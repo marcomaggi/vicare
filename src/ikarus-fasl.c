@@ -744,27 +744,25 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
   }
   else if (c == 'i') {
     if (DEBUG_FASL) ik_debug_message("open %d: complex number object", object_count++);
-    ikptr real = do_read(pcb, p);
-    ikptr imag = do_read(pcb, p);
-    ikptr x;
-    if ((IK_TAGOF(real) == vector_tag)
-	&& (IK_REF(real, -vector_tag) == flonum_tag)) {
-      x = ik_unsafe_alloc(pcb, cflonum_size);
-      IK_REF(x, 0) = cflonum_tag;;
-      IK_REF(x, disp_cflonum_real) = real;
-      IK_REF(x, disp_cflonum_imag) = imag;
+    ikptr_t	s_real = do_read(pcb, p);
+    ikptr_t	s_imag = do_read(pcb, p);
+    ikptr_t	s_cmp;
+    if (IK_IS_FLONUM(s_real) && IK_IS_FLONUM(s_imag)) {
+      s_cmp = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;
+      IK_REF(s_cmp, off_cflonum_tag) = cflonum_tag;
+      IK_CFLONUM_REAL(s_cmp) = s_real;
+      IK_CFLONUM_IMAG(s_cmp) = s_imag;
     } else {
-      x = ik_unsafe_alloc(pcb, compnum_size);
-      IK_REF(x, 0) = compnum_tag;
-      IK_REF(x, disp_compnum_real) = real;
-      IK_REF(x, disp_compnum_imag) = imag;
+      s_cmp = ik_unsafe_alloc(pcb, compnum_size) | vector_tag;
+      IK_REF(s_cmp, off_compnum_tag) = compnum_tag;
+      IK_COMPNUM_REAL(s_cmp) = s_real;
+      IK_COMPNUM_IMAG(s_cmp) = s_imag;
     }
-    x += vector_tag;
     if (put_mark_index) {
-      p->marks[put_mark_index] = x;
+      p->marks[put_mark_index] = s_cmp;
     }
     if (DEBUG_FASL) ik_debug_message("close %d: complex number object", --object_count);
-    return x;
+    return s_cmp;
   } else {
     ik_abort("invalid type '%c' (0x%02x) found in fasl file", c, c);
     return IK_VOID_OBJECT;
