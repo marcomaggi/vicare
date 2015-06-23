@@ -704,21 +704,22 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: char object", --object_count);
     return IK_CHAR_FROM_INTEGER(unicode_code_point);
   }
-  else if (c == 'b') {
+  else if (c == 'b') {	/* bignum object */
     if (DEBUG_FASL) ik_debug_message("open %d: bignum object", object_count++);
-    /* The first word in the memory block of the bignum object. */
-    ikuword_t	first_word;
-    /* The number  of octets representing  the bignum.  If  positive the
-       bignum is positive, if negative the bignum is negative. */
-    long number_of_octets = 0;
+    /* The signed number of octets representing the bignum.  If positive
+       the bignum is positive, if negative the bignum is negative. */
+    iksword_t	number_of_octets = 0;
     /* The number of  limbs (machine words) representing  the bignum; on
        32-bit  platforms: number_of_octets  >> 2;  on 64-bit  platforms:
        number_of_octets >> 3. */
-    long nlimbs = 0;
+    ikuword_t	nlimbs = 0;
     /* The sign bit of the bignum. */
-    long sign = 0;
-    /* We assume the type "long" represents a machine word. */
-    fasl_read_buf(p, &number_of_octets, sizeof(long));
+    ikuword_t	sign = 0;
+    /* The first  word in  the memory  block of  the bignum  object: its
+       value is built from SIGN and NLIMBS. */
+    ikuword_t	first_word;
+    ikptr_t	s_bn;
+    fasl_read_buf(p, &number_of_octets, sizeof(iksword_t));
     if (number_of_octets < 0) {
       sign = 1;
       number_of_octets = -number_of_octets;
@@ -729,17 +730,17 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
       ik_abort("error in fasl-read: invalid bignum length %ld", number_of_octets);
     nlimbs = (number_of_octets >> ((wordsize == 4)? 2 : 3));
     first_word = bignum_tag			\
-      | (sign << bignum_sign_shift)		\
+      | (sign   << bignum_sign_shift)		\
       | (nlimbs << bignum_nlimbs_shift);
-    ikptr x = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_octets + disp_bignum_data)) | vector_tag;
-    IK_REF(x, -vector_tag) = (ikptr) first_word;
+    s_bn = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_octets + disp_bignum_data)) | vector_tag;
+    IK_REF(s_bn, off_bignum_tag) = (ikptr_t) first_word;
     /* Read the vector of limbs as vector of octets. */
-    fasl_read_buf(p, (void*)(long)(x+off_bignum_data), number_of_octets);
+    fasl_read_buf(p, IK_BIGNUM_DATA_VOIDP(s_bn), number_of_octets);
     if (put_mark_index) {
-      p->marks[put_mark_index] = x;
+      p->marks[put_mark_index] = s_bn;
     }
     if (DEBUG_FASL) ik_debug_message("close %d: bignum object", --object_count);
-    return x;
+    return s_bn;
   }
   else if (c == 'i') {
     if (DEBUG_FASL) ik_debug_message("open %d: complex number object", object_count++);

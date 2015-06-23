@@ -414,7 +414,10 @@ ik_api_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
   IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((1)<<bignum_sign_shift))
 
 #define IK_BIGNUM_DATA_LIMBP(X)					\
-  ((mp_limb_t*)(ikuword_t)(X + off_bignum_data))
+  ((mp_limb_t*)(ikuword_t)((X) + off_bignum_data))
+
+#define IK_BIGNUM_DATA_VOIDP(X)					\
+  ((void *)(ikuword_t)((X) + off_bignum_data))
 
 #define IK_BIGNUM_FIRST_LIMB(X)					\
   ((mp_limb_t)IK_REF((X), off_bignum_data))

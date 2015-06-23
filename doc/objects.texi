@@ -3565,6 +3565,7 @@ IK_LIMB(s_bn) = (ikptr)limb;
 
 
 @deftypefn {Preprocessor Macro} {mp_limb_t *} IK_BIGNUM_DATA_LIMBP (ikptr @var{bn})
+@deftypefnx {Preprocessor Macro} {void *} IK_BIGNUM_DATA_LIMBP (ikptr @var{bn})
 Given a reference to bignum: evaluate to a pointer to the first byte in
 the data area, which is a pointer to the least significant limb.
 @end deftypefn
