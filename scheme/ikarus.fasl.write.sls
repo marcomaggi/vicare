@@ -381,29 +381,16 @@
 	 (assertion-violation who "not a fasl-writable immediate" x))))
 
 
-(define-inline (count-leading-unshared-cdrs x refcount-table)
-  (%count-leading-unshared-cdrs x refcount-table 0))
-(define (%count-leading-unshared-cdrs x refcount-table count)
-  (if (and (pair? x) (eq? (hashtable-ref refcount-table x #f) 0))
-      (%count-leading-unshared-cdrs ($cdr x) refcount-table ($fxadd1 count))
-    count))
-
-(define (write-pairs x port refcount-table next-mark count)
-  ;;Serialise the first COUNT pairs in the list X to PORT.
-  ;;
-  (if ($fxzero? count)
-      (%write-object x port refcount-table next-mark)
-    (let ((next-mark (%write-object (car x) port refcount-table next-mark)))
-      (write-pairs (cdr x) port refcount-table next-mark ($fxsub1 count)))))
-
 (define (do-write x port refcount-table next-mark)
-  ;;Actually serialise object X to PORT.
+  ;;Actually serialise object X to PORT.  This function is applied to X only if it is
+  ;;the first time X is written to PORT; so  either X is a non-shared object or it is
+  ;;the first time that the shared object X is written to PORT.
   ;;
-  ;;This function accesses REFCOUNT-TABLE  only when serialising EQ? and
-  ;;EQV?  hashtables which have the keys and values stored there.
+  ;;This  function  accesses  REFCOUNT-TABLE  only when  serialising  EQ?   and  EQV?
+  ;;hashtables which have the keys and values stored there.
   ;;
-  ;;This function  never uses the  NEXT-MARK argument directly,  it only
-  ;;hands it as argument to other functions.
+  ;;This function  never uses the  NEXT-MARK argument directly,  it only hands  it as
+  ;;argument to other functions.
   ;;
   (define-syntax-rule (%write-single-object ?obj ?next-mark)
     (%write-object ?obj port refcount-table ?next-mark))
@@ -456,27 +443,7 @@
 
 
   (cond ((pair? x)
-	 ;;We have to distinguish pairs from proper lists.  Also we have
-	 ;;to distinguish between short (<= 255) lists and long lists.
-	 ;;
-	 (let* ((A	($car x))
-		(D	($cdr x))
-		(count	(count-leading-unshared-cdrs D refcount-table)))
-	   (cond (($fxzero? count)
-		  (put-tag #\P port)
-		  (let* ((next-mark (%write-single-object A next-mark))
-			 (next-mark (%write-single-object D next-mark)))
-		    next-mark))
-		 (else
-		  (cond (($fx<= count 255)
-			 (put-tag #\l port)
-			 (write-byte count port))
-			(else
-			 (put-tag #\L port)
-			 (write-int count port)))
-		  (let* ((next-mark (%write-single-object A next-mark))
-			 (next-mark (write-pairs D port refcount-table next-mark count)))
-		    next-mark)))))
+	 (do-write-pair x port refcount-table next-mark))
 
 ;;; --------------------------------------------------------------------
 
@@ -647,6 +614,141 @@
 
 	(else
 	 (assertion-violation who "not fasl-writable" x))))
+
+
+(module (do-write-pair)
+  ;;Serialise the pair  X to PORT.  This function  is applied to X only if  it is the
+  ;;first time X  is written to PORT; so either  X is a non-shared pair or  it is the
+  ;;first time that the shared pair X is written to PORT.
+  ;;
+  ;;We have to  distinguish standalone pairs from  chains of pairs.  Also  we have to
+  ;;distinguish between short (<= 255) lists and long lists.
+  ;;
+  ;;X  must be  a pair  starting a  proper  or improper  chain of  pairs; here,  with
+  ;;"improper chain of pair" we mean a chain  of pairs whose last pair has a non-null
+  ;;cdr.
+  ;;
+  (define (do-write-pair X port refcount-table next-mark)
+    (define-syntax-rule (%write-single-object ?obj ?next-mark)
+      (%write-object ?obj port refcount-table ?next-mark))
+    (let* ((A  ($car X))
+	   (D  ($cdr X))
+	   (N  (%count-leading-unshared-cdrs D refcount-table)))
+      (cond (($fxzero? N)
+	     ;;Either this is a  standalone pair, or it is the first  pair in a chain
+	     ;;in which D has been previously written to PORT.
+	     (put-tag #\P port)
+	     (let* ((next-mark (%write-single-object A next-mark))
+		    ;;If D has been previously written  to PORT: here we will write a
+		    ;;reference to the already written object.
+		    (next-mark (%write-single-object D next-mark)))
+	       next-mark))
+	    (else
+	     (cond (($fx<= N 255)
+		    ;;Short chain.
+		    (put-tag #\l port)
+		    (write-byte N port))
+		   (else
+		    ;;Long chain.
+		    (put-tag #\L port)
+		    (write-int N port)))
+	     (let* ((next-mark (%write-single-object A next-mark))
+		    (next-mark (%write-leading-unshared-cdrs D port refcount-table next-mark N)))
+	       next-mark)))))
+
+  (case-define %count-leading-unshared-cdrs
+    ((D refcount-table)
+     (%count-leading-unshared-cdrs D refcount-table 0))
+    ((D refcount-table N)
+     ;;Recursive function.  D must be the cdr of  a pair X starting a chain of pairs.
+     ;;It is possible that D is a shared  pair that has already been written to PORT,
+     ;;in this case we do not want to write it again.
+     ;;
+     ;;This  function  considers every  chain  of  pairs as  having  a  head made  of
+     ;;non-shared pairs and a  tail made of pairs that are  shared with other chains.
+     ;;This function counts how many pairs there are in the cdr of the head.
+     ;;
+     ;;As example, let's consider:
+     ;;
+     ;;   (define X1 '(3 . (2 . (1 . ()))))
+     ;;   (define X2 (cons 6 (cons 5 (cons 4 X1))))
+     ;;
+     ;;and  we suppose  X1  is written  to  a fasl  file before  X2;  this means  the
+     ;;following function applications happen:
+     ;;
+     ;;   (do-write-pair X1 port refcount-table next-mark)
+     ;;   (do-write-pair X2 port refcount-table next-mark)
+     ;;
+     ;;where X1  and X2 are pairs  which, at the time  of each call, have  never been
+     ;;written to PORT.  First we compute:
+     ;;
+     ;;   (define D1 (cdr X1))
+     ;;   D1					=> (2 . (1 . ()))
+     ;;   (%count-leading-unshared-cdrs D1)	=> 2
+     ;;
+     ;;when D1 has not yet been written to the file, so all its pairs are non-shared;
+     ;;there are 2 non-shared pairs in D1.  Then we compute:
+     ;;
+     ;;   (define D2 (cdr X2))
+     ;;   D2					=> `(5 . (4 . ,X1))
+     ;;   (%count-leading-unshared-cdrs D2)	=> 2
+     ;;
+     ;;all the  pairs of X1  have been  previously written to  the file, so  only the
+     ;;first 2 pairs in D2 are non-shared.
+     ;;
+     (if (and (pair? D)
+	      ($fxzero? (hashtable-ref refcount-table D 0)))
+	 (%count-leading-unshared-cdrs ($cdr D) refcount-table ($fxadd1 N))
+       N)))
+
+  (define (%write-leading-unshared-cdrs D port refcount-table next-mark N)
+    ;;Recursive function.  D must  be the cdr of a pair X starting  a chain of pairs.
+    ;;It is possible that  D is a shared pair that has already  been written to PORT,
+    ;;in this case we do not want to write it again.
+    ;;
+    ;;When this  function is called,  the car of  the first pair  X in the  chain has
+    ;;already been serialised.  This function must serialise the items in the cars of
+    ;;the chain D of length N and, as last, the cdr of the last pair in the chain D.
+    ;;
+    ;;As example, let's consider:
+    ;;
+    ;;   (define X1 '(3 . (2 . (1 . ()))))
+    ;;   (define X2 (cons 6 (cons 5 (cons 4 X1))))
+    ;;
+    ;;and we suppose X1 is written to a fasl file before X2; this means the following
+    ;;function applications happen:
+    ;;
+    ;;   (do-write-pair X1 port refcount-table next-mark)
+    ;;   (do-write-pair X2 port refcount-table next-mark)
+    ;;
+    ;;where X1  and X2 are  pairs which, at  the time of  each call, have  never been
+    ;;written to PORT.  We know that:
+    ;;
+    ;;   (define D1 (cdr X1))
+    ;;   (define D2 (cdr X2))
+    ;;   D1						=> (2 . (1 . ()))
+    ;;   D2						=> `(5 . (4 . ,X1))
+    ;;   (define N1 (%count-leading-unshared-cdrs D1))
+    ;;   (define N2 (%count-leading-unshared-cdrs D2))
+    ;;   N1						=> 2
+    ;;   N2						=> 2
+    ;;
+    ;;First X1  is serialised.  The  car of X1, which  is 3,is serialised;  then this
+    ;;function is  applied to D1 for  the serialisation of  its items 2, 1,  ().  The
+    ;;number of items in X1 is 4 = 2 + N1; the number of items in D1 is 3 = 1 + N1.
+    ;;
+    ;;Then X2  is serialised.  The car  of X2, which  is 6, is serialised;  then this
+    ;;function is  applied to D2  for the serialisation of  its items 5,  4, ref(X1),
+    ;;where the  last item "ref(X1)"  will be a  reference to the  already serialised
+    ;;object X1.  The number of items in X2 is 4  = 2 + N2; the number of items in D2
+    ;;is 3 = 1 + N2.
+    ;;
+    (if ($fxzero? N)
+	(%write-object D port refcount-table next-mark)
+      (let ((next-mark (%write-object (car D) port refcount-table next-mark)))
+	(%write-leading-unshared-cdrs (cdr D) port refcount-table next-mark ($fxsub1 N)))))
+
+  #| end of module: DO-WRITE-PAIR |# )
 
 
 ;;;; done

@@ -131,10 +131,32 @@ the bignum.
 Complex numbers, both cflonum and compnum.
 
 @item "l" + octet(N) + object ...
-A list of @math{N <= 255} elements followed by the elements.
+A short chain of pairs followed by its elements, including the cdr of
+the last pair; the number @math{N <= 255} is @math{2} less than the
+number of elements.  As example, the list:
+
+@example
+(#\A . (#\B . (#\C . #\D)))
+@end example
+
+@noindent
+has @math{N = 2}, so it is serialised as:
+
+@example
+"l" octet(2) #\A #\B #\C #\D
+@end example
+
+As other example, the standalone pair @samp{(#\A . #\B)} has @math{N =
+0}, so it is serialised as:
+
+@example
+"l" octet(0) #\A #\B
+@end example
 
 @item "L" + word(N) + object ...
-A list of @math{N > 255} elements followed by the elements.
+A long chain of pairs followed by its elements, including the cdr of the
+last pair; the number @math{N > 255} is @math{2} less than the number of
+elements.  See the format of @samp{l} for details.
 
 @item "h" + vector + vector
 @func{eq?}  hashtable, first vector keys, second vector values.

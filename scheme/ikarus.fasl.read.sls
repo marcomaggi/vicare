@@ -262,9 +262,9 @@
 	       (or ($vector-ref MARKS m)
 		   (error __who__ "uninitialized mark" m))
 	     (assertion-violation __who__ "invalid mark" m))))
-	((#\l) ;list of length <= 255
+	((#\l) ;chain of pairs with <= 255 items
 	 (%read-list (read-u8 port) m))
-	((#\L) ;list of length > 255
+	((#\L) ;chain of pairs with  > 255 items
 	 (%read-list (read-integer-word port) m))
 	((#\W) ;R6RS record type descriptor
 	 (let* ((name		(%read-without-mark))
@@ -405,19 +405,53 @@
 	(else
 	 (assertion-violation __who__ "invalid code header" ch)))))
 
-  (define (%read-list len mark)
-    ;;Read and  return a list  of LEN  elements.  Unless MARK  is false:
-    ;;mark the first pair of the list with MARK.
+  (define (%read-list N mark)
+    ;;Read and return a chain of pairs.  Unless MARK is false: mark the first pair of
+    ;;the chain with MARK.
     ;;
-    (let ((ls (make-list (+ 1 len))))
-      (when mark (%put-mark mark ls))
-      (let loop ((ls ls))
-	($set-car! ls (%read-without-mark))
-	(let ((d ($cdr ls)))
-	  (if (null? d)
-	      ($set-cdr! ls (%read-without-mark))
-	    (loop d))))
-      ls))
+    ;;This function is used to process fields  with format "l" and "L".  Short chains
+    ;;have format:
+    ;;
+    ;;   "l" + octet(N) + object ...
+    ;;
+    ;;a short chain of pairs followed by  its elements, including the cdr of the last
+    ;;pair; the number N<=255 is 2 less than the number of elements.  As example, the
+    ;;list:
+    ;;
+    ;;   (#\A . (#\B . (#\C . #\D)))
+    ;;
+    ;;has N=2, so it is serialised as:
+    ;;
+    ;;   "l" octet(2) #\A #\B #\C #\D
+    ;;
+    ;;As  other  example, the  standalone  pair  "(#\A .  #\B)"  has  N=0, so  it  is
+    ;;serialised as:
+    ;;
+    ;;   "l" octet(0) #\A #\B
+    ;;
+    ;;Long chains have the format:
+    ;;
+    ;;   "L" + word(N) + object ...
+    ;;
+    ;;a long chain of  pairs followed by its elements, including the  cdr of the last
+    ;;pair; the number N>255 is 2 less than the number of elements.
+    ;;
+    (define num-of-cars (add1 N))
+    (receive-and-return (P)
+	(cons #f #f)
+      ;;We really need to allocate a pair first and put a mark on it *before* reading
+      ;;the  constituents of  the chain  of  pairs.  Without  this constraints:  this
+      ;;function would be simpler and written in a functional style.  That is life.
+      (when mark
+	(%put-mark mark P))
+      (set-car! P (%read-without-mark))
+      (set-cdr! P (let recur ((i 1))
+		    (if (= i num-of-cars)
+			(%read-without-mark)
+		      ;;We need to impose the order!!!  First read the car, then call
+		      ;;RECUR.
+		      (let ((A (%read-without-mark)))
+			(cons A (recur (add1 i)))))))))
 
   (%read-without-mark))
 

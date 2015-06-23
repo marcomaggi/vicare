@@ -605,46 +605,85 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: bytevector object", --object_count);
     return s_bv;
   }
-  else if (c == 'l') {
+  else if (c == 'l') {	/* short chain of pairs */
+    /* The format is:
+     *
+     *    "l" + octet(N) + object ...
+     *
+     * a short  chain of pairs  followed by its elements,  including the
+     * cdr of the last pair; the number N<=255 is 2 less than the number
+     * of elements.  As example, the list:
+     *
+     *    (#\A . (#\B . (#\C . #\D)))
+     *
+     * has N=2, so it is serialised as:
+     *
+     *    "l" octet(2) #\A #\B #\C #\D
+     *
+     * As other example,  the standalone pair "(#\A . #\B)"  has N=0, so
+     * it is serialised as:
+     *
+     *    "l" octet(0) #\A #\B
+     */
     if (DEBUG_FASL) ik_debug_message("open %d: short list object", object_count++);
-    int   len  = (int) fasl_read_byte(p);
-    ikptr pair = ik_unsafe_alloc(pcb, pair_size * (len+1)) | pair_tag;
+    ikuword_t	num_of_leading_unshared_cdrs	= (ikuword_t) fasl_read_byte(p);
+    ikuword_t	num_of_pairs			= 1 + num_of_leading_unshared_cdrs;
+    /* Allocate a single  block of memory holding all  the pair objects,
+       in sequence. */
+    ikptr_t	s_pair		= ik_unsafe_alloc(pcb, pair_size * num_of_pairs) | pair_tag;
+    /* Mark the head of the list before marking its items: the items may
+       reference the head of the list. */
     if (put_mark_index) {
-      p->marks[put_mark_index] = pair;
+      p->marks[put_mark_index] = s_pair;
     }
-    int i;
-    ikptr pt = pair;
-    for (i=0; i<len; i++) {
-      IK_REF(pt, off_car) = do_read(pcb, p);
-      IK_REF(pt, off_cdr) = pt + pair_size;
-      pt += pair_size;
+    {
+      ikptr_t	s_spine = s_pair;
+      for (iksword_t i=0; i<(num_of_pairs-1); ++i) {
+	IK_CAR(s_spine) = do_read(pcb, p);
+	IK_CDR(s_spine) = s_spine + pair_size; /* automatically tagged as pair */
+	s_spine += pair_size;
+      }
+      IK_CAR(s_spine) = do_read(pcb, p);
+      IK_CDR(s_spine) = do_read(pcb, p);
     }
-    IK_REF(pt, off_car) = do_read(pcb, p);
-    IK_REF(pt, off_cdr) = do_read(pcb, p);
     if (DEBUG_FASL) ik_debug_message("close %d: short list object", --object_count);
-    return pair;
+    return s_pair;
   }
-  else if (c == 'L') {
+  else if (c == 'L') {	/* long chain of pairs */
+    /* The format is:
+     *
+     *    "L" + word(N) + object ...
+     *
+     * a long chain of pairs followed by its elements, including the cdr
+     * of the last pair;  the number N>255 is 2 less  than the number of
+     * elements.  See the format of 'l' for examples.
+     */
     if (DEBUG_FASL) ik_debug_message("open %d: long list object", object_count++);
-    long len = 0;
-    fasl_read_buf(p, &len, sizeof(long));
-    if (len < 0)
-      ik_abort("invalid len=%ld", len);
-    ikptr pair = ik_unsafe_alloc(pcb, pair_size * (len+1)) | pair_tag;
+    ikuword_t	num_of_leading_unshared_cdrs = 0;
+    ikuword_t	num_of_pairs;
+    ikptr_t	s_pair;
+    fasl_read_buf(p, &num_of_leading_unshared_cdrs, sizeof(ikuword_t));
+    num_of_pairs = 1 + num_of_leading_unshared_cdrs;
+    /* Allocate a single  block of memory holding all  the pair objects,
+       in sequence. */
+    s_pair	= ik_unsafe_alloc(pcb, pair_size * num_of_pairs) | pair_tag;
+    /* Mark the head of the list  before marking its items: the list may
+       reference its first pair. */
     if (put_mark_index) {
-      p->marks[put_mark_index] = pair;
+      p->marks[put_mark_index] = s_pair;
     }
-    long i;
-    ikptr pt = pair;
-    for (i=0; i<len; i++) {
-      IK_REF(pt, off_car) = do_read(pcb, p);
-      IK_REF(pt, off_cdr) = pt + pair_size;
-      pt += pair_size;
+    {
+      ikptr_t	s_spine = s_pair;
+      for (iksword_t i=0; i<(num_of_pairs-1); ++i) {
+	IK_CAR(s_spine) = do_read(pcb, p);
+	IK_CDR(s_spine) = s_spine + pair_size; /* automatically tagged as pair */
+	s_spine += pair_size;
+      }
+      IK_CAR(s_spine) = do_read(pcb, p);
+      IK_CDR(s_spine) = do_read(pcb, p);
     }
-    IK_REF(pt, off_car) = do_read(pcb, p);
-    IK_REF(pt, off_cdr) = do_read(pcb, p);
     if (DEBUG_FASL) ik_debug_message("close %d: long list object", --object_count);
-    return pair;
+    return s_pair;
   }
   else if (c == 'f') {
     if (DEBUG_FASL) ik_debug_message("open %d: flonum object", object_count++);
