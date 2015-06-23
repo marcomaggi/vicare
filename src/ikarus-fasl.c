@@ -572,16 +572,17 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: thunk object", --object_count);
     return s_closure;
   }
-  else if (c == '<') {
+  else if (c == '<') {	/* marked object */
     if (DEBUG_FASL) ik_debug_message("open %d: marked object", object_count++);
-    int idx = 0;
-    fasl_read_buf(p, &idx, sizeof(int));
+    int32_t	idx = 0;
+    ikptr_t	s_obj;
+    fasl_read_buf(p, &idx, sizeof(uint32_t));
     if ((idx <= 0) || (idx >= p->marks_size))
       ik_abort("invalid index for ref %d", idx);
-    ikptr obj = p->marks[idx];
-    if (obj) {
+    s_obj = p->marks[idx];
+    if (s_obj) {
       if (DEBUG_FASL) ik_debug_message("close %d: marked object", --object_count);
-      return obj;
+      return s_obj;
     } else {
       ik_abort("reference to uninitialized mark %d", idx);
       return IK_VOID_OBJECT;
