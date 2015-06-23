@@ -685,23 +685,24 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: long list object", --object_count);
     return s_pair;
   }
-  else if (c == 'f') {
+  else if (c == 'f') {	/* flonum object */
     if (DEBUG_FASL) ik_debug_message("open %d: flonum object", object_count++);
-    ikptr x = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;
-    IK_REF(x, -vector_tag) = flonum_tag;
-    fasl_read_buf(p, (void*)(long)(x+disp_flonum_data-vector_tag), 8);
+    ikptr_t	s_flo = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;
+    IK_REF(s_flo, off_flonum_tag) = flonum_tag;
+    /* We know a IEEE 754 double precision flonum is 8 bytes long. */
+    fasl_read_buf(p, IK_FLONUM_VOIDP(s_flo), 8);
     if (put_mark_index) {
-      p->marks[put_mark_index] = x;
+      p->marks[put_mark_index] = s_flo;
     }
     if (DEBUG_FASL) ik_debug_message("close %d: flonum object", --object_count);
-    return x;
+    return s_flo;
   }
-  else if (c == 'C') {
+  else if (c == 'C') {	/* Unicode char object */
     if (DEBUG_FASL) ik_debug_message("open %d: char object", object_count++);
-    int n = 0;
-    fasl_read_buf(p, &n, sizeof(int));
+    uint32_t	unicode_code_point = 0;
+    fasl_read_buf(p, &unicode_code_point, sizeof(uint32_t));
     if (DEBUG_FASL) ik_debug_message("close %d: char object", --object_count);
-    return IK_CHAR_FROM_INTEGER(n);
+    return IK_CHAR_FROM_INTEGER(unicode_code_point);
   }
   else if (c == 'b') {
     if (DEBUG_FASL) ik_debug_message("open %d: bignum object", object_count++);

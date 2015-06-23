@@ -1452,6 +1452,7 @@ ik_decl ikptr_t	ika_compnum_alloc_and_init	(ikpcb_t * pcb);
   IK_REF(VARNAME, off_flonum_tag) = (ikptr_t)flonum_tag
 
 #define IK_FLONUM_DATA(X)	(*((double*)(((ikuword_t)(X))+off_flonum_data)))
+#define IK_FLONUM_VOIDP(X)	((void*)(((ikuword_t)(X))+((iksword_t)off_flonum_data)))
 
 #define IK_IS_FLONUM(X)		((vector_tag == IK_TAGOF(X)) && (flonum_tag == IK_REF((X), -vector_tag)))
 
