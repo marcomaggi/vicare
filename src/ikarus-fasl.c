@@ -337,52 +337,78 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: symbol object", --object_count);
     return s_sym;
   }
-  else if (c == 's') {
-    if (DEBUG_FASL) ik_debug_message("open %d: ascii string object", object_count++);
-    /* ascii string */
-    long len = 0;
-    fasl_read_buf(p, &len, sizeof(long));
-    if (DEBUG_FASL) ik_debug_message("string length: %ld", len);
-    long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
-    ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
-    IK_REF(str, off_string_length) = IK_FIX(len);
-    fasl_read_buf(p, (char*)(long)str+off_string_data, len);
-    if (DEBUG_FASL) fwrite((char*)(long)(str+off_string_data), 1, len, stderr);
+  else if (c == 's') {	/* ASCII string */
+    if (DEBUG_FASL)
+      ik_debug_message("open %d: ascii string object", object_count++);
+    ikuword_t	num_of_chars = 0;
+    ikuword_t	mem_size;
+    uint8_t *	ascii_data;
+    ikptr	s_str;
+    fasl_read_buf(p, &num_of_chars, sizeof(ikuword_t));
+    if (0 || DEBUG_FASL)
+      ik_debug_message("string length: %ld", (long)num_of_chars);
+    mem_size	= IK_ALIGN(num_of_chars * IK_STRING_CHAR_SIZE + disp_string_data);
+    s_str	= ik_unsafe_alloc(pcb, mem_size) | string_tag;
+    IK_STRING_LENGTH_FX(s_str) = IK_FIX(num_of_chars);
+    ascii_data	= IK_STRING_DATA_VOIDP(s_str);
+    fasl_read_buf(p, ascii_data, num_of_chars);
+    if (0 || DEBUG_FASL) {
+      fwrite(ascii_data, 1, num_of_chars, stderr);
+      fwrite("\n", 1, 1, stderr);
+    }
+    /* The ASCII  characters are stored  in the leftmost portion  of the
+     * data area referenced by S_STR.
+     *
+     *         ASCII octets
+     *    |++++++++++++++++++|------------------| <- s_str
+     *
+     * Here we generate the Scheme chars representation as tagged 32-bit
+     * Unicode code points in the same data area, starting from the end:
+     *
+     *         ASCII octets
+     *    |++++++++++++++++++|----------------|-| <- s_str
+     *                      |                  ^
+     *                      |                  |
+     *                       ------------------
+     *                    tagged 32-bit code point
+     *
+     * by proceeding  from the end to  the beginning we consume  all the
+     * ASCII  octets  before  overwriting them  with  the  corresponding
+     * tagged code points.
+     */
     {
-      unsigned char* pi = (unsigned char*)(long)(str+off_string_data);
-      ikchar* pj = (ikchar*)(long)(str+off_string_data);
-      long i = len-1;
-      for (i=len-1; i >= 0; i--) {
-        pj[i] = IK_CHAR32_FROM_INTEGER(pi[i]);
+      ikchar_t *	unicode_code_points = (ikchar_t *)ascii_data;
+      for (iksword_t i=num_of_chars-1; i >= 0; --i) {
+        unicode_code_points[i] = IK_CHAR32_FROM_INTEGER(ascii_data[i]);
       }
     }
-    //str[off_string_data+len] = 0;
     if (put_mark_index) {
-      p->marks[put_mark_index] = str;
+      p->marks[put_mark_index] = s_str;
     }
-    if (DEBUG_FASL) ik_debug_message("close %d: ascii string object", --object_count);
-    return str;
+    if (DEBUG_FASL)
+      ik_debug_message("close %d: ascii string object", --object_count);
+    return s_str;
   }
-  else if (c == 'S') {
+  else if (c == 'S') {    /* Unicode string */
     if (DEBUG_FASL) ik_debug_message("open %d: string object", object_count++);
-    /* string */
-    long len = 0;
-    fasl_read_buf(p, &len, sizeof(long));
-    long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
-    ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
-    IK_REF(str, off_string_length) = IK_FIX(len);
-    long i;
-    for (i=0; i<len; i++) {
-      ikchar c = 0;
-      fasl_read_buf(p, &c, sizeof(ikchar));
-      IK_CHAR32(str, i) = IK_CHAR32_FROM_INTEGER(c);
+    ikuword_t	num_of_chars = 0;
+    ikuword_t	mem_size;
+    ikptr_t	s_str;
+    fasl_read_buf(p, &num_of_chars, sizeof(ikuword_t));
+    mem_size	= IK_ALIGN(num_of_chars*IK_STRING_CHAR_SIZE + disp_string_data);
+    s_str	= ik_unsafe_alloc(pcb, mem_size) | string_tag;
+    IK_STRING_LENGTH_FX(s_str) = IK_FIX(num_of_chars);
+    for (iksword_t i=0; i<num_of_chars; ++i) {
+      ikchar_t	ch = 0;
+      fasl_read_buf(p, &ch, sizeof(ikchar_t));
+      IK_CHAR32(s_str, i) = IK_CHAR32_FROM_INTEGER(ch);
     }
-    //str[off_string_data+len*IK_STRING_CHAR_SIZE] = 0;
     if (put_mark_index) {
-      p->marks[put_mark_index] = str;
+      p->marks[put_mark_index] = s_str;
     }
-    if (DEBUG_FASL) ik_debug_message("close %d: string object", --object_count);
-    return str;
+    if (DEBUG_FASL)
+      ik_debug_message("close %d: string object", --object_count);
+    return s_str;
   }
   else if (c == 'V') {
     if (DEBUG_FASL) ik_debug_message("open %d: vector object", object_count++);
