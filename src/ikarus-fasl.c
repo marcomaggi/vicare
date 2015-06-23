@@ -314,16 +314,18 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: code object", --object_count);
     return p_code | vector_tag;
   }
-  else if (c == 'P') {
+  else if (c == 'P') { /* pair object */
     if (DEBUG_FASL) ik_debug_message("open %d: pair object", object_count++);
-    ikptr pair = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
+    ikptr_t	s_pair = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
+    /* Mark  the  pair  object  before  reading its  car  and  cdr:  the
+       structure may reference the pair itself. */
     if (put_mark_index) {
-      p->marks[put_mark_index] = pair;
+      p->marks[put_mark_index] = s_pair;
     }
-    IK_REF(pair, off_car) = do_read(pcb, p);
-    IK_REF(pair, off_cdr) = do_read(pcb, p);
+    IK_CAR(s_pair) = do_read(pcb, p);
+    IK_CDR(s_pair) = do_read(pcb, p);
     if (DEBUG_FASL) ik_debug_message("close %d: pair object", --object_count);
-    return pair;
+    return s_pair;
   }
   else if (c == 'M') {
     if (DEBUG_FASL) ik_debug_message("open %d: symbol object", object_count++);
