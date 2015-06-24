@@ -23,7 +23,7 @@
 
 #include "internals.h"
 
-static void print_object (FILE* fh, ikptr x, int nested_level);
+static void print_object (FILE* fh, ikptr_t x, int nested_level);
 
 const static char* char_string[128] = {
   "#\\nul","#\\soh","#\\stx","#\\etx","#\\eot","#\\enq","#\\ack","#\\bel",
@@ -50,31 +50,31 @@ const static char* char_string[128] = {
  ** ----------------------------------------------------------------- */
 
 void
-ik_fprint (FILE* fh, ikptr x)
+ik_fprint (FILE* fh, ikptr_t x)
 {
   print_object(fh, x, 0);
 }
 void
-ik_print (ikptr x)
+ik_print (ikptr_t x)
 {
   print_object(stderr, x, 0);
   fprintf(stderr, "\n");
 }
 void
-ik_print_no_newline (ikptr x)
+ik_print_no_newline (ikptr_t x)
 {
   print_object(stderr, x, 0);
 }
 
-ikptr
-ikrt_print_emergency (ikptr s_bv, ikpcb_t *pcb)
+ikptr_t
+ikrt_print_emergency (ikptr_t s_bv, ikpcb_t *pcb)
 {
   fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_bv));
   return IK_VOID;
 }
 
-ikptr
-ikrt_scheme_print (ikptr x, ikpcb_t * pcb)
+ikptr_t
+ikrt_scheme_print (ikptr_t x, ikpcb_t * pcb)
 /* This can be called from Scheme. */
 {
   print_object(stderr, x, 0);
@@ -93,7 +93,7 @@ print_indentation (FILE* fh, int nested_level)
     fprintf(fh, "   ");
 }
 static void
-print_object (FILE* fh, ikptr x, int nested_level)
+print_object (FILE* fh, ikptr_t x, int nested_level)
 {
 #define PRINT_OBJECT(F,X)	print_object((F),(X),1+nested_level)
 #define PRINT_INDENTATION()	print_indentation(fh, 1+nested_level)
@@ -133,16 +133,16 @@ print_object (FILE* fh, ikptr x, int nested_level)
 	    x, kont->top, kont->size, kont->next);
   }
   else if (IK_TAGOF(x) == vector_tag) {
-    ikptr first_word = IK_REF(x, off_vector_length);
+    ikptr_t first_word = IK_REF(x, off_vector_length);
     if (IK_IS_FIXNUM(first_word)) {
-      ikptr len = first_word;
+      ikptr_t len = first_word;
       if (len == 0) {
         fprintf(fh, "vector=#()");
       } else {
         fprintf(fh, "vector=#(");
-        ikptr data = x + off_vector_data;
+        ikptr_t data = x + off_vector_data;
         PRINT_OBJECT(fh, IK_REF(data, 0));
-        ikptr i = (ikptr)wordsize;
+        ikptr_t i = (ikptr_t)wordsize;
         while (i<len) {
           fprintf(fh, " ");
           PRINT_OBJECT(fh, IK_REF(data,i));
@@ -151,8 +151,8 @@ print_object (FILE* fh, ikptr x, int nested_level)
         fprintf(fh, ")");
       }
     } else if (first_word == symbol_tag) {
-      ikptr str   = IK_REF(x, off_symbol_record_string);
-      ikptr fxlen = IK_REF(str, off_string_length);
+      ikptr_t str   = IK_REF(x, off_symbol_record_string);
+      ikptr_t fxlen = IK_REF(str, off_string_length);
       int   len   = IK_UNFIX(fxlen);
       int * data  = (int*)(str + off_string_data);
       int   i;
@@ -162,8 +162,8 @@ print_object (FILE* fh, ikptr x, int nested_level)
         fprintf(fh, "%c", c);
       }
     } else if (IK_TAGOF(first_word) == rtd_tag) {
-      ikptr	s_rtd		 = IK_REF(x, off_record_rtd);;
-      ikptr	number_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+      ikptr_t	s_rtd		 = IK_REF(x, off_record_rtd);;
+      ikptr_t	number_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
       int	i;
       if (s_rtd == ik_the_pcb()->base_rtd) {
 	fprintf(fh, "#[rtd: ");
@@ -202,7 +202,7 @@ print_object (FILE* fh, ikptr x, int nested_level)
     fprintf(fh, ")");
   }
   else if (IK_TAGOF(x) == string_tag) {
-    ikptr fxlen = IK_REF(x, off_string_length);
+    ikptr_t fxlen = IK_REF(x, off_string_length);
     int   len   = IK_UNFIX(fxlen);
     int * data  = (int*)(x + off_string_data);
     int   i;
@@ -217,7 +217,7 @@ print_object (FILE* fh, ikptr x, int nested_level)
     fprintf(fh, "\"");
   }
   else if (IK_TAGOF(x) == bytevector_tag) {
-    ikptr          fxlen = IK_REF(x, off_bytevector_length);
+    ikptr_t          fxlen = IK_REF(x, off_bytevector_length);
     int            len   = IK_UNFIX(fxlen);
     unsigned char* data  = (unsigned char*)(x + off_bytevector_data);
     fprintf(fh, "bytevector=#vu8(");
@@ -251,13 +251,13 @@ print_object (FILE* fh, ikptr x, int nested_level)
 }
 
 void
-ik_print_stack_frame (FILE * fh, ikptr top)
+ik_print_stack_frame (FILE * fh, ikptr_t top)
 {
-  ikptr		single_value_rp	= IK_REF(top, 0);
-  ikptr		framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
-  ikptr		args_size;
-  ikptr		argc;
-  ikptr		s_code;
+  ikptr_t		single_value_rp	= IK_REF(top, 0);
+  ikptr_t		framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
+  ikptr_t		args_size;
+  ikptr_t		argc;
+  ikptr_t		s_code;
   int		i;
   if (framesize) {
     args_size	= framesize - wordsize;
@@ -285,11 +285,11 @@ ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames, ikpcb_t * p
    frames (to avoid printing too much output). */
 {
   int		i;
-  ikptr		top = pcb->frame_pointer;
-  ikptr		end = pcb->frame_base - wordsize;
+  ikptr_t		top = pcb->frame_pointer;
+  ikptr_t		end = pcb->frame_base - wordsize;
   for (i=0; (i <= max_num_of_frames) && (top < end); ++i) {
-    ikptr	single_value_rp	= IK_REF(top, 0);
-    ikptr	framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
+    ikptr_t	single_value_rp	= IK_REF(top, 0);
+    ikptr_t	framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
     if (0 == framesize) {
       framesize = IK_REF(top, wordsize);
     }

@@ -37,12 +37,12 @@
  ** Special objects.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ikrt_bwp_object (ikpcb_t * pcb)
 {
   return IK_BWP_OBJECT;
 }
-ikptr
+ikptr_t
 ikrt_unbound_object (ikpcb_t * pcb)
 {
   return IK_UNBOUND_OBJECT;
@@ -53,24 +53,24 @@ ikrt_unbound_object (ikpcb_t * pcb)
  ** Scheme pairs utilities.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ika_pair_alloc (ikpcb_t * pcb)
 {
-  ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
+  ikptr_t	s_pair = IKA_PAIR_ALLOC(pcb);
   IK_CAR(s_pair) = IK_VOID_OBJECT;
   IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
-ikptr
+ikptr_t
 iku_pair_alloc (ikpcb_t * pcb)
 {
-  ikptr	s_pair = IKU_PAIR_ALLOC(pcb);
+  ikptr_t	s_pair = IKU_PAIR_ALLOC(pcb);
   IK_CAR(s_pair) = IK_VOID_OBJECT;
   IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
 ikuword_t
-ik_list_length (ikptr s_list)
+ik_list_length (ikptr_t s_list)
 /* Return the  length of the list  S_LIST.  Do *not*  check for circular
    lists. */
 {
@@ -87,14 +87,14 @@ ik_list_length (ikptr s_list)
 /* ------------------------------------------------------------------ */
 
 void
-ik_list_to_argv (ikptr s_list, char **argv)
+ik_list_to_argv (ikptr_t s_list, char **argv)
 /* Given a  reference S_LIST  to a list	 of bytevectors, fill  ARGV with
    pointers to the data areas, setting the last element of ARGV to NULL.
    The array referenced by ARGV must be wide enough to hold all the data
    from S_LIST plus the terminating NULL. */
 {
   int	 i;
-  ikptr	 bv;
+  ikptr_t	 bv;
   for (i=0; pair_tag == IK_TAGOF(s_list); s_list=IK_CDR(s_list), ++i) {
     bv	    = IK_CAR(s_list);
     argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
@@ -102,7 +102,7 @@ ik_list_to_argv (ikptr s_list, char **argv)
   argv[i] = NULL;
 }
 void
-ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
+ik_list_to_argv_and_argc (ikptr_t s_list, char **argv, long *argc)
 /* Given a  reference S_LIST  to a list	 of bytevectors: fill  ARGV with
    pointers to the data areas, setting the last element of ARGV to NULL;
    fill ARGC with the lengths  of the bytevectors.  The array referenced
@@ -111,7 +111,7 @@ ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
    hold all the lengths. */
 {
   int	 i;
-  ikptr	 bv;
+  ikptr_t	 bv;
   for (i=0; pair_tag == IK_TAGOF(s_list); s_list=IK_CDR(s_list), ++i) {
     bv	    = IK_CAR(s_list);
     argv[i] = IK_BYTEVECTOR_DATA_CHARP(bv);
@@ -122,7 +122,7 @@ ik_list_to_argv_and_argc (ikptr s_list, char **argv, long *argc)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
+ikptr_t
 ika_list_from_argv (ikpcb_t * pcb, char ** argv)
 /* Given a  pointer ARGV  to a NULL-terminated	array of  ASCIIZ strings
    build and return  a list of bytevectors holding a  copy of the ASCIIZ
@@ -131,7 +131,7 @@ ika_list_from_argv (ikpcb_t * pcb, char ** argv)
   if (! argv[0])
     return IK_NULL_OBJECT;
   else {
-    ikptr	s_list, s_pair;
+    ikptr_t	s_list, s_pair;
     s_list = s_pair = ika_pair_alloc(pcb);
     pcb->root9 = &s_list;
     pcb->root8 = &s_pair;
@@ -155,7 +155,7 @@ ika_list_from_argv (ikpcb_t * pcb, char ** argv)
     return s_list;
   }
 }
-ikptr
+ikptr_t
 ika_list_from_argv_and_argc (ikpcb_t * pcb, char ** argv, long argc)
 /* Given  a pointer  ARGV to  an array	of ASCIIZ  strings  holding ARGC
    pointers: build  and return a list  of bytevectors holding  a copy of
@@ -164,7 +164,7 @@ ika_list_from_argv_and_argc (ikpcb_t * pcb, char ** argv, long argc)
   if (! argc)
     return IK_NULL_OBJECT;
   else {
-    ikptr	s_list, s_pair;
+    ikptr_t	s_list, s_pair;
     s_list = s_pair = ika_pair_alloc(pcb);
     pcb->root9 = &s_list;
     pcb->root8 = &s_pair;
@@ -193,11 +193,11 @@ ika_list_from_argv_and_argc (ikpcb_t * pcb, char ** argv, long argc)
  ** Scheme bytevector utilities.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ika_bytevector_alloc (ikpcb_t * pcb, ikuword_t requested_number_of_bytes)
 {
   ikuword_t   aligned_size;
-  ikptr	 s_bv;
+  ikptr_t	 s_bv;
   assert(requested_number_of_bytes <= most_positive_fixnum);
   aligned_size = IK_ALIGN(disp_bytevector_data + requested_number_of_bytes + 1);
   s_bv	       = ik_safe_alloc(pcb, aligned_size) | bytevector_tag;
@@ -205,11 +205,11 @@ ika_bytevector_alloc (ikpcb_t * pcb, ikuword_t requested_number_of_bytes)
   IK_BYTEVECTOR_DATA_CHARP(s_bv)[requested_number_of_bytes] = '\0';
   return s_bv;
 }
-ikptr
+ikptr_t
 ika_bytevector_from_cstring (ikpcb_t * pcb, const char * cstr)
 {
   if (cstr) {
-    ikptr	s_bv;
+    ikptr_t	s_bv;
     char *	data;
     size_t	len = strlen(cstr);
     if (len > most_positive_fixnum)
@@ -222,30 +222,30 @@ ika_bytevector_from_cstring (ikpcb_t * pcb, const char * cstr)
     return ika_bytevector_alloc(pcb, 0);
   }
 }
-ikptr
+ikptr_t
 ika_bytevector_from_cstring_len (ikpcb_t * pcb, const char * cstr, size_t len)
 {
   if (len > most_positive_fixnum)
     len = most_positive_fixnum;
-  ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
+  ikptr_t	    s_bv = ika_bytevector_alloc(pcb, len);
   char *    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
   memcpy(data, cstr, len);
   return s_bv;
 }
-ikptr
+ikptr_t
 ika_bytevector_from_memory_block (ikpcb_t * pcb, const void * memory, size_t len)
 {
   if (len > most_positive_fixnum)
     len = most_positive_fixnum;
-  ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
+  ikptr_t	    s_bv = ika_bytevector_alloc(pcb, len);
   void *    data = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
   memcpy(data, memory, len);
   return s_bv;
 }
-ikptr
-ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
-		      ikptr s_src, ikptr s_src_start,
-		      ikptr s_count)
+ikptr_t
+ikrt_bytevector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
+		      ikptr_t s_src, ikptr_t s_src_start,
+		      ikptr_t s_count)
 {
   ikuword_t	src_start = IK_UNFIX(s_src_start);
   ikuword_t	dst_start = IK_UNFIX(s_dst_start);
@@ -255,7 +255,7 @@ ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
   memcpy(dst, src, count);
   return IK_VOID_OBJECT;
 }
-ikptr
+ikptr_t
 ika_bytevector_from_utf16z (ikpcb_t * pcb, const void * _data)
 /* Build and return  a new bytevector from a memory  block referencing a
    UTF-16 string terminated with two  consecutive zeros starting at even
@@ -278,13 +278,13 @@ ika_bytevector_from_utf16z (ikpcb_t * pcb, const void * _data)
  ** Scheme bytevector conversion to ASCII HEX.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_bytevector_to_hex (ikptr s_in, ikpcb_t * pcb)
+ikptr_t
+ikrt_bytevector_to_hex (ikptr_t s_in, ikpcb_t * pcb)
 {
   static const char table[] = "0123456789ABCDEF";
   uint8_t *	in	= IK_BYTEVECTOR_DATA_UINT8P(s_in);
   ikuword_t	in_len	= IK_BYTEVECTOR_LENGTH(s_in);
-  ikptr		s_ou;
+  ikptr_t		s_ou;
   char *	ou;
   ikuword_t	ou_len;
   uint8_t	byte;
@@ -305,12 +305,12 @@ ikrt_bytevector_to_hex (ikptr s_in, ikpcb_t * pcb)
   } else
     return IK_FALSE;
 }
-ikptr
-ikrt_bytevector_from_hex (ikptr s_in, ikpcb_t * pcb)
+ikptr_t
+ikrt_bytevector_from_hex (ikptr_t s_in, ikpcb_t * pcb)
 {
   char *	in	= IK_BYTEVECTOR_DATA_CHARP(s_in);
   ikuword_t	in_len	= IK_BYTEVECTOR_LENGTH(s_in);
-  ikptr		s_ou;
+  ikptr_t		s_ou;
   uint8_t *	ou;
   ikuword_t	ou_len;
   ikuword_t	i;
@@ -351,8 +351,8 @@ ikrt_bytevector_from_hex (ikptr s_in, ikpcb_t * pcb)
  ** Scheme bytevector conversion to ASCII Base64.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_bytevector_to_base64 (ikptr s_in, ikpcb_t * pcb)
+ikptr_t
+ikrt_bytevector_to_base64 (ikptr_t s_in, ikpcb_t * pcb)
 {
   /* The following is the encoding table  for Base64 as specified by RFC
      4648. */
@@ -367,7 +367,7 @@ ikrt_bytevector_to_base64 (ikptr s_in, ikpcb_t * pcb)
   };
   uint8_t *	in	= IK_BYTEVECTOR_DATA_UINT8P(s_in);
   ikuword_t		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
-  ikptr		s_ou;
+  ikptr_t		s_ou;
   uint8_t *	ou;
   ikuword_t		ou_len;
   ikuword_t		i, j, left;
@@ -447,8 +447,8 @@ ikrt_bytevector_to_base64 (ikptr s_in, ikpcb_t * pcb)
   pcb->root0 = NULL;
   return s_ou;
 }
-ikptr
-ikrt_bytevector_from_base64 (ikptr s_in, ikpcb_t * pcb)
+ikptr_t
+ikrt_bytevector_from_base64 (ikptr_t s_in, ikpcb_t * pcb)
 {
   /* Decoding tables  for Base64  as specified  by RFC  4648: disallowed
      input  characters  have  a  value  of  0xFF;  only  128  chars,  as
@@ -470,7 +470,7 @@ ikrt_bytevector_from_base64 (ikptr s_in, ikpcb_t * pcb)
   };
   uint8_t *	in	= IK_BYTEVECTOR_DATA_VOIDP(s_in);
   ikuword_t		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
-  ikptr		s_ou;
+  ikptr_t		s_ou;
   uint8_t *	ou;
   ikuword_t		ou_len;
   ikuword_t		i, j;
@@ -618,21 +618,21 @@ ikrt_bytevector_from_base64 (ikptr s_in, ikpcb_t * pcb)
  ** ----------------------------------------------------------------- */
 
 int
-ik_is_vector (ikptr s_vec)
+ik_is_vector (ikptr_t s_vec)
 {
   return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(IK_REF(s_vec, -vector_tag));
 }
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
+ikptr_t
+ikrt_make_vector1 (ikptr_t s_len, ikpcb_t* pcb)
 /* This  is   the  core   implementation  of  the   primitive  operation
    MAKE-VECTOR, */
 {
   iksword_t intlen = (iksword_t)s_len;
   if (IK_IS_FIXNUM(s_len) && (intlen >= 0)) {
-    ikptr s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
+    ikptr_t s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
     IK_REF(s, 0) = s_len;
     /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
        memory is on  the Scheme heap, which is not  a garbage collection
@@ -648,13 +648,13 @@ ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
+ikptr_t
 ika_vector_alloc_no_init (ikpcb_t * pcb, ikuword_t number_of_items)
 {
-  ikptr s_len      = IK_FIX(number_of_items);
+  ikptr_t s_len      = IK_FIX(number_of_items);
   /* Do not ask me why, but IK_ALIGN is needed here. */
   ikuword_t	align_size = IK_ALIGN(disp_vector_data + s_len);
-  ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
+  ikptr_t	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* "ik_safe_alloc()"  returns uninitialised  invalid memory;  but such
      memory is  on the Scheme  heap, which  is not a  garbage collection
@@ -663,13 +663,13 @@ ika_vector_alloc_no_init (ikpcb_t * pcb, ikuword_t number_of_items)
      size, because the garbage collector will never see it. */
   return s_vec;
 }
-ikptr
+ikptr_t
 iku_vector_alloc_no_init (ikpcb_t * pcb, ikuword_t number_of_items)
 {
-  ikptr s_len      = IK_FIX(number_of_items);
+  ikptr_t s_len      = IK_FIX(number_of_items);
   /* Do not ask me why, but IK_ALIGN is needed here. */
   ikuword_t	align_size = IK_ALIGN(disp_vector_data + s_len);
-  ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
+  ikptr_t	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* "ik_unsafe_alloc()" returns uninitialised  invalid memory; but such
      memory is  on the Scheme  heap, which  is not a  garbage collection
@@ -681,13 +681,13 @@ iku_vector_alloc_no_init (ikpcb_t * pcb, ikuword_t number_of_items)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
+ikptr_t
 ika_vector_alloc_and_init (ikpcb_t * pcb, ikuword_t number_of_items)
 {
-  ikptr s_len      = IK_FIX(number_of_items);
+  ikptr_t s_len      = IK_FIX(number_of_items);
   /* Do not ask me why, but IK_ALIGN is needed here. */
   ikuword_t	align_size = IK_ALIGN(disp_vector_data + s_len);
-  ikptr	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
+  ikptr_t	s_vec	   = ik_safe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* Set the data area to zero.  Remember that the machine word 0 is the
      fixnum zero.  We avoid setting to zero the additional word, if any,
@@ -698,13 +698,13 @@ ika_vector_alloc_and_init (ikpcb_t * pcb, ikuword_t number_of_items)
   memset((char*)(ikuword_t)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
-ikptr
+ikptr_t
 iku_vector_alloc_and_init (ikpcb_t * pcb, ikuword_t number_of_items)
 {
-  ikptr s_len      = IK_FIX(number_of_items);
+  ikptr_t s_len      = IK_FIX(number_of_items);
   /* Do not ask me why, but IK_ALIGN is needed here. */
   ikuword_t	align_size = IK_ALIGN(disp_vector_data + s_len);
-  ikptr	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
+  ikptr_t	s_vec	   = ik_unsafe_alloc(pcb, align_size) | vector_tag;
   IK_REF(s_vec, off_vector_length) = s_len;
   /* Set the data area to zero.  Remember that the machine word 0 is the
      fixnum zero.  We avoid setting to zero the additional word, if any,
@@ -718,17 +718,17 @@ iku_vector_alloc_and_init (ikpcb_t * pcb, ikuword_t number_of_items)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ikrt_vector_clean (ikptr s_vec)
+ikptr_t
+ikrt_vector_clean (ikptr_t s_vec)
 {
-  ikptr	s_len = IK_VECTOR_LENGTH_FX(s_vec);
+  ikptr_t	s_len = IK_VECTOR_LENGTH_FX(s_vec);
   memset((char*)(ikuword_t)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
-ikptr
-ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
-		  ikptr s_src, ikptr s_src_start,
-		  ikptr s_count, ikpcb_t * pcb)
+ikptr_t
+ikrt_vector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
+		  ikptr_t s_src, ikptr_t s_src_start,
+		  ikptr_t s_count, ikpcb_t * pcb)
 {
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + (ikuword_t)s_dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + (ikuword_t)s_src_start;
@@ -742,27 +742,27 @@ ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
  ** Scheme struct utilities.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_make_struct (ikptr s_std, ikpcb* pcb)
+ikptr_t
+ikrt_make_struct (ikptr_t s_std, ikpcb_t* pcb)
 {
   return ika_struct_alloc_and_init(pcb, s_std);
 }
 
 int
-ik_is_struct (ikptr R)
+ik_is_struct (ikptr_t R)
 {
   return ((record_tag == (record_mask & R)) &&
 	  (record_tag == (record_mask & IK_REF(R, off_record_rtd))));
 }
-ikptr
-ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr s_rtd)
+ikptr_t
+ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr_t s_rtd)
 /* Allocate  and return  a new  structure instance  using S_RTD  as type
    descriptor.   All the  fields are  left uninitialised.   Make use  of
    "pcb->root9". */
 {
   ikuword_t	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
   ikuword_t	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
-  ikptr		p_stru;
+  ikptr_t		p_stru;
   pcb->root9 = &s_rtd;
   {
     p_stru = ik_safe_alloc(pcb, align_size);
@@ -778,15 +778,15 @@ ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr s_rtd)
   pcb->root9 = NULL;
   return p_stru | record_tag;
 }
-ikptr
-ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr s_rtd)
+ikptr_t
+ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr_t s_rtd)
 /* Allocate  and return  a new  structure instance  using S_RTD  as type
    descriptor.  All the fields are initialised to the fixnum zero.  Make
    use of "pcb->root9". */
 {
-  ikptr		s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
+  ikptr_t		s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
   ikuword_t	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
-  ikptr		p_stru;
+  ikptr_t		p_stru;
   pcb->root9 = &s_rtd;
   {
     p_stru = ik_safe_alloc(pcb, align_size);
@@ -811,24 +811,24 @@ ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr s_rtd)
  ** Scheme string utilities.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ika_string_alloc (ikpcb_t * pcb, ikuword_t number_of_chars)
 {
   ikuword_t	align_size;
-  ikptr s_str;
+  ikptr_t s_str;
   /* Do not ask me why, but IK_ALIGN is needed here. */
-  align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
+  align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar_t));
   s_str	     = ik_safe_alloc(pcb, align_size) | string_tag;
   IK_STRING_LENGTH_FX(s_str) = IK_FIX(number_of_chars);
   return s_str;
 }
-ikptr
+ikptr_t
 iku_string_alloc (ikpcb_t * pcb, ikuword_t number_of_chars)
 {
   ikuword_t	align_size;
-  ikptr s_str;
+  ikptr_t s_str;
   /* Do not ask me why, but IK_ALIGN is needed here. */
-  align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar));
+  align_size = IK_ALIGN(disp_string_data + number_of_chars * sizeof(ikchar_t));
   s_str	     = ik_unsafe_alloc(pcb, align_size) | string_tag;
   IK_STRING_LENGTH_FX(s_str) = IK_FIX(number_of_chars);
   return s_str;
@@ -836,22 +836,22 @@ iku_string_alloc (ikpcb_t * pcb, ikuword_t number_of_chars)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
+ikptr_t
 ika_string_from_cstring (ikpcb_t * pcb, const char * cstr)
 {
   ikuword_t	clen  = strlen(cstr);
-  ikptr	s_str = ika_string_alloc(pcb, clen);
+  ikptr_t	s_str = ika_string_alloc(pcb, clen);
   ikuword_t	i;
   for (i=0; i<clen; ++i) {
     IK_CHAR32(s_str, i) = IK_CHAR32_FROM_INTEGER(IK_UNICODE_FROM_ASCII(cstr[i]));
   }
   return s_str;
 }
-ikptr
+ikptr_t
 iku_string_from_cstring (ikpcb_t * pcb, const char * cstr)
 {
   ikuword_t	clen  = strlen(cstr);
-  ikptr	s_str = iku_string_alloc(pcb, clen);
+  ikptr_t	s_str = iku_string_alloc(pcb, clen);
   ikuword_t	i;
   for (i=0; i<clen; ++i) {
     IK_CHAR32(s_str, i) = IK_CHAR32_FROM_INTEGER(IK_UNICODE_FROM_ASCII(cstr[i]));
@@ -865,7 +865,7 @@ iku_string_from_cstring (ikpcb_t * pcb, const char * cstr)
  ** ----------------------------------------------------------------- */
 
 int
-ik_is_symbol (ikptr obj)
+ik_is_symbol (ikptr_t obj)
 {
   return ((vector_tag == (vector_mask & obj)) &&
 	  (symbol_tag == (symbol_mask & IK_REF(obj, off_symbol_record_tag))));
@@ -876,35 +876,35 @@ ik_is_symbol (ikptr obj)
  ** Scheme objects from C numbers.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ika_integer_from_int (ikpcb_t * pcb, int N)
 {
   return ika_integer_from_long(pcb, (long)N);
 }
-ikptr
+ikptr_t
 ika_integer_from_long (ikpcb_t * pcb, long N)
 {
-  ikptr	s_fx = IK_FIX(N);
+  ikptr_t	s_fx = IK_FIX(N);
   if (IK_UNFIX(s_fx) == N)
     return s_fx;
   else {
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		1
     /* wordsize == sizeof(long) */
-    ikptr s_bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize + disp_bignum_data)) | vector_tag;
+    ikptr_t s_bn = ik_safe_alloc(pcb, IK_ALIGN(wordsize + disp_bignum_data)) | vector_tag;
     if (N > 0) { /* positive bignum */
       IK_REF(s_bn, off_bignum_tag)	 =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
-      IK_REF(s_bn, off_bignum_data) = (ikptr)+N;
+	(ikptr_t)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
+      IK_REF(s_bn, off_bignum_data) = (ikptr_t)+N;
     } else { /* zero or negative bignum */
       IK_REF(s_bn, off_bignum_tag)	 =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
-      IK_REF(s_bn, off_bignum_data) = (ikptr)-N;
+	(ikptr_t)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
+      IK_REF(s_bn, off_bignum_data) = (ikptr_t)-N;
     }
     return s_bn;
   }
 }
-ikptr
+ikptr_t
 ika_integer_from_llong (ikpcb_t * pcb, ik_llong N)
 {
   /* If it  is in the range  of "long", use the	 appropriate function to
@@ -915,38 +915,38 @@ ika_integer_from_llong (ikpcb_t * pcb, ik_llong N)
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		sizeof(ik_llong) / sizeof(mp_limb_t)
     int	  align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_llong));
-    ikptr s_bn	     = ik_safe_alloc(pcb, align_size) | vector_tag;
+    ikptr_t s_bn	     = ik_safe_alloc(pcb, align_size) | vector_tag;
     if (N > 0){
       IK_REF(s_bn, off_bignum_tag) =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
+	(ikptr_t)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift));
       *((ik_llong*)(s_bn + off_bignum_data)) = +N;
     } else {
       IK_REF(s_bn, off_bignum_tag) =
-	(ikptr)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
+	(ikptr_t)(bignum_tag | (NUMBER_OF_WORDS << bignum_nlimbs_shift) | (1 << bignum_sign_shift));
       *((ik_llong*)(s_bn + off_bignum_data)) = -N;
     }
     return s_bn;
   }
 }
-ikptr
+ikptr_t
 ika_integer_from_uint (ikpcb_t * pcb, ik_uint N)
 {
   return ika_integer_from_ulong(pcb, (ik_ulong)N);
 }
-ikptr
+ikptr_t
 ika_integer_from_ulong (ikpcb_t * pcb, ik_ulong N)
 {
   if ((iksword_t)N <= most_positive_fixnum) {
     return IK_FIX(N);
   } else {
     /* wordsize == sizeof(unsigned long) */
-    ikptr	s_bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + wordsize)) | vector_tag;
+    ikptr_t	s_bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + wordsize)) | vector_tag;
     IK_REF(s_bn, off_bignum_tag)  = (ikuword_t)(bignum_tag | (1 << bignum_nlimbs_shift));
     IK_REF(s_bn, off_bignum_data) = (ikuword_t)N;
     return s_bn;
   }
 }
-ikptr
+ikptr_t
 ika_integer_from_ullong (ikpcb_t * pcb, ik_ullong N)
 {
   /* If	 it is	in the	range of  "unsigned long",  use	 the appropriate
@@ -958,7 +958,7 @@ ika_integer_from_ullong (ikpcb_t * pcb, ik_ullong N)
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		sizeof(ik_ullong) / sizeof(mp_limb_t)
     ikuword_t	align_size	= IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
-    ikptr	bn		= ik_safe_alloc(pcb, align_size);
+    ikptr_t	bn		= ik_safe_alloc(pcb, align_size);
     bcopy((uint8_t*)(&N), (uint8_t*)(bn+disp_bignum_data), sizeof(ik_ullong));
     /* "ik_normalize_bignum()" wants an *untagged* pointer as argument. */
     return ik_normalize_bignum(NUMBER_OF_WORDS, 0, bn);
@@ -967,15 +967,15 @@ ika_integer_from_ullong (ikpcb_t * pcb, ik_ullong N)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ika_integer_from_sint8	(ikpcb* pcb, int8_t N)
+ikptr_t
+ika_integer_from_sint8	(ikpcb_t* pcb, int8_t N)
 /* According to R6RS  fixnums have at least 24 bits,  so we just convert
    it to fixnum. */
 {
   return IK_FIX(N);
 }
-ikptr
-ika_integer_from_uint8	(ikpcb* pcb, uint8_t N)
+ikptr_t
+ika_integer_from_uint8	(ikpcb_t* pcb, uint8_t N)
 /* According to R6RS  fixnums have at least 24 bits,  so we just convert
    it to fixnum. */
 {
@@ -984,25 +984,25 @@ ika_integer_from_uint8	(ikpcb* pcb, uint8_t N)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ika_integer_from_sint16	(ikpcb* pcb, int16_t N)
+ikptr_t
+ika_integer_from_sint16	(ikpcb_t* pcb, int16_t N)
 /* According to R6RS  fixnums have at least 24 bits,  so we just convert
    it to fixnum. */
 {
   return IK_FIX(N);
 }
-ikptr
-ika_integer_from_uint16	(ikpcb* pcb, uint16_t N)
+ikptr_t
+ika_integer_from_uint16	(ikpcb_t* pcb, uint16_t N)
 {
   return IK_FIX(N);
 }
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
+ikptr_t
+ika_integer_from_sint32	(ikpcb_t* pcb, int32_t N)
 {
-  ikptr	s_fx = IK_FIX(N);
+  ikptr_t	s_fx = IK_FIX(N);
   if (IK_UNFIX(s_fx) == N)
     return s_fx;
   else {
@@ -1021,8 +1021,8 @@ ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
     }
   }
 }
-ikptr
-ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
+ikptr_t
+ika_integer_from_uint32	(ikpcb_t* pcb, uint32_t N)
 {
   uint64_t	mxn = most_positive_fixnum;
   if (N <= mxn) {
@@ -1046,10 +1046,10 @@ ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
+ikptr_t
+ika_integer_from_sint64	(ikpcb_t* pcb, int64_t N)
 {
-  ikptr	s_fx = IK_FIX(N);
+  ikptr_t	s_fx = IK_FIX(N);
   if (IK_UNFIX(s_fx) == N)
     return s_fx;
   else {
@@ -1068,8 +1068,8 @@ ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
     }
   }
 }
-ikptr
-ika_integer_from_uint64	(ikpcb* pcb, uint64_t N)
+ikptr_t
+ika_integer_from_uint64	(ikpcb_t* pcb, uint64_t N)
 {
   uint64_t	mxn = most_positive_fixnum;
   if (N <= mxn) {
@@ -1093,7 +1093,7 @@ ika_integer_from_uint64	(ikpcb* pcb, uint64_t N)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
+ikptr_t
 ika_integer_from_off_t (ikpcb_t * pcb, off_t N)
 {
   switch (sizeof(off_t)) {
@@ -1106,7 +1106,7 @@ ika_integer_from_off_t (ikpcb_t * pcb, off_t N)
     return IK_VOID_OBJECT;
   }
 }
-ikptr
+ikptr_t
 ika_integer_from_ssize_t (ikpcb_t * pcb, ssize_t N)
 {
   switch (sizeof(ssize_t)) {
@@ -1119,7 +1119,7 @@ ika_integer_from_ssize_t (ikpcb_t * pcb, ssize_t N)
     return IK_VOID_OBJECT;
   }
 }
-ikptr
+ikptr_t
 ika_integer_from_size_t (ikpcb_t * pcb, size_t N)
 {
   switch (sizeof(size_t)) {
@@ -1132,7 +1132,7 @@ ika_integer_from_size_t (ikpcb_t * pcb, size_t N)
     return IK_VOID_OBJECT;
   }
 }
-ikptr
+ikptr_t
 ika_integer_from_ptrdiff_t (ikpcb_t * pcb, ptrdiff_t N)
 {
   switch (sizeof(ptrdiff_t)) {
@@ -1148,18 +1148,18 @@ ika_integer_from_ptrdiff_t (ikpcb_t * pcb, ptrdiff_t N)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ika_flonum_from_double (ikpcb* pcb, double N)
+ikptr_t
+ika_flonum_from_double (ikpcb_t* pcb, double N)
 {
-  ikptr x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
+  ikptr_t x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
   IK_REF(x, off_flonum_tag) = flonum_tag;
   IK_FLONUM_DATA(x) = N;
   return x;
 }
-ikptr
-ika_cflonum_from_doubles (ikpcb* pcb, double re, double im)
+ikptr_t
+ika_cflonum_from_doubles (ikpcb_t* pcb, double re, double im)
 {
-  ikptr	x = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+  ikptr_t	x = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
   IK_REF(x, off_flonum_tag) = cflonum_tag;
   pcb->root9 = &x;
   {
@@ -1174,15 +1174,15 @@ ika_cflonum_from_doubles (ikpcb* pcb, double re, double im)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ikrt_integer_from_machine_word (ikptr s_word, ikpcb_t * pcb)
+ikptr_t
+ikrt_integer_from_machine_word (ikptr_t s_word, ikpcb_t * pcb)
 {
 #ifdef IK_32BIT_PLATFORM
   uint32_t	word	= (uint32_t) s_word;
-  ikptr		s_int	= ika_integer_from_uint32(pcb, word);
+  ikptr_t		s_int	= ika_integer_from_uint32(pcb, word);
 #else
   uint64_t	word	= (uint64_t) s_word;
-  ikptr		s_int	= ika_integer_from_uint64(pcb, word);
+  ikptr_t		s_int	= ika_integer_from_uint64(pcb, word);
 #endif
   return s_int;
 }
@@ -1193,7 +1193,7 @@ ikrt_integer_from_machine_word (ikptr s_word, ikpcb_t * pcb)
  ** ----------------------------------------------------------------- */
 
 int
-ik_integer_to_int (ikptr x)
+ik_integer_to_int (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x))
     return (int)IK_UNFIX(x);
@@ -1207,7 +1207,7 @@ ik_integer_to_int (ikptr x)
   }
 }
 long
-ik_integer_to_long (ikptr x)
+ik_integer_to_long (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
@@ -1221,7 +1221,7 @@ ik_integer_to_long (ikptr x)
   }
 }
 ik_uint
-ik_integer_to_uint (ikptr x)
+ik_integer_to_uint (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
@@ -1233,7 +1233,7 @@ ik_integer_to_uint (ikptr x)
   }
 }
 ik_ulong
-ik_integer_to_ulong (ikptr x)
+ik_integer_to_ulong (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
@@ -1245,16 +1245,16 @@ ik_integer_to_ulong (ikptr x)
   }
 }
 ik_llong
-ik_integer_to_llong (ikptr x)
+ik_integer_to_llong (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
   else if (x == IK_VOID_OBJECT)
     return 0;
   else {
-    ikptr fst		   = IK_REF(x, -vector_tag);
-    ikptr pos_one_limb_tag = (ikptr)(bignum_tag	      | (1 << bignum_nlimbs_shift));
-    ikptr neg_one_limb_tag = (ikptr)(pos_one_limb_tag | (1 << bignum_sign_shift));
+    ikptr_t fst		   = IK_REF(x, -vector_tag);
+    ikptr_t pos_one_limb_tag = (ikptr_t)(bignum_tag	      | (1 << bignum_nlimbs_shift));
+    ikptr_t neg_one_limb_tag = (ikptr_t)(pos_one_limb_tag | (1 << bignum_sign_shift));
     if (fst == pos_one_limb_tag)
       return (ik_ulong)IK_REF(x, off_bignum_data);
     else if (fst == neg_one_limb_tag)
@@ -1267,7 +1267,7 @@ ik_integer_to_llong (ikptr x)
   }
 }
 ik_ullong
-ik_integer_to_ullong (ikptr x)
+ik_integer_to_ullong (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x))
     return (ik_ullong)IK_UNFIX(x);
@@ -1283,7 +1283,7 @@ ik_integer_to_ullong (ikptr x)
 /* ------------------------------------------------------------------ */
 
 uint8_t
-ik_integer_to_uint8 (ikptr x)
+ik_integer_to_uint8 (ikptr_t x)
 /* According to R6RS fixnums must have at  least 24 bits, so X must be a
    fixnum for this function to work. */
 {
@@ -1292,7 +1292,7 @@ ik_integer_to_uint8 (ikptr x)
   return ((0 <= X) && (X <= UINT8_MAX))? ((uint8_t)X) : IK_FALSE;
 }
 int8_t
-ik_integer_to_sint8 (ikptr x)
+ik_integer_to_sint8 (ikptr_t x)
 /* According to R6RS fixnums must have at  least 24 bits, so X must be a
    fixnum for this function to work. */
 {
@@ -1304,7 +1304,7 @@ ik_integer_to_sint8 (ikptr x)
 /* ------------------------------------------------------------------ */
 
 uint16_t
-ik_integer_to_uint16 (ikptr x)
+ik_integer_to_uint16 (ikptr_t x)
 /* According to R6RS fixnums must have at  least 24 bits, so X must be a
    fixnum for this function to work. */
 {
@@ -1313,7 +1313,7 @@ ik_integer_to_uint16 (ikptr x)
   return ((0 <= X) && (X <= UINT16_MAX))? ((uint16_t)X) : IK_FALSE;
 }
 int16_t
-ik_integer_to_sint16 (ikptr x)
+ik_integer_to_sint16 (ikptr_t x)
 /* According to R6RS fixnums must have at  least 24 bits, so X must be a
    fixnum for this function to work. */
 {
@@ -1325,7 +1325,7 @@ ik_integer_to_sint16 (ikptr x)
 /* ------------------------------------------------------------------ */
 
 uint32_t
-ik_integer_to_uint32 (ikptr x)
+ik_integer_to_uint32 (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x)) {
     iksword_t	X = IK_UNFIX(x);
@@ -1336,7 +1336,7 @@ ik_integer_to_uint32 (ikptr x)
   }
 }
 int32_t
-ik_integer_to_sint32 (ikptr x)
+ik_integer_to_sint32 (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x)) {
     iksword_t	X = IK_UNFIX(x);
@@ -1350,7 +1350,7 @@ ik_integer_to_sint32 (ikptr x)
 /* ------------------------------------------------------------------ */
 
 uint64_t
-ik_integer_to_uint64 (ikptr x)
+ik_integer_to_uint64 (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x)) {
     iksword_t	X = IK_UNFIX(x);
@@ -1361,7 +1361,7 @@ ik_integer_to_uint64 (ikptr x)
   }
 }
 int64_t
-ik_integer_to_sint64 (ikptr x)
+ik_integer_to_sint64 (ikptr_t x)
 {
   if (IK_IS_FIXNUM(x)) {
     iksword_t	X = IK_UNFIX(x);
@@ -1375,7 +1375,7 @@ ik_integer_to_sint64 (ikptr x)
 /* ------------------------------------------------------------------ */
 
 off_t
-ik_integer_to_off_t (ikptr x)
+ik_integer_to_off_t (ikptr_t x)
 {
   switch (sizeof(off_t)) {
   case sizeof(int64_t):
@@ -1388,7 +1388,7 @@ ik_integer_to_off_t (ikptr x)
   }
 }
 size_t
-ik_integer_to_size_t (ikptr x)
+ik_integer_to_size_t (ikptr_t x)
 {
   if (sizeof(size_t) == sizeof(uint32_t))
     return (size_t)ik_integer_to_uint32(x);
@@ -1396,7 +1396,7 @@ ik_integer_to_size_t (ikptr x)
     return (size_t)ik_integer_to_uint64(x);
 }
 ssize_t
-ik_integer_to_ssize_t (ikptr x)
+ik_integer_to_ssize_t (ikptr_t x)
 {
   if (sizeof(ssize_t) == sizeof(int32_t))
     return (ssize_t)ik_integer_to_sint32(x);
@@ -1404,7 +1404,7 @@ ik_integer_to_ssize_t (ikptr x)
     return (ssize_t)ik_integer_to_sint64(x);
 }
 ptrdiff_t
-ik_integer_to_ptrdiff_t (ikptr x)
+ik_integer_to_ptrdiff_t (ikptr_t x)
 {
   switch (sizeof(ptrdiff_t)) {
   case sizeof(int32_t):
@@ -1419,15 +1419,15 @@ ik_integer_to_ptrdiff_t (ikptr x)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ikrt_integer_to_machine_word (ikptr s_int, ikpcb_t * pcb)
+ikptr_t
+ikrt_integer_to_machine_word (ikptr_t s_int, ikpcb_t * pcb)
 {
 #ifdef IK_32BIT_PLATFORM
   uint32_t	word = ik_integer_to_uint32(s_int);
 #else
   uint64_t	word = ik_integer_to_uint64(s_int);
 #endif
-  return (ikptr)word;
+  return (ikptr_t)word;
 }
 
 
@@ -1436,22 +1436,22 @@ ikrt_integer_to_machine_word (ikptr s_int, ikpcb_t * pcb)
  ** ----------------------------------------------------------------- */
 
 int
-ik_is_ratnum (ikptr X)
+ik_is_ratnum (ikptr_t X)
 {
   return ((vector_tag == IK_TAGOF(X)) &&
 	  (ratnum_tag == IK_REF(X, -vector_tag)));
 }
-ikptr
+ikptr_t
 ika_ratnum_alloc_no_init (ikpcb_t * pcb)
 {
-  ikptr	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+  ikptr_t	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
   IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
   return s_rn;
 }
-ikptr
+ikptr_t
 ika_ratnum_alloc_and_init (ikpcb_t * pcb)
 {
-  ikptr	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+  ikptr_t	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
   IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
   memset((void *)(((ikuword_t)s_rn) + off_ratnum_num), 0, 3 * wordsize);
   return s_rn;
@@ -1463,22 +1463,22 @@ ika_ratnum_alloc_and_init (ikpcb_t * pcb)
  ** ----------------------------------------------------------------- */
 
 int
-ik_is_compnum (ikptr X)
+ik_is_compnum (ikptr_t X)
 {
   return ((vector_tag == IK_TAGOF(X)) &&
 	  (compnum_tag == IK_REF(X, -vector_tag)));
 }
-ikptr
+ikptr_t
 ika_compnum_alloc_no_init (ikpcb_t * pcb)
 {
-  ikptr	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+  ikptr_t	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
   IK_REF(s_cn, off_compnum_tag) = compnum_tag;
   return s_cn;
 }
-ikptr
+ikptr_t
 ika_compnum_alloc_and_init (ikpcb_t * pcb)
 {
-  ikptr	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+  ikptr_t	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
   IK_REF(s_cn, off_compnum_tag) = compnum_tag;
   memset((void *)(((ikuword_t)s_cn) + off_compnum_real), 0, 3 * wordsize);
   return s_cn;
@@ -1489,8 +1489,8 @@ ika_compnum_alloc_and_init (ikpcb_t * pcb)
  ** Code objects.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ik_stack_frame_top_to_code_object (ikptr top)
+ikptr_t
+ik_stack_frame_top_to_code_object (ikptr_t top)
 /* Given a pointer  to the top of  a stack frame: return  a reference to
    the code object containing the return point. */
 {
@@ -1531,7 +1531,7 @@ ik_stack_frame_top_to_code_object (ikptr top)
    *
    *     ;; high memory
    */
-  ikptr	single_value_rp	= IK_REF(top, 0);
+  ikptr_t	single_value_rp	= IK_REF(top, 0);
   /* Through the return  address we retrieve the field  RP_OFFSET in the
    * call table, which  contains the offset of that very  field from the
    * beginning of the code.
@@ -1567,9 +1567,9 @@ ik_stack_frame_top_to_code_object (ikptr top)
   iksword_t	rp_offset	= field_offset - disp_call_table_offset;
   /* Then we compute the address of  the entry point in the code object:
      the address of the first byte of executable code. */
-  ikptr	code_entry	= single_value_rp - rp_offset;
+  ikptr_t	code_entry	= single_value_rp - rp_offset;
   /* Finally we compute the tagged pointer to the code object. */
-  ikptr s_code		= code_entry - off_code_data;
+  ikptr_t s_code		= code_entry - off_code_data;
   return s_code;
 }
 
@@ -1579,7 +1579,7 @@ ik_stack_frame_top_to_code_object (ikptr top)
  ** ----------------------------------------------------------------- */
 
 size_t
-ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len)
+ik_generalised_c_buffer_len (ikptr_t s_buffer, ikptr_t s_buffer_len)
 /* Return the number of bytes in a generalised C buffer object.
 
    S_BUFFER must  be a  bytevector, pointer object,  memory-block struct
@@ -1603,10 +1603,10 @@ ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len)
  ** Miscellanous functions.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
-		   ikptr s_src, ikptr s_src_start,
-		   ikptr s_count, ikpcb_t * pcb)
+ikptr_t
+ikrt_general_copy (ikptr_t s_dst, ikptr_t s_dst_start,
+		   ikptr_t s_src, ikptr_t s_src_start,
+		   ikptr_t s_count, ikpcb_t * pcb)
 {
   ikuword_t	src_start = IK_UNFIX(s_src_start);
   ikuword_t	dst_start = IK_UNFIX(s_dst_start);
@@ -1640,10 +1640,10 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ikrt_debug_flonum_to_bytevector (ikptr s_flonum, ikpcb_t * pcb)
+ikptr_t
+ikrt_debug_flonum_to_bytevector (ikptr_t s_flonum, ikpcb_t * pcb)
 {
-  ikptr		s_bv;
+  ikptr_t		s_bv;
   uint8_t *	src;
   uint8_t *	dst;
   pcb->root0 = &s_flonum;
@@ -1656,11 +1656,11 @@ ikrt_debug_flonum_to_bytevector (ikptr s_flonum, ikpcb_t * pcb)
   pcb->root0 = NULL;
   return s_bv;
 }
-ikptr
-ikrt_debug_flonum_from_bytevector (ikptr s_bv, ikpcb_t * pcb)
+ikptr_t
+ikrt_debug_flonum_from_bytevector (ikptr_t s_bv, ikpcb_t * pcb)
 {
   if (flonum_size == IK_BYTEVECTOR_LENGTH(s_bv)) {
-    ikptr	s_flonum;
+    ikptr_t	s_flonum;
     uint8_t *	src;
     uint8_t *	dst;
     pcb->root0 = &s_bv;
@@ -1678,13 +1678,13 @@ ikrt_debug_flonum_from_bytevector (ikptr s_bv, ikpcb_t * pcb)
 
 /* ------------------------------------------------------------------ */
 
-ikptr
-ikrt_debug_bignum_to_bytevector (ikptr s_bignum, ikpcb_t * pcb)
+ikptr_t
+ikrt_debug_bignum_to_bytevector (ikptr_t s_bignum, ikpcb_t * pcb)
 {
-  ikptr		first_word = IK_REF(s_bignum, -vector_tag);
+  ikptr_t		first_word = IK_REF(s_bignum, -vector_tag);
   ikuword_t	limb_count = IK_BNFST_LIMB_COUNT(first_word);
   ikuword_t	bv_size    = IK_BIGNUM_ALLOC_SIZE(limb_count);
-  ikptr		s_bv;
+  ikptr_t		s_bv;
   uint8_t *	src;
   uint8_t *	dst;
   /* fprintf(stderr, "limb count: %ld, bv size: %ld\n", limb_count, bv_size); */
@@ -1698,10 +1698,10 @@ ikrt_debug_bignum_to_bytevector (ikptr s_bignum, ikpcb_t * pcb)
   pcb->root0 = NULL;
   return s_bv;
 }
-ikptr
-ikrt_debug_bignum_from_bytevector (ikptr s_bv, ikpcb_t * pcb)
+ikptr_t
+ikrt_debug_bignum_from_bytevector (ikptr_t s_bv, ikpcb_t * pcb)
 {
-  ikptr		s_bignum;
+  ikptr_t		s_bignum;
   uint8_t *	src;
   uint8_t *	dst;
   pcb->root0 = &s_bv;
@@ -1735,14 +1735,14 @@ ik_allocate_avoidance_collection (void)
     collection->slots[i] = IK_VOID;
   return collection;
 }
-ikptr
-ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
+ikptr_t
+ik_register_to_avoid_collecting (ikptr_t s_obj, ikpcb_t * pcb)
 {
   if (IK_VOID == s_obj) {
     return ika_pointer_alloc(pcb, (ikuword_t)NULL);
   } else {
     ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
-    ikptr *				slot = NULL;
+    ikptr_t *				slot = NULL;
     { /* If no collections are present: allocate a new one and store it in
 	 the PCB. */
       if (NULL == collection)
@@ -1777,40 +1777,40 @@ ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
     return ika_pointer_alloc(pcb, (ikuword_t)slot);
   }
 }
-ikptr
-ik_forget_to_avoid_collecting (ikptr s_ptr, ikpcb_t * pcb)
+ikptr_t
+ik_forget_to_avoid_collecting (ikptr_t s_ptr, ikpcb_t * pcb)
 {
-  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  ikptr_t *	P = IK_POINTER_DATA_VOIDP(s_ptr);
   if (P) {
-    ikptr	s_obj = *P;
+    ikptr_t	s_obj = *P;
     *P = IK_VOID;
     return s_obj;
   } else
     return IK_VOID;
 }
-ikptr
-ik_retrieve_to_avoid_collecting (ikptr s_ptr, ikpcb_t * pcb)
+ikptr_t
+ik_retrieve_to_avoid_collecting (ikptr_t s_ptr, ikpcb_t * pcb)
 {
-  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  ikptr_t *	P = IK_POINTER_DATA_VOIDP(s_ptr);
   return (P)? *P : IK_VOID;
 }
-ikptr
-ik_replace_to_avoid_collecting (ikptr s_ptr, ikptr s_new_obj, ikpcb_t * pcb)
+ikptr_t
+ik_replace_to_avoid_collecting (ikptr_t s_ptr, ikptr_t s_new_obj, ikpcb_t * pcb)
 {
-  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  ikptr_t *	P = IK_POINTER_DATA_VOIDP(s_ptr);
   if (P) {
-    ikptr	s_old_obj = *P;
+    ikptr_t	s_old_obj = *P;
     *P = s_new_obj;
     return s_old_obj;
   } else
     return IK_VOID;
 }
-ikptr
+ikptr_t
 ik_collection_avoidance_list (ikpcb_t * pcb)
 {
   ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
-  ikptr		s_list		= IK_NULL;
-  ikptr		s_spine		= IK_NULL;
+  ikptr_t		s_list		= IK_NULL;
+  ikptr_t		s_spine		= IK_NULL;
   if (NULL == collection)
     return IK_NULL;
   else {
@@ -1846,7 +1846,7 @@ ik_collection_avoidance_list (ikpcb_t * pcb)
     return s_list;
   }
 }
-ikptr
+ikptr_t
 ik_purge_collection_avoidance_list (ikpcb_t * pcb)
 {
   ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
@@ -1862,8 +1862,8 @@ ik_purge_collection_avoidance_list (ikpcb_t * pcb)
 #if 0
 /* The following  are the old versions,  when the "not to  be collected"
    list was an actual Scheme list. */
-ikptr
-ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
+ikptr_t
+ik_register_to_avoid_collecting (ikptr_t s_obj, ikpcb_t * pcb)
 {
   switch (s_obj) {
   case IK_FALSE:     /* Avoid registering constants. */
@@ -1880,7 +1880,7 @@ ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
     } else {
       pcb->root0 = &s_obj;
       {
-	ikptr	s_pair = ika_pair_alloc(pcb);
+	ikptr_t	s_pair = ika_pair_alloc(pcb);
 	IK_CAR(s_pair) = s_obj;
 	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_CDR(s_pair) = pcb->not_to_be_collected;
@@ -1891,8 +1891,8 @@ ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
     }
   }
 }
-ikptr
-ik_forget_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
+ikptr_t
+ik_forget_to_avoid_collecting (ikptr_t s_obj, ikpcb_t * pcb)
 {
   switch (s_obj) {
   case IK_FALSE:     /* Avoid searching for constants. */
@@ -1907,7 +1907,7 @@ ik_forget_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
     if (IK_IS_FIXNUM(s_obj)) {    /* Avoid searching for fixnums. */
       return IK_FALSE;
     } else {
-      ikptr s_pair = pcb->not_to_be_collected;
+      ikptr_t s_pair = pcb->not_to_be_collected;
       /*
        *  |------------| pcb
        *       |
@@ -1934,7 +1934,7 @@ ik_forget_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
 	  pcb->not_to_be_collected = IK_CDR(s_pair);
 	  return s_obj;
 	} else {
-	  ikptr	s_prev = s_pair;
+	  ikptr_t	s_prev = s_pair;
 	  while (IK_NULL != s_pair) {
 	    /* Before:
 	     *
@@ -1963,12 +1963,12 @@ ik_forget_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
     }
   }
 }
-ikptr
+ikptr_t
 ik_collection_avoidance_list (ikpcb_t * pcb)
 {
   return pcb->not_to_be_collected;
 }
-ikptr
+ikptr_t
 ik_purge_collection_avoidance_list (ikpcb_t * pcb)
 {
   pcb->not_to_be_collected = IK_NULL;

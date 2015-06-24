@@ -40,16 +40,16 @@
  ** File descriptors handling for Scheme ports: opening and closing.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_close_fd (ikptr fd /*, ikpcb* pcb */)
+ikptr_t
+ikrt_close_fd (ikptr_t fd /*, ikpcb_t* pcb */)
 {
   int   rv;
   errno = 0;
   rv    = close(IK_NUM_TO_FD(fd));
   return (-1 != rv)? IK_FALSE_OBJECT : ik_errno_to_code();
 }
-ikptr
-ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
+ikptr_t
+ikrt_open_input_fd (ikptr_t pathname_bv, ikptr_t ikopts /*, ikpcb_t* pcb */)
 {
   const char *  pathname;
   IK_UNUSED int opts  = IK_UNFIX(ikopts);
@@ -63,8 +63,8 @@ ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   fd       = open(pathname, flags, mode);
   return (0 <= fd)? IK_FD_TO_NUM(fd) : ik_errno_to_code();
 }
-ikptr
-ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
+ikptr_t
+ikrt_open_output_fd (ikptr_t pathname_bv, ikptr_t ikopts /*, ikpcb_t* pcb */)
 {
   const char *  pathname;
   int           opts  = IK_UNFIX(ikopts);
@@ -129,8 +129,8 @@ ikrt_open_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
   fd       = open(pathname, flags, mode);
   return (0 <= fd)? IK_FD_TO_NUM(fd) : ik_errno_to_code();
 }
-ikptr
-ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
+ikptr_t
+ikrt_open_input_output_fd (ikptr_t pathname_bv, ikptr_t ikopts /*, ikpcb_t* pcb */)
 {
   const char *  pathname;
   int           opts  = IK_UNFIX(ikopts);
@@ -168,8 +168,8 @@ ikrt_open_input_output_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)
  ** File descriptors handling for Scheme ports: reading and writing.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)
+ikptr_t
+ikrt_read_fd (ikptr_t fd, ikptr_t buffer_bv, ikptr_t buffer_offset, ikptr_t requested_count /*, ikpcb_t* pcb */)
 {
   ssize_t       rv;
   uint8_t *     buffer;
@@ -178,8 +178,8 @@ ikrt_read_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_co
   rv     = read(IK_NUM_TO_FD(fd), buffer, IK_UNFIX(requested_count));
   return (0 <= rv)? IK_FIX(rv) : ik_errno_to_code();
 }
-ikptr
-ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_count /*, ikpcb* pcb */)
+ikptr_t
+ikrt_write_fd (ikptr_t fd, ikptr_t buffer_bv, ikptr_t buffer_offset, ikptr_t requested_count /*, ikpcb_t* pcb */)
 {
   ssize_t       rv;
   uint8_t *     buffer;
@@ -194,8 +194,8 @@ ikrt_write_fd (ikptr fd, ikptr buffer_bv, ikptr buffer_offset, ikptr requested_c
  ** File descriptors handling for Scheme ports: port position.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
+ikptr_t
+ikrt_set_position (ikptr_t fd, ikptr_t pos /*, ikpcb_t* pcb */)
 {
   off_t         offset;
   off_t         rv;
@@ -210,8 +210,8 @@ ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
  ** File descriptors handling for Scheme ports: non-blocking mode.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
+ikptr_t
+ikptr_fd_set_non_blocking_mode (ikptr_t s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
@@ -226,8 +226,8 @@ ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
   feature_failure(__func__);
 #endif
 }
-ikptr
-ikptr_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
+ikptr_t
+ikptr_fd_unset_non_blocking_mode (ikptr_t s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
@@ -242,8 +242,8 @@ ikptr_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
   feature_failure(__func__);
 #endif
 }
-ikptr
-ikptr_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
+ikptr_t
+ikptr_fd_ref_non_blocking_mode (ikptr_t s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);

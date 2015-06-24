@@ -68,7 +68,7 @@ feature_failure_ (const char * funcname)
  ** Simple support.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ik_readline_enabled (void)
 {
 #ifdef HAVE_LIBREADLINE
@@ -77,13 +77,13 @@ ik_readline_enabled (void)
   return IK_FALSE_OBJECT;
 #endif
 }
-ikptr
-ik_readline_readline (ikptr s_prompt, ikpcb_t * pcb)
+ikptr_t
+ik_readline_readline (ikptr_t s_prompt, ikpcb_t * pcb)
 {
 #ifdef HAVE_LIBREADLINE
   char *	prompt = (IK_FALSE_OBJECT == s_prompt)? NULL : IK_BYTEVECTOR_DATA_CHARP(s_prompt);
   char *	line;
-  ikptr		rv;
+  ikptr_t		rv;
   line = readline(prompt);
   if (line) {
 #ifdef HAVE_READLINE_HISTORY
@@ -106,7 +106,7 @@ ik_readline_readline (ikptr s_prompt, ikpcb_t * pcb)
  ** GNU Readline specific interface.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ik_readline_rl_version (ikpcb_t * pcb)
 {
 #if ((defined HAVE_LIBREADLINE) && (defined RL_READLINE_VERSION))

@@ -34,7 +34,7 @@ extern int cpu_has_sse2();
 static void register_handlers();
 static void register_alt_stack();
 
-ikpcb* the_pcb;
+ikpcb_t* the_pcb;
 
 ikpcb_t *
 ik_the_pcb (void)
@@ -73,7 +73,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
   { /* Set up arg_list from the  last "argv" to the first; the resulting
        list will end in COMMAND-LINE. */
 
-    ikptr	arg_list	= IK_NULL_OBJECT;
+    ikptr_t	arg_list	= IK_NULL_OBJECT;
     int		i		= argc-1;
     for (; i > 0; --i) {
       if (0 == strcmp(argv[i], "--repl-on-sigint")) {
@@ -81,11 +81,11 @@ ikarus_main (int argc, char** argv, char* boot_file)
       } else {
 	char *	s = argv[i];
 	int	n = strlen(s);
-	ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
+	ikptr_t	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
 	IK_REF(bv, off_bytevector_length) = IK_FIX(n);
 	/* copy the bytes and the terminating zero */
 	memcpy((char*)(bv+off_bytevector_data), s, n+1);
-	ikptr p = iku_pair_alloc(pcb);
+	ikptr_t p = iku_pair_alloc(pcb);
 	IK_CAR(p) = bv;
 	IK_CDR(p) = arg_list;
 	arg_list  = p;
@@ -106,19 +106,19 @@ ikarus_main (int argc, char** argv, char* boot_file)
  ** Special functions.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ikrt_get_argv0_bytevector (ikpcb_t * pcb)
 {
   return ika_bytevector_from_cstring(pcb, pcb->argv0);
 }
-ikptr
+ikptr_t
 ikrt_get_argv0_string (ikpcb_t * pcb)
 {
   return ika_string_from_cstring(pcb, pcb->argv0);
 }
 /* FIXME To be  removed at the next boot image  rotation.  (Marco Maggi;
    Wed Mar 11, 2015) */
-ikptr
+ikptr_t
 ikrt_get_last_revision (ikpcb_t * pcb)
 {
   return ika_string_from_cstring(pcb, "unknown-revision");
