@@ -20,11 +20,11 @@
 
 #define DEBUG_EXEC	0
 
-static void ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont);
+static void ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr_t s_kont);
 
 
-ikptr
-ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
+ikptr_t
+ik_exec_code (ikpcb_t * pcb, ikptr_t s_code, ikptr_t s_argcount, ikptr_t s_closure)
 /* Execute  Scheme  code  and  all   its  continuations  until  no  more
    continuations are stored in the PCB or a system continuation is found
    in the continuations linked list.
@@ -43,10 +43,10 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 {
   /* A fixnum representing the negated number of returned Scheme values.
      It can be zero. */
-  ikptr		s_retval_count;
+  ikptr_t		s_retval_count;
   /* Reference to the  continuation object representing the  C or Scheme
      continuation we want to go back to. */
-  ikptr	s_kont;
+  ikptr_t	s_kont;
   if (0 || DEBUG_EXEC) {
     ik_debug_message_no_newline("%s: enter closure 0x%016lx, code 0x%016lx, annotation: ",
 				__func__, (long)s_closure, (long) s_code);
@@ -86,9 +86,9 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *
        * Of course we cannot check for the presence of return values.
        */
-      ikptr	underflow_handler;
+      ikptr_t	underflow_handler;
       assert(pcb->frame_base == pcb->frame_pointer);
-      underflow_handler = *(ikptr *)(pcb->frame_pointer - wordsize);
+      underflow_handler = *(ikptr_t *)(pcb->frame_pointer - wordsize);
       assert(IK_UNDERFLOW_HANDLER == underflow_handler);
     }
 #endif
@@ -109,7 +109,7 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     assert(continuation_tag == kont->tag);
     /* RETURN_ADDRESS is a  raw memory address being the  entry point in
        machine code we have to jump back to. */
-    ikptr	return_address = IK_REF(kont->top, 0);
+    ikptr_t	return_address = IK_REF(kont->top, 0);
     /* FRAMESIZE is stack  frame size of the function we  have to return
        to.  This value was computed at compile time and stored in binary
        code just before the "call" instruction. */
@@ -315,20 +315,20 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
    *   |              |
    *      low memory
    */
-  ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
+  ikptr_t rv = IK_REF(pcb->frame_base, -2*wordsize);
   assert(pcb->frame_pointer == pcb->frame_base);
   return rv;
 }
 
 
 static void
-ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
+ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr_t s_kont)
 {
-  ikptr underflow_handler	= *(ikptr *)(pcb->frame_pointer - wordsize);
+  ikptr_t underflow_handler	= *(ikptr_t *)(pcb->frame_pointer - wordsize);
   ikcont_t * kont		= IK_CONTINUATION_STRUCT(s_kont);
-  ikptr	top			= IK_CONTINUATION_TOP(s_kont);
-  ikptr	return_address		= IK_REF(top, 0);
-  ikptr	call_table_framesize	= IK_CALLTABLE_FRAMESIZE(return_address);
+  ikptr_t	top			= IK_CONTINUATION_TOP(s_kont);
+  ikptr_t	return_address		= IK_REF(top, 0);
+  ikptr_t	call_table_framesize	= IK_CALLTABLE_FRAMESIZE(return_address);
   ikuword_t	framesize	= (call_table_framesize)?	\
     (ikuword_t) call_table_framesize : IK_REF(top, wordsize);
   ikuword_t	redline_delta_words	=			\
@@ -357,7 +357,7 @@ ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
 		   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
 		   pcb->frame_redline, (long)redline_delta_words,
 		   pcb->frame_pointer, pcb->frame_base,
-		   (ikptr)ik_underflow_handler, underflow_handler,
+		   (ikptr_t)ik_underflow_handler, underflow_handler,
 		   (long)s_kont, (long)kont,
 		   top,
 		   IK_CONTINUATION_SIZE(s_kont),

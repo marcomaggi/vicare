@@ -65,8 +65,8 @@
    of the  functions "gc_alloc_new_*" for  further details on  this data
    structure.  */
 typedef struct qupages_t {
-  ikptr p;    /* pointer to the scan start */
-  ikptr q;    /* pointer to the scan end */
+  ikptr_t p;    /* pointer to the scan start */
+  ikptr_t q;    /* pointer to the scan end */
   struct qupages_t* next;
 } qupages_t;
 
@@ -82,10 +82,10 @@ typedef struct qupages_t {
    FIXME Is the "base" field actually needed?  It seems to me that it is
    always equal to "aq".  (Marco Maggi; Mon Dec 16, 2013) */
 typedef struct {
-  ikptr ap;	/* allocation pointer, references the next free word */
-  ikptr aq;	/* pointer to the first allocated word */
-  ikptr ep;	/* end pointer, references a word past the end */
-  ikptr base;	/* pointer to the first allocated word */
+  ikptr_t ap;	/* allocation pointer, references the next free word */
+  ikptr_t aq;	/* pointer to the first allocated word */
+  ikptr_t ep;	/* end pointer, references a word past the end */
+  ikptr_t base;	/* pointer to the first allocated word */
 } meta_t;
 
 /* This structure represents the state of the garbage collector. */
@@ -104,9 +104,9 @@ typedef struct gc_t {
   uint32_t	collect_gen_tag;
 
   /* These fields are for the hash tables. */
-  ikptr		tconc_ap;
-  ikptr		tconc_ep;
-  ikptr		tconc_base;
+  ikptr_t		tconc_ap;
+  ikptr_t		tconc_ep;
+  ikptr_t		tconc_base;
   ikmemblock *	tconc_queue;
   ik_ptr_page *	forward_list;
 } gc_t;
@@ -116,19 +116,19 @@ typedef struct gc_t {
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
-static ikptr	gather_live_code_entry	(gc_t* gc, ikptr entry);
+static ikptr_t	gather_live_code_entry	(gc_t* gc, ikptr_t entry);
 
 static void	scan_dirty_pages	(gc_t*);
 static void	handle_guardians	(gc_t* gc);
 
-static void	collect_stack(gc_t*, ikptr top, ikptr base);
+static void	collect_stack(gc_t*, ikptr_t top, ikptr_t base);
 static void	collect_loop(gc_t*);
 
-static void	ik_munmap_from_segment (ikptr base, ikuword_t size, ikpcb* pcb);
+static void	ik_munmap_from_segment (ikptr_t base, ikuword_t size, ikpcb_t* pcb);
 
-static void	relocate_new_code (ikptr p_X, gc_t* gc);
+static void	relocate_new_code (ikptr_t p_X, gc_t* gc);
 
-static void	register_to_collect_count (ikpcb* pcb, int bytes);
+static void	register_to_collect_count (ikpcb_t* pcb, int bytes);
 
 
 /** --------------------------------------------------------------------
@@ -164,12 +164,12 @@ static const unsigned int META_MT[meta_count] = {
 
 static int verify_gc_integrity_option = 0;
 
-ikptr
+ikptr_t
 ikrt_enable_gc_integrity_checks (ikpcb_t * pcb) {
   verify_gc_integrity_option = 1;
   return IK_VOID;
 }
-ikptr
+ikptr_t
 ikrt_disable_gc_integrity_checks (ikpcb_t * pcb) {
   verify_gc_integrity_option = 0;
   return IK_VOID;
@@ -181,7 +181,7 @@ ikrt_disable_gc_integrity_checks (ikpcb_t * pcb) {
  ** ----------------------------------------------------------------- */
 
 static void
-ik_munmap_from_segment (ikptr base, ikuword_t size, ikpcb* pcb)
+ik_munmap_from_segment (ikptr_t base, ikuword_t size, ikpcb_t* pcb)
 /* Given a block of memory starting at BASE and SIZE bytes wide:
  *
  * - Mark all its pages as "holes" in the segment vector.
@@ -257,10 +257,10 @@ static void		gc_add_tconcs		(gc_t*);
    macro "gather_live_object()" is a convenience interface to it. */
 #undef DEBUG_GATHER_LIVE_OBJECT
 #if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
-static ikptr gather_live_object_proc(gc_t* gc, ikptr x, char* caller);
+static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x, char* caller);
 #  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x,caller)
 #else
-static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
+static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x);
 #  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x)
 #endif
 
@@ -298,12 +298,12 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
  * 6. "ik_collect()" must not move the stack.
  */
 ikpcb_t *
-ik_collect (ikuword_t mem_req, ikpcb* pcb)
+ik_collect (ikuword_t mem_req, ikpcb_t* pcb)
 {
   return ik_collect_gen(mem_req, IK_FALSE, pcb);
 }
 ikpcb_t *
-ik_collect_gen (ikuword_t mem_req, ikptr s_requested_generation, ikpcb* pcb)
+ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
 {
   static const uint32_t NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
     (4 << META_DIRTY_SHIFT) | 1 | NEW_GEN_TAG,
@@ -472,7 +472,7 @@ ik_collect_gen (ikuword_t mem_req, ikptr s_requested_generation, ikpcb* pcb)
 #endif
       ikuword_t		memsize;
       ikuword_t		new_heap_size;
-      ikptr		ap;
+      ikptr_t		ap;
       memsize       = (mem_req > IK_HEAPSIZE)? mem_req : IK_HEAPSIZE;
       memsize	    = IK_ALIGN_TO_NEXT_PAGE(memsize);
       new_heap_size = memsize + 2 * IK_PAGESIZE;
@@ -486,9 +486,9 @@ ik_collect_gen (ikuword_t mem_req, ikptr s_requested_generation, ikpcb* pcb)
     }
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     { /* Reset the free space to a magic number. */
-      ikptr	X;
+      ikptr_t	X;
       for (X=pcb->allocation_pointer; X<pcb->allocation_redline; X+=wordsize)
-	IK_REF(X, 0) = (ikptr)(0x1234FFFF);
+	IK_REF(X, 0) = (ikptr_t)(0x1234FFFF);
     }
 #endif
   } /* Finished allocating a new nursery heap hot block. */
@@ -568,14 +568,14 @@ fix_weak_pointers (gc_t* gc)
     if ((page_sbits & (TYPE_MASK|NEW_GEN_MASK)) == (WEAK_PAIRS_TYPE|NEW_GEN_TAG)) {
       //int gen = t & GEN_MASK;
       if (1) { //(gen > collect_gen) {
-        ikptr	p = IK_PAGE_POINTER_FROM_INDEX(page_idx);
-        ikptr	q = p + IK_PAGESIZE;
+        ikptr_t	p = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+        ikptr_t	q = p + IK_PAGESIZE;
         for (; p < q; p += pair_size) {
-          ikptr X = IK_REF(p, 0);
+          ikptr_t X = IK_REF(p, 0);
           if (! IK_IS_FIXNUM(X)) {
             int tag = IK_TAGOF(X);
             if (tag != immediate_tag) {
-              ikptr first_word = IK_REF(X, -tag);
+              ikptr_t first_word = IK_REF(X, -tag);
               if (first_word == IK_FORWARD_PTR) {
 		/* The car of this pair is still alive: retrieve its new
 		   tagged pointer and store it in the car slot. */
@@ -602,9 +602,9 @@ deallocate_unused_pages (gc_t* gc)
   ikpcb_t *	pcb         = gc->pcb;
   int		collect_gen = gc->collect_gen;
   uint32_t *	segment_vec = pcb->segment_vector;
-  ikptr		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
-  ikptr		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
-  ikptr		page_idx    = lo_idx;
+  ikptr_t		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
+  ikptr_t		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
+  ikptr_t		page_idx    = lo_idx;
   for (; page_idx<hi_idx; ++page_idx) {
     uint32_t	page_sbits = segment_vec[page_idx];
     if (page_sbits & DEALLOC_MASK) {
@@ -626,9 +626,9 @@ fix_new_pages (gc_t* gc)
 {
   ikpcb_t *	pcb         = gc->pcb;
   uint32_t *	segment_vec = pcb->segment_vector;
-  ikptr		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
-  ikptr		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
-  ikptr		page_idx;
+  ikptr_t		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
+  ikptr_t		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
+  ikptr_t		page_idx;
   for (page_idx=lo_idx; page_idx<hi_idx; ++page_idx) {
     segment_vec[page_idx] &= ~NEW_GEN_MASK;
     /*
@@ -649,10 +649,10 @@ gc_finalize_guardians (gc_t* gc)
     int i;
     for(i=0; i<ls->count; i++) {
       tconc_count++;
-      ikptr p = ls->ptr[i];
-      ikptr tc = IK_REF(p, off_car);
-      ikptr obj = IK_REF(p, off_cdr);
-      ikptr last_pair = IK_REF(tc, off_cdr);
+      ikptr_t p = ls->ptr[i];
+      ikptr_t tc = IK_REF(p, off_car);
+      ikptr_t obj = IK_REF(p, off_cdr);
+      ikptr_t last_pair = IK_REF(tc, off_cdr);
       IK_REF(last_pair, off_car) = obj;
       IK_REF(last_pair, off_cdr) = p;
       IK_REF(p, off_car) = IK_FALSE_OBJECT;
@@ -662,7 +662,7 @@ gc_finalize_guardians (gc_t* gc)
       dirty_vec[IK_PAGE_INDEX(last_pair)] = IK_DIRTY_WORD;
     }
     ik_ptr_page* next = ls->next;
-    ik_munmap((ikptr)ls, IK_PAGESIZE);
+    ik_munmap((ikptr_t)ls, IK_PAGESIZE);
     ls = next;
   }
 }
@@ -672,8 +672,8 @@ gc_finalize_guardians (gc_t* gc)
  ** Auxiliary collection function.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_collect_check (ikptr s_number_of_words, ikpcb* pcb)
+ikptr_t
+ikrt_collect_check (ikptr_t s_number_of_words, ikpcb_t* pcb)
 /* Check  if there  are  S_NUMBER_OF_WORDS bytes  already allocated  and
    available on the heap; return #t if there are, run a GC and return #f
    otherwise.
@@ -683,7 +683,7 @@ ikrt_collect_check (ikptr s_number_of_words, ikpcb* pcb)
    unsigned integer, it represents the number of bytes. */
 {
   ikuword_t	bytes = pcb->allocation_redline - pcb->allocation_pointer;
-  ikptr		rv    = IK_TRUE_OBJECT;
+  ikptr_t		rv    = IK_TRUE_OBJECT;
   if (bytes < s_number_of_words) {
     ik_collect(s_number_of_words, pcb);
     rv = IK_FALSE_OBJECT;
@@ -693,8 +693,8 @@ ikrt_collect_check (ikptr s_number_of_words, ikpcb* pcb)
 
 /* FIXME This function is to be removed at the next boot image rotation.
    (Marco Maggi; Wed Mar 25, 2015) */
-ikptr
-ik_collect_check (ikptr s_number_of_words, ikpcb* pcb)
+ikptr_t
+ik_collect_check (ikptr_t s_number_of_words, ikpcb_t* pcb)
 {
   return ikrt_collect_check (s_number_of_words, pcb);
 }
@@ -707,7 +707,7 @@ ik_collect_check (ikptr s_number_of_words, ikpcb* pcb)
 #define DEBUG_STACK 0
 
 static void
-collect_stack (gc_t* gc, ikptr top, ikptr end)
+collect_stack (gc_t* gc, ikptr_t top, ikptr_t end)
 /* This function is used to scan for live objects both the current stack
  * segment and  the array of  freezed stack frames referenced  by Scheme
  * continuation objects.
@@ -885,7 +885,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      * NOTE The  preprocessor symbol  "disp_call_table_offset" is  a negative
      * integer.
      */
-    ikptr	single_value_rp	= IK_REF(top, 0);
+    ikptr_t	single_value_rp	= IK_REF(top, 0);
     ikuword_t	offset_field	= IK_UNFIX(IK_CALLTABLE_OFFSET(single_value_rp));
     if (DEBUG_STACK) {
       ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, offset_field=%ld",
@@ -898,9 +898,9 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
        containing it and  mark it live as well.   The SINGLE_VALUE_RP in
        the stack frame is updated to reflect the new code object. */
     ikuword_t	code_offset	= offset_field - disp_call_table_offset;
-    ikptr	code_entry	= single_value_rp - code_offset;
-    ikptr	new_code_entry	= gather_live_code_entry(gc, code_entry);
-    ikptr	new_sv_rp	= new_code_entry + code_offset;
+    ikptr_t	code_entry	= single_value_rp - code_offset;
+    ikptr_t	new_code_entry	= gather_live_code_entry(gc, code_entry);
+    ikptr_t	new_sv_rp	= new_code_entry + code_offset;
     IK_REF(top, 0) = new_sv_rp;
     single_value_rp = new_sv_rp;
 
@@ -963,9 +963,9 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
        *   |----------------|                                --
        *      low memory
        */
-      ikptr base;
+      ikptr_t base;
       for (base=top+framesize-wordsize; base > top; base-=wordsize) {
-        ikptr new_obj = gather_live_object(gc,IK_REF(base,0), "frame");
+        ikptr_t new_obj = gather_live_object(gc,IK_REF(base,0), "frame");
         IK_REF(base,0) = new_obj;
       }
     } else {
@@ -980,7 +980,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
       /* Pointer to the livemask bytevector */
       char *	mask = (char*)(ikuword_t)(single_value_rp + disp_call_table_size - bytes_in_mask);
       /* Pointer to the Scheme objects on the stack. */
-      ikptr *	fp   = (ikptr*)(ikuword_t)(top + framesize);
+      ikptr_t *	fp   = (ikptr_t*)(ikuword_t)(top + framesize);
       ikuword_t	i;
       for (i=0; i<bytes_in_mask; i++, fp-=8) {
         uint8_t	m = mask[i];
@@ -1011,7 +1011,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
  ** Collection subroutines: tconcs for hash tables.
  ** ----------------------------------------------------------------- */
 
-static void	add_one_tconc (ikpcb* pcb, ikptr p);
+static void	add_one_tconc (ikpcb_t* pcb, ikptr_t p);
 
 static void
 gc_add_tconcs(gc_t* gc)
@@ -1019,18 +1019,18 @@ gc_add_tconcs(gc_t* gc)
   if (gc->tconc_base == 0) {
     return;
   }
-  ikpcb* pcb = gc->pcb;
+  ikpcb_t* pcb = gc->pcb;
   {
-    ikptr p = gc->tconc_base;
-    ikptr q = gc->tconc_ap;
+    ikptr_t p = gc->tconc_base;
+    ikptr_t q = gc->tconc_ap;
     for (; p<q; p+=pair_size) {
       add_one_tconc(pcb, p);
     }
   }
   ikmemblock* blk = gc->tconc_queue;
   while (blk) {
-    ikptr p = blk->base;
-    ikptr q = p + blk->size;
+    ikptr_t p = blk->base;
+    ikptr_t q = p + blk->size;
     for (; p<q; p+=pair_size) {
       add_one_tconc(pcb, p);
     }
@@ -1040,20 +1040,20 @@ gc_add_tconcs(gc_t* gc)
   }
 }
 static void
-add_one_tconc(ikpcb* pcb, ikptr p)
+add_one_tconc(ikpcb_t* pcb, ikptr_t p)
 {
-  ikptr tcbucket = IK_REF(p,0);
-  ikptr tc = IK_REF(tcbucket, off_tcbucket_tconc);
+  ikptr_t tcbucket = IK_REF(p,0);
+  ikptr_t tc = IK_REF(tcbucket, off_tcbucket_tconc);
   assert(IK_TAGOF(tc) == pair_tag);
-  ikptr d = IK_REF(tc, off_cdr);
+  ikptr_t d = IK_REF(tc, off_cdr);
   assert(IK_TAGOF(d) == pair_tag);
-  ikptr new_pair = p | pair_tag;
+  ikptr_t new_pair = p | pair_tag;
   IK_REF(d, off_car) = tcbucket;
   IK_REF(d, off_cdr) = new_pair;
   IK_REF(new_pair, off_car) = IK_FALSE_OBJECT;
   IK_REF(new_pair, off_cdr) = IK_FALSE_OBJECT;
   IK_REF(tc, off_cdr) = new_pair;
-  IK_REF(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
+  IK_REF(tcbucket, -vector_tag) = (ikptr_t)(tcbucket_size - wordsize);
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
 }
@@ -1063,8 +1063,8 @@ add_one_tconc(ikpcb* pcb, ikptr p)
  ** Collection subroutines: guardians handling.
  ** ----------------------------------------------------------------- */
 
-static ik_ptr_page *	move_tconc (ikptr tc, ik_ptr_page* ls);
-static inline int	is_live (ikptr x, gc_t* gc);
+static ik_ptr_page *	move_tconc (ikptr_t tc, ik_ptr_page* ls);
+static inline int	is_live (ikptr_t x, gc_t* gc);
 static inline int	next_gen (int i);
 
 static void
@@ -1083,11 +1083,11 @@ handle_guardians (gc_t* gc)
       int	i;
       /* Scan the words in this page. */
       for(i=0; i<prot_list->count; i++) {
-        ikptr	p   = prot_list->ptr[i];
-        ikptr	tc  = IK_CAR(p);
-        ikptr	obj = IK_CDR(p);
+        ikptr_t	p   = prot_list->ptr[i];
+        ikptr_t	tc  = IK_CAR(p);
+        ikptr_t	obj = IK_CDR(p);
         if (IK_FORWARD_PTR == tc) {
-          ikptr np = IK_CDR(p);
+          ikptr_t np = IK_CDR(p);
           tc  = IK_CAR(np);
           obj = IK_CDR(np);
         }
@@ -1098,7 +1098,7 @@ handle_guardians (gc_t* gc)
       }
       { /* Deallocate this node in the PROT_LIST linked list. */
 	ik_ptr_page *	next = prot_list->next;
-	ik_munmap((ikptr)prot_list, IK_PAGESIZE);
+	ik_munmap((ikptr_t)prot_list, IK_PAGESIZE);
 	prot_list = next;
       }
     }
@@ -1118,10 +1118,10 @@ handle_guardians (gc_t* gc)
       while (ls) {
 	int i;
 	for (i=0; i<ls->count; i++) {
-	  ikptr p = ls->ptr[i];
-	  ikptr tc = IK_REF(p, off_car);
+	  ikptr_t p = ls->ptr[i];
+	  ikptr_t tc = IK_REF(p, off_car);
 	  if (tc == IK_FORWARD_PTR) {
-	    ikptr np = IK_REF(p, off_cdr);
+	    ikptr_t np = IK_REF(p, off_cdr);
 	    tc = IK_REF(np, off_car);
 	  }
 	  if (is_live(tc, gc)) {
@@ -1131,7 +1131,7 @@ handle_guardians (gc_t* gc)
 	  }
 	}
 	ik_ptr_page* next = ls->next;
-	ik_munmap((ikptr)ls, IK_PAGESIZE);
+	ik_munmap((ikptr_t)ls, IK_PAGESIZE);
 	ls = next;
       }
       if (final_list == NULL) {
@@ -1141,11 +1141,11 @@ handle_guardians (gc_t* gc)
 	while (ls) {
 	  int i;
 	  for (i=0; i<ls->count; i++) {
-	    ikptr p = ls->ptr[i];
+	    ikptr_t p = ls->ptr[i];
 	    gc->forward_list = move_tconc(gather_live_object(gc, p, "guardian"), gc->forward_list);
 	  }
 	  ik_ptr_page* next = ls->next;
-	  ik_munmap((ikptr)ls, IK_PAGESIZE);
+	  ik_munmap((ikptr_t)ls, IK_PAGESIZE);
 	  ls = next;
 	}
 	collect_loop(gc);
@@ -1156,7 +1156,7 @@ handle_guardians (gc_t* gc)
      are also dead, deallocate. */
   while (pend_final_list) {
     ik_ptr_page* next = pend_final_list->next;
-    ik_munmap((ikptr)pend_final_list, IK_PAGESIZE);
+    ik_munmap((ikptr_t)pend_final_list, IK_PAGESIZE);
     pend_final_list = next;
   }
   /* pend_hold_list pairs with live tconcs are moved to
@@ -1165,10 +1165,10 @@ handle_guardians (gc_t* gc)
   while(pend_hold_list) {
     int i;
     for(i=0; i<pend_hold_list->count; i++) {
-      ikptr p = pend_hold_list->ptr[i];
-      ikptr tc = IK_REF(p, off_car);
+      ikptr_t p = pend_hold_list->ptr[i];
+      ikptr_t tc = IK_REF(p, off_car);
       if (tc == IK_FORWARD_PTR) {
-        ikptr np = IK_REF(p, off_cdr);
+        ikptr_t np = IK_REF(p, off_cdr);
         tc = IK_REF(np, off_car);
       }
       if (is_live(tc, gc)) {
@@ -1176,14 +1176,14 @@ handle_guardians (gc_t* gc)
       }
     }
     ik_ptr_page* next = pend_hold_list->next;
-    ik_munmap((ikptr)pend_hold_list, IK_PAGESIZE);
+    ik_munmap((ikptr_t)pend_hold_list, IK_PAGESIZE);
     pend_hold_list = next;
   }
   collect_loop(gc);
   pcb->protected_list[next_gen(gc->collect_gen)] = target;
 }
 static inline int
-is_live (ikptr x, gc_t* gc)
+is_live (ikptr_t x, gc_t* gc)
 {
   int		tag;
   int		gen;
@@ -1203,7 +1203,7 @@ next_gen (int i)
   return ((i == (IK_GC_GENERATION_COUNT-1))? i : (i+1));
 }
 static ik_ptr_page *
-move_tconc (ikptr tc, ik_ptr_page* ls)
+move_tconc (ikptr_t tc, ik_ptr_page* ls)
 /* Store TC in the  first node of the linked list LS.   If LS is NULL or
    the first node of  LS is full: allocate a new node  and prepend it to
    LS; then store TC in it.  Return the, possibly new, first node of the
@@ -1225,23 +1225,23 @@ move_tconc (ikptr tc, ik_ptr_page* ls)
  ** ----------------------------------------------------------------- */
 
 /* Prototypes for subroutines of "gather_live_object()". */
-static void		gather_live_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
-static inline void	gc_tconc_push		(gc_t* gc, ikptr tcbucket);
+static void		gather_live_list	(gc_t* gc, unsigned segment_bits, ikptr_t X, ikptr_t* loc);
+static inline void	gc_tconc_push		(gc_t* gc, ikptr_t tcbucket);
 
-static inline ikptr	gc_alloc_new_data	(ikuword_t aligned_size, gc_t* gc);
-static inline ikptr	gc_alloc_new_ptr	(ikuword_t aligned_size, gc_t* gc);
-static inline ikptr	gc_alloc_new_large_ptr	(ikuword_t number_of_bytes, gc_t* gc);
-static inline void	enqueue_large_ptr	(ikptr mem, ikuword_t aligned_size, gc_t* gc);
-static inline ikptr	gc_alloc_new_symbol_record (gc_t* gc);
-static inline ikptr	gc_alloc_new_pair	(gc_t* gc);
-static inline ikptr	gc_alloc_new_weak_pair	(gc_t* gc);
-static inline ikptr	gc_alloc_new_code	(ikuword_t aligned_size, gc_t* gc);
+static inline ikptr_t	gc_alloc_new_data	(ikuword_t aligned_size, gc_t* gc);
+static inline ikptr_t	gc_alloc_new_ptr	(ikuword_t aligned_size, gc_t* gc);
+static inline ikptr_t	gc_alloc_new_large_ptr	(ikuword_t number_of_bytes, gc_t* gc);
+static inline void	enqueue_large_ptr	(ikptr_t mem, ikuword_t aligned_size, gc_t* gc);
+static inline ikptr_t	gc_alloc_new_symbol_record (gc_t* gc);
+static inline ikptr_t	gc_alloc_new_pair	(gc_t* gc);
+static inline ikptr_t	gc_alloc_new_weak_pair	(gc_t* gc);
+static inline ikptr_t	gc_alloc_new_code	(ikuword_t aligned_size, gc_t* gc);
 
-static ikptr
+static ikptr_t
 #if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
-gather_live_object_proc (gc_t* gc, ikptr X, char* caller IK_UNUSED)
+gather_live_object_proc (gc_t* gc, ikptr_t X, char* caller IK_UNUSED)
 #else
-gather_live_object_proc (gc_t* gc, ikptr X)
+gather_live_object_proc (gc_t* gc, ikptr_t X)
 #endif
 /* Vicare implements a moving and compacting garbage collector; whenever
  * the collector, while scanning memory pages from the GC roots, finds a
@@ -1290,7 +1290,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
  */
 {
   int		tag;		/* tag bits of X */
-  ikptr		first_word;	/* first word in the block referenced by X */
+  ikptr_t		first_word;	/* first word in the block referenced by X */
   uint32_t	page_sbits;	/* status bits for memory page holding X */
 
   /* Fixnums and other  immediate objects (self contained  in the single
@@ -1331,7 +1331,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   case pair_tag: {
     /* Pair object,  either weak or strong.   It goes in the  pairs meta
        page. */
-    ikptr Y;
+    ikptr_t Y;
     gather_live_list(gc, page_sbits, X, &Y);
 #if ACCOUNTING
     pair_count++;
@@ -1353,15 +1353,15 @@ gather_live_object_proc (gc_t* gc, ikptr X)
        represents the  number bytes used  in the closure object  to hold
        the actual free variables' values (one machine word for each free
        variable). */
-    ikptr s_num_of_freevars = IK_REF(first_word, disp_code_freevars - disp_code_data);
-    ikptr size              = disp_closure_data + s_num_of_freevars;
+    ikptr_t s_num_of_freevars = IK_REF(first_word, disp_code_freevars - disp_code_data);
+    ikptr_t size              = disp_closure_data + s_num_of_freevars;
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     if (size > 1024) {
       ik_debug_message("large closure size=0x%016lx", (long)size);
     }
 #endif
-    ikptr asize = IK_ALIGN(size);
-    ikptr Y     = gc_alloc_new_ptr(asize, gc) | closure_tag;
+    ikptr_t asize = IK_ALIGN(size);
+    ikptr_t Y     = gc_alloc_new_ptr(asize, gc) | closure_tag;
     IK_REF(Y, asize - closure_tag - wordsize) = 0;
     memcpy((char*)(ikuword_t)(Y - closure_tag),
            (char*)(ikuword_t)(X - closure_tag),
@@ -1387,7 +1387,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
     case symbol_tag: {
       /* Symbol object.  It goes in the symbols meta page. */
-      ikptr	Y = gc_alloc_new_symbol_record(gc) | record_tag;
+      ikptr_t	Y = gc_alloc_new_symbol_record(gc) | record_tag;
       IK_REF(Y, off_symbol_record_tag)	   = symbol_tag;
       IK_REF(Y, off_symbol_record_string)  = IK_REF(X, off_symbol_record_string);
       IK_REF(Y, off_symbol_record_ustring) = IK_REF(X, off_symbol_record_ustring);
@@ -1404,8 +1404,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
     case code_tag: {
       /* Code object.  It goes in the code meta page. */
-      ikptr	entry     = X + off_code_data;
-      ikptr	new_entry = gather_live_code_entry(gc, entry);
+      ikptr_t	entry     = X + off_code_data;
+      ikptr_t	new_entry = gather_live_code_entry(gc, entry);
       return new_entry - off_code_data;
     }
 
@@ -1423,19 +1423,19 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	 split and  split until they  reference one stack frame  and the
 	 data structure representing a continuation is recycled.  (Marco
 	 Maggi; Tue Dec 17, 2013) */
-      ikptr	top  = IK_REF(X, off_continuation_top);
-      ikptr	size = IK_REF(X, off_continuation_size);
+      ikptr_t	top  = IK_REF(X, off_continuation_top);
+      ikptr_t	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       if (size > IK_PAGESIZE)
         ik_debug_message("large cont size=0x%016lx", size);
 #endif
-      ikptr	next = IK_REF(X, off_continuation_next);
-      ikptr	Y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
+      ikptr_t	next = IK_REF(X, off_continuation_next);
+      ikptr_t	Y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
       /* Process the  old data area  BEFORE scanning the  current Scheme
 	 stack. */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
-      ikptr	new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
+      ikptr_t	new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
       memcpy((uint8_t*)(ikuword_t)new_top, (uint8_t*)(ikuword_t)top, size);
       collect_stack(gc, new_top, new_top + size);
       IK_REF(Y, off_continuation_tag)  = continuation_tag;
@@ -1458,9 +1458,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	 immutable object with a single  field holding a tagged pointer.
 	 Notice  that  we  gather  the next  continuation  object  here,
 	 because "collect_loop()" does not scan data meta pages. */
-      ikptr	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
-      ikptr	top  = IK_REF(X, off_system_continuation_top);
-      ikptr	next = IK_REF(X, off_system_continuation_next);
+      ikptr_t	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
+      ikptr_t	top  = IK_REF(X, off_system_continuation_top);
+      ikptr_t	next = IK_REF(X, off_system_continuation_next);
       /* First     process     the     old     memory,     then     call
 	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
@@ -1473,7 +1473,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
     case flonum_tag: {
       /* Flonum object.  It goes in the data meta page. */
-      ikptr	Y = gc_alloc_new_data(flonum_size, gc) | vector_tag;
+      ikptr_t	Y = gc_alloc_new_data(flonum_size, gc) | vector_tag;
       IK_REF(Y,          - vector_tag) = flonum_tag;
       IK_FLONUM_DATA(Y)                = IK_FLONUM_DATA(X);
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
@@ -1491,9 +1491,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
          they  do  not  further   reference  other  Scheme  objects;  by
          gathering the numerator and denominator here we spare some work
          to "collect_loop()".  (Marco Maggi; Tue Dec 17, 2013) */
-      ikptr Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
-      ikptr num = IK_REF(X, off_ratnum_num);
-      ikptr den = IK_REF(X, off_ratnum_den);
+      ikptr_t Y   = gc_alloc_new_data(ratnum_size, gc) | vector_tag;
+      ikptr_t num = IK_REF(X, off_ratnum_num);
+      ikptr_t den = IK_REF(X, off_ratnum_den);
       /* First     process     the     old     memory,     then     call
 	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
@@ -1515,9 +1515,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
          depth is  small; by gathering the  real and imag parts  here we
          spare some work to "collect_loop()".  (Marco Maggi; Tue Dec 17,
          2013) */
-      ikptr Y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
-      ikptr rl = IK_REF(X, off_compnum_real);
-      ikptr im = IK_REF(X, off_compnum_imag);
+      ikptr_t Y  = gc_alloc_new_data(compnum_size, gc) | vector_tag;
+      ikptr_t rl = IK_REF(X, off_compnum_real);
+      ikptr_t im = IK_REF(X, off_compnum_imag);
       /* First     process     the     old     memory,     then     call
 	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
@@ -1538,9 +1538,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
          they  do  not  further   reference  other  Scheme  objects;  by
          gathering the  real and imag parts  here we spare some  work to
          "collect_loop()".  (Marco Maggi; Tue Dec 17, 2013) */
-      ikptr Y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
-      ikptr rl = IK_REF(X, off_cflonum_real);
-      ikptr im = IK_REF(X, off_cflonum_imag);
+      ikptr_t Y  = gc_alloc_new_data(cflonum_size, gc) | vector_tag;
+      ikptr_t rl = IK_REF(X, off_cflonum_real);
+      ikptr_t im = IK_REF(X, off_cflonum_imag);
       /* First     process     the     old     memory,     then     call
 	 "gather_live_object()". */
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
@@ -1553,7 +1553,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
     case pointer_tag: {
       /* Foreign pointer object.  It goes in the data meta page. */
-      ikptr	Y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
+      ikptr_t	Y = gc_alloc_new_data(pointer_size, gc) | vector_tag;
       IK_REF(Y,          - vector_tag) = pointer_tag;
       IK_REF(Y, wordsize - vector_tag) = IK_REF(X, wordsize - vector_tag);
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
@@ -1571,9 +1571,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	   they are in such a number that multiplying the fixnum's value
 	   by the wordsize is  equivalent to right-shifting the fixnum's
 	   value by the fixnum tag. */
-	ikptr	s_length = first_word;
-	ikptr	nbytes   = s_length + disp_vector_data; /* not aligned */
-	ikptr	memreq   = IK_ALIGN(nbytes);
+	ikptr_t	s_length = first_word;
+	ikptr_t	nbytes   = s_length + disp_vector_data; /* not aligned */
+	ikptr_t	memreq   = IK_ALIGN(nbytes);
 	if (memreq >= IK_PAGESIZE) { /* big vector */
 	  if (LARGE_OBJECT_TAG == (page_sbits & LARGE_OBJECT_MASK)) {
 	    /* Big  vector  already stored  in  pages  marked as  "large
@@ -1587,7 +1587,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	       object". */
 	    /* "gc_alloc_new_large_ptr()" wants the real number of bytes
 	       as argument, not the aligned size. */
-	    ikptr Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
+	    ikptr_t Y = gc_alloc_new_large_ptr(nbytes, gc) | vector_tag;
 	    IK_REF(Y, off_vector_length) = first_word;
 	    /* Set to  the fixum  zero the  last word  in the  data area
 	       reserved  for  the  vector.   This is  to  avoid  leaving
@@ -1605,7 +1605,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	  }
 	} else { /* small vector */
 	  /* "gc_alloc_new_ptr()" wants an aligned size as argument. */
-	  ikptr Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
+	  ikptr_t Y = gc_alloc_new_ptr(memreq, gc) | vector_tag;
 	  IK_REF(Y, off_vector_length) = first_word;
 	  /* Set  to the  fixum  zero the  last word  in  the data  area
 	     reserved  for  the  vector.    This  is  to  avoid  leaving
@@ -1657,9 +1657,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	 * the  number  of  bytes  needed  to store  the  fields  of  an
 	 * instance.
 	 */
-	ikptr		s_rtd    = first_word;
-	ikptr		s_length = IK_REF(s_rtd, off_rtd_length);
-	ikptr		Y;
+	ikptr_t		s_rtd    = first_word;
+	ikptr_t		s_length = IK_REF(s_rtd, off_rtd_length);
+	ikptr_t		Y;
 	ikuword_t	requested_size = disp_record_data + s_length;
 	ikuword_t	aligned_size   = IK_ALIGN(requested_size);
 	Y = gc_alloc_new_ptr(aligned_size, gc) | record_tag;
@@ -1683,9 +1683,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	 structs is derived  from the original Ikarus code.   It is more
 	 complicated, but more verified.  I am keeping it here as future
 	   reference.  (Marco Maggi; Wed Dec 18, 2013) */
-	ikptr		s_rtd    = first_word;
-	ikptr		s_length = IK_REF(s_rtd, off_rtd_length);
-	ikptr		Y;
+	ikptr_t		s_rtd    = first_word;
+	ikptr_t		s_length = IK_REF(s_rtd, off_rtd_length);
+	ikptr_t		Y;
 	if (s_length & ((1<<IK_ALIGN_SHIFT)-1)) {
 	  // fprintf(stderr, "%lx align size %ld\n", X, IK_UNFIX(s_length));
 	  /* The number of  fields is odd, which means  that the number of
@@ -1697,9 +1697,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	  Y = gc_alloc_new_ptr(s_length+disp_record_data, gc) | vector_tag;
 	  IK_REF(Y, off_record_rtd) = s_rtd;
 	  {
-	    ikptr i;
-	    ikptr dst = Y + off_record_data; /* DST is untagged */
-	    ikptr src = X + off_record_data; /* SRC is untagged */
+	    ikptr_t i;
+	    ikptr_t dst = Y + off_record_data; /* DST is untagged */
+	    ikptr_t src = X + off_record_data; /* SRC is untagged */
 	    IK_REF(dst, 0) = IK_REF(src, 0);
 	    for (i=wordsize; i<s_length; i+=(2*wordsize)) {
 	      IK_REF(dst, i)          = IK_REF(src, i);
@@ -1716,9 +1716,9 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	  Y = gc_alloc_new_ptr(s_length+(2*wordsize), gc) | vector_tag;
 	  IK_REF(Y, off_record_rtd) = s_rtd;
 	  {
-	    ikptr i;
-	    ikptr dst = Y + off_record_data; /* DST is untagged */
-	    ikptr src = X + off_record_data; /* SRC is untagged */
+	    ikptr_t i;
+	    ikptr_t dst = Y + off_record_data; /* DST is untagged */
+	    ikptr_t src = X + off_record_data; /* SRC is untagged */
 	    for (i=0; i<s_length; i+=(2*wordsize)) {
 	      IK_REF(dst, i)          = IK_REF(src, i);
 	      IK_REF(dst, i+wordsize) = IK_REF(src, i+wordsize);
@@ -1735,8 +1735,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	/* tcbucket object.  It goes in the pointers meta page.
 
 	   The first word of a tcbucket is a tagged pointer to pair. */
-	ikptr	Y   = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
-	ikptr	key = IK_REF(X, off_tcbucket_key);
+	ikptr_t	Y   = gc_alloc_new_ptr(tcbucket_size, gc) | vector_tag;
+	ikptr_t	key = IK_REF(X, off_tcbucket_key);
 	IK_REF(Y, off_tcbucket_tconc) = first_word;
 	IK_REF(Y, off_tcbucket_key)  = key;
 	IK_REF(Y, off_tcbucket_val)  = IK_REF(X, off_tcbucket_val);
@@ -1754,7 +1754,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       }
       else if (port_tag == (((ikuword_t)first_word) & port_mask)) {
 	/* Port object.  It goes in the pointers meta page. */
-	ikptr		Y = gc_alloc_new_ptr(port_size, gc) | vector_tag;
+	ikptr_t		Y = gc_alloc_new_ptr(port_size, gc) | vector_tag;
 	ikuword_t	i;
 	IK_REF(Y, -vector_tag) = first_word;
 	for (i=wordsize; i<port_size; i+=wordsize) {
@@ -1768,7 +1768,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	/* Bignum object.  It goes in the data meta page. */
 	ikuword_t	len    = ((ikuword_t)first_word) >> bignum_nlimbs_shift;
 	ikuword_t	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
-	ikptr		Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
+	ikptr_t		Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
 	memcpy((uint8_t*)(ikuword_t)(Y - vector_tag),
 	       (uint8_t*)(ikuword_t)(X - vector_tag),
 	       memreq);
@@ -1787,7 +1787,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
     if (IK_IS_FIXNUM(first_word)) {
       ikuword_t	len    = IK_UNFIX(first_word);
       ikuword_t	memreq = IK_ALIGN(len * IK_STRING_CHAR_SIZE + disp_string_data);
-      ikptr	Y      = gc_alloc_new_data(memreq, gc) | string_tag;
+      ikptr_t	Y      = gc_alloc_new_data(memreq, gc) | string_tag;
       IK_REF(Y, off_string_length) = first_word;
       memcpy((uint8_t*)(ikuword_t)(Y + off_string_data),
              (uint8_t*)(ikuword_t)(X + off_string_data),
@@ -1805,7 +1805,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
   case bytevector_tag: {
     ikuword_t	len    = IK_UNFIX(first_word);
     ikuword_t	memreq = IK_ALIGN(len + disp_bytevector_data + 1);
-    ikptr	Y = gc_alloc_new_data(memreq, gc) | bytevector_tag;
+    ikptr_t	Y = gc_alloc_new_data(memreq, gc) | bytevector_tag;
     IK_REF(Y, off_bytevector_length) = first_word;
     memcpy((uint8_t*)(ikuword_t)(Y + off_bytevector_data),
            (uint8_t*)(ikuword_t)(X + off_bytevector_data),
@@ -1825,7 +1825,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
  ** ----------------------------------------------------------------- */
 
 static void
-gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr X, ikptr* loc)
+gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr_t X, ikptr_t* loc)
 /* Move the spine of the proper or improper list object X (whose head is
    a pair) to a new location and store in LOC a new tagged pointer which
    must  replace  every  occurrence  of X.   See  the  documentation  of
@@ -1847,10 +1847,10 @@ gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr X, ikptr* loc)
 {
   int collect_gen = gc->collect_gen;
   for (;;) {
-    ikptr first_word      = IK_CAR(X);
-    ikptr second_word     = IK_CDR(X);
+    ikptr_t first_word      = IK_CAR(X);
+    ikptr_t second_word     = IK_CDR(X);
     int   second_word_tag = IK_TAGOF(second_word);
-    ikptr Y;
+    ikptr_t Y;
     if ((page_sbits & TYPE_MASK) != WEAK_PAIRS_TYPE)
       Y = gc_alloc_new_pair(gc)      | pair_tag;
     else
@@ -1882,7 +1882,7 @@ gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr X, ikptr* loc)
 	     it in  the cdr slot of  Y.  Notice that the  next iteration
 	     will use the value of PAGE_SBITS we have set above. */
           X   = second_word;
-          loc = (ikptr*)(ikuword_t)(Y + off_cdr);
+          loc = (ikptr_t*)(ikuword_t)(Y + off_cdr);
         }
       }
     }
@@ -1927,15 +1927,15 @@ gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr X, ikptr* loc)
 
 static int alloc_code_count = 0;
 
-static ikptr
-gather_live_code_entry (gc_t* gc, ikptr entry)
+static ikptr_t
+gather_live_code_entry (gc_t* gc, ikptr_t entry)
 /* Move the data  area of the code  object referenced by ENTRY  to a new
    memory location and return a  new untagged pointer which must replace
    every occurrence of  ENTRY in the memory used by  the Scheme program.
    See  the documentation  of "gather_live_object_proc()"  for the  full
    details. */
 {
-  ikptr		X = entry - disp_code_data; /* UNtagged pointer to code object */
+  ikptr_t		X = entry - disp_code_data; /* UNtagged pointer to code object */
   ikuword_t	page_idx;
   /* If X  has already been moved  in a previous call  to this function:
      the first  word in the data  area is IK_FORWARD_PTR and  the second
@@ -1961,11 +1961,11 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
   /* The total number of allocated bytes for this code object. */
   ikuword_t	required_mem	= IK_ALIGN(code_object_size);
   /* The relocation vector. */
-  ikptr		s_reloc_vec	= IK_REF(X, disp_code_reloc_vector);
+  ikptr_t		s_reloc_vec	= IK_REF(X, disp_code_reloc_vector);
   /* A fixnum representing the number of free variables. */
-  ikptr		s_freevars	= IK_REF(X, disp_code_freevars);
+  ikptr_t		s_freevars	= IK_REF(X, disp_code_freevars);
   /* An object that annotates the code object. */
-  ikptr		s_annotation	= IK_REF(X, disp_code_annotation);
+  ikptr_t		s_annotation	= IK_REF(X, disp_code_annotation);
   if (required_mem >= IK_PAGESIZE) {
     /* This is a "large" code object and we do *not* move it around.  */
     { /* Tag all  the pages  in the  data area of  the code  object: the
@@ -1996,7 +1996,7 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
     /* Only one memory page allocated.  The object is moved like all the
        others.   "gc_alloc_new_code()" registers  the  data  area to  be
        scanned by the function "collect_loop()". */
-    ikptr	Y = gc_alloc_new_code(required_mem, gc); /* UNtagged pointer */
+    ikptr_t	Y = gc_alloc_new_code(required_mem, gc); /* UNtagged pointer */
     IK_REF(Y, disp_code_tag)		= code_tag;
     IK_REF(Y, disp_code_code_size)	= IK_FIX(binary_code_size);
     IK_REF(Y, disp_code_reloc_vector)	= s_reloc_vec;
@@ -2017,13 +2017,13 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
  ** Keeping alive objects: tconcs for hash tables.
  ** ----------------------------------------------------------------- */
 
-static void	gc_tconc_push_extending (gc_t* gc, ikptr tcbucket);
+static void	gc_tconc_push_extending (gc_t* gc, ikptr_t tcbucket);
 
 static inline void
-gc_tconc_push (gc_t* gc, ikptr tcbucket)
+gc_tconc_push (gc_t* gc, ikptr_t tcbucket)
 {
-  ikptr ap  = gc->tconc_ap;
-  ikptr nap = ap + pair_size;
+  ikptr_t ap  = gc->tconc_ap;
+  ikptr_t nap = ap + pair_size;
   if (nap > gc->tconc_ep) {
     gc_tconc_push_extending(gc, tcbucket);
   } else {
@@ -2035,7 +2035,7 @@ gc_tconc_push (gc_t* gc, ikptr tcbucket)
   }
 }
 static void
-gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
+gc_tconc_push_extending (gc_t* gc, ikptr_t tcbucket)
 {
   if (gc->tconc_base) {
     /* Push  a new  node in  the linked  list "pcb->tconc_queue".   Save
@@ -2049,7 +2049,7 @@ gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
   /* Allocate a new page for tconc  pairs; store references to it in the
      PCB. */
   {
-    ikptr	mem;
+    ikptr_t	mem;
     mem = ik_mmap_typed(IK_PAGESIZE, META_MT[meta_ptrs] | gc->collect_gen_tag, gc->pcb);
     bzero((char*)mem, IK_PAGESIZE);
     /* gc statistics */
@@ -2098,10 +2098,10 @@ gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
  * such objects can be scanned by "collect_loop()".
  */
 
-static inline ikptr	meta_alloc           (ikuword_t aligned_size, gc_t* gc, int meta_id);
-static ikptr		meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id);
+static inline ikptr_t	meta_alloc           (ikuword_t aligned_size, gc_t* gc, int meta_id);
+static ikptr_t		meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id);
 
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_ptr (ikuword_t aligned_size, gc_t* gc)
 /* Reserve enough room in the current  meta page for pointers to hold an
    object  of ALIGNED_SIZE  bytes.  Return  an untagged  pointer to  the
@@ -2110,7 +2110,7 @@ gc_alloc_new_ptr (ikuword_t aligned_size, gc_t* gc)
   assert(aligned_size == IK_ALIGN(aligned_size));
   return meta_alloc(aligned_size, gc, meta_ptrs);
 }
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_large_ptr (ikuword_t number_of_bytes, gc_t* gc)
 /* Alloc memory pages  in which a large object will  be stored; return a
    pointer to  the first allocated  page.  The  pages are marked  in the
@@ -2119,7 +2119,7 @@ gc_alloc_new_large_ptr (ikuword_t number_of_bytes, gc_t* gc)
    the queues of objects to be scanned later by "collect_loop()". */
 {
   ikuword_t	memreq;
-  ikptr		mem;
+  ikptr_t		mem;
   memreq = IK_ALIGN_TO_NEXT_PAGE(number_of_bytes);
   mem    = ik_mmap_typed(memreq, POINTERS_MT | LARGE_OBJECT_TAG | gc->collect_gen_tag, gc->pcb);
   /* Reset to zero  the portion of memory  that will not be  used by the
@@ -2142,7 +2142,7 @@ gc_alloc_new_large_ptr (ikuword_t number_of_bytes, gc_t* gc)
   return mem;
 }
 static inline void
-enqueue_large_ptr (ikptr mem, ikuword_t aligned_size, gc_t* gc)
+enqueue_large_ptr (ikptr_t mem, ikuword_t aligned_size, gc_t* gc)
 /* Assume that "mem" references a large object that is already stored in
    memory pages  marked as "large  object".  Such objects are  not moved
    around by the garbage collector, rather  we register the data area in
@@ -2162,7 +2162,7 @@ enqueue_large_ptr (ikptr mem, ikuword_t aligned_size, gc_t* gc)
     gc->queues[meta_ptrs] = qu;
   }
 }
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_symbol_record (gc_t* gc)
 /* Reserve enough  room in the current  meta page for symbols  to hold a
    Scheme symbol's record.  Return an untagged pointer to the first word
@@ -2171,7 +2171,7 @@ gc_alloc_new_symbol_record (gc_t* gc)
   assert(symbol_record_size == IK_ALIGN(symbol_record_size));
   return meta_alloc(symbol_record_size, gc, meta_symbol);
 }
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_pair(gc_t* gc)
 /* Reserve enough  room in  the current  meta page for  pairs to  hold a
    Scheme pair object.  Return an untagged  pointer to the first word of
@@ -2179,7 +2179,7 @@ gc_alloc_new_pair(gc_t* gc)
 {
   return meta_alloc(pair_size, gc, meta_pair);
 }
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_weak_pair(gc_t* gc)
 /* Reserve enough room in the current meta page for weak pairs to hold a
    Scheme weak  pair object.   Return an untagged  pointer to  the first
@@ -2192,13 +2192,13 @@ gc_alloc_new_weak_pair(gc_t* gc)
    segments vector. */
 {
   meta_t *	meta = &gc->meta[meta_weak];
-  ikptr		ap  = meta->ap;		/* meta page alloc pointer */
-  ikptr		ep  = meta->ep;		/* meta page end pointer */
-  ikptr		nap = ap + pair_size;	/* meta page new alloc pointer */
+  ikptr_t		ap  = meta->ap;		/* meta page alloc pointer */
+  ikptr_t		ep  = meta->ep;		/* meta page end pointer */
+  ikptr_t		nap = ap + pair_size;	/* meta page new alloc pointer */
   if (nap > ep) {
     /* There is not  enough room, in the current meta  page, for another
        pair; we have to allocate a new page. */
-    ikptr mem = ik_mmap_typed(IK_PAGESIZE, META_MT[meta_weak] | gc->collect_gen_tag, gc->pcb);
+    ikptr_t mem = ik_mmap_typed(IK_PAGESIZE, META_MT[meta_weak] | gc->collect_gen_tag, gc->pcb);
     /* Retake   the  segments   vector  because   memory  allocated   by
        "ik_mmap_typed()" might have caused  the reallocation of the page
        vectors. */
@@ -2217,7 +2217,7 @@ gc_alloc_new_weak_pair(gc_t* gc)
     return ap;
   }
 }
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_data (ikuword_t aligned_size, gc_t* gc)
 /* Reserve enough room in  the current meta page for raw  data to hold a
    data area of  ALIGNED_SIZE bytes.  Return an untagged  pointer to the
@@ -2226,7 +2226,7 @@ gc_alloc_new_data (ikuword_t aligned_size, gc_t* gc)
   assert(aligned_size == IK_ALIGN(aligned_size));
   return meta_alloc(aligned_size, gc, meta_data);
 }
-static inline ikptr
+static inline ikptr_t
 gc_alloc_new_code (ikuword_t aligned_size, gc_t* gc)
 /* Alloc memory  pages in which a  code object will be  stored; return a
    pointer  to the  first allocated  page.   The object's  data area  is
@@ -2238,7 +2238,7 @@ gc_alloc_new_code (ikuword_t aligned_size, gc_t* gc)
     return meta_alloc(aligned_size, gc, meta_code);
   } else { /* More than one page needed. */
     ikuword_t	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
-    ikptr	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
+    ikptr_t	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
     /* Reset to  zero the portion of  allocated memory that will  not be
        used by the code object. */
     bzero((char*)(ikuword_t)(mem+aligned_size), memreq-aligned_size);
@@ -2259,7 +2259,7 @@ gc_alloc_new_code (ikuword_t aligned_size, gc_t* gc)
 
 /* ------------------------------------------------------------------ */
 
-static inline ikptr
+static inline ikptr_t
 meta_alloc (ikuword_t aligned_size, gc_t* gc, int meta_id)
 /* Reserve enough room in the current meta page of type "meta_id" for an
    object of  size ALIGNED_SIZE  bytes.  Return a  pointer to  the first
@@ -2269,9 +2269,9 @@ meta_alloc (ikuword_t aligned_size, gc_t* gc, int meta_id)
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   meta_t *	meta = &gc->meta[meta_id];
-  ikptr		ap   = meta->ap;		/* allocation pointer */
-  ikptr		ep   = meta->ep;		/* end pointer */
-  ikptr		nap  = ap + aligned_size;	/* new alloc pointer */
+  ikptr_t		ap   = meta->ap;		/* allocation pointer */
+  ikptr_t		ep   = meta->ep;		/* end pointer */
+  ikptr_t		nap  = ap + aligned_size;	/* new alloc pointer */
   if (nap > ep) {
     /* Not enough room. */
     return meta_alloc_extending(aligned_size, gc, meta_id);
@@ -2281,7 +2281,7 @@ meta_alloc (ikuword_t aligned_size, gc_t* gc, int meta_id)
     return ap;
   }
 }
-static ikptr
+static ikptr_t
 meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
 /* Allocate one or move new meta  pages of type "meta_id", so that there
    is enough  room to hold  the data area  of an object  of ALIGNED_SIZE
@@ -2297,7 +2297,7 @@ meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
   };
   ikuword_t	mapsize;
   meta_t *	meta;
-  ikptr		mem;
+  ikptr_t		mem;
   mapsize = IK_ALIGN_TO_NEXT_PAGE(aligned_size);
   if (mapsize < EXTENSION_AMOUNT[meta_id]) {
     mapsize = EXTENSION_AMOUNT[meta_id];
@@ -2306,9 +2306,9 @@ meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
   /* If the  old meta pages are  not of type  raw data: store it  in the
      queues to be scanned by "collect_loop()". */
   if ((meta_id != meta_data) && meta->base) {
-    ikptr	aq = meta->aq;
-    ikptr	ap = meta->ap;
-    ikptr	ep = meta->ep;
+    ikptr_t	aq = meta->aq;
+    ikptr_t	ap = meta->ap;
+    ikptr_t	ep = meta->ep;
     { /* Register the old meta pages  to be scanned by "collect_loop()";
 	 only the portion actually used needs to be registered. */
       qupages_t *	qu  = ik_malloc(sizeof(qupages_t));
@@ -2318,7 +2318,7 @@ meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
       gc->queues[meta_id] = qu;
     }
     { /* Reset to zero all the unused words in the old meta pages. */
-      ikptr	X;
+      ikptr_t	X;
       for (X=ap; X<ep; X+=wordsize) {
 	IK_REF(X, 0) = 0;
       }
@@ -2391,8 +2391,8 @@ collect_loop (gc_t* gc)
 	   be left NULL. */
         gc->queues[meta_pair] = NULL;
         do {
-          ikptr p_pair = qu->p;
-          ikptr p_end  = qu->q;
+          ikptr_t p_pair = qu->p;
+          ikptr_t p_end  = qu->q;
           for (; p_pair < p_end; p_pair += pair_size) {
             IK_REF(p_pair, disp_car) = gather_live_object(gc, IK_REF(p_pair, disp_car), "loop");
 	  }
@@ -2420,8 +2420,8 @@ collect_loop (gc_t* gc)
 	   be left NULL. */
         gc->queues[meta_ptrs] = NULL;
         do {
-          ikptr p_word = qu->p;
-          ikptr p_end  = qu->q;
+          ikptr_t p_word = qu->p;
+          ikptr_t p_end  = qu->q;
           for (; p_word < p_end; p_word += wordsize) {
             IK_REF(p_word, 0) = gather_live_object(gc, IK_REF(p_word, 0), "pending");
           }
@@ -2449,8 +2449,8 @@ collect_loop (gc_t* gc)
 	   "queues[meta_symbol]" will be left NULL. */
         gc->queues[meta_symbol] = NULL;
         do {
-          ikptr p_word = qu->p;
-          ikptr p_end  = qu->q;
+          ikptr_t p_word = qu->p;
+          ikptr_t p_end  = qu->q;
           for (; p_word < p_end; p_word += wordsize) {
             IK_REF(p_word, 0) = gather_live_object(gc, IK_REF(p_word, 0), "symbols");
           }
@@ -2478,8 +2478,8 @@ collect_loop (gc_t* gc)
 	   be left NULL. */
         gc->queues[meta_code] = NULL;
         do {
-          ikptr p_code = codes->p;
-          ikptr p_end  = codes->q;
+          ikptr_t p_code = codes->p;
+          ikptr_t p_end  = codes->q;
           while (p_code < p_end) {
             relocate_new_code(p_code, gc);
             alloc_code_count--;
@@ -2497,8 +2497,8 @@ collect_loop (gc_t* gc)
     {
       {
         meta_t* meta = &gc->meta[meta_pair];
-        ikptr p = meta->aq;
-        ikptr q = meta->ap;
+        ikptr_t p = meta->aq;
+        ikptr_t q = meta->ap;
         if (p < q) {
 	  /* There  is  at least  one  object  in the  "meta[meta_pair]"
 	     field: we will have to perform another full iteration. */
@@ -2515,8 +2515,8 @@ collect_loop (gc_t* gc)
       }
       {
         meta_t* meta = &gc->meta[meta_symbol];
-        ikptr p = meta->aq;
-        ikptr q = meta->ap;
+        ikptr_t p = meta->aq;
+        ikptr_t q = meta->ap;
         if (p < q) {
 	  /* There  is at  least one  object in  the "meta[meta_symbol]"
 	     field: we will have to perform another full iteration. */
@@ -2533,8 +2533,8 @@ collect_loop (gc_t* gc)
       }
       {
         meta_t* meta = &gc->meta[meta_ptrs];
-        ikptr p = meta->aq;
-        ikptr q = meta->ap;
+        ikptr_t p = meta->aq;
+        ikptr_t q = meta->ap;
         if (p < q) {
 	  /* There  is  at least  one  object  in the  "meta[meta_ptrs]"
 	     field: we will have to perform another full iteration. */
@@ -2551,8 +2551,8 @@ collect_loop (gc_t* gc)
       }
       {
         meta_t* meta = &gc->meta[meta_code];
-        ikptr p = meta->aq;
-        ikptr q = meta->ap;
+        ikptr_t p = meta->aq;
+        ikptr_t q = meta->ap;
         if (p < q) {
 	  /* There  is  at least  one  object  in the  "meta[meta_code]"
 	     field: we will have to perform another full iteration. */
@@ -2716,19 +2716,19 @@ scan_dirty_pointers_page (gc_t* gc, ikuword_t page_idx, uint32_t mask)
     uint32_t *	dirty_vec    = (uint32_t*)gc->pcb->dirty_vector;
     uint32_t	page_dbits   = dirty_vec[page_idx];
     uint32_t	masked_dbits = page_dbits & mask;
-    ikptr	word_ptr     = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+    ikptr_t	word_ptr     = IK_PAGE_POINTER_FROM_INDEX(page_idx);
     uint32_t	card_idx;
     for (card_idx=0; card_idx<CARDS_PER_PAGE; ++card_idx) {
       if (masked_dbits & SHIFT_NIBBLE_AT_CARD_SLOT(0xF, card_idx)) {
 	/* This is a dirty card: let's process its words. */
 	uint32_t	card_sbits = 0;
-	ikptr		card_end   = word_ptr + CARDSIZE;
+	ikptr_t		card_end   = word_ptr + CARDSIZE;
 	for (; word_ptr < card_end; word_ptr += wordsize) {
-	  ikptr X = IK_REF(word_ptr, 0);
+	  ikptr_t X = IK_REF(word_ptr, 0);
 	  if (IK_IS_FIXNUM(X) || (IK_TAGOF(X) == immediate_tag)) {
 	    /* do nothing */
 	  } else {
-	    ikptr Y = gather_live_object(gc, X, "nothing");
+	    ikptr_t Y = gather_live_object(gc, X, "nothing");
 	    /* The call  to "gather_live_object()" might  have allocated
 	       new memory, so we must retake the segment vector. */
 	    segment_vec = gc->segment_vector;
@@ -2763,17 +2763,17 @@ scan_dirty_code_page (gc_t* gc, ikuword_t page_idx)
 {
   uint32_t	new_page_dbits  = 0;
   {
-    ikptr	page_start  = IK_PAGE_POINTER_FROM_INDEX(page_idx);
-    ikptr	page_end    = page_start + IK_PAGESIZE;
-    ikptr	p_code      = page_start; /* untagged pointer to code object */
+    ikptr_t	page_start  = IK_PAGE_POINTER_FROM_INDEX(page_idx);
+    ikptr_t	page_end    = page_start + IK_PAGESIZE;
+    ikptr_t	p_code      = page_start; /* untagged pointer to code object */
     /* Iterate over all the code objects in the page. */
     while (p_code < page_end) {
       if (IK_REF(p_code, 0) != code_tag) {
 	p_code = page_end;
       } else {
 	uint32_t *	segment_vec;
-	ikptr		s_reloc_vec;
-	ikptr		s_reloc_vec_len;
+	ikptr_t		s_reloc_vec;
+	ikptr_t		s_reloc_vec_len;
 	ikuword_t	card_idx    = ((ikuword_t)p_code - (ikuword_t)page_start) / CARDSIZE;
 	uint32_t	code_dbits;
 	relocate_new_code(p_code, gc);
@@ -2785,7 +2785,7 @@ scan_dirty_code_page (gc_t* gc, ikuword_t page_idx)
 	code_dbits      = segment_vec[IK_PAGE_INDEX(s_reloc_vec)];
 	/* Iterate over the words in the relocation vector. */
 	for (ikuword_t i=0; i<s_reloc_vec_len; i+=wordsize) {
-	  ikptr		s_item = IK_REF(s_reloc_vec, i+off_vector_data);
+	  ikptr_t		s_item = IK_REF(s_reloc_vec, i+off_vector_data);
 	  if (IK_IS_FIXNUM(s_item) || (IK_TAGOF(s_item) == immediate_tag)) {
 	    /* do nothing */
 	  } else {
@@ -2821,29 +2821,29 @@ scan_dirty_code_page (gc_t* gc, ikuword_t page_idx)
  ** ----------------------------------------------------------------- */
 
 static void
-relocate_new_code (ikptr p_X, gc_t* gc)
+relocate_new_code (ikptr_t p_X, gc_t* gc)
 /* Process  the relocation  vector of  a code  object.  p_X  must be  an
   *untagged* pointer referencing the code object.
 
   This function has similarities with "ik_relocate_code()". */
 {
-  const ikptr	s_reloc_vec = gather_live_object(gc, IK_REF(p_X, disp_code_reloc_vector), "relocvec");
+  const ikptr_t	s_reloc_vec = gather_live_object(gc, IK_REF(p_X, disp_code_reloc_vector), "relocvec");
   IK_REF(p_X, disp_code_reloc_vector) = s_reloc_vec;
   IK_REF(p_X, disp_code_annotation)   = gather_live_object(gc, IK_REF(p_X, disp_code_annotation),
 							   "annotation");
   /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
      word in the data area of the relocation vector VEC. */
-  ikptr		p_reloc_vec_cur = s_reloc_vec + off_vector_data;
+  ikptr_t		p_reloc_vec_cur = s_reloc_vec + off_vector_data;
   /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
      right after the data area of the relocation vector VEC.
 
      Remember  that the  fixnum representing  the number  of items  in a
      vector, taken as  "ikuword_t", also represents the  number of bytes
      in the data area. */
-  const ikptr	p_reloc_vec_end = p_reloc_vec_cur + IK_VECTOR_LENGTH_FX(s_reloc_vec);
+  const ikptr_t	p_reloc_vec_end = p_reloc_vec_cur + IK_VECTOR_LENGTH_FX(s_reloc_vec);
   /* The variable P_DATA is an  *untagged* pointer referencing the first
      byte in the data area of the code object. */
-  const ikptr	p_data = p_X + disp_code_data;
+  const ikptr_t	p_data = p_X + disp_code_data;
   /* Scan the records in the relocation vector. */
   while (p_reloc_vec_cur < p_reloc_vec_end) {
     const ikuword_t	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
@@ -2857,8 +2857,8 @@ relocate_new_code (ikptr p_X, gc_t* gc)
       fprintf(stderr, "r=0x%08x disp_code_word=%d reloc_size=0x%08x\n",
 	      first_record_bits, disp_code_word, IK_VECTOR_LENGTH_FX(s_reloc_vec));
 #endif
-      ikptr	s_old_object = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
-      ikptr	s_new_object = gather_live_object(gc, s_old_object, "reloc1");
+      ikptr_t	s_old_object = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc1");
       IK_REF(p_data, disp_code_word) = s_new_object;
       p_reloc_vec_cur += (2*wordsize);
       break;
@@ -2867,8 +2867,8 @@ relocate_new_code (ikptr p_X, gc_t* gc)
       /* This record  represents a  displaced object;  this record  is 3
 	 words wide. */
       ikuword_t	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
-      ikptr	s_old_object =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      ikptr	s_new_object = gather_live_object(gc, s_old_object, "reloc2");
+      ikptr_t	s_old_object =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc2");
       IK_REF(p_data, disp_code_word) = s_new_object + obj_off;
       p_reloc_vec_cur += (3 * wordsize);
       break;
@@ -2877,14 +2877,14 @@ relocate_new_code (ikptr p_X, gc_t* gc)
       /* This record  represents a  jump label; this  record is  3 words
 	 wide. */
       ikuword_t	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
-      ikptr	s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      ikptr_t	s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)s_obj, obj_off);
 #endif
       s_obj = gather_live_object(gc, s_obj, "reloc3");
-      ikptr	displaced_object  = s_obj + obj_off;
+      ikptr_t	displaced_object  = s_obj + obj_off;
       ikuword_t	next_word         = p_data + disp_code_word + 4;
-      ikptr	relative_distance = displaced_object - next_word;
+      ikptr_t	relative_distance = displaced_object - next_word;
       if (((ikuword_t)relative_distance) != ((ikuword_t)relative_distance))
         ik_abort("relocation error with relative=0x%016lx", relative_distance);
       *((int*)(p_data + disp_code_word)) = (int)relative_distance;
@@ -2905,7 +2905,7 @@ relocate_new_code (ikptr p_X, gc_t* gc)
   } /* end of while() */
 }
 static void
-register_to_collect_count (ikpcb* pcb, int bytes)
+register_to_collect_count (ikpcb_t* pcb, int bytes)
 /* This is  for accounting  purposes.  We  keep count  of all  the bytes
  * allocated for the heap, so that:
  *

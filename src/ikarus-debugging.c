@@ -38,44 +38,44 @@
 /* These functions  have the purpose  to allow testing of  Assembly code
    calling C functions from Scheme code through FOREIGN-CALL. */
 
-ikptr
+ikptr_t
 ikrt_dummy_arg_0 (ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_TRUE;
 }
-ikptr
-ikrt_dummy_arg_1 (ikptr arg1, ikpcb_t * pcb)
+ikptr_t
+ikrt_dummy_arg_1 (ikptr_t arg1, ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000 + IK_UNFIX(arg1));
 }
-ikptr
-ikrt_dummy_arg_2 (ikptr arg1, ikptr arg2, ikpcb_t * pcb)
+ikptr_t
+ikrt_dummy_arg_2 (ikptr_t arg1, ikptr_t arg2, ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000 + IK_UNFIX(arg1) + IK_UNFIX(arg2));
 }
-ikptr
-ikrt_dummy_arg_3 (ikptr arg1, ikptr arg2, ikptr arg3,
+ikptr_t
+ikrt_dummy_arg_3 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
 		  ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000
 		+ IK_UNFIX(arg1) + IK_UNFIX(arg2) + IK_UNFIX(arg3));
 }
-ikptr
-ikrt_dummy_arg_4 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikpcb_t * pcb)
+ikptr_t
+ikrt_dummy_arg_4 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+		  ikptr_t arg4, ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000
 		+ IK_UNFIX(arg1) + IK_UNFIX(arg2) + IK_UNFIX(arg3)
 		+ IK_UNFIX(arg4));
 }
-ikptr
-ikrt_dummy_arg_5 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikptr arg5, ikpcb_t * pcb)
+ikptr_t
+ikrt_dummy_arg_5 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+		  ikptr_t arg4, ikptr_t arg5, ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -86,9 +86,9 @@ ikrt_dummy_arg_5 (ikptr arg1, ikptr arg2, ikptr arg3,
 		+ IK_UNFIX(arg1) + IK_UNFIX(arg2) + IK_UNFIX(arg3)
 		+ IK_UNFIX(arg4) + IK_UNFIX(arg5));
 }
-ikptr
-ikrt_dummy_arg_6 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikptr arg5, ikptr arg6,
+ikptr_t
+ikrt_dummy_arg_6 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+		  ikptr_t arg4, ikptr_t arg5, ikptr_t arg6,
 		  ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
@@ -100,10 +100,10 @@ ikrt_dummy_arg_6 (ikptr arg1, ikptr arg2, ikptr arg3,
 		+ IK_UNFIX(arg1) + IK_UNFIX(arg2) + IK_UNFIX(arg3)
 		+ IK_UNFIX(arg4) + IK_UNFIX(arg5) + IK_UNFIX(arg6));
 }
-ikptr
-ikrt_dummy_arg_7 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikptr arg5, ikptr arg6,
-		  ikptr arg7, ikpcb_t * pcb)
+ikptr_t
+ikrt_dummy_arg_7 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+		  ikptr_t arg4, ikptr_t arg5, ikptr_t arg6,
+		  ikptr_t arg7, ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -116,10 +116,10 @@ ikrt_dummy_arg_7 (ikptr arg1, ikptr arg2, ikptr arg3,
 		+ IK_UNFIX(arg4) + IK_UNFIX(arg5) + IK_UNFIX(arg6)
 		+ IK_UNFIX(arg7));
 }
-ikptr
-ikrt_dummy_arg_8 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikptr arg5, ikptr arg6,
-		  ikptr arg7, ikptr arg8, ikpcb_t * pcb)
+ikptr_t
+ikrt_dummy_arg_8 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+		  ikptr_t arg4, ikptr_t arg5, ikptr_t arg6,
+		  ikptr_t arg7, ikptr_t arg8, ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -132,10 +132,10 @@ ikrt_dummy_arg_8 (ikptr arg1, ikptr arg2, ikptr arg3,
 		+ IK_UNFIX(arg4) + IK_UNFIX(arg5) + IK_UNFIX(arg6)
 		+ IK_UNFIX(arg7) + IK_UNFIX(arg8));
 }
-ikptr
-ikrt_dummy_arg_9 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikptr arg5, ikptr arg6,
-		  ikptr arg7, ikptr arg8, ikptr arg9,
+ikptr_t
+ikrt_dummy_arg_9 (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+		  ikptr_t arg4, ikptr_t arg5, ikptr_t arg6,
+		  ikptr_t arg7, ikptr_t arg8, ikptr_t arg9,
 		  ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());

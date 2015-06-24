@@ -18,19 +18,19 @@
 
 #include "internals.h"
 
-ikptr
-ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
+ikptr_t
+ikrt_weak_cons (ikptr_t a, ikptr_t d, ikpcb_t* pcb)
 {
-  ikptr ap  = pcb->weak_pairs_ap;
-  ikptr nap = ap + pair_size;
-  ikptr p;
+  ikptr_t ap  = pcb->weak_pairs_ap;
+  ikptr_t nap = ap + pair_size;
+  ikptr_t p;
   if (nap > pcb->weak_pairs_ep) {
     /* There is  NOT enough room  for a new  pair object in  the current
        page storage  for weak pairs.   Allocate a new  page (registering
        its use destination  in the segments vector) and  use it.  Notice
        that the old page is already referenced by a slot in the segments
        vector. */
-    ikptr mem = ik_mmap_typed(IK_PAGESIZE, WEAK_PAIRS_MT, pcb);
+    ikptr_t mem = ik_mmap_typed(IK_PAGESIZE, WEAK_PAIRS_MT, pcb);
     pcb->weak_pairs_ap = mem + pair_size;
     pcb->weak_pairs_ep = mem + IK_PAGESIZE;
     p = mem | pair_tag;
@@ -46,8 +46,8 @@ ikrt_weak_cons (ikptr a, ikptr d, ikpcb* pcb)
   IK_CDR(p) = d;
   return p;
 }
-ikptr
-ikrt_is_weak_pair (ikptr x, ikpcb* pcb)
+ikptr_t
+ikrt_is_weak_pair (ikptr_t x, ikpcb_t* pcb)
 {
   if (IK_TAGOF(x) != pair_tag)
     return IK_FALSE_OBJECT;

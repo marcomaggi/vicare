@@ -245,8 +245,8 @@ _ik_foreign_call:
   # arguments on the stack, and we put the 1st, 2nd, ..., 6th in
   # CPU registers.  Let's consider the example of a function call to:
   #
-  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3, ikptr arg4,
-  #              ikptr arg5, ikptr arg6, ikptr arg7, ikptr arg8,
+  #   ikptr_t fun (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3, ikptr_t arg4,
+  #              ikptr_t arg5, ikptr_t arg6, ikptr_t arg7, ikptr_t arg8,
   #              ikpcb_t * pcb);
   #
   # When arriving here: %ebx references the top of the Scheme stack;
@@ -364,8 +364,8 @@ L_loop:                  # (label Lloop)
 L_six_args:
   # There are six arguments.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
-  #              ikptr arg4, ikptr arg5, ikptr arg6,
+  #   ikptr_t fun (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+  #              ikptr_t arg4, ikptr_t arg5, ikptr_t arg6,
   #              ikpcb_t * pcb);
   #
   # is performed by setting:
@@ -389,8 +389,8 @@ L_six_args:
 L_five_args:
   # There are five arguments.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
-  #              ikptr arg4, ikptr arg5,
+  #   ikptr_t fun (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+  #              ikptr_t arg4, ikptr_t arg5,
   #              ikpcb_t * pcb);
   #
   # is performed by setting:
@@ -409,8 +409,8 @@ L_five_args:
 L_four_args:
   # There are four arguments.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
-  #              ikptr arg4,
+  #   ikptr_t fun (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
+  #              ikptr_t arg4,
   #              ikpcb_t * pcb);
   #
   # is performed by setting:
@@ -428,7 +428,7 @@ L_four_args:
 L_three_args:
   # There are three arguments.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
+  #   ikptr_t fun (ikptr_t arg1, ikptr_t arg2, ikptr_t arg3,
   #              ikpcb_t * pcb);
   #
   # is performed by setting:
@@ -445,7 +445,7 @@ L_three_args:
 L_two_args:
   # There are two arguments.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikptr arg2,
+  #   ikptr_t fun (ikptr_t arg1, ikptr_t arg2,
   #              ikpcb_t * pcb);
   #
   # is performed by setting:
@@ -460,7 +460,7 @@ L_two_args:
 L_one_arg:
   # There is one argument.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikpcb_t * pcb);
+  #   ikptr_t fun (ikptr_t arg1, ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -473,7 +473,7 @@ L_one_arg:
 L_zero_args:
   # There are zero arguments.  A function call to:
   #
-  #   ikptr fun (ikpcb_t * pcb);
+  #   ikptr_t fun (ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -1166,7 +1166,7 @@ L_loop:                  # (label Lloop)
 L_set:                   # (label Lset)
   call *%edi             # (call cpr)
   # The C functions callable here always return a single argument
-  # of type "ikptr", and it is in %eax.
+  # of type "ikptr_t", and it is in %eax.
 
   # Load "pcb->frame_pointer" in the Stack Pointer Register.
   movl 8(%esi), %esp     # (movl (pcb-ref 'frame-pointer) fpr)

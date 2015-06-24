@@ -122,7 +122,7 @@ ik_fasl_load (ikpcb_t * pcb, const char * fasl_file)
   /* Read  all the  objects  from  the memory  mapped  buffer.  Run  the
      initialisation code. */
   while (port.memp < port.memq) {
-    ikptr	s_code;
+    ikptr_t	s_code;
     port.code_ap	= 0;
     port.code_ep	= 0;
 
@@ -136,7 +136,7 @@ ik_fasl_load (ikpcb_t * pcb, const char * fasl_file)
     /* Clear table of  marks.  Every super-object in the  boot image has
        its own table. */
     if (port.marks_size) {
-      ik_munmap((ikptr)(ikuword_t)port.marks, port.marks_size * sizeof(ikptr_t*));
+      ik_munmap((ikptr_t)(ikuword_t)port.marks, port.marks_size * sizeof(ikptr_t*));
       port.marks      = 0;
       port.marks_size = 0;
     }
@@ -158,7 +158,7 @@ ik_fasl_load (ikpcb_t * pcb, const char * fasl_file)
     if (DEBUG_FASL)
       ik_debug_message("executing boot image super code object init expressions");
     {
-      ikptr s_retval = ik_exec_code(pcb, s_code, 0, 0);
+      ikptr_t s_retval = ik_exec_code(pcb, s_code, 0, 0);
       if (0) {
 	/* For some reason, at some point, someone introduced this check
 	   for  debugging purposes.   It  is not  really important  what
@@ -343,7 +343,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     ikuword_t	num_of_chars = 0;
     ikuword_t	mem_size;
     uint8_t *	ascii_data;
-    ikptr	s_str;
+    ikptr_t	s_str;
     fasl_read_buf(p, &num_of_chars, sizeof(ikuword_t));
     if (0 || DEBUG_FASL)
       ik_debug_message("string length: %ld", (long)num_of_chars);

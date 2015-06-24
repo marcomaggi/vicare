@@ -34,7 +34,7 @@
  ** ----------------------------------------------------------------- */
 
 #include "internals.h"
-static void seal_scheme_stack (ikpcb* pcb);
+static void seal_scheme_stack (ikpcb_t* pcb);
 
 #ifdef HAVE_LIBFFI
 #include <ffi.h>
@@ -165,7 +165,7 @@ typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
   ((type_id_t*)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t) + (1+(ARITY))*sizeof(ffi_type*)))
 
 static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr_t s_scheme_value, void * buffer);
-static ikptr_t  ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
+static ikptr_t  ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb_t* pcb);
 static void     generic_callback             (ffi_cif *cif, void *ret, void **args, void *user_data);
 
 
@@ -189,7 +189,7 @@ ikrt_has_ffi (void)
 
 #ifdef DEBUG_FFI
 static void
-dump_stack (ikpcb* pcb, char* msg)
+dump_stack (ikpcb_t* pcb, char* msg)
 {
   fprintf(stderr, "====================  %s\n", msg);
   ikptr_t frame_base = pcb->frame_base;
@@ -209,7 +209,7 @@ dump_stack (ikpcb* pcb, char* msg)
  ** ----------------------------------------------------------------- */
 
 ikptr_t
-ikrt_ffi_prep_cif (ikptr_t s_type_ids, ikpcb* pcb)
+ikrt_ffi_prep_cif (ikptr_t s_type_ids, ikpcb_t* pcb)
 /* Wrapper  for   Libffi's  "ffi_prep_cif()";  prepare   a  Libffi  call
    interface (CIF) building an  appropriate data structure, whose memory
    is obtained  by "calloc()".  Return a pointer  object referencing the
@@ -294,7 +294,7 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr_t s_scheme_value, void * b
   }
 }
 static ikptr_t
-ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
+ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb_t* pcb)
 /* Convert the native value stored  in the block of memory referenced by
    BUFFER to  a Scheme value  and return the  Scheme value; the  type is
    selected by TYPE_ID. */
@@ -397,7 +397,7 @@ ikrt_ffi_call (ikptr_t s_data, ikptr_t s_args, ikpcb_t * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr_t
-ikrt_ffi_prepare_callback (ikptr_t s_data, ikpcb* pcb)
+ikrt_ffi_prepare_callback (ikptr_t s_data, ikpcb_t* pcb)
 /* Prepare  a Libffi's  callback interface  associated  to a  CIF and  a
    Scheme function.   If successful return a  pointer object referencing
    the  callback, else  return false.   A failure  is probably  an error
@@ -588,7 +588,7 @@ ikptr_t ikrt_has_ffi()			{ return IK_FALSE_OBJECT; }
  ** ----------------------------------------------------------------- */
 
 void
-ik_enter_c_function (ikpcb* pcb)
+ik_enter_c_function (ikpcb_t* pcb)
 /* We call this function whenever we  enter a C function that may invoke
  * a Scheme callback.  Save into a  system continuation the C stack that
  * was last stored into PCB when entering Scheme code.
@@ -654,7 +654,7 @@ ik_leave_c_function (ikpcb_t * pcb)
   pcb->system_stack = IK_REF(sk, off_system_continuation_top);
 }
 static void
-seal_scheme_stack(ikpcb* pcb)
+seal_scheme_stack(ikpcb_t* pcb)
 /* Freeze the  current Scheme stack  into a continuation  object, unless
  * the stack segment is empty.
  *
