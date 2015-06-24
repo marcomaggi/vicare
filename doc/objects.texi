@@ -971,7 +971,7 @@ performed as follows:
 @example
 ikpcb_t *   pcb = ik_the_pcb();
 long int  number_of_bytes = the_number_of_bytes;
-ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
+ikptr_t     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
 
 @noindent
@@ -981,7 +981,7 @@ follows:
 @example
 ikpcb_t *   pcb = ik_the_pcb();
 long int  number_of_bytes = the_number_of_bytes;
-ikptr     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
+ikptr_t     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
 
 @noindent
@@ -994,7 +994,7 @@ pointer we can do:
 @example
 ikpcb_t * pcb = ik_the_pcb();
 long    len = IK_ALIGN(the_number_of_bytes);
-ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
+ikptr_t   ref = ik_safe_alloc(pcb, len) | vector_tag;
 @end example
 
 Objects subject to garbage collection are allocated on the Scheme heap;
@@ -1043,7 +1043,7 @@ uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
 long      requested_size  = ...;
 long      align_size      = IK_ALIGN(requested_size);
 uint8_t * next_free_block = allocated_block + align_size;
-pcb->allocation_pointer   = (ikptr)next_free_block;
+pcb->allocation_pointer   = (ikptr_t)next_free_block;
 
 /* use "allocated_block" */
 
@@ -1137,7 +1137,7 @@ We can simulate the computation with:
 @end deftypefn
 
 
-@deftypefun ikptr ik_safe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{aligned_size})
+@deftypefun ikptr_t ik_safe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{aligned_size})
 Reserve a memory block on the Scheme heap hot block and return a
 reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{aligned_size} must be the
@@ -1156,7 +1156,7 @@ happens, because the garbage collector never sees them.
 @end deftypefun
 
 
-@deftypefun ikptr ik_unsafe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{align_size})
+@deftypefun ikptr_t ik_unsafe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{align_size})
 Reserve a memory block on the Scheme heap hot block and return a
 reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{align_size} must be the
@@ -1179,7 +1179,7 @@ C pointers as garbage collection roots.
 @end deftypefun
 
 
-@deffn {Preprocessor Macro} IK_ASS (ikptr @var{left}, ikptr @var{right})
+@deffn {Preprocessor Macro} IK_ASS (ikptr_t @var{left}, ikptr_t @var{right})
 Perform a C language assignment enforcing the order of evaluation of the
 left--side and right--side expressions.  First evaluate @var{right},
 then evaluate @var{left}, finally store the result of @var{right} in the
@@ -1191,7 +1191,7 @@ resulting from evaluating @var{left}.  For example, when allocating a
 pair filled with numbers:
 
 @example
-ikptr   s_pair = ika_pair_alloc(pcb);
+ikptr_t   s_pair = ika_pair_alloc(pcb);
 
 IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, 1));
 ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
@@ -1202,7 +1202,7 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @end deffn
 
 
-@deftypefun void ik_signal_dirt_in_page_of_pointer (ikpcb_t * @var{pcb}, ikptr @var{pointer})
+@deftypefun void ik_signal_dirt_in_page_of_pointer (ikpcb_t * @var{pcb}, ikptr_t @var{pointer})
 Register in the dirty vector that the memory page containing the
 location referenced by @var{pointer} has been mutated.  This function
 must be called every time we mutate a pair, vector, structure, record,
@@ -1265,7 +1265,7 @@ allocating @code{s_two}:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
-ikptr   s_one, s_two;
+ikptr_t   s_one, s_two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
 pcb->root0 = &s_one;
@@ -1281,7 +1281,7 @@ function the value in @code{s_one} may be invalid:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
-ikptr   s_one, s_two;
+ikptr_t   s_one, s_two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
 s_two = ika_bytevector_alloc(pcb, 10);
@@ -1294,8 +1294,8 @@ the data area of @code{s_one} is retrieved again:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
-ikptr   s_one;
-ikptr   s_two;
+ikptr_t   s_one;
+ikptr_t   s_two;
 char *  one;
 char *  two;
 
@@ -1318,8 +1318,8 @@ function the pointer to the data area of @code{s_one} may be invalid:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
-ikptr   s_one;
-ikptr   s_two;
+ikptr_t   s_one;
+ikptr_t   s_two;
 char *  one;
 char *  two;
 
@@ -1353,7 +1353,7 @@ resulting in the value referenced by @code{s_pair} to be invalid when
 the memory assigment actually takes place; so we have to code:
 
 @example
-ikptr   s_tmp;
+ikptr_t   s_tmp;
 s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
 IK_CAR(s_pair) = s_tmp;
 ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
@@ -1374,7 +1374,7 @@ Let's consider the following snippet, which is @strong{wrong}:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
-ikptr   s_one, s_two;
+ikptr_t   s_one, s_two;
 
 s_one = IKA_PAIR_ALLOC(pcb); /* WRONG */
 pcb->root0 = &s_one;
@@ -1393,7 +1393,7 @@ code is:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
-ikptr   s_one, s_two;
+ikptr_t   s_one, s_two;
 
 s_one = ika_pair_alloc(pcb); /* GOOD */
 pcb->root0 = &s_one;
@@ -1411,18 +1411,18 @@ because @cfunc{ika_pair_alloc} initialises the car and the cdr.
 @section Boolean objects
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_BOOLEAN (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} int IK_IS_BOOLEAN (ikptr_t @var{obj})
 If @var{obj} is @code{IK_FALSE} or @code{IK_TRUE} return true, else
 return zero.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} int IK_BOOLEAN_TO_INT (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} int IK_BOOLEAN_TO_INT (ikptr_t @var{obj})
 If @var{obj} is @code{IK_FALSE} return @code{0}, else return @code{1}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_BOOLEAN_FROM_INT (int @var{val})
+@deftypefn {Preprocessor Macro} ikptr_t IK_BOOLEAN_FROM_INT (int @var{val})
 If @var{val} is @code{0} return @code{IK_FALSE}, else return
 @code{IK_TRUE}.
 @end deftypefn
@@ -1516,22 +1516,22 @@ amount of bits, we encode a fixnum as follows:
 
 @example
 long    the_value  = ...;
-ikptr   the_fixnum = (ikptr)(the_value << fx_shift);
+ikptr_t   the_fixnum = (ikptr_t)(the_value << fx_shift);
 @end example
 
 @noindent
 and we decode it as follows:
 
 @example
-ikptr   the_fixnum = ...;
+ikptr_t   the_fixnum = ...;
 long    the_value  = (long)(the_fixnum >> fx_shift);
 @end example
 
 @noindent
-to verify if a @code{ikptr} is a fixnum we do:
+to verify if a @code{ikptr_t} is a fixnum we do:
 
 @example
-ikptr   the_fixnum = ...;
+ikptr_t   the_fixnum = ...;
 
 if (fx_tag == ((long)the_fixnum & fx_mask))
   it_is_a_fixnum();
@@ -1567,13 +1567,13 @@ Examples:
 
 @example
 long int  N = 123L;
-ikptr     P = IK_FIX(N);
+ikptr_t     P = IK_FIX(N);
 long int  M = IK_UNFIX(P);
 @end example
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_FIX (@var{num})
-@deftypefnx {Preprocessor Macro} ikptr fix (@var{num})
+@deftypefn {Preprocessor Macro} ikptr_t IK_FIX (@var{num})
+@deftypefnx {Preprocessor Macro} ikptr_t fix (@var{num})
 Convert a small exact integer in the correct range for a fixnum, into a
 @ikptr{} value.  @var{num} is cast to @code{long int}.
 
@@ -1584,8 +1584,8 @@ header file and its usage is deprecated.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
-@deftypefnx {Preprocessor Macro} long unfix (ikptr @var{ref})
+@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr_t @var{ref})
+@deftypefnx {Preprocessor Macro} long unfix (ikptr_t @var{ref})
 Convert an @ikptr{} value holding a fixnum into a fixnum of type
 @code{long int}.
 
@@ -1596,7 +1596,7 @@ header file and its usage is deprecated.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
+@deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr_t @var{ref})
 Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
 just tests if the least significant bits in the tag are set to zero.
 @end deftypefn
@@ -1630,7 +1630,7 @@ Pairs are allocated as follows, leaving the car and cdr uninitialised:
 
 @example
 ikpcb_t *  pcb = ik_the_pcb();
-ikptr    s_pair;
+ikptr_t    s_pair;
 
 s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
 @end example
@@ -1639,8 +1639,8 @@ s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
 the car and cdr of a pair are extracted as follows:
 
 @example
-ikptr   s_pair = ...;
-ikptr   s_car, s_cdr;
+ikptr_t   s_pair = ...;
+ikptr_t   s_car, s_cdr;
 
 s_car = IK_REF(s_pair, off_car);
 s_cdr = IK_REF(s_pair, off_cdr);
@@ -1650,8 +1650,8 @@ s_cdr = IK_REF(s_pair, off_cdr);
 or as follows:
 
 @example
-ikptr   s_pair = ...;
-ikptr   s_car, s_cdr;
+ikptr_t   s_pair = ...;
+ikptr_t   s_car, s_cdr;
 
 s_car = IK_CAR(s_pair);
 s_cdr = IK_CDR(s_pair);
@@ -1662,9 +1662,9 @@ the car and cdr of a pair are set as follows:
 
 @example
 ikpcb_t * pcb    = ...;
-ikptr   s_pair = ...;
-ikptr   s_car  = ...;
-ikptr   s_cdr  = ...;
+ikptr_t   s_pair = ...;
+ikptr_t   s_car  = ...;
+ikptr_t   s_cdr  = ...;
 
 IK_REF(s_pair, off_car) = s_car;
 IK_REF(s_pair, off_cdr) = s_car;
@@ -1676,9 +1676,9 @@ or as follows:
 
 @example
 ikpcb_t * pcb    = ...;
-ikptr   s_pair = ...;
-ikptr   s_car  = ...;
-ikptr   s_cdr  = ...;
+ikptr_t   s_pair = ...;
+ikptr_t   s_car  = ...;
+ikptr_t   s_cdr  = ...;
 
 IK_CAR(s_pair) = s_car;
 IK_CDR(s_pair) = s_car;
@@ -1711,34 +1711,34 @@ as pair to retrieve the car and the cdr from a pair memory block.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_PAIR (ikptr @var{X})
+@deftypefn {Preprocessor Macro} int IK_IS_PAIR (ikptr_t @var{X})
 Evaluate to true if the machine word @var{X} is tagged as pair.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IKA_PAIR_ALLOC (ikpcb_t * @var{pcb})
+@deftypefn {Preprocessor Macro} ikptr_t IKA_PAIR_ALLOC (ikpcb_t * @var{pcb})
 Allocate a new pair object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The pair words are left @strong{uninitialised}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IKU_PAIR_ALLOC (ikpcb_t * @var{pcb})
+@deftypefn {Preprocessor Macro} ikptr_t IKU_PAIR_ALLOC (ikpcb_t * @var{pcb})
 Allocate a new pair object using @cfunc{ik_unsafe_alloc} and return a
 tagged reference to it.  The pair words are left @strong{uninitialised}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CAR (ikptr @var{pair})
-@deftypefnx {Preprocessor Macro} ikptr IK_CDR (ikptr @var{pair})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CAR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CDR (ikptr_t @var{pair})
 Evaluate to the locations of the car and cdr of a pair; uses of these
 macros can appear both as operands and as left--side of assignments.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CAAR (ikptr @var{pair})
-@deftypefnx {Preprocessor Macro} ikptr IK_CDAR (ikptr @var{pair})
-@deftypefnx {Preprocessor Macro} ikptr IK_CADR (ikptr @var{pair})
-@deftypefnx {Preprocessor Macro} ikptr IK_CDDR (ikptr @var{pair})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CAAR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CDAR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CADR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CDDR (ikptr_t @var{pair})
 Return, respectively: the car of the car, the cdr of the car, the car of
 the cdr, the cdr of the cdr.
 @end deftypefn
@@ -1748,8 +1748,8 @@ the cdr, the cdr of the cdr.
 @subsubheading Operations on pairs and lists
 
 
-@deftypefun ikptr ika_pair_alloc (ikpcb_t * @var{pcb})
-@deftypefunx ikptr iku_pair_alloc (ikpcb_t * @var{pcb})
+@deftypefun ikptr_t ika_pair_alloc (ikpcb_t * @var{pcb})
+@deftypefunx ikptr_t iku_pair_alloc (ikpcb_t * @var{pcb})
 Allocate and return a new pair object using, respectively,
 @cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
 reference to it.  Both the car and cdr are initialised to
@@ -1760,14 +1760,14 @@ These functions @strong{do not} call
 @end deftypefun
 
 
-@deftypefun long ik_list_length (ikptr @var{list})
+@deftypefun long ik_list_length (ikptr_t @var{list})
 Return the length of the proper list referenced by @var{list}.  Do not
 handle circular lists.  If the length exceeds @code{LONG_MAX}: terminate
 the process with @cfunc{ik_abort}.
 @end deftypefun
 
 
-@deftypefun void ik_list_to_argv (ikptr @var{list}, char ** @var{argv})
+@deftypefun void ik_list_to_argv (ikptr_t @var{list}, char ** @var{argv})
 Given a reference @var{list} to a proper list of bytevectors, fill
 @var{argv} with pointers to the data areas, setting the last element of
 @var{argv} to @cnull{}.  The array referenced by @var{argv} must be wide
@@ -1776,7 +1776,7 @@ enough to hold all the pointers from @var{list} plus the terminating
 @end deftypefun
 
 
-@deftypefun void ik_list_to_argv_and_argc (ikptr @var{list}, char ** @var{argv}, long * @var{argc})
+@deftypefun void ik_list_to_argv_and_argc (ikptr_t @var{list}, char ** @var{argv}, long * @var{argc})
 Given a reference @var{list} to a proper list of bytevectors: fill
 @var{argv} with pointers to the data areas, setting the last element of
 @var{argv} to @cnull{}; fill @var{argc} with the lengths of the
@@ -1787,7 +1787,7 @@ lengths.
 @end deftypefun
 
 
-@deftypefun ikptr ika_list_from_argv (ikpcb_t * @var{pcb}, char ** @var{argv})
+@deftypefun ikptr_t ika_list_from_argv (ikpcb_t * @var{pcb}, char ** @var{argv})
 Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
 strings build and return a list of bytevectors holding a copy of the
 @asciiz{} strings.  Make use of @code{pcb->root8} and @code{pcb->root9}.
@@ -1797,7 +1797,7 @@ This function takes care of calling
 @end deftypefun
 
 
-@deftypefun ikptr ika_list_from_argv_and_argc (ikpcb_t * @var{pcb}, char ** @var{argv}, int @var{argc})
+@deftypefun ikptr_t ika_list_from_argv_and_argc (ikpcb_t * @var{pcb}, char ** @var{argv}, int @var{argc})
 Given a pointer @var{argv} to an array of @asciiz{} strings holding
 @var{argc} pointers: build and return a list of bytevectors holding a
 copy of the @asciiz{} strings.  Make use of @code{pcb->root8} and
@@ -1816,7 +1816,7 @@ follows:
 
 @example
 ikpcb_t * pcb    = ik_the_pcb();
-ikptr   s_pair = ika_pair_alloc(pcb);
+ikptr_t   s_pair = ika_pair_alloc(pcb);
 
 pcb->root0 = &s_pair;
 @{
@@ -1839,7 +1839,7 @@ faster code:
 
 @example
 ikpcb_t * pcb    = ik_the_pcb();
-ikptr   s_pair = IKA_PAIR_ALLOC(pcb);
+ikptr_t   s_pair = IKA_PAIR_ALLOC(pcb);
 
 IK_CAR(s_pair) = IK_FIX(123);
 IK_CDR(s_pair) = IK_FIX(456);
@@ -1852,10 +1852,10 @@ in the array @code{argv} and there are @code{argc} of them:
 ikpcb_t *  pcb  = ik_the_pcb();
 char **  argv = ...;
 long     argc = ...;
-ikptr    s_list;
+ikptr_t    s_list;
 
 if (argc) @{
-  ikptr  s_spine;
+  ikptr_t  s_spine;
   long   i;
 
   s_list = s_spine = ika_pair_alloc(pcb);
@@ -1936,7 +1936,7 @@ ikpcb_t * pcb        = ik_the_pcb();
 long    bv_len     = the_number_of_bytes;
 long    block_size = disp_bytevector_data + bv_len + 1;
 lont    align_size = IK_ALIGN(block_size);
-ikptr   bv = ik_safe_alloc(pcb, align_size) | bytevector_tag;
+ikptr_t   bv = ik_safe_alloc(pcb, align_size) | bytevector_tag;
 @end example
 
 @cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
@@ -1950,11 +1950,11 @@ a fixnum and set the last byte to zero, so usually a full allocation
 looks like this:
 
 @example
-ikptr
+ikptr_t
 ika_bytevector_alloc (ikpcb_t * pcb, long bv_len)
 @{
   long   align_size;
-  ikptr  s_bv;
+  ikptr_t  s_bv;
   char * data;
   align_size = IK_ALIGN(disp_bytevector_data + bv_len + 1);
   s_bv       = ik_safe_alloc(pcb, align_size)
@@ -1970,7 +1970,7 @@ ika_bytevector_alloc (ikpcb_t * pcb, long bv_len)
 to acquire the number of bytes we do:
 
 @example
-ikptr  s_bv = the_bytevector;
+ikptr_t  s_bv = the_bytevector;
 long   bv_len;
 
 bv_len = IK_UNFIX(IK_REF(s_bv, off_bytevector_length));
@@ -1980,7 +1980,7 @@ bv_len = IK_UNFIX(IK_REF(s_bv, off_bytevector_length));
 and to access the data area we do:
 
 @example
-ikptr      s_bv = the_bytevector;
+ikptr_t      s_bv = the_bytevector;
 uint8_t *  data_area;
 
 data_area = (uint8_t *)(long)(s_bv + off_bytevector_data);
@@ -2027,31 +2027,31 @@ bytevector memory block.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefun {Preprocessor Macro} IK_IS_BYTEVECTOR (ikptr @var{obj})
+@deftypefun {Preprocessor Macro} IK_IS_BYTEVECTOR (ikptr_t @var{obj})
 Evaluate to true if @var{obj} is a bytevector.
 @end deftypefun
 
 
-@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_LENGTH (ikptr @var{bv})
+@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_LENGTH (ikptr_t @var{bv})
 Return the number of bytes in the data area of @var{bv}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_BYTEVECTOR_LENGTH_FX (ikptr @var{bv})
+@deftypefn {Preprocessor Macro} ikptr_t IK_BYTEVECTOR_LENGTH_FX (ikptr_t @var{bv})
 Return a fixnum representing the number of bytes in the data area of
 @var{bv}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_DATA (ikptr @var{bv})
+@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_DATA (ikptr_t @var{bv})
 Return a integer representing the memory address of the first byte in
 the data area of @var{bv}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_BYTEVECTOR_DATA_VOIDP (ikptr @var{bv})
-@deftypefnx {Preprocessor Macro} {char *} IK_BYTEVECTOR_DATA_CHARP (ikptr @var{bv})
-@deftypefnx {Preprocessor Macro} {uint8_t *} IK_BYTEVECTOR_DATA_UINT8P (ikptr @var{bv})
+@deftypefn {Preprocessor Macro} {void *} IK_BYTEVECTOR_DATA_VOIDP (ikptr_t @var{bv})
+@deftypefnx {Preprocessor Macro} {char *} IK_BYTEVECTOR_DATA_CHARP (ikptr_t @var{bv})
+@deftypefnx {Preprocessor Macro} {uint8_t *} IK_BYTEVECTOR_DATA_UINT8P (ikptr_t @var{bv})
 Return a pointer referencing the first byte in the data area of
 @var{bv}.
 @end deftypefn
@@ -2061,7 +2061,7 @@ Return a pointer referencing the first byte in the data area of
 @subsubheading Operations on bytevectors
 
 
-@deftypefun ikptr ika_bytevector_alloc (ikpcb_t * @var{pcb}, long @var{requested_number_of_bytes})
+@deftypefun ikptr_t ika_bytevector_alloc (ikpcb_t * @var{pcb}, long @var{requested_number_of_bytes})
 Allocate, initialise and return a new bytevector capable of holding the
 specified number of bytes.  The contents of the data area are
 unspecified.  The requested bytevector length @strong{must} be in the
@@ -2069,7 +2069,7 @@ range of fixnums.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
+@deftypefun ikptr_t ika_bytevector_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
 Allocate, initialise and return a new bytevector and copy the contents
 of the @asciiz{} string referenced by @var{cstr} in the data area.  As
 special case: if @var{cstr} is @cnull{}, this function allocates and
@@ -2081,7 +2081,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_cstring_len (ikpcb_t * @var{pcb}, const char * @var{cstr}, size_t @var{len})
+@deftypefun ikptr_t ika_bytevector_from_cstring_len (ikpcb_t * @var{pcb}, const char * @var{cstr}, size_t @var{len})
 Allocate, initialise and return a new bytevector and copy the @var{len}
 bytes of the @ascii{} string referenced by @var{cstr} in the data area.
 
@@ -2091,7 +2091,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb_t * @var{pcb}, const void * @var{memory}, size_t @var{length})
+@deftypefun ikptr_t ika_bytevector_from_memory_block (ikpcb_t * @var{pcb}, const void * @var{memory}, size_t @var{length})
 Allocate, initialise and return a new bytevector and copy in the data
 area @var{length} bytes from of the memory block referenced by
 @var{memory}.
@@ -2102,7 +2102,7 @@ equal to the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_utf16z (ikpcb_t * @var{pcb}, const void * @var{data});
+@deftypefun ikptr_t ika_bytevector_from_utf16z (ikpcb_t * @var{pcb}, const void * @var{data});
 Build and return a new bytevector from a memory block referencing a
 @utf{}-16 string terminated with two consecutive zeros starting at even
 offset:
@@ -2118,7 +2118,7 @@ the maximum fixnum: return the false object.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_bytevector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+@deftypefun ikptr_t ikrt_bytevector_copy (ikptr_t @var{dst}, ikptr_t @var{dst_start}, ikptr_t @var{src}, ikptr_t @var{src_start}, ikptr_t @var{count})
 Copy @var{count} bytes from bytevector @var{src} starting at offset
 @var{src_start}, to bytevector @var{dst} starting at offset
 @var{dst_start}; @var{src_start}, @var{dst_start} and @var{count} must
@@ -2178,7 +2178,7 @@ long    length         = the_number_of_items;
 long    requested_size = wordsize * length;
 long    block_size     = disp_vector_data + requested_size;
 long    align_size     = IK_ALIGN(block_size);
-ikptr   vec = ik_safe_alloc(pcb, align_size) | vector_tag;
+ikptr_t   vec = ik_safe_alloc(pcb, align_size) | vector_tag;
 @end example
 
 @noindent
@@ -2191,12 +2191,12 @@ We have to explicitly store the vector length in the memory block as a
 fixnum, so usually a full allocation looks like this:
 
 @example
-ikptr
+ikptr_t
 ika_vector_alloc (ikpcb_t * pcb, long number_of_items)
 @{
   long  align_size;
-  ikptr s_len;
-  ikptr s_vec;
+  ikptr_t s_len;
+  ikptr_t s_vec;
   s_len      = IK_FIX(number_of_items);
   align_size = IK_ALIGN(disp_vector_data + s_len);
   s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
@@ -2217,10 +2217,10 @@ initialised to a correct Scheme value.  The following function resets
 the data area to a vector of zero fixnums:
 
 @example
-ikptr
-ikrt_vector_clean (ikptr s_vec)
+ikptr_t
+ikrt_vector_clean (ikptr_t s_vec)
 @{
-  ikptr	s_len = IK_VECTOR_LENGTH_FX(s_vec);
+  ikptr_t	s_len = IK_VECTOR_LENGTH_FX(s_vec);
   memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 @}
@@ -2229,7 +2229,7 @@ ikrt_vector_clean (ikptr s_vec)
 To fill a vector of @math{3} items with fixnums we should do:
 
 @example
-ikptr  s_vec = the_vector;
+ikptr_t  s_vec = the_vector;
 IK_REF(s_vec, off_vector_data + 0 * wordsize) = IK_FIX(10);
 IK_REF(s_vec, off_vector_data + 1 * wordsize) = IK_FIX(20);
 IK_REF(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
@@ -2241,16 +2241,16 @@ in this case there is no need to call
 fixnums.  To retrieve the item at index @math{2} we do:
 
 @example
-ikptr  s_vec  = the_vector;
-ikptr  s_item = IK_REF(s_vec, off_vector_data + 2 * wordsize);
+ikptr_t  s_vec  = the_vector;
+ikptr_t  s_item = IK_REF(s_vec, off_vector_data + 2 * wordsize);
 @end example
 
 @noindent
 and to retrieve the vector length:
 
 @example
-ikptr  s_vec  = the_vector;
-ikptr  s_len  = IK_REF(s_vec, off_vector_length);
+ikptr_t  s_vec  = the_vector;
+ikptr_t  s_len  = IK_REF(s_vec, off_vector_length);
 long   length = IK_UNFIX(s_len);
 @end example
 
@@ -2289,27 +2289,27 @@ pointer to the first byte of the data area.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_VECTOR_LENGTH_FX (ikptr @var{vec})
+@deftypefn {Preprocessor Macro} ikptr_t IK_VECTOR_LENGTH_FX (ikptr_t @var{vec})
 Return a fixnum representing the number of items in the vector
 @var{vec}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_VECTOR_LENGTH (ikptr @var{vec})
+@deftypefn {Preprocessor Macro} long IK_VECTOR_LENGTH (ikptr_t @var{vec})
 Return an integer representing the number of items in the vector
 @var{vec}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_ITEM (ikptr @var{vec}, long @var{idx})
+@deftypefn {Preprocessor Macro} ikptr_t IK_ITEM (ikptr_t @var{vec}, long @var{idx})
 Evaluate to the item at index @var{idx} in the vector @var{vec}.  A use
 of this macro can appear both as operand and as left--side of an
 assignment; example:
 
 @example
 long    idx   = the_index;
-ikptr   s_vec = the_vector;
-ikptr   fx;
+ikptr_t   s_vec = the_vector;
+ikptr_t   fx;
 
 IK_ITEM(s_vec, idx) = IK_FIX(10);
 fx = IK_ITEM(s_vec, idx);
@@ -2321,8 +2321,8 @@ fx = IK_ITEM(s_vec, idx);
 @subsubheading Operations on vectors
 
 
-@deftypefun ikptr ika_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
-@deftypefunx ikptr iku_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr_t ika_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr_t iku_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
 
@@ -2331,8 +2331,8 @@ These functions @strong{do not} call
 @end deftypefun
 
 
-@deftypefun ikptr ika_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
-@deftypefunx ikptr iku_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr_t ika_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr_t iku_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.
@@ -2342,20 +2342,20 @@ These functions @strong{do not} call
 @end deftypefun
 
 
-@deftypefun int ik_is_vector (ikptr @var{vec})
+@deftypefun int ik_is_vector (ikptr_t @var{vec})
 Return true if @var{vec} is a reference to a vector object.  This
 predicate tests that @var{vec} is tagged as vector reference and that
 the first machine word in the referenced memory block is a fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_vector_clean (ikptr @var{vec})
+@deftypefun ikptr_t ikrt_vector_clean (ikptr_t @var{vec})
 Clean the data area so that all the items are set to the fixnum
 zero.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb_t * @var{pcb})
+@deftypefun ikptr_t ikrt_vector_copy (ikptr_t @var{dst}, ikptr_t @var{dst_start}, ikptr_t @var{src}, ikptr_t @var{src_start}, ikptr_t @var{count}, ikpcb_t * @var{pcb})
 Copy @var{count} items from vector @var{src} starting at offset
 @var{src_start}, to vector @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative
@@ -2512,8 +2512,8 @@ level we do:
 and at the C level we do:
 
 @example
-ikptr
-ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb_t * pcb)
+ikptr_t
+ikrt_posix_gettimeofday (ikptr_t s_rtd, ikpcb_t * pcb)
 @{
   /* build and return an instance of "timeval" */
 @}
@@ -2532,7 +2532,7 @@ long    num_of_fields = ...;
 long    block_size = disp_record_data +
                      wordsize * num_of_fields;
 long    align_size = IK_ALIGN(block_size);
-ikptr   s_stru     = ik_safe_alloc(pcb, align_size) | record_tag;
+ikptr_t   s_stru     = ik_safe_alloc(pcb, align_size) | record_tag;
 @end example
 
 @noindent
@@ -2545,12 +2545,12 @@ We have to explicitly store a reference to the @rtd{} in the first
 machine word of the structure, so a full allocation looks like this:
 
 @example
-ikptr
-ika_struct_alloc (ikpcb_t * pcb, ikptr s_rtd)
+ikptr_t
+ika_struct_alloc (ikpcb_t * pcb, ikptr_t s_rtd)
 @{
   long	num_of_fields;
   long  align_size;
-  ikptr s_stru;
+  ikptr_t s_stru;
   num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
   align_size = IK_ALIGN(disp_record_data +
                         num_of_fields * wordsize);
@@ -2578,7 +2578,7 @@ initialised to a correct Scheme value.
 To recognise an @ikptr{} value as reference to a structure we do:
 
 @example
-ikptr   R = the_value;
+ikptr_t   R = the_value;
 
 if ((record_tag == (record_mask & R)) &&
     (record_tag == (record_mask & IK_REF(R, off_record_rtd))))
@@ -2592,8 +2592,8 @@ structure fields are identified at the C level by a zero--based index;
 to store a value in field @math{2} of a structure we do:
 
 @example
-ikptr  s_stru  = the_structure;
-ikptr  s_field = the_field;
+ikptr_t  s_stru  = the_structure;
+ikptr_t  s_field = the_field;
 
 ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_REF(s_stru, off_record_data + 2 * wordsize) = the_field;
@@ -2604,8 +2604,8 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 and to retrieve a the value of field @math{2} we do:
 
 @example
-ikptr  s_stru  = the_structure;
-ikptr  s_field;
+ikptr_t  s_stru  = the_structure;
+ikptr_t  s_field;
 
 s_field = IK_REF(s_stru, off_record_data + 2 * wordsize);
 @end example
@@ -2682,14 +2682,14 @@ pointer to the first byte of the fields.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_FIELD (ikptr @var{stru}, @var{idx})
+@deftypefn {Preprocessor Macro} ikptr_t IK_FIELD (ikptr_t @var{stru}, @var{idx})
 Evaluate to the location of the field at zero--based index @var{idx} for
 the structure @var{stru}.  A use of this macro can appear both as
 operand and as left--side of an assignment.
 
 @example
-ikptr   s_stru = the_structure;
-ikptr   s_field;
+ikptr_t   s_stru = the_structure;
+ikptr_t   s_field;
 
 s_field = IK_FIELD(s_stru, 2);
 
@@ -2703,21 +2703,21 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 @subsubheading Operations on structs
 
 
-@deftypefun ikptr ika_struct_alloc_no_init (ikpcb_t * @var{pcb}, ikptr @var{rtd})
+@deftypefun ikptr_t ika_struct_alloc_no_init (ikpcb_t * @var{pcb}, ikptr_t @var{rtd})
 Allocate, initialise and return a new structure instance of type
 @var{rtd}.  The first word of the allocated block is initialised with
 @var{rtd}, the other words are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ika_struct_alloc_and_init (ikpcb_t * @var{pcb}, ikptr @var{rtd})
+@deftypefun ikptr_t ika_struct_alloc_and_init (ikpcb_t * @var{pcb}, ikptr_t @var{rtd})
 Allocate, initialise and return a new structure instance of type
 @var{rtd}.  The first word of the allocated block is initialised with
 @var{rtd}, the other words are initialised to the fixnum zero.
 @end deftypefun
 
 
-@deftypefun int ik_is_struct (ikptr @var{R})
+@deftypefun int ik_is_struct (ikptr_t @var{R})
 Return true if @var{R} is a reference to a structure.
 @end deftypefun
 
@@ -2779,7 +2779,7 @@ Standalone characters are encoded into @ikptr{} values as follows:
 
 @example
 unsigned long   unicode_code_point = the_code_point;
-ikptr           s_char;
+ikptr_t           s_char;
 
 s_char = (unicode_code_point << char_shift) | char_tag;
 @end example
@@ -2788,7 +2788,7 @@ s_char = (unicode_code_point << char_shift) | char_tag;
 decoded to @code{unsigned long} values as follows:
 
 @example
-ikptr           s_char = the_character;
+ikptr_t           s_char = the_character;
 unsigned long   unicode_code_point;
 
 unicode_code_point = s_char >> char_shift;
@@ -2798,7 +2798,7 @@ unicode_code_point = s_char >> char_shift;
 and identified as follows:
 
 @example
-ikptr   X = the_value;
+ikptr_t   X = the_value;
 
 if (char_tag == (char_mask & X))
   it_is_a_character();
@@ -2852,13 +2852,13 @@ Scheme character.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_CHAR (ikptr @var{X})
+@deftypefn {Preprocessor Macro} int IK_IS_CHAR (ikptr_t @var{X})
 Evaluate to true if @var{X} is a Scheme character.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CHAR_FROM_INTEGER (unsigned long @var{X})
-@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_TO_INTEGER (ikptr @var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CHAR_FROM_INTEGER (unsigned long @var{X})
+@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_TO_INTEGER (ikptr_t @var{X})
 Convert a Scheme character to and from an @code{unsigned long} value
 representing the Unicode code point.
 @end deftypefn
@@ -2928,7 +2928,7 @@ long    length         = the_number_of_chars;
 long    requested_size = sizeof(ikchar_t) * length;
 long    block_size     = disp_string_data + requested_size;
 long    align_size     = IK_ALIGN(block_size);
-ikptr   str = ik_safe_alloc(pcb, align_size) | string_tag;
+ikptr_t   str = ik_safe_alloc(pcb, align_size) | string_tag;
 @end example
 
 @noindent
@@ -2941,11 +2941,11 @@ We have to explicitly store the string length in the memory block as a
 fixnum, so usually a full allocation looks like this:
 
 @example
-ikptr
+ikptr_t
 ik_string_alloc (ikpcb_t * pcb, long number_of_chars)
 @{
   long  align_size;
-  ikptr str;
+  ikptr_t str;
   align_size = IK_ALIGN(disp_string_data
                         + number_of_chars * sizeof(ikchar_t));
   str        = ik_safe_alloc(pcb, align_size) | string_tag;
@@ -2957,7 +2957,7 @@ ik_string_alloc (ikpcb_t * pcb, long number_of_chars)
 To fill a string of @math{3} chars with characters we should do:
 
 @example
-ikptr     s_str = the_string;
+ikptr_t     s_str = the_string;
 ikchar_t *  ch    = (ikchar_t*)(s_str + off_string_data);
 
 ch[0] = IK_CHAR32_FROM_INTEGER(10);
@@ -2970,17 +2970,17 @@ to retrieve the character at index @math{2} we do:
 
 @example
 long      index  = 2;
-ikptr     s_str  = the_string;
+ikptr_t     s_str  = the_string;
 ikchar_t *  ch     = (ikchar_t*)(s_str + off_string_data);
-ikptr     s_char = (ikptr)ch[index];
+ikptr_t     s_char = (ikptr_t)ch[index];
 @end example
 
 @noindent
 and to retrieve the string length:
 
 @example
-ikptr  s_str    = the_string;
-ikptr  s_length = IK_REF(s_str, off_string_length);
+ikptr_t  s_str    = the_string;
+ikptr_t  s_length = IK_REF(s_str, off_string_length);
 long   length   = IK_UNFIX(s_length);
 @end example
 
@@ -3028,31 +3028,31 @@ pointer to the first byte of the data area.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_STRING (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} int IK_IS_STRING (ikptr_t @var{obj})
 Return true if @var{obj} is a reference to a string object.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_STRING_LENGTH_FX (ikptr @var{str})
+@deftypefn {Preprocessor Macro} ikptr_t IK_STRING_LENGTH_FX (ikptr_t @var{str})
 Return a fixnum representing the number of characters in the string
 @var{str}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_STRING_LENGTH (ikptr @var{str})
+@deftypefn {Preprocessor Macro} long IK_STRING_LENGTH (ikptr_t @var{str})
 Return an integer representing the number of characters in the string
 @var{str}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32 (ikptr @var{str}, long @var{idx})
+@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32 (ikptr_t @var{str}, long @var{idx})
 Evaluate to the 32-bit character representation at index @var{idx} in
 the string @var{str}.  A use of this macro can appear both as operand
 and as left--side of an assignment; example:
 
 @example
 long    idx   = the_index;
-ikptr   s_str = the_string;
+ikptr_t   s_str = the_string;
 ikchar_t  ch;
 
 IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
@@ -3061,13 +3061,13 @@ ch = IK_CHAR32(s_str, idx);
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_STRING_DATA_VOIDP (ikptr @var{str})
+@deftypefn {Preprocessor Macro} {void *} IK_STRING_DATA_VOIDP (ikptr_t @var{str})
 Given a tagged reference to string object @var{str}, return a pointer to
 the first byte in the data area.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {ikchar_t *} IK_STRING_DATA_IKCHARP (ikptr @var{str})
+@deftypefn {Preprocessor Macro} {ikchar_t *} IK_STRING_DATA_IKCHARP (ikptr_t @var{str})
 Given a tagged reference to string object @var{str}, return a pointer to
 the first Scheme character in the data area.
 @end deftypefn
@@ -3077,21 +3077,21 @@ the first Scheme character in the data area.
 @subsubheading Operations on strings
 
 
-@deftypefun ikptr ika_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
-@deftypefunx ikptr iku_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
+@deftypefun ikptr_t ika_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
+@deftypefunx ikptr_t iku_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
 @end deftypefun
 
 
-@deftypefun ikptr ika_string_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
-@deftypefunx ikptr iku_string_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
+@deftypefun ikptr_t ika_string_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
+@deftypefunx ikptr_t iku_string_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
 Allocate a new string object and fill it with the @ascii{} characters
 from the given @asciiz{} string.
 @end deftypefun
 
 
-@deftypefun ikptr iku_string_to_symbol (ikpcb* @var{pcb}, ikptr @var{str})
+@deftypefun ikptr_t iku_string_to_symbol (ikpcb_t* @var{pcb}, ikptr_t @var{str})
 Return a Scheme symbol object whose name is the Scheme string
 @var{str}.  This function is the same as @cfunc{iku_symbol_from_string}.
 @end deftypefun
@@ -3277,12 +3277,12 @@ specified field.
 @subsubheading Operations on symbols
 
 
-@deftypefun int ik_is_symbol (ikptr @var{obj})
+@deftypefun int ik_is_symbol (ikptr_t @var{obj})
 Return true if @var{obj} is a symbol.
 @end deftypefun
 
 
-@deftypefun ikptr iku_symbol_from_string (ikpcb_t * @var{pcb}, ikptr @var{str})
+@deftypefun ikptr_t iku_symbol_from_string (ikpcb_t * @var{pcb}, ikptr_t @var{str})
 Return a Scheme symbol object whose name is the Scheme string
 @var{str}.  This function is the same as @cfunc{iku_string_to_symbol}.
 @end deftypefun
@@ -3364,7 +3364,7 @@ ikpcb_t * pcb        = ik_the_pcb();
 long    nlimbs     = the_number_of_limbs;
 long    block_size = disp_bignum_data + nlimbs * wordsize;
 long    align_size = IK_ALIGN(block_size);
-ikptr s_bn = ik_safe_alloc(pcb, align_size) | vector_tag;
+ikptr_t s_bn = ik_safe_alloc(pcb, align_size) | vector_tag;
 @end example
 
 @noindent
@@ -3373,7 +3373,7 @@ is encoded as follows:
 
 @example
 long   nlimbs      = the_number_of_limbs;
-ikptr  meta_nlimbs = nlimbs << bignum_nlimbs_shift;
+ikptr_t  meta_nlimbs = nlimbs << bignum_nlimbs_shift;
 @end example
 
 @noindent
@@ -3381,17 +3381,17 @@ the sign bit is encoded as follows:
 
 @example
 long   sign      = zero_if_positive_one_if_negative;
-ikptr  meta_sign = sign << bignum_sign_shift;
+ikptr_t  meta_sign = sign << bignum_sign_shift;
 @end example
 
 @noindent
 and the full first word is composed and stored as follows:
 
 @example
-ikptr  s_bn        = the_bignum;
-ikptr  meta_nlimbs = ...;
-ikptr  meta_sign   = ...;
-ikptr  s_fst       = meta_nlimbs | meta_sign | bignum_tag;
+ikptr_t  s_bn        = the_bignum;
+ikptr_t  meta_nlimbs = ...;
+ikptr_t  meta_sign   = ...;
+ikptr_t  s_fst       = meta_nlimbs | meta_sign | bignum_tag;
 
 IK_REF(s_bn, off_bignum_tag) = s_fst;
 @end example
@@ -3399,7 +3399,7 @@ IK_REF(s_bn, off_bignum_tag) = s_fst;
 To identify an object as bignum we do:
 
 @example
-ikptr  X = the_object;
+ikptr_t  X = the_object;
 
 if ((vector_tag == IK_TAGOF(X)) &&
     (bignum_tag == (bignum_mask & IK_REF(X, -vector_tag))))
@@ -3412,8 +3412,8 @@ else
 to extract meta informations we must first extract the first word:
 
 @example
-ikptr   s_bn  = the_bignum;
-ikptr   s_fst = IK_REF(s_bn, off_bignum_tag);
+ikptr_t   s_bn  = the_bignum;
+ikptr_t   s_fst = IK_REF(s_bn, off_bignum_tag);
 long    nlimbs;
 long    meta_sign;
 
@@ -3427,7 +3427,7 @@ if @code{meta_sign} is zero the bignum is positive, else it is negative.
 To acquire a pointer to the data area we do:
 
 @example
-ikptr        s_bn = the_bignum;
+ikptr_t        s_bn = the_bignum;
 mp_limb_t *  data;
 
 data = (mp_limb_t*)(long)(s_bn + off_bignum_data);
@@ -3437,7 +3437,7 @@ data = (mp_limb_t*)(long)(s_bn + off_bignum_data);
 to extract the @math{N}-th limb we do:
 
 @example
-ikptr      s_bn = the_bignum;
+ikptr_t      s_bn = the_bignum;
 long       N    = the_index;
 mp_limb_t  limb;
 
@@ -3454,20 +3454,20 @@ as first words in bignum memory blocks.
 
 
 @defvr {Preprocessor Symbol} bignum_sign_mask
-A bit pattern used to isolate the sign bit from the @code{ikptr} value
+A bit pattern used to isolate the sign bit from the @code{ikptr_t} value
 used as first word in bignum memory blocks.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} bignum_sign_shift
 The number representing the bit left--shift offset of the sign bit in
-the @code{ikptr} value used as first word in bignum memory blocks.
+the @code{ikptr_t} value used as first word in bignum memory blocks.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} bignum_nlimbs_shift
 The number representing the bit left--shift offset of the number of
-limbs in the @code{ikptr} value used as first word in bignum memory
+limbs in the @code{ikptr_t} value used as first word in bignum memory
 blocks.
 @end defvr
 
@@ -3506,20 +3506,20 @@ block needed to hold the bignum.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IKA_BIGNUM_ALLOC (ikpcb_t * @var{pcb}, long @var{nlimb})
+@deftypefn {Preprocessor Macro} ikptr_t IKA_BIGNUM_ALLOC (ikpcb_t * @var{pcb}, long @var{nlimb})
 Given a number of limbs: allocate, using @cfunc{ik_safe_alloc}, the
 memory block needed to hold the bignum and return an untagged pointer to
 it.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_COMPOSE_BIGNUM_FIRST_WORD (long @var{nlimb}, ikptr @var{meta_sign})
+@deftypefn {Preprocessor Macro} ikptr_t IK_COMPOSE_BIGNUM_FIRST_WORD (long @var{nlimb}, ikptr_t @var{meta_sign})
 Given a number of limbs and the encoded sign bit: evaluate to the first
 word of a bignum object.  It is equivalent to the following:
 
 @example
-ikptr  meta_nlimbs;
-ikptr  s_fst;
+ikptr_t  meta_nlimbs;
+ikptr_t  s_fst;
 
 meta_nlimbs = (@var{nlimbs} << bignum_nlimbs_shift)
 s_fst       = meta_nlimbs | @var{meta_sign} | bignum_tag;
@@ -3527,21 +3527,21 @@ s_fst       = meta_nlimbs | @var{meta_sign} | bignum_tag;
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POSITIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
-@deftypefnx {Preprocessor Macro} ikptr IK_NEGATIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POSITIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_NEGATIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
 Given a number of limbs evaluate to the corresponding first word of
 bignum representing a positive or negative number.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_BIGNUM_FIRST (ikptr @var{bn})
+@deftypefn {Preprocessor Macro} ikptr_t IK_BIGNUM_FIRST (ikptr_t @var{bn})
 Given a reference to bignum: evaluate to the location of the first word
 holding meta informations.  Can be used both as operand or left--side of
 assignment:
 
 @example
-ikptr  s_bn = the_bignum;
-ikptr  s_fst;
+ikptr_t  s_bn = the_bignum;
+ikptr_t  s_fst;
 
 s_fst = IK_BIGNUM_FIRST(s_bn);
 IK_BIGNUM_FIRST(s_bn) = s_fst;
@@ -3549,35 +3549,35 @@ IK_BIGNUM_FIRST(s_bn) = s_fst;
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_LIMB (ikptr @var{bn}, long @var{N})
+@deftypefn {Preprocessor Macro} ikptr_t IK_LIMB (ikptr_t @var{bn}, long @var{N})
 Given a reference to bignum: evaluate to the location of the @var{N}-th
 limb in the data area.  Can be used both as operand or left--side of
 assignment:
 
 @example
-ikptr      s_bn = the_bignum;
+ikptr_t      s_bn = the_bignum;
 mp_limb_t  limb;
 
 limb = (mp_limb_t)IK_LIMB(s_bn);
-IK_LIMB(s_bn) = (ikptr)limb;
+IK_LIMB(s_bn) = (ikptr_t)limb;
 @end example
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {mp_limb_t *} IK_BIGNUM_DATA_LIMBP (ikptr @var{bn})
-@deftypefnx {Preprocessor Macro} {void *} IK_BIGNUM_DATA_LIMBP (ikptr @var{bn})
+@deftypefn {Preprocessor Macro} {mp_limb_t *} IK_BIGNUM_DATA_LIMBP (ikptr_t @var{bn})
+@deftypefnx {Preprocessor Macro} {void *} IK_BIGNUM_DATA_LIMBP (ikptr_t @var{bn})
 Given a reference to bignum: evaluate to a pointer to the first byte in
 the data area, which is a pointer to the least significant limb.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_FIRST_LIMB (ikptr @var{bn})
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_FIRST_LIMB (ikptr_t @var{bn})
 Given a reference to bignum: evaluate to the least significant limb in
 the data area.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_LAST_LIMB (ikptr @var{bn}, long @var{nlimbs})
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_LAST_LIMB (ikptr_t @var{bn}, long @var{nlimbs})
 Given a reference to bignum and its number of limbs: evaluate to the
 most significant limb in the data area.
 @end deftypefn
@@ -3587,74 +3587,74 @@ most significant limb in the data area.
 @subsubheading Operations on exact integers
 
 
-@deftypefun int ik_is_bignum (ikptr @var{obj})
+@deftypefun int ik_is_bignum (ikptr_t @var{obj})
 Return true if @var{obj} is a bignum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_int (ikpcb_t * @var{pcb}, int @var{N})
-@deftypefunx ikptr ika_integer_from_long (ikpcb_t * @var{pcb}, long @var{N})
-@deftypefunx ikptr ika_integer_from_llong (ikpcb_t * @var{pcb}, ik_llong @var{N})
-@deftypefunx ikptr ika_integer_from_uint (ikpcb_t * @var{pcb}, ik_uint @var{N})
-@deftypefunx ikptr ika_integer_from_ulong (ikpcb_t * @var{pcb}, ik_ulong @var{N})
-@deftypefunx ikptr ika_integer_from_ullong (ikpcb_t * @var{pcb}, ik_ullong @var{N})
+@deftypefun ikptr_t ika_integer_from_int (ikpcb_t * @var{pcb}, int @var{N})
+@deftypefunx ikptr_t ika_integer_from_long (ikpcb_t * @var{pcb}, long @var{N})
+@deftypefunx ikptr_t ika_integer_from_llong (ikpcb_t * @var{pcb}, ik_llong @var{N})
+@deftypefunx ikptr_t ika_integer_from_uint (ikpcb_t * @var{pcb}, ik_uint @var{N})
+@deftypefunx ikptr_t ika_integer_from_ulong (ikpcb_t * @var{pcb}, ik_ulong @var{N})
+@deftypefunx ikptr_t ika_integer_from_ullong (ikpcb_t * @var{pcb}, ik_ullong @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_sint8 (ikpcb_t * @var{pcb}, int8_t @var{N})
-@deftypefunx ikptr ika_integer_from_sint16 (ikpcb_t * @var{pcb}, int16_t @var{N})
-@deftypefunx ikptr ika_integer_from_sint32 (ikpcb_t * @var{pcb}, int32_t @var{N})
-@deftypefunx ikptr ika_integer_from_sint64 (ikpcb_t * @var{pcb}, int64_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint8 (ikpcb_t * @var{pcb}, uint8_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint16 (ikpcb_t * @var{pcb}, uint16_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint32 (ikpcb_t * @var{pcb}, uint32_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint64 (ikpcb_t * @var{pcb}, uint64_t @var{N})
+@deftypefun ikptr_t ika_integer_from_sint8 (ikpcb_t * @var{pcb}, int8_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_sint16 (ikpcb_t * @var{pcb}, int16_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_sint32 (ikpcb_t * @var{pcb}, int32_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_sint64 (ikpcb_t * @var{pcb}, int64_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_uint8 (ikpcb_t * @var{pcb}, uint8_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_uint16 (ikpcb_t * @var{pcb}, uint16_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_uint32 (ikpcb_t * @var{pcb}, uint32_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_uint64 (ikpcb_t * @var{pcb}, uint64_t @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_off_t (ikpcb_t * @var{pcb}, off_t @var{N})
-@deftypefunx ikptr ika_integer_from_ssize_t (ikpcb_t * @var{pcb}, ssize_t @var{N})
-@deftypefunx ikptr ika_integer_from_size_t (ikpcb_t * @var{pcb}, size_t @var{N})
-@deftypefunx ikptr ika_integer_from_ptrdiff_t (ikpcb_t * @var{pcb}, ptrdiff_t @var{N})
+@deftypefun ikptr_t ika_integer_from_off_t (ikpcb_t * @var{pcb}, off_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_ssize_t (ikpcb_t * @var{pcb}, ssize_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_size_t (ikpcb_t * @var{pcb}, size_t @var{N})
+@deftypefunx ikptr_t ika_integer_from_ptrdiff_t (ikpcb_t * @var{pcb}, ptrdiff_t @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
 
 
-@deftypefun int ik_integer_to_int (ikptr @var{X})
-@deftypefunx long ik_integer_to_long (ikptr @var{X})
-@deftypefunx ik_llong ik_integer_to_llong (ikptr @var{X})
-@deftypefunx ik_uint ik_integer_to_uint (ikptr @var{X})
-@deftypefunx ik_ulong ik_integer_to_ulong (ikptr @var{X})
-@deftypefunx ik_ullong ik_integer_to_ullong (ikptr @var{X})
+@deftypefun int ik_integer_to_int (ikptr_t @var{X})
+@deftypefunx long ik_integer_to_long (ikptr_t @var{X})
+@deftypefunx ik_llong ik_integer_to_llong (ikptr_t @var{X})
+@deftypefunx ik_uint ik_integer_to_uint (ikptr_t @var{X})
+@deftypefunx ik_ulong ik_integer_to_ulong (ikptr_t @var{X})
+@deftypefunx ik_ullong ik_integer_to_ullong (ikptr_t @var{X})
 Return a C language number from a Scheme exact integer object.  The
 object @var{X} must be in the correct range for the requested
 conversion.
 @end deftypefun
 
 
-@deftypefun int8_t ik_integer_to_sint8 (ikptr @var{X})
-@deftypefunx int16_t ik_integer_to_sint16 (ikptr @var{X})
-@deftypefunx int32_t ik_integer_to_sint32 (ikptr @var{X})
-@deftypefunx int64_t ik_integer_to_sint64 (ikptr @var{X})
-@deftypefunx uint8_t ik_integer_to_uint8 (ikptr @var{X})
-@deftypefunx uint16_t ik_integer_to_uint16 (ikptr @var{X})
-@deftypefunx uint32_t ik_integer_to_uint32 (ikptr @var{X})
-@deftypefunx uint64_t ik_integer_to_uint64 (ikptr @var{X})
+@deftypefun int8_t ik_integer_to_sint8 (ikptr_t @var{X})
+@deftypefunx int16_t ik_integer_to_sint16 (ikptr_t @var{X})
+@deftypefunx int32_t ik_integer_to_sint32 (ikptr_t @var{X})
+@deftypefunx int64_t ik_integer_to_sint64 (ikptr_t @var{X})
+@deftypefunx uint8_t ik_integer_to_uint8 (ikptr_t @var{X})
+@deftypefunx uint16_t ik_integer_to_uint16 (ikptr_t @var{X})
+@deftypefunx uint32_t ik_integer_to_uint32 (ikptr_t @var{X})
+@deftypefunx uint64_t ik_integer_to_uint64 (ikptr_t @var{X})
 Return a C language number from a Scheme exact integer object.  The
 object @var{X} must be in the correct range for the requested
 conversion.
 @end deftypefun
 
 
-@deftypefun off_t ik_integer_to_off_t (ikptr @var{x})
-@deftypefunx size_t ik_integer_to_size_t (ikptr @var{x})
-@deftypefunx ssize_t ik_integer_to_ssize_t (ikptr @var{x})
-@deftypefunx ptrdiff_t ik_integer_to_ptrdiff_t (ikptr @var{x})
+@deftypefun off_t ik_integer_to_off_t (ikptr_t @var{x})
+@deftypefunx size_t ik_integer_to_size_t (ikptr_t @var{x})
+@deftypefunx ssize_t ik_integer_to_ssize_t (ikptr_t @var{x})
+@deftypefunx ptrdiff_t ik_integer_to_ptrdiff_t (ikptr_t @var{x})
 Return a C language number from a Scheme exact integer object.  The
 object @var{X} must be in the correct range for the requested
 conversion.
@@ -3668,7 +3668,7 @@ conversion.
 An exact integer is either a fixnum or a bignum.
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_INTEGER (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} int IK_IS_INTEGER (ikptr_t @var{obj})
 Evaluate to true if @var{obj} is either a fixnum or a bignum.
 @end deftypefn
 
@@ -3714,7 +3714,7 @@ Ratnums are allocated on the Scheme heap as follows:
 
 @example
 ikpcb_t * pcb   = ik_the_pcb();
-ikptr   s_rn;
+ikptr_t   s_rn;
 
 s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
 IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
@@ -3727,9 +3727,9 @@ a full allocation and initialisation is as follows:
 
 @example
 ikpcb_t * pcb   = ik_the_pcb();
-ikptr   s_num = the_numerator;
-ikptr   s_den = the_denominator;
-ikptr   s_rn;
+ikptr_t   s_num = the_numerator;
+ikptr_t   s_den = the_denominator;
+ikptr_t   s_rn;
 
 pcb->root9 = &s_num;
 pcb->root8 = &s_den;
@@ -3753,7 +3753,7 @@ values of the numerator and denominator are older.
 To identify an object as ratnum we do:
 
 @example
-ikptr  X = the_object;
+ikptr_t  X = the_object;
 
 if ((vector_tag == IK_TAGOF(X)) &&
     (ratnum_tag == IK_REF(X, -vector_tag)))
@@ -3766,9 +3766,9 @@ else
 to set or retrieve the numerator and denominator we do:
 
 @example
-ikptr  s_rn = the_ratnum;
-ikptr  s_num;
-ikptr  s_den;
+ikptr_t  s_rn = the_ratnum;
+ikptr_t  s_num;
+ikptr_t  s_den;
 
 s_num = IK_REF(s_rn, off_ratnum_num);
 s_den = IK_REF(s_rn, off_ratnum_den);
@@ -3823,15 +3823,15 @@ denominator.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_NUMERATOR (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} ikptr IK_DENOMINATOR (ikptr @var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_NUMERATOR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_DENOMINATOR (ikptr_t @var{X})
 Evaluate to the location of the numerator or denominator in the ratnum
 memory block.  A use of these macros can appear both as operand and as
 left--side of an assignment:
 
 @example
-ikptr  s_rn  = the_ratnum;
-ikptr  s_num;
+ikptr_t  s_rn  = the_ratnum;
+ikptr_t  s_num;
 
 s_num = IK_NUMERATOR(s_rn);
 
@@ -3846,18 +3846,18 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 @subsubheading Operations on ratnums
 
 
-@deftypefun int ik_is_ratnum (ikptr @var{obj})
+@deftypefun int ik_is_ratnum (ikptr_t @var{obj})
 Return true if @var{obj} is a ratnum object.
 @end deftypefun
 
 
-@deftypefun ikptr ika_ratnum_alloc_no_init (ikpcb_t * @var{pcb})
+@deftypefun ikptr_t ika_ratnum_alloc_no_init (ikpcb_t * @var{pcb})
 Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The fields are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ika_ratnum_alloc_and_init (ikpcb_t * @var{pcb})
+@deftypefun ikptr_t ika_ratnum_alloc_and_init (ikpcb_t * @var{pcb})
 Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  Both the fields are set to the fixnum zero.
 @end deftypefun
@@ -3913,17 +3913,17 @@ Flonums are allcated on the heap as follows:
 
 @example
 ikpcb_t * pcb  = ik_the_pcb();
-ikptr   s_fl;
+ikptr_t   s_fl;
 
 s_fl = ik_safe_alloc(pcb, flonum_size) | vector_tag;
-IK_REF(s_fl, off_flonum_tag) = (ikptr)flonum_tag
+IK_REF(s_fl, off_flonum_tag) = (ikptr_t)flonum_tag
 @end example
 
 @noindent
 to identify an object as flonum we do:
 
 @example
-ikptr  X = the_object;
+ikptr_t  X = the_object;
 
 if ((vector_tag == IK_TAGOF(X)) &&
     (flonum_tag == IK_REF(X, -vector_tag)))
@@ -3936,7 +3936,7 @@ else
 to obtain a pointer to the data area we do:
 
 @example
-ikptr     s_fl = the_flonum;
+ikptr_t     s_fl = the_flonum;
 double *  data;
 
 data = (double*)((long)(X) + off_flonum_data);
@@ -3984,12 +3984,12 @@ pointer to the first byte in the data area holding the actual
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} double IK_FLONUM_DATA (ikptr @var{fl})
+@deftypefn {Preprocessor Macro} double IK_FLONUM_DATA (ikptr_t @var{fl})
 Set or retrieve the floating point number.  A use of this macro can
 appear both as operand or left--side of assignment:
 
 @example
-ikptr  s_fl = the_flonum;
+ikptr_t  s_fl = the_flonum;
 double num;
 
 IK_FLONUM_DATA(s_fl) = 1.2;
@@ -3998,7 +3998,7 @@ num = IK_FLONUM_DATA(s_fl);
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_FLONUM (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} int IK_IS_FLONUM (ikptr_t @var{obj})
 Return non--zero if @var{obj} is a flonum object; otherwise return zero.
 @end deftypefn
 
@@ -4007,18 +4007,18 @@ Return non--zero if @var{obj} is a flonum object; otherwise return zero.
 @subsubheading Operations on flonums
 
 
-@deftypefun int ik_is_flonum (ikptr @var{obj})
+@deftypefun int ik_is_flonum (ikptr_t @var{obj})
 Return non--zero if @var{obj} is a flonum object; otherwise return zero.
 @end deftypefun
 
 
-@deftypefun ikptr iku_flonum_alloc (ikpcb_t * @var{pcb}, double @var{N})
+@deftypefun ikptr_t iku_flonum_alloc (ikpcb_t * @var{pcb}, double @var{N})
 Allocate and return a new flonum object, using @cfunc{ik_unsafe_alloc},
 intialised with @var{N}.
 @end deftypefun
 
 
-@deftypefun ikptr ika_flonum_from_double (ikpcb_t * @var{pcb}, double @var{N})
+@deftypefun ikptr_t ika_flonum_from_double (ikpcb_t * @var{pcb}, double @var{N})
 Allocate and return a new flonum object, using @cfunc{ik_safe_alloc},
 intialised with @var{N}.
 @end deftypefun
@@ -4065,7 +4065,7 @@ Compnums are allocated on the Scheme heap as follows:
 
 @example
 ikpcb_t * pcb   = ik_the_pcb();
-ikptr   s_cn;
+ikptr_t   s_cn;
 
 s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
 IK_REF(s_cn, off_compnum_tag) = compnum_tag;
@@ -4078,9 +4078,9 @@ allocation and initialisation is as follows:
 
 @example
 ikpcb_t * pcb  = ik_the_pcb();
-ikptr   s_re = the_real;
-ikptr   s_im = the_imag;
-ikptr   s_cn;
+ikptr_t   s_re = the_real;
+ikptr_t   s_im = the_imag;
+ikptr_t   s_cn;
 
 pcb->root9 = &s_re;
 pcb->root8 = &s_im;
@@ -4104,7 +4104,7 @@ values of the real and imaginary parts are older.
 To identify an object as compnum we do:
 
 @example
-ikptr  X = the_object;
+ikptr_t  X = the_object;
 
 if ((vector_tag  == IK_TAGOF(X)) &&
     (compnum_tag == IK_REF(X, -vector_tag)))
@@ -4117,9 +4117,9 @@ else
 to set or retrieve the real and imaginary parts we do:
 
 @example
-ikptr  s_cn = the_compnum;
-ikptr  s_re;
-ikptr  s_im;
+ikptr_t  s_cn = the_compnum;
+ikptr_t  s_re;
+ikptr_t  s_im;
 
 s_re = IK_REF(s_cn, off_compnum_real);
 s_im = IK_REF(s_cn, off_compnum_imag);
@@ -4173,15 +4173,15 @@ imaginary part.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_COMPNUM_REAL (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} ikptr IK_COMPNUM_IMAG (ikptr @var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_COMPNUM_REAL (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_COMPNUM_IMAG (ikptr_t @var{X})
 Evaluate to the location of the real and imaginary parts in the compnum
 memory block.  A use of these macros can appear both as operand and as
 left--side of an assignment:
 
 @example
-ikptr  s_cn = the_compnum;
-ikptr  s_re;
+ikptr_t  s_cn = the_compnum;
+ikptr_t  s_re;
 
 s_re = IK_COMPNUM_REAL(s_cn);
 
@@ -4195,18 +4195,18 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 @subsubheading Operations on compnums
 
 
-@deftypefun int ik_is_compnum (ikptr @var{obj})
+@deftypefun int ik_is_compnum (ikptr_t @var{obj})
 Return true if @var{obj} is a compnum object.
 @end deftypefun
 
 
-@deftypefun ikptr ika_compnum_alloc_no_init (ikpcb_t * @var{pcb})
+@deftypefun ikptr_t ika_compnum_alloc_no_init (ikpcb_t * @var{pcb})
 Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The fields are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ika_compnum_alloc_and_init (ikpcb_t * @var{pcb})
+@deftypefun ikptr_t ika_compnum_alloc_and_init (ikpcb_t * @var{pcb})
 Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  Both the fields are set to the fixnum zero.
 @end deftypefun
@@ -4249,7 +4249,7 @@ Cflonums are allocated on the Scheme heap as follows:
 
 @example
 ikpcb_t * pcb   = ik_the_pcb();
-ikptr   s_cf;
+ikptr_t   s_cf;
 
 s_cf = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
 IK_REF(s_cf, off_cflonum_tag) = cflonum_tag;
@@ -4262,9 +4262,9 @@ allocation and initialisation is as follows:
 
 @example
 ikpcb_t * pcb  = ik_the_pcb();
-ikptr   s_re = the_real;
-ikptr   s_im = the_imag;
-ikptr   s_cf;
+ikptr_t   s_re = the_real;
+ikptr_t   s_im = the_imag;
+ikptr_t   s_cf;
 
 pcb->root9 = &s_re;
 pcb->root8 = &s_im;
@@ -4288,7 +4288,7 @@ values of the real and imaginary parts are older.
 To identify an object as cflonum we do:
 
 @example
-ikptr  X = the_object;
+ikptr_t  X = the_object;
 
 if ((vector_tag  == IK_TAGOF(X)) &&
     (cflonum_tag == IK_REF(X, -vector_tag)))
@@ -4301,9 +4301,9 @@ else
 to set or retrieve the real and imaginary parts we do:
 
 @example
-ikptr  s_cf = the_cflonum;
-ikptr  s_re;
-ikptr  s_im;
+ikptr_t  s_cf = the_cflonum;
+ikptr_t  s_re;
+ikptr_t  s_im;
 
 s_re = IK_REF(s_cf, off_cflonum_real);
 s_im = IK_REF(s_cf, off_cflonum_imag);
@@ -4357,15 +4357,15 @@ imaginary part.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CFLONUM_REAL (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} ikptr IK_CFLONUM_IMAG (ikptr @var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CFLONUM_REAL (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_IMAG (ikptr_t @var{X})
 Evaluate to the location of the real and imaginary parts in the cflonum
 memory block.  A use of these macros can appear both as operand and as
 left--side of an assignment:
 
 @example
-ikptr  s_cf = the_cflonum;
-ikptr  s_re;
+ikptr_t  s_cf = the_cflonum;
+ikptr_t  s_re;
 
 s_re = IK_CFLONUM_REAL(s_cf);
 
@@ -4379,19 +4379,19 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
 @subsubheading Operations on cflonums
 
 
-@deftypefun int ik_is_cflonum (ikptr @var{obj})
+@deftypefun int ik_is_cflonum (ikptr_t @var{obj})
 Return true if @var{obj} is a cflonum object.
 @end deftypefun
 
 
-@deftypefun ikptr iku_cflonum_alloc_and_init (ikpcb_t * @var{pcb}, double @var{re}, double @var{im})
+@deftypefun ikptr_t iku_cflonum_alloc_and_init (ikpcb_t * @var{pcb}, double @var{re}, double @var{im})
 Allocate a cflonum and its flonum components using
 @cfunc{ik_unsafe_alloc} and return a tagged reference to it.  No garbage
 collection is run while this function is evaluating.
 @end deftypefun
 
 
-@deftypefun ikptr ika_cflonum_from_doubles (ikpcb_t * @var{pcb}, double @var{re}, double @var{im})
+@deftypefun ikptr_t ika_cflonum_from_doubles (ikpcb_t * @var{pcb}, double @var{re}, double @var{im})
 Allocate a cflonum and its flonum components using @cfunc{ik_safe_alloc}
 and return a tagged reference to it.  This function makes use of
 @code{pcb->root9}.
@@ -4489,7 +4489,7 @@ Pointers are allocated on the Scheme heap as follows:
 
 @example
 ikpcb_t * pcb   = ik_the_pcb();
-ikptr   s_ptr;
+ikptr_t   s_ptr;
 
 s_ptr = ik_safe_alloc(pcb, pointer_size) | vector_tag;
 IK_REF(s_ptr, off_pointer_tag) = pointer_tag;
@@ -4499,7 +4499,7 @@ IK_REF(s_ptr, off_pointer_tag) = pointer_tag;
 to identify an object as pointer we do:
 
 @example
-ikptr  X = the_object;
+ikptr_t  X = the_object;
 
 if ((vector_tag  == IK_TAGOF(X)) &&
     (pointer_tag == IK_REF(X, -vector_tag)))
@@ -4512,11 +4512,11 @@ else
 to set or retrieve the pointer value we do:
 
 @example
-ikptr  s_ptr = the_pointer;
+ikptr_t  s_ptr = the_pointer;
 void * ptr;
 
 ptr = (void *)IK_REF((X), off_pointer_data);
-IK_REF((X), off_pointer_data) = (ikptr)ptr;
+IK_REF((X), off_pointer_data) = (ikptr_t)ptr;
 @end example
 
 
@@ -4561,38 +4561,38 @@ the pointer to the first byte of the word holding the pointer value.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_POINTER (ikptr @var{X})
+@deftypefn {Preprocessor Macro} int IK_IS_POINTER (ikptr_t @var{X})
 Evaluate to true if @var{X} is a pointer object.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_DATA (ikptr @var{X})
-Return the value of the pointer as @code{ikptr}.
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_DATA (ikptr_t @var{X})
+Return the value of the pointer as @code{ikptr_t}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_DATA_VOIDP (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} {char *} IK_POINTER_DATA_CHARP (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} {uint8_t *} IK_POINTER_DATA_UINT8P (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} {long *} IK_POINTER_DATA_LONG (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} {ik_llong *} IK_POINTER_DATA_LLONG (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} {ik_ulong *} IK_POINTER_DATA_ULONG (ikptr @var{X})
-@deftypefnx {Preprocessor Macro} {ik_ullong *} IK_POINTER_DATA_ULLONG (ikptr @var{X})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_DATA_VOIDP (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {char *} IK_POINTER_DATA_CHARP (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {uint8_t *} IK_POINTER_DATA_UINT8P (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {long *} IK_POINTER_DATA_LONG (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ik_llong *} IK_POINTER_DATA_LLONG (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ik_ulong *} IK_POINTER_DATA_ULONG (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ik_ullong *} IK_POINTER_DATA_ULLONG (ikptr_t @var{X})
 Return the value of the pointer cast to a specific type.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET (ikptr @var{X}, void * @var{ptr})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_SET (ikptr_t @var{X}, void * @var{ptr})
 Reset to @var{ptr} the value of the pointer @var{X}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET_NULL (ikptr @var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_SET_NULL (ikptr_t @var{X})
 Reset to @cnull{} the value of the pointer.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} int IK_POINTER_IS_NULL (ikptr @var{X})
+@deftypefn {Preprocessor Macro} int IK_POINTER_IS_NULL (ikptr_t @var{X})
 Evaluate to true if the pointer value is @cnull{}.
 @end deftypefn
 
@@ -4601,24 +4601,24 @@ Evaluate to true if the pointer value is @cnull{}.
 @subsubheading Operations on pointers
 
 
-@deftypefun ikptr ika_pointer_alloc (ikpcb_t * @var{pcb}, ik_ulong @var{memory})
+@deftypefun ikptr_t ika_pointer_alloc (ikpcb_t * @var{pcb}, ik_ulong @var{memory})
 Allocate a pointer object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The pointer is initialised to @var{memory}.
 @end deftypefun
 
 
-@deftypefun ikptr iku_pointer_alloc (ikpcb* pcb, ik_ulong @var{memory})
+@deftypefun ikptr_t iku_pointer_alloc (ikpcb_t* pcb, ik_ulong @var{memory})
 Allocate a pointer object using @cfunc{ik_unsafe_alloc} and return a
 tagged reference to it.  The pointer is initialised to @var{memory}.
 @end deftypefun
 
 
-@deftypefun int ik_is_pointer (ikptr @var{X})
+@deftypefun int ik_is_pointer (ikptr_t @var{X})
 Return true if @var{X} is a pointer object.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_is_pointer (ikptr @var{X})
+@deftypefun ikptr_t ikrt_is_pointer (ikptr_t @var{X})
 Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
 @code{IK_FALSE_OBJECT}.
 @end deftypefun
@@ -5141,9 +5141,9 @@ Closure objects are allocated on the heap; to perform the allocation and
 initialisation for a closure object without free variables we do:
 
 @example
-ikptr   p_closure;
-ikptr   s_closure;
-ikptr   s_code = ...;
+ikptr_t   p_closure;
+ikptr_t   s_closure;
+ikptr_t   s_code = ...;
 
 p_closure = ik_safe_alloc(pcb, IK_ALIGN(disp_closure_data));
 s_closure = p_closure | closure_tag;
@@ -5199,18 +5199,18 @@ pointer to the first word in the data area of the memory block.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr @var{X})
+@deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr_t @var{X})
 Evaluate to true if @var{X} is a reference to closure object.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_ENTRY_POINT (@var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CLOSURE_ENTRY_POINT (@var{X})
 Given a reference to closure object: return the address of the binary
 code entry point.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_CODE_OBJECT (@var{X})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CLOSURE_CODE_OBJECT (@var{X})
 Given a reference to closure object: return a reference to the
 associated code object.  @strong{Only works for closures associated to
 code objects.}
@@ -5223,7 +5223,7 @@ variables.  @strong{Only works for closures associated to code objects.}
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_FREE_VAR (@var{X}, @var{idx})
+@deftypefn {Preprocessor Macro} ikptr_t IK_CLOSURE_FREE_VAR (@var{X}, @var{idx})
 Given a reference to closure object: return a reference to value of the
 free variable at index @var{idx} in the data area.  @var{idx} must be
 less than the number of free variables in this closure object.
@@ -5307,11 +5307,11 @@ next continuation object in the linked list.
 
 @subsubheading Basic operations
 
-To test if a value of type @code{ikptr} is a reference to a continuation
+To test if a value of type @code{ikptr_t} is a reference to a continuation
 object, we should do:
 
 @example
-ikptr   X;
+ikptr_t   X;
 
 if (continuation_primary_tag == (continuation_primary_mask & X))
   @{
@@ -5329,12 +5329,12 @@ A Scheme continuation object is usually allocated as follows:
 
 @example
 ikpcb_t *     pcb = ...;
-ikptr       s_kont;
+ikptr_t       s_kont;
 ikcont *    kont;
 
 kont   = (ikcont*)ik_unsafe_alloc(pcb,
                      IK_ALIGN(continuation_size));
-s_rest = (ikptr)((long)kont) | continuation_primary_tag;
+s_rest = (ikptr_t)((long)kont) | continuation_primary_tag;
 
 IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
 IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
@@ -5347,13 +5347,13 @@ pcb->next_k = s_kont;
 
 
 @defvr {Preprocessor Symbol} continuation_primary_tag
-The tag of an @code{ikptr} machine words referencing the memory block of
+The tag of an @code{ikptr_t} machine words referencing the memory block of
 a Scheme or system continuation object.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} continuation_primary_mask
-A bit pattern used to isolate the tag bits in an @code{ikptr} machine
+A bit pattern used to isolate the tag bits in an @code{ikptr_t} machine
 words referencing the memory block of a Scheme or system continuation
 object.
 @end defvr
@@ -5765,32 +5765,32 @@ structure.
 @subsection Macros handling @code{memory-block}
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_MBLOCK_POINTER (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_MBLOCK_POINTER (ikptr_t @var{obj})
 Given an instance of @code{memory-block}, return a pointer object being
 the value of its @code{pointer} field.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_MBLOCK_SIZE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_MBLOCK_SIZE (ikptr_t @var{obj})
 Given an instance of @code{memory-block}, return an exact integer being
 the value of its @code{size} field.  Notice that the returned value can
 be either a fixnum or a bignum.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} size_t IK_MBLOCK_SIZE_T (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} size_t IK_MBLOCK_SIZE_T (ikptr_t @var{obj})
 Given an instance of @code{memory-block}, return the value of the
 @code{size} field as @code{size_t}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_MBLOCK_DATA_VOIDP (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_MBLOCK_DATA_VOIDP (ikptr_t @var{obj})
 Given an instance of @code{memory-block}, return a @code{void *} pointer
 referencing the first byte of data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {char *} IK_MBLOCK_DATA_CHARP (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {char *} IK_MBLOCK_DATA_CHARP (ikptr_t @var{obj})
 Given an instance of @code{memory-block}, return a @code{charp *} pointer
 referencing the first byte of data.
 @end deftypefn
@@ -5800,69 +5800,69 @@ referencing the first byte of data.
 @subsection Macros extracting @code{void *}
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {void *} IK_VOIDP_FROM_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_VOIDP_FROM_POINTER_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a pointer object return a @code{void *} pointer
 referencing the data; when @var{obj} is @false{}: the returned value is
 @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a bytevector object return a @code{void *} pointer
 referencing the data; when @var{obj} is @false{}: the returned value is
 @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_MBLOCK_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a @code{memory-block} object return a @code{void *}
 pointer referencing the data; when @var{obj} is @false{}: the returned
 value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER (ikptr_t @var{obj})
 Given a bytevector object or a pointer object return a @code{void *}
 pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a bytevector object or a pointer object return a
 @code{void *} pointer referencing the data; when @var{obj} is @false{}:
 the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_POINTER_OR_MBLOCK (ikptr_t @var{obj})
 Given a pointer object or @code{memory-block} object return a @code{void
 *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a pointer object or a @code{memory-block} object
 return a @code{void *} pointer referencing the data; when @var{obj} is
 @false{}: the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr_t @var{obj})
 Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{void *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a bytevector object or a pointer object or a
 @code{memory-block} object return a @code{void *} pointer referencing
 the data; when @var{obj} is @false{}: the returned value is @cnull{}.
@@ -5873,69 +5873,69 @@ the data; when @var{obj} is @false{}: the returned value is @cnull{}.
 @subsection Macros extracting @code{char *}
 
 
-@deftypefn {Preprocessor Macro} {char *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {char *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a pointer object return a @code{char *} pointer
 referencing the data; when @var{obj} is @false{}: the returned value is
 @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a bytevector object return a @code{char *} pointer
 referencing the data; when @var{obj} is @false{}: the returned value is
 @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {charp *} IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {charp *} IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a @code{memory-block} object return a @code{char *}
 pointer referencing the data; when @var{obj} is @false{}: the returned
 value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr_t @var{obj})
 Given a bytevector object or a pointer object return a @code{char *}
 pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a bytevector object or a pointer object return a
 @code{char *} pointer referencing the data; when @var{obj} is @false{}:
 the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr_t @var{obj})
 Given a pointer object or @code{memory-block} object return a @code{void
 *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a pointer object or a @code{memory-block} object
 return a @code{char *} pointer referencing the data; when @var{obj} is
 @false{}: the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr_t @var{obj})
 Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{char *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr_t @var{obj})
 Given @false{} or a bytevector object or a pointer object or a
 @code{memory-block} object return a @code{char *} pointer referencing
 the data; when @var{obj} is @false{}: the returned value is @cnull{}.
@@ -5957,7 +5957,7 @@ Notice that at the C language level only general C buffers exist: Scheme
 strings should be converted to bytevectors at the Scheme level.
 
 
-@deftypefun size_t ik_generalised_c_buffer_len (ikptr @var{buffer}, ikptr @var{buffer_len})
+@deftypefun size_t ik_generalised_c_buffer_len (ikptr_t @var{buffer}, ikptr_t @var{buffer_len})
 Return the number of bytes in a generalised C buffer object.
 
 @var{buffer} must be a bytevector, pointer object or @code{memory-block}
@@ -5971,16 +5971,16 @@ the number of bytes available in the referenced memory block.  Otherwise
 
 @c ------------------------------------------------------------
 
-@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER_OR_FALSE (ikptr_t @var{obj})
 Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{void *} pointer referencing the data.  The second
 macro accepts also @false{} as value and returns @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE (ikptr_t @var{obj})
 Given a pointer object or a @code{memory-block} object return a
 @code{void *} pointer referencing the data.  The second macro accepts
 also @false{} as value and returns @cnull{}.
@@ -5988,8 +5988,8 @@ also @false{} as value and returns @cnull{}.
 
 @c ------------------------------------------------------------
 
-@deftypefn {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING (ikptr_t @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING_OR_FALSE (ikptr_t @var{obj})
 Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{char *} pointer referencing the data.  The second
 macro accepts also @false{} as value and returns @cnull{}.
@@ -6000,7 +6000,7 @@ macro accepts also @false{} as value and returns @cnull{}.
 @subsection Miscellaneous functions
 
 
-@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb  @var{pcb})
+@deftypefun ikptr_t ikrt_general_copy (ikptr_t @var{dst}, ikptr_t @var{dst_start}, ikptr_t @var{src}, ikptr_t @var{src_start}, ikptr_t @var{count}, ikpcb_t @var{pcb})
 Copy @var{count} items from @var{src} starting at offset
 @var{src_start}, to @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative
