@@ -28,14 +28,13 @@
 #undef LOG_VERIFY
 #define LOG_VERIFY	0
 
-static ikuword_t	page_idx	  (uint8_t * x);
-static uint8_t *verify_page       (uint8_t * mem,
-				   uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
+static ikuword_t page_idx     (uint8_t * x);
+static uint8_t * verify_page  (uint8_t * mem, uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
 
 /* Scheme objects, non-code. */
 static uint8_t *verify_scheme_objects_page (uint8_t * mem, uint32_t segment_bits IK_UNUSED, uint32_t dirty_bits IK_UNUSED,
 					    uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
-static void	verify_object	  (ikptr x IK_UNUSED,
+static void	verify_object	  (ikptr_t x IK_UNUSED,
 				   uint8_t * mem_base IK_UNUSED, uint32_t * segment_vector IK_UNUSED, uint32_t * dirty_vector IK_UNUSED);
 
 /* Code objects. */
@@ -43,15 +42,15 @@ static uint8_t *verify_code_page  (uint8_t * mem, uint32_t segment_bits, uint32_
 				   uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
 static uint8_t *verify_code_small_size_sequence (uint8_t * mem,
 						 uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
-static void	verify_code_object_first_word (ikptr p_code);
-static ikuword_t	verify_code_object_size (ikptr p_code);
+static void	verify_code_object_first_word (ikptr_t p_code);
+static ikuword_t	verify_code_object_size (ikptr_t p_code);
 static void	verify_code_common_fields (uint8_t * mem,
 					   uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
-static void	log_invalid_code_object (ikptr X);
+static void	log_invalid_code_object (ikptr_t X);
 
 
 void
-ik_verify_integrity (ikpcb* pcb, char * when_description)
+ik_verify_integrity (ikpcb_t* pcb, char * when_description)
 /* Scan  all the  memory used  by  Vicare searching  for invalid  values
    introduced by the garbage collector.  If successful: just return.  If
    an error is found: abort the process.
@@ -142,7 +141,7 @@ verify_code_page (uint8_t * mem, uint32_t segment_bits, uint32_t dirty_bits,
    pointer to the next machine word to verify. */
 {
   uint8_t *	first_word_of_next_page	= NULL;
-  ikptr		p_code	= (ikptr)mem;
+  ikptr_t		p_code	= (ikptr_t)mem;
   ikuword_t	aligned_code_object_size;
 
   verify_code_object_first_word(p_code);
@@ -183,7 +182,7 @@ verify_code_small_size_sequence (uint8_t * first_word_in_this_page,
   uint8_t *	first_word_of_next_page = first_word_in_this_page + IK_PAGESIZE;
   uint8_t *	current_code_object     = first_word_in_this_page;
   for (;;) {
-    ikptr	p_code	= (ikptr)current_code_object;
+    ikptr_t	p_code	= (ikptr_t)current_code_object;
     /* The ALIGNED_CODE_OBJECT_SIZE is an exact multiple of 16 bytes. */
     ikuword_t	aligned_code_object_size;
     uint8_t *	first_word_after_code_object;
@@ -221,7 +220,7 @@ verify_code_small_size_sequence (uint8_t * first_word_in_this_page,
   return first_word_of_next_page;
 
  integrity_error:
-  log_invalid_code_object(((ikptr)current_code_object) | code_primary_tag);
+  log_invalid_code_object(((ikptr_t)current_code_object) | code_primary_tag);
   ik_abort("integrity check failed");
   return NULL;
 }
@@ -229,16 +228,16 @@ verify_code_small_size_sequence (uint8_t * first_word_in_this_page,
 /* ------------------------------------------------------------------ */
 
 static void
-verify_code_object_first_word (ikptr p_code)
+verify_code_object_first_word (ikptr_t p_code)
 /* Verify the first word. */
 {
-  const ikptr	fst	= IK_REF(p_code, disp_code_tag);
+  const ikptr_t	fst	= IK_REF(p_code, disp_code_tag);
   if (code_tag != fst) {
     ik_abort("expected code_tag as first word of code object memory block, found: 0x%016lx\n", (long)fst);
   }
 }
 static ikuword_t
-verify_code_object_size (ikptr p_code)
+verify_code_object_size (ikptr_t p_code)
 /* Verify the binary code size.  Return the aligned code object size, an
  * exact multiple of 16.
  *
@@ -261,7 +260,7 @@ verify_code_object_size (ikptr p_code)
  *   |...............................................................|
  */
 {
-  const ikptr	s_binary_code_size = IK_REF(p_code, disp_code_code_size);
+  const ikptr_t	s_binary_code_size = IK_REF(p_code, disp_code_code_size);
   ikuword_t	binary_code_size;
   ikuword_t	code_object_size;
   ikuword_t	aligned_code_object_size;
@@ -289,14 +288,14 @@ static void
 verify_code_common_fields (uint8_t * mem,
 			   uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector)
 {
-  ikptr		p_code	= (ikptr)mem;
+  ikptr_t		p_code	= (ikptr_t)mem;
 
   verify_code_object_first_word(p_code);
   verify_code_object_size(p_code);
 
   /* Verify the number of free variables. */
   {
-    ikptr	s_freevars = IK_REF(p_code, disp_code_freevars);
+    ikptr_t	s_freevars = IK_REF(p_code, disp_code_freevars);
     if (!IK_IS_FIXNUM(s_freevars)) {
       ik_debug_message_no_newline("%s: expected fixnum as number of free variables in code object, got: ", __func__);
       ik_print(s_freevars);
@@ -313,13 +312,13 @@ verify_code_common_fields (uint8_t * mem,
 
   /* Verify the annotation object. */
   {
-    ikptr	s_annotation	= IK_REF(p_code, disp_code_annotation);
+    ikptr_t	s_annotation	= IK_REF(p_code, disp_code_annotation);
     verify_object(s_annotation, mem_base, segment_vector, dirty_vector);
   }
 
   /* Verify the unused word. */
   {
-    ikptr	s_unused	= IK_REF(p_code, disp_code_unused);
+    ikptr_t	s_unused	= IK_REF(p_code, disp_code_unused);
     if (IK_FIX(0) != s_unused) {
       ik_debug_message_no_newline("%s: expected fixnum zero as unused word in code object, got: ", __func__);
       ik_print(s_unused);
@@ -329,9 +328,9 @@ verify_code_common_fields (uint8_t * mem,
 
   /* Verify the relocation vector. */
   {
-    ikptr	s_relocation_vector	= IK_REF(p_code, disp_code_reloc_vector);
+    ikptr_t	s_relocation_vector	= IK_REF(p_code, disp_code_reloc_vector);
     assert(ik_is_vector(s_relocation_vector));
-    uint32_t	rs	= segment_vector[page_idx((void*)(long)s_relocation_vector) - page_idx(mem_base)];
+    uint32_t	rs	= segment_vector[page_idx((void*)s_relocation_vector) - page_idx(mem_base)];
     uint32_t	cs	= segment_vector[page_idx(mem) - page_idx(mem_base)];
     uint32_t	cgen	= cs & GEN_MASK;
     uint32_t	rgen	= rs & GEN_MASK;
@@ -355,7 +354,7 @@ verify_code_common_fields (uint8_t * mem,
   ik_abort("integrity check failed");
 }
 static void
-log_invalid_code_object (ikptr X)
+log_invalid_code_object (ikptr_t X)
 {
   ik_debug_message_no_newline("%s: code object: ", __func__);
   ik_print(X);
@@ -380,7 +379,7 @@ verify_scheme_objects_page (uint8_t * mem, uint32_t segment_bits IK_UNUSED, uint
   return mem + IK_PAGESIZE;
 }
 static void
-verify_object (ikptr X IK_UNUSED,
+verify_object (ikptr_t X IK_UNUSED,
 	       uint8_t * mem_base IK_UNUSED, uint32_t * segment_vector IK_UNUSED, uint32_t * dirty_vector IK_UNUSED)
 {
   return;
