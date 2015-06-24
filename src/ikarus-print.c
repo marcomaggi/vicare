@@ -110,11 +110,11 @@ print_object (FILE* fh, ikptr x, int nested_level)
     fprintf(fh, "null=()");
   }
   else if (IK_IS_CHAR(x)) {
-    unsigned long i = ((long)x) >> char_shift;
+    int32_t i = ((int32_t)x) >> char_shift;
     if (i < 128)
       fprintf(fh, "char=%s", char_string[i]);
     else
-      fprintf(fh, "char=#\\x%lx", i);
+      fprintf(fh, "char=#\\x%lx", (long)i);
   }
   else if (IK_IS_CODE(x)) {
     fprintf(fh, "code={x=0x%016lx, annotation=", x);
@@ -182,10 +182,9 @@ print_object (FILE* fh, ikptr x, int nested_level)
   }
   else if (IK_IS_CLOSURE(x)) {
     long	freec = IK_CLOSURE_NUMBER_OF_FREE_VARS(x);
-    long	i;
     fprintf(fh, "#<closure num_of_free_vars=%ld,\n",
 	    freec);
-    for (i=0; i<freec; ++i) {
+    for (long i=0; i<freec; ++i) {
       PRINT_INDENTATION();
       fprintf(fh, "free[%ld]=", i);
       PRINT_OBJECT(fh, IK_CLOSURE_FREE_VAR(x, i));

@@ -121,7 +121,7 @@ ik_mmap (ikuword_t size)
 #ifdef VICARE_DEBUGGING
   ik_debug_message("%s: 0x%016lx .. 0x%016lx\n", __func__, (long)mem, ((long)(mem))+mapsize-1);
 #endif
-  return (ikptr)(long)mem;
+  return (ikptr_t)mem;
 }
 void
 ik_munmap (ikptr mem, ikuword_t size)
@@ -1019,7 +1019,7 @@ ik_stack_overflow (ikpcb* pcb)
       /* Release the protection on the  first low-address memory page in
 	 the stack  segment, which avoids  memory corruption in  case of
 	 undetected Scheme stack overflow. */
-      mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_READ|PROT_WRITE);
+      mprotect((void*)(pcb->stack_base), IK_PAGESIZE, PROT_READ|PROT_WRITE);
     }
   }
   /* Allocate a  new memory segment to  be used as Scheme  stack and set
@@ -1047,7 +1047,7 @@ ik_stack_overflow (ikpcb* pcb)
        * This configuration must be performed also when first allocating
        * the stack segment.
        */
-      mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+      mprotect((void*)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
       pcb->frame_redline= pcb->stack_base + IK_DOUBLE_CHUNK_SIZE + IK_PAGESIZE;
     } else {
       pcb->frame_redline= pcb->stack_base + IK_DOUBLE_CHUNK_SIZE;
@@ -1059,44 +1059,31 @@ ik_stack_overflow (ikpcb* pcb)
 }
 
 
-/*
-char* ik_uuid(char* str) {
-  assert((36 << fx_shift) == (int) ref(str, disp_string_length - string_tag));
-  uuid_t u;
-  uuid_clear(u);
-  uuid_generate(u);
-  uuid_unparse_upper(u, str + disp_string_data - string_tag);
-  return str;
-}
-*/
-
-static const char* uuid_chars =
-  "!$%&/0123456789<=>?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-static int uuid_strlen = 1;
-ikptr
-ik_uuid(ikptr bv)
+ikptr_t
+ik_uuid (ikptr s_bv)
 {
-  static int fd = -1;
-  if (fd == -1) {
+  static const char *	uuid_chars = "!$%&/0123456789<=>?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  static int		uuid_len;
+  static int		fd = -1;
+  if (-1 == fd) {
     fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1) {
       return ik_errno_to_code();
     }
-    uuid_strlen = strlen(uuid_chars);
+    uuid_len = strlen(uuid_chars);
   }
-  long           n    = IK_UNFIX(IK_REF(bv, off_bytevector_length));
-  unsigned char* data = (unsigned char*)(long)(bv + off_bytevector_data);
-  int r = read(fd, data, n);
-  if (r < 0) {
-    return ik_errno_to_code();
+  {
+    uint8_t *	data     = IK_BYTEVECTOR_DATA_UINT8P(s_bv);
+    iksword_t	data_len = IK_BYTEVECTOR_LENGTH(s_bv);
+    ssize_t	r        = read(fd, data, data_len);
+    if (r < 0) {
+      return ik_errno_to_code();
+    }
+    for (uint8_t *p=data, *p_end=data+data_len; p < p_end; ++p) {
+      *p = uuid_chars[*p % uuid_len];
+    }
   }
-  unsigned char* p = data;
-  unsigned char* q = data + n;
-  while (p < q) {
-    *p = uuid_chars[*p % uuid_strlen];
-    p++;
-  }
-  return bv;
+  return s_bv;
 }
 
 
@@ -1165,7 +1152,7 @@ ik_dump_dirty_vector (ikpcb* pcb)
  ** Code objects constructor and auxiliary functions.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, ikpcb* pcb)
 /* Build a new code object and return a reference to it.
 
@@ -1177,7 +1164,7 @@ ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, 
   assert(IK_IS_FIXNUM(s_code_size));
   assert(IK_IS_FIXNUM(s_freevars));
   assert(ik_is_vector(s_relocation_vector));
-  long   code_size = IK_UNFIX(s_code_size);
+  iksword_t	code_size = IK_UNFIX(s_code_size);
   /* We allocate  a number of bytes  equal to the least  number of pages
    * required to  hold CODE_SIZE.   Example: if  CODE_SIZE is  less than
    * IK_PAGESIZE:
@@ -1193,12 +1180,12 @@ ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, 
    *   |-------------------| code_size
    *
    */
-  long   memreq    = IK_ALIGN_TO_NEXT_PAGE(disp_code_data + code_size);
+  ikuword_t	memreq	= IK_ALIGN_TO_NEXT_PAGE(disp_code_data + code_size);
   /* Here MEM is  still an untagged pointer, not really  an "ikptr" yet;
      we  tag it  later.   MEM references  the first  byte  in the  pages
      allocated with "mmap()" with execution protection. */
-  ikptr  mem       = ik_mmap_code(memreq, 0, pcb);
-  bzero((char*)(long)mem, memreq);
+  ikptr_t	mem	= ik_mmap_code(memreq, 0, pcb);
+  bzero((char*)mem, memreq);
   IK_REF(mem, disp_code_tag)		= code_tag;
   IK_REF(mem, disp_code_code_size)	= s_code_size;
   IK_REF(mem, disp_code_freevars)	= s_freevars;
