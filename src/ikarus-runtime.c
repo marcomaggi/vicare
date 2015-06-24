@@ -71,7 +71,7 @@ ik_free (void* x, int size)
  ** Scheme language memory allocation, basic memory mapping.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ik_mmap (ikuword_t size)
 /* Allocate new  memory pages.   All memory  allocation is  performed by
    this function.  The allocated memory  is initialised to a sequence of
@@ -124,7 +124,7 @@ ik_mmap (ikuword_t size)
   return (ikptr_t)mem;
 }
 void
-ik_munmap (ikptr mem, ikuword_t size)
+ik_munmap (ikptr_t mem, ikuword_t size)
 /* All memory relese is performed by this function. */
 {
   ikuword_t	npages  = IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(size);
@@ -154,10 +154,10 @@ ik_munmap (ikptr mem, ikuword_t size)
  ** Memory mapping and tagging for garbage collection.
  ** ----------------------------------------------------------------- */
 
-static void set_page_range_type       (ikptr base, ikuword_t size, uint32_t type, ikpcb* pcb);
-static void extend_page_vectors_maybe (ikptr base, ikuword_t size, ikpcb* pcb);
+static void set_page_range_type       (ikptr_t base, ikuword_t size, uint32_t type, ikpcb* pcb);
+static void extend_page_vectors_maybe (ikptr_t base, ikuword_t size, ikpcb* pcb);
 
-ikptr
+ikptr_t
 ik_mmap_typed (ikuword_t size, uint32_t type, ikpcb* pcb)
 /* Allocate new  memory pages  or recycle  an old  memory page  from the
    PCB's cache and return a pointer to it.
@@ -170,7 +170,7 @@ ik_mmap_typed (ikuword_t size, uint32_t type, ikpcb* pcb)
    is used for  the Scheme heap: we can leave  some words uninitialised,
    because the heap is not a garbage collector root. */
 {
-  ikptr		base;
+  ikptr_t		base;
   if (size == IK_PAGESIZE) {
     /* If available, recycle  a page from the cache.   Remember that the
        memory in the cached pages is  NOT reset in any way: its contents
@@ -195,17 +195,17 @@ ik_mmap_typed (ikuword_t size, uint32_t type, ikpcb* pcb)
   set_page_range_type(base, size, type, pcb);
   return base;
 }
-ikptr
+ikptr_t
 ik_mmap_ptr (ikuword_t size, int gen, ikpcb* pcb)
 {
   return ik_mmap_typed(size, POINTERS_MT|gen, pcb);
 }
-ikptr
+ikptr_t
 ik_mmap_data (ikuword_t size, int gen, ikpcb* pcb)
 {
   return ik_mmap_typed(size, DATA_MT|gen, pcb);
 }
-ikptr
+ikptr_t
 ik_mmap_code (ikuword_t aligned_size, int gen, ikpcb* pcb)
 /* Allocate contiguous  memory mapped pages  into a single  memory block
    which will hold one or more code objects, return a raw pointer to the
@@ -224,19 +224,19 @@ ik_mmap_code (ikuword_t aligned_size, int gen, ikpcb* pcb)
    stored in  the same  page (with  each code  object size  aligned with
    IK_ALIGN). */
 {
-  ikptr p = ik_mmap_typed(aligned_size, CODE_MT|gen, pcb);
+  ikptr_t p = ik_mmap_typed(aligned_size, CODE_MT|gen, pcb);
   if (aligned_size > IK_PAGESIZE)
     set_page_range_type(p+IK_PAGESIZE, aligned_size-IK_PAGESIZE, DATA_MT|gen, pcb);
   return p;
 }
-ikptr
+ikptr_t
 ik_mmap_mainheap (ikuword_t size, ikpcb* pcb)
 /* Allocate a memory segment tagged as part of the Scheme heap. */
 {
   return ik_mmap_typed(size, MAINHEAP_MT, pcb);
 }
 static void
-set_page_range_type (ikptr base, ikuword_t size, uint32_t type, ikpcb* pcb)
+set_page_range_type (ikptr_t base, ikuword_t size, uint32_t type, ikpcb* pcb)
 /* Set to TYPE all the entries in "pcb->segment_vector" corresponding to
    the memory block starting at BASE and SIZE bytes wide. */
 {
@@ -252,7 +252,7 @@ set_page_range_type (ikptr base, ikuword_t size, uint32_t type, ikpcb* pcb)
     *p = type;
 }
 static void
-extend_page_vectors_maybe (ikptr base_ptr, ikuword_t size, ikpcb* pcb)
+extend_page_vectors_maybe (ikptr_t base_ptr, ikuword_t size, ikpcb* pcb)
 /* For garbage  collection purposes we  keep track of every  Vicare page
  * used by Scheme code in PCB's  dirty vector and segments vector.  When
  * a new memory block is allocated we must check if such vectors need to
@@ -275,7 +275,7 @@ extend_page_vectors_maybe (ikptr base_ptr, ikuword_t size, ikpcb* pcb)
  */
 {
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  ikptr end_ptr = base_ptr + size;
+  ikptr_t end_ptr = base_ptr + size;
   if (base_ptr < pcb->memory_base) {
     ikuword_t new_lo_seg   = IK_SEGMENT_INDEX(base_ptr);
     ikuword_t old_lo_seg   = IK_SEGMENT_INDEX(pcb->memory_base);
@@ -287,10 +287,10 @@ extend_page_vectors_maybe (ikptr base_ptr, ikuword_t size, ikpcb* pcb)
 	 the new  vector; the  head of  the new vector  is set  to zero,
 	 which   means  the   corresponding   pages   are  marked   with
 	 IK_PURE_WORD. */
-      ikptr	new_dvec_base = ik_mmap(new_vec_size);
+      ikptr_t	new_dvec_base = ik_mmap(new_vec_size);
       bzero((char*)new_dvec_base, size_delta);
       memcpy((char*)(new_dvec_base + size_delta), (char*)pcb->dirty_vector_base, old_vec_size);
-      ik_munmap((ikptr)pcb->dirty_vector_base, old_vec_size);
+      ik_munmap((ikptr_t)pcb->dirty_vector_base, old_vec_size);
       pcb->dirty_vector_base = (uint32_t *)new_dvec_base;
       pcb->dirty_vector      = new_dvec_base - new_lo_seg * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     }
@@ -298,10 +298,10 @@ extend_page_vectors_maybe (ikptr base_ptr, ikuword_t size, ikpcb* pcb)
 	 of the new vector;  the head of the new vector  is set to zero,
 	 which   means  the   corresponding   pages   are  marked   with
 	 "HOLE_MT". */
-      ikptr	new_svec_base = ik_mmap(new_vec_size);
+      ikptr_t	new_svec_base = ik_mmap(new_vec_size);
       bzero((char*)new_svec_base, size_delta);
       memcpy((char*)(new_svec_base + new_vec_size - old_vec_size), (char*)(pcb->segment_vector_base), old_vec_size);
-      ik_munmap((ikptr)pcb->segment_vector_base, old_vec_size);
+      ik_munmap((ikptr_t)pcb->segment_vector_base, old_vec_size);
       pcb->segment_vector_base = (uint32_t *)new_svec_base;
       pcb->segment_vector      = (uint32_t *)(new_svec_base - new_lo_seg * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT);
     }
@@ -317,10 +317,10 @@ extend_page_vectors_maybe (ikptr base_ptr, ikuword_t size, ikpcb* pcb)
 	 the new  vector; the  tail of  the new vector  is set  to zero,
 	 which   means  the   corresponding   pages   are  marked   with
 	 IK_PURE_WORD. */
-      ikptr new_dvec_base = ik_mmap(new_vec_size);
+      ikptr_t new_dvec_base = ik_mmap(new_vec_size);
       memcpy((char*)new_dvec_base, (char*)pcb->dirty_vector_base, old_vec_size);
       bzero((char*)(new_dvec_base + old_vec_size), size_delta);
-      ik_munmap((ikptr)pcb->dirty_vector_base, old_vec_size);
+      ik_munmap((ikptr_t)pcb->dirty_vector_base, old_vec_size);
       pcb->dirty_vector_base = (uint32_t *)new_dvec_base;
       pcb->dirty_vector      = new_dvec_base - lo_seg * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     }
@@ -328,10 +328,10 @@ extend_page_vectors_maybe (ikptr base_ptr, ikuword_t size, ikpcb* pcb)
 	 of the new vector;  the tail of the new vector  is set to zero,
 	 which   means  the   corresponding   pages   are  marked   with
 	 "HOLE_MT". */
-      ikptr new_svec_base = ik_mmap(new_vec_size);
+      ikptr_t new_svec_base = ik_mmap(new_vec_size);
       memcpy((char*)new_svec_base, (char*)pcb->segment_vector_base, old_vec_size);
       bzero((char*)(new_svec_base + old_vec_size), size_delta);
-      ik_munmap((ikptr)pcb->segment_vector_base, old_vec_size);
+      ik_munmap((ikptr_t)pcb->segment_vector_base, old_vec_size);
       pcb->segment_vector_base = (uint32_t *) new_svec_base;
       pcb->segment_vector      = (uint32_t *) (new_svec_base - lo_seg * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT);
     }
@@ -723,7 +723,7 @@ ik_delete_pcb (ikpcb* pcb)
  ** Basic memory allocation for Scheme objects.
  ** ----------------------------------------------------------------- */
 
-ikptr
+ikptr_t
 ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
 /* Reserve a memory  block on the Scheme heap and  return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
@@ -742,9 +742,9 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
    happens, because the garbage collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
-  ikptr		alloc_ptr;
-  ikptr		end_ptr;
-  ikptr		new_alloc_ptr;
+  ikptr_t		alloc_ptr;
+  ikptr_t		end_ptr;
+  ikptr_t		new_alloc_ptr;
   alloc_ptr	= pcb->allocation_pointer;
   end_ptr	= pcb->heap_base + pcb->heap_size;
   new_alloc_ptr	= alloc_ptr + aligned_size;
@@ -767,7 +767,7 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
   }
   return alloc_ptr;
 }
-ikptr
+ikptr_t
 ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
 /* Reserve a memory  block on the Scheme heap and  return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
@@ -786,9 +786,9 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
    happens, because the garbage collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
-  ikptr alloc_ptr       = pcb->allocation_pointer;
-  ikptr end_ptr         = pcb->heap_base + pcb->heap_size;
-  ikptr new_alloc_ptr   = alloc_ptr + aligned_size;
+  ikptr_t alloc_ptr       = pcb->allocation_pointer;
+  ikptr_t end_ptr         = pcb->heap_base + pcb->heap_size;
+  ikptr_t new_alloc_ptr   = alloc_ptr + aligned_size;
   if (new_alloc_ptr < end_ptr) {
     /* There is  room in the  current heap  nursery: update the  PCB and
        return the offset. */
@@ -836,7 +836,7 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
        *         |.....................................|
        *                       heap_size
        */
-      ikptr	heap_ptr;
+      ikptr_t	heap_ptr;
       ikuword_t	new_size = (aligned_size > IK_HEAP_EXTENSION_SIZE)? \
 	aligned_size : IK_HEAP_EXTENSION_SIZE;
       new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_PAGESIZE);
@@ -850,7 +850,7 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
   }
 }
 void
-ik_signal_dirt_in_page_of_pointer (ikpcb_t * pcb, ikptr s_pointer)
+ik_signal_dirt_in_page_of_pointer (ikpcb_t * pcb, ikptr_t s_pointer)
 {
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pointer);
 }
@@ -898,7 +898,7 @@ ik_abort (const char * error_message, ...)
   return EXIT_FAILURE;
 }
 void
-ik_error (ikptr args)
+ik_error (ikptr_t args)
 {
   fprintf(stderr, "*** Vicare error: ");
   ik_fprint(stderr, args);
@@ -1007,7 +1007,7 @@ ik_stack_overflow (ikpcb* pcb)
      Mark the old Scheme stack segment as "data".*/
   {
     ikcont_t *	kont   = (ikcont_t*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
-    ikptr	s_kont = ((ikptr)kont) | continuation_primary_tag;
+    ikptr_t	s_kont = ((ikptr_t)kont) | continuation_primary_tag;
     kont->tag  = continuation_tag;
     kont->top  = pcb->frame_pointer;
     kont->size = pcb->frame_base - pcb->frame_pointer - wordsize;
@@ -1060,7 +1060,7 @@ ik_stack_overflow (ikpcb* pcb)
 
 
 ikptr_t
-ik_uuid (ikptr s_bv)
+ik_uuid (ikptr_t s_bv)
 {
   static const char *	uuid_chars = "!$%&/0123456789<=>?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   static int		uuid_len;
@@ -1102,15 +1102,15 @@ mtname (unsigned n)
   if (n == HOLE_TYPE)      { return "      "; }
   return "WHAT_T";
 }
-ikptr
+ikptr_t
 ik_dump_metatable (ikpcb* pcb)
 {
   unsigned* s = pcb->segment_vector_base;
-  ikptr p = pcb->memory_base;
-  ikptr hi = pcb->memory_end;
+  ikptr_t p = pcb->memory_base;
+  ikptr_t hi = pcb->memory_end;
   while (p < hi) {
     unsigned t = *s & TYPE_MASK;
-    ikptr start = p;
+    ikptr_t start = p;
     p += IK_PAGESIZE;
     s++;
     while ((p < hi) && ((*s & TYPE_MASK) == t)) {
@@ -1124,15 +1124,15 @@ ik_dump_metatable (ikpcb* pcb)
   }
   return IK_VOID_OBJECT;
 }
-ikptr
+ikptr_t
 ik_dump_dirty_vector (ikpcb* pcb)
 {
   unsigned* s  = pcb->dirty_vector_base;
-  ikptr     p  = pcb->memory_base;
-  ikptr     hi = pcb->memory_end;
+  ikptr_t     p  = pcb->memory_base;
+  ikptr_t     hi = pcb->memory_end;
   while (p < hi) {
     unsigned t     = *s;
-    ikptr    start = p;
+    ikptr_t    start = p;
     p += IK_PAGESIZE;
     s++;
     while ((p < hi) && (*s == t)) {
@@ -1153,7 +1153,7 @@ ik_dump_dirty_vector (ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr_t
-ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, ikpcb* pcb)
+ikrt_make_code (ikptr_t s_code_size, ikptr_t s_freevars, ikptr_t s_relocation_vector, ikpcb* pcb)
 /* Build a new code object and return a reference to it.
 
    S_CODE_SIZE is a non-negative  fixnum representing the requested code
@@ -1181,7 +1181,7 @@ ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, 
    *
    */
   ikuword_t	memreq	= IK_ALIGN_TO_NEXT_PAGE(disp_code_data + code_size);
-  /* Here MEM is  still an untagged pointer, not really  an "ikptr" yet;
+  /* Here MEM is  still an untagged pointer, not really  an "ikptr_t" yet;
      we  tag it  later.   MEM references  the first  byte  in the  pages
      allocated with "mmap()" with execution protection. */
   ikptr_t	mem	= ik_mmap_code(memreq, 0, pcb);
@@ -1200,16 +1200,16 @@ ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, 
   ik_relocate_code(mem);
   return mem | vector_tag;
 }
-ikptr
-ikrt_set_code_reloc_vector (ikptr s_code, ikptr s_vec, ikpcb* pcb)
+ikptr_t
+ikrt_set_code_reloc_vector (ikptr_t s_code, ikptr_t s_vec, ikpcb* pcb)
 {
   IK_REF(s_code, off_code_reloc_vector) = s_vec;
   ik_relocate_code(s_code - vector_tag);
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_code);
   return IK_VOID_OBJECT;
 }
-ikptr
-ikrt_set_code_annotation (ikptr s_code, ikptr s_annot, ikpcb* pcb)
+ikptr_t
+ikrt_set_code_annotation (ikptr_t s_code, ikptr_t s_annot, ikpcb* pcb)
 {
   IK_REF(s_code, off_code_annotation) = s_annot;
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_code);
@@ -1227,8 +1227,8 @@ ikrt_set_code_annotation (ikptr s_code, ikptr s_annot, ikpcb* pcb)
    "protected_list".
 */
 
-ikptr
-ikrt_register_guardian_pair (ikptr p0, ikpcb* pcb)
+ikptr_t
+ikrt_register_guardian_pair (ikptr_t p0, ikpcb* pcb)
 /* Register a guardian  pair in the protected list of  PCB.  If there is
    no more room in the current  protected list node: allocate a new node
    and prepend it to the linked list.  Return the void object. */
@@ -1249,10 +1249,10 @@ ikrt_register_guardian_pair (ikptr p0, ikpcb* pcb)
   first->ptr[first->count++] = p0; /* store the guardian pair */
   return IK_VOID_OBJECT;
 }
-ikptr
-ikrt_register_guardian (ikptr tc, ikptr obj, ikpcb* pcb)
+ikptr_t
+ikrt_register_guardian (ikptr_t tc, ikptr_t obj, ikpcb* pcb)
 {
-  ikptr p0   = IKU_PAIR_ALLOC(pcb);
+  ikptr_t p0   = IKU_PAIR_ALLOC(pcb);
   IK_CAR(p0) = tc;
   IK_CDR(p0) = obj;
   return ikrt_register_guardian_pair(p0, pcb);
@@ -1263,8 +1263,8 @@ ikrt_register_guardian (ikptr tc, ikptr obj, ikpcb* pcb)
  ** Garbage collections statistics.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_stats_now (ikptr t, ikpcb* pcb)
+ikptr_t
+ikrt_stats_now (ikptr_t t, ikpcb* pcb)
 {
   struct rusage r;
   struct timeval s;
@@ -1301,8 +1301,8 @@ ikrt_stats_now (ikptr t, ikpcb* pcb)
  ** Process termination.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_exit (ikptr status, ikpcb* pcb)
+ikptr_t
+ikrt_exit (ikptr_t status, ikpcb* pcb)
 /* This function is the core of implementation of the EXIT proceure from
    "(rnrs programs (6))". */
 {
