@@ -369,12 +369,12 @@ ik_api_decl ikptr_t ikrt_strings_to_gensym	(ikptr_t, ikptr_t,	ikpcb_t* pcb);
 #define disp_symbol_record_plist	(5 * wordsize)
 #define symbol_record_size		(6 * wordsize)
 
-#define off_symbol_record_tag		(disp_symbol_record_tag	    - record_tag)
-#define off_symbol_record_string	(disp_symbol_record_string  - record_tag)
-#define off_symbol_record_ustring	(disp_symbol_record_ustring - record_tag)
-#define off_symbol_record_value		(disp_symbol_record_value   - record_tag)
-#define off_symbol_record_proc		(disp_symbol_record_proc    - record_tag)
-#define off_symbol_record_plist		(disp_symbol_record_plist   - record_tag)
+#define off_symbol_record_tag		(disp_symbol_record_tag	    - vector_tag)
+#define off_symbol_record_string	(disp_symbol_record_string  - vector_tag)
+#define off_symbol_record_ustring	(disp_symbol_record_ustring - vector_tag)
+#define off_symbol_record_value		(disp_symbol_record_value   - vector_tag)
+#define off_symbol_record_proc		(disp_symbol_record_proc    - vector_tag)
+#define off_symbol_record_plist		(disp_symbol_record_plist   - vector_tag)
 
 ik_api_decl int   ik_is_symbol			(ikptr_t obj);
 ik_api_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
@@ -676,6 +676,7 @@ ik_api_decl ikptr_t ikrt_vector_copy	(ikptr_t s_dst, ikptr_t s_dst_start,
 #define IK_VECTOR_LENGTH_FX(VEC)	IK_REF((VEC), off_vector_length)
 #define IK_VECTOR_LENGTH(VEC)		IK_UNFIX(IK_VECTOR_LENGTH_FX(VEC))
 #define IK_ITEM(VEC,IDX)		IK_REF((VEC), off_vector_data + (IDX) * wordsize)
+#define IK_VECTOR_DATA_VOIDP(VEC)	((void*)((ikptr_t)((VEC)+off_vector_data)))
 
 
 /** --------------------------------------------------------------------
