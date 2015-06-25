@@ -3843,40 +3843,40 @@ production rules.  Imagine a copy of the following rules for @math{N =
 @meta{qq-template} -> @meta{qq-template-1}
 
 ;;This represents an expression to be evaluated.  It exists
-;;to represent @meta{qq-template-@math{(N-1)}} when N=1.
+;;to represent @meta{qq-template}-@math{(N-1)} when N=1.
 ;;
 @meta{qq-template-0} -> @meta{expression}
 
-@meta{quasiquotation-@math{N}} -> (quasiquote @meta{qq-template-@math{N}})
+@meta{quasiquotation}-@math{N} -> (quasiquote @meta{qq-template}-@math{N})
 
 @meta{qq-template-@math{N}}
    -> @meta{lexeme-datum}
-    | @meta{list-qq-template-@math{N}}
-    | @meta{vector-qq-template-@math{N}}
-    | @meta{unquotation-@math{N}}
+    | @meta{list-qq-template}-@math{N}
+    | @meta{vector-qq-template}-@math{N}
+    | @meta{unquotation}-@math{N}
 
-@meta{list-qq-template-@math{N}}
-   -> (@arbno{@meta{qq-template-or-splice-@math{N}}})
-    | (@atleastone{@meta{qq-template-or-splice-@math{N}}} . @meta{qq-template-@math{N}})
-    | @meta{quasiquotation-@math{(N+1)}}
+@meta{list-qq-template}-@math{N}
+   -> (@arbno{@meta{qq-template-or-splice}-@math{N}})
+    | (@atleastone{@meta{qq-template-or-splice}-@math{N}} . @meta{qq-template}-@math{N})
+    | @meta{quasiquotation}-@math{(N+1)}
 
-@meta{vector-qq-template-@math{N}} -> #(@arbno{@meta{qq-template-or-splice-@math{N}}})
+@meta{vector-qq-template}-@math{N} -> #(@arbno{@meta{qq-template-or-splice}-@math{N}})
 
-@meta{unquotation-@math{N}} -> (unquote @meta{qq-template-@math{(N-1)}})
+@meta{unquotation}-@math{N} -> (unquote @meta{qq-template}-@math{(N-1)})
 
-@meta{qq-template-or-splice-@math{N}}
-   -> @meta{qq-template-@math{N}}
-    | @meta{splicing-unquotation-@math{N}}
+@meta{qq-template-or-splice}-@math{N}
+   -> @meta{qq-template}-@math{N}
+    | @meta{splicing-unquotation}-@math{N}
 
-@meta{splicing-unquotation-@math{N}}
-   -> (unquote-splicing @arbno{@meta{qq-template-@math{(N-1)}}})
-    | (unquote @arbno{@meta{qq-template-@math{(N-1)}}})
+@meta{splicing-unquotation}-@math{N}
+   -> (unquote-splicing @arbno{@meta{qq-template}-@math{(N-1)}})
+    | (unquote @arbno{@meta{qq-template}-@math{(N-1)}})
 @end example
 
-In @func{quasiquotation}s, a @meta{list-qq-template-@math{N}} can
-sometimes be confused with either an @meta{unquotation-@math{N}} or a
-@meta{splicing-unquotation-@math{N}}.  The interpretation as an
-@meta{unquotation-@math{N}} or @meta{splicing-unquotation-@math{N}}
+In @func{quasiquotation}s, a @meta{list-qq-template}-@math{N} can
+sometimes be confused with either an @meta{unquotation}-@math{N} or a
+@meta{splicing-unquotation}-@math{N}.  The interpretation as an
+@meta{unquotation}-@math{N} or @meta{splicing-unquotation}-@math{N}
 takes precedence.
 @end deffn
 
