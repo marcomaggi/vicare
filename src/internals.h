@@ -585,11 +585,11 @@ typedef struct ikpage {
 
 /* Node in  a simply linked  list.  Used to  store pointers and  size of
    memory blocks. */
-typedef struct ikmemblock {
+typedef struct ikmemblock_t {
   ikptr_t		base;
   int		size;
-  struct ikmemblock* next;
-} ikmemblock;
+  struct ikmemblock_t* next;
+} ikmemblock_t;
 
 /* Node in  a linked list  referencing all the generated  FFI callbacks.
    It is used  to allow the garbage collector not  to collect data still
@@ -749,7 +749,7 @@ typedef struct ikpcb_t {
    */
   ikptr_t		heap_base;
   ikuword_t		heap_size;
-  ikmemblock *		heap_pages;
+  ikmemblock_t *	heap_pages;
 
   /* Pointer to and number of bytes of the current Scheme stack memory.
    */

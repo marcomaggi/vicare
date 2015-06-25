@@ -107,7 +107,7 @@ typedef struct gc_t {
   ikptr_t		tconc_ap;
   ikptr_t		tconc_ep;
   ikptr_t		tconc_base;
-  ikmemblock *	tconc_queue;
+  ikmemblock_t *	tconc_queue;
   ik_ptr_page *	forward_list;
 } gc_t;
 
@@ -315,7 +315,7 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
   gc_t			gc;
-  ikmemblock *		old_heap_pages;
+  ikmemblock_t *		old_heap_pages;
 
   /* fprintf(stderr, "%s: enter\n", __func__); */
 #if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -450,11 +450,11 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
      nursery  hot memory,  and are  now fully  used; the  blocks' memory
      pages are cached in the PCB to be recycled later. */
   if (old_heap_pages) {
-    ikmemblock* p = old_heap_pages;
+    ikmemblock_t* p = old_heap_pages;
     do {
-      ikmemblock* next = p->next;
+      ikmemblock_t* next = p->next;
       ik_munmap_from_segment(p->base, p->size, pcb);
-      ik_free(p, sizeof(ikmemblock));
+      ik_free(p, sizeof(ikmemblock_t));
       p=next;
     } while(p);
     old_heap_pages = NULL;
@@ -1027,15 +1027,15 @@ gc_add_tconcs(gc_t* gc)
       add_one_tconc(pcb, p);
     }
   }
-  ikmemblock* blk = gc->tconc_queue;
+  ikmemblock_t* blk = gc->tconc_queue;
   while (blk) {
     ikptr_t p = blk->base;
     ikptr_t q = p + blk->size;
     for (; p<q; p+=pair_size) {
       add_one_tconc(pcb, p);
     }
-    ikmemblock* next = blk->next;
-    ik_free(blk, sizeof(ikmemblock));
+    ikmemblock_t* next = blk->next;
+    ik_free(blk, sizeof(ikmemblock_t));
     blk = next;
   }
 }
@@ -2040,7 +2040,7 @@ gc_tconc_push_extending (gc_t* gc, ikptr_t tcbucket)
   if (gc->tconc_base) {
     /* Push  a new  node in  the linked  list "pcb->tconc_queue".   Save
        references to the current PCB tconc page in the new node. */
-    ikmemblock *	blk = ik_malloc(sizeof(ikmemblock));
+    ikmemblock_t *	blk = ik_malloc(sizeof(ikmemblock_t));
     blk->base = gc->tconc_base;
     blk->size = IK_PAGESIZE;
     blk->next = gc->tconc_queue;

@@ -865,9 +865,23 @@ In this section we discuss some private fields of the C data structure
 @itemx ikptr_t memory_end
 Untagged pointers updated (if needed) after every memory mapped
 allocation to be lower and greater than all the memory used by Scheme
-programs.  They are used for garbage collection purposes: every Vicare
-page between this range of pointers is described by a slot in the
-segments vector and the dirty vector.
+programs.
+
+@example
+         Scheme used memory
+     |.......................|
+|--------------------------------------| system memory
+     ^                        ^
+  memory_base             memory_end
+@end example
+
+They are used for garbage collection purposes: every Vicare page between
+this range of pointers is described by a slot in the segments vector and
+the dirty vector.
+
+The pointers @code{memory_base} and @code{memory_end} always reference
+the first machine word in a logic memory segment (@pxref{objects memory
+segments}).
 
 @item uint32_t * segment_vector_base
 @itemx uint32_t * segment_vector
@@ -879,7 +893,26 @@ generation the page belongs to.
 
 @code{segment_vector_base} references the first allocated slot; access
 to the vector with zero--based indexes is performed through
-@code{segment_vector}.
+@code{segment_vector}.  The first slot referenced by
+@code{segment_vector_base} has index different from zero: its index is
+computed with @cfunc{IK_PAGE_INDEX}:
+
+@example
+pcb->segment_vector[IK_PAGE_INDEX(memory_pointer)]
+@end example
+
+@noindent
+to loop over all the slots we can do:
+
+@example
+ikuword_t       lo_idx = IK_PAGE_INDEX(pcb->memory_base);
+ikuword_t       hi_idx = IK_PAGE_INDEX(pcb->memory_end);
+ikuword_t       page_idx;
+
+for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) @{
+  pcb->segment_vector[page_idx];
+@}
+@end example
 
 Notice that the segments vector is @strong{not} itself registered in the
 segments vector and dirty vector: if the segments vector falls inside
@@ -900,7 +933,26 @@ is said to be ``dirty''; otherwise it is ``pure''.
 
 @code{dirty_vector_base} references the first allocated slot; access to
 the vector with zero--based indexes is performed through the field
-@code{dirty_vector} (which is also accessible from Scheme code).
+@code{dirty_vector} (which is also accessible from Scheme code).  The
+first slot referenced by @code{dirty_vector_base} has index different
+from zero: its index is computed with @cfunc{IK_PAGE_INDEX}:
+
+@example
+pcb->dirty_vector[IK_PAGE_INDEX(memory_pointer)]
+@end example
+
+@noindent
+to loop over all the slots we can do:
+
+@example
+ikuword_t       lo_idx = IK_PAGE_INDEX(pcb->memory_base);
+ikuword_t       hi_idx = IK_PAGE_INDEX(pcb->memory_end);
+ikuword_t       page_idx;
+
+for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) @{
+  pcb->dirty_vector[page_idx];
+@}
+@end example
 
 Notice that the dirty vector is @strong{not} itself registered in the
 segments vector and dirty vector: if the dirty vector falls inside the
@@ -921,7 +973,7 @@ whenever the hot block is full:
 @item
 If a safe allocation is requested (function @cfunc{ik_safe_alloc}): a
 garbage collection is performed and all the objects are moved from the
-heap into the generational pages.
+nursery into the generational pages.
 
 @item
 If an unsafe allocation is requested (function @cfunc{ik_unsafe_alloc}):
@@ -929,14 +981,14 @@ the current hot block is stored in a linked list of heap blocks and a
 new hot block is allocated.
 @end itemize
 
-The generational pages are a set of Vicare pages, referenced by the
-segments vector, in which objects are moved after they survive a garbage
-collection; every generational page is tagged in the segments vector
-with the index of the generation it belongs to.
+The generational pages are a set of Vicare pages, described by the
+segments vector and dirty vector, in which objects are moved after they
+survive a garbage collection; every generational page is tagged in the
+segments vector with the index of the generation it belongs to.
 
 @table @code
-@item heap_base
-@itemx heap_size
+@item ikptr_t heap_base
+@itemx ikuword_t heap_size
 Pointer and size in bytes of the current nursery hot memory block; new
 Scheme objects are allocated here.  Initialised to a memory mapped block
 of size @code{IK_HEAPSIZE}.  When the previous block is full: to satisfy
@@ -945,19 +997,19 @@ of size @code{IK_HEAP_EXTENSION_SIZE}.  After a garbage collection is
 performed: it is set to a memory mapped block of size
 @code{IK_HEAPSIZE}.
 
-@item allocation_pointer
-Pointer to the first word of available data in the nursery hot memory
+@item ikptr_t allocation_pointer
+Pointer to the first word of available data in the nursery's hot memory
 block; the next Scheme object to be allocated will start there.
 
-@item allocation_redline
+@item ikptr_t allocation_redline
 Pointer to a word towards the end of the heap hot memory block; when the
 allocation of a Scheme object crosses this pointer, the hot block is
 considered full.
 
-@item heap_pages
+@item ikmemblock_t heap_pages
 Pointer to the first node in a linked list of memory blocks that once
-were nursery hot memory, and are now fully used; initialised to @cnull{}
-when building the @pcb{}.
+were nursery's hot memory, and are now fully used; initialised to
+@cnull{} when building the @pcb{}.
 @end table
 
 @c page

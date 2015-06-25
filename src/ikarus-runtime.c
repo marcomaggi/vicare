@@ -799,9 +799,9 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
        allocating new memory. */
     if (alloc_ptr) {
       /* This is not  the first heap block allocation, so  prepend a new
-	 "ikmemblock" node  to the  linked list of  old heap  blocks and
+	 "ikmemblock_t" node to  the linked list of old  heap blocks and
 	 initialise it with a reference to the current heap block. */
-      ikmemblock *	p = ik_malloc(sizeof(ikmemblock));
+      ikmemblock_t *	p = ik_malloc(sizeof(ikmemblock_t));
       p->base = pcb->heap_base;
       p->size = pcb->heap_size;
       p->next = pcb->heap_pages;
