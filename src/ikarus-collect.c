@@ -108,7 +108,7 @@ typedef struct gc_t {
   ikptr_t		tconc_ep;
   ikptr_t		tconc_base;
   ikmemblock_t *	tconc_queue;
-  ik_ptr_page *	forward_list;
+  ik_ptr_page_t *	forward_list;
 } gc_t;
 
 
@@ -213,10 +213,10 @@ ik_munmap_from_segment (ikptr_t base, ikuword_t size, ikpcb_t* pcb)
      the  leftover pages.   Remember that  the page  cache has  constant
      size: it is never enlarged. */
   {
-    ikpage *	free_cache_nodes = pcb->uncached_pages;
+    ikpage_t *	free_cache_nodes = pcb->uncached_pages;
     if (free_cache_nodes) {
-      ikpage *	used_cache_nodes = pcb->cached_pages;
-      ikpage *	next_free_node;
+      ikpage_t *	used_cache_nodes = pcb->cached_pages;
+      ikpage_t *	next_free_node;
       do {
 	/* Split  the BASE  and SIZE  block  into cached  pages.  Pop  a
 	   struct from "free_cached_nodes", store  a pointer to the page
@@ -246,7 +246,7 @@ ik_munmap_from_segment (ikptr_t base, ikuword_t size, ikpcb_t* pcb)
 /* Prototypes for subroutines of "ik_collect()". */
 static int		collection_id_to_gen	(int id);
 static void		fix_weak_pointers	(gc_t *gc);
-static inline void	collect_locatives	(gc_t*, ik_callback_locative*);
+static inline void	collect_locatives	(gc_t*, ik_callback_locative_t*);
 static void		deallocate_unused_pages	(gc_t*);
 static void		fix_new_pages		(gc_t* gc);
 static void		gc_finalize_guardians	(gc_t* gc);
@@ -545,7 +545,7 @@ collection_id_to_gen (int id)
   return 0;
 }
 static inline void
-collect_locatives (gc_t* gc, ik_callback_locative* loc)
+collect_locatives (gc_t* gc, ik_callback_locative_t* loc)
 /* Subroutine of "ik_collect()". */
 {
   for (; loc; loc = loc->next) {
@@ -642,7 +642,7 @@ fix_new_pages (gc_t* gc)
 static void
 gc_finalize_guardians (gc_t* gc)
 {
-  ik_ptr_page*	ls = gc->forward_list;
+  ik_ptr_page_t*	ls = gc->forward_list;
   int		tconc_count = 0;
   uint32_t *	dirty_vec = (uint32_t *)(gc->pcb->dirty_vector);
   while(ls) {
@@ -661,7 +661,7 @@ gc_finalize_guardians (gc_t* gc)
       dirty_vec[IK_PAGE_INDEX(tc)]        = IK_DIRTY_WORD;
       dirty_vec[IK_PAGE_INDEX(last_pair)] = IK_DIRTY_WORD;
     }
-    ik_ptr_page* next = ls->next;
+    ik_ptr_page_t* next = ls->next;
     ik_munmap((ikptr_t)ls, IK_PAGESIZE);
     ls = next;
   }
@@ -1063,7 +1063,7 @@ add_one_tconc(ikpcb_t* pcb, ikptr_t p)
  ** Collection subroutines: guardians handling.
  ** ----------------------------------------------------------------- */
 
-static ik_ptr_page *	move_tconc (ikptr_t tc, ik_ptr_page* ls);
+static ik_ptr_page_t *	move_tconc (ikptr_t tc, ik_ptr_page_t* ls);
 static inline int	is_live (ikptr_t x, gc_t* gc);
 static inline int	next_gen (int i);
 
@@ -1071,13 +1071,13 @@ static void
 handle_guardians (gc_t* gc)
 {
   ikpcb_t *	pcb = gc->pcb;
-  ik_ptr_page *	pend_hold_list = 0;
-  ik_ptr_page *	pend_final_list = 0;
+  ik_ptr_page_t *	pend_hold_list = 0;
+  ik_ptr_page_t *	pend_final_list = 0;
   int		gen;
   /* Sort protected pairs into PEND_HOLD and PEND_FINAL lists. */
   for (gen=0; gen<=gc->collect_gen; gen++) {
     /* PROT_LIST references a NULL-terminated linked list of pages. */
-    ik_ptr_page *	prot_list = pcb->protected_list[gen];
+    ik_ptr_page_t *	prot_list = pcb->protected_list[gen];
     pcb->protected_list[gen] = 0;
     while (prot_list) {
       int	i;
@@ -1097,7 +1097,7 @@ handle_guardians (gc_t* gc)
           pend_final_list = move_tconc(p, pend_final_list);
       }
       { /* Deallocate this node in the PROT_LIST linked list. */
-	ik_ptr_page *	next = prot_list->next;
+	ik_ptr_page_t *	next = prot_list->next;
 	ik_munmap((ikptr_t)prot_list, IK_PAGESIZE);
 	prot_list = next;
       }
@@ -1112,8 +1112,8 @@ handle_guardians (gc_t* gc)
     gc->forward_list = 0;
     int done = 0;
     while (!done) {
-      ik_ptr_page* final_list = 0;
-      ik_ptr_page* ls = pend_final_list;
+      ik_ptr_page_t* final_list = 0;
+      ik_ptr_page_t* ls = pend_final_list;
       pend_final_list = 0;
       while (ls) {
 	int i;
@@ -1130,7 +1130,7 @@ handle_guardians (gc_t* gc)
 	    pend_final_list = move_tconc(p, pend_final_list);
 	  }
 	}
-	ik_ptr_page* next = ls->next;
+	ik_ptr_page_t* next = ls->next;
 	ik_munmap((ikptr_t)ls, IK_PAGESIZE);
 	ls = next;
       }
@@ -1144,7 +1144,7 @@ handle_guardians (gc_t* gc)
 	    ikptr_t p = ls->ptr[i];
 	    gc->forward_list = move_tconc(gather_live_object(gc, p, "guardian"), gc->forward_list);
 	  }
-	  ik_ptr_page* next = ls->next;
+	  ik_ptr_page_t* next = ls->next;
 	  ik_munmap((ikptr_t)ls, IK_PAGESIZE);
 	  ls = next;
 	}
@@ -1155,13 +1155,13 @@ handle_guardians (gc_t* gc)
   /* PEND_FINAL_LIST now contains things  that are dead and their tconcs
      are also dead, deallocate. */
   while (pend_final_list) {
-    ik_ptr_page* next = pend_final_list->next;
+    ik_ptr_page_t* next = pend_final_list->next;
     ik_munmap((ikptr_t)pend_final_list, IK_PAGESIZE);
     pend_final_list = next;
   }
   /* pend_hold_list pairs with live tconcs are moved to
      the protected list of next generation. */
-  ik_ptr_page* target = pcb->protected_list[next_gen(gc->collect_gen)];
+  ik_ptr_page_t* target = pcb->protected_list[next_gen(gc->collect_gen)];
   while(pend_hold_list) {
     int i;
     for(i=0; i<pend_hold_list->count; i++) {
@@ -1175,7 +1175,7 @@ handle_guardians (gc_t* gc)
         target = move_tconc(gather_live_object(gc, p, "guardian"), target);
       }
     }
-    ik_ptr_page* next = pend_hold_list->next;
+    ik_ptr_page_t* next = pend_hold_list->next;
     ik_munmap((ikptr_t)pend_hold_list, IK_PAGESIZE);
     pend_hold_list = next;
   }
@@ -1202,15 +1202,15 @@ next_gen (int i)
 {
   return ((i == (IK_GC_GENERATION_COUNT-1))? i : (i+1));
 }
-static ik_ptr_page *
-move_tconc (ikptr_t tc, ik_ptr_page* ls)
+static ik_ptr_page_t *
+move_tconc (ikptr_t tc, ik_ptr_page_t* ls)
 /* Store TC in the  first node of the linked list LS.   If LS is NULL or
    the first node of  LS is full: allocate a new node  and prepend it to
    LS; then store TC in it.  Return the, possibly new, first node of the
    linked list. */
 {
   if ((NULL == ls) || (IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS == ls->count)) {
-    ik_ptr_page* page = (ik_ptr_page*)ik_mmap(IK_PAGESIZE);
+    ik_ptr_page_t* page = (ik_ptr_page_t*)ik_mmap(IK_PAGESIZE);
     page->count = 0;
     page->next  = ls;
     ls = page;

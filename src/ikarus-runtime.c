@@ -175,7 +175,7 @@ ik_mmap_typed (ikuword_t size, uint32_t type, ikpcb_t* pcb)
     /* If available, recycle  a page from the cache.   Remember that the
        memory in the cached pages is  NOT reset in any way: its contents
        is what it is. */
-    ikpage *	pages = pcb->cached_pages;
+    ikpage_t *	pages = pcb->cached_pages;
     if (pages) {
       /* Extract the first page from the linked list of cached pages. */
       base		  = pages->base;
@@ -463,12 +463,12 @@ ik_make_pcb (void)
    *       NULL   -----------     -----------
    *                 next            next
    *   |.......|.......|.......|.......|.......|
-   *    ikpage0 ikpage1 ikpage2 ikpage3 ikpage4
+   *    ikpage_t0 ikpage_t1 ikpage_t2 ikpage_t3 ikpage_t4
    */
   {
-    ikpage *	cur  = (ikpage*)ik_mmap(IK_PAGE_CACHE_SIZE_IN_BYTES);
-    ikpage *	past = cur + IK_PAGE_CACHE_NUM_OF_SLOTS;
-    ikpage *	prev = NULL;
+    ikpage_t *	cur  = (ikpage_t*)ik_mmap(IK_PAGE_CACHE_SIZE_IN_BYTES);
+    ikpage_t *	past = cur + IK_PAGE_CACHE_NUM_OF_SLOTS;
+    ikpage_t *	prev = NULL;
     pcb->cached_pages_base = (ikptr_t)cur;
     pcb->cached_pages_size = IK_PAGE_CACHE_SIZE_IN_BYTES;
     for (; cur < past; ++cur) {
@@ -677,7 +677,7 @@ void
 ik_delete_pcb (ikpcb_t* pcb)
 {
   { /* Release the page cache. */
-    ikpage *	p = pcb->cached_pages;
+    ikpage_t *	p = pcb->cached_pages;
     for (; p; p = p->next) {
       ik_munmap(p->base, IK_PAGESIZE);
     }
@@ -688,9 +688,9 @@ ik_delete_pcb (ikpcb_t* pcb)
   {
     int i;
     for(i=0; i<IK_GC_GENERATION_COUNT; i++) {
-      ik_ptr_page* p = pcb->protected_list[i];
+      ik_ptr_page_t* p = pcb->protected_list[i];
       while (p) {
-        ik_ptr_page* next = p->next;
+        ik_ptr_page_t* next = p->next;
         ik_munmap((ikptr_t)p, IK_PAGESIZE);
 	p = next;
       }
@@ -1222,7 +1222,7 @@ ikrt_set_code_annotation (ikptr_t s_code, ikptr_t s_annot, ikpcb_t* pcb)
  ** ----------------------------------------------------------------- */
 
 /* The tagged  pointers referencing  guardians are  stored in  the array
-   "protected_list" of the structure  "ik_ptr_page"; such structures are
+   "protected_list" of the structure  "ik_ptr_page_t"; such structures are
    nodes   in   a  linked   list   referenced   by  the   PCB's   member
    "protected_list".
 */
@@ -1236,11 +1236,11 @@ ikrt_register_guardian_pair (ikptr_t p0, ikpcb_t* pcb)
   /* FIRST is  a pointer  to the first  node in  a linked list.   If the
      linked list is empty or the first node is full: allocate a new node
      and prepend it to the list. */
-  ik_ptr_page *	first = pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER];
+  ik_ptr_page_t *	first = pcb->protected_list[IK_GUARDIANS_GENERATION_NUMBER];
   if ((NULL == first) || (IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS == first->count)) {
-    assert(sizeof(ik_ptr_page) == IK_PAGESIZE);
-    ik_ptr_page *	new_node;
-    new_node        = (ik_ptr_page*)ik_mmap(IK_PAGESIZE);
+    assert(sizeof(ik_ptr_page_t) == IK_PAGESIZE);
+    ik_ptr_page_t *	new_node;
+    new_node        = (ik_ptr_page_t*)ik_mmap(IK_PAGESIZE);
     new_node->count = 0;
     new_node->next  = first;
     first           = new_node;

@@ -411,7 +411,7 @@ ikrt_ffi_prepare_callback (ikptr_t s_data, ikpcb_t* pcb)
   ffi_cif *                     cif;
   void *                        callable_pointer;
   ffi_closure *                 closure;
-  ik_callback_locative *        callback_user_data;
+  ik_callback_locative_t *        callback_user_data;
   ffi_status                    st;
   cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
   closure = ffi_closure_alloc(sizeof(ffi_closure), &callable_pointer);
@@ -425,7 +425,7 @@ ikrt_ffi_prepare_callback (ikptr_t s_data, ikpcb_t* pcb)
       fprintf(stderr, "*** Vicare warning: error mprotecting callback code page\n");
   }
 #endif
-  callback_user_data = malloc(sizeof(ik_callback_locative));
+  callback_user_data = malloc(sizeof(ik_callback_locative_t));
   if (NULL == callback_user_data)
     return IK_FALSE_OBJECT;
   st = ffi_prep_closure_loc(closure, cif, generic_callback, callback_user_data, callable_pointer);
@@ -450,7 +450,7 @@ ikrt_ffi_prepare_callback (ikptr_t s_data, ikpcb_t* pcb)
 ikptr_t
 ikrt_ffi_release_callback (ikptr_t s_callable_pointer, ikpcb_t * pcb)
 {
-  ik_callback_locative *  root;
+  ik_callback_locative_t *  root;
   void *                  callable_pointer;
   root             = pcb->callbacks;
   callable_pointer = IK_POINTER_DATA_VOIDP(s_callable_pointer);
@@ -465,7 +465,7 @@ ikrt_ffi_release_callback (ikptr_t s_callable_pointer, ikpcb_t * pcb)
         if (root->next->callable_pointer != callable_pointer)
           continue;
         else {
-          ik_callback_locative *  this = root->next;
+          ik_callback_locative_t *  this = root->next;
           root->next = root->next->next;
           ffi_closure_free(this->closure);
           free(this);
@@ -501,14 +501,14 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
    holding the native input arguments.  The arity of the callback can be
    retrieved from the CIF.
 
-   USER_DATA is a pointer  to a structure of type "ik_callback_locative"
+   USER_DATA is a pointer  to a structure of type "ik_callback_locative_t"
    whose  data  field   is  a  reference  to  the   S_DATA  argument  to
    "ikrt_prepare_callback()".
 
    Access the PCB through "ik_the_pcb()". */
 {
   ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
-  ikptr_t       s_data        = ((ik_callback_locative*)user_data)->data;
+  ikptr_t       s_data        = ((ik_callback_locative_t*)user_data)->data;
   ikptr_t       s_proc        = IK_CDR(s_data);
   ikpcb_t *     pcb           = ik_the_pcb();
   int		i;
