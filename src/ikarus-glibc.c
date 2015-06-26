@@ -238,20 +238,20 @@ ikrt_glibc_if_nameindex (ikpcb_t * pcb)
     {
       for (i=0; arry[i].if_index;) {
 	IK_ASS(IK_CAR(s_spine), ika_pair_alloc(pcb));
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(s_spine));
 	{
 	  ikptr_t	s_entry = IK_CAR(s_spine);
 	  pcb->root2 = &s_entry;
 	  {
 	    IK_CAR(s_entry) = IK_FIX(arry[i].if_index);
 	    IK_ASS(IK_CDR(s_entry), ika_bytevector_from_cstring(pcb, arry[i].if_name));
-	    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_entry);
+	    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_entry));
 	  }
 	  pcb->root2 = NULL;
 	}
 	if (arry[++i].if_index) {
 	  IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
-	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_spine));
 	  s_spine = IK_CDR(s_spine);
 	} else {
 	  IK_CDR(s_spine) = IK_NULL_OBJECT;
@@ -817,7 +817,7 @@ ikrt_glibc_lgamma (ikptr_t s_X, ikpcb_t * pcb)
   pcb->root0 = &s_pair;
   {
     IK_CAR(s_pair) = iku_flonum_alloc(pcb, Y);
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(s_pair));
     IK_CDR(s_pair) = IK_FIX(sgn);
   }
   pcb->root0 = NULL;
@@ -1017,7 +1017,7 @@ ikrt_glibc_regcomp (ikptr_t s_pattern, ikptr_t s_flags, ikpcb_t *pcb)
 	error_message_len = regerror(rv, rex, NULL, 0);
 	IK_CAR(s_retval)  = IK_FIX(rv);
 	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (ikuword_t)(error_message_len-1)));
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_retval);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_retval));
 	error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_retval));
 	regerror(rv, rex, error_message, error_message_len);
 	regfree(rex);
@@ -1081,7 +1081,7 @@ ikrt_glibc_regexec (ikptr_t s_rex, ikptr_t s_string, ikptr_t s_flags, ikpcb_t *p
           IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
           IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
           IK_ITEM(s_match_vector, i) = s_pair;
-	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_match_vector);
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_ITEM_PTR(s_match_vector, i));
         }
       }
       pcb->root1 = NULL;
@@ -1110,7 +1110,7 @@ ikrt_glibc_regexec (ikptr_t s_rex, ikptr_t s_string, ikptr_t s_flags, ikpcb_t *p
 	   15, 2013) */
 	IK_CAR(s_pair) = s_error_code;
 	IK_CDR(s_pair) = s_error_msg;
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_pair));
       }
       pcb->root0 = NULL;
       return s_pair;
@@ -1163,7 +1163,7 @@ ikrt_glibc_wordexp (ikptr_t s_pattern, ikptr_t s_flags, ikpcb_t * pcb)
     {
       for (i=0; i<W.we_wordc; ++i) {
         IK_ASS(IK_ITEM(s_words, i), ika_bytevector_from_cstring(pcb, W.we_wordv[i]));
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_words);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_ITEM_PTR(s_words, i));
       }
     }
     pcb->root0 = NULL;
