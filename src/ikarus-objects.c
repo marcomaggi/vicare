@@ -139,10 +139,10 @@ ika_list_from_argv (ikpcb_t * pcb, char ** argv)
       int		i;
       for (i=0; argv[i];) {
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(s_pair));
 	if (argv[++i]) {
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
-	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_pair));
 	  s_pair = IK_CDR(s_pair);
 	} else {
 	  IK_CDR(s_pair) = IK_NULL_OBJECT;
@@ -171,10 +171,10 @@ ika_list_from_argv_and_argc (ikpcb_t * pcb, char ** argv, long argc)
     {
       for (long i=0; i<argc;) {
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(s_pair));
 	if (++i < argc) {
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
-	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_pair));
 	  s_pair = IK_CDR(s_pair);
 	} else {
 	  IK_CDR(s_pair) = IK_NULL_OBJECT;
@@ -725,17 +725,6 @@ ikrt_vector_clean (ikptr_t s_vec)
   memset((char*)(ikuword_t)(s_vec + off_vector_data), 0, s_len);
   return s_vec;
 }
-ikptr_t
-ikrt_vector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
-		  ikptr_t s_src, ikptr_t s_src_start,
-		  ikptr_t s_count, ikpcb_t * pcb)
-{
-  uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + (ikuword_t)s_dst_start;
-  uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + (ikuword_t)s_src_start;
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_dst);
-  memcpy(dst, src, (size_t)s_count);
-  return IK_VOID_OBJECT;
-}
 
 
 /** --------------------------------------------------------------------
@@ -766,8 +755,9 @@ ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr_t s_rtd)
   pcb->root9 = &s_rtd;
   {
     p_stru = ik_safe_alloc(pcb, align_size);
+    /* The struct is newer  than the RTD, so there is  no need to signal
+       dirt. */
     IK_REF(p_stru, disp_record_rtd) = s_rtd;
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
        memory is on  the Scheme heap, which is not  a garbage collection
        root.   This   means  we  can  freely   leave  uninitialised  the
@@ -790,8 +780,9 @@ ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr_t s_rtd)
   pcb->root9 = &s_rtd;
   {
     p_stru = ik_safe_alloc(pcb, align_size);
+    /* The struct is newer  than the RTD, so there is  no need to signal
+       dirt. */
     IK_REF(p_stru, disp_record_rtd) = s_rtd;
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     /* Set the  reserved data  area to zero;  remember that  the machine
        word 0 is the fixnum zero.
 
@@ -1164,9 +1155,10 @@ ika_cflonum_from_doubles (ikpcb_t* pcb, double re, double im)
   pcb->root9 = &x;
   {
     IK_ASS(IK_CFLONUM_REAL(x), ika_flonum_from_double(pcb, re));
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, x);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CFLONUM_REAL_PTR(x));
+
     IK_ASS(IK_CFLONUM_IMAG(x), ika_flonum_from_double(pcb, im));
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, x);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CFLONUM_IMAG_PTR(x));
   }
   pcb->root9 = NULL;
   return x;
@@ -1607,13 +1599,15 @@ ikptr_t
 ikrt_general_copy (ikptr_t s_dst, ikptr_t s_dst_start,
 		   ikptr_t s_src, ikptr_t s_src_start,
 		   ikptr_t s_count, ikpcb_t * pcb)
+/* General binary  data copy function.   It copies data from  raw memory
+   block  or Scheme  bytevector Scheme  string  to raw  memory block  or
+   Scheme bytevector or Scheme string. */
 {
   ikuword_t	src_start = IK_UNFIX(s_src_start);
   ikuword_t	dst_start = IK_UNFIX(s_dst_start);
   size_t	count     = (size_t)IK_UNFIX(s_count);
   uint8_t *	dst = NULL;
   uint8_t *	src = NULL;
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_dst);
   if (IK_IS_BYTEVECTOR(s_src)) {
     src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
   } else if (ikrt_is_pointer(s_src)) {
@@ -1818,20 +1812,18 @@ ik_collection_avoidance_list (ikpcb_t * pcb)
     pcb->root1 = &s_spine;
     {
       while (collection) {
-	int	i;
-	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	for (ikuword_t i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
 	  /* fprintf(stderr, "%d=%ld ", i, collection->slots[i]); */
 	  if (IK_VOID != collection->slots[i]) {
 	    if (IK_NULL == s_spine) {
 	      s_spine = ika_pair_alloc(pcb);
-	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	    } else {
 	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
-	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
+	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(s_spine));
 	      s_spine = IK_CDR(s_spine);
-	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	    }
 	    IK_CAR(s_spine) = collection->slots[i];
+	    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(s_spine));
 	    if (IK_NULL == s_list)
 	      s_list = s_spine;
 	  }
@@ -1882,7 +1874,7 @@ ik_register_to_avoid_collecting (ikptr_t s_obj, ikpcb_t * pcb)
       {
 	ikptr_t	s_pair = ika_pair_alloc(pcb);
 	IK_CAR(s_pair) = s_obj;
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(s_pair));
 	IK_CDR(s_pair) = pcb->not_to_be_collected;
 	pcb->not_to_be_collected = s_pair;
       }
