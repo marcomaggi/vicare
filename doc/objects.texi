@@ -858,7 +858,8 @@ logic segment it belongs to.
 
 
 In this section we discuss some private fields of the C data structure
-@ikpcb{} related to memory allocation and garbage collection.
+@ikpcb{}, the @dfn{Process Control Block}, related to memory allocation
+and garbage collection.
 
 @table @code
 @item ikptr_t memory_base
@@ -1017,40 +1018,43 @@ were nursery's hot memory, and are now fully used; initialised to
 @subsection Basic memory allocation functions
 
 
-In short, memory allocation which may trigger a garbage collection is
-performed as follows:
+A memory allocation operation that is allowed to trigger a garbage
+collection is performed as follows:
 
 @example
-ikpcb_t *   pcb = ik_the_pcb();
-long int  number_of_bytes = the_number_of_bytes;
-ikptr_t     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
+ikpcb_t *  pcb             = ...;
+ikuword_t  number_of_bytes = ...;
+ikuword_t  aligned_size    = IK_ALIGN(number_of_bytes);
+ikptr_t    P = ik_safe_alloc(pcb, aligned_size);
 @end example
 
 @noindent
-while memory allocation without garbage collection is performed as
-follows:
+while a memory allocation operation that is forbidden to trigger a
+garbage collection is performed as follows:
 
 @example
-ikpcb_t *   pcb = ik_the_pcb();
-long int  number_of_bytes = the_number_of_bytes;
-ikptr_t     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
+ikpcb_t *  pcb             = ...;
+ikuword_t  number_of_bytes = ...;
+ikuword_t  aligned_size    = IK_ALIGN(number_of_bytes);
+ikptr_t    P = ik_unsafe_alloc(pcb, aligned_size);
 @end example
 
 @noindent
-where @code{p} is an untagged memory pointer and @code{pcb} is a pointer
+where @code{P} is an untagged memory pointer and @code{pcb} is a pointer
 to the ``Process Control Block'' data structure.
 
 To add a tag, for example the @code{vector_tag}, to an untagged memory
 pointer we can do:
 
 @example
-ikpcb_t * pcb = ik_the_pcb();
-long    len = IK_ALIGN(the_number_of_bytes);
-ikptr_t   ref = ik_safe_alloc(pcb, len) | vector_tag;
+ikpcb_t *  pcb             = ...;
+ikuword_t  number_of_bytes = ...;
+ikuword_t  aligned_size    = IK_ALIGN(number_of_bytes);
+ikptr_t    S = ik_safe_alloc(pcb, aligned_size) | vector_tag;
 @end example
 
 Objects subject to garbage collection are allocated on the Scheme heap;
-the next object is allocated in the hot memory block:
+a new Scheme object is allocated in the nursery's hot memory block:
 
 @example
     allocated  allocated      allocated
@@ -1082,8 +1086,8 @@ informations when a live Scheme object is gathered.
 @end enumerate
 
 @noindent
-for these reasons we must always filter the requested size (in bytes)
-through the @cfunc{IK_ALIGN} macro.
+for these reasons we must always filter the requested size (number of
+bytes) through the @cfunc{IK_ALIGN} macro.
 
 The @pcb{} always references a ``pointer to the next free block'' with
 alignment constraints satisfied; if we filter the requested number of
@@ -1091,25 +1095,31 @@ bytes through @cfunc{IK_ALIGN}, we obtain a number of bytes which, added
 to the pointer, gives a correctly aligned pointer:
 
 @example
+ikpcb_t   pcb             = ...;
+ikuword_t requested_size  = ...;
 uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
-long      requested_size  = ...;
-long      align_size      = IK_ALIGN(requested_size);
-uint8_t * next_free_block = allocated_block + align_size;
+ikuword_t aligned_size    = IK_ALIGN(requested_size);
+uint8_t * next_free_block = allocated_block + aligned_size;
 pcb->allocation_pointer   = (ikptr_t)next_free_block;
-
-/* use "allocated_block" */
-
-
-            requested size
-       |.......................|
-            aligned size
-       |..........................|
-...----|--------------------------|-----------....
-        ^                          ^
-        |                          |
-      pointer to an              pointer to the
-      allocated block            next block
 @end example
+
+@noindent
+the scenario is as follows:
+
+@example
+       requested size      wasted
+  |.......................|..|
+          aligned size
+--|--------------------------|--- nursery's hot block
+   ^                          ^
+   |                          |
+pointer to an              pointer to the
+allocated block            next block
+@end example
+
+@noindent
+if the aligned size is bigger than the requested size: the small chunk
+of memory at the end of the allocated block is wasted.
 
 
 @deftypefun {ikpcb_t *} ik_the_pcb (void)
@@ -1119,7 +1129,7 @@ needed because when calling a C function from Scheme a pointer to the
 @end deftypefun
 
 
-@deftypefn {Preprocessor Macro} {unsigned long} IK_ALIGN (unsigned long @var{number_of_bytes})
+@deftypefn {Preprocessor Macro} {ikuword_t} IK_ALIGN (ikuword_t @var{number_of_bytes})
 Convert @var{number_of_bytes} to the number of bytes requested to
 satisfy pointer alignment constraints.  The aligned size is always an
 exact multiple of the underlying platform's word size (32-bit or
@@ -1189,9 +1199,9 @@ We can simulate the computation with:
 @end deftypefn
 
 
-@deftypefun ikptr_t ik_safe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{aligned_size})
-Reserve a memory block on the Scheme heap hot block and return a
-reference to it as an @strong{untagged} pointer.  @var{pcb} must
+@deftypefun ikptr_t ik_safe_alloc (ikpcb_t * @var{pcb}, ikuword_t @var{aligned_size})
+Reserve a memory block on the Scheme heap's nursery hot block and return
+a reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{aligned_size} must be the
 requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
@@ -1201,29 +1211,29 @@ still fails the process is terminated with exit status
 @code{EXIT_FAILURE}.
 
 The reserved memory is @strong{not} initialised to safe values: its
-contents have to be considered invalid.  However, notice that the heap
-is @strong{not} a garbage collection root; so if we leave some machine
-words uninitialised on the heap, outside of Scheme objects: nothing bad
-happens, because the garbage collector never sees them.
+contents have to be considered invalid.  However, notice that the heap's
+nursery is @strong{not} a garbage collection root; so if we leave some
+machine words uninitialised on the heap, outside of Scheme objects:
+nothing bad happens, because the garbage collector never sees them.
 @end deftypefun
 
 
-@deftypefun ikptr_t ik_unsafe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{align_size})
-Reserve a memory block on the Scheme heap hot block and return a
-reference to it as an @strong{untagged} pointer.  @var{pcb} must
-reference the process control block, @var{align_size} must be the
+@deftypefun ikptr_t ik_unsafe_alloc (ikpcb_t * @var{pcb}, ikuword_t @var{aligned_size})
+Reserve a memory block on the Scheme heap's nursery hot block and return
+a reference to it as an @strong{untagged} pointer.  @var{pcb} must
+reference the process control block, @var{aligned_size} must be the
 requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
 If not enough memory is available on the current heap hot block: such
-hot block is stored away and a new hot block is allocated; if such
-allocation fails: the process is terminated with exit status
-@code{EXIT_FAILURE}.
+hot block is stored away in a linked list referenced by the @var{pcb},
+and a new hot block is allocated; if such allocation fails: the process
+is terminated with exit status @code{EXIT_FAILURE}.
 
 The reserved memory is @strong{not} initialised to safe values: its
-contents have to be considered invalid.  However, notice that the heap
-is @strong{not} a garbage collection root; so if we leave some machine
-words uninitialised on the heap, outside of Scheme objects: nothing bad
-happens, because the garbage collector never sees them.
+contents have to be considered invalid.  However, notice that the heap's
+nursery is @strong{not} a garbage collection root; so if we leave some
+machine words uninitialised on the heap, outside of Scheme objects:
+nothing bad happens, because the garbage collector never sees them.
 
 We notice explicitly that this function @strong{does not} trigger a
 garbage collection run, so, when using it, it is not needed to register
@@ -1233,23 +1243,38 @@ C pointers as garbage collection roots.
 
 @deffn {Preprocessor Macro} IK_ASS (ikptr_t @var{left}, ikptr_t @var{right})
 Perform a C language assignment enforcing the order of evaluation of the
-left--side and right--side expressions.  First evaluate @var{right},
-then evaluate @var{left}, finally store the result of @var{right} in the
-lvalue resulting from evaluating @var{left}.
+left--side and right--side expressions:
 
-After a use of this macro: the function
+@enumerate
+@item
+Evaluate @var{right}.
+
+@item
+Evaluate @var{left}.
+
+@item
+Store the result of @var{right} in the lvalue resulting from evaluating
+@var{left}.
+@end enumerate
+
+After a use of this macro: if @var{right} is a reference to a
+non--immediate Scheme object, the function
 @cfunc{ik_signal_dirt_in_page_of_pointer} must be applied to the lvalue
 resulting from evaluating @var{left}.  For example, when allocating a
-pair filled with numbers:
+pair filled with non--immediate numbers:
 
 @example
 ikptr_t   s_pair = ika_pair_alloc(pcb);
 
-IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, 1));
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+pcb->root0 = &s_pair;
+@{
+  IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, 1));
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
 
-IK_ASS(IK_CDR(s_pair), ika_integer_from_int(pcb, 2));
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+  IK_ASS(IK_CDR(s_pair), ika_integer_from_int(pcb, 2));
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_pair));
+@}
+pcb->root = NULL;
 @end example
 @end deffn
 
@@ -1259,7 +1284,8 @@ Register in the dirty vector that the memory page containing the
 location referenced by @var{pointer} has been mutated.  This function
 must be called every time we mutate a pair, vector, structure, record,
 ratnum, cflonum, compnum slot by storing in it a reference to another
-Scheme object that might be in a newer garbage collection generation.
+non--immediate Scheme object that might be in a newer garbage collection
+generation.
 
 If we call this function when there is no need for it: nothing bad will
 happen; the garbage collector will just do some useless work, slowing

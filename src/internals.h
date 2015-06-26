@@ -1080,7 +1080,8 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 
 #define IK_TAGOF(X)	(((int)(X)) & 7)
 
-#define IK_REF(X,N)	(((ikptr_t*)(((ikuword_t)(X)) + ((iksword_t)(N))))[0])
+#define IK_PTR(X,N)	((ikptr_t*)(((ikuword_t)(X)) + ((iksword_t)(N))))
+#define IK_REF(X,N)	(IK_PTR(X,N)[0])
 
 /* This  macro computes  the number  of  bytes to  reserve in  allocated
    memory for the  data area of a Scheme object;  the reserved memory is
@@ -1157,6 +1158,13 @@ ik_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 #define IK_CDAR(PAIR)		    IK_CDR(IK_CAR(PAIR))
 #define IK_CADR(PAIR)		    IK_CAR(IK_CDR(PAIR))
 #define IK_CDDR(PAIR)		    IK_CDR(IK_CDR(PAIR))
+
+#define IK_CAR_PTR(PAIR)	IK_PTR((PAIR), off_car)
+#define IK_CDR_PTR(PAIR)	IK_PTR((PAIR), off_cdr)
+#define IK_CAAR_PTR(PAIR)	IK_CAR_PTR(IK_CAR(PAIR))
+#define IK_CDAR_PTR(PAIR)	IK_CDR_PTR(IK_CAR(PAIR))
+#define IK_CADR_PTR(PAIR)	IK_CAR_PTR(IK_CDR(PAIR))
+#define IK_CDDR_PTR(PAIR)	IK_CDR_PTR(IK_CDR(PAIR))
 
 #define IKA_PAIR_ALLOC(PCB)	(ik_safe_alloc((PCB),  pair_size) | pair_tag)
 #define IKU_PAIR_ALLOC(PCB)	(ik_unsafe_alloc((PCB),pair_size) | pair_tag)
@@ -1407,8 +1415,15 @@ ik_decl ikptr_t	ikrt_bignum_hash	(ikptr_t bn /*, ikpcb_t* pcb */);
 #define off_ratnum_den		(disp_ratnum_den    - vector_tag)
 #define off_ratnum_unused	(disp_ratnum_unused - vector_tag)
 
-#define IK_NUMERATOR(X)		IK_REF((X), off_ratnum_num)
-#define IK_DENOMINATOR(X)	IK_REF((X), off_ratnum_den)
+#define IK_RATNUM_NUM(X)	IK_REF((X), off_ratnum_num)
+#define IK_RATNUM_DEN(X)	IK_REF((X), off_ratnum_den)
+
+#define IK_RATNUM_NUM_PTR(X)	IK_PTR((X), off_ratnum_num)
+#define IK_RATNUM_DEN_PTR(X)	IK_PTR((X), off_ratnum_den)
+
+/* deprecated */
+#define IK_NUMERATOR(X)		IK_RATNUM_NUM(X)
+#define IK_DENOMINATOR(X)	IK_RATNUM_DEN(X)
 
 ik_decl int	ik_is_ratnum	(ikptr_t X);
 ik_decl ikptr_t	ika_ratnum_alloc_no_init	(ikpcb_t * pcb);
@@ -1433,6 +1448,9 @@ ik_decl ikptr_t	ika_ratnum_alloc_and_init	(ikpcb_t * pcb);
 
 #define IK_COMPNUM_REAL(X)	IK_REF((X), off_compnum_real)
 #define IK_COMPNUM_IMAG(X)	IK_REF((X), off_compnum_imag)
+
+#define IK_COMPNUM_REAL_PTR(X)	IK_PTR((X), off_compnum_real)
+#define IK_COMPNUM_IMAG_PTR(X)	IK_PTR((X), off_compnum_imag)
 
 ik_decl int	ik_is_compnum	(ikptr_t X);
 ik_decl ikptr_t	ika_compnum_alloc_no_init	(ikpcb_t * pcb);
@@ -1483,14 +1501,18 @@ ik_decl ikptr_t ikrt_flonum_hash	(ikptr_t x /*, ikpcb_t* pcb */);
   ikptr_t VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\
   IK_REF(VARNAME, off_cflonum_tag) = (ikptr_t)cflonum_tag
 
-ik_decl int   ik_is_cflonum	(ikptr_t X);
-ik_decl ikptr_t iku_cflonum_alloc_and_init (ikpcb_t * pcb, double re, double im);
-ik_decl ikptr_t	ika_cflonum_from_doubles (ikpcb_t* pcb, double re, double im);
-
 #define IK_CFLONUM_REAL(X)	IK_REF((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG(X)	IK_REF((X), off_cflonum_imag)
+
+#define IK_CFLONUM_REAL_PTR(X)	IK_PTR((X), off_cflonum_real)
+#define IK_CFLONUM_IMAG_PTR(X)	IK_PTR((X), off_cflonum_imag)
+
 #define IK_CFLONUM_REAL_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_REAL(X))
 #define IK_CFLONUM_IMAG_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_IMAG(X))
+
+ik_decl int	ik_is_cflonum			(ikptr_t X);
+ik_decl ikptr_t iku_cflonum_alloc_and_init	(ikpcb_t * pcb, double re, double im);
+ik_decl ikptr_t	ika_cflonum_from_doubles	(ikpcb_t* pcb, double re, double im);
 
 
 /** --------------------------------------------------------------------
@@ -1555,6 +1577,8 @@ ik_decl ikptr_t ikrt_vector_copy		(ikptr_t s_dst, ikptr_t s_dst_start,
 #define IK_VECTOR_LENGTH(VEC)		IK_UNFIX(IK_VECTOR_LENGTH_FX(VEC))
 #define IK_ITEM(VEC,IDX)		IK_REF((VEC), off_vector_data + (IDX) * wordsize)
 #define IK_VECTOR_DATA_VOIDP(VEC)	((void*)((ikptr_t)((VEC)+off_vector_data)))
+
+#define IK_ITEM_PTR(VEC,IDX)		IK_PTR((VEC), off_vector_data + (IDX) * wordsize)
 
 
 /** --------------------------------------------------------------------
@@ -1625,6 +1649,8 @@ ik_decl int   ik_is_struct	(ikptr_t R);
 
 #define IK_STRUCT_RTD(STRUCT)	IK_REF((STRUCT), off_record_rtd)
 #define IK_FIELD(STRUCT,FIELD)	IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))
+
+#define IK_FIELD_PTR(STRUCT,FIELD)	IK_PTR((STRUCT), (off_record_data+(FIELD)*wordsize))
 
 
 /** --------------------------------------------------------------------

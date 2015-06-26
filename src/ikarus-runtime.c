@@ -730,16 +730,16 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
    block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
    through "IK_ALIGN()".
 
-     If not  enough memory is available  on the current heap  segment, a
-   garbage collection is  triggered; then allocation is  tried again: if
-   it  still   fails  the  process   is  terminated  with   exit  status
+     If not  enough memory  is available on  the current  heap's nursery
+   segment, a garbage collection is  triggered; then allocation is tried
+   again: if it  still fails the process is terminated  with exit status
    EXIT_FAILURE.
 
      The reserved memory is NOT initialised to safe values: its contents
-   have to be considered invalid.  However,  notice that the heap is NOT
-   a  garbage  collection  root;  so  if  we  leave  some  machine  word
-   uninitialised on  the heap,  outside of  Scheme objects:  nothing bad
-   happens, because the garbage collector never sees them. */
+   have  to be  considered  invalid.  However,  notice  that the  heap's
+   nursery is NOT a garbage collection root; so if we leave some machine
+   word uninitialised  on the heap,  outside of Scheme  objects: nothing
+   bad happens, because the garbage collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr_t		alloc_ptr;
@@ -775,15 +775,15 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
    through "IK_ALIGN()".  This function is  meant to be used to allocate
    "small" memory blocks.
 
-     If not  enough memory is available  on the current heap  segment: a
-   new heap segment is allocated;  if such allocation fails: the process
-   is terminated with exit status EXIT_FAILURE.
+     If not  enough memory  is available on  the current  heap's nursery
+   segment: a new  heap segment is allocated; if  such allocation fails:
+   the process is terminated with exit status EXIT_FAILURE.
 
      The reserved memory is NOT initialised to safe values: its contents
-   have to be considered invalid.  However,  notice that the heap is NOT
-   a  garbage  collection  root;  so  if  we  leave  some  machine  word
-   uninitialised on  the heap,  outside of  Scheme objects:  nothing bad
-   happens, because the garbage collector never sees them. */
+   have  to be  considered  invalid.  However,  notice  that the  heap's
+   nursery is NOT a garbage collection root; so if we leave some machine
+   word uninitialised  on the heap,  outside of Scheme  objects: nothing
+   bad happens, because the garbage collector never sees them. */
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr_t alloc_ptr       = pcb->allocation_pointer;
