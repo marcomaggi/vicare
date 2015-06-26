@@ -1045,17 +1045,18 @@ add_one_tconc(ikpcb_t* pcb, ikptr_t p)
   ikptr_t tcbucket = IK_REF(p,0);
   ikptr_t tc = IK_REF(tcbucket, off_tcbucket_tconc);
   assert(IK_TAGOF(tc) == pair_tag);
-  ikptr_t d = IK_REF(tc, off_cdr);
+  ikptr_t d = IK_CDR(tc);
   assert(IK_TAGOF(d) == pair_tag);
   ikptr_t new_pair = p | pair_tag;
-  IK_REF(d, off_car) = tcbucket;
-  IK_REF(d, off_cdr) = new_pair;
-  IK_REF(new_pair, off_car) = IK_FALSE_OBJECT;
-  IK_REF(new_pair, off_cdr) = IK_FALSE_OBJECT;
-  IK_REF(tc, off_cdr) = new_pair;
+  IK_CAR(d)		= tcbucket;
+  IK_CDR(d)		= new_pair;
+  IK_CAR(new_pair)	= IK_FALSE_OBJECT;
+  IK_CDR(new_pair)	= IK_FALSE_OBJECT;
+  IK_CDR(tc)		= new_pair;
   IK_REF(tcbucket, -vector_tag) = (ikptr_t)(tcbucket_size - wordsize);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, tc);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, d);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(tc));
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR_PTR(d));
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CDR_PTR(d));
 }
 
 
