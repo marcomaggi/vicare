@@ -899,12 +899,12 @@ ik_relocate_code (ikptr_t p_code)
 /* Accept as  argument an *untagged*  pointer to a code  object; process
    the code object's relocation vector.
 
-   This function called:
+   This function is called:
 
    - whenever a code  object is allocated, in this  case CODE references
      an allocated but still empty code object;
 
-   - whenever a  code object is read  from a FASL file;
+   - whenever a code object is read from a FASL file;
 
    - whenever a code object is created by the assembler. */
 {

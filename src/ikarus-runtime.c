@@ -1204,15 +1204,15 @@ ikptr_t
 ikrt_set_code_reloc_vector (ikptr_t s_code, ikptr_t s_vec, ikpcb_t* pcb)
 {
   IK_REF(s_code, off_code_reloc_vector) = s_vec;
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_PTR(s_code, off_code_reloc_vector));
   ik_relocate_code(s_code - vector_tag);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_code);
   return IK_VOID_OBJECT;
 }
 ikptr_t
 ikrt_set_code_annotation (ikptr_t s_code, ikptr_t s_annot, ikpcb_t* pcb)
 {
   IK_REF(s_code, off_code_annotation) = s_annot;
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_code);
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_PTR(s_code, off_code_annotation));
   return IK_VOID;
 }
 
