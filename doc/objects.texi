@@ -1299,7 +1299,32 @@ down the collection time a bit.
 
 The garbage collector considers an object ``in use'' if at least one
 reference to it is reachable from the roots of the garbage collection;
-if an @ikptr{} reference exists only in a @cpu{} register or on the C
+the roots of the garbage collection are:
+
+@itemize
+@item
+Heap dirty generational pages not collected in the current garbage
+collection run.
+
+@item
+The Scheme stack.
+
+@item
+The next continuation Scheme object.
+
+@item
+The symbol table collecting interned symbols.
+
+@item
+The @code{root} fields of the @pcb{} structure.
+@end itemize
+
+Notice that, besides the dirty pages, the heap is @strong{not} a garbage
+collector root; so if we leave some machine words uninitialised on the
+heap: nothing bad happens, because the garbage collector never sees
+them.
+
+If an @ikptr{} reference exists only in a @cpu{} register or on the C
 language stack, or on the C language heap out of segments allocated for
 Scheme: the garbage collector will not see it.  This allows to avoid
 scanning the full process' stack for references to values, but imposes
@@ -1307,10 +1332,10 @@ care when writing C language code.
 
 Whenever we call @cfunc{ik_safe_alloc} or a function relying on it for
 memory allocation: a garbage collection may run and Scheme objects may
-be moved from their location in memory to another memory segment; this
-makes invalid all the pointers in the @cpu{} registers, on the C stack
-and the C heap.  Notice that this includes the arguments to C functions
-called from Scheme through the macro @func{foreign-call}.
+be moved from their location in memory to another memory generational
+page; this makes invalid all the pointers in the @cpu{} registers, on
+the C stack and the C heap.  Notice that this includes the arguments to
+C functions called from Scheme through the macro @func{foreign-call}.
 
 If an old Scheme object contains a reference to a new Scheme object: we
 have to inform the garbage collector about this.
@@ -1374,8 +1399,8 @@ the data area of @code{s_one} is retrieved again:
 ikpcb_t * pcb = ik_the_pcb();
 ikptr_t   s_one;
 ikptr_t   s_two;
-char *  one;
-char *  two;
+char *    one;
+char *    two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
 one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
@@ -1392,14 +1417,15 @@ two   = IK_BYTEVECTOR_DATA_CHARP(s_two);
 
 @noindent
 example of @strong{wrong} code: after the second call to the allocation
-function the pointer to the data area of @code{s_one} may be invalid:
+function the pointer @code{one} to the data area of @code{s_one} may be
+invalid:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
 ikptr_t   s_one;
 ikptr_t   s_two;
-char *  one;
-char *  two;
+char *    one;
+char *    two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
 one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
@@ -1431,18 +1457,33 @@ resulting in the value referenced by @code{s_pair} to be invalid when
 the memory assigment actually takes place; so we have to code:
 
 @example
+ikpcb_t * pcb    = ...;
+ikptr_t   s_pair = ...;
 ikptr_t   s_tmp;
-s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
-IK_CAR(s_pair) = s_tmp;
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+
+pcb->root0 = &s_pair;
+@{
+  s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
+  IK_CAR(s_pair) = s_tmp;
+  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+@}
+pcb->root0 = NULL;
 @end example
 
 @noindent
 or:
 
 @example
-IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+ikpcb_t * pcb    = ...;
+ikptr_t   s_pair = ...;
+ikptr_t   s_tmp;
+
+pcb->root0 = &s_pair;
+@{
+  IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
+  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+@}
+pcb->root0 = NULL;
 @end example
 
 @noindent
@@ -1464,10 +1505,28 @@ pcb->root0 = NULL;
 
 @noindent
 when the second pair is allocated, the first pair has car and cdr still
-uninitialised: the content of these words is undefined; this may cause
+uninitialised (the macro @cfunc{IKA_PAIR_ALLOC} does not initialise the
+pair object): the content of these words is undefined; this may cause
 undefined behaviour while the second allocation takes place and the
 garbage collection tries to scan the first pair.  The @strong{correct}
 code is:
+
+@example
+ikpcb_t * pcb = ik_the_pcb();
+ikptr_t   s_one, s_two;
+
+s_one = IKA_PAIR_ALLOC(pcb);
+IK_CAR(s_one) = IK_FALSE; /* GOOD */
+IK_CDR(s_one) = IK_FALSE; /* GOOD */
+pcb->root0 = &s_one;
+@{
+  s_two = IKA_PAIR_ALLOC(pcb);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+or:
 
 @example
 ikpcb_t * pcb = ik_the_pcb();
