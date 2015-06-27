@@ -361,10 +361,10 @@ ik_make_pcb (void)
    * "ik_unsafe_alloc()".
    */
   {
-    pcb->heap_base          = ik_mmap(IK_HEAPSIZE);
-    pcb->heap_size          = IK_HEAPSIZE;
-    pcb->allocation_pointer = pcb->heap_base;
-    pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - IK_DOUBLE_PAGESIZE;
+    pcb->heap_nursery_hot_block_base          = ik_mmap(IK_HEAPSIZE);
+    pcb->heap_nursery_hot_block_size          = IK_HEAPSIZE;
+    pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
+    pcb->allocation_redline = pcb->heap_nursery_hot_block_base + IK_HEAPSIZE - IK_DOUBLE_PAGESIZE;
     /* Notice that below we will register the heap block in the segments
        vector. */
   }
@@ -579,12 +579,12 @@ ik_make_pcb (void)
   {
     ikptr_t	lo_mem, hi_mem;
     ikuword_t	lo_seg_idx, hi_seg_idx, vec_size, base_offset;
-    if (pcb->heap_base < pcb->stack_base) {
-      lo_mem = pcb->heap_base - IK_PAGESIZE;
+    if (pcb->heap_nursery_hot_block_base < pcb->stack_base) {
+      lo_mem = pcb->heap_nursery_hot_block_base - IK_PAGESIZE;
       hi_mem = pcb->stack_base + pcb->stack_size + IK_PAGESIZE;
     } else {
       lo_mem = pcb->stack_base - IK_PAGESIZE;
-      hi_mem = pcb->heap_base + pcb->heap_size + IK_PAGESIZE;
+      hi_mem = pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size + IK_PAGESIZE;
     }
     /* The segment index "lo_seg_idx" is  the index of the first segment
      * (lowest address) of used  memory.  The segment index "hi_seg_idx"
@@ -625,13 +625,13 @@ ik_make_pcb (void)
     /* Register  the heap  block and  the  stack block  in the  segments
        vector.   We  do this  here,  after  having  set the  PCB  fields
        "memory_base" and "memory_end". */
-    set_page_range_type(pcb->heap_base,  pcb->heap_size,  MAINHEAP_MT,  pcb);
+    set_page_range_type(pcb->heap_nursery_hot_block_base,  pcb->heap_nursery_hot_block_size,  MAINHEAP_MT,  pcb);
     set_page_range_type(pcb->stack_base, pcb->stack_size, MAINSTACK_MT, pcb);
 
 #if 0
     fprintf(stderr, "\n*** Vicare debug:\n");
-    fprintf(stderr, "*  pcb->heap_base  = #x%lX\n", pcb->heap_base);
-    fprintf(stderr, "*  pcb->heap_size  = %lu\n", pcb->heap_size);
+    fprintf(stderr, "*  pcb->heap_nursery_hot_block_base  = #x%lX\n", pcb->heap_nursery_hot_block_base);
+    fprintf(stderr, "*  pcb->heap_nursery_hot_block_size  = %lu\n", pcb->heap_nursery_hot_block_size);
     fprintf(stderr, "*  pcb->stack_base = #x%lX\n", pcb->stack_base);
     fprintf(stderr, "*  pcb->stack_size = %lu\n", pcb->stack_size);
     fprintf(stderr, "*  lo_mem = #x%lX, hi_mem = #x%lX\n", lo_mem, hi_mem);
@@ -746,7 +746,7 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
   ikptr_t		end_ptr;
   ikptr_t		new_alloc_ptr;
   alloc_ptr	= pcb->allocation_pointer;
-  end_ptr	= pcb->heap_base + pcb->heap_size;
+  end_ptr	= pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
   new_alloc_ptr	= alloc_ptr + aligned_size;
   if (new_alloc_ptr < end_ptr) {
     /* There is  room in the  current heap  segment: update the  PCB and
@@ -757,7 +757,7 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
     ik_collect(aligned_size, pcb);
     {
       alloc_ptr		= pcb->allocation_pointer;
-      end_ptr		= pcb->heap_base + pcb->heap_size;
+      end_ptr		= pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
       new_alloc_ptr	= alloc_ptr + aligned_size;
       if (new_alloc_ptr < end_ptr)
 	pcb->allocation_pointer = new_alloc_ptr;
@@ -787,7 +787,7 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
 {
   assert(aligned_size == IK_ALIGN(aligned_size));
   ikptr_t alloc_ptr       = pcb->allocation_pointer;
-  ikptr_t end_ptr         = pcb->heap_base + pcb->heap_size;
+  ikptr_t end_ptr         = pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
   ikptr_t new_alloc_ptr   = alloc_ptr + aligned_size;
   if (new_alloc_ptr < end_ptr) {
     /* There is  room in the  current heap  nursery: update the  PCB and
@@ -798,14 +798,15 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
     /* No  room  in  the  current  heap nursery:  enlarge  the  heap  by
        allocating new memory. */
     if (alloc_ptr) {
-      /* This is not  the first heap block allocation, so  prepend a new
-	 "ikmemblock_t" node to  the linked list of old  heap blocks and
-	 initialise it with a reference to the current heap block. */
-      ikmemblock_t *	p = ik_malloc(sizeof(ikmemblock_t));
-      p->base = pcb->heap_base;
-      p->size = pcb->heap_size;
-      p->next = pcb->heap_pages;
-      pcb->heap_pages = p;
+      /* This  is not  the  first heap's  nursery  block allocation,  so
+	 prepend a  new "ikmemblock_t"  node to the  linked list  of old
+	 nursery  blocks  and initialise  it  with  a reference  to  the
+	 current nursery's hot block. */
+      ikmemblock_t *	node = (ikmemblock_t *)ik_malloc(sizeof(ikmemblock_t));
+      node->base = pcb->heap_nursery_hot_block_base;
+      node->size = pcb->heap_nursery_hot_block_size;
+      node->next = pcb->full_heap_nursery_segments;
+      pcb->full_heap_nursery_segments = node;
     }
     { /* Accounting.  We keep  count of all the bytes  allocated for the
        * heap, so that:
@@ -814,7 +815,7 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
        *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major
        *     + pcb->allocation_count_minor
        */
-      ikuword_t bytes = ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_base);
+      ikuword_t bytes = ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_nursery_hot_block_base);
       ikuword_t minor = bytes + pcb->allocation_count_minor;
       while (minor >= IK_MOST_BYTES_IN_MINOR) {
 	minor -= IK_MOST_BYTES_IN_MINOR;
@@ -822,10 +823,11 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
       }
       pcb->allocation_count_minor = minor;
     }
-    { /* Allocate a  new heap  segment and register  it as  current heap
-       * base.  While computing  the segment size: make  sure that there
-       * is always  some room at the  end of the new  heap segment after
-       * allocating the requested memory for the new object.
+    { /* Allocate  a  new heap's  nursery  segment  and register  it  as
+       * current nursery's hot block.  While computing the segment size:
+       * make sure that there is always some  room at the end of the new
+       * heap segment after allocating the  requested memory for the new
+       * object.
        *
        * Initialise it as follows:
        *
@@ -841,8 +843,8 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
 	aligned_size : IK_HEAP_EXTENSION_SIZE;
       new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_PAGESIZE);
       heap_ptr			= ik_mmap_mainheap(new_size, pcb);
-      pcb->heap_base		= heap_ptr;
-      pcb->heap_size		= new_size;
+      pcb->heap_nursery_hot_block_base	= heap_ptr;
+      pcb->heap_nursery_hot_block_size	= new_size;
       pcb->allocation_redline	= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;
       pcb->allocation_pointer	= heap_ptr + aligned_size;
       return heap_ptr;
@@ -1287,7 +1289,7 @@ ikrt_stats_now (ikptr_t t, ikpcb_t* pcb)
   IK_FIELD(t, 11) = IK_FIX(pcb->collect_rtime.tv_sec);
   IK_FIELD(t, 12) = IK_FIX(pcb->collect_rtime.tv_usec);
   { /* minor bytes */
-    ikuword_t bytes_in_heap	= ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_base);
+    ikuword_t bytes_in_heap	= ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_nursery_hot_block_base);
     ikuword_t bytes		= bytes_in_heap + pcb->allocation_count_minor;
     IK_FIELD(t, 13)		= IK_FIX(bytes);
   }

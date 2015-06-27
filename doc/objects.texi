@@ -988,15 +988,39 @@ survive a garbage collection; every generational page is tagged in the
 segments vector with the index of the generation it belongs to.
 
 @table @code
-@item ikptr_t heap_base
-@itemx ikuword_t heap_size
+@item ikptr_t heap_nursery_hot_block_base
+@itemx ikuword_t heap_nursery_hot_block_size
 Pointer and size in bytes of the current nursery hot memory block; new
-Scheme objects are allocated here.  Initialised to a memory mapped block
-of size @code{IK_HEAPSIZE}.  When the previous block is full: to satisfy
-the request of an unsafe allocation it is set to a memory mapped block
-of size @code{IK_HEAP_EXTENSION_SIZE}.  After a garbage collection is
-performed: it is set to a memory mapped block of size
-@code{IK_HEAPSIZE}.
+Scheme objects are allocated here.  About the size of the hot block:
+
+@itemize
+@item
+The hot block is initialised to a memory mapped block of size
+@code{IK_HEAPSIZE} bytes.
+
+@item
+When the current hot block is full and a call to @cfunc{ik_unsafe_alloc}
+is performed:
+
+@itemize -
+@item
+If the requested size, aligned, is less than
+@code{IK_HEAP_EXTENSION_SIZE} bytes: the hot block is set to a memory
+mapped block of size at least @code{IK_HEAP_EXTENSION_SIZE} bytes (a
+couple of @code{IK_PAGESIZE} more than that).
+
+@item
+If the requested size, aligned, is greater than
+@code{IK_HEAP_EXTENSION_SIZE} bytes: the hot block is set to a memory
+mapped block of size wide enough to hold the requested, aligned, size
+(rounded to the next page size, with a couple of @code{IK_PAGESIZE}
+more).
+@end itemize
+
+@item
+After a garbage collection is performed: the hot block is set to a
+memory mapped block of size @code{IK_HEAPSIZE}.
+@end itemize
 
 @item ikptr_t allocation_pointer
 Pointer to the first word of available data in the nursery's hot memory
@@ -1007,7 +1031,7 @@ Pointer to a word towards the end of the heap hot memory block; when the
 allocation of a Scheme object crosses this pointer, the hot block is
 considered full.
 
-@item ikmemblock_t heap_pages
+@item ikmemblock_t full_heap_nursery_segments
 Pointer to the first node in a linked list of memory blocks that once
 were nursery's hot memory, and are now fully used; initialised to
 @cnull{} when building the @pcb{}.

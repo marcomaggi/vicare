@@ -315,7 +315,7 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
   struct rusage		t0, t1;		/* for GC statistics */
   struct timeval	rt0, rt1;	/* for GC statistics */
   gc_t			gc;
-  ikmemblock_t *		old_heap_pages;
+  ikmemblock_t *		old_full_heap_nursery_segments;
 
   /* fprintf(stderr, "%s: enter\n", __func__); */
 #if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -325,7 +325,7 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
     ik_verify_integrity(pcb, "entry");
   }
   { /* accounting */
-    ikuword_t bytes = ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_base);
+    ikuword_t bytes = ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_nursery_hot_block_base);
     register_to_collect_count(pcb, bytes);
   }
 
@@ -352,8 +352,8 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
   /* Save  the linked  list  referencing memory  blocks  that once  were
      nursery hot  memory, and are now  fully used; they will  be deleted
      later. */
-  old_heap_pages  = pcb->heap_pages;
-  pcb->heap_pages = NULL;
+  old_full_heap_nursery_segments  = pcb->full_heap_nursery_segments;
+  pcb->full_heap_nursery_segments = NULL;
 
   /* Scan GC roots. */
   {
@@ -414,7 +414,7 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
   fix_new_pages(&gc);
   gc_finalize_guardians(&gc);
 
-  pcb->allocation_pointer = pcb->heap_base;
+  pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
   /* does not allocate */
   gc_add_tconcs(&gc);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -449,15 +449,15 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
   /* Delete the  linked list  referencing memory  blocks that  once were
      nursery  hot memory,  and are  now fully  used; the  blocks' memory
      pages are cached in the PCB to be recycled later. */
-  if (old_heap_pages) {
-    ikmemblock_t* p = old_heap_pages;
+  if (old_full_heap_nursery_segments) {
+    ikmemblock_t* p = old_full_heap_nursery_segments;
     do {
       ikmemblock_t* next = p->next;
       ik_munmap_from_segment(p->base, p->size, pcb);
       ik_free(p, sizeof(ikmemblock_t));
       p=next;
     } while(p);
-    old_heap_pages = NULL;
+    old_full_heap_nursery_segments = NULL;
   }
 
   /* Release the  old nursery  heap hot  block and  allocate a  new one.
@@ -466,7 +466,7 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
      values before being scanned by the garbage collector. */
   {
     ikuword_t free_space = ((ikuword_t)pcb->allocation_redline) - ((ikuword_t)pcb->allocation_pointer);
-    if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
+    if ((free_space <= mem_req) || (pcb->heap_nursery_hot_block_size < IK_HEAPSIZE)) {
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
@@ -477,12 +477,12 @@ ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
       memsize	    = IK_ALIGN_TO_NEXT_PAGE(memsize);
       new_heap_size = memsize + 2 * IK_PAGESIZE;
       /* Release the old nursery heap hot block. */
-      ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
+      ik_munmap_from_segment(pcb->heap_nursery_hot_block_base, pcb->heap_nursery_hot_block_size, pcb);
       ap = ik_mmap_mainheap(new_heap_size, pcb);
       pcb->allocation_pointer = ap;
       pcb->allocation_redline = ap + memsize;
-      pcb->heap_base = ap;
-      pcb->heap_size = new_heap_size;
+      pcb->heap_nursery_hot_block_base = ap;
+      pcb->heap_nursery_hot_block_size = new_heap_size;
     }
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     { /* Reset the free space to a magic number. */

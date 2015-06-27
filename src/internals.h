@@ -721,8 +721,8 @@ typedef struct ikpcb_t {
    * a  garbage collection;  every generational  page is  tagged in  the
    * segments vector with the index of the generation it belongs to.
    *
-   * heap_base -
-   * heap_size -
+   * heap_nursery_hot_block_base -
+   * heap_nursery_hot_block_size -
    *     Pointer and  size in  bytes of the  current nursery  hot memory
    *     block; new Scheme objects are allocated here.  Initialised to a
    *     memory  mapped block  of size  IK_HEAPSIZE.
@@ -742,14 +742,14 @@ typedef struct ikpcb_t {
    *     when the  allocation of a  Scheme object crosses  this pointer,
    *     the hot block is considered full.
    *
-   * heap_pages -
+   * full_heap_nursery_segments -
    *     Pointer to  the first node  in a  linked list of  memory blocks
    *     that  once were  nursery hot  memory, and  are now  fully used;
    *     initialised to NULL when building the PCB.
    */
-  ikptr_t		heap_base;
-  ikuword_t		heap_size;
-  ikmemblock_t *	heap_pages;
+  ikptr_t		heap_nursery_hot_block_base;
+  ikuword_t		heap_nursery_hot_block_size;
+  ikmemblock_t *	full_heap_nursery_segments;
 
   /* Pointer to and number of bytes of the current Scheme stack memory.
    */

@@ -337,8 +337,8 @@ ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr_t s_kont)
      may be corrupted.  For this reason we use two function calls. */
   ik_debug_message("%s: internal error while resuming continuation", __func__);
   ik_debug_message("%s: status log:\n\
-\tpcb->heap_base     = 0x%016lx\n\
-\tpcb->heap_size     = %ld bytes, %ld words\n\
+\tpcb->heap_nursery_hot_block_base     = 0x%016lx\n\
+\tpcb->heap_nursery_hot_block_size     = %ld bytes, %ld words\n\
 \tpcb->stack_base    = 0x%016lx\n\
 \tpcb->stack_size    = %ld bytes, %ld words\n\
 \tpcb->frame_redline = 0x%016lx, segment words before overflow %ld\n\
@@ -353,7 +353,8 @@ ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr_t s_kont)
 \ts_kont return address           = 0x%016lx (== underflow handler? %s)\n\
 \ts_kont return address framesize = %ld\n\
 \tinvalid framesize=%ld, expected %ld(=kont->size) or less",
-		   pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
+		   pcb->heap_nursery_hot_block_base,
+		   pcb->heap_nursery_hot_block_size, pcb->heap_nursery_hot_block_size/wordsize,
 		   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
 		   pcb->frame_redline, (long)redline_delta_words,
 		   pcb->frame_pointer, pcb->frame_base,
