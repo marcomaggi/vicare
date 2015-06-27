@@ -1319,10 +1319,11 @@ The symbol table collecting interned symbols.
 The @code{root} fields of the @pcb{} structure.
 @end itemize
 
-Notice that, besides the dirty pages, the heap is @strong{not} a garbage
-collector root; so if we leave some machine words uninitialised on the
-heap: nothing bad happens, because the garbage collector never sees
-them.
+Notice that the heap's nursery is @strong{not} a garbage collector root;
+so if we leave some machine words uninitialised on the nursery, outside
+of Scheme objects: nothing bad happens, because the garbage collector
+never sees them.  Upon allocation, there is no need to initialise the
+memory segment used as nursery.
 
 If an @ikptr{} reference exists only in a @cpu{} register or on the C
 language stack, or on the C language heap out of segments allocated for
@@ -1570,10 +1571,10 @@ If @var{val} is @code{0} return @code{IK_FALSE}, else return
 
 
 Fixnums are ``small'' exact integers which fit in a single machine word:
-if the word size is @math{4}, @math{30} bits are used for fixnum
-representation; else the word size is @math{8} and @math{61} bits are
-used for fixnum representation.  On a 32-bit platform, @math{30} bits
-are available to store the number:
+if the word size is @math{4} bytes, @math{30} bits are used for fixnum
+representation; else the word size is @math{8} bytes and @math{61} bits
+are used for fixnum representation.  On a 32-bit platform, @math{30}
+bits are available to store the number:
 
 @example
 (greatest-fixnum)       @result{} +536870911
@@ -1583,6 +1584,18 @@ are available to store the number:
 (least-fixnum)          @result{} -536870912
 (- (expt 2 29))         @result{} -536870912
 @end example
+
+@noindent
+on a 64-bit platform, @math{61} bits are available to store the number:
+
+@lisp
+(greatest-fixnum)       @result{} +1152921504606846975
+(expt 2 60)             @result{} +1152921504606846976
+(- (expt 2 60) 1)       @result{} +1152921504606846975
+
+(least-fixnum)          @result{} -1152921504606846976
+(- (expt 2 60))         @result{} -1152921504606846976
+@end lisp
 
 @itemize
 @item
@@ -1623,14 +1636,18 @@ The fixnums tag is @code{00} on 32-bit platforms and @code{000} on
 
 @table @code
 @item fx_shift
-Set to the number of bits in the tag.
+@cindex @code{fx_shift}, C preprocessor symbol
+Set to the number of bits in the tag: @math{2} on 32-bit platforms;
+@math{3} on 64-bit platforms.
 
 @item fx_scale
 Set to the number of bytes in a machine word.
 @end table
 
 @noindent
-the value is selected in such a way that:
+let's consider a memory block whose size in bytes is an exact multiple
+of a word size in bytes; the value representing the memory block length
+is such that:
 
 @example
 length_in_bytes = number_of_words *  fx_scale
@@ -1648,20 +1665,20 @@ data area in bytes.
 @subsubheading Basic operations
 
 
-Given an exact integer stored in a @code{long} value with the right
+Given an exact integer stored in a @code{iksword_t} value with the right
 amount of bits, we encode a fixnum as follows:
 
 @example
-long    the_value  = ...;
-ikptr_t   the_fixnum = (ikptr_t)(the_value << fx_shift);
+iksword_t  the_value  = ...;
+ikptr_t    the_fixnum = (ikptr_t)(the_value << fx_shift);
 @end example
 
 @noindent
 and we decode it as follows:
 
 @example
-ikptr_t   the_fixnum = ...;
-long    the_value  = (long)(the_fixnum >> fx_shift);
+ikptr_t    the_fixnum = ...;
+iksword_t  the_value  = (iksword_t)(the_fixnum >> fx_shift);
 @end example
 
 @noindent
@@ -1670,7 +1687,7 @@ to verify if a @code{ikptr_t} is a fixnum we do:
 @example
 ikptr_t   the_fixnum = ...;
 
-if (fx_tag == ((long)the_fixnum & fx_mask))
+if (fx_tag == ((iksword_t)the_fixnum & fx_mask))
   it_is_a_fixnum();
 else
   it_is_not();
@@ -1686,8 +1703,8 @@ The fixnums tag.
 
 
 @defmac fx_shift
-The number of bits in the fixnums tag.  It is the amount of bits we have
-to left--shift a machine word to encode its value as fixnum.
+The number of bits in the fixnums tag.  It is the amount of bits to
+left--shift a machine word to encode its value as fixnum.
 @end defmac
 
 
@@ -1703,33 +1720,21 @@ Bit mask used to isolate the tag bits of a fixnum.
 Examples:
 
 @example
-long int  N = 123L;
-ikptr_t     P = IK_FIX(N);
-long int  M = IK_UNFIX(P);
+iksword_t  N = 123L;
+ikptr_t    P = IK_FIX(N);
+iksword_t  M = IK_UNFIX(P);
 @end example
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_FIX (@var{num})
-@deftypefnx {Preprocessor Macro} ikptr_t fix (@var{num})
+@deftypefn {Preprocessor Macro} ikptr_t IK_FIX (iksword_t @var{num})
 Convert a small exact integer in the correct range for a fixnum, into a
-@ikptr{} value.  @var{num} is cast to @code{long int}.
-
-@quotation
-@strong{NOTE} The macro @func{fix} is defined only in the internal
-header file and its usage is deprecated.
-@end quotation
+@ikptr{} value.  @var{num} is cast to @code{iksword_t}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr_t @var{ref})
-@deftypefnx {Preprocessor Macro} long unfix (ikptr_t @var{ref})
+@deftypefn {Preprocessor Macro} iksword_t IK_UNFIX (ikptr_t @var{ref})
 Convert an @ikptr{} value holding a fixnum into a fixnum of type
-@code{long int}.
-
-@quotation
-@strong{NOTE} The macro @func{unfix} is defined only in the internal
-header file and its usage is deprecated.
-@end quotation
+@code{iksword_t}.
 @end deftypefn
 
 
