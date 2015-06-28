@@ -511,13 +511,17 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
     old_full_heap_nursery_segments = NULL;
   }
 
-  /* If the  old nursery's hot  block is not  big enough to  satisfy the
-     request for  memory: free  the old  block and  allocate a  new one;
-     otherwise reuse the old one.
-
-     Notice that the allocated memory is NOT initialised to safe values:
-     its contents have to be  considered invalid and initialised to safe
-     values before being scanned by the garbage collector. */
+  /* We would want to recycle the nursery's hot block; most of the times
+   * we will succeed.
+   *
+   * If the  current nursery's hot  block is  big enough to  satisfy the
+   * request for memory: we reuse it;  otherwise we free the current hot
+   * block and we allocate a new one.
+   *
+   * Notice that the neither the old block nor the newly allocated block
+   * are initialised to  safe values (for example: reset  to zero, which
+   * menas filled with 0 fixnums).
+   */
   {
     pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
     iksword_t free_space = ((ikuword_t)pcb->allocation_redline) - ((ikuword_t)pcb->allocation_pointer);
