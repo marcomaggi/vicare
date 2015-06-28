@@ -387,12 +387,6 @@
    on 64-bit platforms we allocate 8 MiB.  On 64-bit platforms pairs and
    vector-like objects have double the size. */
 #define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((4==SIZEOF_VOID_P)?1:2))
-/* When we  need to perform an  unsafe Scheme object allocation  and the
-   Scheme heap's nursery is nearly full:  the old nursery's hot block is
-   stored away in the  PCB; a new memory block of at  least this size is
-   allocated  and becomes  the new  nursery's hot  block.  This  happens
-   without garbage collections. */
-#define IK_HEAP_EXTENSION_SIZE	IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(32)
 
 /* Only machine  words go on the  Scheme stack, no Scheme  objects data.
    So we are content with a single segment for the stack. */

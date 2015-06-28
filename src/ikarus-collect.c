@@ -135,7 +135,7 @@ static void	register_to_collect_count (ikpcb_t* pcb, int bytes);
  ** Global variables.
  ** ----------------------------------------------------------------- */
 
-extern ikuword_t	ik_customisable_heap_size;
+extern ikuword_t	ik_customisable_heap_nursery_size;
 
 /* When true: internals inspection messages  are enabled.  It is used by
    the preprocessor macro "IK_INTERNALS_MESSAGE()". */
@@ -525,13 +525,13 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
   {
     pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
     iksword_t free_space = ((ikuword_t)pcb->allocation_redline) - ((ikuword_t)pcb->allocation_pointer);
-    if ((free_space <= mem_req) || (pcb->heap_nursery_hot_block_size < ik_customisable_heap_size)) {
+    if ((free_space <= mem_req) || (pcb->heap_nursery_hot_block_size < ik_customisable_heap_nursery_size)) {
       ikuword_t		new_hot_block_size;
       ikptr_t		ap;
-      if (mem_req > ik_customisable_heap_size) {
+      if (mem_req > ik_customisable_heap_nursery_size) {
 	new_hot_block_size	= IK_ALIGN_TO_NEXT_PAGE(mem_req + IK_DOUBLE_PAGESIZE);
       } else {
-	new_hot_block_size	= ik_customisable_heap_size;
+	new_hot_block_size	= ik_customisable_heap_nursery_size;
       }
       /* Release the old nursery heap hot block. */
       ik_munmap_from_segment(pcb->heap_nursery_hot_block_base, pcb->heap_nursery_hot_block_size, pcb);

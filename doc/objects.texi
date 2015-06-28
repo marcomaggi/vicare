@@ -996,7 +996,7 @@ Scheme objects are allocated here.  About the size of the hot block:
 @itemize
 @item
 The hot block is initialised to a memory mapped block of size
-@code{IK_HEAPSIZE} bytes.
+@code{IK_HEAPSIZE} bytes; this size is customisable.
 
 @item
 When the current hot block is full and a call to @cfunc{ik_unsafe_alloc}
@@ -1004,22 +1004,16 @@ is performed:
 
 @itemize -
 @item
-If the requested size, aligned, is less than
-@code{IK_HEAP_EXTENSION_SIZE} bytes: the hot block is set to a memory
-mapped block of size at least @code{IK_HEAP_EXTENSION_SIZE} bytes (a
-couple of @code{IK_PAGESIZE} more than that).
+If the requested size, aligned, is less than @code{IK_HEAPSIZE} bytes:
+the hot block is set to a memory mapped block of size @code{IK_HEAPSIZE}
+bytes.
 
 @item
-If the requested size, aligned, is greater than
-@code{IK_HEAP_EXTENSION_SIZE} bytes: the hot block is set to a memory
-mapped block of size wide enough to hold the requested, aligned, size
-(rounded to the next page size, with a couple of @code{IK_PAGESIZE}
-more).
+If the requested size, aligned, is greater than @code{IK_HEAPSIZE}
+bytes: the hot block is set to a memory mapped block of size wide enough
+to hold the requested, aligned, size (with a couple of
+@code{IK_PAGESIZE} more, rounded to the next page size).
 @end itemize
-
-@item
-After a garbage collection is performed: the hot block is set to a
-memory mapped block of size @code{IK_HEAPSIZE}.
 @end itemize
 
 @item ikptr_t allocation_pointer

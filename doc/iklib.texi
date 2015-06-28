@@ -40,6 +40,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @menu
 * iklib libraries::             Extended @syntax{library} syntax.
 * iklib programs::              Extended program syntax.
+* iklib runtime::               Run-time configuration.
 * iklib progname::              Finding the @value{EXECUTABLE} executable.
 * iklib config::                Configuration options inspection.
 * iklib cmdline::               Command line arguments.
@@ -337,6 +338,39 @@ shared object to the Scheme program, so that, whenever the program is
 expanded from source code or loaded from a @fasl{} file: the shared
 object is dynamically loaded with a call to the operating system's
 function @cfunc{dlopen}.  @ref{foreign} for details.
+
+@c page
+@node iklib runtime
+@section Run-time configuration
+
+
+@cindex @library{vicare system $runtime}, library
+@cindex Library @library{vicare system $runtime}
+
+
+The following syntactic bindings are exported by the library
+@library{vicare system $runtime}.
+
+
+@defun scheme-heap-nursery-size
+@defunx scheme-heap-nursery-size @var{num-of-bytes}
+Getter and setter for the size of the Scheme heap nursery's hot block
+memory segment.  When called without arguments: return the current size.
+When called with one argument: set a new size.  The exact integer
+@var{num-of-bytes} must fit into a platform's @code{unsigned long}
+value.
+
+The Scheme heap nursery's hot block memory segment is allocated at
+process start--up, before loading the boot image.  While loading boot
+image: the hot block may be reallocated.  These first allocation and
+reallocations cannot be configured with this function, we have to use a
+command line argument.
+
+After boot image loading, if the Scheme heap nursery's hot block memory
+segment is reallocated: the new hot block has the size configured with
+this function.  Notice that, after boot image loading: hot block
+reallocation may never happen (most likely it will never happen).
+@end defun
 
 @c page
 @node iklib progname

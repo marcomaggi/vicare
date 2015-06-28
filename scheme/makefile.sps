@@ -532,6 +532,7 @@
     "ikarus.environment-inquiry.sls"
     "ikarus.object-utilities.sls"
     "ikarus.coroutines.sls"
+    "ikarus.run-time-configuration.sls"
     "ikarus.main.sls"
     ))
 
@@ -1045,6 +1046,7 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
+    ($runtime		(vicare system $runtime)		#t	#f)
     ($compiler		(vicare compiler)			#t	#f)
     ($libraries		(vicare libraries)			#t	#t)
     ($programs		(vicare programs)			#t	#f)
@@ -4067,6 +4069,11 @@
     (unparse-recordized-code				$compiler)
     (unparse-recordized-code/pretty			$compiler)
     (unparse-recordized-code/sexp			$compiler)
+
+;;; --------------------------------------------------------------------
+;;; run-time configuration
+
+    (scheme-heap-nursery-size				$runtime)
 
 ;;; --------------------------------------------------------------------
 

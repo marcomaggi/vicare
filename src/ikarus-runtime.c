@@ -45,8 +45,7 @@ static int total_allocated_pages = 0;
 /* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
-ikuword_t ik_customisable_heap_size		= IK_HEAPSIZE;
-ikuword_t ik_customisable_heap_extension_size	= IK_HEAP_EXTENSION_SIZE;
+ikuword_t ik_customisable_heap_nursery_size		= IK_HEAPSIZE;
 
 /* When true: internals inspection messages  are enabled.  It is used by
    the preprocessor macro "IK_INTERNALS_MESSAGE()". */
@@ -369,12 +368,12 @@ ik_make_pcb (void)
    */
   {
     IK_INTERNALS_MESSAGE("initialising heap's nursery hot block, size: %lu bytes, %lu pages",
-			 (ik_ulong)ik_customisable_heap_size,
-			 (ik_ulong)ik_customisable_heap_size/IK_PAGESIZE);
-    pcb->heap_nursery_hot_block_base          = ik_mmap(ik_customisable_heap_size);
-    pcb->heap_nursery_hot_block_size          = ik_customisable_heap_size;
+			 (ik_ulong)ik_customisable_heap_nursery_size,
+			 (ik_ulong)ik_customisable_heap_nursery_size/IK_PAGESIZE);
+    pcb->heap_nursery_hot_block_base          = ik_mmap(ik_customisable_heap_nursery_size);
+    pcb->heap_nursery_hot_block_size          = ik_customisable_heap_nursery_size;
     pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
-    pcb->allocation_redline = pcb->heap_nursery_hot_block_base + ik_customisable_heap_size - IK_DOUBLE_PAGESIZE;
+    pcb->allocation_redline = pcb->heap_nursery_hot_block_base + ik_customisable_heap_nursery_size - IK_DOUBLE_PAGESIZE;
     /* Notice that below we will register the heap block in the segments
        vector. */
   }
@@ -855,10 +854,10 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
     {
       ikptr_t	heap_ptr;
       ikuword_t	new_size;
-      if (aligned_size > (ik_customisable_heap_extension_size - IK_DOUBLE_PAGESIZE)) {
+      if (aligned_size > (ik_customisable_heap_nursery_size - IK_DOUBLE_PAGESIZE)) {
 	new_size = IK_ALIGN_TO_NEXT_PAGE(aligned_size + IK_DOUBLE_PAGESIZE);
       } else {
-	new_size = ik_customisable_heap_extension_size;
+	new_size = ik_customisable_heap_nursery_size;
       }
       heap_ptr			= ik_mmap_mainheap(new_size, pcb);
       pcb->heap_nursery_hot_block_base	= heap_ptr;
@@ -873,6 +872,23 @@ void
 ik_signal_dirt_in_page_of_pointer (ikpcb_t * pcb, ikptr_t s_pointer)
 {
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pointer);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Run-time configuration.
+ ** ----------------------------------------------------------------- */
+
+ikptr_t
+ikrt_scheme_heap_nursery_size_ref (ikpcb_t * pcb)
+{
+  return ika_integer_from_ulong(pcb, ik_customisable_heap_nursery_size);
+}
+ikptr_t
+ikrt_scheme_heap_nursery_size_set (ikptr_t s_num_of_bytes, ikpcb_t * pcb)
+{
+  ik_customisable_heap_nursery_size = ik_integer_to_ulong(s_num_of_bytes);
+  return IK_VOID;
 }
 
 

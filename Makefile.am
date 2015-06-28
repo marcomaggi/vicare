@@ -414,6 +414,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.reader.sls				\
 	scheme/ikarus.readline.sls				\
 	scheme/ikarus.records.procedural.sls			\
+	scheme/ikarus.run-time-configuration.sls		\
 	scheme/ikarus.singular-objects.sls			\
 	scheme/ikarus.sort.sls					\
 	scheme/ikarus.string-to-number.sls 			\
