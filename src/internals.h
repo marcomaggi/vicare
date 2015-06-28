@@ -383,17 +383,15 @@
 #define IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT	\
   (sizeof(uint32_t) * IK_NUMBER_OF_PAGES_PER_SEGMENT)
 
-/* On 32-bit platforms  we allocate 4 MiB as heap  size, while on 64-bit
-   platforms  we  allocate  8  MiB.    On  64-bit  platforms  pairs  and
-   vector-like objects have double the size.
-
-   NOTE We  double the  heap size  on 64-bit  platforms because  of some
-   criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013) */
+/* On 32-bit platforms  we allocate 4 MiB as heap's  nursery size, while
+   on 64-bit platforms we allocate 8 MiB.  On 64-bit platforms pairs and
+   vector-like objects have double the size. */
 #define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((4==SIZEOF_VOID_P)?1:2))
 /* When we  need to perform an  unsafe Scheme object allocation  and the
-   Scheme heap is nearly full: the old heap is stored away in the PCB; a
-   new memory block  of at least this size is  allocated and becomes the
-   new heap.  This happens without garbage collections. */
+   Scheme heap's nursery is nearly full:  the old nursery's hot block is
+   stored away in the  PCB; a new memory block of at  least this size is
+   allocated  and becomes  the new  nursery's hot  block.  This  happens
+   without garbage collections. */
 #define IK_HEAP_EXTENSION_SIZE	IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(32)
 
 /* Only machine  words go on the  Scheme stack, no Scheme  objects data.
@@ -542,7 +540,7 @@
 
 /* Assign RIGHT to LEFT, but evaluate RIGHT first. */
 #define IK_ASS(LEFT,RIGHT)	\
-  { ikptr_t s_tmp = (RIGHT); (LEFT) = s_tmp; }
+  do { ikptr_t s_tmp = (RIGHT); (LEFT) = s_tmp; } while (0);
 
 #define IK_FASL_HEADER		((sizeof(ikptr_t) == 4)? "#@IK01" : "#@IK02")
 #define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))
@@ -1036,6 +1034,9 @@ ik_private_decl void	ik_underflow_handler	(void);
 /** --------------------------------------------------------------------
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
+
+#define IK_INTERNALS_MESSAGE(...)	do { if (ik_enabled_internals_messages) ik_internals_message(__VA_ARGS__); } while (0);
+ik_decl void	ik_internals_message	(const char * error_message, ...);
 
 ik_decl ikpcb_t *	ik_the_pcb		(void);
 ik_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb_t* pcb, ikptr_t s_pointer);

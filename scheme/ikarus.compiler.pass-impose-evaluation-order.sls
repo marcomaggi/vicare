@@ -918,7 +918,7 @@
 	     (make-conditional (%test aligned-size)
 		 (nop)
 	       (interrupt))
-	   (make-forcall "ik_collect" (list aligned-size)))))
+	   (make-forcall "ik_collect_from_scheme_no_hooks" (list aligned-size)))))
 
     (define (%test aligned-size)
       ;;There is a page  between the heap nursery allocation red line  and the end of

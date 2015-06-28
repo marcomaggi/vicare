@@ -45,6 +45,13 @@ static int total_allocated_pages = 0;
 /* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
+ikuword_t ik_customisable_heap_size		= IK_HEAPSIZE;
+ikuword_t ik_customisable_heap_extension_size	= IK_HEAP_EXTENSION_SIZE;
+
+/* When true: internals inspection messages  are enabled.  It is used by
+   the preprocessor macro "IK_INTERNALS_MESSAGE()". */
+int	ik_enabled_internals_messages = 0;
+
 
 /** --------------------------------------------------------------------
  ** C language like memory allocation.
@@ -361,10 +368,13 @@ ik_make_pcb (void)
    * "ik_unsafe_alloc()".
    */
   {
-    pcb->heap_nursery_hot_block_base          = ik_mmap(IK_HEAPSIZE);
-    pcb->heap_nursery_hot_block_size          = IK_HEAPSIZE;
+    IK_INTERNALS_MESSAGE("initialising heap's nursery hot block, size: %lu bytes, %lu pages",
+			 (ik_ulong)ik_customisable_heap_size,
+			 (ik_ulong)ik_customisable_heap_size/IK_PAGESIZE);
+    pcb->heap_nursery_hot_block_base          = ik_mmap(ik_customisable_heap_size);
+    pcb->heap_nursery_hot_block_size          = ik_customisable_heap_size;
     pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
-    pcb->allocation_redline = pcb->heap_nursery_hot_block_base + IK_HEAPSIZE - IK_DOUBLE_PAGESIZE;
+    pcb->allocation_redline = pcb->heap_nursery_hot_block_base + ik_customisable_heap_size - IK_DOUBLE_PAGESIZE;
     /* Notice that below we will register the heap block in the segments
        vector. */
   }
@@ -419,6 +429,9 @@ ik_make_pcb (void)
    * code execution.
    */
   {
+    IK_INTERNALS_MESSAGE("initialising Scheme stack, size: %lu bytes, %lu pages",
+			 (ik_ulong)IK_STACKSIZE,
+			 (ik_ulong)IK_STACKSIZE/IK_PAGESIZE);
     pcb->stack_base	= ik_mmap(IK_STACKSIZE);
     pcb->stack_size	= IK_STACKSIZE;
     pcb->frame_pointer	= pcb->stack_base + pcb->stack_size;
@@ -746,14 +759,16 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
   ikptr_t		end_ptr;
   ikptr_t		new_alloc_ptr;
   alloc_ptr	= pcb->allocation_pointer;
-  end_ptr	= pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
   new_alloc_ptr	= alloc_ptr + aligned_size;
+  end_ptr	= pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
   if (new_alloc_ptr < end_ptr) {
-    /* There is  room in the  current heap  segment: update the  PCB and
-       return the offset. */
+    /* There is room in the current heap's nursery hot block: update the
+       PCB and return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
   } else {
-    /* No room in the current heap block: run GC. */
+    /* No room in the current heap's nursery hot block: run GC. */
+    IK_INTERNALS_MESSAGE("%s: calling GC, requested size: %lu bytes, free space: %lu bytes",
+			 __func__, (ik_ulong)aligned_size, (ik_ulong)(end_ptr - alloc_ptr));
     ik_collect(aligned_size, pcb);
     {
       alloc_ptr		= pcb->allocation_pointer;
@@ -823,25 +838,28 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
       }
       pcb->allocation_count_minor = minor;
     }
-    { /* Allocate  a  new heap's  nursery  segment  and register  it  as
-       * current nursery's hot block.  While computing the segment size:
-       * make sure that there is always some  room at the end of the new
-       * heap segment after allocating the  requested memory for the new
-       * object.
-       *
-       * Initialise it as follows:
-       *
-       *     heap_base                allocation_redline
-       *         v                            v
-       *  lo mem |----------------------------+--------| hi mem
-       *                       Scheme heap
-       *         |.....................................|
-       *                       heap_size
-       */
+    /* Allocate a new heap's nursery  segment and register it as current
+     * nursery's hot block.  While computing the segment size: make sure
+     * that there is always some room at the end of the new heap segment
+     * after allocating the requested memory for the new object.
+     *
+     * Initialise it as follows:
+     *
+     *     heap_base                allocation_redline
+     *         v                            v
+     *  lo mem |----------------------------+--------| hi mem
+     *                       Scheme heap
+     *         |.....................................|
+     *              heap_nursery_hot_block_size
+     */
+    {
       ikptr_t	heap_ptr;
-      ikuword_t	new_size = (aligned_size > IK_HEAP_EXTENSION_SIZE)? \
-	aligned_size : IK_HEAP_EXTENSION_SIZE;
-      new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + IK_DOUBLE_PAGESIZE);
+      ikuword_t	new_size;
+      if (aligned_size > (ik_customisable_heap_extension_size - IK_DOUBLE_PAGESIZE)) {
+	new_size = IK_ALIGN_TO_NEXT_PAGE(aligned_size + IK_DOUBLE_PAGESIZE);
+      } else {
+	new_size = ik_customisable_heap_extension_size;
+      }
       heap_ptr			= ik_mmap_mainheap(new_size, pcb);
       pcb->heap_nursery_hot_block_base	= heap_ptr;
       pcb->heap_nursery_hot_block_size	= new_size;
@@ -855,6 +873,34 @@ void
 ik_signal_dirt_in_page_of_pointer (ikpcb_t * pcb, ikptr_t s_pointer)
 {
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pointer);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Internals inspection messages.
+ ** ----------------------------------------------------------------- */
+
+ikptr_t
+ikrt_enable_internals_messages (ikpcb_t pcb)
+{
+  ik_enabled_internals_messages = 1;
+  return IK_VOID;
+}
+ikptr_t
+ikrt_disable_internals_messages (ikpcb_t pcb)
+{
+  ik_enabled_internals_messages = 0;
+  return IK_VOID;
+}
+void
+ik_internals_message (const char * message, ...)
+{
+  va_list        ap;
+  va_start(ap, message);
+  fprintf(stderr, "vicare: internals: ");
+  vfprintf(stderr, message, ap);
+  fprintf(stderr, "\n");
+  va_end(ap);
 }
 
 

@@ -71,7 +71,7 @@
       ;;Run the post-gc hooks.
       (for-each (lambda (x) (x)) ls))
     (if (eq? k0 (collect-key))
-        (let ((was-enough? (foreign-call "ikrt_collect_check" number-of-words)))
+        (let ((was-enough? (foreign-call "ikrt_collect_check_after_gc_hooks" number-of-words)))
           ;;Handlers ran  without GC but  there was not enough  space in
           ;;the nursery for the pending allocation.
           (unless was-enough?
@@ -91,7 +91,7 @@
    (assert (or (not requested-generation)
 	       (and (fixnum? requested-generation)
 		    (<= 0 requested-generation 4))))
-   (foreign-call "ik_collect_gen" number-of-words requested-generation)
+   (foreign-call "ik_collect_from_scheme_with_hooks" number-of-words requested-generation)
    (let ((ls (post-gc-hooks)))
      (unless (null? ls)
        (do-post-gc ls number-of-words)))

@@ -34,7 +34,11 @@ extern int cpu_has_sse2();
 static void register_handlers();
 static void register_alt_stack();
 
-ikpcb_t* the_pcb;
+/* When true: internals inspection messages  are enabled.  It is used by
+   the preprocessor macro "IK_INTERNALS_MESSAGE()". */
+extern int	ik_enabled_internals_messages;
+
+ikpcb_t *	the_pcb;
 
 ikpcb_t *
 ik_the_pcb (void)
@@ -69,6 +73,10 @@ ikarus_main (int argc, char** argv, char* boot_file)
     ik_abort("limb size does not match");
   if (mp_bits_per_limb != (8*sizeof(long int)))
     ik_abort("invalid bits_per_limb=%d\n", mp_bits_per_limb);
+  {
+    char *	value = getenv("VICARE_ENABLE_INTERNALS_MESSAGES");
+    ik_enabled_internals_messages = (value && (0 == strcmp(value, "yes")));
+  }
   the_pcb = pcb = ik_make_pcb();
   { /* Set up arg_list from the  last "argv" to the first; the resulting
        list will end in COMMAND-LINE. */

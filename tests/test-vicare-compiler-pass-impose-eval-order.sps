@@ -1290,10 +1290,10 @@
 		    (live: #f)
 		    (seq
 		      (asm-instr move nfv.1_0 (constant 32))
-		      (asm-instr move %edi (constant (foreign-label "ik_collect")))
+		      (asm-instr move %edi (constant (foreign-label "ik_collect_from_scheme_no_hooks")))
 		      (asm-instr move %eax (constant -8))
 		      (non-tail-call
-			(target: "ik_collect")
+			(target: "ik_collect_from_scheme_no_hooks")
 			(retval-var: #f)
 			(all-rand*: %eax %ebp %edi %esp %esi nfv.1_0)
 			(mask: #f)
