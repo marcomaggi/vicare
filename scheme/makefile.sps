@@ -4074,6 +4074,7 @@
 ;;; run-time configuration
 
     (scheme-heap-nursery-size				$runtime)
+    (scheme-stack-size					$runtime)
 
 ;;; --------------------------------------------------------------------
 

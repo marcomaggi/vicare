@@ -356,20 +356,48 @@ The following syntactic bindings are exported by the library
 @defunx scheme-heap-nursery-size @var{num-of-bytes}
 Getter and setter for the size of the Scheme heap nursery's hot block
 memory segment.  When called without arguments: return the current size.
-When called with one argument: set a new size.  The exact integer
-@var{num-of-bytes} must fit into a platform's @code{unsigned long}
-value.
+When called with one argument: set a new size.
+
+The exact integer @var{num-of-bytes} must fit into a platform's
+@code{unsigned long} value, it must be positive and greater than
+@math{3} @value{PRJNAME}'s page sizes, @math{4096 * 3 = 12288}.  The
+given @var{num-of-bytes} value is normalised by rounding it to the least
+exact multiple of @math{4096} greater than @var{num-of-bytes}.
 
 The Scheme heap nursery's hot block memory segment is allocated at
-process start--up, before loading the boot image.  While loading boot
-image: the hot block may be reallocated.  These first allocation and
-reallocations cannot be configured with this function, we have to use a
-command line argument.
+process start--up, before loading the boot image.  While loading the
+boot image: the hot block may be reallocated.  These first allocation
+and reallocations cannot be configured with this function, we have to
+use a command line argument (@pxref{using invoking,
+scheme-heap-nursery-size}).
 
 After boot image loading, if the Scheme heap nursery's hot block memory
 segment is reallocated: the new hot block has the size configured with
 this function.  Notice that, after boot image loading: hot block
 reallocation may never happen (most likely it will never happen).
+@end defun
+
+
+@defun scheme-stack-size
+@defunx scheme-stack-size @var{num-of-bytes}
+Getter and setter for the size of the Scheme stack memory segment.  When
+called without arguments: return the current size.  When called with one
+argument: set a new size.
+
+The exact integer @var{num-of-bytes} must fit into a platform's
+@code{unsigned long} value, it must be positive and greater than
+@math{3} @value{PRJNAME}'s page sizes, @math{4096 * 3 = 12288}.  The
+given @var{num-of-bytes} value is normalised by rounding it to the least
+exact multiple of @math{4096} greater than @var{num-of-bytes}.
+
+The Scheme heap stack memory segment is allocated at process start--up,
+before loading the boot image.  While loading the boot image: the stack
+segment may be reallocated.  These first allocation and reallocations
+cannot be configured with this function, we have to use a command line
+argument (@pxref{using invoking, scheme-stack-size}).
+
+After boot image loading, when the Scheme stack segment is reallocated:
+the new segment has the size configured with this function.
 @end defun
 
 @c page

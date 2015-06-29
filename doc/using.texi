@@ -417,6 +417,27 @@ operand is determined at compile--time; the default is to perform it.
 
 @c ------------------------------------------------------------------------
 
+@item --scheme-heap-nursery-size @var{num-of-bytes}
+@cindex Command line option @option{--scheme-heap-nursery-size}
+@cindex @option{--scheme-heap-nursery-size}, command line option
+Configure the Scheme heap's nursery hot memory block size.  The value
+@var{num-of-bytes} must be a positive exact integer fitting a
+@code{signed long} data type, greater than @math{3} @value{PRJNAME}'s
+page sizes, @math{4096 * 3 = 12288}.  The given @var{num-of-bytes} value
+is normalised by rounding it to the least exact multiple of @math{4096}
+greater than @var{num-of-bytes}.
+
+@item --scheme-stack-size @var{num-of-bytes}
+@cindex Command line option @option{--scheme-stack-size}
+@cindex @option{--scheme-stack-size}, command line option
+Configure the Scheme stack size.  The value @var{num-of-bytes} must be a
+positive exact integer fitting a @code{signed long} data type, greater
+than @math{3} @value{PRJNAME}'s page sizes, @math{4096 * 3 = 12288}.
+The given @var{num-of-bytes} value is normalised by rounding it to the
+least exact multiple of @math{4096} greater than @var{num-of-bytes}.
+
+@c ------------------------------------------------------------------------
+
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option

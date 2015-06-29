@@ -26,15 +26,29 @@
 #!vicare
 (library (ikarus run-time-configuration)
   (export
-    scheme-heap-nursery-size)
+    scheme-heap-nursery-size
+    scheme-stack-size)
   (import (vicare)
     (prefix (vicare platform words) words.))
+
+  (define (num-of-bytes? obj)
+    ;;Positive exact integer greater than 3 Vicare pages (4096 * 3).
+    ;;
+    (and (words.unsigned-long? obj)
+	 (positive? obj)
+	 (< obj (* 3 4096))))
 
   (case-define* scheme-heap-nursery-size
     (()
      (foreign-call "ikrt_scheme_heap_nursery_size_ref"))
-    (({num-of-bytes words.unsigned-long?})
+    (({num-of-bytes num-of-bytes?})
      (foreign-call "ikrt_scheme_heap_nursery_size_set" num-of-bytes)))
+
+  (case-define* scheme-stack-size
+    (()
+     (foreign-call "ikrt_scheme_stack_size_ref"))
+    (({num-of-bytes num-of-bytes?})
+     (foreign-call "ikrt_scheme_stack_size_set" num-of-bytes)))
 
   #| end of library |# )
 

@@ -45,7 +45,8 @@ static int total_allocated_pages = 0;
 /* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
-ikuword_t ik_customisable_heap_nursery_size		= IK_HEAPSIZE;
+ikuword_t ik_customisable_heap_nursery_size	= IK_HEAPSIZE;
+ikuword_t ik_customisable_stack_size		= IK_STACKSIZE;
 
 /* When true: internals inspection messages  are enabled.  It is used by
    the preprocessor macro "IK_INTERNALS_MESSAGE()". */
@@ -367,7 +368,7 @@ ik_make_pcb (void)
    * "ik_unsafe_alloc()".
    */
   {
-    IK_INTERNALS_MESSAGE("initialising heap's nursery hot block, size: %lu bytes, %lu pages",
+    IK_INTERNALS_MESSAGE("initialising Scheme heap's nursery hot block, size: %lu bytes, %lu pages",
 			 (ik_ulong)ik_customisable_heap_nursery_size,
 			 (ik_ulong)ik_customisable_heap_nursery_size/IK_PAGESIZE);
     pcb->heap_nursery_hot_block_base          = ik_mmap(ik_customisable_heap_nursery_size);
@@ -429,10 +430,10 @@ ik_make_pcb (void)
    */
   {
     IK_INTERNALS_MESSAGE("initialising Scheme stack, size: %lu bytes, %lu pages",
-			 (ik_ulong)IK_STACKSIZE,
-			 (ik_ulong)IK_STACKSIZE/IK_PAGESIZE);
-    pcb->stack_base	= ik_mmap(IK_STACKSIZE);
-    pcb->stack_size	= IK_STACKSIZE;
+			 (ik_ulong)ik_customisable_stack_size,
+			 (ik_ulong)ik_customisable_stack_size/IK_PAGESIZE);
+    pcb->stack_base	= ik_mmap(ik_customisable_stack_size);
+    pcb->stack_size	= ik_customisable_stack_size;
     pcb->frame_pointer	= pcb->stack_base + pcb->stack_size;
     pcb->frame_base	= pcb->frame_pointer;
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {
@@ -887,7 +888,21 @@ ikrt_scheme_heap_nursery_size_ref (ikpcb_t * pcb)
 ikptr_t
 ikrt_scheme_heap_nursery_size_set (ikptr_t s_num_of_bytes, ikpcb_t * pcb)
 {
-  ik_customisable_heap_nursery_size = ik_integer_to_ulong(s_num_of_bytes);
+  ik_customisable_heap_nursery_size = IK_ALIGN_TO_NEXT_PAGE(ik_integer_to_ulong(s_num_of_bytes));
+  return IK_VOID;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr_t
+ikrt_scheme_stack_size_ref (ikpcb_t * pcb)
+{
+  return ika_integer_from_ulong(pcb, ik_customisable_stack_size);
+}
+ikptr_t
+ikrt_scheme_stack_size_set (ikptr_t s_num_of_bytes, ikpcb_t * pcb)
+{
+  ik_customisable_stack_size = IK_ALIGN_TO_NEXT_PAGE(ik_integer_to_ulong(s_num_of_bytes));
   return IK_VOID;
 }
 
@@ -1089,9 +1104,12 @@ ik_stack_overflow (ikpcb_t* pcb)
   /* Allocate a  new memory segment to  be used as Scheme  stack and set
      the PCB accordingly. */
   {
-    pcb->stack_base	= ik_mmap_typed(IK_STACKSIZE, MAINSTACK_MT, pcb);
-    pcb->stack_size	= IK_STACKSIZE;
-    pcb->frame_base	= pcb->stack_base + IK_STACKSIZE;
+    IK_INTERNALS_MESSAGE("allocating a new Scheme stack, size: %lu bytes, %lu pages",
+			 (ik_ulong)ik_customisable_stack_size,
+			 (ik_ulong)ik_customisable_stack_size/IK_PAGESIZE);
+    pcb->stack_base	= ik_mmap_typed(ik_customisable_stack_size, MAINSTACK_MT, pcb);
+    pcb->stack_size	= ik_customisable_stack_size;
+    pcb->frame_base	= pcb->stack_base + ik_customisable_stack_size;
     pcb->frame_pointer	= pcb->frame_base - wordsize;
     IK_REF(pcb->frame_pointer, 0) = IK_UNDERFLOW_HANDLER;
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {

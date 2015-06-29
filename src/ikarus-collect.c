@@ -364,7 +364,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       collection_id_to_gen(pcb->collection_id) : IK_UNFIX(s_requested_generation);
     assert((0 <= requested_generation) && (requested_generation <= 4));
   }
-  IK_INTERNALS_MESSAGE("%s: enter for generation %d, requested size %lu bytes, crossed redline=%s",
+  IK_INTERNALS_MESSAGE("%s: enter collection for generation %d, requested size %lu bytes, crossed redline=%s",
 		       __func__, requested_generation, (ik_ulong)mem_req,
 		       ((pcb->allocation_redline <= pcb->allocation_pointer)? "yes" : "no"));
 
@@ -500,7 +500,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
      nursery  hot memory,  and are  now fully  used; the  blocks' memory
      pages are cached in the PCB to be recycled later. */
   if (old_full_heap_nursery_segments) {
-    IK_INTERNALS_MESSAGE("%s: releasing old full heap's nursery segments");
+    IK_INTERNALS_MESSAGE("%s: releasing old full heap's nursery segments", __func__);
     ikmemblock_t* p = old_full_heap_nursery_segments;
     do {
       ikmemblock_t* next = p->next;
@@ -546,8 +546,10 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       pcb->allocation_pointer		= ap;
       pcb->allocation_redline		= ap + (new_hot_block_size - IK_DOUBLE_PAGESIZE);
     } else {
-      IK_INTERNALS_MESSAGE("%s: the old heap's nursery hot block is big enough, reusing it",
-			   __func__);
+      IK_INTERNALS_MESSAGE("%s: current heap's nursery hot block is big enough, reusing it; size: %lu bytes, %lu pages",
+			   __func__,
+			   (ik_ulong)ik_customisable_heap_nursery_size,
+			   (ik_ulong)ik_customisable_heap_nursery_size/IK_PAGESIZE);
     }
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     { /* Reset the free space to a magic number. */
@@ -595,7 +597,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       pcb->collect_rtime.tv_sec  -= 1;
     }
   }
-  IK_INTERNALS_MESSAGE("%s: leave for generation %d",
+  IK_INTERNALS_MESSAGE("%s: leave collection for generation %d",
 		       __func__, requested_generation);
   /* fprintf(stderr, "%s: leave\n", __func__); */
   return pcb;

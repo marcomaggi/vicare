@@ -25,31 +25,66 @@
 #include "bootfileloc.h"
 #include <locale.h>
 
+extern int		ik_enabled_internals_messages;
+extern ikuword_t	ik_customisable_heap_nursery_size;
+extern ikuword_t	ik_customisable_stack_size;
+
+static ikuword_t	normalise_number_of_bytes_argument (const char * argument_description,
+							    int i, int argc, char** argv);
+
 
 int
 main (int argc, char** argv)
 {
   char *        boot_file = NULL;
-  int           i, j;
-  /* Filter out the "-b" and  "--boot" options because we need them here
-     to load  the boot file.   Shift the other arguments  accordingly in
-     "argv". */
-  for (i=1, j=1; i<argc; ++i) {
-    if ((0 == strcmp(argv[i], "-b")) ||
-        (0 == strcmp(argv[i], "--boot"))) {
+  int		j=1;
+
+  {
+    char *	value = getenv("VICARE_ENABLE_INTERNALS_MESSAGES");
+    ik_enabled_internals_messages = (value && (0 == strcmp(value, "yes")));
+  }
+
+  /* Filter  out  the command  line  arguments:
+   *
+   *    -b, --boot
+   *    --scheme-heap-nursery-size
+   *    --scheme-stack-size
+   *
+   * Shift the other arguments accordingly in "argv".
+   */
+  for (int i=1; i<argc; ++i) {
+    if (0 == strcmp(argv[i], "--")) {
+      /* End of options marker. */
+      for (; i<argc; ++i, ++j) {
+	argv[j] = argv[i];
+      }
+      break;
+    }
+    else if ((0 == strcmp(argv[i], "-b")) || (0 == strcmp(argv[i], "--boot"))) {
       if (i+1 < argc) {
         if (boot_file) {
-          fprintf(stderr, "*** %s error: option -b or --boot used multiple times\n", argv[0]);
+          fprintf(stderr, "%s: error: option -b or --boot used multiple times\n", argv[0]);
           exit(2);
         } else {
           boot_file = argv[++i];
         }
       } else {
-        fprintf(stderr, "*** %s error: option %s needs the boot filename as argument\n",
+        fprintf(stderr, "%s: error: option %s needs the boot filename as argument\n",
                 argv[0], argv[i]);
         exit(2);
       }
-    } else {
+    }
+    else if (0 == strcmp(argv[i], "--scheme-heap-nursery-size")) {
+      ikuword_t	num_of_bytes = normalise_number_of_bytes_argument("customisable Scheme heap nursery size", i, argc, argv);
+      ik_customisable_heap_nursery_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
+      ++i;
+    }
+    else if (0 == strcmp(argv[i], "--scheme-stack-size")) {
+      ikuword_t	num_of_bytes = normalise_number_of_bytes_argument("customisable Scheme stack size", i, argc, argv);
+      ik_customisable_stack_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
+      ++i;
+    }
+    else {
       argv[j] = argv[i];
       ++j;
     }
@@ -65,6 +100,46 @@ main (int argc, char** argv)
   if (NULL == boot_file)
     boot_file = BOOTFILE;
   return ikarus_main(j, argv, boot_file);
+}
+
+
+static ikuword_t
+normalise_number_of_bytes_argument (const char * argument_description,
+				    int i, int argc, char** argv)
+{
+  if (1+i < argc) {
+    ik_long	num_of_bytes;
+    ikuword_t	normalised_num_of_bytes;
+    char *	tail_ptr;
+    errno = 0;
+    num_of_bytes = strtol(argv[1+i], &tail_ptr, 10);
+    IK_INTERNALS_MESSAGE("argument to command line option for %s: %ld bytes",
+			 argument_description, num_of_bytes);
+    if (errno) {
+      fprintf(stderr, "%s: error: invalid argument to option %s: %s, %s\n",
+	      argv[0], argv[i], argv[1+i], strerror(errno));
+      exit(2);
+    } else if (tail_ptr == argv[1+i]) {
+      fprintf(stderr, "%s: error: invalid argument to option %s: %s\n",
+	      argv[0], argv[i], argv[1+i]);
+      exit(2);
+    } else if (num_of_bytes < 0) {
+      fprintf(stderr, "%s: error: invalid negative argument to option %s: %s\n",
+	      argv[0], argv[i], argv[1+i]);
+      exit(2);
+    } else if (num_of_bytes < (3 * IK_PAGESIZE)) {
+      fprintf(stderr, "%s: error: invalid argument to option %s: %s, it must be at least 3 pages (%d bytes)\n",
+	      argv[0], argv[i], argv[1+i], (3 * IK_PAGESIZE));
+      exit(2);
+    } else {
+      normalised_num_of_bytes = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
+      IK_INTERNALS_MESSAGE("%s set to %lu bytes", argument_description, normalised_num_of_bytes);
+      return normalised_num_of_bytes;
+    }
+  } else {
+    fprintf(stderr, "%s: error: option %s needs an argument\n", argv[0], argv[i]);
+    exit(2);
+  }
 }
 
 /* end of file */

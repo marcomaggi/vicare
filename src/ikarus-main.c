@@ -73,17 +73,11 @@ ikarus_main (int argc, char** argv, char* boot_file)
     ik_abort("limb size does not match");
   if (mp_bits_per_limb != (8*sizeof(long int)))
     ik_abort("invalid bits_per_limb=%d\n", mp_bits_per_limb);
-  {
-    char *	value = getenv("VICARE_ENABLE_INTERNALS_MESSAGES");
-    ik_enabled_internals_messages = (value && (0 == strcmp(value, "yes")));
-  }
   the_pcb = pcb = ik_make_pcb();
   { /* Set up arg_list from the  last "argv" to the first; the resulting
        list will end in COMMAND-LINE. */
-
     ikptr_t	arg_list	= IK_NULL_OBJECT;
-    int		i		= argc-1;
-    for (; i > 0; --i) {
+    for (int i=argc-1; i > 0; --i) {
       if (0 == strcmp(argv[i], "--repl-on-sigint")) {
 	repl_on_sigint = 1;
       } else {
