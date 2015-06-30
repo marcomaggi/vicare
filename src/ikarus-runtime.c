@@ -827,61 +827,10 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
   } else {
     /* No  room  in  the  current  heap nursery:  enlarge  the  heap  by
        allocating new memory. */
-    if (alloc_ptr) {
-      /* This  is not  the  first heap's  nursery  block allocation,  so
-	 prepend a  new "ikmemblock_t"  node to the  linked list  of old
-	 nursery  blocks  and initialise  it  with  a reference  to  the
-	 current nursery's hot block. */
-      ikmemblock_t *	node = (ikmemblock_t *)ik_malloc(sizeof(ikmemblock_t));
-      node->base = pcb->heap_nursery_hot_block_base;
-      node->size = pcb->heap_nursery_hot_block_size;
-      node->next = pcb->full_heap_nursery_segments;
-      pcb->full_heap_nursery_segments = node;
-    }
-    { /* Accounting.  We keep  count of all the bytes  allocated for the
-       * heap, so that:
-       *
-       *   total_allocated_bytes = \
-       *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major
-       *     + pcb->allocation_count_minor
-       */
-      ikuword_t bytes = ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_nursery_hot_block_base);
-      ikuword_t minor = bytes + pcb->allocation_count_minor;
-      while (minor >= IK_MOST_BYTES_IN_MINOR) {
-	minor -= IK_MOST_BYTES_IN_MINOR;
-	pcb->allocation_count_major++;
-      }
-      pcb->allocation_count_minor = minor;
-    }
-    /* Allocate a new heap's nursery  segment and register it as current
-     * nursery's hot block.  While computing the segment size: make sure
-     * that there is always some room at the end of the new heap segment
-     * after allocating the requested memory for the new object.
-     *
-     * Initialise it as follows:
-     *
-     *     heap_base                allocation_redline
-     *         v                            v
-     *  lo mem |----------------------------+--------| hi mem
-     *                       Scheme heap
-     *         |.....................................|
-     *              heap_nursery_hot_block_size
-     */
-    {
-      ikptr_t	heap_ptr;
-      ikuword_t	new_size;
-      if (aligned_size > (ik_customisable_heap_nursery_size - IK_DOUBLE_PAGESIZE)) {
-	new_size = IK_ALIGN_TO_NEXT_PAGE(aligned_size + IK_DOUBLE_PAGESIZE);
-      } else {
-	new_size = ik_customisable_heap_nursery_size;
-      }
-      heap_ptr			= ik_mmap_mainheap(new_size, pcb);
-      pcb->heap_nursery_hot_block_base	= heap_ptr;
-      pcb->heap_nursery_hot_block_size	= new_size;
-      pcb->allocation_redline	= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;
-      pcb->allocation_pointer	= heap_ptr + aligned_size;
-      return heap_ptr;
-    }
+    ik_make_room_in_heap_nursery(pcb, aligned_size);
+    alloc_ptr			= pcb->allocation_pointer;
+    pcb->allocation_pointer	= alloc_ptr + aligned_size;
+    return alloc_ptr;
   }
 }
 void
@@ -910,6 +859,9 @@ ik_make_room_in_heap_nursery (ikpcb_t * pcb, ikuword_t aligned_size)
     node->size = pcb->heap_nursery_hot_block_size;
     node->next = pcb->full_heap_nursery_segments;
     pcb->full_heap_nursery_segments = node;
+    IK_RUNTIME_MESSAGE("%s: stored full heap nursery hot block, size: %lu bytes, %lu pages",
+		       __func__,
+		       (ik_ulong)node->size, (ik_ulong)node->size/IK_PAGESIZE);
   }
   /* Accounting.  We keep count of all the bytes allocated for the heap,
    * so that:
@@ -948,11 +900,13 @@ ik_make_room_in_heap_nursery (ikpcb_t * pcb, ikuword_t aligned_size)
     } else {
       new_size = ik_customisable_heap_nursery_size;
     }
-    heap_ptr			= ik_mmap_mainheap(new_size, pcb);
+    heap_ptr				= ik_mmap_mainheap(new_size, pcb);
     pcb->heap_nursery_hot_block_base	= heap_ptr;
     pcb->heap_nursery_hot_block_size	= new_size;
-    pcb->allocation_redline	= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;
-    pcb->allocation_pointer	= heap_ptr;
+    pcb->allocation_redline		= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;
+    pcb->allocation_pointer		= heap_ptr;
+    IK_RUNTIME_MESSAGE("%s: allocated new heap nursery hot block, size: %lu bytes, %lu pages",
+		       __func__, (ik_ulong)new_size, (ik_ulong)new_size/IK_PAGESIZE);
   }
 }
 void
