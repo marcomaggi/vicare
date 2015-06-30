@@ -45,12 +45,14 @@ static int total_allocated_pages = 0;
 /* Total number of bytes currently allocated with "ik_malloc()". */
 static int total_malloced = 0;
 
-ikuword_t ik_customisable_heap_nursery_size	= IK_HEAPSIZE;
-ikuword_t ik_customisable_stack_size		= IK_STACKSIZE;
+int		ik_garbage_collection_is_forbidden	= 0;
+
+ikuword_t	ik_customisable_heap_nursery_size	= IK_HEAPSIZE;
+ikuword_t	ik_customisable_stack_size		= IK_STACKSIZE;
 
 /* When true: internals inspection messages  are enabled.  It is used by
-   the preprocessor macro "IK_INTERNALS_MESSAGE()". */
-int	ik_enabled_internals_messages = 0;
+   the preprocessor macro "IK_RUNTIME_MESSAGE()". */
+int		ik_enabled_runtime_messages		= 0;
 
 
 /** --------------------------------------------------------------------
@@ -84,7 +86,7 @@ ik_mmap (ikuword_t size)
    this function.  The allocated memory  is initialised to a sequence of
    IK_FORWARD_PTR words.
 
-     If  the allocated  memory  is  used for  the  Scheme  stack or  the
+   If  the allocated  memory  is  used for  the  Scheme  stack or  the
    generational pages:  we must initialise  every word to a  safe value.
    If the  allocated memory is  used for the  Scheme heap: we  can leave
    some words uninitialised, because the heap is not a garbage collector
@@ -111,14 +113,14 @@ ik_mmap (ikuword_t size)
      that should contain the data area of a Scheme object: it interprets
      every machine word with all the bits set to 1 as IK_FORWARD_PTR.
 
-       Here we initialise  every allocated memory page to  a sequence of
+     Here we initialise  every allocated memory page to  a sequence of
      IK_FORWARD_PTR words, which, most likely, will trigger an assertion
      violation if the garbage collector scans a machine word we have not
      explicitly initialised  to something valid.  Whenever  we reserve a
      portion of memory  page, with aligned size, for a  Scheme object we
      must initialise all its words to something valid.
 
-       When  we  convert  a  requested  size to  an  aligned  size  with
+     When  we  convert  a  requested  size to  an  aligned  size  with
      "IK_ALIGN()": either zero  or one machine word  is allocated beyond
      the  requested   size.   When  such  additional   machine  word  is
      allocated: we  have to initialise  it to something  valid.  Usually
@@ -169,7 +171,7 @@ ik_mmap_typed (ikuword_t size, uint32_t type, ikpcb_t* pcb)
 /* Allocate new  memory pages  or recycle  an old  memory page  from the
    PCB's cache and return a pointer to it.
 
-     The  allocated  memory  is  NOT initialised  to  safe  values:  its
+   The  allocated  memory  is  NOT initialised  to  safe  values:  its
    contents have to be considered invalid and initialised to safe values
    before  being scanned  by the  garbage collector.   If the  allocated
    memory is  used for the  Scheme stack  or the generational  pages: we
@@ -268,7 +270,7 @@ extend_page_vectors_maybe (ikptr_t base_ptr, ikuword_t size, ikpcb_t* pcb)
  *   All the memory  used by Scheme code  must be in the  range from the
  * PCB members"memory_base" and "memory_end":
  *
-               Scheme used memory
+ Scheme used memory
  *         |.......................|
  *    |--------------------------------------------| system memory
  *         ^                        ^
@@ -368,9 +370,9 @@ ik_make_pcb (void)
    * "ik_unsafe_alloc()".
    */
   {
-    IK_INTERNALS_MESSAGE("initialising Scheme heap's nursery hot block, size: %lu bytes, %lu pages",
-			 (ik_ulong)ik_customisable_heap_nursery_size,
-			 (ik_ulong)ik_customisable_heap_nursery_size/IK_PAGESIZE);
+    IK_RUNTIME_MESSAGE("initialising Scheme heap's nursery hot block, size: %lu bytes, %lu pages",
+		       (ik_ulong)ik_customisable_heap_nursery_size,
+		       (ik_ulong)ik_customisable_heap_nursery_size/IK_PAGESIZE);
     pcb->heap_nursery_hot_block_base          = ik_mmap(ik_customisable_heap_nursery_size);
     pcb->heap_nursery_hot_block_size          = ik_customisable_heap_nursery_size;
     pcb->allocation_pointer = pcb->heap_nursery_hot_block_base;
@@ -429,9 +431,9 @@ ik_make_pcb (void)
    * code execution.
    */
   {
-    IK_INTERNALS_MESSAGE("initialising Scheme stack, size: %lu bytes, %lu pages",
-			 (ik_ulong)ik_customisable_stack_size,
-			 (ik_ulong)ik_customisable_stack_size/IK_PAGESIZE);
+    IK_RUNTIME_MESSAGE("initialising Scheme stack, size: %lu bytes, %lu pages",
+		       (ik_ulong)ik_customisable_stack_size,
+		       (ik_ulong)ik_customisable_stack_size/IK_PAGESIZE);
     pcb->stack_base	= ik_mmap(ik_customisable_stack_size);
     pcb->stack_size	= ik_customisable_stack_size;
     pcb->frame_pointer	= pcb->stack_base + pcb->stack_size;
@@ -628,9 +630,9 @@ ik_make_pcb (void)
     /* In the  whole system  memory we want  pointers to  delimiting the
        interesting memory:
 
-          |---------------------------------------------| system_memory
-	         ^                        ^
-             memory_base              memory_end
+       |---------------------------------------------| system_memory
+       ^                        ^
+       memory_base              memory_end
     */
     pcb->memory_base = (ikptr_t)(lo_seg_idx * IK_SEGMENT_SIZE);
     pcb->memory_end  = (ikptr_t)(hi_seg_idx * IK_SEGMENT_SIZE);
@@ -743,12 +745,12 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
    block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
    through "IK_ALIGN()".
 
-     If not  enough memory  is available on  the current  heap's nursery
+   If not  enough memory  is available on  the current  heap's nursery
    segment, a garbage collection is  triggered; then allocation is tried
    again: if it  still fails the process is terminated  with exit status
    EXIT_FAILURE.
 
-     The reserved memory is NOT initialised to safe values: its contents
+   The reserved memory is NOT initialised to safe values: its contents
    have  to be  considered  invalid.  However,  notice  that the  heap's
    nursery is NOT a garbage collection root; so if we leave some machine
    word uninitialised  on the heap,  outside of Scheme  objects: nothing
@@ -765,11 +767,24 @@ ik_safe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
     /* There is room in the current heap's nursery hot block: update the
        PCB and return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
+  } else if (ik_garbage_collection_is_forbidden) {
+    /* Running garbage  collection is  currently suspended.   Let's make
+       some room as "ik_unsafe_alloc()" does, then reserve the space. */
+    ik_make_room_in_heap_nursery(pcb, aligned_size);
+    alloc_ptr		= pcb->allocation_pointer;
+    new_alloc_ptr	= alloc_ptr + aligned_size;
+    end_ptr		= pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
+    if (new_alloc_ptr < end_ptr) {
+      pcb->allocation_pointer = new_alloc_ptr;
+      return alloc_ptr;
+    } else {
+      ik_abort("unable to reserve enough room for %lu bytes", aligned_size);
+    }
   } else {
     /* No room in the current heap's nursery hot block: run GC. */
-    IK_INTERNALS_MESSAGE("%s: calling GC, requested size: %lu bytes, free space: %lu bytes",
-			 __func__, (ik_ulong)aligned_size, (ik_ulong)(end_ptr - alloc_ptr));
-    ik_collect(aligned_size, pcb);
+    IK_RUNTIME_MESSAGE("%s: calling GC, requested size: %lu bytes, free space: %lu bytes",
+		       __func__, (ik_ulong)aligned_size, (ik_ulong)(end_ptr - alloc_ptr));
+    ik_automatic_collect_from_C(aligned_size, pcb);
     {
       alloc_ptr		= pcb->allocation_pointer;
       end_ptr		= pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
@@ -790,11 +805,11 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
    through "IK_ALIGN()".  This function is  meant to be used to allocate
    "small" memory blocks.
 
-     If not  enough memory  is available on  the current  heap's nursery
+   If not  enough memory  is available on  the current  heap's nursery
    segment: a new  heap segment is allocated; if  such allocation fails:
    the process is terminated with exit status EXIT_FAILURE.
 
-     The reserved memory is NOT initialised to safe values: its contents
+   The reserved memory is NOT initialised to safe values: its contents
    have  to be  considered  invalid.  However,  notice  that the  heap's
    nursery is NOT a garbage collection root; so if we leave some machine
    word uninitialised  on the heap,  outside of Scheme  objects: nothing
@@ -870,6 +885,77 @@ ik_unsafe_alloc (ikpcb_t * pcb, ikuword_t aligned_size)
   }
 }
 void
+ik_make_room_in_heap_nursery (ikpcb_t * pcb, ikuword_t aligned_size)
+/* To be called when there is no  room in the current heap nursery's hot
+   block to reserve ALIGNED_SIZE bytes for a Scheme object.  Enlarge the
+   heap's nursery by  allocating a new memory segment to  become the new
+   hot block; store the old hot block in the PCB. */
+{
+  assert(aligned_size == IK_ALIGN(aligned_size));
+#ifndef NDEBUG
+  {
+    ikptr_t alloc_ptr       = pcb->allocation_pointer;
+    ikptr_t end_ptr         = pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
+    ikptr_t new_alloc_ptr   = alloc_ptr + aligned_size;
+    assert((new_alloc_ptr >= end_ptr) || (new_alloc_ptr >= pcb->allocation_redline));
+  }
+#endif
+  if (pcb->allocation_pointer) {
+    /* This is not the first heap's nursery block allocation, so prepend
+       a  new "ikmemblock_t"  node to  the  linked list  of old  nursery
+       blocks  and  initialise  it  with  a  reference  to  the  current
+       nursery's hot block. */
+    ikmemblock_t *	node = (ikmemblock_t *)ik_malloc(sizeof(ikmemblock_t));
+    node->base = pcb->heap_nursery_hot_block_base;
+    node->size = pcb->heap_nursery_hot_block_size;
+    node->next = pcb->full_heap_nursery_segments;
+    pcb->full_heap_nursery_segments = node;
+  }
+  /* Accounting.  We keep count of all the bytes allocated for the heap,
+   * so that:
+   *
+   *   total_allocated_bytes = \
+   *     IK_MOST_BYTES_IN_MINOR * pcb->allocation_count_major + pcb->allocation_count_minor
+   */
+  {
+    ikuword_t bytes = ((ikuword_t)pcb->allocation_pointer) - ((ikuword_t)pcb->heap_nursery_hot_block_base);
+    ikuword_t minor = bytes + pcb->allocation_count_minor;
+    while (minor >= IK_MOST_BYTES_IN_MINOR) {
+      minor -= IK_MOST_BYTES_IN_MINOR;
+      pcb->allocation_count_major++;
+    }
+    pcb->allocation_count_minor = minor;
+  }
+  /* Allocate a  new heap's nursery  segment and register it  as current
+   * nursery's hot block.   While computing the segment  size: make sure
+   * that there is always  some room at the end of  the new heap segment
+   * after allocating the requested memory for the new object.
+   *
+   * Initialise it as follows:
+   *
+   *     heap_base                allocation_redline
+   *         v                            v
+   *  lo mem |----------------------------+--------| hi mem
+   *                       Scheme heap
+   *         |.....................................|
+   *              heap_nursery_hot_block_size
+   */
+  {
+    ikptr_t	heap_ptr;
+    ikuword_t	new_size;
+    if (aligned_size > (ik_customisable_heap_nursery_size - IK_DOUBLE_PAGESIZE)) {
+      new_size = IK_ALIGN_TO_NEXT_PAGE(aligned_size + IK_DOUBLE_PAGESIZE);
+    } else {
+      new_size = ik_customisable_heap_nursery_size;
+    }
+    heap_ptr			= ik_mmap_mainheap(new_size, pcb);
+    pcb->heap_nursery_hot_block_base	= heap_ptr;
+    pcb->heap_nursery_hot_block_size	= new_size;
+    pcb->allocation_redline	= heap_ptr + new_size - IK_DOUBLE_CHUNK_SIZE;
+    pcb->allocation_pointer	= heap_ptr;
+  }
+}
+void
 ik_signal_dirt_in_page_of_pointer (ikpcb_t * pcb, ikptr_t s_pointer)
 {
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pointer);
@@ -906,29 +992,43 @@ ikrt_scheme_stack_size_set (ikptr_t s_num_of_bytes, ikpcb_t * pcb)
   return IK_VOID;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr_t
+ikrt_automatic_garbage_collection_status (ikpcb_t * pcb)
+{
+  return IK_BOOLEAN_FROM_INT(!ik_garbage_collection_is_forbidden);
+}
+ikptr_t
+ikrt_enable_disable_automatic_garbage_collection (ikptr_t s_enable, ikpcb_t * pcb)
+{
+  ik_garbage_collection_is_forbidden = !IK_BOOLEAN_TO_INT(s_enable);
+  return IK_VOID;
+}
+
 
 /** --------------------------------------------------------------------
  ** Internals inspection messages.
  ** ----------------------------------------------------------------- */
 
 ikptr_t
-ikrt_enable_internals_messages (ikpcb_t pcb)
+ikrt_enable_runtime_messages (ikpcb_t pcb)
 {
-  ik_enabled_internals_messages = 1;
+  ik_enabled_runtime_messages = 1;
   return IK_VOID;
 }
 ikptr_t
-ikrt_disable_internals_messages (ikpcb_t pcb)
+ikrt_disable_runtime_messages (ikpcb_t pcb)
 {
-  ik_enabled_internals_messages = 0;
+  ik_enabled_runtime_messages = 0;
   return IK_VOID;
 }
 void
-ik_internals_message (const char * message, ...)
+ik_runtime_message (const char * message, ...)
 {
   va_list        ap;
   va_start(ap, message);
-  fprintf(stderr, "vicare: internals: ");
+  fprintf(stderr, "vicare: runtime: ");
   vfprintf(stderr, message, ap);
   fprintf(stderr, "\n");
   va_end(ap);
@@ -940,7 +1040,7 @@ ik_debug_message (const char * error_message, ...)
 {
   va_list        ap;
   va_start(ap, error_message);
-  fprintf(stderr, "*** Vicare debug: ");
+  fprintf(stderr, "vicare: debug: ");
   vfprintf(stderr, error_message, ap);
   fprintf(stderr, "\n");
   va_end(ap);
@@ -950,7 +1050,7 @@ ik_debug_message_no_newline (const char * error_message, ...)
 {
   va_list        ap;
   va_start(ap, error_message);
-  fprintf(stderr, "*** Vicare debug: ");
+  fprintf(stderr, "vicare: debug: ");
   vfprintf(stderr, error_message, ap);
   va_end(ap);
 }
@@ -959,7 +1059,7 @@ ik_debug_message_start (const char * error_message, ...)
 {
   va_list        ap;
   va_start(ap, error_message);
-  fprintf(stderr, "\n*** Vicare debug: ");
+  fprintf(stderr, "\nvicare: debug: ");
   vfprintf(stderr, error_message, ap);
   fprintf(stderr, "\n");
   va_end(ap);
@@ -969,7 +1069,7 @@ ik_abort (const char * error_message, ...)
 {
   va_list        ap;
   va_start(ap, error_message);
-  fprintf(stderr, "*** Vicare error: ");
+  fprintf(stderr, "vicare: error: ");
   vfprintf(stderr, error_message, ap);
   fprintf(stderr, "\n");
   va_end(ap);
@@ -979,7 +1079,7 @@ ik_abort (const char * error_message, ...)
 void
 ik_error (ikptr_t args)
 {
-  fprintf(stderr, "*** Vicare error: ");
+  fprintf(stderr, "vicare: error: ");
   ik_fprint(stderr, args);
   fprintf(stderr, "\n");
   exit(EXIT_FAILURE);
@@ -1104,9 +1204,9 @@ ik_stack_overflow (ikpcb_t* pcb)
   /* Allocate a  new memory segment to  be used as Scheme  stack and set
      the PCB accordingly. */
   {
-    IK_INTERNALS_MESSAGE("allocating a new Scheme stack, size: %lu bytes, %lu pages",
-			 (ik_ulong)ik_customisable_stack_size,
-			 (ik_ulong)ik_customisable_stack_size/IK_PAGESIZE);
+    IK_RUNTIME_MESSAGE("allocating a new Scheme stack, size: %lu bytes, %lu pages",
+		       (ik_ulong)ik_customisable_stack_size,
+		       (ik_ulong)ik_customisable_stack_size/IK_PAGESIZE);
     pcb->stack_base	= ik_mmap_typed(ik_customisable_stack_size, MAINSTACK_MT, pcb);
     pcb->stack_size	= ik_customisable_stack_size;
     pcb->frame_base	= pcb->stack_base + ik_customisable_stack_size;
@@ -1222,9 +1322,9 @@ ik_dump_dirty_vector (ikpcb_t* pcb)
       s++;
     }
     fprintf(stderr, "0x%016lx + %5ld pages = 0x%08x\n",
-        (long) start,
-        ((long)p-(long)start)/IK_PAGESIZE,
-        t);
+	    (long) start,
+	    ((long)p-(long)start)/IK_PAGESIZE,
+	    t);
   }
   return IK_VOID_OBJECT;
 }

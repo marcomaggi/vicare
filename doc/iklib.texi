@@ -15842,9 +15842,9 @@ Return the garbage collection bytes major field of @var{stats}.
 
 @defun collect
 @defunx collect @var{requested-generation}
-Run the garbage collector.  If post--garbage collection hooks are
-registered, they are run.  This binding is exported by the library
-@library{vicare}.
+Explicitly run the garbage collector.  If post--garbage collection hooks
+are registered, they are run.  This function does @strong{not} care if
+automatic garbage collection is disabled.
 
 The optional argument @var{requested-generation} represents the oldest
 objects generation to collect: when @false{} the generation is
@@ -15853,6 +15853,34 @@ determined internally; when a fixnum between @code{0} inclusive and
 is the youngest generation and @code{4} is the oldest generation.  The
 symbol @samp{fastest} is equivalent to @code{0}, the symbol
 @samp{fullest} is equivalent to @code{4}.
+@end defun
+
+
+@defun automatic-collect
+@defunx automatic-collect @var{requested-generation}
+Like @func{collect}, but @strong{does} care if automatic garbage
+collection is disabled.  This function exists mostly for debugging
+purposes, to track what happens when automatic garbage collection is
+disabled and the collector is invoked.
+@end defun
+
+
+@defun automatic-garbage-collection
+@defunx automatic-garbage-collection @var{obj}
+When called with one argument: if @var{obj} is @false{}, disable
+automatic garbage collection; otherwise enable it.  Return a boolean:
+@true{} if automatic garbage collection is enabled; @false{} otherwise.
+
+When called without arguments, return a boolean: @true{} if automatic
+garbage collection is enabled, @false{} otherwise.
+
+When automatic garbage collection is disabled: every memory allocation
+for Scheme objects is performed by enlarging, when needed, the Scheme
+heap's nursery.
+
+We must use with care this function, possibly in conjunction with
+@func{collect}: explicitly calling @func{collect} will still perform
+garbage collection even when the automatic one is disabled.
 @end defun
 
 @c ------------------------------------------------------------

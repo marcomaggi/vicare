@@ -662,7 +662,7 @@
 		  (compiler.perform-unsafe-primrefs-introduction? #f))
 
 		 (else
-		  (%error-and-exit "invalid --option argument" (cadr args))))
+		  (%error-and-exit "invalid --option argument: ~a" (cadr args))))
 	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------

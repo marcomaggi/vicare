@@ -993,7 +993,7 @@ typedef ikpcb_t			ikpcb;
  ** Internal function prototypes.
  ** ----------------------------------------------------------------- */
 
-ik_decl ikpcb_t *	ik_collect		(ikuword_t requested_memory, ikpcb_t* pcb);
+ik_decl ikpcb_t *	ik_automatic_collect_from_C (ikuword_t requested_memory, ikpcb_t* pcb);
 ik_decl ikpcb_t *	ik_collect_gen		(ikuword_t requested_memory, ikptr_t s_requested_generation, ikpcb_t* pcb);
 ik_private_decl void	ik_verify_integrity	(ikpcb_t* pcb, char * when_description);
 
@@ -1029,8 +1029,8 @@ ik_private_decl void	ik_underflow_handler	(void);
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
-#define IK_INTERNALS_MESSAGE(...)	do { if (ik_enabled_internals_messages) ik_internals_message(__VA_ARGS__); } while (0);
-ik_decl void	ik_internals_message	(const char * error_message, ...);
+#define IK_RUNTIME_MESSAGE(...)		do { if (ik_enabled_runtime_messages) ik_runtime_message(__VA_ARGS__); } while (0);
+ik_decl void	ik_runtime_message	(const char * error_message, ...);
 
 ik_decl ikpcb_t *	ik_the_pcb		(void);
 ik_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb_t* pcb, ikptr_t s_pointer);
@@ -1043,6 +1043,7 @@ ik_decl void	ik_debug_message_no_newline (const char * error_message, ...);
 
 ik_decl ikptr_t	ik_unsafe_alloc		(ikpcb_t* pcb, ikuword_t size);
 ik_decl ikptr_t	ik_safe_alloc		(ikpcb_t* pcb, ikuword_t size);
+ik_decl void	ik_make_room_in_heap_nursery (ikpcb_t * pcb, ikuword_t aligned_size);
 
 ik_decl void	ik_print		(ikptr_t x);
 ik_decl void	ik_print_no_newline	(ikptr_t x);

@@ -25,7 +25,8 @@
 #include "bootfileloc.h"
 #include <locale.h>
 
-extern int		ik_enabled_internals_messages;
+extern int		ik_enabled_runtime_messages;
+extern int		ik_garbage_collection_is_forbidden;
 extern ikuword_t	ik_customisable_heap_nursery_size;
 extern ikuword_t	ik_customisable_stack_size;
 
@@ -38,11 +39,6 @@ main (int argc, char** argv)
 {
   char *        boot_file = NULL;
   int		j=1;
-
-  {
-    char *	value = getenv("VICARE_ENABLE_INTERNALS_MESSAGES");
-    ik_enabled_internals_messages = (value && (0 == strcmp(value, "yes")));
-  }
 
   /* Filter  out  the command  line  arguments:
    *
@@ -84,6 +80,35 @@ main (int argc, char** argv)
       ik_customisable_stack_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
       ++i;
     }
+    else if (0 == strcmp(argv[i], "--option")) {
+      if (1+i < argc) {
+	if      (0 == strcmp(argv[1+i], "enable-automatic-gc")) {
+	  IK_RUNTIME_MESSAGE("automatic garbage collection is enabled");
+	  ik_garbage_collection_is_forbidden = 0;
+	  ++i;
+	}
+	else if (0 == strcmp(argv[1+i], "disable-automatic-gc")) {
+	  IK_RUNTIME_MESSAGE("automatic garbage collection is disabled");
+	  ik_garbage_collection_is_forbidden = 1;
+	  ++i;
+	}
+	else if (0 == strcmp(argv[1+i], "enable-runtime-messages")) {
+	  ik_enabled_runtime_messages = 1;
+	  ++i;
+	}
+	else if (0 == strcmp(argv[1+i], "disable-runtime-messages")) {
+	  ik_enabled_runtime_messages = 0;
+	  ++i;
+	}
+	else {
+	  argv[j] = argv[i];
+	  ++j;
+	}
+      } else {
+	fprintf(stderr, "%s: error: option %s needs an argument\n", argv[0], argv[i]);
+	exit(2);
+      }
+    }
     else {
       argv[j] = argv[i];
       ++j;
@@ -113,7 +138,7 @@ normalise_number_of_bytes_argument (const char * argument_description,
     char *	tail_ptr;
     errno = 0;
     num_of_bytes = strtol(argv[1+i], &tail_ptr, 10);
-    IK_INTERNALS_MESSAGE("argument to command line option for %s: %ld bytes",
+    IK_RUNTIME_MESSAGE("argument to command line option for %s: %ld bytes",
 			 argument_description, num_of_bytes);
     if (errno) {
       fprintf(stderr, "%s: error: invalid argument to option %s: %s, %s\n",
@@ -133,7 +158,7 @@ normalise_number_of_bytes_argument (const char * argument_description,
       exit(2);
     } else {
       normalised_num_of_bytes = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
-      IK_INTERNALS_MESSAGE("%s set to %lu bytes", argument_description, normalised_num_of_bytes);
+      IK_RUNTIME_MESSAGE("%s set to %lu bytes", argument_description, normalised_num_of_bytes);
       return normalised_num_of_bytes;
     }
   } else {

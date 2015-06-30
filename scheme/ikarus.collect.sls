@@ -20,7 +20,8 @@
     do-overflow
     do-vararg-overflow		do-stack-overflow
     collect			collect-key
-    post-gc-hooks
+    post-gc-hooks		automatic-garbage-collection
+    automatic-collect
 
     register-to-avoid-collecting
     forget-to-avoid-collecting
@@ -30,7 +31,8 @@
     purge-collection-avoidance-list)
   (import (except (vicare)
 		  collect		collect-key
-		  post-gc-hooks
+		  post-gc-hooks		automatic-garbage-collection
+		  automatic-collect
 
 		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
 		  ;;rotation.  (Marco Maggi; Sun Mar 29, 2015)
@@ -53,6 +55,8 @@
        (not (pointer-null? obj))))
 
 
+;;;; garbage collection API
+
 (define post-gc-hooks
   (make-parameter '()
     (lambda (ls)
@@ -64,62 +68,110 @@
           ls
 	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
-(define (do-post-gc ls number-of-words)
-  (let ((k0 (collect-key)))
-    ;;Run the hook functions.
-    (parameterize ((post-gc-hooks '()))
-      ;;Run the post-gc hooks.
-      (for-each (lambda (x) (x)) ls))
-    (if (eq? k0 (collect-key))
-        (let ((was-enough? (foreign-call "ikrt_collect_check_after_gc_hooks" number-of-words)))
-          ;;Handlers ran  without GC but  there was not enough  space in
-          ;;the nursery for the pending allocation.
-          (unless was-enough?
-	    (do-post-gc ls number-of-words)))
-      ;;Handlers did cause a GC, so, do the handlers again.
-      (do-post-gc ls number-of-words))))
+(module (do-overflow collect automatic-collect collect-key)
 
-(case-define do-overflow
-  ;;This function is called whenever a Scheme function tries to allocate an object on
-  ;;the heap and the heap has no enough  room for it.  A garbage collection is run to
-  ;;reclaim some heap space  and we expect that, at return time,  the heap has enough
-  ;;room to allocate NUMBER-OF-WORDS bytes.
-  ;;
-  ((number-of-words)
-   (do-overflow number-of-words #f))
-  ((number-of-words requested-generation)
-   (assert (or (not requested-generation)
-	       (and (fixnum? requested-generation)
-		    (<= 0 requested-generation 4))))
-   (foreign-call "ik_collect_from_scheme_with_hooks" number-of-words requested-generation)
-   (let ((ls (post-gc-hooks)))
-     (unless (null? ls)
-       (do-post-gc ls number-of-words)))
-   ;;NOTE Do *not* remove this.  The code calling this function to reclaim heap space
-   ;;expects DO-OVERFLOW to return a single value;  if it returns 0, 2 or more values
-   ;;very bad assembly-level errors will happen.  (Marco Maggi; Thu Apr 4, 2013)
-   #t))
+  (define (do-overflow number-of-words)
+    ;;This function is called whenever a  Scheme function tries to allocate an object
+    ;;on the heap  and the heap's nursery  has not enough room for  it.  An automatic
+    ;;garbage collection  is run to  reclaim some heap space  and we expect  that, at
+    ;;return time, the heap has enough room to allocate NUMBER-OF-WORDS bytes.
+    ;;
+    (foreign-call "ik_automatic_collect_from_scheme_with_hooks" number-of-words #f)
+    (%post-gc-operations number-of-words #t))
 
-(define do-vararg-overflow do-overflow)
+  (case-define* automatic-collect
+    ;;Call for  a garbage  collection and  make room on  the heap  for at  least 4096
+    ;;machine words, by behaving like DO-OVERFLOW.   4096 is an arbitrary value equal
+    ;;to a  Vicare's page size.   It is arbitrarily  decided that this  function must
+    ;;return a single value and such value is void.
+    ;;
+    (()
+     (%do-collect __who__ #f #t))
+    ((requested-generation)
+     (%do-collect __who__ requested-generation #t)))
 
-(case-define* collect
-  ;;Force a  garbage collection and make  room on the  heap for at least  4096 bytes.
-  ;;4096 is  an arbitrary value.  It  is arbitrarily decided that  this function must
-  ;;return a single value and such value is void.
-  ;;
+  (case-define* collect
+    ;;Force a garbage collection and make room  on the heap for at least 4096 machine
+    ;;words.   4096 is  an arbitrary  value equal  to a  Vicare's page  size.  It  is
+    ;;arbitrarily decided  that this  function must  return a  single value  and such
+    ;;value is void.
+    ;;
+    (()
+     (%do-collect __who__ #f #f))
+    ((requested-generation)
+     (%do-collect __who__ requested-generation #f)))
+
+  (define (%do-collect who requested-generation automatic?)
+    (let ((number-of-words       4096)
+	  (requested-generation  (case requested-generation
+				   ((0 fastest)		0)
+				   ((#f 1 2 3)		requested-generation)
+				   ((4 fullest)		4)
+				   (else
+				    (procedure-argument-violation who
+				      "requested invalid garbage collection generation level"
+				      requested-generation)))))
+      (if automatic?
+	  (foreign-call "ik_automatic_collect_from_scheme_with_hooks" number-of-words requested-generation)
+	(foreign-call "ik_explicit_collect_from_scheme_with_hooks" number-of-words requested-generation))
+      (%post-gc-operations number-of-words automatic?)))
+
+  (define (%post-gc-operations number-of-words automatic?)
+    (let ((ls (post-gc-hooks)))
+      (unless (null? ls)
+	(%do-post-gc ls number-of-words automatic?)))
+    ;;NOTE Do  *not* remove  this.  The  code calling this  function to  reclaim heap
+    ;;space expects DO-OVERFLOW to return a single  value; if it returns 0, 2 or more
+    ;;values very  bad assembly-level errors will  happen.  (Marco Maggi; Thu  Apr 4,
+    ;;2013)
+    (void))
+
+  (define (%do-post-gc ls number-of-words automatic?)
+    (let ((k0 (collect-key)))
+      ;;Run the hook functions.
+      (parameterize ((post-gc-hooks '()))
+	;;Run the post-gc hooks.
+	(for-each (lambda (x) (x)) ls))
+      (if (eq? k0 (collect-key))
+	  ;;If we are  here: the post-GC hooks were called  without causing a further
+	  ;;GC.
+	  (let ((done-without-further-gc? (if automatic?
+					      (foreign-call "ikrt_automatic_collect_from_scheme_check_after_gc_hooks" number-of-words)
+					    (foreign-call "ikrt_explicit_collect_from_scheme_check_after_gc_hooks" number-of-words))))
+	    (unless done-without-further-gc?
+	      ;;If we are here: after running  the post-GC hooks there was not enough
+	      ;;room on the heap's nursery to serve the pending memory allocation, so
+	      ;;another  GC was  run.   This  further GC  might  have enqueued  other
+	      ;;post-GC hooks: do the handlers again.
+	      (%do-post-gc ls number-of-words automatic?)))
+	;;Running the  post-GC hooks did  cause a GC;  some more post-GC  hooks might
+	;;have been accumulated: do the handlers again.
+	(%do-post-gc ls number-of-words automatic?))))
+
+  (define (collect-key)
+    ;;The core primitive operation $COLLECT-KEY is  a getter and setter for the value
+    ;;of the field "collect_key" in the C language structure PCB.
+    ;;
+    (or ($collect-key)
+	(begin
+	  ($collect-key (gensym "collect-key"))
+	  (collect-key))))
+
+  #| end of module |# )
+
+;;This  function is  called  when we  apply  a  tuple of  operands  a closure  object
+;;accepting a variable number of arguments.  The Assembly code may need to allocate a
+;;Scheme list to hold  the args argument or the rest argument:  if the heap's nursery
+;;runs out of room while this allocation goes on, this function is called.
+;;
+(define do-vararg-overflow
+  do-overflow)
+
+(case-define automatic-garbage-collection
   (()
-   (do-overflow 4096 #f)
-   (void))
-  ((requested-generation)
-   (do-overflow 4096 (case requested-generation
-		       ((0 fastest)	0)
-		       ((#f 1 2 3)	requested-generation)
-		       ((4 fullest)	4)
-		       (else
-			(procedure-argument-violation __who__
-			  "requested invalid garbage collection generation level"
-			  requested-generation))))
-   (void)))
+   (foreign-call "ikrt_automatic_garbage_collection_status"))
+  ((obj)
+   (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj)))
 
 (define (do-stack-overflow)
   (foreign-call "ik_stack_overflow"))
@@ -130,13 +182,9 @@
 (define (dump-dirty-vector)
   (foreign-call "ik_dump_dirty_vector"))
 
-(define (collect-key)
-  (or ($collect-key)
-      (begin
-        ($collect-key (gensym "collect-key"))
-        (collect-key))))
-
 
+;;;; Scheme objects garbage collection avoidance API
+
 (define (register-to-avoid-collecting obj)
   (foreign-call "ik_register_to_avoid_collecting" obj))
 

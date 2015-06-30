@@ -404,15 +404,51 @@ Instruct the compiler to generate descriptive labels.
 
 @item compiler-core-type-inference
 @itemx no-compiler-core-type-inference
+@cindex Command line option @code{compiler-core-type-inference}
+@cindex @code{compiler-core-type-inference}, command line option
 Instruct the compiler to perform core type inference or not; the default
 is to perform it.  Disabling core type inference automatically disables
 substitution of core primitive calls with unsafe core primitive calls.
 
 @item compiler-introduce-primrefs
 @itemx no-compiler-introduce-primrefs
+@cindex Command line option @code{compiler-introduce-primrefs}
+@cindex @code{compiler-introduce-primrefs}, command line option
 Instruct the compiler to perform substitution between core primitive
 calls and unsafe core primitive calls, when the correctness of the
 operand is determined at compile--time; the default is to perform it.
+
+@item enable-automatic-gc
+@itemx disable-automatic-gc
+@cindex Command line option @code{enable-automatic-gc}
+@cindex Command line option @code{disable-automatic-gc}
+@cindex @code{enable-automatic-gc}, command line option
+@cindex @code{disable-automatic-gc}, command line option
+Enable or disable automatic garbage collection.  When automatic garbage
+collection is disabled:
+
+@itemize
+@item
+Memory allocation for Scheme objects is performed by enlarging, when
+needed, the Scheme heap's nursery.
+
+@item
+We can still run garbage collection by explicitly invoking
+@func{collect} (@pxref{iklib gc, collect}).
+@end itemize
+
+We can programmatically change this setting with
+@func{automatic-garbage-collection} (@pxref{iklib gc,
+automatic-garbage-collection}).
+
+@item enable-runtime-messages
+@itemx disable-runtime-messages
+@cindex Command line option @code{enable-runtime-messages}
+@cindex Command line option @code{disable-runtime-messages}
+@cindex @code{enable-runtime-messages}, command line option
+@cindex @code{disable-runtime-messages}, command line option
+Enable or disable printing to the standard error file descriptor some
+debugging messages from the C language run--time program.
 @end table
 
 @c ------------------------------------------------------------------------

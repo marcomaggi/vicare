@@ -130,16 +130,40 @@ static void	relocate_new_code (ikptr_t p_X, gc_t* gc);
 
 static void	register_to_collect_count (ikpcb_t* pcb, int bytes);
 
+static ikpcb_t *perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb);
+
+/* Prototypes for subroutines of "perform_garbage_collection()". */
+static int		collection_id_to_gen	(int id);
+static void		fix_weak_pointers	(gc_t *gc);
+static inline void	collect_locatives	(gc_t*, ik_callback_locative_t*);
+static void		deallocate_unused_pages	(gc_t*);
+static void		fix_new_pages		(gc_t* gc);
+static void		gc_finalize_guardians	(gc_t* gc);
+static void		gc_add_tconcs		(gc_t*);
+
+/* The function "gather_live_object_proc()" is the one that moves a live
+   Scheme object from its pre-GC location to its after-GC location.  The
+   macro "gather_live_object()" is a convenience interface to it. */
+#undef DEBUG_GATHER_LIVE_OBJECT
+#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
+static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x, char* caller);
+#  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x,caller)
+#else
+static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x);
+#  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x)
+#endif
+
 
 /** --------------------------------------------------------------------
  ** Global variables.
  ** ----------------------------------------------------------------- */
 
+extern int		ik_garbage_collection_is_forbidden;
 extern ikuword_t	ik_customisable_heap_nursery_size;
 
 /* When true: internals inspection messages  are enabled.  It is used by
-   the preprocessor macro "IK_INTERNALS_MESSAGE()". */
-extern int		ik_enabled_internals_messages;
+   the preprocessor macro "IK_RUNTIME_MESSAGE()". */
+extern int		ik_enabled_runtime_messages;
 
 /* If accounting  is defined  as true:  "gather_live_object_proc()" will
    increment the  appropriate counter whenever  it moves a  live object;
@@ -249,34 +273,212 @@ ik_munmap_from_segment (ikptr_t base, ikuword_t size, ikpcb_t* pcb)
  ** Main collect function.
  ** ----------------------------------------------------------------- */
 
-/* Prototypes for subroutines of "ik_collect()". */
-static int		collection_id_to_gen	(int id);
-static void		fix_weak_pointers	(gc_t *gc);
-static inline void	collect_locatives	(gc_t*, ik_callback_locative_t*);
-static void		deallocate_unused_pages	(gc_t*);
-static void		fix_new_pages		(gc_t* gc);
-static void		gc_finalize_guardians	(gc_t* gc);
-static void		gc_add_tconcs		(gc_t*);
+ikpcb_t *
+ik_automatic_collect_from_C (ikuword_t aligned_size, ikpcb_t* pcb)
+/* This is  called from C by  "ik_safe_alloc()" when no more  room is in
+   the heap's nursery hot block. */
+{
+  if (ik_garbage_collection_is_forbidden) {
+    IK_RUNTIME_MESSAGE("%s: automatic GC, requested size: %lu bytes, GC is forbidden, allocating new hot block",
+			 __func__, (ik_ulong)aligned_size);
+    ik_make_room_in_heap_nursery(pcb, aligned_size);
+    return pcb;
+  } else {
+    IK_RUNTIME_MESSAGE("%s: automatic GC, requested size: %lu bytes",
+			 __func__, (ik_ulong)aligned_size);
+    return perform_garbage_collection(aligned_size, IK_FALSE, pcb);
+  }
+}
+ikpcb_t *
+ik_collect (ikuword_t mem_req, ikpcb_t* pcb)
+/* FIXME  To be  removed after  the  next boot  image rotation.   (Marco
+   Maggi; Tue Jun 30, 2015) */
+{
+  return ik_automatic_collect_from_C(mem_req, pcb);
+}
 
-/* The function "gather_live_object_proc()" is the one that moves a live
-   Scheme object from its pre-GC location to its after-GC location.  The
-   macro "gather_live_object()" is a convenience interface to it. */
-#undef DEBUG_GATHER_LIVE_OBJECT
-#if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
-static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x, char* caller);
-#  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x,caller)
-#else
-static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x);
-#  define gather_live_object(gc,x,caller) gather_live_object_proc(gc,x)
-#endif
+/* ------------------------------------------------------------------ */
 
-/* This is the entry point of garbage collection.  The roots are:
+ikpcb_t *
+ik_automatic_collect_from_scheme_with_hooks (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
+/* This is called from Scheme when no more room is in the heap's nursery
+   hot  block, but  also from  AUTOMATIC-COLLECT.  This  is the  normal,
+   automatic garbage  collection.  After  this we  will run  the post-GC
+   hooks. */
+{
+  if (ik_garbage_collection_is_forbidden) {
+    ikptr_t alloc_ptr       = pcb->allocation_pointer;
+    ikptr_t end_ptr         = pcb->heap_nursery_hot_block_base + pcb->heap_nursery_hot_block_size;
+    ikptr_t new_alloc_ptr   = alloc_ptr + mem_req;
+    if ((new_alloc_ptr >= end_ptr) || (new_alloc_ptr >= pcb->allocation_redline)) {
+      IK_RUNTIME_MESSAGE("%s: automatic GC, requested size %lu bytes, GC is forbidden, allocating new hot block",
+			 __func__, (ik_ulong)mem_req);
+      ik_make_room_in_heap_nursery(pcb, mem_req);
+    } else {
+      IK_RUNTIME_MESSAGE("%s: automatic GC, requested size %lu bytes, GC is forbidden, enough room in the nursery",
+			 __func__, (ik_ulong)mem_req);
+    }
+    return pcb;
+  } else {
+    IK_RUNTIME_MESSAGE("%s: automatic GC, requested size %lu bytes", __func__, (ik_ulong)mem_req);
+    return perform_garbage_collection(mem_req, s_requested_generation, pcb);
+  }
+}
+ikptr_t
+ikrt_automatic_collect_from_scheme_check_after_gc_hooks (ikptr_t s_number_of_words, ikpcb_t* pcb)
+/* This   is    invoked   by    Scheme   code   after    having   called
+ * "ik_automatic_collect_from_scheme_with_hooks()" and  after having run
+ * the post-GC hooks.
  *
- * 0. dirty pages not collected in this run
- * 1. the stack
- * 2. the next continuation
- * 3. the symbol-table
- * 4. the "root" fields of the PCB
+ * If  we interpret  S_NUMBER_OF_WORDS as  a fixnum:  it represents  the
+ * requested  number of  words.   If we  interpret it  as  a C  language
+ * unsigned integer: it represents the requested number of bytes.
+ *
+ * Check  if there  are  S_NUMBER_OF_WORDS bytes  already allocated  and
+ * available on the heap before the redline:
+ *
+ * - If there is room: return #t.
+ *
+ * - If  there is  no room  and automatic  GC is  disabled: enlarge  the
+ *   nursery by allocating a new hot block and return #t.
+ *
+ * - If there is no  room and automatic GC is enabled:  run a further GC
+ *   and return #f.
+ *
+ * We return #f only if a further GC is run; otherwise we return #t.
+ */
+{
+  ikuword_t	requested_bytes = (ikuword_t)s_number_of_words;
+  if (pcb->allocation_pointer < pcb->allocation_redline) {
+    ikuword_t	available_bytes = pcb->allocation_redline - pcb->allocation_pointer;
+    IK_RUNTIME_MESSAGE("%s: requested %lu bytes, available before redline %lu bytes",
+			 __func__, requested_bytes, available_bytes);
+    if (requested_bytes <= available_bytes) {
+      IK_RUNTIME_MESSAGE("%s: enough room on the nursery, skipping further GC", __func__);
+      return IK_TRUE;
+    }
+  } else {
+    IK_RUNTIME_MESSAGE("%s: requested %lu bytes, no room available before redline",
+			 __func__, requested_bytes);
+  }
+  /* There is not enough room on the heap's nursery, before the redline,
+     to allocate the requested object. */
+  if (ik_garbage_collection_is_forbidden) {
+    IK_RUNTIME_MESSAGE("%s: GC is forbidden, allocating new hot block", __func__);
+    ik_make_room_in_heap_nursery(pcb, requested_bytes);
+    return IK_TRUE;
+  } else {
+    IK_RUNTIME_MESSAGE("%s: performing further GC", __func__);
+    perform_garbage_collection(requested_bytes, IK_FALSE, pcb);
+    return IK_FALSE;
+  }
+}
+
+ikpcb_t *
+ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
+/* FIXME  To be  removed after  the  next boot  image rotation.   (Marco
+   Maggi; Sat Jun 27, 2015) */
+{
+  return ik_automatic_collect_from_scheme_with_hooks(mem_req, s_requested_generation, pcb);
+}
+ikptr_t
+ik_collect_check (ikptr_t s_number_of_words, ikpcb_t* pcb)
+/* FIXME This function is to be removed at the next boot image rotation.
+   (Marco Maggi; Wed Mar 25, 2015) */
+{
+  return ikrt_automatic_collect_from_scheme_check_after_gc_hooks (s_number_of_words, pcb);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikpcb_t *
+ik_explicit_collect_from_scheme_with_hooks (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
+/* This  is called  from Scheme  by an  explicit invocation  of COLLECT.
+   This  function  does not  care  if  automatic garbage  collection  is
+   disabled.  After this we will run the post-GC hooks. */
+{
+  IK_RUNTIME_MESSAGE("%s: explicit GC, requested size %lu bytes",
+		       __func__, (ik_ulong)mem_req);
+  return perform_garbage_collection(mem_req, s_requested_generation, pcb);
+}
+ikptr_t
+ikrt_explicit_collect_from_scheme_check_after_gc_hooks (ikptr_t s_number_of_words, ikpcb_t* pcb)
+/* This   is    invoked   by    Scheme   code   after    having   called
+ * "ik_explicit_collect_from_scheme_with_hooks()"  and after  having run
+ * the post-GC hooks.  This function  does not care if automatic garbage
+ * collection is disabled.
+ *
+ * If  we interpret  S_NUMBER_OF_WORDS as  a fixnum:  it represents  the
+ * requested  number of  words.   If we  interpret it  as  a C  language
+ * unsigned integer: it represents the requested number of bytes.
+ *
+ * Check  if there  are  S_NUMBER_OF_WORDS bytes  already allocated  and
+ * available on the heap before the redline:
+ *
+ * - If there is room: return #t.
+ *
+ * - If there is no room: run a further GC and return #f.
+ *
+ * We return #f only if a further GC is run; otherwise we return #t.
+ */
+{
+  ikuword_t	requested_bytes = (ikuword_t)s_number_of_words;
+  if (pcb->allocation_pointer < pcb->allocation_redline) {
+    ikuword_t	available_bytes = pcb->allocation_redline - pcb->allocation_pointer;
+    IK_RUNTIME_MESSAGE("%s: requested %lu bytes, available before redline %lu bytes",
+			 __func__, requested_bytes, available_bytes);
+    if (requested_bytes <= available_bytes) {
+      IK_RUNTIME_MESSAGE("%s: enough room on the nursery, skipping further GC", __func__);
+      return IK_TRUE;
+    }
+  } else {
+    IK_RUNTIME_MESSAGE("%s: requested %lu bytes, no room available before redline",
+			 __func__, requested_bytes);
+  }
+  /* There is not enough room on the heap's nursery, before the redline,
+     to allocate the requested object. */
+  IK_RUNTIME_MESSAGE("%s: performing further GC", __func__);
+  perform_garbage_collection(requested_bytes, IK_FALSE, pcb);
+  return IK_FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikpcb_t *
+ik_automatic_collect_from_scheme_no_hooks (ikuword_t mem_req, ikpcb_t* pcb)
+/* This is called from Scheme when no more room is in the heap's nursery
+   hot block  and we need a  garbage collection run without  running the
+   post-GC hooks. */
+{
+  if (ik_garbage_collection_is_forbidden) {
+    IK_RUNTIME_MESSAGE("%s: automatic GC, requested size %lu bytes, GC is forbidden, allocating new hot block",
+			 __func__, (ik_ulong)mem_req);
+    ik_make_room_in_heap_nursery(pcb, mem_req);
+    return pcb;
+  } else {
+    IK_RUNTIME_MESSAGE("%s: automatic GC, requested size %lu bytes",
+			 __func__, (ik_ulong)mem_req);
+    return perform_garbage_collection(mem_req, IK_FALSE, pcb);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+static ikpcb_t *
+perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
+/* This is the true entry point of garbage collection.
+ *
+ * The GC roots are:
+ *
+ * 0. Dirty pages not collected in this run.
+ *
+ * 1. The Scheme stack.
+ *
+ * 2. The next continuation.
+ *
+ * 3. The symbol-table.
+ *
+ * 4. The "root" fields of the PCB.
  *
  *   Notice that  the heap's nursery  is NOT a GC  root; so if  we leave
  * some machine word uninitialised, outside Scheme object, on the heap's
@@ -304,46 +506,6 @@ static ikptr_t gather_live_object_proc(gc_t* gc, ikptr_t x);
  *    stack.
  *
  */
-static ikpcb_t * perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb);
-
-ikpcb_t *
-ik_collect (ikuword_t mem_req, ikpcb_t* pcb)
-/* This is  called from C by  "ik_safe_alloc()" when no more  room is in
-   the heap's nursery hot block. */
-{
-  IK_INTERNALS_MESSAGE("%s: calling GC, requested size: %lu bytes",
-		       __func__, (ik_ulong)mem_req);
-  return perform_garbage_collection(mem_req, IK_FALSE, pcb);
-}
-ikpcb_t *
-ik_collect_from_scheme_with_hooks (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
-/* This is called from Scheme when  we need a normal garbage collection,
-   after which we run the post-GC hooks. */
-{
-  IK_INTERNALS_MESSAGE("%s: calling GC, requested size %lu bytes",
-		       __func__, (ik_ulong)mem_req);
-  return perform_garbage_collection(mem_req, s_requested_generation, pcb);
-}
-ikpcb_t *
-ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
-/* FIXME  To be  removed after  the  next boot  image rotation.   (Marco
-   Maggi; Sat Jun 27, 2015) */
-{
-  IK_INTERNALS_MESSAGE("%s: calling GC, requested size %lu bytes",
-		       __func__, (ik_ulong)mem_req);
-  return ik_collect_from_scheme_with_hooks(mem_req, s_requested_generation, pcb);
-}
-ikpcb_t *
-ik_collect_from_scheme_no_hooks (ikuword_t mem_req, ikpcb_t* pcb)
-/* This is called from Scheme when  we need a garbage collection without
-   running the post-GC hooks. */
-{
-  IK_INTERNALS_MESSAGE("%s: calling GC, requested size %lu bytes",
-		       __func__, (ik_ulong)mem_req);
-  return perform_garbage_collection(mem_req, IK_FALSE, pcb);
-}
-static ikpcb_t *
-perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
 {
   /* fprintf(stderr, "%s: enter\n", __func__); */
   static const uint32_t NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
@@ -364,7 +526,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       collection_id_to_gen(pcb->collection_id) : IK_UNFIX(s_requested_generation);
     assert((0 <= requested_generation) && (requested_generation <= 4));
   }
-  IK_INTERNALS_MESSAGE("%s: enter collection for generation %d, requested size %lu bytes, crossed redline=%s",
+  IK_RUNTIME_MESSAGE("%s: enter collection for generation %d, requested size %lu bytes, crossed redline=%s",
 		       __func__, requested_generation, (ik_ulong)mem_req,
 		       ((pcb->allocation_redline <= pcb->allocation_pointer)? "yes" : "no"));
 
@@ -500,7 +662,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
      nursery  hot memory,  and are  now fully  used; the  blocks' memory
      pages are cached in the PCB to be recycled later. */
   if (old_full_heap_nursery_segments) {
-    IK_INTERNALS_MESSAGE("%s: releasing old full heap's nursery segments", __func__);
+    IK_RUNTIME_MESSAGE("%s: releasing old full heap's nursery segments", __func__);
     ikmemblock_t* p = old_full_heap_nursery_segments;
     do {
       ikmemblock_t* next = p->next;
@@ -536,7 +698,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       /* Release the old nursery heap hot block. */
       ik_munmap_from_segment(pcb->heap_nursery_hot_block_base, pcb->heap_nursery_hot_block_size, pcb);
       /* Allocate new hot block. */
-      IK_INTERNALS_MESSAGE("%s: allocating new heap nursery hot block, size: %lu bytes, %lu pages",
+      IK_RUNTIME_MESSAGE("%s: allocating new heap nursery hot block, size: %lu bytes, %lu pages",
 			   __func__,
 			   (ik_ulong)new_hot_block_size,
 			   (ik_ulong)new_hot_block_size/IK_PAGESIZE);
@@ -546,7 +708,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       pcb->allocation_pointer		= ap;
       pcb->allocation_redline		= ap + (new_hot_block_size - IK_DOUBLE_PAGESIZE);
     } else {
-      IK_INTERNALS_MESSAGE("%s: current heap's nursery hot block is big enough, reusing it; size: %lu bytes, %lu pages",
+      IK_RUNTIME_MESSAGE("%s: reusing current heap's nursery hot block, size: %lu bytes, %lu pages",
 			   __func__,
 			   (ik_ulong)ik_customisable_heap_nursery_size,
 			   (ik_ulong)ik_customisable_heap_nursery_size/IK_PAGESIZE);
@@ -597,15 +759,22 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
       pcb->collect_rtime.tv_sec  -= 1;
     }
   }
-  IK_INTERNALS_MESSAGE("%s: leave collection for generation %d",
-		       __func__, requested_generation);
+  IK_RUNTIME_MESSAGE("%s: leave collection for generation %d",
+		     __func__, requested_generation);
   /* fprintf(stderr, "%s: leave\n", __func__); */
   return pcb;
 }
+
+
+/** --------------------------------------------------------------------
+ ** Subroutines of "perform_garbage_collection()".
+ ** ----------------------------------------------------------------- */
+
 static int
 collection_id_to_gen (int id)
-/* Subroutine  of "ik_collect()".   Convert  a collection  counter to  a
-   generation number determining which objects generation to inspect. */
+/* Subroutine of  "perform_garbage_collection()".  Convert  a collection
+   counter to  a generation number determining  which objects generation
+   to inspect. */
 {
   if ((id & 255) == 255) { return 4; }	/* 255 == #b11111111 */
   if ((id &  63) == 63)  { return 3; }	/*  63 == #b00111111 */
@@ -615,7 +784,7 @@ collection_id_to_gen (int id)
 }
 static inline void
 collect_locatives (gc_t* gc, ik_callback_locative_t* loc)
-/* Subroutine of "ik_collect()". */
+/* Subroutine of "perform_garbage_collection()". */
 {
   for (; loc; loc = loc->next) {
     loc->data = gather_live_object(gc, loc->data, "locative");
@@ -623,7 +792,8 @@ collect_locatives (gc_t* gc, ik_callback_locative_t* loc)
 }
 static void
 fix_weak_pointers (gc_t* gc)
-/* Subroutine of "ik_collect()".  Fix the cars of the weak pairs. */
+/* Subroutine of  "perform_garbage_collection()".  Fix  the cars  of the
+   weak pairs. */
 {
   uint32_t *	segment_vec = gc->segment_vector;
   ikuword_t	lo_idx      = IK_PAGE_INDEX(gc->pcb->memory_base);
@@ -666,7 +836,7 @@ fix_weak_pointers (gc_t* gc)
 }
 static void
 deallocate_unused_pages (gc_t* gc)
-/* Subroutine of "ik_collect()". */
+/* Subroutine of "perform_garbage_collection()". */
 {
   ikpcb_t *	pcb         = gc->pcb;
   int		collect_gen = gc->collect_gen;
@@ -691,7 +861,7 @@ deallocate_unused_pages (gc_t* gc)
 }
 static void
 fix_new_pages (gc_t* gc)
-/* Subroutine of "ik_collect()". */
+/* Subroutine of "perform_garbage_collection()". */
 {
   ikpcb_t *	pcb         = gc->pcb;
   uint32_t *	segment_vec = pcb->segment_vector;
@@ -710,6 +880,7 @@ fix_new_pages (gc_t* gc)
 }
 static void
 gc_finalize_guardians (gc_t* gc)
+/* Subroutine of "perform_garbage_collection()". */
 {
   ik_ptr_page_t*	ls = gc->forward_list;
   int		tconc_count = 0;
@@ -734,49 +905,6 @@ gc_finalize_guardians (gc_t* gc)
     ik_munmap((ikptr_t)ls, IK_PAGESIZE);
     ls = next;
   }
-}
-
-
-/** --------------------------------------------------------------------
- ** Auxiliary collection function.
- ** ----------------------------------------------------------------- */
-
-ikptr_t
-ikrt_collect_check_after_gc_hooks (ikptr_t s_number_of_words, ikpcb_t* pcb)
-/* Check  if there  are  S_NUMBER_OF_WORDS bytes  already allocated  and
-   available on the heap; return #t if there are, run a GC and return #f
-   otherwise.
-
-   About S_NUMBER_OF_WORDS, notice that: if we interpret it as a fixnum,
-   it represents the number of words; if we interpret it as a C language
-   unsigned integer, it represents the number of bytes. */
-{
-  ikptr_t	rv    = IK_TRUE_OBJECT;
-  if (pcb->allocation_pointer < pcb->allocation_redline) {
-    IK_INTERNALS_MESSAGE("%s: requested size %lu bytes, available bytes before redline %lu, skipping further GC",
-			 __func__,
-			 (ik_ulong)s_number_of_words, (ik_ulong)(pcb->allocation_redline - pcb->allocation_pointer));
-  } else {
-    iksword_t	bytes = pcb->allocation_redline - pcb->allocation_pointer;
-    if (bytes < s_number_of_words) {
-      IK_INTERNALS_MESSAGE("%s: requested size %lu bytes, performing further GC",
-			   __func__, (ik_ulong)s_number_of_words);
-      perform_garbage_collection(s_number_of_words, IK_FALSE, pcb);
-      rv = IK_FALSE_OBJECT;
-    } else {
-      IK_INTERNALS_MESSAGE("%s: requested size %lu bytes, skipping further GC",
-			   __func__, (ik_ulong)s_number_of_words);
-    }
-  }
-  return rv;
-}
-
-/* FIXME This function is to be removed at the next boot image rotation.
-   (Marco Maggi; Wed Mar 25, 2015) */
-ikptr_t
-ik_collect_check (ikptr_t s_number_of_words, ikpcb_t* pcb)
-{
-  return ikrt_collect_check_after_gc_hooks (s_number_of_words, pcb);
 }
 
 
