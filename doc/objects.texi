@@ -1394,7 +1394,7 @@ the roots of the garbage collection are:
 
 @itemize
 @item
-Heap dirty generational pages not collected in the current garbage
+Heap's dirty generational pages not collected in the current garbage
 collection run.
 
 @item
@@ -1430,11 +1430,10 @@ the C stack and the C heap.  Notice that this includes the arguments to
 C functions called from Scheme through the macro @func{foreign-call}.
 
 If an old Scheme object contains a reference to a new Scheme object: we
-have to inform the garbage collector about this.
-
-Whenever we allocate a new Scheme object and store in one of its fields
-a reference to a previously allocated Scheme object: we have to
-register this event in the dirty vector.
+have to inform the garbage collector about this.  Whenever we allocate a
+new Scheme object and store in one of its fields a reference to a
+previously allocated Scheme object: we have to register this event in
+the dirty vector.
 
 We must write C code with the following constraints:
 
@@ -1455,6 +1454,8 @@ ones calling @cfunc{ik_safe_alloc} are prefixed with @code{ika_} and
 @code{IKA_}; the ones calling @cfunc{ik_unsafe_alloc} are prefixed with
 @code{iku_} and @code{IKU_}.
 
+@itemize
+@item
 Example of @strong{correct} code: @code{s_one} is protected while
 allocating @code{s_two}:
 
@@ -1483,6 +1484,7 @@ s_two = ika_bytevector_alloc(pcb, 10);
 /* do something with "s_one" and "s_two" */ /* WRONG */
 @end example
 
+@item
 Example of @strong{correct} code: @code{s_one} is protected while
 allocating @code{s_two} and after the second allocation the pointer to
 the data area of @code{s_one} is retrieved again:
@@ -1530,6 +1532,7 @@ pcb->root0 = NULL;
 two   = IK_BYTEVECTOR_DATA_CHARP(s_two);
 /* do something with "one" and "two" */ /* WRONG */
 @end example
+@end itemize
 
 Notice that, according to the C standard Section 6.5.16 ``Assignment
 operators'': the order of evaluation of the operands is
@@ -1557,7 +1560,7 @@ pcb->root0 = &s_pair;
 @{
   s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
   IK_CAR(s_pair) = s_tmp;
-  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
 @}
 pcb->root0 = NULL;
 @end example
@@ -1573,7 +1576,7 @@ ikptr_t   s_tmp;
 pcb->root0 = &s_pair;
 @{
   IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
-  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
 @}
 pcb->root0 = NULL;
 @end example
