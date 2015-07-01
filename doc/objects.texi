@@ -1057,8 +1057,8 @@ segments vector with the index of the generation it belongs to.
 
 While nursery segments hold Scheme objects of any type, each
 generational page holds objects of a single ``category'': pairs;
-symbols; bytevectors and strings; vectors, structs and records, ratnums
-and compnums and cflonums; code objects.
+symbols; vectors, structs, records, ratnums, compnums, cflonums; code
+objects; bytevectors, strings, flonums, bignums.
 
 @table @code
 @item ikptr_t heap_nursery_hot_block_base
@@ -1167,7 +1167,7 @@ purposes:
 To make pointer indirection efficient for the underlying platform.
 
 @item
-To have pointer values: with the @math{3} least significant bits set to
+To have pointer values with the @math{3} least significant bits set to
 zero, so that such bits can be used to hold an object's type tag.
 
 @item
@@ -1216,8 +1216,8 @@ of memory at the end of the allocated block is wasted.
 
 @deftypefun {ikpcb_t *} ik_the_pcb (void)
 Return a pointer to the current process control block.  It is rarely
-needed because when calling a C function from Scheme a pointer to the
-@pcb{} is always pushed on the C stack as last argument.
+needed: when calling a C function from Scheme a pointer to the @pcb{} is
+always pushed on the C stack as last argument.
 @end deftypefun
 
 
@@ -1297,15 +1297,14 @@ a reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{aligned_size} must be the
 requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
-If not enough memory is available on the current heap hot block: a
-garbage collection is triggered; then allocation is tried again: if it
-still fails the process is terminated with exit status
-@code{EXIT_FAILURE}.
+If not enough memory is available on the current hot block: a garbage
+collection is triggered; then allocation is tried again: if it still
+fails the process is terminated with exit status @code{EXIT_FAILURE}.
 
 The reserved memory is @strong{not} initialised to safe values: its
 contents have to be considered invalid.  However, notice that the heap's
 nursery is @strong{not} a garbage collection root; so if we leave some
-machine words uninitialised on the heap, outside of Scheme objects:
+machine words uninitialised on the nursery, outside of Scheme objects:
 nothing bad happens, because the garbage collector never sees them.
 @end deftypefun
 
@@ -1316,15 +1315,15 @@ a reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{aligned_size} must be the
 requested number of bytes filtered through @cfunc{IK_ALIGN}.
 
-If not enough memory is available on the current heap hot block: such
-hot block is stored away in a linked list referenced by the @var{pcb},
-and a new hot block is allocated; if such allocation fails: the process
-is terminated with exit status @code{EXIT_FAILURE}.
+If not enough memory is available on the current hot block: such hot
+block is stored away in a linked list referenced by the @var{pcb}, and a
+new hot block is allocated; if such allocation fails: the process is
+terminated with exit status @code{EXIT_FAILURE}.
 
 The reserved memory is @strong{not} initialised to safe values: its
 contents have to be considered invalid.  However, notice that the heap's
 nursery is @strong{not} a garbage collection root; so if we leave some
-machine words uninitialised on the heap, outside of Scheme objects:
+machine words uninitialised on the nursery, outside of Scheme objects:
 nothing bad happens, because the garbage collector never sees them.
 
 We notice explicitly that this function @strong{does not} trigger a
@@ -1375,9 +1374,9 @@ pcb->root = NULL;
 Register in the dirty vector that the memory page containing the
 location referenced by @var{pointer} has been mutated.  This function
 must be called every time we mutate a pair, vector, structure, record,
-ratnum, cflonum, compnum slot by storing in it a reference to another
-non--immediate Scheme object that might be in a newer garbage collection
-generation.
+ratnum, cflonum, compnum, port, symbol slot by storing in it a reference
+to another non--immediate Scheme object that might be in a newer garbage
+collection generation.
 
 If we call this function when there is no need for it: nothing bad will
 happen; the garbage collector will just do some useless work, slowing
