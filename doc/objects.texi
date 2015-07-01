@@ -720,9 +720,9 @@ referencing the first byte in the page @var{X} belongs to.
 
 
 Some memory for use by the Scheme program is allocated through
-@cfunc{mmap} in blocks called @dfn{allocted segments}.  A segment's size
-is a fixed constant which must be defined as an exact multiple of the
-memory allocation granularity used by @cfunc{mmap}; we define the
+@cfunc{mmap} in blocks called @dfn{allocated segments}.  A segment's
+size is a fixed constant which must be defined as an exact multiple of
+the memory allocation granularity used by @cfunc{mmap}; we define the
 preprocessor macro @code{IK_SEGMENT_SIZE} to be such constant.
 
 On Unix platforms we expect @cfunc{mmap}'s allocation granularity to be
@@ -760,19 +760,19 @@ MiB:
 ;;   21098765432109876543210
 @end example
 
-@value{PRJNAME} distinguishes among @dfn{allocated segments} and
+@value{PRJNAME} distinguishes between @dfn{allocated segments} and
 @dfn{logic segments}:
 
 @itemize
 @item
-We assume that @cfunc{mmap} returns pointers such that: the pointer
+We assume @cfunc{mmap} returns pointers such that: the pointer
 references the first byte of a platform's system page; the numeric
 address of the pointer is an exact multiple of @math{4096} (the
 @math{12} least significant bits are zero).
 
 @item
-We request to @cfunc{mmap} to allocate memory in sizes that are
-multiples of the segment size; this memory is composed of @dfn{allocated
+We request @cfunc{mmap} to allocate memory in sizes that are multiples
+of the segment size; this memory is composed of @dfn{allocated
 segments}.
 
 @item
@@ -785,7 +785,8 @@ address @math{0} is part of the first logic segment.
 @end itemize
 
 @noindent
-so, typically, allocated segments are displaced from logic segments:
+so, typically, allocated segments of size @code{IK_SEGMENT_SIZE} are
+displaced from logic segments:
 
 @example
        alloc segment  alloc segment  alloc segment
