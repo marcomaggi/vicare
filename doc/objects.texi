@@ -895,9 +895,17 @@ generation the page belongs to.
 
 @code{segment_vector_base} references the first allocated slot; access
 to the vector with zero--based indexes is performed through
-@code{segment_vector}.  The first slot referenced by
-@code{segment_vector_base} has index different from zero: its index is
-computed with @cfunc{IK_PAGE_INDEX}:
+@code{segment_vector}.
+
+@example
+                     segment vector
+|.................|--------------------|.......| system memory
+     ^             ^
+  segment_vector  segment_vector_base
+@end example
+
+The first slot referenced by @code{segment_vector_base} has index
+different from zero; its index is computed with @cfunc{IK_PAGE_INDEX}:
 
 @example
 pcb->segment_vector[IK_PAGE_INDEX(memory_pointer)]
@@ -907,9 +915,9 @@ pcb->segment_vector[IK_PAGE_INDEX(memory_pointer)]
 to loop over all the slots we can do:
 
 @example
-ikuword_t       lo_idx = IK_PAGE_INDEX(pcb->memory_base);
-ikuword_t       hi_idx = IK_PAGE_INDEX(pcb->memory_end);
-ikuword_t       page_idx;
+ikuword_t  lo_idx = IK_PAGE_INDEX(pcb->memory_base);
+ikuword_t  hi_idx = IK_PAGE_INDEX(pcb->memory_end);
+ikuword_t  page_idx;
 
 for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) @{
   pcb->segment_vector[page_idx];
@@ -935,24 +943,32 @@ is said to be ``dirty''; otherwise it is ``pure''.
 
 @code{dirty_vector_base} references the first allocated slot; access to
 the vector with zero--based indexes is performed through the field
-@code{dirty_vector} (which is also accessible from Scheme code).  The
-first slot referenced by @code{dirty_vector_base} has index different
-from zero: its index is computed with @cfunc{IK_PAGE_INDEX}:
+@code{dirty_vector} (which is also accessible from Scheme code).
 
 @example
-pcb->dirty_vector[IK_PAGE_INDEX(memory_pointer)]
+                       dirty vector
+|.................|--------------------|.......| system memory
+     ^             ^
+  dirty_vector    dirty_vector_base
+@end example
+
+The first slot referenced by @code{dirty_vector_base} has index
+different from zero; its index is computed with @cfunc{IK_PAGE_INDEX}:
+
+@example
+((uint32_t *)(pcb->dirty_vector))[IK_PAGE_INDEX(memory_pointer)]
 @end example
 
 @noindent
 to loop over all the slots we can do:
 
 @example
-ikuword_t       lo_idx = IK_PAGE_INDEX(pcb->memory_base);
-ikuword_t       hi_idx = IK_PAGE_INDEX(pcb->memory_end);
-ikuword_t       page_idx;
+ikuword_t  lo_idx = IK_PAGE_INDEX(pcb->memory_base);
+ikuword_t  hi_idx = IK_PAGE_INDEX(pcb->memory_end);
+ikuword_t  page_idx;
 
 for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) @{
-  pcb->dirty_vector[page_idx];
+  ((uint32_t *)(pcb->dirty_vector))[page_idx];
 @}
 @end example
 
@@ -973,14 +989,65 @@ whenever the hot block is full:
 
 @itemize
 @item
-If a safe allocation is requested (function @cfunc{ik_safe_alloc}): a
-garbage collection is performed and all the objects are moved from the
-nursery into the generational pages.
+If an ``unsafe'' allocation is requested and there is free room in the
+nursery's hot block: the Scheme object is allocated in the nursery's hot
+block.
+
+This is the case of: Scheme object allocation from C language code,
+through the C function @cfunc{ik_unsafe_alloc}.
 
 @item
-If an unsafe allocation is requested (function @cfunc{ik_unsafe_alloc}):
-the current hot block is stored in a linked list of heap blocks and a
-new hot block is allocated.
+If an ``unsafe'' allocation is requested and there is no free room in
+the nursery's hot block:
+
+@enumerate
+@item
+The current hot block is stored away in a linked list of ``full''
+nursery segments.
+
+@item
+A new nursery segment is allocated and registered as empty hot block.
+
+@item
+The Scheme object is allocated in the nursery's hot block.
+@end enumerate
+
+This is the case of: Scheme object allocation from C language code,
+through the C function @cfunc{ik_unsafe_alloc}.
+
+@item
+If a ``safe'' allocation is requested and there is free room in the
+nursery's hot block: the Scheme object is allocated in the nursery's hot
+block.
+
+This is the case of: common Scheme object allocation from Scheme code;
+common Scheme object allocation from C language code, through the C
+function @cfunc{ik_safe_alloc}.
+
+@item
+If a ``safe'' allocation is requested and there is no free room in the
+nursery's hot block:
+
+@enumerate
+@item
+A garbage collection is performed; all the objects are moved from the
+nursery (including all the old full segments) into the generational
+pages of generation 1.
+
+@item
+The current nursery's hot block is reused as empty hot block.
+
+@item
+The old full segments are released or cached for future page
+allocations.
+
+@item
+The Scheme object is allocated in the nursery's hot block.
+@end enumerate
+
+This is the case of: common Scheme object allocation from Scheme code;
+common Scheme object allocation from C language code, through the C
+function @cfunc{ik_safe_alloc}.
 @end itemize
 
 The generational pages are a set of Vicare pages, described by the
@@ -988,16 +1055,22 @@ segments vector and dirty vector, in which objects are moved after they
 survive a garbage collection; every generational page is tagged in the
 segments vector with the index of the generation it belongs to.
 
+While nursery segments hold Scheme objects of any type, each
+generational page holds objects of a single ``category'': pairs;
+symbols; bytevectors and strings; vectors, structs and records, ratnums
+and compnums and cflonums; code objects.
+
 @table @code
 @item ikptr_t heap_nursery_hot_block_base
 @itemx ikuword_t heap_nursery_hot_block_size
-Pointer and size in bytes of the current nursery hot memory block; new
+Pointer and size in bytes of the current nursery's hot memory block; new
 Scheme objects are allocated here.  About the size of the hot block:
 
 @itemize
 @item
 The hot block is initialised to a memory mapped block of size
-@code{IK_HEAPSIZE} bytes; this size is customisable.
+@code{IK_HEAPSIZE} bytes; this size is customisable (@pxref{iklib
+runtime}).
 
 @item
 When the current hot block is full and a call to @cfunc{ik_unsafe_alloc}
