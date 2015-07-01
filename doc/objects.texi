@@ -1665,36 +1665,23 @@ If @var{val} is @code{0} return @code{IK_FALSE}, else return
 
 
 Fixnums are ``small'' exact integers which fit in a single machine word:
-if the word size is @math{4} bytes, @math{30} bits are used for fixnum
-representation; else the word size is @math{8} bytes and @math{61} bits
-are used for fixnum representation.  On a 32-bit platform, @math{30}
-bits are available to store the number:
 
-@example
+@itemize
+@item
+On 32-bit platforms the word size is @math{4} bytes, @math{30} bits are
+used for fixnum representation:
+
+@lisp
 (greatest-fixnum)       @result{} +536870911
 (expt 2 29)             @result{} +536870912
 (- (expt 2 29) 1)       @result{} +536870911
 
 (least-fixnum)          @result{} -536870912
 (- (expt 2 29))         @result{} -536870912
-@end example
-
-@noindent
-on a 64-bit platform, @math{61} bits are available to store the number:
-
-@lisp
-(greatest-fixnum)       @result{} +1152921504606846975
-(expt 2 60)             @result{} +1152921504606846976
-(- (expt 2 60) 1)       @result{} +1152921504606846975
-
-(least-fixnum)          @result{} -1152921504606846976
-(- (expt 2 60))         @result{} -1152921504606846976
 @end lisp
 
-@itemize
-@item
-With machine words 32-bit wide, which means the word size is @math{4}
-bytes, the representation of a fixnum is:
+@noindent
+the representation of a fixnum is:
 
 @example
  30 bits fixnum representation
@@ -1709,8 +1696,20 @@ the two least significant bits are set to zero: this ``tags'' the
 machine words which embed fixnums.
 
 @item
-With machine words 64-bit wide, which means the word size is @math{8}
-bytes, the representation of a fixnum is:
+On 64-bit platforms the word size is @math{8} bytes, @math{61} bits are
+used for fixnum representation:
+
+@lisp
+(greatest-fixnum)       @result{} +1152921504606846975
+(expt 2 60)             @result{} +1152921504606846976
+(- (expt 2 60) 1)       @result{} +1152921504606846975
+
+(least-fixnum)          @result{} -1152921504606846976
+(- (expt 2 60))         @result{} -1152921504606846976
+@end lisp
+
+@noindent
+the representation of a fixnum is:
 
 @example
          61 bits fixnum representation
@@ -1751,8 +1750,8 @@ length_in_bytes = number_of_words *  fx_scale
 
 @noindent
 this allows us, for example, to take the fixnum representing the number
-of items in a vector and consider it directly as size of the vector's
-data area in bytes.
+of items in a vector and, at the C language level, consider it directly
+as size of the vector's data area in bytes.
 
 @c ------------------------------------------------------------
 
@@ -1815,8 +1814,8 @@ Examples:
 
 @example
 iksword_t  N = 123L;
-ikptr_t    P = IK_FIX(N);
-iksword_t  M = IK_UNFIX(P);
+ikptr_t    S = IK_FIX(N);
+iksword_t  M = IK_UNFIX(S);
 @end example
 
 
@@ -1833,7 +1832,7 @@ Convert an @ikptr{} value holding a fixnum into a fixnum of type
 
 
 @deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr_t @var{ref})
-Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
+Evaluate to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
 just tests if the least significant bits in the tag are set to zero.
 @end deftypefn
 
