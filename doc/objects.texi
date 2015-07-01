@@ -532,8 +532,8 @@ attributes.
 @cindex @code{IK_CHUNK_SIZE}, C preprocessor symbol
 
 
-In this section we discuss some private C preprocessor symbols and
-related to memory allocation and garbage collection concepts.
+In this section we discuss some private C preprocessor symbols related
+to memory allocation and garbage collection concepts.
 
 The preprocessor constant @code{IK_MMAP_ALLOCATION_GRANULARITY} is
 determined by the @gnu{} Autotools's @command{configure} script and
@@ -584,7 +584,7 @@ notice how many bits are set to zero in the binary representation of
 
 @noindent
 the constant @math{4096} is used often in the code, so the preprocessor
-symbol @code{IK_CHUNK_SIZE} is defined to it.
+symbol @code{IK_CHUNK_SIZE} is also defined to it.
 
 @value{PRJNAME}'s page size is @strong{not} defined to be equal to the
 system page size, but:
@@ -639,8 +639,8 @@ is @math{12}; so for the example sizes @math{4000}, @math{8000} and
 
 @noindent
 all the tagged pointers hold the tag in the @math{3} least significant
-bits, so right--shifting by @code{IK_PAGESIZE} removes the tag:
-right--shifting by @code{IK_PAGESIZE} works fine on both tagged and
+bits, so right--shifting by @code{IK_PAGESHIFT} removes the tag:
+right--shifting by @code{IK_PAGESHIFT} works fine on both tagged and
 untagged pointers.
 
 
@@ -683,12 +683,12 @@ Given a number of @value{PRJNAME} pages: return the number of bytes
 
 
 @deftypefn {C Preprocessor Macro} ikuword_t IK_ALIGN_TO_NEXT_PAGE (ikuword_t @var{X})
-Given a pointer or tagged pointer @var{X} return an untagged pointer
+Given a pointer or tagged pointer @var{X}: return an untagged pointer
 referencing the first byte in the page right after the one @var{X}
 belongs to.
 
 @example
-    page     page     page
+   page     page     page
 |--------|--------|--------|
                ^   ^
                X   |
