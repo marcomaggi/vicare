@@ -1855,7 +1855,7 @@ are the pair tag.
 
 The empty list is not a pair: it is a special constant fitting in a
 single @ikptr{} machine word, and it is defined by the preprocessor
-symbol @code{IK_NULL_OBJECT}.
+symbol @code{IK_NULL_OBJECT}, shortly @code{IK_NULL}.
 
 @c ------------------------------------------------------------
 
@@ -1864,25 +1864,12 @@ symbol @code{IK_NULL_OBJECT}.
 Pairs are allocated as follows, leaving the car and cdr uninitialised:
 
 @example
-ikpcb_t *  pcb = ik_the_pcb();
-ikptr_t    s_pair;
-
-s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
+ikpcb_t *  pcb    = ik_the_pcb();
+ikptr_t    s_pair = IKA_PAIR_ALLOC(pcb);
 @end example
 
 @noindent
 the car and cdr of a pair are extracted as follows:
-
-@example
-ikptr_t   s_pair = ...;
-ikptr_t   s_car, s_cdr;
-
-s_car = IK_REF(s_pair, off_car);
-s_cdr = IK_REF(s_pair, off_cdr);
-@end example
-
-@noindent
-or as follows:
 
 @example
 ikptr_t   s_pair = ...;
@@ -1901,23 +1888,11 @@ ikptr_t   s_pair = ...;
 ikptr_t   s_car  = ...;
 ikptr_t   s_cdr  = ...;
 
-IK_REF(s_pair, off_car) = s_car;
-IK_REF(s_pair, off_cdr) = s_car;
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
-@end example
-
-@noindent
-or as follows:
-
-@example
-ikpcb_t * pcb    = ...;
-ikptr_t   s_pair = ...;
-ikptr_t   s_car  = ...;
-ikptr_t   s_cdr  = ...;
-
 IK_CAR(s_pair) = s_car;
+ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+
 IK_CDR(s_pair) = s_car;
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_pair));
 @end example
 
 
@@ -1970,12 +1945,28 @@ macros can appear both as operands and as left--side of assignments.
 @end deftypefn
 
 
+@deftypefn {Preprocessor Macro} ikptr_t IK_CAR_PTR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CDR_PTR (ikptr_t @var{pair})
+Evaluate to the pointers to the memory locations holding the car and cdr
+of a pair.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr_t IK_CAAR (ikptr_t @var{pair})
 @deftypefnx {Preprocessor Macro} ikptr_t IK_CDAR (ikptr_t @var{pair})
 @deftypefnx {Preprocessor Macro} ikptr_t IK_CADR (ikptr_t @var{pair})
 @deftypefnx {Preprocessor Macro} ikptr_t IK_CDDR (ikptr_t @var{pair})
 Return, respectively: the car of the car, the cdr of the car, the car of
 the cdr, the cdr of the cdr.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_CAAR_PTR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CDAR_PTR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CADR_PTR (ikptr_t @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CDDR_PTR (ikptr_t @var{pair})
+Evaluate to the pointers to the memory locations hokding the caar, cdar,
+cadr and cddr of the pair.
 @end deftypefn
 
 @c ------------------------------------------------------------
@@ -1995,7 +1986,7 @@ These functions @strong{do not} call
 @end deftypefun
 
 
-@deftypefun long ik_list_length (ikptr_t @var{list})
+@deftypefun ikuword_t ik_list_length (ikptr_t @var{list})
 Return the length of the proper list referenced by @var{list}.  Do not
 handle circular lists.  If the length exceeds @code{LONG_MAX}: terminate
 the process with @cfunc{ik_abort}.
@@ -2050,15 +2041,17 @@ The suggested general way to allocate and initialise a pair is as
 follows:
 
 @example
-ikpcb_t * pcb    = ik_the_pcb();
-ikptr_t   s_pair = ika_pair_alloc(pcb);
+ikpcb_t * pcb   = ...;
+ikptr_t   s_pair;
 
+s_pair = ika_pair_alloc(pcb);
 pcb->root0 = &s_pair;
 @{
-  IK_ASS(IK_CAR(s_pair), allocate_and_build_the_car(pcb));
-  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
-  IK_ASS(IK_CDR(s_pair), allocate_and_build_the_cdr(pcb));
-  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+  IK_ASS(IK_CAR(s_pair), ...);
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+
+  IK_ASS(IK_CDR(s_pair), ...);
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_pair));
 @}
 pcb->root0 = NULL;
 @end example
@@ -2084,10 +2077,10 @@ Let's say we need to build a list of bytevectors from @asciiz{} strings
 in the array @code{argv} and there are @code{argc} of them:
 
 @example
-ikpcb_t *  pcb  = ik_the_pcb();
-char **  argv = ...;
-long     argc = ...;
-ikptr_t    s_list;
+ikpcb_t * pcb  = ik_the_pcb();
+char **   argv = ...;
+long      argc = ...;
+ikptr_t   s_list;
 
 if (argc) @{
   ikptr_t  s_spine;
@@ -2100,10 +2093,10 @@ if (argc) @{
     for (i=0; i<argc;) @{
       IK_ASS(IK_CAR(s_spine),
              ika_bytevector_from_cstring(pcb, argv[i]));
-      ik_signal_dirt_in_page_of_pointer(pcb, s_spine);
+      ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_spine));
       if (++i < argc) @{
         IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
-        ik_signal_dirt_in_page_of_pointer(pcb, s_spine);
+        ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_spine));
         s_spine = IK_CDR(s_spine);
       @} else @{
         IK_CDR(s_spine) = IK_NULL_OBJECT;
