@@ -441,6 +441,25 @@ We can programmatically change this setting with
 @func{automatic-garbage-collection} (@pxref{iklib gc,
 automatic-garbage-collection}).
 
+@item scheme-heap-nursery-size=@var{num-of-bytes}
+@cindex Command line option @option{scheme-heap-nursery-size}
+@cindex @option{scheme-heap-nursery-size}, command line option
+Configure the Scheme heap's nursery hot memory block size.  The value
+@var{num-of-bytes} must be a positive exact integer fitting a
+@code{signed long} data type, greater than @math{3} @value{PRJNAME}'s
+page sizes, @math{4096 * 3 = 12288}.  The given @var{num-of-bytes} value
+is normalised by rounding it to the least exact multiple of @math{4096}
+greater than @var{num-of-bytes}.
+
+@item scheme-stack-size=@var{num-of-bytes}
+@cindex Command line option @option{scheme-stack-size}
+@cindex @option{scheme-stack-size}, command line option
+Configure the Scheme stack size.  The value @var{num-of-bytes} must be a
+positive exact integer fitting a @code{signed long} data type, greater
+than @math{3} @value{PRJNAME}'s page sizes, @math{4096 * 3 = 12288}.
+The given @var{num-of-bytes} value is normalised by rounding it to the
+least exact multiple of @math{4096} greater than @var{num-of-bytes}.
+
 @item enable-runtime-messages
 @itemx disable-runtime-messages
 @cindex Command line option @code{enable-runtime-messages}
@@ -450,27 +469,6 @@ automatic-garbage-collection}).
 Enable or disable printing to the standard error file descriptor some
 debugging messages from the C language run--time program.
 @end table
-
-@c ------------------------------------------------------------------------
-
-@item --scheme-heap-nursery-size @var{num-of-bytes}
-@cindex Command line option @option{--scheme-heap-nursery-size}
-@cindex @option{--scheme-heap-nursery-size}, command line option
-Configure the Scheme heap's nursery hot memory block size.  The value
-@var{num-of-bytes} must be a positive exact integer fitting a
-@code{signed long} data type, greater than @math{3} @value{PRJNAME}'s
-page sizes, @math{4096 * 3 = 12288}.  The given @var{num-of-bytes} value
-is normalised by rounding it to the least exact multiple of @math{4096}
-greater than @var{num-of-bytes}.
-
-@item --scheme-stack-size @var{num-of-bytes}
-@cindex Command line option @option{--scheme-stack-size}
-@cindex @option{--scheme-stack-size}, command line option
-Configure the Scheme stack size.  The value @var{num-of-bytes} must be a
-positive exact integer fitting a @code{signed long} data type, greater
-than @math{3} @value{PRJNAME}'s page sizes, @math{4096 * 3 = 12288}.
-The given @var{num-of-bytes} value is normalised by rounding it to the
-least exact multiple of @math{4096} greater than @var{num-of-bytes}.
 
 @c ------------------------------------------------------------------------
 

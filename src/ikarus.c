@@ -31,7 +31,7 @@ extern ikuword_t	ik_customisable_heap_nursery_size;
 extern ikuword_t	ik_customisable_stack_size;
 
 static ikuword_t	normalise_number_of_bytes_argument (const char * argument_description,
-							    int i, int argc, char** argv);
+							    int i, int argc, char** argv, int offset);
 
 
 int
@@ -70,16 +70,6 @@ main (int argc, char** argv)
         exit(2);
       }
     }
-    else if (0 == strcmp(argv[i], "--scheme-heap-nursery-size")) {
-      ikuword_t	num_of_bytes = normalise_number_of_bytes_argument("customisable Scheme heap nursery size", i, argc, argv);
-      ik_customisable_heap_nursery_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
-      ++i;
-    }
-    else if (0 == strcmp(argv[i], "--scheme-stack-size")) {
-      ikuword_t	num_of_bytes = normalise_number_of_bytes_argument("customisable Scheme stack size", i, argc, argv);
-      ik_customisable_stack_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
-      ++i;
-    }
     else if (0 == strcmp(argv[i], "--option")) {
       if (1+i < argc) {
 	if      (0 == strcmp(argv[1+i], "enable-automatic-gc")) {
@@ -98,6 +88,18 @@ main (int argc, char** argv)
 	}
 	else if (0 == strcmp(argv[1+i], "disable-runtime-messages")) {
 	  ik_enabled_runtime_messages = 0;
+	  ++i;
+	}
+	else if (0 == strncmp(argv[1+i], "scheme-heap-nursery-size=", strlen("scheme-heap-nursery-size="))) {
+	  int		offset       = strlen("scheme-heap-nursery-size=");
+	  ikuword_t	num_of_bytes = normalise_number_of_bytes_argument("customisable Scheme heap nursery size", i, argc, argv, offset);
+	  ik_customisable_heap_nursery_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
+	  ++i;
+	}
+	else if (0 == strncmp(argv[1+i], "scheme-stack-size=", strlen("scheme-stack-size="))) {
+	  int		offset       = strlen("scheme-stack-size=");
+	  ikuword_t	num_of_bytes = normalise_number_of_bytes_argument("customisable Scheme stack size", i, argc, argv, offset);
+	  ik_customisable_stack_size = IK_ALIGN_TO_NEXT_PAGE(num_of_bytes);
 	  ++i;
 	}
 	else {
@@ -130,14 +132,14 @@ main (int argc, char** argv)
 
 static ikuword_t
 normalise_number_of_bytes_argument (const char * argument_description,
-				    int i, int argc, char** argv)
+				    int i, int argc, char** argv, int offset)
 {
   if (1+i < argc) {
     ik_long	num_of_bytes;
     ikuword_t	normalised_num_of_bytes;
     char *	tail_ptr;
     errno = 0;
-    num_of_bytes = strtol(argv[1+i], &tail_ptr, 10);
+    num_of_bytes = strtol(offset + argv[1+i], &tail_ptr, 10);
     IK_RUNTIME_MESSAGE("argument to command line option for %s: %ld bytes",
 			 argument_description, num_of_bytes);
     if (errno) {
