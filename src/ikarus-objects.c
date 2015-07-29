@@ -620,7 +620,7 @@ ikrt_bytevector_from_base64 (ikptr_t s_in, ikpcb_t * pcb)
 int
 ik_is_vector (ikptr_t s_vec)
 {
-  return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(IK_REF(s_vec, -vector_tag));
+  return (vector_tag == (s_vec & vector_mask)) && IK_IS_FIXNUM(IK_REF(s_vec, off_vector_length));
 }
 
 /* ------------------------------------------------------------------ */

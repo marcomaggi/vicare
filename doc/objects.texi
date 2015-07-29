@@ -2161,9 +2161,9 @@ compute the aligned block size:
 
 @example
 ikpcb_t * pcb        = ik_the_pcb();
-long    bv_len     = the_number_of_bytes;
-long    block_size = disp_bytevector_data + bv_len + 1;
-lont    align_size = IK_ALIGN(block_size);
+ikuword_t bv_len     = the_number_of_bytes;
+ikuword_t block_size = disp_bytevector_data + bv_len + 1;
+ikuword_t align_size = IK_ALIGN(block_size);
 ikptr_t   bv = ik_safe_alloc(pcb, align_size) | bytevector_tag;
 @end example
 
@@ -2179,16 +2179,16 @@ looks like this:
 
 @example
 ikptr_t
-ika_bytevector_alloc (ikpcb_t * pcb, long bv_len)
+ika_bytevector_alloc (ikpcb_t * pcb, ikuword_t bv_len)
 @{
-  long   align_size;
-  ikptr_t  s_bv;
-  char * data;
+  ikuword_t     align_size;
+  ikptr_t       s_bv;
+  char *        data;
   align_size = IK_ALIGN(disp_bytevector_data + bv_len + 1);
   s_bv       = ik_safe_alloc(pcb, align_size)
                | bytevector_tag;
-  IK_REF(s_bv, off_bytevector_length) = IK_FIX(bv_len);
-  data = (char *)(long)(s_bv + off_bytevector_data);
+  IK_BYTEVECTOR_LENGTH_FX(s_bv) = IK_FIX(bv_len);
+  data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
   data[bv_len] = '\0';
   return s_bv;
 @}
@@ -2198,20 +2198,16 @@ ika_bytevector_alloc (ikpcb_t * pcb, long bv_len)
 to acquire the number of bytes we do:
 
 @example
-ikptr_t  s_bv = the_bytevector;
-long   bv_len;
-
-bv_len = IK_UNFIX(IK_REF(s_bv, off_bytevector_length));
+ikptr_t    s_bv   = the_bytevector;
+ikuword_t  bv_len = IK_BYTEVECTOR_LENGTH(s_bv);
 @end example
 
 @noindent
 and to access the data area we do:
 
 @example
-ikptr_t      s_bv = the_bytevector;
-uint8_t *  data_area;
-
-data_area = (uint8_t *)(long)(s_bv + off_bytevector_data);
+ikptr_t    s_bv   = the_bytevector;
+uint8_t *  octets = IK_BYTEVECTOR_DATA_UINT8P(s_bv);
 @end example
 
 
@@ -2260,7 +2256,7 @@ Evaluate to true if @var{obj} is a bytevector.
 @end deftypefun
 
 
-@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_LENGTH (ikptr_t @var{bv})
+@deftypefn {Preprocessor Macro} ikuword_t IK_BYTEVECTOR_LENGTH (ikptr_t @var{bv})
 Return the number of bytes in the data area of @var{bv}.
 @end deftypefn
 
@@ -2271,8 +2267,8 @@ Return a fixnum representing the number of bytes in the data area of
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_DATA (ikptr_t @var{bv})
-Return a integer representing the memory address of the first byte in
+@deftypefn {Preprocessor Macro} ikuword_t IK_BYTEVECTOR_DATA (ikptr_t @var{bv})
+Return an integer representing the memory address of the first byte in
 the data area of @var{bv}.
 @end deftypefn
 
@@ -2289,7 +2285,7 @@ Return a pointer referencing the first byte in the data area of
 @subsubheading Operations on bytevectors
 
 
-@deftypefun ikptr_t ika_bytevector_alloc (ikpcb_t * @var{pcb}, long @var{requested_number_of_bytes})
+@deftypefun ikptr_t ika_bytevector_alloc (ikpcb_t * @var{pcb}, ikuword_t @var{requested_number_of_bytes})
 Allocate, initialise and return a new bytevector capable of holding the
 specified number of bytes.  The contents of the data area are
 unspecified.  The requested bytevector length @strong{must} be in the
@@ -2389,7 +2385,7 @@ vector length, interpreted as raw signed integer, also represents the
 number of bytes in the data area.
 
 A fixnum representing the index of slot N, interpreted as raw signed
-integer, also represents the offset in bytes of the firts byte of the
+integer, also represents the offset in bytes of the first byte of the
 slot with respect the beginning of the data area.
 
 @c ------------------------------------------------------------
@@ -2401,12 +2397,12 @@ compute the whole size of the data area, add to it room for meta data
 and finally compute the aligned block size:
 
 @example
-ikpcb_t * pcb            = ik_the_pcb();
-long    length         = the_number_of_items;
-long    requested_size = wordsize * length;
-long    block_size     = disp_vector_data + requested_size;
-long    align_size     = IK_ALIGN(block_size);
-ikptr_t   vec = ik_safe_alloc(pcb, align_size) | vector_tag;
+ikpcb_t *  pcb            = ik_the_pcb();
+ikuword_t  length         = the_number_of_items;
+ikuword_t  requested_size = wordsize * length;
+ikuword_t  block_size     = disp_vector_data + requested_size;
+ikuword_t  align_size     = IK_ALIGN(block_size);
+ikptr_t s_vec = ik_safe_alloc(pcb, align_size) | vector_tag;
 @end example
 
 @noindent
@@ -2420,27 +2416,24 @@ fixnum, so usually a full allocation looks like this:
 
 @example
 ikptr_t
-ika_vector_alloc (ikpcb_t * pcb, long number_of_items)
+ika_vector_alloc (ikpcb_t * pcb, ikuword_t number_of_items)
 @{
-  long  align_size;
-  ikptr_t s_len;
-  ikptr_t s_vec;
-  s_len      = IK_FIX(number_of_items);
-  align_size = IK_ALIGN(disp_vector_data + s_len);
-  s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
-  IK_REF(s_vec, off_vector_length) = s_len;
+  ikptr_t    s_len      = IK_FIX(number_of_items);
+  ikuword_t  align_size = IK_ALIGN(disp_vector_data + s_len);
+  ikptr_t s_vec = ik_safe_alloc(pcb, align_size) | vector_tag;
+  IK_VECTOR_LENGTH_FX(s_vec) = s_len;
   return s_vec;
 @}
 @end example
 
 @noindent
 notice how we exploit the fact that the fixnum representing the number
-of elements equals the number of bytes in the data area needed to hold
-such elements.
+of elements, interpreted as raw integer, equals the number of bytes in
+the data area needed to hold such elements.
 
 The allocation operations described above leaves the data area
 uninitialised: its content is undefined.  This is bad if the garbage
-collector moves the newly built vector before the elements are
+collector processes the newly built vector before the elements are
 initialised to a correct Scheme value.  The following function resets
 the data area to a vector of zero fixnums:
 
@@ -2449,7 +2442,7 @@ ikptr_t
 ikrt_vector_clean (ikptr_t s_vec)
 @{
   ikptr_t	s_len = IK_VECTOR_LENGTH_FX(s_vec);
-  memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
+  memset(IK_VECTOR_DATA_VOIDP(s_vec), 0, s_len);
   return s_vec;
 @}
 @end example
@@ -2464,9 +2457,43 @@ IK_REF(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
 @end example
 
 @noindent
+or, shorter:
+
+@example
+ikptr_t  s_vec = the_vector;
+IK_ITEM(s_vec, 0) = IK_FIX(10);
+IK_ITEM(s_vec, 1) = IK_FIX(20);
+IK_ITEM(s_vec, 2) = IK_FIX(30);
+@end example
+
+@noindent
 in this case there is no need to call
-@cfunc{ik_signal_dirt_in_page_of_pointer} because the values are
-fixnums.  To retrieve the item at index @math{2} we do:
+@cfunc{ik_signal_dirt_in_page_of_pointer} because the values are fixnums
+(which are immediate Scheme objects).  To fill the slots of a vector
+with Scheme objects allocated on the heap we must do:
+
+@example
+ikpcb_t *  pcb   = ik_the_pcb();
+ikptr_t    s_vec = the_vector;
+
+pcb->root0 = &s_vec;
+@{
+  IK_ASS(IK_ITEM(s_vec, 0),
+      ika_bytevector_from_cstring(pcb, "A"));
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_ITEM_PTR(s_vec, 0));
+
+  IK_ASS(IK_ITEM(s_vec, 1),
+      ika_bytevector_from_cstring(pcb, "B"));
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_ITEM_PTR(s_vec, 1));
+
+  IK_ASS(IK_ITEM(s_vec, 2),
+      ika_bytevector_from_cstring(pcb, "B"));
+  ik_signal_dirt_in_page_of_pointer(pcb, IK_ITEM_PTR(s_vec, 2));
+@}
+pcb->root0 = NULL;
+@end example
+
+To retrieve the item at index @math{2} we do:
 
 @example
 ikptr_t  s_vec  = the_vector;
@@ -2474,17 +2501,41 @@ ikptr_t  s_item = IK_REF(s_vec, off_vector_data + 2 * wordsize);
 @end example
 
 @noindent
-and to retrieve the vector length:
+or, shorter:
 
 @example
 ikptr_t  s_vec  = the_vector;
-ikptr_t  s_len  = IK_REF(s_vec, off_vector_length);
-long   length = IK_UNFIX(s_len);
+ikptr_t  s_item = IK_ITEM(s_vec, 2);
+@end example
+
+To retrieve the vector length:
+
+@example
+ikptr_t    s_vec  = the_vector;
+ikptr_t    s_len  = IK_REF(s_vec, off_vector_length);
+ikuword_t  length = IK_UNFIX(s_len);
+@end example
+
+@noindent
+or, shorter:
+
+@example
+ikptr_t    s_vec  = the_vector;
+ikptr_t    s_len  = IK_VECTOR_LENGTH_FX(s_len);
+ikuword_t  length = IK_UNFIX(s_len);
+@end example
+
+@noindent
+or, even shorter:
+
+@example
+ikptr_t    s_vec  = the_vector;
+ikuword_t  length = IK_VECTOR_LENGTH(s_len);
 @end example
 
 
 @defvr {Preprocessor Symbol} vector_tag
-An integer used to tag @ikptr{} references  to vector memory blocks.
+An integer used to tag @ikptr{} references to vector memory blocks.
 @end defvr
 
 
@@ -2517,31 +2568,45 @@ pointer to the first byte of the data area.
 @subsubheading Convenience preprocessor macros
 
 
+@deftypefn {Preprocessor Macro} int IK_IS_VECTOR (ikptr_t @var{vec})
+Evaluate to true if @var{vec} is a reference to a vector object.  This
+predicate tests that @var{vec} is tagged as vector reference and that
+the first machine word in the referenced memory block is a fixnum.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr_t IK_VECTOR_LENGTH_FX (ikptr_t @var{vec})
 Return a fixnum representing the number of items in the vector
 @var{vec}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_VECTOR_LENGTH (ikptr_t @var{vec})
+@deftypefn {Preprocessor Macro} ikuword_t IK_VECTOR_LENGTH (ikptr_t @var{vec})
 Return an integer representing the number of items in the vector
 @var{vec}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_ITEM (ikptr_t @var{vec}, long @var{idx})
+@deftypefn {Preprocessor Macro} ikptr_t IK_ITEM (ikptr_t @var{vec}, ikuword_t @var{idx})
 Evaluate to the item at index @var{idx} in the vector @var{vec}.  A use
 of this macro can appear both as operand and as left--side of an
 assignment; example:
 
 @example
-long    idx   = the_index;
-ikptr_t   s_vec = the_vector;
-ikptr_t   fx;
+ikuword_t  idx   = the_index;
+ikptr_t    s_vec = the_vector;
+ikptr_t    fx;
 
 IK_ITEM(s_vec, idx) = IK_FIX(10);
 fx = IK_ITEM(s_vec, idx);
 @end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {ikptr_t *} IK_ITEM_PTR (ikptr_t @var{vec}, ikuword_t @var{idx})
+Return a pointer to the machine word holding the vector item at index
+@var{idx}.  This is especially useful to build the second argument in a
+call to @cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefn
 
 @c ------------------------------------------------------------
@@ -2549,8 +2614,8 @@ fx = IK_ITEM(s_vec, idx);
 @subsubheading Operations on vectors
 
 
-@deftypefun ikptr_t ika_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
-@deftypefunx ikptr_t iku_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr_t ika_vector_alloc_no_init (ikpcb_t * @var{pcb}, ikuword_t @var{number_of_items})
+@deftypefunx ikptr_t iku_vector_alloc_no_init (ikpcb_t * @var{pcb}, ikuword_t @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
 
@@ -2559,8 +2624,8 @@ These functions @strong{do not} call
 @end deftypefun
 
 
-@deftypefun ikptr_t ika_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
-@deftypefunx ikptr_t iku_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr_t ika_vector_alloc_and_init (ikpcb_t * @var{pcb}, ikuword_t @var{number_of_items})
+@deftypefunx ikptr_t iku_vector_alloc_and_init (ikpcb_t * @var{pcb}, ikuword_t @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.
