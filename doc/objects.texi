@@ -166,7 +166,7 @@ Return an integer representing the @math{3} least significant bits of an
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_REF (ikptr_t @var{value_ref}, long @var{byte_offset})
+@deftypefn {Preprocessor Macro} ikptr_t IK_REF (ikptr_t @var{value_ref}, ikuword_t @var{byte_offset})
 Getter and setter for machine words.  Interpret @var{value_ref} as a
 pointer to an array of @ikptr{} values and locate the value at the
 zero--based @var{byte_offset}.  A use of this macro can appear both as
@@ -245,6 +245,14 @@ and so:
 @example
 s_vector + off_vector_length = p_vector + disp_vector_length
 @end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {ikptr_t *} IK_PTR (ikptr_t @var{value_ref}, ikuword_t @var{byte_offset})
+Like @cfunc{IK_REF}, but rather than returning the machine word at
+offset @var{byte_offset} from @var{value_ref}, return a pointer to it.
+This is especially useful to build the second argument in a call to
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefn
 
 @c ------------------------------------------------------------
