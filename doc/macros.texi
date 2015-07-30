@@ -607,6 +607,14 @@ Revised^6 Report on the algorithmic language Scheme
 @code{ikchar_t}
 @end macro
 
+@macro ikuword{}
+@code{ikuword_t}
+@end macro
+
+@macro iksword{}
+@code{iksword_t}
+@end macro
+
 @macro oob{}
 @acronym{OOB}
 @end macro

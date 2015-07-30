@@ -3116,18 +3116,18 @@ A Scheme character has two representations:
 @itemize
 @item
 As a standalone Scheme object, it is a machine word whose least
-significant bits are set to the character tag and whose most significant
-bits are set to the character's Unicode code point.
+significant bits are set to the character's tag and whose most
+significant bits are set to the character's Unicode code point.
 
 @item
 When embedded in a Scheme string, it is a 32-bit value whose least
-significant bits are set to the character tag and whose most significant
-bits are set to the character's Unicode code point.
+significant bits are set to the character's tag and whose most
+significant bits are set to the character's Unicode code point.
 @end itemize
 
 @noindent
-the least significant 32 bits of the two representations are equal.
-@ref{unicode} for details on Unicode.
+the least significant 32 bits of the two representations are equal
+(@pxref{unicode}).
 
 Let's say that machine words are 32-bit values, which means the word
 size is @math{4} bytes; then the representation of a character is:
@@ -3163,18 +3163,18 @@ converted to a 32-bit integer of type @ikchar{}.
 Standalone characters are encoded into @ikptr{} values as follows:
 
 @example
-unsigned long   unicode_code_point = the_code_point;
-ikptr_t           s_char;
+ikuword_t  unicode_code_point = the_code_point;
+ikptr_t    s_char;
 
 s_char = (unicode_code_point << char_shift) | char_tag;
 @end example
 
 @noindent
-decoded to @code{unsigned long} values as follows:
+decoded to @ikuword{} values as follows:
 
 @example
-ikptr_t           s_char = the_character;
-unsigned long   unicode_code_point;
+ikptr_t    s_char = the_character;
+ikuword_t  unicode_code_point;
 
 unicode_code_point = s_char >> char_shift;
 @end example
@@ -3191,22 +3191,22 @@ else
   it_is_not();
 @end example
 
-Characters from a Scheme string are decoded from @ikchar{} to
-@code{unsigned long} as follows:
+Characters from a Scheme string are decoded from @ikchar{} to @ikuword{}
+as follows:
 
 @example
-ikchar_t        ch = the_32bit_character;
-unsigned long   unicode_code_point;
+ikchar_t   ch = the_32bit_character;
+ikuword_t  unicode_code_point;
 
 unicode_code_point = s_char >> char_shift;
 @end example
 
 @noindent
-and encoded from @code{unsigned long} to @ikchar{} as follows:
+and encoded from @ikuword{} to @ikchar{} as follows:
 
 @example
-unsigned long   unicode_code_point = the_code_point;
-ikchar_t        ch;
+ikuword_t  unicode_code_point = the_code_point;
+ikchar_t   ch;
 
 ch = (ikchar_t)((unicode_code_point << char_shift) | char_tag);
 @end example
@@ -3242,15 +3242,15 @@ Evaluate to true if @var{X} is a Scheme character.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_CHAR_FROM_INTEGER (unsigned long @var{X})
-@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_TO_INTEGER (ikptr_t @var{X})
-Convert a Scheme character to and from an @code{unsigned long} value
+@deftypefn {Preprocessor Macro} ikptr_t IK_CHAR_FROM_INTEGER (ikuword_t @var{X})
+@deftypefnx {Preprocessor Macro} {ikuword_t} IK_CHAR_TO_INTEGER (ikptr_t @var{X})
+Convert a Scheme character to and from an @code{ikuword_t} value
 representing the Unicode code point.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32_FROM_INTEGER (unsigned long @var{X})
-Convert a @code{unsigned long} value representing the Unicode code
+@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32_FROM_INTEGER (ikuword_t @var{X})
+Convert a @code{ikuword_t} value representing the Unicode code
 point into a 32-bit integer representing a Scheme character to be stored
 into a string.
 @end deftypefn
@@ -3262,7 +3262,7 @@ return a 32-bit value representing the Unicode code point.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {unsigned long} IK_UNICODE_FROM_ASCII (char @var{ch})
+@deftypefn {Preprocessor Macro} {ikuword_t} IK_UNICODE_FROM_ASCII (char @var{ch})
 Return an unsigned integer representing the Unicode code point
 corresponding to the given @ascii{} character.
 @end deftypefn
