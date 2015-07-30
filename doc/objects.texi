@@ -3308,12 +3308,12 @@ compute the whole size of the data area, add to it room for meta data
 and finally compute the aligned block size:
 
 @example
-ikpcb_t * pcb            = ik_the_pcb();
-long    length         = the_number_of_chars;
-long    requested_size = sizeof(ikchar_t) * length;
-long    block_size     = disp_string_data + requested_size;
-long    align_size     = IK_ALIGN(block_size);
-ikptr_t   str = ik_safe_alloc(pcb, align_size) | string_tag;
+ikpcb_t *  pcb            = ik_the_pcb();
+ikuword_t  length         = the_number_of_chars;
+ikuword_t  requested_size = sizeof(ikchar_t) * length;
+ikuword_t  block_size     = disp_string_data + requested_size;
+ikuword_t  align_size     = IK_ALIGN(block_size);
+ikptr_t    s_str = ik_safe_alloc(pcb, align_size) | string_tag;
 @end example
 
 @noindent
@@ -3327,23 +3327,28 @@ fixnum, so usually a full allocation looks like this:
 
 @example
 ikptr_t
-ik_string_alloc (ikpcb_t * pcb, long number_of_chars)
+ika_string_alloc (ikpcb_t * pcb, ikuword_t number_of_chars)
 @{
-  long  align_size;
-  ikptr_t str;
-  align_size = IK_ALIGN(disp_string_data
-                        + number_of_chars * sizeof(ikchar_t));
-  str        = ik_safe_alloc(pcb, align_size) | string_tag;
-  IK_REF(str, off_string_length) = IK_FIX(number_of_chars);
-  return str;
+  ikuword_t align_size = IK_ALIGN(disp_string_data + \
+    number_of_chars * sizeof(ikchar_t));
+  ikptr_t   s_str = ik_safe_alloc(pcb, align_size) | string_tag;
+  IK_STRING_LENGTH_FX(s_str) = IK_FIX(number_of_chars);
+  return s_str;
 @}
 @end example
+
+@noindent
+which will leave the characters not initialised: this is not a problem
+from the garbage collector point of view.  Strings are allocated on the
+Scheme heap's nursery, which is not a garbage collection root; this
+means we can leave uninitialised the memory words allocated by
+@cfunc{ik_safe_alloc} to round the block size to the aligned size.
 
 To fill a string of @math{3} chars with characters we should do:
 
 @example
 ikptr_t     s_str = the_string;
-ikchar_t *  ch    = (ikchar_t*)(s_str + off_string_data);
+ikchar_t *  ch    = IK_STRING_DATA_IKCHARP(s_str);
 
 ch[0] = IK_CHAR32_FROM_INTEGER(10);
 ch[1] = IK_CHAR32_FROM_INTEGER(20);
@@ -3354,9 +3359,9 @@ ch[2] = IK_CHAR32_FROM_INTEGER(30);
 to retrieve the character at index @math{2} we do:
 
 @example
-long      index  = 2;
+ikuword_t   index  = 2;
 ikptr_t     s_str  = the_string;
-ikchar_t *  ch     = (ikchar_t*)(s_str + off_string_data);
+ikchar_t *  ch     = IK_STRING_DATA_IKCHARP(s_str);
 ikptr_t     s_char = (ikptr_t)ch[index];
 @end example
 
@@ -3364,9 +3369,17 @@ ikptr_t     s_char = (ikptr_t)ch[index];
 and to retrieve the string length:
 
 @example
-ikptr_t  s_str    = the_string;
-ikptr_t  s_length = IK_REF(s_str, off_string_length);
-long   length   = IK_UNFIX(s_length);
+ikptr_t    s_str    = the_string;
+ikptr_t    s_length = IK_STRING_LENGTH_FX(s_str);
+ikuword_t  length   = IK_UNFIX(s_length);
+@end example
+
+@noindent
+or, shorter:
+
+@example
+ikptr_t    s_str  = the_string;
+ikuword_t  length = IK_STRING_LENGTH(s_str);
 @end example
 
 
@@ -3424,21 +3437,21 @@ Return a fixnum representing the number of characters in the string
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} long IK_STRING_LENGTH (ikptr_t @var{str})
+@deftypefn {Preprocessor Macro} ikuword_t IK_STRING_LENGTH (ikptr_t @var{str})
 Return an integer representing the number of characters in the string
 @var{str}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32 (ikptr_t @var{str}, long @var{idx})
+@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32 (ikptr_t @var{str}, ikuword_t @var{idx})
 Evaluate to the 32-bit character representation at index @var{idx} in
 the string @var{str}.  A use of this macro can appear both as operand
 and as left--side of an assignment; example:
 
 @example
-long    idx   = the_index;
-ikptr_t   s_str = the_string;
-ikchar_t  ch;
+ikuword_t  idx   = the_index;
+ikptr_t    s_str = the_string;
+ikchar_t   ch;
 
 IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
 ch = IK_CHAR32(s_str, idx);
@@ -3462,8 +3475,8 @@ the first Scheme character in the data area.
 @subsubheading Operations on strings
 
 
-@deftypefun ikptr_t ika_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
-@deftypefunx ikptr_t iku_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
+@deftypefun ikptr_t ika_string_alloc (ikpcb_t * @var{pcb}, ikuword_t @var{number_of_chars})
+@deftypefunx ikptr_t iku_string_alloc (ikpcb_t * @var{pcb}, ikuword_t @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
 @end deftypefun
@@ -3476,7 +3489,7 @@ from the given @asciiz{} string.
 @end deftypefun
 
 
-@deftypefun ikptr_t iku_string_to_symbol (ikpcb_t* @var{pcb}, ikptr_t @var{str})
+@deftypefun ikptr_t iku_string_to_symbol (ikpcb_t * @var{pcb}, ikptr_t @var{str})
 Return a Scheme symbol object whose name is the Scheme string
 @var{str}.  This function is the same as @cfunc{iku_symbol_from_string}.
 @end deftypefun
