@@ -1615,40 +1615,55 @@ ik_decl ikptr_t ikrt_bytevector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
  ** Struct objects.
  ** ----------------------------------------------------------------- */
 
-#define record_mask		7
-#define record_tag		vector_tag
-#define disp_record_rtd		0
-#define disp_record_data	wordsize
-#define off_record_rtd		(disp_record_rtd  - record_tag)
-#define off_record_data		(disp_record_data - record_tag)
+#define record_mask			7
+#define record_tag			vector_tag
+#define disp_record_rtd			0
+#define disp_record_data		wordsize
+#define off_record_rtd			(disp_record_rtd  - record_tag)
+#define off_record_data			(disp_record_data - record_tag)
 
-#define rtd_tag			record_tag
-#define disp_rtd_rtd		0
-#define disp_rtd_name		(1 * wordsize)
-#define disp_rtd_length		(2 * wordsize)
-#define disp_rtd_fields		(3 * wordsize)
-#define disp_rtd_printer	(4 * wordsize)
-#define disp_rtd_symbol		(5 * wordsize)
-#define disp_rtd_destructor	(6 * wordsize)
-#define rtd_size		(7 * wordsize)
-//#define rtd_size		(6 * wordsize)
+#define rtd_tag				record_tag
+#define disp_rtd_rtd			0
+#define disp_rtd_name			(1 * wordsize)
+#define disp_rtd_length			(2 * wordsize)
+#define disp_rtd_fields			(3 * wordsize)
+#define disp_rtd_printer		(4 * wordsize)
+#define disp_rtd_symbol			(5 * wordsize)
+#define disp_rtd_destructor		(6 * wordsize)
+#define rtd_size			(7 * wordsize)
 
-#define off_rtd_rtd		(disp_rtd_rtd		- rtd_tag)
-#define off_rtd_name		(disp_rtd_name		- rtd_tag)
-#define off_rtd_length		(disp_rtd_length	- rtd_tag)
-#define off_rtd_fields		(disp_rtd_fields	- rtd_tag)
-#define off_rtd_printer		(disp_rtd_printer	- rtd_tag)
-#define off_rtd_symbol		(disp_rtd_symbol	- rtd_tag)
-#define off_rtd_destructor	(disp_rtd_destructor	- rtd_tag)
+#define off_rtd_rtd			(disp_rtd_rtd		- rtd_tag)
+#define off_rtd_name			(disp_rtd_name		- rtd_tag)
+#define off_rtd_length			(disp_rtd_length	- rtd_tag)
+#define off_rtd_fields			(disp_rtd_fields	- rtd_tag)
+#define off_rtd_printer			(disp_rtd_printer	- rtd_tag)
+#define off_rtd_symbol			(disp_rtd_symbol	- rtd_tag)
+#define off_rtd_destructor		(disp_rtd_destructor	- rtd_tag)
 
 ik_decl ikptr_t ika_struct_alloc_and_init	(ikpcb_t * pcb, ikptr_t rtd);
 ik_decl ikptr_t ika_struct_alloc_no_init	(ikpcb_t * pcb, ikptr_t rtd);
-ik_decl int   ik_is_struct	(ikptr_t R);
+ik_decl int   ik_is_struct			(ikptr_t R);
 
-#define IK_STRUCT_RTD(STRUCT)	IK_REF((STRUCT), off_record_rtd)
-#define IK_FIELD(STRUCT,FIELD)	IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))
+#define IK_IS_STRUCT(OBJ)		((record_tag == (record_mask & (OBJ))) && \
+					 (record_tag == (record_mask & IK_STRUCT_STD(OBJ))))
 
+#define IK_STD_STD(STD)			IK_REF((STD), off_rtd_rtd)
+#define IK_STD_NAME(STD)		IK_REF((STD), off_rtd_name)
+#define IK_STD_LENGTH(STD)		IK_REF((STD), off_rtd_length)
+#define IK_STD_FIELDS(STD)		IK_REF((STD), off_rtd_fields)
+#define IK_STD_PRINTER(STD)		IK_REF((STD), off_rtd_printer)
+#define IK_STD_SYMBOL(STD)		IK_REF((STD), off_rtd_symbol)
+#define IK_STD_DESTRUCTOR(STD)		IK_REF((STD), off_rtd_destructor)
+
+#define IK_STRUCT_RTD(STRUCT)		IK_REF((STRUCT), off_record_rtd)
+#define IK_STRUCT_STD(STRUCT)		IK_REF((STRUCT), off_record_rtd)
+#define IK_STRUCT_RTD_PTR(STRUCT)	IK_PTR((STRUCT), off_record_rtd)
+#define IK_STRUCT_STD_PTR(STRUCT)	IK_PTR((STRUCT), off_record_rtd)
+
+#define IK_FIELD(STRUCT,FIELD)		IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))
 #define IK_FIELD_PTR(STRUCT,FIELD)	IK_PTR((STRUCT), (off_record_data+(FIELD)*wordsize))
+
+#define IK_STRUCT_FIELDS_VOIDP(STRU)	((void *)((STRU) + off_record_data))
 
 
 /** --------------------------------------------------------------------

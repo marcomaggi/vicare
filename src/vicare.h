@@ -768,10 +768,28 @@ ik_api_decl ikptr_t ikrt_bytevector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
 
 ik_api_decl ikptr_t ika_struct_alloc_and_init	(ikpcb_t * pcb, ikptr_t rtd);
 ik_api_decl ikptr_t ika_struct_alloc_no_init	(ikpcb_t * pcb, ikptr_t rtd);
-ik_api_decl int   ik_is_struct	(ikptr_t R);
+ik_api_decl int     ik_is_struct		(ikptr_t R);
+
+#define IK_IS_STRUCT(OBJ)		((record_tag == (record_mask & (OBJ))) && \
+					 (record_tag == (record_mask & IK_STRUCT_STD(OBJ))))
+
+#define IK_STD_STD(STD)			IK_REF((STD), off_rtd_rtd)
+#define IK_STD_NAME(STD)		IK_REF((STD), off_rtd_name)
+#define IK_STD_LENGTH(STD)		IK_REF((STD), off_rtd_length)
+#define IK_STD_FIELDS(STD)		IK_REF((STD), off_rtd_fields)
+#define IK_STD_PRINTER(STD)		IK_REF((STD), off_rtd_printer)
+#define IK_STD_SYMBOL(STD)		IK_REF((STD), off_rtd_symbol)
+#define IK_STD_DESTRUCTOR(STD)		IK_REF((STD), off_rtd_destructor)
+
+#define IK_STRUCT_RTD(STRUCT)		IK_REF((STRUCT), off_record_rtd)
+#define IK_STRUCT_STD(STRUCT)		IK_REF((STRUCT), off_record_rtd)
+#define IK_STRUCT_RTD_PTR(STRUCT)	IK_PTR((STRUCT), off_record_rtd)
+#define IK_STRUCT_STD_PTR(STRUCT)	IK_PTR((STRUCT), off_record_rtd)
 
 #define IK_FIELD(STRUCT,FIELD)		IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))
 #define IK_FIELD_PTR(STRUCT,FIELD)	IK_PTR((STRUCT), (off_record_data+(FIELD)*wordsize))
+
+#define IK_STRUCT_FIELDS_VOIDP(STRU)	((void *)((STRU) + off_record_data))
 
 
 /** --------------------------------------------------------------------

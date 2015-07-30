@@ -9967,14 +9967,14 @@ A data structure is like a lightweight record as defined by @rnrs{6}.
 structures.
 
 @menu
-* iklib structs rtd::           Structure type descriptors.
+* iklib structs define::        Structure type descriptors.
 * iklib structs using::         Using data structures.
 * iklib structs inspect::       Inspecting data structures.
 * iklib structs fields::        Accessing and mutating fields.
 @end menu
 
 @c page
-@node iklib structs rtd
+@node iklib structs define
 @subsection Structure type descriptors
 
 

@@ -741,60 +741,60 @@ int
 ik_is_struct (ikptr_t R)
 {
   return ((record_tag == (record_mask & R)) &&
-	  (record_tag == (record_mask & IK_REF(R, off_record_rtd))));
+	  (record_tag == (record_mask & IK_STRUCT_STD(R))));
 }
 ikptr_t
-ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr_t s_rtd)
-/* Allocate  and return  a new  structure instance  using S_RTD  as type
+ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr_t s_std)
+/* Allocate  and return  a new  structure instance  using S_STD  as type
    descriptor.   All the  fields are  left uninitialised.   Make use  of
    "pcb->root9". */
 {
-  ikuword_t	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  ikuword_t	num_of_fields = IK_UNFIX(IK_STD_LENGTH(s_std));
   ikuword_t	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
-  ikptr_t		p_stru;
-  pcb->root9 = &s_rtd;
+  ikptr_t	s_stru;
+  pcb->root9 = &s_std;
   {
-    p_stru = ik_safe_alloc(pcb, align_size);
+    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
     /* The struct is newer  than the RTD, so there is  no need to signal
        dirt. */
-    IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    IK_STRUCT_STD(s_stru) = s_std;
     /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
-       memory is on  the Scheme heap, which is not  a garbage collection
-       root.   This   means  we  can  freely   leave  uninitialised  the
-       additional memory reserved when  converting the requested size to
-       the aligned  size, because the  garbage collector will  never see
+       memory is  on the Scheme heap's  nursery, which is not  a garbage
+       collection root.   This means  we can freely  leave uninitialised
+       the additional memory reserved when converting the requested size
+       to the aligned size, because the garbage collector will never see
        it. */
   }
   pcb->root9 = NULL;
-  return p_stru | record_tag;
+  return s_stru;
 }
 ikptr_t
-ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr_t s_rtd)
-/* Allocate  and return  a new  structure instance  using S_RTD  as type
+ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr_t s_std)
+/* Allocate  and return  a new  structure instance  using S_STD  as type
    descriptor.  All the fields are initialised to the fixnum zero.  Make
    use of "pcb->root9". */
 {
-  ikptr_t		s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
+  ikptr_t	s_num_of_fields = IK_STD_LENGTH(s_std);
   ikuword_t	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
-  ikptr_t		p_stru;
-  pcb->root9 = &s_rtd;
+  ikptr_t	s_stru;
+  pcb->root9 = &s_std;
   {
-    p_stru = ik_safe_alloc(pcb, align_size);
+    s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
     /* The struct is newer  than the RTD, so there is  no need to signal
        dirt. */
-    IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    IK_STRUCT_STD(s_stru) = s_std;
     /* Set the  reserved data  area to zero;  remember that  the machine
        word 0 is the fixnum zero.
 
          We avoid setting to zero  the additional word, if any, reserved
        by "ik_safe_alloc()"  when converting from the  requested size to
-       the aligned size; such word is on the Scheme heap, which is not a
-       garbage collector root,  so the garbage collector  will never see
-       it. */
-    memset((uint8_t *)(p_stru + disp_record_data), 0, s_num_of_fields);
+       the  aligned size;  such word  is on  the Scheme  heap's nursery,
+       which is not  a garbage collector root, so  the garbage collector
+       will never see it. */
+    memset(IK_STRUCT_FIELDS_VOIDP(s_stru), 0, s_num_of_fields);
   }
   pcb->root9 = NULL;
-  return p_stru | record_tag;
+  return s_stru;
 }
 
 

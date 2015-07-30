@@ -154,6 +154,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{RTD}
 @end macro
 
+@macro rcd{}
+@acronym{RCD}
+@end macro
+
 @c ------------------------------------------------------------
 @c To be used inside argument lists.
 
