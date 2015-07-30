@@ -3685,7 +3685,8 @@ Return a Scheme symbol object whose name is the Scheme string
 
 Bignums are multi--precision exact integers bigger than fixnums; they
 are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
-@xref{Low-level Functions, mpn, Low-level Functions, gmp}.
+@xref{Low-level Functions, Low-level Functions, Low-level Functions,
+gmp}.
 
 @value{PRJNAME} only uses a bignum to represent an exact integer when
 the value does not fit in a fixnum; it follows that the following ranges
@@ -3736,7 +3737,7 @@ is as follows:
 @end example
 
 @noindent
-where the first word @code{1st} is header of meta informations encoded
+where the first word @code{1st} is a header of meta informations encoded
 as explained above and each limb is a machine word stored in
 @strong{native} endianness; the big number is the concatenation of limbs
 with @code{limb0} being the least significant one.  There is always at
@@ -3751,10 +3752,10 @@ always non--zero and outside the range of fixnums.
 To allocate a bignum we must know the number of required limbs:
 
 @example
-ikpcb_t * pcb        = ik_the_pcb();
-long    nlimbs     = the_number_of_limbs;
-long    block_size = disp_bignum_data + nlimbs * wordsize;
-long    align_size = IK_ALIGN(block_size);
+ikpcb_t *  pcb        = ik_the_pcb();
+ikuword_t  nlimbs     = the_number_of_limbs;
+ikuword_t  block_size = disp_bignum_data + nlimbs * wordsize;
+ikuword_t  align_size = IK_ALIGN(block_size);
 ikptr_t s_bn = ik_safe_alloc(pcb, align_size) | vector_tag;
 @end example
 
@@ -3763,16 +3764,16 @@ we must explicitly build and encode the first word; the number of limbs
 is encoded as follows:
 
 @example
-long   nlimbs      = the_number_of_limbs;
-ikptr_t  meta_nlimbs = nlimbs << bignum_nlimbs_shift;
+ikuword_t  nlimbs      = the_number_of_limbs;
+ikptr_t    meta_nlimbs = nlimbs << bignum_nlimbs_shift;
 @end example
 
 @noindent
 the sign bit is encoded as follows:
 
 @example
-long   sign      = zero_if_positive_one_if_negative;
-ikptr_t  meta_sign = sign << bignum_sign_shift;
+ikuword_t  sign      = zero_if_positive_one_if_negative;
+ikptr_t    meta_sign = sign << bignum_sign_shift;
 @end example
 
 @noindent
@@ -3793,7 +3794,7 @@ To identify an object as bignum we do:
 ikptr_t  X = the_object;
 
 if ((vector_tag == IK_TAGOF(X)) &&
-    (bignum_tag == (bignum_mask & IK_REF(X, -vector_tag))))
+    (bignum_tag == (bignum_mask & IK_REF(X, off_bignum_tag))))
   it_is_a_bignum();
 else
   it_is_not();
@@ -3803,13 +3804,13 @@ else
 to extract meta informations we must first extract the first word:
 
 @example
-ikptr_t   s_bn  = the_bignum;
-ikptr_t   s_fst = IK_REF(s_bn, off_bignum_tag);
-long    nlimbs;
-long    meta_sign;
+ikptr_t    s_bn  = the_bignum;
+ikptr_t    s_fst = IK_REF(s_bn, off_bignum_tag);
+ikuword_t  nlimbs;
+ikuword_t  meta_sign;
 
-nlimbs    = ((ik_ulong)s_fst) >> bignum_nlimbs_shift;
-meta_sign = ((ik_ulong)s_fst) &  bignum_sign_mask;
+nlimbs    = ((ikuword_t)s_fst) >> bignum_nlimbs_shift;
+meta_sign = ((ikuword_t)s_fst) &  bignum_sign_mask;
 @end example
 
 @noindent
@@ -3818,21 +3819,17 @@ if @code{meta_sign} is zero the bignum is positive, else it is negative.
 To acquire a pointer to the data area we do:
 
 @example
-ikptr_t        s_bn = the_bignum;
-mp_limb_t *  data;
-
-data = (mp_limb_t*)(long)(s_bn + off_bignum_data);
+ikptr_t      s_bn = the_bignum;
+mp_limb_t *  data = IK_BIGNUM_DATA_LIMBP(s_bn);
 @end example
 
 @noindent
 to extract the @math{N}-th limb we do:
 
 @example
-ikptr_t      s_bn = the_bignum;
-long       N    = the_index;
-mp_limb_t  limb;
-
-limb = (mp_limb_t)IK_REF(s_bn, off_bignum_data + N * wordsize);
+ikptr_t    s_bn = the_bignum;
+ikuword_t  N    = the_index;
+mp_limb_t  limb = IK_LIMB(s_bn, N);
 @end example
 
 
@@ -3891,20 +3888,20 @@ pointer to the first byte in the data area of bignum memory block.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} long IK_BIGNUM_ALLOC_SIZE (long @var{nlimbs})
+@deftypefn {Preprocessor Macro} ikuword_t IK_BIGNUM_ALLOC_SIZE (ikuword_t @var{nlimbs})
 Given a number of limbs: evaluate to the aligned size of the memory
 block needed to hold the bignum.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IKA_BIGNUM_ALLOC (ikpcb_t * @var{pcb}, long @var{nlimb})
+@deftypefn {Preprocessor Macro} ikptr_t IKA_BIGNUM_ALLOC (ikpcb_t * @var{pcb}, ikuword_t @var{nlimb})
 Given a number of limbs: allocate, using @cfunc{ik_safe_alloc}, the
 memory block needed to hold the bignum and return an untagged pointer to
 it.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_COMPOSE_BIGNUM_FIRST_WORD (long @var{nlimb}, ikptr_t @var{meta_sign})
+@deftypefn {Preprocessor Macro} ikptr_t IK_COMPOSE_BIGNUM_FIRST_WORD (ikuword_t @var{nlimb}, ikptr_t @var{meta_sign})
 Given a number of limbs and the encoded sign bit: evaluate to the first
 word of a bignum object.  It is equivalent to the following:
 
@@ -3918,8 +3915,8 @@ s_fst       = meta_nlimbs | @var{meta_sign} | bignum_tag;
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_POSITIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
-@deftypefnx {Preprocessor Macro} ikptr_t IK_NEGATIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+@deftypefn {Preprocessor Macro} ikptr_t IK_POSITIVE_BIGNUM_FIRST_WORD (ikuword_t @var{nlimb})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_NEGATIVE_BIGNUM_FIRST_WORD (ikuword_t @var{nlimb})
 Given a number of limbs evaluate to the corresponding first word of
 bignum representing a positive or negative number.
 @end deftypefn
@@ -3940,7 +3937,7 @@ IK_BIGNUM_FIRST(s_bn) = s_fst;
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_LIMB (ikptr_t @var{bn}, long @var{N})
+@deftypefn {Preprocessor Macro} ikptr_t IK_LIMB (ikptr_t @var{bn}, ikuword_t @var{N})
 Given a reference to bignum: evaluate to the location of the @var{N}-th
 limb in the data area.  Can be used both as operand or left--side of
 assignment:
@@ -3956,7 +3953,7 @@ IK_LIMB(s_bn) = (ikptr_t)limb;
 
 
 @deftypefn {Preprocessor Macro} {mp_limb_t *} IK_BIGNUM_DATA_LIMBP (ikptr_t @var{bn})
-@deftypefnx {Preprocessor Macro} {void *} IK_BIGNUM_DATA_LIMBP (ikptr_t @var{bn})
+@deftypefnx {Preprocessor Macro} {void *} IK_BIGNUM_DATA_VOIDP (ikptr_t @var{bn})
 Given a reference to bignum: evaluate to a pointer to the first byte in
 the data area, which is a pointer to the least significant limb.
 @end deftypefn
@@ -3968,7 +3965,7 @@ the data area.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_LAST_LIMB (ikptr_t @var{bn}, long @var{nlimbs})
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_LAST_LIMB (ikptr_t @var{bn}, ikuword_t @var{nlimbs})
 Given a reference to bignum and its number of limbs: evaluate to the
 most significant limb in the data area.
 @end deftypefn
