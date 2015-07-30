@@ -3499,17 +3499,6 @@ Return a Scheme symbol object whose name is the Scheme string
 @section Symbol objects
 
 
-@menu
-* objects symbols memory::      Memory layout of symbol objects.
-* objects symbols values::      The @code{value} and @code{proc} slots.
-* objects symbols ops::         Operations with the C language @api{}.
-@end menu
-
-@c page
-@node objects symbols memory
-@subsection Memory layout of symbol objects
-
-
 A symbol is a fixed length memory block referenced by machine words
 tagged as vectors.  The first machine word of a symbol block is tagged
 has symbol in its least significant bits and it has the most significant
@@ -3528,6 +3517,11 @@ Scheme objects or references to Scheme objects; each word is a slot and
 the slots have names: @code{string}, @code{ustring}, @code{value},
 @code{proc}, @code{plist}.
 
+@menu
+* objects symbols values::      The @code{value} and @code{proc} slots.
+* objects symbols ops::         Operations with the C language @api{}.
+@end menu
+
 @c page
 @node objects symbols values
 @subsection The @code{value} and @code{proc} slots
@@ -3538,12 +3532,12 @@ The @code{value} field has multiple purposes:
 @itemize
 @item
 When the symbol is the unique identifier of a data structure type: the
-@code{value} field holds a reference to the data structure type
+@code{value} field holds a reference to the data struct--type
 descriptor.
 
 @item
 When the symbol is the unique identifier of a @rnrs{6} record type: the
-@code{value} field holds a reference to the record type descriptor.
+@code{value} field holds a reference to the record--type descriptor.
 
 @item
 Bindings defined at the top level of libraries, programs or standalone
@@ -3556,7 +3550,7 @@ gensyms}.
 Bindings defined at the top level of libraries, programs or standalone
 expressions to be evaluated by @func{eval}, have a @dfn{label gensym}
 associated to them: a symbol whose @code{value} slot holds a reference
-to the binding descriptor to be used by the expander.
+to the syntactic binding descriptor to be used by the expander.
 
 @item
 And more.
@@ -3592,8 +3586,7 @@ binary code without being first validated.
 
 @c ------------------------------------------------------------
 
-@subsubheading Use in primitive function bindings
-
+@subsubheading Use in primitive function syntactic bindings
 
 All the primitive functions implemented by code in @value{PRJNAME}'s
 boot image are accessible from libraries defined by the boot image; such
@@ -3603,7 +3596,7 @@ closure object.  The bindings of primitive functions are immutable.
 
 @c ------------------------------------------------------------
 
-@subsubheading Use in library top level bindings
+@subsubheading Use in library top level syntactic bindings
 
 All the top level bindings defined by a @syntax{library} form have a loc
 gensym associated to them:
