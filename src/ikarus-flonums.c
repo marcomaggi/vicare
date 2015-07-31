@@ -40,34 +40,34 @@ feature_failure_ (const char * funcname)
 ikptr_t
 iku_flonum_alloc (ikpcb_t * pcb, double fl)
 {
-  IKU_DEFINE_AND_ALLOC_FLONUM(F);
-  IK_FLONUM_DATA(F) = fl;
-  return F;
+  IKU_DEFINE_AND_ALLOC_FLONUM(X);
+  IK_FLONUM_DATA(X) = fl;
+  return X;
 }
 ikptr_t
 iku_cflonum_alloc_and_init (ikpcb_t * pcb, double re, double im)
 {
-  IKU_DEFINE_AND_ALLOC_CFLONUM(F);
-  /* No  need  to  update  the  dirty vector  about  F  because  we  are
-     performing unsafe allocations. */
-  IK_CFLONUM_REAL(F) = iku_flonum_alloc(pcb, re);
-  IK_CFLONUM_IMAG(F) = iku_flonum_alloc(pcb, im);
-  return F;
+  IKU_DEFINE_AND_ALLOC_CFLONUM(X);
+  IK_ASS(IK_CFLONUM_REAL(X), iku_flonum_alloc(pcb, re));
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CFLONUM_REAL_PTR(X));
+  IK_ASS(IK_CFLONUM_IMAG(X), iku_flonum_alloc(pcb, im));
+  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CFLONUM_IMAG_PTR(X));
+  return X;
 }
 
 /* ------------------------------------------------------------------ */
 
 int
-ik_is_flonum (ikptr_t obj)
+ik_is_flonum (ikptr_t X)
 {
-  return ((vector_tag == IK_TAGOF(obj)) &&
-	  (flonum_tag == IK_REF(obj, -vector_tag)));
+  return ((vector_tag == IK_TAGOF(X)) &&
+	  (flonum_tag == IK_FLONUM_TAG(X)));
 }
 int
 ik_is_cflonum (ikptr_t X)
 {
-  return ((vector_tag == IK_TAGOF(X)) &&
-	  (cflonum_tag == IK_REF(X, -vector_tag)));
+  return ((vector_tag  == IK_TAGOF(X)) &&
+	  (cflonum_tag == IK_CFLONUM_TAG(X)));
 }
 
 

@@ -640,27 +640,37 @@ ik_api_decl ikptr_t ikrt_flonum_hash		(ikptr_t x /*, ikpcb_t* pcb */);
 #define disp_cflonum_unused	(3 * wordsize)
 #define cflonum_size		(4 * wordsize)
 
-#define off_cflonum_tag		(disp_cflonum_tag  - vector_tag)
-#define off_cflonum_real	(disp_cflonum_real - vector_tag)
-#define off_cflonum_imag	(disp_cflonum_imag - vector_tag)
+#define off_cflonum_tag		(disp_cflonum_tag    - vector_tag)
+#define off_cflonum_real	(disp_cflonum_real   - vector_tag)
+#define off_cflonum_imag	(disp_cflonum_imag   - vector_tag)
 #define off_cflonum_unused	(disp_cflonum_unused - vector_tag)
 
+#define IK_IS_CFLONUM(X)	((vector_tag  == IK_TAGOF(X)) && \
+				 (cflonum_tag == IK_CFLONUM_TAG(X)))
+
 #define IKU_DEFINE_AND_ALLOC_CFLONUM(VARNAME)				\
-  ikptr_t VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\
-  IK_REF(VARNAME, off_cflonum_tag) = (ikptr_t)cflonum_tag
+    ikptr_t VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\
+    IK_REF(VARNAME, off_cflonum_tag) = (ikptr_t)cflonum_tag;
 
-ik_api_decl int   ik_is_cflonum	(ikptr_t X);
-ik_api_decl ikptr_t iku_cflonum_alloc_and_init (ikpcb_t * pcb, double re, double im);
-ik_api_decl ikptr ika_cflonum_from_doubles (ikpcb* pcb, double re, double im);
-
+#define IK_CFLONUM_TAG(X)	IK_REF((X), off_cflonum_tag)
 #define IK_CFLONUM_REAL(X)	IK_REF((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG(X)	IK_REF((X), off_cflonum_imag)
+#define IK_CFLONUM_REP(X)	IK_REF((X), off_cflonum_real)
+#define IK_CFLONUM_IMP(X)	IK_REF((X), off_cflonum_imag)
 
 #define IK_CFLONUM_REAL_PTR(X)	IK_PTR((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG_PTR(X)	IK_PTR((X), off_cflonum_imag)
+#define IK_CFLONUM_REP_PTR(X)	IK_PTR((X), off_cflonum_real)
+#define IK_CFLONUM_IMP_PTR(X)	IK_PTR((X), off_cflonum_imag)
 
 #define IK_CFLONUM_REAL_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_REAL(X))
 #define IK_CFLONUM_IMAG_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_IMAG(X))
+#define IK_CFLONUM_REP_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_REAL(X))
+#define IK_CFLONUM_IMP_DATA(X)	IK_FLONUM_DATA(IK_CFLONUM_IMAG(X))
+
+ik_api_decl int		ik_is_cflonum			(ikptr_t X);
+ik_api_decl ikptr_t	iku_cflonum_alloc_and_init	(ikpcb_t * pcb, double re, double im);
+ik_api_decl ikptr_t	ika_cflonum_from_doubles	(ikpcb_t * pcb, double re, double im);
 
 
 /** --------------------------------------------------------------------

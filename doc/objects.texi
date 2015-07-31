@@ -4567,7 +4567,7 @@ objects, we want to follow this pattern:
 ikpcb_t *  pcb  = ik_the_pcb();
 iksword_t  rep  = the_real_part;
 iksword_t  imp  = the_imag_part;
-ikptr_t    s_cn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+ikptr_t    s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
 IK_COMPNUM_TAG(s_cn) = compnum_tag;
 
 pcb->root9 = &s_cn;
@@ -4750,7 +4750,7 @@ ikpcb_t * pcb   = ik_the_pcb();
 ikptr_t   s_cf;
 
 s_cf = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
-IK_REF(s_cf, off_cflonum_tag) = cflonum_tag;
+IK_CFLONUM_TAG(s_cf) = cflonum_tag;
 @end example
 
 @noindent
@@ -4772,43 +4772,66 @@ pcb->root8 = &s_im;
 pcb->root8 = NULL;
 pcb->root9 = NULL;
 
-IK_REF(s_cf, off_cflonum_tag)  = cflonum_tag;
-IK_REF(s_cf, off_cflonum_real) = s_re;
-IK_REF(s_cf, off_cflonum_imag) = s_im;
-IK_SIGNAL_DIRT(pcb, s_cf);
+IK_CFLONUM_TAG(s_cf) = cflonum_tag;
+IK_CFLONUM_REP(s_cf) = s_re;
+IK_CFLONUM_IMP(s_cf) = s_im;
 @end example
 
 @noindent
-notice that in this case we do not call
-@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cf} because the
-values of the real and imaginary parts are older.
+notice that, as in this example, when a new cflonum object is allocated
+after the allocation of the real and imaginary objects: we do not need
+to call @cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cf} because
+the cflonum is on the Scheme heap's nursery, so it will for sure be
+scanned at the next garbage collection.
 
-To identify an object as cflonum we do:
+If we allocate the cflonum object first, then the real and imaginary
+objects, we want to follow this pattern:
 
 @example
-ikptr_t  X = the_object;
+ikpcb_t *  pcb  = ik_the_pcb();
+double     rep  = the_real_part;
+double     imp  = the_imag_part;
+ikptr_t    s_cf = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+IK_CFLONUM_TAG(s_cf) = cflonum_tag;
 
-if ((vector_tag  == IK_TAGOF(X)) &&
-    (cflonum_tag == IK_REF(X, -vector_tag)))
-  it_is_a_cflonum();
-else
-  it_is_not();
+pcb->root9 = &s_cf;
+@{
+  IK_ASS(IK_CFLONUM_REAL(s_cf), \
+     ika_flonum_from_double(pcb, rep));
+  IK_SIGNAL_DIRT(pcb, IK_CFLONUM_REAL_PTR(s_cf));
+
+  IK_ASS(IK_CFLONUM_IMAG(s_cf), \
+     ika_flonum_from_double(pcb, imp));
+  IK_SIGNAL_DIRT(pcb, IK_CFLONUM_IMAG_PTR(s_cf));
+@}
+pcb->root9 = NULL;
 @end example
 
 @noindent
-to set or retrieve the real and imaginary parts we do:
+or:
+
+@example
+ikpcb_t *  pcb  = ik_the_pcb();
+double     rep  = the_real_part;
+double     imp  = the_imag_part;
+ikptr_t    s_cf = ika_cflonum_from_doubles(pcb, rep, imp);
+@end example
+
+To set or retrieve the real and imaginary parts we do:
 
 @example
 ikptr_t  s_cf = the_cflonum;
 ikptr_t  s_re;
 ikptr_t  s_im;
 
-s_re = IK_REF(s_cf, off_cflonum_real);
-s_im = IK_REF(s_cf, off_cflonum_imag);
+s_re = IK_CFLONUM_REAL(s_cf);
+s_im = IK_CFLONUM_IMAG(s_cf);
 
-IK_REF(s_cf, off_cflonum_real) = s_re;
-IK_REF(s_cf, off_cflonum_imag) = s_im;
-IK_SIGNAL_DIRT(pcb, s_cf);
+IK_CFLONUM_REAL(s_cf) = s_re;
+IK_SIGNAL_DIRT(pcb, IK_CFLONUM_REAL_PTR(s_cf));
+
+IK_CFLONUM_IMAG(s_cf) = s_im;
+IK_SIGNAL_DIRT(pcb, IK_CFLONUM_IMAG_PTR(s_cf));
 @end example
 
 
@@ -4855,11 +4878,19 @@ imaginary part.
 @subsubheading Convenience preprocessor macros
 
 
+@deftypefn {Preprocessor Macro} int IK_IS_CFLONUM (ikptr_t @var{obj})
+Return true if @var{obj} is a cflonum object; otherwise return false.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr_t IK_CFLONUM_REAL (ikptr_t @var{X})
 @deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_IMAG (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_REP (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_IMP (ikptr_t @var{X})
 Evaluate to the location of the real and imaginary parts in the cflonum
-memory block.  A use of these macros can appear both as operand and as
-left--side of an assignment:
+memory block; @var{X} must be a tagged pointer to cflonum object.  A use
+of these macros can appear both as operand and as left--side of an
+assignment:
 
 @example
 ikptr_t  s_cf = the_cflonum;
@@ -4870,6 +4901,17 @@ s_re = IK_CFLONUM_REAL(s_cf);
 IK_CFLONUM_REAL(s_cf) = s_re;
 IK_SIGNAL_DIRT(pcb, s_cf);
 @end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_CFLONUM_REAL_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_IMAG_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_REP_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_CFLONUM_IMP_PTR (ikptr_t @var{X})
+Evaluate to a pointer to the real and imaginary parts in the cflonum
+memory block; @var{X} must be a tagged pointer to cflonum object.  These
+macros are useful to build the second argument to calls to
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefn
 
 @c ------------------------------------------------------------

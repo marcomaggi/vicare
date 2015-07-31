@@ -167,8 +167,8 @@ iku_make_symbol (ikptr_t s_pretty_string, ikptr_t s_unique_string, ikpcb_t* pcb)
 {
   ikptr_t s_sym = ik_unsafe_alloc(pcb, symbol_record_size) | record_tag;
   /* There is no need to update the dirty vector about mutating "s_sym":
-     "s_sym" has  just been created,  so all the  values that go  in its
-     slots are older. */
+     "s_sym" has just been allocated on the Scheme heap's nursery, so it
+     will be scanned for sure at the next garbage collection. */
   IK_REF(s_sym, off_symbol_record_tag)		= symbol_tag;
   IK_REF(s_sym, off_symbol_record_string)	= s_pretty_string;
   IK_REF(s_sym, off_symbol_record_ustring)	= s_unique_string;

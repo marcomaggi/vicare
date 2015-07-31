@@ -755,8 +755,9 @@ ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr_t s_std)
   pcb->root9 = &s_std;
   {
     s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
-    /* The struct is newer  than the RTD, so there is  no need to signal
-       dirt. */
+    /* The  struct is  allocated on  the Scheme  heap's nursery,  so the
+       struct will be  scanned at the next garbage  collection; There is
+       no need to signal dirt. */
     IK_STRUCT_STD(s_stru) = s_std;
     /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
        memory is  on the Scheme heap's  nursery, which is not  a garbage
@@ -780,8 +781,9 @@ ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr_t s_std)
   pcb->root9 = &s_std;
   {
     s_stru = ik_safe_alloc(pcb, align_size) | record_tag;
-    /* The struct is newer  than the RTD, so there is  no need to signal
-       dirt. */
+    /* The  struct is  allocated on  the Scheme  heap's nursery,  so the
+       struct will be  scanned at the next garbage  collection; There is
+       no need to signal dirt. */
     IK_STRUCT_STD(s_stru) = s_std;
     /* Set the  reserved data  area to zero;  remember that  the machine
        word 0 is the fixnum zero.
@@ -1176,7 +1178,7 @@ ikptr_t
 ika_flonum_from_double (ikpcb_t* pcb, double N)
 {
   ikptr_t x = ik_safe_alloc(pcb, flonum_size) | vector_tag;
-  IK_REF(x, off_flonum_tag) = flonum_tag;
+  IK_FLONUM_TAG(x)  = flonum_tag;
   IK_FLONUM_DATA(x) = N;
   return x;
 }
@@ -1184,7 +1186,7 @@ ikptr_t
 ika_cflonum_from_doubles (ikpcb_t* pcb, double re, double im)
 {
   ikptr_t	x = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
-  IK_REF(x, off_flonum_tag) = cflonum_tag;
+  IK_CFLONUM_TAG(x) = cflonum_tag;
   pcb->root9 = &x;
   {
     IK_ASS(IK_CFLONUM_REAL(x), ika_flonum_from_double(pcb, re));
