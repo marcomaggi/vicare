@@ -1127,12 +1127,45 @@ ikptr_t
 ika_integer_from_ptrdiff_t (ikpcb_t * pcb, ptrdiff_t N)
 {
   switch (sizeof(ptrdiff_t)) {
-  case sizeof(uint64_t):
-    return ika_integer_from_sint64(pcb, (uint64_t)N);
+  case sizeof(int64_t):
+    return ika_integer_from_sint64(pcb, (int64_t)N);
   case sizeof(int32_t):
-    return ika_integer_from_sint32(pcb, (uint32_t)N);
+    return ika_integer_from_sint32(pcb, (int32_t)N);
   default:
     ik_abort("unexpected ptrdiff_t size %d", sizeof(ptrdiff_t));
+    return IK_VOID_OBJECT;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr_t
+ika_integer_from_sword (ikpcb_t* pcb, iksword_t N)
+{
+  switch (sizeof(iksword_t)) {
+  case sizeof(int64_t):
+    return ika_integer_from_sint64(pcb, (int64_t)N);
+  case sizeof(int32_t):
+    return ika_integer_from_sint32(pcb, (int32_t)N);
+  /* case sizeof(signed long): */
+  /*   return ika_integer_from_long(pcb, (signed long)N); */
+  default:
+    ik_abort("unexpected iksword_t size %d", sizeof(iksword_t));
+    return IK_VOID_OBJECT;
+  }
+}
+ikptr_t
+ika_integer_from_uword (ikpcb_t* pcb, ikuword_t N)
+{
+  switch (sizeof(ikuword_t)) {
+  case sizeof(uint64_t):
+    return ika_integer_from_uint64(pcb, (int64_t)N);
+  case sizeof(uint32_t):
+    return ika_integer_from_uint32(pcb, (int32_t)N);
+  /* case sizeof(unsigned long): */
+  /*   return ika_integer_from_ulong(pcb, (unsigned long)N); */
+  default:
+    ik_abort("unexpected ikuword_t size %d", sizeof(ikuword_t));
     return IK_VOID_OBJECT;
   }
 }
@@ -1411,6 +1444,39 @@ ik_integer_to_ptrdiff_t (ikptr_t x)
 
 /* ------------------------------------------------------------------ */
 
+iksword_t
+ika_integer_to_sword (ikpcb_t* pcb, ikptr_t X)
+{
+  switch (sizeof(iksword_t)) {
+  case sizeof(int64_t):
+    return (iksword_t)ik_integer_to_sint64(X);
+  case sizeof(int32_t):
+    return (iksword_t)ik_integer_to_sint32(X);
+  /* case sizeof(signed long): */
+  /*   return (iksword_t)ik_integer_to_long(X); */
+  default:
+    ik_abort("unexpected iksword_t size %d", sizeof(iksword_t));
+    return IK_VOID_OBJECT;
+  }
+}
+ikuword_t
+ika_integer_to_uword (ikpcb_t* pcb, ikptr_t X)
+{
+  switch (sizeof(ikuword_t)) {
+  case sizeof(uint64_t):
+    return (ikuword_t)ik_integer_to_uint64(X);
+  case sizeof(uint32_t):
+    return (ikuword_t)ik_integer_to_uint32(X);
+  /* case sizeof(signed long): */
+  /*   return (ikuword_t)ik_integer_to_ulong(X); */
+  default:
+    ik_abort("unexpected iksword_t size %d", sizeof(ikuword_t));
+    return IK_VOID_OBJECT;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
 ikptr_t
 ikrt_integer_to_machine_word (ikptr_t s_int, ikpcb_t * pcb)
 {
@@ -1431,20 +1497,20 @@ int
 ik_is_ratnum (ikptr_t X)
 {
   return ((vector_tag == IK_TAGOF(X)) &&
-	  (ratnum_tag == IK_REF(X, -vector_tag)));
+	  (ratnum_tag == IK_RATNUM_TAG(X)));
 }
 ikptr_t
 ika_ratnum_alloc_no_init (ikpcb_t * pcb)
 {
   ikptr_t	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
-  IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+  IK_RATNUM_TAG(s_rn) = ratnum_tag;
   return s_rn;
 }
 ikptr_t
 ika_ratnum_alloc_and_init (ikpcb_t * pcb)
 {
   ikptr_t	s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
-  IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+  IK_RATNUM_TAG(s_rn) = ratnum_tag;
   memset((void *)(((ikuword_t)s_rn) + off_ratnum_num), 0, 3 * wordsize);
   return s_rn;
 }

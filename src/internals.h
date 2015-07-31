@@ -1032,8 +1032,9 @@ ik_private_decl void	ik_underflow_handler	(void);
 #define IK_RUNTIME_MESSAGE(...)		do { if (ik_enabled_runtime_messages) ik_runtime_message(__VA_ARGS__); } while (0);
 ik_decl void	ik_runtime_message	(const char * error_message, ...);
 
-ik_decl ikpcb_t *	ik_the_pcb		(void);
+ik_decl ikpcb_t * ik_the_pcb		(void);
 ik_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb_t* pcb, ikptr_t s_pointer);
+#define IK_SIGNAL_DIRT(PCB,PTR)		ik_signal_dirt_in_page_of_pointer((PCB),(PTR))
 
 ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr_t args);
@@ -1329,6 +1330,9 @@ ik_decl ikptr_t	ika_integer_from_ssize_t(ikpcb_t * pcb, ssize_t N);
 ik_decl ikptr_t	ika_integer_from_size_t	(ikpcb_t * pcb, size_t N);
 ik_decl ikptr_t	ika_integer_from_ptrdiff_t(ikpcb_t * pcb, ptrdiff_t N);
 
+ik_decl ikptr_t	ika_integer_from_sword	(ikpcb_t* pcb, iksword_t N);
+ik_decl ikptr_t	ika_integer_from_uword	(ikpcb_t* pcb, ikuword_t N);
+
 ik_decl int8_t	 ik_integer_to_sint8	(ikptr_t x);
 ik_decl int16_t	 ik_integer_to_sint16	(ikptr_t x);
 ik_decl int32_t	 ik_integer_to_sint32	(ikptr_t x);
@@ -1349,6 +1353,9 @@ ik_decl off_t	ik_integer_to_off_t	(ikptr_t x);
 ik_decl size_t	ik_integer_to_size_t	(ikptr_t x);
 ik_decl ssize_t	ik_integer_to_ssize_t	(ikptr_t x);
 ik_decl ptrdiff_t ik_integer_to_ptrdiff_t (ikptr_t x);
+
+ik_decl iksword_t	ika_integer_to_sword	(ikpcb_t* pcb, ikptr_t X);
+ik_decl ikuword_t	ika_integer_to_uword	(ikpcb_t* pcb, ikptr_t X);
 
 /* inspection */
 ik_decl ikptr_t	ikrt_positive_bn	(ikptr_t x);
@@ -1406,11 +1413,15 @@ ik_decl ikptr_t	ikrt_bignum_hash	(ikptr_t bn /*, ikpcb_t* pcb */);
 #define disp_ratnum_unused	(3 * wordsize)
 #define ratnum_size		(4 * wordsize)
 
-#define off_ratnum_tag		-vector_tag
+#define off_ratnum_tag		(disp_ratnum_tag    - vector_tag)
 #define off_ratnum_num		(disp_ratnum_num    - vector_tag)
 #define off_ratnum_den		(disp_ratnum_den    - vector_tag)
 #define off_ratnum_unused	(disp_ratnum_unused - vector_tag)
 
+#define IK_IS_RATNUM(X)		((vector_tag == IK_TAGOF(X)) && \
+				 (ratnum_tag == IK_REF(X, off_ratnum_tag)))
+
+#define IK_RATNUM_TAG(X)	IK_REF((X), off_ratnum_tag)
 #define IK_RATNUM_NUM(X)	IK_REF((X), off_ratnum_num)
 #define IK_RATNUM_DEN(X)	IK_REF((X), off_ratnum_den)
 
@@ -1421,7 +1432,7 @@ ik_decl ikptr_t	ikrt_bignum_hash	(ikptr_t bn /*, ikpcb_t* pcb */);
 #define IK_NUMERATOR(X)		IK_RATNUM_NUM(X)
 #define IK_DENOMINATOR(X)	IK_RATNUM_DEN(X)
 
-ik_decl int	ik_is_ratnum	(ikptr_t X);
+ik_decl int	ik_is_ratnum			(ikptr_t X);
 ik_decl ikptr_t	ika_ratnum_alloc_no_init	(ikpcb_t * pcb);
 ik_decl ikptr_t	ika_ratnum_alloc_and_init	(ikpcb_t * pcb);
 

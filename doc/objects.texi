@@ -1368,10 +1368,10 @@ ikptr_t   s_pair = ika_pair_alloc(pcb);
 pcb->root0 = &s_pair;
 @{
   IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, 1));
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+  IK_SIGNAL_DIRT(pcb, IK_CAR_PTR(s_pair));
 
   IK_ASS(IK_CDR(s_pair), ika_integer_from_int(pcb, 2));
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_pair));
+  IK_SIGNAL_DIRT(pcb, IK_CDR_PTR(s_pair));
 @}
 pcb->root = NULL;
 @end example
@@ -1390,6 +1390,12 @@ If we call this function when there is no need for it: nothing bad will
 happen; the garbage collector will just do some useless work, slowing
 down the collection time a bit.
 @end deftypefun
+
+
+@deftypefn {Preprocessor Macro} void IK_SIGNAL_DIRT (ikpcb_t * @var{pcb}, ikptr_t @var{pointer})
+Just a wrapper for @cfunc{ik_signal_dirt_in_page_of_pointer}; it has a
+shorter name.
+@end deftypefn
 
 @c page
 @node objects memory usage
@@ -1568,7 +1574,7 @@ pcb->root0 = &s_pair;
 @{
   s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
   IK_CAR(s_pair) = s_tmp;
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+  IK_SIGNAL_DIRT(pcb, IK_CAR_PTR(s_pair));
 @}
 pcb->root0 = NULL;
 @end example
@@ -1584,7 +1590,7 @@ ikptr_t   s_tmp;
 pcb->root0 = &s_pair;
 @{
   IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+  IK_SIGNAL_DIRT(pcb, IK_CAR_PTR(s_pair));
 @}
 pcb->root0 = NULL;
 @end example
@@ -1897,10 +1903,10 @@ ikptr_t   s_car  = ...;
 ikptr_t   s_cdr  = ...;
 
 IK_CAR(s_pair) = s_car;
-ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+IK_SIGNAL_DIRT(pcb, IK_CAR_PTR(s_pair));
 
 IK_CDR(s_pair) = s_car;
-ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_pair));
+IK_SIGNAL_DIRT(pcb, IK_CDR_PTR(s_pair));
 @end example
 
 
@@ -2056,10 +2062,10 @@ s_pair = ika_pair_alloc(pcb);
 pcb->root0 = &s_pair;
 @{
   IK_ASS(IK_CAR(s_pair), ...);
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_pair));
+  IK_SIGNAL_DIRT(pcb, IK_CAR_PTR(s_pair));
 
   IK_ASS(IK_CDR(s_pair), ...);
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_pair));
+  IK_SIGNAL_DIRT(pcb, IK_CDR_PTR(s_pair));
 @}
 pcb->root0 = NULL;
 @end example
@@ -2101,10 +2107,10 @@ if (argc) @{
     for (i=0; i<argc;) @{
       IK_ASS(IK_CAR(s_spine),
              ika_bytevector_from_cstring(pcb, argv[i]));
-      ik_signal_dirt_in_page_of_pointer(pcb, IK_CAR_PTR(s_spine));
+      IK_SIGNAL_DIRT(pcb, IK_CAR_PTR(s_spine));
       if (++i < argc) @{
         IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
-        ik_signal_dirt_in_page_of_pointer(pcb, IK_CDR_PTR(s_spine));
+        IK_SIGNAL_DIRT(pcb, IK_CDR_PTR(s_spine));
         s_spine = IK_CDR(s_spine);
       @} else @{
         IK_CDR(s_spine) = IK_NULL_OBJECT;
@@ -2488,15 +2494,15 @@ pcb->root0 = &s_vec;
 @{
   IK_ASS(IK_ITEM(s_vec, 0),
       ika_bytevector_from_cstring(pcb, "A"));
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_ITEM_PTR(s_vec, 0));
+  IK_SIGNAL_DIRT(pcb, IK_ITEM_PTR(s_vec, 0));
 
   IK_ASS(IK_ITEM(s_vec, 1),
       ika_bytevector_from_cstring(pcb, "B"));
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_ITEM_PTR(s_vec, 1));
+  IK_SIGNAL_DIRT(pcb, IK_ITEM_PTR(s_vec, 1));
 
   IK_ASS(IK_ITEM(s_vec, 2),
       ika_bytevector_from_cstring(pcb, "B"));
-  ik_signal_dirt_in_page_of_pointer(pcb, IK_ITEM_PTR(s_vec, 2));
+  IK_SIGNAL_DIRT(pcb, IK_ITEM_PTR(s_vec, 2));
 @}
 pcb->root0 = NULL;
 @end example
@@ -2888,7 +2894,7 @@ ikptr_t  s_stru  = the_structure;
 ikptr_t  s_field = the_field;
 
 IK_REF(s_stru, off_record_data + 2 * wordsize) = the_field;
-ik_signal_dirt_in_page_of_pointer(pcb, \
+IK_SIGNAL_DIRT(pcb, \
   IK_PTR(s_stru, off_record_data + 2 * wordsize));
 @end example
 
@@ -2900,7 +2906,7 @@ ikptr_t  s_stru  = the_structure;
 ikptr_t  s_field = the_field;
 
 IK_FIELD(s_stru, 2) = the_field;
-ik_signal_dirt_in_page_of_pointer(pcb, IK_FIELD_PTR(s_stru, 2));
+IK_SIGNAL_DIRT(pcb, IK_FIELD_PTR(s_stru, 2));
 @end example
 
 @noindent
@@ -3055,8 +3061,7 @@ ikptr_t   s_field;
 s_field = IK_FIELD(s_stru, 2);
 
 IK_FIELD(s_stru, 2) = s_field;
-ik_signal_dirt_in_page_of_pointer(pcb, \
-    IK_FIELD_PTR(s_stru, 2));
+IK_SIGNAL_DIRT(pcb, IK_FIELD_PTR(s_stru, 2));
 @end example
 @end deftypefn
 
@@ -3970,6 +3975,22 @@ Given a reference to bignum and its number of limbs: evaluate to the
 most significant limb in the data area.
 @end deftypefn
 
+@c page
+@node objects integers
+@section Exact integer objects
+
+
+An exact integer is either a fixnum or a bignum.
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_INTEGER (ikptr_t @var{obj})
+Evaluate to true if @var{obj} is either a fixnum or a bignum.
+@end deftypefn
+
 @c ------------------------------------------------------------
 
 @subsubheading Operations on exact integers
@@ -4013,6 +4034,13 @@ value.
 @end deftypefun
 
 
+@deftypefun ikptr_t ika_integer_from_sword (ikpcb_t * @var{pcb}, iksword_t @var{W})
+@deftypefunx ikptr_t ika_integer_from_uword (ikpcb_t * @var{pcb}, ikuword_t @var{W})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
 @deftypefun int ik_integer_to_int (ikptr_t @var{X})
 @deftypefunx long ik_integer_to_long (ikptr_t @var{X})
 @deftypefunx ik_llong ik_integer_to_llong (ikptr_t @var{X})
@@ -4048,17 +4076,13 @@ object @var{X} must be in the correct range for the requested
 conversion.
 @end deftypefun
 
-@c page
-@node objects integers
-@section Exact integer objects
 
-
-An exact integer is either a fixnum or a bignum.
-
-
-@deftypefn {Preprocessor Macro} int IK_IS_INTEGER (ikptr_t @var{obj})
-Evaluate to true if @var{obj} is either a fixnum or a bignum.
-@end deftypefn
+@deftypefun iksword_t ika_integer_from_sword (ikpcb_t * @var{pcb}, ikptr_t @var{X})
+@deftypefunx ikuword_t ika_integer_from_uword (ikpcb_t * @var{pcb}, ikptr_t @var{X})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
+@end deftypefun
 
 @c page
 @node objects ratnums
@@ -4105,13 +4129,13 @@ ikpcb_t * pcb   = ik_the_pcb();
 ikptr_t   s_rn;
 
 s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
-IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+IK_RATNUM_TAG(s_rn) = ratnum_tag;
 @end example
 
 @noindent
 after allocation we must always initialise the numerator and denominator
-fields to some correct value before running the next garbage collection;
-a full allocation and initialisation is as follows:
+fields to some correct value before running the next garbage collection.
+A full allocation and initialisation is as follows:
 
 @example
 ikpcb_t * pcb   = ik_the_pcb();
@@ -4127,44 +4151,56 @@ pcb->root8 = &s_den;
 pcb->root8 = NULL;
 pcb->root9 = NULL;
 
-IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
-IK_REF(s_rn, off_ratnum_num) = s_num;
-IK_REF(s_rn, off_ratnum_den) = s_den;
-ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
+IK_RATNUM_TAG(s_rn) = ratnum_tag;
+IK_RATNUM_NUM(s_rn) = s_num;
+IK_RATNUM_DEN(s_rn) = s_den;
 @end example
 
 @noindent
-notice that in this special case we do not need to call
-@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_rn} because the
-values of the numerator and denominator are older.
+notice that, as in this example, when a new ratnum object is allocated
+after the allocation of the numerator and denominator objects: we do not
+need to call @cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_rn}
+because the ratnum is on the Scheme heap's nursery, so it will for sure
+be scanned at the next garbage collection.
 
-To identify an object as ratnum we do:
+If we allocate the ratnum object first, then the numerator and
+denominator objects, we want to follow this pattern:
 
 @example
-ikptr_t  X = the_object;
+ikpcb_t *  pcb  = ik_the_pcb();
+iksword_t  num  = the_numerator;
+iksword_t  den  = the_denominator;
+ikptr_t    s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+IK_RATNUM_TAG(s_rn) = ratnum_tag;
 
-if ((vector_tag == IK_TAGOF(X)) &&
-    (ratnum_tag == IK_REF(X, -vector_tag)))
-  it_is_a_ratnum();
-else
-  it_is_not();
+pcb->root9 = &s_rn;
+@{
+  IK_ASS(IK_RATNUM_NUM(s_rn), \
+     ika_integer_from_sword(pcb, num));
+  IK_SIGNAL_DIRT(pcb, IK_RATNUM_NUM_PTR(s_rn));
+
+  IK_ASS(IK_RATNUM_DEN(s_rn), \
+     ika_integer_from_sword(pcb, den));
+  IK_SIGNAL_DIRT(pcb, IK_RATNUM_DEN_PTR(s_rn));
+@}
+pcb->root9 = NULL;
 @end example
 
-@noindent
-to set or retrieve the numerator and denominator we do:
+To set or retrieve the numerator and denominator we do:
 
 @example
 ikptr_t  s_rn = the_ratnum;
 ikptr_t  s_num;
 ikptr_t  s_den;
 
-s_num = IK_REF(s_rn, off_ratnum_num);
-s_den = IK_REF(s_rn, off_ratnum_den);
+s_num = IK_RATNUM_NUM(s_rn);
+s_den = IK_RATNUM_DEN(s_rn);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
-IK_REF(s_rn, off_ratnum_num) = s_num;
-IK_REF(s_rn, off_ratnum_den) = s_den;
-ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
+IK_RATNUM_NUM(s_rn) = s_num;
+IK_SIGNAL_DIRT(pcb, IK_RATNUM_NUM_PTR(s_rn));
+
+IK_RATNUM_DEN(s_rn) = s_den;
+IK_SIGNAL_DIRT(pcb, IK_RATNUM_DEN_PTR(s_rn));
 @end example
 
 
@@ -4211,23 +4247,50 @@ denominator.
 @subsubheading Convenience preprocessor macros
 
 
-@deftypefn {Preprocessor Macro} ikptr_t IK_NUMERATOR (ikptr_t @var{X})
-@deftypefnx {Preprocessor Macro} ikptr_t IK_DENOMINATOR (ikptr_t @var{X})
+@deftypefn {Preprocessor Macro} int IK_IS_RATNUM (ikptr_t @var{obj})
+Evaluate to true if @var{obj} is a ratnum object; otherwise evaluate to
+false.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_RATNUM_TAG (ikptr_t @var{X})
+Evaluate to the location of the first word in the ratnum memory block;
+@var{X} must be a tagged pointer to a ratnum object.  A use of this
+macro can appear both as operand and as left--side of an assignment.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_RATNUM_NUM (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_RATNUM_DEN (ikptr_t @var{X})
 Evaluate to the location of the numerator or denominator in the ratnum
-memory block.  A use of these macros can appear both as operand and as
-left--side of an assignment:
+memory block; @var{X} must be a tagged pointer to a ratnum object.  A
+use of these macros can appear both as operand and as left--side of an
+assignment:
 
 @example
 ikptr_t  s_rn  = the_ratnum;
 ikptr_t  s_num;
+ikptr_t  s_den;
 
-s_num = IK_NUMERATOR(s_rn);
+s_num = IK_RATNUM_NUM(s_rn);
+s_den = IK_RATNUM_NUM(s_rn);
 
-IK_NUMERATOR(s_rn) = s_num;
-ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
+IK_RATNUM_NUM(s_rn) = s_num;
+IK_SIGNAL_DIRT(pcb, IK_RATNUM_NUM_PTR(s_rn));
+
+IK_RATNUM_DEN(s_rn) = s_den;
+IK_SIGNAL_DIRT(pcb, IK_RATNUM_DEN_PTR(s_rn));
 @end example
 @end deftypefn
 
+
+@deftypefn {Preprocessor Macro} {ikptr_t *} IK_RATNUM_NUM_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ikptr_t *} IK_RATNUM_DEN_PTR (ikptr_t @var{X})
+Evaluate to a pointer to the location of the numerator and denominator
+objects in @var{X}, which must be a tagged pointer to a ratnum object.
+These macros are useful to build the second argument for calls to
+@cfunc{ik_signal_dirt_in_page_of_pointer}.
+@end deftypefn
 
 @c ------------------------------------------------------------
 
@@ -4481,7 +4544,7 @@ pcb->root9 = NULL;
 IK_REF(s_cn, off_compnum_tag)  = compnum_tag;
 IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
-ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
+IK_SIGNAL_DIRT(pcb, s_cn);
 @end example
 
 @noindent
@@ -4514,7 +4577,7 @@ s_im = IK_REF(s_cn, off_compnum_imag);
 
 IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
-ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
+IK_SIGNAL_DIRT(pcb, s_cn);
 @end example
 
 
@@ -4574,7 +4637,7 @@ ikptr_t  s_re;
 s_re = IK_COMPNUM_REAL(s_cn);
 
 IK_COMPNUM_REAL(s_cn) = s_re;
-ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
+IK_SIGNAL_DIRT(pcb, s_cn);
 @end example
 @end deftypefn
 
@@ -4665,7 +4728,7 @@ pcb->root9 = NULL;
 IK_REF(s_cf, off_cflonum_tag)  = cflonum_tag;
 IK_REF(s_cf, off_cflonum_real) = s_re;
 IK_REF(s_cf, off_cflonum_imag) = s_im;
-ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_SIGNAL_DIRT(pcb, s_cf);
 @end example
 
 @noindent
@@ -4698,7 +4761,7 @@ s_im = IK_REF(s_cf, off_cflonum_imag);
 
 IK_REF(s_cf, off_cflonum_real) = s_re;
 IK_REF(s_cf, off_cflonum_imag) = s_im;
-ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_SIGNAL_DIRT(pcb, s_cf);
 @end example
 
 
@@ -4758,7 +4821,7 @@ ikptr_t  s_re;
 s_re = IK_CFLONUM_REAL(s_cf);
 
 IK_CFLONUM_REAL(s_cf) = s_re;
-ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
+IK_SIGNAL_DIRT(pcb, s_cf);
 @end example
 @end deftypefn
 
@@ -5729,7 +5792,7 @@ IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
 IK_REF(s_kont, off_continuation_size) = \
    pcb->frame_base - pcb->frame_pointer - wordsize;
 IK_REF(s_kont, off_continuation_next) = pcb->next_k;
-ik_signal_dirt_in_page_of_pointer(pcb, s_kont);
+IK_SIGNAL_DIRT(pcb, s_kont);
 pcb->next_k = s_kont;
 @end example
 
