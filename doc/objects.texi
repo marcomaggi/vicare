@@ -4967,8 +4967,8 @@ On 32-bit platforms: @math{32 - 6 = 24} bits available for attributes.
 On 64-bit platforms: @math{64 - 6 = 58} bits available for attributes.
 @end itemize
 
-See the source code in @file{ikarus.io.sls} for a more comprehensive
-documentation.
+Port objects are handled at the Scheme level.  See the source code in
+@file{ikarus.io.sls} for a more comprehensive documentation.
 
 @c page
 @node objects transcoders
