@@ -4333,9 +4333,9 @@ bits set to zero.
    all set to zero         flonum tag
 @end example
 
-A flonum memory block is @math{16} bytes wide on both 32-bit and 64-bit
-platforms; to allow for the same binary layout on both platforms, on a
-32-bit platform the actual number is stored in the last two words:
+To allow for the same binary layout: a flonum memory block is @math{16}
+bytes wide on both 32-bit and 64-bit platforms; on a 32-bit platform the
+actual number is stored in the last two words:
 
 @example
    1st word     2nd word     3rd word     4th word
@@ -4360,37 +4360,30 @@ on a 64-bit platform the actual number is stored in the second word:
 
 @subsubheading Basic operations
 
-Flonums are allcated on the heap as follows:
+Flonums are allocated on the heap as follows:
 
 @example
 ikpcb_t * pcb  = ik_the_pcb();
 ikptr_t   s_fl;
 
 s_fl = ik_safe_alloc(pcb, flonum_size) | vector_tag;
-IK_REF(s_fl, off_flonum_tag) = (ikptr_t)flonum_tag
+IK_FLONUM_TAG(s_fl) = flonum_tag;
 @end example
 
 @noindent
-to identify an object as flonum we do:
+to extract the double number we do:
 
 @example
-ikptr_t  X = the_object;
-
-if ((vector_tag == IK_TAGOF(X)) &&
-    (flonum_tag == IK_REF(X, -vector_tag)))
-  it_is_a_flonum();
-else
-  it_is_not();
+ikptr_t  s_fl = the_flonum;
+double   data = IK_FLONUM_DATA(s_fl);
 @end example
 
 @noindent
 to obtain a pointer to the data area we do:
 
 @example
-ikptr_t     s_fl = the_flonum;
-double *  data;
-
-data = (double*)((long)(X) + off_flonum_data);
+ikptr_t   s_fl = the_flonum;
+double *  data = IK_FLONUM_VOIDP(s_fl);
 @end example
 
 
@@ -4435,9 +4428,22 @@ pointer to the first byte in the data area holding the actual
 @subsubheading Convenience preprocessor macros
 
 
+@deftypefn {Preprocessor Macro} int IK_IS_FLONUM (ikptr_t @var{obj})
+Return true if @var{obj} is a flonum object; otherwise return false.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_FLONUM_TAG (ikptr_t @var{fl})
+Evaluate to the location of the first word in a flonum block.  @var{fl}
+must be a tagged pointer to flonum object.  A use of this macro can
+appear both as operand or left--side of assignment.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} double IK_FLONUM_DATA (ikptr_t @var{fl})
-Set or retrieve the floating point number.  A use of this macro can
-appear both as operand or left--side of assignment:
+Set or retrieve the floating point number; @var{fl} must be a tagged
+pointer to flonum object.  A use of this macro can appear both as
+operand or left--side of assignment:
 
 @example
 ikptr_t  s_fl = the_flonum;
@@ -4449,8 +4455,9 @@ num = IK_FLONUM_DATA(s_fl);
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_FLONUM (ikptr_t @var{obj})
-Return non--zero if @var{obj} is a flonum object; otherwise return zero.
+@deftypefn {Preprocessor Macro} {void *} IK_FLONUM_VOIDP (ikptr_t @var{fl})
+Evaluate to a pointer to the data area of a flonum object.  @var{fl}
+must be a tagged pointer to flonum object.
 @end deftypefn
 
 @c ------------------------------------------------------------

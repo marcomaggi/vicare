@@ -609,8 +609,11 @@ ik_api_decl ikptr_t	ika_compnum_alloc_and_init	(ikpcb_t * pcb);
   ikptr_t VARNAME = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;	\
   IK_REF(VARNAME, off_flonum_tag) = (ikptr_t)flonum_tag
 
+#define IK_FLONUM_TAG(X)	IK_REF((X), off_flonum_tag)
 #define IK_FLONUM_DATA(X)	(*((double*)(((ikuword_t)(X))+off_flonum_data)))
 #define IK_FLONUM_VOIDP(X)	((void*)(((ikuword_t)(X))+((iksword_t)off_flonum_data)))
+
+#define IK_IS_FLONUM(X)		((vector_tag == IK_TAGOF(X)) && (flonum_tag == IK_FLONUM_TAG(X)))
 
 ik_api_decl int     ik_is_flonum		(ikptr_t obj);
 ik_api_decl ikptr_t iku_flonum_alloc		(ikpcb_t * pcb, double fl);
