@@ -5032,31 +5032,17 @@ ikpcb_t * pcb   = ik_the_pcb();
 ikptr_t   s_ptr;
 
 s_ptr = ik_safe_alloc(pcb, pointer_size) | vector_tag;
-IK_REF(s_ptr, off_pointer_tag) = pointer_tag;
+IK_POINTER_TAG(s_ptr) = pointer_tag;
 @end example
 
-@noindent
-to identify an object as pointer we do:
-
-@example
-ikptr_t  X = the_object;
-
-if ((vector_tag  == IK_TAGOF(X)) &&
-    (pointer_tag == IK_REF(X, -vector_tag)))
-  it_is_a_pointer();
-else
-  it_is_not();
-@end example
-
-@noindent
-to set or retrieve the pointer value we do:
+To set or retrieve the pointer value we do:
 
 @example
 ikptr_t  s_ptr = the_pointer;
 void * ptr;
 
-ptr = (void *)IK_REF((X), off_pointer_data);
-IK_REF((X), off_pointer_data) = (ikptr_t)ptr;
+ptr = IK_POINTER_DATA_VOIDP(X);
+IK_POINTER_DATA_VOIDP(X) = ptr;
 @end example
 
 
@@ -5106,8 +5092,15 @@ Evaluate to true if @var{X} is a pointer object.
 @end deftypefn
 
 
+@deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_TAG (ikptr_t @var{X})
+Evaluate to the location of the first word in a pointer object; @var{X}
+must be a tagged pointer referencing a pointer object.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_DATA (ikptr_t @var{X})
-Return the value of the pointer as @code{ikptr_t}.
+Return the value of the pointer as @code{ikptr_t}; @var{X} must be a
+tagged pointer referencing a pointer object.
 @end deftypefn
 
 
@@ -5118,39 +5111,31 @@ Return the value of the pointer as @code{ikptr_t}.
 @deftypefnx {Preprocessor Macro} {ik_llong *} IK_POINTER_DATA_LLONG (ikptr_t @var{X})
 @deftypefnx {Preprocessor Macro} {ik_ulong *} IK_POINTER_DATA_ULONG (ikptr_t @var{X})
 @deftypefnx {Preprocessor Macro} {ik_ullong *} IK_POINTER_DATA_ULLONG (ikptr_t @var{X})
-Return the value of the pointer cast to a specific type.
+Return the value of the pointer cast to a specific type; @var{X} must be
+a tagged pointer referencing a pointer object.
 @end deftypefn
 
 
 @deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_SET (ikptr_t @var{X}, void * @var{ptr})
-Reset to @var{ptr} the value of the pointer @var{X}.
+Reset to @var{ptr} the value of the pointer @var{X}; @var{X} must be a
+tagged pointer referencing a pointer object.
 @end deftypefn
 
 
 @deftypefn {Preprocessor Macro} ikptr_t IK_POINTER_SET_NULL (ikptr_t @var{X})
-Reset to @cnull{} the value of the pointer.
+Reset to @cnull{} the value of the pointer; @var{X} must be a tagged
+pointer referencing a pointer object.
 @end deftypefn
 
 
 @deftypefn {Preprocessor Macro} int IK_POINTER_IS_NULL (ikptr_t @var{X})
-Evaluate to true if the pointer value is @cnull{}.
+Evaluate to true if the pointer value is @cnull{}; @var{X} must be a
+tagged pointer referencing a pointer object.
 @end deftypefn
 
 @c ------------------------------------------------------------
 
 @subsubheading Operations on pointers
-
-
-@deftypefun ikptr_t ika_pointer_alloc (ikpcb_t * @var{pcb}, ik_ulong @var{memory})
-Allocate a pointer object using @cfunc{ik_safe_alloc} and return a
-tagged reference to it.  The pointer is initialised to @var{memory}.
-@end deftypefun
-
-
-@deftypefun ikptr_t iku_pointer_alloc (ikpcb_t* pcb, ik_ulong @var{memory})
-Allocate a pointer object using @cfunc{ik_unsafe_alloc} and return a
-tagged reference to it.  The pointer is initialised to @var{memory}.
-@end deftypefun
 
 
 @deftypefun int ik_is_pointer (ikptr_t @var{X})
@@ -5161,6 +5146,18 @@ Return true if @var{X} is a pointer object.
 @deftypefun ikptr_t ikrt_is_pointer (ikptr_t @var{X})
 Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
 @code{IK_FALSE_OBJECT}.
+@end deftypefun
+
+
+@deftypefun ikptr_t ika_pointer_alloc (ikpcb_t * @var{pcb}, ikuword_t @var{memory})
+Allocate a pointer object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The pointer is initialised to @var{memory}.
+@end deftypefun
+
+
+@deftypefun ikptr_t iku_pointer_alloc (ikpcb_t* pcb, ikuword_t @var{memory})
+Allocate a pointer object using @cfunc{ik_unsafe_alloc} and return a
+tagged reference to it.  The pointer is initialised to @var{memory}.
 @end deftypefun
 
 @c page

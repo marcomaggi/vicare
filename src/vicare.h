@@ -684,13 +684,15 @@ ik_api_decl ikptr_t	ika_cflonum_from_doubles	(ikpcb_t * pcb, double re, double i
 #define off_pointer_tag		(disp_pointer_tag  - vector_tag)
 #define off_pointer_data	(disp_pointer_data - vector_tag)
 
-ik_api_decl ikptr_t ika_pointer_alloc	(ikpcb_t* pcb, ikuword_t memory);
-ik_api_decl ikptr_t iku_pointer_alloc	(ikpcb_t* pcb, ikuword_t memory);
-ik_api_decl ikptr_t ikrt_is_pointer	(ikptr_t X);
-ik_api_decl int   ik_is_pointer	(ikptr_t X);
+ik_api_decl ikptr_t	ika_pointer_alloc	(ikpcb_t* pcb, ikuword_t memory);
+ik_api_decl ikptr_t	iku_pointer_alloc	(ikpcb_t* pcb, ikuword_t memory);
+ik_api_decl ikptr_t	ikrt_is_pointer		(ikptr_t X);
+ik_api_decl int		ik_is_pointer		(ikptr_t X);
 
-#define IK_IS_POINTER(X)	\
-  (((vector_tag == IK_TAGOF(X)) && (pointer_tag == IK_REF(X, -vector_tag))))
+#define IK_IS_POINTER(X)		((vector_tag  == IK_TAGOF(X)) && \
+					 (pointer_tag == IK_POINTER_TAG(X)))
+
+#define IK_POINTER_TAG(X)		IK_REF((X), off_pointer_tag)
 
 #define IK_POINTER_DATA(X)		IK_REF((X), off_pointer_data)
 #define IK_POINTER_DATA_VOIDP(X)	((void *)   IK_REF((X), off_pointer_data))
