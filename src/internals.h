@@ -1448,16 +1448,24 @@ ik_decl ikptr_t	ika_ratnum_alloc_and_init	(ikpcb_t * pcb);
 #define disp_compnum_unused	(3 * wordsize)
 #define compnum_size		(4 * wordsize)
 
-#define off_compnum_tag		-vector_tag
+#define off_compnum_tag		(disp_compnum_tag    - vector_tag)
 #define off_compnum_real	(disp_compnum_real   - vector_tag)
 #define off_compnum_imag	(disp_compnum_imag   - vector_tag)
 #define off_compnum_unused	(disp_compnum_unused - vector_tag)
 
+#define IK_IS_COMPNUM(X)	((vector_tag  == IK_TAGOF(X)) && \
+				 (compnum_tag == IK_COMPNUM_TAG(X)))
+
+#define IK_COMPNUM_TAG(X)	IK_REF((X), off_compnum_tag)
 #define IK_COMPNUM_REAL(X)	IK_REF((X), off_compnum_real)
 #define IK_COMPNUM_IMAG(X)	IK_REF((X), off_compnum_imag)
+#define IK_COMPNUM_REP(X)	IK_REF((X), off_compnum_real)
+#define IK_COMPNUM_IMP(X)	IK_REF((X), off_compnum_imag)
 
 #define IK_COMPNUM_REAL_PTR(X)	IK_PTR((X), off_compnum_real)
 #define IK_COMPNUM_IMAG_PTR(X)	IK_PTR((X), off_compnum_imag)
+#define IK_COMPNUM_REP_PTR(X)	IK_PTR((X), off_compnum_real)
+#define IK_COMPNUM_IMP_PTR(X)	IK_PTR((X), off_compnum_imag)
 
 ik_decl int	ik_is_compnum	(ikptr_t X);
 ik_decl ikptr_t	ika_compnum_alloc_no_init	(ikpcb_t * pcb);
@@ -1501,9 +1509,11 @@ ik_decl ikptr_t ikrt_flonum_hash	(ikptr_t x /*, ikpcb_t* pcb */);
 #define disp_cflonum_imag	(2 * wordsize)
 #define disp_cflonum_unused	(3 * wordsize)
 #define cflonum_size		(4 * wordsize)
-#define off_cflonum_tag		(disp_cflonum_tag  - vector_tag)
-#define off_cflonum_real	(disp_cflonum_real - vector_tag)
-#define off_cflonum_imag	(disp_cflonum_imag - vector_tag)
+
+#define off_cflonum_tag		(disp_cflonum_tag    - vector_tag)
+#define off_cflonum_real	(disp_cflonum_real   - vector_tag)
+#define off_cflonum_imag	(disp_cflonum_imag   - vector_tag)
+#define off_cflonum_unused	(disp_cflonum_unused - vector_tag)
 
 #define IKU_DEFINE_AND_ALLOC_CFLONUM(VARNAME)				\
   ikptr_t VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\

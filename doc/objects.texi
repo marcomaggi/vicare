@@ -4526,7 +4526,7 @@ ikpcb_t * pcb   = ik_the_pcb();
 ikptr_t   s_cn;
 
 s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
-IK_REF(s_cn, off_compnum_tag) = compnum_tag;
+IK_COMPNUM_TAG(s_cn) = compnum_tag;
 @end example
 
 @noindent
@@ -4548,43 +4548,56 @@ pcb->root8 = &s_im;
 pcb->root8 = NULL;
 pcb->root9 = NULL;
 
-IK_REF(s_cn, off_compnum_tag)  = compnum_tag;
-IK_REF(s_cn, off_compnum_real) = s_re;
-IK_REF(s_cn, off_compnum_imag) = s_im;
-IK_SIGNAL_DIRT(pcb, s_cn);
+IK_COMPNUM_TAG(s_cn)  = compnum_tag;
+IK_COMPNUM_REAL(s_cn) = s_re;
+IK_COMPNUM_IMAG(s_cn) = s_im;
 @end example
 
 @noindent
-notice that in this case we do not call
-@cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cn} because the
-values of the real and imaginary parts are older.
+notice that, as in this example, when a new compnum object is allocated
+after the allocation of the real and imaginary objects: we do not need
+to call @cfunc{ik_signal_dirt_in_page_of_pointer} for @var{s_cn} because
+the compnum is on the Scheme heap's nursery, so it will for sure be
+scanned at the next garbage collection.
 
-To identify an object as compnum we do:
+If we allocate the compnum object first, then the real and imaginary
+objects, we want to follow this pattern:
 
 @example
-ikptr_t  X = the_object;
+ikpcb_t *  pcb  = ik_the_pcb();
+iksword_t  rep  = the_real_part;
+iksword_t  imp  = the_imag_part;
+ikptr_t    s_cn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+IK_COMPNUM_TAG(s_cn) = compnum_tag;
 
-if ((vector_tag  == IK_TAGOF(X)) &&
-    (compnum_tag == IK_REF(X, -vector_tag)))
-  it_is_a_compnum();
-else
-  it_is_not();
+pcb->root9 = &s_cn;
+@{
+  IK_ASS(IK_COMPNUM_REAL(s_cn), \
+     ika_integer_from_sword(pcb, rep));
+  IK_SIGNAL_DIRT(pcb, IK_COMPNUM_REAL_PTR(s_cn));
+
+  IK_ASS(IK_COMPNUM_IMAG(s_cn), \
+     ika_integer_from_sword(pcb, imp));
+  IK_SIGNAL_DIRT(pcb, IK_COMPNUM_IMAG_PTR(s_cn));
+@}
+pcb->root9 = NULL;
 @end example
 
-@noindent
-to set or retrieve the real and imaginary parts we do:
+To set or retrieve the real and imaginary parts we do:
 
 @example
 ikptr_t  s_cn = the_compnum;
 ikptr_t  s_re;
 ikptr_t  s_im;
 
-s_re = IK_REF(s_cn, off_compnum_real);
-s_im = IK_REF(s_cn, off_compnum_imag);
+s_re = IK_COMPNUM_REAL(s_cn);
+s_im = IK_COMPNUM_IMAG(s_cn);
 
-IK_REF(s_cn, off_compnum_real) = s_re;
-IK_REF(s_cn, off_compnum_imag) = s_im;
-IK_SIGNAL_DIRT(pcb, s_cn);
+IK_COMPNUM_REAL(s_cn) = s_re;
+IK_SIGNAL_DIRT(pcb, IK_COMPNUM_REAL_PTR(s_cn));
+
+IK_COMPNUM_IMAG(s_cn) = s_im;
+IK_SIGNAL_DIRT(pcb, IK_COMPNUM_IMAG_PTR(s_cn));
 @end example
 
 
@@ -4631,10 +4644,26 @@ imaginary part.
 @subsubheading Convenience preprocessor macros
 
 
+@deftypefn {Preprocessor Macro} int IK_IS_COMPNUM (ikptr_t @var{obj})
+Return true if @var{obj} is a compnum object; otherwise return false.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_COMPNUM_TAG (ikptr_t @var{X})
+Evaluate to the location of the first word in the compnum memory block;
+@var{X} must be a tagged pointer referencing a compnum object.  A use of
+this macro can appear both as operand and as left--side of an
+assignment.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr_t IK_COMPNUM_REAL (ikptr_t @var{X})
 @deftypefnx {Preprocessor Macro} ikptr_t IK_COMPNUM_IMAG (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_COMPNUM_REP (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} ikptr_t IK_COMPNUM_IMP (ikptr_t @var{X})
 Evaluate to the location of the real and imaginary parts in the compnum
-memory block.  A use of these macros can appear both as operand and as
+memory block; @var{X} must be a tagged pointer referencing a compnum
+object.  A use of these macros can appear both as operand and as
 left--side of an assignment:
 
 @example
@@ -4646,6 +4675,17 @@ s_re = IK_COMPNUM_REAL(s_cn);
 IK_COMPNUM_REAL(s_cn) = s_re;
 IK_SIGNAL_DIRT(pcb, s_cn);
 @end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {ikptr_t *} IK_COMPNUM_REAL_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ikptr_t *} IK_COMPNUM_IMAG_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ikptr_t *} IK_COMPNUM_REP_PTR (ikptr_t @var{X})
+@deftypefnx {Preprocessor Macro} {ikptr_t *} IK_COMPNUM_IMP_PTR (ikptr_t @var{X})
+Evaluate to a pointer to the real and imaginary parts in the compnum
+memory block; @var{X} must be a tagged pointer referencing a compnum
+object.  These macros are useful in building the second argument for
+calls to @cfunc{ik_signal_dirt_in_page_of_pointer}.
 @end deftypefn
 
 @c ------------------------------------------------------------

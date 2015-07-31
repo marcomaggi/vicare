@@ -1523,22 +1523,22 @@ ika_ratnum_alloc_and_init (ikpcb_t * pcb)
 int
 ik_is_compnum (ikptr_t X)
 {
-  return ((vector_tag == IK_TAGOF(X)) &&
-	  (compnum_tag == IK_REF(X, -vector_tag)));
+  return ((vector_tag  == IK_TAGOF(X)) &&
+	  (compnum_tag == IK_COMPNUM_TAG(X)));
 }
 ikptr_t
 ika_compnum_alloc_no_init (ikpcb_t * pcb)
 {
   ikptr_t	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
-  IK_REF(s_cn, off_compnum_tag) = compnum_tag;
+  IK_COMPNUM_TAG(s_cn) = compnum_tag;
   return s_cn;
 }
 ikptr_t
 ika_compnum_alloc_and_init (ikpcb_t * pcb)
 {
   ikptr_t	s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
-  IK_REF(s_cn, off_compnum_tag) = compnum_tag;
-  memset((void *)(((ikuword_t)s_cn) + off_compnum_real), 0, 3 * wordsize);
+  IK_COMPNUM_TAG(s_cn) = compnum_tag;
+  memset((void *)(((ikuword_t)s_cn) + off_compnum_real), 0, compnum_size);
   return s_cn;
 }
 

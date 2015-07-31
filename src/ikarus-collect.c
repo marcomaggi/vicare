@@ -1711,6 +1711,7 @@ gather_live_object_proc (gc_t* gc, ikptr_t X)
       IK_REF(Y,          - vector_tag) = first_word;
       IK_REF(Y, off_ratnum_num) = gather_live_object(gc, num, "num");
       IK_REF(Y, off_ratnum_den) = gather_live_object(gc, den, "den");
+      IK_REF(Y, off_ratnum_unused) = 0;
       return Y;
     }
 
@@ -1733,8 +1734,9 @@ gather_live_object_proc (gc_t* gc, ikptr_t X)
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
-      IK_REF(Y, off_compnum_real) = gather_live_object(gc, rl, "real");
-      IK_REF(Y, off_compnum_imag) = gather_live_object(gc, im, "imag");
+      IK_REF(Y, off_compnum_real)   = gather_live_object(gc, rl, "real");
+      IK_REF(Y, off_compnum_imag)   = gather_live_object(gc, im, "imag");
+      IK_REF(Y, off_compnum_unused) = 0;
       return Y;
     }
 
@@ -1756,8 +1758,9 @@ gather_live_object_proc (gc_t* gc, ikptr_t X)
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
       IK_REF(Y,          - vector_tag) = first_word;
-      IK_REF(Y, off_cflonum_real) = gather_live_object(gc, rl, "real");
-      IK_REF(Y, off_cflonum_imag) = gather_live_object(gc, im, "imag");
+      IK_REF(Y, off_cflonum_real)   = gather_live_object(gc, rl, "real");
+      IK_REF(Y, off_cflonum_imag)   = gather_live_object(gc, im, "imag");
+      IK_REF(Y, off_cflonum_unused) = 0;
       return Y;
     }
 
