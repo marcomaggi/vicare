@@ -5165,9 +5165,49 @@ tagged reference to it.  The pointer is initialised to @var{memory}.
 @section Components for hashtables
 
 
-A tcbucket is a fixed--length memory block referenced by machine words
-tagged as vectors.  A tcbucket is used only to store values in a
-hashtable: each tcbucket represents an entry in the table.
+Tcbuckets are used only to store values in a hashtable: each tcbucket
+represents an entry in the table.  @value{PRJNAME}'s hash tables are
+implemented as explained in the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+A @dfn{tcbucket} (tconc bucket, tail--concatenation bucket) is a
+fixed--length memory block referenced by machine words tagged as
+vectors; the first word in the memory block is a pair.  Quoting the
+paper:
+
+@quotation
+A tconc is a pair whose car points to the first pair in a non--empty
+list and whose cdr points to the last pair in that list.  Element are
+enqueued by extending the list destructively through the last--pair
+pointer and dequeued through the first--pair pointer.  The queue is
+empty when both pointers point to the same pair.
+@end quotation
+
+@noindent
+tconc objects allow to enqueue objects faster than ordinary lists.
+
+References to tcbuckets have the following format:
+
+@example
+|------------------------|-------------| reference to tcbucket
+      heap pointer         vector tag
+@end example
+
+@noindent
+the memory layout of a tcbucket is as follows:
+
+@example
+|-----|-----|-----|-----| tcbucket memory block
+ tconc  key   val  next
+@end example
+
+@noindent
+references to tcbucket are tagged as vectors and reference a word tagged
+as pair.
 
 Tcbuckets are organised in chains, similarly to pairs in lists.  Hash
 tables are Scheme vectors whose elements are chains of tcbuckets:
@@ -5193,31 +5233,12 @@ its own index in the vector.  Every chain of tcbuckets is a ``bucket''
 in traditional hash tables terminology.  When a new tcbucket is added to
 a bucket: it is prepended to the chain.
 
-References to tcbuckets have the following format:
-
-@example
-|------------------------|-------------| reference to tcbucket
-      heap pointer         vector tag
-@end example
-
-@noindent
-the memory layout of a tcbucket is as follows:
-
-@example
-|-----|-----|-----|-----| tcbucket memory block
- tconc  key   val  next
-@end example
-
-@noindent
-references to tcbucket are tagged as vectors and reference a word tagged
-as pair.
-
 The meaning of a tcbucket's fields is as follows:
 
 @table @code
 @item tconc
-A pair.  It is a structure used to efficiently handle hash tables using
-@func{eq?} as equivalence function.
+A tconc pair.  It is a structure used to efficiently handle hash tables
+using @func{eq?} as equivalence function.
 
 @item key
 A Scheme object representing the key of the hash table entry.
@@ -5231,13 +5252,6 @@ the next tcbucket in the chain.  If this tcbucket @strong{is} the last
 in its chain: a non--negative fixnum representing the index of this
 chain in the table's buckets vector.
 @end table
-
-For details on such objects, see the paper:
-
-@quotation
-Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
-of the 2007 Workshop on Scheme and Functional Programming.
-@end quotation
 
 @c ------------------------------------------------------------
 
