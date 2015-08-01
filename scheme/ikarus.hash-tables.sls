@@ -177,11 +177,10 @@
    hashf
 		;If this is a EQ? or EQV? table: the boolean false.
 		;
-		;the hash
-		;function to be  used to compute keys's hash values.   It is the same
-		;value of the field HASHF0 only if  it is one among the built-in hash
-		;functions, otherwise it  is a wrapper for HASHF0  that validates the
-		;return value as exact integer.
+		;the hash function  to be used to compute keys's  hash values.  It is
+		;the same  value of  the field  HASHF0 only  if it  is one  among the
+		;built-in hash functions,  otherwise it is a wrapper  for HASHF0 that
+		;validates the return value as exact integer.
    equivf
 		;The equivalence function given to the constructor of this struct.
    hashf0
