@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus writer)
   (export
     write			display
@@ -41,6 +42,8 @@
 	  $unbound-object?)
     (only (vicare system $structs)
 	  $struct-rtd)
+    (only (vicare system $codes)
+	  $code-annotation)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
@@ -117,24 +120,34 @@
 (import traversal-helpers)
 
 (define (cannot-happen)
-  (error 'vicare-writer "*** Vicare: internal error"))
+  (error 'vicare-writer "vicare: internal error"))
 
 (define (traverse x h)
+  (define (traverse-noop x h)
+    (void))
+
   (define (traverse-pair x h)
     (traverse (car x) h)
     (traverse (cdr x) h))
+
+  (define (traverse-code x h)
+    (cond (($code-annotation x)
+	   => (lambda (ann)
+		(traverse ann h)))
+	  (else
+	   (void))))
+
   (define (traverse-vector x h)
     (let f ((i 0) (n (vector-length x)))
       (unless (fx=? i n)
         (traverse (vector-ref x i) h)
         (f (fx+ i 1) n))))
-  (define (traverse-noop x h) (void))
+
   (define (traverse-struct x h)
     (define (traverse-vanilla-struct x h)
       (let ((rtd ($struct-rtd x)))
-        (unless
-	    (and (record-type-descriptor? rtd)
-		 (record-type-opaque? rtd))
+        (unless (and (record-type-descriptor? rtd)
+		     (record-type-opaque? rtd))
           (traverse (struct-name x) h)
           (let ((n (struct-length x)))
             (let f ((idx 0))
@@ -158,35 +171,35 @@
       (if (procedure? printer)
           (traverse-custom-struct x h printer)
 	(traverse-vanilla-struct x h))))
+
   (define (traverse-shared x h k)
-    (cond
-     ((hashtable-ref h x #f) =>
-      (lambda (b)
-	(cond
-	 ((fixnum? b)
-	  (hashtable-set! h x (fxior b shared-bit)))
-	 (else
-	  (set-car! b (fxior (car b) shared-bit))))))
-     (else
-      (hashtable-set! h x 0)
-      (k x h)
-      (let ((b (hashtable-ref h x #f)))
-	(cond
-	 ((fixnum? b)
-	  (when (shared-set? b)
-	    (hashtable-set! h x (fxior b cyclic-bit))))
-	 (else
-	  (let ((a (car b)))
-	    (when (shared-set? a)
-	      (set-car! b (fxior a cyclic-bit))))))))))
+    (cond ((hashtable-ref h x #f)
+	   => (lambda (b)
+		(cond ((fixnum? b)
+		       (hashtable-set! h x (fxior b shared-bit)))
+		      (else
+		       (set-car! b (fxior (car b) shared-bit))))))
+	  (else
+	   (hashtable-set! h x 0)
+	   (k x h)
+	   (let ((b (hashtable-ref h x #f)))
+	     (cond ((fixnum? b)
+		    (when (shared-set? b)
+		      (hashtable-set! h x (fxior b cyclic-bit))))
+		   (else
+		    (let ((a (car b)))
+		      (when (shared-set? a)
+			(set-car! b (fxior a cyclic-bit))))))))))
+
   (define (traverse x h)
-    (cond
-     ((pair? x)       (traverse-shared x h traverse-pair))
-     ((vector? x)     (traverse-shared x h traverse-vector))
-     ((struct? x)     (traverse-shared x h traverse-struct))
-     ((bytevector? x) (traverse-shared x h traverse-noop))
-     ((gensym? x)     (traverse-shared x h traverse-noop))
-     (else (void))))
+    (cond ((pair?       x)	(traverse-shared x h traverse-pair))
+	  ((vector?     x)	(traverse-shared x h traverse-vector))
+	  ((struct?     x)	(traverse-shared x h traverse-struct))
+	  ((bytevector? x)	(traverse-shared x h traverse-noop))
+	  ((gensym?     x)	(traverse-shared x h traverse-noop))
+	  ((code?       x)	(traverse-shared x h traverse-code))
+	  (else			(void))))
+
   (traverse x h))
 
 
@@ -213,49 +226,49 @@
 	    ((8)	(write-char #\o p))
 	    ((16)	(write-char #\x p)))
 	  (write-char* (number->string x radix) p)))))
+
   (define (write-pair x p m h i)
     (define (macro x h)
-      (and
-       (pair? x)
-       (let ((a (car x)))
-	 (and (symbol? a)
-	      (let ((d (cdr x)))
-		(and (pair? d)
-		     (null? (cdr d))
-		     (not (shared? d h))))
-	      (let ((p ((pretty-format a))))
-		(and (pair? p)
-		     (eq? (car p) 'read-macro)
-		     (let ((d (cdr p)))
-		       (and (string? d) d))))))))
+      (and (pair? x)
+	   (let ((a (car x)))
+	     (and (symbol? a)
+		  (let ((d (cdr x)))
+		    (and (pair? d)
+			 (null? (cdr d))
+			 (not (shared? d h))))
+		  (let ((p ((pretty-format a))))
+		    (and (pair? p)
+			 (eq? (car p) 'read-macro)
+			 (let ((d (cdr p)))
+			   (and (string? d) d))))))))
     (define (f d i)
-      (cond
-       ((null? d) i)
-       ((not (pair? d))
-	(write-char #\space p)
-	(write-char #\. p)
-	(write-char #\space p)
-	(wr d p m h i))
-       ((shared? d h)
-	(write-char #\space p)
-	(when (print-graph)
-	  (write-char #\. p)
-	  (write-char #\space p))
-	(wr d p m h i))
-       (else
-	(write-char #\space p)
-	(let ((i (wr (car d) p m h i)))
-	  (f (cdr d) i)))))
-    (cond
-     ((macro x h) =>
-      (lambda (a)
-	(write-string a p #f)
-	(wr (cadr x) p m h i)))
-     (else
-      (write-char #\( p)
-      (let ((i (f (cdr x) (wr (car x) p m h i))))
-	(write-char #\) p)
-	i))))
+      (cond ((null? d)
+	     i)
+	    ((not (pair? d))
+	     (write-char #\space p)
+	     (write-char #\. p)
+	     (write-char #\space p)
+	     (wr d p m h i))
+	    ((shared? d h)
+	     (write-char #\space p)
+	     (when (print-graph)
+	       (write-char #\. p)
+	       (write-char #\space p))
+	     (wr d p m h i))
+	    (else
+	     (write-char #\space p)
+	     (let ((i (wr (car d) p m h i)))
+	       (f (cdr d) i)))))
+    (cond ((macro x h)
+	   => (lambda (a)
+		(write-string a p #f)
+		(wr (cadr x) p m h i)))
+	  (else
+	   (write-char #\( p)
+	   (let ((i (f (cdr x) (wr (car x) p m h i))))
+	     (write-char #\) p)
+	     i))))
+
   (define (write-vector x p m h i)
     (define (f x p m h i idx n)
       (cond
@@ -333,7 +346,8 @@
            ((fx= i 127)
             (write-char #\\ p)
             (write-char* "delete" p))
-           ((and (print-unicode) (unicode-printable-char? x))
+           ((and (print-unicode)
+		 (unicode-printable-char? x))
             (write-char #\\ p)
             (write-char x p))
            (else
@@ -641,25 +655,38 @@
     (unless (zero? n)
       (write-hex (sra x 4) (- n 1) p)
       (write-char (string-ref s (bitwise-and x #xF)) p)))
-  (define (write-shared x p m h i k)
+
+  (define* (write-shared x p m h i k)
+    ;;Takes care of printing shared structures  with "#n=" and "#n#" elements, rather
+    ;;than  going  into  infinite  recursion.   For  this  function  to  work:  every
+    ;;interesting sub-object of the object X must have been previously visited by the
+    ;;function TRAVERSE, so that the hashtable H knows about it.
+    ;;
     (let ((b (hashtable-ref h x #f)))
-      (let ((b (if (fixnum? b) b (car b))))
-        (cond
-	 ((mark-set? b)
-	  (write-char #\# p)
-	  (write-fixnum (fxsra b mark-shift) p)
-	  (write-char #\# p)
-	  i)
-	 ((or (cyclic-set? b)
-	      (and (shared-set? b) (print-graph)))
-	  (let ((n i))
-	    (set-mark! x h n)
-	    (write-char #\# p)
-	    (write-fixnum n p)
-	    (write-char #\= p)
-	    (k x p m h (+ i 1))))
-	 (else
-	  (k x p m h i))))))
+      (let ((b (cond ((fixnum? b)
+		      b)
+		     ((pair? b)
+		      (car b))
+		     (else
+		      (assertion-violation __who__
+			"sub-object has not been processed correctly to handle shared structure"
+			b)))))
+        (cond ((mark-set? b)
+	       (write-char #\# p)
+	       (write-fixnum (fxsra b mark-shift) p)
+	       (write-char #\# p)
+	       i)
+	      ((or (cyclic-set? b)
+		   (and (shared-set? b) (print-graph)))
+	       (let ((n i))
+		 (set-mark! x h n)
+		 (write-char #\# p)
+		 (write-fixnum n p)
+		 (write-char #\= p)
+		 (k x p m h (+ i 1))))
+	      (else
+	       (k x p m h i))))))
+
   (define (wr x p m h i)
     (cond
      ((pair? x)   (write-shared x p m h i write-pair))
@@ -699,7 +726,16 @@
 		   p)
       i)
      ((struct? x)		(write-shared x p m h i write-struct))
-     ((code? x)			(write-char* "#<code>" p) i)
+     ((code? x)
+      (cond (($code-annotation x)
+	     => (lambda (ann)
+		  (write-char* "#<code annotation=" p)
+		  (let ((i (wr ann p m h i)))
+		    (write-char #\> p)
+		    i)))
+	    (else
+	     (write-char* "#<code>" p)
+	     i)))
      ((pointer? x)
       (write-char* "#<pointer #x" p)
       (write-hex (pointer->integer x)
@@ -798,74 +834,65 @@
 	  (write-char c p)
 	  (f (fxadd1 i) args)))))))
 
-(define (fprintf p fmt . args)
-  (assert-open-textual-output-port p 'fprintf)
-  (unless (string? fmt)
-    (die 'fprintf "not a string" fmt))
-  (formatter 'fprintf p fmt args)
+(define* (fprintf p {fmt string?} . args)
+  (assert-open-textual-output-port p __who__)
+  (formatter __who__ p fmt args)
   (void))
 
-(define (display-error errname who fmt args)
-  (unless (string? fmt)
-    (die 'print-error "not a string" fmt))
+(define* (display-error errname who {fmt string?} args)
   (let ((p (standard-error-port)))
     (if who
 	(fprintf p "~a in ~a: " errname who)
       (fprintf p "~a: " errname))
-    (formatter 'print-error p fmt args)
+    (formatter __who__ p fmt args)
     (write-char #\. p)
     (newline p)
     (void)))
 
-(define (format fmt . args)
-  (unless (string? fmt)
-    (die 'format "not a string" fmt))
-  (let-values (((p e) (open-string-output-port)))
-    (formatter 'format p fmt args)
-    (e)))
+(define* (format {fmt string?} . args)
+  (receive (port extract)
+      (open-string-output-port)
+    (formatter __who__ port fmt args)
+    (extract)))
 
-(define (printf fmt . args)
-  (unless (string? fmt)
-    (die 'printf "not a string" fmt))
-  (formatter 'printf (current-output-port) fmt args)
+(define* (printf {fmt string?} . args)
+  (formatter __who__ (current-output-port) fmt args)
   (void))
 
-(define write
-  (case-lambda
-   ((x)
-    (write-to-port x (current-output-port))
-    (void))
-   ((x p)
-    (assert-open-textual-output-port p 'write)
-    (write-to-port x p)
-    (void))))
+(case-define* write
+  ((x)
+   (write-to-port x (current-output-port))
+   (void))
+  ((x p)
+   (assert-open-textual-output-port p __who__)
+   (write-to-port x p)
+   (void)))
 
-(define (put-datum p x)
-  (assert-open-textual-output-port p 'put-datum)
+(define* (put-datum p x)
+  (assert-open-textual-output-port p __who__)
   (write-to-port x p)
   (void))
 
-(define display
-  (case-lambda
-   ((x)
-    (display-to-port x (current-output-port))
-    (void))
-   ((x p)
-    (assert-open-textual-output-port p 'display)
-    (display-to-port x p)
-    (void))))
+(case-define* display
+  ((x)
+   (display-to-port x (current-output-port))
+   (void))
+  ((x p)
+   (assert-open-textual-output-port p __who__)
+   (display-to-port x p)
+   (void)))
 
 (define (print-error who fmt . args)
-  (display-error "Error" who fmt args)
+  (display-error "error" who fmt args)
   (void))
 
 (define (assert-open-textual-output-port p who)
   (unless (output-port? p)
-    (die who "not an output port" p))
+    (error who "not an output port" p))
   (unless (textual-port? p)
-    (die who "not a textual port" p))
+    (error who "not a textual port" p))
   (when (port-closed? p)
-    (die who "port is closed" p)))
+    (error who "port is closed" p)))
 
 (define (debug-print . args)
   ;;Print arguments for debugging purposes.
