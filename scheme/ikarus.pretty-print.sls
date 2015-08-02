@@ -41,7 +41,7 @@
 	  non-negative-fixnum?)
     (only (ikarus writer)
 	  traverse
-	  traversal-helpers)
+	  TRAVERSAL-HELPERS)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
@@ -281,7 +281,7 @@
 		   ls)))
 	(make-vbox len prefix ls))))
   (define (graphed? x)
-    (import traversal-helpers)
+    (import TRAVERSAL-HELPERS)
     (let ((b (hashtable-ref h x #f)))
       (let ((b (if (fixnum? b) b (car b))))
 	(cond
@@ -327,7 +327,7 @@
 	       (conc "#[" (make-fbox len ls #f) "]")))))
 
     (define (boxify-custom-struct out)
-      (import traversal-helpers)
+      (import TRAVERSAL-HELPERS)
       (let ((ls
 	     (let f ((cache (cdr out)))
 	       (cond
@@ -346,7 +346,7 @@
        (else (boxify-vanilla-struct x)))))
 
   (define (boxify-shared x k)
-    (import traversal-helpers)
+    (import TRAVERSAL-HELPERS)
     (let ((b (hashtable-ref h x #f)))
       (let ((b (if (fixnum? b) b (car b))))
 	(cond

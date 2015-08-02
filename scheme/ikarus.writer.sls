@@ -25,8 +25,8 @@
     print-unicode		print-graph
     printer-integer-radix
 
-    ;;The following are not in "makefile.sps".
-    traverse		traversal-helpers)
+    ;;These are needed by PRETTY-PRINT.
+    traverse			TRAVERSAL-HELPERS)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -65,7 +65,7 @@
 	 (assertion-violation 'printer-integer-radix
 	   "invalid radix to print integers, expected 2, 8, 10 or 16" obj))))))
 
-(module traversal-helpers
+(module TRAVERSAL-HELPERS
   (cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
                shared-bit cyclic-bit marked-bit mark-shift
                make-cache cache-string cache-object cache-next)
@@ -78,7 +78,8 @@
   (define mark-shift         3)
 ;;;
 ;;; or a pair of a fixnum (above) and a cache:
-  (define-struct cache (string object next))
+  (define-struct cache
+    (string object next))
   (define (cyclic-set? b)
     (fx= (fxand b cyclic-bit) cyclic-bit))
   (define (shared-set? b)
@@ -117,12 +118,21 @@
   #| end of module |#)
 
 
-(import traversal-helpers)
+(module (traverse)
+  (import TRAVERSAL-HELPERS)
 
-(define (cannot-happen)
-  (error 'vicare-writer "vicare: internal error"))
+  (define (traverse x h)
+    ;;Fill  the hashtable  H with  an entry  for every  sub-object of  X; later  such
+    ;;entries will be used to correctly print shared structures.
+    ;;
+    (cond ((pair?       x)	(traverse-shared x h traverse-pair))
+	  ((vector?     x)	(traverse-shared x h traverse-vector))
+	  ((struct?     x)	(traverse-shared x h traverse-struct))
+	  ((bytevector? x)	(traverse-shared x h traverse-noop))
+	  ((gensym?     x)	(traverse-shared x h traverse-noop))
+	  ((code?       x)	(traverse-shared x h traverse-code))
+	  (else			(void))))
 
-(define (traverse x h)
   (define (traverse-noop x h)
     (void))
 
@@ -143,36 +153,42 @@
         (traverse (vector-ref x i) h)
         (f (fx+ i 1) n))))
 
-  (define (traverse-struct x h)
-    (define (traverse-vanilla-struct x h)
-      (let ((rtd ($struct-rtd x)))
-        (unless (and (record-type-descriptor? rtd)
-		     (record-type-opaque? rtd))
-          (traverse (struct-name x) h)
-          (let ((n (struct-length x)))
-            (let f ((idx 0))
-              (unless (fx= idx n)
-                (traverse (struct-ref x idx) h)
-                (f (fxadd1 idx))))))))
-    (define (traverse-custom-struct x h printer)
-      (let-values (((p e) (open-string-output-port)))
-        (let ((cache #f))
-          (printer x p
-		   (lambda (v)
-		     (let ((str (e)))
-		       (set! cache (make-cache str v cache))
-		       (traverse v h))))
-          (let ((cache (cons (e) cache))
-                (b (hashtable-ref h x #f)))
-            (if (fixnum? b)
-                (hashtable-set! h x (cons b cache))
-	      (cannot-happen))))))
-    (let ((printer (struct-printer x)))
-      (if (procedure? printer)
-          (traverse-custom-struct x h printer)
-	(traverse-vanilla-struct x h))))
+  (module (traverse-struct)
 
-  (define (traverse-shared x h k)
+    (define (traverse-struct x h)
+      (let ((printer (struct-printer x)))
+	(if (procedure? printer)
+	    (%traverse-custom-struct x h printer)
+	  (%traverse-vanilla-struct x h))))
+
+    (define (%traverse-vanilla-struct x h)
+      (let ((rtd ($struct-rtd x)))
+	(unless (and (record-type-descriptor? rtd)
+		     (record-type-opaque? rtd))
+	  (traverse (struct-name x) h)
+	  (let ((n (struct-length x)))
+	    (let f ((idx 0))
+	      (unless (fx= idx n)
+		(traverse (struct-ref x idx) h)
+		(f (fxadd1 idx))))))))
+
+    (define (%traverse-custom-struct x h printer)
+      (receive (p e)
+	  (open-string-output-port)
+	(let ((cache #f))
+	  (printer x p (lambda (v)
+			 (let ((str (e)))
+			   (set! cache (make-cache str v cache))
+			   (traverse v h))))
+	  (let ((cache (cons (e) cache))
+		(b (hashtable-ref h x #f)))
+	    (if (fixnum? b)
+		(hashtable-set! h x (cons b cache))
+	      (%cannot-happen))))))
+
+    #| end of module |# )
+
+  (define (traverse-shared x h kont)
     (cond ((hashtable-ref h x #f)
 	   => (lambda (b)
 		(cond ((fixnum? b)
@@ -181,7 +197,7 @@
 		       (set-car! b (fxior (car b) shared-bit))))))
 	  (else
 	   (hashtable-set! h x 0)
-	   (k x h)
+	   (kont x h)
 	   (let ((b (hashtable-ref h x #f)))
 	     (cond ((fixnum? b)
 		    (when (shared-set? b)
@@ -191,19 +207,15 @@
 		      (when (shared-set? a)
 			(set-car! b (fxior a cyclic-bit))))))))))
 
-  (define (traverse x h)
-    (cond ((pair?       x)	(traverse-shared x h traverse-pair))
-	  ((vector?     x)	(traverse-shared x h traverse-vector))
-	  ((struct?     x)	(traverse-shared x h traverse-struct))
-	  ((bytevector? x)	(traverse-shared x h traverse-noop))
-	  ((gensym?     x)	(traverse-shared x h traverse-noop))
-	  ((code?       x)	(traverse-shared x h traverse-code))
-	  (else			(void))))
+  (define (%cannot-happen)
+    (error 'vicare-writer "vicare: internal error"))
 
-  (traverse x h))
+  #| end of module |# )
 
 
 (define (wr x p m h i)
+  (import TRAVERSAL-HELPERS)
+
   (define (write-fixnum x p)
     (define (loop x p)
       (unless (fxzero? x)
@@ -290,6 +302,7 @@
 	  (f x p m h i 1 n)
 	  (write-char #\) p)
 	  i)))))
+
   (define (write-bytevector x p m h i)
     (write-char #\# p)
     (write-char #\v p)
@@ -306,6 +319,7 @@
             (f (fxadd1 idx) n x p)))))
     (write-char #\) p)
     i)
+
   (define (write-positive-hex-fx n p)
     (unless (fx= n 0)
       (write-positive-hex-fx (fxsra n 4) p)
@@ -319,6 +333,7 @@
 	  (write-char (integer->char
 		       (fx+ (char->integer #\A) (fx- n 10)))
 		      p))))))
+
   (define (write-inline-hex b p)
     (write-char #\\ p)
     (write-char #\x p)
@@ -326,6 +341,7 @@
         (write-char #\0 p)
       (write-positive-hex-fx b p))
     (write-char #\; p))
+
   (define (write-character x p m)
     (define char-table ; first nonprintable chars
       '#("nul" "x1" "x2" "x3" "x4" "x5" "x6" "alarm"
@@ -355,6 +371,7 @@
             (write-char #\x p)
             (write-positive-hex-fx i p))))
       (write-char x p)))
+
   (define (write-string x p m)
     (define (write-string-escape x p)
 ;;; commonize with write-symbol-bar-escape
@@ -394,6 +411,7 @@
     (if m
         (write-string-escape x p)
       (write-char* x p)))
+
   (module (write-gensym write-symbol)
     (define (write-gensym x p m h i)
       (cond
@@ -571,6 +589,7 @@
 	(write-char* str p)))
     (define (write-symbol x p m)
       (write-symbol-string (symbol->string x) p m)))
+
   (define (write-struct x p m h i)
     (define (write-vanilla-struct x p m h i)
       (cond ((record-type-descriptor? ($struct-rtd x))
@@ -600,27 +619,28 @@
 		     (write-char #\space p)
 		     (f (fxadd1 idx)
 			(wr (struct-ref x idx) p m h i))))))))))
-  (define (write-custom-struct out p m h i)
-    (let ((i
-	   (let f ((cache (cdr out)))
-	     (cond
-	      ((not cache) i)
-	      (else
-	       (let ((i (f (cache-next cache))))
-		 (write-char* (cache-string cache) p)
-		 (wr (cache-object cache) p m h i)))))))
-      (write-char* (car out) p)
-      i))
-  (let ((b (hashtable-ref h x #f)))
-    (cond
-     ((pair? b)
-      (write-custom-struct (cdr b) p m h i))
-     (else (write-vanilla-struct x p m h i)))))
+    (define (write-custom-struct out p m h i)
+      (begin0
+	  (let f ((cache (cdr out)))
+	    (cond
+	     ((not cache) i)
+	     (else
+	      (let ((i (f (cache-next cache))))
+		(write-char* (cache-string cache) p)
+		(wr (cache-object cache) p m h i)))))
+	(write-char* (car out) p)))
+    (let ((b (hashtable-ref h x #f)))
+      (cond ((pair? b)
+	     (write-custom-struct (cdr b) p m h i))
+	    (else
+	     (write-vanilla-struct x p m h i)))))
+
   (define (write-char* x p)
     (let f ((x x) (p p) (i 0) (n (string-length x)))
       (unless (fx=? i n)
         (write-char (string-ref x i) p)
         (f x p (fx+ i 1) n))))
+
   (define (write-procedure x p)
     (write-char* "#<procedure" p)
     (let-values (((name src)
@@ -639,6 +659,7 @@
           (display file p)
           (write-char* ")" p))))
     (write-char* ">" p))
+
   (define (write-port x p)
     (write-char* "#<" p)
     (write-char* (cond ((input/output-port? x)	"input/output")
@@ -650,6 +671,7 @@
     (let ((i (wr (port-id x) p #t h i)))
       (write-char #\> p)
       i))
+
   (define (write-hex x n p)
     (define s "0123456789ABCDEF")
     (unless (zero? n)
@@ -730,9 +752,9 @@
       (cond (($code-annotation x)
 	     => (lambda (ann)
 		  (write-char* "#<code annotation=" p)
-		  (let ((i (wr ann p m h i)))
-		    (write-char #\> p)
-		    i)))
+		  (begin0
+		      (wr ann p m h i)
+		    (write-char #\> p))))
 	    (else
 	     (write-char* "#<code>" p)
 	     i)))
