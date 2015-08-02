@@ -5474,7 +5474,9 @@ the function:
 
 @noindent
 contains a reference to the list @code{(1 2 3)} in its relocation
-vector.
+vector.  Another notable example, when the code must extract the value
+of the field @code{value} of a storage location gensym: the referenced
+Scheme object is the loc gensym.
 
 These records are composed of @math{2} words: the first word contains
 the tag and the displacement in bytes of the target word in the data
@@ -5506,10 +5508,9 @@ s_code   p_data
 
 Records of this type are used when the code object accesses a word in
 the code block of a Scheme object.  For example, when the code must
-extract the value of the field @code{value} of a storage location
-gensym: the referenced Scheme object is the loc gensym and the
-displacement is the offset of the @code{value} field in the symbol's
-memory block.
+extract the address of the machine code entry point in code objects: the
+referenced Scheme object is the code object and the displacement is the
+offset of the data area from the beginning of the memory block.
 
 These records are composed of @math{3} words: the first word contains
 the tag and the displacement in bytes of the target word in the data
@@ -5550,8 +5551,8 @@ area; @dots{}
 @subsubheading Records of type: foreign address
 
 Records of this type are used when the code performs a call to a C
-function implemented by @value{PRJNAME}'s run--time.  For example, let's
-consider this code:
+function, @strong{not} using the foreign--functions interface.  For
+example, let's consider this code:
 
 @lisp
 (import (vicare)
