@@ -1142,7 +1142,6 @@
     pretty-width
     print-condition
     printer-integer-radix
-    print-error
     printf
     print-gensym
     print-graph

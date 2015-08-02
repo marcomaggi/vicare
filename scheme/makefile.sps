@@ -1205,7 +1205,6 @@
     (gensym-count				v $language)
     (gensym-prefix				v $language)
     (make-parameter				v $language)
-    (print-error				v $language)
     (interrupt-handler				v $language)
     (engine-handler				v $language)
     (assembler-property-key			$codes)

@@ -21,7 +21,7 @@
     write			display
     put-datum			format
     printf			fprintf
-    print-error			debug-print
+    debug-print
     print-unicode		print-graph
     printer-integer-radix
 
@@ -35,7 +35,7 @@
 		  write			display
 		  put-datum		format
 		  printf		fprintf
-		  print-error		debug-print
+		  debug-print
 		  print-unicode		print-graph
 		  printer-integer-radix)
     (only (vicare system $symbols)
@@ -52,19 +52,6 @@
   (include "ikarus.wordsize.scm" #t)
 
 
-(define print-unicode
-  (make-parameter #f))
-
-(define printer-integer-radix
-  (make-parameter 10
-    (lambda (obj)
-      (case obj
-	((2 8 10 16)
-	 obj)
-	(else
-	 (assertion-violation 'printer-integer-radix
-	   "invalid radix to print integers, expected 2, 8, 10 or 16" obj))))))
-
 (module TRAVERSAL-HELPERS
   (cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
                shared-bit cyclic-bit marked-bit mark-shift
@@ -213,8 +200,113 @@
   #| end of module |# )
 
 
-(define (wr x p m h i)
+(module (wr)
   (import TRAVERSAL-HELPERS)
+
+  (define (wr x p m h i)
+    (cond ((pair? x)
+	   (write-shared x p m h i write-pair))
+
+	  ((symbol? x)
+	   (if (gensym? x)
+	       (write-shared x p m h i write-gensym)
+	     (begin (write-symbol x p m) i)))
+
+	  ((fixnum? x)
+	   (write-fixnum x p) i)
+
+	  ((string? x)
+	   (write-string x p m) i)
+
+	  ((boolean? x)
+	   (write-char #\# p)
+	   (write-char (if x #\t #\f) p)
+	   i)
+
+	  ((char? x)
+	   (write-character x p m) i)
+
+	  ((null? x)
+	   (write-char #\( p) (write-char #\) p) i)
+
+	  ((number? x)
+	   (write-char* (if (or (fixnum? x)
+				(bignum? x))
+			    (number->string x (printer-integer-radix))
+			  (number->string x))
+			p)
+	   i)
+
+	  ((vector? x)
+	   (write-shared x p m h i write-vector))
+
+	  ((bytevector? x)
+	   (write-shared x p m h i write-bytevector))
+
+	  ((procedure? x)
+	   (write-procedure x p)
+	   i)
+
+	  ((port? x)
+	   (write-port x p h i)
+	   i)
+
+	  ((eq? x (void))
+	   (write-char* "#!void" p)
+	   i)
+
+	  ((eof-object? x)
+	   (write-char* "#!eof" p)
+	   i)
+
+	  ((bwp-object? x)
+	   (write-char* "#!bwp" p)
+	   i)
+
+	  ((would-block-object? x)
+	   (write-char* "#!would-block" p)
+	   i)
+
+	  ((transcoder? x)
+	   (write-char* (string-append "#<transcoder"
+				       " codec="		(symbol->string (transcoder-codec x))
+				       " eol-style="		(symbol->string (transcoder-eol-style x))
+				       " error-handling-mode="	(symbol->string (transcoder-error-handling-mode x))
+				       ">")
+			p)
+	   i)
+
+	  ((struct? x)
+	   (write-shared x p m h i write-struct))
+
+	  ((code? x)
+	   (cond (($code-annotation x)
+		  => (lambda (ann)
+		       (write-char* "#<code annotation=" p)
+		       (begin0
+			   (wr ann p m h i)
+			 (write-char #\> p))))
+		 (else
+		  (write-char* "#<code>" p)
+		  i)))
+
+	  ((pointer? x)
+	   (write-char* "#<pointer #x" p)
+	   (write-hex (pointer->integer x)
+		      (boot.case-word-size
+		       ((32)		8)
+		       ((64)		16))
+		      p)
+	   (write-char* ">" p)
+	   i)
+
+	  (($unbound-object? x)
+	   (write-char* "#!unbound-object" p)
+	   i)
+
+	  (else
+	   (write-char* "#<unknown>" p)
+	   i)))
 
   (define (write-fixnum x p)
     (define (loop x p)
@@ -291,17 +383,16 @@
 	  (f x p m h i (fx+ idx 1) n)))))
     (write-char #\# p)
     (let ((n (vector-length x)))
-      (cond
-       ((fx=? n 0)
-	(write-char #\( p)
-	(write-char #\) p)
-	i)
-       (else
-	(write-char #\( p)
-	(let ((i (wr (vector-ref x 0) p m h i)))
-	  (f x p m h i 1 n)
-	  (write-char #\) p)
-	  i)))))
+      (cond ((fxzero? n)
+	     (write-char #\( p)
+	     (write-char #\) p)
+	     i)
+	    (else
+	     (write-char #\( p)
+	     (let ((i (wr (vector-ref x 0) p m h i)))
+	       (f x p m h i 1 n)
+	       (write-char #\) p)
+	       i)))))
 
   (define (write-bytevector x p m h i)
     (write-char #\# p)
@@ -660,7 +751,7 @@
           (write-char* ")" p))))
     (write-char* ">" p))
 
-  (define (write-port x p)
+  (define (write-port x p h i)
     (write-char* "#<" p)
     (write-char* (cond ((input/output-port? x)	"input/output")
 		       ((input-port? x)		"input")
@@ -709,221 +800,170 @@
 	      (else
 	       (k x p m h i))))))
 
-  (define (wr x p m h i)
-    (cond
-     ((pair? x)   (write-shared x p m h i write-pair))
-     ((symbol? x)
-      (if (gensym? x)
-	  (write-shared x p m h i write-gensym)
-	(begin (write-symbol x p m) i)))
-     ((fixnum? x) (write-fixnum x p) i)
-     ((string? x) (write-string x p m) i)
-     ((boolean? x)
-      (write-char #\# p)
-      (write-char (if x #\t #\f) p)
-      i)
-     ((char? x) (write-character x p m) i)
-     ((null? x) (write-char #\( p) (write-char #\) p) i)
-     ((number? x)
-      (write-char* (if (or (fixnum? x)
-			   (bignum? x))
-		       (number->string x (printer-integer-radix))
-		     (number->string x))
-		   p)
-      i)
-     ((vector? x)		(write-shared x p m h i write-vector))
-     ((bytevector? x)		(write-shared x p m h i write-bytevector))
-     ((procedure? x)		(write-procedure x p) i)
-     ((port? x)			(write-port x p) i)
-     ((eq? x (void))		(write-char* "#!void" p) i)
-     ((eof-object? x)		(write-char* "#!eof" p) i)
-     ((bwp-object? x)		(write-char* "#!bwp" p) i)
-     ((would-block-object? x)	(write-char* "#!would-block" p) i)
-     ((transcoder? x)
-      (write-char* (string-append "#<transcoder"
-				  " codec="			(symbol->string (transcoder-codec x))
-				  " eol-style="			(symbol->string (transcoder-eol-style x))
-				  " error-handling-mode="	(symbol->string (transcoder-error-handling-mode x))
-				  ">")
-		   p)
-      i)
-     ((struct? x)		(write-shared x p m h i write-struct))
-     ((code? x)
-      (cond (($code-annotation x)
-	     => (lambda (ann)
-		  (write-char* "#<code annotation=" p)
-		  (begin0
-		      (wr ann p m h i)
-		    (write-char #\> p))))
-	    (else
-	     (write-char* "#<code>" p)
-	     i)))
-     ((pointer? x)
-      (write-char* "#<pointer #x" p)
-      (write-hex (pointer->integer x)
-		 (boot.case-word-size
-		  ((32)		8)
-		  ((64)		16))
-		 p)
-      (write-char* ">" p)
-      i)
-     (($unbound-object? x)	(write-char* "#!unbound-object" p) i)
-     (else			(write-char* "#<unknown>" p) i)))
-  (wr x p m h i))
+  #| end of module |# )
 
 
-(define print-graph (make-parameter #f))
+;;;; public API
 
-(define (write-to-port x p)
-  (let ((h (make-eq-hashtable)))
-    (traverse x h)
-    (wr x p #t h 0)
-    (void)))
+(define print-graph
+  (make-parameter #f))
 
-(define (display-to-port x p)
-  (let ((h (make-eq-hashtable)))
-    (traverse x h)
-    (wr x p #f h 0)
-    (void)))
+(define print-unicode
+  (make-parameter #f))
 
-(define (formatter who p fmt args)
+(define printer-integer-radix
+  (make-parameter 10
+    (lambda (obj)
+      (case obj
+	((2 8 10 16)
+	 obj)
+	(else
+	 (assertion-violation 'printer-integer-radix
+	   "invalid radix to print integers, expected 2, 8, 10 or 16" obj))))))
+
+(module (put-datum
+	 write		display
+	 printf		fprintf
+	 format		debug-print)
+
+  (define (%write-to-port x p)
+    (let ((h (make-eq-hashtable)))
+      (traverse x h)
+      (wr x p #t h 0)
+      (void)))
+
+  (define (%display-to-port x p)
+    (let ((h (make-eq-hashtable)))
+      (traverse x h)
+      (wr x p #f h 0)
+      (void)))
+
+  (define (formatter who p fmt args)
 ;;; first check
-  (let f ((i 0) (args args))
-    (cond
-     ((fx= i (string-length fmt))
-      (unless (null? args)
-	(die who
-	     (format
-		 "extra arguments given for format string \x2036;~a\x2033;"
-	       fmt))))
-     (else
-      (let ((c (string-ref fmt i)))
-	(cond
-	 ((eqv? c #\~)
-	  (let ((i (fxadd1 i)))
-	    (when (fx= i (string-length fmt))
-	      (die who "invalid ~ at end of format string" fmt))
-	    (let ((c (string-ref fmt i)))
-	      (cond
-	       ((memv c '(#\~ #\%)) (f (fxadd1 i) args))
-	       ((memv c '(#\a #\s))
-		(when (null? args)
-		  (die who "insufficient arguments"))
-		(f (fxadd1 i) (cdr args)))
-	       ((memv c '(#\b #\o #\x #\d))
-		(when (null? args)
-		  (die who "insufficient arguments"))
-		(let ((a (car args)))
-		  (unless (number? a) (die who "not a number" a))
-		  (unless (or (eqv? c #\d) (exact? a))
-		    (die who
-			 (format "inexact numbers cannot be \
-                                     printed with ~~~a" c)
-			 a)))
-		(f (fxadd1 i) (cdr args)))
-	       (else
-		(die who "invalid sequence character after ~" c))))))
-	 (else (f (fxadd1 i) args)))))))
-;;; then format
-  (let f ((i 0) (args args))
-    (unless (fx= i (string-length fmt))
-      (let ((c (string-ref fmt i)))
-	(cond
-	 ((eqv? c #\~)
-	  (let ((i (fxadd1 i)))
-	    (let ((c (string-ref fmt i)))
-	      (cond
-	       ((eqv? c #\~)
-		(write-char #\~ p)
-		(f (fxadd1 i) args))
-	       ((eqv? c #\%)
-		(write-char #\newline p)
-		(f (fxadd1 i) args))
-	       ((eqv? c #\a)
-		(display-to-port (car args) p)
-		(f (fxadd1 i) (cdr args)))
-	       ((eqv? c #\s)
-		(write-to-port (car args) p)
-		(f (fxadd1 i) (cdr args)))
-	       ((assv c '((#\b . 2) (#\o . 8) (#\x . 16) (#\d . 10)))
-		=>
-		(lambda (x)
+    (let f ((i 0) (args args))
+      (cond
+       ((fx= i (string-length fmt))
+	(unless (null? args)
+	  (die who
+	       (format
+		   "extra arguments given for format string \x2036;~a\x2033;"
+		 fmt))))
+       (else
+	(let ((c (string-ref fmt i)))
+	  (cond
+	   ((eqv? c #\~)
+	    (let ((i (fxadd1 i)))
+	      (when (fx= i (string-length fmt))
+		(die who "invalid ~ at end of format string" fmt))
+	      (let ((c (string-ref fmt i)))
+		(cond
+		 ((memv c '(#\~ #\%)) (f (fxadd1 i) args))
+		 ((memv c '(#\a #\s))
+		  (when (null? args)
+		    (die who "insufficient arguments"))
+		  (f (fxadd1 i) (cdr args)))
+		 ((memv c '(#\b #\o #\x #\d))
+		  (when (null? args)
+		    (die who "insufficient arguments"))
 		  (let ((a (car args)))
-		    (display-to-port (number->string a (cdr x)) p))
-		  (f (fxadd1 i) (cdr args))))
-	       (else (die who "BUG" c))))))
-	 (else
-	  (write-char c p)
-	  (f (fxadd1 i) args)))))))
+		    (unless (number? a) (die who "not a number" a))
+		    (unless (or (eqv? c #\d) (exact? a))
+		      (die who
+			   (format "inexact numbers cannot be \
+                                     printed with ~~~a" c)
+			   a)))
+		  (f (fxadd1 i) (cdr args)))
+		 (else
+		  (die who "invalid sequence character after ~" c))))))
+	   (else (f (fxadd1 i) args)))))))
+;;; then format
+    (let f ((i 0) (args args))
+      (unless (fx= i (string-length fmt))
+	(let ((c (string-ref fmt i)))
+	  (cond
+	   ((eqv? c #\~)
+	    (let ((i (fxadd1 i)))
+	      (let ((c (string-ref fmt i)))
+		(cond
+		 ((eqv? c #\~)
+		  (write-char #\~ p)
+		  (f (fxadd1 i) args))
+		 ((eqv? c #\%)
+		  (write-char #\newline p)
+		  (f (fxadd1 i) args))
+		 ((eqv? c #\a)
+		  (%display-to-port (car args) p)
+		  (f (fxadd1 i) (cdr args)))
+		 ((eqv? c #\s)
+		  (%write-to-port (car args) p)
+		  (f (fxadd1 i) (cdr args)))
+		 ((assv c '((#\b . 2) (#\o . 8) (#\x . 16) (#\d . 10)))
+		  =>
+		  (lambda (x)
+		    (let ((a (car args)))
+		      (%display-to-port (number->string a (cdr x)) p))
+		    (f (fxadd1 i) (cdr args))))
+		 (else (die who "BUG" c))))))
+	   (else
+	    (write-char c p)
+	    (f (fxadd1 i) args)))))))
 
-(define* (fprintf p {fmt string?} . args)
-  (assert-open-textual-output-port p __who__)
-  (formatter __who__ p fmt args)
-  (void))
-
-(define* (display-error errname who {fmt string?} args)
-  (let ((p (standard-error-port)))
-    (if who
-	(fprintf p "~a in ~a: " errname who)
-      (fprintf p "~a: " errname))
+  (define* (fprintf p {fmt string?} . args)
+    (assert-open-textual-output-port p __who__)
     (formatter __who__ p fmt args)
-    (write-char #\. p)
-    (newline p)
-    (void)))
+    (void))
 
-(define* (format {fmt string?} . args)
-  (receive (port extract)
-      (open-string-output-port)
-    (formatter __who__ port fmt args)
-    (extract)))
+  (define* (format {fmt string?} . args)
+    (receive (port extract)
+	(open-string-output-port)
+      (formatter __who__ port fmt args)
+      (extract)))
 
-(define* (printf {fmt string?} . args)
-  (formatter __who__ (current-output-port) fmt args)
-  (void))
+  (define* (printf {fmt string?} . args)
+    (formatter __who__ (current-output-port) fmt args)
+    (void))
 
-(case-define* write
-  ((x)
-   (write-to-port x (current-output-port))
-   (void))
-  ((x p)
-   (assert-open-textual-output-port p __who__)
-   (write-to-port x p)
-   (void)))
+  (case-define* write
+    ((x)
+     (%write-to-port x (current-output-port))
+     (void))
+    ((x p)
+     (assert-open-textual-output-port p __who__)
+     (%write-to-port x p)
+     (void)))
 
-(define* (put-datum p x)
-  (assert-open-textual-output-port p __who__)
-  (write-to-port x p)
-  (void))
+  (define* (put-datum p x)
+    (assert-open-textual-output-port p __who__)
+    (%write-to-port x p)
+    (void))
 
-(case-define* display
-  ((x)
-   (display-to-port x (current-output-port))
-   (void))
-  ((x p)
-   (assert-open-textual-output-port p __who__)
-   (display-to-port x p)
-   (void)))
+  (case-define* display
+    ((x)
+     (%display-to-port x (current-output-port))
+     (void))
+    ((x p)
+     (assert-open-textual-output-port p __who__)
+     (%display-to-port x p)
+     (void)))
 
-(define (print-error who fmt . args)
-  (display-error "error" who fmt args)
-  (void))
+  (define (assert-open-textual-output-port p who)
+    (unless (output-port? p)
+      (error who "not an output port" p))
+    (unless (textual-port? p)
+      (error who "not a textual port" p))
+    (when (port-closed? p)
+      (error who "port is closed" p)))
 
-(define (assert-open-textual-output-port p who)
-  (unless (output-port? p)
-    (error who "not an output port" p))
-  (unless (textual-port? p)
-    (error who "not a textual port" p))
-  (when (port-closed? p)
-    (error who "port is closed" p)))
+  (define (debug-print . args)
+    ;;Print arguments for debugging purposes.
+    ;;
+    (pretty-print args (current-error-port))
+    (newline (current-error-port))
+    (newline (current-error-port))
+    (when (pair? args)
+      (car args)))
 
-(define (debug-print . args)
-  ;;Print arguments for debugging purposes.
-  ;;
-  (pretty-print args (current-error-port))
-  (newline (current-error-port))
-  (newline (current-error-port))
-  (when (pair? args)
-    (car args)))
+  #| end of module |# )
 
 
 ;;;; done
