@@ -1080,6 +1080,14 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 #define IK_PTR(X,N)	((ikptr_t*)(((ikuword_t)(X)) + ((iksword_t)(N))))
 #define IK_REF(X,N)	(IK_PTR(X,N)[0])
 
+/* Special offsets to be used  with "IK_REF()" and "IK_PTR()" applied to
+   UNtagged pointers. */
+#define disp_1st_word	(0*wordsize)
+#define disp_2nd_word	(1*wordsize)
+#define disp_3rd_word	(2*wordsize)
+#define disp_4th_word	(3*wordsize)
+#define disp_5th_word	(4*wordsize)
+
 /* This  macro computes  the number  of  bytes to  reserve in  allocated
    memory for the  data area of a Scheme object;  the reserved memory is
    always  an even  number  of machine  words, at  least  2.  On  32-bit

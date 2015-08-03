@@ -179,6 +179,7 @@ static int record_count		= 0;
 static int continuation_count	= 0;
 static int string_count		= 0;
 static int htable_count		= 0;
+static int alloc_code_count	= 0;
 #endif
 
 static const unsigned int META_MT[meta_count] = {
@@ -717,7 +718,7 @@ perform_garbage_collection (ikuword_t mem_req, ikptr_t s_requested_generation, i
     { /* Reset the free space to a magic number. */
       ikptr_t	X;
       for (X=pcb->allocation_pointer; X<pcb->allocation_redline; X+=wordsize)
-	IK_REF(X, 0) = (ikptr_t)(0x1234FFFF);
+	IK_REF(X,disp_1st_word) = (ikptr_t)(0x1234FFFF);
     }
 #endif
   } /* Finished preparing new nursery heap hot block. */
@@ -814,11 +815,11 @@ fix_weak_pointers (gc_t* gc)
           if (! IK_IS_FIXNUM(X)) {
             int tag = IK_TAGOF(X);
             if (tag != immediate_tag) {
-              ikptr_t first_word = IK_REF(X, -tag);
+              ikptr_t first_word = IK_REF(X, disp_1st_word-tag);
               if (first_word == IK_FORWARD_PTR) {
 		/* The car of this pair is still alive: retrieve its new
 		   tagged pointer and store it in the car slot. */
-                IK_REF(p, disp_car) = IK_REF(X, wordsize-tag);
+                IK_REF(p, disp_car) = IK_REF(X, disp_2nd_word-tag);
               } else {
                 int X_gen = segment_vec[IK_PAGE_INDEX(X)] & GEN_MASK;
                 if (X_gen <= collect_gen) {
@@ -1519,9 +1520,9 @@ gather_live_object_proc (gc_t* gc, ikptr_t X)
      the first  word in the data  area is IK_FORWARD_PTR and  the second
      word is the new reference Y: return the new reference Y. */
   {
-    first_word = IK_REF(X, -tag);
+    first_word = IK_REF(X, disp_1st_word-tag);
     if (IK_FORWARD_PTR == first_word)
-      return IK_REF(X, wordsize-tag);
+      return IK_REF(X, disp_2nd_word-tag);
   }
 
   /* If X does not belong to a generation examined in this GC run: leave
@@ -1572,17 +1573,51 @@ gather_live_object_proc (gc_t* gc, ikptr_t X)
 #endif
     ikptr_t asize = IK_ALIGN(size);
     ikptr_t Y     = gc_alloc_new_ptr(asize, gc) | closure_tag;
+    /* Remember that the  aligned size is an exact multiple  of the size
+     * of 2 machine words.
+     *
+     * The  function "gc_alloc_new_ptr()"  takes  care  of allocating  a
+     * memory block  that is at  least "asize"  wide; if more  words are
+     * allocated: they  are set to zero  by "gc_alloc_new_ptr()" itself;
+     * here we only need to take care of the memory block "asize" wide.
+     *
+     * When the  number of free variables  is even (for example  2), the
+     * layout of the allocated block is this:
+     *
+     *    1st word freevar0 freevar1  unused
+     *   |--------|--------|--------|--------| memory block
+     *
+     *   |..........................| size
+     *   |...................................| asize
+     *
+     * when the  number of free  variables is  odd (for example  3), the
+     * layout of the allocated block is this:
+     *
+     *    1st word freevar0 freevar1 freevar2
+     *   |--------|--------|--------|--------| memory block
+     *
+     *   |...................................| size
+     *   |...................................| asize
+     *
+     * so, to  make sure we  do not leave  an uninitialised word  in the
+     * closure object: we just need to set  to zero the last word in the
+     * memory block.  This is what the following IK_REF does.
+     */
     IK_REF(Y, asize - closure_tag - wordsize) = 0;
+    /* Copy the  first word and  the free  variables slots from  the old
+       object X to the new object Y.   We do *not* visit here the Scheme
+       objects referenced by the free variables slots. */
     memcpy((char*)(ikuword_t)(Y - closure_tag),
            (char*)(ikuword_t)(X - closure_tag),
            size);
-    /* First     process      the     old     memory,      then     call
-       "gather_live_code_entry()". */
+    /* First process  the old  memory, then  gather the  referenced code
+       object by calling "gather_live_code_entry()". */
     IK_REF(X,          - closure_tag) = IK_FORWARD_PTR;
     IK_REF(X, wordsize - closure_tag) = Y;
-    IK_REF(Y,          - closure_tag) = gather_live_code_entry(gc, IK_REF(Y,-closure_tag));
+    IK_REF(Y,          - closure_tag) = gather_live_code_entry(gc, IK_REF(Y,off_closure_code));
 #if ACCOUNTING
     closure_count++;
+    alloc_code_count++;
 #endif
     return Y;
   }
@@ -1613,9 +1648,16 @@ gather_live_object_proc (gc_t* gc, ikptr_t X)
     }
 
     case code_tag: {
-      /* Code object.  It goes in the code meta page. */
+      /* Code  object.  It  goes in  the code  meta page.   The function
+	 "gather_live_code_entry()" is used to gather live code objects:
+	 it accepts  as argument the address  of the entry point  of the
+	 executable binary code; it moves the object; it returns the new
+	 address of the entry point. */
       ikptr_t	entry     = X + off_code_data;
       ikptr_t	new_entry = gather_live_code_entry(gc, entry);
+#if (ACCOUNTING)
+      alloc_code_count++;
+#endif
       return new_entry - off_code_data;
     }
 
@@ -2138,24 +2180,21 @@ gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr_t X, ikptr_t* loc)
  ** Keeping alive objects: code objects.
  ** ----------------------------------------------------------------- */
 
-static int alloc_code_count = 0;
-
 static ikptr_t
 gather_live_code_entry (gc_t* gc, ikptr_t entry)
-/* Move the data  area of the code  object referenced by ENTRY  to a new
-   memory location and return a  new untagged pointer which must replace
-   every occurrence of  ENTRY in the memory used by  the Scheme program.
-   See  the documentation  of "gather_live_object_proc()"  for the  full
-   details. */
+/* Gather  a live  Scheme code  object.   Accept as  argument ENTRY  the
+   address of the entry point in the executable binary code.  Return the
+   new address of the entry point. */
 {
-  ikptr_t		X = entry - disp_code_data; /* UNtagged pointer to code object */
+  /* X is an UNtagged pointer to the code object. */
+  ikptr_t	X = entry - disp_code_data;
   ikuword_t	page_idx;
   /* If X  has already been moved  in a previous call  to this function:
      the first  word in the data  area is IK_FORWARD_PTR and  the second
      word is the new reference Y: compute the pointer to the entry point
      of Y and return it. */
-  if (IK_FORWARD_PTR == IK_REF(X,0)) {
-    return IK_REF(X,wordsize) + off_code_data;
+  if (IK_FORWARD_PTR == IK_REF(X,disp_1st_word)) {
+    return IK_REF(X,disp_2nd_word) + off_code_data;
   }
   /* If X does not belong to a generation examined in this GC run: leave
      it alone. */
@@ -2219,8 +2258,8 @@ gather_live_code_entry (gc_t* gc, ikptr_t entry)
     memcpy((uint8_t*)(ikuword_t)(Y+disp_code_data),
            (uint8_t*)(ikuword_t)(X+disp_code_data),
            binary_code_size);
-    IK_REF(X, 0)	= IK_FORWARD_PTR;
-    IK_REF(X, wordsize)	= Y | vector_tag;
+    IK_REF(X, disp_1st_word)	= IK_FORWARD_PTR;
+    IK_REF(X, disp_2nd_word)	= Y | vector_tag;
     return Y+disp_code_data;
   }
 }
@@ -2533,7 +2572,7 @@ meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
     { /* Reset to zero all the unused words in the old meta pages. */
       ikptr_t	X;
       for (X=ap; X<ep; X+=wordsize) {
-	IK_REF(X, 0) = 0;
+	IK_REF(X, disp_1st_word) = 0;
       }
     }
   }
@@ -2695,7 +2734,9 @@ collect_loop (gc_t* gc)
           ikptr_t p_end  = codes->q;
           while (p_code < p_end) {
             relocate_new_code(p_code, gc);
-            alloc_code_count--;
+#if (ACCOUNTING)
+	      alloc_code_count--;
+#endif
             p_code += IK_ALIGN(disp_code_data + IK_UNFIX(IK_REF(p_code, disp_code_code_size)));
           }
           qupages_t *	next = codes->next;
@@ -2773,7 +2814,9 @@ collect_loop (gc_t* gc)
           do {
             meta->aq = q;
             do {
+#if ACCOUNTING
               alloc_code_count--;
+#endif
               relocate_new_code(p, gc);
               p += IK_ALIGN(disp_code_data + IK_UNFIX(IK_REF(p, disp_code_code_size)));
             } while (p < q);
@@ -3098,9 +3141,9 @@ relocate_new_code (ikptr_t p_X, gc_t* gc)
       ikptr_t	displaced_object  = s_obj + obj_off;
       ikuword_t	next_word         = p_data + disp_code_word + 4;
       ikptr_t	relative_distance = displaced_object - next_word;
-      if (((ikuword_t)relative_distance) != ((ikuword_t)relative_distance))
+      if (((iksword_t)relative_distance) != ((iksword_t)((int32_t)relative_distance)))
         ik_abort("relocation error with relative=0x%016lx", relative_distance);
-      *((int*)(p_data + disp_code_word)) = (int)relative_distance;
+      *((int32_t*)(p_data + disp_code_word)) = (int32_t)relative_distance;
       p_reloc_vec_cur += (3*wordsize);
       break;
     }
