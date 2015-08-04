@@ -239,7 +239,31 @@
 		  (case (car x)
 		    ((byte)
 		     (fxadd1 size))
-		    ((relative local-relative)
+		    ((local-relative)
+		     ;;These entries  represent Assembly  label entry  points located
+		     ;;through displacements from the  current position in the binary
+		     ;;code.  These labels are local  to the unit of compilation (for
+		     ;;example: local the body of a CLAMBDA).
+		     ;;
+		     ;;We reserve 32-bit to store  such displacements, on both 32-bit
+		     ;;and 64-bit platforms.
+		     (fxadd4 size))
+		    ((relative)
+		     ;;These entries  represent Assembly  label entry  points located
+		     ;;through displacements from the  current position in the binary
+		     ;;code.  These labels are not  local to the unit of compilation:
+		     ;;they are meant to be used  to jump-call a CLAMBDA from another
+		     ;;CLAMBDA.
+		     ;;
+		     ;;We reserve 32-bit to store  such displacements, on both 32-bit
+		     ;;and 64-bit platforms.
+		     ;;
+		     ;;NOTE At present it seems  this RELATIVE reference to labels is
+		     ;;never used.  (Marco Maggi; Tue Aug 4, 2015)
+		     ;;
+		     ;;FIXME On  64-bit platforms we  should reserve 64 bits  for the
+		     ;;relative  displacement and  appropriately  implement the  jump
+		     ;;instruction.  (Marco Maggi; Tue Aug 4, 2015)
 		     (fxadd4 size))
 		    ((label)
 		     size)
@@ -248,8 +272,7 @@
 		    ((bottom-code)
 		     (fx+ size (%compute-code-size (cdr x))))
 		    (else
-		     (%compiler-internal-error __who__
-		       "unknown instruction" x)))))
+		     (%compiler-internal-error __who__ "unknown instruction" x)))))
     0
     octets-and-labels))
 
@@ -365,6 +388,21 @@
     ;;
     ;;Notice that this function does NOT modify the spine of OCTETS-AND-SEXPS in any
     ;;way; it just mutates some of the entry's CARs.
+    ;;
+    ;;A reference to label is local if OCTETS-AND-SEXPS contains an entry like:
+    ;;
+    ;;   (label ?name)
+    ;;
+    ;;and an entry like:
+    ;;
+    ;;   (jmp (relative ?name))
+    ;;
+    ;;in this case we can convert the latter to:
+    ;;
+    ;;   (jmp (local-relative ?name))
+    ;;
+    ;;which  can be  implemented with  a  faster jump  instruction that  jumps to  an
+    ;;address relative to the current instruction pointer.
     ;;
     (let ((locals '())
 	  (G      (gensym)))
@@ -646,9 +684,21 @@
 		    ($code-set! x idx (cdr entry))
 		    (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
 
-		   ((relative local-relative)
+		   ((local-relative)
 		    ;;Add an entry  to the relocation list; leave 4  bytes of room in
 		    ;;the data area.
+		    (loop (cdr octets-and-sexps) (fx+ idx 4) (cons (cons idx entry) reloc) bot*))
+
+		   ((relative)
+		    ;;Add an entry  to the relocation list; leave 4  bytes of room in
+		    ;;the data area.
+		    ;;
+		    ;;NOTE At present  it seems this RELATIVE reference  to labels is
+		    ;;never used.  (Marco Maggi; Tue Aug 4, 2015)
+		    ;;
+		    ;;FIXME On  64-bit platforms  we should reserve  64 bits  for the
+		    ;;relative  displacement  and  appropriately implement  the  jump
+		    ;;instruction.  (Marco Maggi; Tue Aug 4, 2015)
 		    (loop (cdr octets-and-sexps) (fx+ idx 4) (cons (cons idx entry) reloc) bot*))
 
 		   ((reloc-word reloc-word+ label-address foreign-label)
@@ -896,7 +946,7 @@
 	     (%error "source code object and target code object of \
                       a local relative jump are not the same"))
 	   (let ((rel (fx- disp (fxadd4 off))))
-	     ($code-set! code         off  (fxlogand         rel     #xFF))
+	     ($code-set! code         off  (fxlogand        rel     #xFF))
 	     ($code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
 	     ($code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
 	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
@@ -904,6 +954,12 @@
 	((relative)
 	 ;;Add a record of type "jump label".
 	 ;;
+	 ;;NOTE At present it seems this  RELATIVE reference to labels is never used.
+	 ;;(Marco Maggi; Tue Aug 4, 2015)
+	 ;;
+	 ;;FIXME  On 64-bit  platforms we  should reserve  64 bits  for the  relative
+	 ;;displacement  and appropriately  implement the  jump instruction.   (Marco
+	 ;;Maggi; Tue Aug 4, 2015)
 	 (let* ((off  (car r))
 		(loc  (%label-loc val))
 		(obj  (car  loc))
@@ -1298,6 +1354,18 @@
 		    ;;this  happens, for  example, in  the implementation  of the  IF
 		    ;;syntax.
 		    'local-relative
+		  ;;The  label name  LN is  a gensym  representing an  Assembly label
+		  ;;outside the  code being  processed by  CONVERT-INSTRUCTIONS.  The
+		  ;;relative  reference  to  a  non-local  label  is  implemented  as
+		  ;;relative displacement  from the current instruction  pointer; the
+		  ;;displacement is computed when processing the relocation vector.
+		  ;;
+		  ;;NOTE At  present it  seems this RELATIVE  reference to  labels is
+		  ;;never used.  (Marco Maggi; Tue Aug 4, 2015)
+		  ;;
+		  ;;FIXME  On 64-bit  platforms we  should  reserve 64  bits for  the
+		  ;;relative  displacement  and   appropriately  implement  the  jump
+		  ;;instruction.  (Marco Maggi; Tue Aug 4, 2015)
 		  'relative)))
       (cons (cons key LN) ac)))
 
@@ -1977,7 +2045,6 @@
        ;;
        ;;this happens, for example, in the implementation of the IF syntax.
        ((label?/local)		(CODE #xE9 (cons `(local-relative . ,(label-name dst)) ac)))
-
        ((imm?)			(boot.case-word-size
 				 ((32)		(CODE #xE9 (IMM32 dst ac)))
 				 ((64)		(jmp-pc-relative #xFF #x25 dst ac))))
