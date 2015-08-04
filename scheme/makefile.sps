@@ -1771,6 +1771,7 @@
     ($code-ref					$codes)
     ($code-set!					$codes)
     ($set-code-annotation!			$codes)
+    (code-reloc-vector->sexp			$codes)
     (procedure-annotation			v $language)
     ($make-annotated-procedure			$codes)
     ($annotated-procedure-annotation		$codes)

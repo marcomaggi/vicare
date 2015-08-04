@@ -24,13 +24,14 @@
     code-set!			set-code-reloc-vector!
     set-code-annotation!	procedure-annotation
     make-annotation-indirect	annotation-indirect?
-    code->thunk)
+    code->thunk			code-reloc-vector->sexp)
   (import (except (vicare)
 		  make-code
 		  code-reloc-vector		code-freevars
 		  code-size			code-ref
 		  code-set!			set-code-reloc-vector!
-		  set-code-annotation!		procedure-annotation)
+		  set-code-annotation!		procedure-annotation
+		  code-reloc-vector->sexp)
     ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
     ;;everything here using the system  libraries and not loading external libraries.
     ;;(Marco Maggi; Fri May 23, 2014)
@@ -137,8 +138,81 @@
       ae)))
 
 
+(define (procedure-or-code-or-vector? obj)
+  (or (procedure? obj)
+      (code?      obj)
+      (vector?    obj)))
+
+(define* (code-reloc-vector->sexp {code procedure-or-code-or-vector?})
+  ;;CODE must be a code object.
+  ;;
+  (define-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0)
+  (define-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1)
+  (define-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG 2)
+  (define-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	3)
+  (module (off-code-data)
+    (module (wordsize)
+      (include "ikarus.config.scm"))
+    (define-constant vector-tag		5)
+    (define-constant disp-code-data	(* 6 wordsize))
+    (define-constant off-code-data	(fx- disp-code-data vector-tag)))
+  (let* ((vec  (cond ((code? code)
+		      ($code-reloc-vector code))
+		     ((procedure? code)
+		      ($code-reloc-vector ($closure-code code)))
+		     (else code)))
+	 (len  (vector-length vec)))
+    (do ((i 0 (fxadd1 i))
+	 (sexp '()))
+	((fx=? i len)
+	 (reverse sexp))
+      (let* ((first-word (vector-ref vec i))
+	     ;;Tag bits describing the type of this relocation vector record.
+	     (first-word.tag   (fxand first-word #b11))
+	     ;;Number of  bytes representing  the displacement  in the  code object's
+	     ;;data area.
+	     (first-word.disp  (fxsra first-word 2)))
+	(cond ((fx=? first-word.tag IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
+	       (set! i (fxadd1 i))
+	       (set-cons! sexp `(vanilla-object
+				 (data-area-displacement ,first-word.disp)
+				 (scheme-object          ,(vector-ref vec i)))))
+
+	      ((fx=? first-word.tag IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG)
+	       (set! i (fxadd1 i))
+	       (set-cons! sexp `(foreign-address
+				 (data-area-displacement ,first-word.disp)
+				 (foreign-function       ,(ascii->string (vector-ref vec i))))))
+
+	      ((fx=? first-word.tag IK_RELOC_RECORD_DISPLACED_OBJECT_TAG)
+	       (let ((offset        (vector-ref vec (fxadd1 i)))
+		     (scheme-object (vector-ref vec (fx+ 2 i))))
+		 (set! i (fx+ 2 i))
+		 (set-cons! sexp `(displaced-object
+				   (data-area-displacement ,first-word.disp)
+				   (offset                 ,(if (and (code? scheme-object)
+								     (fx=? offset off-code-data))
+								'off-code-data
+							      offset))
+				   (scheme-object          ,scheme-object)))))
+
+	      ((fx=? first-word.tag IK_RELOC_RECORD_JUMP_LABEL_TAG)
+	       (let ((offset        (vector-ref vec (fxadd1 i)))
+		     (scheme-object (vector-ref vec (fx+ 2 i))))
+		 (set! i (fx+ 2 i))
+		 (set-cons! sexp `(jump-label
+				   (data-area-displacement ,first-word.disp)
+				   (offset                 ,offset)
+				   (scheme-object          ,scheme-object)))))
+
+	      (else
+	       (error __who__
+		 "invalid tag bits in first word of relocation vector record"
+		 code first-word.tag)))))))
+
+
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

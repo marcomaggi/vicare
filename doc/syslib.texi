@@ -6911,6 +6911,13 @@ range @math{[0, 255]}.
 Store @var{obj} in the annotation field of @var{code}.
 @end deffn
 
+
+@defun code-reloc-vector->sexp @var{code}
+Extract the relocation vector from @var{code} and compose a symbolic
+expression representing its fields; return the symbolic expression.
+@var{code} must be a code object or a closure object or a vector object.
+@end defun
+
 @c page
 @node syslib closures
 @section Low level closures operations
