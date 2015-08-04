@@ -2282,8 +2282,9 @@ gather_live_code_entry (gc_t* gc, ikptr_t old_code_entry)
 static void
 relocate_code_object (ikptr_t p_code_object, gc_t* gc)
 /* Process a code object's relocation vector to update the references in
-   the data  area of the code  object itself.  P_CODE_OBJECT must  be an
-   *untagged* pointer referencing the code object.
+   the data area  of the code object itself.  Also  process other Scheme
+   objects referenced by the code object: the annotation.  P_CODE_OBJECT
+   must be an *untagged* pointer referencing the code object.
 
    This function  has similarities  with "ik_relocate_code()",  which is
    used when loading the boot image. */
@@ -2295,47 +2296,54 @@ relocate_code_object (ikptr_t p_code_object, gc_t* gc)
      word in the data area of the relocation vector. */
   ikptr_t	p_reloc_vec_cur = s_reloc_vec + off_vector_data;
   /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
-     right after the data area of the relocation vector.
-
-     Remember  that the  fixnum representing  the number  of items  in a
-     vector, taken as  "ikuword_t", also represents the  number of bytes
-     in the data area. */
+     right after the data area  of the relocation vector.  Remember that
+     the fixnum representing  the number of items in a  vector, taken as
+     "ikuword_t",  also  represents the  number  of  bytes in  the  data
+     area. */
   const ikptr_t	p_reloc_vec_end = p_reloc_vec_cur + IK_VECTOR_LENGTH_FX(s_reloc_vec);
   /* The variable P_DATA is an  *untagged* pointer referencing the first
-     byte in the data area of the code object. */
+     byte in the data area of the code object.  It is the address of the
+     entry point in the binary code. */
   const ikptr_t	p_data = p_code_object + disp_code_data;
   /* Scan the records in the relocation vector. */
   while (p_reloc_vec_cur < p_reloc_vec_end) {
     const ikuword_t	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
     const ikuword_t	reloc_record_tag  = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
     const ikuword_t	disp_code_word    = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+    fprintf(stderr, "r=0x%08x disp_code_word=%d reloc_size=0x%08x\n",
+	    first_record_bits, disp_code_word, IK_VECTOR_LENGTH_FX(s_reloc_vec));
+#endif
     switch (reloc_record_tag) {
     case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
       /* This record represents a vanilla object; this record is 2 words
-	 wide. */
-#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      fprintf(stderr, "r=0x%08x disp_code_word=%d reloc_size=0x%08x\n",
-	      first_record_bits, disp_code_word, IK_VECTOR_LENGTH_FX(s_reloc_vec));
-#endif
+	 wide.  Records of this type are  used when the binary code must
+	 use a  Scheme object  (examples: a hard  coded list;  a storage
+	 location gensym). */
       ikptr_t	s_old_object = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
-      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc1");
+      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc vanilla object");
       IK_REF(p_data, disp_code_word) = s_new_object;
       p_reloc_vec_cur += (2*wordsize);
       break;
     }
     case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
       /* This record  represents a  displaced object;  this record  is 3
-	 words wide. */
+	 words wide.  Records of this type are used when the binary code
+	 must access  a machine  word in  the memory  block of  a Scheme
+	 object  (examples:  the  binary  code entry  point  in  a  code
+	 object). */
       ikuword_t	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
       ikptr_t	s_old_object =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc2");
+      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc displaced object");
       IK_REF(p_data, disp_code_word) = s_new_object + obj_off;
       p_reloc_vec_cur += (3 * wordsize);
       break;
     }
     case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
       /* This record  represents a  jump label; this  record is  3 words
-	 wide. */
+	 wide.  Records of this type are  used when the binary code must
+	 use the  address of a binary  code entry point as  operand of a
+	 jump instruction. */
       ikuword_t	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
       ikptr_t	s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -2353,7 +2361,10 @@ relocate_code_object (ikptr_t p_code_object, gc_t* gc)
     }
     case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
       /* This record represents a foreign object; this record is 2 words
-	 wide.  Do nothing. */
+	 wide.  Records of  this type are used when te  binary code must
+	 use the address of a  C function retrieved with "dlsym()"; such
+	 addresses  are  stored in  the  data  area at  compile-time  or
+	 load-time and they never change. */
       p_reloc_vec_cur += (2 * wordsize);
       break;
     }
