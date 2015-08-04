@@ -548,17 +548,16 @@
   (define-entry-predicate bottom-code? bottom-code)
 
   (define (%error-incorrect-args who assembly-sexp expected-num-of-rand*)
-    (fluid-let-syntax ((__who__ (identifier-syntax who)))
-      (%compiler-internal-error __who__
-	  (string-append "wrong number of operands in Assembly symbolic expression, expected "
-			 (number->string expected-num-of-rand*))
-	assembly-sexp)))
+    (%compiler-internal-error who
+      (string-append "wrong number of operands in Assembly symbolic expression, expected "
+		     (number->string expected-num-of-rand*))
+      assembly-sexp))
 
 ;;; --------------------------------------------------------------------
 
   (define (%uncover-local-labels names accum)
     ;;Tail recursive function.  Expect ACCUM to be a list of Assembly sexps; NAMES is
-    ;;initially NULL.  Iterate over ACCUM,  visiting PAD and SEQ entries recursively,
+    ;;initially null.  Iterate over ACCUM,  visiting PAD and SEQ entries recursively,
     ;;and  accumulate in  NAMES  a list  of  symbols being  the  gensyms in  symbolic
     ;;expressions:
     ;;
@@ -851,11 +850,15 @@
 	 (fxincr! reloc-idx 3))
 
 	((local-relative)
-	 ;;This entry requires the address of a label in the binary code
-	 ;;of this very  code object.  There is no need  to add a record
-	 ;;to the relocation vector, we  just store in the code object's
-	 ;;data area  the relative offset  of the label with  respect to
-	 ;;the current position in data area itself.
+	 ;;This entry  represents the use,  by the binary  code in the  code object's
+	 ;;data  area, of  the address  of a  label in  this very  code object.   The
+	 ;;address of the label  is represented by a 32-bit offset  in bytes from the
+	 ;;current position in the binary code;  when the code object is relocated by
+	 ;;the garbage collector: this relative offset does *not* change.
+	 ;;
+	 ;;There is no need  to add a record to the relocation  vector: we just store
+	 ;;in  the code  object's data  area the  relative offset  of the  label with
+	 ;;respect to the current position in data area itself.
 	 ;;
 	 ;;  meta data     L  data area
 	 ;; |---------|----+-------------|---|---|--------| code object
@@ -868,8 +871,8 @@
 	 ;;           |....| disp        |...| 4
 	 ;;           |..................| off
 	 ;;
-	 ;;Notice that local  labels are specified with  a 32-bit offset
-	 ;;on all the platforms.
+	 ;;Notice that  local labels are  specified with a  32-bit offset on  all the
+	 ;;platforms.
 	 ;;
 	 (let* ((off  (car r))	;Offset into the data area of the code object.
 		(loc  (%label-loc val))
@@ -879,14 +882,15 @@
 	     (%error "source code object and target code object of \
                       a local relative jump are not the same"))
 	   (let ((rel (fx- disp (fxadd4 off))))
-	     ($code-set! code          off  (fxlogand         rel     #xFF))
+	     ($code-set! code         off  (fxlogand         rel     #xFF))
 	     ($code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
 	     ($code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
 	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
 
 	((relative)
 	 ;;Add a record of type "jump label".
-	 (let* ((off  (car r))	;Offset into the data area of the code object.
+	 ;;
+	 (let* ((off  (car r))
 		(loc  (%label-loc val))
 		(obj  (car  loc))
 		(disp (cadr loc)))
