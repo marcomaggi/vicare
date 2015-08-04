@@ -428,15 +428,26 @@
 
 (module (convert-instructions local-label-gensym?)
 
-  ;;List  of symbols  representing  local labels.
+  ;;List of gensyms representing local Assembly label names.
   (define local-labels
     (make-parameter '()))
 
   (define (local-label-gensym? x)
-    ;;Return true if X is a local label previously registered.
+    ;;Return true if X is a gensym in an entry:
     ;;
-    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
-    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
+    ;;   (label ?gensym)
+    ;;
+    ;;representing a  local Assembly label  in the chunk  of code being  processed by
+    ;;CONVERT-INSTRUCTION.
+    ;;
+    ;;Local Assembly labels are used, for example: to implement the local jumps in IF
+    ;;syntaxes;  to  implement core  primitive  operation's  shortcuts and  interrupt
+    ;;handlers; to implement CLAMBDA with multiple branches.
+    ;;
+    ;;FIXME Would  this be significantly  faster with an  EQ?  hashtable?  Or  is the
+    ;;number of local labels usually small?   While compiling the boot image: most of
+    ;;the times the list  of local labels has less than 15 items;  very rarely it has
+    ;;hundreds of items.
     ;;
     (and (memq x (local-labels)) #t))
 
@@ -563,7 +574,8 @@
     ;;
     ;;   (label ?gensym)
     ;;
-    ;;representing "local" labels.  Return the resulting NAMES list.
+    ;;All these  symbolic expressions represent  Assembly labels that are  "local" to
+    ;;the chunk of code being compiled.  Return the resulting NAMES list.
     ;;
     (define-syntax-rule (recur ?names)
       (%uncover-local-labels ?names (cdr accum)))
@@ -576,7 +588,9 @@
 		 ;;
 		 ;;   (label ?gensym)
 		 ;;
-		 (recur (cons (cadr entry) names)))
+		 (let ()
+		   (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS)
+		   (recur (cons (label-name entry) names))))
 		((seq)
 		 ;;The ENTRY has the format:
 		 ;;
@@ -1274,6 +1288,15 @@
   (define (%IMM/label ival ac)
     (let* ((LN  (label-name ival))
 	   (key (if (local-label-gensym? LN)
+		    ;;The label  name LN  is a gensym  representing a  local Assembly
+		    ;;label in the code  being processed by CONVERT-INSTRUCTIONS.  It
+		    ;;means that  somewhere in  the code being  compiled there  is an
+		    ;;element:
+		    ;;
+		    ;;   (label ?name)
+		    ;;
+		    ;;this  happens, for  example, in  the implementation  of the  IF
+		    ;;syntax.
 		    'local-relative
 		  'relative)))
       (cons (cons key LN) ac)))
@@ -1942,7 +1965,19 @@
 
     ((jmp dst)
      (match-operands (dst)
+       ;;This branch is used when ASM-SEXP has the format:
+       ;;
+       ;;   (jmp (label ?name))
+       ;;
+       ;;and ?NAME is a gensym representing a  local Assembly label in the code being
+       ;;processed  by CONVERT-INSTRUCTIONS.   It means  that somewhere  in the  code
+       ;;being compiled there is an element:
+       ;;
+       ;;   (label ?name)
+       ;;
+       ;;this happens, for example, in the implementation of the IF syntax.
        ((label?/local)		(CODE #xE9 (cons `(local-relative . ,(label-name dst)) ac)))
+
        ((imm?)			(boot.case-word-size
 				 ((32)		(CODE #xE9 (IMM32 dst ac)))
 				 ((64)		(jmp-pc-relative #xFF #x25 dst ac))))
