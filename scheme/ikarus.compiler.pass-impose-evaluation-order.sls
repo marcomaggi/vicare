@@ -1371,9 +1371,8 @@
 	    (%load-register-operand/closure-object-reference rator.simple)
 	    (%load-register-operand/number-of-stack-operands (length rand*.fvar))
 	    (if target
-		;;This is  was a JMPCALL: we  jump directly to the  binary code entry
-		;;point  represented by  the Assembly  label in  the CODE-LOC  struct
-		;;TARGET.
+		;;This was a JMPCALL: we jump directly to the binary code entry point
+		;;represented by the Assembly label in the CODE-LOC struct TARGET.
 		;;
 		;;NOTE When the  ASMCALL has DIRECT-JUMP as operator:  the first item
 		;;in the  operands must be  the CODE-LOC representing  target!!!  The
