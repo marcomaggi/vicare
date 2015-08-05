@@ -904,6 +904,8 @@ ik_relocate_code (ikptr_t p_code)
 
    - Whenever a code object is read from the boot image.
 
+   - Whenever a code object is read from a FASL file.
+
    - Whenever  a  code  object  is  created by  the  assembler  and  its
      relocation vector is set. */
 {
