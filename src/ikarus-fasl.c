@@ -902,12 +902,10 @@ ik_relocate_code (ikptr_t p_code)
 
    This function is called:
 
-   - whenever a code  object is allocated, in this  case CODE references
-     an allocated but still empty code object;
+   - Whenever a code object is read from the boot image.
 
-   - whenever a code object is read from the boot image;
-
-   - whenever a code object is created by the assembler. */
+   - Whenever  a  code  object  is  created by  the  assembler  and  its
+     relocation vector is set. */
 {
   /* The relocation vector. */
   const ikptr_t s_reloc_vec = IK_REF(p_code, disp_code_reloc_vector);
