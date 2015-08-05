@@ -5415,76 +5415,108 @@ Evaluate to true if @var{X} is a reference to code object.
 
 
 The @dfn{relocation vector} is a Scheme vector referenced by the meta
-data of a code object; the relocation vector can be empty.
-
-The relocation vector is divided into records, each some words long:
+data of a code object.  In this documentation we refer to the code
+object associated to a relocation vector as the ``subject code object''.
+The relocation vector can be empty.  The relocation vector is divided
+into records, each some words long:
 
 @example
    0     1     2     3     4     5     6     7
-|-----|-----|-----|-----|-----|-----|-----|-----| relocation vector
+|-----|-----|-----|-----|-----|-----|-----|-----| reloc vector
 |...........|.................|.................|
  1st record      2nd record        3rd record
 @end example
 
 @noindent
 the first word in each record contains a fixnum which must be
-interpreted as bit field; such fixnum must never be zero.  On 32-bit
-platforms the layout of such fixnum is:
+interpreted as bit field (this fixnum is never zero).  The layout of the
+first machine word in a record is:
+
+@itemize
+@item
+On 32-bit platforms:
 
 @example
      bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
 ... |----|----|----|----|----|----|----|----|
-........................|.........|.........| 1st record word
- number of bytes        record tag fixnum tag
+........................|.........|.........| 1st word
+  number of bytes        record tag fixnum tag
 @end example
 
-@noindent
-on 64-bit platforms the layout of such fixnum is:
+@item
+On 64-bit platforms:
 
 @example
-        bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
-   ... |----|----|----|----|----|----|----|----|
-......................|.........|..............| 1st record word
- number of bytes      record tag   fixnum tag
+     bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+... |----|----|----|----|----|----|----|----|
+...................|.........|..............| 1st word
+  number of bytes   record tag   fixnum tag
+@end example
+@end itemize
+
+@noindent
+The @math{2} least significant bits of the fixnum's data represent a
+type tag for the record:
+
+@table @code
+@item #b00
+Record referencing a vanilla Scheme object.
+
+@item #b01
+Record referencing the address of a C function.
+
+@item #b10
+Record referencing an offset in the memory block of a Scheme object.
+
+@item #b11
+Record referencing an entry point in a code object.
+@end table
+
+@noindent
+the remaining most significant bits of the fixnum's data area represent
+a number of bytes, a displacement in the data area of the subject code
+object selecting a target word:
+
+@example
+ meta data        machine code
+|---------|----------------+---+-------| code object
+          |................|...|
+             displacement   target word
 @end example
 
-@noindent
-the @math{2} least significant bits of the fixnum's data represent a
-type tag for the record; the remaining most significant bits of the
-fixnum's data area represent a number of bytes: a displacement in the
-data area of the code object selecting the target word.
+The purpose of each record in the relocation vector is to provide
+operands from which a value for the target word can be computed and
+stored in the middle of machine code; this way the machine code can
+easily use it.  When the subject code object is created: the values must
+be computed and stored.  Every time the garbage collector moves the
+subject code object: the values must be recomputed and updated.
+Whenever the subject code object is serialised into a @fasl{} file: the
+relocation vector is serialised along with the code.
 
-Whenever a code object is serialised into a @fasl{} file: the relocation
-vector is appended to it in the @fasl{} file.  Whenever the garbage
-collector moves a code object into a new location: the relocation vector
-must be processed again to update the addresses.
+To allow inspection and comprehension of the records, the function
+@func{code-reloc-vector->sexp} transforms a relocation vector into a
+human readable symbolic expression (@pxref{syslib codes,
+code-reloc-vector->sexp}).
 
-@c ------------------------------------------------------------
+@menu
+* objects codes reloc vanilla:: Records of type: vanilla object.
+* objects codes reloc foreign:: Records of type: foreign address.
+* objects codes reloc offset::  Records of type: offset in object.
+* objects codes reloc jump::    Records of type: jump to label-offset.
+@end menu
 
-@subsubheading Records of type: vanilla object
+@c page
+@node objects codes reloc vanilla
+@subsubsection Records of type: vanilla object
 
-Records of this type are used when the code object uses a generic Scheme
-object.  For example, the code object representing the implementation of
-the function:
 
-@lisp
-(define (doit)
-  '(1 2 3))
-@end lisp
+@cindex Relocation vector, vanilla object records
 
-@noindent
-contains a reference to the list @code{(1 2 3)} in its relocation
-vector.  Another notable example, when the code must extract the value
-of the field @code{value} of a storage location gensym: the referenced
-Scheme object is the loc gensym.
 
-These records are composed of @math{2} words: the first word contains
-the tag and the displacement in bytes of the target word in the data
-area; the second word contains the reference to a Scheme object (or the
-Scheme object itself, if immediate).
-
-When these records are processed: the object reference is stored into
-the target word in the data area.
+These records are composed of @math{2} words: the second word contains a
+tagged pointer to a Scheme object.  When these records are processed:
+the tagged pointer is stored into the target word in the data area of
+the subject code object.
 
 @example
    meta data         data area
@@ -5492,8 +5524,8 @@ the target word in the data area.
 
 s_code   p_data
   v         v
-  |---------|--------------|----|------| code object
-            |..............|....|target word
+  |---------|--------------|---|-------| code object
+            |..............|...|target word
       ------->displacement   ^
      |                       |
      |     ------------------
@@ -5502,95 +5534,51 @@ s_code   p_data
    1st  2nd
 @end example
 
-@c ------------------------------------------------------------
+Records of this type are used when the code object uses a generic Scheme
+object.  Some notable examples:
 
-@subsubheading Records of type: displaced object
-
-Records of this type are used when the code object accesses a word in
-the code block of a Scheme object.  For example, when the code must
-extract the address of the machine code entry point in code objects: the
-referenced Scheme object is the code object and the displacement is the
-offset of the data area from the beginning of the memory block.
-
-These records are composed of @math{3} words: the first word contains
-the tag and the displacement in bytes of the target word in the data
-area; the second word contains a fixnum representing a byte offset; the
-third word contains the reference to a Scheme object (or the Scheme
-object itself, if immediate).
-
-When these records are processed: the object reference is added to the
-offset in bytes and the result is stored into the target word.
-
-@example
-   meta data         data area
-  |.........|..........................|
-
-s_code   p_data
-  v         v
-  |---------|--------------|----|------| code object
-            |..............|....|target word
-      ------->displacement   ^
-     |                       |
-     |       ----------------
-     |      |
-     |  off + obj
-  |----|----|----| displaced object record
-   1st  2nd  3rd
-@end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Records of type: jump label
-
-These records are composed of @math{2} words: the first word contains
-the tag and the displacement in bytes of the target word in the data
-area; @dots{}
-
-@c ------------------------------------------------------------
-
-@subsubheading Records of type: foreign address
-
-Records of this type are used when the code performs a call to a C
-function, @strong{not} using the foreign--functions interface.  For
-example, let's consider this code:
+@itemize
+@item
+The code object representing the implementation of the function:
 
 @lisp
-(import (vicare)
-  (vicare system $codes))
-
-(define (f x)
-  (foreign-call "ikrt_glibc_csin" x))
-(f 1.2+3.4i)    @result{} 13.979408806017995+5.422815472463402i
-
-(define reloc-vec
-  ($code-reloc-vector ($closure-code f)))
-
-reloc-vec @result{} #(390 43 #<code> 290 43 #<code>
-  169
-  #vu8(105 107 95 102 111 114 101 105 103 110 95 99 97 108 108)
-  89
-  #vu8(105 107 114 116 95 103 108 105 98 99 95 99 115 105 110))
-
-(ascii->string (vector-ref reloc-vec 7)) @result{} "ik_foreign_call"
-(ascii->string (vector-ref reloc-vec 9)) @result{} "ikrt_glibc_csin"
+(define (doit)
+  '(1 2 3))
 @end lisp
 
 @noindent
-the function @code{ik_foreign_call} is an Assembly routine used as
-trampoline to call C functions.  The two Scheme objects @code{169},
-@code{#vu8(105 107 95 102 ...)} are a ``foreign address'' record.  The
-two Scheme objects @code{89}, @code{#vu8(105 107 95 114 ...)} are
-another ``foreign address'' record.
+contains a reference to the list @code{(1 2 3)} in its relocation
+vector.
 
-These records are composed of @math{2} words: the first word contains
-the tag and the displacement in bytes of the target word in the data
-area; the second word contains the reference to a bytevector object
-holding the C string representation of a foreign object name, in the
-format suitable to be handed to @cfunc{dlsym}.
+@item
+The code object representing the implementation of the function:
 
-When these records are processed: @cfunc{dlsym} is used to retrieve the
-address of the foreign object (which must be present in the global
-namespace), then the address is stored directly in the target word.
+@lisp
+(define (doit x)
+  (display x))
+@end lisp
+
+@noindent
+contains a reference to the storage location gensym of @func{display} in
+its relocation vector.
+@end itemize
+
+@c page
+@node objects codes reloc foreign
+@subsubsection Records of type: foreign address
+
+
+@cindex Relocation vector, foreign address records
+
+
+These records are composed of @math{2} words: the second word contains a
+tagged pointer referencing a bytevector object holding the C string
+representation of a foreign object name, in the format suitable to be
+handed to @cfunc{dlsym}.  When these records are processed:
+@cfunc{dlsym} is used to retrieve the address of the foreign object
+(which must be present in the global namespace), then the address is
+stored directly in the target word in the data area of the subject code
+object.
 
 @example
    meta data         data area
@@ -5598,8 +5586,8 @@ namespace), then the address is stored directly in the target word.
 
 s_code   p_data
   v         v
-  |---------|--------------|----|------| code object
-            |..............|....|target word
+  |---------|--------------|---|-------| code object
+            |..............|...|target word
       ------->displacement   ^
      |                       |
      |     --- dlsym() ------
@@ -5609,11 +5597,209 @@ s_code   p_data
    1st  2nd
 @end example
 
-Examples of foreign objects are: the C functions exported by the
-executable program @value{EXECUTABLE} to be called from Scheme; the C
-functions exported by the shared library when using an extension to
-Vicare with the model proposed by the Vicare/Template project (for
-example Vicare/SQLite).
+Records of this type are used when the code performs a call to a C
+function, @strong{not} using the foreign--functions interface.  For
+example, let's consider this code:
+
+@lisp
+(define (f x)
+  (foreign-call "ikrt_glibc_csin" x))
+@end lisp
+
+@noindent
+the relocation vector references a bytevector containing the @asciiz{}
+representation of @code{ikrt_glibc_csin}.
+
+Examples of C functions used in this way are: the C functions exported
+by the executable program @value{EXECUTABLE} to be called from Scheme;
+the C functions exported by shared libraries when using extensions like
+Vicare/SQLite and Vicare/cURL.  The foreign--functions interface does
+@strong{not} make use of this mechanism.
+
+@c page
+@node objects codes reloc offset
+@subsubsection Records of type: offset in object
+
+
+@cindex Relocation vector, offset in object records
+
+
+These records are composed of @math{3} words: the second word contains a
+fixnum which, unpacked to @code{iksword_t}, represents a byte offset;
+the third word contains the tagged pointer to a subordinate Scheme
+object.  When these records are processed: the tagged pointer is added
+to the offset in bytes and the result is stored in the target word in
+the data area of the subject code object:
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|---|-------| code object
+            |..............|...|target word
+      ------->displacement   ^
+     |                       |
+     |       ----------------
+     |      |
+     |  off + obj
+  |----|----|----| offset in object record
+   1st  2nd  3rd
+@end example
+
+Records of this type are used when the subject code object uses a
+pointer to a word in the code block of the subordinate Scheme object:
+
+@example
+      pointer ---
+                 |
+                 v
+|--------------|---|----------| subordinate Scheme object
+|..............|...|
+  displacement  word
+@end example
+
+@noindent
+the pointer to the word is the sum between:
+
+@enumerate
+@item
+The tagged pointer to the subordinate code object.
+
+@item
+A constant that untags the tagged pointer to the subordinate code
+object.
+
+@item
+A constant representing the displacement of the word in the memory block
+of the subordinate Scheme object.
+@end enumerate
+
+@noindent
+the offset stored in the relocation vector is the sum between the latter
+two constants.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example: common routines
+
+Every Scheme function makes use of some common machine code routines: to
+validate the number of arguments, to validate the number of returned
+values, as implementation of @func{call-with-values} and other
+operations.  Such routines are compiled into code objects.
+
+When the subject code object calls such routines, it does it by jumping
+directly to the entry point in the machine code; for each routine used
+by the subject code object, a relocation vector record is added
+containing:
+
+@enumerate
+@item
+A tagged pointer to the code object implementing the routine.
+
+@item
+A fixnum which, unpacked to @code{iksword_t}, represents the constant
+@code{off_code_tag}.
+@end enumerate
+
+@noindent
+adding @code{off_code_tag} to the tagged pointer yields the address of
+the machine code entry point.
+
+@c page
+@node objects codes reloc jump
+@subsubsection Records of type: jump to label--offset
+
+
+@cindex Relocation vector, jump to label--offset records
+
+
+These records are composed of @math{3} words: the second word contains a
+fixnum which, unpacked to @code{iksword_t}, represents a byte offset;
+the third word contains the tagged pointer to a subordinate Scheme code
+object.  When these records are processed: a 32-bit byte offset is
+computed and stored in the target word in the data area of the subject
+code object:
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|---|-------| code object
+            |..............|...|target word
+      ------->displacement   ^
+     |                       |
+     |    -----+-------------
+     |   |     |
+     |  off   obj
+  |----|----|----| jump label offset record
+   1st  2nd  3rd
+@end example
+
+Let's imagine the following scenario in Assembly language, in which a
+@code{jmp} instruction is used to jump directly to another entry point
+by specifying the target address as an immediate value:
+
+@example
+   ...
+   jmp L_target
+   ...
+
+   ...
+L_target:
+   ...
+@end example
+
+@noindent
+such operation can be implemented also as:
+
+@example
+   ...
+   jmp-pc-relative (L_target - L_after_jmp)
+L_after_jmp:
+   ...
+
+   ...
+L_target:
+   ...
+@end example
+
+@noindent
+in which the jump is to the address at a computable offset from the
+@code{jmp-pc-relative} instruction; the target address is computed at
+run--time, by the @cpu{} executing the @code{jmp-pc-relative}
+instruction, by adding the constant offset @code{L_target - L_after_jmp}
+to the value of the Instruction Pointer Register (or Program Counter
+Register).
+
+The ``jump to label--offset'' records are used to implement this
+scenario, in which: the @code{jmp-pc-relative} instruction is in the
+subject code object; the target label is in the subordinate code object.
+The third word in the record contains the tagged pointer to the
+subordinate Scheme code object.  The second word in the record contains
+a fixnum which, unpacked to @code{iksword_t}, represents the constant to
+add to a tagged pointer to the subordinate code object to obtain the
+offset of the target label:
+
+@example
+ meta data        machine code
+|---------|--------------|---|-----| subject code object
+                             ^ L_after_jmp
+          |..............|...|
+            displacement  32-bit
+
+
+ meta data     machine code
+|---------|------------|-----------| subordinate code object
+                       ^ L_target
+|......................|
+ offset - code_primary_tag
+@end example
+
+At present, the code handles only 32-bit offsets.
 
 @c page
 @node objects codes gc
