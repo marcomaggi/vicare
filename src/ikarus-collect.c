@@ -2309,63 +2309,74 @@ relocate_code_object (ikptr_t p_code_object, gc_t* gc)
   while (p_reloc_vec_cur < p_reloc_vec_end) {
     const ikuword_t	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
     const ikuword_t	reloc_record_tag  = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
-    const ikuword_t	disp_code_word    = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+    /* We want to store a value in  the code object's data area, at this
+     * offset in bytes:
+     *
+     *   IK_REF(p_data, data_area_displacement) = ...;
+     *
+     * notice that the displacement is relative to the first byte in the
+     * data area.
+     */
+    const ikuword_t	data_area_displacement = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-    fprintf(stderr, "r=0x%08x disp_code_word=%d reloc_size=0x%08x\n",
-	    first_record_bits, disp_code_word, IK_VECTOR_LENGTH_FX(s_reloc_vec));
+    fprintf(stderr, "r=0x%08x data_area_displacement=%d reloc_size=0x%08x\n",
+	    first_record_bits, data_area_displacement, IK_VECTOR_LENGTH_FX(s_reloc_vec));
 #endif
     switch (reloc_record_tag) {
     case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
-      /* This record represents a vanilla object; this record is 2 words
-	 wide.  Records of this type are  used when the binary code must
-	 use a  Scheme object  (examples: a hard  coded list;  a storage
-	 location gensym). */
+      /* This record  is 2 words  wide.  Records  of this type  are used
+	 when the binary code must use a Scheme object (examples: a hard
+	 coded list; a storage location gensym). */
       ikptr_t	s_old_object = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
       ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc vanilla object");
-      IK_REF(p_data, disp_code_word) = s_new_object;
-      p_reloc_vec_cur += (2*wordsize);
+      IK_REF(p_data, data_area_displacement) = s_new_object;
+      p_reloc_vec_cur += 2 * wordsize;
       break;
     }
-    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
-      /* This record  represents a  displaced object;  this record  is 3
-	 words wide.  Records of this type are used when the binary code
-	 must access  a machine  word in  the memory  block of  a Scheme
-	 object  (examples:  the  binary  code entry  point  in  a  code
-	 object). */
-      ikuword_t	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+    case IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG: {
+      /* This record  is 3 words  wide.  Records  of this type  are used
+	 when the code  object must access a machine word  in the memory
+	 block of another Scheme object  through a pointer.  Notice that
+	 OBJ_OFFSET is to be added to the tagged pointer referencing the
+	 Scheme object. */
+      ikuword_t	obj_offset   = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
       ikptr_t	s_old_object =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc displaced object");
-      IK_REF(p_data, disp_code_word) = s_new_object + obj_off;
-      p_reloc_vec_cur += (3 * wordsize);
+      ikptr_t	s_new_object = gather_live_object(gc, s_old_object, "reloc offset in object");
+      IK_REF(p_data, data_area_displacement) = s_new_object + obj_offset;
+      p_reloc_vec_cur += 3 * wordsize;
       break;
     }
     case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
-      /* This record  represents a  jump label; this  record is  3 words
-	 wide.  Records of this type are  used when the binary code must
-	 use the  address of a binary  code entry point as  operand of a
-	 jump instruction. */
-      ikuword_t	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
-      ikptr_t	s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      /* This record  is 3 words  wide.  Records  of this type  are used
+	 when the machine  code in the (source) code object  jumps to an
+	 entry point into another (target)  code object.  The operand of
+	 the JMP instruction is *not*  the target address itself, rather
+	 it is the  offset from the JMP instruction to  the target entry
+	 point.
+
+	 NOTE At present the offset is a 32-bit value. */
+      ikuword_t	obj_offset = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      ikptr_t	s_obj      =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)s_obj, obj_off);
+      fprintf(stderr, "obj=0x%08x, obj_offset=0x%08x\n", (ikuword_t)s_obj, obj_offset);
 #endif
-      s_obj = gather_live_object(gc, s_obj, "reloc3");
-      ikptr_t	displaced_object  = s_obj + obj_off;
-      ikuword_t	next_word         = p_data + disp_code_word + 4;
-      ikptr_t	relative_distance = displaced_object - next_word;
-      if (((iksword_t)relative_distance) != ((iksword_t)((int32_t)relative_distance)))
+      s_obj = gather_live_object(gc, s_obj, "reloc jump target object");
+      ikptr_t	address_of_target_entry_point   = s_obj + obj_offset;
+      ikuword_t	address_of_word_after_jmp_instr = p_data + data_area_displacement + 4;
+      iksword_t	relative_distance = address_of_target_entry_point - address_of_word_after_jmp_instr;
+      if (relative_distance != ((iksword_t)((int32_t)relative_distance)))
         ik_abort("relocation error with relative=0x%016lx", relative_distance);
-      *((int32_t*)(p_data + disp_code_word)) = (int32_t)relative_distance;
-      p_reloc_vec_cur += (3*wordsize);
+      *((int32_t*)(p_data + data_area_displacement)) = (int32_t)relative_distance;
+      p_reloc_vec_cur += 3 * wordsize;
       break;
     }
     case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
-      /* This record represents a foreign object; this record is 2 words
-	 wide.  Records of  this type are used when te  binary code must
-	 use the address of a  C function retrieved with "dlsym()"; such
-	 addresses  are  stored in  the  data  area at  compile-time  or
-	 load-time and they never change. */
-      p_reloc_vec_cur += (2 * wordsize);
+      /* This record  is 2 words  wide.  Records  of this type  are used
+	 when  te binary  code  must use  the address  of  a C  function
+	 retrieved with "dlsym()"; such addresses are stored in the data
+	 area at compile-time or load-time  and they never change.  Here
+	 we just skip this record. */
+      p_reloc_vec_cur += 2 * wordsize;
       break;
     }
     default:

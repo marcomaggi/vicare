@@ -940,7 +940,7 @@ ik_relocate_code (ikptr_t p_code)
       p_reloc_vec_cur += (2*wordsize);
       break;
     }
-    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
+    case IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG: {
       /* This record  represents a  displaced object;  this record  is 3
 	 words  wide.  The  second word  contains the  displacement, the
 	 third word contains the reference to the object. */

@@ -882,7 +882,7 @@
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
 	       (obj  (car val))
 	       (disp (cdr val)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) disp)
 	   (vector-set! vec (fxadd2 reloc-idx) obj)
 	   (fxincr! reloc-idx 3)))
@@ -908,7 +908,7 @@
 		(obj  (car  loc))
 		;;Offset from the beginning of the code object's data area.
 		(disp (cadr loc)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
@@ -1003,7 +1003,7 @@
   ;;the C language headers.
   (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	#b00)
   (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	#b01)
-  (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	#b10)
+  (define-inline-constant IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG	#b10)
   (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	#b11)
   #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG		#b11)
 

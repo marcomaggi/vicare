@@ -214,7 +214,7 @@ ik_api_decl void	ik_fprint		(FILE*, ikptr_t x);
 #define IK_ALIGN_SIZE	(2 * wordsize)
 #define immediate_tag	7
 
-#define IK_TAGOF(X)	(((int)(X)) & 7)
+#define IK_TAGOF(X)	(((ikuword_t)(X)) & 7)
 
 #define IK_PTR(X,N)	((ikptr_t*)(((ikuword_t)(X)) + ((iksword_t)(N))))
 #define IK_REF(X,N)	(IK_PTR(X,N)[0])
