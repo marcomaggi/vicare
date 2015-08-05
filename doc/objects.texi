@@ -5715,6 +5715,13 @@ the machine code entry point.
 @cindex Relocation vector, jump to label--offset records
 
 
+@quotation
+@strong{NOTE} This record type is currently not used.  Is it really
+needed?  Can its use allow operations not possible with records of type
+``offset in object''?
+@end quotation
+
+
 These records are composed of @math{3} words: the second word contains a
 fixnum which, unpacked to @code{iksword_t}, represents a byte offset;
 the third word contains the tagged pointer to a subordinate Scheme code
