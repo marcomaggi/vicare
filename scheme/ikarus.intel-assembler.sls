@@ -878,7 +878,7 @@
 	   (fxincr! reloc-idx 2)))
 
 	((reloc-word+)
-	 ;;Add a record of type "displaced object".
+	 ;;Add a record of type "offset in object".
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
 	       (obj  (car val))
 	       (disp (cdr val)))
@@ -888,20 +888,21 @@
 	   (fxincr! reloc-idx 3)))
 
 	((label-address)
-	 ;;Add  a  record  of  type  "displaced  object".   The  value  is  a  gensym
+	 ;;Add  a  record  of  type  "offset  in object".   The  value  is  a  gensym
 	 ;;representing an  Assembly label entry  point.  The referenced code  is one
 	 ;;among: the entry  point of a common Assembly routine  (the return value of
 	 ;;the functions  SL-*-LABEL); the entry  point of a "known"  Scheme function
 	 ;;that was  represented by a  CODE-LOC struct; an  entry point in  this very
 	 ;;code object.
 	 ;;
-	 ;;Being an entry  point: it the address  of a code object, to  which we must
+	 ;;Being an entry point: it is the address of a code object, to which we must
 	 ;;add an offset.   We retrieve informations about the  label's location from
 	 ;;the label gensym's property list as:
 	 ;;
-	 ;;   (?code-object-reference ?offset-as-number-of-words)
+	 ;;   (?code-object-reference ?fixnum-representing-offset-as-number-of-bytes)
 	 ;;
-	 ;;such values are stored in the relocation vector.
+	 ;;these values  are used to generate  the fields of the  relocation vector's
+	 ;;record.
 	 (let* ((off  (car r)) ;offset into the data area of the code object
 		(loc  (%label-loc val))
 		;;Reference to code object.
@@ -914,31 +915,56 @@
 	 (fxincr! reloc-idx 3))
 
 	((local-relative)
-	 ;;This entry  represents the use,  by the binary  code in the  code object's
-	 ;;data  area, of  the address  of a  label in  this very  code object.   The
-	 ;;address of the label  is represented by a 32-bit offset  in bytes from the
-	 ;;current position in the binary code;  when the code object is relocated by
-	 ;;the garbage collector: this relative offset does *not* change.
+	 ;;Let's imagine the following scenario in  Assembly language, in which a JMP
+	 ;;instruction is used to jump directly  to another entry point by specifying
+	 ;;the target address as an immediate value:
 	 ;;
-	 ;;There is no need  to add a record to the relocation  vector: we just store
-	 ;;in  the code  object's data  area the  relative offset  of the  label with
-	 ;;respect to the current position in data area itself.
+	 ;;      ...
+	 ;;      jmp L_target
+	 ;;      ...
 	 ;;
-	 ;;  meta data     L  data area
-	 ;; |---------|----+-------------|---|---|--------| code object
-	 ;;                ^               ^ |
-	 ;;                |               | |
-	 ;;                |         ------  |
-	 ;;                |        |        |
-	 ;;                |.................| relative offset of L
+	 ;;      ...
+	 ;;   L_target:
+	 ;;      ...
 	 ;;
-	 ;;           |....| disp        |...| 4
+	 ;;such operation can be implemented also as:
+	 ;;
+	 ;;      ...
+	 ;;      jmp-pc-relative (L_target - L_after_jmp)
+	 ;;   L_after_jmp:
+	 ;;      ...
+	 ;;
+	 ;;      ...
+	 ;;   L_target:
+	 ;;      ...
+	 ;;
+	 ;;in  which the  jump is  to the  address at  a computable  offset from  the
+	 ;;JMP-PC-RELATIVE instruction;  the target address is  computed at run-time,
+	 ;;by  the  CPU executing  the  JMP-PC-RELATIVE  instruction, by  adding  the
+	 ;;constant offset "L_target  - L_after_jmp" to the value  of the Instruction
+	 ;;Pointer Register (or Program Counter Register).
+	 ;;
+	 ;;When both the jump  instruction and the target label are  in the data area
+	 ;;of  the  same  code  object:  the  constant  offset  can  be  computed  at
+	 ;;compile-time and it  never changes.  There is  no need to add  a record to
+	 ;;the relocation vector.
+	 ;;
+	 ;;The  constant offset  "L_target -  L_after_jmp" is  represented as  32-bit
+	 ;;value, which we  compute here and store  directly in the data  area of the
+	 ;;code object.
+	 ;;
+	 ;;            L_target          L_after_jmp
+	 ;;                |                 |
+	 ;;  meta data     v                 v
+	 ;; |---------|----+-------------+---+------------| code object
+	 ;;                                ^
+	 ;;                                |
+	 ;;                |.................| L_target-L_after_jmp
+	 ;;
+	 ;;           |....| disp        |...| 32 bits
 	 ;;           |..................| off
 	 ;;
-	 ;;Notice that  local labels are  specified with a  32-bit offset on  all the
-	 ;;platforms.
-	 ;;
-	 (let* ((off  (car r))	;Offset into the data area of the code object.
+	 (let* ((off  (car r)) ;Offset into the data area of the code object.
 		(loc  (%label-loc val))
 		(obj  (car  loc))
 		(disp (cadr loc)))
@@ -952,7 +978,8 @@
 	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
 
 	((relative)
-	 ;;Add a record of type "jump label".
+	 ;;Add a  record of type  "jump to  label-offset".  See the  documentation in
+	 ;;Texinfo format about the code object and the relocation vector.
 	 ;;
 	 ;;NOTE At present it seems this  RELATIVE reference to labels is never used.
 	 ;;(Marco Maggi; Tue Aug 4, 2015)
@@ -966,7 +993,7 @@
 		(disp (cadr loc)))
 	   (unless (and (code? obj) (fixnum? disp))
 	     (%error "invalid relative jump obj/disp" obj disp))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG off)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_TO_LABEL_OFFSET_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
@@ -1001,11 +1028,11 @@
 
   ;;The following constants  must be kept in sync with  the equivalent definitions in
   ;;the C language headers.
-  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	#b00)
-  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	#b01)
-  (define-inline-constant IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG	#b10)
-  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG	#b11)
-  #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG		#b11)
+  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG		#b00)
+  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG		#b01)
+  (define-inline-constant IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG		#b10)
+  (define-inline-constant IK_RELOC_RECORD_JUMP_TO_LABEL_OFFSET_TAG	#b11)
+  #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG			#b11)
 
   #| end of module |# )
 

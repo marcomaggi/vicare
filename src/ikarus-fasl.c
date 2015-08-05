@@ -953,7 +953,7 @@ ik_relocate_code (ikptr_t p_code)
       p_reloc_vec_cur += (3*wordsize);
       break;
     }
-    case IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG: {
+    case IK_RELOC_RECORD_JUMP_TO_LABEL_OFFSET_TAG: {
       /* This record  represents a jump  label offset; this record  is 3
 	 words wide.  The offset is a 32-bit value. */
       const iksword_t obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
