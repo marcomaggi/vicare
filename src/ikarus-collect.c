@@ -2346,7 +2346,7 @@ relocate_code_object (ikptr_t p_code_object, gc_t* gc)
       p_reloc_vec_cur += 3 * wordsize;
       break;
     }
-    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
+    case IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG: {
       /* This record  is 3 words  wide.  Records  of this type  are used
 	 when the machine  code in the (source) code object  jumps to an
 	 entry point into another (target)  code object.  The operand of

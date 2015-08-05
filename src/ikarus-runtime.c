@@ -1290,58 +1290,59 @@ ik_dump_dirty_vector (ikpcb_t* pcb)
 
 ikptr_t
 ikrt_make_code (ikptr_t s_code_size, ikptr_t s_freevars, ikptr_t s_relocation_vector, ikpcb_t* pcb)
-/* Build a new code object and return a reference to it.
-
-   S_CODE_SIZE is a non-negative  fixnum representing the requested code
-   size.  S_FREEVARS is a non-negative fixnum representing the number of
-   free variables in the code.  S_RELOCATION_VECTOR is a vector used for
-   relocation; empty when handed to this function. */
+/* Build a new code object and return a reference to it.  S_CODE_SIZE is
+   a  non-negative   fixnum  representing   the  requested   code  size.
+   S_FREEVARS is a  non-negative fixnum representing the  number of free
+   variables in the  code.  S_RELOCATION_VECTOR is an  empty vector used
+   to  initialise  the relocation  vector  field;  this argument  exists
+   because it is  easier and more efficient to allocate  an empty vector
+   from Scheme  code than here from  C code (the empty  vector in Scheme
+   code is a constant: only one is allocated). */
 {
   assert(IK_IS_FIXNUM(s_code_size));
   assert(IK_IS_FIXNUM(s_freevars));
   assert(ik_is_vector(s_relocation_vector));
+  assert(0 == IK_VECTOR_LENGTH(s_relocation_vector));
   iksword_t	code_size = IK_UNFIX(s_code_size);
-  /* We allocate  a number of bytes  equal to the least  number of pages
-   * required to  hold CODE_SIZE.   Example: if  CODE_SIZE is  less than
-   * IK_PAGESIZE:
+  /* We allocate a number of bytes equal to the size of the least number
+   * of pages required  to hold CODE_SIZE plus the  meta data.  Example:
+   * if the size is less than IK_PAGESIZE:
    *
-   *      IK_PAGESIZE
-   *   |---------------| memreq
-   *   |---------| code_size
+   *            IK_PAGESIZE
+   *   |-------------------------| memreq
+   *   |---------|---------| code object
+   *    meta data code_size
    *
    * Example: if CODE_SIZE is greater than IK_PAGESIZE:
    *
-   *      IK_PAGESIZE     IK_PAGESIZE
-   *   |---------------|---------------| memreq
-   *   |-------------------| code_size
+   *            IK_PAGESIZE              IK_PAGESIZE
+   *   |-------------------------|-------------------------| memreq
+   *   |---------|-------------------------| code object
+   *    meta data         code_size
    *
+   * All the allocated pages have  execution protection set by "mmap()".
+   * In  the  segments  vector:  the  first  page  is  marked  as  code;
+   * subsequent pages are marked as data.
    */
   ikuword_t	memreq	= IK_ALIGN_TO_NEXT_PAGE(disp_code_data + code_size);
-  /* Here MEM is  still an untagged pointer, not really  an "ikptr_t" yet;
-     we  tag it  later.   MEM references  the first  byte  in the  pages
-     allocated with "mmap()" with execution protection. */
-  ikptr_t	mem	= ik_mmap_code(memreq, 0, pcb);
-  bzero((char*)mem, memreq);
-  IK_REF(mem, disp_code_tag)		= code_tag;
-  IK_REF(mem, disp_code_code_size)	= s_code_size;
-  IK_REF(mem, disp_code_freevars)	= s_freevars;
-  IK_REF(mem, disp_code_reloc_vector)	= s_relocation_vector;
-  IK_REF(mem, disp_code_annotation)	= IK_FALSE;
-  /* We put  nothing in the "unused"  field of the block;  this field is
-     already allocated to zeros, which means the fixnum zero. */
-  /* FIXME Do we actually need to call the relocation function here?  It
-     appears  that the  functions does  nothing when  the relocation  is
-     empty, and it IS empty when this function is called.  (Marco Maggi;
-     Oct 4, 2012) */
-  ik_relocate_code(mem);
-  return mem | vector_tag;
+  /* P_CODE  references  the first  byte  in  the pages  allocated  with
+     "mmap()" with execution protection. */
+  ikptr_t	p_code	= ik_mmap_code(memreq, 0, pcb);
+  bzero((char*)p_code, memreq);
+  IK_REF(p_code, disp_code_tag)		  = code_tag;
+  IK_REF(p_code, disp_code_code_size)	  = s_code_size;
+  IK_REF(p_code, disp_code_reloc_vector)  = s_relocation_vector;
+  IK_REF(p_code, disp_code_freevars)	  = s_freevars;
+  IK_REF(p_code, disp_code_annotation)	  = IK_FALSE;
+  IK_REF(p_code, disp_code_unused)	  = IK_FIX(0);
+  return p_code | code_primary_tag;
 }
 ikptr_t
 ikrt_set_code_reloc_vector (ikptr_t s_code, ikptr_t s_vec, ikpcb_t* pcb)
 {
   IK_REF(s_code, off_code_reloc_vector) = s_vec;
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_PTR(s_code, off_code_reloc_vector));
-  ik_relocate_code(s_code - vector_tag);
+  ik_relocate_code(s_code - code_primary_tag);
   return IK_VOID_OBJECT;
 }
 ikptr_t

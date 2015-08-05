@@ -966,7 +966,7 @@
 		(disp (cadr loc)))
 	   (unless (and (code? obj) (fixnum? disp))
 	     (%error "invalid relative jump obj/disp" obj disp))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG off)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
@@ -1004,7 +1004,7 @@
   (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	#b00)
   (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	#b01)
   (define-inline-constant IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG	#b10)
-  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	#b11)
+  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG	#b11)
   #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG		#b11)
 
   #| end of module |# )

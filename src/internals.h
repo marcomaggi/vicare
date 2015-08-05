@@ -1804,7 +1804,7 @@ ik_private_decl ikptr_t ik_stack_frame_top_to_code_object (ikptr_t top);
 #define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
 #define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
 #define IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG	2
-#define IK_RELOC_RECORD_JUMP_LABEL_TAG		3
+#define IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG	3
 
 /* Given a  machine word representing  the bits in  the first word  of a
    record in a relocation vector: evaluate to the record type tag. */

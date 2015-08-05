@@ -146,10 +146,10 @@
 (define* (code-reloc-vector->sexp {code procedure-or-code-or-vector?})
   ;;CODE must be a code object.
   ;;
-  (define-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0)
-  (define-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1)
-  (define-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG 2)
-  (define-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	3)
+  (define-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG		0)
+  (define-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG		1)
+  (define-constant IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG		2)
+  (define-constant IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG	3)
   (module (off-code-data)
     (module (wordsize)
       (include "ikarus.config.scm"))
@@ -184,7 +184,7 @@
 				 (data-area-displacement ,first-word.disp)
 				 (foreign-function       ,(ascii->string (vector-ref vec i))))))
 
-	      ((fx=? first-word.tag IK_RELOC_RECORD_DISPLACED_OBJECT_TAG)
+	      ((fx=? first-word.tag IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG)
 	       (let ((offset        (vector-ref vec (fxadd1 i)))
 		     (scheme-object (vector-ref vec (fx+ 2 i))))
 		 (set! i (fx+ 2 i))
@@ -196,7 +196,7 @@
 							      offset))
 				   (scheme-object          ,scheme-object)))))
 
-	      ((fx=? first-word.tag IK_RELOC_RECORD_JUMP_LABEL_TAG)
+	      ((fx=? first-word.tag IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG)
 	       (let ((offset        (vector-ref vec (fxadd1 i)))
 		     (scheme-object (vector-ref vec (fx+ 2 i))))
 		 (set! i (fx+ 2 i))

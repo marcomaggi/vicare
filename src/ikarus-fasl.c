@@ -897,14 +897,15 @@ alloc_code_object (ikuword_t scheme_object_size, ikpcb_t * pcb, fasl_port_t* p)
 void
 ik_relocate_code (ikptr_t p_code)
 /* Accept as  argument an *untagged*  pointer to a code  object; process
-   the code object's relocation vector.
+   the code object's relocation vector.  To understand what happens here
+   see the documentation of the code object's relocation vector.
 
    This function is called:
 
    - whenever a code  object is allocated, in this  case CODE references
      an allocated but still empty code object;
 
-   - whenever a code object is read from a FASL file;
+   - whenever a code object is read from the boot image;
 
    - whenever a code object is created by the assembler. */
 {
@@ -929,65 +930,63 @@ ik_relocate_code (ikptr_t p_code)
     const iksword_t	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
     if (0 == first_record_bits)
       ik_abort("invalid empty record in code object's relocation vector");
-    const iksword_t	reloc_record_tag = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
-    const iksword_t	disp_code_word   = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+    const iksword_t	reloc_record_tag       = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const iksword_t	data_area_displacement = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
     switch (reloc_record_tag) {
     case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
       /* This record represents a vanilla object; this record is 2 words
 	 wide.  The second word contains the reference to the object (or
 	 the object itself if immediate). */
-      IK_REF(p_data, disp_code_word) = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      IK_REF(p_data, data_area_displacement) = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
       p_reloc_vec_cur += (2*wordsize);
       break;
     }
     case IK_RELOC_RECORD_OFFSET_IN_OBJECT_TAG: {
-      /* This record  represents a  displaced object;  this record  is 3
-	 words  wide.  The  second word  contains the  displacement, the
-	 third word contains the reference to the object. */
+      /* This  record represents  an offset  in  the memory  block of  a
+	 Scheme object;  this record is  3 words wide.  The  second word
+	 contains  a  constant to  add  to  the Scheme  object's  tagged
+	 pointer.  The  third word  contains the  tagged poniter  to the
+	 Scheme object. */
       const iksword_t	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
       const ikptr_t	s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      IK_REF(p_data, disp_code_word) = s_obj + obj_off;
+      IK_REF(p_data, data_area_displacement) = s_obj + obj_off;
       p_reloc_vec_cur += (3*wordsize);
       break;
     }
-    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
-      /* This record  represents a  jump label; this  record is  3 words
-	 wide. */
-      const iksword_t obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
-      const iksword_t obj               =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      const iksword_t displaced_object  = obj + obj_off;
-      const iksword_t next_word         = p_data + disp_code_word + 4;
-      const iksword_t relative_distance = displaced_object - next_word;
-#if 0
-      if (wordsize == 8) {
-        relative_distance += 4;
-      }
-#endif
-      /* FIXME Why  is the target  word an  "int" rather than  a "long"?
-	 (Marco Maggi; Oct 5, 2012) */
-      *((int*)(p_data + disp_code_word)) = relative_distance;
-      /* IK_REF(next_word, -wordsize) = relative_distance; */
+    case IK_RELOC_RECORD_JUMP_LABEL_OFFSET_TAG: {
+      /* This record  represents a jump  label offset; this record  is 3
+	 words wide.  The offset is a 32-bit value. */
+      const iksword_t obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const iksword_t s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      const iksword_t address_of_target_entry_point   = s_obj + obj_off;
+      const iksword_t address_of_word_after_jmp_instr = p_data + data_area_displacement + 4;
+      const iksword_t relative_distance = address_of_target_entry_point - address_of_word_after_jmp_instr;
+      *((int32_t*)(p_data + data_area_displacement)) = (int32_t)relative_distance;
       p_reloc_vec_cur += (3*wordsize);
       break;
     }
     case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
-      /* This record represents a foreign object; this record is 2 words
-	 wide.   We store  directly the  address of  the foreign  object
-	 (usually a C function) in the data area. */
+      /* This record  represents the address  of a C  language function;
+	 this record is 2 words wide.   We store directly the address in
+	 the data area. */
       ikptr_t	s_str	= IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
       char *	name	= NULL;
+      void *	sym;
+      char *	err;
       if (IK_TAGOF(s_str) == bytevector_tag) {
         name = IK_BYTEVECTOR_DATA_CHARP(s_str);
-      } else
+      } else {
         ik_abort("foreign name is not a bytevector");
-      /* We call "dlerror()" here to  clean up possible previous errors.
-	 (Marco Maggi; Oct 4, 2012) */
+      }
+      /* We  call  "dlerror()"  here   to  clean  up  possible  previous
+	 errors. */
       dlerror();
-      void *	sym	= dlsym(RTLD_DEFAULT, name);
-      char *	err	= dlerror();
-      if (err)
+      sym = dlsym(RTLD_DEFAULT, name);
+      err = dlerror();
+      if (err) {
         ik_abort("dlsym() failed to find foreign name %s: %s", name, err);
-      IK_REF(p_data, disp_code_word) = (ikptr_t)sym;
+      }
+      IK_REF(p_data, data_area_displacement) = (ikptr_t)sym;
       p_reloc_vec_cur += (2*wordsize);
       break;
     }
