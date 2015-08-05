@@ -1452,14 +1452,31 @@
 	(bitwise-and x #xFF)
       (%compiler-internal-error __who__ "expected byte operand" x)))
 
-  (define-syntax-rule (word x)
-    (cons 'word x))
+  (define-syntax-rule (word immediate-scheme-obj)
+    ;;Create an  entry representing an  immediate Scheme  object that must  be stored
+    ;;directly in the data area of the code object.
+    ;;
+    (cons 'word immediate-scheme-obj))
 
-  (define-syntax-rule (reloc-word x)
-    (cons 'reloc-word x))
+  (define-syntax-rule (reloc-word non-immediate-scheme-obj)
+    ;;Create an  entry representing a  reference to non-immediate Scheme  object that
+    ;;must be stored in the relocation vector.
+    ;;
+    (cons 'reloc-word non-immediate-scheme-obj))
 
-  (define-syntax-rule (reloc-word+ x d)
-    (cons* 'reloc-word+ x d))
+  (define-syntax-rule (reloc-word+ non-immediate-scheme-obj displacement)
+    ;;Create an entry representing a reference to machine word in the memory block of
+    ;;a non-immediate Scheme object that must be stored in the relocation vector.
+    ;;
+    ;;DISPLACEMENT is  a fixnum representing  the offset  in bytes of  the referenced
+    ;;word in the memory block of the Scheme object:
+    ;;
+    ;;                word
+    ;;   |------------++++-----------| Scheme object
+    ;;   |............|
+    ;;    displacement
+    ;;
+    (cons* 'reloc-word+ non-immediate-scheme-obj displacement))
 
   (define-entry-predicate obj?	obj)
 
