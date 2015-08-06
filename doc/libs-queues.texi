@@ -178,8 +178,8 @@ assertion violation if @var{queue} is empty.
 @end defun
 
 
-@defun queue-purge! @var{queue} @var{obj}
-@defunx $queue-purge! @var{queue} @var{obj}
+@defun queue-purge! @var{queue}
+@defunx $queue-purge! @var{queue}
 Remove all the elements from @var{queue}.
 @end defun
 

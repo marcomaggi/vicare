@@ -171,8 +171,8 @@ assertion violation if @var{stack} is empty.
 @end defun
 
 
-@defun stack-purge! @var{stack} @var{obj}
-@defunx $stack-purge! @var{stack} @var{obj}
+@defun stack-purge! @var{stack}
+@defunx $stack-purge! @var{stack}
 Remove all the elements from @var{stack}.
 @end defun
 
