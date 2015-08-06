@@ -100,19 +100,6 @@ instantiated as follows:
 @end example
 @end defmethod
 
-@c ------------------------------------------------------------
-
-@subsubheading Arguments validation
-
-
-The following bindings are meant to be used with the facilities of the
-library @library{vicare arguments validation}.
-
-
-@deffn {Validation Clause} @aclass{stack} @var{obj}
-Succeed if @var{obj} is a @class{stack} object.
-@end deffn
-
 @c page
 @node containers stacks inspection
 @subsection Inspecting stack objects

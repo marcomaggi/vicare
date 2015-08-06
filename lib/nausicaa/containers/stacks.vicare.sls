@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2010, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -29,8 +29,6 @@
   (options visit-upon-loading)
   (export
     <stack>
-    (rename (stack.vicare-arguments-validation
-	     <stack>.vicare-arguments-validation))
     list->stack
     vector->stack)
   (import (nausicaa)

@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2010, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -109,24 +109,6 @@
 	(list (S getprop 'ciao)
 	      (S getprop 'hello)))
     => '(salut ohayo))
-
-;;; --------------------------------------------------------------------
-;;; arguments validation
-
-  (check-for-true
-   (let ((S (<stack> (1 2 3))))
-     (with-arguments-validation (who)
-	 ((<stack>	S))
-       #t)))
-
-;;;
-
-  (check-for-procedure-argument-violation
-      (let ((S 123))
-	(with-arguments-validation (who)
-	    ((<stack>	S))
-	  #t))
-    => (list who '(123)))
 
   #f)
 

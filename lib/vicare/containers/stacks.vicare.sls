@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,13 +25,10 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare containers stacks)
   (export
     stack
-
-    stack.vicare-arguments-validation
-
     make-stack			stack?
 
     stack-hash			$stack-hash
@@ -53,9 +50,8 @@
     stack->list			list->stack
     stack->vector		vector->stack)
   (import (vicare)
-    (vicare unsafe operations)
-    (vicare system $numerics)
-    (vicare arguments validation))
+    (vicare system $pairs)
+    (vicare system $numerics))
 
 
 ;;; helpers
@@ -78,18 +74,11 @@
   (fields (mutable uid)
 	  (mutable first-pair)))
 
-(define-argument-validation (stack who obj)
-  (stack? obj)
-  (procedure-argument-violation who "expected stack object as argument" obj))
-
 
 ;;;; UID stuff
 
-(define (stack-hash S)
-  (define who 'stack-hash)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-hash S)))
+(define* (stack-hash {S stack?})
+  ($stack-hash S))
 
 (define ($stack-hash S)
   (unless ($stack-uid S)
@@ -98,12 +87,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-putprop S key value)
-  (define who 'stack-putprop)
-  (with-arguments-validation (who)
-      ((stack		S)
-       (symbol		key))
-    ($stack-putprop S key value)))
+(define* (stack-putprop {S stack?} {key symbol?} value)
+  ($stack-putprop S key value))
 
 (define ($stack-putprop S key value)
   (unless ($stack-uid S)
@@ -112,12 +97,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-getprop S key)
-  (define who 'stack-getprop)
-  (with-arguments-validation (who)
-      ((stack		S)
-       (symbol		key))
-    ($stack-getprop S key)))
+(define* (stack-getprop {S stack?} {key symbol?})
+  ($stack-getprop S key))
 
 (define ($stack-getprop S key)
   (unless ($stack-uid S)
@@ -126,12 +107,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-remprop S key)
-  (define who 'stack-remprop)
-  (with-arguments-validation (who)
-      ((stack		S)
-       (symbol		key))
-    ($stack-remprop S key)))
+(define* (stack-remprop {S stack?} {key symbol?})
+  ($stack-remprop S key))
 
 (define ($stack-remprop S key)
   (unless ($stack-uid S)
@@ -140,11 +117,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-property-list S)
-  (define who 'stack-property-list)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-property-list S)))
+(define* (stack-property-list {S stack?})
+  ($stack-property-list S))
 
 (define ($stack-property-list S)
   (unless ($stack-uid S)
@@ -154,33 +128,24 @@
 
 ;;;; inspection
 
-(define (stack-empty? S)
-  (define who 'stack-empty?)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-empty? S)))
+(define* (stack-empty? {S stack?})
+  ($stack-empty? S))
 
 (define ($stack-empty? S)
   (null? ($stack-first-pair S)))
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-not-empty? S)
-  (define who 'stack-not-empty?)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-not-empty? S)))
+(define* (stack-not-empty? {S stack?})
+  ($stack-not-empty? S))
 
 (define ($stack-not-empty? S)
   (pair? ($stack-first-pair S)))
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-size S)
-  (define who 'stack-size)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-size S)))
+(define* (stack-size {S stack?})
+  ($stack-size S))
 
 (define ($stack-size S)
   (let loop ((ell ($stack-first-pair S))
@@ -192,11 +157,8 @@
 
 ;;;; accessors and mutators
 
-(define (stack-top S)
-  (define who 'stack-top)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-top S)))
+(define* (stack-top {S stack?})
+  ($stack-top S))
 
 (define ($stack-top S)
   (if (pair? ($stack-first-pair S))
@@ -205,38 +167,28 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-push! S obj)
-  (define who 'stack-push!)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-push! S obj)))
+(define* (stack-push! {S stack?} obj)
+  ($stack-push! S obj))
 
 (define ($stack-push! S obj)
   ($stack-first-pair-set! S (cons obj ($stack-first-pair S))))
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-pop! S)
-  (define who 'stack-pop!)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-pop! S)))
+(define* (stack-pop! {S stack?})
+  ($stack-pop! S))
 
-(define ($stack-pop! S)
-  (define who '$stack-pop!)
+(define* ($stack-pop! S)
   (if (pair? ($stack-first-pair S))
       (receive-and-return (value)
 	  ($car ($stack-first-pair S))
 	($stack-first-pair-set! S ($cdr ($stack-first-pair S))))
-    (assertion-violation who "stack is empty" S)))
+    (assertion-violation __who__ "stack is empty" S)))
 
 ;;; --------------------------------------------------------------------
 
-(define (stack-purge! S)
-  (define who 'stack-purge!)
-  (with-arguments-validation (who)
-      ((stack		S))
-    ($stack-purge! S)))
+(define* (stack-purge! {S stack?})
+  ($stack-purge! S))
 
 (define ($stack-purge! S)
   ($stack-first-pair-set! S '()))
@@ -244,35 +196,23 @@
 
 ;;;; conversion
 
-(define (stack->list S)
-  (define who 'stack->list)
-  (with-arguments-validation (who)
-      ((stack		S))
-    (list-copy/stx ($stack-first-pair S))))
+(define* (stack->list {S stack?})
+  (list-copy/stx ($stack-first-pair S)))
 
-(define (list->stack ell)
-  (define who 'list->stack)
-  (with-arguments-validation (who)
-      ((list		ell))
-    (apply make-stack ell)))
+(define* (list->stack {ell list?})
+  (apply make-stack ell))
 
 ;;; --------------------------------------------------------------------
 
-(define (stack->vector S)
-  (define who 'stack->vector)
-  (with-arguments-validation (who)
-      ((stack		S))
-    (list->vector ($stack-first-pair S))))
+(define* (stack->vector {S stack?})
+  (list->vector ($stack-first-pair S)))
 
-(define (vector->stack vec)
-  (define who 'vector->stack)
-  (with-arguments-validation (who)
-      ((vector		vec))
-    (apply make-stack (vector->list vec))))
+(define* (vector->stack {vec vector?})
+  (apply make-stack (vector->list vec)))
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
