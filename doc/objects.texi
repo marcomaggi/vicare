@@ -6076,7 +6076,7 @@ code objects.}
 
 @deftypefn {Preprocessor Macro} int IK_CLOSURE_NUMBER_OF_FREE_VARS (@var{X})
 Given a reference to closure object: return the number of free
-variables.  @strong{Only works for closures associated to code objects.}
+variables.
 @end deftypefn
 
 
