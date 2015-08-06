@@ -96,6 +96,13 @@
   language-extensions pipelines) was posted on comp.lang.scheme by Marko
   Rauhamaa, thread "Pipeline macro" on Tue, 09 Sep 2014 01:00:47 +0300.
 
+* The library (vicare containers binary-heaps) is derived from code at:
+
+     <http://en.literateprograms.org/Binary_heap_%28Scheme%29>
+
+  by S.  Carton.   The site claims that the code  is available under the
+  Creative Commons CC0 1.0 Universal Public Domain Dedication.
+
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
 

@@ -1348,6 +1348,20 @@ endif
 EXTRA_DIST += lib/vicare/containers/queues.vicare.sls
 CLEANFILES += lib/vicare/containers/queues.fasl
 
+lib/vicare/containers/binary-heaps.fasl: \
+		lib/vicare/containers/binary-heaps.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_binary_heaps_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_binary_heaps_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_binary_heaps_fasl_DATA = lib/vicare/containers/binary-heaps.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_binary_heaps_vicare_sls_DATA = lib/vicare/containers/binary-heaps.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/binary-heaps.vicare.sls
+CLEANFILES += lib/vicare/containers/binary-heaps.fasl
+
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \

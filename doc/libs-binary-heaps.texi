@@ -1,0 +1,195 @@
+@node binary heaps
+@chapter Binary heaps
+
+
+@cindex @library{vicare containers binary-heaps}, library
+@cindex Library @library{vicare containers-binary heaps}
+
+
+The library @library{vicare containers binary-heaps} implements binary
+heaps holding arbitrary Scheme objects.
+
+@menu
+* binary heaps objects::        Heap objects.
+* binary heaps inspection::     Inspecting heap objects.
+* binary heaps access::         Heap accessors and mutators.
+* binary heaps sorting::        Sorting using binary heaps.
+@end menu
+
+@c page
+@node binary heaps objects
+@section Heap objects
+
+
+The following bindings are exported by the library @library{vicare
+containers binary-heaps}.  The bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@deftp {@rnrs{6} Record Type} binary-heap
+@cindex @var{heap} argument
+@cindex Argument @var{heap}
+Record type representing a binary heap object.  The
+@objtype{binary-heap} type is non--generative and available for
+subtyping.  In this documentation @objtype{binary-heap} object arguments
+to functions are indicated as @var{heap}.
+@end deftp
+
+
+@defun make-binary-heap @var{item<}
+@defunx make-binary-heap @var{item<} @var{initial-array-size}
+Build and return a new instance of @objtype{binary-heap}.  @var{item<}
+must be a procedure implementing a ``less than'' comparison predicate.
+The optional @var{initial-array-size} must be a non--negative fixnum
+representing the initial size of the underlying vector used as storage
+for the heap implementation.
+@end defun
+
+
+@defun binary-heap? @var{obj}
+Return @true{} if @var{obj} is a record of type @objtype{binary-heap};
+otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defun binary-heap-putprop @var{heap} @var{key} @var{value}
+@defunx $binary-heap-putprop @var{heap} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{heap};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun binary-heap-getprop @var{heap} @var{key}
+@defunx $binary-heap-getprop @var{heap} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{heap}; if @var{key} is not set: return @false{}.  @var{key} must be
+a symbol.
+@end defun
+
+
+@defun binary-heap-remprop @var{heap} @var{key}
+@defunx $binary-heap-remprop @var{heap} @var{key}
+Remove the property @var{key} from the property list of @var{heap}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun binary-heap-property-list @var{heap}
+@defunx $binary-heap-property-list @var{heap}
+Return a new association list representing the property list of
+@var{heap}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun binary-heap-hash @var{heap}
+@defunx $binary-heap-hash @var{heap}
+Return an exact integer to be used as hashtable key for @var{heap}.
+Hashtables having a @objtype{binary-heap} as key can be instantiated as
+follows:
+
+@example
+(make-hashtable binary-heap-hash eq?)
+@end example
+@end defun
+
+@c page
+@node binary heaps inspection
+@section Inspecting heap objects
+
+
+The following bindings are exported by the library @library{vicare
+containers binary-heaps}.  The bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun binary-heap-empty? @var{heap}
+@defunx $binary-heap-empty? @var{heap}
+Return @true{} if @var{heap} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun binary-heap-not-empty? @var{heap}
+@defunx $binary-heap-not-empty? @var{heap}
+Return @true{} if @var{heap} is @strong{not} empty; otherwise return
+@false{}.
+@end defun
+
+
+@defun binary-heap-size? @var{heap}
+@defunx $binary-heap-size? @var{heap}
+Return a non--negative fixnum representing the number of objects in
+@var{heap}.
+@end defun
+
+@c page
+@node binary heaps access
+@section Heap accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers binary-heaps}.  The bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun binary-heap-top @var{heap}
+@defunx $binary-heap-top @var{heap}
+Return the object at the root of the heap.  Raise an assertion violation
+if @var{heap} is empty.
+@end defun
+
+
+@defun binary-heap-push! @var{heap} @var{obj}
+@defunx $binary-heap-push! @var{heap} @var{obj}
+Push @var{obj} on the @var{heap}.
+@end defun
+
+
+@defun binary-heap-pop! @var{heap}
+@defunx $binary-heap-pop! @var{heap}
+Remove the object at the root of the heap and return it.  Raise an
+assertion violation if @var{heap} is empty.
+@end defun
+
+
+@defun binary-heap-fill! @var{heap} @var{item*}
+@defunx $binary-heap-fill! @var{heap} @var{item*}
+Push on the heap the list of objects @var{item*}.
+@end defun
+
+
+@defun binary-heap-purge! @var{heap}
+@defunx $binary-heap-purge! @var{heap}
+Remove all the elements from @var{heap}.
+@end defun
+
+@c page
+@node binary heaps sorting
+@section Sorting using binary heaps
+
+
+The following bindings are exported by the library @library{vicare
+containers binary-heaps}.  The bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun binary-heap-sort-to-list! @var{heap}
+@defunx $binary-heap-sort-to-list! @var{heap}
+Build and return a list holding all the objects in @var{heap} sorted
+from the lesser to the greater.  The heap is left empty.
+@end defun
+
+@c end of file
