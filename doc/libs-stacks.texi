@@ -170,6 +170,12 @@ Remove the object at the top of the stack and return it.  Raise an
 assertion violation if @var{stack} is empty.
 @end defun
 
+
+@defun stack-purge! @var{stack} @var{obj}
+@defunx $stack-purge! @var{stack} @var{obj}
+Remove all the elements from @var{stack}.
+@end defun
+
 @c page
 @node stacks conversion
 @section Converting stacks to other objects

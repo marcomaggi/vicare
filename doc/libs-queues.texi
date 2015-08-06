@@ -177,6 +177,12 @@ Remove the object at the front of the queue and return it.  Raise an
 assertion violation if @var{queue} is empty.
 @end defun
 
+
+@defun queue-purge! @var{queue} @var{obj}
+@defunx $queue-purge! @var{queue} @var{obj}
+Remove all the elements from @var{queue}.
+@end defun
+
 @c page
 @node queues conversion
 @section Converting queues to other objects
