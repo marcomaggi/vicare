@@ -15881,6 +15881,15 @@ heap's nursery.
 We must use with care this function, possibly in conjunction with
 @func{collect}: explicitly calling @func{collect} will still perform
 garbage collection even when the automatic one is disabled.
+
+Strictly speaking, this function is not a parameter, but its @api{} is
+compatible with the one of parameters; so it is possible to use it in a
+@syntax{parametrise} syntax:
+
+@lisp
+(parametrise ((automatic-garbage-collection #f))
+  @meta{body})
+@end lisp
 @end defun
 
 @c ------------------------------------------------------------

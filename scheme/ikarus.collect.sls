@@ -168,9 +168,14 @@
   do-overflow)
 
 (case-define automatic-garbage-collection
+  ;;We want this function to be compatible with the parameters API, so we also need a
+  ;;2 arguments branch.
+  ;;
   (()
    (foreign-call "ikrt_automatic_garbage_collection_status"))
   ((obj)
+   (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj))
+  ((obj unused)
    (foreign-call "ikrt_enable_disable_automatic_garbage_collection" obj)))
 
 (define (do-stack-overflow)
