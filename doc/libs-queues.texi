@@ -7,7 +7,7 @@
 
 
 The library @library{vicare containers queues} implements queues holding
-arbitrary scheme objects and designed for efficient first--in/first--out
+arbitrary Scheme objects and designed for efficient first--in/first--out
 operations.
 
 @menu

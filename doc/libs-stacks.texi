@@ -7,7 +7,7 @@
 
 
 The library @library{vicare containers stacks} implements stacks holding
-arbitrary scheme objects and designed for efficient last--in/first--out
+arbitrary Scheme objects and designed for efficient last--in/first--out
 operations.
 
 @menu
