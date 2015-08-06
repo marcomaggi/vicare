@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -125,24 +125,6 @@
 	(list (queue-getprop S 'ciao)
 	      (queue-getprop S 'hello)))
     => '(salut ohayo))
-
-;;; --------------------------------------------------------------------
-;;; arguments validation
-
-  (check-for-true
-   (let ((S (make-queue 1 2 3)))
-     (with-arguments-validation (who)
-	 ((queue	S))
-       #t)))
-
-;;;
-
-  (check-for-procedure-argument-violation
-      (let ((S 123))
-	(with-arguments-validation (who)
-	    ((queue	S))
-	  #t))
-    => (list who '(123)))
 
   #f)
 

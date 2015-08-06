@@ -98,19 +98,6 @@ follows:
 @end example
 @end defun
 
-@c ------------------------------------------------------------
-
-@subsubheading Arguments validation
-
-
-The following bindings are meant to be used with the facilities of the
-library @library{vicare arguments validation}.
-
-
-@deffn {Validation Clause} queue @var{obj}
-Succeed if @var{obj} satisfies the predicate @func{queue?}.
-@end deffn
-
 @c page
 @node queues inspection
 @section Inspecting queue objects

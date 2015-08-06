@@ -101,19 +101,6 @@ instantiated as follows:
 @end example
 @end defmethod
 
-@c ------------------------------------------------------------
-
-@subsubheading Arguments validation
-
-
-The following bindings are meant to be used with the facilities of the
-library @library{nausicaa arguments validation}.
-
-
-@deffn {Validation Clause} @aclass{queue} @var{obj}
-Succeed if @var{obj} is a @class{queue} object.
-@end deffn
-
 @c page
 @node containers queues inspection
 @subsection Inspecting queue objects
