@@ -1782,7 +1782,7 @@ ik_decl int   ik_is_struct			(ikptr_t R);
 
 /* Given a reference  to code object: return a raw  pointer to the entry
    point in the code, as "ikptr_t". */
-#define IK_CODE_ENTRY_POINT(CODE)	((CODE)+off_code_data)
+#define IK_CODE_ENTRY_POINT(CODE)	(((ikptr_t)(CODE)) + ((ikptr_t)off_code_data))
 
 ik_private_decl ikptr_t ik_stack_frame_top_to_code_object (ikptr_t top);
 

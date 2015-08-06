@@ -896,6 +896,10 @@ ik_api_decl int     ik_is_struct		(ikptr_t R);
      ((code_primary_tag == (code_primary_mask & X)) && \
       (code_tag         == IK_REF(X, off_code_tag)))
 
+/* Given a reference  to code object: return a raw  pointer to the entry
+   point in the code, as "ikptr_t". */
+#define IK_CODE_ENTRY_POINT(CODE)	(((ikptr_t)(CODE)) + ((ikptr_t)off_code_data))
+
 
 /** --------------------------------------------------------------------
  ** Closure objects.

@@ -5286,6 +5286,7 @@ host's processor.
 
 @menu
 * objects codes layout::        Memory layout of code objects.
+* objects codes ops::           Operations on code objects.
 * objects codes reloc::         The relocation vector.
 * objects codes gc::            Memory and garbage collection.
 @end menu
@@ -5400,13 +5401,75 @@ zero.
 the subsequent words in the memory block are the code object's data
 area.
 
-@c ------------------------------------------------------------
+@c page
+@node objects codes ops
+@subsection Operations on code objects
 
-@subsubheading Operations
+
+@defvr {Preprocessor Symbol} code_primary_mask
+A bitmask that can be used to extract the primary tag of code objects
+from tagged pointers.
+@end defvr
 
 
-@deftypefn {Preprocessor Macro} int IK_IS_CODE (@var{X})
+@defvr {Preprocessor Symbol} code_primary_tag
+The tag of @ikptr{} values used as references to code objects.  The
+primary tag of code objects is equal to the vector tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} code_tag
+The tag of @ikptr{} values used as first words in pointer memory blocks.
+@end defvr
+
+
+We can determine if a @code{ikptr_t} references a code object as
+follows:
+
+@example
+ikptr_t  s_obj = ...;
+
+if ((code_primary_tag == (code_primary_mask & s_obj)) && \
+    (code_tag         == IK_REF(s_obj, off_code_tag)))
+  is_code_object();
+else
+  it_is_not();
+@end example
+
+
+
+@defvr {Preprocessor Symbol} disp_code_tag
+@defvrx {Preprocessor Symbol} disp_code_code_size
+@defvrx {Preprocessor Symbol} disp_code_reloc_vector
+@defvrx {Preprocessor Symbol} disp_code_freevars
+@defvrx {Preprocessor Symbol} disp_code_annotation
+@defvrx {Preprocessor Symbol} disp_code_unused
+Displacement of fields.  The number of bytes to add to an
+@strong{untagged} pointer to code to get the pointer to the first byte
+in the word of the code's field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_code_tag
+@defvrx {Preprocessor Symbol} off_code_code_size
+@defvrx {Preprocessor Symbol} off_code_reloc_vector
+@defvrx {Preprocessor Symbol} off_code_freevars
+@defvrx {Preprocessor Symbol} off_code_annotation
+@defvrx {Preprocessor Symbol} off_code_unused
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the code's field.
+@end defvr
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CODE (ikptr_t @var{X})
 Evaluate to true if @var{X} is a reference to code object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr_t IK_CODE_ENTRY_POINT (ikptr_t @var{code})
+Given a tagged pointer to code object: evaluate to a pointer to the
+first octet in the data area.  This pointer is the entry point in the
+machine code.
 @end deftypefn
 
 @c page
