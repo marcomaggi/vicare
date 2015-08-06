@@ -160,7 +160,7 @@
   #t)
 
 
-(parametrise ((check-test-name 'operations))
+(parametrise ((check-test-name 'access))
 
   (check
       (let ((q (make-binary-heap <)))
@@ -169,6 +169,17 @@
 	(binary-heap-push! q 3)
 	(binary-heap-sort-to-list! q))
     => '(1 2 3))
+
+  (check
+      (let ((q (make-binary-heap <)))
+	(binary-heap-push! q 1)
+	(binary-heap-push! q 2)
+	(binary-heap-push! q 3)
+	(let ((X (binary-heap-pop! q))
+	      (Y (binary-heap-pop! q))
+	      (Z (binary-heap-pop! q)))
+	  (values X Y Z)))
+    => 1 2 3)
 
 ;;; --------------------------------------------------------------------
 
@@ -194,6 +205,68 @@
 	(binary-heap-fill! H '(3 5 7 0 6 5 34 3 6 9 67 5 4 4 3 1 2 3))
 	(binary-heap-sort-to-list! H))
     => '(0 1 2 3 3 3 3 4 4 5 5 5 6 6 7 9 34 67))
+
+  #t)
+
+
+(parametrise ((check-test-name 'operations))
+
+  ;;Copy a heap.
+  ;;
+  (check
+      (let ((H1 (make-binary-heap <)))
+	(binary-heap-fill! H1 '(9 8 7 6 5 4 3 2 1 0))
+	(let ((H2 (binary-heap-copy H1)))
+	  (let ((L1 (binary-heap-sort-to-list! H1))
+		(L2 (binary-heap-sort-to-list! H2)))
+	    ;;(debug-print L1 L2)
+	    (equal? L1 L2))))
+    => #t)
+
+  ;;Copy an empty heap.
+  ;;
+  (check
+      (let* ((H1 (make-binary-heap <))
+	     (H2 (binary-heap-copy H1)))
+	(values (binary-heap-size H1)
+		(binary-heap-size H2)))
+    => 0 0)
+
+;;; --------------------------------------------------------------------
+
+  ;;Merge two heaps.
+  ;;
+  (check
+      (let ((H1 (make-binary-heap <))
+	    (H2 (make-binary-heap <)))
+	(binary-heap-fill! H1 '(19 18 17 16 15 14 13 12 11 10))
+	(binary-heap-fill! H2 '(29 28 27 26 25 24 23 22 21 20))
+	(let ((H (binary-heap-merge H1 H2)))
+	  (values (binary-heap-sort-to-list! H1)
+		  (binary-heap-sort-to-list! H2)
+		  (binary-heap-sort-to-list! H))))
+    =>
+    '(10 11 12 13 14 15 16 17 18 19)
+    '(20 21 22 23 24 25 26 27 28 29)
+    '(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29))
+
+;;; --------------------------------------------------------------------
+
+  ;;Blend two heaps.
+  ;;
+  (check
+      (let ((H1 (make-binary-heap <))
+	    (H2 (make-binary-heap <)))
+	(binary-heap-fill! H1 '(19 18 17 16 15 14 13 12 11 10))
+	(binary-heap-fill! H2 '(29 28 27 26 25 24 23 22 21 20))
+	(let ((H (binary-heap-blend! H1 H2)))
+	  (values (binary-heap-sort-to-list! H2)
+		  (binary-heap-sort-to-list! H)
+		  (eq? H H1))))
+    =>
+    '()
+    '(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29)
+    #t)
 
   #t)
 

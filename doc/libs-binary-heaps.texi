@@ -14,6 +14,7 @@ heaps holding arbitrary Scheme objects.
 * binary heaps inspection::     Inspecting heap objects.
 * binary heaps access::         Heap accessors and mutators.
 * binary heaps sorting::        Sorting using binary heaps.
+* binary heaps misc::           Miscellaneous operations on heaps.
 @end menu
 
 @c page
@@ -190,6 +191,40 @@ arguments before accessing them.
 @defunx $binary-heap-sort-to-list! @var{heap}
 Build and return a list holding all the objects in @var{heap} sorted
 from the lesser to the greater.  The heap is left empty.
+@end defun
+
+@c page
+@node binary heaps misc
+@section Miscellaneous operations on heaps
+
+
+The following bindings are exported by the library @library{vicare
+containers binary-heaps}.  The bindings whose name is prefixed with
+@code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun binary-heap-copy @var{heap}
+@defunx $binary-heap-copy @var{heap}
+Build and return a new instance of @objtype{binary-heap} using the same
+comparison predicate of @var{heap} and containing the same objects of
+@var{heap}.
+@end defun
+
+
+@defun binary-heap-merge @vari{heap} @varii{heap}
+@defunx $binary-heap-merge @vari{heap} @varii{heap}
+Build and return a new instance of @objtype{binary-heap} using the same
+comparison predicate of @vari{heap} and containing the same objects of
+both @vari{heap} and @varii{heap}.  The arguments @vari{heap} and
+@varii{heap} are left unchanged.
+@end defun
+
+
+@defun binary-heap-blend! @vari{heap} @varii{heap}
+@defunx $binary-heap-blend! @vari{heap} @varii{heap}
+Destructively extract all the objects from @varii{heap} and add them to
+@vari{heap}.  Return @vari{heap} itself.
 @end defun
 
 @c end of file

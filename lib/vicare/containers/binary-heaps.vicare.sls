@@ -51,7 +51,7 @@
 
     binary-heap-copy		$binary-heap-copy
     binary-heap-merge		$binary-heap-merge
-    binary-heap-blend		$binary-heap-blend
+    binary-heap-blend!		$binary-heap-blend!
 
     binary-heap-sort-to-list!	$binary-heap-sort-to-list!)
   (import (vicare)
@@ -302,7 +302,7 @@
   (receive-and-return (dst)
       (make-binary-heap ($binary-heap-item< src))
     ($binary-heap-array-set! dst (vector-copy ($binary-heap-array src)))
-    ($binary-heap-array-set! dst ($binary-heap-size src))))
+    ($binary-heap-size-set!  dst ($binary-heap-size src))))
 
 (define* (binary-heap-merge {H1 binary-heap?} {H2 binary-heap?})
   ($binary-heap-merge H1 H2))
@@ -310,26 +310,21 @@
 (define* ($binary-heap-merge H1 H2)
   ;;Merge two heaps without destroying them.
   ;;
-  (receive-and-return (H)
-      ($binary-heap-copy H1)
-    ($binary-heap-array-set! H (vector-resize ($binary-heap-array H)
-					      (fx+ ($binary-heap-size H1)
-						   ($binary-heap-size H2))))
-    (let ((H2^ ($binary-heap-copy H2)))
-      (while ($binary-heap-not-empty? H2^)
-	($binary-heap-push! H ($binary-heap-pop! H2^))))))
+  ($binary-heap-blend! ($binary-heap-copy H1)
+		       ($binary-heap-copy H2)))
 
-(define* (binary-heap-blend {H1 binary-heap?} {H2 binary-heap?})
-  ($binary-heap-blend H1 H2))
+(define* (binary-heap-blend! {H1 binary-heap?} {H2 binary-heap?})
+  ($binary-heap-blend! H1 H2))
 
-(define* ($binary-heap-blend H1 H2)
+(define* ($binary-heap-blend! H1 H2)
   ;;Merge two heaps destroying them.
   ;;
   ($binary-heap-array-set! H1 (vector-resize ($binary-heap-array H1)
 					     (fx+ ($binary-heap-size H1)
 						  ($binary-heap-size H2))))
   (while ($binary-heap-not-empty? H2)
-    ($binary-heap-push! H1 ($binary-heap-pop! H2))))
+    ($binary-heap-push! H1 ($binary-heap-pop! H2)))
+  H1)
 
 
 ;;;; done
