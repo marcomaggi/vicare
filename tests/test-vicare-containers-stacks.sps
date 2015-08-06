@@ -28,7 +28,6 @@
 #!r6rs
 (import (vicare)
   (vicare containers stacks)
-  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

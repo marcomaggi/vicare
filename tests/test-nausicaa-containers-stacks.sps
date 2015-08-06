@@ -27,7 +27,6 @@
 #!vicare
 (import (nausicaa)
   (nausicaa containers stacks)
-  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

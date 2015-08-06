@@ -27,7 +27,6 @@
 #!vicare
 (import (nausicaa (0 4))
   (nausicaa containers queues)
-  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
