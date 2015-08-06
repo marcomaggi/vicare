@@ -6185,9 +6185,9 @@ else
 A Scheme continuation object is usually allocated as follows:
 
 @example
-ikpcb_t *     pcb = ...;
-ikptr_t       s_kont;
-ikcont *    kont;
+ikpcb_t *  pcb = ...;
+ikptr_t    s_kont;
+ikcont *   kont;
 
 kont   = (ikcont*)ik_unsafe_alloc(pcb,
                      IK_ALIGN(continuation_size));
@@ -6895,7 +6895,7 @@ the wrong continuation and undefined behaviour ensues.
 
 
 @deftypefun void ik_enter_c_function (ikpcb_t * @var{pcb})
-Save the current Scheme continuation and followed by the current system
+Save the current Scheme continuation followed by the current system
 continuation.  A call to this function must be matched by a call to
 @cfunc{ik_leave_c_function}.
 @end deftypefun
@@ -6907,11 +6907,10 @@ function must be matched by a call to @cfunc{ik_enter_c_function}.
 @end deftypefun
 
 
-Notice that when Scheme calls C then C calls a Scheme: garbage
-collections can happen in the nested Scheme code, so the C code cannot
-rely on the Scheme value to keep their location.  Also, nested C code
-invocations can happen, so the C code calling out to Scheme
-@strong{cannot} use the @code{pcb->root} fields to preserve Scheme
-values.
+Notice that when Scheme calls C then C calls Scheme: garbage collections
+can happen in the nested Scheme code, so the C code cannot rely on the
+Scheme values to keep their location.  Also, nested C code invocations
+can happen, so the C code calling out to Scheme @strong{cannot} use the
+@code{pcb->root} fields to preserve Scheme values.
 
 @c end of file
