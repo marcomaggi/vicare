@@ -49,14 +49,15 @@
     chain-link-next-set!		$chain-link-next-set!
     chain-link-prev-set!		$chain-link-prev-set!
 
-    chain-link-remove!			$chain-link-remove!
-
     chain-front				$chain-front
     chain-rear				$chain-rear
     chain-push-front!			$chain-push-front!
     chain-push-rear!			$chain-push-rear!
     chain-pop-front!			$chain-pop-front!
     chain-pop-rear!			$chain-pop-rear!
+    chain-link-remove!			$chain-link-remove!
+    chain-index-forwards		$chain-index-forwards
+    chain-index-backwards		$chain-index-backwards
 
     chain-fold-left-forwards		$chain-fold-left-forwards
     chain-fold-right-forwards		$chain-fold-right-forwards
@@ -367,6 +368,36 @@
 	($<chain-link>-next-set! link '())
 	($<chain-link>-prev-set! next '()))))
   link)
+
+;;; --------------------------------------------------------------------
+
+(define* (chain-index-forwards {C chain?} {I non-negative-exact-integer?})
+  ($chain-index-forwards C I))
+
+(define* ($chain-index-forwards C I)
+  (let next-link ((link C)
+		  (idx  I))
+    (cond ((null? link)
+	   (assertion-violation __who__ "index out of range for chain" C I))
+	  ((zero? idx)
+	   ($chain-link-ref link))
+	  (else
+	   (next-link ($chain-link-next link) (sub1 idx))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (chain-index-backwards {C chain?} {I non-negative-exact-integer?})
+  ($chain-index-backwards C I))
+
+(define* ($chain-index-backwards C I)
+  (let next-link ((link C)
+		  (idx  I))
+    (cond ((null? link)
+	   (assertion-violation __who__ "index out of range for chain" C I))
+	  ((zero? idx)
+	   ($chain-link-ref link))
+	  (else
+	   (next-link ($chain-link-prev link) (sub1 idx))))))
 
 
 ;;;; basic list operations

@@ -281,6 +281,42 @@ links, if any, are chained together.
 @end lisp
 @end defun
 
+
+@defun chain-index-forwards! @var{chain} @var{idx}
+@defunx $chain-index-forwards! @var{chain} @var{idx}
+Return the object referenced by the link in @var{chain} at index
+@var{idx}.  @var{idx} must be a non--negative exact integer representing
+a zero--based index; the count starts from the link @var{chain} and
+proceeds in the forwards direction.
+
+@lisp
+(define C
+  (chain-link-next
+     (chain-link-next
+        (chain 10 11 12 13 14))))
+
+(chain-index-forwards C 2)      @result{} 14
+@end lisp
+@end defun
+
+
+@defun chain-index-backwards! @var{chain} @var{idx}
+@defunx $chain-index-backwards! @var{chain} @var{idx}
+Return the object referenced by the link in @var{chain} at index
+@var{idx}.  @var{idx} must be a non--negative exact integer representing
+a zero--based index; the count starts from the link @var{chain} and
+proceeds in the backwards direction.
+
+@lisp
+(define C
+  (chain-link-next
+     (chain-link-next
+        (chain 10 11 12 13 14))))
+
+(chain-index-backwards C 2)     @result{} 10
+@end lisp
+@end defun
+
 @c page
 @node chains conversion
 @section Converting chains to other objects

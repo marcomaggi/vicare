@@ -363,6 +363,90 @@
 	  (values (chain-link-ref R) (chain->list C))))
     => 4 '(0 1 2 3))
 
+;;; --------------------------------------------------------------------
+;;; chain-index-forwards
+
+  (check
+      (try
+	  (chain-index-forwards (chain) 0)
+	(catch E
+	  ((&assertion)
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check
+      (try
+	  (chain-index-forwards (chain 10 11 12 13 14) 5)
+	(catch E
+	  ((&assertion)
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check (chain-index-forwards (chain 10 11 12 13 14) 0) => 10)
+  (check (chain-index-forwards (chain 10 11 12 13 14) 1) => 11)
+  (check (chain-index-forwards (chain 10 11 12 13 14) 2) => 12)
+  (check (chain-index-forwards (chain 10 11 12 13 14) 3) => 13)
+  (check (chain-index-forwards (chain 10 11 12 13 14) 4) => 14)
+
+  (check
+      (let ((C (chain-link-next (chain-link-next (chain 10 11 12 13 14)))))
+	(chain-index-forwards C 0))
+    => 12)
+
+  (check
+      (let ((C (chain-link-next (chain-link-next (chain 10 11 12 13 14)))))
+	(chain-index-forwards C 1))
+    => 13)
+
+  (check
+      (let ((C (chain-link-next (chain-link-next (chain 10 11 12 13 14)))))
+	(chain-index-forwards C 2))
+    => 14)
+
+;;; --------------------------------------------------------------------
+;;; chain-index-backwards
+
+  (check
+      (try
+	  (chain-index-backwards (chain) 0)
+	(catch E
+	  ((&assertion)
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check
+      (try
+	  (chain-index-backwards (chain-rear (chain 10 11 12 13 14)) 5)
+	(catch E
+	  ((&assertion)
+	   #t)
+	  (else E)))
+    => #t)
+
+  (check (chain-index-backwards (chain-rear (chain 10 11 12 13 14)) 0) => 14)
+  (check (chain-index-backwards (chain-rear (chain 10 11 12 13 14)) 1) => 13)
+  (check (chain-index-backwards (chain-rear (chain 10 11 12 13 14)) 2) => 12)
+  (check (chain-index-backwards (chain-rear (chain 10 11 12 13 14)) 3) => 11)
+  (check (chain-index-backwards (chain-rear (chain 10 11 12 13 14)) 4) => 10)
+
+  (check
+      (let ((C (chain-link-next (chain-link-next (chain 10 11 12 13 14)))))
+	(chain-index-backwards C 0))
+    => 12)
+
+  (check
+      (let ((C (chain-link-next (chain-link-next (chain 10 11 12 13 14)))))
+	(chain-index-backwards C 1))
+    => 11)
+
+  (check
+      (let ((C (chain-link-next (chain-link-next (chain 10 11 12 13 14)))))
+	(chain-index-backwards C 2))
+    => 10)
+
   #t)
 
 
