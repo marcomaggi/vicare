@@ -366,6 +366,147 @@
   #t)
 
 
+(parametrise ((check-test-name	'access/remove))
+
+  (check
+      (let ((A (make-chain-link 0)))
+	(chain-link-remove! A)
+	(chain->list A))
+    => '(0))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! C)
+	(values (chain->list A)
+		(chain->list C)
+		(chain->list E)))
+    => '(0 1 3 4) '(2) '(0 1 3 4))
+
+;;; --------------------------------------------------------------------
+;;; removing from front
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! A)
+	(values (chain->list A)
+		(chain->list B)))
+    => '(0) '(1 2 3 4))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! A)
+	(chain-link-remove! B)
+	(values (chain->list A)
+		(chain->list B)
+		(chain->list C)))
+    => '(0) '(1) '(2 3 4))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! A)
+	(chain-link-remove! B)
+	(chain-link-remove! C)
+	(values (chain->list A)
+		(chain->list B)
+		(chain->list C)
+		(chain->list D)))
+    => '(0) '(1) '(2) '(3 4))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! A)
+	(chain-link-remove! B)
+	(chain-link-remove! C)
+	(chain-link-remove! D)
+	(values (chain->list A)
+		(chain->list B)
+		(chain->list C)
+		(chain->list D)
+		(chain->list E)))
+    => '(0) '(1) '(2) '(3) '(4))
+
+;;; --------------------------------------------------------------------
+;;; removing from rear
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! E)
+	(values (chain->list A)
+		(chain->list E)))
+    => '(0 1 2 3) '(4))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! E)
+	(chain-link-remove! D)
+	(values (chain->list A)
+		(chain->list D)
+		(chain->list E)))
+    => '(0 1 2) '(3) '(4))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! E)
+	(chain-link-remove! D)
+	(chain-link-remove! C)
+	(values (chain->list A)
+		(chain->list C)
+		(chain->list D)
+		(chain->list E)))
+    => '(0 1) '(2) '(3) '(4))
+
+  (check
+      (let* ((A (chain 0 1 2 3 4))
+	     (B (chain-link-next A))
+	     (C (chain-link-next B))
+	     (D (chain-link-next C))
+	     (E (chain-link-next D)))
+	(chain-link-remove! B)
+	(chain-link-remove! C)
+	(chain-link-remove! D)
+	(chain-link-remove! E)
+	(values (chain->list A)
+		(chain->list B)
+		(chain->list C)
+		(chain->list D)
+		(chain->list E)))
+    => '(0) '(1) '(2) '(3) '(4))
+
+  #t)
+
+
 (parametrise ((check-test-name 'operations))
 
   (check

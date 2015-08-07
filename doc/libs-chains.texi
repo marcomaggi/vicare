@@ -261,6 +261,26 @@ chain.  If @var{chain} is null: raise an assertion violation.  If
 @var{chain} has only one link: return that link and null.
 @end defun
 
+
+@defun chain-link-remove! @var{link}
+@defunx $chain-link-remove! @var{link}
+Extract @var{link} from its chain and return it.  The previous and next
+links, if any, are chained together.
+
+@lisp
+(let* ((A (chain 0 1 2 3 4))
+       (B (chain-link-next A))
+       (C (chain-link-next B))
+       (D (chain-link-next C))
+       (E (chain-link-next D)))
+  (chain-link-remove! C)
+  (values (chain->list A)
+          (chain->list C)
+          (chain->list E)))
+@result{} (0 1 3 4) (2) (0 1 3 4)
+@end lisp
+@end defun
+
 @c page
 @node chains conversion
 @section Converting chains to other objects

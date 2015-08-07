@@ -49,6 +49,8 @@
     chain-link-next-set!		$chain-link-next-set!
     chain-link-prev-set!		$chain-link-prev-set!
 
+    chain-link-remove!			$chain-link-remove!
+
     chain-front				$chain-front
     chain-rear				$chain-rear
     chain-push-front!			$chain-push-front!
@@ -341,6 +343,30 @@
 	($<chain-link>-prev-set! old-rear '())
 	($<chain-link>-next-set! new-rear '()))
       (values old-rear new-rear))))
+
+;;; --------------------------------------------------------------------
+
+(define* (chain-link-remove! {C chain-link?})
+  ($chain-link-remove! C))
+
+(define ($chain-link-remove! link)
+  (let* ((prev   ($chain-link-prev link))
+	 (next   ($chain-link-next link))
+	 (prev?  (not (null? prev)))
+	 (next?  (not (null? next))))
+    (if prev?
+	(begin
+	  ($<chain-link>-prev-set! link '())
+	  (if next?
+	      (begin
+		($<chain-link>-next-set! link '())
+		($<chain-link>-next-set! prev next)
+		($<chain-link>-prev-set! next prev))
+	    ($<chain-link>-next-set! prev '())))
+      (when next?
+	($<chain-link>-next-set! link '())
+	($<chain-link>-prev-set! next '()))))
+  link)
 
 
 ;;;; basic list operations
