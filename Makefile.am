@@ -97,10 +97,12 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-bytevectors.texi			\
 	doc/libs-bytevector-compounds.texi		\
 	doc/libs-cbuffers.texi				\
+	doc/libs-chains.texi				\
 	doc/libs-char-sets.texi				\
 	doc/libs-comparisons.texi			\
 	doc/libs-conditions-and-restarts.texi		\
 	doc/libs-debugging.texi				\
+	doc/libs-deques.texi				\
 	doc/libs-flonum-format.texi			\
 	doc/libs-flonum-parser.texi			\
 	doc/libs-formations.texi			\
@@ -927,6 +929,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-containers-bytevectors-u8-high.sps		\
 	tests/test-vicare-containers-bytevectors-u8-low.sps		\
 	tests/test-vicare-containers-char-sets.sps			\
+	tests/test-vicare-containers-chains.sps				\
 	tests/test-vicare-containers-kmp.sps				\
 	tests/test-vicare-containers-levenshtein.sps			\
 	tests/test-vicare-containers-lists-fun.sps			\
@@ -936,6 +939,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-containers-one-dimension-cc.sps		\
 	tests/test-vicare-containers-one-dimension-co.sps		\
 	tests/test-vicare-containers-queues.sps				\
+	tests/test-vicare-containers-deques.sps				\
 	tests/test-vicare-containers-stacks.sps				\
 	tests/test-vicare-containers-strings-high.sps			\
 	tests/test-vicare-containers-strings-low.sps			\

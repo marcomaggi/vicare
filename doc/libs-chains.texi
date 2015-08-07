@@ -1,0 +1,401 @@
+@node chains
+@chapter Chains: doubly--linked lists.
+
+
+@cindex @library{vicare containers chains}, library
+@cindex Library @library{vicare containers chains}
+
+
+The library @library{vicare containers chains} implements doubly--linked
+lists holding arbitrary Scheme objects.
+
+@menu
+* chains objects::              Chain objects.
+* chains inspection::           Inspecting chain objects.
+* chains access::               Chain accessors and mutators.
+* chains conversion::           Converting chains to other objects.
+* chains ops::                  Operations on chains.
+@end menu
+
+@c page
+@node chains objects
+@section Chain objects
+
+
+@cindex @var{chain} argument
+@cindex Argument @var{chain}
+
+Chains are doubly--linked lists composed of @objtype{<chain-link>}
+instances; an empty chain is represented by the built--in null object.
+In this documentation: chain objects arguments to functions are
+indicated as @var{chain}, and they can be either null or instances of
+@objtype{<chain-link>}.
+
+The following bindings are exported by the library @library{vicare
+containers chains}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@deftp {@rnrs{6} Record Type} <chain-link>
+@cindex @var{link} argument
+@cindex Argument @var{link}
+Record type representing a link in a chain.  The @objtype{<chain-link>}
+type is non--generative and available for subtyping.  In this
+documentation @objtype{<chain-link>} object arguments to functions are
+indicated as @var{link}.
+@end deftp
+
+
+@defun make-chain-link @var{obj}
+Build and return a new instance of @objtype{<chain-link>} referencing
+@var{obj} as payload object.
+@end defun
+
+
+@defun chain-link? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<chain-link>};
+otherwise return @false{}.
+@end defun
+
+
+@defun chain @var{obj} @dots{}
+Build and return a new chain holding the given objects, which are pushed
+on the chain from right to left.  If no arguments are given: return
+null.
+@end defun
+
+
+@defun chain? @var{obj}
+Return @true{} if @var{obj} is null or a a record of type
+@objtype{<chain-link>}; otherwise return @false{}.
+@end defun
+
+
+@defun chain-link-ref @var{link}
+@defunx $chain-link-ref @var{link}
+Return the payload object referenced by @var{link}.
+@end defun
+
+
+@defun chain-link-set! @var{link} @var{new-obj}
+@defunx $chain-link-set! @var{link} @var{new-obj}
+Store a new object as payload for @var{link}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defun chain-link-putprop @var{link} @var{key} @var{value}
+@defunx $chain-link-putprop @var{link} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{link};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun chain-link-getprop @var{link} @var{key}
+@defunx $chain-link-getprop @var{link} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{link}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defun
+
+
+@defun chain-link-remprop @var{link} @var{key}
+@defunx $chain-link-remprop @var{link} @var{key}
+Remove the property @var{key} from the property list of @var{link}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun chain-link-property-list @var{link}
+@defunx $chain-link-property-list @var{link}
+Return a new association list representing the property list of
+@var{link}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun chain-link-hash @var{link}
+@defunx $chain-link-hash @var{link}
+Return an exact integer to be used as hashtable key for @var{link}.
+Hashtables having a @objtype{<chain-link>} as key can be instantiated as
+follows:
+
+@example
+(make-hashtable chain-link-hash eq?)
+@end example
+@end defun
+
+@c page
+@node chains inspection
+@section Inspecting chain objects
+
+
+The following bindings are exported by the library @library{vicare
+containers chains}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun chain-length? @var{chain}
+@defunx $chain-length? @var{chain}
+Return a non--negative exact integer representing the number of objects
+in @var{chain}.  In counting the links: proceed both in forwards and
+backwards directions.  Circular chains are forbidden.
+@end defun
+
+
+@defun chain-forwards-length? @var{chain}
+@defunx $chain-forwards-length? @var{chain}
+Return a non--negative exact integer representing the number of objects
+in @var{chain} in the forwards direction, including @var{chain}.
+Circular chains are forbidden.
+@end defun
+
+
+@defun chain-backwards-length? @var{chain}
+@defunx $chain-backwards-length? @var{chain}
+Return a non--negative exact integer representing the number of objects
+in @var{chain} in the backwards direction, including @var{chain}.
+Circular chains are forbidden.
+@end defun
+
+@c page
+@node chains access
+@section Chain accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers chains}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun chain-link-next @var{link}
+@defunx $chain-link-next @var{link}
+Accessor for the next link in the forwards direction.  Return null or an
+instance of @objtype{<chain-link>}.
+@end defun
+
+
+@defun chain-link-prev @var{link}
+@defunx $chain-link-prev @var{link}
+Accessor for the next link in the backwards direction.  Return null or
+an instance of @objtype{<chain-link>}.
+@end defun
+
+
+@defun chain-link-next-set! @var{link} @var{chain}
+@defunx $chain-link-next-set! @var{link} @var{chain}
+Set the next link of @var{link} in the forwards direction; @var{chain}
+can be null or an instance of @objtype{<chain-link>}.  If @var{chain} is
+an instance of @objtype{<chain-link>}: @var{chain} is mutated to
+reference @var{link} as its previous link.
+@end defun
+
+
+@defun chain-link-prev-set! @var{link} @var{chain}
+@defunx $chain-link-prev-set! @var{link} @var{chain}
+Set the next link of @var{link} in the backwards direction; @var{chain}
+can be null or an instance of @objtype{<chain-link>}.  If @var{chain} is
+an instance of @objtype{<chain-link>}: @var{chain} is mutated to
+reference @var{link} as its next link.
+@end defun
+
+
+@defun chain-front @var{chain}
+@defunx $chain-front @var{chain}
+Return the first link in the chain of which @var{chain} is a link;
+return the last link in the backwards direction.  Return @var{chain}
+itself if @var{chain} is null or the first link.  Circular chains are
+forbidden.
+@end defun
+
+
+@defun chain-rear @var{chain}
+@defunx $chain-rear @var{chain}
+Return the last link in the chain of which @var{chain} is a link; return
+the last link in the forwards direction.  Return @var{chain} itself if
+@var{chain} is null or the last link.  Circular chains are forbidden.
+@end defun
+
+
+@defun chain-push-front! @var{chain} @var{new-front-link}
+@defunx $chain-push-front! @var{chain} @var{new-front-link}
+Prepend a new chain link to the chain of which @var{chain} is a link;
+return @var{new-front-link} itself.  If @var{chain} is null: do nothing
+and return @var{new-front-link} itself.
+@end defun
+
+
+@defun chain-push-rear! @var{chain} @var{new-rear-link}
+@defunx $chain-push-rear! @var{chain} @var{new-rear-link}
+Append a new chain link to the chain of which @var{chain} is a link;
+return @var{new-rear-link} itself.  If @var{chain} is null: do nothing
+and return @var{new-rear-link} itself.
+@end defun
+
+
+@defun chain-pop-front! @var{chain}
+@defunx $chain-pop-front! @var{chain}
+Remove the first link in @var{chain} and return @math{2} values: the
+removed @objtype{<chain-link>} instance and the new first link in the
+chain.  If @var{chain} is null: raise an assertion violation.  If
+@var{chain} has only one link: return that link and null.
+@end defun
+
+
+@defun chain-pop-rear! @var{chain}
+@defunx $chain-pop-rear! @var{chain}
+Remove the last link in @var{chain} and return @math{2} values: the
+removed @objtype{<chain-link>} instance and the new first link in the
+chain.  If @var{chain} is null: raise an assertion violation.  If
+@var{chain} has only one link: return that link and null.
+@end defun
+
+@c page
+@node chains conversion
+@section Converting chains to other objects
+
+
+The following bindings are exported by the library @library{vicare
+containers chains}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun chain->list @var{chain}
+@defunx $chain->list @var{chain}
+@defunx list->chain @var{list}
+@defunx $list->chain @var{list}
+Convert to and from a chain and a proper list.
+@end defun
+
+
+@defun chain->vector @var{chain}
+@defunx $chain->vector @var{chain}
+@defunx vector->chain @var{vector}
+@defunx $vector->chain @var{vector}
+Convert to and from a chain and a vector.
+@end defun
+
+@c page
+@node chains ops
+@section Operations on chains
+
+
+The following bindings are exported by the library @library{vicare
+containers chains}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun chain-fold-left-forwards @var{kons} @var{knil} @var{chain}
+@defunx $chain-fold-left-forwards @var{kons} @var{knil} @var{chain}
+Perform a @func{fold-left} style iteration over the objects in
+@var{chain}.  The iteration starts at @var{chain} and proceeds forwards.
+
+@lisp
+(chain-fold-left-forwards
+    (lambda (knil obj)
+      (cons obj knil))
+  '()
+  (chain 0 1 2 3 4))
+@result{} (4 3 2 1 0)
+
+(chain-fold-left-forwards
+    (lambda (knil obj)
+      (cons obj knil))
+  '()
+  (chain-link-next
+     (chain-link-next
+        (chain 0 1 2 3 4))))
+@result{} (4 3 2)
+@end lisp
+@end defun
+
+
+@defun chain-fold-right-forwards @var{kons} @var{knil} @var{chain}
+@defunx $chain-fold-right-forwards @var{kons} @var{knil} @var{chain}
+Perform a @func{fold-right} style iteration over the objects in
+@var{chain}.  The iteration starts at the last link in the forwards
+direction and proceeds up to and including @var{chain}.
+
+@lisp
+(chain-fold-right-forwards
+    (lambda (obj knil)
+      (cons obj knil))
+  '()
+  (chain 0 1 2 3 4))
+@result{} (0 1 2 3 4)
+
+(chain-fold-right-forwards
+    (lambda (obj knil)
+      (cons obj knil))
+  '()
+  (chain-link-next
+     (chain-link-next
+        (chain 0 1 2 3 4))))
+@result{} (2 3 4)
+@end lisp
+@end defun
+
+
+@defun chain-fold-left-backwards @var{kons} @var{knil} @var{chain}
+@defunx $chain-fold-left-backwards @var{kons} @var{knil} @var{chain}
+Perform a @func{fold-left} style iteration over the objects in
+@var{chain}.  The iteration starts at @var{chain} and proceeds
+backwards.
+
+@lisp
+(chain-fold-left-backwards
+    (lambda (knil obj)
+      (cons obj knil))
+  '()
+  (chain-rear (chain 0 1 2 3 4)))
+@result{} (0 1 2 3 4)
+
+(chain-fold-left-backwards
+    (lambda (knil obj)
+      (cons obj knil))
+  '()
+  (chain-link-prev
+     (chain-link-prev
+        (chain-rear (chain 0 1 2 3 4)))))
+@result{} (0 1 2)
+@end lisp
+@end defun
+
+
+@defun chain-fold-right-backwards @var{kons} @var{knil} @var{chain}
+@defunx $chain-fold-right-backwards @var{kons} @var{knil} @var{chain}
+Perform a @func{fold-right} style iteration over the objects in
+@var{chain}.  The iteration starts at the last link in the backwards
+direction and proceeds up to and including @var{chain}.
+
+@lisp
+(chain-fold-right-backwards (lambda (obj knil)
+                              (cons obj knil))
+  '()
+  (chain-rear (chain 0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+
+(chain-fold-right-backwards (lambda (obj knil)
+                              (cons obj knil))
+  '()
+  (chain-link-prev
+     (chain-link-prev
+        (chain-rear (chain 0 1 2 3 4)))))
+@result{} (2 1 0)
+@end lisp
+@end defun
+
+@c end of file

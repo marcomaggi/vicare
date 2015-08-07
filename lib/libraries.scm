@@ -134,8 +134,10 @@
      (vicare containers bytevectors u8)
      (vicare containers bytevectors s8)
      (vicare containers arrays)
+     (vicare containers chains)
      (vicare containers stacks)
      (vicare containers queues)
+     (vicare containers deques)
      (vicare containers binary-heaps)
 
      (vicare parser-tools silex lexer)

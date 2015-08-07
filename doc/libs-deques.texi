@@ -1,0 +1,209 @@
+@node deques
+@chapter Simple double--ended queues
+
+
+@cindex @library{vicare containers deques}, library
+@cindex Library @library{vicare containers deques}
+
+
+The library @library{vicare containers deques} implements deques holding
+arbitrary Scheme objects and designed for efficient insertion and
+removal at both ends.
+
+@menu
+* deques objects::              Deque objects.
+* deques inspection::           Inspecting deque objects.
+* deques access::               Deque accessors and mutators.
+* deques conversion::           Converting deques to other objects.
+@end menu
+
+@c page
+@node deques objects
+@section Deque objects
+
+
+The following bindings are exported by the library @library{vicare
+containers deques}.
+
+
+@deftp {@rnrs{6} Record Type} deque
+@cindex @var{deque} argument
+@cindex Argument @var{deque}
+Record type representing a deque object.  The @objtype{deque} type is
+non--generative and available for subtyping.  In this documentation
+@objtype{deque} object arguments to functions are indicated as
+@var{deque}.
+@end deftp
+
+
+@defun make-deque @var{obj} @dots{}
+Build and return a @objtype{deque} object holding the given objects,
+which are pushed on the deque from left to right.
+@end defun
+
+
+@defun deque? @var{obj}
+Return @true{} if @var{obj} is a record of type @objtype{deque};
+otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defun deque-putprop @var{deque} @var{key} @var{value}
+@defunx $deque-putprop @var{deque} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{deque};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun deque-getprop @var{deque} @var{key}
+@defunx $deque-getprop @var{deque} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{deque}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defun
+
+
+@defun deque-remprop @var{deque} @var{key}
+@defunx $deque-remprop @var{deque} @var{key}
+Remove the property @var{key} from the property list of @var{deque}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun deque-property-list @var{deque}
+@defunx $deque-property-list @var{deque}
+Return a new association list representing the property list of
+@var{deque}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun deque-hash @var{deque}
+@defunx $deque-hash @var{deque}
+Return an exact integer to be used as hashtable key for @var{deque}.
+Hashtables having a @objtype{deque} as key can be instantiated as
+follows:
+
+@example
+(make-hashtable deque-hash eq?)
+@end example
+@end defun
+
+@c page
+@node deques inspection
+@section Inspecting deque objects
+
+
+The following bindings are exported by the library @library{vicare
+containers deques}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun deque-empty? @var{deque}
+@defunx $deque-empty? @var{deque}
+Return @true{} if @var{deque} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun deque-not-empty? @var{deque}
+@defunx $deque-not-empty? @var{deque}
+Return @true{} if @var{deque} is @strong{not} empty; otherwise return
+@false{}.
+@end defun
+
+
+@defun deque-size? @var{deque}
+@defunx $deque-size? @var{deque}
+Return an exact integer representing the number of objects in @var{deque}.
+@end defun
+
+@c page
+@node deques access
+@section Deque accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+containers deques}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun deque-front @var{deque}
+@defunx $deque-front @var{deque}
+Return the object at the front of the deque.  Raise an assertion violation
+if @var{deque} is empty.
+@end defun
+
+
+@defun deque-rear @var{deque}
+@defunx $deque-rear @var{deque}
+Return the object at the rear of the deque.  Raise an assertion
+violation if @var{deque} is empty.
+@end defun
+
+
+@defun deque-push-front! @var{deque} @var{obj}
+@defunx $deque-push-front! @var{deque} @var{obj}
+Push @var{obj} on the front of the @var{deque}.
+@end defun
+
+
+@defun deque-push-rear! @var{deque} @var{obj}
+@defunx $deque-push-rear! @var{deque} @var{obj}
+Push @var{obj} on the rear of the @var{deque}.
+@end defun
+
+
+@defun deque-pop-front! @var{deque}
+@defunx $deque-pop-front! @var{deque}
+Remove the object at the front of the deque and return it.  Raise an
+assertion violation if @var{deque} is empty.
+@end defun
+
+
+@defun deque-pop-rear! @var{deque}
+@defunx $deque-pop-rear! @var{deque}
+Remove the object at the rear of the deque and return it.  Raise an
+assertion violation if @var{deque} is empty.
+@end defun
+
+
+@defun deque-purge! @var{deque}
+@defunx $deque-purge! @var{deque}
+Remove all the elements from @var{deque}.
+@end defun
+
+@c page
+@node deques conversion
+@section Converting deques to other objects
+
+
+The following bindings are exported by the library @library{vicare
+containers deques}.  The bindings whose name is prefixed with @code{$}
+are unsafe operations: they do @strong{not} validate their arguments
+before accessing them.
+
+
+@defun deque->list @var{deque}
+@defunx list->deque @var{list}
+Convert to and from a deque and a proper list.  Objects from the list
+are pushed on the deque from left to right.
+@end defun
+
+
+@defun deque->vector @var{deque}
+@defunx vector->deque @var{vector}
+Convert to and from a deque and a vector.
+@end defun
+
+@c end of file
