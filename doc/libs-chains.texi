@@ -10,12 +10,41 @@ The library @library{vicare containers chains} implements doubly--linked
 lists holding arbitrary Scheme objects.
 
 @menu
+* chains intro::                Introduction to chains.
 * chains objects::              Chain objects.
 * chains inspection::           Inspecting chain objects.
 * chains access::               Chain accessors and mutators.
 * chains conversion::           Converting chains to other objects.
 * chains ops::                  Operations on chains.
 @end menu
+
+@c page
+@node chains intro
+@section Introduction to chains
+
+
+To understand the chains @api{} we need to understand the following
+terms: previous link, next link, first link, last link, front link, rear
+link, forwards direction, backwards direction.  Here is an explicative
+picture:
+
+@example
+first          prev     this    next           last
+ v               v       v       v               v
+ O <---> O <---> O <---> O <---> O <---> O <---> O
+ ^                                               ^
+front                                          rear
+
+                 forwards direction
+               ---------------------->
+
+                 backwards direction
+               <----------------------
+@end example
+
+Every link in a chain is an instance of @rnrs{6} record of type
+@objtype{<chain-link>}.  Every link references its previous link and
+next link.  Empty chains are represented by the built--in null object.
 
 @c page
 @node chains objects
@@ -26,10 +55,9 @@ lists holding arbitrary Scheme objects.
 @cindex Argument @var{chain}
 
 Chains are doubly--linked lists composed of @objtype{<chain-link>}
-instances; an empty chain is represented by the built--in null object.
-In this documentation: chain objects arguments to functions are
-indicated as @var{chain}, and they can be either null or instances of
-@objtype{<chain-link>}.
+instances.  In this documentation: chain objects arguments to functions
+are indicated as @var{chain}, and they can be either null or instances
+of @objtype{<chain-link>}.
 
 The following bindings are exported by the library @library{vicare
 containers chains}.  The bindings whose name is prefixed with @code{$}
