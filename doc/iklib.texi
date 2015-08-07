@@ -10801,6 +10801,21 @@ Return the current destructor for @var{rtd}: @false{} or a function.
 @end defun
 
 
+@defun record-printer @var{rtd}
+@defunx record-printer-set! @var{rtd} @var{printer}
+Accessor and mutator for the printer field in a @rnrs{6} record--type
+descriptor.  The @var{printer} argument must be a procedure accepting
+two arguments: a record instance of type @var{rtd}, a textual output
+port.
+@end defun
+
+
+@defun default-r6rs-record-printer @var{record} @var{port}
+Default printer function for @rnrs{6}records.  @var{record} must be an
+instance of @rnrs{6} record.  @var{port} must be a textual output port.
+@end defun
+
+
 @deffn Parameter record-guardian-logger
 @cindex Parameter @func{record-guardian-logger}
 Select record instance destruction logging mode for debugging purposes.
