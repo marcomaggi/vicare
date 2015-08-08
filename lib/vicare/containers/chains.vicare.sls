@@ -68,6 +68,7 @@
     chain-for-each-forwards		$chain-for-each-forwards
     chain-for-all-forwards		$chain-for-all-forwards
     chain-exists-forwards		$chain-exists-forwards
+    chain-find-forwards			$chain-find-forwards
 
     chain->list				$chain->list
     list->chain				$list->chain
@@ -800,6 +801,31 @@
 		(loop next1 next2 next*)))))))
 
   #| end of module |# )
+
+
+;;;; basic list operations: find
+
+(case-define* chain-find-forwards
+  (({fun procedure?} {C chain?})
+   ($chain-find-forwards fun C #f))
+  (({fun procedure?} {C chain?} not-found-return-value)
+   ($chain-find-forwards fun C  not-found-return-value))
+  #| end of CASE-DEFINE* |# )
+
+(case-define $chain-find-forwards
+  ((fun chain)
+   ($chain-find-forwards fun chain #f))
+
+  ((fun chain not-found-return-value)
+   (let loop ((link chain))
+     (if (null? link)
+	 not-found-return-value
+       (let ((obj ($chain-link-ref link)))
+	 (if (fun obj)
+	     obj
+	   (loop ($chain-link-next link)))))))
+
+  #| end of CASE-DEFINE |# )
 
 
 ;;;; conversion

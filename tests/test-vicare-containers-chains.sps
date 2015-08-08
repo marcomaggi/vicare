@@ -1212,6 +1212,20 @@
   #t)
 
 
+(parametrise ((check-test-name	'find))
+
+  (check (chain-find-forwards even? (chain))				=> #f)
+  (check (chain-find-forwards even? (chain) 'not-found)			=> 'not-found)
+
+  (check (chain-find-forwards even? (chain 1 3 5 7))			=> #f)
+  (check (chain-find-forwards even? (chain 1 3 5 7) 'not-found)		=> 'not-found)
+
+  (check (chain-find-forwards even? (chain 1 3 5 6 7))			=> 6)
+  (check (chain-find-forwards even? (chain 1 3 5 6 7) 'not-found)	=> 6)
+
+  #t)
+
+
 (parametrise ((check-test-name 'conversion))
 
   (check
@@ -1290,5 +1304,7 @@
 ;; eval: (put 'chain-for-all-backwards		'scheme-indent-function 1)
 ;; eval: (put 'chain-exists-forwards		'scheme-indent-function 1)
 ;; eval: (put 'chain-exists-backwards		'scheme-indent-function 1)
+;; eval: (put 'chain-find-forwards		'scheme-indent-function 1)
+;; eval: (put 'chain-find-backwards		'scheme-indent-function 1)
 ;; End:
 

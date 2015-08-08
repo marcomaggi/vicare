@@ -552,4 +552,41 @@ argument, then it proceeds in the forwards direction; the iteration
 stops when reaching the end of one of the chain arguments.
 @end defun
 
+
+@defun chain-find-forwards @var{fun} @var{chain}
+@defunx $chain-find-forwards @var{fun} @var{chain} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{chain}: stop at the
+first true value and return the object from @var{chain} that generated
+it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+
+The iteration starts from the link given as argument, then it proceeds
+in the forwards direction; the iteration stops when reaching the end of
+one of the chain arguments.
+
+@lisp
+(chain-find-forwards
+    even?
+  (chain 1 3 5 7)
+  'not-found)
+@result{} not-found
+
+(chain-find-forwards
+    even?
+  (chain 1 3 5 7))
+@result{} #f
+
+(chain-find-forwards
+    even?
+  (chain 1 3 5 6 7)
+  'not-found)
+@result{} 6
+@end lisp
+@end defun
+
 @c end of file
