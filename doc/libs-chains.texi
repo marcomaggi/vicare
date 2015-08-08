@@ -15,6 +15,7 @@ lists holding arbitrary Scheme objects.
 * chains inspection::           Inspecting chain objects.
 * chains access::               Chain accessors and mutators.
 * chains conversion::           Converting chains to other objects.
+* chains ops::                  Basic operations on chains.
 * chains folding::              Folding chains.
 * chains mapping::              Mapping chains.
 * chains searching::            Searching in chains.
@@ -371,6 +372,40 @@ Convert to and from a chain and a proper list.
 @defunx vector->chain @var{vector}
 @defunx $vector->chain @var{vector}
 Convert to and from a chain and a vector.
+@end defun
+
+@c page
+@node chains ops
+@section Basic operations on chains
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun chain-copy-forwards @var{chain}
+@defunx $chain-copy-forwards @var{chain}
+Build and return a new chain holding all the objects from @var{chain} in
+the same order.  The iteration starts at the link given as argument,
+then it proceeds in the forwards direction.
+@end defun
+
+
+@defun chain-reverse-forwards @var{chain}
+@defunx $chain-reverse-forwards @var{chain}
+Build and return a new chain holding all the objects from @var{chain} in
+reverse order.  The iteration starts at the link given as argument, then
+it proceeds in the forwards direction.
+@end defun
+
+
+@defun chain-append-forwards @var{chain} @dots{}
+@defunx $chain-append-forwards @var{chain} @dots{}
+Build and return a new chain holding all the objects from the
+@var{chain} arguments left--to--right order.  The iteration starts at
+the link given as argument, then it proceeds in the forwards direction.
 @end defun
 
 @c page

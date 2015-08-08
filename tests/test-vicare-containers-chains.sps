@@ -591,6 +591,127 @@
   #t)
 
 
+(parametrise ((check-test-name	'copy))
+
+  (check
+      (chain-copy-forwards (chain))
+    => '())
+
+  (check
+      (chain->list (chain-copy-forwards (chain 0)))
+    => '(0))
+
+  (check
+      (chain->list (chain-copy-forwards (chain 0 1 2 3 4)))
+    => '(0 1 2 3 4))
+
+  #t)
+
+
+(parametrise ((check-test-name	'reverse))
+
+  (check
+      (chain-reverse-forwards (chain))
+    => '())
+
+  (check
+      (chain->list (chain-reverse-forwards (chain 0)))
+    => '(0))
+
+  (check
+      (chain->list (chain-reverse-forwards (chain 0 1 2 3 4)))
+    => '(4 3 2 1 0))
+
+  #t)
+
+
+(parametrise ((check-test-name	'append))
+
+  (check
+      (chain-append-forwards)
+    => '())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (chain-append-forwards (chain))
+    => '())
+
+  (check
+      (chain->list (chain-append-forwards (chain 0)))
+    => '(0))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2 3 4)))
+    => '(0 1 2 3 4))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (chain-append-forwards (chain) (chain))
+    => '())
+
+  (check
+      (chain->list (chain-append-forwards (chain 0) (chain 1)))
+    => '(0 1))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2 3 4) (chain 5 6 7 8 9)))
+    => '(0 1 2 3 4 5 6 7 8 9))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2) (chain)))
+    => '(0 1 2))
+
+  (check
+      (chain->list (chain-append-forwards (chain) (chain 0 1 2)))
+    => '(0 1 2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (chain-append-forwards (chain) (chain) (chain))
+    => '())
+
+  (check
+      (chain->list (chain-append-forwards (chain 0) (chain 1) (chain 2)))
+    => '(0 1 2))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2) (chain 3 4 5) (chain 6 7 8 9)))
+    => '(0 1 2 3 4 5 6 7 8 9))
+
+;;;
+
+  (check
+      (chain->list (chain-append-forwards (chain) (chain 0 1 2) (chain 3 4 5)))
+    => '(0 1 2 3 4 5))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2) (chain) (chain 3 4 5)))
+    => '(0 1 2 3 4 5))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2) (chain 3 4 5) (chain)))
+    => '(0 1 2 3 4 5))
+
+;;;
+
+  (check
+      (chain->list (chain-append-forwards (chain) (chain) (chain 0 1 2)))
+    => '(0 1 2))
+
+  (check
+      (chain->list (chain-append-forwards (chain) (chain 0 1 2) (chain)))
+    => '(0 1 2))
+
+  (check
+      (chain->list (chain-append-forwards (chain 0 1 2) (chain) (chain)))
+    => '(0 1 2))
+
+  #t)
+
+
 (parametrise ((check-test-name	'folding))
 
   (check
@@ -1222,6 +1343,63 @@
 
   (check (chain-find-forwards even? (chain 1 3 5 6 7))			=> 6)
   (check (chain-find-forwards even? (chain 1 3 5 6 7) 'not-found)	=> 6)
+
+  #t)
+
+
+(parametrise ((check-test-name	'filter))
+
+  (check
+      (chain->list (chain-filter-forwards even? (chain)))
+    => '())
+
+  (check
+      (chain->list (chain-filter-forwards even? (chain 1 3 5 7)))
+    => '())
+
+  (check
+      (chain->list (chain-filter-forwards even? (chain 1 3 5 6 7)))
+    => '(6))
+
+  (check
+      (chain->list (chain-filter-forwards even? (chain 1 2 3 4 5 6 7)))
+    => '(2 4 6))
+
+  (check
+      (chain->list (chain-filter-forwards even? (chain 1 2 3 4 5 6 7 8)))
+    => '(2 4 6 8))
+
+  (check
+      (chain->list (chain-filter-forwards even? (chain 2 4 6 8)))
+    => '(2 4 6 8))
+
+  #t)
+
+
+(parametrise ((check-test-name	'partition))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?body ?expected-in ?expected-ou)
+       (check
+	   (receive (in ou)
+	       ?body
+	     (values (chain->list in) (chain->list ou)))
+	 => ?expected-in ?expected-ou))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (chain-partition-forwards even? (chain))			'() '())
+
+  (doit (chain-partition-forwards even? (chain 1 3 5 7))		'() '(1 3 5 7))
+  (doit (chain-partition-forwards even? (chain 2 4 6 8))		'(2 4 6 8) '())
+
+  (doit (chain-partition-forwards even? (chain 1 3 5 6 7))		'(6) '(1 3 5 7))
+
+  (doit (chain-partition-forwards even? (chain 1 2 3 4 5 6 7))		'(2 4 6) '(1 3 5 7))
+
+  (doit (chain-partition-forwards even? (chain 1 2 3 4 5 6 7 8))	'(2 4 6 8) '(1 3 5 7))
 
   #t)
 

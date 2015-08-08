@@ -59,6 +59,10 @@
     chain-index-forwards		$chain-index-forwards
     chain-index-backwards		$chain-index-backwards
 
+    chain-copy-forwards			$chain-copy-forwards
+    chain-reverse-forwards		$chain-reverse-forwards
+    chain-append-forwards		$chain-append-forwards
+
     chain-fold-left-forwards		$chain-fold-left-forwards
     chain-fold-right-forwards		$chain-fold-right-forwards
     chain-fold-left-backwards		$chain-fold-left-backwards
@@ -69,6 +73,8 @@
     chain-for-all-forwards		$chain-for-all-forwards
     chain-exists-forwards		$chain-exists-forwards
     chain-find-forwards			$chain-find-forwards
+    chain-filter-forwards		$chain-filter-forwards
+    chain-partition-forwards		$chain-partition-forwards
 
     chain->list				$chain->list
     list->chain				$list->chain
@@ -404,6 +410,101 @@
 	   ($chain-link-ref link))
 	  (else
 	   (next-link ($chain-link-prev link) (sub1 idx))))))
+
+
+;;;; copy, reverse, append
+
+(define* (chain-copy-forwards {C chain?})
+  ($chain-copy-forwards C))
+
+(define ($chain-copy-forwards C)
+  (let recur ((new-prev '())
+	      (link     C))
+    (if (null? link)
+	'()
+      (receive-and-return (new-link)
+	  (make-chain-link ($chain-link-ref link))
+	($chain-link-prev-set! new-link new-prev)
+	($chain-link-next-set! new-link (recur new-link ($chain-link-next link)))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (chain-reverse-forwards {C chain?})
+  ($chain-reverse-forwards C))
+
+(define ($chain-reverse-forwards C)
+  (let recur ((new-next '())
+	      (link     C))
+    (if (null? link)
+	'()
+      (receive-and-return (new-link)
+	  (make-chain-link ($chain-link-ref link))
+	($chain-link-next-set! new-link new-next)
+	($chain-link-prev-set! new-link (recur new-link ($chain-link-next link)))))))
+
+;;; --------------------------------------------------------------------
+
+(define (chain-first? obj)
+  (or (null? obj)
+      (and (chain-link? obj)
+	   (null? ($chain-link-prev obj)))))
+
+(case-define* chain-append-forwards
+  (()
+   '())
+
+  (({C chain?})
+   ($chain-copy-forwards C))
+
+  (({C1 chain?} {C2 chain?})
+   ($chain-append-forwards C1 C2))
+
+  (({C1 chain?} {C2 chain?} . {C* chain?})
+   ($chain-append-forwards/two-and-more C1 C2 C*))
+
+  #| end of CASE-DEFINE* |# )
+
+(case-define* $chain-append-forwards
+  (()
+   '())
+
+  ((C)
+   ($chain-copy-forwards C))
+
+  ((C1 C2)
+   (let outer-recur ((outer-new-prev '())
+		     (outer-link     C1))
+     (if (null? outer-link)
+	 (let recur ((inner-new-prev outer-new-prev)
+		     (inner-link     C2))
+	   (if (null? inner-link)
+	       '()
+	     (receive-and-return (new-link)
+		 (make-chain-link ($chain-link-ref inner-link))
+	       ($chain-link-prev-set! new-link inner-new-prev)
+	       ($chain-link-next-set! new-link (recur new-link ($chain-link-next inner-link))))))
+       (receive-and-return (new-link)
+	   (make-chain-link ($chain-link-ref outer-link))
+	 ($chain-link-prev-set! new-link outer-new-prev)
+	 ($chain-link-next-set! new-link (outer-recur new-link ($chain-link-next outer-link)))))))
+
+  ((C1 C2 . C*)
+   ($chain-append-forwards/two-and-more C1 C2 C*))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($chain-append-forwards/two-and-more C1 C2 C*)
+  (let recur ((new-prev '())
+	      (link     C1)
+	      (link*    (cons C2 C*)))
+    (if (null? link)
+	(if (null? link*)
+	    '()
+	  (recur new-prev (car link*) (cdr link*)))
+      (receive-and-return (new-link)
+	  (make-chain-link ($chain-link-ref link))
+	($chain-link-prev-set! new-link new-prev)
+	($chain-link-next-set! new-link (recur new-link ($chain-link-next link) link*))))))
 
 
 ;;;; basic list operations: folding
@@ -826,6 +927,51 @@
 	   (loop ($chain-link-next link)))))))
 
   #| end of CASE-DEFINE |# )
+
+
+;;;; basic list operations: filter and partition
+
+(define* (chain-filter-forwards {fun procedure?} {C chain?})
+  ($chain-filter-forwards fun C))
+
+(define ($chain-filter-forwards fun link)
+  (let recur ((new-prev  '())
+	      (old-link  link))
+    (if (null? old-link)
+	'()
+      (let ((obj ($chain-link-ref old-link)))
+	(if (fun obj)
+	    (receive-and-return (new-link)
+		(make-chain-link obj)
+	      ($chain-link-prev-set! new-link new-prev)
+	      ($chain-link-next-set! new-link (recur new-link ($chain-link-next old-link))))
+	  (recur new-prev ($chain-link-next old-link)))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (chain-partition-forwards {fun procedure?} {C chain?})
+  ($chain-partition-forwards fun C))
+
+(define ($chain-partition-forwards fun link)
+  (let recur ((new-in-prev  '())
+	      (new-ou-prev  '())
+	      (old-link     link))
+    (if (null? old-link)
+	(values '() '())
+      (let ((obj ($chain-link-ref old-link)))
+	(if (fun obj)
+	    (let ((new-in-link (make-chain-link obj)))
+	      ($chain-link-prev-set! new-in-link new-in-prev)
+	      (receive (in-next ou-next)
+		  (recur new-in-link new-ou-prev ($chain-link-next old-link))
+		($chain-link-next-set! new-in-link in-next)
+		(values new-in-link ou-next)))
+	  (let ((new-ou-link (make-chain-link obj)))
+	    ($chain-link-prev-set! new-ou-link new-ou-prev)
+	    (receive (in-next ou-next)
+		(recur new-in-prev new-ou-link ($chain-link-next old-link))
+	      ($chain-link-next-set! new-ou-link ou-next)
+	      (values in-next new-ou-link))))))))
 
 
 ;;;; conversion
