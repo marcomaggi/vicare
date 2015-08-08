@@ -591,7 +591,7 @@
   #t)
 
 
-(parametrise ((check-test-name 'operations))
+(parametrise ((check-test-name	'folding))
 
   (check
       (let ((C (chain)))
@@ -745,6 +745,473 @@
   #t)
 
 
+(parametrise ((check-test-name	'map))
+
+;;; mapping one argument
+
+  (check
+      (chain-map-forwards
+	  add1
+	(chain))
+    => '())
+
+  (check
+      (chain->list
+       (chain-map-forwards
+	   add1
+	 (chain 10)))
+    => '(11))
+
+  (check
+      (chain->list
+       (chain-map-forwards
+	   add1
+	 (chain 10 20 30)))
+    => '(11 21 31))
+
+;;; mapping two arguments
+
+  (check
+      (chain-map-forwards
+	  +
+	(chain)
+	(chain))
+    => '())
+
+  (check
+      (chain->list
+       (chain-map-forwards
+	   +
+	 (chain 1)
+	 (chain 10)))
+    => '(11))
+
+  (check
+      (chain->list
+       (chain-map-forwards
+	   +
+	 (chain 1  2  3)
+	 (chain 10 20 30)))
+    => '(11 22 33))
+
+;;; mapping three arguments
+
+  (check
+      (chain-map-forwards
+	  +
+	(chain)
+	(chain)
+	(chain))
+    => '())
+
+  (check
+      (chain->list
+       (chain-map-forwards
+	   +
+	 (chain 1)
+	 (chain 10)
+	 (chain 100)))
+    => '(111))
+
+  (check
+      (chain->list
+       (chain-map-forwards
+	   +
+	 (chain 1 2 3)
+	 (chain 10 20 30)
+	 (chain 100 200 300)))
+    => '(111 222 333))
+
+  ;;Different list length.
+  ;;
+  (check
+      (chain->list
+       (chain-map-forwards
+	   +
+	 (chain 1 2 3)
+	 (chain 10 20 30 40)
+	 (chain 100 200 300)))
+    => '(111 222 333))
+
+  #t)
+
+
+(parametrise ((check-test-name	'for-each))
+
+  (define (fun . obj*)
+    ;;Remember that ADD-RESULT returns its argument.
+    (add-result (list->vector obj*)))
+
+;;; --------------------------------------------------------------------
+;;; for-each'ing one argument
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    add-result
+	  (chain)))
+    => '(#!void ()))
+
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    add-result
+	  (chain 10)))
+    => '(10 (10)))
+
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    add-result
+	  (chain 10 20 30)))
+    => '(30 (10 20 30)))
+
+;;; for-each'ing two arguments
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain)
+	  (chain)))
+    => '(#!void ()))
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)))
+    => '(#(1 10) (#(1 10))))
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain 1  2  3)
+	  (chain 10 20 30)))
+    => '(#(3 30) (#(1 10) #(2 20) #(3 30))))
+
+;;; for-each'ing three arguments
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain)
+	  (chain)
+	  (chain)))
+    => '(#!void ()))
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)
+	  (chain 100)))
+    => '(#(1 10 100) (#(1 10 100))))
+
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 10 20 30)
+	  (chain 100 200 300)))
+    => '(#(3 30 300) (#(1 10 100) #(2 20 200) #(3 30 300))))
+
+  ;;Different list length.
+  ;;
+  (check
+      (with-result
+	(chain-for-each-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 10 20 30 40)
+	  (chain 100 200 300)))
+    => '(#(3 30 300) (#(1 10 100) #(2 20 200) #(3 30 300))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'for-all))
+
+  (define (fun . obj*)
+    (add-result (list->vector obj*))
+    ;;Remember that FOR-ALL returns the result of the last application.
+    (for-all values obj*))
+
+;;; --------------------------------------------------------------------
+;;; for-all'ing one argument
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    add-result
+	  (chain)))
+    => '(#t ()))
+
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    add-result
+	  (chain 10)))
+    => '(10 (10)))
+
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    add-result
+	  (chain 10 20 30)))
+    => '(30 (10 20 30)))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    add-result
+	  (chain 10 #f 30)))
+    => '(#f (10 #f)))
+
+;;; for-all'ing two arguments
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain)
+	  (chain)))
+    => '(#t ()))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)))
+    => '(10 (#(1 10))))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1  2  3)
+	  (chain 10 20 30)))
+    => '(30 (#(1 10) #(2 20) #(3 30))))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1  2  3)
+	  (chain 10 #f 30)))
+    => '(#f (#(1 10) #(2 #f))))
+
+;;; for-all'ing three arguments
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain)
+	  (chain)
+	  (chain)))
+    => '(#t ()))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)
+	  (chain 100)))
+    => '(100 (#(1 10 100))))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 10 20 30)
+	  (chain 100 200 300)))
+    => '(300 (#(1 10 100) #(2 20 200) #(3 30 300))))
+
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 10 #f 30)
+	  (chain 100 200 300)))
+    => '(#f (#(1 10 100) #(2 #f 200))))
+
+  ;;Different list length.
+  ;;
+  (check
+      (with-result
+	(chain-for-all-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 10 20 30 40)
+	  (chain 100 200 300)))
+    => '(300 (#(1 10 100) #(2 20 200) #(3 30 300))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'exists))
+
+  (define (fun . obj*)
+    (add-result (list->vector obj*))
+    (find (lambda (obj)
+	    (<= 30 obj))
+      obj*))
+
+;;; --------------------------------------------------------------------
+;;; exists'ing one argument
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain)))
+    => '(#f ()))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 10)))
+    => '(#f (#(10))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 30)))
+    => '(30 (#(30))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 10 20 30)))
+    => '(30 (#(10) #(20) #(30))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 10 20 25)))
+    => '(#f (#(10) #(20) #(25))))
+
+;;; exists'ing two arguments
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain)
+	  (chain)))
+    => '(#f ()))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)))
+    => '(#f (#(1 10))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1)
+	  (chain 30)))
+    => '(30 (#(1 30))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1  2  3)
+	  (chain 10 20 30)))
+    => '(30 (#(1 10) #(2 20) #(3 30))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1  2  3)
+	  (chain 10 20 25)))
+    => '(#f (#(1 10) #(2 20) #(3 25))))
+
+;;; exists'ing three arguments
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain)
+	  (chain)
+	  (chain)))
+    => '(#f ()))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)
+	  (chain 20)))
+    => '(#f (#(1 10 20))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1)
+	  (chain 10)
+	  (chain 100)))
+    => '(100 (#(1 10 100))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 1.1 2.1 30)
+	  (chain 1.2 2.2 300)))
+    => '(30 (#(1 1.1 1.2) #(2 2.1 2.2) #(3 30 300))))
+
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 1.1 2.1 3.1)
+	  (chain 1.2 2.2 3.2)))
+    => '(#f (#(1 1.1 1.2) #(2 2.1 2.2) #(3 3.1 3.2))))
+
+  ;;Different list length.
+  ;;
+  (check
+      (with-result
+	(chain-exists-forwards
+	    fun
+	  (chain 1 2 3)
+	  (chain 1.1 2.1 3.1 4.1)
+	  (chain 1.2 2.2 3.2)))
+    => '(#f (#(1 1.1 1.2) #(2 2.1 2.2) #(3 3.1 3.2))))
+
+  #t)
+
+
 (parametrise ((check-test-name 'conversion))
 
   (check
@@ -815,5 +1282,13 @@
 ;; eval: (put 'chain-fold-right-forwards	'scheme-indent-function 1)
 ;; eval: (put 'chain-fold-left-backwards	'scheme-indent-function 1)
 ;; eval: (put 'chain-fold-right-backwards	'scheme-indent-function 1)
+;; eval: (put 'chain-map-forwards		'scheme-indent-function 1)
+;; eval: (put 'chain-map-backwards		'scheme-indent-function 1)
+;; eval: (put 'chain-for-each-forwards		'scheme-indent-function 1)
+;; eval: (put 'chain-for-each-backwards		'scheme-indent-function 1)
+;; eval: (put 'chain-for-all-forwards		'scheme-indent-function 1)
+;; eval: (put 'chain-for-all-backwards		'scheme-indent-function 1)
+;; eval: (put 'chain-exists-forwards		'scheme-indent-function 1)
+;; eval: (put 'chain-exists-backwards		'scheme-indent-function 1)
 ;; End:
 

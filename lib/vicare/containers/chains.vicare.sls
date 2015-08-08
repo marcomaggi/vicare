@@ -64,6 +64,11 @@
     chain-fold-left-backwards		$chain-fold-left-backwards
     chain-fold-right-backwards		$chain-fold-right-backwards
 
+    chain-map-forwards			$chain-map-forwards
+    chain-for-each-forwards		$chain-for-each-forwards
+    chain-for-all-forwards		$chain-for-all-forwards
+    chain-exists-forwards		$chain-exists-forwards
+
     chain->list				$chain->list
     list->chain				$list->chain
     chain->vector			$chain->vector
@@ -400,7 +405,7 @@
 	   (next-link ($chain-link-prev link) (sub1 idx))))))
 
 
-;;;; basic list operations
+;;;; basic list operations: folding
 
 (define* (chain-fold-left-forwards {kons procedure?} knil {C chain?})
   ($chain-fold-left-forwards kons knil C))
@@ -457,6 +462,344 @@
 	  (kons ($chain-link-ref C) knil)
 	(kons ($chain-link-ref C)
 	      ($chain-fold-right-backwards kons knil prev-link))))))
+
+
+;;;; basic list operations: mapping
+
+(module (chain-map-forwards $chain-map-forwards)
+
+  (case-define* chain-map-forwards
+
+    (({fun procedure?} {C chain?})
+     ($chain-map-forwards fun C))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?})
+     ($chain-map-forwards fun C1 C2))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?} . {C* chain?})
+     ($chain-map-forwards/two-and-list fun C1 C2 C*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (case-define $chain-map-forwards
+    ((fun link)
+     (let recur ((new-prev  '())
+		 (old-link  link))
+       (if (null? old-link)
+	   '()
+	 (receive-and-return (new-link)
+	     (make-chain-link (fun ($chain-link-ref old-link)))
+	   ($chain-link-prev-set! new-link new-prev)
+	   ($chain-link-next-set! new-link (recur new-link ($chain-link-next old-link)))))))
+
+    ((fun link1 link2)
+     (let recur ((new-prev   '())
+		 (old-link1  link1)
+		 (old-link2  link2))
+       (cond ((null? old-link1)
+	      '())
+	     ((null? old-link2)
+	      '())
+	     (else
+	      (receive-and-return (new-link)
+		  (make-chain-link (fun ($chain-link-ref old-link1)
+					($chain-link-ref old-link2)))
+		($chain-link-prev-set! new-link new-prev)
+		($chain-link-next-set! new-link (recur new-link
+						       ($chain-link-next old-link1)
+						       ($chain-link-next old-link2))))))))
+
+    ((fun link1 link2 . link*)
+     ($chain-map-forwards/two-and-list fun link1 link2 link*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (define ($chain-map-forwards/two-and-list fun link1 link2 link*)
+    (let recur ((new-prev   '())
+		(old-link1  link1)
+		(old-link2  link2)
+		(old-link*  link*))
+      (cond ((null? old-link1)
+	     '())
+	    ((null? old-link2)
+	     '())
+	    ((find null? old-link*)
+	     '())
+	    (else
+	     (receive-and-return (new-link)
+		 (make-chain-link (apply fun
+					 ($chain-link-ref old-link1)
+					 ($chain-link-ref old-link2)
+					 (map (lambda (lnk)
+						($chain-link-ref lnk))
+					   old-link*)))
+	       ($<chain-link>-prev-set! new-link new-prev)
+	       ($<chain-link>-next-set! new-link (recur new-link
+							($chain-link-next old-link1)
+							($chain-link-next old-link2)
+							(map (lambda (lnk)
+							       ($chain-link-next lnk))
+							  old-link*))))))))
+
+  #| end of module |# )
+
+
+;;;; basic list operations: for-each
+
+(module (chain-for-each-forwards $chain-for-each-forwards)
+
+  (case-define* chain-for-each-forwards
+
+    (({fun procedure?} {C chain?})
+     ($chain-for-each-forwards fun C))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?})
+     ($chain-for-each-forwards fun C1 C2))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?} . {C* chain?})
+     ($chain-for-each-forwards/two-and-list fun C1 C2 C*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (case-define $chain-for-each-forwards
+    ((fun link)
+     (if (null? link)
+	 (void)
+       (let loop ((link link))
+	 (let ((next ($chain-link-next link)))
+	   (if (null? next)
+	       ;;Last application in tail position.
+	       (fun ($chain-link-ref link))
+	     (begin
+	       (fun ($chain-link-ref link))
+	       (loop next)))))))
+
+    ((fun link1 link2)
+     (if (or (null? link1)
+	     (null? link2))
+	 (void)
+       (let loop ((link1  link1)
+		  (link2  link2))
+	 (let ((next1 ($chain-link-next link1))
+	       (next2 ($chain-link-next link2)))
+	   (if (or (null? next1)
+		   (null? next2))
+	       ;;Last application in tail position.
+	       (fun ($chain-link-ref link1)
+		    ($chain-link-ref link2))
+	     (begin
+	       (fun ($chain-link-ref link1)
+		    ($chain-link-ref link2))
+	       (loop next1 next2)))))))
+
+    ((fun link1 link2 . link*)
+     ($chain-for-each-forwards/two-and-list fun link1 link2 link*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (define ($chain-for-each-forwards/two-and-list fun link1 link2 link*)
+    (if (or (null? link1)
+	    (null? link2)
+	    (find null? link*))
+	(void)
+      (let loop ((link1  link1)
+		 (link2  link2)
+		 (link*  link*))
+	(let ((next1  ($chain-link-next link1))
+	      (next2  ($chain-link-next link2))
+	      (next*  (map (lambda (lnk)
+			     ($chain-link-next lnk))
+			link*)))
+	  (if (or (null? next1)
+		  (null? next2)
+		  (find null? next*))
+	      ;;Last application in tail position.
+	      (apply fun
+		     ($chain-link-ref link1)
+		     ($chain-link-ref link2)
+		     (map (lambda (lnk)
+			    ($chain-link-ref lnk))
+		       link*))
+	    (begin
+	      (apply fun
+		     ($chain-link-ref link1)
+		     ($chain-link-ref link2)
+		     (map (lambda (lnk)
+			    ($chain-link-ref lnk))
+		       link*))
+	      (loop next1 next2 next*)))))))
+
+  #| end of module |# )
+
+
+;;;; basic list operations: for-all
+
+(module (chain-for-all-forwards $chain-for-all-forwards)
+
+  (case-define* chain-for-all-forwards
+
+    (({fun procedure?} {C chain?})
+     ($chain-for-all-forwards fun C))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?})
+     ($chain-for-all-forwards fun C1 C2))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?} . {C* chain?})
+     ($chain-for-all-forwards/two-and-list fun C1 C2 C*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (case-define $chain-for-all-forwards
+    ((fun link)
+     (if (null? link)
+	 #t
+       (let loop ((link link))
+	 (let ((next ($chain-link-next link)))
+	   (if (null? next)
+	       ;;Last application in tail position.
+	       (fun ($chain-link-ref link))
+	     (and (fun ($chain-link-ref link))
+		  (loop next)))))))
+
+    ((fun link1 link2)
+     (if (or (null? link1)
+	     (null? link2))
+	 #t
+       (let loop ((link1  link1)
+		  (link2  link2))
+	 (let ((next1 ($chain-link-next link1))
+	       (next2 ($chain-link-next link2)))
+	   (if (or (null? next1)
+		   (null? next2))
+	       ;;Last application in tail position.
+	       (fun ($chain-link-ref link1)
+		    ($chain-link-ref link2))
+	     (and (fun ($chain-link-ref link1)
+		       ($chain-link-ref link2))
+		  (loop next1 next2)))))))
+
+    ((fun link1 link2 . link*)
+     ($chain-for-all-forwards/two-and-list fun link1 link2 link*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (define ($chain-for-all-forwards/two-and-list fun link1 link2 link*)
+    (if (or (null? link1)
+	    (null? link2)
+	    (find null? link*))
+	#t
+      (let loop ((link1  link1)
+		 (link2  link2)
+		 (link*  link*))
+	(let ((next1  ($chain-link-next link1))
+	      (next2  ($chain-link-next link2))
+	      (next*  (map (lambda (lnk)
+			     ($chain-link-next lnk))
+			link*)))
+	  (if (or (null? next1)
+		  (null? next2)
+		  (find null? next*))
+	      ;;Last application in tail position.
+	      (apply fun
+		     ($chain-link-ref link1)
+		     ($chain-link-ref link2)
+		     (map (lambda (lnk)
+			    ($chain-link-ref lnk))
+		       link*))
+	    (and (apply fun
+			($chain-link-ref link1)
+			($chain-link-ref link2)
+			(map (lambda (lnk)
+			       ($chain-link-ref lnk))
+			  link*))
+		 (loop next1 next2 next*)))))))
+
+  #| end of module |# )
+
+
+;;;; basic list operations: exists
+
+(module (chain-exists-forwards $chain-exists-forwards)
+
+  (case-define* chain-exists-forwards
+
+    (({fun procedure?} {C chain?})
+     ($chain-exists-forwards fun C))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?})
+     ($chain-exists-forwards fun C1 C2))
+
+    (({fun procedure?} {C1 chain?} {C2 chain?} . {C* chain?})
+     ($chain-exists-forwards/two-and-list fun C1 C2 C*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (case-define $chain-exists-forwards
+    ((fun link)
+     (if (null? link)
+	 #f
+       (let loop ((link link))
+	 (let ((next ($chain-link-next link)))
+	   (if (null? next)
+	       ;;Last application in tail position.
+	       (fun ($chain-link-ref link))
+	     (or (fun ($chain-link-ref link))
+		 (loop next)))))))
+
+    ((fun link1 link2)
+     (if (or (null? link1)
+	     (null? link2))
+	 #f
+       (let loop ((link1  link1)
+		  (link2  link2))
+	 (let ((next1 ($chain-link-next link1))
+	       (next2 ($chain-link-next link2)))
+	   (if (or (null? next1)
+		   (null? next2))
+	       ;;Last application in tail position.
+	       (fun ($chain-link-ref link1)
+		    ($chain-link-ref link2))
+	     (or (fun ($chain-link-ref link1)
+		      ($chain-link-ref link2))
+		 (loop next1 next2)))))))
+
+    ((fun link1 link2 . link*)
+     ($chain-exists-forwards/two-and-list fun link1 link2 link*))
+
+    #| end of CASE-DEFINE* |# )
+
+  (define ($chain-exists-forwards/two-and-list fun link1 link2 link*)
+    (if (or (null? link1)
+	    (null? link2)
+	    (find null? link*))
+	#f
+      (let loop ((link1  link1)
+		 (link2  link2)
+		 (link*  link*))
+	(let ((next1  ($chain-link-next link1))
+	      (next2  ($chain-link-next link2))
+	      (next*  (map (lambda (lnk)
+			     ($chain-link-next lnk))
+			link*)))
+	  (if (or (null? next1)
+		  (null? next2)
+		  (find null? next*))
+	      ;;Last application in tail position.
+	      (apply fun
+		     ($chain-link-ref link1)
+		     ($chain-link-ref link2)
+		     (map (lambda (lnk)
+			    ($chain-link-ref lnk))
+		       link*))
+	    (or (apply fun
+		       ($chain-link-ref link1)
+		       ($chain-link-ref link2)
+		       (map (lambda (lnk)
+			      ($chain-link-ref lnk))
+			 link*))
+		(loop next1 next2 next*)))))))
+
+  #| end of module |# )
 
 
 ;;;; conversion

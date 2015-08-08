@@ -15,7 +15,9 @@ lists holding arbitrary Scheme objects.
 * chains inspection::           Inspecting chain objects.
 * chains access::               Chain accessors and mutators.
 * chains conversion::           Converting chains to other objects.
-* chains ops::                  Operations on chains.
+* chains folding::              Folding chains.
+* chains mapping::              Mapping chains.
+* chains searching::            Searching in chains.
 @end menu
 
 @c page
@@ -59,10 +61,10 @@ instances.  In this documentation: chain objects arguments to functions
 are indicated as @var{chain}, and they can be either null or instances
 of @objtype{<chain-link>}.
 
-The following bindings are exported by the library @library{vicare
-containers chains}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
 
 
 @deftp {@rnrs{6} Record Type} <chain-link>
@@ -167,10 +169,10 @@ follows:
 @section Inspecting chain objects
 
 
-The following bindings are exported by the library @library{vicare
-containers chains}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
 
 
 @defun chain-length? @var{chain}
@@ -201,10 +203,10 @@ Circular chains are forbidden.
 @section Chain accessors and mutators
 
 
-The following bindings are exported by the library @library{vicare
-containers chains}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
 
 
 @defun chain-link-next @var{link}
@@ -350,10 +352,10 @@ proceeds in the backwards direction.
 @section Converting chains to other objects
 
 
-The following bindings are exported by the library @library{vicare
-containers chains}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
 
 
 @defun chain->list @var{chain}
@@ -372,14 +374,14 @@ Convert to and from a chain and a vector.
 @end defun
 
 @c page
-@node chains ops
-@section Operations on chains
+@node chains folding
+@section Folding chains
 
 
-The following bindings are exported by the library @library{vicare
-containers chains}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
 
 
 @defun chain-fold-left-forwards @var{kons} @var{knil} @var{chain}
@@ -480,6 +482,74 @@ direction and proceeds up to and including @var{chain}.
         (chain-rear (chain 0 1 2 3 4)))))
 @result{} (2 1 0)
 @end lisp
+@end defun
+
+@c page
+@node chains mapping
+@section Mapping chains
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun chain-map-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+@defunx $chain-map-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+Map the procedure @var{fun} over the chain arguments; build and return a
+new chain holding the results of the application.  The iteration starts
+from the link given as argument, then it proceeds in the forwards
+direction; the iteration stops when reaching the end of one of the chain
+arguments.
+@end defun
+
+
+@defun chain-for-each-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+@defunx $chain-for-each-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+Apply the procedure @var{fun} over the chain arguments; discard the
+results.  The last procedure application is performed in tail position,
+so its return value is the return value of the iteration; if one of the
+arguments is null: the return value is @samp{#!void}.  The iteration
+starts from the link given as argument, then it proceeds in the forwards
+direction; the iteration stops when reaching the end of one of the chain
+arguments.
+@end defun
+
+@c page
+@node chains searching
+@section Searching in chains
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers chains}.  The bindings whose name is prefixed
+with @code{$} are unsafe operations: they do @strong{not} validate their
+arguments before accessing them.
+
+
+@defun chain-for-all-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+@defunx $chain-for-all-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+Apply the procedure @var{fun} over the chain arguments; stop at the
+first application returning @false{} and return @false{}.  If the
+iteration reaches the end of one argument: the last procedure
+application is performed in tail position, so its return value is the
+return value of the iteration; if one of the arguments is null: the
+return value is @true{}.  The iteration starts from the link given as
+argument, then it proceeds in the forwards direction; the iteration
+stops when reaching the end of one of the chain arguments.
+@end defun
+
+
+@defun chain-exists-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+@defunx $chain-exists-forwards @var{fun} @varo{chain} @var{chain} @dots{}
+Apply the procedure @var{fun} over the chain arguments; stop at the
+first application returning true and return the returned value.  If the
+iteration reaches the end of one argument: the last procedure
+application is performed in tail position, so its return value is the
+return value of the iteration; if one of the arguments is null: the
+return value is @false{}.  The iteration starts from the link given as
+argument, then it proceeds in the forwards direction; the iteration
+stops when reaching the end of one of the chain arguments.
 @end defun
 
 @c end of file
