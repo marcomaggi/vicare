@@ -444,11 +444,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (chain-first? obj)
-  (or (null? obj)
-      (and (chain-link? obj)
-	   (null? ($chain-link-prev obj)))))
-
 (case-define* chain-append-forwards
   (()
    '())
@@ -979,6 +974,11 @@
 (define (chain? obj)
   (or (chain-link? obj)
       (null?       obj)))
+
+;; (define (chain-first? obj)
+;;   (or (null? obj)
+;;       (and (chain-link? obj)
+;; 	   (null? ($chain-link-prev obj)))))
 
 (define (chain . item*)
   ($list->chain item*))
