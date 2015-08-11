@@ -7,18 +7,6 @@
 ;;;
 ;;;	An instance of <slots> is a chain (doubly-linked list) of built-in vectors.
 ;;;
-;;;	About the size of vectors
-;;;	-------------------------
-;;;
-;;;	A vector uses a machine word to  store the number of slots.  Vicare's garbage
-;;;	collector does not  move Scheme objects whose size exceeds  a page size: 4096
-;;;	bytes.  In a page there are: on  32-bit systems, 4096/4 = 1024 machine words;
-;;;	on 64-bit systems, 4096/8  = 512 machine words.  So if we  want to allocate a
-;;;	vector with total size  less than a page size (so that it  is moved by the GC
-;;;	and it does  not cause memory fragmentation) the maximum  number of slots is:
-;;;	on 32-bit systems, 1023 words; on 64-bit systems, 511 words.
-;;;
-;;;
 ;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -33,6 +21,119 @@
 ;;;You should have received a copy of  the GNU General Public License along with this
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
+
+
+;;;; slots internals
+;;
+;;A "<slots>"  instance is a  doubly-linked list of  built-in Scheme vectors  used as
+;;buffers for objects of any type.  The doubly-linked list is implemented with chains
+;;from  the library  "(vicare containers  chains)".
+;;
+;;All the buffers have  the same length; the buffers length must be  at least one; at
+;;most a buffer can hold "(greatest-fixnum)" objects.
+;;
+;;The layout of a "<slots>" instance with 3 chain links is:
+;;
+;;   --- first link
+;;    +---> ()
+;;    +---> |---|---|---|---|---|---|---| buffer
+;;    +---
+;;   ---  |
+;;    ^   v
+;;    |  --- second link
+;;     ---+
+;;        +---> |---|---|---|---|---|---|---| buffer
+;;        +---
+;;       ---  |
+;;        ^   v
+;;        |  --- third link
+;;         ---+
+;;            +---> |---|---|---|---|---|---|---| buffer
+;;            +---> ()
+;;           ---
+;;
+;;Middle buffers are always fully used: every slot contains a Scheme object.
+;;
+;;The first buffer can  be partially used; the objects are stored  towards the end of
+;;the vector; new obects are put in from the left:
+;;
+;;     free slots    used slots
+;;   |...........|...............|
+;;
+;;   |---|---|---|+++|+++|+++|+++| buffer
+;;             ^
+;;
+;;        fir-link-next-index
+;;
+;;the "<slots>" instance keeps the index of the next free slot in the first buffer.
+;;
+;;The last buffer can be partially used; the objects are stored towards the beginning
+;;of the vector; new obects are put in from the right:
+;;
+;;       used slots   free slots
+;;   |...............|...........|
+;;
+;;   |+++|+++|+++|+++|---|---|---| buffer
+;;                     ^
+;;            las-link-next-index
+;;
+;;the "<slots>" instance keeps the index of the next free slot in the last buffer.
+;;
+;;When the chain  contains only one link  (and so one buffer) a  possible scenario is
+;;this:
+;;
+;;     free slots          used slots          free slots
+;;   |...........|...........................|...........|
+;;
+;;   |---|---|---|+++|+++|+++|+++|+++|+++|+++|---|---|---| buffer
+;;             ^                               ^
+;;     fir-link-next-index              las-link-next-index
+;;
+;;when the chain  contains only one link (and  so one buffer) and the  only buffer is
+;;empty, the scenario is this:
+;;
+;;                         free slots
+;;   |...................................................|
+;;
+;;   |---|---|---|---|---|---|---|---|---|---|---|---|---| buffer
+;;                             ^
+;;           fir-link-next-index == las-link-next-index
+;;
+;;When the  chain contains two  link (and  so two buffers)  and both the  buffers are
+;;empty, the following scenario is possible:
+;;
+;;                         free slots
+;;   |...................................................|
+;;
+;;   |---|---|---|---|---|---|---|---|---|---|---|---|---| first buffer
+;;                                                     ^
+;;                                           fir-link-next-index
+;;
+;;                         free slots
+;;   |...................................................|
+;;
+;;   |---|---|---|---|---|---|---|---|---|---|---|---|---| last buffer
+;;     ^
+;;   las-link-next-index
+;;
+;;
+;;About the size of vectors used as buffers
+;;-----------------------------------------
+;;
+;;Built-in Scheme  vectors use a machine  word to store  the number of slots,  so the
+;;total memory block size of a vector is: one plus num-of-slots machine words.
+;;
+;;Vicare's garbage collector  does not move Scheme objects whose  size exceeds a page
+;;size: 4096 bytes.   In a page there  are: on 32-bit systems, 4096/4  = 1024 machine
+;;words; on 64-bit systems, 4096/8 = 512 machine words.
+;;
+;;So if we want to  allocate a vector with total size less than  a page size (so that
+;;it is  moved by  the GC  and it does  not cause  memory fragmentation)  the maximum
+;;number of slots is: on 32-bit systems, 1023 words; on 64-bit systems, 511 words.
+;;
+;;By using  15 as default buffer  length: we make  the total number of  machine words
+;;allocated for each buffer equal to 16, which is nice.
+;;
 
 
 #!vicare
@@ -56,6 +157,12 @@
 
     slots-fold-front		$slots-fold-front
     slots-fold-rear		$slots-fold-rear
+
+    slots-copy			$slots-copy
+    slots-map-front		$slots-map-front
+    slots-map-rear		$slots-map-rear
+    slots-for-each-front	$slots-for-each-front
+    slots-for-each-rear		$slots-for-each-rear
 
     slots->list			$slots->list
     list->slots			$list->slots
@@ -607,7 +714,62 @@
   #| end of module: $SLOTS-FOLD-REAR |# )
 
 
-;;;; miscellaneous operations
+;;;; operations
+
+(define* (slots-copy {dst-slots slots?} {src-slots slots?})
+  ($slots-copy dst-slots src-slots))
+
+(define ($slots-copy dst-slots src-slots)
+  ($slots-fold-front (lambda (knil obj)
+		       ($slots-push-rear! dst-slots obj)
+		       knil)
+    dst-slots src-slots))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-map-front {dst-slots slots?} {fun procedure?} {src-slots slots?})
+  ($slots-map-front dst-slots fun src-slots))
+
+(define ($slots-map-front dst-slots fun src-slots)
+  ($slots-fold-front (lambda (dst-slots obj)
+		       ($slots-push-rear! dst-slots (fun obj))
+		       dst-slots)
+    dst-slots src-slots))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-map-rear {dst-slots slots?} {fun procedure?} {src-slots slots?})
+  ($slots-map-rear dst-slots fun src-slots))
+
+(define ($slots-map-rear dst-slots fun src-slots)
+  ($slots-fold-rear (lambda (obj dst-slots)
+		      ($slots-push-front! dst-slots (fun obj))
+		      dst-slots)
+    dst-slots src-slots))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-for-each-front {fun procedure?} {slots slots?})
+  ($slots-for-each-front fun slots))
+
+(define ($slots-for-each-front fun slots)
+  ($slots-fold-front (lambda (knil obj)
+		       (fun obj)
+		       knil)
+    (void) slots))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-for-each-rear {fun procedure?} {slots slots?})
+  ($slots-for-each-rear fun slots))
+
+(define ($slots-for-each-rear fun slots)
+  ($slots-fold-rear (lambda (obj knil)
+		      (fun obj)
+		      knil)
+    (void) slots))
+
+;;; --------------------------------------------------------------------
 
 (define* (slots-purge! {slots slots?})
   ($slots-purge! slots))
@@ -634,14 +796,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (list->slots {ell list?})
-  ($list->slots ell))
+  ($list->slots (make-slots) ell))
 
-(define* ($list->slots {ell list?})
+(define* ($list->slots dst-slots ell)
   (fold-left (lambda (slots item)
 	       ($slots-push-rear! slots item)
 	       slots)
-    (make-slots)
-    ell))
+    dst-slots ell))
 
 ;;; --------------------------------------------------------------------
 
@@ -663,14 +824,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (vector->slots {vec vector?})
-  ($vector->slots vec))
+  ($vector->slots (make-slots) vec))
 
-(define ($vector->slots vec)
+(define ($vector->slots dst-slots vec)
   (vector-fold-left (lambda (slots item)
 		      ($slots-push-rear! slots item)
 		      slots)
-    (make-slots)
-    vec))
+    dst-slots vec))
 
 
 ;;;; done
@@ -681,4 +841,16 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8-unix
+;; eval: (put 'slots-fold-front		'scheme-indent-function 1)
+;; eval: (put 'slots-fold-rear		'scheme-indent-function 1)
+;; eval: (put 'slots-map-front		'scheme-indent-function 1)
+;; eval: (put 'slots-map-rear		'scheme-indent-function 1)
+;; eval: (put 'slots-for-each-front	'scheme-indent-function 1)
+;; eval: (put 'slots-for-each-rear	'scheme-indent-function 1)
+;; eval: (put '$slots-fold-front	'scheme-indent-function 1)
+;; eval: (put '$slots-fold-rear		'scheme-indent-function 1)
+;; eval: (put '$slots-map-front		'scheme-indent-function 1)
+;; eval: (put '$slots-map-rear		'scheme-indent-function 1)
+;; eval: (put '$slots-for-each-front	'scheme-indent-function 1)
+;; eval: (put '$slots-for-each-rear	'scheme-indent-function 1)
 ;; End:

@@ -52,6 +52,12 @@
     deque-fold-front		$deque-fold-front
     deque-fold-rear		$deque-fold-rear
 
+    deque-copy			$deque-copy
+    deque-map-front		$deque-map-front
+    deque-map-rear		$deque-map-rear
+    deque-for-each-front	$deque-for-each-front
+    deque-for-each-rear		$deque-for-each-rear
+
     deque->list			list->deque
     deque->vector		vector->deque)
   (import (vicare)
@@ -143,58 +149,88 @@
 
 ;;;; aliases
 
-(define-alias  deque-empty?		 slots-empty?)
-(define-alias $deque-empty?		$slots-empty?)
-
-(define-alias  deque-not-empty?		 slots-not-empty?)
-(define-alias $deque-not-empty?		$slots-not-empty?)
-
-(define-alias  deque-size		 slots-size)
-(define-alias $deque-size		$slots-size)
+(define-syntax-rule (declare-operation-unary ?safe ?unsafe)
+  (define* (?safe {D deque?})
+    (?unsafe D)))
 
 ;;; --------------------------------------------------------------------
 
-(define-alias  deque-front		 slots-front)
-(define-alias $deque-front		$slots-front)
+(declare-operation-unary deque-empty?		$deque-empty?)
+(declare-operation-unary deque-not-empty?	$deque-not-empty?)
+(declare-operation-unary deque-size		$deque-size)
 
-(define-alias  deque-rear		 slots-rear)
-(define-alias $deque-rear		$slots-rear)
+(define-alias $deque-empty?			$slots-empty?)
+(define-alias $deque-not-empty?			$slots-not-empty?)
+(define-alias $deque-size			$slots-size)
 
-(define-alias  deque-push-front!	 slots-push-front!)
+;;; --------------------------------------------------------------------
+
+(declare-operation-unary deque-front		$deque-front)
+(declare-operation-unary deque-rear		$deque-rear)
+
+(define-alias $deque-front			$slots-front)
+(define-alias $deque-rear			$slots-rear)
+
+;;; --------------------------------------------------------------------
+
+(define* (deque-push-front! {D deque?} obj)
+  ($deque-push-front! D obj))
+
+(define* (deque-push-rear! {D deque?} obj)
+  ($deque-push-rear! D obj))
+
+(define* (deque-fold-front {kons procedure?} knil {D deque?})
+  ($deque-fold-front kons knil D))
+
+(define* (deque-fold-rear {kons procedure?} knil {D deque?})
+  ($deque-fold-rear kons knil D))
+
+(define* (deque-copy {dst deque?} {src deque?})
+  ($deque-copy dst src))
+
+(define* (deque-map-front {dst deque?} {fun procedure?} {src deque?})
+  ($deque-map-front dst fun src))
+
+(define* (deque-map-rear  {dst deque?} {fun procedure?} {src deque?})
+  ($deque-map-rear dst fun src))
+
+(define* (deque-for-each-front {fun procedure?} {src deque?})
+  ($deque-for-each-front fun src))
+
+(define* (deque-for-each-rear  {fun procedure?} {src deque?})
+  ($deque-for-each-rear fun src))
+
+(declare-operation-unary deque-pop-front!	$deque-pop-front!)
+(declare-operation-unary deque-pop-rear!	$deque-pop-rear!)
+(declare-operation-unary deque-purge!		$deque-purge!)
+
 (define-alias $deque-push-front!	$slots-push-front!)
-
-(define-alias  deque-push-rear!		 slots-push-rear!)
 (define-alias $deque-push-rear!		$slots-push-rear!)
-
-(define-alias  deque-pop-front!		 slots-pop-front!)
 (define-alias $deque-pop-front!		$slots-pop-front!)
-
-(define-alias  deque-pop-rear!		 slots-pop-rear!)
 (define-alias $deque-pop-rear!		$slots-pop-rear!)
-
-(define-alias  deque-purge!		 slots-purge!)
-(define-alias $deque-purge!		$slots-purge!)
-
-;;; --------------------------------------------------------------------
-
-(define-alias  deque-fold-front		 slots-fold-front)
 (define-alias $deque-fold-front		$slots-fold-front)
-
-(define-alias  deque-fold-rear		 slots-fold-rear)
 (define-alias $deque-fold-rear		$slots-fold-rear)
+(define-alias $deque-map-front		$slots-map-front)
+(define-alias $deque-map-rear		$slots-map-rear)
+(define-alias $deque-for-each-front	$slots-for-each-front)
+(define-alias $deque-for-each-rear	$slots-for-each-rear)
+(define-alias $deque-purge!		$slots-purge!)
+(define-alias $deque-copy		$slots-copy)
 
 ;;; --------------------------------------------------------------------
 
-(define-alias  deque->list		 slots->list)
+(declare-operation-unary deque->list	$deque->list)
+(declare-operation-unary deque->vector	$deque->vector)
+
+(define* (list->deque {ell list?})
+  ($list->slots (make-deque) ell))
+
+(define* (vector->deque {vec vector?})
+  ($vector->slots (make-deque) vec))
+
 (define-alias $deque->list		$slots->list)
-
-(define-alias  deque->vector		 slots->vector)
 (define-alias $deque->vector		$slots->vector)
-
-(define-alias  list->deque		 list->slots)
 (define-alias $list->deque		$list->slots)
-
-(define-alias  vector->deque		 vector->slots)
 (define-alias $vector->deque		$vector->slots)
 
 

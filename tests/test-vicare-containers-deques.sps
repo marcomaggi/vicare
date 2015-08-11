@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare containers deques)
   (vicare checks))
@@ -79,16 +79,19 @@
 ;;
 (define-constant LIST-5			'(0 1 2 3 4))
 (define-constant LIST-5-REVERSED	(reverse LIST-5))
+(define-constant LIST-5-NEGATED		(map - LIST-5))
 
 ;;A list of 20 objects, enqueued in a deque, is stored in two buffers.
 ;;
 (define-constant LIST-20		(make-list-20))
 (define-constant LIST-20-REVERSED	(reverse LIST-20))
+(define-constant LIST-20-NEGATED	(map - LIST-20))
 
 ;;A list of 100 objects, enqueued in a deque, is stored in multiple buffers.
 ;;
 (define-constant LIST-100		(make-list-100))
 (define-constant LIST-100-REVERSED	(reverse LIST-100))
+(define-constant LIST-100-NEGATED	(map - LIST-100))
 
 ;;A vector of 5 objects, enqueued in a deque, is fully stored in a single buffer.
 ;;
@@ -633,6 +636,81 @@
 
 (parametrise ((check-test-name	'operations))
 
+  (check
+      (deque->list (deque-copy (make-deque) (deque)))
+    => '())
+
+  (check
+      (deque->list (deque-copy (make-deque) (list->deque LIST-5)))
+    => LIST-5)
+
+  (check
+      (deque->list (deque-copy (make-deque) (list->deque LIST-20)))
+    => LIST-20)
+
+  (check
+      (deque->list (deque-copy (make-deque) (list->deque LIST-100)))
+    => LIST-100)
+
+;;; --------------------------------------------------------------------
+
+  (check (deque->list (deque-map-front (deque) - (deque)))			=> '())
+  (check (deque->list (deque-map-front (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
+  (check (deque->list (deque-map-front (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
+  (check (deque->list (deque-map-front (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
+
+  (check (deque->list (deque-map-rear (deque) - (deque)))			=> '())
+  (check (deque->list (deque-map-rear (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
+  (check (deque->list (deque-map-rear (deque) - (list->deque LIST-20)))		=> LIST-20-NEGATED)
+  (check (deque->list (deque-map-rear (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
+
+;;; --------------------------------------------------------------------
+;;; for-each-front
+
+  (check
+      (with-result
+	(deque-for-each-front add-result (deque)))
+    => '(#!void ()))
+
+  (check
+      (with-result
+	(deque-for-each-front add-result (list->deque LIST-5)))
+    => `(#!void ,LIST-5))
+
+  (check
+      (with-result
+	(deque-for-each-front add-result (list->deque LIST-20)))
+    => `(#!void ,LIST-20))
+
+  (check
+      (with-result
+	(deque-for-each-front add-result (list->deque LIST-100)))
+    => `(#!void ,LIST-100))
+
+;;; --------------------------------------------------------------------
+;;; for-each-rear
+
+  (check
+      (with-result
+	(deque-for-each-rear add-result (deque)))
+    => '(#!void ()))
+
+  (check
+      (with-result
+	(deque-for-each-rear add-result (list->deque LIST-5)))
+    => `(#!void ,LIST-5-REVERSED))
+
+  (check
+      (with-result
+	(deque-for-each-rear add-result (list->deque LIST-20)))
+    => `(#!void ,LIST-20-REVERSED))
+
+  (check
+      (with-result
+	(deque-for-each-rear add-result (list->deque LIST-100)))
+    => `(#!void ,LIST-100-REVERSED))
+
+;;; --------------------------------------------------------------------
 ;;; purging
 
   (check
