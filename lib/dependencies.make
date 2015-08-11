@@ -1330,19 +1330,35 @@ endif
 EXTRA_DIST += lib/vicare/containers/chains.vicare.sls
 CLEANFILES += lib/vicare/containers/chains.fasl
 
-lib/vicare/containers/stacks.fasl: \
-		lib/vicare/containers/stacks.vicare.sls \
+lib/vicare/containers/slots.fasl: \
+		lib/vicare/containers/slots.vicare.sls \
+		lib/vicare/containers/chains.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-lib_vicare_containers_stacks_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_stacks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_stacks_fasl_DATA = lib/vicare/containers/stacks.fasl
+lib_vicare_containers_slots_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_slots_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_slots_fasl_DATA = lib/vicare/containers/slots.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_stacks_vicare_sls_DATA = lib/vicare/containers/stacks.vicare.sls
+dist_lib_vicare_containers_slots_vicare_sls_DATA = lib/vicare/containers/slots.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/stacks.vicare.sls
-CLEANFILES += lib/vicare/containers/stacks.fasl
+EXTRA_DIST += lib/vicare/containers/slots.vicare.sls
+CLEANFILES += lib/vicare/containers/slots.fasl
+
+lib/vicare/containers/deques.fasl: \
+		lib/vicare/containers/deques.vicare.sls \
+		lib/vicare/containers/slots.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_deques_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_deques_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_deques_fasl_DATA = lib/vicare/containers/deques.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_deques_vicare_sls_DATA = lib/vicare/containers/deques.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/deques.vicare.sls
+CLEANFILES += lib/vicare/containers/deques.fasl
 
 lib/vicare/containers/queues.fasl: \
 		lib/vicare/containers/queues.vicare.sls \
@@ -1358,19 +1374,19 @@ endif
 EXTRA_DIST += lib/vicare/containers/queues.vicare.sls
 CLEANFILES += lib/vicare/containers/queues.fasl
 
-lib/vicare/containers/deques.fasl: \
-		lib/vicare/containers/deques.vicare.sls \
+lib/vicare/containers/stacks.fasl: \
+		lib/vicare/containers/stacks.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-lib_vicare_containers_deques_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_deques_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_deques_fasl_DATA = lib/vicare/containers/deques.fasl
+lib_vicare_containers_stacks_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_stacks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_stacks_fasl_DATA = lib/vicare/containers/stacks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_deques_vicare_sls_DATA = lib/vicare/containers/deques.vicare.sls
+dist_lib_vicare_containers_stacks_vicare_sls_DATA = lib/vicare/containers/stacks.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/deques.vicare.sls
-CLEANFILES += lib/vicare/containers/deques.fasl
+EXTRA_DIST += lib/vicare/containers/stacks.vicare.sls
+CLEANFILES += lib/vicare/containers/stacks.fasl
 
 lib/vicare/containers/binary-heaps.fasl: \
 		lib/vicare/containers/binary-heaps.vicare.sls \

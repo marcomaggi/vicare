@@ -7,7 +7,7 @@
 
 
 The library @library{vicare containers queues} implements queues
-(pronounced ``kews) holding arbitrary Scheme objects and designed for
+(pronounced ``kews'') holding arbitrary Scheme objects and designed for
 efficient first--in/first--out operations.
 
 @menu

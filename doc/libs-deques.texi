@@ -6,14 +6,15 @@
 @cindex Library @library{vicare containers deques}
 
 
-The library @library{vicare containers deques} implements deques holding
-arbitrary Scheme objects and designed for efficient insertion and
-removal at both ends.
+The library @library{vicare containers deques} implements deques
+(pronounced ``decks'') holding arbitrary Scheme objects and designed for
+efficient insertion and removal at both ends.
 
 @menu
 * deques objects::              Deque objects.
 * deques inspection::           Inspecting deque objects.
 * deques access::               Deque accessors and mutators.
+* deques folding::              Folding over deques.
 * deques conversion::           Converting deques to other objects.
 @end menu
 
@@ -22,29 +23,47 @@ removal at both ends.
 @section Deque objects
 
 
-The following bindings are exported by the library @library{vicare
-containers deques}.
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.
 
 
-@deftp {@rnrs{6} Record Type} deque
+@deftp {@rnrs{6} Record Type} <deque>
 @cindex @var{deque} argument
 @cindex Argument @var{deque}
-Record type representing a deque object.  The @objtype{deque} type is
+Record type representing a deque object.  The @objtype{<deque>} type is
 non--generative and available for subtyping.  In this documentation
-@objtype{deque} object arguments to functions are indicated as
+@objtype{<deque>} object arguments to functions are indicated as
 @var{deque}.
 @end deftp
 
 
-@defun make-deque @var{obj} @dots{}
-Build and return a @objtype{deque} object holding the given objects,
-which are pushed on the deque from left to right.
+@defun make-deque
+@defunx make-deque @var{buffer-length}
+Build and return a new @objtype{<deque>} object.  The optional argument
+@var{buffer-length} must be a non--negative fixnum representing the
+number of slots in the internal object buffers; when not given, it
+defaults to @math{15}.
 @end defun
 
 
 @defun deque? @var{obj}
-Return @true{} if @var{obj} is a record of type @objtype{deque};
+Return @true{} if @var{obj} is a record of type @objtype{<deque>};
 otherwise return @false{}.
+@end defun
+
+
+@defun deque @var{obj} @dots{}
+Build and return a @objtype{<deque>} object holding the given objects,
+which are pushed on the deque left to right from the rear side.  The
+size of the internal buffers is set to the default.
+
+@lisp
+(define D
+  (deque 0 1 2))
+
+(deque-front D)         @result{} 0
+(deque-rear  D)         @result{} 2
+@end lisp
 @end defun
 
 @c ------------------------------------------------------------
@@ -90,7 +109,7 @@ creation order.
 @defun deque-hash @var{deque}
 @defunx $deque-hash @var{deque}
 Return an exact integer to be used as hashtable key for @var{deque}.
-Hashtables having a @objtype{deque} as key can be instantiated as
+Hashtables having a @objtype{<deque>} as key can be instantiated as
 follows:
 
 @example
@@ -103,10 +122,10 @@ follows:
 @section Inspecting deque objects
 
 
-The following bindings are exported by the library @library{vicare
-containers deques}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun deque-empty? @var{deque}
@@ -132,10 +151,10 @@ Return an exact integer representing the number of objects in @var{deque}.
 @section Deque accessors and mutators
 
 
-The following bindings are exported by the library @library{vicare
-containers deques}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun deque-front @var{deque}
@@ -184,26 +203,93 @@ Remove all the elements from @var{deque}.
 @end defun
 
 @c page
+@node deques folding
+@section Folding over deques
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun deque-fold-front @var{kons} @var{knil} @var{deque}
+@defunx $deque-fold-front @var{kons} @var{knil} @var{deque}
+Analogous to @func{fold-left} for lists.  Fold the procedure @var{kons}
+of the the objects from @var{deque}.
+
+@lisp
+(define D
+  (deque 0 1 2 3 4 5))
+
+(deque-fold-front (lambda (knil obj)
+                    (cons obj knil))
+  '() D)
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun deque-fold-rear @var{kons} @var{knil} @var{deque}
+@defunx $deque-fold-rear @var{kons} @var{knil} @var{deque}
+Analogous to @func{fold-right} for lists.  Fold the procedure @var{kons}
+of the the objects from @var{deque}.
+
+@lisp
+(define D
+  (deque 0 1 2 3 4 5))
+
+(deque-fold-rear (lambda (obj knil)
+                   (cons obj knil))
+  '() D)
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
+
+@c page
 @node deques conversion
 @section Converting deques to other objects
 
 
-The following bindings are exported by the library @library{vicare
-containers deques}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun deque->list @var{deque}
+@defunx $deque->list @var{deque}
 @defunx list->deque @var{list}
+@defunx $list->deque @var{list}
 Convert to and from a deque and a proper list.  Objects from the list
-are pushed on the deque from left to right.
+are pushed on the deque left--to--right from the rear side.
+
+@lisp
+(define D
+  (list->deque '(0 1 2)))
+
+(deque-front  D)        @result{} 0
+(deque-rear   D)        @result{} 2
+(list->vector D)        @result{} (0 1 2)
+@end lisp
 @end defun
 
 
 @defun deque->vector @var{deque}
+@defunx $deque->vector @var{deque}
 @defunx vector->deque @var{vector}
-Convert to and from a deque and a vector.
+@defunx $vector->deque @var{vector}
+Convert to and from a deque and a vector.  Objects from the list are
+pushed on the deque left--to--right from the rear side.
+
+@lisp
+(define D
+  (vector->deque '#(0 1 2)))
+
+(deque-front   D)       @result{} 0
+(deque-rear    D)       @result{} 2
+(deque->vector D)       @result{} #(0 1 2)
+@end lisp
 @end defun
 
 @c end of file

@@ -49,68 +49,36 @@
     deque-pop-rear!		$deque-pop-rear!
     deque-purge!		$deque-purge!
 
+    deque-fold-front		$deque-fold-front
+    deque-fold-rear		$deque-fold-rear
+
     deque->list			list->deque
     deque->vector		vector->deque)
   (import (vicare)
-    (vicare system $fx)
-    (vicare system $pairs))
-
-
-;;; helpers
-
-(define-inline (list-copy/stx ?ell)
-  (let recur ((ell ?ell))
-    (if (pair? ell)
-	(cons ($car ell) (recur ($cdr ell)))
-      ell)))
-
-(define-inline (last-pair/stx ?x)
-  ;;*WARNING* Do  not rename LAST-PAIR/STX to LAST-PAIR,  it would clash
-  ;;with the LAST-PAIR field of <deque> records.
-  ;;
-  (let ((x ?x))
-    (if (null? x)
-	#f
-      (let loop ((x x))
-	(if (pair? ($cdr x))
-	    (loop ($cdr x))
-	  x)))))
+    (vicare containers slots))
 
 
 ;;;; data structure
 
 (define-record-type (<deque> make-deque deque?)
   (nongenerative vicare:containers:<deque>)
+  (parent <slots>)
   (protocol
-   (lambda (make-record)
-     (lambda ()
-       (make-record #f '() #f))))
-  (fields (mutable uid)
-	  (mutable first-pair)
-		;First node in the doubly-linked list.
-	  (mutable last-pair)
-		;Last node in the doubly-linked list.
-	  ))
+   (lambda (make-slots)
+     (case-lambda
+      (()
+       ((make-slots) #f))
+      ((buffer-length)
+       ((make-slots buffer-length) #f)))))
+  (fields (mutable uid)))
 
 ;;; --------------------------------------------------------------------
 
 (define-alias  deque-uid		 <deque>-uid)
 (define-alias $deque-uid		$<deque>-uid)
 
-(define-alias  deque-first-pair		 <deque>-first-pair)
-(define-alias $deque-first-pair		$<deque>-first-pair)
-
-(define-alias  deque-last-pair		 <deque>-last-pair)
-(define-alias $deque-last-pair		$<deque>-last-pair)
-
 (define-alias  deque-uid-set!		 <deque>-uid-set!)
 (define-alias $deque-uid-set!		$<deque>-uid-set!)
-
-(define-alias  deque-first-pair-set!	 <deque>-first-pair-set!)
-(define-alias $deque-first-pair-set!	$<deque>-first-pair-set!)
-
-(define-alias  deque-last-pair-set!	 <deque>-last-pair-set!)
-(define-alias $deque-last-pair-set!	$<deque>-last-pair-set!)
 
 ;;; --------------------------------------------------------------------
 
@@ -173,130 +141,61 @@
   (property-list ($deque-uid Q)))
 
 
-;;;; inspection
+;;;; aliases
 
-(define* (deque-empty? {Q deque?})
-  ($deque-empty? Q))
+(define-alias  deque-empty?		 slots-empty?)
+(define-alias $deque-empty?		$slots-empty?)
 
-(define ($deque-empty? Q)
-  ($fxzero? ($deque-size Q)))
+(define-alias  deque-not-empty?		 slots-not-empty?)
+(define-alias $deque-not-empty?		$slots-not-empty?)
 
-;;; --------------------------------------------------------------------
-
-(define* (deque-not-empty? {Q deque?})
-  ($deque-not-empty? Q))
-
-(define ($deque-not-empty? Q)
-  ($fxpositive? ($deque-size Q)))
+(define-alias  deque-size		 slots-size)
+(define-alias $deque-size		$slots-size)
 
 ;;; --------------------------------------------------------------------
 
-(define* (deque-size {Q deque?})
-  ($deque-size Q))
+(define-alias  deque-front		 slots-front)
+(define-alias $deque-front		$slots-front)
 
-(define ($deque-size Q)
-  (length ($deque-first-pair Q)))
+(define-alias  deque-rear		 slots-rear)
+(define-alias $deque-rear		$slots-rear)
 
-
-;;;; accessors and mutators
+(define-alias  deque-push-front!	 slots-push-front!)
+(define-alias $deque-push-front!	$slots-push-front!)
 
-(define* (deque-front {Q deque?})
-  ($deque-front Q))
+(define-alias  deque-push-rear!		 slots-push-rear!)
+(define-alias $deque-push-rear!		$slots-push-rear!)
 
-(define* ($deque-front Q)
-  (let ((first-pair ($deque-first-pair Q)))
-    (if (pair? first-pair)
-	(car first-pair)
-      (assertion-violation __who__ "deque is empty" Q))))
+(define-alias  deque-pop-front!		 slots-pop-front!)
+(define-alias $deque-pop-front!		$slots-pop-front!)
 
-;;; --------------------------------------------------------------------
+(define-alias  deque-pop-rear!		 slots-pop-rear!)
+(define-alias $deque-pop-rear!		$slots-pop-rear!)
 
-(define* (deque-rear {Q deque?})
-  ($deque-rear Q))
-
-(define* ($deque-rear Q)
-  (let ((last-pair ($deque-last-pair Q)))
-    (if (pair? last-pair)
-	(car last-pair)
-      (assertion-violation __who__ "deque is empty" Q))))
+(define-alias  deque-purge!		 slots-purge!)
+(define-alias $deque-purge!		$slots-purge!)
 
 ;;; --------------------------------------------------------------------
 
-(define* (deque-push-front! {S deque?} obj)
-  ($deque-push-front! S obj))
+(define-alias  deque-fold-front		 slots-fold-front)
+(define-alias $deque-fold-front		$slots-fold-front)
 
-(define ($deque-push-front! S obj)
-  ($deque-first-pair-set! S (cons obj ($deque-first-pair S))))
-
-;;; --------------------------------------------------------------------
-
-(define* (deque-push-rear! {Q deque?} obj)
-  ($deque-push-rear! Q obj))
-
-(define ($deque-push-rear! Q obj)
-  (let ((new-last-pair (list obj)))
-    (if (pair? ($deque-first-pair Q))
-	;;The deque  is not empty: append  the new last-pair to  the old
-	;;last-pair.
-	($set-cdr! ($deque-last-pair Q) new-last-pair)
-      ;;The  deque  is  empty:  the   new  last-pair  is  also  the  new
-      ;;first-pair, so store it the first-pair slot.
-      ($deque-first-pair-set! Q new-last-pair))
-    ;;Store the new last-pair in the last-pair slot.
-    ($deque-last-pair-set! Q new-last-pair)))
+(define-alias  deque-fold-rear		 slots-fold-rear)
+(define-alias $deque-fold-rear		$slots-fold-rear)
 
 ;;; --------------------------------------------------------------------
 
-(define* (deque-pop-front! {Q deque?})
-  ($deque-pop-front! Q))
+(define-alias  deque->list		 slots->list)
+(define-alias $deque->list		$slots->list)
 
-(define* ($deque-pop-front! Q)
-  (let ((old-first-pair ($deque-first-pair Q)))
-    (if (pair? old-first-pair)
-	(begin
-	  ;;The new first-pair is the  next of the old first-pair, which
-	  ;;can be null.
-	  ($deque-first-pair-set! Q ($cdr old-first-pair))
-	  ;;If the old  first-pair is also the old  last-pair: reset the
-	  ;;last-pair so that the deque results as empty.
-	  (when (eq? ($deque-last-pair Q) old-first-pair)
-	    ($deque-last-pair-set! Q #f)))
-      (error __who__ "deque is empty" Q))
-    ($car old-first-pair)))
+(define-alias  deque->vector		 slots->vector)
+(define-alias $deque->vector		$slots->vector)
 
-;;; --------------------------------------------------------------------
+(define-alias  list->deque		 list->slots)
+(define-alias $list->deque		$list->slots)
 
-(define* (deque-pop-rear! {Q deque?})
-  ($deque-pop-rear! Q))
-
-(define* ($deque-pop-rear! Q)
-  (void))
-
-;;; --------------------------------------------------------------------
-
-(define* (deque-purge! {Q deque?})
-  ($deque-purge! Q))
-
-(define ($deque-purge! Q)
-  ($deque-first-pair-set! Q '())
-  ($deque-last-pair-set!  Q #f))
-
-
-;;;; conversion
-
-(define* (deque->list {Q deque?})
-  (list-copy/stx ($deque-first-pair Q)))
-
-(define* (list->deque {ell list?})
-  (apply deque ell))
-
-;;; --------------------------------------------------------------------
-
-(define* (deque->vector {Q deque?})
-  (list->vector ($deque-first-pair Q)))
-
-(define* (vector->deque {vec vector?})
-  (apply deque (vector->list vec)))
+(define-alias  vector->deque		 vector->slots)
+(define-alias $vector->deque		$vector->slots)
 
 
 ;;;; done
