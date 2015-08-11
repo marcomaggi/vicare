@@ -6,9 +6,9 @@
 @cindex Library @library{vicare containers queues}
 
 
-The library @library{vicare containers queues} implements queues holding
-arbitrary Scheme objects and designed for efficient first--in/first--out
-operations.
+The library @library{vicare containers queues} implements queues
+(pronounced ``kews) holding arbitrary Scheme objects and designed for
+efficient first--in/first--out operations.
 
 @menu
 * queues objects::              Queue objects.
