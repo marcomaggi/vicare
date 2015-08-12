@@ -652,7 +652,10 @@
       (deque->list (deque-copy (make-deque) (list->deque LIST-100)))
     => LIST-100)
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'mapping))
 
   (check (deque->list (deque-map-left (deque) - (deque)))			=> '())
   (check (deque->list (deque-map-left (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
@@ -669,7 +672,11 @@
   (check (deque->list (deque-map (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
   (check (deque->list (deque-map (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'for-each))
+
 ;;; for-each-left
 
   (check
@@ -738,8 +745,10 @@
 	(deque-for-each add-result (list->deque LIST-100)))
     => `(#!void ,LIST-100))
 
-;;; --------------------------------------------------------------------
-;;; purging
+  #t)
+
+
+(parametrise ((check-test-name	'purge))
 
   (check
       (let ((D (list->deque LIST-100)))
