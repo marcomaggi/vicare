@@ -1,5 +1,5 @@
 @node stacks
-@chapter Simple stacks
+@chapter Stacks of objects
 
 
 @cindex @library{vicare containers stacks}, library

@@ -10,26 +10,25 @@
 ;;;
 ;;;Copyright (c) 2009, 2010, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
 (library (vicare containers queues)
   (export
-    queue
-    make-queue			queue?
+    <queue>			make-queue
+    queue			queue?
 
     queue-hash			$queue-hash
     queue-putprop		$queue-putprop
@@ -48,45 +47,81 @@
     queue-pop!			$queue-pop!
     queue-purge!		$queue-purge!
 
+    queue-fold-left		$queue-fold-left
+    queue-fold-right		$queue-fold-right
+
+    queue-map-left		$queue-map-left
+    queue-map-right		$queue-map-right
+    queue-for-each-left		$queue-for-each-left
+    queue-for-each-right	$queue-for-each-right
+
+    (rename
+     (queue-map-left		queue-map)
+     ($queue-map-left		$queue-map)
+     (queue-for-each-left	queue-for-each)
+     ($queue-for-each-left	$queue-for-each))
+
+    queue-find-left		$queue-find-left
+    queue-find-right		$queue-find-right
+    queue-for-all		$queue-for-all
+    queue-exists-left		$queue-exists-left
+    queue-exists-right		$queue-exists-right
+
+    (rename
+     (queue-find-left		queue-find)
+     ($queue-find-left		$queue-find)
+     (queue-exists-left		queue-exists)
+     ($queue-exists-left	$queue-exists))
+
+    queue-filter		$queue-filter
+    queue-partition		$queue-partition
+
+    queue-copy!			$queue-copy!
+    queue-reverse!		$queue-reverse!
+
     queue->list			list->queue
     queue->vector		vector->queue)
   (import (vicare)
-    (vicare system $pairs)
-    (vicare system $numerics))
+    (vicare containers slots))
 
 
-;;; helpers
+;;;; helpers
 
-(define-inline (list-copy/stx ?ell)
-  (let recur ((ell ?ell))
-    (if (pair? ell)
-	(cons ($car ell) (recur ($cdr ell)))
-      ell)))
-
-(define-inline (last-pair/stx ?x)
-  ;;*WARNING* Do  not rename LAST-PAIR/STX to LAST-PAIR,  it would clash
-  ;;with the LAST-PAIR field of <queue> records.
-  ;;
-  (let ((x ?x))
-    (if (null? x)
-	#f
-      (let loop ((x x))
-	(if (pair? ($cdr x))
-	    (loop ($cdr x))
-	  x)))))
+(define-syntax-rule (declare-operation-unary ?safe ?unsafe)
+  (define* (?safe {D queue?})
+    (?unsafe D)))
 
 
 ;;;; data structure
 
-(define-record-type queue
-  (nongenerative vicare:containers:queue)
+(define-record-type (<queue> make-queue queue?)
+  (nongenerative vicare:containers:<queue>)
+  (parent <slots>)
   (protocol
-   (lambda (make-record)
-     (lambda items
-       (make-record #f items (last-pair/stx items)))))
-  (fields (mutable uid)
-	  (mutable first-pair)
-	  (mutable last-pair)))
+   (lambda (make-slots)
+     (case-lambda
+      (()
+       ((make-slots) #f))
+      ((buffer-length)
+       ((make-slots buffer-length) #f)))))
+  (fields (mutable uid)))
+
+;;; --------------------------------------------------------------------
+
+(define-alias  queue-uid		 <queue>-uid)
+(define-alias $queue-uid		$<queue>-uid)
+
+(define-alias  queue-uid-set!		 <queue>-uid-set!)
+(define-alias $queue-uid-set!		$<queue>-uid-set!)
+
+;;; --------------------------------------------------------------------
+
+(define (queue . item*)
+  (receive-and-return (D)
+      (make-queue)
+    (for-each (lambda (obj)
+		($slots-push-rear! D obj))
+      item*)))
 
 
 ;;;; UID stuff
@@ -142,114 +177,149 @@
 
 ;;;; inspection
 
-(define* (queue-empty? {Q queue?})
-  ($queue-empty? Q))
+(declare-operation-unary queue-empty?		$queue-empty?)
+(declare-operation-unary queue-not-empty?	$queue-not-empty?)
+(declare-operation-unary queue-size		$queue-size)
 
-(define ($queue-empty? Q)
-  (null? ($queue-first-pair Q)))
-
-;;; --------------------------------------------------------------------
-
-(define* (queue-not-empty? {Q queue?})
-  ($queue-not-empty? Q))
-
-(define ($queue-not-empty? Q)
-  (pair? ($queue-first-pair Q)))
-
-;;; --------------------------------------------------------------------
-
-(define* (queue-size {Q queue?})
-  ($queue-size Q))
-
-(define ($queue-size Q)
-  (let loop ((ell ($queue-first-pair Q))
-	     (len 0))
-    (if (pair? ell)
-	(loop ($cdr ell) ($add-fixnum-number 1 len))
-      len)))
+(define-alias $queue-empty?			$slots-empty?)
+(define-alias $queue-not-empty?			$slots-not-empty?)
+(define-alias $queue-size			$slots-size)
 
 
 ;;;; accessors and mutators
 
-(define* (queue-front {Q queue?})
-  ($queue-front Q))
+(declare-operation-unary queue-front		$queue-front)
+(declare-operation-unary queue-rear		$queue-rear)
 
-(define* ($queue-front Q)
-  (if (pair? ($queue-first-pair Q))
-      ($car ($queue-first-pair Q))
-    (assertion-violation __who__ "queue is empty" Q)))
+(define-alias $queue-front			$slots-front)
+(define-alias $queue-rear			$slots-rear)
 
 ;;; --------------------------------------------------------------------
 
-(define* (queue-rear {Q queue?})
-  ($queue-rear Q))
+(define* (queue-push! {D queue?} obj)
+  ($queue-push! D obj))
 
-(define* ($queue-rear Q)
-  (if (pair? ($queue-last-pair Q))
-      ($car ($queue-last-pair Q))
-    (assertion-violation __who__ "queue is empty" Q)))
+(define-alias $queue-push!			$slots-push-rear!)
 
 ;;; --------------------------------------------------------------------
 
-(define* (queue-push! {Q queue?} obj)
-  ($queue-push! Q obj))
+(declare-operation-unary queue-pop!		$queue-pop!)
 
-(define ($queue-push! Q obj)
-  (let ((new-last-pair (list obj)))
-    (if (pair? ($queue-first-pair Q))
-	;;The queue  is not empty: append  the new last-pair to  the old
-	;;last-pair.
-	($set-cdr! ($queue-last-pair Q) new-last-pair)
-      ;;The  queue  is  empty:  the   new  last-pair  is  also  the  new
-      ;;first-pair, so store it the first-pair slot.
-      ($queue-first-pair-set! Q new-last-pair))
-    ;;Store the new last-pair in the last-pair slot.
-    ($queue-last-pair-set! Q new-last-pair)))
+(define-alias $queue-pop!			$slots-pop-front!)
 
 ;;; --------------------------------------------------------------------
 
-(define* (queue-pop! {Q queue?})
-  ($queue-pop! Q))
+(declare-operation-unary queue-purge!		$queue-purge!)
+(define-alias $queue-purge!			$slots-purge!)
 
-(define* ($queue-pop! Q)
-  (let ((old-first-pair ($queue-first-pair Q)))
-    (if (pair? old-first-pair)
-	(begin
-	  ;;The new first-pair is the  next of the old first-pair, which
-	  ;;can be null.
-	  ($queue-first-pair-set! Q ($cdr old-first-pair))
-	  ;;If the old  first-pair is also the old  last-pair: reset the
-	  ;;last-pair so that the queue results as empty.
-	  (when (eq? ($queue-last-pair Q) old-first-pair)
-	    ($queue-last-pair-set! Q #f)))
-      (error __who__ "queue is empty" Q))
-    ($car old-first-pair)))
+
+;;;; mapping
+
+(define* (queue-map-left {dst queue?} {fun procedure?} {src queue?})
+  ($queue-map-left dst fun src))
+
+(define* (queue-map-right  {dst queue?} {fun procedure?} {src queue?})
+  ($queue-map-right dst fun src))
+
+(define* (queue-for-each-left {fun procedure?} {src queue?})
+  ($queue-for-each-left fun src))
+
+(define* (queue-for-each-right  {fun procedure?} {src queue?})
+  ($queue-for-each-right fun src))
+
+(define-alias $queue-map-left		$slots-map-left)
+(define-alias $queue-map-right		$slots-map-right)
+(define-alias $queue-for-each-left	$slots-for-each-left)
+(define-alias $queue-for-each-right	$slots-for-each-right)
+
+
+;;;; folding
+
+(define* (queue-fold-left {kons procedure?} knil {D queue?})
+  ($queue-fold-left kons knil D))
+
+(define* (queue-fold-right {kons procedure?} knil {D queue?})
+  ($queue-fold-right kons knil D))
+
+(define-alias $queue-fold-left		$slots-fold-left)
+(define-alias $queue-fold-right		$slots-fold-right)
+
+
+;;;; searching
+
+(case-define* queue-find-left
+  (({fun procedure?} {D queue?})
+   ($queue-find-left fun D #f))
+  (({fun procedure?} {D queue?} not-found-rv)
+   ($queue-find-left fun D not-found-rv)))
+
+(case-define* queue-find-right
+  (({fun procedure?} {D queue?})
+   ($queue-find-right fun D #f))
+  (({fun procedure?} {D queue?} not-found-rv)
+   ($queue-find-right fun D not-found-rv)))
+
+(define* (queue-for-all {fun procedure?} {D queue?})
+  ($queue-for-all fun D))
+
+(define* (queue-exists-left {fun procedure?} {D queue?})
+  ($queue-exists-left fun D))
+
+(define* (queue-exists-right {fun procedure?} {D queue?})
+  ($queue-exists-right fun D))
+
+(define-alias $queue-for-all		$slots-for-all)
+(define-alias $queue-find-left		$slots-find-left)
+(define-alias $queue-find-right		$slots-find-right)
+(define-alias $queue-exists-left	$slots-exists-left)
+(define-alias $queue-exists-right	$slots-exists-right)
+
+
+;;;; filtering
+
+(define* (queue-filter {dst-queue queue?} {fun procedure?} {src-queue queue?})
+  ($queue-filter dst-queue fun src-queue))
+
+(define-alias $queue-filter		$slots-filter)
 
 ;;; --------------------------------------------------------------------
 
-(define* (queue-purge! {Q queue?})
-  ($queue-purge! Q))
+(define* (queue-partition {matching-queue queue?} {not-matching-queue queue?} {fun procedure?} {src-queue queue?})
+  ($queue-partition matching-queue not-matching-queue fun src-queue))
 
-(define ($queue-purge! Q)
-  ($queue-first-pair-set! Q '())
-  ($queue-last-pair-set!  Q #f))
+(define-alias $queue-partition		$slots-partition)
 
 
 ;;;; conversion
 
-(define* (queue->list {Q queue?})
-  (list-copy/stx ($queue-first-pair Q)))
+(declare-operation-unary queue->list	$queue->list)
+(declare-operation-unary queue->vector	$queue->vector)
 
 (define* (list->queue {ell list?})
-  (apply make-queue ell))
+  ($list->slots (make-queue) ell))
+
+(define* (vector->queue {vec vector?})
+  ($vector->slots (make-queue) vec))
+
+(define-alias $queue->list		$slots->list)
+(define-alias $queue->vector		$slots->vector)
+(define-alias $list->queue		$list->slots)
+(define-alias $vector->queue		$vector->slots)
+
+
+;;;; miscellaneous operations
+
+(define* (queue-copy! {dst queue?} {src queue?})
+  ($queue-copy! dst src))
+
+(define-alias $queue-copy!		$slots-copy!)
 
 ;;; --------------------------------------------------------------------
 
-(define* (queue->vector {Q queue?})
-  (list->vector ($queue-first-pair Q)))
+(define* (queue-reverse! {dst queue?} {src queue?})
+  ($queue-reverse! dst src))
 
-(define* (vector->queue {vec vector?})
-  (apply make-queue (vector->list vec)))
+(define-alias $queue-reverse!		$slots-reverse!)
 
 
 ;;;; done

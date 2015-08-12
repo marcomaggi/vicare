@@ -14,7 +14,12 @@ efficient first--in/first--out operations.
 * queues objects::              Queue objects.
 * queues inspection::           Inspecting queue objects.
 * queues access::               Queue accessors and mutators.
+* queues folding::              Folding over queues.
+* queues mapping::              Mapping over queues.
+* queues searching::            Searching in queues.
+* queues filtering::            Filtering in queues.
 * queues conversion::           Converting queues to other objects.
+* queues misc::                 Miscellaneous operations on queues.
 @end menu
 
 @c page
@@ -22,29 +27,51 @@ efficient first--in/first--out operations.
 @section Queue objects
 
 
-The following bindings are exported by the library @library{vicare
-containers queues}.
+Queues are implemented as doubly--linked lists of vector objects; each
+vector acts as buffer for contained objects; all the vectors have the
+same length.
+
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.
 
 
-@deftp {@rnrs{6} Record Type} queue
+@deftp {@rnrs{6} Record Type} <queue>
 @cindex @var{queue} argument
 @cindex Argument @var{queue}
-Record type representing a queue object.  The @objtype{queue} type is
+Record type representing a queue object.  The @objtype{<queue>} type is
 non--generative and available for subtyping.  In this documentation
-@objtype{queue} object arguments to functions are indicated as
+@objtype{<queue>} object arguments to functions are indicated as
 @var{queue}.
 @end deftp
 
 
-@defun make-queue @var{obj} @dots{}
-Build and return a @objtype{queue} object holding the given objects,
-which are pushed on the queue from left to right.
+@defun make-queue
+@defunx make-queue @var{buffer-length}
+Build and return a new @objtype{<queue>} object.  The optional argument
+@var{buffer-length} must be a non--negative fixnum representing the
+number of slots in the internal object buffers; when not given, it
+defaults to @math{15}.
 @end defun
 
 
 @defun queue? @var{obj}
-Return @true{} if @var{obj} is a record of type @objtype{queue};
+Return @true{} if @var{obj} is a record of type @objtype{<queue>};
 otherwise return @false{}.
+@end defun
+
+
+@defun queue @var{obj} @dots{}
+Build and return a @objtype{<queue>} object holding the given objects,
+which are pushed on the queue left to right from the rear side.  The
+size of the internal buffers is set to the default.
+
+@lisp
+(define D
+  (queue 0 1 2))
+
+(queue-front D)         @result{} 0
+(queue-rear  D)         @result{} 2
+@end lisp
 @end defun
 
 @c ------------------------------------------------------------
@@ -90,7 +117,7 @@ creation order.
 @defun queue-hash @var{queue}
 @defunx $queue-hash @var{queue}
 Return an exact integer to be used as hashtable key for @var{queue}.
-Hashtables having a @objtype{queue} as key can be instantiated as
+Hashtables having a @objtype{<queue>} as key can be instantiated as
 follows:
 
 @example
@@ -103,10 +130,10 @@ follows:
 @section Inspecting queue objects
 
 
-The following bindings are exported by the library @library{vicare
-containers queues}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun queue-empty? @var{queue}
@@ -132,10 +159,10 @@ Return an exact integer representing the number of objects in @var{queue}.
 @section Queue accessors and mutators
 
 
-The following bindings are exported by the library @library{vicare
-containers queues}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun queue-front @var{queue}
@@ -147,20 +174,20 @@ if @var{queue} is empty.
 
 @defun queue-rear @var{queue}
 @defunx $queue-rear @var{queue}
-Return the object at the rear of the queue.  Raise an assertion
-violation if @var{queue} is empty.
+Return the object at the front of the queue.  Raise an assertion violation
+if @var{queue} is empty.
 @end defun
 
 
 @defun queue-push! @var{queue} @var{obj}
 @defunx $queue-push! @var{queue} @var{obj}
-Push @var{obj} on the @var{queue}.
+Push @var{obj} on the front of the @var{queue}.
 @end defun
 
 
 @defun queue-pop! @var{queue}
 @defunx $queue-pop! @var{queue}
-Remove the object at the front of the queue and return it.  Raise an
+Remove the object at the rear of the queue and return it.  Raise an
 assertion violation if @var{queue} is empty.
 @end defun
 
@@ -171,26 +198,332 @@ Remove all the elements from @var{queue}.
 @end defun
 
 @c page
+@node queues folding
+@section Folding over queues
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun queue-fold-left @var{kons} @var{knil} @var{queue}
+@defunx $queue-fold-left @var{kons} @var{knil} @var{queue}
+Analogous to @func{fold-left} for lists.  Fold the procedure @var{kons}
+of the the objects from @var{queue}.
+
+@lisp
+(define D
+  (queue 0 1 2 3 4 5))
+
+(queue-fold-left (lambda (knil obj)
+                   (cons obj knil))
+  '() D)
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun queue-fold-right @var{kons} @var{knil} @var{queue}
+@defunx $queue-fold-right @var{kons} @var{knil} @var{queue}
+Analogous to @func{fold-right} for lists.  Fold the procedure @var{kons}
+of the the objects from @var{queue}.
+
+@lisp
+(define D
+  (queue 0 1 2 3 4 5))
+
+(queue-fold-right (lambda (obj knil)
+                    (cons obj knil))
+  '() D)
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
+
+@c page
+@node queues mapping
+@section Mapping over queues
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun queue-map-left @var{dst-queue} @var{fun} @var{src-queue}
+@defunx $queue-map-left @var{dst-queue} @var{fun} @var{src-queue}
+Iterate over all the objects in @var{src-queue}, starting from the front
+side, apply @var{fun} to them, push the result of the application in the
+rear side of @var{dst-queue}.
+
+@lisp
+(queue->list
+  (queue-map-left (queue) - (queue 0 1 2 3)))
+@result{} (0 -1 -2 -3)
+@end lisp
+
+The @var{dst-queue} argument allows us to build the destination queue
+with the desired configuration.
+@end defun
+
+
+@defun queue-map-right @var{dst-queue} @var{fun} @var{src-queue}
+@defunx $queue-map-right @var{dst-queue} @var{fun} @var{src-queue}
+Iterate over all the objects in @var{src-queue}, starting from the rear
+side, apply @var{fun} to them, push the result of the application in the
+front side of @var{dst-queue}.
+
+@lisp
+(queue->list
+  (queue-map-right (queue) - (queue 0 1 2 3)))
+@result{} (0 -1 -2 -3)
+@end lisp
+
+The @var{dst-queue} argument allows us to build the destination queue
+with the desired configuration.
+@end defun
+
+
+@defun queue-map @var{fun} @var{queue}
+@defunx $queue-map @var{fun} @var{queue}
+Aliases for @func{queue-map-left} and @func{$queue-map-left}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun queue-for-each-left @var{fun} @var{queue}
+@defunx $queue-for-each-left @var{fun} @var{queue}
+Iterate over all the objects in @var{queue}, starting from the front
+side, and apply @var{fun} to them discarding the return value.
+@end defun
+
+
+@defun queue-for-each-right @var{fun} @var{queue}
+@defunx $queue-for-each-right @var{fun} @var{queue}
+Iterate over all the objects in @var{queue}, starting from the rear
+side, and apply @var{fun} to them discarding the return value.
+@end defun
+
+
+@defun queue-for-each @var{fun} @var{queue}
+@defunx $queue-for-each @var{fun} @var{queue}
+Aliases for @func{queue-for-each-left} and @func{$queue-for-each-left}.
+@end defun
+
+@c page
+@node queues searching
+@section Searching in queues
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun queue-for-all @var{fun} @var{queue}
+@defunx $queue-for-all @var{fun} @var{queue}
+Apply the procedure @var{fun} over the objects in @var{queue}, starting
+from the front side; stop at the first application returning @false{}
+and return @false{}.  If the iteration reaches the end of the queue: the
+return value is the result of applying @var{fun} to the last object in
+the queue.  If the queue is empty: the return value is @true{}.
+@end defun
+
+
+@defun queue-exists-left @var{fun} @var{queue}
+@defunx $queue-exists-left @var{fun} @var{queue}
+Apply the procedure @var{fun} over the objects in @var{queue}, starting
+from the front side; stop at the first application returning true and
+return the returned value.  If the queue is empty: the return value is
+@false{}.
+@end defun
+
+
+@defun queue-exists-right @var{fun} @var{queue}
+@defunx $queue-exists-right @var{fun} @var{queue}
+Apply the procedure @var{fun} over the objects in @var{queue}, starting
+from the rear side; stop at the first application returning true and
+return the returned value.  If the queue is empty: the return value is
+@false{}.
+@end defun
+
+
+@defun queue-exists @var{fun} @var{queue}
+@defunx $queue-exists @var{fun} @var{queue}
+Aliases for @func{queue-exists-left} and @func{$queue-exists-left}.
+@end defun
+
+
+@defun queue-find-left @var{fun} @var{queue}
+@defunx queue-find-left @var{fun} @var{queue} @var{not-found-rv}
+@defunx $queue-find-left @var{fun} @var{queue} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{queue}, starting
+from the front side: stop at the first true value and return the object
+from @var{queue} that generated it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+
+@lisp
+(queue-find-left
+    even?
+  (queue 1 3 5 7)
+  'not-found)
+@result{} not-found
+
+(queue-find-left
+    even?
+  (queue 1 3 5 7))
+@result{} #f
+
+(queue-find-left
+    even?
+  (queue 1 3 5 6 7)
+  'not-found)
+@result{} 6
+@end lisp
+@end defun
+
+
+@defun queue-find-right @var{fun} @var{queue}
+@defunx queue-find-right @var{fun} @var{queue} @var{not-found-rv}
+@defunx $queue-find-right @var{fun} @var{queue} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{queue}, starting
+from the rear side: stop at the first true value and return the object
+from @var{queue} that generated it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+@end defun
+
+
+@defun queue-find @var{fun} @var{queue}
+@defunx queue-find @var{fun} @var{queue} @var{not-found-rv}
+@defunx $queue-find @var{fun} @var{queue} @var{not-found-rv}
+Aliases for @func{queue-find-left} and @func{$queue-find-right}.
+@end defun
+
+@c page
+@node queues filtering
+@section Filtering in queues
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun queue-filter @var{dst-queue} @var{pred} @var{src-queue}
+@defunx queue-filter @var{dst-queue} @var{pred} @var{src-queue}
+Iterate over the objects in @var{src-queue} starting from the front
+side, apply @var{pred} to them, push on the rear of @var{dst-queue} the
+ones for which @var{pred} returns true.  Return @var{dst-queue} itself.
+
+The argument @var{dst-queue} allows us to build and configure a queue
+with the needed parameters.
+@end defun
+
+
+@defun queue-partition @var{match-queue} @var{no-match-queue} @var{pred} @var{src-queue}
+@defunx queue-partition @var{match-queue} @var{no-match-queue} @var{pred} @var{src-queue}
+Iterate over the objects in @var{src-queue}, starting from the front
+side, and apply @var{pred} to them: if the return value is true, push
+the object on the rear of @var{match-queue}; if the return value is
+@false{}, push the object on the rear of @var{no-match-queue}.  Return
+two values: @var{match-queue} and @var{no-match-queue}.
+
+The arguments @var{match-queue} and @var{no-match-queue} allow us to
+build and configure queues with the needed parameters.
+@end defun
+
+@c page
 @node queues conversion
 @section Converting queues to other objects
 
 
-The following bindings are exported by the library @library{vicare
-containers queues}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun queue->list @var{queue}
+@defunx $queue->list @var{queue}
 @defunx list->queue @var{list}
+@defunx $list->queue @var{list}
 Convert to and from a queue and a proper list.  Objects from the list
-are pushed on the queue from left to right.
+are pushed on the queue left--to--right from the rear side.
+
+@lisp
+(define D
+  (list->queue '(0 1 2)))
+
+(queue-front  D)        @result{} 0
+(queue-rear   D)        @result{} 2
+(list->vector D)        @result{} (0 1 2)
+@end lisp
 @end defun
 
 
 @defun queue->vector @var{queue}
+@defunx $queue->vector @var{queue}
 @defunx vector->queue @var{vector}
-Convert to and from a queue and a vector.
+@defunx $vector->queue @var{vector}
+Convert to and from a queue and a vector.  Objects from the list are
+pushed on the queue left--to--right from the rear side.
+
+@lisp
+(define D
+  (vector->queue '#(0 1 2)))
+
+(queue-front   D)       @result{} 0
+(queue-rear    D)       @result{} 2
+(queue->vector D)       @result{} #(0 1 2)
+@end lisp
+@end defun
+
+@c page
+@node queues misc
+@section Miscellaneous operations on queues
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers queues}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun queue-copy! @var{dst-queue} @var{src-queue}
+@defunx $queue-copy! @var{dst-queue} @var{src-queue}
+Iterate over all the objects in @var{src-queue}, starting from the front
+side, and push them in the rear side of @var{dst-queue}.  This is a
+shallow copy: the very objects from the source queue are added to the
+destination queue; if we need to duplicate the objects, we can use the
+map operation.
+
+The @var{dst-queue} argument allows us to build the destination queue
+with the desired configuration.
+@end defun
+
+
+@defun queue-reverse! @var{dst-queue} @var{src-queue}
+@defunx $queue-reverse! @var{dst-queue} @var{src-queue}
+Iterate over the objects in @var{src-queue}, starting from the front
+side, and push them in the front side of @var{dst-queue}.  Return
+@var{dst-queue}.
+
+The @var{dst-queue} argument allows us to build the destination queue
+with the desired configuration.
 @end defun
 
 @c end of file

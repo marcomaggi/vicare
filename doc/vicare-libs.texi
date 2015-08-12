@@ -166,9 +166,9 @@ Container libraries
 * one-dimension::               One dimensional extended ranges.
 * arrays::                      Multidimensional arrays.
 * chains::                      Chains: doubly-linked lists.
-* stacks::                      Simple stacks.
-* queues::                      Simple queues.
-* deques::                      Simple double-ended queues.
+* stacks::                      Stacks of objects.
+* queues::                      Queues of objects.
+* deques::                      Double-ended queues of objects.
 * binary heaps::                Binary heaps.
 
 Adapted libraries

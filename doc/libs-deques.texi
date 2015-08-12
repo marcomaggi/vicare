@@ -1,5 +1,5 @@
 @node deques
-@chapter Simple double--ended queues
+@chapter Double--ended queues of objects
 
 
 @cindex @library{vicare containers deques}, library
@@ -26,6 +26,10 @@ efficient insertion and removal at both ends.
 @node deques objects
 @section Deque objects
 
+
+Deques are implemented as doubly--linked lists of vector objects; each
+vector acts as buffer for contained objects; all the vectors have the
+same length.
 
 The following syntactic bindings are exported by the library
 @library{vicare containers deques}.

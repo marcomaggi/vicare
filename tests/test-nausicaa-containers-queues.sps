@@ -172,7 +172,7 @@
       (guard (E (else (condition-message E)))
 	(let (({S <queue>} (<queue> ())))
 	  (S front)))
-    => "queue is empty")
+    => "the container is empty")
 
   (check
       (let (({S <queue>} (<queue> (1))))
@@ -190,7 +190,7 @@
       (guard (E (else (condition-message E)))
 	(let (({S <queue>} (<queue> ())))
 	  (S rear)))
-    => "queue is empty")
+    => "the container is empty")
 
   (check
       (let (({S <queue>} (<queue> (1))))

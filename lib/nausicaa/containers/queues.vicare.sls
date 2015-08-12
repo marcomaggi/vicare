@@ -32,9 +32,10 @@
     list->queue
     vector->queue)
   (import (nausicaa)
-    (vicare containers queues))
+    (except (vicare containers queues)
+	    <queue>))
   (define-label <queue>
-    (protocol (lambda () make-queue))
+    (protocol (lambda () queue))
     (predicate queue?)
     (virtual-fields
      (immutable {empty?		<boolean>}	queue-empty?)
