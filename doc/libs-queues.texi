@@ -211,7 +211,7 @@ validate their arguments before accessing them.
 @defun queue-fold-left @var{kons} @var{knil} @var{queue}
 @defunx $queue-fold-left @var{kons} @var{knil} @var{queue}
 Analogous to @func{fold-left} for lists.  Fold the procedure @var{kons}
-of the the objects from @var{queue}.
+over the objects from @var{queue}, starting from the front.
 
 @lisp
 (define D
@@ -228,7 +228,7 @@ of the the objects from @var{queue}.
 @defun queue-fold-right @var{kons} @var{knil} @var{queue}
 @defunx $queue-fold-right @var{kons} @var{knil} @var{queue}
 Analogous to @func{fold-right} for lists.  Fold the procedure @var{kons}
-of the the objects from @var{queue}.
+over the objects from @var{queue}, starting from the rear.
 
 @lisp
 (define D
@@ -265,7 +265,7 @@ rear side of @var{dst-queue}.
 @end lisp
 
 The @var{dst-queue} argument allows us to build the destination queue
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 
@@ -282,7 +282,7 @@ front side of @var{dst-queue}.
 @end lisp
 
 The @var{dst-queue} argument allows us to build the destination queue
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 
@@ -409,7 +409,7 @@ When @var{not-found-rv} is used: if all the applications return
 @defun queue-find @var{fun} @var{queue}
 @defunx queue-find @var{fun} @var{queue} @var{not-found-rv}
 @defunx $queue-find @var{fun} @var{queue} @var{not-found-rv}
-Aliases for @func{queue-find-left} and @func{$queue-find-right}.
+Aliases for @func{queue-find-left} and @func{$queue-find-left}.
 @end defun
 
 @c page
@@ -424,7 +424,7 @@ validate their arguments before accessing them.
 
 
 @defun queue-filter @var{dst-queue} @var{pred} @var{src-queue}
-@defunx queue-filter @var{dst-queue} @var{pred} @var{src-queue}
+@defunx $queue-filter @var{dst-queue} @var{pred} @var{src-queue}
 Iterate over the objects in @var{src-queue} starting from the front
 side, apply @var{pred} to them, push on the rear of @var{dst-queue} the
 ones for which @var{pred} returns true.  Return @var{dst-queue} itself.
@@ -435,7 +435,7 @@ with the needed parameters.
 
 
 @defun queue-partition @var{match-queue} @var{no-match-queue} @var{pred} @var{src-queue}
-@defunx queue-partition @var{match-queue} @var{no-match-queue} @var{pred} @var{src-queue}
+@defunx $queue-partition @var{match-queue} @var{no-match-queue} @var{pred} @var{src-queue}
 Iterate over the objects in @var{src-queue}, starting from the front
 side, and apply @var{pred} to them: if the return value is true, push
 the object on the rear of @var{match-queue}; if the return value is
@@ -468,9 +468,9 @@ are pushed on the queue left--to--right from the rear side.
 (define D
   (list->queue '(0 1 2)))
 
-(queue-front  D)        @result{} 0
-(queue-rear   D)        @result{} 2
-(list->vector D)        @result{} (0 1 2)
+(queue-front D)         @result{} 0
+(queue-rear  D)         @result{} 2
+(queue->list D)         @result{} (0 1 2)
 @end lisp
 @end defun
 
@@ -479,7 +479,7 @@ are pushed on the queue left--to--right from the rear side.
 @defunx $queue->vector @var{queue}
 @defunx vector->queue @var{vector}
 @defunx $vector->queue @var{vector}
-Convert to and from a queue and a vector.  Objects from the list are
+Convert to and from a queue and a vector.  Objects from the vector are
 pushed on the queue left--to--right from the rear side.
 
 @lisp
@@ -512,7 +512,7 @@ destination queue; if we need to duplicate the objects, we can use the
 map operation.
 
 The @var{dst-queue} argument allows us to build the destination queue
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 
@@ -523,7 +523,7 @@ side, and push them in the front side of @var{dst-queue}.  Return
 @var{dst-queue}.
 
 The @var{dst-queue} argument allows us to build the destination queue
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 @c end of file

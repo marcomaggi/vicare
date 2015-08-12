@@ -1377,6 +1377,7 @@ CLEANFILES += lib/vicare/containers/queues.fasl
 
 lib/vicare/containers/stacks.fasl: \
 		lib/vicare/containers/stacks.vicare.sls \
+		lib/vicare/containers/slots.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

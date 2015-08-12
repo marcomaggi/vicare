@@ -172,7 +172,7 @@
       (guard (E (else (condition-message E)))
 	(let (({S <stack>} (<stack> ())))
 	  (S top)))
-    => "stack is empty")
+    => "the container is empty")
 
   (check
       (let (({S <stack>} (<stack> (1))))

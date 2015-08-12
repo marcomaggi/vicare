@@ -224,7 +224,7 @@ validate their arguments before accessing them.
 @defun deque-fold-left @var{kons} @var{knil} @var{deque}
 @defunx $deque-fold-left @var{kons} @var{knil} @var{deque}
 Analogous to @func{fold-left} for lists.  Fold the procedure @var{kons}
-of the the objects from @var{deque}.
+over the objects from @var{deque}, starting from the front.
 
 @lisp
 (define D
@@ -241,7 +241,7 @@ of the the objects from @var{deque}.
 @defun deque-fold-right @var{kons} @var{knil} @var{deque}
 @defunx $deque-fold-right @var{kons} @var{knil} @var{deque}
 Analogous to @func{fold-right} for lists.  Fold the procedure @var{kons}
-of the the objects from @var{deque}.
+over the objects from @var{deque}, starting from the rear.
 
 @lisp
 (define D
@@ -278,7 +278,7 @@ rear side of @var{dst-deque}.
 @end lisp
 
 The @var{dst-deque} argument allows us to build the destination deque
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 
@@ -295,7 +295,7 @@ front side of @var{dst-deque}.
 @end lisp
 
 The @var{dst-deque} argument allows us to build the destination deque
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 
@@ -422,7 +422,7 @@ When @var{not-found-rv} is used: if all the applications return
 @defun deque-find @var{fun} @var{deque}
 @defunx deque-find @var{fun} @var{deque} @var{not-found-rv}
 @defunx $deque-find @var{fun} @var{deque} @var{not-found-rv}
-Aliases for @func{deque-find-left} and @func{$deque-find-right}.
+Aliases for @func{deque-find-left} and @func{$deque-find-left}.
 @end defun
 
 @c page
@@ -437,7 +437,7 @@ validate their arguments before accessing them.
 
 
 @defun deque-filter @var{dst-deque} @var{pred} @var{src-deque}
-@defunx deque-filter @var{dst-deque} @var{pred} @var{src-deque}
+@defunx $deque-filter @var{dst-deque} @var{pred} @var{src-deque}
 Iterate over the objects in @var{src-deque} starting from the front
 side, apply @var{pred} to them, push on the rear of @var{dst-deque} the
 ones for which @var{pred} returns true.  Return @var{dst-deque} itself.
@@ -448,7 +448,7 @@ with the needed parameters.
 
 
 @defun deque-partition @var{match-deque} @var{no-match-deque} @var{pred} @var{src-deque}
-@defunx deque-partition @var{match-deque} @var{no-match-deque} @var{pred} @var{src-deque}
+@defunx $deque-partition @var{match-deque} @var{no-match-deque} @var{pred} @var{src-deque}
 Iterate over the objects in @var{src-deque}, starting from the front
 side, and apply @var{pred} to them: if the return value is true, push
 the object on the rear of @var{match-deque}; if the return value is
@@ -481,9 +481,9 @@ are pushed on the deque left--to--right from the rear side.
 (define D
   (list->deque '(0 1 2)))
 
-(deque-front  D)        @result{} 0
-(deque-rear   D)        @result{} 2
-(list->vector D)        @result{} (0 1 2)
+(deque-front D)         @result{} 0
+(deque-rear  D)         @result{} 2
+(deque->list D)         @result{} (0 1 2)
 @end lisp
 @end defun
 
@@ -492,7 +492,7 @@ are pushed on the deque left--to--right from the rear side.
 @defunx $deque->vector @var{deque}
 @defunx vector->deque @var{vector}
 @defunx $vector->deque @var{vector}
-Convert to and from a deque and a vector.  Objects from the list are
+Convert to and from a deque and a vector.  Objects from the vector are
 pushed on the deque left--to--right from the rear side.
 
 @lisp
@@ -525,7 +525,7 @@ destination deque; if we need to duplicate the objects, we can use the
 map operation.
 
 The @var{dst-deque} argument allows us to build the destination deque
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 
@@ -536,7 +536,7 @@ side, and push them in the front side of @var{dst-queue}.  Return
 @var{dst-queue}.
 
 The @var{dst-deque} argument allows us to build the destination deque
-with the desired configuration.
+with the desired configuration parameters.
 @end defun
 
 @c end of file

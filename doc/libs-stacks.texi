@@ -14,7 +14,12 @@ operations.
 * stacks objects::              Stack objects.
 * stacks inspection::           Inspecting stack objects.
 * stacks access::               Stack accessors and mutators.
+* stacks folding::              Folding over stacks.
+* stacks mapping::              Mapping over stacks.
+* stacks searching::            Searching in stacks.
+* stacks filtering::            Filtering in stacks.
 * stacks conversion::           Converting stacks to other objects.
+* stacks misc::                 Miscellaneous operations on stacks.
 @end menu
 
 @c page
@@ -22,29 +27,50 @@ operations.
 @section Stack objects
 
 
-The following bindings are exported by the library @library{vicare
-containers stacks}.
+Stacks are implemented as doubly--linked lists of vector objects; each
+vector acts as buffer for contained objects; all the vectors have the
+same length.
+
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.
 
 
-@deftp {@rnrs{6} Record Type} stack
+@deftp {@rnrs{6} Record Type} <stack>
 @cindex @var{stack} argument
 @cindex Argument @var{stack}
-Record type representing a stack object.  The @objtype{stack} type is
+Record type representing a stack object.  The @objtype{<stack>} type is
 non--generative and available for subtyping.  In this documentation
-@objtype{stack} object arguments to functions are indicated as
+@objtype{<stack>} object arguments to functions are indicated as
 @var{stack}.
 @end deftp
 
 
-@defun make-stack @var{obj} @dots{}
-Build and return a @objtype{stack} object holding the given objects,
-which are pushed on the stack from right to left.
+@defun make-stack
+@defunx make-stack @var{buffer-length}
+Build and return a new @objtype{<stack>} object.  The optional argument
+@var{buffer-length} must be a non--negative fixnum representing the
+number of slots in the internal object buffers; when not given, it
+defaults to @math{15}.
 @end defun
 
 
 @defun stack? @var{obj}
-Return @true{} if @var{obj} is a record of type @objtype{stack};
+Return @true{} if @var{obj} is a record of type @objtype{<stack>};
 otherwise return @false{}.
+@end defun
+
+
+@defun stack @var{obj} @dots{}
+Build and return a @objtype{<stack>} object holding the given objects,
+which are pushed on the stack right--to--left from the bottom side.  The
+size of the internal buffers is set to the default.
+
+@lisp
+(define D
+  (stack 0 1 2))
+
+(stack-top D)         @result{} 0
+@end lisp
 @end defun
 
 @c ------------------------------------------------------------
@@ -90,7 +116,7 @@ creation order.
 @defun stack-hash @var{stack}
 @defunx $stack-hash @var{stack}
 Return an exact integer to be used as hashtable key for @var{stack}.
-Hashtables having a @objtype{stack} as key can be instantiated as
+Hashtables having a @objtype{<stack>} as key can be instantiated as
 follows:
 
 @example
@@ -103,10 +129,10 @@ follows:
 @section Inspecting stack objects
 
 
-The following bindings are exported by the library @library{vicare
-containers stacks}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun stack-empty? @var{stack}
@@ -132,10 +158,10 @@ Return an exact integer representing the number of objects in @var{stack}.
 @section Stack accessors and mutators
 
 
-The following bindings are exported by the library @library{vicare
-containers stacks}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun stack-top @var{stack}
@@ -147,7 +173,7 @@ if @var{stack} is empty.
 
 @defun stack-push! @var{stack} @var{obj}
 @defunx $stack-push! @var{stack} @var{obj}
-Push @var{obj} on the @var{stack}.
+Push @var{obj} on the top of the @var{stack}.
 @end defun
 
 
@@ -164,25 +190,330 @@ Remove all the elements from @var{stack}.
 @end defun
 
 @c page
+@node stacks folding
+@section Folding over stacks
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun stack-fold-left @var{kons} @var{knil} @var{stack}
+@defunx $stack-fold-left @var{kons} @var{knil} @var{stack}
+Analogous to @func{fold-left} for lists.  Fold the procedure @var{kons}
+over the objects from @var{stack}, starting from the top.
+
+@lisp
+(define D
+  (stack 0 1 2 3 4 5))
+
+(stack-fold-left (lambda (knil obj)
+                   (cons obj knil))
+  '() D)
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun stack-fold-right @var{kons} @var{knil} @var{stack}
+@defunx $stack-fold-right @var{kons} @var{knil} @var{stack}
+Analogous to @func{fold-right} for lists.  Fold the procedure @var{kons}
+over the objects from @var{stack}, starting from the bottom.
+
+@lisp
+(define D
+  (stack 0 1 2 3 4 5))
+
+(stack-fold-right (lambda (obj knil)
+                    (cons obj knil))
+  '() D)
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
+
+@c page
+@node stacks mapping
+@section Mapping over stacks
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun stack-map-left @var{dst-stack} @var{fun} @var{src-stack}
+@defunx $stack-map-left @var{dst-stack} @var{fun} @var{src-stack}
+Iterate over all the objects in @var{src-stack}, starting from the top
+side, apply @var{fun} to them, push the result of the application in the
+bottom side of @var{dst-stack}.
+
+@lisp
+(stack->list
+  (stack-map-left (stack) - (stack 0 1 2 3)))
+@result{} (0 -1 -2 -3)
+@end lisp
+
+The @var{dst-stack} argument allows us to build the destination stack
+with the desired configuration parameters.
+@end defun
+
+
+@defun stack-map-right @var{dst-stack} @var{fun} @var{src-stack}
+@defunx $stack-map-right @var{dst-stack} @var{fun} @var{src-stack}
+Iterate over all the objects in @var{src-stack}, starting from the
+bottom side, apply @var{fun} to them, push the result of the application
+in the top side of @var{dst-stack}.
+
+@lisp
+(stack->list
+  (stack-map-right (stack) - (stack 0 1 2 3)))
+@result{} (0 -1 -2 -3)
+@end lisp
+
+The @var{dst-stack} argument allows us to build the destination stack
+with the desired configuration parameters.
+@end defun
+
+
+@defun stack-map @var{fun} @var{stack}
+@defunx $stack-map @var{fun} @var{stack}
+Aliases for @func{stack-map-left} and @func{$stack-map-left}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun stack-for-each-left @var{fun} @var{stack}
+@defunx $stack-for-each-left @var{fun} @var{stack}
+Iterate over all the objects in @var{stack}, starting from the top
+side, and apply @var{fun} to them discarding the return value.
+@end defun
+
+
+@defun stack-for-each-right @var{fun} @var{stack}
+@defunx $stack-for-each-right @var{fun} @var{stack}
+Iterate over all the objects in @var{stack}, starting from the bottom
+side, and apply @var{fun} to them discarding the return value.
+@end defun
+
+
+@defun stack-for-each @var{fun} @var{stack}
+@defunx $stack-for-each @var{fun} @var{stack}
+Aliases for @func{stack-for-each-left} and @func{$stack-for-each-left}.
+@end defun
+
+@c page
+@node stacks searching
+@section Searching in stacks
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun stack-for-all @var{fun} @var{stack}
+@defunx $stack-for-all @var{fun} @var{stack}
+Apply the procedure @var{fun} over the objects in @var{stack}, starting
+from the top side; stop at the first application returning @false{}
+and return @false{}.  If the iteration reaches the end of the stack: the
+return value is the result of applying @var{fun} to the last object in
+the stack.  If the stack is empty: the return value is @true{}.
+@end defun
+
+
+@defun stack-exists-left @var{fun} @var{stack}
+@defunx $stack-exists-left @var{fun} @var{stack}
+Apply the procedure @var{fun} over the objects in @var{stack}, starting
+from the top side; stop at the first application returning true and
+return the returned value.  If the stack is empty: the return value is
+@false{}.
+@end defun
+
+
+@defun stack-exists-right @var{fun} @var{stack}
+@defunx $stack-exists-right @var{fun} @var{stack}
+Apply the procedure @var{fun} over the objects in @var{stack}, starting
+from the bottom side; stop at the first application returning true and
+return the returned value.  If the stack is empty: the return value is
+@false{}.
+@end defun
+
+
+@defun stack-exists @var{fun} @var{stack}
+@defunx $stack-exists @var{fun} @var{stack}
+Aliases for @func{stack-exists-left} and @func{$stack-exists-left}.
+@end defun
+
+
+@defun stack-find-left @var{fun} @var{stack}
+@defunx stack-find-left @var{fun} @var{stack} @var{not-found-rv}
+@defunx $stack-find-left @var{fun} @var{stack} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{stack}, starting
+from the top side: stop at the first true value and return the object
+from @var{stack} that generated it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+
+@lisp
+(stack-find-left
+    even?
+  (stack 1 3 5 7)
+  'not-found)
+@result{} not-found
+
+(stack-find-left
+    even?
+  (stack 1 3 5 7))
+@result{} #f
+
+(stack-find-left
+    even?
+  (stack 1 3 5 6 7)
+  'not-found)
+@result{} 6
+@end lisp
+@end defun
+
+
+@defun stack-find-right @var{fun} @var{stack}
+@defunx stack-find-right @var{fun} @var{stack} @var{not-found-rv}
+@defunx $stack-find-right @var{fun} @var{stack} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{stack}, starting
+from the bottom side: stop at the first true value and return the object
+from @var{stack} that generated it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+@end defun
+
+
+@defun stack-find @var{fun} @var{stack}
+@defunx stack-find @var{fun} @var{stack} @var{not-found-rv}
+@defunx $stack-find @var{fun} @var{stack} @var{not-found-rv}
+Aliases for @func{stack-find-left} and @func{$stack-find-left}.
+@end defun
+
+@c page
+@node stacks filtering
+@section Filtering in stacks
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun stack-filter @var{dst-stack} @var{pred} @var{src-stack}
+@defunx $stack-filter @var{dst-stack} @var{pred} @var{src-stack}
+Iterate over the objects in @var{src-stack} starting from the top
+side, apply @var{pred} to them, push on the bottom of @var{dst-stack} the
+ones for which @var{pred} returns true.  Return @var{dst-stack} itself.
+
+The argument @var{dst-stack} allows us to build and configure a stack
+with the needed parameters.
+@end defun
+
+
+@defun stack-partition @var{match-stack} @var{no-match-stack} @var{pred} @var{src-stack}
+@defunx $stack-partition @var{match-stack} @var{no-match-stack} @var{pred} @var{src-stack}
+Iterate over the objects in @var{src-stack}, starting from the top
+side, and apply @var{pred} to them: if the return value is true, push
+the object on the bottom of @var{match-stack}; if the return value is
+@false{}, push the object on the bottom of @var{no-match-stack}.  Return
+two values: @var{match-stack} and @var{no-match-stack}.
+
+The arguments @var{match-stack} and @var{no-match-stack} allow us to
+build and configure stacks with the needed parameters.
+@end defun
+
+@c page
 @node stacks conversion
 @section Converting stacks to other objects
 
 
-The following bindings are exported by the library @library{vicare
-containers stacks}.  The bindings whose name is prefixed with @code{$}
-are unsafe operations: they do @strong{not} validate their arguments
-before accessing them.
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
 
 
 @defun stack->list @var{stack}
+@defunx $stack->list @var{stack}
 @defunx list->stack @var{list}
-Convert to and from a stack and a proper list.
+@defunx $list->stack @var{list}
+Convert to and from a stack and a proper list.  Objects from the list
+are pushed on the stack left--to--right from the bottom side.
+
+@lisp
+(define D
+  (list->stack '(0 1 2)))
+
+(stack-top   D)        @result{} 0
+(stack->list D)        @result{} (0 1 2)
+@end lisp
 @end defun
 
 
 @defun stack->vector @var{stack}
+@defunx $stack->vector @var{stack}
 @defunx vector->stack @var{vector}
-Convert to and from a stack and a vector.
+@defunx $vector->stack @var{vector}
+Convert to and from a stack and a vector.  Objects from the vector are
+pushed on the stack left--to--right from the bottom side.
+
+@lisp
+(define D
+  (vector->stack '#(0 1 2)))
+
+(stack-top     D)       @result{} 0
+(stack->vector D)       @result{} #(0 1 2)
+@end lisp
+@end defun
+
+@c page
+@node stacks misc
+@section Miscellaneous operations on stacks
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers stacks}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun stack-copy! @var{dst-stack} @var{src-stack}
+@defunx $stack-copy! @var{dst-stack} @var{src-stack}
+Iterate over all the objects in @var{src-stack}, starting from the top
+side, and push them in the bottom side of @var{dst-stack}.  This is a
+shallow copy: the very objects from the source stack are added to the
+destination stack; if we need to duplicate the objects, we can use the
+map operation.
+
+The @var{dst-stack} argument allows us to build the destination stack
+with the desired configuration parameters.
+@end defun
+
+
+@defun stack-reverse! @var{dst-stack} @var{src-stack}
+@defunx $stack-reverse! @var{dst-stack} @var{src-stack}
+Iterate over the objects in @var{src-stack}, starting from the top
+side, and push them in the top side of @var{dst-stack}.  Return
+@var{dst-stack}.
+
+The @var{dst-stack} argument allows us to build the destination stack
+with the desired configuration parameters.
 @end defun
 
 @c end of file

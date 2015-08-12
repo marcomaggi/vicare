@@ -10,26 +10,25 @@
 ;;;
 ;;;Copyright (c) 2009, 2010, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
 (library (vicare containers stacks)
   (export
-    stack
-    make-stack			stack?
+    <stack>			make-stack
+    stack			stack?
 
     stack-hash			$stack-hash
     stack-putprop		$stack-putprop
@@ -47,168 +46,277 @@
     stack-pop!			$stack-pop!
     stack-purge!		$stack-purge!
 
+    stack-fold-left		$stack-fold-left
+    stack-fold-right		$stack-fold-right
+
+    stack-map-left		$stack-map-left
+    stack-map-right		$stack-map-right
+    stack-for-each-left		$stack-for-each-left
+    stack-for-each-right	$stack-for-each-right
+
+    (rename
+     (stack-map-left		stack-map)
+     ($stack-map-left		$stack-map)
+     (stack-for-each-left	stack-for-each)
+     ($stack-for-each-left	$stack-for-each))
+
+    stack-find-left		$stack-find-left
+    stack-find-right		$stack-find-right
+    stack-for-all		$stack-for-all
+    stack-exists-left		$stack-exists-left
+    stack-exists-right		$stack-exists-right
+
+    (rename
+     (stack-find-left		stack-find)
+     ($stack-find-left		$stack-find)
+     (stack-exists-left		stack-exists)
+     ($stack-exists-left	$stack-exists))
+
+    stack-filter		$stack-filter
+    stack-partition		$stack-partition
+
+    stack-copy!			$stack-copy!
+    stack-reverse!		$stack-reverse!
+
     stack->list			list->stack
     stack->vector		vector->stack)
   (import (vicare)
-    (vicare system $pairs)
-    (vicare system $numerics))
+    (vicare containers slots))
 
 
-;;; helpers
+;;;; helpers
 
-(define-inline (list-copy/stx ?ell)
-  (let recur ((ell ?ell))
-    (if (pair? ell)
-	(cons ($car ell) (recur ($cdr ell)))
-      ell)))
+(define-syntax-rule (declare-operation-unary ?safe ?unsafe)
+  (define* (?safe {D stack?})
+    (?unsafe D)))
 
 
 ;;;; data structure
 
-(define-record-type stack
-  (nongenerative vicare:containers:stack)
+(define-record-type (<stack> make-stack stack?)
+  (nongenerative vicare:containers:<stack>)
+  (parent <slots>)
   (protocol
-   (lambda (make-record)
-     (lambda items
-       (make-record #f items))))
-  (fields (mutable uid)
-	  (mutable first-pair)))
+   (lambda (make-slots)
+     (case-lambda
+      (()
+       ((make-slots) #f))
+      ((buffer-length)
+       ((make-slots buffer-length) #f)))))
+  (fields (mutable uid)))
+
+;;; --------------------------------------------------------------------
+
+(define-alias  stack-uid		 <stack>-uid)
+(define-alias $stack-uid		$<stack>-uid)
+
+(define-alias  stack-uid-set!		 <stack>-uid-set!)
+(define-alias $stack-uid-set!		$<stack>-uid-set!)
+
+;;; --------------------------------------------------------------------
+
+(define (stack . item*)
+  (receive-and-return (D)
+      (make-stack)
+    (for-each (lambda (obj)
+		($slots-push-rear! D obj))
+      item*)))
 
 
 ;;;; UID stuff
 
-(define* (stack-hash {S stack?})
-  ($stack-hash S))
+(define* (stack-hash {Q stack?})
+  ($stack-hash Q))
 
-(define ($stack-hash S)
-  (unless ($stack-uid S)
-    ($stack-uid-set! S (gensym)))
-  (symbol-hash ($stack-uid S)))
-
-;;; --------------------------------------------------------------------
-
-(define* (stack-putprop {S stack?} {key symbol?} value)
-  ($stack-putprop S key value))
-
-(define ($stack-putprop S key value)
-  (unless ($stack-uid S)
-    ($stack-uid-set! S (gensym)))
-  (putprop ($stack-uid S) key value))
+(define ($stack-hash Q)
+  (unless ($stack-uid Q)
+    ($stack-uid-set! Q (gensym)))
+  (symbol-hash ($stack-uid Q)))
 
 ;;; --------------------------------------------------------------------
 
-(define* (stack-getprop {S stack?} {key symbol?})
-  ($stack-getprop S key))
+(define* (stack-putprop {Q stack?} {key symbol?} value)
+  ($stack-putprop Q key value))
 
-(define ($stack-getprop S key)
-  (unless ($stack-uid S)
-    ($stack-uid-set! S (gensym)))
-  (getprop ($stack-uid S) key))
-
-;;; --------------------------------------------------------------------
-
-(define* (stack-remprop {S stack?} {key symbol?})
-  ($stack-remprop S key))
-
-(define ($stack-remprop S key)
-  (unless ($stack-uid S)
-    ($stack-uid-set! S (gensym)))
-  (remprop ($stack-uid S) key))
+(define ($stack-putprop Q key value)
+  (unless ($stack-uid Q)
+    ($stack-uid-set! Q (gensym)))
+  (putprop ($stack-uid Q) key value))
 
 ;;; --------------------------------------------------------------------
 
-(define* (stack-property-list {S stack?})
-  ($stack-property-list S))
+(define* (stack-getprop {Q stack?} {key symbol?})
+  ($stack-getprop Q key))
 
-(define ($stack-property-list S)
-  (unless ($stack-uid S)
-    ($stack-uid-set! S (gensym)))
-  (property-list ($stack-uid S)))
+(define ($stack-getprop Q key)
+  (unless ($stack-uid Q)
+    ($stack-uid-set! Q (gensym)))
+  (getprop ($stack-uid Q) key))
+
+;;; --------------------------------------------------------------------
+
+(define* (stack-remprop {Q stack?} {key symbol?})
+  ($stack-remprop Q key))
+
+(define ($stack-remprop Q key)
+  (unless ($stack-uid Q)
+    ($stack-uid-set! Q (gensym)))
+  (remprop ($stack-uid Q) key))
+
+;;; --------------------------------------------------------------------
+
+(define* (stack-property-list {Q stack?})
+  ($stack-property-list Q))
+
+(define ($stack-property-list Q)
+  (unless ($stack-uid Q)
+    ($stack-uid-set! Q (gensym)))
+  (property-list ($stack-uid Q)))
 
 
 ;;;; inspection
 
-(define* (stack-empty? {S stack?})
-  ($stack-empty? S))
+(declare-operation-unary stack-empty?		$stack-empty?)
+(declare-operation-unary stack-not-empty?	$stack-not-empty?)
+(declare-operation-unary stack-size		$stack-size)
 
-(define ($stack-empty? S)
-  (null? ($stack-first-pair S)))
-
-;;; --------------------------------------------------------------------
-
-(define* (stack-not-empty? {S stack?})
-  ($stack-not-empty? S))
-
-(define ($stack-not-empty? S)
-  (pair? ($stack-first-pair S)))
-
-;;; --------------------------------------------------------------------
-
-(define* (stack-size {S stack?})
-  ($stack-size S))
-
-(define ($stack-size S)
-  (let loop ((ell ($stack-first-pair S))
-	     (len 0))
-    (if (pair? ell)
-	(loop ($cdr ell) ($add-fixnum-number 1 len))
-      len)))
+(define-alias $stack-empty?			$slots-empty?)
+(define-alias $stack-not-empty?			$slots-not-empty?)
+(define-alias $stack-size			$slots-size)
 
 
 ;;;; accessors and mutators
 
-(define* (stack-top {S stack?})
-  ($stack-top S))
+(declare-operation-unary stack-top		$stack-top)
 
-(define ($stack-top S)
-  (if (pair? ($stack-first-pair S))
-      ($car ($stack-first-pair S))
-    (assertion-violation 'stack-top "stack is empty" S)))
+(define-alias $stack-top			$slots-front)
 
 ;;; --------------------------------------------------------------------
 
-(define* (stack-push! {S stack?} obj)
-  ($stack-push! S obj))
+(define* (stack-push! {D stack?} obj)
+  ($stack-push! D obj))
 
-(define ($stack-push! S obj)
-  ($stack-first-pair-set! S (cons obj ($stack-first-pair S))))
-
-;;; --------------------------------------------------------------------
-
-(define* (stack-pop! {S stack?})
-  ($stack-pop! S))
-
-(define* ($stack-pop! S)
-  (if (pair? ($stack-first-pair S))
-      (receive-and-return (value)
-	  ($car ($stack-first-pair S))
-	($stack-first-pair-set! S ($cdr ($stack-first-pair S))))
-    (assertion-violation __who__ "stack is empty" S)))
+(define-alias $stack-push!			$slots-push-front!)
 
 ;;; --------------------------------------------------------------------
 
-(define* (stack-purge! {S stack?})
-  ($stack-purge! S))
+(declare-operation-unary stack-pop!		$stack-pop!)
 
-(define ($stack-purge! S)
-  ($stack-first-pair-set! S '()))
+(define-alias $stack-pop!			$slots-pop-front!)
+
+;;; --------------------------------------------------------------------
+
+(declare-operation-unary stack-purge!		$stack-purge!)
+(define-alias $stack-purge!			$slots-purge!)
+
+
+;;;; mapping
+
+(define* (stack-map-left {dst stack?} {fun procedure?} {src stack?})
+  ($stack-map-left dst fun src))
+
+(define* (stack-map-right  {dst stack?} {fun procedure?} {src stack?})
+  ($stack-map-right dst fun src))
+
+(define* (stack-for-each-left {fun procedure?} {src stack?})
+  ($stack-for-each-left fun src))
+
+(define* (stack-for-each-right  {fun procedure?} {src stack?})
+  ($stack-for-each-right fun src))
+
+(define-alias $stack-map-left		$slots-map-left)
+(define-alias $stack-map-right		$slots-map-right)
+(define-alias $stack-for-each-left	$slots-for-each-left)
+(define-alias $stack-for-each-right	$slots-for-each-right)
+
+
+;;;; folding
+
+(define* (stack-fold-left {kons procedure?} knil {D stack?})
+  ($stack-fold-left kons knil D))
+
+(define* (stack-fold-right {kons procedure?} knil {D stack?})
+  ($stack-fold-right kons knil D))
+
+(define-alias $stack-fold-left		$slots-fold-left)
+(define-alias $stack-fold-right		$slots-fold-right)
+
+
+;;;; searching
+
+(case-define* stack-find-left
+  (({fun procedure?} {D stack?})
+   ($stack-find-left fun D #f))
+  (({fun procedure?} {D stack?} not-found-rv)
+   ($stack-find-left fun D not-found-rv)))
+
+(case-define* stack-find-right
+  (({fun procedure?} {D stack?})
+   ($stack-find-right fun D #f))
+  (({fun procedure?} {D stack?} not-found-rv)
+   ($stack-find-right fun D not-found-rv)))
+
+(define* (stack-for-all {fun procedure?} {D stack?})
+  ($stack-for-all fun D))
+
+(define* (stack-exists-left {fun procedure?} {D stack?})
+  ($stack-exists-left fun D))
+
+(define* (stack-exists-right {fun procedure?} {D stack?})
+  ($stack-exists-right fun D))
+
+(define-alias $stack-for-all		$slots-for-all)
+(define-alias $stack-find-left		$slots-find-left)
+(define-alias $stack-find-right		$slots-find-right)
+(define-alias $stack-exists-left	$slots-exists-left)
+(define-alias $stack-exists-right	$slots-exists-right)
+
+
+;;;; filtering
+
+(define* (stack-filter {dst-stack stack?} {fun procedure?} {src-stack stack?})
+  ($stack-filter dst-stack fun src-stack))
+
+(define-alias $stack-filter		$slots-filter)
+
+;;; --------------------------------------------------------------------
+
+(define* (stack-partition {matching-stack stack?} {not-matching-stack stack?} {fun procedure?} {src-stack stack?})
+  ($stack-partition matching-stack not-matching-stack fun src-stack))
+
+(define-alias $stack-partition		$slots-partition)
 
 
 ;;;; conversion
 
-(define* (stack->list {S stack?})
-  (list-copy/stx ($stack-first-pair S)))
+(declare-operation-unary stack->list	$stack->list)
+(declare-operation-unary stack->vector	$stack->vector)
 
 (define* (list->stack {ell list?})
-  (apply make-stack ell))
+  ($list->slots (make-stack) ell))
+
+(define* (vector->stack {vec vector?})
+  ($vector->slots (make-stack) vec))
+
+(define-alias $stack->list		$slots->list)
+(define-alias $stack->vector		$slots->vector)
+(define-alias $list->stack		$list->slots)
+(define-alias $vector->stack		$vector->slots)
+
+
+;;;; miscellaneous operations
+
+(define* (stack-copy! {dst stack?} {src stack?})
+  ($stack-copy! dst src))
+
+(define-alias $stack-copy!		$slots-copy!)
 
 ;;; --------------------------------------------------------------------
 
-(define* (stack->vector {S stack?})
-  (list->vector ($stack-first-pair S)))
+(define* (stack-reverse! {dst stack?} {src stack?})
+  ($stack-reverse! dst src))
 
-(define* (vector->stack {vec vector?})
-  (apply make-stack (vector->list vec)))
+(define-alias $stack-reverse!		$slots-reverse!)
 
 
 ;;;; done

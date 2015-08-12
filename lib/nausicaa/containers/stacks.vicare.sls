@@ -32,9 +32,10 @@
     list->stack
     vector->stack)
   (import (nausicaa)
-    (vicare containers stacks))
+    (except (vicare containers stacks)
+	    <stack>))
   (define-label <stack>
-    (protocol (lambda () make-stack))
+    (protocol (lambda () stack))
     (predicate stack?)
     (virtual-fields
      (immutable {empty?		<boolean>}	stack-empty?)
