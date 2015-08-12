@@ -1016,6 +1016,64 @@
   #t)
 
 
+(parametrise ((check-test-name	'filter))
+
+  (check
+      (deque->list (deque-filter (deque) even? (deque)))
+    => '())
+
+  (check
+      (deque->list (deque-filter (deque) even? (deque 1 3 5 7)))
+    => '())
+
+  (check
+      (deque->list (deque-filter (deque) even? (deque 1 3 5 6 7)))
+    => '(6))
+
+  (check
+      (deque->list (deque-filter (deque) even? (deque 1 2 3 4 5 6 7)))
+    => '(2 4 6))
+
+  (check
+      (deque->list (deque-filter (deque) even? (deque 1 2 3 4 5 6 7 8)))
+    => '(2 4 6 8))
+
+  (check
+      (deque->list (deque-filter (deque) even? (deque 2 4 6 8)))
+    => '(2 4 6 8))
+
+  #t)
+
+
+(parametrise ((check-test-name	'partition))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?body ?expected-in ?expected-ou)
+       (check
+	   (receive (in ou)
+	       ?body
+	     (values (deque->list in) (deque->list ou)))
+	 => ?expected-in ?expected-ou))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (deque-partition (deque) (deque) even? (deque))				'() '())
+
+  (doit (deque-partition (deque) (deque) even? (deque 1 3 5 7))			'() '(1 3 5 7))
+  (doit (deque-partition (deque) (deque) even? (deque 2 4 6 8))			'(2 4 6 8) '())
+
+  (doit (deque-partition (deque) (deque) even? (deque 1 3 5 6 7))		'(6) '(1 3 5 7))
+
+  (doit (deque-partition (deque) (deque) even? (deque 1 2 3 4 5 6 7))		'(2 4 6) '(1 3 5 7))
+
+  (doit (deque-partition (deque) (deque) even? (deque 1 2 3 4 5 6 7 8))		'(2 4 6 8) '(1 3 5 7))
+
+  #t)
+
+
+
 (parametrise ((check-test-name 'conversion))
 
   (check

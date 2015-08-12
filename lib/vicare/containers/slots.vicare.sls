@@ -170,6 +170,9 @@
     slots-exists-left		$slots-exists-left
     slots-exists-right		$slots-exists-right
 
+    slots-filter		$slots-filter
+    slots-partition		$slots-partition
+
     slots->list			$slots->list
     list->slots			$list->slots
     slots->vector		$slots->vector
@@ -863,6 +866,34 @@
       #f slots)))
 
 
+;;;; filtering
+
+(define* (slots-filter {dst-slots slots?} {pred procedure?} {src-slots slots?})
+  ($slots-filter dst-slots pred src-slots))
+
+(define ($slots-filter dst-slots pred src-slots)
+  ($slots-fold-left (lambda (dst-slots obj)
+		      (when (pred obj)
+			($slots-push-rear! dst-slots obj))
+			dst-slots)
+    dst-slots src-slots))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-partition {matching-slots slots?} {not-matching-slots slots?} {pred procedure?} {src-slots slots?})
+  ($slots-partition matching-slots not-matching-slots pred src-slots))
+
+(define ($slots-partition matching-slots not-matching-slots pred src-slots)
+  ($slots-fold-left (lambda (knil obj)
+		      ($slots-push-rear! (if (pred obj)
+					     (car knil)
+					   (cdr knil))
+					 obj)
+		      knil)
+    (cons matching-slots not-matching-slots) src-slots)
+  (values matching-slots not-matching-slots))
+
+
 ;;;; conversion
 
 (define* (slots->list {slots slots?})
@@ -931,4 +962,16 @@
 ;; eval: (put '$slots-map-right		'scheme-indent-function 1)
 ;; eval: (put '$slots-for-each-left	'scheme-indent-function 1)
 ;; eval: (put '$slots-for-each-right	'scheme-indent-function 1)
+;; eval: (put 'slots-for-all		'scheme-indent-function 1)
+;; eval: (put 'slots-find-left		'scheme-indent-function 1)
+;; eval: (put 'slots-find-right		'scheme-indent-function 1)
+;; eval: (put 'slots-exists		'scheme-indent-function 1)
+;; eval: (put 'slots-exists-left	'scheme-indent-function 1)
+;; eval: (put 'slots-exists-right	'scheme-indent-function 1)
+;; eval: (put '$slots-for-all		'scheme-indent-function 1)
+;; eval: (put '$slots-find-left		'scheme-indent-function 1)
+;; eval: (put '$slots-find-right	'scheme-indent-function 1)
+;; eval: (put '$slots-exists		'scheme-indent-function 1)
+;; eval: (put '$slots-exists-left	'scheme-indent-function 1)
+;; eval: (put '$slots-exists-right	'scheme-indent-function 1)
 ;; End:

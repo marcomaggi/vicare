@@ -76,6 +76,9 @@
      (deque-exists-left		deque-exists)
      ($deque-exists-left	$deque-exists))
 
+    deque-filter		$deque-filter
+    deque-partition		$deque-partition
+
     deque->list			list->deque
     deque->vector		vector->deque)
   (import (vicare)
@@ -281,6 +284,21 @@
 (define-alias $deque-find-right		$slots-find-right)
 (define-alias $deque-exists-left	$slots-exists-left)
 (define-alias $deque-exists-right	$slots-exists-right)
+
+
+;;;; filtering
+
+(define* (deque-filter {dst-deque deque?} {fun procedure?} {src-deque deque?})
+  ($deque-filter dst-deque fun src-deque))
+
+(define-alias $deque-filter		$slots-filter)
+
+;;; --------------------------------------------------------------------
+
+(define* (deque-partition {matching-deque deque?} {not-matching-deque deque?} {fun procedure?} {src-deque deque?})
+  ($deque-partition matching-deque not-matching-deque fun src-deque))
+
+(define-alias $deque-partition		$slots-partition)
 
 
 ;;;; conversion

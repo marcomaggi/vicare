@@ -17,6 +17,7 @@ efficient insertion and removal at both ends.
 * deques folding::              Folding over deques.
 * deques mapping::              Mapping over deques.
 * deques searching::            Searching in deques.
+* deques filtering::            Filtering in deques.
 * deques conversion::           Converting deques to other objects.
 @end menu
 
@@ -430,6 +431,40 @@ When @var{not-found-rv} is used: if all the applications return
 @defunx deque-find @var{fun} @var{deque} @var{not-found-rv}
 @defunx $deque-find @var{fun} @var{deque} @var{not-found-rv}
 Aliases for @func{deque-find-left} and @func{$deque-find-right}.
+@end defun
+
+@c page
+@node deques filtering
+@section Filtering in deques
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun deque-filter @var{dst-deque} @var{pred} @var{src-deque}
+@defunx deque-filter @var{dst-deque} @var{pred} @var{src-deque}
+Iterate over the objects in @var{src-deque} starting from the front
+side, apply @var{pred} to them, push on the rear of @var{dst-deque} the
+ones for which @var{pred} returns true.  Return @var{dst-deque} itself.
+
+The argument @var{dst-queue} allows us to build and configure a deque
+with the needed parameters.
+@end defun
+
+
+@defun deque-partition @var{match-deque} @var{no-match-deque} @var{pred} @var{src-deque}
+@defunx deque-partition @var{match-deque} @var{no-match-deque} @var{pred} @var{src-deque}
+Iterate over the objects in @var{src-deque}, starting from the front
+side, and apply @var{pred} to them: if the return value is true, push
+the object on the rear of @var{match-deque}; if the return value is
+@false{}, push the object on the rear of @var{no-match-deque}.  Return
+two values: @var{match-deque} and @var{no-match-deque}.
+
+The arguments @var{match-deque} and @var{no-match-deque} allow us to
+build and configure deques with the needed parameters.
 @end defun
 
 @c page
