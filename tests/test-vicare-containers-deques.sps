@@ -634,25 +634,45 @@
   (collect))
 
 
-(parametrise ((check-test-name	'operations))
+(parametrise ((check-test-name	'copy))
 
   (check
-      (deque->list (deque-copy (make-deque) (deque)))
+      (deque->list (deque-copy! (make-deque) (deque)))
     => '())
 
   (check
-      (deque->list (deque-copy (make-deque) (list->deque LIST-5)))
+      (deque->list (deque-copy! (make-deque) (list->deque LIST-5)))
     => LIST-5)
 
   (check
-      (deque->list (deque-copy (make-deque) (list->deque LIST-20)))
+      (deque->list (deque-copy! (make-deque) (list->deque LIST-20)))
     => LIST-20)
 
   (check
-      (deque->list (deque-copy (make-deque) (list->deque LIST-100)))
+      (deque->list (deque-copy! (make-deque) (list->deque LIST-100)))
     => LIST-100)
 
   #t)
+
+
+(parametrise ((check-test-name	'reverse))
+
+  (check
+      (deque->list (deque-reverse! (deque) (deque)))
+    => '())
+
+  (check
+      (deque->list (deque-reverse! (deque) (deque 0)))
+    => '(0))
+
+  (check
+      (deque->list (deque-reverse! (deque) (deque 0 1 2 3 4)))
+    => '(4 3 2 1 0))
+
+  #t)
+
+
+
 
 
 (parametrise ((check-test-name	'mapping))

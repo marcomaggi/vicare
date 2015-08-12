@@ -52,7 +52,6 @@
     deque-fold-left		$deque-fold-left
     deque-fold-right		$deque-fold-right
 
-    deque-copy			$deque-copy
     deque-map-left		$deque-map-left
     deque-map-right		$deque-map-right
     deque-for-each-left		$deque-for-each-left
@@ -78,6 +77,9 @@
 
     deque-filter		$deque-filter
     deque-partition		$deque-partition
+
+    deque-copy!			$deque-copy!
+    deque-reverse!		$deque-reverse!
 
     deque->list			list->deque
     deque->vector		vector->deque)
@@ -122,11 +124,6 @@
     (for-each (lambda (obj)
 		($deque-push-rear! D obj))
       item*)))
-
-(define* (deque-copy {dst deque?} {src deque?})
-  ($deque-copy dst src))
-
-(define-alias $deque-copy		$slots-copy)
 
 
 ;;;; UID stuff
@@ -316,6 +313,21 @@
 (define-alias $deque->vector		$slots->vector)
 (define-alias $list->deque		$list->slots)
 (define-alias $vector->deque		$vector->slots)
+
+
+;;;; miscellaneous operations
+
+(define* (deque-copy! {dst deque?} {src deque?})
+  ($deque-copy! dst src))
+
+(define-alias $deque-copy!		$slots-copy!)
+
+;;; --------------------------------------------------------------------
+
+(define* (deque-reverse! {dst deque?} {src deque?})
+  ($deque-reverse! dst src))
+
+(define-alias $deque-reverse!		$slots-reverse!)
 
 
 ;;;; done

@@ -158,7 +158,6 @@
     slots-fold-left		$slots-fold-left
     slots-fold-right		$slots-fold-right
 
-    slots-copy			$slots-copy
     slots-map-left		$slots-map-left
     slots-map-right		$slots-map-right
     slots-for-each-left		$slots-for-each-left
@@ -172,6 +171,9 @@
 
     slots-filter		$slots-filter
     slots-partition		$slots-partition
+
+    slots-copy!			$slots-copy!
+    slots-reverse!		$slots-reverse!
 
     slots->list			$slots->list
     list->slots			$list->slots
@@ -740,13 +742,24 @@
 
 ;;;; misc operations
 
-(define* (slots-copy {dst-slots slots?} {src-slots slots?})
-  ($slots-copy dst-slots src-slots))
+(define* (slots-copy! {dst-slots slots?} {src-slots slots?})
+  ($slots-copy! dst-slots src-slots))
 
-(define ($slots-copy dst-slots src-slots)
+(define ($slots-copy! dst-slots src-slots)
   ($slots-fold-left (lambda (knil obj)
 		       ($slots-push-rear! dst-slots obj)
 		       knil)
+    dst-slots src-slots))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-reverse! {dst-slots slots?} {src-slots slots?})
+  ($slots-reverse! dst-slots src-slots))
+
+(define ($slots-reverse! dst-slots src-slots)
+  ($slots-fold-left (lambda (knil obj)
+		      ($slots-push-front! dst-slots obj)
+		      knil)
     dst-slots src-slots))
 
 

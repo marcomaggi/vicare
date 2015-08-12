@@ -19,6 +19,7 @@ efficient insertion and removal at both ends.
 * deques searching::            Searching in deques.
 * deques filtering::            Filtering in deques.
 * deques conversion::           Converting deques to other objects.
+* deques misc::                 Miscellaneous operations on deques.
 @end menu
 
 @c page
@@ -67,19 +68,6 @@ size of the internal buffers is set to the default.
 (deque-front D)         @result{} 0
 (deque-rear  D)         @result{} 2
 @end lisp
-@end defun
-
-
-@defun deque-copy @var{dst-deque} @var{src-deque}
-@defunx $deque-copy @var{dst-deque} @var{src-deque}
-Iterate over all the objects in @var{src-deque}, starting from the front
-side, and push them in the rear side of @var{dst-deque}.  This is a
-shallow copy: the very objects from the source deque are added to the
-destination deque; if we need to duplicate the objects, we can use the
-map operation.
-
-The @var{dst-deque} argument allows us to build the destination deque
-with the desired configuration.
 @end defun
 
 @c ------------------------------------------------------------
@@ -276,8 +264,8 @@ validate their arguments before accessing them.
 @defun deque-map-left @var{dst-deque} @var{fun} @var{src-deque}
 @defunx $deque-map-left @var{dst-deque} @var{fun} @var{src-deque}
 Iterate over all the objects in @var{src-deque}, starting from the front
-side, apply @var{fun} to them, finally push them in the rear side of
-@var{dst-deque}.
+side, apply @var{fun} to them, push the result of the application in the
+rear side of @var{dst-deque}.
 
 @lisp
 (deque->list
@@ -293,8 +281,8 @@ with the desired configuration.
 @defun deque-map-right @var{dst-deque} @var{fun} @var{src-deque}
 @defunx $deque-map-right @var{dst-deque} @var{fun} @var{src-deque}
 Iterate over all the objects in @var{src-deque}, starting from the rear
-side, apply @var{fun} to them, finally push them in the front side of
-@var{dst-deque}.
+side, apply @var{fun} to them, push the result of the application in the
+front side of @var{dst-deque}.
 
 @lisp
 (deque->list
@@ -511,6 +499,40 @@ pushed on the deque left--to--right from the rear side.
 (deque-rear    D)       @result{} 2
 (deque->vector D)       @result{} #(0 1 2)
 @end lisp
+@end defun
+
+@c page
+@node deques misc
+@section Miscellaneous operations on deques
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers deques}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun deque-copy! @var{dst-deque} @var{src-deque}
+@defunx $deque-copy! @var{dst-deque} @var{src-deque}
+Iterate over all the objects in @var{src-deque}, starting from the front
+side, and push them in the rear side of @var{dst-deque}.  This is a
+shallow copy: the very objects from the source deque are added to the
+destination deque; if we need to duplicate the objects, we can use the
+map operation.
+
+The @var{dst-deque} argument allows us to build the destination deque
+with the desired configuration.
+@end defun
+
+
+@defun deque-reverse! @var{dst-deque} @var{src-deque}
+@defunx $deque-reverse! @var{dst-deque} @var{src-deque}
+Iterate over the objects in @var{src-queue}, starting from the front
+side, and push them in the front side of @var{dst-queue}.  Return
+@var{dst-queue}.
+
+The @var{dst-deque} argument allows us to build the destination deque
+with the desired configuration.
 @end defun
 
 @c end of file
