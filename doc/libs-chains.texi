@@ -589,6 +589,7 @@ stops when reaching the end of one of the chain arguments.
 
 
 @defun chain-find-forwards @var{fun} @var{chain}
+@defunx chain-find-forwards @var{fun} @var{chain} @var{not-found-rv}
 @defunx $chain-find-forwards @var{fun} @var{chain} @var{not-found-rv}
 Apply the procedure @var{fun} to the objects in @var{chain}: stop at the
 first true value and return the object from @var{chain} that generated

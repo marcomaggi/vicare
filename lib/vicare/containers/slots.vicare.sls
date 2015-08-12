@@ -155,14 +155,20 @@
     slots-pop-rear!		$slots-pop-rear!
     slots-purge!		$slots-purge!
 
-    slots-fold-front		$slots-fold-front
-    slots-fold-rear		$slots-fold-rear
+    slots-fold-left		$slots-fold-left
+    slots-fold-right		$slots-fold-right
 
     slots-copy			$slots-copy
-    slots-map-front		$slots-map-front
-    slots-map-rear		$slots-map-rear
-    slots-for-each-front	$slots-for-each-front
-    slots-for-each-rear		$slots-for-each-rear
+    slots-map-left		$slots-map-left
+    slots-map-right		$slots-map-right
+    slots-for-each-left		$slots-for-each-left
+    slots-for-each-right	$slots-for-each-right
+
+    slots-for-all		$slots-for-all
+    slots-find-left		$slots-find-left
+    slots-find-right		$slots-find-right
+    slots-exists-left		$slots-exists-left
+    slots-exists-right		$slots-exists-right
 
     slots->list			$slots->list
     list->slots			$list->slots
@@ -629,15 +635,30 @@
 	       ($<slots>-las-link-next-idx-set! slots obj-idx)
 	       ($slots-decr-size! slots)))))))
 
+;;; --------------------------------------------------------------------
+
+(define* (slots-purge! {slots slots?})
+  ($slots-purge! slots))
+
+(define ($slots-purge! slots)
+  (let ((lnk		($<slots>-fir-link slots))
+	(middle-idx	(div ($<slots>-buffer-length slots) 2)))
+    ($<slots>-las-link-set!          slots lnk)
+    ($<slots>-fir-link-next-idx-set! slots middle-idx)
+    ($<slots>-las-link-next-idx-set! slots middle-idx)
+    ($<slots>-front-cache-set!       slots #f)
+    ($<slots>-rear-cache-set!        slots #f)
+    ($<slots>-size-set!              slots 0)))
+
 
 ;;;; folding from front
 
-(define* (slots-fold-front {kons procedure?} knil {slots slots?})
-  ($slots-fold-front kons knil slots))
+(define* (slots-fold-left {kons procedure?} knil {slots slots?})
+  ($slots-fold-left kons knil slots))
 
-(module ($slots-fold-front)
+(module ($slots-fold-left)
 
-  (define ($slots-fold-front kons knil slots)
+  (define ($slots-fold-left kons knil slots)
     (let ((fir-lnk ($<slots>-fir-link slots))
 	  (las-lnk ($<slots>-las-link slots))
 	  (fir-idx ($<slots>-fir-link-next-idx slots))
@@ -669,17 +690,17 @@
 			   vec ($fxadd1 i) i.past)
       knil))
 
-  #| end of module: $SLOTS-FOLD-FRONT |# )
+  #| end of module: $SLOTS-FOLD-LEFT |# )
 
 
 ;;;; folding from rear
 
-(define* (slots-fold-rear {kons procedure?} knil {slots slots?})
-  ($slots-fold-rear kons knil slots))
+(define* (slots-fold-right {kons procedure?} knil {slots slots?})
+  ($slots-fold-right kons knil slots))
 
-(module ($slots-fold-rear)
+(module ($slots-fold-right)
 
-  (define ($slots-fold-rear kons knil slots)
+  (define ($slots-fold-right kons knil slots)
     (let ((fir-lnk ($<slots>-fir-link slots))
 	  (las-lnk ($<slots>-las-link slots))
 	  (fir-idx ($<slots>-fir-link-next-idx slots))
@@ -711,78 +732,135 @@
 			   vec ($fxsub1 i) i.first)
       knil))
 
-  #| end of module: $SLOTS-FOLD-REAR |# )
+  #| end of module: $SLOTS-FOLD-RIGHT |# )
 
 
-;;;; operations
+;;;; misc operations
 
 (define* (slots-copy {dst-slots slots?} {src-slots slots?})
   ($slots-copy dst-slots src-slots))
 
 (define ($slots-copy dst-slots src-slots)
-  ($slots-fold-front (lambda (knil obj)
+  ($slots-fold-left (lambda (knil obj)
 		       ($slots-push-rear! dst-slots obj)
 		       knil)
     dst-slots src-slots))
 
-;;; --------------------------------------------------------------------
+
+;;;; mapping
 
-(define* (slots-map-front {dst-slots slots?} {fun procedure?} {src-slots slots?})
-  ($slots-map-front dst-slots fun src-slots))
+(define* (slots-map-left {dst-slots slots?} {fun procedure?} {src-slots slots?})
+  ($slots-map-left dst-slots fun src-slots))
 
-(define ($slots-map-front dst-slots fun src-slots)
-  ($slots-fold-front (lambda (dst-slots obj)
+(define ($slots-map-left dst-slots fun src-slots)
+  ($slots-fold-left (lambda (dst-slots obj)
 		       ($slots-push-rear! dst-slots (fun obj))
 		       dst-slots)
     dst-slots src-slots))
 
 ;;; --------------------------------------------------------------------
 
-(define* (slots-map-rear {dst-slots slots?} {fun procedure?} {src-slots slots?})
-  ($slots-map-rear dst-slots fun src-slots))
+(define* (slots-map-right {dst-slots slots?} {fun procedure?} {src-slots slots?})
+  ($slots-map-right dst-slots fun src-slots))
 
-(define ($slots-map-rear dst-slots fun src-slots)
-  ($slots-fold-rear (lambda (obj dst-slots)
+(define ($slots-map-right dst-slots fun src-slots)
+  ($slots-fold-right (lambda (obj dst-slots)
 		      ($slots-push-front! dst-slots (fun obj))
 		      dst-slots)
     dst-slots src-slots))
 
 ;;; --------------------------------------------------------------------
 
-(define* (slots-for-each-front {fun procedure?} {slots slots?})
-  ($slots-for-each-front fun slots))
+(define* (slots-for-each-left {fun procedure?} {slots slots?})
+  ($slots-for-each-left fun slots))
 
-(define ($slots-for-each-front fun slots)
-  ($slots-fold-front (lambda (knil obj)
+(define ($slots-for-each-left fun slots)
+  ($slots-fold-left (lambda (knil obj)
 		       (fun obj)
 		       knil)
     (void) slots))
 
 ;;; --------------------------------------------------------------------
 
-(define* (slots-for-each-rear {fun procedure?} {slots slots?})
-  ($slots-for-each-rear fun slots))
+(define* (slots-for-each-right {fun procedure?} {slots slots?})
+  ($slots-for-each-right fun slots))
 
-(define ($slots-for-each-rear fun slots)
-  ($slots-fold-rear (lambda (obj knil)
+(define ($slots-for-each-right fun slots)
+  ($slots-fold-right (lambda (obj knil)
 		      (fun obj)
 		      knil)
     (void) slots))
 
+
+;;;; searching
+
+(case-define* slots-find-left
+  (({fun procedure?} {slots slots?})
+   ($slots-find-left fun slots #f))
+  (({fun procedure?} {slots slots?} not-found-rv)
+   ($slots-find-left fun slots not-found-rv)))
+
+(define ($slots-find-left fun slots not-found-rv)
+  (returnable
+    ($slots-fold-left (lambda (knil obj)
+			 (if (fun obj)
+			     (return obj)
+			   knil))
+      not-found-rv slots)))
+
 ;;; --------------------------------------------------------------------
 
-(define* (slots-purge! {slots slots?})
-  ($slots-purge! slots))
+(case-define* slots-find-right
+  (({fun procedure?} {slots slots?})
+   ($slots-find-right fun slots #f))
+  (({fun procedure?} {slots slots?} not-found-rv)
+   ($slots-find-right fun slots not-found-rv)))
 
-(define ($slots-purge! slots)
-  (let ((lnk		($<slots>-fir-link slots))
-	(middle-idx	(div ($<slots>-buffer-length slots) 2)))
-    ($<slots>-las-link-set!          slots lnk)
-    ($<slots>-fir-link-next-idx-set! slots middle-idx)
-    ($<slots>-las-link-next-idx-set! slots middle-idx)
-    ($<slots>-front-cache-set!       slots #f)
-    ($<slots>-rear-cache-set!        slots #f)
-    ($<slots>-size-set!              slots 0)))
+(define ($slots-find-right fun slots not-found-rv)
+  (returnable
+    ($slots-fold-right (lambda (obj knil)
+			(if (fun obj)
+			    (return obj)
+			  knil))
+      not-found-rv slots)))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-for-all {fun procedure?} {slots slots?})
+  ($slots-for-all fun slots))
+
+(define ($slots-for-all fun slots)
+  (returnable
+    ($slots-fold-left (lambda (knil obj)
+			 (or (fun obj)
+			     (return #f)))
+      #t slots)))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-exists-left {fun procedure?} {slots slots?})
+  ($slots-exists-left fun slots))
+
+(define ($slots-exists-left fun slots)
+  (returnable
+    ($slots-fold-left (lambda (knil obj)
+			 (if (fun obj)
+			     (return obj)
+			   knil))
+      #f slots)))
+
+;;; --------------------------------------------------------------------
+
+(define* (slots-exists-right {fun procedure?} {slots slots?})
+  ($slots-exists-right fun slots))
+
+(define ($slots-exists-right fun slots)
+  (returnable
+    ($slots-fold-right (lambda (obj knil)
+			(if (fun obj)
+			    (return obj)
+			  knil))
+      #f slots)))
 
 
 ;;;; conversion
@@ -791,7 +869,7 @@
   ($slots->list slots))
 
 (define ($slots->list slots)
-  ($slots-fold-rear cons '() slots))
+  ($slots-fold-right cons '() slots))
 
 ;;; --------------------------------------------------------------------
 
@@ -812,7 +890,7 @@
 (define ($slots->vector slots)
   (receive-and-return (vec)
       (make-vector ($slots-size slots))
-    ($slots-fold-front (lambda (knil item)
+    ($slots-fold-left (lambda (knil item)
 			 (let ((vec ($car knil))
 			       (idx ($cdr knil)))
 			   ($vector-set! vec idx item)
@@ -841,16 +919,16 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8-unix
-;; eval: (put 'slots-fold-front		'scheme-indent-function 1)
-;; eval: (put 'slots-fold-rear		'scheme-indent-function 1)
-;; eval: (put 'slots-map-front		'scheme-indent-function 1)
-;; eval: (put 'slots-map-rear		'scheme-indent-function 1)
-;; eval: (put 'slots-for-each-front	'scheme-indent-function 1)
-;; eval: (put 'slots-for-each-rear	'scheme-indent-function 1)
-;; eval: (put '$slots-fold-front	'scheme-indent-function 1)
-;; eval: (put '$slots-fold-rear		'scheme-indent-function 1)
-;; eval: (put '$slots-map-front		'scheme-indent-function 1)
-;; eval: (put '$slots-map-rear		'scheme-indent-function 1)
-;; eval: (put '$slots-for-each-front	'scheme-indent-function 1)
-;; eval: (put '$slots-for-each-rear	'scheme-indent-function 1)
+;; eval: (put 'slots-fold-left		'scheme-indent-function 1)
+;; eval: (put 'slots-fold-right		'scheme-indent-function 1)
+;; eval: (put 'slots-map-left		'scheme-indent-function 1)
+;; eval: (put 'slots-map-right		'scheme-indent-function 1)
+;; eval: (put 'slots-for-each-left	'scheme-indent-function 1)
+;; eval: (put 'slots-for-each-right	'scheme-indent-function 1)
+;; eval: (put '$slots-fold-left		'scheme-indent-function 1)
+;; eval: (put '$slots-fold-right	'scheme-indent-function 1)
+;; eval: (put '$slots-map-left		'scheme-indent-function 1)
+;; eval: (put '$slots-map-right		'scheme-indent-function 1)
+;; eval: (put '$slots-for-each-left	'scheme-indent-function 1)
+;; eval: (put '$slots-for-each-right	'scheme-indent-function 1)
 ;; End:

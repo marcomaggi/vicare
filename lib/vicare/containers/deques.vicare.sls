@@ -49,19 +49,44 @@
     deque-pop-rear!		$deque-pop-rear!
     deque-purge!		$deque-purge!
 
-    deque-fold-front		$deque-fold-front
-    deque-fold-rear		$deque-fold-rear
+    deque-fold-left		$deque-fold-left
+    deque-fold-right		$deque-fold-right
 
     deque-copy			$deque-copy
-    deque-map-front		$deque-map-front
-    deque-map-rear		$deque-map-rear
-    deque-for-each-front	$deque-for-each-front
-    deque-for-each-rear		$deque-for-each-rear
+    deque-map-left		$deque-map-left
+    deque-map-right		$deque-map-right
+    deque-for-each-left		$deque-for-each-left
+    deque-for-each-right	$deque-for-each-right
+
+    (rename
+     (deque-map-left		deque-map)
+     ($deque-map-left		$deque-map)
+     (deque-for-each-left	deque-for-each)
+     ($deque-for-each-left	$deque-for-each))
+
+    deque-find-left		$deque-find-left
+    deque-find-right		$deque-find-right
+    deque-for-all		$deque-for-all
+    deque-exists-left		$deque-exists-left
+    deque-exists-right		$deque-exists-right
+
+    (rename
+     (deque-find-left		deque-find)
+     ($deque-find-left		$deque-find)
+     (deque-exists-left		deque-exists)
+     ($deque-exists-left	$deque-exists))
 
     deque->list			list->deque
     deque->vector		vector->deque)
   (import (vicare)
     (vicare containers slots))
+
+
+;;;; helpers
+
+(define-syntax-rule (declare-operation-unary ?safe ?unsafe)
+  (define* (?safe {D deque?})
+    (?unsafe D)))
 
 
 ;;;; data structure
@@ -94,6 +119,11 @@
     (for-each (lambda (obj)
 		($deque-push-rear! D obj))
       item*)))
+
+(define* (deque-copy {dst deque?} {src deque?})
+  ($deque-copy dst src))
+
+(define-alias $deque-copy		$slots-copy)
 
 
 ;;;; UID stuff
@@ -147,13 +177,7 @@
   (property-list ($deque-uid Q)))
 
 
-;;;; aliases
-
-(define-syntax-rule (declare-operation-unary ?safe ?unsafe)
-  (define* (?safe {D deque?})
-    (?unsafe D)))
-
-;;; --------------------------------------------------------------------
+;;;; inspection
 
 (declare-operation-unary deque-empty?		$deque-empty?)
 (declare-operation-unary deque-not-empty?	$deque-not-empty?)
@@ -163,7 +187,8 @@
 (define-alias $deque-not-empty?			$slots-not-empty?)
 (define-alias $deque-size			$slots-size)
 
-;;; --------------------------------------------------------------------
+
+;;;; accessors and mutators
 
 (declare-operation-unary deque-front		$deque-front)
 (declare-operation-unary deque-rear		$deque-rear)
@@ -179,45 +204,86 @@
 (define* (deque-push-rear! {D deque?} obj)
   ($deque-push-rear! D obj))
 
-(define* (deque-fold-front {kons procedure?} knil {D deque?})
-  ($deque-fold-front kons knil D))
+(define-alias $deque-push-front!		$slots-push-front!)
+(define-alias $deque-push-rear!			$slots-push-rear!)
 
-(define* (deque-fold-rear {kons procedure?} knil {D deque?})
-  ($deque-fold-rear kons knil D))
-
-(define* (deque-copy {dst deque?} {src deque?})
-  ($deque-copy dst src))
-
-(define* (deque-map-front {dst deque?} {fun procedure?} {src deque?})
-  ($deque-map-front dst fun src))
-
-(define* (deque-map-rear  {dst deque?} {fun procedure?} {src deque?})
-  ($deque-map-rear dst fun src))
-
-(define* (deque-for-each-front {fun procedure?} {src deque?})
-  ($deque-for-each-front fun src))
-
-(define* (deque-for-each-rear  {fun procedure?} {src deque?})
-  ($deque-for-each-rear fun src))
+;;; --------------------------------------------------------------------
 
 (declare-operation-unary deque-pop-front!	$deque-pop-front!)
 (declare-operation-unary deque-pop-rear!	$deque-pop-rear!)
-(declare-operation-unary deque-purge!		$deque-purge!)
 
-(define-alias $deque-push-front!	$slots-push-front!)
-(define-alias $deque-push-rear!		$slots-push-rear!)
-(define-alias $deque-pop-front!		$slots-pop-front!)
-(define-alias $deque-pop-rear!		$slots-pop-rear!)
-(define-alias $deque-fold-front		$slots-fold-front)
-(define-alias $deque-fold-rear		$slots-fold-rear)
-(define-alias $deque-map-front		$slots-map-front)
-(define-alias $deque-map-rear		$slots-map-rear)
-(define-alias $deque-for-each-front	$slots-for-each-front)
-(define-alias $deque-for-each-rear	$slots-for-each-rear)
-(define-alias $deque-purge!		$slots-purge!)
-(define-alias $deque-copy		$slots-copy)
+(define-alias $deque-pop-front!			$slots-pop-front!)
+(define-alias $deque-pop-rear!			$slots-pop-rear!)
 
 ;;; --------------------------------------------------------------------
+
+(declare-operation-unary deque-purge!		$deque-purge!)
+(define-alias $deque-purge!			$slots-purge!)
+
+
+;;;; mapping
+
+(define* (deque-map-left {dst deque?} {fun procedure?} {src deque?})
+  ($deque-map-left dst fun src))
+
+(define* (deque-map-right  {dst deque?} {fun procedure?} {src deque?})
+  ($deque-map-right dst fun src))
+
+(define* (deque-for-each-left {fun procedure?} {src deque?})
+  ($deque-for-each-left fun src))
+
+(define* (deque-for-each-right  {fun procedure?} {src deque?})
+  ($deque-for-each-right fun src))
+
+(define-alias $deque-map-left		$slots-map-left)
+(define-alias $deque-map-right		$slots-map-right)
+(define-alias $deque-for-each-left	$slots-for-each-left)
+(define-alias $deque-for-each-right	$slots-for-each-right)
+
+
+;;;; folding
+
+(define* (deque-fold-left {kons procedure?} knil {D deque?})
+  ($deque-fold-left kons knil D))
+
+(define* (deque-fold-right {kons procedure?} knil {D deque?})
+  ($deque-fold-right kons knil D))
+
+(define-alias $deque-fold-left		$slots-fold-left)
+(define-alias $deque-fold-right		$slots-fold-right)
+
+
+;;;; searching
+
+(case-define* deque-find-left
+  (({fun procedure?} {D deque?})
+   ($deque-find-left fun D #f))
+  (({fun procedure?} {D deque?} not-found-rv)
+   ($deque-find-left fun D not-found-rv)))
+
+(case-define* deque-find-right
+  (({fun procedure?} {D deque?})
+   ($deque-find-right fun D #f))
+  (({fun procedure?} {D deque?} not-found-rv)
+   ($deque-find-right fun D not-found-rv)))
+
+(define* (deque-for-all {fun procedure?} {D deque?})
+  ($deque-for-all fun D))
+
+(define* (deque-exists-left {fun procedure?} {D deque?})
+  ($deque-exists-left fun D))
+
+(define* (deque-exists-right {fun procedure?} {D deque?})
+  ($deque-exists-right fun D))
+
+(define-alias $deque-for-all		$slots-for-all)
+(define-alias $deque-find-left		$slots-find-left)
+(define-alias $deque-find-right		$slots-find-right)
+(define-alias $deque-exists-left	$slots-exists-left)
+(define-alias $deque-exists-right	$slots-exists-right)
+
+
+;;;; conversion
 
 (declare-operation-unary deque->list	$deque->list)
 (declare-operation-unary deque->vector	$deque->vector)

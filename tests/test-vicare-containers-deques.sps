@@ -556,7 +556,7 @@
 
   (check
       (let ((D (make-deque)))
-	(deque-fold-front (lambda (knil obj)
+	(deque-fold-left (lambda (knil obj)
 			    (cons obj knil))
 	  '() D))
     => '())
@@ -564,21 +564,21 @@
   (check
       (let* ((L LIST-5)
 	     (D (list->deque L)))
-	(deque-fold-front (lambda (knil obj)
+	(deque-fold-left (lambda (knil obj)
 			    (cons obj knil))
 	  '() D))
     => LIST-5-REVERSED)
 
   (check
       (let ((D (list->deque LIST-20)))
-	(deque-fold-front (lambda (knil obj)
+	(deque-fold-left (lambda (knil obj)
 			    (cons obj knil))
 	  '() D))
     => LIST-20-REVERSED)
 
   (check
       (let ((D (list->deque LIST-100)))
-	(deque-fold-front (lambda (knil obj)
+	(deque-fold-left (lambda (knil obj)
 			    (cons obj knil))
 	  '() D))
     => LIST-100-REVERSED)
@@ -589,7 +589,7 @@
       (internal-body
 	(define D
 	  (deque 0 1 2 3 4 5))
-	(deque-fold-front (lambda (knil obj)
+	(deque-fold-left (lambda (knil obj)
 			    (cons obj knil))
 	  '() D))
     => '(5 4 3 2 1 0))
@@ -599,7 +599,7 @@
 
   (check
       (let ((D (make-deque)))
-	(deque-fold-rear (lambda (knil obj)
+	(deque-fold-right (lambda (knil obj)
 			   (cons obj knil))
 	  '() D))
     => '())
@@ -607,17 +607,17 @@
   (check
       (let* ((L LIST-5)
 	     (D (list->deque L)))
-	(deque-fold-rear cons '() D))
+	(deque-fold-right cons '() D))
     => LIST-5)
 
   (check
       (let ((D (list->deque LIST-20)))
-	(deque-fold-rear cons '() D))
+	(deque-fold-right cons '() D))
     => LIST-20)
 
   (check
       (let ((D (list->deque LIST-100)))
-	(deque-fold-rear cons '() D))
+	(deque-fold-right cons '() D))
     => LIST-100)
 
   ;;Documentation example.
@@ -626,7 +626,7 @@
       (internal-body
 	(define D
 	  (deque 0 1 2 3 4 5))
-	(deque-fold-rear (lambda (obj knil)
+	(deque-fold-right (lambda (obj knil)
 			   (cons obj knil))
 	  '() D))
     => '(0 1 2 3 4 5))
@@ -654,61 +654,89 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check (deque->list (deque-map-front (deque) - (deque)))			=> '())
-  (check (deque->list (deque-map-front (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
-  (check (deque->list (deque-map-front (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
-  (check (deque->list (deque-map-front (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
+  (check (deque->list (deque-map-left (deque) - (deque)))			=> '())
+  (check (deque->list (deque-map-left (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
+  (check (deque->list (deque-map-left (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
+  (check (deque->list (deque-map-left (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
 
-  (check (deque->list (deque-map-rear (deque) - (deque)))			=> '())
-  (check (deque->list (deque-map-rear (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
-  (check (deque->list (deque-map-rear (deque) - (list->deque LIST-20)))		=> LIST-20-NEGATED)
-  (check (deque->list (deque-map-rear (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
+  (check (deque->list (deque-map-right (deque) - (deque)))			=> '())
+  (check (deque->list (deque-map-right (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
+  (check (deque->list (deque-map-right (deque) - (list->deque LIST-20)))		=> LIST-20-NEGATED)
+  (check (deque->list (deque-map-right (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
+
+  (check (deque->list (deque-map (deque) - (deque)))			=> '())
+  (check (deque->list (deque-map (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
+  (check (deque->list (deque-map (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
+  (check (deque->list (deque-map (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
 
 ;;; --------------------------------------------------------------------
-;;; for-each-front
+;;; for-each-left
 
   (check
       (with-result
-	(deque-for-each-front add-result (deque)))
+	(deque-for-each-left add-result (deque)))
     => '(#!void ()))
 
   (check
       (with-result
-	(deque-for-each-front add-result (list->deque LIST-5)))
+	(deque-for-each-left add-result (list->deque LIST-5)))
     => `(#!void ,LIST-5))
 
   (check
       (with-result
-	(deque-for-each-front add-result (list->deque LIST-20)))
+	(deque-for-each-left add-result (list->deque LIST-20)))
     => `(#!void ,LIST-20))
 
   (check
       (with-result
-	(deque-for-each-front add-result (list->deque LIST-100)))
+	(deque-for-each-left add-result (list->deque LIST-100)))
     => `(#!void ,LIST-100))
 
 ;;; --------------------------------------------------------------------
-;;; for-each-rear
+;;; for-each-right
 
   (check
       (with-result
-	(deque-for-each-rear add-result (deque)))
+	(deque-for-each-right add-result (deque)))
     => '(#!void ()))
 
   (check
       (with-result
-	(deque-for-each-rear add-result (list->deque LIST-5)))
+	(deque-for-each-right add-result (list->deque LIST-5)))
     => `(#!void ,LIST-5-REVERSED))
 
   (check
       (with-result
-	(deque-for-each-rear add-result (list->deque LIST-20)))
+	(deque-for-each-right add-result (list->deque LIST-20)))
     => `(#!void ,LIST-20-REVERSED))
 
   (check
       (with-result
-	(deque-for-each-rear add-result (list->deque LIST-100)))
+	(deque-for-each-right add-result (list->deque LIST-100)))
     => `(#!void ,LIST-100-REVERSED))
+
+;;; --------------------------------------------------------------------
+;;; for-each-left aliases
+
+  (check
+      (with-result
+	(deque-for-each add-result (deque)))
+    => '(#!void ()))
+
+  (check
+      (with-result
+	(deque-for-each add-result (list->deque LIST-5)))
+    => `(#!void ,LIST-5))
+
+  (check
+      (with-result
+	(deque-for-each add-result (list->deque LIST-20)))
+    => `(#!void ,LIST-20))
+
+  (check
+      (with-result
+	(deque-for-each add-result (list->deque LIST-100)))
+    => `(#!void ,LIST-100))
 
 ;;; --------------------------------------------------------------------
 ;;; purging
@@ -745,6 +773,236 @@
 	  LIST-20)
 	(deque->list D))
     => LIST-20)
+
+  #t)
+
+
+(parametrise ((check-test-name	'for-all))
+
+  (define (fun . obj*)
+    (add-result (list->vector obj*))
+    ;;Remember that FOR-ALL returns the result of the last application.
+    (for-all values obj*))
+
+;;; --------------------------------------------------------------------
+;;; for-all'ing one argument
+
+  (check
+      (with-result
+	(deque-for-all
+	    add-result
+	  (deque)))
+    => '(#t ()))
+
+
+  (check
+      (with-result
+	(deque-for-all
+	    add-result
+	  (deque 10)))
+    => '(10 (10)))
+
+
+  (check
+      (with-result
+	(deque-for-all
+	    add-result
+	  (deque 10 20 30)))
+    => '(30 (10 20 30)))
+
+  (check
+      (with-result
+	(deque-for-all
+	    add-result
+	  (deque 10 #f 30)))
+    => '(#f (10 #f)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'exists))
+
+  (define (fun . obj*)
+    (add-result (list->vector obj*))
+    (find (lambda (obj)
+	    (<= 30 obj))
+      obj*))
+
+;;; --------------------------------------------------------------------
+;;; from left
+
+  (check
+      (with-result
+	(deque-exists-left
+	    fun
+	  (deque)))
+    => '(#f ()))
+
+  (check
+      (with-result
+	(deque-exists-left
+	    fun
+	  (deque 10)))
+    => '(#f (#(10))))
+
+  (check
+      (with-result
+	(deque-exists-left
+	    fun
+	  (deque 30)))
+    => '(30 (#(30))))
+
+  (check
+      (with-result
+	(deque-exists-left
+	    fun
+	  (deque 10 20 30)))
+    => '(30 (#(10) #(20) #(30))))
+
+  (check
+      (with-result
+	(deque-exists-left
+	    fun
+	  (deque 10 20 25)))
+    => '(#f (#(10) #(20) #(25))))
+
+;;; --------------------------------------------------------------------
+;;; from right
+
+  (check
+      (with-result
+	(deque-exists-right
+	    fun
+	  (deque)))
+    => '(#f ()))
+
+  (check
+      (with-result
+	(deque-exists-right
+	    fun
+	  (deque 10)))
+    => '(#f (#(10))))
+
+  (check
+      (with-result
+	(deque-exists-right
+	    fun
+	  (deque 30)))
+    => '(30 (#(30))))
+
+  (check
+      (with-result
+	(deque-exists-right
+	    fun
+	  (deque 30 20 10)))
+    => '(30 (#(10) #(20) #(30))))
+
+  (check
+      (with-result
+	(deque-exists-right
+	    fun
+	  (deque 25 20 10)))
+    => '(#f (#(10) #(20) #(25))))
+
+;;; --------------------------------------------------------------------
+;;; left/right difference
+
+  (check
+      (deque-exists-left
+	  (lambda (obj)
+	    (and (even? obj)
+		 obj))
+	(deque 1 2 3 5 6 7))
+    => 2)
+
+  (check
+      (deque-exists-right
+	  (lambda (obj)
+	    (and (even? obj)
+		 obj))
+	(deque 1 2 3 5 6 7))
+    => 6)
+
+;;; --------------------------------------------------------------------
+;;; from left aliases
+
+  (check
+      (with-result
+	(deque-exists
+	    fun
+	  (deque)))
+    => '(#f ()))
+
+  (check
+      (with-result
+	(deque-exists
+	    fun
+	  (deque 10)))
+    => '(#f (#(10))))
+
+  (check
+      (with-result
+	(deque-exists
+	    fun
+	  (deque 30)))
+    => '(30 (#(30))))
+
+  (check
+      (with-result
+	(deque-exists
+	    fun
+	  (deque 10 20 30)))
+    => '(30 (#(10) #(20) #(30))))
+
+  (check
+      (with-result
+	(deque-exists
+	    fun
+	  (deque 10 20 25)))
+    => '(#f (#(10) #(20) #(25))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'find))
+
+  (check (deque-find-left even? (deque))				=> #f)
+  (check (deque-find-left even? (deque) 'not-found)			=> 'not-found)
+
+  (check (deque-find-left even? (deque 1 3 5 7))			=> #f)
+  (check (deque-find-left even? (deque 1 3 5 7) 'not-found)		=> 'not-found)
+
+  (check (deque-find-left even? (deque 1 3 5 6 7))			=> 6)
+  (check (deque-find-left even? (deque 1 3 5 6 7) 'not-found)		=> 6)
+
+;;; --------------------------------------------------------------------
+
+  (check (deque-find-right even? (deque))				=> #f)
+  (check (deque-find-right even? (deque) 'not-found)			=> 'not-found)
+
+  (check (deque-find-right even? (deque 1 3 5 7))			=> #f)
+  (check (deque-find-right even? (deque 1 3 5 7) 'not-found)		=> 'not-found)
+
+  (check (deque-find-right even? (deque 1 3 5 6 7))			=> 6)
+  (check (deque-find-right even? (deque 1 3 5 6 7) 'not-found)		=> 6)
+
+;;; --------------------------------------------------------------------
+;;; left/rigt difference
+
+  (check (deque-find-left  even? (deque 1 2 3 5 6 7))			=> 2)
+  (check (deque-find-right even? (deque 1 2 3 5 6 7))			=> 6)
+
+;;; --------------------------------------------------------------------
+;;; left aliases
+
+  (check (deque-find even? (deque))					=> #f)
+  (check (deque-find even? (deque) 'not-found)				=> 'not-found)
+
+  (check (deque-find even? (deque 1 3 5 7))				=> #f)
+  (check (deque-find even? (deque 1 3 5 7) 'not-found)			=> 'not-found)
+
+  (check (deque-find even? (deque 1 3 5 6 7))				=> 6)
+  (check (deque-find even? (deque 1 3 5 6 7) 'not-found)		=> 6)
 
   #t)
 
@@ -851,10 +1109,17 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'deque-fold-front		'scheme-indent-function 1)
-;; eval: (put 'deque-fold-rear		'scheme-indent-function 1)
-;; eval: (put 'deque-map-front		'scheme-indent-function 1)
-;; eval: (put 'deque-map-rear		'scheme-indent-function 1)
-;; eval: (put 'deque-for-each-front	'scheme-indent-function 1)
-;; eval: (put 'deque-for-each-rear	'scheme-indent-function 1)
+;; eval: (put 'deque-fold-left		'scheme-indent-function 1)
+;; eval: (put 'deque-fold-right		'scheme-indent-function 1)
+;; eval: (put 'deque-map-left		'scheme-indent-function 1)
+;; eval: (put 'deque-map-right		'scheme-indent-function 1)
+;; eval: (put 'deque-for-each-left	'scheme-indent-function 1)
+;; eval: (put 'deque-for-each-right	'scheme-indent-function 1)
+;; eval: (put 'deque-for-all		'scheme-indent-function 1)
+;; eval: (put 'deque-find		'scheme-indent-function 1)
+;; eval: (put 'deque-find-left		'scheme-indent-function 1)
+;; eval: (put 'deque-find-right		'scheme-indent-function 1)
+;; eval: (put 'deque-exists		'scheme-indent-function 1)
+;; eval: (put 'deque-exists-left	'scheme-indent-function 1)
+;; eval: (put 'deque-exists-right	'scheme-indent-function 1)
 ;; End:
