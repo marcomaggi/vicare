@@ -679,18 +679,18 @@
 
   (check (deque->list (deque-map-left (deque) - (deque)))			=> '())
   (check (deque->list (deque-map-left (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
-  (check (deque->list (deque-map-left (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
+  (check (deque->list (deque-map-left (deque) - (list->deque LIST-20)))		=> LIST-20-NEGATED)
   (check (deque->list (deque-map-left (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
 
   (check (deque->list (deque-map-right (deque) - (deque)))			=> '())
   (check (deque->list (deque-map-right (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
-  (check (deque->list (deque-map-right (deque) - (list->deque LIST-20)))		=> LIST-20-NEGATED)
+  (check (deque->list (deque-map-right (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
   (check (deque->list (deque-map-right (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
 
-  (check (deque->list (deque-map (deque) - (deque)))			=> '())
+  (check (deque->list (deque-map (deque) - (deque)))				=> '())
   (check (deque->list (deque-map (deque) - (list->deque LIST-5)))		=> LIST-5-NEGATED)
-  (check (deque->list (deque-map (deque) - (list->deque LIST-20)))	=> LIST-20-NEGATED)
-  (check (deque->list (deque-map (deque) - (list->deque LIST-100)))	=> LIST-100-NEGATED)
+  (check (deque->list (deque-map (deque) - (list->deque LIST-20)))		=> LIST-20-NEGATED)
+  (check (deque->list (deque-map (deque) - (list->deque LIST-100)))		=> LIST-100-NEGATED)
 
   #t)
 

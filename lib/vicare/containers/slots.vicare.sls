@@ -434,7 +434,7 @@
 	     ;;FIR-IDX cannot  reference last slot  in the  buffer, so we  can safely
 	     ;;increment it.
 	     (begin
-	       (assert (fx<? fir-idx ($slots-buffer-greatest-index slots)))
+	       #;(assert (fx<? fir-idx ($slots-buffer-greatest-index slots)))
 	       ($link-ref fir-lnk ($fxadd1 fir-idx)))))
 
 	  (($fx= fir-idx ($slots-buffer-greatest-index slots))
@@ -479,7 +479,7 @@
 	     ;;LAS-IDX cannot  reference first slot in  the buffer, so we  can safely
 	     ;;decrement it.
 	     (begin
-	       (assert (fxpositive? las-idx))
+	       #;(assert (fxpositive? las-idx))
 	       ($link-ref las-lnk ($fxsub1 las-idx)))))
 
 	  (($fxzero? las-idx)
@@ -606,7 +606,7 @@
 	     ;;LAS-IDX cannot  reference the first  slot, so we can  safely decrement
 	     ;;it.
 	     (begin
-	       (assert (fx<? 1 las-idx))
+	       #;(assert (fx<? 1 las-idx))
 	       (let ((obj-idx ($fxsub1 las-idx)))
 		 (receive-and-return (obj)
 		     ($link-ref-and-reset! las-lnk obj-idx)

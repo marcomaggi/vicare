@@ -140,6 +140,7 @@
      (vicare containers queues)
      (vicare containers stacks)
      (vicare containers binary-heaps)
+     (vicare containers dynamic-arrays)
 
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)

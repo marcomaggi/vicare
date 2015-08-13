@@ -170,6 +170,7 @@ Container libraries
 * queues::                      Queues of objects.
 * deques::                      Double-ended queues of objects.
 * binary heaps::                Binary heaps.
+* dynarrys::                    Dynamic arrays.
 
 Adapted libraries
 
@@ -242,6 +243,7 @@ External documents
 @include libs-queues.texi
 @include libs-deques.texi
 @include libs-binary-heaps.texi
+@include libs-dynarrys.texi
 
 @include libs-randomisations.texi
 

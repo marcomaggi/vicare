@@ -1,0 +1,635 @@
+@node dynarrys
+@chapter Dynamic arrays
+
+
+@cindex @library{vicare containers dynamic-arrays}, library
+@cindex Library @library{vicare containers dynamic-arrays}
+
+
+The library @library{vicare containers dynamic-arrays} implements array
+objects holding arbitrary Scheme objects and designed for efficient
+dynamic resizing.
+
+@menu
+* dynarrys objects::              Dynamic vector objects.
+* dynarrys inspection::           Inspecting stack objects.
+* dynarrys access::               Stack accessors and mutators.
+* dynarrys folding::              Folding over dynamic vectors.
+* dynarrys mapping::              Mapping over dynamic vectors.
+* dynarrys searching::            Searching in dynamic vectors.
+* dynarrys filtering::            Filtering in dynamic vectors.
+* dynarrys conversion::           Converting dynamic vectors to
+                                  other objects.
+* dynarrys misc::                 Miscellaneous operations on
+                                  dynamic vectors.
+@end menu
+
+@c page
+@node dynarrys objects
+@section Dynamic-Arrays objects
+
+
+Dynamic arrays are implemented as built--in vector objects of which only
+a subrange of slots is used:
+
+@example
+  left span       used slots     right span
+|...........|...................|...........|
+
+|---|---|---|+++|+++|+++|+++|+++|---|---|---| vector
+              0   1   2   3   4
+@end example
+
+@noindent
+when a new object is inserted: if there is room at the beginning or end
+of the vector, that room is consumed.  Indexing in dynamic arrays is
+zero--based, with index @samp{0} referencing the first used slot.
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.
+
+
+@deftp {@rnrs{6} Record Type} <dynamic-array>
+@cindex @var{arry} argument
+@cindex Argument @var{arry}
+Record type representing a dynamic-arrays object.  The
+@objtype{<dynamic-array>} type is non--generative and available for
+subtyping.  In this documentation @objtype{<dynamic-array>} objects used
+as arguments to functions are indicated as @var{arry}.
+@end deftp
+
+
+@defun make-dynamic-array
+@defunx make-dynamic-array @var{full-length} @var{left-span}
+Build and return a new @objtype{<dynamic-array>} object.
+
+The optional argument @var{full-length} must be a non--negative fixnum
+representing the number of slots in the internal vector object; when not
+used, it defaults to @samp{15}.  The optional argument @var{left-span}
+must be a non--negative fixnum representing the number of slots to
+initially leave unused at the left; when not used, it defaults to
+@samp{7}.
+@end defun
+
+
+@defun dynamic-array? @var{obj}
+Return @true{} if @var{obj} is a record of type
+@objtype{<dynamic-array>}; otherwise return @false{}.
+@end defun
+
+
+@defun dynamic-array @var{obj} @dots{}
+Build and return a @objtype{<dynamic-array>} object holding the given
+objects, which are pushed on the dynamic-array left to right from the
+rear side.  The size of the internal vector is set to the default.
+
+@lisp
+(define D
+  (dynamic-array 0 1 2))
+
+(dynamic-array-front D)         @result{} 0
+(dynamic-array-rear  D)         @result{} 2
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Object properties
+
+
+@defun dynamic-array-putprop @var{arry} @var{key} @var{value}
+@defunx $dynamic-array-putprop @var{arry} @var{key} @var{value}
+Add a new property @var{key} to the property list of @var{arry};
+@var{key} must be a symbol.  If @var{key} is already set: the old entry
+is mutated to reference the new @var{value}.
+@end defun
+
+
+@defun dynamic-array-getprop @var{arry} @var{key}
+@defunx $dynamic-array-getprop @var{arry} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{arry}; if @var{key} is not set: return @false{}.  @var{key} must
+be a symbol.
+@end defun
+
+
+@defun dynamic-array-remprop @var{arry} @var{key}
+@defunx $dynamic-array-remprop @var{arry} @var{key}
+Remove the property @var{key} from the property list of @var{arry}; if
+@var{key} is not set: nothing happens.  @var{key} must be a symbol.
+@end defun
+
+
+@defun dynamic-array-property-list @var{arry}
+@defunx $dynamic-array-property-list @var{arry}
+Return a new association list representing the property list of
+@var{arry}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other operations
+
+
+@defun dynamic-array-hash @var{arry}
+@defunx $dynamic-array-hash @var{arry}
+Return an exact integer to be used as hashtable key for @var{arry}.
+Hashtables having a @objtype{<dynamic-array>} as key can be instantiated
+as follows:
+
+@example
+(make-hashtable dynamic-array-hash eq?)
+@end example
+@end defun
+
+@c page
+@node dynarrys inspection
+@section Inspecting dynamic array objects
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun dynamic-array-empty? @var{arry}
+@defunx $dynamic-array-empty? @var{arry}
+Return @true{} if @var{arry} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun dynamic-array-not-empty? @var{arry}
+@defunx $dynamic-array-not-empty? @var{arry}
+Return @true{} if @var{arry} is @strong{not} empty; otherwise return
+@false{}.
+@end defun
+
+
+@defun dynamic-array-length @var{arry}
+@defunx $dynamic-array-length @var{arry}
+Return a non--negative fixnum representing the number of objects in
+@var{arry}.
+@end defun
+
+
+@defun dynamic-array-size @var{arry}
+@defunx $dynamic-array-size @var{arry}
+Aliases for @func{dynamic-array-length} and
+@func{$dynamic-array-length}.
+@end defun
+
+@c page
+@node dynarrys access
+@section Dynamic-Arrays accessors and mutators
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun dynamic-array-ref @var{arry} @var{idx}
+@defunx $dynamic-array-ref @var{arry} @var{idx}
+Return the object at @var{idx} in the dynamic array.  Raise an assertion
+violation if @var{arry} is empty.
+@end defun
+
+
+@defun dynamic-array-set! @var{arry} @var{idx} @var{obj}
+@defunx $dynamic-array-set! @var{arry} @var{idx} @var{obj}
+Store a new value at @var{idx} in the dynamic array, overwriting the old
+value.
+@end defun
+
+
+@defun dynamic-array-insert! @var{arry} @var{idx} @var{obj}
+@defunx $dynamic-array-insert! @var{arry} @var{idx} @var{obj}
+Insert a new value at @var{idx} in the dynamic array.  The objects in
+the array are shifted to make room for the new one.
+
+The argument @var{idx} must be a non--negative fixnum in the range
+@math{[0, N)} where @math{N} is the number of objects in the array; as
+special cases:
+
+@itemize
+@item
+If @var{idx} is @math{-1}: the new object is prepended to the beginning
+of the array; in this case the insertion operation is equivalent to a
+``push to the front side''.
+
+@item
+If @var{idx} equals the number of objects in the array: the new object
+is appended to the end of the array; in this case the insertion
+operation is equivalent to a ``push to the rear side''.
+@end itemize
+
+@lisp
+(let ((D (dynamic-array 0 1 2 3)))
+  (dynamic-array-insert! D 0 9)
+  (dynamic-array->list D))
+@result{} (9 0 1 2 3)
+
+(let ((D (dynamic-array 0 1 2 3)))
+  (dynamic-array-insert! D 3 9)
+  (dynamic-array->list D))
+@result{} (0 1 2 9 3)
+@end lisp
+@end defun
+
+
+@defun dynamic-array-front @var{arry}
+@defunx $dynamic-array-front @var{arry}
+Return the object at the front of the dynamic array.  Raise an assertion
+violation if @var{arry} is empty.
+@end defun
+
+
+@defun dynamic-array-rear @var{arry}
+@defunx $dynamic-array-rear @var{arry}
+Return the object at the rear of the dynamic array.  Raise an assertion
+violation if @var{arry} is empty.
+@end defun
+
+
+@defun dynamic-array-push-front! @var{arry} @var{obj}
+@defunx $dynamic-array-push-front! @var{arry} @var{obj}
+Push @var{obj} on the front of @var{arry}.
+@end defun
+
+
+@defun dynamic-array-push-rear! @var{arry} @var{obj}
+@defunx $dynamic-array-push-rear! @var{arry} @var{obj}
+Push @var{obj} on the rear of @var{arry}.
+@end defun
+
+
+@defun dynamic-array-pop-front! @var{arry}
+@defunx $dynamic-array-pop-front! @var{arry}
+Remove the object at the front of the dynamic array and return it.
+Raise an assertion violation if @var{arry} is empty.
+@end defun
+
+
+@defun dynamic-array-pop-rear! @var{arry}
+@defunx $dynamic-array-pop-rear! @var{arry}
+Remove the object at the rear of the dynamic array and return it.  Raise
+an assertion violation if @var{arry} is empty.
+@end defun
+
+
+@defun dynamic-array-purge! @var{arry}
+@defunx $dynamic-array-purge! @var{arry}
+Remove all the elements from @var{arry}.
+@end defun
+
+@c page
+@node dynarrys folding
+@section Folding over dynamic-arrays
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings whose name
+is prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun dynamic-array-fold-left @var{kons} @var{knil} @var{arry}
+@defunx $dynamic-array-fold-left @var{kons} @var{knil} @var{arry}
+Analogous to @func{fold-left} for lists.  Fold the procedure @var{kons}
+over the objects from @var{arry}, starting from the front.
+
+@lisp
+(define D
+  (dynamic-array 0 1 2 3 4 5))
+
+(dynamic-array-fold-left
+    (lambda (knil obj)
+      (cons obj knil))
+  '() D)
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun dynamic-array-fold-right @var{kons} @var{knil} @var{arry}
+@defunx $dynamic-array-fold-right @var{kons} @var{knil} @var{arry}
+Analogous to @func{fold-right} for lists.  Fold the procedure @var{kons}
+over the objects from @var{arry}, starting from the rear.
+
+@lisp
+(define D
+  (dynamic-array 0 1 2 3 4 5))
+
+(dynamic-array-fold-right
+    (lambda (obj knil)
+      (cons obj knil))
+  '() D)
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
+
+@c page
+@node dynarrys mapping
+@section Mapping over dynamic arrays
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun dynamic-array-map-left @var{dst-arry} @var{fun} @var{src-arry}
+@defunx $dynamic-array-map-left @var{dst-arry} @var{fun} @var{src-arry}
+Iterate over all the objects in @var{src-arry}, starting from the front
+side, apply @var{fun} to them, push the result of the application in the
+rear side of @var{dst-arry}.
+
+@lisp
+(dynamic-array->list
+  (dynamic-array-map-left
+     (dynamic-array)
+     -
+     (dynamic-array 0 1 2 3)))
+@result{} (0 -1 -2 -3)
+@end lisp
+
+The @var{dst-arry} argument allows us to build the destination dynamic
+array with the desired configuration parameters.
+@end defun
+
+
+@defun dynamic-array-map-right @var{dst-arry} @var{fun} @var{src-arry}
+@defunx $dynamic-array-map-right @var{dst-arry} @var{fun} @var{src-arry}
+Iterate over all the objects in @var{src-arry}, starting from the rear
+side, apply @var{fun} to them, push the result of the application in the
+front side of @var{dst-arry}.
+
+@lisp
+(dynamic-array->list
+  (dynamic-array-map-right
+     (dynamic-array)
+     -
+     (dynamic-array 0 1 2 3)))
+@result{} (0 -1 -2 -3)
+@end lisp
+
+The @var{dst-arry} argument allows us to build the destination dynamic
+array with the desired configuration parameters.
+@end defun
+
+
+@defun dynamic-array-map @var{fun} @var{arry}
+@defunx $dynamic-array-map @var{fun} @var{arry}
+Aliases for @func{dynamic-array-map-left} and
+@func{$dynamic-array-map-left}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun dynamic-array-for-each-left @var{fun} @var{arry}
+@defunx $dynamic-array-for-each-left @var{fun} @var{arry}
+Iterate over all the objects in @var{arry}, starting from the front
+side, and apply @var{fun} to them discarding the return value.
+@end defun
+
+
+@defun dynamic-array-for-each-right @var{fun} @var{arry}
+@defunx $dynamic-array-for-each-right @var{fun} @var{arry}
+Iterate over all the objects in @var{arry}, starting from the rear side,
+and apply @var{fun} to them discarding the return value.
+@end defun
+
+
+@defun dynamic-array-for-each @var{fun} @var{arry}
+@defunx $dynamic-array-for-each @var{fun} @var{arry}
+Aliases for @func{dynamic-array-for-each-left} and
+@func{$dynamic-array-for-each-left}.
+@end defun
+
+@c page
+@node dynarrys searching
+@section Searching in dynamic arrays
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun dynamic-array-for-all @var{fun} @var{arry}
+@defunx $dynamic-array-for-all @var{fun} @var{arry}
+Apply the procedure @var{fun} over the objects in @var{arry}, starting
+from the left side; stop at the first application returning @false{}
+and return @false{}.  If the iteration reaches the end of the dynamic
+array: the return value is the result of applying @var{fun} to the last
+object in the dynamic array.  If the dynamic array is empty: the return
+value is @true{}.
+@end defun
+
+
+@defun dynamic-array-exists-left @var{fun} @var{arry}
+@defunx $dynamic-array-exists-left @var{fun} @var{arry}
+Apply the procedure @var{fun} over the objects in @var{arry}, starting
+from the left side; stop at the first application returning true and
+return the returned value.  If the dynamic array is empty: the return
+value is @false{}.
+@end defun
+
+
+@defun dynamic-array-exists-right @var{fun} @var{arry}
+@defunx $dynamic-array-exists-right @var{fun} @var{arry}
+Apply the procedure @var{fun} over the objects in @var{arry}, starting
+from the right side; stop at the first application returning true and
+return the returned value.  If the dynamic-arrays is empty: the return
+value is @false{}.
+@end defun
+
+
+@defun dynamic-array-exists @var{fun} @var{arry}
+@defunx $dynamic-array-exists @var{fun} @var{arry}
+Aliases for @func{dynamic-array-exists-left} and
+@func{$dynamic-array-exists-left}.
+@end defun
+
+
+@defun dynamic-array-find-left @var{fun} @var{arry}
+@defunx dynamic-array-find-left @var{fun} @var{arry} @var{not-found-rv}
+@defunx $dynamic-array-find-left @var{fun} @var{arry} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{arry}, starting
+from the front side: stop at the first true value and return the object
+from @var{arry} that generated it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+
+@lisp
+(dynamic-array-find-left
+    even?
+  (dynamic-array 1 3 5 7)
+  'not-found)
+@result{} not-found
+
+(dynamic-array-find-left
+    even?
+  (dynamic-array 1 3 5 7))
+@result{} #f
+
+(dynamic-array-find-left
+    even?
+  (dynamic-array 1 3 5 6 7)
+  'not-found)
+@result{} 6
+@end lisp
+@end defun
+
+
+@defun dynamic-array-find-right @var{fun} @var{arry}
+@defunx dynamic-array-find-right @var{fun} @var{arry} @var{not-found-rv}
+@defunx $dynamic-array-find-right @var{fun} @var{arry} @var{not-found-rv}
+Apply the procedure @var{fun} to the objects in @var{arry}, starting
+from the right side: stop at the first true value and return the object
+from @var{arry} that generated it.
+
+When @var{not-found-rv} is not used: if all the applications return
+@false{}, the return value is @false{}.
+
+When @var{not-found-rv} is used: if all the applications return
+@false{}, the return value is @var{not-found-rv}.
+@end defun
+
+
+@defun dynamic-array-find @var{fun} @var{arry}
+@defunx dynamic-array-find @var{fun} @var{arry} @var{not-found-rv}
+@defunx $dynamic-array-find @var{fun} @var{arry} @var{not-found-rv}
+Aliases for @func{dynamic-array-find-left} and
+@func{$dynamic-array-find-left}.
+@end defun
+
+@c page
+@node dynarrys filtering
+@section Filtering in dynamic arrays
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun dynamic-array-filter @var{dst-arry} @var{pred} @var{src-arry}
+@defunx $dynamic-array-filter @var{dst-arry} @var{pred} @var{src-arry}
+Iterate over the objects in @var{src-arry} starting from the left side,
+apply @var{pred} to them, push on the right of @var{dst-arry} the ones
+for which @var{pred} returns true.  Return @var{dst-arry} itself.
+
+The argument @var{dst-queue} allows us to build and configure a dynamic
+array with the needed parameters.
+@end defun
+
+
+@defun dynamic-array-partition @var{match-arry} @var{no-match-arry} @var{pred} @var{src-arry}
+@defunx $dynamic-array-partition @var{match-arry} @var{no-match-arry} @var{pred} @var{src-arry}
+Iterate over the objects in @var{src-arry}, starting from the left side,
+and apply @var{pred} to them: if the return value is true, push the
+object on the right of @var{match-arry}; if the return value is
+@false{}, push the object on the right of @var{no-match-arry}.  Return
+two values: @var{match-arry} and @var{no-match-arry}.
+
+The arguments @var{match-arry} and @var{no-match-arry} allow us to build
+and configure dynamic arrays with the needed parameters.
+@end defun
+
+@c page
+@node dynarrys conversion
+@section Converting dynamic-arrays to other objects
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun dynamic-array->list @var{arry}
+@defunx $dynamic-array->list @var{arry}
+@defunx list->dynamic-array @var{list}
+@defunx $list->dynamic-array @var{list}
+Convert to and from a dynamic array and a proper list.  Objects from the
+list are pushed on the dynamic array left--to--right from the rear side.
+
+@lisp
+(define D
+  (list->dynamic-array '(0 1 2)))
+
+(dynamic-array-front D)         @result{} 0
+(dynamic-array-rear  D)         @result{} 2
+(dynamic-array->list D)         @result{} (0 1 2)
+@end lisp
+@end defun
+
+
+@defun dynamic-array->vector @var{arry}
+@defunx $dynamic-array->vector @var{arry}
+@defunx vector->dynamic-array @var{vector}
+@defunx $vector->dynamic-array @var{vector}
+Convert to and from a dynamic array and a vector.  Objects from the
+vector are pushed on the dynamic array left--to--right from the rear
+side.
+
+@lisp
+(define D
+  (vector->dynamic-array '#(0 1 2)))
+
+(dynamic-array-front   D)       @result{} 0
+(dynamic-array-rear    D)       @result{} 2
+(dynamic-array->vector D)       @result{} #(0 1 2)
+@end lisp
+@end defun
+
+@c page
+@node dynarrys misc
+@section Miscellaneous operations on dynamic-arrays
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays}.  The syntactic bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun dynamic-array-copy! @var{dst-arry} @var{src-arry}
+@defunx $dynamic-array-copy! @var{dst-arry} @var{src-arry}
+Iterate over all the objects in @var{src-arry}, starting from the front
+side, and push them in the rear side of @var{dst-arry}.  This is a
+shallow copy: the very objects from the source dynamic array are added
+to the destination dynamic array; if we need to duplicate the objects,
+we can use the map operation.
+
+The @var{dst-arry} argument allows us to build the destination dynamic
+array with the desired configuration parameters.
+@end defun
+
+
+@defun dynamic-array-reverse! @var{dst-arry} @var{src-arry}
+@defunx $dynamic-array-reverse! @var{dst-arry} @var{src-arry}
+Iterate over the objects in @var{src-queue}, starting from the front
+side, and push them in the front side of @var{dst-queue}.  Return
+@var{dst-queue}.
+
+The @var{dst-arry} argument allows us to build the destination dynamic
+array with the desired configuration parameters.
+@end defun
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

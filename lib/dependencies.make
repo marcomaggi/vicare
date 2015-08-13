@@ -1404,6 +1404,20 @@ endif
 EXTRA_DIST += lib/vicare/containers/binary-heaps.vicare.sls
 CLEANFILES += lib/vicare/containers/binary-heaps.fasl
 
+lib/vicare/containers/dynamic-arrays.fasl: \
+		lib/vicare/containers/dynamic-arrays.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_dynamic_vectors_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_dynamic_vectors_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_dynamic_vectors_fasl_DATA = lib/vicare/containers/dynamic-arrays.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_dynamic_vectors_vicare_sls_DATA = lib/vicare/containers/dynamic-arrays.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/dynamic-arrays.vicare.sls
+CLEANFILES += lib/vicare/containers/dynamic-arrays.fasl
+
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
