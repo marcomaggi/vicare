@@ -46,8 +46,9 @@
     dynamic-array-ref			$dynamic-array-ref
     dynamic-array-set!			$dynamic-array-set!
     dynamic-array-insert!		$dynamic-array-insert!
+    dynamic-array-remove!		$dynamic-array-remove!
 
-    dynamic-array-front		$dynamic-array-front
+    dynamic-array-front			$dynamic-array-front
     dynamic-array-rear			$dynamic-array-rear
     dynamic-array-push-front!		$dynamic-array-push-front!
     dynamic-array-push-rear!		$dynamic-array-push-rear!
@@ -380,6 +381,42 @@
 		     ($<dynamic-array>-fir-idx-set! arry fir-idx.new)
 		     ($<dynamic-array>-pas-idx-set! arry pas-idx.new)
 		     ($vector-set! data.new obj-idx.new obj))))))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (dynamic-array-remove! {arry dynamic-array?} {i non-negative-fixnum?})
+  ($dynamic-array-remove! arry i))
+
+(define ($dynamic-array-remove! arry i)
+  (let* ((fir-idx ($<dynamic-array>-fir-idx arry))
+	 (pas-idx ($<dynamic-array>-pas-idx arry))
+	 (obj-idx ($fx+ fir-idx i)))
+    (if (or ($fx<  obj-idx fir-idx)
+	    ($fx>= obj-idx pas-idx))
+	(assertion-violation __who__ "index out of range" arry i)
+      (let ((data ($<dynamic-array>-data arry)))
+	(cond (($fx= obj-idx fir-idx)
+	       ($vector-set! data fir-idx (void))
+	       ($<dynamic-array>-fir-idx-set! arry ($fxadd1 fir-idx)))
+
+	      (($fx= obj-idx ($fxsub1 pas-idx))
+	       ($vector-set! data obj-idx (void))
+	       ($<dynamic-array>-pas-idx-set! arry ($fxsub1 pas-idx)))
+
+	      (else
+	       (let* ((used-at-left   ($fx- obj-idx fir-idx))
+		      (used-at-right  ($fx- pas-idx obj-idx)))
+		 (if ($fx< used-at-left used-at-right)
+		     ;;Less used slots at the left.
+		     (begin
+		       ($vector-self-copy-backwards! data obj-idx ($fxadd1 obj-idx) used-at-left)
+		       ($vector-set! data fir-idx (void))
+		       ($<dynamic-array>-fir-idx-set! arry ($fxadd1 fir-idx)))
+		   ;;Less used slots at the right.
+		   (let ((pas-idx.new ($fxsub1 pas-idx)))
+		     ($vector-self-copy-forwards! data ($fxadd1 obj-idx) obj-idx ($fxsub1 used-at-right))
+		     ($vector-set! data pas-idx.new (void))
+		     ($<dynamic-array>-pas-idx-set! arry pas-idx.new))))))))))
 
 ;;; --------------------------------------------------------------------
 

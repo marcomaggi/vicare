@@ -240,6 +240,19 @@ operation is equivalent to a ``push to the rear side''.
 @end defun
 
 
+@defun dynamic-array-remove! @var{arry} @var{idx}
+@defunx $dynamic-array-remove! @var{arry} @var{idx}
+Remove the object at index @var{idx} in @var{arry}.
+
+@lisp
+(let ((D (dynamic-array 0 1 2 3 4)))
+  (dynamic-array-remove! D 2)
+  (dynamic-array->list D))
+@result{} (0 1 3 4)
+@end lisp
+@end defun
+
+
 @defun dynamic-array-front @var{arry}
 @defunx $dynamic-array-front @var{arry}
 Return the object at the front of the dynamic array.  Raise an assertion

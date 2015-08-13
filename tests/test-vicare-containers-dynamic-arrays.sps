@@ -730,6 +730,135 @@
   #t)
 
 
+(parametrise ((check-test-name	'removal))
+
+;;; remove from the left side
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '(1 2 3 4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '(2 3 4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '(3 4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '(4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '())
+
+;;; --------------------------------------------------------------------
+;;; remove from the right
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 4)
+	(dynamic-array->list D))
+    => '(0 1 2 3))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 4)
+	(dynamic-array-remove! D 3)
+	(dynamic-array->list D))
+    => '(0 1 2))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 4)
+	(dynamic-array-remove! D 3)
+	(dynamic-array-remove! D 2)
+	(dynamic-array->list D))
+    => '(0 1))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 4)
+	(dynamic-array-remove! D 3)
+	(dynamic-array-remove! D 2)
+	(dynamic-array-remove! D 1)
+	(dynamic-array->list D))
+    => '(0))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 4)
+	(dynamic-array-remove! D 3)
+	(dynamic-array-remove! D 2)
+	(dynamic-array-remove! D 1)
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '())
+
+;;; --------------------------------------------------------------------
+;;; remove from the middle
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 2)
+	(dynamic-array->list D))
+    => '(0 1 3 4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 1)
+	(dynamic-array->list D))
+    => '(0 2 3 4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4 5 6 7 8 9)))
+	(dynamic-array-remove! D 3)
+	(dynamic-array-remove! D 2)
+	(dynamic-array-remove! D 1)
+	(dynamic-array-remove! D 0)
+	(dynamic-array->list D))
+    => '(4 5 6 7 8 9))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4)))
+	(dynamic-array-remove! D 3)
+	(dynamic-array->list D))
+    => '(0 1 2 4))
+
+  (check
+      (let ((D (dynamic-array 0 1 2 3 4 5 6 7 8 9)))
+	(dynamic-array-remove! D 6)
+	(dynamic-array-remove! D 6)
+	(dynamic-array-remove! D 6)
+	(dynamic-array-remove! D 6)
+	(dynamic-array->list D))
+    => '(0 1 2 3 4 5))
+
+  #t)
+
+
 (parametrise ((check-test-name	'folding))
 
 ;;; front folding
@@ -1189,7 +1318,7 @@
   (check (dynamic-array-find-right even? (dynamic-array 1 3 5 7))			=> #f)
   (check (dynamic-array-find-right even? (dynamic-array 1 3 5 7) 'not-found)		=> 'not-found)
 
-  (check 'this (dynamic-array-find-right even? (dynamic-array 1 3 5 6 7))			=> 6)
+  (check (dynamic-array-find-right even? (dynamic-array 1 3 5 6 7))			=> 6)
   (check (dynamic-array-find-right even? (dynamic-array 1 3 5 6 7) 'not-found)		=> 6)
 
 ;;; --------------------------------------------------------------------
