@@ -5616,6 +5616,21 @@ function or set a new destructor function.
 @cindex Library @library{vicare system $vectors}
 
 
+@menu
+* syslib vectors makers::       Vector constructors.
+* syslib vectors inspect::      Inspecting vectors.
+* syslib vectors access::       Accessors and mutators.
+* syslib vectors mapping::      Mapping over vectors.
+* syslib vectors copying::      Copying between vectors.
+* syslib vectors conversion::   Converting between vectors
+                                and other object types.
+@end menu
+
+@c page
+@node syslib vectors makers
+@subsection Vector constructors
+
+
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the library @library{vicare system $vectors}.
@@ -5640,6 +5655,21 @@ all the slots to the fixnum zero.
 @end deffn
 
 
+@deffn {Unsafe Operation} $subvector @var{src.vec} @var{src.start} @var{src.end}
+Return a new vector holding items from @var{src.vec} from
+@var{src.start} inclusive to @var{src.end} exclusive.
+@end deffn
+
+@c page
+@node syslib vectors inspect
+@subsection Inspecting vectors
+
+
+The arguments @var{vec} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the library @library{vicare system $vectors}.
+
+
 @deffn {Unsafe Operation} $vector-length @var{vec}
 Evaluate to a fixnum representing the numbe of values in @var{vec}.
 @end deffn
@@ -5651,6 +5681,21 @@ Return @true{} if the vector @var{vec} has zero length, otherwise return
 @end deffn
 
 
+@deffn {Unsafe Operation} $vectors-of-same-length? @varo{vec} @var{vec} @dots{}
+Return @true{} if all the vector arguments have the same length;
+otherwise return @false{}.
+@end deffn
+
+@c page
+@node syslib vectors access
+@subsection Accessors and mutators
+
+
+The arguments @var{vec} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the library @library{vicare system $vectors}.
+
+
 @deffn {Unsafe Operation} $vector-ref @var{vec} @var{fx}
 Return the value at index @var{fx} in @var{vec}.
 @end deffn
@@ -5659,6 +5704,15 @@ Return the value at index @var{fx} in @var{vec}.
 @deffn {Unsafe Operation} $vector-set! @var{vec} @var{fx} @var{value}
 Store @var{value} at index @var{fx} in @var{vec}.
 @end deffn
+
+@c page
+@node syslib vectors mapping
+@subsection Mapping over vectors
+
+
+The arguments @var{vec} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the library @library{vicare system $vectors}.
 
 
 @deffn {Unsafe Operation} $vector-map1 @var{func} @var{vec}
@@ -5688,6 +5742,61 @@ Like @func{vector-exists}, but for only one vector argument: return
 If the application of @var{func} to the items of @var{vec} returns
 @false{} up to the penultimate item, the last application is performed
 as tail call.
+@end deffn
+
+@c page
+@node syslib vectors copying
+@subsection Copying between vectors
+
+
+The arguments @var{vec} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the library @library{vicare system $vectors}.
+
+
+@deffn {Unsafe Operation} $vector-self-copy-forwards! @var{vec} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} items of @var{vec} from @var{src.start} inclusive to
+@var{vec} itself starting at @var{dst.start} inclusive.  The copy
+happens forwards, so it is suitable for the case @var{src.start} greater
+than @var{dst.start}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-self-copy-backwards! @var{vec} @var{src.end} @var{dst.end} @var{count}
+Copy @var{count} items of @var{vec} from @var{src.end} exclusive to
+@var{vec} itself starting at @var{dst.end} exclusive.  The copy happens
+backwards, so it is suitable for the case @var{src.end} less than
+@var{dst.end}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-copy-source-range! src.vec src.start src.end dst.vec dst.start
+Copy items from @var{src.vec} to @var{dst.vec}; return @var{dst.vec}.
+Copy the items from the source slots from index @var{src.start}
+(inclusive) to @var{src.end} (exclusive), in the destination slots
+starting at index @var{dst.start}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-copy-source-count! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
+Copy @var{count} items from @var{src.vec} to @var{dst.vec}; return
+@var{dst.vec}.  Copy the items the source slots at index @var{src.start}
+inclusive, to the destination slots at index @var{dst.start} inclusive.
+@end deffn
+
+@c page
+@node syslib vectors conversion
+@subsection Converting between vectors and other object types
+
+
+The arguments @var{vec} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the library @library{vicare system $vectors}.
+
+
+@deffn {Unsafe Operation} $fill-vector-from-list! @var{vec} @var{start} @var{ls}
+Fill the vector @var{vec} with items from the proper list @var{ls},
+starting at index @var{start}.
 @end deffn
 
 @c page

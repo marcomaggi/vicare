@@ -266,7 +266,6 @@
     $vector-copy
     $vector-copy!
     $vector-fill!
-    $subvector
     $vector-clean!
     $make-clean-vector
 
@@ -715,17 +714,6 @@
 	(loop src.vec ($fxadd1 src.start)
 	      dst.vec ($fxadd1 dst.start)
 	      src.end)))))
-
-(define-inline ($subvector ?vec ?start ?end)
-  ;;Return a new vector holding items from ?VEC from ?START inclusive to
-  ;;?END exclusive.
-  ;;
-  (let ((dst.len ($fx- ?end ?start)))
-    (if ($fx< 0 dst.len)
-	(let ((dst.vec ($make-vector dst.len)))
-	  ($vector-copy! ?vec ?start dst.vec 0 ?end)
-	  dst.vec)
-      '#())))
 
 
 ;;;; characters

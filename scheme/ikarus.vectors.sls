@@ -151,7 +151,14 @@
     $vector-map1
     $vector-for-each1
     $vector-for-all1
-    $vector-exists1)
+    $vector-exists1
+    $subvector
+    $vectors-of-same-length?
+    $vector-self-copy-forwards!
+    $vector-self-copy-backwards!
+    $vector-copy-source-range!
+    $vector-copy-source-count!
+    $fill-vector-from-list!)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed May 6, 2015)
@@ -178,11 +185,18 @@
     (vicare system $pairs)
     (except (vicare system $vectors)
 	    $make-clean-vector
+	    $subvector
 	    $vector-empty?
 	    $vector-map1
 	    $vector-for-each1
 	    $vector-for-all1
-	    $vector-exists1)
+	    $vector-exists1
+	    $vectors-of-same-length?
+	    $vector-self-copy-forwards!
+	    $vector-self-copy-backwards!
+	    $vector-copy-source-range!
+	    $vector-copy-source-count!
+	    $fill-vector-from-list!)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed May 6,
     ;;2015)
     (only (ikarus fixnums)
@@ -389,13 +403,13 @@
 	  ($vector-copy-source-range! src.vec src.start src.end dst.vec 0))
       ($make-vector 0))))
 
-(define ($list->vector v i ls)
+(define ($fill-vector-from-list! v i ls)
   ;;Fill the vector V with items from the proper list LS, starting at index I.
   ;;
   (if (pair? ls)
       (begin
 	($vector-set! v i (car ls))
-	($list->vector v ($fxadd1 i) (cdr ls)))
+	($fill-vector-from-list! v ($fxadd1 i) (cdr ls)))
     v))
 
 
@@ -495,7 +509,7 @@
 		  len))))
      (preconditions
       (total-vector-length-is-a-fixnum len))
-     ($list->vector ($make-clean-vector len) 0 arg*)))
+     ($fill-vector-from-list! ($make-clean-vector len) 0 arg*)))
 
   #| end of CASE-DEFINE* |# )
 
@@ -575,7 +589,7 @@
   (let ((len (race ls ls ls 0)))
     (preconditions
      (total-vector-length-is-a-fixnum len))
-    ($list->vector ($make-clean-vector len) 0 ls)))
+    ($fill-vector-from-list! ($make-clean-vector len) 0 ls)))
 
 
 (module (vector-map)

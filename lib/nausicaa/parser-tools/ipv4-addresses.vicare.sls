@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -51,6 +51,8 @@
     (prefix (vicare parser-tools silex lexer) lex.)
     (prefix (nausicaa parser-tools lexical-tokens) lt.)
     (prefix (nausicaa parser-tools source-locations) sl.)
+    (only (vicare system $vectors)
+	  $subvector)
     (vicare unsafe operations))
 
 

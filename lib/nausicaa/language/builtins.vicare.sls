@@ -89,6 +89,8 @@
 	  $property-list)
     (vicare system $keywords)
     (vicare system $strings)
+    (only (vicare system $vectors)
+	  $subvector)
     (vicare system $bytevectors)
     (vicare unsafe operations)
     (vicare language-extensions sentinels)
