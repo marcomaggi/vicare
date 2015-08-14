@@ -94,6 +94,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-arguments-validation.texi		\
 	doc/libs-arrays.texi				\
 	doc/libs-binary-heaps.texi			\
+	doc/libs-binary-trees.texi			\
 	doc/libs-bytevectors.texi			\
 	doc/libs-bytevector-compounds.texi		\
 	doc/libs-cbuffers.texi				\
@@ -924,6 +925,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	tests/test-vicare-containers-arrays.sps				\
 	tests/test-vicare-containers-binary-heaps.sps			\
+	tests/test-vicare-containers-binary-trees.sps			\
 	tests/test-vicare-containers-bytevector-compounds.sps		\
 	tests/test-vicare-containers-bytevectors-s8-high.sps		\
 	tests/test-vicare-containers-bytevectors-s8-low.sps		\

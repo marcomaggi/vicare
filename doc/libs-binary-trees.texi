@@ -1,0 +1,16 @@
+@node binary trees
+@chapter Binary tree skeletons
+
+
+@cindex Library @library{vicare containers binary-trees}
+@cindex @library{vicare containers binary-trees}, library
+
+
+The library @library{vicare containers binary-trees} implements the
+skeleton functions needed by binary search trees.
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

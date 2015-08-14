@@ -171,6 +171,7 @@ Container libraries
 * deques::                      Double-ended queues of objects.
 * binary heaps::                Binary heaps.
 * dynamic arrays::              Dynamic arrays.
+* binary trees::                Binary tree skeletons.
 
 Adapted libraries
 
@@ -244,6 +245,7 @@ External documents
 @include libs-deques.texi
 @include libs-binary-heaps.texi
 @include libs-dynamic-arrays.texi
+@include libs-binary-trees.texi
 
 @include libs-randomisations.texi
 
