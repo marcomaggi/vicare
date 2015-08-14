@@ -4,24 +4,28 @@
 
 @cindex @library{vicare containers dynamic-arrays}, library
 @cindex Library @library{vicare containers dynamic-arrays}
+@cindex @library{vicare containers dynamic-arrays sort}, library
+@cindex Library @library{vicare containers dynamic-arrays sort}
 
 
 The library @library{vicare containers dynamic-arrays} implements array
 objects holding arbitrary Scheme objects and designed for efficient
-dynamic resizing.
+dynamic resizing.  The library @library{vicare containers dynamic-arrays
+sort} implements sorting algorithms.
 
 @menu
-* dynarrys objects::              Dynamic vector objects.
-* dynarrys inspection::           Inspecting stack objects.
-* dynarrys access::               Stack accessors and mutators.
-* dynarrys folding::              Folding over dynamic vectors.
-* dynarrys mapping::              Mapping over dynamic vectors.
-* dynarrys searching::            Searching in dynamic vectors.
-* dynarrys filtering::            Filtering in dynamic vectors.
-* dynarrys conversion::           Converting dynamic vectors to
-                                  other objects.
-* dynarrys misc::                 Miscellaneous operations on
-                                  dynamic vectors.
+* dynarrys objects::            Dynamic vector objects.
+* dynarrys inspection::         Inspecting stack objects.
+* dynarrys access::             Stack accessors and mutators.
+* dynarrys folding::            Folding over dynamic vectors.
+* dynarrys mapping::            Mapping over dynamic vectors.
+* dynarrys searching::          Searching in dynamic vectors.
+* dynarrys filtering::          Filtering in dynamic vectors.
+* dynarrys conversion::         Converting dynamic vectors to
+                                other objects.
+* dynarrys misc::               Miscellaneous operations on
+                                dynamic vectors.
+* dynarrys sort::               Sorting dynamic arrays.
 @end menu
 
 @c page
@@ -639,6 +643,53 @@ side, and push them in the front side of @var{dst-queue}.  Return
 
 The @var{dst-arry} argument allows us to build the destination dynamic
 array with the desired configuration parameters.
+@end defun
+
+@c page
+@node dynarrys sort
+@section Sorting dynamic arrays
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers dynamic-arrays sort}.  The syntactic bindings
+whose name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun dynamic-array-sort @var{item<} @var{arry}
+@defunx $dynamic-array-sort @var{item<} @var{arry}
+Build and return a new dynamic array holding all the objects from
+@var{arry} sorted from the lesser to the greater according to the
+comparison procedure @var{item<}.
+
+@var{item<} must be a procedure accepting two objects from @var{arry}
+and returning true if the first argument is less than the second
+argument.
+
+@lisp
+(let* ((C1 (dynamic-array 0 4 3 1 2 5))
+       (C2 (dynamic-array-sort < C1)))
+  (dynamic-array->list C2))
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
+
+
+@defun dynamic-array-sort! @var{item<} @var{arry}
+@defunx $dynamic-array-sort! @var{item<} @var{arry}
+Sort all the objects from @var{arry} from the lesser to the greater
+according to the comparison procedure @var{item<}; @var{arry} itself is
+mutated and returned.
+
+@var{item<} must be a procedure accepting two objects from @var{arry}
+and returning true if the first argument is less than the second
+argument.
+
+@lisp
+(let ((C (dynamic-array 0 4 3 1 2 5)))
+  (dynamic-array->list (dynamic-array-sort! < C)))
+@result{} (0 1 2 3 4 5)
+@end lisp
 @end defun
 
 

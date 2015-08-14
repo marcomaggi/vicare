@@ -1434,6 +1434,21 @@ endif
 EXTRA_DIST += lib/vicare/containers/dynamic-arrays.vicare.sls
 CLEANFILES += lib/vicare/containers/dynamic-arrays.fasl
 
+lib/vicare/containers/dynamic-arrays/sort.fasl: \
+		lib/vicare/containers/dynamic-arrays/sort.vicare.sls \
+		lib/vicare/containers/dynamic-arrays.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_dynamic_arrays_sort_fasldir = $(bundledlibsdir)/vicare/containers/dynamic-arrays
+lib_vicare_containers_dynamic_arrays_sort_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/dynamic-arrays
+nodist_lib_vicare_containers_dynamic_arrays_sort_fasl_DATA = lib/vicare/containers/dynamic-arrays/sort.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_dynamic_arrays_sort_vicare_sls_DATA = lib/vicare/containers/dynamic-arrays/sort.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/dynamic-arrays/sort.vicare.sls
+CLEANFILES += lib/vicare/containers/dynamic-arrays/sort.fasl
+
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \

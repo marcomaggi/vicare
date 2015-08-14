@@ -27,6 +27,7 @@
 #!vicare
 (import (vicare)
   (vicare containers dynamic-arrays)
+  (vicare containers dynamic-arrays sort)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1496,6 +1497,64 @@
 		(dynamic-array-rear  D)
 		(dynamic-array->vector D)))
     => 0 2 '#(0 1 2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'sorting))
+
+  (define (permutations ls)
+    (define (rem* ls)
+      (if (null? ls)
+	  '()
+	(begin
+	  (cons (cdr ls)
+		(map (lambda (a)
+		       (cons (car ls) a))
+		  (rem* (cdr ls)))))))
+    (if (null? ls)
+	'(())
+      (begin
+	(apply append (map (lambda (x a*)
+			     (map (lambda (a) (cons x a)) a*))
+			ls
+			(map permutations (rem* ls)))))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((C1 (dynamic-array 0 1 2 3 4 5))
+	     (C2 (dynamic-array-sort < C1)))
+	(dynamic-array->list C2))
+    => '(0 1 2 3 4 5))
+
+  (check
+      (let* ((C1 (dynamic-array 5 4 3 2 1 0))
+	     (C2 (dynamic-array-sort < C1)))
+	(dynamic-array->list C2))
+    => '(0 1 2 3 4 5))
+
+  (check
+      (let* ((C1 (dynamic-array 0 4 3 1 2 5))
+	     (C2 (dynamic-array-sort < C1)))
+	(dynamic-array->list C2))
+    => '(0 1 2 3 4 5))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all (lambda (ell)
+		 #;(debug-print ell)
+		 (equal? LIST-5 (dynamic-array->list (dynamic-array-sort < (list->dynamic-array ell)))))
+	(permutations LIST-5))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((C (dynamic-array 0 4 3 1 2 5)))
+	(dynamic-array->list (dynamic-array-sort! < C)))
+    => '(0 1 2 3 4 5))
 
   #t)
 
