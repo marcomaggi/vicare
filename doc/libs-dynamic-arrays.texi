@@ -1,4 +1,4 @@
-@node dynarrys
+@node dynamic arrays
 @chapter Dynamic arrays
 
 
@@ -14,22 +14,22 @@ dynamic resizing.  The library @library{vicare containers dynamic-arrays
 sort} implements sorting algorithms.
 
 @menu
-* dynarrys objects::            Dynamic vector objects.
-* dynarrys inspection::         Inspecting stack objects.
-* dynarrys access::             Stack accessors and mutators.
-* dynarrys folding::            Folding over dynamic vectors.
-* dynarrys mapping::            Mapping over dynamic vectors.
-* dynarrys searching::          Searching in dynamic vectors.
-* dynarrys filtering::          Filtering in dynamic vectors.
-* dynarrys conversion::         Converting dynamic vectors to
+* dynamic arrays objects::      Dynamic vector objects.
+* dynamic arrays inspection::   Inspecting stack objects.
+* dynamic arrays access::       Stack accessors and mutators.
+* dynamic arrays folding::      Folding over dynamic vectors.
+* dynamic arrays mapping::      Mapping over dynamic vectors.
+* dynamic arrays searching::    Searching in dynamic vectors.
+* dynamic arrays filtering::    Filtering in dynamic vectors.
+* dynamic arrays conversion::   Converting dynamic vectors to
                                 other objects.
-* dynarrys misc::               Miscellaneous operations on
+* dynamic arrays misc::         Miscellaneous operations on
                                 dynamic vectors.
-* dynarrys sort::               Sorting dynamic arrays.
+* dynamic arrays sort::         Sorting dynamic arrays.
 @end menu
 
 @c page
-@node dynarrys objects
+@node dynamic arrays objects
 @section Dynamic-Arrays objects
 
 
@@ -148,7 +148,7 @@ as follows:
 @end defun
 
 @c page
-@node dynarrys inspection
+@node dynamic arrays inspection
 @section Inspecting dynamic array objects
 
 
@@ -185,7 +185,7 @@ Aliases for @func{dynamic-array-length} and
 @end defun
 
 @c page
-@node dynarrys access
+@node dynamic arrays access
 @section Dynamic-Arrays accessors and mutators
 
 
@@ -303,7 +303,7 @@ Remove all the elements from @var{arry}.
 @end defun
 
 @c page
-@node dynarrys folding
+@node dynamic arrays folding
 @section Folding over dynamic-arrays
 
 
@@ -349,7 +349,7 @@ over the objects from @var{arry}, starting from the rear.
 @end defun
 
 @c page
-@node dynarrys mapping
+@node dynamic arrays mapping
 @section Mapping over dynamic arrays
 
 
@@ -428,7 +428,7 @@ Aliases for @func{dynamic-array-for-each-left} and
 @end defun
 
 @c page
-@node dynarrys searching
+@node dynamic arrays searching
 @section Searching in dynamic arrays
 
 
@@ -531,7 +531,7 @@ Aliases for @func{dynamic-array-find-left} and
 @end defun
 
 @c page
-@node dynarrys filtering
+@node dynamic arrays filtering
 @section Filtering in dynamic arrays
 
 
@@ -565,7 +565,7 @@ and configure dynamic arrays with the needed parameters.
 @end defun
 
 @c page
-@node dynarrys conversion
+@node dynamic arrays conversion
 @section Converting dynamic-arrays to other objects
 
 
@@ -612,7 +612,7 @@ side.
 @end defun
 
 @c page
-@node dynarrys misc
+@node dynamic arrays misc
 @section Miscellaneous operations on dynamic-arrays
 
 
@@ -646,7 +646,7 @@ array with the desired configuration parameters.
 @end defun
 
 @c page
-@node dynarrys sort
+@node dynamic arrays sort
 @section Sorting dynamic arrays
 
 

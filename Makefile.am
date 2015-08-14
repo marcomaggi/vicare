@@ -103,7 +103,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-conditions-and-restarts.texi		\
 	doc/libs-debugging.texi				\
 	doc/libs-deques.texi				\
-	doc/libs-dynarrys.texi				\
+	doc/libs-dynamic-arrays.texi			\
 	doc/libs-flonum-format.texi			\
 	doc/libs-flonum-parser.texi			\
 	doc/libs-formations.texi			\
