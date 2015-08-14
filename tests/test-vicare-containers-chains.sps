@@ -26,10 +26,54 @@
 #!vicare
 (import (vicare)
   (vicare containers chains)
+  (vicare containers chains sort)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: chain containers\n")
+
+
+;;;; helpers
+
+(define (make-list-20)
+  ;;Build and return a new list object holding fixnums from 0 to 99 included.
+  ;;
+  (let loop ((i   19)
+	     (ell '()))
+    (if (fxzero? i)
+	(cons i ell)
+      (loop (fxsub1 i) (cons i ell)))))
+
+;;; --------------------------------------------------------------------
+
+(define (make-list-100)
+  ;;Build and return a new list object holding fixnums from 0 to 99 included.
+  ;;
+  (let loop ((i   99)
+	     (ell '()))
+    (if (fxzero? i)
+	(cons i ell)
+      (loop (fxsub1 i) (cons i ell)))))
+
+;;; --------------------------------------------------------------------
+
+;;A list of 5 objects, enqueued in a deque, is fully stored in a single buffer.
+;;
+(define-constant LIST-5			'(0 1 2 3 4))
+(define-constant LIST-5-REVERSED	(reverse LIST-5))
+(define-constant LIST-5-NEGATED		(map - LIST-5))
+
+;;A list of 20 objects, enqueued in a deque, is stored in two buffers.
+;;
+(define-constant LIST-20		(make-list-20))
+(define-constant LIST-20-REVERSED	(reverse LIST-20))
+(define-constant LIST-20-NEGATED	(map - LIST-20))
+
+;;A list of 100 objects, enqueued in a deque, is stored in multiple buffers.
+;;
+(define-constant LIST-100		(make-list-100))
+(define-constant LIST-100-REVERSED	(reverse LIST-100))
+(define-constant LIST-100-NEGATED	(map - LIST-100))
 
 
 (parametrise ((check-test-name	'making))
@@ -1459,6 +1503,57 @@
   (check
       (chain->vector (vector->chain '#(1 2 3)))
     => '#(1 2 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'sorting))
+
+  (define (permutations ls)
+    (define (rem* ls)
+      (if (null? ls)
+	  '()
+	(begin
+	  (cons (cdr ls)
+		(map (lambda (a)
+		       (cons (car ls) a))
+		  (rem* (cdr ls)))))))
+    (if (null? ls)
+	'(())
+      (begin
+	(apply append (map (lambda (x a*)
+			     (map (lambda (a) (cons x a)) a*))
+			ls
+			(map permutations (rem* ls)))))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((C1 (chain 0 1 2 3 4 5))
+	     (C2 (chain-sort-forwards < C1)))
+	(chain->list C2))
+    => '(0 1 2 3 4 5))
+
+  (check
+      (let* ((C1 (chain 5 4 3 2 1 0))
+	     (C2 (chain-sort-forwards < C1)))
+	(chain->list C2))
+    => '(0 1 2 3 4 5))
+
+  (check
+      (let* ((C1 (chain 0 4 3 1 2 5))
+	     (C2 (chain-sort-forwards < C1)))
+	(chain->list C2))
+    => '(0 1 2 3 4 5))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (for-all (lambda (ell)
+		 #;(debug-print ell)
+		 (equal? LIST-5 (chain->list (chain-sort-forwards < (list->chain ell)))))
+	(permutations LIST-5))
+    => #t)
 
   #t)
 

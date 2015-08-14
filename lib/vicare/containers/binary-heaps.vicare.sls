@@ -53,6 +53,8 @@
     binary-heap-merge		$binary-heap-merge
     binary-heap-blend!		$binary-heap-blend!
 
+    binary-heap-fold!		$binary-heap-fold!
+
     binary-heap-sort-to-list!	$binary-heap-sort-to-list!)
   (import (vicare)
     (vicare system $fx)
@@ -304,6 +306,18 @@
     ($binary-heap-array-set! dst (vector-copy ($binary-heap-array src)))
     ($binary-heap-size-set!  dst ($binary-heap-size src))))
 
+;;; --------------------------------------------------------------------
+
+(define* (binary-heap-fold! {kons procedure?} knil {H binary-heap?})
+  ($binary-heap-fold! kons knil H))
+
+(define ($binary-heap-fold! kons knil heap)
+  (if ($binary-heap-empty? heap)
+      knil
+    ($binary-heap-fold! kons (kons knil ($binary-heap-pop! heap)) heap)))
+
+;;; --------------------------------------------------------------------
+
 (define* (binary-heap-merge {H1 binary-heap?} {H2 binary-heap?})
   ($binary-heap-merge H1 H2))
 
@@ -312,6 +326,8 @@
   ;;
   ($binary-heap-blend! ($binary-heap-copy H1)
 		       ($binary-heap-copy H2)))
+
+;;; --------------------------------------------------------------------
 
 (define* (binary-heap-blend! {H1 binary-heap?} {H2 binary-heap?})
   ($binary-heap-blend! H1 H2))

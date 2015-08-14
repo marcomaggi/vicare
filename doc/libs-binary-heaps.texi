@@ -212,6 +212,28 @@ comparison predicate of @var{heap} and containing the same objects of
 @end defun
 
 
+@defun binary-heap-fold! @var{kons} @var{knil} @var{heap}
+@defunx $binary-heap-fold! @var{kons} @var{knil} @var{heap}
+While the @var{heap} is not empty: apply @var{kons} to @var{knil} and
+the next top object; the return value of the application becomes the new
+@var{knil}; return the return value of the last application.  After a
+call to this function: the heap is left empty.
+
+@lisp
+(binary-heap-fold!
+    (lambda (knil obj)
+      (cons obj knil))
+  '()
+  (fold-left (lambda (heap obj)
+               (binary-heap-push! heap obj)
+               heap)
+    (make-binary-heap <)
+    '(2 4 0 1 3)))
+@result{} (4 3 2 1 0)
+@end lisp
+@end defun
+
+
 @defun binary-heap-merge @vari{heap} @varii{heap}
 @defunx $binary-heap-merge @vari{heap} @varii{heap}
 Build and return a new instance of @objtype{binary-heap} using the same

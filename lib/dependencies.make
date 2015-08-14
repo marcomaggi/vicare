@@ -1316,6 +1316,20 @@ endif
 EXTRA_DIST += lib/vicare/containers/arrays.vicare.sls
 CLEANFILES += lib/vicare/containers/arrays.fasl
 
+lib/vicare/containers/binary-heaps.fasl: \
+		lib/vicare/containers/binary-heaps.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_binary_heaps_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_binary_heaps_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_binary_heaps_fasl_DATA = lib/vicare/containers/binary-heaps.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_binary_heaps_vicare_sls_DATA = lib/vicare/containers/binary-heaps.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/binary-heaps.vicare.sls
+CLEANFILES += lib/vicare/containers/binary-heaps.fasl
+
 lib/vicare/containers/chains.fasl: \
 		lib/vicare/containers/chains.vicare.sls \
 		$(FASL_PREREQUISITES)
@@ -1329,6 +1343,22 @@ dist_lib_vicare_containers_chains_vicare_sls_DATA = lib/vicare/containers/chains
 endif
 EXTRA_DIST += lib/vicare/containers/chains.vicare.sls
 CLEANFILES += lib/vicare/containers/chains.fasl
+
+lib/vicare/containers/chains/sort.fasl: \
+		lib/vicare/containers/chains/sort.vicare.sls \
+		lib/vicare/containers/chains.fasl \
+		lib/vicare/containers/binary-heaps.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_chains_sort_fasldir = $(bundledlibsdir)/vicare/containers/chains
+lib_vicare_containers_chains_sort_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/chains
+nodist_lib_vicare_containers_chains_sort_fasl_DATA = lib/vicare/containers/chains/sort.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_chains_sort_vicare_sls_DATA = lib/vicare/containers/chains/sort.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/chains/sort.vicare.sls
+CLEANFILES += lib/vicare/containers/chains/sort.fasl
 
 lib/vicare/containers/slots.fasl: \
 		lib/vicare/containers/slots.vicare.sls \
@@ -1390,30 +1420,16 @@ endif
 EXTRA_DIST += lib/vicare/containers/stacks.vicare.sls
 CLEANFILES += lib/vicare/containers/stacks.fasl
 
-lib/vicare/containers/binary-heaps.fasl: \
-		lib/vicare/containers/binary-heaps.vicare.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_containers_binary_heaps_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_binary_heaps_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_binary_heaps_fasl_DATA = lib/vicare/containers/binary-heaps.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_binary_heaps_vicare_sls_DATA = lib/vicare/containers/binary-heaps.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/containers/binary-heaps.vicare.sls
-CLEANFILES += lib/vicare/containers/binary-heaps.fasl
-
 lib/vicare/containers/dynamic-arrays.fasl: \
 		lib/vicare/containers/dynamic-arrays.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-lib_vicare_containers_dynamic_vectors_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_dynamic_vectors_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_dynamic_vectors_fasl_DATA = lib/vicare/containers/dynamic-arrays.fasl
+lib_vicare_containers_dynamic_arrays_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_dynamic_arrays_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_dynamic_arrays_fasl_DATA = lib/vicare/containers/dynamic-arrays.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_dynamic_vectors_vicare_sls_DATA = lib/vicare/containers/dynamic-arrays.vicare.sls
+dist_lib_vicare_containers_dynamic_arrays_vicare_sls_DATA = lib/vicare/containers/dynamic-arrays.vicare.sls
 endif
 EXTRA_DIST += lib/vicare/containers/dynamic-arrays.vicare.sls
 CLEANFILES += lib/vicare/containers/dynamic-arrays.fasl

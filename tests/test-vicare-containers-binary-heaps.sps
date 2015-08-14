@@ -233,6 +233,41 @@
     => 0 0)
 
 ;;; --------------------------------------------------------------------
+;;; folding
+
+  (check
+      (binary-heap-fold!
+	  (lambda (knil obj)
+	    (cons obj knil))
+	'() (make-binary-heap <))
+    => '())
+
+  (check
+      (let ((H (receive-and-return (heap)
+		   (make-binary-heap <)
+		 (for-each-in-order
+		     (lambda (obj)
+		       (binary-heap-push! heap obj))
+		   '(4 3 2 1 0)))))
+	(binary-heap-fold!
+	    (lambda (knil obj)
+	      (cons obj knil))
+	  '() H))
+    => '(4 3 2 1 0))
+
+  (check
+      (binary-heap-fold!
+	  (lambda (knil obj)
+	    (cons obj knil))
+	'()
+	(fold-left (lambda (heap obj)
+		     (binary-heap-push! heap obj)
+		     heap)
+	  (make-binary-heap <)
+	  '(2 4 0 1 3)))
+    => '(4 3 2 1 0))
+
+;;; --------------------------------------------------------------------
 
   ;;Merge two heaps.
   ;;
@@ -276,3 +311,6 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'binary-heap-fold! 'scheme-indent-function 1)
+;; End:
