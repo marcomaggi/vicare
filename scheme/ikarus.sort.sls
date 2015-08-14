@@ -28,30 +28,7 @@
     (vicare system $vectors))
 
 
-(module UNSAFE
-  (fx<? fx<=? fx>? fx>=? fx=?
-	fx+ fx- fxarithmetic-shift-right
-	vector-ref vector-set! car cdr)
-  (import
-      (rename (vicare system $pairs)
-	      ($car    car)
-	      ($cdr    cdr))
-    (rename (vicare system $vectors)
-	    ($vector-ref    vector-ref)
-	    ($vector-set!   vector-set!))
-    (rename (vicare system $fx)
-	    ($fxsra    fxarithmetic-shift-right)
-	    ($fx+      fx+)
-	    ($fx-      fx-)
-	    ($fx<      fx<?)
-	    ($fx>      fx>?)
-	    ($fx>=     fx>=?)
-	    ($fx<=     fx<=?)
-	    ($fx=      fx=?))))
-
-
 (define* (list-sort {proc procedure?} ls)
-  (import UNSAFE)
 
   (define (race hare turtle ls accum-length)
     ;;Perform the  "turtle and  hare" race to  compute the length  of the  list HARE,
@@ -96,7 +73,6 @@
 
 
 (module (vector-sort vector-sort!)
-  (import UNSAFE)
 
   (define* (vector-sort {proc procedure?} {src vector?})
     (receive-and-return (dst)
@@ -109,93 +85,93 @@
 
   (define (%do-sort! proc src skr i k)
     ;; sort src(i .. k) inclusive in place
-    (when (fx<? i k)
-      (let ((j (fxarithmetic-shift-right (fx+ i k) 1)))
+    (when ($fx< i k)
+      (let ((j ($fxsra ($fx+ i k) 1)))
 	(%do-sort!  proc skr src i j)
 	(%do-sort!  proc skr src ($fxadd1 j) k)
 	(%do-merge! proc src skr i k i j ($fxadd1 j) k))))
 
   (define (%copy-subrange! src dst src.idx dst.idx dst.last)
-    (vector-set! dst dst.idx (vector-ref src src.idx))
+    ($vector-set! dst dst.idx ($vector-ref src src.idx))
     (let ((dst.idx ($fxadd1 dst.idx)))
-      (when (fx<=? dst.idx dst.last)
+      (when ($fx<= dst.idx dst.last)
 	(%copy-subrange! src dst ($fxadd1 src.idx) dst.idx dst.last))))
 
   (define (%do-merge-a! proc src skr ri rj ai aj bi bj b0)
-    (let ((a0 (vector-ref skr ai))
+    (let ((a0 ($vector-ref skr ai))
 	  (ai ($fxadd1 ai)))
       (if (proc b0 a0)
 	  (begin
-	    (vector-set! src ri b0)
+	    ($vector-set! src ri b0)
 	    (let ((ri ($fxadd1 ri)))
-	      (if (fx<=? bi bj)
+	      (if ($fx<= bi bj)
 		  (%do-merge-b! proc src skr ri rj ai aj bi bj a0)
 		(begin
-		  (vector-set! src ri a0)
+		  ($vector-set! src ri a0)
 		  (let ((ri ($fxadd1 ri)))
-		    (when (fx<=? ri rj)
+		    (when ($fx<= ri rj)
 		      (%copy-subrange! skr src ai ri rj)))))))
 	(begin
-	  (vector-set! src ri a0)
+	  ($vector-set! src ri a0)
 	  (let ((ri ($fxadd1 ri)))
-	    (if (fx<=? ai aj)
+	    (if ($fx<= ai aj)
 		(%do-merge-a! proc src skr ri rj ai aj bi bj b0)
 	      (begin
-		(vector-set! src ri b0)
+		($vector-set! src ri b0)
 		(let ((ri ($fxadd1 ri)))
-		  (when (fx<=? ri rj)
+		  (when ($fx<= ri rj)
 		    (%copy-subrange! skr src bi ri rj))))))))))
 
   (define (%do-merge-b! proc src skr ri rj ai aj bi bj a0)
-    (let ((b0 (vector-ref skr bi))
+    (let ((b0 ($vector-ref skr bi))
 	  (bi ($fxadd1 bi)))
       (if (proc b0 a0)
 	  (begin
-	    (vector-set! src ri b0)
+	    ($vector-set! src ri b0)
 	    (let ((ri ($fxadd1 ri)))
-	      (if (fx<=? bi bj)
+	      (if ($fx<= bi bj)
 		  (%do-merge-b! proc src skr ri rj ai aj bi bj a0)
 		(begin
-		  (vector-set! src ri a0)
+		  ($vector-set! src ri a0)
 		  (let ((ri ($fxadd1 ri)))
-		    (when (fx<=? ri rj)
+		    (when ($fx<= ri rj)
 		      (%copy-subrange! skr src ai ri rj)))))))
 	(begin
-	  (vector-set! src ri a0)
+	  ($vector-set! src ri a0)
 	  (let ((ri ($fxadd1 ri)))
-	    (if (fx<=? ai aj)
+	    (if ($fx<= ai aj)
 		(%do-merge-a! proc src skr ri rj ai aj bi bj b0)
 	      (begin
-		(vector-set! src ri b0)
+		($vector-set! src ri b0)
 		(let ((ri ($fxadd1 ri)))
-		  (when (fx<=? ri rj)
+		  (when ($fx<= ri rj)
 		    (%copy-subrange! skr src bi ri rj))))))))))
 
   (define (%do-merge! proc src skr ri rj ai aj bi bj)
-    (let ((a0 (vector-ref skr ai))
-	  (b0 (vector-ref skr bi))
+    (let ((a0 ($vector-ref skr ai))
+	  (b0 ($vector-ref skr bi))
 	  (ai ($fxadd1 ai))
 	  (bi ($fxadd1 bi)))
       (if (proc b0 a0)
 	  (begin
-	    (vector-set! src ri b0)
+	    ($vector-set! src ri b0)
 	    (let ((ri ($fxadd1 ri)))
-	      (if (fx<=? bi bj)
+	      (if ($fx<= bi bj)
 		  (%do-merge-b! proc src skr ri rj ai aj bi bj a0)
 		(begin
-		  (vector-set! src ri a0)
+		  ($vector-set! src ri a0)
 		  (let ((ri ($fxadd1 ri)))
-		    (when (fx<=? ri rj)
+		    (when ($fx<= ri rj)
 		      (%copy-subrange! skr src ai ri rj)))))))
 	(begin
-	  (vector-set! src ri a0)
+	  ($vector-set! src ri a0)
 	  (let ((ri ($fxadd1 ri)))
-	    (if (fx<=? ai aj)
+	    (if ($fx<= ai aj)
 		(%do-merge-a! proc src skr ri rj ai aj bi bj b0)
 	      (begin
-		(vector-set! src ri b0)
+		($vector-set! src ri b0)
 		(let ((ri ($fxadd1 ri)))
-		  (when (fx<=? ri rj)
+		  (when ($fx<= ri rj)
 		    (%copy-subrange! skr src bi ri rj))))))))))
 
   #| end of module |# )
