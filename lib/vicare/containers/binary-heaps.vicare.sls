@@ -31,6 +31,7 @@
 #!vicare
 (library (vicare containers binary-heaps)
   (export
+    <binary-heap>
     make-binary-heap		binary-heap?
 
     binary-heap-hash		$binary-heap-hash
@@ -91,7 +92,7 @@
 
 ;;;; data structure
 
-(define-record-type binary-heap
+(define-record-type (<binary-heap> make-binary-heap binary-heap?)
   (nongenerative vicare:containers:binary-heap)
   (fields (mutable	uid)
 	  (immutable	item<)
@@ -105,6 +106,15 @@
        (({item< procedure?} {initial-size non-negative-fixnum?})
 	(make-record #f item< 0 (make-vector initial-size)))))))
 
+(define-alias  binary-heap-size		 <binary-heap>-size)
+(define-alias $binary-heap-size		$<binary-heap>-size)
+
+(define-alias  binary-heap-size-set!	 <binary-heap>-size-set!)
+(define-alias $binary-heap-size-set!	$<binary-heap>-size-set!)
+
+(define-alias  binary-heap-item<	 <binary-heap>-item<)
+(define-alias $binary-heap-item<	$<binary-heap>-item<)
+
 
 ;;;; UID stuff
 
@@ -112,9 +122,9 @@
   ($binary-heap-hash H))
 
 (define ($binary-heap-hash H)
-  (unless ($binary-heap-uid H)
-    ($binary-heap-uid-set! H (gensym)))
-  (symbol-hash ($binary-heap-uid H)))
+  (unless ($<binary-heap>-uid H)
+    ($<binary-heap>-uid-set! H (gensym)))
+  (symbol-hash ($<binary-heap>-uid H)))
 
 ;;; --------------------------------------------------------------------
 
@@ -122,9 +132,9 @@
   ($binary-heap-putprop H key value))
 
 (define ($binary-heap-putprop H key value)
-  (unless ($binary-heap-uid H)
-    ($binary-heap-uid-set! H (gensym)))
-  (putprop ($binary-heap-uid H) key value))
+  (unless ($<binary-heap>-uid H)
+    ($<binary-heap>-uid-set! H (gensym)))
+  (putprop ($<binary-heap>-uid H) key value))
 
 ;;; --------------------------------------------------------------------
 
@@ -132,9 +142,9 @@
   ($binary-heap-getprop H key))
 
 (define ($binary-heap-getprop H key)
-  (unless ($binary-heap-uid H)
-    ($binary-heap-uid-set! H (gensym)))
-  (getprop ($binary-heap-uid H) key))
+  (unless ($<binary-heap>-uid H)
+    ($<binary-heap>-uid-set! H (gensym)))
+  (getprop ($<binary-heap>-uid H) key))
 
 ;;; --------------------------------------------------------------------
 
@@ -142,9 +152,9 @@
   ($binary-heap-remprop H key))
 
 (define ($binary-heap-remprop H key)
-  (unless ($binary-heap-uid H)
-    ($binary-heap-uid-set! H (gensym)))
-  (remprop ($binary-heap-uid H) key))
+  (unless ($<binary-heap>-uid H)
+    ($<binary-heap>-uid-set! H (gensym)))
+  (remprop ($<binary-heap>-uid H) key))
 
 ;;; --------------------------------------------------------------------
 
@@ -152,9 +162,9 @@
   ($binary-heap-property-list H))
 
 (define ($binary-heap-property-list H)
-  (unless ($binary-heap-uid H)
-    ($binary-heap-uid-set! H (gensym)))
-  (property-list ($binary-heap-uid H)))
+  (unless ($<binary-heap>-uid H)
+    ($<binary-heap>-uid-set! H (gensym)))
+  (property-list ($<binary-heap>-uid H)))
 
 
 ;;;; inspection
@@ -185,20 +195,20 @@
   (define* ($binary-heap-push! H elem)
     (let* ((size      ($binary-heap-size H))
 	   (size^     (fxadd1 size)))
-      (let* ((arry      ($binary-heap-array H))
+      (let* ((arry      ($<binary-heap>-array H))
 	     (arry.len  ($vector-length arry)))
 	(when (> size^ arry.len)
 	  (let ((new-size (if (fxzero? arry.len)
 			      16
 			    (fx* 2 arry.len))))
-	    ($binary-heap-array-set! H (vector-resize arry new-size)))))
-      ($vector-set! ($binary-heap-array H) size elem)
+	    ($<binary-heap>-array-set! H (vector-resize arry new-size)))))
+      ($vector-set! ($<binary-heap>-array H) size elem)
       ($binary-heap-size-set! H size^)
       (%binary-heap-move-up H size)))
 
   (define (%binary-heap-move-up H position)
     (let ((parent-idx  (quotient (- position 1) 2))
-	  (arry        (binary-heap-array H))
+	  (arry        (<binary-heap>-array H))
 	  (item<       (binary-heap-item< H)))
       (cond ((or (= position 0) (array-index< arry item< parent-idx position))
 	     'end-move-up)
@@ -222,7 +232,7 @@
       (receive-and-return (old-root)
 	  (binary-heap-top  H)
 	(let ((size^ (fxsub1 ($binary-heap-size H))))
-	  (let ((arry ($binary-heap-array H)))
+	  (let ((arry ($<binary-heap>-array H)))
 	    (array-swap! arry 0 size^))
 	  ($binary-heap-size-set! H size^)
 	  (%binary-heap-move-down H 0)))))
@@ -231,7 +241,7 @@
     (let* ((lchild  (fxadd1 (fx* 2 position)))
 	   (rchild  (fx+ 2  (fx* 2 position)))
 	   (size    (binary-heap-size  H))
-	   (arry    (binary-heap-array H))
+	   (arry    (<binary-heap>-array H))
 	   (item<   (binary-heap-item< H))
 	   (swap!   (lambda (pos child)
 		      (begin
@@ -261,7 +271,7 @@
 (define* ($binary-heap-top H)
   (if ($binary-heap-empty? H)
       (assertion-violation __who__ "binary heap is empty" H)
-    ($vector-ref ($binary-heap-array H) 0)))
+    ($vector-ref ($<binary-heap>-array H) 0)))
 
 (define* (binary-heap-fill! {H binary-heap?} item*)
   ($binary-heap-fill! H item*))
@@ -280,7 +290,7 @@
 
 (define ($binary-heap-purge! H)
   ($binary-heap-size-set!  H 0)
-  ($binary-heap-array-set! H (make-vector 16)))
+  ($<binary-heap>-array-set! H (make-vector 16)))
 
 
 ;;;; sorting
@@ -303,7 +313,7 @@
 (define* ($binary-heap-copy src)
   (receive-and-return (dst)
       (make-binary-heap ($binary-heap-item< src))
-    ($binary-heap-array-set! dst (vector-copy ($binary-heap-array src)))
+    ($<binary-heap>-array-set! dst (vector-copy ($<binary-heap>-array src)))
     ($binary-heap-size-set!  dst ($binary-heap-size src))))
 
 ;;; --------------------------------------------------------------------
@@ -335,9 +345,9 @@
 (define* ($binary-heap-blend! H1 H2)
   ;;Merge two heaps destroying them.
   ;;
-  ($binary-heap-array-set! H1 (vector-resize ($binary-heap-array H1)
-					     (fx+ ($binary-heap-size H1)
-						  ($binary-heap-size H2))))
+  ($<binary-heap>-array-set! H1 (vector-resize ($<binary-heap>-array H1)
+					       (fx+ ($binary-heap-size H1)
+						    ($binary-heap-size H2))))
   (while ($binary-heap-not-empty? H2)
     ($binary-heap-push! H1 ($binary-heap-pop! H2)))
   H1)

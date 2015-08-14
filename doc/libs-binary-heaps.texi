@@ -28,19 +28,19 @@ containers binary-heaps}.  The bindings whose name is prefixed with
 arguments before accessing them.
 
 
-@deftp {@rnrs{6} Record Type} binary-heap
+@deftp {@rnrs{6} Record Type} <binary-heap>
 @cindex @var{heap} argument
 @cindex Argument @var{heap}
 Record type representing a binary heap object.  The
-@objtype{binary-heap} type is non--generative and available for
-subtyping.  In this documentation @objtype{binary-heap} object arguments
-to functions are indicated as @var{heap}.
+@objtype{<binary-heap>} type is non--generative and available for
+subtyping.  In this documentation @objtype{<binary-heap>} object
+arguments to functions are indicated as @var{heap}.
 @end deftp
 
 
 @defun make-binary-heap @var{item<}
 @defunx make-binary-heap @var{item<} @var{initial-array-size}
-Build and return a new instance of @objtype{binary-heap}.  @var{item<}
+Build and return a new instance of @objtype{<binary-heap>}.  @var{item<}
 must be a procedure implementing a ``less than'' comparison predicate.
 The optional @var{initial-array-size} must be a non--negative fixnum
 representing the initial size of the underlying vector used as storage
@@ -49,7 +49,7 @@ for the heap implementation.
 
 
 @defun binary-heap? @var{obj}
-Return @true{} if @var{obj} is a record of type @objtype{binary-heap};
+Return @true{} if @var{obj} is a record of type @objtype{<binary-heap>};
 otherwise return @false{}.
 @end defun
 
@@ -96,7 +96,7 @@ creation order.
 @defun binary-heap-hash @var{heap}
 @defunx $binary-heap-hash @var{heap}
 Return an exact integer to be used as hashtable key for @var{heap}.
-Hashtables having a @objtype{binary-heap} as key can be instantiated as
+Hashtables having a @objtype{<binary-heap>} as key can be instantiated as
 follows:
 
 @example
@@ -206,7 +206,7 @@ arguments before accessing them.
 
 @defun binary-heap-copy @var{heap}
 @defunx $binary-heap-copy @var{heap}
-Build and return a new instance of @objtype{binary-heap} using the same
+Build and return a new instance of @objtype{<binary-heap>} using the same
 comparison predicate of @var{heap} and containing the same objects of
 @var{heap}.
 @end defun
@@ -236,7 +236,7 @@ call to this function: the heap is left empty.
 
 @defun binary-heap-merge @vari{heap} @varii{heap}
 @defunx $binary-heap-merge @vari{heap} @varii{heap}
-Build and return a new instance of @objtype{binary-heap} using the same
+Build and return a new instance of @objtype{<binary-heap>} using the same
 comparison predicate of @vari{heap} and containing the same objects of
 both @vari{heap} and @varii{heap}.  The arguments @vari{heap} and
 @varii{heap} are left unchanged.
