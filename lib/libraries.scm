@@ -143,6 +143,7 @@
      (vicare containers stacks)
      (vicare containers dynamic-arrays)
      (vicare containers dynamic-arrays sort)
+     (vicare containers binary-trees)
 
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)
