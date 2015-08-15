@@ -138,6 +138,13 @@
 		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
       #f key*))
 
+  (define (make-comparison-proc target-key)
+    (lambda (node)
+      (let ((key (binary-node-sort-key node)))
+	(cond ((= target-key key)	 0)
+	      ((< target-key key)	-1)
+	      (else			+1)))))
+
 ;;; --------------------------------------------------------------------
 
   (check
@@ -214,7 +221,7 @@
 
   (check
       (let ((root (tree)))
-	(binary-tree-minimum root 99))
+	(binary-tree-minimum root (lambda () 99)))
     => 99)
 
   (check
@@ -241,7 +248,7 @@
   ;; 0
   ;;
   (check
-      (let ((root (tree 5 3 8 1 4 6 9 0 7 10)))
+      (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
 	(binary-node-sort-key (binary-tree-minimum root)))
     => 0)
 
@@ -250,7 +257,7 @@
 
   (check
       (let ((root (tree)))
-	(binary-tree-maximum root 99))
+	(binary-tree-maximum root (lambda () 99)))
     => 99)
 
   (check
@@ -278,9 +285,52 @@
   ;; 0
   ;;
   (check
-      (let ((root (tree 5 3 8 1 4 6 9 0 7 10)))
+      (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
 	(binary-node-sort-key (binary-tree-maximum root)))
     => 10)
+
+;;; --------------------------------------------------------------------
+;;; finding
+
+  (check
+      (let ((root (tree)))
+	(define (search target-key)
+	  (binary-tree-find root (make-comparison-proc target-key)))
+	(search 99))
+    => #f)
+
+  (check
+      (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
+	(define (search target-key)
+	  (binary-tree-find root (make-comparison-proc target-key)))
+	(search 99))
+    => #f)
+
+  (check
+      (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
+	(define (search target-key)
+	  (binary-tree-find root (make-comparison-proc target-key) (lambda () 'not-found)))
+	(search 99))
+    => 'not-found)
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check
+      (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
+	(define (search target-key)
+	  (binary-tree-find root (make-comparison-proc target-key)))
+	(map binary-node-sort-key
+	  (fold-right
+	      (lambda (target-key knil)
+		(cons (search target-key) knil))
+	    '() '(0 1 2 3 4 5 6 7 8 9 10))))
+    => '(0 1 2 3 4 5 6 7 8 9 10))
 
   #t)
 

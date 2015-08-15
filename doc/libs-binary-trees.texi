@@ -147,16 +147,98 @@ validate their arguments before accessing them.
 
 
 @defun binary-tree-minimum @var{root}
-@defunx binary-tree-minimum @var{root} @var{empty-tree-rv}
-@defunx $binary-tree-minimum @var{root} @var{empty-tree-rv}
+@defunx binary-tree-minimum @var{root} @var{empty-tree-handler}
+@defunx $binary-tree-minimum @var{root} @var{empty-tree-handler}
 Search and return the minimum node in the tree starting from @var{root};
 the minimum node is the leftmost from @var{root}.
 
 The argument @var{root} must be @false{}, to represent an empty tree, or
-an instance of @objtype{<binary-node>}.  If @var{root} is @false{} and
-@var{empty-tree-rv} is not used: the return value is @false{}.  If
-@var{root} is @false{} and @var{empty-tree-rv} is used: the return value
-is @var{empty-tree-rv}.
+an instance of @objtype{<binary-node>}.
+
+The optional argument @var{empty-tree-handler} must be a thunk.  If
+@var{root} is @false{} and @var{empty-tree-handler} is not used: the
+return value is @false{}.  If @var{root} is @false{} and
+@var{empty-tree-handler} is used: the return value is the return value
+of @var{empty-tree-handler}.
+@end defun
+
+
+@defun binary-tree-maximum @var{root}
+@defunx binary-tree-maximum @var{root} @var{empty-tree-handler}
+@defunx $binary-tree-maximum @var{root} @var{empty-tree-handler}
+Search and return the maximum node in the tree starting from @var{root};
+the maximum node is the rightmost from @var{root}.
+
+The argument @var{root} must be @false{}, to represent an empty tree, or
+an instance of @objtype{<binary-node>}.
+
+The optional argument @var{empty-tree-handler} must be a thunk.  If
+@var{root} is @false{} and @var{empty-tree-handler} is not used: the
+return value is @false{}.  If @var{root} is @false{} and
+@var{empty-tree-handler} is used: the return value is the return value
+of @var{empty-tree-handler}.
+@end defun
+
+
+@defun binary-tree-find @var{root} @var{compare}
+@defunx binary-tree-find @var{root} @var{compare} @var{empty-tree-handler}
+@defunx $binary-tree-find @var{root} @var{compare} @var{empty-tree-handler}
+Search and return a node in the tree starting from @var{root} based on
+its sort key.
+
+The argument @var{root} must be @false{}, to represent an empty tree, or
+an instance of @objtype{<binary-node>}.
+
+The argument @var{compare} must be a procedure accepting an instance of
+@objtype{<binary-node>} as single argument; it must return a single
+value:
+
+@table @code
+@item 0
+If the argument node satisfies the search criterion.
+
+@item -1
+If the argument node has sort key less than the sort key of the target
+node.
+
+@item +1
+If the argument node has sort key greater than, or equal to, the sort
+key of the target node.
+@end table
+
+The optional argument @var{empty-tree-handler} must be a thunk.  If the
+target node is not found and @var{empty-tree-handler} is not used: the
+return value is @false{}.  If the target node it not found and
+@var{empty-tree-handler} is used: the return value is the return value
+of @var{empty-tree-handler}.
+
+@lisp
+(import (vicare)
+  (vicare containers binary-trees))
+
+(define (tree . key*)
+  (fold-left (lambda (root key)
+               (unbalanced-tree-insert! root key<
+                 (make-unbalanced-binary-node key)))
+    #f key*))
+
+(define (key< one two)
+  (< (binary-node-sort-key one)
+     (binary-node-sort-key two)))
+
+(define (make-comparison-proc target-key)
+  (lambda (node)
+    (let ((key (binary-node-sort-key node)))
+      (cond ((= target-key key)        0)
+            ((< target-key key)       -1)
+            (else                     +1)))))
+
+(binary-node-sort-key
+  (binary-tree-find (tree 5 3 8 1 4 6 9 0 2 7 10)
+                    (make-comparison-proc 4)
+                    (lambda () 'not-found)))
+@result{} 4
+@end lisp
 @end defun
 
 @c page

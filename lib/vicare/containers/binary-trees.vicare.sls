@@ -41,6 +41,7 @@
 
     binary-tree-minimum			$binary-tree-minimum
     binary-tree-maximum			$binary-tree-maximum
+    binary-tree-find			$binary-tree-find
 
     ;; unbalanced binary nodes
     <unbalanced-binary-node>		make-unbalanced-binary-node
@@ -108,25 +109,28 @@
 (define-alias $binary-node-sort-key-set!	$<binary-node>-sort-key-set!)
 
 
-;;;; plain binary trees: operations
+;;;; plain binary trees: searching operations
 
 (case-define* binary-tree-minimum
 
   (({root false-or-binary-node?})
    ($binary-tree-minimum root #f))
 
-  (({root false-or-binary-node?} empty-tree-rv)
-   ($binary-tree-minimum root empty-tree-rv))
+  (({root false-or-binary-node?} {empty-tree-handler procedure?})
+   ($binary-tree-minimum root empty-tree-handler))
 
   #| end of CASE-DEFINE* |# )
 
-(define ($binary-tree-minimum root empty-tree-rv)
-  (if root
-      (let loop ((node root))
-	(cond (($binary-node-left node)
-	       => loop)
-	      (else node)))
-    empty-tree-rv))
+(define ($binary-tree-minimum root empty-tree-handler)
+  (cond (root
+	    (let loop ((node root))
+	      (cond (($binary-node-left node)
+		     => loop)
+		    (else node))))
+	((procedure? empty-tree-handler)
+	 (empty-tree-handler))
+	(else
+	 empty-tree-handler)))
 
 ;;; --------------------------------------------------------------------
 
@@ -135,18 +139,49 @@
   (({root false-or-binary-node?})
    ($binary-tree-maximum root #f))
 
-  (({root false-or-binary-node?} empty-tree-rv)
-   ($binary-tree-maximum root empty-tree-rv))
+  (({root false-or-binary-node?} {empty-tree-handler procedure?})
+   ($binary-tree-maximum root empty-tree-handler))
 
   #| end of CASE-DEFINE* |# )
 
-(define ($binary-tree-maximum root empty-tree-rv)
-  (if root
-      (let loop ((node root))
-	(cond (($binary-node-right node)
-	       => loop)
-	      (else node)))
-    empty-tree-rv))
+(define ($binary-tree-maximum root empty-tree-handler)
+  (cond (root
+	    (let loop ((node root))
+	      (cond (($binary-node-right node)
+		     => loop)
+		    (else node))))
+	((procedure? empty-tree-handler)
+	 (empty-tree-handler))
+	(else
+	 empty-tree-handler)))
+
+;;; --------------------------------------------------------------------
+
+(case-define* binary-tree-find
+
+  (({root false-or-binary-node?} {compare procedure?})
+   ($binary-tree-find root compare #f))
+
+  (({root false-or-binary-node?} {compare procedure?} {not-found-handler procedure?})
+   ($binary-tree-find root compare not-found-handler))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($binary-tree-find root compare not-found-handler)
+  (define-syntax-rule (recurse ?node)
+    ($binary-tree-find ?node compare not-found-handler))
+  (cond (root
+	    (case (compare root)
+	      ((0)	root)
+	      ((-1)	(recurse ($binary-node-left  root)))
+	      ((+1)	(recurse ($binary-node-right root)))
+	      (else
+	       (expression-return-value-violation __who__
+		 "invalid return value from comparison procedure" root))))
+	((procedure? not-found-handler)
+	 (not-found-handler))
+	(else
+	 not-found-handler)))
 
 
 ;;;; unbalanced binary nodes: data type
