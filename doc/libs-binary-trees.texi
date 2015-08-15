@@ -10,12 +10,12 @@ The library @library{vicare containers binary-trees} implements the
 skeleton functions needed by binary search trees.
 
 @menu
-* bst binary bnodes::           Binary node objects.
-* bst binary unodes::           Unbalanced binary node objects.
+* bst bnodes::                  Binary node objects.
+* bst unodes::                  Unbalanced binary node objects.
 @end menu
 
 @c page
-@node bst binary bnodes
+@node bst bnodes
 @section Binary node objects
 
 
@@ -24,13 +24,13 @@ together in a tree hierarchy.  The object type @objtype{<binary-node>}
 is the base type of all the node types.
 
 @menu
-* bst binary bnodes objects::   Binary node data type.
-* bst binary bnodes access::    Accessors and mutators for binary nodes.
-* bst binary bnodes searching:: Searching in binary trees.
+* bst bnodes objects::          Binary node data type.
+* bst bnodes access::           Accessors and mutators for binary nodes.
+* bst bnodes searching::        Searching in binary trees.
 @end menu
 
 @c page
-@node bst binary bnodes objects
+@node bst bnodes objects
 @subsection Binary node data type
 
 
@@ -51,6 +51,10 @@ arguments to functions are indicated as @var{bnode}.
 @table @code
 @item sort-key
 An object used as sort key.
+
+@item parent
+False or an instance of @objtype{<binary-node>} representing the parent
+node.
 
 @item left
 False or an instance of @objtype{<binary-node>} representing the left
@@ -73,6 +77,8 @@ to @code{(void)}.
 The optional @var{left} and @var{right} arguments must be @false{} or
 instances of @objtype{<binary-node>} representing the left and right
 subtrees.
+
+The @code{parent} field of the new instance is set to @false{}.
 @end defun
 
 
@@ -82,7 +88,7 @@ otherwise return @false{}.
 @end defun
 
 @c page
-@node bst binary bnodes access
+@node bst bnodes access
 @subsection Accessors and mutators for binary nodes
 
 
@@ -91,6 +97,14 @@ The following syntactic bindings are exported by the library
 prefixed with @code{$} are unsafe operations: they do @strong{not}
 validate their arguments before accessing them.
 
+
+@defun binary-node-parent @var{bnode}
+@defunx $binary-node-parent @var{bnode}
+Accessor for the parent node of @var{bnode}.  Return @false{} or an
+instance of @objtype{<binary-node>}.
+@end defun
+
+@c ------------------------------------------------------------------------
 
 @defun binary-node-left @var{bnode}
 @defunx $binary-node-left @var{bnode}
@@ -103,7 +117,8 @@ instance of @objtype{<binary-node>}.
 @defunx $binary-node-left-set! @var{bnode} @var{left}
 Mutator for the left subtree of a @objtype{<binary-node>} instance.  The
 argument @var{left} must be @false{} or instances of
-@objtype{<binary-node>} representing the left subtree.
+@objtype{<binary-node>} representing the left subtree.  When @var{left}
+is a node: it is mutated to reference @var{bnode} as parent.
 @end defun
 
 @c ------------------------------------------------------------------------
@@ -119,7 +134,8 @@ instance of @objtype{<binary-node>}.
 @defunx $binary-node-right-set! @var{bnode} @var{right}
 Mutator for the right subtree of a @objtype{<binary-node>} instance.
 The argument @var{right} must be @false{} or instances of
-@objtype{<binary-node>} representing the right subtree.
+@objtype{<binary-node>} representing the right subtree.  When
+@var{right} is a node: it is mutated to reference @var{bnode} as parent.
 @end defun
 
 @c ------------------------------------------------------------------------
@@ -136,7 +152,7 @@ Mutator for the payload object of a @objtype{<binary-node>} instance.
 @end defun
 
 @c page
-@node bst binary bnodes searching
+@node bst bnodes searching
 @subsection Searching in binary trees
 
 
@@ -241,100 +257,8 @@ of @var{empty-tree-handler}.
 @end lisp
 @end defun
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Searching a node and its parent
-
-
-@defun binary-tree-minimum-and-parent @var{root}
-@defunx binary-tree-minimum-and-parent @var{root} @var{parent}
-@defunx binary-tree-minimum-and-parent @var{root} @var{parent} @var{empty-tree-handler}
-@defunx $binary-tree-minimum-and-parent @var{root} @var{parent} @var{empty-tree-handler}
-Search and minimum node in the tree starting from @var{root}; the
-minimum node is the leftmost from @var{root}.  Return two values: the
-target node and its parent node.
-
-The argument @var{root} must be @false{}, to represent an empty tree, or
-an instance of @objtype{<binary-node>}.
-
-The argument @var{parent} must be @false{} or an instance of
-@objtype{<binary-node>} being parent of @var{root}; this means that
-@var{root} is in the left or right field of @var{parent}.  When not
-used: @var{parent} defaults to @false{}.
-
-The optional argument @var{empty-tree-handler} must be a thunk.  If
-@var{root} is @false{} and @var{empty-tree-handler} is not used: the
-return values are both @false{}.  If @var{root} is @false{} and
-@var{empty-tree-handler} is used: the return values are the return
-values of @var{empty-tree-handler}.
-@end defun
-
-
-@defun binary-tree-maximum-and-parent @var{root}
-@defunx binary-tree-maximum-and-parent @var{root} @var{parent}
-@defunx binary-tree-maximum-and-parent @var{root} @var{parent} @var{empty-tree-handler}
-@defunx $binary-tree-maximum-and-parent @var{root} @var{parent} @var{empty-tree-handler}
-Search the maximum node in the tree starting from @var{root}; the
-maximum node is the rightmost from @var{root}.  Return two values: the
-target node and its parent node.
-
-The argument @var{root} must be @false{}, to represent an empty tree, or
-an instance of @objtype{<binary-node>}.
-
-The argument @var{parent} must be @false{} or an instance of
-@objtype{<binary-node>} being parent of @var{root}; this means that
-@var{root} is in the left or right field of @var{parent}.  When not
-used: @var{parent} defaults to @false{}.
-
-The optional argument @var{empty-tree-handler} must be a thunk.  If
-@var{root} is @false{} and @var{empty-tree-handler} is not used: the
-return values are both @false{}.  If @var{root} is @false{} and
-@var{empty-tree-handler} is used: the return values are the return
-values of @var{empty-tree-handler}.
-@end defun
-
-
-@defun binary-tree-find-and-parent @var{root} @var{compare}
-@defunx binary-tree-find-and-parent @var{root} @var{compare} @var{parent}
-@defunx binary-tree-find-and-parent @var{root} @var{compare} @var{parent} @var{empty-tree-handler}
-@defunx $binary-tree-find-and-parent @var{root} @var{compare} @var{parent} @var{empty-tree-handler}
-Search a node in the tree starting from @var{root} based on its sort
-key.  Return two values: the target node and its parent node.
-
-The argument @var{root} must be @false{}, to represent an empty tree, or
-an instance of @objtype{<binary-node>}.
-
-The argument @var{parent} must be @false{} or an instance of
-@objtype{<binary-node>} being parent of @var{root}; this means that
-@var{root} is in the left or right field of @var{parent}.  When not
-used: @var{parent} defaults to @false{}.
-
-The argument @var{compare} must be a procedure accepting an instance of
-@objtype{<binary-node>} as single argument; it must return a single
-value:
-
-@table @code
-@item 0
-If the argument node satisfies the search criterion.
-
-@item -1
-If the argument node has sort key less than the sort key of the target
-node.
-
-@item +1
-If the argument node has sort key greater than, or equal to, the sort
-key of the target node.
-@end table
-
-The optional argument @var{empty-tree-handler} must be a thunk.  If the
-target node is not found and @var{empty-tree-handler} is not used: the
-return values are both @false{}.  If the target node is not found and
-@var{empty-tree-handler} is used: the return values are the return
-values of @var{empty-tree-handler}.
-@end defun
-
 @c page
-@node bst binary unodes
+@node bst unodes
 @section Unbalanced binary node objects
 
 
@@ -353,12 +277,12 @@ root node.
 no effort is made to balance the this search tree.
 
 @menu
-* bst binary unodes objects::   Unbalanced binary node data type.
-* bst binary unodes ops::       Operations on unbalanced trees.
+* bst unodes objects::          Unbalanced binary node data type.
+* bst unodes ops::              Operations on unbalanced trees.
 @end menu
 
 @c page
-@node bst binary unodes objects
+@node bst unodes objects
 @subsection Unbalanced binary node data type
 
 
@@ -384,9 +308,11 @@ Build and return a new instance of @objtype{<unbalanced-binary-node>}
 referencing @var{key} as sort key.  When @var{key} is not given: the
 sort key is set to @code{(void)}.
 
-The optional @var{left} and @var{right} arguments must be @false{} or
-instances of @objtype{<unbalanced-binary-node>} representing the left
-and right subtrees.
+The optional arguments @var{left} and @var{right} arguments must be
+@false{} or instances of @objtype{<unbalanced-binary-node>} representing
+the and right subtrees.
+
+The @code{parent} field of the new instance is set to @false{}.
 @end defun
 
 
@@ -396,7 +322,7 @@ Return @true{} if @var{obj} is an instance of
 @end defun
 
 @c page
-@node bst binary unodes ops
+@node bst unodes ops
 @subsection Operations on unbalanced binary nodes
 
 
@@ -428,6 +354,13 @@ The argument @var{unode} must be an instance of
 This node is meant to have left and right fields set to @false{}.
 @end defun
 
+
+@defun unbalanced-tree-remove! @var{unode}
+@defunx $unbalanced-tree-remove! @var{unode}
+Remove a node from an unbalanced binary tree.  @var{unode} must be the
+instance of @objtype{<unbalanced-binary-node>} to remove.  The return
+value is the node that took the place of @var{unode} in the tree.
+@end defun
 
 
 @c Local Variables:

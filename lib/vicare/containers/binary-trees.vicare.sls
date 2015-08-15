@@ -32,6 +32,7 @@
     binary-node?			false-or-binary-node?
 
     binary-node-sort-key		$binary-node-sort-key
+    binary-node-parent			$binary-node-parent
     binary-node-left			$binary-node-left
     binary-node-right			$binary-node-right
 
@@ -43,16 +44,12 @@
     binary-tree-maximum			$binary-tree-maximum
     binary-tree-find			$binary-tree-find
 
-    binary-tree-minimum-and-parent	$binary-tree-minimum-and-parent
-    binary-tree-maximum-and-parent	$binary-tree-maximum-and-parent
-    binary-tree-find-and-parent		$binary-tree-find-and-parent
-
     ;; unbalanced binary nodes
     <unbalanced-binary-node>		make-unbalanced-binary-node
     unbalanced-binary-node?		false-or-unbalanced-binary-node?
 
     unbalanced-tree-insert!		$unbalanced-tree-insert!
-
+    unbalanced-tree-remove!		$unbalanced-tree-remove!
     )
   (import (vicare))
 
@@ -64,6 +61,8 @@
 
   (fields (mutable sort-key)
 		;An arbitrary object used as sort key.
+	  (mutable parent)
+		;False or an instance of "<binary-node>" being the parent node.
 	  (mutable left)
 		;False or an instance of "<binary-node>" being the left subtree.
 	  (mutable right)
@@ -74,13 +73,18 @@
    (lambda (make-record)
      (case-define* make-<binary-node>
        (()
-	(make-record (void) #f #f))
+	(make-record (void) #f #f #f))
 
        ((key)
-	(make-record key #f #f))
+	(make-record key #f #f #f))
 
-       ((object {left false-or-binary-node?} {right false-or-binary-node?})
-	(make-record object left right)))
+       ((key {left false-or-binary-node?} {right false-or-binary-node?})
+	(receive-and-return (node)
+	    (make-record key #f left right)
+	  (when left
+	    ($<binary-node>-parent-set! left node))
+	  (when right
+	    ($<binary-node>-parent-set! right node)))))
 
      make-<binary-node>))
 
@@ -91,6 +95,9 @@
       (binary-node? obj)))
 
 ;;; --------------------------------------------------------------------
+
+(define-alias  binary-node-parent		 <binary-node>-parent)
+(define-alias $binary-node-parent		$<binary-node>-parent)
 
 (define-alias  binary-node-left			 <binary-node>-left)
 (define-alias $binary-node-left			$<binary-node>-left)
@@ -103,11 +110,25 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-alias  binary-node-left-set!		 <binary-node>-left-set!)
-(define-alias $binary-node-left-set!		$<binary-node>-left-set!)
+(define* (binary-node-left-set! {node binary-node?} {left false-or-binary-node?})
+  ($binary-node-left-set! node left))
 
-(define-alias  binary-node-right-set!		 <binary-node>-right-set!)
-(define-alias $binary-node-right-set!		$<binary-node>-right-set!)
+(define ($binary-node-left-set! node left)
+  ($<binary-node>-left-set! node left)
+  (when left
+    ($<binary-node>-parent-set! left node)))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-node-right-set! {node binary-node?} {right false-or-binary-node?})
+  ($binary-node-right-set! node right))
+
+(define ($binary-node-right-set! node right)
+  ($<binary-node>-right-set! node right)
+  (when right
+    ($<binary-node>-parent-set! right node)))
+
+;;; --------------------------------------------------------------------
 
 (define-alias  binary-node-sort-key-set!	 <binary-node>-sort-key-set!)
 (define-alias $binary-node-sort-key-set!	$<binary-node>-sort-key-set!)
@@ -188,96 +209,6 @@
 	 not-found-handler)))
 
 
-;;;; plain binary trees: searching operations with parents
-
-(case-define* binary-tree-minimum-and-parent
-
-  (({root false-or-binary-node?})
-   ($binary-tree-minimum-and-parent root #f #f))
-
-  (({root false-or-binary-node?} {parent false-or-binary-node?})
-   ($binary-tree-minimum-and-parent root parent #f))
-
-  (({root false-or-binary-node?} {parent false-or-binary-node?} {empty-tree-handler procedure?})
-   ($binary-tree-minimum-and-parent root parent empty-tree-handler))
-
-  #| end of CASE-DEFINE* |# )
-
-(define ($binary-tree-minimum-and-parent root parent empty-tree-handler)
-  (cond (root
-	    (let loop ((node  root)
-		       (dad   parent))
-	      (cond (($binary-node-left node)
-		     => (lambda (left)
-			  (loop left node)))
-		    (else
-		     (values node dad)))))
-	((procedure? empty-tree-handler)
-	 (empty-tree-handler))
-	(else
-	 (values #f #f))))
-
-;;; --------------------------------------------------------------------
-
-(case-define* binary-tree-maximum-and-parent
-
-  (({root false-or-binary-node?})
-   ($binary-tree-maximum-and-parent root #f #f))
-
-  (({root false-or-binary-node?} {parent false-or-binary-node?})
-   ($binary-tree-maximum-and-parent root parent #f))
-
-  (({root false-or-binary-node?} {parent false-or-binary-node?} {empty-tree-handler procedure?})
-   ($binary-tree-maximum-and-parent root parent empty-tree-handler))
-
-  #| end of CASE-DEFINE* |# )
-
-(define ($binary-tree-maximum-and-parent root parent empty-tree-handler)
-  (cond (root
-	    (let loop ((node  root)
-		       (dad   parent))
-	      (cond (($binary-node-right node)
-		     => (lambda (left)
-			  (loop left node)))
-		    (else
-		     (values node dad)))))
-	((procedure? empty-tree-handler)
-	 (empty-tree-handler))
-	(else
-	 (values #f #f))))
-
-;;; --------------------------------------------------------------------
-
-(case-define* binary-tree-find-and-parent
-
-  (({root false-or-binary-node?} {compare procedure?})
-   ($binary-tree-find-and-parent root compare #f #f))
-
-  (({root false-or-binary-node?} {compare procedure?} {parent false-or-binary-node?})
-   ($binary-tree-find-and-parent root compare parent #f))
-
-  (({root false-or-binary-node?} {compare procedure?} {parent false-or-binary-node?} {not-found-handler procedure?})
-   ($binary-tree-find-and-parent root compare parent not-found-handler))
-
-  #| end of CASE-DEFINE* |# )
-
-(define ($binary-tree-find-and-parent root compare parent not-found-handler)
-  (define-syntax-rule (recurse ?node ?parent)
-    ($binary-tree-find-and-parent ?node compare ?parent not-found-handler))
-  (cond (root
-	    (case (compare root)
-	      ((0)	(values root parent))
-	      ((-1)	(recurse ($binary-node-left  root) root))
-	      ((+1)	(recurse ($binary-node-right root) root))
-	      (else
-	       (expression-return-value-violation __who__
-		 "invalid return value from comparison procedure" root))))
-	((procedure? not-found-handler)
-	 (not-found-handler))
-	(else
-	 (values #f #f))))
-
-
 ;;;; unbalanced binary nodes: data type
 
 (define-record-type (<unbalanced-binary-node> make-unbalanced-binary-node unbalanced-binary-node?)
@@ -289,10 +220,10 @@
    (lambda (make-binary-node)
      (case-define* make-<unbalanced-binary-node>
        (()
-	((make-binary-node (void) #f #f)))
+	((make-binary-node (void) #f #f #f)))
 
-       ((object)
-	((make-binary-node object #f #f)))
+       ((key)
+	((make-binary-node key #f #f)))
 
        ((key {left false-or-unbalanced-binary-node?} {right false-or-unbalanced-binary-node?})
 	((make-binary-node key left right))))
@@ -306,7 +237,7 @@
       (unbalanced-binary-node? obj)))
 
 
-;;;; unbalanced binary nodes: data type
+;;;; unbalanced binary nodes: insertion and removal
 
 (define* (unbalanced-tree-insert! {root false-or-unbalanced-binary-node?} {key< procedure?} {new unbalanced-binary-node?})
   ($unbalanced-tree-insert! root key< new))
@@ -326,6 +257,42 @@
 		 ($binary-node-right-set! old new)
 		 root))))
     new))
+
+;;; --------------------------------------------------------------------
+
+(define* (unbalanced-tree-remove! {node		unbalanced-binary-node?}
+				  {left-parent	unbalanced-binary-node?}
+				  {right-parent	unbalanced-binary-node?})
+  ($unbalanced-tree-remove! node left-parent right-parent))
+
+(define ($unbalanced-tree-remove! node left-parent right-parent)
+  (let ((left  ($binary-node-left  node))
+	(right ($binary-node-right node)))
+    (cond ((and left right)
+	   (let ((minimum ($binary-tree-minimum node #f)))
+	     ($binary-node-left-set! left-parent minimum)
+	       ($binary-node-right-set! right-parent left)
+	       (void)))
+
+	  (left
+	   (if left-parent
+	       ($binary-node-left-set! left-parent left)
+	     ($binary-node-right-set! right-parent left))
+	   left)
+
+	  (right
+	   (if left-parent
+	       ($binary-node-left-set! left-parent right)
+	     ($binary-node-right-set! right-parent right))
+	   right)
+
+	  (else
+	   ;;No children.
+	   (if left-parent
+	       ($binary-node-left-set! left-parent #f)
+	     ($binary-node-right-set! right-parent #f))
+	   ;;No node takes place of NODE in the tree.
+	   #f))))
 
 
 ;;;; done
