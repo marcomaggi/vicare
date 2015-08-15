@@ -1,4 +1,4 @@
-@node binary trees
+@node bst
 @chapter Binary tree skeletons
 
 
@@ -8,6 +8,252 @@
 
 The library @library{vicare containers binary-trees} implements the
 skeleton functions needed by binary search trees.
+
+@menu
+* bst binary bnodes::           Binary node objects.
+* bst binary unodes::           Unbalanced binary node objects.
+@end menu
+
+@c page
+@node bst binary bnodes
+@section Binary node objects
+
+
+Binary search trees are composed of ``binary node objects'' linked
+together in a tree hierarchy.  The object type @objtype{<binary-node>}
+is the base type of all the node types.
+
+@menu
+* bst binary bnodes objects::   Binary node data type.
+* bst binary bnodes access::    Accessors and mutators for binary nodes.
+* bst binary bnodes searching:: Searching in binary trees.
+@end menu
+
+@c page
+@node bst binary bnodes objects
+@subsection Binary node data type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-trees}.
+
+
+@deftp {@rnrs{6} Record Type} <binary-node>
+@cindex @var{bnode} argument
+@cindex Argument @var{bnode}
+Record type representing a node in a binary tree.  The
+@objtype{<binary-node>} type is non--generative and available for
+subtyping.  In this documentation @objtype{<binary-node>} object
+arguments to functions are indicated as @var{bnode}.
+
+@objtype{<binary-node>}  has the following fields:
+
+@table @code
+@item sort-key
+An object used as sort key.
+
+@item left
+False or an instance of @objtype{<binary-node>} representing the left
+subtree.
+
+@item right
+False or an instance of @objtype{<binary-node>} representing the right
+subtree.
+@end table
+@end deftp
+
+
+@defun make-binary-node
+@defunx make-binary-node @var{key}
+@defunx make-binary-node @var{key} @var{left} @var{right}
+Build and return a new instance of @objtype{<binary-node>} referencing
+@var{key} as sort key.  When @var{key} is not given: the sort key is set
+to @code{(void)}.
+
+The optional @var{left} and @var{right} arguments must be @false{} or
+instances of @objtype{<binary-node>} representing the left and right
+subtrees.
+@end defun
+
+
+@defun binary-node? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<binary-node>};
+otherwise return @false{}.
+@end defun
+
+@c page
+@node bst binary bnodes access
+@subsection Accessors and mutators for binary nodes
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-trees}.  The bindings whose name is
+prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun binary-node-left @var{bnode}
+@defunx $binary-node-left @var{bnode}
+Accessor for the left subtree of @var{bnode}.  Return @false{} or an
+instance of @objtype{<binary-node>}.
+@end defun
+
+
+@defun binary-node-left-set! @var{bnode} @var{left}
+@defunx $binary-node-left-set! @var{bnode} @var{left}
+Mutator for the left subtree of a @objtype{<binary-node>} instance.  The
+argument @var{left} must be @false{} or instances of
+@objtype{<binary-node>} representing the left subtree.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun binary-node-right @var{bnode}
+@defunx $binary-node-right @var{bnode}
+Accessor for the right subtree of @var{bnode}.  Return @false{} or an
+instance of @objtype{<binary-node>}.
+@end defun
+
+
+@defun binary-node-right-set! @var{bnode} @var{right}
+@defunx $binary-node-right-set! @var{bnode} @var{right}
+Mutator for the right subtree of a @objtype{<binary-node>} instance.
+The argument @var{right} must be @false{} or instances of
+@objtype{<binary-node>} representing the right subtree.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun binary-node-sort-key @var{bnode}
+@defunx $binary-node-sort-key @var{bnode}
+Accessor for the payload object of @var{bnode}.
+@end defun
+
+
+@defun binary-node-sort-key-set! @var{bnode} @var{obj}
+@defunx $binary-node-sort-key-set! @var{bnode} @var{obj}
+Mutator for the payload object of a @objtype{<binary-node>} instance.
+@end defun
+
+@c page
+@node bst binary bnodes searching
+@subsection Searching in binary trees
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-trees}.  The bindings whose name is
+prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun binary-tree-minimum @var{root}
+@defunx binary-tree-minimum @var{root} @var{empty-tree-rv}
+@defunx $binary-tree-minimum @var{root} @var{empty-tree-rv}
+Search and return the minimum node in the tree starting from @var{root};
+the minimum node is the leftmost from @var{root}.
+
+The argument @var{root} must be @false{}, to represent an empty tree, or
+an instance of @objtype{<binary-node>}.  If @var{root} is @false{} and
+@var{empty-tree-rv} is not used: the return value is @false{}.  If
+@var{root} is @false{} and @var{empty-tree-rv} is used: the return value
+is @var{empty-tree-rv}.
+@end defun
+
+@c page
+@node bst binary unodes
+@section Unbalanced binary node objects
+
+
+Unbalanced binary search trees are sorted in such a way that:
+
+@itemize
+@item
+The left child node has key less than the one of the root node.
+
+@item
+The right child node has key greater than, or equal to, the one of the
+root node.
+@end itemize
+
+@noindent
+no effort is made to balance the this search tree.
+
+@menu
+* bst binary unodes objects::   Unbalanced binary node data type.
+* bst binary unodes ops::       Operations on unbalanced trees.
+@end menu
+
+@c page
+@node bst binary unodes objects
+@subsection Unbalanced binary node data type
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-trees}.
+
+
+@deftp {@rnrs{6} Record Type} <unbalanced-binary-node>
+@cindex @var{unode} argument
+@cindex Argument @var{unode}
+Record type representing a node in a binary tree.  The
+@objtype{<unbalanced-binary-node>} type is non--generative and available
+for subtyping.  It is derived from @objtype{<binary-node>}.  In this
+documentation @objtype{<unbalanced-binary-node>} object arguments to
+functions are indicated as @var{unode}.
+@end deftp
+
+
+@defun make-unbalanced-binary-node
+@defunx make-unbalanced-binary-node @var{key}
+@defunx make-unbalanced-binary-node @var{key} @var{left} @var{right}
+Build and return a new instance of @objtype{<unbalanced-binary-node>}
+referencing @var{key} as sort key.  When @var{key} is not given: the
+sort key is set to @code{(void)}.
+
+The optional @var{left} and @var{right} arguments must be @false{} or
+instances of @objtype{<unbalanced-binary-node>} representing the left
+and right subtrees.
+@end defun
+
+
+@defun unbalanced-binary-node? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{<unbalanced-binary-node>}; otherwise return @false{}.
+@end defun
+
+@c page
+@node bst binary unodes ops
+@subsection Operations on unbalanced binary nodes
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-trees}.  The bindings whose name is
+prefixed with @code{$} are unsafe operations: they do @strong{not}
+validate their arguments before accessing them.
+
+
+@defun unbalanced-tree-insert! @var{root} @var{key<} @var{unode}
+@defunx $unbalanced-tree-insert! @var{root} @var{key<} @var{unode}
+Insert a new node into an unbalanced binary tree.
+
+The argument @var{root} must be @false{} or an instance of
+@objtype{<unbalanced-binary-node>} representing the root of the tree.
+
+The argument @var{key<} must be a procedure accepting two arguments of
+type @objtype{<binary-node>} and returning: true if the first argument
+as sort key less than the second argument; @false{} otherwise.  Example:
+
+@lisp
+(define (key< one two)
+  (< (binary-node-sort-key one)
+     (binary-node-sort-key two)))
+@end lisp
+
+The argument @var{unode} must be an instance of
+@objtype{<unbalanced-binary-node>} representing the new node to insert.
+This node is meant to have left and right fields set to @false{}.
+@end defun
+
 
 
 @c Local Variables:

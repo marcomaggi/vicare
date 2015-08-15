@@ -109,7 +109,7 @@
 (define-constant VECTOR-100-REVERSED	(list->vector LIST-100-REVERSED))
 
 
-(parametrise ((check-test-name	'making))
+(parametrise ((check-test-name	'binary-nodes))
 
   (check
       (binary-node? (make-binary-node 123 #f #f))
@@ -119,10 +119,168 @@
       (let* ((lx (make-binary-node 0))
 	     (rx (make-binary-node 2))
 	     (rt (make-binary-node 1 lx rx)))
-	(values (binary-node-object (binary-node-left  rt))
-		(binary-node-object rt)
-		(binary-node-object (binary-node-right rt))))
+	(values (binary-node-sort-key (binary-node-left  rt))
+		(binary-node-sort-key rt)
+		(binary-node-sort-key (binary-node-right rt))))
     => 0 1 2)
+
+  #t)
+
+
+(parametrise ((check-test-name	'unbalanced-nodes))
+
+  (define (key< new old)
+    (< (binary-node-sort-key new)
+       (binary-node-sort-key old)))
+
+  (define (tree . key*)
+    (fold-left (lambda (root key)
+		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
+      #f key*))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unbalanced-binary-node? (make-unbalanced-binary-node 123))
+    => #t)
+
+  (check
+      (let* ((lx (make-unbalanced-binary-node 0))
+	     (rx (make-unbalanced-binary-node 2))
+	     (rt (make-unbalanced-binary-node 1 lx rx)))
+	(values (binary-node-sort-key (binary-node-left  rt))
+		(binary-node-sort-key rt)
+		(binary-node-sort-key (binary-node-right rt))))
+    => 0 1 2)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((node (make-unbalanced-binary-node 0))
+	     (root (unbalanced-tree-insert! #f key< node)))
+	(eq? root node))
+    => #t)
+
+  (check
+      (internal-body
+	(define (insert root fx)
+	  (unbalanced-tree-insert! root key< (make-unbalanced-binary-node fx)))
+	(let* ((root #f)
+	       (root (insert root 1))
+	       (root (insert root 0))
+	       (root (insert root 2)))
+	  (values (and root (binary-node-sort-key root))
+		  (let ((lx (binary-node-left root)))
+		    (and lx (binary-node-sort-key lx)))
+		  (let ((rx (binary-node-right root)))
+		    (and rx (binary-node-sort-key rx))))))
+    => 1 0 2)
+
+  (check
+      (internal-body
+	(define (insert root fx)
+	  (unbalanced-tree-insert! root key< (make-unbalanced-binary-node fx)))
+	(let* ((root #f)
+	       (root (insert root 0))
+	       (root (insert root 1))
+	       (root (insert root 2)))
+	  (values (binary-node-sort-key root)
+		  (binary-node-sort-key (binary-node-right root))
+		  (binary-node-sort-key (binary-node-right (binary-node-right root))))))
+    => 0 1 2)
+
+  (check
+      (internal-body
+	(define (insert root fx)
+	  (unbalanced-tree-insert! root key< (make-unbalanced-binary-node fx)))
+	(let* ((root #f)
+	       (root (insert root 2))
+	       (root (insert root 1))
+	       (root (insert root 0)))
+	  (values (binary-node-sort-key root)
+		  (binary-node-sort-key (binary-node-left root))
+		  (binary-node-sort-key (binary-node-left (binary-node-left root))))))
+    => 2 1 0)
+
+  (check
+      (let ((root (tree 1 0 2)))
+	(values (binary-node-sort-key root)
+		(binary-node-sort-key (binary-node-left  root))
+		(binary-node-sort-key (binary-node-right root))))
+    => 1 0 2)
+
+;;; --------------------------------------------------------------------
+;;; minimum search
+
+  (check
+      (let ((root (tree)))
+	(binary-tree-minimum root 99))
+    => 99)
+
+  (check
+      (let ((root (tree)))
+	(binary-tree-minimum root))
+    => #f)
+
+  (check
+      (let ((root (tree 0)))
+	(binary-node-sort-key (binary-tree-minimum root)))
+    => 0)
+
+  (check
+      (let ((root (tree 1 0 2)))
+	(binary-node-sort-key (binary-tree-minimum root)))
+    => 0)
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check
+      (let ((root (tree 5 3 8 1 4 6 9 0 7 10)))
+	(binary-node-sort-key (binary-tree-minimum root)))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; maximum search
+
+  (check
+      (let ((root (tree)))
+	(binary-tree-maximum root 99))
+    => 99)
+
+  (check
+      (let ((root (tree)))
+	(binary-tree-maximum root))
+    => #f)
+
+  (check
+      (let ((root (tree 0)))
+	(binary-node-sort-key (binary-tree-maximum root)))
+    => 0)
+
+
+  (check
+      (let ((root (tree 1 0 2)))
+	(binary-node-sort-key (binary-tree-maximum root)))
+    => 2)
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check
+      (let ((root (tree 5 3 8 1 4 6 9 0 7 10)))
+	(binary-node-sort-key (binary-tree-maximum root)))
+    => 10)
 
   #t)
 

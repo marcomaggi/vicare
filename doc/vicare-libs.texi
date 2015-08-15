@@ -171,7 +171,7 @@ Container libraries
 * deques::                      Double-ended queues of objects.
 * binary heaps::                Binary heaps.
 * dynamic arrays::              Dynamic arrays.
-* binary trees::                Binary tree skeletons.
+* bst::                         Binary search trees.
 
 Adapted libraries
 

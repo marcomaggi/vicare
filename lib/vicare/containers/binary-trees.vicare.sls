@@ -26,21 +26,39 @@
 #!vicare
 (library (vicare containers binary-trees (1 0 0))
   (export
+
+    ;; plain binary nodes
     <binary-node>			make-binary-node
     binary-node?			false-or-binary-node?
 
-    binary-node-object			$binary-node-object
+    binary-node-sort-key		$binary-node-sort-key
     binary-node-left			$binary-node-left
     binary-node-right			$binary-node-right
+
+    binary-node-sort-key-set!		$binary-node-sort-key-set!
+    binary-node-left-set!		$binary-node-left-set!
+    binary-node-right-set!		$binary-node-right-set!
+
+    binary-tree-minimum			$binary-tree-minimum
+    binary-tree-maximum			$binary-tree-maximum
+
+    ;; unbalanced binary nodes
+    <unbalanced-binary-node>		make-unbalanced-binary-node
+    unbalanced-binary-node?		false-or-unbalanced-binary-node?
+
+    unbalanced-tree-insert!		$unbalanced-tree-insert!
+
     )
   (import (vicare))
 
 
+;;;; plain binary nodes: data type
+
 (define-record-type (<binary-node> make-binary-node binary-node?)
   (nongenerative vicare:containers:<binary-node>)
 
-  (fields (mutable object)
-		;The payload object.
+  (fields (mutable sort-key)
+		;An arbitrary object used as sort key.
 	  (mutable left)
 		;False or an instance of "<binary-node>" being the left subtree.
 	  (mutable right)
@@ -49,17 +67,17 @@
 
   (protocol
    (lambda (make-record)
-     (case-define* make-<binary-tree>
+     (case-define* make-<binary-node>
        (()
-	(make-<binary-tree> (void) #f #f))
+	(make-record (void) #f #f))
 
-       ((object)
-	(make-<binary-tree> object #f #f))
+       ((key)
+	(make-record key #f #f))
 
        ((object {left false-or-binary-node?} {right false-or-binary-node?})
 	(make-record object left right)))
 
-     make-<binary-tree>))
+     make-<binary-node>))
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -67,14 +85,118 @@
   (or (not obj)
       (binary-node? obj)))
 
+;;; --------------------------------------------------------------------
+
 (define-alias  binary-node-left			 <binary-node>-left)
 (define-alias $binary-node-left			$<binary-node>-left)
 
 (define-alias  binary-node-right		 <binary-node>-right)
 (define-alias $binary-node-right		$<binary-node>-right)
 
-(define-alias  binary-node-object		 <binary-node>-object)
-(define-alias $binary-node-object		$<binary-node>-object)
+(define-alias  binary-node-sort-key		 <binary-node>-sort-key)
+(define-alias $binary-node-sort-key		$<binary-node>-sort-key)
+
+;;; --------------------------------------------------------------------
+
+(define-alias  binary-node-left-set!		 <binary-node>-left-set!)
+(define-alias $binary-node-left-set!		$<binary-node>-left-set!)
+
+(define-alias  binary-node-right-set!		 <binary-node>-right-set!)
+(define-alias $binary-node-right-set!		$<binary-node>-right-set!)
+
+(define-alias  binary-node-sort-key-set!	 <binary-node>-sort-key-set!)
+(define-alias $binary-node-sort-key-set!	$<binary-node>-sort-key-set!)
+
+
+;;;; plain binary trees: operations
+
+(case-define* binary-tree-minimum
+
+  (({root false-or-binary-node?})
+   ($binary-tree-minimum root #f))
+
+  (({root false-or-binary-node?} empty-tree-rv)
+   ($binary-tree-minimum root empty-tree-rv))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($binary-tree-minimum root empty-tree-rv)
+  (if root
+      (let loop ((node root))
+	(cond (($binary-node-left node)
+	       => loop)
+	      (else node)))
+    empty-tree-rv))
+
+;;; --------------------------------------------------------------------
+
+(case-define* binary-tree-maximum
+
+  (({root false-or-binary-node?})
+   ($binary-tree-maximum root #f))
+
+  (({root false-or-binary-node?} empty-tree-rv)
+   ($binary-tree-maximum root empty-tree-rv))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($binary-tree-maximum root empty-tree-rv)
+  (if root
+      (let loop ((node root))
+	(cond (($binary-node-right node)
+	       => loop)
+	      (else node)))
+    empty-tree-rv))
+
+
+;;;; unbalanced binary nodes: data type
+
+(define-record-type (<unbalanced-binary-node> make-unbalanced-binary-node unbalanced-binary-node?)
+  (nongenerative vicare:containers:<unbalanced-binary-node>)
+
+  (parent <binary-node>)
+
+  (protocol
+   (lambda (make-binary-node)
+     (case-define* make-<unbalanced-binary-node>
+       (()
+	((make-binary-node (void) #f #f)))
+
+       ((object)
+	((make-binary-node object #f #f)))
+
+       ((key {left false-or-unbalanced-binary-node?} {right false-or-unbalanced-binary-node?})
+	((make-binary-node key left right))))
+
+     make-<unbalanced-binary-node>))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define (false-or-unbalanced-binary-node? obj)
+  (or (not obj)
+      (unbalanced-binary-node? obj)))
+
+
+;;;; unbalanced binary nodes: data type
+
+(define* (unbalanced-tree-insert! {root false-or-unbalanced-binary-node?} {key< procedure?} {new unbalanced-binary-node?})
+  ($unbalanced-tree-insert! root key< new))
+
+(define ($unbalanced-tree-insert! root key< new)
+  (if root
+      (let loop ((old root))
+	(if (key< new old)
+	    (cond (($binary-node-left old)
+		   => loop)
+		  (else
+		   ($binary-node-left-set! old new)
+		   root))
+	  (cond (($binary-node-right old)
+		 => loop)
+		(else
+		 ($binary-node-right-set! old new)
+		 root))))
+    new))
 
 
 ;;;; done
