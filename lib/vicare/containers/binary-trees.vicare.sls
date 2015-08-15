@@ -43,6 +43,10 @@
     binary-tree-maximum			$binary-tree-maximum
     binary-tree-find			$binary-tree-find
 
+    binary-tree-minimum-and-parent	$binary-tree-minimum-and-parent
+    binary-tree-maximum-and-parent	$binary-tree-maximum-and-parent
+    binary-tree-find-and-parent		$binary-tree-find-and-parent
+
     ;; unbalanced binary nodes
     <unbalanced-binary-node>		make-unbalanced-binary-node
     unbalanced-binary-node?		false-or-unbalanced-binary-node?
@@ -182,6 +186,96 @@
 	 (not-found-handler))
 	(else
 	 not-found-handler)))
+
+
+;;;; plain binary trees: searching operations with parents
+
+(case-define* binary-tree-minimum-and-parent
+
+  (({root false-or-binary-node?})
+   ($binary-tree-minimum-and-parent root #f #f))
+
+  (({root false-or-binary-node?} {parent false-or-binary-node?})
+   ($binary-tree-minimum-and-parent root parent #f))
+
+  (({root false-or-binary-node?} {parent false-or-binary-node?} {empty-tree-handler procedure?})
+   ($binary-tree-minimum-and-parent root parent empty-tree-handler))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($binary-tree-minimum-and-parent root parent empty-tree-handler)
+  (cond (root
+	    (let loop ((node  root)
+		       (dad   parent))
+	      (cond (($binary-node-left node)
+		     => (lambda (left)
+			  (loop left node)))
+		    (else
+		     (values node dad)))))
+	((procedure? empty-tree-handler)
+	 (empty-tree-handler))
+	(else
+	 (values #f #f))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* binary-tree-maximum-and-parent
+
+  (({root false-or-binary-node?})
+   ($binary-tree-maximum-and-parent root #f #f))
+
+  (({root false-or-binary-node?} {parent false-or-binary-node?})
+   ($binary-tree-maximum-and-parent root parent #f))
+
+  (({root false-or-binary-node?} {parent false-or-binary-node?} {empty-tree-handler procedure?})
+   ($binary-tree-maximum-and-parent root parent empty-tree-handler))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($binary-tree-maximum-and-parent root parent empty-tree-handler)
+  (cond (root
+	    (let loop ((node  root)
+		       (dad   parent))
+	      (cond (($binary-node-right node)
+		     => (lambda (left)
+			  (loop left node)))
+		    (else
+		     (values node dad)))))
+	((procedure? empty-tree-handler)
+	 (empty-tree-handler))
+	(else
+	 (values #f #f))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* binary-tree-find-and-parent
+
+  (({root false-or-binary-node?} {compare procedure?})
+   ($binary-tree-find-and-parent root compare #f #f))
+
+  (({root false-or-binary-node?} {compare procedure?} {parent false-or-binary-node?})
+   ($binary-tree-find-and-parent root compare parent #f))
+
+  (({root false-or-binary-node?} {compare procedure?} {parent false-or-binary-node?} {not-found-handler procedure?})
+   ($binary-tree-find-and-parent root compare parent not-found-handler))
+
+  #| end of CASE-DEFINE* |# )
+
+(define ($binary-tree-find-and-parent root compare parent not-found-handler)
+  (define-syntax-rule (recurse ?node ?parent)
+    ($binary-tree-find-and-parent ?node compare ?parent not-found-handler))
+  (cond (root
+	    (case (compare root)
+	      ((0)	(values root parent))
+	      ((-1)	(recurse ($binary-node-left  root) root))
+	      ((+1)	(recurse ($binary-node-right root) root))
+	      (else
+	       (expression-return-value-violation __who__
+		 "invalid return value from comparison procedure" root))))
+	((procedure? not-found-handler)
+	 (not-found-handler))
+	(else
+	 (values #f #f))))
 
 
 ;;;; unbalanced binary nodes: data type
