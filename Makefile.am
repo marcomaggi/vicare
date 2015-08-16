@@ -112,6 +112,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-getopts.texi				\
 	doc/libs-checks.texi				\
 	doc/libs-gcc.texi				\
+	doc/libs-ilists.texi				\
 	doc/libs-irregex.texi				\
 	doc/libs-knuth-morris-pratt.texi		\
 	doc/libs-levenshtein.texi			\

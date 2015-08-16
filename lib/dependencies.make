@@ -1492,6 +1492,51 @@ endif
 EXTRA_DIST += lib/vicare/containers/sets-and-bags.vicare.sls
 CLEANFILES += lib/vicare/containers/sets-and-bags.fasl
 
+lib/vicare/containers/ilists.fasl: \
+		lib/vicare/containers/ilists.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_ilists_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_ilists_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_ilists_fasl_DATA = lib/vicare/containers/ilists.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_ilists_vicare_sls_DATA = lib/vicare/containers/ilists.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/ilists.vicare.sls
+CLEANFILES += lib/vicare/containers/ilists.fasl
+
+lib/vicare/containers/ilists/comparators.fasl: \
+		lib/vicare/containers/ilists/comparators.vicare.sls \
+		lib/vicare/containers/ilists.fasl \
+		lib/vicare/containers/comparators.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_ilists_comparators_fasldir = $(bundledlibsdir)/vicare/containers/ilists
+lib_vicare_containers_ilists_comparators_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/ilists
+nodist_lib_vicare_containers_ilists_comparators_fasl_DATA = lib/vicare/containers/ilists/comparators.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_ilists_comparators_vicare_sls_DATA = lib/vicare/containers/ilists/comparators.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/ilists/comparators.vicare.sls
+CLEANFILES += lib/vicare/containers/ilists/comparators.fasl
+
+lib/vicare/containers/ilists/quotations.fasl: \
+		lib/vicare/containers/ilists/quotations.vicare.sls \
+		lib/vicare/containers/ilists.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_ilists_quotations_fasldir = $(bundledlibsdir)/vicare/containers/ilists
+lib_vicare_containers_ilists_quotations_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/ilists
+nodist_lib_vicare_containers_ilists_quotations_fasl_DATA = lib/vicare/containers/ilists/quotations.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_ilists_quotations_vicare_sls_DATA = lib/vicare/containers/ilists/quotations.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/ilists/quotations.vicare.sls
+CLEANFILES += lib/vicare/containers/ilists/quotations.fasl
+
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
@@ -3665,6 +3710,7 @@ endif
 
 lib/srfi/%3a116/ilists.fasl: \
 		lib/srfi/%3a116/ilists.sls \
+		lib/vicare/containers/ilists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -3681,8 +3727,7 @@ endif
 
 lib/srfi/%3a116/comparators.fasl: \
 		lib/srfi/%3a116/comparators.sls \
-		lib/srfi/%3a116.fasl \
-		lib/srfi/%3a114.fasl \
+		lib/vicare/containers/ilists/comparators.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -3699,7 +3744,7 @@ endif
 
 lib/srfi/%3a116/quotations.fasl: \
 		lib/srfi/%3a116/quotations.sls \
-		lib/srfi/%3a116.fasl \
+		lib/vicare/containers/ilists/quotations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

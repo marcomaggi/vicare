@@ -4,9 +4,9 @@
 
 @cindex @ansrfi{116} feature based conditional expansion construct
 @cindex @library{srfi :116}, library
-@cindex @library{srfi :116 regexps}, library
+@cindex @library{srfi :116 ilists}, library
 @cindex Library @library{srfi :116}
-@cindex Library @library{srfi :116 regexps}
+@cindex Library @library{srfi :116 ilists}
 
 
 The library @library{srfi :116} is by John Cowan as reference

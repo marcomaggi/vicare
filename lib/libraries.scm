@@ -146,6 +146,9 @@
      (vicare containers dynamic-arrays sort)
      (vicare containers binary-trees)
      (vicare containers sets-and-bags)
+     (vicare containers ilists)
+     (vicare containers ilists comparators)
+     (vicare containers ilists quotations)
 
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)

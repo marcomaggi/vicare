@@ -1,0 +1,31 @@
+@node ilists
+@chapter Immutable lists
+
+
+@cindex Library @library{vicare containers ilists}
+@cindex @library{vicare containers ilists}, library
+@cindex Library @library{vicare containers ilists comparators}
+@cindex @library{vicare containers ilists comparators}, library
+@cindex Library @library{vicare containers ilists quotations}
+@cindex @library{vicare containers ilists quotations}, library
+
+
+The library @library{vicare containers ilists} implements immutable
+lists.  This library is actually the reference implementation of
+@ansrfi{116} adapted to @value{PRJNAME}.  The library exports the same
+syntactic bindings of the library @library{srfi :116 ilists}.  @ref{srfi
+ilists, @ansrfi{116} immutable lists}, for the documentation.
+
+The library @library{vicare containers ilists comparators} implements
+comparators for immutable lists; it exports the same syntactic bindings
+of @library{srfi :116 comparators}.
+
+The library @library{vicare containers ilists quotations} implements
+special quotation syntaxes; it exports the same syntactic bindings of
+@library{srfi :116 quotations}.
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

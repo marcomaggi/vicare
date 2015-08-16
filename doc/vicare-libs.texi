@@ -153,6 +153,7 @@ Networking libraires
 
 Container libraries
 
+* comparators::                 Comparators.
 * lists::                       List library.
 * vectors::                     Vector library.
 * strings::                     String library.
@@ -173,7 +174,7 @@ Container libraries
 * dynamic arrays::              Dynamic arrays.
 * bst::                         Binary search trees.
 * sets bags::                   Sets and bags.
-* comparators::                 Comparators.
+* ilists::                      Immutable lists.
 
 Adapted libraries
 
@@ -229,6 +230,7 @@ External documents
 
 @include libs-net-channels.texi
 
+@include libs-comparators.texi
 @include libs-lists.texi
 @include libs-vectors.texi
 @include libs-strings.texi
@@ -249,7 +251,7 @@ External documents
 @include libs-dynamic-arrays.texi
 @include libs-binary-trees.texi
 @include libs-sets-and-bags.texi
-@include libs-comparators.texi
+@include libs-ilists.texi
 
 @include libs-randomisations.texi
 
