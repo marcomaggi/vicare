@@ -433,6 +433,101 @@
   #t)
 
 
+(parametrise ((check-test-name	'unbalanced-nodes-removal))
+
+  (define (key< new old)
+    (< (binary-node-sort-key new)
+       (binary-node-sort-key old)))
+
+  (define (tree . key*)
+    (fold-left (lambda (root key)
+		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
+      #f key*))
+
+  (define (make-comparison-proc target-key)
+    (lambda (node)
+      (let ((key (binary-node-sort-key node)))
+	(cond ((= target-key key)	 0)
+	      ((< target-key key)	-1)
+	      (else			+1)))))
+
+;;; --------------------------------------------------------------------
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check-for-true
+   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+	  (node (binary-tree-find root (make-comparison-proc 0))))
+     (unbalanced-tree-remove! root)
+     (binary-tree-valid? root key<)))
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check-for-true
+   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+	  (node (binary-tree-find root (make-comparison-proc 10))))
+     (unbalanced-tree-remove! root)
+     (binary-tree-valid? root key<)))
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check-for-true
+   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+	  (node (binary-tree-find root (make-comparison-proc 1))))
+     (unbalanced-tree-remove! root)
+     (binary-tree-valid? root key<)))
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check-for-true
+   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+	  (node (binary-tree-find root (make-comparison-proc 5))))
+     (unbalanced-tree-remove! root)
+     (binary-tree-valid? root key<)))
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (for-all (lambda (target)
+	     (check-for-true
+	      (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+		     (node (binary-tree-find root (make-comparison-proc 0))))
+		(unbalanced-tree-remove! root)
+		(binary-tree-valid? root key<))))
+    '(0 1 2 3 4 5 6 7 8 9 10))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
