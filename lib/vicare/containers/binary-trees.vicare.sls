@@ -40,9 +40,14 @@
     binary-node-left-set!		$binary-node-left-set!
     binary-node-right-set!		$binary-node-right-set!
 
+    binary-node-parent-and-left-child?	$binary-node-parent-and-left-child?
+    binary-node-parent-and-right-child?	$binary-node-parent-and-right-child?
+    binary-node-parent-and-child?	$binary-node-parent-and-child?
+
     binary-tree-minimum			$binary-tree-minimum
     binary-tree-maximum			$binary-tree-maximum
     binary-tree-find			$binary-tree-find
+    binary-tree-valid?			$binary-tree-valid?
 
     ;; unbalanced binary nodes
     <unbalanced-binary-node>		make-unbalanced-binary-node
@@ -134,6 +139,95 @@
 (define-alias $binary-node-sort-key-set!	$<binary-node>-sort-key-set!)
 
 
+;;;; plain binary nodes: structure predicates
+
+(define* (binary-node-parent-and-left-child? {node1 binary-node?} {node2 binary-node?})
+  ;;Return true if NODE2 is the left child of NODE1.
+  ;;
+  ($binary-node-parent-and-left-child? node1 node2))
+
+(define ($binary-node-parent-and-left-child? node1 node2)
+  (eq? node2 ($binary-node-left node1)))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-node-parent-and-right-child? {node1 binary-node?} {node2 binary-node?})
+  ;;Return true if NODE2 is the right child of NODE1.
+  ;;
+  ($binary-node-parent-and-right-child? node1 node2))
+
+(define ($binary-node-parent-and-right-child? node1 node2)
+  (eq? node2 ($binary-node-right node1)))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-node-parent-and-child? {node1 binary-node?} {node2 binary-node?})
+  ;;Return true if NODE2 is the left or right child of NODE1.
+  ;;
+  ($binary-node-parent-and-child? node1 node2))
+
+(define ($binary-node-parent-and-child? node1 node2)
+  (or ($binary-node-parent-and-left-child?  node1 node2)
+      ($binary-node-parent-and-right-child? node1 node2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-valid? {root false-or-binary-node?} {key< procedure?})
+  ($binary-tree-valid? root key<))
+
+(module ($binary-tree-valid?)
+
+  (define ($binary-tree-valid? root key<)
+    (if root
+	(let ((left  ($binary-node-left  root))
+	      (right ($binary-node-right root)))
+	  (and (if left
+		   (%traverse key< left #f root)
+		 #t)
+	       (if right
+		   (%traverse key< right root #f)
+		 #t)))
+      ;;An empty tree is valid.
+      #t))
+
+  (define (%traverse key< node range-min range-max)
+    ;; (debug-print __who__
+    ;; 		 'min (and range-min (binary-node-sort-key range-min))
+    ;; 		 'key (binary-node-sort-key node)
+    ;; 		 'max (and range-max (binary-node-sort-key range-max)))
+    (and (if range-min
+	     (key< range-min node)
+	   #t)
+	 (if range-max
+	     (key< node range-max)
+	   #t)
+	 (let ((left  ($binary-node-left  node))
+	       (right ($binary-node-right node)))
+	   (and (if left
+		    (%traverse key< left range-min node)
+		  #t)
+		(if right
+		    (%traverse key< right node range-max)
+		  #t)))))
+
+  #| end of module |# )
+
+
+;;;; plain binary nodes: structure operations
+
+(define* (binary-node-replace-in-parent! {old-child binary-node?} {new-child false-or-binary-node?})
+  ;;In the parent of OLD-CHILD: replace OLD-CHILD with NEW-CHILD.
+  ;;
+  ($binary-node-replace-in-parent! old-child new-child))
+
+(define ($binary-node-replace-in-parent! old-child new-child)
+  (cond (($binary-node-parent old-child)
+	 => (lambda (dad)
+	      (if ($binary-node-parent-and-left-child? dad old-child)
+		  ($binary-node-left-set! dad new-child)
+		($binary-node-right-set! dad new-child))))))
+
+
 ;;;; plain binary trees: searching operations
 
 (case-define* binary-tree-minimum
@@ -220,7 +314,7 @@
    (lambda (make-binary-node)
      (case-define* make-<unbalanced-binary-node>
        (()
-	((make-binary-node (void) #f #f #f)))
+	((make-binary-node (void) #f #f)))
 
        ((key)
 	((make-binary-node key #f #f)))
@@ -260,37 +354,43 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (unbalanced-tree-remove! {node		unbalanced-binary-node?}
-				  {left-parent	unbalanced-binary-node?}
-				  {right-parent	unbalanced-binary-node?})
-  ($unbalanced-tree-remove! node left-parent right-parent))
+(define* (unbalanced-tree-remove! {node unbalanced-binary-node?})
+  ($unbalanced-tree-remove! node))
 
-(define ($unbalanced-tree-remove! node left-parent right-parent)
+(define ($unbalanced-tree-remove! node)
   (let ((left  ($binary-node-left  node))
 	(right ($binary-node-right node)))
     (cond ((and left right)
-	   (let ((minimum ($binary-tree-minimum node #f)))
-	     ($binary-node-left-set! left-parent minimum)
-	       ($binary-node-right-set! right-parent left)
-	       (void)))
+	   (let* ((min     ($binary-tree-minimum node #f))
+		  (min.dad ($binary-node-parent  min)))
+	     ;;Insert MIN in the tree in place of NODE.
+	     ($binary-node-replace-in-parent! node min)
+	     ($binary-node-left-set!  min left)
+	     ($binary-node-right-set! min right)
+	     ;;If MIN is the minimum, by definition  of BST: MIN is the left child of
+	     ;;MIN.DAD.
+	     ($binary-node-left-set! min.dad #f)
+	     min))
 
 	  (left
-	   (if left-parent
-	       ($binary-node-left-set! left-parent left)
-	     ($binary-node-right-set! right-parent left))
+	   ;;Left child exists, right child does not.
+	   ;;
+	   ($binary-node-replace-in-parent! node left)
 	   left)
 
 	  (right
-	   (if left-parent
-	       ($binary-node-left-set! left-parent right)
-	     ($binary-node-right-set! right-parent right))
+	   ;;Right child exists, left child does not.
+	   ;;
+	   ($binary-node-replace-in-parent! node right)
 	   right)
 
 	  (else
-	   ;;No children.
-	   (if left-parent
-	       ($binary-node-left-set! left-parent #f)
-	     ($binary-node-right-set! right-parent #f))
+	   ;;No children.  Remove this node from its parent.
+	   ($binary-node-replace-in-parent! node #f)
+	   ;;Reset this node.
+	   ($<binary-node>-parent-set! node #f)
+	   ($<binary-node>-left-set!   node #f)
+	   ($<binary-node>-right-set!  node #f)
 	   ;;No node takes place of NODE in the tree.
 	   #f))))
 

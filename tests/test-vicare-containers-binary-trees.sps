@@ -356,6 +356,83 @@
   #t)
 
 
+(parametrise ((check-test-name	'unbalanced-nodes-validation))
+
+  (define (key< new old)
+    (< (binary-node-sort-key new)
+       (binary-node-sort-key old)))
+
+  (define (tree . key*)
+    (fold-left (lambda (root key)
+		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
+      #f key*))
+
+  (define (make-comparison-proc target-key)
+    (lambda (node)
+      (let ((key (binary-node-sort-key node)))
+	(cond ((= target-key key)	 0)
+	      ((< target-key key)	-1)
+	      (else			+1)))))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((root #f))
+     (binary-tree-valid? root key<)))
+
+  (check-for-true
+   (let ((root (tree 5)))
+     (binary-tree-valid? root key<)))
+
+  (check-for-true
+   (let ((root (tree 5 4)))
+     (binary-tree-valid? root key<)))
+
+  (check-for-true
+   (let ((root (tree 5 6)))
+     (binary-tree-valid? root key<)))
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check-for-true
+   (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
+     (binary-tree-valid? root key<)))
+
+  ;; 3--5--6
+  ;; |  |
+  ;; 2  99
+  ;;
+  (check-for-false
+   (let ((root (make-binary-node 3
+				 (make-binary-node 5
+						   (make-binary-node 99)
+						   (make-binary-node 6))
+				 (make-binary-node 2))))
+     (binary-tree-valid? root key<)))
+
+  ;; 3-----4
+  ;; |
+  ;; 2--0
+  ;; |
+  ;; 1
+  ;;
+  (check-for-false
+   (let ((root (make-binary-node 3
+				 (make-binary-node 4)
+				 (make-binary-node 2
+						   (make-binary-node 1)
+						   (make-binary-node 0)))))
+     (binary-tree-valid? root key<)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
