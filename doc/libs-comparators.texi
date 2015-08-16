@@ -1,0 +1,22 @@
+@node comparators
+@chapter Comparators
+
+
+@cindex Library @library{vicare containers comparators}
+@cindex @library{vicare containers comparators}, library
+
+
+The library @library{vicare containers comparators} implements
+comparator objects, which can be used for: type checking; comparison;
+hash value computation.
+
+This library is actually the reference implementation of @ansrfi{114}
+adapted to @value{PRJNAME}.  The library exports the same syntactic
+bindings of the library @library{srfi :114 comparators}.  @ref{srfi
+comparators, @ansrfi{114} comparators}, for the documentation.
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

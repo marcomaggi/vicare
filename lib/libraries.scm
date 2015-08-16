@@ -109,6 +109,7 @@
      (vicare numerics flonum-parser)
      (vicare numerics flonum-formatter)
 
+     (vicare containers comparators)
      (vicare containers bytevectors)
      (vicare containers auxiliary-syntaxes)
      (vicare containers weak-hashtables)
@@ -144,6 +145,7 @@
      (vicare containers dynamic-arrays)
      (vicare containers dynamic-arrays sort)
      (vicare containers binary-trees)
+     (vicare containers sets-and-bags)
 
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)

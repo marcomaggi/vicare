@@ -988,6 +988,20 @@ endif
 EXTRA_DIST += lib/vicare/numerics/flonum-formatter.vicare.sls
 CLEANFILES += lib/vicare/numerics/flonum-formatter.fasl
 
+lib/vicare/containers/comparators.fasl: \
+		lib/vicare/containers/comparators.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_comparators_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_comparators_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_comparators_fasl_DATA = lib/vicare/containers/comparators.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_comparators_vicare_sls_DATA = lib/vicare/containers/comparators.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/comparators.vicare.sls
+CLEANFILES += lib/vicare/containers/comparators.fasl
+
 lib/vicare/containers/bytevectors.fasl: \
 		lib/vicare/containers/bytevectors.vicare.sls \
 		$(FASL_PREREQUISITES)
@@ -1462,6 +1476,21 @@ dist_lib_vicare_containers_binary_trees_vicare_sls_DATA = lib/vicare/containers/
 endif
 EXTRA_DIST += lib/vicare/containers/binary-trees.vicare.sls
 CLEANFILES += lib/vicare/containers/binary-trees.fasl
+
+lib/vicare/containers/sets-and-bags.fasl: \
+		lib/vicare/containers/sets-and-bags.vicare.sls \
+		lib/vicare/containers/comparators.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_sets_and_bags_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_sets_and_bags_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_sets_and_bags_fasl_DATA = lib/vicare/containers/sets-and-bags.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_sets_and_bags_vicare_sls_DATA = lib/vicare/containers/sets-and-bags.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/sets-and-bags.vicare.sls
+CLEANFILES += lib/vicare/containers/sets-and-bags.fasl
 
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
@@ -3534,7 +3563,7 @@ endif
 
 lib/srfi/%3a113/sets-and-bags.fasl: \
 		lib/srfi/%3a113/sets-and-bags.sls \
-		lib/srfi/%3a114.fasl \
+		lib/vicare/containers/sets-and-bags.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -3568,6 +3597,7 @@ endif
 
 lib/srfi/%3a114/comparators.fasl: \
 		lib/srfi/%3a114/comparators.sls \
+		lib/vicare/containers/comparators.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

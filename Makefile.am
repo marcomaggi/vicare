@@ -100,6 +100,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-cbuffers.texi				\
 	doc/libs-chains.texi				\
 	doc/libs-char-sets.texi				\
+	doc/libs-comparators.texi			\
 	doc/libs-comparisons.texi			\
 	doc/libs-conditions-and-restarts.texi		\
 	doc/libs-debugging.texi				\
@@ -124,6 +125,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-queues.texi				\
 	doc/libs-randomisations.texi			\
 	doc/libs-readline.texi				\
+	doc/libs-sets-and-bags.texi			\
 	doc/libs-stacks.texi				\
 	doc/libs-streams.texi				\
 	doc/libs-strings.texi				\

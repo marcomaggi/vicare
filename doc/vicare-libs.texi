@@ -172,6 +172,8 @@ Container libraries
 * binary heaps::                Binary heaps.
 * dynamic arrays::              Dynamic arrays.
 * bst::                         Binary search trees.
+* sets bags::                   Sets and bags.
+* comparators::                 Comparators.
 
 Adapted libraries
 
@@ -246,6 +248,8 @@ External documents
 @include libs-binary-heaps.texi
 @include libs-dynamic-arrays.texi
 @include libs-binary-trees.texi
+@include libs-sets-and-bags.texi
+@include libs-comparators.texi
 
 @include libs-randomisations.texi
 

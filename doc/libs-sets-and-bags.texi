@@ -1,0 +1,22 @@
+@node sets bags
+@chapter Sets and bags
+
+
+@cindex Library @library{vicare containers sets-and-bags}
+@cindex @library{vicare containers sets-and-bags}, library
+
+
+The library @library{vicare containers sets-and-bags} implements sets
+and bags; sets and bags (also known as multisets) are unordered
+collections that can contain any Scheme object.
+
+This library is actually the reference implementation of @ansrfi{113}
+adapted to @value{PRJNAME}.  The library exports the same syntactic
+bindings of the library @library{srfi :113 sets-and-bags}.  @ref{srfi
+sets-and-bags, @ansrfi{113} sets and bags}, for the documentation.
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:
