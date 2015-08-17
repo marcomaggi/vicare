@@ -164,6 +164,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-list.texi				\
 	doc/srfi-multidimensional-array.texi		\
 	doc/srfi-parameters.texi			\
+	doc/srfi-ralists.texi				\
 	doc/srfi-random.texi				\
 	doc/srfi-rec.texi				\
 	doc/srfi-receive.texi				\
@@ -177,8 +178,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-strings.texi				\
 	doc/srfi-testing.texi				\
 	doc/srfi-time.texi				\
-	doc/srfi-vectors.texi				\
-	doc/srfi-functional-pairs.texi
+	doc/srfi-vectors.texi
 
 doc_nausicaa_TEXINFOS	= \
 	doc/nausicaa-language.texi			\
@@ -1018,7 +1018,7 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	tests/test-srfi-69-basic-hash-tables.sps			\
 	tests/test-srfi-78-lightweight-testing.sps			\
 	tests/test-srfi-98-os-environment-variables.sps			\
-	tests/test-srfi-101-functional-pairs.sps			\
+	tests/test-srfi-101-ralists.sps					\
 	tests/test-srfi-111-boxes.sps					\
 	tests/test-srfi-112-environment-inquiry.sps			\
 	tests/test-srfi-113-sets-and-bags.sps				\

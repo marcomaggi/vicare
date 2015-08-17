@@ -1,5 +1,5 @@
-@node srfi functional pairs
-@section @ansrfi{101} purely functional random--access pairs and lists
+@node srfi ralists
+@section @ansrfi{101} random--access lists
 
 
 @cindex @ansrfi{101} purely functional random--access pairs and lists
@@ -27,17 +27,17 @@ specification; rather such function is exported by @library{srfi :101
 random-access-lists equal}, along with a version of @func{eqv?}.
 
 @menu
-* srfi functional pairs abstract::      Abstract.
-* srfi functional pairs issues::        Issues.
-* srfi functional pairs rationale::     Rationale.
-* srfi functional pairs spec::          Specification.
-* srfi functional pairs refs::          References.
-* srfi functional pairs ack::           Acknowledgements.
-* srfi functional pairs copyright::     Copyright.
+* srfi ralists abstract::       Abstract.
+* srfi ralists issues::         Issues.
+* srfi ralists rationale::      Rationale.
+* srfi ralists spec::           Specification.
+* srfi ralists refs::           References.
+* srfi ralists ack::            Acknowledgements.
+* srfi ralists copyright::      Copyright.
 @end menu
 
 @c page
-@node srfi functional pairs abstract
+@node srfi ralists abstract
 @subsection Abstract
 
 
@@ -57,7 +57,7 @@ random--access lists consistent with the @rnrs{6} [2] base library and
 list utility standard library [3].
 
 @c page
-@node srfi functional pairs issues
+@node srfi ralists issues
 @subsection Issues
 
 
@@ -87,7 +87,7 @@ Should a @func{car+cdr} procedure be added?
 Should the current syntax and procedures sub--libraries be included?
 
 @c page
-@node srfi functional pairs rationale
+@node srfi ralists rationale
 @subsection Rationale
 
 
@@ -121,18 +121,18 @@ implementations that embrace random--access pairs as the fundamental
 pair representation.
 
 @c page
-@node srfi functional pairs spec
+@node srfi ralists spec
 @subsection Specification
 
 
 @menu
-* srfi functional pairs spec random::   Random--access pairs and lists.
-* srfi functional pairs spec repre::    Representation conversion.
-* srfi functional pairs spec requir::   Implementation requirements.
+* srfi ralists spec random::    Random-access pairs and lists.
+* srfi ralists spec repre::     Representation conversion.
+* srfi ralists spec requir::    Implementation requirements.
 @end menu
 
 @c page
-@node srfi functional pairs spec random
+@node srfi ralists spec random
 @subsubsection Random--access pairs and lists
 
 
@@ -621,7 +621,7 @@ tail--call @var{proc} on the last element.
 @end defun
 
 @c page
-@node srfi functional pairs spec repre
+@node srfi ralists spec repre
 @subsubsection Representation conversion
 
 
@@ -638,7 +638,7 @@ lists, these conversions may simply be list identity procedures.
 @end defun
 
 @c page
-@node srfi functional pairs spec requir
+@node srfi ralists spec requir
 @subsubsection Implementation requirements
 
 
@@ -680,7 +680,7 @@ provide the following libraries:
 @end example
 
 @c page
-@node srfi functional pairs refs
+@node srfi ralists refs
 @subsection References
 
 
@@ -709,7 +709,7 @@ Libraries''.  Michael Sperber, et al. (Editors).
 @end enumerate
 
 @c page
-@node srfi functional pairs ack
+@node srfi ralists ack
 @subsection Acknowledgements
 
 
@@ -730,7 +730,7 @@ under Grant #0937060 to the Computing Research Association for the
 CIFellow Project.
 
 @c page
-@node srfi functional pairs copyright
+@node srfi ralists copyright
 @subsection Copyright
 
 

@@ -60,8 +60,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi lightweight-testing::    @ansrfi{78} lightweight testing.
 * srfi environment-variables::  @ansrfi{98} environment variables.
 * srfi err5rs records::         @ansrfi{99} @acronym{ERR5RS} records.
-* srfi functional pairs::       @ansrfi{101} purely functional
-                                random--access pairs and lists.
+* srfi ralists::                @ansrfi{101} random--access lists.
 * srfi basic-socket::           @ansrfi{106} basic socket interface.
 * srfi boxes::                  @ansrfi{111} boxes.
 * srfi env-inquiry::            @ansrfi{112} environment inquiry.
@@ -105,7 +104,7 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-lightweight-testing.texi
 @include srfi-environment-variables.texi
 @include srfi-err5rs-records.texi
-@include srfi-functional-pairs.texi
+@include srfi-ralists.texi
 @include srfi-basic-socket-interface.texi
 @include srfi-boxes.texi
 @include srfi-environment-inquiry.texi
