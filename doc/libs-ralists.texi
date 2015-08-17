@@ -1,0 +1,24 @@
+@node ralists
+@chapter Random--access lists
+
+
+@cindex Library @library{vicare containers ralists}
+@cindex @library{vicare containers ralists}, library
+
+
+The library @library{vicare containers ralists} implements
+random--access lists.  This library is actually the reference
+implementation of @ansrfi{101} adapted to @value{PRJNAME}.  @ref{srfi
+ralists, @ansrfi{101} random--access lists}, for the documentation.
+
+To avoid name conflicts, it is suggested to prefix the syntactic
+bindings when importing this library; for example:
+
+@lisp
+(import (prefix (vicare containers ralists) ra.))
+@end lisp
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

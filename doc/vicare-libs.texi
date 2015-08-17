@@ -175,6 +175,7 @@ Container libraries
 * bst::                         Binary search trees.
 * sets bags::                   Sets and bags.
 * ilists::                      Immutable lists.
+* ralists::                     Random-access lists.
 
 Adapted libraries
 
@@ -252,6 +253,7 @@ External documents
 @include libs-binary-trees.texi
 @include libs-sets-and-bags.texi
 @include libs-ilists.texi
+@include libs-ralists.texi
 
 @include libs-randomisations.texi
 

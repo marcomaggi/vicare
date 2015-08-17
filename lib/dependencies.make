@@ -1537,6 +1537,20 @@ endif
 EXTRA_DIST += lib/vicare/containers/ilists/quotations.vicare.sls
 CLEANFILES += lib/vicare/containers/ilists/quotations.fasl
 
+lib/vicare/containers/ralists.fasl: \
+		lib/vicare/containers/ralists.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_ralists_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_ralists_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_ralists_fasl_DATA = lib/vicare/containers/ralists.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_ralists_vicare_sls_DATA = lib/vicare/containers/ralists.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/ralists.vicare.sls
+CLEANFILES += lib/vicare/containers/ralists.fasl
+
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
@@ -3441,6 +3455,7 @@ endif
 
 lib/srfi/%3a101.fasl: \
 		lib/srfi/%3a101.sls \
+		lib/vicare/containers/ralists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

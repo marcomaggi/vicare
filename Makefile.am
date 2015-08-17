@@ -124,6 +124,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-platform.texi				\
 	doc/libs-pregexp.texi				\
 	doc/libs-queues.texi				\
+	doc/libs-ralists.texi				\
 	doc/libs-randomisations.texi			\
 	doc/libs-readline.texi				\
 	doc/libs-sets-and-bags.texi			\

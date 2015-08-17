@@ -149,6 +149,7 @@
      (vicare containers ilists)
      (vicare containers ilists comparators)
      (vicare containers ilists quotations)
+     (vicare containers ralists)
 
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)
