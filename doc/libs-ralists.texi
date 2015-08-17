@@ -8,8 +8,10 @@
 
 The library @library{vicare containers ralists} implements
 random--access lists.  This library is actually the reference
-implementation of @ansrfi{101} adapted to @value{PRJNAME}.  @ref{srfi
-ralists, @ansrfi{101} random--access lists}, for the documentation.
+implementation of @ansrfi{101} adapted to @value{PRJNAME}. The library
+exports the same syntactic bindings of the library @library{srfi :101}.
+@ref{srfi ralists, @ansrfi{101} random--access lists}, for the
+documentation.
 
 To avoid name conflicts, it is suggested to prefix the syntactic
 bindings when importing this library; for example:
