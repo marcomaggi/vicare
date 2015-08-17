@@ -528,6 +528,216 @@
   #t)
 
 
+(parametrise ((check-test-name	'iteration-tree-test))
+
+;;; check the tree used for iterator tests
+
+  (define (key< new old)
+    (< (binary-node-sort-key new)
+       (binary-node-sort-key old)))
+
+  (define (tree . key*)
+    (fold-left (lambda (root key)
+		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
+      #f key*))
+
+  (define (make-comparison-proc target-key)
+    (lambda (node)
+      (let ((key (binary-node-sort-key node)))
+	(cond ((= target-key key)	 0)
+	      ((< target-key key)	-1)
+	      (else			+1)))))
+
+  (define (make-tree)
+    ;; 5-------10----12
+    ;; |        |     |
+    ;; 1--3--4  7--9 11
+    ;;    |     |  |
+    ;;    2     6  8
+    (tree 5 1 3 2 4 10 7 12 6 9 8 11))
+
+;;; --------------------------------------------------------------------
+;;; check tree
+
+  (check	;node 1
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 1))))
+	(values (= 5  (binary-node-sort-key (binary-node-parent node)))
+		(not  (binary-node-left  node))
+		(= 3  (binary-node-sort-key (binary-node-right node)))))
+    => #t #t #t)
+
+  (check	;node 2
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 2))))
+	(values (= 3  (binary-node-sort-key (binary-node-parent node)))
+		(not  (binary-node-left  node))
+		(not  (binary-node-right node))))
+    => #t #t #t)
+
+  (check	;node 3
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 3))))
+	(values (= 1  (binary-node-sort-key (binary-node-parent node)))
+		(= 2  (binary-node-sort-key (binary-node-left   node)))
+		(= 4  (binary-node-sort-key (binary-node-right  node)))))
+    => #t #t #t)
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (check	;node 4
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 4))))
+	(values (= 3  (binary-node-sort-key (binary-node-parent node)))
+		(not  (binary-node-left  node))
+		(not  (binary-node-right node))))
+    => #t #t #t)
+
+  (check	;node 5
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 5))))
+	(values (not  (binary-node-parent node))
+		(= 1  (binary-node-sort-key (binary-node-left  node)))
+		(= 10 (binary-node-sort-key (binary-node-right node)))))
+    => #t #t #t)
+
+  (check	;node 6
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 6))))
+	(values (= 7  (binary-node-sort-key (binary-node-parent node)))
+		(not  (binary-node-left  node))
+		(not  (binary-node-right node))))
+    => #t #t #t)
+
+  (check	;node 7
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 7))))
+	(values (= 10 (binary-node-sort-key (binary-node-parent node)))
+		(= 6  (binary-node-sort-key (binary-node-left   node)))
+		(= 9  (binary-node-sort-key (binary-node-right  node)))))
+    => #t #t #t)
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (check	;node 8
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 8))))
+	(values (= 9  (binary-node-sort-key (binary-node-parent node)))
+		(not  (binary-node-left  node))
+		(not  (binary-node-right node))))
+    => #t #t #t)
+
+  (check	;node 9
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 9))))
+	(values (= 7  (binary-node-sort-key (binary-node-parent node)))
+		(= 8  (binary-node-sort-key (binary-node-left   node)))
+		(not (binary-node-right  node))))
+    => #t #t #t)
+
+  (check	;node 10
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 10))))
+	(values (= 5  (binary-node-sort-key (binary-node-parent node)))
+		(= 7  (binary-node-sort-key (binary-node-left   node)))
+		(= 12 (binary-node-sort-key (binary-node-right  node)))))
+    => #t #t #t)
+
+  (check	;node 11
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 11))))
+	(values (= 12 (binary-node-sort-key (binary-node-parent node)))
+		(not  (binary-node-left  node))
+		(not  (binary-node-right node))))
+    => #t #t #t)
+
+  (check	;node 12
+      (let* ((root (make-tree))
+	     (node (binary-tree-find root (make-comparison-proc 12))))
+	(values (= 10 (binary-node-sort-key (binary-node-parent node)))
+		(= 11 (binary-node-sort-key (binary-node-left   node)))
+		(not (binary-node-right  node))))
+    => #t #t #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'iteration-in-order))
+
+;;; check the tree used for iterator tests
+
+  (define (key< new old)
+    (< (binary-node-sort-key new)
+       (binary-node-sort-key old)))
+
+  (define (tree . key*)
+    (fold-left (lambda (root key)
+		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
+      #f key*))
+
+  (define (make-tree)
+    ;; 5-------10----12
+    ;; |        |     |
+    ;; 1--3--4  7--9 11
+    ;;    |     |  |
+    ;;    2     6  8
+    (tree 5 1 3 2 4 10 7 12 6 9 8 11))
+
+  (define (xcons knil node)
+    (cons (binary-node-sort-key node) knil))
+
+  (define-syntax doit-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse (binary-tree-fold-in-order-forwards xcons '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-in-order-backwards (lambda (node knil)
+						   (cons (binary-node-sort-key node) knil))
+						 '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-forwards #f			())	;empty tree
+  (doit-forwards (tree 1)		(1))	;one node tree
+  (doit-forwards (tree 0 1 2)		(0 1 2))
+  (doit-forwards (tree 2 1 0)		(0 1 2))
+  (doit-forwards (tree 1 0 2)		(0 1 2))
+  (doit-forwards (make-tree)		(1 2 3 4 5 6 7 8 9 10 11 12))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-backwards #f			())	;empty tree
+  (doit-backwards (tree 1)		(1))	;one node tree
+  (doit-backwards (tree 0 1 2)		(2 1 0))
+  (doit-backwards (tree 2 1 0)		(2 1 0))
+  (doit-backwards (tree 1 0 2)		(2 1 0))
+  (doit-backwards (make-tree)		(12 11 10 9 8 7 6 5 4 3 2 1))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

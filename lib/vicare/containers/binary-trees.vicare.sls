@@ -28,33 +28,70 @@
   (export
 
     ;; plain binary nodes
-    <binary-node>			make-binary-node
-    binary-node?			false-or-binary-node?
+    <binary-node>				make-binary-node
+    binary-node?				false-or-binary-node?
 
-    binary-node-sort-key		$binary-node-sort-key
-    binary-node-parent			$binary-node-parent
-    binary-node-left			$binary-node-left
-    binary-node-right			$binary-node-right
+    binary-node-sort-key			$binary-node-sort-key
+    binary-node-parent				$binary-node-parent
+    binary-node-left				$binary-node-left
+    binary-node-right				$binary-node-right
 
-    binary-node-sort-key-set!		$binary-node-sort-key-set!
-    binary-node-left-set!		$binary-node-left-set!
-    binary-node-right-set!		$binary-node-right-set!
+    binary-node-sort-key-set!			$binary-node-sort-key-set!
+    binary-node-left-set!			$binary-node-left-set!
+    binary-node-right-set!			$binary-node-right-set!
 
-    binary-node-parent-and-left-child?	$binary-node-parent-and-left-child?
-    binary-node-parent-and-right-child?	$binary-node-parent-and-right-child?
-    binary-node-parent-and-child?	$binary-node-parent-and-child?
+    binary-node-parent-and-left-child?		$binary-node-parent-and-left-child?
+    binary-node-parent-and-right-child?		$binary-node-parent-and-right-child?
+    binary-node-parent-and-child?		$binary-node-parent-and-child?
 
-    binary-tree-minimum			$binary-tree-minimum
-    binary-tree-maximum			$binary-tree-maximum
-    binary-tree-find			$binary-tree-find
-    binary-tree-valid?			$binary-tree-valid?
+    binary-tree-minimum				$binary-tree-minimum
+    binary-tree-maximum				$binary-tree-maximum
+    binary-tree-find				$binary-tree-find
+    binary-tree-valid?				$binary-tree-valid?
+
+    ;; forwards iterators
+    binary-tree-begin-in-order-forwards		$binary-tree-begin-in-order-forwards
+    binary-tree-step-in-order-forwards		$binary-tree-step-in-order-forwards
+
+    binary-tree-begin-pre-order-forwards	$binary-tree-begin-pre-order-forwards
+    binary-tree-step-pre-order-forwards		$binary-tree-step-pre-order-forwards
+
+    binary-tree-begin-post-order-forwards	$binary-tree-begin-post-order-forwards
+    binary-tree-step-post-order-forwards	$binary-tree-step-post-order-forwards
+
+    binary-tree-begin-level-order-forwards	$binary-tree-begin-level-order-forwards
+    binary-tree-step-level-order-forwards	$binary-tree-step-level-order-forwards
+
+    ;; backwards iterators
+    binary-tree-begin-in-order-backwards	$binary-tree-begin-in-order-backwards
+    binary-tree-step-in-order-backwards		$binary-tree-step-in-order-backwards
+
+    binary-tree-begin-pre-order-backwards	$binary-tree-begin-pre-order-backwards
+    binary-tree-step-pre-order-backwards	$binary-tree-step-pre-order-backwards
+
+    binary-tree-begin-post-order-backwards	$binary-tree-begin-post-order-backwards
+    binary-tree-step-post-order-backwards	$binary-tree-step-post-order-backwards
+
+    binary-tree-begin-level-order-backwards	$binary-tree-begin-level-order-backwards
+    binary-tree-step-level-order-backwards	$binary-tree-step-level-order-backwards
+
+    ;; folding
+    binary-tree-fold-in-order-forwards		$binary-tree-fold-in-order-forwards
+    binary-tree-fold-pre-order-forwards		$binary-tree-fold-pre-order-forwards
+    binary-tree-fold-post-order-forwards	$binary-tree-fold-post-order-forwards
+    binary-tree-fold-level-order-forwards	$binary-tree-fold-level-order-forwards
+
+    binary-tree-fold-in-order-backwards		$binary-tree-fold-in-order-backwards
+    binary-tree-fold-pre-order-backwards	$binary-tree-fold-pre-order-backwards
+    binary-tree-fold-post-order-backwards	$binary-tree-fold-post-order-backwards
+    binary-tree-fold-level-order-backwards	$binary-tree-fold-level-order-backwards
 
     ;; unbalanced binary nodes
-    <unbalanced-binary-node>		make-unbalanced-binary-node
-    unbalanced-binary-node?		false-or-unbalanced-binary-node?
+    <unbalanced-binary-node>			make-unbalanced-binary-node
+    unbalanced-binary-node?			false-or-unbalanced-binary-node?
 
-    unbalanced-tree-insert!		$unbalanced-tree-insert!
-    unbalanced-tree-remove!		$unbalanced-tree-remove!
+    unbalanced-tree-insert!			$unbalanced-tree-insert!
+    unbalanced-tree-remove!			$unbalanced-tree-remove!
     )
   (import (vicare))
 
@@ -301,6 +338,254 @@
 	 (not-found-handler))
 	(else
 	 not-found-handler)))
+
+
+;;;; plain binary trees: in-order iterations
+
+(define* (binary-tree-begin-in-order-forwards {root false-or-binary-node?})
+  ($binary-tree-begin-in-order-forwards root))
+
+(define ($binary-tree-begin-in-order-forwards root)
+  (if root
+      ($binary-tree-minimum root #f)
+    root))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-in-order-forwards {node binary-node?})
+  ($binary-tree-step-in-order-forwards node))
+
+(define ($binary-tree-step-in-order-forwards node)
+  (cond (($binary-node-right node)
+	 => (lambda (right)
+	      ($binary-tree-minimum right #f)))
+	(else
+	 (let loop ((node node)
+		    (dad  ($binary-node-parent node)))
+	   (if (and dad ($binary-node-parent-and-right-child? dad node))
+	       (loop dad ($binary-node-parent dad))
+	     dad)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-begin-in-order-backwards {root false-or-binary-node?})
+  ($binary-tree-begin-in-order-backwards root))
+
+(define ($binary-tree-begin-in-order-backwards root)
+  (if root
+      ($binary-tree-maximum root #f)
+    root))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-in-order-backwards {root false-or-binary-node?})
+  ($binary-tree-step-in-order-backwards root))
+
+(define ($binary-tree-step-in-order-backwards node)
+  (cond (($binary-node-left node)
+	 => (lambda (left)
+	      ($binary-tree-maximum left #f)))
+	(else
+	 (let loop ((node node)
+		    (dad  ($binary-node-parent node)))
+	   (if (and dad ($binary-node-parent-and-left-child? dad node))
+	       (loop dad ($binary-node-parent dad))
+	     dad)))))
+
+
+;;;; plain binary trees: pre-order iterations
+
+(define* (binary-tree-begin-pre-order-forwards {root false-or-binary-node?})
+  ($binary-tree-begin-pre-order-forwards root))
+
+(define ($binary-tree-begin-pre-order-forwards root)
+  (if root
+      ($binary-tree-minimum root #f)
+    root))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-pre-order-forwards {node binary-node?})
+  ($binary-tree-step-pre-order-forwards node))
+
+(define ($binary-tree-step-pre-order-forwards node)
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-begin-pre-order-backwards {root false-or-binary-node?})
+  ($binary-tree-begin-pre-order-backwards root))
+
+(define ($binary-tree-begin-pre-order-backwards root)
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-pre-order-backwards {root false-or-binary-node?})
+  ($binary-tree-step-pre-order-backwards root))
+
+(define ($binary-tree-step-pre-order-backwards root)
+  (void))
+
+
+;;;; plain binary trees: post-order iterations
+
+(define* (binary-tree-begin-post-order-forwards {root false-or-binary-node?})
+  ($binary-tree-begin-post-order-forwards root))
+
+(define ($binary-tree-begin-post-order-forwards root)
+  (if root
+      ($binary-tree-minimum root #f)
+    root))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-post-order-forwards {node binary-node?})
+  ($binary-tree-step-post-order-forwards node))
+
+(define ($binary-tree-step-post-order-forwards node)
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-begin-post-order-backwards {root false-or-binary-node?})
+  ($binary-tree-begin-post-order-backwards root))
+
+(define ($binary-tree-begin-post-order-backwards root)
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-post-order-backwards {root false-or-binary-node?})
+  ($binary-tree-step-post-order-backwards root))
+
+(define ($binary-tree-step-post-order-backwards root)
+  (void))
+
+
+;;;; plain binary trees: level-order iterations
+
+(define* (binary-tree-begin-level-order-forwards {root false-or-binary-node?})
+  ($binary-tree-begin-level-order-forwards root))
+
+(define ($binary-tree-begin-level-order-forwards root)
+  (if root
+      ($binary-tree-minimum root #f)
+    root))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-level-order-forwards {node binary-node?})
+  ($binary-tree-step-level-order-forwards node))
+
+(define ($binary-tree-step-level-order-forwards node)
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-begin-level-order-backwards {root false-or-binary-node?})
+  ($binary-tree-begin-level-order-backwards root))
+
+(define ($binary-tree-begin-level-order-backwards root)
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-step-level-order-backwards {root false-or-binary-node?})
+  ($binary-tree-step-level-order-backwards root))
+
+(define ($binary-tree-step-level-order-backwards root)
+  (void))
+
+
+;;;; plain binary trees: folding forwards
+
+(define-syntax define-folder-forwards
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who ?begin ?step)
+     (begin
+       (define* (?safe-who {kons procedure?} knil {root false-or-binary-node?})
+	 (?unsafe-who kons knil root))
+
+       (define (?unsafe-who kons knil root)
+	 (cond ((?begin root)
+		=> (lambda (node)
+		     (let next ((knil (kons knil node))
+				(node node))
+		       (cond ((?step node)
+			      => (lambda (node)
+				   (next (kons knil node) node)))
+			     (else knil)))))
+	       (else knil)))
+       #| end of BEGIN |# ))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-folder-forwards binary-tree-fold-in-order-forwards
+  $binary-tree-fold-in-order-forwards
+  $binary-tree-begin-in-order-forwards
+  $binary-tree-step-in-order-forwards)
+
+(define-folder-forwards binary-tree-fold-pre-order-forwards
+  $binary-tree-fold-pre-order-forwards
+  $binary-tree-begin-pre-order-forwards
+  $binary-tree-step-pre-order-forwards)
+
+(define-folder-forwards binary-tree-fold-post-order-forwards
+  $binary-tree-fold-post-order-forwards
+  $binary-tree-begin-post-order-forwards
+  $binary-tree-step-post-order-forwards)
+
+(define-folder-forwards binary-tree-fold-level-order-forwards
+  $binary-tree-fold-level-order-forwards
+  $binary-tree-begin-level-order-forwards
+  $binary-tree-step-level-order-forwards)
+
+
+;;;; plain binary trees: folding backwards
+
+(define-syntax define-folder-backwards
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who ?begin ?step)
+     (begin
+       (define* (?safe-who {kons procedure?} knil {root false-or-binary-node?})
+	 (?unsafe-who kons knil root))
+
+       (define (?unsafe-who kons knil root)
+	 (cond ((?begin root)
+		=> (lambda (node)
+		     (let next ((knil (kons node knil))
+				(node node))
+		       (cond ((?step node)
+			      => (lambda (node)
+				   (next (kons node knil) node)))
+			     (else knil)))))
+	       (else knil)))
+       #| end of BEGIN |# ))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-folder-backwards binary-tree-fold-in-order-backwards
+  $binary-tree-fold-in-order-backwards
+  $binary-tree-begin-in-order-backwards
+  $binary-tree-step-in-order-backwards)
+
+(define-folder-backwards binary-tree-fold-pre-order-backwards
+  $binary-tree-fold-pre-order-backwards
+  $binary-tree-begin-pre-order-backwards
+  $binary-tree-step-pre-order-backwards)
+
+(define-folder-backwards binary-tree-fold-post-order-backwards
+  $binary-tree-fold-post-order-backwards
+  $binary-tree-begin-post-order-backwards
+  $binary-tree-step-post-order-backwards)
+
+(define-folder-backwards binary-tree-fold-level-order-backwards
+  $binary-tree-fold-level-order-backwards
+  $binary-tree-begin-level-order-backwards
+  $binary-tree-step-level-order-backwards)
 
 
 ;;;; unbalanced binary nodes: data type
