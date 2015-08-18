@@ -901,15 +901,16 @@ name is prefixed with @code{$} are unsafe operations: they do
 @defun binary-tree-valid? @var{root} @var{key<}
 @defunx $binary-tree-valid? @var{root} @var{key<}
 Traverse a binary search tree from @var{root} verifying that: all the
-left subtrees have sort key less than their parents; all the right
-subtrees have sort key greater than, or equal to, than their parents.
+left subtrees have sort key less than that of their parents; all the
+right subtrees have sort key greater than, or equal to, that of their
+parents.
 
 The argument @var{root} must be @false{}, to represent an empty tree, or
 an instance of @objtype{<binary-node>} representing the root of the
 tree.
 
 The argument @var{key<} must be a procedure taking @math{2} arguments
-being instances of @objtype{<binary-nod>}: it must return true if the
+being instances of @objtype{<binary-node>}: it must return true if the
 first argument has sort key less than the sort key of the second
 argument; otherwise it must return @false{}.
 @end defun
@@ -949,17 +950,12 @@ functions are indicated as @var{unode}.
 
 
 @defun make-unbalanced-binary-node
-@defunx make-unbalanced-binary-node @var{key}
-@defunx make-unbalanced-binary-node @var{key} @var{left} @var{right}
-Build and return a new instance of @objtype{<unbalanced-binary-node>}
-referencing @var{key} as sort key.  When @var{key} is not given: the
-sort key is set to @code{(void)}.
-
-The optional arguments @var{left} and @var{right} arguments must be
-@false{} or instances of @objtype{<unbalanced-binary-node>} representing
-the and right subtrees.
-
-The @code{parent} field of the new instance is set to @false{}.
+@defunx make-unbalanced-binary-node @var{left} @var{right}
+Build and return a new instance of @objtype{<unbalanced-binary-node>}.
+The optional arguments @var{left} and @var{right} must be @false{} or
+instances of @objtype{<unbalanced-binary-node>} representing the left
+and right subtrees.  The @code{parent} field of the new instance is set
+to @false{}.
 @end defun
 
 
@@ -988,19 +984,24 @@ The argument @var{root} must be @false{} or an instance of
 
 The argument @var{key<} must be a procedure accepting two arguments of
 type @objtype{<binary-node>} and returning: true if the first argument
-as sort key less than the second argument; @false{} otherwise.  Example
+has sort key less than the second argument; @false{} otherwise.  Example
 for the trees of fixnums defined in the introduction (@pxref{bst
 intro}):
 
 @lisp
 (define (key< one two)
-  (< (<fixnum-node>-sort-key one)
-     (<fixnum-node>-sort-key two)))
+  (fx<? (<fixnum-node>-sort-key one)
+        (<fixnum-node>-sort-key two)))
 @end lisp
 
 The argument @var{unode} must be an instance of
 @objtype{<unbalanced-binary-node>} representing the new node to insert.
 This node is meant to have left and right fields set to @false{}.
+
+The return value is the root node after the insertion operation.  If the
+argument @var{root} is @false{}: the return value is @var{unode}.  If
+the argument @var{root} is a node: the return value is @var{root}
+itself.
 @end defun
 
 
