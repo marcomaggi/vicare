@@ -502,10 +502,10 @@ backward: 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1
 @end example
 
 Here is an example of forwards and backwards in--order iteration using
-trees of fixnums (@pxref{bst intro}):
+trees of fixnums as defined in the introduction (@pxref{bst intro}):
 
 @lisp
-(define (make-tree)
+(define root
   ;; 5-------10----12
   ;; |        |     |
   ;; 1--3--4  7--9 11
@@ -519,7 +519,7 @@ trees of fixnums (@pxref{bst intro}):
   (binary-tree-fold-in-order-forwards
       (lambda (knil node)
         (cons (<fixnum-node>-sort-key node) knil))
-    '() (make-tree)))
+    '() root))
 @result{} (1 2 3 4 5 6 7 8 9 10 11 12)
 
 ;;By reversing we return a list in which: the first item
@@ -528,7 +528,7 @@ trees of fixnums (@pxref{bst intro}):
   (binary-tree-fold-in-order-backwards
       (lambda (node knil)
         (cons (<fixnum-node>-sort-key node) knil))
-    '() (make-tree)))
+    '() root))
 @result{} (12 11 10 9 8 7 6 5 4 3 2 1)
 @end lisp
 
@@ -543,10 +543,10 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-in-order-forwards @var{kons} @var{knil} @var{root}
-Like @func{fold-left} for lists, but visit the nodes of a binary tree
-with a in--order forwards iteration.  The argument @var{root} must be
-@false{} to represent an empty tree or an instance of
-@objtype{<binary-node>} representing the root of a tree.
+Like @func{fold-left} for lists, visit the nodes of a binary tree with a
+in--order forwards iteration.  The argument @var{root} must be @false{}
+to represent an empty tree or an instance of @objtype{<binary-node>}
+representing the root of a tree.
 @end defun
 
 
@@ -575,8 +575,8 @@ visited node.
 
 
 @defun binary-tree-fold-in-order-backwards @var{kons} @var{knil} @var{root}
-Like @func{fold-right} for lists, but visit the nodes of a binary tree
-with a in--order backwards iteration.  The argument @var{root} must be
+Like @func{fold-right} for lists, visit the nodes of a binary tree with
+a in--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
 @end defun
@@ -640,7 +640,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-pre-order-forwards @var{kons} @var{knil} @var{root}
-Like @func{fold-left} for lists, but visit the nodes of a binary tree
+Like @func{fold-left} for lists, visit the nodes of a binary tree
 with a pre--order forwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
@@ -672,8 +672,8 @@ visited node.
 
 
 @defun binary-tree-fold-pre-order-backwards @var{kons} @var{knil} @var{root}
-Like @func{fold-right} for lists, but visit the nodes of a binary tree
-with a pre--order backwards iteration.  The argument @var{root} must be
+Like @func{fold-right} for lists, visit the nodes of a binary tree with
+a pre--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
 @end defun
@@ -733,7 +733,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-post-order-forwards @var{kons} @var{knil} @var{root}
-Like @func{fold-left} for lists, but visit the nodes of a binary tree
+Like @func{fold-left} for lists, visit the nodes of a binary tree
 with a post--order forwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
@@ -765,8 +765,8 @@ visited node.
 
 
 @defun binary-tree-fold-post-order-backwards @var{kons} @var{knil} @var{root}
-Like @func{fold-right} for lists, but visit the nodes of a binary tree
-with a post--order backwards iteration.  The argument @var{root} must be
+Like @func{fold-right} for lists, visit the nodes of a binary tree with
+a post--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
 @end defun
@@ -813,10 +813,10 @@ keeping the count of the level.  The order of the backwards iteration
 is: 5, 10, 1, 12, 7, 3, 11, 9, 6, 4, 2, 8.
 
 The implementation of the level--order iteration is particularly slow,
-but the current implementation has the current node as the only state.
-The level--order iteration is usually called ``breadth--first
-iteration'' or ``breadth--first search''; this name is reserved for
-another implementation.
+but it has the current node as the only state.  The level--order
+iteration is usually called ``breadth--first iteration'' or
+``breadth--first search'', that name is reserved for another
+implementation.
 
 The following syntactic bindings are exported by the library
 @library{vicare containers binary-search-trees}.  The bindings whose
@@ -829,7 +829,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-level-order-forwards @var{kons} @var{knil} @var{root}
-Like @func{fold-left} for lists, but visit the nodes of a binary tree
+Like @func{fold-left} for lists, visit the nodes of a binary tree
 with a level--order forwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
@@ -861,8 +861,8 @@ visited node.
 
 
 @defun binary-tree-fold-level-order-backwards @var{kons} @var{knil} @var{root}
-Like @func{fold-right} for lists, but visit the nodes of a binary tree
-with a level--order backwards iteration.  The argument @var{root} must be
+Like @func{fold-right} for lists,a visit the nodes of a binary tree with
+a level--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
 @objtype{<binary-node>} representing the root of a tree.
 @end defun

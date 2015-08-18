@@ -842,6 +842,97 @@
   #t)
 
 
+(parametrise ((check-test-name	'iteration-pre-order))
+
+;;; check the tree used for iterator tests
+
+  (define-syntax doit-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-pre-order-forwards
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-pre-order-backwards
+		(lambda (node knil)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-forwards #f			())  ;empty tree
+  (doit-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-forwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-forwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-forwards (tree 1 0 2)		(1 0 2))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-forwards (make-tree)		(5 1 3 2 4 10 7 6 9 8 12 11))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-backwards #f			())  ;empty tree
+  (doit-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-backwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-backwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-backwards (tree 1 0 2)		(1 2 0))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-backwards (make-tree)		(5 10 12 11 7 9 8 6 1 3 4 2))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

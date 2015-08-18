@@ -402,9 +402,7 @@
   ($binary-tree-begin-pre-order-forwards root))
 
 (define ($binary-tree-begin-pre-order-forwards root)
-  (if root
-      ($binary-tree-minimum root #f)
-    root))
+  root)
 
 ;;; --------------------------------------------------------------------
 
@@ -412,7 +410,35 @@
   ($binary-tree-step-pre-order-forwards node))
 
 (define ($binary-tree-step-pre-order-forwards node)
-  (void))
+  (or ($binary-node-left  node)
+      ($binary-node-right node)
+      (let loop ((node node)
+		 (dad  ($binary-node-parent node)))
+	(cond ((not dad)
+	       #f)
+	      ((and ($binary-node-parent-and-left-child? dad node)
+		    ($binary-node-right dad)))
+	      (else
+	       (loop dad ($binary-node-parent dad)))))))
+
+  ;; ucl_node_t	N = node;
+  ;; ucl_node_t	dad;
+  ;; if (N->son)
+  ;;   return N->son;
+  ;; else if (N->bro)
+  ;;   return N->bro;
+  ;; else {
+  ;;   for (;;) {
+  ;;     dad = N->dad;
+  ;;     if (! dad)
+  ;; 	break;
+  ;;     else if ((dad->son == N) && (dad->bro))
+  ;; 	return dad->bro;
+  ;;     else
+  ;; 	N = dad;
+  ;;   }
+  ;; }
+  ;; return dad;
 
 ;;; --------------------------------------------------------------------
 
@@ -420,15 +446,24 @@
   ($binary-tree-begin-pre-order-backwards root))
 
 (define ($binary-tree-begin-pre-order-backwards root)
-  (void))
+  root)
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-pre-order-backwards {root false-or-binary-node?})
-  ($binary-tree-step-pre-order-backwards root))
+(define* (binary-tree-step-pre-order-backwards {node false-or-binary-node?})
+  ($binary-tree-step-pre-order-backwards node))
 
-(define ($binary-tree-step-pre-order-backwards root)
-  (void))
+(define ($binary-tree-step-pre-order-backwards node)
+  (or ($binary-node-right node)
+      ($binary-node-left  node)
+      (let loop ((node node)
+		 (dad  ($binary-node-parent node)))
+	(cond ((not dad)
+	       #f)
+	      ((and ($binary-node-parent-and-right-child? dad node)
+		    ($binary-node-left dad)))
+	      (else
+	       (loop dad ($binary-node-parent dad)))))))
 
 
 ;;;; plain binary trees: post-order iterations
@@ -459,10 +494,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-post-order-backwards {root false-or-binary-node?})
-  ($binary-tree-step-post-order-backwards root))
+(define* (binary-tree-step-post-order-backwards {node false-or-binary-node?})
+  ($binary-tree-step-post-order-backwards node))
 
-(define ($binary-tree-step-post-order-backwards root)
+(define ($binary-tree-step-post-order-backwards node)
   (void))
 
 
@@ -494,10 +529,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-level-order-backwards {root false-or-binary-node?})
-  ($binary-tree-step-level-order-backwards root))
+(define* (binary-tree-step-level-order-backwards {node false-or-binary-node?})
+  ($binary-tree-step-level-order-backwards node))
 
-(define ($binary-tree-step-level-order-backwards root)
+(define ($binary-tree-step-level-order-backwards node)
   (void))
 
 
