@@ -44,6 +44,7 @@
     binary-node-parent-and-right-child?		$binary-node-parent-and-right-child?
     binary-node-parent-and-child?		$binary-node-parent-and-child?
 
+    binary-tree-root				$binary-tree-root
     binary-tree-minimum				$binary-tree-minimum
     binary-tree-maximum				$binary-tree-maximum
     binary-tree-find				$binary-tree-find
@@ -228,10 +229,6 @@
       #t))
 
   (define (%traverse key< node range-min range-max)
-    ;; (debug-print __who__
-    ;; 		 'min (and range-min (binary-node-sort-key range-min))
-    ;; 		 'key (binary-node-sort-key node)
-    ;; 		 'max (and range-max (binary-node-sort-key range-max)))
     (and (if range-min
 	     (key< range-min node)
 	   #t)
@@ -253,7 +250,8 @@
 ;;;; plain binary nodes: structure operations
 
 (define* (binary-node-replace-in-parent! {old-child binary-node?} {new-child false-or-binary-node?})
-  ;;In the parent of OLD-CHILD: replace OLD-CHILD with NEW-CHILD.
+  ;;In the parent of OLD-CHILD: replace  OLD-CHILD with NEW-CHILD.  Link NEW-CHILD to
+  ;;its new parent.
   ;;
   ($binary-node-replace-in-parent! old-child new-child))
 
@@ -262,10 +260,28 @@
 	 => (lambda (dad)
 	      (if ($binary-node-parent-and-left-child? dad old-child)
 		  ($binary-node-left-set! dad new-child)
-		($binary-node-right-set! dad new-child))))))
+		($binary-node-right-set! dad new-child))
+	      (when new-child
+		($<binary-node>-parent-set! new-child dad))))
+	(else
+	 ;;OLD-CHILD has no parent.
+	 (when new-child
+	   ($<binary-node>-parent-set! new-child #f)))))
 
 
 ;;;; plain binary trees: searching operations
+
+(define* (binary-tree-root {node false-or-binary-node?})
+  ($binary-tree-root node))
+
+(define ($binary-tree-root node)
+  (if node
+      (cond (($binary-node-parent node)
+	     => $binary-tree-root)
+	    (else node))
+    #f))
+
+;;; --------------------------------------------------------------------
 
 (case-define* binary-tree-minimum
 
@@ -639,35 +655,99 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (unbalanced-tree-remove! {node unbalanced-binary-node?})
-  ($unbalanced-tree-remove! node))
+(define* (unbalanced-tree-remove! {node unbalanced-binary-node?} {root unbalanced-binary-node?})
+  ($unbalanced-tree-remove! node root))
 
-(define ($unbalanced-tree-remove! node)
+(define ($unbalanced-tree-remove! node root)
   (let ((left  ($binary-node-left  node))
 	(right ($binary-node-right node)))
     (cond ((and left right)
-	   (let* ((min     ($binary-tree-minimum node #f))
-		  (min.dad ($binary-node-parent  min)))
-	     ;;Insert MIN in the tree in place of NODE.
-	     ($binary-node-replace-in-parent! node min)
-	     ($binary-node-left-set!  min left)
-	     ($binary-node-right-set! min right)
-	     ;;If MIN is the minimum, by definition  of BST: MIN is the left child of
-	     ;;MIN.DAD.
-	     ($binary-node-left-set! min.dad #f)
-	     min))
+	   ;;Replace NODE with the maximum in the left subtree.
+	   (let* ((lmax     ($binary-tree-maximum left #f))
+		  (lmax.dad ($binary-node-parent  lmax)))
+	     (if (eq? lmax left)
+		 ;;The scenario before the removal is:
+		 ;;
+		 ;;    node--right
+		 ;;     |
+		 ;;    lmax--#f
+		 ;;     |
+		 ;;    subleft
+		 ;;
+		 ;;we know  that LMAX has no  right subtree.  The scenario  after the
+		 ;;removal must be:
+		 ;;
+		 ;;    lmax--right
+		 ;;     |
+		 ;;    subleft
+		 ;;
+		 (begin
+		   ($binary-node-replace-in-parent! node lmax)
+		   ($binary-node-right-set! lmax right))
+	       ;;Insert LMAX in the  tree in place of NODE.  If we  are here and LMAX
+	       ;;is the left-maximum,  by definition of BST: LMAX is  the right child
+	       ;;of LMAX.DAD; LMAX has no right child; LMAX might have a left child.
+	       ;;
+	       ;;The scenario before the removal is:
+	       ;;
+	       ;;    node--right
+	       ;;     |
+	       ;;    left--...
+	       ;;           |
+	       ;;          lmax.dad--lmax--#f
+	       ;;                     |
+	       ;;                  subleft
+	       ;;
+	       ;;the scenario after the removal must be:
+	       ;;
+	       ;;    lmax--right
+	       ;;     |
+	       ;;    left--...
+	       ;;           |
+	       ;;          lmax.dad--subleft
+	       ;;
+	       ;;Notice that in the special case before the removal:
+	       ;;
+	       ;;    node--right
+	       ;;     |
+	       ;;    lmax.dad--lmax--#f
+	       ;;               |
+	       ;;             subleft
+	       ;;
+	       ;;the scenario after the removal must be:
+	       ;;
+	       ;;    lmax--right
+	       ;;     |
+	       ;;    lmax.dad--subleft
+	       ;;
+	       (begin
+		 ($binary-node-replace-in-parent! node lmax)
+		 ($binary-node-right-set! lmax.dad ($binary-node-left lmax))
+		 ($binary-node-left-set!  lmax left)
+		 ($binary-node-right-set! lmax right)))
+	     ;;Reset NODE links.
+	     ($<binary-node>-parent-set! node #f)
+	     ($<binary-node>-left-set!   node #f)
+	     ($<binary-node>-right-set!  node #f)
+	     (if (eq? node root)
+		 lmax
+	       root)))
 
 	  (left
 	   ;;Left child exists, right child does not.
 	   ;;
 	   ($binary-node-replace-in-parent! node left)
-	   left)
+	   (if (eq? node root)
+	       left
+	     root))
 
 	  (right
 	   ;;Right child exists, left child does not.
 	   ;;
 	   ($binary-node-replace-in-parent! node right)
-	   right)
+	   (if (eq? node root)
+	       right
+	     root))
 
 	  (else
 	   ;;No children.  Remove this node from its parent.
@@ -676,8 +756,9 @@
 	   ($<binary-node>-parent-set! node #f)
 	   ($<binary-node>-left-set!   node #f)
 	   ($<binary-node>-right-set!  node #f)
-	   ;;No node takes place of NODE in the tree.
-	   #f))))
+	   (if (eq? node root)
+	       #f
+	     root)))))
 
 
 ;;;; done

@@ -353,6 +353,47 @@
 	    '() '(0 1 2 3 4 5 6 7 8 9 10))))
     => '(0 1 2 3 4 5 6 7 8 9 10))
 
+;;; --------------------------------------------------------------------
+;;; root search
+
+  (check
+      (let ((root (tree)))
+	(binary-tree-root root))
+    => #f)
+
+  (check
+      (let ((root (tree 0)))
+	(binary-node-sort-key (binary-tree-root root)))
+    => 0)
+
+  (check
+      (let* ((root (tree 1 0 2))
+	     (node (binary-tree-find root (make-comparison-proc 0))))
+	(binary-node-sort-key (binary-tree-root node)))
+    => 1)
+
+  (check
+      (let* ((root (tree 1 0 2))
+	     (node (binary-tree-find root (make-comparison-proc 2))))
+	(binary-node-sort-key (binary-tree-root node)))
+    => 1)
+
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (for-all (lambda (target)
+	     (check
+		 (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+			(node (binary-tree-find root (make-comparison-proc target))))
+		   (binary-node-sort-key (binary-tree-root node)))
+	       => 5))
+    '(0 1 2 3 4 5 6 7 8 9 10))
+
   #t)
 
 
@@ -373,6 +414,36 @@
 	(cond ((= target-key key)	 0)
 	      ((< target-key key)	-1)
 	      (else			+1)))))
+
+  (define (validate-node root node-key dad-key left-key right-key)
+    (let ((node (binary-tree-find root (make-comparison-proc node-key))))
+      (assert node)
+      (assert (= node-key (binary-node-sort-key node)))
+      (let* ((dad    (binary-node-parent node))
+	     (left   (binary-node-left   node))
+	     (right  (binary-node-right  node)))
+	;;The parent is the expected one.
+	(if dad-key
+	    (assert (= dad-key (binary-node-sort-key dad)))
+	  (assert (not dad)))
+	;;The parent has NODE as child.
+	(when dad-key
+	  (assert (binary-node-parent-and-child? dad node)))
+	;;The left child is the expected one.
+	(if left-key
+	    (assert (= left-key (binary-node-sort-key left)))
+	  (assert (not left)))
+	;;The left child has NODE as parent.
+	(when left-key
+	  (assert (binary-node-parent-and-left-child? node left)))
+	;;The right child is the expected one.
+	(if right-key
+	    (assert (= right-key (binary-node-sort-key right)))
+	  (assert (not right)))
+	;;The right child has NODE as parent.
+	(when right-key
+	  (assert (binary-node-parent-and-right-child? node right)))
+	)))
 
 ;;; --------------------------------------------------------------------
 
@@ -430,6 +501,29 @@
 						   (make-binary-node 0)))))
      (binary-tree-valid? root key<)))
 
+  ;; 5------8--9--10
+  ;; |      |
+  ;; 3--4   6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check-for-true
+   (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
+     (validate-node root  0  1 #f #f)
+     (validate-node root  1  3  0  2)
+     (validate-node root  2  1 #f #f)
+     (validate-node root  3  5  1  4)
+     (validate-node root  4  3 #f #f)
+     (validate-node root  5 #f  3  8)
+     (validate-node root  6  8 #f  7)
+     (validate-node root  7  6 #f #f)
+     (validate-node root  8  5  6  9)
+     (validate-node root  9  8 #f 10)
+     (validate-node root 10  9 #f #f)
+     #t))
+
   #t)
 
 
@@ -451,64 +545,152 @@
 	      ((< target-key key)	-1)
 	      (else			+1)))))
 
+  (define (validate-node root node-key dad-key left-key right-key)
+    ;; (debug-print __who__
+    ;; 		 'root-key (binary-node-sort-key root)
+    ;; 		 'node-key node-key
+    ;; 		 'dad-key dad-key
+    ;; 		 'left-key left-key
+    ;; 		 'right-key right-key)
+    (let ((node (binary-tree-find root (make-comparison-proc node-key))))
+      ;; (debug-print __who__
+      ;; 		   (binary-node-sort-key root)
+      ;; 		   node-key
+      ;; 		   (and node (binary-node-sort-key node)))
+      (assert node)
+      (assert (= node-key (binary-node-sort-key node)))
+      (let* ((dad    (binary-node-parent node))
+	     (left   (binary-node-left   node))
+	     (right  (binary-node-right  node)))
+	;;The parent is the expected one.
+	(if dad-key
+	    (assert (= dad-key (binary-node-sort-key dad)))
+	  (assert (not dad)))
+	;;The parent has NODE as child.
+	(when dad-key
+	  (assert (binary-node-parent-and-child? dad node)))
+	;;The left child is the expected one.
+	(if left-key
+	    (assert (= left-key (binary-node-sort-key left)))
+	  (assert (not left)))
+	;;The left child has NODE as parent.
+	(when left-key
+	  (assert (binary-node-parent-and-left-child? node left)))
+	;;The right child is the expected one.
+	(if right-key
+	    (assert (= right-key (binary-node-sort-key right)))
+	  (assert (not right)))
+	;;The right child has NODE as parent.
+	(when right-key
+	  (assert (binary-node-parent-and-right-child? node right)))
+	)))
+
+  (define (%fold-it root)
+    ;;Fold the tree with a in-order iteration, forwards and backwards.
+    ;;
+    ;;By reversing we return  a list in which: the first item is  the sort key of the
+    ;;first node visited in the iteration.
+    (values (reverse
+	     (binary-tree-fold-in-order-forwards
+		 (lambda (knil node)
+		   (cons (binary-node-sort-key node) knil))
+	       '() root))
+	    (binary-tree-fold-in-order-backwards
+		(lambda (node knil)
+		  (cons (binary-node-sort-key node) knil))
+	      '() root)))
+
 ;;; --------------------------------------------------------------------
+;;; checking with validation predicate
 
-  ;; 5------8--9--10
-  ;; |      |
-  ;; 3--4   6--7
-  ;; |
-  ;; 1--2
-  ;; |
-  ;; 0
-  ;;
   (check-for-true
-   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
-	  (node (binary-tree-find root (make-comparison-proc 0))))
-     (unbalanced-tree-remove! root)
+   (let* ((root (tree 0))
+	  (root (unbalanced-tree-remove! root root)))
      (binary-tree-valid? root key<)))
 
-  ;; 5------8--9--10
-  ;; |      |
-  ;; 3--4   6--7
-  ;; |
-  ;; 1--2
-  ;; |
-  ;; 0
-  ;;
   (check-for-true
-   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
-	  (node (binary-tree-find root (make-comparison-proc 10))))
-     (unbalanced-tree-remove! root)
+   (let* ((root (tree 0 1 2))
+	  (node (binary-tree-find root (make-comparison-proc 1)))
+	  (root (unbalanced-tree-remove! node root)))
      (binary-tree-valid? root key<)))
 
-  ;; 5------8--9--10
-  ;; |      |
-  ;; 3--4   6--7
-  ;; |
-  ;; 1--2
-  ;; |
-  ;; 0
-  ;;
   (check-for-true
-   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
-	  (node (binary-tree-find root (make-comparison-proc 1))))
-     (unbalanced-tree-remove! root)
+   (let* ((root (tree 0 1 2))
+	  (node (binary-tree-find root (make-comparison-proc 2)))
+	  (root (unbalanced-tree-remove! node root)))
      (binary-tree-valid? root key<)))
 
-  ;; 5------8--9--10
-  ;; |      |
-  ;; 3--4   6--7
-  ;; |
-  ;; 1--2
-  ;; |
-  ;; 0
-  ;;
-  (check-for-true
-   (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
-	  (node (binary-tree-find root (make-comparison-proc 5))))
-     (unbalanced-tree-remove! root)
-     (binary-tree-valid? root key<)))
+  (let-syntax
+      ((check-with-validation (syntax-rules ()
+				((_ ?key)
+				 ;; 5------8--9--10
+				 ;; |      |
+				 ;; 3--4   6--7
+				 ;; |
+				 ;; 1--2
+				 ;; |
+				 ;; 0
+				 ;;
+				 (check-for-true
+				  (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+					 (node (binary-tree-find root (make-comparison-proc ?key)))
+					 (root (unbalanced-tree-remove! node root)))
+				    (binary-tree-valid? root key<))))
+				)))
 
+    (check-with-validation 0)
+    (check-with-validation 1)
+    (check-with-validation 2)
+    (check-with-validation 3)
+    (check-with-validation 4)
+    (check-with-validation 5)
+    (check-with-validation 6)
+    (check-with-validation 7)
+    (check-with-validation 8)
+    (check-with-validation 9)
+    (check-with-validation 10)
+
+    #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; checking by folding
+
+  (let-syntax
+      ((check-with-folding (syntax-rules ()
+			     ((_ ?key ?expected)
+			      ;; 5------8--9--10
+			      ;; |      |
+			      ;; 3--4   6--7
+			      ;; |
+			      ;; 1--2
+			      ;; |
+			      ;; 0
+			      ;;
+			      (check
+				  (let* ((key  ?key)
+					 (root (tree 5 3 8 1 4 6 9 0 2 7 10))
+					 (node (binary-tree-find root (make-comparison-proc key)))
+					 (root (unbalanced-tree-remove! node root)))
+				    (%fold-it root))
+				=> (quote ?expected) (quote ?expected)))
+			     )))
+
+    (check-with-folding 0		(  1 2 3 4 5 6 7 8 9 10))
+    (check-with-folding 1		(0   2 3 4 5 6 7 8 9 10))
+    (check-with-folding 2		(0 1   3 4 5 6 7 8 9 10))
+    (check-with-folding 3		(0 1 2   4 5 6 7 8 9 10))
+    (check-with-folding 4		(0 1 2 3   5 6 7 8 9 10))
+    (check-with-folding 5		(0 1 2 3 4   6 7 8 9 10))
+    (check-with-folding 6		(0 1 2 3 4 5   7 8 9 10))
+    (check-with-folding 7		(0 1 2 3 4 5 6   8 9 10))
+    (check-with-folding 8		(0 1 2 3 4 5 6 7   9 10))
+    (check-with-folding 9		(0 1 2 3 4 5 6 7 8   10))
+    (check-with-folding 10		(0 1 2 3 4 5 6 7 8 9   ))
+
+    #| end of LET-SYNTAX |# )
+
+  ;;Before:
+  ;;
   ;; 5------8--9--10
   ;; |      |
   ;; 3--4   6--7
@@ -517,13 +699,33 @@
   ;; |
   ;; 0
   ;;
-  (for-all (lambda (target)
-	     (check-for-true
-	      (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
-		     (node (binary-tree-find root (make-comparison-proc 0))))
-		(unbalanced-tree-remove! root)
-		(binary-tree-valid? root key<))))
-    '(0 1 2 3 4 5 6 7 8 9 10))
+  ;;After:
+  ;;
+  ;; 4------8--9--10
+  ;; |      |
+  ;; 3      6--7
+  ;; |
+  ;; 1--2
+  ;; |
+  ;; 0
+  ;;
+  (check
+      (let* ((key  5)
+	     (root (tree 5 3 8 1 4 6 9 0 2 7 10))
+	     (node (binary-tree-find root (make-comparison-proc key)))
+	     (root (unbalanced-tree-remove! node root)))
+	(validate-node root  0  1 #f #f)
+	(validate-node root  1  3  0  2)
+	(validate-node root  2  1 #f #f)
+	(validate-node root  3  4  1 #f)
+	(validate-node root  4 #f  3  8)
+	(validate-node root  6  8 #f  7)
+	(validate-node root  7  6 #f #f)
+	(validate-node root  8  4  6  9)
+	(validate-node root  9  8 #f 10)
+	(validate-node root 10  9 #f #f)
+	(%fold-it root))
+    => '(0 1 2 3 4 6 7 8 9 10) '(0 1 2 3 4 6 7 8 9 10))
 
   #t)
 
@@ -689,16 +891,17 @@
     ;;    2     6  8
     (tree 5 1 3 2 4 10 7 12 6 9 8 11))
 
-  (define (xcons knil node)
-    (cons (binary-node-sort-key node) knil))
-
   (define-syntax doit-forwards
     (syntax-rules ()
       ((_ ?tree ?expected)
        (check
 	   ;;By reversing we return  a list in which: the first item  is the sort key
 	   ;;of the first node visited in the iteration.
-	   (reverse (binary-tree-fold-in-order-forwards xcons '() ?tree))
+	   (reverse
+	    (binary-tree-fold-in-order-forwards
+		(lambda (knil node)
+		  (cons (binary-node-sort-key node) knil))
+	      '() ?tree))
 	 => (quote ?expected)))
       ))
 
@@ -709,9 +912,10 @@
 	   ;;By reversing we return  a list in which: the first item  is the sort key
 	   ;;of the first node visited in the iteration.
 	   (reverse
-	    (binary-tree-fold-in-order-backwards (lambda (node knil)
-						   (cons (binary-node-sort-key node) knil))
-						 '() ?tree))
+	    (binary-tree-fold-in-order-backwards
+		(lambda (node knil)
+		  (cons (binary-node-sort-key node) knil))
+	      '() ?tree))
 	 => (quote ?expected)))
       ))
 
@@ -744,5 +948,12 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'binary-tree-fold-in-order	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-in-order-forwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-in-order-backwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-pre-order-forwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-pre-order-backwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-post-order-forwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-post-order-backwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-level-order-forwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-level-order-backwards	'scheme-indent-function 1)
 ;; End:
