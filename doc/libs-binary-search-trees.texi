@@ -464,6 +464,50 @@ return value is @false{}.  If the target node it not found and
 of @var{empty-tree-handler}.
 @end defun
 
+
+@defun binary-tree-deepest-left-leaf @var{root}
+@defunx $binary-tree-deepest-left-leaf @var{root}
+Find the deepest leaf in the left subtrees starting from @var{root}.
+The argument root must be @false{} to represent an empty tree or an
+instance of @objtype{<binary-node>}.
+
+As example, given the tree:
+
+@example
+5-------10----12
+|        |     |
+1--3--4  7--9 11
+   |     |  |
+   2     6  8
+@end example
+
+@noindent
+starting from @samp{5} the selected node is @samp{2}, starting from
+@samp{10} the selected node is @samp{6}.
+@end defun
+
+
+@defun binary-tree-deepest-right-leaf @var{root}
+@defunx $binary-tree-deepest-right-leaf @var{root}
+Find the deepest leaf in the right subtrees starting from @var{root}.
+The argument root must be @false{} to represent an empty tree or an
+instance of @objtype{<binary-node>}.
+
+As example, given the tree:
+
+@example
+5-------10----12
+|        |     |
+1--3--4  7--9 11
+   |     |  |
+   2     6  8
+@end example
+
+@noindent
+starting from @samp{5} the selected node is @samp{11}, starting from
+@samp{1} the selected node is @samp{4}.
+@end defun
+
 @c page
 @node bst bnodes iterating
 @subsection Iterating over binary trees

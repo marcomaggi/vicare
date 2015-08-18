@@ -47,6 +47,8 @@
     binary-tree-minimum				$binary-tree-minimum
     binary-tree-maximum				$binary-tree-maximum
     binary-tree-find				$binary-tree-find
+    binary-tree-deepest-left-leaf		$binary-tree-deepest-left-leaf
+    binary-tree-deepest-right-leaf		$binary-tree-deepest-right-leaf
     binary-tree-valid?				$binary-tree-valid?
 
     ;; forwards iterators
@@ -342,6 +344,32 @@
 	(else
 	 not-found-handler)))
 
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-deepest-left-leaf {node false-or-binary-node?})
+  ($binary-tree-deepest-left-leaf node))
+
+(define ($binary-tree-deepest-left-leaf node)
+  (and node
+       (cond (($binary-node-left node)
+	      => $binary-tree-deepest-left-leaf)
+	     (($binary-node-right node)
+	      => $binary-tree-deepest-left-leaf)
+	     (else node))))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-deepest-right-leaf {node false-or-binary-node?})
+  ($binary-tree-deepest-right-leaf node))
+
+(define ($binary-tree-deepest-right-leaf node)
+  (and node
+       (cond (($binary-node-right node)
+	      => $binary-tree-deepest-right-leaf)
+	     (($binary-node-left  node)
+	      => $binary-tree-deepest-right-leaf)
+	     (else node))))
+
 
 ;;;; plain binary trees: in-order iterations
 
@@ -421,25 +449,6 @@
 	      (else
 	       (loop dad ($binary-node-parent dad)))))))
 
-  ;; ucl_node_t	N = node;
-  ;; ucl_node_t	dad;
-  ;; if (N->son)
-  ;;   return N->son;
-  ;; else if (N->bro)
-  ;;   return N->bro;
-  ;; else {
-  ;;   for (;;) {
-  ;;     dad = N->dad;
-  ;;     if (! dad)
-  ;; 	break;
-  ;;     else if ((dad->son == N) && (dad->bro))
-  ;; 	return dad->bro;
-  ;;     else
-  ;; 	N = dad;
-  ;;   }
-  ;; }
-  ;; return dad;
-
 ;;; --------------------------------------------------------------------
 
 (define* (binary-tree-begin-pre-order-backwards {root false-or-binary-node?})
@@ -472,9 +481,7 @@
   ($binary-tree-begin-post-order-forwards root))
 
 (define ($binary-tree-begin-post-order-forwards root)
-  (if root
-      ($binary-tree-minimum root #f)
-    root))
+  ($binary-tree-deepest-left-leaf root))
 
 ;;; --------------------------------------------------------------------
 
@@ -482,7 +489,23 @@
   ($binary-tree-step-post-order-forwards node))
 
 (define ($binary-tree-step-post-order-forwards node)
-  (void))
+  (let ((dad ($binary-node-parent node)))
+    (cond ((not dad)
+	   #f)
+	  ((let ((dad.right ($binary-node-right dad)))
+	     (and dad.right
+		  (not (eq? dad.right node))
+		  dad.right))
+	   => $binary-tree-deepest-left-leaf)
+	  (else dad))))
+
+  ;; dad = N->dad;
+  ;; if (! dad)
+  ;;   return dad;
+  ;; else if ((dad->bro) && (dad->bro != N))
+  ;;   return ucl_btree_find_deepest_son(dad->bro);
+  ;; else
+  ;;   return dad;
 
 ;;; --------------------------------------------------------------------
 
@@ -490,7 +513,7 @@
   ($binary-tree-begin-post-order-backwards root))
 
 (define ($binary-tree-begin-post-order-backwards root)
-  (void))
+  ($binary-tree-deepest-right-leaf root))
 
 ;;; --------------------------------------------------------------------
 
@@ -498,7 +521,15 @@
   ($binary-tree-step-post-order-backwards node))
 
 (define ($binary-tree-step-post-order-backwards node)
-  (void))
+  (let ((dad ($binary-node-parent node)))
+    (cond ((not dad)
+	   #f)
+	  ((let ((dad.left ($binary-node-left dad)))
+	     (and dad.left
+		  (not (eq? dad.left node))
+		  dad.left))
+	   => $binary-tree-deepest-right-leaf)
+	  (else dad))))
 
 
 ;;;; plain binary trees: level-order iterations

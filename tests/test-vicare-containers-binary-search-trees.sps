@@ -439,6 +439,136 @@
 	       => 5))
     '(0 1 2 3 4 5 6 7 8 9 10))
 
+;;; --------------------------------------------------------------------
+;;; deepest left
+
+  (let-syntax
+      ((check-it (syntax-rules ()
+		   ((_ ?key ?expected)
+		    ;; 5------8--9--10
+		    ;; |      |
+		    ;; 3--4   6--7
+		    ;; |
+		    ;; 1--2
+		    ;; |
+		    ;; 0
+		    ;;
+		    (check
+			(let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+			       (node (binary-tree-find root (make-comparison-proc ?key))))
+			  (<fixnum-node>-sort-key (binary-tree-deepest-left-leaf node)))
+		      => ?expected))
+		   )))
+
+    (check-it 0		0)
+    (check-it 1		0)
+    (check-it 2		2)
+    (check-it 3		0)
+    (check-it 4		4)
+    (check-it 5		0)
+    (check-it 6		7)
+    (check-it 7		7)
+    (check-it 8		7)
+    (check-it 9		10)
+    (check-it 10	10)
+
+    #| end of LET-SYNTAX |# )
+
+  (let-syntax
+      ((check-it (syntax-rules ()
+		   ((_ ?key ?expected)
+		    ;; 5-------10----12
+		    ;; |        |     |
+		    ;; 1--3--4  7--9 11
+		    ;;    |     |  |
+		    ;;    2     6  8
+		    (check
+			(let* ((root (make-tree))
+			       (node (binary-tree-find root (make-comparison-proc ?key))))
+			  (<fixnum-node>-sort-key (binary-tree-deepest-left-leaf node)))
+		      => ?expected))
+		   )))
+
+    (check-it 1		2)
+    (check-it 2		2)
+    (check-it 3		2)
+    (check-it 4		4)
+    (check-it 5		2)
+    (check-it 6		6)
+    (check-it 7		6)
+    (check-it 8		8)
+    (check-it 9		8)
+    (check-it 10	6)
+    (check-it 11	11)
+    (check-it 12	11)
+
+    #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; deepest right
+
+  (let-syntax
+      ((check-it (syntax-rules ()
+		   ((_ ?key ?expected)
+		    ;; 5------8--9--10
+		    ;; |      |
+		    ;; 3--4   6--7
+		    ;; |
+		    ;; 1--2
+		    ;; |
+		    ;; 0
+		    ;;
+		    (check
+			(let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
+			       (node (binary-tree-find root (make-comparison-proc ?key))))
+			  (<fixnum-node>-sort-key (binary-tree-deepest-right-leaf node)))
+		      => ?expected))
+		   )))
+
+    (check-it 0		0)
+    (check-it 1		2)
+    (check-it 2		2)
+    (check-it 3		4)
+    (check-it 4		4)
+    (check-it 5		10)
+    (check-it 6		7)
+    (check-it 7		7)
+    (check-it 8		10)
+    (check-it 9		10)
+    (check-it 10	10)
+
+    #| end of LET-SYNTAX |# )
+
+  (let-syntax
+      ((check-it (syntax-rules ()
+		   ((_ ?key ?expected)
+		    ;; 5-------10----12
+		    ;; |        |     |
+		    ;; 1--3--4  7--9 11
+		    ;;    |     |  |
+		    ;;    2     6  8
+		    (check
+			(let* ((root (make-tree))
+			       (node (binary-tree-find root (make-comparison-proc ?key))))
+			  (<fixnum-node>-sort-key (binary-tree-deepest-right-leaf node)))
+		      => ?expected))
+		   )))
+
+    (check-it 1		4)
+    (check-it 2		2)
+    (check-it 3		4)
+    (check-it 4		4)
+    (check-it 5		11)
+    (check-it 6		6)
+    (check-it 7		8)
+    (check-it 8		8)
+    (check-it 9		8)
+    (check-it 10	11)
+    (check-it 11	11)
+    (check-it 12	11)
+
+    #| end of LET-SYNTAX |# )
+
   #t)
 
 
@@ -929,6 +1059,97 @@
   ;;    |     |  |
   ;;    2     6  8
   (doit-backwards (make-tree)		(5 10 12 11 7 9 8 6 1 3 4 2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'iteration-post-order))
+
+;;; check the tree used for iterator tests
+
+  (define-syntax doit-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-post-order-forwards
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-post-order-backwards
+		(lambda (node knil)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-forwards #f			())  ;empty tree
+  (doit-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-forwards (tree 0 1 2)		(2 1 0))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-forwards (tree 2 1 0)		(0 1 2))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-forwards (tree 1 0 2)		(0 2 1))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-forwards (make-tree)		(2 4 3 1 6 8 9 7 11 12 10 5))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-backwards #f			())  ;empty tree
+  (doit-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-backwards (tree 0 1 2)		(2 1 0))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-backwards (tree 2 1 0)		(0 1 2))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-backwards (tree 1 0 2)		(2 0 1))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-backwards (make-tree)		(11 12 8 9 6 7 10 4 2 3 1 5))
 
   #t)
 
