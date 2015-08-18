@@ -1,6 +1,6 @@
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: binary tree skeleton
+;;;Contents: binary search trees
 ;;;Date: Fri Aug 14, 2015
 ;;;
 ;;;Abstract
@@ -24,7 +24,7 @@
 
 
 #!vicare
-(library (vicare containers binary-trees (1 0 0))
+(library (vicare containers binary-search-trees (1 0 0))
   (options visit-upon-loading)
   (export
 
@@ -113,9 +113,6 @@
    (lambda (make-record)
      (case-define* make-<binary-node>
        (()
-	(make-record #f #f #f))
-
-       ((key)
 	(make-record #f #f #f))
 
        (({left false-or-binary-node?} {right false-or-binary-node?})
@@ -251,7 +248,8 @@
 		  ($binary-node-left-set! dad new-child)
 		($binary-node-right-set! dad new-child))
 	      (when new-child
-		($<binary-node>-parent-set! new-child dad))))
+		($<binary-node>-parent-set! new-child dad))
+	      ($<binary-node>-parent-set! old-child #f)))
 	(else
 	 ;;OLD-CHILD has no parent.
 	 (when new-child
@@ -604,9 +602,6 @@
    (lambda (make-binary-node)
      (case-define* make-<unbalanced-binary-node>
        (()
-	((make-binary-node #f #f)))
-
-       ((key)
 	((make-binary-node #f #f)))
 
        (({left false-or-unbalanced-binary-node?} {right false-or-unbalanced-binary-node?})

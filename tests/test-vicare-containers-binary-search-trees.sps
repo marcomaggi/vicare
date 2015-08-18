@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for binary tree skeleton
+;;;Contents: tests for binary search trees
 ;;;Date: Fri Aug 14, 2015
 ;;;
 ;;;Abstract
@@ -26,11 +26,11 @@
 
 #!vicare
 (import (vicare)
-  (vicare containers binary-trees)
+  (vicare containers binary-search-trees)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare libraries: binary tree skeleton\n")
+(check-display "*** testing Vicare libraries: binary search trees\n")
 
 
 ;;;; fixnum binary search trees

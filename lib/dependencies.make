@@ -1463,19 +1463,19 @@ endif
 EXTRA_DIST += lib/vicare/containers/dynamic-arrays/sort.vicare.sls
 CLEANFILES += lib/vicare/containers/dynamic-arrays/sort.fasl
 
-lib/vicare/containers/binary-trees.fasl: \
-		lib/vicare/containers/binary-trees.vicare.sls \
+lib/vicare/containers/binary-search-trees.fasl: \
+		lib/vicare/containers/binary-search-trees.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-lib_vicare_containers_binary_trees_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_binary_trees_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_binary_trees_fasl_DATA = lib/vicare/containers/binary-trees.fasl
+lib_vicare_containers_binary_search_trees_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_binary_search_trees_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_binary_search_trees_fasl_DATA = lib/vicare/containers/binary-search-trees.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_binary_trees_vicare_sls_DATA = lib/vicare/containers/binary-trees.vicare.sls
+dist_lib_vicare_containers_binary_search_trees_vicare_sls_DATA = lib/vicare/containers/binary-search-trees.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/binary-trees.vicare.sls
-CLEANFILES += lib/vicare/containers/binary-trees.fasl
+EXTRA_DIST += lib/vicare/containers/binary-search-trees.vicare.sls
+CLEANFILES += lib/vicare/containers/binary-search-trees.fasl
 
 lib/vicare/containers/sets-and-bags.fasl: \
 		lib/vicare/containers/sets-and-bags.vicare.sls \

@@ -144,7 +144,7 @@
      (vicare containers stacks)
      (vicare containers dynamic-arrays)
      (vicare containers dynamic-arrays sort)
-     (vicare containers binary-trees)
+     (vicare containers binary-search-trees)
      (vicare containers sets-and-bags)
      (vicare containers ilists)
      (vicare containers ilists comparators)
