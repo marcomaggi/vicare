@@ -33,6 +33,86 @@
 (check-display "*** testing Vicare libraries: binary tree skeleton\n")
 
 
+;;;; fixnum binary search trees
+
+(define-record-type <fixnum-node>
+  (parent <unbalanced-binary-node>)
+
+  (fields (immutable sort-key))
+
+  (protocol
+   (lambda (make-unbalanced-binary-node)
+     (case-lambda*
+       (()
+	((make-unbalanced-binary-node #f #f) (void)))
+
+       (({key fixnum?})
+	((make-unbalanced-binary-node #f #f) key))
+
+       (({key fixnum?} {left false-or-unbalanced-binary-node?} {right false-or-unbalanced-binary-node?})
+	((make-unbalanced-binary-node left right) key)))))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define (key< new old)
+  (fx<? (<fixnum-node>-sort-key new)
+	(<fixnum-node>-sort-key old)))
+
+(define (make-comparison-proc target-key)
+  (lambda (node)
+    (let ((key (<fixnum-node>-sort-key node)))
+      (cond ((fx=? target-key key)	 0)
+	    ((fx<? target-key key)	-1)
+	    (else			+1)))))
+
+;;; --------------------------------------------------------------------
+
+(define (tree . key*)
+  (fold-left (lambda (root key)
+	       (unbalanced-tree-insert! root key< (make-<fixnum-node> key)))
+    #f key*))
+
+(define (make-tree)
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (tree 5 1 3 2 4 10 7 12 6 9 8 11))
+
+;;; --------------------------------------------------------------------
+
+(define (validate-node root node-key dad-key left-key right-key)
+  (let ((node (binary-tree-find root (make-comparison-proc node-key))))
+    (assert node)
+    (assert (= node-key (<fixnum-node>-sort-key node)))
+    (let* ((dad    (binary-node-parent node))
+	   (left   (binary-node-left   node))
+	   (right  (binary-node-right  node)))
+      ;;The parent is the expected one.
+      (if dad-key
+	  (assert (= dad-key (<fixnum-node>-sort-key dad)))
+	(assert (not dad)))
+      ;;The parent has NODE as child.
+      (when dad-key
+	(assert (binary-node-parent-and-child? dad node)))
+      ;;The left child is the expected one.
+      (if left-key
+	  (assert (= left-key (<fixnum-node>-sort-key left)))
+	(assert (not left)))
+      ;;The left child has NODE as parent.
+      (when left-key
+	(assert (binary-node-parent-and-left-child? node left)))
+      ;;The right child is the expected one.
+      (if right-key
+	  (assert (= right-key (<fixnum-node>-sort-key right)))
+	(assert (not right)))
+      ;;The right child has NODE as parent.
+      (when right-key
+	(assert (binary-node-parent-and-right-child? node right)))
+      #t)))
+
+
 ;;;; helpers
 
 (define (make-list-20)
@@ -112,16 +192,16 @@
 (parametrise ((check-test-name	'binary-nodes))
 
   (check
-      (binary-node? (make-binary-node 123 #f #f))
+      (binary-node? (make-<fixnum-node> 123 #f #f))
     => #t)
 
   (check
-      (let* ((lx (make-binary-node 0))
-	     (rx (make-binary-node 2))
-	     (rt (make-binary-node 1 lx rx)))
-	(values (binary-node-sort-key (binary-node-left  rt))
-		(binary-node-sort-key rt)
-		(binary-node-sort-key (binary-node-right rt))))
+      (let* ((lx (make-<fixnum-node> 0))
+	     (rx (make-<fixnum-node> 2))
+	     (rt (make-<fixnum-node> 1 lx rx)))
+	(values (<fixnum-node>-sort-key (binary-node-left  rt))
+		(<fixnum-node>-sort-key rt)
+		(<fixnum-node>-sort-key (binary-node-right rt))))
     => 0 1 2)
 
   #t)
@@ -129,41 +209,23 @@
 
 (parametrise ((check-test-name	'unbalanced-nodes))
 
-  (define (key< new old)
-    (< (binary-node-sort-key new)
-       (binary-node-sort-key old)))
-
-  (define (tree . key*)
-    (fold-left (lambda (root key)
-		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
-      #f key*))
-
-  (define (make-comparison-proc target-key)
-    (lambda (node)
-      (let ((key (binary-node-sort-key node)))
-	(cond ((= target-key key)	 0)
-	      ((< target-key key)	-1)
-	      (else			+1)))))
-
-;;; --------------------------------------------------------------------
-
   (check
-      (unbalanced-binary-node? (make-unbalanced-binary-node 123))
+      (unbalanced-binary-node? (make-<fixnum-node> 123))
     => #t)
 
   (check
-      (let* ((lx (make-unbalanced-binary-node 0))
-	     (rx (make-unbalanced-binary-node 2))
-	     (rt (make-unbalanced-binary-node 1 lx rx)))
-	(values (binary-node-sort-key (binary-node-left  rt))
-		(binary-node-sort-key rt)
-		(binary-node-sort-key (binary-node-right rt))))
+      (let* ((lx (make-<fixnum-node> 0))
+	     (rx (make-<fixnum-node> 2))
+	     (rt (make-<fixnum-node> 1 lx rx)))
+	(values (<fixnum-node>-sort-key (binary-node-left  rt))
+		(<fixnum-node>-sort-key rt)
+		(<fixnum-node>-sort-key (binary-node-right rt))))
     => 0 1 2)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let* ((node (make-unbalanced-binary-node 0))
+      (let* ((node (make-<fixnum-node> 0))
 	     (root (unbalanced-tree-insert! #f key< node)))
 	(eq? root node))
     => #t)
@@ -171,49 +233,49 @@
   (check
       (internal-body
 	(define (insert root fx)
-	  (unbalanced-tree-insert! root key< (make-unbalanced-binary-node fx)))
+	  (unbalanced-tree-insert! root key< (make-<fixnum-node> fx)))
 	(let* ((root #f)
 	       (root (insert root 1))
 	       (root (insert root 0))
 	       (root (insert root 2)))
-	  (values (and root (binary-node-sort-key root))
+	  (values (and root (<fixnum-node>-sort-key root))
 		  (let ((lx (binary-node-left root)))
-		    (and lx (binary-node-sort-key lx)))
+		    (and lx (<fixnum-node>-sort-key lx)))
 		  (let ((rx (binary-node-right root)))
-		    (and rx (binary-node-sort-key rx))))))
+		    (and rx (<fixnum-node>-sort-key rx))))))
     => 1 0 2)
 
   (check
       (internal-body
 	(define (insert root fx)
-	  (unbalanced-tree-insert! root key< (make-unbalanced-binary-node fx)))
+	  (unbalanced-tree-insert! root key< (make-<fixnum-node> fx)))
 	(let* ((root #f)
 	       (root (insert root 0))
 	       (root (insert root 1))
 	       (root (insert root 2)))
-	  (values (binary-node-sort-key root)
-		  (binary-node-sort-key (binary-node-right root))
-		  (binary-node-sort-key (binary-node-right (binary-node-right root))))))
+	  (values (<fixnum-node>-sort-key root)
+		  (<fixnum-node>-sort-key (binary-node-right root))
+		  (<fixnum-node>-sort-key (binary-node-right (binary-node-right root))))))
     => 0 1 2)
 
   (check
       (internal-body
 	(define (insert root fx)
-	  (unbalanced-tree-insert! root key< (make-unbalanced-binary-node fx)))
+	  (unbalanced-tree-insert! root key< (make-<fixnum-node> fx)))
 	(let* ((root #f)
 	       (root (insert root 2))
 	       (root (insert root 1))
 	       (root (insert root 0)))
-	  (values (binary-node-sort-key root)
-		  (binary-node-sort-key (binary-node-left root))
-		  (binary-node-sort-key (binary-node-left (binary-node-left root))))))
+	  (values (<fixnum-node>-sort-key root)
+		  (<fixnum-node>-sort-key (binary-node-left root))
+		  (<fixnum-node>-sort-key (binary-node-left (binary-node-left root))))))
     => 2 1 0)
 
   (check
       (let ((root (tree 1 0 2)))
-	(values (binary-node-sort-key root)
-		(binary-node-sort-key (binary-node-left  root))
-		(binary-node-sort-key (binary-node-right root))))
+	(values (<fixnum-node>-sort-key root)
+		(<fixnum-node>-sort-key (binary-node-left  root))
+		(<fixnum-node>-sort-key (binary-node-right root))))
     => 1 0 2)
 
   #t)
@@ -221,23 +283,6 @@
 
 (parametrise ((check-test-name	'unbalanced-nodes-searching))
 
-  (define (key< new old)
-    (< (binary-node-sort-key new)
-       (binary-node-sort-key old)))
-
-  (define (tree . key*)
-    (fold-left (lambda (root key)
-		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
-      #f key*))
-
-  (define (make-comparison-proc target-key)
-    (lambda (node)
-      (let ((key (binary-node-sort-key node)))
-	(cond ((= target-key key)	 0)
-	      ((< target-key key)	-1)
-	      (else			+1)))))
-
-;;; --------------------------------------------------------------------
 ;;; minimum search
 
   (check
@@ -252,12 +297,12 @@
 
   (check
       (let ((root (tree 0)))
-	(binary-node-sort-key (binary-tree-minimum root)))
+	(<fixnum-node>-sort-key (binary-tree-minimum root)))
     => 0)
 
   (check
       (let ((root (tree 1 0 2)))
-	(binary-node-sort-key (binary-tree-minimum root)))
+	(<fixnum-node>-sort-key (binary-tree-minimum root)))
     => 0)
 
   ;; 5------8--9--10
@@ -270,7 +315,7 @@
   ;;
   (check
       (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
-	(binary-node-sort-key (binary-tree-minimum root)))
+	(<fixnum-node>-sort-key (binary-tree-minimum root)))
     => 0)
 
 ;;; --------------------------------------------------------------------
@@ -288,13 +333,13 @@
 
   (check
       (let ((root (tree 0)))
-	(binary-node-sort-key (binary-tree-maximum root)))
+	(<fixnum-node>-sort-key (binary-tree-maximum root)))
     => 0)
 
 
   (check
       (let ((root (tree 1 0 2)))
-	(binary-node-sort-key (binary-tree-maximum root)))
+	(<fixnum-node>-sort-key (binary-tree-maximum root)))
     => 2)
 
   ;; 5------8--9--10
@@ -307,7 +352,7 @@
   ;;
   (check
       (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
-	(binary-node-sort-key (binary-tree-maximum root)))
+	(<fixnum-node>-sort-key (binary-tree-maximum root)))
     => 10)
 
 ;;; --------------------------------------------------------------------
@@ -346,7 +391,7 @@
       (let ((root (tree 5 3 8 1 4 6 9 0 2 7 10)))
 	(define (search target-key)
 	  (binary-tree-find root (make-comparison-proc target-key)))
-	(map binary-node-sort-key
+	(map <fixnum-node>-sort-key
 	  (fold-right
 	      (lambda (target-key knil)
 		(cons (search target-key) knil))
@@ -363,19 +408,19 @@
 
   (check
       (let ((root (tree 0)))
-	(binary-node-sort-key (binary-tree-root root)))
+	(<fixnum-node>-sort-key (binary-tree-root root)))
     => 0)
 
   (check
       (let* ((root (tree 1 0 2))
 	     (node (binary-tree-find root (make-comparison-proc 0))))
-	(binary-node-sort-key (binary-tree-root node)))
+	(<fixnum-node>-sort-key (binary-tree-root node)))
     => 1)
 
   (check
       (let* ((root (tree 1 0 2))
 	     (node (binary-tree-find root (make-comparison-proc 2))))
-	(binary-node-sort-key (binary-tree-root node)))
+	(<fixnum-node>-sort-key (binary-tree-root node)))
     => 1)
 
   ;; 5------8--9--10
@@ -390,7 +435,7 @@
 	     (check
 		 (let* ((root (tree 5 3 8 1 4 6 9 0 2 7 10))
 			(node (binary-tree-find root (make-comparison-proc target))))
-		   (binary-node-sort-key (binary-tree-root node)))
+		   (<fixnum-node>-sort-key (binary-tree-root node)))
 	       => 5))
     '(0 1 2 3 4 5 6 7 8 9 10))
 
@@ -398,54 +443,6 @@
 
 
 (parametrise ((check-test-name	'unbalanced-nodes-validation))
-
-  (define (key< new old)
-    (< (binary-node-sort-key new)
-       (binary-node-sort-key old)))
-
-  (define (tree . key*)
-    (fold-left (lambda (root key)
-		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
-      #f key*))
-
-  (define (make-comparison-proc target-key)
-    (lambda (node)
-      (let ((key (binary-node-sort-key node)))
-	(cond ((= target-key key)	 0)
-	      ((< target-key key)	-1)
-	      (else			+1)))))
-
-  (define (validate-node root node-key dad-key left-key right-key)
-    (let ((node (binary-tree-find root (make-comparison-proc node-key))))
-      (assert node)
-      (assert (= node-key (binary-node-sort-key node)))
-      (let* ((dad    (binary-node-parent node))
-	     (left   (binary-node-left   node))
-	     (right  (binary-node-right  node)))
-	;;The parent is the expected one.
-	(if dad-key
-	    (assert (= dad-key (binary-node-sort-key dad)))
-	  (assert (not dad)))
-	;;The parent has NODE as child.
-	(when dad-key
-	  (assert (binary-node-parent-and-child? dad node)))
-	;;The left child is the expected one.
-	(if left-key
-	    (assert (= left-key (binary-node-sort-key left)))
-	  (assert (not left)))
-	;;The left child has NODE as parent.
-	(when left-key
-	  (assert (binary-node-parent-and-left-child? node left)))
-	;;The right child is the expected one.
-	(if right-key
-	    (assert (= right-key (binary-node-sort-key right)))
-	  (assert (not right)))
-	;;The right child has NODE as parent.
-	(when right-key
-	  (assert (binary-node-parent-and-right-child? node right)))
-	)))
-
-;;; --------------------------------------------------------------------
 
   (check-for-true
    (let ((root #f))
@@ -480,11 +477,11 @@
   ;; 2  99
   ;;
   (check-for-false
-   (let ((root (make-binary-node 3
-				 (make-binary-node 5
-						   (make-binary-node 99)
-						   (make-binary-node 6))
-				 (make-binary-node 2))))
+   (let ((root (make-<fixnum-node> 3
+				   (make-<fixnum-node> 5
+						       (make-<fixnum-node> 99)
+						       (make-<fixnum-node> 6))
+				   (make-<fixnum-node> 2))))
      (binary-tree-valid? root key<)))
 
   ;; 3-----4
@@ -494,11 +491,11 @@
   ;; 1
   ;;
   (check-for-false
-   (let ((root (make-binary-node 3
-				 (make-binary-node 4)
-				 (make-binary-node 2
-						   (make-binary-node 1)
-						   (make-binary-node 0)))))
+   (let ((root (make-<fixnum-node> 3
+				   (make-<fixnum-node> 4)
+				   (make-<fixnum-node> 2
+						       (make-<fixnum-node> 1)
+						       (make-<fixnum-node> 0)))))
      (binary-tree-valid? root key<)))
 
   ;; 5------8--9--10
@@ -529,62 +526,6 @@
 
 (parametrise ((check-test-name	'unbalanced-nodes-removal))
 
-  (define (key< new old)
-    (< (binary-node-sort-key new)
-       (binary-node-sort-key old)))
-
-  (define (tree . key*)
-    (fold-left (lambda (root key)
-		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
-      #f key*))
-
-  (define (make-comparison-proc target-key)
-    (lambda (node)
-      (let ((key (binary-node-sort-key node)))
-	(cond ((= target-key key)	 0)
-	      ((< target-key key)	-1)
-	      (else			+1)))))
-
-  (define (validate-node root node-key dad-key left-key right-key)
-    ;; (debug-print __who__
-    ;; 		 'root-key (binary-node-sort-key root)
-    ;; 		 'node-key node-key
-    ;; 		 'dad-key dad-key
-    ;; 		 'left-key left-key
-    ;; 		 'right-key right-key)
-    (let ((node (binary-tree-find root (make-comparison-proc node-key))))
-      ;; (debug-print __who__
-      ;; 		   (binary-node-sort-key root)
-      ;; 		   node-key
-      ;; 		   (and node (binary-node-sort-key node)))
-      (assert node)
-      (assert (= node-key (binary-node-sort-key node)))
-      (let* ((dad    (binary-node-parent node))
-	     (left   (binary-node-left   node))
-	     (right  (binary-node-right  node)))
-	;;The parent is the expected one.
-	(if dad-key
-	    (assert (= dad-key (binary-node-sort-key dad)))
-	  (assert (not dad)))
-	;;The parent has NODE as child.
-	(when dad-key
-	  (assert (binary-node-parent-and-child? dad node)))
-	;;The left child is the expected one.
-	(if left-key
-	    (assert (= left-key (binary-node-sort-key left)))
-	  (assert (not left)))
-	;;The left child has NODE as parent.
-	(when left-key
-	  (assert (binary-node-parent-and-left-child? node left)))
-	;;The right child is the expected one.
-	(if right-key
-	    (assert (= right-key (binary-node-sort-key right)))
-	  (assert (not right)))
-	;;The right child has NODE as parent.
-	(when right-key
-	  (assert (binary-node-parent-and-right-child? node right)))
-	)))
-
   (define (%fold-it root)
     ;;Fold the tree with a in-order iteration, forwards and backwards.
     ;;
@@ -593,11 +534,11 @@
     (values (reverse
 	     (binary-tree-fold-in-order-forwards
 		 (lambda (knil node)
-		   (cons (binary-node-sort-key node) knil))
+		   (cons (<fixnum-node>-sort-key node) knil))
 	       '() root))
 	    (binary-tree-fold-in-order-backwards
 		(lambda (node knil)
-		  (cons (binary-node-sort-key node) knil))
+		  (cons (<fixnum-node>-sort-key node) knil))
 	      '() root)))
 
 ;;; --------------------------------------------------------------------
@@ -734,45 +675,21 @@
 
 ;;; check the tree used for iterator tests
 
-  (define (key< new old)
-    (< (binary-node-sort-key new)
-       (binary-node-sort-key old)))
-
-  (define (tree . key*)
-    (fold-left (lambda (root key)
-		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
-      #f key*))
-
-  (define (make-comparison-proc target-key)
-    (lambda (node)
-      (let ((key (binary-node-sort-key node)))
-	(cond ((= target-key key)	 0)
-	      ((< target-key key)	-1)
-	      (else			+1)))))
-
-  (define (make-tree)
-    ;; 5-------10----12
-    ;; |        |     |
-    ;; 1--3--4  7--9 11
-    ;;    |     |  |
-    ;;    2     6  8
-    (tree 5 1 3 2 4 10 7 12 6 9 8 11))
-
 ;;; --------------------------------------------------------------------
 ;;; check tree
 
   (check	;node 1
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 1))))
-	(values (= 5  (binary-node-sort-key (binary-node-parent node)))
+	(values (= 5  (<fixnum-node>-sort-key (binary-node-parent node)))
 		(not  (binary-node-left  node))
-		(= 3  (binary-node-sort-key (binary-node-right node)))))
+		(= 3  (<fixnum-node>-sort-key (binary-node-right node)))))
     => #t #t #t)
 
   (check	;node 2
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 2))))
-	(values (= 3  (binary-node-sort-key (binary-node-parent node)))
+	(values (= 3  (<fixnum-node>-sort-key (binary-node-parent node)))
 		(not  (binary-node-left  node))
 		(not  (binary-node-right node))))
     => #t #t #t)
@@ -780,9 +697,9 @@
   (check	;node 3
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 3))))
-	(values (= 1  (binary-node-sort-key (binary-node-parent node)))
-		(= 2  (binary-node-sort-key (binary-node-left   node)))
-		(= 4  (binary-node-sort-key (binary-node-right  node)))))
+	(values (= 1  (<fixnum-node>-sort-key (binary-node-parent node)))
+		(= 2  (<fixnum-node>-sort-key (binary-node-left   node)))
+		(= 4  (<fixnum-node>-sort-key (binary-node-right  node)))))
     => #t #t #t)
 
   ;; 5-------10----12
@@ -793,7 +710,7 @@
   (check	;node 4
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 4))))
-	(values (= 3  (binary-node-sort-key (binary-node-parent node)))
+	(values (= 3  (<fixnum-node>-sort-key (binary-node-parent node)))
 		(not  (binary-node-left  node))
 		(not  (binary-node-right node))))
     => #t #t #t)
@@ -802,14 +719,14 @@
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 5))))
 	(values (not  (binary-node-parent node))
-		(= 1  (binary-node-sort-key (binary-node-left  node)))
-		(= 10 (binary-node-sort-key (binary-node-right node)))))
+		(= 1  (<fixnum-node>-sort-key (binary-node-left  node)))
+		(= 10 (<fixnum-node>-sort-key (binary-node-right node)))))
     => #t #t #t)
 
   (check	;node 6
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 6))))
-	(values (= 7  (binary-node-sort-key (binary-node-parent node)))
+	(values (= 7  (<fixnum-node>-sort-key (binary-node-parent node)))
 		(not  (binary-node-left  node))
 		(not  (binary-node-right node))))
     => #t #t #t)
@@ -817,9 +734,9 @@
   (check	;node 7
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 7))))
-	(values (= 10 (binary-node-sort-key (binary-node-parent node)))
-		(= 6  (binary-node-sort-key (binary-node-left   node)))
-		(= 9  (binary-node-sort-key (binary-node-right  node)))))
+	(values (= 10 (<fixnum-node>-sort-key (binary-node-parent node)))
+		(= 6  (<fixnum-node>-sort-key (binary-node-left   node)))
+		(= 9  (<fixnum-node>-sort-key (binary-node-right  node)))))
     => #t #t #t)
 
   ;; 5-------10----12
@@ -830,7 +747,7 @@
   (check	;node 8
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 8))))
-	(values (= 9  (binary-node-sort-key (binary-node-parent node)))
+	(values (= 9  (<fixnum-node>-sort-key (binary-node-parent node)))
 		(not  (binary-node-left  node))
 		(not  (binary-node-right node))))
     => #t #t #t)
@@ -838,23 +755,23 @@
   (check	;node 9
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 9))))
-	(values (= 7  (binary-node-sort-key (binary-node-parent node)))
-		(= 8  (binary-node-sort-key (binary-node-left   node)))
+	(values (= 7  (<fixnum-node>-sort-key (binary-node-parent node)))
+		(= 8  (<fixnum-node>-sort-key (binary-node-left   node)))
 		(not (binary-node-right  node))))
     => #t #t #t)
 
   (check	;node 10
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 10))))
-	(values (= 5  (binary-node-sort-key (binary-node-parent node)))
-		(= 7  (binary-node-sort-key (binary-node-left   node)))
-		(= 12 (binary-node-sort-key (binary-node-right  node)))))
+	(values (= 5  (<fixnum-node>-sort-key (binary-node-parent node)))
+		(= 7  (<fixnum-node>-sort-key (binary-node-left   node)))
+		(= 12 (<fixnum-node>-sort-key (binary-node-right  node)))))
     => #t #t #t)
 
   (check	;node 11
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 11))))
-	(values (= 12 (binary-node-sort-key (binary-node-parent node)))
+	(values (= 12 (<fixnum-node>-sort-key (binary-node-parent node)))
 		(not  (binary-node-left  node))
 		(not  (binary-node-right node))))
     => #t #t #t)
@@ -862,8 +779,8 @@
   (check	;node 12
       (let* ((root (make-tree))
 	     (node (binary-tree-find root (make-comparison-proc 12))))
-	(values (= 10 (binary-node-sort-key (binary-node-parent node)))
-		(= 11 (binary-node-sort-key (binary-node-left   node)))
+	(values (= 10 (<fixnum-node>-sort-key (binary-node-parent node)))
+		(= 11 (<fixnum-node>-sort-key (binary-node-left   node)))
 		(not (binary-node-right  node))))
     => #t #t #t)
 
@@ -874,23 +791,6 @@
 
 ;;; check the tree used for iterator tests
 
-  (define (key< new old)
-    (< (binary-node-sort-key new)
-       (binary-node-sort-key old)))
-
-  (define (tree . key*)
-    (fold-left (lambda (root key)
-		 (unbalanced-tree-insert! root key< (make-unbalanced-binary-node key)))
-      #f key*))
-
-  (define (make-tree)
-    ;; 5-------10----12
-    ;; |        |     |
-    ;; 1--3--4  7--9 11
-    ;;    |     |  |
-    ;;    2     6  8
-    (tree 5 1 3 2 4 10 7 12 6 9 8 11))
-
   (define-syntax doit-forwards
     (syntax-rules ()
       ((_ ?tree ?expected)
@@ -900,7 +800,7 @@
 	   (reverse
 	    (binary-tree-fold-in-order-forwards
 		(lambda (knil node)
-		  (cons (binary-node-sort-key node) knil))
+		  (cons (<fixnum-node>-sort-key node) knil))
 	      '() ?tree))
 	 => (quote ?expected)))
       ))
@@ -914,7 +814,7 @@
 	   (reverse
 	    (binary-tree-fold-in-order-backwards
 		(lambda (node knil)
-		  (cons (binary-node-sort-key node) knil))
+		  (cons (<fixnum-node>-sort-key node) knil))
 	      '() ?tree))
 	 => (quote ?expected)))
       ))

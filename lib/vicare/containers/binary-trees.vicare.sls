@@ -25,18 +25,17 @@
 
 #!vicare
 (library (vicare containers binary-trees (1 0 0))
+  (options visit-upon-loading)
   (export
 
     ;; plain binary nodes
     <binary-node>				make-binary-node
     binary-node?				false-or-binary-node?
 
-    binary-node-sort-key			$binary-node-sort-key
     binary-node-parent				$binary-node-parent
     binary-node-left				$binary-node-left
     binary-node-right				$binary-node-right
 
-    binary-node-sort-key-set!			$binary-node-sort-key-set!
     binary-node-left-set!			$binary-node-left-set!
     binary-node-right-set!			$binary-node-right-set!
 
@@ -102,9 +101,7 @@
 (define-record-type (<binary-node> make-binary-node binary-node?)
   (nongenerative vicare:containers:<binary-node>)
 
-  (fields (mutable sort-key)
-		;An arbitrary object used as sort key.
-	  (mutable parent)
+  (fields (mutable parent)
 		;False or an instance of "<binary-node>" being the parent node.
 	  (mutable left)
 		;False or an instance of "<binary-node>" being the left subtree.
@@ -116,14 +113,14 @@
    (lambda (make-record)
      (case-define* make-<binary-node>
        (()
-	(make-record (void) #f #f #f))
+	(make-record #f #f #f))
 
        ((key)
-	(make-record key #f #f #f))
+	(make-record #f #f #f))
 
-       ((key {left false-or-binary-node?} {right false-or-binary-node?})
+       (({left false-or-binary-node?} {right false-or-binary-node?})
 	(receive-and-return (node)
-	    (make-record key #f left right)
+	    (make-record #f left right)
 	  (when left
 	    ($<binary-node>-parent-set! left node))
 	  (when right
@@ -148,9 +145,6 @@
 (define-alias  binary-node-right		 <binary-node>-right)
 (define-alias $binary-node-right		$<binary-node>-right)
 
-(define-alias  binary-node-sort-key		 <binary-node>-sort-key)
-(define-alias $binary-node-sort-key		$<binary-node>-sort-key)
-
 ;;; --------------------------------------------------------------------
 
 (define* (binary-node-left-set! {node binary-node?} {left false-or-binary-node?})
@@ -170,11 +164,6 @@
   ($<binary-node>-right-set! node right)
   (when right
     ($<binary-node>-parent-set! right node)))
-
-;;; --------------------------------------------------------------------
-
-(define-alias  binary-node-sort-key-set!	 <binary-node>-sort-key-set!)
-(define-alias $binary-node-sort-key-set!	$<binary-node>-sort-key-set!)
 
 
 ;;;; plain binary nodes: structure predicates
@@ -615,13 +604,13 @@
    (lambda (make-binary-node)
      (case-define* make-<unbalanced-binary-node>
        (()
-	((make-binary-node (void) #f #f)))
+	((make-binary-node #f #f)))
 
        ((key)
-	((make-binary-node key #f #f)))
+	((make-binary-node #f #f)))
 
-       ((key {left false-or-unbalanced-binary-node?} {right false-or-unbalanced-binary-node?})
-	((make-binary-node key left right))))
+       (({left false-or-unbalanced-binary-node?} {right false-or-unbalanced-binary-node?})
+	((make-binary-node left right))))
 
      make-<unbalanced-binary-node>))
 

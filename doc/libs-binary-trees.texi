@@ -10,9 +10,164 @@ The library @library{vicare containers binary-trees} implements the
 skeleton functions needed by binary search trees.
 
 @menu
+* bst intro::                   Introduction to binary search trees.
 * bst bnodes::                  Binary node objects.
 * bst unodes::                  Unbalanced binary node objects.
 @end menu
+
+@c page
+@node bst intro
+@section Introduction to binary search trees
+
+
+The @dfn{binary search trees} are tree structures in which every node
+has at most two children.  Every node is associated to a ``sort key'': a
+value that can be used to establish an ordering among the nodes.  The
+node insertion and node removal operations are implemented in such a way
+that:
+
+@itemize
+@item
+The left child of a node has key less than the one the node.
+
+@item
+The right child of a node has key greater than, or equal to, the one of
+the node.
+@end itemize
+
+Here is an example of binary search tree, with nodes in the correct
+order:
+
+@example
+5-------10----12
+|        |     |
+1--3--4  7--9 11
+   |     |  |
+   2     6  8
+@end example
+
+@noindent
+the root node has sort key @samp{5}; the left child of the root has sort
+key @samp{1}; the right child of the root has sort key @samp{10}.  Let's
+take @samp{10} as example: every node in its left subtree has key less
+than @samp{10}; every node in its right subtree has key greater than, or
+equal to, @samp{10}.  This is a general property of binary search trees.
+
+The library @library{vicare containers binary-trees} is the core library
+for binary search tree implementation; it implements trees in such a way
+that:
+
+@itemize
+@item
+The empty tree is represented by @false{}.
+
+@item
+A node is represented by an instance of type @objtype{<binary-node>} or
+a subtype of this type.
+
+@item
+The type @objtype{<binary-node>} has @math{3} fields: @code{parent},
+@code{left}, @code{right}.  The value of these fields can be @false{} or
+an instance of @objtype{<binary-node>}.
+
+@item
+If the @code{parent} field of a node is set to @false{}: it means that
+node is the root of a tree.
+@end itemize
+
+All the functions acting on instances of @objtype{<binary-node>} are
+meant to be usable on trees implementing any node balancing strategy;
+they only expect the binary tree to be a binary search tree as defined
+above.  The core library only implements unbalanced binary search trees,
+in which nodes have the type @objtype{<unbalanced-binary-node>}.  The
+type hierarchy is:
+
+@lisp
+(define-record-type <binary-node>
+  ---)
+
+(define-record-type <unbalanced-binary-node>
+  (parent <binary-node>)
+  ---)
+@end lisp
+
+By themselves, these types have no sort key; to associate a sort key
+with a node instance we need to subtype them.  The following is an
+example of binary search tree of fixnums:
+
+@lisp
+(import (vicare)
+  (vicare containers binary-search-trees))
+
+(define-record-type <fixnum-node>
+  (parent <unbalanced-binary-node>)
+
+  (fields (immutable sort-key))
+
+  (protocol
+   (lambda (make-unbalanced-binary-node)
+     (case-lambda*
+       (()
+        ((make-unbalanced-binary-node #f #f) (void)))
+
+       ((key)
+        ((make-unbalanced-binary-node #f #f) key))
+
+       ((@{key   fixnum?@}
+         @{left  false-or-unbalanced-binary-node?@}
+         @{right false-or-unbalanced-binary-node?@})
+        ((make-unbalanced-binary-node left right) key)))))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define (key< new old)
+  (fx<? (<fixnum-node>-sort-key new)
+        (<fixnum-node>-sort-key old)))
+
+(define (make-comparison-proc target-key)
+  (lambda (node)
+    (let ((key (<fixnum-node>-sort-key node)))
+      (cond ((fx=? target-key key)       0)
+            ((fx<? target-key key)      -1)
+            (else                       +1)))))
+@end lisp
+
+@noindent
+we can build a tree from a list and then search for a node as follows:
+
+@lisp
+(define (tree . key*)
+  (fold-left (lambda (root key)
+               (unbalanced-tree-insert! root key<
+                  (make-<fixnum-node> key)))
+    #f key*))
+
+;; 5-------10----12
+;; |        |     |
+;; 1--3--4  7--9 11
+;;    |     |  |
+;;    2     6  8
+(define root
+  (tree 5 1 3 2 4 10 7 12 6 9 8 11))
+
+(define node
+  (binary-tree-find root (make-comparison-proc 8)))
+@end lisp
+
+@noindent
+we can perform a forwards in--order iteration as follows:
+
+@lisp
+(binary-tree-fold-in-order-forwards
+    (lambda (knil node)
+      (cons (<fixnum-node>-sort-key node) knil))
+  '() root))
+@result{} (12 11 10 9 8 7 6 5 4 3 2 1)
+@end lisp
+
+@noindent
+in the result of this operation: the sort key in the first node from the
+search is the last item in the list.
 
 @c page
 @node bst bnodes
@@ -786,19 +941,9 @@ argument; otherwise it must return @false{}.
 @section Unbalanced binary node objects
 
 
-Unbalanced binary search trees are sorted in such a way that:
-
-@itemize
-@item
-The left child node has key less than the one of the root node.
-
-@item
-The right child node has key greater than, or equal to, the one of the
-root node.
-@end itemize
-
-@noindent
-no effort is made to balance the this search tree.
+The @dfn{unbalanced binary search trees} support insertion and removal
+of nodes without implementing any balancing algorithm.  The performance
+of these trees is low, but they are useful for debugging purposes.
 
 @menu
 * bst unodes objects::          Unbalanced binary node data type.
