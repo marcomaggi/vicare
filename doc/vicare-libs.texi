@@ -147,7 +147,7 @@ Trademarks used herein are the property of their respective owners.
 * getopts::                     Parsing command line arguments.
 * checks::                      Lightweight testing.
 
-Networking libraires
+Networking libraries
 
 * net channels::                Interprocess connection channels.
 
