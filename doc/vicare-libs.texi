@@ -154,6 +154,7 @@ Networking libraries
 Container libraries
 
 * comparators::                 Comparators.
+* iterators::                   Iteration thunks.
 * lists::                       List library.
 * vectors::                     Vector library.
 * strings::                     String library.
@@ -232,6 +233,7 @@ External documents
 @include libs-net-channels.texi
 
 @include libs-comparators.texi
+@include libs-iteration-thunks.texi
 @include libs-lists.texi
 @include libs-vectors.texi
 @include libs-strings.texi

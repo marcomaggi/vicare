@@ -100,6 +100,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-cbuffers.texi				\
 	doc/libs-chains.texi				\
 	doc/libs-char-sets.texi				\
+	doc/libs-checks.texi				\
 	doc/libs-comparators.texi			\
 	doc/libs-comparisons.texi			\
 	doc/libs-conditions-and-restarts.texi		\
@@ -110,10 +111,10 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-flonum-parser.texi			\
 	doc/libs-formations.texi			\
 	doc/libs-getopts.texi				\
-	doc/libs-checks.texi				\
 	doc/libs-gcc.texi				\
 	doc/libs-ilists.texi				\
 	doc/libs-irregex.texi				\
+	doc/libs-iteration-thunks.texi			\
 	doc/libs-knuth-morris-pratt.texi		\
 	doc/libs-levenshtein.texi			\
 	doc/libs-lists.texi				\
@@ -939,6 +940,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-containers-chains.sps				\
 	tests/test-vicare-containers-dynamic-arrays.sps			\
 	tests/test-vicare-containers-kmp.sps				\
+	tests/test-vicare-containers-iteration-thunks.sps		\
 	tests/test-vicare-containers-levenshtein.sps			\
 	tests/test-vicare-containers-lists-fun.sps			\
 	tests/test-vicare-containers-lists-low.sps			\

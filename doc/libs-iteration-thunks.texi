@@ -1,0 +1,105 @@
+@node iterators
+@chapter Iteration thunks
+
+
+@cindex Library @library{vicare containers iterators}
+@cindex @library{vicare containers iterators}, library
+
+
+The library @library{vicare containers iterators} implements some
+iteration methods over collections of objects.  An @dfn{iteration thunk}
+is a thunk the returns the next object from an iteration over a compound
+object; when no more objects are available, it returns the void object.
+
+@menu
+* iterators common::            Iterators for common objects.
+@end menu
+
+@c page
+@node iterators common
+@section Iterators for common objects
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iterators}.
+
+
+@defun make-spine-iterator @var{ell}
+Return an iteration thunk for the objects in the proper list @var{ell}.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iterator-fold xcons
+  '()
+  (make-spine-iterator '(0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-vector-iterator @var{vec}
+Return an iteration thunk for the objects in the vector @var{vec}.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iterator-fold xcons
+  '()
+  (make-vector-iterator '#(0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-string-iterator @var{str}
+Return an iteration thunk for the characters in the string @var{str}.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iterator-fold xcons
+  '()
+  (make-string-iterator "01234"))
+@result{} (#\4 #\3 #\2 #\1 #\0)
+@end lisp
+@end defun
+
+
+@defun make-bytevector-u8-iterator @var{bv}
+Return an iteration thunk for the octets in the bytevector @var{bv}.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iterator-fold xcons
+  '()
+  (make-bytevector-u8-iterator '#vu8(0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-bytevector-s8-iterator @var{bv}
+Return an iteration thunk for the bytes in the bytevector @var{bv}.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iterator-fold xcons
+  '()
+  (make-bytevector-s8-iterator '#vs8(0 -1 -2 -3 -4)))
+@result{} (-4 -3 -2 -1 0)
+@end lisp
+@end defun
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:
