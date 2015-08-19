@@ -241,6 +241,58 @@
   #t)
 
 
+(parametrise ((check-test-name	'depth))
+
+  (check
+      (binary-tree-depth #f)
+    => 0)
+
+  (check
+      (let ((root (tree 1)))
+	(binary-tree-depth root))
+    => 1)
+
+  (check
+      (let* ((root (tree 1 0 2))
+	     (node (binary-tree-find root (make-comparison-proc 0))))
+	(binary-tree-depth node))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (let-syntax
+      ((doit (syntax-rules ()
+	       ((_ ?key ?depth)
+		(check
+		    (let* ((root (make-tree))
+			   (node (binary-tree-find root (make-comparison-proc ?key))))
+		      (binary-tree-depth node))
+		  => ?depth))
+	       )))
+
+    (doit 1	2)
+    (doit 2	4)
+    (doit 3	3)
+    (doit 4	4)
+    (doit 5	1)
+    (doit 6	4)
+    (doit 7	3)
+    (doit 8	5)
+    (doit 9	4)
+    (doit 10	2)
+    (doit 11	4)
+    (doit 12	3)
+
+    #| end of LET-SYNTAX |# )
+
+  #t)
+
+
 (parametrise ((check-test-name	'unbalanced-nodes-insertion))
 
   (check

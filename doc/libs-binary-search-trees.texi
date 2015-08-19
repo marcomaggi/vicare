@@ -182,6 +182,7 @@ is the base type of all the node types.
 * bst bnodes objects::          Binary node data type.
 * bst bnodes access::           Accessors and mutators for binary nodes.
 * bst bnodes pred::             Structure predicates for binary nodes.
+* bst bnodes inspect::          Inspecting binary trees.
 * bst bnodes searching::        Searching in binary trees.
 * bst bnodes iterating::        Iterating over binary trees.
 * bst bnodes validating::       Validating binary trees.
@@ -345,9 +346,9 @@ applying this function to @var{old-child} having key @samp{1} and
 
 
 The following syntactic bindings are exported by the library
-@library{vicare containers binary-search-trees}.  The bindings whose name is
-prefixed with @code{$} are unsafe operations: they do @strong{not}
-validate their arguments before accessing them.
+@library{vicare containers binary-search-trees}.  The bindings whose
+name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
 
 
 @defun binary-node-parent-and-left-child? @vari{bnode} @varii{bnode}
@@ -383,6 +384,40 @@ otherwise return @false{}.
 Return @true{} if @var{bnode} is a leaf in the a tree (it has no
 children); otherwise return @false{}.
 @end defun
+
+@c page
+@node bst bnodes inspect
+@subsection Inspecting binary trees
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-search-trees}.  The bindings whose
+name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+
+@defun binary-tree-depth @var{node}
+@defunx $binary-node-depth @var{node}
+Return an exact integer representing the depth of @var{node} in the
+binary tree.  @var{node} must be @false{} to represent and empty tree or
+an instance of @objtype{<binary-node>}.
+
+@itemize
+@item
+If @var{node} is @false{}: the return value is @samp{0}.
+
+@item
+If @var{node} is the root of a tree: the return value is @samp{1}.
+
+@item
+If @var{node} is a child of the root of a tree: the return value is
+@samp{2}.
+
+@item
+And so on.
+@end itemize
+@end defun
+
 
 @c page
 @node bst bnodes searching

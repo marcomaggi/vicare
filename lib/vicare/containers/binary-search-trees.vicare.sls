@@ -46,6 +46,8 @@
     binary-node-leaf?				$binary-node-leaf?
     binary-tree-valid?				$binary-tree-valid?
 
+    binary-tree-depth				$binary-tree-depth
+
     binary-tree-root				$binary-tree-root
     binary-tree-minimum				$binary-tree-minimum
     binary-tree-maximum				$binary-tree-maximum
@@ -262,6 +264,22 @@
 (define ($binary-node-leaf? node)
   (and (not ($binary-node-left  node))
        (not ($binary-node-right node))))
+
+
+;;;; plain binary nodes: inspection
+
+(define* (binary-tree-depth {node false-or-binary-node?})
+  ($binary-tree-depth node))
+
+(define ($binary-tree-depth node)
+  (if node
+      (let loop ((i    1)
+		 (node node))
+	(cond (($binary-node-parent node)
+	       => (lambda (dad)
+		    (loop (add1 i) dad)))
+	      (else i)))
+    0))
 
 
 ;;;; plain binary nodes: structure operations
