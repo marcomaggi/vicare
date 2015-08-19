@@ -858,12 +858,13 @@
   ($slots-exists-left fun slots))
 
 (define ($slots-exists-left fun slots)
-  (returnable
-    ($slots-fold-left (lambda (knil obj)
-			 (if (fun obj)
-			     (return obj)
-			   knil))
-      #f slots)))
+  (call/cc
+      (lambda (escape)
+	($slots-fold-left (lambda (knil obj)
+			    (cond ((fun obj)
+				   => escape)
+				  (else knil)))
+	  #f slots))))
 
 ;;; --------------------------------------------------------------------
 
@@ -871,12 +872,13 @@
   ($slots-exists-right fun slots))
 
 (define ($slots-exists-right fun slots)
-  (returnable
-    ($slots-fold-right (lambda (obj knil)
-			(if (fun obj)
-			    (return obj)
-			  knil))
-      #f slots)))
+  (call/cc
+      (lambda (escape)
+	($slots-fold-right (lambda (obj knil)
+			     (cond ((fun obj)
+				    => escape)
+				   (else knil)))
+	  #f slots))))
 
 
 ;;;; filtering
