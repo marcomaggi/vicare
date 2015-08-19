@@ -42,6 +42,9 @@
     binary-node-parent-and-left-child?		$binary-node-parent-and-left-child?
     binary-node-parent-and-right-child?		$binary-node-parent-and-right-child?
     binary-node-parent-and-child?		$binary-node-parent-and-child?
+    binary-node-root?				$binary-node-root?
+    binary-node-leaf?				$binary-node-leaf?
+    binary-tree-valid?				$binary-tree-valid?
 
     binary-tree-root				$binary-tree-root
     binary-tree-minimum				$binary-tree-minimum
@@ -49,7 +52,6 @@
     binary-tree-find				$binary-tree-find
     binary-tree-deepest-left-leaf		$binary-tree-deepest-left-leaf
     binary-tree-deepest-right-leaf		$binary-tree-deepest-right-leaf
-    binary-tree-valid?				$binary-tree-valid?
 
     ;; forwards iterators
     binary-tree-begin-in-order-forwards		$binary-tree-begin-in-order-forwards
@@ -87,6 +89,16 @@
     binary-tree-fold-pre-order-backwards	$binary-tree-fold-pre-order-backwards
     binary-tree-fold-post-order-backwards	$binary-tree-fold-post-order-backwards
     binary-tree-fold-level-order-backwards	$binary-tree-fold-level-order-backwards
+
+    ;; breadth-first iteration
+    binary-tree-begin-breadth-first-forwards	$binary-tree-begin-breadth-first-forwards
+    binary-tree-step-breadth-first-forwards	$binary-tree-step-breadth-first-forwards
+
+    binary-tree-begin-breadth-first-backwards	$binary-tree-begin-breadth-first-backwards
+    binary-tree-step-breadth-first-backwards	$binary-tree-step-breadth-first-backwards
+
+    binary-tree-fold-breadth-first-forwards	$binary-tree-fold-breadth-first-forwards
+    binary-tree-fold-breadth-first-backwards	$binary-tree-fold-breadth-first-backwards
 
     ;; unbalanced binary nodes
     <unbalanced-binary-node>			make-unbalanced-binary-node
@@ -233,6 +245,23 @@
 		  #t)))))
 
   #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-node-root? {node binary-node?})
+  ($binary-node-root? node))
+
+(define ($binary-node-root? node)
+  (not ($binary-node-parent node)))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-node-leaf? {node binary-node?})
+  ($binary-node-leaf? node))
+
+(define ($binary-node-leaf? node)
+  (and (not ($binary-node-left  node))
+       (not ($binary-node-right node))))
 
 
 ;;;; plain binary nodes: structure operations
@@ -765,6 +794,130 @@
   $binary-tree-fold-level-order-backwards
   $binary-tree-begin-level-order-backwards
   $binary-tree-step-level-order-backwards)
+
+
+;;;; breadth-first search iterators
+
+(module (binary-tree-begin-breadth-first-forwards
+	 $binary-tree-begin-breadth-first-forwards
+	 binary-tree-step-breadth-first-forwards
+	 $binary-tree-step-breadth-first-forwards)
+  (import (vicare containers queues))
+
+  (define* (binary-tree-begin-breadth-first-forwards {root false-or-binary-node?})
+    ($binary-tree-begin-breadth-first-forwards root))
+
+  (define ($binary-tree-begin-breadth-first-forwards root)
+    (if root
+	(let ((Q (make-queue)))
+	  (cond (($binary-node-left  root)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (cond (($binary-node-right root)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (values Q root))
+      (values #f #f)))
+
+;;; --------------------------------------------------------------------
+
+  (define* (binary-tree-step-breadth-first-forwards {Q queue?})
+    ($binary-tree-step-breadth-first-forwards Q))
+
+  (define ($binary-tree-step-breadth-first-forwards Q)
+    (if ($queue-not-empty? Q)
+	(let ((node ($queue-pop! Q)))
+	  (cond (($binary-node-left  node)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (cond (($binary-node-right node)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (values Q node))
+      (values #f #f)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (binary-tree-begin-breadth-first-backwards
+	 $binary-tree-begin-breadth-first-backwards
+	 binary-tree-step-breadth-first-backwards
+	 $binary-tree-step-breadth-first-backwards)
+  (import (vicare containers queues))
+
+  (define* (binary-tree-begin-breadth-first-backwards {root false-or-binary-node?})
+    ($binary-tree-begin-breadth-first-backwards root))
+
+  (define ($binary-tree-begin-breadth-first-backwards root)
+    (if root
+	(let ((Q     (make-queue))
+	      (left  ($binary-node-left  root))
+	      (right ($binary-node-right root)))
+	  (cond (($binary-node-right root)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (cond (($binary-node-left  root)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (values Q root))
+      (values #f #f)))
+
+;;; --------------------------------------------------------------------
+
+  (define* (binary-tree-step-breadth-first-backwards {Q queue?})
+    ($binary-tree-step-breadth-first-backwards Q))
+
+  (define ($binary-tree-step-breadth-first-backwards Q)
+    (if ($queue-not-empty? Q)
+	(let ((node ($queue-pop! Q)))
+	  (cond (($binary-node-right node)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (cond (($binary-node-left  node)
+		 => (lambda (node)
+		      ($queue-push! Q node))))
+	  (values Q node))
+      (values #f #f)))
+
+  #| end of module |# )
+
+
+;;;; breadth-first search iterators
+
+(define* (binary-tree-fold-breadth-first-forwards {kons procedure?} knil {root false-or-binary-node?})
+  ($binary-tree-fold-breadth-first-forwards kons knil root))
+
+(define ($binary-tree-fold-breadth-first-forwards kons knil root)
+  (receive (Q node)
+      ($binary-tree-begin-breadth-first-forwards root)
+    (if node
+	(let next ((knil (kons knil node))
+		   (Q    Q))
+	  (receive (Q node)
+	      ($binary-tree-step-breadth-first-forwards Q)
+	    (if node
+		(next (kons knil node) Q)
+	      knil)))
+      knil)))
+
+;;; --------------------------------------------------------------------
+
+(define* (binary-tree-fold-breadth-first-backwards {kons procedure?} knil {root false-or-binary-node?})
+  ($binary-tree-fold-breadth-first-backwards kons knil root))
+
+(define ($binary-tree-fold-breadth-first-backwards kons knil root)
+  (receive (Q node)
+      ($binary-tree-begin-breadth-first-backwards root)
+    (if node
+	(let next ((knil (kons node knil))
+		   (Q    Q))
+	  (receive (Q node)
+	      ($binary-tree-step-breadth-first-backwards Q)
+	    (if node
+		(next (kons node knil) Q)
+	      knil)))
+      knil)))
 
 
 ;;;; unbalanced binary nodes: data type

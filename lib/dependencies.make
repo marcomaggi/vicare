@@ -1465,6 +1465,7 @@ CLEANFILES += lib/vicare/containers/dynamic-arrays/sort.fasl
 
 lib/vicare/containers/binary-search-trees.fasl: \
 		lib/vicare/containers/binary-search-trees.vicare.sls \
+		lib/vicare/containers/queues.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

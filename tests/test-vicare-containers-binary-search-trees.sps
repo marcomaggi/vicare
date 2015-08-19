@@ -207,7 +207,41 @@
   #t)
 
 
-(parametrise ((check-test-name	'unbalanced-nodes))
+(parametrise ((check-test-name	'predicates))
+
+  (check
+      (let ((root (tree 1)))
+	(binary-node-root? root))
+    => #t)
+
+  (check
+      (let* ((root (tree 1 0 2))
+	     (node (binary-tree-find root (make-comparison-proc 0))))
+	(binary-node-root? node))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((root (tree 1)))
+	(binary-node-leaf? root))
+    => #t)
+
+  (check
+      (let ((root (tree 1 0 2)))
+	(binary-node-leaf? root))
+    => #f)
+
+  (check
+      (let* ((root (tree 1 0 2))
+	     (node (binary-tree-find root (make-comparison-proc 0))))
+	(binary-node-leaf? node))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'unbalanced-nodes-insertion))
 
   (check
       (unbalanced-binary-node? (make-<fixnum-node> 123))
@@ -1289,6 +1323,141 @@
   #t)
 
 
+(parametrise ((check-test-name	'iteration-breadth-first))
+
+;;; check the tree used for iterator tests
+
+  (define-syntax doit-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-breadth-first-forwards
+	     (lambda (knil node)
+	       (cons (<fixnum-node>-sort-key node) knil))
+	     '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (binary-tree-fold-breadth-first-backwards
+	     (lambda (node knil)
+	       (cons (<fixnum-node>-sort-key node) knil))
+	     '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-forwards #f			())  ;empty tree
+  (doit-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-forwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-forwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-forwards (tree 1 0 2)		(1 0 2))
+
+  ;; 5--7
+  ;; |
+  ;; 3
+  ;; |
+  ;; 1
+  (doit-forwards (tree 5 3 7 1)		(5 3 7 1))
+
+  ;; 5--7
+  ;; |
+  ;; 3--2
+  (doit-forwards (tree 5 3 7 2)		(5 3 7 2))
+
+  ;; 5--7
+  ;; |  |
+  ;; 3  6
+  (doit-forwards (tree 5 3 7 6)		(5 3 7 6))
+
+  ;; 5--7--8
+  ;; |
+  ;; 3
+  (doit-forwards (tree 5 3 7 8)		(5 3 7 8))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-forwards (make-tree)		(5 1 10 3 7 12 2 4 6 9 11 8))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-backwards #f			())  ;empty tree
+  (doit-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-backwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-backwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-backwards (tree 1 0 2)		(1 2 0))
+
+  ;; 5--7
+  ;; |
+  ;; 3
+  ;; |
+  ;; 1
+  (doit-backwards (tree 5 3 7 1)	(5 7 3 1))
+
+  ;; 5--7
+  ;; |
+  ;; 3--2
+  (doit-backwards (tree 5 3 7 2)	(5 7 3 2))
+
+  ;; 5--7
+  ;; |  |
+  ;; 3  6
+  (doit-backwards (tree 5 3 7 6)	(5 7 3 6))
+
+  ;; 5--7--8
+  ;; |
+  ;; 3
+  (doit-backwards (tree 5 3 7 8)	(5 7 3 8))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-backwards (make-tree)		(5 10 1 12 7 3 11 9 6 4 2 8))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
@@ -1303,4 +1472,6 @@
 ;; eval: (put 'binary-tree-fold-post-order-backwards	'scheme-indent-function 1)
 ;; eval: (put 'binary-tree-fold-level-order-forwards	'scheme-indent-function 1)
 ;; eval: (put 'binary-tree-fold-level-order-backwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-breadth-first-forwards	'scheme-indent-function 1)
+;; eval: (put 'binary-tree-fold-breadth-first-backwards	'scheme-indent-function 1)
 ;; End:

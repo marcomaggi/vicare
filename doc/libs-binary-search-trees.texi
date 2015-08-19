@@ -370,6 +370,20 @@ Return @true{} if @varii{bnode} is the left or right child of
 @vari{bnode}; otherwise return @false{}.
 @end defun
 
+
+@defun binary-node-root? @var{bnode}
+@defunx $binary-node-root? @var{bnode}
+Return @true{} if @var{bnode} is the root of a tree (it has no parent);
+otherwise return @false{}.
+@end defun
+
+
+@defun binary-node-leaf? @var{bnode}
+@defunx $binary-node-leaf? @var{bnode}
+Return @true{} if @var{bnode} is a leaf in the a tree (it has no
+children); otherwise return @false{}.
+@end defun
+
 @c page
 @node bst bnodes searching
 @subsection Searching in binary trees
@@ -518,6 +532,7 @@ starting from @samp{5} the selected node is @samp{11}, starting from
 * bst bnodes iterating pre-order::      Pre-order iterations.
 * bst bnodes iterating post-order::     Post-order iterations.
 * bst bnodes iterating level-order::    Level-order iterations.
+* bst bnodes iterating breadth-first::  Breadth-first iterations.
 @end menu
 
 @c page
@@ -587,6 +602,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-in-order-forwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-in-order-forwards @var{kons} @var{knil} @var{root}
 Like @func{fold-left} for lists, visit the nodes of a binary tree with a
 in--order forwards iteration.  The argument @var{root} must be @false{}
 to represent an empty tree or an instance of @objtype{<binary-node>}
@@ -619,6 +635,7 @@ visited node.
 
 
 @defun binary-tree-fold-in-order-backwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-in-order-backwards @var{kons} @var{knil} @var{root}
 Like @func{fold-right} for lists, visit the nodes of a binary tree with
 a in--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -684,6 +701,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-pre-order-forwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-pre-order-forwards @var{kons} @var{knil} @var{root}
 Like @func{fold-left} for lists, visit the nodes of a binary tree
 with a pre--order forwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -716,6 +734,7 @@ visited node.
 
 
 @defun binary-tree-fold-pre-order-backwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-pre-order-backwards @var{kons} @var{knil} @var{root}
 Like @func{fold-right} for lists, visit the nodes of a binary tree with
 a pre--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -777,6 +796,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-post-order-forwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-post-order-forwards @var{kons} @var{knil} @var{root}
 Like @func{fold-left} for lists, visit the nodes of a binary tree
 with a post--order forwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -809,6 +829,7 @@ visited node.
 
 
 @defun binary-tree-fold-post-order-backwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-post-order-backwards @var{kons} @var{knil} @var{root}
 Like @func{fold-right} for lists, visit the nodes of a binary tree with
 a post--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -860,7 +881,8 @@ The implementation of the level--order iteration is particularly slow,
 but it has the current node as the only state.  The level--order
 iteration is usually called ``breadth--first iteration'' or
 ``breadth--first search'', that name is reserved for another
-implementation.
+implementation (@pxref{bst bnodes iterating breadth-first,
+Breadth--first iterations}).
 
 The following syntactic bindings are exported by the library
 @library{vicare containers binary-search-trees}.  The bindings whose
@@ -873,6 +895,7 @@ name is prefixed with @code{$} are unsafe operations: they do
 
 
 @defun binary-tree-fold-level-order-forwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-level-order-forwards @var{kons} @var{knil} @var{root}
 Like @func{fold-left} for lists, visit the nodes of a binary tree
 with a level--order forwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -892,7 +915,7 @@ empty: return @false{}; otherwise return an instance of
 
 @defun binary-tree-step-level-order-forwards @var{bnode}
 @defunx $binary-tree-step-level-order-forwards @var{bnode}
-Advance an level--order forwards iteration by one step starting from
+Advance a level--order forwards iteration by one step starting from
 @var{bnode}, which must be an instance of @objtype{<binary-node>}.  If
 @var{bnode} is the last in the iteration: return @false{}; otherwise
 return an instance of @objtype{<binary-node>} representing the next
@@ -905,6 +928,7 @@ visited node.
 
 
 @defun binary-tree-fold-level-order-backwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-level-order-backwards @var{kons} @var{knil} @var{root}
 Like @func{fold-right} for lists,a visit the nodes of a binary tree with
 a level--order backwards iteration.  The argument @var{root} must be
 @false{} to represent an empty tree or an instance of
@@ -924,11 +948,141 @@ empty: return @false{}; otherwise return an instance of
 
 @defun binary-tree-step-level-order-backwards @var{bnode}
 @defunx $binary-tree-step-level-order-backwards @var{bnode}
-Advance an level--order backwards iteration by one step starting from
+Advance a level--order backwards iteration by one step starting from
 @var{bnode}, which must be an instance of @objtype{<binary-node>}.  If
 @var{bnode} is the last in the iteration: return @false{}; otherwise
 return an instance of @objtype{<binary-node>} representing the next
 visited node.
+@end defun
+
+@c page
+@node bst bnodes iterating breadth-first
+@subsubsection Breadth--first iterations
+
+
+Breadth--first iteration: visit the tree level by level.  Example:
+
+@example
+5-------10----12
+|        |     |
+1--3--4  7--9 11
+   |     |  |
+   2     6  8
+@end example
+
+@noindent
+the order of the forwards iteration is: 5, 1, 10, 3, 7, 12, 2, 4, 6, 9,
+11, 8.  To do it we need a moving cursor that always ``turns right''
+keeping the count of the level.  The order of the backwards iteration
+is: 5, 10, 1, 12, 7, 3, 11, 9, 6, 4, 2, 8.
+
+The implementation of the breadth--first iteration makes use, internally
+of a queue container.  The @api{} of this iteration is
+@strong{different} from the one of the other iterations.
+
+The following syntactic bindings are exported by the library
+@library{vicare containers binary-search-trees}.  The bindings whose
+name is prefixed with @code{$} are unsafe operations: they do
+@strong{not} validate their arguments before accessing them.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Forwards iteration
+
+
+@defun binary-tree-fold-breadth-first-forwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-breadth-first-forwards @var{kons} @var{knil} @var{root}
+Like @func{fold-left} for lists, visit the nodes of a binary tree with a
+breadth--first forwards iteration.  The argument @var{root} must be
+@false{} to represent an empty tree or an instance of
+@objtype{<binary-node>} representing the root of a tree.
+@end defun
+
+
+@defun binary-tree-begin-breadth-first-forwards @var{root}
+@defunx $binary-tree-begin-breadth-first-forwards @var{root}
+Perform the first step in a breadth--first forwards iteration.  The
+argument @var{root} must be @false{} to represent an empty tree or an
+instance of @objtype{<binary-node>} representing the root of a tree.
+Return @math{2} values:
+
+@itemize
+@item
+If the tree is empty: return @false{} and @false{}.
+
+@item
+If the tree is not empty: return an object representing the state of the
+iteration and an instance of @objtype{<binary-node>} representing the
+first visited node.
+@end itemize
+@end defun
+
+
+@defun binary-tree-step-breadth-first-forwards @var{state}
+@defunx $binary-tree-step-breadth-first-forwards @var{state}
+Advance a breadth--first forwards iteration by one step; @var{state}
+must be the object representing the state of the iteration.  Return
+@math{2} values:
+
+@itemize
+@item
+If the iteration is over: return @false{} and @false{}.
+
+@item
+If the iteratio is not over: return an object representing the state of
+the iteration and an instance of @objtype{<binary-node>} representing
+the next visited node.
+@end itemize
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Backwards iteration
+
+
+@defun binary-tree-fold-breadth-first-backwards @var{kons} @var{knil} @var{root}
+@defunx $binary-tree-fold-breadth-first-backwards @var{kons} @var{knil} @var{root}
+Like @func{fold-left} for lists, visit the nodes of a binary tree with a
+breadth--first backwards iteration.  The argument @var{root} must be
+@false{} to represent an empty tree or an instance of
+@objtype{<binary-node>} representing the root of a tree.
+@end defun
+
+
+@defun binary-tree-begin-breadth-first-backwards @var{root}
+@defunx $binary-tree-begin-breadth-first-backwards @var{root}
+Perform the first step in a breadth--first backwards iteration.  The
+argument @var{root} must be @false{} to represent an empty tree or an
+instance of @objtype{<binary-node>} representing the root of a tree.
+Return @math{2} values:
+
+@itemize
+@item
+If the tree is empty: return @false{} and @false{}.
+
+@item
+If the tree is not empty: return an object representing the state of the
+iteration and an instance of @objtype{<binary-node>} representing the
+first visited node.
+@end itemize
+@end defun
+
+
+@defun binary-tree-step-breadth-first-backwards @var{state}
+@defunx $binary-tree-step-breadth-first-backwards @var{state}
+Advance a breadth--first backwards iteration by one step; @var{state}
+must be the object representing the state of the iteration.  Return
+@math{2} values:
+
+@itemize
+@item
+If the iteration is over: return @false{} and @false{}.
+
+@item
+If the iteratio is not over: return an object representing the state of
+the iteration and an instance of @objtype{<binary-node>} representing
+the next visited node.
+@end itemize
 @end defun
 
 @c page
