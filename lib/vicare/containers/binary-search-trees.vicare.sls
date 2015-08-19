@@ -538,9 +538,7 @@
   ($binary-tree-begin-level-order-forwards root))
 
 (define ($binary-tree-begin-level-order-forwards root)
-  (if root
-      ($binary-tree-minimum root #f)
-    root))
+  root)
 
 ;;; --------------------------------------------------------------------
 
@@ -548,7 +546,60 @@
   ($binary-tree-step-level-order-forwards node))
 
 (define ($binary-tree-step-level-order-forwards node)
-  (void))
+  (returnable
+    (if (and (not ($binary-node-parent node))
+	     (not ($binary-node-left   node))
+	     (not ($binary-node-right  node)))
+	#f
+      (let loop ((i    0)
+		 (org  node) ;the node from which we started this step
+		 (last #f))  ;the NODE in the previous loop iteration
+	(define-syntax node->dad	(identifier-syntax ($binary-node-parent  node)))
+	(define-syntax node->left	(identifier-syntax ($binary-node-left    node)))
+	(define-syntax node->right	(identifier-syntax ($binary-node-right   node)))
+	(if node->dad
+	    (begin
+	      (set! last node)
+	      (set! node node->dad)
+	      (++ i)
+	      (when (and node->right (not (eq? node->right last)))
+		(set! last node)
+		(set! node node->right)
+		(-- i)
+		(when (zero? i)
+		  (return node))
+		(when (and (eq? node org) (not node->left) (not node->right))
+		  (return #f))
+		(while (or node->left node->right)
+		  (cond (node->left
+			 (set! last node)
+			 (set! node node->left))
+			(node->right
+			 (set! last node)
+			 (set! node node->right)))
+		  (-- i)
+		  (when (zero? i)
+		    (return node))
+		  (when (and (eq? node org)
+			     (not node->left)
+			     (not node->right))
+		    (return #f))))
+	      (loop i org last))
+	  (begin
+	    (++ i)
+	    (while (or node->left node->right)
+	      (cond (node->left
+		     (set! last node)
+		     (set! node node->left))
+		    (node->right
+		     (set! last node)
+		     (set! node node->right)))
+	      (-- i)
+	      (when (zero? i)
+		(return node))
+	      (when (and (eq? node org) (not node->left) (not node->right))
+		(return #f)))
+	    (loop i org last)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -556,7 +607,7 @@
   ($binary-tree-begin-level-order-backwards root))
 
 (define ($binary-tree-begin-level-order-backwards root)
-  (void))
+  root)
 
 ;;; --------------------------------------------------------------------
 
@@ -564,7 +615,63 @@
   ($binary-tree-step-level-order-backwards node))
 
 (define ($binary-tree-step-level-order-backwards node)
-  (void))
+  ;;NOTE This  is a Scheme translation  of very old code  I wrote in the  C language.
+  ;;This is why the style is so unschemey.  (Marco Maggi; Wed Aug 19, 2015)
+  ;;
+  (returnable
+    (if (and (not ($binary-node-parent node))
+	     (not ($binary-node-left   node))
+	     (not ($binary-node-right  node)))
+	#f
+      (let loop ((i    0)
+		 (org  node) ;the node from which we started this step
+		 (last #f))  ;the NODE in the previous loop iteration
+	(define-syntax node->dad	(identifier-syntax ($binary-node-parent  node)))
+	(define-syntax node->left	(identifier-syntax ($binary-node-left    node)))
+	(define-syntax node->right	(identifier-syntax ($binary-node-right   node)))
+	(if node->dad
+	    (begin
+	      (set! last node)
+	      (set! node node->dad)
+	      (++ i)
+	      (when (and node->left (not (eq? node->left last)))
+		(set! last node)
+		(set! node node->left)
+		(-- i)
+		(when (zero? i)
+		  (return node))
+		(when (and (eq? node org) (not node->right) (not node->left))
+		  (return #f))
+		(while (or node->right node->left)
+		  (cond (node->right
+			 (set! last node)
+			 (set! node node->right))
+			(node->left
+			 (set! last node)
+			 (set! node node->left)))
+		  (-- i)
+		  (when (zero? i)
+		    (return node))
+		  (when (and (eq? node org)
+			     (not node->right)
+			     (not node->left))
+		    (return #f))))
+	      (loop i org last))
+	  (begin
+	    (++ i)
+	    (while (or node->right node->left)
+	      (cond (node->right
+		     (set! last node)
+		     (set! node node->right))
+		    (node->left
+		     (set! last node)
+		     (set! node node->left)))
+	      (-- i)
+	      (when (zero? i)
+		(return node))
+	      (when (and (eq? node org) (not node->left) (not node->right))
+		(return #f)))
+	    (loop i org last)))))))
 
 
 ;;;; plain binary trees: folding forwards
