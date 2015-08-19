@@ -546,6 +546,9 @@
   ($binary-tree-step-level-order-forwards node))
 
 (define ($binary-tree-step-level-order-forwards node)
+  ;;NOTE This  is a Scheme translation  of very old code  I wrote in the  C language.
+  ;;This is why the style is so unschemey.  (Marco Maggi; Wed Aug 19, 2015)
+  ;;
   (returnable
     (if (and (not ($binary-node-parent node))
 	     (not ($binary-node-left   node))
