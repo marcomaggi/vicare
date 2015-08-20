@@ -19,6 +19,7 @@ efficient insertion and removal at both ends.
 * deques searching::            Searching in deques.
 * deques filtering::            Filtering in deques.
 * deques conversion::           Converting deques to other objects.
+* deques iteration thunks::     Deque iteration thunks.
 * deques misc::                 Miscellaneous operations on deques.
 @end menu
 
@@ -502,6 +503,72 @@ pushed on the deque left--to--right from the rear side.
 (deque-front   D)       @result{} 0
 (deque-rear    D)       @result{} 2
 (deque->vector D)       @result{} #(0 1 2)
+@end lisp
+@end defun
+
+@c page
+@node deques iteration thunks
+@section Deque iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers deques}.
+
+
+@defun make-deque-front-iteration-thunk @var{deque}
+Build and return a new iteration thunk popping the objects from the
+front of @var{deque}.
+
+@lisp
+(import (vicare)
+  (vicare containers deques)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-deque-front-iteration-thunks (deque)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-deque-front-iteration-thunks (deque 0 1 2 3 4 5)))
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-deque-rear-iteration-thunk @var{deque}
+Build and return a new iteration thunk popping the objects from the
+rear of @var{deque}.
+
+@lisp
+(import (vicare)
+  (vicare containers deques)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-deque-rear-iteration-thunks (deque)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-deque-rear-iteration-thunks (deque 0 1 2 3 4 5)))
+@result{} (0 1 2 3 4 5)
 @end lisp
 @end defun
 

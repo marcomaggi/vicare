@@ -82,7 +82,10 @@
     deque-reverse!		$deque-reverse!
 
     deque->list			list->deque
-    deque->vector		vector->deque)
+    deque->vector		vector->deque
+
+    make-deque-front-iteration-thunk
+    make-deque-rear-iteration-thunk)
   (import (vicare)
     (vicare containers slots))
 
@@ -328,6 +331,21 @@
   ($deque-reverse! dst src))
 
 (define-alias $deque-reverse!		$slots-reverse!)
+
+
+;;;; iteration thunks
+
+(define* (make-deque-front-iteration-thunk {S deque?})
+  (lambda ()
+    (if ($deque-empty? S)
+	(void)
+      ($deque-pop-front! S))))
+
+(define* (make-deque-rear-iteration-thunk {S deque?})
+  (lambda ()
+    (if ($deque-empty? S)
+	(void)
+      ($deque-pop-rear! S))))
 
 
 ;;;; done

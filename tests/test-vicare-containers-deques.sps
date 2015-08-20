@@ -27,6 +27,7 @@
 #!vicare
 (import (vicare)
   (vicare containers deques)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1186,6 +1187,46 @@
 		(deque-rear  D)
 		(deque->vector D)))
     => 0 2 '#(0 1 2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'iteration-thunks))
+
+  (define (xcons a b)
+    (cons b a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-deque-front-iteration-thunk (deque)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-deque-front-iteration-thunk (deque 0 1 2 3 4 5)))
+    => '(5 4 3 2 1 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-deque-rear-iteration-thunk (deque)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-deque-rear-iteration-thunk (deque 0 1 2 3 4 5)))
+    => '(0 1 2 3 4 5))
 
   #t)
 
