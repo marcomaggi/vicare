@@ -102,6 +102,19 @@
     binary-tree-fold-breadth-first-forwards	$binary-tree-fold-breadth-first-forwards
     binary-tree-fold-breadth-first-backwards	$binary-tree-fold-breadth-first-backwards
 
+    ;; iteration thunks
+    make-binary-tree-forwards-in-order-iteration-thunk
+    make-binary-tree-forwards-pre-order-iteration-thunk
+    make-binary-tree-forwards-post-order-iteration-thunk
+    make-binary-tree-forwards-level-order-iteration-thunk
+    make-binary-tree-forwards-breadth-first-iteration-thunk
+
+    make-binary-tree-backwards-in-order-iteration-thunk
+    make-binary-tree-backwards-pre-order-iteration-thunk
+    make-binary-tree-backwards-post-order-iteration-thunk
+    make-binary-tree-backwards-level-order-iteration-thunk
+    make-binary-tree-backwards-breadth-first-iteration-thunk
+
     ;; unbalanced binary nodes
     <unbalanced-binary-node>			make-unbalanced-binary-node
     unbalanced-binary-node?			false-or-unbalanced-binary-node?
@@ -936,6 +949,109 @@
 		(next (kons node knil) Q)
 	      knil)))
       knil)))
+
+
+;;;; plain binary trees: iteration thunks
+
+(define-syntax define-iteration-thunk
+  (syntax-rules ()
+    ((_ ?who ?begin ?step)
+     (define* (?who {root false-or-binary-node?})
+       (let ((started?     #f)
+	     (current-node root))
+	 (lambda ()
+	   (cond ((not current-node)
+		  (void))
+		 (started?
+		  (cond ((?step current-node)
+			 => (lambda (next-node)
+			      (set! current-node next-node)
+			      next-node))
+			(else
+			 (set! current-node #f)
+			 (void))))
+		 ((?begin current-node)
+		  => (lambda (next-node)
+		       (set! started? #t)
+		       (set! current-node next-node)
+		       next-node))
+		 (else
+		  (set! current-node #f)
+		  (void)))))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-iteration-thunk make-binary-tree-forwards-in-order-iteration-thunk
+  $binary-tree-begin-in-order-forwards
+  $binary-tree-step-in-order-forwards)
+
+(define-iteration-thunk make-binary-tree-forwards-pre-order-iteration-thunk
+  $binary-tree-begin-pre-order-forwards
+  $binary-tree-step-pre-order-forwards)
+
+(define-iteration-thunk make-binary-tree-forwards-post-order-iteration-thunk
+  $binary-tree-begin-post-order-forwards
+  $binary-tree-step-post-order-forwards)
+
+(define-iteration-thunk make-binary-tree-forwards-level-order-iteration-thunk
+  $binary-tree-begin-level-order-forwards
+  $binary-tree-step-level-order-forwards)
+
+;;; --------------------------------------------------------------------
+
+(define-iteration-thunk make-binary-tree-backwards-in-order-iteration-thunk
+  $binary-tree-begin-in-order-backwards
+  $binary-tree-step-in-order-backwards)
+
+(define-iteration-thunk make-binary-tree-backwards-pre-order-iteration-thunk
+  $binary-tree-begin-pre-order-backwards
+  $binary-tree-step-pre-order-backwards)
+
+(define-iteration-thunk make-binary-tree-backwards-post-order-iteration-thunk
+  $binary-tree-begin-post-order-backwards
+  $binary-tree-step-post-order-backwards)
+
+(define-iteration-thunk make-binary-tree-backwards-level-order-iteration-thunk
+  $binary-tree-begin-level-order-backwards
+  $binary-tree-step-level-order-backwards)
+
+
+;;;; plain binary trees: breadth-first iteration thunks
+
+(define-syntax define-breadth-first-iteration-thunk
+  (syntax-rules ()
+    ((_ ?who ?begin ?step)
+     (define* (?who {root false-or-binary-node?})
+       (let ((queue #f))
+	 (lambda ()
+	   (cond ((not root)
+		  (void))
+		 (queue
+		  (receive (Q next-node)
+		      (?step queue)
+		    (if next-node
+			(begin
+			  (set! queue Q)
+			  next-node)
+		      (void))))
+		 (else
+		  (receive (Q first-node)
+		      (?begin root)
+		    (if first-node
+			(begin
+			  (set! queue Q)
+			  first-node)
+		      (void)))))))))
+    ))
+
+(define-breadth-first-iteration-thunk make-binary-tree-forwards-breadth-first-iteration-thunk
+  $binary-tree-begin-breadth-first-forwards
+  $binary-tree-step-breadth-first-forwards)
+
+(define-breadth-first-iteration-thunk make-binary-tree-backwards-breadth-first-iteration-thunk
+  $binary-tree-begin-breadth-first-backwards
+  $binary-tree-step-breadth-first-backwards)
 
 
 ;;;; unbalanced binary nodes: data type

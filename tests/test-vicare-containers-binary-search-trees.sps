@@ -27,6 +27,7 @@
 #!vicare
 (import (vicare)
   (vicare containers binary-search-trees)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1035,6 +1036,34 @@
 	 => (quote ?expected)))
       ))
 
+  (define-syntax doit-thunk-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-forwards-in-order-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-backwards-in-order-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
 ;;; --------------------------------------------------------------------
 ;;; forwards iteration
 
@@ -1054,6 +1083,26 @@
   (doit-backwards (tree 2 1 0)		(2 1 0))
   (doit-backwards (tree 1 0 2)		(2 1 0))
   (doit-backwards (make-tree)		(12 11 10 9 8 7 6 5 4 3 2 1))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration thunk
+
+  (doit-thunk-forwards #f		())	;empty tree
+  (doit-thunk-forwards (tree 1)		(1))	;one node tree
+  (doit-thunk-forwards (tree 0 1 2)	(0 1 2))
+  (doit-thunk-forwards (tree 2 1 0)	(0 1 2))
+  (doit-thunk-forwards (tree 1 0 2)	(0 1 2))
+  (doit-thunk-forwards (make-tree)	(1 2 3 4 5 6 7 8 9 10 11 12))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration thunk
+
+  (doit-thunk-backwards #f		())	;empty tree
+  (doit-thunk-backwards (tree 1)	(1))	;one node tree
+  (doit-thunk-backwards (tree 0 1 2)	(2 1 0))
+  (doit-thunk-backwards (tree 2 1 0)	(2 1 0))
+  (doit-thunk-backwards (tree 1 0 2)	(2 1 0))
+  (doit-thunk-backwards (make-tree)	(12 11 10 9 8 7 6 5 4 3 2 1))
 
   #t)
 
@@ -1087,6 +1136,34 @@
 		(lambda (node knil)
 		  (cons (<fixnum-node>-sort-key node) knil))
 	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-forwards-pre-order-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-backwards-pre-order-iteration-thunk ?tree)))
 	 => (quote ?expected)))
       ))
 
@@ -1146,6 +1223,62 @@
   ;;    2     6  8
   (doit-backwards (make-tree)		(5 10 12 11 7 9 8 6 1 3 4 2))
 
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-thunk-forwards #f			())  ;empty tree
+  (doit-thunk-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-forwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 1 0 2)		(1 0 2))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-forwards (make-tree)		(5 1 3 2 4 10 7 6 9 8 12 11))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-thunk-backwards #f			())  ;empty tree
+  (doit-thunk-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-backwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 1 0 2)		(1 2 0))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-backwards (make-tree)		(5 10 12 11 7 9 8 6 1 3 4 2))
+
   #t)
 
 
@@ -1178,6 +1311,34 @@
 		(lambda (node knil)
 		  (cons (<fixnum-node>-sort-key node) knil))
 	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-forwards-post-order-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-backwards-post-order-iteration-thunk ?tree)))
 	 => (quote ?expected)))
       ))
 
@@ -1237,6 +1398,62 @@
   ;;    2     6  8
   (doit-backwards (make-tree)		(11 12 8 9 6 7 10 4 2 3 1 5))
 
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-thunk-forwards #f			())  ;empty tree
+  (doit-thunk-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-forwards (tree 0 1 2)		(2 1 0))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 2 1 0)		(0 1 2))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 1 0 2)		(0 2 1))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-forwards (make-tree)		(2 4 3 1 6 8 9 7 11 12 10 5))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-thunk-backwards #f			())  ;empty tree
+  (doit-thunk-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-backwards (tree 0 1 2)		(2 1 0))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 2 1 0)		(0 1 2))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 1 0 2)		(2 0 1))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-backwards (make-tree)		(11 12 8 9 6 7 10 4 2 3 1 5))
+
   #t)
 
 
@@ -1269,6 +1486,34 @@
 		(lambda (node knil)
 		  (cons (<fixnum-node>-sort-key node) knil))
 	      '() ?tree))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-forwards-level-order-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-backwards-level-order-iteration-thunk ?tree)))
 	 => (quote ?expected)))
       ))
 
@@ -1371,6 +1616,106 @@
   ;;    |     |  |
   ;;    2     6  8
   (doit-backwards (make-tree)		(5 10 1 12 7 3 11 9 6 4 2 8))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-thunk-forwards #f			())  ;empty tree
+  (doit-thunk-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-forwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 1 0 2)		(1 0 2))
+
+  ;; 5--7
+  ;; |
+  ;; 3
+  ;; |
+  ;; 1
+  (doit-thunk-forwards (tree 5 3 7 1)		(5 3 7 1))
+
+  ;; 5--7
+  ;; |
+  ;; 3--2
+  (doit-thunk-forwards (tree 5 3 7 2)		(5 3 7 2))
+
+  ;; 5--7
+  ;; |  |
+  ;; 3  6
+  (doit-thunk-forwards (tree 5 3 7 6)		(5 3 7 6))
+
+  ;; 5--7--8
+  ;; |
+  ;; 3
+  (doit-thunk-forwards (tree 5 3 7 8)		(5 3 7 8))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-forwards (make-tree)		(5 1 10 3 7 12 2 4 6 9 11 8))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-thunk-backwards #f			())  ;empty tree
+  (doit-thunk-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-backwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 1 0 2)		(1 2 0))
+
+  ;; 5--7
+  ;; |
+  ;; 3
+  ;; |
+  ;; 1
+  (doit-thunk-backwards (tree 5 3 7 1)	(5 7 3 1))
+
+  ;; 5--7
+  ;; |
+  ;; 3--2
+  (doit-thunk-backwards (tree 5 3 7 2)	(5 7 3 2))
+
+  ;; 5--7
+  ;; |  |
+  ;; 3  6
+  (doit-thunk-backwards (tree 5 3 7 6)	(5 7 3 6))
+
+  ;; 5--7--8
+  ;; |
+  ;; 3
+  (doit-thunk-backwards (tree 5 3 7 8)	(5 7 3 8))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-backwards (make-tree)		(5 10 1 12 7 3 11 9 6 4 2 8))
 
   #t)
 
@@ -1407,6 +1752,34 @@
 	 => (quote ?expected)))
       ))
 
+  (define-syntax doit-thunk-forwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-forwards-breadth-first-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
+  (define-syntax doit-thunk-backwards
+    (syntax-rules ()
+      ((_ ?tree ?expected)
+       (check
+	   ;;By reversing we return  a list in which: the first item  is the sort key
+	   ;;of the first node visited in the iteration.
+	   (reverse
+	    (iteration-thunk-fold
+		(lambda (knil node)
+		  (cons (<fixnum-node>-sort-key node) knil))
+	      '() (make-binary-tree-backwards-breadth-first-iteration-thunk ?tree)))
+	 => (quote ?expected)))
+      ))
+
 ;;; --------------------------------------------------------------------
 ;;; forwards iteration
 
@@ -1506,6 +1879,106 @@
   ;;    |     |  |
   ;;    2     6  8
   (doit-backwards (make-tree)		(5 10 1 12 7 3 11 9 6 4 2 8))
+
+;;; --------------------------------------------------------------------
+;;; forwards iteration
+
+  (doit-thunk-forwards #f			())  ;empty tree
+  (doit-thunk-forwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-forwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-forwards (tree 1 0 2)		(1 0 2))
+
+  ;; 5--7
+  ;; |
+  ;; 3
+  ;; |
+  ;; 1
+  (doit-thunk-forwards (tree 5 3 7 1)		(5 3 7 1))
+
+  ;; 5--7
+  ;; |
+  ;; 3--2
+  (doit-thunk-forwards (tree 5 3 7 2)		(5 3 7 2))
+
+  ;; 5--7
+  ;; |  |
+  ;; 3  6
+  (doit-thunk-forwards (tree 5 3 7 6)		(5 3 7 6))
+
+  ;; 5--7--8
+  ;; |
+  ;; 3
+  (doit-thunk-forwards (tree 5 3 7 8)		(5 3 7 8))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-forwards (make-tree)		(5 1 10 3 7 12 2 4 6 9 11 8))
+
+;;; --------------------------------------------------------------------
+;;; backwards iteration
+
+  (doit-thunk-backwards #f			())  ;empty tree
+  (doit-thunk-backwards (tree 1)		(1)) ;one node tree
+
+  ;; 0--1--2
+  (doit-thunk-backwards (tree 0 1 2)		(0 1 2))
+
+  ;; 2
+  ;; |
+  ;; 1
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 2 1 0)		(2 1 0))
+
+  ;; 1--2
+  ;; |
+  ;; 0
+  (doit-thunk-backwards (tree 1 0 2)		(1 2 0))
+
+  ;; 5--7
+  ;; |
+  ;; 3
+  ;; |
+  ;; 1
+  (doit-thunk-backwards (tree 5 3 7 1)	(5 7 3 1))
+
+  ;; 5--7
+  ;; |
+  ;; 3--2
+  (doit-thunk-backwards (tree 5 3 7 2)	(5 7 3 2))
+
+  ;; 5--7
+  ;; |  |
+  ;; 3  6
+  (doit-thunk-backwards (tree 5 3 7 6)	(5 7 3 6))
+
+  ;; 5--7--8
+  ;; |
+  ;; 3
+  (doit-thunk-backwards (tree 5 3 7 8)	(5 7 3 8))
+
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (doit-thunk-backwards (make-tree)		(5 10 1 12 7 3 11 9 6 4 2 8))
 
   #t)
 

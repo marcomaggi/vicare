@@ -568,6 +568,7 @@ starting from @samp{5} the selected node is @samp{11}, starting from
 * bst bnodes iterating post-order::     Post-order iterations.
 * bst bnodes iterating level-order::    Level-order iterations.
 * bst bnodes iterating breadth-first::  Breadth-first iterations.
+* bst bnodes iterating thunks::         Iteration thunks.
 @end menu
 
 @c page
@@ -1118,6 +1119,85 @@ If the iteratio is not over: return an object representing the state of
 the iteration and an instance of @objtype{<binary-node>} representing
 the next visited node.
 @end itemize
+@end defun
+
+@c page
+@node bst bnodes iterating thunks
+@subsubsection Iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers binary-search-trees}.
+
+
+@defun make-binary-tree-forwards-in-order-iteration-thunk @var{root}
+@defunx make-binary-tree-backwards-in-order-iteration-thunk @var{root}
+Build and return an iteration thunk visiting the node of a tree with a
+in--order forwards or backwards iteration.  @var{root} must be @false{}
+to represent an empty tree or an instance of @objtype{<binary-node>}
+representing the root of a tree.
+
+Here is an example with the fixnum trees defined in the introduction
+(@pxref{bst intro}):
+
+@lisp
+(import (vicare containers iteration-thunks))
+
+(define root
+  ;; 5-------10----12
+  ;; |        |     |
+  ;; 1--3--4  7--9 11
+  ;;    |     |  |
+  ;;    2     6  8
+  (tree 5 1 3 2 4 10 7 12 6 9 8 11))
+
+(iteration-thunk-fold
+    (lambda (knil node)
+      (cons (<fixnum-node>-sort-key node) knil))
+  '()
+  (make-binary-tree-forwards-in-order-iteration-thunk root))
+@result{} (12 11 10 9 8 7 6 5 4 3 2 1)
+@end lisp
+@end defun
+
+
+@defun make-binary-tree-forwards-pre-order-iteration-thunk @var{root}
+@defunx make-binary-tree-backwards-pre-order-iteration-thunk @var{root}
+Build and return an iteration thunk visiting the node of a tree with a
+pre--order forwards or backwards iteration.  @var{root} must be @false{}
+to represent an empty tree or an instance of @objtype{<binary-node>}
+representing the root of a tree.
+@end defun
+
+
+@defun make-binary-tree-forwards-post-order-iteration-thunk @var{root}
+@defunx make-binary-tree-backwards-post-order-iteration-thunk @var{root}
+Build and return an iteration thunk visiting the node of a tree with a
+post--order forwards or backwards iteration.  @var{root} must be
+@false{} to represent an empty tree or an instance of
+@objtype{<binary-node>} representing the root of a tree.
+@end defun
+
+
+@defun make-binary-tree-forwards-level-order-iteration-thunk @var{root}
+@defunx make-binary-tree-backwards-level-order-iteration-thunk @var{root}
+Build and return an iteration thunk visiting the node of a tree with a
+level--order forwards or backwards iteration.  @var{root} must be
+@false{} to represent an empty tree or an instance of
+@objtype{<binary-node>} representing the root of a tree.
+@end defun
+
+
+@defun make-binary-tree-forwards-breadth-first-iteration-thunk @var{root}
+@defunx make-binary-tree-backwards-breadth-first-iteration-thunk @var{root}
+Build and return an iteration thunk visiting the node of a tree with a
+breadth--first forwards or backwards iteration.  @var{root} must be
+@false{} to represent an empty tree or an instance of
+@objtype{<binary-node>} representing the root of a tree.
 @end defun
 
 @c page
