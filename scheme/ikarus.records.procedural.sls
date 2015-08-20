@@ -923,7 +923,7 @@
 		      #f     ;default-protocol
 		      #f     ;default-rcd
 		      #f     ;destructor
-		      default-r6rs-record-printer)
+		      #f)    ;printer
 	(make-<rtd> name
 		    (fx+ fields-number (<rtd>-total-fields-number parent-rtd)) ;total-fields-number
 		    fields-number			   ;fields-number
@@ -933,7 +933,8 @@
 		    #f	   ;default-protocol
 		    #f	   ;default-rcd
 		    #f	   ;destructor
-		    default-r6rs-record-printer))))
+		    #f	   ;printer
+		    ))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and

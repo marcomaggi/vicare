@@ -141,7 +141,9 @@
         (f (fx+ i 1) n))))
 
   (module (traverse-struct)
-
+    ;;This module processes: Vicare's structs; Vicare's struct-type descriptors; R6RS
+    ;;records; R6RS record-type descriptors.
+    ;;
     (define (traverse-struct x h)
       (let ((printer (struct-printer x)))
 	(if (procedure? printer)
@@ -149,6 +151,8 @@
 	  (%traverse-vanilla-struct x h))))
 
     (define (%traverse-vanilla-struct x h)
+      ;;Traverse a struct object that is meant to use the built-in printer function.
+      ;;
       (let ((rtd ($struct-rtd x)))
 	(unless (and (record-type-descriptor? rtd)
 		     (record-type-opaque? rtd))
@@ -159,21 +163,27 @@
 		(traverse (struct-ref x idx) h)
 		(f (fxadd1 idx))))))))
 
-    (define (%traverse-custom-struct x h printer)
-      (receive (p e)
+    (define (%traverse-custom-struct stru h printer)
+      ;;Traverse a struct object with a custom printer function.
+      ;;
+      ;;The custom printer is  used to print the struct in a  string output port; the
+      ;;resulting string is cached
+      ;;
+      (receive (port extract)
 	  (open-string-output-port)
-	(let ((cache #f))
-	  (printer x p (lambda (v)
-			 (let ((str (e)))
-			   (set! cache (make-cache str v cache))
-			   (traverse v h))))
-	  (let ((cache (cons (e) cache))
-		(b (hashtable-ref h x #f)))
+	(let* ((cache        #f)
+	       (sub-printer  (lambda (sub-object)
+			       (let ((str (extract)))
+				 (set! cache (make-cache str sub-object cache))
+				 (traverse sub-object h)))))
+	  (printer stru port sub-printer)
+	  (let ((cache (cons (extract) cache))
+		(b (hashtable-ref h stru #f)))
 	    (if (fixnum? b)
-		(hashtable-set! h x (cons b cache))
+		(hashtable-set! h stru (cons b cache))
 	      (%cannot-happen))))))
 
-    #| end of module |# )
+    #| end of module: TRAVERSE-STRUCT |# )
 
   (define (traverse-shared x h kont)
     (cond ((hashtable-ref h x #f)
@@ -200,23 +210,30 @@
   #| end of module |# )
 
 
-(module (wr)
+(module (write-object)
+  ;;All the function whose name starts  with "write-object-" are writers for specific
+  ;;object types.
+  ;;
   (import TRAVERSAL-HELPERS)
 
-  (define (wr x p m h i)
+  (define (write-object x p m h i)
     (cond ((pair? x)
-	   (write-shared x p m h i write-pair))
+	   (write-shared x p m h i write-object-pair))
 
 	  ((symbol? x)
 	   (if (gensym? x)
-	       (write-shared x p m h i write-gensym)
-	     (begin (write-symbol x p m) i)))
+	       (write-shared x p m h i write-object-gensym)
+	     (begin
+	       (write-object-symbol x p m)
+	       i)))
 
 	  ((fixnum? x)
-	   (write-fixnum x p) i)
+	   (write-object-fixnum x p)
+	   i)
 
 	  ((string? x)
-	   (write-string x p m) i)
+	   (write-object-string x p m)
+	   i)
 
 	  ((boolean? x)
 	   (write-char #\# p)
@@ -224,10 +241,13 @@
 	   i)
 
 	  ((char? x)
-	   (write-character x p m) i)
+	   (write-object-character x p m)
+	   i)
 
 	  ((null? x)
-	   (write-char #\( p) (write-char #\) p) i)
+	   (write-char #\( p)
+	   (write-char #\) p)
+	   i)
 
 	  ((number? x)
 	   (write-char* (if (or (fixnum? x)
@@ -238,17 +258,17 @@
 	   i)
 
 	  ((vector? x)
-	   (write-shared x p m h i write-vector))
+	   (write-shared x p m h i write-object-vector))
 
 	  ((bytevector? x)
-	   (write-shared x p m h i write-bytevector))
+	   (write-shared x p m h i write-object-bytevector))
 
 	  ((procedure? x)
-	   (write-procedure x p)
+	   (write-object-procedure x p)
 	   i)
 
 	  ((port? x)
-	   (write-port x p h i)
+	   (write-object-port x p h i)
 	   i)
 
 	  ((eq? x (void))
@@ -277,27 +297,13 @@
 	   i)
 
 	  ((struct? x)
-	   (write-shared x p m h i write-struct))
+	   (write-shared x p m h i write-object-struct))
 
 	  ((code? x)
-	   (cond (($code-annotation x)
-		  => (lambda (ann)
-		       (write-char* "#<code annotation=" p)
-		       (begin0
-			   (wr ann p m h i)
-			 (write-char #\> p))))
-		 (else
-		  (write-char* "#<code>" p)
-		  i)))
+	   (write-object-code x p m h i))
 
 	  ((pointer? x)
-	   (write-char* "#<pointer #x" p)
-	   (write-hex (pointer->integer x)
-		      (boot.case-word-size
-		       ((32)		8)
-		       ((64)		16))
-		      p)
-	   (write-char* ">" p)
+	   (write-object-pointer x p)
 	   i)
 
 	  (($unbound-object? x)
@@ -308,7 +314,20 @@
 	   (write-char* "#<unknown>" p)
 	   i)))
 
-  (define (write-fixnum x p)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-pointer ptr port)
+    (write-char* "#<pointer #x" port)
+    (write-hex (pointer->integer ptr)
+	       (boot.case-word-size
+		((32)		8)
+		((64)		16))
+	       port)
+    (write-char #\> port))
+
+;;; --------------------------------------------------------------------
+
+  (define (write-object-fixnum x p)
     (define (loop x p)
       (unless (fxzero? x)
 	(loop (fxquotient x 10) p)
@@ -331,7 +350,9 @@
 	    ((16)	(write-char #\x p)))
 	  (write-char* (number->string x radix) p)))))
 
-  (define (write-pair x p m h i)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-pair x p m h i)
     (define (macro x h)
       (and (pair? x)
 	   (let ((a (car x)))
@@ -352,34 +373,36 @@
 	     (write-char #\space p)
 	     (write-char #\. p)
 	     (write-char #\space p)
-	     (wr d p m h i))
+	     (write-object d p m h i))
 	    ((shared? d h)
 	     (write-char #\space p)
 	     (when (print-graph)
 	       (write-char #\. p)
 	       (write-char #\space p))
-	     (wr d p m h i))
+	     (write-object d p m h i))
 	    (else
 	     (write-char #\space p)
-	     (let ((i (wr (car d) p m h i)))
+	     (let ((i (write-object (car d) p m h i)))
 	       (f (cdr d) i)))))
     (cond ((macro x h)
 	   => (lambda (a)
-		(write-string a p #f)
-		(wr (cadr x) p m h i)))
+		(write-object-string a p #f)
+		(write-object (cadr x) p m h i)))
 	  (else
 	   (write-char #\( p)
-	   (let ((i (f (cdr x) (wr (car x) p m h i))))
+	   (let ((i (f (cdr x) (write-object (car x) p m h i))))
 	     (write-char #\) p)
 	     i))))
 
-  (define (write-vector x p m h i)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-vector x p m h i)
     (define (f x p m h i idx n)
       (cond
        ((fx= idx n) i)
        (else
 	(write-char #\space p)
-	(let ((i (wr (vector-ref x idx) p m h i)))
+	(let ((i (write-object (vector-ref x idx) p m h i)))
 	  (f x p m h i (fx+ idx 1) n)))))
     (write-char #\# p)
     (let ((n (vector-length x)))
@@ -389,12 +412,14 @@
 	     i)
 	    (else
 	     (write-char #\( p)
-	     (let ((i (wr (vector-ref x 0) p m h i)))
+	     (let ((i (write-object (vector-ref x 0) p m h i)))
 	       (f x p m h i 1 n)
 	       (write-char #\) p)
 	       i)))))
 
-  (define (write-bytevector x p m h i)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-bytevector x p m h i)
     (write-char #\# p)
     (write-char #\v p)
     (write-char #\u p)
@@ -402,11 +427,11 @@
     (write-char #\( p)
     (let ((n (bytevector-length x)))
       (when (fx> n 0)
-        (write-fixnum (bytevector-u8-ref x 0) p)
+        (write-object-fixnum (bytevector-u8-ref x 0) p)
         (let f ((idx 1) (n n) (x x) (p p))
           (unless (fx= idx n)
             (write-char #\space p)
-            (write-fixnum (bytevector-u8-ref x idx) p)
+            (write-object-fixnum (bytevector-u8-ref x idx) p)
             (f (fxadd1 idx) n x p)))))
     (write-char #\) p)
     i)
@@ -433,7 +458,9 @@
       (write-positive-hex-fx b p))
     (write-char #\; p))
 
-  (define (write-character x p m)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-character x p m)
     (define char-table ; first nonprintable chars
       '#("nul" "x1" "x2" "x3" "x4" "x5" "x6" "alarm"
          "backspace" "tab" "linefeed" "vtab" "page" "return" "xE" "xF"
@@ -463,7 +490,9 @@
             (write-positive-hex-fx i p))))
       (write-char x p)))
 
-  (define (write-string x p m)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-string x p m)
     (define (write-string-escape x p)
 ;;; commonize with write-symbol-bar-escape
       (define (loop x i n p)
@@ -503,58 +532,66 @@
         (write-string-escape x p)
       (write-char* x p)))
 
-  (module (write-gensym write-symbol)
-    (define (write-gensym x p m h i)
-      (cond
-       ((and m (print-gensym)) =>
-	(lambda (gensym-how)
-	  (case gensym-how
-	    ((pretty)
-	     (let ((str (symbol->string x)))
-	       (write-char #\# p)
-	       (write-char #\: p)
-	       (write-symbol-string str p m)))
+;;; --------------------------------------------------------------------
+
+  (module (write-object-gensym write-object-symbol)
+
+    (define (write-object-symbol x p m)
+      (write-symbol-string (symbol->string x) p m))
+
+    (define (write-object-gensym x p m h i)
+      (cond ((and m (print-gensym))
+	     =>	(lambda (gensym-how)
+		  (case gensym-how
+		    ((pretty)
+		     (let ((str (symbol->string x)))
+		       (write-char #\# p)
+		       (write-char #\: p)
+		       (write-symbol-string str p m)))
+		    (else
+		     (let ((str (symbol->string x))
+			   (ustr (gensym->unique-string x)))
+		       (write-char #\# p)
+		       (write-char #\{ p)
+		       (write-symbol-string str p m)
+		       (write-char #\space p)
+		       (write-symbol-bar-esc ustr p)
+		       (write-char #\} p))))
+		  i))
 	    (else
-	     (let ((str (symbol->string x))
-		   (ustr (gensym->unique-string x)))
-	       (write-char #\# p)
-	       (write-char #\{ p)
-	       (write-symbol-string str p m)
-	       (write-char #\space p)
-	       (write-symbol-bar-esc ustr p)
-	       (write-char #\} p))))
-	  i))
-       (else
-	(write-symbol x p m)
-	i)))
-    (define write-symbol-bar-esc
-      (lambda (x p)
-        (define write-symbol-bar-esc-loop
-          (lambda (x i n p)
-            (unless (fx= i n)
-              (let* ((c (string-ref x i))
-                     (b (char->integer c)))
-                (cond
-		 ((fx< b 32)
-		  (cond
-		   ((fx< b 7)
-		    (write-inline-hex b p))
-		   ((fx< b 14)
-		    (write-char #\\ p)
-		    (write-char (string-ref "abtnvfr" (fx- b 7)) p))
-		   (else
-		    (write-inline-hex b p))))
-		 ((memq c '(#\\ #\|))
-		  (write-char #\\ p)
-		  (write-char c p))
-		 ((fx< b 127)
-		  (write-char c p))
-		 (else
-		  (write-inline-hex b p))))
-              (write-symbol-bar-esc-loop x (fxadd1 i) n p))))
-        (write-char #\| p)
-        (write-symbol-bar-esc-loop x 0 (string-length x) p)
-        (write-char #\| p)))
+	     (write-object-symbol x p m)
+	     i)))
+
+    (module (write-symbol-bar-esc)
+
+      (define (write-symbol-bar-esc x p)
+	(write-char #\| p)
+	(%write-symbol-bar-esc-loop x 0 (string-length x) p)
+	(write-char #\| p))
+
+      (define (%write-symbol-bar-esc-loop x i n p)
+	(unless (fx= i n)
+	  (let* ((c (string-ref x i))
+		 (b (char->integer c)))
+	    (cond ((fx< b 32)
+		   (cond ((fx< b 7)
+			  (write-inline-hex b p))
+			 ((fx< b 14)
+			  (write-char #\\ p)
+			  (write-char (string-ref "abtnvfr" (fx- b 7)) p))
+			 (else
+			  (write-inline-hex b p))))
+		  ((memq c '(#\\ #\|))
+		   (write-char #\\ p)
+		   (write-char c p))
+		  ((fx< b 127)
+		   (write-char c p))
+		  (else
+		   (write-inline-hex b p))))
+	  (%write-symbol-bar-esc-loop x (fxadd1 i) n p)))
+
+      #| end of module |# )
+
     (define (write-symbol-string str p m)
       (define-syntax ascii-map
         (lambda (x)
@@ -678,61 +715,111 @@
 	      (write-peculiar str p)
 	    (write-symbol-hex-esc str p))
 	(write-char* str p)))
-    (define (write-symbol x p m)
-      (write-symbol-string (symbol->string x) p m)))
 
-  (define (write-struct x p m h i)
+    #| end of module: WRITE-OBJECT-SYMBOL, WRITE-OBJECT-GENSYM |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (write-object-struct)
+
+    (define (write-object-struct x p m h i)
+      (let ((b (hashtable-ref h x #f)))
+	(cond ((pair? b)
+	       (write-custom-struct (cdr b) p m h i))
+	      (else
+	       (write-vanilla-struct x p m h i)))))
+
+    (define (write-custom-struct out p m h i)
+      ;;Write a struct having a custom printer function.
+      ;;
+      (begin0
+	  (let recur ((cache (cdr out)))
+	    (if (not cache)
+		i
+	      (let ((i (recur (cache-next cache))))
+		(write-char*  (cache-string cache) p)
+		(write-object (cache-object cache) p m h i))))
+	(write-char* (car out) p)))
+
     (define (write-vanilla-struct x p m h i)
+      ;;Write a struct that is meant to use the built-in printer function.
+      ;;
       (cond ((record-type-descriptor? ($struct-rtd x))
-	     (print-r6rs-record-instance x p)
-	     i)
+	     (%write-r6rs-record ($struct-rtd x) x p m h i))
+
 	    ;;We do not handle opaque records specially.
 	    ;; ((let ((rtd ($struct-rtd x)))
 	    ;;    (and (record-type-descriptor? rtd)
 	    ;; 	    (record-type-opaque? rtd)))
 	    ;;  (write-char* "#<unknown>" p)
 	    ;;  i)
+
 	    ((keyword? x)
 	     (write-char #\# p)
 	     (write-char #\: p)
-	     (wr (struct-ref x 0) p m h i))
-	    (else ;it is a Vicare's struct
-	     (write-char #\# p)
-	     (write-char #\[ p)
-	     (let ((i (wr (struct-name x) p m h i)))
-	       (let ((n (struct-length x)))
-		 (let f ((idx 0) (i i))
-		   (cond
-		    ((fx= idx n)
-		     (write-char #\] p)
-		     i)
-		    (else
-		     (write-char #\space p)
-		     (f (fxadd1 idx)
-			(wr (struct-ref x idx) p m h i))))))))))
-    (define (write-custom-struct out p m h i)
-      (begin0
-	  (let f ((cache (cdr out)))
-	    (cond
-	     ((not cache) i)
-	     (else
-	      (let ((i (f (cache-next cache))))
-		(write-char* (cache-string cache) p)
-		(wr (cache-object cache) p m h i)))))
-	(write-char* (car out) p)))
-    (let ((b (hashtable-ref h x #f)))
-      (cond ((pair? b)
-	     (write-custom-struct (cdr b) p m h i))
+	     (write-object (struct-ref x 0) p m h i))
+
 	    (else
-	     (write-vanilla-struct x p m h i)))))
+	     (%write-vicare-struct x p m h i))))
 
-  (define (write-char* x p)
-    (let f ((x x) (p p) (i 0) (n (string-length x)))
-      (unless (fx=? i n)
-        (write-char (string-ref x i) p)
-        (f x p (fx+ i 1) n))))
+    (define (%write-vicare-struct stru port m h i)
+      (write-char #\# port)
+      (write-char #\[ port)
+      (let ((i        (write-object (struct-name stru) port m h i))
+	    (stru.len (struct-length stru)))
+	(let next-field ((stru.idx  0)
+			 (i         i))
+	  (cond ((fx=? stru.idx stru.len)
+		 (write-char #\] port)
+		 i)
+		(else
+		 (write-char #\space port)
+		 (next-field (fxadd1 stru.idx)
+			     (write-object (struct-ref stru stru.idx) port m h i)))))))
 
-  (define (write-procedure x p)
+    (module (%write-r6rs-record)
+
+      (define (%write-r6rs-record rtd record port m h i)
+	(write-char* (if (record-type-opaque? rtd)
+			 "#[opaque-r6rs-record: "
+		       "#[r6rs-record: ")
+		     port)
+	(write-char* (symbol->string (record-type-name rtd))
+		     port)
+	(receive (i record.idx)
+	    (let upper-rtd ((rtd rtd))
+	      (cond ((record-type-parent rtd)
+		     => (lambda (prtd)
+			  (receive (i record.idx)
+			      (upper-rtd prtd)
+			    (%print-record-fields prtd record.idx record port m h i))))
+		    (else
+		     (values i 0))))
+	  (%print-record-fields rtd record.idx record port m h i)
+	  (write-char #\] port)
+	  i))
+
+      (define (%print-record-fields rtd next-record.idx record port m h i)
+	(let* ((vec      (record-type-field-names rtd))
+	       (vec.len  (vector-length vec)))
+	  (do ((vec.idx    0               (fxadd1 vec.idx))
+	       (record.idx next-record.idx (fxadd1 record.idx)))
+	      ((fx=? vec.idx vec.len)
+	       (values i record.idx))
+	    (let* ((field-nam  (vector-ref vec vec.idx))
+		   (field-val  (struct-ref record record.idx)))
+	      (write-char #\space port)
+	      (let ((i (write-object field-nam port m h i)))
+		(write-char #\= port)
+		(set! i (write-object field-val port m h i)))))))
+
+      #| end of module: WRITE-R6RS-RECORD |# )
+
+    #| end of module: WRITE-OBJECT-STRUCT |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (write-object-procedure x p)
     (write-char* "#<procedure" p)
     (let-values (((name src)
                   (let ((ae (procedure-annotation x)))
@@ -751,7 +838,9 @@
           (write-char* ")" p))))
     (write-char* ">" p))
 
-  (define (write-port x p h i)
+;;; --------------------------------------------------------------------
+
+  (define (write-object-port x p h i)
     (write-char* "#<" p)
     (write-char* (cond ((input/output-port? x)	"input/output")
 		       ((input-port? x)		"input")
@@ -759,17 +848,26 @@
 		 p)
     (write-char* "-port " p)
     (write-char* (if (binary-port? x) "(binary) " "(textual) ") p)
-    (let ((i (wr (port-id x) p #t h i)))
+    (let ((i (write-object (port-id x) p #t h i)))
       (write-char #\> p)
       i))
 
-  (define (write-hex x n p)
-    (define s "0123456789ABCDEF")
-    (unless (zero? n)
-      (write-hex (sra x 4) (- n 1) p)
-      (write-char (string-ref s (bitwise-and x #xF)) p)))
+;;; --------------------------------------------------------------------
 
-  (define* (write-shared x p m h i k)
+  (define (write-object-code x port m h i)
+    (cond (($code-annotation x)
+	   => (lambda (ann)
+		(write-char* "#<code annotation=" port)
+		(begin0
+		    (write-object ann port m h i)
+		  (write-char #\> port))))
+	  (else
+	   (write-char* "#<code>" port)
+	   i)))
+
+;;; --------------------------------------------------------------------
+
+  (define* (write-shared x port m h i writer-kont)
     ;;Takes care of printing shared structures  with "#n=" and "#n#" elements, rather
     ;;than  going  into  infinite  recursion.   For  this  function  to  work:  every
     ;;interesting sub-object of the object X must have been previously visited by the
@@ -785,20 +883,35 @@
 			"sub-object has not been processed correctly to handle shared structure"
 			b)))))
         (cond ((mark-set? b)
-	       (write-char #\# p)
-	       (write-fixnum (fxsra b mark-shift) p)
-	       (write-char #\# p)
+	       (write-char #\# port)
+	       (write-object-fixnum (fxsra b mark-shift) port)
+	       (write-char #\# port)
 	       i)
 	      ((or (cyclic-set? b)
 		   (and (shared-set? b) (print-graph)))
 	       (let ((n i))
 		 (set-mark! x h n)
-		 (write-char #\# p)
-		 (write-fixnum n p)
-		 (write-char #\= p)
-		 (k x p m h (+ i 1))))
+		 (write-char #\# port)
+		 (write-object-fixnum n port)
+		 (write-char #\= port)
+		 (writer-kont x port m h (add1 i))))
 	      (else
-	       (k x p m h i))))))
+	       (writer-kont x port m h i))))))
+
+;;; --------------------------------------------------------------------
+;;; helpers
+
+  (define (write-char* x p)
+    (let f ((x x) (p p) (i 0) (n (string-length x)))
+      (unless (fx=? i n)
+        (write-char (string-ref x i) p)
+        (f x p (fx+ i 1) n))))
+
+  (define (write-hex x n p)
+    (define s "0123456789ABCDEF")
+    (unless (zero? n)
+      (write-hex (sra x 4) (- n 1) p)
+      (write-char (string-ref s (bitwise-and x #xF)) p)))
 
   #| end of module |# )
 
@@ -829,13 +942,13 @@
   (define (%write-to-port x p)
     (let ((h (make-eq-hashtable)))
       (traverse x h)
-      (wr x p #t h 0)
+      (write-object x p #t h 0)
       (void)))
 
   (define (%display-to-port x p)
     (let ((h (make-eq-hashtable)))
       (traverse x h)
-      (wr x p #f h 0)
+      (write-object x p #f h 0)
       (void)))
 
   (define (formatter who p fmt args)
