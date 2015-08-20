@@ -171,8 +171,28 @@ validate their arguments.
 Apply @func{fun} to the items from the iteration thunks @var{iter}.
 When multiple iteration thunks are given: the iteration stops when one
 of the thunks returns void.  The function @var{acceptor} is applied to
-the the results of the applications; the return values of @var{acceptor}
-are discarded.
+the the results of the applications.  The return value of the mapping
+form is the return value of the last application of @var{acceptor}; if
+the iteration thunk is empty: the return value is void.
+
+@lisp
+(let ((ell '()))
+  (iteration-thunk-map (lambda (rv)
+                         (set-cons! ell rv)
+                         ell)
+    -
+    (make-list-iteration-thunk '(0 1 2 3 4))))
+@result{} (-4 -3 -2 -1 0)
+
+(let ((ell '()))
+  (iteration-thunk-map (lambda (rv)
+                         (set-cons! ell rv)
+                         ell)
+    +
+    (make-list-iteration-thunk '(0  1  2  3  4))
+    (make-list-iteration-thunk '(0 10 20 30 40))))
+@result{} (44 33 22 11 0)
+@end lisp
 @end defun
 
 
@@ -181,6 +201,25 @@ are discarded.
 Apply @func{fun} to the items from the iteration thunks @var{iter} and
 discard the return values.  When multiple iteration thunks are given:
 the iteration stops when one of the thunks returns void.
+
+@lisp
+(receive-and-return (ell)
+    '()
+  (iteration-thunk-for-each
+      (lambda (item)
+        (set-cons! ell (- item)))
+    (make-list-iteration-thunk '(0 1 2 3 4))))
+@result{} (-4 -3 -2 -1 0)
+
+(receive-and-return (ell)
+    '()
+  (iteration-thunk-for-each
+      (lambda (item1 item2)
+        (set-cons! ell (+ item1 item2)))
+    (make-list-iteration-thunk '(0  1  2  3  4))
+    (make-list-iteration-thunk '(0 10 20 30 40))))
+@result{} (44 33 22 11 0)
+@end lisp
 @end defun
 
 @c page
@@ -203,6 +242,25 @@ of the thunks returns void.
 If all the applications of @var{fun} return true: the return value is
 @true{}.  If an application of @var{fun} returns @false{}: the iteration
 stops immediately and the return value is @false{}.
+
+@lisp
+(iteration-thunk-for-all
+    even?
+  (make-list-iteration-thunk '(2 4 5 6 8)))
+@result{} #f
+
+(iteration-thunk-for-all
+    even?
+  (make-list-iteration-thunk '(2 4 6 8)))
+@result{} #t
+
+(iteration-thunk-for-all
+    =
+  (make-list-iteration-thunk '(+1 +2 +3 +4))
+  (make-list-iteration-thunk '(+1 +2 +3 +4))
+  (make-list-iteration-thunk '(+1 +2 +3 +4)))
+@result{} #t
+@end lisp
 @end defun
 
 
@@ -216,6 +274,25 @@ If all the applications of @var{fun} return @false{}: the return value
 is @false{}.  If an application of @var{fun} returns a non--@false{}
 value: the iteration stops immediately and the returned value is
 returned.
+
+@lisp
+(iteration-thunk-exists
+    even?
+  (make-list-iteration-thunk '(1 3 5 7)))
+@result{} #f
+
+(iteration-thunk-exists
+    even?
+  (make-list-iteration-thunk '(1 3 4 5 7)))
+@result{} #t
+
+(iteration-thunk-exists
+    =
+  (make-list-iteration-thunk '(+1 +2 +3 +4))
+  (make-list-iteration-thunk '(-1 -2 +3 -4))
+  (make-list-iteration-thunk '( 0  0 +3  0)))a
+@result{} #t
+@end lisp
 @end defun
 
 
@@ -232,13 +309,32 @@ If all the applications of @var{fun} return @false{} and
 @item
 If all the applications of @var{fun} return @false{} and
 @var{not-found-handler} is given: @var{not-found-handler} must be a
-thunk and the return value is the return value of the thunk.
+thunk and the return value is the return value of the thunk;
+@var{not-found-handler} is called in tail position.
 
 @item
 If an application of @var{fun} returns a non--@false{} value: the
 iteration stops immediately and the return value is the item from the
 iteration thunks.
 @end itemize
+
+@lisp
+(iteration-thunk-find
+    even?
+  (make-list-iteration-thunk '(1 3 5 7)))
+@result{} #f
+
+(iteration-thunk-find
+    even?
+  (make-list-iteration-thunk '(1 3 5 7))
+  (lambda () 'not-found))
+@result{} not-found
+
+(iteration-thunk-find
+    even?
+  (make-list-iteration-thunk '(1 3 4 5 7)))
+@result{} 4
+@end lisp
 @end defun
 
 @c page
@@ -257,6 +353,26 @@ validate their arguments.
 Iterate over the items from @var{iter}, apply @var{pred} to them, apply
 @var{acceptor} to the items for which @var{pred} returns true.  Return
 unspecified values.
+
+@lisp
+(receive-and-return (ell)
+    '()
+  (iteration-thunk-filter
+      (lambda (rv)
+        (set-cons! ell rv))
+      even?
+    (make-list-iteration-thunk '(1 3 5 7))))
+@result{} ()
+
+(receive-and-return (ell)
+    '()
+  (iteration-thunk-filter
+      (lambda (rv)
+        (set-cons! ell rv))
+      even?
+    (make-list-iteration-thunk '(1 3 4 5 7 8))))
+@result{} (8 4)
+@end lisp
 @end defun
 
 
@@ -266,6 +382,30 @@ Iterate over the items from @var{iter} and apply @var{pred} to them: if
 the return value is true, apply @var{match-acceptor} to the item; if the
 return value is @false{}, apply @var{no-match-acceptor} to the item.
 Return unspecified values.
+
+@lisp
+(receive-and-return (match-ell no-match-ell)
+    (values '() '())
+  (iteration-thunk-partition
+      (lambda (match-rv)
+        (set-cons! match-ell match-rv))
+      (lambda (no-match-rv)
+        (set-cons! no-match-ell no-match-rv))
+      even?
+    (make-list-iteration-thunk '(1 3 5 7))))
+@result{} () (7 5 3 1)
+
+(receive-and-return (match-ell no-match-ell)
+    (values '() '())
+  (iteration-thunk-partition
+      (lambda (match-rv)
+        (set-cons! match-ell match-rv))
+      (lambda (no-match-rv)
+        (set-cons! no-match-ell no-match-rv))
+      even?
+    (make-list-iteration-thunk '(1 3 4 5 7 8))))
+@result{} (8 4) (7 5 3 1)
+@end lisp
 @end defun
 
 @c Local Variables:

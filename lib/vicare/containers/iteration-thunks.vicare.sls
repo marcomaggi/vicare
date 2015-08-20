@@ -181,16 +181,16 @@
 (case-define $iteration-thunk-map
 
   ((acceptor fun iter)
-   ($iteration-thunk-fold (lambda (knil item)
-			    (acceptor (fun item))
-			    knil)
+   ($iteration-thunk-fold
+       (lambda (knil item)
+	 (acceptor (fun item)))
      (void) iter))
 
   ((acceptor fun iter1 iter2)
-   ($iteration-thunk-fold (lambda (knil item1 item2)
-			    (acceptor (fun item1 item2))
-			    knil)
-     iter1 iter2))
+   ($iteration-thunk-fold
+       (lambda (knil item1 item2)
+	 (acceptor (fun item1 item2)))
+     (void) iter1 iter2))
 
   ((acceptor fun iter1 iter2 . iter*)
    ($iteration-thunk-map-multi acceptor fun iter1 iter2 iter*))
@@ -198,9 +198,9 @@
   #| end of CASE-DEFINE |# )
 
 (define ($iteration-thunk-map-multi acceptor fun iter1 iter2 iter*)
-  ($iteration-thunk-fold-multi (lambda (knil item1 item2 . item*)
-				 (acceptor (apply fun item1 item2 item*))
-				 knil)
+  ($iteration-thunk-fold-multi
+      (lambda (knil item1 item2 . item*)
+	(acceptor (apply fun item1 item2 item*)))
     (void) iter1 iter2 iter*))
 
 
@@ -221,16 +221,18 @@
 (case-define $iteration-thunk-for-each
 
   ((fun iter)
-   ($iteration-thunk-fold (lambda (knil item)
-			    (fun item)
-			    knil)
+   ($iteration-thunk-fold
+       (lambda (knil item)
+	 (fun item)
+	 knil)
      (void) iter))
 
   ((fun iter1 iter2)
-   ($iteration-thunk-fold (lambda (knil item1 item2)
-			    (fun item1 item2)
-			    knil)
-     iter1 iter2))
+   ($iteration-thunk-fold
+       (lambda (knil item1 item2)
+	 (fun item1 item2)
+	 knil)
+     (void) iter1 iter2))
 
   ((fun iter1 iter2 . iter*)
    ($iteration-thunk-for-each-multi fun iter1 iter2 iter*))
@@ -238,9 +240,10 @@
   #| end of CASE-DEFINE |# )
 
 (define ($iteration-thunk-for-each-multi fun iter1 iter2 iter*)
-  ($iteration-thunk-fold-multi (lambda (knil item1 item2 . item*)
-				 (apply fun item1 item2 item*)
-				 knil)
+  ($iteration-thunk-fold-multi
+      (lambda (knil item1 item2 . item*)
+	(apply fun item1 item2 item*)
+	knil)
     (void) iter1 iter2 iter*))
 
 
@@ -262,16 +265,18 @@
 
   ((fun iter)
    (returnable
-     ($iteration-thunk-fold (lambda (knil item)
-			      (or (fun item)
-				  (return #f)))
+     ($iteration-thunk-fold
+	 (lambda (knil item)
+	   (or (fun item)
+	       (return #f)))
        #t iter)))
 
   ((fun iter1 iter2)
    (returnable
-     ($iteration-thunk-fold (lambda (knil item1 item2)
-			      (or (fun item1 item2)
-				  (return #f)))
+     ($iteration-thunk-fold
+	 (lambda (knil item1 item2)
+	   (or (fun item1 item2)
+	       (return #f)))
        #t iter1 iter2)))
 
   ((fun iter1 iter2 . iter*)
@@ -281,9 +286,10 @@
 
 (define ($iteration-thunk-for-all-multi fun iter1 iter2 iter*)
   (returnable
-    ($iteration-thunk-fold-multi (lambda (knil item1 item2 . item*)
-				   (or (apply fun item1 item2 item*)
-				       (return #f)))
+    ($iteration-thunk-fold-multi
+	(lambda (knil item1 item2 . item*)
+	  (or (apply fun item1 item2 item*)
+	      (return #f)))
       #t iter1 iter2 iter*)))
 
 
@@ -306,19 +312,21 @@
   ((fun iter)
    (call/cc
        (lambda (escape)
-	 ($iteration-thunk-fold (lambda (knil item)
-				  (cond ((fun item)
-					 => escape)
-					(else knil)))
+	 ($iteration-thunk-fold
+	     (lambda (knil item)
+	       (cond ((fun item)
+		      => escape)
+		     (else knil)))
 	   #f iter))))
 
   ((fun iter1 iter2)
    (call/cc
        (lambda (escape)
-	 ($iteration-thunk-fold (lambda (knil item1 item2)
-				  (cond ((fun item1 item2)
-					 => escape)
-					(else knil)))
+	 ($iteration-thunk-fold
+	     (lambda (knil item1 item2)
+	       (cond ((fun item1 item2)
+		      => escape)
+		     (else knil)))
 	   #f iter1 iter2))))
 
   ((fun iter1 iter2 . iter*)
@@ -329,10 +337,11 @@
 (define ($iteration-thunk-exists-multi fun iter1 iter2 iter*)
   (call/cc
       (lambda (escape)
-	($iteration-thunk-fold-multi (lambda (knil item1 item2 . item*)
-				       (cond ((apply fun item1 item2 item*)
-					      => escape)
-					     (else knil)))
+	($iteration-thunk-fold-multi
+	    (lambda (knil item1 item2 . item*)
+	      (cond ((apply fun item1 item2 item*)
+		     => escape)
+		    (else knil)))
 	  #f iter1 iter2 iter*))))
 
 
@@ -351,11 +360,11 @@
 	  (if (fun obj)
 	      (return obj)
 	    knil))
-      (void) iter))
-  ;;If we are here no object was found.
-  (if (procedure? not-found-handler)
-      (not-found-handler)
-    not-found-handler))
+      (void) iter)
+    ;;If we are here no object was found.
+    (if (procedure? not-found-handler)
+	(not-found-handler)
+      not-found-handler)))
 
 
 ;;;; operations: filter and partition
@@ -396,4 +405,11 @@
 ;; eval: (put 'iteration-thunk-fold		'scheme-indent-function 1)
 ;; eval: (put '$iteration-thunk-fold		'scheme-indent-function 1)
 ;; eval: (put '$iteration-thunk-fold-multi	'scheme-indent-function 1)
+;; eval: (put 'iteration-thunk-map		'scheme-indent-function 1)
+;; eval: (put 'iteration-thunk-for-each		'scheme-indent-function 1)
+;; eval: (put 'iteration-thunk-for-all		'scheme-indent-function 1)
+;; eval: (put 'iteration-thunk-exists		'scheme-indent-function 1)
+;; eval: (put 'iteration-thunk-find		'scheme-indent-function 1)
+;; eval: (put 'iteration-thunk-filter		'scheme-indent-function 2)
+;; eval: (put 'iteration-thunk-partition	'scheme-indent-function 3)
 ;; End:
