@@ -80,7 +80,9 @@
     queue-reverse!		$queue-reverse!
 
     queue->list			list->queue
-    queue->vector		vector->queue)
+    queue->vector		vector->queue
+
+    make-queue-iteration-thunk)
   (import (vicare)
     (vicare containers slots))
 
@@ -320,6 +322,15 @@
   ($queue-reverse! dst src))
 
 (define-alias $queue-reverse!		$slots-reverse!)
+
+
+;;;; iteration thunks
+
+(define* (make-queue-iteration-thunk {S queue?})
+  (lambda ()
+    (if ($queue-empty? S)
+	(void)
+      ($queue-pop! S))))
 
 
 ;;;; done

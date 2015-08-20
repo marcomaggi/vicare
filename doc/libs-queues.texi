@@ -19,6 +19,7 @@ efficient first--in/first--out operations.
 * queues searching::            Searching in queues.
 * queues filtering::            Filtering in queues.
 * queues conversion::           Converting queues to other objects.
+* queues iteration thunks::     Queue iteration thunks.
 * queues misc::                 Miscellaneous operations on queues.
 @end menu
 
@@ -489,6 +490,45 @@ pushed on the queue left--to--right from the rear side.
 (queue-front   D)       @result{} 0
 (queue-rear    D)       @result{} 2
 (queue->vector D)       @result{} #(0 1 2)
+@end lisp
+@end defun
+
+@c page
+@node queues iteration thunks
+@section Queue iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers queues}.
+
+
+@defun make-queue-iteration-thunk @var{queue}
+Build and return a new iteration thunk popping the objects from
+@var{queue}.
+
+@lisp
+(import (vicare)
+  (vicare containers queues)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-queue-iteration-thunks (queue)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-queue-iteration-thunks (queue 0 1 2 3 4 5)))
+@result{} (5 4 3 2 1 0)
 @end lisp
 @end defun
 

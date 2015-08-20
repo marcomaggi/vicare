@@ -28,6 +28,7 @@
 #!vicare
 (import (vicare)
   (vicare containers queues)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1008,6 +1009,29 @@
 
   #t)
 
+
+(parametrise ((check-test-name	'iteration-thunks))
+
+  (define (xcons a b)
+    (cons b a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-queue-iteration-thunk (queue)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-queue-iteration-thunk (queue 0 1 2 3 4 5)))
+    => '(5 4 3 2 1 0))
+
+  #t)
 
 
 ;;;; done
