@@ -1,4 +1,4 @@
-@node iterators
+@node iteration thunks
 @chapter Iteration thunks
 
 
@@ -12,15 +12,15 @@ is a thunk the returns the next object from an iteration over a compound
 object; when no more objects are available, it returns the void object.
 
 @menu
-* iterators common::            Iterators for common objects.
-* iterators folding::           Folding over iterators.
-* iterators mapping::           Mapping iterators.
-* iterators searching::         Searching with iterators.
-* iterators filtering::         Filtering with iterators.
+* iteration thunks common::     Iterators for common objects.
+* iteration thunks folding::    Folding over iterators.
+* iteration thunks mapping::    Mapping iterators.
+* iteration thunks searching::  Searching with iterators.
+* iteration thunks filtering::  Filtering with iterators.
 @end menu
 
 @c page
-@node iterators common
+@node iteration thunks common
 @section Iterators for common objects
 
 
@@ -118,7 +118,7 @@ Return an iteration thunk for the bytes in the bytevector @var{bv}.
 @end defun
 
 @c page
-@node iterators folding
+@node iteration thunks folding
 @section Folding over iterators
 
 
@@ -156,7 +156,7 @@ of the thunks returns void.
 @end defun
 
 @c page
-@node iterators mapping
+@node iteration thunks mapping
 @section Maping iterators
 
 
@@ -223,7 +223,7 @@ the iteration stops when one of the thunks returns void.
 @end defun
 
 @c page
-@node iterators searching
+@node iteration thunks searching
 @section Searching with iterators
 
 
@@ -338,7 +338,7 @@ iteration thunks.
 @end defun
 
 @c page
-@node iterators filtering
+@node iteration thunks filtering
 @section Filtering with iterators
 
 

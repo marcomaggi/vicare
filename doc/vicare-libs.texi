@@ -154,7 +154,7 @@ Networking libraries
 Container libraries
 
 * comparators::                 Comparators.
-* iterators::                   Iteration thunks.
+* iteration thunks::            Iteration thunks.
 * lists::                       List library.
 * vectors::                     Vector library.
 * strings::                     String library.
