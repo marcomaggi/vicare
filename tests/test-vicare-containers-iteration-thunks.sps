@@ -158,6 +158,40 @@
   #t)
 
 
+(parametrise ((check-test-name	'folding))
+
+  (check
+      (iteration-thunk-fold xcons
+	'()
+	(make-list-iteration-thunk '(0 1 2 3 4)))
+    => '(4 3 2 1 0))
+
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2)
+				(set-cons! ell (+ knil item1 item2))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0  1  2  3  4))
+	  (make-list-iteration-thunk '(0 10 20 30 40))))
+    => '(44 33 22 11 0))
+
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2 item3)
+				(set-cons! ell (+ knil item1 item2 item3))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0   1   2   3   4))
+	  (make-list-iteration-thunk '(0  10  20  30  40))
+	  (make-list-iteration-thunk '(0 100 200 300 400))))
+    => '(444 333 222 111 0))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

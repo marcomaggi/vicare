@@ -143,10 +143,14 @@ of the thunks returns void.
   (make-list-iteration-thunk '(0 1 2 3 4)))
 @result{} (4 3 2 1 0)
 
-(iteration-thunk-fold +
-  0
-  (make-list-iteration-thunk '(0  1  2  3  4))
-  (make-list-iteration-thunk '(0 10 20 30 40)))
+(receive-and-return (ell)
+    '()
+  (iteration-thunk-fold (lambda (knil item1 item2)
+                          (set-cons! ell (+ knil item1 item2))
+                          knil)
+    0
+    (make-list-iteration-thunk '(0  1  2  3  4))
+    (make-list-iteration-thunk '(0 10 20 30 40))))
 @result{} (44 33 22 11 0)
 @end lisp
 @end defun

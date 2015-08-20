@@ -122,11 +122,11 @@
   (({kons procedure?} knil {fun procedure?})
    ($iteration-thunk-fold kons knil fun))
 
-  (({kons procedure?} knil {fun1 procedure?} {fun2 procedure?})
-   ($iteration-thunk-fold kons knil fun1 fun2))
+  (({kons procedure?} knil {iter1 procedure?} {iter2 procedure?})
+   ($iteration-thunk-fold kons knil iter1 iter2))
 
-  (({kons procedure?} knil {fun1 procedure?} {fun2 procedure?} . {fun* procedure?})
-   ($iteration-thunk-fold-multi kons knil fun1 fun2 fun*))
+  (({kons procedure?} knil {iter1 procedure?} {iter2 procedure?} . {iter* procedure?})
+   ($iteration-thunk-fold-multi kons knil iter1 iter2 iter*))
 
   #| end of CASE-DEFINE |# )
 
@@ -138,28 +138,30 @@
 	 knil
        ($iteration-thunk-fold kons (kons knil item) fun))))
 
-  ((kons knil fun1 fun2)
-   (let ((item1 (fun1))
-	 (item2 (fun2)))
+  ((kons knil iter1 iter2)
+   (let ((item1 (iter1))
+	 (item2 (iter2)))
      (if (or (void-object? item1)
 	     (void-object? item2))
 	 knil
-       ($iteration-thunk-fold kons (kons knil item1 item2) fun1 fun2))))
+       ($iteration-thunk-fold kons (kons knil item1 item2) iter1 iter2))))
 
-  ((kons knil fun1 fun2 . fun*)
-   ($iteration-thunk-fold-multi kons knil fun1 fun2 fun*))
+  ((kons knil iter1 iter2 . iter*)
+   ($iteration-thunk-fold-multi kons knil iter1 iter2 iter*))
 
   #| end of CASE-DEFINE |# )
 
-(define ($iteration-thunk-fold-multi kons knil fun1 fun2 fun*)
-  (let ((item1 (fun1))
-	(item2 (fun2))
-	(item* (map apply fun*)))
+(define ($iteration-thunk-fold-multi kons knil iter1 iter2 iter*)
+  (let ((item1 (iter1))
+	(item2 (iter2))
+	(item* (map (lambda (it)
+		      (apply it '()))
+		 iter*)))
     (if (or (void-object? item1)
 	    (void-object? item2)
 	    (exists void-object? item*))
 	knil
-      ($iteration-thunk-fold-multi kons (apply kons knil item1 item2 item*) fun1 fun2 fun*))))
+      ($iteration-thunk-fold-multi kons (apply kons knil item1 item2 item*) iter1 iter2 iter*))))
 
 
 ;;;; operations: map
