@@ -34,6 +34,7 @@
   (srfi :116)
   (srfi :116 comparators)
   (srfi :116 quotations)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -4438,6 +4439,31 @@
   (check
       (iquasiquote #(1 2 (iunquote (+ 3 4))))
     => (vector '1 '2 (+ '3 '4)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'ilist))
+
+  (define (xcons a b)
+    (cons b a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((iter (make-ilist-iteration-thunk '())))
+        (iteration-thunk-fold xcons '() iter))
+    => '())
+
+  (check
+      (let ((iter (make-ilist-iteration-thunk (ilist 0))))
+        (iteration-thunk-fold xcons '() iter))
+    => '(0))
+
+  (check
+      (let ((iter (make-ilist-iteration-thunk (ilist 0 1 2 3 4))))
+        (iteration-thunk-fold xcons '() iter))
+    => '(4 3 2 1 0))
 
   #t)
 

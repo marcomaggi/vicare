@@ -464,6 +464,7 @@ two examples on the difference between @syntax{iunquote} and
 * srfi ilists procs conversion::        Conversion.
 * srfi ilists procs apply::             Procedure application.
 * srfi ilists procs comparators::       Comparators.
+* srfi ilists procs iterthunks::        Iteration thunks.
 @end menu
 
 @c page
@@ -2324,6 +2325,33 @@ Return a comparator that compares ipairs on their icars alone using
 Return a comparator that compares ipairs on their icdrs alone using
 @var{comparator}.
 @end deftypefun
+
+@c page
+@node srfi ilists procs iterthunks
+@subsubsection Iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).
+
+
+@defun make-ilist-iteration-thunk @var{ell}
+Return an iteration thunk for the objects in the proper immutable list
+@var{ell}.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold xcons
+  '()
+  (make-ilist-iteration-thunk (ilist 0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+@end lisp
+@end defun
 
 @c page
 @node srfi ilists ack

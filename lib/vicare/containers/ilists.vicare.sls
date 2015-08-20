@@ -160,7 +160,8 @@
     list->ilist			ilist->list
     ilist->vector		vector->ilist
     tree->itree itree->tree gtree->itree gtree->tree
-    iapply)
+    iapply
+    make-ilist-iteration-thunk)
   (import (vicare)
     (rnrs mutable-pairs))
 
@@ -1216,6 +1217,21 @@
 ;;;;;;;;;;;
 
 (define (ireverse lis) (ifold ipair '() lis))
+
+
+;;;; iteration thunks
+
+(define (make-ilist-iteration-thunk ell)
+  (lambda ()
+    (cond ((ipair? ell)
+	   (receive-and-return (item)
+	       (icar ell)
+	     (set! ell (icdr ell))))
+	  ((null? ell)
+	   (void))
+	  (else
+	   (assertion-violation 'ilist-iteration-thunk
+	     "expected ipair as ilist object" ell)))))
 
 
 ;;;; done

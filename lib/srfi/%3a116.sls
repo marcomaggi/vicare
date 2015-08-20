@@ -50,7 +50,8 @@
     list->ilist			ilist->list
     ilist->vector		vector->ilist
     tree->itree itree->tree gtree->itree gtree->tree
-    iapply)
+    iapply
+    make-ilist-iteration-thunk)
   (import (srfi :116 ilists)))
 
 ;;; end of file
