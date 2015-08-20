@@ -27,6 +27,7 @@
 (import (vicare)
   (vicare containers chains)
   (vicare containers chains sort)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1554,6 +1555,47 @@
 		 (equal? LIST-5 (chain->list (chain-sort-forwards < (list->chain ell)))))
 	(permutations LIST-5))
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name 'iteration-thunks))
+
+  (define (xcons a b)
+    (cons b a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-chain-forwards-iteration-thunks (chain)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-chain-forwards-iteration-thunks (chain 0 1 2 3 4 5)))
+    => '(5 4 3 2 1 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-chain-backwards-iteration-thunks (chain)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-chain-backwards-iteration-thunks
+	   (chain-rear (chain 0 1 2 3 4 5))))
+    => '(0 1 2 3 4 5))
 
   #t)
 

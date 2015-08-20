@@ -24,6 +24,7 @@ containers chains sort} implements a sorting algorithm.
 * chains filtering::            Filtering in chains.
 * chains conversion::           Converting chains to other objects.
 * chains sort::                 Sorting chains.
+* chains iteration thunks::     Chain iteration thunks.
 @end menu
 
 @c page
@@ -686,6 +687,73 @@ argument.
 (let* ((C1 (chain 0 4 3 1 2 5))
        (C2 (chain-sort-forwards < C1)))
   (chain->list C2))
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
+
+@c page
+@node chains iteration thunks
+@section Chain iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers chains sort}.
+
+
+@defun make-chain-forwards-iteration-thunk @var{chain}
+Build and return a new iteration thunk visiting the objects from
+@var{chain}.  The iteration proceeds forwards from @var{chain}.
+
+@lisp
+(import (vicare)
+  (vicare containers chains)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-chain-forwards-iteration-thunks (chain)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-chain-forwards-iteration-thunks (chain 0 1 2 3 4 5)))
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-chain-backwards-iteration-thunk @var{chain}
+Build and return a new iteration thunk visiting the objects from
+@var{chain}.  The iteration proceeds backwards from @var{chain}.
+
+@lisp
+(import (vicare)
+  (vicare containers chains)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-chain-backwards-iteration-thunks (chain)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-chain-backwards-iteration-thunks
+     (chain-rear (chain 0 1 2 3 4 5))))
 @result{} (0 1 2 3 4 5)
 @end lisp
 @end defun

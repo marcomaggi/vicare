@@ -79,7 +79,10 @@
     chain->list				$chain->list
     list->chain				$list->chain
     chain->vector			$chain->vector
-    vector->chain			$vector->chain)
+    vector->chain			$vector->chain
+
+    make-chain-forwards-iteration-thunks
+    make-chain-backwards-iteration-thunks)
   (import (vicare)
     (vicare system $fx)
     (vicare system $pairs)
@@ -1049,6 +1052,25 @@
 			   (make-chain-link item)
 			 ($chain-link-next-set! this-link next-link)))
     '() V))
+
+
+;;;; iteration thunks
+
+(define* (make-chain-forwards-iteration-thunks {C chain?})
+  (lambda ()
+    (if (null? C)
+	(void)
+      (receive-and-return (obj)
+	  ($<chain-link>-object C)
+	(set! C ($chain-link-next C))))))
+
+(define* (make-chain-backwards-iteration-thunks {C chain?})
+  (lambda ()
+    (if (null? C)
+	(void)
+      (receive-and-return (obj)
+	  ($<chain-link>-object C)
+	(set! C ($chain-link-prev C))))))
 
 
 ;;;; done
