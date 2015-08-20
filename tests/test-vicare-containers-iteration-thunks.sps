@@ -189,6 +189,77 @@
 	  (make-list-iteration-thunk '(0 100 200 300 400))))
     => '(444 333 222 111 0))
 
+;;; --------------------------------------------------------------------
+
+  ;;Two iterators, the first finishes first.
+  ;;
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2)
+				(set-cons! ell (+ knil item1 item2))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0   1   2))
+	  (make-list-iteration-thunk '(0  10  20  30  40))))
+    => '(22 11 0))
+
+  ;;Two iterators, the second finishes first.
+  ;;
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2)
+				(set-cons! ell (+ knil item1 item2))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0   1   2   3   4))
+	  (make-list-iteration-thunk '(0  10  20))))
+    => '(22 11 0))
+
+
+  ;;Three iterators, the first finishes first.
+  ;;
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2 item3)
+				(set-cons! ell (+ knil item1 item2 item3))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0   1   2))
+	  (make-list-iteration-thunk '(0  10  20  30  40))
+	  (make-list-iteration-thunk '(0 100 200 300 400))))
+    => '(222 111 0))
+
+  ;;Three iterators, the second finishes first.
+  ;;
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2 item3)
+				(set-cons! ell (+ knil item1 item2 item3))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0   1   2   3   4))
+	  (make-list-iteration-thunk '(0  10  20))
+	  (make-list-iteration-thunk '(0 100 200 300 400))))
+    => '(222 111 0))
+
+  ;;Three iterators, the third finishes first.
+  ;;
+  (check
+      (receive-and-return (ell)
+	  '()
+	(iteration-thunk-fold (lambda (knil item1 item2 item3)
+				(set-cons! ell (+ knil item1 item2 item3))
+				knil)
+	  0
+	  (make-list-iteration-thunk '(0   1   2   3   4))
+	  (make-list-iteration-thunk '(0  10  20  30  40))
+	  (make-list-iteration-thunk '(0 100 200))))
+    => '(222 111 0))
+
   #t)
 
 
