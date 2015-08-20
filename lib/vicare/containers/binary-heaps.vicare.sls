@@ -56,7 +56,9 @@
 
     binary-heap-fold!		$binary-heap-fold!
 
-    binary-heap-sort-to-list!	$binary-heap-sort-to-list!)
+    binary-heap-sort-to-list!	$binary-heap-sort-to-list!
+
+    make-binary-heap-iteration-thunk)
   (import (vicare)
     (vicare system $fx)
     (vicare system $pairs)
@@ -351,6 +353,15 @@
   (while ($binary-heap-not-empty? H2)
     ($binary-heap-push! H1 ($binary-heap-pop! H2)))
   H1)
+
+
+;;;; iteration thunks
+
+(define* (make-binary-heap-iteration-thunk {H binary-heap?})
+  (lambda ()
+    (if ($binary-heap-empty? H)
+	(void)
+      ($binary-heap-pop! H))))
 
 
 ;;;; done

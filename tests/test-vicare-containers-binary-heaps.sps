@@ -27,6 +27,7 @@
 #!vicare
 (import (vicare)
   (vicare containers binary-heaps)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -302,6 +303,32 @@
     '()
     '(10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29)
     #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'iteration-thunks))
+
+  (define (xcons a b)
+    (cons b a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-binary-heap-iteration-thunk (make-binary-heap <)))
+    => '())
+
+  (check
+      (let ((H (make-binary-heap <)))
+	(binary-heap-fill! H '(3 5 7 0 6 5 34 3 6 9 67 5 4 4 3 1 2 3))
+	(iteration-thunk-fold
+	    xcons
+	  '()
+	  (make-binary-heap-iteration-thunk H)))
+    => '(67 34 9 7 6 6 5 5 5 4 4 3 3 3 3 2 1 0))
 
   #t)
 

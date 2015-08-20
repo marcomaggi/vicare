@@ -14,6 +14,7 @@ heaps holding arbitrary Scheme objects.
 * binary heaps inspection::     Inspecting heap objects.
 * binary heaps access::         Heap accessors and mutators.
 * binary heaps sorting::        Sorting using binary heaps.
+* binary heaps iterthunks::     Iteration thunks.
 * binary heaps misc::           Miscellaneous operations on heaps.
 @end menu
 
@@ -191,6 +192,47 @@ arguments before accessing them.
 @defunx $binary-heap-sort-to-list! @var{heap}
 Build and return a list holding all the objects in @var{heap} sorted
 from the lesser to the greater.  The heap is left empty.
+@end defun
+
+@c page
+@node binary heaps iterthunks
+@section Iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers binary-heaps}.
+
+
+@defun make-binary-heap-iteration-thunk @var{heap}
+Build and return a new iteration thunk popping the objects from
+@var{stack}.
+
+@lisp
+(import (vicare)
+  (vicare containers binary-heaps)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-binary-heap-iteration-thunk (make-binary-heap <)))
+@result{} ()
+
+(let ((H (make-binary-heap <)))
+  (binary-heap-fill! H '(3 5 7 0 6 5 34 3 6 9 67 5 4 4 3 1 2 3))
+  (iteration-thunk-fold
+      xcons
+    '()
+    (make-binary-heap-iteration-thunk H)))
+@result{} (67 34 9 7 6 6 5 5 5 4 4 3 3 3 3 2 1 0)
+@end lisp
 @end defun
 
 @c page
