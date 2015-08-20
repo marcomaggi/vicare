@@ -25,7 +25,7 @@
 
 #!vicare
 (import (vicare)
-  (vicare containers iterators)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -38,21 +38,44 @@
   (cons b a))
 
 
-(parametrise ((check-test-name	'spine))
+(parametrise ((check-test-name	'list))
 
   (check
-      (let ((iter (make-spine-iterator '())))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-list-iteration-thunk '())))
+        (iteration-thunk-fold xcons '() iter))
     => '())
 
   (check
-      (let ((iter (make-spine-iterator '(0))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-list-iteration-thunk '(0))))
+        (iteration-thunk-fold xcons '() iter))
     => '(0))
 
   (check
-      (let ((iter (make-spine-iterator '(0 1 2 3 4))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-list-iteration-thunk '(0 1 2 3 4))))
+        (iteration-thunk-fold xcons '() iter))
+    => '(4 3 2 1 0))
+
+  #t)
+
+
+(parametrise ((check-test-name	'spine))
+
+  (define (kons knil pair)
+    (cons (car pair) knil))
+
+  (check
+      (let ((iter (make-spine-iteration-thunk '())))
+        (iteration-thunk-fold kons '() iter))
+    => '())
+
+  (check
+      (let ((iter (make-spine-iteration-thunk '(0))))
+        (iteration-thunk-fold kons '() iter))
+    => '(0))
+
+  (check
+      (let ((iter (make-spine-iteration-thunk '(0 1 2 3 4))))
+        (iteration-thunk-fold kons '() iter))
     => '(4 3 2 1 0))
 
   #t)
@@ -61,18 +84,18 @@
 (parametrise ((check-test-name	'vector))
 
   (check
-      (let ((iter (make-vector-iterator '#())))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-vector-iteration-thunk '#())))
+        (iteration-thunk-fold xcons '() iter))
     => '())
 
   (check
-      (let ((iter (make-vector-iterator '#(0))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-vector-iteration-thunk '#(0))))
+        (iteration-thunk-fold xcons '() iter))
     => '(0))
 
   (check
-      (let ((iter (make-vector-iterator '#(0 1 2 3 4))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-vector-iteration-thunk '#(0 1 2 3 4))))
+        (iteration-thunk-fold xcons '() iter))
     => '(4 3 2 1 0))
 
   #t)
@@ -81,18 +104,18 @@
 (parametrise ((check-test-name	'string))
 
   (check
-      (let ((iter (make-string-iterator "")))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-string-iteration-thunk "")))
+        (iteration-thunk-fold xcons '() iter))
     => '())
 
   (check
-      (let ((iter (make-string-iterator "0")))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-string-iteration-thunk "0")))
+        (iteration-thunk-fold xcons '() iter))
     => '(#\0))
 
   (check
-      (let ((iter (make-string-iterator "01234")))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-string-iteration-thunk "01234")))
+        (iteration-thunk-fold xcons '() iter))
     => '(#\4 #\3 #\2 #\1 #\0))
 
   #t)
@@ -101,35 +124,35 @@
 (parametrise ((check-test-name	'bytevector))
 
   (check
-      (let ((iter (make-bytevector-u8-iterator '#vu8())))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-bytevector-u8-iteration-thunk '#vu8())))
+        (iteration-thunk-fold xcons '() iter))
     => '())
 
   (check
-      (let ((iter (make-bytevector-u8-iterator '#vu8(0))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-bytevector-u8-iteration-thunk '#vu8(0))))
+        (iteration-thunk-fold xcons '() iter))
     => '(0))
 
   (check
-      (let ((iter (make-bytevector-u8-iterator '#vu8(0 1 2 3 4))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-bytevector-u8-iteration-thunk '#vu8(0 1 2 3 4))))
+        (iteration-thunk-fold xcons '() iter))
     => '(4 3 2 1 0))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((iter (make-bytevector-s8-iterator '#vs8())))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-bytevector-s8-iteration-thunk '#vs8())))
+        (iteration-thunk-fold xcons '() iter))
     => '())
 
   (check
-      (let ((iter (make-bytevector-s8-iterator '#vs8(0))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-bytevector-s8-iteration-thunk '#vs8(0))))
+        (iteration-thunk-fold xcons '() iter))
     => '(0))
 
   (check
-      (let ((iter (make-bytevector-s8-iterator '#vs8(0 -1 -2 -3 -4))))
-        (iterator-fold xcons '() iter))
+      (let ((iter (make-bytevector-s8-iteration-thunk '#vs8(0 -1 -2 -3 -4))))
+        (iteration-thunk-fold xcons '() iter))
     => '(-4 -3 -2 -1 0))
 
   #t)

@@ -1002,19 +1002,19 @@ endif
 EXTRA_DIST += lib/vicare/containers/comparators.vicare.sls
 CLEANFILES += lib/vicare/containers/comparators.fasl
 
-lib/vicare/containers/iterators.fasl: \
-		lib/vicare/containers/iterators.vicare.sls \
+lib/vicare/containers/iteration-thunks.fasl: \
+		lib/vicare/containers/iteration-thunks.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-lib_vicare_containers_iterators_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_iterators_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_iterators_fasl_DATA = lib/vicare/containers/iterators.fasl
+lib_vicare_containers_iteration_thunks_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_iteration_thunks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_iteration_thunks_fasl_DATA = lib/vicare/containers/iteration-thunks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_iterators_vicare_sls_DATA = lib/vicare/containers/iterators.vicare.sls
+dist_lib_vicare_containers_iteration_thunks_vicare_sls_DATA = lib/vicare/containers/iteration-thunks.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/iterators.vicare.sls
-CLEANFILES += lib/vicare/containers/iterators.fasl
+EXTRA_DIST += lib/vicare/containers/iteration-thunks.vicare.sls
+CLEANFILES += lib/vicare/containers/iteration-thunks.fasl
 
 lib/vicare/containers/bytevectors.fasl: \
 		lib/vicare/containers/bytevectors.vicare.sls \

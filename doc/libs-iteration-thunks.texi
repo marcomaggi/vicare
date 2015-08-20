@@ -2,17 +2,21 @@
 @chapter Iteration thunks
 
 
-@cindex Library @library{vicare containers iterators}
-@cindex @library{vicare containers iterators}, library
+@cindex Library @library{vicare containers iteration-thunks}
+@cindex @library{vicare containers iteration-thunks}, library
 
 
-The library @library{vicare containers iterators} implements some
+The library @library{vicare containers iteration-thunks} implements some
 iteration methods over collections of objects.  An @dfn{iteration thunk}
 is a thunk the returns the next object from an iteration over a compound
 object; when no more objects are available, it returns the void object.
 
 @menu
 * iterators common::            Iterators for common objects.
+* iterators folding::           Folding over iterators.
+* iterators mapping::           Mapping iterators.
+* iterators searching::         Searching with iterators.
+* iterators filtering::         Filtering with iterators.
 @end menu
 
 @c page
@@ -21,83 +25,244 @@ object; when no more objects are available, it returns the void object.
 
 
 The following syntactic bindings are exported by the library
-@library{vicare containers iterators}.
+@library{vicare containers iteration-thunks}.
 
 
-@defun make-spine-iterator @var{ell}
+@defun make-list-iteration-thunk @var{ell}
 Return an iteration thunk for the objects in the proper list @var{ell}.
 
 @lisp
 (define (xcons a b)
   (cons b a))
 
-(iterator-fold xcons
+(iteration-thunk-fold xcons
   '()
-  (make-spine-iterator '(0 1 2 3 4)))
+  (make-list-iteration-thunk '(0 1 2 3 4)))
 @result{} (4 3 2 1 0)
 @end lisp
 @end defun
 
 
-@defun make-vector-iterator @var{vec}
+@defun make-spine-iteration-thunk @var{ell}
+Return an iteration thunk for the pairs in the proper list @var{ell}.
+
+@lisp
+(define (kons knil pair)
+  (cons (car pair) knil))
+
+(iteration-thunk-fold kons
+  '()
+  (make-list-iteration-thunk '(0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-vector-iteration-thunk @var{vec}
 Return an iteration thunk for the objects in the vector @var{vec}.
 
 @lisp
 (define (xcons a b)
   (cons b a))
 
-(iterator-fold xcons
+(iteration-thunk-fold xcons
   '()
-  (make-vector-iterator '#(0 1 2 3 4)))
+  (make-vector-iteration-thunk '#(0 1 2 3 4)))
 @result{} (4 3 2 1 0)
 @end lisp
 @end defun
 
 
-@defun make-string-iterator @var{str}
+@defun make-string-iteration-thunk @var{str}
 Return an iteration thunk for the characters in the string @var{str}.
 
 @lisp
 (define (xcons a b)
   (cons b a))
 
-(iterator-fold xcons
+(iteration-thunk-fold xcons
   '()
-  (make-string-iterator "01234"))
+  (make-string-iteration-thunk "01234"))
 @result{} (#\4 #\3 #\2 #\1 #\0)
 @end lisp
 @end defun
 
 
-@defun make-bytevector-u8-iterator @var{bv}
+@defun make-bytevector-u8-iteration-thunk @var{bv}
 Return an iteration thunk for the octets in the bytevector @var{bv}.
 
 @lisp
 (define (xcons a b)
   (cons b a))
 
-(iterator-fold xcons
+(iteration-thunk-fold xcons
   '()
-  (make-bytevector-u8-iterator '#vu8(0 1 2 3 4)))
+  (make-bytevector-u8-iteration-thunk '#vu8(0 1 2 3 4)))
 @result{} (4 3 2 1 0)
 @end lisp
 @end defun
 
 
-@defun make-bytevector-s8-iterator @var{bv}
+@defun make-bytevector-s8-iteration-thunk @var{bv}
 Return an iteration thunk for the bytes in the bytevector @var{bv}.
 
 @lisp
 (define (xcons a b)
   (cons b a))
 
-(iterator-fold xcons
+(iteration-thunk-fold xcons
   '()
-  (make-bytevector-s8-iterator '#vs8(0 -1 -2 -3 -4)))
+  (make-bytevector-s8-iteration-thunk '#vs8(0 -1 -2 -3 -4)))
 @result{} (-4 -3 -2 -1 0)
 @end lisp
 @end defun
 
+@c page
+@node iterators folding
+@section Folding over iterators
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iteration-thunks}.  The syntactic bindings
+whose name is prefixed with @samp{$} are unsafe: they @strong{do not}
+validate their arguments.
+
+
+@defun iteration-thunk-fold @var{kons} @var{knil} @varo{iter} @var{iter} @dots{}
+@defunx $iteration-thunk-fold @var{kons} @var{knil} @varo{iter} @var{iter} @dots{}
+Fold operation over the objects from the iteration thunks @var{iter}.
+When multiple iteration thunks are given: the iteration stops when one
+of the thunks returns void.
+
+@lisp
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold xcons
+  '()
+  (make-list-iteration-thunk '(0 1 2 3 4)))
+@result{} (4 3 2 1 0)
+
+(iteration-thunk-fold +
+  0
+  (make-list-iteration-thunk '(0  1  2  3  4))
+  (make-list-iteration-thunk '(0 10 20 30 40)))
+@result{} (44 33 22 11 0)
+@end lisp
+@end defun
+
+@c page
+@node iterators mapping
+@section Maping iterators
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iteration-thunks}.  The syntactic bindings
+whose name is prefixed with @samp{$} are unsafe: they @strong{do not}
+validate their arguments.
+
+
+@defun iteration-thunk-map @var{acceptor} @var{fun} @varo{iter} @var{iter} @dots{}
+@defunx $iteration-thunk-map @var{acceptor} @var{fun} @varo{iter} @var{iter} @dots{}
+Apply @func{fun} to the items from the iteration thunks @var{iter}.
+When multiple iteration thunks are given: the iteration stops when one
+of the thunks returns void.  The function @var{acceptor} is applied to
+the the results of the applications; the return values of @var{acceptor}
+are discarded.
+@end defun
+
+
+@defun iteration-thunk-for-each @var{fun} @varo{iter} @var{iter} @dots{}
+@defunx $iteration-thunk-for-each @var{fun} @varo{iter} @var{iter} @dots{}
+Apply @func{fun} to the items from the iteration thunks @var{iter} and
+discard the return values.  When multiple iteration thunks are given:
+the iteration stops when one of the thunks returns void.
+@end defun
+
+@c page
+@node iterators searching
+@section Searching with iterators
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iteration-thunks}.  The syntactic bindings
+whose name is prefixed with @samp{$} are unsafe: they @strong{do not}
+validate their arguments.
+
+
+@defun iteration-thunk-for-all @var{fun} @varo{iter} @var{iter} @dots{}
+@defunx $iteration-thunk-for-all @var{fun} @varo{iter} @var{iter} @dots{}
+Apply @func{fun} to the items from the iteration thunks @var{iter}.
+When multiple iteration thunks are given: the iteration stops when one
+of the thunks returns void.
+
+If all the applications of @var{fun} return true: the return value is
+@true{}.  If an application of @var{fun} returns @false{}: the iteration
+stops immediately and the return value is @false{}.
+@end defun
+
+
+@defun iteration-thunk-exists @var{fun} @varo{iter} @var{iter} @dots{}
+@defunx $iteration-thunk-exists @var{fun} @varo{iter} @var{iter} @dots{}
+Apply @func{fun} to the items from the iteration thunks @var{iter}.
+When multiple iteration thunks are given: the iteration stops when one
+of the thunks returns void.
+
+If all the applications of @var{fun} return @false{}: the return value
+is @false{}.  If an application of @var{fun} returns a non--@false{}
+value: the iteration stops immediately and the returned value is
+returned.
+@end defun
+
+
+@defun iteration-thunk-find @var{fun} @var{iter}
+@defunx iteration-thunk-find @var{fun} @var{iter} @var{not-found-handler}
+@defunx $iteration-thunk-find @var{fun} @var{iter} @var{not-found-handler}
+Apply @func{fun} to the items from the iteration thunk @var{iter}:
+
+@itemize
+@item
+If all the applications of @var{fun} return @false{} and
+@var{not-found-handler} is not given: the return value is @false{}.
+
+@item
+If all the applications of @var{fun} return @false{} and
+@var{not-found-handler} is given: @var{not-found-handler} must be a
+thunk and the return value is the return value of the thunk.
+
+@item
+If an application of @var{fun} returns a non--@false{} value: the
+iteration stops immediately and the return value is the item from the
+iteration thunks.
+@end itemize
+@end defun
+
+@c page
+@node iterators filtering
+@section Filtering with iterators
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iteration-thunks}.  The syntactic bindings
+whose name is prefixed with @samp{$} are unsafe: they @strong{do not}
+validate their arguments.
+
+
+@defun iteration-thunk-filter @var{acceptor} @var{pred} @var{iter}
+@defunx $iteration-thunk-filter @var{acceptor} @var{pred} @var{iter}
+Iterate over the items from @var{iter}, apply @var{pred} to them, apply
+@var{acceptor} to the items for which @var{pred} returns true.  Return
+unspecified values.
+@end defun
+
+
+@defun iteration-thunk-partition @var{match-acceptor} @var{no-match-acceptor} @var{pred} @var{iter}
+@defunx $iteration-thunk-partition @var{match-acceptor} @var{no-match-acceptor} @var{pred} @var{iter}
+Iterate over the items from @var{iter} and apply @var{pred} to them: if
+the return value is true, apply @var{match-acceptor} to the item; if the
+return value is @false{}, apply @var{no-match-acceptor} to the item.
+Return unspecified values.
+@end defun
 
 @c Local Variables:
 @c mode: texinfo

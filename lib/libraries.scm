@@ -110,7 +110,7 @@
      (vicare numerics flonum-formatter)
 
      (vicare containers comparators)
-     (vicare containers iterators)
+     (vicare containers iteration-thunks)
      (vicare containers bytevectors)
      (vicare containers auxiliary-syntaxes)
      (vicare containers weak-hashtables)
