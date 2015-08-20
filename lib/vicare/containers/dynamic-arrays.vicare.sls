@@ -79,17 +79,20 @@
     (rename
      (dynamic-array-find-left		dynamic-array-find)
      ($dynamic-array-find-left		$dynamic-array-find)
-     (dynamic-array-exists-left	dynamic-array-exists)
+     (dynamic-array-exists-left		dynamic-array-exists)
      ($dynamic-array-exists-left	$dynamic-array-exists))
 
     dynamic-array-filter		$dynamic-array-filter
     dynamic-array-partition		$dynamic-array-partition
 
-    dynamic-array-copy!		$dynamic-array-copy!
+    dynamic-array-copy!			$dynamic-array-copy!
     dynamic-array-reverse!		$dynamic-array-reverse!
 
-    dynamic-array->list		list->dynamic-array
-    dynamic-array->vector		vector->dynamic-array)
+    dynamic-array->list			list->dynamic-array
+    dynamic-array->vector		vector->dynamic-array
+
+    make-dynamic-array-front-iteration-thunk
+    make-dynamic-array-rear-iteration-thunk)
   (import (vicare)
     (vicare system $fx)
     (vicare system $pairs)
@@ -835,6 +838,28 @@
 	($dynamic-array-push-front! dst-arry obj)
 	knil)
     dst-arry src-arry))
+
+
+;;;; iteration thunks
+
+(define* (make-dynamic-array-front-iteration-thunk {arry dynamic-array?})
+  (let ((arry.idx 0)
+	(arry.len ($dynamic-array-length arry)))
+    (lambda ()
+      (if ($fx< arry.idx arry.len)
+	  (receive-and-return (ch)
+	      ($dynamic-array-ref arry arry.idx)
+	    (set! arry.idx ($fxadd1 arry.idx)))
+	(void)))))
+
+(define* (make-dynamic-array-rear-iteration-thunk {arry dynamic-array?})
+  (let ((arry.idx ($fxsub1 ($dynamic-array-length arry))))
+    (lambda ()
+      (if ($fxnonnegative? arry.idx)
+	  (receive-and-return (ch)
+	      ($dynamic-array-ref arry arry.idx)
+	    (set! arry.idx ($fxsub1 arry.idx)))
+	(void)))))
 
 
 ;;;; done

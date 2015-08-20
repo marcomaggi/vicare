@@ -26,6 +26,7 @@ sort} implements sorting algorithms.
 * dynamic arrays misc::         Miscellaneous operations on
                                 dynamic vectors.
 * dynamic arrays sort::         Sorting dynamic arrays.
+* dynamic arrays iterthunks::   Iteration thunks.
 @end menu
 
 @c page
@@ -692,6 +693,75 @@ argument.
 @end lisp
 @end defun
 
+@c page
+@node dynamic arrays iterthunks
+@section Iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers dynamic-arrays}.
+
+
+@defun make-dynamic-array-front-iteration-thunk @var{arry}
+Build and return a new iteration thunk visiting the objects from the
+front of @var{arry}.
+
+@lisp
+(import (vicare)
+  (vicare containers dynamic-arrays)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-dynamic-array-front-iteration-thunks
+     (dynamic-array)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-dynamic-array-front-iteration-thunks
+     (dynamic-array 0 1 2 3 4 5)))
+@result{} (5 4 3 2 1 0)
+@end lisp
+@end defun
+
+
+@defun make-dynamic-array-rear-iteration-thunk @var{arry}
+Build and return a new iteration thunk popping the objects from the rear
+of @var{arry}.
+
+@lisp
+(import (vicare)
+  (vicare containers dynamic-arrays)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-dynamic-array-rear-iteration-thunks
+     (dynamic-array)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-dynamic-array-rear-iteration-thunks
+     (dynamic-array 0 1 2 3 4 5)))
+@result{} (0 1 2 3 4 5)
+@end lisp
+@end defun
 
 @c Local Variables:
 @c mode: texinfo

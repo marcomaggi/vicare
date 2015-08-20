@@ -28,10 +28,11 @@
 (import (vicare)
   (vicare containers dynamic-arrays)
   (vicare containers dynamic-arrays sort)
+  (vicare containers iteration-thunks)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare libraries: dynamic vector containers\n")
+(check-display "*** testing Vicare libraries: dynamic array containers\n")
 
 
 ;;;; helpers
@@ -1554,6 +1555,46 @@
   (check
       (let ((C (dynamic-array 0 4 3 1 2 5)))
 	(dynamic-array->list (dynamic-array-sort! < C)))
+    => '(0 1 2 3 4 5))
+
+  #t)
+
+
+(parametrise ((check-test-name	'iteration-thunks))
+
+  (define (xcons a b)
+    (cons b a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-dynamic-array-front-iteration-thunk (dynamic-array)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-dynamic-array-front-iteration-thunk (dynamic-array 0 1 2 3 4 5)))
+    => '(5 4 3 2 1 0))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-dynamic-array-rear-iteration-thunk (dynamic-array)))
+    => '())
+
+  (check
+      (iteration-thunk-fold
+	  xcons
+	'()
+	(make-dynamic-array-rear-iteration-thunk (dynamic-array 0 1 2 3 4 5)))
     => '(0 1 2 3 4 5))
 
   #t)
