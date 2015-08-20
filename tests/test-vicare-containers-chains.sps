@@ -1559,7 +1559,7 @@
   #t)
 
 
-(parametrise ((check-test-name 'iteration-thunks))
+(parametrise ((check-test-name	'iteration-thunks))
 
   (define (xcons a b)
     (cons b a))
@@ -1570,14 +1570,14 @@
       (iteration-thunk-fold
 	  xcons
 	'()
-	(make-chain-forwards-iteration-thunks (chain)))
+	(make-chain-forwards-iteration-thunk (chain)))
     => '())
 
   (check
       (iteration-thunk-fold
 	  xcons
 	'()
-	(make-chain-forwards-iteration-thunks (chain 0 1 2 3 4 5)))
+	(make-chain-forwards-iteration-thunk (chain 0 1 2 3 4 5)))
     => '(5 4 3 2 1 0))
 
 ;;; --------------------------------------------------------------------
@@ -1586,14 +1586,14 @@
       (iteration-thunk-fold
 	  xcons
 	'()
-	(make-chain-backwards-iteration-thunks (chain)))
+	(make-chain-backwards-iteration-thunk (chain)))
     => '())
 
   (check
       (iteration-thunk-fold
 	  xcons
 	'()
-	(make-chain-backwards-iteration-thunks
+	(make-chain-backwards-iteration-thunk
 	   (chain-rear (chain 0 1 2 3 4 5))))
     => '(0 1 2 3 4 5))
 

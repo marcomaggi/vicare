@@ -701,7 +701,7 @@ item from a collection; when the iteration finishes: the return value is
 the void object.  Iteration thunks can be used with the facilities of
 the library @library{vicare containers iteration-thunks}
 (@pxref{iteration thunks}).  The following syntactic bindings are
-exported by the library @library{vicare containers chains sort}.
+exported by the library @library{vicare containers chains}.
 
 
 @defun make-chain-forwards-iteration-thunk @var{chain}

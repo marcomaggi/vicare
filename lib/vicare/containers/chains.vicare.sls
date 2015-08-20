@@ -81,8 +81,8 @@
     chain->vector			$chain->vector
     vector->chain			$vector->chain
 
-    make-chain-forwards-iteration-thunks
-    make-chain-backwards-iteration-thunks)
+    make-chain-forwards-iteration-thunk
+    make-chain-backwards-iteration-thunk)
   (import (vicare)
     (vicare system $fx)
     (vicare system $pairs)
@@ -1056,7 +1056,7 @@
 
 ;;;; iteration thunks
 
-(define* (make-chain-forwards-iteration-thunks {C chain?})
+(define* (make-chain-forwards-iteration-thunk {C chain?})
   (lambda ()
     (if (null? C)
 	(void)
@@ -1064,7 +1064,7 @@
 	  ($<chain-link>-object C)
 	(set! C ($chain-link-next C))))))
 
-(define* (make-chain-backwards-iteration-thunks {C chain?})
+(define* (make-chain-backwards-iteration-thunk {C chain?})
   (lambda ()
     (if (null? C)
 	(void)
