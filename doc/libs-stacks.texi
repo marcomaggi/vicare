@@ -19,6 +19,7 @@ operations.
 * stacks searching::            Searching in stacks.
 * stacks filtering::            Filtering in stacks.
 * stacks conversion::           Converting stacks to other objects.
+* stacks iteration thunks::     Stack iteration thunks.
 * stacks misc::                 Miscellaneous operations on stacks.
 @end menu
 
@@ -479,6 +480,45 @@ pushed on the stack left--to--right from the bottom side.
 
 (stack-top     D)       @result{} 0
 (stack->vector D)       @result{} #(0 1 2)
+@end lisp
+@end defun
+
+@c page
+@node stacks iteration thunks
+@section Stack iteration thunks
+
+
+Iteration thunks are procedures accepting no arguments and returning an
+item from a collection; when the iteration finishes: the return value is
+the void object.  Iteration thunks can be used with the facilities of
+the library @library{vicare containers iteration-thunks}
+(@pxref{iteration thunks}).  The following syntactic bindings are
+exported by the library @library{vicare containers stacks}.
+
+
+@defun make-stack-iteration-thunk @var{stack}
+Build and return a new iteration thunk popping the objects from
+@var{stack}.
+
+@lisp
+(import (vicare)
+  (vicare containers stacks)
+  (vicare containers iteration-thunks))
+
+(define (xcons a b)
+  (cons b a))
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-stack-iteration-thunks (stack)))
+@result{} ()
+
+(iteration-thunk-fold
+    xcons
+  '()
+  (make-stack-iteration-thunks (stack 0 1 2 3 4 5)))
+@result{} (5 4 3 2 1 0)
 @end lisp
 @end defun
 

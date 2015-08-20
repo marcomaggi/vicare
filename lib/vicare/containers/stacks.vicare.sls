@@ -79,7 +79,9 @@
     stack-reverse!		$stack-reverse!
 
     stack->list			list->stack
-    stack->vector		vector->stack)
+    stack->vector		vector->stack
+
+    make-stack-iteration-thunk)
   (import (vicare)
     (vicare containers slots))
 
@@ -317,6 +319,15 @@
   ($stack-reverse! dst src))
 
 (define-alias $stack-reverse!		$slots-reverse!)
+
+
+;;;; iteration thunks
+
+(define* (make-stack-iteration-thunk {S stack?})
+  (lambda ()
+    (if ($stack-empty? S)
+	(void)
+      ($stack-pop! S))))
 
 
 ;;;; done
