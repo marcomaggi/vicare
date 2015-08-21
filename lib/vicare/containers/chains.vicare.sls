@@ -108,27 +108,6 @@
 		;The payload object.
 	  ))
 
-(define (%chain-link-printer link port)
-  (define-syntax-rule (%display thing)
-    (display thing port))
-  (define-syntax-rule (%write thing)
-    (write thing port))
-  (%display "#[chain-link")
-  (%display " uid=")	(%display (<chain-link>-uid    link))
-  (%display " object=")	(%display (<chain-link>-object link))
-  (%display " prev=")	(%display (let ((prev (<chain-link>-prev link)))
-				    (if (null? prev)
-					"()"
-				      "...")))
-  (%display " next=")	(%display (let ((next (<chain-link>-next link)))
-				    (if (null? next)
-					"()"
-				      "...")))
-  (%display "]"))
-
-(module ()
-  (record-printer-set! (record-type-descriptor <chain-link>) %chain-link-printer))
-
 ;;; --------------------------------------------------------------------
 
 (define-alias  chain-link-uid	 <chain-link>-uid)
