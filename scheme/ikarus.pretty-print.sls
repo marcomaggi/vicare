@@ -121,7 +121,7 @@
       (define (good-match? fmt ls)
 	(cond
 	 ((not (pair? fmt)) #t)
-	 ((eq? (car fmt) 'read-macro)
+	 ((eq? (car fmt) 'pretty-format-reader-macro)
 	  (and (unshared-list? ls) (fx= (length ls) 2)))
 	 (else
 	  (let ((a (car fmt)) (fmt (cdr fmt)))
@@ -200,10 +200,10 @@
 				   (cdr fmt)
 				 (list fmt))))
 		 (else (boxify x))))
-	      (define (read-macro? x)
-		(and (pair? x) (eq? (car x) 'read-macro)))
+	      (define (pretty-format-reader-macro? x)
+		(and (pair? x) (eq? (car x) 'pretty-format-reader-macro)))
 	      (cond
-	       ((read-macro? fmt)
+	       ((pretty-format-reader-macro? fmt)
 		(conc (cdr fmt) (boxify (cadr ls))))
 	       ((fmt-dots? fmt)
 		(return (fmt-tab fmt)

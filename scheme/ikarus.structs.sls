@@ -133,8 +133,13 @@
 
 (define ($make-std name field-name* uid)
   (receive-and-return (std)
-      ($struct (base-rtd) name (length field-name*) field-name*
-	       default-struct-printer uid #f)
+      ($struct (base-rtd)
+	       name
+	       (length field-name*) ;number of fields
+	       field-name*	    ;list of field names as symbols
+	       #f		    ;custom printer
+	       uid		    ;unique symbol identifier
+	       #f)		    ;destructor
     ($set-symbol-value! uid std)))
 
 ;;; --------------------------------------------------------------------
@@ -471,13 +476,14 @@
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.structs before"))
 
 ;;Initialise the fields of the base RTD.
-($set-std-name!       (base-rtd) "base-rtd")
-($set-std-fields!     (base-rtd) '(name length fields printer symbol destructor))
-;; (let ((uid (gensym "base-rtd")))
+($set-std-name!		(base-rtd) "base-rtd")
+($set-std-fields!	(base-rtd) '(name length fields printer symbol destructor))
+($set-std-symbol!	(base-rtd) #f)
+;; (let ((uid (expand-time-gensym "base-rtd")))
 ;;   ($set-std-symbol! (base-rtd) uid)
 ;;   ($set-symbol-value! uid (base-rtd)))
-($set-std-destructor! (base-rtd) #f)
-($set-std-printer!    (base-rtd) default-struct-printer)
+($set-std-destructor!	(base-rtd) #f)
+($set-std-printer!	(base-rtd) #f)
 
 ;;; --------------------------------------------------------------------
 

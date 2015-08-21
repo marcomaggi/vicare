@@ -41,15 +41,182 @@
     (only (vicare system $symbols)
 	  $unbound-object?)
     (only (vicare system $structs)
-	  $struct-rtd)
+	  base-rtd)
     (only (vicare system $codes)
 	  $code-annotation)
-    (only (ikarus.pretty-formats)
-	  get-fmt)
-    (only (ikarus records procedural)
-	  print-r6rs-record-instance))
+    (prefix (only (ikarus.keywords)
+		  keyword->string)
+	    keywords.)
+    (prefix (only (ikarus records procedural)
+		  record-constructor-descriptor?
+		  rcd-rtd
+		  rcd-parent-rcd)
+	    records.))
 
   (include "ikarus.wordsize.scm" #t)
+
+
+;;;; public API
+
+(define print-graph
+  (make-parameter #t))
+
+(define print-unicode
+  (make-parameter #f))
+
+(define printer-integer-radix
+  (make-parameter 10
+    (lambda (obj)
+      (case obj
+	((2 8 10 16)
+	 obj)
+	(else
+	 (assertion-violation 'printer-integer-radix
+	   "invalid radix to print integers, expected 2, 8, 10 or 16" obj))))))
+
+(module (put-datum
+	 write		display
+	 printf		fprintf
+	 format		debug-print)
+
+  (define (%write-to-port x p)
+    (let ((h (make-eq-hashtable)))
+      (traverse x h)
+      (write-object x p #t h 0)
+      (void)))
+
+  (define (%display-to-port x p)
+    (let ((h (make-eq-hashtable)))
+      (traverse x h)
+      (write-object x p #f h 0)
+      (void)))
+
+  (define (formatter who p fmt args)
+;;; first check
+    (let f ((i 0) (args args))
+      (cond
+       ((fx= i (string-length fmt))
+	(unless (null? args)
+	  (die who
+	       (format
+		   "extra arguments given for format string \x2036;~a\x2033;"
+		 fmt))))
+       (else
+	(let ((c (string-ref fmt i)))
+	  (cond
+	   ((eqv? c #\~)
+	    (let ((i (fxadd1 i)))
+	      (when (fx= i (string-length fmt))
+		(die who "invalid ~ at end of format string" fmt))
+	      (let ((c (string-ref fmt i)))
+		(cond
+		 ((memv c '(#\~ #\%)) (f (fxadd1 i) args))
+		 ((memv c '(#\a #\s))
+		  (when (null? args)
+		    (die who "insufficient arguments"))
+		  (f (fxadd1 i) (cdr args)))
+		 ((memv c '(#\b #\o #\x #\d))
+		  (when (null? args)
+		    (die who "insufficient arguments"))
+		  (let ((a (car args)))
+		    (unless (number? a) (die who "not a number" a))
+		    (unless (or (eqv? c #\d) (exact? a))
+		      (die who
+			   (format "inexact numbers cannot be \
+                                     printed with ~~~a" c)
+			   a)))
+		  (f (fxadd1 i) (cdr args)))
+		 (else
+		  (die who "invalid sequence character after ~" c))))))
+	   (else (f (fxadd1 i) args)))))))
+;;; then format
+    (let f ((i 0) (args args))
+      (unless (fx= i (string-length fmt))
+	(let ((c (string-ref fmt i)))
+	  (cond
+	   ((eqv? c #\~)
+	    (let ((i (fxadd1 i)))
+	      (let ((c (string-ref fmt i)))
+		(cond
+		 ((eqv? c #\~)
+		  (write-char #\~ p)
+		  (f (fxadd1 i) args))
+		 ((eqv? c #\%)
+		  (write-char #\newline p)
+		  (f (fxadd1 i) args))
+		 ((eqv? c #\a)
+		  (%display-to-port (car args) p)
+		  (f (fxadd1 i) (cdr args)))
+		 ((eqv? c #\s)
+		  (%write-to-port (car args) p)
+		  (f (fxadd1 i) (cdr args)))
+		 ((assv c '((#\b . 2) (#\o . 8) (#\x . 16) (#\d . 10)))
+		  =>
+		  (lambda (x)
+		    (let ((a (car args)))
+		      (%display-to-port (number->string a (cdr x)) p))
+		    (f (fxadd1 i) (cdr args))))
+		 (else (die who "BUG" c))))))
+	   (else
+	    (write-char c p)
+	    (f (fxadd1 i) args)))))))
+
+  (define* (fprintf p {fmt string?} . args)
+    (assert-open-textual-output-port p __who__)
+    (formatter __who__ p fmt args)
+    (void))
+
+  (define* (format {fmt string?} . args)
+    (receive (port extract)
+	(open-string-output-port)
+      (formatter __who__ port fmt args)
+      (extract)))
+
+  (define* (printf {fmt string?} . args)
+    (formatter __who__ (current-output-port) fmt args)
+    (void))
+
+  (case-define* write
+    ((x)
+     (%write-to-port x (current-output-port))
+     (void))
+    ((x p)
+     (assert-open-textual-output-port p __who__)
+     (%write-to-port x p)
+     (void)))
+
+  (define* (put-datum p x)
+    (assert-open-textual-output-port p __who__)
+    (%write-to-port x p)
+    (void))
+
+  (case-define* display
+    ((x)
+     (%display-to-port x (current-output-port))
+     (void))
+    ((x p)
+     (assert-open-textual-output-port p __who__)
+     (%display-to-port x p)
+     (void)))
+
+  (define (assert-open-textual-output-port p who)
+    (unless (output-port? p)
+      (error who "not an output port" p))
+    (unless (textual-port? p)
+      (error who "not a textual port" p))
+    (when (port-closed? p)
+      (error who "port is closed" p)))
+
+  (define (debug-print . args)
+    ;;Print arguments for debugging purposes.
+    ;;
+    (pretty-print args (current-error-port))
+    (newline (current-error-port))
+    (newline (current-error-port))
+    (when (pair? args)
+      (car args)))
+
+  #| end of module |# )
 
 
 (module TRAVERSAL-HELPERS
@@ -114,6 +281,7 @@
     ;;
     (cond ((pair?       x)	(traverse-shared x h traverse-pair))
 	  ((vector?     x)	(traverse-shared x h traverse-vector))
+	  ((string?     x)	(traverse-shared x h traverse-noop))
 	  ((struct?     x)	(traverse-shared x h traverse-struct))
 	  ((bytevector? x)	(traverse-shared x h traverse-noop))
 	  ((gensym?     x)	(traverse-shared x h traverse-noop))
@@ -153,7 +321,7 @@
     (define (%traverse-vanilla-struct x h)
       ;;Traverse a struct object that is meant to use the built-in printer function.
       ;;
-      (let ((rtd ($struct-rtd x)))
+      (let ((rtd (struct-rtd x)))
 	(unless (and (record-type-descriptor? rtd)
 		     (record-type-opaque? rtd))
 	  (traverse (struct-name x) h)
@@ -224,6 +392,7 @@
 	   (if (gensym? x)
 	       (write-shared x p m h i write-object-gensym)
 	     (begin
+	       ;;We do not cache the representation of interned symbols!
 	       (write-object-symbol x p m)
 	       i)))
 
@@ -232,8 +401,10 @@
 	   i)
 
 	  ((string? x)
-	   (write-object-string x p m)
-	   i)
+	   ;; (begin
+	   ;;   (write-object-string x p m)
+	   ;;   i)
+	   (write-shared x p m h i write-object-string))
 
 	  ((boolean? x)
 	   (write-char #\# p)
@@ -296,6 +467,13 @@
 			p)
 	   i)
 
+	  ((keyword? x)
+	   ;;At present  keywords are Vicare  structs, so we  have to make  sure this
+	   ;;branch comes before the one below.
+	   (write-char #\# p)
+	   (write-char #\: p)
+	   (write-object (struct-ref x 0) p m h i))
+
 	  ((struct? x)
 	   (write-shared x p m h i write-object-struct))
 
@@ -352,47 +530,91 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-pair x p m h i)
-    (define (macro x h)
+  (module (write-object-pair)
+
+    (define (write-object-pair x p m h i)
+      (cond ((%pretty-format-reader-macro x h)
+	     => (lambda (prefix-str)
+		  ;;If we  are here PREFIX-STR  is a string and  X is a  list holding
+		  ;;only one item.  Examples:
+		  ;;
+		  ;;* X  is the list  "(quote ?thing)" and  PREFIX-STR is "'",  so we
+		  ;;want to print "'?thing".
+		  ;;
+		  ;;* X is  the list "(quasiquote ?thing)" and PREFIX-STR  is ",", so
+		  ;;we want to print ",?thing".
+		  ;;
+		  ;;* X is  the list "(syntax ?thing)" and PREFIX-STR  is "#'", so we
+		  ;;want to print "#'?thing".
+		  ;;
+		  (let ((i (write-object-string prefix-str p #f h i)))
+		    (write-object (cadr x) p m h i))))
+	    (else
+	     (write-char #\( p)
+	     (receive-and-return (i)
+		 (let loop ((d  (cdr x))
+			    (i  (write-object (car x) p m h i)))
+		   (cond ((null? d)
+			  i)
+			 ((not (pair? d))
+			  (write-char #\space p)
+			  (write-char #\. p)
+			  (write-char #\space p)
+			  (write-object d p m h i))
+			 ((shared? d h)
+			  (write-char #\space p)
+			  (when (print-graph)
+			    (write-char #\. p)
+			    (write-char #\space p))
+			  (write-object d p m h i))
+			 (else
+			  (write-char #\space p)
+			  (let ((i (write-object (car d) p m h i)))
+			    (loop (cdr d) i)))))
+	       (write-char #\) p)))))
+
+    (define (%pretty-format-reader-macro x h)
+      ;;Evaluate to non-false if:
+      ;;
+      ;;* X is a list with the format:
+      ;;
+      ;;   (?symbol ?thing)
+      ;;
+      ;;* The symbol ?SYMBOL  is recognised by PRETTY-FORMAT as the  name of a syntax
+      ;;having  a  special   reader  macro.   For  example:  QUOTE   has  the  reader
+      ;;abbreviation "'";  SYNTAX has  the reader  abbreviation "#'";  and so  on for
+      ;;QUASIQUOTE, UNQUOTE, QUASISYNTAX, UNSYNTAX.
+      ;;
+      ;;otherwise evaluate to false.
+      ;;
+      ;;The  non-false return  value is  the  string prefix  representing the  reader
+      ;;abbreviation.  So if X  is "(quote ?thing)" the return value is  "'"; if X is
+      ;;"(syntax ?thing)" the return value is "#'"; and so on.
+      ;;
       (and (pair? x)
 	   (let ((a (car x)))
 	     (and (symbol? a)
+		  ;;Evaluate to true  if "(cdr X)" is a proper  list holding only one
+		  ;;item and the item is not a shared object.
 		  (let ((d (cdr x)))
 		    (and (pair? d)
 			 (null? (cdr d))
 			 (not (shared? d h))))
+		  ;;Evaluate  to true  if  P is  a  pair having:  as  car the  symbol
+		  ;;"pretty-format-reader-macro"; as cdr a string.  The true value is
+		  ;;the string itself.
+		  ;;
+		  ;;NOTE  PRETTY-FORMAT return  a  thunk.  If  A  is a  pretty-format
+		  ;;selector, the thunk  returns a pair; otherwise  the thunk returns
+		  ;;false.
 		  (let ((p ((pretty-format a))))
 		    (and (pair? p)
-			 (eq? (car p) 'read-macro)
+			 (eq? (car p) 'pretty-format-reader-macro)
 			 (let ((d (cdr p)))
-			   (and (string? d) d))))))))
-    (define (f d i)
-      (cond ((null? d)
-	     i)
-	    ((not (pair? d))
-	     (write-char #\space p)
-	     (write-char #\. p)
-	     (write-char #\space p)
-	     (write-object d p m h i))
-	    ((shared? d h)
-	     (write-char #\space p)
-	     (when (print-graph)
-	       (write-char #\. p)
-	       (write-char #\space p))
-	     (write-object d p m h i))
-	    (else
-	     (write-char #\space p)
-	     (let ((i (write-object (car d) p m h i)))
-	       (f (cdr d) i)))))
-    (cond ((macro x h)
-	   => (lambda (a)
-		(write-object-string a p #f)
-		(write-object (cadr x) p m h i)))
-	  (else
-	   (write-char #\( p)
-	   (let ((i (f (cdr x) (write-object (car x) p m h i))))
-	     (write-char #\) p)
-	     i))))
+			   (and (string? d)
+				d))))))))
+
+    #| end of module: WRITE-OBJECT-PAIR |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -492,14 +714,21 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-string x p m)
+  (module (write-object-string)
+
+    (define (write-object-string x p m h i)
+      (if m
+	  (write-string-escape x p)
+	(write-char* x p))
+      i)
+
     (define (write-string-escape x p)
-;;; commonize with write-symbol-bar-escape
+      ;; commonize with write-symbol-bar-escape
       (define (loop x i n p)
-        (unless (fx= i n)
-          (let* ((ch   (string-ref x i))
-                 (byte (char->integer ch)))
-            (cond
+	(unless (fx= i n)
+	  (let* ((ch   (string-ref x i))
+		 (byte (char->integer ch)))
+	    (cond
 	     ((fx< byte 32)
 	      (cond
 	       ((fx< byte 7)
@@ -524,13 +753,12 @@
 	      (write-char ch p))
 	     (else
 	      (write-inline-hex byte p))))
-          (loop x (fxadd1 i) n p)))
+	  (loop x (fxadd1 i) n p)))
       (write-char #\" p)
       (loop x 0 (string-length x) p)
       (write-char #\" p))
-    (if m
-        (write-string-escape x p)
-      (write-char* x p)))
+
+    #| end of module: WRITE-OBJECT-STRING |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -725,11 +953,11 @@
     (define (write-object-struct x p m h i)
       (let ((b (hashtable-ref h x #f)))
 	(cond ((pair? b)
-	       (write-custom-struct (cdr b) p m h i))
+	       (%write-struct-with-custom-printer (cdr b) p m h i))
 	      (else
-	       (write-vanilla-struct x p m h i)))))
+	       (%write-struct-with-built-in-printer x p m h i)))))
 
-    (define (write-custom-struct out p m h i)
+    (define (%write-struct-with-custom-printer out p m h i)
       ;;Write a struct having a custom printer function.
       ;;
       (begin0
@@ -741,48 +969,97 @@
 		(write-object (cache-object cache) p m h i))))
 	(write-char* (car out) p)))
 
-    (define (write-vanilla-struct x p m h i)
+    (define (%write-struct-with-built-in-printer stru p m h i)
       ;;Write a struct that is meant to use the built-in printer function.
       ;;
-      (cond ((record-type-descriptor? ($struct-rtd x))
-	     (%write-r6rs-record ($struct-rtd x) x p m h i))
+      (cond ((record-type-descriptor? stru)
+	     (%write-r6rs-record-type-descriptor stru p m h i))
+
+	    ((records.record-constructor-descriptor? stru)
+	     (%write-r6rs-record-constructor-descriptor stru p m h i))
+
+	    ((record-type-descriptor? (struct-rtd stru))
+	     (%write-r6rs-record stru p m h i))
 
 	    ;;We do not handle opaque records specially.
-	    ;; ((let ((rtd ($struct-rtd x)))
+	    ;; ((let ((rtd (struct-rtd x)))
 	    ;;    (and (record-type-descriptor? rtd)
 	    ;; 	    (record-type-opaque? rtd)))
 	    ;;  (write-char* "#<unknown>" p)
 	    ;;  i)
 
-	    ((keyword? x)
-	     (write-char #\# p)
-	     (write-char #\: p)
-	     (write-object (struct-ref x 0) p m h i))
-
 	    (else
-	     (%write-vicare-struct x p m h i))))
+	     (%write-vicare-struct stru p m h i))))
+
+    (define (%write-r6rs-record-type-descriptor rtd port m h i)
+      ;;Remember that record-type descriptors are struct instances.
+      ;;
+      (let ((std (struct-rtd rtd)))
+	(write-char* "#[rtd " port)
+	(write-char* (symbol->string (record-type-name rtd)) port)
+	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port m h i)))
+
+    (define (%write-r6rs-record-constructor-descriptor rcd port m h i)
+      (let ((rtd (records.rcd-rtd rcd)))
+	(write-char* "#[rcd " port)
+	(write-char* (symbol->string (record-type-name rtd)) port)
+	(write-char #\space port)
+	(write-char* "rtd=" port)
+	(let ((i (write-object rtd port m h i)))
+	  (write-char #\space port)
+	  (write-char* "parent-rcd=" port)
+	  (let ((i (write-object (records.rcd-parent-rcd rcd) port m h i)))
+	    (write-char #\] port)
+	    i))))
 
     (define (%write-vicare-struct stru port m h i)
-      (write-char #\# port)
-      (write-char #\[ port)
-      (let ((i        (write-object (struct-name stru) port m h i))
-	    (stru.len (struct-length stru)))
-	(let next-field ((stru.idx  0)
-			 (i         i))
-	  (cond ((fx=? stru.idx stru.len)
-		 (write-char #\] port)
-		 i)
-		(else
-		 (write-char #\space port)
-		 (next-field (fxadd1 stru.idx)
-			     (write-object (struct-ref stru stru.idx) port m h i)))))))
+      ;;If it is an instance we want to print all the fields as in:
+      ;;
+      ;;   #[struct ?type-name ?field=?value ...]
+      ;;
+      ;;if it  is a struct-type we  want to skip the  first field, which is  the type
+      ;;name, as in:
+      ;;
+      ;;   #[struct-type ?type-name length=?len fields=?fields ...]
+      ;;
+      (let* ((std       (struct-rtd stru))
+	     (instance? (not (eq? std (base-rtd)))))
+	(write-char* (if instance? "#[struct " "#[struct-type ") port)
+	(write-char* (if instance?
+			 (struct-type-name std)
+		       (struct-ref stru 0))
+		     port)
+	(%write-struct-fields stru
+			      (if instance? 0 1)
+			      (let ((names (struct-type-field-names std)))
+				(if instance? names (cdr names)))
+			      port m h i)))
+
+    (define (%write-struct-fields stru stru.idx names port m h i)
+      ;;Tail recursive  function.  Write to  PORT the  fields from the  Vicare struct
+      ;;STRU, starting  from field index STRU.IDX.   NAMES must be a  list of symbols
+      ;;representing field names, with the first item  being the name of the field at
+      ;;STRU.IDX.  Finish  the writing with  a close  bracket and return  the updated
+      ;;mark index.
+      ;;
+      (if (pair? names)
+	  (begin
+	    (write-char #\space port)
+	    (let ((i (write-object (car names) port m h i)))
+	      (write-char #\= port)
+	      (let ((i (write-object (struct-ref stru stru.idx) port m h i)))
+		(%write-struct-fields stru (fxadd1 stru.idx) (cdr names) port m h i))))
+	(begin
+	  (write-char #\] port)
+	  i)))
 
     (module (%write-r6rs-record)
 
-      (define (%write-r6rs-record rtd record port m h i)
+      (define (%write-r6rs-record record port m h i)
+	(define rtd (record-rtd record))
 	(write-char* (if (record-type-opaque? rtd)
-			 "#[opaque-r6rs-record: "
-		       "#[r6rs-record: ")
+			 "#[opaque-r6rs-record "
+		       "#[r6rs-record ")
 		     port)
 	(write-char* (symbol->string (record-type-name rtd))
 		     port)
@@ -883,6 +1160,8 @@
 			"sub-object has not been processed correctly to handle shared structure"
 			b)))))
         (cond ((mark-set? b)
+	       ;;This object has already been  written.  Extract from the bit-field B
+	       ;;its mark index N and write it as "#N#".
 	       (write-char #\# port)
 	       (write-object-fixnum (fxsra b mark-shift) port)
 	       (write-char #\# port)
@@ -912,169 +1191,6 @@
     (unless (zero? n)
       (write-hex (sra x 4) (- n 1) p)
       (write-char (string-ref s (bitwise-and x #xF)) p)))
-
-  #| end of module |# )
-
-
-;;;; public API
-
-(define print-graph
-  (make-parameter #f))
-
-(define print-unicode
-  (make-parameter #f))
-
-(define printer-integer-radix
-  (make-parameter 10
-    (lambda (obj)
-      (case obj
-	((2 8 10 16)
-	 obj)
-	(else
-	 (assertion-violation 'printer-integer-radix
-	   "invalid radix to print integers, expected 2, 8, 10 or 16" obj))))))
-
-(module (put-datum
-	 write		display
-	 printf		fprintf
-	 format		debug-print)
-
-  (define (%write-to-port x p)
-    (let ((h (make-eq-hashtable)))
-      (traverse x h)
-      (write-object x p #t h 0)
-      (void)))
-
-  (define (%display-to-port x p)
-    (let ((h (make-eq-hashtable)))
-      (traverse x h)
-      (write-object x p #f h 0)
-      (void)))
-
-  (define (formatter who p fmt args)
-;;; first check
-    (let f ((i 0) (args args))
-      (cond
-       ((fx= i (string-length fmt))
-	(unless (null? args)
-	  (die who
-	       (format
-		   "extra arguments given for format string \x2036;~a\x2033;"
-		 fmt))))
-       (else
-	(let ((c (string-ref fmt i)))
-	  (cond
-	   ((eqv? c #\~)
-	    (let ((i (fxadd1 i)))
-	      (when (fx= i (string-length fmt))
-		(die who "invalid ~ at end of format string" fmt))
-	      (let ((c (string-ref fmt i)))
-		(cond
-		 ((memv c '(#\~ #\%)) (f (fxadd1 i) args))
-		 ((memv c '(#\a #\s))
-		  (when (null? args)
-		    (die who "insufficient arguments"))
-		  (f (fxadd1 i) (cdr args)))
-		 ((memv c '(#\b #\o #\x #\d))
-		  (when (null? args)
-		    (die who "insufficient arguments"))
-		  (let ((a (car args)))
-		    (unless (number? a) (die who "not a number" a))
-		    (unless (or (eqv? c #\d) (exact? a))
-		      (die who
-			   (format "inexact numbers cannot be \
-                                     printed with ~~~a" c)
-			   a)))
-		  (f (fxadd1 i) (cdr args)))
-		 (else
-		  (die who "invalid sequence character after ~" c))))))
-	   (else (f (fxadd1 i) args)))))))
-;;; then format
-    (let f ((i 0) (args args))
-      (unless (fx= i (string-length fmt))
-	(let ((c (string-ref fmt i)))
-	  (cond
-	   ((eqv? c #\~)
-	    (let ((i (fxadd1 i)))
-	      (let ((c (string-ref fmt i)))
-		(cond
-		 ((eqv? c #\~)
-		  (write-char #\~ p)
-		  (f (fxadd1 i) args))
-		 ((eqv? c #\%)
-		  (write-char #\newline p)
-		  (f (fxadd1 i) args))
-		 ((eqv? c #\a)
-		  (%display-to-port (car args) p)
-		  (f (fxadd1 i) (cdr args)))
-		 ((eqv? c #\s)
-		  (%write-to-port (car args) p)
-		  (f (fxadd1 i) (cdr args)))
-		 ((assv c '((#\b . 2) (#\o . 8) (#\x . 16) (#\d . 10)))
-		  =>
-		  (lambda (x)
-		    (let ((a (car args)))
-		      (%display-to-port (number->string a (cdr x)) p))
-		    (f (fxadd1 i) (cdr args))))
-		 (else (die who "BUG" c))))))
-	   (else
-	    (write-char c p)
-	    (f (fxadd1 i) args)))))))
-
-  (define* (fprintf p {fmt string?} . args)
-    (assert-open-textual-output-port p __who__)
-    (formatter __who__ p fmt args)
-    (void))
-
-  (define* (format {fmt string?} . args)
-    (receive (port extract)
-	(open-string-output-port)
-      (formatter __who__ port fmt args)
-      (extract)))
-
-  (define* (printf {fmt string?} . args)
-    (formatter __who__ (current-output-port) fmt args)
-    (void))
-
-  (case-define* write
-    ((x)
-     (%write-to-port x (current-output-port))
-     (void))
-    ((x p)
-     (assert-open-textual-output-port p __who__)
-     (%write-to-port x p)
-     (void)))
-
-  (define* (put-datum p x)
-    (assert-open-textual-output-port p __who__)
-    (%write-to-port x p)
-    (void))
-
-  (case-define* display
-    ((x)
-     (%display-to-port x (current-output-port))
-     (void))
-    ((x p)
-     (assert-open-textual-output-port p __who__)
-     (%display-to-port x p)
-     (void)))
-
-  (define (assert-open-textual-output-port p who)
-    (unless (output-port? p)
-      (error who "not an output port" p))
-    (unless (textual-port? p)
-      (error who "not a textual port" p))
-    (when (port-closed? p)
-      (error who "port is closed" p)))
-
-  (define (debug-print . args)
-    ;;Print arguments for debugging purposes.
-    ;;
-    (pretty-print args (current-error-port))
-    (newline (current-error-port))
-    (newline (current-error-port))
-    (when (pair? args)
-      (car args)))
 
   #| end of module |# )
 

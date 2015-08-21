@@ -804,7 +804,7 @@
 	    (lambda (port)
 	      (display (builder 1 2) port)
 	      )))
-    => "#[r6rs-record: rtd-0 a=1 b=2]")
+    => "#[r6rs-record rtd-0 a=1 b=2]")
 
   #t)
 

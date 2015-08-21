@@ -878,6 +878,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-tagged-language.sps				\
 	tests/test-vicare-unwind-protection.sps				\
 	tests/test-vicare-vectors.sps					\
+	tests/test-vicare-writer.sps					\
 	\
 	tests/test-issue-001-equal-hash.sps				\
 	tests/test-issue-003.sps					\

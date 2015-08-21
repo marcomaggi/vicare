@@ -764,7 +764,7 @@
 
   (check
       ($std-printer (struct-type-descriptor alpha))
-    => default-struct-printer)
+    => #f)
 
   (check
       (gensym? ($std-symbol (struct-type-descriptor alpha)))
@@ -794,7 +794,7 @@
 
   (check
       ($std-printer (struct-type-descriptor beta))
-    => default-struct-printer)
+    => #f)
 
   (check
       (gensym? ($std-symbol (struct-type-descriptor beta)))

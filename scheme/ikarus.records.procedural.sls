@@ -36,6 +36,8 @@
 
     ;; extension utility functions, non-R6RS
     rtd-subtype?			print-r6rs-record-instance
+    (rename (<rcd>-rtd		rcd-rtd)
+	    (<rcd>-parent-rcd	rcd-parent-rcd))
     record-reset			record=?
     record-and-rtd?			record-object?
     record-destructor-set!		record-destructor
@@ -170,7 +172,7 @@
   ;;  |----|----|----|------------
   ;;
   (name
-		;Record type name, for debugging purposes.
+		;Symbol representing the record type name, for debugging purposes.
    total-fields-number
 		;Total number of fields, including the fields of the parents.
    fields-number
@@ -249,7 +251,7 @@
 		;second argument is a textual output port.
    ))
 
-(module ()
+#;(module ()
   (set-rtd-printer! (type-descriptor <rtd>)
     (lambda (S port sub-printer)
       (define-inline (%display thing)
@@ -294,7 +296,7 @@
 		;by RECORD-CONSTRUCTOR.
    ))
 
-(module ()
+#;(module ()
   (set-rtd-printer! (type-descriptor <rcd>)
     (lambda (S port sub-printer)
       (define-inline (%display thing)
