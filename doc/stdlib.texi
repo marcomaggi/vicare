@@ -2901,7 +2901,8 @@ raised with condition type @condition{assertion}.
 
 
 @deffn Procedure record-type-name @var{rtd}
-Return the name of the record--type descriptor @var{rtd}.
+Return a symbol representing the name of the record--type descriptor
+@var{rtd}.
 @end deffn
 
 
