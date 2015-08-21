@@ -220,44 +220,101 @@
 
 
 (module TRAVERSAL-HELPERS
-  (cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
-               shared-bit cyclic-bit marked-bit mark-shift
-               make-cache cache-string cache-object cache-next)
+  (traverse-shared
+   write-shared
+   cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
+   SHARED-BIT CYCLIC-BIT MARKED-BIT MARK-SHIFT
+   make-cache cache-string cache-object cache-next)
+
+  (define (traverse-shared x h kont)
+    (cond ((hashtable-ref h x #f)
+	   => (lambda (b)
+		(cond ((fixnum? b)
+		       (hashtable-set! h x (fxior b SHARED-BIT)))
+		      (else
+		       (set-car! b (fxior (car b) SHARED-BIT))))))
+	  (else
+	   (hashtable-set! h x 0)
+	   (kont x h)
+	   (let ((b (hashtable-ref h x #f)))
+	     (cond ((fixnum? b)
+		    (when (shared-set? b)
+		      (hashtable-set! h x (fxior b CYCLIC-BIT))))
+		   (else
+		    (let ((a (car b)))
+		      (when (shared-set? a)
+			(set-car! b (fxior a CYCLIC-BIT))))))))))
+
+  (define* (write-shared x port m h i writer-kont)
+    ;;Takes care of printing shared structures  with "#n=" and "#n#" elements, rather
+    ;;than  going  into  infinite  recursion.   For  this  function  to  work:  every
+    ;;interesting sub-object of the object X must have been previously visited by the
+    ;;function TRAVERSE, so that the hashtable H knows about it.
+    ;;
+    (let ((b (hashtable-ref h x #f)))
+      (let ((b (cond ((fixnum? b)
+		      b)
+		     ((pair? b)
+		      (car b))
+		     (else
+		      (assertion-violation __who__
+			"sub-object has not been processed correctly to handle shared structure"
+			b)))))
+        (cond ((mark-set? b)
+	       ;;This object has already been  written.  Extract from the bit-field B
+	       ;;its mark index N and write it as "#N#".
+	       (write-char #\# port)
+	       (put-string port (fixnum->string (fxsra b MARK-SHIFT)))
+	       (write-char #\# port)
+	       i)
+	      ((or (cyclic-set? b)
+		   (and (shared-set? b) (print-graph)))
+	       (let ((n i))
+		 (set-mark! x h n)
+		 (write-char #\# port)
+		 (put-string port (fixnum->string n))
+		 (write-char #\= port)
+		 (writer-kont x port m h (add1 i))))
+	      (else
+	       (writer-kont x port m h i))))))
+
+;;; --------------------------------------------------------------------
+
 ;;; association list in hash table is one of the following forms:
 ;;;
 ;;; a fixnum:
-  (define cyclic-bit         #b001)
-  (define shared-bit         #b010)
-  (define marked-bit         #b100)
-  (define mark-shift         3)
+  (define-constant CYCLIC-BIT         #b001)
+  (define-constant SHARED-BIT         #b010)
+  (define-constant MARKED-BIT         #b100)
+  (define-constant MARK-SHIFT         3)
 ;;;
 ;;; or a pair of a fixnum (above) and a cache:
   (define-struct cache
     (string object next))
   (define (cyclic-set? b)
-    (fx= (fxand b cyclic-bit) cyclic-bit))
+    (fx= (fxand b CYCLIC-BIT) CYCLIC-BIT))
   (define (shared-set? b)
-    (fx= (fxand b shared-bit) shared-bit))
+    (fx= (fxand b SHARED-BIT) SHARED-BIT))
   (define (mark-set? b)
-    (fx= (fxand b marked-bit) marked-bit))
+    (fx= (fxand b MARKED-BIT) MARKED-BIT))
 
   (define (set-mark! x h n)
     (let ((b (hashtable-ref h x #f)))
       (cond
        ((fixnum? b)
 	(hashtable-set! h x
-			(fxior (fxsll n mark-shift) marked-bit b)))
+			(fxior (fxsll n MARK-SHIFT) MARKED-BIT b)))
        (else
 	(set-car! b
-		  (fxior (fxsll n mark-shift) marked-bit (car b)))))))
+		  (fxior (fxsll n MARK-SHIFT) MARKED-BIT (car b)))))))
 
   (define (set-shared! x h)
     (let ((b (hashtable-ref h x #f)))
       (cond
        ((fixnum? b)
-	(hashtable-set! h x (fxior shared-bit b)))
+	(hashtable-set! h x (fxior SHARED-BIT b)))
        (else
-	(set-car! b (fxior shared-bit (car b)))))))
+	(set-car! b (fxior SHARED-BIT (car b)))))))
 
   (define (shared? x h)
     (cond
@@ -352,25 +409,6 @@
 	      (%cannot-happen))))))
 
     #| end of module: TRAVERSE-STRUCT |# )
-
-  (define (traverse-shared x h kont)
-    (cond ((hashtable-ref h x #f)
-	   => (lambda (b)
-		(cond ((fixnum? b)
-		       (hashtable-set! h x (fxior b shared-bit)))
-		      (else
-		       (set-car! b (fxior (car b) shared-bit))))))
-	  (else
-	   (hashtable-set! h x 0)
-	   (kont x h)
-	   (let ((b (hashtable-ref h x #f)))
-	     (cond ((fixnum? b)
-		    (when (shared-set? b)
-		      (hashtable-set! h x (fxior b cyclic-bit))))
-		   (else
-		    (let ((a (car b)))
-		      (when (shared-set? a)
-			(set-car! b (fxior a cyclic-bit))))))))))
 
   (define (%cannot-happen)
     (error 'vicare-writer "vicare: internal error"))
@@ -505,28 +543,30 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-fixnum x p)
-    (define (loop x p)
-      (unless (fxzero? x)
-	(loop (fxquotient x 10) p)
-	(write-char (integer->char (fx+ (fxremainder x 10)
+  (define (write-object-fixnum fx port)
+    ;;Write the fixnum FX to the output textual port PORT.
+    ;;
+    (define (loop fx port)
+      (unless (fxzero? fx)
+	(loop (fxquotient fx 10) port)
+	(write-char (integer->char (fx+ (fxremainder fx 10)
 					(char->integer #\0)))
-		    p)))
+		    port)))
     (let ((radix (printer-integer-radix)))
       (if (fx=? 10 radix)
-	  (cond ((fxzero? x)
-		 (write-char #\0 p))
-		((fx< x 0)
-		 (write-char* (fixnum->string x) p))
+	  (cond ((fxzero? fx)
+		 (write-char #\0 port))
+		((fx< fx 0)
+		 (write-char* (fixnum->string fx) port))
 		(else
-		 (loop x p)))
+		 (loop fx port)))
 	(begin
-	  (write-char #\# p)
+	  (write-char #\# port)
 	  (case radix
-	    ((2)	(write-char #\b p))
-	    ((8)	(write-char #\o p))
-	    ((16)	(write-char #\x p)))
-	  (write-char* (number->string x radix) p)))))
+	    ((2)	(write-char #\b port))
+	    ((8)	(write-char #\o port))
+	    ((16)	(write-char #\x port)))
+	  (write-char* (number->string fx radix) port)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1143,49 +1183,16 @@
 	   i)))
 
 ;;; --------------------------------------------------------------------
-
-  (define* (write-shared x port m h i writer-kont)
-    ;;Takes care of printing shared structures  with "#n=" and "#n#" elements, rather
-    ;;than  going  into  infinite  recursion.   For  this  function  to  work:  every
-    ;;interesting sub-object of the object X must have been previously visited by the
-    ;;function TRAVERSE, so that the hashtable H knows about it.
-    ;;
-    (let ((b (hashtable-ref h x #f)))
-      (let ((b (cond ((fixnum? b)
-		      b)
-		     ((pair? b)
-		      (car b))
-		     (else
-		      (assertion-violation __who__
-			"sub-object has not been processed correctly to handle shared structure"
-			b)))))
-        (cond ((mark-set? b)
-	       ;;This object has already been  written.  Extract from the bit-field B
-	       ;;its mark index N and write it as "#N#".
-	       (write-char #\# port)
-	       (write-object-fixnum (fxsra b mark-shift) port)
-	       (write-char #\# port)
-	       i)
-	      ((or (cyclic-set? b)
-		   (and (shared-set? b) (print-graph)))
-	       (let ((n i))
-		 (set-mark! x h n)
-		 (write-char #\# port)
-		 (write-object-fixnum n port)
-		 (write-char #\= port)
-		 (writer-kont x port m h (add1 i))))
-	      (else
-	       (writer-kont x port m h i))))))
-
-;;; --------------------------------------------------------------------
 ;;; helpers
 
-  (define (write-char* x p)
-    (let f ((x x) (p p) (i 0) (n (string-length x)))
+  (define (write-char* str port)
+    ;;Write the characters from the string STR in the textual output port PORT.
+    ;;
+    (let loop ((i  0)
+	       (n  (string-length str)))
       (unless (fx=? i n)
-        (write-char (string-ref x i) p)
-        (f x p (fx+ i 1) n))))
-
+        (write-char (string-ref str i) port)
+        (loop (fxadd1 i) n))))
   (define (write-hex x n p)
     (define s "0123456789ABCDEF")
     (unless (zero? n)

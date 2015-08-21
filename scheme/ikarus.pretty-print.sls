@@ -351,7 +351,7 @@
 	(cond
 	 ((mark-set? b)
 	  (string-append "#"
-			 (number->string (fxsra b mark-shift))
+			 (number->string (fxsra b MARK-SHIFT))
 			 "#"))
 	 ((or (cyclic-set? b)
 	      (and (shared-set? b) (print-graph)))
