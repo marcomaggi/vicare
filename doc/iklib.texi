@@ -10163,7 +10163,7 @@ to @rnrs{6} record type descriptors.
 
 
 @defun struct-type-name @var{rtd}
-Return a string represnting the name of structures of type @var{rtd}.
+Return a string representing the name of structures of type @var{rtd}.
 @end defun
 
 
