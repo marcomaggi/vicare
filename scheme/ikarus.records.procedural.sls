@@ -35,15 +35,14 @@
     record-type-field-names
 
     ;; extension utility functions, non-R6RS
-    rtd-subtype?			print-r6rs-record-instance
+    rtd-subtype?
     (rename (<rcd>-rtd		rcd-rtd)
 	    (<rcd>-parent-rcd	rcd-parent-rcd))
     record-reset			record=?
     record-and-rtd?			record-object?
     record-destructor-set!		record-destructor
     (rename (<rtd>-printer		record-printer)
-	    (set-<rtd>-printer!		record-printer-set!))
-    default-r6rs-record-printer)
+	    (set-<rtd>-printer!		record-printer-set!)))
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Mar 31, 2015)
@@ -67,12 +66,11 @@
 		  record-type-field-names
 
 		  ;; extension utility functions, non-R6RS
-		  rtd-subtype?				print-r6rs-record-instance
+		  rtd-subtype?
 		  record-reset				record=?
 		  record-and-rtd?			record-object?
 		  record-destructor-set!		record-destructor
-		  record-printer-set!			record-printer
-		  default-r6rs-record-printer)
+		  record-printer-set!			record-printer)
     (vicare system $fx)
     (vicare system $pairs)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
@@ -1261,46 +1259,6 @@
 	(and prtd^
 	     (or (eq? prtd^ prtd)
 		 (upper-parent ($<rtd>-parent prtd^)))))))
-
-(case-define* print-r6rs-record-instance
-  ((the-record)
-   (print-r6rs-record-instance the-record (current-error-port)))
-  (({the-record record-object?} {port textual-output-port?})
-   (let ((rtd ($struct-rtd the-record)))
-     (cond ((<rtd>-printer rtd)
-	    => (lambda (printer)
-		 (printer the-record port)))
-	   (else
-	    (default-r6rs-record-printer the-record port))))))
-
-(define* (default-r6rs-record-printer {the-record record-object?} {port textual-output-port?})
-  (define (%print-fields rtd first)
-    (let* ((fields.vec	($<rtd>-fields rtd))
-	   (fields.len	(vector-length fields.vec)))
-      (do ((i 0     (fx+ 1 i))
-	   (j first (fx+ 1 j)))
-	  ((= i fields.len))
-	(%display " ")
-	(%display (cdr (vector-ref fields.vec i)))
-	(%display "=")
-	(%write ($struct-ref the-record j)))))
-  (define-inline (%display thing)
-    (display thing port))
-  (define-inline (%write thing)
-    (write thing port))
-  (let ((rtd ($struct-rtd the-record)))
-    (%display (if ($<rtd>-opaque? rtd)
-		  "#[opaque-r6rs-record: "
-		"#[r6rs-record: "))
-    (%display ($<rtd>-name rtd))
-    (%print-fields rtd (let upper-rtd ((rtd rtd))
-			 (let ((prtd ($<rtd>-parent rtd)))
-			   (if prtd
-			       (begin
-				 (%print-fields prtd (upper-rtd prtd))
-				 ($<rtd>-total-fields-number prtd))
-			     0))))
-    (%display "]")))
 
 (define* (record=? {obj1 non-opaque-record?} {obj2 non-opaque-record?})
   ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal

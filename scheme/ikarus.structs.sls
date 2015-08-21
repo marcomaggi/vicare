@@ -27,7 +27,6 @@
     struct-type-field-names	struct-type-destructor
 
     ;; struct type descriptor customisation
-    default-struct-printer	default-struct-printer-details
     set-rtd-printer!		set-rtd-destructor!
 
     ;; struct constructor and predicate
@@ -65,7 +64,6 @@
 		  struct-type-field-names	struct-type-destructor
 
 		  ;; struct type descriptor customisation
-		  default-struct-printer	default-struct-printer-details
 		  set-rtd-printer!		set-rtd-destructor!
 
 		  ;; struct accessors and mutators
@@ -427,47 +425,6 @@
 		 (and (eqv? ($struct-ref obj1 i)
 			    ($struct-ref obj2 i))
 		      (loop ($fxadd1 i)))))))))
-
-;;; --------------------------------------------------------------------
-
-(define default-struct-printer-details
-  (make-parameter #f
-    (lambda (obj)
-      (and obj #t))))
-
-(define* (default-struct-printer {stru struct?} {port output-port?} unused)
-  (let ((std ($struct-rtd stru)))
-    (if (default-struct-printer-details)
-	;;Long variant.
-	(begin
-	  (display (if (eq? std (base-rtd))
-		       "#[std type="
-		     "#[struct type=")
-		   port)
-	  (display ($std-name std) port)
-	  (do ((i 0 ($fxadd1 i))
-	       (field-names ($std-fields std) (cdr field-names)))
-	      ((null? field-names))
-	    (display " " port)
-	    (display (car field-names) port)
-	    (display "=" port)
-	    (display ($struct-ref stru i) port))
-	  (display "]" port))
-      ;;Short variant.
-      (if (eq? std (base-rtd))
-	  ;;struct type descriptor
-	  (begin
-	    (display "#[std type=" port)
-	    (display ($std-name std) port)
-	    (display " " port)
-	    (display "name=" port)
-	    (display ($struct-ref stru 0) port)
-	    (display "]" port))
-	;;struct instance
-	(begin
-	  (display "#[struct type=" port)
-	  (display ($std-name std) port)
-	  (display "]" port))))))
 
 
 ;;;; done

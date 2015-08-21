@@ -178,13 +178,6 @@
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
 
-(declare-core-primitive default-struct-printer
-    (safe)
-  (signatures
-   ((T:struct)			=> (T:void)))
-  (attributes
-   ((_)			result-true)))
-
 (declare-parameter struct-guardian-logger	(or T:boolean T:procedure))
 
 (declare-core-primitive struct-guardian-log

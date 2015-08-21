@@ -45,7 +45,6 @@
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
-	  print-r6rs-record-instance
 	  ;;FIXME  This import  must  be removed  at the  next  boot image  rotation.
 	  ;;(Marco Maggi; Sun May 10, 2015)
 	  record-object?)
@@ -302,7 +301,7 @@
       (cond ((record-object? x) #;(record-type-descriptor? ($struct-rtd x))
 	     (call-with-string-output-port
 		 (lambda (port)
-		   (print-r6rs-record-instance x port))))
+		   (write x port))))
 	    ;;We do *not* handle opaque records specially.
 	    ;; ((let ((rtd ($struct-rtd x)))
 	    ;; 	  (and (record-type-descriptor? rtd)
