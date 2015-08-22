@@ -1503,24 +1503,31 @@
 
  (define-core-primitive-operation $vector-ref unsafe
    ((V vec idx)
-    (or (struct-case idx
-	  ((constant idx.val)
-	   ;;LEN.VAL   is  an   exact   integer   (possibly  a   bignum)
-	   ;;representing  the binary  representation of  the number  of
-	   ;;slots.
-	   (and (target-platform-fixnum? idx.val)
-		(fx>= idx.val 0)
-		(asm 'mref (V-simple-operand vec) (K (+ (* idx.val wordsize) off-vector-data)))))
-	  ((known idx.expr)
-	   (cogen-value-$vector-ref vec idx.expr))
-	  (else
-	   #f))
-	;;Notice that  IDX is  not multiplied by  the WORDSIZE;  this is
-	;;because  IDX is  recordized  code that,  once evaluated,  must
-	;;return a fixnum representing the index of the IDX-th slot in a
-	;;vector; also,  taken as  a "long",  such value  represents the
-	;;offset in bytes of the word in the IDX-th slot.
-	(asm 'mref (V-simple-operand vec) (asm 'int+ (V-simple-operand idx) (K off-vector-data)))))
+    (let ((%make-general-case
+	   (lambda ()
+	     ;;Notice that IDX is not multiplied by the WORDSIZE; this is because IDX
+	     ;;is  recordized  code  that,  once  evaluated,  must  return  a  fixnum
+	     ;;representing the index of the IDX-th  slot in a vector; also, taken as
+	     ;;a "long", such value represents the offset in bytes of the word in the
+	     ;;IDX-th slot.
+	     (asm 'mref (V-simple-operand vec)
+		  (asm 'int+ (V-simple-operand idx) (K off-vector-data))))))
+      (struct-case idx
+	((constant idx.val)
+	 ;;IDX.VAL is  an exact integer  (possibly a bignum) representing  the binary
+	 ;;representation of the number of slots.
+	 (if (and (target-platform-fixnum? idx.val)
+		  (<= 0 idx.val))
+	     (asm 'mref
+		  (V-simple-operand vec)
+		  (K (+ (* idx.val wordsize) off-vector-data)))
+	   (error '$vector-ref
+	     "invalid constant index argument, expected representation of non-negative fixnum"
+	     idx.val)))
+	((known idx.expr)
+	 (cogen-value-$vector-ref vec idx.expr))
+	(else
+	 (%make-general-case)))))
    ((E vec idx)
     (nop)))
 

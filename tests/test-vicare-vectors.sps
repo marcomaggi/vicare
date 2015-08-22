@@ -114,19 +114,19 @@
 ;;; arguments validation: index
 
   (check-for-assertion-violation
-      (vector-ref '#(c i a o) #\d)
+      (apply vector-ref '#(c i a o) #\d '())
     => '(#\d))
 
   (check-for-assertion-violation
-      (vector-ref '#(c i a o) 'd)
+      (apply vector-ref '#(c i a o) 'd '())
     => '(d))
 
   (check-for-assertion-violation
-      (vector-ref '#() -1)
+      (apply vector-ref '#() -1 '())
     => '(-1))
 
   (check-for-assertion-violation
-      (vector-ref '#() (+ 1 (greatest-fixnum)))
+      (apply vector-ref '#() (+ 1 (greatest-fixnum)) '())
     => (list (+ 1 (greatest-fixnum))))
 
   (check-for-assertion-violation
