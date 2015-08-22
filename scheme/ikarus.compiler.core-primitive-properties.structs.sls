@@ -125,12 +125,14 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:struct-type-descriptor ?new-value-tag)	=> (T:void)))
+		    ((T:struct-type-descriptor (or T:false ?new-value-tag))	=> (T:void)))
 		   (attributes
 		    ((_ _)		result-true))))
 		)))
   (declare set-rtd-printer!	T:procedure)
   (declare set-rtd-destructor!	T:procedure)
+  (declare set-struct-type-printer!	T:procedure)
+  (declare set-struct-type-destructor!	T:procedure)
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
