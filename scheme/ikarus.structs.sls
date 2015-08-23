@@ -21,13 +21,15 @@
     ;; struct type descriptor constructor
     make-struct-type
 
-    ;; struct type descriptor inspection
+    ;; struct type descriptor inspection and customisation
     struct-type-descriptor?
-    struct-type-name		struct-type-symbol
-    struct-type-field-names	struct-type-destructor
-
-    ;; struct type descriptor customisation
-    set-rtd-printer!		set-rtd-destructor!
+    struct-type-name			struct-type-symbol
+    struct-type-field-names
+    struct-type-printer			set-struct-type-printer!
+    struct-type-destructor		set-struct-type-destructor!
+    (rename
+     (set-struct-type-printer!		set-rtd-printer!)
+     (set-struct-type-destructor!	set-rtd-destructor!))
 
     ;; struct constructor and predicate
     struct?
@@ -45,7 +47,14 @@
     struct-destructor		struct-length
 
     ;; unsafe operations
-    $make-clean-struct)
+    $make-clean-struct
+    $std-std
+    $std-name			$set-std-name!
+    $std-length			$set-std-length!
+    $std-fields			$set-std-fields!
+    $std-printer		$set-std-printer!
+    $std-symbol			$set-std-symbol!
+    $std-destructor		$set-std-destructor!)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed May 6, 2015)
@@ -61,10 +70,9 @@
 		  ;; struct type descriptor inspection
 		  struct-type-descriptor?
 		  struct-type-name		struct-type-symbol
-		  struct-type-field-names	struct-type-destructor
-
-		  ;; struct type descriptor customisation
-		  set-rtd-printer!		set-rtd-destructor!
+		  struct-type-field-names
+		  struct-type-printer		set-struct-type-printer!
+		  struct-type-destructor	set-struct-type-destructor!
 
 		  ;; struct accessors and mutators
 		  struct?			struct=?
@@ -85,7 +93,14 @@
     (vicare system $fx)
     (vicare system $pairs)
     (except (vicare system $structs)
-	    $make-clean-struct)
+	    $make-clean-struct
+	    $std-std
+	    $std-name		$set-std-name!
+	    $std-length		$set-std-length!
+	    $std-fields		$set-std-fields!
+	    $std-printer	$set-std-printer!
+	    $std-symbol		$set-std-symbol!
+	    $std-destructor	$set-std-destructor!)
     (only (vicare system $symbols)
 	  $set-symbol-value!
 	  $symbol-value)
@@ -102,6 +117,9 @@
 (define procedure-arguments-consistency-violation assertion-violation)
 
 (define-list-of-type-predicate list-of-symbols? symbol?)
+
+(define (false-or-procedure? obj)
+  (or (not obj) (procedure? obj)))
 
 (define-syntax (assert-struct-of-type stx)
   (syntax-case stx ()
@@ -127,60 +145,67 @@
     ))
 
 
-;;;; low level RTD operations
+;;;; low level struct-type descriptor operations
 
 (define ($make-std name field-name* uid)
   (receive-and-return (std)
       ($struct (base-rtd)
-	       name
-	       (length field-name*) ;number of fields
-	       field-name*	    ;list of field names as symbols
-	       #f		    ;custom printer
-	       uid		    ;unique symbol identifier
-	       #f)		    ;destructor
+	       name		    ;index 0
+	       (length field-name*) ;index 1, number of fields
+	       field-name*	    ;index 2, list of field names as symbols
+	       #f		    ;index 3, custom printer
+	       uid		    ;index 4, unique symbol identifier
+	       #f)		    ;index 5, destructor
     ($set-symbol-value! uid std)))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe STD fields accessors
 
-;; (define-syntax-rule ($std-name std)
-;;   ($struct-ref std 0))
+;;These are both primitive functions and primitive operations.
 
-;; (define-syntax-rule ($std-length std)
-;;   ($struct-ref std 1))
+(define ($std-std std)
+  ($struct-rtd std))
 
-;; (define-syntax-rule ($std-fields std)
-;;   ($struct-ref std 2))
+(define ($std-name std)
+  ($struct-ref std 0))
 
-;; (define-syntax-rule ($std-printer std)
-;;   ($struct-ref std 3))
+(define ($std-length std)
+  ($struct-ref std 1))
 
-;; (define-syntax-rule ($std-symbol std)
-;;   ($struct-ref std 4))
+(define ($std-fields std)
+  ($struct-ref std 2))
 
-;; (define-syntax-rule ($std-destructor std)
-;;   ($struct-ref std 5))
+(define ($std-printer std)
+  ($struct-ref std 3))
+
+(define ($std-symbol std)
+  ($struct-ref std 4))
+
+(define ($std-destructor std)
+  ($struct-ref std 5))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe STD fields mutators
 
-;; (define-syntax-rule ($set-std-name! std name)
-;;   ($struct-set! std 0 name))
+;;These are both primitive functions and primitive operations.
 
-;; (define-syntax-rule ($set-std-length! std n)
-;;   ($struct-set! std 1 n))
+(define ($set-std-name! std name)
+  ($struct-set! std 0 name))
 
-;; (define-syntax-rule ($set-std-fields! std fields)
-;;   ($struct-set! std 2 fields))
+(define ($set-std-length! std n)
+  ($struct-set! std 1 n))
 
-;; (define-syntax-rule ($set-std-printer! std printer)
-;;   ($struct-set! std 3 printer))
+(define ($set-std-fields! std fields)
+  ($struct-set! std 2 fields))
 
-;; (define-syntax-rule ($set-std-symbol! std symbol)
-;;   ($struct-set! std 4 symbol))
+(define ($set-std-printer! std printer)
+  ($struct-set! std 3 printer))
 
-;; (define-syntax-rule ($set-std-destructor! std destructor-func)
-;;   ($struct-set! std 5 destructor-func))
+(define ($set-std-symbol! std symbol)
+  ($struct-set! std 4 symbol))
+
+(define ($set-std-destructor! std destructor-func)
+  ($struct-set! std 5 destructor-func))
 
 
 ;;;; structure type descriptor
@@ -234,14 +259,9 @@
   ;;
   ($std-fields std))
 
-(define* (struct-type-destructor {std struct-type-descriptor?})
-  ;;Return false or a procedure being the destructor of STD.
-  ;;
-  ($std-destructor std))
-
 ;;; --------------------------------------------------------------------
 
-(define* (set-rtd-printer! {std struct-type-descriptor?} {printer procedure?})
+(define* (set-struct-type-printer! {std struct-type-descriptor?} {printer false-or-procedure?})
   ;;Select the procedure PRINTER as  printer for data structures of type
   ;;RTD.   The printer  accepts  as  3 arguments:  the  structure to  be
   ;;printed,  the port  to  which  write a  string  represention of  the
@@ -250,12 +270,22 @@
   ;;
   ($set-std-printer! std printer))
 
-(define* (set-rtd-destructor! {std struct-type-descriptor?} {destructor procedure?})
+(define* (struct-type-printer {std struct-type-descriptor?})
+  ($std-printer std))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-struct-type-destructor! {std struct-type-descriptor?} {destructor procedure?})
   ;;Select the procedure DESTRUCTOR ad destructor for data structures of
   ;;type  RTD.   The destructor  accepts  a  single argument  being  the
   ;;structure instance.
   ;;
   ($set-std-destructor! std destructor))
+
+(define* (struct-type-destructor {std struct-type-descriptor?})
+  ;;Return false or a procedure being the destructor of STD.
+  ;;
+  ($std-destructor std))
 
 
 ;;;; data structure functions
@@ -444,7 +474,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(set-rtd-printer! (type-descriptor immutable-pair)
+(set-struct-type-printer! (type-descriptor immutable-pair)
   (lambda (stru port sub-printer)
     (define-syntax-rule (%display ?obj)
       (display ?obj port))

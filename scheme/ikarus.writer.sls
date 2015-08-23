@@ -388,7 +388,7 @@
 		(traverse (struct-ref x idx) h)
 		(f (fxadd1 idx))))))))
 
-    (define (%traverse-custom-struct stru h printer)
+    (define* (%traverse-custom-struct stru h printer)
       ;;Traverse a struct object with a custom printer function.
       ;;
       ;;The custom printer is  used to print the struct in a  string output port; the
@@ -406,12 +406,9 @@
 		(b (hashtable-ref h stru #f)))
 	    (if (fixnum? b)
 		(hashtable-set! h stru (cons b cache))
-	      (%cannot-happen))))))
+	      (error __who__ "internal error"))))))
 
     #| end of module: TRAVERSE-STRUCT |# )
-
-  (define (%cannot-happen)
-    (error 'vicare-writer "vicare: internal error"))
 
   #| end of module |# )
 
@@ -420,18 +417,22 @@
   ;;All the function whose name starts  with "write-object-" are writers for specific
   ;;object types.
   ;;
+  ;;For all  the functions: if the  argument WRITE-STYLE? is non-false,  it means the
+  ;;object must be  written in WRITE style;  otherwise the object must  be written in
+  ;;DISPLAY style.
+  ;;
   (import TRAVERSAL-HELPERS)
 
-  (define (write-object x p m h i)
+  (define (write-object x p write-style? h i)
     (cond ((pair? x)
-	   (write-shared x p m h i write-object-pair))
+	   (write-shared x p write-style? h i write-object-pair))
 
 	  ((symbol? x)
 	   (if (gensym? x)
-	       (write-shared x p m h i write-object-gensym)
+	       (write-shared x p write-style? h i write-object-gensym)
 	     (begin
 	       ;;We do not cache the representation of interned symbols!
-	       (write-object-symbol x p m)
+	       (write-object-symbol x p write-style?)
 	       i)))
 
 	  ((fixnum? x)
@@ -440,9 +441,9 @@
 
 	  ((string? x)
 	   ;; (begin
-	   ;;   (write-object-string x p m)
+	   ;;   (write-object-string x p write-style?)
 	   ;;   i)
-	   (write-shared x p m h i write-object-string))
+	   (write-shared x p write-style? h i write-object-string))
 
 	  ((boolean? x)
 	   (write-char #\# p)
@@ -450,7 +451,7 @@
 	   i)
 
 	  ((char? x)
-	   (write-object-character x p m)
+	   (write-object-character x p write-style?)
 	   i)
 
 	  ((null? x)
@@ -467,10 +468,10 @@
 	   i)
 
 	  ((vector? x)
-	   (write-shared x p m h i write-object-vector))
+	   (write-shared x p write-style? h i write-object-vector))
 
 	  ((bytevector? x)
-	   (write-shared x p m h i write-object-bytevector))
+	   (write-shared x p write-style? h i write-object-bytevector))
 
 	  ((procedure? x)
 	   (write-object-procedure x p)
@@ -510,13 +511,13 @@
 	   ;;branch comes before the one below.
 	   (write-char #\# p)
 	   (write-char #\: p)
-	   (write-object (struct-ref x 0) p m h i))
+	   (write-object (struct-ref x 0) p write-style? h i))
 
 	  ((struct? x)
-	   (write-shared x p m h i write-object-struct))
+	   (write-shared x p write-style? h i write-object-struct))
 
 	  ((code? x)
-	   (write-object-code x p m h i))
+	   (write-object-code x p write-style? h i))
 
 	  ((pointer? x)
 	   (write-object-pointer x p)
@@ -572,7 +573,7 @@
 
   (module (write-object-pair)
 
-    (define (write-object-pair x p m h i)
+    (define (write-object-pair x p write-style? h i)
       (cond ((%pretty-format-reader-macro x h)
 	     => (lambda (prefix-str)
 		  ;;If we  are here PREFIX-STR  is a string and  X is a  list holding
@@ -588,28 +589,28 @@
 		  ;;want to print "#'?thing".
 		  ;;
 		  (let ((i (write-object-string prefix-str p #f h i)))
-		    (write-object (cadr x) p m h i))))
+		    (write-object (cadr x) p write-style? h i))))
 	    (else
 	     (write-char #\( p)
 	     (receive-and-return (i)
 		 (let loop ((d  (cdr x))
-			    (i  (write-object (car x) p m h i)))
+			    (i  (write-object (car x) p write-style? h i)))
 		   (cond ((null? d)
 			  i)
 			 ((not (pair? d))
 			  (write-char #\space p)
 			  (write-char #\. p)
 			  (write-char #\space p)
-			  (write-object d p m h i))
+			  (write-object d p write-style? h i))
 			 ((shared? d h)
 			  (write-char #\space p)
 			  (when (print-graph)
 			    (write-char #\. p)
 			    (write-char #\space p))
-			  (write-object d p m h i))
+			  (write-object d p write-style? h i))
 			 (else
 			  (write-char #\space p)
-			  (let ((i (write-object (car d) p m h i)))
+			  (let ((i (write-object (car d) p write-style? h i)))
 			    (loop (cdr d) i)))))
 	       (write-char #\) p)))))
 
@@ -658,14 +659,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-vector x p m h i)
-    (define (f x p m h i idx n)
+  (define (write-object-vector x p write-style? h i)
+    (define (f x p write-style? h i idx n)
       (cond
        ((fx= idx n) i)
        (else
 	(write-char #\space p)
-	(let ((i (write-object (vector-ref x idx) p m h i)))
-	  (f x p m h i (fx+ idx 1) n)))))
+	(let ((i (write-object (vector-ref x idx) p write-style? h i)))
+	  (f x p write-style? h i (fx+ idx 1) n)))))
     (write-char #\# p)
     (let ((n (vector-length x)))
       (cond ((fxzero? n)
@@ -674,14 +675,14 @@
 	     i)
 	    (else
 	     (write-char #\( p)
-	     (let ((i (write-object (vector-ref x 0) p m h i)))
-	       (f x p m h i 1 n)
+	     (let ((i (write-object (vector-ref x 0) p write-style? h i)))
+	       (f x p write-style? h i 1 n)
 	       (write-char #\) p)
 	       i)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-bytevector x p m h i)
+  (define (write-object-bytevector x p write-style? h i)
     (write-char #\# p)
     (write-char #\v p)
     (write-char #\u p)
@@ -722,14 +723,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-character x p m)
+  (define (write-object-character x p write-style?)
     (define char-table ; first nonprintable chars
       '#("nul" "x1" "x2" "x3" "x4" "x5" "x6" "alarm"
          "backspace" "tab" "linefeed" "vtab" "page" "return" "xE" "xF"
          "x10" "x11" "x12" "x13" "x14" "x15" "x16" "x17"
          "x18" "x19" "x1A" "esc" "x1C" "x1D" "x1E" "x1F"
          "space"))
-    (if m
+    (if write-style?
         (let ((i (char->integer x)))
           (write-char #\# p)
           (cond
@@ -756,8 +757,8 @@
 
   (module (write-object-string)
 
-    (define (write-object-string x p m h i)
-      (if m
+    (define (write-object-string x p write-style? h i)
+      (if write-style?
 	  (write-string-escape x p)
 	(write-char* x p))
       i)
@@ -804,30 +805,30 @@
 
   (module (write-object-gensym write-object-symbol)
 
-    (define (write-object-symbol x p m)
-      (write-symbol-string (symbol->string x) p m))
+    (define (write-object-symbol x p write-style?)
+      (write-symbol-string (symbol->string x) p write-style?))
 
-    (define (write-object-gensym x p m h i)
-      (cond ((and m (print-gensym))
+    (define (write-object-gensym x p write-style? h i)
+      (cond ((and write-style? (print-gensym))
 	     =>	(lambda (gensym-how)
 		  (case gensym-how
 		    ((pretty)
 		     (let ((str (symbol->string x)))
 		       (write-char #\# p)
 		       (write-char #\: p)
-		       (write-symbol-string str p m)))
+		       (write-symbol-string str p write-style?)))
 		    (else
 		     (let ((str (symbol->string x))
 			   (ustr (gensym->unique-string x)))
 		       (write-char #\# p)
 		       (write-char #\{ p)
-		       (write-symbol-string str p m)
+		       (write-symbol-string str p write-style?)
 		       (write-char #\space p)
 		       (write-symbol-bar-esc ustr p)
 		       (write-char #\} p))))
 		  i))
 	    (else
-	     (write-object-symbol x p m)
+	     (write-object-symbol x p write-style?)
 	     i)))
 
     (module (write-symbol-bar-esc)
@@ -860,7 +861,7 @@
 
       #| end of module |# )
 
-    (define (write-symbol-string str p m)
+    (define (write-symbol-string str p write-style?)
       (define-syntax ascii-map
         (lambda (x)
           (syntax-case x ()
@@ -978,7 +979,7 @@
 	    (write-char #\. p)
 	    (write-char #\. p))
 	   (else (error 'write-peculiar "BUG")))))
-      (if m
+      (if write-style?
 	  (if (peculiar-symbol-string? str)
 	      (write-peculiar str p)
 	    (write-symbol-hex-esc str p))
@@ -990,14 +991,14 @@
 
   (module (write-object-struct)
 
-    (define (write-object-struct x p m h i)
+    (define (write-object-struct x p write-style? h i)
       (let ((b (hashtable-ref h x #f)))
 	(cond ((pair? b)
-	       (%write-struct-with-custom-printer (cdr b) p m h i))
+	       (%write-struct-with-custom-printer (cdr b) p write-style? h i))
 	      (else
-	       (%write-struct-with-built-in-printer x p m h i)))))
+	       (%write-struct-with-built-in-printer x p write-style? h i)))))
 
-    (define (%write-struct-with-custom-printer out p m h i)
+    (define (%write-struct-with-custom-printer out p write-style? h i)
       ;;Write a struct having a custom printer function.
       ;;
       (begin0
@@ -1006,20 +1007,20 @@
 		i
 	      (let ((i (recur (cache-next cache))))
 		(write-char*  (cache-string cache) p)
-		(write-object (cache-object cache) p m h i))))
+		(write-object (cache-object cache) p write-style? h i))))
 	(write-char* (car out) p)))
 
-    (define (%write-struct-with-built-in-printer stru p m h i)
+    (define (%write-struct-with-built-in-printer stru p write-style? h i)
       ;;Write a struct that is meant to use the built-in printer function.
       ;;
       (cond ((record-type-descriptor? stru)
-	     (%write-r6rs-record-type-descriptor stru p m h i))
+	     (%write-r6rs-record-type-descriptor stru p write-style? h i))
 
 	    ((records.record-constructor-descriptor? stru)
-	     (%write-r6rs-record-constructor-descriptor stru p m h i))
+	     (%write-r6rs-record-constructor-descriptor stru p write-style? h i))
 
 	    ((record-type-descriptor? (struct-rtd stru))
-	     (%write-r6rs-record stru p m h i))
+	     (%write-r6rs-record stru p write-style? h i))
 
 	    ;;We do not handle opaque records specially.
 	    ;; ((let ((rtd (struct-rtd x)))
@@ -1029,30 +1030,30 @@
 	    ;;  i)
 
 	    (else
-	     (%write-vicare-struct stru p m h i))))
+	     (%write-vicare-struct stru p write-style? h i))))
 
-    (define (%write-r6rs-record-type-descriptor rtd port m h i)
+    (define (%write-r6rs-record-type-descriptor rtd port write-style? h i)
       ;;Remember that record-type descriptors are struct instances.
       ;;
       (let ((std (struct-rtd rtd)))
 	(write-char* "#[rtd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
-	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port m h i)))
+	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? h i)))
 
-    (define (%write-r6rs-record-constructor-descriptor rcd port m h i)
+    (define (%write-r6rs-record-constructor-descriptor rcd port write-style? h i)
       (let ((rtd (records.rcd-rtd rcd)))
 	(write-char* "#[rcd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
 	(write-char #\space port)
 	(write-char* "rtd=" port)
-	(let ((i (write-object rtd port m h i)))
+	(let ((i (write-object rtd port write-style? h i)))
 	  (write-char #\space port)
 	  (write-char* "parent-rcd=" port)
-	  (let ((i (write-object (records.rcd-parent-rcd rcd) port m h i)))
+	  (let ((i (write-object (records.rcd-parent-rcd rcd) port write-style? h i)))
 	    (write-char #\] port)
 	    i))))
 
-    (define (%write-vicare-struct stru port m h i)
+    (define (%write-vicare-struct stru port write-style? h i)
       ;;If it is an instance we want to print all the fields as in:
       ;;
       ;;   #[struct ?type-name ?field=?value ...]
@@ -1073,9 +1074,9 @@
 			      (if instance? 0 1)
 			      (let ((names (struct-type-field-names std)))
 				(if instance? names (cdr names)))
-			      port m h i)))
+			      port write-style? h i)))
 
-    (define (%write-struct-fields stru stru.idx names port m h i)
+    (define (%write-struct-fields stru stru.idx names port write-style? h i)
       ;;Tail recursive  function.  Write to  PORT the  fields from the  Vicare struct
       ;;STRU, starting  from field index STRU.IDX.   NAMES must be a  list of symbols
       ;;representing field names, with the first item  being the name of the field at
@@ -1085,17 +1086,17 @@
       (if (pair? names)
 	  (begin
 	    (write-char #\space port)
-	    (let ((i (write-object (car names) port m h i)))
+	    (let ((i (write-object (car names) port write-style? h i)))
 	      (write-char #\= port)
-	      (let ((i (write-object (struct-ref stru stru.idx) port m h i)))
-		(%write-struct-fields stru (fxadd1 stru.idx) (cdr names) port m h i))))
+	      (let ((i (write-object (struct-ref stru stru.idx) port write-style? h i)))
+		(%write-struct-fields stru (fxadd1 stru.idx) (cdr names) port write-style? h i))))
 	(begin
 	  (write-char #\] port)
 	  i)))
 
     (module (%write-r6rs-record)
 
-      (define (%write-r6rs-record record port m h i)
+      (define (%write-r6rs-record record port write-style? h i)
 	(define rtd (record-rtd record))
 	(write-char* (if (record-type-opaque? rtd)
 			 "#[opaque-r6rs-record "
@@ -1109,14 +1110,14 @@
 		     => (lambda (prtd)
 			  (receive (i record.idx)
 			      (upper-rtd prtd)
-			    (%print-record-fields prtd record.idx record port m h i))))
+			    (%print-record-fields prtd record.idx record port write-style? h i))))
 		    (else
 		     (values i 0))))
-	  (%print-record-fields rtd record.idx record port m h i)
+	  (%print-record-fields rtd record.idx record port write-style? h i)
 	  (write-char #\] port)
 	  i))
 
-      (define (%print-record-fields rtd next-record.idx record port m h i)
+      (define (%print-record-fields rtd next-record.idx record port write-style? h i)
 	(let* ((vec      (record-type-field-names rtd))
 	       (vec.len  (vector-length vec)))
 	  (do ((vec.idx    0               (fxadd1 vec.idx))
@@ -1126,9 +1127,9 @@
 	    (let* ((field-nam  (vector-ref vec vec.idx))
 		   (field-val  (struct-ref record record.idx)))
 	      (write-char #\space port)
-	      (let ((i (write-object field-nam port m h i)))
+	      (let ((i (write-object field-nam port write-style? h i)))
 		(write-char #\= port)
-		(set! i (write-object field-val port m h i)))))))
+		(set! i (write-object field-val port write-style? h i)))))))
 
       #| end of module: WRITE-R6RS-RECORD |# )
 
@@ -1171,12 +1172,12 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-code x port m h i)
+  (define (write-object-code x port write-style? h i)
     (cond (($code-annotation x)
 	   => (lambda (ann)
 		(write-char* "#<code annotation=" port)
 		(begin0
-		    (write-object ann port m h i)
+		    (write-object ann port write-style? h i)
 		  (write-char #\> port))))
 	  (else
 	   (write-char* "#<code>" port)

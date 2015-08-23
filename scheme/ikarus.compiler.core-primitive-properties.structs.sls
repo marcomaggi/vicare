@@ -271,7 +271,7 @@
 	   (signatures
 	    ((T:struct-type-descriptor)	=> (?return-value-tag)))
 	   (attributes
-	    ((_)			foldable effect-free))))
+	    ((_)			effect-free))))
 	)))
   (declare-unsafe-struct-accessor $std-std		T:struct-type-descriptor)
   (declare-unsafe-struct-accessor $std-name		T:string)

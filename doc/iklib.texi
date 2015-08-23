@@ -9970,18 +9970,16 @@ A data structure is like a lightweight record as defined by @rnrs{6}.
 structures.
 
 @menu
-* iklib structs define::        Structure type descriptors.
-* iklib structs using::         Using data structures.
+* iklib structs define::        Defining structure types.
+* iklib structs types::         Inspection and configuration of
+                                structure types.
 * iklib structs inspect::       Inspecting data structures.
 * iklib structs fields::        Accessing and mutating fields.
 @end menu
 
 @c page
 @node iklib structs define
-@subsection Structure type descriptors
-
-
-The following bindings are exported by the library @library{vicare}.
+@subsection Defining structure types
 
 
 @deffn Syntax define-struct @meta{name} (@meta{field} ...)
@@ -10142,6 +10140,22 @@ but, by specifying a @var{uid}, we can also do:
 and everything will work as before.
 @end defun
 
+@c page
+@node iklib structs types
+@subsection Inspection and configuration of structure types
+
+
+@menu
+* iklib structs types using::   Using structure types.
+* iklib structs types access::  Structure types accessors and mutators.
+* iklib structs types printer:: Structure printer customisation.
+* iklib structs types final::   Automatic finalisation of structures.
+@end menu
+
+@c page
+@node iklib structs types using
+@subsubsection Using structure types
+
 
 @deffn Syntax struct-type-descriptor @meta{name}
 Evaluate to the type descriptor of the data structure @meta{name}, which
@@ -10165,41 +10179,136 @@ to @rnrs{6} record type descriptors.
 @end defun
 
 
-@defun struct-type-name @var{rtd}
-Return a string representing the name of structures of type @var{rtd}.
+@defun struct-constructor @var{std}
+Return a constructor function for data structures of type @var{std}.
+The constructor accepts as many arguments as fields defined by @var{std}
+and returns a new structure instance.
 @end defun
 
 
-@defun struct-type-symbol @var{rtd}
-Return a symbol uniquely identifying the data structure type @var{rtd}.
+@defun struct-predicate @var{std}
+Return a predicate function for structures of type @var{std}.
 @end defun
 
 
-@defun struct-type-field-names @var{rtd}
+@defun struct-field-accessor @var{std} @var{index/name}
+@defunx struct-field-mutator @var{std} @var{index/name}
+Return an accessor or mutator function for the field at @var{index/name}
+of data structures of type @var{std}.  @var{index/name} can be a field
+index or a symbol representing a field name.
+
+@example
+(define-struct color
+  (red green blue))
+
+(define stru
+  (make-color 1 2 3))
+
+((struct-field-accessor (struct-type-descriptor color) 'red)
+ stru)
+@result{} 1
+
+((struct-field-accessor (struct-type-descriptor color) 0)
+ stru)
+@result{} 1
+@end example
+@end defun
+
+@c page
+@node iklib structs types access
+@subsubsection Structure types accessors and mutators
+
+
+@defun struct-type-name @var{std}
+Return a string representing the name of structures of type @var{std}.
+@end defun
+
+
+@defun struct-type-symbol @var{std}
+Return a symbol uniquely identifying the data structure type @var{std}.
+@end defun
+
+
+@defun struct-type-field-names @var{std}
 Return a list of symbols representing the names of fields in structures
-of type @var{rtd}.
+of type @var{std}.
 @end defun
 
+@c page
+@node iklib structs types printer
+@subsubsection Structure printer customisation
 
-@defun struct-type-destructor @var{rtd}
-Return @false{} or a procedure being the destructor for instances of
-@var{rtd}.  The destructor is registered in a structure type descriptor
-with @func{set-rtd-destructor!}.
-@end defun
 
-@c ------------------------------------------------------------
+@value{PRJNAME}'s built--in Scheme objects writer can print structures
+just fine, handling cyclic references and shared objects:
 
-@defun set-rtd-printer! @var{rtd} @var{printer}
+@lisp
+(import (vicare))
+(print-graph #t)
+(define-struct duo (one two))
+
+;; simple struct
+(with-output-to-string
+  (lambda ()
+    (display (make-duo 1 2))))
+@result{} #[struct duo one=1 two=2]"
+
+;; struct with shared object
+(with-output-to-string
+  (lambda ()
+    (let* ((A (make-duo 1 2))
+           (B (make-duo A A)))
+      (display B))))
+@result{} "#[struct duo one=#0=#[struct duo one=1 two=2] two=#0#]"
+
+;; struct with cyclic reference to itself
+(with-output-to-string
+  (lambda ()
+    (let ((A (make-duo 1 (void))))
+      (set-duo-two! A A)
+      (display A))))
+@result{} "#0=#[struct duo one=1 two=#0#]"
+@end lisp
+
+@noindent
+but sometimes we need to print a structure with a customised
+representation.  For example keyword objects (@pxref{iklib keywords,
+Keyword objects}) are structures with a custom printer function:
+
+@lisp
+(with-output-to-string
+  (lambda ()
+    (display #:ciao)))
+@result{} "#:ciao"
+@end lisp
+
+A custom printer function accepts @math{3} arguments: the structure to
+be printed; a textual output port into which to write a string
+representation of the structure in the style of @func{display} or
+@func{write}; a function to be optionally applied to the field values to
+print them.
+
+
+@defun set-struct-type-printer! @var{std} @var{printer}
+@defunx set-rtd-printer! @var{std} @var{printer}
 Select the procedure @var{printer} as printer for data structures of
-type @var{rtd}; return unspecified values.  The printer accepts @math{3}
-arguments: the structure to be printed, the port to which write a string
-represention of the structure with @func{display}, a function to be
-optionally applied to the field values to print them.
+type @var{std}; if @var{printer} is @false{}, instances of type
+@var{std} make use of the built--in Scheme objects printer.  Return
+unspecified values.
 @end defun
 
-@c ------------------------------------------------------------
 
-@subsubheading Automatic finalisation of structures
+@defun struct-type-printer @var{std}
+Return @false{} or a function previously set as custom structure printer
+for instances of structure type @var{std}.  When the return value is
+@false{}: instances of type @var{std} make use of the built--in Scheme
+objects printer.
+@end defun
+
+@c page
+@node iklib structs types final
+@subsubsection Automatic finalisation of structures
+
 
 @cindex Automatic finalisation of structures
 @cindex Structures, automatic finalisation
@@ -10209,13 +10318,22 @@ optionally applied to the field values to print them.
 @cindex Finalisation of data structures
 @cindex Destructors for data structures
 
-@defun set-rtd-destructor! @var{rtd} @var{destructor}
+
+@defun struct-type-destructor @var{std}
+Return @false{} or a procedure being the destructor for instances of
+@var{std}.  The destructor is registered in a structure type descriptor
+with @func{set-rtd-destructor!}.
+@end defun
+
+
+@defun set-struct-type-destructor! @var{std} @var{destructor}
+@defunx set-rtd-destructor! @var{std} @var{destructor}
 Select the procedure @var{destructor} as destructor for data structures
-of type @var{rtd}; return unspecified values.  The destructor accepts a
+of type @var{std}; return unspecified values.  The destructor accepts a
 single argument being the structure instance to finalise; the destructor
 can return unspecified values.
 
-After a destructor is registered in @var{rtd}: new instances of this
+After a destructor is registered in @var{std}: new instances of this
 structure type are registered, upon creation, into an internal guardian,
 @ref{iklib guardians} for details; whenever such structures are garbage
 collected: the guardian applies @var{destructor} to them.
@@ -10313,68 +10431,23 @@ The current implementation is the following:
 @end defun
 
 @c page
-@node iklib structs using
-@subsection Using data structures
-
-
-The following bindings are exported by the library @library{vicare}.
-
-
-@defun struct-constructor @var{rtd}
-Return a constructor function for data structures of type @var{rtd}.
-The constructor accepts as many arguments as fields defined by @var{rtd}
-and returns a new structure instance.
-@end defun
-
-
-@defun struct-predicate @var{rtd}
-Return a predicate function for structures of type @var{rtd}.
-@end defun
-
-
-@defun struct-field-accessor @var{rtd} @var{index/name}
-@defunx struct-field-mutator @var{rtd} @var{index/name}
-Return an accessor or mutator function for the field at @var{index/name}
-of data structures of type @var{rtd}.  @var{index/name} can be a field
-index or a symbol representing a field name.
-
-@example
-(define-struct color
-  (red green blue))
-
-(define stru
-  (make-color 1 2 3))
-
-((struct-field-accessor (type-descriptor color) 'red)
- stru)
-@result{} 1
-
-((struct-field-accessor (type-descriptor color) 0)
- stru)
-@result{} 1
-@end example
-@end defun
-
-@c page
 @node iklib structs inspect
 @subsection Inspecting data structures
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
 @defun struct? @var{stru}
-@defunx struct? @var{stru} @var{rtd}
-When no @var{rtd} argument is given: return true if @var{stru} is a data
-structure.  When @var{rtd} is given: return true if @var{stru} is a data
-structure and it is of type @var{rtd}, which must be a struct type
+@defunx struct? @var{stru} @var{std}
+When no @var{std} argument is given: return true if @var{stru} is a data
+structure.  When @var{std} is given: return true if @var{stru} is a data
+structure and it is of type @var{std}, which must be a struct type
 descriptor.
 @end defun
 
 
 @defun struct-rtd @var{stru}
-Return the @var{rtd} of the data structure @var{stru}.  Notice that this
-function works with both Vicare's structs and @rnrs{6} records.
+Return the struct--type descriptor of the data structure @var{stru}.
+Notice that this function works with both Vicare's structs and @rnrs{6}
+records.
 @end defun
 
 

@@ -738,11 +738,16 @@
   (define-struct beta
     (a b c))
 
+  (define alpha-std
+    (struct-type-descriptor alpha))
+
+  (define beta-std
+    (struct-type-descriptor beta))
+
   (define (the-beta-destructor S)
     #t)
 
-  (module ()
-    (set-rtd-destructor! (struct-type-descriptor beta) the-beta-destructor))
+  (set-rtd-destructor! beta-std the-beta-destructor)
 
 ;;; --------------------------------------------------------------------
 
@@ -777,69 +782,73 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      ($std-std (struct-type-descriptor beta))
+      ($std-std beta-std)
     => (base-rtd))
 
   (check
-      ($std-name (struct-type-descriptor beta))
+      ($std-name beta-std)
     => "beta")
 
   (check
-      ($std-length (struct-type-descriptor beta))
+      ($std-length beta-std)
     => 3)
 
   (check
-      ($std-fields (struct-type-descriptor beta))
+      ($std-fields beta-std)
     => '(a b c))
 
   (check
-      ($std-printer (struct-type-descriptor beta))
+      ($std-printer beta-std)
     => #f)
 
   (check
-      (gensym? ($std-symbol (struct-type-descriptor beta)))
+      (gensym? ($std-symbol beta-std))
     => #t)
 
   (check
-      ($std-destructor (struct-type-descriptor beta))
+      ($std-destructor beta-std)
     => the-beta-destructor)
+
+  ;; (check
+  ;;     (struct-type-destructor beta-std)
+  ;;   => the-beta-destructor)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((std (struct-type-descriptor beta)))
+      (let ((std beta-std))
 	($set-std-name! std "ciao")
 	($std-name std))
     => "ciao")
 
   (check
-      (let ((std (struct-type-descriptor beta)))
+      (let ((std beta-std))
 	($set-std-length! std 2)
 	($std-length std))
     => 2)
 
   (check
-      (let ((std (struct-type-descriptor beta)))
+      (let ((std beta-std))
 	($set-std-fields! std '(A B))
 	($std-fields std))
     => '(A B))
 
   (check
-      (let ((std (struct-type-descriptor beta))
+      (let ((std beta-std)
 	    (fun (lambda args (void))))
 	($set-std-printer! std fun)
 	(eq? fun ($std-printer std)))
     => #t)
 
   (check
-      (let ((std (struct-type-descriptor beta))
+      (let ((std beta-std)
 	    (fun (lambda args (void))))
 	($set-std-destructor! std fun)
 	(eq? fun ($std-destructor std)))
     => #t)
 
   (check
-      (let ((std (struct-type-descriptor beta))
+      (let ((std beta-std)
 	    (uid (gensym "uid")))
 	(set-symbol-value! uid std)
 	($set-std-symbol! std uid)

@@ -96,6 +96,15 @@
       (write-it #:ciao)
     => "#:ciao")
 
+;;; --------------------------------------------------------------------
+;;; documentation examples
+
+  (check
+      (with-output-to-string
+	(lambda ()
+	  (display #:ciao)))
+    => "#:ciao")
+
   #t)
 
 
@@ -177,6 +186,22 @@
     => "#0=#[struct duo one=3 two=#[struct duo one=1 two=#0#]]")
 
 ;;; --------------------------------------------------------------------
+;;; custom printer
+
+  (check
+      (internal-body
+	(define-struct duo	(one two))
+	(define A		(make-duo 1 2))
+	(define (printer stru port sub-printer)
+	  (fprintf port
+		   "#{duo one=~s two=~s}"
+		   (duo-one stru)
+		   (duo-two stru)))
+	(set-rtd-printer! (struct-type-descriptor duo) printer)
+	(write-it A))
+    => "#{duo one=1 two=2}")
+
+;;; --------------------------------------------------------------------
 ;;; struct-type descriptors
 
   (check
@@ -188,6 +213,37 @@
 	(define-struct duo	(one two))
 	(write-it (struct-type-descriptor duo)))
     => "#[struct-type duo length=2 fields=(one two) printer=#f symbol=duo destructor=#f]")
+
+;;; --------------------------------------------------------------------
+;;; documentation examples
+
+  (parametrise ((print-graph #t))
+    (internal-body
+      (define-struct duo (one two))
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (display (make-duo 1 2))))
+	=> "#[struct duo one=1 two=2]")
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let* ((A (make-duo 1 2))
+		     (B (make-duo A A)))
+		(display B))))
+	=> "#[struct duo one=#0=#[struct duo one=1 two=2] two=#0#]")
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let ((A (make-duo 1 (void))))
+		(set-duo-two! A A)
+		(display A))))
+	=> "#0=#[struct duo one=1 two=#0#]")
+
+      (void)))
 
   #t)
 
