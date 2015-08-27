@@ -354,17 +354,6 @@
 		 (fxadd1 (sum-box* D)))
 	  (box-length (car ls)))))
 
-    (define (%gensep*-default ls)
-      ;;Non-tail  recursive function.   Generate  a list  of  separators.  Build  and
-      ;;return a new list  of fixnums, one item for each item in  LS.  Each fixnum is
-      ;;the value returned by "(pretty-indent)".
-      ;;
-      (let ((D (cdr ls)))
-	(if (pair? D)
-	    (cons (pretty-indent)
-		  (%gensep*-default D))
-	  '())))
-
     (define (tab-value x)
       (cond ((eq? x 'tab)
 	     (pretty-indent))
@@ -572,7 +561,10 @@
 		     (+ 1 ac (box-length box)))
 	  -1 box*))
       ;;FIXME We should consider using an  FBOX, after the code for outputting FBOXes
-      ;;has been reviewed.  (Marco Maggi; Thu Aug 27, 2015)
+      ;;has been  reviewed.  Alternatively  introduce a  new box  for the  purpose of
+      ;;printing structs and records.  (Marco Maggi; Thu Aug 27, 2015)
+      ;;
+      ;;(make-fbox len box* (%gensep*-default box*))
       (make-cbox len box*))
 
     (define (%boxify-vanilla-struct stru)
@@ -613,14 +605,17 @@
 						       (if instance? 0 1)
 						       (let ((names (struct-type-field-names std)))
 							 (if instance? names (cdr names)))))
-		    (ls		(cons name field-box*))
+		    (box*	(cons name field-box*))
 		    (len	(fold-left (lambda (ac s)
 					     (+ 1 ac (box-length s)))
-				  -1 ls))
+				  -1 box*))
 		    ;;FIXME  We should  consider using  an FBOX,  after the  code for
-		    ;;outputting FBOXes has been reviewed.  (Marco Maggi; Thu Aug 27,
-		    ;;2015)
-		    (box	(make-cbox len ls)))
+		    ;;outputting FBOXes has  been reviewed.  Alternatively, introduce
+		    ;;a  new box  for the  purpose of  printing structs  and records.
+		    ;;(Marco Maggi; Thu Aug 27, 2015)
+		    ;;
+		    ;;(box	(make-fbox len box* (%gensep*-default box*)))
+		    (box	(make-cbox len box*)))
 		 (%concatenate-into-cbox (if instance? "#[struct " "#[struct-type ")
 					 box "]")))))
 
@@ -661,6 +656,16 @@
 			   (fx+ accum-len (box-length (car item*))))
 		   accum-len))))
       (make-cbox len string/box*)))
+
+  (define (%gensep*-default ls)
+    ;;Non-tail recursive  function.  Generate a  list of separators  to be used  in a
+    ;;FBOX.  Build and  return a new list of  fixnums, one item for each  item in LS.
+    ;;Each fixnum is the value returned by "(pretty-indent)".
+    ;;
+    (let ((D (cdr ls)))
+      (if (pair? D)
+	  (cons (pretty-indent) (%gensep*-default D))
+	'())))
 
   (define* (graphed? x)
     (import TRAVERSAL-HELPERS)
@@ -863,6 +868,7 @@
 ;;; --------------------------------------------------------------------
 
   (module (output-fbox)
+    ;;FIXME This code needs a full review.  (Marco Maggi; Thu Aug 27, 2015)
 
     (define (output-fbox x port col)
       (let* ((box*		(fbox-box* x))
