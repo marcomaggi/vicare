@@ -1126,7 +1126,7 @@
 	     (%error-expected-proper-list-as-argument (car ls*))))))
 
   (define (cars+cdrs ls ls*)
-    (with-who fold-left
+    (with-who fold-right
       (if (null? ls)
 	  (values '() '())
 	(let ((a (car ls)))
@@ -1139,7 +1139,7 @@
 		 (%error-expected-proper-list-as-argument (car ls*))))))))
 
   (define (loop1 f nil h t ls)
-    (with-who fold-left
+    (with-who fold-right
       (cond ((pair? h)
 	     (let ((a (car h)) (h (cdr h)))
 	       (cond ((pair? h)
@@ -1157,7 +1157,7 @@
 	     (%error-expected-proper-list-as-argument ls)))))
 
   (define (loopn f nil h h* t ls ls*)
-    (with-who fold-left
+    (with-who fold-right
       (cond ((pair? h)
 	     (let-values (((a* h*) (cars+cdrs h* ls*)))
 	       (let ((a (car h)) (h (cdr h)))
