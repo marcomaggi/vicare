@@ -10366,6 +10366,23 @@ objects printer.
 @cindex Destructors for data structures
 
 
+@value{PRJNAME} allows structures to be finalised by the garbage
+collector by applying a destructor functions to them; here is how it
+works:
+
+@example
+vicare> (define-struct duo (one two))
+vicare> (set-struct-type-destructor! (struct-type-descriptor duo)
+   (lambda (stru)
+     (printf "destroying ~s\n" stru)))
+vicare> (make-duo 1 2)
+$1 = #[struct duo one=1 two=2]
+vicare> (collect)
+destroying #[struct duo one=1 two=2]
+vicare>
+@end example
+
+
 @defun struct-type-destructor @var{std}
 Return @false{} or a procedure being the destructor for instances of
 @var{std}.  The destructor is registered in a structure type descriptor
