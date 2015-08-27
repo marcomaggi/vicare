@@ -585,6 +585,48 @@
 
       (void)))
 
+;;;
+
+  (internal-body
+
+    (define-struct duo
+      (one two))
+
+    (set-struct-type-printer! (struct-type-descriptor duo)
+			      (lambda (stru port sub-printer)
+				(display "#{duo " port)
+				(sub-printer (duo-one stru))
+				(display " " port)
+				(sub-printer (duo-two stru))
+				(display "}" port)))
+
+    ;; simple struct
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (display (make-duo 1 2))))
+      => "#{duo 1 2}")
+
+    ;; struct with shared object
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (let* ((A (make-duo 1 2))
+		   (B (make-duo A A)))
+	      (display B))))
+      => "#{duo #0=#{duo 1 2} #0#}")
+
+    ;; struct with cyclic reference to itself
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (let ((A (make-duo 1 (void))))
+	      (set-duo-two! A A)
+	      (display A))))
+      => "#0=#{duo 1 #0#}")
+
+    (void))
+
   #t)
 
 
