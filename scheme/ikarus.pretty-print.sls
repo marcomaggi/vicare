@@ -39,25 +39,37 @@
     ;;2015)
     (only (ikarus fixnums)
 	  non-negative-fixnum?)
+    (only (vicare system $structs)
+	  base-rtd)
     (only (ikarus writer)
 	  traverse
 	  TRAVERSAL-HELPERS)
     (only (ikarus.pretty-formats)
 	  get-fmt)
-    (only (ikarus records procedural)
-	  ;;FIXME  This import  must  be removed  at the  next  boot image  rotation.
-	  ;;(Marco Maggi; Sun May 10, 2015)
-	  record-object?)
-    (only (vicare system $structs)
-	  $struct-rtd))
+    (prefix (only (ikarus structs)
+		  struct-field-names)
+	    structs.)
+    (prefix (only (ikarus records procedural)
+		  ;;FIXME  This import  must  be removed  at the  next  boot image  rotation.
+		  ;;(Marco Maggi; Sun May 10, 2015)
+		  record-object?
+		  record-constructor-descriptor?)
+	    records.))
 
 
-(define (map1ltr f ls)
-;;; ltr so that gensym counts get assigned properly
-  (if (null? ls)
-      '()
-    (let ((a (f (car ls)))) ;do this first
-      (cons a (map1ltr f (cdr ls))))))
+;;;; helpers
+
+(define (map1-in-order fun ls)
+  ;;Non-tail recursive  function.  Map the  function FUN over  the list LS  in order:
+  ;;make sure that  FUN is first applied to the  car of LS, then to the  items in the
+  ;;cdr.  This  way if FUN causes  the generation of gensyms:  the car of LS  has the
+  ;;first gensyms, the cdr has the latter ones.
+  ;;
+  (if (pair? ls)
+      (let* ((A (fun (car ls)))		       ;this first
+	     (D (map1-in-order fun (cdr ls)))) ;this next
+	(cons A D))
+    '()))
 
 (define pretty-width
   (make-parameter 60
@@ -70,600 +82,101 @@
 (define (pretty-indent)
   1)
 
-(define-struct cbox (length boxes))
-(define-struct pbox (length ls last))
-(define-struct mbox (length str val))
-(define-struct vbox (length prefix ls))
-(define-struct fbox (length box* sep*))
+
+;;;; data types definition
+
+;;CBOX structs represent a simple  concatenation of objects' strings representations.
+;;The string  representations must  be written  one after  the other  without further
+;;special processing and no separator between them.
+;;
+(define-struct cbox
+  (length
+		;The total length of the representations.
+   boxes
+		;A list of strings or box structs.
+   ))
+
+;;VBOX structs represent a vector's or bytevector's string representation.
+;;
+(define-struct vbox
+  (length
+		;The total  length of the  representation.  Including the  prefix and
+		;the parentheses.
+   prefix
+		;A string representing the prefix.  Either "#" or "#vu8".
+   ls
+		;A list of strings and box structures representing the objects.
+   ))
+
+;;PBOX structs represent the string  representation of: pairs, improper lists, cyclic
+;;lists, lists with shared objects.
+;;
+(define-struct pbox
+  (length
+		;The total length  of the objects, including the  parentheses and the
+		;dot.
+   ls
+		;A list of strings or boxes representing the car and cdr.
+   last
+		;The string or box representing the last object in list.
+   ))
+
+;;FBOX structs  represent the string representation  of sequenced of objects  and the
+;;separators between them.  It is used for lists, structs and records.
+;;
+(define-struct fbox
+  (length
+		;The total  length of  the object representations  in BOX*  and their
+		;separators in SEP*.
+   box*
+		;A list of strings or box structs.
+   sep*
+		;False or a  list of fixnums representing blank  characters to insert
+		;as separators between the representations of the objects in BOX*.
+   ))
+
+;;; --------------------------------------------------------------------
 
 (define (box-length x)
-  (cond
-   ((string? x) (string-length x))
-   ((cbox? x)   (cbox-length x))
-   ((pbox? x)   (pbox-length x))
-   ((mbox? x)   (mbox-length x))
-   ((vbox? x)   (vbox-length x))
-   ((fbox? x)   (fbox-length x))
-   (else
-    (assertion-violation 'boxify "invalid box" x))))
+  (cond ((string? x)	(string-length x))
+	((cbox? x)	(cbox-length x))
+	((pbox? x)	(pbox-length x))
+	((vbox? x)	(vbox-length x))
+	((fbox? x)	(fbox-length x))
+	(else
+	 (assertion-violation 'pretty-printer
+	   "internal error: invalid box" x))))
 
 
-(define (boxify x h)
-  (define shared-idx 0)
+;;;; public API
 
-  (define (conc . a*)
-    (let ((n (let f ((a* a*) (len 0))
-	       (if (null? a*)
-		   len
-		 (f (cdr a*) (fx+ len (box-length (car a*))))))))
-      (make-cbox n a*)))
+(module (pretty-print pretty-print*)
 
-  (define (boxify-list ls)
-    (define (sum-box* ls)
-      (cond
-       ((null? (cdr ls))
-	(box-length (car ls)))
-       (else
-	(fx+ (box-length (car ls))
-	     (fxadd1 (sum-box* (cdr ls)))))))
-    (define (gensep*-default ls)
-      (cond
-       ((null? (cdr ls)) '())
-       (else
-	(cons (pretty-indent) (gensep*-default (cdr ls))))))
-    (define (tab-value x)
-      (cond
-       ((eq? x 'tab) (pretty-indent))
-       ((fixnum? x) x)
-       (else #f)))
-    (define (select-alt alt-fmt* ls)
-      (define (good-match? fmt ls)
-	(cond
-	 ((not (pair? fmt)) #t)
-	 ((eq? (car fmt) 'pretty-format-reader-macro)
-	  (and (unshared-list? ls) (fx= (length ls) 2)))
-	 (else
-	  (let ((a (car fmt)) (fmt (cdr fmt)))
-	    (cond
-	     ((or (eq? a 'tab) (fixnum? a))
-	      (good-match? fmt ls))
-	     ((and (pair? fmt) (eq? (car fmt) '...))
-	      (and (unshared-list? ls)
-		   (andmap (lambda (x) (good-match? a x)) ls)))
-	     ((and (pair? ls) (not (graphed? ls)))
-	      (and (good-match? a (car ls))
-		   (good-match? fmt (cdr ls))))
-	     (else #f))))))
-      (ormap (lambda (fmt) (and (good-match? fmt ls) fmt))
-	     alt-fmt*))
-    (define (applicable-formats a alt-fmt*)
-      (cond
-       ((and (symbol? a) (get-fmt a)) =>
-	(lambda (fmt)
-	  (cond
-	   ((and (pair? fmt) (eq? (car fmt) 'alt))
-	    (append alt-fmt* (cdr fmt)))
-	   (else
-	    (append alt-fmt* (list fmt))))))
-       ((null? alt-fmt*) #f)
-       (else       alt-fmt*)))
-    (define (return sep* box*)
-      (let ((n (sum-box* box*)))
-	(conc "(" (make-fbox n box* sep*) ")")))
-    (define (boxify-list ls alt-fmt*)
-      (let ((a (car ls)))
-	(cond
-	 ((applicable-formats a alt-fmt*) =>
-	  (lambda (fmt*)
-	    (let ((fmt (select-alt fmt* ls)))
-	      (module (fmt-dots? skip-fmt fmt-tab sub-fmt)
-		(define (parse-fmt x)
-		  (define (parse-dots tab fmt x)
-		    (cond
-		     ((and (pair? x) (eq? (car x) '...))
-		      (values tab fmt #t (cdr x)))
-		     (else
-		      (values tab fmt #f x))))
-		  (define (parse-tab tab x)
-		    (cond
-		     ((pair? x)
-		      (parse-dots tab (car x) (cdr x)))
-		     (else (values tab #f #f #f))))
-		  (cond
-		   ((pair? x)
-		    (let ((a0 (car x)))
-		      (cond
-		       ((eq? a0 'tab)
-			(parse-tab (pretty-indent) (cdr x)))
-		       ((fixnum? a0)
-			(parse-tab a0 (cdr x)))
-		       (else (parse-tab #f x)))))
-		   (else (values (pretty-indent) #f #f #f))))
-		(define (fmt-dots? x)
-		  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
-		    dots))
-		(define (fmt-tab x)
-		  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
-		    tab))
-		(define (sub-fmt x)
-		  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
-		    subfmt))
-		(define (skip-fmt x)
-		  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
-		    fmt)))
-	      (define (boxify/fmt fmt x)
-		(cond
-		 ((and (pair? fmt) (unshared-list? x))
-		  (boxify-list x
-			       (if (eq? (car fmt) 'alt)
-				   (cdr fmt)
-				 (list fmt))))
-		 (else (boxify x))))
-	      (define (pretty-format-reader-macro? x)
-		(and (pair? x) (eq? (car x) 'pretty-format-reader-macro)))
-	      (cond
-	       ((pretty-format-reader-macro? fmt)
-		(conc (cdr fmt) (boxify (cadr ls))))
-	       ((fmt-dots? fmt)
-		(return (fmt-tab fmt)
-			(map1ltr (lambda (x) (boxify/fmt (sub-fmt fmt) x))
-                                 ls)))
-	       (else
-		(let ((a (boxify/fmt (sub-fmt fmt) a)))
-		  (let-values (((sep* ls)
-				(let f ((fmt (skip-fmt fmt)) (ls (cdr ls)))
-				  (cond
-				   ((null? ls)
-				    (values '() '()))
-				   ((fmt-dots? fmt)
-				    (values (fmt-tab fmt)
-					    (map1ltr
-					     (lambda (x)
-					       (boxify/fmt (sub-fmt fmt) x))
-					     ls)))
-				   (else
-				    (let ((a
-					   (boxify/fmt (sub-fmt fmt)
-						       (car ls))))
-				      (let-values (((f^ l^)
-						    (f (skip-fmt fmt)
-						       (cdr ls))))
-					(values (cons (fmt-tab fmt) f^)
-						(cons a l^)))))))))
-		    (return sep* (cons a ls)))))))))
-	 (else
-	  (return (gensep*-default ls) (map1ltr boxify ls))))))
-    (boxify-list ls '()))
-  (define (boxify-pair x)
-    (define (boxify-cdrs x)
-      (cond
-       ((and (pair? x) (not (graphed? x)))
-	(let ((a (boxify (car x))))
-	  (let-values (((ls last) (boxify-cdrs (cdr x))))
-	    (values (cons a ls) last))))
-       (else
-	(values '() (boxify x)))))
-    (let ((a (boxify (car x))))
-      (let-values (((ls last) (boxify-cdrs (cdr x))))
-	(let ((ls (cons a ls)))
-	  (let ((n
-		 (let f ((ls ls) (n 4))
-		   (cond
-		    ((null? ls) n)
-		    (else
-		     (f (cdr ls)
-			(fx+ (fxadd1 n) (box-length (car ls)))))))))
-	    (make-pbox (fx+ n (box-length last)) ls last))))))
-  (define (boxify-vector x)
-    (let ((ls (map1ltr boxify (vector->list x))))
-      (let ((n
-	     (let f ((ls ls) (n 0))
-	       (cond
-		((null? ls) n)
-		(else
-		 (f (cdr ls) (fx+ n (box-length (car ls)))))))))
-	(make-vbox (fx+ (fx+ n 2) (vector-length x)) "#" ls))))
-  (define (boxify-bytevector x)
-    (define prefix "#vu8")
-    (let ((ls (map (lambda (x)
-		     (let ((radix (printer-integer-radix)))
-		       (if (fx=? 10 radix)
-			   (number->string x)
-			 (string-append (case radix
-					  ((2)	"#b")
-					  ((8)	"#o")
-					  ((16)	"#x"))
-					(number->string x radix)))))
-		(bytevector->u8-list x))))
-      (let ((len (fold-left (lambda (ac s) (+ 1 ac (string-length s)))
-		   (+ 1 (string-length prefix))
-		   ls)))
-	(make-vbox len prefix ls))))
-  (define (graphed? x)
-    (import TRAVERSAL-HELPERS)
-    (let ((b (hashtable-ref h x #f)))
-      (let ((b (if (fixnum? b) b (car b))))
-	(cond
-	 ((cyclic-set? b) #t)
-	 ((shared-set? b) (print-graph))
-	 (else            #f)))))
-  (define (unshared-list? x)
-      ;;; all cdrs of non-empty list are not-shared?
-    (and (pair? x)
-	 (let f ((x (cdr x)))
-	   (or (null? x)
-	       (and (pair? x)
-		    (not (graphed? x))
-		    (f (cdr x)))))))
+  (case-define* pretty-print
+    ((x)
+     (%pretty x (current-output-port) 0 #t))
+    ((x {port textual-output-port?})
+     (%pretty x port 0 #t)))
 
-  (define (boxify-struct x)
-    (define (boxify-vanilla-struct x)
-      (cond ((record-object? x) #;(record-type-descriptor? ($struct-rtd x))
-	     (call-with-string-output-port
-		 (lambda (port)
-		   (write x port))))
-	    ;;We do *not* handle opaque records specially.
-	    ;; ((let ((rtd ($struct-rtd x)))
-	    ;; 	  (and (record-type-descriptor? rtd)
-	    ;; 	       (record-type-opaque? rtd)))
-	    ;; 	"#<unknown>")
-	    ((keyword? x)
-	     (string-append "#:" (symbol->string (keyword->symbol x))))
-	    (else
-	     (let* ((name (boxify (struct-name x)))
-		    (ls   (let ((n (struct-length x)))
-			    (let f ((i 0))
-			      (cond ((fx= i n)
-				     '())
-				    (else
-				     (let ((a (boxify (struct-ref x i))))
-				       (cons a (f (+ i 1)))))))))
-		    (ls   (cons name ls))
-		    (len   (fold-left
-			       (lambda (ac s)
-				 (+ 1 ac (box-length s)))
-			     -1 ls)))
-	       (conc "#[" (make-fbox len ls #f) "]")))))
+  (define* (pretty-print* x {port textual-output-port?} {start-column non-negative-fixnum?} ending-newline?)
+    (%pretty x port start-column ending-newline?))
 
-    (define (boxify-custom-struct out)
-      (import TRAVERSAL-HELPERS)
-      (let ((ls
-	     (let f ((cache (cdr out)))
-	       (cond
-		((not cache) (list (car out)))
-		(else
-		 (let ((obj (boxify (cache-object cache))))
-		   (let ((ls (f (cache-next cache))))
-		     (cons* (cache-string cache) obj ls))))))))
-	(let ((len (fold-left (lambda (ac s) (+ 1 ac (box-length s)))
-		     -1 ls)))
-	  (make-fbox len ls #f))))
+  (define (%pretty x port start-column ending-newline?)
+    (let ((h (make-eq-hashtable)))
+      (traverse x h)
+      (output (boxify x h) port start-column))
+    (when ending-newline?
+      (newline port)))
 
-    (let ((b (hashtable-ref h x #f)))
-      (cond
-       ((pair? b) (boxify-custom-struct (cdr b)))
-       (else (boxify-vanilla-struct x)))))
-
-  (define (boxify-shared x k)
-    (import TRAVERSAL-HELPERS)
-    (let ((b (hashtable-ref h x #f)))
-      (let ((b (if (fixnum? b) b (car b))))
-	(cond
-	 ((mark-set? b)
-	  (string-append "#"
-			 (number->string (fxsra b MARK-SHIFT))
-			 "#"))
-	 ((or (cyclic-set? b)
-	      (and (shared-set? b) (print-graph)))
-	  (let ((n shared-idx))
-	    (set! shared-idx (+ shared-idx 1))
-	    (set-mark! x h n)
-	    (let ((str (string-append "#" (number->string n) "=")))
-	      (let ((xbox (k x)))
-		(make-cbox (+ (string-length str) (box-length xbox))
-			   (list str xbox))))))
-	 (else (k x))))))
-  (define (boxify x)
-    (cond
-     ((null? x)          "()")
-     ((vector? x)        (boxify-shared x boxify-vector))
-     ((unshared-list? x) (boxify-shared x boxify-list))
-     ((pair? x)          (boxify-shared x boxify-pair))
-     ((bytevector? x)    (boxify-shared x boxify-bytevector))
-     ;;Right now the would block object is a struct instance, so we have
-     ;;to check for  it before checking for structs.   (Marco Maggi; Mon
-     ;;May 13, 2013)
-     ((would-block-object? x)	"#!would-block-object")
-     ((bwp-object? x)		"#!bwp-object")
-     ((unbound-object? x)	"#!unbound-object")
-     ((struct? x)        (boxify-shared x boxify-struct))
-;;;((setbox? x)
-;;; (let ((i (format "#~a=" (setbox-idx x)))
-;;;       (b (boxify (setbox-data x))))
-;;;   (make-cbox (+ (string-length i) (box-length b))
-;;;     (list i b))))
-;;;((refbox? x) (format "#~a#" (refbox-idx x)))
-     (else           (format "~s" x))))
-  (boxify x))
-
-
-(define string-esc-table
-  '((7 . "a")
-    (8 . "b")
-    (9 . "t")
-    (10 . "n")
-    (11 . "v")
-    (12 . "f")
-    (13 . "r")
-    (34 . "\"")
-    (92 . "\\")))
-
-(define FIXNUM-ZERO
-  (char->integer #\0))
-
-(define FIXNUM-A
-  (char->integer #\A))
-
-(define (hexify n)
-  (if (fx< n 10)
-      (integer->char (fx+ n FIXNUM-ZERO))
-    (integer->char (fx+ (fx- n 10) FIXNUM-A))))
-
-
-(define (output x port start-column ending-newline?)
-
-  (define (output-cbox x port col)
-    (let loop ((ls	(cbox-boxes x))
-	       (port	port)
-	       (col	col))
-      (if (null? ls)
-	  col
-	(loop (cdr ls) port
-	      (main (car ls) port col)))))
-
-  (define (tab col port)
-    (newline port)
-    (let loop ((col col) (port port))
-      (unless (fxzero? col)
-	(put-char port #\space)
-	(loop (fxsub1 col) port))))
-
-  (define (output-pbox x port col)
-
-    (define (pbox-one-line x port col)
-      (display "(" port)
-      (let loop ((ls	(pbox-ls x))
-		 (port	port)
-		 (col	(fx+ col 1))
-		 (last	(pbox-last x)))
-	(cond ((null? ls)
-	       (display ". " port)
-	       (let ((col (main last port (fx+ col 2))))
-		 (display ")" port)
-		 (fx+ col 1)))
-	      (else
-	       (let ((col (main (car ls) port col)))
-		 (display " " port)
-		 (loop (cdr ls) port (fx+ col 1) last))))))
-
-    (define (pbox-multi-fill x port col)
-      (display "(" port)
-      (let g ((ls		(cdr (pbox-ls x)))
-	      (port		port)
-	      (start-col	(fx+ col 1))
-	      (col		(main (car (pbox-ls x)) port (fx+ col 1)))
-	      (last		(pbox-last x)))
-	(cond ((null? ls)
-	       (let ((n (box-length last)))
-		 (let ((col (cond ((fx<= (fx+ (fx+ col n) 4) (pretty-width))
-				   (display " . " port)
-				   (fx+ col 3))
-				  (else
-				   (tab start-col port)
-				   (display ". " port)
-				   (fx+ start-col 2)))))
-		   (let ((col (main last port col)))
-		     (display ")" port)
-		     (fx+ col 1)))))
-	      ((fx<= (fx+ (fx+ col 1) (box-length (car ls)))
-		     (pretty-width))
-	       (display " " port)
-	       (g (cdr ls) port start-col
-		  (main (car ls) port (fx+ col 1))
-		  last))
-	      (else
-	       (tab start-col port)
-	       (g (cdr ls) port start-col
-		  (main (car ls) port start-col)
-		  last)))))
-
-    (if (fx<= (fx+ col (pbox-length x)) (pretty-width))
-	(pbox-one-line x port col)
-      (pbox-multi-fill x port col)))
-
-  (define (output-mbox x port col)
-    (display (mbox-str x) port)
-    (main (mbox-val x) port (fx+ col (string-length (mbox-str x)))))
-
-  (define (output-vbox x port col)
-    (display (vbox-prefix x) port)
-    (let ((ls	(vbox-ls x))
-	  (col	(+ col (string-length (vbox-prefix x)))))
-      (cond ((null? ls)
-	     (display "()" port)
-	     (fx+ col 2))
-	    (else
-	     (display "(" port)
-	     (let g ((ls	(cdr ls)) (port port)
-		     (col	(main (car ls) port (fx+ col 1)))
-		     (start	(fx+ col 1)))
-	       (cond ((null? ls)
-		      (display ")" port)
-		      (fx+ col 1))
-		     ((fx<= (fx+ (fx+ col 1) (box-length (car ls))) (pretty-width))
-		      (display " " port)
-		      (g (cdr ls) port
-			 (main (car ls) port (fx+ col 1))
-			 start))
-		     (else
-		      (tab start port)
-		      (g (cdr ls) port
-			 (main (car ls) port start)
-			 start))))))))
-
-  (define (output-fbox x port col)
-    (define (output-rest-cont box* sep* port col left)
-      (cond ((null? box*)
-	     col)
-	    ((pair? sep*)
-	     (let* ((box	(car box*))
-		    (sep	(car sep*))
-		    (w		(box-length box)))
-	       (cond ((fx<= (fx+ (fxadd1 w) col) (pretty-width))
-		      (display " " port)
-		      (output-rest-cont (cdr box*) (cdr sep*) port
-					(main box port (fxadd1 col)) left))
-		     ((not sep)
-		      (display " " port)
-		      (output-rest-multi (cdr box*) (cdr sep*) port
-					 (main box port (fxadd1 col)) left))
-		     (else
-		      (let ((col (fx+ left sep)))
-			(tab col port)
-			(cond
-			 ((fx<= (fx+ w col) (pretty-width))
-			  (output-rest-cont (cdr box*) (cdr sep*) port
-					    (main box port col) left))
-			 (else
-			  (output-rest-multi (cdr box*) (cdr sep*) port
-					     (main box port col) left))))))))
-	    (else
-	     (output-last-cont box* sep* port col left))))
-
-    (define (output-last-cont box* sep port col left)
-      (define (sum ls)
-	(if (null? ls)
-	    0
-	  (fx+ (box-length (car ls))
-	       (fxadd1 (sum (cdr ls))))))
-
-      (cond ((not sep)
-	     (output-rest-cont box* '(#f . #f) port col left))
-	    ((fx<= (fx+ (sum box*) col) (pretty-width))
-	     (let g ((box* box*)
-		     (port port)
-		     (col  col))
-	       (if (null? box*)
-		   col
-		 (begin
-		   (display " " port)
-		   (g (cdr box*) port (main (car box*) port (fxadd1 col)))))))
-	    (else
-	     (let g ((box* box*)
-		     (port port)
-		     (left (fx+ left sep))
-		     (col  col))
-	       (if (null? box*)
-		   col
-		 (begin
-		   (tab left port)
-		   (g (cdr box*) port left
-		      (main (car box*) port left))))
-	       ))))
-
-    (define (output-last-multi box* sep port col left)
-      (define (sum ls)
-	(if (null? ls)
-	    0
-	  (fx+ (box-length (car ls))
-	       (fxadd1 (sum (cdr ls))))))
-      (if (not sep)
-	  (output-rest-multi box* '(#f . #f) port col left)
-	(let g ((box* box*)
-		(port port)
-		(left (fx+ left sep))
-		(col  col))
-	  (if (null? box*)
-	      col
-	    (begin
-	      (tab left port)
-	      (g (cdr box*) port left
-		 (main (car box*) port left))))
-	  )))
-
-    (define (output-rest-multi box* sep* port col left)
-      (cond ((null? box*)
-	     col)
-	    ((pair? sep*)
-	     (let* ((box	(car box*))
-		    (sep	(car sep*))
-		    (w		(box-length box)))
-	       (cond ((not sep)
-		      (display " " port)
-		      (output-rest-multi (cdr box*) (cdr sep*) port
-					 (main box port (fxadd1 col)) left))
-		     (else
-		      (let ((col (fx+ left sep)))
-			(tab col port)
-			(if (fx<= (fx+ w col)
-				  (pretty-width))
-			    (output-rest-cont (cdr box*) (cdr sep*) port
-					      (main box port col) left)
-			  (output-rest-multi (cdr box*) (cdr sep*) port
-					     (main box port col) left)))
-		      ))))
-	    (else
-	     (output-last-multi box* sep* port col left))))
-
-    (define (output-box-init box box* sep* port left)
-      (if (fx<= (fx+ (box-length box) left)
-		(pretty-width))
-	  (let ((col (main box port left)))
-	    (output-rest-cont box* sep* port col left))
-	(let ((col (main box port left)))
-	  (output-rest-multi box* sep* port col left))))
-
-    (let ((box* (fbox-box* x))
-	  (sep* (fbox-sep* x)))
-      (output-box-init (car box*) (cdr box*) sep* port col))) ;end of OUTPUT-FBOX
-
-  (define (main x port col)
-    (cond ((string? x)
-	   (display x port)
-	   (fx+ col (string-length x)))
-	  ((cbox? x)   (output-cbox x port col))
-	  ((pbox? x)   (output-pbox x port col))
-	  ((mbox? x)   (output-mbox x port col))
-	  ((vbox? x)   (output-vbox x port col))
-	  ((fbox? x)   (output-fbox x port col))
-	  (else
-	   (assertion-violation 'pretty-print-output "invalid" x))))
-
-  (main x port start-column)
-  (when ending-newline?
-    (newline port)))
-
-
-(define (pretty x port start-column ending-newline?)
-  (let ((h (make-eq-hashtable)))
-    (traverse x h)
-    (output (boxify x h) port start-column ending-newline?)))
-
-(case-define* pretty-print
-  ((x)
-   (pretty x (current-output-port) 0 #t))
-  ((x {port textual-output-port?})
-   (pretty x port 0 #t)))
-
-(define* (pretty-print* x {port textual-output-port?} {start-column non-negative-fixnum?} ending-newline?)
-  (pretty x port start-column ending-newline?))
+  #| end of module |# )
 
 (define (debug-print . args)
   ;;Print arguments for debugging purposes.
   ;;
   (pretty-print args (current-error-port))
   (newline (current-error-port))
-  (flush-output-port (current-error-port)))
+  (when (pair? args)
+    (car args)))
 
 (define debug-print-enabled?
   (make-parameter #f
@@ -673,6 +186,817 @@
 (define (debug-print* . args)
   (when (debug-print-enabled?)
     (apply debug-print args)))
+
+
+(define (boxify x marks-table)
+  ;;
+  ;;This function has a lot of internal functions because only a few of them make use
+  ;;of the argument MARKS-TABLE, so it is  more convenient to let that few close upon
+  ;;the argument and the other avoid accepting a MARKS-TABLE argument.
+  ;;
+  ;;The entry  point is the  function "%boxify-object",  which can boxify  any Scheme
+  ;;object.   All  the  internal  syntactic  bindings whose  name  is  prefixed  with
+  ;;"%boxify-object-" do boxify a specific Scheme object type.
+  ;;
+  (define shared-idx 0)
+
+  (define (%boxify-object x)
+    (cond
+     ((null? x)			"()")
+     ((vector? x)		(boxify-shared x %boxify-object-vector))
+     ((unshared-list? x)	(boxify-shared x %boxify-object-list))
+     ((pair? x)			(boxify-shared x %boxify-object-pair))
+     ((bytevector? x)		(boxify-shared x %boxify-object-bytevector))
+     ;;Right now the would block object is a struct instance, so we have to check for
+     ;;it before checking for structs.  (Marco Maggi; Mon May 13, 2013)
+     ((would-block-object? x)	"#!would-block-object")
+     ((bwp-object? x)		"#!bwp-object")
+     ((unbound-object? x)	"#!unbound-object")
+     ((struct? x)		(boxify-shared x %boxify-object-struct))
+     ((gensym? x)		(boxify-shared x %boxify-object-format))
+     ((string? x)		(boxify-shared x %boxify-object-format))
+     (else
+      ;;This call to FORMAT might cause  calls to DISPLAY which recursively enter the
+      ;;objects writer.
+      (format "~s" x))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%boxify-object-format obj)
+    ;;We want the "~s" format here, so that gensyms are written out in full.
+    ;;
+    (format "~s" obj))
+
+;;; --------------------------------------------------------------------
+
+  (module (%boxify-object-list)
+
+    (define (%boxify-object-list ls)
+      (%internal-boxify-list ls '()))
+
+    (define (%internal-boxify-list ls alt-fmt*)
+      (let ((a (car ls)))
+	(cond ((%applicable-formats a alt-fmt*)
+	       => (lambda (fmt*)
+		    (let ((fmt (select-alt fmt* ls)))
+		      (module (fmt-dots? skip-fmt fmt-tab sub-fmt)
+			(define (parse-fmt x)
+			  (define (parse-dots tab fmt x)
+			    (cond
+			     ((and (pair? x) (eq? (car x) '...))
+			      (values tab fmt #t (cdr x)))
+			     (else
+			      (values tab fmt #f x))))
+			  (define (parse-tab tab x)
+			    (cond
+			     ((pair? x)
+			      (parse-dots tab (car x) (cdr x)))
+			     (else (values tab #f #f #f))))
+			  (cond
+			   ((pair? x)
+			    (let ((a0 (car x)))
+			      (cond
+			       ((eq? a0 'tab)
+				(parse-tab (pretty-indent) (cdr x)))
+			       ((fixnum? a0)
+				(parse-tab a0 (cdr x)))
+			       (else (parse-tab #f x)))))
+			   (else (values (pretty-indent) #f #f #f))))
+			(define (fmt-dots? x)
+			  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
+			    dots))
+			(define (fmt-tab x)
+			  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
+			    tab))
+			(define (sub-fmt x)
+			  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
+			    subfmt))
+			(define (skip-fmt x)
+			  (let-values (((tab subfmt dots fmt) (parse-fmt x)))
+			    fmt)))
+		      (define (boxify/fmt fmt x)
+			(cond
+			 ((and (pair? fmt) (unshared-list? x))
+			  (%internal-boxify-list x (if (eq? (car fmt) 'alt)
+						       (cdr fmt)
+						     (list fmt))))
+			 (else (%boxify-object x))))
+		      (define (pretty-format-reader-macro? x)
+			(and (pair? x) (eq? (car x) 'pretty-format-reader-macro)))
+		      (cond
+		       ((pretty-format-reader-macro? fmt)
+			(%concatenate-into-cbox (cdr fmt) (%boxify-object (cadr ls))))
+		       ((fmt-dots? fmt)
+			(return (fmt-tab fmt)
+				(map1-in-order (lambda (x) (boxify/fmt (sub-fmt fmt) x))
+					 ls)))
+		       (else
+			(let ((a (boxify/fmt (sub-fmt fmt) a)))
+			  (let-values (((sep* ls)
+					(let f ((fmt (skip-fmt fmt)) (ls (cdr ls)))
+					  (cond
+					   ((null? ls)
+					    (values '() '()))
+					   ((fmt-dots? fmt)
+					    (values (fmt-tab fmt)
+						    (map1-in-order
+						     (lambda (x)
+						       (boxify/fmt (sub-fmt fmt) x))
+						     ls)))
+					   (else
+					    (let ((a
+						   (boxify/fmt (sub-fmt fmt)
+							       (car ls))))
+					      (let-values (((f^ l^)
+							    (f (skip-fmt fmt)
+							       (cdr ls))))
+						(values (cons (fmt-tab fmt) f^)
+							(cons a l^)))))))))
+			    (return sep* (cons a ls)))))))))
+	      (else
+	       (return (%gensep*-default ls) (map1-in-order %boxify-object ls))))))
+
+    (define (%applicable-formats first-item alt-fmt*)
+      ;;FIRST-ITEM is the  first item in the  list to format.  ALT-FMT* is  a list of
+      ;;pretty-format templates that are applicable to format FIRST-ITEM.
+      ;;
+      ;;* If  FIRST-ITEM is a  symbol recognised  by the pretty-format  facilities as
+      ;;   having one  or more  templates: prepend  that template  (or templates)  to
+      ;;  ALT-FMT* and return the result.
+      ;;
+      ;;* If FIRST-ITEM is not a symbol or does not have a pretty-format template: if
+      ;;  ALT-FMT* is null, return false; otherwise return ALT-FMT* unchanged.
+      ;;
+      (cond ((and (symbol? first-item)
+		  (get-fmt first-item))
+	     => (lambda (fmt)
+		  (cond ((and (pair? fmt)
+			      (eq? (car fmt) 'alt))
+			 (append alt-fmt* (cdr fmt)))
+			(else
+			 (append alt-fmt* (list fmt))))))
+	    ((null? alt-fmt*)
+	     #f)
+	    (else
+	     alt-fmt*)))
+
+    (define (return sep* box*)
+      (let ((n (sum-box* box*)))
+	(%concatenate-into-cbox "(" (make-fbox n box* sep*) ")")))
+
+    (define (sum-box* ls)
+      ;;Non-tail recursive function.  Return a fixnum representing the sum of all the
+      ;;lengths of the boxes and strings in the list LS.
+      ;;
+      (let ((D (cdr ls)))
+	(if (pair? (cdr ls))
+	    (fx+ (box-length (car ls))
+		 (fxadd1 (sum-box* D)))
+	  (box-length (car ls)))))
+
+    (define (%gensep*-default ls)
+      ;;Non-tail  recursive function.   Generate  a list  of  separators.  Build  and
+      ;;return a new list  of fixnums, one item for each item in  LS.  Each fixnum is
+      ;;the value returned by "(pretty-indent)".
+      ;;
+      (let ((D (cdr ls)))
+	(if (pair? D)
+	    (cons (pretty-indent)
+		  (%gensep*-default D))
+	  '())))
+
+    (define (tab-value x)
+      (cond ((eq? x 'tab)
+	     (pretty-indent))
+	    ((fixnum? x)
+	     x)
+	    (else #f)))
+
+    (module (select-alt)
+
+      (define (select-alt alt-fmt* ls)
+	;;Expect ALT-FMT*  to be a  list symbolic expressions  representing alternate
+	;;pretty-format templates.   Select the template  that matches LS  and return
+	;;it.
+	;;
+	(ormap (lambda (fmt)
+		 (and (good-match? fmt ls)
+		      fmt))
+	       alt-fmt*))
+
+      (define (good-match? fmt ls)
+	;;Return true  if the  symbolic expression  FMT representing  a pretty-format
+	;;template matches the list LS.
+	;;
+	(cond ((not (pair? fmt))
+	       #t)
+
+	      ((eq? (car fmt) 'pretty-format-reader-macro)
+	       (and (unshared-list? ls)
+		    (fx= (length ls) 2)))
+
+	      (else
+	       (let ((fmt.a (car fmt))
+		     (fmt.d (cdr fmt)))
+		 (cond ((or (eq? fmt.a 'tab)
+			    (fixnum? fmt.a))
+			(good-match? fmt.d ls))
+
+		       ((and (pair? fmt.d)
+			     (eq? (car fmt.d) '...))
+			;;Ellipsis patterns: the rest of LS must match FMT.A.
+			(and (unshared-list? ls)
+			     (andmap (lambda (x)
+				       (good-match? fmt.a x))
+				     ls)))
+
+		       ((and (pair? ls)
+			     (not (graphed? ls)))
+			;;Pair pattern.
+			(and (good-match? fmt.a (car ls))
+			     (good-match? fmt.d (cdr ls))))
+
+		       (else #f))))))
+
+      #| end of module: SELECT-ALT |# )
+
+    #| end of module: %BOXIFY-OBJECT-LIST |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%boxify-object-pair)
+
+    (define (%boxify-object-pair x)
+      (let ((A (%boxify-object (car x))))
+	(receive (ls last-box)
+	    (%boxify-cdrs (cdr x))
+	  (let* ((ls   (cons A ls))
+		 (len  (fold-left (lambda (n box)
+				    (fx+ (fxadd1 n) (box-length box)))
+			 4 ls))
+		 (len  (fx+ len (box-length last-box))))
+	    (make-pbox len ls last-box)))))
+
+    (define (%boxify-cdrs x)
+      (cond ((and (pair? x)
+		  (not (graphed? x)))
+	     (let ((A (%boxify-object (car x))))
+	       (receive (ls last-box)
+		   (%boxify-cdrs (cdr x))
+		 (values (cons A ls) last-box))))
+	    (else
+	     (values '() (%boxify-object x)))))
+
+    #| end of module: %BOXIFY-OBJECT-PAIR |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%boxify-object-vector x)
+    (define-constant PREFIX "#")
+    (let* ((ls   (map1-in-order %boxify-object (vector->list x)))
+	   (len  (fold-left (lambda (accum box)
+			      (fx+ accum (box-length box)))
+		   0 ls))
+	   ;;The total length includes the prefix and the parentheses.
+	   (len  (fxadd1 (fx+ (fx+ len 2) (vector-length x)))))
+      (make-vbox len PREFIX ls)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%boxify-object-bytevector x)
+    (define-constant PREFIX "#vu8")
+    (define-constant RADIX
+      (printer-integer-radix))
+    (define-constant RADIX-PREFIX
+      (case RADIX
+	((10)	"")
+	((2)	"#b")
+	((8)	"#o")
+	((16)	"#x")))
+    (define-constant RADIX-10?
+      (fx=? 10 RADIX))
+    (let* ((ls   (map (lambda (x)
+			(if RADIX-10?
+			    (fixnum->string x)
+			  (string-append RADIX-PREFIX (fixnum->string x RADIX))))
+		   (bytevector->u8-list x)))
+	   ;;The total length includes the prefix and the parentheses.
+	   (len  (fold-left (lambda (ac s)
+			      (+ 1 ac (string-length s)))
+		   (+ 1 (string-length PREFIX))
+		   ls)))
+      (make-vbox len PREFIX ls)))
+
+;;; --------------------------------------------------------------------
+
+  (module (%boxify-object-struct)
+
+    (define (%boxify-object-struct x)
+      (let ((b (hashtable-ref marks-table x #f)))
+	(if (pair? b)
+	    (%boxify-custom-struct (cdr b))
+	  (%boxify-vanilla-struct x))))
+
+    (define (%boxify-custom-struct cache-stack)
+      ;;Boxify a struct object that makes use of a custom printer functions.
+      ;;
+      ;;We expect CACHE-STACK to  be a pair whose car is a suffix  string to write at
+      ;;the end and whose  cdr is false or a chain of  CACHE structs representing the
+      ;;strings to print in reverse order.
+      ;;
+      ;;To follow what happens, let's take this example code:
+      ;;
+      ;;   (define-struct duo
+      ;;     (one two))
+      ;;
+      ;;   (set-rtd-printer! (struct-type-descriptor duo)
+      ;;     (lambda (stru port sub-printer)
+      ;;       (display "#{duo " port)
+      ;;       (sub-printer (duo-one stru))
+      ;;       (display " " port)
+      ;;       (sub-printer (duo-two stru))
+      ;;       (display "}" port))
+      ;;
+      ;;   (pretty-print (make-duo 1 2))
+      ;;
+      ;;we expect CACHE-STACK to be the pair:
+      ;;
+      ;;   ("}" . ?caches)
+      ;;
+      ;;and the ?CACHES linked list to be:
+      ;;
+      ;;   ---
+      ;;    | string=" "
+      ;;    | object=2
+      ;;    | next --> ---
+      ;;   ---          | string="#{duo "
+      ;;                | object=1
+      ;;                | next --> #f
+      ;;               ---
+      ;;
+      (import TRAVERSAL-HELPERS)
+      ;;This RECUR  loop is conceptually  a fold-right for  the linked list  of CACHE
+      ;;structs.  We traverse the  linked list of CACHE structs from  the tail to the
+      ;;end, boxifying the  tail objects first; this way the  marks "#N=" are defined
+      ;;in the correct order.  The value PAIR* is  a proper list of pairs; the car of
+      ;;each pair is  a STRING field, the cdr  of each pair is the box  of the OBJECT
+      ;;field.
+      ;;
+      ;;For the example, the resulting PAIR* is:
+      ;;
+      ;;   ((" " . 2) ("#{duo " . 1))
+      ;;
+      (define pair*
+	(let recur ((cache (cdr cache-stack)))
+	  (if cache
+	      (let ((pair* (recur (cache-next cache))))
+		(cons (cons (cache-string cache)
+			    (%boxify-object (cache-object cache)))
+		      pair*))
+	    '())))
+      ;;This folding  transforms the list of  pairs in printing-reverse order  into a
+      ;;list of boxes in the printing-correct  order.  For the example, the resulting
+      ;;BOX* is:
+      ;;
+      ;;   ("#{duo" 1 " " 2 "}")
+      ;;
+      (define box*
+	(fold-left (lambda (box* pair)
+		     (cons* (car pair) ;the STRING field
+			    (cdr pair) ;the boxification of the OBJECT field
+			    box*))
+	  (list (car cache-stack))
+	  pair*))
+      (define len
+	(fold-left (lambda (ac box)
+		     (+ 1 ac (box-length box)))
+	  -1 box*))
+      ;;FIXME We should consider using an  FBOX, after the code for outputting FBOXes
+      ;;has been reviewed.  (Marco Maggi; Thu Aug 27, 2015)
+      (make-cbox len box*))
+
+    (define (%boxify-vanilla-struct stru)
+      ;;Boxify a struct object that makes use of the built-in Scheme objects writer.
+      ;;
+      (cond ((records.record-object? stru)
+	     ;;It is a R6RS record.
+	     (let* ((rtd	(record-rtd stru))
+		    (name	(%boxify-object (record-type-name rtd)))
+		    (field-box*	(%boxify-struct-fields stru 0 (vector->list (record-type-field-names rtd))))
+		    (ls		(cons name field-box*))
+		    (len	(fold-left (lambda (ac s)
+					     (+ 1 ac (box-length s)))
+				  -1 ls))
+		    ;;FIXME  We should  consider using  an FBOX,  after the  code for
+		    ;;outputting FBOXes has been reviewed.  (Marco Maggi; Thu Aug 27,
+		    ;;2015)
+		    (box	(make-cbox len ls)))
+		 (%concatenate-into-cbox "#[record " box "]")))
+
+	    ;;We do *not* handle opaque records specially.
+	    ;; ((let ((rtd (struct-rtd stru)))
+	    ;; 	  (and (record-type-descriptor? rtd)
+	    ;; 	       (record-type-opaque? rtd)))
+	    ;; 	"#<unknown>")
+
+	    ((keyword? stru)
+	     (string-append "#:" (symbol->string (keyword->symbol stru))))
+
+	    (else
+	     ;;It is a Vicare's structure.
+	     (let* ((std	(struct-rtd stru))
+		    (instance?	(or (not (eq? std (base-rtd)))
+				    (record-type-descriptor? std)
+				    (records.record-constructor-descriptor? std)))
+		    (name	(%boxify-object (string->symbol (struct-name stru))))
+		    (field-box*	(%boxify-struct-fields stru
+						       (if instance? 0 1)
+						       (let ((names (struct-type-field-names std)))
+							 (if instance? names (cdr names)))))
+		    (ls		(cons name field-box*))
+		    (len	(fold-left (lambda (ac s)
+					     (+ 1 ac (box-length s)))
+				  -1 ls))
+		    ;;FIXME  We should  consider using  an FBOX,  after the  code for
+		    ;;outputting FBOXes has been reviewed.  (Marco Maggi; Thu Aug 27,
+		    ;;2015)
+		    (box	(make-cbox len ls)))
+		 (%concatenate-into-cbox (if instance? "#[struct " "#[struct-type ")
+					 box "]")))))
+
+    (define (%boxify-struct-fields stru stru.idx stru.field-names)
+      ;;Return a  list of CBOX structs,  one for each  field to print.  Each  CBOX is
+      ;;meant to represent the string representation:
+      ;;
+      ;;   ?field-name=?field-value
+      ;;
+      ;;where ?FIELD-NAME=  is a string and  ?FIELD-VALUE is the boxification  of the
+      ;;field's value.
+      ;;
+      (let recur ((i           stru.idx)
+		  (field-names stru.field-names))
+	(if (pair? field-names)
+	    (let* ((nam   (car field-names))
+		   (val   (struct-ref stru i))
+		   (box1  (string-append " " (symbol->string nam) "="))
+		   (box2  (%boxify-object val)))
+	      (cons (make-cbox (+ (string-length box1) (box-length box2))
+			       (list box1 box2))
+		    (recur (add1 i) (cdr field-names))))
+	  '())))
+
+    #| end of module: %BOXIFY-OBJECT-STRUCT |# )
+
+;;; --------------------------------------------------------------------
+;;; helpers
+
+  (define (%concatenate-into-cbox . string/box*)
+    ;;STRING/BOX* must  be a list of  string objects or  BOX structs (any of  the box
+    ;;structs).  Build and return a new CBOX struct holding the given arguments.
+    ;;
+    (let ((len (let loop ((item*      string/box*)
+			  (accum-len  0))
+		 (if (pair? item*)
+		     (loop (cdr item*)
+			   (fx+ accum-len (box-length (car item*))))
+		   accum-len))))
+      (make-cbox len string/box*)))
+
+  (define* (graphed? x)
+    (import TRAVERSAL-HELPERS)
+    (let ((b (get-writer-marks-bitfield __who__ marks-table x)))
+      (cond ((writer-marks-bitfield.cyclic-set? b)	#t)
+	    ((writer-marks-bitfield.shared-set? b)	(print-graph))
+	    (else		#f))))
+
+  (define (unshared-list? x)
+    ;;Return true if X  is a non-empty list and all its cdrs  list are not-shared and
+    ;;not part of a cyclic compound.
+    ;;
+    (and (pair? x)
+	 (let loop ((D (cdr x)))
+	   (or (null? D)
+	       (and (pair? D)
+		    (not (graphed? D))
+		    (loop (cdr D)))))))
+
+  (define* (boxify-shared x boxify-kont)
+    (import TRAVERSAL-HELPERS)
+    (let ((b (get-writer-marks-bitfield __who__ marks-table x)))
+      (cond ((writer-marks-bitfield.mark-set? b)
+	     (string-append "#" (fixnum->string (writer-marks-bitfield.decode-mark b)) "#"))
+
+	    ((or (writer-marks-bitfield.cyclic-set? b)
+		 (and (writer-marks-bitfield.shared-set? b)
+		      (print-graph)))
+	     (let ((n (begin0
+			  ;;Remember that SHARED-IDX is  a local syntactic binding in
+			  ;;the outer function BOXIFY.
+			  shared-idx
+			(set! shared-idx (add1 shared-idx)))))
+	       (writer-marks-table.set-mark! marks-table x n)
+	       (let* ((str  (string-append "#" (fixnum->string n) "="))
+		      (xbox (boxify-kont x)))
+		 (make-cbox (+ (string-length str)
+			       (box-length xbox))
+			    (list str xbox)))))
+
+	    (else
+	     (boxify-kont x)))))
+
+;;; --------------------------------------------------------------------
+
+  (%boxify-object x))
+
+
+(define (output x port start-column)
+  ;;Display the box X to the textual output port PORT, starting at START-COLUMN.
+  ;;
+  ;;The function %OUTPUT-BOX is the printer of any box.
+  ;;
+  (define (%output-box x port col)
+    ;;Print the string representation of X  to the textual output port PORT, starting
+    ;;with an  indentation at column  COL.  Return  a fixnum representing  the column
+    ;;index after the representation has been written.
+    ;;
+    (cond ((string? x)
+	   (display x port)
+	   (fx+ col (string-length x)))
+	  ((cbox? x)   (output-cbox x port col))
+	  ((pbox? x)   (output-pbox x port col))
+	  ((vbox? x)   (output-vbox x port col))
+	  ((fbox? x)   (output-fbox x port col))
+	  (else
+	   (assertion-violation 'pretty-print-output
+	     "internal error: invalid argument" x))))
+
+;;; --------------------------------------------------------------------
+
+  (define (output-cbox x port col)
+    (fold-left (lambda (col box)
+		 (%output-box box port col))
+      col (cbox-boxes x)))
+
+;;; --------------------------------------------------------------------
+
+  (module (output-pbox)
+
+    (define (output-pbox x port col)
+      ;;Output the pair object X to PORT starting at column COL.
+      ;;
+      (if (fx<= (fx+ col (pbox-length x))
+		(pretty-width))
+	  ;;The whole representation fits into  the current line without crossing the
+	  ;;maximum width.
+	  (%pbox-one-line x port col)
+	;;To avoid  crossing the  maximum width: the  whole representation  must span
+	;;multiple lines.
+	(%pbox-multi-fill x port col)))
+
+    (define (%pbox-one-line x port col)
+      (display "(" port)
+      (let loop ((ls		(pbox-ls x))
+		 (port		port)
+		 (col		(fxadd1 col))
+		 (last-box	(pbox-last x)))
+	(cond ((null? ls)
+	       (let* ((col (begin
+			     (display ". " port)
+			     (fx+ col 2)))
+		      (col (%output-box last-box port col)))
+		 (display ")" port)
+		 (fxadd1 col)))
+	      (else
+	       (let ((col (%output-box (car ls) port col)))
+		 (display " " port)
+		 (loop (cdr ls) port (fxadd1 col) last-box))))))
+
+    (define (%pbox-multi-fill x port col)
+      (display "(" port)
+      (let g ((ls		(cdr (pbox-ls x)))
+	      (port		port)
+	      (start-col	(fxadd1 col))
+	      (col		(%output-box (car (pbox-ls x)) port (fxadd1 col)))
+	      (last-box		(pbox-last x)))
+	(cond ((null? ls)
+	       (let ((n (box-length last-box)))
+		 (let ((col (cond ((fx<= (fx+ (fx+ col n) 4) (pretty-width))
+				   (display " . " port)
+				   (fx+ col 3))
+				  (else
+				   (%open-new-line-write-indentation start-col port)
+				   (display ". " port)
+				   (fx+ start-col 2)))))
+		   (let ((col (%output-box last-box port col)))
+		     (display ")" port)
+		     (fxadd1 col)))))
+	      ((fx<= (fx+ (fxadd1 col) (box-length (car ls)))
+		     (pretty-width))
+	       (display " " port)
+	       (g (cdr ls) port start-col
+		  (%output-box (car ls) port (fxadd1 col))
+		  last-box))
+	      (else
+	       (%open-new-line-write-indentation start-col port)
+	       (g (cdr ls) port start-col
+		  (%output-box (car ls) port start-col)
+		  last-box)))))
+
+    #| end of module: OUTPUT-PBOX |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (output-vbox x port col)
+    ;;Print a vector or bytevector.  Return  a fixnum representing the current column
+    ;;after the representation has been written.
+    ;;
+    ;;The prefix is either "#" or "#vu8".
+    (display (vbox-prefix x) port)
+    (let ((ls	(vbox-ls x))
+	  (col	(+ col (string-length (vbox-prefix x)))))
+      (if (pair? ls)
+	  ;;The bytevector is not empty.
+	  (begin
+	    (display "(" port)
+	    (let loop ((ls	(cdr ls))
+		       (port	port)
+		       (col	(%output-box (car ls) port (fxadd1 col)))
+		       ;;If we  wrap around and  start a new  line: we begin  the new
+		       ;;line with an indentation that  puts the next char one column
+		       ;;after the open paren.
+		       ;;
+		       ;;   #vu8(1 2 3
+		       ;;        4 5 6
+		       ;;        7 8 9)
+		       ;;
+		       ;;   #(1 2 3 4
+		       ;;     5 6 7 8
+		       ;;     9)
+		       ;;
+		       (start	(fxadd1 col)))
+	      (cond ((null? ls)
+		     ;;No more objects to write.
+		     (display ")" port)
+		     (fxadd1 col))
+
+		    ((fx<= (fx+ (fxadd1 col)
+				(box-length (car ls)))
+			   (pretty-width))
+		     ;;More objects  to write  and we  are not  yet past  the maximum
+		     ;;column.
+		     (display " " port)
+		     (loop (cdr ls) port
+			   (%output-box (car ls) port (fxadd1 col))
+			   start))
+
+		    (else
+		     ;;More objects to write and we are past the maximum column.
+		     (%open-new-line-write-indentation start port)
+		     (loop (cdr ls) port
+			   (%output-box (car ls) port start)
+			   start)))))
+	;;The bytevector is empty.
+	(begin
+	  (display "()" port)
+	  (fx+ col 2)))))
+
+;;; --------------------------------------------------------------------
+
+  (module (output-fbox)
+
+    (define (output-fbox x port col)
+      (let* ((box*		(fbox-box* x))
+	     (box		(car box*))
+	     (box*		(cdr box*))
+	     (sep*		(fbox-sep* x))
+	     (left-margin-col	col))
+	(if (fx<= (fx+ (box-length box) left-margin-col)
+		  (pretty-width))
+	    ;;The  string representation  of  BOX  fits into  a  single line  without
+	    ;;crossing the maximum column.
+	    (let ((col (%output-box box port left-margin-col)))
+	      (output-rest-cont box* sep* port col left-margin-col))
+	  ;;The  string representation  of  BOX  must span  multiple  lines to  avoid
+	  ;;crossing the maximum column.
+	  (let ((col (%output-box box port left-margin-col)))
+	    (output-rest-multi box* sep* port col left-margin-col)))))
+
+    (define (output-rest-cont box* sep* port col left-margin-col)
+      (cond ((null? box*)
+	     col)
+	    ((pair? sep*)
+	     (let* ((box	(car box*))
+		    (sep	(car sep*))
+		    (w		(box-length box)))
+	       (cond ((fx<= (fx+ (fxadd1 w) col) (pretty-width))
+		      (display " " port)
+		      (output-rest-cont (cdr box*) (cdr sep*) port
+					(%output-box box port (fxadd1 col)) left-margin-col))
+		     ((not sep)
+		      (display " " port)
+		      (output-rest-multi (cdr box*) (cdr sep*) port
+					 (%output-box box port (fxadd1 col)) left-margin-col))
+		     (else
+		      (let ((col (fx+ left-margin-col sep)))
+			(%open-new-line-write-indentation col port)
+			(cond ((fx<= (fx+ w col) (pretty-width))
+			       (output-rest-cont (cdr box*) (cdr sep*) port
+						 (%output-box box port col) left-margin-col))
+			      (else
+			       (output-rest-multi (cdr box*) (cdr sep*) port
+						  (%output-box box port col) left-margin-col))))))))
+	    (else
+	     (output-last-cont box* sep* port col left-margin-col))))
+
+    (define (output-last-cont box* sep port col left-margin-col)
+      (define (sum ls)
+	(if (null? ls)
+	    0
+	  (fx+ (box-length (car ls))
+	       (fxadd1 (sum (cdr ls))))))
+
+      (cond ((not sep)
+	     (output-rest-cont box* '(#f . #f) port col left-margin-col))
+	    ((fx<= (fx+ (sum box*) col) (pretty-width))
+	     (let g ((box* box*)
+		     (port port)
+		     (col  col))
+	       (if (null? box*)
+		   col
+		 (begin
+		   (display " " port)
+		   (g (cdr box*) port (%output-box (car box*) port (fxadd1 col)))))))
+	    (else
+	     (let g ((box* box*)
+		     (port port)
+		     (left-margin-col (fx+ left-margin-col sep))
+		     (col  col))
+	       (if (null? box*)
+		   col
+		 (begin
+		   (%open-new-line-write-indentation left-margin-col port)
+		   (g (cdr box*) port left-margin-col
+		      (%output-box (car box*) port left-margin-col))))
+	       ))))
+
+    (define (output-last-multi box* sep port col left-margin-col)
+      (if (not sep)
+	  (output-rest-multi box* '(#f . #f) port col left-margin-col)
+	(let g ((box* box*)
+		(port port)
+		(left-margin-col (fx+ left-margin-col sep))
+		(col  col))
+	  (if (null? box*)
+	      col
+	    (begin
+	      (%open-new-line-write-indentation left-margin-col port)
+	      (g (cdr box*) port left-margin-col
+		 (%output-box (car box*) port left-margin-col))))
+	  )))
+
+    (define (output-rest-multi box* sep* port col left-margin-col)
+      (cond ((null? box*)
+	     col)
+	    ((pair? sep*)
+	     (let* ((box	(car box*))
+		    (sep	(car sep*))
+		    (w		(box-length box)))
+	       (cond ((not sep)
+		      (display " " port)
+		      (output-rest-multi (cdr box*) (cdr sep*) port
+					 (%output-box box port (fxadd1 col)) left-margin-col))
+		     (else
+		      (let ((col (fx+ left-margin-col sep)))
+			(%open-new-line-write-indentation col port)
+			(if (fx<= (fx+ w col)
+				  (pretty-width))
+			    (output-rest-cont (cdr box*) (cdr sep*) port
+					      (%output-box box port col) left-margin-col)
+			  (output-rest-multi (cdr box*) (cdr sep*) port
+					     (%output-box box port col) left-margin-col)))
+		      ))))
+	    (else
+	     (output-last-multi box* sep* port col left-margin-col))))
+
+    #| end of module: OUTPUT-FBOX |# )
+
+;;; --------------------------------------------------------------------
+;;; helpers
+
+  (define (%open-new-line-write-indentation col port)
+    ;;Write the indentation at the beginning of a new line.  Write a newline to PORT,
+    ;;then print COL space characters to PORT.  COL must be a non-negative fixnum.
+    ;;
+    (newline port)
+    (let loop ((col  col)
+	       (port port))
+      (unless (fxzero? col)
+	(put-char port #\space)
+	(loop (fxsub1 col) port))))
+
+;;; --------------------------------------------------------------------
+
+  (%output-box x port start-column))
 
 
 ;;;; done

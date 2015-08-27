@@ -1165,8 +1165,8 @@
     ;;
     ;; receive
     ;; receive-and-return
-    record-destructor
-    record-destructor-set!
+    record-type-destructor
+    record-type-destructor-set!
     record-guardian-log
     record-guardian-logger
     record-reset

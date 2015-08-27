@@ -21,7 +21,6 @@
     write			display
     put-datum			format
     printf			fprintf
-    debug-print
     print-unicode		print-graph
     printer-integer-radix
 
@@ -35,7 +34,6 @@
 		  write			display
 		  put-datum		format
 		  printf		fprintf
-		  debug-print
 		  print-unicode		print-graph
 		  printer-integer-radix)
     (only (vicare system $symbols)
@@ -48,7 +46,9 @@
 		  keyword->string)
 	    keywords.)
     (prefix (only (ikarus records procedural)
+		  record-object?
 		  record-constructor-descriptor?
+		  record-printer
 		  rcd-rtd
 		  rcd-parent-rcd)
 	    records.))
@@ -77,7 +77,7 @@
 (module (put-datum
 	 write		display
 	 printf		fprintf
-	 format		debug-print)
+	 format)
 
   (define (%write-to-port x p)
     (let ((h (make-eq-hashtable)))
@@ -207,124 +207,219 @@
     (when (port-closed? p)
       (error who "port is closed" p)))
 
-  (define (debug-print . args)
-    ;;Print arguments for debugging purposes.
-    ;;
-    (pretty-print args (current-error-port))
-    (newline (current-error-port))
-    (newline (current-error-port))
-    (when (pair? args)
-      (car args)))
-
   #| end of module |# )
 
 
 (module TRAVERSAL-HELPERS
   (traverse-shared
    write-shared
-   cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
-   SHARED-BIT CYCLIC-BIT MARKED-BIT MARK-SHIFT
-   make-cache cache-string cache-object cache-next)
+   get-writer-marks-bitfield
+   writer-marks-bitfield.decode-mark
+   writer-marks-bitfield.encode-mark
+   writer-marks-bitfield.encode-mark-and-flag
+   writer-marks-bitfield.cyclic-set?
+   writer-marks-bitfield.shared-set?
+   writer-marks-bitfield.mark-set?
+   writer-marks-table.set-mark!
+   writer-marks-table.shared?
+   cache? make-cache cache-string cache-object cache-next)
 
-  (define (traverse-shared x h kont)
-    (cond ((hashtable-ref h x #f)
-	   => (lambda (b)
-		(cond ((fixnum? b)
-		       (hashtable-set! h x (fxior b SHARED-BIT)))
-		      (else
-		       (set-car! b (fxior (car b) SHARED-BIT))))))
-	  (else
-	   (hashtable-set! h x 0)
-	   (kont x h)
-	   (let ((b (hashtable-ref h x #f)))
-	     (cond ((fixnum? b)
-		    (when (shared-set? b)
-		      (hashtable-set! h x (fxior b CYCLIC-BIT))))
-		   (else
-		    (let ((a (car b)))
-		      (when (shared-set? a)
-			(set-car! b (fxior a CYCLIC-BIT))))))))))
-
-  (define* (write-shared x port m h i writer-kont)
-    ;;Takes care of printing shared structures  with "#n=" and "#n#" elements, rather
-    ;;than  going  into  infinite  recursion.   For  this  function  to  work:  every
-    ;;interesting sub-object of the object X must have been previously visited by the
-    ;;function TRAVERSE, so that the hashtable H knows about it.
+  (define (traverse-shared X marks-table traverse-kont)
+    ;;Step  on the  depth-first traversal  of the  object we  are printing.   Here we
+    ;;expect the Scheme  object X to have sub-objects worth  visiting for the purpose
+    ;;of  finding  cyclic  references  and shared  references.   TRAVERSE-KONT  is  a
+    ;;function to be applied to X to visit its sub-objects.
     ;;
-    (let ((b (hashtable-ref h x #f)))
-      (let ((b (cond ((fixnum? b)
-		      b)
-		     ((pair? b)
-		      (car b))
-		     (else
-		      (assertion-violation __who__
-			"sub-object has not been processed correctly to handle shared structure"
-			b)))))
-        (cond ((mark-set? b)
-	       ;;This object has already been  written.  Extract from the bit-field B
-	       ;;its mark index N and write it as "#N#".
-	       (write-char #\# port)
-	       (put-string port (fixnum->string (fxsra b MARK-SHIFT)))
-	       (write-char #\# port)
-	       i)
-	      ((or (cyclic-set? b)
-		   (and (shared-set? b) (print-graph)))
-	       (let ((n i))
-		 (set-mark! x h n)
-		 (write-char #\# port)
-		 (put-string port (fixnum->string n))
-		 (write-char #\= port)
-		 (writer-kont x port m h (add1 i))))
-	      (else
-	       (writer-kont x port m h i))))))
+    (cond ((hashtable-ref marks-table X #f)
+	   => (lambda (B)
+		;;If we  are here it  means we have  already traversed X  before: the
+		;;Scheme object X is either  a compound object referencing itself, or
+		;;an object appearing  multiple times in the enclosing  object we are
+		;;writing.
+		(cond ((fixnum? B)
+		       (hashtable-set! marks-table X (writer-marks-bitfield.set-shared-bit B)))
+		      (else
+		       (set-car! B (writer-marks-bitfield.set-cyclic-bit (car B)))))))
+	  (else
+	   ;;If we  are here  it means  this is the  first time  we visit  the Scheme
+	   ;;object X.
+	   (hashtable-set! marks-table X EMPTY-BITFIELD)
+	   (traverse-kont X marks-table)
+	   (let ((B (hashtable-ref marks-table X #f)))
+	     ;;After traversing X:  if the bitfield has the shared  bit set, it means
+	     ;;the object  X is a compound  object that references itself,  so we set
+	     ;;the cyclic bit too.
+	     (cond ((fixnum? B)
+		    (when (writer-marks-bitfield.shared-set? B)
+		      (hashtable-set! marks-table X (writer-marks-bitfield.set-cyclic-bit B))))
+		   (else
+		    (let ((A (car B)))
+		      (when (writer-marks-bitfield.shared-set? A)
+			(set-car! B (writer-marks-bitfield.set-cyclic-bit A))))))))))
+
+  (define* (write-shared X port m marks-table next-mark-idx writer-kont)
+    ;;Takes  care of  printing  cyclic and  shared structures  with  "#N=" and  "#N#"
+    ;;elements,  rather than  going into  infinite recursion.   For this  function to
+    ;;work: every  interesting sub-object of the  object X must have  been previously
+    ;;visited by the function TRAVERSE, so that the hashtable MARKS-TABLE knows about
+    ;;them.
+    ;;
+    (let ((B (get-writer-marks-bitfield __who__ marks-table X)))
+      (cond ((writer-marks-bitfield.mark-set? B)
+	     ;;The Scheme object X is either a compound object referencing itself, or
+	     ;;an  object appearing  multiple times  in the  enclosing object  we are
+	     ;;writing.
+	     ;;
+	     ;;The Scheme object X has already been written.  This means its bitfield
+	     ;;B already contains a mark index.  Extract from the bitfield B its mark
+	     ;;index N and write it as "#N#".
+	     (write-char #\# port)
+	     (put-string port (fixnum->string (writer-marks-bitfield.decode-mark B)))
+	     (write-char #\# port)
+	     next-mark-idx)
+
+	    ((or (writer-marks-bitfield.cyclic-set? B)
+		 (and (writer-marks-bitfield.shared-set? B)
+		      (print-graph)))
+	     ;;The Scheme object X is either a compound object referencing itself, or
+	     ;;an  object appearing  multiple times  in the  enclosing object  we are
+	     ;;writing.
+	     ;;
+	     ;;The Scheme object X  has not yet been written: this  is the first time
+	     ;;we write it  to PORT.  We assign  a mark index to it,  then prefix the
+	     ;;string representation with "#N=".
+	     (writer-marks-table.set-mark! marks-table X next-mark-idx)
+	     (write-char #\# port)
+	     (put-string port (fixnum->string next-mark-idx))
+	     (write-char #\= port)
+	     (writer-kont X port m marks-table (fxadd1 next-mark-idx)))
+
+	    (else
+	     ;;This object X is neither a  compound object referencing itself, nor an
+	     ;;object appearing multiple times in an enclosing object.  We just write
+	     ;;its string representation.
+	     (writer-kont X port m marks-table next-mark-idx)))))
+
+  (define (get-writer-marks-bitfield who marks-table obj)
+    (let ((B (hashtable-ref marks-table obj #f)))
+      (cond ((fixnum? B)	B)
+	    ((pair?   B)	(car B))
+	    (else
+	     (assertion-violation who
+	       "object has not been processed correctly to handle shared structures"
+	       B)))))
 
 ;;; --------------------------------------------------------------------
 
-;;; association list in hash table is one of the following forms:
+  (define-constant EMPTY-BITFIELD	0)
+
+  ;;The writer  marks bitfield is  an inclusive OR  composition of the  following bit
+  ;;flags:
+  (define-constant CYCLIC-BIT		#b001)
+  (define-constant SHARED-BIT		#b010)
+  (define-constant MARKED-BIT		#b100)
+  (define-constant MARK-SHIFT		3)
+
 ;;;
-;;; a fixnum:
-  (define-constant CYCLIC-BIT         #b001)
-  (define-constant SHARED-BIT         #b010)
-  (define-constant MARKED-BIT         #b100)
-  (define-constant MARK-SHIFT         3)
+
+  (define (writer-marks-bitfield.decode-mark B)
+    (fxsra B MARK-SHIFT))
+
+  (define (writer-marks-bitfield.encode-mark B N)
+    (fxior B (fxsll N MARK-SHIFT)))
+
+  (define (writer-marks-bitfield.encode-mark-and-flag B N flag)
+    (fxior B flag (fxsll N MARK-SHIFT)))
+
 ;;;
-;;; or a pair of a fixnum (above) and a cache:
+
+  (define (writer-marks-bitfield.set-cyclic-bit B)
+    (fxior B CYCLIC-BIT))
+
+  (define (writer-marks-bitfield.set-shared-bit B)
+    (fxior B SHARED-BIT))
+
+;;;
+
+  (define (writer-marks-bitfield.cyclic-set? B)
+    (fx=? (fxand B CYCLIC-BIT) CYCLIC-BIT))
+
+  (define (writer-marks-bitfield.shared-set? B)
+    (fx=? (fxand B SHARED-BIT) SHARED-BIT))
+
+  (define (writer-marks-bitfield.mark-set? B)
+    (fx=? (fxand B MARKED-BIT) MARKED-BIT))
+
+;;; --------------------------------------------------------------------
+
+  ;;The  struct CACHE  is used  only when  writing structs  (including R6RS  records)
+  ;;having a custom printer function.  Given the following code:
+  ;;
+  ;;   (define-struct duo
+  ;;     (one two))
+  ;;
+  ;;   (set-rtd-printer! (struct-type-descriptor duo)
+  ;;     (lambda (stru port sub-printer)
+  ;;       (display "#{duo " port)
+  ;;       (sub-printer (duo-one stru))
+  ;;       (display " " port)
+  ;;       (sub-printer (duo-two stru))
+  ;;       (display "}" port))
+  ;;
+  ;;   (display (make-duo 1 2))
+  ;;
+  ;;the writer builds  a value named CACHE-STACK  in the code.  The  CACHE-STACK is a
+  ;;pair whose car is the last string written  to PORT and whose cdr is a linked list
+  ;;of CACHE structs:
+  ;;
+  ;;   ("}" . ?caches)
+  ;;
+  ;;where the linked list ?CACHES is as follows:
+  ;;
+  ;;   ---
+  ;;    | string=" "
+  ;;    | object=2
+  ;;    | next --> ---
+  ;;   ---          | string="#duo "
+  ;;                | object=1
+  ;;                | next --> #f
+  ;;               ---
+  ;;
+  ;;every new  CACHE struct  is built  by the sub-printer  function and  contains the
+  ;;string displayed to PORT before the call  and the object to which the sub-printer
+  ;;is applied.
+  ;;
+  ;;The linked list  of CACHE structs contains  the output of the  printer in reverse
+  ;;order.  We can use the following code to build a list out of a CACHE-STACK:
+  ;;
+  ;;   (cons (car cache-stack)
+  ;;         (let recur ((cache (cdr cache-stack)))
+  ;;           (if cache
+  ;;               (cons* (cache-object cache)
+  ;;                      (cache-string cache)
+  ;;                      (recur (cache-next cache)))
+  ;;             '())))
+  ;;
+  ;;for the example the return value is:
+  ;;
+  ;;   ("}" 2 " " 1 "#{duo ")
+  ;;
   (define-struct cache
     (string object next))
-  (define (cyclic-set? b)
-    (fx= (fxand b CYCLIC-BIT) CYCLIC-BIT))
-  (define (shared-set? b)
-    (fx= (fxand b SHARED-BIT) SHARED-BIT))
-  (define (mark-set? b)
-    (fx= (fxand b MARKED-BIT) MARKED-BIT))
 
-  (define (set-mark! x h n)
-    (let ((b (hashtable-ref h x #f)))
-      (cond
-       ((fixnum? b)
-	(hashtable-set! h x
-			(fxior (fxsll n MARK-SHIFT) MARKED-BIT b)))
-       (else
-	(set-car! b
-		  (fxior (fxsll n MARK-SHIFT) MARKED-BIT (car b)))))))
+;;; --------------------------------------------------------------------
 
-  (define (set-shared! x h)
-    (let ((b (hashtable-ref h x #f)))
-      (cond
-       ((fixnum? b)
-	(hashtable-set! h x (fxior SHARED-BIT b)))
-       (else
-	(set-car! b (fxior SHARED-BIT (car b)))))))
+  (define (writer-marks-table.set-mark! marks-table X N)
+    (let ((B (hashtable-ref marks-table X #f)))
+      (if (fixnum? B)
+	  (hashtable-set! marks-table X (writer-marks-bitfield.encode-mark-and-flag B N MARKED-BIT))
+	(set-car! B (writer-marks-bitfield.encode-mark-and-flag (car B) N MARKED-BIT)))))
 
-  (define (shared? x h)
-    (cond
-     ((hashtable-ref h x #f) =>
-      (lambda (b)
-	(if (fixnum? b)
-	    (shared-set? b)
-	  (let ((b (car b)))
-	    (shared-set? b)))))
-     (else #f)))
+  (define (writer-marks-table.shared? marks-table X)
+    (cond ((hashtable-ref marks-table X #f)
+	   => (lambda (B)
+		(writer-marks-bitfield.shared-set? (if (fixnum? B) B (car B)))))
+	  (else #f)))
 
   #| end of module |#)
 
@@ -332,80 +427,135 @@
 (module (traverse)
   (import TRAVERSAL-HELPERS)
 
-  (define (traverse x h)
-    ;;Fill  the hashtable  H with  an entry  for every  sub-object of  X; later  such
-    ;;entries will be used to correctly print shared structures.
+  (define (traverse X marks-table)
+    ;;Perform a depth-first search in the Scheme object X with the purpose of finding
+    ;;compound  objects  referencing  themselves   (cyclic  references)  and  objects
+    ;;appearing  multiple  times  in  an  enclosing object  we  are  writing  (shared
+    ;;objects).
     ;;
-    (cond ((pair?       x)	(traverse-shared x h traverse-pair))
-	  ((vector?     x)	(traverse-shared x h traverse-vector))
-	  ((string?     x)	(traverse-shared x h traverse-noop))
-	  ((struct?     x)	(traverse-shared x h traverse-struct))
-	  ((bytevector? x)	(traverse-shared x h traverse-noop))
-	  ((gensym?     x)	(traverse-shared x h traverse-noop))
-	  ((code?       x)	(traverse-shared x h traverse-code))
+    ;;Fill the EQ hashtable MARKS-TABLE with an entry for every visited sub-object of
+    ;;X.
+    ;;
+    (cond ((pair?       X)	(traverse-shared X marks-table traverse-pair))
+	  ((vector?     X)	(traverse-shared X marks-table traverse-vector))
+	  ((string?     X)	(traverse-shared X marks-table traverse-noop))
+	  ((struct?     X)	(traverse-shared X marks-table traverse-struct))
+	  ((bytevector? X)	(traverse-shared X marks-table traverse-noop))
+	  ((gensym?     X)	(traverse-shared X marks-table traverse-noop))
+	  ((code?       X)	(traverse-shared X marks-table traverse-code))
 	  (else			(void))))
 
-  (define (traverse-noop x h)
+  (define (traverse-noop X marks-table)
     (void))
 
-  (define (traverse-pair x h)
-    (traverse (car x) h)
-    (traverse (cdr x) h))
+  (define (traverse-pair X marks-table)
+    (traverse (car X) marks-table)
+    (traverse (cdr X) marks-table))
 
-  (define (traverse-code x h)
-    (cond (($code-annotation x)
+  (define (traverse-code X marks-table)
+    (cond (($code-annotation X)
 	   => (lambda (ann)
-		(traverse ann h)))
+		(traverse ann marks-table)))
 	  (else
 	   (void))))
 
-  (define (traverse-vector x h)
-    (let f ((i 0) (n (vector-length x)))
+  (define (traverse-vector X marks-table)
+    (let f ((i 0) (n (vector-length X)))
       (unless (fx=? i n)
-        (traverse (vector-ref x i) h)
+        (traverse (vector-ref X i) marks-table)
         (f (fx+ i 1) n))))
 
   (module (traverse-struct)
     ;;This module processes: Vicare's structs; Vicare's struct-type descriptors; R6RS
     ;;records; R6RS record-type descriptors.
     ;;
-    (define (traverse-struct x h)
-      (let ((printer (struct-printer x)))
-	(if (procedure? printer)
-	    (%traverse-custom-struct x h printer)
-	  (%traverse-vanilla-struct x h))))
+    (define (traverse-struct stru marks-table)
+      (if (records.record-object? stru)
+	  ;;It is an R6RS record.
+	  (cond ((records.record-printer stru)
+		 => (lambda (printer)
+		      (%traverse-custom-struct stru marks-table printer)))
+		(else
+		 (%traverse-vanilla-struct stru marks-table)))
+	(cond ((struct-printer stru)
+	       => (lambda (printer)
+		    (%traverse-custom-struct stru marks-table printer)))
+	      (else
+	       (%traverse-vanilla-struct stru marks-table)))))
 
-    (define (%traverse-vanilla-struct x h)
+    (define (%traverse-vanilla-struct stru marks-table)
       ;;Traverse a struct object that is meant to use the built-in printer function.
       ;;
-      (let ((rtd (struct-rtd x)))
+      (let ((rtd (struct-rtd stru)))
 	(unless (and (record-type-descriptor? rtd)
 		     (record-type-opaque? rtd))
-	  (traverse (struct-name x) h)
-	  (let ((n (struct-length x)))
-	    (let f ((idx 0))
-	      (unless (fx= idx n)
-		(traverse (struct-ref x idx) h)
-		(f (fxadd1 idx))))))))
+	  (traverse (struct-name stru) marks-table)
+	  (let ((num-of-fields (struct-length stru)))
+	    (let loop ((field-idx 0))
+	      (unless (fx=? field-idx num-of-fields)
+		(traverse (struct-ref stru field-idx) marks-table)
+		(loop (fxadd1 field-idx))))))))
 
-    (define* (%traverse-custom-struct stru h printer)
-      ;;Traverse a struct object with a custom printer function.
+    (define* (%traverse-custom-struct stru marks-table printer)
+      ;;Traverse a struct object with a  custom printer function.  The custom printer
+      ;;is used to print the struct in  a string output port; the resulting string is
+      ;;cached
       ;;
-      ;;The custom printer is  used to print the struct in a  string output port; the
-      ;;resulting string is cached
+      ;;Here we build a CACHE-STACK.  Given the following code:
+      ;;
+      ;;   (define-struct duo
+      ;;     (one two))
+      ;;
+      ;;   (set-rtd-printer! (struct-type-descriptor duo)
+      ;;     (lambda (stru port sub-printer)
+      ;;       (display "#{duo " port)
+      ;;       (sub-printer (duo-one stru))
+      ;;       (display " " port)
+      ;;       (sub-printer (duo-two stru))
+      ;;       (display "}" port))
+      ;;
+      ;;   (display (make-duo 1 2))
+      ;;
+      ;;the CACHE-STACK is  a pair whose car  is the last string written  to PORT and
+      ;;whose cdr is a linked list of CACHE structs:
+      ;;
+      ;;   ("}" . ?caches)
+      ;;
+      ;;where the linked list ?CACHES is as follows:
+      ;;
+      ;;   ---
+      ;;    | string=" "
+      ;;    | object=2
+      ;;    | next --> ---
+      ;;   ---          | string="#duo "
+      ;;                | object=1
+      ;;                | next --> #f
+      ;;               ---
+      ;;
+      ;;every new CACHE struct is built  by the sub-printer function and contains the
+      ;;string displayed before  the call and the object to  which the sub-printer is
+      ;;applied.  The linked list of CACHE structs contains the output of the printer
+      ;;in reverse order.
       ;;
       (receive (port extract)
 	  (open-string-output-port)
-	(let* ((cache        #f)
+	(let* ((cache-stack  #f)
 	       (sub-printer  (lambda (sub-object)
-			       (let ((str (extract)))
-				 (set! cache (make-cache str sub-object cache))
-				 (traverse sub-object h)))))
+			       (set! cache-stack (make-cache (extract) sub-object cache-stack))
+			       (traverse sub-object marks-table))))
 	  (printer stru port sub-printer)
-	  (let ((cache (cons (extract) cache))
-		(b (hashtable-ref h stru #f)))
-	    (if (fixnum? b)
-		(hashtable-set! h stru (cons b cache))
+	  (let ((cache-stack (cons (extract) cache-stack))
+		(B           (hashtable-ref marks-table stru #f)))
+	    ;; (debug-print 'built-cache-stack
+	    ;; 		 (cons (car cache-stack)
+	    ;; 		       (let recur ((cache (cdr cache-stack)))
+	    ;; 			 (if cache
+	    ;; 			     (cons* (cache-object cache)
+	    ;; 				    (cache-string cache)
+	    ;; 				    (recur (cache-next cache)))
+	    ;; 			   '()))))
+	    (if (fixnum? B)
+		(hashtable-set! marks-table stru (cons B cache-stack))
 	      (error __who__ "internal error"))))))
 
     #| end of module: TRAVERSE-STRUCT |# )
@@ -423,41 +573,41 @@
   ;;
   (import TRAVERSAL-HELPERS)
 
-  (define (write-object x p write-style? h i)
+  (define (write-object x p write-style? marks-table next-mark-idx)
     (cond ((pair? x)
-	   (write-shared x p write-style? h i write-object-pair))
+	   (write-shared x p write-style? marks-table next-mark-idx write-object-pair))
 
 	  ((symbol? x)
 	   (if (gensym? x)
-	       (write-shared x p write-style? h i write-object-gensym)
+	       (write-shared x p write-style? marks-table next-mark-idx write-object-gensym)
 	     (begin
 	       ;;We do not cache the representation of interned symbols!
 	       (write-object-symbol x p write-style?)
-	       i)))
+	       next-mark-idx)))
 
 	  ((fixnum? x)
 	   (write-object-fixnum x p)
-	   i)
+	   next-mark-idx)
 
 	  ((string? x)
 	   ;; (begin
 	   ;;   (write-object-string x p write-style?)
-	   ;;   i)
-	   (write-shared x p write-style? h i write-object-string))
+	   ;;   next-mark-idx)
+	   (write-shared x p write-style? marks-table next-mark-idx write-object-string))
 
 	  ((boolean? x)
 	   (write-char #\# p)
 	   (write-char (if x #\t #\f) p)
-	   i)
+	   next-mark-idx)
 
 	  ((char? x)
 	   (write-object-character x p write-style?)
-	   i)
+	   next-mark-idx)
 
 	  ((null? x)
 	   (write-char #\( p)
 	   (write-char #\) p)
-	   i)
+	   next-mark-idx)
 
 	  ((number? x)
 	   (write-char* (if (or (fixnum? x)
@@ -465,37 +615,37 @@
 			    (number->string x (printer-integer-radix))
 			  (number->string x))
 			p)
-	   i)
+	   next-mark-idx)
 
 	  ((vector? x)
-	   (write-shared x p write-style? h i write-object-vector))
+	   (write-shared x p write-style? marks-table next-mark-idx write-object-vector))
 
 	  ((bytevector? x)
-	   (write-shared x p write-style? h i write-object-bytevector))
+	   (write-shared x p write-style? marks-table next-mark-idx write-object-bytevector))
 
 	  ((procedure? x)
 	   (write-object-procedure x p)
-	   i)
+	   next-mark-idx)
 
 	  ((port? x)
-	   (write-object-port x p h i)
-	   i)
+	   (write-object-port x p marks-table next-mark-idx)
+	   next-mark-idx)
 
 	  ((eq? x (void))
 	   (write-char* "#!void" p)
-	   i)
+	   next-mark-idx)
 
 	  ((eof-object? x)
 	   (write-char* "#!eof" p)
-	   i)
+	   next-mark-idx)
 
 	  ((bwp-object? x)
 	   (write-char* "#!bwp" p)
-	   i)
+	   next-mark-idx)
 
 	  ((would-block-object? x)
 	   (write-char* "#!would-block" p)
-	   i)
+	   next-mark-idx)
 
 	  ((transcoder? x)
 	   (write-char* (string-append "#<transcoder"
@@ -504,32 +654,32 @@
 				       " error-handling-mode="	(symbol->string (transcoder-error-handling-mode x))
 				       ">")
 			p)
-	   i)
+	   next-mark-idx)
 
 	  ((keyword? x)
 	   ;;At present  keywords are Vicare  structs, so we  have to make  sure this
 	   ;;branch comes before the one below.
 	   (write-char #\# p)
 	   (write-char #\: p)
-	   (write-object (struct-ref x 0) p write-style? h i))
+	   (write-object (struct-ref x 0) p write-style? marks-table next-mark-idx))
 
 	  ((struct? x)
-	   (write-shared x p write-style? h i write-object-struct))
+	   (write-shared x p write-style? marks-table next-mark-idx write-object-struct))
 
 	  ((code? x)
-	   (write-object-code x p write-style? h i))
+	   (write-object-code x p write-style? marks-table next-mark-idx))
 
 	  ((pointer? x)
 	   (write-object-pointer x p)
-	   i)
+	   next-mark-idx)
 
 	  (($unbound-object? x)
 	   (write-char* "#!unbound-object" p)
-	   i)
+	   next-mark-idx)
 
 	  (else
 	   (write-char* "#<unknown>" p)
-	   i)))
+	   next-mark-idx)))
 
 ;;; --------------------------------------------------------------------
 
@@ -573,8 +723,8 @@
 
   (module (write-object-pair)
 
-    (define (write-object-pair x p write-style? h i)
-      (cond ((%pretty-format-reader-macro x h)
+    (define (write-object-pair x p write-style? marks-table next-mark-idx)
+      (cond ((%pretty-format-reader-macro x marks-table)
 	     => (lambda (prefix-str)
 		  ;;If we  are here PREFIX-STR  is a string and  X is a  list holding
 		  ;;only one item.  Examples:
@@ -588,33 +738,33 @@
 		  ;;* X is  the list "(syntax ?thing)" and PREFIX-STR  is "#'", so we
 		  ;;want to print "#'?thing".
 		  ;;
-		  (let ((i (write-object-string prefix-str p #f h i)))
-		    (write-object (cadr x) p write-style? h i))))
+		  (let ((next-mark-idx (write-object-string prefix-str p #f marks-table next-mark-idx)))
+		    (write-object (cadr x) p write-style? marks-table next-mark-idx))))
 	    (else
 	     (write-char #\( p)
-	     (receive-and-return (i)
+	     (receive-and-return (next-mark-idx)
 		 (let loop ((d  (cdr x))
-			    (i  (write-object (car x) p write-style? h i)))
+			    (next-mark-idx  (write-object (car x) p write-style? marks-table next-mark-idx)))
 		   (cond ((null? d)
-			  i)
+			  next-mark-idx)
 			 ((not (pair? d))
 			  (write-char #\space p)
 			  (write-char #\. p)
 			  (write-char #\space p)
-			  (write-object d p write-style? h i))
-			 ((shared? d h)
+			  (write-object d p write-style? marks-table next-mark-idx))
+			 ((writer-marks-table.shared? marks-table d)
 			  (write-char #\space p)
 			  (when (print-graph)
 			    (write-char #\. p)
 			    (write-char #\space p))
-			  (write-object d p write-style? h i))
+			  (write-object d p write-style? marks-table next-mark-idx))
 			 (else
 			  (write-char #\space p)
-			  (let ((i (write-object (car d) p write-style? h i)))
-			    (loop (cdr d) i)))))
+			  (let ((next-mark-idx (write-object (car d) p write-style? marks-table next-mark-idx)))
+			    (loop (cdr d) next-mark-idx)))))
 	       (write-char #\) p)))))
 
-    (define (%pretty-format-reader-macro x h)
+    (define (%pretty-format-reader-macro x marks-table)
       ;;Evaluate to non-false if:
       ;;
       ;;* X is a list with the format:
@@ -640,7 +790,7 @@
 		  (let ((d (cdr x)))
 		    (and (pair? d)
 			 (null? (cdr d))
-			 (not (shared? d h))))
+			 (not (writer-marks-table.shared? marks-table d))))
 		  ;;Evaluate  to true  if  P is  a  pair having:  as  car the  symbol
 		  ;;"pretty-format-reader-macro"; as cdr a string.  The true value is
 		  ;;the string itself.
@@ -659,30 +809,30 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-vector x p write-style? h i)
-    (define (f x p write-style? h i idx n)
+  (define (write-object-vector x p write-style? marks-table next-mark-idx)
+    (define (f x p write-style? marks-table next-mark-idx idx n)
       (cond
-       ((fx= idx n) i)
+       ((fx= idx n) next-mark-idx)
        (else
 	(write-char #\space p)
-	(let ((i (write-object (vector-ref x idx) p write-style? h i)))
-	  (f x p write-style? h i (fx+ idx 1) n)))))
+	(let ((next-mark-idx (write-object (vector-ref x idx) p write-style? marks-table next-mark-idx)))
+	  (f x p write-style? marks-table next-mark-idx (fx+ idx 1) n)))))
     (write-char #\# p)
     (let ((n (vector-length x)))
       (cond ((fxzero? n)
 	     (write-char #\( p)
 	     (write-char #\) p)
-	     i)
+	     next-mark-idx)
 	    (else
 	     (write-char #\( p)
-	     (let ((i (write-object (vector-ref x 0) p write-style? h i)))
-	       (f x p write-style? h i 1 n)
+	     (let ((next-mark-idx (write-object (vector-ref x 0) p write-style? marks-table next-mark-idx)))
+	       (f x p write-style? marks-table next-mark-idx 1 n)
 	       (write-char #\) p)
-	       i)))))
+	       next-mark-idx)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-bytevector x p write-style? h i)
+  (define (write-object-bytevector x p write-style? marks-table next-mark-idx)
     (write-char #\# p)
     (write-char #\v p)
     (write-char #\u p)
@@ -697,7 +847,7 @@
             (write-object-fixnum (bytevector-u8-ref x idx) p)
             (f (fxadd1 idx) n x p)))))
     (write-char #\) p)
-    i)
+    next-mark-idx)
 
   (define (write-positive-hex-fx n p)
     (unless (fx= n 0)
@@ -733,35 +883,34 @@
     (if write-style?
         (let ((i (char->integer x)))
           (write-char #\# p)
-          (cond
-           ((fx< i (vector-length char-table))
-            (write-char #\\ p)
-            (write-char* (vector-ref char-table i) p))
-           ((fx< i 127)
-            (write-char #\\ p)
-            (write-char x p))
-           ((fx= i 127)
-            (write-char #\\ p)
-            (write-char* "delete" p))
-           ((and (print-unicode)
-		 (unicode-printable-char? x))
-            (write-char #\\ p)
-            (write-char x p))
-           (else
-            (write-char #\\ p)
-            (write-char #\x p)
-            (write-positive-hex-fx i p))))
+          (cond ((fx< i (vector-length char-table))
+		 (write-char #\\ p)
+		 (write-char* (vector-ref char-table i) p))
+		((fx< i 127)
+		 (write-char #\\ p)
+		 (write-char x p))
+		((fx= i 127)
+		 (write-char #\\ p)
+		 (write-char* "delete" p))
+		((and (print-unicode)
+		      (unicode-printable-char? x))
+		 (write-char #\\ p)
+		 (write-char x p))
+		(else
+		 (write-char #\\ p)
+		 (write-char #\x p)
+		 (write-positive-hex-fx i p))))
       (write-char x p)))
 
 ;;; --------------------------------------------------------------------
 
   (module (write-object-string)
 
-    (define (write-object-string x p write-style? h i)
+    (define (write-object-string x p write-style? marks-table next-mark-idx)
       (if write-style?
 	  (write-string-escape x p)
 	(write-char* x p))
-      i)
+      next-mark-idx)
 
     (define (write-string-escape x p)
       ;; commonize with write-symbol-bar-escape
@@ -808,7 +957,7 @@
     (define (write-object-symbol x p write-style?)
       (write-symbol-string (symbol->string x) p write-style?))
 
-    (define (write-object-gensym x p write-style? h i)
+    (define (write-object-gensym x p write-style? marks-table next-mark-idx)
       (cond ((and write-style? (print-gensym))
 	     =>	(lambda (gensym-how)
 		  (case gensym-how
@@ -826,10 +975,10 @@
 		       (write-char #\space p)
 		       (write-symbol-bar-esc ustr p)
 		       (write-char #\} p))))
-		  i))
+		  next-mark-idx))
 	    (else
 	     (write-object-symbol x p write-style?)
-	     i)))
+	     next-mark-idx)))
 
     (module (write-symbol-bar-esc)
 
@@ -991,69 +1140,74 @@
 
   (module (write-object-struct)
 
-    (define (write-object-struct x p write-style? h i)
-      (let ((b (hashtable-ref h x #f)))
-	(cond ((pair? b)
-	       (%write-struct-with-custom-printer (cdr b) p write-style? h i))
+    (define (write-object-struct x p write-style? marks-table next-mark-idx)
+      (let ((B (hashtable-ref marks-table x #f)))
+	(cond ((pair? B)
+	       (%write-struct-with-custom-printer (cdr B) p write-style? marks-table next-mark-idx))
 	      (else
-	       (%write-struct-with-built-in-printer x p write-style? h i)))))
+	       (%write-struct-with-built-in-printer x p write-style? marks-table next-mark-idx)))))
 
-    (define (%write-struct-with-custom-printer out p write-style? h i)
+    (define (%write-struct-with-custom-printer cache-stack p write-style? marks-table next-mark-idx)
       ;;Write a struct having a custom printer function.
       ;;
+      ;;We expect CACHE-STACK to  be a pair whose car is a suffix  string to write at
+      ;;the end and whose  cdr is false or a chain of  CACHE structs representing the
+      ;;strings to print in reverse order.  So we recurse to the end of the chain and
+      ;;print the node from the tail to the head.
+      ;;
       (begin0
-	  (let recur ((cache (cdr out)))
+	  (let recur ((cache (cdr cache-stack)))
 	    (if (not cache)
-		i
-	      (let ((i (recur (cache-next cache))))
+		next-mark-idx
+	      (let ((next-mark-idx (recur (cache-next cache))))
 		(write-char*  (cache-string cache) p)
-		(write-object (cache-object cache) p write-style? h i))))
-	(write-char* (car out) p)))
+		(write-object (cache-object cache) p write-style? marks-table next-mark-idx))))
+	(write-char* (car cache-stack) p)))
 
-    (define (%write-struct-with-built-in-printer stru p write-style? h i)
+    (define (%write-struct-with-built-in-printer stru p write-style? marks-table next-mark-idx)
       ;;Write a struct that is meant to use the built-in printer function.
       ;;
       (cond ((record-type-descriptor? stru)
-	     (%write-r6rs-record-type-descriptor stru p write-style? h i))
+	     (%write-r6rs-record-type-descriptor stru p write-style? marks-table next-mark-idx))
 
 	    ((records.record-constructor-descriptor? stru)
-	     (%write-r6rs-record-constructor-descriptor stru p write-style? h i))
+	     (%write-r6rs-record-constructor-descriptor stru p write-style? marks-table next-mark-idx))
 
 	    ((record-type-descriptor? (struct-rtd stru))
-	     (%write-r6rs-record stru p write-style? h i))
+	     (%write-r6rs-record stru p write-style? marks-table next-mark-idx))
 
 	    ;;We do not handle opaque records specially.
 	    ;; ((let ((rtd (struct-rtd x)))
 	    ;;    (and (record-type-descriptor? rtd)
 	    ;; 	    (record-type-opaque? rtd)))
 	    ;;  (write-char* "#<unknown>" p)
-	    ;;  i)
+	    ;;  next-mark-idx)
 
 	    (else
-	     (%write-vicare-struct stru p write-style? h i))))
+	     (%write-vicare-struct stru p write-style? marks-table next-mark-idx))))
 
-    (define (%write-r6rs-record-type-descriptor rtd port write-style? h i)
+    (define (%write-r6rs-record-type-descriptor rtd port write-style? marks-table next-mark-idx)
       ;;Remember that record-type descriptors are struct instances.
       ;;
       (let ((std (struct-rtd rtd)))
 	(write-char* "#[rtd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
-	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? h i)))
+	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? marks-table next-mark-idx)))
 
-    (define (%write-r6rs-record-constructor-descriptor rcd port write-style? h i)
+    (define (%write-r6rs-record-constructor-descriptor rcd port write-style? marks-table next-mark-idx)
       (let ((rtd (records.rcd-rtd rcd)))
 	(write-char* "#[rcd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
 	(write-char #\space port)
 	(write-char* "rtd=" port)
-	(let ((i (write-object rtd port write-style? h i)))
+	(let ((next-mark-idx (write-object rtd port write-style? marks-table next-mark-idx)))
 	  (write-char #\space port)
 	  (write-char* "parent-rcd=" port)
-	  (let ((i (write-object (records.rcd-parent-rcd rcd) port write-style? h i)))
-	    (write-char #\] port)
-	    i))))
+	  (begin0
+	      (write-object (records.rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
+	    (write-char #\] port)))))
 
-    (define (%write-vicare-struct stru port write-style? h i)
+    (define (%write-vicare-struct stru port write-style? marks-table next-mark-idx)
       ;;If it is an instance we want to print all the fields as in:
       ;;
       ;;   #[struct ?type-name ?field=?value ...]
@@ -1074,9 +1228,9 @@
 			      (if instance? 0 1)
 			      (let ((names (struct-type-field-names std)))
 				(if instance? names (cdr names)))
-			      port write-style? h i)))
+			      port write-style? marks-table next-mark-idx)))
 
-    (define (%write-struct-fields stru stru.idx names port write-style? h i)
+    (define (%write-struct-fields stru stru.idx names port write-style? marks-table next-mark-idx)
       ;;Tail recursive  function.  Write to  PORT the  fields from the  Vicare struct
       ;;STRU, starting  from field index STRU.IDX.   NAMES must be a  list of symbols
       ;;representing field names, with the first item  being the name of the field at
@@ -1086,17 +1240,17 @@
       (if (pair? names)
 	  (begin
 	    (write-char #\space port)
-	    (let ((i (write-object (car names) port write-style? h i)))
+	    (let ((next-mark-idx (write-object (car names) port write-style? marks-table next-mark-idx)))
 	      (write-char #\= port)
-	      (let ((i (write-object (struct-ref stru stru.idx) port write-style? h i)))
-		(%write-struct-fields stru (fxadd1 stru.idx) (cdr names) port write-style? h i))))
+	      (let ((next-mark-idx (write-object (struct-ref stru stru.idx) port write-style? marks-table next-mark-idx)))
+		(%write-struct-fields stru (fxadd1 stru.idx) (cdr names) port write-style? marks-table next-mark-idx))))
 	(begin
 	  (write-char #\] port)
-	  i)))
+	  next-mark-idx)))
 
     (module (%write-r6rs-record)
 
-      (define (%write-r6rs-record record port write-style? h i)
+      (define (%write-r6rs-record record port write-style? marks-table next-mark-idx)
 	(define rtd (record-rtd record))
 	(write-char* (if (record-type-opaque? rtd)
 			 "#[opaque-r6rs-record "
@@ -1104,32 +1258,32 @@
 		     port)
 	(write-char* (symbol->string (record-type-name rtd))
 		     port)
-	(receive (i record.idx)
+	(receive (next-mark-idx record.idx)
 	    (let upper-rtd ((rtd rtd))
 	      (cond ((record-type-parent rtd)
 		     => (lambda (prtd)
-			  (receive (i record.idx)
+			  (receive (next-mark-idx record.idx)
 			      (upper-rtd prtd)
-			    (%print-record-fields prtd record.idx record port write-style? h i))))
+			    (%print-record-fields prtd record.idx record port write-style? marks-table next-mark-idx))))
 		    (else
-		     (values i 0))))
-	  (%print-record-fields rtd record.idx record port write-style? h i)
+		     (values next-mark-idx 0))))
+	  (%print-record-fields rtd record.idx record port write-style? marks-table next-mark-idx)
 	  (write-char #\] port)
-	  i))
+	  next-mark-idx))
 
-      (define (%print-record-fields rtd next-record.idx record port write-style? h i)
+      (define (%print-record-fields rtd next-record.idx record port write-style? marks-table next-mark-idx)
 	(let* ((vec      (record-type-field-names rtd))
 	       (vec.len  (vector-length vec)))
 	  (do ((vec.idx    0               (fxadd1 vec.idx))
 	       (record.idx next-record.idx (fxadd1 record.idx)))
 	      ((fx=? vec.idx vec.len)
-	       (values i record.idx))
+	       (values next-mark-idx record.idx))
 	    (let* ((field-nam  (vector-ref vec vec.idx))
 		   (field-val  (struct-ref record record.idx)))
 	      (write-char #\space port)
-	      (let ((i (write-object field-nam port write-style? h i)))
+	      (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
 		(write-char #\= port)
-		(set! i (write-object field-val port write-style? h i)))))))
+		(set! next-mark-idx (write-object field-val port write-style? marks-table next-mark-idx)))))))
 
       #| end of module: WRITE-R6RS-RECORD |# )
 
@@ -1158,7 +1312,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-port x p h i)
+  (define (write-object-port x p marks-table next-mark-idx)
     (write-char* "#<" p)
     (write-char* (cond ((input/output-port? x)	"input/output")
 		       ((input-port? x)		"input")
@@ -1166,22 +1320,22 @@
 		 p)
     (write-char* "-port " p)
     (write-char* (if (binary-port? x) "(binary) " "(textual) ") p)
-    (let ((i (write-object (port-id x) p #t h i)))
-      (write-char #\> p)
-      i))
+    (begin0
+	(write-object (port-id x) p #t marks-table next-mark-idx)
+      (write-char #\> p)))
 
 ;;; --------------------------------------------------------------------
 
-  (define (write-object-code x port write-style? h i)
+  (define (write-object-code x port write-style? marks-table next-mark-idx)
     (cond (($code-annotation x)
 	   => (lambda (ann)
 		(write-char* "#<code annotation=" port)
 		(begin0
-		    (write-object ann port write-style? h i)
+		    (write-object ann port write-style? marks-table next-mark-idx)
 		  (write-char #\> port))))
 	  (else
 	   (write-char* "#<code>" port)
-	   i)))
+	   next-mark-idx)))
 
 ;;; --------------------------------------------------------------------
 ;;; helpers
@@ -1194,8 +1348,9 @@
       (unless (fx=? i n)
         (write-char (string-ref str i) port)
         (loop (fxadd1 i) n))))
+
   (define (write-hex x n p)
-    (define s "0123456789ABCDEF")
+    (define-constant s "0123456789ABCDEF")
     (unless (zero? n)
       (write-hex (sra x 4) (- n 1) p)
       (write-char (string-ref s (bitwise-and x #xF)) p)))

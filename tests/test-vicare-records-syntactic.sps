@@ -1240,10 +1240,10 @@
     (define-record-type <alpha>
       (fields a b c))
 
-    (record-destructor-set! (record-type-descriptor <alpha>)
-			    (lambda (S)
-			      (pretty-print (list 'finalising S)
-					    (current-error-port))))
+    (record-type-destructor-set! (record-type-descriptor <alpha>)
+				 (lambda (S)
+				   (pretty-print (list 'finalising S)
+						 (current-error-port))))
 
     (parametrise ((record-guardian-logger #f))
       (pretty-print (make-<alpha> 1 2 3) (current-error-port))
@@ -1254,12 +1254,12 @@
   (define-record-type <alpha>
     (fields a b c))
 
-  (record-destructor-set! (record-type-descriptor <alpha>)
-			  (lambda (S)
-			    (void)))
+  (record-type-destructor-set! (record-type-descriptor <alpha>)
+			       (lambda (S)
+				 (void)))
 
   (check
-      (procedure? (record-destructor (record-type-descriptor <alpha>)))
+      (procedure? (record-type-destructor (record-type-descriptor <alpha>)))
     => #t)
 
   (check

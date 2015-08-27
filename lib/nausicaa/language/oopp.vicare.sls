@@ -765,8 +765,8 @@
 	  (module ()
 	    (cond (FINALISER-EXPRESSION
 		   => (lambda (finaliser)
-			(record-destructor-set! (record-type-descriptor THE-RECORD-TYPE)
-						finaliser)))))
+			(record-type-destructor-set! (record-type-descriptor THE-RECORD-TYPE)
+						     finaliser)))))
 
 	  (define THE-LIST-OF-UIDS
 	    (THE-PARENT :append-unique-id (NONGENERATIVE-UID)))

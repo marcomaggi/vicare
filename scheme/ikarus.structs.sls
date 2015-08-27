@@ -33,18 +33,20 @@
 
     ;; struct constructor and predicate
     struct?
-    struct-constructor		struct-predicate
+    struct-constructor			struct-predicate
     struct=?
 
     ;; struct accessors and mutators
-    struct-ref			struct-set!
-    struct-field-accessor	struct-field-mutator
+    struct-ref				struct-set!
+    struct-field-accessor		struct-field-mutator
     struct-reset
 
     ;; structure inspection
-    struct-rtd
-    struct-name			struct-printer
-    struct-destructor		struct-length
+    struct-std
+    (rename (struct-std	struct-rtd))
+    struct-name				struct-length
+    struct-field-names
+    struct-printer			struct-destructor
 
     ;; unsafe operations
     $make-clean-struct
@@ -84,9 +86,11 @@
 		  struct-reset
 
 		  ;; structure inspection
-		  struct-rtd			struct-type-descriptor
-		  struct-name			struct-printer
-		  struct-destructor		struct-length
+		  struct-type-descriptor
+		  struct-rtd			struct-std
+		  struct-name			struct-length
+		  struct-field-names
+		  struct-printer		struct-destructor
 
 		  ;; immutable pairs stuff
 		  immutable-pair ipair icar icdr ipair?)
@@ -140,7 +144,7 @@
 		    ($fx>= ?index 0)
 		    ($fx<  ?index ($std-length ($struct-rtd ?struct))))
 	 (procedure-arguments-consistency-violation __who__
-	   "expected fixnum in range for structure field as ?index argument"
+	   "expected fixnum in range for structure field as INDEX argument"
 	   ?index ?struct)))
     ))
 
@@ -400,7 +404,7 @@
   ((x {std struct-type-descriptor?})
    ($struct/rtd? x std)))
 
-(define* (struct-rtd {stru struct?})
+(define* (struct-std {stru struct?})
   ;;Return  the  STD of  the  data  structure  STRU.  Notice  that  this
   ;;function works with both Vicare's structs and R6RS records.
   ;;
@@ -411,6 +415,11 @@
   ;;this function works with both Vicare's structs and R6RS records.
   ;;
   ($std-length ($struct-rtd stru)))
+
+(define* (struct-field-names {stru struct?})
+  ;;Return a list of symbols representing the structure field names.
+  ;;
+  ($std-fields ($struct-rtd stru)))
 
 (define* (struct-name {stru struct?})
   ;;Return a  string representing the  name of the data  structure STRU.

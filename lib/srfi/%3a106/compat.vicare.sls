@@ -86,8 +86,8 @@
 	  node service ai-family ai-socktype ai-flags ai-protocol))
 
 (module ()
-  (record-destructor-set! (record-type-descriptor :socket)
-			  socket-close))
+  (record-type-destructor-set! (record-type-descriptor :socket)
+			       socket-close))
 
 ;;; --------------------------------------------------------------------
 

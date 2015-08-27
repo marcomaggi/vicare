@@ -10270,8 +10270,11 @@ just fine, handling cyclic references and shared objects:
 @result{} "#0=#[struct duo one=1 two=#0#]"
 @end lisp
 
-@noindent
-but sometimes we need to print a structure with a customised
+The built--in writer also differentiates between ``@func{display}
+style'' printing and ``@func{write} style'' printing, although not for
+structures.
+
+However, sometimes, we need to print a structure with a customised
 representation.  For example keyword objects (@pxref{iklib keywords,
 Keyword objects}) are structures with a custom printer function:
 
@@ -10444,7 +10447,8 @@ descriptor.
 @end defun
 
 
-@defun struct-rtd @var{stru}
+@defun struct-std @var{stru}
+@defunx struct-rtd @var{stru}
 Return the struct--type descriptor of the data structure @var{stru}.
 Notice that this function works with both Vicare's structs and @rnrs{6}
 records.
@@ -10455,6 +10459,12 @@ records.
 Return the number of fields in the data structure @var{stru}.  Notice
 that this function works with both Vicare's structs and @rnrs{6}
 records.
+@end defun
+
+
+@defun struct-field-names @var{stru}
+Return a list of symbols representing the field names of the structure
+@var{stru}.
 @end defun
 
 
@@ -10534,6 +10544,7 @@ unsafe accessor and mutator identifiers out of libraries.
 * iklib records predicates::    Record predicates.
 * iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
+* iklib records printer::       Custom record printers.
 * iklib records rcd::           Record-constructor descriptors.
 * iklib records misc::          Miscellaneous functions.
 @end menu
@@ -10825,10 +10836,10 @@ It is possible to automatically apply a destructor function whenever an
 (define-record-type <alpha>
   (fields a b c))
 
-(record-destructor-set! (record-type-descriptor <alpha>)
-                        (lambda (S)
-                          (pretty-print (list 'finalising S)
-                                        (current-error-port))))
+(record-type-destructor-set! (record-type-descriptor <alpha>)
+   (lambda (S)
+     (pretty-print (list 'finalising S)
+                   (current-error-port))))
 
 (pretty-print (make-<alpha> 1 2 3) (current-error-port))
 @print{} #[r6rs-record: <alpha> a=1 b=2 c=3]
@@ -10840,7 +10851,7 @@ It is possible to automatically apply a destructor function whenever an
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun record-destructor-set! @var{rtd} @var{destructor}
+@defun record-type-destructor-set! @var{rtd} @var{destructor}
 Select the procedure @var{destructor} as destructor for @rnrs{6} record
 instances of type @var{rtd}; return unspecified values.  The destructor
 accepts a single argument being the record instance to finalise; the
@@ -10857,17 +10868,14 @@ themselves.
 @end defun
 
 
-@defun record-destructor @var{rtd}
+@defun record-type-destructor @var{rtd}
 Return the current destructor for @var{rtd}: @false{} or a function.
 @end defun
 
 
-@defun record-printer @var{rtd}
-@defunx record-printer-set! @var{rtd} @var{printer}
-Accessor and mutator for the printer field in a @rnrs{6} record--type
-descriptor.  The @var{printer} argument must be a procedure accepting
-two arguments: a record instance of type @var{rtd}, a textual output
-port.
+@defun record-destructor @var{record}
+Return the current destructor for the record @var{record}: @false{} or a
+function.
 @end defun
 
 
@@ -10958,8 +10966,27 @@ The current implementation is the following:
 @end defun
 
 @c page
+@node iklib records printer
+@subsection Custom record printers
+
+
+@defun record-type-printer @var{rtd}
+@defunx record-type-printer-set! @var{rtd} @var{printer}
+Accessor and mutator for the printer field in a @rnrs{6} record--type
+descriptor.  The @var{printer} argument must be a procedure accepting
+two arguments: a record instance of type @var{rtd}, a textual output
+port.
+@end defun
+
+
+@defun record-printer @var{record}
+Return @false{} or the function being the custom record printer for the
+record @var{record}.
+@end defun
+
+@c page
 @node iklib records rcd
-@subsection Record-constructor descriptors
+@subsection Record--constructor descriptors
 
 
 @defun record-constructor-descriptor? @var{obj}

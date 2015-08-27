@@ -40,9 +40,10 @@
 	    (<rcd>-parent-rcd	rcd-parent-rcd))
     record-reset			record=?
     record-and-rtd?			record-object?
-    record-destructor-set!		record-destructor
-    (rename (<rtd>-printer		record-printer)
-	    (set-<rtd>-printer!		record-printer-set!)))
+    record-printer			record-destructor
+    record-type-destructor-set!		record-type-destructor
+    (rename (<rtd>-printer		record-type-printer)
+	    (set-<rtd>-printer!		record-type-printer-set!)))
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Mar 31, 2015)
@@ -68,9 +69,10 @@
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?
 		  record-reset				record=?
+		  record-printer			record-destructor
 		  record-and-rtd?			record-object?
-		  record-destructor-set!		record-destructor
-		  record-printer-set!			record-printer)
+		  record-type-destructor-set!		record-type-destructor
+		  record-type-printer-set!		record-type-printer)
     (vicare system $fx)
     (vicare system $pairs)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
@@ -255,22 +257,21 @@
       (define-inline (%display thing)
 	(display thing port))
       (%display "#[rtd")
-      (%display " name=")			(%display (<rtd>-name S))
-      (%display " total-fields-number=")	(%display (<rtd>-total-fields-number S))
-      (%display " this-fields-number=")		(%display (<rtd>-fields-number S))
+      (%display " name=")			(sub-printer (<rtd>-name S))
+      (%display " total-fields-number=")	(sub-printer (<rtd>-total-fields-number S))
+      (%display " this-fields-number=")		(sub-printer (<rtd>-fields-number S))
       (let ((prtd (<rtd>-parent S)))
 	(if (<rtd>? prtd)
 	    (begin
 	      (%display " parent-name=")
-	      (%display (<rtd>-name prtd)))
+	      (sub-printer (<rtd>-name prtd)))
 	  (begin
 	    (%display " parent=")
-	    (%display prtd))))
-      (%display " sealed?=")			(%display (<rtd>-sealed? S))
-      (%display " opaque?=")			(%display (<rtd>-opaque? S))
-      (%display " fields=")			(%display (<rtd>-fields  S))
-      ;;We avoid printing  the initialiser, default-protocol and default-rcd
-      ;;fields.
+	    (sub-printer prtd))))
+      (%display " sealed?=")			(sub-printer (<rtd>-sealed? S))
+      (%display " opaque?=")			(sub-printer (<rtd>-opaque? S))
+      (%display " fields=")			(sub-printer (<rtd>-fields  S))
+      ;;We avoid printing the initialiser, default-protocol and default-rcd fields.
       (%display "]"))))
 
 (define-struct <rcd>
@@ -300,11 +301,11 @@
       (define-inline (%display thing)
 	(display thing port))
       (%display "#[rcd")
-      (%display " rtd=")		(%display (<rcd>-rtd S))
-      (%display " prcd=")		(%display (<rcd>-parent-rcd S))
-      (%display " maker=")		(%display (<rcd>-maker S))
-      (%display " constructor=")	(%display (<rcd>-constructor S))
-      (%display " builder=")		(%display (<rcd>-builder S))
+      (%display " rtd=")		(sub-printer (<rcd>-rtd S))
+      (%display " prcd=")		(sub-printer (<rcd>-parent-rcd S))
+      (%display " maker=")		(sub-printer (<rcd>-maker S))
+      (%display " constructor=")	(sub-printer (<rcd>-constructor S))
+      (%display " builder=")		(sub-printer (<rcd>-builder S))
       (%display "]"))))
 
 
@@ -1284,19 +1285,25 @@
 	(($fx= i len))
       ($struct-set! x i (void)))))
 
+(define* (record-printer {x record-object?})
+  (<rtd>-printer (record-rtd x)))
+
 
 ;;;; non-R6RS extensions: record destructor
 
-(define* (record-destructor-set! {rtd record-type-descriptor?} {func procedure?})
+(define* (record-type-destructor-set! {rtd record-type-descriptor?} {func procedure?})
   ;;Store  a  function  as  destructor  in a  R6RS  record-type  descriptor.   Return
   ;;unspecified values.
   ;;
   ($set-<rtd>-destructor! rtd func))
 
-(define* (record-destructor {rtd record-type-descriptor?})
+(define* (record-type-destructor {rtd record-type-descriptor?})
   ;;Return the value of the destructor field in RTD: #f or a function.
   ;;
   ($<rtd>-destructor rtd))
+
+(define* (record-destructor {rtd record-object?})
+  ($<rtd>-destructor (record-rtd rtd)))
 
 
 ;;;; done
