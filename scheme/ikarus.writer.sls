@@ -1253,8 +1253,8 @@
       (define (%write-r6rs-record record port write-style? marks-table next-mark-idx)
 	(define rtd (record-rtd record))
 	(write-char* (if (record-type-opaque? rtd)
-			 "#[opaque-r6rs-record "
-		       "#[r6rs-record ")
+			 "#[opaque-record "
+		       "#[record ")
 		     port)
 	(write-char* (symbol->string (record-type-name rtd))
 		     port)

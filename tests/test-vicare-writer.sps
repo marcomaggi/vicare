@@ -813,7 +813,7 @@
 	(define-record-type duo	(fields (mutable one) (mutable two)))
 	(define A		(make-duo 1 2))
 	(write-it A))
-    => "#[r6rs-record duo one=1 two=2]")
+    => "#[record duo one=1 two=2]")
 
   ;;One record with circular reference.
   ;;
@@ -823,7 +823,7 @@
 	(define A		(make-duo 1 2))
 	(duo-two-set! A A)
 	(write-it A))
-    => "#0=#[r6rs-record duo one=1 two=#0#]")
+    => "#0=#[record duo one=1 two=#0#]")
 
   ;;One record with two circular references.
   ;;
@@ -834,7 +834,7 @@
 	(duo-one-set! A A)
 	(duo-two-set! A A)
 	(write-it A))
-    => "#0=#[r6rs-record duo one=#0# two=#0#]")
+    => "#0=#[record duo one=#0# two=#0#]")
 
   ;;Two records with circular reference.
   ;;
@@ -845,7 +845,7 @@
 	(define B		(make-duo 3 A))
 	(duo-two-set! A B)
 	(write-it B))
-    => "#0=#[r6rs-record duo one=3 two=#[r6rs-record duo one=1 two=#0#]]")
+    => "#0=#[record duo one=3 two=#[record duo one=1 two=#0#]]")
 
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
@@ -864,6 +864,89 @@
 	(define-record-type duo	(fields one two))
 	(write-it (record-constructor-descriptor duo)))
     => "#[rcd duo rtd=#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=#f fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#<procedure> default-rcd=#f destructor=#f printer=#f] parent-rcd=#f]")
+
+;;; --------------------------------------------------------------------
+;;; documentation examples
+
+  ;;Built-in printer.
+  ;;
+  (internal-body
+
+    (define-record-type duo
+      (fields (mutable one)
+	      (mutable two)))
+
+    ;; simple record
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (display (make-duo 1 2))))
+      => "#[record duo one=1 two=2]")
+
+    ;; record with shared object
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (let* ((A (make-duo 1 2))
+		   (B (make-duo A A)))
+	      (display B))))
+      => "#[record duo one=#0=#[record duo one=1 two=2] two=#0#]")
+
+    ;; record with cyclic reference to itself
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (let ((A (make-duo 1 (void))))
+	      (duo-two-set! A A)
+	      (display A))))
+      => "#0=#[record duo one=1 two=#0#]")
+
+    (void))
+
+;;;
+
+  ;;Custom printer.
+  ;;
+  (internal-body
+
+    (define-record-type duo
+      (fields (mutable one)
+	      (mutable two)))
+
+    (record-type-printer-set! (record-type-descriptor duo)
+			      (lambda (stru port sub-printer)
+				(display "#@{duo " port)
+				(sub-printer (duo-one stru))
+				(display " " port)
+				(sub-printer (duo-two stru))
+				(display "@}" port)))
+
+    ;; simple record
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (display (make-duo 1 2))))
+      => "#@{duo 1 2@}")
+
+    ;; record with shared object
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (let* ((A (make-duo 1 2))
+		   (B (make-duo A A)))
+	      (display B))))
+      => "#@{duo #0=#@{duo 1 2@} #0#@}")
+
+    ;; record with cyclic reference to itself
+    (check
+	(with-output-to-string
+	  (lambda ()
+	    (let ((A (make-duo 1 (void))))
+	      (duo-two-set! A A)
+	      (display A))))
+      => "#0=#@{duo 1 #0#@}")
+
+    (void))
 
   #t)
 

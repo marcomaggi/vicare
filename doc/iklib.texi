@@ -11031,6 +11031,98 @@ The current implementation is the following:
 @subsection Custom record printers
 
 
+@value{PRJNAME}'s built--in Scheme objects writer can print records just
+fine, handling cyclic references and shared objects:
+
+@lisp
+(import (vicare))
+(print-graph #t)
+
+(define-record-type duo
+  (fields (mutable one)
+          (mutable two)))
+
+;; simple record
+(with-output-to-string
+  (lambda ()
+    (display (make-duo 1 2))))
+@result{} "#[record duo one=1 two=2]"
+
+;; record with shared object
+(with-output-to-string
+  (lambda ()
+    (let* ((A (make-duo 1 2))
+           (B (make-duo A A)))
+      (display B))))
+@result{} "#[record duo one=#0=#[record duo one=1 two=2] two=#0#]"
+
+;; record with cyclic reference to itself
+(with-output-to-string
+  (lambda ()
+    (let ((A (make-duo 1 (void))))
+      (duo-two-set! A A)
+      (display A))))
+@result{} "#0=#[record duo one=1 two=#0#]"
+@end lisp
+
+The built--in writer also differentiates between ``@func{display}
+style'' printing and ``@func{write} style'' printing, although not for
+records.
+
+However, sometimes, we need to print a record with a customised
+representation; for this we can use a custom printer function.
+
+A custom printer function accepts @math{3} arguments: the record to be
+printed; a textual output port into which to write a string
+representation of the record in the style of @func{display} or
+@func{write}; a sub--printer function to be optionally applied to the
+field values to print them.
+
+The sub--printer function accepts as single argument the object to
+print; it allows us to interface with the shared objects printer that
+handles shared and cyclic references.  As example, the following code
+defines a custom printer:
+
+@lisp
+(import (vicare))
+(print-graph #t)
+
+(define-record-type duo
+  (fields (mutable one)
+          (mutable two)))
+
+(record-type-printer-set! (record-type-descriptor duo)
+  (lambda (stru port sub-printer)
+    (display "#@{duo " port)
+    (sub-printer (duo-one stru))
+    (display " " port)
+    (sub-printer (duo-two stru))
+    (display "@}" port)))
+
+;; simple record
+(with-output-to-string
+  (lambda ()
+    (display (make-duo 1 2))))
+@result{} "#@{duo 1 2@}"
+
+;; record with shared object
+(with-output-to-string
+  (lambda ()
+    (let* ((A (make-duo 1 2))
+           (B (make-duo A A)))
+      (display B))))
+@result{} "#@{duo #0=#@{duo 1 2@} #0#@}"
+
+;; record with cyclic reference to itself
+(with-output-to-string
+  (lambda ()
+    (let ((A (make-duo 1 (void))))
+      (duo-two-set! A A)
+      (display A))))
+@result{} "#0=#@{duo 1 #0#@}"
+@end lisp
+
+
 @defun record-type-printer @var{rtd}
 @defunx record-type-printer-set! @var{rtd} @var{printer}
 Accessor and mutator for the printer field in a @rnrs{6} record--type
