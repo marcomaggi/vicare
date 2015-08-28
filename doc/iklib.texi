@@ -15474,8 +15474,101 @@ counterpart:
 @section Printing
 
 
-@deffn Procedure pretty-print @var{datum}
-@deffnx Procedure pretty-print @var{datum} @var{output-port}
+@menu
+* iklib printing formatting::   Formatting and printing strings.
+* iklib printing pretty::       Pretty printing Scheme objects.
+* iklib printing debug::        Printing for debugging.
+@end menu
+
+@c page
+@node iklib printing formatting
+@subsection Formatting and printing strings
+
+
+@defun format @var{fmt-string} @var{args} ...
+The procedure @func{format} produces a string formatted according to
+@func{fmt-string} and the supplied arguments.  The format string
+contains markers in which the string representation of each argument is
+placed.  The markers include:
+
+@table @code
+@item ~s
+instructs the formatter to place the next argument as if the procedure
+@func{write} has printed it; if the argument contains a string, the
+string will be quoted and all quotes and backslashes in the string will
+be escaped; similarly, characters will be printed using the @code{#\x}
+notation;
+
+@item ~a
+instructs the formatter to place the next argument as if the procedure
+@func{display} has printed it; strings and characters are placed as they
+are in the output;
+
+@item ~b
+instructs the formatter to convert the next argument to its binary (base
+2) representation; the argument must be an exact number;
+
+@item ~o
+is similar to @code{~b} except that the number is printed in octal (base
+8);
+
+@item ~x
+is similar to @code{~b} except that the number is printed in hexadecimal
+(base 16);
+
+@item ~d
+outputs the next argument, which can be an exact or inexact number, in
+its decimal (base 10) representation;
+
+@item ~~
+instructs the formatter to place a tilde character, @code{~}, in the
+output without consuming an argument;
+
+@item ~%
+instructs the formatter to place a newline character in the output
+without consuming an argument.
+@end table
+
+Note that the @code{#b}, @code{#o}, and @code{#x} numeric prefixes are
+not added to the output when @code{~b}, @code{~o}, and @code{~x} are
+used.
+
+@example
+> (format "message: ~s, ~s, and ~s" 'symbol "string" #\c)
+"message: symbol, \"string\", and #\\c"
+
+> (format "message: ~a, ~a, and ~a" 'symbol "string" #\c)
+"message: symbol, string, and c"
+@end example
+@end defun
+
+
+@defun printf @var{fmt-string} @var{args} ...
+The procedure @func{printf} is similar to @func{format} except that the
+output is sent to the @code{current-output-port} instead of being
+collected in a string.
+
+@example
+> (let ([n (+ (expt 2 32) #b11001)])
+    (printf "~d = #b~b = #x~x\n" n n n))
+4294967321 = #b100000000000000000000000000011001 = #x100000019
+@end example
+@end defun
+
+
+@defun fprintf @var{output-port} @var{fmt-string} @var{args} ...
+The procedure @func{fprintf} is similar to @func{printf} except that the
+output port to which the output is sent is specified as the first
+argument.
+@end defun
+
+@c page
+@node iklib printing pretty
+@subsection Pretty printing Scheme objects
+
+
+@defun pretty-print @var{datum}
+@defunx pretty-print @var{datum} @var{output-port}
 The procedure @func{pretty-print} is intended for printing Scheme data,
 typically Scheme programs, in a format close to how a Scheme programmer
 would write it.  Unlike @func{write}, which writes its input all in one
@@ -15504,7 +15597,7 @@ output port.  If not supplied, the @func{current-output-port} is used.
 implementation of @func{pretty-print} does not handle printing of square
 brackets properly.
 @end quotation
-@end deffn
+@end defun
 
 
 @defun pretty-print* @var{datum} @var{output-port} @var{start-column} @var{ending-newline?}
@@ -15583,105 +15676,6 @@ to go beyond the value of @func{pretty-width}.
 @defun pretty-format @var{obj}
 Still undocumented.
 @end defun
-
-
-@defun debug-print . @var{args}
-Print the given arguments on the current error port using
-@func{pretty-print}.  This is a convenience function, useful while
-debugging code.
-@end defun
-
-
-@deffn Parameter debug-print-enabled?
-@cindex Parameter @func{debug-print-enabled?}
-When set to true, @func{debug-print*} will print its arguments.  It is
-initialised to @false{}.  We can set this parameter to any value,
-internally the value is normalised to @true{} or @false{}.
-@end deffn
-
-
-@defun debug-print* . @var{args}
-Like @func{debug-print}, but print arguments only when the parameter
-@func{debug-print-enabled?} is set to true.
-@end defun
-
-
-@deffn Procedure format @var{fmt-string} @var{args} ...
-The procedure @func{format} produces a string formatted according to
-@func{fmt-string} and the supplied arguments.  The format string
-contains markers in which the string representation of each argument is
-placed.  The markers include:
-
-@table @code
-@item ~s
-instructs the formatter to place the next argument as if the procedure
-@func{write} has printed it; if the argument contains a string, the
-string will be quoted and all quotes and backslashes in the string will
-be escaped; similarly, characters will be printed using the @code{#\x}
-notation;
-
-@item ~a
-instructs the formatter to place the next argument as if the procedure
-@func{display} has printed it; strings and characters are placed as they
-are in the output;
-
-@item ~b
-instructs the formatter to convert the next argument to its binary (base
-2) representation; the argument must be an exact number;
-
-@item ~o
-is similar to @code{~b} except that the number is printed in octal (base
-8);
-
-@item ~x
-is similar to @code{~b} except that the number is printed in hexadecimal
-(base 16);
-
-@item ~d
-outputs the next argument, which can be an exact or inexact number, in
-its decimal (base 10) representation;
-
-@item ~~
-instructs the formatter to place a tilde character, @code{~}, in the
-output without consuming an argument;
-
-@item ~%
-instructs the formatter to place a newline character in the output
-without consuming an argument.
-@end table
-
-Note that the @code{#b}, @code{#o}, and @code{#x} numeric prefixes are
-not added to the output when @code{~b}, @code{~o}, and @code{~x} are
-used.
-
-@example
-> (format "message: ~s, ~s, and ~s" 'symbol "string" #\c)
-"message: symbol, \"string\", and #\\c"
-
-> (format "message: ~a, ~a, and ~a" 'symbol "string" #\c)
-"message: symbol, string, and c"
-@end example
-@end deffn
-
-
-@deffn Procedure printf @var{fmt-string} @var{args} ...
-The procedure @func{printf} is similar to @func{format} except that the
-output is sent to the @code{current-output-port} instead of being
-collected in a string.
-
-@example
-> (let ([n (+ (expt 2 32) #b11001)])
-    (printf "~d = #b~b = #x~x\n" n n n))
-4294967321 = #b100000000000000000000000000011001 = #x100000019
-@end example
-@end deffn
-
-
-@deffn Procedure fprintf @var{output-port} @var{fmt-string} @var{args} ...
-The procedure @func{fprintf} is similar to @func{printf} except that the
-output port to which the output is sent is specified as the first
-argument.
-@end deffn
 
 
 @deffn Parameter print-unicode
@@ -15791,6 +15785,31 @@ any non-negative integer value.
 Notice from all the examples so far that pretty names are generated in
 the order at which the gensyms are printed, not in the order in which
 gensyms were created.
+
+@c page
+@node iklib printing debug
+@subsection Printing for debugging
+
+
+@defun debug-print . @var{args}
+Print the given arguments on the current error port using
+@func{pretty-print}.  This is a convenience function, useful while
+debugging code.
+@end defun
+
+
+@deffn Parameter debug-print-enabled?
+@cindex Parameter @func{debug-print-enabled?}
+When set to true, @func{debug-print*} will print its arguments.  It is
+initialised to @false{}.  We can set this parameter to any value,
+internally the value is normalised to @true{} or @false{}.
+@end deffn
+
+
+@defun debug-print* . @var{args}
+Like @func{debug-print}, but print arguments only when the parameter
+@func{debug-print-enabled?} is set to true.
+@end defun
 
 @c page
 @node iklib tracing
