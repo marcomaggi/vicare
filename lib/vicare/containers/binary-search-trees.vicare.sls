@@ -25,7 +25,6 @@
 
 #!vicare
 (library (vicare containers binary-search-trees (1 0 0))
-  (options visit-upon-loading)
   (export
 
     ;; plain binary nodes
