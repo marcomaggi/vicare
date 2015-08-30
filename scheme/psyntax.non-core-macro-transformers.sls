@@ -1131,7 +1131,7 @@
       (%make-object-type-spec-form foo make-foo foo? foo-parent
 				   x* foo-x* unsafe-foo-x*
 				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
-				   immutable-x*))
+				   immutable-x* input-form.stx))
 
     (bless
      `(begin
@@ -1618,7 +1618,7 @@
   (define (%make-object-type-spec-form foo make-foo foo? foo-parent
 				       x* foo-x* unsafe-foo-x*
 				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
-				       immutable-x*)
+				       immutable-x* input-form.stx)
     (define type.str
       (symbol->string (syntax->datum foo)))
     (define %constructor-maker
@@ -1631,6 +1631,12 @@
       (string->symbol (string-append type.str "-getter-maker")))
     (define %setter-maker
       (string->symbol (string-append type.str "-setter-maker")))
+    ;;If  a parent  record  type is  specified  and its  syntactic  identifier is  an
+    ;;imported syntactic binding:  we want to make sure that  the imported library is
+    ;;visited.
+    (when foo-parent
+      (visit-library-of-imported-syntactic-binding 'define-record-type input-form.stx
+						   foo-parent (current-inferior-lexenv)))
     `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))

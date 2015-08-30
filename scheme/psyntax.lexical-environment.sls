@@ -139,6 +139,7 @@
     make-syntactic-identifier-for-temporary-variable
     make-top-level-syntax-object/quoted-quoting
     wrap-source-expression
+    visit-library-of-imported-syntactic-binding
 
     ;; syntax objects: mapping identifiers to labels
     id->label
@@ -2279,6 +2280,51 @@
       (syntax-violation who
 	"identifier not bound to a record type descriptor"
 	input-form.stx type-name-id))))
+
+(define (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+  (let* ((label (id->label/or-error who input-form.stx id))
+	 (descr (label->syntactic-binding-descriptor label lexenv)))
+    (case (syntactic-binding-descriptor.type descr)
+      ((global global-macro global-macro! global-etv)
+       ;;We expect the syntactic binding's descriptor to be one among:
+       ;;
+       ;;   (global         . (?library . ?loc))
+       ;;   (global-macro   . (?library . ?loc))
+       ;;   (global-macro!  . (?library . ?loc))
+       ;;   (global-etv     . (?library . ?loc))
+       ;;
+       (visit-library (car (syntactic-binding-descriptor.value descr))))
+      (($record-type-name)
+       ;;We expect the syntactic binding's descriptor to be:
+       ;;
+       ;;   ($record-type-name . (?rtd-id ?rcd-id))
+       ;;
+       (let* ((rtd-id          (car (syntactic-binding-descriptor.value descr)))
+	      (rtd-id.label    (id->label/or-error who input-form.stx rtd-id))
+	      (rtd-id.descr    (label->syntactic-binding-descriptor rtd-id.label lexenv)))
+	 (case (syntactic-binding-descriptor.type rtd-id.descr)
+	   ((global)
+	    ;;This happens when ID is the  syntactic identifier of an imported record
+	    ;;type.
+	    (visit-library (car (syntactic-binding-descriptor.value rtd-id.descr))))
+	   ((lexical)
+	    ;;This happens when  ID is the syntactic identifier of  a locally defined
+	    ;;record type.
+	    (void))
+	   ((core-prim)
+	    ;;This happens when  ID is the syntactic identifier of  a built-in record
+	    ;;type, like predefined condition object types.
+	    (void))
+	   (else
+	    (syntax-violation who
+	      "while inspecting syntactic binding of R6RS record type, expected RTD identifier's descriptor to be of type \"global\""
+	      input-form.stx id)))))
+    (($core-rtd lexical local-macro local-macro! local-etv)
+     (void))
+    (else
+     (syntax-violation who
+       "attempt to force library visit, but it is impossible to find a library exporting the given syntactic binding identifier"
+       input-form.stx id)))))
 
 
 ;;;; system label gensym
