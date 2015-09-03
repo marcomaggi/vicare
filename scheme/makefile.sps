@@ -2987,6 +2987,7 @@
     (record-field-mutable?			v r ri)
     (record-rtd					v r ri)
     (record-type-field-names			v r ri)
+    (record-type-all-field-names		v $language)
     (record-type-generative?			v r ri)
     (record-type-name				v r ri)
     (record-type-opaque?			v r ri)

@@ -35,7 +35,7 @@
     record-type-field-names
 
     ;; extension utility functions, non-R6RS
-    rtd-subtype?
+    rtd-subtype?			record-type-all-field-names
     (rename (<rcd>-rtd		rcd-rtd)
 	    (<rcd>-parent-rcd	rcd-parent-rcd))
     record-reset			record=?
@@ -67,7 +67,7 @@
 		  record-type-field-names
 
 		  ;; extension utility functions, non-R6RS
-		  rtd-subtype?
+		  rtd-subtype?				record-type-all-field-names
 		  record-reset				record=?
 		  record-printer			record-destructor
 		  record-and-rtd?			record-object?
@@ -1260,6 +1260,22 @@
 	(and prtd^
 	     (or (eq? prtd^ prtd)
 		 (upper-parent ($<rtd>-parent prtd^)))))))
+
+(define* (record-type-all-field-names {rtd record-type-descriptor?})
+  ;;Return a vector holding one Scheme symbol for each field of RTD, including fields
+  ;;of the parents; the  order of the symbols is the same of  the order of the fields
+  ;;in the RTD definition.
+  ;;
+  (apply vector-append
+	 ;;Typically  the hierarchy  of  RTDs is  "short": 2,  3,  4 supertypes.   So
+	 ;;reversing the list is not a big problem.
+	 (reverse (let recur ((rtd rtd))
+		    (cond ((record-type-parent rtd)
+			   => (lambda (prtd)
+				(cons (record-type-field-names rtd)
+				      (recur prtd))))
+			  (else
+			   (list (record-type-field-names rtd))))))))
 
 (define* (record=? {obj1 non-opaque-record?} {obj2 non-opaque-record?})
   ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal

@@ -357,6 +357,108 @@
 
 (parametrise ((check-test-name	'record-type-field))
 
+;;; record-type-field-names
+
+  (check
+      (internal-body
+	(define-record-type alpha)
+	(record-type-field-names (record-type-descriptor alpha)))
+    => '#())
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(record-type-field-names (record-type-descriptor alpha)))
+    => '#(a b c))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(record-type-field-names (record-type-descriptor beta)))
+    => '#(d e f))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define-record-type gamma
+	  (parent beta)
+	  (fields g h i))
+	(record-type-field-names (record-type-descriptor gamma)))
+    => '#(g h i))
+
+;;; --------------------------------------------------------------------
+;;; record-type-all-field-names
+
+  (check
+      (internal-body
+	(define-record-type alpha)
+	(record-type-all-field-names (record-type-descriptor alpha)))
+    => '#())
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(record-type-all-field-names (record-type-descriptor alpha)))
+    => '#(a b c))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(record-type-all-field-names (record-type-descriptor beta)))
+    => '#(a b c d e f))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define-record-type gamma
+	  (parent beta)
+	  (fields g h i))
+	(record-type-all-field-names (record-type-descriptor gamma)))
+    => '#(a b c d e f g h i))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define-record-type gamma
+	  (parent beta)
+	  (fields g h i))
+	(define fields
+	  (record-type-all-field-names (record-type-descriptor gamma)))
+	(define O
+	  (make-gamma 1 2 3 4 5 6 7 8 9))
+	(let recur ((len (vector-length fields))
+		    (i   0))
+	  (if (fx<? i len)
+	      (cons (list (vector-ref fields i)
+			  (struct-ref O i))
+		    (recur len (fxadd1 i)))
+	    '())))
+    => '((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9)))
+
+;;; --------------------------------------------------------------------
+
   (check	;safe accessors
       (let ()
 	(define-record-type color

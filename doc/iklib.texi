@@ -11249,6 +11249,46 @@ Return @true{} if @var{obj} is an @rnrs{6} record, otherwise return
 record--type is opaque.
 @end defun
 
+
+@defun record-type-all-field-names @var{rtd}
+Return a vector holding one Scheme symbol for each field of @var{rtd},
+including fields of the parents; the order of the symbols is the same of
+the order of the fields in the @var{rtd} definition.
+
+If we need to couple the field names to the field values, we can do it
+as follows:
+
+@lisp
+(import (vicare))
+
+(define-record-type alpha
+  (fields a b c))
+
+(define-record-type beta
+  (parent alpha)
+  (fields d e f))
+
+(define-record-type gamma
+  (parent beta)
+  (fields g h i))
+
+(define fields
+  (record-type-all-field-names (record-type-descriptor gamma)))
+
+(define O
+  (make-gamma 1 2 3 4 5 6 7 8 9))
+
+(let recur ((len (vector-length fields))
+            (i   0))
+  (if (fx<? i len)
+      (cons (list (vector-ref fields i)
+                  (struct-ref O i))
+            (recur len (fxadd1 i)))
+    '())))
+@result{} ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9))
+@end lisp
+@end defun
+
 @c page
 @node iklib promises
 @section Delay, force and promises
