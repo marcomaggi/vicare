@@ -48,6 +48,11 @@
 	  $code-annotation)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
     ;;2015)
+    (prefix (only (ikarus.io)
+		  open-textual-output-port?)
+	    io.)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
+    ;;2015)
     (prefix (only (ikarus.keywords)
 		  keyword->string)
 	    keywords.)
@@ -127,13 +132,11 @@
     ((x)
      (%write-to-port x (current-output-port))
      (void))
-    ((x p)
-     (assert-open-textual-output-port p __who__)
+    ((x {p io.open-textual-output-port?})
      (%write-to-port x p)
      (void)))
 
-  (define* (put-datum p x)
-    (assert-open-textual-output-port p __who__)
+  (define* (put-datum {p io.open-textual-output-port?} x)
     (%write-to-port x p)
     (void))
 
@@ -141,15 +144,13 @@
     ((x)
      (%display-to-port x (current-output-port))
      (void))
-    ((x p)
-     (assert-open-textual-output-port p __who__)
+    ((x {p io.open-textual-output-port?})
      (%display-to-port x p)
      (void)))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (fprintf p {fmt string?} . args)
-    (assert-open-textual-output-port p __who__)
+  (define* (fprintf {p io.open-textual-output-port?} {fmt string?} . args)
     (%formatter __who__ p fmt args)
     (void))
 
@@ -167,16 +168,16 @@
 
   (define (%write-to-port x p)
     (parametrise ((the-printer-printing-style 'write))
-      (let ((h (make-eq-hashtable)))
-	(traverse x h)
-	(write-object x p #t h 0)
+      (let ((marks-table (make-eq-hashtable)))
+	(traverse x marks-table)
+	(write-object x p #t marks-table 0)
 	(void))))
 
   (define (%display-to-port x p)
     (parametrise ((the-printer-printing-style 'display))
-      (let ((h (make-eq-hashtable)))
-	(traverse x h)
-	(write-object x p #f h 0)
+      (let ((marks-table (make-eq-hashtable)))
+	(traverse x marks-table)
+	(write-object x p #f marks-table 0)
 	(void))))
 
 ;;; --------------------------------------------------------------------
@@ -258,14 +259,6 @@
 	    (begin
 	      (write-char ch p)
 	      (loop (fxadd1 i) arg*)))))))
-
-  (define (assert-open-textual-output-port p who)
-    (unless (output-port? p)
-      (error who "not an output port" p))
-    (unless (textual-port? p)
-      (error who "not a textual port" p))
-    (when (port-closed? p)
-      (error who "port is closed" p)))
 
   #| end of module |# )
 
