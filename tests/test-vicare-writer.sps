@@ -174,6 +174,16 @@
     => "#:ciao")
 
 ;;; --------------------------------------------------------------------
+
+  (check
+      (display-it #:A)
+    => "#:A")
+
+  (check
+      (display-it #:ciao)
+    => "#:ciao")
+
+;;; --------------------------------------------------------------------
 ;;; documentation examples
 
   (check
@@ -557,9 +567,13 @@
 ;;; --------------------------------------------------------------------
 ;;; documentation examples
 
+  ;;Built-in printer function.
+  ;;
   (parametrise ((print-graph #t))
     (internal-body
       (define-struct duo (one two))
+
+      ;;; display
 
       (check
 	  (with-output-to-string
@@ -583,49 +597,202 @@
 		(display A))))
 	=> "#0=#[struct duo one=1 two=#0#]")
 
+      ;;; write
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (write (make-duo 1 2))))
+	=> "#[struct duo one=1 two=2]")
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let* ((A (make-duo 1 2))
+		     (B (make-duo A A)))
+		(write B))))
+	=> "#[struct duo one=#0=#[struct duo one=1 two=2] two=#0#]")
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let ((A (make-duo 1 (void))))
+		(set-duo-two! A A)
+		(write A))))
+	=> "#0=#[struct duo one=1 two=#0#]")
+
+      ;;; pretty-print
+
+      (parametrise ((pretty-width 13))
+	(pretty-print (make-duo 1 2))
+	(newline)
+	(flush-output-port (current-output-port)))
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (pretty-print (make-duo 1 2))))
+	=> "(struct duo (one 1) (two 2))\n")
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let* ((A (make-duo 1 2))
+		     (B (make-duo A A)))
+		(pretty-print B))))
+	=> "(struct duo (one #0=(struct duo (one 1) (two 2))) (two #0#))\n")
+
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let ((A (make-duo 1 (void))))
+		(set-duo-two! A A)
+		(pretty-print A))))
+	=> "#0=(struct duo (one 1) (two #0#))\n")
+
       (void)))
 
 ;;;
 
-  (internal-body
+  ;;Custom printer function.
+  ;;
+  (parametrise ((print-graph #t))
+    (internal-body
 
-    (define-struct duo
-      (one two))
+      (define-struct duo
+	(one two))
 
-    (set-struct-type-printer! (struct-type-descriptor duo)
-			      (lambda (stru port sub-printer)
-				(display "#{duo " port)
-				(sub-printer (duo-one stru))
-				(display " " port)
-				(sub-printer (duo-two stru))
-				(display "}" port)))
+      (set-struct-type-printer! (struct-type-descriptor duo)
+	(lambda (stru port sub-printer)
+	  (display "#{duo " port)
+	  (sub-printer (duo-one stru))
+	  (display " " port)
+	  (sub-printer (duo-two stru))
+	  (display "}" port)))
 
-    ;; simple struct
-    (check
-	(with-output-to-string
-	  (lambda ()
-	    (display (make-duo 1 2))))
-      => "#{duo 1 2}")
+      ;; simple struct
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (display (make-duo 1 2))))
+	=> "#{duo 1 2}")
 
-    ;; struct with shared object
-    (check
-	(with-output-to-string
-	  (lambda ()
-	    (let* ((A (make-duo 1 2))
-		   (B (make-duo A A)))
-	      (display B))))
-      => "#{duo #0=#{duo 1 2} #0#}")
+      ;; struct with shared object
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let* ((A (make-duo 1 2))
+		     (B (make-duo A A)))
+		(display B))))
+	=> "#{duo #0=#{duo 1 2} #0#}")
 
-    ;; struct with cyclic reference to itself
-    (check
-	(with-output-to-string
-	  (lambda ()
-	    (let ((A (make-duo 1 (void))))
-	      (set-duo-two! A A)
-	      (display A))))
-      => "#0=#{duo 1 #0#}")
+      ;; struct with cyclic reference to itself
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let ((A (make-duo 1 (void))))
+		(set-duo-two! A A)
+		(display A))))
+	=> "#0=#{duo 1 #0#}")
 
-    (void))
+      (void)))
+
+;;;
+
+  ;;Custom printer function that differentiates between printing styles.
+  ;;
+  (parametrise ((print-graph #t))
+    (internal-body
+
+      (define-struct duo
+	(one two))
+
+      (set-struct-type-printer! (struct-type-descriptor duo)
+	(lambda (stru port sub-printer)
+	  (case (printer-printing-style)
+	    ((display)
+	     (display "#{duo " port)
+	     (sub-printer (duo-one stru))
+	     (display " " port)
+	     (sub-printer (duo-two stru))
+	     (display "}" port))
+	    ((write)
+	     (display "(" port)
+	     ;;By using the sub-printer: we make this sexp shared too.
+	     (sub-printer '(struct-constructor (struct-type-descriptor duo)))
+	     (display " " port)
+	     (sub-printer (duo-one stru))
+	     (display " " port)
+	     (sub-printer (duo-two stru))
+	     (display ")" port))
+	    ((pretty-print)
+	     (sub-printer `(struct duo
+				   #:one ,(duo-one stru)
+				   #:two ,(duo-two stru)))))))
+
+      (parametrise ((pretty-width 13))
+	(pretty-print (make-duo 1 2))
+	(newline)
+	(flush-output-port (current-output-port)))
+
+      ;; simple struct, display
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (display (make-duo 1 2))))
+	=> "#{duo 1 2}")
+
+      ;; simple struct, write
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (write (make-duo 1 2))))
+	=> "((struct-constructor (struct-type-descriptor duo)) 1 2)")
+
+      ;; simple struct, pretty-print
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (pretty-print (make-duo 1 2))))
+	=> "(struct duo #:one 1 #:two 2) \n")
+
+      ;; struct with shared object, display
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let* ((A (make-duo 1 2))
+		     (B (make-duo A A)))
+		(display B))))
+	=> "#{duo #0=#{duo 1 2} #0#}")
+
+      ;; struct with shared object, write
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let* ((A (make-duo 1 2))
+		     (B (make-duo A A)))
+		(write B))))
+	=> "(#0=(struct-constructor (struct-type-descriptor duo)) #1=(#0# 1 2) #1#)")
+
+      ;; struct with cyclic reference to itself, display
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let ((A (make-duo 1 (void))))
+		(set-duo-two! A A)
+		(display A))))
+	=> "#0=#{duo 1 #0#}")
+
+      ;; struct with cyclic reference to itself, write
+      (check
+	  (with-output-to-string
+	    (lambda ()
+	      (let ((A (make-duo 1 (void))))
+		(set-duo-two! A A)
+		(write A))))
+	=> "#0=((struct-constructor (struct-type-descriptor duo)) 1 #0#)")
+
+      (void)))
 
   #t)
 
@@ -640,7 +807,7 @@
 	(define-struct duo	(one two))
 	(define A		(make-duo 1 2))
 	(pretty-it A))
-    => "#[struct duo one=1 two=2]\n")
+    => "(struct duo (one 1) (two 2))\n")
 
   (check
       (parametrise ((print-graph #f))
@@ -649,7 +816,7 @@
 	  (define A		(make-duo 1 2))
 	  (define P		(cons A A))
 	  (pretty-it P)))
-    => "(#[struct duo one=1 two=2] . #[struct duo one=1 two=2])\n")
+    => "((struct duo (one 1) (two 2)) . (struct duo (one 1) (two 2)))\n")
 
   (check
       (parametrise ((print-graph #t))
@@ -658,7 +825,7 @@
 	  (define A		(make-duo 1 2))
 	  (define P		(cons A A))
 	  (pretty-it P)))
-    => "(#0=#[struct duo one=1 two=2] . #0#)\n")
+    => "(#0=(struct duo (one 1) (two 2)) . #0#)\n")
 
   ;;One struct with circular reference.
   ;;
@@ -668,7 +835,7 @@
 	(define A		(make-duo 1 2))
 	(set-duo-two! A A)
 	(pretty-it A))
-    => "#0=#[struct duo one=1 two=#0#]\n")
+    => "#0=(struct duo (one 1) (two #0#))\n")
 
   ;;One struct with two circular references.
   ;;
@@ -679,7 +846,7 @@
 	(set-duo-one! A A)
 	(set-duo-two! A A)
 	(pretty-it A))
-    => "#0=#[struct duo one=#0# two=#0#]\n")
+    => "#0=(struct duo (one #0#) (two #0#))\n")
 
   ;;Two structs with circular reference.
   ;;
@@ -690,7 +857,7 @@
 	(define B		(make-duo 3 A))
 	(set-duo-two! A B)
 	(pretty-it B))
-    => "#0=#[struct duo one=3 two=#[struct duo one=1 two=#0#]]\n")
+    => "#0=(struct duo (one 3) (two (struct duo (one 1) (two #0#))))\n")
 
 ;;; --------------------------------------------------------------------
 ;;; custom printer
@@ -717,30 +884,12 @@
 	(define-struct duo	(one two))
 	(define A		(make-duo 1 2))
 	(define (printer stru port sub-printer)
-	  (display "#{duo " port)
-	  (sub-printer (duo-one stru))
-	  (display " " port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(struct duo
+				#:one ,(duo-one stru)
+				#:two ,(duo-two stru))))
 	(set-struct-type-printer! (struct-type-descriptor duo) printer)
 	(pretty-it A))
-    => "#{duo 1 2}\n")
-
-  ;;Use of sub-printer on immediate objects.
-  ;;
-  (check
-      (internal-body
-	(define-struct duo	(one two))
-	(define A		(make-duo 1 2))
-	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
-	(set-struct-type-printer! (struct-type-descriptor duo) printer)
-	(pretty-it A))
-    => "#{duo one=1 two=2}\n")
+    => "(struct duo #:one 1 #:two 2) \n")
 
   ;;Use of sub-printer on compound objects.
   ;;
@@ -750,14 +899,12 @@
 	(define A		(make-duo 1 2))
 	(define B		(make-duo 3 A))
 	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(struct duo
+				#:one ,(duo-one stru)
+				#:two ,(duo-two stru))))
 	(set-struct-type-printer! (struct-type-descriptor duo) printer)
 	(pretty-it B))
-    => "#{duo one=3 two=#{duo one=1 two=2}}\n")
+    => "(struct duo #:one 3 #:two (struct duo #:one 1 #:two 2) ) \n")
 
   ;;Use of sub-printer on shared objects objects.
   ;;
@@ -767,14 +914,12 @@
 	(define A		(make-duo 1 2))
 	(define B		(make-duo A A))
 	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(struct duo
+				#:one ,(duo-one stru)
+				#:two ,(duo-two stru))))
 	(set-struct-type-printer! (struct-type-descriptor duo) printer)
 	(pretty-it B))
-    => "#{duo one=#0=#{duo one=1 two=2} two=#0#}\n")
+    => "(struct duo #:one #0=(struct duo #:one 1 #:two 2)  #:two #0#) \n")
 
   ;;Use of sub-printer on cyclic references.
   ;;
@@ -783,15 +928,13 @@
 	(define-struct duo	(one two))
 	(define A		(make-duo 1 (void)))
 	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(struct duo
+				#:one ,(duo-one stru)
+				#:two ,(duo-two stru))))
 	(set-struct-type-printer! (struct-type-descriptor duo) printer)
 	(set-duo-two! A A)
 	(pretty-it A))
-    => "#0=#{duo one=1 two=#0#}\n")
+    => "#0=(struct duo #:one 1 #:two #0#) \n")
 
 ;;; --------------------------------------------------------------------
 ;;; struct-type descriptors
@@ -846,6 +989,36 @@
 	(duo-two-set! A B)
 	(write-it B))
     => "#0=#[record duo one=3 two=#[record duo one=1 two=#0#]]")
+
+  ;;Record with 1 parent.
+  ;;
+  (check
+      (internal-body
+	(define-record-type high
+	  (fields a b))
+	(define-record-type low
+	  (parent high)
+	  (fields c d))
+	(write-it (make-low 0 1 2 3)))
+    => "#[record low a=0 b=1 c=2 d=3]")
+
+  ;;Record with 2 parents.
+  ;;
+  (check
+      (internal-body
+	(define-record-type high
+	  (fields a b))
+	(define-record-type middle
+	  (parent high)
+	  (fields c d))
+	(define-record-type low
+	  (parent middle)
+	  (fields e f))
+	(define R
+	  (make-low 0 1 2 3 4 5))
+	;;(debug-print R)
+	(write-it R))
+    => "#[record low a=0 b=1 c=2 d=3 e=4 f=5]")
 
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
@@ -963,7 +1136,7 @@
 	(define A
 	  (make-duo 1 2))
 	(pretty-it A))
-    => "#[record duo one=1 two=2]\n")
+    => "(record duo (one 1) (two 2))\n")
 
   (check
       (parametrise ((print-graph #f))
@@ -973,7 +1146,7 @@
 	  (define A	(make-duo 1 2))
 	  (define P	(cons A A))
 	  (pretty-it P)))
-    => "(#[record duo one=1 two=2] . #[record duo one=1 two=2])\n")
+    => "((record duo (one 1) (two 2)) . (record duo (one 1) (two 2)))\n")
 
   (check
       (parametrise ((print-graph #t))
@@ -983,7 +1156,7 @@
 	  (define A	(make-duo 1 2))
 	  (define P	(cons A A))
 	  (pretty-it P)))
-    => "(#0=#[record duo one=1 two=2] . #0#)\n")
+    => "(#0=(record duo (one 1) (two 2)) . #0#)\n")
 
   ;;One record with circular reference.
   ;;
@@ -994,7 +1167,7 @@
 	(define A	(make-duo 1 2))
 	(duo-two-set! A A)
 	(pretty-it A))
-    => "#0=#[record duo one=1 two=#0#]\n")
+    => "#0=(record duo (one 1) (two #0#))\n")
 
   ;;One record with two circular references.
   ;;
@@ -1007,7 +1180,7 @@
 	(duo-one-set! A A)
 	(duo-two-set! A A)
 	(pretty-it A))
-    => "#0=#[record duo one=#0# two=#0#]\n")
+    => "#0=(record duo (one #0#) (two #0#))\n")
 
   ;;Two records with circular reference.
   ;;
@@ -1019,7 +1192,37 @@
 	(define B	(make-duo 3 A))
 	(duo-two-set! A B)
 	(pretty-it B))
-    => "#0=#[record duo one=3 two=#[record duo one=1 two=#0#]]\n")
+    => "#0=(record duo (one 3) (two (record duo (one 1) (two #0#))))\n")
+
+  ;;Record with 1 parent.
+  ;;
+  (check
+      (internal-body
+	(define-record-type high
+	  (fields a b))
+	(define-record-type low
+	  (parent high)
+	  (fields c d))
+	(pretty-it (make-low 0 1 2 3)))
+    => "(record low (a 0) (b 1) (c 2) (d 3))\n")
+
+  ;;Record with 2 parents.
+  ;;
+  (check
+      (internal-body
+	(define-record-type high
+	  (fields a b))
+	(define-record-type middle
+	  (parent high)
+	  (fields c d))
+	(define-record-type low
+	  (parent middle)
+	  (fields e f))
+	(define R
+	  (make-low 0 1 2 3 4 5))
+	;;(debug-print R)
+	(pretty-it R))
+    => "(record low (a 0) (b 1) (c 2) (d 3) (e 4) (f 5))\n")
 
 ;;; --------------------------------------------------------------------
 ;;; custom printer
@@ -1049,31 +1252,10 @@
 	  (fields (mutable one) (mutable two)))
 	(define A		(make-duo 1 2))
 	(define (printer stru port sub-printer)
-	  (display "#{duo " port)
-	  (sub-printer (duo-one stru))
-	  (display " " port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(record duo #:one ,(duo-one stru) #:two ,(duo-two stru))))
 	(record-type-printer-set! (record-type-descriptor duo) printer)
 	(pretty-it A))
-    => "#{duo 1 2}\n")
-
-  ;;Use of sub-printer on immediate objects.
-  ;;
-  (check
-      (internal-body
-	(define-record-type duo
-	  (fields (mutable one) (mutable two)))
-	(define A		(make-duo 1 2))
-	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
-	(record-type-printer-set! (record-type-descriptor duo) printer)
-	(pretty-it A))
-    => "#{duo one=1 two=2}\n")
+    => "(record duo #:one 1 #:two 2) \n")
 
   ;;Use of sub-printer on compound objects.
   ;;
@@ -1084,14 +1266,10 @@
 	(define A		(make-duo 1 2))
 	(define B		(make-duo 3 A))
 	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(record duo #:one ,(duo-one stru) #:two ,(duo-two stru))))
 	(record-type-printer-set! (record-type-descriptor duo) printer)
 	(pretty-it B))
-    => "#{duo one=3 two=#{duo one=1 two=2}}\n")
+    => "(record duo #:one 3 #:two (record duo #:one 1 #:two 2) ) \n")
 
   ;;Use of sub-printer on shared objects objects.
   ;;
@@ -1102,14 +1280,10 @@
 	(define A		(make-duo 1 2))
 	(define B		(make-duo A A))
 	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(record duo #:one ,(duo-one stru) #:two ,(duo-two stru))))
 	(record-type-printer-set! (record-type-descriptor duo) printer)
 	(pretty-it B))
-    => "#{duo one=#0=#{duo one=1 two=2} two=#0#}\n")
+    => "(record duo #:one #0=(record duo #:one 1 #:two 2)  #:two #0#) \n")
 
   ;;Use of sub-printer on cyclic references.
   ;;
@@ -1119,15 +1293,11 @@
 	  (fields (mutable one) (mutable two)))
 	(define A		(make-duo 1 (void)))
 	(define (printer stru port sub-printer)
-	  (display "#{duo one=" port)
-	  (sub-printer (duo-one stru))
-	  (display " two=" port)
-	  (sub-printer (duo-two stru))
-	  (display "}" port))
+	  (sub-printer `(record duo #:one ,(duo-one stru) #:two ,(duo-two stru))))
 	(record-type-printer-set! (record-type-descriptor duo) printer)
 	(duo-two-set! A A)
 	(pretty-it A))
-    => "#0=#{duo one=1 two=#0#}\n")
+    => "#0=(record duo #:one 1 #:two #0#) \n")
 
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
@@ -1137,6 +1307,26 @@
      (define-record-type duo
        (fields (mutable one) (mutable two)))
      (record-type-descriptor duo)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'pretty-formats))
+
+  (case-define doit
+    ((sexp)
+     (doit sexp 60))
+    ((sexp width)
+     (parametrise ((pretty-width width))
+       (pretty-print sexp)
+       (flush-output-port (current-output-port)))))
+
+;;; --------------------------------------------------------------------
+
+  (doit '(let ((a 1) (b 2)) (this a) (that b)) 13)
+  (doit '(receive (a b) (values 1 2) (this a) (that b)))
+  (doit '(receive-and-return (a b) (values 1 2) (this a) (that b)))
+
 
   #t)
 

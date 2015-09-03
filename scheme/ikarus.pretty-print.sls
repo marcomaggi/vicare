@@ -41,14 +41,24 @@
 	  non-negative-fixnum?)
     (only (vicare system $structs)
 	  base-rtd)
-    (only (ikarus writer)
-	  traverse
-	  TRAVERSAL-HELPERS)
+    (prefix (only (ikarus writer)
+		  the-printer-printing-style
+		  case-printing-style
+		  traverse
+		  TRAVERSAL-HELPERS)
+	    writer.)
     (only (ikarus.pretty-formats)
 	  get-fmt)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
+    ;;2015)
     (prefix (only (ikarus structs)
 		  struct-field-names)
 	    structs.)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
+    ;;2015)
+    (prefix (only (ikarus.keywords)
+		  keyword->string)
+	    keywords.)
     (prefix (only (ikarus records procedural)
 		  ;;FIXME  This import  must  be removed  at the  next  boot image  rotation.
 		  ;;(Marco Maggi; Sun May 10, 2015)
@@ -162,13 +172,16 @@
     (%pretty x port start-column ending-newline?))
 
   (define (%pretty x port start-column ending-newline?)
-    (let ((h (make-eq-hashtable)))
-      (traverse x h)
-      (output (boxify x h) port start-column))
+    (parametrise ((writer.the-printer-printing-style 'pretty-print))
+      (let ((marks-table (make-eq-hashtable)))
+	(writer.traverse x marks-table)
+	(output (boxify x marks-table) port start-column)))
     (when ending-newline?
       (newline port)))
 
   #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
 (define (debug-print . args)
   ;;Print arguments for debugging purposes.
@@ -212,6 +225,9 @@
      ((would-block-object? x)	"#!would-block-object")
      ((bwp-object? x)		"#!bwp-object")
      ((unbound-object? x)	"#!unbound-object")
+     ;;At present  keywords are  structs, so  we must process  them before  the other
+     ;;structs.  We do not want them to be printed as shared objects.
+     ((keyword? x)		(%boxify-object-keyword x))
      ((struct? x)		(boxify-shared x %boxify-object-struct))
      ((gensym? x)		(boxify-shared x %boxify-object-format))
      ((string? x)		(boxify-shared x %boxify-object-format))
@@ -226,6 +242,9 @@
     ;;We want the "~s" format here, so that gensyms are written out in full.
     ;;
     (format "~s" obj))
+
+  (define (%boxify-object-keyword x)
+    (keywords.keyword->string x))
 
 ;;; --------------------------------------------------------------------
 
@@ -346,7 +365,8 @@
 
     (define (sum-box* ls)
       ;;Non-tail recursive function.  Return a fixnum representing the sum of all the
-      ;;lengths of the boxes and strings in the list LS.
+      ;;lengths of  the boxes and  strings in the  list LS; for  every pair add  1 to
+      ;;represent a single white space of separation between the list items.
       ;;
       (let ((D (cdr ls)))
 	(if (pair? (cdr ls))
@@ -483,10 +503,10 @@
     (define (%boxify-object-struct x)
       (let ((b (hashtable-ref marks-table x #f)))
 	(if (pair? b)
-	    (%boxify-custom-struct (cdr b))
-	  (%boxify-vanilla-struct x))))
+	    (%boxify-struct/custom-printer (cdr b))
+	  (%boxify-struct/default-printer x))))
 
-    (define (%boxify-custom-struct cache-stack)
+    (define (%boxify-struct/custom-printer cache-stack)
       ;;Boxify a struct object that makes use of a custom printer functions.
       ;;
       ;;We expect CACHE-STACK to  be a pair whose car is a suffix  string to write at
@@ -523,7 +543,7 @@
       ;;                | next --> #f
       ;;               ---
       ;;
-      (import TRAVERSAL-HELPERS)
+      (import writer.TRAVERSAL-HELPERS)
       ;;This RECUR  loop is conceptually  a fold-right for  the linked list  of CACHE
       ;;structs.  We traverse the  linked list of CACHE structs from  the tail to the
       ;;end, boxifying the  tail objects first; this way the  marks "#N=" are defined
@@ -551,39 +571,26 @@
       ;;
       (define box*
 	(fold-left (lambda (box* pair)
-		     (cons* (car pair) ;the STRING field
-			    (cdr pair) ;the boxification of the OBJECT field
-			    box*))
+		     (if (string-empty? (car pair))
+			 (cons (cdr pair) ;the boxification of the OBJECT field
+			       box*)
+		       (cons* (car pair) ;the STRING field
+			      (cdr pair) ;the boxification of the OBJECT field
+			      box*)))
 	  (list (car cache-stack))
 	  pair*))
       (define len
 	(fold-left (lambda (ac box)
 		     (+ 1 ac (box-length box)))
 	  -1 box*))
-      ;;FIXME We should consider using an  FBOX, after the code for outputting FBOXes
-      ;;has been  reviewed.  Alternatively  introduce a  new box  for the  purpose of
-      ;;printing structs and records.  (Marco Maggi; Thu Aug 27, 2015)
-      ;;
-      ;;(make-fbox len box* (%gensep*-default box*))
-      (make-cbox len box*))
+      (make-fbox len box* #f))
 
-    (define (%boxify-vanilla-struct stru)
+    (define (%boxify-struct/default-printer stru)
       ;;Boxify a struct object that makes use of the built-in Scheme objects writer.
       ;;
       (cond ((records.record-object? stru)
 	     ;;It is a R6RS record.
-	     (let* ((rtd	(record-rtd stru))
-		    (name	(%boxify-object (record-type-name rtd)))
-		    (field-box*	(%boxify-struct-fields stru 0 (vector->list (record-type-field-names rtd))))
-		    (ls		(cons name field-box*))
-		    (len	(fold-left (lambda (ac s)
-					     (+ 1 ac (box-length s)))
-				  -1 ls))
-		    ;;FIXME  We should  consider using  an FBOX,  after the  code for
-		    ;;outputting FBOXes has been reviewed.  (Marco Maggi; Thu Aug 27,
-		    ;;2015)
-		    (box	(make-cbox len ls)))
-		 (%concatenate-into-cbox "#[record " box "]")))
+	     (%boxify-r6rs-record-object stru))
 
 	    ;;We do *not* handle opaque records specially.
 	    ;; ((let ((rtd (struct-rtd stru)))
@@ -591,54 +598,93 @@
 	    ;; 	       (record-type-opaque? rtd)))
 	    ;; 	"#<unknown>")
 
-	    ((keyword? stru)
-	     (string-append "#:" (symbol->string (keyword->symbol stru))))
-
 	    (else
-	     ;;It is a Vicare's structure.
-	     (let* ((std	(struct-rtd stru))
-		    (instance?	(or (not (eq? std (base-rtd)))
-				    (record-type-descriptor? std)
-				    (records.record-constructor-descriptor? std)))
-		    (name	(%boxify-object (string->symbol (struct-name stru))))
-		    (field-box*	(%boxify-struct-fields stru
-						       (if instance? 0 1)
-						       (let ((names (struct-type-field-names std)))
-							 (if instance? names (cdr names)))))
-		    (box*	(cons name field-box*))
-		    (len	(fold-left (lambda (ac s)
-					     (+ 1 ac (box-length s)))
-				  -1 box*))
-		    ;;FIXME  We should  consider using  an FBOX,  after the  code for
-		    ;;outputting FBOXes has  been reviewed.  Alternatively, introduce
-		    ;;a  new box  for the  purpose of  printing structs  and records.
-		    ;;(Marco Maggi; Thu Aug 27, 2015)
-		    ;;
-		    ;;(box	(make-fbox len box* (%gensep*-default box*)))
-		    (box	(make-cbox len box*)))
-		 (%concatenate-into-cbox (if instance? "#[struct " "#[struct-type ")
-					 box "]")))))
+	     (%boxify-vicare-struct-object stru))))
 
-    (define (%boxify-struct-fields stru stru.idx stru.field-names)
-      ;;Return a  list of CBOX structs,  one for each  field to print.  Each  CBOX is
-      ;;meant to represent the string representation:
+    (define (%boxify-r6rs-record-object stru)
+      ;;We want a prettyfication as follows:
       ;;
-      ;;   ?field-name=?field-value
+      ;;   (define-record-type duo
+      ;;     (fields one two))
       ;;
-      ;;where ?FIELD-NAME=  is a string and  ?FIELD-VALUE is the boxification  of the
-      ;;field's value.
+      ;;   (pretty-print (make-duo 1 2))
+      ;;   -> (record duo
+      ;;        (one 1)
+      ;;        (two 2))
       ;;
-      (let recur ((i           stru.idx)
-		  (field-names stru.field-names))
-	(if (pair? field-names)
-	    (let* ((nam   (car field-names))
-		   (val   (struct-ref stru i))
-		   (box1  (string-append " " (symbol->string nam) "="))
-		   (box2  (%boxify-object val)))
-	      (cons (make-cbox (+ (string-length box1) (box-length box2))
-			       (list box1 box2))
-		    (recur (add1 i) (cdr field-names))))
-	  '())))
+      (let* ((rtd		(record-rtd stru))
+	     (field-name*	(let recur ((rtd rtd))
+				  (cond ((record-type-parent rtd)
+					 => (lambda (prtd)
+					      (append (recur prtd)
+						      (vector->list (record-type-field-names rtd)))))
+					(else
+					 (vector->list (record-type-field-names rtd)))))))
+	(receive (field-box* field-sep*)
+	    (%boxify-struct-fields stru 0 field-name*)
+	  (let* ((record-box	(%boxify-object 'record))
+		 (type-name-box	(symbol->string (record-type-name rtd)))
+		 (box*		(cons* record-box type-name-box field-box*))
+		 (sep*		(cons* 0 ;separator between record-box and type-name-box
+				       (pretty-indent) ;separator between type-name-box and field
+				       field-sep*))
+		 (len		(fold-left (lambda (len box)
+					     (+ len (box-length box)))
+				  0 box*)))
+	    (make-cbox (+ 2 len) (list "(" (make-fbox len box* sep*) ")"))))))
+
+    (define (%boxify-vicare-struct-object stru)
+      ;;We want a prettyfication as follows:
+      ;;
+      ;;   (define-struct duo
+      ;;     (one two))
+      ;;
+      ;;   (pretty-print (make-duo 1 2))
+      ;;   -> (struct duo
+      ;;        (one 1)
+      ;;        (two 2))
+      ;;
+      (let* ((std		(struct-rtd stru))
+	     (field-name*	(struct-type-field-names std)))
+	(receive (field-box* field-sep*)
+	    (let ((instance? (or (not (eq? std (base-rtd)))
+				 (record-type-descriptor? std)
+				 (records.record-constructor-descriptor? std))))
+	      (%boxify-struct-fields stru
+				     (if instance? 0 1)
+				     (if instance? field-name* (cdr field-name*))))
+	  (let* ((struct-box	(%boxify-object 'struct))
+		 ;;The return value of STRUCT-NAME is a string.
+		 (type-name-box	(struct-name stru))
+		 (box*		(cons* struct-box type-name-box field-box*))
+		 (sep*		(cons* 0 ;separator between struct-box and type-name-box
+				       (pretty-indent) ;separator between type-name-box and field
+				       field-sep*))
+		 (len		(fold-left (lambda (len box)
+					     (+ len (box-length box)))
+				  0 box*)))
+	    (make-cbox (+ 2 len) (list "(" (make-fbox len box* sep*) ")"))))))
+
+    (define (%boxify-struct-fields stru field-idx field-name*)
+      ;;Non-tail recursive function.   Boxify the fields and return 2  values: a list
+      ;;of  boxes  representing  the  fields,  a list  of  fixnums  representing  the
+      ;;separators.
+      ;;
+      (if (pair? field-name*)
+	  ;;First we do the next field...
+	  (let ((box (let* ((box1 (%boxify-object (car field-name*)))
+			    (box2 (%boxify-object (struct-ref stru field-idx)))
+			    (len  (+ (box-length box1) (box-length box2)))
+			    (box  (make-fbox len (list box1 box2) #f)))
+		       (make-cbox (+ 2 len) (list "(" box ")"))))
+		(sep (pretty-indent)))
+	    ;;...  then we recurse  to process the rest of the  fields.  This way the
+	    ;;shared marks "#N" are introduced correctly.
+	    (receive (field-box* field-sep*)
+		(%boxify-struct-fields stru (fxadd1 field-idx) (cdr field-name*))
+	      (values (cons box field-box*)
+		      (cons sep field-sep*))))
+	(values '() '())))
 
     #| end of module: %BOXIFY-OBJECT-STRUCT |# )
 
@@ -668,15 +714,16 @@
 	'())))
 
   (define* (graphed? x)
-    (import TRAVERSAL-HELPERS)
+    (import writer.TRAVERSAL-HELPERS)
     (let ((b (get-writer-marks-bitfield __who__ marks-table x)))
       (cond ((writer-marks-bitfield.cyclic-set? b)	#t)
 	    ((writer-marks-bitfield.shared-set? b)	(print-graph))
-	    (else		#f))))
+	    (else					#f))))
 
   (define (unshared-list? x)
-    ;;Return true if X  is a non-empty list and all its cdrs  list are not-shared and
-    ;;not part of a cyclic compound.
+    ;;Return true if  X is a non-empty list  and all its cdrs are  not-shared and not
+    ;;part of a cyclic  compound.  Notice that the collected items  can be shared, it
+    ;;is the spine of the list (the pairs) that must not be shared.
     ;;
     (and (pair? x)
 	 (let loop ((D (cdr x)))
@@ -686,7 +733,7 @@
 		    (loop (cdr D)))))))
 
   (define* (boxify-shared x boxify-kont)
-    (import TRAVERSAL-HELPERS)
+    (import writer.TRAVERSAL-HELPERS)
     (let ((b (get-writer-marks-bitfield __who__ marks-table x)))
       (cond ((writer-marks-bitfield.mark-set? b)
 	     (string-append "#" (fixnum->string (writer-marks-bitfield.decode-mark b)) "#"))

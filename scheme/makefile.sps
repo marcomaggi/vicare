@@ -1201,6 +1201,7 @@
     (print-graph				v $language)
     (print-unicode				v $language)
     (printer-integer-radix			v $language)
+    (printer-printing-style			v $language)
     (unicode-printable-char?			v $language)
     (gensym-count				v $language)
     (gensym-prefix				v $language)

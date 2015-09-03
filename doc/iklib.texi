@@ -57,7 +57,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib eval::                  Extended code evaluation.
 * iklib cafe::                  Cafe.
 * iklib procedures::            Procedures.
-* iklib structs::               Structures and type descriptors.
+* iklib structs::               @value{PRJNAME}'s structs.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
 * iklib booleans::              Additional boolean functions.
@@ -9962,19 +9962,19 @@ Return the annotation of the procedure @var{proc}; return @false{} if
 
 @c page
 @node iklib structs
-@section Structures and type descriptors
+@section @value{PRJNAME}'s structs
 
 
-A data structure is like a lightweight record as defined by @rnrs{6}.
-@ref{objects structs} for more informations on the internals of data
-structures.
+A @value{PRJNAME}'s struct is a record object, lighter than records as
+defined by @rnrs{6}.  @ref{objects structs} for more informations on the
+internals of structs.
 
 @menu
-* iklib structs define::        Defining structure types.
+* iklib structs define::        Defining struct types.
 * iklib structs types::         Inspection and configuration of
-                                structure types.
-* iklib structs inspect::       Inspecting data structures.
-* iklib structs fields::        Accessing and mutating fields.
+                                struct types.
+* iklib structs inspect::       Inspecting structs.
+* iklib structs fields::        Accessing and mutating struct fields.
 @end menu
 
 @c page
@@ -9982,15 +9982,14 @@ structures.
 @subsection Defining structure types
 
 
-@deffn Syntax define-struct @meta{name} (@meta{field} ...)
-@deffnx Syntax define-struct @meta{name} (@meta{field} ...) (nongenerative @meta{uid})
-@deffnx Syntax define-struct (@meta{name} @meta{constructor} @meta{predicate}) (@meta{field} ...)
-@deffnx Syntax define-struct (@meta{name} @meta{constructor} @meta{predicate}) (@meta{field} ...) (nongenerative @meta{uid})
+@deffn Syntax define-struct @meta{type-name} (@meta{field} @dots{})
+@deffnx Syntax define-struct @meta{type-name} (@meta{field} @dots{}) (nongenerative @meta{uid})
+@deffnx Syntax define-struct (@meta{type-name} @meta{constructor} @meta{predicate}) (@meta{field} @dots{})
+@deffnx Syntax define-struct (@meta{type-name} @meta{constructor} @meta{predicate}) (@meta{field} @dots{}) (nongenerative @meta{uid})
 @deffnx {Auxiliary Syntax} nongenerative
-Define a new data structure type.  This macro is embedded in the
-expander.
+Define a new struct type.  This macro is embedded in the expander.
 
-@meta{name} must be a symbol representing the name of the structure; it
+@meta{type-name} must be a symbol representing the name of the structure; it
 is used to build names for the constructor, predicate, field accessors
 and mutators.  When @meta{constructor} is used: it must be an identifier
 representing the name of the constructor.  When @meta{predicate} is
@@ -10012,15 +10011,34 @@ The following definition:
 @end example
 
 @noindent
-expands to the definition of the following bindings:
+expands to the definition of the following syntactic bindings:
 
 @table @code
 @item color
-When the identifier representing the record type name is used in macro
-keyword position with the syntax:
+A syntactic identifier representing the type name.  When the tagged
+language is enabled, we can use this identifier to tag a variable
+syntactic binding:
+
+@lisp
+(define @{O color@}
+  (make-color 1 2 3))
+
+(O red)         @result{} 1
+(O green)       @result{} 2
+(O blue)        @result{} 3
+@end lisp
+
+We can use the identifier as argument for the @syntax{is-a?} syntax:
+
+@lisp
+(is-a? (make-color 1 2 3) color)        @result{} #t
+(is-a? "ciao" color)                    @result{} #f
+@end lisp
+
+When the identifier is used in macro keyword position with the syntax:
 
 @example
-(@meta{name} (@meta{expr} ...))
+(@meta{type-name} (@meta{expr} ...))
 @end example
 
 @noindent
@@ -10028,7 +10046,7 @@ the form is expanded to the application of the constructor to the
 results of evaluating the @meta{expr} arguments:
 
 @example
-(color (1 2 3)) @result{} #["color" 1 2 3]
+(color (1 2 3)) @result{} #["color" red=1 green=2 blue=3]
 @end example
 
 @item make-color @var{red} @var{green} @var{blue}
@@ -10077,10 +10095,10 @@ invalid: the behaviour is undefined.
 @end deffn
 
 
-@defun make-struct-type @var{name} @var{fields}
-@defunx make-struct-type @var{name} @var{fields} @var{uid}
-Build and return a new structure type descriptor.  @var{name} must be a
-string representing the type name.  @var{fields} must be a list of
+@defun make-struct-type @var{type-name} @var{fields}
+@defunx make-struct-type @var{type-name} @var{fields} @var{uid}
+Build and return a new struct--type descriptor.  @var{type-name} must be
+a string representing the type name.  @var{fields} must be a list of
 symbols representing the field names.
 
 The optional @var{uid} argument must be a symbol uniquely identifying
@@ -10091,8 +10109,8 @@ be a struct descriptor equal to the newly created @rtd{}.
 
 The use of a @var{uid} allows us to define a unique struct type in
 different libraries without sharing the definition by importing
-bindings.  For example, we can define a struct type in a library and
-import the definition in other libraries:
+syntactic bindings.  For example, we can define a struct type in a
+library and import the definition in other libraries:
 
 @example
 (library (one)
@@ -10146,10 +10164,10 @@ and everything will work as before.
 
 
 @menu
-* iklib structs types using::   Using structure types.
-* iklib structs types access::  Structure types accessors and mutators.
-* iklib structs types printer:: Structure printer customisation.
-* iklib structs types final::   Automatic finalisation of structures.
+* iklib structs types using::   Using struct types.
+* iklib structs types inspect:: Inspecting struct types.
+* iklib structs types printer:: Struct printer customisation.
+* iklib structs types final::   Automatic finalisation of structs.
 @end menu
 
 @c page
@@ -10157,8 +10175,8 @@ and everything will work as before.
 @subsubsection Using structure types
 
 
-@deffn Syntax struct-type-descriptor @meta{name}
-Evaluate to the type descriptor of the data structure @meta{name}, which
+@deffn Syntax struct-type-descriptor @meta{type-name}
+Evaluate to the type descriptor of the data structure @meta{type-name}, which
 must be the first argument to a previous use of @func{define-struct}.
 @end deffn
 
@@ -10173,29 +10191,55 @@ of libraries.
 
 
 @defun struct-type-descriptor? @var{obj}
-Return @true{} if @var{obj} is a Vicare struct type descriptor,
-otherwise return @false{}.  This predicate returns @false{} when applied
-to @rnrs{6} record type descriptors.
+Return @true{} if @var{obj} is a struct--type descriptor, otherwise
+return @false{}.  This predicate returns @false{} when applied to
+@rnrs{6} record--type descriptors.
 @end defun
 
 
 @defun struct-constructor @var{std}
-Return a constructor function for data structures of type @var{std}.
-The constructor accepts as many arguments as fields defined by @var{std}
-and returns a new structure instance.
+Return a constructor function for struct of type defined by the type
+descriptor @var{std}.  The returned constructor accepts as many
+arguments as there are fields specified by @var{std} and it returns a
+new struct instance.
+
+@lisp
+(define duo-std
+  (make-struct-type "duo" '(one two)))
+
+(define make-duo
+  (struct-constructor duo-std))
+
+(make-duo 1 2)  @result{} #[struct duo one=1 two=2]
+@end lisp
 @end defun
 
 
 @defun struct-predicate @var{std}
-Return a predicate function for structures of type @var{std}.
+Return a predicate function for structs of type defined by the type
+descriptor @var{std}.
+
+@lisp
+(define duo-std
+  (make-struct-type "duo" '(one two)))
+
+(define make-duo
+  (struct-constructor duo-std))
+
+(define duo?
+  (struct-predicate duo-std))
+
+(duo? (make-duo 1 2))   @result{} #t
+@end lisp
 @end defun
 
 
 @defun struct-field-accessor @var{std} @var{index/name}
 @defunx struct-field-mutator @var{std} @var{index/name}
 Return an accessor or mutator function for the field at @var{index/name}
-of data structures of type @var{std}.  @var{index/name} can be a field
-index or a symbol representing a field name.
+of structs of type defined by the type descriptor @var{std}.
+@var{index/name} can be a field index or a symbol representing a field
+name.
 
 @example
 (define-struct color
@@ -10215,74 +10259,95 @@ index or a symbol representing a field name.
 @end defun
 
 @c page
-@node iklib structs types access
-@subsubsection Structure types accessors and mutators
+@node iklib structs types inspect
+@subsubsection Inspecting struct types
 
 
 @defun struct-type-name @var{std}
-Return a string representing the name of structures of type @var{std}.
+Return a string representing the name of structs of type @var{std}.
 @end defun
 
 
 @defun struct-type-symbol @var{std}
-Return a symbol uniquely identifying the data structure type @var{std}.
+Return a symbol uniquely identifying the struct type @var{std}.
 @end defun
 
 
 @defun struct-type-field-names @var{std}
-Return a list of symbols representing the names of fields in structures
-of type @var{std}.
+Return a list of symbols representing the names of fields in structs of
+type @var{std}.
 @end defun
 
 @c page
 @node iklib structs types printer
-@subsubsection Structure printer customisation
+@subsubsection Structs printer customisation
 
 
-@value{PRJNAME}'s built--in Scheme objects writer can print structures
-just fine, handling cyclic references and shared objects:
+@value{PRJNAME}'s built--in Scheme objects writer can print structs just
+fine, handling cyclic references and shared objects:
 
 @lisp
 (import (vicare))
 (print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
 (define-struct duo (one two))
 
 ;; simple struct
-(with-output-to-string
-  (lambda ()
-    (display (make-duo 1 2))))
-@result{} "#[struct duo one=1 two=2]"
+(display (make-duo 1 2))
+@print{} #[struct duo one=1 two=2]
 
 ;; struct with shared object
-(with-output-to-string
-  (lambda ()
-    (let* ((A (make-duo 1 2))
-           (B (make-duo A A)))
-      (display B))))
-@result{} "#[struct duo one=#0=#[struct duo one=1 two=2] two=#0#]"
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (display B))
+@print{} #[struct duo one=#0=#[struct duo one=1 two=2] two=#0#]
 
 ;; struct with cyclic reference to itself
-(with-output-to-string
-  (lambda ()
-    (let ((A (make-duo 1 (void))))
-      (set-duo-two! A A)
-      (display A))))
-@result{} "#0=#[struct duo one=1 two=#0#]"
+(let ((A (make-duo 1 (void))))
+  (set-duo-two! A A)
+  (display A))
+@print{} #0=#[struct duo one=1 two=#0#]
 @end lisp
 
-The built--in writer also differentiates between ``@func{display}
-style'' printing and ``@func{write} style'' printing, although not for
-structures.
+For most Scheme object types, the built--in writer differentiates
+between @func{display}, @func{write} and @func{pretty-print} printing.
+When printing structs, the built--in writer makes @strong{no} difference
+between printing with @func{display} and @func{write}; it does it
+differently when printing with @func{pretty-print}:
 
-However, sometimes, we need to print a structure with a customised
+@lisp
+(import (vicare))
+(print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(define-struct duo (one two))
+
+;; simple struct
+(pretty-print (make-duo 1 2))
+@print{} (struct duo (one 1) (two 2))
+
+;; struct with shared object
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (pretty-print B))
+@print{} (struct duo (one #0=(struct duo (one 1) (two 2))) (two #0#))
+
+;; struct with cyclic reference to itself
+(let ((A (make-duo 1 (void))))
+  (set-duo-two! A A)
+  (pretty-print A))
+@print{} #0=(struct duo (one 1) (two #0#))
+@end lisp
+
+Sometimes, we need to print a structure with a customised
 representation.  For example keyword objects (@pxref{iklib keywords,
 Keyword objects}) are structures with a custom printer function:
 
 @lisp
-(with-output-to-string
-  (lambda ()
-    (display #:ciao)))
-@result{} "#:ciao"
+(display #:ciao)        @result{} #:ciao
 @end lisp
 
 A custom printer function accepts @math{3} arguments: the structure to
@@ -10354,7 +10419,7 @@ objects printer.
 
 @c page
 @node iklib structs types final
-@subsubsection Automatic finalisation of structures
+@subsubsection Automatic finalisation of structs
 
 
 @cindex Automatic finalisation of structures
@@ -15485,47 +15550,47 @@ counterpart:
 @subsection Formatting and printing strings
 
 
-@defun format @var{fmt-string} @var{args} ...
-The procedure @func{format} produces a string formatted according to
-@func{fmt-string} and the supplied arguments.  The format string
+@defun format @var{template} @var{arg} @dots{}
+Build and return a new string formatted according to the template in the
+string @var{template} and the supplied arguments.  The template string
 contains markers in which the string representation of each argument is
 placed.  The markers include:
 
 @table @code
 @item ~s
-instructs the formatter to place the next argument as if the procedure
+Instructs the formatter to place the next argument as if the procedure
 @func{write} has printed it; if the argument contains a string, the
 string will be quoted and all quotes and backslashes in the string will
 be escaped; similarly, characters will be printed using the @code{#\x}
-notation;
+notation.
 
 @item ~a
-instructs the formatter to place the next argument as if the procedure
+Instructs the formatter to place the next argument as if the procedure
 @func{display} has printed it; strings and characters are placed as they
-are in the output;
+are in the output.
 
 @item ~b
-instructs the formatter to convert the next argument to its binary (base
-2) representation; the argument must be an exact number;
+Instructs the formatter to convert the next argument to its binary (base
+2) representation; the argument must be an exact number.
 
 @item ~o
-is similar to @code{~b} except that the number is printed in octal (base
-8);
+Similar to @code{~b} except that the number is printed in octal (base
+8).
 
 @item ~x
-is similar to @code{~b} except that the number is printed in hexadecimal
-(base 16);
+Similar to @code{~b} except that the number is printed in hexadecimal
+(base 16).
 
 @item ~d
-outputs the next argument, which can be an exact or inexact number, in
-its decimal (base 10) representation;
+Outputs the next argument, which can be an exact or inexact number, in
+its decimal (base 10) representation.
 
 @item ~~
-instructs the formatter to place a tilde character, @code{~}, in the
-output without consuming an argument;
+Instructs the formatter to place a tilde character, @code{~}, in the
+output without consuming an argument.
 
 @item ~%
-instructs the formatter to place a newline character in the output
+Instructs the formatter to place a newline character in the output
 without consuming an argument.
 @end table
 
@@ -15543,10 +15608,9 @@ used.
 @end defun
 
 
-@defun printf @var{fmt-string} @var{args} ...
-The procedure @func{printf} is similar to @func{format} except that the
-output is sent to the @code{current-output-port} instead of being
-collected in a string.
+@defun printf @var{template} @var{arg} @dots{}
+Similar to @func{format} except that the output is sent to the
+@code{current-output-port} instead of being collected in a string.
 
 @example
 > (let ([n (+ (expt 2 32) #b11001)])
@@ -15556,10 +15620,9 @@ collected in a string.
 @end defun
 
 
-@defun fprintf @var{output-port} @var{fmt-string} @var{args} ...
-The procedure @func{fprintf} is similar to @func{printf} except that the
-output port to which the output is sent is specified as the first
-argument.
+@defun fprintf @var{output-port} @var{template} @var{arg} @dots{}
+Similar to @func{printf} except that the textual output port to which
+the output is sent is specified as the first argument.
 @end defun
 
 @c page
@@ -15569,11 +15632,10 @@ argument.
 
 @defun pretty-print @var{datum}
 @defunx pretty-print @var{datum} @var{output-port}
-The procedure @func{pretty-print} is intended for printing Scheme data,
-typically Scheme programs, in a format close to how a Scheme programmer
-would write it.  Unlike @func{write}, which writes its input all in one
-line, @func{pretty-print} inserts spaces and new lines in order to
-produce more pleasant output.
+Printi Scheme data, typically Scheme programs, in a format close to how
+a Scheme programmer would write it.  Unlike @func{write}, which writes
+its input all in one line, @func{pretty-print} inserts spaces and new
+lines in order to produce more pleasant output.
 
 @example
 (define fact-code
@@ -15589,14 +15651,9 @@ produce more pleasant output.
   (fact 5))
 @end example
 
-The second argument to @func{pretty-print}, if supplied, must be an
-output port.  If not supplied, the @func{current-output-port} is used.
-
-@quotation
-@strong{LIMITATIONS} As shown in the output above, the current
-implementation of @func{pretty-print} does not handle printing of square
-brackets properly.
-@end quotation
+The second argument to @func{pretty-print}, if supplied, must be an open
+textual output port.  If not supplied, the @func{current-output-port} is
+used.
 @end defun
 
 
@@ -15684,7 +15741,7 @@ Still undocumented.
 @cindex Parameter @func{print-unicode}
 If set to true: print Scheme Unicode characters outside of the printable
 @ascii{} range in hex format, else print them using the encoding of the
-output port.  The default is false.
+output port.  This parameter is initialised to @false{}.
 @end deffn
 
 
@@ -15702,63 +15759,71 @@ The radix used to print exact integers (fixnums and bignums) with
 @deffnx Parameter print-gensym #f
 @deffnx Parameter print-gensym 'pretty
 @cindex Parameter @func{print-gensym}
-The parameter @code{print-gensym} controls how gensyms are printed by
-the various writers.
+Control how gensyms are printed by the various writers.
 
-If the value of @code{print-gensym} is @false{}, then gensym syntax is
-suppressed by the writers and only the gensyms' pretty names are
-printed.  If the value of @code{print-gensym} is @true{}, then the full
-@code{#@{pretty unique@}} syntax is printed.  Finally, if the value of
-@code{print-gensym} is the symbol @code{pretty}, then gensyms are
-printed using the @code{#:pretty} notation.
+@itemize
+@item
+If the value is @false{}: gensym syntax is suppressed by the writers and
+only the gensyms' pretty names are printed.
+
+@item
+If the value is @true{}: the full @code{#@{pretty unique@}} syntax is
+printed.
+
+@item
+If the value is the symbol @code{pretty}: then gensyms are printed using
+the @code{#:pretty} notation.
+@end itemize
+
+This parameter is initialised to @true{}.  Examples:
 
 @example
-> (parameterize ([print-gensym #f])
+> (parametrise ((print-gensym #f))
     (pretty-print (list (gensym) (gensym))))
 (g0 g1)
 
-> (parameterize ([print-gensym #t])
+> (parametrise ((print-gensym #t))
     (pretty-print (list (gensym) (gensym))))
 (#@{g2 |KR1M2&CTt1<B0n/m|@} #@{g3 |FBAb&7NC6&=c82!O|@})
 
-> (parameterize ([print-gensym 'pretty])
+> (parametrise ((print-gensym 'pretty))
     (pretty-print (list (gensym) (gensym))))
 (#:g4 #:g5)
 @end example
-
-The initial value of @code{print-gensym} is @true{}.
 @end deffn
 
 
 @deffn Parameter gensym-prefix
 @deffnx Parameter gensym-prefix @var{string}
 @cindex Parameter @func{gensym-prefix}
-The parameter @code{gensym-prefix} specifies the string to be used as
-the prefix to generated pretty names.  The default value of
-@code{gensym-prefix} is the string @code{g}, which causes generated
-strings to have pretty names in the sequence @code{g0}, @code{g1},
-@code{g2}, etc.
+Specify the string to be used as the prefix to generated pretty names.
+The initialisation value is the string @samp{g}, which causes generated
+strings to have pretty names in the sequence @samp{g0}, @samp{g1},
+@samp{g2}, etc.
 
 @example
-> (parameterize ([gensym-prefix "var"]
-                 [print-gensym #f])
-     (pretty-print (list (gensym) (gensym) (gensym))))
+> (parametrise ((gensym-prefix "var")
+                (print-gensym  #f))
+    (pretty-print (list (gensym) (gensym) (gensym))))
 (var0 var1 var2)
 @end example
 
-Beware that the @code{gensym-prefix} controls how pretty names are
-generated, and has nothing to do with how @func{gensym} constructs a new
-gensym.  In particular, notice the difference between the output in the
-first example with the output of the examples below:
+This parameter controls how pretty names are generated, and has nothing
+to do with how @func{gensym} constructs a new gensym; in particular,
+knowing that it is @func{pretty-print} that generates the pretty names,
+notice the difference between the output in the first example with the
+output of the examples below:
 
 @example
 > (pretty-print
-    (parameterize ([gensym-prefix "var"] [print-gensym #f])
+    (parametrise ((gensym-prefix "var")
+                  (print-gensym  #f))
       (list (gensym) (gensym) (gensym))))
 (g3 g4 g5)
 
-> (let ([ls (list (gensym) (gensym) (gensym))])
-    (parameterize ([gensym-prefix "var"] [print-gensym #f])
+> (let ((ls (list (gensym) (gensym) (gensym))))
+    (parametrise ((gensym-prefix "var")
+                  (print-gensym  #f))
       (pretty-print ls)))
 (var5 var6 var7)
 @end example
@@ -15768,19 +15833,20 @@ first example with the output of the examples below:
 @deffn Parameter gensym-count
 @deffnx Parameter gensym-count @var{n}
 @cindex Parameter @func{gensym-count}
-The parameter @code{gensym-count} determines the number which is
-attached to the @code{gensym-prefix} when gensyms' pretty names are
-generated.  The initial value of @code{gensym-count} is 0 and is
-incremented every time a pretty name is generated.  It might be set to
-any non-negative integer value.
+Determine the number which is attached to the @func{gensym-prefix} when
+gensyms' pretty names are generated.  The initialisation value is
+@samp{0} and it is incremented every time a pretty name is generated.
+It might be set to any non--negative integer value.
 
 @example
-> (let ([x (gensym)])
-    (parameterize ([gensym-count 100] [print-gensym #f])
+> (let ((x (gensym)))
+    (parametrise ((gensym-count 100)
+                  (print-gensym #f))
       (pretty-print (list (gensym) x (gensym)))))
 (g100 g101 g102)
 @end example
 @end deffn
+
 
 Notice from all the examples so far that pretty names are generated in
 the order at which the gensyms are printed, not in the order in which
