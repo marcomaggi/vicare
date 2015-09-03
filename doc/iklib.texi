@@ -10629,8 +10629,8 @@ records.
 
 
 @defun struct-printer @var{stru}
-Return the procedure being the printer function for the data structure
-@var{stru}.
+Return @false{} or the procedure being the printer function for the data
+structure @var{stru}.
 @end defun
 
 
