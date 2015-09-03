@@ -5553,10 +5553,35 @@ evaluating @meta{alloc-thunk}.
 
 @deffn Syntax compensate @metao{alloc} @meta{alloc} @dots{} (with @metao{release} @meta{release} @dots{})
 @deffnx {Auxiliary Fluid Syntax} with
+@deffnx {Auxiliary Fluid Syntax} <>
 First evaluate all the @meta{alloc} expressions then, @strong{only} if
 they perform a normal return: push one thunk holding all the
 @meta{release} forms on the current compensations stack.  Return the
 result of the last @meta{alloc} expression.
+
+While expanding the @meta{release} forms: the fluid syntax @syntax{<>}
+is bound to an identifier referencing the object returned by the
+@meta{alloc} forms; this allows to code:
+
+@lisp
+(define (make-compensated-object)
+  (compensate
+      (make-new-object)
+    (with
+      (destroy-object <>))))
+@end lisp
+
+@noindent
+rather than:
+
+@lisp
+(define (make-compensated-object)
+  (receive-and-return (obj)
+    (compensate
+        (make-new-object)
+      (with
+        (destroy-object obj)))))
+@end lisp
 @end deffn
 
 

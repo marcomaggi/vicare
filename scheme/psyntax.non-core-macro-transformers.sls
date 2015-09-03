@@ -2136,7 +2136,14 @@
 	      (cons ?alloc (recur ?form*)))
 	     )))
        (bless
-	`(begin0 (begin ,?alloc0 . ,alloc*) ,free))))
+	(let ((the-obj (gensym)))
+	  `(receive-and-return (,the-obj)
+	       (begin ,?alloc0 . ,alloc*)
+	     (fluid-let-syntax ((<> (identifier-syntax ,the-obj)))
+	       ,free))))
+       ;; (bless
+       ;;   `(begin0 (begin ,?alloc0 . ,alloc*) ,free))
+       ))
     ))
 
 
