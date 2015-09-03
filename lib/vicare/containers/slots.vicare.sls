@@ -138,7 +138,6 @@
 
 #!vicare
 (library (vicare containers slots)
-  (options visit-upon-loading)
   (export
     <slots>
     make-slots			slots?
