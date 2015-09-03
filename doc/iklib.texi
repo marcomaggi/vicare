@@ -10459,7 +10459,7 @@ objects printer.
 
 
 @value{PRJNAME} allows structures to be finalised by the garbage
-collector by applying a destructor functions to them; here is how it
+collector by applying a destructor function to them; here is how it
 works:
 
 @example
@@ -10475,28 +10475,28 @@ vicare>
 @end example
 
 
-@defun struct-type-destructor @var{std}
-Return @false{} or a procedure being the destructor for instances of
-@var{std}.  The destructor is registered in a structure type descriptor
-with @func{set-rtd-destructor!}.
-@end defun
-
-
 @defun set-struct-type-destructor! @var{std} @var{destructor}
 @defunx set-rtd-destructor! @var{std} @var{destructor}
 Select the procedure @var{destructor} as destructor for data structures
-of type @var{std}; return unspecified values.  The destructor accepts a
-single argument being the structure instance to finalise; the destructor
-can return unspecified values.
+of type @var{std}; return the old destructor function or @false{} if no
+destructor was set for @var{std}.  The destructor accepts a single
+argument being the structure instance to finalise; the destructor can
+return unspecified values.
 
 After a destructor is registered in @var{std}: new instances of this
 structure type are registered, upon creation, into an internal guardian,
 @ref{iklib guardians} for details; whenever such structures are garbage
 collected: the guardian applies @var{destructor} to them.
 
-Exceptions raised by @var{destructor} are catched with @func{guard} and
-discarded: destructor functions should take care of exceptions by
-themselves.
+When @var{destructor} is called by the garbage collector: exceptions
+raised by @var{destructor} are catched with @func{guard} and discarded:
+destructor functions should take care of exceptions by themselves.
+@end defun
+
+
+@defun struct-type-destructor @var{std}
+Return @false{} or a procedure being the destructor for instances of
+@var{std}.
 @end defun
 
 
