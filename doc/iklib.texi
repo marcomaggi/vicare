@@ -10311,9 +10311,9 @@ fine, handling cyclic references and shared objects:
 @print{} #0=#[struct duo one=1 two=#0#]
 @end lisp
 
-For most Scheme object types, the built--in writer differentiates
-between @func{display}, @func{write} and @func{pretty-print} printing.
-When printing structs, the built--in writer makes @strong{no} difference
+The Scheme objects writer is able to differentiate between
+@func{display}, @func{write} and @func{pretty-print} printing.  When
+printing structs, the built--in writer makes @strong{no} difference
 between printing with @func{display} and @func{write}; it does it
 differently when printing with @func{pretty-print}:
 
@@ -10342,6 +10342,10 @@ differently when printing with @func{pretty-print}:
 @print{} #0=(struct duo (one 1) (two #0#))
 @end lisp
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Custom printers
+
 Sometimes, we need to print a structure with a customised
 representation.  For example keyword objects (@pxref{iklib keywords,
 Keyword objects}) are structures with a custom printer function:
@@ -10350,54 +10354,76 @@ Keyword objects}) are structures with a custom printer function:
 (display #:ciao)        @result{} #:ciao
 @end lisp
 
-A custom printer function accepts @math{3} arguments: the structure to
-be printed; a textual output port into which to write a string
-representation of the structure in the style of @func{display} or
-@func{write}; a sub--printer function to be optionally applied to the
-field values to print them.
-
+For every struct type it is possible to set a custom printer function;
+it accepts @math{3} arguments: the structure to be printed; a textual
+output port into which to write a string representation of the structure
+in the style of @func{display}, @func{write} or @func{pretty-print}; a
+sub--printer function to be optionally used to print component objects.
 The sub--printer function accepts as single argument the object to
 print; it allows us to interface with the shared objects printer that
-handles shared and cyclic references.  As example, the following code
-defines a custom printer:
+handles shared and cyclic references.
+
+As example, the following code defines a custom printer, making use of
+the parameter @func{printer-printing-style} to differentiate the style:
 
 @lisp
 (import (vicare))
 (print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
 (define-struct duo (one two))
 
-(define-struct duo
-  (one two))
+(define (duo-printer stru port sub-printer)
+  (case (printer-printing-style)
+    ((display)
+     (display "#@{duo " port)
+     (sub-printer (duo-one stru))
+     (display " " port)
+     (sub-printer (duo-two stru))
+     (display "@}" port))
+    ((write)
+     (display "(" port)
+     ;;By using the sub-printer: we make this sexp shared too.
+     (sub-printer '(struct-constructor
+                      (struct-type-descriptor duo)))
+     (display " " port)
+     (sub-printer (duo-one stru))
+     (display " " port)
+     (sub-printer (duo-two stru))
+     (display ")" port))
+    ((pretty-print)
+     (sub-printer `(struct duo
+                           #:one ,(duo-one stru)
+                           #:two ,(duo-two stru))))))
 
 (set-struct-type-printer! (struct-type-descriptor duo)
-  (lambda (stru port sub-printer)
-    (display "#@{duo " port)
-    (sub-printer (duo-one stru))
-    (display " " port)
-    (sub-printer (duo-two stru))
-    (display "@}" port)))
+                          duo-printer)
 
-;; simple struct
-(with-output-to-string
-  (lambda ()
-    (display (make-duo 1 2))))
-@result{} "#@{duo 1 2@}"
+(define O
+  (make-duo 1 2))
 
-;; struct with shared object
-(with-output-to-string
-  (lambda ()
-    (let* ((A (make-duo 1 2))
-           (B (make-duo A A)))
-      (display B))))
-@result{} "#@{duo #0=#@{duo 1 2@} #0#@}"
+(display O)
+@print{} #@{duo 1 2@}"
 
-;; struct with cyclic reference to itself
-(with-output-to-string
-  (lambda ()
-    (let ((A (make-duo 1 (void))))
-      (set-duo-two! A A)
-      (display A))))
-@result{} "#0=#@{duo 1 #0#@}"
+(write O)
+@print{} ((struct-constructor (struct-type-descriptor duo)) 1 2)
+
+(pretty-print O)
+@print{} (struct duo #:one 1 #:two 2)
+
+;; shared object, display
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (display B))
+@print{} #@{duo #0=#@{duo 1 2@} #0#@}
+
+;; shared object, write
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (write B))
+@print{} (#0=(struct-constructor (struct-type-descriptor duo)) \
+  #1=(#0# 1 2) #1#)
 @end lisp
 
 
@@ -10405,8 +10431,9 @@ defines a custom printer:
 @defunx set-rtd-printer! @var{std} @var{printer}
 Select the procedure @var{printer} as printer for data structures of
 type @var{std}; if @var{printer} is @false{}, instances of type
-@var{std} make use of the built--in Scheme objects printer.  Return
-unspecified values.
+@var{std} make use of the built--in Scheme objects printer.  Return the
+old printer function or @false{} if no printer function was set for this
+@var{std}.
 @end defun
 
 

@@ -266,13 +266,15 @@
 ;;; --------------------------------------------------------------------
 
 (define* (set-struct-type-printer! {std struct-type-descriptor?} {printer false-or-procedure?})
-  ;;Select the procedure PRINTER as  printer for data structures of type
-  ;;RTD.   The printer  accepts  as  3 arguments:  the  structure to  be
-  ;;printed,  the port  to  which  write a  string  represention of  the
-  ;;structure with DISPLAY,  a function to be optionally  applied to the
-  ;;field values to print them.
+  ;;Select the procedure  PRINTER as printer for data structures  of type RTD; return
+  ;;the old printer  function or false if  no printer function was set  for this STD.
+  ;;The printer  accepts as  3 arguments: the  structure to be  printed, the  port to
+  ;;which write a string represention of the structure with DISPLAY, a function to be
+  ;;optionally applied to the field values to print them.
   ;;
-  ($set-std-printer! std printer))
+  (begin0
+      ($std-printer std)
+    ($set-std-printer! std printer)))
 
 (define* (struct-type-printer {std struct-type-descriptor?})
   ($std-printer std))
@@ -280,11 +282,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (set-struct-type-destructor! {std struct-type-descriptor?} {destructor procedure?})
-  ;;Select the procedure DESTRUCTOR ad destructor for data structures of
-  ;;type  RTD.   The destructor  accepts  a  single argument  being  the
-  ;;structure instance.
+  ;;Select the  procedure DESTRUCTOR ad destructor  for data structures of  type RTD;
+  ;;return the  old destructor function  or false if no  destructor was set  for this
+  ;;STD.  The destructor accepts a single argument being the structure instance.
   ;;
-  ($set-std-destructor! std destructor))
+  (begin0
+      ($std-destructor std)
+    ($set-std-destructor! std destructor)))
 
 (define* (struct-type-destructor {std struct-type-descriptor?})
   ;;Return false or a procedure being the destructor of STD.
