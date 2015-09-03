@@ -403,12 +403,21 @@
     input/output-file-buffer-size	input/output-socket-buffer-size
 
     ;; predicates
-    port? input-port? output-port? input/output-port?
-    textual-port? binary-port?
+    port?
+    input-port?				output-port?
+    input/output-port?
+    textual-port?			binary-port?
     binary-input-port?			textual-input-port?
     binary-output-port?			textual-output-port?
     binary-input/output-port?		textual-input/output-port?
     port-eof?
+
+    open-input-port?			open-output-port?
+    open-textual-port?			open-binary-port?
+    open-input/output-port?
+    open-binary-input-port?		open-textual-input-port?
+    open-binary-output-port?		open-textual-output-port?
+    open-binary-input/output-port?	open-textual-input/output-port?
 
     ;; generic port functions
     call-with-port
@@ -542,12 +551,21 @@
 		  input/output-file-buffer-size	input/output-socket-buffer-size
 
 		  ;; predicates
-		  port? input-port? output-port? input/output-port?
-		  textual-port? binary-port?
+		  port?
+		  input-port?				output-port?
+		  input/output-port?
+		  textual-port?				binary-port?
 		  binary-input-port?			textual-input-port?
 		  binary-output-port?			textual-output-port?
 		  binary-input/output-port?		textual-input/output-port?
 		  port-eof?
+
+		  open-input-port?			open-output-port?
+		  open-textual-port?			open-binary-port?
+		  open-input/output-port?
+		  open-binary-input-port?		open-textual-input-port?
+		  open-binary-output-port?		open-textual-output-port?
+		  open-binary-input/output-port?	open-textual-input/output-port?
 
 		  ;; generic port functions
 		  call-with-port
@@ -2273,6 +2291,62 @@
 (define (textual-input/output-port? obj)
   (and (input/output-port?  obj)
        ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+;;; --------------------------------------------------------------------
+
+(define (open-input-port? obj)
+  (and (input-port? obj)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-output-port? obj)
+  (and (input-port? obj)
+       (not (%unsafe.port-closed? obj))))
+
+;;;
+
+(define (open-textual-port? obj)
+  (and (textual-port? obj)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-binary-port? obj)
+  (and (binary-port? obj)
+       (not (%unsafe.port-closed? obj))))
+
+;;;
+
+(define (open-input/output-port? obj)
+  (and (input-port? obj)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-binary-input-port? obj)
+  (and (input-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-textual-input-port? obj)
+  (and (input-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-binary-output-port? obj)
+  (and (output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-textual-output-port? obj)
+  (and (output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-binary-input/output-port? obj)
+  (and (input/output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)
+       (not (%unsafe.port-closed? obj))))
+
+(define (open-textual-input/output-port? obj)
+  (and (input/output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)
+       (not (%unsafe.port-closed? obj))))
 
 ;;; --------------------------------------------------------------------
 

@@ -17356,6 +17356,15 @@ input, output or input/output.
 @end defun
 
 
+@defun open-binary-port? @var{obj}
+@defunx open-binary-input-port? @var{obj}
+@defunx open-binary-output-port? @var{obj}
+@defunx open-binary-input/output-port? @var{obj}
+Return @true{} if @var{obj} is an open binary port and, respectively, it
+is input, output or input/output.
+@end defun
+
+
 @defun lookahead-two-u8 @var{port}
 Like @func{lookahead-u8} but peeks at @math{2} octets and return two
 values: the @eof{} object, the would--block object or a fixnum
@@ -17495,6 +17504,15 @@ textual output port.
 @defunx textual-input/output-port? @var{obj}
 Return @true{} if @var{obj} is a textual port and, respectively, it is
 input, output or input/output.
+@end defun
+
+
+@defun open-textual-port? @var{obj}
+@defunx open-textual-input-port? @var{obj}
+@defunx open-textual-output-port? @var{obj}
+@defunx open-textual-input/output-port? @var{obj}
+Return @true{} if @var{obj} is an open textual port and, respectively,
+it is input, output or input/output.
 @end defun
 
 
@@ -17778,6 +17796,14 @@ gensym is generated the first time this function is applied to
 @defun port-closed? @var{port}
 Return @true{} if @var{port} has already been closed, else return
 @false{}.
+@end defun
+
+
+@defun open-input-port? @var{obj}
+@defunx open-output-port? @var{obj}
+@defunx open-input/output-port? @var{obj}
+Return @true{} if @var{obj} is an open port and, respectively, it is
+input, output or input/output.
 @end defun
 
 
