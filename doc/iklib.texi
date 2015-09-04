@@ -10192,7 +10192,7 @@ and everything will work as before.
 * iklib structs types using::   Using struct types.
 * iklib structs types inspect:: Inspecting struct types.
 * iklib structs types printer:: Struct printer customisation.
-* iklib structs types final::   Automatic finalisation of structs.
+* iklib structs types final::   Finalisation of structs.
 @end menu
 
 @c page
@@ -10471,21 +10471,19 @@ objects printer.
 
 @c page
 @node iklib structs types final
-@subsubsection Automatic finalisation of structs
+@subsubsection Finalisation of structs
 
 
-@cindex Automatic finalisation of structures
-@cindex Structures, automatic finalisation
-@cindex Structures, destructors
-@cindex Data structures, automatic finalisation
-@cindex Data structures, destructors
-@cindex Finalisation of data structures
-@cindex Destructors for data structures
+@cindex Automatic finalisation of structs
+@cindex Structs, automatic finalisation
+@cindex Structs, destructors
+@cindex Finalisation of structs
+@cindex Destructors for structs
 
 
-@value{PRJNAME} allows structures to be finalised by the garbage
-collector by applying a destructor function to them; here is how it
-works:
+@value{PRJNAME} allows structs to be finalised either explicitly or
+automatically by the garbage collector, by applying a destructor
+function to them; here is how automatic finalisation works:
 
 @example
 vicare> (define-struct duo (one two))
@@ -10493,30 +10491,40 @@ vicare> (set-struct-type-destructor! (struct-type-descriptor duo)
    (lambda (stru)
      (printf "destroying ~s\n" stru)))
 vicare> (make-duo 1 2)
-$1 = #[struct duo one=1 two=2]
+$1 = (struct duo (one 1) (two 2))
 vicare> (collect)
 destroying #[struct duo one=1 two=2]
 vicare>
 @end example
 
+A destructor function is associated to a struct--type by registering it
+in the struct--type descriptor.  After a destructor is set in the
+descriptor: new instances of the struct--type are registered, upon
+creation, into an internal guardian, @ref{iklib guardians} for details;
+whenever such structs are garbage collected: the guardian applies the
+destructor to them.
+
+When the destructor is called by the garbage collector: exceptions
+raised by it are catched with @syntax{guard} and discarded; destructor
+functions should take care of exceptions by themselves.
+
+It is possible for a destructor function to be applied multiple times to
+the same struct: once a destructor is set in the descriptor, it can be
+explicitly applied to structs and later applied again by the garbage
+collector.  Destructor functions must be written in such a way that
+multiple applications are not a problem.  For example, it is usually
+possible, upon destruction, to reset some struct fields to the void
+object: when the destructor detects a field set to void, it knows that
+the struct has already been finalised.
+
 
 @defun set-struct-type-destructor! @var{std} @var{destructor}
 @defunx set-rtd-destructor! @var{std} @var{destructor}
-Select the procedure @var{destructor} as destructor for data structures
-of type @var{std}; return the old destructor function or @false{} if no
+Select the procedure @var{destructor} as destructor for data structs of
+type @var{std}; return the old destructor function or @false{} if no
 destructor was set for @var{std}.  The destructor accepts a single
-argument being the structure instance to finalise; the destructor can
+argument being the struct instance to finalise; the destructor can
 return unspecified values.
-
-After a destructor is registered in @var{std}: new instances of this
-structure type are registered, upon creation, into an internal guardian,
-@ref{iklib guardians} for details; whenever such structures are garbage
-collected: the guardian applies @var{destructor} to them.
-
-When @var{destructor} is called by the garbage collector: exceptions
-raised by @var{destructor} are catched with @syntax{guard} and
-discarded: destructor functions should take care of exceptions by
-themselves.
 @end defun
 
 
@@ -10528,8 +10536,8 @@ Return @false{} or a procedure being the destructor for instances of
 
 @deffn Parameter struct-guardian-logger
 @cindex Parameter @func{struct-guardian-logger}
-Select data structure destruction logging mode for debugging purposes.
-When a structure is finalised by the garbage collector, using the
+Select data structs destruction logging mode for debugging purposes.
+When a struct is finalised by the garbage collector, using the
 destructor registered in the @rtd{}:
 
 @itemize
@@ -10553,10 +10561,10 @@ protocol of the logger functions.
 
 
 @defun struct-guardian-log @var{struct} @var{exception} @var{action}
-Built in logger function to be used to log data structure finalisation
-operations by the garbage collector.  @var{struct} is the structure to
-be finalised; @var{exception} is @false{} or an object raised by the
-structure destructor; @var{action} is one of the symbols:
+Built in logger function to be used to log struct finalisation
+operations by the garbage collector.  @var{struct} is the instance to be
+finalised; @var{exception} is @false{} or an object raised by the struct
+destructor; @var{action} is one of the symbols:
 @code{before-destruction}, @code{after-destruction}, @code{exception}.
 
 When this function is used as value for the parameter
@@ -10564,17 +10572,17 @@ When this function is used as value for the parameter
 
 @itemize
 @item
-The function is called whenever a data structure is registered for
-destruction with @var{action} set to the symbol @code{registration} and
+The function is called whenever a struct is registered for destruction
+with @var{action} set to the symbol @code{registration} and
 @var{exception} set to @false{}.
 
 @item
-The function is called just before the structure is finalised with
+The function is called just before the struct is finalised with
 @var{action} set to the symbol @code{before-destruction} and
 @var{exception} set to @false{}.
 
 @item
-The function is called right after the structure has been finalised with
+The function is called right after the struct has been finalised with
 @var{action} set to the symbol @code{after-destruction} and
 @var{exception} set to @false{}.
 
@@ -11011,8 +11019,9 @@ matching field.
 @cindex Destructors for data records
 
 
-It is possible to automatically apply a destructor function whenever an
-@rnrs{6} record is reclaimed by the garbage collector.
+@value{PRJNAME} allows records to be finalised either explicitly or
+automatically by the garbage collector, by applying a destruction
+function to them; here is how automatic finalisation works:
 
 @example
 #!r6rs
@@ -11034,22 +11043,32 @@ It is possible to automatically apply a destructor function whenever an
 @print{} finalising #[record <alpha> a=1 b=2 c=3]
 @end example
 
+A destructor function is associated to a record--type by registering it
+in the record--type descriptor.  After a destructor is set in the
+descriptor: new instances of the record--type are registered, upon
+creation, into an internal guardian, @ref{iklib guardians} for details;
+whenever such records are garbage collected: the guardian applies the
+destructor to them.
+
+When the destructor is called by the garbage collector: exceptions
+raised by it are catched with @syntax{guard} and discarded; destructor
+functions should take care of exceptions by themselves.
+
+It is possible for a destructor function to be applied multiple times to
+the same record: once a destructor is set in the descriptor, it can be
+explicitly applied to records and later applied again by the garbage
+collector.  Destructor functions must be written in such a way that
+multiple applications are not a problem.  For example, it is usually
+possible, upon destruction, to reset some record fields to the void
+object: when the destructor detects a field set to void, it knows that
+the record has already been finalised.
+
 
 @defun record-type-destructor-set! @var{rtd} @var{destructor}
 Select the procedure @var{destructor} as destructor for @rnrs{6} records
 of type @var{rtd}; return unspecified values.  The destructor accepts a
 single argument being the record to finalise; the destructor can return
 unspecified values.
-
-After a destructor is registered in @var{rtd}: new instances of this
-record--type are registered, upon creation, into an internal guardian,
-@ref{iklib guardians} for details; whenever such records are garbage
-collected: the guardian applies @var{destructor} to them.
-
-When @var{destructor} is called by the garbage collector: exceptions
-raised by @var{destructor} are catched with @syntax{guard} and
-discarded: destructor functions should take care of exceptions by
-themselves.
 @end defun
 
 
