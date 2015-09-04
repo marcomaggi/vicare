@@ -1121,6 +1121,74 @@
 
     (void))
 
+;;; --------------------------------------------------------------------
+;;; documentation examples
+
+  (internal-body
+
+    (define-record-type duo
+      (fields one two))
+
+    (define (duo-printer stru port sub-printer)
+      (case (printer-printing-style)
+	((display)
+	 (display "#{duo " port)
+	 (sub-printer (duo-one stru))
+	 (display " " port)
+	 (sub-printer (duo-two stru))
+	 (display "}" port))
+	((write)
+	 (display "(" port)
+	 ;;By using the sub-printer: we make this sexp shared too.
+	 (sub-printer '(record-constructor
+			(record-constructor-descriptor duo)))
+	 (display " " port)
+	 (sub-printer (duo-one stru))
+	 (display " " port)
+	 (sub-printer (duo-two stru))
+	 (display ")" port))
+	((pretty-print)
+	 (sub-printer `(record duo
+			       #:one ,(duo-one stru)
+			       #:two ,(duo-two stru))))))
+
+    (record-type-printer-set! (record-type-descriptor duo)
+			      duo-printer)
+
+    (internal-body
+      (define O
+	(make-duo 1 2))
+
+      (check
+	  (display-it O)
+	=> "#{duo 1 2}")
+
+      (check
+	  (write-it O)
+	=> "((record-constructor (record-constructor-descriptor duo)) 1 2)")
+
+      (check
+	  (pretty-it O)
+	=> "(record duo #:one 1 #:two 2) \n")
+
+      (void))
+
+    ;; shared object, display
+    (check
+	(let* ((A (make-duo 1 2))
+	       (B (make-duo A A)))
+	  (display-it B))
+      => "#{duo #0=#{duo 1 2} #0#}")
+
+    ;; shared object, write
+    (check
+	(let* ((A (make-duo 1 2))
+	       (B (make-duo A A)))
+	  (write-it B))
+      => "(#0=(record-constructor (record-constructor-descriptor duo)) #1=(#0# 1 2) #1#)")
+
+    (void))
+
   #t)
 
 

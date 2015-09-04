@@ -10454,17 +10454,17 @@ the parameter @func{printer-printing-style} to differentiate the style:
 
 @defun set-struct-type-printer! @var{std} @var{printer}
 @defunx set-rtd-printer! @var{std} @var{printer}
-Select the procedure @var{printer} as printer for data structures of
-type @var{std}; if @var{printer} is @false{}, instances of type
-@var{std} make use of the built--in Scheme objects printer.  Return the
-old printer function or @false{} if no printer function was set for this
+Select the procedure @var{printer} as printer for structs of type
+@var{std}; if @var{printer} is @false{}, instances of type @var{std}
+make use of the built--in Scheme objects printer.  Return the old
+printer function or @false{} if no printer function was set for this
 @var{std}.
 @end defun
 
 
 @defun struct-type-printer @var{std}
-Return @false{} or a function previously set as custom structure printer
-for instances of structure type @var{std}.  When the return value is
+Return @false{} or a function previously set as custom struct printer
+for instances of struct type @var{std}.  When the return value is
 @false{}: instances of type @var{std} make use of the built--in Scheme
 objects printer.
 @end defun
@@ -10514,8 +10514,9 @@ structure type are registered, upon creation, into an internal guardian,
 collected: the guardian applies @var{destructor} to them.
 
 When @var{destructor} is called by the garbage collector: exceptions
-raised by @var{destructor} are catched with @func{guard} and discarded:
-destructor functions should take care of exceptions by themselves.
+raised by @var{destructor} are catched with @syntax{guard} and
+discarded: destructor functions should take care of exceptions by
+themselves.
 @end defun
 
 
@@ -10752,7 +10753,7 @@ the results of evaluating the @meta{expr} arguments:
   (fields red green blue))
 
 (color (1 2 3))
-@result{} #[r6rs-record: color red=1 green=2 blue=3]
+@result{} #[record color red=1 green=2 blue=3]
 @end example
 @end deffn
 
@@ -10762,17 +10763,24 @@ the results of evaluating the @meta{expr} arguments:
 
 
 @defun record-and-rtd? @var{record} @var{rtd}
-Return @true{} if @var{record} is a record instance of @var{rtd} or a
-record instance of a subtype of @var{rtd}; otherwise return @false{}.
+Return @true{} if @var{record} is a record instance of the type
+described by @var{rtd} or a record instance of a subtype of @var{rtd};
+otherwise return @false{}.  This procedure does @strong{not} care if
+@var{rtd} is an opaque record type.
 @end defun
 
 
 @deffn Syntax record-type-and-record? @meta{type-name} @meta{record}
 Return @true{} if @meta{record} is an expression evaluating to a record
 instance of type @meta{type-name} or a record instance of a subtype of
-@meta{type-name}; otherwise return @false{}.  This syntax allows to test
-the type of a record instance through the type name identifier, without
-the need to export the predicate identifier out of libraries.
+@meta{type-name}; otherwise return @false{}.  This syntax does
+@strong{not} care if @meta{type-name} is an opaque record type.
+
+This syntax allows to test the type of a record instance through the
+type name identifier, without the need to export the predicate
+identifier out of libraries.  It performs the same operation of the more
+generic @syntax{is-a?}, but will raise an exception if @meta{type-name}
+is not the identifier of a record type.
 @end deffn
 
 @c page
@@ -10811,9 +10819,8 @@ Here is an example with the field name argument being a symbol:
 ((record-accessor alpha-rtd 'c) R)      @result{} 3
 @end example
 
-@noindent
-and another example with record type inheritance; notice that both the
-record types have a field named @samp{C} and the sub--type takes
+Below is another example with record type inheritance; notice that both
+the record types have a field named @samp{C} and the sub--type takes
 precedence:
 
 @example
@@ -11014,40 +11021,41 @@ It is possible to automatically apply a destructor function whenever an
 (define-record-type <alpha>
   (fields a b c))
 
+(define (<alpha>-destructor rec)
+  (fprintf (current-error-port) "finalising ~s\n" rec))
+
 (record-type-destructor-set! (record-type-descriptor <alpha>)
-   (lambda (S)
-     (pretty-print (list 'finalising S)
-                   (current-error-port))))
+                             <alpha>-destructor)
 
 (pretty-print (make-<alpha> 1 2 3) (current-error-port))
-@print{} #[r6rs-record: <alpha> a=1 b=2 c=3]
+@print{} (record <alpha> (a 1) (b 2) (c 3))
 
 (collect)
-@print{} (finalising #[r6rs-record: <alpha> a=1 b=2 c=3])
+@print{} finalising #[record <alpha> a=1 b=2 c=3]
 @end example
-
-The following bindings are exported by the library @library{vicare}.
 
 
 @defun record-type-destructor-set! @var{rtd} @var{destructor}
-Select the procedure @var{destructor} as destructor for @rnrs{6} record
-instances of type @var{rtd}; return unspecified values.  The destructor
-accepts a single argument being the record instance to finalise; the
-destructor can return unspecified values.
+Select the procedure @var{destructor} as destructor for @rnrs{6} records
+of type @var{rtd}; return unspecified values.  The destructor accepts a
+single argument being the record to finalise; the destructor can return
+unspecified values.
 
 After a destructor is registered in @var{rtd}: new instances of this
-record type are registered, upon creation, into an internal guardian,
+record--type are registered, upon creation, into an internal guardian,
 @ref{iklib guardians} for details; whenever such records are garbage
 collected: the guardian applies @var{destructor} to them.
 
-Exceptions raised by @var{destructor} are catched with @func{guard} and
+When @var{destructor} is called by the garbage collector: exceptions
+raised by @var{destructor} are catched with @syntax{guard} and
 discarded: destructor functions should take care of exceptions by
 themselves.
 @end defun
 
 
 @defun record-type-destructor @var{rtd}
-Return the current destructor for @var{rtd}: @false{} or a function.
+Return the function set in @var{rtd} as instance destructor; return
+@false{} if no destructor is set in @var{rtd}.
 @end defun
 
 
@@ -11059,9 +11067,9 @@ function.
 
 @deffn Parameter record-guardian-logger
 @cindex Parameter @func{record-guardian-logger}
-Select record instance destruction logging mode for debugging purposes.
-When a record is finalised by the garbage collector, using the
-destructor registered in the @rtd{}:
+Select a record destruction logging mode for debugging purposes.  When a
+record is finalised by the garbage collector, using the destructor
+registered in the @rtd{}:
 
 @itemize
 @item
@@ -11084,7 +11092,7 @@ protocol of the logger functions.
 
 
 @defun record-guardian-log @var{record} @var{exception} @var{action}
-Built in logger function to be used to log record instance finalisation
+Built in logger function to be used to log record finalisation
 operations by the garbage collector.  @var{record} is the record to be
 finalised; @var{exception} is @false{} or an object raised by the record
 destructor; @var{action} is one of the symbols:
@@ -11154,98 +11162,152 @@ fine, handling cyclic references and shared objects:
 @lisp
 (import (vicare))
 (print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
 
 (define-record-type duo
-  (fields (mutable one)
-          (mutable two)))
+  (fields one two))
 
 ;; simple record
-(with-output-to-string
-  (lambda ()
-    (display (make-duo 1 2))))
-@result{} "#[record duo one=1 two=2]"
+(display (make-duo 1 2))
+@print{} #[record duo one=1 two=2]
 
 ;; record with shared object
-(with-output-to-string
-  (lambda ()
-    (let* ((A (make-duo 1 2))
-           (B (make-duo A A)))
-      (display B))))
-@result{} "#[record duo one=#0=#[record duo one=1 two=2] two=#0#]"
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (display B))
+@print{} #[record duo one=#0=#[record duo one=1 two=2] two=#0#]
 
 ;; record with cyclic reference to itself
-(with-output-to-string
-  (lambda ()
-    (let ((A (make-duo 1 (void))))
-      (duo-two-set! A A)
-      (display A))))
-@result{} "#0=#[record duo one=1 two=#0#]"
+(let ((A (make-duo 1 (void))))
+  (duo-two-set! A A)
+  (display A))
+@print{} #0=#[record duo one=1 two=#0#]
 @end lisp
 
-The built--in writer also differentiates between ``@func{display}
-style'' printing and ``@func{write} style'' printing, although not for
-records.
-
-However, sometimes, we need to print a record with a customised
-representation; for this we can use a custom printer function.
-
-A custom printer function accepts @math{3} arguments: the record to be
-printed; a textual output port into which to write a string
-representation of the record in the style of @func{display} or
-@func{write}; a sub--printer function to be optionally applied to the
-field values to print them.
-
-The sub--printer function accepts as single argument the object to
-print; it allows us to interface with the shared objects printer that
-handles shared and cyclic references.  As example, the following code
-defines a custom printer:
+The Scheme objects writer is able to differentiate between
+@func{display}, @func{write} and @func{pretty-print} printing.  When
+printing records, the built--in writer makes @strong{no} difference
+between printing with @func{display} and @func{write}; it does it
+differently when printing with @func{pretty-print}:
 
 @lisp
 (import (vicare))
 (print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
 
 (define-record-type duo
-  (fields (mutable one)
-          (mutable two)))
-
-(record-type-printer-set! (record-type-descriptor duo)
-  (lambda (stru port sub-printer)
-    (display "#@{duo " port)
-    (sub-printer (duo-one stru))
-    (display " " port)
-    (sub-printer (duo-two stru))
-    (display "@}" port)))
+  (fields one two))
 
 ;; simple record
-(with-output-to-string
-  (lambda ()
-    (display (make-duo 1 2))))
-@result{} "#@{duo 1 2@}"
+(pretty-print (make-duo 1 2))
+@print{} (record duo (one 1) (two 2))
 
 ;; record with shared object
-(with-output-to-string
-  (lambda ()
-    (let* ((A (make-duo 1 2))
-           (B (make-duo A A)))
-      (display B))))
-@result{} "#@{duo #0=#@{duo 1 2@} #0#@}"
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (pretty-print B))
+@print{} (record duo (one #0=(record duo (one 1) (two 2))) (two #0#))
 
 ;; record with cyclic reference to itself
-(with-output-to-string
-  (lambda ()
-    (let ((A (make-duo 1 (void))))
-      (duo-two-set! A A)
-      (display A))))
-@result{} "#0=#@{duo 1 #0#@}"
+(let ((A (make-duo 1 (void))))
+  (duo-two-set! A A)
+  (pretty-print A))
+@print{} #0=(record duo (one 1) (two #0#))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Custom printers
+
+Sometimes, we need to print a record with a customised representation.
+For every record type it is possible to set a custom printer function;
+it accepts @math{3} arguments: the record to be printed; a textual
+output port into which to write a string representation of the record in
+the style of @func{display}, @func{write} or @func{pretty-print}; a
+sub--printer function to be optionally used to print component objects.
+The sub--printer function accepts as single argument the object to
+print; it allows us to interface with the shared objects printer that
+handles shared and cyclic references.
+
+As example, the following code defines a custom printer, making use of
+the parameter @func{printer-printing-style} to differentiate the style:
+
+@lisp
+(import (vicare))
+(print-graph #t)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(define-record-type duo
+  (fields one two))
+
+(define (duo-printer stru port sub-printer)
+  (case (printer-printing-style)
+    ((display)
+     (display "#@{duo " port)
+     (sub-printer (duo-one stru))
+     (display " " port)
+     (sub-printer (duo-two stru))
+     (display "@}" port))
+    ((write)
+     (display "(" port)
+     ;;By using the sub-printer: we make this sexp shared too.
+     (sub-printer '(record-constructor
+                      (record-constructor-descriptor duo)))
+     (display " " port)
+     (sub-printer (duo-one stru))
+     (display " " port)
+     (sub-printer (duo-two stru))
+     (display ")" port))
+    ((pretty-print)
+     (sub-printer `(record duo
+                           #:one ,(duo-one stru)
+                           #:two ,(duo-two stru))))))
+
+(record-type-printer-set! (record-type-descriptor duo)
+                          duo-printer)
+
+(define O
+  (make-duo 1 2))
+
+(display O)
+@print{} #@{duo 1 2@}"
+
+(write O)
+@print{} ((record-constructor (record-constructor-descriptor duo)) 1 2)
+
+(pretty-print O)
+@print{} (record duo #:one 1 #:two 2)
+
+;; shared object, display
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (display B))
+@print{} #@{duo #0=#@{duo 1 2@} #0#@}
+
+;; shared object, write
+(let* ((A (make-duo 1 2))
+       (B (make-duo A A)))
+  (write B))
+@print{} (#0=(record-constructor (record-constructor-descriptor duo)) \
+  #1=(#0# 1 2) #1#)
 @end lisp
 
 
+@defun record-type-printer-set! @var{rtd} @var{printer}
+Select the procedure @var{printer} as printer for reocrds of type
+@var{rtd}; if @var{printer} is @false{}, instances of type @var{rtd}
+make use of the built--in Scheme objects printer.  Return the old
+printer function or @false{} if no printer function was set for this
+@var{rtd}.
+@end defun
+
+
 @defun record-type-printer @var{rtd}
-@defunx record-type-printer-set! @var{rtd} @var{printer}
-Accessor and mutator for the printer field in a @rnrs{6} record--type
-descriptor.  The @var{printer} argument must be a procedure accepting
-two arguments: a record instance of type @var{rtd}, a textual output
-port.
+Return the function set as custom printer for records of type @var{rtd};
+return @false{} if @var{rtd} has no custom printer.
 @end defun
 
 

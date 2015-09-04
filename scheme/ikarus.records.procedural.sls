@@ -158,8 +158,10 @@
 ;;
 
 (define-struct <rtd>
-  ;;R6RS record  type descriptor.   Notice that  the first two  fields have  the same
-  ;;meaning of the first two fields of a Vicare's struct-type descriptor.
+  ;;R6RS record type descriptor.
+  ;;
+  ;;NOTE The  first two fields  have the same  meaning of the  first two fields  of a
+  ;;Vicare's struct-type descriptor and this is MANDATORY!!!
   ;;
   ;;Vicare's struct-type descriptor:
   ;;

@@ -829,6 +829,26 @@
   #t)
 
 
+(parametrise ((check-test-name	'record-and-rtd))
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+	(record-and-rtd? (make-duo 1 2) (record-type-descriptor duo)))
+    => #t)
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (opaque #t)
+	  (fields one two))
+	(record-and-rtd? (make-duo 1 2) (record-type-descriptor duo)))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

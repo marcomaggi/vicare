@@ -1069,6 +1069,18 @@
 	      (record-type-and-record? beta  A)))
     => '(#t #f))
 
+  ;;Opaque record type.
+  ;;
+  (check
+      (let ()
+	(define-record-type alpha
+	  (opaque #t)
+	  (fields a))
+	(define A
+	  (make-alpha 1))
+	(record-type-and-record? alpha A))
+    => #t)
+
   #t)
 
 
