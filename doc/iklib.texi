@@ -10371,18 +10371,18 @@ differently when printing with @func{pretty-print}:
 
 @subsubheading Custom printers
 
-Sometimes, we need to print a structure with a customised
-representation.  For example keyword objects (@pxref{iklib keywords,
-Keyword objects}) are structures with a custom printer function:
+Sometimes, we need to print a struct with a customised representation.
+For example keyword objects (@pxref{iklib keywords, Keyword objects})
+are structs with a custom printer function:
 
 @lisp
 (display #:ciao)        @result{} #:ciao
 @end lisp
 
 For every struct type it is possible to set a custom printer function;
-it accepts @math{3} arguments: the structure to be printed; a textual
-output port into which to write a string representation of the structure
-in the style of @func{display}, @func{write} or @func{pretty-print}; a
+it accepts @math{3} arguments: the struct to be printed; a textual
+output port into which to write a string representation of the struct in
+the style of @func{display}, @func{write} or @func{pretty-print}; a
 sub--printer function to be optionally used to print component objects.
 The sub--printer function accepts as single argument the object to
 print; it allows us to interface with the shared objects printer that
