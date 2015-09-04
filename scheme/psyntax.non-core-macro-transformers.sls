@@ -1758,16 +1758,20 @@
 
 ;;;; non-core macro: RECORD-TYPE-AND-RECORD?
 
-(define (record-type-and-record?-macro expr-stx)
-  ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define (record-type-and-record?-macro input-form.stx)
+  ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?  syntax uses
+  ;;from the top-level built in  environment.  Expand the contents of INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?type-name ?record)
-     (identifier? ?type-name)
-     (bless
-      `(record-and-rtd? ,?record (record-type-descriptor ,?type-name))))
+     (begin
+       (unless (identifier? ?type-name)
+	 (syntax-violation 'record-type-and-record?
+	   "expected identifier as first argument"
+	   input-form.stx ?type-name))
+       (bless
+	`(record-and-rtd? ,?record (record-type-descriptor ,?type-name)))))
     ))
 
 
