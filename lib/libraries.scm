@@ -152,6 +152,21 @@
      (vicare containers ilists quotations)
      (vicare containers ralists)
 
+     (vicare containers istacks)
+     (vicare containers istacks ralists)
+     (vicare containers istacks dynamic-arrays)
+     (vicare containers istacks deques)
+     (vicare containers istacks lists)
+     (vicare containers istacks chains)
+     (vicare containers istacks ilists)
+     (vicare containers istacks stacks)
+
+     (vicare containers iqueues)
+     (vicare containers iqueues dynamic-arrays)
+     (vicare containers iqueues queues)
+     (vicare containers iqueues deques)
+     (vicare containers iqueues chains)
+
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)
      (vicare parser-tools silex utilities)

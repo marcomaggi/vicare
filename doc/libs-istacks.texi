@@ -1,0 +1,20 @@
+@node istacks
+@chapter Interface to stack--like containers
+
+
+@cindex @library{vicare containers istacks}, library
+@cindex Library @library{vicare containers istacks}
+
+
+The library @library{vicare containers istacks} implements a common
+@api{} for stack--like containers: data structure capable of
+last--in/first--out operations.  A data structure is stack--like if it
+implements the operations: @samp{empty?}, @samp{top}, @samp{push!},
+@samp{pop!}.
+
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

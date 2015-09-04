@@ -1566,6 +1566,209 @@ endif
 EXTRA_DIST += lib/vicare/containers/ralists.vicare.sls
 CLEANFILES += lib/vicare/containers/ralists.fasl
 
+lib/vicare/containers/istacks.fasl: \
+		lib/vicare/containers/istacks.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_istacks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_istacks_fasl_DATA = lib/vicare/containers/istacks.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_vicare_sls_DATA = lib/vicare/containers/istacks.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks.fasl
+
+lib/vicare/containers/istacks/ralists.fasl: \
+		lib/vicare/containers/istacks/ralists.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		lib/vicare/containers/ralists.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_ralists_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_ralists_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_ralists_fasl_DATA = lib/vicare/containers/istacks/ralists.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_ralists_vicare_sls_DATA = lib/vicare/containers/istacks/ralists.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/ralists.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/ralists.fasl
+
+lib/vicare/containers/istacks/dynamic-arrays.fasl: \
+		lib/vicare/containers/istacks/dynamic-arrays.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		lib/vicare/containers/dynamic-arrays.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_dynamic_arrays_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_dynamic_arrays_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_dynamic_arrays_fasl_DATA = lib/vicare/containers/istacks/dynamic-arrays.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_dynamic_arrays_vicare_sls_DATA = lib/vicare/containers/istacks/dynamic-arrays.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/dynamic-arrays.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/dynamic-arrays.fasl
+
+lib/vicare/containers/istacks/deques.fasl: \
+		lib/vicare/containers/istacks/deques.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		lib/vicare/containers/deques.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_deques_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_deques_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_deques_fasl_DATA = lib/vicare/containers/istacks/deques.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_deques_vicare_sls_DATA = lib/vicare/containers/istacks/deques.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/deques.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/deques.fasl
+
+lib/vicare/containers/istacks/lists.fasl: \
+		lib/vicare/containers/istacks/lists.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_lists_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_lists_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_lists_fasl_DATA = lib/vicare/containers/istacks/lists.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_lists_vicare_sls_DATA = lib/vicare/containers/istacks/lists.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/lists.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/lists.fasl
+
+lib/vicare/containers/istacks/chains.fasl: \
+		lib/vicare/containers/istacks/chains.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		lib/vicare/containers/chains.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_chains_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_chains_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_chains_fasl_DATA = lib/vicare/containers/istacks/chains.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_chains_vicare_sls_DATA = lib/vicare/containers/istacks/chains.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/chains.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/chains.fasl
+
+lib/vicare/containers/istacks/ilists.fasl: \
+		lib/vicare/containers/istacks/ilists.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		lib/vicare/containers/ilists.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_ilists_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_ilists_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_ilists_fasl_DATA = lib/vicare/containers/istacks/ilists.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_ilists_vicare_sls_DATA = lib/vicare/containers/istacks/ilists.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/ilists.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/ilists.fasl
+
+lib/vicare/containers/istacks/stacks.fasl: \
+		lib/vicare/containers/istacks/stacks.vicare.sls \
+		lib/vicare/containers/istacks.fasl \
+		lib/vicare/containers/stacks.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_istacks_stacks_fasldir = $(bundledlibsdir)/vicare/containers/istacks
+lib_vicare_containers_istacks_stacks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/istacks
+nodist_lib_vicare_containers_istacks_stacks_fasl_DATA = lib/vicare/containers/istacks/stacks.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_istacks_stacks_vicare_sls_DATA = lib/vicare/containers/istacks/stacks.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/istacks/stacks.vicare.sls
+CLEANFILES += lib/vicare/containers/istacks/stacks.fasl
+
+lib/vicare/containers/iqueues.fasl: \
+		lib/vicare/containers/iqueues.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_iqueues_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_iqueues_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_iqueues_fasl_DATA = lib/vicare/containers/iqueues.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_iqueues_vicare_sls_DATA = lib/vicare/containers/iqueues.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/iqueues.vicare.sls
+CLEANFILES += lib/vicare/containers/iqueues.fasl
+
+lib/vicare/containers/iqueues/dynamic-arrays.fasl: \
+		lib/vicare/containers/iqueues/dynamic-arrays.vicare.sls \
+		lib/vicare/containers/iqueues.fasl \
+		lib/vicare/containers/dynamic-arrays.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_iqueues_dynamic_arrays_fasldir = $(bundledlibsdir)/vicare/containers/iqueues
+lib_vicare_containers_iqueues_dynamic_arrays_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/iqueues
+nodist_lib_vicare_containers_iqueues_dynamic_arrays_fasl_DATA = lib/vicare/containers/iqueues/dynamic-arrays.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_iqueues_dynamic_arrays_vicare_sls_DATA = lib/vicare/containers/iqueues/dynamic-arrays.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/iqueues/dynamic-arrays.vicare.sls
+CLEANFILES += lib/vicare/containers/iqueues/dynamic-arrays.fasl
+
+lib/vicare/containers/iqueues/queues.fasl: \
+		lib/vicare/containers/iqueues/queues.vicare.sls \
+		lib/vicare/containers/iqueues.fasl \
+		lib/vicare/containers/queues.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_iqueues_queues_fasldir = $(bundledlibsdir)/vicare/containers/iqueues
+lib_vicare_containers_iqueues_queues_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/iqueues
+nodist_lib_vicare_containers_iqueues_queues_fasl_DATA = lib/vicare/containers/iqueues/queues.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_iqueues_queues_vicare_sls_DATA = lib/vicare/containers/iqueues/queues.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/iqueues/queues.vicare.sls
+CLEANFILES += lib/vicare/containers/iqueues/queues.fasl
+
+lib/vicare/containers/iqueues/deques.fasl: \
+		lib/vicare/containers/iqueues/deques.vicare.sls \
+		lib/vicare/containers/iqueues.fasl \
+		lib/vicare/containers/deques.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_iqueues_deques_fasldir = $(bundledlibsdir)/vicare/containers/iqueues
+lib_vicare_containers_iqueues_deques_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/iqueues
+nodist_lib_vicare_containers_iqueues_deques_fasl_DATA = lib/vicare/containers/iqueues/deques.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_iqueues_deques_vicare_sls_DATA = lib/vicare/containers/iqueues/deques.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/iqueues/deques.vicare.sls
+CLEANFILES += lib/vicare/containers/iqueues/deques.fasl
+
+lib/vicare/containers/iqueues/chains.fasl: \
+		lib/vicare/containers/iqueues/chains.vicare.sls \
+		lib/vicare/containers/iqueues.fasl \
+		lib/vicare/containers/chains.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_iqueues_chains_fasldir = $(bundledlibsdir)/vicare/containers/iqueues
+lib_vicare_containers_iqueues_chains_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/iqueues
+nodist_lib_vicare_containers_iqueues_chains_fasl_DATA = lib/vicare/containers/iqueues/chains.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_iqueues_chains_vicare_sls_DATA = lib/vicare/containers/iqueues/chains.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/containers/iqueues/chains.vicare.sls
+CLEANFILES += lib/vicare/containers/iqueues/chains.fasl
+
 lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \

@@ -177,6 +177,8 @@ Container libraries
 * sets bags::                   Sets and bags.
 * ilists::                      Immutable lists.
 * ralists::                     Random-access lists.
+* istacks::                     Interface to stack-like containers.
+* iqueues::                     Interface to queue-like containers.
 
 Adapted libraries
 
@@ -256,6 +258,9 @@ External documents
 @include libs-sets-and-bags.texi
 @include libs-ilists.texi
 @include libs-ralists.texi
+
+@include libs-istacks.texi
+@include libs-iqueues.texi
 
 @include libs-randomisations.texi
 
