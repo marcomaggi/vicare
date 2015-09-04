@@ -59,11 +59,12 @@
     (prefix (only (ikarus.keywords)
 		  keyword->string)
 	    keywords.)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun May 10,
+    ;;2015)
     (prefix (only (ikarus records procedural)
-		  ;;FIXME  This import  must  be removed  at the  next  boot image  rotation.
-		  ;;(Marco Maggi; Sun May 10, 2015)
 		  record-object?
-		  record-constructor-descriptor?)
+		  record-constructor-descriptor?
+		  record-type-all-field-names)
 	    records.))
 
 
@@ -613,13 +614,7 @@
       ;;        (two 2))
       ;;
       (let* ((rtd		(record-rtd stru))
-	     (field-name*	(let recur ((rtd rtd))
-				  (cond ((record-type-parent rtd)
-					 => (lambda (prtd)
-					      (append (recur prtd)
-						      (vector->list (record-type-field-names rtd)))))
-					(else
-					 (vector->list (record-type-field-names rtd)))))))
+	     (field-name*	(vector->list (records.record-type-all-field-names rtd))))
 	(receive (field-box* field-sep*)
 	    (%boxify-struct-fields stru 0 field-name*)
 	  (let* ((record-box	(%boxify-object 'record))
