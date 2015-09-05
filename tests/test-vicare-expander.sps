@@ -5254,6 +5254,60 @@
 	  (delete O)))
     => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
 
+;;; --------------------------------------------------------------------
+;;; compensations
+
+  (check
+      (with-result
+	(internal-body
+
+	  (define-struct duo (one two))
+
+	  (define (duo-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (set-struct-type-destructor! (type-descriptor duo)
+	      duo-destructor))
+
+	  (with-compensations
+	    (duo-two (compensate
+			 (new duo 1 2)
+		       (with
+			(delete <>)))))))
+    => '(2 ("#[struct duo one=1 two=2]")))
+
+  (check
+      (with-result
+	(internal-body
+
+	  (define-struct duo (one two))
+
+	  (define (duo-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (set-struct-type-destructor! (type-descriptor duo)
+	      duo-destructor))
+
+	  (define (make-compensated-duo one two)
+	    (compensate
+		(new duo one two)
+	      (with
+	       (delete <>))))
+
+	  (with-compensations
+	    (duo-two (make-compensated-duo 1 2)))))
+    => '(2 ("#[struct duo one=1 two=2]")))
+
   #t)
 
 
