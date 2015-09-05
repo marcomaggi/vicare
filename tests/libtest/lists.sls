@@ -162,7 +162,7 @@
 		       remq		remv)
 	       expand run)
     (except (vicare)
-	    break)
+	    break delete)
     (libtest lists low)
     (libtest lists stx))
 

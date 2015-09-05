@@ -56,7 +56,10 @@
     $std-fields			$set-std-fields!
     $std-printer		$set-std-printer!
     $std-symbol			$set-std-symbol!
-    $std-destructor		$set-std-destructor!)
+    $std-destructor		$set-std-destructor!
+
+    ;; syntactic bindings for internal use only
+    internal-applicable-struct-type-destructor)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed May 6, 2015)
@@ -294,6 +297,15 @@
   ;;Return false or a procedure being the destructor of STD.
   ;;
   ($std-destructor std))
+
+(define (internal-applicable-struct-type-destructor std)
+  ;;This private primitive is  used by the DELETE syntax.  If a  destructor is set in
+  ;;STD: return it; otherwise  return a function that does nothing.   This way we can
+  ;;use  DELETE  on  both  structs  having  a destructor  and  struct  not  having  a
+  ;;destructor.
+  ;;
+  (or ($std-destructor std)
+      (lambda (x) (void))))
 
 
 ;;;; data structure functions

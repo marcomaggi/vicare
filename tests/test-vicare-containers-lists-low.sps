@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (except (vicare)
-		break)
+		break delete)
   (vicare checks)
   (vicare containers lists low))
 

@@ -30,7 +30,7 @@
   (vicare containers char-sets blocks)
   (vicare containers char-sets categories)
   (except (vicare containers lists)
-	  break))
+	  break delete))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare containers: char-sets library\n")

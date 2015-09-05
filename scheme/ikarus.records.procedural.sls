@@ -43,7 +43,10 @@
     record-printer			record-destructor
     record-type-destructor-set!		record-type-destructor
     (rename (<rtd>-printer		record-type-printer)
-	    (set-<rtd>-printer!		record-type-printer-set!)))
+	    (set-<rtd>-printer!		record-type-printer-set!))
+
+    ;; syntactic bindings for internal use only
+    internal-applicable-record-type-destructor)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Mar 31, 2015)
@@ -1232,6 +1235,9 @@
     (and ($struct? record)
 	 ($record-and-rtd? record rtd))))
 
+
+;;;; non-R6RS extensions
+
 (define (record-and-rtd? record rtd)
   ;;Vicare extension.  Return  #t if RECORD is  a record instance of RTD  or a record
   ;;instance of a subtype of RTD.
@@ -1251,8 +1257,7 @@
 		    (or (eq? rtd prtd^)
 			(upper-parent ($<rtd>-parent prtd^)))))))))
 
-
-;;;; non-R6RS extensions
+;;; --------------------------------------------------------------------
 
 (define* (rtd-subtype? {rtd record-type-descriptor?} {prtd record-type-descriptor?})
   ;;Return true if PRTD is a parent of RTD or they are equal.
@@ -1322,6 +1327,15 @@
 
 (define* (record-destructor {rtd record-object?})
   ($<rtd>-destructor (record-rtd rtd)))
+
+(define (internal-applicable-record-type-destructor rtd)
+  ;;This private primitive is  used by the DELETE syntax.  If a  destructor is set in
+  ;;RTD: return it; otherwise  return a function that does nothing.   This way we can
+  ;;use  DELETE  on  both records  having  a  destructor  and  records not  having  a
+  ;;destructor.
+  ;;
+  (or ($<rtd>-destructor rtd)
+      (lambda (x) (void))))
 
 
 ;;;; done

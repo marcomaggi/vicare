@@ -28,6 +28,9 @@
 #!vicare
 (library (ikarus.object-utilities)
   (export
+    ;; delete fallback
+    internal-delete
+
     ;; conversion
     any->symbol			any->string
 
@@ -39,11 +42,6 @@
     return-value-validation-with-predicate
     signature-rest-argument-validation-with-predicate)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Fri May 8, 2015)
-		  procedure-signature-argument-violation
-		  ;;;
-
 		  any->symbol		any->string
 		  always-true		always-false
 		  procedure-and-error
@@ -51,10 +49,36 @@
 		  return-value-validation-with-predicate)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
     ;;2015)
-    (only (ikarus conditions)
-	  procedure-signature-argument-violation)
+    (prefix (only (ikarus conditions)
+		  procedure-signature-argument-violation)
+	    conditions.)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Sep 5,
+    ;;2015)
+    (prefix (only (ikarus records procedural)
+		  record-object?
+		  record-destructor)
+	    records.)
     (only (vicare system $fx)
 	  $fxadd1))
+
+
+;;;; delete fallback implementation
+
+(define (internal-delete obj)
+  ;;This is  the fallback  implementation of  the DELETE  syntax.  When  the expander
+  ;;cannot determine at expand-time the type of an object: this function is called to
+  ;;recognise it and apply to it the appropriate destructor function.
+  ;;
+  ;;This  is not  a public  syntactic binding:  it is  exported only  by the  library
+  ;;"(psyntax system $all)".
+  ;;
+  (cond ((records.record-object? obj)
+	 ((records.record-destructor obj) obj))
+	((struct? obj)
+	 ((struct-destructor obj) obj))
+	(else
+	 (assertion-violation 'delete
+	   "unknown method to destroy object" obj))))
 
 
 ;;;; conversion
@@ -122,7 +146,7 @@
   (when (pair? arg*)
     (if (pred (car arg*))
 	(signature-rest-argument-validation-with-predicate who ($fxadd1 arg-counter) pred pred-sexp (cdr arg*))
-      (procedure-signature-argument-violation who
+      (conditions.procedure-signature-argument-violation who
 	"failed argument validation"
 	arg-counter pred-sexp (car arg*)))))
 
@@ -170,4 +194,5 @@
 
 ;;; end of file
 ;; Local Variables:
+;; eval: (put 'conditions.procedure-signature-argument-violation 'scheme-indent-function 1)
 ;; End:
