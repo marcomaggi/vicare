@@ -45,7 +45,8 @@
     (protocol
      (lambda (make-istack)
        (lambda* ({A dynamic-array?})
-	 ((make-istack istack-dynamic-array-top istack-dynamic-array-push! istack-dynamic-array-pop! istack-dynamic-array-empty?)
+	 ((make-istack istack-dynamic-array-empty? istack-dynamic-array-top
+		       istack-dynamic-array-push! istack-dynamic-array-pop!)
 	  A)))))
 
   (define (istack-dynamic-array-top IA)

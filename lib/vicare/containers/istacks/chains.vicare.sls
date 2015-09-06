@@ -48,8 +48,8 @@
     (protocol
      (lambda (make-istack)
        (lambda* ({C chain?})
-	 ((make-istack istack-chain-top istack-chain-push!
-		       istack-chain-pop! istack-chain-empty?)
+	 ((make-istack istack-chain-empty? istack-chain-top
+		       istack-chain-push! istack-chain-pop!)
 	  C)))))
 
   (define (istack-chain-top IS)

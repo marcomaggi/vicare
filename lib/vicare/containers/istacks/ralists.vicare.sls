@@ -28,7 +28,8 @@
   (export
     <istack-ralist>
     make-istack-ralist
-    istack-ralist?)
+    istack-ralist?
+    istack-ralist-first-pair)
   (import (vicare)
     (vicare containers istacks)
     (prefix (vicare containers ralists) ra))
@@ -36,32 +37,38 @@
 
 ;;;; type definitions and core operations
 
-(module (<istack-ralist> make-istack-ralist istack-ralist?)
+(module (<istack-ralist> make-istack-ralist istack-ralist? istack-ralist-first-pair)
 
   (define-record-type (<istack-ralist> make-istack-ralist istack-ralist?)
     (nongenerative vicare:containers:<istack-ralist>)
     (parent <istack>)
-    (fields (mutable ell))
+    (fields (mutable first-pair istack-ralist-first-pair istack-ralist-first-pair-set!))
     (protocol
      (lambda (make-istack)
-       (lambda* ({L ralist?})
-	 ((make-istack istack-ralist-top istack-ralist-push! istack-ralist-pop! istack-ralist-empty?)
-	  L)))))
+       (define (mk ell)
+	 ((make-istack istack-ralist-empty? istack-ralist-top
+		       istack-ralist-push! istack-ralist-pop!)
+	  ell))
+       (case-lambda*
+	 (()
+	  (mk '()))
+	 (({L ralist?})
+	  (mk L))))))
 
   (define (istack-ralist-top IL)
-    (racar ($<istack-ralist>-ell IL)))
+    (racar ($<istack-ralist>-first-pair IL)))
 
   (define (istack-ralist-push! IL obj)
-    ($<istack-ralist>-ell-set! IL (racons obj ($<istack-ralist>-ell IL))))
+    ($<istack-ralist>-first-pair-set! IL (racons obj ($<istack-ralist>-first-pair IL))))
 
   (define (istack-ralist-pop! IL)
-    (let ((ell ($<istack-ralist>-ell IL)))
+    (let ((first-pair ($<istack-ralist>-first-pair IL)))
       (begin0
-	  (racar ell)
-	($<istack-ralist>-ell-set! IL (racdr ell)))))
+	  (racar first-pair)
+	($<istack-ralist>-first-pair-set! IL (racdr first-pair)))))
 
   (define (istack-ralist-empty? IL)
-    (null? ($<istack-ralist>-ell IL)))
+    (null? ($<istack-ralist>-first-pair IL)))
 
   #| end of module |# )
 

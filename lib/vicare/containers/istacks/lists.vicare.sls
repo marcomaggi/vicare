@@ -43,10 +43,14 @@
     (parent <istack>)
     (fields (mutable first-pair istack-list-first-pair istack-list-first-pair-set!))
     (protocol
-     (lambda (make-istack)
-       (lambda* ({L list?})
-	 ((make-istack istack-list-top istack-list-push! istack-list-pop! istack-list-empty?)
-	  L)))))
+      (lambda (make-istack)
+	(define (mk ell)
+	  ((make-istack istack-list-empty? istack-list-top istack-list-push! istack-list-pop!) ell))
+	(case-lambda*
+	  (()
+	   (mk '()))
+	  (({L list?})
+	   (mk L))))))
 
   (define (istack-list-top IL)
     (car ($<istack-list>-first-pair IL)))

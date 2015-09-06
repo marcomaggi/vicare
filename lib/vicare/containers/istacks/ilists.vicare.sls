@@ -28,7 +28,8 @@
   (export
     <istack-ilist>
     make-istack-ilist
-    istack-ilist?)
+    istack-ilist?
+    istack-ilist-first-pair)
   (import (vicare)
     (vicare containers istacks)
     (vicare containers ilists))
@@ -36,32 +37,38 @@
 
 ;;;; type definitions and core operations
 
-(module (<istack-ilist> make-istack-ilist istack-ilist?)
+(module (<istack-ilist> make-istack-ilist istack-ilist? istack-ilist-first-pair)
 
   (define-record-type (<istack-ilist> make-istack-ilist istack-ilist?)
     (nongenerative vicare:containers:<istack-ilist>)
     (parent <istack>)
-    (fields (mutable ell))
+    (fields (mutable first-pair istack-ilist-first-pair istack-ilist-first-pair-set!))
     (protocol
      (lambda (make-istack)
-       (lambda* ({L ilist?})
-	 ((make-istack istack-ilist-top istack-ilist-push! istack-ilist-pop! istack-ilist-empty?)
-	  L)))))
+       (define (mk ell)
+	 ((make-istack istack-ilist-empty? istack-ilist-top
+		       istack-ilist-push! istack-ilist-pop!)
+	  ell))
+       (case-lambda*
+	 (()
+	  (mk '()))
+	 (({L ilist?})
+	  (mk L))))))
 
   (define (istack-ilist-top IL)
-    (icar ($<istack-ilist>-ell IL)))
+    (icar ($<istack-ilist>-first-pair IL)))
 
   (define (istack-ilist-push! IL obj)
-    ($<istack-ilist>-ell-set! IL (ipair obj ($<istack-ilist>-ell IL))))
+    ($<istack-ilist>-first-pair-set! IL (ipair obj ($<istack-ilist>-first-pair IL))))
 
   (define (istack-ilist-pop! IL)
-    (let ((ell ($<istack-ilist>-ell IL)))
+    (let ((ell ($<istack-ilist>-first-pair IL)))
       (begin0
 	  (icar ell)
-	($<istack-ilist>-ell-set! IL (icdr ell)))))
+	($<istack-ilist>-first-pair-set! IL (icdr ell)))))
 
   (define (istack-ilist-empty? IL)
-    (null? ($<istack-ilist>-ell IL)))
+    (null? ($<istack-ilist>-first-pair IL)))
 
   #| end of module |# )
 

@@ -30,7 +30,8 @@
   (vicare containers dynamic-arrays)
   (vicare containers chains)
   (vicare containers ilists)
-  (prefix (vicare containers ralists) ra)
+  (vicare containers ilists quotations)
+  (prefix (vicare containers ralists) ra.)
   (vicare containers istacks)
   (vicare containers istacks deques)
   (vicare containers istacks stacks)
@@ -68,6 +69,22 @@
 	  (values rv1 rv2 (istack-empty? S))))
     => 0 0 #t)
 
+  (check
+      (let ((S (make-istack-list)))
+	(istack-push! S 0)
+	(let* ((rv1 (istack-top  S))
+	       (rv2 (istack-pop! S)))
+	  (values rv1 rv2 (istack-empty? S))))
+    => 0 0 #t)
+
+  (check
+      (let ((S (make-istack-list)))
+	(istack-push! S 0)
+	(istack-push! S 1)
+	(istack-push! S 2)
+	(istack-list-first-pair S))
+    => '(2 1 0))
+
 ;;; --------------------------------------------------------------------
 
   #t)
@@ -96,6 +113,22 @@
 	  (values rv1 rv2 (istack-empty? S))))
     => 0 0 #t)
 
+  (check
+      (let ((S (make-istack-ilist)))
+	(istack-push! S 0)
+	(let* ((rv1 (istack-top  S))
+	       (rv2 (istack-pop! S)))
+	  (values rv1 rv2 (istack-empty? S))))
+    => 0 0 #t)
+
+  (check
+      (let ((S (make-istack-ilist)))
+	(istack-push! S 0)
+	(istack-push! S 1)
+	(istack-push! S 2)
+	(istack-ilist-first-pair S))
+    => (iquote (2 1 0)))
+
 ;;; --------------------------------------------------------------------
 
   #t)
@@ -104,7 +137,7 @@
 (parametrise ((check-test-name	'ralists))
 
   (check
-      (let* ((D	(ralist 0 1 2 3))
+      (let* ((D	(ra.list 0 1 2 3))
 	     (S	(make-istack-ralist D)))
 	(istack-empty? S))
     => #f)
@@ -123,6 +156,22 @@
 	       (rv2 (istack-pop! S)))
 	  (values rv1 rv2 (istack-empty? S))))
     => 0 0 #t)
+
+  (check
+      (let ((S (make-istack-ralist)))
+	(istack-push! S 0)
+	(let* ((rv1 (istack-top  S))
+	       (rv2 (istack-pop! S)))
+	  (values rv1 rv2 (istack-empty? S))))
+    => 0 0 #t)
+
+  (check
+      (let ((S (make-istack-ralist)))
+	(istack-push! S 0)
+	(istack-push! S 1)
+	(istack-push! S 2)
+	(ra.random-access-list->linear-access-list (istack-ralist-first-pair S)))
+    => '(2 1 0))
 
 ;;; --------------------------------------------------------------------
 

@@ -45,7 +45,8 @@
     (protocol
      (lambda (make-istack)
        (lambda* ({D deque?})
-	 ((make-istack istack-deque-top istack-deque-push! istack-deque-pop! istack-deque-empty?)
+	 ((make-istack istack-deque-empty? istack-deque-top
+		       istack-deque-push! istack-deque-pop!)
 	  D)))))
 
   (define (istack-deque-top ID)

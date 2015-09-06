@@ -1,5 +1,5 @@
 @node istacks
-@chapter Interface to stack--like containers
+@chapter Common interface to stack--like containers
 
 
 @cindex @library{vicare containers istacks}, library
@@ -10,7 +10,300 @@ The library @library{vicare containers istacks} implements a common
 @api{} for stack--like containers: data structure capable of
 last--in/first--out operations.  A data structure is stack--like if it
 implements the operations: @samp{empty?}, @samp{top}, @samp{push!},
-@samp{pop!}.
+@samp{pop!}.  Several libraries provide concrete stack implementations.
+
+@menu
+* istacks common::              The common stacks @api{}.
+* istacks lists::               Built-in lists as stacks.
+* istacks ilists::              Immutable lists as stacks.
+* istacks ralists::             Random-access lists as stacks.
+* istacks stacks::              Common stacks @api{} for stacks.
+* istacks deques::              Deques as stacks.
+* istacks chains::              Chains as stacks.
+* istacks dynarrys::            Dynamic arrays as stacks.
+@end menu
+
+@c page
+@node istacks common
+@section The common stacks @api{}
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks}.
+
+
+@deftp {@rnrs{6} Record Type} <istack>
+@cindex @var{istack} argument
+@cindex Argument @var{istack}
+Record type representing a stack object.  The @objtype{<istack>} type is
+non--generative and available for subtyping.  In this documentation
+@objtype{<istack>} instances used as arguments to functions are
+indicated as @var{istack}.
+
+@objtype{<istack>} is an ``abstract'' type: it must not be instantiated
+directly, rather a subtype of @objtype{<istack>} must be defined
+implementing the required functions.
+@end deftp
+
+
+@deffn {Protocol Constructor} make-istack @var{empty?} @var{top} @var{push!} @var{pop!}
+When we derive a type from @objtype{<istack>} and we specify a protocol:
+this is the function used as argument for the protocol function.
+
+@lisp
+(define-record-type <istack-list>
+  (parent <istack>)
+  (protocol
+    (lambda (make-istack)
+      ---))
+  ---)
+@end lisp
+
+Its arguments must be functions implementing the methods for the
+concrete stack:
+
+@table @var
+@item empty?
+A function accepting as single argument the @objtype{<istack>} instance
+itself.  It must return @true{} if @var{obj} is an instance of
+@objtype{<istack>}; otherwise it must return @false{}.
+
+@item top
+A function accepting as single argument the @objtype{<istack>} instance
+itself.  It must return the top object in the @objtype{<istack>}.
+
+@item push!
+A function accepting two arguments: the @objtype{<istack>} instance
+itself and an object.  It must push the object on the
+@objtype{<istack>}; it can return unspecified values.
+
+@item pop!
+A function accepting as single argument the @objtype{<istack>} instance
+itself.  It must remove and return the top object from the
+@objtype{<istack>}.
+@end table
+@end deffn
+
+
+@defun istack? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack>};
+otherwise return @false{}.
+@end defun
+
+
+@defun istack-empty? @var{istack}
+Return @true{} if @var{istack} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun istack-top @var{istack}
+Return the top object in @var{istack}.
+@end defun
+
+
+@defun istack-push! @var{istack} @var{obj}
+Push @var{obj} on @var{istack}.  Return unspecified values.
+@end defun
+
+
+@defun istack-pop! @var{istack}
+Remove and return the top object from @var{istack}.
+@end defun
+
+@c page
+@node istacks lists
+@section Built--in lists as stacks
+
+
+@cindex @library{vicare containers istacks lists}, library
+@cindex Library @library{vicare containers istacks lists}
+
+
+The library @library{vicare containers istacks lists} provides a
+concrete implementation of the @objtype{<istack>} type using built--in
+lists as storage.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers istacks lists))
+
+(define S
+  (make-istack-list))
+
+(istack-push! S 0)
+(istack-push! S 1)
+
+(istack-top  S)         @result{} 1
+(istack-pop! S)         @result{} 1
+(istack-pop! S)         @result{} 2
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks lists}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-list>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-list
+@defunx make-istack-list @var{ell}
+Build and return a new instance of @objtype{<istack-list>}.  The
+optional argument @var{ell} must be a proper list (or null) representing
+the initial contents of the stack, with the car of the list being the
+top object.
+@end defun
+
+
+@defun istack-list? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack-list>};
+otherwise return @false{}.
+@end defun
+
+
+@defun istack-list-first-pair @var{istack}
+Return null or the first pair of the list used as storage in the
+@objtype{<istack-list>} instance @var{istack}.
+@end defun
+
+@c page
+@node istacks ilists
+@section Immutable lists as stacks
+
+
+@cindex @library{vicare containers istacks ilists}, library
+@cindex Library @library{vicare containers istacks ilists}
+
+
+The library @library{vicare containers istacks ilists} provides a
+concrete implementation of the @objtype{<istack>} type using immutable
+lists as storage; immutable lists are defined by the library
+@library{vicare containers ilists}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers istacks ilists))
+
+(define S
+  (make-istack-ilist))
+
+(istack-push! S 0)
+(istack-push! S 1)
+
+(istack-top  S)         @result{} 1
+(istack-pop! S)         @result{} 1
+(istack-pop! S)         @result{} 2
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks ilists}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-ilist>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-ilist
+@defunx make-istack-ilist @var{ell}
+Build and return a new instance of @objtype{<istack-ilist>}.  The
+optional argument @var{ell} must be a proper immutable list (or null)
+representing the initial contents of the stack, with the car of the list
+being the top object.
+@end defun
+
+
+@defun istack-ilist? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack-ilist>};
+otherwise return @false{}.
+@end defun
+
+
+@defun istack-ilist-first-pair @var{istack}
+Return null or the first pair of the list used as storage in the
+@objtype{<istack-ilist>} instance @var{istack}.
+@end defun
+
+@c page
+@node istacks ralists
+@section Random--access lists as stacks
+
+
+@cindex @library{vicare containers istacks ralists}, library
+@cindex Library @library{vicare containers istacks ralists}
+
+
+The library @library{vicare containers istacks ralists} provides a
+concrete implementation of the @objtype{<istack>} type using
+random--access lists as storage; random--access lists are defined by the
+library @library{vicare containers ralists}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers istacks ralists))
+
+(define S
+  (make-istack-ralist))
+
+(istack-push! S 0)
+(istack-push! S 1)
+
+(istack-top  S)         @result{} 1
+(istack-pop! S)         @result{} 1
+(istack-pop! S)         @result{} 2
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks ralists}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-ralist>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-ralist
+@defunx make-istack-ralist @var{ell}
+Build and return a new instance of @objtype{<istack-ralist>}.  The
+optional argument @var{ell} must be a proper random--access list (or
+null) representing the initial contents of the stack, with the car of
+the list being the top object.
+@end defun
+
+
+@defun istack-ralist? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack-ralist>};
+otherwise return @false{}.
+@end defun
+
+
+@defun istack-ralist-first-pair @var{istack}
+Return null or the first pair of the list used as storage in the
+@objtype{<istack-ralist>} instance @var{istack}.
+@end defun
+
+@c page
+@node istacks stacks
+@section Common stacks @api{} for stacks
+
+@c page
+@node istacks deques
+@section Deques as stacks
+
+@c page
+@node istacks chains
+@section Chains as stacks
+
+@c page
+@node istacks dynarrys
+@section Dynamic arrays as stacks
 
 
 

@@ -45,7 +45,8 @@
     (protocol
      (lambda (make-istack)
        (lambda* ({D stack?})
-	 ((make-istack istack-stack-top istack-stack-push! istack-stack-pop! istack-stack-empty?)
+	 ((make-istack istack-stack-empty? istack-stack-top
+		       istack-stack-push! istack-stack-pop!)
 	  D)))))
 
   (define (istack-stack-top IS)
