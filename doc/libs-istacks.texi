@@ -133,10 +133,11 @@ lists as storage.  Usage example:
 
 (istack-push! S 0)
 (istack-push! S 1)
+(istack-push! S 2)
 
-(istack-top  S)         @result{} 1
-(istack-pop! S)         @result{} 1
+(istack-top  S)         @result{} 2
 (istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
 @end lisp
 
 The following syntactic bindings are exported by the library
@@ -193,10 +194,11 @@ lists as storage; immutable lists are defined by the library
 
 (istack-push! S 0)
 (istack-push! S 1)
+(istack-push! S 2)
 
-(istack-top  S)         @result{} 1
-(istack-pop! S)         @result{} 1
+(istack-top  S)         @result{} 2
 (istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
 @end lisp
 
 The following syntactic bindings are exported by the library
@@ -253,10 +255,11 @@ library @library{vicare containers ralists}.  Usage example:
 
 (istack-push! S 0)
 (istack-push! S 1)
+(istack-push! S 2)
 
-(istack-top  S)         @result{} 1
-(istack-pop! S)         @result{} 1
+(istack-top  S)         @result{} 2
 (istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
 @end lisp
 
 The following syntactic bindings are exported by the library
@@ -293,18 +296,225 @@ Return null or the first pair of the list used as storage in the
 @node istacks stacks
 @section Common stacks @api{} for stacks
 
+
+@cindex @library{vicare containers istacks stacks}, library
+@cindex Library @library{vicare containers istacks stacks}
+
+
+The library @library{vicare containers stacks} provides an
+implementation of the stack container using the @objtype{<stack>} type;
+the library @library{vicare containers istacks stacks} provides a
+concrete implementation of the @objtype{<istack>} type using an instance
+of @objtype{<stack>} as storage.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers stacks)
+  (vicare containers istacks stacks))
+
+(define S
+  (make-istack-stack (stack)))
+
+(istack-push! S 0)
+(istack-push! S 1)
+(istack-push! S 2)
+
+(istack-top  S)         @result{} 2
+(istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks stacks}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-stack>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-stack @var{stack}
+Build and return a new instance of @objtype{<istack-stack>}.  The
+argument @var{stack} must be an instance of type @objtype{<stack>}.
+@end defun
+
+
+@defun istack-stack? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack-stack>};
+otherwise return @false{}.
+@end defun
+
 @c page
 @node istacks deques
 @section Deques as stacks
+
+
+@cindex @library{vicare containers istacks deques}, library
+@cindex Library @library{vicare containers istacks deques}
+
+
+The library @library{vicare containers istacks deques} provides a
+concrete implementation of the @objtype{<istack>} type using a deque as
+storage; deques are defined by the library @library{vicare containers
+deques}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers deques)
+  (vicare containers istacks deques))
+
+(define S
+  (make-istack-deque (deque)))
+
+(istack-push! S 0)
+(istack-push! S 1)
+(istack-push! S 2)
+
+(istack-top  S)         @result{} 2
+(istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks deques}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-deque>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-deque @var{deque}
+Build and return a new instance of @objtype{<istack-deque>}.  The
+argument @var{deque} must be an instance of type @objtype{<deque>} as
+defined by the library @library{vicare containers deques}.
+@end defun
+
+
+@defun istack-deque? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack-deque>};
+otherwise return @false{}.
+@end defun
 
 @c page
 @node istacks chains
 @section Chains as stacks
 
+
+@cindex @library{vicare containers istacks chains}, library
+@cindex Library @library{vicare containers istacks chains}
+
+
+The library @library{vicare containers istacks chains} provides a
+concrete implementation of the @objtype{<istack>} type using a chain as
+storage; chains are defined by the library @library{vicare containers
+chains}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers chains)
+  (vicare containers istacks chains))
+
+(define S
+  (make-istack-chain (chain)))
+
+(istack-push! S 0)
+(istack-push! S 1)
+(istack-push! S 2)
+
+(istack-top  S)         @result{} 2
+(istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks chains}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-chain>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-chain @var{chain}
+Build and return a new instance of @objtype{<istack-chain>}.  The
+argument @var{chain} must be null or an instance of type
+@objtype{<chain-link>} as defined by the library @library{vicare
+containers chains}.
+@end defun
+
+
+@defun istack-chain? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<istack-chain>};
+otherwise return @false{}.
+@end defun
+
+
+@defun istack-chain-first-pair @var{istack}
+Return null or the first link of the chain used as storage in the
+@objtype{<istack-chain>} instance @var{istack}.
+@end defun
+
 @c page
 @node istacks dynarrys
 @section Dynamic arrays as stacks
 
+
+@cindex @library{vicare containers istacks dynamic-arrays}, library
+@cindex Library @library{vicare containers istacks dynamic-arrays}
+
+
+The library @library{vicare containers istacks dynamic-arrays} provides
+a concrete implementation of the @objtype{<istack>} type using a dynamic
+array as storage; dynamic arrays are defined by the library
+@library{vicare containers dynamic-arrays}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers istacks)
+  (vicare containers dynamic-arrays)
+  (vicare containers istacks dynamic-arrays))
+
+(define S
+  (make-istack-dynamic-array (dynamic-array)))
+
+(istack-push! S 0)
+(istack-push! S 1)
+(istack-push! S 2)
+
+(istack-top  S)         @result{} 2
+(istack-pop! S)         @result{} 2
+(istack-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers istacks dynamic-arrays}.
+
+
+@deftp {@rnrs{6} Record Type} <istack-dynamic-array>
+Record type implementing an @objtype{<istack>}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-istack-dynamic-array @var{arry}
+Build and return a new instance of @objtype{<istack-dynamic-array>}.
+The argument @var{arry} must be an instance of type
+@objtype{<dynamic-array>} as defined by the library @library{vicare
+containers dynamic-arrays}.
+@end defun
+
+
+@defun istack-dynamic-array? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{<istack-dynamic-array>}; otherwise return @false{}.
+@end defun
 
 
 @c Local Variables:

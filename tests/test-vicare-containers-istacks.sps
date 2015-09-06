@@ -178,6 +178,34 @@
   #t)
 
 
+(parametrise ((check-test-name	'stacks))
+
+  (check
+      (let* ((D	(stack 0 1 2 3))
+	     (S	(make-istack-stack D)))
+	(istack-empty? S))
+    => #f)
+
+  (check
+      (let* ((D	(stack))
+	     (S	(make-istack-stack D)))
+	(istack-empty? S))
+    => #t)
+
+  (check
+      (let* ((D	(stack))
+	     (S	(make-istack-stack D)))
+	(istack-push! S 0)
+	(let* ((rv1 (istack-top  S))
+	       (rv2 (istack-pop! S)))
+	  (values rv1 rv2 (istack-empty? S))))
+    => 0 0 #t)
+
+;;; --------------------------------------------------------------------
+
+  #t)
+
+
 (parametrise ((check-test-name	'deques))
 
   (check
