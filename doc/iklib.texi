@@ -622,8 +622,6 @@ Example:
                                 stale state.
 * iklib syntaxes body::         Internal body.
 * iklib syntaxes types::        Type syntaxes.
-* iklib syntaxes predicates::   Predicate syntaxes.
-* iklib syntaxes slots::        Slot getter and setter syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
 * iklib syntaxes infix::        Infix to prefix transformer.
@@ -2010,46 +2008,22 @@ expression.  This syntax must be used in expression context.
 @subsection Type syntaxes
 
 
-The syntactic bindings of Vicare struct types and @rnrs{6} record types
-allow the identifier name to act as reference to the maker function with
-the special syntax:
+Some Scheme objects have a type name and an associated syntactic
+identifier acting as unique identifier for the type specification.
+@value{PRJNAME} allows us to perform some operations on objects of such
+types through generic syntaxes, provided that we use the type name's
+syntactic identifier.
 
-@example
-(?type (?arg ...))
-@end example
+@menu
+* iklib syntaxes types descriptors::    Retrieving type descriptors.
+* iklib syntaxes types new-and-del::    Constructors and destructors.
+* iklib syntaxes types predicates::     Predicate syntaxes.
+* iklib syntaxes types slots::          Slot getter and setter syntaxes.
+@end menu
 
-@noindent
-that is, for struct types:
-
-@example
-(import (vicare))
-
-(define-struct color
-  (red green blue))
-
-(color (1 2 3))                    @result{} #["color" 1 2 3]
-(apply (color (...)) 1 '(2 3))     @result{} #["color" 1 2 3]
-@end example
-
-@noindent
-and for @rnrs{6} record types:
-
-@example
-(import (vicare))
-
-(define-record-type color
-  (fields red green blue))
-
-(color (1 2 3))
-@result{} #[r6rs-record: color red=1 green=2 blue=3]
-
-(apply (color (...)) 1 '(2 3))
-@result{}  #[r6rs-record: color red=1 green=2 blue=3]
-@end example
-
-@noindent
-where @code{...} is the ellipsis binding exported by @rsixlibrary{base}
-and @library{vicare}.
+@c page
+@node iklib syntaxes types descriptors
+@subsubsection Retrieving type descriptors
 
 
 @deffn Syntax type-descriptor @meta{name}
@@ -2057,18 +2031,114 @@ Expand to an expression which, when evaluated, results in:
 
 @itemize
 @item
-A Vicare struct type descriptor if the given identifier argument
-@meta{name} is a struct type name.
+A Vicare struct--type descriptor if the given identifier argument
+@meta{name} is a struct--type name.
 
 @item
-A @rnrs{6} record type descriptor if the given identifier argument
-@meta{name} is a record type name.
+A @rnrs{6} record--type descriptor if the given identifier argument
+@meta{name} is a record--type name.
 @end itemize
 @end deffn
 
 @c page
-@node iklib syntaxes predicates
-@subsection Predicate syntaxes
+@node iklib syntaxes types new-and-del
+@subsubsection Constructors and destructors
+
+
+The syntaxes @syntax{new} and @syntax{delete} allow us to retrieve the
+constructor and destructor function of Scheme objects of some types.
+For example, with structs:
+
+@lisp
+(import (vicare))
+
+(define-struct duo (one two))
+
+(define (duo-destructor stru)
+  (fprintf (current-error-port) "destroying ~s\n" stru))
+
+(set-struct-type-destructor! (type-descriptor duo)
+  duo-destructor)
+
+(define O
+  (new duo 1 2))
+
+(delete O)
+@print{} destroying #[struct duo one=1 two=2]
+@end lisp
+
+@noindent
+and with records:
+
+@lisp
+(import (vicare))
+
+(define-record-type duo
+  (fields one two))
+
+(define (duo-destructor reco)
+  (fprintf (current-error-port) "destroying ~s\n" stru))
+
+(record-type-destructor-set! (type-descriptor duo)
+  duo-destructor)
+
+(define O
+  (new duo 1 2))
+
+(delete O)
+@print{} destroying #[record duo one=1 two=2]
+@end lisp
+
+Such syntaxes make it easier to code, for example, compensated
+allocation of objects:
+
+@lisp
+(import (vicare))
+
+(define-struct duo (one two))
+
+(define (duo-destructor stru)
+  (fprintf (current-error-port) "destroying ~s\n" stru))
+
+(set-struct-type-destructor! (type-descriptor duo)
+  duo-destructor)
+
+(define (make-compensated-duo one two)
+  (compensate
+      (new duo one two)
+    (with
+      (delete <>))))
+@end lisp
+
+@noindent
+where @syntax{<>} is the fluid syntax exported by @library{vicare} and
+@syntax{compensate} binds it to the value returned by the allocation
+form (@pxref{iklib compensations api, compensate}).
+
+
+@deffn Syntax new @meta{type-name} @meta{arg} @dots{}
+Retrieve the default constructor function of the type @var{type-name}
+and apply it to the given arguments; return the result of the
+application.
+
+At present, this syntax is capable of retrieving the constructor
+function of structs and records.
+@end deffn
+
+
+@deffn Syntax delete @meta{expr}
+Retrieve the destructor function, if any, of the object returned by the
+evaluation of the expression @meta{expr} and apply it to the object;
+return the return value of the application.  The evaluation of
+@meta{expr} must return a single return value.
+
+At present, this syntax is capable of retrieving the destructor function
+of structs and records.
+@end deffn
+
+@c page
+@node iklib syntaxes types predicates
+@subsubsection Predicate syntaxes
 
 
 @deffn Syntax is-a? @meta{expr} @meta{type-id}
@@ -2106,8 +2176,8 @@ predicate function.
 @end deffn
 
 @c page
-@node iklib syntaxes slots
-@subsection Slot getter and setter syntaxes
+@node iklib syntaxes types slots
+@subsubsection Slot getter and setter syntaxes
 
 
 The syntaxes @func{slot-ref} and @func{slot-set!} allow both access to

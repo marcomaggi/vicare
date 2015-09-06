@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (except (vicare)
-		break)
+		break delete)
   (vicare checks)
   (only (vicare containers lists)
 	circular-list xcons not-pair?

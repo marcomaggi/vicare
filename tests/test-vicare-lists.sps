@@ -8,7 +8,7 @@
 ;;;
 ;;;	This test file was originally in Nausicaa.
 ;;;
-;;;Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +27,7 @@
 
 #!vicare
 (import (for (except (vicare)
-		     break
+		     break delete
 
 		     ;; from (rnrs base (6))
 		     pair?		cons

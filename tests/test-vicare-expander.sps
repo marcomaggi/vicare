@@ -5060,6 +5060,257 @@
   #t)
 
 
+(parametrise ((check-test-name	'new-and-delete))
+
+;;; structs
+
+  (check
+      (with-result
+	(internal-body
+
+	  (define-struct duo (one two))
+
+	  (define (duo-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (set-struct-type-destructor! (type-descriptor duo)
+	      duo-destructor))
+
+	  (define O
+	    (new duo 1 2))
+
+	  (delete O)))
+    => '(1234 ("#[struct duo one=1 two=2]")))
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type duo
+	    (fields one two))
+
+	  (define (duo-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (record-type-destructor-set! (type-descriptor duo)
+	      duo-destructor))
+
+	  (define O
+	    (new duo 1 2))
+
+	  (delete O)))
+    => '(1234 ("#[record duo one=1 two=2]")))
+
+  ;;Record with parent, no protocols.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d))
+
+	  (define (beta-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (record-type-destructor-set! (type-descriptor beta)
+	      beta-destructor))
+
+	  (define O
+	    (new beta 1 2 3 4))
+
+	  (delete O)))
+    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+
+  ;;Record with parent, parent with protocol.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b)
+	    (protocol
+	     (lambda (make-record)
+	       (lambda (a)
+		 (make-record a 2)))))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d)
+	    (protocol
+	     (lambda (make-alpha)
+	       (lambda (a c)
+		 ((make-alpha a) c 4)))))
+
+	  (define (beta-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (record-type-destructor-set! (type-descriptor beta)
+	      beta-destructor))
+
+	  (define O
+	    (new beta 1 3))
+
+	  (delete O)))
+    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+
+  ;;Record with parent, child with protocol.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d)
+	    (protocol
+	     (lambda (make-alpha)
+	       (lambda (a b c)
+		 ((make-alpha a b) c 4)))))
+
+	  (define (beta-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (record-type-destructor-set! (type-descriptor beta)
+	      beta-destructor))
+
+	  (define O
+	    (new beta 1 2 3))
+
+	  (delete O)))
+    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+
+  ;;Record with parent, parent and child with protocols.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b)
+	    (protocol
+	     (lambda (make-record)
+	       (lambda (a)
+		 (make-record a 2)))))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d)
+	    (protocol
+	     (lambda (make-alpha)
+	       (lambda (a c)
+		 ((make-alpha a) c 4)))))
+
+	  (define (beta-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (record-type-destructor-set! (type-descriptor beta)
+	      beta-destructor))
+
+	  (define O
+	    (new beta 1 3))
+
+	  (delete O)))
+    => '(1234 ("#[record beta a=1 b=2 c=3 d=4]")))
+
+;;; --------------------------------------------------------------------
+;;; compensations
+
+  (check
+      (with-result
+	(internal-body
+
+	  (define-struct duo (one two))
+
+	  (define (duo-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (set-struct-type-destructor! (type-descriptor duo)
+	      duo-destructor))
+
+	  (with-compensations
+	    (duo-two (compensate
+			 (new duo 1 2)
+		       (with
+			(delete <>)))))))
+    => '(2 ("#[struct duo one=1 two=2]")))
+
+  (check
+      (with-result
+	(internal-body
+
+	  (define-struct duo (one two))
+
+	  (define (duo-destructor stru)
+	    (receive (port extract)
+		(open-string-output-port)
+	      (display stru port)
+	      (add-result (extract)))
+	    1234)
+
+	  (module ()
+	    (set-struct-type-destructor! (type-descriptor duo)
+	      duo-destructor))
+
+	  (define (make-compensated-duo one two)
+	    (compensate
+		(new duo one two)
+	      (with
+	       (delete <>))))
+
+	  (with-compensations
+	    (duo-two (make-compensated-duo 1 2)))))
+    => '(2 ("#[struct duo one=1 two=2]")))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -128,7 +128,7 @@
     lset-xor			lset-xor!
     lset-diff+intersection	lset-diff+intersection!)
   (import (except (vicare)
-		  break)
+		  break delete)
     (vicare containers lists stx)
     (vicare containers lists low))
 
