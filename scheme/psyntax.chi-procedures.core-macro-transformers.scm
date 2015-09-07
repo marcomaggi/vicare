@@ -1874,46 +1874,48 @@
   (syntax-match input-form.stx ()
     ((_ ?type-id ?arg* ...)
      (identifier? ?type-id)
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-       ((r6rs-record-type)
-	;;For structs we want to expand to an equivalent of:
-	;;
-	;;   ((record-constructor (record-type-descriptor ?type-id)) ?arg* ...)
-	;;
-	(let* ((rcd-id.psi (chi-expr (record-type-name-binding-descriptor.rcd-id binding)
-				     lexenv.run lexenv.expand))
-	       (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+     (begin
+       (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run)
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+	 ((r6rs-record-type)
+	  ;;For structs we want to expand to an equivalent of:
+	  ;;
+	  ;;   ((record-constructor (record-type-descriptor ?type-id)) ?arg* ...)
+	  ;;
+	  (let* ((rcd-id.psi (chi-expr (record-type-name-binding-descriptor.rcd-id binding)
+				       lexenv.run lexenv.expand))
+		 (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+	    (make-psi input-form.stx
+		      (build-application no-source
+			(build-application no-source
+			  (build-primref no-source 'record-constructor)
+			  (list (psi-core-expr rcd-id.psi)))
+			(map psi-core-expr args.psi*))
+		      (make-retvals-signature-single-value ?type-id))))
+
+	 ((vicare-struct-type)
+	  ;;For structs we want to expand to an equivalent of:
+	  ;;
+	  ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
+	  ;;
+	  (let ((args.psi* (chi-expr* ?arg* lexenv.run lexenv.expand)))
+	    (make-psi input-form.stx
+		      (build-application no-source
+			(build-application no-source
+			  (build-primref no-source 'struct-constructor)
+			  (list (build-data no-source
+				  (syntactic-binding-descriptor.value binding))))
+			(map psi-core-expr args.psi*))
+		      (make-retvals-signature-single-value ?type-id))))
+
+	 ((object-type-spec)
 	  (make-psi input-form.stx
 		    (build-application no-source
-		      (build-application no-source
-			(build-primref no-source 'record-constructor)
-			(list (psi-core-expr rcd-id.psi)))
-		      (map psi-core-expr args.psi*))
-		    (make-retvals-signature-single-value ?type-id))))
-
-       ((vicare-struct-type)
-	;;For structs we want to expand to an equivalent of:
-	;;
-	;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
-	;;
-	(let ((args.psi* (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	  (make-psi input-form.stx
-		    (build-application no-source
-		      (build-application no-source
-			(build-primref no-source 'struct-constructor)
-			(list (build-data no-source
-				(syntactic-binding-descriptor.value binding))))
-		      (map psi-core-expr args.psi*))
-		    (make-retvals-signature-single-value ?type-id))))
-
-       ((object-type-spec)
-	(make-psi input-form.stx
-		  (build-application no-source
-		    (psi-core-expr (chi-expr (tag-identifier-constructor-maker ?type-id input-form.stx)
-					     lexenv.run lexenv.expand))
-		    (map psi-core-expr (chi-expr* ?arg* lexenv.run lexenv.expand)))
-		  (make-retvals-signature-single-value ?type-id)))
-       ))
+		      (psi-core-expr (chi-expr (tag-identifier-constructor-maker ?type-id input-form.stx)
+					       lexenv.run lexenv.expand))
+		      (map psi-core-expr (chi-expr* ?arg* lexenv.run lexenv.expand)))
+		    (make-retvals-signature-single-value ?type-id)))
+	 )))
     ))
 
 (module (delete-transformer)

@@ -2316,15 +2316,17 @@
 	    ;;type, like predefined condition object types.
 	    (void))
 	   (else
-	    (syntax-violation who
-	      "while inspecting syntactic binding of R6RS record type, expected RTD identifier's descriptor to be of type \"global\""
-	      input-form.stx id)))))
-    (($core-rtd lexical local-macro local-macro! local-etv)
-     (void))
-    (else
-     (syntax-violation who
-       "attempt to force library visit, but it is impossible to find a library exporting the given syntactic binding identifier"
-       input-form.stx id)))))
+	    (raise
+	     (condition (make-syntax-violation input-form.stx id)
+			(make-who-condition who)
+			(make-message-condition "while inspecting syntactic binding of R6RS record type, invalid RTD descriptor")
+			(make-irritants-condition rtd-id rtd-id.descr)))))))
+      (($core-rtd $struct-type-name lexical local-macro local-macro! local-etv)
+       (void))
+      (else
+       (syntax-violation who
+	 "attempt to force library visit, but it is impossible to find a library exporting the given syntactic binding identifier"
+	 input-form.stx id)))))
 
 
 ;;;; system label gensym

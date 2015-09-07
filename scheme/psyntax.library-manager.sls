@@ -641,7 +641,18 @@
     (when (procedure? visit)
       (set-library-visit-state! lib (lambda ()
 				      (assertion-violation __who__ "circularity detected" lib)))
+      ;;By invoking the vis libraries: we initialise the loc gensyms of the syntactic
+      ;;bindings imported by the right-hand sides of the syntax definitions.
       (for-each invoke-library (library-vis-lib* lib))
+      ;;By visiting the imp libraries: we evaluate the right-hand sides of the syntax
+      ;;definitions  in   the  imp  libraries,   causing  syntax  properties   to  be
+      ;;initialised.   For  example  the   properties  associated  with  record  type
+      ;;definitions.
+      ;;
+      ;;It  is better  to  visit an  imp  library only  when  a syntactic  identifier
+      ;;exported by  the imp library  is used in  the importing library,  rather than
+      ;;visiting all the libraries as we do here.
+      (for-each visit-library (library-imp-lib* lib))
       (set-library-visit-state! lib (lambda ()
 				      (assertion-violation __who__ "first visit did not return" lib)))
       (library-debug-message "visiting: ~a" (library-name lib))
