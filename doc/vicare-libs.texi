@@ -167,7 +167,7 @@ Container libraries
 * object-properties::           Object properties.
 * one-dimension::               One dimensional extended ranges.
 * arrays::                      Multidimensional arrays.
-* chains::                      Chains: doubly-linked lists.
+* chains::                      Chains of objects.
 * stacks::                      Stacks of objects.
 * queues::                      Queues of objects.
 * deques::                      Double-ended queues of objects.

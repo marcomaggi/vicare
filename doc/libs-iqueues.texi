@@ -10,7 +10,337 @@ The library @library{vicare containers iqueues} implements a common
 @api{} for queue--like containers: data structure capable of
 first--in/first--out operations.  A data structure is queue--like if it
 implements the operations: @samp{empty?}, @samp{top}, @samp{push!},
-@samp{pop!}.
+@samp{pop!}; the names are the same of the operations for a stack, but
+for a queue: @samp{push!} enqueues objects on the rear; @samp{pop!}
+dequeues objects from the front.
+
+@menu
+* iqueues common::              The common queues @api{}.
+* iqueues queues::              Common queues @api{} for queues.
+* iqueues deques::              Deques as queues.
+* iqueues chains::              Chains as queues.
+* iqueues dynamic arrays::      Dynamic arrays as queues.
+@end menu
+
+@c page
+@node iqueues common
+@section The common queues @api{}
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iqueues}.
+
+
+@deftp {Record Type} <iqueue>
+@cindex @var{iqueue} argument
+@cindex Argument @var{iqueue}
+Record type representing a queue object.  The @class{iqueue} type is
+non--generative and available for subtyping.  In this documentation
+@class{iqueue} instances used as arguments to functions are indicated as
+@var{iqueue}.
+
+@class{iqueue} is an ``abstract'' type: it must not be instantiated
+directly, rather a subtype of @class{iqueue} must be defined
+implementing the required functions.
+@end deftp
+
+
+@defop Constructor <iqueue> make-iqueue @var{empty?} @var{top} @var{push!} @var{pop!}
+When we derive a type from @class{iqueue} and we specify a protocol:
+this is the closure object used as argument for the protocol function.
+
+@lisp
+(define-record-type <iqueue-list>
+  (parent <iqueue>)
+  (protocol
+    (lambda (make-iqueue)
+      ---))
+  ---)
+@end lisp
+
+Its arguments must be functions implementing the methods for the
+concrete queue:
+
+@table @var
+@item empty?
+A function accepting as single argument the @class{iqueue} instance
+itself.  It must return @true{} if the queue is empty; otherwise it must
+return @false{}.
+
+@item top
+A function accepting as single argument the @class{iqueue} instance
+itself.  It must return the top object at the front of the
+@class{iqueue}.
+
+@item push!
+A function accepting two arguments: the @class{iqueue} instance itself
+and an object.  It must push the object on the rear of the
+@class{iqueue}; it can return unspecified values.
+
+@item pop!
+A function accepting as single argument the @class{iqueue} instance
+itself.  It must remove and return the top object on the front of the
+@class{iqueue}.
+@end table
+@end defop
+
+
+@defun iqueue? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{iqueue}; otherwise
+return @false{}.
+@end defun
+
+
+@defun iqueue-empty? @var{iqueue}
+Return @true{} if @var{iqueue} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun iqueue-top @var{iqueue}
+Return the top object on the front of @var{iqueue}.
+@end defun
+
+
+@defun iqueue-push! @var{iqueue} @var{obj}
+Push @var{obj} on the rear of @var{iqueue}.  Return unspecified values.
+@end defun
+
+
+@defun iqueue-pop! @var{iqueue}
+Remove and return the top object on the front of @var{iqueue}.
+@end defun
+
+@c page
+@node iqueues queues
+@section Common queues @api{} for queues
+
+
+@cindex @library{vicare containers iqueues queues}, library
+@cindex Library @library{vicare containers iqueues queues}
+
+
+The library @library{vicare containers queues} provides an
+implementation of the queue container using the @objtype{<queue>} type,
+@ref{queues, Simple queues}.  The library @library{vicare containers
+iqueues queues} provides a concrete implementation of the @class{iqueue}
+type using an instance of @objtype{<queue>} as storage.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers queues)
+  (vicare containers iqueues)
+  (vicare containers iqueues queues))
+
+(define S
+  (make-iqueue-queue (queue)))
+
+(iqueue-push! S 0)
+(iqueue-push! S 1)
+(iqueue-push! S 2)
+
+(iqueue-top  S)         @result{} 2
+(iqueue-pop! S)         @result{} 2
+(iqueue-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iqueues queues}.
+
+
+@deftp {Record Type} <iqueue-queue>
+Record type implementing an @class{iqueue}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-iqueue-queue @var{queue}
+Build and return a new instance of @objtype{<iqueue-queue>}.  The
+argument @var{queue} must be an instance of type @objtype{<queue>}.
+@end defun
+
+
+@defun iqueue-queue? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<iqueue-queue>};
+otherwise return @false{}.
+@end defun
+
+@c page
+@node iqueues deques
+@section Deques as queues
+
+
+@cindex @library{vicare containers iqueues deques}, library
+@cindex Library @library{vicare containers iqueues deques}
+
+
+The library @library{vicare containers iqueues deques} provides a
+concrete implementation of the @class{iqueue} type using a deque as
+storage; deques are defined by the library @library{vicare containers
+deques}, @ref{deques, Double--ended queues of objects}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers deques)
+  (vicare containers iqueues)
+  (vicare containers iqueues deques))
+
+(define S
+  (make-iqueue-deque (deque)))
+
+(iqueue-push! S 0)
+(iqueue-push! S 1)
+(iqueue-push! S 2)
+
+(iqueue-top  S)         @result{} 2
+(iqueue-pop! S)         @result{} 2
+(iqueue-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iqueues deques}.
+
+
+@deftp {Record Type} <iqueue-deque>
+Record type implementing an @class{iqueue}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-iqueue-deque @var{deque}
+Build and return a new instance of @objtype{<iqueue-deque>}.  The
+argument @var{deque} must be an instance of type @objtype{<deque>} as
+defined by the library @library{vicare containers deques}.
+@end defun
+
+
+@defun iqueue-deque? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<iqueue-deque>};
+otherwise return @false{}.
+@end defun
+
+@c page
+@node iqueues chains
+@section Chains as queues
+
+
+@cindex @library{vicare containers iqueues chains}, library
+@cindex Library @library{vicare containers iqueues chains}
+
+
+The library @library{vicare containers iqueues chains} provides a
+concrete implementation of the @class{iqueue} type using a chain as
+storage; chains are defined by the library @library{vicare containers
+chains}, @ref{chains, Chains of objects}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers chains)
+  (vicare containers iqueues)
+  (vicare containers iqueues chains))
+
+(define S
+  (make-iqueue-chain (chain)))
+
+(iqueue-push! S 0)
+(iqueue-push! S 1)
+(iqueue-push! S 2)
+
+(iqueue-top  S)         @result{} 2
+(iqueue-pop! S)         @result{} 2
+(iqueue-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iqueues chains}.
+
+
+@deftp {Record Type} <iqueue-chain>
+Record type implementing an @class{iqueue}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-iqueue-chain @var{chain}
+Build and return a new instance of @objtype{<iqueue-chain>}.  The
+argument @var{chain} must be null or an instance of type
+@objtype{<chain-link>} as defined by the library @library{vicare
+containers chains}.
+@end defun
+
+
+@defun iqueue-chain? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<iqueue-chain>};
+otherwise return @false{}.
+@end defun
+
+
+@defun iqueue-chain-first-link @var{iqueue}
+Return null or the first link of the chain used as storage in the
+@objtype{<iqueue-chain>} instance @var{iqueue}.
+@end defun
+
+
+@defun iqueue-chain-last-link @var{iqueue}
+Return null or the last link of the chain used as storage in the
+@objtype{<iqueue-chain>} instance @var{iqueue}.
+@end defun
+
+@c page
+@node iqueues dynamic arrays
+@section Dynamic arrays as queues
+
+
+@cindex @library{vicare containers iqueues dynamic-arrays}, library
+@cindex Library @library{vicare containers iqueues dynamic-arrays}
+
+
+The library @library{vicare containers iqueues dynamic-arrays} provides
+a concrete implementation of the @class{iqueue} type using a dynamic
+array as storage; dynamic arrays are defined by the library
+@library{vicare containers dynamic-arrays}, @ref{dynamic arrays, Dynamic
+arrays}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers dynamic-arrays)
+  (vicare containers iqueues)
+  (vicare containers iqueues dynamic-arrays))
+
+(define S
+  (make-iqueue-dynamic-array (dynamic-array)))
+
+(iqueue-push! S 0)
+(iqueue-push! S 1)
+(iqueue-push! S 2)
+
+(iqueue-top  S)         @result{} 2
+(iqueue-pop! S)         @result{} 2
+(iqueue-pop! S)         @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers iqueues dynamic-arrays}.
+
+
+@deftp {Record Type} <iqueue-dynamic-array>
+Record type implementing an @class{iqueue}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-iqueue-dynamic-array @var{arry}
+Build and return a new instance of @objtype{<iqueue-dynamic-array>}.
+The argument @var{arry} must be an instance of type
+@objtype{<dynamic-array>} as defined by the library @library{vicare
+containers dynamic-arrays}.
+@end defun
+
+
+@defun iqueue-dynamic-array? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{<iqueue-dynamic-array>}; otherwise return @false{}.
+@end defun
+
 
 
 

@@ -20,7 +20,7 @@ implements the operations: @samp{empty?}, @samp{top}, @samp{push!},
 * istacks stacks::              Common stacks @api{} for stacks.
 * istacks deques::              Deques as stacks.
 * istacks chains::              Chains as stacks.
-* istacks dynarrys::            Dynamic arrays as stacks.
+* istacks dynamic arrays::      Dynamic arrays as stacks.
 @end menu
 
 @c page
@@ -32,23 +32,23 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks}.
 
 
-@deftp {@rnrs{6} Record Type} <istack>
+@deftp {Record Type} <istack>
 @cindex @var{istack} argument
 @cindex Argument @var{istack}
-Record type representing a stack object.  The @objtype{<istack>} type is
+Record type representing a stack object.  The @class{istack} type is
 non--generative and available for subtyping.  In this documentation
-@objtype{<istack>} instances used as arguments to functions are
+@class{istack} instances used as arguments to functions are
 indicated as @var{istack}.
 
-@objtype{<istack>} is an ``abstract'' type: it must not be instantiated
-directly, rather a subtype of @objtype{<istack>} must be defined
+@class{istack} is an ``abstract'' type: it must not be instantiated
+directly, rather a subtype of @class{istack} must be defined
 implementing the required functions.
 @end deftp
 
 
 @defop Constructor <istack> make-istack @var{empty?} @var{top} @var{push!} @var{pop!}
-When we derive a type from @objtype{<istack>} and we specify a protocol:
-this is the function used as argument for the protocol function.
+When we derive a type from @class{istack} and we specify a protocol:
+this is the closure object used as argument for the protocol function.
 
 @lisp
 (define-record-type <istack-list>
@@ -64,29 +64,29 @@ concrete stack:
 
 @table @var
 @item empty?
-A function accepting as single argument the @objtype{<istack>} instance
-itself.  It must return @true{} if @var{obj} is an instance of
-@objtype{<istack>}; otherwise it must return @false{}.
+A function accepting as single argument the @class{istack} instance
+itself.  It must return @true{} if the stack is empty; otherwise it must
+return @false{}.
 
 @item top
-A function accepting as single argument the @objtype{<istack>} instance
-itself.  It must return the top object in the @objtype{<istack>}.
+A function accepting as single argument the @class{istack} instance
+itself.  It must return the top object in the @class{istack}.
 
 @item push!
-A function accepting two arguments: the @objtype{<istack>} instance
+A function accepting two arguments: the @class{istack} instance
 itself and an object.  It must push the object on the
-@objtype{<istack>}; it can return unspecified values.
+@class{istack}; it can return unspecified values.
 
 @item pop!
-A function accepting as single argument the @objtype{<istack>} instance
+A function accepting as single argument the @class{istack} instance
 itself.  It must remove and return the top object from the
-@objtype{<istack>}.
+@class{istack}.
 @end table
 @end defop
 
 
 @defun istack? @var{obj}
-Return @true{} if @var{obj} is an instance of @objtype{<istack>};
+Return @true{} if @var{obj} is an instance of @class{istack};
 otherwise return @false{}.
 @end defun
 
@@ -120,7 +120,7 @@ Remove and return the top object from @var{istack}.
 
 
 The library @library{vicare containers istacks lists} provides a
-concrete implementation of the @objtype{<istack>} type using built--in
+concrete implementation of the @class{istack} type using built--in
 lists as storage.  Usage example:
 
 @lisp
@@ -144,8 +144,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks lists}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-list>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-list>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 
@@ -180,9 +180,9 @@ Return null or the first pair of the list used as storage in the
 
 
 The library @library{vicare containers istacks ilists} provides a
-concrete implementation of the @objtype{<istack>} type using immutable
-lists as storage; immutable lists are defined by the library
-@library{vicare containers ilists}.  Usage example:
+concrete implementation of the @class{istack} type using immutable lists
+as storage; immutable lists are defined by the library @library{vicare
+containers ilists}, @ref{ilists, Immutable lists}.  Usage example:
 
 @lisp
 (import (vicare)
@@ -205,8 +205,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks ilists}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-ilist>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-ilist>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 
@@ -241,9 +241,10 @@ Return null or the first pair of the list used as storage in the
 
 
 The library @library{vicare containers istacks ralists} provides a
-concrete implementation of the @objtype{<istack>} type using
-random--access lists as storage; random--access lists are defined by the
-library @library{vicare containers ralists}.  Usage example:
+concrete implementation of the @class{istack} type using random--access
+lists as storage; random--access lists are defined by the library
+@library{vicare containers ralists}, @ref{ralists, Random--access
+lists}.  Usage example:
 
 @lisp
 (import (vicare)
@@ -266,8 +267,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks ralists}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-ralist>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-ralist>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 
@@ -302,15 +303,15 @@ Return null or the first pair of the list used as storage in the
 
 
 The library @library{vicare containers stacks} provides an
-implementation of the stack container using the @objtype{<stack>} type;
-the library @library{vicare containers istacks stacks} provides a
-concrete implementation of the @objtype{<istack>} type using an instance
-of @objtype{<stack>} as storage.  Usage example:
+implementation of the stack container using the @objtype{<stack>} type,
+@ref{stacks, Stacks of objects}.  The library @library{vicare containers
+istacks stacks} provides a concrete implementation of the @class{istack}
+type using an instance of @objtype{<stack>} as storage.  Usage example:
 
 @lisp
 (import (vicare)
-  (vicare containers istacks)
   (vicare containers stacks)
+  (vicare containers istacks)
   (vicare containers istacks stacks))
 
 (define S
@@ -329,8 +330,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks stacks}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-stack>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-stack>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 
@@ -356,14 +357,14 @@ otherwise return @false{}.
 
 
 The library @library{vicare containers istacks deques} provides a
-concrete implementation of the @objtype{<istack>} type using a deque as
+concrete implementation of the @class{istack} type using a deque as
 storage; deques are defined by the library @library{vicare containers
-deques}.  Usage example:
+deques}, @ref{deques, Double--ended queues of objects}.  Usage example:
 
 @lisp
 (import (vicare)
-  (vicare containers istacks)
   (vicare containers deques)
+  (vicare containers istacks)
   (vicare containers istacks deques))
 
 (define S
@@ -382,8 +383,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks deques}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-deque>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-deque>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 
@@ -410,14 +411,14 @@ otherwise return @false{}.
 
 
 The library @library{vicare containers istacks chains} provides a
-concrete implementation of the @objtype{<istack>} type using a chain as
+concrete implementation of the @class{istack} type using a chain as
 storage; chains are defined by the library @library{vicare containers
-chains}.  Usage example:
+chains}, @ref{chains, Chains of objects}.  Usage example:
 
 @lisp
 (import (vicare)
-  (vicare containers istacks)
   (vicare containers chains)
+  (vicare containers istacks)
   (vicare containers istacks chains))
 
 (define S
@@ -436,8 +437,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks chains}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-chain>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-chain>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 
@@ -462,7 +463,7 @@ Return null or the first link of the chain used as storage in the
 @end defun
 
 @c page
-@node istacks dynarrys
+@node istacks dynamic arrays
 @section Dynamic arrays as stacks
 
 
@@ -471,14 +472,15 @@ Return null or the first link of the chain used as storage in the
 
 
 The library @library{vicare containers istacks dynamic-arrays} provides
-a concrete implementation of the @objtype{<istack>} type using a dynamic
+a concrete implementation of the @class{istack} type using a dynamic
 array as storage; dynamic arrays are defined by the library
-@library{vicare containers dynamic-arrays}.  Usage example:
+@library{vicare containers dynamic-arrays}, @ref{dynamic arrays, Dynamic
+arrays}.  Usage example:
 
 @lisp
 (import (vicare)
-  (vicare containers istacks)
   (vicare containers dynamic-arrays)
+  (vicare containers istacks)
   (vicare containers istacks dynamic-arrays))
 
 (define S
@@ -497,8 +499,8 @@ The following syntactic bindings are exported by the library
 @library{vicare containers istacks dynamic-arrays}.
 
 
-@deftp {@rnrs{6} Record Type} <istack-dynamic-array>
-Record type implementing an @objtype{<istack>}, of which it is a
+@deftp {Record Type} <istack-dynamic-array>
+Record type implementing an @class{istack}, of which it is a
 subtype.
 @end deftp
 

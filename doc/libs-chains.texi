@@ -1,5 +1,5 @@
 @node chains
-@chapter Chains: doubly--linked lists.
+@chapter Chains of objects
 
 
 @cindex @library{vicare containers chains}, library
