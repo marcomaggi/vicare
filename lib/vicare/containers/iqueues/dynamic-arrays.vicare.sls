@@ -45,7 +45,8 @@
     (protocol
      (lambda (make-iqueue)
        (lambda* ({A dynamic-array?})
-	 ((make-iqueue iqueue-dynamic-array-top iqueue-dynamic-array-push! iqueue-dynamic-array-pop! iqueue-dynamic-array-empty?)
+	 ((make-iqueue iqueue-dynamic-array-empty? iqueue-dynamic-array-top
+		       iqueue-dynamic-array-push!  iqueue-dynamic-array-pop!)
 	  A)))))
 
   (define (iqueue-dynamic-array-top IA)

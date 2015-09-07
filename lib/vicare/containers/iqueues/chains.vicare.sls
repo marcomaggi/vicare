@@ -54,8 +54,8 @@
     (protocol
      (lambda (make-iqueue)
        (lambda* ({C chain?})
-	 ((make-iqueue iqueue-chain-top iqueue-chain-push!
-		       iqueue-chain-pop! iqueue-chain-empty?)
+	 ((make-iqueue iqueue-chain-empty? iqueue-chain-top
+		       iqueue-chain-push! iqueue-chain-pop!)
 	  (chain-front C)
 	  (chain-rear  C)))))
     #| end of DEFINE-RECORD-TYPE |# )

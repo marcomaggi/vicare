@@ -36,14 +36,14 @@
 
 (define-record-type (<iqueue> make-iqueue iqueue?)
   (nongenerative vicare:containers:<iqueue>)
-  (fields (immutable top)
+  (fields (immutable empty?)
+	  (immutable top)
 	  (immutable push!)
-	  (immutable pop!)
-	  (immutable empty?))
+	  (immutable pop!))
   (protocol
    (lambda (make-record)
-     (lambda (top push pop empty?)
-       (make-record top push pop empty?))))
+     (lambda (empty? top push pop)
+       (make-record empty? top push pop))))
   #| end of DEFINE-RECORD-TYPE|# )
 
 (define* (iqueue-top {S iqueue?})

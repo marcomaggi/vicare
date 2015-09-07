@@ -45,7 +45,8 @@
     (protocol
      (lambda (make-iqueue)
        (lambda* ({D deque?})
-	 ((make-iqueue iqueue-deque-top iqueue-deque-push! iqueue-deque-pop! iqueue-deque-empty?)
+	 ((make-iqueue iqueue-deque-empty? iqueue-deque-top
+		       iqueue-deque-push! iqueue-deque-pop!)
 	  D)))))
 
   (define (iqueue-deque-top ID)
