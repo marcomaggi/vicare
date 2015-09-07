@@ -46,7 +46,7 @@ implementing the required functions.
 @end deftp
 
 
-@deffn {Protocol Constructor} make-istack @var{empty?} @var{top} @var{push!} @var{pop!}
+@defop Constructor <istack> make-istack @var{empty?} @var{top} @var{push!} @var{pop!}
 When we derive a type from @objtype{<istack>} and we specify a protocol:
 this is the function used as argument for the protocol function.
 
@@ -82,7 +82,7 @@ A function accepting as single argument the @objtype{<istack>} instance
 itself.  It must remove and return the top object from the
 @objtype{<istack>}.
 @end table
-@end deffn
+@end defop
 
 
 @defun istack? @var{obj}
