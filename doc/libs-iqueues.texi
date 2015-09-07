@@ -264,7 +264,8 @@ subtype.
 Build and return a new instance of @objtype{<iqueue-chain>}.  The
 argument @var{chain} must be null or an instance of type
 @objtype{<chain-link>} as defined by the library @library{vicare
-containers chains}.
+containers chains}; this function automatically determines the first and
+last links in the chain starting from @var{chain}.
 @end defun
 
 

@@ -181,6 +181,8 @@ Container libraries
                                 containers.
 * iqueues::                     Common interface to queue-like
                                 containers.
+* ideques::                     Common interface to deque-like
+                                containers.
 
 Adapted libraries
 
@@ -263,6 +265,7 @@ External documents
 
 @include libs-istacks.texi
 @include libs-iqueues.texi
+@include libs-ideques.texi
 
 @include libs-randomisations.texi
 

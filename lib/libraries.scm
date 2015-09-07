@@ -167,6 +167,11 @@
      (vicare containers iqueues deques)
      (vicare containers iqueues chains)
 
+     (vicare containers ideques)
+     (vicare containers ideques dynamic-arrays)
+     (vicare containers ideques deques)
+     (vicare containers ideques chains)
+
      (vicare parser-tools silex lexer)
      (vicare parser-tools silex)
      (vicare parser-tools silex utilities)

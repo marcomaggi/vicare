@@ -1,0 +1,325 @@
+@node ideques
+@chapter Interface to deque--like containers
+
+
+@cindex @library{vicare containers ideques}, library
+@cindex Library @library{vicare containers ideques}
+
+
+The library @library{vicare containers ideques} implements a common
+@api{} for deque--like containers: data structures representing
+sequences and capable of efficient insertion at both the front and rear.
+A data structure is deque--like if it implements the operations:
+@samp{empty?}, @samp{front}, @samp{rear}, @samp{push-front!},
+@samp{push-rear!}, @samp{pop-front!}, @samp{pop-rear!}.
+
+@menu
+* ideques common::              The common deques @api{}.
+* ideques deques::              Deques as deques.
+* ideques chains::              Chains as deques.
+* ideques dynamic arrays::      Dynamic arrays as deques.
+@end menu
+
+@c page
+@node ideques common
+@section The common deques @api{}
+
+
+The following syntactic bindings are exported by the library
+@library{vicare containers ideques}.
+
+
+@deftp {Record Type} <ideque>
+@cindex @var{ideque} argument
+@cindex Argument @var{ideque}
+Record type representing a deque object.  The @class{ideque} type is
+non--generative and available for subtyping.  In this documentation
+@class{ideque} instances used as arguments to functions are indicated as
+@var{ideque}.
+
+@class{ideque} is an ``abstract'' type: it must not be instantiated
+directly, rather a subtype of @class{ideque} must be defined
+implementing the required functions.
+@end deftp
+
+
+@defop Constructor <ideque> make-ideque @var{empty?} @var{front} @var{rear} @var{push-front!} @var{push-rear!} @var{pop-front!} @var{pop-rear!}
+When we derive a type from @class{ideque} and we specify a protocol:
+this is the closure object used as argument for the protocol function.
+
+@lisp
+(define-record-type <ideque-chain>
+  (parent <ideque>)
+  (protocol
+    (lambda (make-ideque)
+      ---))
+  ---)
+@end lisp
+
+Its arguments must be functions implementing the methods for the
+concrete deque:
+
+@table @var
+@item empty?
+A function accepting as single argument the @class{ideque} instance
+itself.  It must return @true{} if the deque is empty; otherwise it must
+return @false{}.
+
+@item front
+A function accepting as single argument the @class{ideque} instance
+itself.  It must return the first object, at the front of the
+@class{ideque}.
+
+@item rear
+A function accepting as single argument the @class{ideque} instance
+itself.  It must return the last object, at the rear of the
+@class{ideque}.
+
+@item push-front!
+A function accepting two arguments: the @class{ideque} instance itself
+and an object.  It must push the object on the front of the
+@class{ideque}; it can return unspecified values.
+
+@item push-rear!
+A function accepting two arguments: the @class{ideque} instance itself
+and an object.  It must push the object on the rear of the
+@class{ideque}; it can return unspecified values.
+
+@item pop-front!
+A function accepting as single argument the @class{ideque} instance
+itself.  It must remove and return the first object, from the front of
+the @class{ideque}.
+
+@item pop-rear!
+A function accepting as single argument the @class{ideque} instance
+itself.  It must remove and return the last object, from the rear of the
+@class{ideque}.
+@end table
+@end defop
+
+
+@defun ideque? @var{obj}
+Return @true{} if @var{obj} is an instance of @class{ideque}; otherwise
+return @false{}.
+@end defun
+
+
+@defun ideque-empty? @var{ideque}
+Return @true{} if @var{ideque} is empty; otherwise return @false{}.
+@end defun
+
+
+@defun ideque-front @var{ideque}
+Return the first object, on the front of @var{ideque}.
+@end defun
+
+
+@defun ideque-rear @var{ideque}
+Return the last object, on the rear of @var{ideque}.
+@end defun
+
+
+@defun ideque-push-front! @var{ideque} @var{obj}
+Push @var{obj} on the front of @var{ideque}.  Return unspecified values.
+@end defun
+
+
+@defun ideque-push-rear! @var{ideque} @var{obj}
+Push @var{obj} on the rear of @var{ideque}.  Return unspecified values.
+@end defun
+
+
+@defun ideque-pop-front! @var{ideque}
+Remove and return the first object, from the front of @var{ideque}.
+@end defun
+
+
+@defun ideque-pop-rear! @var{ideque}
+Remove and return the last object, from the rear of @var{ideque}.
+@end defun
+
+@c page
+@node ideques deques
+@section Deques as deques
+
+
+@cindex @library{vicare containers ideques deques}, library
+@cindex Library @library{vicare containers ideques deques}
+
+
+The library @library{vicare containers deques} provides an
+implementation of the deque container using the @class{deque} type,
+@ref{deques, Double--ended queues of objects}.  The library
+@library{vicare containers ideques deques} provides a concrete
+implementation of the @class{ideque} type using an instance of
+@class{deque} as storage.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers deques)
+  (vicare containers ideques)
+  (vicare containers ideques deques))
+
+(define S
+  (make-ideque-deque (deque)))
+
+(ideque-push-front! S 0)
+(ideque-push-rear!  S 1)
+
+(ideque-front S)        @result{} 0
+(ideque-rear  S)        @result{} 1
+(ideque-pop-front! S)   @result{} 0
+(ideque-pop-rear!  S)   @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers ideques deques}.
+
+
+@deftp {Record Type} <ideque-deque>
+Record type implementing an @class{ideque}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-ideque-deque @var{deque}
+Build and return a new instance of @objtype{<ideque-deque>}.  The
+argument @var{deque} must be an instance of type @objtype{<deque>} as
+defined by the library @library{vicare containers deques}.
+@end defun
+
+
+@defun ideque-deque? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<ideque-deque>};
+otherwise return @false{}.
+@end defun
+
+@c page
+@node ideques chains
+@section Chains as deques
+
+
+@cindex @library{vicare containers ideques chains}, library
+@cindex Library @library{vicare containers ideques chains}
+
+
+The library @library{vicare containers ideques chains} provides a
+concrete implementation of the @class{ideque} type using a chain as
+storage; chains are defined by the library @library{vicare containers
+chains}, @ref{chains, Chains of objects}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers chains)
+  (vicare containers ideques)
+  (vicare containers ideques chains))
+
+(define S
+  (make-ideque-chain (chain)))
+
+(ideque-push-front! S 0)
+(ideque-push-rear!  S 1)
+
+(ideque-front S)        @result{} 0
+(ideque-rear  S)        @result{} 1
+(ideque-pop-front! S)   @result{} 0
+(ideque-pop-rear!  S)   @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers ideques chains}.
+
+
+@deftp {Record Type} <ideque-chain>
+Record type implementing an @class{ideque}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-ideque-chain @var{chain}
+Build and return a new instance of @objtype{<ideque-chain>}.  The
+argument @var{chain} must be null or an instance of type
+@objtype{<chain-link>} as defined by the library @library{vicare
+containers chains}; this function automatically determines the first and
+last links in the chain starting from @var{chain}.
+@end defun
+
+
+@defun ideque-chain? @var{obj}
+Return @true{} if @var{obj} is an instance of @objtype{<ideque-chain>};
+otherwise return @false{}.
+@end defun
+
+
+@defun ideque-chain-first-link @var{ideque}
+Return null or the first link of the chain used as storage in the
+@objtype{<ideque-chain>} instance @var{ideque}.
+@end defun
+
+
+@defun ideque-chain-last-link @var{ideque}
+Return null or the last link of the chain used as storage in the
+@objtype{<ideque-chain>} instance @var{ideque}.
+@end defun
+
+@c page
+@node ideques dynamic arrays
+@section Dynamic arrays as deques
+
+
+@cindex @library{vicare containers ideques dynamic-arrays}, library
+@cindex Library @library{vicare containers ideques dynamic-arrays}
+
+
+The library @library{vicare containers ideques dynamic-arrays} provides
+a concrete implementation of the @class{ideque} type using a dynamic
+array as storage; dynamic arrays are defined by the library
+@library{vicare containers dynamic-arrays}, @ref{dynamic arrays, Dynamic
+arrays}.  Usage example:
+
+@lisp
+(import (vicare)
+  (vicare containers dynamic-arrays)
+  (vicare containers ideques)
+  (vicare containers ideques dynamic-arrays))
+
+(define S
+  (make-ideque-dynamic-array (dynamic-array)))
+
+(ideque-push-front! S 0)
+(ideque-push-rear!  S 1)
+
+(ideque-front S)        @result{} 0
+(ideque-rear  S)        @result{} 1
+(ideque-pop-front! S)   @result{} 0
+(ideque-pop-rear!  S)   @result{} 1
+@end lisp
+
+The following syntactic bindings are exported by the library
+@library{vicare containers ideques dynamic-arrays}.
+
+
+@deftp {Record Type} <ideque-dynamic-array>
+Record type implementing an @class{ideque}, of which it is a
+subtype.
+@end deftp
+
+
+@defun make-ideque-dynamic-array @var{arry}
+Build and return a new instance of @objtype{<ideque-dynamic-array>}.
+The argument @var{arry} must be an instance of type
+@objtype{<dynamic-array>} as defined by the library @library{vicare
+containers dynamic-arrays}.
+@end defun
+
+
+@defun ideque-dynamic-array? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{<ideque-dynamic-array>}; otherwise return @false{}.
+@end defun
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

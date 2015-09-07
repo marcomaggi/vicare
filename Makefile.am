@@ -115,6 +115,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-ilists.texi				\
 	doc/libs-irregex.texi				\
 	doc/libs-iteration-thunks.texi			\
+	doc/libs-ideques.texi				\
 	doc/libs-iqueues.texi				\
 	doc/libs-istacks.texi				\
 	doc/libs-knuth-morris-pratt.texi		\
@@ -962,6 +963,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	tests/test-vicare-containers-istacks.sps			\
 	tests/test-vicare-containers-iqueues.sps			\
+	tests/test-vicare-containers-ideques.sps			\
 	\
 	tests/test-vicare-crypto-randomisations.sps			\
 	\
