@@ -80,6 +80,44 @@
     => 0 0 1 1 2 2 #t)
 
 ;;; --------------------------------------------------------------------
+;;; type syntaxes
+
+  (check
+      (let* ((D	(queue 0 1 2 3))
+	     (S	(new <iqueue-queue> D)))
+	(iqueue-empty? S))
+    => #f)
+
+  (check
+      (let* ((D	(new <queue>))
+	     (S	(new <iqueue-queue> D)))
+	(iqueue-empty? S))
+    => #t)
+
+  (check
+      (let* ((D	(new <queue>))
+	     (S	(new <iqueue-queue> D)))
+	(iqueue-push! S 0)
+	(let* ((rv1 (iqueue-top  S))
+	       (rv2 (iqueue-pop! S)))
+	  (values rv1 rv2 (iqueue-empty? S))))
+    => 0 0 #t)
+
+  (check
+      (let* ((D	(new <queue>))
+	     (S	(new <iqueue-queue> D)))
+	(iqueue-push! S 0)
+	(iqueue-push! S 1)
+	(iqueue-push! S 2)
+	(let* ((rv1 (iqueue-top  S))
+	       (rv2 (iqueue-pop! S))
+	       (rv3 (iqueue-top  S))
+	       (rv4 (iqueue-pop! S))
+	       (rv5 (iqueue-top  S))
+	       (rv6 (iqueue-pop! S)))
+	  (values rv1 rv2  rv3 rv4  rv5 rv6
+		  (iqueue-empty? S))))
+    => 0 0 1 1 2 2 #t)
 
   #t)
 
@@ -210,6 +248,18 @@
 	  (values rv1 rv2  rv3 rv4  rv5 rv6
 		  (iqueue-empty? S))))
     => 0 0 1 1 2 2 #t)
+
+  (check
+      (let* ((D	(chain 0 1 2 3))
+	     (S	(make-iqueue-chain D)))
+	(chain->list (iqueue-chain-first-link S)))
+    => '(0 1 2 3))
+
+  (check
+      (let* ((D	(chain 0 1 2 3))
+	     (S	(make-iqueue-chain D)))
+	(chain-link-ref (iqueue-chain-last-link S)))
+    => 3)
 
 ;;; --------------------------------------------------------------------
 
