@@ -1880,27 +1880,46 @@
      (begin
        (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run)
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+	 ;;For records we can access the record constructor syntactic identifier.  We
+	 ;;just expand to an equivalent of:
+	 ;;
+	 ;;   (?maker ?arg ...)
+	 ;;
 	 ((r6rs-record-type)
-	  ;;For structs we want to expand to an equivalent of:
-	  ;;
-	  ;;   ((record-constructor (record-type-descriptor ?type-id)) ?arg* ...)
-	  ;;
-	  (let* ((rcd-id.psi (chi-expr (r6rs-record-type-spec.rcd-id (syntactic-binding-descriptor.value binding))
-				       lexenv.run lexenv.expand))
-		 (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+	  (let* ((rts          (syntactic-binding-descriptor.value binding))
+		 (maker.id     (r6rs-record-type-spec.default-constructor-id rts))
+		 (maker-id.psi (chi-expr maker.id lexenv.run lexenv.expand))
+		 (args.psi*    (chi-expr* ?arg* lexenv.run lexenv.expand)))
 	    (make-psi input-form.stx
 		      (build-application no-source
-			(build-application no-source
-			  (build-primref no-source 'record-constructor)
-			  (list (psi-core-expr rcd-id.psi)))
+			(psi-core-expr maker-id.psi)
 			(map psi-core-expr args.psi*))
 		      (make-retvals-signature-single-value ?type-id))))
 
+	 ;;Alternatively for records, we cano expand to an equivalent of:
+	 ;;
+	 ;;   ((record-constructor (record-type-descriptor ?type-id)) ?arg* ...)
+	 ;;
+	 ;;Kept here  for reference  about how to  do it.  (Marco  Maggi; Tue  Sep 8,
+	 ;;2015)
+	 ;;
+	 ;; ((r6rs-record-type)
+	 ;;  (let* ((rcd-id.psi (chi-expr (r6rs-record-type-spec.rcd-id (syntactic-binding-descriptor.value binding))
+	 ;; 			       lexenv.run lexenv.expand))
+	 ;; 	 (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+	 ;;    (make-psi input-form.stx
+	 ;; 	      (build-application no-source
+	 ;; 		(build-application no-source
+	 ;; 		  (build-primref no-source 'record-constructor)
+	 ;; 		  (list (psi-core-expr rcd-id.psi)))
+	 ;; 		(map psi-core-expr args.psi*))
+	 ;; 	      (make-retvals-signature-single-value ?type-id))))
+
+	 ;;For structs we want to expand to an equivalent of:
+	 ;;
+	 ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
+	 ;;
 	 ((vicare-struct-type)
-	  ;;For structs we want to expand to an equivalent of:
-	  ;;
-	  ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
-	  ;;
 	  (let ((args.psi* (chi-expr* ?arg* lexenv.run lexenv.expand)))
 	    (make-psi input-form.stx
 		      (build-application no-source
