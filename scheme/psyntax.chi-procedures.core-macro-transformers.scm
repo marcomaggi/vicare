@@ -1757,7 +1757,6 @@
 	 record-type-field-ref-transformer
 	 $record-type-field-set!-transformer
 	 $record-type-field-ref-transformer)
-  (import R6RS-RECORD-TYPE-SPEC)
 
   (let-syntax
       ((define-transformer
