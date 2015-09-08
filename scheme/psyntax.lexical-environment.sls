@@ -2197,44 +2197,29 @@
        ;;   (global-etv     . (?library . ?loc))
        ;;
        (visit-library (car (syntactic-binding-descriptor.value descr))))
+
       (($record-type-name)
        ;;We expect the syntactic binding's descriptor to be:
        ;;
        ;;   ($record-type-name . #<r6rs-record-type-spec>)
        ;;
-       ;; (let* ((rts        (syntactic-binding-descriptor.value descr))
-       ;; 	      (rtd-id     (r6rs-record-type-spec.rtd-id    rts))
-       ;; 	      (parent-id  (r6rs-record-type-spec.parent-id rts)))
-       ;; 	 (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id    lexenv)
-       ;; 	 (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))
-       (let* ((rtd-id        (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value descr)))
-	      (rtd-id.label  (id->label/or-error who input-form.stx rtd-id))
-	      (rtd-id.descr  (label->syntactic-binding-descriptor rtd-id.label lexenv)))
-	 (case (syntactic-binding-descriptor.type rtd-id.descr)
-	   ((global)
-	    ;;This happens when ID is the  syntactic identifier of an imported record
-	    ;;type.
-	    (visit-library (car (syntactic-binding-descriptor.value rtd-id.descr))))
-	   ((lexical)
-	    ;;This happens when  ID is the syntactic identifier of  a locally defined
-	    ;;record type.
-	    (void))
-	   ((core-prim)
-	    ;;This happens when  ID is the syntactic identifier of  a built-in record
-	    ;;type, like predefined condition object types.
-	    (void))
-	   (else
-	    (raise
-	     (condition (make-syntax-violation input-form.stx id)
-			(make-who-condition who)
-			(make-message-condition "while inspecting syntactic binding of R6RS record type, invalid RTD descriptor")
-			(make-irritants-condition rtd-id rtd-id.descr)))))))
-      (($core-rtd $struct-type-name lexical local-macro local-macro! local-etv)
+       (let* ((rts    (syntactic-binding-descriptor.value descr))
+       	      (rtd-id (r6rs-record-type-spec.rtd-id rts)))
+	 (cond ((r6rs-record-type-spec.parent-id rts)
+		= (lambda (parent-id)
+		    (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
+       	 (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv)))
+
+      (($core-rtd $struct-type-name core-prim lexical local-macro local-macro! local-etv)
        (void))
+
       (else
-       (syntax-violation who
-	 "attempt to force library visit, but it is impossible to find a library exporting the given syntactic binding identifier"
-	 input-form.stx id)))))
+       (raise
+	(condition (make-syntax-violation input-form.stx id)
+		   (make-who-condition who)
+		   (make-message-condition "attempt to force library visit, \
+                      but it is impossible to find a library exporting the given syntactic binding identifier")
+		   (make-irritants-condition descr)))))))
 
 
 ;;;; system label gensym

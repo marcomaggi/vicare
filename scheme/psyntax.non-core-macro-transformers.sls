@@ -1112,14 +1112,13 @@
     ;;which, expanded and  evaluated at run-time, will return  the parent record-type
     ;;default constructor descriptor.
     (define-values (foo-parent parent-rtd-code parent-rcd-code)
-      (%make-parent-rtd+rcd-code clause* synner))
-
-    ;;If  a parent  record  type is  specified  and its  syntactic  identifier is  an
-    ;;imported syntactic binding:  we want to make sure that  the imported library is
-    ;;visited.
-    (module ()
-      (when foo-parent
-	(visit-library-of-imported-syntactic-binding __module_who__ input-form.stx foo-parent (current-inferior-lexenv))))
+      (receive-and-return (foo-parent parent-rtd-code parent-rcd-code)
+	  (%make-parent-rtd+rcd-code clause* synner)
+	;;If a  parent record type  is specified and  its syntactic identifier  is an
+	;;imported syntactic binding: we want to  make sure that the imported library
+	;;is visited.
+	(when foo-parent
+	  (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx foo-parent (current-inferior-lexenv)))))
 
     ;;This can be  a symbol or false.  When  a symbol: the symbol is  the record type
     ;;UID, which will make this record  type non-generative.  When false: this record

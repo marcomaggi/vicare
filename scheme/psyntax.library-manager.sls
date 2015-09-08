@@ -649,9 +649,15 @@
       ;;initialised.   For  example  the   properties  associated  with  record  type
       ;;definitions.
       ;;
-      ;;It  is better  to  visit an  imp  library only  when  a syntactic  identifier
+      ;;FIXME It is better  to visit an imp library only  when a syntactic identifier
       ;;exported by  the imp library  is used in  the importing library,  rather than
-      ;;visiting all the libraries as we do here.
+      ;;visiting all the libraries as we do  here.  For this purpose this form should
+      ;;be    commented    out    and    we   should    rely    on    the    function
+      ;;VISIT-LIBRARY-OF-IMPORTED-SYNTACTIC-BINDING to  do the right thing  for every
+      ;;identifier  that  needs   to  access  properties  set  by   the  visit  code.
+      ;;Unfortunately, right now  there are cases when the function  is not doing the
+      ;;right thing (for some reason not yet  clear to me).  (Marco Maggi; Tue Sep 8,
+      ;;2015)
       (for-each visit-library (library-imp-lib* lib))
       (set-library-visit-state! lib (lambda ()
 				      (assertion-violation __who__ "first visit did not return" lib)))
