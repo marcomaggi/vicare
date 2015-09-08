@@ -1933,16 +1933,14 @@ library, but not established by the boot image, associated to a
 of the formats:
 
 @example
-($record-type-name . (@meta{rtd-id} @meta{rcd-id}))
-($record-type-name . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+($record-type-name . @meta{record-type-spec})
 @end example
 
 @noindent
-where: @meta{rtd-id} is the syntactic identifier to which the
-record--type descriptor is bound; @meta{rcd-id} is the syntactic
-identifier to which the default record--constructor descriptor is bound;
-@meta{spec} is an instance of record type
-@objtype{r6rs-record-type-spec}.
+where @meta{record-type-spec} is a record of type
+@objtype{<r6rs-record-type-spec>}.  This record references the syntactic
+identifiers bound to the record--type descriptor, the
+record--constructor descriptor and other values.
 
 @c ------------------------------------------------------------------------
 
@@ -2304,18 +2302,16 @@ A syntactic binding representing a keyword binding associated to a
 @rnrs{6}'s record--type name has descriptor with one of the formats:
 
 @example
-($record-type-name . (@meta{rtd-id} @meta{rcd-id}))
-($record-type-name . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+($record-type-name . @meta{record-type-spec})
 @end example
 
 @noindent
-where: @meta{rtd-id} is the syntactic identifier to which the
-record--type descriptor is bound; @meta{rcd-id} is the syntactic
-identifier to which the default record--constructor descriptor is bound;
-@meta{spec} is an instance of record type
-@objtype{r6rs-record-type-spec}.
+where @meta{record-type-spec} is a record of type
+@objtype{<r6rs-record-type-spec>}.  This record references the syntactic
+identifiers bound to the record--type descriptor, the
+record--constructor descriptor and other values.
 
-These bindings are established by uses of the syntax
+These syntactic bindings are established by uses of the syntax
 @syntax{define-record-type}, @syntax{define-condition-type} and similar.
 
 @c ------------------------------------------------------------------------

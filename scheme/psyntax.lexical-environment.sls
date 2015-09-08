@@ -72,10 +72,11 @@
     struct-type-name-binding-descriptor?
     struct-type-name-binding-descriptor.type-descriptor
 
-    r6rs-record-type-spec
+    <r6rs-record-type-spec>
     make-r6rs-record-type-spec				r6rs-record-type-spec?
     r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
-    r6rs-record-type-spec.type-name-id			r6rs-record-type-spec.parent-id
+    r6rs-record-type-spec.parent-id
+    r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.type-predicate-id
     r6rs-record-type-spec.safe-accessors-table		r6rs-record-type-spec.safe-mutators-table
     r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
 
@@ -691,19 +692,23 @@
 ;;Lexical variables  bound to  instances of  this type  should be  called RTS  (as in
 ;;"record-type spec").
 ;;
-(define-record-type r6rs-record-type-spec
-  (nongenerative vicare:expander:r6rs-record-type-spec)
+(define-record-type (<r6rs-record-type-spec> make-r6rs-record-type-spec r6rs-record-type-spec?)
+  (nongenerative vicare:expander:<r6rs-record-type-spec>)
   (fields
    (immutable rtd-id r6rs-record-type-spec.rtd-id)
 		;The syntactic identifier bound to the record-type descriptor.
    (immutable rcd-id r6rs-record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
-   (immutable type-name-id r6rs-record-type-spec.type-name-id)
-		;False or a syntactic identifier representing this record type's name.
    (immutable parent-id r6rs-record-type-spec.parent-id)
 		;If this record  type has no parent or the  parent is unknown: false.
 		;If this  record type has a  known parent defined with  the syntactic
 		;layer: a syntactic identifier representing the parent type name.
+   (immutable default-constructor-id r6rs-record-type-spec.default-constructor-id)
+		;False  or  the syntactic  identifier  bound  to the  default  record
+		;constructor function.
+   (immutable type-predicate-id r6rs-record-type-spec.type-predicate-id)
+		;False  or  the syntactic  identifier  bound  to the  type  predicate
+		;function.
    (immutable safe-accessors-table r6rs-record-type-spec.safe-accessors-table)
 		;Alist mapping all  field names to the identifiers to  which the safe
 		;accessors are bound.
@@ -722,15 +727,17 @@
       (case-lambda
        ((rtd-id rcd-id)
 	(make-record rtd-id rcd-id
-		     #f ;type-name-id
 		     #f ;parent-id
+		     #f ;default-constructor-id
+		     #f ;type-predicate-id
 		     '() ;safe-accessors-table
 		     '() ;safe-mutators-table
 		     '() ;unsafe-accessors-table
 		     '() ;unsafe-mutators-table
 		     ))
-       ((rtd-id rcd-id type-name-id parent-id safe-accessors-table safe-mutators-table unsafe-accessors-table unsafe-mutators-table)
-	(make-record rtd-id rcd-id type-name-id parent-id
+       ((rtd-id rcd-id parent-id default-constructor-id type-predicate-id
+		safe-accessors-table safe-mutators-table unsafe-accessors-table unsafe-mutators-table)
+	(make-record rtd-id rcd-id parent-id default-constructor-id type-predicate-id
 		     safe-accessors-table safe-mutators-table
 		     unsafe-accessors-table unsafe-mutators-table)))))
   #| end of DEFINE-RECORD-TYPE |# )
@@ -770,7 +777,7 @@
 	 record-type-name-binding-descriptor.unsafe-mutator)
 
   (define (record-type-name-binding-descriptor.safe-accessor binding-descriptor field-name-id synner)
-    ;;BINDING-DESCRIPTOR  must   a  R6RS   record-type  name's   synatctic  binding's
+    ;;BINDING-DESCRIPTOR  must   a  R6RS   record-type  name's   syntactic  binding's
     ;;descriptor (the lexenv entry):
     ;;
     ;;   ($record-type-name . #<r6rs-record-type-spec>)
@@ -871,7 +878,7 @@
 	     => cdr)
 	    (else
 	     ;;Fallback to the common field accessor or mutator constructor.
-	     (let ((rtd-id (record-type-name-binding-descriptor.rtd-id binding-descriptor)))
+	     (let ((rtd-id (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value binding-descriptor))))
 	       (bless
 		`(,actor-constructor ,rtd-id (quote ,field-name-sym))))))))
 
@@ -2366,7 +2373,7 @@
        ;;
        ;;   ($record-type-name . (?rtd-id ?rcd-id))
        ;;
-       (let* ((rtd-id          (record-type-name-binding-descriptor.rtd-id descr))
+       (let* ((rtd-id          (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value descr)))
 	      (rtd-id.label    (id->label/or-error who input-form.stx rtd-id))
 	      (rtd-id.descr    (label->syntactic-binding-descriptor rtd-id.label lexenv)))
 	 (case (syntactic-binding-descriptor.type rtd-id.descr)

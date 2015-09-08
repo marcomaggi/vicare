@@ -1642,17 +1642,22 @@
     ;;alist in which:  keys are symbols representing all the  field names; values are
     ;;identifiers bound to the unsafe accessors.
     (define foo-fields-unsafe-accessors.table
-      (%make-alist x* unsafe-foo-x*))
+      (if (option.strict-r6rs)
+	  '()
+	(%make-alist x* unsafe-foo-x*)))
 
     ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
     ;;alist in which:  keys are symbols representing mutable field  names; values are
     ;;identifiers bound to unsafe mutators.
     (define foo-fields-unsafe-mutators.table
-      (%make-alist mutable-x* unsafe-foo-x-set!*))
+      (if (option.strict-r6rs)
+	  '()
+	(%make-alist mutable-x* unsafe-foo-x-set!*)))
 
     `(make-syntactic-binding-descriptor/record-type-name
       (make-r6rs-record-type-spec (syntax ,foo-rtd.sym) (syntax ,foo-rcd.sym)
-				  (syntax ,foo.id) ,(and foo-parent.id `(syntax ,foo-parent.id))
+				  ,(and foo-parent.id `(syntax ,foo-parent.id))
+				  (syntax ,make-foo.id) (syntax ,foo?.id)
 				  ,foo-fields-safe-accessors.table
 				  ,foo-fields-safe-mutators.table
 				  ,foo-fields-unsafe-accessors.table
