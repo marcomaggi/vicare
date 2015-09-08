@@ -1761,17 +1761,19 @@
   (let-syntax
       ((define-transformer
 	 (syntax-rules ()
-	   ((_ ?who ?actor-getter)
+	   ((_ ?who ?getter)
 	    (define-core-transformer (?who input-form.stx lexenv.run lexenv.expand)
 	      (syntax-match input-form.stx ()
 		((_ ?type-name)
 		 (identifier? ?type-name)
-		 (chi-expr (?actor-getter (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
-			   lexenv.run lexenv.expand))
+		 (let* ((descr     (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
+			(rts       (syntactic-binding-descriptor.value descr))
+			(expr.stx  (?getter rts)))
+		   (chi-expr expr.stx lexenv.run lexenv.expand)))
 		)))
 	   )))
-    (define-transformer record-type-descriptor        record-type-name-binding-descriptor.rtd-id)
-    (define-transformer record-constructor-descriptor record-type-name-binding-descriptor.rcd-id)
+    (define-transformer record-type-descriptor        r6rs-record-type-spec.rtd-id)
+    (define-transformer record-constructor-descriptor r6rs-record-type-spec.rcd-id)
     #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -1785,17 +1787,18 @@
 		((_ ?type-name ?field-name ?record)
 		 (and (identifier? ?type-name)
 		      (identifier? ?field-name))
-		 (let* ((synner   (lambda (message)
-				    (syntax-violation __who__ message input-form.stx ?type-name)))
-			(binding  (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
-			(accessor (?actor-getter binding ?field-name synner)))
-		   (chi-expr (bless
-			      (list accessor ?record))
-			     lexenv.run lexenv.expand)))
+		 (let* ((synner        (lambda (message)
+					 (syntax-violation __who__ message input-form.stx ?type-name)))
+			(descr         (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
+			(rts           (syntactic-binding-descriptor.value descr))
+			(accessor.sexp (?actor-getter rts (syntax->datum ?field-name) synner))
+			(expr.stx      (bless
+					(list accessor.sexp ?record))))
+		   (chi-expr expr.stx lexenv.run lexenv.expand)))
 		)))
 	   )))
-    (define-transformer  record-type-field-ref record-type-name-binding-descriptor.safe-accessor)
-    (define-transformer $record-type-field-ref record-type-name-binding-descriptor.unsafe-accessor)
+    (define-transformer  record-type-field-ref r6rs-record-type-spec.safe-accessor)
+    (define-transformer $record-type-field-ref r6rs-record-type-spec.unsafe-accessor)
     #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -1809,17 +1812,18 @@
 		((_ ?type-name ?field-name ?record ?new-value)
 		 (and (identifier? ?type-name)
 		      (identifier? ?field-name))
-		 (let* ((synner  (lambda (message)
-				   (syntax-violation __who__ message input-form.stx ?type-name)))
-			(binding (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
-			(mutator (?actor-getter binding ?field-name synner)))
-		   (chi-expr (bless
-			      (list mutator ?record ?new-value))
-			     lexenv.run lexenv.expand)))
+		 (let* ((synner       (lambda (message)
+					(syntax-violation __who__ message input-form.stx ?type-name)))
+			(descr        (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
+			(rts          (syntactic-binding-descriptor.value descr))
+			(mutator.sexp (?actor-getter rts (syntax->datum ?field-name) synner))
+			(expr.stx     (bless
+				       (list mutator.sexp ?record ?new-value))))
+		   (chi-expr expr.stx lexenv.run lexenv.expand)))
 		)))
 	   )))
-    (define-transformer  record-type-field-set! record-type-name-binding-descriptor.safe-mutator)
-    (define-transformer $record-type-field-set! record-type-name-binding-descriptor.unsafe-mutator)
+    (define-transformer  record-type-field-set! r6rs-record-type-spec.safe-mutator)
+    (define-transformer $record-type-field-set! r6rs-record-type-spec.unsafe-mutator)
     #| end of LET-SYNTAX |# )
 
   #| end of module |# )
@@ -1847,7 +1851,7 @@
      (identifier? ?type-id)
      (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
        ((r6rs-record-type)
-	(chi-expr (record-type-name-binding-descriptor.rtd-id binding)
+	(chi-expr (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value binding))
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
 	(make-psi input-form.stx
@@ -1881,7 +1885,7 @@
 	  ;;
 	  ;;   ((record-constructor (record-type-descriptor ?type-id)) ?arg* ...)
 	  ;;
-	  (let* ((rcd-id.psi (chi-expr (record-type-name-binding-descriptor.rcd-id binding)
+	  (let* ((rcd-id.psi (chi-expr (r6rs-record-type-spec.rcd-id (syntactic-binding-descriptor.value binding))
 				       lexenv.run lexenv.expand))
 		 (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
 	    (make-psi input-form.stx
@@ -1958,7 +1962,7 @@
 		 (build-application no-source
 		   (build-application no-source
 		     (build-primref no-source 'internal-applicable-record-type-destructor)
-		     (list (psi-core-expr (chi-expr (record-type-name-binding-descriptor.rtd-id binding)
+		     (list (psi-core-expr (chi-expr (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value binding))
 						    lexenv.run lexenv.expand))))
 		   (list (psi-core-expr expr.psi)))
 		 (make-retvals-signature-single-top)))
@@ -2928,6 +2932,8 @@
     ))
 
 
+;;;; module core-macro-transformer: ASSEMBLY-OF
+
 (define-core-transformer (assembly-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used to  expand  Vicare's  ASSEMBLY-OF syntaxes  from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
