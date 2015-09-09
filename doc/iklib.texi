@@ -10812,28 +10812,97 @@ unsafe accessor and mutator identifiers out of libraries.
 
 
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
+@deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
-records syntactic layer, define-record-type}.
+records syntactic layer, define-record-type}.  This syntax supports some
+@value{PRJNAME} extensions, when the selected language is not strict
+@rnrs{6}.
+@end deffn
 
-Additionally, as Vicare extension, when the identifier representing the
-record type name is used in macro keyword position with the syntax:
+@c ------------------------------------------------------------------------
 
-@example
-(@meta{name} (@meta{expr} ...))
-@end example
+@subsubheading The destructor protocol
+
+The definition clause:
+
+@lisp
+(destructor-protocol @meta{expr})
+@end lisp
 
 @noindent
-the form is expanded to the application of the default constructor to
-the results of evaluating the @meta{expr} arguments:
+allows the specification of an expression @meta{expr} which must
+evaluate to the destructor protocol function; this function is used as
+explained below to construct a destructor function to be called:
 
-@example
-(define-record-type color
-  (fields red green blue))
+@itemize
+@item
+Implicitly by the garbage collector when a record of this type is
+collected.
 
-(color (1 2 3))
-@result{} #[record color red=1 green=2 blue=3]
-@end example
-@end deffn
+@item
+Explicitly with the @syntax{delete} syntax.
+@end itemize
+
+@noindent
+@ref{iklib records final} for further details.
+
+Here is how the destructor function is built:
+
+@itemize
+@item
+If this type has a @syntax{destructor-protocol} clause and no parent:
+@meta{expr} must evaluate to a closure object accepting no arguments and
+returning a closure object acting as destructor function for records of
+this type.  For example:
+
+@lisp
+(define-record-type <device>
+  (fields port)
+  (destructor-protocol
+    (lambda ()
+      (lambda (record)
+        (let ((P (<device>-port port)))
+          (unless (port-closed? P)
+            (close-port P))))))
+@end lisp
+
+@item
+If this type has a @syntax{destructor-protocol} clause and a parent
+specified with the @clause{parent} or @clause{parent-rtd} clauses:
+@meta{expr} must evaluate to a closure object accepting as single
+argument the parent's destructor function and returning as single value
+a closure object acting as destructor function for records of this type.
+For example:
+
+@lisp
+(define-record-type <port>
+  (fields port)
+  (destructor-protocol
+    (lambda ()
+      (lambda (record)
+        (let ((P (<device>-port port)))
+          (unless (port-closed? P)
+            (close-port P))))))
+
+(define-record-type <file>
+  (parent <port>)
+  (fields filename)
+  (destructor-protocol
+    (lambda (destroy-<device>)
+      (lambda (record)
+        (destroy-<device> record)))))
+@end lisp
+
+@noindent
+notice that the destructor of @samp{<file>} is meant to call the
+destructor of its supertype @samp{<port>} at some point; however calling
+the supertype's destructor is optional.
+
+@item
+If this type has no @clause{destructor-protocol} clause, it has a parent
+and the parent has a destructor function: the parent's destructor
+function becomes this type's destructor function.
+@end itemize
 
 @c page
 @node iklib records predicates

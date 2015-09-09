@@ -23,7 +23,8 @@
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
 	 r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
 	 r6rs-record-type-spec.parent-id
-	 r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.type-predicate-id
+	 r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.default-destructor-id
+	 r6rs-record-type-spec.type-predicate-id
 	 r6rs-record-type-spec.safe-accessors-table	r6rs-record-type-spec.safe-mutators-table
 	 r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
 
@@ -60,6 +61,9 @@
    (immutable default-constructor-id r6rs-record-type-spec.default-constructor-id)
 		;False  or  the syntactic  identifier  bound  to the  default  record
 		;constructor function.
+   (immutable default-destructor-id r6rs-record-type-spec.default-destructor-id)
+		;False  or  the syntactic  identifier  bound  to the  default  record
+		;destructor function.
    (immutable type-predicate-id r6rs-record-type-spec.type-predicate-id)
 		;False  or  the syntactic  identifier  bound  to the  type  predicate
 		;function.
@@ -83,15 +87,17 @@
 	(make-record rtd-id rcd-id
 		     #f ;parent-id
 		     #f ;default-constructor-id
+		     #f ;default-destructor-id
 		     #f ;type-predicate-id
 		     '() ;safe-accessors-table
 		     '() ;safe-mutators-table
 		     '() ;unsafe-accessors-table
 		     '() ;unsafe-mutators-table
 		     ))
-       ((rtd-id rcd-id parent-id default-constructor-id type-predicate-id
+       ((rtd-id rcd-id parent-id default-constructor-id default-destructor-id type-predicate-id
 		safe-accessors-table safe-mutators-table unsafe-accessors-table unsafe-mutators-table)
-	(make-record rtd-id rcd-id parent-id default-constructor-id type-predicate-id
+	(make-record rtd-id rcd-id parent-id
+		     default-constructor-id default-destructor-id type-predicate-id
 		     safe-accessors-table safe-mutators-table
 		     unsafe-accessors-table unsafe-mutators-table)))))
   #| end of DEFINE-RECORD-TYPE |# )

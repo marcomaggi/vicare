@@ -1972,17 +1972,17 @@
 
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type-id expr.psi)
     (case-object-type-binding (who input-form.stx type-id lexenv.run binding)
+
       ((r6rs-record-type)
-       ;;For structs we want to expand to an equivalent of:
+       ;;For records, when  we have access to the record-type  specification, we want
+       ;;to expand to an equivalent of:
        ;;
-       ;;   ((record-type-destructor (record-type-descriptor ?type-id)) ?expr)
+       ;;   (?deafult-record-destructor-id ?expr)
        ;;
        (make-psi input-form.stx
 		 (build-application no-source
-		   (build-application no-source
-		     (build-primref no-source 'internal-applicable-record-type-destructor)
-		     (list (psi-core-expr (chi-expr (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value binding))
-						    lexenv.run lexenv.expand))))
+		   (psi-core-expr (chi-expr (r6rs-record-type-spec.default-destructor-id (syntactic-binding-descriptor.value binding))
+					    lexenv.run lexenv.expand))
 		   (list (psi-core-expr expr.psi)))
 		 (make-retvals-signature-single-top)))
 

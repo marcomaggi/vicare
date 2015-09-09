@@ -96,7 +96,8 @@
     make-r6rs-record-type-spec				r6rs-record-type-spec?
     r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
     r6rs-record-type-spec.parent-id
-    r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.type-predicate-id
+    r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.default-destructor-id
+    r6rs-record-type-spec.type-predicate-id
     r6rs-record-type-spec.safe-accessors-table		r6rs-record-type-spec.safe-mutators-table
     r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
 
