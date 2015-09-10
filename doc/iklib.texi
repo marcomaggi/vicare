@@ -10856,12 +10856,12 @@ returning a closure object acting as destructor function for records of
 this type.  For example:
 
 @lisp
-(define-record-type <device>
+(define-record-type <port>
   (fields port)
   (destructor-protocol
     (lambda ()
       (lambda (record)
-        (close-port (<device>-port record))))))
+        (close-port (<port>-port record))))))
 @end lisp
 
 @item
@@ -10878,15 +10878,15 @@ For example:
   (destructor-protocol
     (lambda ()
       (lambda (record)
-        (close-port (<device>-port record))))))
+        (close-port (<port>-port record))))))
 
 (define-record-type <file>
   (parent <port>)
   (fields filename)
   (destructor-protocol
-    (lambda (destroy-<device>)
+    (lambda (destroy-<port>)
       (lambda (record)
-        (destroy-<device> record)))))
+        (destroy-<port> record)))))
 @end lisp
 
 @noindent
