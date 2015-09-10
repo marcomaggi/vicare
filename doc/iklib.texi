@@ -10861,7 +10861,7 @@ this type.  For example:
   (destructor-protocol
     (lambda ()
       (lambda (record)
-        (close-port (<device>-port port))))))
+        (close-port (<device>-port record))))))
 @end lisp
 
 @item
@@ -10878,7 +10878,7 @@ For example:
   (destructor-protocol
     (lambda ()
       (lambda (record)
-        (close-port (<device>-port port))))))
+        (close-port (<device>-port record))))))
 
 (define-record-type <file>
   (parent <port>)
