@@ -57,7 +57,7 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare expander object-type-specs) typ.)
+  (prefix (vicare expander tag-type-specs) typ.)
   (vicare language-extensions callables)
   (vicare checks))
 
@@ -5317,7 +5317,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'typ.set-identifier-object-type-spec! 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-tag-type-spec! 'scheme-indent-function 1)
 ;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
 ;; eval: (put 'catch-expand-time-signature-violation 'scheme-indent-function 1)
 ;; End:

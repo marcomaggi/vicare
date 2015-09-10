@@ -162,8 +162,8 @@
   ;;This function is used  as tag validator by the tagged  language.  It validates an
   ;;object type as  belonging to a tag  specification; it must raise  an exception or
   ;;just return the object  itself.  TYPE-NAME is typically the symbol  name of a tag
-  ;;identifier.  PRED is typically the predicate function from the "object-type-spec"
-  ;;of a tag identifier.
+  ;;identifier.  PRED is typically the predicate function from the "tag-type-spec" of
+  ;;a tag identifier.
   ;;
   (if (pred obj)
       obj
@@ -177,8 +177,8 @@
   ;;This function is used  as tag validator by the tagged  language.  It validates an
   ;;object type as  belonging to a tag  specification; it must raise  an exception or
   ;;just return the object  itself.  TYPE-NAME is typically the symbol  name of a tag
-  ;;identifier.  PRED is typically the predicate function from the "object-type-spec"
-  ;;of a tag identifier.
+  ;;identifier.  PRED is typically the predicate function from the "tag-type-spec" of
+  ;;a tag identifier.
   ;;
   (if (pred obj)
       obj

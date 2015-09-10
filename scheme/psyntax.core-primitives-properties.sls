@@ -2867,23 +2867,23 @@
   ;; tag-common-ancestor
   ;; formals-signature-super-and-sub-syntax?
 
-  ;; set-identifier-object-type-spec!
-  ;; identifier-object-type-spec
-  ;; set-label-object-type-spec!
-  ;; label-object-type-spec
-  ;; make-object-type-spec
-  ;; object-type-spec?
-  ;; object-type-spec-uids
-  ;; object-type-spec-type-id
-  ;; object-type-spec-parent-spec
-  ;; object-type-spec-pred-stx
-  ;; object-type-spec-constructor-maker
-  ;; object-type-spec-accessor-maker
-  ;; object-type-spec-mutator-maker
-  ;; object-type-spec-getter-maker
-  ;; object-type-spec-setter-maker
-  ;; object-type-spec-dispatcher
-  ;; object-type-spec-ancestry
+  ;; set-identifier-tag-type-spec!
+  ;; identifier-tag-type-spec
+  ;; set-label-tag-type-spec!
+  ;; label-tag-type-spec
+  ;; make-tag-type-spec
+  ;; tag-type-spec?
+  ;; tag-type-spec-uids
+  ;; tag-type-spec-type-id
+  ;; tag-type-spec-parent-spec
+  ;; tag-type-spec-pred-stx
+  ;; tag-type-spec-constructor-maker
+  ;; tag-type-spec-accessor-maker
+  ;; tag-type-spec-mutator-maker
+  ;; tag-type-spec-getter-maker
+  ;; tag-type-spec-setter-maker
+  ;; tag-type-spec-dispatcher
+  ;; tag-type-spec-ancestry
 
   ;; tagged-identifier?
   ;; set-identifier-tag!

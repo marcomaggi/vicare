@@ -12,7 +12,7 @@
 ;;;	using "void  *" pointers in the  C language and  casting them to
 ;;;	some structure pointer type when needed.
 ;;;
-;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -73,7 +73,7 @@
 	       aux.<>			aux.<-)
 	      aux.))
   (import (vicare (0 4))
-    (for (prefix (vicare expander object-type-specs)
+    (for (prefix (vicare expander tag-type-specs)
 		 typ.)
       expand)
     (prefix (only (vicare expander tags)
@@ -145,8 +145,8 @@
 
 (define-syntax <top>
   (let ()
-    (typ.set-identifier-object-type-spec! #'<top>
-      (typ.make-object-type-spec #'<top> #'typ.<top> #'<top>-predicate))
+    (typ.set-identifier-tag-type-spec! #'<top>
+      (typ.make-tag-type-spec #'<top> #'typ.<top> #'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -291,8 +291,8 @@
 
 (define-syntax <procedure>
   (let ()
-    (typ.set-identifier-object-type-spec! #'<procedure>
-      (typ.make-object-type-spec #'<procedure> #'<top> #'procedure?))
+    (typ.set-identifier-tag-type-spec! #'<procedure>
+      (typ.make-tag-type-spec #'<procedure> #'<top> #'procedure?))
     (lambda (stx)
       (case-define synner
 	((message)
@@ -491,12 +491,12 @@
 		(define (%dispatcher method-sym arg*.stx input-form-stx)
 		  #f)
 		(define type-spec
-		  (typ.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
+		  (typ.make-tag-type-spec #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
 					     %constructor-maker
 					     %accessor-maker %mutator-maker
 					     %getter-maker %setter-maker
 					     %caster-maker %dispatcher))
-		(typ.set-identifier-object-type-spec! #'THE-TAG type-spec))
+		(typ.set-identifier-tag-type-spec! #'THE-TAG type-spec))
 
 	      (lambda (stx)
 		(define (synner message subform)
@@ -848,12 +848,12 @@
 		(define (%dispatcher method-sym arg*.stx input-form-stx)
 		  #f)
 		(define type-spec
-		  (typ.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PREDICATE
+		  (typ.make-tag-type-spec #'THE-TAG #'THE-PARENT #'THE-PREDICATE
 					     %constructor-maker
 					     %accessor-maker %mutator-maker
 					     %getter-maker %setter-maker
 					     %caster-maker %dispatcher))
-		(typ.set-identifier-object-type-spec! #'THE-TAG type-spec))
+		(typ.set-identifier-tag-type-spec! #'THE-TAG type-spec))
 
 	      (lambda (stx)
 		(define (synner message subform)
@@ -1723,5 +1723,5 @@
 ;; eval: (put 'aux.method 'scheme-indent-function 1)
 ;; eval: (put 'THE-PARENT 'scheme-indent-function 1)
 ;; eval: (put 'receive-and-return/tags 'scheme-indent-function 2)
-;; eval: (put 'typ.set-identifier-object-type-spec! 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-tag-type-spec! 'scheme-indent-function 1)
 ;; End:

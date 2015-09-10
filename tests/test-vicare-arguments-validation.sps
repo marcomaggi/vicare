@@ -56,7 +56,7 @@
   (syntax-rules ()
     ((_ print? . ?body)
      (guard (E ((internal-body
-		  (import (prefix (vicare expander object-type-specs) typ.))
+		  (import (prefix (vicare expander tag-type-specs) typ.))
 		  (typ.expand-time-type-signature-violation? E))
 		(when print?
 		  (check-pretty-print (condition-message E)))

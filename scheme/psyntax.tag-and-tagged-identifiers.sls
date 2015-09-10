@@ -26,7 +26,7 @@
 ;;
 ;;A "tag identifier" is a bound identifier whose syntactic binding label gensym has a
 ;;specific   entry  in   its  property   list;  such   entry  has   an  instance   of
-;;"object-type-spec" as value.  Tag identifiers must  be bound (otherwise they do not
+;;"tag-type-spec" as value.  Tag identifiers must  be bound (otherwise they do not
 ;;have a  syntactic binding label), but  it does not  matter to what they  are bound.
 ;;Typical examples of tag identifiers are:
 ;;
@@ -45,13 +45,13 @@
 #|
      (import (vicare)
        (vicare expander tags)
-       (for (prefix (vicare expander object-type-specs) typ.)
+       (for (prefix (vicare expander tag-type-specs) typ.)
          expand))
 
      (define-syntax <my-tag>
        (let ()
          (set-identifier-tag! #'<my-tag>
-           (make-object-type-spec #'<my-tag> #'<top> ...))
+           (make-tag-type-spec #'<my-tag> #'<top> ...))
          (lambda (x) #f)))
 |#
 ;;in which "<top>" is used as parent tag.
@@ -84,21 +84,21 @@
 (library (psyntax.tag-and-tagged-identifiers)
   (export
 
-    object-type-spec
-    make-object-type-spec
-    object-type-spec?				false-or-object-type-spec?
-    object-type-spec-uids			set-object-type-spec-uids!
-    object-type-spec-type-id			set-object-type-spec-type-id!
-    object-type-spec-pred-stx			set-object-type-spec-pred-stx!
-    object-type-spec-constructor-maker		set-object-type-spec-constructor-maker!
-    object-type-spec-accessor-maker		set-object-type-spec-accessor-maker!
-    object-type-spec-mutator-maker		set-object-type-spec-mutator-maker!
-    object-type-spec-getter-maker		set-object-type-spec-getter-maker!
-    object-type-spec-setter-maker		set-object-type-spec-setter-maker!
-    object-type-spec-caster-maker		set-object-type-spec-caster-maker!
-    object-type-spec-dispatcher			set-object-type-spec-dispatcher!
-    object-type-spec-parent-spec		set-object-type-spec-parent-spec!
-    object-type-spec-ancestry
+    tag-type-spec
+    make-tag-type-spec
+    tag-type-spec?				false-or-tag-type-spec?
+    tag-type-spec-uids			set-tag-type-spec-uids!
+    tag-type-spec-type-id			set-tag-type-spec-type-id!
+    tag-type-spec-pred-stx			set-tag-type-spec-pred-stx!
+    tag-type-spec-constructor-maker		set-tag-type-spec-constructor-maker!
+    tag-type-spec-accessor-maker		set-tag-type-spec-accessor-maker!
+    tag-type-spec-mutator-maker		set-tag-type-spec-mutator-maker!
+    tag-type-spec-getter-maker		set-tag-type-spec-getter-maker!
+    tag-type-spec-setter-maker		set-tag-type-spec-setter-maker!
+    tag-type-spec-caster-maker		set-tag-type-spec-caster-maker!
+    tag-type-spec-dispatcher			set-tag-type-spec-dispatcher!
+    tag-type-spec-parent-spec		set-tag-type-spec-parent-spec!
+    tag-type-spec-ancestry
 
     ;; object type specification queries
     tag-identifier-constructor-maker
@@ -110,9 +110,9 @@
     tag-identifier-dispatch
 
     ;; tag identifiers
-    set-identifier-object-type-spec!		identifier-object-type-spec
-    $identifier-object-type-spec
-    set-label-object-type-spec!			label-object-type-spec
+    set-identifier-tag-type-spec!		identifier-tag-type-spec
+    $identifier-tag-type-spec
+    set-label-tag-type-spec!			label-tag-type-spec
     tag-identifier?				false-or-tag-identifier?
     tag-identifier-and-list-sub-tag?
     assert-tag-identifier?			assert-list-sub-tag-identifier?
@@ -236,7 +236,7 @@
 
 ;;;; expand-time object type specification
 
-(define-record (object-type-spec %make-object-type-spec object-type-spec?)
+(define-record (tag-type-spec %make-tag-type-spec tag-type-spec?)
   ;;A type representing  the object type to which expressions  in syntax objects will
   ;;evaluate.  All the Scheme objects are meant to be representable with this type.
   ;;
@@ -266,21 +266,21 @@
    dispatcher
 		;False or a method dispatcher procedure.
    parent-spec
-		;False or an instance of  "object-type-spec" describing the parent of
+		;False or an instance of  "tag-type-spec" describing the parent of
 		;this type.   Only "<top>" has this  field set to false;  every other
-		;"object-type-spec"  has  a parent  spec.   "<top>"  is the  implicit
+		;"tag-type-spec"  has  a parent  spec.   "<top>"  is the  implicit
 		;parent of  all the type  specs; "<top>"  is the tag  of single-value
 		;untagged bindings.
    ))
 
-(case-define* make-object-type-spec
+(case-define* make-tag-type-spec
   (({type-id	lex.identifier-bound?}
     {parent-id	tag-identifier?}
     {pred-stx	lex.syntax-object?})
-   (let* ((parent-spec (identifier-object-type-spec parent-id))
+   (let* ((parent-spec (identifier-tag-type-spec parent-id))
 	  (uid         (lex.id->label type-id))
-	  (uids        (list uid (object-type-spec-uids parent-spec))))
-     (%make-object-type-spec uids type-id pred-stx
+	  (uids        (list uid (tag-type-spec-uids parent-spec))))
+     (%make-tag-type-spec uids type-id pred-stx
 			     #f ;constructor-maker
 			     #f ;accessor-maker
 			     #f ;mutator-maker
@@ -300,28 +300,28 @@
     {setter	false-or-procedure?}
     {caster	false-or-procedure?}
     {dispatcher	false-or-procedure?})
-   (let* ((parent-spec (identifier-object-type-spec parent-id))
+   (let* ((parent-spec (identifier-tag-type-spec parent-id))
 	  (uid         (lex.id->label type-id))
-	  (uids        (list uid (object-type-spec-uids parent-spec))))
-     (%make-object-type-spec uids type-id pred-stx
+	  (uids        (list uid (tag-type-spec-uids parent-spec))))
+     (%make-tag-type-spec uids type-id pred-stx
 			     construct accessor mutator getter setter caster dispatcher parent-spec))))
 
-(define (false-or-object-type-spec? obj)
+(define (false-or-tag-type-spec? obj)
   (or (not obj)
-      (object-type-spec? obj)))
+      (tag-type-spec? obj)))
 
 ;;; --------------------------------------------------------------------
 
-(module (object-type-spec-ancestry)
+(module (tag-type-spec-ancestry)
 
-  (define* (object-type-spec-ancestry {spec object-type-spec?})
-    ($object-type-spec-ancestry spec))
+  (define* (tag-type-spec-ancestry {spec tag-type-spec?})
+    ($tag-type-spec-ancestry spec))
 
-  (define ($object-type-spec-ancestry spec)
-    (cons ($object-type-spec-type-id spec)
-	  (cond (($object-type-spec-parent-spec spec)
+  (define ($tag-type-spec-ancestry spec)
+    (cons ($tag-type-spec-type-id spec)
+	  (cond (($tag-type-spec-parent-spec spec)
 		 => (lambda (pspec)
-		      ($object-type-spec-ancestry pspec)))
+		      ($tag-type-spec-ancestry pspec)))
 		(else '()))))
 
   #| end of module |# )
@@ -333,9 +333,9 @@
   ((tag-id)
    (tag-identifier-constructor-maker tag-id #f))
   (({tag-id tag-identifier?} input-form.stx)
-   (cond ((identifier-object-type-spec tag-id)
+   (cond ((identifier-tag-type-spec tag-id)
 	  => (lambda (spec)
-	       (cond ((object-type-spec-constructor-maker spec)
+	       (cond ((tag-type-spec-constructor-maker spec)
 		      => (lambda (constructor-maker)
 			   (constructor-maker input-form.stx)))
 		     (else
@@ -345,10 +345,10 @@
 	  ;;This should never happen because we  have validated the identifier in the
 	  ;;fender.
 	  (lex.syntax-violation/internal-error __who__
-	    "tag identifier without object-type-spec" input-form.stx tag-id)))))
+	    "tag identifier without tag-type-spec" input-form.stx tag-id)))))
 
 (case-define* tag-identifier-predicate
-  ;;Given  a tag  identifier:  retrieve from  the  associated "object-type-spec"  the
+  ;;Given  a tag  identifier:  retrieve from  the  associated "tag-type-spec"  the
   ;;predicate syntax object.   If successful: return a syntax  object representing an
   ;;expression  which,  expanded  by  itself  and  evaluated,  will  return  the  tag
   ;;predicate.
@@ -356,22 +356,22 @@
   ((tag-id)
    (tag-identifier-predicate tag-id #f))
   (({tag-id tag-identifier?} input-form.stx)
-   (cond ((identifier-object-type-spec tag-id)
+   (cond ((identifier-tag-type-spec tag-id)
 	  => (lambda (spec)
-	       (or (object-type-spec-pred-stx spec)
+	       (or (tag-type-spec-pred-stx spec)
 		   ;;This   should    never   happen    because   an    instance   of
-		   ;;"object-type-spec" always has a defined predicate.
+		   ;;"tag-type-spec" always has a defined predicate.
 		   (lex.syntax-violation/internal-error __who__
 		     "undefined tag predicate" input-form.stx tag-id))))
 	 (else
 	  ;;This should never happen because we  have validated the identifier in the
 	  ;;fender.
 	  (lex.syntax-violation/internal-error __who__
-	    "tag identifier without object-type-spec" input-form.stx tag-id)))))
+	    "tag identifier without tag-type-spec" input-form.stx tag-id)))))
 
 (case-define* tag-identifier-accessor
   ;;Given   a  tag   identifier  and   a  field   name:  search   the  hierarchy   of
-  ;;"object-type-spec" associated  to TAG-ID for  an accessor of the  selected field.
+  ;;"tag-type-spec" associated  to TAG-ID for  an accessor of the  selected field.
   ;;If successful: return a syntax  object representing an expression which, expanded
   ;;by itself and evaluated, will return the field accessor; if no accessor is found:
   ;;raise an exception.
@@ -379,26 +379,26 @@
   ((tag-id field-name-id)
    (tag-identifier-accessor tag-id field-name-id #f))
   (({tag-id tag-identifier?} {field-name-id identifier?} input-form.stx)
-   (let loop ((spec ($identifier-object-type-spec tag-id)))
+   (let loop ((spec ($identifier-tag-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
-	    ;;object-type-specs  until an  object-type-spec without  parent has  been
+	    ;;tag-type-specs  until an  tag-type-spec without  parent has  been
 	    ;;found.  The serach for the field accessor has failed.
 	    (syntax-violation __who__
 	      "object type does not provide selected field accessor"
 	      input-form.stx field-name-id))
-	   (($object-type-spec-accessor-maker spec)
+	   (($tag-type-spec-accessor-maker spec)
 	    => (lambda (accessor-maker)
 		 (or (accessor-maker (syntax->datum field-name-id) input-form.stx)
 		     ;;The field is unknown: try with the parent.
-		     (loop ($object-type-spec-parent-spec spec)))))
+		     (loop ($tag-type-spec-parent-spec spec)))))
 	   (else
-	    ;;The object-type-spec has no accessor maker: try with the parent.
-	    (loop ($object-type-spec-parent-spec spec)))))))
+	    ;;The tag-type-spec has no accessor maker: try with the parent.
+	    (loop ($tag-type-spec-parent-spec spec)))))))
 
 (case-define* tag-identifier-mutator
   ;;Given   a  tag   identifier  and   a  field   name:  search   the  hierarchy   of
-  ;;"object-type-spec" associated to TAG-ID for an mutator of the selected field.  If
+  ;;"tag-type-spec" associated to TAG-ID for an mutator of the selected field.  If
   ;;successful: return a syntax object  representing an expression which, expanded by
   ;;itself and  evaluated, will  return the  field mutator; if  no mutator  is found:
   ;;raise an exception.
@@ -406,25 +406,25 @@
   ((tag-id field-name-id)
    (tag-identifier-mutator tag-id field-name-id #f))
   (({tag-id tag-identifier?} {field-name-id identifier?} input-form.stx)
-   (let loop ((spec ($identifier-object-type-spec tag-id)))
+   (let loop ((spec ($identifier-tag-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
-	    ;;"object-type-specs" until an "object-type-spec" without parent has been
+	    ;;"tag-type-specs" until an "tag-type-spec" without parent has been
 	    ;;found.  The serach for the field mutator has failed.
 	    (syntax-violation __who__
 	      "object type does not provide selected field mutator"
 	      input-form.stx field-name-id))
-	   (($object-type-spec-mutator-maker spec)
+	   (($tag-type-spec-mutator-maker spec)
 	    => (lambda (mutator-maker)
 		 (or (mutator-maker (syntax->datum field-name-id) input-form.stx)
-		     (loop ($object-type-spec-parent-spec spec)))))
+		     (loop ($tag-type-spec-parent-spec spec)))))
 	   (else
-	    ;;The object-type-spec has no mutator maker: try with the parent.
-	    (loop ($object-type-spec-parent-spec spec)))))))
+	    ;;The tag-type-spec has no mutator maker: try with the parent.
+	    (loop ($tag-type-spec-parent-spec spec)))))))
 
 (case-define* tag-identifier-getter
   ;;Given  a   tag  identifier  and   a  set  of   keys:  search  the   hierarchy  of
-  ;;"object-type-spec"  associated to  TAG-ID for  a getter  accepting the  keys.  If
+  ;;"tag-type-spec"  associated to  TAG-ID for  a getter  accepting the  keys.  If
   ;;successful: return a syntax object  representing an expression which, expanded by
   ;;itself and  evaluated, will return  the getter; if no  getter is found:  raise an
   ;;exception.
@@ -432,25 +432,25 @@
   ((tag-id keys.stx)
    (tag-identifier-getter tag-id keys.stx #f))
   (({tag-id tag-identifier?} {keys.stx lex.syntax-object?} input-form.stx)
-   (let loop ((spec (identifier-object-type-spec tag-id)))
+   (let loop ((spec (identifier-tag-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
-	    ;;"object-type-specs" until an "object-type-spec" without parent has been
+	    ;;"tag-type-specs" until an "tag-type-spec" without parent has been
 	    ;;found.  The serach for the field getter has failed.
 	    (syntax-violation __who__
 	      "object type does not provide getter syntax" input-form.stx tag-id))
-	   (($object-type-spec-getter-maker spec)
+	   (($tag-type-spec-getter-maker spec)
 	    => (lambda (getter-maker)
 		 (or (getter-maker keys.stx input-form.stx)
 		     ;;The keys are unknown: try with the parent.
-		     (loop ($object-type-spec-parent-spec spec)))))
+		     (loop ($tag-type-spec-parent-spec spec)))))
 	   (else
-	    ;;The object-type-spec has no getter maker: try with the parent.
-	    (loop ($object-type-spec-parent-spec spec)))))))
+	    ;;The tag-type-spec has no getter maker: try with the parent.
+	    (loop ($tag-type-spec-parent-spec spec)))))))
 
 (case-define* tag-identifier-setter
   ;;Given  a   tag  identifier  and   a  set  of   keys:  search  the   hierarchy  of
-  ;;"object-type-spec"  associated to  TAG-ID for  a setter  accepting the  keys.  If
+  ;;"tag-type-spec"  associated to  TAG-ID for  a setter  accepting the  keys.  If
   ;;successful: return a syntax object  representing an expression which, expanded by
   ;;itself and  evaluated, will return  the setter; if no  setter is found:  raise an
   ;;exception.
@@ -458,28 +458,28 @@
   ((tag-id keys.stx)
    (tag-identifier-setter tag-id keys.stx #f))
   (({tag-id tag-identifier?} {keys.stx lex.syntax-object?} input-form.stx)
-   (let loop ((spec (identifier-object-type-spec tag-id)))
+   (let loop ((spec (identifier-tag-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
-	    ;;"object-type-specs" until an "object-type-spec" without parent has been
+	    ;;"tag-type-specs" until an "tag-type-spec" without parent has been
 	    ;;found.  The serach for the field setter has failed.
 	    (syntax-violation __who__
 	      "object type does not provide setter syntax" input-form.stx))
-	   (($object-type-spec-setter-maker spec)
+	   (($tag-type-spec-setter-maker spec)
 	    => (lambda (setter-maker)
 		 (or (setter-maker keys.stx input-form.stx)
 		     ;;The keys are unknown: try with the parent.
-		     (loop ($object-type-spec-parent-spec spec)))))
+		     (loop ($tag-type-spec-parent-spec spec)))))
 	   (else
-	    ;;The object-type-spec has no setter maker: try with the parent.
-	    (loop ($object-type-spec-parent-spec spec)))))))
+	    ;;The tag-type-spec has no setter maker: try with the parent.
+	    (loop ($tag-type-spec-parent-spec spec)))))))
 
 (module (tag-identifier-dispatch)
   (define-module-who tag-identifier-dispatch)
 
   (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} {input-form.stx lex.syntax-object?})
     ;;Given  a tag  identifier  and  a member  identifier:  search  the hierarchy  of
-    ;;"object-type-spec" associated  to TAG for  a dispatcher accepting  MEMBER.ID as
+    ;;"tag-type-spec" associated  to TAG for  a dispatcher accepting  MEMBER.ID as
     ;;method name  or, if not found,  an accessor maker accepting  MEMBER.ID as field
     ;;name.  If successful: return a  syntax object representing an expression which,
     ;;expanded by  itself and evaluated, will  return the method or  the accessor; if
@@ -498,16 +498,16 @@
 	  ((top-tag-id? tag)
 	   (%error-invalid-tagged-syntax input-form.stx))
 	  (else
-	   (%try-dispatcher ($identifier-object-type-spec tag) (syntax->datum member.id)
+	   (%try-dispatcher ($identifier-tag-type-spec tag) (syntax->datum member.id)
 			    input-form.stx))))
 
   (define (%try-dispatcher spec member.sym input-form.stx)
     (cond ((not spec)
 	   ;;If   we  wre   here:  we   have   climbed  upwards   the  hierarchy   of
-	   ;;"object-type-spec" until "<top>" was found;  "<top>" has no parent.  The
+	   ;;"tag-type-spec" until "<top>" was found;  "<top>" has no parent.  The
 	   ;;expression in the tagged syntax has no matching methor nor field.
 	   (%error-invalid-tagged-syntax input-form.stx))
-	  (($object-type-spec-dispatcher spec)
+	  (($tag-type-spec-dispatcher spec)
 	   => (lambda (dispatcher)
 		(or (dispatcher member.sym input-form.stx)
 		    (%try-accessor spec member.sym input-form.stx))))
@@ -516,8 +516,8 @@
 
   (define (%try-accessor spec member.sym input-form.stx)
     (define (%try-parent-dispatcher)
-      (%try-dispatcher ($object-type-spec-parent-spec spec) member.sym input-form.stx))
-    (cond (($object-type-spec-accessor-maker spec)
+      (%try-dispatcher ($tag-type-spec-parent-spec spec) member.sym input-form.stx))
+    (cond (($tag-type-spec-accessor-maker spec)
 	   => (lambda (accessor-maker)
 		(or (accessor-maker member.sym input-form.stx)
 		    (%try-parent-dispatcher))))
@@ -533,48 +533,48 @@
 
 ;;;; tag identifiers
 
-(define-constant *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*
-  'vicare:expander:object-type-spec)
+(define-constant *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*
+  'vicare:expander:tag-type-spec)
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-identifier-object-type-spec! {type-id lex.identifier-bound?} {spec object-type-spec?})
+(define* (set-identifier-tag-type-spec! {type-id lex.identifier-bound?} {spec tag-type-spec?})
   ;;Add to  the syntactic binding  label property list  an entry representing  a type
   ;;specification.  When this call succeeds: TYPE-ID becomes a tag identifier.
   ;;
   (let ((label (lex.id->label/or-error __who__ type-id type-id)))
-    (cond (($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+    (cond (($getprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*)
 	   => (lambda (old-spec)
 		(assertion-violation __who__
-		  "identifier is already a tag, will not overwrite object-type-spec"
+		  "identifier is already a tag, will not overwrite tag-type-spec"
 		  type-id old-spec spec)))
 	  (($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*)
 	   => (lambda (bind-tag)
 		(assertion-violation __who__
 		  "tagged identifier cannot become a tag identifier" type-id bind-tag spec)))
 	  (else
-	   ($putprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec)))))
+	   ($putprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE* spec)))))
 
-(define* ({identifier-object-type-spec false-or-object-type-spec?} {tag lex.identifier-bound?})
-  ;;Retrieve from  the syntactic binding  label property list  the "object-type-spec"
+(define* ({identifier-tag-type-spec false-or-tag-type-spec?} {tag lex.identifier-bound?})
+  ;;Retrieve from  the syntactic binding  label property list  the "tag-type-spec"
   ;;describing the type specification; return false if no such entry exists.
   ;;
-  ($identifier-object-type-spec tag))
+  ($identifier-tag-type-spec tag))
 
-(define ($identifier-object-type-spec tag)
-  ;;Retrieve from  the syntactic binding  label property list  the "object-type-spec"
+(define ($identifier-tag-type-spec tag)
+  ;;Retrieve from  the syntactic binding  label property list  the "tag-type-spec"
   ;;describing the type specification; return false if no such entry exists.
   ;;
-  ($syntactic-binding-getprop tag *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*))
+  ($syntactic-binding-getprop tag *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-object-type-spec! {label symbol?} {spec object-type-spec?})
+(define* (set-label-tag-type-spec! {label symbol?} {spec tag-type-spec?})
   ;;Add to LABEL's property list an entry representing a type specification; LABEL is
   ;;meant to be  a syntactic binding label.  When this  call succeeds: the associated
   ;;identifier becomes a tag identifier.
   ;;
-  (cond (($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+  (cond (($getprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*)
 	 => (lambda (old-spec)
 	      (assertion-violation __who__
 		"object specification already defined for label" label old-spec spec)))
@@ -583,33 +583,33 @@
 	      (assertion-violation __who__
 		"tagged identifier's label cannot become a tag identifier" label bind-tag spec)))
 	(else
-	 ($putprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec))))
+	 ($putprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE* spec))))
 
-(define* ({label-object-type-spec false-or-object-type-spec?} {label symbol?})
-  ;;Retrieve from  LABEL's property list  the "object-type-spec" describing  the type
+(define* ({label-tag-type-spec false-or-tag-type-spec?} {label symbol?})
+  ;;Retrieve from  LABEL's property list  the "tag-type-spec" describing  the type
   ;;specification; return  false if  no such entry  exists.  LABEL is  meant to  be a
   ;;syntactic binding label.
   ;;
-  ($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*))
+  ($getprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
 (define (tag-identifier? obj)
-  ;;Return true  if OBJ is a  bound identifier with "object-type-spec"  property set;
+  ;;Return true  if OBJ is a  bound identifier with "tag-type-spec"  property set;
   ;;otherwise return false.
   ;;
   (and (identifier? obj)
        (lex.~identifier-bound? obj)
-       (and ($identifier-object-type-spec obj)
+       (and ($identifier-tag-type-spec obj)
 	    #t)))
 
 (define (tag-identifier-and-list-sub-tag? obj)
-  ;;Return true if OBJ is a bound identifier with "object-type-spec" property set and
+  ;;Return true if OBJ is a bound identifier with "tag-type-spec" property set and
   ;;it is a sub-tag of "<list>"; otherwise return false.
   ;;
   (and (identifier? obj)
        (lex.~identifier-bound? obj)
-       ($identifier-object-type-spec obj)
+       ($identifier-tag-type-spec obj)
        (tag-super-and-sub? (list-tag-id) obj)
        #t))
 
@@ -620,7 +620,7 @@
 (define (assert-tag-identifier? obj)
   (unless (tag-identifier? obj)
     (syntax-violation #f
-      "expected tag identifier, identifier with object-type-spec set" obj)))
+      "expected tag identifier, identifier with tag-type-spec set" obj)))
 
 (define (assert-list-sub-tag-identifier? obj)
   (unless (and (tag-identifier? obj)
@@ -639,9 +639,9 @@
   (define ($tag-super-and-sub? super-tag sub-tag)
     (or (lex.~free-identifier=? super-tag sub-tag)
 	(lex.~free-identifier=? (top-tag-id) super-tag)
-	(let ((pspec ($object-type-spec-parent-spec ($identifier-object-type-spec sub-tag))))
+	(let ((pspec ($tag-type-spec-parent-spec ($identifier-tag-type-spec sub-tag))))
 	  (and pspec
-	       (let ((sub-ptag ($object-type-spec-type-id pspec)))
+	       (let ((sub-ptag ($tag-type-spec-type-id pspec)))
 		 (and (not (lex.~free-identifier=? (top-tag-id) sub-ptag))
 		      ($tag-super-and-sub? super-tag sub-ptag)))))))
 
@@ -663,7 +663,7 @@
 ;;; --------------------------------------------------------------------
 
 (define* (tag-identifier-ancestry {tag tag-identifier?})
-  (object-type-spec-ancestry ($identifier-object-type-spec tag)))
+  (tag-type-spec-ancestry ($identifier-tag-type-spec tag)))
 
 ;;; --------------------------------------------------------------------
 
@@ -712,7 +712,7 @@
 		(assertion-violation __who__
 		  "identifier is already tagged, will not overwrite old tag"
 		  binding-id old-tag tag)))
-	  (($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+	  (($getprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*)
 	   => (lambda (spec)
 		(assertion-violation __who__
 		  "tag identifier cannot become a tagged identifier"
@@ -770,7 +770,7 @@
 		(assertion-violation __who__
 		  "label binding tag already defined (redefining a binding?)"
 		  id label old-tag tag))))
-	(($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+	(($getprop label *EXPAND-TIME-TAG-TYPE-SPEC-COOKIE*)
 	 => (lambda (spec)
 	      (assertion-violation __who__
 		"tag identifier cannot become a tagged identifier"
@@ -863,13 +863,13 @@
   (define ($fabricate-procedure-tag-identifier sym callable-signature)
     (receive (tag lab)
 	(%fabricate-bound-identifier sym)
-      ;;FIXME? We  create an instance  of "object-type-spec" with a  plain PROCEDURE?
+      ;;FIXME? We  create an instance  of "tag-type-spec" with a  plain PROCEDURE?
       ;;as predicate.  This  is because there is  no way at run-time  to identify the
       ;;signature of a  closure object, so it is impossible  to properly validate it;
       ;;this is bad because  we pass on a value that is  not fully validated.  (Marco
       ;;Maggi; Fri Apr 4, 2014)
-      (let ((spec  (make-object-type-spec tag (procedure-tag-id) (lex.procedure-pred-id))))
-	(set-identifier-object-type-spec! tag spec)
+      (let ((spec  (make-tag-type-spec tag (procedure-tag-id) (lex.procedure-pred-id))))
+	(set-identifier-tag-type-spec! tag spec)
 	($putprop lab *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE* callable-signature))
       tag))
 
@@ -934,7 +934,7 @@
   (cond ((lex.id->label id)
 	 => (lambda (label)
 	      (%print "identifier: ~a\nlabel: ~a\n" (syntax->datum id) label)
-	      (cond ((identifier-object-type-spec id)
+	      (cond ((identifier-tag-type-spec id)
 		     => (lambda (spec)
 			  (%print "tag identifier: yes\n")))
 		    (else
@@ -1025,13 +1025,13 @@
 ;;       (else #f)))
 ;;
 ;;   (define type-spec
-;;     (make-object-type-spec THE-TAG (S THE-PARENT) (S THE-PREDICATE)
+;;     (make-tag-type-spec THE-TAG (S THE-PARENT) (S THE-PREDICATE)
 ;; 			   %constructor-maker
 ;; 			   %accessor-maker %mutator-maker
 ;; 			   %getter-maker %setter-maker
 ;; 			   %caster-maker %dispatcher))
 ;;
-;;   (typ.set-identifier-object-type-spec! THE-TAG type-spec))
+;;   (typ.set-identifier-tag-type-spec! THE-TAG type-spec))
 ;;
 
 
@@ -1051,13 +1051,13 @@
 ;;   (define %dispatcher	#f)
 ;;
 ;;   (define type-spec
-;;     (make-object-type-spec THE-TAG #'THE-PARENT #'THE-PREDICATE
+;;     (make-tag-type-spec THE-TAG #'THE-PARENT #'THE-PREDICATE
 ;; 			   %constructor-maker
 ;; 			   %accessor-maker %mutator-maker
 ;; 			   %getter-maker %setter-maker
 ;; 			   %caster-maker %dispatcher))
 ;;
-;;   (typ.set-identifier-object-type-spec! THE-TAG type-spec))
+;;   (typ.set-identifier-tag-type-spec! THE-TAG type-spec))
 ;;
 
 
@@ -1070,8 +1070,8 @@
     ;;spec field.  "<top>" is the default tag for single-value untagged bindings.
     (let ((tag-id   (top-tag-id))
 	  (pred-id  (S always-true)))
-      (set-identifier-object-type-spec! tag-id
-	(%make-object-type-spec (list (lex.id->label tag-id)) tag-id pred-id
+      (set-identifier-tag-type-spec! tag-id
+	(%make-tag-type-spec (list (lex.id->label tag-id)) tag-id pred-id
 				#f #f #f  #f #f  #f #f #f)))
 
     (%basic '<void>		'<top>		'void-object?)
@@ -1105,13 +1105,13 @@
 ;;;; built-in tags module: helpers
 
 (define (%basic name.sym parent.sym pred.sym)
-  ;;Initialise a built-in tag with a basic "object-type-spec".
+  ;;Initialise a built-in tag with a basic "tag-type-spec".
   ;;
   (let ((tag-id    (lex.core-prim-id name.sym))
 	(parent-id (lex.core-prim-id parent.sym))
 	(pred-id   (lex.core-prim-id pred.sym)))
-    (set-identifier-object-type-spec! tag-id
-      (make-object-type-spec tag-id parent-id pred-id))))
+    (set-identifier-tag-type-spec! tag-id
+      (make-tag-type-spec tag-id parent-id pred-id))))
 
 
 ;;;; non-compound built-in tags: <symbol>
@@ -1158,13 +1158,13 @@
 	(else #f)))
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S symbol?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S symbol?)
 			     %constructor-maker
 			     %accessor-maker %mutator-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 ;;;; non-compound built-in tags: <keyword>
@@ -1192,13 +1192,13 @@
     (define %dispatcher		#f)
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S keyword?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S keyword?)
 			     %constructor-maker
 			     %mutator-maker %accessor-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 ;;;; non-compound built-in tags: <pointer>
@@ -1243,13 +1243,13 @@
 	(else		#f)))
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S pointer?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S pointer?)
 			     %constructor-maker
 			     %accessor-maker %mutator-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 ;;;; non-compound built-in tags: <char>
@@ -1288,13 +1288,13 @@
     (define %dispatcher		#f)
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S char?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S char?)
 			     %constructor-maker
 			     %accessor-maker %mutator-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 ;;;; non-compound built-in tags: <transcoder>
@@ -1322,13 +1322,13 @@
     (define %dispatcher		#f)
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S transcoder?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S transcoder?)
 			     %constructor-maker
 			     %accessor-maker %mutator-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 ;;;; compound built-in tags: <pair>
@@ -1382,13 +1382,13 @@
     (define %dispatcher		#f)
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S pair?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S pair?)
 			     %constructor-maker
 			     %accessor-maker %mutator-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 ;;;; compound built-in tags: <string>
@@ -1483,23 +1483,23 @@
 	(else			#f)))
 
     (define type-spec
-      (make-object-type-spec THE-TAG (top-tag-id) (S string?)
+      (make-tag-type-spec THE-TAG (top-tag-id) (S string?)
 			     %constructor-maker
 			     %accessor-maker %mutator-maker
 			     %getter-maker %setter-maker
 			     %caster-maker %dispatcher))
 
-    (set-identifier-object-type-spec! THE-TAG type-spec)))
+    (set-identifier-tag-type-spec! THE-TAG type-spec)))
 
 
 (define (%initialise-some-compound-object-types)
 
-  (set-identifier-object-type-spec! (S <vector>)
-    (make-object-type-spec (S <vector>) (top-tag-id) (S vector?)))
+  (set-identifier-tag-type-spec! (S <vector>)
+    (make-tag-type-spec (S <vector>) (top-tag-id) (S vector?)))
 
 ;;; --------------------------------------------------------------------
 
-  (set-identifier-object-type-spec! (S <list>)
+  (set-identifier-tag-type-spec! (S <list>)
     ;;FIXME The truth  is that "<pair>" is  *not* a parent of  "<list>" because nulls
     ;;are "<list>" but not "<pair>".
     ;;
@@ -1511,56 +1511,56 @@
     ;;dispatched at expand-time for <pair> and <list> arguments.
     ;;
     ;;(Marco Maggi; Sat Apr 26, 2014)
-    (make-object-type-spec (S <list>) (S <pair>) (S list?)))
+    (make-tag-type-spec (S <list>) (S <pair>) (S list?)))
 
-  (set-identifier-object-type-spec! (S <bytevector>)
-    (make-object-type-spec (S <bytevector>) (top-tag-id) (S bytevector?)))
+  (set-identifier-tag-type-spec! (S <bytevector>)
+    (make-tag-type-spec (S <bytevector>) (top-tag-id) (S bytevector?)))
 
-  (set-identifier-object-type-spec! (S <hashtable>)
-    (make-object-type-spec (S <hashtable>) (top-tag-id) (S hashtable?)))
+  (set-identifier-tag-type-spec! (S <hashtable>)
+    (make-tag-type-spec (S <hashtable>) (top-tag-id) (S hashtable?)))
 
-  (set-identifier-object-type-spec! (S <struct>)
-    (make-object-type-spec (S <struct>) (top-tag-id) (S struct?)))
+  (set-identifier-tag-type-spec! (S <struct>)
+    (make-tag-type-spec (S <struct>) (top-tag-id) (S struct?)))
 
-  (set-identifier-object-type-spec! (S <struct-type-descriptor>)
-    (make-object-type-spec (S <struct-type-descriptor>) (S <struct>) (S struct-type-descriptor?)))
+  (set-identifier-tag-type-spec! (S <struct-type-descriptor>)
+    (make-tag-type-spec (S <struct-type-descriptor>) (S <struct>) (S struct-type-descriptor?)))
 
-  (set-identifier-object-type-spec! (S <record>)
-    (make-object-type-spec (S <record>) (S <struct>) (S record?)))
+  (set-identifier-tag-type-spec! (S <record>)
+    (make-tag-type-spec (S <record>) (S <struct>) (S record?)))
 
-  (set-identifier-object-type-spec! (S <record-type-descriptor>)
-    (make-object-type-spec (S <record-type-descriptor>) (S <struct>) (S record-type-descriptor?)))
+  (set-identifier-tag-type-spec! (S <record-type-descriptor>)
+    (make-tag-type-spec (S <record-type-descriptor>) (S <struct>) (S record-type-descriptor?)))
 
   (void))
 
 
 (define (%initialise-numeric-object-types)
-  (set-identifier-object-type-spec! (S <number>)
-    (make-object-type-spec (S <number>) (top-tag-id) (S number?)))
+  (set-identifier-tag-type-spec! (S <number>)
+    (make-tag-type-spec (S <number>) (top-tag-id) (S number?)))
 
-  (set-identifier-object-type-spec! (S <complex>)
-    (make-object-type-spec (S <complex>) (S <number>) (S complex?)))
+  (set-identifier-tag-type-spec! (S <complex>)
+    (make-tag-type-spec (S <complex>) (S <number>) (S complex?)))
 
-  (set-identifier-object-type-spec! (S <real-valued>)
-    (make-object-type-spec (S <real-valued>) (S <complex>) (S real-valued?)))
+  (set-identifier-tag-type-spec! (S <real-valued>)
+    (make-tag-type-spec (S <real-valued>) (S <complex>) (S real-valued?)))
 
-  (set-identifier-object-type-spec! (S <real>)
-    (make-object-type-spec (S <real>) (S <real-valued>) (S real?)))
+  (set-identifier-tag-type-spec! (S <real>)
+    (make-tag-type-spec (S <real>) (S <real-valued>) (S real?)))
 
-  (set-identifier-object-type-spec! (S <rational-valued>)
-    (make-object-type-spec (S <rational-valued>) (S <real>) (S rational-valued?)))
+  (set-identifier-tag-type-spec! (S <rational-valued>)
+    (make-tag-type-spec (S <rational-valued>) (S <real>) (S rational-valued?)))
 
-  (set-identifier-object-type-spec! (S <rational>)
-    (make-object-type-spec (S <rational>) (S <rational-valued>) (S rational?)))
+  (set-identifier-tag-type-spec! (S <rational>)
+    (make-tag-type-spec (S <rational>) (S <rational-valued>) (S rational?)))
 
-  (set-identifier-object-type-spec! (S <integer-valued>)
-    (make-object-type-spec (S <integer-valued>) (S <rational-valued>) (S integer-valued?)))
+  (set-identifier-tag-type-spec! (S <integer-valued>)
+    (make-tag-type-spec (S <integer-valued>) (S <rational-valued>) (S integer-valued?)))
 
-  (set-identifier-object-type-spec! (S <integer>)
-    (make-object-type-spec (S <integer>) (S <rational-valued>) (S integer?)))
+  (set-identifier-tag-type-spec! (S <integer>)
+    (make-tag-type-spec (S <integer>) (S <rational-valued>) (S integer?)))
 
-  (set-identifier-object-type-spec! (S <exact-integer>)
-    (make-object-type-spec (S <exact-integer>) (S <integer>) (S exact-integer?)))
+  (set-identifier-tag-type-spec! (S <exact-integer>)
+    (make-tag-type-spec (S <exact-integer>) (S <integer>) (S exact-integer?)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1582,16 +1582,16 @@
       #f)
 
     (define type-spec
-      (make-object-type-spec (S <fixnum>) (S <exact-integer>) (S fixnum?)
+      (make-tag-type-spec (S <fixnum>) (S <exact-integer>) (S fixnum?)
 			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
-    (set-identifier-object-type-spec! (S <fixnum>) type-spec))
+    (set-identifier-tag-type-spec! (S <fixnum>) type-spec))
 
 ;;; --------------------------------------------------------------------
 
-  (set-identifier-object-type-spec! (S <bignum>)
-    (make-object-type-spec (S <bignum>) (S <exact-integer>) (S bignum?)))
+  (set-identifier-tag-type-spec! (S <bignum>)
+    (make-tag-type-spec (S <bignum>) (S <exact-integer>) (S bignum?)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1675,11 +1675,11 @@
 	(else #f)))
 
     (define type-spec
-      (make-object-type-spec (S <flonum>) (S <real>) (S flonum?)
+      (make-tag-type-spec (S <flonum>) (S <real>) (S flonum?)
 			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
-    (set-identifier-object-type-spec! (S <flonum>) type-spec))
+    (set-identifier-tag-type-spec! (S <flonum>) type-spec))
 
 ;;; --------------------------------------------------------------------
 
@@ -1695,59 +1695,59 @@
       #f)
 
     (define type-spec
-      (make-object-type-spec (S <ratnum>) (S <rational>) (S ratnum?)
+      (make-tag-type-spec (S <ratnum>) (S <rational>) (S ratnum?)
 			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
-    (set-identifier-object-type-spec! (S <ratnum>) type-spec))
+    (set-identifier-tag-type-spec! (S <ratnum>) type-spec))
 
 ;;; --------------------------------------------------------------------
 
-  (set-identifier-object-type-spec! (S <compnum>)
-    (make-object-type-spec (S <compnum>) (S <complex>) (S compnum?)))
+  (set-identifier-tag-type-spec! (S <compnum>)
+    (make-tag-type-spec (S <compnum>) (S <complex>) (S compnum?)))
 
-  (set-identifier-object-type-spec! (S <cflonum>)
-    (make-object-type-spec (S <cflonum>) (S <complex>) (S cflonum?)))
+  (set-identifier-tag-type-spec! (S <cflonum>)
+    (make-tag-type-spec (S <cflonum>) (S <complex>) (S cflonum?)))
 
   (void))
 
 
 (define (%initialise-input/output-port-object-types)
-  (set-identifier-object-type-spec! (S <port>)
-    (make-object-type-spec (S <port>) (top-tag-id) (S port?)))
+  (set-identifier-tag-type-spec! (S <port>)
+    (make-tag-type-spec (S <port>) (top-tag-id) (S port?)))
 
-  (set-identifier-object-type-spec! (S <input-port>)
-    (make-object-type-spec (S <input-port>) (S <port>) (S input-port?)))
+  (set-identifier-tag-type-spec! (S <input-port>)
+    (make-tag-type-spec (S <input-port>) (S <port>) (S input-port?)))
 
-  (set-identifier-object-type-spec! (S <output-port>)
-    (make-object-type-spec (S <output-port>) (S <port>) (S output-port?)))
+  (set-identifier-tag-type-spec! (S <output-port>)
+    (make-tag-type-spec (S <output-port>) (S <port>) (S output-port?)))
 
-  (set-identifier-object-type-spec! (S <input/output-port>)
-    (make-object-type-spec (S <input/output-port>) (S <port>) (S input/output-port?)))
+  (set-identifier-tag-type-spec! (S <input/output-port>)
+    (make-tag-type-spec (S <input/output-port>) (S <port>) (S input/output-port?)))
 
-  (set-identifier-object-type-spec! (S <textual-port>)
-    (make-object-type-spec (S <textual-port>) (S <port>) (S textual-port?)))
+  (set-identifier-tag-type-spec! (S <textual-port>)
+    (make-tag-type-spec (S <textual-port>) (S <port>) (S textual-port?)))
 
-  (set-identifier-object-type-spec! (S <binary-port>)
-    (make-object-type-spec (S <binary-port>) (S <port>) (S binary-port?)))
+  (set-identifier-tag-type-spec! (S <binary-port>)
+    (make-tag-type-spec (S <binary-port>) (S <port>) (S binary-port?)))
 
-  (set-identifier-object-type-spec! (S <textual-input-port>)
-    (make-object-type-spec (S <textual-input-port>) (S <input-port>) (S textual-input-port?)))
+  (set-identifier-tag-type-spec! (S <textual-input-port>)
+    (make-tag-type-spec (S <textual-input-port>) (S <input-port>) (S textual-input-port?)))
 
-  (set-identifier-object-type-spec! (S <textual-output-port>)
-    (make-object-type-spec (S <textual-output-port>) (S <output-port>) (S textual-output-port?)))
+  (set-identifier-tag-type-spec! (S <textual-output-port>)
+    (make-tag-type-spec (S <textual-output-port>) (S <output-port>) (S textual-output-port?)))
 
-  (set-identifier-object-type-spec! (S <textual-input/output-port>)
-    (make-object-type-spec (S <textual-input/output-port>) (S <input/output-port>) (S textual-input/output-port?)))
+  (set-identifier-tag-type-spec! (S <textual-input/output-port>)
+    (make-tag-type-spec (S <textual-input/output-port>) (S <input/output-port>) (S textual-input/output-port?)))
 
-  (set-identifier-object-type-spec! (S <binary-input-port>)
-    (make-object-type-spec (S <binary-input-port>) (S <input-port>) (S binary-input-port?)))
+  (set-identifier-tag-type-spec! (S <binary-input-port>)
+    (make-tag-type-spec (S <binary-input-port>) (S <input-port>) (S binary-input-port?)))
 
-  (set-identifier-object-type-spec! (S <binary-output-port>)
-    (make-object-type-spec (S <binary-output-port>) (S <output-port>) (S binary-output-port?)))
+  (set-identifier-tag-type-spec! (S <binary-output-port>)
+    (make-tag-type-spec (S <binary-output-port>) (S <output-port>) (S binary-output-port?)))
 
-  (set-identifier-object-type-spec! (S <binary-input/output-port>)
-    (make-object-type-spec (S <binary-input/output-port>) (S <input/output-port>) (S binary-input/output-port?)))
+  (set-identifier-tag-type-spec! (S <binary-input/output-port>)
+    (make-tag-type-spec (S <binary-input/output-port>) (S <input/output-port>) (S binary-input/output-port?)))
 
   (void))
 
@@ -2647,7 +2647,7 @@
 ;;; end of file
 ;; Local Variables:
 ;; coding: utf-8-unix
-;; eval: (put 'set-identifier-object-type-spec!		'scheme-indent-function 1)
+;; eval: (put 'set-identifier-tag-type-spec!		'scheme-indent-function 1)
 ;; eval: (put 'sys.syntax-case				'scheme-indent-function 2)
 ;; eval: (put 'sys.with-syntax				'scheme-indent-function 1)
 ;; eval: (put 'lex.syntax-violation/internal-error	'scheme-indent-function 1)

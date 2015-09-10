@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (for (prefix (vicare expander object-type-specs) typ.)
+  (for (prefix (vicare expander tag-type-specs) typ.)
     expand)
   (vicare expander tags)
   (vicare checks))
@@ -44,7 +44,7 @@
   	  (syntax-case stx ()
   	    ((_ ?type-id)
 	     (begin
-	       #`(quote #,(typ.object-type-spec-type-id (typ.identifier-object-type-spec #'?type-id)))))
+	       #`(quote #,(typ.tag-type-spec-type-id (typ.identifier-tag-type-spec #'?type-id)))))
   	    ))
   	(get-name <vector>))
     => '<vector>)
@@ -55,13 +55,13 @@
 (parametrise ((check-test-name	'type-descriptor))
 
   (check-for-true
-   (typ.object-type-spec? (type-descriptor <vector>)))
+   (typ.tag-type-spec? (type-descriptor <vector>)))
 
   (check-for-true
-   (typ.object-type-spec? (type-descriptor <fixnum>)))
+   (typ.tag-type-spec? (type-descriptor <fixnum>)))
 
   (check-for-true
-   (typ.object-type-spec? (type-descriptor <exact-integer>)))
+   (typ.tag-type-spec? (type-descriptor <exact-integer>)))
 
   #t)
 

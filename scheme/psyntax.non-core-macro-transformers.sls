@@ -895,8 +895,8 @@
 		    ($struct-set! ?stru ,field.idx ?val)))
 	    unsafe-mutator*.id field*.idx))
 
-	(define object-type-spec-form
-	  (%build-object-type-spec type.id type.sym type.str
+	(define tag-type-spec-form
+	  (%build-tag-type-spec type.id type.sym type.str
 				   constructor.id
 				   predicate.id field*.sym field*.tag
 				   accessor*.id unsafe-accessor*.id
@@ -910,10 +910,10 @@
 	    (define ((brace ,predicate.id ,(boolean-tag-id)) obj)
 	      ($struct/rtd? obj ',std))
 	    ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
-	    ;;bound when the "object-type-spec" is built.
+	    ;;bound when the "tag-type-spec" is built.
 	    (define-syntax ,type.id
 	      (make-syntactic-binding-descriptor/struct-type-name ',std))
-	    (begin-for-syntax ,object-type-spec-form)
+	    (begin-for-syntax ,tag-type-spec-form)
 	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
 	      (receive-and-return (S)
 		  ($struct ',std ,@field*.sym)
@@ -951,7 +951,7 @@
 	     input-form.stx (car field*.stx))))
       (values '() '())))
 
-  (define (%build-object-type-spec type.id type.sym type.str
+  (define (%build-tag-type-spec type.id type.sym type.str
 				   constructor.id
 				   predicate.id field*.sym field*.tag
 				   accessor*.id unsafe-accessor*.id
@@ -970,7 +970,7 @@
       (string->symbol (string-append type.str "-setter-maker")))
     `(internal-body
        (import (vicare)
-	 (prefix (vicare expander object-type-specs) typ.))
+	 (prefix (vicare expander tag-type-specs) typ.))
 
        (define (,%constructor-maker input-form.stx)
 	 (syntax ,constructor.id))
@@ -1014,14 +1014,14 @@
        (define %caster-maker #f)
        (define %dispatcher   #f)
 
-       (define object-type-spec
-	 (typ.make-object-type-spec (syntax ,type.id) (typ.struct-tag-id) (syntax ,predicate.id)
+       (define tag-type-spec
+	 (typ.make-tag-type-spec (syntax ,type.id) (typ.struct-tag-id) (syntax ,predicate.id)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker   ,%setter-maker
 				    %caster-maker    %dispatcher))
 
-       (typ.set-identifier-object-type-spec! (syntax ,type.id) object-type-spec)))
+       (typ.set-identifier-tag-type-spec! (syntax ,type.id) tag-type-spec)))
 
   (define (enumerate ls)
     (let recur ((i 0) (ls ls))
@@ -1151,10 +1151,10 @@
 					      x* mutable-x*
 					      foo-x* foo-x-set!*
 					      unsafe-foo-x* unsafe-foo-x-set!*))
-    (define object-type-spec-form
-      ;;The object-type-spec stuff is  used to add a tag property  to the record type
+    (define tag-type-spec-form
+      ;;The tag-type-spec stuff is  used to add a tag property  to the record type
       ;;identifier.
-      (%make-object-type-spec-form foo make-foo foo? foo-parent
+      (%make-tag-type-spec-form foo make-foo foo? foo-parent
 				   x* foo-x* unsafe-foo-x*
 				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				   immutable-x* input-form.stx))
@@ -1174,7 +1174,7 @@
 	;;Syntactic binding for record-type name.
 	(define-syntax ,foo
 	  ,foo-syntactic-binding-form)
-	(begin-for-syntax ,object-type-spec-form)
+	(begin-for-syntax ,tag-type-spec-form)
 	;;Type predicate.
 	(define (brace ,foo? <predicate>)
 	  (record-predicate ,foo-rtd))
@@ -1185,7 +1185,7 @@
 	;;record-type as return type.
 	(begin-for-syntax
 	  (internal-body
-	    (import (prefix (vicare expander object-type-specs) typ.))
+	    (import (prefix (vicare expander tag-type-specs) typ.))
 	    (define %constructor-signature
 	      (typ.make-lambda-signature (typ.make-retvals-signature-single-value (syntax ,foo))
 					 (typ.make-formals-signature (syntax <list>))))
@@ -1737,7 +1737,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-object-type-spec-form foo make-foo foo? foo-parent
+  (define (%make-tag-type-spec-form foo make-foo foo? foo-parent
 				       x* foo-x* unsafe-foo-x*
 				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				       immutable-x* input-form.stx)
@@ -1755,7 +1755,7 @@
       (string->symbol (string-append type.str "-setter-maker")))
     `(internal-body
        (import (vicare)
-	 (prefix (vicare expander object-type-specs) typ.))
+	 (prefix (vicare expander tag-type-specs) typ.))
 
        (define (,%constructor-maker input-form.stx)
 	 (syntax ,make-foo))
@@ -1802,14 +1802,14 @@
 	      `(syntax ,foo-parent)
 	    '(typ.record-tag-id)))
 
-       (define object-type-spec
-	 (typ.make-object-type-spec (syntax ,foo) parent-id (syntax ,foo?)
+       (define tag-type-spec
+	 (typ.make-tag-type-spec (syntax ,foo) parent-id (syntax ,foo?)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker   ,%setter-maker
 				    %caster-maker    %dispatcher))
 
-       (typ.set-identifier-object-type-spec! (syntax ,foo) object-type-spec)))
+       (typ.set-identifier-tag-type-spec! (syntax ,foo) tag-type-spec)))
 
 ;;; --------------------------------------------------------------------
 

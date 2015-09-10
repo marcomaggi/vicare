@@ -88,15 +88,15 @@
     syntax-dispatch			ellipsis-map
 
     ;; expand-time object type specs: type specification
-    make-object-type-spec			object-type-spec?
-    object-type-spec-parent-spec
-    object-type-spec-uids
-    object-type-spec-type-id			object-type-spec-pred-stx
-    object-type-spec-constructor-maker
-    object-type-spec-accessor-maker		object-type-spec-mutator-maker
-    object-type-spec-getter-maker		object-type-spec-setter-maker
-    object-type-spec-dispatcher
-    object-type-spec-ancestry
+    make-tag-type-spec			tag-type-spec?
+    tag-type-spec-parent-spec
+    tag-type-spec-uids
+    tag-type-spec-type-id			tag-type-spec-pred-stx
+    tag-type-spec-constructor-maker
+    tag-type-spec-accessor-maker		tag-type-spec-mutator-maker
+    tag-type-spec-getter-maker		tag-type-spec-setter-maker
+    tag-type-spec-dispatcher
+    tag-type-spec-ancestry
 
     ;; expand-time object type specs: parsing tagged identifiers
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
@@ -126,8 +126,8 @@
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?				all-tag-identifiers?
     tag-super-and-sub?				formals-signature-super-and-sub-syntax?
-    identifier-object-type-spec			set-identifier-object-type-spec!
-    label-object-type-spec			set-label-object-type-spec!
+    identifier-tag-type-spec			set-identifier-tag-type-spec!
+    label-tag-type-spec			set-label-tag-type-spec!
     tag-identifier-ancestry			tag-common-ancestor
 
     set-tag-identifier-callable-signature!	tag-identifier-callable-signature

@@ -29,7 +29,7 @@
 (program (test)
   (options tagged-language)
   (import (vicare)
-    (for (prefix (vicare expander object-type-specs) typ.)
+    (for (prefix (vicare expander tag-type-specs) typ.)
       run expand)
     (vicare expander tags)
     (vicare checks))
@@ -71,14 +71,14 @@
   (define-syntax-rule (top-tagged? ?var)
     (tag=tagging? <top> ?var))
 
-  (typ.set-identifier-object-type-spec! #'<numbers>
-    (typ.make-object-type-spec #'<numbers> #'<list> #'numbers?))
+  (typ.set-identifier-tag-type-spec! #'<numbers>
+    (typ.make-tag-type-spec #'<numbers> #'<list> #'numbers?))
 
-  (typ.set-identifier-object-type-spec! #'<complexes>
-    (typ.make-object-type-spec #'<complexes> #'<numbers> #'complexes?))
+  (typ.set-identifier-tag-type-spec! #'<complexes>
+    (typ.make-tag-type-spec #'<complexes> #'<numbers> #'complexes?))
 
-  (typ.set-identifier-object-type-spec! #'<fixnums>
-    (typ.make-object-type-spec #'<fixnums> #'<complexes> #'fixnums?))
+  (typ.set-identifier-tag-type-spec! #'<fixnums>
+    (typ.make-tag-type-spec #'<fixnums> #'<complexes> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 
@@ -3876,7 +3876,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'typ.set-identifier-object-type-spec! 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-tag-type-spec! 'scheme-indent-function 1)
 ;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
 ;; eval: (put 'catch-expand-time-signature-violation 'scheme-indent-function 1)
 ;; End:

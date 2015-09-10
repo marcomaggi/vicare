@@ -248,7 +248,7 @@ language for programs and libraries.
 
 Technically, a @dfn{tag identifier} is a bound identifier whose
 syntactic binding label gensym has a specific entry in its property
-list, such entry has an instance of @objtype{object-type-spec} as value;
+list, such entry has an instance of @objtype{tag-type-spec} as value;
 tag identifiers must be bound (otherwise they do not have a syntactic
 binding label), but it does not matter to what they are bound.  Tag
 identifiers represent data types.
@@ -275,7 +275,7 @@ Some of them are: @class{fixnum}, @class{string}, @class{vector},
 @end itemize
 
 Other tag identifiers can be created using the @api{} exported by the
-library @library{vicare expander object-type-specs}.
+library @library{vicare expander tag-type-specs}.
 
 Tag identifiers are organised in a tree hierarchy, with subtags
 inheriting properties of supertags; by convention, @class{top} is the

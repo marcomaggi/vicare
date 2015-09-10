@@ -92,18 +92,18 @@
   ;;         ...)
   ;;        ((vicare-struct-type)
   ;;         ...)
-  ;;        ((object-type-spec)
+  ;;        ((tag-type-spec)
   ;;         ...)))
   ;;     )
   ;;
   ;;where  ?TYPE-ID  is  meant to  be  an  identifier  bound  to a  R6RS  record-type
   ;;descriptor or Vicare's struct-type descriptor.
   ;;
-  (sys.syntax-case stx (r6rs-record-type vicare-struct-type object-type-spec)
+  (sys.syntax-case stx (r6rs-record-type vicare-struct-type tag-type-spec)
     ((_ (?who ?input-stx ?type-id ?lexenv)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
-	((object-type-spec)	?spec-body0   ?spec-body   ...))
+	((tag-type-spec)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
@@ -115,7 +115,7 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-name-binding-descriptor? binding)
 	       ?struct-body0 ?struct-body ...)
-	      ((identifier-object-type-spec ?type-id)
+	      ((identifier-tag-type-spec ?type-id)
 	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
@@ -124,7 +124,7 @@
     ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
-	((object-type-spec)	?spec-body0   ?spec-body   ...))
+	((tag-type-spec)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
@@ -136,7 +136,7 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-name-binding-descriptor? ?binding)
 	       ?struct-body0 ?struct-body ...)
-	      ((identifier-object-type-spec ?type-id)
+	      ((identifier-tag-type-spec ?type-id)
 	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
@@ -1844,7 +1844,7 @@
   ;;* A R6RS record type descriptor if the given identifier argument is a record type
   ;;  name.
   ;;
-  ;;* An expand-time OBJECT-TYPE-SPEC instance.
+  ;;* An expand-time TAG-TYPE-SPEC instance.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-id)
@@ -1858,10 +1858,10 @@
 		  (build-data no-source
 		    (syntactic-binding-descriptor.value binding))
 		  (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
-       ((object-type-spec)
+       ((tag-type-spec)
 	(make-psi input-form.stx
 		  (build-data no-source
-		    (identifier-object-type-spec ?type-id))
+		    (identifier-tag-type-spec ?type-id))
 		  (make-retvals-signature-single-top)))
        ))
     ))
@@ -1930,7 +1930,7 @@
 			(map psi-core-expr args.psi*))
 		      (make-retvals-signature-single-value ?type-id))))
 
-	 ((object-type-spec)
+	 ((tag-type-spec)
 	  (make-psi input-form.stx
 		    (build-application no-source
 		      (psi-core-expr (chi-expr (tag-identifier-constructor-maker ?type-id input-form.stx)
@@ -2000,8 +2000,8 @@
 		   (list (psi-core-expr expr.psi)))
 		 (make-retvals-signature-single-top)))
 
-      ((object-type-spec)
-       ;;FIXME  At   present,  expand-time   support  for  OBJECT-TYPE-SPEC   it  not
+      ((tag-type-spec)
+       ;;FIXME  At   present,  expand-time   support  for  TAG-TYPE-SPEC   it  not
        ;;implemented; but it  is to be implemented later.  However,  notice that when
        ;;the type is  "<top>": falling back to run-time dispatching  is fine.  (Marco
        ;;Maggi; Sat Sep 5, 2015)
@@ -2042,9 +2042,9 @@
 		     `(lambda (,obj)
 			($struct/rtd? ,obj (struct-type-descriptor ,?type-id)))))
 
-		  ((object-type-spec)
-		   (let ((spec (identifier-object-type-spec ?type-id)))
-		     (object-type-spec-pred-stx spec)))))
+		  ((tag-type-spec)
+		   (let ((spec (identifier-tag-type-spec ?type-id)))
+		     (tag-type-spec-pred-stx spec)))))
 
 	       ((_ ?expr ?type-id)
 		(identifier? ?type-id)
@@ -2057,9 +2057,9 @@
 		  ((vicare-struct-type)
 		   `($struct/rtd? ,?expr (struct-type-descriptor ,?type-id)))
 
-		  ((object-type-spec)
-		   (let* ((spec     (identifier-object-type-spec ?type-id))
-			  (pred.stx (object-type-spec-pred-stx spec)))
+		  ((tag-type-spec)
+		   (let* ((spec     (identifier-tag-type-spec ?type-id))
+			  (pred.stx (tag-type-spec-pred-stx spec)))
 		     `(,pred.stx ,?expr)))))
 	       ))
 	    lexenv.run lexenv.expand))
@@ -2674,8 +2674,8 @@
   ;;
 
   (define (%retrieve-caster-maker target-tag)
-    (cond ((identifier-object-type-spec target-tag)
-	   => object-type-spec-caster-maker)
+    (cond ((identifier-tag-type-spec target-tag)
+	   => tag-type-spec-caster-maker)
 	  (else
 	   (syntax-violation/internal-error __who__ "tag identifier without object type spec" input-form.stx))))
 

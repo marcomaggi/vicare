@@ -2,7 +2,7 @@
 @chapter Internals of tagged language
 
 
-The library @library{vicare expander object-type-specs} defines the
+The library @library{vicare expander tag-type-specs} defines the
 low--level @api{} used to define and inspect new data types and tag
 identifiers.
 
@@ -17,7 +17,7 @@ identifiers.
 @section Parsing tagged syntaxes
 
 
-The library @library{vicare expander object-type-specs} exports
+The library @library{vicare expander tag-type-specs} exports
 functions to validate and parse syntax objects representing tagged and
 untagged bindings.
 
@@ -110,7 +110,7 @@ the following context:
 @noindent
 the signature of the return values is the signature of the consumer's
 @meta{formals}.  The following bindings are exported by the library
-@library{vicare expander object-type-specs}.
+@library{vicare expander tag-type-specs}.
 
 
 @deftp {Struct Type} retvals-signature
@@ -166,7 +166,7 @@ Return @true{} if the arguments are equal, @false{} otherwise.
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @deftp {Struct Type} formals-signature
@@ -209,7 +209,7 @@ The arguments must be instances of @objtype{formals-signature}.  Return
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @deftp {Struct Type} lambda-signature
@@ -268,7 +268,7 @@ The arguments must be instances of @objtype{lambda-signature}.  Return
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @deftp {Struct Type} clambda-compound
@@ -331,7 +331,7 @@ Accessor for the fields of @objtype{clambda-compound} instances.
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @defun standard-formals-syntax? @var{stx}
@@ -365,7 +365,7 @@ acceptable.
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @defun tagged-identifier-syntax? @var{stx}
@@ -376,7 +376,7 @@ untagged identifier, otherwise return @false{}.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (typ.tagged-identifier-syntax? #'(brace X <fixnum>)) @result{} #t
 (typ.tagged-identifier-syntax? #'@{X <fixnum>@})       @result{} #t
@@ -397,7 +397,7 @@ to @class{top}.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (typ.parse-tagged-identifier-syntax #'(brace X <fixnum>))
 @result{} #'X #'<fixnum>
@@ -447,7 +447,7 @@ and parsed to yield the identifiers and the tags:
 @end example
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @defun list-of-tagged-bindings? @var{stx}
@@ -458,7 +458,7 @@ list of tagged or untagged identifiers, otherwise return @false{}.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (typ.list-of-tagged-bindings? #'(@{a <fixnum>@}))
 @result{} #t
@@ -524,7 +524,7 @@ used as @code{form} field when raising a syntax violation.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}))
 @result{} (#'a) (#'<fixnum>)
@@ -617,7 +617,7 @@ the binding identifiers must be distinct according to
 @func{bound-identifier=?}.
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @defun tagged-formals-syntax? @var{stx}
@@ -630,7 +630,7 @@ wich null and a standalone tagged identifier being acceptable.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (typ.tagged-formals-syntax? #'(@{a <fixnum>@}
                                @{b <string>@}))
@@ -723,7 +723,7 @@ used as @code{form} field when raising a syntax violation.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (define (split stx)
   (receive (standard-formals signature)
@@ -842,7 +842,7 @@ the identifiers @func{brace} and @func{_} are the syntax bindings
 exported by @library{vicare}.
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @defun tagged-lambda-proto-syntax? @var{stx}
@@ -853,7 +853,7 @@ callable signature syntax; otherwise return @false{}.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
                                     @{b <string>@}))
@@ -963,7 +963,7 @@ used as @code{form} field when raising a syntax violation.
 #!vicare
 (import (vicare)
   (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+  (prefix (vicare expander tag-type-specs) typ.))
 
 (define (split input)
   (receive (standard-formals-stx signature)
@@ -1065,10 +1065,10 @@ used as @code{form} field when raising a syntax violation.
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
-@defun set-identifier-object-type-spec! @var{type-id} @var{spec}
+@defun set-identifier-tag-type-spec! @var{type-id} @var{spec}
 Add to the property list of the syntactic binding label of @var{type-id}
 an entry representing an object type specification; return unspecified
 values.  If @var{type-id} already has an object type specification
@@ -1077,22 +1077,22 @@ property: an exception is raised with condition object type
 
 @var{type-id} must be a bound identifier; when this call succeeds:
 @var{type-id} becomes a tag identifier.  @var{spec} must be an instance
-of @objtype{object-type-spec}.
+of @objtype{tag-type-spec}.
 @end defun
 
 
-@defun identifier-object-type-spec @var{type-id}
+@defun identifier-tag-type-spec @var{type-id}
 Retrieve from the property list of the syntactic binding label of
-@var{type-id} the @objtype{object-type-spec} instance representing the
+@var{type-id} the @objtype{tag-type-spec} instance representing the
 object type specification.
 
 @var{type-id} must be a bound identifier; if it also is a tag
-identifier: the return value is the @objtype{object-type-spec} instance;
+identifier: the return value is the @objtype{tag-type-spec} instance;
 otherwise the return value is @false{}.
 @end defun
 
 
-@defun set-label-object-type-spec! @var{label} @var{spec}
+@defun set-label-tag-type-spec! @var{label} @var{spec}
 Add to the property list of the syntactic binding @var{label} an entry
 representing an object type specification; return unspecified values.
 If @var{label} already has an object type specification property: an
@@ -1101,24 +1101,24 @@ exception is raised with condition object type @condition{&syntax}.
 @var{label} must be the symbol used as syntactic binding label for a
 bound identifier; when this call succeeds: the associated identifiers
 become a tag identifiers.  @var{spec} must be an instance of
-@objtype{object-type-spec}.
+@objtype{tag-type-spec}.
 @end defun
 
 
-@defun label-object-type-spec @var{label}
+@defun label-tag-type-spec @var{label}
 Retrieve from the property list of @var{label} the
-@objtype{object-type-spec} instance representing the object type
+@objtype{tag-type-spec} instance representing the object type
 specification.
 
 @var{label} must be a symbol used as syntactic binding label for a bound
 identifier; if the latter is also a tag identifier: the return value is
-the @objtype{object-type-spec} instance; otherwise the return value is
+the @objtype{tag-type-spec} instance; otherwise the return value is
 @false{}.
 @end defun
 
 
 @defun tag-identifier? @var{obj}
-Return @true{} if @var{obj} is a bound identifier with "object-type-spec"
+Return @true{} if @var{obj} is a bound identifier with "tag-type-spec"
 property set; otherwise return @false{}.
 @end defun
 
@@ -1140,7 +1140,7 @@ Given two tag identifiers: return @true{} if @var{super-tag} is
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
 @defun set-identifier-tag! @var{binding-id} @var{tag}
@@ -1203,12 +1203,12 @@ identifier: an exception is raised.
 @subsection Introduction to object types specification
 
 
-Records of type @objtype{object-type-spec} are used to describe the
+Records of type @objtype{tag-type-spec} are used to describe the
 object type of tag identifiers; a bound identifier is a tag identiier
-if, and only if, it has an @objtype{object-type-spec} in the property
+if, and only if, it has an @objtype{tag-type-spec} in the property
 list of its syntactic binding label.
 
-Below we discuss the fields of @objtype{object-type-spec} and we assume
+Below we discuss the fields of @objtype{tag-type-spec} and we assume
 the definitions:
 
 @example
@@ -1308,7 +1308,7 @@ as single argument the current field's value.
 
 When the field is unknown: the accessor maker must return @false{}; in
 this case the field will be searched in the parent
-@objtype{object-type-spec}, if any.
+@objtype{tag-type-spec}, if any.
 
 When the field is recognised but invalid (for example: inaccessible):
 the accessor maker must raise a syntax violation.
@@ -1370,7 +1370,7 @@ value and returning unspecified values.
 
 When the field is unknown: the mutator maker must return @false{}; in
 this case the field will be searched in the parent
-@objtype{object-type-spec}, if any.
+@objtype{tag-type-spec}, if any.
 
 When the field is recognised but invalid (for example: immutable): the
 mutator maker must raise a syntax violation.
@@ -1442,7 +1442,7 @@ returning a tuple of values.
 
 When the keys are unknown: the getter maker must return @false{}; in
 this case another getter will be searched in the parent
-@objtype{object-type-spec}, if any.
+@objtype{tag-type-spec}, if any.
 
 When the keys are recognised but invalid: the getter maker must raise a
 syntax violation.
@@ -1511,7 +1511,7 @@ property's value and returning unspecified values.
 
 When the keys are unknown: the setter maker must return @false{}; in
 this case another setter will be searched in the parent
-@objtype{object-type-spec}, if any.
+@objtype{tag-type-spec}, if any.
 
 When the keys are recognised but invalid: the setter maker must raise a
 syntax violation.
@@ -1688,10 +1688,10 @@ and its implementation can be:
 
 
 The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+expander tag-type-specs}.
 
 
-@deftp {Struct Type} object-type-spec
+@deftp {Struct Type} tag-type-spec
 Type of structs representing the object type to which expressions in
 syntax objects will evaluate; all the Scheme objects are meant to be
 representable with this type specification.  It has the following
@@ -1717,15 +1717,15 @@ true if the requested accessor is safe, false if it is unsafe.
 
 @item
 The return value is a syntax object evaluating to a slot accessor, or
-false if this @objtype{object-type-spec} does not provide an accessor
+false if this @objtype{tag-type-spec} does not provide an accessor
 for the selected slot.
 @end itemize
 
 If the slot name is invalid for some reason (for example the slot is
 hidden): the proceure must raise an exception.  If this
-@objtype{object-type-spec} does not implement the selected slot: the
+@objtype{tag-type-spec} does not implement the selected slot: the
 return value must be @false{} and the slot will be searched in the
-parent @objtype{object-type-spec}, if any.
+parent @objtype{tag-type-spec}, if any.
 
 @item mutator-maker
 @false{} or a mutator maker procedure accepting 2 arguments and
@@ -1738,15 +1738,15 @@ true if the requested mutator is safe, false if it is unsafe.
 
 @item
 The return value is a syntax object evaluating to a slot mutator, or
-false if this @objtype{object-type-spec} does not provide a mutator for
+false if this @objtype{tag-type-spec} does not provide a mutator for
 the selected slot.
 @end itemize
 
 If the slot name is invalid for some reason (for example the slot is
 immutable): the proceure must raise an exception.  If this
-@objtype{object-type-spec} does not implement the selected slot: the
+@objtype{tag-type-spec} does not implement the selected slot: the
 return value must be false and the slot will be searched in the parent
-@objtype{object-type-spec}, if any.
+@objtype{tag-type-spec}, if any.
 
 @item dispatcher
 False or a dispatcher procedure accepting a single argument and
@@ -1765,21 +1765,21 @@ object representing the output form: an expression to be further
 expanded.
 
 @item parent-spec
-@false{} or an instance of @objtype{object-type-spec} describing the
+@false{} or an instance of @objtype{tag-type-spec} describing the
 parent of this type.
 @end table
 @end deftp
 
 
-@defun make-object-type-spec @var{type-id} @var{pred-id}
-@defunx make-object-type-spec @var{type-id} @var{pred-id} @var{accessor-maker} @var{mutator-maker} @var{dispatcher} @var{parent-id}
-Build and return a new instance of @objtype{object-type-spec}.
+@defun make-tag-type-spec @var{type-id} @var{pred-id}
+@defunx make-tag-type-spec @var{type-id} @var{pred-id} @var{accessor-maker} @var{mutator-maker} @var{dispatcher} @var{parent-id}
+Build and return a new instance of @objtype{tag-type-spec}.
 @end defun
 
 
-@defun object-type-spec? @var{obj}
+@defun tag-type-spec? @var{obj}
 Return @true{} if @var{obj} is an instance of
-@objtype{object-type-spec}, otherwise return @false{}.
+@objtype{tag-type-spec}, otherwise return @false{}.
 @end defun
 
 @c end of file
