@@ -1365,35 +1365,248 @@
 
     #f)
 
-  (define-record-type <alpha>
-    (fields a b c))
+;;; --------------------------------------------------------------------
 
-  (record-type-destructor-set! (record-type-descriptor <alpha>)
-			       (lambda (S)
-				 (void)))
+  (internal-body
 
-  (check
-      (procedure? (record-type-destructor (record-type-descriptor <alpha>)))
-    => #t)
+    (define-record-type <alpha>
+      (fields a b c))
 
-  (check
-      (parametrise ((record-guardian-logger #t))
+    (record-type-destructor-set! (record-type-descriptor <alpha>)
+				 (lambda (S)
+				   (void)))
+
+    (check
+	(procedure? (record-type-destructor (record-type-descriptor <alpha>)))
+      => #t)
+
+    (check
+	(parametrise ((record-guardian-logger #t))
+	  (let ((S (make-<alpha> 1 2 3)))
+	    (check-pretty-print S)
+	    (collect)))
+      => (void))
+
+    (check
 	(let ((S (make-<alpha> 1 2 3)))
 	  (check-pretty-print S)
-	  (collect)))
-    => (void))
+	  (collect))
+      => (void))
 
-  (check
-      (let ((S (make-<alpha> 1 2 3)))
-  	(check-pretty-print S)
-  	(collect))
-    => (void))
+    (check
+	(let ((S (make-<alpha> 1 2 3)))
+	  (check-pretty-print S)
+	  (collect))
+      => (void))
 
+    (void))
+
+  (collect))
+
+
+(parametrise ((check-test-name		'destructor-protocol)
+	      (record-guardian-logger	(lambda (S E action)
+					  (check-pretty-print (list S E action)))))
+
+  ;;No parent, no destructor.
+  ;;
   (check
-      (let ((S (make-<alpha> 1 2 3)))
-  	(check-pretty-print S)
-  	(collect))
-    => (void))
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+	(define O
+	  (make-duo 1 2))
+	(delete O))
+    => '#!void)
+
+  ;;No parent, this type with destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define-record-type duo
+	    (fields one two)
+	    (destructor-protocol
+	      (lambda ()
+		(lambda (record)
+		  (add-result 'duo-destructor)))))
+	  (define O
+	    (make-duo 1 2))
+	  (delete O)))
+    => '(duo-destructor (duo-destructor)))
+
+  ;;No parent, this type with destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+	  (define-record-type duo
+	    (fields one two)
+	    (destructor-protocol
+	      (lambda ()
+		(lambda (record)
+		  (add-result 'duo-destructor)))))
+	  (delete (make-duo 1 2))))
+    => '(duo-destructor (duo-destructor)))
+
+;;; --------------------------------------------------------------------
+;;; parent specified with PARENT clause
+
+  ;;Parent with no destructor, this type with destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d)
+	    (destructor-protocol
+	      (lambda (destroy-alpha)
+		(lambda (record)
+		  (destroy-alpha record)
+		  (add-result 'beta-destructor)))))
+
+	  (define O
+	    (make-beta 1 2 3 4))
+
+	  (delete O)))
+    => '(beta-destructor (beta-destructor)))
+
+  ;;Both this type and its parent with destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b)
+	    (destructor-protocol
+	      (lambda ()
+		(lambda (record)
+		  (add-result 'alpha-destructor)))))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d)
+	    (destructor-protocol
+	      (lambda (destroy-alpha)
+		(lambda (record)
+		  (destroy-alpha record)
+		  (add-result 'beta-destructor)))))
+
+	  (define O
+	    (make-beta 1 2 3 4))
+
+	  (delete O)))
+    => '(beta-destructor (alpha-destructor beta-destructor)))
+
+  ;;Parent with destructor, this type with no destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b)
+	    (destructor-protocol
+	      (lambda ()
+		(lambda (record)
+		  (add-result 'alpha-destructor)))))
+
+	  (define-record-type beta
+	    (parent alpha)
+	    (fields c d))
+
+	  (define O
+	    (make-beta 1 2 3 4))
+
+	  (delete O)))
+    => '(alpha-destructor (alpha-destructor)))
+
+;;; --------------------------------------------------------------------
+;;; parent specified with PARENT-RTD clause
+
+  ;;Parent with no destructor, this type with destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b))
+
+	  (define-record-type beta
+	    (parent-rtd (record-type-descriptor alpha)
+			(record-constructor-descriptor alpha))
+	    (fields c d)
+	    (destructor-protocol
+	      (lambda (destroy-alpha)
+		(lambda (record)
+		  (destroy-alpha record)
+		  (add-result 'beta-destructor)))))
+
+	  (define O
+	    (make-beta 1 2 3 4))
+
+	  (delete O)))
+    => '(beta-destructor (beta-destructor)))
+
+  ;;Both this type and its parent with destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b)
+	    (destructor-protocol
+	      (lambda ()
+		(lambda (record)
+		  (add-result 'alpha-destructor)))))
+
+	  (define-record-type beta
+	    (parent-rtd (record-type-descriptor alpha)
+			(record-constructor-descriptor alpha))
+	    (fields c d)
+	    (destructor-protocol
+	      (lambda (destroy-alpha)
+		(lambda (record)
+		  (destroy-alpha record)
+		  (add-result 'beta-destructor)))))
+
+	  (define O
+	    (make-beta 1 2 3 4))
+
+	  (delete O)))
+    => '(beta-destructor (alpha-destructor beta-destructor)))
+
+  ;;Parent with destructor, this type with no destructor.
+  ;;
+  (check
+      (with-result
+	(internal-body
+
+	  (define-record-type alpha
+	    (fields a b)
+	    (destructor-protocol
+	      (lambda ()
+		(lambda (record)
+		  (add-result 'alpha-destructor)))))
+
+	  (define-record-type beta
+	    (parent-rtd (record-type-descriptor alpha)
+			(record-constructor-descriptor alpha))
+	    (fields c d))
+
+	  (define O
+	    (make-beta 1 2 3 4))
+
+	  (delete O)))
+    => '(alpha-destructor (alpha-destructor)))
 
   (collect))
 

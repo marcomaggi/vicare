@@ -46,7 +46,8 @@
 	    (set-<rtd>-printer!		record-type-printer-set!))
 
     ;; syntactic bindings for internal use only
-    internal-applicable-record-type-destructor)
+    internal-applicable-record-type-destructor
+    internal-applicable-record-destructor)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Mar 31, 2015)
@@ -1328,13 +1329,26 @@
 (define* (record-destructor {rtd record-object?})
   ($<rtd>-destructor (record-rtd rtd)))
 
+;;; --------------------------------------------------------------------
+
 (define (internal-applicable-record-type-destructor rtd)
-  ;;This private primitive is  used by the DELETE syntax.  If a  destructor is set in
-  ;;RTD: return it; otherwise  return a function that does nothing.   This way we can
-  ;;use  DELETE  on  both records  having  a  destructor  and  records not  having  a
-  ;;destructor.
+  ;;This private primitive is used by the DEFINE-RECORD-TYPE syntax.  If a destructor
+  ;;is set in  RTD: return it; otherwise  return a function that  does nothing.  This
+  ;;way we can use DELETE on both  records having a destructor and records not having
+  ;;a destructor.
   ;;
   (or ($<rtd>-destructor rtd)
+      (lambda (x) (void))))
+
+(define (internal-applicable-record-destructor record)
+  ;;This private primitive is used by  the INTERNAL-DELETE function.  If a destructor
+  ;;is set  in the RTD of  RECORD: return it;  otherwise return a function  that does
+  ;;nothing.  This way we can use INTERNAL-DELETE on both records having a destructor
+  ;;and records not having a destructor.
+  ;;
+  ;;Notice that this works also on opaque records.
+  ;;
+  (or ($<rtd>-destructor ($struct-rtd record))
       (lambda (x) (void))))
 
 

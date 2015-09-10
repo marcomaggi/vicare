@@ -708,6 +708,7 @@
     (opaque					(macro . opaque ))
     (nongenerative				(macro . nongenerative))
     (parent-rtd					(macro . parent-rtd))
+    (destructor-protocol			(macro . destructor-protocol))
     (define-record-type				(macro . define-record-type))
     (record-type-and-record?			(macro . record-type-and-record?))
     (define-enumeration				(macro . define-enumeration))
@@ -1855,6 +1856,7 @@
     (internal-delete)
     (internal-applicable-struct-type-destructor)
     (internal-applicable-record-type-destructor)
+    (internal-applicable-record-destructor)
     (error@fxsub1)
     (fasl-write					v $language)
     (fasl-read					v $language)
@@ -2989,6 +2991,7 @@
     (record-constructor-descriptor		v r rs)
     (sealed					v r rs)
     (nongenerative				v r rs)
+    (destructor-protocol			v $language)
     (rcd-rtd					v $language)
     (rcd-parent-rcd				v $language)
     (record-field-mutable?			v r ri)
@@ -4042,6 +4045,7 @@
     ;;These are only for internal use by the psyntax.
     (make-syntactic-binding-descriptor/struct-type-name)
     (make-syntactic-binding-descriptor/record-type-name)
+    (make-r6rs-record-type-spec)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

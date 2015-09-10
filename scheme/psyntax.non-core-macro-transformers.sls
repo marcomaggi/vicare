@@ -226,7 +226,7 @@
 	  else unquote unquote-splicing
 	  unsyntax unsyntax-splicing
 	  fields mutable immutable parent protocol
-	  sealed opaque nongenerative parent-rtd
+	  sealed opaque nongenerative parent-rtd destructor-protocol
 	  catch finally)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
@@ -1060,9 +1060,11 @@
 
     (define-values (foo make-foo foo?)
       (%parse-full-name-spec namespec))
-    (define foo-rtd		(%named-gensym foo "-rtd"))
-    (define foo-rcd		(%named-gensym foo "-rcd"))
-    (define foo-protocol	(%named-gensym foo "-protocol"))
+    (define foo-rtd			(%named-gensym/suffix foo "-rtd"))
+    (define foo-rcd			(%named-gensym/suffix foo "-rcd"))
+    (define parent-rtd			(%named-gensym/suffix foo "-parent-rtd"))
+    (define foo-constructor-protocol	(%named-gensym/suffix foo "-constructor-protocol"))
+    (define foo-destructor		(%named-gensym/prefix foo "destroy-"))
     (define-values
       (x*
 		;A list of identifiers representing all the field names.
@@ -1098,10 +1100,27 @@
        )
       (%parse-field-specs foo (%get-fields clause*) synner))
 
-    ;;Code  for parent  record-type  descriptor  and parent  record-type
-    ;;constructor descriptor retrieval.
+    ;;Code  for  parent record-type  descriptor  and  parent record-type  constructor
+    ;;descriptor retrieval.
+    ;;
+    ;;FOO-PARENT: an identifier representing the parent type, or false if there is no
+    ;;parent or the parent is specified through the procedural layer.
+    ;;
+    ;;PARENT-RTD-CODE:  false or  a  symbolic expression  representing an  expression
+    ;;which, expanded and  evaluated at run-time, will return  the parent record-type
+    ;;descriptor.
+    ;;
+    ;;PARENT-RCD-CODE:  false or  a  symbolic expression  representing an  expression
+    ;;which, expanded and  evaluated at run-time, will return  the parent record-type
+    ;;default constructor descriptor.
     (define-values (foo-parent parent-rtd-code parent-rcd-code)
-      (%make-parent-rtd+rcd-code clause* synner))
+      (receive-and-return (foo-parent parent-rtd-code parent-rcd-code)
+	  (%make-parent-rtd+rcd-code clause* synner)
+	;;If a  parent record type  is specified and  its syntactic identifier  is an
+	;;imported syntactic binding: we want to  make sure that the imported library
+	;;is visited.
+	(when foo-parent
+	  (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx foo-parent (current-inferior-lexenv)))))
 
     ;;This can be  a symbol or false.  When  a symbol: the symbol is  the record type
     ;;UID, which will make this record  type non-generative.  When false: this record
@@ -1109,25 +1128,32 @@
     (define foo-uid
       (%get-uid foo clause* synner))
 
-    ;;Code  for  record-type   descriptor  and  record-type  constructor
-    ;;descriptor.
+    ;;Code  to  build  at  run-time:  the  record-type  descriptor;  the  record-type
+    ;;constructor descriptor; the record-type destructor function.
     (define foo-rtd-code
-      (%make-rtd-code foo foo-uid clause* parent-rtd-code synner))
+      (%make-rtd-code foo foo-uid clause* parent-rtd synner))
     (define foo-rcd-code
-      (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code))
+      (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code))
+    (define foo-destructor-code
+      (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd parent-rtd-code synner))
 
     ;;Code for protocol.
-    (define protocol-code
-      (%get-protocol-code clause* synner))
+    (define constructor-protocol-code
+      (%get-constructor-protocol-code clause* synner))
 
-    (define binding-spec
-      (%make-binding-spec x* mutable-x*
-			  foo-x* foo-x-set!*
-			  unsafe-foo-x* unsafe-foo-x-set!*))
-
+    ;;A  symbolic expression  representing a  form which,  expanded and  evaluated at
+    ;;expand-time,   returns  the   right-hand   side  of   the  record-type   name's
+    ;;DEFINE-SYNTAX.  The  value of  the right-hand side  is the  syntactic binding's
+    ;;descriptor.
+    (define foo-syntactic-binding-form
+      (%make-type-name-syntactic-binding-form foo make-foo foo-destructor foo?
+					      foo-parent foo-rtd foo-rcd
+					      x* mutable-x*
+					      foo-x* foo-x-set!*
+					      unsafe-foo-x* unsafe-foo-x-set!*))
     (define object-type-spec-form
-      ;;The object-type-spec stuff is used to  add a tag property to the
-      ;;record type identifier.
+      ;;The object-type-spec stuff is  used to add a tag property  to the record type
+      ;;identifier.
       (%make-object-type-spec-form foo make-foo foo? foo-parent
 				   x* foo-x* unsafe-foo-x*
 				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
@@ -1135,35 +1161,41 @@
 
     (bless
      `(begin
-	;;Record type descriptor.
+	;;Parent record-type descriptor.
+	(define ,parent-rtd ,parent-rtd-code)
+	;;Record-type descriptor.
 	(define ,foo-rtd ,foo-rtd-code)
 	;;Protocol function.
-	(define ,foo-protocol ,protocol-code)
-	;;Record constructor descriptor.
+	(define ,foo-constructor-protocol ,constructor-protocol-code)
+	;;Record-constructor descriptor.
 	(define ,foo-rcd ,foo-rcd-code)
-	;;Binding for record type name.
+	;;Record destructor function.
+	(define ,foo-destructor ,foo-destructor-code)
+	;;Syntactic binding for record-type name.
 	(define-syntax ,foo
-	  (make-syntactic-binding-descriptor/record-type-name (syntax ,foo-rtd) (syntax ,foo-rcd) (quote ,binding-spec)))
+	  ,foo-syntactic-binding-form)
 	(begin-for-syntax ,object-type-spec-form)
-	;;Record instance predicate.
+	;;Type predicate.
 	(define (brace ,foo? <predicate>)
 	  (record-predicate ,foo-rtd))
-	;;Record instance constructor.
+	;;Default constructor.
 	(define ,make-foo
 	  (record-constructor ,foo-rcd))
+	;;We want the default constructor function to have a signature specifying the
+	;;record-type as return type.
 	(begin-for-syntax
 	  (internal-body
 	    (import (prefix (vicare expander object-type-specs) typ.))
 	    (define %constructor-signature
-	      (typ.make-lambda-signature
-	       (typ.make-retvals-signature-single-value (syntax ,foo))
-	       (typ.make-formals-signature (syntax <list>))))
+	      (typ.make-lambda-signature (typ.make-retvals-signature-single-value (syntax ,foo))
+					 (typ.make-formals-signature (syntax <list>))))
 	    (define %constructor-tag-id
-	      (typ.fabricate-procedure-tag-identifier (quote ,make-foo)
-						      %constructor-signature))
+	      (typ.fabricate-procedure-tag-identifier (quote ,make-foo) %constructor-signature))
 	    (typ.override-identifier-tag! (syntax ,make-foo) %constructor-tag-id)))
 	(module (,@foo-x*
 		 ,@foo-x-set!*
+		 ;;We want to  create the syntactic bindings of  unsafe accessors and
+		 ;;mutators only when STRICT-R6RS mode is DISabled.
 		 ,@(if (option.strict-r6rs)
 		       '()
 		     (append unsafe-foo-x* unsafe-foo-x-set!*)))
@@ -1236,7 +1268,7 @@
     (define foo.str
       (symbol->string (syntax->datum foo)))
     (define foo-first-field-offset
-      (%named-gensym foo "-first-field-offset"))
+      (%named-gensym/suffix foo "-first-field-offset"))
     `(module (,@unsafe-foo-x* ,@unsafe-foo-x-set!*)
        (define ,foo-first-field-offset
 	 ;;The field at index  3 in the RTD is: the index of  the first field of this
@@ -1269,8 +1301,9 @@
 ;;; --------------------------------------------------------------------
 
   (define (%parse-full-name-spec spec)
-    ;;Given  a  syntax  object  representing  a  full  record-type  name
-    ;;specification: return the name identifier.
+    ;;Given  a syntax  object  representing a  full  record-type name  specification:
+    ;;return the  3 syntactic identifiers: the  type name, the constructor  name, the
+    ;;predicate name.
     ;;
     (syntax-match spec ()
       ((?foo ?make-foo ?foo?)
@@ -1350,45 +1383,45 @@
     `(make-record-type-descriptor (quote ,name) ,parent-rtd-code
 				  (quote ,foo-uid) ,sealed? ,opaque? ,fields))
 
-  (define (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code)
+  (define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code)
     ;;Return a sexp  which, when evaluated, will  return the record-type
     ;;default constructor descriptor.
     ;;
-    `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-protocol))
+    `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-constructor-protocol))
 
   (define (%make-parent-rtd+rcd-code clause* synner)
     ;;Return 3 values:
     ;;
-    ;;1. An identifier  representing the parent type, or  false if there
-    ;;is no  parent or  the parent is  specified through  the procedural
-    ;;layer.
+    ;;1. A syntactic identifier representing the parent type, or false if there is no
+    ;;parent or the parent is specified through the procedural layer.
     ;;
-    ;;2.  A  sexp   which,  when  evaluated,  will   return  the  parent
-    ;;record-type descriptor.
+    ;;2. False  of a symbolic  expression representing an expression  which, expanded
+    ;;and evaluated at run-time, will return the parent's record-type descriptor.
     ;;
-    ;;3.  A  sexp   which,  when  evaluated,  will   return  the  parent
-    ;;record-type default constructor descriptor.
+    ;;3.  False or  a symbolic expression representing an  expression which, expanded
+    ;;and  evaluated  at  run-time,  will   return  the  parent  record-type  default
+    ;;constructor descriptor.
     ;;
     (let ((parent-clause (%get-clause 'parent clause*)))
       (syntax-match parent-clause ()
-	;;If there is a PARENT clause insert code that retrieves the RTD
-	;;from the parent type name.
+	;;If there  is a PARENT  clause insert code that  retrieves the RTD  from the
+	;;parent type name.
 	((_ ?name)
 	 (identifier? ?name)
 	 (values ?name
 		 `(record-type-descriptor ,?name)
 		 `(record-constructor-descriptor ,?name)))
 
-	;;If there  is no PARENT  clause try to retrieve  the expression
-	;;evaluating to the RTD.
+	;;If there is  no PARENT clause try to retrieve  the expression evaluating to
+	;;the RTD.
 	(#f
 	 (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
 	   (syntax-match parent-rtd-clause ()
 	     ((_ ?rtd ?rcd)
 	      (values #f ?rtd ?rcd))
 
-	     ;;If  neither the  PARENT  nor the  PARENT-RTD clauses  are
-	     ;;present: just return false.
+	     ;;If neither  the PARENT  nor the PARENT-RTD  clauses are  present: just
+	     ;;return false.
 	     (#f
 	      (values #f #f #f))
 
@@ -1398,7 +1431,62 @@
 	(_
 	 (synner "invalid syntax in PARENT clause" parent-clause)))))
 
-  (define (%get-protocol-code clause* synner)
+  (define (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd parent-rtd-code synner)
+    ;;Extract from the  CLAUSE* the DESTRUCTOR-PROTOCOL one and  return an expression
+    ;;which, expanded and evaluated at run-time, will return the destructor function;
+    ;;the expression will return false if there is no destructor.
+    ;;
+    ;;If FOO-PARENT is  not false: this record  type has a parent  specified with the
+    ;;PARENT clause;  in this  case: PARENT-RTD  is an  expression evaluating  to the
+    ;;parent's RTD.
+    ;;
+    ;;If PARENT-RTD-CODE is  not false: this record type has  a parent specified with
+    ;;the PARENT-RTD clause; in this case:  PARENT-RTD is an expression evaluating to
+    ;;the parent's RTD.
+    ;;
+    (let ((clause (%get-clause 'destructor-protocol clause*))
+	  (foo-destructor-protocol (%named-gensym/suffix foo "-destructor-protocol")))
+      (syntax-match clause ()
+	((_ ?destructor-protocol-expr)
+	 ;;This record definition has a destructor protocol.
+	 `(let ((,foo-destructor-protocol ,?destructor-protocol-expr))
+	    (unless (procedure? ,foo-destructor-protocol)
+	      (assertion-violation (quote ,foo)
+		"expected closure object as result of evaluating the destructor protocol expression"
+		,foo-destructor-protocol))
+	    (receive-and-return (,foo-destructor)
+		,(if (or foo-parent parent-rtd-code)
+		     `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd))
+		   `(,foo-destructor-protocol))
+	      (if (procedure? ,foo-destructor)
+		  (record-type-destructor-set! ,foo-rtd ,foo-destructor)
+		(assertion-violation (quote ,foo)
+		  "expected closure object as result of applying the destructor protocol function"
+		  ,foo-destructor)))))
+
+	;;No  matching  clause  found.   This record  definition  has  no  destructor
+	;;protocol, but the parent (if any) might have one.
+	;;
+	;;*  If  the  parent  record-type  has  a  record  destructor:  the  parent's
+	;;destructor becomes this record-type's destructor.
+	;;
+	;;* If  the parent record-type  has no record destructor:  this record-type's
+	;;record destructor variable is set to false.
+	;;
+	(#f
+	 (if (or foo-parent parent-rtd-code)
+	     (let ((foo-parent-destructor (%named-gensym/suffix foo "-parent-destructor")))
+	       `(cond ((record-type-destructor ,parent-rtd)
+		       => (lambda (,foo-parent-destructor)
+			    (record-type-destructor-set! ,foo-rtd ,foo-parent-destructor)
+			    ,foo-parent-destructor))))
+	   ;;Set to false this record-type record destructor variable.
+	   #f))
+
+	(_
+	 (synner "invalid syntax in DESTRUCTOR-PROTOCOL clause" clause)))))
+
+  (define (%get-constructor-protocol-code clause* synner)
     ;;Return  a  sexp  which,   when  evaluated,  returns  the  protocol
     ;;function.
     ;;
@@ -1562,56 +1650,90 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%make-binding-spec)
-    (import R6RS-RECORD-TYPE-SPEC)
+  (define (%make-type-name-syntactic-binding-form foo.id make-foo.id foo-destructor.sym foo?.id
+						  foo-parent.id foo-rtd.sym foo-rcd.sym
+						  x* mutable-x*
+						  foo-x* foo-x-set!*
+						  unsafe-foo-x* unsafe-foo-x-set!*)
+    ;;Build and  return symbolic expression  representing a form which,  expanded and
+    ;;evaluated at  expand-time, returns  the record-type name's  syntactic binding's
+    ;;descriptor.
+    ;;
+    ;;FOO.ID must be the identifier bound to the type name.
+    ;;
+    ;;MAKE-FOO.ID must be the identifier bound to the default constructor function.
+    ;;
+    ;;FOO?.ID must be the identifier bound to the type predicate.
+    ;;
+    ;;FOO-PARENT.ID must be false or the identifier bound to the parent's type name.
+    ;;
+    ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
+    ;;to the record-type descriptor.
+    ;;
+    ;;FOO-RTD.SYM must be a  gensym: it will become the name  of the identifier bound
+    ;;to the record-constructor descriptor.
+    ;;
+    ;;X* must be a list of identifiers whose names represent all the field names.
+    ;;
+    ;;MUTABLE-X* must be a list of  identifiers whose names represent all the mutable
+    ;;field names.
+    ;;
+    ;;FOO-X*,  FOO-X-SET!*,  UNSAFE-FOO-X*,  UNSAFE-FOO-X-SET!*   must  be  lists  of
+    ;;identifiers bound  to: the safe field  accessors; the safe field  mutators; the
+    ;;unsafe field accessors; the unsafe field mutators.
+    ;;
+    (define (%make-alist field-name*.id operator*.id)
+      ;;We  want  to   return  a  symbolic  expression   representing  the  following
+      ;;expand-time expression:
+      ;;
+      ;;   (list (cons (quote ?field-sym0) (syntax ?operator0))
+      ;;         (cons (quote ?field-sym)  (syntax ?operator))
+      ;;         ...)
+      ;;
+      ;;which evaluates to an aslist whose keys  are field names and whose values are
+      ;;syntactic identifiers bound to accessors or mutators.
+      ;;
+      (cons 'list (map (lambda (key.id operator.id)
+			 (list 'cons `(quote ,(syntax->datum key.id)) `(syntax ,operator.id)))
+		    field-name*.id operator*.id)))
 
-    (define (%make-binding-spec x* mutable-x*
-				foo-x* foo-x-set!*
-				unsafe-foo-x* unsafe-foo-x-set!*)
+    ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
+    ;;alist in which:  keys are symbols representing all the  field names; values are
+    ;;identifiers bound to the safe accessors.
+    (define foo-fields-safe-accessors.table
+      (%make-alist x* foo-x*))
 
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to an alist in which: keys are symbols representing all
-      ;;the  field  names; values  are  identifiers  bound to  the  safe
-      ;;accessors.
-      (define foo-fields-safe-accessors-table
-	(%make-alist x* foo-x*))
+    ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
+    ;;alist in which:  keys are symbols representing mutable field  names; values are
+    ;;identifiers bound to safe mutators.
+    (define foo-fields-safe-mutators.table
+      (%make-alist mutable-x* foo-x-set!*))
 
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to  an alist  in which:  keys are  symbols representing
-      ;;mutable  field  names;  values  are identifiers  bound  to  safe
-      ;;mutators.
-      (define foo-fields-safe-mutators-table
-	(%make-alist mutable-x* foo-x-set!*))
-
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to an alist in which: keys are symbols representing all
-      ;;the  field names;  values are  identifiers bound  to the  unsafe
-      ;;accessors.
-      (define foo-fields-unsafe-accessors-table
-	(%make-alist x* unsafe-foo-x*))
-
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to  an alist  in which:  keys are  symbols representing
-      ;;mutable  field names;  values  are identifiers  bound to  unsafe
-      ;;mutators.
-      (define foo-fields-unsafe-mutators-table
-	(%make-alist mutable-x* unsafe-foo-x-set!*))
-
+    ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
+    ;;alist in which:  keys are symbols representing all the  field names; values are
+    ;;identifiers bound to the unsafe accessors.
+    (define foo-fields-unsafe-accessors.table
       (if (option.strict-r6rs)
-	  (make-r6rs-record-type-spec foo-fields-safe-accessors-table
-				      foo-fields-safe-mutators-table
-				      #f #f)
-	(make-r6rs-record-type-spec foo-fields-safe-accessors-table
-				    foo-fields-safe-mutators-table
-				    foo-fields-unsafe-accessors-table
-				    foo-fields-unsafe-mutators-table)))
+	  '()
+	(%make-alist x* unsafe-foo-x*)))
 
-    (define (%make-alist key-id* operator-id*)
-      (map (lambda (key-id operator-id)
-	     (cons (syntax->datum key-id) operator-id))
-	key-id* operator-id*))
+    ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
+    ;;alist in which:  keys are symbols representing mutable field  names; values are
+    ;;identifiers bound to unsafe mutators.
+    (define foo-fields-unsafe-mutators.table
+      (if (option.strict-r6rs)
+	  '()
+	(%make-alist mutable-x* unsafe-foo-x-set!*)))
 
-    #| end of module: %MAKE-BINDING-SPEC |# )
+    `(make-syntactic-binding-descriptor/record-type-name
+      (make-r6rs-record-type-spec (syntax ,foo-rtd.sym) (syntax ,foo-rcd.sym)
+				  ,(and foo-parent.id `(syntax ,foo-parent.id))
+				  (syntax ,make-foo.id) (syntax ,foo-destructor.sym)
+				  (syntax ,foo?.id)
+				  ,foo-fields-safe-accessors.table
+				  ,foo-fields-safe-mutators.table
+				  ,foo-fields-unsafe-accessors.table
+				  ,foo-fields-unsafe-mutators.table)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1631,12 +1753,6 @@
       (string->symbol (string-append type.str "-getter-maker")))
     (define %setter-maker
       (string->symbol (string-append type.str "-setter-maker")))
-    ;;If  a parent  record  type is  specified  and its  syntactic  identifier is  an
-    ;;imported syntactic binding:  we want to make sure that  the imported library is
-    ;;visited.
-    (when foo-parent
-      (visit-library-of-imported-syntactic-binding 'define-record-type input-form.stx
-						   foo-parent (current-inferior-lexenv)))
     `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
@@ -1700,9 +1816,17 @@
   (module (%verify-clauses)
 
     (define (%verify-clauses input-form.stx cls*)
-      (define VALID-KEYWORDS
+      (define-constant R6RS-VALID-KEYWORDS
 	(map bless
 	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
+      (define-constant EXTENDED-VALID-KEYWORDS
+	(append R6RS-VALID-KEYWORDS
+		(map bless
+		  '(fields parent parent-rtd protocol sealed opaque destructor-protocol))))
+      (define-constant VALID-KEYWORDS
+	(if (option.strict-r6rs)
+	    R6RS-VALID-KEYWORDS
+	  EXTENDED-VALID-KEYWORDS))
       (let loop ((cls*  cls*)
 		 (seen* '()))
 	(unless (null? cls*)
@@ -1748,10 +1872,11 @@
 	     `(,?key . ,?rest)
 	   (next id ?clause*))))))
 
-  (define (%named-gensym foo suffix)
-    (gensym (string-append
-	     (symbol->string (syntax->datum foo))
-	     suffix)))
+  (define (%named-gensym/suffix foo suffix)
+    (gensym (string-append (symbol->string (syntax->datum foo)) suffix)))
+
+  (define (%named-gensym/prefix foo prefix)
+    (gensym (string-append prefix (symbol->string (syntax->datum foo)))))
 
   #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
 

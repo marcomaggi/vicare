@@ -56,7 +56,8 @@
     ;;2015)
     (prefix (only (ikarus records procedural)
 		  record-object?
-		  record-destructor)
+		  record-destructor
+		  internal-applicable-record-destructor)
 	    records.)
     (only (vicare system $fx)
 	  $fxadd1))
@@ -73,7 +74,7 @@
   ;;"(psyntax system $all)".
   ;;
   (cond ((records.record-object? obj)
-	 ((records.record-destructor obj) obj))
+	 ((records.internal-applicable-record-destructor obj) obj))
 	((struct? obj)
 	 ((struct-destructor obj) obj))
 	(else
