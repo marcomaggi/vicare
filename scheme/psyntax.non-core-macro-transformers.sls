@@ -226,7 +226,8 @@
 	  else unquote unquote-splicing
 	  unsyntax unsyntax-splicing
 	  fields mutable immutable parent protocol
-	  sealed opaque nongenerative parent-rtd destructor-protocol
+	  sealed opaque nongenerative parent-rtd
+	  destructor-protocol custom-printer
 	  catch finally)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))

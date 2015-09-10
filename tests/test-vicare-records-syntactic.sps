@@ -1404,6 +1404,38 @@
   (collect))
 
 
+(parametrise ((check-test-name		'custom-printer))
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (custom-printer
+	    (lambda (record port sub-printer)
+	      (display "#{record duo one=" port)
+	      (display (duo-one record) port)
+	      (display " two=" port)
+	      (display (duo-two record) port)
+	      (display "}" port))))
+
+	(receive (port extract)
+	    (open-string-output-port)
+	  (display (make-duo 1 2) port)
+	  (extract)))
+    => "#{record duo one=1 two=2}")
+
+  (check-for-assertion-violation
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (custom-printer
+	    123))
+	(void))
+    => '(duo (123)))
+
+  (void))
+
+
 (parametrise ((check-test-name		'destructor-protocol)
 	      (record-guardian-logger	(lambda (S E action)
 					  (check-pretty-print (list S E action)))))

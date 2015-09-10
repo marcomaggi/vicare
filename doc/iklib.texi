@@ -10813,15 +10813,23 @@ unsafe accessor and mutator identifiers out of libraries.
 
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
+@deffnx {Auxiliary Syntax} custom-printer @meta{expr}
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
 @value{PRJNAME} extensions, when the selected language is not strict
 @rnrs{6}.
 @end deffn
 
-@c ------------------------------------------------------------------------
 
-@subsubheading The destructor protocol
+@menu
+* iklib records definitions destructor::  The destructor protocol.
+* iklib records definitions printer::     The custom printer.
+@end menu
+
+@c page
+@node iklib records definitions destructor
+@subsubsection The destructor protocol
+
 
 The definition clause:
 
@@ -10899,6 +10907,39 @@ If this type has no @clause{destructor-protocol} clause, it has a parent
 and the parent has a destructor function: the parent's destructor
 function becomes this type's destructor function.
 @end itemize
+
+@c page
+@node iklib records definitions printer
+@subsubsection The custom printer
+
+
+The definition clause:
+
+@lisp
+(custom-printer @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which must
+evaluate to a custom printer function for instances of the record type;
+@ref{iklib records printer}, for details on record's custom printers.
+
+Usage example:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (custom-printer
+    (lambda (record port sub-printer)
+      (display "#@{record duo one=" port)
+      (display (duo-one record) port)
+      (display " two=" port)
+      (display (duo-two record) port)
+      (display "@}" port))))
+
+(display (make-duo 1 2))
+@print{} #@{record duo one=1 two=2@}
+@end lisp
 
 @c page
 @node iklib records predicates
