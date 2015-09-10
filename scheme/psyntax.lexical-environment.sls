@@ -2211,7 +2211,7 @@
 		    (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
        	 (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv)))
 
-      (($core-rtd $struct-type-name core-prim lexical local-macro local-macro! local-etv)
+      (($core-rtd $struct-type-name core-prim lexical macro local-macro local-macro! local-etv)
        (void))
 
       (else

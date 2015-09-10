@@ -2025,21 +2025,44 @@
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI struct.
   ;;
-  (syntax-match input-form.stx ()
-    ((_ ?jolly ?tag)
-     (and (tag-identifier? ?tag)
-	  (jolly-id? ?jolly))
-     (let ((spec (identifier-object-type-spec ?tag)))
-       (chi-expr (object-type-spec-pred-stx spec)
-		 lexenv.run lexenv.expand)))
+  (chi-expr (bless
+	     (syntax-match input-form.stx ()
+	       ((_ ?jolly ?type-id)
+		(and (identifier? ?type-id)
+		     (jolly-id? ?jolly))
 
-    ((_ ?expr ?tag)
-     (tag-identifier? ?tag)
-     (let ((spec (identifier-object-type-spec ?tag)))
-       (chi-expr (bless
-		  `(,(object-type-spec-pred-stx spec) ,?expr))
-		 lexenv.run lexenv.expand)))
-    ))
+		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		  ((r6rs-record-type)
+		   (let* ((rts      (syntactic-binding-descriptor.value binding))
+			  (pred.id  (r6rs-record-type-spec.type-predicate-id rts)))
+		     pred.id))
+
+		  ((vicare-struct-type)
+		   (let ((obj (gensym)))
+		     `(lambda (,obj)
+			($struct/rtd? ,obj (struct-type-descriptor ,?type-id)))))
+
+		  ((object-type-spec)
+		   (let ((spec (identifier-object-type-spec ?type-id)))
+		     (object-type-spec-pred-stx spec)))))
+
+	       ((_ ?expr ?type-id)
+		(identifier? ?type-id)
+		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		  ((r6rs-record-type)
+		   (let* ((rts      (syntactic-binding-descriptor.value binding))
+			  (pred.id  (r6rs-record-type-spec.type-predicate-id rts)))
+		     `(,pred.id ,?expr)))
+
+		  ((vicare-struct-type)
+		   `($struct/rtd? ,?expr (struct-type-descriptor ,?type-id)))
+
+		  ((object-type-spec)
+		   (let* ((spec     (identifier-object-type-spec ?type-id))
+			  (pred.stx (object-type-spec-pred-stx spec)))
+		     `(,pred.stx ,?expr)))))
+	       ))
+	    lexenv.run lexenv.expand))
 
 (define-core-transformer (condition-is-a? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand Vicare's CONDITION-IS-A?   syntaxes from the

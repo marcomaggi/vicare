@@ -511,7 +511,7 @@
 
   (set-rtd-destructor! (type-descriptor alpha) alpha-destructor)
 
-  (debug-print ($std-destructor (type-descriptor alpha)))
+  #;(debug-print ($std-destructor (type-descriptor alpha)))
 
   (check
       (parametrise ((struct-guardian-logger #t))
