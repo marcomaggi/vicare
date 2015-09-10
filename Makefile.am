@@ -462,6 +462,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.import-spec-parser.sls				\
 	scheme/psyntax.export-spec-parser.sls				\
 	scheme/psyntax.non-core-macro-transformers.sls			\
+	scheme/psyntax.non-core-macro-transformers.define-record-type.scm	\
 	scheme/psyntax.non-core-macro-transformers.infix-macro.scm	\
 	scheme/psyntax.chi-procedures.sls				\
 	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
