@@ -19,7 +19,14 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module (<r6rs-record-type-spec>
+(module (<object-type-spec>
+	 object-type-spec?
+	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
+	 object-type-spec.type-predicate-stx
+	 object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
+	 object-type-spec.unsafe-accessors-table	object-type-spec.unsafe-mutators-table
+
+	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
 	 r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
 	 r6rs-record-type-spec.parent-id
@@ -31,6 +38,130 @@
 	 r6rs-record-type-spec.safe-accessor		r6rs-record-type-spec.safe-mutator
 	 r6rs-record-type-spec.unsafe-accessor		r6rs-record-type-spec.unsafe-mutator
 	 )
+
+
+;;;; basic object-type specification
+
+;;This  record-type is  used as  root  type for  all the  Scheme objects  expand-time
+;;specification.
+;;
+;;We must handle this type as if it  is an "abstract" type: we must never instantiate
+;;it directly, rather we  must define subtype and instantiate that.   This is why the
+;;maker of "<object-type-spec>" is not exported by the module.
+;;
+(module (<object-type-spec>
+	 object-type-spec?
+	 object-type-spec.constructor-stx
+	 object-type-spec.destructor-stx
+	 object-type-spec.type-predicate-stx
+	 object-type-spec.safe-accessors-table
+	 object-type-spec.safe-mutators-table
+	 object-type-spec.unsafe-accessors-table
+	 object-type-spec.unsafe-mutators-table)
+
+  (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
+    (nongenerative vicare:expander:<object-type-spec>)
+    (fields
+     (immutable constructor-stx		object-type-spec.constructor-stx)
+		;False or a  syntax object representing an  expression that, expanded
+		;and  evaluated at  run-time, returns  the default  constructor.  The
+		;constructor is meant to be used as:
+		;
+		;   (?constructor ?arg ...)
+		;
+		;and called explicitly with the NEW syntax.
+		;
+		;The   constructor  can   be  a   syntax  or   core  operation   like
+		;"$make-clean-vector" or a closure object  like "vector" or the maker
+		;of R6RS records.
+
+     (immutable destructor-stx		object-type-spec.destructor-stx)
+		;False or a  syntax object representing an  expression that, expanded
+		;and  evaluated  at run-time,  returns  a  destructor function.   The
+		;constructor is meant to be used as:
+		;
+		;   (?destructor ?instance)
+		;
+		;and called explicitly with the DELETE syntax.
+		;
+		;At present only structs and records have a destructor.
+
+     (immutable type-predicate-stx		object-type-spec.type-predicate-stx)
+		;False or a  syntax object representing an  expression that, expanded
+		;and evaluated at run-time, returns  a type predicate.  The predicate
+		;is meant to be used as:
+		;
+		;   (?predicate ?object)
+		;
+		;and called explicitly with the IS-A? syntax.
+		;
+		;The type  predicate can be a  syntax or core operation  or a closure
+		;object like "vector?" or the predicate of R6RS records.
+
+     (immutable safe-accessors-table		object-type-spec.safe-accessors-table)
+		;Null or  an alist  mapping symbols representing  the field  names to
+		;syntax objects which, expanded and evaluated at run-time, return the
+		;associated safe  field accessor.   A field accessor  is meant  to be
+		;used as:
+		;
+		;   (?accessor ?instance)
+		;
+		;and called explicitly with the SLOT-REF syntax.
+
+     (immutable safe-mutators-table		object-type-spec.safe-mutators-table)
+		;Null or  an alist  mapping symbols representing  the field  names to
+		;syntax objects which, expanded and evaluated at run-time, return the
+		;associated safe field mutator.  A field  mutator is meant to be used
+		;as:
+		;
+		;   (?mutator ?instance ?new-field-value)
+		;
+		;and called explicitly with the SLOT-SET! syntax.
+
+     (immutable unsafe-accessors-table		object-type-spec.unsafe-accessors-table)
+		;Null or  an alist  mapping symbols representing  the field  names to
+		;syntax objects which, expanded and evaluated at run-time, return the
+		;associated unsafe field  accessor.  A field accessor is  meant to be
+		;used as:
+		;
+		;   (?accessor ?instance)
+		;
+		;and called explicitly with the $SLOT-REF syntax.
+
+     (immutable unsafe-mutators-table		object-type-spec.unsafe-mutators-table)
+		;Null or  an alist  mapping symbols representing  the field  names to
+		;syntax objects which, expanded and evaluated at run-time, return the
+		;associated unsafe  field mutator.   A field mutator  is meant  to be
+		;used as:
+		;
+		;   (?mutator ?instance ?new-field-value)
+		;
+		;and called explicitly with the $SLOT-SET! syntax.
+
+     #| end of FIELDS |# )
+
+    (protocol
+      (lambda (make-record)
+	(case-lambda
+	 (()
+	  (make-record #f  ;constructor-stx
+		       #f  ;destructor-stx
+		       #f  ;type-predicate-stx
+		       '() ;safe-accessors-table
+		       '() ;safe-mutators-table
+		       '() ;unsafe-accessors-table
+		       '() ;unsafe-mutators-table
+		       ))
+	 ((constructor-stx destructor-stx type-predicate-stx
+			   safe-accessors-table safe-mutators-table
+			   unsafe-accessors-table unsafe-mutators-table)
+	  (make-record constructor-stx destructor-stx type-predicate-stx
+		       safe-accessors-table safe-mutators-table
+		       unsafe-accessors-table unsafe-mutators-table)))))
+
+    #| end of DEFINE-RECORD-TYPE |# )
+
+  #| end of module |# )
 
 
 ;;;; R6RS record-type specification
@@ -49,58 +180,52 @@
 ;;
 (define-record-type (<r6rs-record-type-spec> make-r6rs-record-type-spec r6rs-record-type-spec?)
   (nongenerative vicare:expander:<r6rs-record-type-spec>)
+  (parent <object-type-spec>)
   (fields
-   (immutable rtd-id r6rs-record-type-spec.rtd-id)
+   (immutable rtd-id			r6rs-record-type-spec.rtd-id)
 		;The syntactic identifier bound to the record-type descriptor.
-   (immutable rcd-id r6rs-record-type-spec.rcd-id)
+   (immutable rcd-id			r6rs-record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
-   (immutable parent-id r6rs-record-type-spec.parent-id)
-		;If this record  type has no parent or the  parent is unknown: false.
-		;If this  record type has a  known parent defined with  the syntactic
-		;layer: a syntactic identifier representing the parent type name.
-   (immutable default-constructor-id r6rs-record-type-spec.default-constructor-id)
-		;False  or  the syntactic  identifier  bound  to the  default  record
-		;constructor function.
-   (immutable default-destructor-id r6rs-record-type-spec.default-destructor-id)
-		;False  or  the syntactic  identifier  bound  to the  default  record
-		;destructor function.
-   (immutable type-predicate-id r6rs-record-type-spec.type-predicate-id)
-		;False  or  the syntactic  identifier  bound  to the  type  predicate
-		;function.
-   (immutable safe-accessors-table r6rs-record-type-spec.safe-accessors-table)
-		;Alist mapping all  field names to the identifiers to  which the safe
-		;accessors are bound.
-   (immutable safe-mutators-table r6rs-record-type-spec.safe-mutators-table)
-		;Alist mapping mutable  field names to the identifiers  to which safe
-		;mutators are bound.
-   (immutable unsafe-accessors-table r6rs-record-type-spec.unsafe-accessors-table)
-		;False or alist  mapping all field names to the  identifiers to which
-		;the unsafe accessors are bound.
-   (immutable unsafe-mutators-table r6rs-record-type-spec.unsafe-mutators-table)
-		;False or  alist mapping  mutable field names  to the  identifiers to
-		;which unsafe mutators are bound.
+   (immutable parent-id			r6rs-record-type-spec.parent-id)
+		;False  or a  syntactic identifier  representing the  parent of  this
+		;record-type.
    #| end of FIELDS |# )
   (protocol
-    (lambda (make-record)
+    (lambda (make-object-type-spec)
       (case-lambda
        ((rtd-id rcd-id)
-	(make-record rtd-id rcd-id
-		     #f ;parent-id
-		     #f ;default-constructor-id
-		     #f ;default-destructor-id
-		     #f ;type-predicate-id
-		     '() ;safe-accessors-table
-		     '() ;safe-mutators-table
-		     '() ;unsafe-accessors-table
-		     '() ;unsafe-mutators-table
-		     ))
-       ((rtd-id rcd-id parent-id default-constructor-id default-destructor-id type-predicate-id
-		safe-accessors-table safe-mutators-table unsafe-accessors-table unsafe-mutators-table)
-	(make-record rtd-id rcd-id parent-id
-		     default-constructor-id default-destructor-id type-predicate-id
-		     safe-accessors-table safe-mutators-table
-		     unsafe-accessors-table unsafe-mutators-table)))))
+	((make-object-type-spec) rtd-id rcd-id #f))
+
+       ((rtd-id rcd-id parent-id
+		default-constructor-id default-destructor-id type-predicate-id
+		safe-accessors-table safe-mutators-table
+		unsafe-accessors-table unsafe-mutators-table)
+	((make-object-type-spec default-constructor-id default-destructor-id type-predicate-id
+				safe-accessors-table safe-mutators-table
+				unsafe-accessors-table unsafe-mutators-table)
+	 rtd-id rcd-id parent-id)))))
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define (r6rs-record-type-spec.default-constructor-id spec)
+  (object-type-spec.constructor-stx spec))
+
+(define (r6rs-record-type-spec.default-destructor-id spec)
+  (object-type-spec.destructor-stx spec))
+
+(define (r6rs-record-type-spec.type-predicate-id spec)
+  (object-type-spec.type-predicate-stx spec))
+
+(define (r6rs-record-type-spec.safe-accessors-table spec)
+  (object-type-spec.safe-accessors-table spec))
+
+(define (r6rs-record-type-spec.safe-mutators-table spec)
+  (object-type-spec.safe-mutators-table spec))
+
+(define (r6rs-record-type-spec.unsafe-accessors-table spec)
+  (object-type-spec.unsafe-accessors-table spec))
+
+(define (r6rs-record-type-spec.unsafe-mutators-table spec)
+  (object-type-spec.unsafe-mutators-table spec))
 
 
 ;;;; R6RS record-type specification: accessor and mutator retrieval
