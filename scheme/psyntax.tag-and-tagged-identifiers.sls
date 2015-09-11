@@ -1531,6 +1531,9 @@
   (set-identifier-tag-type-spec! (S <record-type-descriptor>)
     (make-tag-type-spec (S <record-type-descriptor>) (S <struct>) (S record-type-descriptor?)))
 
+  (set-identifier-tag-type-spec! (S <record-constructor-descriptor>)
+    (make-tag-type-spec (S <record-constructor-descriptor>) (S <struct>) (S record-constructor-descriptor?)))
+
   (void))
 
 

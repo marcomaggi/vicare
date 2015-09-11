@@ -567,16 +567,16 @@
 
   (check
       (let ((stru (make-alpha 1 2 3)))
-	(struct-type-and-struct? alpha stru))
+	(is-a? stru alpha))
     => #t)
 
   (check
       (let ((stru (make-alpha 1 2 3)))
-	(struct-type-and-struct? beta stru))
+	(is-a? stru beta))
     => #f)
 
   (check
-      (struct-type-and-struct? beta 123)
+      (is-a? 123 beta)
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -584,39 +584,19 @@
 
   (check
       (let ((stru (make-alpha 1 2 3)))
-	(list (struct-type-field-ref alpha a stru)
-	      (struct-type-field-ref alpha b stru)
-	      (struct-type-field-ref alpha c stru)))
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
     => '(1 2 3))
 
   (check
       (let ((stru (make-alpha 1 2 3)))
-	(struct-type-field-set! alpha a stru 10)
-	(struct-type-field-set! alpha b stru 20)
-	(struct-type-field-set! alpha c stru 30)
-	(list (struct-type-field-ref alpha a stru)
-	      (struct-type-field-ref alpha b stru)
-	      (struct-type-field-ref alpha c stru)))
-    => '(10 20 30))
-
-;;; --------------------------------------------------------------------
-;;; unsafe accessors and mutators
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	(list ($struct-type-field-ref alpha a stru)
-	      ($struct-type-field-ref alpha b stru)
-	      ($struct-type-field-ref alpha c stru)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (make-alpha 1 2 3)))
-	($struct-type-field-set! alpha a stru 10)
-	($struct-type-field-set! alpha b stru 20)
-	($struct-type-field-set! alpha c stru 30)
-	(list ($struct-type-field-ref alpha a stru)
-	      ($struct-type-field-ref alpha b stru)
-	      ($struct-type-field-ref alpha c stru)))
+	(slot-set! stru a alpha 10)
+	(slot-set! stru b alpha 20)
+	(slot-set! stru c alpha 30)
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
     => '(10 20 30))
 
 ;;; --------------------------------------------------------------------

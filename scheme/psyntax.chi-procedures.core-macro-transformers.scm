@@ -203,11 +203,6 @@
     ((predicate-return-value-validation)	predicate-return-value-validation-transformer)
 
     ((struct-type-descriptor)			struct-type-descriptor-transformer)
-    ((struct-type-and-struct?)			struct-type-and-struct?-transformer)
-    ((struct-type-field-ref)			struct-type-field-ref-transformer)
-    ((struct-type-field-set!)			struct-type-field-set!-transformer)
-    (($struct-type-field-ref)			$struct-type-field-ref-transformer)
-    (($struct-type-field-set!)			$struct-type-field-set!-transformer)
 
     ((record-type-descriptor)			record-type-descriptor-transformer)
     ((record-constructor-descriptor)		record-constructor-descriptor-transformer)
@@ -1632,116 +1627,21 @@
     ))
 
 
-;;;; module core-macro-transformer: struct type descriptor, setter and getter
+;;;; module core-macro-transformer: struct-type descriptor
 
-(module (struct-type-descriptor-transformer
-	 struct-type-and-struct?-transformer
-	 struct-type-field-ref-transformer
-	 struct-type-field-set!-transformer
-	 $struct-type-field-ref-transformer
-	 $struct-type-field-set!-transformer)
-
-  (define-core-transformer (struct-type-descriptor input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
-    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
-    ;;context of the given LEXENV; return a PSI struct.
-    ;;
-    (syntax-match input-form.stx ()
-      ((_ ?type-id)
-       (identifier? ?type-id)
-       (make-psi input-form.stx
-		 (build-data no-source
-		   (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-		 (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
-      ))
-
-  (define-core-transformer (struct-type-and-struct? input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer function used to  expand STRUCT-TYPE-AND-STRUCT?  syntaxes from the
-    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
-    ;;context of the given LEXENV; return an PSI struct.
-    ;;
-    (syntax-match input-form.stx ()
-      ((_ ?type-id ?stru)
-       (identifier? ?type-id)
-       (let ((rtd (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run)))
-	 (chi-expr (bless
-		    `($struct/rtd? ,?stru (quote ,rtd)))
-		   lexenv.run lexenv.expand)))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (module (struct-type-field-ref-transformer
-	   $struct-type-field-ref-transformer)
-
-    (define-core-transformer (struct-type-field-ref input-form.stx lexenv.run lexenv.expand)
-      ;;Transformer function  used to expand STRUCT-TYPE-FIELD-REF  syntaxes from the
-      ;;top-level built in  environment.  Expand the syntax  object INPUT-FORM.STX in
-      ;;the context of the given LEXENV; return a PSI struct.
-      ;;
-      (%struct-type-field-ref-transformer __who__ #t input-form.stx lexenv.run lexenv.expand))
-
-    (define-core-transformer ($struct-type-field-ref input-form.stx lexenv.run lexenv.expand)
-      ;;Transformer function used to  expand $STRUCT-TYPE-FIELD-REF syntaxes from the
-      ;;top-level built in  environment.  Expand the syntax  object INPUT-FORM.STX in
-      ;;the context of the given LEXENV; return a PSI struct.
-      ;;
-      (%struct-type-field-ref-transformer __who__ #f input-form.stx lexenv.run lexenv.expand))
-
-    (define (%struct-type-field-ref-transformer who safe? input-form.stx lexenv.run lexenv.expand)
-      (syntax-match input-form.stx ()
-	((_ ?type-id ?field-id ?stru)
-	 (and (identifier? ?type-id)
-	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->std who input-form.stx ?type-id lexenv.run))
-		(field-names (struct-type-field-names rtd))
-		(field-idx   (%struct-field-name->struct-field-idx who input-form.stx field-names ?field-id)))
-	   (chi-expr (bless
-		      (if safe?
-			  `(struct-ref ,?stru ,field-idx)
-			`($struct-ref ,?stru ,field-idx)))
-		     lexenv.run lexenv.expand)))
-	))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (struct-type-field-set!-transformer
-	   $struct-type-field-set!-transformer)
-
-    (define-core-transformer (struct-type-field-set! input-form.stx lexenv.run lexenv.expand)
-      ;;Transformer function used to expand STRUCT-TYPE-FIELD-SET!  syntaxes from the
-      ;;top-level built in  environment.  Expand the syntax  object INPUT-FORM.STX in
-      ;;the context of the given LEXENV; return a PSI struct.
-      ;;
-      (%struct-type-field-set!-transformer __who__ #t input-form.stx lexenv.run lexenv.expand))
-
-    (define-core-transformer ($struct-type-field-set! input-form.stx lexenv.run lexenv.expand)
-      ;;Transformer function  used to  expand $STRUCT-TYPE-FIELD-SET!   syntaxes from
-      ;;the top-level built in environment.   Expand the syntax object INPUT-FORM.STX
-      ;;in the context of the given LEXENV; return a PSI struct.
-      ;;
-      (%struct-type-field-set!-transformer __who__ #f input-form.stx lexenv.run lexenv.expand))
-
-    (define (%struct-type-field-set!-transformer who safe? input-form.stx lexenv.run lexenv.expand)
-      (syntax-match input-form.stx ()
-	((_ ?type-id ?field-id ?stru ?new-value)
-	 (and (identifier? ?type-id)
-	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->std who input-form.stx ?type-id lexenv.run))
-		(field-names (struct-type-field-names rtd))
-		(field-idx   (%struct-field-name->struct-field-idx who input-form.stx field-names ?field-id)))
-	   (chi-expr (bless
-		      (if safe?
-			  `(struct-set! ,?stru ,field-idx ,?new-value)
-			`($struct-set! ,?stru ,field-idx ,?new-value)))
-		     lexenv.run lexenv.expand)))
-	))
-
-    #| end of module |# )
-
-  #| end of module |# )
+(define-core-transformer (struct-type-descriptor input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
+  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-id)
+     (identifier? ?type-id)
+     (make-psi input-form.stx
+	       (build-data no-source
+		 (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+	       (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
+    ))
 
 
 ;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR
@@ -1752,19 +1652,22 @@
   (let-syntax
       ((define-transformer
 	 (syntax-rules ()
-	   ((_ ?who ?getter)
+	   ((_ ?who ?getter ?type-id)
 	    (define-core-transformer (?who input-form.stx lexenv.run lexenv.expand)
 	      (syntax-match input-form.stx ()
 		((_ ?type-name)
 		 (identifier? ?type-name)
 		 (let* ((descr     (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
 			(rts       (syntactic-binding-descriptor.value descr))
-			(expr.stx  (?getter rts)))
-		   (chi-expr expr.stx lexenv.run lexenv.expand)))
+			(expr.stx  (?getter rts))
+			(expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
+		   (make-psi input-form.stx
+			     (psi-core-expr expr.psi)
+			     (make-retvals-signature-single-value (core-prim-id '?type-id)))))
 		)))
 	   )))
-    (define-transformer record-type-descriptor        r6rs-record-type-spec.rtd-id)
-    (define-transformer record-constructor-descriptor r6rs-record-type-spec.rcd-id)
+    (define-transformer record-type-descriptor        r6rs-record-type-spec.rtd-id <record-type-descriptor>)
+    (define-transformer record-constructor-descriptor r6rs-record-type-spec.rcd-id <record-constructor-descriptor>)
     #| end of LET-SYNTAX |# )
 
   #| end of module |# )

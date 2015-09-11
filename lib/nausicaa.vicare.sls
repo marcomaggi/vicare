@@ -1532,11 +1532,6 @@
     ;; misc
     set-cons!
     eval-for-expand
-    struct-type-and-struct?
-    struct-type-field-ref
-    struct-type-field-set!
-    $struct-type-field-ref
-    $struct-type-field-set!
     splice-first-expand
     syntactic-binding-putprop
     syntactic-binding-getprop
