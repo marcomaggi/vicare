@@ -467,9 +467,9 @@
 		  (mutable blue)))
 	(define X
 	  (make-color 1 2 3))
-	(list (record-type-field-ref color red   X)
-	      (record-type-field-ref color green X)
-	      (record-type-field-ref color blue  X)))
+	(list (slot-ref X red   color)
+	      (slot-ref X green color)
+	      (slot-ref X blue  color)))
     => '(1 2 3))
 
   (check	;safe accessors and mutators
@@ -480,12 +480,12 @@
 		  (mutable blue)))
 	(define X
 	  (make-color 1 2 3))
-	(record-type-field-set! color red   X 10)
-	(record-type-field-set! color green X 20)
-	(record-type-field-set! color blue  X 30)
-	(list (record-type-field-ref color red   X)
-	      (record-type-field-ref color green X)
-	      (record-type-field-ref color blue  X)))
+	(slot-set! X red   color 10)
+	(slot-set! X green color 20)
+	(slot-set! X blue  color 30)
+	(list (slot-ref X red   color)
+	      (slot-ref X green color)
+	      (slot-ref X blue  color)))
     => '(10 20 30))
 
   (check	;safe accessors and mutators
@@ -496,12 +496,12 @@
 		  (mutable blue  the-blue  set-the-blue!)))
 	(define X
 	  (make-color 1 2 3))
-	(record-type-field-set! color red   X 10)
-	(record-type-field-set! color green X 20)
-	(record-type-field-set! color blue  X 30)
-	(list (record-type-field-ref color red   X)
-	      (record-type-field-ref color green X)
-	      (record-type-field-ref color blue  X)))
+	(slot-set! X red   color 10)
+	(slot-set! X green color 20)
+	(slot-set! X blue  color 30)
+	(list (slot-ref X red   color)
+	      (slot-ref X green color)
+	      (slot-ref X blue  color)))
     => '(10 20 30))
 
 ;;; --------------------------------------------------------------------
@@ -519,12 +519,12 @@
 		  (mutable c)))
 	(define O
 	  (make-beta 1 2 3 4 5 6))
-	(list (record-type-field-ref alpha a O)
-	      (record-type-field-ref alpha b O)
-	      (record-type-field-ref alpha c O)
-	      (record-type-field-ref beta a O)
-	      (record-type-field-ref beta b O)
-	      (record-type-field-ref beta c O)))
+	(list (slot-ref O a alpha)
+	      (slot-ref O b alpha)
+	      (slot-ref O c alpha)
+	      (slot-ref O a beta)
+	      (slot-ref O b beta)
+	      (slot-ref O c beta)))
     => '(1 2 3 4 5 6))
 
   (check	;safe accessors, with inheritance, sub-rtd access
@@ -540,12 +540,12 @@
 		  (mutable f)))
 	(define O
 	  (make-beta 1 2 3 4 5 6))
-	(list (record-type-field-ref beta a O)
-	      (record-type-field-ref beta b O)
-	      (record-type-field-ref beta c O)
-	      (record-type-field-ref beta d O)
-	      (record-type-field-ref beta e O)
-	      (record-type-field-ref beta f O)))
+	(list (slot-ref O a beta)
+	      (slot-ref O b beta)
+	      (slot-ref O c beta)
+	      (slot-ref O d beta)
+	      (slot-ref O e beta)
+	      (slot-ref O f beta)))
     => '(1 2 3 4 5 6))
 
   (check	;safe accessors and mutators, with inheritance, sub-rtd access
@@ -561,18 +561,18 @@
 		  (mutable f)))
 	(define O
 	  (make-beta 1 2 3 4 5 6))
-	(record-type-field-set! beta a O 19)
-	(record-type-field-set! beta b O 29)
-	(record-type-field-set! beta c O 39)
-	(record-type-field-set! beta d O 49)
-	(record-type-field-set! beta e O 59)
-	(record-type-field-set! beta f O 69)
-	(list (record-type-field-ref beta a O)
-	      (record-type-field-ref beta b O)
-	      (record-type-field-ref beta c O)
-	      (record-type-field-ref beta d O)
-	      (record-type-field-ref beta e O)
-	      (record-type-field-ref beta f O)))
+	(slot-set! O a beta 19)
+	(slot-set! O b beta 29)
+	(slot-set! O c beta 39)
+	(slot-set! O d beta 49)
+	(slot-set! O e beta 59)
+	(slot-set! O f beta 69)
+	(list (slot-ref O a beta)
+	      (slot-ref O b beta)
+	      (slot-ref O c beta)
+	      (slot-ref O d beta)
+	      (slot-ref O e beta)
+	      (slot-ref O f beta)))
     => '(19 29 39 49 59 69))
 
   (check	;safe accessors and mutators, with inheritance
@@ -588,18 +588,18 @@
 		  (mutable c)))
 	(define O
 	  (make-beta 1 2 3 4 5 6))
-	(record-type-field-set! alpha a O 10)
-	(record-type-field-set! alpha b O 20)
-	(record-type-field-set! alpha c O 30)
-	(record-type-field-set! beta a O 40)
-	(record-type-field-set! beta b O 50)
-	(record-type-field-set! beta c O 60)
-	(list (record-type-field-ref alpha a O)
-	      (record-type-field-ref alpha b O)
-	      (record-type-field-ref alpha c O)
-	      (record-type-field-ref beta a O)
-	      (record-type-field-ref beta b O)
-	      (record-type-field-ref beta c O)))
+	(slot-set! O a alpha 10)
+	(slot-set! O b alpha 20)
+	(slot-set! O c alpha 30)
+	(slot-set! O a beta 40)
+	(slot-set! O b beta 50)
+	(slot-set! O c beta 60)
+	(list (slot-ref O a alpha)
+	      (slot-ref O b alpha)
+	      (slot-ref O c alpha)
+	      (slot-ref O a beta)
+	      (slot-ref O b beta)
+	      (slot-ref O c beta)))
     => '(10 20 30 40 50 60))
 
   (check	;safe accessors and mutators, with inheritance
@@ -615,56 +615,58 @@
 		  (mutable c)))
 	(define O
 	  (make-beta 1 2 3 4 5 6))
-	(record-type-field-set! alpha a O 10)
-	#;(record-type-field-set! alpha b O 20)
-	(record-type-field-set! alpha c O 30)
-	(record-type-field-set! beta a O 40)
-	#;(record-type-field-set! beta b O 50)
-	(record-type-field-set! beta c O 60)
-	(list (record-type-field-ref alpha a O)
-	      (record-type-field-ref alpha b O)
-	      (record-type-field-ref alpha c O)
-	      (record-type-field-ref beta a O)
-	      (record-type-field-ref beta b O)
-	      (record-type-field-ref beta c O)))
+	(slot-set! O a alpha 10)
+	#;(slot-set! O b alpha 20)
+	(slot-set! O c alpha 30)
+	(slot-set! O a beta 40)
+	#;(slot-set! O b beta 50)
+	(slot-set! O c beta 60)
+	(list (slot-ref O a alpha)
+	      (slot-ref O b alpha)
+	      (slot-ref O c alpha)
+	      (slot-ref O a beta)
+	      (slot-ref O b beta)
+	      (slot-ref O c beta)))
     => '(10 2 30 40 5 60))
 
   (check	;safe accessors and mutators, with inheritance
       (let ()
 	(define-record-type alpha
-	  (fields (mutable a)
+	  (fields (mutable   a)
 		  (immutable b)
-		  (mutable c)))
+		  (mutable   c)))
 	(define-record-type beta
 	  (parent alpha)
-	  (fields (mutable a)
+	  (fields (mutable   a)
 		  (immutable b)
-		  (mutable c)))
+		  (mutable   c)))
 	(define-record-type gamma
 	  (parent beta)
-	  (fields (mutable a)
+	  (fields (mutable   a)
 		  (immutable b)
-		  (mutable c)))
+		  (mutable   c)))
 	(define O
 	  (make-gamma 1 2 3 4 5 6 7 8 9))
-	(record-type-field-set! alpha a O 10)
-	#;(record-type-field-set! alpha b O 20)
-	(record-type-field-set! alpha c O 30)
-	(record-type-field-set! beta a O 40)
-	#;(record-type-field-set! beta b O 50)
-	(record-type-field-set! beta c O 60)
-	(record-type-field-set! gamma a O 70)
-	#;(record-type-field-set! gamma b O 80)
-	(record-type-field-set! gamma c O 90)
-	(list (record-type-field-ref alpha a O)
-	      (record-type-field-ref alpha b O)
-	      (record-type-field-ref alpha c O)
-	      (record-type-field-ref beta a O)
-	      (record-type-field-ref beta b O)
-	      (record-type-field-ref beta c O)
-	      (record-type-field-ref gamma a O)
-	      (record-type-field-ref gamma b O)
-	      (record-type-field-ref gamma c O)))
+	(slot-set! O a alpha 10)
+	#;(slot-set! O b alpha 20)
+	(slot-set! O c alpha 30)
+	;;
+	(slot-set! O a beta 40)
+	#;(slot-set! O b beta 50)
+	(slot-set! O c beta 60)
+	;;
+	(slot-set! O a gamma 70)
+	#;(slot-set! O b gamma 80)
+	(slot-set! O c gamma 90)
+	(list (slot-ref O a alpha)
+	      (slot-ref O b alpha)
+	      (slot-ref O c alpha)
+	      (slot-ref O a beta)
+	      (slot-ref O b beta)
+	      (slot-ref O c beta)
+	      (slot-ref O a gamma)
+	      (slot-ref O b gamma)
+	      (slot-ref O c gamma)))
     => '(10 2 30 40 5 60 70 8 90))
 
 ;;; --------------------------------------------------------------------
@@ -672,236 +674,33 @@
 
   (check	;safe accessors
       (let ((X (make-<alpha> 1 2)))
-	(list (record-type-field-ref <alpha> one X)
-	      (record-type-field-ref <alpha> two X)))
+	(list (slot-ref X one <alpha>)
+	      (slot-ref X two <alpha>)))
     => '(1 2))
 
   (check	;safe accessors and mutators
       (let ((X (make-<alpha> 1 2)))
-	(record-type-field-set! <alpha> one X 10)
-	(list (record-type-field-ref <alpha> one X)
-	      (record-type-field-ref <alpha> two X)))
+	(slot-set! X one <alpha> 10)
+	(list (slot-ref X one <alpha>)
+	      (slot-ref X two <alpha>)))
     => '(10 2))
 
   (check	;safe accessors
       (let ((X (make-<gamma> 1 2 3 4)))
-	(list (record-type-field-ref <beta>  one   X)
-	      (record-type-field-ref <beta>  two   X)
-	      (record-type-field-ref <gamma> three X)
-	      (record-type-field-ref <gamma> four  X)
-	      ))
+	(list (slot-ref X one <beta>)
+	      (slot-ref X two <beta>)
+	      (slot-ref X three <gamma>)
+	      (slot-ref X four  <gamma>)))
     => '(1 2 3 4))
 
   (check	;safe accessors and mutators
       (let ((X (make-<gamma> 1 2 3 4)))
-	(record-type-field-set! <beta>  one   X 10)
-	(record-type-field-set! <gamma> three X 30)
-	(list (record-type-field-ref <beta>  one   X)
-	      (record-type-field-ref <beta>  two   X)
-	      (record-type-field-ref <gamma> three X)
-	      (record-type-field-ref <gamma> four  X)
-	      ))
-    => '(10 2 30 4))
-
-  #t)
-
-
-(parametrise ((check-test-name	'unsafe-record-type-field))
-
-  (check	;unsafe accessors
-      (let ()
-	(define-record-type color
-	  (fields (mutable red)
-		  (mutable green)
-		  (mutable blue)))
-	(define X
-	  (make-color 1 2 3))
-	(list ($record-type-field-ref color red   X)
-	      ($record-type-field-ref color green X)
-	      ($record-type-field-ref color blue  X)))
-    => '(1 2 3))
-
-  (check	;unsafe accessors and mutators
-      (let ()
-	(define-record-type color
-	  (fields (mutable red)
-		  (mutable green)
-		  (mutable blue)))
-	(define X
-	  (make-color 1 2 3))
-	($record-type-field-set! color red   X 10)
-	($record-type-field-set! color green X 20)
-	($record-type-field-set! color blue  X 30)
-	(list ($record-type-field-ref color red   X)
-	      ($record-type-field-ref color green X)
-	      ($record-type-field-ref color blue  X)))
-    => '(10 20 30))
-
-  (check	;unsafe accessors and mutators
-      (let ()
-	(define-record-type color
-	  (fields (mutable red   the-red   set-the-red!)
-		  (mutable green the-green set-the-green!)
-		  (mutable blue  the-blue  set-the-blue!)))
-	(define X
-	  (make-color 1 2 3))
-	($record-type-field-set! color red   X 10)
-	($record-type-field-set! color green X 20)
-	($record-type-field-set! color blue  X 30)
-	(list ($record-type-field-ref color red   X)
-	      ($record-type-field-ref color green X)
-	      ($record-type-field-ref color blue  X)))
-    => '(10 20 30))
-
-;;; --------------------------------------------------------------------
-
-  (check	;unsafe accessors, with inheritance
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a)
-		  (mutable b)
-		  (mutable c)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable a)
-		  (mutable b)
-		  (mutable c)))
-	(define O
-	  (make-beta 1 2 3 4 5 6))
-	(list ($record-type-field-ref alpha a O)
-	      ($record-type-field-ref alpha b O)
-	      ($record-type-field-ref alpha c O)
-	      ($record-type-field-ref beta a O)
-	      ($record-type-field-ref beta b O)
-	      ($record-type-field-ref beta c O)))
-    => '(1 2 3 4 5 6))
-
-  (check	;unsafe accessors and mutators, with inheritance
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a)
-		  (mutable b)
-		  (mutable c)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable a)
-		  (mutable b)
-		  (mutable c)))
-	(define O
-	  (make-beta 1 2 3 4 5 6))
-	($record-type-field-set! alpha a O 10)
-	($record-type-field-set! alpha b O 20)
-	($record-type-field-set! alpha c O 30)
-	($record-type-field-set! beta a O 40)
-	($record-type-field-set! beta b O 50)
-	($record-type-field-set! beta c O 60)
-	(list ($record-type-field-ref alpha a O)
-	      ($record-type-field-ref alpha b O)
-	      ($record-type-field-ref alpha c O)
-	      ($record-type-field-ref beta a O)
-	      ($record-type-field-ref beta b O)
-	      ($record-type-field-ref beta c O)))
-    => '(10 20 30 40 50 60))
-
-  (check	;unsafe accessors and mutators, with inheritance
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a)
-		  (immutable b)
-		  (mutable c)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable a)
-		  (immutable b)
-		  (mutable c)))
-	(define O
-	  (make-beta 1 2 3 4 5 6))
-	($record-type-field-set! alpha a O 10)
-	#;($record-type-field-set! alpha b O 20)
-	($record-type-field-set! alpha c O 30)
-	($record-type-field-set! beta a O 40)
-	#;($record-type-field-set! beta b O 50)
-	($record-type-field-set! beta c O 60)
-	(list ($record-type-field-ref alpha a O)
-	      ($record-type-field-ref alpha b O)
-	      ($record-type-field-ref alpha c O)
-	      ($record-type-field-ref beta a O)
-	      ($record-type-field-ref beta b O)
-	      ($record-type-field-ref beta c O)))
-    => '(10 2 30 40 5 60))
-
-  (check	;unsafe accessors and mutators, with inheritance
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a)
-		  (immutable b)
-		  (mutable c)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable a)
-		  (immutable b)
-		  (mutable c)))
-	(define-record-type gamma
-	  (parent beta)
-	  (fields (mutable a)
-		  (immutable b)
-		  (mutable c)))
-	(define O
-	  (make-gamma 1 2 3 4 5 6 7 8 9))
-	($record-type-field-set! alpha a O 10)
-	#;($record-type-field-set! alpha b O 20)
-	($record-type-field-set! alpha c O 30)
-	($record-type-field-set! beta a O 40)
-	#;($record-type-field-set! beta b O 50)
-	($record-type-field-set! beta c O 60)
-	($record-type-field-set! gamma a O 70)
-	#;($record-type-field-set! gamma b O 80)
-	($record-type-field-set! gamma c O 90)
-	(list ($record-type-field-ref alpha a O)
-	      ($record-type-field-ref alpha b O)
-	      ($record-type-field-ref alpha c O)
-	      ($record-type-field-ref beta a O)
-	      ($record-type-field-ref beta b O)
-	      ($record-type-field-ref beta c O)
-	      ($record-type-field-ref gamma a O)
-	      ($record-type-field-ref gamma b O)
-	      ($record-type-field-ref gamma c O)))
-    => '(10 2 30 40 5 60 70 8 90))
-
-;;; --------------------------------------------------------------------
-;;; here we use records from the library (libtest records-lib)
-
-  (check	;safe accessors
-      (let ((X (make-<alpha> 1 2)))
-	(list ($record-type-field-ref <alpha> one X)
-	      ($record-type-field-ref <alpha> two X)))
-    => '(1 2))
-
-  (check	;safe accessors and mutators
-      (let ((X (make-<alpha> 1 2)))
-	($record-type-field-set! <alpha> one X 10)
-	(list ($record-type-field-ref <alpha> one X)
-	      ($record-type-field-ref <alpha> two X)))
-    => '(10 2))
-
-  (check	;safe accessors
-      (let ((X (make-<gamma> 1 2 3 4)))
-	(list ($record-type-field-ref <beta>  one   X)
-	      ($record-type-field-ref <beta>  two   X)
-	      ($record-type-field-ref <gamma> three X)
-	      ($record-type-field-ref <gamma> four  X)
-	      ))
-    => '(1 2 3 4))
-
-  (check	;safe accessors and mutators
-      (let ((X (make-<gamma> 1 2 3 4)))
-	($record-type-field-set! <beta>  one   X 10)
-	($record-type-field-set! <gamma> three X 30)
-	(list ($record-type-field-ref <beta>  one   X)
-	      ($record-type-field-ref <beta>  two   X)
-	      ($record-type-field-ref <gamma> three X)
-	      ($record-type-field-ref <gamma> four  X)
-	      ))
+	(slot-set! X one   <beta>  10)
+	(slot-set! X three <gamma> 30)
+	(list (slot-ref X one <beta>)
+	      (slot-ref X two <beta>)
+	      (slot-ref X three <gamma>)
+	      (slot-ref X four  <gamma>)))
     => '(10 2 30 4))
 
   #t)
@@ -1182,69 +981,83 @@
 
 (parametrise ((check-test-name	'generic-slots-syntax))
 
-  (let ()
-    (define-record-type alpha
-      (fields (mutable a)
-	      (mutable b)
-	      (mutable c)))
+  (define-record-type alpha
+    (fields (mutable a)
+	    (mutable b)
+	    (mutable c)))
 
-    (define-record-type beta
-      (fields (mutable a)
-	      (mutable b)
-	      (mutable c)))
+  (define-record-type beta
+    (parent alpha)
+    (fields (mutable d)
+	    (mutable e)
+	    (mutable f)))
 
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (list (slot-ref stru a alpha)
-		(slot-ref stru b alpha)
-		(slot-ref stru c alpha)))
-      => '(1 2 3))
+;;; --------------------------------------------------------------------
+;;; accessors and mutators, no parent
 
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (slot-set! stru a alpha 19)
-	  (slot-set! stru b alpha 29)
-	  (slot-set! stru c alpha 39)
-	  (list (slot-ref stru a alpha)
-		(slot-ref stru b alpha)
-		(slot-ref stru c alpha)))
-      => '(19 29 39))
+  (check
+      (let ((stru (new alpha 1 2 3)))
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
+    => '(1 2 3))
 
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (list ((slot-ref <> a alpha) stru)
-		((slot-ref <> b alpha) stru)
-		((slot-ref <> c alpha) stru)))
-      => '(1 2 3))
+  (check
+      (let ((stru (new alpha 1 2 3)))
+	(slot-set! stru a alpha 19)
+	(slot-set! stru b alpha 29)
+	(slot-set! stru c alpha 39)
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
+    => '(19 29 39))
 
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  ((slot-set! <> a alpha <>) stru 19)
-	  ((slot-set! <> b alpha <>) stru 29)
-	  ((slot-set! <> c alpha <>) stru 39)
-	  (list ((slot-ref <> a alpha) stru)
-		((slot-ref <> b alpha) stru)
-		((slot-ref <> c alpha) stru)))
-      => '(19 29 39))
+  (check
+      (let ((stru (new alpha 1 2 3)))
+	(list ((slot-ref <> a alpha) stru)
+	      ((slot-ref <> b alpha) stru)
+	      ((slot-ref <> c alpha) stru)))
+    => '(1 2 3))
 
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (list ((slot-ref _ a alpha) stru)
-		((slot-ref _ b alpha) stru)
-		((slot-ref _ c alpha) stru)))
-      => '(1 2 3))
+  (check
+      (let ((stru (new alpha 1 2 3)))
+	((slot-set! <> a alpha <>) stru 19)
+	((slot-set! <> b alpha <>) stru 29)
+	((slot-set! <> c alpha <>) stru 39)
+	(list ((slot-ref <> a alpha) stru)
+	      ((slot-ref <> b alpha) stru)
+	      ((slot-ref <> c alpha) stru)))
+    => '(19 29 39))
 
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  ((slot-set! _ a alpha _) stru 19)
-	  ((slot-set! _ b alpha _) stru 29)
-	  ((slot-set! _ c alpha _) stru 39)
-	  (list ((slot-ref _ a alpha) stru)
-		((slot-ref _ b alpha) stru)
-		((slot-ref _ c alpha) stru)))
-      => '(19 29 39))
+  (check
+      (let ((stru (new alpha 1 2 3)))
+	(list ((slot-ref _ a alpha) stru)
+	      ((slot-ref _ b alpha) stru)
+	      ((slot-ref _ c alpha) stru)))
+    => '(1 2 3))
 
-    (void))
+  (check
+      (let ((stru (new alpha 1 2 3)))
+	((slot-set! _ a alpha _) stru 19)
+	((slot-set! _ b alpha _) stru 29)
+	((slot-set! _ c alpha _) stru 39)
+	(list ((slot-ref _ a alpha) stru)
+	      ((slot-ref _ b alpha) stru)
+	      ((slot-ref _ c alpha) stru)))
+    => '(19 29 39))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators, parent
+
+  (check
+      (let ((stru (new beta 1 2 3 4 5 6)))
+	(values (slot-ref stru a beta)
+		(slot-ref stru b beta)
+		(slot-ref stru c beta)
+		(slot-ref stru d beta)
+		(slot-ref stru e beta)
+		(slot-ref stru f beta)))
+    => 1 2 3 4 5 6)
 
   #t)
 

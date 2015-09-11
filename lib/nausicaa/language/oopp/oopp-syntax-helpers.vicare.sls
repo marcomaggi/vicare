@@ -9,7 +9,7 @@
 ;;;	This  library defines  functions used  as macro  tranformers, or
 ;;;	portions of macro transformers, implementing the OOPP syntax.
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -507,12 +507,12 @@
 	  ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
 	   (%assert-null-args)
 	   #`(IMMUTABLE-CONCRETE-TAG #:nested-oopp-syntax
-				     ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)))
+				     (slot-ref #,expr-stx IMMUTABLE-CONCRETE-FIELD THE-RECORD-TYPE)))
 	  ...
 	  ((UNSAFE-MUTABLE-CONCRETE-FIELD)
 	   (%assert-null-args)
 	   #`(MUTABLE-CONCRETE-TAG #:nested-oopp-syntax
-				   ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)))
+				   (slot-ref #,expr-stx MUTABLE-CONCRETE-FIELD THE-RECORD-TYPE)))
 	  ...
 	  (else
 	   #`(THE-PARENT :dispatch (#,expr-stx #,member-id . #,args-stx)))))))
@@ -603,8 +603,8 @@
 	  ...
 	  ;;Unsafe mutators.
 	  ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	   #`($record-type-field-set! THE-RECORD-TYPE MUTABLE-CONCRETE-FIELD #,expr-stx
-				      (MUTABLE-CONCRETE-TAG :assert-type-and-return #,new-value-stx)))
+	   #`(slot-set! #,expr-stx MUTABLE-CONCRETE-FIELD THE-RECORD-TYPE
+			(MUTABLE-CONCRETE-TAG :assert-type-and-return #,new-value-stx)))
 	  ...
 	  ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
 	   (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-CONCRETE-FIELD))

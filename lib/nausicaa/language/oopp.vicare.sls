@@ -800,8 +800,7 @@
 	      (lambda args
 		(receive-and-return (instance)
 		    (apply constructor args)
-		  ($record-type-field-set! <top>-record-type unique-identifiers
-					   instance (THE-TAG :list-of-unique-ids))))))
+		  (slot-set! instance unique-identifiers <top>-record-type (THE-TAG :list-of-unique-ids))))))
 
 	  (define the-super-constructor-descriptor THE-SUPER-CONSTRUCTOR-EXPR)
 	  ;;This  is commented  out  because unused  at present.   The

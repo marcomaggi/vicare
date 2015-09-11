@@ -145,6 +145,35 @@
     ))
 
 
+;;;; helpers: struct types
+
+(define (%struct-field-name->struct-field-idx who input-form.stx field-names field-id)
+  ;;Given a list  of symbols FIELD-NAMES representing a struct's  list of field names
+  ;;and an identifier FIELD-ID representing the name  of a field: return the index of
+  ;;the selected field in the list.
+  ;;
+  (define field-sym (identifier->symbol field-id))
+  (let loop ((i 0) (ls field-names))
+    (if (pair? ls)
+	(if (eq? field-sym ($car ls))
+	    i
+	  (loop ($fxadd1 i) ($cdr ls)))
+      (syntax-violation who "invalid struct type field name" input-form.stx field-id))))
+
+(define (%struct-type-id->std who input-form.stx type-id lexenv.run)
+  ;;Given the syntactic identifier TYPE-ID  representing a struct-type name and bound
+  ;;to a  struct-type descriptor (STD):  find its  label, then its  syntactic binding
+  ;;descriptor,  finally return  the struct-type  descriptor itself.   If no  binding
+  ;;captures the  identifier or  the binding  does not  describe a  struct-type name:
+  ;;raise an exception.
+  ;;
+  (let* ((label (id->label/or-error who input-form.stx type-id))
+	 (descr (label->syntactic-binding-descriptor label lexenv.run)))
+    (if (struct-type-name-binding-descriptor? descr)
+	(struct-type-name-binding-descriptor.type-descriptor descr)
+      (syntax-violation who "not a struct type" input-form.stx type-id))))
+
+
 ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
 ;;non-core macros to their macro transformers.
 ;;
@@ -182,10 +211,6 @@
 
     ((record-type-descriptor)			record-type-descriptor-transformer)
     ((record-constructor-descriptor)		record-constructor-descriptor-transformer)
-    ((record-type-field-set!)			record-type-field-set!-transformer)
-    ((record-type-field-ref)			record-type-field-ref-transformer)
-    (($record-type-field-set!)			$record-type-field-set!-transformer)
-    (($record-type-field-ref)			$record-type-field-ref-transformer)
 
     ((type-descriptor)				type-descriptor-transformer)
     ((new)					new-transformer)
@@ -1626,7 +1651,7 @@
        (identifier? ?type-id)
        (make-psi input-form.stx
 		 (build-data no-source
-		   (%struct-type-id->rtd __who__ input-form.stx ?type-id lexenv.run))
+		   (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
 		 (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
       ))
 
@@ -1638,7 +1663,7 @@
     (syntax-match input-form.stx ()
       ((_ ?type-id ?stru)
        (identifier? ?type-id)
-       (let ((rtd (%struct-type-id->rtd __who__ input-form.stx ?type-id lexenv.run)))
+       (let ((rtd (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run)))
 	 (chi-expr (bless
 		    `($struct/rtd? ,?stru (quote ,rtd)))
 		   lexenv.run lexenv.expand)))
@@ -1668,9 +1693,9 @@
 	((_ ?type-id ?field-id ?stru)
 	 (and (identifier? ?type-id)
 	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who input-form.stx ?type-id lexenv.run))
+	 (let* ((rtd         (%struct-type-id->std who input-form.stx ?type-id lexenv.run))
 		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who input-form.stx field-names ?field-id)))
+		(field-idx   (%struct-field-name->struct-field-idx who input-form.stx field-names ?field-id)))
 	   (chi-expr (bless
 		      (if safe?
 			  `(struct-ref ,?stru ,field-idx)
@@ -1704,9 +1729,9 @@
 	((_ ?type-id ?field-id ?stru ?new-value)
 	 (and (identifier? ?type-id)
 	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who input-form.stx ?type-id lexenv.run))
+	 (let* ((rtd         (%struct-type-id->std who input-form.stx ?type-id lexenv.run))
 		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who input-form.stx field-names ?field-id)))
+		(field-idx   (%struct-field-name->struct-field-idx who input-form.stx field-names ?field-id)))
 	   (chi-expr (bless
 		      (if safe?
 			  `(struct-set! ,?stru ,field-idx ,?new-value)
@@ -1716,47 +1741,13 @@
 
     #| end of module |# )
 
-;;; --------------------------------------------------------------------
-
-  (define (%struct-type-id->rtd who input-form.stx type-id lexenv.run)
-    ;;Given the syntactic identifier TYPE-ID of  the struct-type: find its label then
-    ;;its  syntactic binding  descriptor, finally  return the  struct-type descriptor
-    ;;itself.  If no binding captures the identifier or the binding does not describe
-    ;;a struct-type name: raise an exception.
-    ;;
-    (cond ((id->label type-id)
-	   => (lambda (label)
-		(let ((binding-descriptor (label->syntactic-binding-descriptor label lexenv.run)))
-		  (if (struct-type-name-binding-descriptor? binding-descriptor)
-		      (struct-type-name-binding-descriptor.type-descriptor binding-descriptor)
-		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
-	  (else
-	   (raise-unbound-error who input-form.stx type-id))))
-
-  (define (%field-name->field-idx who input-form.stx field-names field-id)
-    ;;Given a list of symbols FIELD-NAMES  representing a struct's field names and an
-    ;;identifier FIELD-ID representing  the name of a field: return  the index of the
-    ;;selected field in the list.
-    ;;
-    (define field-sym (identifier->symbol field-id))
-    (let loop ((i 0) (ls field-names))
-      (if (pair? ls)
-	  (if (eq? field-sym ($car ls))
-	      i
-	    (loop ($fxadd1 i) ($cdr ls)))
-	(syntax-violation who "invalid struct type field name" input-form.stx field-id))))
-
   #| end of module |# )
 
 
-;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, field setter and getter
+;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR
 
 (module (record-type-descriptor-transformer
-	 record-constructor-descriptor-transformer
-	 record-type-field-set!-transformer
-	 record-type-field-ref-transformer
-	 $record-type-field-set!-transformer
-	 $record-type-field-ref-transformer)
+	 record-constructor-descriptor-transformer)
 
   (let-syntax
       ((define-transformer
@@ -1774,56 +1765,6 @@
 	   )))
     (define-transformer record-type-descriptor        r6rs-record-type-spec.rtd-id)
     (define-transformer record-constructor-descriptor r6rs-record-type-spec.rcd-id)
-    #| end of LET-SYNTAX |# )
-
-;;; --------------------------------------------------------------------
-
-  (let-syntax
-      ((define-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?actor-getter)
-	    (define-core-transformer (?who input-form.stx lexenv.run lexenv.expand)
-	      (syntax-match input-form.stx ()
-		((_ ?type-name ?field-name ?record)
-		 (and (identifier? ?type-name)
-		      (identifier? ?field-name))
-		 (let* ((synner        (lambda (message)
-					 (syntax-violation __who__ message input-form.stx ?type-name)))
-			(descr         (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
-			(rts           (syntactic-binding-descriptor.value descr))
-			(accessor.sexp (?actor-getter rts (syntax->datum ?field-name) synner))
-			(expr.stx      (bless
-					(list accessor.sexp ?record))))
-		   (chi-expr expr.stx lexenv.run lexenv.expand)))
-		)))
-	   )))
-    (define-transformer  record-type-field-ref r6rs-record-type-spec.safe-accessor)
-    (define-transformer $record-type-field-ref r6rs-record-type-spec.unsafe-accessor)
-    #| end of LET-SYNTAX |# )
-
-;;; --------------------------------------------------------------------
-
-  (let-syntax
-      ((define-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?actor-getter)
-	    (define-core-transformer (?who input-form.stx lexenv.run lexenv.expand)
-	      (syntax-match input-form.stx ()
-		((_ ?type-name ?field-name ?record ?new-value)
-		 (and (identifier? ?type-name)
-		      (identifier? ?field-name))
-		 (let* ((synner       (lambda (message)
-					(syntax-violation __who__ message input-form.stx ?type-name)))
-			(descr        (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
-			(rts          (syntactic-binding-descriptor.value descr))
-			(mutator.sexp (?actor-getter rts (syntax->datum ?field-name) synner))
-			(expr.stx     (bless
-				       (list mutator.sexp ?record ?new-value))))
-		   (chi-expr expr.stx lexenv.run lexenv.expand)))
-		)))
-	   )))
-    (define-transformer  record-type-field-set! r6rs-record-type-spec.safe-mutator)
-    (define-transformer $record-type-field-set! r6rs-record-type-spec.unsafe-mutator)
     #| end of LET-SYNTAX |# )
 
   #| end of module |# )
@@ -2086,20 +2027,50 @@
   ;;the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
-    ((_ ?jolly ?field-name-id ?tag)
-     (and (tag-identifier? ?tag)
+    ((_ ?jolly ?field-name-id ?type-id)
+     (and (identifier? ?type-id)
 	  (identifier? ?field-name-id)
 	  (jolly-id? ?jolly))
-     (chi-expr (tag-identifier-accessor ?tag ?field-name-id input-form.stx)
+     (chi-expr (bless
+		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		  ((r6rs-record-type)
+		   (let* ((rts           (syntactic-binding-descriptor.value binding))
+			  (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol ?field-name-id) lexenv.run)))
+		     accessor.stx))
+
+		  ((vicare-struct-type)
+		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+			  (field-names (struct-type-field-names std))
+			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id))
+			  (stru.sym    (gensym "stru")))
+		     `(lambda (,stru.sym)
+			(struct-and-std-ref ,stru.sym ,field-idx (struct-type-descriptor ,?type-id)))))
+
+		  ((tag-type-spec)
+		   (let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
+		     accessor-stx))))
 	       lexenv.run lexenv.expand))
 
-    ((_ ?expr ?field-name-id ?tag)
-     (and (tag-identifier? ?tag)
+    ((_ ?expr ?field-name-id ?type-id)
+     (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (let ((accessor-stx (tag-identifier-accessor ?tag ?field-name-id input-form.stx)))
-       (chi-expr (bless
-		  `(,accessor-stx ,?expr))
-		 lexenv.run lexenv.expand)))
+     (chi-expr (bless
+		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		  ((r6rs-record-type)
+		   (let* ((rts           (syntactic-binding-descriptor.value binding))
+			  (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol ?field-name-id) lexenv.run)))
+		     `(,accessor.stx ,?expr)))
+
+		  ((vicare-struct-type)
+		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+			  (field-names (struct-type-field-names std))
+			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id)))
+		     `(struct-and-std-ref ,?expr ,field-idx (struct-type-descriptor ,?type-id))))
+
+		  ((tag-type-spec)
+		   (let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
+		     `(,accessor-stx ,?expr)))))
+	       lexenv.run lexenv.expand))
 
     ;;Missing type identifier.  Try to retrieve the type from the tag of the subject.
     ((_ ?expr ?field-name-id)
@@ -2108,8 +2079,8 @@
 	    (expr.core (psi-core-expr         expr.psi))
 	    (expr.sig  (psi-retvals-signature expr.psi)))
        (syntax-match (retvals-signature-tags expr.sig) ()
-	 ((?tag)
-	  (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
+	 ((?type-id)
+	  (let* ((accessor.stx  (tag-identifier-accessor ?type-id ?field-name-id input-form.stx))
 		 (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
 		 (accessor.core (psi-core-expr accessor.psi)))
 	    (make-psi input-form.stx
@@ -2123,26 +2094,56 @@
     ))
 
 (define-core-transformer (slot-set! input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used  to  expand  Vicare's  SLOT-SET!  syntaxes  from  the
+  ;;Transformer  function  used  to  expand Vicare's  SLOT-SET!   syntaxes  from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
-    ((_ ?jolly1 ?field-name-id ?tag ?jolly2)
-     (and (tag-identifier? ?tag)
+    ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
+     (and (identifier? ?type-id)
 	  (identifier? ?field-name-id)
 	  (jolly-id? ?jolly1)
 	  (jolly-id? ?jolly2))
-     (chi-expr (tag-identifier-mutator ?tag ?field-name-id input-form.stx)
+     (chi-expr (bless
+		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		  ((r6rs-record-type)
+		   (let* ((rts          (syntactic-binding-descriptor.value binding))
+			  (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol ?field-name-id) lexenv.run)))
+		     mutator.stx))
+
+		  ((vicare-struct-type)
+		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+			  (field-names (struct-type-field-names std))
+			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id))
+			  (stru.sym    (gensym "stru"))
+			  (val.sym     (gensym "new-val")))
+		     `(lambda (,stru.sym ,val.sym)
+			(struct-and-std-set! ,stru.sym ,field-idx (struct-type-descriptor ,?type-id) ,val.sym))))
+
+		  ((tag-type-spec)
+		   (tag-identifier-mutator ?type-id ?field-name-id input-form.stx))))
 	       lexenv.run lexenv.expand))
 
-    ((_ ?expr ?field-name-id ?tag ?new-value)
-     (and (tag-identifier? ?tag)
+    ((_ ?expr ?field-name-id ?type-id ?new-value)
+     (and (tag-identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (let ((mutator-stx (tag-identifier-mutator ?tag ?field-name-id input-form.stx)))
-       (chi-expr (bless
-		  `(,mutator-stx ,?expr ,?new-value))
-		 lexenv.run lexenv.expand)))
+     (chi-expr (bless
+		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		  ((r6rs-record-type)
+		   (let* ((rts          (syntactic-binding-descriptor.value binding))
+			  (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol ?field-name-id) lexenv.run)))
+		     `(,mutator.stx ,?expr ,?new-value)))
+
+		  ((vicare-struct-type)
+		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+			  (field-names (struct-type-field-names std))
+			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id)))
+		     `(struct-and-std-set! ,?expr ,field-idx (struct-type-descriptor ,?type-id) ,?new-value)))
+
+		  ((tag-type-spec)
+		   (let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
+		     `(,mutator-stx ,?expr ,?new-value)))))
+	       lexenv.run lexenv.expand))
 
     ;;Missing type identifier.  Try to retrieve the type from the tag of the subject.
     ((_ ?expr ?field-name-id ?new-value)
@@ -2151,8 +2152,8 @@
 	    (expr.core (psi-core-expr         expr.psi))
 	    (expr.sig  (psi-retvals-signature expr.psi)))
        (syntax-match (retvals-signature-tags expr.sig) ()
-	 ((?tag)
-	  (let* ((mutator.stx    (tag-identifier-mutator ?tag ?field-name-id input-form.stx))
+	 ((?type-id)
+	  (let* ((mutator.stx    (tag-identifier-mutator ?type-id ?field-name-id input-form.stx))
 		 (mutator.psi    (chi-expr mutator.stx lexenv.run lexenv.expand))
 		 (mutator.core   (psi-core-expr mutator.psi))
 		 (new-value.psi  (chi-expr ?new-value lexenv.run lexenv.expand))

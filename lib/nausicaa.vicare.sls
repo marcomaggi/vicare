@@ -1172,10 +1172,6 @@
     record-reset
     record-and-rtd?
     record-type-and-record?
-    record-type-field-ref
-    record-type-field-set!
-    $record-type-field-ref
-    $record-type-field-set!
     register-to-avoid-collecting
     remprop
     replace-to-avoid-collecting

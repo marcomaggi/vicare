@@ -32,12 +32,13 @@
      (set-struct-type-destructor!	set-rtd-destructor!))
 
     ;; struct constructor and predicate
-    struct?
+    struct?				struct-and-std?
     struct-constructor			struct-predicate
     struct=?
 
     ;; struct accessors and mutators
     struct-ref				struct-set!
+    struct-and-std-ref			struct-and-std-set!
     struct-field-accessor		struct-field-mutator
     struct-reset
 
@@ -80,11 +81,13 @@
 		  struct-type-destructor	set-struct-type-destructor!
 
 		  ;; struct accessors and mutators
-		  struct?			struct=?
+		  struct?			struct-and-std?
 		  struct-constructor		struct-predicate
+		  struct=?
 
 		  ;; struct accessors and mutators
 		  struct-ref			struct-set!
+		  struct-and-std-ref			struct-and-std-set!
 		  struct-field-accessor		struct-field-mutator
 		  struct-reset
 
@@ -149,6 +152,17 @@
 	 (procedure-arguments-consistency-violation __who__
 	   "expected fixnum in range for structure field as INDEX argument"
 	   ?index ?struct)))
+    ))
+
+(define-syntax (assert-struct-and-std stx)
+  (syntax-case stx ()
+    ((_ ?stru ?std)
+     (and (identifier? #'?stru)
+	  (identifier? #'?std))
+     #'(unless ($struct/rtd? ?stru ?std)
+	 (procedure-arguments-consistency-violation __who__
+	   "struct is not an instance of given struct-type descriptor"
+	   ?stru ?std)))
     ))
 
 
@@ -420,6 +434,9 @@
   ((x {std struct-type-descriptor?})
    ($struct/rtd? x std)))
 
+(define* (struct-and-std? stru {std struct-type-descriptor?})
+  ($struct/rtd? stru std))
+
 (define* (struct-std {stru struct?})
   ;;Return  the  STD of  the  data  structure  STRU.  Notice  that  this
   ;;function works with both Vicare's structs and R6RS records.
@@ -462,11 +479,21 @@
   (assert-field-index-for-struct i stru)
   ($struct-ref stru i))
 
+(define* (struct-and-std-ref {stru struct?} i {std struct-type-descriptor?})
+  (assert-struct-and-std stru std)
+  (assert-field-index-for-struct i stru)
+  ($struct-ref stru i))
+
 (define* (struct-set! {stru struct?} i v)
   ;;Store V in the field at index I in the data structure X.
   ;;
   (assert-field-index-for-struct i stru)
   ($struct-set! stru i v))
+
+(define* (struct-and-std-set! {stru struct?} i {std struct-type-descriptor?} new-value)
+  (assert-struct-and-std stru std)
+  (assert-field-index-for-struct i stru)
+  ($struct-set! stru i new-value))
 
 (define* (struct=? {obj1 struct?} {obj2 struct?})
   ;;Return true if OBJ1 and OBJ2  are two structures having the same STD

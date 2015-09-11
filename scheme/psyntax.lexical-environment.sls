@@ -91,7 +91,16 @@
     make-syntactic-binding-descriptor/pattern-variable
     pattern-variable-binding-descriptor?
 
-    ;; object types specifications
+    ;; object types specifications: base types
+    <object-type-spec>
+    object-type-spec?
+    object-type-spec.parent-id
+    object-type-spec.constructor-stx			object-type-spec.destructor-stx
+    object-type-spec.type-predicate-stx
+    object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
+    object-type-spec.unsafe-accessors-table		object-type-spec.unsafe-mutators-table
+
+    ;; object types specifications: R6RS records
     <r6rs-record-type-spec>
     make-r6rs-record-type-spec				r6rs-record-type-spec?
     r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
@@ -151,9 +160,8 @@
     visit-library-of-imported-syntactic-binding
 
     ;; syntax objects: mapping identifiers to labels
-    id->label
-    id->label/or-error
-    id->record-type-name-binding-descriptor
+    id->label				id->label/or-error
+    id->object-type-binding-descriptor	id->record-type-name-binding-descriptor
 
     ;; syntax objects: marks
     same-marks?
@@ -689,24 +697,22 @@
 ;;; --------------------------------------------------------------------
 ;;; R6RS record-type descriptor binding
 
-(module (make-syntactic-binding-descriptor/record-type-name)
-  (case-define* make-syntactic-binding-descriptor/record-type-name
-    ;;Build  and return  a syntactic  binding descriptor  representing a  record-type
-    ;;name.
-    ;;
-    ;;The argument  RTD-ID must be  a syntactic  identifier bound to  the record-type
-    ;;descriptor object.  The argument RCD-ID must be a syntactic identifier bound to
-    ;;the record-constructor  descriptor object.   The optional  argument SPEC  is an
-    ;;instance of "r6rs-record-type-spec".
-    ;;
-    ;;The returned descriptor has the format:
-    ;;
-    ;;   ($record-type-name . #<r6rs-record-type-spec>)
-    ;;
-    ((rtd-id rcd-id)
-     (make-syntactic-binding-descriptor $record-type-name (make-r6rs-record-type-spec rtd-id rcd-id)))
-    (({rts r6rs-record-type-spec?})
-     (make-syntactic-binding-descriptor $record-type-name rts))))
+(case-define* make-syntactic-binding-descriptor/record-type-name
+  ;;Build and return a syntactic binding descriptor representing a record-type name.
+  ;;
+  ;;The  argument RTD-ID  must be  a syntactic  identifier bound  to the  record-type
+  ;;descriptor object.  The  argument RCD-ID must be a syntactic  identifier bound to
+  ;;the  record-constructor descriptor  object.   The optional  argument  SPEC is  an
+  ;;instance of "r6rs-record-type-spec".
+  ;;
+  ;;The returned descriptor has the format:
+  ;;
+  ;;   ($record-type-name . #<r6rs-record-type-spec>)
+  ;;
+  ((rtd-id rcd-id)
+   (make-syntactic-binding-descriptor $record-type-name (make-r6rs-record-type-spec rtd-id rcd-id)))
+  (({rts r6rs-record-type-spec?})
+   (make-syntactic-binding-descriptor $record-type-name rts)))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported binding describing a R6RS record-type descriptor.
@@ -2168,10 +2174,30 @@
   (or (id->label id)
       (raise-unbound-error who input-form.stx id)))
 
+(define (id->object-type-binding-descriptor who input-form.stx type-name-id lexenv)
+  ;;TYPE-NAME-ID is  meant to be  a syntactic identifier representing  an object-type
+  ;;name, whose syntactic binding descriptor  has an instance of "<object-type-spec>"
+  ;;as value;  retrieve its label  then its  binding descriptor from  LEXENV, finally
+  ;;return the binding descriptor.
+  ;;
+  ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
+  ;;syntactic binding descriptor does not represent an R6RS record-type name: raise a
+  ;;syntax violation exception.
+  ;;
+  (let* ((label (id->label/or-error who input-form.stx type-name-id))
+	 (descr (label->syntactic-binding-descriptor label lexenv))
+	 (value (syntactic-binding-descriptor.value descr)))
+    (if (object-type-spec? value)
+	descr
+      (syntax-violation who
+	"identifier not bound to an object-type specification"
+	input-form.stx type-name-id))))
+
 (define (id->record-type-name-binding-descriptor who input-form.stx type-name-id lexenv)
-  ;;TYPE-NAME-ID is meant  to be a syntactic identifier bound  to an R6RS record-type
-  ;;name  binding descriptor;  retrieve its  label then  its binding  descriptor from
-  ;;LEXENV, finally return the binding descriptor.
+  ;;TYPE-NAME-ID  is  meant  to  be  a  syntactic  identifier  representing  an  R6RS
+  ;;record-type  name,  whose  syntactic  binding   descriptor  has  an  instance  of
+  ;;"<r6rs-record-type-spec>"  as   value;  retrieve  its  label   then  its  binding
+  ;;descriptor from LEXENV, finally return the binding descriptor.
   ;;
   ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
   ;;syntactic binding descriptor does not represent an R6RS record-type name: raise a
@@ -2182,8 +2208,10 @@
     (if (record-type-name-binding-descriptor? descr)
 	descr
       (syntax-violation who
-	"identifier not bound to a record type descriptor"
+	"identifier not bound to a record-type specification"
 	input-form.stx type-name-id))))
+
+;;; --------------------------------------------------------------------
 
 (define (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
   (let* ((label (id->label/or-error who input-form.stx id))

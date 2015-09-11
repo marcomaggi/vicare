@@ -2242,10 +2242,6 @@ When @meta{type} is bound to a struct--type descriptor: this syntax
 expands to a use of @func{struct-type-field-ref}; @ref{iklib structs
 fields, struct-type-field-ref}.
 
-When @meta{type} is bound to a record--type descriptor: this syntax
-expands to a use of @func{record-type-field-ref}; @ref{iklib records
-fields, record-type-field-ref}.
-
 When @code{<>} or @code{_} is used in place of @meta{expr}: the syntax
 evaluates to a slot accessor function.
 @end deffn
@@ -2269,10 +2265,6 @@ field.
 When @meta{type} is bound to a struct--type descriptor: this syntax
 expands to a use of @func{struct-type-field-set!}; @ref{iklib structs
 fields, struct-type-field-set!}.
-
-When @meta{type} is bound to a record--type descriptor: this syntax
-expands to a use of @func{record-type-field-set!}; @ref{iklib records
-fields, record-type-field-set!}.
 
 When @code{<>} or @code{_} is used in place of both @meta{expr} and
 @meta{new-val}: the syntax evaluates to a slot mutator function.
@@ -9470,9 +9462,9 @@ and use its fields to produce the output of a syntax use:
   (lambda (stx)
     (let ((S (retrieve-expand-time-value #'it)))
       (with-syntax
-          ((A (record-type-field-ref that a S))
-           (B (record-type-field-ref that b S))
-           (C (record-type-field-ref that c S)))
+          ((A (slot-ref S a that))
+           (B (slot-ref S b that))
+           (C (slot-ref S c that)))
         #'(quote #(A B C))))))
 
 (get-it)        @expansion{} (quote #(1 2 3))
@@ -10704,6 +10696,13 @@ descriptor.
 @end defun
 
 
+@defun struct-and-std? @var{stru} @var{std}
+Return @true{} if @var{stru} is a struct with struct--type descriptor
+equal to @var{std}; otherwise return @false{}.  Raise an error if
+@var{std} is not a struct--type descriptor.
+@end defun
+
+
 @defun struct-std @var{stru}
 @defunx struct-rtd @var{stru}
 Return the struct--type descriptor of the data structure @var{stru}.
@@ -10753,6 +10752,18 @@ Return the value of field at @var{index} in the data structure
 @defun struct-set! @var{stru} @var{index} @var{value}
 Store @var{value} in the field at @var{index} in the data structure
 @var{stru}.
+@end defun
+
+
+@defun struct-and-std-ref @var{stru} @var{index} @var{std}
+Check that @var{stru} is a struct of type @var{std}, then return the
+value of field at @var{index} in the data structure @var{stru}.
+@end defun
+
+
+@defun struct-and-std-set! @var{stru} @var{index} @var{std} @var{value}
+Check that @var{stru} is a struct of type @var{std}, store @var{value}
+in the field at @var{index} in the data structure @var{stru}.
 @end defun
 
 
@@ -11103,83 +11114,6 @@ will not validate its arguments.
 Like @func{record-mutator}, but return an unsafe field mutator that will
 not validate its arguments.
 @end defun
-
-
-@deffn Syntax record-type-field-ref @meta{type-name} @meta{field-name} @meta{record}
-@deffnx Syntax record-type-field-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
-Expand to an expression which accesses or mutates the field whose name
-is @meta{field-name} in the record @meta{record} of type
-@meta{type-name}.  These syntaxes allow access to the fields of a record
-through the type name identifier, without the need to export accessor
-and mutator identifiers out of libraries.
-
-@example
-(import (vicare))
-
-(define-record-type alpha
-  (field (mutable a)))
-
-(define-record-type beta
-  (parent alpha)
-  (field (mutable b)))
-
-(define A
-  (make-alpha 1))
-
-(define B
-  (make-beta 1 11))
-
-(record-type-field-ref  alpha a A)       @result{} 1
-(record-type-field-set! alpha a A 2)
-(record-type-field-ref  alpha a A)       @result{} 2
-
-(record-type-field-ref  alpha a B)       @result{} 1
-(record-type-field-set! alpha a B 2)
-(record-type-field-ref  alpha a B)       @result{} 2
-
-(record-type-field-ref  beta b B)        @result{} 11
-(record-type-field-set! beta b B 22)
-(record-type-field-ref  beta b B)        @result{} 22
-@end example
-
-If @meta{field-name} does not select a field of @meta{type-name}: the
-parent record--types of @meta{type-name} are searched for the first
-matching field.
-@end deffn
-
-
-@deffn Syntax $record-type-field-ref @meta{type-name} @meta{field-name} @meta{record}
-@deffnx Syntax $record-type-field-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
-Expand to an unsafe expression which accesses or mutates the field whose
-name is @meta{field-name} in the record @meta{record} of type
-@meta{type-name}.  These syntaxes allow unsafe access to the fields of a
-record through the type name identifier, without the need to export
-unsafe accessor and mutator identifiers out of libraries.
-
-These syntaxes are usable only when the @func{define-record-type} syntax
-used to define @meta{type-name} has been expanded in extended Vicare
-mode; if @value{EXECUTABLE} was run with the option
-@option{--strict-r6rs} use of these syntaxes raises a syntax violation
-exception.
-
-@example
-(import (vicare))
-
-(define-record-type alpha
-  (field (mutable a)))
-
-(define A
-  (make-alpha 1))
-
-($record-type-field-ref  alpha a A)      @result{} 1
-($record-type-field-set! alpha a A 2)
-($record-type-field-ref  alpha a A)      @result{} 2
-@end example
-
-If @meta{field-name} does not select a field of @meta{type-name}: the
-parent record--types of @meta{type-name} are searched for the first
-matching field.
-@end deffn
 
 @c page
 @node iklib records final

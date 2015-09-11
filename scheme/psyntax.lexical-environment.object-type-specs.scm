@@ -21,10 +21,13 @@
 
 (module (<object-type-spec>
 	 object-type-spec?
+	 object-type-spec.parent-id
 	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
 	 object-type-spec.type-predicate-stx
 	 object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
 	 object-type-spec.unsafe-accessors-table	object-type-spec.unsafe-mutators-table
+	 object-type-spec.safe-accessor			object-type-spec.safe-mutator
+	 object-type-spec.unsafe-accessor		object-type-spec.unsafe-mutator
 
 	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
@@ -34,7 +37,6 @@
 	 r6rs-record-type-spec.type-predicate-id
 	 r6rs-record-type-spec.safe-accessors-table	r6rs-record-type-spec.safe-mutators-table
 	 r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
-
 	 r6rs-record-type-spec.safe-accessor		r6rs-record-type-spec.safe-mutator
 	 r6rs-record-type-spec.unsafe-accessor		r6rs-record-type-spec.unsafe-mutator
 	 )
@@ -51,6 +53,7 @@
 ;;
 (module (<object-type-spec>
 	 object-type-spec?
+	 object-type-spec.parent-id
 	 object-type-spec.constructor-stx
 	 object-type-spec.destructor-stx
 	 object-type-spec.type-predicate-stx
@@ -62,6 +65,9 @@
   (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
     (nongenerative vicare:expander:<object-type-spec>)
     (fields
+     (immutable parent-id		object-type-spec.parent-id)
+		;False  or a  syntactic identifier  representing the  parent of  this
+		;record-type.
      (immutable constructor-stx		object-type-spec.constructor-stx)
 		;False or a  syntax object representing an  expression that, expanded
 		;and  evaluated at  run-time, returns  the default  constructor.  The
@@ -144,7 +150,8 @@
       (lambda (make-record)
 	(case-lambda
 	 (()
-	  (make-record #f  ;constructor-stx
+	  (make-record #f  ;parent-id
+		       #f  ;constructor-stx
 		       #f  ;destructor-stx
 		       #f  ;type-predicate-stx
 		       '() ;safe-accessors-table
@@ -152,14 +159,87 @@
 		       '() ;unsafe-accessors-table
 		       '() ;unsafe-mutators-table
 		       ))
-	 ((constructor-stx destructor-stx type-predicate-stx
-			   safe-accessors-table safe-mutators-table
-			   unsafe-accessors-table unsafe-mutators-table)
-	  (make-record constructor-stx destructor-stx type-predicate-stx
+	 ((parent-id
+	   constructor-stx destructor-stx type-predicate-stx
+	   safe-accessors-table safe-mutators-table
+	   unsafe-accessors-table unsafe-mutators-table)
+	  (make-record parent-id
+		       constructor-stx destructor-stx type-predicate-stx
 		       safe-accessors-table safe-mutators-table
 		       unsafe-accessors-table unsafe-mutators-table)))))
 
     #| end of DEFINE-RECORD-TYPE |# )
+
+  #| end of module |# )
+
+
+;;;; basic object-type specification: accessor and mutator retrieval
+
+(module (object-type-spec.safe-accessor
+	 object-type-spec.safe-mutator
+	 object-type-spec.unsafe-accessor
+	 object-type-spec.unsafe-mutator)
+
+  (define* (object-type-spec.safe-accessor {spec object-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an object-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the object-type specification.
+    ;;
+    ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
+    ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
+    ;;expanded  and  evaluated  at  run-time,  returns  the  field's  safe  accessor;
+    ;;otherwise return false.
+    ;;
+    (%spec-actor spec field-name.sym lexenv object-type-spec.safe-accessors-table))
+
+  (define* (object-type-spec.safe-mutator {spec object-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an object-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the object-type specification.
+    ;;
+    ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
+    ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
+    ;;expanded and evaluated at run-time, returns the field's safe mutator; otherwise
+    ;;return false.
+    ;;
+    (%spec-actor spec field-name.sym lexenv object-type-spec.safe-mutators-table))
+
+  (define* (object-type-spec.unsafe-accessor {spec object-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an object-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the object-type specification.
+    ;;
+    ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
+    ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
+    ;;expanded  and  evaluated at  run-time,  returns  the field's  unsafe  accessor;
+    ;;otherwise return false.
+    ;;
+    (%spec-actor spec field-name.sym lexenv object-type-spec.unsafe-accessors-table))
+
+  (define* (object-type-spec.unsafe-mutator {spec object-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an object-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the object-type specification.
+    ;;
+    ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
+    ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
+    ;;expanded  and  evaluated  at  run-time, returns  the  field's  unsafe  mutator;
+    ;;otherwise return false.
+    ;;
+    (%spec-actor spec field-name.sym lexenv object-type-spec.unsafe-mutators-table))
+
+  (define (%spec-actor spec field-name.sym lexenv table-getter)
+    ;;TABLE-GETTER  must be  a  function  which, applied  to  the  SPEC, returns  the
+    ;;required association list.
+    (cond ((assq field-name.sym (table-getter spec))
+	   ;;The field name is known; extract  the symbolic expression from the alist
+	   ;;entry and return it.
+	   => cdr)
+	  ((let loop ((parent-id (object-type-spec.parent-id spec)))
+	     (and parent-id
+		  (let* ((descr (id->object-type-binding-descriptor #f #f parent-id lexenv))
+			 (spec^ (syntactic-binding-descriptor.value descr)))
+	  	    (cond ((assq field-name.sym (table-getter spec^))
+	  		   => cdr)
+	  		  (else
+	  		   (loop (object-type-spec.parent-id spec^))))))))
+	  (else #f)))
 
   #| end of module |# )
 
@@ -186,25 +266,29 @@
 		;The syntactic identifier bound to the record-type descriptor.
    (immutable rcd-id			r6rs-record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
-   (immutable parent-id			r6rs-record-type-spec.parent-id)
-		;False  or a  syntactic identifier  representing the  parent of  this
-		;record-type.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
       (case-lambda
        ((rtd-id rcd-id)
-	((make-object-type-spec) rtd-id rcd-id #f))
+	((make-object-type-spec) rtd-id rcd-id))
 
-       ((rtd-id rcd-id parent-id
+       ((rtd-id rcd-id
+		parent-id
 		default-constructor-id default-destructor-id type-predicate-id
 		safe-accessors-table safe-mutators-table
 		unsafe-accessors-table unsafe-mutators-table)
-	((make-object-type-spec default-constructor-id default-destructor-id type-predicate-id
+	((make-object-type-spec parent-id
+				default-constructor-id default-destructor-id type-predicate-id
 				safe-accessors-table safe-mutators-table
 				unsafe-accessors-table unsafe-mutators-table)
-	 rtd-id rcd-id parent-id)))))
+	 rtd-id rcd-id)))))
   #| end of DEFINE-RECORD-TYPE |# )
+
+;;; --------------------------------------------------------------------
+
+(define (r6rs-record-type-spec.parent-id spec)
+  (object-type-spec.parent-id spec))
 
 (define (r6rs-record-type-spec.default-constructor-id spec)
   (object-type-spec.constructor-stx spec))
@@ -228,110 +312,99 @@
   (object-type-spec.unsafe-mutators-table spec))
 
 
-;;;; R6RS record-type specification: accessor and mutator retrieval
-
 (module (r6rs-record-type-spec.safe-accessor
 	 r6rs-record-type-spec.safe-mutator
 	 r6rs-record-type-spec.unsafe-accessor
 	 r6rs-record-type-spec.unsafe-mutator)
 
-  (define* (r6rs-record-type-spec.safe-accessor {rts r6rs-record-type-spec?} field-name.sym synner)
-    ;;RTS must a R6RS record-type specification.
+  (define* (r6rs-record-type-spec.safe-accessor {spec r6rs-record-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an record-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the record-type definition.
     ;;
-    ;;FIELD-NAME.SYM must  be a symbol representing  a field name in  the record-type
-    ;;definition.   SYNNER must  be  the  closure object  usable  to raise  syntactic
-    ;;violations.
-    ;;
+    ;;Return a symbolic  expression (to be BLESSed later)  representing an expression
+    ;;which, expanded and  evaluated at run-time, returns the  field's safe accessor.
     ;;If FIELD-NAME.SYM is EQ?  to the name of a record's field: return the syntactic
-    ;;identifier bound to  its safe accessor; otherwise return  a symbolic expression
-    ;;(to be BLESSed later) representing the expression:
+    ;;identifier bound to the accessor; otherwise return the symbolic expression:
     ;;
     ;;   (record-accessor ?rtd-id '?field-name)
     ;;
-    ;;which, expanded and evaluated, returns a fresh safe accessor.
+    ;;which  will search  for the  accessor at  run-time, inspecting  the record-type
+    ;;descriptor.
     ;;
-    (%spec-actor rts field-name.sym r6rs-record-type-spec.safe-accessors-table 'record-accessor synner))
+    (%spec-actor spec field-name.sym lexenv r6rs-record-type-spec.safe-accessors-table 'record-accessor))
 
-  (define (r6rs-record-type-spec.safe-mutator rts field-name.sym synner)
-    ;;RTS must a R6RS record-type specification.
+  (define* (r6rs-record-type-spec.safe-mutator {spec r6rs-record-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an record-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the record-type definition.
     ;;
-    ;;FIELD-NAME.SYM must  be a symbol representing  a field name in  the record-type
-    ;;definition.   SYNNER must  be  the  closure object  usable  to raise  syntactic
-    ;;violations.
-    ;;
+    ;;Return a symbolic  expression (to be BLESSed later)  representing an expression
+    ;;which, expanded  and evaluated at  run-time, returns the field's  safe mutator.
     ;;If FIELD-NAME.SYM is EQ?  to the name of a record's field: return the syntactic
-    ;;identifier bound  to its safe  mutator; otherwise return a  symbolic expression
-    ;;(to be BLESSed later) representing the expression:
+    ;;identifier bound to the mutator; otherwise return the symbolic expression:
     ;;
     ;;   (record-mutator ?rtd-id '?field-name)
     ;;
-    ;;which, expanded and evaluated, returns a fresh safe mutator.
+    ;;which  will search  for the  mutator  at run-time,  inspecting the  record-type
+    ;;descriptor.
     ;;
-    (%spec-actor rts field-name.sym r6rs-record-type-spec.safe-mutators-table  'record-mutator synner))
+    (%spec-actor spec field-name.sym lexenv r6rs-record-type-spec.safe-mutators-table  'record-mutator))
 
-  (define (r6rs-record-type-spec.unsafe-accessor rts field-name.sym synner)
-    ;;RTS must a R6RS record-type specification.
+  (define* (r6rs-record-type-spec.unsafe-accessor {spec r6rs-record-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an record-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the record-type definition.
     ;;
-    ;;FIELD-NAME.SYM must  be a symbol representing  a field name in  the record-type
-    ;;definition.   SYNNER must  be  the  closure object  usable  to raise  syntactic
-    ;;violations.
-    ;;
+    ;;Return a symbolic  expression (to be BLESSed later)  representing an expression
+    ;;which, expanded and evaluated at run-time, returns the field's unsafe accessor.
     ;;If FIELD-NAME.SYM is EQ?  to the name of a record's field: return the syntactic
-    ;;identifier bound to its unsafe accessor; otherwise return a symbolic expression
-    ;;(to be BLESSed later) representing the expression:
+    ;;identifier bound to the accessor; otherwise return the symbolic expression:
     ;;
-    ;;   (record-accessor ?rtd-id '?field-name)
+    ;;   (unsafe-record-accessor ?rtd-id '?field-name)
     ;;
-    ;;which, expanded and evaluated, returns a fresh unsafe accessor.
+    ;;which  will search  for the  accessor at  run-time, inspecting  the record-type
+    ;;descriptor.
     ;;
-    (%spec-actor rts field-name.sym r6rs-record-type-spec.unsafe-accessors-table 'unsafe-record-accessor synner))
+    (%spec-actor spec field-name.sym lexenv r6rs-record-type-spec.unsafe-accessors-table 'unsafe-record-accessor))
 
-  (define (r6rs-record-type-spec.unsafe-mutator rts field-name.sym synner)
-    ;;RTS must a R6RS record-type specification.
+  (define* (r6rs-record-type-spec.unsafe-mutator {spec r6rs-record-type-spec?} field-name.sym lexenv)
+    ;;SPEC must an record-type specification record.  FIELD-NAME.SYM must be a symbol
+    ;;representing a field name in the record-type definition.
     ;;
-    ;;FIELD-NAME.SYM must  be a symbol representing  a field name in  the record-type
-    ;;definition.   SYNNER must  be  the  closure object  usable  to raise  syntactic
-    ;;violations.
-    ;;
+    ;;Return a symbolic  expression (to be BLESSed later)  representing an expression
+    ;;which, expanded and evaluated at  run-time, returns the field's unsafe mutator.
     ;;If FIELD-NAME.SYM is EQ?  to the name of a record's field: return the syntactic
-    ;;identifier bound to its unsafe  mutator; otherwise return a symbolic expression
-    ;;(to be BLESSed later) representing the expression:
+    ;;identifier bound to the mutator; otherwise return the symbolic expression:
     ;;
-    ;;   (record-mutator ?rtd-id '?field-name)
+    ;;   (unsafe-record-mutator ?rtd-id '?field-name)
     ;;
-    ;;which, expanded and evaluated, returns a fresh unsafe mutator.
+    ;;which  will search  for the  mutator  at run-time,  inspecting the  record-type
+    ;;descriptor.
     ;;
-    (%spec-actor rts field-name.sym r6rs-record-type-spec.unsafe-mutators-table  'unsafe-record-mutator synner))
+    (%spec-actor spec field-name.sym lexenv r6rs-record-type-spec.unsafe-mutators-table  'unsafe-record-mutator))
 
-  (define (%spec-actor rts field-name.sym table-getter actor-constructor synner)
-    ;;Given  an  R6RS record-type  specification  and  an identifier  representing  a
-    ;;record's field name: return a symbolic  expression (that must be BLESSed later)
-    ;;representing an expression which, expanded  and evaluated, returns the accessor
-    ;;or mutator for the named field.
-    ;;
-    ;;TABLE-GETTER must be a function which,  applied to the record spec, returns the
+  (define (%spec-actor spec field-name.sym lexenv table-getter actor-constructor)
+    ;;TABLE-GETTER  must be  a  function  which, applied  to  the  SPEC, returns  the
     ;;required association list.
     ;;
     ;;ACTOR-CONSTRUCTOR must be one  of the symbols: record-accessor, record-mutator,
     ;;unsafe-record-accessor, unsafe-record-mutator;  these are  the public  names of
     ;;the core primitives building the accessors and mutators.
     ;;
-    (cond ((assq field-name.sym (table-getter rts))
+    (cond ((assq field-name.sym (table-getter spec))
 	   ;;The field name  is known and known is the  syntactic identifier bound to
 	   ;;its accessor  or mutator.  Extract  the identifier from the  alist entry
 	   ;;and return it.
 	   => cdr)
-	  ;; ((let loop ((parent-id (r6rs-record-type-spec.parent-id rts)))
-	  ;;    (and parent-id
-	  ;; 	  (let* ((descr  (id->record-type-name-binding-descriptor #f #f parent-id (current-inferior-lexenv)))
-	  ;; 		 (rts    (syntactic-binding-descriptor.value descr)))
-	  ;; 	    (cond ((assq field-name.sym (table-getter rts))
-	  ;; 		   => cdr)
-	  ;; 		  (else
-	  ;; 		   (loop (r6rs-record-type-spec.parent-id rts))))))))
+	  ((let loop ((parent-id (r6rs-record-type-spec.parent-id spec)))
+	     (and parent-id
+	  	  (let* ((descr  (id->record-type-name-binding-descriptor #f #f parent-id lexenv))
+	  		 (spec^  (syntactic-binding-descriptor.value descr)))
+	  	    (cond ((assq field-name.sym (table-getter spec^))
+	  		   => cdr)
+	  		  (else
+	  		   (loop (r6rs-record-type-spec.parent-id spec^))))))))
 	  (else
 	   ;;Fallback to the common field accessor or mutator constructor.
-	   (let ((rtd-id (r6rs-record-type-spec.rtd-id rts)))
+	   (let ((rtd-id (r6rs-record-type-spec.rtd-id spec)))
 	     `(,actor-constructor ,rtd-id (quote ,field-name.sym))))))
 
   #| end of module |# )
