@@ -992,6 +992,12 @@
 	    (mutable e)
 	    (mutable f)))
 
+  (define-record-type gamma
+    (parent beta)
+    (fields (mutable g)
+	    (mutable h)
+	    (mutable i)))
+
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators, no parent
 
@@ -1077,6 +1083,79 @@
 		(slot-ref stru e beta)
 		(slot-ref stru f beta)))
     => 10 20 30 40 50 60)
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators, parent and grand-parent
+
+  (check
+      (let ((stru (new gamma 1 2 3 4 5 6 7 8 9)))
+	(values (slot-ref stru a alpha)
+		(slot-ref stru b alpha)
+		(slot-ref stru c alpha)
+		;;
+		(slot-ref stru a beta)
+		(slot-ref stru b beta)
+		(slot-ref stru c beta)
+		(slot-ref stru d beta)
+		(slot-ref stru e beta)
+		(slot-ref stru f beta)
+		;;
+		(slot-ref stru a gamma)
+		(slot-ref stru b gamma)
+		(slot-ref stru c gamma)
+		(slot-ref stru d gamma)
+		(slot-ref stru e gamma)
+		(slot-ref stru f gamma)
+		(slot-ref stru g gamma)
+		(slot-ref stru h gamma)
+		(slot-ref stru i gamma)))
+    => 1 2 3
+    1 2 3 4 5 6
+    1 2 3 4 5 6 7 8 9)
+
+  (check
+      (let ((stru (new gamma 1 2 3 4 5 6 7 8 9)))
+	(slot-set! stru a gamma 10)
+	(slot-set! stru b gamma 20)
+	(slot-set! stru c gamma 30)
+	(slot-set! stru d gamma 40)
+	(slot-set! stru e gamma 50)
+	(slot-set! stru f gamma 60)
+	(slot-set! stru g gamma 70)
+	(slot-set! stru h gamma 80)
+	(slot-set! stru i gamma 90)
+	(values (slot-ref stru a gamma)
+		(slot-ref stru b gamma)
+		(slot-ref stru c gamma)
+		(slot-ref stru d gamma)
+		(slot-ref stru e gamma)
+		(slot-ref stru f gamma)
+		(slot-ref stru g gamma)
+		(slot-ref stru h gamma)
+		(slot-ref stru i gamma)))
+    => 10 20 30 40 50 60 70 80 90)
+
+  (check
+      (let ((stru (new gamma 1 2 3 4 5 6 7 8 9)))
+	(slot-set! stru a alpha 10)
+	(slot-set! stru b alpha 20)
+	(slot-set! stru c alpha 30)
+	(slot-set! stru d beta 40)
+	(slot-set! stru e beta 50)
+	(slot-set! stru f beta 60)
+	(slot-set! stru g gamma 70)
+	(slot-set! stru h gamma 80)
+	(slot-set! stru i gamma 90)
+	(values (slot-ref stru a alpha)
+		(slot-ref stru b alpha)
+		(slot-ref stru c alpha)
+		(slot-ref stru d beta)
+		(slot-ref stru e beta)
+		(slot-ref stru f beta)
+		(slot-ref stru g gamma)
+		(slot-ref stru h gamma)
+		(slot-ref stru i gamma)))
+    => 10 20 30 40 50 60 70 80 90)
 
   #t)
 
