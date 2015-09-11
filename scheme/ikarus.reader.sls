@@ -1754,6 +1754,12 @@
 		   (else
 		    (%error "invalid syntax" (string #\. #\. ch1))))))
 
+	  ;;An identifier starting with a symbol, example: .doit
+	  ((and (port-in-vicare-mode? port)
+		(initial? ch))
+	   (get-char-and-track-textual-position port)
+	   (finish-tokenisation-of-identifier (cons ch '(#\.)) port #t))
+
 	  ;;then it must be a number
 	  (else
 	   (cons 'datum (u:dot port '(#\.) 10 #f #f +1))))))
@@ -2001,6 +2007,30 @@
   (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
+  (define (%first-item-in-list-is-dot-symbol? ls)
+    ;;Assume LS is null or a proper list.  Return true if: LS is not empty; the first
+    ;;object in LS is a  symbol; the string name of the symbol is  a string with 2 or
+    ;;more characters; the first character in the string name is a dot character; the
+    ;;second character in the string name is *not* a dot character.
+    ;;
+    (and (not (null? ls))
+	 (let ((A (car ls)))
+	   (and (symbol? (car ls))
+		(let ((A.str (symbol->string A)))
+		  (and (fx<=? 2 (string-length A.str))
+		       (char=? #\. (string-ref A.str 0))
+		       (not (char=? #\. (string-ref A.str 1)))))))))
+
+  (define (%insert-method-call ls ls/ann locations kont pos)
+    (let* ((A     (car ls))
+	   (A.str (symbol->string A))
+	   (A^    (string->symbol (substring A.str 1 (string-length A.str))))
+	   (x     (cons* 'method-call A^ (cdr ls)))
+	   (x/ann (cons* (annotate-simple 'method-call pos)
+			 (annotate-simple A^ pos)
+			 (cdr ls/ann))))
+      (values x (annotate x x/ann pos) locations kont)))
+
   (define-inline (main)
     (cond ((eof-object? token)
 	   (values (eof-object)
@@ -2010,13 +2040,17 @@
 	  ((eq? token 'lparen)
 	   (receive (ls ls/ann locations kont)
 	       (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack 'rbrace)
-	     (values ls (annotate ls ls/ann pos) locations kont)))
+	     (if (%first-item-in-list-is-dot-symbol? ls)
+		 (%insert-method-call ls ls/ann locations kont pos)
+	       (values ls (annotate ls ls/ann pos) locations kont))))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
 	   (receive (ls ls/ann locations kont)
 	       (finish-tokenisation-of-list port pos locations kont 'rbrack 'rparen 'rbrace)
-	     (values ls (annotate ls ls/ann pos) locations kont)))
+	     (if (%first-item-in-list-is-dot-symbol? ls)
+		 (%insert-method-call ls ls/ann locations kont pos)
+	       (values ls (annotate ls ls/ann pos) locations kont))))
 
 	  ;;Read brace list that was opened by a brace parenthesis.
 	  ((eq? token 'lbrace)

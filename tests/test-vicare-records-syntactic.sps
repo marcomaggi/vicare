@@ -1554,6 +1554,125 @@
   (collect))
 
 
+(parametrise ((check-test-name	'methods))
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (method (get-a O)
+	    (alpha-a O))
+	  (method (get-b O)
+	    (alpha-b O)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(values (method-call get-a O)
+		(method-call get-b O)))
+    => 1 2)
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (method (get-a O)
+	    (alpha-a O))
+	  (method (get-b O)
+	    (alpha-b O))
+	  (method (set-a O v)
+	    (alpha-a-set! O v))
+	  (method (set-b O v)
+	    (alpha-b-set! O v)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(method-call set-a O 10)
+	(method-call set-b O 20)
+	(values (method-call get-a O)
+		(method-call get-b O)))
+    => 10 20)
+
+;;; --------------------------------------------------------------------
+;;; dot notation
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (method (get-a O)
+	    (alpha-a O))
+	  (method (get-b O)
+	    (alpha-b O)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(values (.get-a O)
+		(.get-b O)))
+    => 1 2)
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (method (get-a O)
+	    (alpha-a O))
+	  (method (get-b O)
+	    (alpha-b O))
+	  (method (set-a O v)
+	    (alpha-a-set! O v))
+	  (method (set-b O v)
+	    (alpha-b-set! O v)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(.set-a O 10)
+	(.set-b O 20)
+	(values (.get-a O)
+		(.get-b O)))
+    => 10 20)
+
+;;; --------------------------------------------------------------------
+;;; misc method examples
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (method (doit O c d)
+	    (+ (alpha-a O) (alpha-b O) c d)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(.doit O 3 4))
+    => (+ 1 2 3 4))
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (method (doit O . arg*)
+	    (apply + (alpha-a O) (alpha-b O) arg*)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(.doit O 3 4))
+    => (+ 1 2 3 4))
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
 
   (let ()
