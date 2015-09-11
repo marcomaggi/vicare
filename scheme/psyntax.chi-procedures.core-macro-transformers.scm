@@ -1627,88 +1627,100 @@
     ))
 
 
-;;;; module core-macro-transformer: struct-type descriptor
+;;;; module core-macro-transformer: STRUCT-TYPE-DESCRIPTOR, RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, TYPE-DESCRIPTOR
 
-(define-core-transformer (struct-type-descriptor input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
-  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-id)
-     (identifier? ?type-id)
-     (make-psi input-form.stx
-	       (build-data no-source
-		 (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-	       (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
-    ))
+(module (struct-type-descriptor-transformer
+	 record-type-descriptor-transformer
+	 record-constructor-descriptor-transformer
+	 type-descriptor-transformer)
 
-
-;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR
+  (define-core-transformer (struct-type-descriptor input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
+    ;;context of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (%make-struct-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))))
 
-(module (record-type-descriptor-transformer
-	 record-constructor-descriptor-transformer)
 
-  (let-syntax
-      ((define-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?getter ?type-id)
-	    (define-core-transformer (?who input-form.stx lexenv.run lexenv.expand)
-	      (syntax-match input-form.stx ()
-		((_ ?type-name)
-		 (identifier? ?type-name)
-		 (let* ((descr     (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
-			(rts       (syntactic-binding-descriptor.value descr))
-			(expr.stx  (?getter rts))
-			(expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
-		   (make-psi input-form.stx
-			     (psi-core-expr expr.psi)
-			     (make-retvals-signature-single-value (core-prim-id '?type-id)))))
-		)))
-	   )))
-    (define-transformer record-type-descriptor        r6rs-record-type-spec.rtd-id <record-type-descriptor>)
-    (define-transformer record-constructor-descriptor r6rs-record-type-spec.rcd-id <record-constructor-descriptor>)
-    #| end of LET-SYNTAX |# )
+  (define-core-transformer (record-type-descriptor input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function  used to  expand RECORD-TYPE-DESCRIPTOR syntaxes  from the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
+    ;;context of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (%make-record-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))))
+
+  (define-core-transformer (record-constructor-descriptor input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from
+    ;;the top-level built in environment.  Expand the syntax object INPUT-FORM.STX in
+    ;;the context of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (let* ((descr     (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run))
+	      (rts       (syntactic-binding-descriptor.value descr))
+	      (expr.stx  (r6rs-record-type-spec.rcd-id rts))
+	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
+	 (make-psi input-form.stx
+		   (psi-core-expr expr.psi)
+		   (make-retvals-signature-single-value (core-prim-id '<record-constructor-descriptor>)))))
+      ))
+
+  (define-core-transformer (type-descriptor input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand TYPE-DESCRIPTOR syntaxes from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI struct.
+    ;;
+    ;;The result must be an expression evaluating to:
+    ;;
+    ;;* A Vicare struct type descriptor if  the given identifier argument is a struct
+    ;;  type name.
+    ;;
+    ;;* A R6RS  record type descriptor if  the given identifier argument  is a record
+    ;;  type name.
+    ;;
+    ;;* An expand-time TAG-TYPE-SPEC instance.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+	 ((r6rs-record-type)
+	  (%make-record-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))
+	 ((vicare-struct-type)
+	  (%make-struct-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))
+	 ((tag-type-spec)
+	  (make-psi input-form.stx
+		    (build-data no-source
+		      (identifier-tag-type-spec ?type-id))
+		    (make-retvals-signature-single-top)))
+	 ))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-struct-type-descriptor who type-id input-form.stx lexenv.run lexenv.expand)
+    (make-psi input-form.stx
+	      (build-data no-source
+		(%struct-type-id->std who input-form.stx type-id lexenv.run))
+	      (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
+
+  (define (%make-record-type-descriptor who type-id input-form.stx lexenv.run lexenv.expand)
+    (let* ((descr     (id->record-type-name-binding-descriptor who input-form.stx type-id lexenv.run))
+	   (rts       (syntactic-binding-descriptor.value descr))
+	   (expr.stx  (r6rs-record-type-spec.rtd-id rts))
+	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
+      (make-psi input-form.stx
+		(psi-core-expr expr.psi)
+		(make-retvals-signature-single-value (core-prim-id '<record-type-descriptor>)))))
 
   #| end of module |# )
-
-
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR
-
-(define-core-transformer (type-descriptor input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand TYPE-DESCRIPTOR syntaxes  from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  ;;The result must be an expression evaluating to:
-  ;;
-  ;;* A Vicare  struct type descriptor if  the given identifier argument  is a struct
-  ;;  type name.
-  ;;
-  ;;* A R6RS record type descriptor if the given identifier argument is a record type
-  ;;  name.
-  ;;
-  ;;* An expand-time TAG-TYPE-SPEC instance.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-id)
-     (identifier? ?type-id)
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-       ((r6rs-record-type)
-	(chi-expr (r6rs-record-type-spec.rtd-id (syntactic-binding-descriptor.value binding))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(make-psi input-form.stx
-		  (build-data no-source
-		    (syntactic-binding-descriptor.value binding))
-		  (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
-       ((tag-type-spec)
-	(make-psi input-form.stx
-		  (build-data no-source
-		    (identifier-tag-type-spec ?type-id))
-		  (make-retvals-signature-single-top)))
-       ))
-    ))
 
 
 ;;;; module core-macro-transformer: NEW, DELETE
