@@ -109,18 +109,21 @@
 	  (sys.identifier? (sys.syntax ?type-id))
 	  (sys.identifier? (sys.syntax ?lexenv)))
      (sys.syntax
-      (let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
-	     (binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	(cond ((record-type-name-binding-descriptor? binding)
-	       ?r6rs-body0 ?r6rs-body ...)
-	      ((struct-type-name-binding-descriptor? binding)
-	       ?struct-body0 ?struct-body ...)
-	      ((identifier-tag-type-spec ?type-id)
-	       ?spec-body0 ?spec-body ...)
-	      (else
-	       (syntax-violation ?who
-		 "neither a struct type nor an R6RS record type nor a spec type"
-		 ?input-stx ?type-id))))))
+      (begin
+	(visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
+	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
+	       (binding  (label->syntactic-binding-descriptor label ?lexenv)))
+	  (cond ((record-type-name-binding-descriptor? binding)
+		 ?r6rs-body0 ?r6rs-body ...)
+		((struct-type-name-binding-descriptor? binding)
+		 ?struct-body0 ?struct-body ...)
+		((identifier-tag-type-spec ?type-id)
+		 ?spec-body0 ?spec-body ...)
+		(else
+		 (syntax-violation ?who
+		   "neither a struct type nor an R6RS record type nor a spec type"
+		   ?input-stx ?type-id)))))))
+
     ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
@@ -130,18 +133,20 @@
 	  (sys.identifier? (sys.syntax ?type-id))
 	  (sys.identifier? (sys.syntax ?lexenv)))
      (sys.syntax
-      (let* ((label     (id->label/or-error ?who ?input-stx ?type-id))
-	     (?binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	(cond ((record-type-name-binding-descriptor? ?binding)
-	       ?r6rs-body0 ?r6rs-body ...)
-	      ((struct-type-name-binding-descriptor? ?binding)
-	       ?struct-body0 ?struct-body ...)
-	      ((identifier-tag-type-spec ?type-id)
-	       ?spec-body0 ?spec-body ...)
-	      (else
-	       (syntax-violation ?who
-		 "neither a struct type nor an R6RS record type"
-		 ?input-stx ?type-id))))))
+      (begin
+	(visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
+	(let* ((label     (id->label/or-error ?who ?input-stx ?type-id))
+	       (?binding  (label->syntactic-binding-descriptor label ?lexenv)))
+	  (cond ((record-type-name-binding-descriptor? ?binding)
+		 ?r6rs-body0 ?r6rs-body ...)
+		((struct-type-name-binding-descriptor? ?binding)
+		 ?struct-body0 ?struct-body ...)
+		((identifier-tag-type-spec ?type-id)
+		 ?spec-body0 ?spec-body ...)
+		(else
+		 (syntax-violation ?who
+		   "neither a struct type nor an R6RS record type"
+		   ?input-stx ?type-id)))))))
     ))
 
 
@@ -1733,49 +1738,46 @@
   (syntax-match input-form.stx ()
     ((_ ?type-id ?arg* ...)
      (identifier? ?type-id)
-     (begin
-       (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run)
-       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-	 ;;For records we can access the record constructor syntactic identifier.  We
-	 ;;just expand to an equivalent of:
-	 ;;
-	 ;;   (?maker ?arg ...)
-	 ;;
-	 ((r6rs-record-type)
-	  (let* ((rts          (syntactic-binding-descriptor.value binding))
-		 (maker.id     (r6rs-record-type-spec.default-constructor-id rts))
-		 (maker-id.psi (chi-expr maker.id lexenv.run lexenv.expand))
-		 (args.psi*    (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	    (make-psi input-form.stx
-		      (build-application no-source
-			(psi-core-expr maker-id.psi)
-			(map psi-core-expr args.psi*))
-		      (make-retvals-signature-single-value ?type-id))))
-
-	 ;;For structs we want to expand to an equivalent of:
-	 ;;
-	 ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
-	 ;;
-	 ((vicare-struct-type)
-	  (let ((args.psi* (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	    (make-psi input-form.stx
-		      (build-application no-source
-			(build-application no-source
-			  (build-primref no-source 'struct-constructor)
-			  (list (build-data no-source
-				  (syntactic-binding-descriptor.value binding))))
-			(map psi-core-expr args.psi*))
-		      (make-retvals-signature-single-value ?type-id))))
-
-	 ((tag-type-spec)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+       ;;For records we  can access the record constructor  syntactic identifier.  We
+       ;;just expand to an equivalent of:
+       ;;
+       ;;   (?maker ?arg ...)
+       ;;
+       ((r6rs-record-type)
+	(let* ((rts          (syntactic-binding-descriptor.value binding))
+	       (maker.id     (r6rs-record-type-spec.default-constructor-id rts))
+	       (maker-id.psi (chi-expr maker.id lexenv.run lexenv.expand))
+	       (args.psi*    (chi-expr* ?arg* lexenv.run lexenv.expand)))
 	  (make-psi input-form.stx
 		    (build-application no-source
-		      (psi-core-expr (chi-expr (tag-identifier-constructor-maker ?type-id input-form.stx)
-					       lexenv.run lexenv.expand))
-		      (map psi-core-expr (chi-expr* ?arg* lexenv.run lexenv.expand)))
-		    (make-retvals-signature-single-value ?type-id)))
-	 )))
-    ))
+		      (psi-core-expr maker-id.psi)
+		      (map psi-core-expr args.psi*))
+		    (make-retvals-signature-single-value ?type-id))))
+
+       ;;For structs we want to expand to an equivalent of:
+       ;;
+       ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
+       ;;
+       ((vicare-struct-type)
+	(let ((args.psi* (chi-expr* ?arg* lexenv.run lexenv.expand)))
+	  (make-psi input-form.stx
+		    (build-application no-source
+		      (build-application no-source
+			(build-primref no-source 'struct-constructor)
+			(list (build-data no-source
+				(syntactic-binding-descriptor.value binding))))
+		      (map psi-core-expr args.psi*))
+		    (make-retvals-signature-single-value ?type-id))))
+
+       ((tag-type-spec)
+	(make-psi input-form.stx
+		  (build-application no-source
+		    (psi-core-expr (chi-expr (tag-identifier-constructor-maker ?type-id input-form.stx)
+					     lexenv.run lexenv.expand))
+		    (map psi-core-expr (chi-expr* ?arg* lexenv.run lexenv.expand)))
+		  (make-retvals-signature-single-value ?type-id)))
+       ))))
 
 (module (delete-transformer)
 
