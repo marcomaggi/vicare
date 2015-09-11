@@ -1752,25 +1752,6 @@
 			(map psi-core-expr args.psi*))
 		      (make-retvals-signature-single-value ?type-id))))
 
-	 ;;Alternatively for records, we cano expand to an equivalent of:
-	 ;;
-	 ;;   ((record-constructor (record-type-descriptor ?type-id)) ?arg* ...)
-	 ;;
-	 ;;Kept here  for reference  about how to  do it.  (Marco  Maggi; Tue  Sep 8,
-	 ;;2015)
-	 ;;
-	 ;; ((r6rs-record-type)
-	 ;;  (let* ((rcd-id.psi (chi-expr (r6rs-record-type-spec.rcd-id (syntactic-binding-descriptor.value binding))
-	 ;; 			       lexenv.run lexenv.expand))
-	 ;; 	 (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	 ;;    (make-psi input-form.stx
-	 ;; 	      (build-application no-source
-	 ;; 		(build-application no-source
-	 ;; 		  (build-primref no-source 'record-constructor)
-	 ;; 		  (list (psi-core-expr rcd-id.psi)))
-	 ;; 		(map psi-core-expr args.psi*))
-	 ;; 	      (make-retvals-signature-single-value ?type-id))))
-
 	 ;;For structs we want to expand to an equivalent of:
 	 ;;
 	 ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
