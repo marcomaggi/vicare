@@ -219,6 +219,7 @@
     ((condition-is-a?)				condition-is-a?-transformer)
     ((slot-ref)					slot-ref-transformer)
     ((slot-set!)				slot-set!-transformer)
+    ((method-call)				method-call-transformer)
 
     ((tag-predicate)				tag-predicate-transformer)
     ((tag-procedure-argument-validator)		tag-procedure-argument-validator-transformer)
@@ -1934,7 +1935,8 @@
 		  ((r6rs-record-type)
 		   (let* ((rts           (syntactic-binding-descriptor.value binding))
 			  (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     accessor.stx))
+		     (or accessor.stx
+			 (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
 
 		  ((vicare-struct-type)
 		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
@@ -1957,7 +1959,9 @@
 		  ((r6rs-record-type)
 		   (let* ((rts           (syntactic-binding-descriptor.value binding))
 			  (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     `(,accessor.stx ,?expr)))
+		     (if accessor.stx
+			 `(,accessor.stx ,?expr)
+		       (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
 
 		  ((vicare-struct-type)
 		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
@@ -2007,7 +2011,8 @@
 		  ((r6rs-record-type)
 		   (let* ((rts          (syntactic-binding-descriptor.value binding))
 			  (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     mutator.stx))
+		     (or mutator.stx
+			 (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
 
 		  ((vicare-struct-type)
 		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
@@ -2030,7 +2035,9 @@
 		  ((r6rs-record-type)
 		   (let* ((rts          (syntactic-binding-descriptor.value binding))
 			  (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     `(,mutator.stx ,?expr ,?new-value)))
+		     (if mutator.stx
+			 `(,mutator.stx ,?expr ,?new-value)
+		       (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
 
 		  ((vicare-struct-type)
 		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
@@ -2063,6 +2070,55 @@
 		      (psi-application-retvals-signature mutator.psi))))
 	 (_
 	  (%synner "unable to determine type tag of expression, or invalid expression signature"))
+	 )))
+    ))
+
+
+;;;; module core-macro-transformer: METHOD-CALL
+
+(define-core-transformer (method-call input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used to  expand  Vicare's  METHOD-CALL syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?method-name-id ?subject-expr ?arg* ...)
+     (identifier? ?method-name-id)
+     (let* ((expr.psi  (chi-expr ?subject-expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr         expr.psi))
+	    (expr.sig  (psi-retvals-signature expr.psi)))
+       (syntax-match (retvals-signature-tags expr.sig) ()
+	 ((?type-id)
+	  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+	    ((r6rs-record-type)
+	     (let* ((rts         (syntactic-binding-descriptor.value binding))
+		    (method.stx  (r6rs-record-type-spec.applicable-method rts (identifier->symbol ?method-name-id) lexenv.run)))
+	       (if method.stx
+		   (let* ((method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+			  (method.core (psi-core-expr method.psi))
+			  (arg*.psi    (chi-expr* ?arg* lexenv.run lexenv.expand))
+			  (arg*.core   (map psi-core-expr arg*.psi)))
+		     (make-psi input-form.stx
+			       (build-application input-form.stx
+				 method.core
+				 (cons expr.core arg*.core))
+			       (psi-application-retvals-signature method.psi)))
+		 (%synner "unknown method name for type of subject expression" ?type-id))))
+
+	    ((vicare-struct-type)
+	     ;; (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+	     ;; 	    (field-names (struct-type-field-names std))
+	     ;; 	    (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?method-name-id)))
+	     ;;   `(struct-and-std-ref ,?object-expr ,field-idx (struct-type-descriptor ,?type-id)))
+	     (%synner "unsupported method call operation on struct type of subject expression"
+		      ?type-id))
+
+	    ((tag-type-spec)
+	     (%synner "unsupported method call operation on type of subject expression" ?type-id))
+	    ))
+
+	 (_
+	  (%synner "unable to determine type tag of expression, or invalid expression signature" expr.sig))
 	 )))
     ))
 

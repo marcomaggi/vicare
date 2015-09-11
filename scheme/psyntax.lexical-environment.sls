@@ -99,6 +99,11 @@
     object-type-spec.type-predicate-stx
     object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
     object-type-spec.unsafe-accessors-table		object-type-spec.unsafe-mutators-table
+    object-type-spec.methods-table
+
+    object-type-spec.safe-accessor			object-type-spec.safe-mutator
+    object-type-spec.unsafe-accessor			object-type-spec.unsafe-mutator
+    object-type-spec.applicable-method
 
     ;; object types specifications: R6RS records
     <r6rs-record-type-spec>
@@ -109,9 +114,11 @@
     r6rs-record-type-spec.type-predicate-id
     r6rs-record-type-spec.safe-accessors-table		r6rs-record-type-spec.safe-mutators-table
     r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
+    r6rs-record-type-spec.methods-table
 
     r6rs-record-type-spec.safe-accessor			r6rs-record-type-spec.safe-mutator
     r6rs-record-type-spec.unsafe-accessor		r6rs-record-type-spec.unsafe-mutator
+    r6rs-record-type-spec.applicable-method
 
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -177,6 +184,8 @@
     underscore-id			underscore-id?
     ellipsis-id				ellipsis-id?
     place-holder-id			place-holder-id?
+    brace-id				brace-id?
+    method-id				method-id?
     procedure-pred-id
     jolly-id?
 
@@ -2400,6 +2409,8 @@
   (define-core-prim-id-retriever ellipsis-id		...)
   (define-core-prim-id-retriever place-holder-id	<>)
   (define-core-prim-id-retriever procedure-pred-id	procedure?)
+  (define-core-prim-id-retriever method-id		method)
+  (define-core-prim-id-retriever brace-id		brace)
   #| end of let-syntax |# )
 
 (define (underscore-id? id)
@@ -2421,6 +2432,14 @@
   (and (identifier? id)
        (or (~free-identifier=? id (underscore-id))
 	   (~free-identifier=? id (place-holder-id)))))
+
+(define (method-id? id)
+  (and (identifier? id)
+       (~free-identifier=? id (method-id))))
+
+(define (brace-id? id)
+  (and (identifier? id)
+       (~free-identifier=? id (brace-id))))
 
 
 ;;;; public interface: identifiers handling

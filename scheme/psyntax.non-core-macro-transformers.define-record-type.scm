@@ -140,6 +140,10 @@
   (define foo-custom-printer-code
     (%make-custom-printer-code clause* foo foo-rtd synner))
 
+  ;;Code for methods.
+  (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
+    (%get-methods clause* foo synner))
+
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
@@ -148,7 +152,9 @@
 					    foo-parent foo-rtd foo-rcd
 					    x* mutable-x*
 					    foo-x* foo-x-set!*
-					    unsafe-foo-x* unsafe-foo-x-set!*))
+					    unsafe-foo-x* unsafe-foo-x-set!*
+					    method-name*.sym method-procname*.sym))
+
   (define tag-type-spec-form
     ;;The  tag-type-spec stuff  is used  to add  a tag  property to  the record  type
     ;;identifier.
@@ -181,6 +187,8 @@
       ;;Default constructor.
       (define ,make-foo
 	(record-constructor ,foo-rcd))
+      ;;Methods.
+      ,@method-form*.sexp
       ;;We want the default constructor function to have a signature specifying the
       ;;record-type as return type.
       (begin-for-syntax
@@ -507,6 +515,9 @@
       (_
        (synner "invalid syntax in PROTOCOL clause" clause)))))
 
+
+;;;; FIELDS clause
+
 (define (%get-fields clause*)
   ;;Return   a  list   of  syntax   objects  representing   the  field
   ;;specifications.
@@ -519,7 +530,6 @@
     ((_ . ?rest)
      (%get-fields ?rest))))
 
-
 (define (%parse-field-specs foo field-clause* synner)
   ;;Given the  arguments of the  fields specification clause  return 4
   ;;values:
@@ -674,11 +684,63 @@
        (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
 
 
-(define (%make-type-name-syntactic-binding-form foo.id make-foo.id foo-destructor.sym foo?.id
-						foo-parent.id foo-rtd.sym foo-rcd.sym
-						x* mutable-x*
-						foo-x* foo-x-set!*
-						unsafe-foo-x* unsafe-foo-x-set!*)
+;;;; METHOD clauses
+
+(define (%get-methods clause* foo synner)
+  ;;Return two  values: a list  of symbols representing the  method names; a  list of
+  ;;symbolic  expressions  (to  be  BLESSed later)  representing  expressions  which,
+  ;;expanded and evaluated at run-time, define the method procedures.
+  ;;
+  (define-syntax-rule (recurse ?clause*)
+    (%get-methods ?clause* foo synner))
+  (syntax-match clause* ()
+    (()
+     (values '() '() '()))
+
+    (((?method (?who . ?args) . ?body) . ?clause*)
+     (and (method-id? ?method)
+	  (identifier? ?who))
+     (receive (method-name*.sym method-procname*.sym method-form*.sexp)
+	 (recurse ?clause*)
+       (let* ((name.sym		(identifier->symbol ?who))
+	      (procname.sym	(%named-gensym/suffix foo (string-append "-" (symbol->string name.sym))))
+	      (form.sexp	`(define (,procname.sym . ,?args) . ,?body)))
+	 (if (memq name.sym method-name*.sym)
+	     (synner "multiple method definitions with the same name" ?who)
+	   (values (cons name.sym	method-name*.sym)
+		   (cons procname.sym	method-procname*.sym)
+		   (cons form.sexp	method-form*.sexp))))))
+
+    (((?method ((?brace ?who ?rv-tag0 . ?rv-tag*) . ?args) . ?body) . ?clause*)
+     (and (method-id? ?method)
+	  (brace-id?  ?brace)
+	  (identifier? ?who))
+     (receive (method-name*.sym method-procname*.sym method-form*.sexp)
+	 (recurse ?clause*)
+       (let* ((name.sym		(identifier->symbol ?who))
+	      (procname.sym	(%named-gensym/suffix foo (string-append "-" (symbol->string name.sym))))
+	      (form.sexp	`(define ((brace ,procname.sym ,?rv-tag0 . ,?rv-tag*) . ,?args) . ,?body)))
+	 (if (memq name.sym method-name*.sym)
+	     (synner "multiple method definitions with the same name" ?who)
+	   (values (cons name.sym	method-name*.sym)
+		   (cons procname.sym	method-procname*.sym)
+		   (cons form.sexp	method-form*.sexp))))))
+
+    (((?method . ?wrong-stuff) . ?clause*)
+     (method-id? ?method)
+     (synner "invalid syntax in METHOD clause" (cons ?method ?wrong-stuff)))
+
+    ((_ . ?clause*)
+     (recurse ?clause*))
+    ))
+
+
+(define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo-destructor.sym foo?.id
+						 foo-parent.id foo-rtd.sym foo-rcd.sym
+						 x* mutable-x*
+						 foo-x* foo-x-set!*
+						 unsafe-foo-x* unsafe-foo-x-set!*
+						 method-name*.sym method-procname*.sym)
   ;;Build and  return symbolic expression  representing a form which,  expanded and
   ;;evaluated at  expand-time, returns  the record-type name's  syntactic binding's
   ;;descriptor.
@@ -706,7 +768,10 @@
   ;;identifiers bound  to: the safe field  accessors; the safe field  mutators; the
   ;;unsafe field accessors; the unsafe field mutators.
   ;;
-  (define (%make-alist field-name*.id operator*.id)
+  ;;METHOD-NAME*.SYM  and  METHOD-PROCNAME*.SYM  must  be null  or  list  of  symbols
+  ;;representing: method names, names of procedures implementing the methods.
+  ;;
+  (define (%make-alist-from-ids field-name*.id operator*.id)
     ;;We  want  to   return  a  symbolic  expression   representing  the  following
     ;;expand-time expression:
     ;;
@@ -721,33 +786,41 @@
 		       (list 'cons `(quote ,(syntax->datum key.id)) `(syntax ,operator.id)))
 		  field-name*.id operator*.id)))
 
+  (define (%make-alist-from-syms key*.sym value*.sym)
+    (cons 'list (map (lambda (key.sym value.sym)
+		       (list 'cons `(quote ,key.sym) `(syntax ,value.sym)))
+		  key*.sym value*.sym)))
+
   ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
   ;;alist in which:  keys are symbols representing all the  field names; values are
   ;;identifiers bound to the safe accessors.
   (define foo-fields-safe-accessors.table
-    (%make-alist x* foo-x*))
+    (%make-alist-from-ids x* foo-x*))
 
   ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
   ;;alist in which:  keys are symbols representing mutable field  names; values are
   ;;identifiers bound to safe mutators.
   (define foo-fields-safe-mutators.table
-    (%make-alist mutable-x* foo-x-set!*))
+    (%make-alist-from-ids mutable-x* foo-x-set!*))
 
   ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
   ;;alist in which:  keys are symbols representing all the  field names; values are
   ;;identifiers bound to the unsafe accessors.
   (define foo-fields-unsafe-accessors.table
     (if (option.strict-r6rs)
-	'()
-      (%make-alist x* unsafe-foo-x*)))
+	'(quote ())
+      (%make-alist-from-ids x* unsafe-foo-x*)))
 
   ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
   ;;alist in which:  keys are symbols representing mutable field  names; values are
   ;;identifiers bound to unsafe mutators.
   (define foo-fields-unsafe-mutators.table
     (if (option.strict-r6rs)
-	'()
-      (%make-alist mutable-x* unsafe-foo-x-set!*)))
+	'(quote ())
+      (%make-alist-from-ids mutable-x* unsafe-foo-x-set!*)))
+
+  (define foo-methods.table
+    (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
   `(make-syntactic-binding-descriptor/record-type-name
     (make-r6rs-record-type-spec (syntax ,foo-rtd.sym) (syntax ,foo-rcd.sym)
@@ -757,7 +830,8 @@
 				,foo-fields-safe-accessors.table
 				,foo-fields-safe-mutators.table
 				,foo-fields-unsafe-accessors.table
-				,foo-fields-unsafe-mutators.table)))
+				,foo-fields-unsafe-mutators.table
+				,foo-methods.table)))
 
 
 (define (%make-tag-type-spec-form foo make-foo foo? foo-parent
@@ -844,7 +918,8 @@
     (define-constant EXTENDED-VALID-KEYWORDS
       (append R6RS-VALID-KEYWORDS
 	      (map bless
-		'(fields parent parent-rtd protocol sealed opaque destructor-protocol custom-printer))))
+		'(destructor-protocol custom-printer))
+	      (list (method-id))))
     (define-constant VALID-KEYWORDS
       (if (option.strict-r6rs)
 	  R6RS-VALID-KEYWORDS
@@ -864,7 +939,11 @@
 		    "invalid duplicate clause in DEFINE-RECORD-TYPE"
 		    input-form.stx ?kwd))
 		 (else
-		  (loop (cdr cls*) (cons ?kwd seen*)))))
+		  (loop (cdr cls*)
+			;;We allow multiple METHOD clauses.
+			(if (method-id? ?kwd)
+			    seen*
+			  (cons ?kwd seen*))))))
 	  (?cls
 	   (syntax-violation __module_who__
 	     "malformed define-record-type clause"

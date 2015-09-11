@@ -26,8 +26,10 @@
 	 object-type-spec.type-predicate-stx
 	 object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
 	 object-type-spec.unsafe-accessors-table	object-type-spec.unsafe-mutators-table
+	 object-type-spec.methods-table
 	 object-type-spec.safe-accessor			object-type-spec.safe-mutator
 	 object-type-spec.unsafe-accessor		object-type-spec.unsafe-mutator
+	 object-type-spec.applicable-method
 
 	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
@@ -37,8 +39,10 @@
 	 r6rs-record-type-spec.type-predicate-id
 	 r6rs-record-type-spec.safe-accessors-table	r6rs-record-type-spec.safe-mutators-table
 	 r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
+	 r6rs-record-type-spec.methods-table
 	 r6rs-record-type-spec.safe-accessor		r6rs-record-type-spec.safe-mutator
 	 r6rs-record-type-spec.unsafe-accessor		r6rs-record-type-spec.unsafe-mutator
+	 r6rs-record-type-spec.applicable-method
 	 )
 
 
@@ -60,7 +64,8 @@
 	 object-type-spec.safe-accessors-table
 	 object-type-spec.safe-mutators-table
 	 object-type-spec.unsafe-accessors-table
-	 object-type-spec.unsafe-mutators-table)
+	 object-type-spec.unsafe-mutators-table
+	 object-type-spec.methods-table)
 
   (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
     (nongenerative vicare:expander:<object-type-spec>)
@@ -144,6 +149,15 @@
 		;
 		;and called explicitly with the $SLOT-SET! syntax.
 
+     (immutable methods-table			object-type-spec.methods-table)
+		;Null or  an alist mapping  symbols representing the method  names to
+		;syntax objects which, expanded and evaluated at run-time, return the
+		;associated method applicable.  A method is meant to be used as:
+		;
+		;   (?method ?instance ?arg ...)
+		;
+		;and called explicitly with the METHOD-CALL syntax.
+
      #| end of FIELDS |# )
 
     (protocol
@@ -158,15 +172,18 @@
 		       '() ;safe-mutators-table
 		       '() ;unsafe-accessors-table
 		       '() ;unsafe-mutators-table
+		       '() ;methods-table
 		       ))
 	 ((parent-id
 	   constructor-stx destructor-stx type-predicate-stx
 	   safe-accessors-table safe-mutators-table
-	   unsafe-accessors-table unsafe-mutators-table)
+	   unsafe-accessors-table unsafe-mutators-table
+	   methods-table)
 	  (make-record parent-id
 		       constructor-stx destructor-stx type-predicate-stx
 		       safe-accessors-table safe-mutators-table
-		       unsafe-accessors-table unsafe-mutators-table)))))
+		       unsafe-accessors-table unsafe-mutators-table
+		       methods-table)))))
 
     #| end of DEFINE-RECORD-TYPE |# )
 
@@ -244,6 +261,32 @@
   #| end of module |# )
 
 
+;;;; basic object-type specification: methods application
+
+(define* (object-type-spec.applicable-method {spec object-type-spec?} method-name.sym lexenv)
+  ;;SPEC must an object-type specification  record.  METHOD-NAME.SYM must be a symbol
+  ;;representing a method name in the object-type specification.
+  ;;
+  ;;If METHOD-NAME.SYM is  EQ?  to the name  of a object's method:  return a symbolic
+  ;;expression (to be BLESSed later) representing a Scheme expression which, expanded
+  ;;and  evaluated at  run-time, returns  the method's  applicable; otherwise  return
+  ;;false.
+  ;;
+  (cond ((assq method-name.sym (object-type-spec.methods-table spec))
+	 ;;The method name  is known; extract the symbolic expression  from the alist
+	 ;;entry and return it.
+	 => cdr)
+	((let loop ((parent-id (object-type-spec.parent-id spec)))
+	   (and parent-id
+		(let* ((descr (id->object-type-binding-descriptor #f #f parent-id lexenv))
+		       (spec^ (syntactic-binding-descriptor.value descr)))
+		  (cond ((assq method-name.sym (object-type-spec.unsafe-mutators-table spec^))
+			 => cdr)
+			(else
+			 (loop (object-type-spec.parent-id spec^))))))))
+	(else #f)))
+
+
 ;;;; R6RS record-type specification
 
 ;;This record  type is  used as  syntactic binding descriptor  for R6RS  record types
@@ -277,11 +320,13 @@
 		parent-id
 		default-constructor-id default-destructor-id type-predicate-id
 		safe-accessors-table safe-mutators-table
-		unsafe-accessors-table unsafe-mutators-table)
+		unsafe-accessors-table unsafe-mutators-table
+		methods-table)
 	((make-object-type-spec parent-id
 				default-constructor-id default-destructor-id type-predicate-id
 				safe-accessors-table safe-mutators-table
-				unsafe-accessors-table unsafe-mutators-table)
+				unsafe-accessors-table unsafe-mutators-table
+				methods-table)
 	 rtd-id rcd-id)))))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -310,6 +355,12 @@
 
 (define (r6rs-record-type-spec.unsafe-mutators-table spec)
   (object-type-spec.unsafe-mutators-table spec))
+
+(define (r6rs-record-type-spec.methods-table spec)
+  (object-type-spec.methods-table spec))
+
+(define (r6rs-record-type-spec.applicable-method spec method-name.sym lexenv)
+  (object-type-spec.applicable-method spec method-name.sym lexenv))
 
 
 (module (r6rs-record-type-spec.safe-accessor
