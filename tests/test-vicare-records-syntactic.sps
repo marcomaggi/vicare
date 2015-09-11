@@ -1051,13 +1051,32 @@
 
   (check
       (let ((stru (new beta 1 2 3 4 5 6)))
+	(values (slot-ref stru a alpha)
+		(slot-ref stru b alpha)
+		(slot-ref stru c alpha)
+		(slot-ref stru a beta)
+		(slot-ref stru b beta)
+		(slot-ref stru c beta)
+		(slot-ref stru d beta)
+		(slot-ref stru e beta)
+		(slot-ref stru f beta)))
+    => 1 2 3 1 2 3 4 5 6)
+
+  (check
+      (let ((stru (new beta 1 2 3 4 5 6)))
+	(slot-set! stru a beta 10)
+	(slot-set! stru b beta 20)
+	(slot-set! stru c beta 30)
+	(slot-set! stru d beta 40)
+	(slot-set! stru e beta 50)
+	(slot-set! stru f beta 60)
 	(values (slot-ref stru a beta)
 		(slot-ref stru b beta)
 		(slot-ref stru c beta)
 		(slot-ref stru d beta)
 		(slot-ref stru e beta)
 		(slot-ref stru f beta)))
-    => 1 2 3 4 5 6)
+    => 10 20 30 40 50 60)
 
   #t)
 
