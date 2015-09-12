@@ -2091,30 +2091,72 @@
 	 ((?type-id)
 	  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 	    ((r6rs-record-type)
-	     (let* ((rts         (syntactic-binding-descriptor.value binding))
-		    (method.stx  (r6rs-record-type-spec.applicable-method rts (identifier->symbol ?method-name-id) lexenv.run)))
-	       (if method.stx
-		   (let* ((method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
-			  (method.core (psi-core-expr method.psi))
-			  (arg*.psi    (chi-expr* ?arg* lexenv.run lexenv.expand))
-			  (arg*.core   (map psi-core-expr arg*.psi)))
-		     (make-psi input-form.stx
-			       (build-application input-form.stx
-				 method.core
-				 (cons expr.core arg*.core))
-			       (psi-application-retvals-signature method.psi)))
-		 (%synner "unknown method name for type of subject expression" ?type-id))))
+	     (let* ((rts              (syntactic-binding-descriptor.value binding))
+		    (method-name.sym  (identifier->symbol ?method-name-id)))
+	       (cond
+		;;Look for a matching method name.
+		((r6rs-record-type-spec.applicable-method rts method-name.sym lexenv.run)
+		      => (lambda (method.stx)
+			   ;;A matching method name exists.
+			   (let* ((method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+				  (method.core (psi-core-expr method.psi))
+				  (arg*.psi    (chi-expr* ?arg* lexenv.run lexenv.expand))
+				  (arg*.core   (map psi-core-expr arg*.psi)))
+			     (make-psi input-form.stx
+				       (build-application input-form.stx
+					 method.core
+					 (cons expr.core arg*.core))
+				       (psi-application-retvals-signature method.psi)))))
+		;;If the input  form has the right syntax: look  for a matching field
+		;;name for accessor application.
+		((and (null? ?arg*)
+		      (r6rs-record-type-spec.safe-accessor rts method-name.sym lexenv.run))
+		 => (lambda (accessor.stx)
+		      ;;A matching field name exists.
+		      (let* ((accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+			     (accessor.core (psi-core-expr accessor.psi)))
+			(make-psi input-form.stx
+				  (build-application input-form.stx
+				    accessor.core
+				    (list expr.core))
+				  (psi-application-retvals-signature accessor.psi)))))
+		;;If the input  form has the right syntax: look  for a matching field
+		;;name for mutator application.
+		((and (pair? ?arg*)
+		      (null? (cdr ?arg*))
+		      (r6rs-record-type-spec.safe-mutator rts method-name.sym lexenv.run))
+		 => (lambda (mutator.stx)
+		      ;;A matching field name exists.
+		      (let* ((mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
+			     (mutator.core (psi-core-expr mutator.psi))
+			     (arg*.psi     (chi-expr* ?arg* lexenv.run lexenv.expand))
+			     (arg*.core    (map psi-core-expr arg*.psi)))
+			(make-psi input-form.stx
+				  (build-application input-form.stx
+				    mutator.core
+				    (cons expr.core arg*.core))
+				  (psi-application-retvals-signature mutator.psi)))))
+		(else
+		 (raise
+		  (condition (make-who-condition __who__)
+			     (make-message-condition "unknown method name for type of subject expression")
+			     (make-syntax-violation input-form.stx ?subject-expr)
+			     (make-type-syntactic-identifier-condition ?type-id)
+			     (make-type-method-name-condition method-name.sym)))))))
 
 	    ((vicare-struct-type)
-	     ;; (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-	     ;; 	    (field-names (struct-type-field-names std))
-	     ;; 	    (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?method-name-id)))
-	     ;;   `(struct-and-std-ref ,?object-expr ,field-idx (struct-type-descriptor ,?type-id)))
-	     (%synner "unsupported method call operation on struct type of subject expression"
-		      ?type-id))
+	     (raise
+	      (condition (make-who-condition __who__)
+			 (make-message-condition "unsupported method call operation on struct-type of subject expression")
+			 (make-syntax-violation input-form.stx ?subject-expr)
+			 (make-type-syntactic-identifier-condition ?type-id))))
 
 	    ((tag-type-spec)
-	     (%synner "unsupported method call operation on type of subject expression" ?type-id))
+	     (raise
+	      (condition (make-who-condition __who__)
+			 (make-message-condition "unsupported method call operation on type of subject expression")
+			 (make-syntax-violation input-form.stx ?subject-expr)
+			 (make-type-syntactic-identifier-condition ?type-id))))
 	    ))
 
 	 (_

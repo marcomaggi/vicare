@@ -26,11 +26,13 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare language-extensions syntaxes)
-  (vicare system $structs)
-  (libtest records-lib)
-  (vicare checks))
+(program (test-vicare-records-syntactic)
+  #;(options tagged-language)
+  (import (vicare)
+    (vicare language-extensions syntaxes)
+    (vicare system $structs)
+    (libtest records-lib)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare R6RS records, syntactic layer\n")
@@ -1556,6 +1558,8 @@
 
 (parametrise ((check-test-name	'methods))
 
+;;; no parent
+
   (check
       (internal-body
 
@@ -1595,6 +1599,203 @@
 	(values (method-call get-a O)
 		(method-call get-b O)))
     => 10 20)
+
+  ;;Field accessors.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(values (method-call a O)
+		(method-call b O)))
+    => 1 2)
+
+  ;;Field accessors and mutators.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(method-call a O 10)
+	(method-call b O 20)
+	(values (method-call a O)
+		(method-call b O)))
+    => 10 20)
+
+;;; --------------------------------------------------------------------
+;;; calling parent's methods
+
+  ;;Record-type with parent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields one two)
+	  (method (sum-them O)
+	    (+ (duo-one O)
+	       (duo-two O))))
+
+	(define-record-type trio
+	  (parent duo)
+	  (fields three)
+	  (method (mul-them O)
+	    (* (duo-one O)
+	       (duo-two O)
+	       (trio-three O))))
+
+	(define {O trio}
+	  (make-trio 3 5 7))
+
+	(values (method-call sum-them O)
+		(method-call mul-them O)))
+    => (+ 3 5) (* 3 5 7))
+
+  ;;Record-type with parent and grandparent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields one two)
+	  (method (sum-them O)
+	    (+ (duo-one O)
+	       (duo-two O))))
+
+	(define-record-type trio
+	  (parent duo)
+	  (fields three)
+	  (method (mul-them O)
+	    (* (duo-one O)
+	       (duo-two O)
+	       (trio-three O))))
+
+	(define-record-type quater
+	  (parent trio)
+	  (fields four)
+	  (method (list-them O)
+	    (list (duo-one O)
+		  (duo-two O)
+		  (trio-three O)
+		  (quater-four O))))
+
+	(define {O quater}
+	  (make-quater 3 5 7 11))
+
+	(values (method-call sum-them O)
+		(method-call mul-them O)
+		(method-call list-them O)))
+    => (+ 3 5) (* 3 5 7) (list 3 5 7 11))
+
+  ;;Accessing fields of record-type with parent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields one two))
+
+	(define-record-type trio
+	  (parent duo)
+	  (fields three))
+
+	(define {O trio}
+	  (make-trio 3 5 7))
+
+	(values (method-call one O)
+		(method-call two O)
+		(method-call three O)))
+    => 3 5 7)
+
+  ;;Accessing and mutating fields of record-type with parent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields (mutable one)
+		  (mutable two)))
+
+	(define-record-type trio
+	  (parent duo)
+	  (fields (mutable three)))
+
+	(define {O trio}
+	  (make-trio 3 5 7))
+
+	(method-call one O 30)
+	(method-call two O 50)
+	(method-call three O 70)
+	(values (method-call one O)
+		(method-call two O)
+		(method-call three O)))
+    => 30 50 70)
+
+  ;;Accessing fields of record-type with parent and grandparent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields one two))
+
+	(define-record-type trio
+	  (parent duo)
+	  (fields three))
+
+	(define-record-type quater
+	  (parent trio)
+	  (fields four))
+
+	(define {O quater}
+	  (make-quater 3 5 7 11))
+
+	(values (method-call one O)
+		(method-call two O)
+		(method-call three O)
+		(method-call four O)))
+    => 3 5 7 11)
+
+  ;;Accessing and mutating fields of record-type with parent and grandparent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields (mutable one)
+		  (mutable two)))
+
+	(define-record-type trio
+	  (parent duo)
+	  (fields (mutable three)))
+
+	(define-record-type quater
+	  (parent trio)
+	  (fields (mutable four)))
+
+	(define {O quater}
+	  (make-quater 3 5 7 11))
+
+	(method-call one O 1)
+	(method-call two O 2)
+	(method-call three O 3)
+	(method-call four O 4)
+	(values (method-call one O)
+		(method-call two O)
+		(method-call three O)
+		(method-call four O)))
+    => 1 2 3 4)
 
 ;;; --------------------------------------------------------------------
 ;;; dot notation
@@ -1707,6 +1908,8 @@
 
 (collect 4)
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;;Local Variables:

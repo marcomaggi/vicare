@@ -206,6 +206,16 @@
     identifier-append
 
     ;; condition object types
+    &type-syntactic-identifier
+    make-type-syntactic-identifier-condition
+    condition-type-syntactic-identifier?
+    condition-type-syntactic-identifier
+
+    &type-method-name
+    make-type-method-name-condition
+    condition-type-method-name?
+    condition-type-method-name
+
     &syntax-definition-expanded-rhs-condition
     make-syntax-definition-expanded-rhs-condition
     syntax-definition-expanded-rhs-condition?
@@ -2662,6 +2672,23 @@
 
 
 ;;;; condition object types: descriptive objects
+
+;;This is used  to describe a type involved  in an exception.  The field  must be the
+;;syntactic identifier  bound to the type  specification (for example the  name of an
+;;R6RS record type).
+(define-condition-type &type-syntactic-identifier
+    &condition
+  make-type-syntactic-identifier-condition
+  condition-type-syntactic-identifier?
+  (id condition-type-syntactic-identifier))
+
+;;This is used to describe a type's  method name involved in an exception.  The field
+;;must be a symbol representing the method name.
+(define-condition-type &type-method-name
+    &condition
+  make-type-method-name-condition
+  condition-type-method-name?
+  (method-name condition-type-method-name))
 
 ;;This  is  used  to describe  exceptions  in  which  the  expanded expression  of  a
 ;;right-hand side (RHS) syntax  definition (DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,

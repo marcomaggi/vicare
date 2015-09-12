@@ -280,7 +280,7 @@
 	   (and parent-id
 		(let* ((descr (id->object-type-binding-descriptor #f #f parent-id lexenv))
 		       (spec^ (syntactic-binding-descriptor.value descr)))
-		  (cond ((assq method-name.sym (object-type-spec.unsafe-mutators-table spec^))
+		  (cond ((assq method-name.sym (object-type-spec.methods-table spec^))
 			 => cdr)
 			(else
 			 (loop (object-type-spec.parent-id spec^))))))))
