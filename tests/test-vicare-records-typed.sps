@@ -643,6 +643,135 @@
   #t)
 
 
+(parametrise ((check-test-name	'case-methods))
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (case-method get-a
+	    ((O)
+	     (alpha-a O)))
+	  (case-method get-b
+	    ((O)
+	     (alpha-b O))))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(values (method-call get-a O)
+		(method-call get-b O)))
+    => 1 2)
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (case-method on-a
+	    ((O)
+	     (alpha-a O))
+	    ((O v)
+	     (alpha-a-set! O v)))
+	  (case-method on-b
+	    ((O)
+	     (alpha-b O))
+	    ((O v)
+	     (alpha-b-set! O v))))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(method-call on-a O 10)
+	(method-call on-b O 20)
+	(values (method-call on-a O)
+		(method-call on-b O)))
+    => 10 20)
+
+;;; --------------------------------------------------------------------
+;;; dot notation
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (case-method on-a
+	    ((O)
+	     (alpha-a O)))
+	  (case-method on-b
+	    ((O)
+	     (alpha-b O))))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(values (.on-a O)
+		(.on-b O)))
+    => 1 2)
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (case-method on-a
+	    ((O)
+	     (alpha-a O))
+	    ((O v)
+	     (alpha-a-set! O v)))
+	  (case-method on-b
+	    ((O)
+	     (alpha-b O))
+	    ((O v)
+	     (alpha-b-set! O v))))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(.on-a O 10)
+	(.on-b O 20)
+	(values (.on-a O)
+		(.on-b O)))
+    => 10 20)
+
+;;; --------------------------------------------------------------------
+;;; misc method examples
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (case-method doit
+	    ((O c d)
+	     (+ (alpha-a O) (alpha-b O) c d))))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(.doit O 3 4))
+    => (+ 1 2 3 4))
+
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (case-method doit
+	    ((O . arg*)
+	     (apply + (alpha-a O) (alpha-b O) arg*))))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(.doit O 3 4))
+    => (+ 1 2 3 4))
+
+  #t)
+
+
 ;;;; done
 
 (collect 'fullest)

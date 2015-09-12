@@ -762,6 +762,28 @@
      (method-id? ?method)
      (synner "invalid syntax in METHOD clause" (cons ?method ?wrong-stuff)))
 
+    ;; ------------------------------------------------------------
+
+    (((?case-method ?who . ?stuff) . ?clause*)
+     (and (case-method-id? ?case-method)
+	  (identifier? ?who))
+     (receive (method-name*.sym method-procname*.sym method-form*.sexp)
+	 (recurse ?clause*)
+       (let* ((name.sym		(identifier->symbol ?who))
+	      (procname.sym	(%named-gensym/suffix foo (string-append "-" (symbol->string name.sym))))
+	      (form.sexp	`(case-define ,procname.sym . ,?stuff)))
+	 (if (memq name.sym method-name*.sym)
+	     (synner "multiple method definitions with the same name" ?who)
+	   (values (cons name.sym	method-name*.sym)
+		   (cons procname.sym	method-procname*.sym)
+		   (cons form.sexp	method-form*.sexp))))))
+
+    (((?case-method . ?wrong-stuff) . ?clause*)
+     (case-method-id? ?case-method)
+     (synner "invalid syntax in METHOD clause" (cons ?case-method ?wrong-stuff)))
+
+    ;; ------------------------------------------------------------
+
     ((_ . ?clause*)
      (recurse ?clause*))
     ))
@@ -957,7 +979,7 @@
       (append R6RS-VALID-KEYWORDS
 	      (map bless
 		'(destructor-protocol custom-printer))
-	      (list (method-id))))
+	      (list (method-id) (case-method-id))))
     (define-constant VALID-KEYWORDS
       (if (option.strict-r6rs)
 	  R6RS-VALID-KEYWORDS
@@ -978,8 +1000,9 @@
 		    input-form.stx ?kwd))
 		 (else
 		  (loop (cdr cls*)
-			;;We allow multiple METHOD clauses.
-			(if (method-id? ?kwd)
+			;;We allow multiple METHOD and CASE-METHOD clauses.
+			(if (or (method-id? ?kwd)
+				(case-method-id? ?kwd))
 			    seen*
 			  (cons ?kwd seen*))))))
 	  (?cls

@@ -186,6 +186,7 @@
     place-holder-id			place-holder-id?
     brace-id				brace-id?
     method-id				method-id?
+    case-method-id			case-method-id?
     procedure-pred-id
     jolly-id?
 
@@ -2420,6 +2421,7 @@
   (define-core-prim-id-retriever place-holder-id	<>)
   (define-core-prim-id-retriever procedure-pred-id	procedure?)
   (define-core-prim-id-retriever method-id		method)
+  (define-core-prim-id-retriever case-method-id		case-method)
   (define-core-prim-id-retriever brace-id		brace)
   #| end of let-syntax |# )
 
@@ -2446,6 +2448,10 @@
 (define (method-id? id)
   (and (identifier? id)
        (~free-identifier=? id (method-id))))
+
+(define (case-method-id? id)
+  (and (identifier? id)
+       (~free-identifier=? id (case-method-id))))
 
 (define (brace-id? id)
   (and (identifier? id)
