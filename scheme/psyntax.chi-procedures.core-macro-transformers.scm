@@ -2139,12 +2139,12 @@
 		      ;;A matching field name exists.
 		      (let* ((mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
 			     (mutator.core (psi-core-expr mutator.psi))
-			     (arg*.psi     (chi-expr* ?arg* lexenv.run lexenv.expand))
-			     (arg*.core    (map psi-core-expr arg*.psi)))
+			     (arg.psi      (chi-expr (car ?arg*) lexenv.run lexenv.expand))
+			     (arg.core     (psi-core-expr arg.psi)))
 			(make-psi input-form.stx
 				  (build-application input-form.stx
 				    mutator.core
-				    (cons expr.core arg*.core))
+				    (list expr.core arg.core))
 				  (psi-application-retvals-signature mutator.psi)))))
 		(else
 		 (raise
@@ -2155,11 +2155,38 @@
 			     (make-type-method-name-condition method-name.sym)))))))
 
 	    ((vicare-struct-type)
-	     (raise
-	      (condition (make-who-condition __who__)
-			 (make-message-condition "unsupported method call operation on struct-type of subject expression")
-			 (make-syntax-violation input-form.stx ?subject-expr)
-			 (make-type-syntactic-identifier-condition ?type-id))))
+	     (cond ((null? ?arg*)
+		    (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+			   (field-names (struct-type-field-names std))
+			   (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?method-name-id)))
+		      (make-psi input-form.stx
+				(build-application input-form.stx
+				  (build-primref no-source 'struct-and-std-ref)
+				  (list expr.core
+					(build-data no-source field-idx)
+					(build-data no-source std)))
+				(make-retvals-signature-single-top))))
+		   ((and (pair? ?arg*)
+			 (null? (cdr ?arg*)))
+		    (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
+			   (field-names (struct-type-field-names std))
+			   (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?method-name-id))
+			   (arg.psi     (chi-expr (car ?arg*) lexenv.run lexenv.expand))
+			   (arg.core    (psi-core-expr arg.psi)))
+		      (make-psi input-form.stx
+				(build-application input-form.stx
+				  (build-primref no-source 'struct-and-std-set!)
+				  (list expr.core
+					(build-data no-source field-idx)
+					(build-data no-source std)
+					arg.core))
+				(make-retvals-signature-single-void))))
+		   (else
+		    (raise
+		     (condition (make-who-condition __who__)
+				(make-message-condition "unsupported method call operation on struct-type of subject expression")
+				(make-syntax-violation input-form.stx ?subject-expr)
+				(make-type-syntactic-identifier-condition ?type-id))))))
 
 	    ((tag-type-spec)
 	     (raise
