@@ -432,7 +432,7 @@
     ;;
     (%spec-actor spec field-name.sym lexenv r6rs-record-type-spec.unsafe-mutators-table  'unsafe-record-mutator))
 
-  (define (%spec-actor spec field-name.sym lexenv table-getter actor-constructor)
+  (define* (%spec-actor spec field-name.sym lexenv table-getter actor-constructor)
     ;;TABLE-GETTER  must be  a  function  which, applied  to  the  SPEC, returns  the
     ;;required association list.
     ;;
