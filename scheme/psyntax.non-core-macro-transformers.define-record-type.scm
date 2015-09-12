@@ -132,6 +132,13 @@
   (define foo-destructor-code
     (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd parent-rtd-code synner))
 
+  ;;This is null if  there is no destructor; otherwise it is a  list holding a DEFINE
+  ;;form defining the default destructor function, the list is spliced in the output.
+  (define foo-destructor-definition
+    (if foo-destructor-code
+	`((define ,foo-destructor ,foo-destructor-code))
+      '()))
+
   ;;Code for protocol.
   (define constructor-protocol-code
     (%get-constructor-protocol-code clause* synner))
@@ -148,7 +155,9 @@
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
   (define foo-syntactic-binding-form
-    (%make-type-name-syntactic-binding-form foo make-foo foo-destructor foo?
+    (%make-type-name-syntactic-binding-form foo make-foo
+					    (and foo-destructor-code foo-destructor)
+					    foo?
 					    foo-parent foo-rtd foo-rcd
 					    x* mutable-x*
 					    foo-x* foo-x-set!*
@@ -174,7 +183,7 @@
       ;;Record-constructor descriptor.
       (define ,foo-rcd ,foo-rcd-code)
       ;;Record destructor function.
-      (define ,foo-destructor ,foo-destructor-code)
+      ,@foo-destructor-definition
       ;;Record printer function.
       (define ,foo-custom-printer ,foo-custom-printer-code)
       ;;Syntactic binding for record-type name.
@@ -749,6 +758,10 @@
   ;;
   ;;MAKE-FOO.ID must be the identifier bound to the default constructor function.
   ;;
+  ;;FOO-DESTRUCTOR.SYM must be  false if this record-type has  no default destructor;
+  ;;otherwise it must  be a symbol representing the name  of the syntactic identifier
+  ;;to which the destructor function is bound.
+  ;;
   ;;FOO?.ID must be the identifier bound to the type predicate.
   ;;
   ;;FOO-PARENT.ID must be false or the identifier bound to the parent's type name.
@@ -825,7 +838,9 @@
   `(make-syntactic-binding-descriptor/record-type-name
     (make-r6rs-record-type-spec (syntax ,foo-rtd.sym) (syntax ,foo-rcd.sym)
 				,(and foo-parent.id `(syntax ,foo-parent.id))
-				(syntax ,make-foo.id) (syntax ,foo-destructor.sym)
+				(syntax ,make-foo.id)
+				,(and foo-destructor.sym
+				      `(syntax ,foo-destructor.sym))
 				(syntax ,foo?.id)
 				,foo-fields-safe-accessors.table
 				,foo-fields-safe-mutators.table

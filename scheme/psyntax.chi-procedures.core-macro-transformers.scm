@@ -1819,12 +1819,22 @@
        ;;
        ;;   (?deafult-record-destructor-id ?expr)
        ;;
-       (make-psi input-form.stx
-		 (build-application no-source
-		   (psi-core-expr (chi-expr (r6rs-record-type-spec.default-destructor-id (syntactic-binding-descriptor.value binding))
-					    lexenv.run lexenv.expand))
-		   (list (psi-core-expr expr.psi)))
-		 (make-retvals-signature-single-top)))
+       (cond ((r6rs-record-type-spec.default-destructor-id (syntactic-binding-descriptor.value binding))
+	      => (lambda (default-destructor-id)
+		   ;;This record type has a default destructor.
+		   (make-psi input-form.stx
+			     (build-application no-source
+			       (psi-core-expr (chi-expr default-destructor-id
+							lexenv.run lexenv.expand))
+			       (list (psi-core-expr expr.psi)))
+			     (make-retvals-signature-single-top))))
+	     (else
+	      ;;This record  type has  *no* default destructor.   Just expand  to the
+	      ;;constant void object, which, when appropriate, will be llater removed
+	      ;;by the compiler.
+	      (make-psi input-form.stx
+			(build-void)
+			(make-retvals-signature-single-void)))))
 
       ((vicare-struct-type)
        ;;For structs we want to expand to an equivalent of:
