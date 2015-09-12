@@ -126,26 +126,44 @@
   ;;Code  to  build  at  run-time:  the  record-type  descriptor;  the  record-type
   ;;constructor descriptor; the record-type destructor function.
   (define foo-rtd-code
-    (%make-rtd-code foo foo-uid clause* parent-rtd synner))
+    (%make-rtd-code foo foo-uid clause* (and parent-rtd-code parent-rtd) synner))
   (define foo-rcd-code
     (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code))
   (define foo-destructor-code
-    (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd parent-rtd-code synner))
-
-  ;;This is null if  there is no destructor; otherwise it is a  list holding a DEFINE
-  ;;form defining the default destructor function, the list is spliced in the output.
-  (define foo-destructor-definition
-    (if foo-destructor-code
-	`((define ,foo-destructor ,foo-destructor-code))
-      '()))
+    (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent (and parent-rtd-code parent-rtd) synner))
 
   ;;Code for protocol.
   (define constructor-protocol-code
     (%get-constructor-protocol-code clause* synner))
 
-  ;;Code for custom printer
+  ;;Code  for custom  printer.  False  or  a form  evaluating to  the custom  printer
+  ;;function.
   (define foo-custom-printer-code
     (%make-custom-printer-code clause* foo foo-rtd synner))
+
+  ;;Definition forms.
+  ;;
+  (begin
+    ;;This is null if  there is parent; otherwise it is a list  holding a DEFINE form
+    ;;defining the parent RTD syntactic binding, the list is spliced in the output.
+    (define parent-rtd-definition
+      (if parent-rtd-code
+	  `((define ,parent-rtd ,parent-rtd-code))
+	'()))
+    ;;This is null if there is no destructor; otherwise it is a list holding a DEFINE
+    ;;form  defining the  default destructor  function, the  list is  spliced in  the
+    ;;output.
+    (define foo-destructor-definition
+      (if foo-destructor-code
+	  `((define ,foo-destructor ,foo-destructor-code))
+	'()))
+    ;;This is null  if there is no custom  printer; otherwise it is a  list holding a
+    ;;DEFINE form  defining the custom printer  function, the list is  spliced in the
+    ;;output.
+    (define foo-printer-definition
+      (if foo-custom-printer-code
+	  `((define ,foo-custom-printer ,foo-custom-printer-code))
+	'())))
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
@@ -175,7 +193,7 @@
   (bless
    `(begin
       ;;Parent record-type descriptor.
-      (define ,parent-rtd ,parent-rtd-code)
+      ,@parent-rtd-definition
       ;;Record-type descriptor.
       (define ,foo-rtd ,foo-rtd-code)
       ;;Protocol function.
@@ -185,7 +203,7 @@
       ;;Record destructor function.
       ,@foo-destructor-definition
       ;;Record printer function.
-      (define ,foo-custom-printer ,foo-custom-printer-code)
+      ,@foo-printer-definition
       ;;Syntactic binding for record-type name.
       (define-syntax ,foo
 	,foo-syntactic-binding-form)
@@ -351,9 +369,14 @@
 
 ;;;; RTD and RCD code
 
-(define (%make-rtd-code name foo-uid clause* parent-rtd-code synner)
-  ;;Return a  sexp which,  when evaluated,  will return  a record-type
+(define (%make-rtd-code name foo-uid clause* parent-rtd synner)
+  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression  which, expanded  and  evaluated at  run-time,  returns a  record-type
   ;;descriptor.
+  ;;
+  ;;PARENT-RTD must be false if this record-type  has no parent; otherwise it must be
+  ;;a symbol  representing the name of  the syntactic identifier bound  to the parent
+  ;;RTD.
   ;;
   (define sealed?
     (let ((clause (%get-clause 'sealed clause*)))
@@ -399,7 +422,7 @@
 
 	(_
 	 (synner "invalid syntax in FIELDS clause" clause)))))
-  `(make-record-type-descriptor (quote ,name) ,parent-rtd-code
+  `(make-record-type-descriptor (quote ,name) ,parent-rtd
 				(quote ,foo-uid) ,sealed? ,opaque? ,fields))
 
 ;;; --------------------------------------------------------------------
@@ -453,18 +476,18 @@
        (synner "invalid syntax in PARENT clause" parent-clause)))))
 
 
-(define (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd parent-rtd-code synner)
+(define (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd.sym synner)
   ;;Extract from the  CLAUSE* the DESTRUCTOR-PROTOCOL one and  return an expression
   ;;which, expanded and evaluated at run-time, will return the destructor function;
   ;;the expression will return false if there is no destructor.
   ;;
-  ;;If FOO-PARENT is  not false: this record  type has a parent  specified with the
-  ;;PARENT clause;  in this  case: PARENT-RTD  is an  expression evaluating  to the
-  ;;parent's RTD.
+  ;;If FOO-PARENT  is false:  this record-type  definition has  no PARENT  clause, so
+  ;;either it has  no parent or its  parent is specified with  the PARENT-RTD clause.
+  ;;If FOO-PARENT is  true: this record type  has a parent specified  with the PARENT
+  ;;clause.
   ;;
-  ;;If PARENT-RTD-CODE is  not false: this record type has  a parent specified with
-  ;;the PARENT-RTD clause; in this case:  PARENT-RTD is an expression evaluating to
-  ;;the parent's RTD.
+  ;;PARENT-RTD.SYM is  false if  this record-type  has no parent;  otherwise it  is a
+  ;;symbol representing the name of the syntactic identifier bound to the parent RTD.
   ;;
   (let ((clause (%get-clause 'destructor-protocol clause*))
 	(foo-destructor-protocol (%named-gensym/suffix foo "-destructor-protocol")))
@@ -477,8 +500,8 @@
 	      "expected closure object as result of evaluating the destructor protocol expression"
 	      ,foo-destructor-protocol))
 	  (receive-and-return (,foo-destructor)
-	      ,(if (or foo-parent parent-rtd-code)
-		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd))
+	      ,(if (or foo-parent parent-rtd.sym)
+		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
 		 `(,foo-destructor-protocol))
 	    (if (procedure? ,foo-destructor)
 		(record-type-destructor-set! ,foo-rtd ,foo-destructor)
@@ -496,9 +519,9 @@
       ;;record destructor variable is set to false.
       ;;
       (#f
-       (if (or foo-parent parent-rtd-code)
+       (if (or foo-parent parent-rtd.sym)
 	   (let ((foo-parent-destructor (%named-gensym/suffix foo "-parent-destructor")))
-	     `(cond ((record-type-destructor ,parent-rtd)
+	     `(cond ((record-type-destructor ,parent-rtd.sym)
 		     => (lambda (,foo-parent-destructor)
 			  (record-type-destructor-set! ,foo-rtd ,foo-parent-destructor)
 			  ,foo-parent-destructor))))
