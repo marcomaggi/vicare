@@ -101,6 +101,14 @@
   ;;FOO-PARENT: an identifier  representing the parent type, or false  if there is no
   ;;parent or the parent is specified through the procedural layer.
   ;;
+  ;;PARENT-RTD: false  if this record-type  has no parent;  otherwise it is  a symbol
+  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
+  ;;record-type descriptor.
+  ;;
+  ;;PARENT-RCD: false  if this record-type  has no parent;  otherwise it is  a symbol
+  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
+  ;;record-constructor descriptor.
+  ;;
   ;;PARENT-RTD-CODE: false or a symbolic expression representing an expression which,
   ;;expanded  and  evaluated   at  run-time,  will  return   the  parent  record-type
   ;;descriptor.
@@ -108,22 +116,8 @@
   ;;PARENT-RCD-CODE: false or a symbolic  expression representing a Scheme expression
   ;;which, expanded  and evaluated  at run-time, will  return the  parent record-type
   ;;default constructor descriptor.
-  (define-values (foo-parent parent-rtd-code parent-rcd-code)
-    (%make-parent-rtd+rcd-code clause* input-form.stx synner))
-
-  ;;If  this record-type  has no  parent: this  is false;  otherwise it  is a  symbol
-  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
-  ;;record-type descriptor.
-  (define parent-rtd
-    (and parent-rtd-code
-	 (%named-gensym/suffix foo "-parent-rtd")))
-
-  ;;If  this record-type  has no  parent: this  is false;  otherwise it  is a  symbol
-  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
-  ;;record-constructor descriptor.
-  (define parent-rcd
-    (and parent-rcd-code
-	 (%named-gensym/suffix foo "-parent-rcd")))
+  (define-values (foo-parent parent-rtd parent-rcd parent-rtd-code parent-rcd-code)
+    (%make-parent-rtd+rcd-code clause* foo input-form.stx synner))
 
   ;;This can be  a symbol or false.  When  a symbol: the symbol is  the record type
   ;;UID, which will make this record  type non-generative.  When false: this record
@@ -790,46 +784,66 @@
 	#| end of module: unsafe accessors and mutators |# ))))
 
 
-(define (%make-parent-rtd+rcd-code clause* input-form.stx synner)
-  ;;Return 3 values:
+(define (%make-parent-rtd+rcd-code clause* foo input-form.stx synner)
+  ;;Parse  the PARENT  and PARENT-RTD  definition clauses  in CLAUSE*.   Return these
+  ;;values:
   ;;
-  ;;1. A syntactic identifier  representing the parent type, or false  if there is no
-  ;;parent or the parent is specified through the procedural layer.
+  ;;1. FOO-PARENT: an  identifier representing the parent type, or  false if there is
+  ;;no parent or the parent is specified through the procedural layer.
   ;;
-  ;;2. False of a symbolic expression  representing an expression which, expanded and
-  ;;evaluated at run-time, will return the parent's record-type descriptor.
+  ;;2. PARENT-RTD: false if this record-type has  no parent; otherwise it is a symbol
+  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
+  ;;record-type descriptor.
   ;;
-  ;;3.  False or a symbolic expression representing an expression which, expanded and
-  ;;evaluated at  run-time, will  return the  parent record-type  default constructor
-  ;;descriptor.
+  ;;3. PARENT-RCD: false if this record-type has  no parent; otherwise it is a symbol
+  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
+  ;;record-constructor descriptor.
+  ;;
+  ;;4.   PARENT-RTD-CODE:  false of  a  symbolic  expression  (to be  BLESSed  later)
+  ;;representing a Scheme expression which,  expanded and evaluated at run-time, will
+  ;;return the parent's record-type descriptor.
+  ;;
+  ;;5.   PARENT-RCD-CODE:  false or  a  symbolic  expression  (to be  BLESSed  later)
+  ;;representing a Scheme expression which,  expanded and evaluated at run-time, will
+  ;;return the parent record-type default constructor descriptor.
   ;;
   (let ((parent-clause (%get-clause 'parent clause*)))
     (syntax-match parent-clause ()
       ;;If there  is a  PARENT clause  insert code  that retrieves  the RTD  from the
       ;;parent type name.
-      ((_ ?name)
-       (identifier? ?name)
+      ((_ ?parent-name)
+       (identifier? ?parent-name)
        (begin
-	 (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx ?name (current-inferior-lexenv))
-	 ;;Validate ?NAME  as syntactic identifier  bound to a  record-type syntactic
+	 (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx ?parent-name (current-inferior-lexenv))
+	 ;;Validate ?PARENT-NAME  as syntactic identifier  bound to a  record-type syntactic
 	 ;;binding.
-	 (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?name (current-inferior-lexenv))
-	 (values ?name
-		 `(record-type-descriptor ,?name)
-		 `(record-constructor-descriptor ,?name))))
+	 (let* ((parent-descr (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
+		(parent-rts   (syntactic-binding-descriptor.value parent-descr))
+		(parent-proto (r6rs-record-type-spec.super-protocol-id parent-rts)))
+	   (values ?parent-name
+		   (%named-gensym/suffix foo "-parent-rtd")
+		   (%named-gensym/suffix foo "-parent-rcd")
+		   `(record-type-descriptor ,?parent-name)
+		   ;;If the parent  has a super-type constructor  descriptor: use it;
+		   ;;otherwise use the default constructor descriptor.
+		   (or parent-proto
+		       `(record-constructor-descriptor ,?parent-name))))))
 
       ;;If there is no PARENT clause try to retrieve the expression evaluating to the
       ;;RTD.
       (#f
        (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
 	 (syntax-match parent-rtd-clause ()
-	   ((_ ?rtd ?rcd)
-	    (values #f ?rtd ?rcd))
+	   ((_ ?parent-rtd ?parent-rcd)
+	    (values #f
+		    (%named-gensym/suffix foo "-parent-rtd")
+		    (%named-gensym/suffix foo "-parent-rcd")
+		    ?parent-rtd ?parent-rcd))
 
 	   ;;If  neither the  PARENT nor  the  PARENT-RTD clauses  are present:  just
 	   ;;return false.
 	   (#f
-	    (values #f #f #f))
+	    (values #f #f #f #f #f))
 
 	   (_
 	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
