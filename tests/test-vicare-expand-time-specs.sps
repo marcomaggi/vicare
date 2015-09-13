@@ -105,16 +105,16 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (values ((slot-ref <> car <pair>) '(1 . 2))
-	      ((slot-ref <> cdr <pair>) '(1 . 2)))
+      (values ((slot-ref _ car <pair>) '(1 . 2))
+	      ((slot-ref _ cdr <pair>) '(1 . 2)))
     => 1 2)
 
   (check
       (let ((P (cons 1 2)))
-	((slot-set! <> car <pair> <>) P 10)
-	((slot-set! <> cdr <pair> <>) P 20)
-	(values ((slot-ref <> car <pair>) P)
-		((slot-ref <> cdr <pair>) P)))
+	((slot-set! _ car <pair> _) P 10)
+	((slot-set! _ cdr <pair> _) P 20)
+	(values ((slot-ref _ car <pair>) P)
+		((slot-ref _ cdr <pair>) P)))
     => 10 20)
 
   #t)

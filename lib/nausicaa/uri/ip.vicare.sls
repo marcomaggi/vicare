@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -434,7 +434,7 @@
   (parent <vector>)
   (predicate (lambda ({obj <vector>})
 	       (and ($fx= 8 (obj $length))
-		    ($vector-for-all1 (is-a? <> <ipv6-address-fixnum>) obj)))))
+		    ($vector-for-all1 (is-a? _ <ipv6-address-fixnum>) obj)))))
 
 (define-label <ipv6-address-prefix-length>
   (parent <nonnegative-fixnum>)

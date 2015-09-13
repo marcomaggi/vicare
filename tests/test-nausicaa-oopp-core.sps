@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -3266,19 +3266,19 @@
     (define b (<beta>  (2)))
 
     (check	;special syntax
-    	((is-a? <> <beta>) b)
+    	((is-a? _ <beta>) b)
       => #t)
 
     (check	;special syntax
-    	((is-a? <> <beta>) a)
+    	((is-a? _ <beta>) a)
       => #f)
 
     (check	;special syntax
-    	(for-all (is-a? <> <alpha>) (list a a a))
+    	(for-all (is-a? _ <alpha>) (list a a a))
       => #t)
 
     (check	;special syntax
-    	(for-all (is-a? <> <alpha>) (list a b a))
+    	(for-all (is-a? _ <alpha>) (list a b a))
       => #f)
 
     #f)
@@ -3385,10 +3385,10 @@
 
     (check	;special syntax
 	(let ((o (<alpha> (1 2))))
-	  ((slot-set! <> a <alpha> <>) o 11)
-	  ((slot-set! <> b <alpha> <>) o 22)
-	  (list ((slot-ref <> a <alpha>) o)
-		((slot-ref <> b <alpha>) o)))
+	  ((slot-set! _ a <alpha> _) o 11)
+	  ((slot-set! _ b <alpha> _) o 22)
+	  (list ((slot-ref _ a <alpha>) o)
+		((slot-ref _ b <alpha>) o)))
       => '(11 22))
 
     #f)
@@ -3458,10 +3458,10 @@
 
     (check	;special syntax
 	(let ((o (<p> (1 2))))
-	  ((slot-set! <> a <p> <>) o 11)
-	  ((slot-set! <> b <p> <>) o 22)
-	  (list ((slot-ref <> a <p>) o)
-		((slot-ref <> b <p>) o)))
+	  ((slot-set! _ a <p> _) o 11)
+	  ((slot-set! _ b <p> _) o 22)
+	  (list ((slot-ref _ a <p>) o)
+		((slot-ref _ b <p>) o)))
       => '(11 22))
 
     #f)

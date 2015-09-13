@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -408,17 +408,17 @@
     (check
 	(let ()
 	  (<alpha> A (<> (1 2)))
-	  (list ((slot-ref <> a <alpha>) A)
-		((slot-ref <> b <alpha>) A)))
+	  (list ((slot-ref _ a <alpha>) A)
+		((slot-ref _ b <alpha>) A)))
       => '(1 2))
 
     (check
 	(let ()
 	  (<alpha> A (<> (1 2)))
-	  ((slot-set! <> a <alpha> <>) A 10)
-	  ((slot-set! <> b <alpha> <>) A 20)
-	  (list ((slot-ref <> a <alpha>) A)
-		((slot-ref <> b <alpha>) A)))
+	  ((slot-set! _ a <alpha> _) A 10)
+	  ((slot-set! _ b <alpha> _) A 20)
+	  (list ((slot-ref _ a <alpha>) A)
+		((slot-ref _ b <alpha>) A)))
       => '(10 20))
 
     #f)

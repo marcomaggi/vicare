@@ -2438,11 +2438,10 @@
 
 (define (jolly-id? id)
   ;;Return  true if  ID is  a  syntactic identifier  that  could be  captured by  the
-  ;;primitive binding "_" or "<>"; otherwise return false.
+  ;;primitive binding "_"; otherwise return false.
   ;;
   (and (identifier? id)
-       (or (~free-identifier=? id (underscore-id))
-	   (~free-identifier=? id (place-holder-id)))))
+       (or (~free-identifier=? id (underscore-id)))))
 
 (define (method-id? id)
   (and (identifier? id)

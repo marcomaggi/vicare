@@ -151,23 +151,6 @@
 
   (check
       (let ((stru (new alpha 1 2 3)))
-	(list ((slot-ref <> a alpha) stru)
-	      ((slot-ref <> b alpha) stru)
-	      ((slot-ref <> c alpha) stru)))
-    => '(1 2 3))
-
-  (check
-      (let ((stru (new alpha 1 2 3)))
-	((slot-set! <> a alpha <>) stru 19)
-	((slot-set! <> b alpha <>) stru 29)
-	((slot-set! <> c alpha <>) stru 39)
-	(list ((slot-ref <> a alpha) stru)
-	      ((slot-ref <> b alpha) stru)
-	      ((slot-ref <> c alpha) stru)))
-    => '(19 29 39))
-
-  (check
-      (let ((stru (new alpha 1 2 3)))
 	(list ((slot-ref _ a alpha) stru)
 	      ((slot-ref _ b alpha) stru)
 	      ((slot-ref _ c alpha) stru)))
