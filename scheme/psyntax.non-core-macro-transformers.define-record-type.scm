@@ -782,8 +782,9 @@
 
 
 (define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code)
-  ;;Return a sexp  which, when evaluated, will  return the record-type
-  ;;default constructor descriptor.
+  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression  which,  expanded  and  evaluated at  run-time,  returns  the  default
+  ;;record-constructor descriptor.
   ;;
   `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-constructor-protocol))
 
@@ -791,19 +792,19 @@
 (define (%make-parent-rtd+rcd-code clause* synner)
   ;;Return 3 values:
   ;;
-  ;;1. A syntactic identifier representing the parent type, or false if there is no
+  ;;1. A syntactic identifier  representing the parent type, or false  if there is no
   ;;parent or the parent is specified through the procedural layer.
   ;;
-  ;;2. False  of a symbolic  expression representing an expression  which, expanded
-  ;;and evaluated at run-time, will return the parent's record-type descriptor.
+  ;;2. False of a symbolic expression  representing an expression which, expanded and
+  ;;evaluated at run-time, will return the parent's record-type descriptor.
   ;;
-  ;;3.  False or  a symbolic expression representing an  expression which, expanded
-  ;;and  evaluated  at  run-time,  will   return  the  parent  record-type  default
-  ;;constructor descriptor.
+  ;;3.  False or a symbolic expression representing an expression which, expanded and
+  ;;evaluated at  run-time, will  return the  parent record-type  default constructor
+  ;;descriptor.
   ;;
   (let ((parent-clause (%get-clause 'parent clause*)))
     (syntax-match parent-clause ()
-      ;;If there  is a PARENT  clause insert code that  retrieves the RTD  from the
+      ;;If there  is a  PARENT clause  insert code  that retrieves  the RTD  from the
       ;;parent type name.
       ((_ ?name)
        (identifier? ?name)
@@ -811,15 +812,15 @@
 	       `(record-type-descriptor ,?name)
 	       `(record-constructor-descriptor ,?name)))
 
-      ;;If there is  no PARENT clause try to retrieve  the expression evaluating to
-      ;;the RTD.
+      ;;If there is no PARENT clause try to retrieve the expression evaluating to the
+      ;;RTD.
       (#f
        (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
 	 (syntax-match parent-rtd-clause ()
 	   ((_ ?rtd ?rcd)
 	    (values #f ?rtd ?rcd))
 
-	   ;;If neither  the PARENT  nor the PARENT-RTD  clauses are  present: just
+	   ;;If  neither the  PARENT nor  the  PARENT-RTD clauses  are present:  just
 	   ;;return false.
 	   (#f
 	    (values #f #f #f))
@@ -918,9 +919,9 @@
 						 foo-x* foo-x-set!*
 						 unsafe-foo-x* unsafe-foo-x-set!*
 						 method-name*.sym method-procname*.sym)
-  ;;Build  and return  symbolic expression  representing a  form which,  expanded and
-  ;;evaluated  at expand-time,  returns  the record-type  name's syntactic  binding's
-  ;;descriptor.
+  ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
+  ;;expression which, expanded and evaluated  at expand-time, returns the record-type
+  ;;name's syntactic binding's descriptor.
   ;;
   ;;FOO.ID must be the identifier bound to the type name.
   ;;
