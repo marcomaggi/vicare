@@ -37,21 +37,20 @@
 
 
 (define (define-record-type-macro input-form.stx)
-  (syntax-match input-form.stx ()
-    ((_ ?namespec ?clause* ...)
-     (begin
-       (%verify-clauses input-form.stx ?clause*)
-       (%do-define-record input-form.stx ?namespec ?clause*)))
-    ))
-
-
-(define (%do-define-record input-form.stx namespec clause*)
   (case-define synner
     ((message)
      (synner message #f))
     ((message subform)
      (syntax-violation __module_who__ message input-form.stx subform)))
+  (syntax-match input-form.stx ()
+    ((_ ?namespec ?clause* ...)
+     (begin
+       (%validate-definition-clauses ?clause* synner)
+       (%do-define-record input-form.stx ?namespec ?clause* synner)))
+    ))
 
+
+(define (%do-define-record input-form.stx namespec clause* synner)
   (define-values (foo make-foo foo?)
     (%parse-full-name-spec namespec))
   (define foo-rtd			(%named-gensym/suffix foo "-rtd"))
@@ -86,14 +85,17 @@
      immutable-x*
 		;A list of identifiers  representing the immutable field
 		;names.
-     tag*
+     field-type-id*
 		;A list of tag identifiers representing the field tags.
-     mutable-tag*
+     mutable-field-type-id*
 		;A list of tag identifiers representing the mutable field tags.
-     immutable-tag*
+     immutable-field-type-id*
 		;A list of tag identifiers representing the immutable field tags.
+     fields-vector-spec
+		;A  vector to  be  used as  FIELDS argument  for  the core  primitive
+		;function MAKE-RECORD-TYPE-DESCRIPTOR.
      )
-    (%parse-field-specs foo (%get-fields clause*) synner))
+    (%parse-field-specs foo clause* synner))
 
   ;;Code  for  parent record-type  descriptor  and  parent record-type  constructor
   ;;descriptor retrieval.
@@ -126,7 +128,7 @@
   ;;Code  to  build  at  run-time:  the  record-type  descriptor;  the  record-type
   ;;constructor descriptor; the record-type destructor function.
   (define foo-rtd-code
-    (%make-rtd-code foo foo-uid clause* (and parent-rtd-code parent-rtd) synner))
+    (%make-rtd-code foo foo-uid clause* (and parent-rtd-code parent-rtd) fields-vector-spec synner))
   (define foo-rcd-code
     (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code))
   (define foo-destructor-code
@@ -167,7 +169,7 @@
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
-    (%get-methods clause* foo synner))
+    (%parse-method-clauses clause* foo synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
@@ -216,7 +218,8 @@
 	(record-constructor ,foo-rcd))
       ;;Methods.
       ,@method-form*.sexp
-      ;;We want the default constructor function to have a signature specifying the
+
+      ;;We want the  default constructor function to have a  signature specifying the
       ;;record-type as return type.
       (begin-for-syntax
 	(internal-body
@@ -227,112 +230,111 @@
 	  (define %constructor-tag-id
 	    (typ.fabricate-procedure-tag-identifier (quote ,make-foo) %constructor-signature))
 	  (typ.override-identifier-tag! (syntax ,make-foo) %constructor-tag-id)))
+
+      ;;When there are  no fields: this form  expands to "(module ())"  which is just
+      ;;wiped away with a further expansion.
       (module (,@foo-x*
 	       ,@foo-x-set!*
-	       ;;We want to  create the syntactic bindings of  unsafe accessors and
+	       ;;We want  to create  the syntactic bindings  of unsafe  accessors and
 	       ;;mutators only when STRICT-R6RS mode is DISabled.
 	       ,@(if (option.strict-r6rs)
 		     '()
 		   (append unsafe-foo-x* unsafe-foo-x-set!*)))
-	,(%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
-					    unsafe-foo-x*      x*         idx*
-					    unsafe-foo-x-set!* mutable-x* set-foo-idx*
-					    tag*)
 
-	;;Safe record fields accessors.
-	;;
-	;;NOTE The  unsafe variant of  the field accessor  must be a  syntax object
-	;;which, expanded  by itself and  evaluated, returns an  accessor function.
-	;;We know that: when the compiler finds a form like:
-	;;
-	;;   ((lambda (record)
-	;;      (unsafe-foo-x record))
-	;;    the-record)
-	;;
-	;;it integrates the LAMBDA into:
-	;;
-	;;   (unsafe-foo-x the-record)
-	;;
-	;;(Marco Maggi; Wed Apr 23, 2014)
-	,@(map (lambda (foo-x unsafe-foo-x field-tag)
-		 `(begin
-		    (internal-define (safe) ((brace ,foo-x ,field-tag) (brace record ,foo))
-		      (,unsafe-foo-x record))
-		    (begin-for-syntax
-		      (set-identifier-unsafe-variant! (syntax ,foo-x)
-			(syntax (lambda (record)
-				  (,unsafe-foo-x record)))))))
-	    foo-x* unsafe-foo-x* tag*)
+	,@(%make-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
+					      unsafe-foo-x*      x*         idx*
+					      unsafe-foo-x-set!* mutable-x* set-foo-idx*
+					      field-type-id*)
 
-	;;Safe record fields mutators (if any).
-	;;
-	;;NOTE The  unsafe variant  of the  field mutator must  be a  syntax object
-	;;which, expanded by itself and  evaluated, returns a mutator function.  We
-	;;know that: when the compiler finds a form like:
-	;;
-	;;   ((lambda (record new-value)
-	;;      (unsafe-foo-x-set! record new-value))
-	;;    the-record the-new-value)
-	;;
-	;;it integrates the LAMBDA into:
-	;;
-	;;   (unsafe-foo-x-set! the-record the-new-value)
-	;;
-	;;(Marco Maggi; Wed Apr 23, 2014)
-	,@(map (lambda (foo-x-set! unsafe-foo-x-set! field-tag)
-		 `(begin
-		    (internal-define (safe) ((brace ,foo-x-set! <void>) (brace record ,foo) (brace new-value ,field-tag))
-		      (,unsafe-foo-x-set! record new-value))
-		    (begin-for-syntax
-		      (set-identifier-unsafe-variant! (syntax ,foo-x-set!)
-			(syntax (lambda (record new-value)
-				  (,unsafe-foo-x-set! record new-value)))))))
-	    foo-x-set!* unsafe-foo-x-set!* mutable-tag*)
+	,@(%make-safe-accessor+mutator-code foo foo-rtd foo-rcd
+					    foo-x*      unsafe-foo-x*      x*         idx*
+					    foo-x-set!* unsafe-foo-x-set!* mutable-x* set-foo-idx*
+					    field-type-id* mutable-field-type-id*)
 
 	#| end of module: safe and unsafe accessors and mutators |# )
       )))
 
 
-(define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
-					   unsafe-foo-x*      x*         idx*
-					   unsafe-foo-x-set!* mutable-x* set-foo-idx*
-					   tag*)
-  (define (%make-field-index-varname x.id)
-    (string->symbol (string-append foo.str "-" (symbol->string (syntax->datum x.id)) "-index")))
-  (define foo.str
-    (symbol->string (syntax->datum foo)))
-  (define foo-first-field-offset
-    (%named-gensym/suffix foo "-first-field-offset"))
-  `(module (,@unsafe-foo-x* ,@unsafe-foo-x-set!*)
-     (define ,foo-first-field-offset
-       ;;The field at index  3 in the RTD is: the index of  the first field of this
-       ;;subtype in the  layout of instances; it  is the total number  of fields of
-       ;;the parent type.
-       ($struct-ref ,foo-rtd 3))
+(module (%validate-definition-clauses)
 
-     ;;all fields indexes
-     ,@(map (lambda (x idx)
-	      (let ((the-index (%make-field-index-varname x)))
-		`(define (brace ,the-index <fixnum>)
-		   (fx+ ,idx ,foo-first-field-offset))))
-	 x* idx*)
+  (define (%validate-definition-clauses clause* synner)
+    (define-constant VALID-KEYWORDS
+      (if (option.strict-r6rs)
+	  (%r6rs-valid-keywords)
+	(%extended-valid-keywords)))
+    (let loop ((clause*  clause*)
+	       (seen*    '()))
+      (unless (null? clause*)
+	(syntax-match (car clause*) ()
+	  ((?kwd . ?rest)
+	   (cond ((or (not (identifier? ?kwd))
+		      (not (free-id-member? ?kwd VALID-KEYWORDS)))
+		  (synner "not a valid DEFINE-RECORD-TYPE keyword" ?kwd))
+		 ((bound-id-member? ?kwd seen*)
+		  (synner "invalid duplicate clause in DEFINE-RECORD-TYPE" ?kwd))
+		 (else
+		  (loop (cdr clause*)
+			(if (keyword-allowed-multiple-times? ?kwd)
+			    seen*
+			  (cons ?kwd seen*))))))
+	  (?cls
+	   (synner "malformed DEFINE-RECORD-TYPE clause" ?cls))
+	  ))))
 
-     ;;unsafe record fields accessors
-     ,@(map (lambda (unsafe-foo-x x field.tag)
-	      (let ((the-index (%make-field-index-varname x)))
-		`(define-syntax-rule (,unsafe-foo-x ?x)
-		   (tag-unsafe-cast ,field.tag ($struct-ref ?x ,the-index)))))
-	 unsafe-foo-x* x* tag*)
+  (define %r6rs-valid-keywords
+    ;;Return a  list of  syntactic identifiers representing  the keywords  of clauses
+    ;;accepted by DEFINE-RECORD-TYPE under the strict R6RS language.
+    ;;
+    (let ((cached #f))
+      (lambda ()
+	(or cached
+	    (receive-and-return (rv)
+		(map core-prim-id
+		  '(fields parent parent-rtd protocol sealed opaque nongenerative))
+	      (set! cached rv))))))
 
-     ;;unsafe record fields mutators
-     ,@(map (lambda (unsafe-foo-x-set! x)
-	      (let ((the-index (%make-field-index-varname x)))
-		`(define-syntax-rule (,unsafe-foo-x-set! ?x ?v)
-		   ($struct-set! ?x ,the-index ?v))))
-	 unsafe-foo-x-set!* mutable-x*)
-     #| end of module: unsafe accessors and mutators |# ))
+  (define %extended-valid-keywords
+    ;;Return a  list of  syntactic identifiers representing  the keywords  of clauses
+    ;;accepted by DEFINE-RECORD-TYPE under the non-strict R6RS language.
+    ;;
+    (let ((cached #f))
+      (lambda ()
+	(or cached
+	    (receive-and-return (rv)
+		(append (%r6rs-valid-keywords)
+			(map core-prim-id
+			  '(destructor-protocol custom-printer method case-method super-protocol)))
+	      (set! cached rv))))))
+
+  (define keyword-allowed-multiple-times?
+    (let ((cached #f))
+      (lambda (id)
+	(free-id-member? id (or cached
+				(receive-and-return (rv)
+				    (map core-prim-id
+				      '(method case-method))
+				  (set! cached rv)))))))
+
+  #| end of module: %VALIDATE-DEFINITION-CLAUSES |# )
 
 
+;;;; basic parsing functions
+
+(define (%get-clause sym clause*)
+  ;;Given a symbol SYM representing the name  of a clause and a syntax object CLAUSE*
+  ;;representing the definition clauses: search the  selected clause and return it as
+  ;;syntax object.  When no matching clause is found: return false.
+  ;;
+  (let next ((id       (core-prim-id sym))
+	     (clause*  clause*))
+    (syntax-match clause* ()
+      (()
+       #f)
+      (((?key . ?rest) . ?clause*)
+       (if (~free-identifier=? id ?key)
+	   `(,?key . ,?rest)
+	 (next id ?clause*))))))
+
 (define (%parse-full-name-spec spec)
   ;;Given a syntax object representing  a full record-type name specification: return
   ;;the 3 syntactic  identifiers: the type name, the constructor  name, the predicate
@@ -351,7 +353,6 @@
 	     (identifier-append ?foo ?foo "?")))
     ))
 
-
 (define (%get-uid foo clause* synner)
   (let ((clause (%get-clause 'nongenerative clause*)))
     (syntax-match clause ()
@@ -366,175 +367,8 @@
       (_
        (synner "expected symbol or no argument in nongenerative clause" clause)))))
 
-
-;;;; RTD and RCD code
-
-(define (%make-rtd-code name foo-uid clause* parent-rtd synner)
-  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
-  ;;expression  which, expanded  and  evaluated at  run-time,  returns a  record-type
-  ;;descriptor.
-  ;;
-  ;;PARENT-RTD must be false if this record-type  has no parent; otherwise it must be
-  ;;a symbol  representing the name of  the syntactic identifier bound  to the parent
-  ;;RTD.
-  ;;
-  (define sealed?
-    (let ((clause (%get-clause 'sealed clause*)))
-      (syntax-match clause ()
-	((_ #t)	#t)
-	((_ #f)	#f)
-	;;No matching clause found.
-	(#f		#f)
-	(_
-	 (synner "invalid argument in SEALED clause" clause)))))
-  (define opaque?
-    (let ((clause (%get-clause 'opaque clause*)))
-      (syntax-match clause ()
-	((_ #t)	#t)
-	((_ #f)	#f)
-	;;No matching clause found.
-	(#f		#f)
-	(_
-	 (synner "invalid argument in OPAQUE clause" clause)))))
-  (define fields
-    (let ((clause (%get-clause 'fields clause*)))
-      (syntax-match clause ()
-	((_ field-spec* ...)
-	 `(quote ,(list->vector
-		   (map (lambda (field-spec)
-			  (syntax-match field-spec (mutable immutable brace)
-			    ((mutable (brace ?name ?tag) . ?rest)
-			     `(mutable ,?name))
-			    ((mutable ?name . ?rest)
-			     `(mutable ,?name))
-			    ((immutable (brace ?name ?tag) . ?rest)
-			     `(immutable ,?name))
-			    ((immutable ?name . ?rest)
-			     `(immutable ,?name))
-			    ((brace ?name ?tag)
-			     `(immutable ,?name))
-			    (?name
-			     `(immutable ,?name))))
-		     field-spec*))))
-	;;No matching clause found.
-	(#f
-	 (quote (quote #())))
-
-	(_
-	 (synner "invalid syntax in FIELDS clause" clause)))))
-  `(make-record-type-descriptor (quote ,name) ,parent-rtd
-				(quote ,foo-uid) ,sealed? ,opaque? ,fields))
-
-;;; --------------------------------------------------------------------
-
-(define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code)
-  ;;Return a sexp  which, when evaluated, will  return the record-type
-  ;;default constructor descriptor.
-  ;;
-  `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-constructor-protocol))
-
-(define (%make-parent-rtd+rcd-code clause* synner)
-  ;;Return 3 values:
-  ;;
-  ;;1. A syntactic identifier representing the parent type, or false if there is no
-  ;;parent or the parent is specified through the procedural layer.
-  ;;
-  ;;2. False  of a symbolic  expression representing an expression  which, expanded
-  ;;and evaluated at run-time, will return the parent's record-type descriptor.
-  ;;
-  ;;3.  False or  a symbolic expression representing an  expression which, expanded
-  ;;and  evaluated  at  run-time,  will   return  the  parent  record-type  default
-  ;;constructor descriptor.
-  ;;
-  (let ((parent-clause (%get-clause 'parent clause*)))
-    (syntax-match parent-clause ()
-      ;;If there  is a PARENT  clause insert code that  retrieves the RTD  from the
-      ;;parent type name.
-      ((_ ?name)
-       (identifier? ?name)
-       (values ?name
-	       `(record-type-descriptor ,?name)
-	       `(record-constructor-descriptor ,?name)))
-
-      ;;If there is  no PARENT clause try to retrieve  the expression evaluating to
-      ;;the RTD.
-      (#f
-       (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
-	 (syntax-match parent-rtd-clause ()
-	   ((_ ?rtd ?rcd)
-	    (values #f ?rtd ?rcd))
-
-	   ;;If neither  the PARENT  nor the PARENT-RTD  clauses are  present: just
-	   ;;return false.
-	   (#f
-	    (values #f #f #f))
-
-	   (_
-	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
-
-      (_
-       (synner "invalid syntax in PARENT clause" parent-clause)))))
-
-
-(define (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd.sym synner)
-  ;;Extract from the  CLAUSE* the DESTRUCTOR-PROTOCOL one and  return an expression
-  ;;which, expanded and evaluated at run-time, will return the destructor function;
-  ;;the expression will return false if there is no destructor.
-  ;;
-  ;;If FOO-PARENT  is false:  this record-type  definition has  no PARENT  clause, so
-  ;;either it has  no parent or its  parent is specified with  the PARENT-RTD clause.
-  ;;If FOO-PARENT is  true: this record type  has a parent specified  with the PARENT
-  ;;clause.
-  ;;
-  ;;PARENT-RTD.SYM is  false if  this record-type  has no parent;  otherwise it  is a
-  ;;symbol representing the name of the syntactic identifier bound to the parent RTD.
-  ;;
-  (let ((clause (%get-clause 'destructor-protocol clause*))
-	(foo-destructor-protocol (%named-gensym/suffix foo "-destructor-protocol")))
-    (syntax-match clause ()
-      ((_ ?destructor-protocol-expr)
-       ;;This record definition has a destructor protocol.
-       `(let ((,foo-destructor-protocol ,?destructor-protocol-expr))
-	  (unless (procedure? ,foo-destructor-protocol)
-	    (assertion-violation (quote ,foo)
-	      "expected closure object as result of evaluating the destructor protocol expression"
-	      ,foo-destructor-protocol))
-	  (receive-and-return (,foo-destructor)
-	      ,(if (or foo-parent parent-rtd.sym)
-		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
-		 `(,foo-destructor-protocol))
-	    (if (procedure? ,foo-destructor)
-		(record-type-destructor-set! ,foo-rtd ,foo-destructor)
-	      (assertion-violation (quote ,foo)
-		"expected closure object as result of applying the destructor protocol function"
-		,foo-destructor)))))
-
-      ;;No  matching  clause  found.   This record  definition  has  no  destructor
-      ;;protocol, but the parent (if any) might have one.
-      ;;
-      ;;*  If  the  parent  record-type  has  a  record  destructor:  the  parent's
-      ;;destructor becomes this record-type's destructor.
-      ;;
-      ;;* If  the parent record-type  has no record destructor:  this record-type's
-      ;;record destructor variable is set to false.
-      ;;
-      (#f
-       (if (or foo-parent parent-rtd.sym)
-	   (let ((foo-parent-destructor (%named-gensym/suffix foo "-parent-destructor")))
-	     `(cond ((record-type-destructor ,parent-rtd.sym)
-		     => (lambda (,foo-parent-destructor)
-			  (record-type-destructor-set! ,foo-rtd ,foo-parent-destructor)
-			  ,foo-parent-destructor))))
-	 ;;Set to false this record-type record destructor variable.
-	 #f))
-
-      (_
-       (synner "invalid syntax in DESTRUCTOR-PROTOCOL clause" clause)))))
-
-
 (define (%get-constructor-protocol-code clause* synner)
-  ;;Return  a  sexp  which,   when  evaluated,  returns  the  protocol
-  ;;function.
+  ;;Return a sexp which, when evaluated, returns the protocol function.
   ;;
   (let ((clause (%get-clause 'protocol clause*)))
     (syntax-match clause ()
@@ -548,28 +382,13 @@
        (synner "invalid syntax in PROTOCOL clause" clause)))))
 
 
-;;;; FIELDS clause
-
-(define (%get-fields clause*)
-  ;;Return   a  list   of  syntax   objects  representing   the  field
-  ;;specifications.
+(define (%parse-field-specs foo clause* synner)
+  ;;Given the definition  clauses CLAUSE* extract the FIELDS clauses  and parse them.
+  ;;Return the following values:
   ;;
-  (syntax-match clause* (fields)
-    (()
-     '())
-    (((fields ?field-spec* ...) . _)
-     ?field-spec*)
-    ((_ . ?rest)
-     (%get-fields ?rest))))
-
-(define (%parse-field-specs foo field-clause* synner)
-  ;;Given the  arguments of the  fields specification clause  return 4
-  ;;values:
+  ;;1..The list of syntactic identifiers representing all the field names.
   ;;
-  ;;1..The list of identifiers representing all the field names.
-  ;;
-  ;;2..The  list  of  fixnums  representings all  the  field  relative
-  ;;   indexes (zero-based).
+  ;;2..The list of fixnums representings all the field relative indexes (zero-based).
   ;;
   ;;3..A list of identifiers representing the safe accessor names.
   ;;
@@ -577,8 +396,8 @@
   ;;
   ;;5..The list of identifiers representing the mutable field names.
   ;;
-  ;;6..The list  of fixnums  representings the mutable  field relative
-  ;;   indexes (zero-based).
+  ;;6..The  list  of  fixnums  representings   the  mutable  field  relative  indexes
+  ;;   (zero-based).
   ;;
   ;;7..A list of identifiers representing the safe mutator names.
   ;;
@@ -586,22 +405,34 @@
   ;;
   ;;9..The list of identifiers representing the immutable field names.
   ;;
-  ;;10.The list of identifiers representing the field tags.
+  ;;10.The list of identifiers representing the field types.
   ;;
-  ;;11.The list of identifiers representing the mutable field tags.
+  ;;11.The list of identifiers representing the mutable field types.
   ;;
-  ;;12.The list of identifiers representing the immutable field tags.
+  ;;12.The list of identifiers representing the immutable field types.
+  ;;
+  ;;13.A vector to be used as FIELDS argument to MAKE-RECORD-TYPE-DESCRIPTOR.
   ;;
   ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
   ;;
-  (define (gen-safe-accessor-name x)
+  (define field-clause*
+    (let loop ((clause* clause*))
+      (syntax-match clause* (fields)
+	(()
+	 '())
+	(((fields ?field-spec* ...) . _)
+	 ?field-spec*)
+	((_ . ?rest)
+	 (loop ?rest)))))
+  (define (%gen-safe-accessor-name x)
     (identifier-append  foo foo "-" x))
-  (define (gen-unsafe-accessor-name x)
+  (define (%gen-unsafe-accessor-name x)
     (identifier-append  foo "$" foo "-" x))
-  (define (gen-safe-mutator-name x)
+  (define (%gen-safe-mutator-name x)
     (identifier-append  foo foo "-" x "-set!"))
-  (define (gen-unsafe-mutator-name x)
+  (define (%gen-unsafe-mutator-name x)
     (identifier-append  foo "$" foo "-" x "-set!"))
+
   (let loop ((field-clause*		field-clause*)
 	     (i				0)
 	     (field*			'())
@@ -615,14 +446,16 @@
 	     (immutable-field*		'())
 	     (tag*			'())
 	     (mutable-tag*		'())
-	     (immutable-tag*		'()))
+	     (immutable-tag*		'())
+	     (fields-vector-spec*       '()))
     (syntax-match field-clause* (mutable immutable)
       (()
-       (values (reverse field*) (reverse idx*) (reverse accessor*) (reverse unsafe-accessor*)
-	       (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)
+       (values (reverse field*)         (reverse idx*)         (reverse accessor*) (reverse unsafe-accessor*)
+	       (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*)  (reverse unsafe-mutator*)
 	       (reverse immutable-field*)
 	       (reverse tag*)
-	       (reverse mutable-tag*) (reverse immutable-tag*)))
+	       (reverse mutable-tag*) (reverse immutable-tag*)
+	       (list->vector (reverse fields-vector-spec*))))
 
       (((mutable   ?name ?accessor ?mutator) . ?rest)
        (and (identifier? ?accessor)
@@ -630,101 +463,83 @@
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
 	 (loop ?rest (+ 1 i)
-	       (cons field.id field*)		(cons i idx*)
-	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name field.id) unsafe-accessor*)
-	       (cons field.id mutable-field*)	(cons i mutable-idx*)
-	       (cons ?mutator mutator*)	(cons (gen-unsafe-mutator-name  field.id) unsafe-mutator*)
+	       (cons field.id field*)			(cons i idx*)
+	       (cons ?accessor accessor*)		(cons (%gen-unsafe-accessor-name field.id) unsafe-accessor*)
+	       (cons field.id mutable-field*)		(cons i mutable-idx*)
+	       (cons ?mutator mutator*)			(cons (%gen-unsafe-mutator-name  field.id) unsafe-mutator*)
 	       immutable-field*
 	       (cons field.tag tag*)
-	       (cons field.tag mutable-tag*)	immutable-tag*)))
+	       (cons field.tag mutable-tag*)		immutable-tag*
+	       (cons `(mutable ,field.id) fields-vector-spec*))))
 
       (((immutable ?name ?accessor) . ?rest)
        (identifier? ?accessor)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
 	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*			unsafe-mutator*
+	       (cons ?name field*)			(cons i idx*)
+	       (cons ?accessor accessor*)		(cons (%gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       mutable-field*				mutable-idx*
+	       mutator*					unsafe-mutator*
 	       (cons ?name immutable-field*)
 	       (cons field.tag tag*)
-	       mutable-tag*			(cons field.tag immutable-tag*))))
+	       mutable-tag*				(cons field.tag immutable-tag*)
+	       (cons `(immutable ,field.id) fields-vector-spec*))))
 
       (((mutable   ?name) . ?rest)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
 	 (loop ?rest (+ 1 i)
 	       (cons field.id field*)				(cons i idx*)
-	       (cons (gen-safe-accessor-name   field.id)	accessor*)
-	       (cons (gen-unsafe-accessor-name field.id)	unsafe-accessor*)
+	       (cons (%gen-safe-accessor-name   field.id)	accessor*)
+	       (cons (%gen-unsafe-accessor-name field.id)	unsafe-accessor*)
 	       (cons field.id mutable-field*)			(cons i mutable-idx*)
-	       (cons (gen-safe-mutator-name    field.id)	mutator*)
-	       (cons (gen-unsafe-mutator-name  field.id)	unsafe-mutator*)
+	       (cons (%gen-safe-mutator-name    field.id)	mutator*)
+	       (cons (%gen-unsafe-mutator-name  field.id)	unsafe-mutator*)
 	       immutable-field*
 	       (cons field.tag tag*)
-	       (cons field.tag mutable-tag*)			immutable-tag*)))
+	       (cons field.tag mutable-tag*)			immutable-tag*
+	       (cons `(mutable ,field.id) fields-vector-spec*))))
 
       (((immutable ?name) . ?rest)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
 	 (loop ?rest (+ 1 i)
 	       (cons field.id field*)				(cons i idx*)
-	       (cons (gen-safe-accessor-name   field.id)	accessor*)
-	       (cons (gen-unsafe-accessor-name field.id)	unsafe-accessor*)
+	       (cons (%gen-safe-accessor-name   field.id)	accessor*)
+	       (cons (%gen-unsafe-accessor-name field.id)	unsafe-accessor*)
 	       mutable-field*					mutable-idx*
-	       mutator*					unsafe-mutator*
+	       mutator*						unsafe-mutator*
 	       (cons field.id immutable-field*)
 	       (cons field.tag tag*)
-	       mutable-tag*					(cons field.tag immutable-tag*))))
+	       mutable-tag*					(cons field.tag immutable-tag*)
+	       (cons `(immutable ,field.id) fields-vector-spec*))))
 
       ((?name . ?rest)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
 	 (loop ?rest (+ 1 i)
 	       (cons field.id field*)				(cons i idx*)
-	       (cons (gen-safe-accessor-name   field.id)	 accessor*)
-	       (cons (gen-unsafe-accessor-name field.id)	unsafe-accessor*)
+	       (cons (%gen-safe-accessor-name   field.id)	accessor*)
+	       (cons (%gen-unsafe-accessor-name field.id)	unsafe-accessor*)
 	       mutable-field*					mutable-idx*
-	       mutator*					unsafe-mutator*
+	       mutator*						unsafe-mutator*
 	       (cons field.id immutable-field*)
 	       (cons field.tag tag*)
-	       mutable-tag*					(cons field.tag immutable-tag*))))
+	       mutable-tag*					(cons field.tag immutable-tag*)
+	       (cons `(immutable ,field.id) fields-vector-spec*))))
 
       ((?spec . ?rest)
-       (synner "invalid field specification in DEFINE-RECORD-TYPE syntax"
-	       ?spec)))))
+       (synner "invalid field specification in DEFINE-RECORD-TYPE syntax" ?spec)))))
 
 
-(define (%make-custom-printer-code clause* foo foo-rtd synner)
-  (let ((clause (%get-clause 'custom-printer clause*)))
-    (syntax-match clause ()
-      ((_ ?expr)
-       (let ((printer (%named-gensym/suffix foo "-custom-printer")))
-	 `(receive-and-return (,printer)
-	      ,?expr
-	    (if (procedure? ,printer)
-		(record-type-printer-set! ,foo-rtd ,printer)
-	      (assertion-violation (quote ,foo)
-		"expected closure object from evaluation of expression in CUSTOM-PRINTER clause"
-		,printer)))))
-
-      ;;No matching clause found.
-      (#f	#f)
-
-      (_
-       (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
-
-
-;;;; METHOD clauses
-
-(define (%get-methods clause* foo synner)
+(define (%parse-method-clauses clause* foo synner)
   ;;Return two  values: a list  of symbols representing the  method names; a  list of
   ;;symbolic  expressions  (to  be  BLESSed later)  representing  expressions  which,
   ;;expanded and evaluated at run-time, define the method procedures.
   ;;
   (define-syntax-rule (recurse ?clause*)
-    (%get-methods ?clause* foo synner))
+    (%parse-method-clauses ?clause* foo synner))
   (syntax-match clause* ()
     (()
      (values '() '() '()))
@@ -789,14 +604,322 @@
     ))
 
 
+(define (%make-safe-accessor+mutator-code foo foo-rtd foo-rcd
+					  foo-x*      unsafe-foo-x*      x*         idx*
+					  foo-x-set!* unsafe-foo-x-set!* mutable-x* set-foo-idx*
+					  field-type-id* mutable-field-type-id*)
+  ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
+  ;;representing  a Scheme  expression  which, expanded  and  evaluated at  run-time,
+  ;;defines the syntactic bindings of the  unsafe fields accessors and mutators.  The
+  ;;returned list is meant to be spliced in the output form.
+  ;;
+  ;;FOO must be  the syntactic identifier represening the  record-type name.  FOO-RTD
+  ;;must be a symbol  representing the name of the syntactic  identifier bound to the
+  ;;record-type descriptor.   FOO-RCD must be a  symbol representing the name  of the
+  ;;syntactic identifier bound to the record-constructor descriptor.
+  ;;
+  ;;FOO-X* and  FOO-X-SET!* must  be list  of symbols representing  the names  of the
+  ;;syntactic identifiers bound to the safe field accessors and mutators.
+  ;;
+  ;;UNSAFE-FOO-X* and  UNSAFE-FOO-X-SET!* must  be list  of symbols  representing the
+  ;;names  of the  syntactic  identifiers bound  to the  unsafe  field accessors  and
+  ;;mutators.
+  ;;
+  ;;X* and MUTABLE-X* must  be list of identifiers representing the  names of all the
+  ;;fields and the mutable fields.
+  ;;
+  ;;IDX* and SET-FOO-IDX* must be lists  of fixnums representing the relative indexes
+  ;;of all the fields and the mutable fields.
+  ;;
+  ;;FIELD-TYPE-ID* and MUTABLE-FIELD-TYPE-ID* must  be lists of syntactic identifiers
+  ;;representing all the field types and the mutable field types.
+  ;;
+  ;;NOTE The unsafe variant of the field accessor and mutator must be a syntax object
+  ;;which, expanded by itself and evaluated, returns an accessor or mutator function.
+  ;;We know that when the compiler finds a form like:
+  ;;
+  ;;   ((lambda (record)           (unsafe-foo-x record))
+  ;;    the-record)
+  ;;   ((lambda (record new-value) (unsafe-foo-x-set! record new-value))
+  ;;    the-record the-new-value)
+  ;;
+  ;;it integrates the LAMBDA into:
+  ;;
+  ;;   (unsafe-foo-x the-record)
+  ;;   (unsafe-foo-x-set! the-record the-new-value)
+  ;;
+  (define safe-accessor*
+    (map (lambda (foo-x unsafe-foo-x field-tag)
+	   `(begin
+	      (internal-define (safe) ((brace ,foo-x ,field-tag) (brace record ,foo))
+		(,unsafe-foo-x record))
+	      (begin-for-syntax
+		(set-identifier-unsafe-variant! (syntax ,foo-x)
+		  (syntax (lambda (record)
+			    (,unsafe-foo-x record)))))))
+      foo-x* unsafe-foo-x* field-type-id*))
+
+  (define safe-mutator*
+    (map (lambda (foo-x-set! unsafe-foo-x-set! field-tag)
+	   `(begin
+	      (internal-define (safe) ((brace ,foo-x-set! <void>) (brace record ,foo) (brace new-value ,field-tag))
+		(,unsafe-foo-x-set! record new-value))
+	      (begin-for-syntax
+		(set-identifier-unsafe-variant! (syntax ,foo-x-set!)
+		  (syntax (lambda (record new-value)
+			    (,unsafe-foo-x-set! record new-value)))))))
+      foo-x-set!* unsafe-foo-x-set!* mutable-field-type-id*))
+
+  (if (and (null? safe-accessor*)
+	   (null? safe-mutator*))
+      '()
+    (append safe-accessor* safe-mutator*)))
+
+
+(define (%make-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
+					    unsafe-foo-x*      x*         idx*
+					    unsafe-foo-x-set!* mutable-x* set-foo-idx*
+					    field-type-id*)
+  ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
+  ;;representing  a Scheme  expression  which, expanded  and  evaluated at  run-time,
+  ;;defines the syntactic bindings of the  unsafe fields accessors and mutators.  The
+  ;;returned list is meant to be spliced in the output form.
+  ;;
+  ;;FOO must be  the syntactic identifier represening the  record-type name.  FOO-RTD
+  ;;must be a symbol  representing the name of the syntactic  identifier bound to the
+  ;;record-type descriptor.   FOO-RCD must be a  symbol representing the name  of the
+  ;;syntactic identifier bound to the record-constructor descriptor.
+  ;;
+  ;;UNSAFE-FOO-X* and  UNSAFE-FOO-X-SET!* must  be list  of symbols  representing the
+  ;;names  of the  syntactic  identifiers bound  to the  unsafe  field accessors  and
+  ;;mutators.
+  ;;
+  ;;X* and MUTABLE-X* must  be list of identifiers representing the  names of all the
+  ;;fields and the mutable fields.
+  ;;
+  ;;IDX* and SET-FOO-IDX* must be lists  of fixnums representing the relative indexes
+  ;;of all the fields and the mutable fields.
+  ;;
+  ;;FIELD-TYPE-ID* must be a list of syntactic identifiers representing all the field
+  ;;types.
+  ;;
+
+  (define (%make-field-index-varname x.id)
+    (string->symbol (string-append foo.str "-" (symbol->string (syntax->datum x.id)) "-index")))
+
+  (define foo.str
+    (symbol->string (identifier->symbol foo)))
+
+  (define foo-first-field-offset
+    (%named-gensym/suffix foo "-first-field-offset"))
+
+  (if (null? x*)
+      '()
+    `((module (,@unsafe-foo-x* ,@unsafe-foo-x-set!*)
+	(define ,foo-first-field-offset
+	  ;;The field at index  3 in the RTD is: the index of  the first field of this
+	  ;;subtype in the  layout of instances; it  is the total number  of fields of
+	  ;;the parent type.
+	  ($struct-ref ,foo-rtd 3))
+
+	;;all fields indexes
+	,@(map (lambda (x idx)
+		 (let ((the-index (%make-field-index-varname x)))
+		   `(define (brace ,the-index <fixnum>)
+		      (fx+ ,idx ,foo-first-field-offset))))
+	    x* idx*)
+
+	;;unsafe record fields accessors
+	,@(map (lambda (unsafe-foo-x x field.tag)
+		 (let ((the-index (%make-field-index-varname x)))
+		   `(define-syntax-rule (,unsafe-foo-x ?x)
+		      (tag-unsafe-cast ,field.tag ($struct-ref ?x ,the-index)))))
+	    unsafe-foo-x* x* field-type-id*)
+
+	;;unsafe record fields mutators
+	,@(map (lambda (unsafe-foo-x-set! x)
+		 (let ((the-index (%make-field-index-varname x)))
+		   `(define-syntax-rule (,unsafe-foo-x-set! ?x ?v)
+		      ($struct-set! ?x ,the-index ?v))))
+	    unsafe-foo-x-set!* mutable-x*)
+
+	#| end of module: unsafe accessors and mutators |# ))))
+
+
+(define (%make-rtd-code name foo-uid clause* parent-rtd fields-vector-spec synner)
+  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression  which, expanded  and  evaluated at  run-time,  returns a  record-type
+  ;;descriptor.
+  ;;
+  ;;PARENT-RTD must be false if this record-type  has no parent; otherwise it must be
+  ;;a symbol  representing the name of  the syntactic identifier bound  to the parent
+  ;;RTD.
+  ;;
+  (define sealed?
+    (let ((clause (%get-clause 'sealed clause*)))
+      (syntax-match clause ()
+	((_ #t)	#t)
+	((_ #f)	#f)
+	;;No matching clause found.
+	(#f		#f)
+	(_
+	 (synner "invalid argument in SEALED clause" clause)))))
+
+  (define opaque?
+    (let ((clause (%get-clause 'opaque clause*)))
+      (syntax-match clause ()
+	((_ #t)	#t)
+	((_ #f)	#f)
+	;;No matching clause found.
+	(#f		#f)
+	(_
+	 (synner "invalid argument in OPAQUE clause" clause)))))
+
+  (define fields
+    `(quote ,fields-vector-spec))
+
+  `(make-record-type-descriptor (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque? ,fields))
+
+
+(define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code)
+  ;;Return a sexp  which, when evaluated, will  return the record-type
+  ;;default constructor descriptor.
+  ;;
+  `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-constructor-protocol))
+
+
+(define (%make-parent-rtd+rcd-code clause* synner)
+  ;;Return 3 values:
+  ;;
+  ;;1. A syntactic identifier representing the parent type, or false if there is no
+  ;;parent or the parent is specified through the procedural layer.
+  ;;
+  ;;2. False  of a symbolic  expression representing an expression  which, expanded
+  ;;and evaluated at run-time, will return the parent's record-type descriptor.
+  ;;
+  ;;3.  False or  a symbolic expression representing an  expression which, expanded
+  ;;and  evaluated  at  run-time,  will   return  the  parent  record-type  default
+  ;;constructor descriptor.
+  ;;
+  (let ((parent-clause (%get-clause 'parent clause*)))
+    (syntax-match parent-clause ()
+      ;;If there  is a PARENT  clause insert code that  retrieves the RTD  from the
+      ;;parent type name.
+      ((_ ?name)
+       (identifier? ?name)
+       (values ?name
+	       `(record-type-descriptor ,?name)
+	       `(record-constructor-descriptor ,?name)))
+
+      ;;If there is  no PARENT clause try to retrieve  the expression evaluating to
+      ;;the RTD.
+      (#f
+       (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
+	 (syntax-match parent-rtd-clause ()
+	   ((_ ?rtd ?rcd)
+	    (values #f ?rtd ?rcd))
+
+	   ;;If neither  the PARENT  nor the PARENT-RTD  clauses are  present: just
+	   ;;return false.
+	   (#f
+	    (values #f #f #f))
+
+	   (_
+	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
+
+      (_
+       (synner "invalid syntax in PARENT clause" parent-clause)))))
+
+
+(define (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd.sym synner)
+  ;;Extract from  the CLAUSE*  the DESTRUCTOR-PROTOCOL one  and return  an expression
+  ;;which, expanded and  evaluated at run-time, will return  the destructor function;
+  ;;the expression will return false if there is no destructor.
+  ;;
+  ;;If FOO-PARENT  is false:  this record-type  definition has  no PARENT  clause, so
+  ;;either it has  no parent or its  parent is specified with  the PARENT-RTD clause.
+  ;;If FOO-PARENT is  true: this record type  has a parent specified  with the PARENT
+  ;;clause.
+  ;;
+  ;;PARENT-RTD.SYM is  false if  this record-type  has no parent;  otherwise it  is a
+  ;;symbol representing the name of the syntactic identifier bound to the parent RTD.
+  ;;
+  (let ((clause (%get-clause 'destructor-protocol clause*))
+	(foo-destructor-protocol (%named-gensym/suffix foo "-destructor-protocol")))
+    (syntax-match clause ()
+      ((_ ?destructor-protocol-expr)
+       ;;This record definition has a destructor protocol.
+       `(let ((,foo-destructor-protocol ,?destructor-protocol-expr))
+	  (unless (procedure? ,foo-destructor-protocol)
+	    (assertion-violation (quote ,foo)
+	      "expected closure object as result of evaluating the destructor protocol expression"
+	      ,foo-destructor-protocol))
+	  (receive-and-return (,foo-destructor)
+	      ,(if (or foo-parent parent-rtd.sym)
+		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
+		 `(,foo-destructor-protocol))
+	    (if (procedure? ,foo-destructor)
+		(record-type-destructor-set! ,foo-rtd ,foo-destructor)
+	      (assertion-violation (quote ,foo)
+		"expected closure object as result of applying the destructor protocol function"
+		,foo-destructor)))))
+
+      ;;No  matching  clause  found.   This record  definition  has  no  destructor
+      ;;protocol, but the parent (if any) might have one.
+      ;;
+      ;;*  If  the  parent  record-type  has  a  record  destructor:  the  parent's
+      ;;destructor becomes this record-type's destructor.
+      ;;
+      ;;* If  the parent record-type  has no record destructor:  this record-type's
+      ;;record destructor variable is set to false.
+      ;;
+      (#f
+       (if (or foo-parent parent-rtd.sym)
+	   (let ((foo-parent-destructor (%named-gensym/suffix foo "-parent-destructor")))
+	     `(cond ((record-type-destructor ,parent-rtd.sym)
+		     => (lambda (,foo-parent-destructor)
+			  (record-type-destructor-set! ,foo-rtd ,foo-parent-destructor)
+			  ,foo-parent-destructor))))
+	 ;;Set to false this record-type record destructor variable.
+	 #f))
+
+      (_
+       (synner "invalid syntax in DESTRUCTOR-PROTOCOL clause" clause)))))
+
+
+(define (%make-custom-printer-code clause* foo foo-rtd synner)
+  ;;Extract from the  definition clauses CLAUSE* the CUSTOM-PRINTER one  and return a
+  ;;symbolic expression (to be BLESSed) later representing a Scheme expression which,
+  ;;expanded and evaluated  at run-time, will return the custom  printer function and
+  ;;register it in the RTD.  Return false if there is no CUSTOM-PRINTER clause.
+  ;;
+  (let ((clause (%get-clause 'custom-printer clause*)))
+    (syntax-match clause ()
+      ((_ ?expr)
+       (let ((printer (%named-gensym/suffix foo "-custom-printer")))
+	 `(receive-and-return (,printer)
+	      ,?expr
+	    (if (procedure? ,printer)
+		(record-type-printer-set! ,foo-rtd ,printer)
+	      (assertion-violation (quote ,foo)
+		"expected closure object from evaluation of expression in CUSTOM-PRINTER clause"
+		,printer)))))
+
+      ;;No matching clause found.
+      (#f	#f)
+
+      (_
+       (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
+
+
 (define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo-destructor.sym foo?.id
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
 						 x* mutable-x*
 						 foo-x* foo-x-set!*
 						 unsafe-foo-x* unsafe-foo-x-set!*
 						 method-name*.sym method-procname*.sym)
-  ;;Build and  return symbolic expression  representing a form which,  expanded and
-  ;;evaluated at  expand-time, returns  the record-type name's  syntactic binding's
+  ;;Build  and return  symbolic expression  representing a  form which,  expanded and
+  ;;evaluated  at expand-time,  returns  the record-type  name's syntactic  binding's
   ;;descriptor.
   ;;
   ;;FOO.ID must be the identifier bound to the type name.
@@ -967,86 +1090,6 @@
 			       %caster-maker    %dispatcher))
 
      (typ.set-identifier-tag-type-spec! (syntax ,foo) tag-type-spec)))
-
-
-(module (%verify-clauses)
-
-  (define r6rs-valid-keywords
-    ;;Return a  list of  syntactic identifiers representing  the keywords  of clauses
-    ;;accepted by DEFINE-RECORD-TYPE under the strict R6RS language.
-    ;;
-    (let ((cached #f))
-      (lambda ()
-	(or cached
-	    (receive-and-return (rv)
-		(map bless
-		  '(fields parent parent-rtd protocol sealed opaque nongenerative))
-	      (set! cached rv))))))
-
-  (define extended-valid-keywords
-    ;;Return a  list of  syntactic identifiers representing  the keywords  of clauses
-    ;;accepted by DEFINE-RECORD-TYPE under the non-strict R6RS language.
-    ;;
-    (let ((cached #f))
-      (lambda ()
-	(or cached
-	    (receive-and-return (rv)
-		(append (r6rs-valid-keywords)
-			(map bless
-			  '(destructor-protocol custom-printer))
-			(list (method-id) (case-method-id)))
-	      (set! cached rv))))))
-
-  (define (%verify-clauses input-form.stx cls*)
-    (define-constant VALID-KEYWORDS
-      (if (option.strict-r6rs)
-	  (r6rs-valid-keywords)
-	(extended-valid-keywords)))
-    (let loop ((cls*  cls*)
-	       (seen* '()))
-      (unless (null? cls*)
-	(syntax-match (car cls*) ()
-	  ((?kwd . ?rest)
-	   (cond ((or (not (identifier? ?kwd))
-		      (not (free-id-member? ?kwd VALID-KEYWORDS)))
-		  (syntax-violation __module_who__
-		    "not a valid DEFINE-RECORD-TYPE keyword"
-		    input-form.stx ?kwd))
-		 ((bound-id-member? ?kwd seen*)
-		  (syntax-violation __module_who__
-		    "invalid duplicate clause in DEFINE-RECORD-TYPE"
-		    input-form.stx ?kwd))
-		 (else
-		  (loop (cdr cls*)
-			;;We allow multiple METHOD and CASE-METHOD clauses.
-			(if (or (method-id? ?kwd)
-				(case-method-id? ?kwd))
-			    seen*
-			  (cons ?kwd seen*))))))
-	  (?cls
-	   (syntax-violation __module_who__
-	     "malformed define-record-type clause"
-	     input-form.stx ?cls))
-	  ))))
-
-  #| end of module: %VERIFY-CLAUSES |# )
-
-
-(define (%get-clause sym clause*)
-  ;;Given a symbol SYM representing the  name of a clause and a syntax
-  ;;object  CLAUSE*  representing  the clauses:  search  the  selected
-  ;;clause and return it as syntax object.  When no matching clause is
-  ;;found: return false.
-  ;;
-  (let next ((id       (bless sym))
-	     (clause*  clause*))
-    (syntax-match clause* ()
-      (()
-       #f)
-      (((?key . ?rest) . ?clause*)
-       (if (~free-identifier=? id ?key)
-	   `(,?key . ,?rest)
-	 (next id ?clause*))))))
 
 
 ;;;; done

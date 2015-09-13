@@ -79,7 +79,7 @@
 		;; bindings from (rnrs records syntactic (6))
 		parent sealed opaque parent-rtd nongenerative
 		protocol fields mutable immutable => <>
-		method))
+		method super-protocol))
 
 
 (define-auxiliary-syntaxes
@@ -90,7 +90,6 @@
   setter
   getter
   public-protocol
-  super-protocol
   virtual-fields
   methods
   method-syntax

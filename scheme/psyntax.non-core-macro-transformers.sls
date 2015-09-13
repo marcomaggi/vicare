@@ -229,7 +229,7 @@
 	  sealed opaque nongenerative parent-rtd
 	  destructor-protocol custom-printer
 	  catch finally
-	  method case-method)
+	  method case-method super-protocol)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
