@@ -1879,8 +1879,7 @@
 	     (syntax-match input-form.stx ()
 	       ((_ ?jolly ?type-id)
 		(and (identifier? ?type-id)
-		     (jolly-id? ?jolly))
-
+		     (underscore-id? ?jolly))
 		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 		  ((r6rs-record-type)
 		   (let* ((rts      (syntactic-binding-descriptor.value binding))
@@ -1939,7 +1938,7 @@
     ((_ ?jolly ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id)
-	  (jolly-id? ?jolly))
+	  (underscore-id? ?jolly))
      (chi-expr (bless
 		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 		  ((r6rs-record-type)
@@ -2014,8 +2013,8 @@
     ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id)
-	  (jolly-id? ?jolly1)
-	  (jolly-id? ?jolly2))
+	  (underscore-id? ?jolly1)
+	  (underscore-id? ?jolly2))
      (chi-expr (bless
 		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 		  ((r6rs-record-type)
