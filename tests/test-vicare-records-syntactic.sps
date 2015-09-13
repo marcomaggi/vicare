@@ -1540,6 +1540,191 @@
   (collect))
 
 
+(parametrise ((check-test-name		'super-protocol))
+
+  ;;Single record with  no PROTOCOL and SUPER-PROTOCOL.  The normal  protocol is used
+  ;;to build.
+  ;;
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b))
+	  (super-protocol
+	    (lambda (make-record)
+	      (lambda (a b)
+		(make-record (+ 100 a) (+ 200 b))))))
+
+	(let ((R (make-alpha 1 2)))
+	  (values (alpha-a R)
+		  (alpha-b R))))
+    => 1 2)
+
+  ;;Single record with  PROTOCOL and SUPER-PROTOCOL.  The normal protocol  is used to
+  ;;build.
+  ;;
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b))
+	  (protocol
+	    (lambda (make-record)
+	      (lambda (a b)
+		(make-record (+ 10 a) (+ 20 b)))))
+	  (super-protocol
+	    (lambda (make-record)
+	      (lambda (a b)
+		(make-record (+ 100 a) (+ 200 b))))))
+
+	(let ((R (make-alpha 1 2)))
+	  (values (alpha-a R)
+		  (alpha-b R))))
+    => 11 22)
+
+;;; --------------------------------------------------------------------
+;;; recort-type with parent
+
+  (internal-body
+    (define-record-type alpha
+      (fields (mutable a)
+	      (mutable b))
+      (super-protocol
+	(lambda (make-record)
+	  (lambda (a b)
+	    (make-record (+ 10 a) (+ 20 b))))))
+
+    (define-record-type beta
+      (parent alpha)
+      (fields (mutable c)
+	      (mutable d)))
+
+    (check
+	(let ((R (make-alpha 1 2)))
+	  (values (alpha-a R)
+		  (alpha-b R)))
+      => 1 2)
+
+    (check
+	(let ((R (make-beta 1 2 3 4)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (beta-c  R)
+		  (beta-d  R)))
+      => 11 22 3 4)
+
+    (void))
+
+;;; --------------------------------------------------------------------
+;;; record-type with parent and grandparent
+
+  (internal-body
+    (define-record-type alpha
+      (fields (mutable a)
+	      (mutable b))
+      (super-protocol
+	(lambda (make-record)
+	  (lambda (a b)
+	    (make-record (+ 10 a) (+ 20 b))))))
+
+    (define-record-type beta
+      (parent alpha)
+      (fields (mutable c)
+	      (mutable d))
+      (super-protocol
+	(lambda (make-alpha)
+	  (lambda (a b c d)
+	    ((make-alpha a b) (+ 30 c) (+ 40 d))))))
+
+    (define-record-type gamma
+      (parent beta)
+      (fields (mutable e)
+	      (mutable f))
+      (super-protocol
+	(lambda (make-beta)
+	  (lambda (a b c d e f)
+	    ((make-beta a b c d) (+ 50 e) (+ 60 f))))))
+
+    (check
+	(let ((R (make-alpha 1 2)))
+	  (values (alpha-a R)
+		  (alpha-b R)))
+      => 1 2)
+
+    (check
+	(let ((R (make-beta 1 2 3 4)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (beta-c  R)
+		  (beta-d  R)))
+      => 11 22 3 4)
+
+    (check
+	(let ((R (make-gamma 1 2 3 4 5 6)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (beta-c  R)
+		  (beta-d  R)
+		  (gamma-e R)
+		  (gamma-f R)))
+      => 11 22 33 44 5 6)
+
+    (void))
+
+  ;;Parent record-type with no SUPER-PROTOCOL.
+  ;;
+  (internal-body
+    (define-record-type alpha
+      (fields (mutable a)
+	      (mutable b))
+      (super-protocol
+	(lambda (make-record)
+	  (lambda (a b)
+	    (make-record (+ 10 a) (+ 20 b))))))
+
+    (define-record-type beta
+      (parent alpha)
+      (fields (mutable c)
+	      (mutable d)))
+
+    (define-record-type gamma
+      (parent beta)
+      (fields (mutable e)
+	      (mutable f))
+      (super-protocol
+	(lambda (make-beta)
+	  (lambda (a b c d e f)
+	    ((make-beta a b c d) (+ 50 e) (+ 60 f))))))
+
+    (check
+	(let ((R (make-alpha 1 2)))
+	  (values (alpha-a R)
+		  (alpha-b R)))
+      => 1 2)
+
+    (check
+	(let ((R (make-beta 1 2 3 4)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (beta-c  R)
+		  (beta-d  R)))
+      => 11 22 3 4)
+
+    (check
+	(let ((R (make-gamma 1 2 3 4 5 6)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (beta-c  R)
+		  (beta-d  R)
+		  (gamma-e R)
+		  (gamma-f R)))
+      => 11 22 3 4 5 6)
+
+    (void))
+
+  (void))
+
+
 (parametrise ((check-test-name	'misc))
 
   (let ()

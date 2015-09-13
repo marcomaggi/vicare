@@ -10775,6 +10775,7 @@ Reset to void all the fields of a structure.
 
 
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
+@deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
@@ -10785,16 +10786,77 @@ records syntactic layer, define-record-type}.  This syntax supports some
 
 
 @menu
+* iklib records definitions super-proto:: The super-type protocol.
 * iklib records definitions destructor::  The destructor protocol.
 * iklib records definitions printer::     The custom printer.
 @end menu
+
+@c page
+@node iklib records definitions super-proto
+@subsubsection The super--type protocol
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(super-protocol @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of a constructor protocol to be used by
+sub--types of a record--type.  Usually a sub--type make use of the
+protocol function built from the constructor protocol specified by the
+clause @clause{protocol}, but the clause @clause{super-protocol}
+overrides it.
+
+The @clause{super-protocol} works like @clause{protocol}, its
+@meta{expr} argument must be an expression evaluating to a protocol
+function; the protocol function accepts as single argument the
+constructor function of its super--type and it must return the record
+instance.
+
+Here is an example in which the record--type @objtype{alpha} is the
+super--type of the record--type @objtype{beta}:
+
+@lisp
+(define-record-type alpha
+  (fields a b)
+  (super-protocol
+    (lambda (make-record)
+      (lambda (a b)
+        (make-record (+ 10 a) (+ 20 b))))))
+
+(define-record-type beta
+  (parent alpha)
+  (fields c d))
+
+(let ((R (make-alpha 1 2)))
+  (values (alpha-a R)
+          (alpha-b R)))
+@result{} 1 2
+
+(let ((R (make-beta 1 2 3 4)))
+  (values (alpha-a R)
+          (alpha-b R)
+          (beta-c  R)
+          (beta-d  R)))
+@result{} 11 22 3 4
+@end lisp
+
+@noindent
+the default constructor function @func{make-alpha} builds instances of
+@objtype{alpha} with the default constructor; the constructor of
+@objtype{beta} receives as constructor function the result of calling
+the @clause{super-protocol} of @objtype{alpha}.
 
 @c page
 @node iklib records definitions destructor
 @subsubsection The destructor protocol
 
 
-The definition clause:
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
 
 @lisp
 (destructor-protocol @meta{expr})
@@ -10876,7 +10938,8 @@ function becomes this type's destructor function.
 @subsubsection The custom printer
 
 
-The definition clause:
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
 
 @lisp
 (custom-printer @meta{expr})
