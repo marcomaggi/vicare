@@ -55,9 +55,7 @@
     (%parse-full-name-spec namespec))
   (define foo-rtd			(%named-gensym/suffix foo "-rtd"))
   (define foo-rcd			(%named-gensym/suffix foo "-rcd"))
-  (define parent-rtd			(%named-gensym/suffix foo "-parent-rtd"))
   (define foo-constructor-protocol	(%named-gensym/suffix foo "-constructor-protocol"))
-  (define foo-destructor		(%named-gensym/prefix foo "destroy-"))
   (define foo-custom-printer		(%named-gensym/suffix foo "-custom-printer"))
   (define-values
     (x*
@@ -97,27 +95,35 @@
      )
     (%parse-field-specs foo clause* synner))
 
-  ;;Code  for  parent record-type  descriptor  and  parent record-type  constructor
+  ;;Code  for  parent  record-type  descriptor  and  parent  record-type  constructor
   ;;descriptor retrieval.
   ;;
-  ;;FOO-PARENT: an identifier representing the parent type, or false if there is no
+  ;;FOO-PARENT: an identifier  representing the parent type, or false  if there is no
   ;;parent or the parent is specified through the procedural layer.
   ;;
-  ;;PARENT-RTD-CODE:  false or  a  symbolic expression  representing an  expression
-  ;;which, expanded and  evaluated at run-time, will return  the parent record-type
+  ;;PARENT-RTD-CODE: false or a symbolic expression representing an expression which,
+  ;;expanded  and  evaluated   at  run-time,  will  return   the  parent  record-type
   ;;descriptor.
   ;;
-  ;;PARENT-RCD-CODE:  false or  a  symbolic expression  representing an  expression
-  ;;which, expanded and  evaluated at run-time, will return  the parent record-type
+  ;;PARENT-RCD-CODE: false or a symbolic  expression representing a Scheme expression
+  ;;which, expanded  and evaluated  at run-time, will  return the  parent record-type
   ;;default constructor descriptor.
   (define-values (foo-parent parent-rtd-code parent-rcd-code)
-    (receive-and-return (foo-parent parent-rtd-code parent-rcd-code)
-	(%make-parent-rtd+rcd-code clause* synner)
-      ;;If a  parent record type  is specified and  its syntactic identifier  is an
-      ;;imported syntactic binding: we want to  make sure that the imported library
-      ;;is visited.
-      (when foo-parent
-	(visit-library-of-imported-syntactic-binding __module_who__ input-form.stx foo-parent (current-inferior-lexenv)))))
+    (%make-parent-rtd+rcd-code clause* input-form.stx synner))
+
+  ;;If  this record-type  has no  parent: this  is false;  otherwise it  is a  symbol
+  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
+  ;;record-type descriptor.
+  (define parent-rtd
+    (and parent-rtd-code
+	 (%named-gensym/suffix foo "-parent-rtd")))
+
+  ;;If  this record-type  has no  parent: this  is false;  otherwise it  is a  symbol
+  ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
+  ;;record-constructor descriptor.
+  (define parent-rcd
+    (and parent-rcd-code
+	 (%named-gensym/suffix foo "-parent-rcd")))
 
   ;;This can be  a symbol or false.  When  a symbol: the symbol is  the record type
   ;;UID, which will make this record  type non-generative.  When false: this record
@@ -125,14 +131,35 @@
   (define foo-uid
     (%get-uid foo clause* synner))
 
-  ;;Code  to  build  at  run-time:  the  record-type  descriptor;  the  record-type
-  ;;constructor descriptor; the record-type destructor function.
+  ;;False or code to build at run-time the record-type descriptor.
   (define foo-rtd-code
-    (%make-rtd-code foo foo-uid clause* (and parent-rtd-code parent-rtd) fields-vector-spec synner))
+    (%make-rtd-code foo foo-uid clause* parent-rtd fields-vector-spec synner))
+
+  ;;False or code to build at run-time the record-constructor descriptor.
   (define foo-rcd-code
-    (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code))
+    (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd))
+
+  ;;False or code to build at run-time the super-type record-constructor descriptor.
+  (define foo-super-rcd-code
+    (%make-super-rcd-code clause* foo foo-rtd foo-parent parent-rcd synner))
+
+  ;;If this  record-type has no  parent or no  SUPER-PROTOCOL clause: this  is false;
+  ;;otherwise it is a symbol representing  the name of the syntactic identifier bound
+  ;;to the super-type record-constructor descriptor.
+  (define foo-super-protocol
+    (and foo-super-rcd-code
+	 (%named-gensym/suffix foo "-super-protocol")))
+
+  ;;False or code to build at run-time the record destructor function.
   (define foo-destructor-code
-    (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent (and parent-rtd-code parent-rtd) synner))
+    (%make-destructor-code clause* foo foo-rtd foo-parent parent-rtd synner))
+
+  ;;If this record-type  has no destructor: this  is false; otherwise it  is a symbol
+  ;;representing  the  name of  the  syntactic  identifier  bound to  the  destructor
+  ;;function.
+  (define foo-destructor
+    (and foo-destructor-code
+	 (%named-gensym/suffix foo "-destructor")))
 
   ;;Code for protocol.
   (define constructor-protocol-code
@@ -146,17 +173,32 @@
   ;;Definition forms.
   ;;
   (begin
-    ;;This is null if  there is parent; otherwise it is a list  holding a DEFINE form
-    ;;defining the parent RTD syntactic binding, the list is spliced in the output.
+    ;;This is  null if there is  no parent; otherwise it  is a list holding  a DEFINE
+    ;;form defining  the parent  RTD syntactic  binding, the list  is spliced  in the
+    ;;output.
     (define parent-rtd-definition
-      (if parent-rtd-code
+      (if parent-rtd
 	  `((define ,parent-rtd ,parent-rtd-code))
+	'()))
+    ;;This is  null if there is  no parent; otherwise it  is a list holding  a DEFINE
+    ;;form defining  the parent  RCD syntactic  binding, the list  is spliced  in the
+    ;;output.
+    (define parent-rcd-definition
+      (if parent-rcd
+	  `((define ,parent-rcd ,parent-rcd-code))
+	'()))
+    ;;This is null if  there is no supertype constructor protocol;  otherwise it is a
+    ;;list holding a DEFINE form defining the supertype record-constructor descriptor
+    ;;syntactic binding, the list is spliced in the output.
+    (define super-rcd-definition
+      (if foo-super-protocol
+	  `((define ,foo-super-protocol ,foo-super-rcd-code))
 	'()))
     ;;This is null if there is no destructor; otherwise it is a list holding a DEFINE
     ;;form  defining the  default destructor  function, the  list is  spliced in  the
     ;;output.
     (define foo-destructor-definition
-      (if foo-destructor-code
+      (if foo-destructor
 	  `((define ,foo-destructor ,foo-destructor-code))
 	'()))
     ;;This is null  if there is no custom  printer; otherwise it is a  list holding a
@@ -175,9 +217,7 @@
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
   (define foo-syntactic-binding-form
-    (%make-type-name-syntactic-binding-form foo make-foo
-					    (and foo-destructor-code foo-destructor)
-					    foo?
+    (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-protocol foo-destructor
 					    foo-parent foo-rtd foo-rcd
 					    x* mutable-x*
 					    foo-x* foo-x-set!*
@@ -196,12 +236,16 @@
    `(begin
       ;;Parent record-type descriptor.
       ,@parent-rtd-definition
+      ;;Parent record-constructor descriptor.
+      ,@parent-rcd-definition
       ;;Record-type descriptor.
       (define ,foo-rtd ,foo-rtd-code)
       ;;Protocol function.
       (define ,foo-constructor-protocol ,constructor-protocol-code)
       ;;Record-constructor descriptor.
       (define ,foo-rcd ,foo-rcd-code)
+      ;;Super-type record-constructor descriptor.
+      ,@super-rcd-definition
       ;;Record destructor function.
       ,@foo-destructor-definition
       ;;Record printer function.
@@ -746,6 +790,54 @@
 	#| end of module: unsafe accessors and mutators |# ))))
 
 
+(define (%make-parent-rtd+rcd-code clause* input-form.stx synner)
+  ;;Return 3 values:
+  ;;
+  ;;1. A syntactic identifier  representing the parent type, or false  if there is no
+  ;;parent or the parent is specified through the procedural layer.
+  ;;
+  ;;2. False of a symbolic expression  representing an expression which, expanded and
+  ;;evaluated at run-time, will return the parent's record-type descriptor.
+  ;;
+  ;;3.  False or a symbolic expression representing an expression which, expanded and
+  ;;evaluated at  run-time, will  return the  parent record-type  default constructor
+  ;;descriptor.
+  ;;
+  (let ((parent-clause (%get-clause 'parent clause*)))
+    (syntax-match parent-clause ()
+      ;;If there  is a  PARENT clause  insert code  that retrieves  the RTD  from the
+      ;;parent type name.
+      ((_ ?name)
+       (identifier? ?name)
+       (begin
+	 (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx ?name (current-inferior-lexenv))
+	 ;;Validate ?NAME  as syntactic identifier  bound to a  record-type syntactic
+	 ;;binding.
+	 (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?name (current-inferior-lexenv))
+	 (values ?name
+		 `(record-type-descriptor ,?name)
+		 `(record-constructor-descriptor ,?name))))
+
+      ;;If there is no PARENT clause try to retrieve the expression evaluating to the
+      ;;RTD.
+      (#f
+       (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
+	 (syntax-match parent-rtd-clause ()
+	   ((_ ?rtd ?rcd)
+	    (values #f ?rtd ?rcd))
+
+	   ;;If  neither the  PARENT nor  the  PARENT-RTD clauses  are present:  just
+	   ;;return false.
+	   (#f
+	    (values #f #f #f))
+
+	   (_
+	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
+
+      (_
+       (synner "invalid syntax in PARENT clause" parent-clause)))))
+
+
 (define (%make-rtd-code name foo-uid clause* parent-rtd fields-vector-spec synner)
   ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
   ;;expression  which, expanded  and  evaluated at  run-time,  returns a  record-type
@@ -781,58 +873,62 @@
   `(make-record-type-descriptor (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque? ,fields))
 
 
-(define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd-code)
+(define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd.sym)
   ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
   ;;expression  which,  expanded  and  evaluated at  run-time,  returns  the  default
   ;;record-constructor descriptor.
   ;;
-  `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-constructor-protocol))
+  ;;If this  record-type has no  parent: PARENT-RCD.SYM is  false; otherwise it  is a
+  ;;symbol representing  the name of the  syntactic identifier bound to  the parent's
+  ;;record-constructor descriptor.
+  ;;
+  `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,foo-constructor-protocol))
 
 
-(define (%make-parent-rtd+rcd-code clause* synner)
-  ;;Return 3 values:
+(define (%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.sym synner)
+  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression  which, expanded  and evaluated  at run-time,  returns the  super-type
+  ;;record-constructor descriptor.  If there is  no SUPER-PROTOCOL clause in CLAUSE*:
+  ;;return false.
   ;;
-  ;;1. A syntactic identifier  representing the parent type, or false  if there is no
-  ;;parent or the parent is specified through the procedural layer.
+  ;;FOO must be the identifier representing this record type.
   ;;
-  ;;2. False of a symbolic expression  representing an expression which, expanded and
-  ;;evaluated at run-time, will return the parent's record-type descriptor.
+  ;;FOO-RTD must be a symbol representing  the name of the syntactic identifier bound
+  ;;to this type's RTD.
   ;;
-  ;;3.  False or a symbolic expression representing an expression which, expanded and
-  ;;evaluated at  run-time, will  return the  parent record-type  default constructor
-  ;;descriptor.
+  ;;FOO-PARENT.ID  must be  false if  this record-type  has no  parent or  has parent
+  ;;specified through  the procedural interface;  otherwise it must be  the syntactic
+  ;;identifier representing the parent's type.
   ;;
-  (let ((parent-clause (%get-clause 'parent clause*)))
-    (syntax-match parent-clause ()
-      ;;If there  is a  PARENT clause  insert code  that retrieves  the RTD  from the
-      ;;parent type name.
-      ((_ ?name)
-       (identifier? ?name)
-       (values ?name
-	       `(record-type-descriptor ,?name)
-	       `(record-constructor-descriptor ,?name)))
+  ;;PARENT-RCD.SYM must be false if this record-type has no parent; otherwise it must
+  ;;be  a symbol  representing the  name  of the  syntactic identifier  bound to  the
+  ;;parent's record-constructor descriptor.
+  ;;
+  (syntax-match (%get-clause 'super-protocol clause*) ()
+    ((_ ?super-protocol-expr)
+     (if foo-parent.id
+	 ;;This record type has a parent selected with the PARENT clause.
+	 (let* ((descr (id->record-type-name-binding-descriptor __module_who__ #f foo-parent.id (current-inferior-lexenv)))
+		(rts   (syntactic-binding-descriptor.value descr))
+		(proto (r6rs-record-type-spec.super-protocol-id rts)))
+	   (if proto
+	       ;;The parent record-type specification has a super-protocol.
+	       `(make-record-constructor-descriptor ,foo-rtd ,proto ,?super-protocol-expr)
+	     ;;The parent record-type specification has no super-protocol: let's use
+	     ;;the parent's default RCD.
+	     `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,?super-protocol-expr)))
+       ;;This record type has no parent.
+       `(make-record-constructor-descriptor ,foo-rtd #f ,?super-protocol-expr)))
 
-      ;;If there is no PARENT clause try to retrieve the expression evaluating to the
-      ;;RTD.
-      (#f
-       (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
-	 (syntax-match parent-rtd-clause ()
-	   ((_ ?rtd ?rcd)
-	    (values #f ?rtd ?rcd))
+    (#f
+     ;;No SUPER-PROTOCOL clause in this record-type definition.
+     #f)
 
-	   ;;If  neither the  PARENT nor  the  PARENT-RTD clauses  are present:  just
-	   ;;return false.
-	   (#f
-	    (values #f #f #f))
-
-	   (_
-	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
-
-      (_
-       (synner "invalid syntax in PARENT clause" parent-clause)))))
+    (?invalid-clause
+     (synner "invalid syntax in SUPER-PROTOCOL clause" ?invalid-clause))))
 
 
-(define (%make-destructor-code clause* foo-destructor foo foo-rtd foo-parent parent-rtd.sym synner)
+(define (%make-destructor-code clause* foo foo-rtd foo-parent parent-rtd.sym synner)
   ;;Extract from  the CLAUSE*  the DESTRUCTOR-PROTOCOL one  and return  an expression
   ;;which, expanded and  evaluated at run-time, will return  the destructor function;
   ;;the expression will return false if there is no destructor.
@@ -845,8 +941,9 @@
   ;;PARENT-RTD.SYM is  false if  this record-type  has no parent;  otherwise it  is a
   ;;symbol representing the name of the syntactic identifier bound to the parent RTD.
   ;;
-  (let ((clause (%get-clause 'destructor-protocol clause*))
-	(foo-destructor-protocol (%named-gensym/suffix foo "-destructor-protocol")))
+  (let ((clause                  (%get-clause 'destructor-protocol clause*))
+	(foo-destructor-protocol (%named-gensym/suffix foo "-destructor-protocol"))
+	(destructor-tmp          (%named-gensym/suffix foo "-destructor")))
     (syntax-match clause ()
       ((_ ?destructor-protocol-expr)
        ;;This record definition has a destructor protocol.
@@ -855,15 +952,15 @@
 	    (assertion-violation (quote ,foo)
 	      "expected closure object as result of evaluating the destructor protocol expression"
 	      ,foo-destructor-protocol))
-	  (receive-and-return (,foo-destructor)
+	  (receive-and-return (,destructor-tmp)
 	      ,(if (or foo-parent parent-rtd.sym)
 		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
 		 `(,foo-destructor-protocol))
-	    (if (procedure? ,foo-destructor)
-		(record-type-destructor-set! ,foo-rtd ,foo-destructor)
+	    (if (procedure? ,destructor-tmp)
+		(record-type-destructor-set! ,foo-rtd ,destructor-tmp)
 	      (assertion-violation (quote ,foo)
 		"expected closure object as result of applying the destructor protocol function"
-		,foo-destructor)))))
+		,destructor-tmp)))))
 
       ;;No  matching  clause  found.   This record  definition  has  no  destructor
       ;;protocol, but the parent (if any) might have one.
@@ -913,7 +1010,8 @@
        (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
 
 
-(define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo-destructor.sym foo?.id
+(define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo?.id
+						 foo-super-protocol.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
 						 x* mutable-x*
 						 foo-x* foo-x-set!*
@@ -926,6 +1024,10 @@
   ;;FOO.ID must be the identifier bound to the type name.
   ;;
   ;;MAKE-FOO.ID must be the identifier bound to the default constructor function.
+  ;;
+  ;;FOO-SUPER-PROTOCOL.SYM  must  be false  if  this  record-type has  no  super-type
+  ;;constructor descriptor;  otherwise it must be  a symbol representing the  name of
+  ;;the syntactic identifier to which the super-RCD is bound.
   ;;
   ;;FOO-DESTRUCTOR.SYM must be  false if this record-type has  no default destructor;
   ;;otherwise it must  be a symbol representing the name  of the syntactic identifier
@@ -1005,11 +1107,12 @@
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
   `(make-syntactic-binding-descriptor/record-type-name
-    (make-r6rs-record-type-spec (syntax ,foo-rtd.sym) (syntax ,foo-rcd.sym)
-				,(and foo-parent.id `(syntax ,foo-parent.id))
+    (make-r6rs-record-type-spec (syntax ,foo-rtd.sym)
+				(syntax ,foo-rcd.sym)
+				,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
+				,(and foo-parent.id          `(syntax ,foo-parent.id))
 				(syntax ,make-foo.id)
-				,(and foo-destructor.sym
-				      `(syntax ,foo-destructor.sym))
+				,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
 				(syntax ,foo?.id)
 				,foo-fields-safe-accessors.table
 				,foo-fields-safe-mutators.table

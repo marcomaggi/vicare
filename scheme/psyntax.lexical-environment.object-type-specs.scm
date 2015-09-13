@@ -34,7 +34,7 @@
 	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
 	 r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
-	 r6rs-record-type-spec.parent-id
+	 r6rs-record-type-spec.parent-id		r6rs-record-type-spec.super-protocol-id
 	 r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.default-destructor-id
 	 r6rs-record-type-spec.type-predicate-id
 	 r6rs-record-type-spec.safe-accessors-table	r6rs-record-type-spec.safe-mutators-table
@@ -309,14 +309,17 @@
 		;The syntactic identifier bound to the record-type descriptor.
    (immutable rcd-id			r6rs-record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
+   (immutable super-protocol-id		r6rs-record-type-spec.super-protocol-id)
+		;False if this record-type  has no super-type constructor descriptor;
+		;otherwise the syntactic identifier to which the super-RCD is bound.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
       (case-lambda
        ((rtd-id rcd-id)
-	((make-object-type-spec) rtd-id rcd-id))
+	((make-object-type-spec) rtd-id rcd-id #f))
 
-       ((rtd-id rcd-id
+       ((rtd-id rcd-id super-protocol-id
 		parent-id
 		default-constructor-id default-destructor-id type-predicate-id
 		safe-accessors-table safe-mutators-table
@@ -327,7 +330,7 @@
 				safe-accessors-table safe-mutators-table
 				unsafe-accessors-table unsafe-mutators-table
 				methods-table)
-	 rtd-id rcd-id)))))
+	 rtd-id rcd-id super-protocol-id)))))
   #| end of DEFINE-RECORD-TYPE |# )
 
 ;;; --------------------------------------------------------------------

@@ -51,7 +51,7 @@
 
 (parametrise ((check-test-name	'generic-maker-syntax))
 
-  (let ()	;application syntax
+  (internal-body ;application syntax
     (define-record-type alpha
       (fields a b c))
 
