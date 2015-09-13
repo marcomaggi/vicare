@@ -707,6 +707,45 @@
   #t)
 
 
+(parametrise ((check-test-name	'multiple-fields-clauses))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a)
+	  (fields b)
+	  (fields c))
+	(define O
+	  (make-alpha 1 2 3))
+	(values (alpha-a O)
+		(alpha-b O)
+		(alpha-c O)))
+    => 1 2 3)
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a)
+	  (fields b)
+	  (fields c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d)
+	  (fields e)
+	  (fields f))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(values (alpha-a O)
+		(alpha-b O)
+		(alpha-c O)
+		(beta-d  O)
+		(beta-e  O)
+		(beta-f  O)))
+    => 1 2 3 4 5 6)
+
+  (void))
+
+
 (parametrise ((check-test-name	'record-accessor-constructor))
 
   (check	;record accessor constructor with symbol argument

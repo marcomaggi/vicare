@@ -10775,6 +10775,7 @@ Reset to void all the fields of a structure.
 
 
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
+@deffnx {Auxiliary Syntax} fields @meta{field-spec} @dots{}
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
@@ -10782,6 +10783,24 @@ Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
 @value{PRJNAME} extensions, when the selected language is not strict
 @rnrs{6}.
+
+When the selected language is non--strict @rnrs{6}: multiple
+@clause{fields} clauses are accepted and the field specifications
+concatenated in the order in which they are given.  Example:
+
+@lisp
+(define-record-type alpha
+  (fields a)
+  (fields b)
+  (fields c))
+
+(define O
+  (make-alpha 1 2 3))
+
+(alpha-a O)     @result{} 1
+(alpha-b O)     @result{} 2
+(alpha-c O)     @result{} 3
+@end lisp
 @end deffn
 
 

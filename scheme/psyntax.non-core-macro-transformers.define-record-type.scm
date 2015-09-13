@@ -350,7 +350,7 @@
 	(free-id-member? id (or cached
 				(receive-and-return (rv)
 				    (map core-prim-id
-				      '(method case-method))
+				      '(method case-method fields))
 				  (set! cached rv)))))))
 
   #| end of module: %VALIDATE-DEFINITION-CLAUSES |# )
@@ -454,14 +454,30 @@
   ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
   ;;
   (define field-clause*
-    (let loop ((clause* clause*))
+    (let loop ((clause*        clause*)
+	       (field-spec**  '()))
       (syntax-match clause* (fields)
 	(()
-	 '())
-	(((fields ?field-spec* ...) . _)
-	 ?field-spec*)
-	((_ . ?rest)
-	 (loop ?rest)))))
+	 (if (option.strict-r6rs)
+	     (if (pair? field-spec**)
+		 ;;If there is only one list of field specs, fine; otherwise raise an
+		 ;;error.
+		 (if (null? (cdr field-spec**))
+		     (car field-spec**)
+		   (synner "invalid multiple FIELDS clauses in strict-R6RS language"
+			   (let ((fields.id (core-prim-id 'fields)))
+			     (map (lambda (field-spec*)
+				    (cons fields.id field-spec*))
+			       field-spec**))))
+	       '())
+	   ;;Non-strict language: we accept any number of FIELDS clauses.
+	   (if (pair? field-spec**)
+	       (apply append (reverse field-spec**))
+	     '())))
+	(((fields ?field-spec* ...) . ?clauses)
+	 (loop ?clauses (cons ?field-spec* field-spec**)))
+	((_ . ?clauses)
+	 (loop ?clauses field-spec**)))))
   (define (%gen-safe-accessor-name x)
     (identifier-append  foo foo "-" x))
   (define (%gen-unsafe-accessor-name x)
