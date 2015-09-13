@@ -244,9 +244,7 @@
 				      lex.a-rtd_0 (constant #f)
 				      lex.a-constructor-protocol_0))
 		       (lex.a?_0 (funcall (primref record-predicate) lex.a-rtd_0))
-		       (lex.make-a_0 (funcall (primref record-constructor) lex.a-rcd_0))
-		       (lex.a-first-field-offset_0 (funcall (primref $struct-ref) lex.a-rtd_0
-							    (constant 3))))
+		       (lex.make-a_0 (funcall (primref record-constructor) lex.a-rcd_0)))
 	      (constant #!void)))
 
 ;;; --------------------------------------------------------------------
@@ -1586,9 +1584,7 @@
 	      (bind ((lex.a?_0 (funcall (primref record-predicate) lex.a-rtd_0)))
 		(bind ((lex.make-a_0 (funcall (primref record-constructor)
 				       lex.a-rcd_0)))
-		  (bind ((lex.a-first-field-offset_0 (funcall (primref $struct-ref)
-						       lex.a-rtd_0 (constant 3))))
-		    (constant #!void))))))))
+		  (constant #!void)))))))
 
   #t)
 
@@ -1801,11 +1797,7 @@
 		(bind ((lex.make-a_0 (funcall (primref record-constructor)
 				       (funcall (primref $symbol-value)
 					 (constant loc.a-rcd)))))
-		  (bind ((lex.a-first-field-offset_0 (funcall (primref $struct-ref)
-						       (funcall (primref $symbol-value)
-							 (constant loc.a-rtd))
-						       (constant 3))))
-		    (constant #!void))))))))
+		  (constant #!void)))))))
 
   #f)
 
