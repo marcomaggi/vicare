@@ -200,10 +200,9 @@
     syntax-parameter-value
 
     ;; utilities for identifiers
-    valid-bound-ids?
-    distinct-bound-ids?
+    valid-bound-ids?			distinct-bound-ids?
     duplicate-bound-formals?
-    bound-id-member?
+    bound-id-member?			free-id-member?
     identifier-append
 
     ;; condition object types
@@ -2630,13 +2629,21 @@
       (_
        (syntax-violation #f "invalid formals" standard-formals-stx)))))
 
+(define (free-id-member? id id*)
+  ;;Given  an identifier  ID  and a  list  of identifiers  ID*: return  #t  if ID  is
+  ;;~BOUND-IDENTIFIER=? to one of the identifiers in ID*; else return #f.
+  ;;
+  (and (pair? id*)
+       (or (~free-identifier=? id (car id*))
+	   (free-id-member?    id (cdr id*)))))
+
 (define (bound-id-member? id id*)
   ;;Given  an identifier  ID  and a  list  of identifiers  ID*: return  #t  if ID  is
   ;;~BOUND-IDENTIFIER=? to one of the identifiers in ID*; else return #f.
   ;;
   (and (pair? id*)
-       (or (~bound-identifier=? id ($car id*))
-	   (bound-id-member? id ($cdr id*)))))
+       (or (~bound-identifier=? id (car id*))
+	   (bound-id-member?    id (cdr id*)))))
 
 (define* (identifier-append {ctxt identifier?} . str*)
   ;;Given  the identifier  CTXT  and a  list of  strings  or symbols  or

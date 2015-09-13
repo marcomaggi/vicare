@@ -971,26 +971,44 @@
 
 (module (%verify-clauses)
 
+  (define r6rs-valid-keywords
+    ;;Return a  list of  syntactic identifiers representing  the keywords  of clauses
+    ;;accepted by DEFINE-RECORD-TYPE under the strict R6RS language.
+    ;;
+    (let ((cached #f))
+      (lambda ()
+	(or cached
+	    (receive-and-return (rv)
+		(map bless
+		  '(fields parent parent-rtd protocol sealed opaque nongenerative))
+	      (set! cached rv))))))
+
+  (define extended-valid-keywords
+    ;;Return a  list of  syntactic identifiers representing  the keywords  of clauses
+    ;;accepted by DEFINE-RECORD-TYPE under the non-strict R6RS language.
+    ;;
+    (let ((cached #f))
+      (lambda ()
+	(or cached
+	    (receive-and-return (rv)
+		(append (r6rs-valid-keywords)
+			(map bless
+			  '(destructor-protocol custom-printer))
+			(list (method-id) (case-method-id)))
+	      (set! cached rv))))))
+
   (define (%verify-clauses input-form.stx cls*)
-    (define-constant R6RS-VALID-KEYWORDS
-      (map bless
-	'(fields parent parent-rtd protocol sealed opaque nongenerative)))
-    (define-constant EXTENDED-VALID-KEYWORDS
-      (append R6RS-VALID-KEYWORDS
-	      (map bless
-		'(destructor-protocol custom-printer))
-	      (list (method-id) (case-method-id))))
     (define-constant VALID-KEYWORDS
       (if (option.strict-r6rs)
-	  R6RS-VALID-KEYWORDS
-	EXTENDED-VALID-KEYWORDS))
+	  (r6rs-valid-keywords)
+	(extended-valid-keywords)))
     (let loop ((cls*  cls*)
 	       (seen* '()))
       (unless (null? cls*)
 	(syntax-match (car cls*) ()
 	  ((?kwd . ?rest)
 	   (cond ((or (not (identifier? ?kwd))
-		      (not (%free-id-member? ?kwd VALID-KEYWORDS)))
+		      (not (free-id-member? ?kwd VALID-KEYWORDS)))
 		  (syntax-violation __module_who__
 		    "not a valid DEFINE-RECORD-TYPE keyword"
 		    input-form.stx ?kwd))
@@ -1010,11 +1028,6 @@
 	     "malformed define-record-type clause"
 	     input-form.stx ?cls))
 	  ))))
-
-  (define (%free-id-member? x ls)
-    (and (pair? ls)
-	 (or (~free-identifier=? x (car ls))
-	     (%free-id-member? x (cdr ls)))))
 
   #| end of module: %VERIFY-CLAUSES |# )
 
