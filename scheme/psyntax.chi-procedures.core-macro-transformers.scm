@@ -2087,132 +2087,191 @@
 
 (module (method-call-transformer)
 
+  (define-module-who method-call)
+
   (define-core-transformer (method-call input-form.stx lexenv.run lexenv.expand)
     ;;Transformer  function used  to expand  Vicare's METHOD-CALL  syntaxes from  the
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return a PSI struct.
     ;;
     (syntax-match input-form.stx ()
-      ((_ ?method-name-id ?subject-expr ?arg* ...)
-       (identifier? ?method-name-id)
-       (let* ((method-name.sym	(identifier->symbol ?method-name-id))
-	      (expr.psi		(chi-expr ?subject-expr lexenv.run lexenv.expand))
-	      (expr.core	(psi-core-expr         expr.psi))
-	      (expr.sig		(psi-retvals-signature expr.psi)))
-	 (syntax-match (retvals-signature-tags expr.sig) ()
+      ((_ ?method-name ?subject-expr ?arg* ...)
+       (identifier? ?method-name)
+       (let* ((method-name.sym	(identifier->symbol ?method-name))
+	      (subject-expr.psi	(chi-expr ?subject-expr lexenv.run lexenv.expand))
+	      (subject-expr.sig	(psi-retvals-signature subject-expr.psi)))
+	 (define-syntax-rule (%late-binding)
+	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+						method-name.sym subject-expr.psi ?arg*))
+	 (syntax-match (retvals-signature-tags subject-expr.sig) ()
 	   ((?type-id)
-	    (if (top-tag-id? ?type-id)
-		(%expand-to-method-late-binding input-form.stx lexenv.run lexenv.expand
-						method-name.sym expr.psi ?arg*)
-	      (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		((r6rs-record-type)
-		 (let* ((rts (syntactic-binding-descriptor.value binding)))
-		   (cond
-		    ;;Look for a matching method name.
-		    ((r6rs-record-type-spec.applicable-method rts method-name.sym lexenv.run)
-		     => (lambda (method.stx)
-			  ;;A matching method name exists.
-			  (let* ((method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
-				 (method.core (psi-core-expr method.psi))
-				 (arg*.psi    (chi-expr* ?arg* lexenv.run lexenv.expand))
-				 (arg*.core   (map psi-core-expr arg*.psi)))
-			    (make-psi input-form.stx
-				      (build-application input-form.stx
-					method.core
-					(cons expr.core arg*.core))
-				      (psi-application-retvals-signature method.psi)))))
-		    ;;If the input  form has the right syntax: look  for a matching field
-		    ;;name for accessor application.
-		    ((and (null? ?arg*)
-			  (r6rs-record-type-spec.safe-accessor rts method-name.sym lexenv.run))
-		     => (lambda (accessor.stx)
-			  ;;A matching field name exists.
-			  (let* ((accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
-				 (accessor.core (psi-core-expr accessor.psi)))
-			    (make-psi input-form.stx
-				      (build-application input-form.stx
-					accessor.core
-					(list expr.core))
-				      (psi-application-retvals-signature accessor.psi)))))
-		    ;;If the input  form has the right syntax: look  for a matching field
-		    ;;name for mutator application.
-		    ((and (pair? ?arg*)
-			  (null? (cdr ?arg*))
-			  (r6rs-record-type-spec.safe-mutator rts method-name.sym lexenv.run))
-		     => (lambda (mutator.stx)
-			  ;;A matching field name exists.
-			  (let* ((mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
-				 (mutator.core (psi-core-expr mutator.psi))
-				 (arg.psi      (chi-expr (car ?arg*) lexenv.run lexenv.expand))
-				 (arg.core     (psi-core-expr arg.psi)))
-			    (make-psi input-form.stx
-				      (build-application input-form.stx
-					mutator.core
-					(list expr.core arg.core))
-				      (psi-application-retvals-signature mutator.psi)))))
-		    (else
-		     (raise
-		      (condition (make-who-condition __who__)
-				 (make-message-condition "unknown method name for type of subject expression")
-				 (make-syntax-violation input-form.stx ?subject-expr)
-				 (make-type-syntactic-identifier-condition ?type-id)
-				 (make-type-method-name-condition method-name.sym)))))))
+	    (top-tag-id? ?type-id)
+	    (%late-binding))
 
-		((vicare-struct-type)
-		 (cond ((null? ?arg*)
-			(let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-			       (field-names (struct-type-field-names std))
-			       (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?method-name-id)))
-			  (make-psi input-form.stx
-				    (build-application input-form.stx
-				      (build-primref no-source 'struct-and-std-ref)
-				      (list expr.core
-					    (build-data no-source field-idx)
-					    (build-data no-source std)))
-				    (make-retvals-signature-single-top))))
-		       ((and (pair? ?arg*)
-			     (null? (cdr ?arg*)))
-			(let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-			       (field-names (struct-type-field-names std))
-			       (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?method-name-id))
-			       (arg.psi     (chi-expr (car ?arg*) lexenv.run lexenv.expand))
-			       (arg.core    (psi-core-expr arg.psi)))
-			  (make-psi input-form.stx
-				    (build-application input-form.stx
-				      (build-primref no-source 'struct-and-std-set!)
-				      (list expr.core
-					    (build-data no-source field-idx)
-					    (build-data no-source std)
-					    arg.core))
-				    (make-retvals-signature-single-void))))
-		       (else
-			(raise
-			 (condition (make-who-condition __who__)
-				    (make-message-condition "unsupported method call operation on struct-type of subject expression")
-				    (make-syntax-violation input-form.stx ?subject-expr)
-				    (make-type-syntactic-identifier-condition ?type-id))))))
+	   ((?type-id)
+	    (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						  ?method-name method-name.sym
+						  ?type-id
+						  ?subject-expr subject-expr.psi ?arg*))
 
-		((tag-type-spec)
-		 (raise
-		  (condition (make-who-condition __who__)
-			     (make-message-condition "unsupported method call operation on type of subject expression")
-			     (make-syntax-violation input-form.stx ?subject-expr)
-			     (make-type-syntactic-identifier-condition ?type-id))))
-		)))
+	   (?type-id
+	    (list-tag-id? ?type-id)
+	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
+	    ;;signature; we need to insert a run-time dispatch.
+	    (%late-binding))
 
 	   (_
-	    (%synner "unable to determine type tag of expression, or invalid expression signature" expr.sig))
+	    (raise
+	     (condition (make-who-condition __module_who__)
+			(make-message-condition "subject expression of method call returns multiple values")
+			(make-syntax-violation input-form.stx ?subject-expr)
+			(make-irritants-condition subject-expr.sig))))
 	   )))
       ))
 
-  (define (%expand-to-method-late-binding input-form.stx lexenv.run lexenv.expand
-					  method-name.sym expr.psi arg*.stx)
+;;; --------------------------------------------------------------------
+
+  (module (%expand-to-early-binding-method-call)
+
+    (define (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						  method-name.id method-name.sym
+						  type-id
+						  subject-expr.stx subject-expr.psi arg*.stx)
+      (case-object-type-binding (__module_who__ input-form.stx type-id lexenv.run type-id-descr)
+	((r6rs-record-type)
+	 (%r6rs-record-method-call input-form.stx lexenv.run lexenv.expand
+				   method-name.id method-name.sym
+				   type-id type-id-descr
+				   subject-expr.stx subject-expr.psi arg*.stx))
+
+	((vicare-struct-type)
+	 (%vicare-struct-method-call input-form.stx lexenv.run lexenv.expand
+				     method-name.id method-name.sym
+				     type-id
+				     subject-expr.stx subject-expr.psi arg*.stx))
+
+	((tag-type-spec)
+	 (raise
+	  (condition (make-who-condition __module_who__)
+		     (make-message-condition "unsupported method call operation on type of subject expression")
+		     (make-syntax-violation input-form.stx subject-expr.stx)
+		     (make-type-syntactic-identifier-condition type-id))))
+	))
+
+    ;;;
+
+    (define (%r6rs-record-method-call input-form.stx lexenv.run lexenv.expand
+				      method-name.id method-name.sym
+				      type-id type-id-descr
+				      subject-expr.stx subject-expr.psi arg*.stx)
+      (let* ((expr.core  (psi-core-expr subject-expr.psi))
+	     (rts        (syntactic-binding-descriptor.value type-id-descr)))
+	(cond
+	 ;;Look for a matching method name.
+	 ((r6rs-record-type-spec.applicable-method rts method-name.sym lexenv.run)
+	  => (lambda (method.stx)
+	       ;;A matching method name exists.
+	       (let* ((method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+		      (method.core (psi-core-expr method.psi))
+		      (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
+		      (arg*.core   (map psi-core-expr arg*.psi)))
+		 (make-psi input-form.stx
+			   (build-application input-form.stx
+			     method.core
+			     (cons expr.core arg*.core))
+			   (psi-application-retvals-signature method.psi)))))
+	 ;;If the input form has the right syntax: look for a matching field name for
+	 ;;accessor application.
+	 ((and (null? arg*.stx)
+	       (r6rs-record-type-spec.safe-accessor rts method-name.sym lexenv.run))
+	  => (lambda (accessor.stx)
+	       ;;A matching field name exists.
+	       (let* ((accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+		      (accessor.core (psi-core-expr accessor.psi)))
+		 (make-psi input-form.stx
+			   (build-application input-form.stx
+			     accessor.core
+			     (list expr.core))
+			   (psi-application-retvals-signature accessor.psi)))))
+	 ;;If the input form has the right syntax: look for a matching field name for
+	 ;;mutator application.
+	 ((and (pair? arg*.stx)
+	       (null? (cdr arg*.stx))
+	       (r6rs-record-type-spec.safe-mutator rts method-name.sym lexenv.run))
+	  => (lambda (mutator.stx)
+	       ;;A matching field name exists.
+	       (let* ((mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
+		      (mutator.core (psi-core-expr mutator.psi))
+		      (arg.psi      (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
+		      (arg.core     (psi-core-expr arg.psi)))
+		 (make-psi input-form.stx
+			   (build-application input-form.stx
+			     mutator.core
+			     (list expr.core arg.core))
+			   (psi-application-retvals-signature mutator.psi)))))
+	 (else
+	  (raise
+	   (condition (make-who-condition __module_who__)
+		      (make-message-condition "unknown method name for type of subject expression")
+		      (make-syntax-violation input-form.stx subject-expr.stx)
+		      (make-type-syntactic-identifier-condition type-id)
+		      (make-type-method-name-condition method-name.sym)))))))
+
+    ;;;
+
+    (define (%vicare-struct-method-call input-form.stx lexenv.run lexenv.expand
+					method-name.id method-name.sym
+					type-id
+					subject-expr.stx subject-expr.psi arg*.stx)
+      (define expr.core
+	(psi-core-expr subject-expr.psi))
+      (cond ((null? arg*.stx)
+	     ;;No arguments, let's go for an accessor application.
+	     (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+		    (field-names (struct-type-field-names std))
+		    (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names method-name.id)))
+	       (make-psi input-form.stx
+			 (build-application input-form.stx
+			   (build-primref no-source 'struct-and-std-ref)
+			   (list expr.core
+				 (build-data no-source field-idx)
+				 (build-data no-source std)))
+			 (make-retvals-signature-single-top))))
+	    ((and (pair? arg*.stx)
+		  (null? (cdr arg*.stx)))
+	     ;;Only one argument, let's go for a mutator application.
+	     (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+		    (field-names (struct-type-field-names std))
+		    (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names method-name.id))
+		    (arg.psi     (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
+		    (arg.core    (psi-core-expr arg.psi)))
+	       (make-psi input-form.stx
+			 (build-application input-form.stx
+			   (build-primref no-source 'struct-and-std-set!)
+			   (list expr.core
+				 (build-data no-source field-idx)
+				 (build-data no-source std)
+				 arg.core))
+			 (make-retvals-signature-single-void))))
+	    (else
+	     (raise
+	      (condition (make-who-condition __module_who__)
+			 (make-message-condition "unsupported method call operation on struct-type of subject expression")
+			 (make-syntax-violation input-form.stx subject-expr.stx)
+			 (make-type-syntactic-identifier-condition type-id))))))
+
+    #| end of module: %EXPAND-TO-EARLY-BINDING-METHOD-CALL |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
+					       method-name.sym subject-expr.psi arg*.stx)
     ;;The  type of  the  values returned  by  the subject  expression  is unknown  at
     ;;expand-time; so we  expand to an expression that searches  at run-time a method
     ;;matching the  given name.  In other  words: we default to  "late binding" (also
     ;;known as "run-time dispatching").
     ;;
-    (let* ((expr.core	(psi-core-expr expr.psi))
+    (let* ((expr.core	(psi-core-expr subject-expr.psi))
 	   (arg*.psi	(chi-expr* arg*.stx lexenv.run lexenv.expand))
 	   (arg*.core	(map psi-core-expr arg*.psi)))
       (make-psi input-form.stx
