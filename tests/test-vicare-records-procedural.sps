@@ -114,14 +114,14 @@
 	(list (record-type-descriptor? rtd)
 	      (record-type-name rtd)
 	      (record-type-parent rtd)
-	      (record-type-uid rtd)
+	      (gensym? (record-type-uid rtd))
 	      (record-type-generative? rtd)
 	      (record-type-sealed? rtd)
 	      (record-type-opaque? rtd)
 	      (record-type-field-names rtd)
 	      (record-field-mutable? rtd 0)
 	      (record-field-mutable? rtd 1)))
-    => '(#t make-rtd #f #f #t #t #t #(a b) #t #f))
+    => '(#t make-rtd #f #t #t #t #t #(a b) #t #f))
 
   (check	;non-generative defined twice
       (let ((rtd1 (make-record-type-descriptor (name:	'make-rtd)

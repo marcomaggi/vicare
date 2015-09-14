@@ -216,9 +216,10 @@
    opaque?
 		;Boolean, true if this record type is opaque.
    uid
-		;False or Scheme symbol acting  as unique record type identifier.  If
-		;it is a symbol: this  record-type descriptor is non-generative.  The
-		;field "value" of the UID holds a reference to this <RTD>.
+		;Scheme symbol  acting as unique  record type identifier.   The field
+		;"value" of the UID holds a reference to this <RTD>.
+   generative?
+		;True if this record type is generative.
    fields
 		;Scheme vector, normalised fields specification.
 		;
@@ -611,9 +612,6 @@
 
 ;;;; record-type descriptor inspection
 
-(define-inline (not-<rtd>-uid rtd)
-  (not (<rtd>-uid rtd)))
-
 (let-syntax
     ((define-rtd-inspector (syntax-rules ()
 			     ((_ ?procname ?accessor)
@@ -623,7 +621,7 @@
   (define-rtd-inspector record-type-parent		<rtd>-parent)
   (define-rtd-inspector record-type-sealed?		<rtd>-sealed?)
   (define-rtd-inspector record-type-opaque?		<rtd>-opaque?)
-  (define-rtd-inspector record-type-generative?		not-<rtd>-uid)
+  (define-rtd-inspector record-type-generative?		<rtd>-generative?)
 
   ;;Return false or the UID of RTD.   Notice that this library assumes that: there is
   ;;a difference between generative and non-generative record-type descriptors.  This
@@ -634,7 +632,7 @@
   ;;	is generative,  so the return  of a UID does  not necessarily imply  that the
   ;;	type is nongenerative.)
   ;;
-  (define-rtd-inspector record-type-uid	<rtd>-uid)
+  (define-rtd-inspector record-type-uid			<rtd>-uid)
   #| end of LET-SYNTAX |# )
 
 (define* (record-type-field-names {rtd record-type-descriptor?})
@@ -911,37 +909,30 @@
       (receive-and-return (rtd)
 	  (if (symbol? uid)
 	      (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields-description fields)
-	    (%generate-rtd name parent uid sealed? opaque? normalised-fields-description))
+	    (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields-description))
 	($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd)))))
 
-  (define (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)
+  (define* (%generate-rtd name parent-rtd {uid symbol?} generative? sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
     ;;
-    ;;Here we do not care if UID is a symbol or false.
-    ;;
-    (let ((fields-number ($vector-length normalised-fields)))
-      (if (not parent-rtd)
-	  (make-<rtd> name
-		      fields-number ;total-fields-number
-		      fields-number ;fields-number
-		      0		    ;first-field-index
-		      parent-rtd sealed? opaque? uid normalised-fields
-		      (void) ;initialiser
-		      #f     ;default-protocol
-		      #f     ;default-rcd
-		      #f     ;destructor
-		      #f)    ;printer
-	(make-<rtd> name
-		    (fx+ fields-number (<rtd>-total-fields-number parent-rtd)) ;total-fields-number
-		    fields-number			   ;fields-number
-		    (<rtd>-total-fields-number parent-rtd) ;first-field-index
-		    parent-rtd sealed? (or opaque? (<rtd>-opaque? parent-rtd)) uid normalised-fields
-		    (void) ;initialiser
-		    #f	   ;default-protocol
-		    #f	   ;default-rcd
-		    #f	   ;destructor
-		    #f	   ;printer
-		    ))))
+    (%intern-nongenerative-rtd! uid (let ((fields-number ($vector-length normalised-fields)))
+				      (make-<rtd> name
+						  (if parent-rtd
+						      (fx+ fields-number (<rtd>-total-fields-number parent-rtd))
+						    fields-number) ;total-fields-number
+						  fields-number    ;fields-number
+						  (if parent-rtd
+						      (<rtd>-total-fields-number parent-rtd)
+						    0) ;first-field-index
+						  parent-rtd sealed?
+						  (or opaque? (and parent-rtd (<rtd>-opaque? parent-rtd)))
+						  uid generative? normalised-fields
+						  (void) ;initialiser
+						  #f     ;default-protocol
+						  #f     ;default-rcd
+						  #f     ;destructor
+						  #f     ;printer
+						  ))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and
@@ -973,7 +964,7 @@
 		  (%error "parent"))))
 	  (else
 	   ;;Build a new RTD and intern it.
-	   (%intern-nongenerative-rtd! uid (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)))))
+	   (%generate-rtd name parent-rtd uid #f sealed? opaque? normalised-fields))))
 
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
     (receive-and-return (rtd)

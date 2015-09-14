@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1522,8 +1522,8 @@
 
   (check
       (let (({T <record-type-descriptor>} (record-type-descriptor <alpha>)))
-	(T uid))
-    => #f)
+	(gensym? (T uid)))
+    => #t)
 
   (check
       (let (({T <record-type-descriptor>} (record-type-descriptor <alpha>)))

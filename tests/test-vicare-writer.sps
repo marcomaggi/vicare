@@ -949,7 +949,8 @@
   #t)
 
 
-(parametrise ((check-test-name	'records-writer))
+(parametrise ((check-test-name	'records-writer)
+	      (print-gensym	#f))
 
   (check
       (internal-body
@@ -1027,7 +1028,7 @@
       (internal-body
 	(define-record-type duo	(fields one two))
 	(write-it (record-type-descriptor duo)))
-    => "#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=#f fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#f default-rcd=#f destructor=#f printer=#f]")
+    => "#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=duo generative?=#t fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#f default-rcd=#f destructor=#f printer=#f]")
 
 ;;; --------------------------------------------------------------------
 ;;; record-constructor descriptors
@@ -1036,7 +1037,7 @@
       (internal-body
 	(define-record-type duo	(fields one two))
 	(write-it (record-constructor-descriptor duo)))
-    => "#[rcd duo rtd=#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=#f fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#<procedure> default-rcd=#f destructor=#f printer=#f] parent-rcd=#f]")
+    => "#[rcd duo rtd=#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=duo generative?=#t fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#<procedure> default-rcd=#f destructor=#f printer=#f] parent-rcd=#f]")
 
 ;;; --------------------------------------------------------------------
 ;;; documentation examples
