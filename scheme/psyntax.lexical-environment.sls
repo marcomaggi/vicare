@@ -169,6 +169,7 @@
     ;; syntax objects: mapping identifiers to labels
     id->label				id->label/or-error
     id->object-type-binding-descriptor	id->record-type-name-binding-descriptor
+    object-type-binding-identifier?
 
     ;; syntax objects: marks
     same-marks?
@@ -2191,6 +2192,17 @@
 (define (id->label/or-error who input-form.stx id)
   (or (id->label id)
       (raise-unbound-error who input-form.stx id)))
+
+(case-define object-type-binding-identifier?
+  ((id)
+   (object-type-binding-identifier? id (current-inferior-lexenv)))
+  ((id lexenv)
+   (cond ((id->label id)
+	  => (lambda (label)
+	       (let* ((descr (label->syntactic-binding-descriptor label lexenv))
+		      (value (syntactic-binding-descriptor.value descr)))
+		 (object-type-spec? value))))
+	 (else #f))))
 
 (define (id->object-type-binding-descriptor who input-form.stx type-name-id lexenv)
   ;;TYPE-NAME-ID is  meant to be  a syntactic identifier representing  an object-type

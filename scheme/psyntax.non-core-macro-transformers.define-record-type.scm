@@ -59,30 +59,24 @@
   (define foo-custom-printer		(%named-gensym/suffix foo "-custom-printer"))
   (define-values
     (x*
-		;A list of identifiers representing all the field names.
+		;A list of symbols representing all the field names.
      idx*
-		;A list  of fixnums  representing all the  field indexes
-		;(zero-based).
+		;A list of fixnums representing all the field indexes (zero-based).
      foo-x*
-		;A list  of identifiers  representing the  safe accessor
-		;names.
+		;A list of identifiers representing the safe accessor names.
      unsafe-foo-x*
-		;A list of identifiers  representing the unsafe accessor
-		;names.
+		;A list of identifiers representing the unsafe accessor names.
      mutable-x*
-		;A list  of identifiers  representing the  mutable field
-		;names.
+		;A list of identifiers representing the mutable field names.
      set-foo-idx*
-		;A  list  of  fixnums  representing  the  mutable  field
-		;indexes (zero-based).
+		;A   list  of   fixnums  representing   the  mutable   field  indexes
+		;(zero-based).
      foo-x-set!*
 		;A list of identifiers representing the mutator names.
      unsafe-foo-x-set!*
-		;A list  of identifiers representing the  unsafe mutator
-		;names.
+		;A list of identifiers representing the unsafe mutator names.
      immutable-x*
-		;A list of identifiers  representing the immutable field
-		;names.
+		;A list of identifiers representing the immutable field names.
      field-type-id*
 		;A list of tag identifiers representing the field tags.
      mutable-field-type-id*
@@ -207,6 +201,30 @@
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
     (%parse-method-clauses clause* foo synner))
 
+  ;;A  symbolic expression  (to be  BLESSed later)  representing a  Scheme expression
+  ;;which, expanded and evaluated at run-time, builds a hashtable of methods for this
+  ;;record-type  and  registers  it  as  property  in  the  record-type's  UID.   The
+  ;;expression must be spliced in the output form.
+  ;;
+  (define methods-late-binding-table.sexp
+    (if (or (pair? method-name*.sym)
+	    (pair? x*))
+	(let ((table.sym (gensym)))
+	  `((putprop (record-type-uid ,foo-rtd)
+		     'late-binding-methods-table
+		     (receive-and-return (,table.sym)
+			 (make-eq-hashtable)
+		       ;;First the fields...
+		       ,@(map (lambda (name procname)
+				`(hashtable-set! ,table.sym (quote ,name) ,procname))
+			   x* foo-x*)
+		       ;;... then the method, so that the methods will override the
+		       ;;symbols in the table.
+		       ,@(map (lambda (name procname)
+				`(hashtable-set! ,table.sym (quote ,name) ,procname))
+			   method-name*.sym method-procname*.sym)))))
+      '()))
+
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
@@ -256,7 +274,6 @@
 	(record-constructor ,foo-rcd))
       ;;Methods.
       ,@method-form*.sexp
-
       ;;We want the  default constructor function to have a  signature specifying the
       ;;record-type as return type.
       (begin-for-syntax
@@ -289,6 +306,7 @@
 					    foo-x-set!* unsafe-foo-x-set!* mutable-x* set-foo-idx*
 					    field-type-id* mutable-field-type-id*)
 
+	,@methods-late-binding-table.sexp
 	#| end of module: safe and unsafe accessors and mutators |# )
       )))
 
@@ -424,7 +442,7 @@
   ;;Given the definition  clauses CLAUSE* extract the FIELDS clauses  and parse them.
   ;;Return the following values:
   ;;
-  ;;1..The list of syntactic identifiers representing all the field names.
+  ;;1..The list of symbols representing all the field names.
   ;;
   ;;2..The list of fixnums representings all the field relative indexes (zero-based).
   ;;
@@ -502,6 +520,11 @@
 	     (mutable-tag*		'())
 	     (immutable-tag*		'())
 	     (fields-vector-spec*       '()))
+    (define (%register-field-name field.id)
+      (let ((field.sym (identifier->symbol field.id)))
+	(if (memq field.sym field*)
+	    (synner "multiple field definitions with the same name" field.id)
+	  (cons field.sym field*))))
     (syntax-match field-clause* (mutable immutable)
       (()
        (values (reverse field*)         (reverse idx*)         (reverse accessor*) (reverse unsafe-accessor*)
@@ -516,35 +539,35 @@
 	    (identifier? ?mutator))
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons field.id field*)			(cons i idx*)
-	       (cons ?accessor accessor*)		(cons (%gen-unsafe-accessor-name field.id) unsafe-accessor*)
-	       (cons field.id mutable-field*)		(cons i mutable-idx*)
-	       (cons ?mutator mutator*)			(cons (%gen-unsafe-mutator-name  field.id) unsafe-mutator*)
+	 (loop ?rest (fxadd1 i)
+	       (%register-field-name field.id)			(cons i idx*)
+	       (cons ?accessor accessor*)			(cons (%gen-unsafe-accessor-name field.id) unsafe-accessor*)
+	       (cons field.id mutable-field*)			(cons i mutable-idx*)
+	       (cons ?mutator mutator*)				(cons (%gen-unsafe-mutator-name  field.id) unsafe-mutator*)
 	       immutable-field*
 	       (cons field.tag tag*)
-	       (cons field.tag mutable-tag*)		immutable-tag*
+	       (cons field.tag mutable-tag*)			immutable-tag*
 	       (cons `(mutable ,field.id) fields-vector-spec*))))
 
       (((immutable ?name ?accessor) . ?rest)
        (identifier? ?accessor)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)			(cons i idx*)
-	       (cons ?accessor accessor*)		(cons (%gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*				mutable-idx*
-	       mutator*					unsafe-mutator*
+	 (loop ?rest (fxadd1 i)
+	       (cons ?name field*)				(cons i idx*)
+	       (cons ?accessor accessor*)			(cons (%gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       mutable-field*					mutable-idx*
+	       mutator*						unsafe-mutator*
 	       (cons ?name immutable-field*)
 	       (cons field.tag tag*)
-	       mutable-tag*				(cons field.tag immutable-tag*)
+	       mutable-tag*					(cons field.tag immutable-tag*)
 	       (cons `(immutable ,field.id) fields-vector-spec*))))
 
       (((mutable   ?name) . ?rest)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons field.id field*)				(cons i idx*)
+	 (loop ?rest (fxadd1 i)
+	       (%register-field-name field.id)			(cons i idx*)
 	       (cons (%gen-safe-accessor-name   field.id)	accessor*)
 	       (cons (%gen-unsafe-accessor-name field.id)	unsafe-accessor*)
 	       (cons field.id mutable-field*)			(cons i mutable-idx*)
@@ -558,8 +581,8 @@
       (((immutable ?name) . ?rest)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons field.id field*)				(cons i idx*)
+	 (loop ?rest (fxadd1 i)
+	       (%register-field-name field.id)			(cons i idx*)
 	       (cons (%gen-safe-accessor-name   field.id)	accessor*)
 	       (cons (%gen-unsafe-accessor-name field.id)	unsafe-accessor*)
 	       mutable-field*					mutable-idx*
@@ -572,8 +595,8 @@
       ((?name . ?rest)
        (receive (field.id field.tag)
 	   (parse-tagged-identifier-syntax ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons field.id field*)				(cons i idx*)
+	 (loop ?rest (fxadd1 i)
+	       (%register-field-name field.id)			(cons i idx*)
 	       (cons (%gen-safe-accessor-name   field.id)	accessor*)
 	       (cons (%gen-unsafe-accessor-name field.id)	unsafe-accessor*)
 	       mutable-field*					mutable-idx*
@@ -798,6 +821,64 @@
 	    unsafe-foo-x-set!* mutable-x*)
 
 	#| end of module: unsafe accessors and mutators |# ))))
+
+
+#;(define (%make-field-actors-code foo foo-rtd foo-rcd
+				 foo-x*      unsafe-foo-x*      x*         idx*
+				 foo-x-set!* unsafe-foo-x-set!* mutable-x* set-foo-idx*
+				 field-type-id* mutable-field-type-id*
+				 fields-vector-spec)
+  ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
+  ;;representing  a Scheme  expression  which, expanded  and  evaluated at  run-time,
+  ;;defines the syntactic bindings of the  unsafe fields accessors and mutators.  The
+  ;;returned list is meant to be spliced in the output form.
+  ;;
+  ;;FOO must be  the syntactic identifier represening the  record-type name.  FOO-RTD
+  ;;must be a symbol  representing the name of the syntactic  identifier bound to the
+  ;;record-type descriptor.   FOO-RCD must be a  symbol representing the name  of the
+  ;;syntactic identifier bound to the record-constructor descriptor.
+  ;;
+  ;;FOO-X* and  FOO-X-SET!* must  be list  of symbols representing  the names  of the
+  ;;syntactic identifiers bound to the safe field accessors and mutators.
+  ;;
+  ;;UNSAFE-FOO-X* and  UNSAFE-FOO-X-SET!* must  be list  of symbols  representing the
+  ;;names  of the  syntactic  identifiers bound  to the  unsafe  field accessors  and
+  ;;mutators.
+  ;;
+  ;;X* and MUTABLE-X* must  be list of identifiers representing the  names of all the
+  ;;fields and the mutable fields.
+  ;;
+  ;;IDX* and SET-FOO-IDX* must be lists  of fixnums representing the relative indexes
+  ;;of all the fields and the mutable fields.
+  ;;
+  ;;FIELD-TYPE-ID* and MUTABLE-FIELD-TYPE-ID* must  be lists of syntactic identifiers
+  ;;representing all the field types and the mutable field types.
+  ;;
+  ;;NOTE The unsafe variant of the field accessor and mutator must be a syntax object
+  ;;which, expanded by itself and evaluated, returns an accessor or mutator function.
+  ;;We know that when the compiler finds a form like:
+  ;;
+  ;;   ((lambda (record)           (unsafe-foo-x record))
+  ;;    the-record)
+  ;;   ((lambda (record new-value) (unsafe-foo-x-set! record new-value))
+  ;;    the-record the-new-value)
+  ;;
+  ;;it integrates the LAMBDA into:
+  ;;
+  ;;   (unsafe-foo-x the-record)
+  ;;   (unsafe-foo-x-set! the-record the-new-value)
+  ;;
+  (if (null? x*)
+      '()
+    (map (lambda (foo-x unsafe-foo-x field-tag)
+	   (let ((record.sym   (gensym "record"))
+		 (new-val.sym  (gensym "record")))
+	     `(case-define ,foo-on-x
+		(((brace _ ,field-tag) (brace ,record.sym ,foo))
+		 (,unsafe-foo-x ,record.sym))
+		(((brace ,record.sym ,foo) (brace ,new-val.sym ,field-tag))
+		 (,unsafe-foo-x-set! ,record.sym ,new-val.sym)))))
+      foo-x* unsafe-foo-x* field-type-id*)))
 
 
 (define (%make-parent-rtd+rcd-code clause* foo input-form.stx synner)

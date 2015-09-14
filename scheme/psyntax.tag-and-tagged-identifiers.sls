@@ -601,8 +601,9 @@
   ;;
   (and (identifier? obj)
        (lex.~identifier-bound? obj)
-       (and ($identifier-tag-type-spec obj)
-	    #t)))
+       (or (lex.object-type-binding-identifier? obj)
+	   (and ($identifier-tag-type-spec obj)
+		#t))))
 
 (define (tag-identifier-and-list-sub-tag? obj)
   ;;Return true if OBJ is a bound identifier with "tag-type-spec" property set and

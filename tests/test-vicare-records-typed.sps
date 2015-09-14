@@ -27,7 +27,8 @@
 (program (test-vicare-records-typed)
   (options tagged-language)
   (import (vicare)
-    (vicare checks))
+    (vicare checks)
+    (vicare expander tags))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: records with typed language\n")
@@ -753,6 +754,245 @@
     => (+ 1 2 3 4))
 
   #t)
+
+
+(parametrise ((check-test-name	'methods-late-binding))
+
+;;; method-call
+
+  ;;Calling methods.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (method (get-a O)
+	    (alpha-a O))
+	  (method (get-b O)
+	    (alpha-b O)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(define ({the-record <top>})
+	  O)
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+
+	(values (.get-a (the-record))
+		(.get-b (the-record))))
+    => 1 2)
+
+  ;;Calling methods and parent's methods.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (method (add-them {O alpha})
+	    (+ (.a O) (.b O))))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (method (mul-them {O beta})
+	    (* (.a O) (.b O))))
+
+	(define {O beta}
+	  (make-beta 3 5))
+
+	(define ({the-record <top>})
+	  O)
+
+	(values (.add-them (the-record))
+		(.mul-them (the-record))))
+    => 8 15)
+
+  ;;Calling methods, parent's methods, grandparent's methods.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (method (add-them {O alpha})
+	    (+ (.a O) (.b O))))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (method (mul-them {O beta})
+	    (* (.a O) (.b O))))
+
+	(define-record-type gamma
+	  (parent beta)
+	  (method (list-them {O gamma})
+	    (list (.a O) (.b O))))
+
+	(define {O gamma}
+	  (make-gamma 3 5))
+
+	(define ({the-record <top>})
+	  O)
+
+	(values (.add-them (the-record))
+		(.mul-them (the-record))
+		(.list-them (the-record))))
+    => 8 15 '(3 5))
+
+;;; --------------------------------------------------------------------
+;;; method-call-late-binding, accessing fields
+
+  ;;Accessing fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define O
+	  (make-alpha 1 2))
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)))
+    => 1 2)
+
+  ;;Accessing parent's fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields c d))
+
+	(define O
+	  (make-beta 1 2 3 4))
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)
+		(method-call-late-binding 'c O)
+		(method-call-late-binding 'd O)))
+    => 1 2 3 4)
+
+  ;;Accessing grandparent's fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields c d))
+
+	(define-record-type gamma
+	  (parent beta)
+	  (fields e f))
+
+	(define O
+	  (make-gamma 1 2 3 4 5 6))
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)
+		(method-call-late-binding 'c O)
+		(method-call-late-binding 'd O)
+		(method-call-late-binding 'e O)
+		(method-call-late-binding 'f O)))
+    => 1 2 3 4 5 6)
+
+;;; --------------------------------------------------------------------
+;;; method-call-late-binding, calling methods
+
+  ;;Calling methods.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b))
+	  (method (get-a O)
+	    (alpha-a O))
+	  (method (get-b O)
+	    (alpha-b O)))
+
+	(define {O alpha}
+	  (make-alpha 1 2))
+
+	(define ({the-record <top>})
+	  O)
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+
+	(values (method-call-late-binding 'get-a (the-record))
+		(method-call-late-binding 'get-b (the-record))))
+    => 1 2)
+
+  ;;Calling methods and parent's methods.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (method (add-them {O alpha})
+	    (+ (.a O) (.b O))))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (method (mul-them {O beta})
+	    (* (.a O) (.b O))))
+
+	(define {O beta}
+	  (make-beta 3 5))
+
+	(define ({the-record <top>})
+	  O)
+
+	(values (method-call-late-binding 'add-them (the-record))
+		(method-call-late-binding 'mul-them (the-record))))
+    => 8 15)
+
+  ;;Calling methods, parent's methods, grandparent's methods.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b)
+	  (method (add-them {O alpha})
+	    (+ (.a O) (.b O))))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (method (mul-them {O beta})
+	    (* (.a O) (.b O))))
+
+	(define-record-type gamma
+	  (parent beta)
+	  (method (list-them {O gamma})
+	    (list (.a O) (.b O))))
+
+	(define {O gamma}
+	  (make-gamma 3 5))
+
+	(define ({the-record <top>})
+	  O)
+
+	(values (method-call-late-binding 'add-them (the-record))
+		(method-call-late-binding 'mul-them (the-record))
+		(method-call-late-binding 'list-them (the-record))))
+    => 8 15 '(3 5))
+
+  (void))
 
 
 ;;;; done

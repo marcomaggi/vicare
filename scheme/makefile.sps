@@ -1092,6 +1092,7 @@
     (slot-ref					v $language)
     (slot-set!					v $language)
     (method-call				v $language)
+    (method-call-late-binding			v $language)
     (struct-type-descriptor			v $language)
     (parameterize				v $language)
     (parameterise				v $language)

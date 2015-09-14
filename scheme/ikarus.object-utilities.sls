@@ -28,6 +28,9 @@
 #!vicare
 (library (ikarus.object-utilities)
   (export
+    ;; type methods
+    method-call-late-binding
+
     ;; delete fallback
     internal-delete
 
@@ -42,6 +45,7 @@
     return-value-validation-with-predicate
     signature-rest-argument-validation-with-predicate)
   (import (except (vicare)
+		  method-call-late-binding
 		  any->symbol		any->string
 		  always-true		always-false
 		  procedure-and-error
@@ -61,6 +65,50 @@
 	    records.)
     (only (vicare system $fx)
 	  $fxadd1))
+
+
+;;;; helpers for object-type method calls
+
+(define (method-call-late-binding method-name.sym subject . args)
+  ;;This function is called by the expansion of METHOD-CALL:
+  ;;
+  ;;   (method-call ?method-name ?subject-expr ?arg ...)
+  ;;
+  ;;when it  is impossible to  determine type signature of  the return values  of the
+  ;;subject expression.   SUBJECT is the  result of  the subject expression;  ARGS is
+  ;;null or a list of method arguments.
+  ;;
+  ;;Here
+  ;;
+  (define (%error message)
+    (error 'method-call message method-name.sym subject args))
+  (define (%error-object-type-has-no-methods-table)
+    (%error "object type has no methods table"))
+  (define (%error-record-type-has-no-matching-method)
+    (%error "record type has no matching method"))
+  (cond ((records.record-object? subject)
+	 ;;Here we  expect the record-type  descriptor to have  a symbol as  UID: the
+	 ;;property  list   of  the   symbol  should  contain   an  entry   with  key
+	 ;;"late-binding-methods-table"; the value  of the entry must  be a hashtable
+	 ;;associating the method name to the implementation procedure.
+	 (let loop ((rtd (record-rtd subject)))
+	   (if rtd
+	       (cond ((record-type-uid rtd)
+		      => (lambda (uid)
+			   (cond ((getprop uid 'late-binding-methods-table)
+				  => (lambda (table)
+				       (cond ((hashtable-ref table method-name.sym #f)
+					      => (lambda (proc)
+						   (apply proc subject args)))
+					     (else
+					      (loop (record-type-parent rtd))))))
+				 (else
+				  (loop (record-type-parent rtd))))))
+		     (else
+		      (loop (record-type-parent rtd))))
+	     (%error-record-type-has-no-matching-method))))
+	(else
+	 (%error-object-type-has-no-methods-table))))
 
 
 ;;;; delete fallback implementation
