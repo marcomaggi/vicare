@@ -46,6 +46,7 @@
 	    (set-<rtd>-printer!		record-type-printer-set!))
 
     ;; syntactic bindings for internal use only
+    (rename ($<rtd>-destructor		$record-type-destructor))
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
