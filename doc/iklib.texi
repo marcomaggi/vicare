@@ -2019,6 +2019,7 @@ syntactic identifier.
 * iklib syntaxes types new-and-del::    Constructors and destructors.
 * iklib syntaxes types predicates::     Predicate syntaxes.
 * iklib syntaxes types slots::          Slot getter and setter syntaxes.
+* iklib syntaxes types methods::        Calling object-type methods.
 @end menu
 
 @c page
@@ -2255,6 +2256,168 @@ field.
 When @syntax{_} is used in place of both @meta{expr} and @meta{new-val}:
 the syntax evaluates to a slot mutator function.
 @end deffn
+
+@c page
+@node iklib syntaxes types methods
+@subsubsection Calling object--type methods
+
+
+The following keyword syntactic bindings are involved in the definition
+and use of methods: @clause{method}, @clause{case-method},
+@syntax{method-call}.  In addition the function
+@func{method-call-late-binding} performs a method call with ``late
+binding'' (run--time dispatching).
+
+The keywords @clause{method} and @clause{case-method} are used in
+@syntax{define-record-type} to define methods for a record type
+(@pxref{iklib records defs methods, Record--type methods}).  For
+example:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (method (sum-them self)
+    (+ (duo-one self)
+       (duo-two self)))
+  (method (mul-them self)
+    (* (duo-one self)
+       (duo-two self))))
+@end lisp
+
+@noindent
+the syntax @syntax{method-call} is then used to call a record's methods:
+
+@lisp
+(define @{O duo@}
+  (new duo 3 5))
+
+(method-call sum-them O)        @result{} 8
+(method-call mul-them O)        @result{} 15
+@end lisp
+
+
+@deffn Syntax method-call @meta{name} @meta{subject-expr} @meta{arg} @dots{}
+Apply an object--type's method to the return value of
+@meta{subject-expr} and the optional arguments @meta{arg}.
+
+@meta{name} must be a symbol representing a method name.
+@meta{subject-expr} must be a Scheme expression which, expanded and
+evaluated at run--time, returns a single value.  Each @meta{arg} must be
+a Scheme expression which, expanded and evaluated at run--time, returns
+a single value.
+
+When possible, @syntax{method-call} determines at expand--time the type
+of the expression @meta{subject-expr} and searches for a method with
+equal name, according to @func{eq?}.  If the method is found, the
+syntactic identifier to which the implementation procedure is bound is
+inserted in the macro expansion:
+
+@lisp
+(@meta{procedure} @meta{subject-expr} @meta{arg} ...)
+@end lisp
+
+@noindent
+If the object--type of @meta{subject-expr} has no matching method: its
+super--type is inspected, then the super--type of the super--type and so
+on.  If no method is found in the types hierarchy: an exception is
+raised.
+
+@syntax{method-call} is able to retrieve the type of its second argument
+at expand--time only when the typed language is enabled.  If
+@syntax{method-call} cannot determine the type of @meta{subject-expr} at
+expand--time, the macro use is expanded to:
+
+@lisp
+(method-call-late-binding (quote @meta{name})
+                          @meta{subject-expr} @meta{arg} ...)
+@end lisp
+
+@noindent
+and the function @func{method-call-late-binding} attempts to determine a
+suitable method at run--time.
+@end deffn
+
+
+@defun method-call-late-binding @var{name} @var{subject} @var{arg} @dots{}
+Apply an object--type's method to @var{subject} and the optional
+arguments @meta{arg}.  Return the application results.
+
+@var{name} must be a symbol representing a method name.  @var{subject}
+must be a Scheme object implementing a set of methods.  The optional
+@meta{arg} arguments can be any value.
+
+This function attempts to determine the type of @var{subject} at
+run--time and searches the object--type's table of methods, if any, for
+a method whose name equals @var{name} according to @func{eq?}.  If a
+method is found, its implementation procedure is retrieved and applied
+to @var{subject} and the @var{arg} values.
+
+If the object--type of @var{subject} has no matching method: its
+super--type is inspected, then the super--type of the super--type and so
+on.  If no method is found in the types hierarchy: an exception is
+raised.
+
+Usually we do not need to call this function explicitly; however, it is
+useful for debugging purposes.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Dot notation
+
+When the Scheme reader's textual input port is configured in
+@samp{#!vicare} mode: if a list starts with a symbol; the name of the
+symbol is a string of length at least @math{2}; the first character of
+the string is a dot; the second character of the string is @strong{not}
+a dot, then a @syntax{method-call} symbol is inserted and the symbol
+stripped of the dot.
+
+We can try it at the @repl{}:
+
+@example
+vicare> '(.ciao)
+$1 = (method-call ciao)
+@end example
+
+Notice that @rnrs{6} forbids symbols starting with a dot, with the
+exception of the ellipsis; so this transformation does not influence the
+other reader operations.
+
+We can use this notation to call an object--type's methods as in the
+following program:
+
+@lisp
+#!vicare
+(program (demo)
+  (options tagged-language)
+  (import (vicare))
+
+  (define-record-type duo
+    (fields one two)
+
+    (method (sum-them @{O duo@})
+      (+ (.one O) (.two O)))
+
+    (method (mul-them @{O duo@})
+      (* (.one O) (.two O)))
+
+    (method (display O port)
+      (display O port)))
+
+  (define @{O duo@}
+    (new duo 3 4))
+
+  (pretty-print (.sum-them O)
+                (current-error-port))
+
+  (pretty-print (.mul-them O)
+                (current-error-port))
+
+  (.display O (current-error-port))
+  (newline (current-error-port))
+
+  #| end of program |# )
+@end lisp
 
 @c page
 @node iklib syntaxes try
@@ -10760,7 +10923,7 @@ Reset to void all the fields of a structure.
 
 
 @menu
-* iklib records definitions::   Defining record types.
+* iklib records defs::          Defining record types.
 * iklib records predicates::    Record predicates.
 * iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
@@ -10770,12 +10933,14 @@ Reset to void all the fields of a structure.
 @end menu
 
 @c page
-@node iklib records definitions
+@node iklib records defs
 @subsection Defining record types
 
 
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
 @deffnx {Auxiliary Syntax} fields @meta{field-spec} @dots{}
+@deffnx {Auxiliary Syntax} method
+@deffnx {Auxiliary Syntax} case-method
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
@@ -10805,13 +10970,14 @@ concatenated in the order in which they are given.  Example:
 
 
 @menu
-* iklib records definitions super-proto:: The super-type protocol.
-* iklib records definitions destructor::  The destructor protocol.
-* iklib records definitions printer::     The custom printer.
+* iklib records defs super-proto:: The super-type protocol.
+* iklib records defs methods::     Record-type methods.
+* iklib records defs destructor::  The destructor protocol.
+* iklib records defs printer::     The custom printer.
 @end menu
 
 @c page
-@node iklib records definitions super-proto
+@node iklib records defs super-proto
 @subsubsection The super--type protocol
 
 
@@ -10870,7 +11036,127 @@ the default constructor function @func{make-alpha} builds instances of
 the @clause{super-protocol} of @objtype{alpha}.
 
 @c page
-@node iklib records definitions destructor
+@node iklib records defs methods
+@subsubsection Record--type methods
+
+
+The syntactic bindings @clause{method} and @clause{case-method} are used
+as clause keywords in @syntax{define-record-type} to define methods for
+a record type; each can be used any number of times in the same
+@syntax{define-record-type} macro use.  These clauses are accepted by
+@syntax{define-record-type} only when the language is non--strict
+@rnrs{6}.
+
+We can think of @clause{method} as acting like @syntax{define} with
+regard to the syntax of arguments to function; the first argument to a
+method is the record itself: we have to write it explicitly.  For
+example:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (method (sum-them this)
+    (+ (duo-one this)
+       (duo-two this)))
+  (method (mul-them this)
+    (* (duo-one this)
+       (duo-two this))))
+
+(define @{O duo@}
+  (make-duo 1 2))
+
+(method-call sum-them O)        @result{} 3
+@end lisp
+
+The clause @clause{case-method} is similar, we can think of it as acting
+like @syntax{case-define}:
+
+@lisp
+(define-record-type alpha
+  (fields (mutable a))
+  (case-method on-a
+    ((this)
+     (alpha-a this))
+    ((this new-val)
+     (alpha-a-set! this new-val))))
+
+(define @{O alpha@}
+  (new alpha 1))
+
+(method-call on-a O)            @result{} 1
+(method-call on-a O 2)
+(method-call on-a O)            @result{} 2
+@end lisp
+
+The syntax @syntax{method-call} searches for a record--type's methods by
+comparing the symbols with @func{eq?} (@strong{not} the syntactic
+identifiers with @func{free-identifier=?}).  @ref{iklib syntaxes types
+methods, Calling object--type methods}.
+
+When used with records: if a method with the given name is not found,
+@syntax{method-call} searches for a field with the given name, but only
+if the number of arguments is right; field accessors and mutators are
+methods automatically.  The syntax of @syntax{method-call} is:
+
+@example
+(method-call @meta{name} @meta{subject-expr} @meta{arg} ...)
+@end example
+
+@noindent
+and this is what it does for records when no matching method is found:
+
+@itemize
+@item
+If there are @strong{no} arguments @meta{arg}, then a field with name
+@meta{name} is searched and, if found, the form is expanded to an
+application of the field's accessor:
+
+@example
+(@meta{accessor} @meta{subject-expr})
+@end example
+
+@item
+If there is @strong{only one} argument @meta{arg}, then a field with
+name @meta{name} is searched and, if the field is found and it is
+mutable, the form is expanded to an application of the field's mutator:
+
+@example
+(@meta{mutator} @meta{subject-expr} @meta{arg})
+@end example
+@end itemize
+
+So the above @clause{case-method} example can just be rewritten as:
+
+@lisp
+(define-record-type alpha
+  (fields (mutable a)))
+
+(define @{O alpha@}
+  (new alpha 1))
+
+(method-call a O)            @result{} 1
+(method-call a O 2)
+(method-call a O)            @result{} 2
+@end lisp
+
+@noindent
+and with dot notation (@pxref{iklib syntaxes types methods, Dot
+notation}):
+
+@lisp
+(define-record-type alpha
+  (fields (mutable a)))
+
+(define @{O alpha@}
+  (new alpha 1))
+
+(.a O)          @result{} 1
+(.a O 2)
+(.a O)          @result{} 2
+@end lisp
+
+@c page
+@node iklib records defs destructor
 @subsubsection The destructor protocol
 
 
@@ -10953,7 +11239,7 @@ function becomes this type's destructor function.
 @end itemize
 
 @c page
-@node iklib records definitions printer
+@node iklib records defs printer
 @subsubsection The custom printer
 
 

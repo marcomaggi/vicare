@@ -624,6 +624,59 @@
 	(.doit O 3 4))
     => (+ 1 2 3 4))
 
+;;; --------------------------------------------------------------------
+;;; documentation examples
+
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields one two)
+	  (method (sum-them self)
+	    (+ (duo-one self)
+	       (duo-two self)))
+	  (method (mul-them self)
+	    (* (duo-one self)
+	       (duo-two self))))
+
+	(define {O duo}
+	  (new duo 3 5))
+
+	(values (method-call sum-them O)
+		(method-call mul-them O)))
+    => 8 15)
+
+  (check
+      (internal-body
+
+	(define-record-type duo
+	  (fields one two)
+	  (method (sum-them {self duo})
+	    (+ (.one self)
+	       (.two self)))
+	  (method (mul-them {self duo})
+	    (* (.one self)
+	       (.two self))))
+
+	(define {O duo}
+	  (new duo 3 5))
+
+	(values (.sum-them O)
+		(.mul-them O)))
+    => 8 15)
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields (mutable a)))
+
+	(define {O alpha}
+	  (new alpha 1))
+
+	(method-call a O 2)
+	(method-call a O))
+    => 2)
+
   #t)
 
 
