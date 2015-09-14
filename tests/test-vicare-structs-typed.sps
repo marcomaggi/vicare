@@ -146,6 +146,25 @@
 	      ((slot-ref _ c alpha) stru)))
     => '(19 29 39))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (({stru alpha} (new alpha 1 2 3)))
+	(list (slot-ref stru a)
+	      (slot-ref stru b)
+	      (slot-ref stru c)))
+    => '(1 2 3))
+
+  (check
+      (let (({stru alpha} (new alpha 1 2 3)))
+	(slot-set! stru a 19)
+	(slot-set! stru b 29)
+	(slot-set! stru c 39)
+	(list (slot-ref stru a)
+	      (slot-ref stru b)
+	      (slot-ref stru c)))
+    => '(19 29 39))
+
   #t)
 
 

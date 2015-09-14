@@ -1927,160 +1927,372 @@
     ))
 
 
-;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!
+;;;; module core-macro-transformer: SLOT-REF
 
-(define-core-transformer (slot-ref input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's SLOT-REF syntaxes from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?jolly ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id)
-	  (underscore-id? ?jolly))
-     (chi-expr (bless
-		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		  ((r6rs-record-type)
-		   (let* ((rts           (syntactic-binding-descriptor.value binding))
-			  (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     (or accessor.stx
-			 (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
+(module (slot-ref-transformer)
 
-		  ((vicare-struct-type)
-		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-			  (field-names (struct-type-field-names std))
-			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id))
-			  (stru.sym    (gensym "stru")))
-		     `(lambda (,stru.sym)
-			(struct-and-std-ref ,stru.sym ,field-idx (struct-type-descriptor ,?type-id)))))
+  (define-module-who slot-ref)
 
-		  ((tag-type-spec)
-		   (let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
-		     accessor-stx))))
-	       lexenv.run lexenv.expand))
+  (define-core-transformer (slot-ref input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer  function  used  to  expand Vicare's  SLOT-REF  syntaxes  from  the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
+    ;;context of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ;;Everything included.  It must expand to an accessor application.
+      ((_ ?expr ?field-name ?type-id)
+       (and (not (underscore-id? ?expr))
+	    (identifier? ?field-name)
+	    (identifier? ?type-id))
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
+	 ((r6rs-record-type)
+	  (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name))
+	 ((vicare-struct-type)
+	  (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name))
+	 ((tag-type-spec)
+	  (%expand-to-tag-accessor-application    input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name))))
 
-    ((_ ?expr ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (chi-expr (bless
-		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		  ((r6rs-record-type)
-		   (let* ((rts           (syntactic-binding-descriptor.value binding))
-			  (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     (if accessor.stx
-			 `(,accessor.stx ,?expr)
-		       (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
+      ;;Wildcard in place of the subject expression.  It must expand to an expression
+      ;;that evaluates to an accessor.
+      ((_ ?jolly ?field-name ?type-id)
+       (and (identifier? ?type-id)
+	    (identifier? ?field-name)
+	    (underscore-id? ?jolly))
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
+	 ((r6rs-record-type)
+	  (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand descr ?field-name))
+	 ((vicare-struct-type)
+	  (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))
+	 ((tag-type-spec)
+	  (%expand-to-tag-accessor    input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))))
 
-		  ((vicare-struct-type)
-		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-			  (field-names (struct-type-field-names std))
-			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id)))
-		     `(struct-and-std-ref ,?expr ,field-idx (struct-type-descriptor ,?type-id))))
+      ;;Missing type identifier.  Try to retrieve  the type from the signature of the
+      ;;subject expression.
+      ((_ ?expr ?field-name)
+       (and (not (underscore-id? ?expr))
+	    (identifier? ?field-name))
+       (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.sig  (psi-retvals-signature expr.psi)))
+	 (define (%error-unknown-type)
+	   (%synner "unable to determine type of expression at expand-time" ?expr))
+	 (syntax-match (retvals-signature-tags expr.sig) ()
+	   ((?type-id)
+	    (top-tag-id? ?type-id)
+	    (%error-unknown-type))
 
-		  ((tag-type-spec)
-		   (let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
-		     `(,accessor-stx ,?expr)))))
-	       lexenv.run lexenv.expand))
+	   ((?type-id)
+	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
+	      ((r6rs-record-type)
+	       (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name))
+	      ((vicare-struct-type)
+	       (%expand-to-struct-accessor-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name))
+	      ((tag-type-spec)
+	       (%expand-to-tag-accessor-application-post    input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name))))
 
-    ;;Missing type identifier.  Try to retrieve the type from the tag of the subject.
-    ((_ ?expr ?field-name-id)
-     (identifier? ?field-name-id)
-     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr         expr.psi))
-	    (expr.sig  (psi-retvals-signature expr.psi)))
-       (syntax-match (retvals-signature-tags expr.sig) ()
-	 ((?type-id)
-	  (let* ((accessor.stx  (tag-identifier-accessor ?type-id ?field-name-id input-form.stx))
-		 (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
-		 (accessor.core (psi-core-expr accessor.psi)))
-	    (make-psi input-form.stx
-		      (build-application input-form.stx
-			accessor.core
-			(list expr.core))
-		      (psi-application-retvals-signature accessor.psi))))
-	 (_
-	  (%synner "unable to determine type tag of expression, or invalid expression signature"))
-	 )))
-    ))
+	   (?type-id
+	    (list-tag-id? ?type-id)
+	    ;;Damn  it!!!   The  expression's  return  values  have  fully  UNspecified
+	    ;;signature.
+	    (%error-unknown-type))
 
-(define-core-transformer (slot-set! input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used  to  expand Vicare's  SLOT-SET!   syntaxes  from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id)
-	  (underscore-id? ?jolly1)
-	  (underscore-id? ?jolly2))
-     (chi-expr (bless
-		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		  ((r6rs-record-type)
-		   (let* ((rts          (syntactic-binding-descriptor.value binding))
-			  (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     (or mutator.stx
-			 (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
+	   (_
+	    ;;We have  determined at expand-time  that the expression  returns multiple
+	    ;;values.
+	    (raise
+	     (condition (make-who-condition __who__)
+			(make-message-condition "subject expression of slot access returns multiple values")
+			(make-syntax-violation input-form.stx ?expr)
+			(make-irritants-condition expr.sig))))
+	   )))
+      ))
 
-		  ((vicare-struct-type)
-		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-			  (field-names (struct-type-field-names std))
-			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id))
-			  (stru.sym    (gensym "stru"))
-			  (val.sym     (gensym "new-val")))
-		     `(lambda (,stru.sym ,val.sym)
-			(struct-and-std-set! ,stru.sym ,field-idx (struct-type-descriptor ,?type-id) ,val.sym))))
+;;; --------------------------------------------------------------------
 
-		  ((tag-type-spec)
-		   (tag-identifier-mutator ?type-id ?field-name-id input-form.stx))))
-	       lexenv.run lexenv.expand))
+  (define* (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand
+						   descr {expr.stx syntax-object?} field-name.id)
+    (let* ((rts           (syntactic-binding-descriptor.value descr))
+	   (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)))
+      (if accessor.stx
+	  (chi-expr (bless
+		     `(,accessor.stx ,expr.stx))
+		    lexenv.run lexenv.expand)
+	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
-    ((_ ?expr ?field-name-id ?type-id ?new-value)
-     (and (tag-identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (chi-expr (bless
-		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		  ((r6rs-record-type)
-		   (let* ((rts          (syntactic-binding-descriptor.value binding))
-			  (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol ?field-name-id) lexenv.run)))
-		     (if mutator.stx
-			 `(,mutator.stx ,?expr ,?new-value)
-		       (syntax-violation __who__ "unknown field name" input-form.stx ?field-name-id))))
+  (define* (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand
+						   type-id {expr.stx syntax-object?} field-name.id)
+    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+	   (field-names (struct-type-field-names std))
+	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id)))
+      (chi-expr (bless
+		 `(struct-and-std-ref ,expr.stx ,field-idx (struct-type-descriptor ,type-id)))
+		lexenv.run lexenv.expand)))
 
-		  ((vicare-struct-type)
-		   (let* ((std         (%struct-type-id->std __who__ input-form.stx ?type-id lexenv.run))
-			  (field-names (struct-type-field-names std))
-			  (field-idx   (%struct-field-name->struct-field-idx __who__ input-form.stx field-names ?field-name-id)))
-		     `(struct-and-std-set! ,?expr ,field-idx (struct-type-descriptor ,?type-id) ,?new-value)))
+  (define* (%expand-to-tag-accessor-application input-form.stx lexenv.run lexenv.expand
+						type-id {expr.stx syntax-object?} field-name.id)
+    (let ((accessor.stx (tag-identifier-accessor type-id field-name.id input-form.stx)))
+      (chi-expr (bless
+		 `(,accessor.stx ,expr.stx))
+		lexenv.run lexenv.expand)))
 
-		  ((tag-type-spec)
-		   (let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
-		     `(,mutator-stx ,?expr ,?new-value)))))
-	       lexenv.run lexenv.expand))
+;;; --------------------------------------------------------------------
 
-    ;;Missing type identifier.  Try to retrieve the type from the tag of the subject.
-    ((_ ?expr ?field-name-id ?new-value)
-     (identifier? ?field-name-id)
-     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr         expr.psi))
-	    (expr.sig  (psi-retvals-signature expr.psi)))
-       (syntax-match (retvals-signature-tags expr.sig) ()
-	 ((?type-id)
-	  (let* ((mutator.stx    (tag-identifier-mutator ?type-id ?field-name-id input-form.stx))
-		 (mutator.psi    (chi-expr mutator.stx lexenv.run lexenv.expand))
-		 (mutator.core   (psi-core-expr mutator.psi))
-		 (new-value.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
-		 (new-value.core (psi-core-expr new-value.psi)))
-	    (make-psi input-form.stx
-		      (build-application input-form.stx
-			mutator.core
-			(list expr.core new-value.core))
-		      (psi-application-retvals-signature mutator.psi))))
-	 (_
-	  (%synner "unable to determine type tag of expression, or invalid expression signature"))
-	 )))
-    ))
+  (define (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand
+				      descr field-name.id)
+    (let* ((rts           (syntactic-binding-descriptor.value descr))
+	   (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)))
+      (if accessor.stx
+	  (chi-expr (bless accessor.stx) lexenv.run lexenv.expand)
+	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+
+  (define (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand
+				      type-id field-name.id)
+    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+	   (field-names (struct-type-field-names std))
+	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
+	   (stru.sym    (gensym "stru")))
+      (chi-expr (bless
+		 `(lambda (,stru.sym)
+		    (struct-and-std-ref ,stru.sym ,field-idx (struct-type-descriptor ,type-id))))
+		lexenv.run lexenv.expand)))
+
+  (define (%expand-to-tag-accessor input-form.stx lexenv.run lexenv.expand
+				   type-id field-name.id)
+    (let ((accessor.stx (tag-identifier-accessor type-id field-name.id input-form.stx)))
+      (chi-expr (bless accessor.stx)
+		lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr {expr.psi psi?} field-name.id)
+    (let ((rts (syntactic-binding-descriptor.value descr)))
+      (cond ((r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)
+	     => (lambda (accessor.stx)
+		  (let* ((accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+			 (accessor.core (psi-core-expr accessor.psi))
+			 (expr.core     (psi-core-expr expr.psi)))
+		    (make-psi input-form.stx
+			      (build-application input-form.stx
+				accessor.core
+				(list expr.core))
+			      (psi-application-retvals-signature accessor.psi)))))
+	    (else
+	     (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id)))))
+
+  (define* (%expand-to-struct-accessor-application-post input-form.stx lexenv.run lexenv.expand type-id {expr.psi psi?} field-name.id)
+    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+	   (field-names (struct-type-field-names std))
+	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
+	   (expr.core   (psi-core-expr expr.psi)))
+      (make-psi input-form.stx
+		(build-application input-form.stx
+		  (build-primref no-source 'struct-and-std-ref)
+		  (list expr.core
+			(build-data no-source field-idx)
+			(build-data no-source std)))
+		(make-retvals-signature-single-void))))
+
+  (define* (%expand-to-tag-accessor-application-post input-form.stx lexenv.run lexenv.expand type-id {expr.psi psi?} field-name.id)
+    (let* ((accessor.stx  (tag-identifier-accessor type-id field-name.id input-form.stx))
+	   (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+	   (accessor.core (psi-core-expr accessor.psi))
+	   (expr.core     (psi-core-expr expr.psi)))
+      (make-psi input-form.stx
+		(build-application input-form.stx
+		  accessor.core
+		  (list expr.core))
+		(psi-application-retvals-signature accessor.psi))))
+
+  #| end of module: SLOT-REF-TRANSFORMER |# )
+
+
+;;;; module core-macro-transformer: SLOT-SET!
+
+(module (slot-set!-transformer)
+
+  (define-module-who slot-set!)
+
+  (define-core-transformer (slot-set! input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer  function  used  to  expand Vicare's  SLOT-SET!  syntaxes  from  the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
+    ;;context of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ;;Everything included.  It must expand to an mutator application.
+      ((_ ?expr ?field-name ?type-id ?new-value)
+       (and (not (underscore-id? ?expr))
+	    (identifier? ?field-name)
+	    (identifier? ?type-id))
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
+	 ((r6rs-record-type)
+	  (%expand-to-record-mutator-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name ?new-value))
+	 ((vicare-struct-type)
+	  (%expand-to-struct-mutator-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name ?new-value))
+	 ((tag-type-spec)
+	  (%expand-to-tag-mutator-application    input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name ?new-value))))
+
+      ;;Wildcard in place of the subject expression.  It must expand to an expression
+      ;;that evaluates to an mutator.
+      ((_ ?jolly1 ?field-name ?type-id ?jolly2)
+       (and (identifier? ?type-id)
+	    (identifier? ?field-name)
+	    (underscore-id? ?jolly1)
+	    (underscore-id? ?jolly2))
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
+	 ((r6rs-record-type)
+	  (%expand-to-record-mutator input-form.stx lexenv.run lexenv.expand descr ?field-name))
+	 ((vicare-struct-type)
+	  (%expand-to-struct-mutator input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))
+	 ((tag-type-spec)
+	  (%expand-to-tag-mutator    input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))))
+
+      ;;Missing type identifier.  Try to retrieve  the type from the signature of the
+      ;;subject expression.
+      ((_ ?expr ?field-name ?new-value)
+       (and (not (underscore-id? ?expr))
+	    (identifier? ?field-name))
+       (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.sig  (psi-retvals-signature expr.psi)))
+	 (define (%error-unknown-type)
+	   (%synner "unable to determine type of expression at expand-time" ?expr))
+	 (syntax-match (retvals-signature-tags expr.sig) ()
+	   ((?type-id)
+	    (top-tag-id? ?type-id)
+	    (%error-unknown-type))
+
+	   ((?type-id)
+	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
+	      ((r6rs-record-type)
+	       (%expand-to-record-mutator-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name ?new-value))
+	      ((vicare-struct-type)
+	       (%expand-to-struct-mutator-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name ?new-value))
+	      ((tag-type-spec)
+	       (%expand-to-tag-mutator-application-post    input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name ?new-value))))
+
+	   (?type-id
+	    (list-tag-id? ?type-id)
+	    ;;Damn  it!!!   The  expression's  return  values  have  fully  UNspecified
+	    ;;signature.
+	    (%error-unknown-type))
+
+	   (_
+	    ;;We have  determined at expand-time  that the expression  returns multiple
+	    ;;values.
+	    (raise
+	     (condition (make-who-condition __who__)
+			(make-message-condition "subject expression of slot access returns multiple values")
+			(make-syntax-violation input-form.stx ?expr)
+			(make-irritants-condition expr.sig))))
+	   )))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%expand-to-record-mutator-application input-form.stx lexenv.run lexenv.expand
+						  descr {expr.stx syntax-object?} field-name.id new-value.stx)
+    (let* ((rts           (syntactic-binding-descriptor.value descr))
+	   (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)))
+      (if mutator.stx
+	  (chi-expr (bless
+		     `(,mutator.stx ,expr.stx ,new-value.stx))
+		    lexenv.run lexenv.expand)
+	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+
+  (define* (%expand-to-struct-mutator-application input-form.stx lexenv.run lexenv.expand
+						  type-id {expr.stx syntax-object?} field-name.id new-value.stx)
+    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+	   (field-names (struct-type-field-names std))
+	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id)))
+      (chi-expr (bless
+		 `(struct-and-std-set! ,expr.stx ,field-idx (struct-type-descriptor ,type-id) ,new-value.stx))
+		lexenv.run lexenv.expand)))
+
+  (define* (%expand-to-tag-mutator-application input-form.stx lexenv.run lexenv.expand
+					       type-id {expr.stx syntax-object?} field-name.id new-value.stx)
+    (let ((mutator.stx (tag-identifier-mutator type-id field-name.id input-form.stx)))
+      (chi-expr (bless
+		 `(,mutator.stx ,expr.stx ,new-value.stx))
+		lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand-to-record-mutator input-form.stx lexenv.run lexenv.expand
+				     descr field-name.id)
+    (let* ((rts           (syntactic-binding-descriptor.value descr))
+	   (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)))
+      (if mutator.stx
+	  (chi-expr (bless mutator.stx) lexenv.run lexenv.expand)
+	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+
+  (define (%expand-to-struct-mutator input-form.stx lexenv.run lexenv.expand
+				     type-id field-name.id)
+    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+	   (field-names (struct-type-field-names std))
+	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
+	   (stru.sym    (gensym "stru"))
+	   (new-val.sym (gensym "new-val")))
+      (chi-expr (bless
+		 `(lambda (,stru.sym ,new-val.sym)
+		    (struct-and-std-set! ,stru.sym ,field-idx (struct-type-descriptor ,type-id) ,new-val.sym)))
+		lexenv.run lexenv.expand)))
+
+  (define (%expand-to-tag-mutator input-form.stx lexenv.run lexenv.expand
+				  type-id field-name.id)
+    (let ((mutator.stx (tag-identifier-mutator type-id field-name.id input-form.stx)))
+      (chi-expr (bless mutator.stx)
+		lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%expand-to-record-mutator-application-post input-form.stx lexenv.run lexenv.expand
+						       descr {expr.psi psi?} field-name.id new-value.stx)
+    (let ((rts (syntactic-binding-descriptor.value descr)))
+      (cond ((r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)
+	     => (lambda (mutator.stx)
+		  (let* ((mutator.psi    (chi-expr mutator.stx lexenv.run lexenv.expand))
+			 (mutator.core   (psi-core-expr mutator.psi))
+			 (expr.core      (psi-core-expr expr.psi))
+			 (new-value.psi  (chi-expr new-value.stx lexenv.run lexenv.expand))
+			 (new-value.core (psi-core-expr new-value.psi)))
+		    (make-psi input-form.stx
+			      (build-application input-form.stx
+				mutator.core
+				(list expr.core new-value.core))
+			      (psi-application-retvals-signature mutator.psi)))))
+	    (else
+	     (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id)))))
+
+  (define* (%expand-to-struct-mutator-application-post input-form.stx lexenv.run lexenv.expand
+						       type-id {expr.psi psi?} field-name.id new-value.stx)
+    (let* ((std             (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
+	   (field-names     (struct-type-field-names std))
+	   (field-idx       (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
+	   (expr.core       (psi-core-expr expr.psi))
+	   (new-value.psi   (chi-expr new-value.stx lexenv.run lexenv.expand))
+	   (new-value.core  (psi-core-expr new-value.psi)))
+      (make-psi input-form.stx
+		(build-application input-form.stx
+		  (build-primref no-source 'struct-and-std-set!)
+		  (list expr.core
+			(build-data no-source field-idx)
+			(build-data no-source std)
+			new-value.core))
+		(make-retvals-signature-single-void))))
+
+  (define* (%expand-to-tag-mutator-application-post input-form.stx lexenv.run lexenv.expand
+						    type-id {expr.psi psi?} field-name.id new-value.stx)
+    (let* ((mutator.stx     (tag-identifier-mutator type-id field-name.id input-form.stx))
+	   (mutator.psi     (chi-expr mutator.stx lexenv.run lexenv.expand))
+	   (mutator.core    (psi-core-expr mutator.psi))
+	   (expr.core       (psi-core-expr expr.psi))
+	   (new-value.psi   (chi-expr new-value.stx lexenv.run lexenv.expand))
+	   (new-value.core  (psi-core-expr new-value.psi)))
+      (make-psi input-form.stx
+		(build-application input-form.stx
+		  mutator.core
+		  (list expr.core new-value.core))
+		(psi-application-retvals-signature mutator.psi))))
+
+  #| end of module: SLOT-SET!-TRANSFORMER |# )
 
 
 ;;;; module core-macro-transformer: METHOD-CALL
@@ -2121,6 +2333,8 @@
 	    (%late-binding))
 
 	   (_
+	    ;;We have determined at expand-time  that the expression returns multiple
+	    ;;values.
 	    (raise
 	     (condition (make-who-condition __module_who__)
 			(make-message-condition "subject expression of method call returns multiple values")
