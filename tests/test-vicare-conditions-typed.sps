@@ -43,11 +43,16 @@
 	     (is-a? ?builder ?type)
 	   => #t)
 	 (check
+	     (let (({O ?type} ?builder))
+	       (is-a? O ?type))
+	   => #t)
+	 (check
 	     (is-a? (condition ?builder) ?type)
 	   => #t)
 	 (check
 	     (is-a? 123 ?type)
-	   => #f)))
+	   => #f)
+	 ))
       ))
 
   (doit &condition					(make-who-condition 'it))
@@ -69,14 +74,14 @@
   (doit &i/o-read					(make-i/o-read-error))
   (doit &i/o-write					(make-i/o-write-error))
   (doit &i/o-invalid-position				(make-i/o-invalid-position-error #f))
-  (doit &i/o-filename					(make-i/o-filename-error #f))
-  (doit &i/o-file-protection				(make-i/o-file-protection-error #f))
-  (doit &i/o-file-is-read-only				(make-i/o-file-is-read-only-error #f))
-  (doit &i/o-file-already-exists			(make-i/o-file-already-exists-error #f))
-  (doit &i/o-file-does-not-exist			(make-i/o-file-does-not-exist-error #f))
-  (doit &i/o-port					(make-i/o-port-error #f))
-  (doit &i/o-decoding					(make-i/o-decoding-error #f))
-  (doit &i/o-encoding					(make-i/o-encoding-error (current-input-port) #f))
+  (doit &i/o-filename					(make-i/o-filename-error "filename"))
+  (doit &i/o-file-protection				(make-i/o-file-protection-error "filename"))
+  (doit &i/o-file-is-read-only				(make-i/o-file-is-read-only-error "filename"))
+  (doit &i/o-file-already-exists			(make-i/o-file-already-exists-error "filename"))
+  (doit &i/o-file-does-not-exist			(make-i/o-file-does-not-exist-error "filename"))
+  (doit &i/o-port					(make-i/o-port-error (current-input-port)))
+  (doit &i/o-decoding					(make-i/o-decoding-error (current-input-port)))
+  (doit &i/o-encoding					(make-i/o-encoding-error (current-output-port) #\C))
   (doit &i/o-eagain					(make-i/o-eagain))
 
   (doit &errno						(make-errno-condition 1))
@@ -86,6 +91,7 @@
   (doit &no-nans					(make-no-nans-violation))
   (doit &interrupted					(make-interrupted-condition))
   (doit &source-position				(make-source-position-condition (current-input-port) 1 1 1 1))
+
 #|
   (doit &failed-expression-condition			(make-failed-expression-condition #f))
   (doit &procedure-precondition-violation		(make-procedure-precondition-violation))
