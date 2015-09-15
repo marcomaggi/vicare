@@ -69,7 +69,7 @@
 
 ;;;; helpers for object-type method calls
 
-(define (method-call-late-binding method-name.sym subject . args)
+(define* (method-call-late-binding method-name.sym subject . args)
   ;;This function is called by the expansion of METHOD-CALL:
   ;;
   ;;   (method-call ?method-name ?subject-expr ?arg ...)
@@ -78,10 +78,8 @@
   ;;subject expression.   SUBJECT is the  result of  the subject expression;  ARGS is
   ;;null or a list of method arguments.
   ;;
-  ;;Here
-  ;;
   (define (%error message)
-    (error 'method-call message method-name.sym subject args))
+    (error __who__ message method-name.sym subject args))
   (define (%error-object-type-has-no-methods-table)
     (%error "object type has no methods table"))
   (define (%error-record-type-has-no-matching-method)
