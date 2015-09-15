@@ -828,7 +828,7 @@
 
 (parametrise ((check-test-name	'methods-late-binding))
 
-;;; method-call
+;;; METHOD-CALL, late binding, calling methods
 
   ;;Calling methods.
   ;;
@@ -911,76 +911,7 @@
     => 8 15 '(3 5))
 
 ;;; --------------------------------------------------------------------
-;;; method-call-late-binding, accessing fields
-
-  ;;Accessing fields.
-  ;;
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields a b))
-
-	(define O
-	  (make-alpha 1 2))
-
-	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)))
-    => 1 2)
-
-  ;;Accessing parent's fields.
-  ;;
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields a b))
-
-	(define-record-type beta
-	  (parent alpha)
-	  (fields c d))
-
-	(define O
-	  (make-beta 1 2 3 4))
-
-	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)
-		(method-call-late-binding 'c O)
-		(method-call-late-binding 'd O)))
-    => 1 2 3 4)
-
-  ;;Accessing grandparent's fields.
-  ;;
-  (check
-      (internal-body
-
-	(define-record-type alpha
-	  (fields a b))
-
-	(define-record-type beta
-	  (parent alpha)
-	  (fields c d))
-
-	(define-record-type gamma
-	  (parent beta)
-	  (fields e f))
-
-	(define O
-	  (make-gamma 1 2 3 4 5 6))
-
-	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
-	(values (method-call-late-binding 'a O)
-		(method-call-late-binding 'b O)
-		(method-call-late-binding 'c O)
-		(method-call-late-binding 'd O)
-		(method-call-late-binding 'e O)
-		(method-call-late-binding 'f O)))
-    => 1 2 3 4 5 6)
-
-;;; --------------------------------------------------------------------
-;;; method-call-late-binding, calling methods
+;;; METHOD-CALL-LATE-BINDING, calling methods
 
   ;;Calling methods.
   ;;
@@ -1061,6 +992,159 @@
 		(method-call-late-binding 'mul-them (the-record))
 		(method-call-late-binding 'list-them (the-record))))
     => 8 15 '(3 5))
+
+;;; --------------------------------------------------------------------
+;;; METHOD-CALL-LATE-BINDING, accessing fields
+
+  ;;Accessing fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define O
+	  (make-alpha 1 2))
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)))
+    => 1 2)
+
+  ;;Accessing parent's fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields c d))
+
+	(define O
+	  (make-beta 1 2 3 4))
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)
+		(method-call-late-binding 'c O)
+		(method-call-late-binding 'd O)))
+    => 1 2 3 4)
+
+  ;;Accessing grandparent's fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields c d))
+
+	(define-record-type gamma
+	  (parent beta)
+	  (fields e f))
+
+	(define O
+	  (make-gamma 1 2 3 4 5 6))
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)
+		(method-call-late-binding 'c O)
+		(method-call-late-binding 'd O)
+		(method-call-late-binding 'e O)
+		(method-call-late-binding 'f O)))
+    => 1 2 3 4 5 6)
+
+;;; --------------------------------------------------------------------
+;;; METHOD-CALL-LATE-BINDING, accessing and mutating fields
+
+  ;;Accessing fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b)))
+
+	(define O
+	  (make-alpha 1 2))
+
+	(method-call-late-binding 'a O 11)
+	(method-call-late-binding 'b O 22)
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)))
+    => 11 22)
+
+  ;;Accessing parent's fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b)))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable c) (mutable d)))
+
+	(define O
+	  (make-beta 1 2 3 4))
+
+	(method-call-late-binding 'a O 11)
+	(method-call-late-binding 'b O 22)
+	(method-call-late-binding 'c O 33)
+	(method-call-late-binding 'd O 44)
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)
+		(method-call-late-binding 'c O)
+		(method-call-late-binding 'd O)))
+    => 11 22 33 44)
+
+  ;;Accessing grandparent's fields.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b)))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable c) (mutable d)))
+
+	(define-record-type gamma
+	  (parent beta)
+	  (fields (mutable e) (mutable f)))
+
+	(define O
+	  (make-gamma 1 2 3 4 5 6))
+
+	(method-call-late-binding 'a O 11)
+	(method-call-late-binding 'b O 22)
+	(method-call-late-binding 'c O 33)
+	(method-call-late-binding 'd O 44)
+	(method-call-late-binding 'e O 55)
+	(method-call-late-binding 'f O 66)
+
+	#;(debug-print (property-list (record-type-uid (record-type-descriptor alpha))))
+	(values (method-call-late-binding 'a O)
+		(method-call-late-binding 'b O)
+		(method-call-late-binding 'c O)
+		(method-call-late-binding 'd O)
+		(method-call-late-binding 'e O)
+		(method-call-late-binding 'f O)))
+    => 11 22 33 44 55 66)
 
   (void))
 
