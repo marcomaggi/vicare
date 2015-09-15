@@ -216,19 +216,24 @@
     (if (or (pair? method-name*.sym)
 	    (pair? field-name*.sym))
 	(let ((table.sym (gensym)))
-	  `((putprop (record-type-uid ,foo-rtd)
-		     'late-binding-methods-table
-		     (receive-and-return (,table.sym)
-			 (make-eq-hashtable)
-		       ;;First the fields...
-		       ,@(map (lambda (name procname)
-				`(hashtable-set! ,table.sym (quote ,name) ,procname))
-			   field-name*.sym safe-field-method*)
-		       ;;... then the method, so that the methods will override the
-		       ;;symbols in the table.
-		       ,@(map (lambda (name procname)
-				`(hashtable-set! ,table.sym (quote ,name) ,procname))
-			   method-name*.sym method-procname*.sym)))))
+	  ;;We define  a dummy syntactic  binding here: it  makes sure the  forms are
+	  ;;evaluated right  after the  other definitions in  the output  MODULE, and
+	  ;;before any initialisation expression in the body of the enclosing program
+	  ;;or library.
+	  `((define ,(gensym)
+	      (putprop (record-type-uid ,foo-rtd)
+		       'late-binding-methods-table
+		       (receive-and-return (,table.sym)
+			   (make-eq-hashtable)
+			 ;;First the fields...
+			 ,@(map (lambda (name procname)
+				  `(hashtable-set! ,table.sym (quote ,name) ,procname))
+			     field-name*.sym safe-field-method*)
+			 ;;... then the method, so that the methods will override the
+			 ;;symbols in the table.
+			 ,@(map (lambda (name procname)
+				  `(hashtable-set! ,table.sym (quote ,name) ,procname))
+			     method-name*.sym method-procname*.sym))))))
       '()))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
