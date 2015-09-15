@@ -1684,21 +1684,64 @@ primitive.
 @subsubheading Primitive binding: core record--type name
 
 A syntactic binding representing @rnrs{6}'s record--type name defined by
-the boot image has descriptor with format:
+the boot image has descriptor with one of the formats:
 
 @example
 ($core-rtd . (@meta{rtd-name} @meta{rcd-name}))
+($core-rtd . (@meta{rtd-name} @meta{rcd-name}
+              @meta{parent-name}
+              @meta{constructor-name} @meta{type-predicate-name}
+              @meta{safe-accessors-alist}))
 @end example
 
 @noindent
-where: @meta{rtd-name} is a symbol representing the public name of the
-identifier to which the record--type descriptor was originally bound;
-@meta{rcd-name} is a symbol representing the public name of the
-identifier to which the default record--constructor descriptor was
-originally bound.
+where the values are:
+
+@table @meta
+@item rtd-name
+A symbol representing the public name of the syntactic identifier to
+which the record--type descriptor is bound.
+
+@item rcd-name
+A symbol representing the public name of the syntactic identifier to
+which the default record--constructor descriptor is bound.
+
+@item parent-name
+@false{} or a symbol representing the public name of the syntactic
+identifier bound to the parent's record-type.
+
+@item constructor-name
+A symbol representing the public name of the syntactic identifier to
+which the default constructor is bound.
+
+@item type-predicate-name
+A symbol representing the public name of the syntactic identifier to
+which the type predicate is bound.
+
+@item safe-accessors-alist
+A list of sublists.  The sublists contain @math{2} values: a field name
+and a symbol representing the public name of the syntactic identifier to
+which the field accessor is bound.
+@end table
 
 For example: these entries are used to represent the predefined @rnrs{6}
-condition object types.
+condition object types.  For the definition:
+
+@lisp
+(define-condition-type &who
+    &condition
+  make-who-condition who-condition?
+  (who condition-who))
+@end lisp
+
+@noindent
+the following descriptor is generated:
+
+@example
+($core-rtd . (&who-rtd &who-rcd &condition
+              make-who-condition who-condition?
+              ((who condition-who))))
+@end example
 
 @c ------------------------------------------------------------------------
 

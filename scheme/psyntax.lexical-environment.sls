@@ -692,19 +692,52 @@
   ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
   ;;values.
   ;;
-  ;;We expect the core descriptor to have format:
+  ;;We expect the core descriptor to have one of the formats:
   ;;
   ;;   ($core-rtd . (?rtd-name ?rcd-name))
+  ;;   ($core-rtd . (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id ?safe-accessors-alist))
   ;;
   ;;and the usable descriptor to have the format:
   ;;
   ;;   ($record-type-name . #<r6rs-record-type-spec>)
   ;;
+  (define (%alist-ref-or-null ell idx)
+    (cond ((null? ell)
+	   '())
+	  ((fxzero? idx)
+	   (if (pair? ell)
+	       (map (lambda (P)
+		      (cons (car P) (core-prim-id (cadr P))))
+		 (car ell))
+	     '()))
+	  (else
+	   (%alist-ref-or-null (cdr ell) (fxsub1 idx)))))
   (set-car! descriptor '$record-type-name)
-  (set-cdr! descriptor (let* ((bindval (syntactic-binding-descriptor.value descriptor))
-			      (rtd-id  (bless (car  bindval)))
-			      (rcd-id  (bless (cadr bindval))))
-			 (make-r6rs-record-type-spec rtd-id rcd-id))))
+  (set-cdr! descriptor
+	    (let ((bindval (syntactic-binding-descriptor.value descriptor)))
+	      (if (null? (cddr bindval))
+		  ;;($core-rtd . (?rtd-name ?rcd-name))
+		  (let ((rtd-id  (core-prim-id (car  bindval)))
+			(rcd-id  (core-prim-id (cadr bindval))))
+		    (make-r6rs-record-type-spec rtd-id rcd-id))
+		;;($core-rtd . (?rtd-name ?rcd-name ?parent-name ?constructor-name ?type-predicate-name ?safe-accessors-alist))
+		(let* ((rtd-id			(core-prim-id (car  bindval)))
+		       (rcd-id			(core-prim-id (cadr bindval)))
+		       (super-protocol-id	#f)
+		       (parent-id		(core-prim-id (list-ref bindval 2)))
+		       (default-constructor-id	(core-prim-id (list-ref bindval 3)))
+		       (default-destructor-id	#f)
+		       (type-predicate-id	(core-prim-id (list-ref bindval 4)))
+		       (safe-accessors-table	(%alist-ref-or-null bindval 5))
+		       (safe-mutators-table	'())
+		       (unsafe-accessors-table	'())
+		       (unsafe-mutators-table	'())
+		       (methods-table		safe-accessors-table))
+		  (make-r6rs-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+					      default-constructor-id default-destructor-id type-predicate-id
+					      safe-accessors-table safe-mutators-table
+					      unsafe-accessors-table unsafe-mutators-table
+					      methods-table))))))
 
 ;;Return true if  the argument is a syntactic binding's  descriptor describing a R6RS
 ;;record-type descriptor  established by  the boot image  (for example:  the built-in
