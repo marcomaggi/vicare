@@ -1874,50 +1874,149 @@
   #| end of module: DELETE-TRANSFORMER |# )
 
 
-;;;; module core-macro-transformer: IS-A?, CONDITION-IS-A?
+;;;; module core-macro-transformer: IS-A?
 
-(define-core-transformer (is-a? input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand Vicare's IS-A?  syntaxes  from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  (chi-expr (bless
-	     (syntax-match input-form.stx ()
-	       ((_ ?jolly ?type-id)
-		(and (identifier? ?type-id)
-		     (underscore-id? ?jolly))
-		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		  ((r6rs-record-type)
-		   (let* ((rts      (syntactic-binding-descriptor.value binding))
-			  (pred.id  (r6rs-record-type-spec.type-predicate-id rts)))
-		     pred.id))
+(module (is-a?-transformer)
 
-		  ((vicare-struct-type)
-		   (let ((obj (gensym)))
-		     `(lambda (,obj)
-			($struct/rtd? ,obj (struct-type-descriptor ,?type-id)))))
+  (define-module-who is-a?)
 
-		  ((tag-type-spec)
-		   (let ((spec (identifier-tag-type-spec ?type-id)))
-		     (tag-type-spec-pred-stx spec)))))
+  (define-core-transformer (is-a? input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand Vicare's IS-A?  syntaxes from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?jolly ?type-id)
+       (and (identifier? ?type-id)
+	    (underscore-id? ?jolly))
+       (chi-expr (bless
+		  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+		    ((r6rs-record-type)
+		     (let* ((rts      (syntactic-binding-descriptor.value binding))
+			    (pred.id  (r6rs-record-type-spec.type-predicate-id rts)))
+		       pred.id))
 
-	       ((_ ?expr ?type-id)
-		(identifier? ?type-id)
-		(case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		  ((r6rs-record-type)
-		   (let* ((rts      (syntactic-binding-descriptor.value binding))
-			  (pred.id  (r6rs-record-type-spec.type-predicate-id rts)))
-		     `(,pred.id ,?expr)))
+		    ((vicare-struct-type)
+		     (let ((obj (gensym)))
+		       `(lambda (,obj)
+			  ($struct/rtd? ,obj (struct-type-descriptor ,?type-id)))))
 
-		  ((vicare-struct-type)
-		   `($struct/rtd? ,?expr (struct-type-descriptor ,?type-id)))
+		    ((tag-type-spec)
+		     (let ((spec (identifier-tag-type-spec ?type-id)))
+		       (tag-type-spec-pred-stx spec)))))
+		 lexenv.run lexenv.expand))
 
-		  ((tag-type-spec)
-		   (let* ((spec     (identifier-tag-type-spec ?type-id))
-			  (pred.stx (tag-type-spec-pred-stx spec)))
-		     `(,pred.stx ,?expr)))))
-	       ))
-	    lexenv.run lexenv.expand))
+      ((_ ?expr ?pred-type-id)
+       (identifier? ?pred-type-id)
+       (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.sig  (psi-retvals-signature expr.psi)))
+	 (define (%run-time-predicate)
+	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi))
+	 (syntax-match (retvals-signature-tags expr.sig) ()
+	   ((?expr-type-id)
+	    (top-tag-id? ?expr-type-id)
+	    (%run-time-predicate))
+
+	   ((?expr-type-id)
+	    (if (free-identifier=? ?expr-type-id ?pred-type-id)
+		(%make-true-psi input-form.stx)
+	      (case-object-type-binding (__who__ input-form.stx ?expr-type-id lexenv.run expr-descr)
+		((r6rs-record-type)
+		 (case-object-type-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-descr)
+		   ((r6rs-record-type)
+		    (if (object-type-spec.subtype-and-supertype? (syntactic-binding-descriptor.value expr-descr)
+								 (syntactic-binding-descriptor.value pred-descr)
+								 lexenv.run)
+			(%make-true-psi input-form.stx)
+		      (%make-false-psi input-form.stx)))
+		   ((vicare-struct-type)
+		    (%make-false-psi input-form.stx))
+		   ((tag-type-spec)
+		    (%make-false-psi input-form.stx))))
+		((vicare-struct-type)
+		 (%make-false-psi input-form.stx))
+		((tag-type-spec)
+		 (%expand-to-tag-predicate-application-post input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi)))))
+
+	   (?expr-type-id
+	    (list-tag-id? ?expr-type-id)
+	    (%run-time-predicate))
+
+	   (_
+	    ;;We have determined at expand-time  that the expression returns multiple
+	    ;;values.
+	    (raise
+	     (condition (make-who-condition __who__)
+			(make-message-condition "subject expression of type predicate returns multiple values")
+			(make-syntax-violation input-form.stx ?expr)
+			(make-irritants-condition expr.sig)))))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand-to-tag-predicate-application-post input-form.stx lexenv.run lexenv.expand pred-type-id expr.psi)
+    (define expr.core
+      (psi-core-expr expr.psi))
+    (let* ((spec       (identifier-tag-type-spec pred-type-id))
+	   (pred.stx   (tag-type-spec-pred-stx spec))
+	   (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
+	   (pred.core  (psi-core-expr pred.psi)))
+      (make-psi input-form.stx
+		(build-application input-form.stx
+		  pred.core
+		  (list expr.core))
+		(psi-application-retvals-signature pred.psi))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand pred-type-id expr.psi)
+    (define expr.core
+      (psi-core-expr expr.psi))
+    (case-object-type-binding (__module_who__ input-form.stx pred-type-id lexenv.run descr)
+      ((r6rs-record-type)
+       (let* ((rts        (syntactic-binding-descriptor.value descr))
+	      (pred.id    (r6rs-record-type-spec.type-predicate-id rts))
+	      (pred.psi   (chi-expr pred.id lexenv.run lexenv.expand))
+	      (pred.core  (psi-core-expr pred.psi)))
+	 (make-psi input-form.stx
+		   (build-application input-form.stx
+		     pred.core
+		     (list expr.core))
+		   (psi-application-retvals-signature pred.psi))))
+
+      ((vicare-struct-type)
+       (let* ((obj.sym    (gensym))
+	      (pred.stx   (bless
+			   `(lambda (,obj.sym)
+			      ($struct/rtd? ,obj.sym (struct-type-descriptor ,pred-type-id)))))
+	      (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
+	      (pred.core  (psi-core-expr pred.psi)))
+	 (make-psi input-form.stx
+		   (build-application input-form.stx
+		     pred.core
+		     (list expr.core))
+		   (psi-application-retvals-signature pred.psi))))
+
+      ((tag-type-spec)
+       (%expand-to-tag-predicate-application-post input-form.stx lexenv.run lexenv.expand pred-type-id expr.psi))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-true-psi input-form.stx)
+    (%make-boolean-psi input-form.stx #t))
+
+  (define (%make-false-psi input-form.stx)
+    (%make-boolean-psi input-form.stx #f))
+
+  (define (%make-boolean-psi input-form.stx bool)
+    (make-psi input-form.stx
+	      (build-data no-source bool)
+	      (make-retvals-signature-single-boolean)))
+
+  #| end of module: IS-A?-TRANSFORMER |# )
+
+
+;;;; module core-macro-transformer: CONDITION-IS-A?
 
 (define-core-transformer (condition-is-a? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand Vicare's CONDITION-IS-A?   syntaxes from the

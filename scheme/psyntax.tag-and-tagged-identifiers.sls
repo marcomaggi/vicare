@@ -180,6 +180,7 @@
     make-clambda-compound
     make-retvals-signature-single-top
     make-retvals-signature-single-void
+    make-retvals-signature-single-boolean
     make-retvals-signature-single-procedure
     make-retvals-signature-standalone-list
     make-retvals-signature-fully-unspecified
@@ -2178,6 +2179,7 @@
 						     (set! sign S))))))))))
   (define-single-tag-retvals-maker make-retvals-signature-single-top		top-tag-id)
   (define-single-tag-retvals-maker make-retvals-signature-single-void		void-tag-id)
+  (define-single-tag-retvals-maker make-retvals-signature-single-boolean	boolean-tag-id)
   (define-single-tag-retvals-maker make-retvals-signature-single-procedure	procedure-tag-id)
   #| end of let-syntax |# )
 

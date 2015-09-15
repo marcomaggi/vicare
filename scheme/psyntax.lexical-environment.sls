@@ -103,7 +103,7 @@
 
     object-type-spec.safe-accessor			object-type-spec.safe-mutator
     object-type-spec.unsafe-accessor			object-type-spec.unsafe-mutator
-    object-type-spec.applicable-method
+    object-type-spec.applicable-method			object-type-spec.subtype-and-supertype?
 
     ;; object types specifications: R6RS records
     <r6rs-record-type-spec>

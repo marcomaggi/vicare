@@ -29,7 +29,9 @@
 	 object-type-spec.methods-table
 	 object-type-spec.safe-accessor			object-type-spec.safe-mutator
 	 object-type-spec.unsafe-accessor		object-type-spec.unsafe-mutator
+
 	 object-type-spec.applicable-method
+	 object-type-spec.subtype-and-supertype?
 
 	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
@@ -285,6 +287,21 @@
 			(else
 			 (loop (object-type-spec.parent-id spec^))))))))
 	(else #f)))
+
+
+;;;; basic object-type specification: ancestor predicate
+
+(define* (object-type-spec.subtype-and-supertype? {sub-spec object-type-spec?} {super-spec object-type-spec?} lexenv)
+  ;;Return true if SUB-SPEC is a subtype of SUPER-SPEC; otherwise return false.
+  ;;
+  (define-syntax-rule (recurse ?sub-spec)
+    (object-type-spec.subtype-and-supertype? ?sub-spec super-spec lexenv))
+  (or (eq? sub-spec super-spec)
+      (cond ((object-type-spec.parent-id sub-spec)
+	     => (lambda (parent-id)
+		  (recurse (syntactic-binding-descriptor.value
+			    (id->object-type-binding-descriptor #f #f parent-id lexenv)))))
+	    (else #f))))
 
 
 ;;;; R6RS record-type specification

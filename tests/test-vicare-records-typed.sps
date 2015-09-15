@@ -76,7 +76,8 @@
 
 (parametrise ((check-test-name	'generic-predicate-syntax))
 
-  (let ()
+  (internal-body
+
     (define-record-type alpha
       (fields a b c))
 
@@ -107,6 +108,58 @@
       => #f)
 
     (void))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+
+	(is-a? (new duo 1 2) duo))
+    => #t)
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+
+	(expansion-of
+	 (is-a? (new duo 1 2) duo)))
+    => '(quote #t))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields one two))
+	(define-record-type beta
+	  (fields one two))
+
+	(expansion-of
+	 (is-a? (new alpha 1 2) beta)))
+    => '(quote #f))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields one two))
+	(define-struct beta
+	  (one two))
+
+	(expansion-of
+	 (is-a? (new alpha 1 2) beta)))
+    => '(quote #f))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields one two))
+	(define-struct beta
+	  (one two))
+
+	(expansion-of
+	 (is-a? (new beta 1 2) alpha)))
+    => '(quote #f))
 
   #t)
 
