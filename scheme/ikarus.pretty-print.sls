@@ -639,18 +639,20 @@
       ;;        (one 1)
       ;;        (two 2))
       ;;
-      (let* ((std		(struct-rtd stru))
-	     (field-name*	(struct-type-field-names std)))
+      (let* ((std          (struct-rtd stru))
+	     (field-name*  (struct-type-field-names std))
+	     (instance?    (or (not (eq? std (base-rtd)))
+			       (record-type-descriptor? std)
+			       (records.record-constructor-descriptor? std))))
 	(receive (field-box* field-sep*)
-	    (let ((instance? (or (not (eq? std (base-rtd)))
-				 (record-type-descriptor? std)
-				 (records.record-constructor-descriptor? std))))
-	      (%boxify-struct-fields stru
-				     (if instance? 0 1)
-				     (if instance? field-name* (cdr field-name*))))
-	  (let* ((struct-box	(%boxify-object 'struct))
+	    (%boxify-struct-fields stru
+				   (if instance? 0 1)
+				   (if instance? field-name* (cdr field-name*)))
+	  (let* ((struct-box	(%boxify-object (if instance? 'struct 'struct-type)))
 		 ;;The return value of STRUCT-NAME is a string.
-		 (type-name-box	(struct-name stru))
+		 (type-name-box	(if instance?
+				    (struct-name stru)
+				  (struct-ref stru 0)))
 		 (box*		(cons* struct-box type-name-box field-box*))
 		 (sep*		(cons* 0 ;separator between struct-box and type-name-box
 				       (pretty-indent) ;separator between type-name-box and field
