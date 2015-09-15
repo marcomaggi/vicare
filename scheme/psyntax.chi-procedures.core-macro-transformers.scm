@@ -1746,15 +1746,21 @@
        ;;   (?maker ?arg ...)
        ;;
        ((r6rs-record-type)
-	(let* ((rts          (syntactic-binding-descriptor.value binding))
-	       (maker.id     (r6rs-record-type-spec.default-constructor-id rts))
-	       (maker-id.psi (chi-expr maker.id lexenv.run lexenv.expand))
-	       (args.psi*    (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	  (make-psi input-form.stx
-		    (build-application no-source
-		      (psi-core-expr maker-id.psi)
-		      (map psi-core-expr args.psi*))
-		    (make-retvals-signature-single-value ?type-id))))
+	(let ((rts (syntactic-binding-descriptor.value binding)))
+	  (cond ((r6rs-record-type-spec.default-constructor-id rts)
+		 => (lambda (maker.id)
+		      (let* ((maker-id.psi (chi-expr maker.id lexenv.run lexenv.expand))
+			     (args.psi*    (chi-expr* ?arg* lexenv.run lexenv.expand)))
+			(make-psi input-form.stx
+				  (build-application no-source
+				    (psi-core-expr maker-id.psi)
+				    (map psi-core-expr args.psi*))
+				  (make-retvals-signature-single-value ?type-id)))))
+		(else
+		 (let ((rcd.id (r6rs-record-type-spec.rcd-id rts)))
+		   (chi-expr (bless
+			      `((record-constructor ,rcd.id) . ,?arg*))
+			     lexenv.run lexenv.expand))))))
 
        ;;For structs we want to expand to an equivalent of:
        ;;
