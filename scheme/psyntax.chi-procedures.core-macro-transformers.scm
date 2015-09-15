@@ -1892,9 +1892,13 @@
        (chi-expr (bless
 		  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 		    ((r6rs-record-type)
-		     (let* ((rts      (syntactic-binding-descriptor.value binding))
-			    (pred.id  (r6rs-record-type-spec.type-predicate-id rts)))
-		       pred.id))
+		     (let ((rts (syntactic-binding-descriptor.value binding)))
+		       (or (r6rs-record-type-spec.type-predicate-id rts)
+			   (let ((rtd-id (r6rs-record-type-spec.rtd-id rts))
+				 (obj    (gensym)))
+			     `(lambda (,obj)
+				(record-and-rtd? ,obj ,rtd-id))))))
+
 
 		    ((vicare-struct-type)
 		     (let ((obj (gensym)))
@@ -1975,8 +1979,13 @@
     (case-object-type-binding (__module_who__ input-form.stx pred-type-id lexenv.run descr)
       ((r6rs-record-type)
        (let* ((rts        (syntactic-binding-descriptor.value descr))
-	      (pred.id    (r6rs-record-type-spec.type-predicate-id rts))
-	      (pred.psi   (chi-expr pred.id lexenv.run lexenv.expand))
+	      (pred.stx   (or (r6rs-record-type-spec.type-predicate-id rts)
+			      (let ((rtd-id (r6rs-record-type-spec.rtd-id rts))
+				    (obj    (gensym)))
+				(bless
+				 `(lambda (,obj)
+				    (record-and-rtd? ,obj ,rtd-id))))))
+	      (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
 	      (pred.core  (psi-core-expr pred.psi)))
 	 (make-psi input-form.stx
 		   (build-application input-form.stx

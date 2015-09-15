@@ -43,12 +43,14 @@
 	     (is-a? ?builder ?type)
 	   => #t)
 	 (check
+	     (is-a? (condition ?builder) ?type)
+	   => #t)
+	 (check
 	     (is-a? 123 ?type)
 	   => #f)))
       ))
 
   (doit &condition					(make-who-condition 'it))
-
   (doit &who						(make-who-condition 'it))
   (doit &message					(make-message-condition "it"))
   (doit &irritants					(make-irritants-condition '(it)))
@@ -66,24 +68,26 @@
   (doit &i/o						(make-i/o-error))
   (doit &i/o-read					(make-i/o-read-error))
   (doit &i/o-write					(make-i/o-write-error))
-  (doit &i/o-invalid-position				(make-i/o-invalid-position-error))
-  (doit &i/o-filename					(make-i/o-filename-error))
-  (doit &i/o-file-protection				(make-i/o-file-protection-error))
-  (doit &i/o-file-is-read-only				(make-i/o-file-is-read-only-error))
-  (doit &i/o-file-already-exists			(make-i/o-file-already-exists-error))
-  (doit &i/o-file-does-not-exist			(make-i/o-file-does-not-exist-error))
-  (doit &i/o-port					(make-i/o-port-error))
-  (doit &i/o-decoding					(make-i/o-decoding-error))
-  (doit &i/o-encoding					(make-i/o-encoding-error))
+  (doit &i/o-invalid-position				(make-i/o-invalid-position-error #f))
+  (doit &i/o-filename					(make-i/o-filename-error #f))
+  (doit &i/o-file-protection				(make-i/o-file-protection-error #f))
+  (doit &i/o-file-is-read-only				(make-i/o-file-is-read-only-error #f))
+  (doit &i/o-file-already-exists			(make-i/o-file-already-exists-error #f))
+  (doit &i/o-file-does-not-exist			(make-i/o-file-does-not-exist-error #f))
+  (doit &i/o-port					(make-i/o-port-error #f))
+  (doit &i/o-decoding					(make-i/o-decoding-error #f))
+  (doit &i/o-encoding					(make-i/o-encoding-error (current-input-port) #f))
   (doit &i/o-eagain					(make-i/o-eagain))
-  (doit &errno						(make-errno-condition))
+
+  (doit &errno						(make-errno-condition 1))
   (doit &out-of-memory-error				(make-out-of-memory-error))
-  (doit &h_errno					(make-h_errno-condition))
+  (doit &h_errno					(make-h_errno-condition 1))
   (doit &no-infinities					(make-no-infinities-violation))
   (doit &no-nans					(make-no-nans-violation))
   (doit &interrupted					(make-interrupted-condition))
-  (doit &source-position				(make-source-position-condition))
-  (doit &failed-expression-condition			(make-failed-expression-condition))
+  (doit &source-position				(make-source-position-condition (current-input-port) 1 1 1 1))
+#|
+  (doit &failed-expression-condition			(make-failed-expression-condition #f))
   (doit &procedure-precondition-violation		(make-procedure-precondition-violation))
   (doit &procedure-postcondition-violation		(make-procedure-postcondition-violation))
   (doit &procedure-argument-violation			(make-procedure-argument-violation))
@@ -92,7 +96,6 @@
   (doit &procedure-arguments-consistency-violation	(make-procedure-arguments-consistency-violation))
   (doit &expression-return-value-violation		(make-expression-return-value-violation))
   (doit &non-reinstatable				(make-non-reinstatable-violation))
-
   (doit &string-encoding				(make-string-encoding-error))
   (doit &string-decoding				(make-string-decoding-error))
   (doit &utf8-string-encoding				(make-utf8-string-encoding-error))
@@ -114,7 +117,7 @@
   (doit &utf16-string-decoding-standalone-octet		(make-utf16-string-decoding-standalone-octet-error))
   (doit &utf32-string-decoding-invalid-word		(make-utf32-string-decoding-invalid-word-error))
   (doit &utf32-string-decoding-orphan-octets		(make-utf32-string-decoding-orphan-octets-error))
-
+|#
   #t)
 
 
