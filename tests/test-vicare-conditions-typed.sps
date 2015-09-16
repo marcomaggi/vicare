@@ -33,6 +33,89 @@
 (check-display "*** testing Vicare libraries: tests for condition object-types under typed language\n")
 
 
+(parametrise ((check-test-name	'generic-type-maker))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?type (?arg ...))
+       (begin
+	 (check
+	     (is-a? (new ?type ?arg ...) ?type)
+	   => #t)
+	 ))
+      ))
+
+  (doit &condition					())
+  (doit &who						('it))
+  (doit &message					("it"))
+  (doit &irritants					('(it)))
+
+  (doit &warning					())
+  (doit &serious					())
+  (doit &violation					())
+  (doit &assertion					())
+  (doit &non-continuable				())
+  (doit &implementation-restriction			())
+  (doit &lexical					())
+  (doit &syntax						(#f #f))
+  (doit &undefined					())
+
+  (doit &i/o						())
+  (doit &i/o-read					())
+  (doit &i/o-write					())
+  (doit &i/o-invalid-position				(#f))
+  (doit &i/o-filename					("filename"))
+  (doit &i/o-file-protection				("filename"))
+  (doit &i/o-file-is-read-only				("filename"))
+  (doit &i/o-file-already-exists			("filename"))
+  (doit &i/o-file-does-not-exist			("filename"))
+  (doit &i/o-port					((current-input-port)))
+  (doit &i/o-decoding					((current-input-port)))
+  (doit &i/o-encoding					((current-output-port) #\C))
+  (doit &i/o-eagain					())
+
+  (doit &errno						(1))
+  (doit &out-of-memory-error				())
+  (doit &h_errno					(1))
+  (doit &no-infinities					())
+  (doit &no-nans					())
+  (doit &interrupted					())
+  (doit &source-position				("the-port" 1 1 1 1))
+
+  (doit &failed-expression-condition			(#f))
+  (doit &procedure-precondition-violation		())
+  (doit &procedure-postcondition-violation		())
+  (doit &procedure-argument-violation			())
+  (doit &procedure-signature-argument-violation		(1 #f #f))
+  (doit &procedure-signature-return-value-violation	(1 #f #f))
+  (doit &procedure-arguments-consistency-violation	())
+  (doit &expression-return-value-violation		())
+  (doit &non-reinstatable				())
+  (doit &string-encoding				())
+  (doit &string-decoding				())
+  (doit &utf8-string-encoding				())
+  (doit &utf16-string-encoding				())
+  (doit &utf32-string-encoding				())
+  (doit &utf8-string-decoding				())
+  (doit &utf16-string-decoding				())
+  (doit &utf32-string-decoding				())
+  (doit &utf8-string-decoding-invalid-octet		('#vu8() 0 '()))
+  (doit &utf8-string-decoding-invalid-2-tuple		('#vu8() 0 '()))
+  (doit &utf8-string-decoding-invalid-3-tuple		('#vu8() 0 '()))
+  (doit &utf8-string-decoding-invalid-4-tuple		('#vu8() 0 '()))
+  (doit &utf8-string-decoding-incomplete-2-tuple	('#vu8() 0 '()))
+  (doit &utf8-string-decoding-incomplete-3-tuple	('#vu8() 0 '()))
+  (doit &utf8-string-decoding-incomplete-4-tuple	('#vu8() 0 '()))
+  (doit &utf16-string-decoding-invalid-first-word	('#vu8() 0 0))
+  (doit &utf16-string-decoding-invalid-second-word	('#vu8() 0 0 0))
+  (doit &utf16-string-decoding-missing-second-word	('#vu8() 0 0))
+  (doit &utf16-string-decoding-standalone-octet		('#vu8() 0 0))
+  (doit &utf32-string-decoding-invalid-word		('#vu8() 0 0))
+  (doit &utf32-string-decoding-orphan-octets		('#vu8() 0 '()))
+
+  (void))
+
+
 (parametrise ((check-test-name	'generic-type-predicate))
 
   (define-syntax doit
