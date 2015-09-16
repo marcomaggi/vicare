@@ -103,8 +103,8 @@ Every @meta{typespec} is meant to be a logic predicate with the format:
 
 @noindent
 where: each @meta{tag} is an identifier usable as second argument to
-@syntax{condition-is-a?}; @syntax{and}, @syntax{or}, @syntax{xor},
-@syntax{not} are the identifiers exported by @library{vicare}.
+@syntax{is-a?}; @syntax{and}, @syntax{or}, @syntax{xor}, @syntax{not}
+are the identifiers exported by @library{vicare}.
 
 Every @meta{condition-handler} must be an expression evaluating to a
 procedure accepting a condition object as single argument; the condition
@@ -390,8 +390,8 @@ Every @meta{typespec} is meant to be a logic predicate with the format:
 
 @noindent
 where: each @meta{tag} is an identifier usable as second argument to
-@syntax{condition-is-a?}; @syntax{and}, @syntax{or}, @syntax{xor},
-@syntax{not} are the identifiers exported by @library{vicare}.
+@syntax{is-a?}; @syntax{and}, @syntax{or}, @syntax{xor}, @syntax{not}
+are the identifiers exported by @library{vicare}.
 
 Every @meta{condition-handler} must be an expression evaluating to a
 procedure accepting a condition object as single argument; the condition

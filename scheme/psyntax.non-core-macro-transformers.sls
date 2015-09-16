@@ -3697,14 +3697,14 @@
        (cons (cons* (syntax-match ?pred ()
 		      ((?tag)
 		       (identifier? ?tag)
-		       `(condition-is-a? ,var-id ,?tag))
+		       `(is-a? ,var-id ,?tag))
 		      (_
 		       (parse-logic-predicate-syntax ?pred
 						     (lambda (tag-id)
 						       (syntax-match tag-id ()
 							 (?tag
 							  (identifier? ?tag)
-							  `(condition-is-a? ,var-id ,?tag))
+							  `(is-a? ,var-id ,?tag))
 							 (else
 							  (syntax-violation __who__
 							    "expected identifier as condition type" tag-id)))))))

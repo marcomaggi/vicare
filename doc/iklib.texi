@@ -2508,7 +2508,7 @@ No else, no finally.
      ...)
     ...))
 @expansion{} (guard (@meta{var}
-              ((condition-is-a? @meta{var})
+              ((is-a? @meta{var})
                @metao{tag-body}
                @meta{tag-body}
                ...)
@@ -2533,7 +2533,7 @@ Else, no finally.
      @meta{else-body}
      ...))
 @expansion{} (guard (@meta{var}
-              ((condition-is-a? @meta{var} @metao{tag})
+              ((is-a? @meta{var} @metao{tag})
                @metao{tag-body}
                @meta{tag-body}
                ...)
@@ -2568,7 +2568,7 @@ Finally, no else.
           ...)
       (lambda ()
         (guard (@meta{var}
-                ((condition-is-a? @meta{var} @metao{tag})
+                ((is-a? @meta{var} @metao{tag})
                  @metao{tag-body}
                  @meta{tag-body}
                  ...)
@@ -7525,28 +7525,6 @@ the record--type descriptor of a condition object type.
 @result{} #f
 @end example
 @end defun
-
-
-@deffn Syntax condition-is-a? @meta{expr} @meta{tag}
-Return @true{} if the result of evaluating @meta{expr} is either a
-simple condition object of type @var{tag} or a compound condition object
-containing a simple condition object of type @var{tag}; otherwise return
-@false{}.  @meta{tag} must an identifier representing the name of a
-condition object type.
-
-@example
-(condition-is-a? (make-error) &error)
-@result{} #t
-
-(condition-is-a? (condition (make-error)
-                            (make-warning))
-                 &error)
-@result{} #t
-
-(condition-is-a? "ciao" &error)
-@result{} #f
-@end example
-@end deffn
 
 
 @defun print-condition @var{cnd}

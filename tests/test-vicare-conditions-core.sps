@@ -67,17 +67,17 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (condition-is-a? (make-error) &error)
+      (is-a? (make-error) &error)
     => #t)
 
   (check
-      (condition-is-a? (condition (make-error)
-				  (make-warning))
-		       &error)
+      (is-a? (condition (make-error)
+			(make-warning))
+	     &error)
     => #t)
 
   (check
-      (condition-is-a? "ciao" &error)
+      (is-a? "ciao" &error)
     => #f)
 
   #t)

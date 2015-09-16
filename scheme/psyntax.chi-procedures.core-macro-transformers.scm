@@ -216,7 +216,6 @@
     ((new)					new-transformer)
     ((delete)					delete-transformer)
     ((is-a?)					is-a?-transformer)
-    ((condition-is-a?)				condition-is-a?-transformer)
     ((slot-ref)					slot-ref-transformer)
     ((slot-set!)				slot-set!-transformer)
     ((method-call)				method-call-transformer)
@@ -2023,22 +2022,6 @@
 	      (make-retvals-signature-single-boolean)))
 
   #| end of module: IS-A?-TRANSFORMER |# )
-
-
-;;;; module core-macro-transformer: CONDITION-IS-A?
-
-(define-core-transformer (condition-is-a? input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand Vicare's CONDITION-IS-A?   syntaxes from the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?expr ?tag)
-     (identifier? ?tag)
-     (chi-expr (bless
-		`(condition-and-rtd? ,?expr (record-type-descriptor ,?tag)))
-	       lexenv.run lexenv.expand))
-    ))
 
 
 ;;;; module core-macro-transformer: SLOT-REF

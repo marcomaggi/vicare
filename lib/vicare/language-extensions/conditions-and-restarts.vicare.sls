@@ -92,7 +92,7 @@
   ;;               | (xor ?inner-pred0 ?inner-pred ...)
   ;;               | (not ?inner-pred)
   ;;
-  ;;where each ?TAG is an identifier usable as second argument to CONDITION-IS-A?.
+  ;;where each ?TAG is an identifier usable as second argument to IS-A?.
   ;;
   ;;Every  ?CONDITION-HANDLER  must  be  an  expression  evaluating  to  a  procedure
   ;;accepting a  condition object  as single  argument; the  condition object  can be
@@ -175,7 +175,7 @@
 				    (syntax-case tag-id ()
 				      (?tag
 				       (identifier? #'?tag)
-				       #`(condition-is-a? #,var ?tag))
+				       #`(is-a? #,var ?tag))
 				      (_
 				       (synner "invalid typespec syntax" spec))))))
 
@@ -223,7 +223,7 @@
   ;;               | (xor ?inner-pred0 ?inner-pred ...)
   ;;               | (not ?inner-pred)
   ;;
-  ;;where each ?TAG is an identifier usable as second argument to CONDITION-IS-A?.
+  ;;where each ?TAG is an identifier usable as second argument to IS-A?.
   ;;
   ;;Every  ?CONDITION-HANDLER  must  be  an  expression  evaluating  to  a  procedure
   ;;accepting a  condition object  as single  argument; the  condition object  can be
@@ -282,7 +282,7 @@
        '())
       ((?typespec . ?rest)
        (identifier? #'?typespec)
-       (cons #`(condition-is-a? #,var ?typespec)
+       (cons #`(is-a? #,var ?typespec)
 	     (%process-typespecs       var #'?rest)))
       ((?typespec . ?rest)
        (cons (%process-single-typespec var #'?typespec)
@@ -295,7 +295,7 @@
 				    (syntax-case tag-id ()
 				      (?tag
 				       (identifier? #'?tag)
-				       #`(condition-is-a? #,var ?tag))
+				       #`(is-a? #,var ?tag))
 				      (_
 				       (synner "invalid typespec syntax" spec))))))
 
