@@ -275,8 +275,8 @@
 ;;   ($record-type-name . #<r6rs-record-type-spec>)
 ;;
 ;;It is built  when expanding DEFINE-RECORD-TYPE forms, or by  converting a syntactic
-;;binding  "$core-rtd" (a  buit-in record  type  defined by  the boot  image) into  a
-;;syntactic binding "$record-type-name".
+;;binding "$core-rtd" or  "$core-record-type-name" (a buit-in record  type defined by
+;;the boot image) into a syntactic binding "$record-type-name".
 ;;
 ;;Lexical variables  bound to  instances of  this type  should be  called RTS  (as in
 ;;"record-type spec").

@@ -776,378 +776,442 @@
     (define-callable-spec			(macro . define-callable-spec))
 ;;;
     (&condition
-     ($core-rtd . (&condition-rtd &condition-rcd #f condition condition?)))
+     ($core-condition-object-type-name
+      . (&condition-rtd &condition-rcd #f condition condition?)))
     (&message
-     ($core-rtd . (&message-rtd
-		   &message-rcd
-		   &condition make-message-condition message-condition?
-		   ((message condition-message)))))
+     ($core-condition-object-type-name
+      . (&message-rtd
+	 &message-rcd
+	 &condition make-message-condition message-condition?
+	 ((message . condition-message)))))
     (&warning
-     ($core-rtd . (&warning-rtd
-		   &warning-rcd
-		   &condition make-warning warning?)))
+     ($core-condition-object-type-name
+      . (&warning-rtd
+	 &warning-rcd
+	 &condition make-warning warning?)))
     (&serious
-     ($core-rtd . (&serious-rtd
-		   &serious-rcd
-		   &condition make-serious-condition serious-condition?)))
+     ($core-condition-object-type-name
+      . (&serious-rtd
+	 &serious-rcd
+	 &condition make-serious-condition serious-condition?)))
     (&error
-     ($core-rtd . (&error-rtd
-		   &error-rcd
-		   &serious make-error error?)))
+     ($core-condition-object-type-name
+      . (&error-rtd
+	 &error-rcd
+	 &serious make-error error?)))
     (&violation
-     ($core-rtd . (&violation-rtd
-		   &violation-rcd
-		   &serious make-violation violation?)))
+     ($core-condition-object-type-name
+      . (&violation-rtd
+	 &violation-rcd
+	 &serious make-violation violation?)))
     (&assertion
-     ($core-rtd . (&assertion-rtd
-		   &assertion-rcd
-		   &violation make-assertion-violation assertion-violation?)))
+     ($core-condition-object-type-name
+      . (&assertion-rtd
+	 &assertion-rcd
+	 &violation make-assertion-violation assertion-violation?)))
     (&irritants
-     ($core-rtd . (&irritants-rtd
-		   &irritants-rcd
-		   &condition make-irritants-condition irritants-condition?
-		   ((irritants condition-irritants)))))
+     ($core-condition-object-type-name
+      . (&irritants-rtd
+	 &irritants-rcd
+	 &condition make-irritants-condition irritants-condition?
+	 ((irritants . condition-irritants)))))
     (&who
-     ($core-rtd . (&who-rtd
-		   &who-rcd
-		   &condition make-who-condition who-condition?
-		   ((who condition-who)))))
+     ($core-condition-object-type-name
+      . (&who-rtd
+	 &who-rcd
+	 &condition make-who-condition who-condition?
+	 ((who . condition-who)))))
     (&non-continuable
-     ($core-rtd . (&non-continuable-rtd
-		   &non-continuable-rcd
-		   &violation make-non-continuable-violation non-continuable-violation?)))
+     ($core-condition-object-type-name
+      . (&non-continuable-rtd
+	 &non-continuable-rcd
+	 &violation make-non-continuable-violation non-continuable-violation?)))
     (&implementation-restriction
-     ($core-rtd . (&implementation-restriction-rtd
-		   &implementation-restriction-rcd
-		   &violation
-		   make-implementation-restriction-violation implementation-restriction-violation?)))
+     ($core-condition-object-type-name
+      . (&implementation-restriction-rtd
+	 &implementation-restriction-rcd
+	 &violation
+	 make-implementation-restriction-violation implementation-restriction-violation?)))
     (&lexical
-     ($core-rtd . (&lexical-rtd
-		   &lexical-rcd
-		   &violation make-lexical-violation lexical-violation?)))
+     ($core-condition-object-type-name
+      . (&lexical-rtd
+	 &lexical-rcd
+	 &violation make-lexical-violation lexical-violation?)))
     (&syntax
-     ($core-rtd . (&syntax-rtd
-		   &syntax-rcd
-		   &violation make-syntax-violation syntax-violation?
-		   ((form syntax-violation-form)
-		    (subform syntax-violation-subform)))))
+     ($core-condition-object-type-name
+      . (&syntax-rtd
+	 &syntax-rcd
+	 &violation make-syntax-violation syntax-violation?
+	 ((form	. syntax-violation-form)
+	  (subform	. syntax-violation-subform)))))
     (&undefined
-     ($core-rtd . (&undefined-rtd
-		   &undefined-rcd
-		   &violation make-undefined-violation undefined-violation?)))
+     ($core-condition-object-type-name
+      . (&undefined-rtd
+	 &undefined-rcd
+	 &violation make-undefined-violation undefined-violation?)))
     (&i/o
-     ($core-rtd . (&i/o-rtd
-		   &i/o-rcd
-		   &error make-i/o-error i/o-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-rtd
+	 &i/o-rcd
+	 &error make-i/o-error i/o-error?)))
     (&i/o-read
-     ($core-rtd . (&i/o-read-rtd
-		   &i/o-read-rcd
-		   &i/o make-i/o-read-error i/o-read-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-read-rtd
+	 &i/o-read-rcd
+	 &i/o make-i/o-read-error i/o-read-error?)))
     (&i/o-write
-     ($core-rtd . (&i/o-write-rtd
-		   &i/o-write-rcd
-		   &i/o make-i/o-write-error i/o-write-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-write-rtd
+	 &i/o-write-rcd
+	 &i/o make-i/o-write-error i/o-write-error?)))
     (&i/o-invalid-position
-     ($core-rtd . (&i/o-invalid-position-rtd
-		   &i/o-invalid-position-rcd
-		   &i/o make-i/o-invalid-position-error i/o-invalid-position-error?
-		   ((position i/o-error-position)))))
+     ($core-condition-object-type-name
+      . (&i/o-invalid-position-rtd
+	 &i/o-invalid-position-rcd
+	 &i/o make-i/o-invalid-position-error i/o-invalid-position-error?
+	 ((position . i/o-error-position)))))
     (&i/o-filename
-     ($core-rtd . (&i/o-filename-rtd
-		   &i/o-filename-rcd
-		   &i/o make-i/o-filename-error i/o-filename-error?
-		   ((filename i/o-error-filename)))))
+     ($core-condition-object-type-name
+      . (&i/o-filename-rtd
+	 &i/o-filename-rcd
+	 &i/o make-i/o-filename-error i/o-filename-error?
+	 ((filename . i/o-error-filename)))))
     (&i/o-file-protection
-     ($core-rtd . (&i/o-file-protection-rtd
-		   &i/o-file-protection-rcd
-		   &i/o-filename make-i/o-file-protection-error i/o-file-protection-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-file-protection-rtd
+	 &i/o-file-protection-rcd
+	 &i/o-filename make-i/o-file-protection-error i/o-file-protection-error?)))
     (&i/o-file-is-read-only
-     ($core-rtd . (&i/o-file-is-read-only-rtd
-		   &i/o-file-is-read-only-rcd
-		   &i/o-file-protection
-		   make-i/o-file-is-read-only-error i/o-file-is-read-only-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-file-is-read-only-rtd
+	 &i/o-file-is-read-only-rcd
+	 &i/o-file-protection
+	 make-i/o-file-is-read-only-error i/o-file-is-read-only-error?)))
     (&i/o-file-already-exists
-     ($core-rtd . (&i/o-file-already-exists-rtd
-		   &i/o-file-already-exists-rcd
-		   &i/o-filename
-		   make-i/o-file-already-exists-error i/o-file-already-exists-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-file-already-exists-rtd
+	 &i/o-file-already-exists-rcd
+	 &i/o-filename
+	 make-i/o-file-already-exists-error i/o-file-already-exists-error?)))
     (&i/o-file-does-not-exist
-     ($core-rtd . (&i/o-file-does-not-exist-rtd
-		   &i/o-file-does-not-exist-rcd
-		   &i/o-filename
-		   make-i/o-file-does-not-exist-error i/o-file-does-not-exist-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-file-does-not-exist-rtd
+	 &i/o-file-does-not-exist-rcd
+	 &i/o-filename
+	 make-i/o-file-does-not-exist-error i/o-file-does-not-exist-error?)))
     (&i/o-port
-     ($core-rtd . (&i/o-port-rtd
-		   &i/o-port-rcd
-		   &i/o
-		   make-i/o-port-error i/o-port-error?
-		   ((port i/o-error-port)))))
+     ($core-condition-object-type-name
+      . (&i/o-port-rtd
+	 &i/o-port-rcd
+	 &i/o
+	 make-i/o-port-error i/o-port-error?
+	 ((port . i/o-error-port)))))
     (&i/o-decoding
-     ($core-rtd . (&i/o-decoding-rtd
-		   &i/o-decoding-rcd
-		   &i/o-port
-		   make-i/o-decoding-error i/o-decoding-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-decoding-rtd
+	 &i/o-decoding-rcd
+	 &i/o-port
+	 make-i/o-decoding-error i/o-decoding-error?)))
     (&i/o-encoding
-     ($core-rtd . (&i/o-encoding-rtd
-		   &i/o-encoding-rcd
-		   &i/o-port
-		   make-i/o-encoding-error i/o-encoding-error?
-		   ((char i/o-encoding-error-char)))))
+     ($core-condition-object-type-name
+      . (&i/o-encoding-rtd
+	 &i/o-encoding-rcd
+	 &i/o-port
+	 make-i/o-encoding-error i/o-encoding-error?
+	 ((char . i/o-encoding-error-char)))))
     (&no-infinities
-     ($core-rtd . (&no-infinities-rtd
-		   &no-infinities-rcd
-		   &implementation-restriction
-		   make-no-infinities-violation no-infinities-violation?)))
+     ($core-condition-object-type-name
+      . (&no-infinities-rtd
+	 &no-infinities-rcd
+	 &implementation-restriction
+	 make-no-infinities-violation no-infinities-violation?)))
     (&no-nans
-     ($core-rtd . (&no-nans-rtd
-		   &no-nans-rcd
-		   &implementation-restriction
-		   make-no-nans-violation no-nans-violation?)))
+     ($core-condition-object-type-name
+      . (&no-nans-rtd
+	 &no-nans-rcd
+	 &implementation-restriction
+	 make-no-nans-violation no-nans-violation?)))
 
     ;; Ikarus specific
     (&interrupted
-     ($core-rtd . (&interrupted-rtd
-		   &interrupted-rcd
-		   &serious
-		   make-interrupted-condition interrupted-condition?)))
+     ($core-condition-object-type-name
+      . (&interrupted-rtd
+	 &interrupted-rcd
+	 &serious
+	 make-interrupted-condition interrupted-condition?)))
     (&source-position
-     ($core-rtd . (&source-position-rtd
-		   &source-position-rcd
-		   &condition
-		   make-source-position-condition source-position-condition?
-		   ((port-id		source-position-port-id)
-		    (byte		source-position-byte)
-		    (character		source-position-character)
-		    (line		source-position-line)
-		    (column		source-position-column)))))
+     ($core-condition-object-type-name
+      . (&source-position-rtd
+	 &source-position-rcd
+	 &condition
+	 make-source-position-condition source-position-condition?
+	 ((port-id		. source-position-port-id)
+	  (byte		. source-position-byte)
+	  (character	. source-position-character)
+	  (line		. source-position-line)
+	  (column		. source-position-column)))))
 
     ;; Vicare specific
     (&i/o-eagain
-     ($core-rtd . (&i/o-eagain-rtd
-		   &i/o-eagain-rcd
-		   &i/o
-		   make-i/o-eagain i/o-eagain-error?)))
+     ($core-condition-object-type-name
+      . (&i/o-eagain-rtd
+	 &i/o-eagain-rcd
+	 &i/o
+	 make-i/o-eagain i/o-eagain-error?)))
     (&errno
-     ($core-rtd . (&errno-rtd
-		   &errno-rcd
-		   &condition
-		   make-errno-condition errno-condition?
-		   ((code		condition-errno)))))
+     ($core-condition-object-type-name
+      . (&errno-rtd
+	 &errno-rcd
+	 &condition
+	 make-errno-condition errno-condition?
+	 ((code		. condition-errno)))))
     (&h_errno
-     ($core-rtd . (&h_errno-rtd
-		   &h_errno-rcd
-		   &condition
-		   make-h_errno-condition h_errno-condition?
-		   ((code		condition-h_errno)))))
+     ($core-condition-object-type-name
+      . (&h_errno-rtd
+	 &h_errno-rcd
+	 &condition
+	 make-h_errno-condition h_errno-condition?
+	 ((code		. condition-h_errno)))))
     (&out-of-memory-error
-     ($core-rtd . (&out-of-memory-error-rtd
-		   &out-of-memory-error-rcd
-		   &error
-		   make-out-of-memory-error out-of-memory-error?)))
+     ($core-condition-object-type-name
+      . (&out-of-memory-error-rtd
+	 &out-of-memory-error-rcd
+	 &error
+	 make-out-of-memory-error out-of-memory-error?)))
     (&failed-expression-condition
-     ($core-rtd . (&failed-expression-condition-rtd
-		   &failed-expression-condition-rcd
-		   &condition
-		   make-failed-expression-condition
-		   failed-expression-condition?
-		   ((failed-expression	condition-failed-expression)))))
+     ($core-condition-object-type-name
+      . (&failed-expression-condition-rtd
+	 &failed-expression-condition-rcd
+	 &condition
+	 make-failed-expression-condition
+	 failed-expression-condition?
+	 ((failed-expression	. condition-failed-expression)))))
     (&procedure-precondition-violation
-     ($core-rtd . (&procedure-precondition-violation-rtd
-		   &procedure-precondition-violation-rcd
-		   &assertion
-		   make-procedure-precondition-violation procedure-precondition-violation?)))
+     ($core-condition-object-type-name
+      . (&procedure-precondition-violation-rtd
+	 &procedure-precondition-violation-rcd
+	 &assertion
+	 make-procedure-precondition-violation procedure-precondition-violation?)))
     (&procedure-postcondition-violation
-     ($core-rtd . (&procedure-postcondition-violation-rtd
-		   &procedure-postcondition-violation-rcd
-		   &assertion
-		   make-procedure-postcondition-violation procedure-postcondition-violation?)))
+     ($core-condition-object-type-name
+      . (&procedure-postcondition-violation-rtd
+	 &procedure-postcondition-violation-rcd
+	 &assertion
+	 make-procedure-postcondition-violation procedure-postcondition-violation?)))
     (&procedure-argument-violation
-     ($core-rtd . (&procedure-argument-violation-rtd
-		   &procedure-argument-violation-rcd
-		   &procedure-precondition-violation
-		   make-procedure-argument-violation procedure-argument-violation?)))
+     ($core-condition-object-type-name
+      . (&procedure-argument-violation-rtd
+	 &procedure-argument-violation-rcd
+	 &procedure-precondition-violation
+	 make-procedure-argument-violation procedure-argument-violation?)))
     (&procedure-signature-argument-violation
-     ($core-rtd . (&procedure-signature-argument-violation-rtd
-		   &procedure-signature-argument-violation-rcd
-		   &procedure-argument-violation
-		   make-procedure-signature-argument-violation
-		   procedure-signature-argument-violation?
-		   ((one-based-argument-index	procedure-signature-argument-violation.one-based-argument-index)
-		    (failed-expression		procedure-signature-argument-violation.failed-expression)
-		    (offending-value		procedure-signature-argument-violation.offending-value)))))
+     ($core-condition-object-type-name
+      . (&procedure-signature-argument-violation-rtd
+	 &procedure-signature-argument-violation-rcd
+	 &procedure-argument-violation
+	 make-procedure-signature-argument-violation
+	 procedure-signature-argument-violation?
+	 ((one-based-argument-index	. procedure-signature-argument-violation.one-based-argument-index)
+	  (failed-expression		. procedure-signature-argument-violation.failed-expression)
+	  (offending-value		. procedure-signature-argument-violation.offending-value)))))
     (&procedure-signature-return-value-violation
-     ($core-rtd . (&procedure-signature-return-value-violation-rtd
-		   &procedure-signature-return-value-violation-rcd
-		   &procedure-postcondition-violation
-		   make-procedure-signature-return-value-violation
-		   procedure-signature-return-value-violation?
-		   ((one-based-return-value-index	procedure-signature-return-value-violation.one-based-return-value-index)
-		    (failed-expression			procedure-signature-return-value-violation.failed-expression)
-		    (offending-value			procedure-signature-return-value-violation.offending-value)))))
+     ($core-condition-object-type-name
+      . (&procedure-signature-return-value-violation-rtd
+	 &procedure-signature-return-value-violation-rcd
+	 &procedure-postcondition-violation
+	 make-procedure-signature-return-value-violation
+	 procedure-signature-return-value-violation?
+	 ((one-based-return-value-index . procedure-signature-return-value-violation.one-based-return-value-index)
+	  (failed-expression		. procedure-signature-return-value-violation.failed-expression)
+	  (offending-value		. procedure-signature-return-value-violation.offending-value)))))
     (&procedure-arguments-consistency-violation
-     ($core-rtd . (&procedure-arguments-consistency-violation-rtd
-		   &procedure-arguments-consistency-violation-rcd
-		   &procedure-precondition-violation
-		   make-procedure-arguments-consistency-violation procedure-arguments-consistency-violation?)))
+     ($core-condition-object-type-name
+      . (&procedure-arguments-consistency-violation-rtd
+	 &procedure-arguments-consistency-violation-rcd
+	 &procedure-precondition-violation
+	 make-procedure-arguments-consistency-violation procedure-arguments-consistency-violation?)))
     (&expression-return-value-violation
-     ($core-rtd . (&expression-return-value-violation-rtd
-		   &expression-return-value-violation-rcd
-		   &assertion make-expression-return-value-violation expression-return-value-violation?)))
+     ($core-condition-object-type-name
+      . (&expression-return-value-violation-rtd
+	 &expression-return-value-violation-rcd
+	 &assertion make-expression-return-value-violation expression-return-value-violation?)))
     (&non-reinstatable
-     ($core-rtd . (&non-reinstatable-rtd
-		   &non-reinstatable-rcd
-		   &violation make-non-reinstatable-violation non-reinstatable-violation?)))
+     ($core-condition-object-type-name
+      . (&non-reinstatable-rtd
+	 &non-reinstatable-rcd
+	 &violation make-non-reinstatable-violation non-reinstatable-violation?)))
 ;;;
     (&string-encoding
-     ($core-rtd . (&string-encoding-rtd
-		   &string-encoding-rcd
-		   &error	make-string-encoding-error	      string-encoding-error?)))
+     ($core-condition-object-type-name
+      . (&string-encoding-rtd
+	 &string-encoding-rcd
+	 &error	make-string-encoding-error	      string-encoding-error?)))
     (&string-decoding
-     ($core-rtd . (&string-decoding-rtd
-		   &string-decoding-rcd
-		   &error	make-string-decoding-error	      string-decoding-error?)))
+     ($core-condition-object-type-name
+      . (&string-decoding-rtd
+	 &string-decoding-rcd
+	 &error	make-string-decoding-error	      string-decoding-error?)))
     (&utf8-string-encoding
-     ($core-rtd . (&utf8-string-encoding-rtd
-		   &utf8-string-encoding-rcd
-		   &error	make-utf8-string-encoding-error	      utf8-string-encoding-error?)))
+     ($core-condition-object-type-name
+      . (&utf8-string-encoding-rtd
+	 &utf8-string-encoding-rcd
+	 &error	make-utf8-string-encoding-error	      utf8-string-encoding-error?)))
     (&utf16-string-encoding
-     ($core-rtd . (&utf16-string-encoding-rtd
-		   &utf16-string-encoding-rcd
-		   &error	make-utf16-string-encoding-error      utf16-string-encoding-error?)))
+     ($core-condition-object-type-name
+      . (&utf16-string-encoding-rtd
+	 &utf16-string-encoding-rcd
+	 &error	make-utf16-string-encoding-error      utf16-string-encoding-error?)))
     (&utf32-string-encoding
-     ($core-rtd . (&utf32-string-encoding-rtd
-		   &utf32-string-encoding-rcd
-		   &error	make-utf32-string-encoding-error      utf32-string-encoding-error?)))
+     ($core-condition-object-type-name
+      . (&utf32-string-encoding-rtd
+	 &utf32-string-encoding-rcd
+	 &error	make-utf32-string-encoding-error      utf32-string-encoding-error?)))
     (&utf8-string-decoding
-     ($core-rtd . (&utf8-string-decoding-rtd
-		   &utf8-string-decoding-rcd
-		   &error	make-utf8-string-decoding-error	      utf8-string-decoding-error?)))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-rtd
+	 &utf8-string-decoding-rcd
+	 &error	make-utf8-string-decoding-error	      utf8-string-decoding-error?)))
     (&utf16-string-decoding
-     ($core-rtd . (&utf16-string-decoding-rtd
-		   &utf16-string-decoding-rcd
-		   &error	make-utf16-string-decoding-error      utf16-string-decoding-error?)))
+     ($core-condition-object-type-name
+      . (&utf16-string-decoding-rtd
+	 &utf16-string-decoding-rcd
+	 &error	make-utf16-string-decoding-error      utf16-string-decoding-error?)))
     (&utf32-string-decoding
-     ($core-rtd . (&utf32-string-decoding-rtd
-		   &utf32-string-decoding-rcd
-		   &error	make-utf32-string-decoding-error      utf32-string-decoding-error?)))
+     ($core-condition-object-type-name
+      . (&utf32-string-decoding-rtd
+	 &utf32-string-decoding-rcd
+	 &error	make-utf32-string-decoding-error      utf32-string-decoding-error?)))
     (&utf8-string-decoding-invalid-octet
-     ($core-rtd . (&utf8-string-decoding-invalid-octet-rtd
-		   &utf8-string-decoding-invalid-octet-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-invalid-octet
-		   utf8-string-decoding-invalid-octet?
-		   ((bytevector		utf8-string-decoding-invalid-octet.bytevector)
-		    (index		utf8-string-decoding-invalid-octet.index)
-		    (octets		utf8-string-decoding-invalid-octet.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-invalid-octet-rtd
+	 &utf8-string-decoding-invalid-octet-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-invalid-octet
+	 utf8-string-decoding-invalid-octet?
+	 ((bytevector		. utf8-string-decoding-invalid-octet.bytevector)
+	  (index		. utf8-string-decoding-invalid-octet.index)
+	  (octets		. utf8-string-decoding-invalid-octet.octets)))))
     (&utf8-string-decoding-invalid-2-tuple
-     ($core-rtd . (&utf8-string-decoding-invalid-2-tuple-rtd
-		   &utf8-string-decoding-invalid-2-tuple-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-invalid-2-tuple
-		   utf8-string-decoding-invalid-2-tuple?
-		   ((bytevector		utf8-string-decoding-invalid-2-tuple.bytevector)
-		    (index		utf8-string-decoding-invalid-2-tuple.index)
-		    (octets		utf8-string-decoding-invalid-2-tuple.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-invalid-2-tuple-rtd
+	 &utf8-string-decoding-invalid-2-tuple-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-invalid-2-tuple
+	 utf8-string-decoding-invalid-2-tuple?
+	 ((bytevector		. utf8-string-decoding-invalid-2-tuple.bytevector)
+	  (index		. utf8-string-decoding-invalid-2-tuple.index)
+	  (octets		. utf8-string-decoding-invalid-2-tuple.octets)))))
     (&utf8-string-decoding-invalid-3-tuple
-     ($core-rtd . (&utf8-string-decoding-invalid-3-tuple-rtd
-		   &utf8-string-decoding-invalid-3-tuple-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-invalid-3-tuple
-		   utf8-string-decoding-invalid-3-tuple?
-		   ((bytevector		utf8-string-decoding-invalid-3-tuple.bytevector)
-		    (index		utf8-string-decoding-invalid-3-tuple.index)
-		    (octets		utf8-string-decoding-invalid-3-tuple.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-invalid-3-tuple-rtd
+	 &utf8-string-decoding-invalid-3-tuple-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-invalid-3-tuple
+	 utf8-string-decoding-invalid-3-tuple?
+	 ((bytevector		. utf8-string-decoding-invalid-3-tuple.bytevector)
+	  (index		. utf8-string-decoding-invalid-3-tuple.index)
+	  (octets		. utf8-string-decoding-invalid-3-tuple.octets)))))
     (&utf8-string-decoding-invalid-4-tuple
-     ($core-rtd . (&utf8-string-decoding-invalid-4-tuple-rtd
-		   &utf8-string-decoding-invalid-4-tuple-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-invalid-4-tuple
-		   utf8-string-decoding-invalid-4-tuple?
-		   ((bytevector		utf8-string-decoding-invalid-4-tuple.bytevector)
-		    (index		utf8-string-decoding-invalid-4-tuple.index)
-		    (octets		utf8-string-decoding-invalid-4-tuple.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-invalid-4-tuple-rtd
+	 &utf8-string-decoding-invalid-4-tuple-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-invalid-4-tuple
+	 utf8-string-decoding-invalid-4-tuple?
+	 ((bytevector		. utf8-string-decoding-invalid-4-tuple.bytevector)
+	  (index		. utf8-string-decoding-invalid-4-tuple.index)
+	  (octets		. utf8-string-decoding-invalid-4-tuple.octets)))))
     (&utf8-string-decoding-incomplete-2-tuple
-     ($core-rtd . (&utf8-string-decoding-incomplete-2-tuple-rtd
-		   &utf8-string-decoding-incomplete-2-tuple-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-incomplete-2-tuple
-		   utf8-string-decoding-incomplete-2-tuple?
-		   ((bytevector		utf8-string-decoding-incomplete-2-tuple.bytevector)
-		    (index		utf8-string-decoding-incomplete-2-tuple.index)
-		    (octets		utf8-string-decoding-incomplete-2-tuple.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-incomplete-2-tuple-rtd
+	 &utf8-string-decoding-incomplete-2-tuple-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-incomplete-2-tuple
+	 utf8-string-decoding-incomplete-2-tuple?
+	 ((bytevector		. utf8-string-decoding-incomplete-2-tuple.bytevector)
+	  (index		. utf8-string-decoding-incomplete-2-tuple.index)
+	  (octets		. utf8-string-decoding-incomplete-2-tuple.octets)))))
     (&utf8-string-decoding-incomplete-3-tuple
-     ($core-rtd . (&utf8-string-decoding-incomplete-3-tuple-rtd
-		   &utf8-string-decoding-incomplete-3-tuple-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-incomplete-3-tuple
-		   utf8-string-decoding-incomplete-3-tuple?
-		   ((bytevector		utf8-string-decoding-incomplete-3-tuple.bytevector)
-		    (index		utf8-string-decoding-incomplete-3-tuple.index)
-		    (octets		utf8-string-decoding-incomplete-3-tuple.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-incomplete-3-tuple-rtd
+	 &utf8-string-decoding-incomplete-3-tuple-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-incomplete-3-tuple
+	 utf8-string-decoding-incomplete-3-tuple?
+	 ((bytevector		. utf8-string-decoding-incomplete-3-tuple.bytevector)
+	  (index		. utf8-string-decoding-incomplete-3-tuple.index)
+	  (octets		. utf8-string-decoding-incomplete-3-tuple.octets)))))
     (&utf8-string-decoding-incomplete-4-tuple
-     ($core-rtd . (&utf8-string-decoding-incomplete-4-tuple-rtd
-		   &utf8-string-decoding-incomplete-4-tuple-rcd
-		   &utf8-string-decoding
-		   make-utf8-string-decoding-incomplete-4-tuple
-		   utf8-string-decoding-incomplete-4-tuple?
-		   ((bytevector		utf8-string-decoding-incomplete-4-tuple.bytevector)
-		    (index		utf8-string-decoding-incomplete-4-tuple.index)
-		    (octets		utf8-string-decoding-incomplete-4-tuple.octets)))))
+     ($core-condition-object-type-name
+      . (&utf8-string-decoding-incomplete-4-tuple-rtd
+	 &utf8-string-decoding-incomplete-4-tuple-rcd
+	 &utf8-string-decoding
+	 make-utf8-string-decoding-incomplete-4-tuple
+	 utf8-string-decoding-incomplete-4-tuple?
+	 ((bytevector		. utf8-string-decoding-incomplete-4-tuple.bytevector)
+	  (index		. utf8-string-decoding-incomplete-4-tuple.index)
+	  (octets		. utf8-string-decoding-incomplete-4-tuple.octets)))))
     (&utf16-string-decoding-invalid-first-word
-     ($core-rtd . (&utf16-string-decoding-invalid-first-word-rtd
-		   &utf16-string-decoding-invalid-first-word-rcd
-		   &utf16-string-decoding
-		   make-utf16-string-decoding-invalid-first-word
-		   utf16-string-decoding-invalid-first-word?
-		   ((bytevector		utf16-string-decoding-invalid-first-word.bytevector)
-		    (index		utf16-string-decoding-invalid-first-word.index)
-		    (word		utf16-string-decoding-invalid-first-word.word)))))
+     ($core-condition-object-type-name
+      . (&utf16-string-decoding-invalid-first-word-rtd
+	 &utf16-string-decoding-invalid-first-word-rcd
+	 &utf16-string-decoding
+	 make-utf16-string-decoding-invalid-first-word
+	 utf16-string-decoding-invalid-first-word?
+	 ((bytevector		. utf16-string-decoding-invalid-first-word.bytevector)
+	  (index		. utf16-string-decoding-invalid-first-word.index)
+	  (word			. utf16-string-decoding-invalid-first-word.word)))))
     (&utf16-string-decoding-invalid-second-word
-     ($core-rtd . (&utf16-string-decoding-invalid-second-word-rtd
-		   &utf16-string-decoding-invalid-second-word-rcd
-		   &utf16-string-decoding
-		   make-utf16-string-decoding-invalid-second-word
-		   utf16-string-decoding-invalid-second-word?
-		   ((bytevector		utf16-string-decoding-invalid-second-word.bytevector)
-		    (index		utf16-string-decoding-invalid-second-word.index)
-		    (first-word		utf16-string-decoding-invalid-second-word.first-word)
-		    (second-word	utf16-string-decoding-invalid-second-word.second-word)))))
+     ($core-condition-object-type-name
+      . (&utf16-string-decoding-invalid-second-word-rtd
+	 &utf16-string-decoding-invalid-second-word-rcd
+	 &utf16-string-decoding
+	 make-utf16-string-decoding-invalid-second-word
+	 utf16-string-decoding-invalid-second-word?
+	 ((bytevector		. utf16-string-decoding-invalid-second-word.bytevector)
+	  (index		. utf16-string-decoding-invalid-second-word.index)
+	  (first-word		. utf16-string-decoding-invalid-second-word.first-word)
+	  (second-word		. utf16-string-decoding-invalid-second-word.second-word)))))
     (&utf16-string-decoding-missing-second-word
-     ($core-rtd . (&utf16-string-decoding-missing-second-word-rtd
-		   &utf16-string-decoding-missing-second-word-rcd
-		   &utf16-string-decoding
-		   make-utf16-string-decoding-missing-second-word
-		   utf16-string-decoding-missing-second-word?
-		   ((bytevector		utf16-string-decoding-missing-second-word.bytevector)
-		    (index		utf16-string-decoding-missing-second-word.index)
-		    (word		utf16-string-decoding-missing-second-word.word)))))
+     ($core-condition-object-type-name
+      . (&utf16-string-decoding-missing-second-word-rtd
+	 &utf16-string-decoding-missing-second-word-rcd
+	 &utf16-string-decoding
+	 make-utf16-string-decoding-missing-second-word
+	 utf16-string-decoding-missing-second-word?
+	 ((bytevector		. utf16-string-decoding-missing-second-word.bytevector)
+	  (index		. utf16-string-decoding-missing-second-word.index)
+	  (word			. utf16-string-decoding-missing-second-word.word)))))
     (&utf16-string-decoding-standalone-octet
-     ($core-rtd . (&utf16-string-decoding-standalone-octet-rtd
-		   &utf16-string-decoding-standalone-octet-rcd
-		   &utf16-string-decoding
-		   make-utf16-string-decoding-standalone-octet
-		   utf16-string-decoding-standalone-octet?
-		   ((bytevector		utf16-string-decoding-standalone-octet.bytevector)
-		    (index		utf16-string-decoding-standalone-octet.index)
-		    (octet		utf16-string-decoding-standalone-octet.octet)))))
+     ($core-condition-object-type-name
+      . (&utf16-string-decoding-standalone-octet-rtd
+	 &utf16-string-decoding-standalone-octet-rcd
+	 &utf16-string-decoding
+	 make-utf16-string-decoding-standalone-octet
+	 utf16-string-decoding-standalone-octet?
+	 ((bytevector		. utf16-string-decoding-standalone-octet.bytevector)
+	  (index		. utf16-string-decoding-standalone-octet.index)
+	  (octet		. utf16-string-decoding-standalone-octet.octet)))))
     (&utf32-string-decoding-invalid-word
-     ($core-rtd . (&utf32-string-decoding-invalid-word-rtd
-		   &utf32-string-decoding-invalid-word-rcd
-		   &utf32-string-decoding
-		   make-utf32-string-decoding-invalid-word
-		   utf32-string-decoding-invalid-word?
-		   ((bytevector		utf32-string-decoding-invalid-word.bytevector)
-		    (index		utf32-string-decoding-invalid-word.index)
-		    (word		utf32-string-decoding-invalid-word.word)))))
+     ($core-condition-object-type-name
+      . (&utf32-string-decoding-invalid-word-rtd
+	 &utf32-string-decoding-invalid-word-rcd
+	 &utf32-string-decoding
+	 make-utf32-string-decoding-invalid-word
+	 utf32-string-decoding-invalid-word?
+	 ((bytevector		. utf32-string-decoding-invalid-word.bytevector)
+	  (index		. utf32-string-decoding-invalid-word.index)
+	  (word			. utf32-string-decoding-invalid-word.word)))))
     (&utf32-string-decoding-orphan-octets
-     ($core-rtd . (&utf32-string-decoding-orphan-octets-rtd
-		   &utf32-string-decoding-orphan-octets-rcd
-		   &utf32-string-decoding
-		   make-utf32-string-decoding-orphan-octets
-		   utf32-string-decoding-orphan-octets?
-		   ((bytevector		utf32-string-decoding-orphan-octets.bytevector)
-		    (index		utf32-string-decoding-orphan-octets.index)
-		    (octets		utf32-string-decoding-orphan-octets.octets)))))
+     ($core-condition-object-type-name
+      . (&utf32-string-decoding-orphan-octets-rtd
+	 &utf32-string-decoding-orphan-octets-rcd
+	 &utf32-string-decoding
+	 make-utf32-string-decoding-orphan-octets
+	 utf32-string-decoding-orphan-octets?
+	 ((bytevector		. utf32-string-decoding-orphan-octets.bytevector)
+	  (index		. utf32-string-decoding-orphan-octets.index)
+	  (octets		. utf32-string-decoding-orphan-octets.octets)))))
 ;;;
     (<top>					(macro . <top>))
     (<void>					(macro . <void>))
@@ -5480,7 +5544,9 @@
       ;;   (?core-macro-name		(core-macro	. ?core-macro-name))
       ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
       ;;   (?fluid-macro-name		($fluid		. ?fluid-macro-name))
-      ;;   (?condition-type-name	($core-rtd	. (?condition-rtd ?condition-rcd)))
+      ;;   (?record-type-name		($core-rtd	. (?condition-rtd ?condition-rcd)))
+      ;;   (?record-type-name		($core-record-type-name	. ...)
+      ;;   (?condition-object-name	($core-condition-object-type-name . ...)
       ;;
       ;;We accumulate  in the subst  and env collections the  associations name/label
       ;;and label/binding

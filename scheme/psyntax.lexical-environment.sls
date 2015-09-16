@@ -681,7 +681,38 @@
   (syntactic-binding-descriptor.value ?descriptor))
 
 ;;; --------------------------------------------------------------------
-;;; core R6RS record-type descriptor binding
+;;; old-style core R6RS record-type descriptor binding
+
+(define (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descriptor)
+  ;;Mutate  a  syntactic  binding  descriptor  from  the  representation  of  a  core
+  ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
+  ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
+  ;;values.
+  ;;
+  ;;We expect the core descriptor to have one of the formats:
+  ;;
+  ;;   ($core-rtd . (?rtd-name ?rcd-name))
+  ;;
+  ;;and the usable descriptor to have the format:
+  ;;
+  ;;   ($record-type-name . #<r6rs-record-type-spec>)
+  ;;
+  (set-car! descriptor '$record-type-name)
+  (set-cdr! descriptor
+	    (let* ((bindval (syntactic-binding-descriptor.value descriptor))
+		   (rtd-id  (core-prim-id (car  bindval)))
+		   (rcd-id  (core-prim-id (cadr bindval))))
+	      (make-r6rs-record-type-spec rtd-id rcd-id))))
+
+;;Return true if  the argument is a syntactic binding's  descriptor describing a R6RS
+;;record-type descriptor  established by  the boot image  (for example:  the built-in
+;;condition object types).
+;;
+(define-syntactic-binding-descriptor-predicate core-rtd-binding-descriptor?
+  $core-rtd)
+
+;;; --------------------------------------------------------------------
+;;; new-style core R6RS record-type descriptor binding
 
 (define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic  binding  descriptor  from  the  representation  of  a  core
@@ -691,8 +722,9 @@
   ;;
   ;;We expect the core descriptor to have one of the formats:
   ;;
-  ;;   ($core-rtd . (?rtd-name ?rcd-name))
-  ;;   ($core-rtd . (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id ?safe-accessors-alist))
+  ;;   ($core-record-type-name . (?rtd-name ?rcd-name ?parent-id
+  ;;                              ?constructor-id ?type-predicate-id
+  ;;                              ?accessors-alist))
   ;;
   ;;and the usable descriptor to have the format:
   ;;
@@ -704,42 +736,92 @@
 	  ((fxzero? idx)
 	   (if (pair? ell)
 	       (map (lambda (P)
-		      (cons (car P) (core-prim-id (cadr P))))
+		      (cons (car P) (bless (cdr P))))
 		 (car ell))
 	     '()))
 	  (else
 	   (%alist-ref-or-null (cdr ell) (fxsub1 idx)))))
   (set-car! descriptor '$record-type-name)
   (set-cdr! descriptor
-	    (let ((bindval (syntactic-binding-descriptor.value descriptor)))
-	      (if (null? (cddr bindval))
-		  ;;($core-rtd . (?rtd-name ?rcd-name))
-		  (let ((rtd-id  (core-prim-id (car  bindval)))
-			(rcd-id  (core-prim-id (cadr bindval))))
-		    (make-r6rs-record-type-spec rtd-id rcd-id))
-		;;($core-rtd . (?rtd-name ?rcd-name ?parent-name ?constructor-name ?type-predicate-name ?safe-accessors-alist))
-		(let* ((rtd-id			(core-prim-id (car  bindval)))
-		       (rcd-id			(core-prim-id (cadr bindval)))
-		       (super-protocol-id	#f)
-		       (parent-id		(cond ((list-ref bindval 2)
+	    (let* ((bindval (syntactic-binding-descriptor.value descriptor))
+		   (rtd-id			(core-prim-id (car  bindval)))
+		   (rcd-id			(core-prim-id (cadr bindval)))
+		   (super-protocol-id		#f)
+		   (parent-id			(cond ((list-ref bindval 2)
 						       => core-prim-id)
 						      (else #f)))
-		       (default-constructor-id	(core-prim-id (list-ref bindval 3)))
-		       (default-destructor-id	#f)
-		       (type-predicate-id	(core-prim-id (list-ref bindval 4)))
-		       (safe-accessors-table	(%alist-ref-or-null bindval 5))
-		       (safe-mutators-table	'())
-		       (methods-table		safe-accessors-table))
-		  (make-r6rs-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-					      default-constructor-id default-destructor-id type-predicate-id
-					      safe-accessors-table safe-mutators-table methods-table))))))
+		   (default-constructor-id	(bless (list-ref bindval 3)))
+		   (default-destructor-id	#f)
+		   (type-predicate-id		(bless (list-ref bindval 4)))
+		   (safe-accessors-table	(%alist-ref-or-null bindval 5))
+		   (safe-mutators-table		'())
+		   (methods-table		safe-accessors-table))
+	      (make-r6rs-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+					  default-constructor-id default-destructor-id type-predicate-id
+					  safe-accessors-table safe-mutators-table methods-table))))
 
 ;;Return true if  the argument is a syntactic binding's  descriptor describing a R6RS
 ;;record-type descriptor  established by  the boot image  (for example:  the built-in
 ;;condition object types).
 ;;
 (define-syntactic-binding-descriptor-predicate core-record-type-name-binding-descriptor?
-  $core-rtd)
+  $core-record-type-name)
+
+;;; --------------------------------------------------------------------
+;;; core R6RS condition object record-type descriptor binding
+
+(define (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
+  ;;Mutate a syntactic binding descriptor from the representation of a core condition
+  ;;object record-type name (established by the  boot image) to a representation of a
+  ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
+  ;;values.
+  ;;
+  ;;We expect the core descriptor to have one of the formats:
+  ;;
+  ;;   ($core-condition-object-type-name
+  ;;    . (?rtd-name ?rcd-name ?parent-id
+  ;;       ?constructor-id ?type-predicate-id ?accessors-alist))
+  ;;
+  ;;and the usable descriptor to have the format:
+  ;;
+  ;;   ($record-type-name . #<r6rs-record-type-spec>)
+  ;;
+  (define (%alist-ref-or-null ell idx)
+    (cond ((null? ell)
+	   '())
+	  ((fxzero? idx)
+	   (if (pair? ell)
+	       (map (lambda (P)
+		      (cons (car P) (bless (cdr P))))
+		 (car ell))
+	     '()))
+	  (else
+	   (%alist-ref-or-null (cdr ell) (fxsub1 idx)))))
+  (set-car! descriptor '$record-type-name)
+  (set-cdr! descriptor
+	    (let* ((bindval (syntactic-binding-descriptor.value descriptor))
+		   (rtd-id			(core-prim-id (car  bindval)))
+		   (rcd-id			(core-prim-id (cadr bindval)))
+		   (super-protocol-id		#f)
+		   (parent-id			(cond ((list-ref bindval 2)
+						       => core-prim-id)
+						      (else #f)))
+		   (default-constructor-id	(bless (list-ref bindval 3)))
+		   (default-destructor-id	#f)
+		   (type-predicate-id		(bless (list-ref bindval 4)))
+		   (safe-accessors-table	(%alist-ref-or-null bindval 5))
+		   (safe-mutators-table		'())
+		   (methods-table		safe-accessors-table))
+	      (make-r6rs-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+					  default-constructor-id default-destructor-id type-predicate-id
+					  safe-accessors-table safe-mutators-table methods-table))))
+
+;;Return true if  the argument is a syntactic binding's  descriptor describing a R6RS
+;;condition object record-type descriptor established by the boot image (for example:
+;;the built-in condition object types).
+;;
+(define-syntactic-binding-descriptor-predicate core-condition-object-type-name-binding-descriptor?
+  $core-condition-object-type-name)
 
 ;;; --------------------------------------------------------------------
 ;;; R6RS record-type descriptor binding
@@ -1069,8 +1151,12 @@
 	   => (lambda (descriptor)
 		;;The first time we access  a syntactic binding descriptor representing
 		;;a core record-type name: we mutate it to a format usable by the code.
-		(when (core-record-type-name-binding-descriptor? descriptor)
-		  (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
+		(cond ((core-condition-object-type-name-binding-descriptor? descriptor)
+		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
+		      ((core-record-type-name-binding-descriptor? descriptor)
+		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
+		      ((core-rtd-binding-descriptor? descriptor)
+		       (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descriptor)))
 		descriptor))
 
 	  ;;Search the given LEXENV.
@@ -2297,7 +2383,8 @@
 		    (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
        	 (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv)))
 
-      (($core-rtd $struct-type-name core-prim lexical macro local-macro local-macro! local-etv)
+      (($core-rtd $core-record-type-name $core-condition-object-type-name
+	$struct-type-name core-prim lexical macro local-macro local-macro! local-etv)
        (void))
 
       (else

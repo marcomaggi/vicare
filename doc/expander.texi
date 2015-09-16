@@ -1347,7 +1347,9 @@ library import export module begin set!
 let-syntax letrec-syntax stale-when
 begin-for-syntax begin-for-syntax
 
-core-macro macro core-prim $core-rtd
+core-macro macro core-prim
+$core-rtd $core-record-type-name
+$core-condition-object-type-name
 
 global global-macro global-macro! global-etv
 
@@ -1681,17 +1683,44 @@ primitive.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Primitive binding: core record--type name
+@subsubheading Primitive binding: old--style core record--type name
 
 A syntactic binding representing @rnrs{6}'s record--type name defined by
 the boot image has descriptor with one of the formats:
 
 @example
 ($core-rtd . (@meta{rtd-name} @meta{rcd-name}))
-($core-rtd . (@meta{rtd-name} @meta{rcd-name}
-              @meta{parent-name}
-              @meta{constructor-name} @meta{type-predicate-name}
-              @meta{safe-accessors-alist}))
+@end example
+
+@noindent
+where the values are:
+
+@table @meta
+@item rtd-name
+A symbol representing the public name of the syntactic identifier to
+which the record--type descriptor is bound.
+
+@item rcd-name
+A symbol representing the public name of the syntactic identifier to
+which the default record--constructor descriptor is bound.
+@end table
+
+This style is deprecate and should be removed from the boot image; it is
+kept to show ``how it is done'' (it takes very little space).
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Primitive binding: new--style core record--type name
+
+A syntactic binding representing @rnrs{6}'s record--type name defined by
+the boot image has descriptor with one of the formats:
+
+@example
+($core-record-type-name
+  . (@meta{rtd-name} @meta{rcd-name}
+     @meta{parent-name}
+     @meta{constructor-name} @meta{type-predicate-name}
+     @meta{accessors-alist}))
 @end example
 
 @noindent
@@ -1718,14 +1747,59 @@ which the default constructor is bound.
 A symbol representing the public name of the syntactic identifier to
 which the type predicate is bound.
 
-@item safe-accessors-alist
-A list of sublists.  The sublists contain @math{2} values: a field name
-and a symbol representing the public name of the syntactic identifier to
-which the field accessor is bound.
+@item accessors-alist
+An alist having: as keys symbols representing field names; as values
+symbols representing the public name of the syntactic identifier to
+which the safe field accessor is bound.
 @end table
 
-For example: these entries are used to represent the predefined @rnrs{6}
-condition object types.  For the definition:
+@c ------------------------------------------------------------------------
+
+@subsubheading Primitive binding: core condition object record--type name
+
+A syntactic binding representing @rnrs{6}'s condition object
+record--type name defined by the boot image has descriptor with one of
+the formats:
+
+@example
+($core-condition-object-type-name
+  . (@meta{rtd-name} @meta{rcd-name}
+     @meta{parent-name}
+     @meta{constructor-name} @meta{type-predicate-name}
+     @meta{accessors-alist}))
+@end example
+
+@noindent
+where the values are:
+
+@table @meta
+@item rtd-name
+A symbol representing the public name of the syntactic identifier to
+which the record--type descriptor is bound.
+
+@item rcd-name
+A symbol representing the public name of the syntactic identifier to
+which the default record--constructor descriptor is bound.
+
+@item parent-name
+@false{} or a symbol representing the public name of the syntactic
+identifier bound to the parent's record-type.
+
+@item constructor-name
+A symbol representing the public name of the syntactic identifier to
+which the default constructor is bound.
+
+@item type-predicate-name
+A symbol representing the public name of the syntactic identifier to
+which the type predicate is bound.
+
+@item accessors-alist
+An alist having: as keys symbols representing field names; as values
+symbols representing the public name of the syntactic identifier to
+which the safe field accessor is bound.
+@end table
+
+As example, for the definition:
 
 @lisp
 (define-condition-type &who
@@ -1738,9 +1812,10 @@ condition object types.  For the definition:
 the following descriptor is generated:
 
 @example
-($core-rtd . (&who-rtd &who-rcd &condition
-              make-who-condition who-condition?
-              ((who condition-who))))
+($core-condition-object-type-name
+  . (&who-rtd &who-rcd &condition
+     make-who-condition who-condition?
+     ((who condition-who))))
 @end example
 
 @c ------------------------------------------------------------------------
