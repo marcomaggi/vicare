@@ -104,6 +104,7 @@
     object-type-spec.safe-accessor			object-type-spec.safe-mutator
     object-type-spec.unsafe-accessor			object-type-spec.unsafe-mutator
     object-type-spec.applicable-method			object-type-spec.subtype-and-supertype?
+    object-type-spec-override-predicate
 
     ;; object types specifications: R6RS records
     <r6rs-record-type-spec>
@@ -724,7 +725,9 @@
 		(let* ((rtd-id			(core-prim-id (car  bindval)))
 		       (rcd-id			(core-prim-id (cadr bindval)))
 		       (super-protocol-id	#f)
-		       (parent-id		(core-prim-id (list-ref bindval 2)))
+		       (parent-id		(cond ((list-ref bindval 2)
+						       => core-prim-id)
+						      (else #f)))
 		       (default-constructor-id	(core-prim-id (list-ref bindval 3)))
 		       (default-destructor-id	#f)
 		       (type-predicate-id	(core-prim-id (list-ref bindval 4)))

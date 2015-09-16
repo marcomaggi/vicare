@@ -32,6 +32,7 @@
 
 	 object-type-spec.applicable-method
 	 object-type-spec.subtype-and-supertype?
+	 object-type-spec-override-predicate
 
 	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
@@ -63,6 +64,7 @@
 	 object-type-spec.constructor-stx
 	 object-type-spec.destructor-stx
 	 object-type-spec.type-predicate-stx
+	 object-type-spec.type-predicate-stx-set!
 	 object-type-spec.safe-accessors-table
 	 object-type-spec.safe-mutators-table
 	 object-type-spec.unsafe-accessors-table
@@ -99,7 +101,9 @@
 		;
 		;At present only structs and records have a destructor.
 
-     (immutable type-predicate-stx		object-type-spec.type-predicate-stx)
+     (mutable type-predicate-stx
+	      object-type-spec.type-predicate-stx
+	      object-type-spec.type-predicate-stx-set!)
 		;False or a  syntax object representing an  expression that, expanded
 		;and evaluated at run-time, returns  a type predicate.  The predicate
 		;is meant to be used as:
@@ -302,6 +306,21 @@
 		  (recurse (syntactic-binding-descriptor.value
 			    (id->object-type-binding-descriptor #f #f parent-id lexenv)))))
 	    (else #f))))
+
+
+;;;; basic object-type specification: miscellaneous operations
+
+(define (object-type-spec-override-predicate name.id predicate.stx)
+  ;;Assume  NAME.ID  is a  syntactic  identifier  representing an  object-type  name.
+  ;;Override the predicate  of the object-type with the  syntax object PREDICATE.STX.
+  ;;Return unspecified values.
+  ;;
+  ;;This is  used to override the  predicate of condition object  record-types, which
+  ;;must work with both simple conditions and compound conditions.
+  ;;
+  (let* ((descr  (id->object-type-binding-descriptor #f #f name.id (current-inferior-lexenv)))
+	 (spec   (syntactic-binding-descriptor.value descr)))
+    (object-type-spec.type-predicate-stx-set! spec predicate.stx)))
 
 
 ;;;; R6RS record-type specification

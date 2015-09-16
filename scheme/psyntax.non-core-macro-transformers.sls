@@ -1091,6 +1091,8 @@
 	     ;;Remember  that the  predicate has  to recognise  a simple
 	     ;;condition object embedded in a compound condition object.
 	     (condition-predicate (record-type-descriptor ,?name)))
+	   (begin-for-syntax
+	     (object-type-spec-override-predicate (syntax ,?name) (syntax ,?predicate)))
 	   ,@(map
 		 (lambda (accessor aux)
 		   `(define ,accessor

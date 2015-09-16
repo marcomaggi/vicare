@@ -777,7 +777,7 @@
     (define-callable-spec			(macro . define-callable-spec))
 ;;;
     (&condition
-     ($core-rtd . (&condition-rtd &condition-rcd)))
+     ($core-rtd . (&condition-rtd &condition-rcd #f condition condition?)))
     (&message
      ($core-rtd . (&message-rtd
 		   &message-rcd
@@ -2096,10 +2096,6 @@
     (error@add1)
     (error@sub1)
     (error@fxadd1)
-    (internal-delete)
-    (internal-applicable-struct-type-destructor)
-    (internal-applicable-record-type-destructor)
-    (internal-applicable-record-destructor)
     (error@fxsub1)
     (fasl-write					v $language)
     (fasl-read					v $language)
@@ -5194,6 +5190,11 @@
     (signature-rest-argument-validation-with-predicate)
     (any->symbol)
     (any->string)
+    (internal-delete)
+    (internal-applicable-struct-type-destructor)
+    (internal-applicable-record-type-destructor)
+    (internal-applicable-record-destructor)
+    (object-type-spec-override-predicate)
 
     ))
 

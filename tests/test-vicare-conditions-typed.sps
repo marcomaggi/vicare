@@ -33,6 +33,21 @@
 (check-display "*** testing Vicare libraries: tests for condition object-types under typed language\n")
 
 
+;;;; helpers
+
+(define-condition-type &a-test-condition
+    &condition
+  make-a-test-condition
+  a-test-condition?
+  (one		a-test-condition.one)
+  (two		a-test-condition.two))
+
+(define-condition-type &b-test-condition
+    &condition
+  make-b-test-condition
+  b-test-condition?)
+
+
 (parametrise ((check-test-name	'generic-type-maker))
 
   (define-syntax doit
@@ -113,6 +128,10 @@
   (doit &utf32-string-decoding-invalid-word		('#vu8() 0 0))
   (doit &utf32-string-decoding-orphan-octets		('#vu8() 0 '()))
 
+;;; --------------------------------------------------------------------
+
+  (doit &a-test-condition		(1 2))
+
   (void))
 
 
@@ -131,6 +150,11 @@
 	   => #t)
 	 (check
 	     (is-a? (condition ?builder) ?type)
+	   => #t)
+	 (check
+	     (is-a? (condition (make-b-test-condition)
+			        ?builder)
+		    ?type)
 	   => #t)
 	 (check
 	     (is-a? 123 ?type)
@@ -205,6 +229,10 @@
   (doit &utf16-string-decoding-standalone-octet		(make-utf16-string-decoding-standalone-octet '#vu8() 0 0))
   (doit &utf32-string-decoding-invalid-word		(make-utf32-string-decoding-invalid-word '#vu8() 0 0))
   (doit &utf32-string-decoding-orphan-octets		(make-utf32-string-decoding-orphan-octets '#vu8() 0 '()))
+
+;;; --------------------------------------------------------------------
+
+  (doit &a-test-condition				(make-a-test-condition 1 2))
 
   (void))
 
@@ -344,6 +372,13 @@
 	((bytevector	#vu8())
 	 (index		0)
 	 (octets	())))
+
+;;; --------------------------------------------------------------------
+
+  (doit &a-test-condition
+	(make-a-test-condition 1 2)
+	((one		1)
+	 (two		2)))
 
   (void))
 
