@@ -90,15 +90,14 @@
   (doit &no-infinities					(make-no-infinities-violation))
   (doit &no-nans					(make-no-nans-violation))
   (doit &interrupted					(make-interrupted-condition))
-  (doit &source-position				(make-source-position-condition (current-input-port) 1 1 1 1))
+  (doit &source-position				(make-source-position-condition "the-port" 1 1 1 1))
 
-#|
   (doit &failed-expression-condition			(make-failed-expression-condition #f))
   (doit &procedure-precondition-violation		(make-procedure-precondition-violation))
   (doit &procedure-postcondition-violation		(make-procedure-postcondition-violation))
   (doit &procedure-argument-violation			(make-procedure-argument-violation))
-  (doit &procedure-signature-argument-violation		(make-procedure-signature-argument-violation))
-  (doit &procedure-signature-return-value-violation	(make-procedure-signature-return-value-violation))
+  (doit &procedure-signature-argument-violation		(make-procedure-signature-argument-violation 1 #f #f))
+  (doit &procedure-signature-return-value-violation	(make-procedure-signature-return-value-violation 1 #f #f))
   (doit &procedure-arguments-consistency-violation	(make-procedure-arguments-consistency-violation))
   (doit &expression-return-value-violation		(make-expression-return-value-violation))
   (doit &non-reinstatable				(make-non-reinstatable-violation))
@@ -110,21 +109,160 @@
   (doit &utf8-string-decoding				(make-utf8-string-decoding-error))
   (doit &utf16-string-decoding				(make-utf16-string-decoding-error))
   (doit &utf32-string-decoding				(make-utf32-string-decoding-error))
-  (doit &utf8-string-decoding-invalid-octet		(make-utf8-string-decoding-invalid-octet-error))
-  (doit &utf8-string-decoding-invalid-2-tuple		(make-utf8-string-decoding-invalid-2-tuple-error))
-  (doit &utf8-string-decoding-invalid-3-tuple		(make-utf8-string-decoding-invalid-3-tuple-error))
-  (doit &utf8-string-decoding-invalid-4-tuple		(make-utf8-string-decoding-invalid-4-tuple-error))
-  (doit &utf8-string-decoding-incomplete-2-tuple	(make-utf8-string-decoding-incomplete-2-tuple-error))
-  (doit &utf8-string-decoding-incomplete-3-tuple	(make-utf8-string-decoding-incomplete-3-tuple-error))
-  (doit &utf8-string-decoding-incomplete-4-tuple	(make-utf8-string-decoding-incomplete-4-tuple-error))
-  (doit &utf16-string-decoding-invalid-first-word	(make-utf16-string-decoding-invalid-first-word-error))
-  (doit &utf16-string-decoding-invalid-second-word	(make-utf16-string-decoding-invalid-second-word-error))
-  (doit &utf16-string-decoding-missing-second-word	(make-utf16-string-decoding-missing-second-word-error))
-  (doit &utf16-string-decoding-standalone-octet		(make-utf16-string-decoding-standalone-octet-error))
-  (doit &utf32-string-decoding-invalid-word		(make-utf32-string-decoding-invalid-word-error))
-  (doit &utf32-string-decoding-orphan-octets		(make-utf32-string-decoding-orphan-octets-error))
-|#
-  #t)
+  (doit &utf8-string-decoding-invalid-octet		(make-utf8-string-decoding-invalid-octet '#vu8() 0 '()))
+  (doit &utf8-string-decoding-invalid-2-tuple		(make-utf8-string-decoding-invalid-2-tuple '#vu8() 0 '()))
+  (doit &utf8-string-decoding-invalid-3-tuple		(make-utf8-string-decoding-invalid-3-tuple '#vu8() 0 '()))
+  (doit &utf8-string-decoding-invalid-4-tuple		(make-utf8-string-decoding-invalid-4-tuple '#vu8() 0 '()))
+  (doit &utf8-string-decoding-incomplete-2-tuple	(make-utf8-string-decoding-incomplete-2-tuple '#vu8() 0 '()))
+  (doit &utf8-string-decoding-incomplete-3-tuple	(make-utf8-string-decoding-incomplete-3-tuple '#vu8() 0 '()))
+  (doit &utf8-string-decoding-incomplete-4-tuple	(make-utf8-string-decoding-incomplete-4-tuple '#vu8() 0 '()))
+  (doit &utf16-string-decoding-invalid-first-word	(make-utf16-string-decoding-invalid-first-word '#vu8() 0 0))
+  (doit &utf16-string-decoding-invalid-second-word	(make-utf16-string-decoding-invalid-second-word '#vu8() 0 0 0))
+  (doit &utf16-string-decoding-missing-second-word	(make-utf16-string-decoding-missing-second-word '#vu8() 0 0))
+  (doit &utf16-string-decoding-standalone-octet		(make-utf16-string-decoding-standalone-octet '#vu8() 0 0))
+  (doit &utf32-string-decoding-invalid-word		(make-utf32-string-decoding-invalid-word '#vu8() 0 0))
+  (doit &utf32-string-decoding-orphan-octets		(make-utf32-string-decoding-orphan-octets '#vu8() 0 '()))
+
+  (void))
+
+
+(parametrise ((check-test-name	'generic-slot-accessors))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?type ?builder ((?slot ?value) ...))
+       (let (({O ?type} ?builder))
+	 (begin
+	   (check
+	       (slot-ref O ?slot)
+	     => (quasiquote ?value))
+	   (check
+	       (method-call ?slot O)
+	     => (quasiquote ?value))
+	   (check
+	       (method-call-late-binding (quote ?slot) O)
+	     => (quasiquote ?value)))
+	 ...
+	 ))
+      ))
+
+  (doit &who		(make-who-condition 'it)		((who it)))
+  (doit &message	(make-message-condition "it")		((message "it")))
+  (doit &irritants	(make-irritants-condition '(it))	((irritants (it))))
+  (doit &syntax		(make-syntax-violation 1 2)		((form 1) (subform 2)))
+
+  (doit &i/o-invalid-position
+	(make-i/o-invalid-position-error #f)
+	((position #f)))
+  (doit &i/o-filename
+	(make-i/o-filename-error "filename")
+	((filename "filename")))
+  (doit &i/o-port
+	(make-i/o-port-error (current-input-port))
+	((port ,(current-input-port))))
+  (doit &i/o-encoding
+	(make-i/o-encoding-error (current-output-port) #\C)
+	((char #\C)))
+
+
+  (doit &errno
+	(make-errno-condition 1)
+	((code 1)))
+  (doit &h_errno
+	(make-h_errno-condition 1)
+	((code 1)))
+  (doit &source-position
+	(make-source-position-condition "the-port" 1 2 3 4)
+	((port-id	"the-port")
+	 (byte		1)
+	 (character	2)
+	 (line		3)
+	 (column	4)))
+
+  #;(doit &failed-expression-condition
+	(make-failed-expression-condition #f)
+	((failed-expression-condition	#f)))
+  (doit &procedure-signature-argument-violation
+	(make-procedure-signature-argument-violation 1 #f #t)
+	((one-based-argument-index	1)
+	 (failed-expression		#f)
+	 (offending-value		#t)))
+  #;(doit &procedure-signature-return-value-violation
+	(make-procedure-signature-return-value-violation 0 #f #t)
+	((one-based-argument-index	1)
+	 (failed-expression		#f)
+	 (offending-value		#t)))
+
+  (doit &utf8-string-decoding-invalid-octet
+	(make-utf8-string-decoding-invalid-octet '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+  (doit &utf8-string-decoding-invalid-2-tuple
+	(make-utf8-string-decoding-invalid-2-tuple '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+  (doit &utf8-string-decoding-invalid-3-tuple
+	(make-utf8-string-decoding-invalid-3-tuple '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+  (doit &utf8-string-decoding-invalid-4-tuple
+	(make-utf8-string-decoding-invalid-4-tuple '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+  (doit &utf8-string-decoding-incomplete-2-tuple
+	(make-utf8-string-decoding-incomplete-2-tuple '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+  (doit &utf8-string-decoding-incomplete-3-tuple
+	(make-utf8-string-decoding-incomplete-3-tuple '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+  (doit &utf8-string-decoding-incomplete-4-tuple
+	(make-utf8-string-decoding-incomplete-4-tuple '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+
+  (doit &utf16-string-decoding-invalid-first-word
+	(make-utf16-string-decoding-invalid-first-word '#vu8() 0 1)
+	((bytevector	#vu8())
+	 (index		0)
+	 (word		1)))
+  (doit &utf16-string-decoding-invalid-second-word
+	(make-utf16-string-decoding-invalid-second-word '#vu8() 0 1 2)
+	((bytevector	#vu8())
+	 (index		0)
+	 (first-word	1)
+	 (second-word	2)))
+  (doit &utf16-string-decoding-missing-second-word
+	(make-utf16-string-decoding-missing-second-word '#vu8() 0 1)
+	((bytevector	#vu8())
+	 (index		0)
+	 (word		1)))
+  (doit &utf16-string-decoding-standalone-octet
+	(make-utf16-string-decoding-standalone-octet '#vu8() 0 1)
+	((bytevector	#vu8())
+	 (index		0)
+	 (octet		1)))
+
+  (doit &utf32-string-decoding-invalid-word
+	(make-utf32-string-decoding-invalid-word '#vu8() 0 1)
+	((bytevector	#vu8())
+	 (index		0)
+	 (word		1)))
+  (doit &utf32-string-decoding-orphan-octets
+	(make-utf32-string-decoding-orphan-octets '#vu8() 0 '())
+	((bytevector	#vu8())
+	 (index		0)
+	 (octets	())))
+
+  (void))
 
 
 ;;;; done

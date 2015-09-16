@@ -836,27 +836,52 @@
 		    (string-append (symbol->string (syntax->datum name))
 				   suffix))))
   (syntax-case stx ()
-    ((ctxt name super constructor predicate (field* accessor*) ...)
-     (and (identifier? #'name)
-	  (identifier? #'super)
-	  (identifier? #'constructor)
-	  (identifier? #'predicate)
-	  (andmap identifier? #'(field* ...))
-	  (andmap identifier? #'(accessor* ...)))
-     (with-syntax (((aux-accessor* ...) (generate-temporaries #'(accessor* ...)))
-		   (rtd (mkname #'name "-rtd"))
-		   (rcd (mkname #'name "-rcd")))
-       #'(begin
-	   (define-record-type (name constructor p?)
-	     (parent super)
-	     (fields (immutable field* aux-accessor*) ...)
-	     (nongenerative)
-	     (sealed #f) (opaque #f))
-	   (define predicate (condition-predicate (record-type-descriptor name)))
-	   (define accessor* (condition-accessor (record-type-descriptor name) aux-accessor*))
-	   ...
-	   (define rtd (record-type-descriptor name))
-	   (define rcd (record-constructor-descriptor name)))))
+    ((_ ?name ?super ?constructor ?predicate (?field ?accessor) ...)
+     (and (identifier? #'?name)
+	  (identifier? #'?super)
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate)
+	  (andmap identifier? #'(?field ...))
+	  (andmap identifier? #'(?accessor ...)))
+     (with-syntax
+	 (((DUMMY AUX-ACCESSOR* ...) (generate-temporaries #'(#f ?accessor ...)))
+	  (RTD (mkname #'?name "-rtd"))
+	  (RCD (mkname #'?name "-rcd")))
+       (with-syntax
+	   (((LATE-BINDING-METHODS-FORM ...) (syntax-case #'(?field ...) ()
+					       ;;No fields.
+					       (()	'())
+					       ;;At least one field.
+					       (_
+						;;We define a dummy syntactic binding
+						;;here: it  makes sure the  forms are
+						;;evaluated  right  after  the  other
+						;;definitions  above, and  before any
+						;;initialisation  expression  in  the
+						;;body  of the  enclosing program  or
+						;;library.
+						#'((define DUMMY
+						     (putprop (record-type-uid RTD)
+							      'late-binding-methods-table
+							      (receive-and-return (table)
+								  (make-eq-hashtable)
+								(hashtable-set! table (quote ?field) ?accessor)
+								...)))
+						   ))
+					       )))
+	 #'(begin
+	     (define-record-type (?name ?constructor p?)
+	       (parent ?super)
+	       (fields (immutable ?field AUX-ACCESSOR*) ...)
+	       (nongenerative)
+	       (sealed #f) (opaque #f))
+	     (define ?predicate (condition-predicate (record-type-descriptor ?name)))
+	     (define ?accessor  (condition-accessor  (record-type-descriptor ?name) AUX-ACCESSOR*))
+	     ...
+	     (define RTD (record-type-descriptor ?name))
+	     (define RCD (record-constructor-descriptor ?name))
+	     LATE-BINDING-METHODS-FORM ...
+	     ))))
     ))
 
 
