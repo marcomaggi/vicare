@@ -75,6 +75,8 @@
     make-syntactic-binding-descriptor/record-type-name
     record-type-name-binding-descriptor?
 
+    object-type-name-binding-descriptor?
+
     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
     fluid-syntax-binding-descriptor?
     fluid-syntax-binding-descriptor.fluid-label
@@ -840,6 +842,20 @@
 ;;
 (define-syntactic-binding-descriptor-predicate record-type-name-binding-descriptor?
   $record-type-name)
+
+
+;;; --------------------------------------------------------------------
+
+(define (object-type-name-binding-descriptor? obj)
+  ;;Return true  if OBJ is a  syntactic binding descriptor  of a type among  the ones
+  ;;having a instance of  "<object-type-spec>" as value: $record-type-name; otherwise
+  ;;return false.
+  ;;
+  (and (pair? obj)
+       (case (syntactic-binding-descriptor.type obj)
+	 (($record-type-name $built-in-object-type-name)
+	  #t)
+	 (else #f))))
 
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings

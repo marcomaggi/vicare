@@ -78,7 +78,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type)
+(define-auxiliary-syntaxes object-type vicare-struct-type)
 
 (define-syntax (case-object-type-binding stx)
   ;;This syntax is meant to be used as follows:
@@ -88,7 +88,7 @@
   ;;     ((_ ?type-id)
   ;;      (identifier? ?type-id)
   ;;      (case-object-type-binding __who__ input-stx ?type-id lexenv.run
-  ;;        ((r6rs-record-type)
+  ;;        ((object-type)
   ;;         ...)
   ;;        ((vicare-struct-type)
   ;;         ...)
@@ -101,7 +101,7 @@
   ;;
   (sys.syntax-case stx (r6rs-record-type vicare-struct-type tag-type-spec)
     ((_ (?who ?input-stx ?type-id ?lexenv)
-	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
+	((object-type)		?object-type-body0 ?object-type-body ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
 	((tag-type-spec)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
@@ -113,8 +113,8 @@
 	(visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
 	       (binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((record-type-name-binding-descriptor? binding)
-		 ?r6rs-body0 ?r6rs-body ...)
+	  (cond ((object-type-name-binding-descriptor? binding)
+		 ?object-type-body0 ?object-type-body ...)
 		((struct-type-name-binding-descriptor? binding)
 		 ?struct-body0 ?struct-body ...)
 		((identifier-tag-type-spec ?type-id)
@@ -125,7 +125,7 @@
 		   ?input-stx ?type-id)))))))
 
     ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
-	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
+	((object-type)		?object-type-body0   ?object-type-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
 	((tag-type-spec)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
@@ -137,8 +137,8 @@
 	(visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
 	(let* ((label     (id->label/or-error ?who ?input-stx ?type-id))
 	       (?binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((record-type-name-binding-descriptor? ?binding)
-		 ?r6rs-body0 ?r6rs-body ...)
+	  (cond ((object-type-name-binding-descriptor? ?binding)
+		 ?object-type-body0 ?object-type-body ...)
 		((struct-type-name-binding-descriptor? ?binding)
 		 ?struct-body0 ?struct-body ...)
 		((identifier-tag-type-spec ?type-id)
@@ -1696,7 +1696,7 @@
       ((_ ?type-id)
        (identifier? ?type-id)
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-	 ((r6rs-record-type)
+	 ((object-type)
 	  (%make-record-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))
 	 ((vicare-struct-type)
 	  (%make-struct-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))
@@ -1744,7 +1744,7 @@
        ;;
        ;;   (?maker ?arg ...)
        ;;
-       ((r6rs-record-type)
+       ((object-type)
 	(let* ((rts        (syntactic-binding-descriptor.value binding))
 	       (maker.sexp (object-type-spec.constructor-sexp rts))
 	       (maker.psi  (chi-expr maker.sexp lexenv.run lexenv.expand))
@@ -1812,7 +1812,7 @@
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type-id expr.psi)
     (case-object-type-binding (who input-form.stx type-id lexenv.run binding)
 
-      ((r6rs-record-type)
+      ((object-type)
        ;;For records, when  we have access to the record-type  specification, we want
        ;;to expand to an equivalent of:
        ;;
@@ -1883,7 +1883,7 @@
 	    (underscore-id? ?jolly))
        (chi-expr (bless
 		  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		    ((r6rs-record-type)
+		    ((object-type)
 		     (object-type-spec.type-predicate-sexp (syntactic-binding-descriptor.value binding)))
 
 		    ((vicare-struct-type)
@@ -1911,9 +1911,9 @@
 	    (if (free-identifier=? ?expr-type-id ?pred-type-id)
 		(%make-true-psi input-form.stx)
 	      (case-object-type-binding (__who__ input-form.stx ?expr-type-id lexenv.run expr-descr)
-		((r6rs-record-type)
+		((object-type)
 		 (case-object-type-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-descr)
-		   ((r6rs-record-type)
+		   ((object-type)
 		    (if (object-type-spec.subtype-and-supertype? (syntactic-binding-descriptor.value expr-descr)
 								 (syntactic-binding-descriptor.value pred-descr)
 								 lexenv.run)
@@ -1963,7 +1963,7 @@
     (define expr.core
       (psi-core-expr expr.psi))
     (case-object-type-binding (__module_who__ input-form.stx pred-type-id lexenv.run descr)
-      ((r6rs-record-type)
+      ((object-type)
        (let* ((rts        (syntactic-binding-descriptor.value descr))
 	      (pred.stx   (bless
 			   (object-type-spec.type-predicate-sexp (syntactic-binding-descriptor.value descr))))
@@ -2025,7 +2025,7 @@
 	    (identifier? ?field-name)
 	    (identifier? ?type-id))
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((r6rs-record-type)
+	 ((object-type)
 	  (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name))
 	 ((vicare-struct-type)
 	  (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name))
@@ -2039,7 +2039,7 @@
 	    (identifier? ?field-name)
 	    (underscore-id? ?jolly))
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((r6rs-record-type)
+	 ((object-type)
 	  (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand descr ?field-name))
 	 ((vicare-struct-type)
 	  (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))
@@ -2062,7 +2062,7 @@
 
 	   ((?type-id)
 	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	      ((r6rs-record-type)
+	      ((object-type)
 	       (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name))
 	      ((vicare-struct-type)
 	       (%expand-to-struct-accessor-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name))
@@ -2205,7 +2205,7 @@
 	    (identifier? ?field-name)
 	    (identifier? ?type-id))
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((r6rs-record-type)
+	 ((object-type)
 	  (%expand-to-record-mutator-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name ?new-value))
 	 ((vicare-struct-type)
 	  (%expand-to-struct-mutator-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name ?new-value))
@@ -2220,7 +2220,7 @@
 	    (underscore-id? ?jolly1)
 	    (underscore-id? ?jolly2))
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((r6rs-record-type)
+	 ((object-type)
 	  (%expand-to-record-mutator input-form.stx lexenv.run lexenv.expand descr ?field-name))
 	 ((vicare-struct-type)
 	  (%expand-to-struct-mutator input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))
@@ -2243,7 +2243,7 @@
 
 	   ((?type-id)
 	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	      ((r6rs-record-type)
+	      ((object-type)
 	       (%expand-to-record-mutator-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name ?new-value))
 	      ((vicare-struct-type)
 	       (%expand-to-struct-mutator-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name ?new-value))
@@ -2436,7 +2436,7 @@
 						  type-id
 						  subject-expr.stx subject-expr.psi arg*.stx)
       (case-object-type-binding (__module_who__ input-form.stx type-id lexenv.run type-id-descr)
-	((r6rs-record-type)
+	((object-type)
 	 (%r6rs-record-method-call input-form.stx lexenv.run lexenv.expand
 				   method-name.id method-name.sym
 				   type-id type-id-descr
