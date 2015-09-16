@@ -27,7 +27,7 @@
 
 #!vicare
 (program (test)
-  (options tagged-language)
+  (options typed-language)
   (import (vicare)
     (vicare checks))
 

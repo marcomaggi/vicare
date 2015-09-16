@@ -1304,7 +1304,7 @@
 	  (else
 	   ;;The rator  has a correct single-value  signature and it has  a specified
 	   ;;tag, but it is not a procedure.
-	   (if (option.tagged-language.datums-as-operators?)
+	   (if (option.typed-language.datums-as-operators?)
 	       (%process-datum-operator input-form.stx lexenv.run lexenv.expand
 					rator.psi rator.tag rand*.stx)
 	     (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
@@ -1768,7 +1768,7 @@
     (while-not-expanding-application-first-subform
      (syntax-match input-form.stx ()
        ((_ (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
-	(option.tagged-language.setter-forms?)
+	(option.typed-language.setter-forms?)
 	(let* ((keys.stx  (cons (cons ?key00 ?key0*)
 				(map cons ?key11* ?key1**))))
 	  (chi-expr (bless
@@ -1776,7 +1776,7 @@
 		    lexenv.run lexenv.expand)))
 
        ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
-	(option.tagged-language.setter-forms?)
+	(option.typed-language.setter-forms?)
 	(let* ((keys.stx  (cons (cons ?key00 ?key0*)
 				(map cons ?key11* ?key1**))))
 	  (chi-expr (bless
@@ -1784,7 +1784,7 @@
 		    lexenv.run lexenv.expand)))
 
        ((_ (?expr ?field-name) ?new-value)
-	(and (option.tagged-language.setter-forms?)
+	(and (option.typed-language.setter-forms?)
 	     (identifier? ?field-name))
 	(chi-expr (bless
 		   `(tag-mutator ,?expr ,?field-name ,?new-value))
@@ -2322,7 +2322,7 @@
 	    (syntax-match (retvals-signature-tags expr.sig) ()
 	      ((?tag)
 	       ;;A single return value: good.
-	       (when (option.tagged-language.rhs-tag-propagation?)
+	       (when (option.typed-language.rhs-tag-propagation?)
 		 (if (top-tag-id? tag.id)
 		     (override-identifier-tag! var.id ?tag)
 		   (assertion-violation/internal-error __who__

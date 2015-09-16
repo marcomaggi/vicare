@@ -160,7 +160,7 @@ methods to Nausicaa's multimethods.
 @end defvr
 
 
-@defvr {Library Option} tagged-language
+@defvr {Library Option} typed-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
@@ -300,7 +300,7 @@ one @clause{options} clause, before the @clause{import} one.
 The following options are supported.
 
 
-@defvr {Program Option} tagged-language
+@defvr {Program Option} typed-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
@@ -2389,7 +2389,7 @@ following program:
 @lisp
 #!vicare
 (program (demo)
-  (options tagged-language)
+  (options typed-language)
   (import (vicare))
 
   (define-record-type duo
@@ -3385,7 +3385,7 @@ function name.  So it is enough for us to write:
 @example
 #!vicare
 (import (vicare))
-(option tagged-language)
+(option typed-language)
 
 (define (@{string-ref-fx <fixnum>@} @{str <string>@} @{idx <fixnum>@})
   (import (vicare system $chars)
@@ -10085,7 +10085,7 @@ Supported @meta{symbol} options are:
 Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at expand--time.
 
-@item tagged-language
+@item typed-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end table
 @end deffn

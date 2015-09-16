@@ -26,7 +26,7 @@
 
 #!vicare
 (library (vicare posix wget)
-  (options tagged-language)
+  (options typed-language)
   (export wget)
   (import (vicare)
     (vicare expander tags)

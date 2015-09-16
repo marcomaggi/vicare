@@ -67,10 +67,10 @@
     option.enable-arguments-validation?
     option.print-loaded-libraries?
     option.print-debug-messages?
-    option.tagged-language.rhs-tag-propagation?
-    option.tagged-language.datums-as-operators?
-    option.tagged-language.setter-forms?
-    option.tagged-language?
+    option.typed-language.rhs-tag-propagation?
+    option.typed-language.datums-as-operators?
+    option.typed-language.setter-forms?
+    option.typed-language?
 
     expander-option.integrate-special-list-functions?
     foreign.dynamically-load-shared-object-from-identifier
@@ -125,10 +125,10 @@
 			  strict-r6rs
 			  print-loaded-libraries?
 			  print-debug-messages?
-			  tagged-language.rhs-tag-propagation?
-			  tagged-language.datums-as-operators?
-			  tagged-language.setter-forms?
-			  tagged-language?
+			  typed-language.rhs-tag-propagation?
+			  typed-language.datums-as-operators?
+			  typed-language.setter-forms?
+			  typed-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))

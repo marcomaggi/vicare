@@ -25,7 +25,7 @@
 
 #!vicare
 (program (test-vicare-conditions-typed)
-  (options tagged-language)
+  (options typed-language)
   (import (vicare)
     (vicare checks))
 

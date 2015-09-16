@@ -27,7 +27,7 @@
 
 #!vicare
 (program (test)
-  (options tagged-language)
+  (options typed-language)
   (import (vicare)
     (for (prefix (vicare expander tag-type-specs) typ.)
       run expand)

@@ -151,25 +151,25 @@ inference.
 
 
 Tagged language extensions are @strong{off} by default.  To enable the
-extensions in libraries we have to use the @code{tagged-language} and
+extensions in libraries we have to use the @code{typed-language} and
 @code{visit-upon-loading} options as follows (@pxref{iklib libraries,
 Extended @syntax{library} syntax}):
 
 @example
 (library (demo)
-  (options tagged-language visit-upon-loading)
+  (options typed-language visit-upon-loading)
   (export)
   (import (vicare))
   ---)
 @end example
 
 To enable the extensions in programs we have to use the
-@code{tagged-language} option as follows (@pxref{iklib programs,
+@code{typed-language} option as follows (@pxref{iklib programs,
 Extended program syntax}):
 
 @example
 (import (vicare))
-(options tagged-language)
+(options typed-language)
 ---
 @end example
 
@@ -234,8 +234,8 @@ and we cannot assign a fixnum to a lexical variable tagged as
 @end quotation
 
 
-@defun enable-tagged-language
-@defunx disable-tagged-language
+@defun enable-typed-language
+@defunx disable-typed-language
 Enable or disable tagged language support.  These functions are meant to
 be used at the @repl{}; they do @strong{not} modify support for tagged
 language for programs and libraries.
@@ -304,7 +304,7 @@ An example of tagged binding creation follows:
 #!vicare
 (import (vicare)
   (vicare expander tags))
-(options tagged-language)
+(options typed-language)
 
 (define @{O <fixnum>@}
   123)

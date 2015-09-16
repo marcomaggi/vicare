@@ -371,7 +371,7 @@
     ;;corresponding RHS inferred tags RHS*.INFERRED-TAG: return a list of LHS tags to
     ;;replace LHS*.TAG.
     ;;
-    (if (option.tagged-language.rhs-tag-propagation?)
+    (if (option.typed-language.rhs-tag-propagation?)
 	(map (lambda (lhs.tag rhs.inferred-tag)
 	       (if (top-tag-id? lhs.tag)
 		   (if (top-tag-id? rhs.inferred-tag)
@@ -390,7 +390,7 @@
     ;;inferred by expanding the RHS.  If there  is no tag explicitly specified in the
     ;;LET syntax we put in the inferred one.
     ;;
-    (if (option.tagged-language.rhs-tag-propagation?)
+    (if (option.typed-language.rhs-tag-propagation?)
 	(map (lambda (lhs.id lhs.tag rhs.tag)
 	       (bless
 		`(brace ,lhs.id ,(if (top-tag-id? lhs.tag)
@@ -768,7 +768,7 @@
 			lexenv.run lexenv.expand)
 	    ;;If the  LHS is untagged:  perform tag propatation  from the RHS  to the
 	    ;;LHS.
-	    (when (and (option.tagged-language.rhs-tag-propagation?)
+	    (when (and (option.typed-language.rhs-tag-propagation?)
 		       (top-tag-id? lhs.tag))
 	      (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
 		((?tag)

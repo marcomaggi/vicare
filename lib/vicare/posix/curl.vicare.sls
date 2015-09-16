@@ -26,7 +26,7 @@
 
 #!vicare
 (library (vicare posix curl)
-  (options tagged-language)
+  (options typed-language)
   (export curl)
   (import (vicare)
     (vicare expander tags)

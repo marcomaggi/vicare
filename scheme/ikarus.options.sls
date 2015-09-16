@@ -34,10 +34,10 @@
     drop-assertions?
     strict-r6rs
     ;; tagged language parameter options
-    tagged-language.rhs-tag-propagation?
-    tagged-language.datums-as-operators?
-    tagged-language.setter-forms?
-    tagged-language?
+    typed-language.rhs-tag-propagation?
+    typed-language.datums-as-operators?
+    typed-language.setter-forms?
+    typed-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
     vicare-built-with-srfi-enabled
@@ -110,7 +110,7 @@
 ;;  "<untagged>" with "<fixnum>".  This will cause an error to be raised if we mutate
 ;;  the binding assigning to A an object whose tag is not "<fixnum>".
 ;;
-(define-parameter-boolean-option tagged-language.rhs-tag-propagation?)
+(define-parameter-boolean-option typed-language.rhs-tag-propagation?)
 
 ;;The option "datums as operators" allows us  to use a non-closure object as operator
 ;;in  call forms.   When this  option is  on, the  following example  evaluations are
@@ -126,7 +126,7 @@
 ;;   The operator is  the string "ciao" and  the expander determines that  its tag is
 ;;   "<string>"; this form matches the syntax of a getter application.
 ;;
-(define-parameter-boolean-option tagged-language.datums-as-operators?)
+(define-parameter-boolean-option typed-language.datums-as-operators?)
 
 ;;The option "setter forms" allows us to use a non-identifier expression as left-hand
 ;;side in  a SET!  syntax.  When  this option  is on,  the following  evaluations are
@@ -150,12 +150,12 @@
 ;;   can  determine the  retvals signature.   This  syntax mutates  the (concrete  or
 ;;   virtual) field selected by ?FIELD-NAME to ?NEW-VALUE.
 ;;
-(define-parameter-boolean-option tagged-language.setter-forms?)
+(define-parameter-boolean-option typed-language.setter-forms?)
 
-;;Turn on tagged  language extensions.  When this  parameter is set to  true: we must
+;;Turn on  typed language extensions.   When this parameter is  set to true:  we must
 ;;also set to true all the tagged language sub-parameters.
 ;;
-(define-parameter-boolean-option tagged-language?)
+(define-parameter-boolean-option typed-language?)
 
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:

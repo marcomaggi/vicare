@@ -67,7 +67,7 @@
     null-environment			scheme-report-environment
     interaction-environment		new-interaction-environment
 
-    enable-tagged-language		disable-tagged-language
+    enable-typed-language		disable-typed-language
 
     ;; inspection of non-interaction environment objects
     environment-symbols			environment-libraries
@@ -193,11 +193,11 @@
 
 (include "psyntax.helpers.scm" #t)
 
-(define-syntax-rule (with-tagged-language ?enabled? . ?body)
-  (parametrise ((option.tagged-language? (or ?enabled? (option.tagged-language?))))
-    (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
-		  (option.tagged-language.datums-as-operators? (option.tagged-language?))
-		  (option.tagged-language.setter-forms?        (option.tagged-language?)))
+(define-syntax-rule (with-typed-language ?enabled? . ?body)
+  (parametrise ((option.typed-language? (or ?enabled? (option.typed-language?))))
+    (parametrise ((option.typed-language.rhs-tag-propagation? (option.typed-language?))
+		  (option.typed-language.datums-as-operators? (option.typed-language?))
+		  (option.typed-language.setter-forms?        (option.typed-language?)))
       . ?body)))
 
 (define-syntax-rule (with-option-strict-r6rs ?enabled? . ?body)
@@ -209,25 +209,25 @@
 
 ;;;; public interface: tagged language support
 
-(module (enable-tagged-language
-	 disable-tagged-language)
+(module (enable-typed-language
+	 disable-typed-language)
 
-  (define (enable-tagged-language)
+  (define (enable-typed-language)
     ;;This is meant to be used at the  REPL to turn on tagged language support, which
     ;;is off by default.
     ;;
-    (tagged-language-support #t))
+    (typed-language-support #t))
 
-  (define (disable-tagged-language)
+  (define (disable-typed-language)
     ;;This is meant to be used at the REPL to turn off tagged language support.
     ;;
-    (tagged-language-support #f))
+    (typed-language-support #f))
 
-  (define (tagged-language-support enable?)
-    (option.tagged-language? enable?)
-    (option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
-    (option.tagged-language.datums-as-operators? (option.tagged-language?))
-    (option.tagged-language.setter-forms?        (option.tagged-language?)))
+  (define (typed-language-support enable?)
+    (option.typed-language? enable?)
+    (option.typed-language.rhs-tag-propagation? (option.typed-language?))
+    (option.typed-language.datums-as-operators? (option.typed-language?))
+    (option.typed-language.setter-forms?        (option.typed-language?)))
 
   #| end of module |# )
 
@@ -245,9 +245,9 @@
    (receive (x invoke-req*)
        (parametrise
 	   ;;Here we  want to override  the value  of the parameters  STRICT-R6RS and
-	   ;;TAGGED-LANGUAGE?.
-	   ((option.strict-r6rs       (and expander-options (enum-set-member? 'strict-r6rs expander-options)))
-	    (option.tagged-language?  (and expander-options (enum-set-member? 'strict-r6rs expander-options))))
+	   ;;TYPED-LANGUAGE?.
+	   ((option.strict-r6rs      (and expander-options (enum-set-member? 'strict-r6rs    expander-options)))
+	    (option.typed-language?  (and expander-options (enum-set-member? 'typed-language expander-options))))
 	 (expand-form-to-core-language x env))
      ;;Here we use the expander and compiler options from the libraries.
      (for-each libman.invoke-library invoke-req*)
@@ -446,7 +446,7 @@
 	  (values invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
-    (when (option.tagged-language?)
+    (when (option.typed-language?)
       (print-expander-warning-message "enabling tagged language support for program"))
     (when (option.strict-r6rs)
       (print-expander-warning-message "enabling expander's strict R6RS support for program")))
@@ -503,8 +503,12 @@
        (symbol? (syntax->datum ?opt))
        (let ((sym (syntax->datum ?opt)))
 	 (case sym
-	   ((tagged-language)
+	   ((typed-language)
 	    (cons sym (%parse-program-options ?other*)))
+	   ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
+	   ;;deprecated.  We should use "typed-language".
+	   ((tagged-language)
+	    (cons 'typed-language (%parse-program-options ?other*)))
 	   ((strict-r6rs)
 	    (cons sym (%parse-program-options ?other*)))
 	   (else
@@ -713,7 +717,7 @@
 
   (define (%make-verbose-messages-thunk libname.sexp)
     (lambda ()
-      (when (option.tagged-language?)
+      (when (option.typed-language?)
 	(print-expander-warning-message "enabling tagged language support for library: ~a" libname.sexp))
       (when (option.strict-r6rs)
 	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
@@ -806,8 +810,12 @@
 	 (case sym
 	   ((visit-upon-loading)
 	    (cons sym (%parse-library-options ?other*)))
-	   ((tagged-language)
+	   ((typed-language)
 	    (cons sym (%parse-library-options ?other*)))
+	   ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
+	   ;;deprecated.  We should use "typed-language".
+	   ((tagged-language)
+	    (cons 'typed-language (%parse-library-options ?other*)))
 	   ((strict-r6rs)
 	    (cons sym (%parse-library-options ?other*)))
 	   (else
@@ -962,7 +970,7 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
-      (with-tagged-language (memq 'tagged-language option*)
+      (with-typed-language (memq 'typed-language option*)
 	(with-option-strict-r6rs (memq 'strict-r6rs option*)
 	  (verbose-messages-thunk)
 	  (let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
@@ -1404,6 +1412,6 @@
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
-;;eval: (put 'with-tagged-language		'scheme-indent-function 1)
+;;eval: (put 'with-typed-language		'scheme-indent-function 1)
 ;;eval: (put 'with-option-strict-r6rs		'scheme-indent-function 1)
 ;;End:

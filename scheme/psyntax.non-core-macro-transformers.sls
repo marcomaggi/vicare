@@ -5063,7 +5063,7 @@
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
 	 (case (identifier->symbol opt-stx)
-	   ((strict-r6rs tagged-language)
+	   ((strict-r6rs typed-language)
 	    #t)
 	   (else #f))))
   (syntax-match expr-stx ()

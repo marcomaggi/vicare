@@ -26,7 +26,7 @@
 
 #!vicare
 (library (vicare posix find)
-  (options tagged-language)
+  (options typed-language)
   (export find)
   (import (except (vicare) find)
     (vicare expander tags)
