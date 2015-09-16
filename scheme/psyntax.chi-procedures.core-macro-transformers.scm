@@ -1745,21 +1745,15 @@
        ;;   (?maker ?arg ...)
        ;;
        ((r6rs-record-type)
-	(let ((rts (syntactic-binding-descriptor.value binding)))
-	  (cond ((r6rs-record-type-spec.default-constructor-id rts)
-		 => (lambda (maker.id)
-		      (let* ((maker-id.psi (chi-expr maker.id lexenv.run lexenv.expand))
-			     (args.psi*    (chi-expr* ?arg* lexenv.run lexenv.expand)))
-			(make-psi input-form.stx
-				  (build-application no-source
-				    (psi-core-expr maker-id.psi)
-				    (map psi-core-expr args.psi*))
-				  (make-retvals-signature-single-value ?type-id)))))
-		(else
-		 (let ((rcd.id (r6rs-record-type-spec.rcd-id rts)))
-		   (chi-expr (bless
-			      `((record-constructor ,rcd.id) . ,?arg*))
-			     lexenv.run lexenv.expand))))))
+	(let* ((rts        (syntactic-binding-descriptor.value binding))
+	       (maker.sexp (object-type-spec.constructor-sexp rts))
+	       (maker.psi  (chi-expr maker.sexp lexenv.run lexenv.expand))
+	       (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+	  (make-psi input-form.stx
+		    (build-application no-source
+		      (psi-core-expr maker.psi)
+		      (map psi-core-expr args.psi*))
+		    (make-retvals-signature-single-value ?type-id))))
 
        ;;For structs we want to expand to an equivalent of:
        ;;
@@ -1824,13 +1818,12 @@
        ;;
        ;;   (?deafult-record-destructor-id ?expr)
        ;;
-       (cond ((r6rs-record-type-spec.default-destructor-id (syntactic-binding-descriptor.value binding))
-	      => (lambda (default-destructor-id)
+       (cond ((object-type-spec.destructor-sexp (syntactic-binding-descriptor.value binding))
+	      => (lambda (destructor-sexp)
 		   ;;This record type has a default destructor.
 		   (make-psi input-form.stx
 			     (build-application no-source
-			       (psi-core-expr (chi-expr default-destructor-id
-							lexenv.run lexenv.expand))
+			       (psi-core-expr (chi-expr destructor-sexp lexenv.run lexenv.expand))
 			       (list (psi-core-expr expr.psi)))
 			     (make-retvals-signature-single-top))))
 	     (else
@@ -1891,13 +1884,7 @@
        (chi-expr (bless
 		  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 		    ((r6rs-record-type)
-		     (let ((rts (syntactic-binding-descriptor.value binding)))
-		       (or (r6rs-record-type-spec.type-predicate-id rts)
-			   (let ((rtd-id (r6rs-record-type-spec.rtd-id rts))
-				 (obj    (gensym)))
-			     `(lambda (,obj)
-				(record-and-rtd? ,obj ,rtd-id))))))
-
+		     (object-type-spec.type-predicate-sexp (syntactic-binding-descriptor.value binding)))
 
 		    ((vicare-struct-type)
 		     (let ((obj (gensym)))
@@ -1978,12 +1965,8 @@
     (case-object-type-binding (__module_who__ input-form.stx pred-type-id lexenv.run descr)
       ((r6rs-record-type)
        (let* ((rts        (syntactic-binding-descriptor.value descr))
-	      (pred.stx   (or (r6rs-record-type-spec.type-predicate-id rts)
-			      (let ((rtd-id (r6rs-record-type-spec.rtd-id rts))
-				    (obj    (gensym)))
-				(bless
-				 `(lambda (,obj)
-				    (record-and-rtd? ,obj ,rtd-id))))))
+	      (pred.stx   (bless
+			   (object-type-spec.type-predicate-sexp (syntactic-binding-descriptor.value descr))))
 	      (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
 	      (pred.core  (psi-core-expr pred.psi)))
 	 (make-psi input-form.stx
@@ -2108,7 +2091,7 @@
   (define* (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand
 						   descr {expr.stx syntax-object?} field-name.id)
     (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run))
+	     (object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run))
 	   => (lambda (accessor.sexp)
 		(chi-expr (bless
 			   `(,accessor.sexp ,expr.stx))
@@ -2137,7 +2120,7 @@
   (define (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand
 				      descr field-name.id)
     (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run))
+	     (object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run))
 	   => (lambda (accessor.sexp)
 		(chi-expr (bless accessor.sexp) lexenv.run lexenv.expand)))
 	  (else
@@ -2164,7 +2147,7 @@
 
   (define* (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr {expr.psi psi?} field-name.id)
     (let ((rts (syntactic-binding-descriptor.value descr)))
-      (cond ((r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)
+      (cond ((object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run)
 	     => (lambda (accessor.sexp)
 		  (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
 			 (accessor.core (psi-core-expr accessor.psi))
@@ -2289,7 +2272,7 @@
   (define* (%expand-to-record-mutator-application input-form.stx lexenv.run lexenv.expand
 						  descr {expr.stx syntax-object?} field-name.id new-value.stx)
     (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run))
+	     (object-type-spec.safe-mutator-sexp rts (identifier->symbol field-name.id) lexenv.run))
 	   => (lambda (mutator.sexp)
 		(chi-expr (bless
 			   `(,mutator.sexp ,expr.stx ,new-value.stx))
@@ -2318,7 +2301,7 @@
   (define (%expand-to-record-mutator input-form.stx lexenv.run lexenv.expand
 				     descr field-name.id)
     (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run))
+	     (object-type-spec.safe-mutator-sexp rts (identifier->symbol field-name.id) lexenv.run))
 	   => (lambda (mutator.sexp)
 		(chi-expr (bless mutator.sexp) lexenv.run lexenv.expand)))
 	  (else
@@ -2347,7 +2330,7 @@
   (define* (%expand-to-record-mutator-application-post input-form.stx lexenv.run lexenv.expand
 						       descr {expr.psi psi?} field-name.id new-value.stx)
     (let ((rts (syntactic-binding-descriptor.value descr)))
-      (cond ((r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)
+      (cond ((object-type-spec.safe-mutator-sexp rts (identifier->symbol field-name.id) lexenv.run)
 	     => (lambda (mutator.sexp)
 		  (let* ((mutator.psi    (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
 			 (mutator.core   (psi-core-expr mutator.psi))
@@ -2483,10 +2466,10 @@
 	     (rts        (syntactic-binding-descriptor.value type-id-descr)))
 	(cond
 	 ;;Look for a matching method name.
-	 ((r6rs-record-type-spec.applicable-method rts method-name.sym lexenv.run)
-	  => (lambda (method.stx)
+	 ((object-type-spec.applicable-method-sexp rts method-name.sym lexenv.run)
+	  => (lambda (method.sexp)
 	       ;;A matching method name exists.
-	       (let* ((method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+	       (let* ((method.psi  (chi-expr (bless method.sexp) lexenv.run lexenv.expand))
 		      (method.core (psi-core-expr method.psi))
 		      (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
 		      (arg*.core   (map psi-core-expr arg*.psi)))
@@ -2498,7 +2481,7 @@
 	 ;;If the input form has the right syntax: look for a matching field name for
 	 ;;accessor application.
 	 ((and (null? arg*.stx)
-	       (r6rs-record-type-spec.safe-accessor rts method-name.sym lexenv.run))
+	       (object-type-spec.safe-accessor-sexp rts method-name.sym lexenv.run))
 	  => (lambda (accessor.sexp)
 	       ;;A matching field name exists.
 	       (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
@@ -2512,7 +2495,7 @@
 	 ;;mutator application.
 	 ((and (pair? arg*.stx)
 	       (null? (cdr arg*.stx))
-	       (r6rs-record-type-spec.safe-mutator rts method-name.sym lexenv.run))
+	       (object-type-spec.safe-mutator-sexp rts method-name.sym lexenv.run))
 	  => (lambda (mutator.sexp)
 	       ;;A matching field name exists.
 	       (let* ((mutator.psi  (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))

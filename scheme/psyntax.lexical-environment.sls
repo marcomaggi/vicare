@@ -95,27 +95,19 @@
     <object-type-spec>
     object-type-spec?
     object-type-spec.parent-id
-    object-type-spec.constructor-stx			object-type-spec.destructor-stx
-    object-type-spec.type-predicate-stx
-    object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
-    object-type-spec.methods-table
+    object-type-spec.constructor-sexp			object-type-spec.destructor-sexp
+    object-type-spec.type-predicate-sexp
+    object-type-spec.safe-accessor-sexp			object-type-spec.safe-mutator-sexp
+    object-type-spec.applicable-method-sexp
 
-    object-type-spec.safe-accessor			object-type-spec.safe-mutator
-    object-type-spec.applicable-method			object-type-spec.subtype-and-supertype?
-    object-type-spec-override-predicate
+    ;; object-type specifications: utilities
+    object-type-spec.subtype-and-supertype?		object-type-spec-override-predicate
 
     ;; object types specifications: R6RS records
     <r6rs-record-type-spec>
     make-r6rs-record-type-spec				r6rs-record-type-spec?
     r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
-    r6rs-record-type-spec.parent-id			r6rs-record-type-spec.super-protocol-id
-    r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.default-destructor-id
-    r6rs-record-type-spec.type-predicate-id
-    r6rs-record-type-spec.safe-accessors-table		r6rs-record-type-spec.safe-mutators-table
-    r6rs-record-type-spec.methods-table
-
-    r6rs-record-type-spec.safe-accessor			r6rs-record-type-spec.safe-mutator
-    r6rs-record-type-spec.applicable-method
+    r6rs-record-type-spec.super-protocol-id
 
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -2378,9 +2370,9 @@
        ;;
        (let* ((rts    (syntactic-binding-descriptor.value descr))
        	      (rtd-id (r6rs-record-type-spec.rtd-id rts)))
-	 (cond ((r6rs-record-type-spec.parent-id rts)
-		= (lambda (parent-id)
-		    (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
+	 (cond ((object-type-spec.parent-id rts)
+		=> (lambda (parent-id)
+		     (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
        	 (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv)))
 
       (($core-rtd $core-record-type-name $core-condition-object-type-name
