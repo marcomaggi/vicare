@@ -98,11 +98,9 @@
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
     object-type-spec.type-predicate-stx
     object-type-spec.safe-accessors-table		object-type-spec.safe-mutators-table
-    object-type-spec.unsafe-accessors-table		object-type-spec.unsafe-mutators-table
     object-type-spec.methods-table
 
     object-type-spec.safe-accessor			object-type-spec.safe-mutator
-    object-type-spec.unsafe-accessor			object-type-spec.unsafe-mutator
     object-type-spec.applicable-method			object-type-spec.subtype-and-supertype?
     object-type-spec-override-predicate
 
@@ -114,11 +112,9 @@
     r6rs-record-type-spec.default-constructor-id	r6rs-record-type-spec.default-destructor-id
     r6rs-record-type-spec.type-predicate-id
     r6rs-record-type-spec.safe-accessors-table		r6rs-record-type-spec.safe-mutators-table
-    r6rs-record-type-spec.unsafe-accessors-table	r6rs-record-type-spec.unsafe-mutators-table
     r6rs-record-type-spec.methods-table
 
     r6rs-record-type-spec.safe-accessor			r6rs-record-type-spec.safe-mutator
-    r6rs-record-type-spec.unsafe-accessor		r6rs-record-type-spec.unsafe-mutator
     r6rs-record-type-spec.applicable-method
 
     ;; lexical environment utilities
@@ -733,14 +729,10 @@
 		       (type-predicate-id	(core-prim-id (list-ref bindval 4)))
 		       (safe-accessors-table	(%alist-ref-or-null bindval 5))
 		       (safe-mutators-table	'())
-		       (unsafe-accessors-table	'())
-		       (unsafe-mutators-table	'())
 		       (methods-table		safe-accessors-table))
 		  (make-r6rs-record-type-spec rtd-id rcd-id super-protocol-id parent-id
 					      default-constructor-id default-destructor-id type-predicate-id
-					      safe-accessors-table safe-mutators-table
-					      unsafe-accessors-table unsafe-mutators-table
-					      methods-table))))))
+					      safe-accessors-table safe-mutators-table methods-table))))))
 
 ;;Return true if  the argument is a syntactic binding's  descriptor describing a R6RS
 ;;record-type descriptor  established by  the boot image  (for example:  the built-in

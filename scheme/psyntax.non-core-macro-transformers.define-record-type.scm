@@ -242,10 +242,8 @@
   (define foo-syntactic-binding-form
     (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-protocol foo-destructor
 					    foo-parent foo-rtd foo-rcd
-					    field-name*.sym field-relative-idx*
-					    safe-field-accessor* unsafe-field-accessor*
-					    safe-field-mutator*  unsafe-field-mutator*
-					    field-type*.id
+					    field-name*.sym field-relative-idx* field-type*.id
+					    safe-field-accessor* safe-field-mutator*
 					    method-name*.sym method-procname*.sym))
 
   (define tag-type-spec-form
@@ -1116,10 +1114,8 @@
 (define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo?.id
 						 foo-super-protocol.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
-						 field-name*.sym field-relative-idx*
-						 safe-field-accessor* unsafe-field-accessor*
-						 safe-field-mutator*  unsafe-field-mutator*
-						 field-type*.id
+						 field-name*.sym field-relative-idx* field-type*.id
+						 safe-field-accessor* safe-field-mutator*
 						 method-name*.sym method-procname*.sym)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
   ;;expression which, expanded and evaluated  at expand-time, returns the record-type
@@ -1152,12 +1148,11 @@
   ;;FIELD-RELATIVE-IDX* must  be a  list of fixnums  representing the  relative field
   ;;indexes (zero based).
   ;;
-  ;;SAFE-FIELD-ACCESSOR*  and  UNSAFE-FIELD-ACCESSOR*  must  be  lists  of  syntactic
-  ;;identifiers that will be bound to the field accessors.
+  ;;SAFE-FIELD-ACCESSOR* must be  a list of syntactic identifiers that  will be bound
+  ;;to the field accessors.
   ;;
-  ;;SAFE-FIELD-MUTATOR*  and   UNSAFE-FIELD-MUTATOR*  must  be  lists   of  syntactic
-  ;;identifiers  that will  be bound  to  the field  mutators.  In  the positions  of
-  ;;immutable fields: these lists contain #f.
+  ;;SAFE-FIELD-MUTATOR* must be a list of syntactic identifiers that will be bound to
+  ;;the field mutators.  In the positions of immutable fields: the list contains #f.
   ;;
   ;;FIELD-TYPE*.ID a list of syntactic identifiers representing the field types.
   ;;
@@ -1200,22 +1195,6 @@
   (define foo-fields-safe-mutators.table
     (%make-alist-from-ids field-name*.sym safe-field-mutator*))
 
-  ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
-  ;;alist in which:  keys are symbols representing all the  field names; values are
-  ;;identifiers bound to the unsafe accessors.
-  (define foo-fields-unsafe-accessors.table
-    (if (option.strict-r6rs)
-	'(quote ())
-      (%make-alist-from-ids field-name*.sym unsafe-field-accessor*)))
-
-  ;;A sexp which will be BLESSed in the  output code.  The sexp will evaluate to an
-  ;;alist in which:  keys are symbols representing mutable field  names; values are
-  ;;identifiers bound to unsafe mutators.
-  (define foo-fields-unsafe-mutators.table
-    (if (option.strict-r6rs)
-	'(quote ())
-      (%make-alist-from-ids field-name*.sym unsafe-field-mutator*)))
-
   (define foo-methods.table
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
@@ -1229,8 +1208,6 @@
 				(syntax ,foo?.id)
 				,foo-fields-safe-accessors.table
 				,foo-fields-safe-mutators.table
-				,foo-fields-unsafe-accessors.table
-				,foo-fields-unsafe-mutators.table
 				,foo-methods.table)))
 
 
