@@ -179,17 +179,17 @@
 	 (line		3)
 	 (column	4)))
 
-  #;(doit &failed-expression-condition
+  (doit &failed-expression-condition
 	(make-failed-expression-condition #f)
-	((failed-expression-condition	#f)))
+	((failed-expression		#f)))
   (doit &procedure-signature-argument-violation
 	(make-procedure-signature-argument-violation 1 #f #t)
 	((one-based-argument-index	1)
 	 (failed-expression		#f)
 	 (offending-value		#t)))
-  #;(doit &procedure-signature-return-value-violation
-	(make-procedure-signature-return-value-violation 0 #f #t)
-	((one-based-argument-index	1)
+  (doit &procedure-signature-return-value-violation
+	(make-procedure-signature-return-value-violation 1 #f #t)
+	((one-based-return-value-index	1)
 	 (failed-expression		#f)
 	 (offending-value		#t)))
 

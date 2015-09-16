@@ -2124,13 +2124,14 @@
 
   (define* (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand
 						   descr {expr.stx syntax-object?} field-name.id)
-    (let* ((rts           (syntactic-binding-descriptor.value descr))
-	   (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)))
-      (if accessor.stx
-	  (chi-expr (bless
-		     `(,accessor.stx ,expr.stx))
-		    lexenv.run lexenv.expand)
-	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
+	     (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run))
+	   => (lambda (accessor.sexp)
+		(chi-expr (bless
+			   `(,accessor.sexp ,expr.stx))
+			  lexenv.run lexenv.expand)))
+	  (else
+	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
   (define* (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand
 						   type-id {expr.stx syntax-object?} field-name.id)
@@ -2152,11 +2153,12 @@
 
   (define (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand
 				      descr field-name.id)
-    (let* ((rts           (syntactic-binding-descriptor.value descr))
-	   (accessor.stx  (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)))
-      (if accessor.stx
-	  (chi-expr (bless accessor.stx) lexenv.run lexenv.expand)
-	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
+	     (r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run))
+	   => (lambda (accessor.sexp)
+		(chi-expr (bless accessor.sexp) lexenv.run lexenv.expand)))
+	  (else
+	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
   (define (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand
 				      type-id field-name.id)
@@ -2180,8 +2182,8 @@
   (define* (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr {expr.psi psi?} field-name.id)
     (let ((rts (syntactic-binding-descriptor.value descr)))
       (cond ((r6rs-record-type-spec.safe-accessor rts (identifier->symbol field-name.id) lexenv.run)
-	     => (lambda (accessor.stx)
-		  (let* ((accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+	     => (lambda (accessor.sexp)
+		  (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
 			 (accessor.core (psi-core-expr accessor.psi))
 			 (expr.core     (psi-core-expr expr.psi)))
 		    (make-psi input-form.stx
@@ -2303,13 +2305,14 @@
 
   (define* (%expand-to-record-mutator-application input-form.stx lexenv.run lexenv.expand
 						  descr {expr.stx syntax-object?} field-name.id new-value.stx)
-    (let* ((rts           (syntactic-binding-descriptor.value descr))
-	   (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)))
-      (if mutator.stx
-	  (chi-expr (bless
-		     `(,mutator.stx ,expr.stx ,new-value.stx))
-		    lexenv.run lexenv.expand)
-	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
+	     (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run))
+	   => (lambda (mutator.sexp)
+		(chi-expr (bless
+			   `(,mutator.sexp ,expr.stx ,new-value.stx))
+			  lexenv.run lexenv.expand)))
+	  (else
+	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
   (define* (%expand-to-struct-mutator-application input-form.stx lexenv.run lexenv.expand
 						  type-id {expr.stx syntax-object?} field-name.id new-value.stx)
@@ -2331,11 +2334,12 @@
 
   (define (%expand-to-record-mutator input-form.stx lexenv.run lexenv.expand
 				     descr field-name.id)
-    (let* ((rts           (syntactic-binding-descriptor.value descr))
-	   (mutator.stx  (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)))
-      (if mutator.stx
-	  (chi-expr (bless mutator.stx) lexenv.run lexenv.expand)
-	(syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
+	     (r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run))
+	   => (lambda (mutator.sexp)
+		(chi-expr (bless mutator.sexp) lexenv.run lexenv.expand)))
+	  (else
+	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
   (define (%expand-to-struct-mutator input-form.stx lexenv.run lexenv.expand
 				     type-id field-name.id)
@@ -2361,8 +2365,8 @@
 						       descr {expr.psi psi?} field-name.id new-value.stx)
     (let ((rts (syntactic-binding-descriptor.value descr)))
       (cond ((r6rs-record-type-spec.safe-mutator rts (identifier->symbol field-name.id) lexenv.run)
-	     => (lambda (mutator.stx)
-		  (let* ((mutator.psi    (chi-expr mutator.stx lexenv.run lexenv.expand))
+	     => (lambda (mutator.sexp)
+		  (let* ((mutator.psi    (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
 			 (mutator.core   (psi-core-expr mutator.psi))
 			 (expr.core      (psi-core-expr expr.psi))
 			 (new-value.psi  (chi-expr new-value.stx lexenv.run lexenv.expand))
@@ -2512,9 +2516,9 @@
 	 ;;accessor application.
 	 ((and (null? arg*.stx)
 	       (r6rs-record-type-spec.safe-accessor rts method-name.sym lexenv.run))
-	  => (lambda (accessor.stx)
+	  => (lambda (accessor.sexp)
 	       ;;A matching field name exists.
-	       (let* ((accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+	       (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
 		      (accessor.core (psi-core-expr accessor.psi)))
 		 (make-psi input-form.stx
 			   (build-application input-form.stx
@@ -2526,9 +2530,9 @@
 	 ((and (pair? arg*.stx)
 	       (null? (cdr arg*.stx))
 	       (r6rs-record-type-spec.safe-mutator rts method-name.sym lexenv.run))
-	  => (lambda (mutator.stx)
+	  => (lambda (mutator.sexp)
 	       ;;A matching field name exists.
-	       (let* ((mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
+	       (let* ((mutator.psi  (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
 		      (mutator.core (psi-core-expr mutator.psi))
 		      (arg.psi      (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
 		      (arg.core     (psi-core-expr arg.psi)))
