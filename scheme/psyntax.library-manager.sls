@@ -551,8 +551,8 @@
 			       module begin set! stale-when
 			       global-mutable
 			       core-macro macro macro!
-			       $core-rtd $core-record-type-name $core-condition-object-type-name
-			       $record-type-name $struct-type-name
+			       $core-rtd $core-record-type-name $core-condition-object-type-name $core-built-in-object-type-name
+			       $record-type-name $struct-type-name $built-in-object-type-name
 			       $module $fluid $synonym)
 			      type.value)
 			     (else

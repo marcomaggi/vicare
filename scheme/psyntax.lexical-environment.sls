@@ -75,6 +75,8 @@
     make-syntactic-binding-descriptor/record-type-name
     record-type-name-binding-descriptor?
 
+    built-in-object-type-name-binding-descriptor?
+
     object-type-name-binding-descriptor?
 
     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
@@ -110,6 +112,10 @@
     make-r6rs-record-type-spec				r6rs-record-type-spec?
     r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
     r6rs-record-type-spec.super-protocol-id
+
+    ;; object types specifications: built-in object types
+    <built-in-object-type-spec>
+    make-built-in-object-type-spec			built-in-object-type-spec?
 
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -818,6 +824,60 @@
   $core-condition-object-type-name)
 
 ;;; --------------------------------------------------------------------
+;;; core built-in object-type descriptor binding
+
+(define (core-built-in-object-type-name-binding-descriptor->built-in-object-type-name-binding-descriptor! descriptor)
+  ;;Mutate a syntactic binding descriptor from  the representation of a core built-in
+  ;;object-type  name (established  by  the  boot image)  to  a  representation of  a
+  ;;built-in  object-type  name  in  the  format  usable  by  the  expander.   Return
+  ;;unspecified values.
+  ;;
+  ;;We expect the core descriptor to have one of the formats:
+  ;;
+  ;;   ($core-built-in-object-type-name
+  ;;     . (?parent-name ?constructor-name ?type-predicate-name ?methods-alist))
+  ;;
+  ;;and the usable descriptor to have the format:
+  ;;
+  ;;   ($built-in-object-type-name . #<built-in-object-type-spec>)
+  ;;
+  (define (%alist-ref-or-null ell idx)
+    (cond ((null? ell)
+	   '())
+	  ((fxzero? idx)
+	   (if (pair? ell)
+	       (map (lambda (P)
+		      (cons (car P) (bless (cdr P))))
+		 (car ell))
+	     '()))
+	  (else
+	   (%alist-ref-or-null (cdr ell) (fxsub1 idx)))))
+  (set-car! descriptor '$built-in-object-type-name)
+  (set-cdr! descriptor
+	    (let* ((bindval			(syntactic-binding-descriptor.value descriptor))
+		   (parent-id			(cond ((car bindval)
+						       => core-prim-id)
+						      (else #f)))
+		   (constructor.sexp		(bless (list-ref bindval 1)))
+		   (type-predicate.sexp		(bless (list-ref bindval 2)))
+		   (methods-table		(%alist-ref-or-null bindval 3)))
+	      (make-built-in-object-type-spec parent-id constructor.sexp type-predicate.sexp methods-table))))
+
+;;Return  true if  the  argument is  a syntactic  binding's  descriptor describing  a
+;;built-in object-type descriptor established by the boot image.
+;;
+(define-syntactic-binding-descriptor-predicate core-built-in-object-type-name-binding-descriptor?
+  $core-built-in-object-type-name)
+
+;;; --------------------------------------------------------------------
+
+;;Return  true if  the  argument is  a syntactic  binding's  descriptor describing  a
+;;built-in object-type descriptor.
+;;
+(define-syntactic-binding-descriptor-predicate built-in-object-type-name-binding-descriptor?
+  $built-in-object-type-name)
+
+;;; --------------------------------------------------------------------
 ;;; R6RS record-type descriptor binding
 
 (case-define* make-syntactic-binding-descriptor/record-type-name
@@ -1163,6 +1223,8 @@
 		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
 		      ((core-record-type-name-binding-descriptor? descriptor)
 		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
+		      ((core-built-in-object-type-name-binding-descriptor? descriptor)
+		       (core-built-in-object-type-name-binding-descriptor->built-in-object-type-name-binding-descriptor! descriptor))
 		      ((core-rtd-binding-descriptor? descriptor)
 		       (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descriptor)))
 		descriptor))
@@ -2391,7 +2453,9 @@
 		     (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
        	 (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv)))
 
-      (($core-rtd $core-record-type-name $core-condition-object-type-name
+      (($core-rtd
+	$core-record-type-name $core-condition-object-type-name
+	$core-built-in-object-type-name $built-in-object-type-name
 	$struct-type-name core-prim lexical macro local-macro local-macro! local-etv)
        (void))
 

@@ -43,7 +43,11 @@
     ;; validation
     procedure-argument-validation-with-predicate
     return-value-validation-with-predicate
-    signature-rest-argument-validation-with-predicate)
+    signature-rest-argument-validation-with-predicate
+
+    ;; built-in object-type specification utilities, for internal use
+    <top>-constructor
+    <top>-type-predicate)
   (import (except (vicare)
 		  method-call-late-binding
 		  any->symbol		any->string
@@ -229,6 +233,17 @@
   (if (pred obj)
       obj
     (expression-return-value-violation type-name "invalid object type" obj)))
+
+
+;;;; built-in object-type specification utilities
+
+(define (<top>-constructor . args)
+  (apply assertion-violation '<top> "no constructor defined for this object-type" args))
+
+(define (<top>-type-predicate obj)
+  #t)
+
+;;; --------------------------------------------------------------------
 
 
 ;;;; done

@@ -262,18 +262,18 @@
     ((stderr)	(lambda (stx) (bless '(console-error-port))))
 
     ;;Expander tags.
-    ((<top> <void>
-	    <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
-	    <procedure> <predicate>
-	    <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
-	    <rational-valued> <rational> <integer> <integer-valued>
-	    <exact-integer> <real> <real-valued> <complex> <number>
-	    <string> <vector> <pair> <list> <bytevector> <hashtable>
-	    <record> <record-type-descriptor> <record-constructor-descriptor>
-	    <struct> <struct-type-descriptor> <condition>
-	    <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
-	    <textual-input-port> <textual-output-port> <textual-input/output-port>
-	    <binary-input-port> <binary-output-port> <binary-input/output-port>)
+    ((<void>
+      <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
+      <procedure> <predicate>
+      <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
+      <rational-valued> <rational> <integer> <integer-valued>
+      <exact-integer> <real> <real-valued> <complex> <number>
+      <string> <vector> <list> <bytevector> <hashtable>
+      <record> <record-type-descriptor> <record-constructor-descriptor>
+      <struct> <struct-type-descriptor> <condition>
+      <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
+      <textual-input-port> <textual-output-port> <textual-input/output-port>
+      <binary-input-port> <binary-output-port> <binary-input/output-port>)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of built-in tag keyword" expr-stx)))
 

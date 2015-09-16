@@ -33,7 +33,10 @@
 	 <r6rs-record-type-spec>
 	 make-r6rs-record-type-spec			r6rs-record-type-spec?
 	 r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
-	 r6rs-record-type-spec.super-protocol-id)
+	 r6rs-record-type-spec.super-protocol-id
+
+	 <built-in-object-type-spec>
+	 make-built-in-object-type-spec			built-in-object-type-spec?)
 
 
 ;;;; basic object-type specification
@@ -303,6 +306,36 @@
 				  constructor.sexp destructor.sexp predicate.sexp
 				  safe-accessors-table safe-mutators-table methods-table)
 	   rtd-id rcd-id super-protocol-id))))))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; built-in object-type specification
+
+;;This record type is used as syntactic binding descriptor for built-in Vicare object
+;;types:  fixnums, pairs,  strings, vectors,  et cetera.   The lexenv  entry has  the
+;;format:
+;;
+;;   ($built-in-object-type-name . #<built-in-object-type-spec>)
+;;
+;;It is built  when expanding DEFINE-RECORD-TYPE forms, or by  converting a syntactic
+;;binding "$core-rtd" or  "$core-record-type-name" (a buit-in record  type defined by
+;;the boot image) into a syntactic binding "$record-type-name".
+;;
+;;Lexical variables  bound to  instances of  this type  should be  called OTS  (as in
+;;"object-type spec").
+;;
+(define-record-type (<built-in-object-type-spec> make-built-in-object-type-spec built-in-object-type-spec?)
+  (nongenerative vicare:expander:<built-in-object-type-spec>)
+  (parent <object-type-spec>)
+  (protocol
+    (lambda (make-object-type-spec)
+      (lambda (parent-id constructor.sexp predicate.sexp methods-table)
+	(let ((destructor.sexp		#f)
+	      (safe-accessors-table	'())
+	      (safe-mutators-table	'()))
+	  ((make-object-type-spec parent-id
+				  constructor.sexp destructor.sexp predicate.sexp
+				  safe-accessors-table safe-mutators-table methods-table))))))
   #| end of DEFINE-RECORD-TYPE |# )
 
 

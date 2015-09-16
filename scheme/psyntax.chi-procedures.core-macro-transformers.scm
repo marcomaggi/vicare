@@ -1827,12 +1827,13 @@
 			       (list (psi-core-expr expr.psi)))
 			     (make-retvals-signature-single-top))))
 	     (else
-	      ;;This record  type has  *no* default destructor.   Just expand  to the
-	      ;;constant void object, which, when appropriate, will be llater removed
-	      ;;by the compiler.
-	      (make-psi input-form.stx
-			(build-void)
-			(make-retvals-signature-single-void)))))
+	      ;;This record  type has  *no* default  destructor; default  to run-time
+	      ;;destruction.
+	      ;;
+	      ;;Example of usefulness  of defaulting to run-time  destruction: if the
+	      ;;object is a  record with a destructor set at  run-time, this way that
+	      ;;destructor will be called.
+	      (%run-time-destruction input-form.stx lexenv.run lexenv.expand expr.psi))))
 
       ((vicare-struct-type)
        ;;For structs we want to expand to an equivalent of:
@@ -2026,7 +2027,7 @@
 	    (identifier? ?type-id))
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
 	 ((object-type)
-	  (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name))
+	  (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name))
 	 ((vicare-struct-type)
 	  (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name))
 	 ((tag-type-spec)
@@ -2040,7 +2041,7 @@
 	    (underscore-id? ?jolly))
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
 	 ((object-type)
-	  (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand descr ?field-name))
+	  (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand descr ?field-name))
 	 ((vicare-struct-type)
 	  (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))
 	 ((tag-type-spec)
@@ -2063,7 +2064,7 @@
 	   ((?type-id)
 	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
 	      ((object-type)
-	       (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name))
+	       (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name))
 	      ((vicare-struct-type)
 	       (%expand-to-struct-accessor-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name))
 	      ((tag-type-spec)
@@ -2088,7 +2089,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%expand-to-record-accessor-application input-form.stx lexenv.run lexenv.expand
+  (define* (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand
 						   descr {expr.stx syntax-object?} field-name.id)
     (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
 	     (object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run))
@@ -2117,7 +2118,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%expand-to-record-accessor input-form.stx lexenv.run lexenv.expand
+  (define (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand
 				      descr field-name.id)
     (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
 	     (object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run))
@@ -2145,7 +2146,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%expand-to-record-accessor-application-post input-form.stx lexenv.run lexenv.expand descr {expr.psi psi?} field-name.id)
+  (define* (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand descr {expr.psi psi?} field-name.id)
     (let ((rts (syntactic-binding-descriptor.value descr)))
       (cond ((object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run)
 	     => (lambda (accessor.sexp)

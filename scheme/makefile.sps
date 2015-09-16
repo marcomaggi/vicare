@@ -1213,7 +1213,9 @@
 	  (index		. utf32-string-decoding-orphan-octets.index)
 	  (octets		. utf32-string-decoding-orphan-octets.octets)))))
 ;;;
-    (<top>					(macro . <top>))
+    (<top>
+     ($core-built-in-object-type-name
+      . (#f <top>-constructor <top>-type-predicate)))
     (<void>					(macro . <void>))
     (<boolean>					(macro . <boolean>))
     (<char>					(macro . <char>))
@@ -1242,7 +1244,11 @@
 
     (<string>					(macro . <string>))
     (<vector>					(macro . <vector>))
-    (<pair>					(macro . <pair>))
+    (<pair>
+     ($core-built-in-object-type-name
+      . (<top> cons pair?
+	       ((car		. car)
+		(cdr		. cdr)))))
     (<list>					(macro . <list>))
     (<bytevector>				(macro . <bytevector>))
     (<hashtable>				(macro . <hashtable>))
@@ -5257,6 +5263,9 @@
     (internal-applicable-record-type-destructor)
     (internal-applicable-record-destructor)
     (object-type-spec-override-predicate)
+
+    (<top>-constructor)
+    (<top>-type-predicate)
 
     ))
 

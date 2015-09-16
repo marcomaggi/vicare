@@ -87,39 +87,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'slots))
-
-  (check
-      (values (slot-ref '(1 . 2) car <pair>)
-	      (slot-ref '(1 . 2) cdr <pair>))
-    => 1 2)
-
-  (check
-      (let ((P (cons 1 2)))
-  	(slot-set! P car <pair> 10)
-  	(slot-set! P cdr <pair> 20)
-  	(values (slot-ref P car <pair>)
-  		(slot-ref P cdr <pair>)))
-    => 10 20)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (values ((slot-ref _ car <pair>) '(1 . 2))
-	      ((slot-ref _ cdr <pair>) '(1 . 2)))
-    => 1 2)
-
-  (check
-      (let ((P (cons 1 2)))
-	((slot-set! _ car <pair> _) P 10)
-	((slot-set! _ cdr <pair> _) P 20)
-	(values ((slot-ref _ car <pair>) P)
-		((slot-ref _ cdr <pair>) P)))
-    => 10 20)
-
-  #t)
-
-
 ;;;; done
 
 (check-report)
