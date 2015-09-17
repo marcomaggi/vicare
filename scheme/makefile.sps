@@ -1229,61 +1229,234 @@
   '((<top>
      ($core-scheme-type-name
       . (#f #f <top>-type-predicate)))
-    (<void>					(macro . <void>))
-    (<boolean>					(macro . <boolean>))
-    (<char>					(macro . <char>))
-    (<symbol>					(macro . <symbol>))
-    (<keyword>					(macro . <keyword>))
-    (<pointer>					(macro . <pointer>))
-    (<transcoder>				(macro . <transcoder>))
-    (<procedure>				(macro . <procedure>))
-    (<predicate>				(macro . <predicate>))
 
-    (<fixnum>					(macro . <fixnum>))
-    (<flonum>					(macro . <ratnum>))
-    (<ratnum>					(macro . <ratnum>))
-    (<bignum>					(macro . <bignum>))
-    (<compnum>					(macro . <compnum>))
-    (<cflonum>					(macro . <cflonum>))
-    (<rational-valued>				(macro . <rational-valued>))
-    (<rational>					(macro . <rational>))
-    (<integer-valued>				(macro . <integer-valued>))
-    (<integer>					(macro . <integer>))
-    (<exact-integer>				(macro . <exact-integer>))
-    (<real-valued>				(macro . <real-valued>))
-    (<real>					(macro . <real>))
-    (<complex>					(macro . <complex>))
-    (<number>					(macro . <number>))
+    (<void>
+     ($core-scheme-type-name
+      . (<top> void void-object?)))
 
-    (<string>					(macro . <string>))
-    (<vector>					(macro . <vector>))
+    (<boolean>
+     ($core-scheme-type-name
+      . (<top> #f boolean?)))
+
+    (<char>
+     ($core-scheme-type-name
+      . (<top> integer->char char?)))
+
+    (<symbol>
+     ($core-scheme-type-name
+      . (<top> string->symbol symbol?)))
+
+    (<keyword>
+     ($core-scheme-type-name
+      . (<top> symbol->keyword keyword?)))
+
+    (<pointer>
+     ($core-scheme-type-name
+      . (<top> integer->pointer pointer?)))
+
+    (<transcoder>
+     ($core-scheme-type-name
+      . (<top> make-transcoder transcoder?)))
+
+;;; --------------------------------------------------------------------
+;;; procedures
+
+    (<procedure>
+     ($core-scheme-type-name
+      . (<top> #f procedure?)))
+
+    (<predicate>
+     ($core-scheme-type-name
+      . (<top> #f procedure?)))
+
+;;; --------------------------------------------------------------------
+;;; numeric types
+
+    (<fixnum>
+     ($core-scheme-type-name
+      . (<exact-integer> #f fixnum?)))
+
+    (<flonum>
+     ($core-scheme-type-name
+      . (<real-valued> #f flonum?)))
+
+    (<ratnum>
+     ($core-scheme-type-name
+      . (<rational> #f ratnum?)))
+
+    (<bignum>
+     ($core-scheme-type-name
+      . (<exact-integer> #f bignum?)))
+
+    (<compnum>
+     ($core-scheme-type-name
+      . (<complex> #f compnum?)))
+
+    (<cflonum>
+     ($core-scheme-type-name
+      . (<complex> #f cflonum?)))
+
+    (<exact-integer>
+     ($core-scheme-type-name
+      . (<integer> #f exact-integer?)))
+
+    ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
+    (<integer>
+     ($core-scheme-type-name
+      . (<rational> #f integer?)))
+
+    ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
+    (<integer-valued>
+     ($core-scheme-type-name
+      . (<rational-valued> #f integer-valued?)))
+
+    (<rational>
+     ($core-scheme-type-name
+      . (<rational-valued> #f rational?)))
+
+    (<rational-valued>
+     ($core-scheme-type-name
+      . (<real> #f rational-valued?)))
+
+    (<real>
+     ($core-scheme-type-name
+      . (<real-valued> #f real?)))
+
+    (<real-valued>
+     ($core-scheme-type-name
+      . (<complex> #f real-valued?)))
+
+    (<complex>
+     ($core-scheme-type-name
+      . (<number> #f complex?)))
+
+    (<number>
+     ($core-scheme-type-name
+      . (<top> #f number?)))
+
+;;; --------------------------------------------------------------------
+;;; compound types
+
+    (<string>
+     ($core-scheme-type-name
+      . (<top> string string?)))
+
+    (<vector>
+     ($core-scheme-type-name
+      . (<top> vector vector?)))
+
     (<pair>
      ($core-scheme-type-name
       . (<top> cons pair?
 	       ((car		. car)
 		(cdr		. cdr)))))
-    (<list>					(macro . <list>))
-    (<bytevector>				(macro . <bytevector>))
-    (<hashtable>				(macro . <hashtable>))
-    (<record>					(macro . <record>))
-    (<record-type-descriptor>			(macro . <record-type-descriptor>))
-    (<record-constructor-descriptor>		(macro . <record-constructor-descriptor>))
-    (<struct>					(macro . <struct>))
-    (<struct-type-descriptor>			(macro . <struct-type-descriptor>))
-    (<condition>				(macro . <condition>))
 
-    (<port>					(macro . <port>))
-    (<input-port>				(macro . <input-port>))
-    (<output-port>				(macro . <output-port>))
-    (<input/output-port>			(macro . <input/output-port>))
-    (<textual-port>				(macro . <textual-port>))
-    (<binary-port>				(macro . <binary-port>))
-    (<textual-input-port>			(macro . <textual-input-port>))
-    (<textual-output-port>			(macro . <textual-output-port>))
-    (<textual-input/output-port>		(macro . <textual-input/output-port>))
-    (<binary-input-port>			(macro . <binary-input-port>))
-    (<binary-output-port>			(macro . <binary-output-port>))
-    (<binary-input/output-port>			(macro . <binary-input/output-port>))
+    (<list>
+     ($core-scheme-type-name
+      . (<top> list list?)))
+
+    (<bytevector>
+     ($core-scheme-type-name
+      . (<top> make-bytevector bytevector?)))
+
+    (<hashtable>
+     ($core-scheme-type-name
+      . (<top> #f hashtable?)))
+
+    (<hashtable-eq>
+     ($core-scheme-type-name
+      . (<hashtable> make-eq-hashtable hashtable?)))
+
+    (<hashtable-eqv>
+     ($core-scheme-type-name
+      . (<hashtable> make-eqv-hashtable hashtable?)))
+
+    (<hashtable-equal>
+     ($core-scheme-type-name
+      . (<hashtable> make-hashtable hashtable?)))
+
+;;; --------------------------------------------------------------------
+;;; records and structs
+
+    (<struct>
+     ($core-scheme-type-name
+      . (<top> #f struct?)))
+
+    (<struct-type-descriptor>
+     ($core-scheme-type-name
+      . (<struct> make-struct-type struct-type-descriptor?)))
+
+    (<record>
+     ($core-scheme-type-name
+      . (<struct> #f record?)))
+
+    (<record-type-descriptor>
+     ($core-scheme-type-name
+      . (<struct> make-record-type-descriptor record-type-descriptor?)))
+
+    (<record-constructor-descriptor>
+     ($core-scheme-type-name
+      . (<struct> make-record-constructor-descriptor record-constructor-descriptor?)))
+
+    (<condition>
+     ($core-scheme-type-name
+      . (<record> #f condition?
+		  ((print	. print-condition)))))
+
+    (<compound-condition>
+     ($core-scheme-type-name
+      . (<condition> condition compound-condition?)))
+
+;;; --------------------------------------------------------------------
+;;; input/output ports
+
+    (<port>
+     ($core-scheme-type-name
+      . (<top> #f port?)))
+
+    (<input-port>
+     ($core-scheme-type-name
+      . (<port> #f input-port?)))
+
+    (<output-port>
+     ($core-scheme-type-name
+      . (<port> #f output-port?)))
+
+    (<input/output-port>
+     ($core-scheme-type-name
+      . (<port> #f input/output-port?)))
+
+    (<textual-port>
+     ($core-scheme-type-name
+      . (<port> #f textual-port?)))
+
+    (<binary-port>
+     ($core-scheme-type-name
+      . (<port> #f binary-port?)))
+
+    (<textual-input-port>
+     ($core-scheme-type-name
+      . (<input-port> #f textual-input-port?)))
+
+    (<textual-output-port>
+     ($core-scheme-type-name
+      . (<output-port> #f textual-output-port?)))
+
+    (<textual-input/output-port>
+     ($core-scheme-type-name
+      . (<input/output-port> #f textual-input/output-port?)))
+
+    (<binary-input-port>
+     ($core-scheme-type-name
+      . (<input-port> #f binary-input-port?)))
+
+    (<binary-output-port>
+     ($core-scheme-type-name
+      . (<output-port> #f binary-output-port?)))
+
+    (<binary-input/output-port>
+     ($core-scheme-type-name
+      . (<input/output-port> #f binary-input/output-port?)))
 
     ))
 
@@ -3832,12 +4005,17 @@
     (<list>					v $language)
     (<bytevector>				v $language)
     (<hashtable>				v $language)
+    (<eq-hashtable>				v $language)
+    (<eqv-hashtable>				v $language)
+    (<equal-hashtable>				v $language)
+
     (<record>					v $language)
     (<record-type-descriptor>			v $language)
     (<record-constructor-descriptor>		v $language)
     (<struct>					v $language)
     (<struct-type-descriptor>			v $language)
     (<condition>				v $language)
+    (<compound-condition>			v $language)
 
     (<port>					v $language)
     (<input-port>				v $language)

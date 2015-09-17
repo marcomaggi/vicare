@@ -329,10 +329,180 @@
 (define-constant <top>-type-descriptor
   (make-scheme-type #f 'vicare:scheme-type:<top> '() #f))
 
+;;; immediate object types
+
+(define-scheme-type <boolean>
+    <top>)
+
+(define-scheme-type <void>
+    <top>)
+
+(define-scheme-type <char>
+    <top>)
+
+(define-scheme-type <symbol>
+    <top>)
+
+(define-scheme-type <keyword>
+    <top>)
+
+(define-scheme-type <pointer>
+    <top>)
+
+(define-scheme-type <transcoder>
+    <top>)
+
+;;; procedures
+
+(define-scheme-type <procedure>
+    <top>)
+
+(define-scheme-type <predicate>
+    <top>)
+
+;;; numeric types
+
+(define-scheme-type <number>
+    <top>)
+
+(define-scheme-type <complex>
+    <number>)
+
+(define-scheme-type <real-valued>
+    <complex>)
+
+(define-scheme-type <real>
+    <real-valued>)
+
+(define-scheme-type <rational-valued>
+    <real>)
+
+(define-scheme-type <rational>
+    <rational-valued>)
+
+;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
+;;
+(define-scheme-type <integer-valued>
+    <rational-valued>)
+
+;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
+;;
+(define-scheme-type <integer>
+    <rational>)
+
+(define-scheme-type <exact-integer>
+    <integer>)
+
+(define-scheme-type <fixnum>
+    <exact-integer>)
+
+(define-scheme-type <flonum>
+    <real-valued>)
+
+(define-scheme-type <ratnum>
+    <rational>)
+
+(define-scheme-type <bignum>
+    <exact-integer>)
+
+(define-scheme-type <compnum>
+    <complex>)
+
+(define-scheme-type <cflonum>
+    <complex>)
+
+;;; compound types
+
+(define-scheme-type <string>
+    <top>)
+
+(define-scheme-type <vector>
+    <top>)
+
 (define-scheme-type <pair>
     <top>
   (car car)
   (cdr cdr))
+
+(define-scheme-type <list>
+    <top>)
+
+(define-scheme-type <bytevector>
+    <top>)
+
+(define-scheme-type <hashtable>
+    <top>)
+
+(define-scheme-type <hashtable-eq>
+    <hashtable>)
+
+(define-scheme-type <hashtable-eqv>
+    <hashtable>)
+
+(define-scheme-type <hashtable-equal>
+    <hashtable>)
+
+;;; records and structs
+
+(define-scheme-type <struct>
+    <top>)
+
+(define-scheme-type <struct-type-descriptor>
+    <struct>)
+
+(define-scheme-type <record>
+    <struct>)
+
+(define-scheme-type <record-type-descriptor>
+    <struct>)
+
+(define-scheme-type <record-constructor-descriptor>
+    <struct>)
+
+(define-scheme-type <condition>
+    <record>
+  (print	print-condition))
+
+(define-scheme-type <compound-condition>
+    <condition>)
+
+;;; input/output ports
+
+(define-scheme-type <port>
+    <top>)
+
+(define-scheme-type <input-port>
+    <port>)
+
+(define-scheme-type <output-port>
+    <port>)
+
+(define-scheme-type <input/output-port>
+    <port>)
+
+(define-scheme-type <textual-port>
+    <port>)
+
+(define-scheme-type <binary-port>
+    <port>)
+
+(define-scheme-type <textual-input-port>
+    <input-port>)
+
+(define-scheme-type <textual-output-port>
+    <output-port>)
+
+(define-scheme-type <textual-input/output-port>
+    <input/output-port>)
+
+(define-scheme-type <binary-input-port>
+    <input-port>)
+
+(define-scheme-type <binary-output-port>
+    <output-port>)
+
+(define-scheme-type <binary-input/output-port>
+    <input/output-port>)
 
 
 ;;;; done

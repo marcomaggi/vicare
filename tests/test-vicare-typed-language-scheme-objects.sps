@@ -96,6 +96,33 @@
   #t)
 
 
+(parametrise ((check-test-name	'ports))
+
+;;; type predicates
+
+  (check-for-true	(is-a? (current-input-port)	<port>))
+  (check-for-true	(is-a? (current-output-port)	<port>))
+  (check-for-true	(is-a? (current-error-port)	<port>))
+
+  (check-for-true
+   (let (({P <textual-output-port>} (current-error-port)))
+     (is-a? P <port>)))
+
+  (check-for-true
+   (let (({P <textual-output-port>} (current-error-port)))
+     (is-a? P <output-port>)))
+
+  (check-for-true
+   (let (({P <textual-output-port>} (current-error-port)))
+     (is-a? P <textual-output-port>)))
+
+  (check-for-false
+   (let (({P <textual-output-port>} (current-error-port)))
+     (is-a? P <input-port>)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
