@@ -219,6 +219,7 @@
     ((slot-ref)					slot-ref-transformer)
     ((slot-set!)				slot-set!-transformer)
     ((method-call)				method-call-transformer)
+    ((unsafe-cast)				unsafe-cast-transformer)
 
     ((tag-predicate)				tag-predicate-transformer)
     ((tag-procedure-argument-validator)		tag-procedure-argument-validator-transformer)
@@ -1945,7 +1946,7 @@
 	     (condition (make-who-condition __who__)
 			(make-message-condition "subject expression of type predicate returns multiple values")
 			(make-syntax-violation input-form.stx ?expr)
-			(make-irritants-condition expr.sig)))))))
+			(make-irritants-condition (list expr.sig))))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -2088,7 +2089,7 @@
 	     (condition (make-who-condition __who__)
 			(make-message-condition "subject expression of slot access returns multiple values")
 			(make-syntax-violation input-form.stx ?expr)
-			(make-irritants-condition expr.sig))))
+			(make-irritants-condition (list expr.sig)))))
 	   )))
       ))
 
@@ -2269,7 +2270,7 @@
 	     (condition (make-who-condition __who__)
 			(make-message-condition "subject expression of slot access returns multiple values")
 			(make-syntax-violation input-form.stx ?expr)
-			(make-irritants-condition expr.sig))))
+			(make-irritants-condition (list expr.sig)))))
 	   )))
       ))
 
@@ -2429,7 +2430,7 @@
 	     (condition (make-who-condition __module_who__)
 			(make-message-condition "subject expression of method call returns multiple values")
 			(make-syntax-violation input-form.stx ?subject-expr)
-			(make-irritants-condition subject-expr.sig))))
+			(make-irritants-condition (list subject-expr.sig)))))
 	   )))
       ))
 
@@ -2587,6 +2588,62 @@
 		(make-retvals-signature-fully-unspecified))))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: UNSAFE-CAST
+
+(define-core-transformer (unsafe-cast input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used to  expand  Vicare's  UNSAFE-CAST syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?target-type ?expr)
+     (let* ((target-descr (id->object-type-binding-descriptor __who__ input-form.stx ?target-type lexenv.run))
+	    (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core    (psi-core-expr expr.psi))
+	    (expr.sig     (psi-retvals-signature expr.psi)))
+       (define (%do-unsafe-cast)
+	 (make-psi input-form.stx expr.core (make-retvals-signature-single-value ?target-type)))
+       (syntax-match (retvals-signature-tags expr.sig) ()
+	 ((?source-type)
+	  (cond ((top-tag-id? ?target-type)
+		 ;;Whatever  the  type  of  the expression:  casting  to  "<top>"  is
+		 ;;nothing: nothing to do, just return the PSI.
+		 expr.psi)
+		((top-tag-id? ?source-type)
+		 ;;The expression has "<top>" as  single-value type: cast the type to
+		 ;;the target one.
+		 (%do-unsafe-cast))
+		((let* ((target-spec  (syntactic-binding-descriptor.value target-descr))
+			(source-descr (id->object-type-binding-descriptor __who__ input-form.stx ?source-type lexenv.run))
+			(source-spec  (syntactic-binding-descriptor.value source-descr)))
+		   (object-type-spec.subtype-and-supertype? source-spec target-spec lexenv.run))
+		 ;;The expression's type is a subtype  of the target type: nothing to
+		 ;;do, just return it.
+		 expr.psi)
+		(else
+		 (raise
+		  (condition (make-who-condition __who__)
+			     (make-message-condition "expression type is incompatible with the requested tag")
+			     (make-syntax-violation input-form.stx ?expr)
+			     (make-irritants-condition (list ?expr.sig)))))))
+
+	 (?source-type
+	  (list-tag-id? ?source-type)
+	  ;;The expression return avlues are fully unspecified.
+	  (%do-unsafe-cast))
+
+	 (_
+	  ;;We have determined at expand-time  that the expression returns multiple
+	  ;;values.
+	  (raise
+	   (condition (make-who-condition __who__)
+		      (make-message-condition "subject expression of unsafe cast returns multiple values")
+		      (make-syntax-violation input-form.stx ?expr)
+		      (make-irritants-condition (list expr.sig)))))
+	 )))
+    ))
 
 
 ;;;; module core-macro-transformer: TAG-PREDICATE

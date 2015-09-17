@@ -42,6 +42,26 @@
   #t)
 
 
+(parametrise ((check-test-name	'unsafe-cast))
+
+  (check
+      (type-of
+       (unsafe-cast <string> "ciao"))
+    => #t)
+
+  (check
+      (type-of
+       (unsafe-cast <string> 123))
+    => #t)
+
+  (check
+      (type-of
+       (unsafe-cast <string> (read)))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'pair))
 
 ;;; type predicate
