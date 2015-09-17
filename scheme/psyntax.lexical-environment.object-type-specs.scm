@@ -86,8 +86,6 @@
 		;   (?destructor ?instance)
 		;
 		;and called explicitly with the DELETE syntax.
-		;
-		;At present only structs and records have a destructor.
 
      (mutable type-predicate-stx
 	      object-type-spec.type-predicate-sexp

@@ -27,8 +27,7 @@
 (program (test-vicare-records-typed)
   (options typed-language)
   (import (vicare)
-    (vicare checks)
-    (vicare expander tags))
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: records with typed language\n")

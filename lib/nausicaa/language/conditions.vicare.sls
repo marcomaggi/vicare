@@ -138,7 +138,15 @@
 		  &i/o-eagain
 		  &out-of-memory-error
 		  &procedure-argument-violation
-		  &expression-return-value-violation)
+		  &expression-return-value-violation
+
+		  <top> <void> <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure> <predicate>
+		  <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum> <rational-valued> <rational> <integer-valued>
+		  <integer> <exact-integer> <real-valued> <real> <complex> <number>
+		  <string> <vector> <pair> <list> <bytevector> <hashtable> <record> <record-type-descriptor> <record-constructor-descriptor>
+		  <struct> <struct-type-descriptor> <condition>
+		  <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port> <textual-input-port>
+		  <textual-output-port> <textual-input/output-port> <binary-input-port> <binary-output-port> <binary-input/output-port>)
     (prefix (only (vicare (0 4))
 		  define-condition-type
 		  ;; (rnrs conditions (6))

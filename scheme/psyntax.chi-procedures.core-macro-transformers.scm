@@ -1745,15 +1745,20 @@
        ;;   (?maker ?arg ...)
        ;;
        ((object-type)
-	(let* ((rts        (syntactic-binding-descriptor.value binding))
-	       (maker.sexp (object-type-spec.constructor-sexp rts))
-	       (maker.psi  (chi-expr maker.sexp lexenv.run lexenv.expand))
-	       (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	  (make-psi input-form.stx
-		    (build-application no-source
-		      (psi-core-expr maker.psi)
-		      (map psi-core-expr args.psi*))
-		    (make-retvals-signature-single-value ?type-id))))
+	(let ((rts (syntactic-binding-descriptor.value binding)))
+	  (cond ((object-type-spec.constructor-sexp rts)
+		 => (lambda (maker.sexp)
+		      (let* ((maker.psi  (chi-expr maker.sexp lexenv.run lexenv.expand))
+			     (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+			(make-psi input-form.stx
+				  (build-application no-source
+				    (psi-core-expr maker.psi)
+				    (map psi-core-expr args.psi*))
+				  (make-retvals-signature-single-value ?type-id)))))
+		(else
+		 ;;If there is no maker: this object-type is abstract.
+		 (%synner "attempt to instantiate object-type with no constructor (abstract type?)"
+			  ?type-id)))))
 
        ;;For structs we want to expand to an equivalent of:
        ;;
@@ -1965,9 +1970,9 @@
       (psi-core-expr expr.psi))
     (case-object-type-binding (__module_who__ input-form.stx pred-type-id lexenv.run descr)
       ((object-type)
-       (let* ((rts        (syntactic-binding-descriptor.value descr))
-	      (pred.stx   (bless
-			   (object-type-spec.type-predicate-sexp (syntactic-binding-descriptor.value descr))))
+       (let* ((ots        (syntactic-binding-descriptor.value descr))
+	      (pred.sexp  (object-type-spec.type-predicate-sexp ots))
+	      (pred.stx   (bless pred.sexp))
 	      (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
 	      (pred.core  (psi-core-expr pred.psi)))
 	 (make-psi input-form.stx

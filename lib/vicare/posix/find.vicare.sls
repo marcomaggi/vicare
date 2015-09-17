@@ -29,7 +29,6 @@
   (options typed-language)
   (export find)
   (import (except (vicare) find)
-    (vicare expander tags)
     (prefix (vicare posix) px.))
 
 

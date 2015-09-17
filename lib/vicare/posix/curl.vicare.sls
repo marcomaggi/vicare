@@ -29,7 +29,6 @@
   (options typed-language)
   (export curl)
   (import (vicare)
-    (vicare expander tags)
     (prefix (vicare posix) px.))
 
 

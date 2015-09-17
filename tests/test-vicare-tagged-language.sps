@@ -31,7 +31,6 @@
   (import (vicare)
     (for (prefix (vicare expander tag-type-specs) typ.)
       run expand)
-    (vicare expander tags)
     (vicare checks))
 
 
@@ -85,8 +84,7 @@
 (define-syntax %eval
   (syntax-rules ()
     ((_ ?form)
-     (eval ?form (environment '(vicare)
-			      '(vicare expander tags))))))
+     (eval ?form (environment '(vicare))))))
 
 (define-syntax catch-syntax-violation
   (syntax-rules ()

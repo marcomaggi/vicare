@@ -46,7 +46,6 @@
     signature-rest-argument-validation-with-predicate
 
     ;; built-in object-type specification utilities, for internal use
-    <top>-constructor
     <top>-type-predicate)
   (import (except (vicare)
 		  method-call-late-binding
@@ -88,27 +87,54 @@
     (%error "object type has no methods table"))
   (define (%error-record-type-has-no-matching-method)
     (%error "record type has no matching method"))
+  (define (%error-scheme-type-has-no-matching-method)
+    (%error "scheme type has no matching method"))
+
+  (define (%built-in-scheme-object-call btd)
+    (define (%recurse)
+      (%built-in-scheme-object-call (scheme-type-parent btd)))
+    (if btd
+	(cond ((scheme-type-method-retriever btd)
+	       => (lambda (method-retriever)
+		    (cond ((method-retriever method-name.sym)
+			   => (lambda (proc)
+				(apply proc subject args)))
+			  (else
+			   (%recurse)))))
+	      (else
+	       (%recurse)))
+      (%error-scheme-type-has-no-matching-method)))
+
+  (define (%record-object-call rtd)
+    ;;Here we expect the record-type descriptor to have a symbol as UID: the property
+    ;;list    of    the    symbol    should     contain    an    entry    with    key
+    ;;"late-binding-methods-table";  the  value of  the  entry  must be  a  hashtable
+    ;;associating the method name to the implementation procedure.
+    ;;
+    (define (%recurse)
+      (%record-object-call (record-type-parent rtd)))
+    (if rtd
+	(cond ((record-type-uid rtd)
+	       => (lambda (uid)
+		    (cond ((getprop uid 'late-binding-methods-table)
+			   => (lambda (table)
+				(cond ((hashtable-ref table method-name.sym #f)
+				       => (lambda (proc)
+					    (apply proc subject args)))
+				      (else
+				       (%recurse)))))
+			  (else
+			   (%recurse)))))
+	      (else
+	       (%recurse)))
+      (%error-record-type-has-no-matching-method)))
+
   (cond ((records.record-object? subject)
-	 ;;Here we  expect the record-type  descriptor to have  a symbol as  UID: the
-	 ;;property  list   of  the   symbol  should  contain   an  entry   with  key
-	 ;;"late-binding-methods-table"; the value  of the entry must  be a hashtable
-	 ;;associating the method name to the implementation procedure.
-	 (let loop ((rtd (record-rtd subject)))
-	   (if rtd
-	       (cond ((record-type-uid rtd)
-		      => (lambda (uid)
-			   (cond ((getprop uid 'late-binding-methods-table)
-				  => (lambda (table)
-				       (cond ((hashtable-ref table method-name.sym #f)
-					      => (lambda (proc)
-						   (apply proc subject args)))
-					     (else
-					      (loop (record-type-parent rtd))))))
-				 (else
-				  (loop (record-type-parent rtd))))))
-		     (else
-		      (loop (record-type-parent rtd))))
-	     (%error-record-type-has-no-matching-method))))
+	 (%record-object-call (record-rtd subject)))
+
+	((pair? subject)
+	 (%built-in-scheme-object-call <pair>-type-descriptor))
+
 	(else
 	 (%error-object-type-has-no-methods-table))))
 
@@ -127,6 +153,8 @@
 	 ((records.internal-applicable-record-destructor obj) obj))
 	((struct? obj)
 	 ((struct-destructor obj) obj))
+	((port? obj)
+	 (close-port obj))
 	(else
 	 (assertion-violation 'delete
 	   "unknown method to destroy object" obj))))
@@ -237,13 +265,74 @@
 
 ;;;; built-in object-type specification utilities
 
-(define (<top>-constructor . args)
-  (apply assertion-violation '<top> "no constructor defined for this object-type" args))
+;;Instances of this type are used at  run-time to describe the built-in Scheme object
+;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
+;;this type should be called BTD (as in "built-in type descriptor").
+;;
+(define-struct scheme-type
+  (parent
+		;False  if  this  type  has  no  parent;  otherwise  an  instance  of
+		;"scheme-type" representing the parent of this type.
+   uid
+		;A symbol representing the unique identifier for this type.
+   uids-list
+		;A list of symbols representing the  hierarchy of UIDs for this type.
+		;The  first item  in the  list  is the  UID  of this  type, then  the
+		;parent's UID, then the grandparent's UID, et cetera.
+   method-retriever
+		;If this type has methods: the  property list of the UID must contain
+		;an  entry with  key "late-binding-methods-table";  the value  of the
+		;entry must be  an EQ?  hashtable associating the method  name to the
+		;implementation procedure.
+   ))
+
+(define-syntax define-scheme-type
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?type-name ?parent-name (?method-name ?method-implementation-procedure) ...)
+       (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+	 (define (%datum->syntax obj)
+	   (datum->syntax #'?type-name obj))
+	 (define (%mk-btd-name type.id)
+	   (%datum->syntax (string->symbol (string-append (symbol->string (syntax->datum type.id))
+							  "-type-descriptor"))))
+	 (with-syntax
+	     ((BTD-NAME		(%mk-btd-name #'?type-name))
+	      (PARENT-NAME	(%mk-btd-name #'?parent-name))
+	      (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str)))))
+	   #'(define BTD-NAME
+	       (make-scheme-type PARENT-NAME (quote UID)
+				 (%build-scheme-type-uids-list (quote UID) PARENT-NAME)
+				 (lambda (method-name.sym)
+				   (case method-name.sym
+				     ((?method-name) ?method-implementation-procedure)
+				     ...))))
+	   )))
+      )))
+
+(define (%build-scheme-type-uids-list this-uid parent-btd)
+  (cons this-uid
+	(if parent-btd
+	    (%build-scheme-type-uids-list (scheme-type-uid    parent-btd)
+					  (scheme-type-parent parent-btd))
+	  '())))
+
+;;; --------------------------------------------------------------------
+;;; <top> helpers
 
 (define (<top>-type-predicate obj)
   #t)
 
 ;;; --------------------------------------------------------------------
+;;; built-in Scheme objects type descriptors
+
+(define-constant <top>-type-descriptor
+  (make-scheme-type #f 'vicare:scheme-type:<top> '() #f))
+
+(define-scheme-type <pair>
+    <top>
+  (car car)
+  (cdr cdr))
 
 
 ;;;; done
@@ -257,4 +346,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'conditions.procedure-signature-argument-violation 'scheme-indent-function 1)
+;; eval: (put 'define-scheme-type		'scheme-indent-function 2)
 ;; End:

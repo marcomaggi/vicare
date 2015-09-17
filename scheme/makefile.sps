@@ -537,9 +537,9 @@
     ))
 
 
-;;;; system macros
+;;;; core syntactic binding descriptors: fluids
 
-(define-constant VICARE-SYSTEM-FLUIDS
+(define-constant VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
   `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
     (return					($fluid . ,(gensym "fluid-label.return")))
     (continue					($fluid . ,(gensym "fluid-label.continue")))
@@ -554,19 +554,22 @@
 ;;  (define-constant label-of-spiffy
 ;;    (gensym "fluid-label.spiffy"))
 ;;
-;;  (define-constant VICARE-SYSTEM-FLUIDS
+;;  (define-constant VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
 ;;    `(...
 ;;      (spiffy			($fluid . ,label-of-spiffy))
 ;;      ...))
 ;;
-;;  (define-constant VICARE-SYSTEM-FLUIDS-DEFAULTS
+;;  (define-constant VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS
 ;;    `((,label-of-spiffy	(macro . default-for-spiffy))))
 ;;
 ;;then we must add an integrated non-core expander macro named DEFAULT-FOR-SPIFFY.
 ;;
-(define-constant VICARE-SYSTEM-FLUIDS-DEFAULTS '())
+(define-constant VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS '())
 
-(define-constant VICARE-SYSTEM-MACROS
+
+;;;; core syntactic binding descriptors: built-in syntaxes
+
+(define-constant VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
   '((internal-define				(define))
     (define-syntax				(define-syntax))
     (define-alias				(define-alias))
@@ -774,8 +777,13 @@
 ;;;
     (define-type-spec				(macro . define-type-spec))
     (define-callable-spec			(macro . define-callable-spec))
-;;;
-    (&condition
+    ))
+
+
+;;;; core syntactic binding descriptors: built-in condition object types
+
+(define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '((&condition
      ($core-condition-object-type-name
       . (&condition-rtd &condition-rcd #f condition condition?)))
     (&message
@@ -1212,10 +1220,15 @@
 	 ((bytevector		. utf32-string-decoding-orphan-octets.bytevector)
 	  (index		. utf32-string-decoding-orphan-octets.index)
 	  (octets		. utf32-string-decoding-orphan-octets.octets)))))
-;;;
-    (<top>
+    ))
+
+
+;;;; core syntactic binding descriptors: built-in Scheme object types
+
+(define-constant VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '((<top>
      ($core-scheme-type-name
-      . (#f <top>-constructor <top>-type-predicate)))
+      . (#f #f <top>-type-predicate)))
     (<void>					(macro . <void>))
     (<boolean>					(macro . <boolean>))
     (<char>					(macro . <char>))
@@ -1273,6 +1286,14 @@
     (<binary-input/output-port>			(macro . <binary-input/output-port>))
 
     ))
+
+
+;;;; core syntactic binding descriptors: all the bindings established by the boot image
+
+(define-constant VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS
+  (append VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
 (define-constant LIBRARY-LEGEND
@@ -1370,10 +1391,8 @@
     ;;(Marco Maggi; Mon Apr 14, 2014)
     ,@(if-building-rotation-boot-image? "expander built-in libraries requirements"
 	  '(($type-specs	(vicare expander tag-type-specs)	#t	#t)
-	    ($expander-tags	(vicare expander tags)			#t	#t)
 	    ($expander		(vicare expander)			#t	#t))
 	'(($type-specs		(vicare expander tag-type-specs)	#t	#f)
-	  ($expander-tags	(vicare expander tags)			#t	#f)
 	  ($expander		(vicare expander)			#t	#f)))))
 
 
@@ -3778,6 +3797,64 @@
     (&source-position-rcd)
 
 ;;; --------------------------------------------------------------------
+;;; built-in Scheme object types
+
+    (<top>					v $language)
+    (<void>					v $language)
+    (<boolean>					v $language)
+    (<char>					v $language)
+    (<symbol>					v $language)
+    (<keyword>					v $language)
+    (<pointer>					v $language)
+    (<transcoder>				v $language)
+    (<procedure>				v $language)
+    (<predicate>				v $language)
+
+    (<fixnum>					v $language)
+    (<flonum>					v $language)
+    (<ratnum>					v $language)
+    (<bignum>					v $language)
+    (<compnum>					v $language)
+    (<cflonum>					v $language)
+    (<exact-integer>				v $language)
+    (<integer-valued>				v $language)
+    (<integer>					v $language)
+    (<rational-valued>				v $language)
+    (<rational>					v $language)
+    (<real-valued>				v $language)
+    (<real>					v $language)
+    (<complex>					v $language)
+    (<number>					v $language)
+
+    (<string>					v $language)
+    (<vector>					v $language)
+    (<pair>					v $language)
+    (<list>					v $language)
+    (<bytevector>				v $language)
+    (<hashtable>				v $language)
+    (<record>					v $language)
+    (<record-type-descriptor>			v $language)
+    (<record-constructor-descriptor>		v $language)
+    (<struct>					v $language)
+    (<struct-type-descriptor>			v $language)
+    (<condition>				v $language)
+
+    (<port>					v $language)
+    (<input-port>				v $language)
+    (<output-port>				v $language)
+    (<input/output-port>			v $language)
+    (<textual-port>				v $language)
+    (<binary-port>				v $language)
+    (<textual-input-port>			v $language)
+    (<textual-output-port>			v $language)
+    (<textual-input/output-port>		v $language)
+    (<binary-input-port>			v $language)
+    (<binary-output-port>			v $language)
+    (<binary-input/output-port>			v $language)
+
+    (<top>-type-predicate)
+
+;;; --------------------------------------------------------------------
 ;;; keywords
 
     (symbol->keyword				v $language)
@@ -5093,71 +5170,18 @@
 ;;; --------------------------------------------------------------------
 ;;; expander tags
 
-    (tag-predicate				$expander-tags)
-    (tag-procedure-argument-validator		$expander-tags)
-    (tag-return-value-validator			$expander-tags)
-    (tag-assert					$expander-tags)
-    (tag-assert-and-return			$expander-tags)
-    (tag-accessor				$expander-tags)
-    (tag-mutator				$expander-tags)
-    (tag-getter					$expander-tags)
-    (tag-setter					$expander-tags)
-    (tag-dispatch				$expander-tags)
-    (tag-cast					$expander-tags)
+    (tag-predicate				v)
+    (tag-procedure-argument-validator		v)
+    (tag-return-value-validator			v)
+    (tag-assert					v)
+    (tag-assert-and-return			v)
+    (tag-accessor				v)
+    (tag-mutator				v)
+    (tag-getter					v)
+    (tag-setter					v)
+    (tag-dispatch				v)
+    (tag-cast					v)
     (tag-unsafe-cast)
-
-    (<top>					$expander-tags)
-    (<void>					$expander-tags)
-    (<boolean>					$expander-tags)
-    (<char>					$expander-tags)
-    (<symbol>					$expander-tags)
-    (<keyword>					$expander-tags)
-    (<pointer>					$expander-tags)
-    (<transcoder>				$expander-tags)
-    (<procedure>				$expander-tags)
-    (<predicate>				$expander-tags)
-
-    (<fixnum>					$expander-tags)
-    (<flonum>					$expander-tags)
-    (<ratnum>					$expander-tags)
-    (<bignum>					$expander-tags)
-    (<compnum>					$expander-tags)
-    (<cflonum>					$expander-tags)
-    (<exact-integer>				$expander-tags)
-    (<integer-valued>				$expander-tags)
-    (<integer>					$expander-tags)
-    (<rational-valued>				$expander-tags)
-    (<rational>					$expander-tags)
-    (<real-valued>				$expander-tags)
-    (<real>					$expander-tags)
-    (<complex>					$expander-tags)
-    (<number>					$expander-tags)
-
-    (<string>					$expander-tags)
-    (<vector>					$expander-tags)
-    (<pair>					$expander-tags)
-    (<list>					$expander-tags)
-    (<bytevector>				$expander-tags)
-    (<hashtable>				$expander-tags)
-    (<record>					$expander-tags)
-    (<record-type-descriptor>			$expander-tags)
-    (<record-constructor-descriptor>		$expander-tags)
-    (<struct>					$expander-tags)
-    (<struct-type-descriptor>			$expander-tags)
-    (<condition>				$expander-tags)
-
-    (<port>					$expander-tags)
-    (<input-port>				$expander-tags)
-    (<output-port>				$expander-tags)
-    (<input/output-port>			$expander-tags)
-    (<textual-port>				$expander-tags)
-    (<binary-port>				$expander-tags)
-    (<textual-input-port>			$expander-tags)
-    (<textual-output-port>			$expander-tags)
-    (<textual-input/output-port>		$expander-tags)
-    (<binary-input-port>			$expander-tags)
-    (<binary-output-port>			$expander-tags)
-    (<binary-input/output-port>			$expander-tags)
 
 ;;; --------------------------------------------------------------------
 
@@ -5263,9 +5287,6 @@
     (internal-applicable-record-type-destructor)
     (internal-applicable-record-destructor)
     (object-type-spec-override-predicate)
-
-    (<top>-constructor)
-    (<top>-type-predicate)
 
     ))
 
@@ -5534,8 +5555,8 @@
     ;;
     (define-constant __who__ 'make-system-data)
     (define-syntax-rule (macro-identifier? x)
-      (and (or (assq x VICARE-SYSTEM-MACROS)
-	       (assq x VICARE-SYSTEM-FLUIDS))
+      (and (or (assq x VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS)
+	       (assq x VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS))
 	   #t))
     (define-syntax-rule (procedure-identifier? x)
       (not (macro-identifier? x)))
@@ -5560,21 +5581,21 @@
       ;;We accumulate  in the subst  and env collections the  associations name/label
       ;;and label/binding
       ;;
-      (each-for VICARE-SYSTEM-MACROS
+      (each-for VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS
 	(lambda (entry)
 	  (let* ((name		(car  entry))
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
 	    (global-env-clt   (cons label binding)))))
-      (each-for VICARE-SYSTEM-FLUIDS
+      (each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
 	(lambda (entry)
 	  (let* ((name		(car  entry))
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
 	    (global-env-clt   (cons label binding)))))
-      (each-for VICARE-SYSTEM-FLUIDS-DEFAULTS
+      (each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS
 	(lambda (entry)
 	  (let* ((label		(car  entry))
 		 (binding	(cadr entry)))

@@ -29,7 +29,6 @@
   (options typed-language)
   (export wget)
   (import (vicare)
-    (vicare expander tags)
     (prefix (vicare posix) px.))
 
 

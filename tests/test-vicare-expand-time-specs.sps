@@ -29,7 +29,6 @@
 (import (vicare)
   (for (prefix (vicare expander tag-type-specs) typ.)
     expand)
-  (vicare expander tags)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

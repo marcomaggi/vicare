@@ -885,6 +885,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-syntax-utilities.sps				\
 	tests/test-vicare-system.sps					\
 	tests/test-vicare-tagged-language.sps				\
+	tests/test-vicare-typed-language-scheme-objects.sps		\
 	tests/test-vicare-unwind-protection.sps				\
 	tests/test-vicare-vectors.sps					\
 	tests/test-vicare-writer.sps					\
