@@ -243,8 +243,8 @@
 
 
 (module (core-language->sexp)
-  ;;Recursively convert  an expression in core  language (which contains
-  ;;syntax objects as annotations) into a readable symbolic expression.
+  ;;Recursively convert an expression in core language (which contains syntax objects
+  ;;as annotations) into a readable symbolic expression.
   ;;
   ;;FIXME This should be improved.  (Marco Maggi; Mon Apr 7, 2014)
   ;;
@@ -275,11 +275,12 @@
 	  ((define)
 	   `(define ,(cadr core) ,(core-language->sexp (caddr core))))
 
-	  ((lerec letrec*)
+	  ((let letrec letrec*)
 	   ;;We expect CORE to have the format:
 	   ;;
 	   ;;   (letrec  ((?id ?expr) ...) ?body)
 	   ;;   (letrec* ((?id ?expr) ...) ?body)
+	   ;;   (let     ((?id ?expr) ...) ?body)
 	   ;;
 	   (let ((bind*.core (cadr  core))
 		 (body.core  (caddr core)))
@@ -289,9 +290,13 @@
 					(list lex (core-language->sexp expr))))
 				 bind*.core))
 		   (body.sexp  (core-language->sexp body.core)))
-	       (if (eq? 'letrec (car core))
-		   `(letrec ,bind*.sexp ,body.sexp)
-		 `(letrec* ,bind*.sexp ,body.sexp)))))
+	       (case (car core)
+		 ((letrec)	`(letrec  ,bind*.sexp ,body.sexp))
+		 ((letrec*)	`(letrec* ,bind*.sexp ,body.sexp))
+		 ((let)		`(let     ,bind*.sexp ,body.sexp))))))
+
+          ((quote)
+           core)
 
 	  (else
 	   (map core-language->sexp core)))
