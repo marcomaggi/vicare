@@ -1670,7 +1670,7 @@
        (identifier? ?type-id)
        (let* ((descr     (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run))
 	      (rts       (syntactic-binding-descriptor.value descr))
-	      (expr.stx  (r6rs-record-type-spec.rcd-id rts))
+	      (expr.stx  (record-type-spec.rcd-id rts))
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
 		   (psi-core-expr expr.psi)
@@ -1719,7 +1719,7 @@
   (define (%make-record-type-descriptor who type-id input-form.stx lexenv.run lexenv.expand)
     (let* ((descr     (id->record-type-name-binding-descriptor who input-form.stx type-id lexenv.run))
 	   (rts       (syntactic-binding-descriptor.value descr))
-	   (expr.stx  (r6rs-record-type-spec.rtd-id rts))
+	   (expr.stx  (record-type-spec.rtd-id rts))
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 		(psi-core-expr expr.psi)

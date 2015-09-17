@@ -453,6 +453,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.special-transformers.sls				\
 	scheme/psyntax.lexical-environment.sls				\
 	scheme/psyntax.lexical-environment.object-type-specs.scm	\
+	scheme/psyntax.lexical-environment.syntactic-bindings.scm	\
 	scheme/psyntax.syntax-match.sls					\
 	scheme/psyntax.syntactic-binding-properties.sls			\
 	scheme/psyntax.syntax-utilities.sls				\

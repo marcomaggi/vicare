@@ -30,13 +30,13 @@
 	 ;; object-type utilities
 	 object-type-spec.subtype-and-supertype?	object-type-spec-override-predicate
 
-	 <r6rs-record-type-spec>
-	 make-r6rs-record-type-spec			r6rs-record-type-spec?
-	 r6rs-record-type-spec.rtd-id			r6rs-record-type-spec.rcd-id
-	 r6rs-record-type-spec.super-protocol-id
+	 <record-type-spec>
+	 make-record-type-spec				record-type-spec?
+	 record-type-spec.rtd-id			record-type-spec.rcd-id
+	 record-type-spec.super-protocol-id
 
-	 <built-in-object-type-spec>
-	 make-built-in-object-type-spec			built-in-object-type-spec?)
+	 <scheme-type-spec>
+	 make-scheme-type-spec				scheme-type-spec?)
 
 
 ;;;; basic object-type specification
@@ -266,7 +266,7 @@
 ;;This record  type is  used as  syntactic binding descriptor  for R6RS  record types
 ;;defined with the syntactic layer.  The lexenv entry has the format:
 ;;
-;;   ($record-type-name . #<r6rs-record-type-spec>)
+;;   ($record-type-name . #<record-type-spec>)
 ;;
 ;;It is built  when expanding DEFINE-RECORD-TYPE forms, or by  converting a syntactic
 ;;binding "$core-rtd" or  "$core-record-type-name" (a buit-in record  type defined by
@@ -275,15 +275,15 @@
 ;;Lexical variables  bound to  instances of  this type  should be  called RTS  (as in
 ;;"record-type spec").
 ;;
-(define-record-type (<r6rs-record-type-spec> make-r6rs-record-type-spec r6rs-record-type-spec?)
-  (nongenerative vicare:expander:<r6rs-record-type-spec>)
+(define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
+  (nongenerative vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (fields
-   (immutable rtd-id			r6rs-record-type-spec.rtd-id)
+   (immutable rtd-id			record-type-spec.rtd-id)
 		;The syntactic identifier bound to the record-type descriptor.
-   (immutable rcd-id			r6rs-record-type-spec.rcd-id)
+   (immutable rcd-id			record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
-   (immutable super-protocol-id		r6rs-record-type-spec.super-protocol-id)
+   (immutable super-protocol-id		record-type-spec.super-protocol-id)
 		;False if this record-type  has no super-type constructor descriptor;
 		;otherwise the syntactic identifier to which the super-RCD is bound.
    #| end of FIELDS |# )
@@ -315,7 +315,7 @@
 ;;types:  fixnums, pairs,  strings, vectors,  et cetera.   The lexenv  entry has  the
 ;;format:
 ;;
-;;   ($built-in-object-type-name . #<built-in-object-type-spec>)
+;;   ($scheme-type-name . #<scheme-type-spec>)
 ;;
 ;;It is built  when expanding DEFINE-RECORD-TYPE forms, or by  converting a syntactic
 ;;binding "$core-rtd" or  "$core-record-type-name" (a buit-in record  type defined by
@@ -324,8 +324,8 @@
 ;;Lexical variables  bound to  instances of  this type  should be  called OTS  (as in
 ;;"object-type spec").
 ;;
-(define-record-type (<built-in-object-type-spec> make-built-in-object-type-spec built-in-object-type-spec?)
-  (nongenerative vicare:expander:<built-in-object-type-spec>)
+(define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
+  (nongenerative vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (protocol
     (lambda (make-object-type-spec)

@@ -906,7 +906,7 @@
 	 ;;binding.
 	 (let* ((parent-descr (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
 		(parent-rts   (syntactic-binding-descriptor.value parent-descr))
-		(parent-proto (r6rs-record-type-spec.super-protocol-id parent-rts)))
+		(parent-proto (record-type-spec.super-protocol-id parent-rts)))
 	   (values ?parent-name
 		   (%named-gensym/suffix foo "-parent-rtd")
 		   (%named-gensym/suffix foo "-parent-rcd")
@@ -1011,7 +1011,7 @@
 	 ;;This record type has a parent selected with the PARENT clause.
 	 (let* ((descr (id->record-type-name-binding-descriptor __module_who__ #f foo-parent.id (current-inferior-lexenv)))
 		(rts   (syntactic-binding-descriptor.value descr))
-		(proto (r6rs-record-type-spec.super-protocol-id rts)))
+		(proto (record-type-spec.super-protocol-id rts)))
 	   (if proto
 	       ;;The parent record-type specification has a super-protocol.
 	       `(make-record-constructor-descriptor ,foo-rtd ,proto ,?super-protocol-expr)
@@ -1199,16 +1199,16 @@
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
   `(make-syntactic-binding-descriptor/record-type-name
-    (make-r6rs-record-type-spec (syntax ,foo-rtd.sym)
-				(syntax ,foo-rcd.sym)
-				,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
-				,(and foo-parent.id          `(syntax ,foo-parent.id))
-				(syntax ,make-foo.id)
-				,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
-				(syntax ,foo?.id)
-				,foo-fields-safe-accessors.table
-				,foo-fields-safe-mutators.table
-				,foo-methods.table)))
+    (make-record-type-spec (syntax ,foo-rtd.sym)
+			   (syntax ,foo-rcd.sym)
+			   ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
+			   ,(and foo-parent.id          `(syntax ,foo-parent.id))
+			   (syntax ,make-foo.id)
+			   ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
+			   (syntax ,foo?.id)
+			   ,foo-fields-safe-accessors.table
+			   ,foo-fields-safe-mutators.table
+			   ,foo-methods.table)))
 
 
 (define (%make-tag-type-spec-form foo make-foo foo? foo-parent

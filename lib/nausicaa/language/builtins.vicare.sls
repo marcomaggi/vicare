@@ -76,7 +76,14 @@
     ;; multimethods for output ports
     put-single			put-multi-2
     put-multi-3			put-multi-4)
-  (import (vicare (0 4))
+  (import (except (vicare (0 4))
+		  <top> <void> <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure> <predicate>
+		  <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum> <rational-valued> <rational> <integer-valued>
+		  <integer> <exact-integer> <real-valued> <real> <complex> <number>
+		  <string> <vector> <pair> <list> <bytevector> <hashtable> <record> <record-type-descriptor> <record-constructor-descriptor>
+		  <struct> <struct-type-descriptor> <condition>
+		  <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port> <textual-input-port>
+		  <textual-output-port> <textual-input/output-port> <binary-input-port> <binary-output-port> <binary-input/output-port>)
     (only (vicare system $symbols)
 	  $symbol-value
 	  $symbol->string

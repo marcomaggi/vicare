@@ -1214,7 +1214,7 @@
 	  (octets		. utf32-string-decoding-orphan-octets.octets)))))
 ;;;
     (<top>
-     ($core-built-in-object-type-name
+     ($core-scheme-type-name
       . (#f <top>-constructor <top>-type-predicate)))
     (<void>					(macro . <void>))
     (<boolean>					(macro . <boolean>))
@@ -1245,7 +1245,7 @@
     (<string>					(macro . <string>))
     (<vector>					(macro . <vector>))
     (<pair>
-     ($core-built-in-object-type-name
+     ($core-scheme-type-name
       . (<top> cons pair?
 	       ((car		. car)
 		(cdr		. cdr)))))
@@ -4352,7 +4352,7 @@
     ;;These are only for internal use by the psyntax.
     (make-syntactic-binding-descriptor/struct-type-name)
     (make-syntactic-binding-descriptor/record-type-name)
-    (make-r6rs-record-type-spec)
+    (make-record-type-spec)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
