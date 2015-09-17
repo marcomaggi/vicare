@@ -1916,7 +1916,7 @@
 
 	   ((?expr-type-id)
 	    (if (free-identifier=? ?expr-type-id ?pred-type-id)
-		(%make-true-psi input-form.stx)
+		(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
 	      (case-object-type-binding (__who__ input-form.stx ?expr-type-id lexenv.run expr-descr)
 		((object-type)
 		 (case-object-type-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-descr)
@@ -1924,14 +1924,14 @@
 		    (if (object-type-spec.subtype-and-supertype? (syntactic-binding-descriptor.value expr-descr)
 								 (syntactic-binding-descriptor.value pred-descr)
 								 lexenv.run)
-			(%make-true-psi input-form.stx)
-		      (%make-false-psi input-form.stx)))
+			(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
+		      (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand)))
 		   ((vicare-struct-type)
-		    (%make-false-psi input-form.stx))
+		    (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))
 		   ((tag-type-spec)
-		    (%make-false-psi input-form.stx))))
+		    (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))))
 		((vicare-struct-type)
-		 (%make-false-psi input-form.stx))
+		 (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))
 		((tag-type-spec)
 		 (%expand-to-tag-predicate-application-post input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi)))))
 
@@ -2000,16 +2000,20 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-true-psi input-form.stx)
-    (%make-boolean-psi input-form.stx #t))
+  (define (%make-true-psi input-form.stx expr.stx lexenv.run lexenv.expand)
+    (%make-boolean-psi input-form.stx #t expr.stx lexenv.run lexenv.expand))
 
-  (define (%make-false-psi input-form.stx)
-    (%make-boolean-psi input-form.stx #f))
+  (define (%make-false-psi input-form.stx expr.stx lexenv.run lexenv.expand)
+    (%make-boolean-psi input-form.stx #f expr.stx lexenv.run lexenv.expand))
 
-  (define (%make-boolean-psi input-form.stx bool)
-    (make-psi input-form.stx
-	      (build-data no-source bool)
-	      (make-retvals-signature-single-boolean)))
+  (define (%make-boolean-psi input-form.stx bool expr.stx lexenv.run lexenv.expand)
+    (let* ((expr.psi   (chi-expr expr.stx lexenv.run lexenv.expand))
+	   (expr.core  (psi-core-expr expr.psi)))
+      (make-psi input-form.stx
+		(build-sequence no-source
+		  (list expr.core
+			(build-data no-source bool)))
+		(make-retvals-signature-single-boolean))))
 
   #| end of module: IS-A?-TRANSFORMER |# )
 
@@ -2627,7 +2631,7 @@
 		  (condition (make-who-condition __who__)
 			     (make-message-condition "expression type is incompatible with the requested tag")
 			     (make-syntax-violation input-form.stx ?expr)
-			     (make-irritants-condition (list ?expr.sig)))))))
+			     (make-irritants-condition (list expr.sig)))))))
 
 	 (?source-type
 	  (list-tag-id? ?source-type)

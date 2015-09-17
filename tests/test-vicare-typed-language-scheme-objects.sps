@@ -42,26 +42,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'unsafe-cast))
-
-  (check
-      (type-of
-       (unsafe-cast <string> "ciao"))
-    => #t)
-
-  (check
-      (type-of
-       (unsafe-cast <string> 123))
-    => #t)
-
-  (check
-      (type-of
-       (unsafe-cast <string> (read)))
-    => #t)
-
-  #t)
-
-
 (parametrise ((check-test-name	'pair))
 
 ;;; type predicate
@@ -79,10 +59,6 @@
 
   (check-for-false
    (is-a? 123 <pair>))
-
-  (check
-      (expansion-of (is-a? '(1 . 2) <pair>))
-    => '(quote #t))
 
 ;;; --------------------------------------------------------------------
 ;;; constructor
