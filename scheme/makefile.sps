@@ -1275,7 +1275,7 @@
 
     (<fixnum>
      ($core-scheme-type-name
-      . (<exact-integer> #f fixnum?)))
+      . (<exact-integer> <fixnum>-constructor fixnum?)))
 
     (<flonum>
      ($core-scheme-type-name

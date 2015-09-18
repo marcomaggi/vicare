@@ -92,6 +92,77 @@
   #t)
 
 
+(parametrise ((check-test-name	'void))
+
+;;; type predicate
+
+  (check-for-true
+   (is-a? (void) <void>))
+
+  (check-for-true
+   (let ((O '#!void))
+     (is-a? O <void>)))
+
+  (check-for-true
+   (let (({O <void>} '#!void))
+     (is-a? O <void>)))
+
+  (check-for-false
+   (is-a? 123 <void>))
+
+;;; --------------------------------------------------------------------
+;;; constructor
+
+  (check
+      (new <void>)
+    => '#!void)
+
+  #t)
+
+
+(parametrise ((check-test-name	'boolean))
+
+;;; type predicate
+
+  (check-for-true
+   (is-a? #t <boolean>))
+
+  (check-for-true
+   (is-a? #f <boolean>))
+
+  (check-for-true
+   (let ((O '#t))
+     (is-a? O <boolean>)))
+
+  (check-for-true
+   (let ((O '#f))
+     (is-a? O <boolean>)))
+
+  (check-for-true
+   (let (({O <boolean>} '#t))
+     (is-a? O <boolean>)))
+
+  (check-for-false
+   (is-a? 123 <boolean>))
+
+;;; --------------------------------------------------------------------
+;;; constructor
+
+  (check
+      (new <boolean> #t)
+    => '#t)
+
+  (check
+      (new <boolean> #f)
+    => '#f)
+
+  (check-for-procedure-signature-argument-violation
+      (new <boolean> 123)
+    => '(_ 1 boolean? 123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'ports))
 
 ;;; type predicates

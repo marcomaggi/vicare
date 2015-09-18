@@ -328,7 +328,11 @@
   (protocol
     (lambda (make-object-type-spec)
       (lambda (parent-id constructor.sexp predicate.sexp methods-table)
-	(let ((destructor.sexp		#f)
+	(let ((constructor.sexp         (or constructor.sexp
+					    (let ((arg (gensym)))
+					      `(lambda* ({,arg ,predicate.sexp})
+						 ,arg))))
+	      (destructor.sexp		#f)
 	      (safe-accessors-table	'())
 	      (safe-mutators-table	'()))
 	  ((make-object-type-spec parent-id

@@ -1749,7 +1749,8 @@
 	(let ((rts (syntactic-binding-descriptor.value binding)))
 	  (cond ((object-type-spec.constructor-sexp rts)
 		 => (lambda (maker.sexp)
-		      (let* ((maker.psi  (chi-expr maker.sexp lexenv.run lexenv.expand))
+		      (let* ((maker.stx  (bless maker.sexp))
+			     (maker.psi  (chi-expr maker.stx lexenv.run lexenv.expand))
 			     (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
 			(make-psi input-form.stx
 				  (build-application no-source
