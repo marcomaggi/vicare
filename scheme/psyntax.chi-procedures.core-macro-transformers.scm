@@ -192,6 +192,8 @@
     ((quote)					quote-transformer)
     ((lambda)					lambda-transformer)
     ((case-lambda)				case-lambda-transformer)
+    ((named-lambda)				named-lambda-transformer)
+    ((named-case-lambda)			named-case-lambda-transformer)
     ((internal-lambda)				internal-lambda-transformer)
     ((internal-case-lambda)			internal-case-lambda-transformer)
     ((let)					let-transformer)
@@ -471,7 +473,7 @@
     ))
 
 
-;;;; module core-macro-transformer: LAMBDA and CASE-LAMBDA, INTERNAL-LAMBDA and INTERNAL-CASE-LAMBDA
+;;;; module core-macro-transformer: LAMBDA, CASE-LAMBDA, NAMED-LAMBDA, NAMED-CASE-LAMBDA, INTERNAL-LAMBDA, INTERNAL-CASE-LAMBDA
 
 (define-core-transformer (case-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand  R6RS CASE-LAMBDA syntaxes from the top-level
@@ -481,7 +483,7 @@
   (syntax-match input-form.stx ()
     ((_ (?formals* ?body* ?body** ...) ...)
      (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-		      '(safe) ?formals* (map cons ?body* ?body**)))
+		      '(safe) (underscore-id) ?formals* (map cons ?body* ?body**)))
     ))
 
 (define-core-transformer (lambda input-form.stx lexenv.run lexenv.expand)
@@ -492,8 +494,36 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?body ?body* ...)
      (chi-lambda input-form.stx lexenv.run lexenv.expand
-		 '(safe) ?formals (cons ?body ?body*)))
+		 '(safe) (underscore-id) ?formals (cons ?body ?body*)))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-core-transformer (named-case-lambda input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand  Vicare's NAMED-CASE-LAMBDA syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return an PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who (?formals* ?body* ?body** ...) ...)
+     (identifier? ?who)
+     (chi-case-lambda input-form.stx lexenv.run lexenv.expand
+		      '(safe) ?who ?formals* (map cons ?body* ?body**)))
+    ))
+
+(define-core-transformer (named-lambda input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to  expand Vicare's  NAMED-LAMBDA  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who ?formals ?body ?body* ...)
+     (identifier? ?who)
+     (chi-lambda input-form.stx lexenv.run lexenv.expand
+		 '(safe) ?who ?formals (cons ?body ?body*)))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-core-transformer (internal-case-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  INTERNAL-CASE-LAMBDA syntaxes from
@@ -503,7 +533,7 @@
   (syntax-match input-form.stx ()
     ((_ ?attributes (?formals* ?body* ?body** ...) ...)
      (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-		      ?attributes ?formals* (map cons ?body* ?body**)))
+		      ?attributes #f ?formals* (map cons ?body* ?body**)))
     ))
 
 (define-core-transformer (internal-lambda input-form.stx lexenv.run lexenv.expand)
@@ -514,7 +544,7 @@
   (syntax-match input-form.stx ()
     ((_ ?attributes ?formals ?body ?body* ...)
      (chi-lambda input-form.stx lexenv.run lexenv.expand
-		 ?attributes ?formals (cons ?body ?body*)))
+		 ?attributes #f ?formals (cons ?body ?body*)))
     ))
 
 

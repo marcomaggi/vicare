@@ -1895,7 +1895,7 @@
    %chi-lambda-clause*)
 
   (define* (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			       attributes.sexp formals.stx body-form*.stx)
+			       attributes.sexp who.id formals.stx body-form*.stx)
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an instance  of "lambda-signature" representing the  tag signature for
@@ -1954,8 +1954,8 @@
 		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			   (%build-retvals-validation-form has-arguments-validators?
 							   (lambda-signature-retvals lambda-signature)
-							   body-form*.stx)
-			 body-form*.stx))))
+							   who.id body-form*.stx)
+			 (%build-no-retvals-validation-form who.id body-form*.stx)))))
 	   ;;Here  we  know that  the  formals  signature is  a  proper  list of  tag
 	   ;;identifiers with the same structure of FORMALS.STX.
 	   (map set-label-tag! ?arg* lab* formals-signature.tags)
@@ -1969,8 +1969,8 @@
 		(rest-lex     (generate-lexical-gensym ?rest-arg))
 		(rest-lab     (generate-label-gensym       ?rest-arg))
 		(lexenv.run^  (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
-						    (cons rest-lex lex*)
-						    lexenv.run)))
+							       (cons rest-lex lex*)
+							       lexenv.run)))
 	   (receive (arg-tag* rest-tag)
 	       (improper-list->list-and-rest formals-signature.tags)
 	     (define validation*.stx
@@ -1982,14 +1982,14 @@
 	     (define body-form^*.stx
 	       (push-lexical-contour
 		   (make-rib/from-identifiers-and-labels (cons ?rest-arg ?arg*)
-				    (cons rest-lab  lab*))
+							 (cons rest-lab  lab*))
 		 ;;Build a list of syntax objects representing the internal body.
 		 (append validation*.stx
 			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			     (%build-retvals-validation-form has-arguments-validators?
 							     (lambda-signature-retvals lambda-signature)
-							     body-form*.stx)
-			   body-form*.stx))))
+							     who.id body-form*.stx)
+			   (%build-no-retvals-validation-form who.id body-form*.stx)))))
 	     ;;Here we know  that the formals signature is an  improper list with the
 	     ;;same structure of FORMALS.STX.
 	     (map set-label-tag! ?arg* lab* arg-tag*)
@@ -2006,7 +2006,7 @@
 ;;; --------------------------------------------------------------------
 
   (define* (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-				attributes.sexp formals*.stx body-form**.stx)
+				attributes.sexp who.id formals*.stx body-form**.stx)
     ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
     ;;
     ;;1..A list  of subslist,  each sublist being  a proper or  improper list  of lex
@@ -2022,10 +2022,10 @@
 	(values '() '() '())
       (receive (formals-lex lambda-signature body.psi)
 	  (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			      attributes.sexp (car formals*.stx) (car body-form**.stx))
+			      attributes.sexp who.id (car formals*.stx) (car body-form**.stx))
 	(receive (formals-lex* lambda-signature* body*.psi)
 	    (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-				 attributes.sexp (cdr formals*.stx) (cdr body-form**.stx))
+				 attributes.sexp who.id (cdr formals*.stx) (cdr body-form**.stx))
 	  (values (cons formals-lex       formals-lex*)
 		  (cons lambda-signature  lambda-signature*)
 		  (cons body.psi          body*.psi))))))
@@ -2064,7 +2064,7 @@
 	   (list (bless
 		  `(tag-procedure-argument-validator ,rest-tag ,rest-arg))))))
 
-  (define (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
+  (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature who.id body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of
     ;;body forms.
     ;;
@@ -2075,26 +2075,31 @@
     ;;The  argument HAS-ARGUMENTS-VALIDATORS?   is  required  to avoid  INTERNAL-BODY
     ;;wrapping when not needed; this gains a bit of speed when expanding the body.
     ;;
-    (cond (has-arguments-validators?
-	   (if (retvals-signature-fully-unspecified? retvals-signature)
-	       ;;The number and type of return values is unknown.
-	       (bless
-		`((internal-body . ,body-form*.stx)))
-	     (receive (head*.stx last.stx)
-		 (proper-list->head-and-last body-form*.stx)
-	       (bless
-		`((internal-body
-		    ,@head*.stx
-		    (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))
-	  (else
-	   (if (retvals-signature-fully-unspecified? retvals-signature)
-	       ;;The number and type of return values is unknown.
-	       body-form*.stx
-	     (receive (head*.stx last.stx)
-		 (proper-list->head-and-last body-form*.stx)
-	       (append head*.stx
-		       (bless
-			`((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))))
+    (define new-body-form*.stx
+      (cond (has-arguments-validators?
+	     (if (retvals-signature-fully-unspecified? retvals-signature)
+		 ;;The number and type of return values is unknown.
+		 `((internal-body . ,body-form*.stx))
+	       (receive (head*.stx last.stx)
+		   (proper-list->head-and-last body-form*.stx)
+		 `((internal-body
+		     ,@head*.stx
+		     (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx))))))
+	    (else
+	     (if (retvals-signature-fully-unspecified? retvals-signature)
+		 ;;The number and type of return values is unknown.
+		 body-form*.stx
+	       (receive (head*.stx last.stx)
+		   (proper-list->head-and-last body-form*.stx)
+		 (append head*.stx
+			 `((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx))))))))
+    (%build-no-retvals-validation-form who.id new-body-form*.stx))
+
+  (define* (%build-no-retvals-validation-form who.id body-form*.stx)
+    (bless (if who.id
+	       `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,who.id))))
+		   ,@body-form*.stx))
+	     body-form*.stx)))
 
   #| end of module: CHI-LAMBDA-CLAUSES |# )
 
@@ -2119,42 +2124,35 @@
     (syntax-match input-form.stx (brace)
       ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (let ((formals.stx (bless
-			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-	     (body*.stx   (bless
-			   `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
-			       . ,?body-form*)))))
+			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls))))
 	 (%expand input-form.stx lexenv.run lexenv.expand
-		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
+		  (syntax->datum ?attributes) ?ctxt formals.stx ?body-form*)))
 
       ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
-       (let ((formals.stx ?fmls)
-	     (body*.stx   (bless
-			   `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
-			       . ,?body-form*)))))
-	 (%expand input-form.stx lexenv.run lexenv.expand
-		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
+       (%expand input-form.stx lexenv.run lexenv.expand
+		(syntax->datum ?attributes) ?ctxt ?fmls ?body-form*))
       ))
 
   (define (%expand input-form.stx lexenv.run lexenv.expand
-		   attributes.sexp ctxt.id formals.stx body*.stx)
-    ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
-    ;;core language LAMBDA sexp's annotation.
+		   attributes.sexp who.id formals.stx body*.stx)
+    ;;This procedure is like CHI-LAMBDA, but, in addition, it puts WHO.ID in the core
+    ;;language LAMBDA sexp's annotation.
     (receive (formals.core lambda-signature body.psi)
 	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			    attributes.sexp formals.stx body*.stx)
+			    attributes.sexp who.id formals.stx body*.stx)
       ;;FORMALS.CORE is composed of lex gensyms.
       (make-psi input-form.stx
-		(build-lambda (syntax-annotation ctxt.id)
+		(build-lambda (syntax-annotation who.id)
 		  formals.core
 		  (psi-core-expr body.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt.id) lambda-signature))))
+		(make-retvals-signature-with-fabricated-procedure-tag (syntax->datum who.id) lambda-signature))))
 
   #| end of module: CHI-DEFUN |# )
 
 ;;; --------------------------------------------------------------------
 
 (define* (chi-lambda input-form.stx lexenv.run lexenv.expand
-		     attributes.stx formals.stx body*.stx)
+		     attributes.stx who.id formals.stx body*.stx)
   ;;Expand the contents of a LAMBDA syntax and return a "psi" struct.
   ;;
   ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
@@ -2168,7 +2166,7 @@
   (define attributes.sexp (syntax->datum attributes.stx))
   (receive (formals.lex lambda-signature body.psi)
       (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			  attributes.sexp formals.stx body*.stx)
+			  attributes.sexp who.id formals.stx body*.stx)
     (make-psi input-form.stx
 	      (build-lambda (syntax-annotation input-form.stx)
 		formals.lex
@@ -2176,7 +2174,7 @@
 	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
 
 (define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-			  attributes.stx formals*.stx body**.stx)
+			  attributes.stx who.id formals*.stx body**.stx)
   ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
   ;;
   ;;INPUT-FORM.STX  is   a  syntax  object  representing   the  original  CASE-LAMBDA
@@ -2204,7 +2202,7 @@
   (define attributes.sexp (syntax->datum attributes.stx))
   (receive (formals*.lex lambda-signature* body**.psi)
       (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-			   attributes.sexp formals*.stx body**.stx)
+			   attributes.sexp who.id formals*.stx body**.stx)
     (make-psi input-form.stx
 	      (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex

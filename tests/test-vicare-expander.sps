@@ -2027,6 +2027,171 @@
   #t)
 
 
+(parametrise ((check-test-name	'named-lambda-core))
+
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name ()
+	    123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name (a)
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name (a b c)
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name rest
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name (a . rest)
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name (a b . rest)
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name (a b c . rest)
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda the-name ()
+	    __who__))
+	(doit))
+    => 'the-name)
+
+  #t)
+
+
+(parametrise ((check-test-name	'named-case-lambda-core))
+
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
+
+;;; --------------------------------------------------------------------
+;;; without predicates
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    (()
+	     123)))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    ((a)
+	     (vector 123 a))))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    ((a b c)
+	     (vector 123 a b c))))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    (rest
+	     (vector 123 rest))))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    ((a . rest)
+	     (vector 123 a rest))))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    ((a b . rest)
+	     (vector 123 a b rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    ((a b c . rest)
+	     (vector 123 a b c rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda the-name
+	    (()
+	     __who__)))
+	(doit))
+    => 'the-name)
+
+  #t)
+
+
 (parametrise ((check-test-name	'lambda-star))
 
   (define (list-of-fixnums? obj)
