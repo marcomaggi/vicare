@@ -721,6 +721,8 @@
     (case-define*				(macro . case-define*))
     (lambda*					(macro . lambda*))
     (case-lambda*				(macro . case-lambda*))
+    (named-lambda*				(macro . named-lambda*))
+    (named-case-lambda*				(macro . named-case-lambda*))
     (define-integrable				(macro . define-integrable))
     (define-inline				(macro . define-inline))
     (define-constant				(macro . define-constant))
@@ -1229,235 +1231,235 @@
 (define-constant VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '((<top>
      ($core-scheme-type-name
-      . (#f #f <top>-type-predicate)))
+      . (<top> #f #f <top>-type-predicate)))
 
     (<void>
      ($core-scheme-type-name
-      . (<top> void void-object?)))
+      . (<void> <top> void void-object?)))
 
     (<boolean>
      ($core-scheme-type-name
-      . (<top> #f boolean?)))
+      . (<boolean> <top> #f boolean?)))
 
     (<char>
      ($core-scheme-type-name
-      . (<top> integer->char char?)))
+      . (<char> <top> integer->char char?)))
 
     (<symbol>
      ($core-scheme-type-name
-      . (<top> string->symbol symbol?)))
+      . (<symbol> <top> string->symbol symbol?)))
 
     (<keyword>
      ($core-scheme-type-name
-      . (<top> symbol->keyword keyword?)))
+      . (<keyword> <top> symbol->keyword keyword?)))
 
     (<pointer>
      ($core-scheme-type-name
-      . (<top> integer->pointer pointer?)))
+      . (<pointer> <top> integer->pointer pointer?)))
 
     (<transcoder>
      ($core-scheme-type-name
-      . (<top> make-transcoder transcoder?)))
+      . (<transcoder> <top> make-transcoder transcoder?)))
 
 ;;; --------------------------------------------------------------------
 ;;; procedures
 
     (<procedure>
      ($core-scheme-type-name
-      . (<top> #f procedure?)))
+      . (<procedure> <top> #f procedure?)))
 
     (<predicate>
      ($core-scheme-type-name
-      . (<top> #f procedure?)))
+      . (<predicate> <top> #f procedure?)))
 
 ;;; --------------------------------------------------------------------
 ;;; numeric types
 
     (<fixnum>
      ($core-scheme-type-name
-      . (<exact-integer> <fixnum>-constructor fixnum?)))
+      . (<fixnum> <exact-integer> <fixnum>-constructor fixnum?)))
 
     (<flonum>
      ($core-scheme-type-name
-      . (<real-valued> #f flonum?)))
+      . (<flonum> <real-valued> #f flonum?)))
 
     (<ratnum>
      ($core-scheme-type-name
-      . (<rational> #f ratnum?)))
+      . (<ratnum> <rational> #f ratnum?)))
 
     (<bignum>
      ($core-scheme-type-name
-      . (<exact-integer> #f bignum?)))
+      . (<bignum> <exact-integer> #f bignum?)))
 
     (<compnum>
      ($core-scheme-type-name
-      . (<complex> #f compnum?)))
+      . (<compnum> <complex> #f compnum?)))
 
     (<cflonum>
      ($core-scheme-type-name
-      . (<complex> #f cflonum?)))
+      . (<cflonum> <complex> #f cflonum?)))
 
     (<exact-integer>
      ($core-scheme-type-name
-      . (<integer> #f exact-integer?)))
+      . (<exact-integer> <integer> #f exact-integer?)))
 
     ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
     (<integer>
      ($core-scheme-type-name
-      . (<rational> #f integer?)))
+      . (<integer> <rational> #f integer?)))
 
     ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
     (<integer-valued>
      ($core-scheme-type-name
-      . (<rational-valued> #f integer-valued?)))
+      . (<integer-valued> <rational-valued> #f integer-valued?)))
 
     (<rational>
      ($core-scheme-type-name
-      . (<rational-valued> #f rational?)))
+      . (<rational> <rational-valued> #f rational?)))
 
     (<rational-valued>
      ($core-scheme-type-name
-      . (<real> #f rational-valued?)))
+      . (<rational-valued> <real> #f rational-valued?)))
 
     (<real>
      ($core-scheme-type-name
-      . (<real-valued> #f real?)))
+      . (<real> <real-valued> #f real?)))
 
     (<real-valued>
      ($core-scheme-type-name
-      . (<complex> #f real-valued?)))
+      . (<real-valued> <complex> #f real-valued?)))
 
     (<complex>
      ($core-scheme-type-name
-      . (<number> #f complex?)))
+      . (<complex> <number> #f complex?)))
 
     (<number>
      ($core-scheme-type-name
-      . (<top> #f number?)))
+      . (<number> <top> #f number?)))
 
 ;;; --------------------------------------------------------------------
 ;;; compound types
 
     (<string>
      ($core-scheme-type-name
-      . (<top> string string?)))
+      . (<string> <top> string string?)))
 
     (<vector>
      ($core-scheme-type-name
-      . (<top> vector vector?)))
+      . (<vector> <top> vector vector?)))
 
     (<pair>
      ($core-scheme-type-name
-      . (<top> cons pair?
-	       ((car		. car)
-		(cdr		. cdr)))))
+      . (<pair> <top> cons pair?
+		((car		. car)
+		 (cdr		. cdr)))))
 
     (<list>
      ($core-scheme-type-name
-      . (<top> list list?)))
+      . (<list> <top> list list?)))
 
     (<bytevector>
      ($core-scheme-type-name
-      . (<top> make-bytevector bytevector?)))
+      . (<bytevector> <top> make-bytevector bytevector?)))
 
     (<hashtable>
      ($core-scheme-type-name
-      . (<top> #f hashtable?)))
+      . (<hashtable> <top> #f hashtable?)))
 
     (<hashtable-eq>
      ($core-scheme-type-name
-      . (<hashtable> make-eq-hashtable hashtable?)))
+      . (<hashtable-eq> <hashtable> make-eq-hashtable hashtable?)))
 
     (<hashtable-eqv>
      ($core-scheme-type-name
-      . (<hashtable> make-eqv-hashtable hashtable?)))
+      . (<hashtable-eqv> <hashtable> make-eqv-hashtable hashtable?)))
 
     (<hashtable-equal>
      ($core-scheme-type-name
-      . (<hashtable> make-hashtable hashtable?)))
+      . (<hashtable-equal> <hashtable> make-hashtable hashtable?)))
 
 ;;; --------------------------------------------------------------------
 ;;; records and structs
 
     (<struct>
      ($core-scheme-type-name
-      . (<top> #f struct?)))
+      . (<struct> <top> #f struct?)))
 
     (<struct-type-descriptor>
      ($core-scheme-type-name
-      . (<struct> make-struct-type struct-type-descriptor?)))
+      . (<struct-type-descriptor> <struct> make-struct-type struct-type-descriptor?)))
 
     (<record>
      ($core-scheme-type-name
-      . (<struct> #f record?)))
+      . (<record> <struct> #f record?)))
 
     (<record-type-descriptor>
      ($core-scheme-type-name
-      . (<struct> make-record-type-descriptor record-type-descriptor?)))
+      . (<record-type-descriptor> <struct> make-record-type-descriptor record-type-descriptor?)))
 
     (<record-constructor-descriptor>
      ($core-scheme-type-name
-      . (<struct> make-record-constructor-descriptor record-constructor-descriptor?)))
+      . (<record-constructor-descriptor> <struct> make-record-constructor-descriptor record-constructor-descriptor?)))
 
     (<condition>
      ($core-scheme-type-name
-      . (<record> #f condition?
-		  ((print	. print-condition)))))
+      . (<condition> <record> #f condition?
+		     ((print	. print-condition)))))
 
     (<compound-condition>
      ($core-scheme-type-name
-      . (<condition> condition compound-condition?)))
+      . (<compound-condition> <condition> condition compound-condition?)))
 
 ;;; --------------------------------------------------------------------
 ;;; input/output ports
 
     (<port>
      ($core-scheme-type-name
-      . (<top> #f port?)))
+      . (<port> <top> #f port?)))
 
     (<input-port>
      ($core-scheme-type-name
-      . (<port> #f input-port?)))
+      . (<input-port> <port> #f input-port?)))
 
     (<output-port>
      ($core-scheme-type-name
-      . (<port> #f output-port?)))
+      . (<output-port> <port> #f output-port?)))
 
     (<input/output-port>
      ($core-scheme-type-name
-      . (<port> #f input/output-port?)))
+      . (<input/output-port> <port> #f input/output-port?)))
 
     (<textual-port>
      ($core-scheme-type-name
-      . (<port> #f textual-port?)))
+      . (<textual-port> <port> #f textual-port?)))
 
     (<binary-port>
      ($core-scheme-type-name
-      . (<port> #f binary-port?)))
+      . (<binary-port> <port> #f binary-port?)))
 
     (<textual-input-port>
      ($core-scheme-type-name
-      . (<input-port> #f textual-input-port?)))
+      . (<textual-input-port> <input-port> #f textual-input-port?)))
 
     (<textual-output-port>
      ($core-scheme-type-name
-      . (<output-port> #f textual-output-port?)))
+      . (<textual-output-port> <output-port> #f textual-output-port?)))
 
     (<textual-input/output-port>
      ($core-scheme-type-name
-      . (<input/output-port> #f textual-input/output-port?)))
+      . (<textual-input/output-port> <input/output-port> #f textual-input/output-port?)))
 
     (<binary-input-port>
      ($core-scheme-type-name
-      . (<input-port> #f binary-input-port?)))
+      . (<binary-input-port> <input-port> #f binary-input-port?)))
 
     (<binary-output-port>
      ($core-scheme-type-name
-      . (<output-port> #f binary-output-port?)))
+      . (<binary-output-port> <output-port> #f binary-output-port?)))
 
     (<binary-input/output-port>
      ($core-scheme-type-name
-      . (<input/output-port> #f binary-input/output-port?)))
+      . (<binary-input/output-port> <input/output-port> #f binary-input/output-port?)))
 
     ))
 
@@ -2364,6 +2366,8 @@
     (lambda						v r ba se ne)
     (lambda*					v $language)
     (case-lambda*				v $language)
+    (named-lambda*				v $language)
+    (named-case-lambda*				v $language)
     (case-define				v $language)
     (case-define*				v $language)
     (and					v r ba se ne)

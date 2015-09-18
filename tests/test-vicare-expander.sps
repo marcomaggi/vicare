@@ -2352,6 +2352,331 @@
   #t)
 
 
+(parametrise ((check-test-name	'named-lambda-star))
+
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
+
+;;; --------------------------------------------------------------------
+;;; without predicates
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ()
+	    123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name (a)
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name (a b c)
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name rest
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name (a . rest)
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name (a b . rest)
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name (a b c . rest)
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, list spec, without retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?})
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?} {b fixnum?} {c fixnum?})
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name {args fixnum?}
+	    (vector 123 args)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?} . {rest fixnum?})
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?} {b fixnum?} . {rest fixnum?})
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?} {b fixnum?} {c fixnum?} . {rest fixnum?})
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?} {b fixnum?} {c fixnum?})
+	    (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(the-name (#\5)))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, with retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ fixnum?})
+	    123))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ vector?} {a fixnum?})
+	    (vector 123 a)))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?})
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ vector?} . {rest fixnum?})
+	    (vector 123 rest)))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ vector?} {a fixnum?} . {rest fixnum?})
+	    (vector 123 a rest)))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ vector?} {a fixnum?} {b fixnum?} . {rest fixnum?})
+	    (vector 123 a b rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . {rest fixnum?})
+	    (vector 123 a b c rest)))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-argument-violation
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({a fixnum?} {b fixnum?} {c fixnum?})
+	    (vector 123 a b c)))
+	(doit 4 #\5 6))
+    => '(the-name (#\5)))
+
+  (check-for-procedure-signature-return-value-violation
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
+	    (vector 123 a b c)))
+	(doit 4 5 6))
+    => '(the-name 1 list? #(123 4 5 6)))
+
+;;; --------------------------------------------------------------------
+;;; multiple retval predicates
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ fixnum? string? char?})
+	    (values 1 "2" #\3)))
+	(doit))
+    => 1 "2" #\3)
+
+  (check-for-procedure-signature-return-value-violation
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ fixnum? string? char?})
+	    (values 1 'a #\3)))
+	(doit))
+    => '(the-name 2 string? a))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ()
+	    __who__))
+	(doit))
+    => 'the-name)
+
+  (check
+      (let ()
+	(define doit
+	  (named-lambda* the-name ({_ symbol?})
+	    __who__))
+	(doit))
+    => 'the-name)
+
+;;; --------------------------------------------------------------------
+;;; compound predicates
+
+;;; argument
+
+  (check
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({a (or integer? string?)})
+	    a))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-signature-argument-violation
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({a (or integer? string?)})
+	    a))
+	(doit 1.2))
+    => '(the-name 1 (or integer? string?) 1.2))
+
+;;; rest argument
+
+  (check
+      (internal-body
+	(define doit
+	  (named-lambda* the-name (a {b (or integer? string?)})
+	    b))
+	(values (doit 1 123) (doit 1 "B")))
+    => 123 "B")
+
+  (check-for-procedure-signature-argument-violation
+      (internal-body
+	(define doit
+	  (named-lambda* the-name (a {b (or integer? string?)})
+	    b))
+	(doit 1 1.2))
+    => '(the-name 2 (or integer? string?) 1.2))
+
+;;; single return value
+
+  (check
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({_ (or integer? string?)} a)
+	    a))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-signature-return-value-violation
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({_ (or integer? string?)} a)
+	    a))
+	(doit 1.2))
+    => '(the-name 1 (or integer? string?) 1.2))
+
+;;; multiple return values
+
+  (check
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({_ (or integer? string?) (or symbol? string?)} a b)
+	    (values a b)))
+	(let-values (((a b) (doit 123 'ciao))
+		     ((c d) (doit "B" "C")))
+	  (values a b c d)))
+    => 123 'ciao "B" "C")
+
+  (check-for-procedure-signature-return-value-violation
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({_ (or integer? string?) (or symbol? string?)} a b)
+	    (values a b)))
+	(doit 1.2 'ciao))
+    => '(the-name 1 (or integer? string?) 1.2))
+
+  (check-for-procedure-signature-return-value-violation
+      (internal-body
+	(define doit
+	  (named-lambda* the-name ({_ (or integer? string?) (or symbol? string?)} a b)
+	    (values a b)))
+	(doit 12 4))
+    => '(the-name 2 (or symbol? string?) 4))
+
+  #t)
+
+
 (parametrise ((check-test-name	'case-lambda-star))
 
   (define (list-of-fixnums? obj)
@@ -2709,6 +3034,367 @@
 	     (values a b))))
 	(doit 12 4))
     => '(_ 2 (or symbol? string?) 4))
+
+  #t)
+
+
+(parametrise ((check-test-name	'named-case-lambda-star))
+
+  (define (list-of-fixnums? obj)
+    (and (list? obj)
+	 (for-all fixnum? obj)))
+
+;;; --------------------------------------------------------------------
+;;; without predicates
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (()
+	     123)))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a)
+	     (vector 123 a))))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a b c)
+	     (vector 123 a b c))))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (rest
+	     (vector 123 rest))))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a . rest)
+	     (vector 123 a rest))))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a b . rest)
+	     (vector 123 a b rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a b c . rest)
+	     (vector 123 a b c rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, list spec, without retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?})
+	     (vector 123 a))))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?} {b fixnum?} {c fixnum?})
+	     (vector 123 a b c))))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    ({args fixnum?}
+	     (vector 123 args))))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?} . {rest fixnum?})
+	     (vector 123 a rest))))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?} {b fixnum?} . {rest fixnum?})
+	     (vector 123 a b rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?} {b fixnum?} {c fixnum?} . {rest fixnum?})
+	     (vector 123 a b c rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-signature-argument-violation
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?} {b fixnum?} {c fixnum?})
+	     (vector 123 a b c))))
+	(doit 4 #\5 6))
+    => '(the-name 2 fixnum? #\5))
+
+;;; --------------------------------------------------------------------
+;;; with arg predicates, with retval predicate
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ fixnum?})
+	     123)))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ vector?} {a fixnum?})
+	     (vector 123 a))))
+	(doit 456))
+    => '#(123 456))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?})
+	     (vector 123 a b c))))
+	(doit 4 5 6))
+    => '#(123 4 5 6))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ vector?} . {rest fixnum?})
+	     (vector 123 rest))))
+	(doit 4 5 6))
+    => '#(123 (4 5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ vector?} {a fixnum?} . {rest fixnum?})
+	     (vector 123 a rest))))
+	(doit 4 5 6))
+    => '#(123 4 (5 6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ vector?} {a fixnum?} {b fixnum?} . {rest fixnum?})
+	     (vector 123 a b rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 (6)))
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . {rest fixnum?})
+	     (vector 123 a b c rest))))
+	(doit 4 5 6))
+    => '#(123 4 5 6 ()))
+
+  (check-for-procedure-signature-argument-violation
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a fixnum?} {b fixnum?} {c fixnum?})
+	     (vector 123 a b c))))
+	(doit 4 #\5 6))
+    => '(the-name 2 fixnum? #\5))
+
+  (check-for-procedure-signature-return-value-violation
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
+	     (vector 123 a b c))))
+	(doit 4 5 6))
+    => '(the-name 1 list? #(123 4 5 6)))
+
+;;; --------------------------------------------------------------------
+;;; multiple retval predicates
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ fixnum? string? char?})
+	     (values 1 "2" #\3))))
+	(doit))
+    => 1 "2" #\3)
+
+  (check-for-procedure-signature-return-value-violation
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ fixnum? string? char?})
+	     (values 1 'a #\3))))
+	(doit))
+    => '(the-name 2 string? a))
+
+;;; --------------------------------------------------------------------
+;;; non-hygienic bindings
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (()
+	     __who__)))
+	(doit))
+    => 'the-name)
+
+  (check
+      (let ()
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ symbol?})
+	     __who__)))
+	(doit))
+    => 'the-name)
+
+;;; --------------------------------------------------------------------
+;;; compound predicates
+
+;;; argument
+
+  (check
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a (or integer? string?)})
+	     a)))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-signature-argument-violation
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({a (or integer? string?)})
+	     a)))
+	(doit 1.2))
+    => '(the-name 1 (or integer? string?) 1.2))
+
+;;; rest argument
+
+  (check
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a {b (or integer? string?)})
+	     b)))
+	(values (doit 1 123) (doit 1 "B")))
+    => 123 "B")
+
+  (check-for-procedure-signature-argument-violation
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    ((a {b (or integer? string?)})
+	     b)))
+	(doit 1 1.2))
+    => '(the-name 2 (or integer? string?) 1.2))
+
+;;; single return value
+
+  (check
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ (or integer? string?)} a)
+	     a)))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-signature-return-value-violation
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ (or integer? string?)} a)
+	     a)))
+	(doit 1.2))
+    => '(the-name 1 (or integer? string?) 1.2))
+
+;;; multiple return values
+
+  (check
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ (or integer? string?) (or symbol? string?)} a b)
+	     (values a b))))
+	(let-values (((a b) (doit 123 'ciao))
+		     ((c d) (doit "B" "C")))
+	  (values a b c d)))
+    => 123 'ciao "B" "C")
+
+  (check-for-procedure-signature-return-value-violation
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ (or integer? string?) (or symbol? string?)} a b)
+	     (values a b))))
+	(doit 1.2 'ciao))
+    => '(the-name 1 (or integer? string?) 1.2))
+
+  (check-for-procedure-signature-return-value-violation
+      (internal-body
+	(define doit
+	  (named-case-lambda* the-name
+	    (({_ (or integer? string?) (or symbol? string?)} a b)
+	     (values a b))))
+	(doit 12 4))
+    => '(the-name 2 (or symbol? string?) 4))
 
   #t)
 

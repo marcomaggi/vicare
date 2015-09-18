@@ -521,15 +521,16 @@
   ;;<string>, et cetera.
   ;;
   (let* ((bindval		(syntactic-binding-descriptor.value descriptor))
-	 (parent-id		(cond ((car bindval)
+	 (type-id               (core-prim-id (car bindval)))
+	 (parent-id		(cond ((list-ref bindval 1)
 				       => core-prim-id)
 				      (else #f)))
-	 (constructor.sexp	(bless (list-ref bindval 1)))
-	 (type-predicate.sexp	(bless (list-ref bindval 2)))
-	 (methods-table		(%alist-ref-or-null bindval 3)))
+	 (constructor.sexp	(bless (list-ref bindval 2)))
+	 (type-predicate.sexp	(bless (list-ref bindval 3)))
+	 (methods-table		(%alist-ref-or-null bindval 4)))
     (set-car! descriptor '$scheme-type-name)
     (set-cdr! descriptor
-	      (make-scheme-type-spec parent-id constructor.sexp type-predicate.sexp methods-table))))
+	      (make-scheme-type-spec type-id parent-id constructor.sexp type-predicate.sexp methods-table))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a core
 ;;built-in object-type descriptor established by the boot image.

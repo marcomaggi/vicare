@@ -143,6 +143,8 @@
     ((case-define*)			case-define*-macro)
     ((lambda*)				lambda*-macro)
     ((case-lambda*)			case-lambda*-macro)
+    ((named-lambda*)			named-lambda*-macro)
+    ((named-case-lambda*)		named-case-lambda*-macro)
 
     ((trace-lambda)			trace-lambda-macro)
     ((trace-define)			trace-define-macro)
@@ -1989,11 +1991,13 @@
     ))
 
 
-;;;; non-core macro: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
+;;;; non-core macro: DEFINE*, LAMBDA*, NAMED-LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*, NAMED-CASE-LAMBDA*
 
 (module (lambda*-macro
+	 named-lambda*-macro
 	 define*-macro
 	 case-lambda*-macro
+	 named-case-lambda*-macro
 	 case-define*-macro)
 
   (define-record argument-validation-spec
@@ -2190,7 +2194,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (lambda*-macro)
+  (module (lambda*-macro named-lambda*-macro)
 
     (define (lambda*-macro expr.stx)
       ;;Transformer  function  used  to  expand  Vicare's  LAMBDA*  macros  from  the
@@ -2199,20 +2203,44 @@
       ;;
       (define (%synner message subform)
 	(syntax-violation 'lambda* message expr.stx subform))
+      (define who.id
+	(underscore-id))
       (bless
        (syntax-match expr.stx (brace)
 	 ;;Ret-pred with list spec.
 	 ((_ ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	  (underscore-id? ?underscore)
-	  (%generate-lambda-output-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-lambda-output-form/with-ret-pred who.id (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
 
 	 ;;No ret-pred.
 	 ((_ ?formals ?body0 ?body* ...)
-	  (%generate-lambda-output-form/without-ret-pred ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-lambda-output-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) %synner))
 
 	 )))
 
-    (define (%generate-lambda-output-form/without-ret-pred predicate-formals.stx body*.stx synner)
+    (define (named-lambda*-macro expr.stx)
+      ;;Transformer function  used to expand  Vicare's NAMED-LAMBDA* macros  from the
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
+      ;;syntax object that must be further expanded.
+      ;;
+      (define (%synner message subform)
+	(syntax-violation 'named-lambda* message expr.stx subform))
+      (bless
+       (syntax-match expr.stx (brace)
+	 ;;Ret-pred with list spec.
+	 ((_ ?who ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	  (and (underscore-id? ?underscore)
+	       (identifier? ?who))
+	  (%generate-lambda-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+
+	 ;;No ret-pred.
+	 ((_ ?who ?formals ?body0 ?body* ...)
+	  (identifier? ?who)
+	  (%generate-lambda-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
+
+	 )))
+
+    (define (%generate-lambda-output-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
       ;;LAMBDA syntax use.
       ;;
@@ -2223,7 +2251,7 @@
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(lambda ,standard-formals.stx
 	   (fluid-let-syntax
-	       ((__who__ (identifier-syntax (quote _))))
+	       ((__who__ (identifier-syntax (quote ,who.id))))
 	     ,(if (option.enable-arguments-validation?)
 		  ;;With validation.
 		  `(begin
@@ -2232,7 +2260,7 @@
 		;;Without validation.
 		`(begin . ,body*.stx))))))
 
-    (define (%generate-lambda-output-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+    (define (%generate-lambda-output-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
       ;;LAMBDA syntax use.
       ;;
@@ -2243,7 +2271,7 @@
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(lambda ,standard-formals.stx
 	   (fluid-let-syntax
-	       ((__who__ (identifier-syntax (quote _))))
+	       ((__who__ (identifier-syntax (quote ,who.id))))
 	     ,(if (option.enable-arguments-validation?)
 		  ;;With validation.
 		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
@@ -2265,7 +2293,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (case-lambda*-macro)
+  (module (case-lambda*-macro named-case-lambda*-macro)
 
     (define (case-lambda*-macro expr.stx)
       ;;Transformer function  used to  expand Vicare's  CASE-LAMBDA* macros  from the
@@ -2274,28 +2302,47 @@
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-lambda* message expr.stx subform))
+      (define who.id
+	(underscore-id))
       (syntax-match expr.stx ()
 	((_ ?clause0 ?clause* ...)
 	 (bless
 	  `(case-lambda
 	    ,@(map (lambda (clause.stx)
-		     (%generate-case-lambda-form clause.stx %synner))
+		     (%generate-case-lambda-form who.id clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
 	))
 
-    (define (%generate-case-lambda-form clause.stx synner)
+    (define (named-case-lambda*-macro expr.stx)
+      ;;Transformer function  used to expand Vicare's  NAMED-CASE-LAMBDA* macros from
+      ;;the top-level built in environment.  Expand the contents of EXPR.STX.  Return
+      ;;a syntax object that must be further expanded.
+      ;;
+      (define (%synner message subform)
+	(syntax-violation 'case-lambda* message expr.stx subform))
+      (syntax-match expr.stx ()
+	((_ ?who ?clause0 ?clause* ...)
+	 (identifier? ?who)
+	 (bless
+	  `(case-lambda
+	    ,@(map (lambda (clause.stx)
+		     (%generate-case-lambda-form ?who clause.stx %synner))
+		(cons ?clause0 ?clause*)))))
+	))
+
+    (define (%generate-case-lambda-form who.id clause.stx synner)
       (syntax-match clause.stx (brace)
 	;;Ret-pred with list spec.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (underscore-id? ?underscore)
-	 (%generate-case-lambda-clause-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
+	 (%generate-case-lambda-clause-form/with-ret-pred who.id (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-lambda-clause-form/without-ret-pred ?formals (cons ?body0 ?body*) synner))
+	 (%generate-case-lambda-clause-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) synner))
 	))
 
-    (define (%generate-case-lambda-clause-form/without-ret-pred predicate-formals.stx body*.stx synner)
+    (define (%generate-case-lambda-clause-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
       ;;CASE-LAMBDA clause.
       ;;
@@ -2306,7 +2353,7 @@
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
 	  (fluid-let-syntax
-	      ((__who__ (identifier-syntax (quote _))))
+	      ((__who__ (identifier-syntax (quote ,who.id))))
 	    ,(if (option.enable-arguments-validation?)
 		 ;;With validation.
 		 `(begin
@@ -2315,7 +2362,7 @@
 	       ;;Without validation.
 	       `(begin . ,body*.stx))))))
 
-    (define (%generate-case-lambda-clause-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+    (define (%generate-case-lambda-clause-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
       ;;CASE-LAMBDA clause.
       ;;
@@ -2326,7 +2373,7 @@
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
 	  (fluid-let-syntax
-	      ((__who__ (identifier-syntax (quote _))))
+	      ((__who__ (identifier-syntax (quote ,who.id))))
 	    ,(if (option.enable-arguments-validation?)
 		 ;;With validation
 		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))

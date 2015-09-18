@@ -158,7 +158,7 @@
 
   (check-for-procedure-signature-argument-violation
       (new <boolean> 123)
-    => '(_ 1 boolean? 123))
+    => '(<boolean> 1 boolean? 123))
 
   #t)
 

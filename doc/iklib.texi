@@ -786,6 +786,7 @@ selects predicates to validate the values returned by the last
 @c ------------------------------------------------------------
 
 @deffn Syntax lambda* @meta{pred-formals} @metao{body} @meta{body} @dots{}
+@deffnx Syntax named-lambda* @meta{who} @meta{pred-formals} @metao{body} @meta{body} @dots{}
 Like the standard @func{lambda} and additionally allow the specification
 of predicate functions to validate the arguments and the return value.
 The formal arguments are handled according to the following rules:
@@ -821,8 +822,11 @@ exception is raised using a compound condition object with component of
 type @condition{expression-return-value-violation}.
 @end itemize
 
-In addition the fluid identifier syntax @code{__who__} is bound to the
-quoted symbol @code{_}.
+When using @syntax{lambda*}, in addition the behaviour of
+@syntax{lambda}, the fluid identifier syntax @code{__who__} is bound to
+the quoted symbol @code{_}; the @syntax{named-lambda*} variant allows to
+specify an identifier @meta{who} to be used as value for the
+@syntax{__who__} fluid syntax.
 
 Usage examples:
 
@@ -903,13 +907,17 @@ Function with multiple validated return values:
 @c ------------------------------------------------------------
 
 @deffn Syntax case-lambda* @meta{pred-cl-clause} @dots{}
+@deffnx Syntax named-case-lambda* @meta{who} @meta{pred-cl-clause} @dots{}
 Like the standard @func{case-lambda} and additionally allow the
 specification of logic predicates to validate the arguments and the
 return values.  Clause by clause the formals are handled as explained
 for @func{lambda*}.
 
-In addition the fluid identifier syntax @code{__who__} is bound to the
-quoted symbol @code{_}.
+When using @syntax{case-lambda*}, in addition to the behaviour of
+@syntax{lambda}, the fluid identifier syntax @code{__who__} is bound to
+the quoted symbol @code{_}; the @syntax{named-case-lamba*} variant
+allows to specify an identifier @meta{who} to be used as value for the
+@syntax{__who__} fluid syntax.
 
 Usage examples:
 
