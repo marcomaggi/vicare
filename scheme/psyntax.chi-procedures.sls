@@ -1923,6 +1923,13 @@
     ;;       ?body ...
     ;;       (tag-assert-and-return (<symbol>) ?last-body)))
     ;;
+    (import CORE-MACRO-TRANSFORMER) ;for PUSH-FLUID-SYNTAX
+    (define %synner
+      (case-lambda
+       ((message)
+	(%synner message #f))
+       ((message subform)
+	(syntax-violation __who__ message input-form.stx subform))))
     (receive (standard-formals.stx lambda-signature)
 	(parse-tagged-lambda-proto-syntax formals.stx input-form.stx)
       (define formals-signature.tags
@@ -1937,9 +1944,9 @@
       (syntax-match standard-formals.stx ()
 	;;Without rest argument.
 	((?arg* ...)
-	 (let* ((lex*        (map generate-lexical-gensym ?arg*))
-		(lab*        (map generate-label-gensym       ?arg*))
-		(lexenv.run^ (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
+	 (let* ((lex*       (map generate-lexical-gensym ?arg*))
+		(lab*       (map generate-label-gensym       ?arg*))
+		(lexenv.run (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
 	   (define validation*.stx
 	     (if (lambda-clause-attributes:safe-formals? attributes.sexp)
 		 (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
@@ -1954,13 +1961,24 @@
 		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			   (%build-retvals-validation-form has-arguments-validators?
 							   (lambda-signature-retvals lambda-signature)
-							   who.id body-form*.stx)
-			 (%build-no-retvals-validation-form who.id body-form*.stx)))))
+							   body-form*.stx)
+			 body-form*.stx))))
 	   ;;Here  we  know that  the  formals  signature is  a  proper  list of  tag
 	   ;;identifiers with the same structure of FORMALS.STX.
 	   (map set-label-tag! ?arg* lab* formals-signature.tags)
-	   (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
-	     (values lex* (%override-retvals-singature lambda-signature body.psi) body.psi))))
+	   (receive (lexenv.run lexenv.expand)
+	       ;;It is  very important  to do  this only  if there  is a  WHO.ID: the
+	       ;;internal syntax INTERNAL-LAMBDA  sets WHO.ID to false, so  we do not
+	       ;;bind  "__who__"  in  its  body.   We  will  go  into  infinite  loop
+	       ;;otherwise, because  IDENTIFIER-SYNTAX expands to  an INTERNAL-LAMBDA
+	       ;;use.
+	       (if who.id
+		   (push-fluid-syntax (core-prim-id '__who__)
+				      (bless `(identifier-syntax (quote ,who.id)))
+				      lexenv.run lexenv.expand %synner)
+		 (values lexenv.run lexenv.expand))
+	     (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run lexenv.expand)))
+	       (values lex* (%override-retvals-singature lambda-signature body.psi) body.psi)))))
 
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
@@ -1968,7 +1986,7 @@
 		(lab*         (map generate-label-gensym       ?arg*))
 		(rest-lex     (generate-lexical-gensym ?rest-arg))
 		(rest-lab     (generate-label-gensym       ?rest-arg))
-		(lexenv.run^  (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
+		(lexenv.run   (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
 							       (cons rest-lex lex*)
 							       lexenv.run)))
 	   (receive (arg-tag* rest-tag)
@@ -1988,20 +2006,30 @@
 			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			     (%build-retvals-validation-form has-arguments-validators?
 							     (lambda-signature-retvals lambda-signature)
-							     who.id body-form*.stx)
-			   (%build-no-retvals-validation-form who.id body-form*.stx)))))
+							     body-form*.stx)
+			   body-form*.stx))))
 	     ;;Here we know  that the formals signature is an  improper list with the
 	     ;;same structure of FORMALS.STX.
 	     (map set-label-tag! ?arg* lab* arg-tag*)
 	     (set-label-tag! ?rest-arg rest-lab rest-tag)
-	     (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
-	       (values (append lex* rest-lex) ;yes, this builds an improper list
-		       (%override-retvals-singature lambda-signature body.psi)
-		       body.psi)))))
+	     (receive (lexenv.run lexenv.expand)
+		 ;;It is  very important to  do this only if  there is a  WHO.ID: the
+		 ;;internal syntax INTERNAL-LAMBDA sets WHO.ID to false, so we do not
+		 ;;bind  "__who__"  in its  body.   We  will  go into  infinite  loop
+		 ;;otherwise, because IDENTIFIER-SYNTAX expands to an INTERNAL-LAMBDA
+		 ;;use.
+		 (if who.id
+		     (push-fluid-syntax (core-prim-id '__who__)
+					(bless `(identifier-syntax (quote ,who.id)))
+					lexenv.run lexenv.expand %synner)
+		   (values lexenv.run lexenv.expand))
+	       (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run lexenv.expand)))
+		 (values (append lex* rest-lex) ;yes, this builds an improper list
+			 (%override-retvals-singature lambda-signature body.psi)
+			 body.psi))))))
 
 	(_
-	 (syntax-violation __who__
-	   "invalid lambda formals syntax" input-form.stx formals.stx)))))
+	 (%synner "invalid lambda formals syntax" formals.stx)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2064,7 +2092,7 @@
 	   (list (bless
 		  `(tag-procedure-argument-validator ,rest-tag ,rest-arg))))))
 
-  (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature who.id body-form*.stx)
+  (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of
     ;;body forms.
     ;;
@@ -2075,31 +2103,25 @@
     ;;The  argument HAS-ARGUMENTS-VALIDATORS?   is  required  to avoid  INTERNAL-BODY
     ;;wrapping when not needed; this gains a bit of speed when expanding the body.
     ;;
-    (define new-body-form*.stx
-      (cond (has-arguments-validators?
-	     (if (retvals-signature-fully-unspecified? retvals-signature)
-		 ;;The number and type of return values is unknown.
-		 `((internal-body . ,body-form*.stx))
-	       (receive (head*.stx last.stx)
-		   (proper-list->head-and-last body-form*.stx)
-		 `((internal-body
-		     ,@head*.stx
-		     (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx))))))
-	    (else
-	     (if (retvals-signature-fully-unspecified? retvals-signature)
-		 ;;The number and type of return values is unknown.
-		 body-form*.stx
-	       (receive (head*.stx last.stx)
-		   (proper-list->head-and-last body-form*.stx)
-		 (append head*.stx
-			 `((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx))))))))
-    (%build-no-retvals-validation-form who.id new-body-form*.stx))
-
-  (define* (%build-no-retvals-validation-form who.id body-form*.stx)
-    (bless (if who.id
-	       `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,who.id))))
-		   ,@body-form*.stx))
-	     body-form*.stx)))
+    (cond (has-arguments-validators?
+	   (bless
+	    (if (retvals-signature-fully-unspecified? retvals-signature)
+		;;The number and type of return values is unknown.
+		`((internal-body . ,body-form*.stx))
+	      (receive (head*.stx last.stx)
+		  (proper-list->head-and-last body-form*.stx)
+		`((internal-body
+		    ,@head*.stx
+		    (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))
+	  (else
+	   (if (retvals-signature-fully-unspecified? retvals-signature)
+	       ;;The number and type of return values is unknown.
+	       body-form*.stx
+	     (receive (head*.stx last.stx)
+		 (proper-list->head-and-last body-form*.stx)
+	       (append head*.stx
+		       (bless
+			`((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))))
 
   #| end of module: CHI-LAMBDA-CLAUSES |# )
 
@@ -3445,7 +3467,7 @@
 ;;;; macro transformer modules
 
 (module CORE-MACRO-TRANSFORMER
-  (core-macro-transformer)
+  (core-macro-transformer push-fluid-syntax)
   (include "psyntax.chi-procedures.core-macro-transformers.scm" #t))
 
 

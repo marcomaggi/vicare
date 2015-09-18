@@ -40,14 +40,13 @@
 	 (sys.syntax
 	  (define (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
 	    (with-who ?who
-	      (let-syntax
-		  ((SYNNER (syntax-rules ()
-			     ((_ ?message)
-			      (syntax-violation __who__ ?message ?input-form.stx))
-			     ((_ ?message ?subform)
-			      (syntax-violation __who__ ?message ?input-form.stx ?subform))
-			     )))
-		?body0 ?body ...)))))))
+	      (define SYNNER
+		(case-lambda
+		 ((message)
+		  (SYNNER message #f))
+		 ((message subform)
+		  (syntax-violation __who__ message ?input-form.stx subform))))
+	      ?body0 ?body ...))))))
     ))
 
 (module ($map-in-order
@@ -819,35 +818,39 @@
 
 ;;;; module core-macro-transformer: FLUID-LET-SYNTAX
 
-(define-core-transformer (fluid-let-syntax input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  FLUID-LET-SYNTAX syntaxes from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  ;;FLUID-LET-SYNTAX is similar,  but not equal, to LET-SYNTAX;  rather than defining
-  ;;new ?LHS bindings, it temporarily rebinds  the keywords to new transformers while
-  ;;expanding  the ?BODY  forms.   The given  ?LHS  must be  already  bound to  fluid
-  ;;syntaxes defined by DEFINE-FLUID-SYNTAX.
-  ;;
-  ;;There   are   two   differences    between   FLUID-LET-SYNTAX   and   LET-SYNTAX:
-  ;;FLUID-LET-SYNTAX must appear in expression context only; the internal ?BODY forms
-  ;;are *not* spliced in the enclosing body.
-  ;;
-  ;;NOTE We would truly like to splice  the inner body forms in the surrounding body,
-  ;;so that  this syntax could  act like LET-SYNTAX, which  is useful; but  we really
-  ;;cannot do it with this implementation of the expander algorithm.  This is because
-  ;;LET-SYNTAX both creates a new rib and adds new id/label entries to it, and pushes
-  ;;label/descriptor  entries to  the  LEXENV; instead  FLUID-LET-SYNTAX only  pushes
-  ;;entries to the LEXENV:  there is no way to keep the  fluid LEXENV entries visible
-  ;;only to a subsequence of forms in a body.  (Marco Maggi; Tue Feb 18, 2014)
-  ;;
-  (define (transformer input-form.stx)
+(module (fluid-let-syntax-transformer push-fluid-syntax)
+
+  (define-core-transformer (fluid-let-syntax input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer  function  used  to   expand  FLUID-LET-SYNTAX  syntaxes  from  the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
+    ;;context of the given LEXENV; return a PSI struct.
+    ;;
+    ;;FLUID-LET-SYNTAX is similar, but not equal, to LET-SYNTAX; rather than defining
+    ;;new  ?LHS bindings,  it temporarily  rebinds the  keywords to  new transformers
+    ;;while expanding the ?BODY forms.  The given ?LHS must be already bound to fluid
+    ;;syntaxes defined by DEFINE-FLUID-SYNTAX.
+    ;;
+    ;;There   are   two   differences  between   FLUID-LET-SYNTAX   and   LET-SYNTAX:
+    ;;FLUID-LET-SYNTAX must  appear in  expression context  only; the  internal ?BODY
+    ;;forms are *not* spliced in the enclosing body.
+    ;;
+    ;;NOTE We  would truly  like to splice  the inner body  forms in  the surrounding
+    ;;body, so that  this syntax could act  like LET-SYNTAX, which is  useful; but we
+    ;;really cannot do  it with this implementation of the  expander algorithm.  This
+    ;;is because LET-SYNTAX both  creates a new rib and adds  new id/label entries to
+    ;;it, and pushes label/descriptor entries to the LEXENV; instead FLUID-LET-SYNTAX
+    ;;only pushes  entries to the LEXENV:  there is no  way to keep the  fluid LEXENV
+    ;;entries visible only  to a subsequence of  forms in a body.   (Marco Maggi; Tue
+    ;;Feb 18, 2014)
+    ;;
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (unless (valid-bound-ids? ?lhs*)
 	 (error-invalid-formals-syntax input-form.stx ?lhs*))
-       (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
+       (let* ((fluid-label* (map (lambda (lhs)
+				   (%lookup-binding-in-lexenv.run lhs lexenv.run %synner))
+			      ?lhs*))
 	      (binding*     (map (lambda (rhs.stx)
 				   (with-exception-handler/input-form
 				       rhs.stx
@@ -859,21 +862,44 @@
 			    (append entry* lexenv.run)
 			    (append entry* lexenv.expand))))))
 
-  (define (%lookup-binding-in-lexenv.run lhs)
+  (define (push-fluid-syntax lhs.id rhs.stx lexenv.run lexenv.expand synner)
+    ;;Push on the LEXENVs the result of defining the single syntactic binding for the
+    ;;identifier LHS.ID,  having RHS.STX as  right-hand side expression.   Return two
+    ;;values: the updated LEXENV.RUN and LEXENV.EXPAND.
+    ;;
+    ;;This  function has  been especially  thought to  push new  definitions for  the
+    ;;"__who__" fluid syntax.  As example, we can use it as follows:
+    ;;
+    ;;   (receive (lexenv.run^ lexenv.expand^)
+    ;;       (push-fluid-syntax (core-prim-id '__who__)
+    ;;                          (bless `(identifier-syntax (quote ,who.id)))
+    ;;                          lexenv.run lexenv.expand)
+    ;;     ---)
+    ;;
+    (let* ((fluid-label  (%lookup-binding-in-lexenv.run lhs.id lexenv.run synner))
+	   (binding      (with-exception-handler/input-form
+			     rhs.stx
+			   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
+						   lexenv.run)))
+	   (entry        (cons fluid-label binding)))
+      (values (cons entry lexenv.run)
+	      (cons entry lexenv.expand))))
+
+  (define (%lookup-binding-in-lexenv.run lhs lexenv.run synner)
     ;;Search the binding of the identifier LHS retrieving its label; if such label is
     ;;present and its  associated syntactic binding descriptor from  LEXENV.RUN is of
     ;;type "fluid  syntax": return  the associated  fluid label that  can be  used to
     ;;rebind the identifier.
     ;;
     (let* ((label    (or (id->label lhs)
-			 (%synner "unbound identifier" lhs)))
+			 (synner "unbound identifier" lhs)))
 	   (binding  (label->syntactic-binding-descriptor/no-indirection label lexenv.run)))
       (cond ((fluid-syntax-binding-descriptor? binding)
 	     (fluid-syntax-binding-descriptor.fluid-label binding))
 	    (else
-	     (%synner "not a fluid identifier" lhs)))))
+	     (synner "not a fluid identifier" lhs)))))
 
-  (transformer input-form.stx))
+  #| end of module |# )
 
 
 ;;;; module core-macro-transformer: FOREIGN-CALL
