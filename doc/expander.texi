@@ -1695,12 +1695,12 @@ the boot image has descriptor with one of the formats:
 @noindent
 where the values are:
 
-@table @meta
-@item rtd-name
+@table @asis
+@item @meta{rtd-name}
 A symbol representing the public name of the syntactic identifier to
 which the record--type descriptor is bound.
 
-@item rcd-name
+@item @meta{rcd-name}
 A symbol representing the public name of the syntactic identifier to
 which the default record--constructor descriptor is bound.
 @end table
@@ -1726,28 +1726,28 @@ the boot image has descriptor with one of the formats:
 @noindent
 where the values are:
 
-@table @meta
-@item rtd-name
+@table @asis
+@item @meta{rtd-name}
 A symbol representing the public name of the syntactic identifier to
 which the record--type descriptor is bound.
 
-@item rcd-name
+@item @meta{rcd-name}
 A symbol representing the public name of the syntactic identifier to
 which the default record--constructor descriptor is bound.
 
-@item parent-name
+@item @meta{parent-name}
 @false{} or a symbol representing the public name of the syntactic
 identifier bound to the parent's record-type.
 
-@item constructor-name
+@item @meta{constructor-name}
 A symbol representing the public name of the syntactic identifier to
 which the default constructor is bound.
 
-@item type-predicate-name
+@item @meta{type-predicate-name}
 A symbol representing the public name of the syntactic identifier to
 which the type predicate is bound.
 
-@item accessors-alist
+@item @meta{accessors-alist}
 An alist having: as keys symbols representing field names; as values
 symbols representing the public name of the syntactic identifier to
 which the safe field accessor is bound.
@@ -1772,28 +1772,28 @@ the formats:
 @noindent
 where the values are:
 
-@table @meta
-@item rtd-name
+@table @asis
+@item @meta{rtd-name}
 A symbol representing the public name of the syntactic identifier to
 which the record--type descriptor is bound.
 
-@item rcd-name
+@item @meta{rcd-name}
 A symbol representing the public name of the syntactic identifier to
 which the default record--constructor descriptor is bound.
 
-@item parent-name
+@item @meta{parent-name}
 @false{} or a symbol representing the public name of the syntactic
 identifier bound to the parent's record-type.
 
-@item constructor-name
+@item @meta{constructor-name}
 A symbol representing the public name of the syntactic identifier to
 which the default constructor is bound.
 
-@item type-predicate-name
+@item @meta{type-predicate-name}
 A symbol representing the public name of the syntactic identifier to
 which the type predicate is bound.
 
-@item accessors-alist
+@item @meta{accessors-alist}
 An alist having: as keys symbols representing field names; as values
 symbols representing the public name of the syntactic identifier to
 which the safe field accessor is bound.
