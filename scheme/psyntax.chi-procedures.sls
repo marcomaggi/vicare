@@ -1917,8 +1917,8 @@
     ;;into:
     ;;
     ;;   (lambda (a b)
-    ;;     (tag-procedure-argument-validator <fixnum> a)
-    ;;     (tag-procedure-argument-validator <string> b)
+    ;;     (validate-typed-procedure-argument <fixnum> a)
+    ;;     (validate-typed-procedure-argument <string> b)
     ;;     (internal-body
     ;;       ?body ...
     ;;       (tag-assert-and-return (<symbol>) ?last-body)))
@@ -1983,8 +1983,8 @@
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
 	 (let* ((lex*         (map generate-lexical-gensym ?arg*))
-		(lab*         (map generate-label-gensym       ?arg*))
-		(rest-lex     (generate-lexical-gensym ?rest-arg))
+		(lab*         (map generate-label-gensym   ?arg*))
+		(rest-lex     (generate-lexical-gensym     ?rest-arg))
 		(rest-lab     (generate-label-gensym       ?rest-arg))
 		(lexenv.run   (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
 							       (cons rest-lex lex*)
@@ -2061,36 +2061,31 @@
 ;;; --------------------------------------------------------------------
 
   (define (%build-formals-validation-form* arg* tag* rest-arg rest-tag)
-    ;;Build and return a list of syntax objects representing expressions like:
+    ;;Build  and  return a  list  of  syntax  objects representing  expressions  that
+    ;;validate the  arguments, excluding  the formals  in which  the tag  is "<top>",
+    ;;whose argument are always valid.  When  there is no rest argument: REST-ARG and
+    ;;REST-TAG must be #f.
     ;;
-    ;;   (tag-procedure-argument-validator ?tag ?arg)
-    ;;
-    ;;excluding the  formals in which the  tag is "<top>", whose  argument are always
-    ;;valid.  When there is no rest argument: REST-ARG and REST-TAG must be #f.
-    ;;
-    (define-syntax-rule (%recur)
-      (%build-formals-validation-form* ($cdr arg*) ($cdr tag*) rest-arg rest-tag))
-    (cond ((pair? arg*)
-	   (if (top-tag-id? ($car tag*))
-	       (%recur)
-	     (cons (bless
-		    `(tag-procedure-argument-validator ,($car tag*) ,($car arg*)))
-		   (%recur))))
-	  ;;If there  is no rest  or args  argument or the  rest or args  argument is
-	  ;;tagged as "<list>":  there is no need to include  an argument validation.
-	  ;;It is obvious that in LAMBDAs like:
-	  ;;
-	  ;;   (lambda args       123)
-	  ;;   (lambda (a . rest) 123)
-	  ;;
-	  ;;the formals ARGS and REST are tagged  as "<list>" and they will always be
-	  ;;lists; so there is no need to validate them.
-	  ((or (not rest-tag)
-	       (list-tag-id? rest-tag))
-	   '())
-	  (else
-	   (list (bless
-		  `(tag-procedure-argument-validator ,rest-tag ,rest-arg))))))
+    (let recur ((arg* arg*)
+		(tag* tag*)
+		(idx  0))
+      (cond ((pair? arg*)
+	     (if (top-tag-id? (car tag*))
+		 (recur (cdr arg*) (cdr tag*) (fxadd1 idx))
+	       (cons (bless
+		      `(validate-typed-procedure-argument ,(car tag*) ,idx ,(car arg*)))
+		     (recur (cdr arg*) (cdr tag*) (fxadd1 idx)))))
+	    ((or (not rest-tag)
+		 (top-tag-id? rest-tag))
+	     '())
+	    (else
+	     (bless
+	      (let ((obj.sym (gensym))
+		    (idx.sym (gensym)))
+		`((fold-left (lambda (,idx.sym ,obj.sym)
+			       (validate-typed-procedure-argument ,rest-arg ,idx.sym ,obj.sym)
+			       (fxadd1 ,idx.sym))
+		    ,idx ,rest-arg))))))))
 
   (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of

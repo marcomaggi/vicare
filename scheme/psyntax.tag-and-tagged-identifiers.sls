@@ -1902,9 +1902,6 @@
 	       ((bignum?  datum)	(S <bignum>))
 	       ((compnum? datum)	(S <compnum>))
 	       ((cflonum? datum)	(S <cflonum>))
-	       ((real?    datum)	(S <real>))
-	       ((complex? datum)	(S <complex>))
-	       ((number?  datum)	(S <number>))
 
 	       ((string?  datum)	(S <string>))
 	       ((vector?  datum)	(S <vector>))

@@ -39,6 +39,10 @@
       (is-a? 123 <top>)
     => #t)
 
+  (check
+      (procedure? (is-a? _ <top>))
+    => #t)
+
   #t)
 
 

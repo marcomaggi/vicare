@@ -772,7 +772,9 @@
   ;; fixnum-in-character-range?
   ;; ;;
   ;; complex?
-  ;; cons
+  (let ((P (C cons)))
+    (register-lambda-signature P (S (list (C <pair>))
+				    (list (C <top>) (C <top>)))))
   ;; cos
   ;; denominator
   ;; div

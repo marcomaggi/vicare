@@ -612,18 +612,11 @@
     (slot-set!					(core-macro . slot-set!))
     (method-call				(core-macro . method-call))
     (unsafe-cast				(core-macro . unsafe-cast))
-    (tag-predicate				(core-macro . tag-predicate))
-    (tag-procedure-argument-validator		(core-macro . tag-procedure-argument-validator))
-    (tag-return-value-validator			(core-macro . tag-return-value-validator))
+    (validate-typed-procedure-argument		(core-macro . validate-typed-procedure-argument))
+    (validate-typed-return-value		(core-macro . validate-typed-return-value))
     (tag-assert					(core-macro . tag-assert))
     (tag-assert-and-return			(core-macro . tag-assert-and-return))
-    (tag-accessor				(core-macro . tag-accessor))
-    (tag-mutator				(core-macro . tag-mutator))
-    (tag-getter					(core-macro . tag-getter))
-    (tag-setter					(core-macro . tag-setter))
-    (tag-dispatch				(core-macro . tag-dispatch))
     (tag-cast					(core-macro . tag-cast))
-    (tag-unsafe-cast				(core-macro . tag-unsafe-cast))
     (type-of					(core-macro . type-of))
     (expansion-of				(core-macro . expansion-of))
     (expansion-of*				(core-macro . expansion-of*))
@@ -1230,238 +1223,268 @@
 
 ;;;; core syntactic binding descriptors: built-in Scheme object types
 
+(define-syntax declare-scheme-type
+  (syntax-rules ()
+    ((_ ?type ?parent ?maker ?pred (?method ?method-implementation) ...)
+     (quote (?type
+	     ($core-scheme-type-name
+	      . (?type ?parent ?maker ?pred ((?method . ?method-implementation) ...))))))
+    ))
+
 (define-constant VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-  '((<top>
-     ($core-scheme-type-name
-      . (<top> #f #f <top>-type-predicate)))
+  `(,(declare-scheme-type <top>
+	 #f
+       #f <top>-type-predicate)
 
-    (<void>
-     ($core-scheme-type-name
-      . (<void> <top> void void-object?)))
+    ,(declare-scheme-type <void>
+	 <top>
+       void void-object?)
 
-    (<boolean>
-     ($core-scheme-type-name
-      . (<boolean> <top> #f boolean?)))
+    ,(declare-scheme-type <boolean>
+	 <top>
+       #f boolean?)
 
-    (<char>
-     ($core-scheme-type-name
-      . (<char> <top> integer->char char?)))
+    ,(declare-scheme-type <char>
+	 <top>
+       integer->char char?)
 
-    (<symbol>
-     ($core-scheme-type-name
-      . (<symbol> <top> string->symbol symbol?)))
+    ,(declare-scheme-type <symbol>
+	 <top>
+       string->symbol symbol?
+       (string		symbol->string)
+       (hash		symbol-hash)
+       (bound?		symbol-bound?)
+       (value		<symbol>-value)
+       (putprop		putprop)
+       (getprop		getprop)
+       (remprop		remprop)
+       (property-list	property-list))
 
-    (<keyword>
-     ($core-scheme-type-name
-      . (<keyword> <top> symbol->keyword keyword?)))
+    ,(declare-scheme-type <keyword>
+	 <top>
+       symbol->keyword keyword?
+       (symbol		keyword->symbol)
+       (string		keyword->string))
 
-    (<pointer>
-     ($core-scheme-type-name
-      . (<pointer> <top> integer->pointer pointer?)))
+    ,(declare-scheme-type <pointer>
+	 <top>
+       integer->pointer pointer?
+       (null?		pointer-null?)
+       (integer		pointer->integer)
+       (=		pointer=?)
+       (!=		pointer!=?)
+       (<		pointer<?)
+       (>		pointer>?)
+       (<=		pointer<=?)
+       (>=		pointer>=?)
+       (add		pointer-add)
+       (diff		pointer-diff)
+       (clone		pointer-clone)
+       (set-null!	set-pointer-null!))
 
-    (<transcoder>
-     ($core-scheme-type-name
-      . (<transcoder> <top> make-transcoder transcoder?)))
+    ,(declare-scheme-type <transcoder>
+	 <top>
+       make-transcoder transcoder?)
 
 ;;; --------------------------------------------------------------------
 ;;; procedures
 
-    (<procedure>
-     ($core-scheme-type-name
-      . (<procedure> <top> #f procedure?)))
+    ,(declare-scheme-type <procedure>
+	 <top>
+       #f procedure?)
 
-    (<predicate>
-     ($core-scheme-type-name
-      . (<predicate> <top> #f procedure?)))
+    ,(declare-scheme-type <predicate>
+	 <top>
+       #f procedure?)
 
 ;;; --------------------------------------------------------------------
 ;;; numeric types
 
-    (<fixnum>
-     ($core-scheme-type-name
-      . (<fixnum> <exact-integer> <fixnum>-constructor fixnum?)))
+    ,(declare-scheme-type <fixnum>
+	 <exact-integer>
+       #f fixnum?)
 
-    (<flonum>
-     ($core-scheme-type-name
-      . (<flonum> <real-valued> #f flonum?)))
+    ,(declare-scheme-type <flonum>
+	 <real-valued>
+       #f flonum?)
 
-    (<ratnum>
-     ($core-scheme-type-name
-      . (<ratnum> <rational> #f ratnum?)))
+    ,(declare-scheme-type <ratnum>
+	 <rational>
+       #f ratnum?)
 
-    (<bignum>
-     ($core-scheme-type-name
-      . (<bignum> <exact-integer> #f bignum?)))
+    ,(declare-scheme-type <bignum>
+	 <exact-integer>
+       #f bignum?)
 
-    (<compnum>
-     ($core-scheme-type-name
-      . (<compnum> <complex> #f compnum?)))
+    ,(declare-scheme-type <compnum>
+	 <complex>
+       #f compnum?)
 
-    (<cflonum>
-     ($core-scheme-type-name
-      . (<cflonum> <complex> #f cflonum?)))
+    ,(declare-scheme-type <cflonum>
+	 <complex>
+       #f cflonum?)
 
-    (<exact-integer>
-     ($core-scheme-type-name
-      . (<exact-integer> <integer> #f exact-integer?)))
+    ,(declare-scheme-type <exact-integer>
+	 <integer>
+       #f exact-integer?)
 
     ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
-    (<integer>
-     ($core-scheme-type-name
-      . (<integer> <rational> #f integer?)))
+    ,(declare-scheme-type <integer>
+	 <rational>
+       #f integer?)
 
     ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
-    (<integer-valued>
-     ($core-scheme-type-name
-      . (<integer-valued> <rational-valued> #f integer-valued?)))
+    ,(declare-scheme-type <integer-valued>
+	 <rational-valued>
+       #f integer-valued?)
 
-    (<rational>
-     ($core-scheme-type-name
-      . (<rational> <rational-valued> #f rational?)))
+    ,(declare-scheme-type <rational>
+	 <rational-valued>
+       #f rational?)
 
-    (<rational-valued>
-     ($core-scheme-type-name
-      . (<rational-valued> <real> #f rational-valued?)))
+    ,(declare-scheme-type <rational-valued>
+	 <real>
+       #f rational-valued?)
 
-    (<real>
-     ($core-scheme-type-name
-      . (<real> <real-valued> #f real?)))
+    ,(declare-scheme-type <real>
+	 <real-valued>
+       #f real?)
 
-    (<real-valued>
-     ($core-scheme-type-name
-      . (<real-valued> <complex> #f real-valued?)))
+    ,(declare-scheme-type <real-valued>
+	 <complex>
+       #f real-valued?)
 
-    (<complex>
-     ($core-scheme-type-name
-      . (<complex> <number> #f complex?)))
+    ,(declare-scheme-type <complex>
+	 <number>
+       #f complex?)
 
-    (<number>
-     ($core-scheme-type-name
-      . (<number> <top> #f number?)))
+    ,(declare-scheme-type <number>
+	 <top>
+       #f number?)
 
 ;;; --------------------------------------------------------------------
 ;;; compound types
 
-    (<string>
-     ($core-scheme-type-name
-      . (<string> <top> string string?)))
+    ,(declare-scheme-type <string>
+	 <top>
+       string string?)
 
-    (<vector>
-     ($core-scheme-type-name
-      . (<vector> <top> vector vector?)))
+    ,(declare-scheme-type <vector>
+	 <top>
+       vector vector?)
 
-    (<pair>
-     ($core-scheme-type-name
-      . (<pair> <top> cons pair?
-		((car		. car)
-		 (cdr		. cdr)))))
+    ,(declare-scheme-type <pair>
+	 <top>
+       cons pair?
+       (car		car)
+       (cdr		cdr))
 
-    (<list>
-     ($core-scheme-type-name
-      . (<list> <top> list list?)))
+    ,(declare-scheme-type <list>
+	 <top>
+       list list?)
 
-    (<bytevector>
-     ($core-scheme-type-name
-      . (<bytevector> <top> make-bytevector bytevector?)))
+    ,(declare-scheme-type <bytevector>
+	 <top>
+       make-bytevector bytevector?)
 
-    (<hashtable>
-     ($core-scheme-type-name
-      . (<hashtable> <top> #f hashtable?)))
+    ,(declare-scheme-type <hashtable>
+	 <top>
+       #f hashtable?)
 
-    (<hashtable-eq>
-     ($core-scheme-type-name
-      . (<hashtable-eq> <hashtable> make-eq-hashtable hashtable?)))
+    ,(declare-scheme-type <hashtable-eq>
+	 <hashtable>
+       make-eq-hashtable hashtable?)
 
-    (<hashtable-eqv>
-     ($core-scheme-type-name
-      . (<hashtable-eqv> <hashtable> make-eqv-hashtable hashtable?)))
+    ,(declare-scheme-type <hashtable-eqv>
+	 <hashtable>
+       make-eqv-hashtable hashtable?)
 
-    (<hashtable-equal>
-     ($core-scheme-type-name
-      . (<hashtable-equal> <hashtable> make-hashtable hashtable?)))
+    ,(declare-scheme-type <hashtable-equal>
+	 <hashtable>
+       make-hashtable hashtable?)
 
 ;;; --------------------------------------------------------------------
 ;;; records and structs
 
-    (<struct>
-     ($core-scheme-type-name
-      . (<struct> <top> #f struct?)))
+    ,(declare-scheme-type <struct>
+	 <top>
+       #f struct?)
 
-    (<struct-type-descriptor>
-     ($core-scheme-type-name
-      . (<struct-type-descriptor> <struct> make-struct-type struct-type-descriptor?)))
+    ,(declare-scheme-type <struct-type-descriptor>
+	 <struct>
+       make-struct-type struct-type-descriptor?)
 
-    (<record>
-     ($core-scheme-type-name
-      . (<record> <struct> #f record?)))
+    ,(declare-scheme-type <record>
+	 <struct>
+       #f record?)
 
-    (<record-type-descriptor>
-     ($core-scheme-type-name
-      . (<record-type-descriptor> <struct> make-record-type-descriptor record-type-descriptor?)))
+    ,(declare-scheme-type <record-type-descriptor>
+	 <struct>
+       make-record-type-descriptor record-type-descriptor?)
 
-    (<record-constructor-descriptor>
-     ($core-scheme-type-name
-      . (<record-constructor-descriptor> <struct> make-record-constructor-descriptor record-constructor-descriptor?)))
+    ,(declare-scheme-type <record-constructor-descriptor>
+	 <struct>
+       make-record-constructor-descriptor record-constructor-descriptor?)
 
-    (<condition>
-     ($core-scheme-type-name
-      . (<condition> <record> #f condition?
-		     ((print	. print-condition)))))
+    ,(declare-scheme-type <condition>
+	 <record>
+       #f condition?
+       (print		print-condition))
 
-    (<compound-condition>
-     ($core-scheme-type-name
-      . (<compound-condition> <condition> condition compound-condition?)))
+    ,(declare-scheme-type <compound-condition>
+	 <condition>
+       condition compound-condition?)
 
 ;;; --------------------------------------------------------------------
 ;;; input/output ports
 
-    (<port>
-     ($core-scheme-type-name
-      . (<port> <top> #f port?)))
+    ,(declare-scheme-type <port>
+	 <top>
+       #f port?)
 
-    (<input-port>
-     ($core-scheme-type-name
-      . (<input-port> <port> #f input-port?)))
+    ,(declare-scheme-type <input-port>
+	 <port>
+       #f input-port?)
 
-    (<output-port>
-     ($core-scheme-type-name
-      . (<output-port> <port> #f output-port?)))
+    ,(declare-scheme-type <output-port>
+	 <port>
+       #f output-port?)
 
-    (<input/output-port>
-     ($core-scheme-type-name
-      . (<input/output-port> <port> #f input/output-port?)))
+    ,(declare-scheme-type <input/output-port>
+	 <port>
+       #f input/output-port?)
 
-    (<textual-port>
-     ($core-scheme-type-name
-      . (<textual-port> <port> #f textual-port?)))
+    ,(declare-scheme-type <textual-port>
+	 <port>
+       #f textual-port?)
 
-    (<binary-port>
-     ($core-scheme-type-name
-      . (<binary-port> <port> #f binary-port?)))
+    ,(declare-scheme-type <binary-port>
+	 <port>
+       #f binary-port?)
 
-    (<textual-input-port>
-     ($core-scheme-type-name
-      . (<textual-input-port> <input-port> #f textual-input-port?)))
+    ,(declare-scheme-type <textual-input-port>
+	 <input-port>
+       #f textual-input-port?)
 
-    (<textual-output-port>
-     ($core-scheme-type-name
-      . (<textual-output-port> <output-port> #f textual-output-port?)))
+    ,(declare-scheme-type <textual-output-port>
+	 <output-port>
+       #f textual-output-port?)
 
-    (<textual-input/output-port>
-     ($core-scheme-type-name
-      . (<textual-input/output-port> <input/output-port> #f textual-input/output-port?)))
+    ,(declare-scheme-type <textual-input/output-port>
+	 <input/output-port>
+       #f textual-input/output-port?)
 
-    (<binary-input-port>
-     ($core-scheme-type-name
-      . (<binary-input-port> <input-port> #f binary-input-port?)))
+    ,(declare-scheme-type <binary-input-port>
+	 <input-port>
+       #f binary-input-port?)
 
-    (<binary-output-port>
-     ($core-scheme-type-name
-      . (<binary-output-port> <output-port> #f binary-output-port?)))
+    ,(declare-scheme-type <binary-output-port>
+	 <output-port>
+       #f binary-output-port?)
 
-    (<binary-input/output-port>
-     ($core-scheme-type-name
-      . (<binary-input/output-port> <input/output-port> #f binary-input/output-port?)))
+    ,(declare-scheme-type <binary-input/output-port>
+	 <input/output-port>
+       #f binary-input/output-port?)
 
     ))
 
@@ -1603,6 +1626,12 @@
     (method-call				v $language)
     (method-call-late-binding			v $language)
     (unsafe-cast				v $language)
+    (validate-typed-procedure-argument		v $language)
+    (validate-typed-return-value		v $language)
+    (tag-assert					v $language)
+    (tag-assert-and-return			v $language)
+    (tag-dispatch				v $language)
+    (tag-cast					v $language)
     (struct-type-descriptor			v $language)
     (parameterize				v $language)
     (parameterise				v $language)
@@ -4015,9 +4044,9 @@
     (<list>					v $language)
     (<bytevector>				v $language)
     (<hashtable>				v $language)
-    (<eq-hashtable>				v $language)
-    (<eqv-hashtable>				v $language)
-    (<equal-hashtable>				v $language)
+    (<hashtable-eq>				v $language)
+    (<hashtable-eqv>				v $language)
+    (<hashtable-equal>				v $language)
 
     (<record>					v $language)
     (<record-type-descriptor>			v $language)
@@ -4041,6 +4070,7 @@
     (<binary-input/output-port>			v $language)
 
     (<top>-type-predicate)
+    (<symbol>-value)
 
 ;;; --------------------------------------------------------------------
 ;;; keywords
@@ -5358,21 +5388,6 @@
 ;;; --------------------------------------------------------------------
 ;;; expander tags
 
-    (tag-predicate				v)
-    (tag-procedure-argument-validator		v)
-    (tag-return-value-validator			v)
-    (tag-assert					v)
-    (tag-assert-and-return			v)
-    (tag-accessor				v)
-    (tag-mutator				v)
-    (tag-getter					v)
-    (tag-setter					v)
-    (tag-dispatch				v)
-    (tag-cast					v)
-    (tag-unsafe-cast)
-
-;;; --------------------------------------------------------------------
-
     (print-identifier-info			v $language)
 
     (tagged-identifier-syntax?			$type-specs)
@@ -6129,4 +6144,5 @@
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
+;; eval: (put 'declare-scheme-type			'scheme-indent-function 2)
 ;; End:

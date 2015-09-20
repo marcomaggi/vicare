@@ -149,6 +149,14 @@
     ))
 
 
+;;;; helpers
+
+(define (%fxiota fx item*)
+  (if (pair? item*)
+      (cons fx (%fxiota (fxadd1 fx) (cdr item*)))
+    '()))
+
+
 ;;;; helpers: struct types
 
 (define (%struct-field-name->struct-field-idx who input-form.stx field-names field-id)
@@ -222,9 +230,8 @@
     ((method-call)				method-call-transformer)
     ((unsafe-cast)				unsafe-cast-transformer)
 
-    ((tag-predicate)				tag-predicate-transformer)
-    ((tag-procedure-argument-validator)		tag-procedure-argument-validator-transformer)
-    ((tag-return-value-validator)		tag-return-value-validator-transformer)
+    ((validate-typed-procedure-argument)	validate-typed-procedure-argument-transformer)
+    ((validate-typed-return-value)		validate-typed-return-value-transformer)
     ((tag-assert)				tag-assert-transformer)
     ((tag-assert-and-return)			tag-assert-and-return-transformer)
     ((tag-accessor)				tag-accessor-transformer)
@@ -2707,58 +2714,67 @@
     ))
 
 
-;;;; module core-macro-transformer: TAG-PREDICATE
+;;;; module core-macro-transformer: VALIDATE-TYPED-PROCEDURE-ARGUMENT, VALIDATE-TYPED-RETURN-VALUE
 
-(define-core-transformer (tag-predicate input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's TAG-PREDICATE  syntaxes from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+(define (%detailed-type-identifier-validation who input-form.stx lexenv.run type.id)
+  ;;To  be  used to  validate  TYPE.ID  as  bound  identifier having  an  object-type
+  ;;specification in  its syntactic binding's  descriptor.  If successful  return the
+  ;;instance of  "<object-type-spec>" as  object-type specification  (OTS), otherwise
+  ;;raise an exception.
   ;;
-  (syntax-match input-form.stx ()
-    ((_ ?tag)
-     (tag-identifier? ?tag)
-     (chi-expr (tag-identifier-predicate ?tag input-form.stx) lexenv.run lexenv.expand))
-    ))
+  (unless (identifier? type.id)
+    (syntax-violation who
+      "expected identifier as type specification"
+      input-form.stx type.id))
+  (let* ((label (id->label/or-error who input-form.stx type.id))
+	 (descr (label->syntactic-binding-descriptor label lexenv.run)))
+    (when (eq? 'displaced-lexical (syntactic-binding-descriptor.type descr))
+      (syntax-violation who "unbound label for type identifier" input-form.stx type.id))
+    (receive-and-return (spec)
+	(syntactic-binding-descriptor.value descr)
+      (unless (object-type-spec? spec)
+	(syntax-violation who
+	  "expected type identifier but given identifier does not represent an object-type"
+	  input-form.stx type.id)))))
 
-
-;;;; module core-macro-transformer: TAG-PROCEDURE-ARGUMENT-VALIDATOR, TAG-RETURN-VALUE-VALIDATOR
-
-(define-core-transformer (tag-procedure-argument-validator input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to  expand Vicare's  TAG-PROCEDURE-ARGUMENT-VALIDATOR
+(define-core-transformer (validate-typed-procedure-argument input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's VALIDATE-TYPED-PROCEDURE-ARGUMENT
   ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
   ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
-  (syntax-match input-form.stx (<>)
-    ((_ ?tag <>)
-     (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(lambda (obj)
-		   (procedure-argument-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj)))
-	       lexenv.run lexenv.expand))
-    ((_ ?tag ?expr)
-     (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(procedure-argument-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr))
-	       lexenv.run lexenv.expand))
+  (syntax-match input-form.stx ()
+    ((_ ?type ?idx ?arg)
+     (let ((ots (%detailed-type-identifier-validation __who__ input-form.stx lexenv.run ?type)))
+       (unless (identifier? ?arg)
+	 (%synner "expected identifier" ?arg))
+       (unless (let ((idx (syntax->datum ?idx)))
+		 (or (not idx)
+		     (fixnum? idx)))
+	 (%synner "expected fixnum as index of argument") ?idx)
+       (chi-expr (bless
+		  `(unless (is-a? ,?arg ,?type)
+		     (procedure-signature-argument-violation __who__ "invalid object type" ,?idx '(is-a? _ ,?type) ,?arg)))
+		 lexenv.run lexenv.expand)))
     ))
 
-(define-core-transformer (tag-return-value-validator input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to  expand Vicare's TAG-RETURN-VALUE-VALIDATOR syntaxes
-  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
+(define-core-transformer (validate-typed-return-value input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function   used  to  expand   Vicare's  VALIDATE-TYPED-RETURN-VALUE
+  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
-  (syntax-match input-form.stx (<>)
-    ((_ ?tag <>)
-     (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(lambda (obj)
-		   (return-value-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj)))
-	       lexenv.run lexenv.expand))
-    ((_ ?tag ?expr)
-     (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(return-value-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr))
-	       lexenv.run lexenv.expand))
+  (syntax-match input-form.stx ()
+    ((_ ?type ?idx ?rv)
+     (let ((ots (%detailed-type-identifier-validation __who__ input-form.stx lexenv.run ?type)))
+       (unless (identifier? ?rv)
+	 (%synner "expected identifier" ?rv))
+       (unless (let ((idx (syntax->datum ?idx)))
+		 (or (not idx)
+		     (fixnum? idx)))
+	 (%synner "expected fixnum as index of argument") ?idx)
+       (chi-expr (bless
+		  `(unless (is-a? ,?rv ,?type)
+		     (procedure-signature-return-value-violation __who__ "invalid object type" ,?idx '(is-a? _ ,?type) ,?rv)))
+		 lexenv.run lexenv.expand)))
     ))
 
 
@@ -2801,8 +2817,7 @@
 		   (list-tag-id? ?tag)
 		   ;;Damn   it!!!   The   expression's  return   values  have   fully
 		   ;;unspecified signature; we need to insert a run-time check.
-		   (%run-time-validation input-form.stx lexenv.run lexenv.expand
-					 asserted.sig expr.psi))
+		   (%run-time-validation input-form.stx lexenv.run lexenv.expand asserted.sig expr.psi))
 		  (_
 		   ;;The  horror!!!   We have  established  at  expand-time that  the
 		   ;;expression returns multiple values; assertion failed.
@@ -2843,11 +2858,12 @@
     (syntax-match (retvals-signature-tags asserted.sig) ()
       ((?rv-tag* ...)
        (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (IDX*         (%fxiota 0 TMP*))
 	      (checker.psi  (chi-expr (bless
 				       `(lambda ,TMP*
-					  ,@(map (lambda (tmp tag)
-						   `(tag-return-value-validator ,tag ,tmp))
-					      TMP* ?rv-tag*)
+					  ,@(map (lambda (tmp idx tag)
+						   `(validate-typed-return-value ,tag ,idx ,tmp))
+					      TMP* IDX* ?rv-tag*)
 					  (void)))
 				      lexenv.run lexenv.expand)))
 	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
@@ -2855,23 +2871,36 @@
 
       ((?rv-tag* ... . ?rv-rest-tag)
        (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (IDX*         (%fxiota 0 TMP*))
+	      (rest.sym     (gensym "rest"))
+	      (obj.sym      (gensym "obj"))
+	      (idx.sym      (gensym "idx"))
 	      (checker.psi  (chi-expr (bless
-				       `(lambda (,@TMP* . rest-tmp)
-					  ,@(map (lambda (tmp tag)
-						   `(tag-return-value-validator ,tag ,tmp))
-					      TMP* ?rv-tag*)
-					  (tag-return-value-validator ,?rv-rest-tag rest-tmp)
+				       `(lambda (,@TMP* . ,rest.sym)
+					  ,@(map (lambda (tmp idx tag)
+						   `(validate-typed-return-value ,tag ,idx ,tmp))
+					      TMP* IDX* ?rv-tag*)
+					  (fold-left (lambda (,idx.sym ,obj.sym)
+						       (validate-typed-return-value ,?rv-rest-tag ,idx.sym ,obj.sym)
+						       (fxadd1 ,idx.sym))
+					    ,(length TMP*) ,rest.sym)
 					  (void)))
 				      lexenv.run lexenv.expand)))
 	 (%run-time-check-output-form  input-form.stx lexenv.run lexenv.expand
 				       expr.core checker.psi)))
 
       (?rv-args-tag
-       (let ((checker.psi  (chi-expr (bless
-				      `(lambda args
-					 (tag-return-value-validator ,?rv-args-tag args)
-					 (void)))
-				     lexenv.run lexenv.expand)))
+       (let* ((args.sym     (gensym "args"))
+	      (obj.sym      (gensym "obj"))
+	      (idx.sym      (gensym "idx"))
+	      (checker.psi  (chi-expr (bless
+				       `(lambda ,args.sym
+					  (fold-left (lambda (,idx.sym ,obj.sym)
+						       (validate-typed-return-value ,?rv-args-tag ,idx.sym ,obj.sym)
+						       (fxadd1 ,idx.sym))
+					    0 ,args.sym)
+					  (void)))
+				      lexenv.run lexenv.expand)))
 	 (%run-time-check-output-form  input-form.stx lexenv.run lexenv.expand
 				       expr.core checker.psi)))
       ))
@@ -2998,10 +3027,11 @@
     (syntax-match (retvals-signature-tags asserted.sig) ()
       ;;Special handling for single value.
       ((?rv-tag)
-       (let* ((checker.psi (chi-expr (bless
-				      `(lambda (t)
-					 (tag-return-value-validator ,?rv-tag t)
-					 t))
+       (let* ((obj.sym     (gensym "obj"))
+	      (checker.psi (chi-expr (bless
+				      `(lambda (,obj.sym)
+					 (validate-typed-return-value ,?rv-tag #f ,obj.sym)
+					 ,obj.sym))
 				     lexenv.run lexenv.expand))
 	      (checker.core (psi-core-expr checker.psi))
 	      (expr.core    (psi-core-expr expr.psi)))
@@ -3016,11 +3046,12 @@
 
       ((?rv-tag* ...)
        (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (IDX*         (%fxiota 0 TMP*))
 	      (checker.psi  (chi-expr (bless
 				       `(lambda ,TMP*
-					  ,@(map (lambda (tmp tag)
-						   `(tag-return-value-validator ,tag ,tmp))
-					      TMP* ?rv-tag*)
+					  ,@(map (lambda (tmp idx tag)
+						   `(validate-typed-return-value ,tag ,idx ,tmp))
+					      TMP* IDX* ?rv-tag*)
 					  (values . ,TMP*)))
 				      lexenv.run lexenv.expand)))
 	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
@@ -3028,23 +3059,36 @@
 
       ((?rv-tag* ... . ?rv-rest-tag)
        (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (IDX*         (%fxiota 0 TMP*))
+	      (rest.sym     (gensym "rest"))
+	      (idx.sym      (gensym "idx"))
+	      (obj.sym      (gensym "obj"))
 	      (checker.psi  (chi-expr (bless
-				       `(lambda (,@TMP* . rest-tmp)
-					  ,@(map (lambda (tmp tag)
-						   `(tag-return-value-validator ,tag ,tmp))
-					      TMP* ?rv-tag*)
-					  (tag-return-value-validator ,?rv-rest-tag rest-tmp)
-					  (apply values ,@TMP* rest-tmp)))
+				       `(lambda (,@TMP* . ,rest.sym)
+					  ,@(map (lambda (tmp idx tag)
+						   `(validate-typed-return-value ,tag ,idx ,tmp))
+					      TMP* IDX* ?rv-tag*)
+					  (fold-left (lambda (,idx.sym ,obj.sym)
+						       (validate-typed-return-value ,?rv-rest-tag ,idx.sym ,obj.sym)
+						       (fxadd1 ,idx.sym))
+					    ,(length TMP*) ,rest.sym)
+					  (apply values ,@TMP* ,rest.sym)))
 				      lexenv.run lexenv.expand)))
 	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
 						      expr.psi checker.psi asserted.sig)))
 
       (?rv-args-tag
-       (let ((checker.psi  (chi-expr (bless
-				      `(lambda args
-					 (tag-return-value-validator ,?rv-args-tag args)
-					 (apply values args)))
-				     lexenv.run lexenv.expand)))
+       (let* ((args.sym     (gensym "args"))
+	      (idx.sym      (gensym "idx"))
+	      (obj.sym      (gensym "obj"))
+	      (checker.psi  (chi-expr (bless
+				       `(lambda ,args.sym
+					  (fold-left (lambda (,idx.sym ,obj.sym)
+						       (validate-typed-return-value ,?rv-args-tag ,idx.sym ,obj.sym)
+						       (fxadd1 ,idx.sym))
+					    0 ,args.sym)
+					  (apply values ,args.sym)))
+				      lexenv.run lexenv.expand)))
 	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
 						      expr.psi checker.psi asserted.sig)))
       ))

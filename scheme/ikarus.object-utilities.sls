@@ -35,10 +35,10 @@
     internal-delete
 
     ;; conversion
-    any->symbol			any->string
+    any->symbol				any->string
 
     ;; predicates
-    always-true			always-false
+    always-true				always-false
 
     ;; validation
     procedure-argument-validation-with-predicate
@@ -46,7 +46,8 @@
     signature-rest-argument-validation-with-predicate
 
     ;; built-in object-type specification utilities, for internal use
-    <top>-type-predicate)
+    <top>-type-predicate
+    <symbol>-value)
   (import (except (vicare)
 		  method-call-late-binding
 		  any->symbol		any->string
@@ -66,6 +67,12 @@
 		  record-destructor
 		  internal-applicable-record-destructor)
 	    records.)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
+    ;;2015)
+    (prefix (only (ikarus.keywords)
+		  keyword-hash
+		  keyword->string)
+	    keywords.)
     (only (vicare system $fx)
 	  $fxadd1))
 
@@ -132,8 +139,35 @@
   (cond ((records.record-object? subject)
 	 (%record-object-call (record-rtd subject)))
 
-	((pair? subject)
-	 (%built-in-scheme-object-call <pair>-type-descriptor))
+	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
+	((vector?  subject)	(%built-in-scheme-object-call <vector>-type-descriptor))
+	((list?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
+	((pair?    subject)	(%built-in-scheme-object-call <pair>-type-descriptor))
+	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-type-descriptor))
+
+	((fixnum?  subject)	(%built-in-scheme-object-call <fixnum>-type-descriptor))
+	((flonum?  subject)	(%built-in-scheme-object-call <flonum>-type-descriptor))
+	((ratnum?  subject)	(%built-in-scheme-object-call <ratnum>-type-descriptor))
+	((bignum?  subject)	(%built-in-scheme-object-call <bignum>-type-descriptor))
+	((compnum? subject)	(%built-in-scheme-object-call <compnum>-type-descriptor))
+	((cflonum? subject)	(%built-in-scheme-object-call <cflonum>-type-descriptor))
+
+	((port? subject)
+	 (cond ((textual-input/output-port? subject)	(%built-in-scheme-object-call <textual-input/output-port>-type-descriptor))
+	       ((binary-input/output-port?  subject)	(%built-in-scheme-object-call <binary-input/output-port>-type-descriptor))
+	       ((textual-output-port?       subject)	(%built-in-scheme-object-call <textual-output-port>-type-descriptor))
+	       ((binary-output-port?        subject)	(%built-in-scheme-object-call <binary-output-port>-type-descriptor))
+	       ((textual-input-port?        subject)	(%built-in-scheme-object-call <textual-input-port>-type-descriptor))
+	       ((binary-input-port?         subject)	(%built-in-scheme-object-call <binary-input-port>-type-descriptor))
+	       (else
+		(%error-object-type-has-no-methods-table))))
+
+	((boolean? subject)	(%built-in-scheme-object-call <boolean>-type-descriptor))
+	((char?    subject)	(%built-in-scheme-object-call <char>-type-descriptor))
+	((symbol?  subject)	(%built-in-scheme-object-call <symbol>-type-descriptor))
+	((keyword? subject)	(%built-in-scheme-object-call <keyword>-type-descriptor))
+
+	((eq? subject (void))	(%built-in-scheme-object-call <void>-type-descriptor))
 
 	(else
 	 (%error-object-type-has-no-methods-table))))
@@ -299,14 +333,18 @@
 	 (with-syntax
 	     ((BTD-NAME		(%mk-btd-name #'?type-name))
 	      (PARENT-NAME	(%mk-btd-name #'?parent-name))
-	      (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str)))))
+	      (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str))))
+	      (RETRIEVER	(if (null? (syntax->datum '((?method-name ?method-implementation-procedure) ...)))
+				    #f
+				  #'(lambda (method-name.sym)
+				      (case method-name.sym
+					((?method-name) ?method-implementation-procedure)
+					...
+					(else #f))))))
 	   #'(define BTD-NAME
 	       (make-scheme-type PARENT-NAME (quote UID)
 				 (%build-scheme-type-uids-list (quote UID) PARENT-NAME)
-				 (lambda (method-name.sym)
-				   (case method-name.sym
-				     ((?method-name) ?method-implementation-procedure)
-				     ...))))
+				 RETRIEVER))
 	   )))
       )))
 
@@ -322,6 +360,12 @@
 
 (define (<top>-type-predicate obj)
   #t)
+
+(case-define <symbol>-value
+  ((sym)
+   (symbol-value sym))
+  ((sym val)
+   (set-symbol-value! sym val)))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors
@@ -341,13 +385,36 @@
     <top>)
 
 (define-scheme-type <symbol>
-    <top>)
+    <top>
+  (string		symbol->string)
+  (hash			symbol-hash)
+  (bound?		symbol-bound?)
+  (value		<symbol>-value)
+  (putprop		putprop)
+  (getprop		getprop)
+  (remprop		remprop)
+  (property-list	property-list))
 
 (define-scheme-type <keyword>
-    <top>)
+    <top>
+  (symbol		keyword->symbol)
+  (string		keywords.keyword->string)
+  (hash			keywords.keyword-hash))
 
 (define-scheme-type <pointer>
-    <top>)
+    <top>
+  (null?		pointer-null?)
+  (integer		pointer->integer)
+  (=			pointer=?)
+  (!=			pointer!=?)
+  (<			pointer<?)
+  (>			pointer>?)
+  (<=			pointer<=?)
+  (>=			pointer>=?)
+  (add			pointer-add)
+  (diff			pointer-diff)
+  (clone		pointer-clone)
+  (set-null!		set-pointer-null!))
 
 (define-scheme-type <transcoder>
     <top>)
