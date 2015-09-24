@@ -261,7 +261,7 @@
 			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
 		     ((core-macro
-		       define define-syntax define-alias
+		       internal-define define-syntax define-alias
 		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
 		       begin set! stale-when
@@ -776,11 +776,11 @@
 	 ((pattern-variable)
 	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
-	 ((define define-syntax define-fluid-syntax define-alias module import library)
+	 ((internal-define define-syntax define-fluid-syntax define-alias module import library)
 	  (stx-error expr.stx
 		     (string-append
 		      (case type
-			((define)                 "a definition")
+			((internal-define)        "a definition")
 			((define-syntax)          "a define-syntax")
 			((define-fluid-syntax)    "a define-fluid-syntax")
 			((define-alias)           "a define-alias")

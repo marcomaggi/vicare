@@ -547,7 +547,7 @@
 			     ((global-macro)  (cons* 'global-macro  lib (cdr type.value)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr type.value)))
 			     ((global-etv)    (cons* 'global-etv    lib (cdr type.value)))
-			     ;;SPEC is an instance  of "<typed-global-spec>", we have
+			     ;;SPEC is an instance  of "<global-typed-spec>", we have
 			     ;;to store the LIB into it.
 			     ((global-typed)  (cons 'global-typed
 						    (receive-and-return (spec)
@@ -555,7 +555,7 @@
 						      ((global-typed-variable-updater) spec lib))))
 			     ((core-prim
 			       library import export
-			       define define-syntax define-alias
+			       internal-define define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when

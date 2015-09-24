@@ -570,7 +570,7 @@
 ;;;; core syntactic binding descriptors: built-in syntaxes
 
 (define-constant VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
-  '((internal-define				(define))
+  '((internal-define				(internal-define))
     (define-syntax				(define-syntax))
     (define-alias				(define-alias))
     (define-fluid-syntax			(define-fluid-syntax))
@@ -708,7 +708,7 @@
     (define-enumeration				(macro . define-enumeration))
     (define-condition-type			(macro . define-condition-type))
 ;;;
-    (define					(macro . exported-define))
+    (define					(macro . define))
     (define-auxiliary-syntaxes			(macro . define-auxiliary-syntaxes))
     (define-syntax*				(macro . define-syntax*))
     (case-define				(macro . case-define))

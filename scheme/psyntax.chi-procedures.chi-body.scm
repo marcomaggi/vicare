@@ -134,7 +134,7 @@
 		      kwd*)))
 	  (case type
 
-	    ((define)
+	    ((internal-define)
 	     ;;The body form is an  INTERNAL-DEFINE primitive macro use; for example,
 	     ;;one among:
 	     ;;

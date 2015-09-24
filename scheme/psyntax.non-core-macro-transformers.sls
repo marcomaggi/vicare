@@ -101,7 +101,7 @@
   ;;Map symbols representing non-core macros to their macro transformers.
   ;;
   (case x
-    ((exported-define)			exported-define-macro)
+    ((define)				define-macro)
     ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
@@ -283,9 +283,9 @@
 
 ;;;; non-core macro: DEFINE
 
-(module (exported-define-macro)
+(module (define-macro)
 
-  (define (exported-define-macro input-form.stx)
+  (define (define-macro input-form.stx)
     ;;Transformer function used  to expand Vicare's DEFINE macros  from the top-level
     ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
     ;;object that must be further expanded.
