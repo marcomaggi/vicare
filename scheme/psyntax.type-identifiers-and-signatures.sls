@@ -22,8 +22,9 @@
 (library (psyntax.type-identifiers-and-signatures)
   (export
     type-identifier?					all-type-identifiers?
-    type-identifier-sub-and-super?			type-identifier-is-procedure-sub-type?
+    type-identifier-super-and-sub?			type-identifier-is-procedure-sub-type?
     type-identifier-common-ancestor
+    type-identifier-detailed-validation
     typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
     fabricate-closure-type-identifier
     syntax-object.standard-formals?
@@ -130,10 +131,31 @@
 	(else
 	 (%synner "expected bound syntactic identifier as type identifier"))))
 
-(case-define* type-identifier-sub-and-super?
+(define (type-identifier-detailed-validation who input-form.stx lexenv.run type.id)
+  ;;To  be  used to  validate  TYPE.ID  as  bound  identifier having  an  object-type
+  ;;specification in  its syntactic binding's  descriptor.  If successful  return the
+  ;;instance of  "<object-type-spec>" as  object-type specification  (OTS), otherwise
+  ;;raise an exception.
+  ;;
+  (unless (identifier? type.id)
+    (syntax-violation who
+      "expected identifier as type specification"
+      input-form.stx type.id))
+  (let* ((label (lex.id->label/or-error who input-form.stx type.id))
+	 (descr (lex.label->syntactic-binding-descriptor label lexenv.run)))
+    (when (eq? 'displaced-lexical (lex.syntactic-binding-descriptor.type descr))
+      (syntax-violation who "unbound label for type identifier" input-form.stx type.id))
+    (receive-and-return (spec)
+	(lex.syntactic-binding-descriptor.value descr)
+      (unless (lex.object-type-spec? spec)
+	(syntax-violation who
+	  "expected type identifier but given identifier does not represent an object-type"
+	  input-form.stx type.id)))))
+
+(case-define* type-identifier-super-and-sub?
   ((sub-type.id super-type.id)
-   (type-identifier-sub-and-super? #f (lex.current-inferior-lexenv) sub-type.id super-type.id))
-  ((input-form.stx lexenv sub-type.id super-type.id)
+   (type-identifier-super-and-sub? #f (lex.current-inferior-lexenv) super-type.id sub-type.id))
+  ((input-form.stx lexenv super-type.id sub-type.id)
    ;;Given two  syntactic identifiers having  an instance of  "<object-type-spec>" as
    ;;value in  the syntactic  binding's descriptor: return  true if  SUPER-TYPE.ID is
    ;;FREE-IDENTIFIER=?  to SUB-TYPE.ID or one of its ancestors.
@@ -211,7 +233,7 @@
   ((id)
    (type-identifier-is-procedure-sub-type? id (lex.current-inferior-lexenv)))
   ((id lexenv)
-   (type-identifier-sub-and-super? #f lexenv id (lex.procedure-tag-id))))
+   (type-identifier-super-and-sub? #f lexenv (lex.procedure-tag-id) id)))
 
 
 ;;;; typed variable with procedure sub-type type utilities
@@ -485,7 +507,7 @@
      (syntax-match sub-signature ()
        ((?sub-tag . ?sub-rest-tags)
 	(and (or (lex.top-tag-id? ?super-tag)
-		 (type-identifier-sub-and-super? ?sub-tag ?super-tag))
+		 (type-identifier-super-and-sub? ?super-tag ?sub-tag))
 	     ($syntax-object.formals-signature-super-and-sub? ?super-rest-tags ?sub-rest-tags)))
        (_ #f)))
 
@@ -521,7 +543,7 @@
        ;;  sub-signature   == #'(<string> <string> . <fixnum>)
        ;;
        (?sub-rest-tag
-	(type-identifier-sub-and-super? ?sub-rest-tag ?super-rest-tag))
+	(type-identifier-super-and-sub? ?super-rest-tag ?sub-rest-tag))
        ))
     ))
 

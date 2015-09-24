@@ -274,7 +274,7 @@
 						 rator.sig))
       (syntax-match (retvals-signature.tags rator.sig) ()
 	((?rator.tag)
-	 (cond ((type-identifier-sub-and-super? input-form.stx lexenv.run ?rator.tag (procedure-tag-id))
+	 (cond ((type-identifier-is-procedure-sub-type? ?rator.tag lexenv.run)
 		;;Procedure application: good.
 		(let* ((apply.core (build-primref no-source 'apply))
 		       (rator.core (psi-core-expr rator.psi))
@@ -394,9 +394,9 @@
     ;;known that the  rator will return a  single value with specified  type.  Do the
     ;;following:
     ;;
-    ;;* If the rator is a procedure  (its type is a sub-type of "<procedure>") return
-    ;;a PSI  struct as per standard  Scheme behaviour and, when  possible, select the
-    ;;appropriate retvals signature for the returned PSI.
+    ;;* If  the rator  is a  procedure (its  type is  "<procedure>" or  its sub-type)
+    ;;return a PSI struct as per standard Scheme behaviour and, when possible, select
+    ;;the appropriate retvals signature for the returned PSI.
     ;;
     ;;* If  the type of rator  is "<top>": expand  to an application as  per standard
     ;;Scheme behaviour.
@@ -627,7 +627,7 @@
 		       ;;this  is  what  happens   with  standard  (untagged)  Scheme
 		       ;;language.  Let's see at run-time what will happen.
 		       (loop #f ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
-		      ((type-identifier-sub-and-super? input-form.stx lexenv.run ?rand.tag ?arg.tag)
+		      ((type-identifier-super-and-sub? input-form.stx lexenv.run ?arg.tag ?rand.tag)
 		       ;;Argument and  operand do match at  expand-time.  Notice that
 		       ;;this case  includes the one  of expected argument  tagged as
 		       ;;"<top>":  this  is  what happens  with  standard  (untagged)

@@ -88,14 +88,14 @@
   (syntax-match input-form.stx ()
     ((_ ?type-id ?arg* ...)
      (identifier? ?type-id)
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
        ;;For records we  can access the record constructor  syntactic identifier.  We
        ;;just expand to an equivalent of:
        ;;
        ;;   (?maker ?arg ...)
        ;;
        ((object-type)
-	;;FIXME It is unknown to be why I have to set this parameter to have:
+	;;FIXME It is unknown to me why I have to set this parameter to have:
 	;;
 	;;   (make-retvals-signature/single-value ?type-id)
 	;;
@@ -103,12 +103,13 @@
 	;;called by a  function that sets the parameter to  this very LEXENV.  (Marco
 	;;Maggi; Wed Sep 23, 2015)
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	  (let ((rts (syntactic-binding-descriptor.value binding)))
+	  (let ((rts (syntactic-binding-descriptor.value descr)))
 	    (cond ((object-type-spec.constructor-sexp rts)
 		   => (lambda (maker.sexp)
 			(let* ((maker.stx  (bless maker.sexp))
 			       (maker.psi  (chi-expr maker.stx lexenv.run lexenv.expand))
 			       (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
+			  (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type-id)
 			  (make-psi input-form.stx
 				    (build-application no-source
 				      (psi-core-expr maker.psi)
@@ -128,7 +129,7 @@
 		      (build-application no-source
 			(build-primref no-source 'struct-constructor)
 			(list (build-data no-source
-				(syntactic-binding-descriptor.value binding))))
+				(syntactic-binding-descriptor.value descr))))
 		      (map psi-core-expr args.psi*))
 		    (make-retvals-signature/single-value ?type-id))))
        ))))
@@ -948,27 +949,6 @@
 
 ;;;; module core-macro-transformer: VALIDATE-TYPED-PROCEDURE-ARGUMENT, VALIDATE-TYPED-RETURN-VALUE
 
-(define (%detailed-type-identifier-validation who input-form.stx lexenv.run type.id)
-  ;;To  be  used to  validate  TYPE.ID  as  bound  identifier having  an  object-type
-  ;;specification in  its syntactic binding's  descriptor.  If successful  return the
-  ;;instance of  "<object-type-spec>" as  object-type specification  (OTS), otherwise
-  ;;raise an exception.
-  ;;
-  (unless (identifier? type.id)
-    (syntax-violation who
-      "expected identifier as type specification"
-      input-form.stx type.id))
-  (let* ((label (id->label/or-error who input-form.stx type.id))
-	 (descr (label->syntactic-binding-descriptor label lexenv.run)))
-    (when (eq? 'displaced-lexical (syntactic-binding-descriptor.type descr))
-      (syntax-violation who "unbound label for type identifier" input-form.stx type.id))
-    (receive-and-return (spec)
-	(syntactic-binding-descriptor.value descr)
-      (unless (object-type-spec? spec)
-	(syntax-violation who
-	  "expected type identifier but given identifier does not represent an object-type"
-	  input-form.stx type.id)))))
-
 (define-core-transformer (validate-typed-procedure-argument input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's VALIDATE-TYPED-PROCEDURE-ARGUMENT
   ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
@@ -976,7 +956,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type ?idx ?arg)
-     (let ((ots (%detailed-type-identifier-validation __who__ input-form.stx lexenv.run ?type)))
+     (let ((ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type)))
        (unless (identifier? ?arg)
 	 (%synner "expected identifier" ?arg))
        (unless (let ((idx (syntax->datum ?idx)))
@@ -1001,7 +981,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type ?idx ?rv)
-     (let ((ots (%detailed-type-identifier-validation __who__ input-form.stx lexenv.run ?type)))
+     (let ((ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type)))
        (unless (identifier? ?rv)
 	 (%synner "expected identifier" ?rv))
        (unless (let ((idx (syntax->datum ?idx)))
