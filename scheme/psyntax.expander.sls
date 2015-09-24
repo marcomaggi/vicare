@@ -74,7 +74,7 @@
     environment-labels			environment-binding
 
     expand-form-to-core-language
-    expand-top-level-program	expand-top-level-program->sexp
+    expand-top-level-program		expand-top-level-program->sexp
     expand-library			expand-library->sexp
     expand-top-level-make-compiler
 

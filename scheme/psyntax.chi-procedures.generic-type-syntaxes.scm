@@ -95,28 +95,18 @@
        ;;   (?maker ?arg ...)
        ;;
        ((object-type)
-	;;FIXME It is unknown to me why I have to set this parameter to have:
-	;;
-	;;   (make-retvals-signature/single-value ?type-id)
-	;;
-	;;below recognise  ?TYPE-ID as  typed identifier.   This whole  transfomer is
-	;;called by a  function that sets the parameter to  this very LEXENV.  (Marco
-	;;Maggi; Wed Sep 23, 2015)
-	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	  (let ((rts (syntactic-binding-descriptor.value descr)))
-	    (cond ((object-type-spec.constructor-sexp rts)
-		   => (lambda (maker.sexp)
-			(let* ((maker.stx  (bless maker.sexp))
-			       (maker.psi  (chi-expr maker.stx lexenv.run lexenv.expand))
-			       (args.psi*  (chi-expr* ?arg* lexenv.run lexenv.expand)))
-			  (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type-id)
-			  (make-psi input-form.stx
-				    (build-application no-source
-				      (psi-core-expr maker.psi)
-				      (map psi-core-expr args.psi*))
-				    (make-retvals-signature/single-value ?type-id)))))
-		  (else
-		   (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id))))))
+	(cond ((object-type-spec.constructor-sexp (syntactic-binding-descriptor.value descr))
+	       => (lambda (constructor.sexp)
+		    (let* ((constructor.stx  (bless constructor.sexp))
+			   (constructor.psi  (chi-expr constructor.stx lexenv.run lexenv.expand))
+			   (args.psi*        (chi-expr* ?arg* lexenv.run lexenv.expand)))
+		      (make-psi input-form.stx
+				(build-application no-source
+				  (psi-core-expr constructor.psi)
+				  (map psi-core-expr args.psi*))
+				(make-retvals-signature/single-value ?type-id)))))
+	      (else
+	       (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id))))
 
        ;;For structs we want to expand to an equivalent of:
        ;;
