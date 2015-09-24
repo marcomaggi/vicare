@@ -642,14 +642,14 @@
 ;;; generic safe slot getter and setter
 
   (check
-      (let ((stru (alpha (1 2 3))))
+      (let ((stru (new alpha 1 2 3)))
 	(list (slot-ref stru a alpha)
 	      (slot-ref stru b alpha)
 	      (slot-ref stru c alpha)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha (1 2 3))))
+      (let ((stru (new alpha 1 2 3)))
 	(slot-set! stru a alpha 19)
 	(slot-set! stru b alpha 29)
 	(slot-set! stru c alpha 39)
@@ -659,14 +659,14 @@
     => '(19 29 39))
 
   (check
-      (let ((stru (alpha (1 2 3))))
+      (let ((stru (new alpha 1 2 3)))
 	(list ((slot-ref _ a alpha) stru)
 	      ((slot-ref _ b alpha) stru)
 	      ((slot-ref _ c alpha) stru)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha (1 2 3))))
+      (let ((stru (new alpha 1 2 3)))
 	((slot-set! _ a alpha _) stru 19)
 	((slot-set! _ b alpha _) stru 29)
 	((slot-set! _ c alpha _) stru 39)
