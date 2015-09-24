@@ -646,18 +646,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;SL-INVALID-ARGS-LABEL  This subroutine  handles calls  to function
-  ;;with the wrong number of arguments.  We just want to tail call the
-  ;;primitive function $INCORRECT-ARGS-ERROR-HANDLER.
+  ;;SL-INVALID-ARGS-LABEL This  subroutine handles calls  to function with  the wrong
+  ;;number  of  arguments.   We  just  want  to  tail  call  the  primitive  function
+  ;;$INCORRECT-ARGS-ERROR-HANDLER.
   ;;
   ;;Upon entering this label:
   ;;
-  ;;**The Frame Pointer  Register (FPR) must reference the  top of the
-  ;;  Scheme stack.
+  ;;* The Frame Pointer Register (FPR) must reference the top of the Scheme stack.
   ;;
-  ;;**The Closure  Pointer Register (CPR)  must hold a reference  to a
-  ;;  closure  object; such closure  is the  one that has  been called
-  ;;  with the wrong number of arguments.
+  ;;* The Closure Pointer  Register (CPR) must hold a reference  to a closure object;
+  ;;such closure is the one that has been called with the wrong number of arguments.
   ;;
   ;;The situation on the Scheme stack when arriving here is:
   ;;
@@ -675,47 +673,234 @@
   ;;   |                      |
   ;;          low memory
   ;;
-  ;;and EAX contains the encoded  number of arguments.  We just ignore
-  ;;the arguments.
-  ;;
-  ;;FIXME It would be  good to call $INCORRECT-ARGS-ERROR-HANDLER with
-  ;;the arguments that are already on the stack.  (Marco Maggi; Nov 6,
-  ;;2012)
+  ;;and AAR contains the encoded number of arguments.
   ;;
   ((public-function		sl-invalid-args-label)
    (entry-point-label		SL_invalid_args)
    (number-of-free-variables	0)
    (code-annotation		'sl-invalid-args-label)
    (definitions)
-   (local-labels)
+   (local-labels L_number_of_arguments_is_zero
+		 L_varargs_loop_head
+		 L_varargs_continue
+		 L_call_error_handler)
    (assembly
-    ;;Store on the  stack a reference to the closure  object (from the
-    ;;Closure  Pointer Register)  as  first argument  to  the call  to
-    ;;$INCORRECT-ARGS-ERROR-HANDLER.
-    (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
-    ;;Decode  the incorrect  number  of  arguments, so  that  it is  a
-    ;;non-negative fixnum.
-    (negl eax)
-    ;;Store on the  stack the incorrect number of  arguments as second
-    ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl eax (mem (fx- (fx* 2 wordsize)) FP-REGISTER))
-    ;;From the  relocation vector  of this  code object:  retrieve the
-    ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
-    ;;load it in the Closure Pointer Register (CPR).
+    ;;Decode the incorrect number of arguments, so that it is a non-negative fixnum.
+    (negl AAR)
+
+    ;;If the  incorrect number  of arguments is  zero: we jump  directly to  call the
+    ;;error handler.
+    (cmpl (int 0) AAR)
+    (je (label L_number_of_arguments_is_zero))
+
+    ;;Check that there is enough room on  the heap to allocate the list of arguments;
+    ;;the amount of words needed to hold the list is twice the number of arguments.
+    (movl (mem pcb-allocation-redline PCR) ebx)
+    (addl AAR ebx)
+    (addl AAR ebx)
+    (cmpl ebx APR)
+    (jle (label L_varargs_loop_head))
+
+;;; perform garbage collection to free room on the heap
+
+    ;;If  we are  here: there  is not  enough room  on the  heap; call  the primitive
+    ;;function  DO-VARARG-OVERFLOW to  allocate new  heap  space.  We  expect AAR  to
+    ;;contain the incorrect positive number of arguments.
     ;;
-    ;;The "proc" slot  of such loc gensym contains a  reference to the
-    ;;closure object implementing $INCORRECT-ARGS-ERROR-HANDLER.
+    ;;Advance FPR to step over the plain arguments on the stack.
+    (addl AAR FPR)
+    ;;Save on the stack values needed later.
+    (pushl CPR)
+    (pushl AAR)
+    ;;Make argument-count positive.
+    (negl AAR)
+    ;;Add 4 words to adjust frame size (see the picture below).
+    (addl (int (fx* +4 wordsize)) AAR)
+    ;;Push the frame size.
+    (pushl AAR)
+    ;;Undo adding 4 words.
+    (addl (int (fx* -4 wordsize)) AAR)
+    ;;Double the number of arguments obtaining the number of bytes needed on the heap
+    ;;...
+    (addl AAR AAR)
+    ;;... pass it as first argument to DO-VARARG-OVERFLOW.
+    (movl AAR (mem (fx* -2 wordsize) FPR))
+    ;;DO-VARARG-OVERFLOW is  called with  one argument.  Load  the argument  count in
+    ;;AAR.
+    (movl (int (argc-convention 1)) AAR)
+    ;;From the  relocation vector of this  code object: retrieve the  location gensym
+    ;;associated to  DO-VARARG-OVERFLOW and load  it in the Closure  Pointer Register
+    ;;(CPR).  The "proc" slot of such loc  gensym contains a reference to the closure
+    ;;object implementing DO-VARARG-OVERFLOW.
+    (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) CPR)
+    ;;Load in  the Closure Pointer Register  (CPR) a reference to  the closure object
+    ;;implementing DO-VARARG-OVERFLOW.
+    (movl (mem off-symbol-record-proc CPR) CPR)
+    ;;When arriving here the Scheme stack is as follows:
+    ;;
+    ;;       high memory
+    ;;   |                |
+    ;;   |----------------|
+    ;;   | return address |
+    ;;   |----------------|          --
+    ;;   |   argument1    |          .
+    ;;   |----------------|          .
+    ;;   |   argument2    |          . stack frame size for the
+    ;;   |----------------|          . call to DO-VARARG-OVERFLOW
+    ;;   |   argument3    |          .
+    ;;   |----------------|          .  --
+    ;;   |   saved CPR    |          .  .
+    ;;   |----------------|          .  .
+    ;;   |   saved AAR    |          .  . 4 words needed to
+    ;;   |----------------|          .  . prepare the call
+    ;;   |   framesize    | <-- FPR  .  . to DO-VARARG-OVERFLOW
+    ;;   |----------------|          .  .
+    ;;   |   empty word   |          .  .
+    ;;   |----------------|          -- --
+    ;;   |needed heap room| <- argument for DO-VARARG-OVERFLOW
+    ;;   |----------------|
+    ;;   |                |
+    ;;       low memory
+    ;;
+    ;;the  empty machine  word is  the  one in  which  "call" will  store the  return
+    ;;address.
+    ;;
+    (compile-call-table 0	  ;frame words count
+			'#()	  ;livemask
+			'(int 0) ;multivalue return point, NULL because unused
+			(indirect-cpr-call))
+    ;;Pop framesize and drop it.
+    (popl AAR)
+    ;;Reload the previously saved number of arguments.
+    (popl AAR)
+    ;;Reload the previously saved pointer to current closure object.
+    (popl CPR)
+    ;;Re-adjust the frame pointer to step back over the plain arguments on the stack.
+    (subl AAR FPR)
+    ;;Upon arriving here AAR contains the incorrect positive number of arguments.
+
+;;; building list of arguments
+
+    ;;When coming here either: there is enough  room on the heap to allocate the rest
+    ;;list, or we have successfully performed  a garbage collection and the result is
+    ;;that  now there  is  enough room  on  the heap.   Here  the Allocation  Pointer
+    ;;Register (APR) contains a  pointer to the first word in the  region of the heap
+    ;;we can use to allocate the list.
+
+    ;;We allocate the list backwards.  Assuming there are three arguments, the list:
+    ;;
+    ;;   (arg1 arg2 arg3)
+    ;;
+    ;;is laid out as follows:
+    ;;
+    ;;       ---- growing heap ---->
+    ;;
+    ;;    tail pair mid pair  head pair
+    ;;   |.........|.........|.........|
+    ;;
+    ;;    arg3 null arg2      arg3
+    ;;   |----|----|----|----|----|----| heap
+    ;;      ^         ^   |         |
+    ;;      |         |   |         |
+    ;;      |          ---+---------
+    ;;      --------------
+    ;;
+    (label L_varargs_loop_head)
+    ;;Store in EDX the positive number of arguments.
+    (movl AAR edx)
+    ;;Put in AAR the negated number of arguments, so that it serves as stack offset.
+    (negl AAR)
+    (movl (int NULL-OBJECT) ebx)   ;the list finishes with a null
+    (label L_varargs_continue)
+    (movl ebx (mem disp-cdr APR))  ;store the cdr value in the pair, either null or a reference to the previous pair
+    (movl (mem FPR AAR) ebx)	   ;load the next car value, the argument from the stack in reverse order
+    (movl ebx (mem disp-car APR))  ;store the car value in the pair
+    (movl APR ebx)		   ;load the allocation pointer
+    (addl (int pair-tag)  ebx)	   ;tag the pointer as reference to pair
+    (addl (int pair-size) APR)	   ;increment the allocation pointer to reference the next pair
+    (addl (int wordsize)  AAR)	   ;increment the negative arguments count to reference the next argument
+    ;;Loop if more arguments.
+    (cmpl (int 0) AAR)
+    (jne (label L_varargs_continue))
+    ;;If  we are  here: EBX  contains the  reference to  the list;  EDX contains  the
+    ;;positive incorrect number of arguments.
+    (jmp (label L_call_error_handler))
+
+;;; Special case: the number of arguments is zer.
+
+    ;;We expect AAR to hold the positive  incorrect number of arguments.  The list of
+    ;;arguments (empty) must  be in EBX.  The positive incorrect  number of arguments
+    ;;must be in EDX.
+    (label L_number_of_arguments_is_zero)
+    (movl (int NULL-OBJECT) ebx)
+    (movl AAR edx)
+
+;;; Preparing call to $INCORRECT-ARGS-ERROR-HANDLER.
+
+    (label L_call_error_handler)
+    ;;Store  on the  stack the  first argument  for $INCORRECT-ARGS-ERROR-HANDLER:  a
+    ;;reference to the closure object (from the Closure Pointer Register).
+    (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
+    ;;Store on the  stack the second argument  for $INCORRECT-ARGS-ERROR-HANDLER: the
+    ;;positive incorrect number of arguments.
+    (movl edx (mem (fx- (fx* 2 wordsize)) FP-REGISTER))
+    ;;Store on  the stack the  third argument for  $INCORRECT-ARGS-ERROR-HANDLER: the
+    ;;list of arguments.
+    (movl ebx (mem (fx- (fx* 3 wordsize)) FP-REGISTER))
+
+    ;;From the  relocation vector of this  code object: retrieve the  location gensym
+    ;;associated to $INCORRECT-ARGS-ERROR-HANDLER and load  it in the Closure Pointer
+    ;;Register (CPR).
+    ;;
+    ;;The "proc" slot of  such loc gensym contains a reference  to the closure object
+    ;;implementing $INCORRECT-ARGS-ERROR-HANDLER.
     (movl (obj (primitive-public-function-name->location-gensym '$incorrect-args-error-handler)) CP-REGISTER)
-    ;;Load in the Closure Pointer  Register a reference to the closure
-    ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
+    ;;Load  in  the Closure  Pointer  Register  a  reference  to the  closure  object
+    ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
     (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
-    ;;Load in  EAX the  encoded number  of arguments  for the  call to
+    ;;Load   in   AAR  the   encoded   number   of   arguments   for  the   call   to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
-    (movl (int (argc-convention 2)) eax)
-    ;;Fetch a binary  code address from the  closure object referenced
-    ;;by the Closure Pointer Register and jump directly there.
+    (movl (int (argc-convention 3)) AAR)
+    ;;Fetch a binary  code address from the closure object  referenced by the Closure
+    ;;Pointer Register and jump directly there.
     (tail-indirect-cpr-call)
     ))
+
+  ;;This is  an old  version of  the subroutine  SL-INVALID-ARGS-LABEL, kept  here as
+  ;;reference.  This  old code was  not building a list  of incorrect argument  to be
+  ;;handed to $INCORRECT-ARGS-ERROR-HANDLER.  (Marco Maggi; Thu Sep 24, 2015)
+  ;;
+  ;; ((public-function             sl-invalid-args-label)
+  ;;  (entry-point-label           SL_invalid_args)
+  ;;  (number-of-free-variables    0)
+  ;;  (code-annotation             'sl-invalid-args-label)
+  ;;  (definitions)
+  ;;  (local-labels)
+  ;;  (assembly
+  ;;   ;;Store on the stack a reference to  the closure object (from the Closure Pointer
+  ;;   ;;Register) as first argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
+  ;;   (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
+  ;;   ;;Decode the incorrect number of arguments, so that it is a non-negative fixnum.
+  ;;   (negl eax)
+  ;;   ;;Store on the stack the incorrect number  of arguments as second argument to the
+  ;;   ;;call to $INCORRECT-ARGS-ERROR-HANDLER.
+  ;;   (movl eax (mem (fx- (fx* 2 wordsize)) FP-REGISTER))
+  ;;   ;;From the  relocation vector of this  code object: retrieve the  location gensym
+  ;;   ;;associated to $INCORRECT-ARGS-ERROR-HANDLER and load  it in the Closure Pointer
+  ;;   ;;Register (CPR).
+  ;;   ;;
+  ;;   ;;The "proc" slot of  such loc gensym contains a reference  to the closure object
+  ;;   ;;implementing $INCORRECT-ARGS-ERROR-HANDLER.
+  ;;   (movl (obj (primitive-public-function-name->location-gensym '$incorrect-args-error-handler)) CP-REGISTER)
+  ;;   ;;Load  in  the Closure  Pointer  Register  a  reference  to the  closure  object
+  ;;   ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
+  ;;   (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
+  ;;   ;;Load   in   EAX  the   encoded   number   of   arguments   for  the   call   to
+  ;;   ;;$INCORRECT-ARGS-ERROR-HANDLER.
+  ;;   (movl (int (argc-convention 2)) eax)
+  ;;   ;;Fetch a binary  code address from the closure object  referenced by the Closure
+  ;;   ;;Pointer Register and jump directly there.
+  ;;   (tail-indirect-cpr-call)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1145,15 +1330,14 @@
     ;;by the CPR (Closure Pointer Register) and jump directly there.
     (tail-indirect-cpr-call)
 
-    ;;We come here if CALL-WITH-VALUES was applied to the wrong number
-    ;;of arguments.  A reference  to the CALL-WITH-VALUES closure must
-    ;;be in the Closure Pointer Register (CPR).
+    ;;We come here if CALL-WITH-VALUES was  applied to the wrong number of arguments.
+    ;;A reference  to the  CALL-WITH-VALUES closure  must be  in the  Closure Pointer
+    ;;Register (CPR).
     ;;
-    ;;We    want    to    tail    call    the    primitive    function
-    ;;$INCORRECT-ARGS-ERROR-HANDLER,  which  accepts  2  arguments:  a
-    ;;reference to the CALL-WITH-VALUES closure, a non-negative fixnum
-    ;;representing the  incorrect number  of arguments.  We  reset the
-    ;;stack from:
+    ;;We  want to  tail  call the  primitive function  $INCORRECT-ARGS-ERROR-HANDLER,
+    ;;which  accepts 3  arguments: a  reference  to the  CALL-WITH-VALUES closure,  a
+    ;;non-negative fixnum representing the incorrect number of arguments, the list of
+    ;;arguments.  We reset the stack from:
     ;;
     ;;         high memory
     ;;   |                      |
@@ -1182,16 +1366,20 @@
     ;;          low memory
     ;;
     (label SL_invalid_args)
-    ;;Put on the stack a  reference to the closure object implementing
-    ;;CALL-WITH-VALUES,        as       first        argument       to
-    ;;$INCORRECT-ARGS-ERROR-HANDLER.
+    ;;Put  on  the  stack  the first  argument  to  $INCORRECT-ARGS-ERROR-HANDLER:  a
+    ;;reference to the closure object implementing CALL-WITH-VALUES.
     (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
-    ;;Decode the  number of  arguments, so that  it is  a non-negative
-    ;;fixnum.
+    ;;Decode the number of arguments, so that it is a non-negative fixnum.
     (negl eax)
-    ;;Put on the stack the incorrect number of arguments as fixnum, as
-    ;;second argument to $INCORRECT-ARGS-ERROR-HANDLER.
+    ;;Put  on the  stack the  second argument  to $INCORRECT-ARGS-ERROR-HANDLER:  the
+    ;;incorrect number of arguments as fixnum.
     (movl eax (mem (fx- 0 (fx* 2 wordsize)) FP-REGISTER))
+    ;;Put on the stack the second argument to $INCORRECT-ARGS-ERROR-HANDLER: the list
+    ;;of arguments.
+    ;;
+    ;;FIXME We use null  to simplify the code, but we should  actually build the list
+    ;;of arguments.  (Marco Maggi; Thu Sep 24, 2015)
+    (movl (int NULL-OBJECT) (mem (fx- 0 (fx* 3 wordsize)) FP-REGISTER))
     ;;From the  relocation vector  of this  code object:  retrieve the
     ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
     ;;load it in the Closure  Pointer Register (CPR).  The "proc" slot

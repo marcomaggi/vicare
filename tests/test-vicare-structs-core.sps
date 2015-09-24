@@ -603,22 +603,12 @@
 ;;; generic maker syntax
 
   (check
-      (let ((stru (alpha (1 2 3))))
+      (let ((stru (new alpha 1 2 3)))
 	(alpha? stru))
     => #t)
 
   (check
-      (let ((stru (beta (1 2 3))))
-	(beta? stru))
-    => #t)
-
-  (check
-      (let ((stru (apply (alpha (...)) 1 '(2 3))))
-	(alpha? stru))
-    => #t)
-
-  (check
-      (let ((stru (apply (beta (...)) '(1 2 3))))
+      (let ((stru (new beta 1 2 3)))
 	(beta? stru))
     => #t)
 

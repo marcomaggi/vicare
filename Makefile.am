@@ -57,7 +57,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/foreign.texi				\
 	doc/ffi.texi					\
 	doc/syslib.texi					\
-	doc/tags.texi					\
+	doc/types.texi					\
 	doc/obspec.texi					\
 	doc/capi.texi					\
 	doc/objects.texi				\
@@ -454,10 +454,11 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.lexical-environment.sls				\
 	scheme/psyntax.lexical-environment.object-type-specs.scm	\
 	scheme/psyntax.lexical-environment.syntactic-bindings.scm	\
+	scheme/psyntax.lexical-environment.lexical-typed-specs.scm	\
 	scheme/psyntax.syntax-match.sls					\
 	scheme/psyntax.syntactic-binding-properties.sls			\
 	scheme/psyntax.syntax-utilities.sls				\
-	scheme/psyntax.tag-and-tagged-identifiers.sls			\
+	scheme/psyntax.type-identifiers-and-signatures.sls		\
 	scheme/psyntax.core-primitives-properties.sls			\
 	scheme/psyntax.library-collectors.sls				\
 	scheme/psyntax.import-spec-parser.sls				\
@@ -466,7 +467,11 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.non-core-macro-transformers.define-record-type.scm	\
 	scheme/psyntax.non-core-macro-transformers.infix-macro.scm	\
 	scheme/psyntax.chi-procedures.sls				\
+	scheme/psyntax.chi-procedures.chi-body.scm			\
+	scheme/psyntax.chi-procedures.chi-lambda.scm			\
+	scheme/psyntax.chi-procedures.chi-application.scm		\
 	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
+	scheme/psyntax.chi-procedures.generic-type-syntaxes.scm		\
 	scheme/psyntax.expander.sls					\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-utils.sls				\
@@ -879,7 +884,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-string-to-number.sps				\
 	tests/test-vicare-strings.sps					\
 	tests/test-vicare-structs-core.sps				\
-	tests/test-vicare-structs-typed.sps				\
 	tests/test-vicare-symbols.sps					\
 	tests/test-vicare-syntactic-extensions.sps			\
 	tests/test-vicare-syntax-utilities.sps				\

@@ -542,25 +542,32 @@
 	   (rtd: rtd) (parent-rcd: #f) (protocol: 123))))
     => '(123))
 
-  (let ((prot (lambda (a b)
-		(list a b))))
-    (check	;protocol accepting wrong num of args
-	(catch #f
-	  (let* ((rtd	(make-record-type-descriptor
-			 (name: 'rtd-0) (parent: #f) (uid: #f)
-			 (sealed: #f) (opaque: #f) (fields: '#())))
-		 (rcd	(make-record-constructor-descriptor
-			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-		 (maker	(record-constructor rcd)))
-	    (maker)))
-      => (list prot 1)))
+  ;;Protocol accepting wrong num of args.
+  ;;
+  ;;A correct  PROT function  would accept  as single  argument the  super-type maker
+  ;;function.
+  (let ((prot (lambda (a b) (void))))
+    (check
+	(guard (E ((assertion-violation? E)
+		   (condition-message E))
+		  (else E))
+	  (let* ((rtd		(make-record-type-descriptor
+				 (name: 'rtd-0) (parent: #f) (uid: #f)
+				 (sealed: #f) (opaque: #f) (fields: '#())))
+		 (rcd		(make-record-constructor-descriptor
+				 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
+		 (constr	(record-constructor rcd)))
+	    (constr)))
+      => "incorrect number of arguments"))
 
   (let* ((builder	(lambda (a b)
 			  (list a b)))
 	 (prot		(lambda (make-top)
 			  builder)))
     (check	;builder accepting wrong num of args
-	(catch #f
+	(guard (E ((assertion-violation? E)
+		   (condition-message E))
+		  (else E))
 	  (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
@@ -568,7 +575,7 @@
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
 		 (builder	(record-constructor rcd)))
 	    (builder)))
-      => (list builder 0)))
+      => "incorrect number of arguments"))
 
   (let ((prot (lambda (make-top)
 		(add-result 1)

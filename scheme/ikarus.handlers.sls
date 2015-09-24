@@ -70,17 +70,32 @@
 (define ($apply-nonprocedure-error-handler x)
   (assertion-violation 'apply "not a procedure" x))
 
-(define ($incorrect-args-error-handler p . ls)
-  ;;Whenever an attempt to apply a closure object to the wrong number of
-  ;;arguments  is  performed:  the assembly  subroutine  SL_INVALID_ARGS
-  ;;calls this function to handle the error.
+(define ($incorrect-args-error-handler proc wrong-num-of-args list-of-args)
+  ;;Whenever an attempt to apply a closure object to the wrong number of arguments is
+  ;;performed: the assembly subroutine SL_INVALID_ARGS  calls this function to handle
+  ;;the error.
   ;;
-  ;;P is a reference to closure object, being the offended one.
+  ;;P is a reference to closure object, being the offended one.  WRONG-NUM-OF-ARGS is
+  ;;fixnum representing the  wrong number of arguments.  LIST-OF-ARGS is  the list of
+  ;;wrong arguments.
   ;;
-  ;;LS is  a list containing  a single non-negative  fixnum representing
-  ;;the incorrect number of arguments.
-  ;;
-  (apply assertion-violation 'apply "incorrect number of arguments" p ls))
+  (define-condition-type &affected-procedure
+      &condition
+    make-affected-procedure-condition
+    affected-procedure-condition?
+    (proc	condition-affected-procedure))
+  (define-condition-type &wrong-num-args
+      &condition
+    make-wrong-num-args-condition
+    wrong-num-args-condition?
+    (n		condition-wrong-num-args))
+  (raise
+   (condition (make-assertion-violation)
+	      (make-who-condition 'apply)
+	      (make-message-condition "incorrect number of arguments")
+	      (make-affected-procedure-condition proc)
+	      (make-wrong-num-args-condition wrong-num-of-args)
+	      (make-irritants-condition list-of-args))))
 
 (define ($multiple-values-error . args)
   ;;Whenever an attempt to return zero  or multiple, but not one, values

@@ -24,15 +24,11 @@
   (export
     initialise-expander
     expander-initialisation/initialise-label-gensyms-and-interned-libraries
-    expander-initialisation/initialise-type-spec-for-built-in-object-types
     expander-initialisation/initialise-core-prims-tagging)
   (import (rnrs)
     (psyntax.compat))
 
   (define expander-initialisation/initialise-label-gensyms-and-interned-libraries
-    (make-parameter #f))
-
-  (define expander-initialisation/initialise-type-spec-for-built-in-object-types
     (make-parameter #f))
 
   (define expander-initialisation/initialise-core-prims-tagging
@@ -44,8 +40,6 @@
 	(unless expander-initialised?
 	  (print-expander-debug-message "initialising expander internals")
 	  (let ((func (expander-initialisation/initialise-label-gensyms-and-interned-libraries)))
-	    (when func (func)))
-	  (let ((func (expander-initialisation/initialise-type-spec-for-built-in-object-types)))
 	    (when func (func)))
 	  (let ((func (expander-initialisation/initialise-core-prims-tagging)))
 	    (when func (func)))

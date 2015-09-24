@@ -30,7 +30,7 @@
     chi-body*			chi-internal-body
     chi-qrhs*			chi-defun
     chi-lambda			chi-case-lambda
-    chi-application/psi-first-operand
+    ;;;chi-application/psi-first-operand
     generate-qrhs-loc
     SPLICE-FIRST-ENVELOPE)
   (import (except (rnrs)
@@ -52,16 +52,15 @@
     (only (psyntax.syntax-utilities)
 	  syntax->list
 	  error-invalid-formals-syntax)
-    (only (psyntax.syntactic-binding-properties)
-	  identifier-unsafe-variant
-	  predicate-assertion-procedure-argument-validation
-	  predicate-assertion-return-value-validation)
     (psyntax.library-collectors)
-    (psyntax.tag-and-tagged-identifiers)
+    (psyntax.type-identifiers-and-signatures)
     (only (psyntax.special-transformers)
 	  variable-transformer?		variable-transformer-procedure
 	  synonym-transformer?		synonym-transformer-identifier
 	  expand-time-value?		expand-time-value-object)
+    (only (psyntax.syntactic-binding-properties)
+	  predicate-assertion-procedure-argument-validation
+	  predicate-assertion-return-value-validation)
     (psyntax.non-core-macro-transformers)
     (psyntax.library-manager)
     (psyntax.internal))
@@ -165,46 +164,34 @@
 
   (case-define* make-psi
     ((stx core-expr)
-     (%make-psi stx core-expr (make-retvals-signature-fully-unspecified)))
+     (%make-psi stx core-expr (make-retvals-signature/fully-unspecified)))
     ((stx core-expr {retvals-signature retvals-signature?})
      (%make-psi stx core-expr retvals-signature)))
 
-  (define* ({psi-application-retvals-signature retvals-signature?} {rator.psi psi?})
+  (define* ({psi-application-retvals-signature retvals-signature?} input-form.stx lexenv.run {rator.psi psi?})
     ;;RATOR.PSI is a PSI representing the first form in a callable application:
     ;;
     ;;   (?rator ?rand ...)
     ;;
     ;;we need to establish the retvals signature of the application and return it.
     ;;
-    (syntax-match (retvals-signature-tags (psi-retvals-signature rator.psi)) ()
-      ((?tag)
-       (let ((spec (tag-identifier-callable-signature ?tag)))
-	 (cond ((lambda-signature? spec)
-		(lambda-signature-retvals spec))
-	       ((clambda-compound? spec)
-		(clambda-compound-common-retvals-signature spec))
-	       (else
-		(make-retvals-signature-fully-unspecified)))))
+    (syntax-match (retvals-signature.tags (psi-retvals-signature rator.psi)) ()
+      ((?type-id)
+       (let* ((label (id->label/or-error #f input-form.stx ?type-id))
+	      (descr (label->syntactic-binding-descriptor label lexenv.run))
+	      (spec  (syntactic-binding-descriptor.value descr)))
+	 (if (closure-type-spec? spec)
+	     (callable-signature.retvals (closure-type-spec.signature spec))
+	   (make-retvals-signature/fully-unspecified))))
       (_
-       (make-retvals-signature-fully-unspecified))))
+       (make-retvals-signature/fully-unspecified))))
 
   #| end of module |# )
 
 
-;;;; lambda clause attributes
-
-(define (lambda-clause-attributes:safe-formals? attributes.sexp)
-  (or (memq 'safe         attributes.sexp)
-      (memq 'safe-formals attributes.sexp)))
-
-(define (lambda-clause-attributes:safe-retvals? attributes.sexp)
-  (or (memq 'safe         attributes.sexp)
-      (memq 'safe-retvals attributes.sexp)))
-
-
 ;;;; chi procedures: syntax object type inspection
 
-(define (syntactic-form-type expr.stx lexenv)
+(define* (syntactic-form-type expr.stx lexenv)
   ;;Determine the  syntax type of a  syntactic form representing an  expression.  The
   ;;type of an expression is determined by two things:
   ;;
@@ -245,25 +232,22 @@
      (identifier? expr.stx)
      (cond ((id->label ?id)
 	    => (lambda (label)
-		 (let* ((binding-descriptor (label->syntactic-binding-descriptor label lexenv))
-			(binding-type       (syntactic-binding-descriptor.type binding-descriptor)))
-		   (case binding-type
+		 (let* ((descr (label->syntactic-binding-descriptor label lexenv))
+			(type  (syntactic-binding-descriptor.type descr)))
+		   (case type
 		     ((core-prim
-		       lexical global global-mutable
+		       lexical lexical-typed
+		       global global-mutable global-typed global-typed-mutable
 		       macro macro! global-macro global-macro! local-macro local-macro!
 		       import export library $module pattern-variable
 		       local-etv global-etv
 		       displaced-lexical)
-		      (values binding-type (syntactic-binding-descriptor.value binding-descriptor) ?id))
+		      (values type (syntactic-binding-descriptor.value descr) ?id))
 		     (else
 		      ;;This will cause an error to be raised later.
 		      (values 'other #f #f))))))
 	   (else
 	    (values 'standalone-unbound-identifier #f #f))))
-
-    ((?tag)
-     (tag-identifier? ?tag)
-     (values 'tag-cast-operator #f ?tag))
 
     ((?car . ?cdr)
      (identifier? ?car)
@@ -273,8 +257,8 @@
      ;;
      (cond ((id->label ?car)
 	    => (lambda (label)
-		 (let* ((binding (label->syntactic-binding-descriptor label lexenv))
-			(type    (syntactic-binding-descriptor.type binding)))
+		 (let* ((descr (label->syntactic-binding-descriptor label lexenv))
+			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
 		     ((core-macro
 		       define define-syntax define-alias
@@ -284,12 +268,11 @@
 		       local-etv global-etv
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module)
-		      (values type (syntactic-binding-descriptor.value binding) ?car))
-		     (($record-type-name $struct-type-name)
-		      (values 'tag-maker-application (syntactic-binding-descriptor.value binding) ?car))
+		      (values type (syntactic-binding-descriptor.value descr) ?car))
 		     (else
-		      ;;This case  includes TYPE  being: CORE-PRIM,  LEXICAL, GLOBAL,
-		      ;;GLOBAL-MUTABLE.
+		      ;;This   case   includes   TYPE  being:   CORE-PRIM,   LEXICAL,
+		      ;;LEXICAL-TYPED,    GLOBAL,    GLOBAL-MUTABLE,    GLOBAL-TYPED,
+		      ;;GLOBAL-TYPED-MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
 	    (raise-unbound-error #f expr.stx ?car))))
@@ -303,7 +286,6 @@
      ;;syntaxes for this case are:
      ;;
      ;;   ((?first-subform ?subform ...) ?form ...)
-     ;;   (?datum ?form ...)
      ;;
      (values 'call #f #f))
 
@@ -635,7 +617,23 @@
 	    ((inv-collector) lib)
 	    (make-psi expr.stx
 		      (build-global-reference no-source loc)
-		      (identifier-tag-retvals-signature expr.stx))))
+		      (make-retvals-signature/single-top))))
+
+	 ((global-typed)
+	  ;;Reference to global imported typed  lexical variable; this means EXPR.STX
+	  ;;is an identifier.  We expect the syntactic binding descriptor to be:
+	  ;;
+	  ;;   (global-typed . ?global-typed-spec)
+	  ;;
+	  ;;and    BIND-VAL    to    be   ?GLOBAL-TYPED-SPEC,    an    instance    of
+	  ;;"<global-typed-spec>".
+	  ;;
+	  (let* ((lib (global-typed-spec.lib bind-val))
+		 (loc (global-typed-spec.loc bind-val)))
+	    ((inv-collector) lib)
+	    (make-psi expr.stx
+		      (build-global-reference no-source loc)
+		      (make-retvals-signature/single-value (global-typed-spec.type-id bind-val)))))
 
 	 ((core-prim)
 	  ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
@@ -651,7 +649,7 @@
 	  (let ((name bind-val))
 	    (make-psi expr.stx
 		      (build-primref no-source name)
-		      (identifier-tag-retvals-signature expr.stx))))
+		      (make-retvals-signature/single-top))))
 
 	 ((call)
 	  ;;A function call; this means EXPR.STX has one of the formats:
@@ -663,10 +661,19 @@
 
 	 ((lexical)
 	  ;;Reference to lexical variable; this means EXPR.STX is an identifier.
-	  (make-psi expr.stx
-		    (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
-		      (build-lexical-reference no-source lex))
-		    (identifier-tag-retvals-signature expr.stx)))
+	  (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
+	    (make-psi expr.stx
+		      (build-lexical-reference no-source lex)
+		      (make-retvals-signature/single-top))))
+
+	 ((lexical-typed)
+	  ;;Reference  to  typed   lexical  variable;  this  means   EXPR.STX  is  an
+	  ;;identifier.
+	  (let ((lex     (lexical-typed-var-binding-descriptor-value.lex-name bind-val))
+		(type-id (lexical-typed-var-binding-descriptor-value.type-id  bind-val)))
+	    (make-psi expr.stx
+		      (build-lexical-reference no-source lex)
+		      (make-retvals-signature/single-value type-id))))
 
 	 ((global-macro global-macro!)
 	  ;;Macro uses of macros imported from other libraries or defined by previous
@@ -695,7 +702,7 @@
 	  (let ((datum bind-val))
 	    (make-psi expr.stx
 		      (build-data no-source datum)
-		      (retvals-signature-of-datum datum))))
+		      (datum-retvals-signature datum))))
 
 	 ((set!)
 	  ;;Macro use of SET!; it means EXPR.STX has the format:
@@ -784,47 +791,11 @@
 			(else                     "a non-expression"))
 		      " was found where an expression was expected")))
 
-	 ((global-mutable)
+	 ((global-mutable global-typed-mutable)
 	  ;;Imported variable  in reference  position, whose  binding is  assigned at
 	  ;;least once in the  code of the imported library; it  means EXPR.STX is an
 	  ;;identifier.
 	  (stx-error expr.stx "attempt to reference a variable that is assigned in an imported library"))
-
-	 ((tag-maker-application)
-	  ;;Here we expand  a form whose car  is a tag identifier.  The  result is an
-	  ;;expression  that evaluates  to the  application of  the struct  or record
-	  ;;maker.
-	  (syntax-match expr.stx ()
-	    ((?tag (?ellipsis))
-	     (ellipsis-id? ?ellipsis)
-	     (let ((constructor.stx (tag-identifier-constructor-maker ?tag expr.stx)))
-	       (chi-expr constructor.stx lexenv.run lexenv.expand)))
-	    ((?tag (?arg* ...))
-	     (let ((constructor.stx (tag-identifier-constructor-maker ?tag expr.stx)))
-	       (chi-expr (bless
-			  `(,constructor.stx . ,?arg*))
-			 lexenv.run lexenv.expand)))
-	    ))
-
-	 ((tag-cast-operator)
-	  ;;The input form is:
-	  ;;
-	  ;;   (?tag)
-	  ;;
-	  ;;and we imagine it is the first form in:
-	  ;;
-	  ;;   ((?tag) ?object)
-	  ;;
-	  ;;this is the  syntax of casting a  value from a type to  another.  We want
-	  ;;the following chain of expansions:
-	  ;;
-	  ;;   ((?tag) ?object)
-	  ;;   ==> ((splice-first-expand (tag-cast ?tag)) ?object)
-	  ;;   ==> (tag-cast ?tag ?object)
-	  ;;
-	  (chi-expr (bless
-		     `(splice-first-expand (tag-cast ,kwd)))
-		    lexenv.run lexenv.expand))
 
 	 ((standalone-unbound-identifier)
 	  (raise-unbound-error __who__ expr.stx expr.stx))
@@ -936,21 +907,21 @@
 	    (define-syntax-rule (%recurse-and-cons ?expr.core)
 	      (cons ?expr.core
 		    (recur (cdr lhs*) (cdr qrhs*))))
-	    (case (qualified-rhs-type qrhs)
+	    (case (qualified-rhs.category qrhs)
 	      ((defun)
-	       (let ((psi (chi-defun (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
+	       (let ((psi (chi-defun qrhs lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (build-global-assignment no-source
 				      lhs (psi-core-expr psi)))))
-	      ((defvar)
-	       (let ((psi (chi-expr  (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
+	      ((typed-defvar)
+	       (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (build-global-assignment no-source
 				      lhs (psi-core-expr psi)))))
-	      ((untagged-defvar)
-	       (let ((psi (chi-expr  (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
+	      ((untyped-defvar)
+	       (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (build-global-assignment no-source
 				      lhs (psi-core-expr psi)))))
 	      ((top-expr)
-	       (let ((psi (chi-expr  (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
+	       (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (psi-core-expr psi))))
 	      (else
 	       (assertion-violation __module_who__
@@ -960,801 +931,6 @@
 	  init*))))
 
   #| end of module: CHI-INTERACTION-EXPR |# )
-
-
-;;;; chi procedures: closure object application processing
-
-(module PROCESS-CLOSURE-OBJECT-APPLICATION
-  (%process-closure-object-application)
-  ;;This module is  subordinate to the function CHI-APPLICATION.  Here  we handle the
-  ;;special case of closure object application to  a given tuple of operands; here we
-  ;;know that the application to process is:
-  ;;
-  ;;   (?rator ?rand ...)
-  ;;
-  ;;and ?RATOR will evaluate to a closure object with tag identifier RATOR.TAG, which
-  ;;is a sub-tag of "<procedure>".
-  ;;
-  (define-module-who %process-closure-object-application)
-
-  (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
-					       rator.tag rator.psi rand*.psi)
-    (define rator.callable
-      (tag-identifier-callable-signature rator.tag))
-    (cond ((lambda-signature? rator.callable)
-	   (%process-lambda-application input-form.stx lexenv.run lexenv.expand
-					rator.callable rator.psi rand*.psi))
-	  ((clambda-compound? rator.callable)
-	   (%process-clambda-application input-form.stx rator.callable rator.psi rand*.psi))
-	  (else
-	   (%build-core-expression input-form.stx rator.psi rand*.psi))))
-
-  (define (%process-lambda-application input-form.stx lexenv.run lexenv.expand
-				       rator.lambda-signature rator.psi rand*.psi)
-    (cond ((option.strict-r6rs)
-	   ;;We rely on run-time checking.
-	   (%build-core-expression input-form.stx rator.psi rand*.psi))
-	  ((%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
-							   rator.psi rand*.psi)
-	   ;;The signatures do match.
-	   (let ((rator.stx (psi-stx rator.psi)))
-	     (cond ((identifier? rator.stx)
-		    (cond ((identifier-unsafe-variant rator.stx)
-			   => (lambda (unsafe-rator.stx)
-				(let ((unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-				  (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi))))
-			  (else
-			   (%build-core-expression input-form.stx rator.psi rand*.psi))))
-		   (else
-		    (%build-core-expression input-form.stx rator.psi rand*.psi)))))
-	  (else
-	   ;;It is not possible to validate the signatures at expand-time; we rely on
-	   ;;run-time checking.
-	   (%build-core-expression input-form.stx rator.psi rand*.psi))))
-
-  (define (%process-clambda-application input-form.stx rator.callable rator.psi rand*.psi)
-    ;;FIXME Insert here  something special for CLAMBDA-COMPOUNDs.   (Marco Maggi; Thu
-    ;;Apr 10, 2014)
-    (%build-core-expression input-form.stx rator.psi rand*.psi))
-
-  (define (%build-core-expression input-form.stx rator.psi rand*.psi)
-    (let* ((rator.core (psi-core-expr rator.psi))
-	   (rand*.core (map psi-core-expr rand*.psi)))
-      (make-psi input-form.stx
-		(build-application (syntax-annotation input-form.stx)
-		  rator.core
-		  rand*.core)
-		(psi-application-retvals-signature rator.psi))))
-
-;;; --------------------------------------------------------------------
-
-  (module CLOSURE-APPLICATION-ERRORS
-    (%error-more-operands-than-arguments
-     %error-more-arguments-than-operands
-     %error-mismatch-between-argument-tag-and-operand-retvals-signature)
-
-    (define-condition-type &wrong-number-of-arguments-error
-	&error
-      make-wrong-number-of-arguments-error-condition
-      wrong-number-of-arguments-error-condition?)
-
-    (define-condition-type &expected-arguments-count
-	&condition
-      make-expected-arguments-count-condition
-      expected-arguments-count-condition?
-      (count expected-arguments-count))
-
-    (define-condition-type &given-operands-count
-	&condition
-      make-given-operands-count-condition
-      given-operands-count-condition?
-      (count given-operands-count))
-
-    (define-condition-type &argument-description
-	&condition
-      make-argument-description-condition
-      argument-description-condition?
-      (zero-based-argument-index argument-description-index)
-      (expected-argument-tag     argument-description-expected-tag))
-
-    (define-condition-type &operand-retvals-signature
-	&condition
-      make-operand-retvals-signature-condition
-      operand-retvals-signature-condition?
-      (signature operand-retvals-signature))
-
-    (define (%error-more-operands-than-arguments who input-form.stx expected-arguments-count given-operands-count)
-      (raise-compound-condition-object who
-	"while expanding, detected wrong number of operands in function application: more given operands than expected arguments"
-	input-form.stx
-	(condition
-	 (make-syntax-violation input-form.stx #f)
-	 (make-wrong-number-of-arguments-error-condition)
-	 (make-expected-arguments-count-condition expected-arguments-count)
-	 (make-given-operands-count-condition given-operands-count))))
-
-    (define (%error-more-arguments-than-operands who input-form.stx expected-arguments-count given-operands-count)
-      (raise-compound-condition-object who
-	"while expanding, detected wrong number of operands in function application: more expected arguments than given operands"
-	input-form.stx
-	(condition
-	 (make-syntax-violation input-form.stx #f)
-	 (make-wrong-number-of-arguments-error-condition)
-	 (make-expected-arguments-count-condition expected-arguments-count)
-	 (make-given-operands-count-condition given-operands-count))))
-
-    (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature who input-form.stx rand.stx
-										arg.idx arg.tag rand.retvals-signature)
-      (raise-compound-condition-object who
-	"expand-time mismatch between expected argument tag and operand retvals signature"
-	input-form.stx
-	(condition
-	 (make-expand-time-type-signature-violation)
-	 (make-syntax-violation input-form.stx rand.stx)
-	 (make-argument-description-condition arg.idx arg.tag)
-	 (make-operand-retvals-signature-condition rand.retvals-signature))))
-
-    #| end of module: CLOSURE-APPLICATION-ERRORS |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
-							  rator.psi rand*.psi)
-    ;;In a closure object application: compare  the signature tags of the operator to
-    ;;the retvals signatures of the operands:
-    ;;
-    ;;* If they match at expand-time: return true.
-    ;;
-    ;;* If  they do  *not* match at  expand-time, but they  could match  at run-time:
-    ;;  return false.
-    ;;
-    ;;* If  they do  *not* match at  expand-time, and will  *not* match  at run-time:
-    ;;  raise an exception.
-    ;;
-    (import CLOSURE-APPLICATION-ERRORS)
-    (define rator.formals-signature
-      (lambda-signature-formals rator.lambda-signature))
-    (let loop ((expand-time-match? #t)
-	       (arg*.tag           (formals-signature-tags rator.formals-signature))
-	       (rand*.psi          rand*.psi)
-	       (count              0))
-      (syntax-match arg*.tag ()
-	(()
-	 (if (null? rand*.psi)
-	     expand-time-match?
-	   (%error-more-operands-than-arguments 'chi-application input-form.stx
-						count (+ count (length rand*.psi)))))
-
-	((?arg.tag . ?rest-arg*.tag)
-	 (if (null? rand*.psi)
-	     (let ((number-of-mandatory-args (if (list? arg*.tag)
-						 (length arg*.tag)
-					       (receive (proper tail)
-						   (improper-list->list-and-rest arg*.tag)
-						 (length proper)))))
-	       (%error-more-arguments-than-operands 'chi-application input-form.stx (+ count number-of-mandatory-args) count))
-	   (let* ((rand.psi               (car rand*.psi))
-		  (rand.retvals-signature (psi-retvals-signature rand.psi))
-		  (rand.signature-tags    (retvals-signature-tags rand.retvals-signature)))
-	     (syntax-match rand.signature-tags ()
-	       ((?rand.tag)
-		;;Single return value from operand: good, this is what we want.
-		(cond ((top-tag-id? ?rand.tag)
-		       ;;The  argument expression  returns a  single "<top>"  object;
-		       ;;this  is  what  happens   with  standard  (untagged)  Scheme
-		       ;;language.  Let's see at run-time what will happen.
-		       (loop #f ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
-		      ((tag-super-and-sub? ?arg.tag ?rand.tag)
-		       ;;Argument and  operand do match at  expand-time.  Notice that
-		       ;;this case  includes the one  of expected argument  tagged as
-		       ;;"<top>":  this  is  what happens  with  standard  (untagged)
-		       ;;Scheme language.
-		       (loop expand-time-match? ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
-		      (else
-		       ;;Argument and operand do *not* match at expand-time.
-		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
-											   input-form.stx
-											   (psi-stx rand.psi)
-											   count ?arg.tag
-											   rand.retvals-signature))))
-	       (?rand.tag
-		(if (list-tag-id? ?rand.tag)
-		    ;;The operand expression returns an unspecified number of objects
-		    ;;of unspecified  type of return  values: it could be  one value.
-		    ;;Let's accept it for now, and  move on to the other operands: we
-		    ;;will see at run-time.
-		    (loop #f ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count))
-		  ;;The operand expression returns zero or more values of a specified
-		  ;;type: we consider this invalid even though if the operand returns
-		  ;;a single value the application could succeed.
-		  ;;
-		  ;;FIXME The  validity of this  rejection must be  verified.  (Marco
-		  ;;Maggi; Fri Apr 11, 2014)
-		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
-										      input-form.stx
-										      (psi-stx rand.psi)
-										      count ?arg.tag
-										      rand.retvals-signature)))
-	       (_
-		;;The operand returns multiple values for sure.
-		(%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
-										    input-form.stx
-										    (psi-stx rand.psi)
-										    count ?arg.tag
-										    rand.retvals-signature))
-	       ))))
-
-	(?arg.tag
-	 (if (list-tag-id? ?arg.tag)
-	     ;;From now on: the rator accepts any number of operands, of any type.
-	     expand-time-match?
-	   ;;If we are  here: ?ARG.TAG is a  sub-tag of "<list>".  From  now on: the
-	   ;;rator accepts any  number of operands, of a specified  type.  Let's see
-	   ;;at run-time what happens.
-	   #f))
-
-	(_
-	 ;;This should never happen.
-	 (assertion-violation/internal-error __module_who__
-	   "invalid closure object operator formals"
-	   input-form.stx rator.formals-signature))
-	)))
-
-  #| end of module: PROCESS-CLOSURE-OBJECT-APPLICATION |# )
-
-
-;;;; chi procedures: operator application processing, operator already expanded
-
-(module (chi-application/psi-rator)
-
-  (define* (chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
-				      {rator.psi psi?} rand*.stx)
-    ;;Expand an operator  application form; it is called when  INPUT-FORM.STX has the
-    ;;format:
-    ;;
-    ;;   (?rator ?rand ...)
-    ;;
-    ;;and ?RATOR is neither a macro keyword identifier, nor a VALUES application, nor
-    ;;an  APPLY application,  nor a  SPLICE-FIRST-EXPAND syntax.   For example  it is
-    ;;called when INPUT-FORM.STX is:
-    ;;
-    ;;   (?core-prim ?rand ...)
-    ;;   (?datum ?rand ...)
-    ;;   ((?sub-rator ?sub-rand ...) ?rand ...)
-    ;;
-    ;;We call this function when the operator has already been expanded.
-    ;;
-    (define rator.sig (psi-retvals-signature rator.psi))
-    (syntax-match (retvals-signature-tags rator.sig) ()
-      (?tag
-       (list-tag-id? ?tag)
-       ;;The rator type  is unknown: evaluating the rator might  return any number of
-       ;;values of any  type.  Return a normal  rator application and we  will see at
-       ;;run-time what happens; this is standard Scheme behaviour.
-       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					rator.psi rand*.stx))
-
-      ((?tag)
-       ;;The rator type is a single value.  Good, this is what it is meant to be.
-       (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					 rator.psi ?tag rand*.stx))
-
-      (_
-       ;;The rator  is declared to  evaluate to multiple  values; this is  invalid in
-       ;;call  context,  so we  raise  an  exception.   This is  non-standard  Scheme
-       ;;behaviour:  according  to the  standard  we  should  insert a  normal  rator
-       ;;application and raise an exception at run-time.
-       (raise
-	(condition (make-who-condition __who__)
-		   (make-message-condition "call operator declared to evaluate to multiple values")
-		   (syntax-match input-form.stx ()
-		     ((?rator . ?rands)
-		      (make-syntax-violation input-form.stx ?rator)))
-		   (make-retvals-signature-condition rator.sig))))
-      ))
-
-  (define* (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					    {rator.psi psi?} rand*.stx)
-    ;;Build a core language expression to apply  the rator to the rands; return a PSI
-    ;;struct.  This  is an application  form in standard (untagged)  Scheme language.
-    ;;We do not know  what the retvals signature of the  application is; the returned
-    ;;PSI struct will  have "<list>" as retvals signature, which  means any number of
-    ;;values of any type.
-    ;;
-    (let* ((rator.core (psi-core-expr rator.psi))
-	   (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	   (rand*.core (map psi-core-expr rand*.psi)))
-      (make-psi input-form.stx
-		(build-application (syntax-annotation input-form.stx)
-		  rator.core
-		  rand*.core))))
-
-  (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					     {rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
-    ;;Build a  core language expression to  apply the rator  to the rands when  it is
-    ;;known  that the  rator will  return  a single  value with  specified tag;  this
-    ;;function implements implicit dispatching.  Do the following:
-    ;;
-    ;;*  If the  rator is  a procedure  return a  PSI struct  as per  standard Scheme
-    ;;  behaviour  and, when possible,  select the appropriate retvals  signature for
-    ;;  the returned PSI.
-    ;;
-    ;;* If the  rator is not a  procedure and implicit dispatching is  ON: attempt to
-    ;;  match the  input form with the  getter syntax, tag method  application or tag
-    ;;  field accessor application.
-    ;;
-    ;;* If  the rator is not  a procedure and  implicit dispatching is OFF:  return a
-    ;;  common Scheme application ad we will se at run-time what happens.
-    ;;
-    ;;* Otherwise raise a syntax violation.
-    ;;
-    (cond ((tag-super-and-sub? (procedure-tag-id) rator.tag)
-	   ;;The rator is  a procedure: very good; return  a procedure application.
-	   (let ((rand*.psi (chi-expr* rand*.stx lexenv.run lexenv.expand)))
-	     (import PROCESS-CLOSURE-OBJECT-APPLICATION)
-	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
-						  rator.tag rator.psi rand*.psi)))
-
-	  ((top-tag-id? rator.tag)
-	   ;;The rator  type is  unknown, we  only know  that it  is a  single value.
-	   ;;Return a procedure application and we will see at run-time what happens.
-	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					    rator.psi rand*.stx))
-
-	  (else
-	   ;;The rator  has a correct single-value  signature and it has  a specified
-	   ;;tag, but it is not a procedure.
-	   (if (option.typed-language.datums-as-operators?)
-	       (%process-datum-operator input-form.stx lexenv.run lexenv.expand
-					rator.psi rator.tag rand*.stx)
-	     (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					      rator.psi rand*.stx)))))
-
-  (define* (%process-datum-operator input-form.stx lexenv.run lexenv.expand
-				    {rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
-    ;;When the "datums  as operators" option is on, there  are multiple cases covered
-    ;;by this procedure; examples:
-    ;;
-    ;;(123 positive?)	=> #t
-    ;;
-    ;;   The  rator is the  fixnum 123  and the expander  determines that its  tag is
-    ;;    "<fixnum>";  this  form  matches  the   syntax  of  a  method  or  accessor
-    ;;   application.  Here we retrieve the method dispatcher of "<fixnum>" and apply
-    ;;   it to the symbol "positive?".
-    ;;
-    ;;("ciao" [1])		=> #\i
-    ;;
-    ;;   The rator is  the string "ciao" and the expander determines  that its tag is
-    ;;   "<string>"; this  form matches the syntax of a  getter application.  Here we
-    ;;   retrieve  the getter  maker of "<string>"  and apply it  to the  keys syntax
-    ;;   object "[1]".
-    ;;
-    (syntax-match rand*.stx ()
-      (()
-       ;;No operands.  This is an error, because the input form is something like:
-       ;;
-       ;;   ("ciao mamma")
-       ;;
-       ;;so we raise an exception.
-       (raise
-	(condition (make-who-condition __who__)
-		   (make-message-condition "invalid datum call operator with no operands")
-		   (make-syntax-violation input-form.stx #f)
-		   (make-retvals-signature-condition (psi-retvals-signature rator.psi)))))
-
-      (((?key00 ?key0* ...) (?key11* ?key1** ...) ...)
-       ;;There are operands and they match the getter keys syntax.
-       (let* ((getter.stx  (tag-identifier-getter rator.tag rand*.stx input-form.stx))
-	      (getter.psi  (while-not-expanding-application-first-subform
-			    (chi-expr getter.stx lexenv.run lexenv.expand)))
-	      (getter.core (psi-core-expr getter.psi))
-	      (rator.core  (psi-core-expr rator.psi)))
-	 (make-psi input-form.stx
-		   (build-application (syntax-annotation input-form.stx)
-		     getter.core
-		     (list rator.core))
-		   (psi-application-retvals-signature getter.psi))))
-
-      ((?member ?arg* ...)
-       (identifier? ?member)
-       ;;There are  operands and  they match  the syntax for  a tag  dispatcher call,
-       ;;that's great.
-       (let ((method.stx (tag-identifier-dispatch rator.tag ?member input-form.stx)))
-	 (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-					    method.stx rator.psi ?arg*)))
-
-      (_
-       ;;There are operands, but they do not match any of the supported syntaxes; for
-       ;;example the input form may be:
-       ;;
-       ;;   ("ciao" "mamma")
-       ;;
-       ;;so we raise an exception.
-       (raise
-	(condition (make-who-condition __who__)
-		   (make-message-condition "invalid operands for non-procedure operator")
-		   (make-syntax-violation input-form.stx #f)
-		   (make-retvals-signature-condition (psi-retvals-signature rator.psi)))))
-      ))
-
-  #| end of module: CHI-APPLICATION/PSI-RATOR |# )
-
-
-;;;; chi procedures: operator application processing, first operand already expanded
-
-(module (chi-application/psi-first-operand)
-
-  (define* (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-					      rator.stx {first-rand.psi psi?} other-rand*.stx)
-    ;;Expand an operator  application form; it is called when  application to process
-    ;;has the format:
-    ;;
-    ;;   (?rator ?first-rand ?other-rand ...)
-    ;;
-    ;;and ?FIRST-RAND has already been expanded.  Here we know that the input form is
-    ;;a special syntax  like IS-A?, SLOT-REF, SLOT-SET! and similar;  so the operator
-    ;;will expand into a predicate, accessor, mutator or method object.
-    ;;
-    (define rator.psi (while-not-expanding-application-first-subform
-		       (chi-expr rator.stx lexenv.run lexenv.expand)))
-    (define rator.sig (psi-retvals-signature rator.psi))
-    (syntax-match (retvals-signature-tags rator.sig) ()
-      (?tag
-       (list-tag-id? ?tag)
-       ;;The rator type  is unknown: evaluating the rator might  return any number of
-       ;;values of any  type.  Return a normal  rator application and we  will see at
-       ;;run-time what happens; this is standard Scheme behaviour.
-       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					rator.psi first-rand.psi other-rand*.stx))
-
-      ((?tag)
-       ;;The rator type is a single value.  Good, this is what it is meant to be.
-       (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					 rator.psi ?tag first-rand.psi other-rand*.stx))
-
-      (_
-       ;;The rator  is declared to  evaluate to multiple  values; this is  invalid in
-       ;;call  context,  so we  raise  an  exception.   This is  non-standard  Scheme
-       ;;behaviour:  according  to the  standard  we  should  insert a  normal  rator
-       ;;application and raise an exception at run-time.
-       (raise
-	(condition (make-who-condition __who__)
-		   (make-message-condition "call operator declared to evaluate to multiple values")
-		   (syntax-match input-form.stx ()
-		     ((?rator . ?rands)
-		      (make-syntax-violation input-form.stx ?rator)))
-		   (make-retvals-signature-condition rator.sig))))
-      ))
-
-  (define* (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					    {rator.psi psi?} {first-rand.psi psi?} other-rand*.stx)
-    ;;Build a core language expression to apply  the rator to the rands; return a PSI
-    ;;struct.  This  is an application  form in standard (untagged)  Scheme language.
-    ;;We do not know  what the retvals signature of the  application is; the returned
-    ;;PSI struct will  have "<list>" as retvals signature, which  means any number of
-    ;;values of any type.
-    ;;
-    (let* ((rator.core       (psi-core-expr rator.psi))
-	   (first-rand.core  (psi-core-expr first-rand.psi))
-	   (other-rand*.psi  (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
-	   (other-rand*.core (map psi-core-expr other-rand*.psi)))
-      (make-psi input-form.stx
-		(build-application (syntax-annotation input-form.stx)
-		  rator.core
-		  (cons first-rand.core other-rand*.core)))))
-
-  (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					     {rator.psi psi?} {rator.tag tag-identifier?}
-					     {first-rand.psi psi?} other-rand*.stx)
-    ;;Build a  core language expression to  apply the rator  to the rands when  it is
-    ;;known that the rator will return a single value with specified tag.
-    ;;
-    ;;Notice that it is an error if the rator is a datum: since the first operand has
-    ;;already  been  expanded,  it  is   impossible  to  correctly  process  implicit
-    ;;dispatching for datums.
-    ;;
-    (cond ((tag-super-and-sub? (procedure-tag-id) rator.tag)
-	   ;;The rator is a procedure: very good; return a procedure application.
-	   (let* ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
-		  (rand*.psi       (cons first-rand.psi other-rand*.psi)))
-	     (import PROCESS-CLOSURE-OBJECT-APPLICATION)
-	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
-						  rator.tag rator.psi rand*.psi)))
-
-	  ((top-tag-id? rator.tag)
-	   ;;The rator  type is  unknown, we  only know  that it  is a  single value.
-	   ;;Return a procedure application and we will see at run-time what happens.
-	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					    rator.psi first-rand.psi other-rand*.stx))
-
-	  (else
-	   ;;The rator  has a correct single-value  signature and it has  a specified
-	   ;;tag, but it is not a procedure.
-	   (syntax-violation __who__
-	     "expansion results in datum call operator, invalid for this form"
-	     input-form.stx (psi-core-expr rator.psi)))))
-
-  #| end of module: CHI-APPLICATION/PSI-FIRST-OPERAND |# )
-
-
-;;;; chi procedures: general operator application, nothing already expanded
-
-(module (chi-application)
-  (define-module-who chi-application)
-
-  (define (chi-application input-form.stx lexenv.run lexenv.expand)
-    ;;Expand an operator  application form; it is called when  INPUT-FORM.STX has the
-    ;;format:
-    ;;
-    ;;   (?rator ?rand ...)
-    ;;
-    ;;and ?RATOR is *not* a macro keyword  identifier.  For example it is called when
-    ;;INPUT-FORM.STX is:
-    ;;
-    ;;   (?core-prim ?rand ...)
-    ;;   (?datum ?rand ...)
-    ;;   ((?sub-rator ?sub-rand ...) ?rand ...)
-    ;;
-    ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
-    ;;
-    (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1)
-      (((?nested-rator ?nested-rand* ...) ?rand* ...)
-       ;;Nested application.  We process this specially because the nested rator form
-       ;;might be a SPLICE-FIRST-EXPAND syntax.
-       (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
-				      (cons ?nested-rator ?nested-rand*) ?rand*))
-
-      ((values ?rand* ...)
-       ;;A  call to  VALUES is  special  because VALUES  does not  have a  predefined
-       ;;retvals signature, but the retvals signature equals the arguments signature.
-       (%chi-values-application input-form.stx lexenv.run lexenv.expand
-				?rand*))
-
-      ((apply ?rator ?rand* ...)
-       (%chi-apply-application input-form.stx lexenv.run lexenv.expand
-       			       ?rator ?rand*))
-
-      ((map1 ?func ?list)
-       (expander-option.integrate-special-list-functions?)
-       ;;This is to be considered experimental.  The purpose of this code integration
-       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
-       ;;integration of ?FUNC.
-       (chi-expr (bless
-		  `(let map1 ((L ,?list)
-			      (H #f)  ;head
-			      (T #f)) ;last pair
-		     (cond ((pair? L)
-			    (let* ((V (,?func ($car L))) ;value
-				   (P (cons V '()))	 ;new last pair
-				   (T (if T
-					  (begin
-					    ($set-cdr! T P)
-					    P)
-					P))
-				   (H (or H P)))
-			      (map1 ($cdr L) H T)))
-			   ((null? L)
-			    (or H '()))
-			   (else
-			    (procedure-argument-violation 'map1 "expected proper list as argument" L)))))
-		 lexenv.run lexenv.expand))
-
-      ((for-each1 ?func ?list)
-       (expander-option.integrate-special-list-functions?)
-       ;;This is to be considered experimental.  The purpose of this code integration
-       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
-       ;;integration of ?FUNC.
-       (chi-expr (bless
-		  `(let for-each1 ((L ,?list))
-		     (cond ((pair? L)
-			    (,?func ($car L))
-			    (for-each1 ($cdr L)))
-			   ((null? L)
-			    (void))
-			   (else
-			    (procedure-argument-violation 'for-each1 "expected proper list as argument" L)))))
-		 lexenv.run lexenv.expand))
-
-      ((for-all1 ?func ?list)
-       (expander-option.integrate-special-list-functions?)
-       ;;This is to be considered experimental.  The purpose of this code integration
-       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
-       ;;integration of ?FUNC.
-       (chi-expr (bless
-		  `(let for-all1 ((L ,?list)
-				  (R #t))
-		     (if (pair? L)
-			 (let ((R (,?func ($car L))))
-			   (and R (for-all1 ($cdr L) R)))
-		       R)))
-		 lexenv.run lexenv.expand))
-
-      ((exists1 ?func ?list)
-       (expander-option.integrate-special-list-functions?)
-       ;;This is to be considered experimental.  The purpose of this code integration
-       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
-       ;;integration of ?FUNC.
-       (chi-expr (bless
-		  `(let exists1 ((L ,?list))
-		     (and (pair? L)
-			  (or (,?func ($car L))
-			      (exists1 ($cdr L))))))
-		 lexenv.run lexenv.expand))
-
-      ((?rator ?rand* ...)
-       ;;The input form is either a common function application like:
-       ;;
-       ;;   (list 1 2 3)
-       ;;
-       ;;or an expression application like:
-       ;;
-       ;;   ((lambda (a b) (+ a b)) 1 2)
-       ;;
-       ;;or a datum operator application like:
-       ;;
-       ;;   ("ciao" length)
-       ;;
-       (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
-	 (chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
-				    rator.psi ?rand*)))
-
-      (_
-       (syntax-violation/internal-error __module_who__
-	 "invalid application syntax" input-form.stx))))
-
-  (define (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
-					 rator.stx rand*.stx)
-    ;;Here the input form is:
-    ;;
-    ;;  ((?nested-rator ?nested-rand* ...) ?rand* ...)
-    ;;
-    ;;where the nested rator  can be anything: a closure application,  a macro use, a
-    ;;datum  operator  application;  we  expand  it considering  the  case  of  rator
-    ;;expanding to a SPLICE-FIRST-EXPAND form.
-    ;;
-    ;;RATOR.STX is the syntax object:
-    ;;
-    ;;  #'(?nested-rator ?nested-rand* ...)
-    ;;
-    ;;and RAND*.STX is the list of syntax objects:
-    ;;
-    ;;  (#'?rand ...)
-    ;;
-    (let* ((rator.psi  (while-expanding-application-first-subform
-			(chi-expr rator.stx lexenv.run lexenv.expand)))
-	   (rator.expr (psi-core-expr rator.psi)))
-      ;;Here RATOR.EXPR  is either an  instance of "splice-first-envelope" or  a core
-      ;;language sexp.
-      (import SPLICE-FIRST-ENVELOPE)
-      (if (splice-first-envelope? rator.expr)
-	  (syntax-match (splice-first-envelope-form rator.expr) ()
-	    ((?nested-rator ?nested-rand* ...)
-	     (chi-expr (cons ?nested-rator (append ?nested-rand* rand*.stx))
-		       lexenv.run lexenv.expand))
-	    (_
-	     (syntax-violation __module_who__
-	       "expected list as argument of splice-first-expand"
-	       input-form.stx rator.stx)))
-	(chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
-				   rator.psi rand*.stx))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%chi-values-application input-form.stx lexenv.run lexenv.expand
-				   rand*.stx)
-    ;;The input form has the syntax:
-    ;;
-    ;;   (values ?rand ...)
-    ;;
-    ;;and RAND*.STX is the syntax object:
-    ;;
-    ;;   (#'?rand ...)
-    ;;
-    ;;A call to VALUES  is special because VALUES does not  have a predefined retvals
-    ;;signature, but the retvals signature equals the operands' signature.
-    ;;
-    (let* ((rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	   (rand*.core (map psi-core-expr rand*.psi))
-	   (rand*.sig  (map psi-retvals-signature rand*.psi))
-	   (rator.core (build-primref no-source 'values)))
-      (define application.sig
-	(let loop ((rand*.sig rand*.sig)
-		   (rand*.stx rand*.stx)
-		   (rand*.tag '()))
-	  (if (pair? rand*.sig)
-	      ;;To be a valid VALUES argument an expression must have as signature:
-	      ;;
-	      ;;   (?tag)
-	      ;;
-	      ;;which  means a  single return  value.  Here  we allow  "<list>", too,
-	      ;;which means  we accept an  argument having unknown  retval signature,
-	      ;;and we will see what happens at run-time; we accept only "<list>", we
-	      ;;reject a signature if it is a standalone sub-tag of "<list>".
-	      ;;
-	      ;;NOTE We  could reject "<list>"  as argument signature and  demand the
-	      ;;caller of  VALUES to cast  the arguments, but  it would be  too much;
-	      ;;remember that we still do  some signature validation even when tagged
-	      ;;language support is off.  (Marco Maggi; Mon Mar 31, 2014)
-	      (syntax-match (retvals-signature-tags (car rand*.sig)) ()
-		((?tag)
-		 (loop (cdr rand*.sig) (cdr rand*.stx)
-		       (cons ?tag rand*.tag)))
-		(?tag
-		 (list-tag-id? ?tag)
-		 (loop (cdr rand*.sig) (cdr rand*.stx)
-		       (cons (top-tag-id) rand*.tag)))
-		(_
-		 (expand-time-retvals-signature-violation 'values
-							  input-form.stx (car rand*.stx)
-							  (make-retvals-signature-single-top)
-							  (car rand*.sig))))
-	    (make-retvals-signature (reverse rand*.tag)))))
-      (make-psi input-form.stx
-		(build-application (syntax-annotation input-form.stx)
-		  rator.core
-		  rand*.core)
-		application.sig)))
-
-;;; --------------------------------------------------------------------
-
-  (module (%chi-apply-application)
-
-    (define (%chi-apply-application input-form.stx lexenv.run lexenv.expand
-				    rator.stx rand*.stx)
-      (let* ((rator.psi (chi-expr rator.stx lexenv.run lexenv.expand))
-	     (rator.sig (psi-retvals-signature rator.psi)))
-	(define (%error-wrong-rator-sig)
-	  (expand-time-retvals-signature-violation 'apply input-form.stx rator.stx
-						   (make-retvals-signature-single-value (procedure-tag-id))
-						   rator.sig))
-	(syntax-match (retvals-signature-tags rator.sig) ()
-	  ((?rator.tag)
-	   (cond ((tag-super-and-sub? (procedure-tag-id) ?rator.tag)
-		  ;;Procedure application: good.
-		  (let* ((apply.core (build-primref no-source 'apply))
-			 (rator.core (psi-core-expr rator.psi))
-			 (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-			 (rand*.core (map psi-core-expr rand*.psi)))
-		    (make-psi input-form.stx
-			      (build-application (syntax-annotation input-form.stx)
-				apply.core
-				(cons rator.core rand*.core))
-			      (psi-application-retvals-signature rator.psi))))
-		 ((top-tag-id? ?rator.tag)
-		  ;;Let's do it and we will see at run-time what happens.  Notice that,
-		  ;;in this case: we do not know the signature of the return values.
-		  (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
-						   rator.psi rand*.stx))
-		 (else
-		  ;;Non-procedure: bad.
-		  (%error-wrong-rator-sig))))
-
-	  (?rator.tag
-	   (list-tag-id? ?rator.tag)
-	   ;;Fully  unspecified return  values.   Let's  do it  and  we  will see  at
-	   ;;run-time what  happens.  Notice that, in  this case: we do  not know the
-	   ;;signature of the return values.
-	   (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
-					    rator.psi rand*.stx))
-
-	  (_
-	   ;;Everything else is wrong.
-	   (%error-wrong-rator-sig)))))
-
-    (define (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
-					     rator.psi rand*.stx)
-      (let* ((apply.core (build-primref no-source 'apply))
-	     (rator.core (psi-core-expr rator.psi))
-	     (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	     (rand*.core (map psi-core-expr rand*.psi)))
-	(make-psi input-form.stx
-		  (build-application (syntax-annotation input-form.stx)
-		    apply.core
-		    (cons rator.core rand*.core)))))
-
-    #| end of module: %CHI-APPLY-APPLICATION |# )
-
-  #| end of module: CHI-APPLICATION |# )
 
 
 ;;;; chi procedures: SET! syntax
@@ -1767,27 +943,12 @@
   (define (chi-set! input-form.stx lexenv.run lexenv.expand)
     (while-not-expanding-application-first-subform
      (syntax-match input-form.stx ()
-       ((_ (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
-	(option.typed-language.setter-forms?)
-	(let* ((keys.stx  (cons (cons ?key00 ?key0*)
-				(map cons ?key11* ?key1**))))
-	  (chi-expr (bless
-		     `(tag-setter ,?expr ,keys.stx ,?new-value))
-		    lexenv.run lexenv.expand)))
-
-       ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
-	(option.typed-language.setter-forms?)
-	(let* ((keys.stx  (cons (cons ?key00 ?key0*)
-				(map cons ?key11* ?key1**))))
-	  (chi-expr (bless
-		     `(tag-setter ,?expr ,keys.stx ,?new-value))
-		    lexenv.run lexenv.expand)))
-
-       ((_ (?expr ?field-name) ?new-value)
-	(and (option.typed-language.setter-forms?)
+       ((_ (?method-call ?field-name ?expr) ?new-value)
+	(and (identifier? ?method-call)
+	     (~free-identifier=? ?method-call (core-prim-id 'method-call))
 	     (identifier? ?field-name))
 	(chi-expr (bless
-		   `(tag-mutator ,?expr ,?field-name ,?new-value))
+		   `(slot-set! ,?expr ,?field-name ?new-value))
 		  lexenv.run lexenv.expand))
 
        ((_ ?lhs ?rhs)
@@ -1813,21 +974,33 @@
 	 ;;     (set! var 2))
 	 ;;
 	 (lexical-var-binding-descriptor-value.assigned? bind-val #t)
-	 (let* ((lhs.tag (or (identifier-tag lhs.id)
-			     (top-tag-id)))
-		(rhs.psi (chi-expr (bless
-				    `(tag-assert-and-return (,lhs.tag) ,rhs.stx))
-				   lexenv.run lexenv.expand)))
+	 (let* ((lhs.tag (top-tag-id))
+		(rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
 		       (lexical-var-binding-descriptor-value.lex-name bind-val)
 		       (psi-core-expr rhs.psi))
-		     (make-retvals-signature-single-top))))
+		     (make-retvals-signature/single-void))))
+
+	((lexical-typed)
+	 ;;A  typed  lexical  binding  used  as   LHS  of  SET!  is  mutable  and  so
+	 ;;unexportable.
+	 (lexical-typed-var-binding-descriptor-value.assigned? bind-val #t)
+	 (let* ((lhs.tag (lexical-typed-var-binding-descriptor-value.type-id  bind-val))
+		(lhs.lex (lexical-typed-var-binding-descriptor-value.lex-name bind-val))
+		(rhs.psi (chi-expr (bless
+				    `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
+				   lexenv.run lexenv.expand)))
+	   (make-psi input-form.stx
+		     (build-lexical-assignment no-source
+		       lhs.lex
+		       (psi-core-expr rhs.psi))
+		     (make-retvals-signature/single-void))))
 
 	((core-prim)
 	 (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
-	((global)
+	((global global-typed)
 	 (syntax-violation __module_who__
 	   "attempt to assign a variable that is imported from a library"
 	   input-form.stx lhs.id))
@@ -1838,7 +1011,7 @@
 	((local-macro!)
 	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
-	((global-mutable)
+	((global-mutable global-typed-mutable)
 	 ;;Imported  variable in  reference position,  whose binding  is assigned  at
 	 ;;least once in the code of the imported library.
 	 ;;
@@ -1888,345 +1061,6 @@
   #| end of module: CHI-SET |# )
 
 
-;;;; chi procedures: lambda clauses
-
-(module CHI-LAMBDA-CLAUSES
-  (%chi-lambda-clause
-   %chi-lambda-clause*)
-
-  (define* (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			       attributes.sexp who.id formals.stx body-form*.stx)
-    ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
-    ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
-    ;;formals; an instance  of "lambda-signature" representing the  tag signature for
-    ;;this  LAMBDA   clause;  a  PSI   struct  containing  the   language  expression
-    ;;representing the body of the clause.
-    ;;
-    ;;A LAMBDA or CASE-LAMBDA clause defines a lexical contour; so we build a new rib
-    ;;for it, initialised with the id/label  associations of the formals; we push new
-    ;;lexical bindings on LEXENV.RUN.
-    ;;
-    ;;NOTE The expander for the internal body will create yet another lexical contour
-    ;;to hold the body's internal definitions.
-    ;;
-    ;;When the formals are tagged, we want to transform:
-    ;;
-    ;;   (lambda ({_ <symbol>} {a <fixnum>} {b <string>})
-    ;;     ?body ... ?last-body)
-    ;;
-    ;;into:
-    ;;
-    ;;   (lambda (a b)
-    ;;     (validate-typed-procedure-argument <fixnum> a)
-    ;;     (validate-typed-procedure-argument <string> b)
-    ;;     (internal-body
-    ;;       ?body ...
-    ;;       (tag-assert-and-return (<symbol>) ?last-body)))
-    ;;
-    (import CORE-MACRO-TRANSFORMER) ;for PUSH-FLUID-SYNTAX
-    (define %synner
-      (case-lambda
-       ((message)
-	(%synner message #f))
-       ((message subform)
-	(syntax-violation __who__ message input-form.stx subform))))
-    (receive (standard-formals.stx lambda-signature)
-	(parse-tagged-lambda-proto-syntax formals.stx input-form.stx)
-      (define formals-signature.tags
-	(lambda-signature-formals-tags lambda-signature))
-      (define (%override-retvals-singature lambda-signature body.psi)
-	;;If  unspecified: override  the retvals  signature  of the  lambda with  the
-	;;retvals signature of the body.
-	(if (retvals-signature-fully-unspecified? (lambda-signature-retvals lambda-signature))
-	    (make-lambda-signature (psi-retvals-signature body.psi)
-				   (lambda-signature-formals lambda-signature))
-	  lambda-signature))
-      (syntax-match standard-formals.stx ()
-	;;Without rest argument.
-	((?arg* ...)
-	 (let* ((lex*       (map generate-lexical-gensym ?arg*))
-		(lab*       (map generate-label-gensym       ?arg*))
-		(lexenv.run (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
-	   (define validation*.stx
-	     (if (lambda-clause-attributes:safe-formals? attributes.sexp)
-		 (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
-	       '()))
-	   (define has-arguments-validators?
-	     (not (null? validation*.stx)))
-	   (define body-form^*.stx
-	     (push-lexical-contour
-		 (make-rib/from-identifiers-and-labels ?arg* lab*)
-	       ;;Build a list of syntax objects representing the internal body.
-	       (append validation*.stx
-		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
-			   (%build-retvals-validation-form has-arguments-validators?
-							   (lambda-signature-retvals lambda-signature)
-							   body-form*.stx)
-			 body-form*.stx))))
-	   ;;Here  we  know that  the  formals  signature is  a  proper  list of  tag
-	   ;;identifiers with the same structure of FORMALS.STX.
-	   (map set-label-tag! ?arg* lab* formals-signature.tags)
-	   (receive (lexenv.run lexenv.expand)
-	       ;;It is  very important  to do  this only  if there  is a  WHO.ID: the
-	       ;;internal syntax INTERNAL-LAMBDA  sets WHO.ID to false, so  we do not
-	       ;;bind  "__who__"  in  its  body.   We  will  go  into  infinite  loop
-	       ;;otherwise, because  IDENTIFIER-SYNTAX expands to  an INTERNAL-LAMBDA
-	       ;;use.
-	       (if who.id
-		   (push-fluid-syntax (core-prim-id '__who__)
-				      (bless `(identifier-syntax (quote ,who.id)))
-				      lexenv.run lexenv.expand %synner)
-		 (values lexenv.run lexenv.expand))
-	     (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run lexenv.expand)))
-	       (values lex* (%override-retvals-singature lambda-signature body.psi) body.psi)))))
-
-	;;With rest argument.
-	((?arg* ... . ?rest-arg)
-	 (let* ((lex*         (map generate-lexical-gensym ?arg*))
-		(lab*         (map generate-label-gensym   ?arg*))
-		(rest-lex     (generate-lexical-gensym     ?rest-arg))
-		(rest-lab     (generate-label-gensym       ?rest-arg))
-		(lexenv.run   (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
-							       (cons rest-lex lex*)
-							       lexenv.run)))
-	   (receive (arg-tag* rest-tag)
-	       (improper-list->list-and-rest formals-signature.tags)
-	     (define validation*.stx
-	       (if (lambda-clause-attributes:safe-formals? attributes.sexp)
-		   (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag)
-		 '()))
-	     (define has-arguments-validators?
-	       (not (null? validation*.stx)))
-	     (define body-form^*.stx
-	       (push-lexical-contour
-		   (make-rib/from-identifiers-and-labels (cons ?rest-arg ?arg*)
-							 (cons rest-lab  lab*))
-		 ;;Build a list of syntax objects representing the internal body.
-		 (append validation*.stx
-			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
-			     (%build-retvals-validation-form has-arguments-validators?
-							     (lambda-signature-retvals lambda-signature)
-							     body-form*.stx)
-			   body-form*.stx))))
-	     ;;Here we know  that the formals signature is an  improper list with the
-	     ;;same structure of FORMALS.STX.
-	     (map set-label-tag! ?arg* lab* arg-tag*)
-	     (set-label-tag! ?rest-arg rest-lab rest-tag)
-	     (receive (lexenv.run lexenv.expand)
-		 ;;It is  very important to  do this only if  there is a  WHO.ID: the
-		 ;;internal syntax INTERNAL-LAMBDA sets WHO.ID to false, so we do not
-		 ;;bind  "__who__"  in its  body.   We  will  go into  infinite  loop
-		 ;;otherwise, because IDENTIFIER-SYNTAX expands to an INTERNAL-LAMBDA
-		 ;;use.
-		 (if who.id
-		     (push-fluid-syntax (core-prim-id '__who__)
-					(bless `(identifier-syntax (quote ,who.id)))
-					lexenv.run lexenv.expand %synner)
-		   (values lexenv.run lexenv.expand))
-	       (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run lexenv.expand)))
-		 (values (append lex* rest-lex) ;yes, this builds an improper list
-			 (%override-retvals-singature lambda-signature body.psi)
-			 body.psi))))))
-
-	(_
-	 (%synner "invalid lambda formals syntax" formals.stx)))))
-
-;;; --------------------------------------------------------------------
-
-  (define* (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-				attributes.sexp who.id formals*.stx body-form**.stx)
-    ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
-    ;;
-    ;;1..A list  of subslist,  each sublist being  a proper or  improper list  of lex
-    ;;   gensyms representing the formals.
-    ;;
-    ;;2..A list of  "lambda-signature" instances representing the  signatures of each
-    ;;   clause.
-    ;;
-    ;;3..A  list  of   PSI  structs  each  containing  a   core  language  expression
-    ;;   representing the body of a clause.
-    ;;
-    (if (null? formals*.stx)
-	(values '() '() '())
-      (receive (formals-lex lambda-signature body.psi)
-	  (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			      attributes.sexp who.id (car formals*.stx) (car body-form**.stx))
-	(receive (formals-lex* lambda-signature* body*.psi)
-	    (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-				 attributes.sexp who.id (cdr formals*.stx) (cdr body-form**.stx))
-	  (values (cons formals-lex       formals-lex*)
-		  (cons lambda-signature  lambda-signature*)
-		  (cons body.psi          body*.psi))))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%build-formals-validation-form* arg* tag* rest-arg rest-tag)
-    ;;Build  and  return a  list  of  syntax  objects representing  expressions  that
-    ;;validate the  arguments, excluding  the formals  in which  the tag  is "<top>",
-    ;;whose argument are always valid.  When  there is no rest argument: REST-ARG and
-    ;;REST-TAG must be #f.
-    ;;
-    (let recur ((arg* arg*)
-		(tag* tag*)
-		(idx  0))
-      (cond ((pair? arg*)
-	     (if (top-tag-id? (car tag*))
-		 (recur (cdr arg*) (cdr tag*) (fxadd1 idx))
-	       (cons (bless
-		      `(validate-typed-procedure-argument ,(car tag*) ,idx ,(car arg*)))
-		     (recur (cdr arg*) (cdr tag*) (fxadd1 idx)))))
-	    ((or (not rest-tag)
-		 (top-tag-id? rest-tag))
-	     '())
-	    (else
-	     (bless
-	      (let ((obj.sym (gensym))
-		    (idx.sym (gensym)))
-		`((fold-left (lambda (,idx.sym ,obj.sym)
-			       (validate-typed-procedure-argument ,rest-arg ,idx.sym ,obj.sym)
-			       (fxadd1 ,idx.sym))
-		    ,idx ,rest-arg))))))))
-
-  (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
-    ;;Add the return values validation to the last form in the body; return a list of
-    ;;body forms.
-    ;;
-    ;;When  there  are  arguments  validators:  the body  forms  are  wrapped  in  an
-    ;;INTERNAL-BODY to  create an internal  lexical scope.   This is far  better than
-    ;;wrapping into a LET, which would expand into a nested LAMBDA.
-    ;;
-    ;;The  argument HAS-ARGUMENTS-VALIDATORS?   is  required  to avoid  INTERNAL-BODY
-    ;;wrapping when not needed; this gains a bit of speed when expanding the body.
-    ;;
-    (cond (has-arguments-validators?
-	   (bless
-	    (if (retvals-signature-fully-unspecified? retvals-signature)
-		;;The number and type of return values is unknown.
-		`((internal-body . ,body-form*.stx))
-	      (receive (head*.stx last.stx)
-		  (proper-list->head-and-last body-form*.stx)
-		`((internal-body
-		    ,@head*.stx
-		    (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))
-	  (else
-	   (if (retvals-signature-fully-unspecified? retvals-signature)
-	       ;;The number and type of return values is unknown.
-	       body-form*.stx
-	     (receive (head*.stx last.stx)
-		 (proper-list->head-and-last body-form*.stx)
-	       (append head*.stx
-		       (bless
-			`((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))))
-
-  #| end of module: CHI-LAMBDA-CLAUSES |# )
-
-
-;;;; chi procedures: function definitions and lambda syntaxes
-
-(module (chi-defun)
-  (import CHI-LAMBDA-CLAUSES)
-
-  (define (chi-defun input-form.stx lexenv.run lexenv.expand)
-    ;;Expand a  syntax object representing a  INTERNAL-DEFINE syntax for the  case of
-    ;;function definition.   Return an expanded language  expression representing the
-    ;;expanded definition.
-    ;;
-    ;;The  returned expression  will  be  coupled (by  the  caller)  with an  already
-    ;;generated  lex gensym  serving as  lexical variable  name; for  this reason  we
-    ;;return a lambda core form rather than a define core form.
-    ;;
-    ;;NOTE This function assumes the INPUT-FORM.STX  has already been parsed, and the
-    ;;binding for ?CTXT has already been added to LEXENV by the caller.
-    ;;
-    (syntax-match input-form.stx (brace)
-      ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
-       (let ((formals.stx (bless
-			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls))))
-	 (%expand input-form.stx lexenv.run lexenv.expand
-		  (syntax->datum ?attributes) ?ctxt formals.stx ?body-form*)))
-
-      ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
-       (%expand input-form.stx lexenv.run lexenv.expand
-		(syntax->datum ?attributes) ?ctxt ?fmls ?body-form*))
-      ))
-
-  (define (%expand input-form.stx lexenv.run lexenv.expand
-		   attributes.sexp who.id formals.stx body*.stx)
-    ;;This procedure is like CHI-LAMBDA, but, in addition, it puts WHO.ID in the core
-    ;;language LAMBDA sexp's annotation.
-    (receive (formals.core lambda-signature body.psi)
-	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			    attributes.sexp who.id formals.stx body*.stx)
-      ;;FORMALS.CORE is composed of lex gensyms.
-      (make-psi input-form.stx
-		(build-lambda (syntax-annotation who.id)
-		  formals.core
-		  (psi-core-expr body.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (syntax->datum who.id) lambda-signature))))
-
-  #| end of module: CHI-DEFUN |# )
-
-;;; --------------------------------------------------------------------
-
-(define* (chi-lambda input-form.stx lexenv.run lexenv.expand
-		     attributes.stx who.id formals.stx body*.stx)
-  ;;Expand the contents of a LAMBDA syntax and return a "psi" struct.
-  ;;
-  ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
-  ;;
-  ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
-  ;;
-  ;;BODY*.STX is  a list of syntax  objects representing the body  expressions in the
-  ;;LAMBDA syntax.
-  ;;
-  (import CHI-LAMBDA-CLAUSES)
-  (define attributes.sexp (syntax->datum attributes.stx))
-  (receive (formals.lex lambda-signature body.psi)
-      (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			  attributes.sexp who.id formals.stx body*.stx)
-    (make-psi input-form.stx
-	      (build-lambda (syntax-annotation input-form.stx)
-		formals.lex
-		(psi-core-expr body.psi))
-	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
-
-(define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-			  attributes.stx who.id formals*.stx body**.stx)
-  ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
-  ;;
-  ;;INPUT-FORM.STX  is   a  syntax  object  representing   the  original  CASE-LAMBDA
-  ;;expression.
-  ;;
-  ;;FORMALS*.STX is  a list  of syntax  objects whose  items are  the formals  of the
-  ;;CASE-LAMBDA clauses.
-  ;;
-  ;;BODY**.STX  is a  list  of syntax  objects  whose  items are  the  bodies of  the
-  ;;CASE-LAMBDA clauses.
-  ;;
-  ;;Example, for the input form:
-  ;;
-  ;;   (case-lambda ((a b c) body1) ((d e f) body2))
-  ;;
-  ;;this function is invoked as:
-  ;;
-  ;;   (chi-case-lambda
-  ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
-  ;;    (list #'(a b c) #'(d e f))
-  ;;    (list #'(body1) #'(body2))
-  ;;    lexenv.run lexenv.expand)
-  ;;
-  (import CHI-LAMBDA-CLAUSES)
-  (define attributes.sexp (syntax->datum attributes.stx))
-  (receive (formals*.lex lambda-signature* body**.psi)
-      (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-			   attributes.sexp who.id formals*.stx body**.stx)
-    (make-psi input-form.stx
-	      (build-case-lambda (syntax-annotation input-form.stx)
-		formals*.lex
-		(map psi-core-expr body**.psi))
-	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
-
-
 ;;;; chi procedures: lexical bindings qualified right-hand sides
 ;;
 ;;A "qualified right-hand side expression" is  an object of type QUALIFIED-RHS; these
@@ -2243,33 +1077,33 @@
 ;;
 ;;all the forms are parsed and the following QUALIFIED-RHS objects are created:
 ;;
-;;   #<qualified-rhs defun            #'fun    #'(internal-define ?attributes (fun x) (list x 1))>
-;;   #<qualified-rhs defvar           #'name   #'(void)>
-;;   #<qualified-rhs defvar           #'red    #'(+ 1 2)>
-;;   #<qualified-rhs untagged-defvar  #'blue   #'(+ 3 4)>
-;;   #<qualified-rhs top-expr         #'dummy  #'(display 5)>
+;;   #<qualified-rhs defun           #'fun    #'(internal-define ?attributes (fun x) (list x 1))>
+;;   #<qualified-rhs untyped-defvar  #'name   #'(void)>
+;;   #<qualified-rhs typed-defvar    #'red    #'(+ 1 2)>
+;;   #<qualified-rhs untyped-defvar  #'blue   #'(+ 3 4)>
+;;   #<qualified-rhs top-expr        #'dummy  #'(display 5)>
 ;;
 ;;the definitions are not immediately expanded.  This allows to expand the macros and
 ;;macro definitions  first, and  to expand the  variable definitions  and expressions
 ;;later.
 ;;
-;;The possible types are:
+;;The possible categories are:
 ;;
 ;;defun -
-;;   For a function variable definition.  A syntax like:
+;;   For a function lexical variable definition.  A syntax like:
 ;;
 ;;      (internal-define ?attributes (?id . ?formals) ?body ...)
 ;;
-;;defvar -
-;;  For an non-function variable definition.  A syntax like:
+;;typed-defvar -
+;;  For an non-function, lexical, typed variable definition.  A syntax like:
 ;;
-;;      (internal-define ?attributes ?id)
 ;;      (internal-define ?attributes {?id ?tag} ?val)
 ;;
-;;untagged-defvar -
-;;  For an non-function variable definition.  A syntax like:
+;;untyped-defvar -
+;;  For an non-function, lexical, non-typed variable definition.  A syntax like:
 ;;
 ;;      (internal-define ?attributes ?id ?val)
+;;      (internal-define ?attributes ?id)
 ;;
 ;;top-expr -
 ;;  For an expression that is not a  definition; this QRHS is created only when mixed
@@ -2286,31 +1120,48 @@
 ;;already been created.
 ;;
 
-(define-record qualified-rhs
-  (type
-		;A symbol specifying the type  of the expression; one among: "defun",
-		;"defvar", "untagged-defvar", "top-expr".
-   id
+(define-record-type qualified-rhs
+  (fields
+   (immutable category		qualified-rhs.category)
+		;A  symbol specifying  the  category of  the  expression; one  among:
+		;"defun", "typed-defvar", "untyped-defvar", "top-expr".
+   (immutable id		qualified-rhs.id)
 		;The syntactic identifier bound by this expression.
-   stx
+   (immutable stx		qualified-rhs.stx)
 		;A syntax  object representing  the right-hand  side expression  of a
 		;lexical binding definition.
-   ))
+   (mutable type-id		qualified-rhs.type-id qualified-rhs.type-id-set!)
+		;False or a  syntactic identifier representing the type  of the QRHS.
+		;When the  QRHS is a "defun":  this field references the  sub-type of
+		;"<procedure>" representing the callable signature.  When the QRHS is
+		;a "typed-defvar": this field contains the type identifier.
+   #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (case-define make-qualified-rhs
+	((category id stx)
+	 (make-record category id stx #f))
+	((category id stx type-id)
+	 (make-record category id stx type-id)))
+      make-qualified-rhs)))
 
-(define-syntax-rule (make-qualified-rhs/defun ?id ?expr)
-  (make-qualified-rhs 'defun ?id ?expr))
+(case-define make-qualified-rhs/defun
+  ((id input-form.stx)
+   (make-qualified-rhs 'defun id input-form.stx #f))
+  ((id input-form.stx signature-type.id)
+   (make-qualified-rhs 'defun id input-form.stx signature-type.id)))
 
-(define-syntax-rule (make-qualified-rhs/defvar ?id ?expr)
-  (make-qualified-rhs 'defvar ?id ?expr))
+(define-syntax-rule (make-qualified-rhs/typed-defvar ?id ?expr ?type-id)
+  (make-qualified-rhs 'typed-defvar ?id ?expr ?type-id))
 
-(define-syntax-rule (make-qualified-rhs/untagged-defvar ?id ?expr)
-  (make-qualified-rhs 'untagged-defvar ?id ?expr))
+(define-syntax-rule (make-qualified-rhs/untyped-defvar ?id ?expr)
+  (make-qualified-rhs 'untyped-defvar ?id ?expr))
 
 (define-syntax-rule (make-qualified-rhs/top-expr ?id ?expr)
   (make-qualified-rhs 'top-expr ?id ?expr))
 
 (define (generate-qrhs-loc qrhs)
-  (generate-storage-location-gensym (qualified-rhs-id qrhs)))
+  (generate-storage-location-gensym (qualified-rhs.id qrhs)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2318,59 +1169,73 @@
   ;;Expand a qualified right-hand side expression and return a PSI struct.
   ;;
   (while-not-expanding-application-first-subform
-   (case (qualified-rhs-type qrhs)
-     ((defun)
-      ;;This returns a PSI struct containing a lambda core expression.
-      (chi-defun (qualified-rhs-stx qrhs) lexenv.run lexenv.expand))
+   (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+     (case (qualified-rhs.category qrhs)
+       ((defun)
+	;;This returns a PSI struct containing a lambda core expression.
+	(chi-defun qrhs lexenv.run lexenv.expand))
 
-     ((defvar)
-      (chi-expr (qualified-rhs-stx qrhs) lexenv.run lexenv.expand))
+       ((typed-defvar)
+	(chi-expr (qualified-rhs.stx qrhs) lexenv.run lexenv.expand))
 
-     ((untagged-defvar)
-      ;;We know that here the definition is for an untagged identifier.
-      (let ((var.id   (qualified-rhs-id  qrhs))
-	    (expr.stx (qualified-rhs-stx qrhs)))
-	(receive-and-return (expr.psi)
-	    (chi-expr expr.stx lexenv.run lexenv.expand)
-	  (let ((expr.sig (psi-retvals-signature expr.psi))
-		(tag.id   (identifier-tag var.id)))
-	    (syntax-match (retvals-signature-tags expr.sig) ()
-	      ((?tag)
-	       ;;A single return value: good.
-	       (when (option.typed-language.rhs-tag-propagation?)
-		 (if (top-tag-id? tag.id)
-		     (override-identifier-tag! var.id ?tag)
-		   (assertion-violation/internal-error __who__
-		     "expected variable definition with untagged identifier"
-		     expr.stx tag.id))))
+       ((untyped-defvar)
+	;;We know that here the definition is for an untagged identifier.
+	(let ((expr.stx (qualified-rhs.stx qrhs)))
+	  (receive-and-return (expr.psi)
+	      (chi-expr expr.stx lexenv.run lexenv.expand)
+	    ;;All right,  we have  expanded the  RHS expression.   Now let's  do some
+	    ;;validation  on the  type  of  the expression  and,  if possible,  let's
+	    ;;propagate the type of the expression to the defined variable.
+	    (let ((expr.sig (psi-retvals-signature expr.psi)))
+	      (syntax-match (retvals-signature.tags expr.sig) ()
+		((?tag)
+		 (top-tag-id? ?tag)
+		 ;;A single return value with type "<top>": good.  Nothing to be done
+		 ;;here.
+		 (void))
 
-	      (?tag
-	       (list-tag-id? ?tag)
-	       ;;Fully  unspecified return  values: we  accept it  here and  delegate
-	       ;;further checks at run-time.
-	       (void))
+		((?tag)
+		 ;;A single return value with type different from "<top>": good.
+		 (when (option.typed-language.rhs-tag-propagation?)
+		   ;;Here we know that  the "untyped-defvar" definition has generated
+		   ;;a syntactic binding with LEXENV entry with format:
+		   ;;
+		   ;;   (lexical . (?lex-name . #f))
+		   ;;
+		   ;;since we know the type we want to convert this entry to:
+		   ;;
+		   ;;   (lexical-typed . ?lexical-typed-spec)
+		   ;;
+		   (let* ((label (id->label (qualified-rhs.id qrhs)))
+			  (descr (label->syntactic-binding-descriptor label lexenv.run)))
+		     (qualified-rhs.type-id-set! qrhs ?tag)
+		     (lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor! descr ?tag))))
 
-	      (_
-	       ;;Multiple return values: syntax violation.
-	       (expand-time-retvals-signature-violation __who__
-							expr.stx #f
-							(make-retvals-signature-single-top)
-							expr.sig))
-	      )))))
+		(?tag
+		 (list-tag-id? ?tag)
+		 ;;Fully unspecified  return values: we  accept it here  and delegate
+		 ;;further checks at run-time.
+		 (void))
 
-     ((top-expr)
-      (let* ((expr.stx  (qualified-rhs-stx qrhs))
-	     (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
-	     (expr.core (psi-core-expr expr.psi)))
-	(make-psi expr.stx
-		  (build-sequence no-source
-		    (list expr.core
-			  (build-void)))
-		  (psi-retvals-signature expr.psi))))
+		(_
+		 ;;Damn!!!   We have  determined at  expand-time that  the expression
+		 ;;returns multiple return values: syntax violation.
+		 (expand-time-retvals-signature-violation __who__
+		   expr.stx #f (make-retvals-signature/single-top) expr.sig))
+		)))))
 
-     (else
-      (assertion-violation/internal-error __who__
-	"invalid qualified right-hand side (QRHS) format" qrhs)))))
+       ((top-expr)
+	(let* ((expr.stx  (qualified-rhs.stx qrhs))
+	       (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+	       (expr.core (psi-core-expr expr.psi)))
+	  (make-psi expr.stx
+		    (build-sequence no-source
+		      (list expr.core (build-void)))
+		    (make-retvals-signature/single-void))))
+
+       (else
+	(assertion-violation/internal-error __who__
+	  "invalid qualified right-hand side (QRHS) format" qrhs))))))
 
 (define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
   ;;Expand the qualified right-hand side expressions in QRHS*, left-to-right.  Return
@@ -2546,754 +1411,99 @@
 
 ;;;; chi procedures: internal body
 
-(define* (chi-internal-body body-form*.stx lexenv.run lexenv.expand)
+(define* (chi-internal-body input-form.stx lexenv.run lexenv.expand
+			    body-form*.stx)
   ;;This function is used to expand the internal bodies:
   ;;
   ;;*  The  LET-like  syntaxes  are  converted to  LETREC*  syntaxes:  this  function
-  ;;  processes the internal bodies of LETREC*.
+  ;;processes the internal bodies of LETREC*.
   ;;
   ;;*  The  LAMBDA syntaxes  are  processed  as  CASE-LAMBDA clauses:  this  function
-  ;;  processes the internal body of CASE-LAMBDA clauses.
+  ;;processes the internal body of CASE-LAMBDA clauses.
   ;;
-  ;;Return  a  PSI  struct  containing   an  expanded  language  symbolic  expression
+  ;;Return  a   PSI  struct  containing  an   expanded-language  symbolic  expression
   ;;representing the expanded body.
+  ;;
+  ;;About internal bodies
+  ;;---------------------
   ;;
   ;;An internal body must satisfy the following constraints:
   ;;
   ;;* There must be at least one trailing expression, otherwise an error is raised.
   ;;
   ;;* Mixed definitions and expressions are forbidden.  All the definitions must come
-  ;;  first and the expressions last.
+  ;;first and the expressions last.
   ;;
   ;;* It is impossible to export an internal binding from the enclosing library.  The
-  ;;  EXPORT syntaxes present in the internal body are discarded.
+  ;;EXPORT syntaxes present in the internal body are discarded.
   ;;
   ;;An internal body having internal definitions:
   ;;
-  ;;   (define ?id ?rhs)
+  ;;   (define ?lhs ?rhs)
   ;;   ...
   ;;   ?trailing-expr
   ;;   ...
   ;;
   ;;is equivalent to:
   ;;
-  ;;   (letrec* ((?id ?rhs) ...)
-  ;;     ?trailing-expr)
+  ;;   (letrec* ((?lhs ?rhs) ...)
+  ;;     ?trailing-expr ...)
   ;;
   ;;so we create  a rib to describe  the lexical contour of the  implicit LETREC* and
   ;;push it on the BODY-FORM*.STX.
   ;;
-  (let ((rib (make-rib/empty)))
-    (receive (trailing-expr-stx*^
-	      lexenv.run^ lexenv.expand^
-	      lex*^ qrhs*^
-	      trailing-mod-expr-stx**^
-	      unused-kwd*^ unused-export-spec*^)
-	(let ((lex*                              '())
-	      (qrhs*                             '())
-	      (mod**                             '())
-	      (kwd*                              '())
-	      (export-spec*                      '())
-	      (mix-definitions-and-expressions?  #f)
-	      ;;We are about to expand syntactic forms in an internal body defining a
-	      ;;lexical contour; it  does not matter if the  top-level environment is
-	      ;;interaction  or not.   When calling  CHI-BODY*, we  set the  argument
-	      ;;SHADOW/REDEFINE-BINDINGS? to false because:
-	      ;;
-	      ;;* Syntactic  binding definitions  in this  body cannot  be redefined.
-	      ;;That is:
-	      ;;
-	      ;;   (internal-body
-	      ;;     (define a 1)
-	      ;;     (define a 2)
-	      ;;     a)
-	      ;;
-	      ;;is a syntax  violation because the use of DEFINE  cannot redefine the
-	      ;;binding for "a".
-	      (shadow/redefine-bindings?    #f))
-	  (chi-body* (map (lambda (x)
-			    (push-lexical-contour rib x))
-		       (syntax->list body-form*.stx))
-		     lexenv.run lexenv.expand
-		     lex* qrhs* mod** kwd* export-spec* rib
-		     mix-definitions-and-expressions? shadow/redefine-bindings?))
-      (when (null? trailing-expr-stx*^)
-	(syntax-violation #f "no expression in body" body-form*.stx))
-      ;;We want order here!   First the RHS then the inits, so that  tags are put in
-      ;;place when the inits are expanded.
-      (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
-	     (init*.psi      (chi-expr* (reverse-and-append-with-tail trailing-mod-expr-stx**^ trailing-expr-stx*^)
-					lexenv.run^ lexenv.expand^))
-	     (rhs*.core      (map psi-core-expr rhs*.psi))
-	     (init*.core     (map psi-core-expr init*.psi))
-	     (last-init.psi  (proper-list->last-item init*.psi)))
-	(make-psi body-form*.stx
-		  (build-letrec* no-source
-		    (reverse lex*^)
-		    rhs*.core
-		    (build-sequence no-source
-		      init*.core))
-		  (psi-retvals-signature last-init.psi))))))
-
-
-;;;; chi procedures: body
-
-(module (chi-body*)
-  ;;The recursive function CHI-BODY* expands the forms of a body.  Here we expand:
+  ;;NOTE  We are  about to  expand syntactic  forms in  an internal  body defining  a
+  ;;lexical contour; it  does not matter if the top-level  environment is interaction
+  ;;or not.   When calling CHI-BODY*,  we set the  argument SHADOW/REDEFINE-BINDINGS?
+  ;;to false because syntactic binding definitions  in this body cannot be redefined.
+  ;;That is:
   ;;
-  ;;* User-defined the macro definitions and uses.
+  ;;   (internal-body
+  ;;     (define a 1)
+  ;;     (define a 2)
+  ;;     a)
   ;;
-  ;;* Non-core macro uses.
-  ;;
-  ;;* Basic language syntaxes: LIBRARY, MODULE, BEGIN, STALE-WHEN, IMPORT, EXPORT.
-  ;;
-  ;;but expand neither  the core macros nor the lexical  variable definitions (DEFINE
-  ;;forms) and trailing expressions: the  variable definitions are accumulated in the
-  ;;argument and return value QRHS* for later expansion; the trailing expressions are
-  ;;accumulated in the argument and return value BODY-FORM*.STX for later expansion.
-  ;;
-  ;;Here is a description of the arguments.
-  ;;
-  ;;BODY-FORM*.STX must be null or a list of syntax objects representing the forms.
-  ;;
-  ;;LEXENV.RUN  and LEXENV.EXPAND  must  be lists  representing  the current  lexical
-  ;;environment for run and expand times.
-  ;;
-  ;;LEX* must be a  list of gensyms and QRHS* must be a  list of qualified right-hand
-  ;;sides representing right-hand  side expressions for DEFINE syntax  uses; they are
-  ;;meant to  be processed together  item by item;  they are accumulated  in reversed
-  ;;order.  Whenever the QRHS expressions are  expanded: a core language binding will
-  ;;be created with a LEX gensym associated  to a QRHS expression.
-  ;;
-  ;;About the MOD** argument.  We know that module definitions have the syntax:
-  ;;
-  ;;   (module (?export-id ...) ?definition ... ?expression ...)
-  ;;
-  ;;and the trailing  ?EXPRESSION forms must be evaluated after  the right-hand sides
-  ;;of the DEFINE syntaxes  of the module but also of  the enclosing lexical context.
-  ;;So, when expanding a MODULE, we  accumulate such expression syntax objects in the
-  ;;MOD** argument as:
-  ;;
-  ;;   MOD** == ((?expression ...) ...)
-  ;;
-  ;;KWD* is  a list of  identifiers representing  the syntaxes and  lexical variables
-  ;;defined in this body.  It is used to test for duplicate definitions.
-  ;;
-  ;;EXPORT-SPEC*  is  null or  a  list  of  syntax  objects representing  the  export
-  ;;specifications from this body.  It is to be processed later.
-  ;;
-  ;;RIB is the current lexical environment's rib.
-  ;;
-  ;;MIX? is interpreted as boolean.  When false: the expansion process visits all the
-  ;;definition forms and stops at the first expression form; the expression forms are
-  ;;returned  to  the caller.   When  true:  the  expansion  process visits  all  the
-  ;;definition  and  expression  forms,  accepting  a  mixed  sequence  of  them;  an
-  ;;expression form is handled as a dummy definition form.
-  ;;
-  ;;When the argument SHADOW/REDEFINE-BINDINGS? is set to false:
-  ;;
-  ;;* Syntactic binding definitions in this body must *not* shadow syntactic bindings
-  ;;established by the top-level environment.  For example, in the program:
-  ;;
-  ;;   (import (vicare))
-  ;;   (define display 1)
-  ;;   (debug-print display)
-  ;;
-  ;;the DEFINE use is a syntax violation  because the use of DEFINE cannot shadow the
-  ;;binding imported from "(vicare)".
-  ;;
-  ;;*  Syntactic bindings  established  in the  body must  *not*  be redefined.   For
-  ;;example, in the program:
-  ;;
-  ;;   (import (vicare))
-  ;;   (define a 1)
-  ;;   (define a 2)
-  ;;   (debug-print a)
-  ;;
-  ;;the second  DEFINE use  is a syntax  violation because the  use of  DEFINE cannot
-  ;;redefine the binding for "a".
-  ;;
-  ;;When the argument SHADOW/REDEFINE-BINDINGS? is set to true:
-  ;;
-  ;;* Syntactic  binding definitions  in this  body are  allowed to  shadow syntactic
-  ;;bindings established by the top-level environment.  For example, at the REPL:
-  ;;
-  ;;   vicare> (import (vicare))
-  ;;   vicare> (define display 1)
-  ;;   vicare> (debug-print display)
-  ;;
-  ;;the  DEFINE use  is fine:  it  is allowed  to  shadow the  binding imported  from
-  ;;"(vicare)".
-  ;;
-  ;;** Syntactic binding  definitions in the body can be  redefined.  For example, at
-  ;;the REPL:
-  ;;
-  ;;  vicare> (begin
-  ;;            (define a 1)
-  ;;            (define a 2)
-  ;;            (debug-print a))
-  ;;
-  ;;the second DEFINE use is fine: it can redefine the binding for "a".
-  ;;
-  (define* (chi-body* body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib
-		     mix?
-		     shadow/redefine-bindings?)
-    (if (null? body-form*.stx)
-	(values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
-      (let ((body-form.stx (car body-form*.stx)))
-	(receive (type bind-val kwd)
-	    (syntactic-form-type body-form.stx lexenv.run)
-	  (let ((kwd* (if (identifier? kwd)
-			  (cons kwd kwd*)
-			kwd*)))
-	    (case type
-
-	      ((define)
-	       ;;The  body  form  is  an INTERNAL-DEFINE  primitive  macro  use;  for
-	       ;;example, one among:
-	       ;;
-	       ;;   (internal-define ?attributes ?lhs ?rhs)
-	       ;;   (internal-define ?attributes (?lhs . ?formals) . ?body)
-	       ;;
-	       ;;we parse  the form and  generate a qualified right-hand  side (QRHS)
-	       ;;object that will be expanded later.
-	       ;;
-	       ;;Here we create  a new syntactic binding representing  a lexical var,
-	       ;;either local or top-level:
-	       ;;
-	       ;;* We generate a label gensym  uniquely associated to the binding and
-	       ;;a lex gensym as name of the binding in the expanded code.
-	       ;;
-	       ;;* We register the association identifier/label in the rib.
-	       ;;
-	       ;;*  We push  an  entry  on LEXENV.RUN  to  represent the  association
-	       ;;label/lex.
-	       ;;
-	       ;;* Finally we recurse on the rest of the body.
-	       ;;
-	       ;;Notice  the  special case:  if  a  syntactic binding  capturing  the
-	       ;;syntactic identifier already exists in the top rib of an interaction
-	       ;;environment, we allow the binding to be redefined.  This is a Vicare
-	       ;;extension.   Normally, in  a non-interaction  environment, we  would
-	       ;;raise an exception as mandated by R6RS.
-	       ;;
-	       ;;From parsing  the syntactic form,  we receive the  following values:
-	       ;;ID, the  tagged binding identifier;  TAG, the tag identifier  for ID
-	       ;;(possibly "<top>"); QRHS, the QRHS object to be expanded later.
-	       (receive (id tag qrhs)
-		   (%parse-define body-form.stx)
-		 (when (bound-id-member? id kwd*)
-		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
-		 (let ((lab (generate-label-gensym   id))
-		       ;;About this call to GENERATE-LEXICAL-GENSYM notice that:
-		       ;;
-		       ;;* If the  binding is at the top-level of  a program body: we
-		       ;;need a loc gensym to store  the result of evaluating the RHS
-		       ;;in QRHS; this loc will be generated later.
-		       ;;
-		       ;;*  If the  binding  is  at the  top-level  of an  expression
-		       ;;expanded in an interaction environment: we need a loc gensym
-		       ;;to store the  result of evaluating the RHS in  QRHS; in this
-		       ;;case the lex gensym generated here also acts as loc gensym.
-		       ;;
-		       (lex (generate-lexical-gensym id)))
-		   ;;This call will raise an exception if it represents an attempt to
-		   ;;illegally redefine a binding.
-		   (extend-rib! rib id lab shadow/redefine-bindings?)
-		   (set-label-tag! id lab tag)
-		   (chi-body* (cdr body-form*.stx)
-			      (lexenv-add-lexical-var-binding lab lex lexenv.run) lexenv.expand
-			      (cons lex lex*) (cons qrhs qrhs*)
-			      mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
-
-	      ((define-syntax)
-	       ;;The body form  is a built-in DEFINE-SYNTAX macro use.   This is what
-	       ;;happens:
-	       ;;
-	       ;;1. Parse the syntactic form.
-	       ;;
-	       ;;2. Expand the right-hand side expression.  This expansion happens in
-	       ;;a lexical context in which the syntactic binding of the macro itself
-	       ;;has *not* yet been established.
-	       ;;
-	       ;;3. Add  to the rib  the syntactic binding's association  between the
-	       ;;macro keyword and the label.
-	       ;;
-	       ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
-	       ;;return:  a  macro  transformer  function, a  compile-time  value,  a
-	       ;;synonym transformer or whatever.
-	       ;;
-	       ;;5. Add to the lexenv the syntactic binding's association between the
-	       ;;label and the binding's descriptor.
-	       ;;
-	       ;;6. Finally recurse to expand the rest of the body.
-	       ;;
-	       (receive (id rhs.stx)
-		   (%parse-define-syntax body-form.stx)
-		 (when (bound-id-member? id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
-		 (let ((rhs.core (with-exception-handler/input-form
-				     rhs.stx
-				   (expand-macro-transformer rhs.stx lexenv.expand)))
-		       (lab      (generate-label-gensym id)))
-		   ;;This call will raise an exception if it represents an attempt to
-		   ;;illegally redefine a binding.
-		   (extend-rib! rib id lab shadow/redefine-bindings?)
-		   (let ((entry (cons lab (with-exception-handler/input-form
-					      rhs.stx
-					    (eval-macro-transformer rhs.core lexenv.run)))))
-		     (chi-body* (cdr body-form*.stx)
-				(cons entry lexenv.run)
-				(cons entry lexenv.expand)
-				lex* qrhs* mod** kwd* export-spec* rib
-				mix? shadow/redefine-bindings?)))))
-
-	      ((define-fluid-syntax)
-	       ;;The body form is a  built-in DEFINE-FLUID-SYNTAX macro use.  This is
-	       ;;what happens:
-	       ;;
-	       ;;1. Parse the syntactic form.
-	       ;;
-	       ;;2. Expand the right-hand side expression.  This expansion happens in
-	       ;;a lexical context in which the syntactic binding of the macro itself
-	       ;;has *not* yet been established.
-	       ;;
-	       ;;3. Add  to the rib  the syntactic binding's association  between the
-	       ;;macro keyword and the label.
-	       ;;
-	       ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
-	       ;;return:  a  macro  transformer  function, a  compile-time  value,  a
-	       ;;synonym transformer or whatever.
-	       ;;
-	       ;;5. Add to the lexenv the syntactic binding's association between the
-	       ;;label and the binding's descriptor.
-	       ;;
-	       ;;6. Finally recurse to expand the rest of the body.
-	       ;;
-	       (receive (id rhs.stx)
-		   (%parse-define-syntax body-form.stx)
-		 (when (bound-id-member? id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
-		 (let ((rhs.core (with-exception-handler/input-form
-				     rhs.stx
-				   (expand-macro-transformer rhs.stx lexenv.expand)))
-		       (lab      (generate-label-gensym id)))
-		   ;;This call will raise an exception if it represents an attempt to
-		   ;;illegally redefine a binding.
-		   (extend-rib! rib id lab shadow/redefine-bindings?)
-		   (let* ((binding  (with-exception-handler/input-form
-					rhs.stx
-				      (eval-macro-transformer rhs.core lexenv.run)))
-			  (flab     (generate-label-gensym id))
-			  ;;This LEXENV entry represents  the definition of the fluid
-			  ;;syntax.
-			  (entry1   (cons lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax flab)))
-			  ;;This LEXENV  entry represents the current  binding of the
-			  ;;fluid syntax.
-			  (entry2   (cons flab binding)))
-		     (chi-body* (cdr body-form*.stx)
-				(cons* entry1 entry2 lexenv.run)
-				(cons* entry1 entry2 lexenv.expand)
-				lex* qrhs* mod** kwd* export-spec* rib
-				mix? shadow/redefine-bindings?)))))
-
-	      ((define-alias)
-	       ;;The body form  is a core language DEFINE-ALIAS macro  use.  We add a
-	       ;;new  association identifier/label  to the  current rib.   Finally we
-	       ;;recurse on the rest of the body.
-	       ;;
-	       (receive (alias-id old-id)
-		   (%parse-define-alias body-form.stx)
-		 (when (bound-id-member? old-id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
-		 (cond ((id->label old-id)
-			=> (lambda (label)
-			     ;;This call will raise an  exception if it represents an
-			     ;;attempt to illegally redefine a binding.
-			     (extend-rib! rib alias-id label shadow/redefine-bindings?)
-			     (chi-body* (cdr body-form*.stx)
-					lexenv.run lexenv.expand
-					lex* qrhs* mod** kwd* export-spec* rib
-					mix? shadow/redefine-bindings?)))
-		       (else
-			(stx-error body-form.stx "unbound source identifier")))))
-
-	      ((let-syntax letrec-syntax)
-	       ;;The body form is a  core language LET-SYNTAX or LETREC-SYNTAX macro
-	       ;;use.   We expand  and evaluate  the transformer  expressions, build
-	       ;;syntactic bindings  for them,  register their labels  in a  new rib
-	       ;;because they are  visible only in the internal  body.  The internal
-	       ;;forms are  spliced in the external  body but with the  rib added to
-	       ;;them.
-	       ;;
-	       (syntax-match body-form.stx ()
-		 ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
-		  (unless (valid-bound-ids? ?xlhs*)
-		    (stx-error body-form.stx "invalid identifiers"))
-		  (let* ((xlab*  (map generate-label-gensym ?xlhs*))
-			 (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
-			 ;;We  evaluate  the  transformers  for  LET-SYNTAX  without
-			 ;;pushing the XRIB: the syntax bindings do not exist in the
-			 ;;environment in which the transformer is evaluated.
-			 ;;
-			 ;;We  evaluate  the  transformers for  LETREC-SYNTAX  after
-			 ;;pushing the  XRIB: the  syntax bindings  do exist  in the
-			 ;;environment in which the transformer is evaluated.
-			 (xbind* (map (lambda (x)
-					(let ((in-form (if (eq? type 'let-syntax)
-							   x
-							 (push-lexical-contour xrib x))))
-					  (with-exception-handler/input-form
-					      in-form
-					    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-								    lexenv.run))))
-				   ?xrhs*)))
-		    (chi-body*
-		     ;;Splice the internal  body forms but add a  lexical contour to
-		     ;;them.
-		     (append (map (lambda (internal-body-form)
-				    (push-lexical-contour xrib
-				      internal-body-form))
-			       ?xbody*)
-			     (cdr body-form*.stx))
-		     ;;Push on the lexical  environment entries corresponding to the
-		     ;;defined syntaxes.  Such entries will stay there even after we
-		     ;;have processed the internal body forms; this is not a problem
-		     ;;because the labels cannot be seen by the rest of the body.
-		     (append (map cons xlab* xbind*) lexenv.run)
-		     (append (map cons xlab* xbind*) lexenv.expand)
-		     lex* qrhs* mod** kwd* export-spec* rib
-		     mix? shadow/redefine-bindings?)))))
-
-	      ((begin-for-syntax)
-	       (let ()
-		 (import CHI-BEGIN-FOR-SYNTAX)
-		 (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand
-				       lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	      ((begin)
-	       ;;The body form  is a BEGIN syntax use.  Just  splice the expressions
-	       ;;and recurse on them.
-	       ;;
-	       (syntax-match body-form.stx ()
-		 ((_ ?expr* ...)
-		  (chi-body* (append ?expr* (cdr body-form*.stx))
-			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
-
-	      ((stale-when)
-	       ;;The body form  is a STALE-WHEN syntax use.   Process the stale-when
-	       ;;guard expression, then  just splice the internal  expressions as we
-	       ;;do for BEGIN and recurse.
-	       ;;
-	       (syntax-match body-form.stx ()
-		 ((_ ?guard ?expr* ...)
-		  (begin
-		    (handle-stale-when ?guard lexenv.expand)
-		    (chi-body* (append ?expr* (cdr body-form*.stx))
-			       lexenv.run lexenv.expand
-			       lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))))
-
-	      ((global-macro global-macro!)
-	       ;;The body form  is a macro use,  where the macro is  imported from a
-	       ;;library.   We perform  the  macro expansion,  then  recurse on  the
-	       ;;resulting syntax object.
-	       ;;
-	       (let ((body-form.stx^ (chi-global-macro bind-val body-form.stx lexenv.run rib)))
-		 (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
-			    lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	      ((local-macro local-macro!)
-	       ;;The body form  is a macro use, where the  macro is locally defined.
-	       ;;We  perform the  macro  expansion, then  recurse  on the  resulting
-	       ;;syntax object.
-	       ;;
-	       (let ((body-form.stx^ (chi-local-macro bind-val body-form.stx lexenv.run rib)))
-		 (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
-			    lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	      ((macro)
-	       ;;The body form is  a macro use, where the macro  is a non-core macro
-	       ;;integrated in the  expander.  We perform the  macro expansion, then
-	       ;;recurse on the resulting syntax object.
-	       ;;
-	       (let ((body-form.stx^ (chi-non-core-macro bind-val body-form.stx lexenv.run rib)))
-		 (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
-			    lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
-
-	      ((module)
-	       ;;The body  form is  an internal module  definition.  We  process the
-	       ;;module, then recurse on the rest of the body.
-	       ;;
-	       (receive (lex* qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		   (chi-internal-module body-form.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
-		 ;;Extend the rib with the syntactic bindings exported by the module.
-		 (vector-for-each (lambda (id lab)
-				    ;;This  call  will  raise   an  exception  if  it
-				    ;;represents an  attempt to illegally  redefine a
-				    ;;binding.
-				    (extend-rib! rib id lab shadow/redefine-bindings?))
-		   m-exp-id* m-exp-lab*)
-		 (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec*
-			    rib mix? shadow/redefine-bindings?)))
-
-	      ((library)
-	       ;;The body  form is  a library definition.   We process  the library,
-	       ;;then recurse on the rest of the body.
-	       ;;
-	       (expand-library (syntax->datum body-form.stx))
-	       (chi-body* (cdr body-form*.stx)
-			  lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec*
-			  rib mix? shadow/redefine-bindings?))
-
-	      ((export)
-	       ;;The body  form is an  EXPORT form.   We just accumulate  the export
-	       ;;specifications, to be  processed later, and we recurse  on the rest
-	       ;;of the body.
-	       ;;
-	       (syntax-match body-form.stx ()
-		 ((_ ?export-spec* ...)
-		  (chi-body* (cdr body-form*.stx)
-			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd*
-			     (append ?export-spec* export-spec*)
-			     rib mix? shadow/redefine-bindings?))))
-
-	      ((import)
-	       ;;The body  form is an  IMPORT form.  We  just process the  form which
-	       ;;results  in   extending  the   RIB  with   more  identifier-to-label
-	       ;;associations.  Finally we recurse on the rest of the body.
-	       ;;
-	       (%chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
-	       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
-
-	      ((standalone-unbound-identifier)
-	       (raise-unbound-error __who__ body-form.stx body-form.stx))
-
-	      (else
-	       ;;Any other expression.
-	       ;;
-	       ;;If mixed  definitions and expressions  are allowed, we  handle this
-	       ;;expression as an implicit definition:
-	       ;;
-	       ;;   (define dummy ?body-form)
-	       ;;
-	       ;;which  is not  really  part  of the  lexical  environment: we  only
-	       ;;generate  a lex  and  a  qrhs for  it,  without  adding entries  to
-	       ;;LEXENV-RUN; then we move on to the next body form.
-	       ;;
-	       ;;If mixed definitions and expressions are forbidden: we have reached
-	       ;;the end of  definitions and expect this and all  the other forms in
-	       ;;BODY-FORM*.STX to  be expressions.   So BODY-FORM*.STX  becomes the
-	       ;;"trailing expressions" return value.
-	       ;;
-	       (if mix?
-		   (let* ((lex  (generate-lexical-gensym 'dummy))
-			  (qrhs (let ((id (make-syntactic-identifier-for-temporary-variable lex)))
-				  (make-qualified-rhs/top-expr id body-form.stx))))
-		     (chi-body* (cdr body-form*.stx)
-				lexenv.run lexenv.expand
-				(cons lex  lex*)
-				(cons qrhs qrhs*)
-				mod** kwd* export-spec* rib #t shadow/redefine-bindings?))
-		 (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)))))))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-define input-form.stx)
-    ;;Syntax  parser for  Vicare's INTERNAL-DEFINE;  this  is like  R6RS DEFINE,  but
-    ;;supports extended tagged bindings syntax and an additional first argument being
-    ;;a list of attributes.  Return 4 values:
-    ;;
-    ;;1..The identifier of the binding variable.
-    ;;
-    ;;2..An identifier representing the binding tag.   "<top>" is used when no tag is
-    ;;   specified; a subtag of "<procedure>" is used when a procedure is defined.
-    ;;
-    ;;3..A qualified  right-hand side expression  (QRHS) representing the  binding to
-    ;;   create.
-    ;;
-    (syntax-match input-form.stx (brace)
-      ;;Function definition with tagged return values and possibly tagged formals.
-      ;;
-      ;;NOTE The following special case matches fine:
-      ;;
-      ;;   (internal-define ?attributes ({ciao})
-      ;;     (void))
-      ;;
-      ;;NOTE We explicitly decide not to rely  on RHS tag propagation to properly tag
-      ;;the defined identifier ?WHO.  We could have considered:
-      ;;
-      ;;   (internal-define ?attributes (?who . ?formals) . ?body)
-      ;;
-      ;;as equivalent to:
-      ;;
-      ;;   (internal-define ?attributes ?who (lambda ?formals . ?body))
-      ;;
-      ;;expand the LAMBDA  form, take its single-tag retvals signature  and use it to
-      ;;tag the identifier  ?WHO.  But to do  it that way: we would  first expand the
-      ;;LAMBDA and after  tag ?WHO; so while  the LAMBDA is expanded ?WHO  is not yet
-      ;;tagged.  Instead by tagging  ?WHO here we are sure that  it is already tagged
-      ;;when LAMBDA is expanded.
-      ((_ ?attributes ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?body0 ?body* ...)
-       (identifier? ?who)
-       (let* ((qrhs   (make-qualified-rhs/defun ?who input-form.stx))
-      	      (tag.id (receive (standard-formals-stx signature)
-      			  (parse-tagged-lambda-proto-syntax (bless
-      							     `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
-      							    input-form.stx)
-      			(fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
-      	 (values ?who tag.id qrhs)))
-
-      ;;Variable definition with tagged identifier.
-      ((_ ?attributes (brace ?id ?tag) ?expr)
-       (identifier? ?id)
-       (let* ((rhs.stx (bless `(tag-assert-and-return (,?tag) ,?expr)))
-	      (qrhs    (make-qualified-rhs/defvar ?id rhs.stx)))
-	 (values ?id ?tag qrhs)))
-
-      ;;Variable definition with tagged identifier, no init.
-      ((_ ?attributes (brace ?id ?tag))
-       (identifier? ?id)
-       (let* ((rhs.stx (bless '(void)))
-	      (qrhs    (make-qualified-rhs/defvar ?id rhs.stx)))
-	 (values ?id ?tag qrhs)))
-
-      ;;Function definition with possibly tagged formals.
-      ;;
-      ;;NOTE We  explicitly decide *not* to  rely on RHS tag  propagation to properly
-      ;;tag the defined identifier ?WHO; see above for an explanation.
-      ((_ ?attributes (?who . ?fmls) ?body0 ?body ...)
-       (identifier? ?who)
-       (let* ((qrhs   (make-qualified-rhs/defun ?who input-form.stx))
-	      (tag.id (receive (standard-formals-stx signature)
-			  (parse-tagged-lambda-proto-syntax ?fmls input-form.stx)
-			(fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
-	 (values ?who tag.id qrhs)))
-
-      ;;R6RS variable definition.
-      ((_ ?attributes ?id ?expr)
-       (identifier? ?id)
-       (let ((qrhs (make-qualified-rhs/untagged-defvar ?id ?expr)))
-	 (values ?id (top-tag-id) qrhs)))
-
-      ;;R6RS variable definition, no init.
-      ((_ ?attributes ?id)
-       (identifier? ?id)
-       (let* ((rhs.stx (bless '(void)))
-	      (qrhs    (make-qualified-rhs/defvar ?id rhs.stx)))
-	 (values ?id (top-tag-id) qrhs)))
-
-      ))
-
-  (define (%parse-define-syntax stx)
-    ;;Syntax parser for R6RS's DEFINE-SYNTAX,  extended with Vicare's syntax.  Accept
-    ;;both:
-    ;;
-    ;;  (define-syntax ?name ?transformer-expr)
-    ;;  (define-syntax (?name ?arg) ?body0 ?body ...)
-    ;;
-    (syntax-match stx ()
-      ((_ (?id ?arg) ?body0 ?body* ...)
-       (and (identifier? ?id)
-	    (identifier? ?arg))
-       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
-      ((_ ?id)
-       (identifier? ?id)
-       (values ?id (bless '(syntax-rules ()))))
-      ((_ ?id ?transformer-expr)
-       (identifier? ?id)
-       (values ?id ?transformer-expr))
-      ))
-
-  (define (%parse-define-alias body-form.stx)
-    ;;Syntax parser for Vicares's DEFINE-ALIAS.
-    ;;
-    (syntax-match body-form.stx ()
-      ((_ ?alias-id ?old-id)
-       (and (identifier? ?alias-id)
-	    (identifier? ?old-id))
-       (values ?alias-id ?old-id))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (module (%chi-import)
-    ;;Process  an IMPORT  form.   The purpose  of  such  forms is  to  push some  new
-    ;;identifier-to-label association on the current RIB.
-    ;;
-    (define-module-who import)
-
-    (define (%chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
-      (receive (id.vec lab.vec)
-	  (%any-import*-checked body-form.stx lexenv.run)
-	(vector-for-each (lambda (id lab)
-			   ;;This call  will raise an  exception if it  represents an
-			   ;;attempt to illegally redefine a binding.
-			   (extend-rib! rib id lab shadow/redefine-bindings?))
-	  id.vec lab.vec)))
-
-    (define (%any-import*-checked import-form lexenv.run)
-      (syntax-match import-form ()
-	((?ctxt ?import-spec* ...)
-	 (%any-import* ?ctxt ?import-spec* lexenv.run))
-	(_
-	 (stx-error import-form "invalid import form"))))
-
-    (define (%any-import* ctxt import-spec* lexenv.run)
-      (if (null? import-spec*)
-	  (values '#() '#())
-	(let-values
-	    (((t1 t2) (%any-import  ctxt (car import-spec*) lexenv.run))
-	     ((t3 t4) (%any-import* ctxt (cdr import-spec*) lexenv.run)))
-	  (values (vector-append t1 t3)
-		  (vector-append t2 t4)))))
-
-    (define (%any-import ctxt import-spec lexenv.run)
-      (if (identifier? import-spec)
-	  (%module-import (list ctxt import-spec) lexenv.run)
-	(%library-import (list ctxt import-spec))))
-
-    (define (%module-import import-form lexenv.run)
-      (syntax-match import-form ()
-	((_ ?id)
-	 (identifier? ?id)
-	 (receive (type bind-val kwd)
-	     (syntactic-form-type ?id lexenv.run)
-	   (case type
-	     (($module)
-	      (let ((iface bind-val))
-		(values (module-interface-exp-id*     iface ?id)
-			(module-interface-exp-lab-vec iface))))
-	     ((standalone-unbound-identifier)
-	      (raise-unbound-error __module_who__ import-form ?id))
-	     (else
-	      (stx-error import-form "invalid import")))))))
-
-    (define (%library-import import-form)
-      (syntax-match import-form ()
-	((?ctxt ?imp* ...)
-	 ;;NAME-VEC is  a vector of  symbols representing  the external names  of the
-	 ;;imported  bindings.   LABEL-VEC is  a  vector  of label  gensyms  uniquely
-	 ;;associated to the imported bindings.
-	 (receive (name-vec label-vec)
-	     (parse-import-spec* (syntax->datum ?imp*))
-	   (values (vector-map (lambda (name)
-				 (~datum->syntax ?ctxt name))
-		     name-vec)
-		   label-vec)))
-	(_
-	 (stx-error import-form "invalid import form"))))
-
-    #| end of module: %CHI-IMPORT |# )
-
-  #| end of module: CHI-BODY* |# )
+  ;;is  a syntax  violation because  the use  of DEFINE  cannot redefine  the
+  ;;binding for "a".
+  (define rib (make-rib/empty))
+  (define-values (trailing-expr-stx*^
+		  lexenv.run^ lexenv.expand^
+		  lex*^ qrhs*^
+		  trailing-mod-expr-stx**^
+		  unused-kwd*^ unused-export-spec*^)
+    (let ((lex*                              '())
+	  (qrhs*                             '())
+	  (mod**                             '())
+	  (kwd*                              '())
+	  (export-spec*                      '())
+	  (mix-definitions-and-expressions?  #f)
+	  (shadow/redefine-bindings?         #f))
+      (chi-body* (map (lambda (x)
+			(push-lexical-contour rib x))
+		   (syntax->list body-form*.stx))
+		 lexenv.run lexenv.expand
+		 lex* qrhs* mod** kwd* export-spec* rib
+		 mix-definitions-and-expressions? shadow/redefine-bindings?)))
+  ;;Upon arriving  here: RIB,  LEXENV.RUN^ and  LEXENV.EXPAND^ contain  the syntactic
+  ;;bindings associated to the QRHS*^.
+  (define init*.stx
+    (reverse-and-append-with-tail trailing-mod-expr-stx**^ trailing-expr-stx*^))
+  (when (null? init*.stx)
+    (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
+  ;;We want  order here!  First we  expand the QRHSs,  then we expande the  INITs; so
+  ;;that the QRHS bindings are typed when the INITs are expanded.
+  (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
+	 (init*.psi      (chi-expr* init*.stx lexenv.run^ lexenv.expand^))
+	 (rhs*.core      (map psi-core-expr rhs*.psi))
+	 (init*.core     (map psi-core-expr init*.psi))
+	 (last-init.psi  (proper-list->last-item init*.psi)))
+    (make-psi (or input-form.stx body-form*.stx)
+	      (build-letrec* (syntax-annotation input-form.stx)
+		(reverse lex*^)
+		rhs*.core
+		(build-sequence no-source
+		  init*.core))
+	      (psi-retvals-signature last-init.psi))))
 
 
 ;;;; chi procedures: module processing
@@ -3459,7 +1669,11 @@
 		(c (psi-core-expr guard-expr.psi) (stc)))))))
 
 
-;;;; macro transformer modules
+;;;; chi procedures: external modules
+
+(include "psyntax.chi-procedures.chi-lambda.scm"      #t)
+(include "psyntax.chi-procedures.chi-application.scm" #t)
+(include "psyntax.chi-procedures.chi-body.scm"        #t)
 
 (module CORE-MACRO-TRANSFORMER
   (core-macro-transformer push-fluid-syntax)
@@ -3477,4 +1691,5 @@
 ;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
+;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
 ;;End:

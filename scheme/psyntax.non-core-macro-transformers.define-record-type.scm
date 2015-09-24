@@ -20,9 +20,9 @@
 
 
 (module (define-record-type-macro)
-  ;;Transformer function used to expand R6RS's DEFINE-RECORD-TYPE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
+  ;;Transformer function  used to  expand R6RS's  DEFINE-RECORD-TYPE macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
   (define-constant __module_who__ 'define-record-type)
 
@@ -246,15 +246,6 @@
 					    safe-field-accessor* safe-field-mutator*
 					    method-name*.sym method-procname*.sym))
 
-  (define tag-type-spec-form
-    ;;The  tag-type-spec stuff  is used  to add  a tag  property to  the record  type
-    ;;identifier.
-    (%make-tag-type-spec-form foo make-foo foo? foo-parent
-			      field-name*.sym
-			      safe-field-accessor* unsafe-field-accessor*
-			      safe-field-mutator* unsafe-field-mutator*
-			      input-form.stx))
-
   (bless
    `(begin
       ;;Parent record-type descriptor.
@@ -276,27 +267,17 @@
       ;;Syntactic binding for record-type name.
       (define-syntax ,foo
 	,foo-syntactic-binding-form)
-      (begin-for-syntax ,tag-type-spec-form)
       ;;Type predicate.
       (define (brace ,foo? <predicate>)
 	(record-predicate ,foo-rtd))
       ;;Default constructor.
-      (define ,make-foo
+      ;;
+      ;;FIXME We would  like the constructor to have a  function signature specifying
+      ;;the return type.  (Marco Maggi; Tue Sep 22, 2015)
+      (define (brace ,make-foo <procedure>)
 	(record-constructor ,foo-rcd))
       ;;Methods.
       ,@method-form*.sexp
-      ;;We want the  default constructor function to have a  signature specifying the
-      ;;record-type as return type.
-      (begin-for-syntax
-	(internal-body
-	  (import (prefix (vicare expander tag-type-specs) typ.))
-	  (define %constructor-signature
-	    (typ.make-lambda-signature (typ.make-retvals-signature-single-value (syntax ,foo))
-				       (typ.make-formals-signature (syntax <list>))))
-	  (define %constructor-tag-id
-	    (typ.fabricate-procedure-tag-identifier (quote ,make-foo) %constructor-signature))
-	  (typ.override-identifier-tag! (syntax ,make-foo) %constructor-tag-id)))
-
       ;;When there are  no fields: this form  expands to "(module ())"  which is just
       ;;wiped away with a further expansion.
       (module (,@safe-field-accessor*
@@ -547,7 +528,7 @@
        (and (identifier? ?accessor)
 	    (identifier? ?mutator))
        (receive (field-name.id field-type.id)
-	   (parse-tagged-identifier-syntax ?name)
+	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
@@ -562,7 +543,7 @@
       (((immutable ?name ?accessor) . ?rest)
        (identifier? ?accessor)
        (receive (field-name.id field-type.id)
-	   (parse-tagged-identifier-syntax ?name)
+	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (cons ?name field-name*.sym)
 	       (cons i field-relative-idx*)
@@ -576,7 +557,7 @@
 
       (((mutable   ?name) . ?rest)
        (receive (field-name.id field-type.id)
-	   (parse-tagged-identifier-syntax ?name)
+	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
@@ -590,7 +571,7 @@
 
       (((immutable ?name) . ?rest)
        (receive (field-name.id field-type.id)
-	   (parse-tagged-identifier-syntax ?name)
+	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
@@ -604,7 +585,7 @@
 
       ((?name . ?rest)
        (receive (field-name.id field-type.id)
-	   (parse-tagged-identifier-syntax ?name)
+	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
@@ -745,18 +726,21 @@
 
 	;;unsafe record fields accessors
 	,@(map (lambda (unsafe-foo-x x field-type.id)
-		 (let ((the-index (%make-field-index-varname x)))
-		   `(define-syntax-rule (,unsafe-foo-x ?x)
-		      (tag-unsafe-cast ,field-type.id ($struct-ref ?x ,the-index)))))
+		 (let ((the-index  (%make-field-index-varname x))
+		       (record.sym (gensym "?record")))
+		   `(define-syntax-rule (,unsafe-foo-x ,record.sym)
+		      (unsafe-cast ,field-type.id ($struct-ref ,record.sym ,the-index)))))
 	    unsafe-field-accessor* field-name*.sym field-type*.id)
 
 	;;unsafe record fields mutators
 	,@(fold-right
 	      (lambda (unsafe-field-mutator field-name.sym knil)
 		(if unsafe-field-mutator
-		    (cons (let ((the-index (%make-field-index-varname field-name.sym)))
-			    `(define-syntax-rule (,unsafe-field-mutator ?x ?v)
-			       ($struct-set! ?x ,the-index ?v)))
+		    (cons (let ((the-index  (%make-field-index-varname field-name.sym))
+				(record.sym (gensym "?record"))
+				(value.sym  (gensym "?new-value")))
+			    `(define-syntax-rule (,unsafe-field-mutator ,record.sym ,value.sym)
+			       ($struct-set! ,record.sym ,the-index ,value.sym)))
 			  knil)
 		  knil))
 	    '() unsafe-field-mutator* field-name*.sym)
@@ -808,26 +792,29 @@
   ;;
   (define safe-field-accessor-form*
     (map (lambda (safe-field-accessor unsafe-field-accessor field-type.id)
-	   `(begin
-	      (internal-define (safe) ((brace ,safe-field-accessor ,field-type.id) (brace record ,foo))
-		(,unsafe-field-accessor record))
-	      (begin-for-syntax
-		(set-identifier-unsafe-variant! (syntax ,safe-field-accessor)
-		  (syntax (lambda (record)
-			    (,unsafe-field-accessor record)))))))
+	   (let ((record.sym (gensym "record")))
+	     `(begin
+		(internal-define (safe) ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
+		  (,unsafe-field-accessor ,record.sym))
+		(begin-for-syntax
+		  (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-accessor)
+								(syntax (lambda (,record.sym)
+									  (,unsafe-field-accessor ,record.sym))))))))
       safe-field-accessor* unsafe-field-accessor* field-type*.id))
 
   (define safe-field-mutator-form*
     (fold-right
 	(lambda (safe-field-mutator unsafe-field-mutator field-type.id knil)
 	  (if safe-field-mutator
-	      (cons `(begin
-		       (internal-define (safe) ((brace ,safe-field-mutator <void>) (brace record ,foo) (brace new-value ,field-type.id))
-			 (,unsafe-field-mutator record new-value))
-		       (begin-for-syntax
-			 (set-identifier-unsafe-variant! (syntax ,safe-field-mutator)
-			   (syntax (lambda (record new-value)
-				     (,unsafe-field-mutator record new-value))))))
+	      (cons (let ((record.sym (gensym "record"))
+			  (val.sym    (gensym "new-value")))
+		      `(begin
+			 (internal-define (safe) ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
+			   (,unsafe-field-mutator ,record.sym ,val.sym))
+			 (begin-for-syntax
+			   (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-mutator)
+									 (syntax (lambda (,record.sym ,val.sym)
+										   (,unsafe-field-mutator ,record.sym ,val.sym)))))))
 		    knil)
 	    knil))
       '() safe-field-mutator* unsafe-field-mutator* field-type*.id))
@@ -1209,90 +1196,6 @@
 			   ,foo-fields-safe-accessors.table
 			   ,foo-fields-safe-mutators.table
 			   ,foo-methods.table)))
-
-
-(define (%make-tag-type-spec-form foo make-foo foo? foo-parent
-				  field-name*.sym
-				  safe-field-accessor* unsafe-field-accessor*
-				  safe-field-mutator* unsafe-field-mutator*
-				  input-form.stx)
-
-  (define type.str
-    (symbol->string (syntax->datum foo)))
-  (define %constructor-maker
-    (string->symbol (string-append type.str "-constructor-maker")))
-  (define %accessor-maker
-    (string->symbol (string-append type.str "-accessor-maker")))
-  (define %mutator-maker
-    (string->symbol (string-append type.str "-mutator-maker")))
-  (define %getter-maker
-    (string->symbol (string-append type.str "-getter-maker")))
-  (define %setter-maker
-    (string->symbol (string-append type.str "-setter-maker")))
-  `(internal-body
-     (import (vicare)
-       (prefix (vicare expander tag-type-specs) typ.))
-
-     (define (,%constructor-maker input-form.stx)
-       (syntax ,make-foo))
-
-     (define (,%accessor-maker field.sym input-form-stx)
-       (case field.sym
-	 ,@(map (lambda (field-name accessor-id)
-		  `((,field-name)	(syntax ,accessor-id)))
-	     field-name*.sym safe-field-accessor*)
-	 (else #f)))
-
-     (define (,%mutator-maker field.sym input-form-stx)
-       (case field.sym
-	 ,@(fold-right
-	       (lambda (field-name mutator-id knil)
-		 (if mutator-id
-		     (cons `((,field-name) (syntax ,mutator-id))
-			   knil)
-		   knil))
-	     '() field-name*.sym safe-field-mutator*)
-	 ,@(fold-right (lambda (field-name mutator-id knil)
-			 (if mutator-id
-			     knil
-			   (cons `((,field-name)
-				   (syntax-violation ',foo
-				     "requested mutator of immutable record field name"
-				     input-form-stx field.sym))
-				 knil)))
-	     '() field-name*.sym safe-field-mutator*)
-	 (else #f)))
-
-     (define (,%getter-maker keys-stx input-form-stx)
-       (syntax-case keys-stx ()
-	 (([?field-id])
-	  (identifier? #'?field-id)
-	  (,%accessor-maker (syntax->datum #'?field-id) input-form-stx))
-	 (else #f)))
-
-     (define (,%setter-maker keys-stx input-form-stx)
-       (syntax-case keys-stx ()
-	 (([?field-id])
-	  (identifier? #'?field-id)
-	  (,%mutator-maker (syntax->datum #'?field-id) input-form-stx))
-	 (else #f)))
-
-     (define %caster-maker #f)
-     (define %dispatcher   #f)
-
-     (define parent-id
-       ,(if foo-parent
-	    `(syntax ,foo-parent)
-	  '(typ.record-tag-id)))
-
-     (define tag-type-spec
-       (typ.make-tag-type-spec (syntax ,foo) parent-id (syntax ,foo?)
-			       ,%constructor-maker
-			       ,%accessor-maker ,%mutator-maker
-			       ,%getter-maker   ,%setter-maker
-			       %caster-maker    %dispatcher))
-
-     (typ.set-identifier-tag-type-spec! (syntax ,foo) tag-type-spec)))
 
 
 ;;;; done

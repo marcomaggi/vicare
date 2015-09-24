@@ -164,7 +164,7 @@ Trademarks used herein are the property of their respective owners.
                                 libraries.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
-* tags::                        Tagged language.
+* types::                       The typed language.
 * obspec::                      Internals of tagged language.
 * capi::                        C language programming interface.
 
@@ -224,7 +224,7 @@ External documents
 @include foreign.texi
 @include ffi.texi
 @include syslib.texi
-@include tags.texi
+@include types.texi
 @include obspec.texi
 @include capi.texi
 

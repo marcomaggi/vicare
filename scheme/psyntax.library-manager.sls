@@ -41,6 +41,7 @@
     ;; interning libraries
     intern-library			just-intern-library
     unintern-library			interned-libraries
+    global-typed-variable-updater
 
     ;; library operations
     visit-library			invoke-library
@@ -529,6 +530,9 @@
     (visit-library lib))
   lib)
 
+(define global-typed-variable-updater
+  (make-parameter #f))
+
 (define* (just-intern-library lib)
   ;;See the documentation of the expander  for the format of the GLOBAL-ENV.  Entries
   ;;in the GLOBAL-ENV are  different from entries in the LEXENV;  here we transform a
@@ -543,6 +547,12 @@
 			     ((global-macro)  (cons* 'global-macro  lib (cdr type.value)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr type.value)))
 			     ((global-etv)    (cons* 'global-etv    lib (cdr type.value)))
+			     ;;SPEC is an instance  of "<typed-global-spec>", we have
+			     ;;to store the LIB into it.
+			     ((global-typed)  (cons 'global-typed
+						    (receive-and-return (spec)
+							(cdr type.value)
+						      ((global-typed-variable-updater) spec lib))))
 			     ((core-prim
 			       library import export
 			       define define-syntax define-alias
@@ -552,7 +562,7 @@
 			       global-mutable
 			       core-macro macro macro!
 			       $core-rtd $core-record-type-name $core-condition-object-type-name $core-scheme-type-name
-			       $record-type-name $struct-type-name $scheme-type-name
+			       $record-type-name $struct-type-name $scheme-type-name $closure-type-name
 			       $module $fluid $synonym)
 			      type.value)
 			     (else

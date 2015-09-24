@@ -508,7 +508,7 @@
     "psyntax.export-spec-parser.sls"
     "psyntax.syntactic-binding-properties.sls"
     "psyntax.syntax-utilities.sls"
-    "psyntax.tag-and-tagged-identifiers.sls"
+    "psyntax.type-identifiers-and-signatures.sls"
     "psyntax.core-primitives-properties.sls"
     "psyntax.non-core-macro-transformers.sls"
     "psyntax.chi-procedures.sls"
@@ -608,15 +608,15 @@
     (delete					(core-macro . delete))
     (type-descriptor				(core-macro . type-descriptor))
     (is-a?					(core-macro . is-a?))
+    (internal-run-time-is-a?			(core-macro . internal-run-time-is-a?))
     (slot-ref					(core-macro . slot-ref))
     (slot-set!					(core-macro . slot-set!))
     (method-call				(core-macro . method-call))
     (unsafe-cast				(core-macro . unsafe-cast))
     (validate-typed-procedure-argument		(core-macro . validate-typed-procedure-argument))
     (validate-typed-return-value		(core-macro . validate-typed-return-value))
-    (tag-assert					(core-macro . tag-assert))
-    (tag-assert-and-return			(core-macro . tag-assert-and-return))
-    (tag-cast					(core-macro . tag-cast))
+    (assert-retvals-signature					(core-macro . assert-retvals-signature))
+    (assert-retvals-signature-and-return			(core-macro . assert-retvals-signature-and-return))
     (type-of					(core-macro . type-of))
     (expansion-of				(core-macro . expansion-of))
     (expansion-of*				(core-macro . expansion-of*))
@@ -1294,7 +1294,7 @@
        #f procedure?)
 
     ,(declare-scheme-type <predicate>
-	 <top>
+	 <procedure>
        #f procedure?)
 
 ;;; --------------------------------------------------------------------
@@ -1591,10 +1591,8 @@
     ;;FIXME At  the next boot  image rotation  these libraries must  become required.
     ;;(Marco Maggi; Mon Apr 14, 2014)
     ,@(if-building-rotation-boot-image? "expander built-in libraries requirements"
-	  '(($type-specs	(vicare expander tag-type-specs)	#t	#t)
-	    ($expander		(vicare expander)			#t	#t))
-	'(($type-specs		(vicare expander tag-type-specs)	#t	#f)
-	  ($expander		(vicare expander)			#t	#f)))))
+	  '(($expander		(vicare expander)			#t	#t))
+	'(($expander		(vicare expander)			#t	#f)))))
 
 
 (define-constant IDENTIFIER->LIBRARY-MAP
@@ -1628,10 +1626,8 @@
     (unsafe-cast				v $language)
     (validate-typed-procedure-argument		v $language)
     (validate-typed-return-value		v $language)
-    (tag-assert					v $language)
-    (tag-assert-and-return			v $language)
-    (tag-dispatch				v $language)
-    (tag-cast					v $language)
+    (assert-retvals-signature			v $language)
+    (assert-retvals-signature-and-return	v $language)
     (struct-type-descriptor			v $language)
     (parameterize				v $language)
     (parameterise				v $language)
@@ -3863,9 +3859,9 @@
     (predicate-procedure-argument-validation	v $language)
     (predicate-return-value-validation		v $language)
 ;;;
-    (unsafe					v $language)
-    (set-identifier-unsafe-variant!		v $language)
-    (identifier-unsafe-variant			v $language)
+    (unsafe						v $language)
+    (typed-procedure-variable.unsafe-variant		v $language)
+    (typed-procedure-variable.unsafe-variant-set!	v $language)
 ;;;
     (eval-for-expand				v $language)
     (begin-for-syntax				v $language)
@@ -5385,98 +5381,6 @@
     ($symbol-hash				$hashtables)
     ($bytevector-hash				$hashtables)
 
-;;; --------------------------------------------------------------------
-;;; expander tags
-
-    (print-identifier-info			v $language)
-
-    (tagged-identifier-syntax?			$type-specs)
-    (list-of-tagged-bindings?			$type-specs)
-    (tagged-lambda-proto-syntax?		$type-specs)
-    (tagged-formals-syntax?			$type-specs)
-    (standard-formals-syntax?			$type-specs)
-    (formals-signature-syntax?			$type-specs)
-    (retvals-signature-syntax?			$type-specs)
-    (parse-tagged-identifier-syntax		$type-specs)
-    (parse-list-of-tagged-bindings		$type-specs)
-    (parse-tagged-lambda-proto-syntax		$type-specs)
-    (parse-tagged-formals-syntax		$type-specs)
-
-    (make-clambda-compound			$type-specs)
-    (clambda-compound?				$type-specs)
-    (clambda-compound-common-retvals-signature	$type-specs)
-    (clambda-compound-lambda-signatures		$type-specs)
-
-    (make-lambda-signature			$type-specs)
-    (lambda-signature?				$type-specs)
-    (lambda-signature-formals			$type-specs)
-    (lambda-signature-retvals			$type-specs)
-    (lambda-signature-formals-tags		$type-specs)
-    (lambda-signature-retvals-tags		$type-specs)
-    (lambda-signature=?				$type-specs)
-
-    (make-formals-signature			$type-specs)
-    (formals-signature?				$type-specs)
-    (formals-signature-tags			$type-specs)
-    (formals-signature=?			$type-specs)
-
-    (make-retvals-signature			$type-specs)
-    (make-retvals-signature-single-value	$type-specs)
-    (retvals-signature?				$type-specs)
-    (retvals-signature-tags			$type-specs)
-    (retvals-signature=?			$type-specs)
-    (retvals-signature-common-ancestor		$type-specs)
-
-    (tag-identifier?				$type-specs)
-    (all-tag-identifiers?			$type-specs)
-    (tag-super-and-sub?				$type-specs)
-    (tag-identifier-ancestry			$type-specs)
-    (tag-common-ancestor			$type-specs)
-    (formals-signature-super-and-sub-syntax?	$type-specs)
-
-    (set-tag-identifier-callable-signature!	$type-specs)
-    (tag-identifier-callable-signature		$type-specs)
-    (fabricate-procedure-tag-identifier		$type-specs)
-
-    (set-identifier-tag-type-spec!		$type-specs)
-    (identifier-tag-type-spec			$type-specs)
-    (set-label-tag-type-spec!			$type-specs)
-    (label-tag-type-spec			$type-specs)
-    (make-tag-type-spec				$type-specs)
-    (tag-type-spec?				$type-specs)
-    (tag-type-spec-uids				$type-specs)
-    (tag-type-spec-type-id			$type-specs)
-    (tag-type-spec-parent-spec			$type-specs)
-    (tag-type-spec-pred-stx			$type-specs)
-    (tag-type-spec-constructor-maker		$type-specs)
-    (tag-type-spec-accessor-maker		$type-specs)
-    (tag-type-spec-mutator-maker		$type-specs)
-    (tag-type-spec-getter-maker			$type-specs)
-    (tag-type-spec-setter-maker			$type-specs)
-    (tag-type-spec-dispatcher			$type-specs)
-    (tag-type-spec-ancestry			$type-specs)
-
-    (tagged-identifier?				$type-specs)
-    (set-identifier-tag!			$type-specs)
-    (override-identifier-tag!			$type-specs)
-    (identifier-tag				$type-specs)
-    (set-label-tag!				$type-specs)
-    (override-label-tag!			$type-specs)
-    (label-tag					$type-specs)
-
-    (expand-time-type-signature-violation?			$type-specs)
-    (expand-time-retvals-signature-violation?			$type-specs)
-    (expand-time-retvals-signature-violation-expected-signature	$type-specs)
-    (expand-time-retvals-signature-violation-returned-signature	$type-specs)
-
-    (top-tag-id					$type-specs)
-    (void-tag-id				$type-specs)
-    (procedure-tag-id				$type-specs)
-    (list-tag-id				$type-specs)
-    (boolean-tag-id				$type-specs)
-    (struct-tag-id				$type-specs)
-    (record-tag-id				$type-specs)
-
 ;;;; built-in object types utilities
 
     ;;These are exported only by "(psyntax system $all)".
@@ -5490,6 +5394,7 @@
     (internal-applicable-record-type-destructor)
     (internal-applicable-record-destructor)
     (object-type-spec-override-predicate)
+    (internal-run-time-is-a?)
 
     ))
 

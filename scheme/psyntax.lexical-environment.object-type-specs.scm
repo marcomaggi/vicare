@@ -27,7 +27,6 @@
 	 object-type-spec.safe-accessor-sexp		object-type-spec.safe-mutator-sexp
 	 object-type-spec.applicable-method-sexp
 
-	 ;; object-type utilities
 	 object-type-spec.subtype-and-supertype?	object-type-spec-override-predicate
 
 	 <record-type-spec>
@@ -36,7 +35,12 @@
 	 record-type-spec.super-protocol-id
 
 	 <scheme-type-spec>
-	 make-scheme-type-spec				scheme-type-spec?)
+	 make-scheme-type-spec				scheme-type-spec?
+
+	 <closure-type-spec>
+	 make-closure-type-spec				closure-type-spec?
+	 closure-type-spec.signature
+	 )
 
 
 ;;;; basic object-type specification
@@ -65,10 +69,10 @@
      (immutable parent-id		object-type-spec.parent-id)
 		;False  or a  syntactic identifier  representing the  parent of  this
 		;record-type.
-     (immutable constructor-stx		object-type-spec.constructor-sexp)
-		;False or a  syntax object representing an  expression that, expanded
-		;and  evaluated at  run-time, returns  the default  constructor.  The
-		;constructor is meant to be used as:
+     (immutable constructor-sexp		object-type-spec.constructor-sexp)
+		;False or a symbolic expression  (to be BLESSed later) representing a
+		;Scheme expression that, expanded  and evaluated at run-time, returns
+		;the default constructor.  The constructor is meant to be used as:
 		;
 		;   (?constructor ?arg ...)
 		;
@@ -78,21 +82,21 @@
 		;"$make-clean-vector" or a closure object  like "vector" or the maker
 		;of R6RS records.
 
-     (immutable destructor-stx		object-type-spec.destructor-sexp)
-		;False or a  syntax object representing an  expression that, expanded
-		;and  evaluated  at run-time,  returns  a  destructor function.   The
-		;constructor is meant to be used as:
+     (immutable destructor-sexp		object-type-spec.destructor-sexp)
+		;False or a symbolic expression  (to be BLESSed later) representing a
+		;Scheme expression that, expanded  and evaluated at run-time, returns
+		;a destructor function.  The destructor is meant to be used as:
 		;
 		;   (?destructor ?instance)
 		;
 		;and called explicitly with the DELETE syntax.
 
-     (mutable type-predicate-stx
+     (mutable type-predicate-sexp
 	      object-type-spec.type-predicate-sexp
 	      object-type-spec.type-predicate-sexp-set!)
-		;False or a  syntax object representing an  expression that, expanded
-		;and evaluated at run-time, returns  a type predicate.  The predicate
-		;is meant to be used as:
+		;False or a symbolic expression  (to be BLESSed later) representing a
+		;Scheme expression that, expanded  and evaluated at run-time, returns
+		;a type predicate.  The predicate is meant to be used as:
 		;
 		;   (?predicate ?object)
 		;
@@ -103,7 +107,8 @@
 
      (immutable safe-accessors-table		object-type-spec.safe-accessors-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
-		;syntax objects which, expanded and evaluated at run-time, return the
+		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
+		;expression  that, expanded  and  evaluated at  run-time, return  the
 		;associated safe  field accessor.   A field accessor  is meant  to be
 		;used as:
 		;
@@ -113,7 +118,8 @@
 
      (immutable safe-mutators-table		object-type-spec.safe-mutators-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
-		;syntax objects which, expanded and evaluated at run-time, return the
+		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
+		;expression  that, expanded  and  evaluated at  run-time, return  the
 		;associated safe field mutator.  A field  mutator is meant to be used
 		;as:
 		;
@@ -123,8 +129,10 @@
 
      (immutable methods-table			object-type-spec.methods-table)
 		;Null or  an alist mapping  symbols representing the method  names to
-		;syntax objects which, expanded and evaluated at run-time, return the
-		;associated method applicable.  A method is meant to be used as:
+		;symboli  expression  (to  be   BLESSed  later)  representing  Scheme
+		;expressions  that, expanded  and evaluated  at run-time,  return the
+		;associated method  applicable.  A method  applicable is meant  to be
+		;used as:
 		;
 		;   (?method ?instance ?arg ...)
 		;
@@ -137,18 +145,18 @@
 	(case-lambda
 	 (()
 	  (make-record #f  ;parent-id
-		       #f  ;constructor-stx
-		       #f  ;destructor-stx
-		       #f  ;type-predicate-stx
+		       #f  ;constructor-sexp
+		       #f  ;destructor-sexp
+		       #f  ;type-predicate-sexp
 		       '() ;safe-accessors-table
 		       '() ;safe-mutators-table
 		       '() ;methods-table
 		       ))
 	 ((parent-id
-	   constructor-stx destructor-stx type-predicate-stx
+	   constructor-sexp destructor-sexp type-predicate-sexp
 	   safe-accessors-table safe-mutators-table methods-table)
 	  (make-record parent-id
-		       constructor-stx destructor-stx type-predicate-stx
+		       constructor-sexp destructor-sexp type-predicate-sexp
 		       safe-accessors-table safe-mutators-table methods-table)))))
 
     #| end of DEFINE-RECORD-TYPE |# )
@@ -308,19 +316,20 @@
 
 
 ;;;; built-in object-type specification
-
+;;
 ;;This record type is used as syntactic binding descriptor for built-in Vicare object
 ;;types:  fixnums, pairs,  strings, vectors,  et cetera.   The lexenv  entry has  the
 ;;format:
 ;;
 ;;   ($scheme-type-name . #<scheme-type-spec>)
 ;;
-;;It is built  when expanding DEFINE-RECORD-TYPE forms, or by  converting a syntactic
-;;binding "$core-rtd" or  "$core-record-type-name" (a buit-in record  type defined by
-;;the boot image) into a syntactic binding "$record-type-name".
+;;It is built at run-time by converting entries with format:
 ;;
-;;Lexical variables  bound to  instances of  this type  should be  called OTS  (as in
-;;"object-type spec").
+;;   ($core-scheme-type-name
+;;     . (?parent-name ?constructor-name ?type-predicate-name ?methods-alist))
+;;
+;;that are defined by the boot image's  makefile and are hard-coded in the boot image
+;;itself.
 ;;
 (define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
   (nongenerative vicare:expander:<scheme-type-spec>)
@@ -338,6 +347,43 @@
 	  ((make-object-type-spec parent-id
 				  constructor.sexp destructor.sexp predicate.sexp
 				  safe-accessors-table safe-mutators-table methods-table))))))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; closure object signature spec
+;;
+;;This  record  type  is  used  as syntactic  binding  descriptor  for  sub-types  of
+;;"<procedure>" representing closure objects defined  in the source code.  The lexenv
+;;entry has the format:
+;;
+;;   ($closure-type-name . #<closure-type-spec>)
+;;
+;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
+;;signature of arguments and return values.
+;;
+;;NOTE There is  no predicate sexp because,  at run-time, there is no  way to inspect
+;;the signature of a closure object.
+;;
+(define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
+  (nongenerative vicare:expander:<closure-type-spec>)
+  (parent <scheme-type-spec>)
+
+  (fields
+   (immutable signature		closure-type-spec.signature)
+		;An instance of "<callable-signature>".
+   #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define (make-closure-type-spec type-id signature)
+	(let ((parent-id		(procedure-tag-id))
+	      (constructor.sexp		#f)
+	      (predicate.sexp		#f)
+	      (methods-table		'()))
+	  ((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
+	   signature)))
+      make-closure-type-spec))
+
   #| end of DEFINE-RECORD-TYPE |# )
 
 

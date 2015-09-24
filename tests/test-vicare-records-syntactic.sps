@@ -941,43 +941,14 @@
 
 (parametrise ((check-test-name	'generic-maker-syntax))
 
-  (let ()	;application syntax
-    (define-record-type alpha
-      (fields a b c))
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields a b c))
 
-    (define-record-type beta
-      (fields a b))
-
-    (check
-	(let ((reco (alpha (1 2 3))))
-	  (alpha? reco))
-      => #t)
-
-    (check
-	(let ((reco (beta (1 2))))
-	  (beta? reco))
-      => #t)
-
-    (void))
-
-  (let ()	;reference syntax
-    (define-record-type alpha
-      (fields a b c))
-
-    (define-record-type beta
-      (fields a b))
-
-    (check
-	(let ((reco (apply (alpha (...)) 1 '(2 3))))
-	  (alpha? reco))
-      => #t)
-
-    (check
-	(let ((reco (apply (beta (...)) '(1 2))))
-	  (beta? reco))
-      => #t)
-
-    (void))
+	(let ((reco (new alpha 1 2 3)))
+	  (alpha? reco)))
+    => #t)
 
   #t)
 
@@ -1112,29 +1083,29 @@
 
   (check
       (let ((stru (new gamma 1 2 3 4 5 6 7 8 9)))
-	(values (slot-ref stru a alpha)
-		(slot-ref stru b alpha)
-		(slot-ref stru c alpha)
-		;;
-		(slot-ref stru a beta)
-		(slot-ref stru b beta)
-		(slot-ref stru c beta)
-		(slot-ref stru d beta)
-		(slot-ref stru e beta)
-		(slot-ref stru f beta)
-		;;
-		(slot-ref stru a gamma)
-		(slot-ref stru b gamma)
-		(slot-ref stru c gamma)
-		(slot-ref stru d gamma)
-		(slot-ref stru e gamma)
-		(slot-ref stru f gamma)
-		(slot-ref stru g gamma)
-		(slot-ref stru h gamma)
-		(slot-ref stru i gamma)))
-    => 1 2 3
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)
+	      ;;
+	      (slot-ref stru a beta)
+	      (slot-ref stru b beta)
+	      (slot-ref stru c beta)
+	      (slot-ref stru d beta)
+	      (slot-ref stru e beta)
+	      (slot-ref stru f beta)
+	      ;;
+	      (slot-ref stru a gamma)
+	      (slot-ref stru b gamma)
+	      (slot-ref stru c gamma)
+	      (slot-ref stru d gamma)
+	      (slot-ref stru e gamma)
+	      (slot-ref stru f gamma)
+	      (slot-ref stru g gamma)
+	      (slot-ref stru h gamma)
+	      (slot-ref stru i gamma)))
+    => '(1 2 3
     1 2 3 4 5 6
-    1 2 3 4 5 6 7 8 9)
+    1 2 3 4 5 6 7 8 9))
 
   (check
       (let ((stru (new gamma 1 2 3 4 5 6 7 8 9)))
@@ -1147,16 +1118,16 @@
 	(slot-set! stru g gamma 70)
 	(slot-set! stru h gamma 80)
 	(slot-set! stru i gamma 90)
-	(values (slot-ref stru a gamma)
-		(slot-ref stru b gamma)
-		(slot-ref stru c gamma)
-		(slot-ref stru d gamma)
-		(slot-ref stru e gamma)
-		(slot-ref stru f gamma)
-		(slot-ref stru g gamma)
-		(slot-ref stru h gamma)
-		(slot-ref stru i gamma)))
-    => 10 20 30 40 50 60 70 80 90)
+	(list (slot-ref stru a gamma)
+	      (slot-ref stru b gamma)
+	      (slot-ref stru c gamma)
+	      (slot-ref stru d gamma)
+	      (slot-ref stru e gamma)
+	      (slot-ref stru f gamma)
+	      (slot-ref stru g gamma)
+	      (slot-ref stru h gamma)
+	      (slot-ref stru i gamma)))
+    => '(10 20 30 40 50 60 70 80 90))
 
   (check
       (let ((stru (new gamma 1 2 3 4 5 6 7 8 9)))
@@ -1169,16 +1140,16 @@
 	(slot-set! stru g gamma 70)
 	(slot-set! stru h gamma 80)
 	(slot-set! stru i gamma 90)
-	(values (slot-ref stru a alpha)
-		(slot-ref stru b alpha)
-		(slot-ref stru c alpha)
-		(slot-ref stru d beta)
-		(slot-ref stru e beta)
-		(slot-ref stru f beta)
-		(slot-ref stru g gamma)
-		(slot-ref stru h gamma)
-		(slot-ref stru i gamma)))
-    => 10 20 30 40 50 60 70 80 90)
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)
+	      (slot-ref stru d beta)
+	      (slot-ref stru e beta)
+	      (slot-ref stru f beta)
+	      (slot-ref stru g gamma)
+	      (slot-ref stru h gamma)
+	      (slot-ref stru i gamma)))
+    => '(10 20 30 40 50 60 70 80 90))
 
   #t)
 

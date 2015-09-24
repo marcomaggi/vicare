@@ -21,6 +21,9 @@
 
 ;;;; syntactic bindings core definitions
 
+(define-syntax-rule (make-lexenv-entry ?label ?descr)
+  (cons ?label ?descr))
+
 ;;Given the entry from a lexical environment: return the gensym acting as label.
 ;;
 (define lexenv-entry.label car)
@@ -28,6 +31,11 @@
 ;;Given the entry from a lexical environment: return the binding value.
 ;;
 (define lexenv-entry.binding-descriptor cdr)
+
+(define-syntax-rule (push-entry-on-lexenv ?label ?descr ?lexenv)
+  (cons (make-lexenv-entry ?label ?descr) ?lexenv))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax-rule (make-syntactic-binding-descriptor ?bind-type ?bind-val)
   ;;Build and return a new syntactic binding descriptor.
@@ -147,7 +155,8 @@
   ;;
   (make-syntactic-binding-descriptor lexical (cons lex-name #f)))
 
-(define-syntactic-binding-descriptor-predicate lexical-var-binding-descriptor? lexical)
+(define-syntactic-binding-descriptor-predicate lexical-var-binding-descriptor?
+  lexical)
 
 (define-syntax-rule (lexical-var-binding-descriptor-value.lex-name ?descriptor-value)
   ;;Accessor  for  the lexical  gensym  in  a  lexical variable's  syntactic  binding
@@ -196,8 +205,8 @@
   ;;LABEL must be a  syntactic binding's label gensym.  LEX must  be a lexical gensym
   ;;representing the name of a lexical variable in the expanded language forms.
   ;;
-  (cons (cons label (make-syntactic-binding-descriptor/lexical-var lex))
-	lexenv))
+  (push-entry-on-lexenv label (make-syntactic-binding-descriptor/lexical-var lex)
+			lexenv))
 
 (define (lexenv-add-lexical-var-bindings label* lex* lexenv)
   ;;Push  on the  LEXENV multiple  entries representing  non-assigned local  variable
@@ -208,9 +217,130 @@
   ;;language forms.
   ;;
   (if (pair? label*)
-      (lexenv-add-lexical-var-bindings ($cdr label*) ($cdr lex*)
-				       (lexenv-add-lexical-var-binding ($car label*) ($car lex*) lexenv))
+      (lexenv-add-lexical-var-bindings (cdr label*) (cdr lex*)
+				       (lexenv-add-lexical-var-binding (car label*) (car lex*) lexenv))
     lexenv))
+
+
+;;;; syntactic binding descriptor: typed lexical variables
+
+(define (make-syntactic-binding-descriptor/lexical-typed-var lex type-id)
+  ;;Build and return  a syntactic binding descriptor representing  a constant lexical
+  ;;variable; this  variable is never  assigned in the code.   LEX must be  a lexical
+  ;;gensym  representing the  name of  a lexical  variable in  the expanded  language
+  ;;forms.  TYPE-ID  must be the  syntactic identifier  representing the type  of the
+  ;;variable.
+  ;;
+  ;;The returned descriptor has format:
+  ;;
+  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;
+  ;;where ?LEXICAL-TYPED-SPEC is an instance of "<lexical-typed-spec>".
+  ;;
+  (if (top-tag-id? type-id)
+      ;;UNtyped.
+      (make-syntactic-binding-descriptor lexical (cons lex #f))
+    ;;FIXME  The  argument  DEFINED-TYPE?   of the  "<lexical-typed-spec>"  maker  is
+    ;;temporarily set to #f,  but it must be set right in  future.  (Marco Maggi; Sun
+    ;;Sep 20, 2015)
+    (make-syntactic-binding-descriptor lexical-typed (make-lexical-typed-spec lex type-id #t))))
+
+(define-syntactic-binding-descriptor-predicate lexical-typed-var-binding-descriptor?
+  lexical-typed)
+
+(define-syntax-rule (lexical-typed-var-binding-descriptor-value.lex-name ?descriptor-value)
+  ;;Accessor for the  lexical gensym in a typed lexical  variable's syntactic binding
+  ;;descriptor's value.
+  ;;
+  ;;A syntactic binding representing a lexical variable has descriptor with format:
+  ;;
+  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;
+  ;;where ?LEXICAL-TYPED-SPEC  is an instance of  "<lexical-typed-spec>".  This macro
+  ;;returns the lexical gensym representing the variable in the expanded code.
+  ;;
+  (lexical-typed-spec.lex ?descriptor-value))
+
+(define-syntax lexical-typed-var-binding-descriptor-value.assigned?
+  ;;Accessor and mutator for assigned boolean in a typed lexical variable's syntactic
+  ;;binding descriptor's value.
+  ;;
+  ;;A syntactic binding representing a lexical variable has descriptor with format:
+  ;;
+  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;
+  ;;where ?LEXICAL-TYPED-SPEC  is an instance of  "<lexical-typed-spec>".
+  ;;
+  ;;The accessor macro returns a boolean: true if the lexical variable is assigned at
+  ;;least once in the code, otherwise false.   The mutator macro sets a new ASSIGNED?
+  ;;value.
+  ;;
+  (syntax-rules ()
+    ((_ ?descriptor-value)
+     (lexical-typed-spec.assigned? ?descriptor-value))
+    ((_ ?descriptor-value #t)
+     (lexical-typed-spec.set-assigned! ?descriptor-value #t))
+    ))
+
+(define-syntax-rule (lexical-typed-var-binding-descriptor-value.type-id ?descriptor-value)
+  ;;Accessor for the type identifier in  a typed lexical variable's syntactic binding
+  ;;descriptor's value.
+  ;;
+  ;;A syntactic binding representing a lexical variable has descriptor with format:
+  ;;
+  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;
+  ;;where ?LEXICAL-TYPED-SPEC  is an instance of  "<lexical-typed-spec>".  This macro
+  ;;returns the type syntactic identifier of the variable.
+  ;;
+  (lexical-typed-spec.type-id ?descriptor-value))
+
+(define (lexenv-add-lexical-typed-var-binding label lex type-id lexenv)
+  ;;Push on the LEXENV a new entry representing a non-assigned, local, typed variable
+  ;;syntactic binding; return the resulting LEXENV.
+  ;;
+  ;;LABEL must be a  syntactic binding's label gensym.  LEX must  be a lexical gensym
+  ;;representing  the name  of a  lexical variable  in the  expanded language  forms.
+  ;;TYPE-ID must be the syntactic identifier representing the type of the variable.
+  ;;
+  (push-entry-on-lexenv label (make-syntactic-binding-descriptor/lexical-typed-var lex type-id)
+			lexenv))
+
+(define (lexenv-add-lexical-typed-var-bindings label* lex* type-id* lexenv)
+  ;;Push  on the  LEXENV  multiple entries  representing  non-assigned, local,  typed
+  ;;variable syntactic bindings; return the resulting LEXENV.
+  ;;
+  ;;LABEL* must be a list of syntactic  binding's label gensyms.  LEX* must be a list
+  ;;of lexical  gensyms representing the names  of lexical variables in  the expanded
+  ;;language forms.   TYPE-ID* must be  a list of synatctic  identifiers representing
+  ;;the types of the variables.
+  ;;
+  (if (pair? label*)
+      (lexenv-add-lexical-typed-var-bindings (cdr label*) (cdr lex*) (cdr type-id*)
+					     (lexenv-add-lexical-typed-var-binding (car label*) (car lex*) (car type-id*) lexenv))
+    lexenv))
+
+(define (lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor! descr type-id)
+  ;;Convert a syntactic  binding descriptor representing an  untyped lexical variable
+  ;;to a  syntactic binding  descriptor representing a  typed lexical  variable.  The
+  ;;argument DESCR must be a syntactic binding descriptor with format:
+  ;;
+  ;;   (lexical . (?lex-name . #f))
+  ;;
+  ;;and we want to convert this entry to:
+  ;;
+  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;
+  ;;where ?LEXICAL-TYPED-SPEC is an instance of "<lexical-typed-spec>".  The argument
+  ;;TYPE-ID must be a type identifier.
+  ;;
+  (assert (lexical-var-binding-descriptor? descr))
+  (assert (gensym? (lexical-var-binding-descriptor-value.lex-name  (syntactic-binding-descriptor.value descr))))
+  (assert (not     (lexical-var-binding-descriptor-value.assigned? (syntactic-binding-descriptor.value descr))))
+  (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr)))
+	(defined-type? #f))
+    (set-car! descr 'lexical-typed)
+    (set-cdr! descr (make-lexical-typed-spec lex type-id defined-type?))))
 
 
 ;;;; syntactic binding descriptor: local macro with non-variable transformer bindings
@@ -548,10 +678,31 @@
   $scheme-type-name)
 
 
+;;;; syntactic binding descriptor: closure type binding
+
+(define (make-syntactic-binding-descriptor/closure-type-name type-id signature)
+  ;;Build and return a syntactic binding descriptor representing a closure-type name.
+  ;;Such type is a sub-type of "<procedure>".
+  ;;
+  ;;TYPE-ID must  be the syntactic identfier  that will be bound  to the closure-type
+  ;;specification.
+  ;;
+  ;;SIGNATURE must be an instance of "lambda-signature" or "clambda-signature".
+  ;;
+  (let ((spec (make-closure-type-spec type-id signature)))
+    (make-syntactic-binding-descriptor $closure-type-name spec)))
+
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;closure-type descriptor.
+;;
+(define-syntactic-binding-descriptor-predicate closure-type-name-binding-descriptor?
+  $closure-type-name)
+
+
 ;;;; syntactic binding descriptor: fluid syntax bindings
 
 (define-syntax-rule (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax ?fluid-label)
-  ;;Build and returnn a syntactic binding descriptor representing a fluid syntax; the
+  ;;Build and return a syntactic binding  descriptor representing a fluid syntax; the
   ;;descriptor can be used to represent both a local and imported syntactic binding.
   ;;
   ;;?FLUID-LABEL is the label gensym that can  be used to redefine the binding.  With
@@ -758,6 +909,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; coding: utf-8-unix
 ;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
 ;; End:

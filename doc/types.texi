@@ -1,39 +1,36 @@
-@node tags
+@node types
 @chapter Tagged language
 
 
 @value{PRJNAME}'s expander implements an extension to the language
-defined by @rnrs{6} that allows the definition of tagged bindings.
-
-@quotation
-@strong{NOTE} Tagged language support is currently experimental.
-@end quotation
+defined by @rnrs{6} that allows the definition of typed syntactic
+bindings.
 
 @menu
-* tags intro::                  Introduction to the tagged language.
-* tags syntaxes::               Convenience syntaxes.
+* types intro::                  Introduction to the typed language.
+* types syntaxes::               Convenience syntaxes.
 @end menu
 
 @c page
-@node tags intro
+@node types intro
 @section Introduction to the tagged language
 
 
-@value{PRJNAME}'s tagged language adds some expand--time binding type
-checking and extended @oop{} syntax to the language specified by
-@rnrs{6}.  The result is a Scheme language dialect in which the code
-writer is invited to explicitly write the type identifiers; there is, in
-practice, @strong{no} type inference.
+@value{PRJNAME}'s typed language adds some expand--time syntactic
+binding type--checking and extended @oop{} syntax to the language
+specified by @rnrs{6}.  The result is a Scheme language dialect in which
+the code writer is invited to explicitly write the type identifiers;
+there is, in practice, @strong{no} type inference.
 
 @menu
-* tags intro philosophy::       Tagged language philosophy.
-* tags intro enabling::         Enabling tagged language extensions.
-* tags intro tag id::           Tag identifiers.
-* tags intro tagged id::        Tagged identifiers.
+* types intro philosophy::       Tagged language philosophy.
+* types intro enabling::         Enabling tagged language extensions.
+* types intro tag id::           Tag identifiers.
+* types intro tagged id::        Tagged identifiers.
 @end menu
 
 @c page
-@node tags intro philosophy
+@node types intro philosophy
 @subsection Tagged language philosophy
 
 
@@ -146,7 +143,7 @@ inference.
 @end itemize
 
 @c page
-@node tags intro enabling
+@node types intro enabling
 @subsection Enabling tagged language extensions
 
 
@@ -242,7 +239,7 @@ language for programs and libraries.
 @end defun
 
 @c page
-@node tags intro tag id
+@node types intro tag id
 @subsection Tag identifiers
 
 
@@ -286,7 +283,7 @@ Many predefined type identifiers have names enclosed in ``angular
 parentheses'' @samp{<...>}, but this is just a convention.
 
 @c page
-@node tags intro tagged id
+@node types intro tagged id
 @subsection Tagged identifiers
 
 
@@ -317,20 +314,20 @@ second identifier.  At the time the tagged identifier is created: the
 tag identifier must already be a tag identifier.
 
 @c page
-@node tags syntaxes
+@node types syntaxes
 @section Convenience syntaxes
 
 
 @menu
-* tags syntaxes assertions::    Validating object types.
-* tags syntaxes fields::        Accessing and mutating fields.
-* tags syntaxes keys::          Special setter and getter syntaxes.
-* tags syntaxes dispatch::      Dispatching methods.
-* tags syntaxes casting::       Converting objects.
+* types syntaxes assertions::    Validating object types.
+* types syntaxes fields::        Accessing and mutating fields.
+* types syntaxes keys::          Special setter and getter syntaxes.
+* types syntaxes dispatch::      Dispatching methods.
+* types syntaxes casting::       Converting objects.
 @end menu
 
 @c page
-@node tags syntaxes assertions
+@node types syntaxes assertions
 @subsection Validating object types
 
 
@@ -479,7 +476,7 @@ inserted.
 @end defun
 
 @c page
-@node tags syntaxes fields
+@node types syntaxes fields
 @subsection Accessing and mutating fields
 
 
@@ -542,7 +539,7 @@ of @meta{expr}.
 @end defun
 
 @c page
-@node tags syntaxes keys
+@node types syntaxes keys
 @subsection Special setter and getter syntaxes
 
 
@@ -610,7 +607,7 @@ the tag of @meta{expr}; the syntax of @meta{keys} must be:
 @end defun
 
 @c page
-@node tags syntaxes dispatch
+@node types syntaxes dispatch
 @subsection Dispatching methods
 
 
@@ -652,7 +649,7 @@ name of a method or a field of @meta{expr}.
 @end defun
 
 @c page
-@node tags syntaxes casting
+@node types syntaxes casting
 @subsection Converting objects
 
 

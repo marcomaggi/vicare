@@ -55,15 +55,27 @@
     generate-label-gensym
 
     ;; LEXENV entries and syntactic binding descriptors
+    make-lexenv-entry
     lexenv-entry.label
     lexenv-entry.binding-descriptor
+    push-entry-on-lexenv
+
     syntactic-binding-descriptor.type
     syntactic-binding-descriptor.value
 
     lexical-var-binding-descriptor-value.lex-name
     lexical-var-binding-descriptor-value.assigned?
+    lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor!
     lexenv-add-lexical-var-binding
     lexenv-add-lexical-var-bindings
+
+    make-syntactic-binding-descriptor/lexical-typed-var
+    lexical-typed-var-binding-descriptor?
+    lexical-typed-var-binding-descriptor-value.lex-name
+    lexical-typed-var-binding-descriptor-value.assigned?
+    lexical-typed-var-binding-descriptor-value.type-id
+    lexenv-add-lexical-typed-var-binding
+    lexenv-add-lexical-typed-var-bindings
 
     object-type-name-binding-descriptor?
 
@@ -81,6 +93,9 @@
     record-type-name-binding-descriptor?
 
     scheme-type-name-binding-descriptor?
+
+    make-syntactic-binding-descriptor/closure-type-name
+    closure-type-name-binding-descriptor?
 
     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
     fluid-syntax-binding-descriptor?
@@ -119,6 +134,30 @@
     ;; object types specifications: built-in object types
     <scheme-type-spec>
     make-scheme-type-spec				scheme-type-spec?
+
+    ;; object types specifications: sub-type of "<procedure>"
+    <closure-type-spec>
+    make-closure-type-spec				closure-type-spec?
+    closure-type-spec.signature
+
+    ;; typed variable specification: base type
+    <typed-variable-spec>
+    typed-variable-spec?
+    typed-variable-spec.type-id
+    typed-variable-spec.unsafe-variant-sexp	typed-variable-spec.unsafe-variant-sexp-set!
+
+    ;; typed lexical variable specification
+    <lexical-typed-spec>
+    make-lexical-typed-spec			lexical-typed-spec?
+    lexical-typed-spec.lex			lexical-typed-spec.assigned?
+    lexical-typed-spec.type-id			lexical-typed-spec.defined-type?
+    lexical-typed-spec.set-assigned!
+
+    ;; typed global variable specification
+    <global-typed-spec>
+    make-global-typed-spec			global-typed-spec?
+    global-typed-spec.loc			global-typed-spec.lib
+    global-typed-spec.type-id
 
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -198,6 +237,13 @@
     identifier-bound?			~identifier-bound?
     identifier->symbol
     syntax-parameter-value
+
+    ;; core type identifiers
+    procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
+    list-tag-id			$list-tag-id?		list-tag-id?
+    top-tag-id			$top-tag-id?		top-tag-id?
+    boolean-tag-id		void-tag-id
+    struct-tag-id		record-tag-id		predicate-tag-id
 
     ;; utilities for identifiers
     valid-bound-ids?			distinct-bound-ids?
@@ -283,8 +329,10 @@
 	  expand-time-value?
 	  expand-time-value-object)
     (only (psyntax.library-manager)
+	  library?
 	  visit-library
-	  label->imported-syntactic-binding-descriptor))
+	  label->imported-syntactic-binding-descriptor
+	  global-typed-variable-updater))
 
 
 ;;;; helpers
@@ -304,6 +352,7 @@
       (boolean?			x)
       (bytevector?		x)
       (keyword?			x)
+      (eq? x (void))
       (would-block-object?	x)
       (unbound-object?		x)
       (bwp-object?		x)))
@@ -460,6 +509,9 @@
 
 ;; Definitions and utilities for object type specification.
 (include "psyntax.lexical-environment.object-type-specs.scm" #t)
+
+;; Definitions and utilities for typed lexical variables specification.
+(include "psyntax.lexical-environment.lexical-typed-specs.scm" #t)
 
 ;; Lexical environment: LEXENV entries and syntactic bindings helpers.
 (include "psyntax.lexical-environment.syntactic-bindings.scm" #t)
@@ -1786,6 +1838,9 @@
        ;;
        (visit-library (car (syntactic-binding-descriptor.value descr))))
 
+      ((global-typed)
+       (visit-library (global-typed-spec.lib (syntactic-binding-descriptor.value descr))))
+
       (($record-type-name)
        ;;We expect the syntactic binding's descriptor to be:
        ;;
@@ -1800,8 +1855,8 @@
 
       (($core-rtd
 	$core-record-type-name $core-condition-object-type-name
-	$core-scheme-type-name $scheme-type-name
-	$struct-type-name core-prim lexical macro local-macro local-macro! local-etv)
+	$core-scheme-type-name $scheme-type-name $closure-type-name
+	$struct-type-name core-prim lexical lexical-typed macro local-macro local-macro! local-etv)
        (void))
 
       (else
@@ -2200,6 +2255,54 @@
 			    str*)))))
 
 
+;;;; basic object-type identifiers
+
+(let-syntax
+    ((define-tag-retriever (syntax-rules ()
+			     ((_ ?who ?tag)
+			      (define ?who
+				(let ((memoized-id #f))
+				  (lambda ()
+				    (or memoized-id
+					(receive-and-return (id)
+					    (core-prim-id '?tag)
+					  (set! memoized-id id))))))))))
+  (define-tag-retriever top-tag-id		<top>)
+  (define-tag-retriever void-tag-id		<void>)
+  (define-tag-retriever procedure-tag-id	<procedure>)
+  (define-tag-retriever predicate-tag-id	<predicate>)
+  (define-tag-retriever list-tag-id		<list>)
+  (define-tag-retriever boolean-tag-id		<boolean>)
+  (define-tag-retriever struct-tag-id		<struct>)
+  (define-tag-retriever record-tag-id		<record>)
+  #| end of let-syntax |# )
+
+;;; --------------------------------------------------------------------
+
+(define ($procedure-tag-id? id)
+  (~free-identifier=? id (procedure-tag-id)))
+
+(define ($list-tag-id? id)
+  (~free-identifier=? id (list-tag-id)))
+
+(define ($top-tag-id? id)
+  (~free-identifier=? id (top-tag-id)))
+
+;;; --------------------------------------------------------------------
+
+(define (procedure-tag-id? id)
+  (and (identifier? id)
+       ($procedure-tag-id? id)))
+
+(define (list-tag-id? id)
+  (and (identifier? id)
+       ($list-tag-id? id)))
+
+(define (top-tag-id? id)
+  (and (identifier? id)
+       ($top-tag-id? id)))
+
+
 ;;;; errors helpers
 
 (define (retvals-signature? x)
@@ -2563,6 +2666,8 @@
 
 
 ;;;; done
+
+(global-typed-variable-updater global-typed-spec.set-lib!)
 
 #| end of library |# )
 

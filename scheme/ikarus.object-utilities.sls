@@ -425,7 +425,7 @@
     <top>)
 
 (define-scheme-type <predicate>
-    <top>)
+    <procedure>)
 
 ;;; numeric types
 

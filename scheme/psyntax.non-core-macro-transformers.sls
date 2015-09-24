@@ -89,9 +89,7 @@
 	  generate-temporaries
 	  parse-logic-predicate-syntax
 	  error-invalid-formals-syntax)
-    (only (psyntax.syntactic-binding-properties)
-	  identifier-unsafe-variant)
-    (psyntax.tag-and-tagged-identifiers)
+    (psyntax.type-identifiers-and-signatures)
     (only (psyntax.library-manager)
 	  current-include-loader
 	  source-code-location))
@@ -324,7 +322,7 @@
 	`(internal-define () ,?id)))
       ))
 
-  (define (%process-function-definition input-form.stx make-define-formals who.id prototype.stx unsafe-body*.stx)
+  (define* (%process-function-definition input-form.stx make-define-formals who.id prototype.stx unsafe-body*.stx)
     ;;When the function definition is fully untagged:
     ;;
     ;;   (define (add a b) (+ a b))
@@ -347,18 +345,17 @@
     ;;     (internal-define (safe-retvals unsafe-formals) ({~add <real>} {a <real>} {b <real>})
     ;;       (+ a b))
     ;;     (begin-for-syntax
-    ;;       (set-identifier-unsafe-variant! #'add #'~add)))
+    ;;       (typed-procedure-variable.unsafe-variant-set! #'add #'~add)))
     ;;
     (receive (standard-formals.stx signature)
-	(parse-tagged-lambda-proto-syntax (bless prototype.stx)
-					  input-form.stx)
-      (cond ((lambda-signature-fully-unspecified? signature)
+	(syntax-object.parse-lambda-clause-signature (bless prototype.stx) input-form.stx)
+      (cond ((lambda-signature.fully-unspecified? signature)
 	     ;;If  no type  is specified:  just generate  a standard  Scheme function
 	     ;;definition.
 	     (bless
 	      `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,unsafe-body*.stx)))
 
-	    ((retvals-signature-fully-unspecified? (lambda-signature-retvals signature))
+	    ((retvals-signature.fully-unspecified? (callable-signature.retvals signature))
 	     ;;If only  the return values  have specified type signature:  generate a
 	     ;;single function definition with type checking for the return values.
 	     ;;
@@ -385,7 +382,7 @@
 		   (internal-define (safe-retvals unsafe-formals) ,(make-define-formals UNSAFE-WHO)
 		     . ,unsafe-body*.stx)
 		   (begin-for-syntax
-		     (set-identifier-unsafe-variant! (syntax ,who.id) (syntax ,UNSAFE-WHO)))))
+		     (typed-procedure-variable.unsafe-variant-set! (syntax ,who.id) (syntax ,UNSAFE-WHO)))))
 	       )))))
 
   #| end of module |# )
@@ -626,7 +623,7 @@
       ((?datum* => ?closure)
        (let ((closure.id (gensym)))
 	 (values (bless
-		  `(tag-assert-and-return (<procedure>) ,?closure))
+		  `(assert-retvals-signature-and-return (<procedure>) ,?closure))
 		 closure.id
 		 (let next-datum ((datums  ?datum*)
 				  (entries '()))
@@ -739,7 +736,7 @@
     (syntax-match clause-stx (=>)
       (((?datum* ...) => ?proc)
        `(if ,(%build-test expr-stx ?datum*)
-	    ((tag-assert-and-return (<procedure>) ,?proc) t)
+	    ((assert-retvals-signature-and-return (<procedure>) ,?proc) t)
 	  ,kont))
 
       (((?datum* ...) ?expr ?expr* ...)
@@ -793,246 +790,105 @@
        (%build-output-form input-form.stx ?name #f     #f         ?field* ?uid))
       ))
 
-  (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
-    (let* ((string->id (lambda (str)
-			 (~datum->syntax type.id (string->symbol str))))
-	   (type.sym   (identifier->symbol type.id))
-	   (type.str   (symbol->string type.sym)))
-      (define-values (field*.id field*.tag)
-	(%parse-field-specs input-form.stx type.id field*.stx))
-      (let* ((field*.sym     (map syntax->datum  field*.id))
-	     (field*.str     (map symbol->string field*.sym))
-	     (field*.arg     (map (lambda (id tag)
-				    `(brace ,id ,tag))
-			       field*.sym field*.tag))
-	     (uid            (if uid
-				 (identifier->symbol uid)
-			       (gensym type.str)))
-	     (std            (~datum->syntax type.id (make-struct-type type.str field*.sym uid)))
-	     (constructor.id (or maker.id     (string->id (string-append "make-" type.str))))
-	     (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
-	     (field*.idx     (enumerate field*.stx)))
+  (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.id uid)
+    (unless (all-identifiers? field*.id)
+      (syntax-violation __module_who__
+	"expected list of identifiers as fields speciication"
+	input-form.stx field*.id))
+    (let* ((string->id     (lambda (str)
+			     (~datum->syntax type.id (string->symbol str))))
+	   (type.sym       (identifier->symbol type.id))
+	   (type.str       (symbol->string type.sym))
+	   (field*.sym     (map syntax->datum  field*.id))
+	   (field*.str     (map symbol->string field*.sym))
+	   (uid            (if uid
+			       (identifier->symbol uid)
+			     (gensym type.str)))
+	   (std            (~datum->syntax type.id (make-struct-type type.str field*.sym uid)))
+	   (constructor.id (or maker.id     (string->id (string-append "make-" type.str))))
+	   (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
+	   (field*.idx     (enumerate 0 field*.id)))
 
-	(define the-constructor.id
-	  (string->id "the-constructor"))
+      (define the-constructor.id
+	(string->id "the-constructor"))
 
-	(define accessor*.id
-	  (map (lambda (x)
-		 (string->id (string-append type.str "-" x)))
-	    field*.str))
+      (define accessor*.id
+	(map (lambda (x)
+	       (string->id (string-append type.str "-" x)))
+	  field*.str))
 
-	(define mutator*.id
-	  (map (lambda (x)
-		 (string->id (string-append "set-" type.str "-" x "!")))
-	    field*.str))
+      (define mutator*.id
+	(map (lambda (x)
+	       (string->id (string-append "set-" type.str "-" x "!")))
+	  field*.str))
 
-	(define unsafe-accessor*.id
-	  (map (lambda (x)
-		 (string->id (string-append "$" type.str "-" x)))
-	    field*.str))
+      (define unsafe-accessor*.id
+	(map (lambda (x)
+	       (string->id (string-append "$" type.str "-" x)))
+	  field*.str))
 
-	(define unsafe-mutator*.id
-	  (map (lambda (x)
-		 (string->id (string-append "$set-" type.str "-" x "!")))
-	    field*.str))
+      (define unsafe-mutator*.id
+	(map (lambda (x)
+	       (string->id (string-append "$set-" type.str "-" x "!")))
+	  field*.str))
 
-	(define accessor-sexp*
-	  ;;Safe struct fields accessors.
-	  ;;
-	  ;;NOTE The  unsafe variant of  the field accessor  must be a  syntax object
-	  ;;which, expanded  by itself and  evaluated, returns an  accessor function.
-	  ;;We know that: when the compiler finds a form like:
-	  ;;
-	  ;;   ((lambda (stru)
-	  ;;      (unsafe-accessor stru))
-	  ;;    the-struct)
-	  ;;
-	  ;;it integrates the LAMBDA into:
-	  ;;
-	  ;;   (unsafe-accessor the-struct)
-	  ;;
-	  ;;(Marco Maggi; Wed Apr 23, 2014)
-	  (map (lambda (accessor.id unsafe-accessor.id field.tag)
-		 `(begin
-		    (internal-define (safe) ((brace ,accessor.id ,field.tag) (brace stru ,type.id))
-		      (,unsafe-accessor.id stru))
-		    (begin-for-syntax
-		      (set-identifier-unsafe-variant! (syntax ,accessor.id)
-			(syntax (internal-lambda (unsafe) (stru)
-				  (,unsafe-accessor.id stru)))))))
-	    accessor*.id unsafe-accessor*.id field*.tag))
+      (define accessor-sexp*
+	(map (lambda (accessor.id unsafe-accessor.id)
+	       (let ((stru.sym (gensym "stru")))
+		 `(internal-define (unsafe) (,accessor.id ,stru.sym)
+		    (,unsafe-accessor.id ,stru.sym))))
+	  accessor*.id unsafe-accessor*.id))
 
-	(define mutator-sexp*
-	  ;;Safe record fields mutators.
-	  ;;
-	  ;;NOTE The  unsafe variant  of the  field mutator must  be a  syntax object
-	  ;;which, expanded by itself and  evaluated, returns a mutator function.  We
-	  ;;know that: when the compiler finds a form like:
-	  ;;
-	  ;;   ((lambda (stru new-value)
-	  ;;      (unsafe-mutator stru new-value))
-	  ;;    the-stru the-new-value)
-	  ;;
-	  ;;it integrates the LAMBDA into:
-	  ;;
-	  ;;   (unsafe-mutator the-stru the-new-value)
-	  ;;
-	  ;;(Marco Maggi; Wed Apr 23, 2014)
-	  (map (lambda (mutator.id unsafe-mutator.id field.tag)
-		 `(begin
-		    (internal-define (safe) ((brace ,mutator.id <void>) (brace stru ,type.id) (brace val ,field.tag))
-		      (,unsafe-mutator.id stru val))
-		    (begin-for-syntax
-		      (set-identifier-unsafe-variant! (syntax ,mutator.id)
-			(syntax (internal-lambda (unsafe) (stru val)
-				  (,unsafe-mutator.id stru val)))))))
-	    mutator*.id unsafe-mutator*.id field*.tag))
+      (define mutator-sexp*
+	;;Safe record fields mutators.
+	;;
+	(map (lambda (mutator.id unsafe-mutator.id)
+	       (let ((stru.sym (gensym "stru"))
+		     (val.sym  (gensym "val")))
+		 `(internal-define (unsafe) (,mutator.id ,stru.sym ,val.sym)
+		    (,unsafe-mutator.id ,stru.sym ,val.sym))))
+	  mutator*.id unsafe-mutator*.id))
 
-	(define unsafe-accessor-sexp*
-	  (map (lambda (unsafe-accessor.id field.idx field.tag)
-		 `(define-syntax-rule (,unsafe-accessor.id ?stru)
-		    (tag-unsafe-cast ,field.tag ($struct-ref ?stru ,field.idx))))
-	    unsafe-accessor*.id field*.idx field*.tag))
+      (define unsafe-accessor-sexp*
+	(map (lambda (unsafe-accessor.id field.idx)
+	       (let ((stru.sym (gensym "stru")))
+		 `(define-syntax-rule (,unsafe-accessor.id ,stru.sym)
+		    ($struct-ref ,stru.sym ,field.idx))))
+	  unsafe-accessor*.id field*.idx))
 
-	(define unsafe-mutator-sexp*
-	  (map (lambda (unsafe-mutator.id field.idx)
-		 `(define-syntax-rule (,unsafe-mutator.id ?stru ?val)
-		    ($struct-set! ?stru ,field.idx ?val)))
-	    unsafe-mutator*.id field*.idx))
+      (define unsafe-mutator-sexp*
+	(map (lambda (unsafe-mutator.id field.idx)
+	       (let ((stru.sym (gensym "stru"))
+		     (val.sym  (gensym "val")))
+		 `(define-syntax-rule (,unsafe-mutator.id ,stru.sym ,val.sym)
+		    ($struct-set! ,stru.sym ,field.idx ,val.sym))))
+	  unsafe-mutator*.id field*.idx))
 
-	(define tag-type-spec-form
-	  (%build-tag-type-spec type.id type.sym type.str
-				   constructor.id
-				   predicate.id field*.sym field*.tag
-				   accessor*.id unsafe-accessor*.id
-				   mutator*.id  unsafe-mutator*.id))
+      (bless
+       `(module (,type.id
+		 ,constructor.id ,predicate.id
+		 ,@accessor*.id ,@unsafe-accessor*.id
+		 ,@mutator*.id  ,@unsafe-mutator*.id)
+	  (define ((brace ,predicate.id ,(boolean-tag-id)) obj)
+	    ($struct/rtd? obj ',std))
+	  ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
+	  ;;bound when the "tag-type-spec" is built.
+	  (define-syntax ,type.id
+	    (make-syntactic-binding-descriptor/struct-type-name ',std))
+	  (define (,constructor.id . ,field*.id)
+	    (receive-and-return (S)
+		($struct ',std ,@field*.id)
+	      (when ($std-destructor ',std)
+		($struct-guardian S))))
+	  ,@unsafe-accessor-sexp*
+	  ,@unsafe-mutator-sexp*
+	  ,@accessor-sexp*
+	  ,@mutator-sexp*))))
 
-	(bless
-	 `(module (,type.id
-		   ,constructor.id ,predicate.id
-		   ,@accessor*.id ,@unsafe-accessor*.id
-		   ,@mutator*.id  ,@unsafe-mutator*.id)
-	    (define ((brace ,predicate.id ,(boolean-tag-id)) obj)
-	      ($struct/rtd? obj ',std))
-	    ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
-	    ;;bound when the "tag-type-spec" is built.
-	    (define-syntax ,type.id
-	      (make-syntactic-binding-descriptor/struct-type-name ',std))
-	    (begin-for-syntax ,tag-type-spec-form)
-	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
-	      (receive-and-return (S)
-		  ($struct ',std ,@field*.sym)
-		(when ($std-destructor ',std)
-		  ($struct-guardian S))))
-	    ,@unsafe-accessor-sexp*
-	    ,@unsafe-mutator-sexp*
-	    ,@accessor-sexp*
-	    ,@mutator-sexp*)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-field-specs input-form.stx type.id field*.stx)
-    (define-syntax-rule (recur ?field*.stx)
-      (%parse-field-specs input-form.stx type.id ?field*.stx))
-    (if (pair? field*.stx)
-	(syntax-match (car field*.stx) (brace)
-	  ((brace ?name ?tag)
-	   (and (identifier? ?name)
-		(or (tag-identifier? ?tag)
-		    (free-identifier=? ?tag type.id)))
-	   (receive (field*.id field*.tag)
-	       (recur (cdr field*.stx))
-	     (values (cons ?name field*.id)
-		     (cons ?tag  field*.tag))))
-	  (?name
-	   (identifier? ?name)
-	   (receive (field*.id field*.tag)
-	       (recur (cdr field*.stx))
-	     (values (cons ?name        field*.id)
-		     (cons (top-tag-id) field*.tag))))
-	  (_
-	   (syntax-violation __module_who__
-	     "invalid struct field specification syntax"
-	     input-form.stx (car field*.stx))))
-      (values '() '())))
-
-  (define (%build-tag-type-spec type.id type.sym type.str
-				   constructor.id
-				   predicate.id field*.sym field*.tag
-				   accessor*.id unsafe-accessor*.id
-				   mutator*.id  unsafe-mutator*.id)
-    (define uid
-      (gensym type.sym))
-    (define %constructor-maker
-      (string->symbol (string-append type.str "-constructor-maker")))
-    (define %accessor-maker
-      (string->symbol (string-append type.str "-accessor-maker")))
-    (define %mutator-maker
-      (string->symbol (string-append type.str "-mutator-maker")))
-    (define %getter-maker
-      (string->symbol (string-append type.str "-getter-maker")))
-    (define %setter-maker
-      (string->symbol (string-append type.str "-setter-maker")))
-    `(internal-body
-       (import (vicare)
-	 (prefix (vicare expander tag-type-specs) typ.))
-
-       (define (,%constructor-maker input-form.stx)
-	 (syntax ,constructor.id))
-
-       (define (,%accessor-maker field.sym input-form.stx)
-	 (case field.sym
-	   ,@(map (lambda (field-sym accessor.id)
-		    `((,field-sym)	(syntax ,accessor.id)))
-	       field*.sym accessor*.id)
-	   (else #f)))
-
-       (define (,%mutator-maker field.sym input-form.stx)
-	 (case field.sym
-	   ,@(map (lambda (field-sym mutator.id)
-		    `((,field-sym)	(syntax ,mutator.id)))
-	       field*.sym mutator*.id)
-	   (else #f)))
-
-       (define (,%getter-maker keys.stx input-form.stx)
-	 (define (%invalid-keys)
-	   (syntax-violation (quote ,type.id) "invalid keys for getter" input-form.stx keys.stx))
-	 (syntax-case keys.stx ()
-	   (([?field.sym])
-	    (identifier? #'?field.sym)
-	    (or (,%accessor-maker (syntax->datum #'?field.sym) input-form.stx)
-		(%invalid-keys)))
-	   (else
-	    (%invalid-keys))))
-
-       (define (,%setter-maker keys.stx input-form.stx)
-	 (define (%invalid-keys)
-	   (syntax-violation (quote ,type.id) "invalid keys for setter" input-form.stx keys.stx))
-	 (syntax-case keys.stx ()
-	   (([?field.sym])
-	    (identifier? #'?field.sym)
-	    (or (,%mutator-maker (syntax->datum #'?field.sym) input-form.stx)
-		(%invalid-keys)))
-	   (else
-	    (%invalid-keys))))
-
-       (define %caster-maker #f)
-       (define %dispatcher   #f)
-
-       (define tag-type-spec
-	 (typ.make-tag-type-spec (syntax ,type.id) (typ.struct-tag-id) (syntax ,predicate.id)
-				    ,%constructor-maker
-				    ,%accessor-maker ,%mutator-maker
-				    ,%getter-maker   ,%setter-maker
-				    %caster-maker    %dispatcher))
-
-       (typ.set-identifier-tag-type-spec! (syntax ,type.id) tag-type-spec)))
-
-  (define (enumerate ls)
-    (let recur ((i 0) (ls ls))
-      (if (null? ls)
-	  '()
-	(cons i (recur (+ i 1) (cdr ls))))))
+  (define (enumerate i ls)
+    (if (pair? ls)
+	(cons i (enumerate (fxadd1 i) (cdr ls)))
+      '()))
 
   #| end of module: DEFINE-STRUCT-MACRO |# )
 
@@ -1110,29 +966,27 @@
 
 ;;;; non-core macro: PARAMETERIZE and PARAMETRISE
 
-(define (parameterize-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's PARAMETERIZE  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define* (parameterize-macro expr-stx)
+  ;;Transformer  function  used  to  expand Vicare's  PARAMETERIZE  macros  from  the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
   ;;
-  ;;Notice that  MAKE-PARAMETER is  a primitive function  implemented in
-  ;;"ikarus.compiler.sls"  by   "E-make-parameter".   Under   Vicare,  a
-  ;;parameter function  can be  called with  0, 1  or 2  arguments:
+  ;;Notice   that   MAKE-PARAMETER   is   a   primitive   function   implemented   in
+  ;;"ikarus.compiler.sls" by "E-make-parameter".  Under  Vicare, a parameter function
+  ;;can be called with 0, 1 or 2 arguments:
   ;;
   ;;* When called with 1 argument: it returns the parameter's value.
   ;;
-  ;;* When called with 2 arguments:  it sets the parameter's value after
-  ;;  checking the new value with the guard function (if any).
+  ;;* When called with 2 arguments: it  sets the parameter's value after checking the
+  ;;new value with the guard function (if any).
   ;;
-  ;;*  When called  with  3  arguments: it  sets  the parameter's  value
-  ;;   optionally checking  the new  value with  the guard  function (if
-  ;;  any).
+  ;;* When called with 3 arguments: it sets the parameter's value optionally checking
+  ;;the new value with the guard function (if any).
   ;;
-  ;;Under Vicare,  PARAMETERIZE applies  the guard  function to  the new
-  ;;value only the first  time it is set; if the  control flow exits and
-  ;;returns multiple times beacuse  escaping continuations are used, the
-  ;;guard function is  no more applied; this is achieved  by setting the
-  ;;flag variable GUARD?.
+  ;;Under Vicare, PARAMETERIZE  applies the guard function to the  new value only the
+  ;;first  time it  is set;  if the  control flow  exits and  returns multiple  times
+  ;;beacuse escaping continuations  are used, the guard function is  no more applied;
+  ;;this is achieved by setting the flag variable GUARD?.
   ;;
   (syntax-match expr-stx ()
     ((_ () ?body ?body* ...)
@@ -1140,22 +994,25 @@
       `(internal-body ,?body . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (let ((lhs* (generate-temporaries ?lhs*))
-	   (rhs* (generate-temporaries ?rhs*)))
+     (let ((lhs*    (generate-temporaries ?lhs*))
+	   (rhs*    (generate-temporaries ?rhs*))
+	   (guard?  (gensym "guard?"))
+	   (swap    (gensym "swap"))
+	   (t       (gensym "t")))
        (bless
 	`((internal-lambda (unsafe) ,(append lhs* rhs*)
-	    (let* ((guard? #t) ;apply the guard function only the first time
-		   (swap   (internal-lambda (unsafe) ()
-			     ,@(map (lambda (lhs rhs)
-				      `(let ((t (,lhs)))
-					 (,lhs ,rhs guard?)
-					 (set! ,rhs t)))
-				 lhs* rhs*)
-			     (set! guard? #f))))
+	    (let* ((,guard? #t) ;apply the guard function only the first time
+		   (,swap   (internal-lambda (unsafe) ()
+			      ,@(map (lambda (lhs rhs)
+				       `(let ((,t (,lhs)))
+					  (,lhs ,rhs ,guard?)
+					  (set! ,rhs ,t)))
+				  lhs* rhs*)
+			      (set! ,guard? #f))))
 	      (dynamic-wind
-		  swap
+		  ,swap
 		  (internal-lambda (unsafe) () ,?body . ,?body*)
-		  swap)))
+		  ,swap)))
 	  ,@(append ?lhs* ?rhs*)))))
     ))
 
@@ -1591,7 +1448,7 @@
 			 (convert-pattern (car pat*) '())
 		       (append idn* (recur (cdr pat*))))))))
        (let ((formals (map car idn*)))
-	 (unless (standard-formals-syntax? formals)
+	 (unless (syntax-object.standard-formals? formals)
 	   (error-invalid-formals-syntax expr-stx formals)))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
@@ -1655,15 +1512,15 @@
 ;;;; non-core macro: LET*, TRACE-LET
 
 (define (let*-macro expr-stx)
-  ;;Transformer  function  used to  expand  R6RS  LET* macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand R6RS  LET* macros from the top-level built in
+  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
+  ;;be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;Remember that LET* allows bindings with duplicate identifiers, so
-     ;;we do *not* use LIST-OF-TAGGED-BINDINGS? here.
-     (for-all tagged-identifier-syntax? ?lhs*)
+     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
+     ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
+     (for-all syntax-object.typed-argument? ?lhs*)
      (bless
       (let recur ((x* (map list ?lhs* ?rhs*)))
 	(if (null? x*)
@@ -1680,13 +1537,13 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (receive (lhs* tag*)
-	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
+	 (syntax-object.parse-list-of-typed-bindings ?lhs* expr-stx)
        (bless
 	`((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
 					  ,?body . ,?body*)))
 	    ,?recur)
 	  . ,(map (lambda (rhs tag)
-		    `(tag-assert-and-return (,tag) ,rhs))
+		    `(assert-retvals-signature-and-return (,tag) ,rhs))
 	       ?rhs* tag*)))))
     ))
 
@@ -1732,10 +1589,10 @@
 		 (values (reverse lhs*.standard)
 			 (reverse lhs*.signature))
 	       (receive (lhs.standard lhs.signature)
-		   (parse-tagged-formals-syntax (car lhs*) input-form.stx)
+		   (syntax-object.parse-formals-signature (car lhs*) input-form.stx)
 		 (loop (cdr lhs*)
 		       (cons lhs.standard                           lhs*.standard)
-		       (cons (formals-signature-tags lhs.signature) lhs*.signature)))))
+		       (cons (formals-signature.tags lhs.signature) lhs*.signature)))))
 	 (bless
 	  (let recur ((lhs*.standard  lhs*.standard)
 		      (lhs*.signature lhs*.signature)
@@ -1753,7 +1610,7 @@
 		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
 		   `(call-with-values
 			(internal-lambda (unsafe) ()
-			  (tag-assert-and-return ,(car lhs*.signature) ,(car rhs*)))
+			  (assert-retvals-signature-and-return ,(car lhs*.signature) ,(car rhs*)))
 		      (internal-lambda (unsafe) ,y*
 			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				(cdr rhs*) standard-old* tagged-old* new*)))))
@@ -2618,7 +2475,7 @@
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
+       (syntax-object.parse-lambda-clause-signature ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(internal-lambda (unsafe) ,?formal*
@@ -2627,7 +2484,7 @@
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
+       (syntax-object.parse-lambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(internal-lambda (unsafe) (,@?formal* . ,?rest-formal)
@@ -2644,7 +2501,7 @@
       ((_ (?who ?formal* ...) ?body ?body* ...)
        (begin
 	 ;;We parse the formals for validation purposes.
-	 (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
+	 (syntax-object.parse-lambda-clause-signature ?formal* expr-stx)
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
@@ -2654,7 +2511,7 @@
       ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
        (begin
 	 ;;We parse the formals for validation purposes.
-	 (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
+	 (syntax-object.parse-lambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
@@ -3379,7 +3236,7 @@
       (syntax-match binding-stx ()
 	((?var ?init)
 	 (receive (id tag)
-	     (parse-tagged-identifier-syntax ?var)
+	     (syntax-object.parse-typed-argument ?var)
 	   `(,?var ,?init ,id)))
 	((?var ?init ?step)
 	 `(,?var ,?init ,?step))
@@ -3473,11 +3330,11 @@
     (syntax-match binding-stx ()
       ((?var ?init)
        (receive (id tag)
-	   (parse-tagged-identifier-syntax ?var)
+	   (syntax-object.parse-typed-argument ?var)
 	 binding-stx))
       ((?var ?init ?step)
        (receive (id tag)
-	   (parse-tagged-identifier-syntax ?var)
+	   (syntax-object.parse-typed-argument ?var)
 	 (list ?var ?init)))
       (_
        (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
@@ -3487,7 +3344,7 @@
        knil)
       ((?var ?init ?step)
        (receive (id tag)
-	   (parse-tagged-identifier-syntax ?var)
+	   (syntax-object.parse-typed-argument ?var)
 	 (cons `(set! ,id ,?step)
 	       knil)))
       (_
@@ -4455,12 +4312,12 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
      (receive (standard-formals signature)
-	 (parse-tagged-formals-syntax ?formals expr-stx)
+	 (syntax-object.parse-formals-signature ?formals expr-stx)
        (syntax-match standard-formals ()
 	 ((?id* ... ?id0)
 	  (let ((TMP* (generate-temporaries ?id*)))
 	    (receive (tag* tag0)
-		(proper-list->head-and-last (formals-signature-tags signature))
+		(proper-list->head-and-last (formals-signature.tags signature))
 	      (bless
 	       `(begin
 		  ,@(map (lambda (var tag)
@@ -4478,7 +4335,7 @@
 	 (?args
 	  (identifier? ?args)
 	  (bless
-	   `(define (brace ,?args ,(formals-signature-tags signature))
+	   `(define (brace ,?args ,(formals-signature.tags signature))
 	      (call-with-values
 		  (internal-lambda (unsafe) () ,?form0 . ,?form*)
 		(internal-lambda (unsafe) args args)))))
@@ -4486,7 +4343,7 @@
 	 ((?id* ... . ?rest-id)
 	  (let ((TMP* (generate-temporaries ?id*)))
 	    (receive (tag* rest-tag)
-		(improper-list->list-and-rest (formals-signature-tags signature))
+		(improper-list->list-and-rest (formals-signature.tags signature))
 	    (bless
 	     `(begin
 		,@(map (lambda (var tag)
@@ -4511,13 +4368,13 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
      (receive (standard-formals signature)
-	 (parse-tagged-formals-syntax ?formals expr-stx)
+	 (syntax-object.parse-formals-signature ?formals expr-stx)
        (syntax-match standard-formals ()
 	 ((?id* ... ?id0)
 	  (let ((SHADOW* (generate-temporaries ?id*))
 		(TMP*    (generate-temporaries ?id*)))
 	    (receive (tag* tag0)
-		(proper-list->head-and-last (formals-signature-tags signature))
+		(proper-list->head-and-last (formals-signature.tags signature))
 	      (bless
 	       `(begin
 		  ,@(map (lambda (var tag)
@@ -4541,7 +4398,7 @@
 
 	 (?args
 	  (identifier? ?args)
-	  (let ((args-tag (formals-signature-tags signature)))
+	  (let ((args-tag (formals-signature.tags signature)))
 	    (bless
 	     `(begin
 		(define (brace shadow ,args-tag)
@@ -4556,7 +4413,7 @@
 	  (let ((SHADOW* (generate-temporaries ?id*))
 		(TMP*    (generate-temporaries ?id*)))
 	    (receive (tag* rest-tag)
-		(improper-list->list-and-rest (formals-signature-tags signature))
+		(improper-list->list-and-rest (formals-signature.tags signature))
 	    (bless
 	     `(begin
 		,@(map (lambda (var tag)
@@ -4591,7 +4448,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature)
-	 (parse-tagged-formals-syntax ?formals input-form.stx)
+	 (syntax-object.parse-formals-signature ?formals input-form.stx)
        (let ((single-return-value? (and (list? standard-formals)
 					(= 1 (length standard-formals)))))
 	 (if single-return-value?
@@ -4611,7 +4468,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature)
-	 (parse-tagged-formals-syntax ?formals input-form.stx)
+	 (syntax-object.parse-formals-signature ?formals input-form.stx)
        (receive (rv-form single-return-value?)
 	   (cond ((list? standard-formals)
 		  (if (= 1 (length standard-formals))
@@ -4687,7 +4544,7 @@
   (syntax-match expr-stx (brace)
     ((_ (brace ?name ?tag) ?expr)
      (and (identifier? ?name)
-	  (tag-identifier? ?tag))
+	  (identifier? ?tag))
      (let ((ghost (gensym (syntax->datum ?name))))
        (bless
 	`(begin
@@ -4757,11 +4614,11 @@
   (syntax-match expr-stx (brace)
     ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-lambda-proto-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
+	  (syntax-object.lambda-clause-signature? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
      (%output ?name ?arg* (bless `(brace ,?rest ,?rest-tag)) (cons ?form0 ?form*)))
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-lambda-proto-syntax? (append ?arg* ?rest)))
+	  (syntax-object.lambda-clause-signature? (append ?arg* ?rest)))
      (%output ?name ?arg* ?rest (cons ?form0 ?form*)))
     ))
 
@@ -4885,7 +4742,7 @@
     (syntax-match input-form.stx ()
       ((_ ?safe-id)
        (identifier? ?safe-id)
-       (or (identifier-unsafe-variant ?safe-id)
+       (or (typed-procedure-variable.unsafe-variant ?safe-id)
 	   (syntax-violation __who__
 	     "identifier has no unsafe variant" input-form.stx ?safe-id)))
       )))

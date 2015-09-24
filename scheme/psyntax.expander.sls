@@ -87,61 +87,8 @@
     ;;SYNTAX-CASE subroutines
     syntax-dispatch			ellipsis-map
 
-    ;; expand-time object type specs: type specification
-    make-tag-type-spec			tag-type-spec?
-    tag-type-spec-parent-spec
-    tag-type-spec-uids
-    tag-type-spec-type-id			tag-type-spec-pred-stx
-    tag-type-spec-constructor-maker
-    tag-type-spec-accessor-maker		tag-type-spec-mutator-maker
-    tag-type-spec-getter-maker		tag-type-spec-setter-maker
-    tag-type-spec-dispatcher
-    tag-type-spec-ancestry
-
-    ;; expand-time object type specs: parsing tagged identifiers
-    tagged-identifier-syntax?			parse-tagged-identifier-syntax
-    list-of-tagged-bindings?			parse-list-of-tagged-bindings
-    tagged-lambda-proto-syntax?			parse-tagged-lambda-proto-syntax
-    tagged-formals-syntax?			parse-tagged-formals-syntax
-    standard-formals-syntax?
-    formals-signature-syntax?			retvals-signature-syntax?
-
-    make-clambda-compound			clambda-compound?
-    clambda-compound-common-retvals-signature	clambda-compound-lambda-signatures
-
-    make-lambda-signature			lambda-signature?
-    lambda-signature-formals			lambda-signature-retvals
-    lambda-signature-formals-tags		lambda-signature-retvals-tags
-    lambda-signature=?
-
-    make-formals-signature			formals-signature?
-    formals-signature-tags			formals-signature=?
-
-    make-retvals-signature			make-retvals-signature-single-value
-    make-retvals-signature-fully-unspecified
-    retvals-signature?
-    retvals-signature-tags			retvals-signature=?
-    retvals-signature-common-ancestor
-
-    ;; expand-time object type specs: identifiers defining types
-    tag-identifier?				all-tag-identifiers?
-    tag-super-and-sub?				formals-signature-super-and-sub-syntax?
-    identifier-tag-type-spec			set-identifier-tag-type-spec!
-    label-tag-type-spec			set-label-tag-type-spec!
-    tag-identifier-ancestry			tag-common-ancestor
-
-    set-tag-identifier-callable-signature!	tag-identifier-callable-signature
-    fabricate-procedure-tag-identifier
-
-    top-tag-id					void-tag-id
-    procedure-tag-id				predicate-tag-id
-    list-tag-id					boolean-tag-id
-    struct-tag-id				record-tag-id
-
-    ;; expand-time object type specs: tagged binding identifiers
-    tagged-identifier?
-    set-identifier-tag!		identifier-tag		override-identifier-tag!
-    set-label-tag!		label-tag		override-label-tag!
+    typed-procedure-variable.unsafe-variant
+    typed-procedure-variable.unsafe-variant-set!
 
     ;; expand-time type checking exception stuff
     expand-time-type-signature-violation?
@@ -173,7 +120,7 @@
     (psyntax.syntax-utilities)
     (only (psyntax.import-spec-parser) parse-import-spec*)
     (only (psyntax.export-spec-parser) parse-export-spec*)
-    (psyntax.tag-and-tagged-identifiers)
+    (psyntax.type-identifiers-and-signatures)
     (only (psyntax.core-primitives-properties)
 	  initialise-core-prims-tagging)
     (psyntax.import-spec-parser)
@@ -195,9 +142,7 @@
 
 (define-syntax-rule (with-typed-language ?enabled? . ?body)
   (parametrise ((option.typed-language? (or ?enabled? (option.typed-language?))))
-    (parametrise ((option.typed-language.rhs-tag-propagation? (option.typed-language?))
-		  (option.typed-language.datums-as-operators? (option.typed-language?))
-		  (option.typed-language.setter-forms?        (option.typed-language?)))
+    (parametrise ((option.typed-language.rhs-tag-propagation? (option.typed-language?)))
       . ?body)))
 
 (define-syntax-rule (with-option-strict-r6rs ?enabled? . ?body)
@@ -225,9 +170,7 @@
 
   (define (typed-language-support enable?)
     (option.typed-language? enable?)
-    (option.typed-language.rhs-tag-propagation? (option.typed-language?))
-    (option.typed-language.datums-as-operators? (option.typed-language?))
-    (option.typed-language.setter-forms?        (option.typed-language?)))
+    (option.typed-language.rhs-tag-propagation? (option.typed-language?)))
 
   #| end of module |# )
 
@@ -1124,7 +1067,7 @@
 	       internal-export*))))
 
   (define (%make-export-subst export-name* export-id*)
-    ;;For  every  identifier in  ID:  get  the rib  of  ID  and extract  the  lexical
+    ;;For every identifier in  EXPORT-ID*: get the rib of ID  and extract the lexical
     ;;environment from it; search the environment  for a binding associated to ID and
     ;;acquire its label (a gensym).  Return an alist with entries having the format:
     ;;
@@ -1140,7 +1083,7 @@
 	       (syntax-violation #f "cannot export unbound identifier" export-id))))
       export-name* export-id*))
 
-  (define (%make-global-env/visit-env* lex* loc* lexenv.run)
+  (define* (%make-global-env/visit-env* lex* loc* lexenv.run)
     ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an GLOBAL-ENV entry,
     ;;accumulating GLOBAL-ENV;  if the syntactic  binding is a macro  or expand-time
     ;;value: accumulate the VISIT-ENV* alist.
@@ -1165,8 +1108,8 @@
 	       (binding  (lexenv-entry.binding-descriptor entry)))
 	  (case (syntactic-binding-descriptor.type binding)
 	    ((lexical)
-	     ;;This binding is a lexical variable.   When we import a lexical binding
-	     ;;from another library, we must see such entry as "global".
+	     ;;This binding is an UNtyped lexical variable.  When we import a lexical
+	     ;;binding from another library, we must see such entry as "global".
 	     ;;
 	     ;;The entry from the LEXENV looks like this:
 	     ;;
@@ -1203,6 +1146,48 @@
 				 'global)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label type loc) global-env)
+		     visit-env*)))
+
+	    ((lexical-typed)
+	     ;;This binding  is an typed  lexical variable.   When we import  a typed
+	     ;;lexical  binding from  another  library,  we must  see  such entry  as
+	     ;;"global-typed".
+	     ;;
+	     ;;The entry from the LEXENV looks like this:
+	     ;;
+	     ;;   (?label . (lexical-typed . ?lexical-typed-spec))
+	     ;;
+	     ;;Add to the GLOBAL-ENV an entry like:
+	     ;;
+	     ;;   (?label . (?type . ?global-typed-spec))
+	     ;;
+	     ;;where:  ?TYPE  is  the  symbol "global-typed-mutable"  or  the  symbol
+	     ;;"global-typed";     ?global-typed-spec    is     an    instance     of
+	     ;;"<global-typed-spec>".
+	     ;;
+	     ;;NOTE The  entries of type  "global-typed-mutable" are forbidden  to be
+	     ;;exported: entries  of this  type can  be in  the GLOBAL-ENV,  but they
+	     ;;cannot  be referenced  in the  EXPORT-SUBST; this  validation will  be
+	     ;;performed later.
+	     ;;
+	     (let* ((spec  (syntactic-binding-descriptor.value binding))
+		    ;;Search for LEXICAL-GENSYM  in the list LEX*:  when found return
+		    ;;the corresponding gensym from  LOC*.  LEXICAL-GENSYM must be an
+		    ;;item in LEX*.
+		    (loc   (let lookup ((lexical-gensym  (lexical-typed-spec.lex spec))
+					(lex*            lex*)
+					(loc*            loc*))
+			     (if (pair? lex*)
+				 (if (eq? lexical-gensym (car lex*))
+				     (car loc*)
+				   (lookup lexical-gensym (cdr lex*) (cdr loc*)))
+			       (assertion-violation/internal-error 'make-global-env/lookup
+				 "missing lexical gensym in lexenv" lexical-gensym))))
+		    (type      (if (lexical-typed-spec.assigned? spec)
+				   'global-typed-mutable
+				 'global-typed)))
+	       (loop (cdr lexenv.run)
+		     (cons (cons* label type (make-global-typed-spec loc spec)) global-env)
 		     visit-env*)))
 
 	    ((local-macro)
@@ -1273,7 +1258,7 @@
 		     (cons (cons* label 'global-etv loc) global-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
-	    (($record-type-name $struct-type-name $module $fluid $synonym)
+	    (($record-type-name $struct-type-name $scheme-type-name $module $fluid $synonym)
 	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
 	     ;;GLOBAL-ENV.
 	     ;;
@@ -1314,9 +1299,9 @@
     ;;
     ;;in which the mutable variable THAT is exported.
     ;;
-    ;;Entries of type "global-mutable" are forbidden  to be exported: entries of this
-    ;;type  can  be  in  the  GLOBAL-ENV,  but  they  cannot  be  referenced  in  the
-    ;;EXPORT-SUBST.
+    ;;Entries of type "global-mutable" and "global-mutable-typed" are forbidden to be
+    ;;exported: entries  of this type  can be in the  GLOBAL-ENV, but they  cannot be
+    ;;referenced in the EXPORT-SUBST.
     ;;
     (define export-subst-entry-name  car)
     (define export-subst-entry-label cdr)
@@ -1324,10 +1309,12 @@
       (for-each (lambda (subst)
 		  (cond ((assq (export-subst-entry-label subst) global-env)
 			 => (lambda (entry)
-			      (when (eq? 'global-mutable (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry)))
-				(syntax-violation 'export
-				  "attempt to export mutated variable"
-				  (export-subst-entry-name subst)))))))
+			      (let ((type (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry))))
+				(when (or (eq? type 'global-mutable)
+					  (eq? type 'global-typed-mutable))
+				  (syntax-violation 'export
+				    "attempt to export mutated variable"
+				    (export-subst-entry-name subst))))))))
 	export-subst)))
 
   #| end of module: CORE-BODY-EXPANDER |# )

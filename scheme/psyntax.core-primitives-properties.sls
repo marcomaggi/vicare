@@ -25,15 +25,11 @@
     (prefix (psyntax.config) config.)
     (only (psyntax.lexical-environment)
 	  core-prim-id)
-    (only (psyntax.tag-and-tagged-identifiers)
+    (only (psyntax.type-identifiers-and-signatures)
 	  make-lambda-signature
 	  make-retvals-signature
 	  make-formals-signature
-	  make-clambda-compound
-	  set-identifier-tag!
-	  fabricate-procedure-tag-identifier)
-    (only (psyntax.syntactic-binding-properties)
-	  set-identifier-unsafe-variant!))
+	  make-clambda-compound))
 
 
 ;;;; helpers
@@ -47,8 +43,9 @@
    (make-formals-signature ?formals-signature-syntax)))
 
 (define-syntax-rule (register-lambda-signature ?core-prim-id ?lambda-signature)
-  (set-identifier-tag! ?core-prim-id (fabricate-procedure-tag-identifier (syntax->datum ?core-prim-id)
-									 ?lambda-signature)))
+  ;; (set-identifier-tag! ?core-prim-id (fabricate-procedure-tag-identifier (syntax->datum ?core-prim-id)
+  ;; 									 ?lambda-signature))
+  (void))
 
 
 (define (initialise-core-prims-tagging)
@@ -868,7 +865,7 @@
   ;; string-for-each
 
   (let ((P (C string-length)))
-    (set-identifier-unsafe-variant! P (C $string-length))
+    ;;(set-identifier-unsafe-variant! P (C $string-length))
     (register-lambda-signature P (S (list (C <fixnum>))
 				    (list (C <string>)))))
 

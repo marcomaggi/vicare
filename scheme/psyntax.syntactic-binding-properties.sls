@@ -28,9 +28,6 @@
     syntactic-binding-remprop			$syntactic-binding-remprop
     syntactic-binding-property-list		$syntactic-binding-property-list
 
-    ;; identifiers: unsafe variants API
-    set-identifier-unsafe-variant!		identifier-unsafe-variant
-
     ;; identifiers: predicates axiliary functions API
     set-predicate-assertion-procedure-argument-validation!	predicate-assertion-procedure-argument-validation
     set-predicate-assertion-return-value-validation!		predicate-assertion-return-value-validation)
@@ -68,24 +65,6 @@
 
 (define* ($syntactic-binding-property-list id)
   ($property-list (id->label/or-error __who__ id id)))
-
-
-;;;; identifiers: unsafe variants API
-;;
-;;See the Texinfo documentation for explanations on the unsafe variants.
-;;
-
-(define-constant *UNSAFE-VARIANT-COOKIE*
-  'vicare:expander:unsafe-variant)
-
-(define* (set-identifier-unsafe-variant! {safe-id identifier?} {unsafe-expr-stx syntax-object?})
-  (if (syntactic-binding-getprop safe-id *UNSAFE-VARIANT-COOKIE*)
-      (syntax-violation __who__
-	"unsafe variant already defined" safe-id unsafe-expr-stx)
-    (syntactic-binding-putprop safe-id *UNSAFE-VARIANT-COOKIE* unsafe-expr-stx)))
-
-(define* (identifier-unsafe-variant {safe-id identifier?})
-  (syntactic-binding-getprop safe-id *UNSAFE-VARIANT-COOKIE*))
 
 
 ;;;; identifiers: predicates axiliary functions API

@@ -41,12 +41,13 @@
     symbol-value			set-symbol-value!
     keyword?				would-block-object?
     unbound-object?			bwp-object?
-    gensym
+    gensym				gensym?
     vector-append			vector-exists
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print
-    print-gensym			pretty-width
+    print-gensym			print-graph
+    pretty-width
     void				port-id
     console-error-port			all-identifiers?
     string-empty?			syntax=?
@@ -68,8 +69,6 @@
     option.print-loaded-libraries?
     option.print-debug-messages?
     option.typed-language.rhs-tag-propagation?
-    option.typed-language.datums-as-operators?
-    option.typed-language.setter-forms?
     option.typed-language?
 
     expander-option.integrate-special-list-functions?
@@ -126,8 +125,6 @@
 			  print-loaded-libraries?
 			  print-debug-messages?
 			  typed-language.rhs-tag-propagation?
-			  typed-language.datums-as-operators?
-			  typed-language.setter-forms?
 			  typed-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled

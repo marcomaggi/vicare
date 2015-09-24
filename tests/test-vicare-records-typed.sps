@@ -35,7 +35,7 @@
 
 (parametrise ((check-test-name	'generic-rtd-syntax))
 
-  (let ()	;application syntax
+  (internal-body	;application syntax
     (define-record-type alpha
       (fields a b c))
 

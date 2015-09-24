@@ -161,7 +161,8 @@ methods to Nausicaa's multimethods.
 
 
 @defvr {Library Option} typed-language
-Turn on the tagged language extensions, @ref{tags, Tagged language}.
+Turn on the tagged language extensions (@pxref{types, The typed
+language}).
 @end defvr
 
 
@@ -301,7 +302,8 @@ The following options are supported.
 
 
 @defvr {Program Option} typed-language
-Turn on the tagged language extensions, @ref{tags, Tagged language}.
+Turn on the tagged language extensions (@pxref{types, The typed
+language}).
 @end defvr
 
 
@@ -2102,28 +2104,7 @@ A @rnrs{6} record--type descriptor if the given identifier argument
 
 The syntaxes @syntax{new} and @syntax{delete} allow us to retrieve the
 constructor and destructor function of Scheme objects of some types.
-For example, with structs:
-
-@lisp
-(import (vicare))
-
-(define-struct duo (one two))
-
-(define (duo-destructor stru)
-  (fprintf (current-error-port) "destroying ~s\n" stru))
-
-(set-struct-type-destructor! (type-descriptor duo)
-  duo-destructor)
-
-(define O
-  (new duo 1 2))
-
-(delete O)
-@print{} destroying #[struct duo one=1 two=2]
-@end lisp
-
-@noindent
-and with records:
+For example, with records:
 
 @lisp
 (import (vicare))
@@ -2150,13 +2131,12 @@ allocation of objects:
 @lisp
 (import (vicare))
 
-(define-struct duo (one two))
-
-(define (duo-destructor stru)
-  (fprintf (current-error-port) "destroying ~s\n" stru))
-
-(set-struct-type-destructor! (type-descriptor duo)
-  duo-destructor)
+(define-record-type duo
+  (fields one two)
+  (destructor-protocol
+    (lambda ()
+      (lambda (self)
+        (fprintf (current-error-port) "destroying ~s\n" self)))))
 
 (define (make-compensated-duo one two)
   (compensate
@@ -2177,7 +2157,7 @@ and apply it to the given arguments; return the result of the
 application.
 
 At present, this syntax is capable of retrieving the constructor
-function of structs and records.
+function of records.
 @end deffn
 
 
@@ -2188,7 +2168,7 @@ return the return value of the application.  The evaluation of
 @meta{expr} must return a single return value.
 
 At present, this syntax is capable of retrieving the destructor function
-of structs and records.
+of records.
 @end deffn
 
 @c page
@@ -2203,9 +2183,8 @@ Expand to an expression which, when evaluated, returns @true{} if
 @meta{expr} evaluates to a struct or record of type @meta{type-id}.
 
 @meta{expr} can be any expression returning a single value.
-@meta{type-id} must the type name of a Vicare struct (defined by
-@func{define-struct}) or an @rnrs{6} record type name (defined by
-@func{define-record-type}).
+@meta{type-id} must the type name of a @rnrs{6} record type name
+(defined by @func{define-record-type}).
 
 When @syntax{_} is used as first argument: the syntax evaluates to a
 predicate function.
@@ -2213,18 +2192,14 @@ predicate function.
 @example
 (import (vicare))
 
-(define-struct two
-  (one two))
+(define-record-type duo
+  (fields one two))
 
-(define-record-type trio
-  (fields one two three))
+(is-a? (make-duo  1 2)   two)   @result{} #t
 
-(is-a? (make-two  1 2)   two)   @result{} #t
-(is-a? (make-trio 1 2 3) trio)  @result{} #t
+((is-a? _ duo) (make-duo 1 2))  @result{} #t
 
-((is-a? _ two) (make-two 1 2))  @result{} #t
-
-(is-a? 123 trio)                @result{} #f
+(is-a? 123 duo)                 @result{} #f
 @end example
 @end deffn
 
@@ -2233,29 +2208,8 @@ predicate function.
 @subsubsection Slot getter and setter syntaxes
 
 
-The syntaxes @func{slot-ref} and @func{slot-set!} allow both access to
-fields of Vicare's structs:
-
-@example
-(import (vicare))
-
-(define-struct color
-  (red green blue))
-
-(define S
-  (make-color 1 2 3))
-
-(slot-set! S red   color 19)
-(slot-set! S green color 29)
-(slot-set! S blue  color 39)
-
-(slot-ref S red   color)        @result{} 19
-(slot-ref S green color)        @result{} 29
-(slot-ref S blue  color)        @result{} 39
-@end example
-
-@noindent
-and access to fields of @rnrs{6} records:
+The syntaxes @func{slot-ref} and @func{slot-set!} allow to fields of
+@rnrs{6} records:
 
 @example
 (import (vicare))
@@ -2284,10 +2238,9 @@ and access to fields of @rnrs{6} records:
 Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
 
 @meta{expr} can be any expression evaluating to an instance of
-@meta{type}; @meta{type} must be an identifier bound to a Vicare
-struct--type descriptor or a @rnrs{6} record--type descriptor;
-@meta{field-name} must be an identifier representing the name of a
-field.
+@meta{type}; @meta{type} must be an identifier bound to a @rnrs{6}
+record--type descriptor; @meta{field-name} must be an identifier
+representing the name of a field.
 
 When @syntax{_} is used in place of @meta{expr}: the syntax evaluates to
 a slot accessor function.
@@ -2302,10 +2255,9 @@ Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
 and @meta{new-val}.
 
 @meta{expr} can be any expression evaluating to an instance of
-@meta{type}; @meta{type} must be an identifier bound to a Vicare
-struct--type descriptor or a @rnrs{6} record--type descriptor;
-@meta{field-name} must be an identifier representing the name of a
-field.
+@meta{type}; @meta{type} must be an identifier bound to a @rnrs{6}
+record--type descriptor; @meta{field-name} must be an identifier
+representing the name of a field.
 
 When @syntax{_} is used in place of both @meta{expr} and @meta{new-val}:
 the syntax evaluates to a slot mutator function.
@@ -3505,7 +3457,7 @@ follows:
 
 @example
 (begin-for-syntax
-  (set-identifier-unsafe-variant!
+  (typed-procedure-variable.unsafe-variant-set!
      #'string-ref-fx #'~string-ref-fx))
 @end example
 
@@ -3544,7 +3496,7 @@ it can validate the arguments and replace the form with:
 We still need to hand--write validations involving multiple arguments.
 
 
-@defun set-identifier-unsafe-variant! @meta{safe.id} @meta{unsafe.stx}
+@defun typed-procedure-variable.unsafe-variant-set! @meta{safe.id} @meta{unsafe.stx}
 Specify that the unsafe variant of the binding for the identifier
 @meta{safe.id} is the expression in the syntax object @meta{unsafe.stx}.
 @meta{unsafe.stx} is stored as syntax object and it is expanded and
@@ -3552,7 +3504,7 @@ evaluated at each use of the unsafe variant.
 @end defun
 
 
-@defun identifier-unsafe-variant @var{safe.id}
+@defun typed-procedure-variable.unsafe-variant @var{safe.id}
 Return the syntax object registered as unsafe variant of the bound
 identifier @var{safe.id}; return @false{} if @var{safe.id} has no unsafe
 variant.
@@ -10218,7 +10170,8 @@ Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at expand--time.
 
 @item typed-language
-Turn on the tagged language extensions, @ref{tags, Tagged language}.
+Turn on the tagged language extensions (@pxref{types, The typed
+language}).
 @end table
 @end deffn
 
