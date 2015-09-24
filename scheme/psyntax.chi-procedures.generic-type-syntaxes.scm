@@ -69,7 +69,7 @@
 	       (?binding-descriptor  (label->syntactic-binding-descriptor label ?lexenv)))
 	  (cond ((object-type-name-binding-descriptor? ?binding-descriptor)
 		 ?object-body0 ?object-body ...)
-		((struct-type-name-binding-descriptor? ?binding-descriptor)
+		#;((struct-type-name-binding-descriptor? ?binding-descriptor)
 		 ?struct-body0 ?struct-body ...)
 		(else
 		 (syntax-violation ?who

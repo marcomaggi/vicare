@@ -1635,7 +1635,8 @@
     (syntax-match input-form.stx ()
       ((_ ?type-id)
        (identifier? ?type-id)
-       (%make-struct-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))))
+       (let ((descr (id->struct-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run)))
+	 (%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand)))))
 
 
   (define-core-transformer (record-type-descriptor input-form.stx lexenv.run lexenv.expand)
@@ -1646,7 +1647,8 @@
     (syntax-match input-form.stx ()
       ((_ ?type-id)
        (identifier? ?type-id)
-       (%make-record-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))))
+       (let ((descr (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run)))
+	 (%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand)))))
 
   (define-core-transformer (record-constructor-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from
@@ -1685,25 +1687,25 @@
 	 (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run)
 	 (let* ((label (id->label/or-error __who__ input-form.stx ?type-id))
 		(descr (label->syntactic-binding-descriptor label lexenv.run)))
-	   (cond ((object-type-name-binding-descriptor? descr)
-		  (%make-record-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))
+	   (cond ((record-type-name-binding-descriptor? descr)
+		  (%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
 		 ((struct-type-name-binding-descriptor? descr)
-		  (%make-struct-type-descriptor __who__ ?type-id input-form.stx lexenv.run lexenv.expand))
+		  (%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
 		 (else
 		  (%synner "neither a struct type nor a object type" ?type-id))))))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-struct-type-descriptor who type-id input-form.stx lexenv.run lexenv.expand)
-    (make-psi input-form.stx
-	      (build-data no-source
-		(%struct-type-id->std who input-form.stx type-id lexenv.run))
-	      (make-retvals-signature/single-value (core-prim-id '<struct-type-descriptor>))))
+  (define (%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand)
+    (let* ((sts (syntactic-binding-descriptor.value descr))
+	   (std (struct-type-spec.std sts)))
+      (make-psi input-form.stx
+		(build-data no-source std)
+		(make-retvals-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
 
-  (define (%make-record-type-descriptor who type-id input-form.stx lexenv.run lexenv.expand)
-    (let* ((descr     (id->record-type-name-binding-descriptor who input-form.stx type-id lexenv.run))
-	   (rts       (syntactic-binding-descriptor.value descr))
+  (define (%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand)
+    (let* ((rts       (syntactic-binding-descriptor.value descr))
 	   (expr.stx  (record-type-spec.rtd-id rts))
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx

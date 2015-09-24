@@ -124,14 +124,15 @@
 (define* (chi-body* body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib
 		    mix?
 		    shadow/redefine-bindings?)
-  (if (null? body-form*.stx)
-      (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
-    (let ((body-form.stx (car body-form*.stx)))
-      (receive (type bind-val kwd)
-	  (syntactic-form-type body-form.stx lexenv.run)
-	(let ((kwd* (if (identifier? kwd)
-			(cons kwd kwd*)
-		      kwd*)))
+  (if (pair? body-form*.stx)
+      (let*-values
+	  (((body-form.stx)      (car body-form*.stx))
+	   ((type bind-val kwd)  (syntactic-form-type body-form.stx lexenv.run)))
+	(define keyword*
+	  (if (identifier? kwd)
+	      (cons kwd kwd*)
+	    kwd*))
+	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	  (case type
 
 	    ((internal-define)
@@ -144,12 +145,11 @@
 	     ;;we  parse the  form and  generate a  qualified right-hand  side (QRHS)
 	     ;;object that will be expanded later.
 	     (receive (lex qrhs lexenv.run)
-		 (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-		   (%chi-internal-define body-form.stx lexenv.run rib kwd* shadow/redefine-bindings?))
+		 (%chi-internal-define body-form.stx lexenv.run rib keyword* shadow/redefine-bindings?)
 	       (chi-body* (cdr body-form*.stx)
 			  lexenv.run lexenv.expand
 			  (cons lex lex*) (cons qrhs qrhs*)
-			  mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+			  mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((define-syntax)
 	     ;;The body  form is a  built-in DEFINE-SYNTAX  macro use.  This  is what
@@ -175,7 +175,7 @@
 	     ;;
 	     (receive (id rhs.stx)
 		 (%parse-define-syntax body-form.stx)
-	       (when (bound-id-member? id kwd*)
+	       (when (bound-id-member? id keyword*)
 		 (stx-error body-form.stx "cannot redefine keyword"))
 	       (let ((rhs.core (with-exception-handler/input-form
 				   rhs.stx
@@ -190,7 +190,7 @@
 		   (chi-body* (cdr body-form*.stx)
 			      (cons entry lexenv.run)
 			      (cons entry lexenv.expand)
-			      lex* qrhs* mod** kwd* export-spec* rib
+			      lex* qrhs* mod** keyword* export-spec* rib
 			      mix? shadow/redefine-bindings?)))))
 
 	    ((define-fluid-syntax)
@@ -217,7 +217,7 @@
 	     ;;
 	     (receive (id rhs.stx)
 		 (%parse-define-syntax body-form.stx)
-	       (when (bound-id-member? id kwd*)
+	       (when (bound-id-member? id keyword*)
 		 (stx-error body-form.stx "cannot redefine keyword"))
 	       (let ((rhs.core (with-exception-handler/input-form
 				   rhs.stx
@@ -239,7 +239,7 @@
 		   (chi-body* (cdr body-form*.stx)
 			      (cons* entry1 entry2 lexenv.run)
 			      (cons* entry1 entry2 lexenv.expand)
-			      lex* qrhs* mod** kwd* export-spec* rib
+			      lex* qrhs* mod** keyword* export-spec* rib
 			      mix? shadow/redefine-bindings?)))))
 
 	    ((define-alias)
@@ -249,7 +249,7 @@
 	     ;;
 	     (receive (alias-id old-id)
 		 (%parse-define-alias body-form.stx)
-	       (when (bound-id-member? old-id kwd*)
+	       (when (bound-id-member? old-id keyword*)
 		 (stx-error body-form.stx "cannot redefine keyword"))
 	       (cond ((id->label old-id)
 		      => (lambda (label)
@@ -258,7 +258,7 @@
 			   (extend-rib! rib alias-id label shadow/redefine-bindings?)
 			   (chi-body* (cdr body-form*.stx)
 				      lexenv.run lexenv.expand
-				      lex* qrhs* mod** kwd* export-spec* rib
+				      lex* qrhs* mod** keyword* export-spec* rib
 				      mix? shadow/redefine-bindings?)))
 		     (else
 		      (stx-error body-form.stx "unbound source identifier")))))
@@ -307,14 +307,14 @@
 		   ;;because the labels cannot be seen by the rest of the body.
 		   (append (map cons xlab* xbind*) lexenv.run)
 		   (append (map cons xlab* xbind*) lexenv.expand)
-		   lex* qrhs* mod** kwd* export-spec* rib
+		   lex* qrhs* mod** keyword* export-spec* rib
 		   mix? shadow/redefine-bindings?)))))
 
 	    ((begin-for-syntax)
 	     (let ()
 	       (import CHI-BEGIN-FOR-SYNTAX)
 	       (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand
-				     lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+				     lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((begin)
 	     ;;The body form  is a BEGIN syntax use.  Just  splice the expressions
@@ -324,7 +324,7 @@
 	       ((_ ?expr* ...)
 		(chi-body* (append ?expr* (cdr body-form*.stx))
 			   lexenv.run lexenv.expand
-			   lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
+			   lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	    ((stale-when)
 	     ;;The body form  is a STALE-WHEN syntax use.   Process the stale-when
@@ -337,7 +337,7 @@
 		  (handle-stale-when ?guard lexenv.expand)
 		  (chi-body* (append ?expr* (cdr body-form*.stx))
 			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))))
+			     lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))))
 
 	    ((global-macro global-macro!)
 	     ;;The body form  is a macro use,  where the macro is  imported from a
@@ -347,7 +347,7 @@
 	     (let ((body-form.stx^ (chi-global-macro bind-val body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+			  lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((local-macro local-macro!)
 	     ;;The body form  is a macro use, where the  macro is locally defined.
@@ -357,7 +357,7 @@
 	     (let ((body-form.stx^ (chi-local-macro bind-val body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+			  lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((macro)
 	     ;;The body form is  a macro use, where the macro  is a non-core macro
@@ -367,14 +367,14 @@
 	     (let ((body-form.stx^ (chi-non-core-macro bind-val body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
+			  lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((module)
 	     ;;The body  form is  an internal module  definition.  We  process the
 	     ;;module, then recurse on the rest of the body.
 	     ;;
-	     (receive (lex* qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		 (chi-internal-module body-form.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
+	     (receive (lex* qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** keyword*)
+		 (chi-internal-module body-form.stx lexenv.run lexenv.expand lex* qrhs* mod** keyword*)
 	       ;;Extend the rib with the syntactic bindings exported by the module.
 	       (vector-for-each (lambda (id lab)
 				  ;;This  call  will  raise   an  exception  if  it
@@ -383,7 +383,7 @@
 				  (extend-rib! rib id lab shadow/redefine-bindings?))
 		 m-exp-id* m-exp-lab*)
 	       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec*
+			  lex* qrhs* mod** keyword* export-spec*
 			  rib mix? shadow/redefine-bindings?)))
 
 	    ((library)
@@ -393,7 +393,7 @@
 	     (expand-library (syntax->datum body-form.stx))
 	     (chi-body* (cdr body-form*.stx)
 			lexenv.run lexenv.expand
-			lex* qrhs* mod** kwd* export-spec*
+			lex* qrhs* mod** keyword* export-spec*
 			rib mix? shadow/redefine-bindings?))
 
 	    ((export)
@@ -405,7 +405,7 @@
 	       ((_ ?export-spec* ...)
 		(chi-body* (cdr body-form*.stx)
 			   lexenv.run lexenv.expand
-			   lex* qrhs* mod** kwd*
+			   lex* qrhs* mod** keyword*
 			   (append ?export-spec* export-spec*)
 			   rib mix? shadow/redefine-bindings?))))
 
@@ -416,7 +416,7 @@
 	     ;;
 	     (%chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
 	     (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
+			lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
 
 	    ((standalone-unbound-identifier)
 	     (raise-unbound-error __who__ body-form.stx body-form.stx))
@@ -446,8 +446,9 @@
 			      lexenv.run lexenv.expand
 			      (cons lex  lex*)
 			      (cons qrhs qrhs*)
-			      mod** kwd* export-spec* rib #t shadow/redefine-bindings?))
-	       (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)))))))))
+			      mod** keyword* export-spec* rib #t shadow/redefine-bindings?))
+	       (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** keyword* export-spec*))))))
+    (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)))
 
 
 (define (%parse-define-syntax stx)

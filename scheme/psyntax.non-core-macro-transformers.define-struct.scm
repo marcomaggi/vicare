@@ -34,6 +34,21 @@
       (cons i (enumerate (fxadd1 i) (cdr ls)))
     '()))
 
+(define (%make-alist-from-ids field-name*.sym operator*.id)
+  ;;We want  to return a  symbolic expression representing the  following expand-time
+  ;;expression:
+  ;;
+  ;;   (list (cons (quote ?field-sym0) (syntax ?operator0))
+  ;;         (cons (quote ?field-sym)  (syntax ?operator))
+  ;;         ...)
+  ;;
+  ;;which evaluates  to an  aslist whose keys  are field names  and whose  values are
+  ;;syntactic identifiers bound to accessors or mutators.
+  ;;
+  (cons 'list (map (lambda (key.sym operator.id)
+		     (list 'cons `(quote ,key.sym) `(syntax ,operator.id)))
+		field-name*.sym operator*.id)))
+
 
 (define (define-struct-macro input-form.stx)
   (syntax-match input-form.stx (nongenerative)
@@ -85,6 +100,11 @@
 	     (string->id (string-append "set-" type.str "-" x "!")))
 	field*.str))
 
+    (define method*.id
+      (map (lambda (x)
+	     (string->id (string-append "on-" type.str "-" x "!")))
+	field*.str))
+
     (define unsafe-accessor*.id
       (map (lambda (x)
 	     (string->id (string-append "$" type.str "-" x)))
@@ -103,14 +123,23 @@
 	accessor*.id unsafe-accessor*.id))
 
     (define mutator-sexp*
-      ;;Safe record fields mutators.
-      ;;
       (map (lambda (mutator.id unsafe-mutator.id)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(internal-define (unsafe) (,mutator.id ,stru.sym ,val.sym)
 		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
 	mutator*.id unsafe-mutator*.id))
+
+    (define method-sexp*
+      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id)
+	     (let ((stru.sym (gensym "stru"))
+		   (val.sym  (gensym "val")))
+	       `(case-define ,method.id
+		  (((brace ,stru.sym ,type.id))
+		   (,unsafe-accessor.id ,stru.sym))
+		  (((brace ,stru.sym ,type.id) ,val.sym)
+		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
+	method*.id unsafe-accessor*.id unsafe-mutator*.id))
 
     (define unsafe-accessor-sexp*
       (map (lambda (unsafe-accessor.id field.idx)
@@ -127,6 +156,15 @@
 		  ($struct-set! ,stru.sym ,field.idx ,val.sym))))
 	unsafe-mutator*.id field*.idx))
 
+    (define safe-accessors-table.sexp
+      (%make-alist-from-ids field*.sym accessor*.id))
+
+    (define safe-mutators-table.sexp
+      (%make-alist-from-ids field*.sym mutator*.id))
+
+    (define methods-table.sexp
+      (%make-alist-from-ids field*.sym method*.id))
+
     (bless
      `(module (,type.id
 	       ,constructor.id ,predicate.id
@@ -134,10 +172,15 @@
 	       ,@mutator*.id  ,@unsafe-mutator*.id)
 	(define ((brace ,predicate.id ,(boolean-tag-id)) obj)
 	  ($struct/rtd? obj ',std))
-	;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
-	;;bound when the "tag-type-spec" is built.
 	(define-syntax ,type.id
-	  (make-syntactic-binding-descriptor/struct-type-name ',std))
+	  (make-syntactic-binding-descriptor/struct-type-name
+	   (make-struct-type-spec ',std
+				  (syntax ,constructor.id) (syntax ,predicate.id)
+				  ,safe-accessors-table.sexp
+				  ,safe-mutators-table.sexp
+				  ,methods-table.sexp)))
+	;; (define-syntax ,type.id
+	;;   (make-syntactic-binding-descriptor/struct-type-name ',std))
 	(define (,constructor.id . ,field*.id)
 	  (receive-and-return (S)
 	      ($struct ',std ,@field*.id)
@@ -146,7 +189,8 @@
 	,@unsafe-accessor-sexp*
 	,@unsafe-mutator-sexp*
 	,@accessor-sexp*
-	,@mutator-sexp*))))
+	,@mutator-sexp*
+	,@method-sexp*))))
 
 
 ;;;; done

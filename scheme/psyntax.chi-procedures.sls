@@ -572,237 +572,238 @@
   (define* (chi-expr expr.stx lexenv.run lexenv.expand)
     ;;Expand a single expression form.  Return a PSI struct.
     ;;
-    (%drop-splice-first-envelope-maybe
-     (receive (type bind-val kwd)
-	 (syntactic-form-type expr.stx lexenv.run)
-       (case type
-	 ((core-macro)
-	  ;;Core  macro use.   The  core  macro transformers  are  integrated in  the
-	  ;;expander; they perform the full expansion of their input forms and return
-	  ;;a PSI struct.
-	  (let ((transformer    (let ()
-				  (import CORE-MACRO-TRANSFORMER)
-				  (core-macro-transformer bind-val))))
-	    (transformer (if (option.debug-mode-enabled?)
-			     ;;Here we push the input  form on the stack of annotated
-			     ;;expressions,  to improve  error  messages  in case  of
-			     ;;syntax violations.  When expanding non-core macros the
-			     ;;function %DO-MACRO-CALL  takes care  of doing  it, but
-			     ;;for core macros we have to do it here.
-			     ;;
-			     ;;NOTE Unfortunately, I have  measured that wrapping the
-			     ;;input  form into  an additional  "stx" record  slows
-			     ;;down  the   expansion  in  a  significant   way;  when
-			     ;;rebuilding the full Vicare  source code, compiling the
-			     ;;libraries and  running the  test suite the  total time
-			     ;;can  be 25%  greater.  For  this reason  this step  is
-			     ;;performed only when debugging mode is enabled.  (Marco
-			     ;;Maggi; Wed Apr 2, 2014)
-			     (make-stx expr.stx '() '() (list expr.stx))
-			   expr.stx)
-			 lexenv.run lexenv.expand)))
+    (define expr.psi
+      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	(define-values (type bind-val kwd)
+	  (syntactic-form-type expr.stx lexenv.run))
+	(case type
+	  ((core-macro)
+	   ;;Core  macro use.   The  core  macro transformers  are  integrated in  the
+	   ;;expander; they perform the full expansion of their input forms and return
+	   ;;a PSI struct.
+	   (let ((transformer    (let ()
+				   (import CORE-MACRO-TRANSFORMER)
+				   (core-macro-transformer bind-val))))
+	     (transformer (if (option.debug-mode-enabled?)
+			      ;;Here we push the input  form on the stack of annotated
+			      ;;expressions,  to improve  error  messages  in case  of
+			      ;;syntax violations.  When expanding non-core macros the
+			      ;;function %DO-MACRO-CALL  takes care  of doing  it, but
+			      ;;for core macros we have to do it here.
+			      ;;
+			      ;;NOTE Unfortunately, I have  measured that wrapping the
+			      ;;input  form into  an additional  "stx" record  slows
+			      ;;down  the   expansion  in  a  significant   way;  when
+			      ;;rebuilding the full Vicare  source code, compiling the
+			      ;;libraries and  running the  test suite the  total time
+			      ;;can  be 25%  greater.  For  this reason  this step  is
+			      ;;performed only when debugging mode is enabled.  (Marco
+			      ;;Maggi; Wed Apr 2, 2014)
+			      (make-stx expr.stx '() '() (list expr.stx))
+			    expr.stx)
+			  lexenv.run lexenv.expand)))
 
-	 ((global)
-	  ;;Reference to global imported lexical  variable; this means EXPR.STX is an
-	  ;;identifier.  We expect the syntactic binding descriptor to be:
-	  ;;
-	  ;;   (global . (?library . ?loc))
-	  ;;
-	  ;;and BIND-VAL to be:
-	  ;;
-	  ;;   (?library . ?loc)
-	  ;;
-	  (let* ((lib (car bind-val))
-		 (loc (cdr bind-val)))
-	    ((inv-collector) lib)
-	    (make-psi expr.stx
-		      (build-global-reference no-source loc)
-		      (make-retvals-signature/single-top))))
+	  ((global)
+	   ;;Reference to global imported lexical  variable; this means EXPR.STX is an
+	   ;;identifier.  We expect the syntactic binding descriptor to be:
+	   ;;
+	   ;;   (global . (?library . ?loc))
+	   ;;
+	   ;;and BIND-VAL to be:
+	   ;;
+	   ;;   (?library . ?loc)
+	   ;;
+	   (let* ((lib (car bind-val))
+		  (loc (cdr bind-val)))
+	     ((inv-collector) lib)
+	     (make-psi expr.stx
+		       (build-global-reference no-source loc)
+		       (make-retvals-signature/single-top))))
 
-	 ((global-typed)
-	  ;;Reference to global imported typed  lexical variable; this means EXPR.STX
-	  ;;is an identifier.  We expect the syntactic binding descriptor to be:
-	  ;;
-	  ;;   (global-typed . ?global-typed-spec)
-	  ;;
-	  ;;and    BIND-VAL    to    be   ?GLOBAL-TYPED-SPEC,    an    instance    of
-	  ;;"<global-typed-spec>".
-	  ;;
-	  (let* ((lib (global-typed-spec.lib bind-val))
-		 (loc (global-typed-spec.loc bind-val)))
-	    ((inv-collector) lib)
-	    (make-psi expr.stx
-		      (build-global-reference no-source loc)
-		      (make-retvals-signature/single-value (global-typed-spec.type-id bind-val)))))
+	  ((global-typed)
+	   ;;Reference to global imported typed  lexical variable; this means EXPR.STX
+	   ;;is an identifier.  We expect the syntactic binding descriptor to be:
+	   ;;
+	   ;;   (global-typed . ?global-typed-spec)
+	   ;;
+	   ;;and    BIND-VAL    to    be   ?GLOBAL-TYPED-SPEC,    an    instance    of
+	   ;;"<global-typed-spec>".
+	   ;;
+	   (let* ((lib (global-typed-spec.lib bind-val))
+		  (loc (global-typed-spec.loc bind-val)))
+	     ((inv-collector) lib)
+	     (make-psi expr.stx
+		       (build-global-reference no-source loc)
+		       (make-retvals-signature/single-value (global-typed-spec.type-id bind-val)))))
 
-	 ((core-prim)
-	  ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
-	  ;;constant (like  then R6RS  record-type descriptor for  "&condition").  We
-	  ;;expect the syntactic binding descriptor to be:
-	  ;;
-	  ;;   (core-prim . ?prim-name)
-	  ;;
-	  ;;and BIND-VAL to be the symbol:
-	  ;;
-	  ;;   ?prim-name
-	  ;;
-	  (let ((name bind-val))
-	    (make-psi expr.stx
-		      (build-primref no-source name)
-		      (make-retvals-signature/single-top))))
+	  ((core-prim)
+	   ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
+	   ;;constant (like  then R6RS  record-type descriptor for  "&condition").  We
+	   ;;expect the syntactic binding descriptor to be:
+	   ;;
+	   ;;   (core-prim . ?prim-name)
+	   ;;
+	   ;;and BIND-VAL to be the symbol:
+	   ;;
+	   ;;   ?prim-name
+	   ;;
+	   (let ((name bind-val))
+	     (make-psi expr.stx
+		       (build-primref no-source name)
+		       (make-retvals-signature/single-top))))
 
-	 ((call)
-	  ;;A function call; this means EXPR.STX has one of the formats:
-	  ;;
-	  ;;   (?id ?form ...)
-	  ;;   ((?first-subform ?subform ...) ?form ...)
-	  ;;
-	  (chi-application expr.stx lexenv.run lexenv.expand))
+	  ((call)
+	   ;;A function call; this means EXPR.STX has one of the formats:
+	   ;;
+	   ;;   (?id ?form ...)
+	   ;;   ((?first-subform ?subform ...) ?form ...)
+	   ;;
+	   (chi-application expr.stx lexenv.run lexenv.expand))
 
-	 ((lexical)
-	  ;;Reference to lexical variable; this means EXPR.STX is an identifier.
-	  (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
-	    (make-psi expr.stx
-		      (build-lexical-reference no-source lex)
-		      (make-retvals-signature/single-top))))
+	  ((lexical)
+	   ;;Reference to lexical variable; this means EXPR.STX is an identifier.
+	   (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
+	     (make-psi expr.stx
+		       (build-lexical-reference no-source lex)
+		       (make-retvals-signature/single-top))))
 
-	 ((lexical-typed)
-	  ;;Reference  to  typed   lexical  variable;  this  means   EXPR.STX  is  an
-	  ;;identifier.
-	  (let ((lex     (lexical-typed-var-binding-descriptor-value.lex-name bind-val))
-		(type-id (lexical-typed-var-binding-descriptor-value.type-id  bind-val)))
-	    (make-psi expr.stx
-		      (build-lexical-reference no-source lex)
-		      (make-retvals-signature/single-value type-id))))
+	  ((lexical-typed)
+	   ;;Reference  to  typed   lexical  variable;  this  means   EXPR.STX  is  an
+	   ;;identifier.
+	   (let ((lex     (lexical-typed-var-binding-descriptor-value.lex-name bind-val))
+		 (type-id (lexical-typed-var-binding-descriptor-value.type-id  bind-val)))
+	     (make-psi expr.stx
+		       (build-lexical-reference no-source lex)
+		       (make-retvals-signature/single-value type-id))))
 
-	 ((global-macro global-macro!)
-	  ;;Macro uses of macros imported from other libraries or defined by previous
-	  ;;expressions in the same interaction environment.
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-global-macro bind-val expr.stx lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
+	  ((global-macro global-macro!)
+	   ;;Macro uses of macros imported from other libraries or defined by previous
+	   ;;expressions in the same interaction environment.
+	   (let ((exp-e (while-not-expanding-application-first-subform
+			 (chi-global-macro bind-val expr.stx lexenv.run #f))))
+	     (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((local-macro local-macro!)
-	  ;;Macro uses of macros defined in the code being expanded.
-	  ;;
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-local-macro bind-val expr.stx lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
+	  ((local-macro local-macro!)
+	   ;;Macro uses of macros defined in the code being expanded.
+	   ;;
+	   (let ((exp-e (while-not-expanding-application-first-subform
+			 (chi-local-macro bind-val expr.stx lexenv.run #f))))
+	     (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((macro macro!)
-	  ;;Macro  uses  of  non-core  macros;  such macros  are  integrated  in  the
-	  ;;expander.
-	  ;;
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-non-core-macro bind-val expr.stx lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
+	  ((macro macro!)
+	   ;;Macro  uses  of  non-core  macros;  such macros  are  integrated  in  the
+	   ;;expander.
+	   ;;
+	   (let ((exp-e (while-not-expanding-application-first-subform
+			 (chi-non-core-macro bind-val expr.stx lexenv.run #f))))
+	     (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((constant)
-	  ;;Constant; it means EXPR.STX is a self-evaluating datum.
-	  (let ((datum bind-val))
-	    (make-psi expr.stx
-		      (build-data no-source datum)
-		      (datum-retvals-signature datum))))
+	  ((constant)
+	   ;;Constant; it means EXPR.STX is a self-evaluating datum.
+	   (let ((datum bind-val))
+	     (make-psi expr.stx
+		       (build-data no-source datum)
+		       (datum-retvals-signature datum))))
 
-	 ((set!)
-	  ;;Macro use of SET!; it means EXPR.STX has the format:
-	  ;;
-	  ;;   (set! ?lhs ?rhs)
-	  ;;
-	  (let ()
-	    (import CHI-SET)
-	    (chi-set! expr.stx lexenv.run lexenv.expand)))
+	  ((set!)
+	   ;;Macro use of SET!; it means EXPR.STX has the format:
+	   ;;
+	   ;;   (set! ?lhs ?rhs)
+	   ;;
+	   (let ()
+	     (import CHI-SET)
+	     (chi-set! expr.stx lexenv.run lexenv.expand)))
 
-	 ((begin)
-	  ;;R6RS BEGIN  core macro use.   First we  check with SYNTAX-MATCH  that the
-	  ;;syntax is correct, then we build the core language expression.
-	  ;;
-	  (syntax-match expr.stx ()
-	    ((_ ?body ?body* ...)
-	     (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
-	       (make-psi expr.stx
-			 (build-sequence no-source
-			   (map psi-core-expr body*.psi))
-			 (psi-retvals-signature (proper-list->last-item body*.psi)))))
-	    ))
+	  ((begin)
+	   ;;R6RS BEGIN  core macro use.   First we  check with SYNTAX-MATCH  that the
+	   ;;syntax is correct, then we build the core language expression.
+	   ;;
+	   (syntax-match expr.stx ()
+	     ((_ ?body ?body* ...)
+	      (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
+		(make-psi expr.stx
+			  (build-sequence no-source
+			    (map psi-core-expr body*.psi))
+			  (psi-retvals-signature (proper-list->last-item body*.psi)))))
+	     ))
 
-	 ((stale-when)
-	  ;;STALE-WHEN macro use.  STALE-WHEN acts like BEGIN, but in addition causes
-	  ;;an expression to be registered in the current stale-when collector.  When
-	  ;;such expression  evaluates to false:  the compiled library is  stale with
-	  ;;respect to some source file.  See for example the INCLUDE syntax.
-	  (syntax-match expr.stx ()
-	    ((_ ?guard ?body ?body* ...)
-	     (begin
-	       (handle-stale-when ?guard lexenv.expand)
-	       (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
-		 (make-psi expr.stx
-			   (build-sequence no-source
-			     (map psi-core-expr body*.psi))
-			   (psi-retvals-signature (proper-list->last-item body*.psi))))))
-	    ))
+	  ((stale-when)
+	   ;;STALE-WHEN macro use.  STALE-WHEN acts like BEGIN, but in addition causes
+	   ;;an expression to be registered in the current stale-when collector.  When
+	   ;;such expression  evaluates to false:  the compiled library is  stale with
+	   ;;respect to some source file.  See for example the INCLUDE syntax.
+	   (syntax-match expr.stx ()
+	     ((_ ?guard ?body ?body* ...)
+	      (begin
+		(handle-stale-when ?guard lexenv.expand)
+		(let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
+		  (make-psi expr.stx
+			    (build-sequence no-source
+			      (map psi-core-expr body*.psi))
+			    (psi-retvals-signature (proper-list->last-item body*.psi))))))
+	     ))
 
-	 ((let-syntax letrec-syntax)
-	  ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
-	  (syntax-match expr.stx ()
-	    ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
-	     (unless (valid-bound-ids? ?xlhs*)
-	       (syntax-violation __who__ "invalid identifiers" expr.stx))
-	     (let* ((xlab* (map generate-label-gensym ?xlhs*))
-		    (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
-		    (xb*   (map (lambda (x)
-				  (let ((in-form (if (eq? type 'let-syntax)
-						     x
-						   (push-lexical-contour xrib x))))
-				    (with-exception-handler/input-form
-					in-form
-				      (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-							      lexenv.run))))
-			     ?xrhs*)))
-	       (let ((body*.psi (chi-expr* (map (lambda (x)
-						  (push-lexical-contour xrib x))
-					     (cons ?xbody ?xbody*))
-					   (append (map cons xlab* xb*) lexenv.run)
-					   (append (map cons xlab* xb*) lexenv.expand))))
-		 (make-psi expr.stx
-			   (build-sequence no-source
-			     (map psi-core-expr body*.psi))
-			   (psi-retvals-signature (proper-list->last-item body*.psi))))))
-	    ))
+	  ((let-syntax letrec-syntax)
+	   ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
+	   (syntax-match expr.stx ()
+	     ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
+	      (unless (valid-bound-ids? ?xlhs*)
+		(syntax-violation __who__ "invalid identifiers" expr.stx))
+	      (let* ((xlab* (map generate-label-gensym ?xlhs*))
+		     (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
+		     (xb*   (map (lambda (x)
+				   (let ((in-form (if (eq? type 'let-syntax)
+						      x
+						    (push-lexical-contour xrib x))))
+				     (with-exception-handler/input-form
+					 in-form
+				       (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+							       lexenv.run))))
+			      ?xrhs*)))
+		(let ((body*.psi (chi-expr* (map (lambda (x)
+						   (push-lexical-contour xrib x))
+					      (cons ?xbody ?xbody*))
+					    (append (map cons xlab* xb*) lexenv.run)
+					    (append (map cons xlab* xb*) lexenv.expand))))
+		  (make-psi expr.stx
+			    (build-sequence no-source
+			      (map psi-core-expr body*.psi))
+			    (psi-retvals-signature (proper-list->last-item body*.psi))))))
+	     ))
 
-	 ((displaced-lexical)
-	  (stx-error expr.stx "identifier out of context"))
+	  ((displaced-lexical)
+	   (stx-error expr.stx "identifier out of context"))
 
-	 ((pattern-variable)
-	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
+	  ((pattern-variable)
+	   (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
-	 ((internal-define define-syntax define-fluid-syntax define-alias module import library)
-	  (stx-error expr.stx
-		     (string-append
-		      (case type
-			((internal-define)        "a definition")
-			((define-syntax)          "a define-syntax")
-			((define-fluid-syntax)    "a define-fluid-syntax")
-			((define-alias)           "a define-alias")
-			((module)                 "a module definition")
-			((library)                "a library definition")
-			((import)                 "an import declaration")
-			((export)                 "an export declaration")
-			(else                     "a non-expression"))
-		      " was found where an expression was expected")))
+	  ((internal-define define-syntax define-fluid-syntax define-alias module import library)
+	   (stx-error expr.stx
+		      (string-append
+		       (case type
+			 ((internal-define)        "a definition")
+			 ((define-syntax)          "a define-syntax")
+			 ((define-fluid-syntax)    "a define-fluid-syntax")
+			 ((define-alias)           "a define-alias")
+			 ((module)                 "a module definition")
+			 ((library)                "a library definition")
+			 ((import)                 "an import declaration")
+			 ((export)                 "an export declaration")
+			 (else                     "a non-expression"))
+		       " was found where an expression was expected")))
 
-	 ((global-mutable global-typed-mutable)
-	  ;;Imported variable  in reference  position, whose  binding is  assigned at
-	  ;;least once in the  code of the imported library; it  means EXPR.STX is an
-	  ;;identifier.
-	  (stx-error expr.stx "attempt to reference a variable that is assigned in an imported library"))
+	  ((global-mutable global-typed-mutable)
+	   ;;Imported variable  in reference  position, whose  binding is  assigned at
+	   ;;least once in the  code of the imported library; it  means EXPR.STX is an
+	   ;;identifier.
+	   (stx-error expr.stx "attempt to reference a variable that is assigned in an imported library"))
 
-	 ((standalone-unbound-identifier)
-	  (raise-unbound-error __who__ expr.stx expr.stx))
+	  ((standalone-unbound-identifier)
+	   (raise-unbound-error __who__ expr.stx expr.stx))
 
-	 (else
-	  (stx-error expr.stx "invalid expression"))))
-     lexenv.run lexenv.expand))
+	  (else
+	   (stx-error expr.stx "invalid expression")))))
+    (%drop-splice-first-envelope-maybe expr.psi lexenv.run lexenv.expand))
 
 ;;; --------------------------------------------------------------------
 

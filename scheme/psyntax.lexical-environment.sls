@@ -131,6 +131,11 @@
     record-type-spec.rtd-id				record-type-spec.rcd-id
     record-type-spec.super-protocol-id
 
+    ;; object-type specifications: structs
+    <struct-type-spec>
+    make-struct-type-spec				struct-type-spec?
+    struct-type-spec.std
+
     ;; object types specifications: built-in object types
     <scheme-type-spec>
     make-scheme-type-spec				scheme-type-spec?
@@ -207,7 +212,9 @@
 
     ;; syntax objects: mapping identifiers to labels
     id->label				id->label/or-error
-    id->object-type-binding-descriptor	id->record-type-name-binding-descriptor
+    id->object-type-binding-descriptor
+    id->record-type-name-binding-descriptor
+    id->struct-type-name-binding-descriptor
     object-type-binding-identifier?
 
     ;; syntax objects: marks
@@ -1820,6 +1827,24 @@
 	descr
       (syntax-violation who
 	"identifier not bound to a record-type specification"
+	input-form.stx type-name-id))))
+
+(define (id->struct-type-name-binding-descriptor who input-form.stx type-name-id lexenv)
+  ;;TYPE-NAME-ID is  meant to be  a syntactic identifier representing  an struct-type
+  ;;name, whose syntactic binding descriptor  has an instance of "<struct-type-spec>"
+  ;;as value;  retrieve its label  then its  binding descriptor from  LEXENV, finally
+  ;;return the binding descriptor.
+  ;;
+  ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
+  ;;syntactic  binding descriptor  does not  represent an  struct-type name:  raise a
+  ;;syntax violation exception.
+  ;;
+  (let* ((label (id->label/or-error who input-form.stx type-name-id))
+	 (descr (label->syntactic-binding-descriptor label lexenv)))
+    (if (struct-type-name-binding-descriptor? descr)
+	descr
+      (syntax-violation who
+	"identifier not bound to a struct-type specification"
 	input-form.stx type-name-id))))
 
 ;;; --------------------------------------------------------------------

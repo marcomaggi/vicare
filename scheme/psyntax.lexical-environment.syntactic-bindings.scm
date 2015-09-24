@@ -64,11 +64,12 @@
   ;;This predicate returns true if OBJ is one among:
   ;;
   ;;   ($record-type-name	. ?record-type-spec)
+  ;;   ($struct-type-name	. ?struct-type-spec)
   ;;   ($scheme-type-name	. ?scheme-type-spec)
   ;;
   (and (pair? obj)
        (case (syntactic-binding-descriptor.type obj)
-	 (($record-type-name $scheme-type-name)
+	 (($scheme-type-name $record-type-name $struct-type-name)
 	  #t)
 	 (else #f))))
 
@@ -408,10 +409,10 @@
 
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings
 
-(define (make-syntactic-binding-descriptor/struct-type-name std)
+(define (make-syntactic-binding-descriptor/struct-type-name sts)
   ;;Build and return a syntactic binding descriptor representing a struct-type name.
   ;;
-  ;;The argument STD must be the struct-type descriptor itself.
+  ;;The argument STS must be an instance of "<struct-type-spec>".
   ;;
   ;;Given the definition:
   ;;
@@ -420,7 +421,8 @@
   ;;the syntax use DEFINE-STRUCT expands into multiple forms, one of which is:
   ;;
   ;;   (define-syntax ?type-name
-  ;;     (make-syntactic-binding-descriptor/struct-type-name ?std))
+  ;;     (make-syntactic-binding-descriptor/struct-type-name
+  ;;       (make-struct-type-spec ?std ...)))
   ;;
   ;;where   ?STD   is   a   struct-type  descriptor   built   at   expand-time   with
   ;;MAKE-STRUCT-TYPE.  Syntactic bindings of this  type are generated when evaluating
@@ -428,9 +430,9 @@
   ;;
   ;;The returned descriptor has format:
   ;;
-  ;;   ($struct-type-name . ?type-descriptor)
+  ;;   ($struct-type-name . ?struct-type-spec)
   ;;
-  (make-syntactic-binding-descriptor $struct-type-name std))
+  (make-syntactic-binding-descriptor $struct-type-name sts))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported syntactic binding describing a struct-type descriptor.
@@ -446,7 +448,50 @@
   ;;
   ;;   ($struct-type-name . ?type-descriptor)
   ;;
-  (syntactic-binding-descriptor.value ?descriptor))
+  (struct-type-spec.std (syntactic-binding-descriptor.value ?descriptor)))
+
+;;The following are  the old definitions, used  back when the descriptor  was the STD
+;;itself.  (Marco Maggi; Thu Sep 24, 2015)
+;;
+;; (define (make-syntactic-binding-descriptor/struct-type-name std)
+;;   ;;Build and return a syntactic binding descriptor representing a struct-type name.
+;;   ;;
+;;   ;;The argument STD must be the struct-type descriptor itself.
+;;   ;;
+;;   ;;Given the definition:
+;;   ;;
+;;   ;;   (define-struct ?type-name (?field-name ...))
+;;   ;;
+;;   ;;the syntax use DEFINE-STRUCT expands into multiple forms, one of which is:
+;;   ;;
+;;   ;;   (define-syntax ?type-name
+;;   ;;     (make-syntactic-binding-descriptor/struct-type-name ?std))
+;;   ;;
+;;   ;;where   ?STD   is   a   struct-type  descriptor   built   at   expand-time   with
+;;   ;;MAKE-STRUCT-TYPE.  Syntactic bindings of this  type are generated when evaluating
+;;   ;;the right-hand side of a DEFINE-SYNTAX returns the return value of this function.
+;;   ;;
+;;   ;;The returned descriptor has format:
+;;   ;;
+;;   ;;   ($struct-type-name . ?type-descriptor)
+;;   ;;
+;;   (make-syntactic-binding-descriptor $struct-type-name std))
+;;
+;; ;;Return true if the argument is  a syntactic binding descriptor representing a local
+;; ;;or imported syntactic binding describing a struct-type descriptor.
+;; ;;
+;; (define-syntactic-binding-descriptor-predicate struct-type-name-binding-descriptor?
+;;   $struct-type-name)
+;;
+;; (define-syntax-rule (struct-type-name-binding-descriptor.type-descriptor ?descriptor)
+;;   ;;Given a syntactic binding descriptor  representing a struct-type name: return the
+;;   ;;struct-type descriptor itself.
+;;   ;;
+;;   ;;We expect the descriptor to have the format:
+;;   ;;
+;;   ;;   ($struct-type-name . ?type-descriptor)
+;;   ;;
+;;   (syntactic-binding-descriptor.value ?descriptor))
 
 
 ;;;; syntactic binding descriptor: old-style core R6RS record-type descriptor binding

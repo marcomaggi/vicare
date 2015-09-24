@@ -34,6 +34,10 @@
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
 	 record-type-spec.super-protocol-id
 
+	 <struct-type-spec>
+	 make-struct-type-spec				struct-type-spec?
+	 struct-type-spec.std
+
 	 <scheme-type-spec>
 	 make-scheme-type-spec				scheme-type-spec?
 
@@ -267,7 +271,7 @@
     (object-type-spec.type-predicate-sexp-set! spec predicate.stx)))
 
 
-;;;; R6RS record-type specification
+;;;; R6RS's record-type specification
 
 ;;This record  type is  used as  syntactic binding descriptor  for R6RS  record types
 ;;defined with the syntactic layer.  The lexenv entry has the format:
@@ -295,24 +299,57 @@
    #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (case-lambda
-       ((rtd-id rcd-id)
-	((make-object-type-spec) rtd-id rcd-id #f))
+      (case-define make-record-type-spec
+	((rtd-id rcd-id)
+	 ((make-object-type-spec) rtd-id rcd-id #f))
 
-       ((rtd-id rcd-id super-protocol-id parent-id
-		constructor.sexp destructor.sexp predicate.sexp
-		safe-accessors-table safe-mutators-table methods-table)
-	(let ((constructor.sexp  (or constructor.sexp
-				     `(record-constructor ,rcd-id)))
-	      (predicate.sexp    (or predicate.sexp
-				     (let ((arg.sym (gensym)))
-				       `(internal-lambda (unsafe) (,arg.sym)
-					  (record-and-rtd? ,arg.sym ,rtd-id))))))
-	  ((make-object-type-spec parent-id
-				  constructor.sexp destructor.sexp predicate.sexp
-				  safe-accessors-table safe-mutators-table methods-table)
-	   rtd-id rcd-id super-protocol-id))))))
+	((rtd-id rcd-id super-protocol-id parent-id
+		 constructor.sexp destructor.sexp predicate.sexp
+		 safe-accessors-table safe-mutators-table methods-table)
+	 (let ((constructor.sexp  (or constructor.sexp
+				      `(record-constructor ,rcd-id)))
+	       (predicate.sexp    (or predicate.sexp
+				      (let ((arg.sym (gensym)))
+					`(internal-lambda (unsafe) (,arg.sym)
+					   (record-and-rtd? ,arg.sym ,rtd-id))))))
+	   ((make-object-type-spec parent-id
+				   constructor.sexp destructor.sexp predicate.sexp
+				   safe-accessors-table safe-mutators-table methods-table)
+	    rtd-id rcd-id super-protocol-id))))
+      make-record-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; Vicare's struct-type specification
+
+;;This record type  is used as syntactic binding descriptor  for struct types defined
+;;by DEFINE-STRUCT.  The lexenv entry has the format:
+;;
+;;   ($record-type-name . #<struct-type-spec>)
+;;
+;;Lexical variables  bound to  instances of  this type  should be  called STS  (as in
+;;"struct-type spec").
+;;
+(define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
+  (nongenerative vicare:expander:<struct-type-spec>)
+  (parent <object-type-spec>)
+  (fields
+   (immutable std			struct-type-spec.std)
+		;The struct-type descriptor object.
+   #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define (make-struct-type-spec std
+				     constructor.id predicate.id
+				     safe-accessors-table safe-mutators-table methods-table)
+	(let ((parent-id         (core-prim-id '<struct>))
+	      (destructor.sexp   `(internal-applicable-struct-type-destructor ,std)))
+	  ((make-object-type-spec parent-id
+				  constructor.id destructor.sexp predicate.id
+				  safe-accessors-table safe-mutators-table methods-table)
+	   std)))
+      make-struct-type-spec))
+  #| end of DEFINE-STRUCT-TYPE |# )
 
 
 ;;;; built-in object-type specification
