@@ -1671,9 +1671,9 @@
 
 ;;;; chi procedures: external modules
 
-(include "psyntax.chi-procedures.chi-lambda.scm"      #t)
-(include "psyntax.chi-procedures.chi-application.scm" #t)
-(include "psyntax.chi-procedures.chi-body.scm"        #t)
+(include "psyntax.chi-procedures.lambda.scm"      #t)
+(include "psyntax.chi-procedures.application.scm" #t)
+(include "psyntax.chi-procedures.body.scm"        #t)
 
 (module CORE-MACRO-TRANSFORMER
   (core-macro-transformer push-fluid-syntax)
