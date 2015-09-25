@@ -283,7 +283,7 @@
 		    (unless (fxzero? (code.code-freevars code))
 		      (assertion-violation who
 			"cannot fasl-write a non-thunk procedure; the one given has free vars"
-			(code.code-freevars code)))
+			x (code.code-freevars code)))
 		    (make-graph code h)))
 		 ((bytevector? x)
 		  (void))

@@ -22,7 +22,8 @@
     code-reloc-vector		code-freevars
     code-size			code-ref
     code-set!			set-code-reloc-vector!
-    set-code-annotation!	procedure-annotation
+    set-code-annotation!	code-annotation
+    procedure-annotation
     make-annotation-indirect	annotation-indirect?
     code->thunk			code-reloc-vector->sexp)
   (import (except (vicare)
@@ -30,7 +31,8 @@
 		  code-reloc-vector		code-freevars
 		  code-size			code-ref
 		  code-set!			set-code-reloc-vector!
-		  set-code-annotation!		procedure-annotation
+		  set-code-annotation!		code-annotation
+		  procedure-annotation
 		  code-reloc-vector->sexp)
     ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
     ;;everything here using the system  libraries and not loading external libraries.
@@ -124,6 +126,9 @@
 
 (define* (set-code-annotation! {code code?} v)
   (foreign-call "ikrt_set_code_annotation" code v))
+
+(define* (code-annotation {code code?})
+  ($code-annotation code))
 
 (define* (code->thunk {code code-with-no-freevars?})
   ($code->closure code))
