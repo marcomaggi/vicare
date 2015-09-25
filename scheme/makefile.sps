@@ -5395,6 +5395,8 @@
     (internal-applicable-struct-type-destructor)
     (internal-applicable-record-type-destructor)
     (internal-applicable-record-destructor)
+    (record-type-method-retriever)
+    (record-type-method-retriever-set!)
     (object-type-spec-override-predicate)
     (internal-run-time-is-a?)
 

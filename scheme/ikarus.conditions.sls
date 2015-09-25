@@ -660,7 +660,12 @@
 	  define-list-of-type-predicate
 	  define-min/max-comparison
 	  define-equality/sorting-predicate
-	  define-inequality-predicate))
+	  define-inequality-predicate)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 25,
+    ;;2015)
+    (prefix (only (ikarus records procedural)
+		  record-type-method-retriever-set!)
+	    records.))
 
 
 ;;;; arguments validation
@@ -848,27 +853,22 @@
 	  (RTD (mkname #'?name "-rtd"))
 	  (RCD (mkname #'?name "-rcd")))
        (with-syntax
-	   (((LATE-BINDING-METHODS-FORM ...) (syntax-case #'(?field ...) ()
-					       ;;No fields.
-					       (()	'())
-					       ;;At least one field.
-					       (_
-						;;We define a dummy syntactic binding
-						;;here: it  makes sure the  forms are
-						;;evaluated  right  after  the  other
-						;;definitions  above, and  before any
-						;;initialisation  expression  in  the
-						;;body  of the  enclosing program  or
-						;;library.
-						#'((define DUMMY
-						     (putprop (record-type-uid RTD)
-							      'late-binding-methods-table
-							      (receive-and-return (table)
-								  (make-eq-hashtable)
-								(hashtable-set! table (quote ?field) ?accessor)
-								...)))
-						   ))
-					       )))
+	   (((METHODS-RETRIEVER-FORM ...)
+	     (syntax-case #'(?field ...) ()
+	       ;;No fields.
+	       (()	'())
+	       ;;At least one field.
+	       (_
+		;;We define a  dummy syntactic binding here: it makes  sure the forms
+		;;are evaluated right  after the other definitions  above, and before
+		;;any initialisation expression in the  body of the enclosing program
+		;;or library.
+		#'((define DUMMY
+		     (records.record-type-method-retriever-set! RTD (lambda (name)
+								      (case name
+									((?field) ?accessor)
+									...
+									(else #f))))))))))
 	 #'(begin
 	     (define-record-type (?name ?constructor p?)
 	       (parent ?super)
@@ -880,7 +880,7 @@
 	     ...
 	     (define RTD (record-type-descriptor ?name))
 	     (define RCD (record-constructor-descriptor ?name))
-	     LATE-BINDING-METHODS-FORM ...
+	     METHODS-RETRIEVER-FORM ...
 	     ))))
     ))
 

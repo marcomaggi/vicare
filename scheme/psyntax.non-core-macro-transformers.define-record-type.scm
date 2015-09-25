@@ -207,34 +207,12 @@
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
     (%parse-method-clauses clause* foo synner))
 
-  ;;A  symbolic expression  (to be  BLESSed later)  representing a  Scheme expression
-  ;;which, expanded and evaluated at run-time, builds a hashtable of methods for this
-  ;;record-type  and  registers  it  as  property  in  the  record-type's  UID.   The
-  ;;expression must be spliced in the output form.
-  ;;
-  (define methods-late-binding-table.sexp
-    (if (or (pair? method-name*.sym)
-	    (pair? field-name*.sym))
-	(let ((table.sym (gensym)))
-	  ;;We define  a dummy syntactic  binding here: it  makes sure the  forms are
-	  ;;evaluated right  after the  other definitions in  the output  MODULE, and
-	  ;;before any initialisation expression in the body of the enclosing program
-	  ;;or library.
-	  `((define ,(gensym)
-	      (putprop (record-type-uid ,foo-rtd)
-		       'late-binding-methods-table
-		       (receive-and-return (,table.sym)
-			   (make-eq-hashtable)
-			 ;;First the fields...
-			 ,@(map (lambda (name procname)
-				  `(hashtable-set! ,table.sym (quote ,name) ,procname))
-			     field-name*.sym safe-field-method*)
-			 ;;... then the method, so that the methods will override the
-			 ;;symbols in the table.
-			 ,@(map (lambda (name procname)
-				  `(hashtable-set! ,table.sym (quote ,name) ,procname))
-			     method-name*.sym method-procname*.sym))))))
-      '()))
+  ;;Null or  a symbolic  expression (to be  BLESSed later and  spliced in  the output
+  ;;form) representing the Scheme definition of the methods retriever function.
+  (define methods-retriever-code.sexp
+    (%make-methods-retriever-code foo foo-rtd
+				  field-name*.sym safe-field-method*
+				  method-name*.sym method-procname*.sym))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
@@ -300,7 +278,7 @@
 	,@(%make-safe-method-code foo field-type*.id
 				  safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
 
-	,@methods-late-binding-table.sexp
+	,@methods-retriever-code.sexp
 
 	#| end of module: safe and unsafe accessors and mutators |# )
       )))
@@ -1096,6 +1074,37 @@
 
       (_
        (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
+
+
+(define (%make-methods-retriever-code foo foo-rtd
+				      field-name*.sym safe-field-method*
+				      method-name*.sym method-procname*.sym)
+  ;;Return null  or a  symbolic expression (to  be BLESSed later  and spliced  in the
+  ;;output  form)  representing  the  Scheme  definition  of  the  methods  retriever
+  ;;function.
+  ;;
+  ;;The methods retriever function is used when performing late binding of methods.
+  ;;
+  (define foo.str
+    (symbol->string (identifier->symbol foo)))
+  (if (or (pair? method-name*.sym)
+	  (pair? field-name*.sym))
+      (let ((method-retriever.sym (gensym (string-append foo.str "-methods-retriever"))))
+	`((define ,(gensym)
+	    (internal-body
+	      (define (,method-retriever.sym name)
+		(case name
+		  ;;First the methods...
+		  ,@(map (lambda (name procname)
+			   `((,name) ,procname))
+		      method-name*.sym method-procname*.sym)
+		  ;;Then the fields, so that the methods will be selected first.
+		  ,@(map (lambda (name procname)
+			   `((,name) ,procname))
+		      field-name*.sym safe-field-method*)
+		  (else #f)))
+	      (record-type-method-retriever-set! ,foo-rtd ,method-retriever.sym)))))
+    '()))
 
 
 (define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo?.id

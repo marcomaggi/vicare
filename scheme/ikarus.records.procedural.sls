@@ -36,14 +36,16 @@
 
     ;; extension utility functions, non-R6RS
     rtd-subtype?			record-type-all-field-names
-    (rename (<rcd>-rtd		rcd-rtd)
-	    (<rcd>-parent-rcd	rcd-parent-rcd))
+    (rename (<rcd>-rtd			rcd-rtd)
+	    (<rcd>-parent-rcd		rcd-parent-rcd))
     record-reset			record=?
     record-and-rtd?			record-object?
     record-printer			record-destructor
     record-type-destructor-set!		record-type-destructor
-    (rename (<rtd>-printer		record-type-printer)
-	    (set-<rtd>-printer!		record-type-printer-set!))
+    (rename (<rtd>-printer			record-type-printer)
+	    (set-<rtd>-printer!			record-type-printer-set!)
+	    (<rtd>-method-retriever		record-type-method-retriever)
+	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
 
     ;; syntactic bindings for internal use only
     (rename ($<rtd>-destructor		$record-type-destructor))
@@ -77,7 +79,8 @@
 		  record-printer			record-destructor
 		  record-and-rtd?			record-object?
 		  record-type-destructor-set!		record-type-destructor
-		  record-type-printer-set!		record-type-printer)
+		  record-type-printer-set!		record-type-printer
+		  record-type-method-retriever		record-type-method-retriever-set!)
     (vicare system $fx)
     (vicare system $pairs)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
@@ -257,6 +260,9 @@
 		;A  function, accepting  two arguments,  to be  invoked whenever  the
 		;record instance is  printed.  The first argument is  the record, the
 		;second argument is a textual output port.
+   method-retriever
+		;False or  a function,  accepting a method  name as  single argument,
+		;returning a method's implementation function as single return value.
    ))
 
 #;(module ()
@@ -933,6 +939,7 @@
 						  #f     ;default-rcd
 						  #f     ;destructor
 						  #f     ;printer
+						  #f     ;method-retriever
 						  ))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)

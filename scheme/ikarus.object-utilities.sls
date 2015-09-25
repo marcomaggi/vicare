@@ -65,7 +65,8 @@
     (prefix (only (ikarus records procedural)
 		  record-object?
 		  record-destructor
-		  internal-applicable-record-destructor)
+		  internal-applicable-record-destructor
+		  record-type-method-retriever)
 	    records.)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
     ;;2015)
@@ -122,23 +123,14 @@
     (apply (structs.struct-field-method std method-name.sym) subject args))
 
   (define (%record-object-call rtd)
-    ;;Here we expect the record-type descriptor to have a symbol as UID: the property
-    ;;list    of    the    symbol    should     contain    an    entry    with    key
-    ;;"late-binding-methods-table";  the  value of  the  entry  must be  a  hashtable
-    ;;associating the method name to the implementation procedure.
-    ;;
     (define (%recurse)
       (%record-object-call (record-type-parent rtd)))
     (if rtd
-	(cond ((record-type-uid rtd)
-	       => (lambda (uid)
-		    (cond ((getprop uid 'late-binding-methods-table)
-			   => (lambda (table)
-				(cond ((hashtable-ref table method-name.sym #f)
-				       => (lambda (proc)
-					    (apply proc subject args)))
-				      (else
-				       (%recurse)))))
+	(cond ((records.record-type-method-retriever rtd)
+	       => (lambda (method-retriever)
+		    (cond ((method-retriever method-name.sym)
+			   => (lambda (proc)
+				(apply proc subject args)))
 			  (else
 			   (%recurse)))))
 	      (else
@@ -325,10 +317,9 @@
 		;The  first item  in the  list  is the  UID  of this  type, then  the
 		;parent's UID, then the grandparent's UID, et cetera.
    method-retriever
-		;If this type has methods: the  property list of the UID must contain
-		;an  entry with  key "late-binding-methods-table";  the value  of the
-		;entry must be  an EQ?  hashtable associating the method  name to the
-		;implementation procedure.
+		;If this  type has methods: a  procedure to be applied  to the method
+		;name  to retriever  the  method  implementation function;  otherwise
+		;false.
    ))
 
 (define-syntax define-scheme-type
