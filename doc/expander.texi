@@ -120,14 +120,9 @@ letrec                   letrec*
 if                       lambda
 case-lambda              fluid-let-syntax
 struct-type-descriptor   struct-type-and-struct?
-struct-type-field-ref    struct-type-field-set!
-$struct-type-field-ref   $struct-type-field-set!
 record-type-descriptor   record-constructor-descriptor
-record-type-field-set!   record-type-field-ref
-$record-type-field-set!  $record-type-field-ref
 type-descriptor          is-a?
 slot-ref                 slot-set!
-$slot-ref                $slot-set!
 splice-first-expand
 predicate-procedure-argument-validation
 predicate-return-value-validation
@@ -2034,12 +2029,12 @@ A syntactic binding representing an imported keyword binding associated
 to a @value{PRJNAME}'s struct--type name has descriptor with format:
 
 @example
-($struct-type-name . @meta{struct-type-descriptor})
+($struct-type-name . @meta{struct-type-spec})
 @end example
 
 @noindent
-where @meta{struct-type-descriptor} is a struct representing the
-struct--type descriptor.
+where @meta{struct-type-descriptor} is an instance of
+@class{struct-type-spec}.
 
 @c ------------------------------------------------------------------------
 
@@ -2402,12 +2397,12 @@ A syntactic binding representing a keyword binding associated to a
 @value{PRJNAME}'s struct--type name has descriptor with format:
 
 @example
-($struct-type-name . @meta{type-descriptor-struct})
+($struct-type-name . @meta{struct-type-spec})
 @end example
 
 @noindent
-where @meta{type-descriptor-struct} is a struct representing the
-struct--type descriptor.
+where @meta{struct-type-spec} is an instance of
+@class{struct-type-spec}.
 
 These bindings are established by uses of the syntax
 @syntax{define-struct}.
