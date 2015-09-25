@@ -1189,7 +1189,9 @@
     (make-record-type-spec (syntax ,foo-rtd.sym)
 			   (syntax ,foo-rcd.sym)
 			   ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
-			   ,(and foo-parent.id          `(syntax ,foo-parent.id))
+			   ,(if foo-parent.id
+				`(syntax ,foo-parent.id)
+			      `(syntax <record>))
 			   (syntax ,make-foo.id)
 			   ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
 			   (syntax ,foo?.id)

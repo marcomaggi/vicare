@@ -84,19 +84,23 @@
       (fields a b c))
 
     (check
-	(let ((stru (make-alpha 1 2 3)))
-	  (is-a? stru alpha))
+	(let ((reco (make-alpha 1 2 3)))
+	  (is-a? reco alpha))
       => #t)
 
     (check
-	(let ((stru (make-alpha 1 2 3)))
-	  (is-a? stru beta))
+	(let ((reco (make-alpha 1 2 3)))
+	  (is-a? reco beta))
       => #f)
 
+;;;
+
     (check
-	(let ((stru (make-alpha 1 2 3)))
-	  ((is-a? _ alpha) stru))
+	(let ((reco (make-alpha 1 2 3)))
+	  ((is-a? _ alpha) reco))
       => #t)
+
+;;;
 
     (check
 	(is-a? 123 alpha)
@@ -105,6 +109,18 @@
     (check
 	(is-a? 123 beta)
       => #f)
+
+;;;
+
+    (check
+	(let ((reco (make-alpha 1 2 3)))
+	  (is-a? reco <record>))
+      => #t)
+
+    (check
+	(let ((reco (make-alpha 1 2 3)))
+	  ((is-a? _ <record>) reco))
+      => #t)
 
     (void))
 
