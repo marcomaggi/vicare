@@ -118,7 +118,7 @@
     (define accessor-sexp*
       (map (lambda (accessor.id unsafe-accessor.id)
 	     (let ((stru.sym (gensym "stru")))
-	       `(internal-define (unsafe) (,accessor.id ,stru.sym)
+	       `(define (,accessor.id (brace ,stru.sym ,type.id))
 		  (,unsafe-accessor.id ,stru.sym))))
 	accessor*.id unsafe-accessor*.id))
 
@@ -126,7 +126,7 @@
       (map (lambda (mutator.id unsafe-mutator.id)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
-	       `(internal-define (unsafe) (,mutator.id ,stru.sym ,val.sym)
+	       `(define (,mutator.id (brace ,stru.sym ,type.id) ,val.sym)
 		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
 	mutator*.id unsafe-mutator*.id))
 
@@ -145,7 +145,7 @@
       (map (lambda (unsafe-accessor.id field.idx)
 	     (let ((stru.sym (gensym "stru")))
 	       `(define-syntax-rule (,unsafe-accessor.id ,stru.sym)
-		  ($struct-ref ,stru.sym ,field.idx))))
+		  (unsafe-cast ,type.id ($struct-ref ,stru.sym ,field.idx)))))
 	unsafe-accessor*.id field*.idx))
 
     (define unsafe-mutator-sexp*
@@ -170,7 +170,7 @@
 	       ,constructor.id ,predicate.id
 	       ,@accessor*.id ,@unsafe-accessor*.id
 	       ,@mutator*.id  ,@unsafe-mutator*.id)
-	(define ((brace ,predicate.id ,(boolean-tag-id)) obj)
+	(define ((brace ,predicate.id <boolean>) obj)
 	  ($struct/rtd? obj ',std))
 	(define-syntax ,type.id
 	  (make-syntactic-binding-descriptor/struct-type-name
@@ -179,9 +179,7 @@
 				  ,safe-accessors-table.sexp
 				  ,safe-mutators-table.sexp
 				  ,methods-table.sexp)))
-	;; (define-syntax ,type.id
-	;;   (make-syntactic-binding-descriptor/struct-type-name ',std))
-	(define (,constructor.id . ,field*.id)
+	(define ((brace ,constructor.id ,type.id) . ,field*.id)
 	  (receive-and-return (S)
 	      ($struct ',std ,@field*.id)
 	    (when ($std-destructor ',std)
