@@ -68,7 +68,9 @@
     ))
 
 
-(define (%build-output-form input-form.stx type.id maker.id predicate.id field*.id uid)
+(define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
+  (define-values (field*.id field*.tag)
+    (syntax-object.parse-list-of-typed-bindings field*.stx))
   (unless (all-identifiers? field*.id)
     (syntax-violation __module_who__
       "expected list of identifiers as fields speciication"
@@ -115,46 +117,60 @@
 	     (string->id (string-append "$set-" type.str "-" x "!")))
 	field*.str))
 
+;;; --------------------------------------------------------------------
+
     (define accessor-sexp*
-      (map (lambda (accessor.id unsafe-accessor.id)
+      (map (lambda (accessor.id unsafe-accessor.id field.tag)
 	     (let ((stru.sym (gensym "stru")))
-	       `(define (,accessor.id (brace ,stru.sym ,type.id))
-		  (,unsafe-accessor.id ,stru.sym))))
-	accessor*.id unsafe-accessor*.id))
+	       `(begin
+		  (define ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
+		    (,unsafe-accessor.id ,stru.sym))
+		  (begin-for-syntax
+		    (typed-procedure-variable.unsafe-variant-set! (syntax ,accessor.id) (syntax ,unsafe-accessor.id))))))
+	accessor*.id unsafe-accessor*.id field*.tag))
 
     (define mutator-sexp*
-      (map (lambda (mutator.id unsafe-mutator.id)
+      (map (lambda (mutator.id unsafe-mutator.id field.tag)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
-	       `(define (,mutator.id (brace ,stru.sym ,type.id) ,val.sym)
-		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
-	mutator*.id unsafe-mutator*.id))
+	       `(begin
+		  (define ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+		    (,unsafe-mutator.id ,stru.sym ,val.sym))
+		  (begin-for-syntax
+		    (typed-procedure-variable.unsafe-variant-set! (syntax ,mutator.id) (syntax ,unsafe-mutator.id))))))
+	mutator*.id unsafe-mutator*.id field*.tag))
 
     (define method-sexp*
-      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id)
+      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.tag)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(case-define ,method.id
-		  (((brace ,stru.sym ,type.id))
+		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
 		   (,unsafe-accessor.id ,stru.sym))
-		  (((brace ,stru.sym ,type.id) ,val.sym)
+		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
 		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
-	method*.id unsafe-accessor*.id unsafe-mutator*.id))
+	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.tag))
+
+;;; --------------------------------------------------------------------
 
     (define unsafe-accessor-sexp*
-      (map (lambda (unsafe-accessor.id field.idx)
+      (map (lambda (unsafe-accessor.id field.idx field.tag)
 	     (let ((stru.sym (gensym "stru")))
-	       `(define-syntax-rule (,unsafe-accessor.id ,stru.sym)
-		  (unsafe-cast ,type.id ($struct-ref ,stru.sym ,field.idx)))))
-	unsafe-accessor*.id field*.idx))
+	       `(define-syntax ,unsafe-accessor.id
+		  (identifier-syntax (lambda ((brace _ ,field.tag) ,stru.sym)
+				       ($struct-ref ,stru.sym ,field.idx))))))
+	unsafe-accessor*.id field*.idx field*.tag))
 
     (define unsafe-mutator-sexp*
       (map (lambda (unsafe-mutator.id field.idx)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
-	       `(define-syntax-rule (,unsafe-mutator.id ,stru.sym ,val.sym)
-		  ($struct-set! ,stru.sym ,field.idx ,val.sym))))
+	       `(define-syntax ,unsafe-mutator.id
+		  (identifier-syntax (lambda ((brace _ <void>) ,stru.sym ,val.sym)
+				       ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
+
+;;; --------------------------------------------------------------------
 
     (define safe-accessors-table.sexp
       (%make-alist-from-ids field*.sym accessor*.id))
@@ -179,7 +195,7 @@
 				  ,safe-accessors-table.sexp
 				  ,safe-mutators-table.sexp
 				  ,methods-table.sexp)))
-	(define ((brace ,constructor.id ,type.id) . ,field*.id)
+	(define ((brace ,constructor.id ,type.id) . ,field*.stx)
 	  (receive-and-return (S)
 	      ($struct ',std ,@field*.id)
 	    (when ($std-destructor ',std)

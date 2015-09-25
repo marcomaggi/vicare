@@ -309,6 +309,37 @@
   (void))
 
 
+(parametrise ((check-test-name	'typed-fields)
+	      (print-graph	#f))
+
+  (check
+      (internal-body
+	(define-struct duo
+	  ({one <fixnum>} {two <flonum>}))
+	(define O
+	  (new duo 1 2.0))
+	(debug-print
+	 (type-of (duo-one O)) (type-of (.one O))
+	 (type-of (duo-two O)) (type-of (.two O)))
+	(values (.one O)
+		(.two O)))
+    => 1 2.0)
+
+  (check
+      (internal-body
+	(define-struct duo
+	  ({one <fixnum>} {two <flonum>}))
+	(define O
+	  (new duo 1 2.0))
+	(.one O 11)
+	(.two O 22.0)
+	(values (.one O)
+		(.two O)))
+    => 11 22.0)
+
+  (void))
+
+
 ;;;; done
 
 (collect 'fullest)

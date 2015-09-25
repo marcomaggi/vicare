@@ -10292,8 +10292,17 @@ is used to build names for the constructor, predicate, field accessors
 and mutators.  When @meta{constructor} is used: it must be an identifier
 representing the name of the constructor.  When @meta{predicate} is
 used: it must be an identifier representing the name of the predicate.
-The @meta{field} values must be symbols representing the names of the
-fields; they are used to build names for the accessors and mutators.
+
+The @meta{field} values must be either symbols representing the names of
+the fields or @syntax{brace} forms representing the name and type of
+fields:
+
+@lisp
+(brace @meta{field-name} @meta{tag})
+@end lisp
+
+@noindent
+they are used to build names for the accessors and mutators.
 
 When the @clause{nongenerative} clause is used: @meta{uid} must be a
 symbol uniquely identifying the struct type.  Multiple definitions of
