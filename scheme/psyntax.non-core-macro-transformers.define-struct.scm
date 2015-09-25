@@ -189,12 +189,11 @@
 	(define ((brace ,predicate.id <boolean>) obj)
 	  ($struct/rtd? obj ',std))
 	(define-syntax ,type.id
-	  (make-syntactic-binding-descriptor/struct-type-name
-	   (make-struct-type-spec ',std
-				  (syntax ,constructor.id) (syntax ,predicate.id)
-				  ,safe-accessors-table.sexp
-				  ,safe-mutators-table.sexp
-				  ,methods-table.sexp)))
+	  (make-struct-type-spec ',std
+				 (syntax ,constructor.id) (syntax ,predicate.id)
+				 ,safe-accessors-table.sexp
+				 ,safe-mutators-table.sexp
+				 ,methods-table.sexp))
 	(define ((brace ,constructor.id ,type.id) . ,field*.stx)
 	  (receive-and-return (S)
 	      ($struct ',std ,@field*.id)

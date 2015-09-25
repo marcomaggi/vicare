@@ -1194,19 +1194,18 @@
   (define foo-methods.table
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
-  `(make-syntactic-binding-descriptor/record-type-name
-    (make-record-type-spec (syntax ,foo-rtd.sym)
-			   (syntax ,foo-rcd.sym)
-			   ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
-			   ,(if foo-parent.id
-				`(syntax ,foo-parent.id)
-			      `(syntax <record>))
-			   (syntax ,make-foo.id)
-			   ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
-			   (syntax ,foo?.id)
-			   ,foo-fields-safe-accessors.table
-			   ,foo-fields-safe-mutators.table
-			   ,foo-methods.table)))
+  `(make-record-type-spec (syntax ,foo-rtd.sym)
+			  (syntax ,foo-rcd.sym)
+			  ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
+			  ,(if foo-parent.id
+			       `(syntax ,foo-parent.id)
+			     `(syntax <record>))
+			  (syntax ,make-foo.id)
+			  ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
+			  (syntax ,foo?.id)
+			  ,foo-fields-safe-accessors.table
+			  ,foo-fields-safe-mutators.table
+			  ,foo-methods.table))
 
 
 ;;;; done
