@@ -96,12 +96,30 @@
 	  ((is-a? _ alpha) stru))
       => #t)
 
+;;;
+
+    (check
+	(let ((stru (make-alpha 1 2 3)))
+	  (is-a? stru <struct>))
+      => #t)
+
+    (check
+	(let ((stru (make-alpha 1 2 3)))
+	  ((is-a? _ <struct>) stru))
+      => #t)
+
+;;;
+
     (check
 	(is-a? 123 alpha)
       => #f)
 
     (check
 	(is-a? 123 beta)
+      => #f)
+
+    (check
+	(is-a? 123 <struct>)
       => #f)
 
     (void))

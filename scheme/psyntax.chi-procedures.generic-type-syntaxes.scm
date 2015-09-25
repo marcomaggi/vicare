@@ -35,46 +35,28 @@
 
 ;;;; helpers
 
-(define-auxiliary-syntaxes object-type struct-type)
-
-(define-syntax (case-object-type-binding stx)
-  ;;This syntax is meant to be used as follows:
-  ;;
-  ;;   (define-constant __who__ ...)
-  ;;   (syntax-match input-stx ()
-  ;;     ((_ ?type-id)
-  ;;      (identifier? ?type-id)
-  ;;      (case-object-type-binding __who__ input-stx ?type-id lexenv.run
-  ;;        ((object-type)
-  ;;         ...)
-  ;;        ((struct-type)
-  ;;         ...)))
-  ;;     )
-  ;;
-  ;;where  ?TYPE-ID  is  meant to  be  an  identifier  bound  to a  R6RS  record-type
-  ;;descriptor or Vicare's struct-type descriptor.
-  ;;
-  (sys.syntax-case stx (object-type struct-type)
-    ((_ (?who ?input-stx ?type-id ?lexenv ?binding-descriptor)
-	((object-type)	?object-body0 ?object-body ...)
-	((struct-type)	?struct-body0 ?struct-body ...))
+(define-syntax (with-object-type-syntactic-binding stx)
+  (sys.syntax-case stx ()
+    ((_ (?who ?input-stx ?type-id ?lexenv ?syntactic-binding-descriptor-value)
+	?object-body0 ?object-body ...)
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
-	  (sys.identifier? (sys.syntax ?lexenv)))
+	  (sys.identifier? (sys.syntax ?lexenv))
+	  (sys.identifier? (sys.syntax ?syntactic-binding-descriptor-value)))
      (sys.syntax
-      (begin
-	(visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
-	(let* ((label                (id->label/or-error ?who ?input-stx ?type-id))
-	       (?binding-descriptor  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((object-type-name-binding-descriptor? ?binding-descriptor)
-		 ?object-body0 ?object-body ...)
-		#;((struct-type-name-binding-descriptor? ?binding-descriptor)
-		 ?struct-body0 ?struct-body ...)
-		(else
-		 (syntax-violation ?who
-		   "neither a struct type nor an object type"
-		   ?input-stx ?type-id)))))))
+      (let* ((label  (id->label/or-error ?who ?input-stx ?type-id))
+	     (descr  (label->syntactic-binding-descriptor label ?lexenv)))
+	(cond ((eq? 'displaced-lexical (syntactic-binding-descriptor.type descr))
+	       (syntax-violation ?who "identifier out of context" ?input-stx ?type-id))
+	      ((object-type-name-binding-descriptor? descr)
+	       (visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
+	       (let ((?syntactic-binding-descriptor-value (syntactic-binding-descriptor.value descr)))
+		 ?object-body0 ?object-body ...))
+	      (else
+	       (syntax-violation ?who
+		 "syntactic identifier is not an object type identifier"
+		 ?input-stx ?type-id))))))
     ))
 
 
@@ -88,41 +70,20 @@
   (syntax-match input-form.stx ()
     ((_ ?type-id ?arg* ...)
      (identifier? ?type-id)
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-       ;;For records we  can access the record constructor  syntactic identifier.  We
-       ;;just expand to an equivalent of:
-       ;;
-       ;;   (?maker ?arg ...)
-       ;;
-       ((object-type)
-	(cond ((object-type-spec.constructor-sexp (syntactic-binding-descriptor.value descr))
-	       => (lambda (constructor.sexp)
-		    (let* ((constructor.stx  (bless constructor.sexp))
-			   (constructor.psi  (chi-expr constructor.stx lexenv.run lexenv.expand))
-			   (args.psi*        (chi-expr* ?arg* lexenv.run lexenv.expand)))
-		      (make-psi input-form.stx
-				(build-application no-source
-				  (psi-core-expr constructor.psi)
-				  (map psi-core-expr args.psi*))
-				(make-retvals-signature/single-value ?type-id)))))
-	      (else
-	       (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id))))
-
-       ;;For structs we want to expand to an equivalent of:
-       ;;
-       ;;   ((struct-constructor (struct-type-descriptor ?type-id)) ?arg* ...)
-       ;;
-       ((struct-type)
-	(let ((args.psi* (chi-expr* ?arg* lexenv.run lexenv.expand)))
-	  (make-psi input-form.stx
-		    (build-application no-source
-		      (build-application no-source
-			(build-primref no-source 'struct-constructor)
-			(list (build-data no-source
-				(syntactic-binding-descriptor.value descr))))
-		      (map psi-core-expr args.psi*))
-		    (make-retvals-signature/single-value ?type-id))))
-       ))))
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+       (cond ((object-type-spec.constructor-sexp ots)
+	      => (lambda (constructor.sexp)
+		   (let* ((constructor.stx  (bless constructor.sexp))
+			  (constructor.psi  (chi-expr constructor.stx lexenv.run lexenv.expand))
+			  (args.psi*        (chi-expr* ?arg* lexenv.run lexenv.expand)))
+		     (make-psi input-form.stx
+			       (build-application no-source
+				 (psi-core-expr constructor.psi)
+				 (map psi-core-expr args.psi*))
+			       (make-retvals-signature/single-value ?type-id)))))
+	     (else
+	      (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
+    ))
 
 
 ;;;; module core-macro-transformer: DELETE
@@ -158,52 +119,30 @@
       ))
 
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type-id expr.psi)
-    (case-object-type-binding (who input-form.stx type-id lexenv.run binding)
-
-      ((object-type)
-       ;;For records, when  we have access to the record-type  specification, we want
-       ;;to expand to an equivalent of:
-       ;;
-       ;;   (?deafult-record-destructor-id ?expr)
-       ;;
-       (cond ((object-type-spec.destructor-sexp (syntactic-binding-descriptor.value binding))
-	      => (lambda (destructor-sexp)
-		   ;;This record type has a default destructor.
-		   (make-psi input-form.stx
-			     (build-application no-source
-			       (psi-core-expr (chi-expr destructor-sexp lexenv.run lexenv.expand))
-			       (list (psi-core-expr expr.psi)))
-			     (make-retvals-signature/single-top))))
-	     (else
-	      ;;This record  type has  *no* default  destructor; default  to run-time
-	      ;;destruction.
-	      ;;
-	      ;;Example of usefulness  of defaulting to run-time  destruction: if the
-	      ;;object is a  record with a destructor set at  run-time, this way that
-	      ;;destructor will be called.
-	      (%run-time-destruction input-form.stx lexenv.run lexenv.expand expr.psi))))
-
-      ((struct-type)
-       ;;For structs we want to expand to an equivalent of:
-       ;;
-       ;;   ((internal-applicable-struct-type-destructor (struct-type-descriptor ?type-id)) ?expr)
-       ;;
-       (make-psi input-form.stx
-		 (build-application no-source
-		   (build-application no-source
-		     (build-primref no-source 'internal-applicable-struct-type-destructor)
-		     (list (build-data no-source
-			     (syntactic-binding-descriptor.value binding))))
-		   (list (psi-core-expr expr.psi)))
-		 (make-retvals-signature/single-top)))
-      ))
+    (with-object-type-syntactic-binding (who input-form.stx type-id lexenv.run ots)
+      (cond ((object-type-spec.destructor-sexp ots)
+	     => (lambda (destructor-sexp)
+		  ;;This record type has a default destructor.
+		  (make-psi input-form.stx
+			    (build-application no-source
+			      (psi-core-expr (chi-expr destructor-sexp lexenv.run lexenv.expand))
+			      (list (psi-core-expr expr.psi)))
+			    (make-retvals-signature/single-top))))
+	    (else
+	     ;;This  record type  has *no*  default destructor;  default to  run-time
+	     ;;destruction.
+	     ;;
+	     ;;Example of  usefulness of defaulting  to run-time destruction:  if the
+	     ;;object is  a record with a  destructor set at run-time,  this way that
+	     ;;destructor will be called.
+	     (%run-time-destruction input-form.stx lexenv.run lexenv.expand expr.psi)))))
 
   (define* (%run-time-destruction input-form.stx lexenv.run lexenv.expand {expr.psi psi?})
     (make-psi input-form.stx
 	      (build-application no-source
 		(build-primref no-source 'internal-delete)
 		(list (psi-core-expr expr.psi)))
-	      (make-retvals-signature/single-top)))
+	      (make-retvals-signature/single-void)))
 
   #| end of module: DELETE-TRANSFORMER |# )
 
@@ -224,15 +163,9 @@
        (and (identifier? ?type-id)
 	    (underscore-id? ?jolly))
        (chi-expr (bless
-		  (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-		    ((object-type)
-		     (or (object-type-spec.type-predicate-sexp (syntactic-binding-descriptor.value binding))
-			 (%synner "type specification has no predicate for run-time use" ?type-id)))
-
-		    ((struct-type)
-		     (let ((obj (gensym)))
-		       `(lambda (,obj)
-			  ($struct/rtd? ,obj (struct-type-descriptor ,?type-id)))))))
+		  (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+		    (or (object-type-spec.type-predicate-sexp ots)
+			(%synner "type specification has no predicate for run-time use" ?type-id))))
 		 lexenv.run lexenv.expand))
 
       ((_ ?expr ?pred-type-id)
@@ -249,21 +182,11 @@
 	   ((?expr-type-id)
 	    (if (free-identifier=? ?expr-type-id ?pred-type-id)
 		(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
-	      (case-object-type-binding (__who__ input-form.stx ?expr-type-id lexenv.run expr-descr)
-		((object-type)
-		 (case-object-type-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-descr)
-		   ((object-type)
-		    (if (object-type-spec.subtype-and-supertype? (syntactic-binding-descriptor.value expr-descr)
-								 (syntactic-binding-descriptor.value pred-descr)
-								 lexenv.run)
-			(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
-		      (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand)))
-		   ((struct-type)
-		    (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))))
-
-		((struct-type)
-		 (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))
-		)))
+	      (with-object-type-syntactic-binding (__who__ input-form.stx ?expr-type-id lexenv.run expr-ots)
+		(with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
+		  (if (object-type-spec.subtype-and-supertype? expr-ots pred-ots lexenv.run)
+		      (%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
+		    (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))))))
 
 	   (?expr-type-id
 	    (list-tag-id? ?expr-type-id)
@@ -282,34 +205,18 @@
 ;;; --------------------------------------------------------------------
 
   (define (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand pred-type-id expr.psi %synner)
-    (define expr.core
-      (psi-core-expr expr.psi))
-    (case-object-type-binding (__module_who__ input-form.stx pred-type-id lexenv.run descr)
-      ((object-type)
-       (let* ((ots        (syntactic-binding-descriptor.value descr))
-	      (pred.sexp  (or (object-type-spec.type-predicate-sexp ots)
-			      (%synner "type specification has no predicate for run-time use" pred-type-id)))
-	      (pred.stx   (bless pred.sexp))
-	      (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
-	      (pred.core  (psi-core-expr pred.psi)))
-	 (make-psi input-form.stx
-		   (build-application input-form.stx
-		     pred.core
-		     (list expr.core))
-		   (psi-application-retvals-signature input-form.stx lexenv.run pred.psi))))
-
-      ((struct-type)
-       (let* ((obj.sym    (gensym))
-	      (pred.stx   (bless
-			   `(lambda (,obj.sym)
-			      ($struct/rtd? ,obj.sym (struct-type-descriptor ,pred-type-id)))))
-	      (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
-	      (pred.core  (psi-core-expr pred.psi)))
-	 (make-psi input-form.stx
-		   (build-application input-form.stx
-		     pred.core
-		     (list expr.core))
-		   (psi-application-retvals-signature input-form.stx lexenv.run pred.psi))))))
+    (with-object-type-syntactic-binding (__module_who__ input-form.stx pred-type-id lexenv.run pred-ots)
+      (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred-ots)
+			     (%synner "type specification has no predicate for run-time use" pred-type-id)))
+	     (pred.stx   (bless pred.sexp))
+	     (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
+	     (pred.core  (psi-core-expr pred.psi))
+	     (expr.core  (psi-core-expr expr.psi)))
+	(make-psi input-form.stx
+		  (build-application input-form.stx
+		    pred.core
+		    (list expr.core))
+		  (psi-application-retvals-signature input-form.stx lexenv.run pred.psi)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -344,32 +251,17 @@
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.sig  (psi-retvals-signature expr.psi))
 	    (expr.core (psi-core-expr expr.psi)))
-       (case-object-type-binding (__who__ input-form.stx ?pred-type-id lexenv.run descr)
-	 ((object-type)
-	  (let* ((ots        (syntactic-binding-descriptor.value descr))
-		 (pred.sexp  (or (object-type-spec.type-predicate-sexp ots)
-				 (%synner "type specification has no predicate for run-time use" ?pred-type-id)))
-		 (pred.stx   (bless pred.sexp))
-		 (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
-		 (pred.core  (psi-core-expr pred.psi)))
-	    (make-psi input-form.stx
-		      (build-application input-form.stx
-			pred.core
-			(list expr.core))
-		      (psi-application-retvals-signature input-form.stx lexenv.run pred.psi))))
-
-	 ((struct-type)
-	  (let* ((obj.sym    (gensym))
-		 (pred.stx   (bless
-			      `(lambda (,obj.sym)
-				 ($struct/rtd? ,obj.sym (struct-type-descriptor ,?pred-type-id)))))
-		 (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
-		 (pred.core  (psi-core-expr pred.psi)))
-	    (make-psi input-form.stx
-		      (build-application input-form.stx
-			pred.core
-			(list expr.core))
-		      (psi-application-retvals-signature input-form.stx lexenv.run pred.psi)))))))
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
+	 (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred-ots)
+				(%synner "type specification has no predicate for run-time use" ?pred-type-id)))
+		(pred.stx   (bless pred.sexp))
+		(pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
+		(pred.core  (psi-core-expr pred.psi)))
+	   (make-psi input-form.stx
+		     (build-application input-form.stx
+		       pred.core
+		       (list expr.core))
+		     (psi-application-retvals-signature input-form.stx lexenv.run pred.psi))))))
     ))
 
 
@@ -390,11 +282,8 @@
        (and (not (underscore-id? ?expr))
 	    (identifier? ?field-name)
 	    (identifier? ?type-id))
-       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((object-type)
-	  (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name))
-	 ((struct-type)
-	  (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name))))
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	 (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand ots ?expr ?field-name)))
 
       ;;Wildcard in place of the subject expression.  It must expand to an expression
       ;;that evaluates to an accessor.
@@ -402,11 +291,8 @@
        (and (identifier? ?type-id)
 	    (identifier? ?field-name)
 	    (underscore-id? ?jolly))
-       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((object-type)
-	  (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand descr ?field-name))
-	 ((struct-type)
-	  (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))))
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	 (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand ots ?field-name)))
 
       ;;Missing type identifier.  Try to retrieve  the type from the signature of the
       ;;subject expression.
@@ -423,21 +309,17 @@
 	    (%error-unknown-type))
 
 	   ((?type-id)
-	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	      ((object-type)
-	       (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name))
-	      ((struct-type)
-	       (%expand-to-struct-accessor-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name))))
-
+	    (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	      (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand ots expr.psi ?field-name)))
 
 	   (?type-id
 	    (list-tag-id? ?type-id)
-	    ;;Damn  it!!!   The  expression's  return  values  have  fully  UNspecified
+	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature.
 	    (%error-unknown-type))
 
 	   (_
-	    ;;We have  determined at expand-time  that the expression  returns multiple
+	    ;;We have determined at expand-time  that the expression returns multiple
 	    ;;values.
 	    (raise
 	     (condition (make-who-condition __who__)
@@ -450,9 +332,8 @@
 ;;; --------------------------------------------------------------------
 
   (define* (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand
-						   descr {expr.stx syntax-object?} field-name.id)
-    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run))
+						   ots {expr.stx syntax-object?} field-name.id)
+    (cond ((object-type-spec.safe-accessor-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (accessor.sexp)
 		(chi-expr (bless
 			   `(,accessor.sexp ,expr.stx))
@@ -460,66 +341,31 @@
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
-  (define* (%expand-to-struct-accessor-application input-form.stx lexenv.run lexenv.expand
-						   type-id {expr.stx syntax-object?} field-name.id)
-    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-	   (field-names (struct-type-field-names std))
-	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id)))
-      (chi-expr (bless
-		 `(struct-and-std-ref ,expr.stx ,field-idx (struct-type-descriptor ,type-id)))
-		lexenv.run lexenv.expand)))
-
 ;;; --------------------------------------------------------------------
 
   (define (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand
-				      descr field-name.id)
-    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run))
+				      ots field-name.id)
+    (cond ((object-type-spec.safe-accessor-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (accessor.sexp)
 		(chi-expr (bless accessor.sexp) lexenv.run lexenv.expand)))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
-  (define (%expand-to-struct-accessor input-form.stx lexenv.run lexenv.expand
-				      type-id field-name.id)
-    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-	   (field-names (struct-type-field-names std))
-	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
-	   (stru.sym    (gensym "stru")))
-      (chi-expr (bless
-		 `(lambda (,stru.sym)
-		    (struct-and-std-ref ,stru.sym ,field-idx (struct-type-descriptor ,type-id))))
-		lexenv.run lexenv.expand)))
-
 ;;; --------------------------------------------------------------------
 
-  (define* (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand descr {expr.psi psi?} field-name.id)
-    (let ((rts (syntactic-binding-descriptor.value descr)))
-      (cond ((object-type-spec.safe-accessor-sexp rts (identifier->symbol field-name.id) lexenv.run)
-	     => (lambda (accessor.sexp)
-		  (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
-			 (accessor.core (psi-core-expr accessor.psi))
-			 (expr.core     (psi-core-expr expr.psi)))
-		    (make-psi input-form.stx
-			      (build-application input-form.stx
-				accessor.core
-				(list expr.core))
-			      (psi-application-retvals-signature input-form.stx lexenv.run accessor.psi)))))
-	    (else
-	     (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id)))))
-
-  (define* (%expand-to-struct-accessor-application-post input-form.stx lexenv.run lexenv.expand type-id {expr.psi psi?} field-name.id)
-    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-	   (field-names (struct-type-field-names std))
-	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
-	   (expr.core   (psi-core-expr expr.psi)))
-      (make-psi input-form.stx
-		(build-application input-form.stx
-		  (build-primref no-source 'struct-and-std-ref)
-		  (list expr.core
-			(build-data no-source field-idx)
-			(build-data no-source std)))
-		(make-retvals-signature/single-void))))
+  (define* (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand ots {expr.psi psi?} field-name.id)
+    (cond ((object-type-spec.safe-accessor-sexp ots (identifier->symbol field-name.id) lexenv.run)
+	   => (lambda (accessor.sexp)
+		(let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
+		       (accessor.core (psi-core-expr accessor.psi))
+		       (expr.core     (psi-core-expr expr.psi)))
+		  (make-psi input-form.stx
+			    (build-application input-form.stx
+			      accessor.core
+			      (list expr.core))
+			    (psi-application-retvals-signature input-form.stx lexenv.run accessor.psi)))))
+	  (else
+	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
   #| end of module: SLOT-REF-TRANSFORMER |# )
 
@@ -541,11 +387,8 @@
        (and (not (underscore-id? ?expr))
 	    (identifier? ?field-name)
 	    (identifier? ?type-id))
-       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((object-type)
-	  (%expand-to-object-mutator-application input-form.stx lexenv.run lexenv.expand descr ?expr ?field-name ?new-value))
-	 ((struct-type)
-	  (%expand-to-struct-mutator-application input-form.stx lexenv.run lexenv.expand ?type-id ?expr ?field-name ?new-value))))
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	 (%expand-to-object-mutator-application input-form.stx lexenv.run lexenv.expand ots ?expr ?field-name ?new-value)))
 
       ;;Wildcard in place of the subject expression.  It must expand to an expression
       ;;that evaluates to an mutator.
@@ -554,11 +397,8 @@
 	    (identifier? ?field-name)
 	    (underscore-id? ?jolly1)
 	    (underscore-id? ?jolly2))
-       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	 ((object-type)
-	  (%expand-to-object-mutator input-form.stx lexenv.run lexenv.expand descr ?field-name))
-	 ((struct-type)
-	  (%expand-to-struct-mutator input-form.stx lexenv.run lexenv.expand ?type-id ?field-name))))
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	 (%expand-to-object-mutator input-form.stx lexenv.run lexenv.expand ots ?field-name)))
 
       ;;Missing type identifier.  Try to retrieve  the type from the signature of the
       ;;subject expression.
@@ -575,21 +415,17 @@
 	    (%error-unknown-type))
 
 	   ((?type-id)
-	    (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run descr)
-	      ((object-type)
-	       (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand descr    expr.psi ?field-name ?new-value))
-	      ((struct-type)
-	       (%expand-to-struct-mutator-application-post input-form.stx lexenv.run lexenv.expand ?type-id expr.psi ?field-name ?new-value))))
-
+	    (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	      (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand ots expr.psi ?field-name ?new-value)))
 
 	   (?type-id
 	    (list-tag-id? ?type-id)
-	    ;;Damn  it!!!   The  expression's  return  values  have  fully  UNspecified
+	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature.
 	    (%error-unknown-type))
 
 	   (_
-	    ;;We have  determined at expand-time  that the expression  returns multiple
+	    ;;We have determined at expand-time  that the expression returns multiple
 	    ;;values.
 	    (raise
 	     (condition (make-who-condition __who__)
@@ -602,9 +438,8 @@
 ;;; --------------------------------------------------------------------
 
   (define* (%expand-to-object-mutator-application input-form.stx lexenv.run lexenv.expand
-						  descr {expr.stx syntax-object?} field-name.id new-value.stx)
-    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (object-type-spec.safe-mutator-sexp rts (identifier->symbol field-name.id) lexenv.run))
+						  ots {expr.stx syntax-object?} field-name.id new-value.stx)
+    (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (mutator.sexp)
 		(chi-expr (bless
 			   `(,mutator.sexp ,expr.stx ,new-value.stx))
@@ -612,74 +447,34 @@
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
-  (define* (%expand-to-struct-mutator-application input-form.stx lexenv.run lexenv.expand
-						  type-id {expr.stx syntax-object?} field-name.id new-value.stx)
-    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-	   (field-names (struct-type-field-names std))
-	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id)))
-      (chi-expr (bless
-		 `(struct-and-std-set! ,expr.stx ,field-idx (struct-type-descriptor ,type-id) ,new-value.stx))
-		lexenv.run lexenv.expand)))
-
 ;;; --------------------------------------------------------------------
 
   (define (%expand-to-object-mutator input-form.stx lexenv.run lexenv.expand
-				     descr field-name.id)
-    (cond ((let ((rts (syntactic-binding-descriptor.value descr)))
-	     (object-type-spec.safe-mutator-sexp rts (identifier->symbol field-name.id) lexenv.run))
+				     ots field-name.id)
+    (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (mutator.sexp)
 		(chi-expr (bless mutator.sexp) lexenv.run lexenv.expand)))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
-  (define (%expand-to-struct-mutator input-form.stx lexenv.run lexenv.expand
-				     type-id field-name.id)
-    (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-	   (field-names (struct-type-field-names std))
-	   (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
-	   (stru.sym    (gensym "stru"))
-	   (new-val.sym (gensym "new-val")))
-      (chi-expr (bless
-		 `(lambda (,stru.sym ,new-val.sym)
-		    (struct-and-std-set! ,stru.sym ,field-idx (struct-type-descriptor ,type-id) ,new-val.sym)))
-		lexenv.run lexenv.expand)))
-
 ;;; --------------------------------------------------------------------
 
   (define* (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand
-						       descr {expr.psi psi?} field-name.id new-value.stx)
-    (let ((rts (syntactic-binding-descriptor.value descr)))
-      (cond ((object-type-spec.safe-mutator-sexp rts (identifier->symbol field-name.id) lexenv.run)
-	     => (lambda (mutator.sexp)
-		  (let* ((mutator.psi    (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
-			 (mutator.core   (psi-core-expr mutator.psi))
-			 (expr.core      (psi-core-expr expr.psi))
-			 (new-value.psi  (chi-expr new-value.stx lexenv.run lexenv.expand))
-			 (new-value.core (psi-core-expr new-value.psi)))
-		    (make-psi input-form.stx
-			      (build-application input-form.stx
-				mutator.core
-				(list expr.core new-value.core))
-			      (psi-application-retvals-signature input-form.stx lexenv.run mutator.psi)))))
-	    (else
-	     (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id)))))
-
-  (define* (%expand-to-struct-mutator-application-post input-form.stx lexenv.run lexenv.expand
-						       type-id {expr.psi psi?} field-name.id new-value.stx)
-    (let* ((std             (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-	   (field-names     (struct-type-field-names std))
-	   (field-idx       (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names field-name.id))
-	   (expr.core       (psi-core-expr expr.psi))
-	   (new-value.psi   (chi-expr new-value.stx lexenv.run lexenv.expand))
-	   (new-value.core  (psi-core-expr new-value.psi)))
-      (make-psi input-form.stx
-		(build-application input-form.stx
-		  (build-primref no-source 'struct-and-std-set!)
-		  (list expr.core
-			(build-data no-source field-idx)
-			(build-data no-source std)
-			new-value.core))
-		(make-retvals-signature/single-void))))
+						       ots {expr.psi psi?} field-name.id new-value.stx)
+    (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
+	   => (lambda (mutator.sexp)
+		(let* ((mutator.psi    (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
+		       (mutator.core   (psi-core-expr mutator.psi))
+		       (expr.core      (psi-core-expr expr.psi))
+		       (new-value.psi  (chi-expr new-value.stx lexenv.run lexenv.expand))
+		       (new-value.core (psi-core-expr new-value.psi)))
+		  (make-psi input-form.stx
+			    (build-application input-form.stx
+			      mutator.core
+			      (list expr.core new-value.core))
+			    (psi-application-retvals-signature input-form.stx lexenv.run mutator.psi)))))
+	  (else
+	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
   #| end of module: SLOT-SET!-TRANSFORMER |# )
 
@@ -734,129 +529,66 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%expand-to-early-binding-method-call)
-
-    (define (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
-						  method-name.id method-name.sym
-						  type-id
-						  subject-expr.stx subject-expr.psi arg*.stx)
-      (case-object-type-binding (__module_who__ input-form.stx type-id lexenv.run type-id-descr)
-	((object-type)
-	 (%object-type-method-call input-form.stx lexenv.run lexenv.expand
-				   method-name.id method-name.sym
-				   type-id type-id-descr
-				   subject-expr.stx subject-expr.psi arg*.stx))
-
-	((struct-type)
-	 (%struct-type-method-call input-form.stx lexenv.run lexenv.expand
-				     method-name.id method-name.sym
-				     type-id
-				     subject-expr.stx subject-expr.psi arg*.stx))
-	))
-
-    ;;;
-
-    (define (%object-type-method-call input-form.stx lexenv.run lexenv.expand
-				      method-name.id method-name.sym
-				      type-id type-id-descr
-				      subject-expr.stx subject-expr.psi arg*.stx)
-      (let* ((expr.core  (psi-core-expr subject-expr.psi))
-	     (rts        (syntactic-binding-descriptor.value type-id-descr)))
-	(cond
-	 ;;Look for a matching method name.
-	 ((object-type-spec.applicable-method-sexp rts method-name.sym lexenv.run)
-	  => (lambda (method.sexp)
-	       ;;A matching method name exists.
-	       (let* ((method.psi  (chi-expr (bless method.sexp) lexenv.run lexenv.expand))
-		      (method.core (psi-core-expr method.psi))
-		      (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
-		      (arg*.core   (map psi-core-expr arg*.psi)))
-		 (make-psi input-form.stx
-			   (build-application input-form.stx
-			     method.core
-			     (cons expr.core arg*.core))
-			   (psi-application-retvals-signature input-form.stx lexenv.run method.psi)))))
-	 ;;If the input form has the right syntax: look for a matching field name for
-	 ;;accessor application.
-	 ((and (null? arg*.stx)
-	       (object-type-spec.safe-accessor-sexp rts method-name.sym lexenv.run))
-	  => (lambda (accessor.sexp)
-	       ;;A matching field name exists.
-	       (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
-		      (accessor.core (psi-core-expr accessor.psi)))
-		 (make-psi input-form.stx
-			   (build-application input-form.stx
-			     accessor.core
-			     (list expr.core))
-			   (psi-application-retvals-signature input-form.stx lexenv.run accessor.psi)))))
-	 ;;If the input form has the right syntax: look for a matching field name for
-	 ;;mutator application.
-	 ((and (pair? arg*.stx)
-	       (null? (cdr arg*.stx))
-	       (object-type-spec.safe-mutator-sexp rts method-name.sym lexenv.run))
-	  => (lambda (mutator.sexp)
-	       ;;A matching field name exists.
-	       (let* ((mutator.psi  (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
-		      (mutator.core (psi-core-expr mutator.psi))
-		      (arg.psi      (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
-		      (arg.core     (psi-core-expr arg.psi)))
-		 (make-psi input-form.stx
-			   (build-application input-form.stx
-			     mutator.core
-			     (list expr.core arg.core))
-			   (psi-application-retvals-signature input-form.stx lexenv.run mutator.psi)))))
-	 (else
-	  (raise
-	   (condition (make-who-condition __module_who__)
-		      (make-message-condition "unknown method name for type of subject expression")
-		      (make-syntax-violation input-form.stx subject-expr.stx)
-		      (make-type-syntactic-identifier-condition type-id)
-		      (make-type-method-name-condition method-name.sym)))))))
-
-    ;;;
-
-    (define (%struct-type-method-call input-form.stx lexenv.run lexenv.expand
-				      method-name.id method-name.sym
-				      type-id
-				      subject-expr.stx subject-expr.psi arg*.stx)
-      (define expr.core
-	(psi-core-expr subject-expr.psi))
-      (cond ((null? arg*.stx)
-	     ;;No arguments, let's go for an accessor application.
-	     (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-		    (field-names (struct-type-field-names std))
-		    (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names method-name.id)))
+  (define (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						method-name.id method-name.sym
+						type-id subject-expr.stx subject-expr.psi arg*.stx)
+    (with-object-type-syntactic-binding (__module_who__ input-form.stx type-id lexenv.run ots)
+      (cond
+       ;;Look for a matching method name.
+       ((object-type-spec.applicable-method-sexp ots method-name.sym lexenv.run)
+	=> (lambda (method.sexp)
+	     ;;A matching method name exists.
+	     (let* ((method.psi  (chi-expr (bless method.sexp) lexenv.run lexenv.expand))
+		    (method.core (psi-core-expr method.psi))
+		    (expr.core   (psi-core-expr subject-expr.psi))
+		    (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
+		    (arg*.core   (map psi-core-expr arg*.psi)))
 	       (make-psi input-form.stx
 			 (build-application input-form.stx
-			   (build-primref no-source 'struct-and-std-ref)
-			   (list expr.core
-				 (build-data no-source field-idx)
-				 (build-data no-source std)))
-			 (make-retvals-signature/single-top))))
-	    ((and (pair? arg*.stx)
-		  (null? (cdr arg*.stx)))
-	     ;;Only one argument, let's go for a mutator application.
-	     (let* ((std         (%struct-type-id->std __module_who__ input-form.stx type-id lexenv.run))
-		    (field-names (struct-type-field-names std))
-		    (field-idx   (%struct-field-name->struct-field-idx __module_who__ input-form.stx field-names method-name.id))
-		    (arg.psi     (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
-		    (arg.core    (psi-core-expr arg.psi)))
+			   method.core
+			   (cons expr.core arg*.core))
+			 (psi-application-retvals-signature input-form.stx lexenv.run method.psi)))))
+
+       ;;If the input form  has the right syntax: look for a  matching field name for
+       ;;accessor application.
+       ((and (null? arg*.stx)
+	     (object-type-spec.safe-accessor-sexp ots method-name.sym lexenv.run))
+	=> (lambda (accessor.sexp)
+	     ;;A matching field name exists.
+	     (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
+		    (accessor.core (psi-core-expr accessor.psi))
+		    (expr.core     (psi-core-expr subject-expr.psi)))
 	       (make-psi input-form.stx
 			 (build-application input-form.stx
-			   (build-primref no-source 'struct-and-std-set!)
-			   (list expr.core
-				 (build-data no-source field-idx)
-				 (build-data no-source std)
-				 arg.core))
-			 (make-retvals-signature/single-void))))
-	    (else
-	     (raise
-	      (condition (make-who-condition __module_who__)
-			 (make-message-condition "unsupported method call operation on struct-type of subject expression")
-			 (make-syntax-violation input-form.stx subject-expr.stx)
-			 (make-type-syntactic-identifier-condition type-id))))))
+			   accessor.core
+			   (list expr.core))
+			 (psi-application-retvals-signature input-form.stx lexenv.run accessor.psi)))))
 
-    #| end of module: %EXPAND-TO-EARLY-BINDING-METHOD-CALL |# )
+       ;;If the input form  has the right syntax: look for a  matching field name for
+       ;;mutator application.
+       ((and (pair? arg*.stx)
+	     (null? (cdr arg*.stx))
+	     (object-type-spec.safe-mutator-sexp ots method-name.sym lexenv.run))
+	=> (lambda (mutator.sexp)
+	     ;;A matching field name exists.
+	     (let* ((mutator.psi  (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
+		    (mutator.core (psi-core-expr mutator.psi))
+		    (expr.core    (psi-core-expr subject-expr.psi))
+		    (arg.psi      (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
+		    (arg.core     (psi-core-expr arg.psi)))
+	       (make-psi input-form.stx
+			 (build-application input-form.stx
+			   mutator.core
+			   (list expr.core arg.core))
+			 (psi-application-retvals-signature input-form.stx lexenv.run mutator.psi)))))
+
+       (else
+	(raise
+	 (condition (make-who-condition __module_who__)
+		    (make-message-condition "unknown method name for type of subject expression")
+		    (make-syntax-violation input-form.stx subject-expr.stx)
+		    (make-type-syntactic-identifier-condition type-id)
+		    (make-type-method-name-condition method-name.sym)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -989,9 +721,9 @@
 ;;;; module core-macro-transformer: ASSERT-RETVALS-SIGNATURE
 
 (module (assert-retvals-signature-transformer)
-  ;;Transformer  function  used  to  expand Vicare's  ASSERT-RETVALS-SIGNATURE  syntaxes  from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;Transformer function  used to  expand Vicare's  ASSERT-RETVALS-SIGNATURE syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
   ;;
   (define-core-transformer (assert-retvals-signature input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
@@ -1389,22 +1121,22 @@
 ;;Local Variables:
 ;;mode: vicare
 ;;fill-column: 85
-;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
-;;eval: (put 'build-application			'scheme-indent-function 1)
-;;eval: (put 'build-conditional			'scheme-indent-function 1)
-;;eval: (put 'build-case-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-foreign-call		'scheme-indent-function 1)
-;;eval: (put 'build-sequence			'scheme-indent-function 1)
-;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
-;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
-;;eval: (put 'build-letrec*			'scheme-indent-function 1)
-;;eval: (put 'build-data			'scheme-indent-function 1)
-;;eval: (put 'core-lang-builder			'scheme-indent-function 1)
-;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
-;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
-;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
-;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
-;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
-;;eval: (put '$map-in-order			'scheme-indent-function 1)
+;;eval: (put 'build-library-letrec*			'scheme-indent-function 1)
+;;eval: (put 'build-application				'scheme-indent-function 1)
+;;eval: (put 'build-conditional				'scheme-indent-function 1)
+;;eval: (put 'build-case-lambda				'scheme-indent-function 1)
+;;eval: (put 'build-lambda				'scheme-indent-function 1)
+;;eval: (put 'build-foreign-call			'scheme-indent-function 1)
+;;eval: (put 'build-sequence				'scheme-indent-function 1)
+;;eval: (put 'build-global-assignment			'scheme-indent-function 1)
+;;eval: (put 'build-lexical-assignment			'scheme-indent-function 1)
+;;eval: (put 'build-letrec*				'scheme-indent-function 1)
+;;eval: (put 'build-data				'scheme-indent-function 1)
+;;eval: (put 'core-lang-builder				'scheme-indent-function 1)
+;;eval: (put 'with-object-type-syntactic-binding	'scheme-indent-function 1)
+;;eval: (put 'push-lexical-contour			'scheme-indent-function 1)
+;;eval: (put 'syntactic-binding-getprop			'scheme-indent-function 1)
+;;eval: (put 'sys.syntax-case				'scheme-indent-function 2)
+;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
+;;eval: (put '$map-in-order				'scheme-indent-function 1)
 ;;End:
