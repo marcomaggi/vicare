@@ -142,14 +142,14 @@
 
     (define method-sexp*
       (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.tag)
-	     (let ((stru.sym (gensym "stru"))
-		   (val.sym  (gensym "val")))
-	       `(case-define ,method.id
-		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
-		   (,unsafe-accessor.id ,stru.sym))
-		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
-		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
-	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.tag))
+    	     (let ((stru.sym (gensym "stru"))
+    		   (val.sym  (gensym "val")))
+    	       `(case-define ,method.id
+    		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
+    		   (,unsafe-accessor.id ,stru.sym))
+    		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+    		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
+    	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.tag))
 
 ;;; --------------------------------------------------------------------
 
@@ -157,7 +157,7 @@
       (map (lambda (unsafe-accessor.id field.idx field.tag)
 	     (let ((stru.sym (gensym "stru")))
 	       `(define-syntax ,unsafe-accessor.id
-		  (identifier-syntax (lambda ((brace _ ,field.tag) ,stru.sym)
+		  (identifier-syntax (internal-lambda (unsafe) ((brace _ ,field.tag) ,stru.sym)
 				       ($struct-ref ,stru.sym ,field.idx))))))
 	unsafe-accessor*.id field*.idx field*.tag))
 
@@ -166,7 +166,7 @@
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
-		  (identifier-syntax (lambda ((brace _ <void>) ,stru.sym ,val.sym)
+		  (identifier-syntax (internal-lambda (unsafe) ((brace _ <void>) ,stru.sym ,val.sym)
 				       ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
 

@@ -728,8 +728,9 @@
 	,@(map (lambda (unsafe-foo-x x field-type.id)
 		 (let ((the-index  (%make-field-index-varname x))
 		       (record.sym (gensym "?record")))
-		   `(define-syntax-rule (,unsafe-foo-x ,record.sym)
-		      (unsafe-cast ,field-type.id ($struct-ref ,record.sym ,the-index)))))
+		   `(define-syntax ,unsafe-foo-x
+		      (identifier-syntax (internal-lambda (unsafe) ((brace _ ,field-type.id) ,record.sym)
+					   ($struct-ref ,record.sym ,the-index))))))
 	    unsafe-field-accessor* field-name*.sym field-type*.id)
 
 	;;unsafe record fields mutators
@@ -739,8 +740,9 @@
 		    (cons (let ((the-index  (%make-field-index-varname field-name.sym))
 				(record.sym (gensym "?record"))
 				(value.sym  (gensym "?new-value")))
-			    `(define-syntax-rule (,unsafe-field-mutator ,record.sym ,value.sym)
-			       ($struct-set! ,record.sym ,the-index ,value.sym)))
+			    `(define-syntax ,unsafe-field-mutator
+			       (identifier-syntax (internal-lambda (unsafe) ((brace _ <void>) ,record.sym ,value.sym)
+						    ($struct-set! ,record.sym ,the-index ,value.sym)))))
 			  knil)
 		  knil))
 	    '() unsafe-field-mutator* field-name*.sym)
@@ -798,8 +800,7 @@
 		  (,unsafe-field-accessor ,record.sym))
 		(begin-for-syntax
 		  (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-accessor)
-								(syntax (lambda (,record.sym)
-									  (,unsafe-field-accessor ,record.sym))))))))
+								(syntax ,unsafe-field-accessor))))))
       safe-field-accessor* unsafe-field-accessor* field-type*.id))
 
   (define safe-field-mutator-form*
@@ -813,8 +814,7 @@
 			   (,unsafe-field-mutator ,record.sym ,val.sym))
 			 (begin-for-syntax
 			   (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-mutator)
-									 (syntax (lambda (,record.sym ,val.sym)
-										   (,unsafe-field-mutator ,record.sym ,val.sym)))))))
+									 (syntax ,unsafe-field-mutator)))))
 		    knil)
 	    knil))
       '() safe-field-mutator* unsafe-field-mutator* field-type*.id))
