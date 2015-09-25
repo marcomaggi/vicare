@@ -885,6 +885,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-string-to-number.sps				\
 	tests/test-vicare-strings.sps					\
 	tests/test-vicare-structs-core.sps				\
+	tests/test-vicare-structs-typed.sps				\
 	tests/test-vicare-symbols.sps					\
 	tests/test-vicare-syntactic-extensions.sps			\
 	tests/test-vicare-syntax-utilities.sps				\

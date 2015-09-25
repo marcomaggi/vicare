@@ -73,6 +73,12 @@
 		  keyword-hash
 		  keyword->string)
 	    keywords.)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 25,
+    ;;2015)
+    (prefix (only (ikarus structs)
+		  struct-field-method
+		  struct-std)
+	    structs.)
     (only (vicare system $fx)
 	  $fxadd1))
 
@@ -111,6 +117,9 @@
 	      (else
 	       (%recurse)))
       (%error-scheme-type-has-no-matching-method)))
+
+  (define (%struct-object-call std)
+    (apply (structs.struct-field-method std method-name.sym) subject args))
 
   (define (%record-object-call rtd)
     ;;Here we expect the record-type descriptor to have a symbol as UID: the property
@@ -166,6 +175,8 @@
 	((char?    subject)	(%built-in-scheme-object-call <char>-type-descriptor))
 	((symbol?  subject)	(%built-in-scheme-object-call <symbol>-type-descriptor))
 	((keyword? subject)	(%built-in-scheme-object-call <keyword>-type-descriptor))
+
+	((struct? subject)	(%struct-object-call (structs.struct-std subject)))
 
 	((eq? subject (void))	(%built-in-scheme-object-call <void>-type-descriptor))
 

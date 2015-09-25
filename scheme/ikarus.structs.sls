@@ -40,7 +40,7 @@
     struct-ref				struct-set!
     struct-and-std-ref			struct-and-std-set!
     struct-field-accessor		struct-field-mutator
-    struct-reset
+    struct-field-method			struct-reset
 
     ;; structure inspection
     struct-std
@@ -89,6 +89,7 @@
 		  struct-ref			struct-set!
 		  struct-and-std-ref			struct-and-std-set!
 		  struct-field-accessor		struct-field-mutator
+		  struct-field-method
 		  struct-reset
 
 		  ;; structure inspection
@@ -366,7 +367,8 @@
     ($struct/rtd? obj std)))
 
 (module (struct-field-accessor
-	 struct-field-mutator)
+	 struct-field-mutator
+	 struct-field-method)
 
   (define* (struct-field-accessor {std struct-type-descriptor?} index/name)
     ;;Return an accessor  function for the field at  index INDEX/NAME of
@@ -381,7 +383,7 @@
 
   (define* (struct-field-mutator {std struct-type-descriptor?} index/name)
     ;;Return a  mutator function  for the field  at index  INDEX/NAME of
-    ;;data structures of type RTD.
+    ;;data structures of type STD.
     ;;
     (let ((field-idx (%field-index index/name std __who__)))
       (lambda (x v)
@@ -389,6 +391,21 @@
 	    ((__who__ (identifier-syntax 'anonymous-struct-mutator)))
 	  (assert-struct-of-type x std)
 	  ($struct-set! x field-idx v)))))
+
+  (define* (struct-field-method {std struct-type-descriptor?} index/name)
+    ;;Return a method  function for the field at index  INDEX/NAME of data structures
+    ;;of type STD.
+    ;;
+    (let ((field-idx (%field-index index/name std __who__)))
+      (fluid-let-syntax
+	  ((__who__ (identifier-syntax 'anonymous-struct-field-method)))
+	(case-lambda
+	 ((x)
+	  (assert-struct-of-type x std)
+	  ($struct-ref x field-idx))
+	 ((x v)
+	  (assert-struct-of-type x std)
+	  ($struct-set! x field-idx v))))))
 
   (define (%field-index index/name std who)
     (cond ((fixnum? index/name)

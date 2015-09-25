@@ -1810,6 +1810,7 @@
     (struct-predicate				v $language)
     (struct-field-accessor			v $language)
     (struct-field-mutator			v $language)
+    (struct-field-method			v $language)
     (struct-length				v $language)
     (struct-field-names				v $language)
     (struct-ref					v $language)

@@ -10547,6 +10547,31 @@ name.
 @end example
 @end defun
 
+
+@defun struct-field-method @var{std} @var{index/name}
+Return a ``method'' function for the field at @var{index/name} of
+structs of type defined by the type descriptor @var{std}.
+@var{index/name} can be a field index or a symbol representing a field
+name.  When the method function is applied to @math{1} argument: it
+behaves like a field accessor.  When the method function is applied to
+@math{2} arguments: it behaves like a field mutator.
+
+@example
+(define-struct color
+  (red green blue))
+
+(define stru
+  (make-color 1 2 3))
+
+(define red-method
+  (struct-field-method (struct-type-descriptor color) 'red))
+
+(red-method stru)       @result{} 1
+(red-method stru 11)
+(red-method stru)       @result{} 11
+@end example
+@end defun
+
 @c page
 @node iklib structs types inspect
 @subsubsection Inspecting struct types
