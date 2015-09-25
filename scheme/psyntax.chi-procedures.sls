@@ -400,8 +400,7 @@
   ;;
   ;;If the return value is not of such type: we raise an assertion violation.
   ;;
-  (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	      (compiler.eval-core (expanded->core rhs-expr.core)))))
+  (let ((rv (compiler.eval-core (expanded->core rhs-expr.core))))
     (cond ((procedure? rv)
 	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
 	  ((variable-transformer? rv)
@@ -532,8 +531,7 @@
     ;;facilities.
     ;;
     (import ADD-MARK)
-    (let ((output-form.stx (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			     (transformer (add-anti-mark input-form.stx)))))
+    (let ((output-form.stx (transformer (add-anti-mark input-form.stx))))
       (let assert-no-raw-symbols-in-output-form ((x output-form.stx))
 	(unless (stx? x)
 	  (cond ((pair? x)
@@ -1347,8 +1345,7 @@
 		(init*.out)
 		(else #f))))
       (when visit-code.core
-	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	  (compiler.eval-core (expanded->core visit-code.core))))
+	(compiler.eval-core (expanded->core visit-code.core)))
       ;;Done!  Push on the LEXENV an entry like:
       ;;
       ;;   (?unused-label . (begin-for-syntax . ?core-code))
