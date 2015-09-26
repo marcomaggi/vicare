@@ -321,7 +321,7 @@
 
 (define (expand-top-level-make-compiler expr*)
   ;;Given a list  of SYNTAX-MATCH expression arguments representing a  R6RS top level
-  ;;program,  expand it  and return  a thunk.
+  ;;program, expand it and return a thunk.
   ;;
   ;;If the returned thunk is called: it invokes the needed libraries; it compiles the
   ;;program; it  returns 2  values: a  list of  library descriptors  representing the
@@ -347,7 +347,7 @@
   ;;
   ;;To serialise a compiled program: we serialise the RUN-THUNK closure object.
   ;;
-  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)
+  (receive (invoke-lib* invoke-code visit-env* export-subst global-env option* foreign-library*)
       (expand-top-level-program expr*)
     (lambda ()
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
@@ -356,7 +356,7 @@
       (for-each libman.invoke-library invoke-lib*)
       ;;Store the  expanded code representing  the macros in the  associated location
       ;;gensyms.
-      (initial-visit! visit-code*)
+      (initial-visit! visit-env*)
       (values (map libman.library-descriptor invoke-lib*)
 	      ;;Convert  the  expanded language  code  to  core language  code,  then
 	      ;;compile it and wrap it into a thunk.
@@ -380,13 +380,13 @@
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
-	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
+	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env* export-subst global-env)
 	    (let ((option* (%parse-program-options option*))
 		  (mixed-definitions-and-expressions? #t))
 	      (import CORE-BODY-EXPANDER)
 	      (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
 				  %verbose-messages-thunk))
-	  (values invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)))))
+	  (values invoke-lib* invoke-code visit-env* export-subst global-env option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
     (when (option.typed-language?)
@@ -472,11 +472,11 @@
   #| end of module: EXPAND-TOP-LEVEL-PROGRAM |# )
 
 (define (expand-top-level-program->sexp sexp)
-  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)
+  (receive (invoke-lib* invoke-code visit-env* export-subst global-env option* foreign-library*)
       (expand-top-level-program sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
-      (visit-code*	. ,visit-code*)
+      (visit-code	. ,(build-visit-code-from-visit-env* visit-env* option*))
       (export-subst	. ,export-subst)
       (global-env	. ,global-env)
       (option*		. ,option*)
@@ -485,7 +485,7 @@
 
 ;;;; R6RS library expander
 
-(module (expand-library)
+(case-define expand-library
   ;;EXPAND-LIBRARY is the default library  expander; it expands a symbolic expression
   ;;representing  a LIBRARY  form  to core-form;  it registers  it  with the  library
   ;;manager, in other words it interns it.
@@ -506,98 +506,46 @@
   ;;
   ;;Return a "library" object representing an interned library.
   ;;
-  (case-define expand-library
-    ((library-sexp)
-     (expand-library library-sexp #f       (lambda (libname) (void))))
-    ((library-sexp filename)
-     (expand-library library-sexp filename (lambda (libname) (void))))
-    ((library-sexp filename verify-libname)
-     (config.initialise-expander)
-     (receive (libname
-	       import-lib* invoke-lib* visit-lib*
-	       invoke-code visit-code*
-	       export-subst global-env
-	       guard-code guard-lib*
-	       option* foreign-library*)
-	 (parametrise ((libman.source-code-location (or filename (libman.source-code-location))))
-	   (let ()
-	     (import CORE-LIBRARY-EXPANDER)
-	     (core-library-expander library-sexp verify-libname)))
-       (let ((uid		(gensym)) ;library unique-symbol identifier
-	     ;;Thunk to eval to visit the library.
-	     (visit-proc	(lambda ()
-				  ;;This initial visit is performed whenever a source
-				  ;;library is visited.
-				  (initial-visit! visit-code*)))
-	     ;;Thunk to eval to invoke the library.
-	     (invoke-proc	(lambda ()
-				  (compiler.eval-core (expanded->core invoke-code))))
-	     ;;This visit code is compiled and  stored in FASL files; the resulting
-	     ;;code objects are  the ones evaluated whenever a  compiled library is
-	     ;;loaded and visited.
-	     (visit-code	(%build-visit-code visit-code* option*))
-	     (visible?		#t))
-	 ;;This call returns a "library" object.
-	 (libman.intern-library
-	  (libman.make-library uid libname
-			       import-lib* visit-lib* invoke-lib*
-			       export-subst global-env
-			       visit-proc invoke-proc
-			       visit-code invoke-code
-			       guard-code guard-lib*
-			       visible? filename
-			       option* foreign-library*))))))
-
-  (define (%build-visit-code visit-code* option*)
-    ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
-    ;;definitions in the  core language: the visit code; code  evaluated whenever the
-    ;;library  is visited;  each library  is  visited only  once, the  first time  an
-    ;;exported binding is used.
-    ;;
-    ;;VISIT-CODE* is a list of sublists.  The entries with format:
-    ;;
-    ;;   (?loc . (?obj . ?core-code))
-    ;;
-    ;;represent  macros  defined by  DEFINE-SYNTAX;  here  we  build code  to  assign
-    ;;?CORE-CODE to ?LOC.  The entries with format:
-    ;;
-    ;;   (#f   . ?core-code)
-    ;;
-    ;;are  the result  of  expanding  BEGIN-FOR-SYNTAX macro  uses;  here we  include
-    ;;?CORE-CODE as is in the output.
-    ;;
-    ;;The returned sexp looks like this (one SET! for every macro):
-    ;;
-    ;;  (begin
-    ;;    (set! G3
-    ;;      (annotated-case-lambda
-    ;;	      (#<syntax expr=lambda mark*=(top)>
-    ;;	       (#<syntax expr=stx mark*=(top)>)
-    ;;         #<syntax expr=3 mark*=(top)>)
-    ;;	      ((stx) '3)))
-    ;;    (set! G5
-    ;;      (annotated-call
-    ;;	      (make-expand-time-value (+ 4 5))
-    ;;	      (primitive make-expand-time-value)
-    ;;	      (annotated-call (+ 4 5)
-    ;;          (primitive +) '4 '5))))
-    ;;
-    (if (null? visit-code*)
-	(build-void)
-      (build-with-compilation-options option*
-        (build-sequence no-source
-	  (map (lambda (entry)
-		 (cond ((car entry)
-			=> (lambda (loc)
-			     (let ((rhs.core (cddr entry)))
-			       (build-global-assignment no-source
-				 loc rhs.core))))
-		       (else
-			(let ((expr.core (cdr entry)))
-			  expr.core))))
-	    visit-code*)))))
-
-  #| end of module: EXPAND-LIBRARY |# )
+  ((library-sexp)
+   (expand-library library-sexp #f       (lambda (libname) (void))))
+  ((library-sexp filename)
+   (expand-library library-sexp filename (lambda (libname) (void))))
+  ((library-sexp filename verify-libname)
+   (config.initialise-expander)
+   (receive (libname
+	     import-lib* invoke-lib* visit-lib*
+	     invoke-code visit-env*
+	     export-subst global-env
+	     guard-code guard-lib*
+	     option* foreign-library*)
+       (parametrise ((libman.source-code-location (or filename (libman.source-code-location))))
+	 (let ()
+	   (import CORE-LIBRARY-EXPANDER)
+	   (core-library-expander library-sexp verify-libname)))
+     (let ((uid		(gensym)) ;library unique-symbol identifier
+	   ;;Thunk to eval to visit the library.
+	   (visit-proc	(lambda ()
+			  ;;This initial visit is performed whenever a source library
+			  ;;is visited.
+			  (initial-visit! visit-env*)))
+	   ;;Thunk to eval to invoke the library.
+	   (invoke-proc	(lambda ()
+			  (compiler.eval-core (expanded->core invoke-code))))
+	   ;;This visit code is compiled and stored in FASL files; the resulting code
+	   ;;objects are the ones evaluated whenever a compiled library is loaded and
+	   ;;visited.
+	   (visit-code	(build-visit-code-from-visit-env* visit-env* option*))
+	   (visible?		#t))
+       ;;This call returns a "library" object.
+       (libman.intern-library
+	(libman.make-library uid libname
+			     import-lib* visit-lib* invoke-lib*
+			     export-subst global-env
+			     visit-proc invoke-proc
+			     visit-code invoke-code
+			     guard-code guard-lib*
+			     visible? filename
+			     option* foreign-library*))))))
 
 (define (expand-library->sexp libsexp)
   (let ((lib (expand-library libsexp)))
@@ -643,7 +591,7 @@
 	     (foreign-library*  (%parse-foreign-library* foreign-library*))
 	     (stale-clt         (%make-stale-collector)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
-	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env* export-subst global-env)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
 		(import CORE-BODY-EXPANDER)
@@ -654,7 +602,7 @@
 	      (stale-clt)
 	    (values libname.sexp
 		    import-lib* invoke-lib* visit-lib*
-		    invoke-code visit-code* export-subst
+		    invoke-code visit-env* export-subst
 		    global-env guard-code guard-lib*
 		    option* foreign-library*))))))
 
@@ -1342,13 +1290,13 @@
 
 ;;;; R6RS programs and libraries helpers
 
-(define (initial-visit! macro*)
+(define (initial-visit! visit-env*)
   ;;Whenever a source  library is loaded and expanded: all  its macro definitions and
   ;;BEGIN-FOR-SYNTAX macro uses are expanded and evaluated.   All it is left to do to
   ;;visit such  library is to  store in  the loc gensyms  of macros the  compiled RHS
   ;;code; this is done by this function.
   ;;
-  ;;MACRO* is a list of sublists.  The entries with format:
+  ;;VISIT-ENV* is a list of sublists.  The entries with format:
   ;;
   ;;   (?loc . (?obj . ?core-code))
   ;;
@@ -1364,7 +1312,56 @@
 		    (proc (cadr x)))
 		(when loc
 		  (set-symbol-value! loc proc))))
-    macro*))
+    visit-env*))
+
+(define (build-visit-code-from-visit-env* visit-env* option*)
+  ;;Return  a  sexp  representing  code   that  initialises  the  bindings  of  macro
+  ;;definitions in  the core language:  the visit  code; code evaluated  whenever the
+  ;;library is visited; each library is visited only once, the first time an exported
+  ;;binding is used.
+  ;;
+  ;;VISIT-ENV* is a list of sublists.  The entries with format:
+  ;;
+  ;;   (?loc . (?obj . ?core-code))
+  ;;
+  ;;represent  macros  defined  by  DEFINE-SYNTAX;  here  we  build  code  to  assign
+  ;;?CORE-CODE to ?LOC.  The entries with format:
+  ;;
+  ;;   (#f   . ?core-code)
+  ;;
+  ;;are  the  result  of  expanding  BEGIN-FOR-SYNTAX macro  uses;  here  we  include
+  ;;?CORE-CODE as is in the output.
+  ;;
+  ;;The returned sexp looks like this (one SET! for every macro):
+  ;;
+  ;;  (begin
+  ;;    (set! G3
+  ;;      (annotated-case-lambda
+  ;;	      (#<syntax expr=lambda mark*=(top)>
+  ;;	       (#<syntax expr=stx mark*=(top)>)
+  ;;         #<syntax expr=3 mark*=(top)>)
+  ;;	      ((stx) '3)))
+  ;;    (set! G5
+  ;;      (annotated-call
+  ;;	      (make-expand-time-value (+ 4 5))
+  ;;	      (primitive make-expand-time-value)
+  ;;	      (annotated-call (+ 4 5)
+  ;;          (primitive +) '4 '5))))
+  ;;
+  (if (null? visit-env*)
+      (build-void)
+    (build-with-compilation-options option*
+      (build-sequence no-source
+	(map (lambda (entry)
+	       (cond ((car entry)
+		      => (lambda (loc)
+			   (let ((rhs.core (cddr entry)))
+			     (build-global-assignment no-source
+			       loc rhs.core))))
+		     (else
+		      (let ((expr.core (cdr entry)))
+			expr.core))))
+	  visit-env*)))))
 
 
 ;;;; done

@@ -100,7 +100,7 @@ symbols as keys:
 
 @example
 invoke-lib* invoke-code
-visit-code*
+visit-code
 export-subst global-env
 option*
 @end example
@@ -144,7 +144,7 @@ yields the @code{invoke-code}:
 @end example
 
 @noindent
-the @code{visit-code*}:
+the @code{visit-code}:
 
 @example
 ((loc.lab.mac #<procedure> . (annotated-case-lambda
