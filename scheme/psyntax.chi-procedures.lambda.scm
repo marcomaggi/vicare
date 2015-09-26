@@ -73,7 +73,7 @@
       (make-psi input-form.stx
 		(build-lambda (syntax-annotation who.id)
 		  formals.core
-		  (psi-core-expr body.psi))
+		  (psi.core-expr body.psi))
 		(cond ((qualified-rhs.type-id qrhs)
 		       => make-retvals-signature/single-value)
 		      (else
@@ -101,7 +101,7 @@
       (make-psi input-form.stx
 		(build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
-		  (psi-core-expr body.psi))
+		  (psi.core-expr body.psi))
 		(make-retvals-signature/single-value
 		 (fabricate-closure-type-identifier who.sym lambda-signature))))))
 
@@ -140,7 +140,7 @@
       (make-psi input-form.stx
 		(build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
-		  (map psi-core-expr body**.psi))
+		  (map psi.core-expr body**.psi))
 		(make-retvals-signature/single-value
 		 (fabricate-closure-type-identifier who.sym signature))))))
 
@@ -379,7 +379,7 @@
     ;;Wed Sep 23, 2015)
     ;;
     (if (retvals-signature.fully-unspecified? (callable-signature.retvals signature))
-	(make-lambda-signature (psi-retvals-signature body.psi)
+	(make-lambda-signature (psi.retvals-signature body.psi)
 			       (lambda-signature.formals signature))
       signature))
 

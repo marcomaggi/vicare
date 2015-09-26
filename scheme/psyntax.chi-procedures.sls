@@ -21,10 +21,7 @@
 
 (library (psyntax.chi-procedures)
   (export
-    make-psi
-    psi?			psi-stx
-    psi-core-expr		psi-retvals-signature
-    psi-application-retvals-signature
+    psi.core-expr
     chi-interaction-expr
     chi-expr			chi-expr*
     chi-body*			chi-internal-body
@@ -127,21 +124,22 @@
 
 ;;;; core expressions struct
 
-(module (psi
+(module (<psi>
 	 make-psi psi?
-	 psi-stx
-	 psi-core-expr
-	 psi-retvals-signature
+	 psi.input-form
+	 psi.core-expr
+	 psi.retvals-signature
 	 psi-application-retvals-signature)
 
-  (define-record (psi %make-psi psi?)
-    (stx
+  (define-record-type (<psi> make-psi psi?)
+    (fields
+     (immutable input-form		psi.input-form)
 		;The syntax object that originated this struct instance.  In the case
 		;of internal  body: it is a  list of syntax objects,  but this should
 		;not be a problem.  It is kept here for debugging purposes: it can be
 		;used  as  "form"  or  "subform"  argument  for  "&syntax"  condition
 		;objects.
-     core-expr
+     (immutable core-expr		psi.core-expr)
 		;Either:
 		;
 		;* A symbolic expression in the core language representing the result
@@ -150,7 +148,7 @@
 		;* An  instance of  "splice-first-envelope".  This happens  only when
 		;   this  PSI   struct  is  the  return  value  of   the  core  macro
 		;  SPLICE-FIRST-EXPAND.
-     retvals-signature
+     (immutable retvals-signature	psi.retvals-signature)
 		;An instance of "retvals-signature".
 		;
 		;When  this  PSI is  a  callable  object:  we  expect this  field  to
@@ -160,22 +158,30 @@
 		;
 		;where ?TAG  is "<procedure>" or a  subtag of it; in  the latter case
 		;?TAG has an associated callable spec object in its property list.
-     ))
+     #| end of FIELDS |# )
 
-  (case-define* make-psi
-    ((stx core-expr)
-     (%make-psi stx core-expr (make-retvals-signature/fully-unspecified)))
-    ((stx core-expr {retvals-signature retvals-signature?})
-     (%make-psi stx core-expr retvals-signature)))
+    (protocol
+      (lambda (make-record)
+	(case-define* make-psi
+	  ((stx core-expr)
+	   (make-record stx core-expr (make-retvals-signature/fully-unspecified)))
+	  ((stx core-expr {retvals-signature retvals-signature?})
+	   (make-record stx core-expr retvals-signature)))
+	make-psi))
+
+    #| end of DEFINE-RECORD-TYPE |# )
 
   (define* ({psi-application-retvals-signature retvals-signature?} input-form.stx lexenv.run {rator.psi psi?})
-    ;;RATOR.PSI is a PSI representing the first form in a callable application:
+    ;;We  assume  RATOR.PSI is  a  PSI  representing the  first  form  in a  callable
+    ;;application:
     ;;
     ;;   (?rator ?rand ...)
     ;;
-    ;;we need to establish the retvals signature of the application and return it.
+    ;;we need  to establish the retvals  signature of the application  and return it.
+    ;;We can return a meaningful value if RATOR.PSI has a type which is a sub-type of
+    ;;"<procedure>".
     ;;
-    (syntax-match (retvals-signature.tags (psi-retvals-signature rator.psi)) ()
+    (syntax-match (retvals-signature.tags (psi.retvals-signature rator.psi)) ()
       ((?type-id)
        (let* ((label (id->label/or-error #f input-form.stx ?type-id))
 	      (descr (label->syntactic-binding-descriptor label lexenv.run))
@@ -376,7 +382,7 @@
 	    (invoke-library lib)
 	    (register-visited-library lib)))
       (rtc))
-    (psi-core-expr rhs-expr.psi)))
+    (psi.core-expr rhs-expr.psi)))
 
 (define* (eval-macro-transformer rhs-expr.core lexenv.run)
   ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
@@ -722,8 +728,8 @@
 	      (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
 		(make-psi expr.stx
 			  (build-sequence no-source
-			    (map psi-core-expr body*.psi))
-			  (psi-retvals-signature (proper-list->last-item body*.psi)))))
+			    (map psi.core-expr body*.psi))
+			  (psi.retvals-signature (proper-list->last-item body*.psi)))))
 	     ))
 
 	  ((stale-when)
@@ -738,8 +744,8 @@
 		(let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
 		  (make-psi expr.stx
 			    (build-sequence no-source
-			      (map psi-core-expr body*.psi))
-			    (psi-retvals-signature (proper-list->last-item body*.psi))))))
+			      (map psi.core-expr body*.psi))
+			    (psi.retvals-signature (proper-list->last-item body*.psi))))))
 	     ))
 
 	  ((let-syntax letrec-syntax)
@@ -766,8 +772,8 @@
 					    (append (map cons xlab* xb*) lexenv.expand))))
 		  (make-psi expr.stx
 			    (build-sequence no-source
-			      (map psi-core-expr body*.psi))
-			    (psi-retvals-signature (proper-list->last-item body*.psi))))))
+			      (map psi.core-expr body*.psi))
+			    (psi.retvals-signature (proper-list->last-item body*.psi))))))
 	     ))
 
 	  ((displaced-lexical)
@@ -812,7 +818,7 @@
     ;;and return the result.
     ;;
     (import SPLICE-FIRST-ENVELOPE)
-    (let ((expr (psi-core-expr expr.psi)))
+    (let ((expr (psi.core-expr expr.psi)))
       (if (splice-first-envelope? expr)
 	  (if (expanding-application-first-subform?)
 	      expr.psi
@@ -911,20 +917,20 @@
 	     (let ((psi (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 			  (chi-defun qrhs lexenv.run lexenv.expand))))
 	       (%recurse-and-cons (build-global-assignment no-source
-				    lhs (psi-core-expr psi)))))
+				    lhs (psi.core-expr psi)))))
 	    ((typed-defvar)
 	     (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (build-global-assignment no-source
-				    lhs (psi-core-expr psi)))))
+				    lhs (psi.core-expr psi)))))
 	    ((untyped-defvar)
 	     (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (build-global-assignment no-source
-				    lhs (psi-core-expr psi)))))
+				    lhs (psi.core-expr psi)))))
 	    ((top-expr)
 	     (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (psi-core-expr psi))))))
+	       (%recurse-and-cons (psi.core-expr psi))))))
       (map (lambda (init)
-	     (psi-core-expr (chi-expr init lexenv.run lexenv.expand)))
+	     (psi.core-expr (chi-expr init lexenv.run lexenv.expand)))
 	init*)))
 
   #| end of module: CHI-INTERACTION-EXPR |# )
@@ -976,7 +982,7 @@
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
 		       (lexical-var-binding-descriptor-value.lex-name bind-val)
-		       (psi-core-expr rhs.psi))
+		       (psi.core-expr rhs.psi))
 		     (make-retvals-signature/single-void))))
 
 	((lexical-typed)
@@ -991,7 +997,7 @@
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
 		       lhs.lex
-		       (psi-core-expr rhs.psi))
+		       (psi.core-expr rhs.psi))
 		     (make-retvals-signature/single-void))))
 
 	((core-prim)
@@ -1202,7 +1208,7 @@
 	    ;;All right,  we have  expanded the  RHS expression.   Now let's  do some
 	    ;;validation  on the  type  of  the expression  and,  if possible,  let's
 	    ;;propagate the type of the expression to the defined variable.
-	    (let ((expr.sig (psi-retvals-signature expr.psi)))
+	    (let ((expr.sig (psi.retvals-signature expr.psi)))
 	      (syntax-match (retvals-signature.tags expr.sig) ()
 		((?tag)
 		 (top-tag-id? ?tag)
@@ -1243,7 +1249,7 @@
        ((top-expr)
 	(let* ((expr.stx  (qualified-rhs.stx qrhs))
 	       (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
-	       (expr.core (psi-core-expr expr.psi)))
+	       (expr.core (psi.core-expr expr.psi)))
 	  (make-psi expr.stx
 		    (build-sequence no-source
 		      (list expr.core (build-void)))
@@ -1414,8 +1420,8 @@
 		  (register-visited-library lib)))
 	    (rtc))
 	  (values lhs*.lex
-		  (map psi-core-expr init*.psi)
-		  (map psi-core-expr rhs*.psi)
+		  (map psi.core-expr init*.psi)
+		  (map psi.core-expr rhs*.psi)
 		  lexenv.expand^)))))
 
   #| end of module: BEGIN-FOR-SYNTAX |# )
@@ -1506,8 +1512,8 @@
   ;;that the QRHS bindings are typed when the INITs are expanded.
   (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
 	 (init*.psi      (chi-expr* init*.stx lexenv.run^ lexenv.expand^))
-	 (rhs*.core      (map psi-core-expr rhs*.psi))
-	 (init*.core     (map psi-core-expr init*.psi))
+	 (rhs*.core      (map psi.core-expr rhs*.psi))
+	 (init*.core     (map psi.core-expr init*.psi))
 	 (last-init.psi  (proper-list->last-item init*.psi)))
     (make-psi (or input-form.stx body-form*.stx)
 	      (build-letrec* (syntax-annotation input-form.stx)
@@ -1515,7 +1521,7 @@
 		rhs*.core
 		(build-sequence no-source
 		  init*.core))
-	      (psi-retvals-signature last-init.psi))))
+	      (psi.retvals-signature last-init.psi))))
 
 
 ;;;; chi procedures: module processing
@@ -1678,7 +1684,7 @@
 			   (chi-expr guard-expr.stx lexenv.expand lexenv.expand))))
     (cond ((stale-when-collector)
 	   => (lambda (c)
-		(c (psi-core-expr guard-expr.psi) (stc)))))))
+		(c (psi.core-expr guard-expr.psi) (stc)))))))
 
 
 ;;;; chi procedures: external modules

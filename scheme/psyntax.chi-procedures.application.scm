@@ -180,7 +180,7 @@
   ;;
   (let* ((rator.psi  (while-expanding-application-first-subform
 		      (chi-expr rator.stx lexenv.run lexenv.expand)))
-	 (rator.expr (psi-core-expr rator.psi)))
+	 (rator.expr (psi.core-expr rator.psi)))
     ;;Here  RATOR.EXPR is  either an  instance of  "splice-first-envelope" or  a core
     ;;language sexp.
     (import SPLICE-FIRST-ENVELOPE)
@@ -211,8 +211,8 @@
   ;;signature, but the retvals signature equals the operands' signature.
   ;;
   (let* ((rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	 (rand*.core (map psi-core-expr rand*.psi))
-	 (rand*.sig  (map psi-retvals-signature rand*.psi))
+	 (rand*.core (map psi.core-expr rand*.psi))
+	 (rand*.sig  (map psi.retvals-signature rand*.psi))
 	 (rator.core (build-primref no-source 'values)))
     (define application.sig
       (let loop ((rand*.sig rand*.sig)
@@ -267,7 +267,7 @@
     ;;   #'(?rand ...)
     ;;
     (let* ((rator.psi (chi-expr rator.stx lexenv.run lexenv.expand))
-	   (rator.sig (psi-retvals-signature rator.psi)))
+	   (rator.sig (psi.retvals-signature rator.psi)))
       (define (%error-wrong-rator-sig)
 	(expand-time-retvals-signature-violation 'apply input-form.stx rator.stx
 						 (make-retvals-signature/single-procedure)
@@ -277,9 +277,9 @@
 	 (cond ((type-identifier-is-procedure-sub-type? ?rator.tag lexenv.run)
 		;;Procedure application: good.
 		(let* ((apply.core (build-primref no-source 'apply))
-		       (rator.core (psi-core-expr rator.psi))
+		       (rator.core (psi.core-expr rator.psi))
 		       (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-		       (rand*.core (map psi-core-expr rand*.psi)))
+		       (rand*.core (map psi.core-expr rand*.psi)))
 		  (make-psi input-form.stx
 			    (build-application (syntax-annotation input-form.stx)
 			      apply.core
@@ -309,9 +309,9 @@
   (define (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
 					   rator.psi rand*.stx)
     (let* ((apply.core (build-primref no-source 'apply))
-	   (rator.core (psi-core-expr rator.psi))
+	   (rator.core (psi.core-expr rator.psi))
 	   (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	   (rand*.core (map psi-core-expr rand*.psi)))
+	   (rand*.core (map psi.core-expr rand*.psi)))
       (make-psi input-form.stx
 		(build-application (syntax-annotation input-form.stx)
 		  apply.core
@@ -340,7 +340,7 @@
     ;;
     ;;We call this function when the operator has already been expanded.
     ;;
-    (define rator.sig (psi-retvals-signature rator.psi))
+    (define rator.sig (psi.retvals-signature rator.psi))
     (syntax-match (retvals-signature.tags rator.sig) ()
       (?tag
        (list-tag-id? ?tag)
@@ -380,9 +380,9 @@
     ;;struct  will have  "<list>" as  retvals signature,  which means  any number  of
     ;;values of any type.
     ;;
-    (let* ((rator.core (psi-core-expr rator.psi))
+    (let* ((rator.core (psi.core-expr rator.psi))
 	   (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	   (rand*.core (map psi-core-expr rand*.psi)))
+	   (rand*.core (map psi.core-expr rand*.psi)))
       (make-psi input-form.stx
 		(build-application (syntax-annotation input-form.stx)
 		  rator.core
@@ -447,7 +447,7 @@
     ;;
     (define rator.psi (while-not-expanding-application-first-subform
 		       (chi-expr rator.stx lexenv.run lexenv.expand)))
-    (define rator.sig (psi-retvals-signature rator.psi))
+    (define rator.sig (psi.retvals-signature rator.psi))
     (define (%common-rator-application)
       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
 				       rator.psi first-rand.psi other-rand*.stx))
@@ -493,10 +493,10 @@
     ;;struct  will have  "<list>" as  retvals signature,  which means  any number  of
     ;;values of any type.
     ;;
-    (let* ((rator.core       (psi-core-expr rator.psi))
-	   (first-rand.core  (psi-core-expr first-rand.psi))
+    (let* ((rator.core       (psi.core-expr rator.psi))
+	   (first-rand.core  (psi.core-expr first-rand.psi))
 	   (other-rand*.psi  (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
-	   (other-rand*.core (map psi-core-expr other-rand*.psi)))
+	   (other-rand*.core (map psi.core-expr other-rand*.psi)))
       (make-psi input-form.stx
 		(build-application (syntax-annotation input-form.stx)
 		  rator.core
@@ -572,7 +572,7 @@
 							   rator.lambda-signature rator.psi rand*.psi)
 	   ;;The signatures  do match: we  are applying a  closure object rator  to a
 	   ;;tuple of rands that have the right type.
-	   (let ((rator.stx (psi-stx rator.psi)))
+	   (let ((rator.stx (psi.input-form rator.psi)))
 	     (cond ((identifier? rator.stx)
 		    ;;Here  we do  not  want  to raise  an  error  if the  identifier
 		    ;;RATOR.STX is not a typed lexical variable.
@@ -601,8 +601,8 @@
     (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
 
   (define (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi)
-    (let* ((rator.core (psi-core-expr rator.psi))
-	   (rand*.core (map psi-core-expr rand*.psi)))
+    (let* ((rator.core (psi.core-expr rator.psi))
+	   (rand*.core (map psi.core-expr rand*.psi)))
       (make-psi input-form.stx
 		(build-application (syntax-annotation input-form.stx)
 		  rator.core
@@ -717,7 +717,7 @@
 						 (length proper)))))
 	       (%error-more-arguments-than-operands 'chi-application input-form.stx (+ count number-of-mandatory-args) count))
 	   (let* ((rand.psi               (car rand*.psi))
-		  (rand.retvals-signature (psi-retvals-signature rand.psi))
+		  (rand.retvals-signature (psi.retvals-signature rand.psi))
 		  (rand.signature-tags    (retvals-signature.tags rand.retvals-signature)))
 	     (syntax-match rand.signature-tags ()
 	       ((?rand.tag)
@@ -737,7 +737,7 @@
 		       ;;Argument and operand do *not* match at expand-time.
 		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
 											   input-form.stx
-											   (psi-stx rand.psi)
+											   (psi.input-form rand.psi)
 											   count ?arg.tag
 											   rand.retvals-signature))))
 	       (?rand.tag
@@ -755,14 +755,14 @@
 		  ;;Maggi; Fri Apr 11, 2014)
 		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
 										      input-form.stx
-										      (psi-stx rand.psi)
+										      (psi.input-form rand.psi)
 										      count ?arg.tag
 										      rand.retvals-signature)))
 	       (_
 		;;The operand returns multiple values for sure.
 		(%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
 										    input-form.stx
-										    (psi-stx rand.psi)
+										    (psi.input-form rand.psi)
 										    count ?arg.tag
 										    rand.retvals-signature))
 	       ))))

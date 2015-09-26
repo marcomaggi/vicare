@@ -293,7 +293,7 @@
 				  (lexenv.expand  '()))
 			      (chi-expr expr.stx lexenv.run lexenv.expand))))))
 	       (seal-rib! rib)
-	       (values (psi-core-expr psi) (rtc))))))
+	       (values (psi.core-expr psi) (rtc))))))
 
 	((interaction-env? env)
 	 (let ((rib         (interaction-env-rib    env))
@@ -910,11 +910,11 @@
 		      (let ((invoke-code (build-with-compilation-options option*
 					   (build-library-letrec* no-source
 					     mixed-definitions-and-expressions?
-					     lex* loc* (map psi-core-expr rhs*.psi)
+					     lex* loc* (map psi.core-expr rhs*.psi)
 					     (if (null? init*.psi)
 						 (build-void)
 					       (build-sequence no-source
-						 (map psi-core-expr init*.psi)))))))
+						 (map psi.core-expr init*.psi)))))))
 			(values (itc) (rtc) (vtc)
 				invoke-code visit-env* export-subst global-env))))))))))))
 

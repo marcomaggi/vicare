@@ -73,8 +73,50 @@
      (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
        (cond ((object-type-spec.constructor-sexp ots)
 	      => (lambda (constructor.sexp)
-		   (chi-expr (cons (bless constructor.sexp) ?arg*)
-			     lexenv.run lexenv.expand)))
+		   (define output-form.stx
+		     (cons (bless constructor.sexp) ?arg*))
+		   (define output-form.psi
+		     (chi-expr output-form.stx lexenv.run lexenv.expand))
+		   (define output-form.sig
+		     (retvals-signature.tags (psi.retvals-signature output-form.psi)))
+		   ;;The NEW syntax is special because  we know that it has to return
+		   ;;a single value of type ?TYPE-ID.  So let's check it.
+		   (syntax-match output-form.sig ()
+		     ((?retvals-type-id)
+		      ;;We have determined at expand-time that the expression returns
+		      ;;a single value.  Good.
+		      (if (free-identifier=? ?type-id ?retvals-type-id)
+			  output-form.psi
+			(raise
+			 (condition
+			  (make-who-condition __who__)
+			  (make-message-condition
+			   "the expression used as constructor operand returns a type different from the requested one")
+			  (make-syntax-violation input-form.stx output-form.stx)
+			  (make-irritants-condition (list ?type-id ?retvals-type-id))))))
+		     (?tag
+		      (list-tag-id? ?tag)
+		      ;;Damn  it!!!   The  expression's   return  values  have  fully
+		      ;;UNspecified signature.
+		      ;;
+		      ;;We could patch it as follows:
+		      ;;
+                      ;;   (make-psi (psi.input-form input-form.psi)
+                      ;;             (psi.core-expr  input-form.psi)
+                      ;;             (make-retvals-signature/single-value ?type-id)))
+		      ;;
+		      ;;but it would be unsafe.  So let's just hope for the best.
+		      output-form.psi)
+		     (_
+		      ;;The horror!!!   We have  established at expand-time  that the
+		      ;;expression returns multiple values; type violation.
+		      (raise
+		       (condition
+			(make-who-condition __who__)
+			(make-message-condition "the expression used as constructor operand returns multiple values")
+			(make-syntax-violation input-form.stx output-form.stx)
+			(make-irritants-condition (list output-form.sig)))))
+		     )))
 	     (else
 	      (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
     ))
@@ -92,7 +134,7 @@
     (syntax-match input-form.stx ()
       ((_ ?expr)
        (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig (psi-retvals-signature expr.psi)))
+	      (expr.sig (psi.retvals-signature expr.psi)))
 	 (syntax-match (retvals-signature.tags expr.sig) ()
 	   ((?type-id)
 	    ;;We have determined at expand-time  that the expression returns a single
@@ -159,7 +201,7 @@
       ((_ ?expr ?pred-type-id)
        (identifier? ?pred-type-id)
        (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig  (psi-retvals-signature expr.psi)))
+	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%run-time-predicate)
 	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi %synner))
 	 (syntax-match (retvals-signature.tags expr.sig) ()
@@ -210,7 +252,7 @@
 
   (define (%make-boolean-psi input-form.stx bool expr.stx lexenv.run lexenv.expand)
     (let* ((expr.psi   (chi-expr expr.stx lexenv.run lexenv.expand))
-	   (expr.core  (psi-core-expr expr.psi)))
+	   (expr.core  (psi.core-expr expr.psi)))
       (make-psi input-form.stx
 		(build-sequence no-source
 		  (list expr.core
@@ -231,8 +273,8 @@
     ((_ ?expr ?pred-type-id)
      (identifier? ?pred-type-id)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.sig  (psi-retvals-signature expr.psi))
-	    (expr.core (psi-core-expr expr.psi)))
+	    (expr.sig  (psi.retvals-signature expr.psi))
+	    (expr.core (psi.core-expr expr.psi)))
        (with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
 	 (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred-ots)
 				(%synner "type specification has no predicate for run-time use" ?pred-type-id)))
@@ -277,7 +319,7 @@
        (and (not (underscore-id? ?expr))
 	    (identifier? ?field-name))
        (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig  (psi-retvals-signature expr.psi)))
+	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
 	 (syntax-match (retvals-signature.tags expr.sig) ()
@@ -377,7 +419,7 @@
        (and (not (underscore-id? ?expr))
 	    (identifier? ?field-name))
        (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig  (psi-retvals-signature expr.psi)))
+	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
 	 (syntax-match (retvals-signature.tags expr.sig) ()
@@ -458,7 +500,7 @@
        (identifier? ?method-name)
        (let* ((method-name.sym	(identifier->symbol ?method-name))
 	      (subject-expr.psi	(chi-expr ?subject-expr lexenv.run lexenv.expand))
-	      (subject-expr.sig	(psi-retvals-signature subject-expr.psi)))
+	      (subject-expr.sig	(psi.retvals-signature subject-expr.psi)))
 	 (define-syntax-rule (%late-binding)
 	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
 						method-name.sym subject-expr.psi ?arg*))
@@ -540,9 +582,9 @@
     ;;matching the  given name.  In other  words: we default to  "late binding" (also
     ;;known as "run-time dispatching" at some level of abstract reasoning).
     ;;
-    (let* ((expr.core   (psi-core-expr subject-expr.psi))
+    (let* ((expr.core   (psi.core-expr subject-expr.psi))
 	   (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
-	   (arg*.core   (map psi-core-expr arg*.psi)))
+	   (arg*.core   (map psi.core-expr arg*.psi)))
       (make-psi input-form.stx
 		(build-application input-form.stx
 		  (build-primref no-source 'method-call-late-binding)
@@ -565,8 +607,8 @@
     ((_ ?target-type ?expr)
      (let* ((target-descr (id->object-type-binding-descriptor __who__ input-form.stx ?target-type lexenv.run))
 	    (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core    (psi-core-expr expr.psi))
-	    (expr.sig     (psi-retvals-signature expr.psi)))
+	    (expr.core    (psi.core-expr expr.psi))
+	    (expr.sig     (psi.retvals-signature expr.psi)))
        (define (%do-unsafe-cast)
 	 (make-psi input-form.stx expr.core (make-retvals-signature/single-value ?target-type)))
        (syntax-match (retvals-signature.tags expr.sig) ()
@@ -672,7 +714,7 @@
        (syntax-object.retvals-signature? ?retvals-signature)
        (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
 	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig     (psi-retvals-signature expr.psi)))
+	      (expr.sig     (psi.retvals-signature expr.psi)))
 	 (cond ((list-tag-id? ?retvals-signature)
 		;;If we are here the input form is:
 		;;
@@ -737,7 +779,7 @@
     ;;return a single value, of any type.
     ;;
     (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (expr.core    (psi-core-expr expr.psi))
+	   (expr.core    (psi.core-expr expr.psi))
 	   (checker.sexp (let ((arg.sym  (gensym "arg"))
 			       (rest.sym (gensym "rest")))
 			   `(lambda (,arg.sym . ,rest.sym)
@@ -745,7 +787,7 @@
 				  ,arg.sym
 				(assertion-violation #f "expected single return value" (cons ,arg.sym ,rest.sym))))))
 	   (checker.psi  (chi-expr (bless checker.sexp) lexenv.run lexenv.expand))
-	   (checker.core (psi-core-expr checker.psi)))
+	   (checker.core (psi.core-expr checker.psi)))
       (make-psi input-form.stx
 		(build-application no-source
 		  cwv.core
@@ -757,8 +799,8 @@
 
   (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
 				 {asserted.sig retvals-signature?} {expr.psi psi?})
-    (define expr.core (psi-core-expr         expr.psi))
-    (define expr.sig  (psi-retvals-signature expr.psi))
+    (define expr.core (psi.core-expr         expr.psi))
+    (define expr.sig  (psi.retvals-signature expr.psi))
     ;;Here we know that ASSERTED.SIG is a  valid retvals signature, so we can be less
     ;;strict in the patterns.
     (syntax-match (retvals-signature.tags asserted.sig) ()
@@ -812,9 +854,9 @@
       ))
 
   (define (%just-evaluate-the-expression expr.psi)
-    (make-psi (psi-stx expr.psi)
+    (make-psi (psi.input-form expr.psi)
 	      (build-sequence no-source
-		(list (psi-core-expr expr.psi)
+		(list (psi.core-expr expr.psi)
 		      (build-void)))
 	      ;;We know that we are returning a single void argument.
 	      (make-retvals-signature/single-top)))
@@ -830,7 +872,7 @@
     ;;       (void)))
     ;;
     (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (checker.core (psi-core-expr checker.psi)))
+	   (checker.core (psi.core-expr checker.psi)))
       (make-psi input-form.stx
 		(build-application no-source
 		  cwv.core
@@ -855,7 +897,7 @@
        (syntax-object.retvals-signature? ?retvals-signature)
        (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
 	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig     (psi-retvals-signature expr.psi)))
+	      (expr.sig     (psi.retvals-signature expr.psi)))
 	 (cond ((list-tag-id? ?retvals-signature)
 		;;If we are here the input form is:
 		;;
@@ -927,7 +969,7 @@
     ;;return a single value, of any type.
     ;;
     (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (expr.core    (psi-core-expr expr.psi))
+	   (expr.core    (psi.core-expr expr.psi))
 	   (checker.sexp (let ((arg.sym  (gensym "arg"))
 			       (rest.sym (gensym "rest")))
 			   `(lambda (,arg.sym . ,rest.sym)
@@ -935,7 +977,7 @@
 				  ,arg.sym
 				(assertion-violation #f "expected single return value" (cons ,arg.sym ,rest.sym))))))
 	   (checker.psi  (chi-expr (bless checker.sexp) lexenv.run lexenv.expand))
-	   (checker.core (psi-core-expr checker.psi)))
+	   (checker.core (psi.core-expr checker.psi)))
       (make-psi input-form.stx
 		(build-application no-source
 		  cwv.core
@@ -951,8 +993,8 @@
     ;;must  have  some  specific  types,  but  it  is  impossible  to  determine,  at
     ;;expand-time, the type of the actually returned values.
     ;;
-    (define expr.core (psi-core-expr         expr.psi))
-    (define expr.sig  (psi-retvals-signature expr.psi))
+    (define expr.core (psi.core-expr         expr.psi))
+    (define expr.sig  (psi.retvals-signature expr.psi))
     ;;Here we know that ASSERTED.SIG is a  valid formals signature, so we can be less
     ;;strict in the patterns.
     (syntax-match (retvals-signature.tags asserted.sig) ()
@@ -965,7 +1007,7 @@
 					 (validate-typed-return-value ,?rv-tag 1 ,obj.sym)
 					 ,obj.sym))
 				     lexenv.run lexenv.expand))
-	      (checker.core (psi-core-expr checker.psi)))
+	      (checker.core (psi.core-expr checker.psi)))
 	 (make-psi input-form.stx
 		   (build-application no-source
 		     checker.core
@@ -1037,8 +1079,8 @@
     ;;The returned PSI struct has the given retvals signature.
     ;;
     (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (expr.core    (psi-core-expr expr.psi))
-	   (checker.core (psi-core-expr checker.psi)))
+	   (expr.core    (psi.core-expr expr.psi))
+	   (checker.core (psi.core-expr checker.psi)))
       (make-psi input-form.stx
 		(build-application no-source
 		  cwv.core

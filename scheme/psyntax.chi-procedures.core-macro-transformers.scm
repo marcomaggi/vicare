@@ -284,7 +284,7 @@
 		       lexenv.run lexenv.expand))
 	rhs*.stx lhs*.tag))
     (define rhs*.sig
-      (map psi-retvals-signature rhs*.psi))
+      (map psi.retvals-signature rhs*.psi))
     (define rhs*.tag
       (map (lambda (sig)
 	     (syntax-match (retvals-signature.tags sig) ()
@@ -354,11 +354,11 @@
 	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
        (make-psi input-form.stx
 		 (build-conditional no-source
-		   (psi-core-expr test.psi)
-		   (psi-core-expr consequent.psi)
-		   (psi-core-expr alternate.psi))
-		 (retvals-signatures-common-ancestor (psi-retvals-signature consequent.psi)
-						     (psi-retvals-signature alternate.psi)))))
+		   (psi.core-expr test.psi)
+		   (psi.core-expr consequent.psi)
+		   (psi.core-expr alternate.psi))
+		 (retvals-signatures-common-ancestor (psi.retvals-signature consequent.psi)
+						     (psi.retvals-signature alternate.psi)))))
     ((_ ?test ?consequent)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
@@ -379,8 +379,8 @@
        ;;value must be the return value of the last expression in the body.
        (make-psi input-form.stx
 		 (build-conditional no-source
-		   (psi-core-expr test.psi)
-		   (psi-core-expr consequent.psi)
+		   (psi.core-expr test.psi)
+		   (psi.core-expr consequent.psi)
 		   (build-void))
 		 (make-retvals-signature/single-top))))
     ))
@@ -581,13 +581,13 @@
 	     (let* ((body*.stx  (cons ?body ?body*))
 		    (body.psi   (%expand-unnamed-let-body body*.stx lexenv.run lexenv.expand
 							  lhs*.id lhs*.lab lhs*.lex lhs*.inferred-tag))
-		    (body.core  (psi-core-expr body.psi))
-		    (rhs*.core  (map psi-core-expr rhs*.psi)))
+		    (body.core  (psi.core-expr body.psi))
+		    (rhs*.core  (map psi.core-expr rhs*.psi)))
 	       (make-psi input-form.stx
 			 (build-let (syntax-annotation input-form.stx)
 				    lhs*.lex rhs*.core
 				    body.core)
-			 (psi-retvals-signature body.psi)))))))
+			 (psi.retvals-signature body.psi)))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;NOTE We want an implementation in which:  when BREAK is not used, the escape
@@ -689,15 +689,15 @@
 		  (body*.stx   (cons ?body ?body*))
 		  (body.psi    (chi-internal-body #f lexenv.run^ lexenv.expand
 						  (push-lexical-contour rib body*.stx))))
-	     (let* ((rhs*.core (map psi-core-expr rhs*.psi))
-		    (body.core (psi-core-expr body.psi))
+	     (let* ((rhs*.core (map psi.core-expr rhs*.psi))
+		    (body.core (psi.core-expr body.psi))
 		    ;;Build the LETREC or LETREC* expression in the core language.
 		    (expr.core (core-lang-builder no-source
 				 lhs*.lex
 				 rhs*.core
 				 body.core)))
 	       (make-psi input-form.stx expr.core
-			 (psi-retvals-signature body.psi)))))))
+			 (psi.retvals-signature body.psi)))))))
       ))
 
   (define (%expand-rhs input-form.stx lexenv.run lexenv.expand
@@ -727,7 +727,7 @@
 	    ;;LHS.
 	    (when (and (option.typed-language.rhs-tag-propagation?)
 		       (top-tag-id? lhs.tag))
-	      (syntax-match (retvals-signature.tags (psi-retvals-signature rhs.psi)) ()
+	      (syntax-match (retvals-signature.tags (psi.retvals-signature rhs.psi)) ()
 		((?tag)
 		 ;;Single return value: good.
 		 (let ((descr (label->syntactic-binding-descriptor lhs.lab lexenv.run)))
@@ -739,7 +739,7 @@
 		 (assertion-violation/internal-error __who__
 		   "invalid retvals signature"
 		   (syntax->datum input-form.stx)
-		   (psi-retvals-signature rhs.psi)))))))
+		   (psi.retvals-signature rhs.psi)))))))
       rhs*.stx lhs*.lab lhs*.tag))
 
   #| end of module |# )
@@ -844,8 +844,8 @@
      (let* ((name.psi  (chi-expr  ?name lexenv.run lexenv.expand))
 	    (arg*.psi  (chi-expr* ?arg* lexenv.run lexenv.expand))
 	    (expr.core (build-foreign-call no-source
-			 (psi-core-expr name.psi)
-			 (map psi-core-expr arg*.psi))))
+			 (psi.core-expr name.psi)
+			 (map psi.core-expr arg*.psi))))
        (make-psi input-form.stx expr.core)))
     ))
 
@@ -1549,7 +1549,7 @@
 	    (string-append "invalid " description.str) (car id*))))))
 
   (define (%chi-expr.core expr.stx lexenv.run lexenv.expand)
-    (psi-core-expr (chi-expr expr.stx lexenv.run lexenv.expand)))
+    (psi.core-expr (chi-expr expr.stx lexenv.run lexenv.expand)))
 
   #| end of module: SYNTAX-CASE-TRANSFORMER |# )
 
@@ -1663,7 +1663,7 @@
 	      (expr.stx  (record-type-spec.rcd-id rts))
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
-		   (psi-core-expr expr.psi)
+		   (psi.core-expr expr.psi)
 		   (make-retvals-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
       ))
 
@@ -1709,7 +1709,7 @@
 	   (expr.stx  (record-type-spec.rtd-id rts))
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
-		(psi-core-expr expr.psi)
+		(psi.core-expr expr.psi)
 		(make-retvals-signature/single-value (core-prim-id '<record-type-descriptor>)))))
 
   #| end of module |# )
@@ -1725,7 +1725,7 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.sig (psi-retvals-signature expr.psi)))
+	    (expr.sig (psi.retvals-signature expr.psi)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sig)
@@ -1757,7 +1757,7 @@
 			(,?define . ,?stuff)
 			(,(core-prim-id 'void))))
 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (core-language->sexp expr.core)))
        (let* ((out.sexp (map (lambda (bind*)
 			       (list 'define (car bind*) (cadr bind*)))
@@ -1772,7 +1772,7 @@
 
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (core-language->sexp expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
@@ -1826,7 +1826,7 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->optimized-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
@@ -1843,7 +1843,7 @@
     ((_ ?expr0 ?expr* ...)
      (let* ((expr.psi  (chi-expr (bless `(internal-body ,?expr0 ,@?expr* (void)))
 				 lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->optimized-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
@@ -1859,7 +1859,7 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
@@ -1876,7 +1876,7 @@
     ((_ ?expr0 ?expr* ...)
      (let* ((expr.psi  (chi-expr (bless `(internal-body ,?expr0 ,@?expr* (void)))
 				 lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
@@ -1895,7 +1895,7 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
+	    (expr.core (psi.core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->assembly-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
