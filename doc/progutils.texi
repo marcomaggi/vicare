@@ -114,6 +114,7 @@ We can toy with the program expander using the following code:
 (import (vicare)
   (prefix (vicare programs) progs.))
 (print-gensym #f)
+(print-graph  #f)
 (debug-print (progs.expand-top-level-program->sexp @meta{sexp}))
 @end example
 
@@ -139,17 +140,18 @@ yields the @code{invoke-code}:
         (begin
           (annotated-call (display var)
              (primitive display) lex.var)
-          ((primitive void)))))
-  ((primitive void)))
+          '#!void)))
+  '#!void)
 @end example
 
 @noindent
 the @code{visit-code}:
 
 @example
-((loc.lab.mac #<procedure> . (annotated-case-lambda
-                                 (#'lambda (#'stx) #'2)
-                               ((lex.stx) '2))))
+(set! loc.lab.mac
+      (annotated-case-lambda
+          (#'lambda #'stx #'2)
+        ((lex.stx) '2)))
 @end example
 
 @noindent
