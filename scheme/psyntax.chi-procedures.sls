@@ -899,36 +899,33 @@
   (define (%expand-interaction-qrhs*/init* lhs* qrhs* init* lexenv.run lexenv.expand)
     ;;Return a list of expressions in the core language.
     ;;
-    (let recur ((lhs*  lhs*)
-		(qrhs* qrhs*))
-      (if (pair? lhs*)
-	  (let ((lhs  (car lhs*))
-		(qrhs (car qrhs*)))
-	    (define-syntax-rule (%recurse-and-cons ?expr.core)
-	      (cons ?expr.core
-		    (recur (cdr lhs*) (cdr qrhs*))))
-	    (case (qualified-rhs.category qrhs)
-	      ((defun)
-	       (let ((psi (chi-defun qrhs lexenv.run lexenv.expand)))
-		 (%recurse-and-cons (build-global-assignment no-source
-				      lhs (psi-core-expr psi)))))
-	      ((typed-defvar)
-	       (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
-		 (%recurse-and-cons (build-global-assignment no-source
-				      lhs (psi-core-expr psi)))))
-	      ((untyped-defvar)
-	       (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
-		 (%recurse-and-cons (build-global-assignment no-source
-				      lhs (psi-core-expr psi)))))
-	      ((top-expr)
-	       (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
-		 (%recurse-and-cons (psi-core-expr psi))))
-	      (else
-	       (assertion-violation __module_who__
-		 "invalid qualified RHS while expanding expression" qrhs))))
-	(map (lambda (init)
-	       (psi-core-expr (chi-expr init lexenv.run lexenv.expand)))
-	  init*))))
+    (if (pair? lhs*)
+	(let ((lhs  (car lhs*))
+	      (qrhs (car qrhs*)))
+	  (define-syntax-rule (%recurse-and-cons ?expr.core)
+	    (cons ?expr.core
+		  (%expand-interaction-qrhs*/init* (cdr lhs*) (cdr qrhs*) init* lexenv.run lexenv.expand)))
+	  (case-qrhs-category (qualified-rhs.category qrhs)
+	    ((defun)
+	     ;;CHI-DEFUN does not set CURRENT-RUN-LEXENV so we do it here.
+	     (let ((psi (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			  (chi-defun qrhs lexenv.run lexenv.expand))))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
+	    ((typed-defvar)
+	     (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
+	    ((untyped-defvar)
+	     (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
+	    ((top-expr)
+	     (let ((psi (chi-expr  (qualified-rhs.stx qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (psi-core-expr psi))))))
+      (map (lambda (init)
+	     (psi-core-expr (chi-expr init lexenv.run lexenv.expand)))
+	init*)))
 
   #| end of module: CHI-INTERACTION-EXPR |# )
 
@@ -1163,6 +1160,25 @@
 (define (generate-qrhs-loc qrhs)
   (generate-storage-location-gensym (qualified-rhs.id qrhs)))
 
+(define-syntax case-qrhs-category
+  (lambda (stx)
+    (sys.syntax-case stx (defun typed-defvar untyped-defvar top-expr)
+      ((_ ?category
+	  ((defun)		. ?defun-body)
+	  ((typed-defvar)	. ?typed-defvar-body)
+	  ((untyped-defvar)	. ?untyped-defvar-body)
+	  ((top-expr)		. ?top-expr-body))
+       (sys.syntax
+	(let ((category ?category))
+	  (case category
+	    ((defun)		. ?defun-body)
+	    ((typed-defvar)	. ?typed-defvar-body)
+	    ((untyped-defvar)	. ?untyped-defvar-body)
+	    ((top-expr)		. ?top-expr-body)
+	    (else
+	     (assertion-violation 'case-qrhs-category "invalid QRHS category" category))))))
+      )))
+
 ;;; --------------------------------------------------------------------
 
 (define* (chi-qrhs qrhs lexenv.run lexenv.expand)
@@ -1170,7 +1186,7 @@
   ;;
   (while-not-expanding-application-first-subform
    (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-     (case (qualified-rhs.category qrhs)
+     (case-qrhs-category (qualified-rhs.category qrhs)
        ((defun)
 	;;This returns a PSI struct containing a lambda core expression.
 	(chi-defun qrhs lexenv.run lexenv.expand))
@@ -1232,10 +1248,7 @@
 		    (build-sequence no-source
 		      (list expr.core (build-void)))
 		    (make-retvals-signature/single-void))))
-
-       (else
-	(assertion-violation/internal-error __who__
-	  "invalid qualified right-hand side (QRHS) format" qrhs))))))
+       ))))
 
 (define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
   ;;Expand the qualified right-hand side expressions in QRHS*, left-to-right.  Return
@@ -1691,4 +1704,5 @@
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
+;;eval: (put 'case-qrhs-category			'scheme-indent-function 1)
 ;;End:
