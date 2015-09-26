@@ -142,8 +142,7 @@
 
 (define-syntax-rule (with-typed-language ?enabled? . ?body)
   (parametrise ((option.typed-language? (or ?enabled? (option.typed-language?))))
-    (parametrise ((option.typed-language.rhs-tag-propagation? (option.typed-language?)))
-      . ?body)))
+    . ?body))
 
 (define-syntax-rule (with-option-strict-r6rs ?enabled? . ?body)
   ;;We want to  enable "strict R6RS" if  it is requested with the  OPTIONS library or
@@ -169,8 +168,7 @@
     (typed-language-support #f))
 
   (define (typed-language-support enable?)
-    (option.typed-language? enable?)
-    (option.typed-language.rhs-tag-propagation? (option.typed-language?)))
+    (option.typed-language? enable?))
 
   #| end of module |# )
 

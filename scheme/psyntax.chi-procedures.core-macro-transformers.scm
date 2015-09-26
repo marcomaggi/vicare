@@ -181,165 +181,6 @@
 (include "psyntax.chi-procedures.generic-type-syntaxes.scm" #t)
 
 
-(module PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS
-  (%expand-rhs*
-   %select-lhs-declared-tag-or-rhs-inferred-tag
-   %compose-lhs-specification)
-  ;;In  this  module  we  assume  the  argument  INPUT-FORM.STX  can  be  matched  by
-  ;;SYNTAX-MATCH patterns like:
-  ;;
-  ;;  (let            ((?lhs* ?rhs*) ...) . ?body*)
-  ;;  (let     ?recur ((?lhs* ?rhs*) ...) . ?body*)
-  ;;
-  ;;where the ?LHS identifiers can be tagged or not; we have to remember that LET* is
-  ;;just expanded in  a set of nested  LET syntaxes.  We assume that  the ?LHS syntax
-  ;;objects have been processed with:
-  ;;
-  ;;   (receive (lhs*.id lhs*.tag)
-  ;;       (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
-  ;;     ...)
-  ;;
-  ;;We want to provide helper functions to handle the following situations.
-  ;;
-  ;;
-  ;;RHS tag propagation
-  ;;-------------------
-  ;;
-  ;;When we write:
-  ;;
-  ;;   (let ((a 1)) . ?body)
-  ;;
-  ;;the identifier A is the left-hand side of the binding and the expression 1 is the
-  ;;right-hand side  of the  binding; since  A is  untagged in  the source  code, the
-  ;;expander will tag it, by default, with "<top>".
-  ;;
-  ;;* If  the option  RHS-TAG-PROPAGATION? is  turned OFF: the  identifier A  is left
-  ;;  tagged with "<top>".  We are free to assign any object to A, mutating the bound
-  ;;  value  multiple times with  objects of different  tag; this is  standard Scheme
-  ;;  behaviour.
-  ;;
-  ;;* When the option RHS-TAG-PROPAGATION? is turned ON: the expander infers that the
-  ;;  RHS has  signature "(<fixnum>)", so it  propagates the tag from the  RHS to the
-  ;;  LHS overriding "<top>" with "<fixnum>".  This  will cause an error to be raised
-  ;;  if we mutate the binding assigning to A an object whose tag is not "<fixnum>".
-  ;;
-  ;;
-  ;;RHS signature validation
-  ;;------------------------
-  ;;
-  ;;When we write:
-  ;;
-  ;;   (let (({a <fixnum>} 1)) . ?body)
-  ;;
-  ;;the identifier A is the left-hand side of the binding and the expression 1 is the
-  ;;right-hand side of the binding; A is explicitly tagged with "<fixnum>".
-  ;;
-  ;;We want to make  sure that the RHS expression returns a  single return value with
-  ;;signature "<fixnum>"; so  the RHS's retvals signature must  be "(<fixnum>)".  All
-  ;;the work  is done  by the  macro ASSERT-RETVALS-SIGNATURE-AND-RETURN, so  we transform  the RHS
-  ;;expression as if the input form is:
-  ;;
-  ;;   (let (({a <fixnum>} (assert-retvals-signature-and-return (<fixnum>) 1))) . ?body)
-  ;;
-  ;;and expand the new RHS:
-  ;;
-  ;;   (assert-retvals-signature-and-return (<fixnum>) 1)
-  ;;
-  ;;if the expander  determines that the signature  of 1 is "(<fixnum>)",  the RHS is
-  ;;transformed at expand-time into just "1";  otherwise a run-time object type check
-  ;;is inserted.  In  any case we can  be sure at both expand-time  and run-time that
-  ;;the signature  of the  identifier A  is correct, otherwise  an exception  will be
-  ;;raised before expanding or running the ?BODY.
-  ;;
-
-  (define* (%expand-rhs* input-form.stx lexenv.run lexenv.expand
-			 lhs*.tag rhs*.stx)
-    ;;Expand  a  list  of  right-hand  sides  from  bindings  in  the  syntax  object
-    ;;INPUT-FORM.STX; the context  of the expansion is described by  the given LEXENV
-    ;;arguments.
-    ;;
-    ;;LHS*.TAG must be a list of tag identifiers representing the tags resulting from
-    ;;parsing the left-hand sides in the source code.
-    ;;
-    ;;RHS*.STX must be a list of syntax objects representing the expressions from the
-    ;;right-hand sides.
-    ;;
-    ;;Return 2 values: a list of  PSI structures representing the expanded right-hand
-    ;;sides; a list of tag identifiers  representing the signatures of the right-hand
-    ;;sides.  If  the RHS  are found,  at expand-time,  to return  zero, two  or more
-    ;;values: a synatx violation is raised.
-    ;;
-    ;;The tag identifiers  in the second returned  value can be used  to override the
-    ;;ones in LHS*.TAG.
-    ;;
-    (define rhs*.psi
-      (map (lambda (rhs.stx lhs.tag)
-	     ;;If LHS.TAG is "<top>", we still want to use the assert and return form
-	     ;;to  make sure  that  a single  value is  returned.   If the  signature
-	     ;;validation  succeeds at  expand-time:  the returned  PSI  has the  RHS
-	     ;;signature  inferred from  the original  RHS.STX, not  "(<top>)".  This
-	     ;;allows us to propagate the tag from RHS to LHS.
-	     (chi-expr (bless
-			`(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
-		       lexenv.run lexenv.expand))
-	rhs*.stx lhs*.tag))
-    (define rhs*.sig
-      (map psi.retvals-signature rhs*.psi))
-    (define rhs*.tag
-      (map (lambda (sig)
-	     (syntax-match (retvals-signature.tags sig) ()
-	       ((?tag)
-		;;Single return value: good.
-		?tag)
-	       (_
-		;;If we  are here it  means that the ASSERT-RETVALS-SIGNATURE-AND-RETURN  above has
-		;;misbehaved.
-		(assertion-violation/internal-error __who__
-		  "invalid retvals signature" (syntax->datum input-form.stx) sig))))
-	rhs*.sig))
-    (values rhs*.psi rhs*.tag))
-
-  (define (%select-lhs-declared-tag-or-rhs-inferred-tag lhs*.tag rhs*.inferred-tag)
-    ;;Given  a list  of  LHS tags  LHS*.tag  from the  source code  and  the list  of
-    ;;corresponding RHS inferred tags RHS*.INFERRED-TAG: return a list of LHS tags to
-    ;;replace LHS*.TAG.
-    ;;
-    (if (option.typed-language.rhs-tag-propagation?)
-	(map (lambda (lhs.tag rhs.inferred-tag)
-	       (if (top-tag-id? lhs.tag)
-		   (if (top-tag-id? rhs.inferred-tag)
-		       lhs.tag
-		     rhs.inferred-tag)
-		 lhs.tag))
-	  lhs*.tag rhs*.inferred-tag)
-      lhs*.tag))
-
-  (define (%compose-lhs-specification lhs*.id lhs*.tag rhs*.inferred-tag)
-    ;;For every LHS identifier build a tagged identifier syntax:
-    ;;
-    ;;   (brace ?lhs.id ?tag)
-    ;;
-    ;;in which ?TAG is either the original one specified in the LET syntax or the one
-    ;;inferred by expanding the RHS.  If there  is no tag explicitly specified in the
-    ;;LET syntax we put in the inferred one.
-    ;;
-    (if (option.typed-language.rhs-tag-propagation?)
-	(map (lambda (lhs.id lhs.tag rhs.tag)
-	       (bless
-		`(brace ,lhs.id ,(if (top-tag-id? lhs.tag)
-				     (if (top-tag-id? rhs.tag)
-					 lhs.tag
-				       rhs.tag)
-				   lhs.tag))))
-	  lhs*.id lhs*.tag rhs*.inferred-tag)
-      (map (lambda (lhs.id lhs.tag)
-	     (bless
-	      `(brace ,lhs.id ,lhs.tag)))
-	lhs*.id lhs*.tag)))
-
-  #| end of module: PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS |# )
-
-
 ;;;; module core-macro-transformer: IF
 
 (define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
@@ -479,146 +320,68 @@
 
 ;;;; module core-macro-transformer: LET
 
-(module (let-transformer)
+(define* (let-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand R6RS LET macros with  Vicare extensions from
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
   ;;the context of the given LEXENV; return an PSI struct.
   ;;
-  ;;In practice, below we convert the UNnamed standard syntax:
-  ;;
-  ;;   (let ((?lhs ?rhs) ...) . ?body)
-  ;;
-  ;;into the core language syntax:
-  ;;
-  ;;   (let ((?lhs ?rhs) ...) . ?body)
-  ;;
-  ;;and the named standard syntax:
-  ;;
-  ;;   (let ?recur ((?lhs ?rhs) ...) . ?body)
-  ;;
-  ;;into the extended syntax:
-  ;;
-  ;;   (internal-body
-  ;;     (define (?recur ?lhs ...) . ?body)
-  ;;     (?recur ?rhs ...))
-  ;;
-  ;;for further expansion, notice that the latter allows ?RECUR to be tagged with the
-  ;;return values of the LET form.
-  ;;
-  ;;When expanding UNnamed LET syntaxes:
-  ;;
-  ;;1. We parse the LHS tagged identifiers to acquire the declared tags.
-  ;;
-  ;;2. We expand the ?RHS expression to acquire their retvals signature.
-  ;;
-  ;;3. We  select the  more specific  LHS tag between  the declared  LHS one  and the
-  ;;   inferred RHS one.
-  ;;
-  ;;3. We expand the body with the LHS identifiers correctly tagged.
-  ;;
-  ;;This way if we write:
-  ;;
-  ;;   (let ((a 1)) . ?body)
-  ;;
-  ;;this is what happens:
-  ;;
-  ;;1..The identifier A is first tagged with "<top>".
-  ;;
-  ;;2..The expander figures out that the RHS's signature is "(<fixnum>)".
-  ;;
-  ;;3..The expander overrides the tag of A to be "<fixnum>".
-  ;;
-  ;;4..In the ?BODY the identifier A is  tagged as "<fixnum>", so the extended syntax
-  ;;   is available.
-  ;;
-  ;;On the other hand if we write:
-  ;;
-  ;;   (let (({a <exact-integer>} 1)) . ?body)
-  ;;
-  ;;we get an expansion that is equivalent to:
-  ;;
-  ;;   (let (({a <exact-integer>} (assert-retvals-signature-and-return (<exact-integer>) 1)))
-  ;;     . ?body)
-  ;;
-  ;;so  the type  of the  RHS expression  is validated  either at  expand-time or  at
-  ;;run-time.
-  ;;
-  ;;HISTORICAL NOTE In the original Ikarus code, the UNnamed LET syntax:
-  ;;
-  ;;   (let ((?lhs ?rhs) ...) . ?body)
-  ;;
-  ;;was transformed into:
-  ;;
-  ;;   ((lambda (?lhs ...) . ?body) ?rhs ...)
-  ;;
-  ;;and the named syntax:
-  ;;
-  ;;   (let ?recur ((?lhs ?rhs) ...) . ?body)
-  ;;
-  ;;into:
-  ;;
-  ;;   ((letrec ((?recur (lambda (?lhs ...) . ?body))) ?recur) ?rhs ...)
-  ;;
-  ;;such transformations are fine for an  UNtagged language.  In a tagged language we
-  ;;want to use types  whenever possible, and this means to use  the DEFINE syntax to
-  ;;define both a safe and an unsafe function.  (Marco Maggi; Sun Apr 27, 2014)
-  ;;
-  (define-syntax __who__
-    (identifier-syntax 'let))
+  (syntax-match input-form.stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     ;;Convert the UNnamed standard syntax:
+     ;;
+     ;;   (let ((?lhs ?rhs) ...) . ?body)
+     ;;
+     ;;into the core language syntax:
+     ;;
+     ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
+     ;;
+     (receive (lhs*.id lhs*.tag)
+	 (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
+       (let* ((rhs*.psi   (map (lambda (rhs.stx lhs.tag)
+				 ;;If LHS.TAG  is "<top>", we  still want to  use the
+				 ;;assert and return form to  make sure that a single
+				 ;;value  is returned.   If the  signature validation
+				 ;;succeeds at expand-time: the  returned PSI has the
+				 ;;RHS signature inferred  from the original RHS.STX,
+				 ;;not "(<top>)".
+				 (chi-expr (bless
+					    `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
+					   lexenv.run lexenv.expand))
+			    ?rhs* lhs*.tag))
+	      (lhs*.lex   (map generate-lexical-gensym lhs*.id))
+	      (lhs*.lab   (map generate-label-gensym   lhs*.id))
+	      (body*.stx  (push-lexical-contour
+			      (make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)
+			    (cons ?body ?body*)))
+	      (lexenv.run (lexenv-add-lexical-typed-var-bindings lhs*.lab lhs*.lex lhs*.tag lexenv.run))
+	      (body.psi   (chi-internal-body #f lexenv.run lexenv.expand body*.stx))
+	      (body.core  (psi.core-expr body.psi))
+	      (rhs*.core  (map psi.core-expr rhs*.psi)))
+	 (make-psi input-form.stx
+		   (build-let (syntax-annotation input-form.stx)
+			      lhs*.lex rhs*.core
+			      body.core)
+		   (psi.retvals-signature body.psi)))))
 
-  (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
+    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     ;;We use an internal define so that we can keep the type signature of ?RECUR.
+     ;;
+     ;;NOTE We want  an implementation in which:  when BREAK is not  used, the escape
+     ;;function is never referenced, so the compiler can remove CALL/CC.  Notice that
+     ;;here the  syntactic binding  CONTINUE makes no  sense, because  calling ?RECUR
+     ;;does the job.
+     (receive (recur.id recur.tag)
+	 (syntax-object.parse-typed-argument ?recur)
+       (chi-expr (bless
+		  `(internal-body
+		     ;;We do not want "__who__" and RETURN to be bound here.
+		     (internal-define () ,?recur
+		       (internal-lambda (safe) ,?lhs* ,?body . ,?body*))
+		     (,recur.id . ,?rhs*)))
+		 lexenv.run lexenv.expand)))
 
-  (define (let-transformer input-form.stx lexenv.run lexenv.expand)
-    (syntax-match input-form.stx ()
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (receive (lhs*.id lhs*.declared-tag)
-	   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
-	 (receive (rhs*.psi rhs*.inferred-tag)
-	     (%expand-rhs* input-form.stx lexenv.run lexenv.expand lhs*.declared-tag ?rhs*)
-	   (let ((lhs*.lex           (map generate-lexical-gensym lhs*.id))
-		 (lhs*.lab           (map generate-label-gensym   lhs*.id))
-		 (lhs*.inferred-tag  (%select-lhs-declared-tag-or-rhs-inferred-tag lhs*.declared-tag rhs*.inferred-tag)))
-	     (let* ((body*.stx  (cons ?body ?body*))
-		    (body.psi   (%expand-unnamed-let-body body*.stx lexenv.run lexenv.expand
-							  lhs*.id lhs*.lab lhs*.lex lhs*.inferred-tag))
-		    (body.core  (psi.core-expr body.psi))
-		    (rhs*.core  (map psi.core-expr rhs*.psi)))
-	       (make-psi input-form.stx
-			 (build-let (syntax-annotation input-form.stx)
-				    lhs*.lex rhs*.core
-				    body.core)
-			 (psi.retvals-signature body.psi)))))))
-
-      ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;NOTE We want an implementation in which:  when BREAK is not used, the escape
-       ;;function is  never referenced, so  the compiler can remove  CALL/CC.  Notice
-       ;;that here binding  CONTINUE makes no sense, because calling  ?RECUR does the
-       ;;job.
-       (receive (recur.id recur.tag)
-	   (syntax-object.parse-typed-argument ?recur)
-	 (chi-expr (bless
-		    `(internal-body
-		       ;;We do not want "__who__" and RETURN to be bound here.
-		       (internal-define () ,?recur
-			   (internal-lambda (safe) ,?lhs* ,?body . ,?body*))
-		       (,recur.id . ,?rhs*)))
-		   lexenv.run lexenv.expand)))
-
-      (_
-       (syntax-violation __who__ "invalid syntax" input-form.stx))))
-
-  (define (%expand-unnamed-let-body body*.stx lexenv.run lexenv.expand
-				    lhs*.id lhs*.lab lhs*.lex lhs*.inferred-tag)
-    ;;Generate what  is needed  to create a  lexical contour: a  RIB and  an extended
-    ;;lexical environment in  which to evaluate the body.  Expand  the body forms and
-    ;;return a single PSI struct representing the full body.
-    (let ((body*.stx^   (push-lexical-contour
-			    (make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)
-			  body*.stx))
-	  (lexenv.run^  (lexenv-add-lexical-typed-var-bindings lhs*.lab lhs*.lex lhs*.inferred-tag lexenv.run)))
-      (chi-internal-body #f lexenv.run^ lexenv.expand body*.stx^)))
-
-  #| end of module: LET-TRANSFORMER |# )
+    (_
+     (syntax-violation __who__ "invalid syntax" input-form.stx))))
 
 
 ;;;; module core-macro-transformer: LETREC and LETREC*
@@ -638,17 +401,6 @@
   ;;   (letrec  ((?lhs ?rhs) ...) . ?body)
   ;;   (letrec* ((?lhs ?rhs) ...) . ?body)
   ;;
-  ;;NOTE Unfortunately, with recursive bindings we cannot implement coherent RHS type
-  ;;propagation.  Let's think of:
-  ;;
-  ;;   (letrec ((a (some-stuff ... a ...)))
-  ;;     ?body)
-  ;;
-  ;;we could infer  the returned type of the  RHS and use it while  expand the ?BODY,
-  ;;but what about the RHS?  While expanding the RHS the identifier A would be tagged
-  ;;as "<top>" and while expanding the ?BODY it would be tagged as "<whatever>"; this
-  ;;is incoherent.
-  ;;
   (define-syntax __who__
     (identifier-syntax 'letrec-transformer))
 
@@ -667,7 +419,6 @@
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
   (define* (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
-    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the binding names are identifiers and without duplicates.
@@ -684,8 +435,13 @@
 	   ;;right-hand sides.
 	   (let* ((rib         (make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
 		  (lexenv.run^ (lexenv-add-lexical-typed-var-bindings lhs*.lab lhs*.lex lhs*.tag lexenv.run))
-		  (rhs*.psi    (%expand-rhs input-form.stx lexenv.run^ lexenv.expand
-					    lhs*.lab lhs*.tag ?rhs* rib))
+		  (rhs*.psi    ($map-in-order
+				   (lambda (rhs.stx lhs.tag)
+				     (chi-expr (push-lexical-contour rib
+						 (bless
+						  `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx)))
+					       lexenv.run^ lexenv.expand))
+				 ?rhs* lhs*.tag))
 		  (body*.stx   (cons ?body ?body*))
 		  (body.psi    (chi-internal-body #f lexenv.run^ lexenv.expand
 						  (push-lexical-contour rib body*.stx))))
@@ -699,48 +455,6 @@
 	       (make-psi input-form.stx expr.core
 			 (psi.retvals-signature body.psi)))))))
       ))
-
-  (define (%expand-rhs input-form.stx lexenv.run lexenv.expand
-		       lhs*.lab lhs*.tag rhs*.stx rib)
-    ;;Expand  the  right  hand sides  in  RHS*.STX  and  return  a list  holding  the
-    ;;corresponding PSI structures.
-    ;;
-    ($map-in-order
-	(lambda (rhs.stx lhs.lab lhs.tag)
-	  (receive-and-return (rhs.psi)
-	      ;;The LHS*.ID and LHS*.LAB  have been added to the rib,  and the rib is
-	      ;;pushed on  the RHS.STX.  So,  while the specific  identifiers LHS*.ID
-	      ;;are unbound (because they do not  contain the rib), any occurrence of
-	      ;;the binding identifiers in the RHS.STX  is captured by the binding in
-	      ;;the rib.
-	      ;;
-	      ;;If LHS.TAG  is "<top>", we  still want to  use the assert  and return
-	      ;;form to make sure that a  single value is returned.  If the signature
-	      ;;validation succeeds at expand-time: the returned PSI has the original
-	      ;;RHS signature,  not "(<top>)".  This  allows us to propagate  the tag
-	      ;;from RHS to LHS.
-	      (chi-expr (push-lexical-contour rib
-			  (bless
-			   `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx)))
-			lexenv.run lexenv.expand)
-	    ;;If the  LHS is untagged:  perform tag propatation  from the RHS  to the
-	    ;;LHS.
-	    (when (and (option.typed-language.rhs-tag-propagation?)
-		       (top-tag-id? lhs.tag))
-	      (syntax-match (retvals-signature.tags (psi.retvals-signature rhs.psi)) ()
-		((?tag)
-		 ;;Single return value: good.
-		 (let ((descr (label->syntactic-binding-descriptor lhs.lab lexenv.run)))
-		   (lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor! descr ?tag)))
-
-		(_
-		 ;;If we  are here it means  that the expansion of  the assertion and
-		 ;;return syntax above has misbehaved.
-		 (assertion-violation/internal-error __who__
-		   "invalid retvals signature"
-		   (syntax->datum input-form.stx)
-		   (psi.retvals-signature rhs.psi)))))))
-      rhs*.stx lhs*.lab lhs*.tag))
 
   #| end of module |# )
 

@@ -34,7 +34,6 @@
     drop-assertions?
     strict-r6rs
     ;; tagged language parameter options
-    typed-language.rhs-tag-propagation?
     typed-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
@@ -91,27 +90,7 @@
 
 (define-parameter-boolean-option strict-r6rs)
 
-;;This option is about the tagged language.  When we write:
-;;
-;;   (let ((a 1)) . ?body)
-;;
-;;the identifier A is  the left-hand side of the binding and the  expression 1 is the
-;;right-hand side of  the binding; since A  is left untagged in the  source code, the
-;;expander will tag it, by default, with "<untagged>".
-;;
-;;* If this option is turned OFF:  the identifier A is left tagged with "<untagged>".
-;;  We are free  to assign any object  to A, mutating the bound  value multiple times
-;;  with objects of different tag; this is standard Scheme behaviour.
-;;
-;;* When  this option is turned  ON: the expander  infers that the RHS  has signature
-;;  "(<fixnum>)",  so it  propagates  the tag  from  the RHS  to  the LHS  overriding
-;;  "<untagged>" with "<fixnum>".  This will cause an error to be raised if we mutate
-;;  the binding assigning to A an object whose tag is not "<fixnum>".
-;;
-(define-parameter-boolean-option typed-language.rhs-tag-propagation?)
-
-;;Turn on  typed language extensions.   When this parameter is  set to true:  we must
-;;also set to true all the tagged language sub-parameters.
+;;Turn on typed language extensions.
 ;;
 (define-parameter-boolean-option typed-language?)
 

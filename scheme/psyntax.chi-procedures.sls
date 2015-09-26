@@ -1202,49 +1202,28 @@
 
        ((untyped-defvar)
 	;;We know that here the definition is for an untagged identifier.
-	(let ((expr.stx (qualified-rhs.stx qrhs)))
-	  (receive-and-return (expr.psi)
-	      (chi-expr expr.stx lexenv.run lexenv.expand)
-	    ;;All right,  we have  expanded the  RHS expression.   Now let's  do some
-	    ;;validation  on the  type  of  the expression  and,  if possible,  let's
-	    ;;propagate the type of the expression to the defined variable.
-	    (let ((expr.sig (psi.retvals-signature expr.psi)))
-	      (syntax-match (retvals-signature.tags expr.sig) ()
-		((?tag)
-		 (top-tag-id? ?tag)
-		 ;;A single return value with type "<top>": good.  Nothing to be done
-		 ;;here.
-		 (void))
+	(let* ((expr.stx (qualified-rhs.stx qrhs))
+	       (expr.psi (chi-expr expr.stx lexenv.run lexenv.expand))
+	       (expr.sig (psi.retvals-signature expr.psi)))
+	  ;;All  right, we  have  expanded the  RHS expression.   Now  let's do  some
+	  ;;validation on the type of the expression.
+	  (syntax-match (retvals-signature.tags expr.sig) ()
+	    ((?tag)
+	     ;;A single return value.  Good.
+	     expr.psi)
 
-		((?tag)
-		 ;;A single return value with type different from "<top>": good.
-		 (when (option.typed-language.rhs-tag-propagation?)
-		   ;;Here we know that  the "untyped-defvar" definition has generated
-		   ;;a syntactic binding with LEXENV entry with format:
-		   ;;
-		   ;;   (lexical . (?lex-name . #f))
-		   ;;
-		   ;;since we know the type we want to convert this entry to:
-		   ;;
-		   ;;   (lexical-typed . ?lexical-typed-spec)
-		   ;;
-		   (let* ((label (id->label (qualified-rhs.id qrhs)))
-			  (descr (label->syntactic-binding-descriptor label lexenv.run)))
-		     (qualified-rhs.type-id-set! qrhs ?tag)
-		     (lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor! descr ?tag))))
+	    (?tag
+	     (list-tag-id? ?tag)
+	     ;;Fully unspecified  return values: we  accept it here  and delegate
+	     ;;further checks at run-time.
+	     expr.psi)
 
-		(?tag
-		 (list-tag-id? ?tag)
-		 ;;Fully unspecified  return values: we  accept it here  and delegate
-		 ;;further checks at run-time.
-		 (void))
-
-		(_
-		 ;;Damn!!!   We have  determined at  expand-time that  the expression
-		 ;;returns multiple return values: syntax violation.
-		 (expand-time-retvals-signature-violation __who__
-		   expr.stx #f (make-retvals-signature/single-top) expr.sig))
-		)))))
+	    (_
+	     ;;Damn!!!   We have  determined at  expand-time that  the expression
+	     ;;returns multiple return values: syntax violation.
+	     (expand-time-retvals-signature-violation __who__
+	       expr.stx #f (make-retvals-signature/single-top) expr.sig))
+	    )))
 
        ((top-expr)
 	(let* ((expr.stx  (qualified-rhs.stx qrhs))

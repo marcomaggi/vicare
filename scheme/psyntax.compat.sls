@@ -68,7 +68,6 @@
     option.enable-arguments-validation?
     option.print-loaded-libraries?
     option.print-debug-messages?
-    option.typed-language.rhs-tag-propagation?
     option.typed-language?
 
     expander-option.integrate-special-list-functions?
@@ -124,7 +123,6 @@
 			  strict-r6rs
 			  print-loaded-libraries?
 			  print-debug-messages?
-			  typed-language.rhs-tag-propagation?
 			  typed-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
