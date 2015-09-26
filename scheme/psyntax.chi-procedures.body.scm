@@ -622,10 +622,10 @@
   (define* (%chi-internal-define body-form.stx lexenv.run rib kwd* shadow/redefine-bindings?)
     (define-values (id type.id qrhs)
       ;;From parsing  the syntactic form,  we receive  the following values:  ID, the
-      ;;lexical typed  variable's syntactic  binding's identifier; TYPE.ID,  the type
-      ;;identifier for ID (possibly "<top>" if  the definition is untyped); QRHS, the
-      ;;qualified RHS object to be expanded later; a possibly updated LEXENV.run, see
-      ;;%PARSE-INTERNAL-DEFINE for details.
+      ;;lexical typed  variable's syntactic  binding's identifier; TYPE.ID,  false or
+      ;;the type identifier  for ID (possibly "<top>" if the  definition is untyped);
+      ;;QRHS,  the qualified  RHS object  to be  expanded later;  a possibly  updated
+      ;;LEXENV.run, see %PARSE-INTERNAL-DEFINE for details.
       (%parse-internal-define body-form.stx lexenv.run))
     (when (bound-id-member? id kwd*)
       (syntax-violation #f "cannot redefine keyword" body-form.stx))
@@ -634,7 +634,10 @@
       ;;This rib  extension will raise  an exception if  it represents an  attempt to
       ;;illegally redefine a binding.
       (extend-rib! rib id lab shadow/redefine-bindings?)
-      (values lex qrhs (lexenv-add-lexical-typed-var-binding lab lex type.id lexenv.run))))
+      (values lex qrhs
+	      (if type.id
+		  (lexenv-add-lexical-typed-var-binding lab lex type.id lexenv.run)
+		(lexenv-add-lexical-var-binding lab lex lexenv.run)))))
 
   (define (%parse-internal-define input-form.stx lexenv.run)
     ;;Syntax parser for  Vicare's INTERNAL-DEFINE; this is like  the standard DEFINE,
@@ -699,14 +702,14 @@
        ;;R6RS variable definition.
        (identifier? ?id)
        (let ((qrhs (make-qualified-rhs/untyped-defvar ?id ?expr)))
-	 (values ?id (top-tag-id) qrhs)))
+	 (values ?id #f qrhs)))
 
       ((_ ?attributes ?id)
        ;;R6RS variable definition, no init.
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
 	      (qrhs    (make-qualified-rhs/untyped-defvar ?id rhs.stx)))
-	 (values ?id (top-tag-id) qrhs)))
+	 (values ?id #f qrhs)))
       ))
 
   #| end of module: %CHI-INTERNAL-DEFINE |# )
