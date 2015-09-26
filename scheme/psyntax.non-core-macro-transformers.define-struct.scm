@@ -178,9 +178,6 @@
     (define safe-mutators-table.sexp
       (%make-alist-from-ids field*.sym mutator*.id))
 
-    (define methods-table.sexp
-      (%make-alist-from-ids field*.sym method*.id))
-
     (bless
      `(module (,type.id
 	       ,constructor.id ,predicate.id
@@ -193,7 +190,7 @@
 				 (syntax ,constructor.id) (syntax ,predicate.id)
 				 ,safe-accessors-table.sexp
 				 ,safe-mutators-table.sexp
-				 ,methods-table.sexp))
+				 (quote ())))
 	(define ((brace ,constructor.id ,type.id) . ,field*.stx)
 	  (receive-and-return (S)
 	      ($struct ',std ,@field*.id)

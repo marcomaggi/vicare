@@ -73,14 +73,8 @@
      (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
        (cond ((object-type-spec.constructor-sexp ots)
 	      => (lambda (constructor.sexp)
-		   (let* ((constructor.stx  (bless constructor.sexp))
-			  (constructor.psi  (chi-expr constructor.stx lexenv.run lexenv.expand))
-			  (args.psi*        (chi-expr* ?arg* lexenv.run lexenv.expand)))
-		     (make-psi input-form.stx
-			       (build-application no-source
-				 (psi-core-expr constructor.psi)
-				 (map psi-core-expr args.psi*))
-			       (make-retvals-signature/single-value ?type-id)))))
+		   (chi-expr (cons (bless constructor.sexp) ?arg*)
+			     lexenv.run lexenv.expand)))
 	     (else
 	      (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
     ))
@@ -121,13 +115,10 @@
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type-id expr.psi)
     (with-object-type-syntactic-binding (who input-form.stx type-id lexenv.run ots)
       (cond ((object-type-spec.destructor-sexp ots)
-	     => (lambda (destructor-sexp)
+	     => (lambda (destructor.sexp)
 		  ;;This record type has a default destructor.
-		  (make-psi input-form.stx
-			    (build-application no-source
-			      (psi-core-expr (chi-expr destructor-sexp lexenv.run lexenv.expand))
-			      (list (psi-core-expr expr.psi)))
-			    (make-retvals-signature/single-top))))
+		  (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						     (bless destructor.sexp) expr.psi '())))
 	    (else
 	     ;;This  record type  has *no*  default destructor;  default to  run-time
 	     ;;destruction.
@@ -138,11 +129,8 @@
 	     (%run-time-destruction input-form.stx lexenv.run lexenv.expand expr.psi)))))
 
   (define* (%run-time-destruction input-form.stx lexenv.run lexenv.expand {expr.psi psi?})
-    (make-psi input-form.stx
-	      (build-application no-source
-		(build-primref no-source 'internal-delete)
-		(list (psi-core-expr expr.psi)))
-	      (make-retvals-signature/single-void)))
+    (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+				       (core-prim-id 'internal-delete) expr.psi '()))
 
   #| end of module: DELETE-TRANSFORMER |# )
 
@@ -208,15 +196,9 @@
     (with-object-type-syntactic-binding (__module_who__ input-form.stx pred-type-id lexenv.run pred-ots)
       (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred-ots)
 			     (%synner "type specification has no predicate for run-time use" pred-type-id)))
-	     (pred.stx   (bless pred.sexp))
-	     (pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
-	     (pred.core  (psi-core-expr pred.psi))
-	     (expr.core  (psi-core-expr expr.psi)))
-	(make-psi input-form.stx
-		  (build-application input-form.stx
-		    pred.core
-		    (list expr.core))
-		  (psi-application-retvals-signature input-form.stx lexenv.run pred.psi)))))
+	     (pred.stx   (bless pred.sexp)))
+	(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+					   pred.stx expr.psi '()))))
 
 ;;; --------------------------------------------------------------------
 
@@ -254,14 +236,9 @@
        (with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
 	 (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred-ots)
 				(%synner "type specification has no predicate for run-time use" ?pred-type-id)))
-		(pred.stx   (bless pred.sexp))
-		(pred.psi   (chi-expr pred.stx lexenv.run lexenv.expand))
-		(pred.core  (psi-core-expr pred.psi)))
-	   (make-psi input-form.stx
-		     (build-application input-form.stx
-		       pred.core
-		       (list expr.core))
-		     (psi-application-retvals-signature input-form.stx lexenv.run pred.psi))))))
+		(pred.stx   (bless pred.sexp)))
+	   (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+					      pred.stx expr.psi '())))))
     ))
 
 
@@ -356,14 +333,8 @@
   (define* (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand ots {expr.psi psi?} field-name.id)
     (cond ((object-type-spec.safe-accessor-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (accessor.sexp)
-		(let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
-		       (accessor.core (psi-core-expr accessor.psi))
-		       (expr.core     (psi-core-expr expr.psi)))
-		  (make-psi input-form.stx
-			    (build-application input-form.stx
-			      accessor.core
-			      (list expr.core))
-			    (psi-application-retvals-signature input-form.stx lexenv.run accessor.psi)))))
+		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						   (bless accessor.sexp) expr.psi '())))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
@@ -463,16 +434,8 @@
 						       ots {expr.psi psi?} field-name.id new-value.stx)
     (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (mutator.sexp)
-		(let* ((mutator.psi    (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
-		       (mutator.core   (psi-core-expr mutator.psi))
-		       (expr.core      (psi-core-expr expr.psi))
-		       (new-value.psi  (chi-expr new-value.stx lexenv.run lexenv.expand))
-		       (new-value.core (psi-core-expr new-value.psi)))
-		  (make-psi input-form.stx
-			    (build-application input-form.stx
-			      mutator.core
-			      (list expr.core new-value.core))
-			    (psi-application-retvals-signature input-form.stx lexenv.run mutator.psi)))))
+		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						   (bless mutator.sexp) expr.psi (list new-value.stx))))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
@@ -538,16 +501,8 @@
        ((object-type-spec.applicable-method-sexp ots method-name.sym lexenv.run)
 	=> (lambda (method.sexp)
 	     ;;A matching method name exists.
-	     (let* ((method.psi  (chi-expr (bless method.sexp) lexenv.run lexenv.expand))
-		    (method.core (psi-core-expr method.psi))
-		    (expr.core   (psi-core-expr subject-expr.psi))
-		    (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
-		    (arg*.core   (map psi-core-expr arg*.psi)))
-	       (make-psi input-form.stx
-			 (build-application input-form.stx
-			   method.core
-			   (cons expr.core arg*.core))
-			 (psi-application-retvals-signature input-form.stx lexenv.run method.psi)))))
+	     (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						(bless method.sexp) subject-expr.psi arg*.stx)))
 
        ;;If the input form  has the right syntax: look for a  matching field name for
        ;;accessor application.
@@ -555,14 +510,8 @@
 	     (object-type-spec.safe-accessor-sexp ots method-name.sym lexenv.run))
 	=> (lambda (accessor.sexp)
 	     ;;A matching field name exists.
-	     (let* ((accessor.psi  (chi-expr (bless accessor.sexp) lexenv.run lexenv.expand))
-		    (accessor.core (psi-core-expr accessor.psi))
-		    (expr.core     (psi-core-expr subject-expr.psi)))
-	       (make-psi input-form.stx
-			 (build-application input-form.stx
-			   accessor.core
-			   (list expr.core))
-			 (psi-application-retvals-signature input-form.stx lexenv.run accessor.psi)))))
+	     (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						(bless accessor.sexp) subject-expr.psi arg*.stx)))
 
        ;;If the input form  has the right syntax: look for a  matching field name for
        ;;mutator application.
@@ -571,16 +520,8 @@
 	     (object-type-spec.safe-mutator-sexp ots method-name.sym lexenv.run))
 	=> (lambda (mutator.sexp)
 	     ;;A matching field name exists.
-	     (let* ((mutator.psi  (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand))
-		    (mutator.core (psi-core-expr mutator.psi))
-		    (expr.core    (psi-core-expr subject-expr.psi))
-		    (arg.psi      (chi-expr (car arg*.stx) lexenv.run lexenv.expand))
-		    (arg.core     (psi-core-expr arg.psi)))
-	       (make-psi input-form.stx
-			 (build-application input-form.stx
-			   mutator.core
-			   (list expr.core arg.core))
-			 (psi-application-retvals-signature input-form.stx lexenv.run mutator.psi)))))
+	     (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						(bless mutator.sexp) subject-expr.psi arg*.stx)))
 
        (else
 	(raise
@@ -597,11 +538,11 @@
     ;;The  type of  the  values returned  by  the subject  expression  is unknown  at
     ;;expand-time; so we  expand to an expression that searches  at run-time a method
     ;;matching the  given name.  In other  words: we default to  "late binding" (also
-    ;;known as "run-time dispatching").
+    ;;known as "run-time dispatching" at some level of abstract reasoning).
     ;;
-    (let* ((expr.core	(psi-core-expr subject-expr.psi))
-	   (arg*.psi	(chi-expr* arg*.stx lexenv.run lexenv.expand))
-	   (arg*.core	(map psi-core-expr arg*.psi)))
+    (let* ((expr.core   (psi-core-expr subject-expr.psi))
+	   (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
+	   (arg*.core   (map psi-core-expr arg*.psi)))
       (make-psi input-form.stx
 		(build-application input-form.stx
 		  (build-primref no-source 'method-call-late-binding)

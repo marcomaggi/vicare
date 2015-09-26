@@ -18,7 +18,7 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(module (chi-application)
+(module (chi-application chi-application/psi-first-operand)
   (define-module-who chi-application)
 
 
@@ -427,6 +427,106 @@
 		       (make-retvals-signature-condition rator.tag))))))
 
   #| end of module: CHI-APPLICATION/PSI-RATOR |# )
+
+
+;;;; chi procedures: operator application processing, first operand already expanded
+
+(module (chi-application/psi-first-operand)
+
+  (define* (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+					      rator.stx {first-rand.psi psi?} other-rand*.stx)
+    ;;This  is an  entry  point, not  a sub-routine  of  CHI-APPLICATION.  Expand  an
+    ;;operator application  form; it is  called when  application to process  has the
+    ;;format:
+    ;;
+    ;;   (?rator ?first-rand ?other-rand ...)
+    ;;
+    ;;and ?FIRST-RAND has already been expanded.  Here we know that the input form is
+    ;;a special syntax like IS-A?,  SLOT-REF, SLOT-SET!, METHOD-CALL; so the operator
+    ;;will expand into a predicate, accessor, mutator or method.
+    ;;
+    (define rator.psi (while-not-expanding-application-first-subform
+		       (chi-expr rator.stx lexenv.run lexenv.expand)))
+    (define rator.sig (psi-retvals-signature rator.psi))
+    (define (%common-rator-application)
+      (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
+				       rator.psi first-rand.psi other-rand*.stx))
+    (syntax-match (retvals-signature.tags rator.sig) ()
+      (?tag
+       (list-tag-id? ?tag)
+       ;;The rator type  is unknown: evaluating the rator might  return any number of
+       ;;values of any  type.  Return a normal  rator application and we  will see at
+       ;;run-time what happens; this is standard Scheme behaviour.
+       (%common-rator-application))
+
+      ((?tag)
+       (top-tag-id? ?tag)
+       ;;The rator type is unknown, we only know  that it is a single value; it might
+       ;;be a closure object or not.  Return  a procedure application and we will see
+       ;;at run-time what happens.
+       (%common-rator-application))
+
+      ((?tag)
+       ;;The rator type is a single value.  Good, this is what it is meant to be.
+       (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
+					 rator.psi ?tag first-rand.psi other-rand*.stx))
+
+      (_
+       ;;The rator  is declared to  evaluate to multiple  values; this is  invalid in
+       ;;call  context,  so we  raise  an  exception.   This is  non-standard  Scheme
+       ;;behaviour:  according  to the  standard  we  should  insert a  normal  rator
+       ;;application and raise an exception at run-time.
+       (raise
+	(condition (make-who-condition __who__)
+		   (make-message-condition "call operator declared to evaluate to multiple values")
+		   (syntax-match input-form.stx ()
+		     ((?rator . ?rands)
+		      (make-syntax-violation input-form.stx ?rator)))
+		   (make-retvals-signature-condition rator.sig))))
+      ))
+
+  (define* (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
+					    {rator.psi psi?} {first-rand.psi psi?} other-rand*.stx)
+    ;;Build a core language expression to apply  the rator to the rands; return a PSI
+    ;;struct.  This is an application form in standard (untyped) Scheme language.  We
+    ;;do not know what the retvals signature  of the application is; the returned PSI
+    ;;struct  will have  "<list>" as  retvals signature,  which means  any number  of
+    ;;values of any type.
+    ;;
+    (let* ((rator.core       (psi-core-expr rator.psi))
+	   (first-rand.core  (psi-core-expr first-rand.psi))
+	   (other-rand*.psi  (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
+	   (other-rand*.core (map psi-core-expr other-rand*.psi)))
+      (make-psi input-form.stx
+		(build-application (syntax-annotation input-form.stx)
+		  rator.core
+		  (cons first-rand.core other-rand*.core)))))
+
+  (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
+					     {rator.psi psi?} rator.tag
+					     {first-rand.psi psi?} other-rand*.stx)
+    ;;Build a  core language expression to  apply the rator  to the rands when  it is
+    ;;known that the rator will return a single value with specified type.
+    ;;
+    (cond ((type-identifier-is-procedure-sub-type? rator.tag lexenv.run)
+	   ;;The rator is a procedure: very good; return a procedure application.
+	   (let* ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
+		  (rand*.psi       (cons first-rand.psi other-rand*.psi)))
+	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
+						  rator.tag rator.psi rand*.psi)))
+
+	  (else
+	   ;;The rator  has a correct single-value  signature and it has  a specified
+	   ;;type, but it is not a procedure.
+	   (raise
+	    (condition (make-who-condition __who__)
+		       (make-message-condition "call operator declared to evaluate to non-procedure value")
+		       (syntax-match input-form.stx ()
+			 ((?rator . ?rands)
+			  (make-syntax-violation input-form.stx ?rator)))
+		       (make-retvals-signature-condition rator.tag))))))
+
+  #| end of module: CHI-APPLICATION/PSI-FIRST-OPERAND |# )
 
 
 ;;;; chi procedures: closure object application processing

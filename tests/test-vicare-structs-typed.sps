@@ -318,9 +318,9 @@
 	  ({one <fixnum>} {two <flonum>}))
 	(define O
 	  (new duo 1 2.0))
-	(debug-print
-	 (type-of (duo-one O)) (type-of (.one O))
-	 (type-of (duo-two O)) (type-of (.two O)))
+	;; (debug-print
+	;;  (type-of (duo-one O)) (type-of (.one O))
+	;;  (type-of (duo-two O)) (type-of (.two O)))
 	(values (.one O)
 		(.two O)))
     => 1 2.0)

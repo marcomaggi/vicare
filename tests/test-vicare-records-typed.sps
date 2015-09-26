@@ -33,7 +33,7 @@
 (check-display "*** testing Vicare libraries: records with typed language\n")
 
 
-(parametrise ((check-test-name	'generic-rtd-syntax))
+(parametrise ((check-test-name	'descriptor-syntax))
 
   (internal-body	;application syntax
     (define-record-type alpha
@@ -49,7 +49,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'generic-maker-syntax))
+(parametrise ((check-test-name	'maker-syntax))
 
   (internal-body ;application syntax
     (define-record-type alpha
@@ -73,7 +73,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'generic-predicate-syntax))
+(parametrise ((check-test-name	'predicate-syntax))
 
   (internal-body
 
@@ -137,7 +137,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'generic-slots-syntax))
+(parametrise ((check-test-name	'slots-syntax))
 
   (define-record-type alpha
     (fields (mutable a)
@@ -322,7 +322,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'methods))
+(parametrise ((check-test-name	'method-syntax))
 
 ;;; no parent
 
@@ -723,7 +723,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'case-methods))
+(parametrise ((check-test-name	'case-method-syntax))
 
   (check
       (internal-body
