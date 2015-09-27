@@ -37,26 +37,18 @@
 
 (define-syntax (with-object-type-syntactic-binding stx)
   (sys.syntax-case stx ()
-    ((_ (?who ?input-stx ?type-id ?lexenv ?syntactic-binding-descriptor-value)
-	?object-body0 ?object-body ...)
+    ((_ (?who ?input-form.stx ?type-id ?lexenv ?syntactic-binding-descriptor-value)
+	. ?body)
      (and (sys.identifier? (sys.syntax ?who))
-	  (sys.identifier? (sys.syntax ?expr-stx))
+	  (sys.identifier? (sys.syntax ?input-form.stx))
 	  (sys.identifier? (sys.syntax ?type-id))
 	  (sys.identifier? (sys.syntax ?lexenv))
 	  (sys.identifier? (sys.syntax ?syntactic-binding-descriptor-value)))
      (sys.syntax
-      (let* ((label  (id->label/or-error ?who ?input-stx ?type-id))
-	     (descr  (label->syntactic-binding-descriptor label ?lexenv)))
-	(cond ((eq? 'displaced-lexical (syntactic-binding-descriptor.type descr))
-	       (syntax-violation ?who "identifier out of context" ?input-stx ?type-id))
-	      ((object-type-name-binding-descriptor? descr)
-	       (visit-library-of-imported-syntactic-binding ?who ?input-stx ?type-id ?lexenv)
-	       (let ((?syntactic-binding-descriptor-value (syntactic-binding-descriptor.value descr)))
-		 ?object-body0 ?object-body ...))
-	      (else
-	       (syntax-violation ?who
-		 "syntactic identifier is not an object type identifier"
-		 ?input-stx ?type-id))))))
+      (let ((descr (id->object-type-binding-descriptor ?who ?input-form.stx ?type-id ?lexenv)))
+	(visit-library-of-imported-syntactic-binding ?who ?input-form.stx ?type-id ?lexenv descr)
+	(let ((?syntactic-binding-descriptor-value (syntactic-binding-descriptor.value descr)))
+	  . ?body))))
     ))
 
 

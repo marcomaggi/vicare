@@ -4642,9 +4642,7 @@
     (system-id						$expander)
 
     ;;These are only for internal use by the psyntax.
-    (make-syntactic-binding-descriptor/struct-type-name)
-    (make-syntactic-binding-descriptor/record-type-name)
-    (make-record-type-spec)
+    (make-syntactic-record-type-spec)
     (make-struct-type-spec)
 
 ;;; --------------------------------------------------------------------

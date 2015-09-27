@@ -1204,7 +1204,20 @@
 		     (cons (cons* label 'global-etv loc) global-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
-	    (($record-type-name $struct-type-name $scheme-type-name $module $fluid $synonym)
+	    (($object-type-name)
+	     (let ((ots (syntactic-binding-descriptor.value binding)))
+	       (cond ((core-scheme-type-spec? ots)
+		      (core-scheme-type-spec.original-descriptor ots))
+		     ((core-record-type-spec? ots)
+		      (core-record-type-spec.original-descriptor ots))
+		     (else
+		      (loop (cdr lexenv.run)
+			    (cons entry global-env)
+			    visit-env*)))))
+
+	    (($core-scheme-type-name
+	      $core-rtd $core-record-type-name $core-condition-object-type-name
+	      $module $fluid $synonym)
 	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
 	     ;;GLOBAL-ENV.
 	     ;;

@@ -1397,16 +1397,15 @@
     (syntax-match input-form.stx ()
       ((_ ?type-id)
        (identifier? ?type-id)
-       (begin
-	 (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run)
-	 (let* ((label (id->label/or-error __who__ input-form.stx ?type-id))
-		(descr (label->syntactic-binding-descriptor label lexenv.run)))
-	   (cond ((record-type-name-binding-descriptor? descr)
-		  (%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
-		 ((struct-type-name-binding-descriptor? descr)
-		  (%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
-		 (else
-		  (%synner "neither a struct type nor a object type" ?type-id))))))
+       (let* ((label (id->label/or-error __who__ input-form.stx ?type-id))
+	      (descr (label->syntactic-binding-descriptor label lexenv.run)))
+	 (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run descr)
+	 (cond ((record-type-name-binding-descriptor? descr)
+		(%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
+	       ((struct-type-name-binding-descriptor? descr)
+		(%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
+	       (else
+		(%synner "neither a struct type nor a object type" ?type-id)))))
       ))
 
 ;;; --------------------------------------------------------------------

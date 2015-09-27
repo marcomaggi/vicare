@@ -562,7 +562,7 @@
 			       global-mutable
 			       core-macro macro macro!
 			       $core-rtd $core-record-type-name $core-condition-object-type-name $core-scheme-type-name
-			       $record-type-name $struct-type-name $scheme-type-name $closure-type-name
+			       $object-type-name
 			       $module $fluid $synonym)
 			      type.value)
 			     (else

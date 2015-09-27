@@ -865,21 +865,20 @@
       ;;parent type name.
       ((_ ?parent-name)
        (identifier? ?parent-name)
-       (begin
-	 (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx ?parent-name (current-inferior-lexenv))
-	 ;;Validate ?PARENT-NAME  as syntactic identifier  bound to a  record-type syntactic
-	 ;;binding.
-	 (let* ((parent-descr (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
-		(parent-rts   (syntactic-binding-descriptor.value parent-descr))
-		(parent-proto (record-type-spec.super-protocol-id parent-rts)))
-	   (values ?parent-name
-		   (%named-gensym/suffix foo "-parent-rtd")
-		   (%named-gensym/suffix foo "-parent-rcd")
-		   `(record-type-descriptor ,?parent-name)
-		   ;;If the parent  has a super-type constructor  descriptor: use it;
-		   ;;otherwise use the default constructor descriptor.
-		   (or parent-proto
-		       `(record-constructor-descriptor ,?parent-name))))))
+       ;;Validate  ?PARENT-NAME  as  syntactic  identifier  bound  to  a  record-type
+       ;;syntactic binding.
+       (let* ((parent-descr (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
+	      (parent-rts   (syntactic-binding-descriptor.value parent-descr))
+	      (parent-proto (record-type-spec.super-protocol-id parent-rts)))
+	 (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx ?parent-name (current-inferior-lexenv) parent-descr)
+	 (values ?parent-name
+		 (%named-gensym/suffix foo "-parent-rtd")
+		 (%named-gensym/suffix foo "-parent-rcd")
+		 `(record-type-descriptor ,?parent-name)
+		 ;;If the parent  has a super-type constructor  descriptor: use it;
+		 ;;otherwise use the default constructor descriptor.
+		 (or parent-proto
+		     `(record-constructor-descriptor ,?parent-name)))))
 
       ;;If there is no PARENT clause try to retrieve the expression evaluating to the
       ;;RTD.
@@ -1194,18 +1193,19 @@
   (define foo-methods.table
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
-  `(make-record-type-spec (syntax ,foo-rtd.sym)
-			  (syntax ,foo-rcd.sym)
-			  ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
-			  ,(if foo-parent.id
-			       `(syntax ,foo-parent.id)
-			     `(syntax <record>))
-			  (syntax ,make-foo.id)
-			  ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
-			  (syntax ,foo?.id)
-			  ,foo-fields-safe-accessors.table
-			  ,foo-fields-safe-mutators.table
-			  ,foo-methods.table))
+  `(make-syntactic-record-type-spec
+    (syntax ,foo-rtd.sym)
+    (syntax ,foo-rcd.sym)
+    ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
+    ,(if foo-parent.id
+	 `(syntax ,foo-parent.id)
+       `(syntax <record>))
+    (syntax ,make-foo.id)
+    ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
+    (syntax ,foo?.id)
+    ,foo-fields-safe-accessors.table
+    ,foo-fields-safe-mutators.table
+    ,foo-methods.table))
 
 
 ;;;; done

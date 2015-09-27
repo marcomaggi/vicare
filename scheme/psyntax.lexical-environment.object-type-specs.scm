@@ -29,22 +29,33 @@
 
 	 object-type-spec.subtype-and-supertype?	object-type-spec-override-predicate
 
-	 <record-type-spec>
-	 make-record-type-spec				record-type-spec?
-	 record-type-spec.rtd-id			record-type-spec.rcd-id
-	 record-type-spec.super-protocol-id
+	 <scheme-type-spec>				scheme-type-spec?
+
+	 <closure-type-spec>
+	 make-closure-type-spec				closure-type-spec?
+	 closure-type-spec.signature
+
+	 <core-scheme-type-spec>
+	 make-core-scheme-type-spec			core-scheme-type-spec?
+	 core-scheme-type-spec.original-descriptor
 
 	 <struct-type-spec>
 	 make-struct-type-spec				struct-type-spec?
 	 struct-type-spec.std
 
-	 <scheme-type-spec>
-	 make-scheme-type-spec				scheme-type-spec?
+	 <record-type-spec>				record-type-spec?
+	 record-type-spec.rtd-id			record-type-spec.rcd-id
+	 record-type-spec.super-protocol-id
 
-	 <closure-type-spec>
-	 make-closure-type-spec				closure-type-spec?
-	 closure-type-spec.signature
-	 )
+	 <syntactic-record-type-spec>
+	 make-syntactic-record-type-spec		syntactic-record-type-spec?
+
+	 <core-record-type-spec>
+	 make-core-record-type-spec			core-record-type-spec?
+	 core-record-type-spec.original-descriptor
+
+	 <core-condition-type-spec>
+	 make-core-condition-type-spec			core-condition-type-spec?)
 
 
 ;;;; basic object-type specification
@@ -271,21 +282,148 @@
     (object-type-spec.type-predicate-sexp-set! spec predicate.stx)))
 
 
+;;;; built-in Scheme object-type specification
+;;
+;;This record-type  is the  base type  for all  the type  specifications representing
+;;Scheme objects.  It must not be instantiated directly.
+;;
+(define-record-type (<scheme-type-spec> dummy-make-scheme-type-spec scheme-type-spec?)
+  (nongenerative vicare:expander:<scheme-type-spec>)
+  (parent <object-type-spec>)
+  (protocol
+    (lambda (make-object-type-spec)
+      (define (make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
+	(let ((constructor.sexp         (or constructor.sexp
+					    (let ((arg (gensym)))
+					      `(named-lambda* ,type-id ({,arg ,predicate.sexp})
+						 ,arg))))
+	      (destructor.sexp		#f)
+	      (safe-accessors-table	'())
+	      (safe-mutators-table	'()))
+	  ((make-object-type-spec parent-id
+				  constructor.sexp destructor.sexp predicate.sexp
+				  safe-accessors-table safe-mutators-table methods-table))))
+      make-scheme-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; closure object signature spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<procedure>" representing closure objects defined  in the source code.  The lexenv
+;;entry has the format:
+;;
+;;   ($object-type-name . #<closure-type-spec>)
+;;
+;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
+;;signature of arguments and return values.
+;;
+;;NOTE There is  no predicate sexp because,  at run-time, there is no  way to inspect
+;;the signature of a closure object.
+;;
+(define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
+  (nongenerative vicare:expander:<closure-type-spec>)
+  (parent <scheme-type-spec>)
+
+  (fields
+   (immutable signature		closure-type-spec.signature)
+		;An instance of "<callable-signature>".
+   #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define (make-closure-type-spec type-id signature)
+	(let ((parent-id		(procedure-tag-id))
+	      (constructor.sexp		#f)
+	      (predicate.sexp		#f)
+	      (methods-table		'()))
+	  ((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
+	   signature)))
+      make-closure-type-spec))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; core Scheme object-type specification
+;;
+;;This  record-type is  used as  syntactic binding  descriptor's values  for built-in
+;;Vicare object types: fixnums, pairs, strings, vectors, et cetera.  The LEXENV entry
+;;has the format:
+;;
+;;   ($object-type-name . #<core-scheme-type-spec>)
+;;
+;;It is built at run-time by converting entries with format:
+;;
+;;   ($core-scheme-type-name
+;;     . (?parent-name ?constructor-name ?type-predicate-name ?methods-alist))
+;;
+;;that are defined by the boot image's  makefile and are hard-coded in the boot image
+;;itself.   Whenever  the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR  is  used  to
+;;retrieve  the descriptor  from  the label:  the descriptor  is  converted from  the
+;;hard-coded format to the format holding this value.
+;;
+(define-record-type (<core-scheme-type-spec> make-core-scheme-type-spec core-scheme-type-spec?)
+  (nongenerative vicare:expander:<core-scheme-type-spec>)
+  (parent <scheme-type-spec>)
+  (fields (immutable original-descriptor	core-scheme-type-spec.original-descriptor))
+		;The  original syntactic  binding descriptor  hard-coded in  the boot
+		;image.
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define (make-core-scheme-type-spec type-id parent-id
+					  constructor.sexp predicate.sexp methods-table
+					  original-descriptor)
+	((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
+	 original-descriptor))
+      make-core-scheme-type-spec)))
+
+
+;;;; Vicare's struct-type specification
+
+;;This record type is used as  syntactic binding descriptor's values for struct types
+;;defined by DEFINE-STRUCT.  The lexenv entry has the format:
+;;
+;;   ($object-type-name . #<struct-type-spec>)
+;;
+;;Lexical variables  bound to  instances of  this type  should be  called STS  (as in
+;;"Struct-Type Spec").
+;;
+(define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
+  (nongenerative vicare:expander:<struct-type-spec>)
+  (parent <object-type-spec>)
+  (fields
+   (immutable std			struct-type-spec.std)
+		;The struct-type descriptor object.
+   #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define (make-struct-type-spec std
+				     constructor.id predicate.id
+				     safe-accessors-table safe-mutators-table methods-table)
+	(let ((parent-id         (core-prim-id '<struct>))
+	      (destructor.sexp   `(internal-applicable-struct-type-destructor ,std)))
+	  ((make-object-type-spec parent-id
+				  constructor.id destructor.sexp predicate.id
+				  safe-accessors-table safe-mutators-table methods-table)
+	   std)))
+      make-struct-type-spec))
+  #| end of DEFINE-STRUCT-TYPE |# )
+
+
 ;;;; R6RS's record-type specification
 
-;;This record  type is  used as  syntactic binding descriptor  for R6RS  record types
-;;defined with the syntactic layer.  The lexenv entry has the format:
+;;This record type  is used as syntactic binding descriptor's  values for R6RS record
+;;types.  The lexenv entry has the format:
 ;;
-;;   ($record-type-name . #<record-type-spec>)
+;;   ($object-type-name . #<record-type-spec>)
 ;;
-;;It is built  when expanding DEFINE-RECORD-TYPE forms, or by  converting a syntactic
-;;binding "$core-rtd" or  "$core-record-type-name" (a buit-in record  type defined by
-;;the boot image) into a syntactic binding "$record-type-name".
+;;This type should  never be instantiated directly, rather sub-types  must be created
+;;and instantiated.
 ;;
-;;Lexical variables  bound to  instances of  this type  should be  called RTS  (as in
-;;"record-type spec").
+;;Lexical  variables bound  to instances  of this  type and  its sub-types  should be
+;;called RTS (as in "Record-Type Spec").
 ;;
-(define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
+(define-record-type (<record-type-spec> dummy-make-record-type-spec record-type-spec?)
   (nongenerative vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (fields
@@ -320,108 +458,99 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 
-;;;; Vicare's struct-type specification
-
-;;This record type  is used as syntactic binding descriptor  for struct types defined
-;;by DEFINE-STRUCT.  The lexenv entry has the format:
+;;;; syntactic R6RS's record-type specification
 ;;
-;;   ($record-type-name . #<struct-type-spec>)
+;;This record-type is  used as syntactic binding descriptor's values  for R6RS record
+;;types defined with the syntactic layer.  The lexenv entry has the format:
 ;;
-;;Lexical variables  bound to  instances of  this type  should be  called STS  (as in
-;;"struct-type spec").
+;;   ($object-type-name . #<syntactic-record-type-spec>)
 ;;
-(define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
-  (nongenerative vicare:expander:<struct-type-spec>)
-  (parent <object-type-spec>)
-  (fields
-   (immutable std			struct-type-spec.std)
-		;The struct-type descriptor object.
-   #| end of FIELDS |# )
+(define-record-type (<syntactic-record-type-spec> make-syntactic-record-type-spec syntactic-record-type-spec?)
+  (nongenerative vicare:expander:<syntactic-record-type-spec>)
+  (parent <record-type-spec>)
   (protocol
-    (lambda (make-object-type-spec)
-      (define (make-struct-type-spec std
-				     constructor.id predicate.id
-				     safe-accessors-table safe-mutators-table methods-table)
-	(let ((parent-id         (core-prim-id '<struct>))
-	      (destructor.sexp   `(internal-applicable-struct-type-destructor ,std)))
-	  ((make-object-type-spec parent-id
-				  constructor.id destructor.sexp predicate.id
-				  safe-accessors-table safe-mutators-table methods-table)
-	   std)))
-      make-struct-type-spec))
-  #| end of DEFINE-STRUCT-TYPE |# )
+    (lambda (make-record-type-spec)
+      (define (make-syntactic-record-type-spec rtd-id rcd-id
+					       super-protocol-id parent-id
+					       constructor.sexp destructor.sexp predicate.sexp
+					       safe-accessors-table safe-mutators-table methods-table)
+	((make-record-type-spec rtd-id rcd-id
+				super-protocol-id parent-id
+				constructor.sexp destructor.sexp predicate.sexp
+				safe-accessors-table safe-mutators-table methods-table)))
+      make-syntactic-record-type-spec)))
 
 
-;;;; built-in object-type specification
+;;;; core R6RS's record-type specification
+
+;;This record type  is used as syntactic binding descriptor's  values for R6RS record
+;;types defined by the boot image.  The lexenv entry has the format:
 ;;
-;;This record type is used as syntactic binding descriptor for built-in Vicare object
-;;types:  fixnums, pairs,  strings, vectors,  et cetera.   The lexenv  entry has  the
-;;format:
+;;   ($object-type-name . #<core-record-type-spec>)
 ;;
-;;   ($scheme-type-name . #<scheme-type-spec>)
+;;Instances of this type are built by the expander from syntactic binding descriptors
+;;of type "$core-rtd" and "$core-record-type-name",  which are hard-coded in the boot
+;;image and  generated directly by the  makefile at boot image  build-time.  Whenever
+;;the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the descriptor
+;;from  the label:  the descriptor  is converted  from the  hard-coded format  to the
+;;format holding this value.
 ;;
-;;It is built at run-time by converting entries with format:
-;;
-;;   ($core-scheme-type-name
-;;     . (?parent-name ?constructor-name ?type-predicate-name ?methods-alist))
-;;
-;;that are defined by the boot image's  makefile and are hard-coded in the boot image
-;;itself.
-;;
-(define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
-  (nongenerative vicare:expander:<scheme-type-spec>)
-  (parent <object-type-spec>)
+(define-record-type (<core-record-type-spec> make-core-record-type-spec core-record-type-spec?)
+  (nongenerative vicare:expander:<core-record-type-spec>)
+  (parent <record-type-spec>)
+  (fields (immutable original-descriptor	core-record-type-spec.original-descriptor))
+		;The  original syntactic  binding descriptor  hard-coded in  the boot
+		;image.
   (protocol
-    (lambda (make-object-type-spec)
-      (lambda (type-id parent-id constructor.sexp predicate.sexp methods-table)
-	(let ((constructor.sexp         (or constructor.sexp
-					    (let ((arg (gensym)))
-					      `(named-lambda* ,type-id ({,arg ,predicate.sexp})
-						 ,arg))))
-	      (destructor.sexp		#f)
-	      (safe-accessors-table	'())
-	      (safe-mutators-table	'()))
-	  ((make-object-type-spec parent-id
-				  constructor.sexp destructor.sexp predicate.sexp
-				  safe-accessors-table safe-mutators-table methods-table))))))
-  #| end of DEFINE-RECORD-TYPE |# )
+    (lambda (make-record-type-spec)
+      (case-define make-core-record-type-spec
+	((rtd-id rcd-id original-descriptor)
+	 ((make-record-type-spec rtd-id rcd-id) original-descriptor))
+
+	((rtd-id rcd-id super-protocol-id parent-id
+		 constructor.sexp destructor.sexp predicate.sexp
+		 safe-accessors-table safe-mutators-table methods-table
+		 original-descriptor)
+	 ((make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+				 constructor.sexp destructor.sexp predicate.sexp
+				 safe-accessors-table safe-mutators-table methods-table)
+	  original-descriptor)))
+      make-core-record-type-spec)))
 
 
-;;;; closure object signature spec
-;;
-;;This  record  type  is  used  as syntactic  binding  descriptor  for  sub-types  of
-;;"<procedure>" representing closure objects defined  in the source code.  The lexenv
-;;entry has the format:
-;;
-;;   ($closure-type-name . #<closure-type-spec>)
-;;
-;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
-;;signature of arguments and return values.
-;;
-;;NOTE There is  no predicate sexp because,  at run-time, there is no  way to inspect
-;;the signature of a closure object.
-;;
-(define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
-  (nongenerative vicare:expander:<closure-type-spec>)
-  (parent <scheme-type-spec>)
+;;;; core R6RS's condition object record-type specification
 
-  (fields
-   (immutable signature		closure-type-spec.signature)
-		;An instance of "<callable-signature>".
-   #| end of FIELDS |# )
-
+;;This record type is used as syntactic binding descriptor's value for R6RS condition
+;;object types defined by the boot image (exmples: "&who", "&error", et cetera).  The
+;;lexenv entry has the format:
+;;
+;;   ($object-type-name . #<core-condition-type-spec>)
+;;
+;;Instances of this type are built by the expander from syntactic binding descriptors
+;;of type "$core-condition-object-type-name", which are  hard-coded in the boot image
+;;and generated  directly by  the makefile  at boot  image build-time.   Whenever the
+;;function  LABEL->SYNTACTIC-BINDING-DESCRIPTOR is  used to  retrieve the  descriptor
+;;from  the label:  the descriptor  is converted  from the  hard-coded format  to the
+;;format holding this value.
+;;
+(define-record-type (<core-condition-type-spec> make-core-condition-type-spec core-condition-type-spec?)
+  (nongenerative vicare:expander:<core-condition-type-spec>)
+  (parent <core-record-type-spec>)
   (protocol
-    (lambda (make-scheme-type-spec)
-      (define (make-closure-type-spec type-id signature)
-	(let ((parent-id		(procedure-tag-id))
-	      (constructor.sexp		#f)
-	      (predicate.sexp		#f)
-	      (methods-table		'()))
-	  ((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
-	   signature)))
-      make-closure-type-spec))
+    (lambda (make-core-record-type-spec)
+      (case-define make-core-condition-type-spec
+	((rtd-id rcd-id original-descriptor)
+	 ((make-core-record-type-spec rtd-id rcd-id original-descriptor)))
 
-  #| end of DEFINE-RECORD-TYPE |# )
+	((rtd-id rcd-id super-protocol-id parent-id
+		 constructor.sexp destructor.sexp predicate.sexp
+		 safe-accessors-table safe-mutators-table methods-table
+		 original-descriptor)
+	 ((make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+				      constructor.sexp destructor.sexp predicate.sexp
+				      safe-accessors-table safe-mutators-table methods-table
+				      original-descriptor))))
+      make-core-condition-type-spec)))
 
 
 ;;;; done
