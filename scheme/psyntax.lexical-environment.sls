@@ -531,7 +531,7 @@
 (include "psyntax.lexical-environment.object-type-specs.scm" #t)
 
 ;; Definitions and utilities for typed lexical variables specification.
-(include "psyntax.lexical-environment.lexical-typed-specs.scm" #t)
+(include "psyntax.lexical-environment.typed-variable-specs.scm" #t)
 
 ;; Lexical environment: LEXENV entries and syntactic bindings helpers.
 (include "psyntax.lexical-environment.syntactic-bindings.scm" #t)
