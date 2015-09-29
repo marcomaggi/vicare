@@ -229,6 +229,17 @@
 	    (build-data no-source lex))))
   (make-syntactic-binding-descriptor/lexical-typed-var lts expanded-expr))
 
+(define* (make-global-typed-variable-spec-and-maker-core-expr {lts lexical-typed-variable-spec?} variable-loc)
+  (let* ((type-id		(typed-variable-spec.type-id             lts))
+	 (unsafe-variant	(typed-variable-spec.unsafe-variant-sexp lts))
+	 (gts			(make-global-typed-variable-spec type-id unsafe-variant variable-loc))
+	 (core-expr		(build-application no-source
+				  (build-primref no-source 'make-global-typed-variable-spec)
+				  (list (build-data no-source type-id)
+					(build-data no-source unsafe-variant)
+					(build-data no-source variable-loc)))))
+    (values gts core-expr)))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntactic-binding-descriptor-predicate lexical-typed-var-binding-descriptor?

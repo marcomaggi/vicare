@@ -4645,6 +4645,7 @@
     (make-syntactic-record-type-spec)
     (make-struct-type-spec)
     (make-lexical-typed-variable-spec)
+    (make-global-typed-variable-spec)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

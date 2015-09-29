@@ -104,10 +104,8 @@
    #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-global-typed-variable-spec {lts lexical-typed-variable-spec?} variable-loc)
-	((make-typed-variable-spec (typed-variable-spec.type-id             lts)
-				   (typed-variable-spec.unsafe-variant-sexp lts))
-	 variable-loc))
+      (define* (make-global-typed-variable-spec type-id unsafe-variant.sexp variable-loc)
+	((make-typed-variable-spec type-id unsafe-variant.sexp) variable-loc))
       make-global-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 

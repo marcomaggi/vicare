@@ -76,6 +76,8 @@
     syntactic-binding-descriptor/lexical-typed-var.value.type-id
     syntactic-binding-descriptor/lexical-typed-var.value.assigned?
 
+    make-global-typed-variable-spec-and-maker-core-expr
+
     ;; syntactic bindings utilities: base object-type specifications
     object-type-name-binding-descriptor?
 

@@ -1112,7 +1112,6 @@
 	       ;;EXPORT-SUBST; this validation will be performed later.
 	       ;;
 	       (let* ((lts		(car descr.value))
-		      (expanded-expr	(cdr descr.value))
 		      (lex		(lexical-typed-variable-spec.lex lts))
 		      (loc		(generate-storage-location-gensym lex))
 		      (variable-loc	(let lookup ((the-lex	lex)
@@ -1128,13 +1127,14 @@
 						(lookup the-lex (cdr lex*) (cdr loc*)))
 					    (assertion-violation/internal-error __who__
 					      "missing lexical gensym in lexenv" the-lex))))
-		      (gts		(make-global-typed-variable-spec lts variable-loc))
 		      (type		(if (lexical-typed-variable-spec.assigned? lts)
 					    'global-typed-mutable
 					  'global-typed)))
-		 (loop (cdr lexenv.run)
-		       (cons (make-global-env-entry label type loc) global-env)
-		       (cons (make-visit-env-entry loc gts expanded-expr) visit-env))))
+		 (receive (gts gts-maker-core-expr)
+		     (make-global-typed-variable-spec-and-maker-core-expr lts variable-loc)
+		   (loop (cdr lexenv.run)
+			 (cons (make-global-env-entry label type loc) global-env)
+			 (cons (make-visit-env-entry loc gts gts-maker-core-expr) visit-env)))))
 
 	      ((local-macro)
 	       ;;When we  define a syntactic  binding representing a  keyword binding
