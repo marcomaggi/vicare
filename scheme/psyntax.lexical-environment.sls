@@ -130,7 +130,6 @@
 
     <core-scheme-type-spec>
     make-core-scheme-type-spec				core-scheme-type-spec?
-    core-scheme-type-spec.original-descriptor
 
     <closure-type-spec>
     make-closure-type-spec				closure-type-spec?
@@ -151,7 +150,6 @@
 
     <core-record-type-spec>
     make-core-record-type-spec				core-record-type-spec?
-    core-record-type-spec.original-descriptor
 
     <core-condition-type-spec>
     make-core-condition-type-spec			core-condition-type-spec?

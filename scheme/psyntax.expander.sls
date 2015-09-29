@@ -1220,47 +1220,64 @@
 	       ;;
 	       ;;   (?label
 	       ;;     . (local-object-type-name
-	       ;;         . (#<object-type-spec> . ?expanded-expr)))
+	       ;;         . (#<object-type-spec> . ?symbolic-expr)))
+	       ;;
+	       ;;where for  some types  ?SYMBOLIC-EXPR is an  expression in  the core
+	       ;;language; for other types it is  a symbolic expression hard coded in
+	       ;;the boot image.
 	       ;;
 	       (let ((ots		(car descr.value))
 		     (expanded-expr	(cdr descr.value)))
 		 (cond
 		  ((core-scheme-type-spec? ots)
 		   ;;This case  is for  the syntactic bindings  representing built-in
-		   ;;types ("<top>", "<fixnum>", et cetera).
+		   ;;types ("<top>", "<fixnum>",  et cetera).  Here we  know that the
+		   ;;syntactic binding's descriptor has the format:
+		   ;;
+		   ;;   (local-object-type-name
+		   ;;     . (#<core-scheme-type-spec> . ?hard-coded-sexp-expr))
 		   ;;
 		   ;;Add to the GLOBAL-ENV an entry like:
 		   ;;
 		   ;;   (?label . ($core-scheme-type-name . ?hard-coded-sexp))
 		   ;;
-		   (let* ((D		(core-scheme-type-spec.original-descriptor ots))
-			  (D.type	(car D))
-			  (D.value	(cdr D)))
+		   (let ((hard-coded-sexp (cdr descr.value)))
 		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label D.type D.value) global-env)
+			   (cons (make-global-env-entry label '$core-scheme-type-name hard-coded-sexp) global-env)
 			   visit-env)))
 		  ((core-condition-type-spec? ots)
+		   ;;Here we  know that  the syntactic  binding's descriptor  has the
+		   ;;format:
+		   ;;
+		   ;;   (local-object-type-name
+		   ;;     . (#<core-condition-type-spec> . ?hard-coded-sexp-expr))
+		   ;;
 		   ;;Add to the GLOBAL-ENV an entry like:
 		   ;;
 		   ;;   (?label . ($core-condition-object-type-name . ?hard-coded-sexp))
 		   ;;
-		   (let* ((D		(core-record-type-spec.original-descriptor ots))
-			  (D.type	(car D))
-			  (D.value	(cdr D)))
+		   (let ((hard-coded-sexp (cdr descr.value)))
 		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label D.type D.value) global-env)
+			   (cons (make-global-env-entry label '$core-condition-object-type-name hard-coded-sexp) global-env)
 			   visit-env)))
 		  ((core-record-type-spec? ots)
+		   ;;Here we  know that  the syntactic  binding's descriptor  has the
+		   ;;format:
+		   ;;
+		   ;;   (local-object-type-name
+		   ;;     . (#<core-record-type-spec> . ?hard-coded-sexp-expr))
+		   ;;
 		   ;;Add to the GLOBAL-ENV an entry like:
 		   ;;
-		   ;;   (?label . ($core-rtd . (?rtd-name ?rcd-name)))
+		   ;;   (?label . ($core-rtd              . ?hard-coded-sexp))
 		   ;;   (?label . ($core-record-type-name . ?hard-coded-sexp))
 		   ;;
-		   (let* ((D		(core-record-type-spec.original-descriptor ots))
-			  (D.type	(car D))
-			  (D.value	(cdr D)))
+		   (let* ((hard-coded-sexp (cdr descr.value))
+			  (type            (if (fx=? 2 (length hard-coded-sexp))
+					       '$core-rtd
+					     '$core-record-type-name)))
 		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label D.type D.value) global-env)
+			   (cons (make-global-env-entry label type hard-coded-sexp) global-env)
 			   visit-env)))
 		  (else
 		   ;;This case  is for everything else:  struct-type names, syntactic

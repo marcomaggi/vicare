@@ -475,7 +475,6 @@
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
 	 (descr.value		(syntactic-binding-descriptor.value descriptor))
-	 (org			(cons descr.type descr.value))
 	 (type-id               (core-prim-id (car descr.value)))
 	 (parent-id		(cond ((list-ref descr.value 1)
 				       => core-prim-id)
@@ -485,8 +484,7 @@
 	 (methods-table		(%alist-ref-or-null descr.value 4)))
     (define spec
       (make-core-scheme-type-spec type-id parent-id
-				  constructor.sexp type-predicate.sexp methods-table
-				  org))
+				  constructor.sexp type-predicate.sexp methods-table))
     (set-car! descriptor 'local-object-type-name)
     (set-cdr! descriptor (cons spec descr.value))))
 
@@ -612,15 +610,13 @@
   ;;informations  about   the  type.   We  should   use  the  new  style   with  type
   ;;"$core-record-type-name".
   ;;
-  (let* ((descr.type	(syntactic-binding-descriptor.type  descriptor))
-	 (descr.value	(syntactic-binding-descriptor.value descriptor))
-	 (org		(cons descr.type descr.value))
-	 (rtd-id	(core-prim-id (car  descr.value)))
-	 (rcd-id	(core-prim-id (cadr descr.value))))
-    (define spec
-      (make-core-record-type-spec rtd-id rcd-id org))
+  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
+	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
+	 (rtd-id		(core-prim-id (car  hard-coded-sexp)))
+	 (rcd-id		(core-prim-id (cadr hard-coded-sexp)))
+	 (ots			(make-core-record-type-spec rtd-id rcd-id)))
     (set-car! descriptor 'local-object-type-name)
-    (set-cdr! descriptor (cons spec descr.value))))
+    (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
 (define-syntactic-binding-descriptor-predicate core-rtd-binding-descriptor?
   $core-rtd)
@@ -652,27 +648,24 @@
   ;;descriptor from the label: this function is used to convert the descriptor.
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (descr.value		(syntactic-binding-descriptor.value descriptor))
-	 (org			(cons descr.type descr.value))
-	 (rtd-id		(core-prim-id (car  descr.value)))
-	 (rcd-id		(core-prim-id (cadr descr.value)))
+	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
+	 (rtd-id		(core-prim-id (car  hard-coded-sexp)))
+	 (rcd-id		(core-prim-id (cadr hard-coded-sexp)))
 	 (super-protocol-id	#f)
-	 (parent-id		(cond ((list-ref descr.value 2)
+	 (parent-id		(cond ((list-ref hard-coded-sexp 2)
 				       => core-prim-id)
 				      (else #f)))
-	 (constructor-sexp	(bless (list-ref descr.value 3)))
+	 (constructor-sexp	(bless (list-ref hard-coded-sexp 3)))
 	 (destructor-sexp	#f)
-	 (type-predicate-sexp	(bless (list-ref descr.value 4)))
-	 (accessors-table	(%alist-ref-or-null descr.value 5))
+	 (type-predicate-sexp	(bless (list-ref hard-coded-sexp 4)))
+	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 5))
 	 (mutators-table	'())
-	 (methods-table		accessors-table))
-    (define spec
-      (make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-				  constructor-sexp destructor-sexp type-predicate-sexp
-				  accessors-table mutators-table methods-table
-				  org))
+	 (methods-table		accessors-table)
+	 (ots			(make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+							    constructor-sexp destructor-sexp type-predicate-sexp
+							    accessors-table mutators-table methods-table)))
     (set-car! descriptor 'local-object-type-name)
-    (set-cdr! descriptor (cons spec descr.value))))
+    (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
 ;;record-type descriptor established by the boot image; otherwise return false.
@@ -708,27 +701,24 @@
   ;;descriptor.
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (descr.value		(syntactic-binding-descriptor.value descriptor))
-	 (org			(cons descr.type descr.value))
-	 (rtd-id		(core-prim-id (car  descr.value)))
-	 (rcd-id		(core-prim-id (cadr descr.value)))
+	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
+	 (rtd-id		(core-prim-id (car  hard-coded-sexp)))
+	 (rcd-id		(core-prim-id (cadr hard-coded-sexp)))
 	 (super-protocol-id	#f)
-	 (parent-id		(cond ((list-ref descr.value 2)
+	 (parent-id		(cond ((list-ref hard-coded-sexp 2)
 				       => core-prim-id)
 				      (else #f)))
-	 (constructor-id	(bless (list-ref descr.value 3)))
+	 (constructor-id	(bless (list-ref hard-coded-sexp 3)))
 	 (destructor-id		#f)
-	 (type-predicate-id	(bless (list-ref descr.value 4)))
-	 (accessors-table	(%alist-ref-or-null descr.value 5))
+	 (type-predicate-id	(bless (list-ref hard-coded-sexp 4)))
+	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 5))
 	 (mutators-table	'())
-	 (methods-table		accessors-table))
-    (define spec
-      (make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
-				     constructor-id destructor-id type-predicate-id
-				     accessors-table mutators-table methods-table
-				     org))
+	 (methods-table		accessors-table)
+	 (ots			(make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
+							       constructor-id destructor-id type-predicate-id
+							       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'local-object-type-name)
-    (set-cdr! descriptor (cons spec descr.value))))
+    (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
 ;;condition object record-type descriptor established  by the boot image (for example

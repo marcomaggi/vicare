@@ -37,7 +37,6 @@
 
 	 <core-scheme-type-spec>
 	 make-core-scheme-type-spec			core-scheme-type-spec?
-	 core-scheme-type-spec.original-descriptor
 
 	 <struct-type-spec>
 	 make-struct-type-spec				struct-type-spec?
@@ -52,7 +51,6 @@
 
 	 <core-record-type-spec>
 	 make-core-record-type-spec			core-record-type-spec?
-	 core-record-type-spec.original-descriptor
 
 	 <core-condition-type-spec>
 	 make-core-condition-type-spec			core-condition-type-spec?)
@@ -351,16 +349,11 @@
 (define-record-type (<core-scheme-type-spec> make-core-scheme-type-spec core-scheme-type-spec?)
   (nongenerative vicare:expander:<core-scheme-type-spec>)
   (parent <scheme-type-spec>)
-  (fields (immutable original-descriptor	core-scheme-type-spec.original-descriptor))
-		;The  original syntactic  binding descriptor  hard-coded in  the boot
-		;image.
   (protocol
     (lambda (make-scheme-type-spec)
       (define (make-core-scheme-type-spec type-id parent-id
-					  constructor.sexp predicate.sexp methods-table
-					  original-descriptor)
-	((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
-	 original-descriptor))
+					  constructor.sexp predicate.sexp methods-table)
+	((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)))
       make-core-scheme-type-spec)))
 
 
@@ -484,23 +477,18 @@
 (define-record-type (<core-record-type-spec> make-core-record-type-spec core-record-type-spec?)
   (nongenerative vicare:expander:<core-record-type-spec>)
   (parent <record-type-spec>)
-  (fields (immutable original-descriptor	core-record-type-spec.original-descriptor))
-		;The  original syntactic  binding descriptor  hard-coded in  the boot
-		;image.
   (protocol
     (lambda (make-record-type-spec)
       (case-define make-core-record-type-spec
-	((rtd-id rcd-id original-descriptor)
-	 ((make-record-type-spec rtd-id rcd-id) original-descriptor))
+	((rtd-id rcd-id)
+	 ((make-record-type-spec rtd-id rcd-id)))
 
 	((rtd-id rcd-id super-protocol-id parent-id
 		 constructor.sexp destructor.sexp predicate.sexp
-		 safe-accessors-table safe-mutators-table methods-table
-		 original-descriptor)
+		 safe-accessors-table safe-mutators-table methods-table)
 	 ((make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
 				 constructor.sexp destructor.sexp predicate.sexp
-				 safe-accessors-table safe-mutators-table methods-table)
-	  original-descriptor)))
+				 safe-accessors-table safe-mutators-table methods-table))))
       make-core-record-type-spec)))
 
 
@@ -525,17 +513,15 @@
   (protocol
     (lambda (make-core-record-type-spec)
       (case-define make-core-condition-type-spec
-	((rtd-id rcd-id original-descriptor)
-	 ((make-core-record-type-spec rtd-id rcd-id original-descriptor)))
+	((rtd-id rcd-id)
+	 ((make-core-record-type-spec rtd-id rcd-id)))
 
 	((rtd-id rcd-id super-protocol-id parent-id
 		 constructor.sexp destructor.sexp predicate.sexp
-		 safe-accessors-table safe-mutators-table methods-table
-		 original-descriptor)
+		 safe-accessors-table safe-mutators-table methods-table)
 	 ((make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
 				      constructor.sexp destructor.sexp predicate.sexp
-				      safe-accessors-table safe-mutators-table methods-table
-				      original-descriptor))))
+				      safe-accessors-table safe-mutators-table methods-table))))
       make-core-condition-type-spec)))
 
 
