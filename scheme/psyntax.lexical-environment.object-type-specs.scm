@@ -185,8 +185,8 @@
 	 object-type-spec.safe-mutator-sexp
 	 object-type-spec.applicable-method-sexp)
 
-  (define* (object-type-spec.safe-accessor-sexp {spec object-type-spec?} field-name.sym lexenv)
-    ;;SPEC must an object-type specification record.  FIELD-NAME.SYM must be a symbol
+  (define* (object-type-spec.safe-accessor-sexp {ots object-type-spec?} field-name.sym lexenv)
+    ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
     ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
@@ -194,10 +194,10 @@
     ;;expanded  and  evaluated  at  run-time,  returns  the  field's  safe  accessor;
     ;;otherwise return false.
     ;;
-    (%spec-actor spec field-name.sym lexenv object-type-spec.safe-accessors-table))
+    (%spec-actor ots field-name.sym lexenv object-type-spec.safe-accessors-table))
 
-  (define* (object-type-spec.safe-mutator-sexp {spec object-type-spec?} field-name.sym lexenv)
-    ;;SPEC must an object-type specification record.  FIELD-NAME.SYM must be a symbol
+  (define* (object-type-spec.safe-mutator-sexp {ots object-type-spec?} field-name.sym lexenv)
+    ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
     ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
@@ -205,48 +205,33 @@
     ;;expanded and evaluated at run-time, returns the field's safe mutator; otherwise
     ;;return false.
     ;;
-    (%spec-actor spec field-name.sym lexenv object-type-spec.safe-mutators-table))
+    (%spec-actor ots field-name.sym lexenv object-type-spec.safe-mutators-table))
 
-  (define* (object-type-spec.applicable-method-sexp {spec object-type-spec?} method-name.sym lexenv)
-    ;;SPEC  must an  object-type  specification record.   METHOD-NAME.SYM  must be  a
-    ;;symbol representing a method name in the object-type specification.
+  (define* (object-type-spec.applicable-method-sexp {ots object-type-spec?} method-name.sym lexenv)
+    ;;OTS must an object-type specification record.  METHOD-NAME.SYM must be a symbol
+    ;;representing a method name in the object-type specification.
     ;;
     ;;If METHOD-NAME.SYM is EQ?  to the name  of a object's method: return a symbolic
     ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
     ;;expanded and evaluated at run-time,  returns the method's applicable; otherwise
     ;;return false.
     ;;
-    (%spec-actor spec method-name.sym lexenv object-type-spec.methods-table))
-    ;; (cond ((assq method-name.sym (object-type-spec.methods-table spec))
-    ;; 	   ;;The method name  is known; extract the symbolic expression  from the alist
-    ;; 	   ;;entry and return it.
-    ;; 	   => cdr)
-    ;; 	  ((let loop ((parent-id (object-type-spec.parent-id spec)))
-    ;; 	     (and parent-id
-    ;; 		  (let* ((descr (id->object-type-binding-descriptor #f #f parent-id lexenv))
-    ;; 			 (spec^ (syntactic-binding-descriptor.value descr)))
-    ;; 		    (cond ((assq method-name.sym (object-type-spec.methods-table spec^))
-    ;; 			   => cdr)
-    ;; 			  (else
-    ;; 			   (loop (object-type-spec.parent-id spec^))))))))
-    ;; 	  (else #f)))
+    (%spec-actor ots method-name.sym lexenv object-type-spec.methods-table))
 
-
-  (define (%spec-actor spec name.sym lexenv table-getter)
-    ;;TABLE-GETTER  must be  a  function  which, applied  to  the  SPEC, returns  the
-    ;;required association list.
-    (cond ((assq name.sym (table-getter spec))
+  (define (%spec-actor ots name.sym lexenv table-getter)
+    ;;TABLE-GETTER must be a function which, applied to the OTS, returns the required
+    ;;association list.
+    (cond ((assq name.sym (table-getter ots))
 	   ;;The field name is known; extract  the symbolic expression from the alist
 	   ;;entry and return it.
 	   => cdr)
-	  ((let loop ((parent-id (object-type-spec.parent-id spec)))
+	  ((let loop ((parent-id (object-type-spec.parent-id ots)))
 	     (and parent-id
-		  (let* ((descr (id->object-type-binding-descriptor #f #f parent-id lexenv))
-			 (spec^ (syntactic-binding-descriptor.value descr)))
-	  	    (cond ((assq name.sym (table-getter spec^))
+		  (let ((ots^ (id->object-type-specification #f #f parent-id lexenv)))
+	  	    (cond ((assq name.sym (table-getter ots^))
 	  		   => cdr)
 	  		  (else
-	  		   (loop (object-type-spec.parent-id spec^))))))))
+	  		   (loop (object-type-spec.parent-id ots^))))))))
 	  (else #f)))
 
   #| end of module |# )
@@ -254,16 +239,15 @@
 
 ;;;; basic object-type specification: ancestor predicate
 
-(define* (object-type-spec.subtype-and-supertype? {sub-spec object-type-spec?} {super-spec object-type-spec?} lexenv)
-  ;;Return true if SUB-SPEC is a subtype of SUPER-SPEC; otherwise return false.
+(define* (object-type-spec.subtype-and-supertype? {sub-ots object-type-spec?} {super-ots object-type-spec?} lexenv)
+  ;;Return true if SUB-OTS is a subtype of SUPER-OTS; otherwise return false.
   ;;
-  (define-syntax-rule (recurse ?sub-spec)
-    (object-type-spec.subtype-and-supertype? ?sub-spec super-spec lexenv))
-  (or (eq? sub-spec super-spec)
-      (cond ((object-type-spec.parent-id sub-spec)
+  (define-syntax-rule (recurse ?sub-ots)
+    (object-type-spec.subtype-and-supertype? ?sub-ots super-ots lexenv))
+  (or (eq? sub-ots super-ots)
+      (cond ((object-type-spec.parent-id sub-ots)
 	     => (lambda (parent-id)
-		  (recurse (syntactic-binding-descriptor.value
-			    (id->object-type-binding-descriptor #f #f parent-id lexenv)))))
+		  (recurse (id->object-type-specification #f #f parent-id lexenv))))
 	    (else #f))))
 
 
@@ -277,9 +261,8 @@
   ;;This is  used to override the  predicate of condition object  record-types, which
   ;;must work with both simple conditions and compound conditions.
   ;;
-  (let* ((descr  (id->object-type-binding-descriptor #f #f name.id (current-inferior-lexenv)))
-	 (spec   (syntactic-binding-descriptor.value descr)))
-    (object-type-spec.type-predicate-sexp-set! spec predicate.stx)))
+  (let ((ots (id->object-type-specification #f #f name.id (current-inferior-lexenv))))
+    (object-type-spec.type-predicate-sexp-set! ots predicate.stx)))
 
 
 ;;;; built-in Scheme object-type specification
@@ -313,7 +296,7 @@
 ;;"<procedure>" representing closure objects defined  in the source code.  The lexenv
 ;;entry has the format:
 ;;
-;;   ($object-type-name . #<closure-type-spec>)
+;;   (local-object-type-name . (#<closure-type-spec> . ?expanded-expr))
 ;;
 ;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
 ;;signature of arguments and return values.
@@ -350,12 +333,15 @@
 ;;Vicare object types: fixnums, pairs, strings, vectors, et cetera.  The LEXENV entry
 ;;has the format:
 ;;
-;;   ($object-type-name . #<core-scheme-type-spec>)
+;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
 ;;
 ;;It is built at run-time by converting entries with format:
 ;;
-;;   ($core-scheme-type-name
-;;     . (?parent-name ?constructor-name ?type-predicate-name ?methods-alist))
+;;   ($core-scheme-type-name . ?hard-coded-sexp)
+;;
+;;where ?HARD-CODED-SEXP has the format:
+;;
+;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
 ;;
 ;;that are defined by the boot image's  makefile and are hard-coded in the boot image
 ;;itself.   Whenever  the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR  is  used  to
@@ -383,7 +369,7 @@
 ;;This record type is used as  syntactic binding descriptor's values for struct types
 ;;defined by DEFINE-STRUCT.  The lexenv entry has the format:
 ;;
-;;   ($object-type-name . #<struct-type-spec>)
+;;   (local-object-type-name . (#<struct-type-spec> . ?expanded-expr))
 ;;
 ;;Lexical variables  bound to  instances of  this type  should be  called STS  (as in
 ;;"Struct-Type Spec").
@@ -413,12 +399,8 @@
 ;;;; R6RS's record-type specification
 
 ;;This record type  is used as syntactic binding descriptor's  values for R6RS record
-;;types.  The lexenv entry has the format:
-;;
-;;   ($object-type-name . #<record-type-spec>)
-;;
-;;This type should  never be instantiated directly, rather sub-types  must be created
-;;and instantiated.
+;;types.  This  type must never  be instantiated  directly, rather sub-types  must be
+;;created and instantiated.
 ;;
 ;;Lexical  variables bound  to instances  of this  type and  its sub-types  should be
 ;;called RTS (as in "Record-Type Spec").
@@ -463,7 +445,7 @@
 ;;This record-type is  used as syntactic binding descriptor's values  for R6RS record
 ;;types defined with the syntactic layer.  The lexenv entry has the format:
 ;;
-;;   ($object-type-name . #<syntactic-record-type-spec>)
+;;   (local-object-type-name . (#<syntactic-record-type-spec> . ?expanded-expr))
 ;;
 (define-record-type (<syntactic-record-type-spec> make-syntactic-record-type-spec syntactic-record-type-spec?)
   (nongenerative vicare:expander:<syntactic-record-type-spec>)
@@ -486,7 +468,11 @@
 ;;This record type  is used as syntactic binding descriptor's  values for R6RS record
 ;;types defined by the boot image.  The lexenv entry has the format:
 ;;
-;;   ($object-type-name . #<core-record-type-spec>)
+;;   (local-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
+;;
+;;where ?HARD-CODED-SEXP has one of the formats:
+;;
+;;   (?rtd-name ?rcd-name)
 ;;
 ;;Instances of this type are built by the expander from syntactic binding descriptors
 ;;of type "$core-rtd" and "$core-record-type-name",  which are hard-coded in the boot
@@ -524,7 +510,7 @@
 ;;object types defined by the boot image (exmples: "&who", "&error", et cetera).  The
 ;;lexenv entry has the format:
 ;;
-;;   ($object-type-name . #<core-condition-type-spec>)
+;;   (local-object-type-name . (#<core-condition-type-spec> . #f))
 ;;
 ;;Instances of this type are built by the expander from syntactic binding descriptors
 ;;of type "$core-condition-object-type-name", which are  hard-coded in the boot image

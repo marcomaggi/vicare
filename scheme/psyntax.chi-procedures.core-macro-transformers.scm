@@ -73,43 +73,6 @@
   #| end of module |# )
 
 
-;;;; helpers
-
-(define (%fxiota fx item*)
-  (if (pair? item*)
-      (cons fx (%fxiota (fxadd1 fx) (cdr item*)))
-    '()))
-
-
-;;;; helpers: struct types
-
-(define (%struct-field-name->struct-field-idx who input-form.stx field-names field-id)
-  ;;Given a list  of symbols FIELD-NAMES representing a struct's  list of field names
-  ;;and an identifier FIELD-ID representing the name  of a field: return the index of
-  ;;the selected field in the list.
-  ;;
-  (define field-sym (identifier->symbol field-id))
-  (let loop ((i 0) (ls field-names))
-    (if (pair? ls)
-	(if (eq? field-sym ($car ls))
-	    i
-	  (loop ($fxadd1 i) ($cdr ls)))
-      (syntax-violation who "invalid struct type field name" input-form.stx field-id))))
-
-(define (%struct-type-id->std who input-form.stx type-id lexenv.run)
-  ;;Given the syntactic identifier TYPE-ID  representing a struct-type name and bound
-  ;;to a  struct-type descriptor (STD):  find its  label, then its  syntactic binding
-  ;;descriptor,  finally return  the struct-type  descriptor itself.   If no  binding
-  ;;captures the  identifier or  the binding  does not  describe a  struct-type name:
-  ;;raise an exception.
-  ;;
-  (let* ((label (id->label/or-error who input-form.stx type-id))
-	 (descr (label->syntactic-binding-descriptor label lexenv.run)))
-    (if (struct-type-name-binding-descriptor? descr)
-	(struct-type-name-binding-descriptor.type-descriptor descr)
-      (syntax-violation who "not a struct type" input-form.stx type-id))))
-
-
 ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
 ;;non-core macros to their macro transformers.
 ;;
@@ -321,9 +284,9 @@
 ;;;; module core-macro-transformer: LET
 
 (define* (let-transformer input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand R6RS LET macros with  Vicare extensions from
-  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
-  ;;the context of the given LEXENV; return an PSI struct.
+  ;;Transformer functions  used to expand  LET syntaxes  from the top-level  built in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -337,31 +300,28 @@
      ;;
      (receive (lhs*.id lhs*.tag)
 	 (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
-       (let* ((rhs*.psi   (map (lambda (rhs.stx lhs.tag)
-				 ;;If LHS.TAG  is "<top>", we  still want to  use the
-				 ;;assert and return form to  make sure that a single
-				 ;;value  is returned.   If the  signature validation
-				 ;;succeeds at expand-time: the  returned PSI has the
-				 ;;RHS signature inferred  from the original RHS.STX,
-				 ;;not "(<top>)".
-				 (chi-expr (bless
-					    `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
-					   lexenv.run lexenv.expand))
-			    ?rhs* lhs*.tag))
-	      (lhs*.lex   (map generate-lexical-gensym lhs*.id))
-	      (lhs*.lab   (map generate-label-gensym   lhs*.id))
-	      (body*.stx  (push-lexical-contour
-			      (make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)
-			    (cons ?body ?body*)))
-	      (lexenv.run (lexenv-add-lexical-typed-var-bindings lhs*.lab lhs*.lex lhs*.tag lexenv.run))
-	      (body.psi   (chi-internal-body #f lexenv.run lexenv.expand body*.stx))
-	      (body.core  (psi.core-expr body.psi))
-	      (rhs*.core  (map psi.core-expr rhs*.psi)))
-	 (make-psi input-form.stx
-		   (build-let (syntax-annotation input-form.stx)
-			      lhs*.lex rhs*.core
-			      body.core)
-		   (psi.retvals-signature body.psi)))))
+       ;;If LHS.TAG is  "<top>", we still want  to use the assert and  return form to
+       ;;make sure  that a  single value  is returned.   If the  signature validation
+       ;;succeeds at  expand-time: the  returned PSI has  the RHS  signature inferred
+       ;;from the original RHS.STX, not "(<top>)".
+       (let ((rhs*.psi   (map (lambda (rhs.stx lhs.tag)
+				(chi-expr (bless
+					   `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
+					  lexenv.run lexenv.expand))
+			   ?rhs* lhs*.tag)))
+	 ;;Prepare the ghost lexical variables.
+	 (receive (rib lexenv.run lhs*.lex)
+	     (%process-syntactic-bindings lhs*.id lhs*.tag lexenv.run)
+	   ;;Prepare the body.
+	   (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
+		  (body.psi   (chi-internal-body input-form.stx lexenv.run lexenv.expand body*.stx))
+		  (body.core  (psi.core-expr body.psi))
+		  (rhs*.core  (map psi.core-expr rhs*.psi)))
+	     (make-psi input-form.stx
+		       (build-let (syntax-annotation input-form.stx)
+				  lhs*.lex rhs*.core
+				  body.core)
+		       (psi.retvals-signature body.psi)))))))
 
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;We use an internal define so that we can keep the type signature of ?RECUR.
@@ -384,10 +344,10 @@
      (syntax-violation __who__ "invalid syntax" input-form.stx))))
 
 
-;;;; module core-macro-transformer: LETREC and LETREC*
+;;;; module core-macro-transformer: LET, LETREC and LETREC*
 
 (module (letrec-transformer letrec*-transformer)
-  ;;Transformer  functions  used to  expand  LETREC  and  LETREC* syntaxes  from  the
+  ;;Transformer functions  used to expand LET,  LETREC and LETREC* syntaxes  from the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
@@ -401,8 +361,6 @@
   ;;   (letrec  ((?lhs ?rhs) ...) . ?body)
   ;;   (letrec* ((?lhs ?rhs) ...) . ?body)
   ;;
-  (define-syntax __who__
-    (identifier-syntax 'letrec-transformer))
 
   (define (letrec-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand LETREC syntaxes from the top-level built in
@@ -422,38 +380,30 @@
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the binding names are identifiers and without duplicates.
-       (receive (lhs*.id lhs*.tag)
-	   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
-	 ;;Generate unique variable names and labels for the LETREC bindings.
-	 (let ((lhs*.lex (map generate-lexical-gensym lhs*.id))
-	       (lhs*.lab (map generate-label-gensym   lhs*.id)))
-	   ;;Generate  what is  needed to  create  a lexical  contour: a  rib and  an
-	   ;;extended lexical  environment in which  to evaluate both  the right-hand
-	   ;;sides and the body.
-	   ;;
-	   ;;NOTE The region of all the  LETREC and LETREC* bindings includes all the
-	   ;;right-hand sides.
-	   (let* ((rib         (make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
-		  (lexenv.run^ (lexenv-add-lexical-typed-var-bindings lhs*.lab lhs*.lex lhs*.tag lexenv.run))
-		  (rhs*.psi    ($map-in-order
-				   (lambda (rhs.stx lhs.tag)
-				     (chi-expr (push-lexical-contour rib
-						 (bless
-						  `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx)))
-					       lexenv.run^ lexenv.expand))
-				 ?rhs* lhs*.tag))
-		  (body*.stx   (cons ?body ?body*))
-		  (body.psi    (chi-internal-body #f lexenv.run^ lexenv.expand
-						  (push-lexical-contour rib body*.stx))))
-	     (let* ((rhs*.core (map psi.core-expr rhs*.psi))
-		    (body.core (psi.core-expr body.psi))
-		    ;;Build the LETREC or LETREC* expression in the core language.
-		    (expr.core (core-lang-builder no-source
-				 lhs*.lex
-				 rhs*.core
-				 body.core)))
-	       (make-psi input-form.stx expr.core
-			 (psi.retvals-signature body.psi)))))))
+       (let*-values
+	   (((lhs*.id lhs*.tag)         (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
+	    ;;Prepare the ghost lexical variables.
+	    ((rib lexenv.run lhs*.lex)  (%process-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
+	 ;;NOTE The  region of all the  LETREC and LETREC* bindings  includes all the
+	 ;;right-hand sides.  The new rib is pushed on all the RHS and the body.
+	 (let* ((rhs*.psi    ($map-in-order
+				 (lambda (rhs.stx lhs.tag)
+				   (chi-expr (push-lexical-contour rib
+					       (bless
+						`(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx)))
+					     lexenv.run lexenv.expand))
+			       ?rhs* lhs*.tag))
+		(rhs*.core (map psi.core-expr rhs*.psi))
+		(body*.stx   (cons ?body ?body*))
+		(body.psi    (chi-internal-body input-form.stx lexenv.run lexenv.expand
+						(push-lexical-contour rib body*.stx)))
+		(body.core (psi.core-expr body.psi))
+		;;Build the LETREC or LETREC* expression in the core language.
+		(expr.core (core-lang-builder (syntax-annotation input-form.stx)
+			     lhs*.lex rhs*.core
+			     body.core)))
+	   (make-psi input-form.stx expr.core
+		     (psi.retvals-signature body.psi)))))
       ))
 
   #| end of module |# )
@@ -1348,9 +1298,8 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (identifier? ?type-id)
-       (let ((descr (id->struct-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run)))
-	 (%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand)))))
+       (let ((sts (id->struct-type-specification __who__ input-form.stx ?type-id lexenv.run)))
+	 (%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand sts)))))
 
 
   (define-core-transformer (record-type-descriptor input-form.stx lexenv.run lexenv.expand)
@@ -1360,9 +1309,8 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (identifier? ?type-id)
-       (let ((descr (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run)))
-	 (%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand)))))
+       (let ((rts (id->record-type-specification __who__ input-form.stx ?type-id lexenv.run)))
+	 (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand rts)))))
 
   (define-core-transformer (record-constructor-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from
@@ -1371,9 +1319,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (identifier? ?type-id)
-       (let* ((descr     (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-id lexenv.run))
-	      (rts       (syntactic-binding-descriptor.value descr))
+       (let* ((rts       (id->record-type-specification __who__ input-form.stx ?type-id lexenv.run))
 	      (expr.stx  (record-type-spec.rcd-id rts))
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
@@ -1396,30 +1342,27 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (identifier? ?type-id)
-       (let* ((label (id->label/or-error __who__ input-form.stx ?type-id))
-	      (descr (label->syntactic-binding-descriptor label lexenv.run)))
-	 (visit-library-of-imported-syntactic-binding __who__ input-form.stx ?type-id lexenv.run descr)
-	 (cond ((record-type-name-binding-descriptor? descr)
-		(%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
-	       ((struct-type-name-binding-descriptor? descr)
-		(%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand))
+       (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv.run)))
+	 (cond ((record-type-spec? ots)
+		(%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
+	       ((struct-type-spec? ots)
+		(%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       (else
-		(%synner "neither a struct type nor a object type" ?type-id)))))
+		(%synner "expected type identifier representing a struct-type name or a record-type name" ?type-id)))))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-struct-type-descriptor descr input-form.stx lexenv.run lexenv.expand)
-    (let* ((sts (syntactic-binding-descriptor.value descr))
-	   (std (struct-type-spec.std sts)))
+  (define (%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand
+					sts)
+    (let* ((std (struct-type-spec.std sts)))
       (make-psi input-form.stx
 		(build-data no-source std)
 		(make-retvals-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
 
-  (define (%make-record-type-descriptor descr input-form.stx lexenv.run lexenv.expand)
-    (let* ((rts       (syntactic-binding-descriptor.value descr))
-	   (expr.stx  (record-type-spec.rtd-id rts))
+  (define (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand
+					rts)
+    (let* ((expr.stx  (record-type-spec.rtd-id rts))
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 		(psi.core-expr expr.psi)

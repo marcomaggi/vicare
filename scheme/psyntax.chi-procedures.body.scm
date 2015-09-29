@@ -620,24 +620,25 @@
   ;;first we are sure that it is already typed when LAMBDA is expanded.
   ;;
   (define* (%chi-internal-define body-form.stx lexenv.run rib kwd* shadow/redefine-bindings?)
-    (define-values (id type.id qrhs)
+    (define-values (id type-id qrhs)
       ;;From parsing  the syntactic form,  we receive  the following values:  ID, the
-      ;;lexical typed  variable's syntactic  binding's identifier; TYPE.ID,  false or
+      ;;lexical typed  variable's syntactic  binding's identifier; TYPE-ID,  false or
       ;;the type identifier  for ID (possibly "<top>" if the  definition is untyped);
       ;;QRHS,  the qualified  RHS object  to be  expanded later;  a possibly  updated
       ;;LEXENV.run, see %PARSE-INTERNAL-DEFINE for details.
       (%parse-internal-define body-form.stx lexenv.run))
     (when (bound-id-member? id kwd*)
       (syntax-violation #f "cannot redefine keyword" body-form.stx))
-    (let ((lab (generate-label-gensym   id))
-	  (lex (generate-lexical-gensym id)))
+    (let* ((lab		(generate-label-gensym   id))
+	   (lex		(generate-lexical-gensym id))
+	   (descr	(if (and type-id (not (top-tag-id? type-id)))
+			    (make-syntactic-binding-descriptor/lexical-typed-var/from-data type-id lex)
+			  (make-syntactic-binding-descriptor/lexical-var lex)))
+	   (lexenv.run	(push-entry-on-lexenv lab descr lexenv.run)))
       ;;This rib  extension will raise  an exception if  it represents an  attempt to
       ;;illegally redefine a binding.
       (extend-rib! rib id lab shadow/redefine-bindings?)
-      (values lex qrhs
-	      (if type.id
-		  (lexenv-add-lexical-typed-var-binding lab lex type.id lexenv.run)
-		(lexenv-add-lexical-var-binding lab lex lexenv.run)))))
+      (values lex qrhs lexenv.run)))
 
   (define (%parse-internal-define input-form.stx lexenv.run)
     ;;Syntax parser for  Vicare's INTERNAL-DEFINE; this is like  the standard DEFINE,
@@ -666,11 +667,11 @@
 	      (who.sym      (identifier->symbol ?lhs)))
 	 (define-values (standard-formals.stx signature)
 	   (syntax-object.parse-lambda-clause-signature formals.stx input-form.stx))
-	 (define type.id
+	 (define type-id
 	   (fabricate-closure-type-identifier who.sym signature))
 	 (define qrhs
-	   (make-qualified-rhs/defun ?lhs input-form.stx type.id))
-	 (values ?lhs type.id qrhs)))
+	   (make-qualified-rhs/defun ?lhs input-form.stx type-id))
+	 (values ?lhs type-id qrhs)))
 
       ((_ ?attributes (brace ?id ?tag) ?expr)
        ;;Variable definition with tagged identifier.
@@ -693,10 +694,10 @@
 	   (syntax-object.parse-lambda-clause-signature ?fmls input-form.stx)
 	 (if (lambda-signature.fully-unspecified? signature)
 	     (let ((qrhs (make-qualified-rhs/defun ?lhs input-form.stx)))
-	       (values ?lhs (top-tag-id) qrhs))
-	   (let* ((type.id (fabricate-closure-type-identifier (identifier->symbol ?lhs) signature))
-		  (qrhs    (make-qualified-rhs/defun ?lhs input-form.stx type.id)))
-	     (values ?lhs type.id qrhs)))))
+	       (values ?lhs #f qrhs))
+	   (let* ((type-id (fabricate-closure-type-identifier (identifier->symbol ?lhs) signature))
+		  (qrhs    (make-qualified-rhs/defun ?lhs input-form.stx type-id)))
+	     (values ?lhs type-id qrhs)))))
 
       ((_ ?attributes ?id ?expr)
        ;;R6RS variable definition.

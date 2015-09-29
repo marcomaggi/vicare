@@ -41,7 +41,6 @@
     ;; interning libraries
     intern-library			just-intern-library
     unintern-library			interned-libraries
-    global-typed-variable-updater
 
     ;; library operations
     visit-library			invoke-library
@@ -530,9 +529,6 @@
     (visit-library lib))
   lib)
 
-(define global-typed-variable-updater
-  (make-parameter #f))
-
 (define* (just-intern-library lib)
   ;;See the documentation of the expander  for the format of the GLOBAL-ENV.  Entries
   ;;in the GLOBAL-ENV are  different from entries in the LEXENV;  here we transform a
@@ -542,17 +538,11 @@
       (lambda (label.descriptor)
 	(let* ((label      (car label.descriptor))
 	       (type.value (cdr label.descriptor))
-	       (binding    (case (car type.value)
-			     ((global)        (cons* 'global        lib (cdr type.value)))
-			     ((global-macro)  (cons* 'global-macro  lib (cdr type.value)))
-			     ((global-macro!) (cons* 'global-macro! lib (cdr type.value)))
-			     ((global-etv)    (cons* 'global-etv    lib (cdr type.value)))
-			     ;;SPEC is an instance  of "<global-typed-spec>", we have
-			     ;;to store the LIB into it.
-			     ((global-typed)  (cons 'global-typed
-						    (receive-and-return (spec)
-							(cdr type.value)
-						      ((global-typed-variable-updater) spec lib))))
+	       (descr      (case (car type.value)
+			     ((global global-typed global-typed-mutable
+			       global-macro global-macro! global-etv
+			       global-object-type-name)
+			      (cons* (car type.value) lib (cdr type.value)))
 			     ((core-prim
 			       library import export
 			       internal-define define-syntax define-alias
@@ -562,7 +552,6 @@
 			       global-mutable
 			       core-macro macro macro!
 			       $core-rtd $core-record-type-name $core-condition-object-type-name $core-scheme-type-name
-			       $object-type-name
 			       $module $fluid $synonym)
 			      type.value)
 			     (else
@@ -571,7 +560,7 @@
 				lib label.descriptor)))))
 	  ;;When the library  is serialised: the content of the  label's "value" slot
 	  ;;is not saved, so we have to set it here every time the library is loaded.
-	  (set-label-binding! label binding)))
+	  (set-label-binding! label descr)))
     ;;This expression returns the GLOBAL-ENV of the library LIB.
     (library-global-env lib))
   ;;Register the object in the collection of interned libraries.

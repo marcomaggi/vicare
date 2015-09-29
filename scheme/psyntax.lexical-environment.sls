@@ -63,19 +63,18 @@
     syntactic-binding-descriptor.type
     syntactic-binding-descriptor.value
 
+    make-syntactic-binding-descriptor/lexical-var
     lexical-var-binding-descriptor-value.lex-name
     lexical-var-binding-descriptor-value.assigned?
-    lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor!
     lexenv-add-lexical-var-binding
     lexenv-add-lexical-var-bindings
 
     make-syntactic-binding-descriptor/lexical-typed-var
+    make-syntactic-binding-descriptor/lexical-typed-var/from-data
     lexical-typed-var-binding-descriptor?
-    lexical-typed-var-binding-descriptor-value.lex-name
-    lexical-typed-var-binding-descriptor-value.assigned?
-    lexical-typed-var-binding-descriptor-value.type-id
-    lexenv-add-lexical-typed-var-binding
-    lexenv-add-lexical-typed-var-bindings
+    syntactic-binding-descriptor/lexical-typed-var.value.lex
+    syntactic-binding-descriptor/lexical-typed-var.value.type-id
+    syntactic-binding-descriptor/lexical-typed-var.value.assigned?
 
     ;; syntactic bindings utilities: base object-type specifications
     object-type-name-binding-descriptor?
@@ -161,20 +160,18 @@
     <typed-variable-spec>
     typed-variable-spec?
     typed-variable-spec.type-id
-    typed-variable-spec.unsafe-variant-sexp	typed-variable-spec.unsafe-variant-sexp-set!
+    typed-variable-spec.unsafe-variant-sexp		typed-variable-spec.unsafe-variant-sexp-set!
 
     ;; typed lexical variable specification
-    <lexical-typed-spec>
-    make-lexical-typed-spec			lexical-typed-spec?
-    lexical-typed-spec.lex			lexical-typed-spec.assigned?
-    lexical-typed-spec.type-id			lexical-typed-spec.defined-type?
-    lexical-typed-spec.set-assigned!
+    <lexical-typed-variable-spec>
+    make-lexical-typed-variable-spec			lexical-typed-variable-spec?
+    lexical-typed-variable-spec.lex			lexical-typed-variable-spec.type-id
+    lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
     ;; typed global variable specification
-    <global-typed-spec>
-    make-global-typed-spec			global-typed-spec?
-    global-typed-spec.loc			global-typed-spec.lib
-    global-typed-spec.type-id
+    <global-typed-variable-spec>
+    make-global-typed-variable-spec			global-typed-variable-spec?
+    global-typed-variable-spec.variable-loc		global-typed-variable-spec.type-id
 
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -220,14 +217,13 @@
     make-syntactic-identifier-for-temporary-variable
     make-top-level-syntax-object/quoted-quoting
     wrap-source-expression
-    visit-library-of-imported-syntactic-binding
 
-    ;; syntax objects: mapping identifiers to labels
+    ;; syntax objects: mapping identifiers to labels and similar
     id->label				id->label/or-error
-    id->object-type-binding-descriptor
-    id->record-type-name-binding-descriptor
-    id->struct-type-name-binding-descriptor
-    object-type-binding-identifier?
+    id->object-type-specification
+    id->record-type-specification
+    id->struct-type-specification
+    id->typed-variable-spec
 
     ;; syntax objects: marks
     same-marks?
@@ -280,6 +276,11 @@
     make-type-method-name-condition
     condition-type-method-name?
     condition-type-method-name
+
+    &syntactic-binding-descriptor
+    make-syntactic-binding-descriptor-condition
+    syntactic-binding-descriptor-condition?
+    condition-syntactic-binding-descriptor
 
     &syntax-definition-expanded-rhs-condition
     make-syntax-definition-expanded-rhs-condition
@@ -344,14 +345,14 @@
     (prefix (rnrs syntax-case) sys.)
     (psyntax.setup)
     (psyntax.compat)
+    (psyntax.builders)
     (only (psyntax.special-transformers)
 	  expand-time-value?
 	  expand-time-value-object)
     (only (psyntax.library-manager)
 	  library?
 	  visit-library
-	  label->imported-syntactic-binding-descriptor
-	  global-typed-variable-updater))
+	  label->imported-syntactic-binding-descriptor))
 
 
 ;;;; helpers
@@ -1652,6 +1653,10 @@
 
 ;;;; syntax objects: mapping identifiers to labels
 
+(define (id->label/or-error who input-form.stx id)
+  (or (id->label id)
+      (raise-unbound-error who input-form.stx id)))
+
 (module (id->label)
 
   (define* (id->label {id identifier?})
@@ -1787,30 +1792,20 @@
 
   #| end of module: ID->LABEL |# )
 
-;;; --------------------------------------------------------------------
+
+;;;; syntax objects: mapping identifiers to values
 
-(define (id->label/or-error who input-form.stx id)
-  (or (id->label id)
-      (raise-unbound-error who input-form.stx id)))
-
-(case-define object-type-binding-identifier?
-  ((id)
-   (object-type-binding-identifier? id (current-inferior-lexenv)))
-  ((id lexenv)
-   (cond ((id->label id)
-	  => (lambda (label)
-	       (object-type-spec? (syntactic-binding-descriptor.value
-				   (label->syntactic-binding-descriptor label lexenv)))))
-	 (else #f))))
-
-(define (id->object-type-binding-descriptor who input-form.stx id lexenv)
+(define (id->object-type-specification who input-form.stx id lexenv)
   ;;ID is meant to be a  syntactic identifier representing an object-type name, whose
-  ;;syntactic binding  descriptor has an  instance of "<object-type-spec>"  as value;
-  ;;retrieve its  label then its binding  descriptor from LEXENV, finally  return the
-  ;;binding descriptor.
+  ;;syntactic  binding's descriptor  contains  an  instance of  "<object-type-spec>";
+  ;;retrieve its label, then its descriptor  from LEXENV, finally return the instance
+  ;;of "<object-type-spec>".
+  ;;
+  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
+  ;;visited.
   ;;
   ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding descriptor  does not represent an  R6RS record-type name: raise  a syntax
+  ;;binding's  descriptor does  not represent  an  object-type name:  raise a  syntax
   ;;violation exception.
   ;;
   (unless (identifier? id)
@@ -1828,19 +1823,26 @@
       ((displaced-lexical)
        (syntax-violation who
 	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      (($object-type-name)
-       descr)
+      ((local-object-type-name)
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (syntactic-binding-descriptor/local-object-type.object-type-spec  descr))
+      ((global-object-type-name)
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (syntactic-binding-descriptor/global-object-type.object-type-spec descr))
       (else
        (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
 
-(define (id->record-type-name-binding-descriptor who input-form.stx id lexenv)
+(define (id->record-type-specification who input-form.stx id lexenv)
   ;;ID is meant  to be a syntactic identifier representing  a record-type name, whose
-  ;;syntactic binding descriptor  has an instance of "<record-type-spec>"  (or one of
-  ;;its sub-types)  as value;  retrieve its  label then  its binding  descriptor from
-  ;;LEXENV, finally return the binding descriptor.
+  ;;syntactic  binding's descriptor  contains  an  instance of  "<record-type-spec>";
+  ;;retrieve its label,  then its binding descriptor from LEXENV,  finally return the
+  ;;instance of "<record-type-spec>".
+  ;;
+  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
+  ;;visited.
   ;;
   ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding descriptor  does not represent an  R6RS record-type name: raise  a syntax
+  ;;binding's  descriptor does  not  represent  a record-type  name:  raise a  syntax
   ;;violation exception.
   ;;
   (unless (identifier? id)
@@ -1854,26 +1856,38 @@
 		  (make-message-condition message)
 		  (make-syntax-violation input-form.stx id)
 		  (make-syntactic-binding-descriptor-condition descr))))
+    (define (%error-wrong-type-identifier)
+      (%error-wrong-descriptor "the given type identifier is not bound to a record-type specification"))
     (case (syntactic-binding-descriptor.type descr)
       ((displaced-lexical)
        (syntax-violation who
 	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      (($object-type-name)
-       (let ((ots (syntactic-binding-descriptor.value descr)))
-	 (if (record-type-spec? ots)
-	     descr
-	   (%error-wrong-descriptor "the given type identifier is not bound to a record-type specification"))))
+      ((local-object-type-name)
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (receive-and-return (ots)
+	   (syntactic-binding-descriptor/local-object-type.object-type-spec  descr)
+	 (unless (record-type-spec? ots)
+	   (%error-wrong-type-identifier))))
+      ((global-object-type-name)
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (receive-and-return (ots)
+	   (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
+	 (unless (record-type-spec? ots)
+	   (%error-wrong-type-identifier))))
       (else
        (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
 
-(define (id->struct-type-name-binding-descriptor who input-form.stx id lexenv)
-  ;;ID is meant to be a  syntactic identifier representing an struct-type name, whose
-  ;;syntactic binding  descriptor has an  instance of "<struct-type-spec>"  as value;
-  ;;retrieve its  label then its binding  descriptor from LEXENV, finally  return the
-  ;;binding descriptor.
+(define (id->struct-type-specification who input-form.stx id lexenv)
+  ;;ID is meant  to be a syntactic identifier representing  a struct-type name, whose
+  ;;syntactic  binding's descriptor  contains  an  instance of  "<struct-type-spec>";
+  ;;retrieve its label,  then its binding descriptor from LEXENV,  finally return the
+  ;;instance of "<struct-type-name>".
+  ;;
+  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
+  ;;visited.
   ;;
   ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding  descriptor  does not  represent  an  struct-type  name: raise  a  syntax
+  ;;binding's  descriptor does  not represent  an  struct-type name:  raise a  syntax
   ;;violation exception.
   ;;
   (unless (identifier? id)
@@ -1887,19 +1901,78 @@
 		  (make-message-condition message)
 		  (make-syntax-violation input-form.stx id)
 		  (make-syntactic-binding-descriptor-condition descr))))
+    (define (%error-wrong-type-identifier)
+      (%error-wrong-descriptor "the given type identifier is not bound to a struct-type specification"))
     (case (syntactic-binding-descriptor.type descr)
       ((displaced-lexical)
        (syntax-violation who
 	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      (($object-type-name)
-       (let ((ots (syntactic-binding-descriptor.value descr)))
-	 (if (struct-type-spec? ots)
-	     descr
-	   (%error-wrong-descriptor "the given type identifier is not bound to a struct-type specification"))))
+      ((local-object-type-name)
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (receive-and-return (ots)
+	   (syntactic-binding-descriptor/local-object-type.object-type-spec  descr)
+	 (unless (struct-type-spec? ots)
+	   (%error-wrong-type-identifier))))
+      ((global-object-type-name)
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (receive-and-return (ots)
+	   (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
+	 (unless (struct-type-spec? ots)
+	   (%error-wrong-type-identifier))))
       (else
        (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
 
-;;; --------------------------------------------------------------------
+(define* (id->typed-variable-spec who input-form.stx id lexenv)
+  ;;ID is  meant to be a  syntactic identifier representing a  typed variable, either
+  ;;lexical or global,  whose syntactic binding's descriptor contains  an instance of
+  ;;"<typed-variable-spec>";  retrieve its  label, then  its binding  descriptor from
+  ;;LEXENV, finally return the instance of "<typed-variable-spec>".
+  ;;
+  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
+  ;;visited.
+  ;;
+  ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
+  ;;binding's  descriptor  does  not  represent  a typed  variable:  raise  a  syntax
+  ;;violation exception.
+  ;;
+  (unless (identifier? id)
+    (syntax-violation who
+      "expected identifier as typed variable name" input-form.stx id))
+  (let* ((label (id->label/or-error who input-form.stx id))
+	 (descr (label->syntactic-binding-descriptor label lexenv)))
+    (define (%error-wrong-descriptor message)
+      (raise
+       (condition (make-who-condition who)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx id)
+		  (make-syntactic-binding-descriptor-condition descr))))
+    (define (%error-wrong-type-identifier)
+      (%error-wrong-descriptor "the identifier is not bound to a typed variable"))
+    (case (syntactic-binding-descriptor.type descr)
+      ((displaced-lexical)
+       (syntax-violation who
+	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
+      ((lexical-typed)
+       ;;We expect the descriptor to have the format:
+       ;;
+       ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+       ;;
+       (car (syntactic-binding-descriptor.value descr)))
+      ((global-typed global-typed-mutable)
+       ;;We expect the descriptor to have the format:
+       ;;
+       ;;   (global-typed         . (#<library> . ?loc))
+       ;;   (global-typed-mutable . (#<library> . ?loc))
+       ;;
+       ;;where ?LOC is a  loc gensym containing in its VALUE slots  a reference to an
+       ;;instance of "<global-typed-variable-spec>".
+       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+       (symbol-value (cdr (syntactic-binding-descriptor.value descr))))
+      (else
+       (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
+
+
+;;; visiting libraries
 
 (case-define* visit-library-of-imported-syntactic-binding
   ((who input-form.stx id lexenv)
@@ -1908,25 +1981,25 @@
      (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv descr)))
   ((who input-form.stx id lexenv descr)
    (case (syntactic-binding-descriptor.type descr)
-     ((global global-macro global-macro! global-etv)
+     ((global global-macro global-macro! global-etv global-typed global-object-type-name)
       ;;We expect the syntactic binding's descriptor to be one among:
       ;;
-      ;;   (global         . (?library . ?loc))
-      ;;   (global-macro   . (?library . ?loc))
-      ;;   (global-macro!  . (?library . ?loc))
-      ;;   (global-etv     . (?library . ?loc))
+      ;;   (global         . (#<library> . ?loc))
+      ;;   (global-macro   . (#<library> . ?loc))
+      ;;   (global-macro!  . (#<library> . ?loc))
+      ;;   (global-etv     . (#<library> . ?loc))
+      ;;   (global-typed   . (#<library> . ?loc))
+      ;;   (global-typed-mutable    . (#<library> . ?loc))
+      ;;   (global-object-type-name . (#<library> . ?loc))
       ;;
       (visit-library (car (syntactic-binding-descriptor.value descr))))
 
-     ((global-typed)
-      (visit-library (global-typed-spec.lib (syntactic-binding-descriptor.value descr))))
-
-     (($object-type-name)
+     ((local-object-type-name)
       ;;We expect the syntactic binding's descriptor to be:
       ;;
-      ;;   ($object-type-name . #<object-type-spec>)
+      ;;   (local-object-type-name . (#<object-type-spec> . ?expanded-expr))
       ;;
-      (let ((ots (syntactic-binding-descriptor.value descr)))
+      (let ((ots (syntactic-binding-descriptor/local-object-type.object-type-spec descr)))
 	(cond ((syntactic-record-type-spec? ots)
 	       (let ((rtd-id (record-type-spec.rtd-id ots)))
 		 ;;If needed: visit the library from which the parent was imported.
@@ -2754,8 +2827,6 @@
 
 
 ;;;; done
-
-(global-typed-variable-updater global-typed-spec.set-lib!)
 
 #| end of library |# )
 

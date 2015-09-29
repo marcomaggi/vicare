@@ -102,34 +102,25 @@
 
 ;;;; type identifier utilities
 
-(case-define type-identifier?
+(case-define* type-identifier?
   ((id)
    (type-identifier? id (lex.current-inferior-lexenv)))
   ((id lexenv)
    (and (identifier? id)
 	(cond ((lex.id->label id)
 	       => (lambda (label)
-		    (let* ((descr (lex.label->syntactic-binding-descriptor label lexenv))
-			   (value (lex.syntactic-binding-descriptor.value descr)))
-		      (lex.object-type-spec? value))))
+		    (let ((descr (lex.label->syntactic-binding-descriptor label lexenv)))
+		      (case (lex.syntactic-binding-descriptor.type descr)
+			((displaced-lexical)
+			 (raise
+			  (condition (make-who-condition __who__)
+				     (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
+				     (make-syntax-violation id #f)
+				     (lex.make-syntactic-binding-descriptor-condition descr))))
+			((local-object-type-name global-object-type-name)
+			 #t)
+			(else #f)))))
 	      (else #f)))))
-
-(define (assert-type-identifier who input-form.stx id)
-  (define (%synner message)
-    (syntax-violation who message input-form.stx id))
-  (unless (identifier? id)
-    (%synner "expected syntactic identifier as type identifier"))
-  (cond ((lex.id->label id)
-	 => (lambda (label)
-	      (let ((descr (lex.label->syntactic-binding-descriptor label (lex.current-inferior-lexenv))))
-		(case (lex.syntactic-binding-descriptor.type descr)
-		  ((displaced-lexical)
-		   (%synner "out of context syntactic identifier given as type identifier"))
-		  (else
-		   (unless (lex.object-type-spec? (lex.syntactic-binding-descriptor.value descr))
-		     (%synner "syntactic identifier has no <object-type-spex> as descriptor value")))))))
-	(else
-	 (%synner "expected bound syntactic identifier as type identifier"))))
 
 (define (type-identifier-detailed-validation who input-form.stx lexenv.run type.id)
   ;;To  be  used to  validate  TYPE.ID  as  bound  identifier having  an  object-type
@@ -137,20 +128,19 @@
   ;;instance of  "<object-type-spec>" as  object-type specification  (OTS), otherwise
   ;;raise an exception.
   ;;
+  (define (%synner message)
+    (syntax-violation who message input-form.stx type.id))
   (unless (identifier? type.id)
-    (syntax-violation who
-      "expected identifier as type specification"
-      input-form.stx type.id))
+    (%synner "expected identifier as type specification"))
   (let* ((label (lex.id->label/or-error who input-form.stx type.id))
-	 (descr (lex.label->syntactic-binding-descriptor label lexenv.run)))
-    (when (eq? 'displaced-lexical (lex.syntactic-binding-descriptor.type descr))
-      (syntax-violation who "unbound label for type identifier" input-form.stx type.id))
-    (receive-and-return (spec)
-	(lex.syntactic-binding-descriptor.value descr)
-      (unless (lex.object-type-spec? spec)
-	(syntax-violation who
-	  "expected type identifier but given identifier does not represent an object-type"
-	  input-form.stx type.id)))))
+    	 (descr (lex.label->syntactic-binding-descriptor label lexenv.run)))
+    (case (lex.syntactic-binding-descriptor.type descr)
+      ((displaced-lexical)
+       (%synner "identifier out of context as type identifier"))
+      ((local-object-type-name global-object-type-name)
+       (car (lex.syntactic-binding-descriptor.value descr)))
+      (else
+       (%synner "expected type identifier but given identifier does not represent an object-type")))))
 
 (case-define* type-identifier-super-and-sub?
   ((sub-type.id super-type.id)
@@ -168,14 +158,16 @@
        (lex.$top-tag-id? super-type.id)
        (let* ((super-label (lex.id->label/or-error #f input-form.stx super-type.id))
 	      (super-descr (lex.label->syntactic-binding-descriptor super-label lexenv))
-	      (super-value (lex.syntactic-binding-descriptor.value super-descr)))
-	 (if (lex.object-type-spec? super-value)
+	      (super-value (lex.syntactic-binding-descriptor.value super-descr))
+	      (super-ots   (car super-value)))
+	 (if (lex.object-type-spec? super-ots)
 	     (let loop ((sub-type.id sub-type.id))
 	       (let* ((sub-label (lex.id->label/or-error #f input-form.stx sub-type.id))
 		      (sub-descr (lex.label->syntactic-binding-descriptor sub-label lexenv))
-		      (sub-value (lex.syntactic-binding-descriptor.value sub-descr)))
-		 (if (lex.object-type-spec? sub-value)
-		     (cond ((lex.object-type-spec.parent-id sub-value)
+		      (sub-value (lex.syntactic-binding-descriptor.value sub-descr))
+		      (sub-ots   (car sub-value)))
+		 (if (lex.object-type-spec? sub-ots)
+		     (cond ((lex.object-type-spec.parent-id sub-ots)
 			    => (lambda (parent.id)
 				 (cond ((lex.$top-tag-id? parent.id)
 					#f)
@@ -206,14 +198,16 @@
 		 type1
 	       (let* ((label2 (lex.id->label/or-error #f #f type2))
 		      (descr2 (lex.label->syntactic-binding-descriptor label2 lexenv))
-		      (value2 (lex.syntactic-binding-descriptor.value descr2)))
-		 (cond ((lex.object-type-spec.parent-id value2)
+		      (value2 (lex.syntactic-binding-descriptor.value descr2))
+		      (ots2   (car value2)))
+		 (cond ((lex.object-type-spec.parent-id ots2)
 			=> inner-loop)
 		       (else
 			(let* ((label1 (lex.id->label/or-error #f #f type1))
 			       (descr1 (lex.label->syntactic-binding-descriptor label1 lexenv))
-			       (value1 (lex.syntactic-binding-descriptor.value descr1)))
-			  (cond ((lex.object-type-spec.parent-id value1)
+			       (value1 (lex.syntactic-binding-descriptor.value descr1))
+			       (ots1   (car value1)))
+			  (cond ((lex.object-type-spec.parent-id ots1)
 				 => outer-loop)
 				(else
 				 (lex.top-tag-id))))))))))))))
@@ -243,13 +237,15 @@
 ;;expand-time that such  lexical variables are bound to a  closure object; this means
 ;;their syntactic binding descriptor has one of the formats:
 ;;
-;;   (lexical-typed . ?lexical-typed-spec)
-;;   (global-typed  . ?global-typed-spec)
+;;   (lexical-typed         . (#<lexical-typed-variable-spec> . ?expanded-expr))
+;;   (global-typed          . (#<library> . ?loc))
+;;   (global-typed-mutable  . (#<library> . ?loc))
 ;;
-;;where   ?LEXICAL-TYPED-SPEC   is   an  instance   of   "<lexical-typed-spec>"   and
-;;?GLOBAL-TYPED-SPEC is an  instance of "<global-typed-spec>".  These  two spec types
-;;are  sub-types  of  "<typed-variable-spec>",  which  has  some  special  fields  to
-;;represent expand-time properties of closure object's syntactic bindings.
+;;and  ?LOC  is  a  loc  gensym  containing,  in  its  VALUE  slot,  an  instance  of
+;;"<global-typed-variable-spec>".
+;;
+;;The two spec types are sub-types of "<typed-variable-spec>", which has some special
+;;fields to represent expand-time properties of closure object's syntactic bindings.
 ;;
 
 (case-define* typed-procedure-variable.unsafe-variant
@@ -257,34 +253,36 @@
   ;;variable which  is meant to  be bound  to a closure  object: return false  or the
   ;;symbolic expression representing its unsafe variant.
   ;;
-  (({typed-variable.id identifier?})
-   (typed-procedure-variable.unsafe-variant typed-variable.id (lex.current-inferior-lexenv)))
-  (({typed-variable.id identifier?} lexenv)
-   (let* ((label (lex.id->label/or-error __who__ #f typed-variable.id))
-	  (descr (lex.label->syntactic-binding-descriptor label lexenv))
-	  (spec  (lex.syntactic-binding-descriptor.value descr)))
-     (if (lex.typed-variable-spec? spec)
-	 (lex.typed-variable-spec.unsafe-variant-sexp spec)
+  ((id)
+   (typed-procedure-variable.unsafe-variant id (lex.current-inferior-lexenv)))
+  ((id lexenv)
+   (let ((tvs (lex.id->typed-variable-spec __who__ #f id lexenv)))
+     (if (type-identifier-is-procedure-sub-type? (lex.typed-variable-spec.type-id tvs))
+	 (lex.typed-variable-spec.unsafe-variant-sexp tvs)
        (assertion-violation __who__
-	 "given identifier is not a typed lexical variable"
-	 typed-variable.id)))))
+	 "the type of typed variable is not a sub-type of \"<procedure>\""
+	 id tvs)))))
 
 (case-define* typed-procedure-variable.unsafe-variant-set!
   ;;Given an identifier representing a typed, non-imported, lexical variable which is
   ;;meant to be  bound to a closure object: set  the symbolic expression representing
   ;;its unsafe variant.
   ;;
-  (({typed-variable.id identifier?} unsafe-variant.sexp)
-   (typed-procedure-variable.unsafe-variant-set! typed-variable.id unsafe-variant.sexp (lex.current-inferior-lexenv)))
-  (({typed-variable.id identifier?} unsafe-variant.sexp lexenv)
-   (let* ((label (lex.id->label/or-error __who__ #f typed-variable.id))
-	  (descr (lex.label->syntactic-binding-descriptor label lexenv))
-	  (spec  (lex.syntactic-binding-descriptor.value descr)))
-     (if (lex.lexical-typed-spec? spec)
-	 (lex.typed-variable-spec.unsafe-variant-sexp-set! spec unsafe-variant.sexp)
+  ((id unsafe-variant.sexp)
+   (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp (lex.current-inferior-lexenv)))
+  ((id unsafe-variant.sexp lexenv)
+   (let ((tvs (lex.id->typed-variable-spec __who__ #f id lexenv)))
+     (if (lex.lexical-typed-variable-spec? tvs)
+	 (if (type-identifier-is-procedure-sub-type? (lex.typed-variable-spec.type-id tvs))
+	     (lex.typed-variable-spec.unsafe-variant-sexp-set! tvs unsafe-variant.sexp)
+	   (assertion-violation __who__
+	     "the type of typed variable is not a sub-type of \"<procedure>\""
+	     id tvs))
+       ;;If we are here, ID is bound to a syntactic identifier of type "global-typed"
+       ;;or "global-typed-mutable".
        (assertion-violation __who__
-	 "given identifier is not a typed lexical variable"
-	 typed-variable.id unsafe-variant.sexp)))))
+	 "attempt to mutate unsafe variant of imported typed variable"
+	 id unsafe-variant.sexp)))))
 
 
 ;;;; fabricated procedure type identifiers
@@ -323,8 +321,7 @@
 ;;
 ;;To represent  the type of  the closure object: we  create a fresh  type identifier,
 ;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
-;;VALUE field of the label gensym; the descriptor is of type "$closure-type-spec" and
-;;it has an instance of "<closure-type-spec>" as value.
+;;VALUE field of the label gensym.
 ;;
 (module (fabricate-closure-type-identifier)
 
@@ -333,11 +330,13 @@
     ;;can be a random gensym when no name is given.  SIGNATURE must be an instance of
     ;;"<callable-signature>" or one of its sub-types.
     ;;
-    (let* ((type.sym  (%make-closure-type-name who))
-	   (type.lab  (gensym type.sym)))
-      (receive-and-return (type.id)
-	  (lex.make-top-level-syntactic-identifier-from-source-name-and-label type.sym type.lab)
-	(set-symbol-value! type.lab (lex.make-syntactic-binding-descriptor/closure-type-name type.id signature)))))
+    (let* ((type-id.sym  (%make-closure-type-name who))
+	   (type-id.lab  (gensym type-id.sym)))
+      (receive-and-return (type-id)
+	  (lex.make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
+	(let ((spec          (lex.make-closure-type-spec type-id signature))
+	      (expanded-expr #f))
+	  (set-symbol-value! type-id.lab (lex.make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
 
   (define (false-or-symbol? obj)
     (or (not     obj)
@@ -934,7 +933,7 @@
   (syntax-match stx (brace)
     ((brace ?id ?tag)
      (begin
-       (assert-type-identifier __who__ stx ?tag)
+       (type-identifier-detailed-validation __who__ stx (lex.current-inferior-lexenv) ?tag)
        (values ?id ?tag)))
     (?id
      (identifier? ?id)
@@ -982,7 +981,7 @@
 	    (values '() '()))
 	   (((brace ?id ?tag) . ?other-id*)
 	    (begin
-	      (assert-type-identifier __who__ input-form.stx ?tag)
+	      (type-identifier-detailed-validation __who__ input-form.stx (lex.current-inferior-lexenv) ?tag)
 	      (receive (id* tag*)
 		  (recur ?other-id*)
 		(values (cons ?id id*) (cons ?tag tag*)))))
@@ -1058,7 +1057,7 @@
 		      (identifier? ?rest-tag))
 	   (syntax-violation __module_who__
 	     "invalid rest argument specification" original-formals.stx (list 'brace ?rest-id ?rest-tag)))
-	 (assert-type-identifier __module_who__ input-form.stx ?rest-tag)
+	 (type-identifier-detailed-validation __module_who__ input-form.stx (lex.current-inferior-lexenv) ?rest-tag)
 	 (receive-and-return (standard-formals.stx tags)
 	     (let recur ((?arg* ?arg*))
 	       (if (pair? ?arg*)
@@ -1128,7 +1127,7 @@
 	   (and (identifier? ?id)
 		(identifier? ?tag))
 	   (begin
-	     (assert-type-identifier __module_who__ input-form.stx ?tag)
+	     (type-identifier-detailed-validation __module_who__ input-form.stx (lex.current-inferior-lexenv) ?tag)
 	     (values (cons ?id standard-formals) (cons ?tag tags))))
 	  (else
 	   (syntax-violation __module_who__

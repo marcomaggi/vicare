@@ -37,19 +37,22 @@
 
 (define-syntax (with-object-type-syntactic-binding stx)
   (sys.syntax-case stx ()
-    ((_ (?who ?input-form.stx ?type-id ?lexenv ?syntactic-binding-descriptor-value)
+    ((_ (?who ?input-form.stx ?type-id ?lexenv ?object-type-spec)
 	. ?body)
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?input-form.stx))
 	  (sys.identifier? (sys.syntax ?type-id))
 	  (sys.identifier? (sys.syntax ?lexenv))
-	  (sys.identifier? (sys.syntax ?syntactic-binding-descriptor-value)))
+	  (sys.identifier? (sys.syntax ?object-type-spec)))
      (sys.syntax
-      (let ((descr (id->object-type-binding-descriptor ?who ?input-form.stx ?type-id ?lexenv)))
-	(visit-library-of-imported-syntactic-binding ?who ?input-form.stx ?type-id ?lexenv descr)
-	(let ((?syntactic-binding-descriptor-value (syntactic-binding-descriptor.value descr)))
-	  . ?body))))
+      (let ((?object-type-spec (id->object-type-specification ?who ?input-form.stx ?type-id ?lexenv)))
+	. ?body)))
     ))
+
+(define (%fxiota fx item*)
+  (if (pair? item*)
+      (cons fx (%fxiota (fxadd1 fx) (cdr item*)))
+    '()))
 
 
 ;;;; module core-macro-transformer: NEW
@@ -597,8 +600,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?target-type ?expr)
-     (let* ((target-descr (id->object-type-binding-descriptor __who__ input-form.stx ?target-type lexenv.run))
-	    (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
+     (let* ((expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core    (psi.core-expr expr.psi))
 	    (expr.sig     (psi.retvals-signature expr.psi)))
        (define (%do-unsafe-cast)
@@ -613,10 +615,9 @@
 		 ;;The expression has "<top>" as  single-value type: cast the type to
 		 ;;the target one.
 		 (%do-unsafe-cast))
-		((let* ((target-spec  (syntactic-binding-descriptor.value target-descr))
-			(source-descr (id->object-type-binding-descriptor __who__ input-form.stx ?source-type lexenv.run))
-			(source-spec  (syntactic-binding-descriptor.value source-descr)))
-		   (object-type-spec.subtype-and-supertype? source-spec target-spec lexenv.run))
+		((let* ((target-ots  (id->object-type-specification __who__ input-form.stx ?target-type lexenv.run))
+			(source-ots  (id->object-type-specification __who__ input-form.stx ?source-type lexenv.run)))
+		   (object-type-spec.subtype-and-supertype? source-ots target-ots lexenv.run))
 		 ;;The expression's type is a subtype  of the target type: nothing to
 		 ;;do, just return it.
 		 expr.psi)

@@ -55,24 +55,13 @@
 
 ;;; helpers
 
-(define-syntax define-syntactic-binding-descriptor-predicate
-  (syntax-rules ()
-    ((_ ?who ?type)
-     (define (?who obj)
-       ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor of  type  ?TYPE;
-       ;;otherwise return false.
-       ;;
-       (and (pair? obj)
-	    (eq? (quote ?type) (syntactic-binding-descriptor.type obj)))))
-    ((_ ?who ?type ?spec-pred)
-     (define (?who obj)
-       ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor of  type  ?TYPE;
-       ;;otherwise return false.
-       ;;
-       (and (pair? obj)
-	    (eq? (quote ?type) (syntactic-binding-descriptor.type  obj))
-	    (?spec-pred        (syntactic-binding-descriptor.value obj)))))
-    ))
+(define-syntax-rule (define-syntactic-binding-descriptor-predicate ?who ?type)
+  (define (?who obj)
+    ;;Return true if  OBJ is a syntactic binding descriptor  of type ?TYPE; otherwise
+    ;;return false.
+    ;;
+    (and (pair? obj)
+	 (eq? (quote ?type) (syntactic-binding-descriptor.type obj)))))
 
 (define (%alist-ref-or-null ell idx)
   ;;Traverse the proper  list ELL until the contained object  at zero-based index IDX
@@ -135,10 +124,10 @@
 ;;;; syntactic binding descriptor: lexical variables
 
 (define (make-syntactic-binding-descriptor/lexical-var lex-name)
-  ;;Build and return  a syntactic binding descriptor representing  a constant lexical
-  ;;variable;  this variable  is never  assigned  in the  code.  LEX-NAME  must be  a
-  ;;lexical  gensym representing  the  name of  a lexical  variable  in the  expanded
-  ;;language forms.
+  ;;Build and return  a syntactic binding descriptor representing  an untyped lexical
+  ;;variable.   The returned  descriptor marks  this variable  as non-assigned;  this
+  ;;state can be  changed later.  LEX-NAME must be a  lexical gensym representing the
+  ;;name of a lexical variable in the expanded language forms.
   ;;
   ;;The returned descriptor has format:
   ;;
@@ -215,123 +204,66 @@
 
 ;;;; syntactic binding descriptor: typed lexical variables
 
-(define (make-syntactic-binding-descriptor/lexical-typed-var lex type-id)
-  ;;Build and return  a syntactic binding descriptor representing  a constant lexical
-  ;;variable; this  variable is never  assigned in the code.   LEX must be  a lexical
-  ;;gensym  representing the  name of  a lexical  variable in  the expanded  language
-  ;;forms.  TYPE-ID  must be the  syntactic identifier  representing the type  of the
-  ;;variable.
+(define* (make-syntactic-binding-descriptor/lexical-typed-var {lts lexical-typed-variable-spec?} lts.core-expr)
+  ;;Build  and return  a syntactic  binding descriptor  representing a  typed lexical
+  ;;variable.  LTS is  the specification of the variable's  type.  LTS.CORE-EXPR must
+  ;;be  a core  language  expression  which, evaluated  at  expand-time, returns  LTS
+  ;;itself.
   ;;
   ;;The returned descriptor has format:
   ;;
-  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
   ;;
-  ;;where ?LEXICAL-TYPED-SPEC is an instance of "<lexical-typed-spec>".
+  ;;and it is similar to the one of a local macro.  Indeed syntactic bindings of this
+  ;;type are similar to identifier macros.
   ;;
-  (if (top-tag-id? type-id)
-      ;;UNtyped.
-      (make-syntactic-binding-descriptor lexical (cons lex #f))
-    ;;FIXME  The  argument  DEFINED-TYPE?   of the  "<lexical-typed-spec>"  maker  is
-    ;;temporarily set to #f,  but it must be set right in  future.  (Marco Maggi; Sun
-    ;;Sep 20, 2015)
-    (make-syntactic-binding-descriptor lexical-typed (make-lexical-typed-spec lex type-id #t))))
+  (make-syntactic-binding-descriptor lexical-typed (cons lts lts.core-expr)))
+
+(define (make-syntactic-binding-descriptor/lexical-typed-var/from-data type-id lex)
+  (define lts
+    (make-lexical-typed-variable-spec type-id lex))
+  (define expanded-expr
+    (build-application no-source
+      (build-primref no-source 'make-lexical-typed-variable-spec)
+      (list (build-data no-source type-id)
+	    (build-data no-source lex))))
+  (make-syntactic-binding-descriptor/lexical-typed-var lts expanded-expr))
+
+;;; --------------------------------------------------------------------
 
 (define-syntactic-binding-descriptor-predicate lexical-typed-var-binding-descriptor?
   lexical-typed)
 
-(define-syntax-rule (lexical-typed-var-binding-descriptor-value.lex-name ?descriptor-value)
-  ;;Accessor for the  lexical gensym in a typed lexical  variable's syntactic binding
-  ;;descriptor's value.
-  ;;
-  ;;A syntactic binding representing a lexical variable has descriptor with format:
-  ;;
-  ;;   (lexical-typed . ?lexical-typed-spec)
-  ;;
-  ;;where ?LEXICAL-TYPED-SPEC  is an instance of  "<lexical-typed-spec>".  This macro
-  ;;returns the lexical gensym representing the variable in the expanded code.
-  ;;
-  (lexical-typed-spec.lex ?descriptor-value))
+;;; --------------------------------------------------------------------
 
-(define-syntax lexical-typed-var-binding-descriptor-value.assigned?
-  ;;Accessor and mutator for assigned boolean in a typed lexical variable's syntactic
-  ;;binding descriptor's value.
+(define-syntax-rule (syntactic-binding-descriptor/lexical-typed-var.value.lex ?descriptor-value)
+  ;;Accessor for the  lexical gensym in a typed lexical  variable's syntactic binding
+  ;;descriptor.
+  ;;
+  ;;A  syntactic binding  representing a  type lexical  variable has  descriptor with
+  ;;format:
+  ;;
+  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+  ;;
+  (lexical-typed-variable-spec.lex (car ?descriptor-value)))
+
+(define-syntax-rule (syntactic-binding-descriptor/lexical-typed-var.value.type-id ?descriptor-value)
+  ;;Accessor for the type identifier in  a typed lexical variable's syntactic binding
+  ;;descriptor.
   ;;
   ;;A syntactic binding representing a lexical variable has descriptor with format:
   ;;
-  ;;   (lexical-typed . ?lexical-typed-spec)
+  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
   ;;
-  ;;where ?LEXICAL-TYPED-SPEC  is an instance of  "<lexical-typed-spec>".
-  ;;
-  ;;The accessor macro returns a boolean: true if the lexical variable is assigned at
-  ;;least once in the code, otherwise false.   The mutator macro sets a new ASSIGNED?
-  ;;value.
-  ;;
+  (lexical-typed-variable-spec.type-id (car ?descriptor-value)))
+
+(define-syntax syntactic-binding-descriptor/lexical-typed-var.value.assigned?
   (syntax-rules ()
     ((_ ?descriptor-value)
-     (lexical-typed-spec.assigned? ?descriptor-value))
-    ((_ ?descriptor-value #t)
-     (lexical-typed-spec.set-assigned! ?descriptor-value #t))
+     (lexical-typed-variable-spec.assigned? (car ?descriptor-value)))
+    ((_ ?descriptor-value ?bool)
+     (lexical-typed-variable-spec.assigned?-set! (car ?descriptor-value) (and ?bool #t)))
     ))
-
-(define-syntax-rule (lexical-typed-var-binding-descriptor-value.type-id ?descriptor-value)
-  ;;Accessor for the type identifier in  a typed lexical variable's syntactic binding
-  ;;descriptor's value.
-  ;;
-  ;;A syntactic binding representing a lexical variable has descriptor with format:
-  ;;
-  ;;   (lexical-typed . ?lexical-typed-spec)
-  ;;
-  ;;where ?LEXICAL-TYPED-SPEC  is an instance of  "<lexical-typed-spec>".  This macro
-  ;;returns the type syntactic identifier of the variable.
-  ;;
-  (lexical-typed-spec.type-id ?descriptor-value))
-
-(define (lexenv-add-lexical-typed-var-binding label lex type-id lexenv)
-  ;;Push on the LEXENV a new entry representing a non-assigned, local, typed variable
-  ;;syntactic binding; return the resulting LEXENV.
-  ;;
-  ;;LABEL must be a  syntactic binding's label gensym.  LEX must  be a lexical gensym
-  ;;representing  the name  of a  lexical variable  in the  expanded language  forms.
-  ;;TYPE-ID must be the syntactic identifier representing the type of the variable.
-  ;;
-  (push-entry-on-lexenv label (make-syntactic-binding-descriptor/lexical-typed-var lex type-id)
-			lexenv))
-
-(define (lexenv-add-lexical-typed-var-bindings label* lex* type-id* lexenv)
-  ;;Push  on the  LEXENV  multiple entries  representing  non-assigned, local,  typed
-  ;;variable syntactic bindings; return the resulting LEXENV.
-  ;;
-  ;;LABEL* must be a list of syntactic  binding's label gensyms.  LEX* must be a list
-  ;;of lexical  gensyms representing the names  of lexical variables in  the expanded
-  ;;language forms.   TYPE-ID* must be  a list of synatctic  identifiers representing
-  ;;the types of the variables.
-  ;;
-  (if (pair? label*)
-      (lexenv-add-lexical-typed-var-bindings (cdr label*) (cdr lex*) (cdr type-id*)
-					     (lexenv-add-lexical-typed-var-binding (car label*) (car lex*) (car type-id*) lexenv))
-    lexenv))
-
-(define (lexical-var-binding-descriptor->lexical-typed-var-binding-descriptor! descr type-id)
-  ;;Convert a syntactic  binding descriptor representing an  untyped lexical variable
-  ;;to a  syntactic binding  descriptor representing a  typed lexical  variable.  The
-  ;;argument DESCR must be a syntactic binding descriptor with format:
-  ;;
-  ;;   (lexical . (?lex-name . #f))
-  ;;
-  ;;and we want to convert this entry to:
-  ;;
-  ;;   (lexical-typed . ?lexical-typed-spec)
-  ;;
-  ;;where ?LEXICAL-TYPED-SPEC is an instance of "<lexical-typed-spec>".  The argument
-  ;;TYPE-ID must be a type identifier.
-  ;;
-  (assert (lexical-var-binding-descriptor? descr))
-  (assert (gensym? (lexical-var-binding-descriptor-value.lex-name  (syntactic-binding-descriptor.value descr))))
-  (assert (not     (lexical-var-binding-descriptor-value.assigned? (syntactic-binding-descriptor.value descr))))
-  (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr)))
-	(defined-type? #f))
-    (set-car! descr 'lexical-typed)
-    (set-cdr! descr (make-lexical-typed-spec lex type-id defined-type?))))
 
 
 ;;;; syntactic binding descriptor: local macro with non-variable transformer bindings
@@ -399,44 +331,118 @@
 
 ;;;; base object-type syntactic binding descriptors
 
-;;Return true  if OBJ  is a  syntactic binding descriptor  of a  type among  the ones
-;;having  an instance  of "<object-type-spec>"  (or one  of its  subtypes) as  value;
-;;otherwise  return false.   Syntactic identifiers  bound to  such syntactic  binding
-;;descriptors  can be  used with  the generic  syntaxes: IS-A?,  SLOT-REF, SLOT-SET!,
-;;METHOD-CALL.
+(define-syntax-rule (define-syntactic-binding-descriptor-predicate/object-type-spec ?who ?pred)
+  (define (?who obj)
+    ;;Return  true  if  OBJ  is  a syntactic  binding's  descriptor  representing  an
+    ;;object-type  specification; otherwise  return false.   We expect  the syntactic
+    ;;binding's descriptor to have one of the formats:
+    ;;
+    ;;   (local-object-type-name  . (#<object-type-spec> . ?expanded-expr))
+    ;;   (global-object-type-name . (#<library> . ?loc))
+    ;;
+    ;;where ?LOC  is a  loc gensym  containing in its  VALUE slot  a reference  to an
+    ;;instance of "<object-type-spec>".
+    ;;
+    (and (pair? obj)
+	 (let ((descr.value (syntactic-binding-descriptor.value obj)))
+	   (case (syntactic-binding-descriptor.type obj)
+	     ((local-object-type-name)
+	      (?pred (syntactic-binding-descriptor/local-object-type.object-type-spec  obj)))
+	     ((global-object-type-name)
+	      (?pred (syntactic-binding-descriptor/global-object-type.object-type-spec obj)))
+	     (else #f))))))
+
+;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
+;;object-type specification; otherwise return  false.  Syntactic identifiers bound to
+;;such syntactic  binding descriptors  can be  used with  the generic  syntaxes: NEW,
+;;IS-A?, SLOT-REF, SLOT-SET!, METHOD-CALL.
 ;;
-(define-syntactic-binding-descriptor-predicate object-type-name-binding-descriptor?
-  $object-type-name)
+(define-syntactic-binding-descriptor-predicate/object-type-spec object-type-name-binding-descriptor?
+  object-type-spec?)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (syntactic-binding-descriptor/local-object-type.object-type-spec ?descriptor)
+  ;;We expect ?DESCRIPTOR to have the format:
+  ;;
+  ;;   (local-object-type-name . (#<object-type-spec> . ?expanded-expr))
+  ;;
+  ;;and we return #<object-type-spec>.
+  ;;
+  (car (syntactic-binding-descriptor.value ?descriptor)))
+
+(define-syntax-rule (syntactic-binding-descriptor/local-object-type.expanded-expr ?descriptor)
+  ;;We expect ?DESCRIPTOR to have the format:
+  ;;
+  ;;   (local-object-type-name . (#<object-type-spec> . ?expanded-expr))
+  ;;
+  ;;and we return ?EXPANDED-EXPR.
+  ;;
+  (cdr (syntactic-binding-descriptor.value ?descriptor)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (syntactic-binding-descriptor/global-object-type.library ?descriptor)
+  ;;We expect ?DESCRIPTOR to have the format:
+  ;;
+  ;;   (global-object-type-name . (#<library> . ?loc))
+  ;;
+  ;;and we return #<library>.
+  ;;
+  (car (syntactic-binding-descriptor.value ?descriptor)))
+
+(define-syntax-rule (syntactic-binding-descriptor/global-object-type.loc ?descriptor)
+  ;;We expect ?DESCRIPTOR to have the format:
+  ;;
+  ;;   (global-object-type-name . (#<library> . ?loc))
+  ;;
+  ;;and we return ?LOC.
+  ;;
+  (cdr (syntactic-binding-descriptor.value ?descriptor)))
+
+(define (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
+  ;;We expect DESCR to have the format:
+  ;;
+  ;;   (global-object-type-name . (#<library> . ?loc))
+  ;;
+  ;;and we return  the value in the  slot "value" of the ?LOC  gensym, which contains
+  ;;the instance of "<object-type-spec>".
+  ;;
+  (symbol-value (syntactic-binding-descriptor/global-object-type.loc descr)))
 
 
 ;;;; syntactic binding descriptor: usable built-in object type binding
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
-;;built-in object-type descriptor usable by the expander.
+;;Scheme object-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate scheme-type-name-binding-descriptor?
-  $object-type-name scheme-type-spec?)
+;;We expect the syntactic binding's descriptor to have the format:
+;;
+;;   (local-object-type-name . (?spec . ?expanded-expr))
+;;
+;;where ?SPEC is an instance of a sub-type of "<scheme-type-spec>".
+;;
+(define-syntactic-binding-descriptor-predicate/object-type-spec scheme-type-name-binding-descriptor?
+  scheme-type-spec?)
 
 
 ;;;; syntactic binding descriptor: closure type binding
 
-(define (make-syntactic-binding-descriptor/closure-type-name type-id signature)
-  ;;Build and return a syntactic binding descriptor representing a closure-type name.
-  ;;Such type is a sub-type of "<procedure>".
+(define* (make-syntactic-binding-descriptor/closure-type-name {ots closure-type-spec?} expanded-expr)
+  ;;Build and  return a  syntactic binding's  descriptor representing  a closure-type
+  ;;name.  Such type is a sub-type of "<procedure>".
   ;;
-  ;;TYPE-ID must  be the syntactic identfier  that will be bound  to the closure-type
-  ;;specification.
+  ;;The returned syntactic binding's descriptor has the format:
   ;;
-  ;;SIGNATURE must be an instance of "<callable-signature>".
+  ;;   (local-object-type-name . (#<closure-type-spec> . ?expanded-expr))
   ;;
-  (let ((spec (make-closure-type-spec type-id signature)))
-    (make-syntactic-binding-descriptor $object-type-name spec)))
+  (make-syntactic-binding-descriptor local-object-type-name (cons ots expanded-expr)))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
-;;closure-type descriptor.
+;;closure object-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate closure-type-name-binding-descriptor?
-  $object-type-name closure-type-spec?)
+(define-syntactic-binding-descriptor-predicate/object-type-spec closure-type-name-binding-descriptor?
+  closure-type-spec?)
 
 
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding
@@ -449,12 +455,15 @@
   ;;
   ;;We expect the core descriptor to have the format:
   ;;
-  ;;   ($core-scheme-type-name
-  ;;     . (?parent-name ?constructor-name ?type-predicate-name ?methods-alist))
+  ;;   ($core-scheme-type-name . ?hard-coded-sexp)
+  ;;
+  ;;and ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   ($object-type-name . #<core-scheme-type-spec>)
+  ;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
   ;;
   ;;Syntactic binding descriptors of  type "$core-scheme-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -474,14 +483,15 @@
 	 (constructor.sexp	(bless (list-ref descr.value 2)))
 	 (type-predicate.sexp	(bless (list-ref descr.value 3)))
 	 (methods-table		(%alist-ref-or-null descr.value 4)))
-    (set-car! descriptor '$object-type-name)
-    (set-cdr! descriptor
-	      (make-core-scheme-type-spec type-id parent-id
-					  constructor.sexp type-predicate.sexp methods-table
-					  org))))
+    (define spec
+      (make-core-scheme-type-spec type-id parent-id
+				  constructor.sexp type-predicate.sexp methods-table
+				  org))
+    (set-car! descriptor 'local-object-type-name)
+    (set-cdr! descriptor (cons spec descr.value))))
 
-;;Return true if the argument is a syntactic binding's descriptor representing a core
-;;built-in object-type descriptor established by the boot image.
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;built-in Scheme object-type name; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate core-scheme-type-name-binding-descriptor?
   $core-scheme-type-name)
@@ -489,7 +499,7 @@
 
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings
 
-(define* (make-syntactic-binding-descriptor/struct-type-name {sts struct-type-spec?})
+(define* (make-syntactic-binding-descriptor/struct-type-name {sts struct-type-spec?} expanded-expr)
   ;;Build and return a syntactic binding descriptor representing a struct-type name.
   ;;
   ;;The argument STS must be an instance of "<struct-type-spec>".
@@ -501,8 +511,7 @@
   ;;the syntax use DEFINE-STRUCT expands into multiple forms, one of which is:
   ;;
   ;;   (define-syntax ?type-name
-  ;;     (make-syntactic-binding-descriptor/struct-type-name
-  ;;       (make-struct-type-spec ?std ...)))
+  ;;     (make-struct-type-spec ?std ...))
   ;;
   ;;where   ?STD   is   a   struct-type  descriptor   built   at   expand-time   with
   ;;MAKE-STRUCT-TYPE.  Syntactic bindings of this  type are generated when evaluating
@@ -510,41 +519,44 @@
   ;;
   ;;The returned descriptor has format:
   ;;
-  ;;   ($object-type-name . ?struct-type-spec)
+  ;;   (local-object-type-name . (#<struct-type-spec> . ?expanded-expr))
   ;;
-  (make-syntactic-binding-descriptor $object-type-name sts))
+  (make-syntactic-binding-descriptor local-object-type-name (cons sts expanded-expr)))
 
-;;Return true if the argument is  a syntactic binding descriptor representing a local
-;;or imported syntactic binding describing a struct-type descriptor.
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;struct-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate struct-type-name-binding-descriptor?
-  $object-type-name struct-type-spec?)
+(define-syntactic-binding-descriptor-predicate/object-type-spec struct-type-name-binding-descriptor?
+  struct-type-spec?)
 
 (define-syntax-rule (struct-type-name-binding-descriptor.type-descriptor ?descriptor)
-  ;;Given a syntactic binding descriptor  representing a struct-type name: return the
-  ;;struct-type descriptor itself.
+  ;;Given a  syntactic binding's descriptor  representing a struct-type  name: return
+  ;;the struct-type descriptor itself.
   ;;
-  ;;We expect the descriptor to have the format:
-  ;;
-  ;;   ($struct-type-name . ?type-descriptor)
-  ;;
-  (struct-type-spec.std (syntactic-binding-descriptor.value ?descriptor)))
+  (struct-type-spec.std (car (syntactic-binding-descriptor.value ?descriptor))))
 
 
 ;;;; syntactic binding descriptor: base record-type descriptor binding
 
-;;Return true if  the argument is a syntactic binding  descriptor representing a base
-;;R6RS record-type descriptor.
+;;Return true if the argument is a syntactic binding's descriptor representing a base
+;;R6RS record-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate record-type-name-binding-descriptor?
-  $object-type-name record-type-spec?)
+;;We expect these syntactic binding's descriptors to have the format:
+;;
+;;   (local-object-type-spec . (?spec . ?expanded-expr))
+;;
+;;where ?SPEC is an instance of a sub-type of "<record-type-spec>".
+;;
+(define-syntactic-binding-descriptor-predicate/object-type-spec record-type-name-binding-descriptor?
+  record-type-spec?)
 
 
 ;;;; syntactic binding descriptor: usable R6RS record-type descriptor binding
 
-(define* (make-syntactic-binding-descriptor/syntactic-record-type-name {rts syntactic-record-type-spec?})
-  ;;Build and return  a syntactic binding descriptor representing  a record-type name
-  ;;defined by the syntactic layer.
+(define* (make-syntactic-binding-descriptor/syntactic-record-type-name {rts syntactic-record-type-spec?} expanded-expr)
+  ;;Build and return a syntactic binding's descriptor representing a record-type name
+  ;;defined by the syntactic layer.  We handle this entry in a way that is similar to
+  ;;a local macro.
   ;;
   ;;Given the syntax use:
   ;;
@@ -560,32 +572,36 @@
   ;;
   ;;The returned descriptor has the format:
   ;;
-  ;;   ($object-type-name . #<syntactic-record-type-spec>)
+  ;;   (local-object-type-name . (#<syntactic-record-type-spec> . ?expanded-expr))
   ;;
-  (make-syntactic-binding-descriptor $object-type-name rts))
+  (make-syntactic-binding-descriptor local-object-type-name (cons rts expanded-expr)))
 
-;;Return true if the argument is  a syntactic binding descriptor representing a local
-;;or imported binding describing a R6RS record-type descriptor.
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;record-type name defined by the syntactic layer; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate syntactic-record-type-name-binding-descriptor?
-  $object-type-name syntactic-record-type-spec?)
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-record-type-name-binding-descriptor?
+  syntactic-record-type-spec?)
 
 
 ;;;; syntactic binding descriptor: old-style core R6RS record-type descriptor binding
 
 (define (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descriptor)
-  ;;Mutate  a  syntactic  binding  descriptor  from  the  representation  of  a  core
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
   ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
   ;;values.
   ;;
   ;;We expect the core descriptor to have the format:
   ;;
-  ;;   ($core-rtd . (?rtd-name ?rcd-name))
+  ;;   ($core-rtd . ?hard-coded-sexp)
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   ($object-type-name . #<core-record-type-spec>)
+  ;;   (local-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
+  ;;
+  ;;where ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?rtd-name ?rcd-name)
   ;;
   ;;Syntactic  binding descriptors  of type  "$core-rtd" are  hard-coded in  the boot
   ;;image and generated directly by the  makefile at boot image build-time.  Whenever
@@ -601,12 +617,11 @@
 	 (org		(cons descr.type descr.value))
 	 (rtd-id	(core-prim-id (car  descr.value)))
 	 (rcd-id	(core-prim-id (cadr descr.value))))
-    (set-car! descriptor '$object-type-name)
-    (set-cdr! descriptor (make-core-record-type-spec rtd-id rcd-id org))))
+    (define spec
+      (make-core-record-type-spec rtd-id rcd-id org))
+    (set-car! descriptor 'local-object-type-name)
+    (set-cdr! descriptor (cons spec descr.value))))
 
-;;Return true if the argument is a syntactic binding's descriptor representing a core
-;;R6RS record-type descriptor established by the boot image.
-;;
 (define-syntactic-binding-descriptor-predicate core-rtd-binding-descriptor?
   $core-rtd)
 
@@ -614,20 +629,22 @@
 ;;;; syntactic binding descriptor: new-style core R6RS record-type descriptor binding
 
 (define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
-  ;;Mutate  a  syntactic  binding  descriptor  from  the  representation  of  a  core
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
   ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
   ;;values.
   ;;
   ;;We expect the core descriptor to have the format:
   ;;
-  ;;   ($core-record-type-name . (?rtd-name ?rcd-name ?parent-id
-  ;;                              ?constructor-id ?type-predicate-id
-  ;;                              ?accessors-alist))
+  ;;   ($core-record-type-name . ?hard-coded-sexp)
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   ($object-type-name . #<core-record-type-spec>)
+  ;;   (local-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
+  ;;
+  ;;where ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id ?accessors-alist)
   ;;
   ;;Syntactic binding descriptors of  type "$core-record-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -649,15 +666,16 @@
 	 (accessors-table	(%alist-ref-or-null descr.value 5))
 	 (mutators-table	'())
 	 (methods-table		accessors-table))
-    (set-car! descriptor '$object-type-name)
-    (set-cdr! descriptor
-	      (make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-					  constructor-sexp destructor-sexp type-predicate-sexp
-					  accessors-table mutators-table methods-table
-					  org))))
+    (define spec
+      (make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+				  constructor-sexp destructor-sexp type-predicate-sexp
+				  accessors-table mutators-table methods-table
+				  org))
+    (set-car! descriptor 'local-object-type-name)
+    (set-cdr! descriptor (cons spec descr.value))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
-;;record-type descriptor established by the boot image.
+;;record-type descriptor established by the boot image; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate core-record-type-name-binding-descriptor?
   $core-record-type-name)
@@ -666,20 +684,22 @@
 ;;;; syntactic binding descriptor: core R6RS condition object record-type descriptor binding
 
 (define (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
-  ;;Mutate a syntactic binding descriptor from the representation of a core condition
-  ;;object record-type name (established by the  boot image) to a representation of a
-  ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
-  ;;values.
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
+  ;;condition  object  record-type  name  (established   by  the  boot  image)  to  a
+  ;;representation  of a  record-type  name in  the format  usable  by the  expander.
+  ;;Return unspecified values.
   ;;
   ;;We expect the core descriptor to have the format:
   ;;
-  ;;   ($core-condition-object-type-name
-  ;;    . (?rtd-name ?rcd-name ?parent-id
-  ;;       ?constructor-id ?type-predicate-id ?accessors-alist))
+  ;;   ($core-condition-object-type-name . ?hard-coded-sexp)
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   ($object-type-name . #<core-condition-type-spec>)
+  ;;   (local-object-type-name . (#<core-condition-type-spec> . ?hard-coded-sexp))
+  ;;
+  ;;where ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id ?accessors-alist)
   ;;
   ;;Syntactic  binding  descriptors  of type  "$core-condition-object-type-name"  are
   ;;hard-coded in the boot image and generated directly by the makefile at boot image
@@ -702,16 +722,17 @@
 	 (accessors-table	(%alist-ref-or-null descr.value 5))
 	 (mutators-table	'())
 	 (methods-table		accessors-table))
-    (set-car! descriptor '$object-type-name)
-    (set-cdr! descriptor
-	      (make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
-					     constructor-id destructor-id type-predicate-id
-					     accessors-table mutators-table methods-table
-					     org))))
+    (define spec
+      (make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
+				     constructor-id destructor-id type-predicate-id
+				     accessors-table mutators-table methods-table
+				     org))
+    (set-car! descriptor 'local-object-type-name)
+    (set-cdr! descriptor (cons spec descr.value))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
-;;condition object record-type descriptor established by the boot image (for example:
-;;the built-in condition object types).
+;;condition object record-type descriptor established  by the boot image (for example
+;;"&who", "&error", et cetera); otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate core-condition-object-type-name-binding-descriptor?
   $core-condition-object-type-name)

@@ -4644,6 +4644,7 @@
     ;;These are only for internal use by the psyntax.
     (make-syntactic-record-type-spec)
     (make-struct-type-spec)
+    (make-lexical-typed-spec)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

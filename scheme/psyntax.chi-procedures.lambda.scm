@@ -191,73 +191,68 @@
       (syntax-object.parse-lambda-clause-signature formals.stx input-form.stx))
     (define formals-signature.tags
       (lambda-signature.formals.tags signature))
-    (syntax-match standard-formals.stx ()
-      ;;Without rest argument.
-      ((?arg* ...)
-       (let* ((lex*       (map generate-lexical-gensym ?arg*))
-	      (lab*       (map generate-label-gensym   ?arg*))
-	      (lexenv.run (lexenv-add-lexical-typed-var-bindings lab* lex* formals-signature.tags lexenv.run)))
-	 (define validation*.stx
-	   (if (attributes.safe-formals? attributes.sexp)
-	       (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
-	     '()))
-	 (define has-arguments-validators?
-	   (not (null? validation*.stx)))
-	 (define body-form^*.stx
-	   (push-lexical-contour
-	       (make-rib/from-identifiers-and-labels ?arg* lab*)
-	     ;;Build a list of syntax objects representing the internal body.
-	     (append validation*.stx
-	 	     (if (attributes.safe-retvals? attributes.sexp)
-	 		 (%build-retvals-validation-form has-arguments-validators?
-	 						 (callable-signature.retvals signature)
-	 						 body-form*.stx)
-	 	       body-form*.stx))))
-	 (define-values (lexenv.run^ lexenv.expand^)
-	   (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner))
-	 (let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
-		(signature (%override-retvals-signature signature body.psi)))
-	   (values lex* signature body.psi))))
+    (cond
+     ((list? standard-formals.stx)
+      ;;Without  rest argument.   Here  we know  that  both STANDARD-FORMALS.STX  and
+      ;;FORMALS-SIGNATURE.TAGS are proper lists with equal length.
+      (receive (rib lexenv.run formals*.lex)
+	  (%process-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run)
+	(define validation*.stx
+	  (if (attributes.safe-formals? attributes.sexp)
+	      (%build-formals-validation-form* standard-formals.stx formals-signature.tags #f #f)
+	    '()))
+	(define has-arguments-validators?
+	  (not (null? validation*.stx)))
+	(define body-form^*.stx
+	  (push-lexical-contour
+	      rib
+	    ;;Build a list of syntax objects representing the internal body.
+	    (append validation*.stx
+		    (if (attributes.safe-retvals? attributes.sexp)
+			(%build-retvals-validation-form has-arguments-validators?
+							(callable-signature.retvals signature)
+							body-form*.stx)
+		      body-form*.stx))))
+	(define-values (lexenv.run^ lexenv.expand^)
+	  (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner))
+	(let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
+	       (signature (%override-retvals-signature signature body.psi)))
+	  (values formals*.lex signature body.psi))))
 
-      ;;With rest argument.
-      ((?arg* ... . ?rest-arg)
-       (receive (arg-tag* rest-tag)
-	   (improper-list->list-and-rest formals-signature.tags)
-	 (let* ((lex*         (map generate-lexical-gensym ?arg*))
-		(lab*         (map generate-label-gensym   ?arg*))
-		(rest-lex     (generate-lexical-gensym     ?rest-arg))
-		(rest-lab     (generate-label-gensym       ?rest-arg))
-		(lexenv.run   (lexenv-add-lexical-typed-var-bindings (cons rest-lab lab*)
-								     (cons rest-lex lex*)
-								     (cons rest-tag arg-tag*)
-								     lexenv.run)))
-	   (define validation*.stx
-	     (if (attributes.safe-formals? attributes.sexp)
-		 (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag)
-	       '()))
-	   (define has-arguments-validators?
-	     (not (null? validation*.stx)))
-	   (define body-form^*.stx
-	     (push-lexical-contour
-		 (make-rib/from-identifiers-and-labels (cons ?rest-arg ?arg*)
-						       (cons rest-lab  lab*))
-	       ;;Build a list of syntax objects representing the internal body.
-	       (append validation*.stx
-		       (if (attributes.safe-retvals? attributes.sexp)
-			   (%build-retvals-validation-form has-arguments-validators?
-							   (callable-signature.retvals signature)
-							   body-form*.stx)
-			 body-form*.stx))))
-	   (define-values (lexenv.run^ lexenv.expand^)
-	     (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner))
-	   (let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
-		  (signature (%override-retvals-signature signature body.psi))
-		  ;;Yes, this builds an improper list.
-		  (lexes     (append lex* rest-lex)))
-	     (values lexes signature body.psi)))))
-
-      (_
-       (%synner "invalid lambda formals syntax" formals.stx))))
+     (else
+      ;;With  rest  argument.   Here  we  know  that  both  STANDARD-FORMALS.STX  and
+      ;;FORMALS-SIGNATURE.TAGS are improper lists with equal length.
+      (let*-values
+	  (((arg*.id  rest.id)
+	    (improper-list->list-and-rest standard-formals.stx))
+	   ((arg*.tag rest.tag)
+	    (improper-list->list-and-rest formals-signature.tags))
+	   ((rib lexenv.run ghost*.lex)
+	    (%process-syntactic-bindings (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run)))
+	(define formals.lex
+	  ;;Yes, this call to APPEND builds an improper list.
+	  (append (cdr ghost*.lex) (car ghost*.lex)))
+	(define validation*.stx
+	  (if (attributes.safe-formals? attributes.sexp)
+	      (%build-formals-validation-form* arg*.id arg*.tag rest.id rest.tag)
+	    '()))
+	(define has-arguments-validators?
+	  (not (null? validation*.stx)))
+	(define body-form^*.stx
+	  (push-lexical-contour
+	      rib
+	    ;;Build a list of syntax objects representing the internal body.
+	    (append validation*.stx
+		    (if (attributes.safe-retvals? attributes.sexp)
+			(%build-retvals-validation-form has-arguments-validators?
+							(callable-signature.retvals signature)
+							body-form*.stx)
+		      body-form*.stx))))
+	(define-values (lexenv.run^ lexenv.expand^)
+	  (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner))
+	(let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
+	       (signature (%override-retvals-signature signature body.psi)))
+	  (values formals.lex signature body.psi))))))
 
 ;;; --------------------------------------------------------------------
 

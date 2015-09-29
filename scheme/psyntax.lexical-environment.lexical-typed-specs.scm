@@ -24,17 +24,14 @@
 	 typed-variable-spec.type-id
 	 typed-variable-spec.unsafe-variant-sexp	typed-variable-spec.unsafe-variant-sexp-set!
 
-	 <lexical-typed-spec>
-	 make-lexical-typed-spec			lexical-typed-spec?
-	 lexical-typed-spec.lex				lexical-typed-spec.type-id
-	 lexical-typed-spec.defined-type?
-	 lexical-typed-spec.assigned?			lexical-typed-spec.set-assigned!
+	 <lexical-typed-variable-spec>
+	 make-lexical-typed-variable-spec		lexical-typed-variable-spec?
+	 lexical-typed-variable-spec.lex		lexical-typed-variable-spec.type-id
+	 lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
-	 <global-typed-spec>
-	 make-global-typed-spec				global-typed-spec?
-	 global-typed-spec.loc				global-typed-spec.type-id
-	 global-typed-spec.lib				global-typed-spec.set-lib!
-	 )
+	 <global-typed-variable-spec>
+	 make-global-typed-variable-spec		global-typed-variable-spec?
+	 global-typed-variable-spec.variable-loc	global-typed-variable-spec.type-id)
 
 
 ;;;; lexical variable specification: base type
@@ -69,55 +66,53 @@
 
 ;;;; local lexical variable specification
 
-(define-record-type (<lexical-typed-spec> make-lexical-typed-spec lexical-typed-spec?)
-  (nongenerative vicare:expander:<lexical-typed-spec>)
+(define-record-type (<lexical-typed-variable-spec> make-lexical-typed-variable-spec lexical-typed-variable-spec?)
+  (nongenerative vicare:expander:<lexical-typed-variable-spec>)
   (parent <typed-variable-spec>)
   (fields
-   (immutable lex		lexical-typed-spec.lex)
-		;A gensym representing the lexical gensym of the variable.
-   (mutable   assigned?		lexical-typed-spec.assigned? lexical-typed-spec.set-assigned!)
-		;Boolean.  True if this lexical variable is assigned at least once in
-		;the code; false if it is never assigned.
-   (immutable defined-type?	lexical-typed-spec.defined-type?)
-		;Boolean.  True if the type of this variable has been declared in the
-		;variable definition; false  if it was inferred  from the surrounding
-		;code.
+   (immutable lex		lexical-typed-variable-spec.lex)
+		;The lex gensym of the lexical variable.
+   (mutable   assigned?		lexical-typed-variable-spec.assigned? lexical-typed-variable-spec.assigned?-set!)
    #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-<lexical-typed-spec> {lex gensym?} {type-id identifier?} defined-type?)
-	((make-typed-variable-spec type-id) lex #f (and defined-type? #t)))
-      make-<lexical-typed-spec>))
+      (define* (make-lexical-typed-variable-spec type-id lex)
+	((make-typed-variable-spec type-id) lex #f))
+      make-lexical-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define (lexical-typed-spec.type-id spec)
-  (typed-variable-spec.type-id spec))
+(define-syntax-rule (lexical-typed-variable-spec.type-id gts)
+  (typed-variable-spec.type-id gts))
 
 
 ;;;; global lexical variable specification
 
-(define-record-type (<global-typed-spec> make-global-typed-spec global-typed-spec?)
-  (nongenerative vicare:expander:<global-typed-spec>)
+;;A global typed variable has two loc gensyms:
+;;
+;;* One for the global variable, which holds the variable's value; it pertains to the
+;;invoke code.
+;;
+;;*  One for  the type  specification,  which holds  a  reference to  an instance  of
+;;"<global-typed-variable-spec>"; it pertains to the invoke code.
+;;
+(define-record-type (<global-typed-variable-spec> make-global-typed-variable-spec global-typed-variable-spec?)
+  (nongenerative vicare:expander:<global-typed-variable-spec>)
   (parent <typed-variable-spec>)
   (fields
-   (immutable loc	global-typed-spec.loc)
-		;A gensym representing the location gensym of the variable.
-   (mutable   lib	global-typed-spec.lib global-typed-spec.set-lib!)
-		;False or an instance of "lib" representing the library in which this
-		;global syntactic binding is defined.
+   (immutable variable-loc	global-typed-variable-spec.variable-loc)
+		;The loc gensym of the variable.
    #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-global-typed-spec {loc gensym?} {lexical-spec lexical-typed-spec?})
-	;;The lex gensym of global variables acts also as loc gensym.
-	((make-typed-variable-spec (lexical-typed-spec.type-id lexical-spec)
-				   (typed-variable-spec.unsafe-variant-sexp lexical-spec))
-	 loc #f))
-      make-global-typed-spec))
+      (define* (make-global-typed-variable-spec {lts lexical-typed-variable-spec?} variable-loc)
+	((make-typed-variable-spec (typed-variable-spec.type-id             lts)
+				   (typed-variable-spec.unsafe-variant-sexp lts))
+	 variable-loc))
+      make-global-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define (global-typed-spec.type-id spec)
-  (typed-variable-spec.type-id spec))
+(define-syntax-rule (global-typed-variable-spec.type-id gts)
+  (typed-variable-spec.type-id gts))
 
 
 ;;;; done

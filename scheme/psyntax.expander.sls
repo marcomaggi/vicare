@@ -140,16 +140,6 @@
 
 (include "psyntax.helpers.scm" #t)
 
-(define-syntax-rule (with-typed-language ?enabled? . ?body)
-  (parametrise ((option.typed-language? (or ?enabled? (option.typed-language?))))
-    . ?body))
-
-(define-syntax-rule (with-option-strict-r6rs ?enabled? . ?body)
-  ;;We want to  enable "strict R6RS" if  it is requested with the  OPTIONS library or
-  ;;program clause, but not disable it if the option is not used.
-  (parametrise ((option.strict-r6rs (or ?enabled? (option.strict-r6rs))))
-    . ?body))
-
 
 ;;;; public interface: tagged language support
 
@@ -345,7 +335,7 @@
   ;;
   ;;To serialise a compiled program: we serialise the RUN-THUNK closure object.
   ;;
-  (receive (invoke-lib* invoke-code visit-env* export-subst global-env option* foreign-library*)
+  (receive (invoke-lib* invoke-code visit-env export-subst global-env option* foreign-library*)
       (expand-top-level-program expr*)
     (lambda ()
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
@@ -354,7 +344,7 @@
       (for-each libman.invoke-library invoke-lib*)
       ;;Store the  expanded code representing  the macros in the  associated location
       ;;gensyms.
-      (initial-visit! visit-env*)
+      (initial-visit! visit-env)
       (values (map libman.library-descriptor invoke-lib*)
 	      ;;Convert  the  expanded language  code  to  core language  code,  then
 	      ;;compile it and wrap it into a thunk.
@@ -378,13 +368,13 @@
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
-	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env* export-subst global-env)
+	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env)
 	    (let ((option* (%parse-program-options option*))
 		  (mixed-definitions-and-expressions? #t))
 	      (import CORE-BODY-EXPANDER)
 	      (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
 				  %verbose-messages-thunk))
-	  (values invoke-lib* invoke-code visit-env* export-subst global-env option* foreign-library*)))))
+	  (values invoke-lib* invoke-code visit-env export-subst global-env option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
     (when (option.typed-language?)
@@ -470,11 +460,11 @@
   #| end of module: EXPAND-TOP-LEVEL-PROGRAM |# )
 
 (define (expand-top-level-program->sexp sexp)
-  (receive (invoke-lib* invoke-code visit-env* export-subst global-env option* foreign-library*)
+  (receive (invoke-lib* invoke-code visit-env export-subst global-env option* foreign-library*)
       (expand-top-level-program sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
-      (visit-code	. ,(build-visit-code-from-visit-env* visit-env* option*))
+      (visit-code	. ,(build-visit-code-from-visit-env visit-env option*))
       (export-subst	. ,export-subst)
       (global-env	. ,global-env)
       (option*		. ,option*)
@@ -512,7 +502,7 @@
    (config.initialise-expander)
    (receive (libname
 	     import-lib* invoke-lib* visit-lib*
-	     invoke-code visit-env*
+	     invoke-code visit-env
 	     export-subst global-env
 	     guard-code guard-lib*
 	     option* foreign-library*)
@@ -525,15 +515,15 @@
 	   (visit-proc	(lambda ()
 			  ;;This initial visit is performed whenever a source library
 			  ;;is visited.
-			  (initial-visit! visit-env*)))
+			  (initial-visit! visit-env)))
 	   ;;Thunk to eval to invoke the library.
 	   (invoke-proc	(lambda ()
 			  (compiler.eval-core (expanded->core invoke-code))))
 	   ;;This visit code is compiled and stored in FASL files; the resulting code
 	   ;;objects are the ones evaluated whenever a compiled library is loaded and
 	   ;;visited.
-	   (visit-code	(build-visit-code-from-visit-env* visit-env* option*))
-	   (visible?		#t))
+	   (visit-code	(build-visit-code-from-visit-env visit-env option*))
+	   (visible?	#t))
        ;;This call returns a "library" object.
        (libman.intern-library
 	(libman.make-library uid libname
@@ -589,7 +579,7 @@
 	     (foreign-library*  (%parse-foreign-library* foreign-library*))
 	     (stale-clt         (%make-stale-collector)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
-	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env* export-subst global-env)
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
 		(import CORE-BODY-EXPANDER)
@@ -600,7 +590,7 @@
 	      (stale-clt)
 	    (values libname.sexp
 		    import-lib* invoke-lib* visit-lib*
-		    invoke-code visit-env* export-subst
+		    invoke-code visit-env export-subst
 		    global-env guard-code guard-lib*
 		    option* foreign-library*))))))
 
@@ -796,55 +786,55 @@
   ;;
   ;;BODY-SEXP* is a SYNTAX-MATCH input argument representing the body forms.
   ;;
-  ;;MIXED-DEFINITIONS-AND-EXPRESSIONS?  is true  when expanding  a program  and false
+  ;;MIXED-DEFINITIONS-AND-EXPRESSIONS?  is  true when  expanding a program  and false
   ;;when expanding a library; when  true mixing top-level definitions and expressions
   ;;is fine.
   ;;
   ;;Return multiple values:
   ;;
-  ;;1..A  list of  LIBRARY records  representing  the collection  accumulated by  the
-  ;;   IMP-COLLECTOR.   The records  represent the libraries  imported by  the IMPORT
-  ;;   syntaxes.
+  ;;1.  A list  of LIBRARY  records representing  the collection  accumulated by  the
+  ;;IMP-COLLECTOR.   The  records represent  the  libraries  imported by  the  IMPORT
+  ;;syntaxes.
   ;;
-  ;;2..A  list of  LIBRARY records  representing  the collection  accumulated by  the
-  ;;    INV-COLLECTOR.  The  records  represent the  libraries  exporting the  global
-  ;;   variable bindings referenced in the run-time code.
+  ;;2.  A list  of LIBRARY  records representing  the collection  accumulated by  the
+  ;;INV-COLLECTOR.  The records represent the libraries exporting the global variable
+  ;;bindings referenced in the run-time code.
   ;;
-  ;;3..A  list of  LIBRARY records  representing  the collection  accumulated by  the
-  ;;    VIS-COLLECTOR.  The  records  represent the  libraries  exporting the  global
-  ;;   variable bindings referenced in the right-hand sides of syntax definitions.
+  ;;3.  A list  of LIBRARY  records representing  the collection  accumulated by  the
+  ;;VIS-COLLECTOR.  The records represent the libraries exporting the global variable
+  ;;bindings referenced in the right-hand sides of syntax definitions.
   ;;
-  ;;4..INVOKE-CODE  is a  core language  LIBRARY-LETREC* expression  representing the
-  ;;    result  of expanding  the  input  source.  For  the  library  in the  example
-  ;;   INVOKE-CODE is:
+  ;;4. INVOKE-CODE  is a  core language  LIBRARY-LETREC* expression  representing the
+  ;;result of expanding the input source.  For the library in the example INVOKE-CODE
+  ;;is:
   ;;
   ;;      (library-letrec*
   ;;          ((lex.var1 loc.lex.var1 '1)
   ;;           (lex.var2 loc.lec.var2 '2))
   ;;        ((primitive void)))
   ;;
-  ;;5..VISIT-ENV* is a list of bindings  representing the macros defined in the code.
-  ;;   For the example library VISIT-ENV* is:
+  ;;5. VISIT-ENV is a  list of bindings representing the macros  defined in the code.
+  ;;For the example library VISIT-ENV is:
   ;;
   ;;      ((lab.mac #<procedure> .
   ;;         (annotated-case-lambda (#'lambda (#'stx) #'3)
   ;;           ((#'stx) '3)))
   ;;
-  ;;6..EXPORT-SUBST is an alist with entries having the format:
+  ;;6. EXPORT-SUBST is an alist with entries having the format:
   ;;
   ;;      (?name . ?label)
   ;;
-  ;;    where: ?NAME  is  a symbol  representing  the external  name  of an  exported
-  ;;    syntactic binding;  ?LABEL is  a gensym  uniquely identifying  such syntactic
-  ;;   binding.  For the library in the example, EXPORT-SUBST is:
+  ;;where: ?NAME is a symbol representing  the external name of an exported syntactic
+  ;;binding; ?LABEL is a gensym uniquely identifying such syntactic binding.  For the
+  ;;library in the example, EXPORT-SUBST is:
   ;;
   ;;      ((mac      . lab.mac)
   ;;       (the-var2 . lab.var2)
   ;;       (var1     . lab.var1))
   ;;
-  ;;7..GLOBAL-ENV is  the lexical  environment of bindings  exported by  the library.
-  ;;   Its format  is different from the  one of the LEXENV.*  values used throughout
-  ;;   the expansion process.  For the library in the example, GLOBAL-ENV is:
+  ;;7. GLOBAL-ENV  is the lexical  environment of  bindings exported by  the library.
+  ;;Its format is different  from the one of the LEXENV.*  values used throughout the
+  ;;expansion process.  For the library in the example, GLOBAL-ENV is:
   ;;
   ;;      ((lab.var1 global       . loc.lex.var1)
   ;;       (lab.var2 global       . loc.lex.var2)
@@ -859,62 +849,63 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
-      (with-typed-language (memq 'typed-language option*)
-	(with-option-strict-r6rs (memq 'strict-r6rs option*)
-	  (verbose-messages-thunk)
-	  (let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
-		(rtc	(make-collector))
-		(vtc	(make-collector)))
-	    (parametrise ((inv-collector  rtc)
-			  (vis-collector  vtc))
-	      ;;INIT*.STX  is a  list  of syntax  objects  representing the  trailing
-	      ;;non-definition forms from the body of the library and the body of the
-	      ;;internal modules.
+      (parametrise ((option.typed-language? (or (memq 'typed-language option*) (option.typed-language?)))
+		    (option.strict-r6rs     (or (memq 'strict-r6rs    option*) (option.strict-r6rs))))
+	(verbose-messages-thunk)
+	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
+	      (rtc	(make-collector))
+	      (vtc	(make-collector)))
+	  (parametrise ((inv-collector  rtc)
+			(vis-collector  vtc))
+	    ;;INIT*.STX  is  a  list  of syntax  objects  representing  the  trailing
+	    ;;non-definition forms from  the body of the library and  the body of the
+	    ;;internal modules.
+	    ;;
+	    ;;LEX* is  a list  of left-hand-side  lex gensyms to  be used  in binding
+	    ;;definitions when  building core  language symbolic expressions  for the
+	    ;;glocal DEFINE  forms in the library.   There is a lex  gensym for every
+	    ;;item in QRHS*.
+	    ;;
+	    ;;QRHS*  is  a  list  of  qualified  right-hand  sides  representing  the
+	    ;;right-hand side  expressions in the DEFINE  forms from the body  of the
+	    ;;library.
+	    ;;
+	    ;;INTERNAL-EXPORT*  is a  list of  identifiers exported  through internal
+	    ;;EXPORT syntaxes  rather than the  export spec  at the beginning  of the
+	    ;;library.
+	    ;;
+	    (let*-values
+		(((init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
+		  (%process-internal-body body-stx* rib mixed-definitions-and-expressions?))
+		 ((export-name* export-id*)
+		  (%parse-all-export-specs export-spec* internal-export* wrap-source-expression-with-top-rib rib)))
+	      (seal-rib! rib)
+	      ;;RHS*.PSI is a  list of PSI structs containing  core language symbolic
+	      ;;expressions representing the DEFINE right-hand sides.
 	      ;;
-	      ;;LEX* is  a list of left-hand-side  lex gensyms to be  used in binding
-	      ;;definitions when building core  language symbolic expressions for the
-	      ;;glocal DEFINE forms in the library.   There is a lex gensym for every
-	      ;;item in QRHS*.
+	      ;;INIT*.PSI is a list of  PSI structs containing core language symbolic
+	      ;;expressions representing the trailing init forms.
 	      ;;
-	      ;;QRHS*  is  a list  of  qualified  right-hand sides  representing  the
-	      ;;right-hand side expressions in the DEFINE  forms from the body of the
-	      ;;library.
-	      ;;
-	      ;;INTERNAL-EXPORT* is  a list of identifiers  exported through internal
-	      ;;EXPORT syntaxes rather  than the export spec at the  beginning of the
-	      ;;library.
-	      ;;
-	      (receive (init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
-		  (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
-		(receive (export-name* export-id*)
-		    (%parse-all-export-specs export-spec* internal-export* wrap-source-expression-with-top-rib rib)
-		  (seal-rib! rib)
-		  ;;RHS*.PSI  is  a list  of  PSI  structs containing  core  language
-		  ;;symbolic expressions representing the DEFINE right-hand sides.
-		  ;;
-		  ;;INIT*.PSI  is a  list  of PSI  structs  containing core  language
-		  ;;symbolic expressions representing the trailing init forms.
-		  ;;
-		  ;;We want order here?  Yes.   We expand first the definitions, then
-		  ;;the init forms; so that tag  identifiers have been put where they
-		  ;;are needed.
-		  (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
-			 (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
-			 (loc*          (map generate-qrhs-loc qrhs*))
-			 (export-subst  (%make-export-subst export-name* export-id*)))
-		    (receive (global-env visit-env*)
-			(%make-global-env/visit-env* lex* loc* lexenv.run)
-		      (%validate-exports export-spec* export-subst global-env)
-		      (let ((invoke-code (build-with-compilation-options option*
-					   (build-library-letrec* no-source
-					     mixed-definitions-and-expressions?
-					     lex* loc* (map psi.core-expr rhs*.psi)
-					     (if (null? init*.psi)
-						 (build-void)
-					       (build-sequence no-source
-						 (map psi.core-expr init*.psi)))))))
-			(values (itc) (rtc) (vtc)
-				invoke-code visit-env* export-subst global-env))))))))))))
+	      ;;We want order here?  Yes.  We  expand first the definitions, then the
+	      ;;init forms;  so that  tag identifiers  have been  put where  they are
+	      ;;needed.
+	      (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
+		     (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
+		     (loc*          (map generate-qrhs-loc qrhs*))
+		     (export-subst  (%make-export-subst export-name* export-id*)))
+		(receive (global-env visit-env)
+		    (%make-global-env/visit-env lex* loc* lexenv.run)
+		  (%validate-exports export-spec* export-subst global-env lexenv.run)
+		  (let ((invoke-code (build-with-compilation-options option*
+				       (build-library-letrec* no-source
+					 mixed-definitions-and-expressions?
+					 lex* loc* (map psi.core-expr rhs*.psi)
+					 (if (null? init*.psi)
+					     (build-void)
+					   (build-sequence no-source
+					     (map psi.core-expr init*.psi)))))))
+		    (values (itc) (rtc) (vtc)
+			    invoke-code visit-env export-subst global-env))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -1029,224 +1020,307 @@
 	       (syntax-violation #f "cannot export unbound identifier" export-id))))
       export-name* export-id*))
 
-  (define* (%make-global-env/visit-env* lex* loc* lexenv.run)
-    ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an GLOBAL-ENV entry,
-    ;;accumulating GLOBAL-ENV;  if the syntactic  binding is a macro  or expand-time
-    ;;value: accumulate the VISIT-ENV* alist.
+  (define* (%make-global-env/visit-env lex* loc* lexenv.run)
+    ;;For each entry  in LEXENV.RUN: convert the LEXENV entry  to a GLOBAL-ENV entry,
+    ;;accumulating GLOBAL-ENV;  if the  syntactic binding is  a macro  or expand-time
+    ;;value: accumulate the VISIT-ENV alist.
     ;;
-    ;;Notice that  GLOBAL-ENV contains  an entry for  every global  lexical variable,
-    ;;both the exported ones and the  non-exported ones.  It is responsibility of the
+    ;;Remember: GLOBAL-ENV contains an entry  for every global lexical variable, both
+    ;;the  exported ones  and the  non-exported ones.   It is  responsibility of  the
     ;;EXPORT-SUBST to select the entries representing the exported bindings.
     ;;
     ;;LEX*  must be  a  list of  gensyms representing  the  global lexical  variables
-    ;;binding names.
-    ;;
-    ;;LOC*  must  be a  list  of  storage location  gensyms  for  the global  lexical
-    ;;variables: there must be a loc in LOC* for every lex in LEX*.
+    ;;binding names.  LOC* must be a list  of storage location gensyms for the global
+    ;;lexical variables: there must be a loc in LOC* for every lex in LEX*.
     ;;
     (let loop ((lexenv.run	lexenv.run)
 	       (global-env	'())
-	       (visit-env*	'()))
-      (if (null? lexenv.run)
-	  (values global-env visit-env*)
-	(let* ((entry    (car lexenv.run))
-	       (label    (lexenv-entry.label entry))
-	       (binding  (lexenv-entry.binding-descriptor entry)))
-	  (case (syntactic-binding-descriptor.type binding)
-	    ((lexical)
-	     ;;This binding is an UNtyped lexical variable.  When we import a lexical
-	     ;;binding from another library, we must see such entry as "global".
-	     ;;
-	     ;;The entry from the LEXENV looks like this:
-	     ;;
-	     ;;   (?label . (lexical . (?lexvar . ?mutable)))
-	     ;;
-	     ;;Add to the GLOBAL-ENV an entry like:
-	     ;;
-	     ;;   (?label . (?type . ?lex/loc))
-	     ;;
-	     ;;where: ?TYPE  is the symbol  "global-mutable" or the  symbol "global";
-	     ;;?lex/loc is the loc gensym of the variable, used as lex gensym and loc
-	     ;;gensym.
-	     ;;
-	     ;;NOTE  The  entries  of  type  "global-mutable"  are  forbidden  to  be
-	     ;;exported: entries  of this  type can  be in  the GLOBAL-ENV,  but they
-	     ;;cannot  be referenced  in the  EXPORT-SUBST; this  validation will  be
-	     ;;performed later.
-	     ;;
-	     (let* ((bind-val  (syntactic-binding-descriptor.value binding))
-		    ;;Search for LEXICAL-GENSYM  in the list LEX*:  when found return
-		    ;;the corresponding gensym from  LOC*.  LEXICAL-GENSYM must be an
-		    ;;item in LEX*.
-		    (loc       (let lookup ((lexical-gensym  (lexical-var-binding-descriptor-value.lex-name bind-val))
-					    (lex*            lex*)
-					    (loc*            loc*))
-				 (if (pair? lex*)
-				     (if (eq? lexical-gensym (car lex*))
-					 (car loc*)
-				       (lookup lexical-gensym (cdr lex*) (cdr loc*)))
-				   (assertion-violation/internal-error 'make-global-env/lookup
-				     "missing lexical gensym in lexenv" lexical-gensym))))
-		    (type      (if (lexical-var-binding-descriptor-value.assigned? bind-val)
-				   'global-mutable
-				 'global)))
+	       (visit-env	'()))
+      (if (pair? lexenv.run)
+	  (let* ((entry		(car lexenv.run))
+		 (label		(lexenv-entry.label entry))
+		 (descr		(lexenv-entry.binding-descriptor entry))
+		 (descr.value	(syntactic-binding-descriptor.value descr)))
+	    (case (syntactic-binding-descriptor.type descr)
+	      ((lexical)
+	       ;;This  syntactic binding  is an  UNtyped lexical  variable.  When  we
+	       ;;import  a lexical  binding from  another library,  we must  see such
+	       ;;entry as "global".
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (lexical . (?lexvar . ?mutable)))
+	       ;;
+	       ;;Here we add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (?type . ?lex/loc))
+	       ;;
+	       ;;where: ?TYPE is the symbol  "global-mutable" or the symbol "global";
+	       ;;?LEX/LOC is the loc gensym of  the variable, used as both lex gensym
+	       ;;and loc gensym.
+	       ;;
+	       ;;NOTE  The  entries of  type  "global-mutable"  are forbidden  to  be
+	       ;;exported: entries of  this type must be in the  GLOBAL-ENV, but they
+	       ;;cannot be  referenced in the  EXPORT-SUBST; this validation  will be
+	       ;;performed later.
+	       ;;
+	       (let* ((loc  (let lookup ((the-lex	(lexical-var-binding-descriptor-value.lex-name descr.value))
+					 (lex*		lex*)
+					 (loc*		loc*))
+			      ;;Search  for  THE-LEX in  the  list  LEX*: when  found
+			      ;;return the  corresponding gensym from  LOC*.  THE-LEX
+			      ;;must be an item in LEX*.
+			      (if (pair? lex*)
+				  (if (eq? the-lex (car lex*))
+				      (car loc*)
+				    (lookup the-lex (cdr lex*) (cdr loc*)))
+				(assertion-violation/internal-error __who__
+				  "missing lexical gensym in lexenv" the-lex))))
+		      (type  (if (lexical-var-binding-descriptor-value.assigned? descr.value)
+				 'global-mutable
+			       'global)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label type loc) global-env)
+		       visit-env)))
+
+	      ((lexical-typed)
+	       ;;This syntactic  binding represents  a typed lexical  variable.  This
+	       ;;syntactic  binding acts  like an  identifier local  macro.  When  we
+	       ;;import a  typed lexical  binding from another  library, we  must see
+	       ;;such entry as "global-typed" or "global-typed-mutable".
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr)))
+	       ;;
+	       ;;Add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (global-typed         . ?loc))
+	       ;;   (?label . (global-typed-mutable . ?loc))
+	       ;;
+	       ;;and to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (?loc . (#<global-typed-variable-spec> . ?expanded-expr))
+	       ;;
+	       ;;notice   how  the   VISIT-ENV   entry  has   the   same  format   of
+	       ;;"global-macro!"  entries: CAR  gets the loc, CDDR  gets the expanded
+	       ;;expr.
+	       ;;
+	       ;;NOTE The  entries of  type "global-typed-mutable" whose  variable is
+	       ;;assigned in the  code are forbidden to be exported:  entries of this
+	       ;;type must be in the GLOBAL-ENV, but they cannot be referenced in the
+	       ;;EXPORT-SUBST; this validation will be performed later.
+	       ;;
+	       (let* ((lts		(car descr.value))
+		      (expanded-expr	(cdr descr.value))
+		      (lex		(lexical-typed-variable-spec.lex lts))
+		      (loc		(generate-storage-location-gensym lex))
+		      (variable-loc	(let lookup ((the-lex	lex)
+						     (lex*	lex*)
+						     (loc*	loc*))
+					  ;;Search for THE-LEX in the list LEX*: when
+					  ;;found  return  the  corresponding  gensym
+					  ;;from LOC*.   THE-LEX must  be an  item in
+					  ;;LEX*.
+					  (if (pair? lex*)
+					      (if (eq? the-lex (car lex*))
+						  (car loc*)
+						(lookup the-lex (cdr lex*) (cdr loc*)))
+					    (assertion-violation/internal-error __who__
+					      "missing lexical gensym in lexenv" the-lex))))
+		      (gts		(make-global-typed-variable-spec lts variable-loc))
+		      (type		(if (lexical-typed-variable-spec.assigned? lts)
+					    'global-typed-mutable
+					  'global-typed)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label type loc) global-env)
+		       (cons (make-visit-env-entry loc gts expanded-expr) visit-env))))
+
+	      ((local-macro)
+	       ;;When we  define a syntactic  binding representing a  keyword binding
+	       ;;with non-variable  transformer: the  local code sees  the descriptor
+	       ;;with type  "local-macro".  If we  export such binding:  the importer
+	       ;;must see the descriptor with type "global-macro".
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (local-macro . (?transformer . ?expanded-expr)))
+	       ;;
+	       ;;Add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (global-macro . ?loc))
+	       ;;
+	       ;;and to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (?loc . (?transformer . ?expanded-expr))
+	       ;;
+	       (let ((loc		(generate-storage-location-gensym label))
+		     (transformer	(car descr.value))
+		     (expanded-expr	(cdr descr.value)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label 'global-macro loc)      global-env)
+		       (cons (make-visit-env-entry loc transformer expanded-expr) visit-env))))
+
+	      ((local-macro!)
+	       ;;When we  define a syntactic  binding representing a  keyword binding
+	       ;;with variable transformer:  the local code sees  the descriptor with
+	       ;;type "local-macro!".  If  we export such binding:  the importer must
+	       ;;see the descriptor with type "global-macro!".
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (local-macro! . (?transformer . ?expanded-expr)))
+	       ;;
+	       ;;Add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (global-macro . ?loc))
+	       ;;
+	       ;;and to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (?loc . (?transformer . ?expanded-expr))
+	       ;;
+	       (let ((loc		(generate-storage-location-gensym label))
+		     (transformer	(car descr.value))
+		     (expanded-expr	(cdr descr.value)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label 'global-macro! loc)     global-env)
+		       (cons (make-visit-env-entry loc transformer expanded-expr) visit-env))))
+
+	      ((local-etv)
+	       ;;When we define  a syntactic binding for an  expand-time value (ETV):
+	       ;;the local code  sees it as "local-etv".  If we  export such binding:
+	       ;;the importer must see it as a "global-etv".
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (local-etv . (?object . ?expanded-expr)))
+	       ;;
+	       ;;Add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (global-etv . ?loc))
+	       ;;
+	       ;;and to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (?loc . (?object . ?expanded-expr))
+	       ;;
+	       (let ((loc		(generate-storage-location-gensym label))
+		     (object		(car descr.value))
+		     (expanded-expr	(cdr descr.value)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label 'global-etv loc)   global-env)
+		       (cons (make-visit-env-entry loc object expanded-expr) visit-env))))
+
+	      ((local-object-type-name)
+	       ;;When we define a syntactic binding for an object-type specification:
+	       ;;the local  code sees it  as "local-object-type-name".  If  we export
+	       ;;such  binding: the  entries added  to the  GLOBAL-ENV and  VISIT-ENV
+	       ;;depend on the type of the object specification.
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label
+	       ;;     . (local-object-type-name
+	       ;;         . (#<object-type-spec> . ?expanded-expr)))
+	       ;;
+	       (let ((ots		(car descr.value))
+		     (expanded-expr	(cdr descr.value)))
+		 (cond
+		  ((core-scheme-type-spec? ots)
+		   ;;This case  is for  the syntactic bindings  representing built-in
+		   ;;types ("<top>", "<fixnum>", et cetera).
+		   ;;
+		   ;;Add to the GLOBAL-ENV an entry like:
+		   ;;
+		   ;;   (?label . ($core-scheme-type-name . ?hard-coded-sexp))
+		   ;;
+		   (let* ((D		(core-scheme-type-spec.original-descriptor ots))
+			  (D.type	(car D))
+			  (D.value	(cdr D)))
+		     (loop (cdr lexenv.run)
+			   (cons (make-global-env-entry label D.type D.value) global-env)
+			   visit-env)))
+		  ((core-condition-type-spec? ots)
+		   ;;Add to the GLOBAL-ENV an entry like:
+		   ;;
+		   ;;   (?label . ($core-condition-object-type-name . ?hard-coded-sexp))
+		   ;;
+		   (let* ((D		(core-record-type-spec.original-descriptor ots))
+			  (D.type	(car D))
+			  (D.value	(cdr D)))
+		     (loop (cdr lexenv.run)
+			   (cons (make-global-env-entry label D.type D.value) global-env)
+			   visit-env)))
+		  ((core-record-type-spec? ots)
+		   ;;Add to the GLOBAL-ENV an entry like:
+		   ;;
+		   ;;   (?label . ($core-rtd . (?rtd-name ?rcd-name)))
+		   ;;   (?label . ($core-record-type-name . ?hard-coded-sexp))
+		   ;;
+		   (let* ((D		(core-record-type-spec.original-descriptor ots))
+			  (D.type	(car D))
+			  (D.value	(cdr D)))
+		     (loop (cdr lexenv.run)
+			   (cons (make-global-env-entry label D.type D.value) global-env)
+			   visit-env)))
+		  (else
+		   ;;This case  is for everything else:  struct-type names, syntactic
+		   ;;record-type  names, custom  object-type  names,  et cetera.   We
+		   ;;handle these entries like they are macros.
+		   ;;
+		   ;;We add to the GLOBAL-ENV an entry like:
+		   ;;
+		   ;;   (?label . (global-object-type-name . ?loc))
+		   ;;
+		   ;;and to the VISIT-ENV an entry like:
+		   ;;
+		   ;;   (?loc . (#<object-type-spec> . ?expanded-expr))
+		   ;;
+		   (let ((loc (generate-storage-location-gensym label)))
+		     (loop (cdr lexenv.run)
+			   (cons (make-global-env-entry label 'global-object-type-name loc) global-env)
+			   (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)))))))
+
+	      (($core-scheme-type-name
+		$core-rtd $core-record-type-name $core-condition-object-type-name
+		$module $fluid $synonym)
+	       ;;We expect LEXENV entries of these types to have the format:
+	       ;;
+	       ;;   (?label . (?type-symbol . ?value))
+	       ;;
+	       ;;where ?VALUE can be serialised as a symbolic expression.
+	       ;;
+	       ;;We add to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (?type-symbol . ?value))
+	       ;;
+	       ;;just copying the LEXENV entry.
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label type loc) global-env)
-		     visit-env*)))
+		     (cons entry global-env)
+		     visit-env))
 
-	    ((lexical-typed)
-	     ;;This binding  is an typed  lexical variable.   When we import  a typed
-	     ;;lexical  binding from  another  library,  we must  see  such entry  as
-	     ;;"global-typed".
-	     ;;
-	     ;;The entry from the LEXENV looks like this:
-	     ;;
-	     ;;   (?label . (lexical-typed . ?lexical-typed-spec))
-	     ;;
-	     ;;Add to the GLOBAL-ENV an entry like:
-	     ;;
-	     ;;   (?label . (?type . ?global-typed-spec))
-	     ;;
-	     ;;where:  ?TYPE  is  the  symbol "global-typed-mutable"  or  the  symbol
-	     ;;"global-typed";     ?global-typed-spec    is     an    instance     of
-	     ;;"<global-typed-spec>".
-	     ;;
-	     ;;NOTE The  entries of type  "global-typed-mutable" are forbidden  to be
-	     ;;exported: entries  of this  type can  be in  the GLOBAL-ENV,  but they
-	     ;;cannot  be referenced  in the  EXPORT-SUBST; this  validation will  be
-	     ;;performed later.
-	     ;;
-	     (let* ((spec  (syntactic-binding-descriptor.value binding))
-		    ;;Search for LEXICAL-GENSYM  in the list LEX*:  when found return
-		    ;;the corresponding gensym from  LOC*.  LEXICAL-GENSYM must be an
-		    ;;item in LEX*.
-		    (loc   (let lookup ((lexical-gensym  (lexical-typed-spec.lex spec))
-					(lex*            lex*)
-					(loc*            loc*))
-			     (if (pair? lex*)
-				 (if (eq? lexical-gensym (car lex*))
-				     (car loc*)
-				   (lookup lexical-gensym (cdr lex*) (cdr loc*)))
-			       (assertion-violation/internal-error 'make-global-env/lookup
-				 "missing lexical gensym in lexenv" lexical-gensym))))
-		    (type      (if (lexical-typed-spec.assigned? spec)
-				   'global-typed-mutable
-				 'global-typed)))
+	      ((begin-for-syntax)
+	       ;;This entry is the result of expanding BEGIN-FOR-SYNTAX macro use; we
+	       ;;want this code to be part of the visit code.
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (begin-for-syntax . ?expanded-expr))
+	       ;;
+	       ;;We add to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (#f . ?expanded-expr)
+	       ;;
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label type (make-global-typed-spec loc spec)) global-env)
-		     visit-env*)))
+		     global-env
+		     (cons (cons #f descr.value) visit-env)))
 
-	    ((local-macro)
-	     ;;When we define a syntactic binding representing a keyword binding with
-	     ;;non-variable transformer: the local code sees the descriptor with type
-	     ;;"local-macro".  If we  export such binding: the importer  must see the
-	     ;;descriptor with type "global-macro".
-	     ;;
-	     ;;The entry from the LEXENV looks like this:
-	     ;;
-	     ;;   (?label . (local-macro . (?transformer . ?expanded-expr)))
-	     ;;
-	     ;;Add to the GLOBAL-ENV an entry like:
-	     ;;
-	     ;;   (?label global-macro . ?loc)
-	     ;;
-	     ;;and to the VISIT-ENV* an entry like:
-	     ;;
-	     ;;   (?loc . (?transformer . ?expanded-expr))
-	     ;;
-	     (let ((loc (generate-storage-location-gensym label)))
-	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-macro loc) global-env)
-		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
+	      (else
+	       (assertion-violation/internal-error 'core-body-expander
+		 "unknown or unexportable syntactic binding"
+		 descr))))
+	(values global-env visit-env))))
 
-	    ((local-macro!)
-	     ;;When we define a syntactic binding representing a keyword binding with
-	     ;;variable transformer:  the local  code sees  the descriptor  with type
-	     ;;"local-macro!".  If we export such  binding: the importer must see the
-	     ;;descriptor with type "global-macro!".
-	     ;;
-	     ;;The entry from the LEXENV looks like this:
-	     ;;
-	     ;;   (?label . (local-macro! . (?transformer . ?expanded-expr)))
-	     ;;
-	     ;;Add to the GLOBAL-ENV an entry like:
-	     ;;
-	     ;;   (?label global-macro . ?loc)
-	     ;;
-	     ;;and to the VISIT-ENV* an entry like:
-	     ;;
-	     ;;   (?loc . (?transformer . ?expanded-expr))
-	     ;;
-	     (let ((loc (generate-storage-location-gensym label)))
-	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-macro! loc) global-env)
-		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
-
-	    ((local-etv)
-	     ;;When we define a binding for a expand-time value (ETV): the local code
-	     ;;sees it as "local-etv".  If we  export such binding: the importer must
-	     ;;see it as a "global-etv".
-	     ;;
-	     ;;The entry from the LEXENV looks like this:
-	     ;;
-	     ;;   (?label . (local-etv . (?object . ?expanded-expr)))
-	     ;;
-	     ;;Add to the GLOBAL-ENV an entry like:
-	     ;;
-	     ;;   (?label . (global-etv . ?loc))
-	     ;;
-	     ;;and to the VISIT-ENV* an entry like:
-	     ;;
-	     ;;   (?loc . (?object . ?expanded-expr))
-	     ;;
-	     (let ((loc (generate-storage-location-gensym label)))
-	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-etv loc) global-env)
-		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
-
-	    (($object-type-name)
-	     (let ((ots (syntactic-binding-descriptor.value binding)))
-	       (cond ((core-scheme-type-spec? ots)
-		      (core-scheme-type-spec.original-descriptor ots))
-		     ((core-record-type-spec? ots)
-		      (core-record-type-spec.original-descriptor ots))
-		     (else
-		      (loop (cdr lexenv.run)
-			    (cons entry global-env)
-			    visit-env*)))))
-
-	    (($core-scheme-type-name
-	      $core-rtd $core-record-type-name $core-condition-object-type-name
-	      $module $fluid $synonym)
-	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
-	     ;;GLOBAL-ENV.
-	     ;;
-	     (loop (cdr lexenv.run)
-		   (cons entry global-env)
-		   visit-env*))
-
-	    ((begin-for-syntax)
-	     ;;This entry is  the result of expanding BEGIN-FOR-SYNTAX  macro use; we
-	     ;;want this code to be part of the visit code.
-	     ;;
-	     ;;The entry from the LEXENV looks like this:
-	     ;;
-	     ;;   (?label . (begin-for-syntax . ?expanded-expr))
-	     ;;
-	     ;;add to the VISIT-ENV* an entry like:
-	     ;;
-	     ;;   (#f . ?expanded-expr)
-	     ;;
-	     (loop (cdr lexenv.run)
-		   global-env
-		   (cons (cons #f (syntactic-binding-descriptor.value binding)) visit-env*)))
-
-	    (else
-	     (assertion-violation/internal-error 'core-body-expander
-	       "unknown or unexportable syntactic binding"
-	       binding)))))))
-
-  (define (%validate-exports export-spec* export-subst global-env)
+  (define (%validate-exports export-spec* export-subst global-env lexenv.run)
     ;;We want to forbid code like the following:
     ;;
     ;;    (library (proof)
@@ -1262,18 +1336,17 @@
     ;;exported: entries  of this type  can be in the  GLOBAL-ENV, but they  cannot be
     ;;referenced in the EXPORT-SUBST.
     ;;
-    (define export-subst-entry-name  car)
-    (define export-subst-entry-label cdr)
+    (define export-subst.entry-name  car)
+    (define export-subst.entry-label cdr)
     (unless (%expanding-program? export-spec*)
       (for-each (lambda (subst)
-		  (cond ((assq (export-subst-entry-label subst) global-env)
+		  (cond ((assq (export-subst.entry-label subst) global-env)
 			 => (lambda (entry)
-			      (let ((type (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry))))
-				(when (or (eq? type 'global-mutable)
-					  (eq? type 'global-typed-mutable))
-				  (syntax-violation 'export
-				    "attempt to export mutated variable"
-				    (export-subst-entry-name subst))))))))
+			      (let ((descr (lexenv-entry.binding-descriptor entry)))
+				(case (syntactic-binding-descriptor.type descr)
+				  ((global-mutable global-typed-mutable)
+				   (syntax-violation 'export
+				     "attempt to export mutated variable" (export-subst.entry-name subst)))))))))
 	export-subst)))
 
   #| end of module: CORE-BODY-EXPANDER |# )
@@ -1282,10 +1355,16 @@
 ;;;; GLOBAL-ENV helpers
 
 (define-syntax-rule (make-global-env-entry ?label ?type ?loc)
-  ;;Given a  label gensym, a  symbol representing an GLOBAL-ENV  type, a
-  ;;loc gensym: build and return an entry of GLOBAL-ENV.
+  ;;Given a  label gensym,  a symbol  representing a GLOBAL-ENV  type, a  loc gensym:
+  ;;build and return an entry of GLOBAL-ENV.
   ;;
   (cons* ?label ?type ?loc))
+
+(define-syntax-rule (make-visit-env-entry ?loc ?value ?expanded-expr)
+  ;;Given  a loc  gensym,  a  syntactic binding's  specific  value,  a core  language
+  ;;expression: build and return an entry of VISIT-ENV.
+  ;;
+  (cons* ?loc ?value ?expanded-expr))
 
 (define-syntax-rule (export-binding-type ?export-binding)
   ;;Given an export binding return the symbol representin its type.
@@ -1301,13 +1380,13 @@
 
 ;;;; R6RS programs and libraries helpers
 
-(define (initial-visit! visit-env*)
+(define (initial-visit! visit-env)
   ;;Whenever a source  library is loaded and expanded: all  its macro definitions and
   ;;BEGIN-FOR-SYNTAX macro uses are expanded and evaluated.   All it is left to do to
   ;;visit such  library is to  store in  the loc gensyms  of macros the  compiled RHS
   ;;code; this is done by this function.
   ;;
-  ;;VISIT-ENV* is a list of sublists.  The entries with format:
+  ;;VISIT-ENV is a list of sublists.  The entries with format:
   ;;
   ;;   (?loc . (?obj . ?core-code))
   ;;
@@ -1323,15 +1402,15 @@
 		    (proc (cadr x)))
 		(when loc
 		  (set-symbol-value! loc proc))))
-    visit-env*))
+    visit-env))
 
-(define (build-visit-code-from-visit-env* visit-env* option*)
+(define (build-visit-code-from-visit-env visit-env option*)
   ;;Return  a  sexp  representing  code   that  initialises  the  bindings  of  macro
   ;;definitions in  the core language:  the visit  code; code evaluated  whenever the
   ;;library is visited; each library is visited only once, the first time an exported
   ;;binding is used.
   ;;
-  ;;VISIT-ENV* is a list of sublists.  The entries with format:
+  ;;VISIT-ENV is a list of sublists.  The entries with format:
   ;;
   ;;   (?loc . (?obj . ?core-code))
   ;;
@@ -1359,7 +1438,7 @@
   ;;	      (annotated-call (+ 4 5)
   ;;          (primitive +) '4 '5))))
   ;;
-  (if (null? visit-env*)
+  (if (null? visit-env)
       (build-void)
     (build-with-compilation-options option*
       (build-sequence no-source
@@ -1372,7 +1451,7 @@
 		     (else
 		      (let ((expr.core (cdr entry)))
 			expr.core))))
-	  visit-env*)))))
+	  visit-env)))))
 
 
 ;;;; done
@@ -1407,6 +1486,4 @@
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
-;;eval: (put 'with-typed-language		'scheme-indent-function 1)
-;;eval: (put 'with-option-strict-r6rs		'scheme-indent-function 1)
 ;;End:

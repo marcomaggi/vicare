@@ -24,9 +24,7 @@
     psi.core-expr
     chi-interaction-expr
     chi-expr			chi-expr*
-    chi-body*			chi-internal-body
-    chi-qrhs*			chi-defun
-    chi-lambda			chi-case-lambda
+    chi-body*			chi-qrhs*
     ;;;chi-application/psi-first-operand
     generate-qrhs-loc
     SPLICE-FIRST-ENVELOPE)
@@ -412,9 +410,9 @@
 	  ((variable-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
 	  ((syntactic-record-type-spec? rv)
-	   (make-syntactic-binding-descriptor/syntactic-record-type-name rv))
+	   (make-syntactic-binding-descriptor/syntactic-record-type-name rv rhs-expr.core))
 	  ((struct-type-spec? rv)
-	   (make-syntactic-binding-descriptor/struct-type-name rv))
+	   (make-syntactic-binding-descriptor/struct-type-name rv rhs-expr.core))
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
@@ -612,11 +610,11 @@
 	   ;;Reference to global imported lexical  variable; this means EXPR.STX is an
 	   ;;identifier.  We expect the syntactic binding descriptor to be:
 	   ;;
-	   ;;   (global . (?library . ?loc))
+	   ;;   (global . (#<library> . ?loc))
 	   ;;
 	   ;;and BIND-VAL to be:
 	   ;;
-	   ;;   (?library . ?loc)
+	   ;;   (#<library> . ?loc)
 	   ;;
 	   (let* ((lib (car bind-val))
 		  (loc (cdr bind-val)))
@@ -626,20 +624,23 @@
 		       (make-retvals-signature/single-top))))
 
 	  ((global-typed)
-	   ;;Reference to global imported typed  lexical variable; this means EXPR.STX
+	   ;;Reference to global imported typed lexical variable; this means EXPR.STX
 	   ;;is an identifier.  We expect the syntactic binding descriptor to be:
 	   ;;
-	   ;;   (global-typed . ?global-typed-spec)
+	   ;;   (global-typed . (#<library> . ?loc))
 	   ;;
-	   ;;and    BIND-VAL    to    be   ?GLOBAL-TYPED-SPEC,    an    instance    of
-	   ;;"<global-typed-spec>".
-	   ;;
-	   (let* ((lib (global-typed-spec.lib bind-val))
-		  (loc (global-typed-spec.loc bind-val)))
+	   ;;We visit the  library so that the ?LOC actually  references the instance
+	   ;;of "<global-typed-variable-spec>".
+	   (let* ((lib      (car bind-val))
+		  (loc      (cdr bind-val)))
 	     ((inv-collector) lib)
-	     (make-psi expr.stx
-		       (build-global-reference no-source loc)
-		       (make-retvals-signature/single-value (global-typed-spec.type-id bind-val)))))
+	     (visit-library lib)
+	     (let* ((gts		(symbol-value loc))
+		    (type-id		(global-typed-variable-spec.type-id      gts))
+		    (variable-loc	(global-typed-variable-spec.variable-loc gts)))
+	       (make-psi expr.stx
+			 (build-global-reference no-source variable-loc)
+			 (make-retvals-signature/single-value type-id)))))
 
 	  ((core-prim)
 	   ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
@@ -673,10 +674,17 @@
 		       (make-retvals-signature/single-top))))
 
 	  ((lexical-typed)
-	   ;;Reference  to  typed   lexical  variable;  this  means   EXPR.STX  is  an
-	   ;;identifier.
-	   (let ((lex     (lexical-typed-var-binding-descriptor-value.lex-name bind-val))
-		 (type-id (lexical-typed-var-binding-descriptor-value.type-id  bind-val)))
+	   ;;Reference  to  typed  lexical  variable;   this  means  EXPR.STX  is  an
+	   ;;identifier.  The syntactic binding's descriptor has format:
+	   ;;
+	   ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+	   ;;
+	   ;;and BIND-VAL is:
+	   ;;
+	   ;;   (#<lexical-typed-variable-spec> . ?expanded-expr)
+	   ;;
+	   (let ((lex     (syntactic-binding-descriptor/lexical-typed-var.value.lex     bind-val))
+		 (type-id (syntactic-binding-descriptor/lexical-typed-var.value.type-id bind-val)))
 	     (make-psi expr.stx
 		       (build-lexical-reference no-source lex)
 		       (make-retvals-signature/single-value type-id))))
@@ -986,14 +994,14 @@
 		     (make-retvals-signature/single-void))))
 
 	((lexical-typed)
-	 ;;A  typed  lexical  binding  used  as   LHS  of  SET!  is  mutable  and  so
+	 ;;A  typed  lexical  binding  used  as  LHS  of  SET!   is  mutable  and  so
 	 ;;unexportable.
-	 (lexical-typed-var-binding-descriptor-value.assigned? bind-val #t)
-	 (let* ((lhs.tag (lexical-typed-var-binding-descriptor-value.type-id  bind-val))
-		(lhs.lex (lexical-typed-var-binding-descriptor-value.lex-name bind-val))
-		(rhs.psi (chi-expr (bless
-				    `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
-				   lexenv.run lexenv.expand)))
+	 (let* ((lhs.lex  (syntactic-binding-descriptor/lexical-typed-var.value.lex     bind-val))
+		(lhs.tag  (syntactic-binding-descriptor/lexical-typed-var.value.type-id bind-val))
+		(rhs.psi  (chi-expr (bless
+				     `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
+				    lexenv.run lexenv.expand)))
+	   (syntactic-binding-descriptor/lexical-typed-var.value.assigned? bind-val #t)
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
 		       lhs.lex
@@ -1014,7 +1022,7 @@
 	((local-macro!)
 	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
-	((global-mutable global-typed-mutable)
+	((global-mutable)
 	 ;;Imported  variable in  reference position,  whose binding  is assigned  at
 	 ;;least once in the code of the imported library.
 	 ;;
@@ -1664,6 +1672,95 @@
     (cond ((stale-when-collector)
 	   => (lambda (c)
 		(c (psi.core-expr guard-expr.psi) (stc)))))))
+
+
+(module (%process-syntactic-bindings)
+  ;;This function is meant to be used by syntaxes that create new syntactic bindings:
+  ;;INTERNAL-LAMBDA, INTERNAL-CASE-LAMBDA, LET, LETREC, LETREC*.  These syntaxes need
+  ;;to create both typed and untyped syntactic bindings.
+  ;;
+  ;;LHS*.ID must be a proper list  of syntactic identifiers representing the names of
+  ;;the  syntactic bindings.   LHS*.TAG must  be  a proper  list of  #f or  syntactic
+  ;;identifiers representing the types of the bindings.
+  ;;
+  ;;Process the  LHS specifications  generating the typed  lexical vars  when needed.
+  ;;Create a  new rib mapping  identifiers to labels.   Update the given  LEXENV with
+  ;;entries mapping labels to syntactic binding descriptors.
+  ;;
+  ;;Return:  the  new  rib;  the  updated  LEXENV;  a  proper  list  of  lex  gensyms
+  ;;representing the core language names of the bindings.
+  ;;
+  ;;
+  ;;Example, for the LET syntax:
+  ;;
+  ;;   (let (({A <fixnum>} 1)
+  ;;         ({B <string>} "ciao"))
+  ;;     ?body)
+  ;;
+  ;;this function must be called as:
+  ;;
+  ;;   (%process-syntactic-bindings (list #'A #'B)
+  ;;                                (list #'<fixnum> #'<string>)
+  ;;                                lexenv.run)
+  ;;
+  ;;Example, for the LAMBDA syntax:
+  ;;
+  ;;   (lambda ({A <fixnum>} {B <string>} . C)
+  ;;     ?body)
+  ;;
+  ;;this function must be called as:
+  ;;
+  ;;   (%process-syntactic-bindings (list #'C #'A #'B)
+  ;;                                (list #'<list> #'<fixnum> #'<string>)
+  ;;                                lexenv.run)
+  ;;
+  (define (%process-syntactic-bindings lhs*.id lhs*.tag lexenv)
+    (receive (typed-var*.id typed-var*.tag untyped-var*.id)
+	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
+      ;;Prepare the UNtyped lexical variables.
+      (let* ((untyped-var*.lab	(map generate-label-gensym   untyped-var*.id))
+	     (untyped-var*.lex	(map generate-lexical-gensym untyped-var*.id))
+	     (lexenv		(lexenv-add-lexical-var-bindings untyped-var*.lab untyped-var*.lex lexenv)))
+	;;Prepare the typed lexical variables.
+	(let* ((typed-var*.lab	  (map generate-label-gensym   typed-var*.id))
+	       (typed-var*.lex    (map generate-lexical-gensym typed-var*.id))
+	       (typed-var*.descr  (map make-syntactic-binding-descriptor/lexical-typed-var/from-data
+				    typed-var*.tag typed-var*.lex))
+	       (lexenv            (fold-left (lambda (lexenv lab descr)
+					       (push-entry-on-lexenv lab descr lexenv))
+				    lexenv typed-var*.lab typed-var*.descr))
+	       (rib               (make-rib/from-identifiers-and-labels (append typed-var*.id  untyped-var*.id)
+									(append typed-var*.lab untyped-var*.lab))))
+	  (values rib lexenv (append typed-var*.lex untyped-var*.lex))))))
+
+  (define (%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
+    ;;Partition the  syntactic bindings into typed  and untyped.  Those having  #f or
+    ;;"<top>" as tag are untyped.
+    ;;
+    (let loop ((lhs*.id		lhs*.id)
+	       (lhs*.tag	lhs*.tag)
+	       (typed-var*.id	'())
+	       (typed-var*.tag	'())
+	       (untyped-var*.id	'()))
+      (if (pair? lhs*.id)
+	  (let ((lhs.id  (car lhs*.id))
+		(lhs.tag (car lhs*.tag)))
+	    (if (and lhs.tag (not (top-tag-id? lhs.tag)))
+		;;Add a typed lexical variable.
+		(loop (cdr lhs*.id)
+		      (cdr lhs*.tag)
+		      (cons lhs.id  typed-var*.id)
+		      (cons lhs.tag typed-var*.tag)
+		      untyped-var*.id)
+	      ;;Add an UNtyped lexical variable.
+	      (loop (cdr lhs*.id)
+		    (cdr lhs*.tag)
+		    typed-var*.id
+		    typed-var*.tag
+		    (cons lhs.id untyped-var*.id))))
+	(values (reverse typed-var*.id) (reverse typed-var*.tag) (reverse untyped-var*.id)))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: external modules

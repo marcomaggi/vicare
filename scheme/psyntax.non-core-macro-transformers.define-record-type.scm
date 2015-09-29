@@ -867,10 +867,8 @@
        (identifier? ?parent-name)
        ;;Validate  ?PARENT-NAME  as  syntactic  identifier  bound  to  a  record-type
        ;;syntactic binding.
-       (let* ((parent-descr (id->record-type-name-binding-descriptor __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
-	      (parent-rts   (syntactic-binding-descriptor.value parent-descr))
+       (let* ((parent-rts   (id->record-type-specification __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
 	      (parent-proto (record-type-spec.super-protocol-id parent-rts)))
-	 (visit-library-of-imported-syntactic-binding __module_who__ input-form.stx ?parent-name (current-inferior-lexenv) parent-descr)
 	 (values ?parent-name
 		 (%named-gensym/suffix foo "-parent-rtd")
 		 (%named-gensym/suffix foo "-parent-rcd")
@@ -973,8 +971,7 @@
     ((_ ?super-protocol-expr)
      (if foo-parent.id
 	 ;;This record type has a parent selected with the PARENT clause.
-	 (let* ((descr (id->record-type-name-binding-descriptor __module_who__ #f foo-parent.id (current-inferior-lexenv)))
-		(rts   (syntactic-binding-descriptor.value descr))
+	 (let* ((rts   (id->record-type-specification __module_who__ #f foo-parent.id (current-inferior-lexenv)))
 		(proto (record-type-spec.super-protocol-id rts)))
 	   (if proto
 	       ;;The parent record-type specification has a super-protocol.
