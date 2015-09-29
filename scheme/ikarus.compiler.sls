@@ -182,9 +182,9 @@
 	(let* ((p (do-pass (pass-recordize core-language-sexp)))
 	       (p (do-pass (pass-optimize-direct-calls p)))
 	       (p (do-pass (pass-optimize-letrec p)))
-	       (p (do-pass (if (static:perform-source-optimisation?)
-			       (pass-source-optimize p)
-			     p))))
+	       (p (if (static:perform-source-optimisation?)
+		      (do-pass (pass-source-optimize p))
+		    p)))
 	  (%print-optimiser-output p)
 	  (let ((p (do-pass (pass-rewrite-references-and-assignments p))))
 	    (if stop-after-optimisation?
