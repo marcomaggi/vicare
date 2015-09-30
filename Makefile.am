@@ -413,6 +413,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.numerics.complex-numbers.sls			\
 	scheme/ikarus.object-utilities.sls				\
 	scheme/ikarus.options.sls					\
+	scheme/ikarus.printing-messages.sls				\
 	scheme/ikarus.pairs.sls						\
 	scheme/ikarus.immutable-pairs.sls				\
 	scheme/ikarus.pointers.sls					\

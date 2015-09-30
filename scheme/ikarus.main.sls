@@ -56,7 +56,7 @@
 		  cafe-input-port)
     (prefix (ikarus startup) config.)
     (prefix (only (ikarus.options)
-		  verbose?
+		  print-verbose-messages?
 		  debug-mode-enabled?
 		  drop-assertions?
 		  print-loaded-libraries?
@@ -64,6 +64,7 @@
 		  print-library-debug-messages?
 		  strict-r6rs)
 	    option.)
+    (ikarus.printing-messages)
     (prefix (only (ikarus.compiler)
 		  optimize-level
 		  generate-debug-calls
@@ -120,13 +121,6 @@
 
 
 ;;;; helpers
-
-(define (print-error-message template . args)
-  (let ((P (current-error-port)))
-    (display "vicare: compiler: " P)
-    (apply fprintf P template args)
-    (newline P)))
-
 
 (define (%error-and-exit template . args)
   (apply print-error-message template args)
@@ -524,11 +518,11 @@
 	   (next-option (cdr args) k))
 
 	  ((%option= "-v" "--verbose")
-	   (option.verbose? #t)
+	   (option.print-verbose-messages? #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--silent")
-	   (option.verbose? #f)
+	   (option.print-verbose-messages? #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------

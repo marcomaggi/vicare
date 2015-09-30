@@ -31,6 +31,7 @@
     include
     define-list-of-type-predicate
     expand-time-gensym			expand-library
+    with-blocked-exceptions
 
     __who__				brace
 
@@ -55,6 +56,7 @@
     compnum?				cflonum?
     fx=
     fxadd1				fxsub1
+    fxnonnegative?
 
     ;; compiler related operations
     compiler.eval-core			compiler.core-expr->optimized-code
@@ -64,11 +66,12 @@
     ;; runtime options
     option.debug-mode-enabled?
     option.drop-assertions?
+    option.typed-language?
     option.strict-r6rs
     option.enable-arguments-validation?
     option.print-loaded-libraries?
     option.print-debug-messages?
-    option.typed-language?
+    option.print-library-debug-messages?
 
     expander-option.integrate-special-list-functions?
     foreign.dynamically-load-shared-object-from-identifier
@@ -92,11 +95,13 @@
     remprop				property-list
 
     ;; error handlers
+    print-verbose-message
+    print-error-message
     print-expander-warning-message
     print-expander-debug-message
     procedure-argument-violation
     warning
-    library-debug-message
+    print-library-debug-message
 
     ;; system stuff
     file-modification-time
@@ -107,7 +112,10 @@
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-length $vector-empty? $vector-ref $vector-set!
     $putprop $getprop $remprop $property-list)
-  (import (vicare)
+  (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed Sep 30, 2015)
+		  with-blocked-exceptions)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk
@@ -117,17 +125,19 @@
 		  optimize-level)
 	    compiler.)
     (prefix (rename (only (ikarus.options)
-			  verbose?
 			  debug-mode-enabled?
 			  drop-assertions?
 			  strict-r6rs
 			  print-loaded-libraries?
+			  print-verbose-messages?
 			  print-debug-messages?
+			  print-library-debug-messages?
 			  typed-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    option.)
+    (ikarus.printing-messages)
     (only (ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
@@ -172,29 +182,43 @@
   (import (only (vicare) expand-library)))
 
 
-(define (print-expander-warning-message template . args)
-  (when (option.verbose?)
-    (let ((P (current-error-port)))
-      (display "vicare: expander warning: " P)
-      (apply fprintf P template args)
-      (newline P))))
+;;;; printing debug and verbose messages
 
-(define (print-expander-debug-message template . args)
-  (when (option.print-debug-messages?)
-    (let ((P (current-error-port)))
-      (display "vicare: expander: " P)
-      (apply fprintf P template args)
-      (newline P))))
+(module (print-expander-warning-message)
 
-(define (library-debug-message template . args)
-  (when (option.print-debug-messages?)
-    ;;We do not want an exception from the I/O layer to ruin things.
-    (guard (E (else (void)))
-      (let ((P (current-error-port)))
-	(apply fprintf P (string-append "vicare: " template "\n") args)
-	(flush-output-port P)))))
+  (define-syntax-rule (print-expander-warning-message . ?args)
+    (when (option.print-verbose-messages?)
+      (%print-expander-warning-message . ?args)))
 
-;;; --------------------------------------------------------------------
+  (define (%print-expander-warning-message template . args)
+    (print-stderr-message "expander warning: " template args))
+
+  #| end of module |# )
+
+(module (print-expander-debug-message)
+
+  (define-syntax-rule (print-expander-debug-message . ?args)
+    (when (option.print-debug-messages?)
+      (%print-expander-debug-message . ?args)))
+
+  (define (%print-expander-debug-message template . args)
+    (print-verbose-message (string-append "expander expander: " (apply format template args))))
+
+  #| end of module |# )
+
+(module (print-library-debug-message)
+
+  (define-syntax-rule (print-library-debug-message . ?args)
+    (when (option.print-library-debug-messages?)
+      (%print-library-debug-message . ?args)))
+
+  (define (%print-library-debug-message template . args)
+    (print-stderr-message #f template args))
+
+  #| end of module |# )
+
+
+;;;; stuff
 
 (define (set-label-binding! label binding)
   (set-symbol-value! label binding))
@@ -252,6 +276,19 @@
 	   ((SYM (datum->syntax (syntax here) sym)))
 	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
 	 (syntax (quote SYM)))))))
+
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Thu  Mar 5,
+;;2015)
+;;
+(define-syntax with-blocked-exceptions
+  (syntax-rules ()
+    ((_ ?thunk)
+     (call/cc
+	 (lambda (reinstate-with-blocked-exceptions-continuation)
+	   (with-exception-handler
+	       reinstate-with-blocked-exceptions-continuation
+	     ?thunk))))
+    ))
 
 
 ;;;; done

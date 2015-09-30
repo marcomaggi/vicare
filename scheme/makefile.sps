@@ -268,7 +268,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(option.verbose? #t)
+(option.print-verbose-messages? #t)
 (option.print-debug-messages? (equal? "yes" (getenv "DEBUG_MESSAGES")))
 
 (fasl-write.writing-boot-image? #t)
@@ -322,7 +322,7 @@
       (set! set (cons x set))))))
 
 (define debug-printf
-  (if (option.verbose?)
+  (if (option.print-verbose-messages?)
       (lambda args
 	(let ((port (console-error-port)))
 	  (apply fprintf port args)
@@ -355,6 +355,7 @@
   ;;
   '("ikarus.emergency.sls"
     "ikarus.options.sls"
+    "ikarus.printing-messages.sls"
     "ikarus.singular-objects.sls"
     "ikarus.handlers.sls"
     "ikarus.multiple-values.sls"

@@ -52,6 +52,7 @@
 		  default-include-file-loader
 		  current-include-file-locator
 		  current-include-file-loader)
+    (ikarus.printing-messages)
     (prefix (ikarus.posix)
 	    posix.)
     (prefix (only (ikarus.compiler)
@@ -176,7 +177,7 @@
     ;;   (?identifier0 ?identifier ...)
     ;;   (?identifier0 ?identifier ... ?version-reference)
     ;;
-    (print-library-debug-message "~a: searching: ~a" __module_who__ libref)
+    (print-library-info-message "~a: searching: ~a" __module_who__ libref)
     (parametrise
 	;;For error reporting  purposes: collect all the library  locations that were
 	;;found by the library locator, but were rejected for some reason.
@@ -189,7 +190,7 @@
       (let loop ((next-locator-search ((current-library-locator) libref)))
 	(receive (rv further-locator-search)
 	    (next-locator-search)
-	  (print-library-debug-message "~a: reading from: ~a" __module_who__ rv)
+	  (print-library-info-message "~a: reading from: ~a" __module_who__ rv)
 	  (assert (or (input-port? rv) (boolean? rv)))
 	  (cond ((binary-port? rv)
 		 (%load-binary-library libref rv (lambda ()
@@ -259,9 +260,9 @@
 	   (loop))))
 
   ;;Keep the library names aligned!!!
-  (define (%print-loading-library  port) (print-library-debug-message "loading:  ~a" (port-id port)))
-  (define (%print-loaded-library   port) (print-library-debug-message "loaded:   ~a" (port-id port)))
-  (define (%print-rejected-library port) (print-library-debug-message "rejected: ~a" (port-id port)))
+  (define (%print-loading-library  port) (print-library-info-message "loading:  ~a" (port-id port)))
+  (define (%print-loaded-library   port) (print-library-info-message "loaded:   ~a" (port-id port)))
+  (define (%print-rejected-library port) (print-library-info-message "rejected: ~a" (port-id port)))
 
   (define (%file-locator-resolution-error libref failed-list pending-libraries)
     (raise
@@ -310,7 +311,7 @@
   ;;We  assume that  applying  the function  PORT-ID  to PORT  will  return a  string
   ;;representing a file name associated to the port (or equivalent).
   ;;
-  (print-library-debug-message "~a: reading library from port: ~a" __who__ port)
+  (print-library-info-message "~a: reading library from port: ~a" __who__ port)
   (let ((source-pathname  (port-id port))
 	(libsexp          (reader.read-library-from-port port)))
     ;;If the library name extracted from LIBSEXP  does not conform to LIBREF: we make
@@ -320,14 +321,14 @@
       (unless (conforming-library-name-and-library-reference? libname libref)
 	(raise REJECT-KEY)))
     (guard (E ((eq? E REJECT-KEY)
-	       (print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
+	       (print-library-info-message "~a: rejected library from port: ~a" __who__ port)
 	       #f))
       ;;This  call  to  the  library  expander loads  and  interns  all  the  library
       ;;dependencies using FIND-LIBRARY-BY-REFERENCE.
       (let ((lib ((libman.current-library-expander) libsexp source-pathname %verify-libname)))
 	(receive-and-return (name)
 	    (libman.library-name lib)
-	  (print-library-verbose-message "loaded library \"~a\" from: ~a" name (port-id port)))))))
+	  (print-library-info-message "loaded library \"~a\" from: ~a" name (port-id port)))))))
 
 (define current-source-library-loader
   ;;Reference a function used to load a source library from a textual input port.
@@ -360,7 +361,7 @@
   ;;We  assume that  applying  the function  PORT-ID  to PORT  will  return a  string
   ;;representing a file name associated to the port (or equivalent).
   ;;
-  (print-library-debug-message "~a: loading library from port: ~a" __who__ port)
+  (print-library-info-message "~a: loading library from port: ~a" __who__ port)
   (let ((binary-pathname (port-id port)))
     ;;If the version  of the loaded library  does not conform to LIBREF:  we make the
     ;;loader raise  an exception with REJECT-KEY  as raised object; we  catch it here
@@ -369,17 +370,17 @@
       (unless (conforming-library-name-and-library-reference? libname libref)
 	(raise REJECT-KEY)))
     (guard (E ((eq? E REJECT-KEY)
-	       (print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
+	       (print-library-info-message "~a: rejected library from port: ~a" __who__ port)
 	       #f))
       (cond ((read-serialised-library-from-binary-port port %verify-libname)
 	     => (lambda (serialised-lib)
-		  (print-library-verbose-message "loaded library \"~a\" from: ~a"
-						 (serialised-library-name serialised-lib)
-						 (port-id port))
+		  (print-library-info-message "loaded library \"~a\" from: ~a"
+					      (serialised-library-name serialised-lib)
+					      (port-id port))
 		  (let ((interned-lib (intern-binary-library-and-its-dependencies serialised-lib)))
 		    (libman.library-name interned-lib))))
 	    (else
-	     (print-library-verbose-message
+	     (print-library-info-message
 	      "warning: not using FASL file ~s because invalid or compiled with a different instance of Vicare"
 	      binary-pathname)
 	     #f)))))
@@ -639,7 +640,7 @@
   ;;When no matching library is found: the returned thunk returns false and false.
   ;;
   (import LIBRARY-LOCATOR-UTILS)
-  (print-library-debug-message "~a: locating library for: ~a" __who__ libref)
+  (print-library-info-message "~a: locating library for: ~a" __who__ libref)
   (let ((options (current-library-locator-options)))
     (%binary-search-start libref options (%source-search-start libref options))))
 
@@ -702,7 +703,7 @@
     ;;
     ;;When no matching library is found: the returned thunk returns false and false.
     ;;
-    (print-library-debug-message "~a: start search for library: ~a" __who__ libref)
+    (print-library-info-message "~a: start search for library: ~a" __who__ libref)
     (let* ((options        (current-library-locator-options))
 	   (source-locator (current-library-source-search-path-scanner))
 	   (fail-kont      (%binary-search-start libref options)))
@@ -720,15 +721,15 @@
       (if source-pathname
 	  ;;A matching source library was found in a local directory.
 	  (begin
-	    (print-library-debug-message "~a: found source: ~a" __module_who__ source-pathname)
+	    (print-library-info-message "~a: found source: ~a" __module_who__ source-pathname)
 	    (let ((binary-pathname (library-reference->library-binary-pathname-in-build-directory libref)))
-	      (print-library-debug-message "~a: checking binary: ~a" __module_who__ binary-pathname)
+	      (print-library-info-message "~a: checking binary: ~a" __module_who__ binary-pathname)
 	      (if (and (file-exists? binary-pathname)
 		       (receive-and-return (rv)
 			   (< (posix.file-modification-time source-pathname)
 			      (posix.file-modification-time binary-pathname))
 			 (unless rv
-			   (print-library-verbose-message
+			   (print-library-info-message
 			    "warning: not using fasl file ~s because it is older than the source file ~s"
 			    binary-pathname source-pathname))))
 		  ;;The library binary file exists in  the store and it is newer than
@@ -745,7 +746,7 @@
 	;;fail continuation to search for a compiled library installed under a system
 	;;directory.
 	(begin
-	  (print-library-debug-message "~a: no source file for: ~a" __module_who__ libref)
+	  (print-library-info-message "~a: no source file for: ~a" __module_who__ libref)
 	  (search-fail-kont)))))
 
 ;;; --------------------------------------------------------------------
@@ -765,7 +766,7 @@
       ;;was rejected.  We go for the source library.
       ;;
       ((failed-library-location-collector) binary-pathname)
-      (print-library-debug-message "~a: rejected: ~a" __module_who__ binary-pathname)
+      (print-library-info-message "~a: rejected: ~a" __module_who__ binary-pathname)
       (%handle-source-file-match options libref source-pathname next-source-file-match search-fail-kont))
     (values (with-exception-handler
 		(lambda (E)
@@ -775,7 +776,7 @@
 			(raise E))
 		    (raise E)))
 	      (lambda ()
-		(print-library-debug-message "~a: opening: ~a" __module_who__ binary-pathname)
+		(print-library-info-message "~a: opening: ~a" __module_who__ binary-pathname)
 		(%open-binary-library binary-pathname)))
 	    %continue))
 
@@ -789,7 +790,7 @@
       ;;the next search result.
       ;;
       ((failed-library-location-collector) source-pathname)
-      (print-library-debug-message "~a: rejected: ~a" __module_who__ source-pathname)
+      (print-library-info-message "~a: rejected: ~a" __module_who__ source-pathname)
       (%locator-search-step options libref next-source-file-match search-fail-kont))
     (values (with-exception-handler
 		(lambda (E)
@@ -799,7 +800,7 @@
 			(raise E))
 		    (raise E)))
 	      (lambda ()
-		(print-library-debug-message "~a: opening: ~a" __module_who__ source-pathname)
+		(print-library-info-message "~a: opening: ~a" __module_who__ source-pathname)
 		(%open-source-library source-pathname)))
 	    %continue))
 
@@ -833,7 +834,7 @@
   ;;When no matching library is found: the returned thunk returns false and false.
   ;;
   (import LIBRARY-LOCATOR-UTILS)
-  (print-library-debug-message "~a: locating library for: ~a" __who__ libref)
+  (print-library-info-message "~a: locating library for: ~a" __who__ libref)
   (let ((options (current-library-locator-options)))
     (%source-search-start libref options (%binary-search-start libref options))))
 
@@ -920,7 +921,7 @@
   ;;library: it is silently overwritten.
   ;;
   (when (libman.library-loaded-from-source-file? lib)
-    (print-library-verbose-message "serialising library: ~a" binary-pathname)
+    (print-verbose-message "serialising library: ~a" binary-pathname)
     (store-full-serialised-library-to-file binary-pathname lib)))
 
 (define current-library-serialiser
@@ -1008,7 +1009,7 @@
     (unwind-protect
 	(store-full-serialised-library-to-port port lib)
       (close-output-port port)))
-  (print-library-verbose-message "library serialisation done"))
+  (print-verbose-message "library serialisation done"))
 
 (define* (store-full-serialised-library-to-port {port binary-output-port?} {lib libman.library?})
   ;;Given a binary output port: store the  contents of a serialised full library into
@@ -1181,7 +1182,7 @@
   ;;
   ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
-  (print-library-verbose-message "~a: loading R6RS script: ~a" __who__ file-pathname)
+  (print-verbose-message "~a: loading R6RS script: ~a" __who__ file-pathname)
   (let ((compiler-thunk (parametrise ((libman.source-code-location file-pathname))
 			  ;;Expand  the  top  level program;  intern  the  depencency
 			  ;;libraries.
@@ -1200,7 +1201,7 @@
 		  (store-full-serialised-library-to-file binary-pathname lib))
 	((libman.current-library-collection))))
     (when run?
-      (print-library-verbose-message "~a: running R6RS script: ~a" __who__ file-pathname)
+      (print-verbose-message "~a: running R6RS script: ~a" __who__ file-pathname)
       (receive (lib-descr* run-thunk option* foreign-library*)
 	  ;;Invoke the dependency libraries and compile the top level program.
 	  (compiler-thunk)
@@ -1220,7 +1221,7 @@
    (load file-pathname (lambda (sexp)
 			 (eval sexp (interaction-environment)))))
   (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
-   (print-library-verbose-message "~a: loading script: ~a" __who__ file-pathname)
+   (print-verbose-message "~a: loading script: ~a" __who__ file-pathname)
    (let next-form ((ls (reader.read-script-from-file file-pathname)))
      (unless (null? ls)
        (eval-proc (car ls))
@@ -1254,7 +1255,7 @@
   (define (%read-first-library-form-from-source-library-file who source-pathname)
     (module (%open-source-library)
       (import LIBRARY-LOCATOR-UTILS))
-    (print-library-verbose-message "~a: loading library: ~a" who source-pathname)
+    (print-verbose-message "~a: loading library: ~a" who source-pathname)
     (let ((port (%open-source-library source-pathname)))
       (unwind-protect
 	  (reader.read-library-from-port port)
@@ -1365,7 +1366,7 @@
     ;;serialised program FASL file.
     ;;
     (let ((binary-filename (%make-binary-filename __who__ binary-filename source-filename)))
-      (print-library-verbose-message "serialising program ~a ... " binary-filename)
+      (print-verbose-message "serialising program ~a ... " binary-filename)
       (receive (dir name)
 	  (posix.split-pathname-root-and-tail binary-filename)
 	(unless (string-empty? dir)
@@ -1382,7 +1383,7 @@
 	    (fasl-write (make-serialised-program lib-descr* run-thunk option* foreign-library*)
 			port foreign-library*)
 	  (close-output-port port)))
-      (print-library-verbose-message "done")))
+      (print-verbose-message "done")))
 
 ;;; --------------------------------------------------------------------
 

@@ -29,13 +29,13 @@
     check-compiler-pass-preconditions
     ;;
     option.strict-r6rs
-    option.verbose?
+    option.print-verbose-messages?
     option.print-debug-messages?)
   (import (rnrs)
     (ikarus.compiler.compat)
     (prefix (only (ikarus.options)
 		  strict-r6rs
-		  verbose?
+		  print-verbose-messages?
 		  print-debug-messages?)
 	    option.))
 

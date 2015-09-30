@@ -74,41 +74,36 @@
     program-source-pathname->program-binary-pathname
 
     ;; for internal use
-    print-library-verbose-message
-    print-library-debug-message)
-  (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Thu Mar 5, 2015)
-		  with-blocked-exceptions
+    print-library-info-message)
+  (import (rnrs)
+    #;(except (vicare)
+	    ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+	    ;;Maggi; Thu Mar 5, 2015)
+	    with-blocked-exceptions
 
-		  ;; library names and version numbers
-		  library-name?
-		  library-version-numbers?		library-version-number?
-		  library-name-decompose
-		  library-name->identifiers		library-name->version
-		  library-name-identifiers=?		library-name=?
-		  library-name<?			library-name<=?
-		  library-version=?
-		  library-version<?			library-version<=?
+	    ;; library names and version numbers
+	    library-name?
+	    library-version-numbers?		library-version-number?
+	    library-name-decompose
+	    library-name->identifiers		library-name->version
+	    library-name-identifiers=?		library-name=?
+	    library-name<?			library-name<=?
+	    library-version=?
+	    library-version<?			library-version<=?
 
-		  ;; library references and conformity
-		  library-reference?			library-version-reference?
-		  library-sub-version-reference?	library-sub-version?
-		  library-reference-decompose
-		  library-reference->identifiers
-		  library-reference->version-reference
-		  library-reference-identifiers=?
-		  conforming-sub-version-and-sub-version-reference?
-		  conforming-version-and-version-reference?
-		  conforming-library-name-and-library-reference?)
+	    ;; library references and conformity
+	    library-reference?			library-version-reference?
+	    library-sub-version-reference?	library-sub-version?
+	    library-reference-decompose
+	    library-reference->identifiers
+	    library-reference->version-reference
+	    library-reference-identifiers=?
+	    conforming-sub-version-and-sub-version-reference?
+	    conforming-version-and-version-reference?
+	    conforming-library-name-and-library-reference?)
+    (psyntax.compat)
     (prefix (ikarus.posix) posix.)
-    (vicare unsafe operations)
-    (vicare language-extensions simple-match)
-    (prefix (only (ikarus.options)
-		  print-loaded-libraries?
-		  print-debug-messages?
-		  verbose?)
-	    option.))
+    (vicare language-extensions simple-match))
 
 
 ;;;; helpers
@@ -144,7 +139,7 @@
   ;;
   (let ((str.len    (string-length str))
 	(suffix.len (string-length suffix)))
-    (and (fx< suffix.len str.len)
+    (and (fx<? suffix.len str.len)
 	 (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
 
 (define (%string-desuffix str suffix)
@@ -155,41 +150,19 @@
   ;;
   (substring str 0 (fx- (string-length str) (string-length suffix))))
 
-;;; --------------------------------------------------------------------
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Thu  Mar 5,
-;;2015)
-;;
-(define-syntax with-blocked-exceptions
-  (syntax-rules ()
-    ((_ ?thunk)
-     (call/cc
-	 (lambda (reinstate-with-blocked-exceptions-continuation)
-	   (with-exception-handler
-	       reinstate-with-blocked-exceptions-continuation
-	     ?thunk))))
-    ))
-
 
 ;;;; printing messages
 
-(define (print-library-verbose-message template . args)
-  (when (option.print-loaded-libraries?)
-    ;;We do not want an exception from the I/O layer to ruin things.
-    (with-blocked-exceptions
-	(lambda ()
-	  (let ((P (current-error-port)))
-	    (apply fprintf P (string-append "vicare: " template "\n") args)
-	    (flush-output-port P))))))
-
-(define (print-library-debug-message template . args)
+(define (print-library-info-message template . args)
   (when (and (option.print-loaded-libraries?)
-	     (option.print-debug-messages?))
+	     (option.print-library-debug-messages?))
     ;;We do not want an exception from the I/O layer to ruin things.
     (with-blocked-exceptions
 	(lambda ()
 	  (let ((P (current-error-port)))
-	    (apply fprintf P (string-append "vicare: " template "\n") args)
+	    (display "vicare: " P)
+	    (apply fprintf P template args)
+	    (newline P)
 	    (flush-output-port P))))))
 
 
@@ -250,7 +223,7 @@
   ;;Return #t if OBJ is a version number according to R6RS.
   ;;
   (and (fixnum? obj)
-       ($fxnonnegative? obj)))
+       (fxnonnegative? obj)))
 
 (define (library-name? sexp)
   ;;Return  #t if  SEXP is  a  symbolic expressions  compliant with  the
@@ -378,15 +351,15 @@
     (cond ((null? vrs1)
 	   (or (null? vrs2)
 	       (for-all (lambda (fx)
-			  ($fxzero? fx))
+			  (fxzero? fx))
 		 vrs2)))
 	  ((null? vrs2)
 	   (for-all (lambda (fx)
-		      ($fxzero? fx))
+		      (fxzero? fx))
 	     vrs1)) ;it cannot be (null? vrs1) here
 	  (else
-	   (and ($fx= ($car vrs1) ($car vrs2))
-		(loop ($cdr vrs1) ($cdr vrs2)))))))
+	   (and (fx= (car vrs1) (car vrs2))
+		(loop (cdr vrs1) (cdr vrs2)))))))
 
 (define* (library-version<? {vrs1 library-version-numbers?} {vrs2 library-version-numbers?})
   ;;Given two lists of version  numbers compliant with the definition of
@@ -414,17 +387,17 @@
     (cond ((null? vrs1)
 	   (cond ((null? vrs2)		#f)
 		 ((find (lambda (fx)
-			  ($fxpositive? fx))
+			  (fxpositive? fx))
 		    vrs2)		#t)
 		 (else			#f)))
 	  ((null? vrs2)
 	   #f)
-	  (($fx< ($car vrs1) ($car vrs2))
+	  ((fx<? (car vrs1) (car vrs2))
 	   #t)
-	  (($fx> ($car vrs1) ($car vrs2))
+	  ((fx>? (car vrs1) (car vrs2))
 	   #f)
 	  (else ;;(= (car vrs1) (car vrs2))
-	   (loop ($cdr vrs1) ($cdr vrs2))))))
+	   (loop (cdr vrs1) (cdr vrs2))))))
 
 (define* (library-version<=? {vrs1 library-version-numbers?} {vrs2 library-version-numbers?})
   ;;Given two lists of version  numbers compliant with the definition of
@@ -454,11 +427,11 @@
 	   #t)
 	  ((null? vrs2)
 	   (for-all (lambda (fx)
-		      ($fxzero? fx))
+		      (fxzero? fx))
 	     vrs1))
 	  (else
-	   (and ($fx<= ($car vrs1) ($car vrs2))
-		(loop  ($cdr vrs1) ($cdr vrs2)))))))
+	   (and (fx<=? (car vrs1) (car vrs2))
+		(loop  (cdr vrs1) (cdr vrs2)))))))
 
 
 ;;;; R6RS library references and conformity
@@ -531,7 +504,7 @@
   ;;(Marco Maggi; Tue Apr 23, 2013)
   ;;
   (and (fixnum? obj)
-       ($fxnonnegative? obj)))
+       (fxnonnegative? obj)))
 
 ;;; --------------------------------------------------------------------
 ;;; decomposition
@@ -545,15 +518,15 @@
   (if (or (null? obj)
 	  (not (list? obj)))
       (values #f #f)
-    (let next-identifier ((next ($car obj))
-			  (rest ($cdr obj))
+    (let next-identifier ((next (car obj))
+			  (rest (cdr obj))
 			  (ids  '()))
       (cond ((symbol? next) ;identifier
 	     (if (null? rest)
 		 ;;No  version   reference,  so  OBJ  is   the  list  of
 		 ;;identifiers.
 		 (values obj '()) ; == (values (reverse (cons next ids)) '())
-	       (next-identifier ($car rest) ($cdr rest) (cons next ids))))
+	       (next-identifier (car rest) (cdr rest) (cons next ids))))
 	    ((and (list? next) (null? rest)) ;version spec
 	     (if (library-version-reference? next)
 		 (values (reverse ids) next)
@@ -604,13 +577,13 @@
     (conforming-sub-version-and-sub-version-reference? sub-version sub-ver-ref))
   (match sub-version-reference
     ((apply library-sub-version?)
-     ($fx= sub-version sub-version-reference))
+     (fx= sub-version sub-version-reference))
 
     (('>= (let ?sub-version-ref))
-     ($fx>= sub-version ?sub-version-ref))
+     (fx>=? sub-version ?sub-version-ref))
 
     (('<= (let ?sub-version-ref))
-     ($fx<= sub-version ?sub-version-ref))
+     (fx<=? sub-version ?sub-version-ref))
 
     (('and)
      #t)
@@ -687,8 +660,8 @@
 	     ((null? version)
 	      (null? version-reference))
 	     ((conforming-sub-version-and-sub-version-reference?
-	       ($car version) ($car version-reference))
-	      (next-sub-version ($cdr version) ($cdr version-reference)))
+	       (car version) (car version-reference))
+	      (next-sub-version (cdr version) (cdr version-reference)))
 	     (else
 	      #f))))))
 
@@ -728,13 +701,13 @@
   ;;pathname; a thunk to be called to  continue the search from the next directory in
   ;;the search path.  Otherwise return: false and false.
   ;;
-  (print-library-debug-message "~a: locating source library file for: ~a" __who__ libref)
+  (print-library-info-message "~a: locating source library file for: ~a" __who__ libref)
   (let loop ((stem        (library-reference->filename-stem libref))
 	     (directories (library-source-search-path))
 	     (extensions  (library-extensions)))
     (cond ((null? directories)
 	   ;;No more directories in the search path.
-	   (print-library-debug-message "~a: exhausted search path, no source library file found for: ~a" __who__ libref)
+	   (print-library-info-message "~a: exhausted search path, no source library file found for: ~a" __who__ libref)
 	   (values #f #f))
 
 	  ((null? extensions)
@@ -750,7 +723,7 @@
 				     (loop stem directories (cdr extensions)))))
 	     (if (file-exists? source-pathname)
 		 (let ((source-pathname (posix.real-pathname source-pathname)))
-		   (print-library-debug-message "~a: found: ~a" __who__ source-pathname)
+		   (print-library-info-message "~a: found: ~a" __who__ source-pathname)
 		   (values source-pathname continue-thunk))
 	       (continue-thunk)))))))
 
@@ -807,7 +780,7 @@
   ;;a thunk to be called to continue the search from the next directory in the search
   ;;path.  Otherwise return: false and false.
   ;;
-  (print-library-debug-message "~a: locating binary library file for: ~a" __who__ libref)
+  (print-library-info-message "~a: locating binary library file for: ~a" __who__ libref)
   (let loop ((stem        (library-reference->filename-stem libref))
 	     (directories (library-binary-search-path)))
     (if (pair? directories)
@@ -816,17 +789,17 @@
 	(let* ((binary-pathname (directory+library-stem->library-binary-pathname (car directories) stem))
 	       (continue-thunk  (lambda ()
 				  (loop stem (cdr directories)))))
-	  (print-library-debug-message "~a: trying: ~a" __who__ binary-pathname)
+	  (print-library-info-message "~a: trying: ~a" __who__ binary-pathname)
 	  (if (file-exists? binary-pathname)
 	      (let ((binary-pathname (posix.real-pathname binary-pathname)))
-		(print-library-debug-message "~a: found: ~a" __who__ binary-pathname)
+		(print-library-info-message "~a: found: ~a" __who__ binary-pathname)
 		(values binary-pathname continue-thunk))
 	    (begin
-	      (print-library-debug-message "~a: unexistent: ~a" __who__ binary-pathname)
+	      (print-library-info-message "~a: unexistent: ~a" __who__ binary-pathname)
 	      (continue-thunk))))
       ;;No suitable library file was found.
       (begin
-	(print-library-debug-message "~a: exhausted search path, no binary library file found for: ~a" __who__ libref)
+	(print-library-info-message "~a: exhausted search path, no binary library file found for: ~a" __who__ libref)
 	(values #f #f)))))
 
 (define current-library-binary-search-path-scanner
@@ -1072,13 +1045,13 @@
       (extract)))
 
   (define (%display-hex N port)
-    (if (fx<= 0 N 9)
+    (if (fx<=? 0 N 9)
 	(display N port)
       (write-char (integer->char (fx+ (char->integer #\a) (fx- N 10))) port)))
 
   (define (%main*? component-name)
     (let ((component-name.len (string-length component-name)))
-      (and (fx>= component-name.len 4)
+      (and (fx>=? component-name.len 4)
 	   (string=? (substring component-name 0 4) "main")
 	   (for-all (lambda (ch)
 		      (char=? ch #\_))

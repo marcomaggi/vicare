@@ -26,7 +26,7 @@
 #!r6rs
 (library (ikarus.options)
   (export
-    verbose?
+    print-verbose-messages?
     print-debug-messages?
     print-library-debug-messages?
     print-loaded-libraries?
@@ -70,8 +70,8 @@
 	   (set! bool (and value #t)))))))
     ))
 
-(define-boolean-option verbose?)
 (define-boolean-option debug-mode-enabled?)
+(define-boolean-option print-verbose-messages?)
 (define-boolean-option print-debug-messages?)
 (define-boolean-option print-library-debug-messages?)
 (define-boolean-option print-loaded-libraries?)

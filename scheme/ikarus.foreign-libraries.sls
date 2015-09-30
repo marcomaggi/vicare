@@ -34,9 +34,7 @@
     dynamically-load-shared-object-from-identifier)
   (import (vicare)
     (prefix (vicare system $foreign) ffi.)
-    (prefix (only (ikarus.options)
-		  verbose?)
-	    option.))
+    (ikarus.printing-messages))
 
 
 ;;;; foreign libraries loading
@@ -62,10 +60,7 @@
 			     "internal error: invalid target OS UID"
 			     target-os-uid))))
 	 (rv		(begin
-			  (when (option.verbose?)
-			    (fprintf (current-error-port)
-				     "vicare: loading shared object \"~a\"\n"
-				     libname))
+			  (print-verbose-message "loading shared object: ~a" libname)
 			  (ffi.dlopen libname #t #t))))
     ;;FIXME The handle is lost: the library cannot be closed.
     (unless rv
@@ -74,6 +69,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
