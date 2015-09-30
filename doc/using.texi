@@ -374,8 +374,8 @@ running the optimiser.
 @cindex @code{no-print-loaded-libraries}, command line option
 Whenever a library file is loaded: the first option causes a message to
 be printed on the console error port.  This is for debugging purposes.
-When used together with @option{--debug-messages}: even more detailed
-messages are generated for library related actions.
+When used together with @code{library-debug-messages}: even more
+detailed messages are generated for library related actions.
 
 @item debug-messages
 @itemx no-debug-messages
@@ -385,6 +385,15 @@ messages are generated for library related actions.
 @cindex @code{no-debug-messages}, command line option
 Be more verbose about undertaken actions.  This is for debugging
 purposes.
+
+@item library-debug-messages
+@itemx no-library-debug-messages
+@cindex Command line option @code{library-debug-messages}
+@cindex Command line option @code{no-library-debug-messages}
+@cindex @code{library-debug-messages}, command line option
+@cindex @code{no-library-debug-messages}, command line option
+Be more verbose about undertaken library--related actions.  This is for
+debugging purposes.
 
 @item expander-descriptive-gensyms
 @cindex Command line option @code{expander-descriptive-gensyms}

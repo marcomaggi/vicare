@@ -28,6 +28,7 @@
   (export
     verbose?
     print-debug-messages?
+    print-library-debug-messages?
     print-loaded-libraries?
 
     debug-mode-enabled?
@@ -72,6 +73,7 @@
 (define-boolean-option verbose?)
 (define-boolean-option debug-mode-enabled?)
 (define-boolean-option print-debug-messages?)
+(define-boolean-option print-library-debug-messages?)
 (define-boolean-option print-loaded-libraries?)
 
 

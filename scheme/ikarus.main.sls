@@ -61,6 +61,7 @@
 		  drop-assertions?
 		  print-loaded-libraries?
 		  print-debug-messages?
+		  print-library-debug-messages?
 		  strict-r6rs)
 	    option.)
     (prefix (only (ikarus.compiler)
@@ -643,6 +644,11 @@
 		  (option.print-debug-messages? #t))
 		 (("no-debug-messages")
 		  (option.print-debug-messages? #f))
+
+		 (("library-debug-messages")
+		  (option.print-library-debug-messages? #t))
+		 (("no-library-debug-messages")
+		  (option.print-library-debug-messages? #f))
 
 		 (("expander-descriptive-gensyms")
 		  (psyntax.generate-descriptive-gensyms? #t))
