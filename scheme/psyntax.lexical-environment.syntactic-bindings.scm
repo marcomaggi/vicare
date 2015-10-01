@@ -411,7 +411,7 @@
   ;;
   (cdr (syntactic-binding-descriptor.value ?descriptor)))
 
-(define (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
+(define* (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
   ;;We expect DESCR to have the format:
   ;;
   ;;   (global-object-type-name . (#<library> . ?loc))
@@ -419,7 +419,17 @@
   ;;and we return  the value in the  slot "value" of the ?LOC  gensym, which contains
   ;;the instance of "<object-type-spec>".
   ;;
-  (symbol-value (syntactic-binding-descriptor/global-object-type.loc descr)))
+  (let ((loc (syntactic-binding-descriptor/global-object-type.loc descr)))
+    (if (symbol-bound? loc)
+	(let ((ots (symbol-value loc)))
+	  (if (object-type-spec? ots)
+	      ots
+	    (assertion-violation __who__
+	      "invalid object in \"value\" slot of loc gensym for syntactic binding's descriptor of global object-type name"
+	      descr ots)))
+      (assertion-violation __who__
+	"unbound loc gensym associated to syntactic binding's descriptor of global object-type name"
+	descr))))
 
 
 ;;;; syntactic binding descriptor: usable built-in object type binding
@@ -899,7 +909,7 @@
     ;;If this global binding use is the first  time a binding from LIB is used: visit
     ;;the library.   This makes  sure that  the actual  object is  stored in  the loc
     ;;gensym.
-    (visit-library lib)
+    #;(visit-library lib)
     ;;When the  library LIB  has been  loaded from  source: the  compile-time value's
     ;;object is stored in the loc gensym.   When the library LIB has been loaded from
     ;;a compiled file: the compile-time value itself is in the loc gensym, so we have

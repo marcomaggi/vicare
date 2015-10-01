@@ -126,8 +126,8 @@
 		    shadow/redefine-bindings?)
   (if (pair? body-form*.stx)
       (let*-values
-	  (((body-form.stx)      (car body-form*.stx))
-	   ((type bind-val kwd)  (syntactic-form-type body-form.stx lexenv.run)))
+	  (((body-form.stx)	(car body-form*.stx))
+	   ((type descr kwd)	(syntactic-form-type body-form.stx lexenv.run)))
 	(define keyword*
 	  (if (identifier? kwd)
 	      (cons kwd kwd*)
@@ -327,9 +327,9 @@
 			   lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	    ((stale-when)
-	     ;;The body form  is a STALE-WHEN syntax use.   Process the stale-when
-	     ;;guard expression, then  just splice the internal  expressions as we
-	     ;;do for BEGIN and recurse.
+	     ;;The  body form  is a  STALE-WHEN syntax  use.  Process  the stale-when
+	     ;;guard expression, then  just splice the internal expressions  as we do
+	     ;;for BEGIN and recurse.
 	     ;;
 	     (syntax-match body-form.stx ()
 	       ((_ ?guard ?expr* ...)
@@ -340,31 +340,45 @@
 			     lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))))
 
 	    ((global-macro global-macro!)
-	     ;;The body form  is a macro use,  where the macro is  imported from a
-	     ;;library.   We perform  the  macro expansion,  then  recurse on  the
-	     ;;resulting syntax object.
+	     ;;The body  form is  a macro  use, where  the macro  is imported  from a
+	     ;;library.   We  perform  the  macro  expansion,  then  recurse  on  the
+	     ;;resulting syntax object.  The syntactic binding's descriptor DESCR has
+	     ;;format:
 	     ;;
-	     (let ((body-form.stx^ (chi-global-macro bind-val body-form.stx lexenv.run rib)))
+	     ;;   (global-macro  . (#<library> . ?loc))
+	     ;;   (global-macro! . (#<library> . ?loc))
+	     ;;
+	     (let ((body-form.stx^ (chi-global-macro (syntactic-binding-descriptor.value descr)
+						     body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
 			  lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((local-macro local-macro!)
-	     ;;The body form  is a macro use, where the  macro is locally defined.
-	     ;;We  perform the  macro  expansion, then  recurse  on the  resulting
-	     ;;syntax object.
+	     ;;The body form is a macro use,  where the macro is locally defined.  We
+	     ;;perform  the macro  expansion, then  recurse on  the resulting  syntax
+	     ;;object.  The syntactic binding's descriptor DESCR has format:
 	     ;;
-	     (let ((body-form.stx^ (chi-local-macro bind-val body-form.stx lexenv.run rib)))
+	     ;;   (local-macro  . (?transformer . ?expanded-expr))
+	     ;;   (local-macro! . (?transformer . ?expanded-expr))
+	     ;;
+	     (let ((body-form.stx^ (chi-local-macro (syntactic-binding-descriptor.value descr)
+						    body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
 			  lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
-	    ((macro)
-	     ;;The body form is  a macro use, where the macro  is a non-core macro
-	     ;;integrated in the  expander.  We perform the  macro expansion, then
-	     ;;recurse on the resulting syntax object.
+	    ((macro macro!)
+	     ;;The body  form is  a macro use,  where the macro  is a  non-core macro
+	     ;;integrated  in the  expander.  We  perform the  macro expansion,  then
+	     ;;recurse  on  the resulting  syntax  object.   The syntactic  binding's
+	     ;;descriptor DESCR has format:
 	     ;;
-	     (let ((body-form.stx^ (chi-non-core-macro bind-val body-form.stx lexenv.run rib)))
+	     ;;   (macro  . ?macro-name)
+	     ;;   (macro! . ?macro-name)
+	     ;;
+	     (let ((body-form.stx^ (chi-non-core-macro (syntactic-binding-descriptor.value descr)
+						       body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
 			  lex* qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
@@ -420,6 +434,16 @@
 
 	    ((standalone-unbound-identifier)
 	     (raise-unbound-error __who__ body-form.stx body-form.stx))
+
+	    ((displaced-lexical)
+	     (syntax-violation __who__ "identifier out of context" body-form.stx
+			       (syntax-match body-form.stx ()
+				 ((?car . ?cdr)
+				  ?car)
+				 (?id
+				  (identifier? ?id)
+				  ?id)
+				 (_ #f))))
 
 	    (else
 	     ;;Any other expression.
@@ -523,11 +547,11 @@
     (syntax-match import-form ()
       ((_ ?id)
        (identifier? ?id)
-       (receive (type bind-val kwd)
+       (receive (type descr kwd)
 	   (syntactic-form-type ?id lexenv.run)
 	 (case type
 	   (($module)
-	    (let ((iface bind-val))
+	    (let ((iface (syntactic-binding-descriptor.value descr)))
 	      (values (module-interface-exp-id*     iface ?id)
 		      (module-interface-exp-lab-vec iface))))
 	   ((standalone-unbound-identifier)

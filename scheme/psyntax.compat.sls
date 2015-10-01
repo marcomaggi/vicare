@@ -23,7 +23,7 @@
     case-lambda*			lambda*
     define-record			define-auxiliary-syntaxes
     define-inline			define-syntax-rule
-    fluid-let-syntax
+    define-fluid-syntax			fluid-let-syntax
     unwind-protect
     receive				receive-and-return
     module				import
@@ -40,6 +40,7 @@
 
     make-parameter			parametrise
     symbol-value			set-symbol-value!
+    symbol-bound?
     keyword?				would-block-object?
     unbound-object?			bwp-object?
     gensym				gensym?
@@ -138,7 +139,7 @@
 		     enable-arguments-validation?))
 	    option.)
     (ikarus.printing-messages)
-    (only (ikarus.posix)
+    (only (vicare language-extensions posix) #;(ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
 	  file-modification-time)

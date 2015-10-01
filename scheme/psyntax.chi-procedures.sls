@@ -246,7 +246,7 @@
 		       import export library $module pattern-variable
 		       local-etv global-etv
 		       displaced-lexical)
-		      (values type (syntactic-binding-descriptor.value descr) ?id))
+		      (values type descr ?id))
 		     (else
 		      ;;This will cause an error to be raised later.
 		      (values 'other #f #f))))))
@@ -271,8 +271,9 @@
 		       begin set! stale-when
 		       local-etv global-etv
 		       global-macro global-macro! local-macro local-macro! macro
-		       import export library module)
-		      (values type (syntactic-binding-descriptor.value descr) ?car))
+		       import export library module
+		       displaced-lexical)
+		      (values type descr ?car))
 		     (else
 		      ;;This   case   includes   TYPE  being:   CORE-PRIM,   LEXICAL,
 		      ;;LEXICAL-TYPED,    GLOBAL,    GLOBAL-MUTABLE,    GLOBAL-TYPED,
@@ -577,16 +578,19 @@
     ;;
     (define expr.psi
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(define-values (type bind-val kwd)
+	(define-values (type descr kwd)
 	  (syntactic-form-type expr.stx lexenv.run))
 	(case type
 	  ((core-macro)
-	   ;;Core  macro use.   The  core  macro transformers  are  integrated in  the
-	   ;;expander; they perform the full expansion of their input forms and return
-	   ;;a PSI struct.
+	   ;;Core macro use.  We expect the syntactic binding's descriptor to be:
+	   ;;
+	   ;;   (core-macro . ?core-macro-name)
+	   ;;
+	   ;;The core macro transformers are integrated in the expander; they perform
+	   ;;the full expansion of their input forms and return a PSI struct.
 	   (let ((transformer    (let ()
 				   (import CORE-MACRO-TRANSFORMER)
-				   (core-macro-transformer bind-val))))
+				   (core-macro-transformer (syntactic-binding-descriptor.value descr)))))
 	     (transformer (if (option.debug-mode-enabled?)
 			      ;;Here we push the input  form on the stack of annotated
 			      ;;expressions,  to improve  error  messages  in case  of
@@ -607,17 +611,14 @@
 			  lexenv.run lexenv.expand)))
 
 	  ((global)
-	   ;;Reference to global imported lexical  variable; this means EXPR.STX is an
-	   ;;identifier.  We expect the syntactic binding descriptor to be:
+	   ;;Reference to global imported lexical variable; this means EXPR.STX is an
+	   ;;identifier.  We expect the syntactic binding's descriptor to be:
 	   ;;
 	   ;;   (global . (#<library> . ?loc))
 	   ;;
-	   ;;and BIND-VAL to be:
-	   ;;
-	   ;;   (#<library> . ?loc)
-	   ;;
-	   (let* ((lib (car bind-val))
-		  (loc (cdr bind-val)))
+	   (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+		  (lib		(car descr.value))
+		  (loc		(cdr descr.value)))
 	     ((inv-collector) lib)
 	     (make-psi expr.stx
 		       (build-global-reference no-source loc)
@@ -625,35 +626,39 @@
 
 	  ((global-typed)
 	   ;;Reference to global imported typed lexical variable; this means EXPR.STX
-	   ;;is an identifier.  We expect the syntactic binding descriptor to be:
+	   ;;is an identifier.  We expect the syntactic binding's descriptor to be:
 	   ;;
 	   ;;   (global-typed . (#<library> . ?loc))
 	   ;;
 	   ;;We visit the  library so that the ?LOC actually  references the instance
 	   ;;of "<global-typed-variable-spec>".
-	   (let* ((lib      (car bind-val))
-		  (loc      (cdr bind-val)))
+	   (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+		  (lib		(car descr.value))
+		  (loc		(cdr descr.value)))
 	     ((inv-collector) lib)
-	     (visit-library lib)
-	     (let* ((gts		(symbol-value loc))
-		    (type-id		(global-typed-variable-spec.type-id      gts))
-		    (variable-loc	(global-typed-variable-spec.variable-loc gts)))
-	       (make-psi expr.stx
-			 (build-global-reference no-source variable-loc)
-			 (make-retvals-signature/single-value type-id)))))
+	     (if (symbol-bound? loc)
+		 (let ((gts (symbol-value loc)))
+		   (if (global-typed-variable-spec? gts)
+		       (let ((type-id		(global-typed-variable-spec.type-id      gts))
+			     (variable-loc	(global-typed-variable-spec.variable-loc gts)))
+			 (make-psi expr.stx
+				   (build-global-reference no-source variable-loc)
+				   (make-retvals-signature/single-value type-id)))
+		     (assertion-violation __who__
+		       "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
+		       expr.stx descr)))
+	       (assertion-violation __who__
+		 "unbound loc gensym of \"global-typed\" syntactic binding's descriptor"
+		 expr.stx descr))))
 
 	  ((core-prim)
-	   ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
-	   ;;constant (like  then R6RS  record-type descriptor for  "&condition").  We
-	   ;;expect the syntactic binding descriptor to be:
+	   ;;Core primitive;  it is either a  built-in procedure (like DISPLAY)  or a
+	   ;;constant (like  then R6RS record-type descriptor  for "&condition").  We
+	   ;;expect the syntactic binding's descriptor DESCR to be:
 	   ;;
 	   ;;   (core-prim . ?prim-name)
 	   ;;
-	   ;;and BIND-VAL to be the symbol:
-	   ;;
-	   ;;   ?prim-name
-	   ;;
-	   (let ((name bind-val))
+	   (let ((name (syntactic-binding-descriptor.value descr)))
 	     (make-psi expr.stx
 		       (build-primref no-source name)
 		       (make-retvals-signature/single-top))))
@@ -667,8 +672,12 @@
 	   (chi-application expr.stx lexenv.run lexenv.expand))
 
 	  ((lexical)
-	   ;;Reference to lexical variable; this means EXPR.STX is an identifier.
-	   (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
+	   ;;Reference to  lexical variable;  this means  EXPR.STX is  an identifier.
+	   ;;The syntactic binding's descriptor DESCR has format:
+	   ;;
+	   ;;   (lexical . (?lex-gensym . ?assigned-bool))
+	   ;;
+	   (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr))))
 	     (make-psi expr.stx
 		       (build-lexical-reference no-source lex)
 		       (make-retvals-signature/single-top))))
@@ -679,41 +688,53 @@
 	   ;;
 	   ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
 	   ;;
-	   ;;and BIND-VAL is:
-	   ;;
-	   ;;   (#<lexical-typed-variable-spec> . ?expanded-expr)
-	   ;;
-	   (let ((lex     (syntactic-binding-descriptor/lexical-typed-var.value.lex     bind-val))
-		 (type-id (syntactic-binding-descriptor/lexical-typed-var.value.type-id bind-val)))
+	   (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+		  (lex		(syntactic-binding-descriptor/lexical-typed-var.value.lex     descr.value))
+		  (type-id	(syntactic-binding-descriptor/lexical-typed-var.value.type-id descr.value)))
 	     (make-psi expr.stx
 		       (build-lexical-reference no-source lex)
 		       (make-retvals-signature/single-value type-id))))
 
 	  ((global-macro global-macro!)
-	   ;;Macro uses of macros imported from other libraries or defined by previous
-	   ;;expressions in the same interaction environment.
+	   ;;Macro  uses  of macros  imported  from  other  libraries or  defined  by
+	   ;;previous expressions in the same interaction environment.  The syntactic
+	   ;;binding's descriptor DESCR has format:
+	   ;;
+	   ;;   (global-macro  . (#<library> . ?loc))
+	   ;;   (global-macro! . (#<library> . ?loc))
+	   ;;
 	   (let ((exp-e (while-not-expanding-application-first-subform
-			 (chi-global-macro bind-val expr.stx lexenv.run #f))))
+			 (chi-global-macro (syntactic-binding-descriptor.value descr)
+					   expr.stx lexenv.run #f))))
 	     (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	  ((local-macro local-macro!)
-	   ;;Macro uses of macros defined in the code being expanded.
+	   ;;Macro uses of macros defined in  the code being expanded.  The syntactic
+	   ;;binding's descriptor DESCR has format:
+	   ;;
+	   ;;   (local-macro  . (?transformer . ?expanded-expr))
+	   ;;   (local-macro! . (?transformer . ?expanded-expr))
 	   ;;
 	   (let ((exp-e (while-not-expanding-application-first-subform
-			 (chi-local-macro bind-val expr.stx lexenv.run #f))))
+			 (chi-local-macro (syntactic-binding-descriptor.value descr)
+					  expr.stx lexenv.run #f))))
 	     (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	  ((macro macro!)
-	   ;;Macro  uses  of  non-core  macros;  such macros  are  integrated  in  the
-	   ;;expander.
+	   ;;Macro  uses  of non-core  macros;  such  macros  are integrated  in  the
+	   ;;expander.  The syntactic binding's descriptor DESCR has format:
+	   ;;
+	   ;;   (macro  . ?macro-name)
+	   ;;   (macro! . ?macro-name)
 	   ;;
 	   (let ((exp-e (while-not-expanding-application-first-subform
-			 (chi-non-core-macro bind-val expr.stx lexenv.run #f))))
+			 (chi-non-core-macro (syntactic-binding-descriptor.value descr)
+					     expr.stx lexenv.run #f))))
 	     (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	  ((constant)
 	   ;;Constant; it means EXPR.STX is a self-evaluating datum.
-	   (let ((datum bind-val))
+	   (let ((datum descr))
 	     (make-psi expr.stx
 		       (build-data no-source datum)
 		       (datum-retvals-signature datum))))
@@ -728,7 +749,7 @@
 	     (chi-set! expr.stx lexenv.run lexenv.expand)))
 
 	  ((begin)
-	   ;;R6RS BEGIN  core macro use.   First we  check with SYNTAX-MATCH  that the
+	   ;;R6RS BEGIN  core macro use.  First  we check with SYNTAX-MATCH  that the
 	   ;;syntax is correct, then we build the core language expression.
 	   ;;
 	   (syntax-match expr.stx ()
@@ -971,103 +992,120 @@
 	(syntax-violation __module_who__ "invalid setter syntax" input-form.stx)))))
 
   (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)
-    (receive (type bind-val kwd)
-	(syntactic-form-type lhs.id lexenv.run)
-      (case type
-	((lexical)
-	 ;;A  lexical binding  used as  LHS of  SET! is  mutable and  so unexportable
-	 ;;according to R6RS.  Example:
-	 ;;
-	 ;;   (library (demo)
-	 ;;     (export var)		;error!!!
-	 ;;     (import (rnrs))
-	 ;;     (define var 1)
-	 ;;     (set! var 2))
-	 ;;
-	 (lexical-var-binding-descriptor-value.assigned? bind-val #t)
-	 (let* ((lhs.tag (top-tag-id))
-		(rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand)))
+    (define-values (type descr kwd)
+      (syntactic-form-type lhs.id lexenv.run))
+    (case type
+      ((lexical)
+       ;;A  lexical binding  used  as LHS  of  SET! is  mutable  and so  unexportable
+       ;;according to R6RS.  Example:
+       ;;
+       ;;   (library (demo)
+       ;;     (export var)		;error!!!
+       ;;     (import (rnrs))
+       ;;     (define var 1)
+       ;;     (set! var 2))
+       ;;
+       ;;The syntactic binding's descriptor DESCR has format:
+       ;;
+       ;;   (lexical . (?lex-gensym . ?assigned-bool))
+       ;;
+       (let ((descr.value (syntactic-binding-descriptor.value descr)))
+	 (lexical-var-binding-descriptor-value.assigned? descr.value #t)
+	 (let ((rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
-		       (lexical-var-binding-descriptor-value.lex-name bind-val)
+		       (lexical-var-binding-descriptor-value.lex-name descr.value)
 		       (psi.core-expr rhs.psi))
-		     (make-retvals-signature/single-void))))
+		     (make-retvals-signature/single-void)))))
 
-	((lexical-typed)
-	 ;;A  typed  lexical  binding  used  as  LHS  of  SET!   is  mutable  and  so
-	 ;;unexportable.
-	 (let* ((lhs.lex  (syntactic-binding-descriptor/lexical-typed-var.value.lex     bind-val))
-		(lhs.tag  (syntactic-binding-descriptor/lexical-typed-var.value.type-id bind-val))
-		(rhs.psi  (chi-expr (bless
-				     `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
-				    lexenv.run lexenv.expand)))
-	   (syntactic-binding-descriptor/lexical-typed-var.value.assigned? bind-val #t)
-	   (make-psi input-form.stx
-		     (build-lexical-assignment no-source
-		       lhs.lex
-		       (psi.core-expr rhs.psi))
-		     (make-retvals-signature/single-void))))
+      ((lexical-typed)
+       ;;A typed lexical binding used as LHS of SET!  is mutable and so unexportable.
+       ;;The syntactic binding's descriptor has format:
+       ;;
+       ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+       ;;
+       (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+	      (lhs.lex		(syntactic-binding-descriptor/lexical-typed-var.value.lex     descr.value))
+	      (lhs.tag		(syntactic-binding-descriptor/lexical-typed-var.value.type-id descr.value))
+	      (rhs.psi		(chi-expr (bless
+					   `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
+					  lexenv.run lexenv.expand)))
+	 (syntactic-binding-descriptor/lexical-typed-var.value.assigned? descr.value #t)
+	 (make-psi input-form.stx
+		   (build-lexical-assignment no-source
+		     lhs.lex
+		     (psi.core-expr rhs.psi))
+		   (make-retvals-signature/single-void))))
 
-	((core-prim)
-	 (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
+      ((core-prim)
+       (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
-	((global global-typed)
-	 (syntax-violation __module_who__
-	   "attempt to assign a variable that is imported from a library"
-	   input-form.stx lhs.id))
+      ((global global-typed)
+       (syntax-violation __module_who__
+	 "attempt to assign a variable that is imported from a library"
+	 input-form.stx lhs.id))
 
-	((global-macro!)
-	 (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
+      ((global-macro!)
+       ;;The syntactic binding's descriptor DESCR has format:
+       ;;
+       ;;   (global-macro! . (#<library> . ?loc))
+       ;;
+       (chi-expr (chi-global-macro (syntactic-binding-descriptor.value descr)
+				   input-form.stx lexenv.run #f)
+		 lexenv.run lexenv.expand))
 
-	((local-macro!)
-	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
+      ((local-macro!)
+       ;;The syntactic binding's descriptor DESCR has format:
+       ;;
+       ;;   (local-macro! . (?transformer . ?expanded-expr))
+       ;;
+       (chi-expr (chi-local-macro (syntactic-binding-descriptor.value descr)
+				  input-form.stx lexenv.run #f)
+		 lexenv.run lexenv.expand))
 
-	((global-mutable)
-	 ;;Imported  variable in  reference position,  whose binding  is assigned  at
-	 ;;least once in the code of the imported library.
-	 ;;
-	 ;;Let's consider this library:
-	 ;;
-	 ;;   (library (demo)
-	 ;;     (export macro)
-	 ;;     (import (vicare))
-	 ;;     (define-syntax macro
-	 ;;       (syntax-rules ()
-	 ;;         ((_)
-	 ;;          (set! var 5))))
-	 ;;     (define var 123)
-	 ;;     (set! var 8))
-	 ;;
-	 ;;in which VAR  is assigned and so  not exportable according to  R6RS; if we
-	 ;;import the library in a program and use MACRO:
-	 ;;
-	 ;;   (import (vicare) (demo))
-	 ;;   (macro)
-	 ;;
-	 ;;we are  attempting to  mutate an unexportable  binding in  another lexical
-	 ;;context.  This is forbidden by R6RS.
-	 (syntax-violation __module_who__
-	   "attempt to assign a variable that is imported from a library"
-	   input-form.stx lhs.id))
+      ((global-mutable)
+       ;;Imported variable in reference position,  whose binding is assigned at least
+       ;;once in the code of the imported library.
+       ;;
+       ;;Let's consider this library:
+       ;;
+       ;;   (library (demo)
+       ;;     (export macro)
+       ;;     (import (vicare))
+       ;;     (define-syntax macro
+       ;;       (syntax-rules ()
+       ;;         ((_)
+       ;;          (set! var 5))))
+       ;;     (define var 123)
+       ;;     (set! var 8))
+       ;;
+       ;;in which  VAR is  assigned and so  not exportable according  to R6RS;  if we
+       ;;import the library in a program and use MACRO:
+       ;;
+       ;;   (import (vicare) (demo))
+       ;;   (macro)
+       ;;
+       ;;we  are attempting  to mutate  an  unexportable binding  in another  lexical
+       ;;context.  This is forbidden by R6RS.
+       (syntax-violation __module_who__
+	 "attempt to assign a variable that is imported from a library"
+	 input-form.stx lhs.id))
 
-	((standalone-unbound-identifier)
-	 ;;The identifier  LHS.ID is unbound: raise  an exception.
-	 ;;
-	 ;;NOTE In  the original Ikarus' code,  and for years in  Vicare's code: SET!
-	 ;;could create a new syntactic binding  when LHS.ID was unbound and the SET!
-	 ;;syntactic  form   was  expanded  at   the  top-level  of   an  interaction
-	 ;;environment.  I nuked this feature.  (Marco Maggi; Fri Apr 24, 2015)
-	 ;;
-	 (raise-unbound-error __module_who__ input-form.stx lhs.id))
+      ((standalone-unbound-identifier)
+       ;;The identifier  LHS.ID is unbound: raise  an exception.
+       ;;
+       ;;NOTE In  the original  Ikarus' code,  and for years  in Vicare's  code: SET!
+       ;;could create  a new syntactic binding  when LHS.ID was unbound  and the SET!
+       ;;syntactic form was expanded at  the top-level of an interaction environment.
+       ;;I nuked this feature.  (Marco Maggi; Fri Apr 24, 2015)
+       ;;
+       (raise-unbound-error __module_who__ input-form.stx lhs.id))
 
-	(else
-	 (stx-error input-form.stx "syntax error")))))
+      ((displaced-lexical)
+       (syntax-violation __module_who__ "identifier out of context" input-form.stx))
 
-  (define-syntax stx-error
-    (syntax-rules ()
-      ((_ ?stx ?msg)
-       (syntax-violation __module_who__ ?msg ?stx))
-      ))
+      (else
+       (syntax-violation __module_who__ input-form.stx "syntax error"))))
 
   #| end of module: CHI-SET |# )
 

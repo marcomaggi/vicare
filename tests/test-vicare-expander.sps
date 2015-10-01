@@ -57,7 +57,6 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare expander tag-type-specs) typ.)
   (vicare language-extensions callables)
   (vicare checks))
 
@@ -66,18 +65,6 @@
 
 
 ;;;; helpers
-
-(define-syntax catch-expand-time-signature-violation
-  (syntax-rules ()
-    ((_ ?verbose . ?body)
-     (guard (E ((typ.expand-time-retvals-signature-violation? E)
-		(when ?verbose
-		  (debug-print (condition-message E)
-			       (syntax-violation-form E)))
-		(values (syntax->datum (typ.retvals-signature-tags (typ.expand-time-retvals-signature-violation-expected-signature E)))
-			(syntax->datum (typ.retvals-signature-tags (typ.expand-time-retvals-signature-violation-returned-signature E)))))
-	       (else E))
-       . ?body))))
 
 (define (%eval sexp)
   (eval sexp (environment '(vicare))))
@@ -4572,13 +4559,13 @@
 	      (environment '(vicare))))
     => "incorrect usage of auxiliary keyword")
 
-  (check	;receiver form does not evaluate to function
-      (catch-expand-time-signature-violation #f
-	(%eval '(case 2
-		  ((a b c)	'symbol)
-		  ((1 2 3)	=> 123)
-		  (else		'else))))
-    => '(<procedure>) '(<fixnum>))
+  ;; (check	;receiver form does not evaluate to function
+  ;;     (catch-expand-time-signature-violation #f
+  ;; 	(%eval '(case 2
+  ;; 		  ((a b c)	'symbol)
+  ;; 		  ((1 2 3)	=> 123)
+  ;; 		  (else		'else))))
+  ;;   => '(<procedure>) '(<fixnum>))
 
   #t)
 
@@ -4660,13 +4647,13 @@
   	      (environment '(vicare))))
     => "incorrect usage of auxiliary keyword")
 
-  (check	;receiver form does not evaluate to function
-      (catch-expand-time-signature-violation #f
-	(%eval '(case-identifiers #'two
-		  ((a b c)		'symbol)
-		  ((one two three)	=> 'one-two-three)
-		  (else			'else))))
-    => '(<procedure>) '(<symbol>))
+  ;; (check	;receiver form does not evaluate to function
+  ;;     (catch-expand-time-signature-violation #f
+  ;; 	(%eval '(case-identifiers #'two
+  ;; 		  ((a b c)		'symbol)
+  ;; 		  ((one two three)	=> 'one-two-three)
+  ;; 		  (else			'else))))
+  ;;   => '(<procedure>) '(<symbol>))
 
   (check	;datum is not an identifier
       (guard (E ((syntax-violation? E)
@@ -6170,5 +6157,4 @@
 ;; Local Variables:
 ;; eval: (put 'typ.set-identifier-tag-type-spec! 'scheme-indent-function 1)
 ;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
-;; eval: (put 'catch-expand-time-signature-violation 'scheme-indent-function 1)
 ;; End:

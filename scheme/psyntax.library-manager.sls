@@ -249,15 +249,15 @@
 	 set)
 	(({lib library?})
 	 (unless (memq lib set)
-	   (library-debug-message "interned library: ~a" (library-name lib))
+	   (print-library-debug-message "interned library: ~a" (library-name lib))
 	   (set! set (cons lib set))))
 	(({lib library?} del?)
 	 (if del?
 	     (begin
-	       (library-debug-message "uninterning library: ~a" (library-name lib))
+	       (print-library-debug-message "uninterning library: ~a" (library-name lib))
 	       (set! set (remq lib set)))
 	   (unless (memq lib set)
-	     (library-debug-message "interned library: ~a" (library-name lib))
+	     (print-library-debug-message "interned library: ~a" (library-name lib))
 	     (set! set (cons lib set))))))))
 
   (define current-library-collection
@@ -628,7 +628,7 @@
       (for-each invoke-library (library-inv-lib* lib))
       (set-library-invoke-state! lib (lambda ()
 				       (assertion-violation __who__ "first invoke did not return" lib)))
-      (library-debug-message "invoking: ~a" (library-name lib))
+      (print-library-debug-message "invoking: ~a" (library-name lib))
       (invoke)
       (set-library-invoke-state! lib #t)))
   lib)
@@ -638,32 +638,37 @@
   ;;if an error occurs: raise an exception.
   ;;
   (let ((visit (library-visit-state lib)))
-    (when (procedure? visit)
-      (set-library-visit-state! lib (lambda ()
-				      (assertion-violation __who__ "circularity detected" lib)))
-      ;;By invoking the vis libraries: we initialise the loc gensyms of the syntactic
-      ;;bindings imported by the right-hand sides of the syntax definitions.
-      (for-each invoke-library (library-vis-lib* lib))
-      ;;By visiting the imp libraries: we evaluate the right-hand sides of the syntax
-      ;;definitions  in   the  imp  libraries,   causing  syntax  properties   to  be
-      ;;initialised.   For  example  the   properties  associated  with  record  type
-      ;;definitions.
-      ;;
-      ;;FIXME It is better  to visit an imp library only  when a syntactic identifier
-      ;;exported by  the imp library  is used in  the importing library,  rather than
-      ;;visiting all the libraries as we do  here.  For this purpose this form should
-      ;;be    commented    out    and    we   should    rely    on    the    function
-      ;;VISIT-LIBRARY-OF-IMPORTED-SYNTACTIC-BINDING to  do the right thing  for every
-      ;;identifier  that  needs   to  access  properties  set  by   the  visit  code.
-      ;;Unfortunately, right now  there are cases when the function  is not doing the
-      ;;right thing (for some reason not yet  clear to me).  (Marco Maggi; Tue Sep 8,
-      ;;2015)
-      (for-each visit-library (library-imp-lib* lib))
-      (set-library-visit-state! lib (lambda ()
-				      (assertion-violation __who__ "first visit did not return" lib)))
-      (library-debug-message "visiting: ~a" (library-name lib))
-      (visit)
-      (set-library-visit-state! lib #t)))
+    (if (procedure? visit)
+	(begin
+	  (print-library-debug-message "start visiting process for library: ~a" (library-name lib))
+	  (set-library-visit-state! lib (lambda ()
+					  (assertion-violation __who__ "circularity detected" lib)))
+	  ;;By  invoking the  vis libraries:  we initialise  the loc  gensyms of  the
+	  ;;syntactic  bindings  imported  by  the right-hand  sides  of  the  syntax
+	  ;;definitions.
+	  (for-each invoke-library (library-vis-lib* lib))
+	  ;;By visiting the imp libraries: we evaluate the right-hand sides of the syntax
+	  ;;definitions  in   the  imp  libraries,   causing  syntax  properties   to  be
+	  ;;initialised.   For  example  the   properties  associated  with  record  type
+	  ;;definitions.
+	  ;;
+	  ;;FIXME  It  is better  to  visit  an imp  library  only  when a  syntactic
+	  ;;identifier exported by the imp library  is used in the importing library,
+	  ;;rather than visiting  all the libraries as we do  here.  For this purpose
+	  ;;this form  should be  commented out  and we should  rely on  the function
+	  ;;VISIT-LIBRARY-OF-IMPORTED-SYNTACTIC-BINDING  to do  the  right thing  for
+	  ;;every identifier that  needs to access properties set by  the visit code.
+	  ;;Unfortunately, right now  there are cases when the function  is not doing
+	  ;;the right thing (for some reason not yet clear to me).  (Marco Maggi; Tue
+	  ;;Sep 8, 2015)
+	  (for-each visit-library (library-imp-lib* lib))
+	  (set-library-visit-state! lib (lambda ()
+					  (assertion-violation __who__ "first visit did not return" lib)))
+	  (print-library-debug-message "visiting library: ~a" (library-name lib))
+	  (visit)
+	  (print-library-debug-message "finished visiting process for library: ~a" (library-name lib))
+	  (set-library-visit-state! lib #t)))
+    (print-library-debug-message "library already visited: ~a" (library-name lib)))
   lib)
 
 

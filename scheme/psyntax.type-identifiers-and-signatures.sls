@@ -156,28 +156,18 @@
        input-form.stx id))
    (or (free-identifier=? sub-type.id super-type.id)
        (lex.$top-tag-id? super-type.id)
-       (let* ((super-label (lex.id->label/or-error #f input-form.stx super-type.id))
-	      (super-descr (lex.label->syntactic-binding-descriptor super-label lexenv))
-	      (super-value (lex.syntactic-binding-descriptor.value super-descr))
-	      (super-ots   (car super-value)))
-	 (if (lex.object-type-spec? super-ots)
-	     (let loop ((sub-type.id sub-type.id))
-	       (let* ((sub-label (lex.id->label/or-error #f input-form.stx sub-type.id))
-		      (sub-descr (lex.label->syntactic-binding-descriptor sub-label lexenv))
-		      (sub-value (lex.syntactic-binding-descriptor.value sub-descr))
-		      (sub-ots   (car sub-value)))
-		 (if (lex.object-type-spec? sub-ots)
-		     (cond ((lex.object-type-spec.parent-id sub-ots)
-			    => (lambda (parent.id)
-				 (cond ((lex.$top-tag-id? parent.id)
-					#f)
-				       ((lex.~free-identifier=? parent.id super-type.id)
-					#t)
-				       (else
-					(loop parent.id)))))
-			   (else #f))
-		   (%error-non-type-identifier sub-type.id))))
-	   (%error-non-type-identifier super-type.id))))))
+       (let ((super-ots (lex.id->object-type-specification __who__ input-form.stx super-type.id lexenv)))
+	 (let loop ((sub-type.id sub-type.id))
+	   (let ((sub-ots (lex.id->object-type-specification __who__ input-form.stx sub-type.id lexenv)))
+	     (cond ((lex.object-type-spec.parent-id sub-ots)
+		    => (lambda (parent.id)
+			 (cond ((lex.$top-tag-id? parent.id)
+				#f)
+			       ((lex.~free-identifier=? parent.id super-type.id)
+				#t)
+			       (else
+				(loop parent.id)))))
+		   (else #f))))))))
 
 (case-define* type-identifier-common-ancestor
   ((id1 id2)
@@ -196,17 +186,11 @@
 	   (let inner-loop ((type2 id2))
 	     (if (lex.~free-identifier=? type1 type2)
 		 type1
-	       (let* ((label2 (lex.id->label/or-error #f #f type2))
-		      (descr2 (lex.label->syntactic-binding-descriptor label2 lexenv))
-		      (value2 (lex.syntactic-binding-descriptor.value descr2))
-		      (ots2   (car value2)))
+	       (let ((ots2 (lex.id->object-type-specification __who__ #f type2 lexenv)))
 		 (cond ((lex.object-type-spec.parent-id ots2)
 			=> inner-loop)
 		       (else
-			(let* ((label1 (lex.id->label/or-error #f #f type1))
-			       (descr1 (lex.label->syntactic-binding-descriptor label1 lexenv))
-			       (value1 (lex.syntactic-binding-descriptor.value descr1))
-			       (ots1   (car value1)))
+			(let ((ots1 (lex.id->object-type-specification __who__ #f type1 lexenv)))
 			  (cond ((lex.object-type-spec.parent-id ots1)
 				 => outer-loop)
 				(else
@@ -264,25 +248,23 @@
 	 id tvs)))))
 
 (case-define* typed-procedure-variable.unsafe-variant-set!
-  ;;Given an identifier representing a typed, non-imported, lexical variable which is
-  ;;meant to be  bound to a closure object: set  the symbolic expression representing
-  ;;its unsafe variant.
+  ;;Given an  identifier representing a typed  lexical variable which is  meant to be
+  ;;bound to  a closure object: set  the symbolic expression representing  its unsafe
+  ;;variant.
+  ;;
+  ;;When this  function is  called while expanding  code: the ID  is a  local lexical
+  ;;typed variable.   When this function is  called while evaluating the  visit code:
+  ;;the ID is a global lexical typed variable.
   ;;
   ((id unsafe-variant.sexp)
    (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp (lex.current-inferior-lexenv)))
   ((id unsafe-variant.sexp lexenv)
    (let ((tvs (lex.id->typed-variable-spec __who__ #f id lexenv)))
-     (if (lex.lexical-typed-variable-spec? tvs)
-	 (if (type-identifier-is-procedure-sub-type? (lex.typed-variable-spec.type-id tvs))
-	     (lex.typed-variable-spec.unsafe-variant-sexp-set! tvs unsafe-variant.sexp)
-	   (assertion-violation __who__
-	     "the type of typed variable is not a sub-type of \"<procedure>\""
-	     id tvs))
-       ;;If we are here, ID is bound to a syntactic identifier of type "global-typed"
-       ;;or "global-typed-mutable".
+     (if (type-identifier-is-procedure-sub-type? (lex.typed-variable-spec.type-id tvs))
+	 (lex.typed-variable-spec.unsafe-variant-sexp-set! tvs unsafe-variant.sexp)
        (assertion-violation __who__
-	 "attempt to mutate unsafe variant of imported typed variable"
-	 id unsafe-variant.sexp)))))
+	 "the type of typed variable is not a sub-type of \"<procedure>\""
+	 id tvs)))))
 
 
 ;;;; fabricated procedure type identifiers

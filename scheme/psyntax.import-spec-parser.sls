@@ -89,7 +89,7 @@
     (psyntax.syntax-match)
     (psyntax.library-collectors)
     (psyntax.library-utils)
-    (prefix (psyntax.library-manager) lm.))
+    (prefix (psyntax.library-manager) libman.))
 
 
 ;;;; helpers
@@ -373,11 +373,14 @@
       ;;Search for the library first in the collection of already interned libraires,
       ;;then  on the  file system.   If  successful: LIB  is an  instance of  LIBRARY
       ;;struct.
-      (let ((lib (lm.find-library-by-reference (syntax->datum libref))))
-	(unless (version-conforms-to-reference? (library-name->version (lm.library-name lib)))
+      (let ((lib (libman.find-library-by-reference (syntax->datum libref))))
+	(unless (version-conforms-to-reference? (library-name->version (libman.library-name lib)))
 	  (%synner "library does not satisfy version specification" libref lib))
+	;;Here we know that we are loading  a library for future expansion of code so
+	;;let's visit it right away.
+	(libman.visit-library lib)
 	((imp-collector) lib)
-	(lm.library-export-subst lib))))
+	(libman.library-export-subst lib))))
 
   #| end of module: %IMPORT-SPEC->EXPORT-SUBST |# )
 

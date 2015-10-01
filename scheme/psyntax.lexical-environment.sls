@@ -224,6 +224,8 @@
     id->record-type-specification
     id->struct-type-specification
     id->typed-variable-spec
+    case-identifier-syntactic-binding-descriptor
+    __descr__
 
     ;; syntax objects: marks
     same-marks?
@@ -351,6 +353,7 @@
 	  expand-time-value-object)
     (only (psyntax.library-manager)
 	  library?
+	  library-name
 	  visit-library
 	  label->imported-syntactic-binding-descriptor))
 
@@ -656,7 +659,7 @@
 	  (else
 	   SYNTACTIC-BINDING-DESCRIPTOR/UNBOUND-LABEL)))
 
-  (define (label->syntactic-binding-descriptor label lexenv)
+  (define* (label->syntactic-binding-descriptor label lexenv)
     ;;Look up the  symbol LABEL in the  LEXENV as well as in  the global environment.
     ;;If an  entry with key LABEL  is found: return the  associated syntactic binding
     ;;descriptor;  if  no  matching  entry  is  found,  return  one  of  the  special
@@ -668,7 +671,11 @@
     ;;If the binding  descriptor represents a fluid syntax or  synonym syntax: follow
     ;;through and return the innermost re-definition of the binding.
     ;;
-    (%label->descriptor label lexenv '()))
+    (if #f	;for debugging purposes
+	(receive-and-return (descr)
+	    (%label->descriptor label lexenv '())
+	  (debug-print __who__ descr))
+      (%label->descriptor label lexenv '())))
 
   (define (%label->descriptor label lexenv accum-labels)
     (let ((binding (label->syntactic-binding-descriptor/no-indirection label lexenv)))
@@ -1665,6 +1672,7 @@
     ;;binding's label gensym; otherwise return false.
     ;;
     (define id.source-name ($identifier->symbol id))
+    #;(debug-print __who__ id.source-name)
     (let search ((rib*  ($stx-rib* id))
 		 (mark* ($stx-mark* id)))
       (and (pair? rib*)
@@ -1808,29 +1816,24 @@
   ;;binding's  descriptor does  not represent  an  object-type name:  raise a  syntax
   ;;violation exception.
   ;;
+  (define (%error-wrong-descriptor message descr)
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx id)
+		(make-syntactic-binding-descriptor-condition descr))))
   (unless (identifier? id)
     (syntax-violation who
       "expected identifier as object-type name" input-form.stx id))
-  (let* ((label (id->label/or-error who input-form.stx id))
-	 (descr (label->syntactic-binding-descriptor label lexenv)))
-    (define (%error-wrong-descriptor message)
-      (raise
-       (condition (make-who-condition who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx id)
-		  (make-syntactic-binding-descriptor-condition descr))))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (syntax-violation who
-	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      ((local-object-type-name)
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (syntactic-binding-descriptor/local-object-type.object-type-spec  descr))
-      ((global-object-type-name)
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (syntactic-binding-descriptor/global-object-type.object-type-spec descr))
-      (else
-       (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
+  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
+    ((local-object-type-name)
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__))
+    ((global-object-type-name)
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__))
+    (else
+     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
 
 (define (id->record-type-specification who input-form.stx id lexenv)
   ;;ID is meant  to be a syntactic identifier representing  a record-type name, whose
@@ -1845,37 +1848,32 @@
   ;;binding's  descriptor does  not  represent  a record-type  name:  raise a  syntax
   ;;violation exception.
   ;;
+  (define (%error-wrong-descriptor message descr)
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx id)
+		(make-syntactic-binding-descriptor-condition descr))))
+  (define (%error-wrong-type-identifier descr)
+    (%error-wrong-descriptor "the given type identifier is not bound to a record-type specification" descr))
   (unless (identifier? id)
     (syntax-violation who
       "expected identifier as record-type name" input-form.stx id))
-  (let* ((label (id->label/or-error who input-form.stx id))
-	 (descr (label->syntactic-binding-descriptor label lexenv)))
-    (define (%error-wrong-descriptor message)
-      (raise
-       (condition (make-who-condition who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx id)
-		  (make-syntactic-binding-descriptor-condition descr))))
-    (define (%error-wrong-type-identifier)
-      (%error-wrong-descriptor "the given type identifier is not bound to a record-type specification"))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (syntax-violation who
-	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      ((local-object-type-name)
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (receive-and-return (ots)
-	   (syntactic-binding-descriptor/local-object-type.object-type-spec  descr)
-	 (unless (record-type-spec? ots)
-	   (%error-wrong-type-identifier))))
-      ((global-object-type-name)
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (receive-and-return (ots)
-	   (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
-	 (unless (record-type-spec? ots)
-	   (%error-wrong-type-identifier))))
-      (else
-       (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
+  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
+    ((local-object-type-name)
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     (receive-and-return (ots)
+	 (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__)
+       (unless (record-type-spec? ots)
+	 (%error-wrong-type-identifier __descr__))))
+    ((global-object-type-name)
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     (receive-and-return (ots)
+	 (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__)
+       (unless (record-type-spec? ots)
+	 (%error-wrong-type-identifier __descr__))))
+    (else
+     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
 
 (define (id->struct-type-specification who input-form.stx id lexenv)
   ;;ID is meant  to be a syntactic identifier representing  a struct-type name, whose
@@ -1890,37 +1888,32 @@
   ;;binding's  descriptor does  not represent  an  struct-type name:  raise a  syntax
   ;;violation exception.
   ;;
+  (define (%error-wrong-descriptor message descr)
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx id)
+		(make-syntactic-binding-descriptor-condition descr))))
+  (define (%error-wrong-type-identifier descr)
+    (%error-wrong-descriptor "the given type identifier is not bound to a struct-type specification" descr))
   (unless (identifier? id)
     (syntax-violation who
       "expected identifier as struct-type name" input-form.stx id))
-  (let* ((label (id->label/or-error who input-form.stx id))
-	 (descr (label->syntactic-binding-descriptor label lexenv)))
-    (define (%error-wrong-descriptor message)
-      (raise
-       (condition (make-who-condition who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx id)
-		  (make-syntactic-binding-descriptor-condition descr))))
-    (define (%error-wrong-type-identifier)
-      (%error-wrong-descriptor "the given type identifier is not bound to a struct-type specification"))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (syntax-violation who
-	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      ((local-object-type-name)
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (receive-and-return (ots)
-	   (syntactic-binding-descriptor/local-object-type.object-type-spec  descr)
-	 (unless (struct-type-spec? ots)
-	   (%error-wrong-type-identifier))))
-      ((global-object-type-name)
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (receive-and-return (ots)
-	   (syntactic-binding-descriptor/global-object-type.object-type-spec descr)
-	 (unless (struct-type-spec? ots)
-	   (%error-wrong-type-identifier))))
-      (else
-       (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
+  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
+    ((local-object-type-name)
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     (receive-and-return (ots)
+	 (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__)
+       (unless (struct-type-spec? ots)
+	 (%error-wrong-type-identifier __descr__))))
+    ((global-object-type-name)
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     (receive-and-return (ots)
+	 (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__)
+       (unless (struct-type-spec? ots)
+	 (%error-wrong-type-identifier __descr__))))
+    (else
+     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
 
 (define* (id->typed-variable-spec who input-form.stx id lexenv)
   ;;ID is  meant to be a  syntactic identifier representing a  typed variable, either
@@ -1935,41 +1928,42 @@
   ;;binding's  descriptor  does  not  represent  a typed  variable:  raise  a  syntax
   ;;violation exception.
   ;;
+  (define (%error-wrong-descriptor message descr)
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx id)
+		(make-syntactic-binding-descriptor-condition descr))))
+  (define (%error-wrong-type-identifier descr)
+    (%error-wrong-descriptor "the identifier is not bound to a typed variable" descr))
   (unless (identifier? id)
     (syntax-violation who
       "expected identifier as typed variable name" input-form.stx id))
-  (let* ((label (id->label/or-error who input-form.stx id))
-	 (descr (label->syntactic-binding-descriptor label lexenv)))
-    (define (%error-wrong-descriptor message)
-      (raise
-       (condition (make-who-condition who)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx id)
-		  (make-syntactic-binding-descriptor-condition descr))))
-    (define (%error-wrong-type-identifier)
-      (%error-wrong-descriptor "the identifier is not bound to a typed variable"))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (syntax-violation who
-	 "identifier out of context (identifier's label not in LEXENV)" input-form.stx id))
-      ((lexical-typed)
-       ;;We expect the descriptor to have the format:
-       ;;
-       ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
-       ;;
-       (car (syntactic-binding-descriptor.value descr)))
-      ((global-typed global-typed-mutable)
-       ;;We expect the descriptor to have the format:
-       ;;
-       ;;   (global-typed         . (#<library> . ?loc))
-       ;;   (global-typed-mutable . (#<library> . ?loc))
-       ;;
-       ;;where ?LOC is a  loc gensym containing in its VALUE slots  a reference to an
-       ;;instance of "<global-typed-variable-spec>".
-       (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-       (symbol-value (cdr (syntactic-binding-descriptor.value descr))))
-      (else
-       (%error-wrong-descriptor "identifier not bound to an object-type specification")))))
+  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
+    ((lexical-typed)
+     ;;We expect the descriptor to have the format:
+     ;;
+     ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+     ;;
+     (car (syntactic-binding-descriptor.value __descr__)))
+    ((global-typed global-typed-mutable)
+     ;;We expect the descriptor to have the format:
+     ;;
+     ;;   (global-typed         . (#<library> . ?loc))
+     ;;   (global-typed-mutable . (#<library> . ?loc))
+     ;;
+     ;;where ?LOC  is a loc gensym  containing in its  VALUE slots a reference  to an
+     ;;instance of "<global-typed-variable-spec>".
+     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
+     #;(visit-library (car (syntactic-binding-descriptor.value descr)))
+     (let ((tvs (symbol-value (cdr (syntactic-binding-descriptor.value __descr__)))))
+       (if (global-typed-variable-spec? tvs)
+	   tvs
+	 (assertion-violation who
+	   "invalid object in \"value\" slot of loc gensym for global typed variable"
+	   id __descr__ tvs))))
+    (else
+     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
 
 
 ;;; visiting libraries
@@ -1981,18 +1975,28 @@
      (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv descr)))
   ((who input-form.stx id lexenv descr)
    (case (syntactic-binding-descriptor.type descr)
-     ((global global-macro global-macro! global-etv global-typed global-object-type-name)
+     ((global global-macro global-macro! global-etv)
       ;;We expect the syntactic binding's descriptor to be one among:
       ;;
       ;;   (global         . (#<library> . ?loc))
       ;;   (global-macro   . (#<library> . ?loc))
       ;;   (global-macro!  . (#<library> . ?loc))
       ;;   (global-etv     . (#<library> . ?loc))
-      ;;   (global-typed   . (#<library> . ?loc))
+      ;;
+      (let ((lib (car (syntactic-binding-descriptor.value descr))))
+	(print-library-debug-message "for identifier ~a, visiting library: ~a" id (library-name lib))
+	(visit-library lib)))
+
+     ((global-typed global-typed-mutable global-object-type-name)
+      ;;We expect the syntactic binding's descriptor to be one among:
+      ;;
+      ;;   (global-typed            . (#<library> . ?loc))
       ;;   (global-typed-mutable    . (#<library> . ?loc))
       ;;   (global-object-type-name . (#<library> . ?loc))
       ;;
-      (visit-library (car (syntactic-binding-descriptor.value descr))))
+      (let ((lib (car (syntactic-binding-descriptor.value descr))))
+	(print-library-debug-message "for identifier ~a, visiting library: ~a" id (library-name lib))
+	(visit-library lib)))
 
      ((local-object-type-name)
       ;;We expect the syntactic binding's descriptor to be:
@@ -2020,7 +2024,40 @@
 		  (make-who-condition who)
 		  (make-message-condition "attempt to force library visit, \
                       but it is impossible to find a library exporting the given syntactic binding identifier")
-		  (make-irritants-condition descr)))))))
+		  (make-syntactic-binding-descriptor-condition descr)))))))
+
+
+;;;; identifier to syntactic binding's descriptor
+
+(define-fluid-syntax __descr__
+  (lambda (stx)
+    (sys.syntax-violation '__descr__ "unset fluid syntax" stx)))
+
+(define-syntax case-identifier-syntactic-binding-descriptor
+  (lambda (stx)
+    (define (%id-or-false X)
+      (or (sys.identifier? X)
+	  (not (sys.syntax->datum X))))
+    (sys.syntax-case stx (else)
+      ((_ (?who ?input-form.stx ?id ?lexenv)
+	  ((?type0 ?type ...) . ?body)
+	  ...
+	  (else . ?else-body))
+       (and (%id-or-false (sys.syntax ?who))
+	    (%id-or-false (sys.syntax ?input-form.stx))
+	    (sys.identifier? (sys.syntax ?lexenv))
+	    (sys.identifier? (sys.syntax ?id)))
+       (sys.syntax
+	(let* ((label (id->label/or-error ?who ?input-form.stx ?id))
+	       (descr (label->syntactic-binding-descriptor label ?lexenv)))
+	  (fluid-let-syntax ((__descr__ (identifier-syntax descr)))
+	    (case (syntactic-binding-descriptor.type descr)
+	      ((displaced-lexical)
+	       (syntax-violation ?who "identifier out of context (identifier's label not in LEXENV)" ?input-form.stx ?id))
+	      ((?type0 ?type ...) . ?body)
+	      ...
+	      (else . ?else-body))))))
+      )))
 
 
 ;;;; system label gensym
@@ -2310,22 +2347,18 @@
 ;;;; identifiers: syntax parameters
 
 (define* (syntax-parameter-value {id identifier?})
-  (let ((label (id->label id)))
-    (if label
-	(let ((binding (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
-	  (case (syntactic-binding-descriptor.type binding)
-	    ((local-etv)
-	     (local-expand-time-value-binding-descriptor.object binding))
+  (define lexenv
+    (current-inferior-lexenv))
+  (case-identifier-syntactic-binding-descriptor (__who__ #f id lexenv)
+    ((local-etv)
+     (local-expand-time-value-binding-descriptor.object __descr__))
 
-	    ((global-etv)
-	     (global-expand-time-value-binding-descriptor.object binding))
+    ((global-etv)
+     (global-expand-time-value-binding-descriptor.object __descr__))
 
-	    (else
-	     (procedure-argument-violation __who__
-	       "expected identifier bound to compile-time value"
-	       id))))
-      (procedure-argument-violation __who__
-	"unbound identifier" id))))
+    (else
+     (procedure-argument-violation __who__
+       "expected identifier bound to compile-time value" id))))
 
 
 ;;;; utilities for identifiers
@@ -2834,4 +2867,5 @@
 ;; Local Variables:
 ;; coding: utf-8-unix
 ;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
+;; eval: (put 'case-identifier-syntactic-binding-descriptor			'scheme-indent-function 1)
 ;; End:

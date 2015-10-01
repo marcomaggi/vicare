@@ -236,6 +236,9 @@
    (let* ((lib    (libman.find-library-by-reference libref))
 	  (rib    (export-subst->rib (libman.library-export-subst lib)))
 	  (lexenv '()))
+     ;;Here we know that we are loading  a library for future expansion of code (that
+     ;;is the whole point of environment objects) so let's visit it right away.
+     (libman.visit-library lib)
      (make-interaction-env rib lexenv))))
 
 (define interaction-environment
@@ -574,10 +577,10 @@
     (receive (libname export-spec* import-spec* body* libopt* foreign-library*)
 	(%parse-library library-sexp)
       (%validate-library-name libname verify-libname)
-      (let* ((libname.sexp  (syntax->datum libname))
-	     (option*           (%parse-library-options libopt*))
-	     (foreign-library*  (%parse-foreign-library* foreign-library*))
-	     (stale-clt         (%make-stale-collector)))
+      (let* ((libname.sexp	(syntax->datum libname))
+	     (option*		(%parse-library-options libopt*))
+	     (foreign-library*	(%parse-foreign-library* foreign-library*))
+	     (stale-clt		(%make-stale-collector)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env)
 	    (parametrise ((stale-when-collector    stale-clt))
@@ -840,6 +843,7 @@
   ;;       (lab.var2 global       . loc.lex.var2)
   ;;       (lab.mac  global-macro . loc.lab.mac))
   ;;
+  (define-constant __module_who__ 'core-body-expander)
   (define (core-body-expander export-spec* import-spec* option* body-sexp* mixed-definitions-and-expressions?
 			      verbose-messages-thunk)
     (define itc (make-collector))
@@ -887,8 +891,8 @@
 	      ;;expressions representing the trailing init forms.
 	      ;;
 	      ;;We want order here?  Yes.  We  expand first the definitions, then the
-	      ;;init forms;  so that  tag identifiers  have been  put where  they are
-	      ;;needed.
+	      ;;init  forms: typed  variables's  syntactic bindings  must be  already
+	      ;;established before expanding the init forms.
 	      (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
 		     (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
 		     (loc*          (map generate-qrhs-loc qrhs*))

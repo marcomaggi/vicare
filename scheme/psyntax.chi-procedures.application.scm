@@ -576,7 +576,7 @@
 	     (cond ((identifier? rator.stx)
 		    ;;Here  we do  not  want  to raise  an  error  if the  identifier
 		    ;;RATOR.STX is not a typed lexical variable.
-		    (let* ((rator.label (id->label rator.stx))
+		    (let* ((rator.label (id->label/or-error __module_who__ input-form.stx rator.stx))
 			   (rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run))
 			   (rator.spec  (syntactic-binding-descriptor.value rator.descr)))
 		      (cond ((and (typed-variable-spec? rator.spec)
