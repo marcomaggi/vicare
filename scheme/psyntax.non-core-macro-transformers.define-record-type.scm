@@ -1088,7 +1088,7 @@
       (let ((method-retriever.sym (gensym (string-append foo.str "-methods-retriever"))))
 	`((define ,(gensym)
 	    (internal-body
-	      (define (,method-retriever.sym name)
+	      (define (,method-retriever.sym rtd name)
 		(case name
 		  ;;First the methods...
 		  ,@(map (lambda (name procname)

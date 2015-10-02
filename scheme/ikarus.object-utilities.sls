@@ -110,7 +110,7 @@
     (if btd
 	(cond ((scheme-type-method-retriever btd)
 	       => (lambda (method-retriever)
-		    (cond ((method-retriever method-name.sym)
+		    (cond ((method-retriever btd method-name.sym)
 			   => (lambda (proc)
 				(apply proc subject args)))
 			  (else
@@ -128,7 +128,7 @@
     (if rtd
 	(cond ((records.record-type-method-retriever rtd)
 	       => (lambda (method-retriever)
-		    (cond ((method-retriever method-name.sym)
+		    (cond ((method-retriever rtd method-name.sym)
 			   => (lambda (proc)
 				(apply proc subject args)))
 			  (else
@@ -338,7 +338,7 @@
 	      (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str))))
 	      (RETRIEVER	(if (null? (syntax->datum '((?method-name ?method-implementation-procedure) ...)))
 				    #f
-				  #'(lambda (method-name.sym)
+				  #'(lambda (btd method-name.sym)
 				      (case method-name.sym
 					((?method-name) ?method-implementation-procedure)
 					...

@@ -864,7 +864,7 @@
 		;;any initialisation expression in the  body of the enclosing program
 		;;or library.
 		#'((define DUMMY
-		     (records.record-type-method-retriever-set! RTD (lambda (name)
+		     (records.record-type-method-retriever-set! RTD (lambda (rtd name)
 								      (case name
 									((?field) ?accessor)
 									...
