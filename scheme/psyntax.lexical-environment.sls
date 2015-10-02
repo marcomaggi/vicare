@@ -32,9 +32,9 @@
     ;; non-interaction environment objects
     env
     make-env				env?
-    env-names				set-env-names!
-    env-labels				set-env-labels!
-    env-itc				set-env-itc!
+    env-names
+    env-labels
+    env-itc
 
     ;; interaction environment objects
     interaction-env
@@ -184,17 +184,11 @@
     rib-src-marked-source-names
 
     ;; rib objects
-    rib
     make-rib					rib?
     rib-name*					set-rib-name*!
     rib-mark**					set-rib-mark**!
     rib-label*					set-rib-label*!
     rib-sealed/freq				set-rib-sealed/freq!
-
-    $rib-name*					$set-rib-name*!
-    $rib-mark**					$set-rib-mark**!
-    $rib-label*					$set-rib-label*!
-    $rib-sealed/freq				$set-rib-sealed/freq!
 
     ;; rib operations
     false-or-rib?				list-of-ribs?
@@ -363,24 +357,6 @@
 
 (include "psyntax.helpers.scm" #t)
 
-(define (non-compound-sexp? obj)
-  (or (null? obj)
-      (self-evaluating? obj)
-      ;;Notice that struct instances are not self evaluating.
-      (struct? obj)))
-
-(define (self-evaluating? x)
-  (or (number?			x)
-      (string?			x)
-      (char?			x)
-      (boolean?			x)
-      (bytevector?		x)
-      (keyword?			x)
-      (eq? x (void))
-      (would-block-object?	x)
-      (unbound-object?		x)
-      (bwp-object?		x)))
-
 (define-syntax let-syntax-rules
   (syntax-rules ()
     ((_ (((?lhs0 . ?args0) ?rhs0) ((?lhs . ?args) ?rhs) ...) ?body0 ?body ...)
@@ -443,35 +419,41 @@
 
 ;;An ENV record encapsulates a substitution and a set of libraries.
 ;;
-(define-record env
-  (names
+(define-record-type env
+  (fields names
 		;A vector of symbols representing the public names of bindings from a
 		;set of  import specifications as  defined by R6RS.  These  names are
 		;from  the  subst  of  the  libraries,  already  processed  with  the
 		;directives  in  the import  sets  (prefix,  deprefix, only,  except,
 		;rename).
-   labels
+	  labels
 		;A vector of  gensyms representing the labels of bindings  from a set
 		;of import specifications as defined  by R6RS.  These labels are from
 		;the subst of the libraries.
-   itc
+	  itc
 		;A  collector  function  (see  MAKE-COLLECTOR)  holding  the  LIBRARY
 		;records  representing the  libraries selected  by the  source IMPORT
 		;specifications.  These libraries have already been interned.
-   )
-  (lambda (S port sub-printer)
-    (display "#<environment>" port)))
+	  ))
 
-(define-record interaction-env
-  (rib
+(module ()
+  (record-type-printer-set! (record-type-descriptor env)
+    (lambda (S port sub-printer)
+      (display "#<environment>" port))))
+
+(define-record-type interaction-env
+  (fields (mutable rib		interaction-env-rib	set-interaction-env-rib!)
 		;The  top  RIB   structure  for  the  evaluation  of   code  in  this
 		;environment.  It maps bound identifiers to labels.
-   lexenv
+	  (mutable lexenv	interaction-env-lexenv	set-interaction-env-lexenv!)
 		;The LEXENV  for both run  time and expand  time.  It maps  labels to
 		;syntactic binding descriptors.
-   )
-  (lambda (S port sub-printer)
-    (display "#<interaction-environment>" port)))
+	  ))
+
+(module ()
+  (record-type-printer-set! (record-type-descriptor interaction-env)
+    (lambda (S port sub-printer)
+      (display "#<interaction-environment>" port))))
 
 
 ;;;; top level environment objects: operations
@@ -485,7 +467,7 @@
   ;;the given environment.
   ;;
   (cond ((env? x)
-	 (vector->list ($env-names x)))
+	 (vector->list (env-names x)))
 	((interaction-env? x)
 	 (map values (rib-name* ($interaction-env-rib x))))
 	(else
@@ -498,7 +480,7 @@
   (unless (env? x)
     (assertion-violation __who__
       "expected non-interaction environment object as argument" x))
-  (vector->list ($env-labels x)))
+  (vector->list (env-labels x)))
 
 (define* (environment-libraries x)
   ;;Return  the  list  of  LIBRARY records  representing  the  libraries
@@ -507,7 +489,7 @@
   (unless (env? x)
     (assertion-violation __who__
       "expected non-interaction environment object as argument" x))
-  (($env-itc x)))
+  ((env-itc x)))
 
 (define* (environment-binding sym env)
   ;;Search the symbol SYM in the non-interaction environment ENV; if SYM
@@ -522,8 +504,8 @@
 			    (import (vicare system $symbols))
 			    (and (eq? sym name)
 				 (cons label ($symbol-value label))))
-	     ($env-names  env)
-	     ($env-labels env))))
+	     (env-names  env)
+	     (env-labels env))))
     (if P
 	(values (car P) (cdr P))
       (values #f #f))))
@@ -789,44 +771,48 @@
 
 ;;;; rib type definition
 
-(define-record (rib make-rib rib?)
-  (name*
+(define-record-type rib
+  (fields
+   (mutable name*	rib-name*	set-rib-name*!)
 		;List  of symbols  representing  the original  binding  names in  the
 		;source code.
 		;
 		;When the RIB is sealed: the list is converted to a vector.
 
-   mark**
+   (mutable mark**	rib-mark**	set-rib-mark**!)
 		;List of  sublists of marks;  there is a  sublist of marks  for every
 		;item in NAME*.
 		;
 		;When the RIB is sealed: the list is converted to a vector.
 
-   label*
+   (mutable label*	rib-label*	set-rib-label*!)
 		;List of  label gensyms uniquely identifying  the syntactic bindings;
 		;there is a label for each item in NAME*.
 		;
 		;When the RIB is sealed: the list is converted to a vector.
 
-   sealed/freq
+   (mutable sealed/freq	rib-sealed/freq	set-rib-sealed/freq!)
 		;False  or  vector  of  exact  integers.  When  false:  this  RIB  is
 		;extensible, that is new bindings can be added to it.  When a vector:
 		;this RIB is  sealed; see the documentation in Texinfo  format for an
 		;explanation of the frequency vector.
-   )
-  (lambda (S port subwriter) ;record printer function
-    (define-syntax-rule (%display ?thing)
-      (display ?thing port))
-    (define-syntax-rule (%write ?thing)
-      (write ?thing port))
-    (define-syntax-rule (%pretty-print ?thing)
-      (pretty-print* ?thing port 0 #f))
-    (%display "#<rib")
-    (%display " name*=")	(%pretty-print (rib-name*  S))
-    (%display " mark**=")	(%pretty-print (rib-mark** S))
-    (%display " label*=")	(%pretty-print (rib-label* S))
-    (%display " sealed/freq=")	(%pretty-print (rib-sealed/freq S))
-    (%display ">")))
+   ))
+
+(module ()
+  (record-type-printer-set! (record-type-descriptor rib)
+    (lambda (S port subwriter) ;record printer function
+      (define-syntax-rule (%display ?thing)
+	(display ?thing port))
+      (define-syntax-rule (%write ?thing)
+	(write ?thing port))
+      (define-syntax-rule (%pretty-print ?thing)
+	(pretty-print* ?thing port 0 #f))
+      (%display "#<rib")
+      (%display " name*=")		(subwriter (rib-name*  S))
+      (%display " mark**=")		(subwriter (rib-mark** S))
+      (%display " label*=")		(subwriter (rib-label* S))
+      (%display " sealed/freq=")	(subwriter (rib-sealed/freq S))
+      (%display ">"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -962,20 +948,20 @@
 ;;; rib sealing
 
 (define* (seal-rib! {rib rib?})
-  (let ((name* ($rib-name* rib)))
+  (let ((name* (rib-name* rib)))
     (unless (null? name*) ;only seal if RIB is not empty
       (let ((name* (list->vector name*)))
-	($set-rib-name*!       rib name*)
-	($set-rib-mark**!      rib (list->vector ($rib-mark** rib)))
-	($set-rib-label*!      rib (list->vector ($rib-label* rib)))
-	($set-rib-sealed/freq! rib (make-vector (vector-length name*) 0))))))
+	(set-rib-name*!       rib name*)
+	(set-rib-mark**!      rib (list->vector (rib-mark** rib)))
+	(set-rib-label*!      rib (list->vector (rib-label* rib)))
+	(set-rib-sealed/freq! rib (make-vector (vector-length name*) 0))))))
 
 (define* (unseal-rib! {rib rib?})
-  (when ($rib-sealed/freq rib)
-    ($set-rib-sealed/freq! rib #f)
-    ($set-rib-name*!       rib (vector->list ($rib-name*  rib)))
-    ($set-rib-mark**!      rib (vector->list ($rib-mark** rib)))
-    ($set-rib-label*!      rib (vector->list ($rib-label* rib)))))
+  (when (rib-sealed/freq rib)
+    (set-rib-sealed/freq! rib #f)
+    (set-rib-name*!       rib (vector->list (rib-name*  rib)))
+    (set-rib-mark**!      rib (vector->list (rib-mark** rib)))
+    (set-rib-label*!      rib (vector->list (rib-label* rib)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1026,14 +1012,14 @@
     ;;See the  documentation of CHI-BODY*  for the  full description of  the argument
     ;;SHADOW/REDEFINE-BINDINGS?.
     ;;
-    (when ($rib-sealed/freq rib)
+    (when (rib-sealed/freq rib)
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
     (let ((id.source-name  ($identifier->symbol id))
 	  (id.mark*        ($stx-mark*  id))
-	  (rib.name*       ($rib-name*  rib))
-	  (rib.mark**      ($rib-mark** rib))
-	  (rib.label*      ($rib-label* rib)))
+	  (rib.name*       (rib-name*  rib))
+	  (rib.mark**      (rib-mark** rib))
+	  (rib.label*      (rib-label* rib)))
       (cond ((and (memq id.source-name rib.name*)
 		  (%find-syntactic-binding-with-same-name-and-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*))
 	     => (lambda (tail-of-label*)
@@ -1063,9 +1049,9 @@
 	    (else
 	     ;;No capturing binding  exists for ID in RIB: let's  establish a new one
 	     ;;by pushing the appropriate tuple on the rib.
-	     ($set-rib-name*!  rib (cons id.source-name  rib.name*))
-	     ($set-rib-mark**! rib (cons id.mark*        rib.mark**))
-	     ($set-rib-label*! rib (cons label           rib.label*))))))
+	     (set-rib-name*!  rib (cons id.source-name  rib.name*))
+	     (set-rib-mark**! rib (cons id.mark*        rib.mark**))
+	     (set-rib-label*! rib (cons label           rib.label*))))))
 
   (define (%find-syntactic-binding-with-same-name-and-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*)
     ;;Here we  know that the  list of source-names RIB.NAME*  has one element  EQ? to
@@ -1104,9 +1090,9 @@
     (and (pair? obj)
 	 (eq? 'src ($car obj))
 	 (null? ($cdr obj))))
-  (let ((name*  ($rib-name*  rib))
-	(mark** ($rib-mark** rib)))
-    (if ($rib-sealed/freq rib)
+  (let ((name*  (rib-name*  rib))
+	(mark** (rib-mark** rib)))
+    (if (rib-sealed/freq rib)
 	;;This rib is sealed: here NAME* and MARK** are vectors.
 	(let recur ((i    0)
 		    (imax ($vector-length name*)))
@@ -1432,13 +1418,13 @@
 
 ;;;; syntax object type definition
 
-(define-record stx
-  (expr
+(define-record-type stx
+  (fields expr
 		;A symbolic expression, possibly  annotated, whose subexpressions can
 		;also be instances of stx.
-   mark*
+	  mark*
 		;Null or a proper list of marks, including the symbol "src".
-   rib*
+	  rib*
 		;Null or  a proper list of  rib instances or "shift"  symbols.  Every
 		;rib represents  a nested lexical  contour; a "shift"  represents the
 		;return from a macro transformer application.
@@ -1448,7 +1434,7 @@
 		;the whole structure of nested stx  instances: the items in all the
 		;MARK* fields  are associated to the  items in all the  RIB*, see the
 		;functions JOIN-WRAPS and ADD-MARK for details.
-   annotated-expr*
+	  annotated-expr*
 		;List of annotated expressions: null or a proper list whose items are
 		;#f or input  forms of macro transformer calls.  It  is used to trace
 		;the transformations a  form undergoes when it is  processed as macro
@@ -1456,29 +1442,32 @@
 		;
 		;The #f items  are inserted when this instance is  processed as input
 		;form of a macro call, but is later discarded.
-   )
-  (lambda (S port subwriter) ;record printer function
-    (define-syntax-rule (%display ?thing)
-      (display ?thing port))
-    (define-syntax-rule (%write ?thing)
-      (write ?thing port))
-    (define-syntax-rule (%pretty-print ?thing)
-      (pretty-print* ?thing port 0 #f))
-    (define raw-expr
-      (syntax->datum S))
-    (if (symbol? raw-expr)
-	(%display "#<syntactic-identifier")
-      (%display "#<syntax"))
-    (%display " expr=")		(%pretty-print raw-expr)
-    (%display " mark*=")	(%pretty-print (stx-mark* S))
-    (let ((expr (stx-expr S)))
-      (when (annotation? expr)
-	(let ((pos (annotation-textual-position expr)))
-	  (when (source-position-condition? pos)
-	    (%display " line=")		(%display (source-position-line    pos))
-	    (%display " column=")	(%display (source-position-column  pos))
-	    (%display " source=")	(%display (source-position-port-id pos))))))
-    (%display ">")))
+	  ))
+
+(module ()
+  (record-type-printer-set! (record-type-descriptor stx)
+    (lambda (S port subwriter) ;record printer function
+      (define-syntax-rule (%display ?thing)
+	(display ?thing port))
+      (define-syntax-rule (%write ?thing)
+	(write ?thing port))
+      (define-syntax-rule (%pretty-print ?thing)
+	(pretty-print* ?thing port 0 #f))
+      (define raw-expr
+	(syntax->datum S))
+      (if (symbol? raw-expr)
+	  (%display "#<syntactic-identifier")
+	(%display "#<syntax"))
+      (%display " expr=")	(subwriter raw-expr)
+      (%display " mark*=")	(subwriter (stx-mark* S))
+      (let ((expr (stx-expr S)))
+	(when (annotation? expr)
+	  (let ((pos (annotation-textual-position expr)))
+	    (when (source-position-condition? pos)
+	      (%display " line=")	(%display (source-position-line    pos))
+	      (%display " column=")	(%display (source-position-column  pos))
+	      (%display " source=")	(%display (source-position-port-id pos))))))
+      (%display ">"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1688,7 +1677,7 @@
 	     (let ((rib ($car rib*)))
 	       (define (search-in-next-rib)
 		 (search ($cdr rib*) mark*))
-	       (if ($rib-sealed/freq rib)
+	       (if (rib-sealed/freq rib)
 		   (%search-in-rib/sealed rib id.source-name mark* search-in-next-rib)
 		 (%search-in-rib/non-sealed rib id.source-name mark* search-in-next-rib)))))))
 
@@ -1696,9 +1685,9 @@
     (eq? x y))
 
   (define (%search-in-rib/non-sealed rib id.source-name id.mark* search-in-next-rib)
-    (let loop ((rib.source-name* ($rib-name*  rib))
-	       (rib.mark**       ($rib-mark** rib))
-	       (rib.label*       ($rib-label* rib)))
+    (let loop ((rib.source-name* (rib-name*  rib))
+	       (rib.mark**       (rib-mark** rib))
+	       (rib.label*       (rib-label* rib)))
       (let-syntax-rules (((more-tuples?)		(pair? rib.source-name*))
 			 ((loop-to-next-rib-tuple)	(loop ($cdr rib.source-name*) ($cdr rib.mark**) ($cdr rib.label*)))
 			 ((next-rib-source-name)	($car rib.source-name*))
@@ -1712,9 +1701,9 @@
 	  (search-in-next-rib)))))
 
   (define (%search-in-rib/sealed rib id.source-name id.mark* search-in-next-rib)
-    (define rib.source-name* ($rib-name*  rib))
-    (define rib.mark**       ($rib-mark** rib))
-    (define rib.label*       ($rib-label* rib))
+    (define rib.source-name* (rib-name*  rib))
+    (define rib.mark**       (rib-mark** rib))
+    (define rib.label*       (rib-label* rib))
     (let loop ((i    0)
 	       (imax ($vector-length rib.source-name*)))
       (let-syntax-rules (((more-tuples?)		($fx< i imax))

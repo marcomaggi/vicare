@@ -21,7 +21,7 @@
     define*				define-constant
     case-define				case-define*
     case-lambda*			lambda*
-    define-record			define-auxiliary-syntaxes
+    define-auxiliary-syntaxes
     define-inline			define-syntax-rule
     define-fluid-syntax			fluid-let-syntax
     unwind-protect
@@ -33,16 +33,17 @@
     expand-time-gensym			expand-library
     with-blocked-exceptions
 
+    non-compound-sexp?			self-evaluating?
+
     __who__				brace
 
-    make-struct-type			struct?
-    struct-type-descriptor?		struct-type-field-names
+    (rename (records.record-type-printer-set! record-type-printer-set!))
 
+    make-struct-type
     make-parameter			parametrise
     symbol-value			set-symbol-value!
     symbol-bound?
-    keyword?				would-block-object?
-    unbound-object?			bwp-object?
+    keyword?
     gensym				gensym?
     vector-append			vector-exists
     add1				sub1
@@ -139,6 +140,11 @@
 		     enable-arguments-validation?))
 	    option.)
     (ikarus.printing-messages)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
+    ;;2015)
+    (prefix (only (ikarus records procedural)
+		  record-type-printer-set!)
+	    records.)
     (only (vicare language-extensions posix) #;(ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
@@ -233,26 +239,28 @@
 (define (expander-option.integrate-special-list-functions?)
   (fx>=? 3 (compiler.optimize-level)))
 
+;;; --------------------------------------------------------------------
+
+(define (non-compound-sexp? obj)
+  (or (null? obj)
+      (self-evaluating? obj)
+      ;;Notice that struct instances are not self evaluating.
+      (struct? obj)))
+
+(define (self-evaluating? x)
+  (or (number?			x)
+      (string?			x)
+      (char?			x)
+      (boolean?			x)
+      (bytevector?		x)
+      (keyword?			x)
+      (eq? x (void))
+      (would-block-object?	x)
+      (unbound-object?		x)
+      (bwp-object?		x)))
+
 
 ;;;; syntax helpers
-
-(define-syntax define-record
-  (syntax-rules ()
-    ((_ (?name ?maker ?pred) (?field* ...) ?printer)
-     (begin
-       (define-struct (?name ?maker ?pred) (?field* ...))
-       (module ()
-	 (set-rtd-printer! (type-descriptor ?name)
-	   ?printer))))
-    ((_ ?name (?field* ...) ?printer)
-     (begin
-       (define-struct ?name (?field* ...))
-       (module ()
-	 (set-rtd-printer! (type-descriptor ?name)
-	   ?printer))))
-    ((_ ?name (?field* ...))
-     (define-struct ?name (?field* ...)))
-    ))
 
 (define-syntax define-list-of-type-predicate
   (syntax-rules ()

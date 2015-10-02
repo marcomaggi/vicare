@@ -24,7 +24,6 @@
 
 (library (psyntax.setup)
   (export
-    if-wants-define-record	#;if-wants-define-struct
     if-wants-case-lambda
     if-wants-letrec*			if-wants-global-defines
     if-wants-library-letrec*
@@ -45,13 +44,6 @@
      (define-syntax name
        (syntax-rules ()
 	 ((_ ?success-kont ?failure-kont) ?failure-kont))))))
-
-;;DEFINE-RECORD is an Ikarus-specific extension.  It should be disabled for all other
-;;implementations; the  source is included to  illustrate how implementation-specific
-;;extensions can be added to the expander
-;;
-(define-option if-wants-define-record  #t)
-(define-option if-wants-define-struct  #t)
 
 ;;If the implementation requires that all  global variables be defined before they're
 ;;SET!ed, then enabling this option causes the expander to produce:

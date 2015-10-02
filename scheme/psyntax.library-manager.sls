@@ -73,8 +73,9 @@
 
 ;;;; type definitions: library object
 
-(define-record library
-  (uid
+(define-record-type library
+  (fields
+   (immutable uid)
 		;A  gensym  uniquely  identifying  this  interned  library;  it  also
 		;identifies the corresponding serialised library.
 		;
@@ -87,7 +88,7 @@
 		;binary file is compared to this field: if they are EQ?  the compiled
 		;versions  are  in sync,  otherwise  the  importing library  must  be
 		;recompiled.
-   name
+   (immutable name)
 		;A library name as defined by R6RS; it is the symbolic expression:
 		;
 		;   (?identifier0 ?identifier ...)
@@ -95,46 +96,46 @@
 		;
 		;where  the  ?IDENTIFIERs are  symbols  and  ?VERSION  is a  list  of
 		;non-negative fixnums representing the version numbers.
-   imp-lib*
+   (immutable imp-lib*)
 		;The list of LIBRARY objects selected by the IMPORT syntax.
-   vis-lib*
+   (immutable vis-lib*)
 		;The list of LIBRARY objects  selecting libraries needed by the visit
 		;code.
-   inv-lib*
+   (immutable inv-lib*)
 		;The list of LIBRARY objects selecting libraries needed by the invoke
 		;code.
-   export-subst
+   (immutable export-subst)
 		;A subst selecting the exported bindings from the GLOBAL-ENV.
-   global-env
+   (immutable global-env)
 		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
 		;library body.
-   visit-state
+   (mutable visit-state	library-visit-state library.visit-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the visit  code.  When set to something  else: this library
 		;has been already visited.
-   invoke-state
+   (mutable invoke-state library-invoke-state library.invoke-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the invoke code.  When  set to something else: this library
 		;has been already invoked.
-   visit-code
+   (immutable visit-code)
 		;When this object  is created from source code: this  field is a core
 		;language symbolic expression representing the visit code.  When this
 		;object  is created  from a  binary file:  this field  is a  thunk to
 		;evaluate to visit the library.
-   invoke-code
+   (immutable invoke-code)
 		;When this object  is created from source code: this  field is a core
 		;language  symbolic expression  representing the  invoke code.   When
 		;this object is created from a binary  file: this field is a thunk to
 		;evaluate to invoke the library.
-   guard-code
+   (immutable guard-code)
 		;When this object  is created from source code: this  field is a core
 		;language symbolic expression representing the guard code.  When this
 		;object  is created  from a  binary file:  this field  is a  thunk to
 		;evaluate to run the STALE-WHEN composite test expression.
-   guard-lib*
+   (immutable guard-lib*)
 		;The  list  of LIBRARY  objects  selecting  libraries needed  by  the
 		;STALE-WHEN composite test expression.
-   visible?
+   (immutable visible?)
 		;A boolean determining if the  library is visible.  This attribute is
 		;used  by  INTERNED-LIBRARIES  to   select  libraries  to  report  as
 		;interned.
@@ -142,25 +143,26 @@
 		;A library should be marked as visible  if it is meant to be imported
 		;by client  code in "normal"  use; unsafe libraries in  the hierarchy
 		;"(vicare system ---)" should *not* be visible.
-   source-file-name
+   (immutable source-file-name)
 		;False or a  string representing the pathname of the  file from which
 		;the source code of the library was read.
-   option*
+   (immutable option*)
 		;A sexp holding library options.
-   foreign-library*
+   (immutable foreign-library*)
 		;A list of strings representing  identifiers of shared libraries that
 		;must be  loaded before  this library is  invoked.  For  example: for
 		;"libvicare-curl.so", the string identifier is "vicare-curl".
-   )
-  (lambda (S port sub-printer)
-    (define-syntax-rule (%display thing)
-      (display thing port))
-    (define-syntax-rule (%write thing)
-      (write thing port))
-    (%display "#<library ")
-    (%display (library-name S))
-    (%display " filename=")	(%write (library-source-file-name S))
-    (%display ">")))
+   #| end of FIELDS |# ))
+
+  ;; (lambda (S port sub-printer)
+  ;;   (define-syntax-rule (%display thing)
+  ;;     (display thing port))
+  ;;   (define-syntax-rule (%write thing)
+  ;;     (write thing port))
+  ;;   (%display "#<library ")
+  ;;   (%display (library-name S))
+  ;;   (%display " filename=")	(%write (library-source-file-name S))
+  ;;   (%display ">"))
 
 ;;; --------------------------------------------------------------------
 
@@ -623,14 +625,14 @@
   ;;
   (let ((invoke (library-invoke-state lib)))
     (when (procedure? invoke)
-      (set-library-invoke-state! lib (lambda ()
+      (library.invoke-state-set! lib (lambda ()
 				       (assertion-violation __who__ "circularity detected" lib)))
       (for-each invoke-library (library-inv-lib* lib))
-      (set-library-invoke-state! lib (lambda ()
+      (library.invoke-state-set! lib (lambda ()
 				       (assertion-violation __who__ "first invoke did not return" lib)))
       (print-library-debug-message "invoking: ~a" (library-name lib))
       (invoke)
-      (set-library-invoke-state! lib #t)))
+      (library.invoke-state-set! lib #t)))
   lib)
 
 (define* (visit-library {lib library?})
@@ -641,7 +643,7 @@
     (if (procedure? visit)
 	(begin
 	  (print-library-debug-message "start visiting process for library: ~a" (library-name lib))
-	  (set-library-visit-state! lib (lambda ()
+	  (library.visit-state-set! lib (lambda ()
 					  (assertion-violation __who__ "circularity detected" lib)))
 	  ;;By  invoking the  vis libraries:  we initialise  the loc  gensyms of  the
 	  ;;syntactic  bindings  imported  by  the right-hand  sides  of  the  syntax
@@ -662,12 +664,12 @@
 	  ;;the right thing (for some reason not yet clear to me).  (Marco Maggi; Tue
 	  ;;Sep 8, 2015)
 	  (for-each visit-library (library-imp-lib* lib))
-	  (set-library-visit-state! lib (lambda ()
+	  (library.visit-state-set! lib (lambda ()
 					  (assertion-violation __who__ "first visit did not return" lib)))
 	  (print-library-debug-message "visiting library: ~a" (library-name lib))
 	  (visit)
 	  (print-library-debug-message "finished visiting process for library: ~a" (library-name lib))
-	  (set-library-visit-state! lib #t)))
+	  (library.visit-state-set! lib #t)))
     (print-library-debug-message "library already visited: ~a" (library-name lib)))
   lib)
 

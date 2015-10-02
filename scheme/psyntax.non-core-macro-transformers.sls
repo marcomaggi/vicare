@@ -1726,27 +1726,27 @@
 	 named-case-lambda*-macro
 	 case-define*-macro)
 
-  (define-record argument-validation-spec
-    (arg-id
+  (define-record-type argument-validation-spec
+    (fields arg-id
 		;Identifier  representing  the  formal  name of  the  argument  being
 		;validated.
-     pred
+	    pred
 		;Syntax object representing the validation logic predicate.
-     expr
+	    expr
 		;Syntax object representing an argument's validation expression.
-     list-arg?
+	    list-arg?
 		;Boolean.  True if this struct represents a rest or args argument.
-     ))
+	    ))
 
-  (define-record retval-validation-spec
-    (rv-id
+  (define-record-type retval-validation-spec
+    (fields rv-id
 		;Identifier representing the internal formal name of the return value
 		;being validated.
-     pred
+	    pred
 		;Syntax object representing the validation logic predicate.
-     expr
+	    expr
 		;Syntax object representing a return value's validation expression.
-     ))
+	    ))
 
 ;;; --------------------------------------------------------------------
 
