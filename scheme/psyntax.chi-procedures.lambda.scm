@@ -214,7 +214,8 @@
 							body-form*.stx)
 		      body-form*.stx))))
 	(define-values (lexenv.run^ lexenv.expand^)
-	  (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner))
+	  (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
+					    who.id %synner))
 	(let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
 	       (signature (%override-retvals-signature signature body.psi)))
 	  (values formals*.lex signature body.psi))))
@@ -249,7 +250,8 @@
 							body-form*.stx)
 		      body-form*.stx))))
 	(define-values (lexenv.run^ lexenv.expand^)
-	  (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner))
+	  (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
+					    who.id %synner))
 	(let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
 	       (signature (%override-retvals-signature signature body.psi)))
 	  (values formals.lex signature body.psi))))))
@@ -347,17 +349,18 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%push-who-fluid-syntax-on-lexenv who.id lexenv.run lexenv.expand %synner)
-    ;;It is very important to do this only  if there is a WHO.ID: the internal syntax
-    ;;INTERNAL-LAMBDA sets WHO.ID to false, so we  do not bind "__who__" in its body.
-    ;;We will go  into infinite loop otherwise, because  IDENTIFIER-SYNTAX expands to
+  (define* (%push-who-fluid-syntax-on-lexenv who input-form.stx lexenv.run lexenv.expand
+					     lhs.id %synner)
+    ;;It is  very important to do  this only if  LHS.ID is true: the  internal syntax
+    ;;INTERNAL-LAMBDA sets LHS.ID to false, so we  do not bind "__who__" in its body.
+    ;;We would go into infinite  loop otherwise, because IDENTIFIER-SYNTAX expands to
     ;;an INTERNAL-LAMBDA use.
     ;;
     (import CORE-MACRO-TRANSFORMER) ;for PUSH-FLUID-SYNTAX
-    (if who.id
-	(push-fluid-syntax (core-prim-id '__who__)
-			   (bless `(identifier-syntax (quote ,who.id)))
-			   lexenv.run lexenv.expand %synner)
+    (if lhs.id
+	(push-fluid-syntax who input-form.stx lexenv.run lexenv.expand
+			   (core-prim-id '__who__) (bless `(identifier-syntax (quote ,lhs.id)))
+			   %synner)
       (values lexenv.run lexenv.expand)))
 
   (define (%override-retvals-signature signature body.psi)

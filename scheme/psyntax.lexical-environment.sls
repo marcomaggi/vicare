@@ -225,6 +225,7 @@
     id->struct-type-specification
     id->typed-variable-spec
     case-identifier-syntactic-binding-descriptor
+    case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
 
     ;; syntax objects: marks
@@ -2033,31 +2034,64 @@
   (lambda (stx)
     (sys.syntax-violation '__descr__ "unset fluid syntax" stx)))
 
-(define-syntax case-identifier-syntactic-binding-descriptor
-  (lambda (stx)
-    (define (%id-or-false X)
-      (or (sys.identifier? X)
-	  (not (sys.syntax->datum X))))
-    (sys.syntax-case stx (else)
+(module (case-identifier-syntactic-binding-descriptor case-identifier-syntactic-binding-descriptor/no-indirection)
+
+  (define-syntax case-identifier-syntactic-binding-descriptor
+    (syntax-rules ()
       ((_ (?who ?input-form.stx ?id ?lexenv)
 	  ((?type0 ?type ...) . ?body)
 	  ...
 	  (else . ?else-body))
-       (and (%id-or-false (sys.syntax ?who))
-	    (%id-or-false (sys.syntax ?input-form.stx))
-	    (sys.identifier? (sys.syntax ?lexenv))
-	    (sys.identifier? (sys.syntax ?id)))
-       (sys.syntax
-	(let* ((label (id->label/or-error ?who ?input-form.stx ?id))
-	       (descr (label->syntactic-binding-descriptor label ?lexenv)))
-	  (fluid-let-syntax ((__descr__ (identifier-syntax descr)))
-	    (case (syntactic-binding-descriptor.type descr)
-	      ((displaced-lexical)
-	       (syntax-violation ?who "identifier out of context (identifier's label not in LEXENV)" ?input-form.stx ?id))
-	      ((?type0 ?type ...) . ?body)
-	      ...
-	      (else . ?else-body))))))
-      )))
+       (%case-identifier-syntactic-binding-descriptor
+	label->syntactic-binding-descriptor
+	(?who ?input-form.stx ?id ?lexenv)
+	((?type0 ?type ...) . ?body)
+	...
+	(else . ?else-body)))
+      ))
+
+  (define-syntax case-identifier-syntactic-binding-descriptor/no-indirection
+    (syntax-rules ()
+      ((_ (?who ?input-form.stx ?id ?lexenv)
+	  ((?type0 ?type ...) . ?body)
+	  ...
+	  (else . ?else-body))
+       (%case-identifier-syntactic-binding-descriptor
+	label->syntactic-binding-descriptor/no-indirection
+	(?who ?input-form.stx ?id ?lexenv)
+	((?type0 ?type ...) . ?body)
+	...
+	(else . ?else-body)))
+      ))
+
+  (define-syntax %case-identifier-syntactic-binding-descriptor
+    (lambda (stx)
+      (define (%id-or-false X)
+	(or (sys.identifier? X)
+	    (not (sys.syntax->datum X))))
+      (sys.syntax-case stx (else)
+	((_ ?label->descr
+	    (?who ?input-form.stx ?id ?lexenv)
+	    ((?type0 ?type ...) . ?body)
+	    ...
+	    (else . ?else-body))
+	 (and (%id-or-false (sys.syntax ?who))
+	      (%id-or-false (sys.syntax ?input-form.stx))
+	      (sys.identifier? (sys.syntax ?lexenv))
+	      (sys.identifier? (sys.syntax ?id)))
+	 (sys.syntax
+	  (let* ((label (id->label/or-error ?who ?input-form.stx ?id))
+		 (descr (?label->descr label ?lexenv)))
+	    (fluid-let-syntax ((__descr__ (identifier-syntax descr)))
+	      (case (syntactic-binding-descriptor.type descr)
+		((displaced-lexical)
+		 (syntax-violation ?who "identifier out of context (identifier's label not in LEXENV)" ?input-form.stx ?id))
+		((?type0 ?type ...) . ?body)
+		...
+		(else . ?else-body))))))
+	)))
+
+  #| end of module |# )
 
 
 ;;;; system label gensym
@@ -2868,4 +2902,5 @@
 ;; coding: utf-8-unix
 ;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
 ;; eval: (put 'case-identifier-syntactic-binding-descriptor			'scheme-indent-function 1)
+;; eval: (put 'case-identifier-syntactic-binding-descriptor/no-indirection	'scheme-indent-function 1)
 ;; End:

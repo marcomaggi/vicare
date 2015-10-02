@@ -169,7 +169,7 @@
 
     #| end of DEFINE-RECORD-TYPE |# )
 
-  (define* ({psi-application-retvals-signature retvals-signature?} input-form.stx lexenv.run {rator.psi psi?})
+  (define* ({psi-application-retvals-signature retvals-signature?} input-form.stx lexenv {rator.psi psi?})
     ;;We  assume  RATOR.PSI is  a  PSI  representing the  first  form  in a  callable
     ;;application:
     ;;
@@ -181,11 +181,9 @@
     ;;
     (syntax-match (retvals-signature.tags (psi.retvals-signature rator.psi)) ()
       ((?type-id)
-       (let* ((label (id->label/or-error #f input-form.stx ?type-id))
-	      (descr (label->syntactic-binding-descriptor label lexenv.run))
-	      (spec  (syntactic-binding-descriptor.value descr)))
-	 (if (closure-type-spec? spec)
-	     (callable-signature.retvals (closure-type-spec.signature spec))
+       (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv)))
+	 (if (closure-type-spec? ots)
+	     (callable-signature.retvals (closure-type-spec.signature ots))
 	   (make-retvals-signature/fully-unspecified))))
       (_
        (make-retvals-signature/fully-unspecified))))
@@ -233,7 +231,7 @@
   ;;
   (syntax-match expr.stx ()
     (?id
-     (identifier? expr.stx)
+     (identifier? ?id)
      (cond ((id->label ?id)
 	    => (lambda (label)
 		 (let* ((descr (label->syntactic-binding-descriptor label lexenv))

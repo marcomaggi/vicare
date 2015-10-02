@@ -441,8 +441,8 @@
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (unless (valid-bound-ids? ?lhs*)
 	 (error-invalid-formals-syntax input-form.stx ?lhs*))
-       (let* ((fluid-label* (map (lambda (lhs)
-				   (%lookup-binding-in-lexenv.run lhs lexenv.run %synner))
+       (let* ((fluid-label* (map (lambda (lhs.id)
+				   (%lookup-binding-in-lexenv.run __who__ input-form.stx lhs.id lexenv.run %synner))
 			      ?lhs*))
 	      (binding*     (map (lambda (rhs.stx)
 				   (with-exception-handler/input-form
@@ -456,21 +456,13 @@
 			    (append entry* lexenv.expand)
 			    (cons ?body ?body*))))))
 
-  (define* (push-fluid-syntax lhs.id rhs.stx lexenv.run lexenv.expand synner)
+  (define* (push-fluid-syntax who input-form.stx lexenv.run lexenv.expand
+			      lhs.id rhs.stx synner)
     ;;Push on the LEXENVs the result of defining the single syntactic binding for the
     ;;identifier LHS.ID,  having RHS.STX as  right-hand side expression.   Return two
     ;;values: the updated LEXENV.RUN and LEXENV.EXPAND.
     ;;
-    ;;This  function has  been especially  thought to  push new  definitions for  the
-    ;;"__who__" fluid syntax.  As example, we can use it as follows:
-    ;;
-    ;;   (receive (lexenv.run^ lexenv.expand^)
-    ;;       (push-fluid-syntax (core-prim-id '__who__)
-    ;;                          (bless `(identifier-syntax (quote ,who.id)))
-    ;;                          lexenv.run lexenv.expand synner)
-    ;;     ---)
-    ;;
-    (let* ((fluid-label  (%lookup-binding-in-lexenv.run lhs.id lexenv.run synner))
+    (let* ((fluid-label  (%lookup-binding-in-lexenv.run __who__ input-form.stx lhs.id lexenv.run synner))
 	   (binding      (with-exception-handler/input-form
 			     rhs.stx
 			   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
@@ -479,19 +471,17 @@
       (values (cons entry lexenv.run)
 	      (cons entry lexenv.expand))))
 
-  (define (%lookup-binding-in-lexenv.run lhs lexenv.run synner)
-    ;;Search the binding of the identifier LHS retrieving its label; if such label is
-    ;;present and its  associated syntactic binding descriptor from  LEXENV.RUN is of
-    ;;type "fluid  syntax": return  the associated  fluid label that  can be  used to
+  (define (%lookup-binding-in-lexenv.run who input-form.stx lhs.id lexenv synner)
+    ;;Search the binding of the identifier LHS.ID retrieving its label; if such label
+    ;;is present and  its associated syntactic binding descriptor  from LEXENV.RUN is
+    ;;of type "fluid syntax":  return the associated fluid label that  can be used to
     ;;rebind the identifier.
     ;;
-    (let* ((label    (or (id->label lhs)
-			 (synner "unbound identifier" lhs)))
-	   (binding  (label->syntactic-binding-descriptor/no-indirection label lexenv.run)))
-      (cond ((fluid-syntax-binding-descriptor? binding)
-	     (fluid-syntax-binding-descriptor.fluid-label binding))
-	    (else
-	     (synner "not a fluid identifier" lhs)))))
+    (case-identifier-syntactic-binding-descriptor/no-indirection (who input-form.stx lhs.id lexenv)
+      (($fluid)
+       (fluid-syntax-binding-descriptor.fluid-label __descr__))
+      (else
+       (synner "not a fluid identifier" lhs.id))))
 
   #| end of module |# )
 
@@ -665,22 +655,22 @@
   (quote #<syntax expr=()>)))))
   ?a)
   |#
-  (define (syntax-transformer use-stx lexenv.run lexenv.expand)
-    (syntax-match use-stx ()
+  (define (syntax-transformer input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
       ((_ ?template)
        (receive (intermediate-sexp maps)
-	   (%gen-syntax use-stx ?template lexenv.run '() ellipsis? #f)
+	   (%gen-syntax input-form.stx ?template lexenv.run '() ellipsis? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
-	   (make-psi use-stx code))))
+	   (make-psi input-form.stx code))))
       ))
 
   (define-module-who syntax)
 
-  (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
+  (define (%gen-syntax input-form.stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
-    ;;USE-STX must be the syntax object  containing the original SYNTAX macro use; it
+    ;;INPUT-FORM.STX must be the syntax object  containing the original SYNTAX macro use; it
     ;;is used for descriptive error reporting.
     ;;
     ;;TEMPLATE-STX must be the template from the SYNTAX macro use.
@@ -719,7 +709,7 @@
       ;;
       (?dots
        (ellipsis? ?dots)
-       (syntax-violation __module_who__ "misplaced ellipsis in syntax form" use-stx))
+       (syntax-violation __module_who__ "misplaced ellipsis in syntax form" input-form.stx))
 
       ;;Match a standalone  identifier.  ?ID can be: a reference  to pattern variable
       ;;created by SYNTAX-CASE; an identifier that  will be captured by some binding;
@@ -735,10 +725,41 @@
 		 (let* ((name.level  (syntactic-binding-descriptor.value binding))
 			(name        (car name.level))
 			(level       (cdr name.level)))
-		   (%gen-ref use-stx name level maps))
+		   (%gen-ref input-form.stx name level maps))
 	       (values (list 'ref var) maps))
 	   ;;It is some other identifier.
 	   (values (list 'quote ?id) maps))))
+      #;(?id
+       (identifier? ?id)
+       (let* ((label (id->label ?id) #;(id->label/or-error __module_who__ input-form.stx ?id))
+	      (descr (label->syntactic-binding-descriptor label lexenv)))
+	 (case (syntactic-binding-descriptor.type descr)
+	   ((displaced-lexical)
+	    (syntax-violation __module_who__
+	      "identifier out of context (identifier's label not in LEXENV)" input-form.stx ?id))
+	   ((pattern-variable)
+	    (receive (var maps)
+		(let* ((name.level  (syntactic-binding-descriptor.value descr))
+		       (name        (car name.level))
+		       (level       (cdr name.level)))
+		  (%gen-ref input-form.stx name level maps))
+	      (values (list 'ref var) maps)))
+	   (else
+	    ;;It is some other identifier.
+	    (values (list 'quote ?id) maps)))))
+      #;(?id
+       (identifier? ?id)
+       (case-identifier-syntactic-binding-descriptor (__module_who__ input-form.stx ?id lexenv)
+	 ((pattern-variable)
+	  (receive (var maps)
+	      (let* ((name.level  (syntactic-binding-descriptor.value __descr__))
+		     (name        (car name.level))
+		     (level       (cdr name.level)))
+		(%gen-ref input-form.stx name level maps))
+	    (values (list 'ref var) maps)))
+	 (else
+	  ;;It is some other identifier.
+	  (values (list 'quote ?id) maps))))
 
       ;;Ellipses starting a vector template are not allowed:
       ;;
@@ -757,8 +778,8 @@
       ((?dots ?sub-template)
        (ellipsis? ?dots)
        (if vec?
-	   (syntax-violation __module_who__ "misplaced ellipsis in syntax form" use-stx)
-	 (%gen-syntax use-stx ?sub-template lexenv maps (lambda (x) #f) #f)))
+	   (syntax-violation __module_who__ "misplaced ellipsis in syntax form" input-form.stx)
+	 (%gen-syntax input-form.stx ?sub-template lexenv maps (lambda (x) #f) #f)))
 
       ;;Match a template followed by ellipsis.
       ;;
@@ -768,9 +789,9 @@
 	   ((rest.stx ?rest)
 	    (kont     (lambda (maps)
 			(receive (template^ maps)
-			    (%gen-syntax use-stx ?template lexenv (cons '() maps) ellipsis? #f)
+			    (%gen-syntax input-form.stx ?template lexenv (cons '() maps) ellipsis? #f)
 			  (if (null? (car maps))
-			      (syntax-violation __module_who__ "extra ellipsis in syntax form" use-stx)
+			      (syntax-violation __module_who__ "extra ellipsis in syntax form" input-form.stx)
 			    (values (%gen-map template^ (car maps))
 				    (cdr maps)))))))
 	 (syntax-match rest.stx ()
@@ -783,13 +804,13 @@
 			  (receive (template^ maps)
 			      (kont (cons '() maps))
 			    (if (null? (car maps))
-				(syntax-violation __module_who__ "extra ellipsis in syntax form" use-stx)
+				(syntax-violation __module_who__ "extra ellipsis in syntax form" input-form.stx)
 			      (values (%gen-mappend template^ (car maps))
 				      (cdr maps)))))))
 
 	   (_
 	    (receive (rest^ maps)
-		(%gen-syntax use-stx rest.stx lexenv maps ellipsis? vec?)
+		(%gen-syntax input-form.stx rest.stx lexenv maps ellipsis? vec?)
 	      (receive (template^ maps)
 		  (kont maps)
 		(values (%gen-append template^ rest^) maps))))
@@ -799,9 +820,9 @@
       ;;
       ((?car . ?cdr)
        (receive (car.new maps)
-	   (%gen-syntax use-stx ?car lexenv maps ellipsis? #f)
+	   (%gen-syntax input-form.stx ?car lexenv maps ellipsis? #f)
 	 (receive (cdr.new maps)
-	     (%gen-syntax use-stx ?cdr lexenv maps ellipsis? vec?)
+	     (%gen-syntax input-form.stx ?cdr lexenv maps ellipsis? vec?)
 	   (values (%gen-cons template-stx ?car ?cdr car.new cdr.new)
 		   maps))))
 
@@ -809,7 +830,7 @@
       ;;
       (#(?item* ...)
        (receive (item*.new maps)
-	   (%gen-syntax use-stx ?item* lexenv maps ellipsis? #t)
+	   (%gen-syntax input-form.stx ?item* lexenv maps ellipsis? #t)
 	 (values (%gen-vector template-stx ?item* item*.new)
 		 maps)))
 
@@ -820,16 +841,16 @@
        (values `(quote ,template-stx) maps))
       ))
 
-  (define (%gen-ref use-stx var level maps)
+  (define (%gen-ref input-form.stx var level maps)
     ;;Recursive function.
     ;;
     #;(debug-print 'gen-ref maps)
     (if (zero? level)
 	(values var maps)
       (if (null? maps)
-	  (syntax-violation __module_who__ "missing ellipsis in syntax form" use-stx)
+	  (syntax-violation __module_who__ "missing ellipsis in syntax form" input-form.stx)
 	(receive (outer-var outer-maps)
-	    (%gen-ref use-stx var (- level 1) (cdr maps))
+	    (%gen-ref input-form.stx var (- level 1) (cdr maps))
 	  (cond ((assq outer-var (car maps))
 		 => (lambda (b)
 		      (values (cdr b) maps)))
@@ -1458,17 +1479,16 @@
   (syntax-match input-form.stx ()
     ((_ ?id)
      (identifier? ?id)
-     (let* ((label               (id->label/or-error __who__ input-form.stx ?id))
-	    (binding-descriptor  (label->syntactic-binding-descriptor label lexenv.run))
-	    (binding-value       (case (syntactic-binding-descriptor.type binding-descriptor)
-				   ((local-macro local-macro!)
-				    (syntactic-binding-descriptor.value binding-descriptor))
-				   (else
-				    (%synner "expected identifier of local macro" ?id)))))
-       (make-psi input-form.stx
-		 (build-data no-source
-		   (core-language->sexp (cdr binding-value)))
-		 (make-retvals-signature/single-top))))
+     (case-identifier-syntactic-binding-descriptor (__who__ input-form.stx ?id lexenv.run)
+       ((local-macro local-macro!)
+	(let* ((descr.value   (syntactic-binding-descriptor.value __descr__))
+	       (expanded-expr (cdr descr.value)))
+	  (make-psi input-form.stx
+		    (build-data no-source
+		      (core-language->sexp expanded-expr))
+		    (make-retvals-signature/single-top))))
+       (else
+	(%synner "expected identifier of local macro" ?id))))
     ))
 
 
