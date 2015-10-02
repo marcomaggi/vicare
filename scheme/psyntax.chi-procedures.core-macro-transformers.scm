@@ -718,48 +718,27 @@
       ;;
       (?id
        (identifier? ?id)
-       (let ((binding (label->syntactic-binding-descriptor (id->label ?id) lexenv)))
-	 (if (pattern-variable-binding-descriptor? binding)
-	     ;;It is a reference to pattern variable.
-	     (receive (var maps)
-		 (let* ((name.level  (syntactic-binding-descriptor.value binding))
-			(name        (car name.level))
-			(level       (cdr name.level)))
-		   (%gen-ref input-form.stx name level maps))
-	       (values (list 'ref var) maps))
-	   ;;It is some other identifier.
-	   (values (list 'quote ?id) maps))))
-      #;(?id
-       (identifier? ?id)
-       (let* ((label (id->label ?id) #;(id->label/or-error __module_who__ input-form.stx ?id))
-	      (descr (label->syntactic-binding-descriptor label lexenv)))
-	 (case (syntactic-binding-descriptor.type descr)
-	   ((displaced-lexical)
-	    (syntax-violation __module_who__
-	      "identifier out of context (identifier's label not in LEXENV)" input-form.stx ?id))
-	   ((pattern-variable)
-	    (receive (var maps)
-		(let* ((name.level  (syntactic-binding-descriptor.value descr))
-		       (name        (car name.level))
-		       (level       (cdr name.level)))
-		  (%gen-ref input-form.stx name level maps))
-	      (values (list 'ref var) maps)))
-	   (else
-	    ;;It is some other identifier.
-	    (values (list 'quote ?id) maps)))))
-      #;(?id
-       (identifier? ?id)
-       (case-identifier-syntactic-binding-descriptor (__module_who__ input-form.stx ?id lexenv)
-	 ((pattern-variable)
-	  (receive (var maps)
-	      (let* ((name.level  (syntactic-binding-descriptor.value __descr__))
-		     (name        (car name.level))
-		     (level       (cdr name.level)))
-		(%gen-ref input-form.stx name level maps))
-	    (values (list 'ref var) maps)))
-	 (else
-	  ;;It is some other identifier.
-	  (values (list 'quote ?id) maps))))
+       (cond ((id->label ?id)
+	      => (lambda (label)
+		   (let ((descr (label->syntactic-binding-descriptor label lexenv)))
+		     (case (syntactic-binding-descriptor.type descr)
+		       ((pattern-variable)
+			;;It is a reference to pattern variable.
+			(receive (var maps)
+			    (let* ((name.level  (syntactic-binding-descriptor.value descr))
+				   (name        (car name.level))
+				   (level       (cdr name.level)))
+			      (%gen-ref input-form.stx name level maps))
+			  (values (list 'ref var) maps)))
+		       (else
+			;;It is  some other identifier.  Here  we just put it  in the
+			;;output form:  we do not want  to raise an exception,  we do
+			;;not care if the descriptor is of type "displaced-lexical".
+			(values (list 'quote ?id) maps))))))
+	     (else
+	      ;;It is an unbound identifier.  Here we just put it in the output form:
+	      ;;we do not want to raise an exception.
+	      (values (list 'quote ?id) maps))))
 
       ;;Ellipses starting a vector template are not allowed:
       ;;
