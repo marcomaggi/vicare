@@ -809,9 +809,9 @@
 	(pretty-print* ?thing port 0 #f))
       (%display "#<rib")
       (%display " name*=")		(subwriter (rib-name*  S))
-      (%display " mark**=")		(subwriter (rib-mark** S))
-      (%display " label*=")		(subwriter (rib-label* S))
-      (%display " sealed/freq=")	(subwriter (rib-sealed/freq S))
+      ;; (%display " mark**=")		(subwriter (rib-mark** S))
+      ;; (%display " label*=")		(subwriter (rib-label* S))
+      ;; (%display " sealed/freq=")	(subwriter (rib-sealed/freq S))
       (%display ">"))))
 
 ;;; --------------------------------------------------------------------

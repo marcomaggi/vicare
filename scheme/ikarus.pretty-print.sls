@@ -229,6 +229,8 @@
      ;;At present  keywords are  structs, so  we must process  them before  the other
      ;;structs.  We do not want them to be printed as shared objects.
      ((keyword? x)		(%boxify-object-keyword x))
+     ((records.record-object? x)
+      (boxify-shared x %boxify-object-record))
      ((struct? x)		(boxify-shared x %boxify-object-struct))
      ((gensym? x)		(boxify-shared x %boxify-object-format))
      ((string? x)		(boxify-shared x %boxify-object-format))
@@ -587,48 +589,6 @@
       (make-fbox len box* #f))
 
     (define (%boxify-struct/default-printer stru)
-      ;;Boxify a struct object that makes use of the built-in Scheme objects writer.
-      ;;
-      (cond ((records.record-object? stru)
-	     ;;It is a R6RS record.
-	     (%boxify-r6rs-record-object stru))
-
-	    ;;We do *not* handle opaque records specially.
-	    ;; ((let ((rtd (struct-rtd stru)))
-	    ;; 	  (and (record-type-descriptor? rtd)
-	    ;; 	       (record-type-opaque? rtd)))
-	    ;; 	"#<unknown>")
-
-	    (else
-	     (%boxify-vicare-struct-object stru))))
-
-    (define (%boxify-r6rs-record-object stru)
-      ;;We want a prettyfication as follows:
-      ;;
-      ;;   (define-record-type duo
-      ;;     (fields one two))
-      ;;
-      ;;   (pretty-print (make-duo 1 2))
-      ;;   -> (record duo
-      ;;        (one 1)
-      ;;        (two 2))
-      ;;
-      (let* ((rtd		(record-rtd stru))
-	     (field-name*	(vector->list (records.record-type-all-field-names rtd))))
-	(receive (field-box* field-sep*)
-	    (%boxify-struct-fields stru 0 field-name*)
-	  (let* ((record-box	(%boxify-object 'record))
-		 (type-name-box	(symbol->string (record-type-name rtd)))
-		 (box*		(cons* record-box type-name-box field-box*))
-		 (sep*		(cons* 0 ;separator between record-box and type-name-box
-				       (pretty-indent) ;separator between type-name-box and field
-				       field-sep*))
-		 (len		(fold-left (lambda (len box)
-					     (+ len (box-length box)))
-				  0 box*)))
-	    (make-cbox (+ 2 len) (list "(" (make-fbox len box* sep*) ")"))))))
-
-    (define (%boxify-vicare-struct-object stru)
       ;;We want a prettyfication as follows:
       ;;
       ;;   (define-struct duo
@@ -684,6 +644,93 @@
 	(values '() '())))
 
     #| end of module: %BOXIFY-OBJECT-STRUCT |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%boxify-object-record)
+
+    (define (%boxify-object-record x)
+      (let ((b (hashtable-ref marks-table x #f)))
+	(if (pair? b)
+	    (%boxify-record/custom-printer (cdr b))
+	  (%boxify-record/default-printer x))))
+
+    (define (%boxify-record/custom-printer cache-stack)
+      ;;Boxify a record object that makes use of a custom printer function.
+      ;;
+      (import writer.TRAVERSAL-HELPERS)
+      (define pair*
+	(let recur ((cache (cdr cache-stack)))
+	  (if cache
+	      (let ((pair* (recur (cache-next cache))))
+		(cons (cons (cache-string cache)
+			    (%boxify-object (cache-object cache)))
+		      pair*))
+	    '())))
+      (define box*
+	(fold-left (lambda (box* pair)
+		     (if (string-empty? (car pair))
+			 (cons (cdr pair) ;the boxification of the OBJECT field
+			       box*)
+		       (cons* (car pair) ;the STRING field
+			      (cdr pair) ;the boxification of the OBJECT field
+			      box*)))
+	  (list (car cache-stack))
+	  pair*))
+      (define len
+	(fold-left (lambda (ac box)
+		     (+ 1 ac (box-length box)))
+	  -1 box*))
+      (make-fbox len box* #f))
+
+    (define (%boxify-record/default-printer reco)
+      ;;We want a prettyfication as follows:
+      ;;
+      ;;   (define-record-type duo
+      ;;     (fields one two))
+      ;;
+      ;;   (pretty-print (make-duo 1 2))
+      ;;   -> (record duo
+      ;;        (one 1)
+      ;;        (two 2))
+      ;;
+      (let* ((rtd		(record-rtd reco))
+	     (field-name*	(vector->list (records.record-type-all-field-names rtd))))
+	(receive (field-box* field-sep*)
+	    (%boxify-record-fields reco 0 field-name*)
+	  (let* ((record-box	(%boxify-object 'record))
+		 (type-name-box	(symbol->string (record-type-name rtd)))
+		 (box*		(cons* record-box type-name-box field-box*))
+		 (sep*		(cons* 0 ;separator between record-box and type-name-box
+				       (pretty-indent) ;separator between type-name-box and field
+				       field-sep*))
+		 (len		(fold-left (lambda (len box)
+					     (+ len (box-length box)))
+				  0 box*)))
+	    (make-cbox (+ 2 len) (list "(" (make-fbox len box* sep*) ")"))))))
+
+    (define (%boxify-record-fields reco field-idx field-name*)
+      ;;Non-tail recursive function.   Boxify the fields and return 2  values: a list
+      ;;of  boxes  representing  the  fields,  a list  of  fixnums  representing  the
+      ;;separators.
+      ;;
+      (if (pair? field-name*)
+	  ;;First we do the next field...
+	  (let ((box (let* ((box1 (%boxify-object (car field-name*)))
+			    (box2 (%boxify-object (struct-ref reco field-idx)))
+			    (len  (+ (box-length box1) (box-length box2)))
+			    (box  (make-fbox len (list box1 box2) #f)))
+		       (make-cbox (+ 2 len) (list "(" box ")"))))
+		(sep (pretty-indent)))
+	    ;;...  then we recurse  to process the rest of the  fields.  This way the
+	    ;;shared marks "#N" are introduced correctly.
+	    (receive (field-box* field-sep*)
+		(%boxify-record-fields reco (fxadd1 field-idx) (cdr field-name*))
+	      (values (cons box field-box*)
+		      (cons sep field-sep*))))
+	(values '() '())))
+
+    #| end of module: %BOXIFY-OBJECT-record |# )
 
 ;;; --------------------------------------------------------------------
 ;;; helpers

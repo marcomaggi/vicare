@@ -495,6 +495,8 @@
 	  ;;At present  keywords are  Vicare structs,  so we have  to make  sure this
 	  ;;branch comes before the one below.
 	  ((keyword?	X)	(void))
+	  ((records.record-object? X)
+	   (traverse-shared X marks-table traverse-record))
 	  ((struct?     X)	(traverse-shared X marks-table traverse-struct))
 	  ((bytevector? X)	(traverse-shared X marks-table traverse-noop))
 	  ((gensym?     X)	(traverse-shared X marks-table traverse-noop))
@@ -521,36 +523,72 @@
         (traverse (vector-ref X i) marks-table)
         (f (fx+ i 1) n))))
 
+;;; --------------------------------------------------------------------
+
+  (module (traverse-record)
+    ;;This module processes R6RS records.
+    ;;
+    (define (traverse-record reco marks-table)
+      (cond ((records.record-printer reco)
+	     => (lambda (printer)
+		  (%traverse-custom-record reco marks-table printer)))
+	    (else
+	     (%traverse-vanilla-record reco marks-table))))
+
+    (define (%traverse-vanilla-record reco marks-table)
+      ;;Traverse a record object that is meant to use the built-in printer function.
+      ;;
+      (let ((rtd (record-rtd reco)))
+	(traverse (record-type-name rtd) marks-table)
+	(let* ((fields.vec	(record-type-field-names rtd))
+	       (fields.num	(vector-length fields.vec)))
+	  (let loop ((field.idx 0))
+	    (unless (fx=? field.idx fields.num)
+	      (traverse (struct-ref reco field.idx) marks-table)
+	      (loop (fxadd1 field.idx)))))))
+
+    (define* (%traverse-custom-record reco marks-table printer)
+      ;;Traverse a record object with a  custom printer function.  The custom printer
+      ;;is used to print the record in  a string output port; the resulting string is
+      ;;cached
+      ;;
+      (receive (port extract)
+	  (open-string-output-port)
+	(let* ((cache-stack  #f)
+	       (sub-printer  (lambda (sub-object)
+			       (set! cache-stack (make-cache (extract) sub-object cache-stack))
+			       (traverse sub-object marks-table))))
+	  (printer reco port sub-printer)
+	  (let ((cache-stack (cons (extract) cache-stack))
+		(B           (hashtable-ref marks-table reco #f)))
+	    (if (fixnum? B)
+		(hashtable-set! marks-table reco (cons B cache-stack))
+	      (error __who__ "internal error"))))))
+
+    #| end of module: TRAVERSE-RECORD |# )
+
+;;; --------------------------------------------------------------------
+
   (module (traverse-struct)
     ;;This module processes: Vicare's structs; Vicare's struct-type descriptors; R6RS
-    ;;records; R6RS record-type descriptors.
+    ;;record-type descriptors.
     ;;
     (define (traverse-struct stru marks-table)
-      (if (records.record-object? stru)
-	  ;;It is an R6RS record.
-	  (cond ((records.record-printer stru)
-		 => (lambda (printer)
-		      (%traverse-custom-struct stru marks-table printer)))
-		(else
-		 (%traverse-vanilla-struct stru marks-table)))
-	(cond ((struct-printer stru)
-	       => (lambda (printer)
-		    (%traverse-custom-struct stru marks-table printer)))
-	      (else
-	       (%traverse-vanilla-struct stru marks-table)))))
+      (cond ((struct-printer stru)
+	     => (lambda (printer)
+		  (%traverse-custom-struct stru marks-table printer)))
+	    (else
+	     (%traverse-vanilla-struct stru marks-table))))
 
     (define (%traverse-vanilla-struct stru marks-table)
       ;;Traverse a struct object that is meant to use the built-in printer function.
       ;;
-      (let ((rtd (struct-rtd stru)))
-	(unless (and (record-type-descriptor? rtd)
-		     (record-type-opaque? rtd))
-	  (traverse (struct-name stru) marks-table)
-	  (let ((num-of-fields (struct-length stru)))
-	    (let loop ((field-idx 0))
-	      (unless (fx=? field-idx num-of-fields)
-		(traverse (struct-ref stru field-idx) marks-table)
-		(loop (fxadd1 field-idx))))))))
+      (traverse (struct-name stru) marks-table)
+      (let ((num-of-fields (struct-length stru)))
+	(let loop ((field-idx 0))
+	  (unless (fx=? field-idx num-of-fields)
+	    (traverse (struct-ref stru field-idx) marks-table)
+	    (loop (fxadd1 field-idx))))))
 
     (define* (%traverse-custom-struct stru marks-table printer)
       ;;Traverse a struct object with a  custom printer function.  The custom printer
@@ -717,6 +755,9 @@
 	   ;;branch comes before the one below.
 	   (write-char* (keywords.keyword->string x) p)
 	   next-mark-idx)
+
+	  ((records.record-object? x)
+	   (write-shared x p write-style? marks-table next-mark-idx write-object-record))
 
 	  ((struct? x)
 	   (write-shared x p write-style? marks-table next-mark-idx write-object-struct))
@@ -1193,6 +1234,75 @@
 
 ;;; --------------------------------------------------------------------
 
+  (module (write-object-record)
+
+    (define (write-object-record x p write-style? marks-table next-mark-idx)
+      (let ((B (hashtable-ref marks-table x #f)))
+	(cond ((pair? B)
+	       (%write-record/custom-printer (cdr B) p write-style? marks-table next-mark-idx))
+	      (else
+	       (%write-record/default-printer x p write-style? marks-table next-mark-idx)))))
+
+    (define (%write-record/custom-printer cache-stack p write-style? marks-table next-mark-idx)
+      ;;Write a struct having a custom printer function.
+      ;;
+      ;;We expect CACHE-STACK to  be a pair whose car is a suffix  string to write at
+      ;;the end and whose  cdr is false or a chain of  CACHE structs representing the
+      ;;strings to print in reverse order.  So we recurse to the end of the chain and
+      ;;print the node from the tail to the head.
+      ;;
+      (begin0
+	  (let recur ((cache (cdr cache-stack)))
+	    (if (not cache)
+		next-mark-idx
+	      (let ((next-mark-idx (recur (cache-next cache))))
+		(write-char*  (cache-string cache) p)
+		(write-object (cache-object cache) p write-style? marks-table next-mark-idx))))
+	(write-char* (car cache-stack) p)))
+
+    (module (%write-record/default-printer)
+
+      (define (%write-record/default-printer record port write-style? marks-table next-mark-idx)
+	(define rtd (record-rtd record))
+	(write-char* (if (record-type-opaque? rtd)
+			 "#[opaque-record "
+		       "#[record ")
+		     port)
+	(write-char* (symbol->string (record-type-name rtd))
+		     port)
+	(receive (next-mark-idx record.idx)
+	    (let upper-rtd ((rtd rtd))
+	      (cond ((record-type-parent rtd)
+		     => (lambda (prtd)
+			  (receive (next-mark-idx record.idx)
+			      (upper-rtd prtd)
+			    (%print-record-fields prtd record.idx record port write-style? marks-table next-mark-idx))))
+		    (else
+		     (values next-mark-idx 0))))
+	  (%print-record-fields rtd record.idx record port write-style? marks-table next-mark-idx)
+	  (write-char #\] port)
+	  next-mark-idx))
+
+      (define (%print-record-fields rtd next-record.idx record port write-style? marks-table next-mark-idx)
+	(let* ((vec      (record-type-field-names rtd))
+	       (vec.len  (vector-length vec)))
+	  (do ((vec.idx    0               (fxadd1 vec.idx))
+	       (record.idx next-record.idx (fxadd1 record.idx)))
+	      ((fx=? vec.idx vec.len)
+	       (values next-mark-idx record.idx))
+	    (let* ((field-nam  (vector-ref vec vec.idx))
+		   (field-val  (struct-ref record record.idx)))
+	      (write-char #\space port)
+	      (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
+		(write-char #\= port)
+		(set! next-mark-idx (write-object field-val port write-style? marks-table next-mark-idx)))))))
+
+      #| end of module: %WRITE-RECORD/DEFAULT-PRINTER |# )
+
+    #| end of module: WRITE-OBJECT-RECORD |# )
+
+;;; --------------------------------------------------------------------
+
   (module (write-object-struct)
 
     (define (write-object-struct x p write-style? marks-table next-mark-idx)
@@ -1227,9 +1337,6 @@
 
 	    ((records.record-constructor-descriptor? stru)
 	     (%write-r6rs-record-constructor-descriptor stru p write-style? marks-table next-mark-idx))
-
-	    ((record-type-descriptor? (struct-rtd stru))
-	     (%write-r6rs-record stru p write-style? marks-table next-mark-idx))
 
 	    ;;We do not handle opaque records specially.
 	    ;; ((let ((rtd (struct-rtd x)))
@@ -1302,45 +1409,6 @@
 	(begin
 	  (write-char #\] port)
 	  next-mark-idx)))
-
-    (module (%write-r6rs-record)
-
-      (define (%write-r6rs-record record port write-style? marks-table next-mark-idx)
-	(define rtd (record-rtd record))
-	(write-char* (if (record-type-opaque? rtd)
-			 "#[opaque-record "
-		       "#[record ")
-		     port)
-	(write-char* (symbol->string (record-type-name rtd))
-		     port)
-	(receive (next-mark-idx record.idx)
-	    (let upper-rtd ((rtd rtd))
-	      (cond ((record-type-parent rtd)
-		     => (lambda (prtd)
-			  (receive (next-mark-idx record.idx)
-			      (upper-rtd prtd)
-			    (%print-record-fields prtd record.idx record port write-style? marks-table next-mark-idx))))
-		    (else
-		     (values next-mark-idx 0))))
-	  (%print-record-fields rtd record.idx record port write-style? marks-table next-mark-idx)
-	  (write-char #\] port)
-	  next-mark-idx))
-
-      (define (%print-record-fields rtd next-record.idx record port write-style? marks-table next-mark-idx)
-	(let* ((vec      (record-type-field-names rtd))
-	       (vec.len  (vector-length vec)))
-	  (do ((vec.idx    0               (fxadd1 vec.idx))
-	       (record.idx next-record.idx (fxadd1 record.idx)))
-	      ((fx=? vec.idx vec.len)
-	       (values next-mark-idx record.idx))
-	    (let* ((field-nam  (vector-ref vec vec.idx))
-		   (field-val  (struct-ref record record.idx)))
-	      (write-char #\space port)
-	      (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
-		(write-char #\= port)
-		(set! next-mark-idx (write-object field-val port write-style? marks-table next-mark-idx)))))))
-
-      #| end of module: WRITE-R6RS-RECORD |# )
 
     #| end of module: WRITE-OBJECT-STRUCT |# )
 
