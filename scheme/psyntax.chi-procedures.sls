@@ -114,8 +114,8 @@
    splice-first-envelope?
    splice-first-envelope-form)
 
-  (define-record splice-first-envelope
-    (form))
+  (define-record-type splice-first-envelope
+    (fields form))
 
   #| end of module |# )
 
@@ -1553,15 +1553,15 @@
 	 module-interface-exp-id*
 	 module-interface-exp-lab-vec)
 
-  (define-record module-interface
-    (first-mark
+  (define-record-type module-interface
+    (fields first-mark
 		;The first mark in the lexical context of the MODULE form.
-     exp-id-vec
+	    exp-id-vec
 		;A vector of identifiers exported by the module.
-     exp-lab-vec
+	    exp-lab-vec
 		;A vector  of gensyms  acting as  labels for  the identifiers  in the
 		;field EXP-ID-VEC.
-     ))
+	    ))
 
   (define (chi-internal-module module-form-stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
     ;;Expand  the syntax  object  MODULE-FORM-STX which  represents  a core  langauge
