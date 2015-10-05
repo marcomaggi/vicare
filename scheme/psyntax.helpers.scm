@@ -126,6 +126,10 @@
   (or (not obj)
       (procedure? obj)))
 
+(define (false-or-symbol? obj)
+  (or (not     obj)
+      (symbol? obj)))
+
 (define (non-empty-list-of-symbols? obj)
   (and (not (null? obj))
        (list? obj)

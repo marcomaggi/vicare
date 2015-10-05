@@ -39,7 +39,7 @@
 
     (rename (records.record-type-printer-set! record-type-printer-set!))
 
-    make-struct-type
+    define-struct			make-struct-type
     make-parameter			parametrise
     symbol-value			set-symbol-value!
     symbol-bound?
@@ -59,6 +59,7 @@
     fx=
     fxadd1				fxsub1
     fxnonnegative?
+    uuid
 
     ;; compiler related operations
     compiler.eval-core			compiler.core-expr->optimized-code

@@ -115,6 +115,7 @@
    splice-first-envelope-form)
 
   (define-record-type splice-first-envelope
+    (nongenerative vicare:expander:splice-first-envelope)
     (fields form))
 
   #| end of module |# )
@@ -130,6 +131,7 @@
 	 psi-application-retvals-signature)
 
   (define-record-type (<psi> make-psi psi?)
+    (nongenerative vicare:expander:<psi>)
     (fields
      (immutable input-form		psi.input-form)
 		;The syntax object that originated this struct instance.  In the case
@@ -412,6 +414,8 @@
 	   (make-syntactic-binding-descriptor/syntactic-record-type-name rv rhs-expr.core))
 	  ((struct-type-spec? rv)
 	   (make-syntactic-binding-descriptor/struct-type-name rv rhs-expr.core))
+	  ((closure-type-spec? rv)
+	   (make-syntactic-binding-descriptor/closure-type-name rv rhs-expr.core))
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
@@ -1168,6 +1172,7 @@
 ;;
 
 (define-record-type qualified-rhs
+  (nongenerative vicare:expander:qualified-rhs)
   (fields
    (immutable category		qualified-rhs.category)
 		;A  symbol specifying  the  category of  the  expression; one  among:
@@ -1554,6 +1559,7 @@
 	 module-interface-exp-lab-vec)
 
   (define-record-type module-interface
+    (nongenerative vicare:expander:module-interface)
     (fields first-mark
 		;The first mark in the lexical context of the MODULE form.
 	    exp-id-vec

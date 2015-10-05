@@ -5400,6 +5400,7 @@
     (record-type-method-retriever-set!)
     (object-type-spec-override-predicate)
     (internal-run-time-is-a?)
+    (make-closure-type-spec)
 
     ))
 

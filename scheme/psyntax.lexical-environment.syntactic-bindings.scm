@@ -449,21 +449,62 @@
 
 ;;;; syntactic binding descriptor: closure type binding
 
-(define* (make-syntactic-binding-descriptor/closure-type-name {ots closure-type-spec?} expanded-expr)
+(define* (make-syntactic-binding-descriptor/closure-type-name {ots closure-type-spec?} ots-maker.core-expr)
   ;;Build and  return a  syntactic binding's  descriptor representing  a closure-type
   ;;name.  Such type is a sub-type of "<procedure>".
   ;;
   ;;The returned syntactic binding's descriptor has the format:
   ;;
-  ;;   (local-object-type-name . (#<closure-type-spec> . ?expanded-expr))
+  ;;   (local-object-type-name . (#<closure-type-spec> . ?ots-maker.core-expr))
   ;;
-  (make-syntactic-binding-descriptor local-object-type-name (cons ots expanded-expr)))
+  (make-syntactic-binding-descriptor local-object-type-name (cons ots ots-maker.core-expr)))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;closure object-type specification; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate/object-type-spec closure-type-name-binding-descriptor?
   closure-type-spec?)
+
+(case-define* make-syntactic-binding/closure-type-name
+  ;;Establish the full  syntactic binding representing a  closure-type: the signature
+  ;;of  a closure  object  to be  used  at  expand-time.  This  function  is used  by
+  ;;INTERNAL-DEFINE when defining the syntactic binding of a function.
+  ;;
+  ;;TYPE-ID.NAME  must  be  a  symbol  representing the  name  of  the  closure-type.
+  ;;SIGNATURE must be an instance of  "<callable-signature>".  RIB must be the rib in
+  ;;which the syntactic binding's identifier is associated to its label.  LEXENV must
+  ;;be the LEXENV in which the label is associated to the descriptor.
+  ;;
+  ;;The established syntactic binding can be  included in the export environment of a
+  ;;library.
+  ;;
+  ;;NOTE  The operation  is similar  to what  the C  language "typedef"  does in  the
+  ;;following code chunk:
+  ;;
+  ;;   int func (double a, char * b) { ... }
+  ;;   typedef int func_t (double a, char * b);
+  ;;   func_t * the_func = func;
+  ;;
+  ((type-id signature rib lexenv)
+   (make-syntactic-binding/closure-type-name type-id signature rib lexenv #f))
+  (({type-id identifier?} signature rib lexenv shadow/redefine-bindings?)
+   (let* ((ots			(make-closure-type-spec type-id signature))
+	  (ots.core-expr	(build-application no-source
+				  (build-primref no-source 'make-closure-type-spec)
+				  (list (build-data no-source type-id)
+					(build-data no-source signature))))
+	  (type-id.descr	(make-syntactic-binding-descriptor/closure-type-name ots ots.core-expr))
+	  (type-id.lab		(generate-label-gensym type-id))
+	  (lexenv^		(push-entry-on-lexenv type-id.lab type-id.descr lexenv)))
+     (extend-rib! rib type-id type-id.lab shadow/redefine-bindings?)
+     lexenv^)))
+
+(define* (make-fabricated-closure-type-name {who false-or-symbol?})
+  (gensym (string-append "<"
+			 (if who
+			     (symbol->string who)
+			   "anonymous")
+			 "/closure-signature>")))
 
 
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding

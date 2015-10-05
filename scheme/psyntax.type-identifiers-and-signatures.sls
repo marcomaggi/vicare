@@ -26,7 +26,6 @@
     type-identifier-common-ancestor
     type-identifier-detailed-validation
     typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
-    fabricate-closure-type-identifier
     syntax-object.standard-formals?
     syntax-object.formals-signature?
     syntax-object.retvals-signature?
@@ -36,6 +35,8 @@
     syntax-object.list-of-typed-bindings?		syntax-object.parse-list-of-typed-bindings
     syntax-object.parse-formals-signature
     syntax-object.lambda-clause-signature?		syntax-object.parse-lambda-clause-signature
+
+    fabricate-closure-type-identifier
 
 ;;; --------------------------------------------------------------------
 ;;; signatures internal representation
@@ -273,7 +274,7 @@
 ;;
 ;;   int func (double a, char * b) { ... }
 ;;   typedef int func_t (double a, char * b);
-;;   func_t * the_func = do_something;
+;;   func_t * the_func = func;
 ;;
 ;;we need a pointer to the function "func()",  so we define the type "func_t" as type
 ;;of the pointer to function "the_func".  We do something similar in Vicare.
@@ -305,33 +306,18 @@
 ;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
 ;;VALUE field of the label gensym.
 ;;
-(module (fabricate-closure-type-identifier)
-
-  (define* ({fabricate-closure-type-identifier type-identifier?} {who false-or-symbol?} {signature callable-signature?})
-    ;;WHO must be false  or a symbol representing the name of  the closure object; it
-    ;;can be a random gensym when no name is given.  SIGNATURE must be an instance of
-    ;;"<callable-signature>" or one of its sub-types.
-    ;;
-    (let* ((type-id.sym  (%make-closure-type-name who))
-	   (type-id.lab  (gensym type-id.sym)))
-      (receive-and-return (type-id)
-	  (lex.make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
-	(let ((spec          (lex.make-closure-type-spec type-id signature))
-	      (expanded-expr #f))
-	  (set-symbol-value! type-id.lab (lex.make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
-
-  (define (false-or-symbol? obj)
-    (or (not     obj)
-	(symbol? obj)))
-
-  (define (%make-closure-type-name who)
-    (gensym (string-append "<"
-			   (if who
-			       (symbol->string who)
-			     "anonymous")
-			   "/closure-signature>")))
-
-  #| end of module |# )
+(define* ({fabricate-closure-type-identifier type-identifier?} {who false-or-symbol?} {signature callable-signature?})
+  ;;WHO must be false or a symbol representing the name of the closure object; it can
+  ;;be a  random gensym  when no  name is given.   SIGNATURE must  be an  instance of
+  ;;"<callable-signature>" or one of its sub-types.
+  ;;
+  (let* ((type-id.sym  (lex.make-fabricated-closure-type-name who))
+	 (type-id.lab  (lex.generate-label-gensym type-id.sym)))
+    (receive-and-return (type-id)
+	(lex.make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
+      (let ((spec          (lex.make-closure-type-spec type-id signature))
+	    (expanded-expr #f))
+	(set-symbol-value! type-id.lab (lex.make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
 
 
 ;;;; helpers and utilities
@@ -762,16 +748,10 @@
 
 (define* (lambda-signature.fully-unspecified? {signature lambda-signature?})
   ;;A LAMBDA  signature has fully unspecified  types if its retvals  tag signature is
-  ;;the standalone "<list>" tag and its formals signature is a proper list of "<top>"
-  ;;tags:
+  ;;the standalone "<list>" tag and its  formals signature is the standalone "<list>"
+  ;;tag.
   ;;
-  ;;   (<top> ...)
-  ;;
-  ;;or an improper list like:
-  ;;
-  ;;   (<top> ... . <list>)
-  ;;
-  (and (formals-signature.fully-unspecified? (lambda-signature.formals signature))
+  (and (formals-signature.fully-unspecified? (lambda-signature.formals   signature))
        (retvals-signature.fully-unspecified? (callable-signature.retvals signature))))
 
 
@@ -793,25 +773,20 @@
 						   (formals-signature.tags sub-signature)))
 
 (define* (formals-signature.fully-unspecified? {signature formals-signature?})
-  ;;Return  true  if the  formals  signature  does  not  specify any  argument  type,
-  ;;otherwise  return false;  in other  words, return  true if  the signature  is one
-  ;;among:
+  ;;Return  true if  the  formals  signature specifies  neither  argument types,  nor
+  ;;arguments count;  otherwise return  false.  In  other words,  return true  if the
+  ;;signature is a standalone "<list>".
   ;;
-  ;;   (<top> ...)
-  ;;   (<top> ... . <list>)
-  ;;
-  (let ((formals.stx (formals-signature.tags signature)))
-    (if (list? formals.stx)
-	(for-all lex.top-tag-id? formals.stx)
-      (receive (head tail)
-	  (improper-list->list-and-rest formals.stx)
-	(and (for-all lex.top-tag-id? head)
-	     (lex.list-tag-id? tail))))))
+  (lex.list-tag-id? (formals-signature.tags signature)))
 
 
 ;;;; retvals-signature stuff
 
 (define* (retvals-signature.fully-unspecified? {signature retvals-signature?})
+  ;;Return true if the retvals signature  specifies neither object types, nor objects
+  ;;count; otherwise return false.  In other words, return true if the signature is a
+  ;;standalone "<list>".
+  ;;
   (lex.list-tag-id? (retvals-signature.tags signature)))
 
 (define* (retvals-signature.partially-unspecified? {signature retvals-signature?})

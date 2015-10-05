@@ -74,6 +74,7 @@
 ;;;; type definitions: library object
 
 (define-record-type library
+  (nongenerative vicare:expander:library)
   (fields
    (immutable uid)
 		;A  gensym  uniquely  identifying  this  interned  library;  it  also

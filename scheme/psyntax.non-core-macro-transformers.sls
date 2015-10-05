@@ -1727,6 +1727,7 @@
 	 case-define*-macro)
 
   (define-record-type argument-validation-spec
+    (nongenerative vicare:expander:argument-validation-spec)
     (fields arg-id
 		;Identifier  representing  the  formal  name of  the  argument  being
 		;validated.
@@ -1739,6 +1740,7 @@
 	    ))
 
   (define-record-type retval-validation-spec
+    (nongenerative vicare:expander:retval-validation-spec)
     (fields rv-id
 		;Identifier representing the internal formal name of the return value
 		;being validated.

@@ -84,8 +84,11 @@
     ;; Scheme object-type specifications
     scheme-type-name-binding-descriptor?
     core-scheme-type-name-binding-descriptor?
+
     make-syntactic-binding-descriptor/closure-type-name
     closure-type-name-binding-descriptor?
+    make-syntactic-binding/closure-type-name
+    make-fabricated-closure-type-name
 
     ;; syntactic bindings utilities: struct-type specifications
     make-syntactic-binding-descriptor/struct-type-name
@@ -420,6 +423,7 @@
 ;;An ENV record encapsulates a substitution and a set of libraries.
 ;;
 (define-record-type env
+  (nongenerative vicare:expander:env)
   (fields names
 		;A vector of symbols representing the public names of bindings from a
 		;set of  import specifications as  defined by R6RS.  These  names are
@@ -442,6 +446,7 @@
       (display "#<environment>" port))))
 
 (define-record-type interaction-env
+  (nongenerative vicare:expander:interaction-env)
   (fields (mutable rib		interaction-env-rib	set-interaction-env-rib!)
 		;The  top  RIB   structure  for  the  evaluation  of   code  in  this
 		;environment.  It maps bound identifiers to labels.
@@ -772,6 +777,7 @@
 ;;;; rib type definition
 
 (define-record-type rib
+  (nongenerative vicare:expander:rib)
   (fields
    (mutable name*	rib-name*	set-rib-name*!)
 		;List  of symbols  representing  the original  binding  names in  the
@@ -808,7 +814,7 @@
       (define-syntax-rule (%pretty-print ?thing)
 	(pretty-print* ?thing port 0 #f))
       (%display "#<rib")
-      (%display " name*=")		(subwriter (rib-name*  S))
+      (%display " name*=")		(%display (rib-name*  S))
       ;; (%display " mark**=")		(subwriter (rib-mark** S))
       ;; (%display " label*=")		(subwriter (rib-label* S))
       ;; (%display " sealed/freq=")	(subwriter (rib-sealed/freq S))
@@ -1419,6 +1425,7 @@
 ;;;; syntax object type definition
 
 (define-record-type stx
+  (nongenerative vicare:expander:stx)
   (fields expr
 		;A symbolic expression, possibly  annotated, whose subexpressions can
 		;also be instances of stx.
@@ -1444,30 +1451,28 @@
 		;form of a macro call, but is later discarded.
 	  ))
 
-(module ()
-  (record-type-printer-set! (record-type-descriptor stx)
-    (lambda (S port subwriter) ;record printer function
-      (define-syntax-rule (%display ?thing)
-	(display ?thing port))
-      (define-syntax-rule (%write ?thing)
-	(write ?thing port))
-      (define-syntax-rule (%pretty-print ?thing)
-	(pretty-print* ?thing port 0 #f))
-      (define raw-expr
-	(syntax->datum S))
-      (if (symbol? raw-expr)
-	  (%display "#<syntactic-identifier")
-	(%display "#<syntax"))
-      (%display " expr=")	(subwriter raw-expr)
-      (%display " mark*=")	(subwriter (stx-mark* S))
-      (let ((expr (stx-expr S)))
-	(when (annotation? expr)
-	  (let ((pos (annotation-textual-position expr)))
-	    (when (source-position-condition? pos)
-	      (%display " line=")	(%display (source-position-line    pos))
-	      (%display " column=")	(%display (source-position-column  pos))
-	      (%display " source=")	(%display (source-position-port-id pos))))))
-      (%display ">"))))
+(define (stx-record-printer S port subwriter)
+  (define-syntax-rule (%display ?thing)
+    (display ?thing port))
+  (define-syntax-rule (%write ?thing)
+    (write ?thing port))
+  (define-syntax-rule (%pretty-print ?thing)
+    (pretty-print* ?thing port 0 #f))
+  (define raw-expr
+    (syntax->datum S))
+  (if (symbol? raw-expr)
+      (%display "#<syntactic-identifier")
+    (%display "#<syntax"))
+  (%display " expr=")	(%display raw-expr)
+  (%display " mark*=")	(%display (stx-mark* S))
+  (let ((expr (stx-expr S)))
+    (when (annotation? expr)
+      (let ((pos (annotation-textual-position expr)))
+	(when (source-position-condition? pos)
+	  (%display " line=")	(%display (source-position-line    pos))
+	  (%display " column=")	(%display (source-position-column  pos))
+	  (%display " source=")	(%display (source-position-port-id pos))))))
+  (%display ">"))
 
 ;;; --------------------------------------------------------------------
 
@@ -2883,6 +2888,8 @@
 
 
 ;;;; done
+
+(record-type-printer-set! (record-type-descriptor stx) stx-record-printer)
 
 #| end of library |# )
 

@@ -644,27 +644,27 @@
   ;;first we are sure that it is already typed when LAMBDA is expanded.
   ;;
   (define* (%chi-internal-define body-form.stx lexenv.run rib kwd* shadow/redefine-bindings?)
-    (define-values (id type-id qrhs)
-      ;;From parsing  the syntactic form,  we receive  the following values:  ID, the
-      ;;lexical typed  variable's syntactic  binding's identifier; TYPE-ID,  false or
-      ;;the type identifier  for ID (possibly "<top>" if the  definition is untyped);
-      ;;QRHS,  the qualified  RHS object  to be  expanded later;  a possibly  updated
-      ;;LEXENV.run, see %PARSE-INTERNAL-DEFINE for details.
-      (%parse-internal-define body-form.stx lexenv.run))
-    (when (bound-id-member? id kwd*)
-      (syntax-violation #f "cannot redefine keyword" body-form.stx))
-    (let* ((lab		(generate-label-gensym   id))
-	   (lex		(generate-lexical-gensym id))
-	   (descr	(if (and type-id (not (top-tag-id? type-id)))
-			    (make-syntactic-binding-descriptor/lexical-typed-var/from-data type-id lex)
-			  (make-syntactic-binding-descriptor/lexical-var lex)))
-	   (lexenv.run	(push-entry-on-lexenv lab descr lexenv.run)))
-      ;;This rib  extension will raise  an exception if  it represents an  attempt to
-      ;;illegally redefine a binding.
-      (extend-rib! rib id lab shadow/redefine-bindings?)
-      (values lex qrhs lexenv.run)))
+    (receive (id type-id qrhs lexenv.run)
+	;;From parsing the  syntactic form, we receive the following  values: ID, the
+	;;lexical typed variable's syntactic  binding's identifier; TYPE-ID, false or
+	;;the type identifier for ID (possibly "<top>" if the definition is untyped);
+	;;QRHS, the  qualified RHS object  to be  expanded later; a  possibly updated
+	;;LEXENV.run, see %PARSE-INTERNAL-DEFINE for details.
+	(%parse-internal-define body-form.stx rib lexenv.run shadow/redefine-bindings?)
+      (when (bound-id-member? id kwd*)
+	(syntax-violation #f "cannot redefine keyword" body-form.stx))
+      (let* ((lab		(generate-label-gensym   id))
+	     (lex		(generate-lexical-gensym id))
+	     (descr		(if (and type-id (not (top-tag-id? type-id)))
+				    (make-syntactic-binding-descriptor/lexical-typed-var/from-data type-id lex)
+				  (make-syntactic-binding-descriptor/lexical-var lex)))
+	     (lexenv.run	(push-entry-on-lexenv lab descr lexenv.run)))
+	;;This rib extension  will raise an exception if it  represents an attempt to
+	;;illegally redefine a binding.
+	(extend-rib! rib id lab shadow/redefine-bindings?)
+	(values lex qrhs lexenv.run))))
 
-  (define (%parse-internal-define input-form.stx lexenv.run)
+  (define* (%parse-internal-define input-form.stx rib lexenv.run shadow/redefine-bindings?)
     ;;Syntax parser for  Vicare's INTERNAL-DEFINE; this is like  the standard DEFINE,
     ;;but supports  extended typed bindings  syntax and an additional  first argument
     ;;being a list of attributes.  Return the following values:
@@ -691,25 +691,24 @@
 	      (who.sym      (identifier->symbol ?lhs)))
 	 (define-values (standard-formals.stx signature)
 	   (syntax-object.parse-lambda-clause-signature formals.stx input-form.stx))
-	 (define type-id
-	   (fabricate-closure-type-identifier who.sym signature))
-	 (define qrhs
-	   (make-qualified-rhs/defun ?lhs input-form.stx type-id))
-	 (values ?lhs type-id qrhs)))
+	 (let* ((type-id	(datum->syntax ?lhs (make-fabricated-closure-type-name (identifier->symbol ?lhs))))
+		(lexenv.run	(make-syntactic-binding/closure-type-name type-id signature rib lexenv.run shadow/redefine-bindings?))
+		(qrhs		(make-qualified-rhs/defun ?lhs input-form.stx type-id)))
+	   (values ?lhs type-id qrhs lexenv.run))))
 
       ((_ ?attributes (brace ?id ?tag) ?expr)
        ;;Variable definition with tagged identifier.
        (type-identifier? ?tag lexenv.run)
        (let* ((rhs.stx (bless `(assert-retvals-signature-and-return (,?tag) ,?expr)))
 	      (qrhs    (make-qualified-rhs/typed-defvar ?id rhs.stx ?tag)))
-	 (values ?id ?tag qrhs)))
+	 (values ?id ?tag qrhs lexenv.run)))
 
       ((_ ?attributes (brace ?id ?tag))
        ;;Variable definition with tagged identifier, no init.
        (type-identifier? ?tag lexenv.run)
        (let* ((rhs.stx (bless '(void)))
 	      (qrhs    (make-qualified-rhs/typed-defvar ?id rhs.stx ?tag)))
-	 (values ?id ?tag qrhs)))
+	 (values ?id ?tag qrhs lexenv.run)))
 
       ((_ ?attributes (?lhs . ?fmls) ?body0 ?body ...)
        ;;Function definition with possibly tagged formals.
@@ -718,23 +717,24 @@
 	   (syntax-object.parse-lambda-clause-signature ?fmls input-form.stx)
 	 (if (lambda-signature.fully-unspecified? signature)
 	     (let ((qrhs (make-qualified-rhs/defun ?lhs input-form.stx)))
-	       (values ?lhs #f qrhs))
-	   (let* ((type-id (fabricate-closure-type-identifier (identifier->symbol ?lhs) signature))
-		  (qrhs    (make-qualified-rhs/defun ?lhs input-form.stx type-id)))
-	     (values ?lhs type-id qrhs)))))
+	       (values ?lhs #f qrhs lexenv.run))
+	   (let* ((type-id	(datum->syntax ?lhs (make-fabricated-closure-type-name (identifier->symbol ?lhs))))
+		  (lexenv.run	(make-syntactic-binding/closure-type-name type-id signature rib lexenv.run shadow/redefine-bindings?))
+		  (qrhs		(make-qualified-rhs/defun ?lhs input-form.stx type-id)))
+	     (values ?lhs type-id qrhs lexenv.run)))))
 
       ((_ ?attributes ?id ?expr)
        ;;R6RS variable definition.
        (identifier? ?id)
        (let ((qrhs (make-qualified-rhs/untyped-defvar ?id ?expr)))
-	 (values ?id #f qrhs)))
+	 (values ?id #f qrhs lexenv.run)))
 
       ((_ ?attributes ?id)
        ;;R6RS variable definition, no init.
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
 	      (qrhs    (make-qualified-rhs/untyped-defvar ?id rhs.stx)))
-	 (values ?id #f qrhs)))
+	 (values ?id #f qrhs lexenv.run)))
       ))
 
   #| end of module: %CHI-INTERNAL-DEFINE |# )
