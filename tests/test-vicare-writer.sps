@@ -1024,20 +1024,30 @@
 ;;; --------------------------------------------------------------------
 ;;; record-type descriptors
 
-  (check
-      (internal-body
-	(define-record-type duo	(fields one two))
-	(write-it (record-type-descriptor duo)))
-    => "#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=duo generative?=#t fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#f default-rcd=#f destructor=#f printer=#f]")
+  (when #t
+    (internal-body
+      (define-record-type duo	(fields one two))
+      (write-it (record-type-descriptor duo))))
+
+  ;; (check
+  ;;     (internal-body
+  ;; 	(define-record-type duo	(fields one two))
+  ;; 	(write-it (record-type-descriptor duo)))
+  ;;   => "#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=duo generative?=#t fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#f default-rcd=#f destructor=#f printer=#f]")
 
 ;;; --------------------------------------------------------------------
 ;;; record-constructor descriptors
 
-  (check
-      (internal-body
-	(define-record-type duo	(fields one two))
-	(write-it (record-constructor-descriptor duo)))
-    => "#[rcd duo rtd=#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=duo generative?=#t fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#<procedure> default-rcd=#f destructor=#f printer=#f] parent-rcd=#f]")
+  (when #t
+    (internal-body
+      (define-record-type duo	(fields one two))
+      (write-it (record-constructor-descriptor duo))))
+
+  ;; (check
+  ;;     (internal-body
+  ;; 	(define-record-type duo	(fields one two))
+  ;; 	(write-it (record-constructor-descriptor duo)))
+  ;;   => "#[rcd duo rtd=#[rtd duo total-fields-number=2 fields-number=2 first-field-index=0 parent=#f sealed?=#f opaque?=#f uid=duo generative?=#t fields=#((#f . one) (#f . two)) initialiser=#<procedure> default-protocol=#<procedure> default-rcd=#f destructor=#f printer=#f] parent-rcd=#f]")
 
 ;;; --------------------------------------------------------------------
 ;;; documentation examples
