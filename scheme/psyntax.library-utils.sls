@@ -76,31 +76,6 @@
     ;; for internal use
     print-library-info-message)
   (import (rnrs)
-    #;(except (vicare)
-	    ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-	    ;;Maggi; Thu Mar 5, 2015)
-	    with-blocked-exceptions
-
-	    ;; library names and version numbers
-	    library-name?
-	    library-version-numbers?		library-version-number?
-	    library-name-decompose
-	    library-name->identifiers		library-name->version
-	    library-name-identifiers=?		library-name=?
-	    library-name<?			library-name<=?
-	    library-version=?
-	    library-version<?			library-version<=?
-
-	    ;; library references and conformity
-	    library-reference?			library-version-reference?
-	    library-sub-version-reference?	library-sub-version?
-	    library-reference-decompose
-	    library-reference->identifiers
-	    library-reference->version-reference
-	    library-reference-identifiers=?
-	    conforming-sub-version-and-sub-version-reference?
-	    conforming-version-and-version-reference?
-	    conforming-library-name-and-library-reference?)
     (psyntax.compat)
     (prefix (ikarus.posix) posix.)
     (vicare language-extensions simple-match))
