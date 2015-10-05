@@ -103,7 +103,14 @@
 		  formals.lex
 		  (psi.core-expr body.psi))
 		(make-retvals-signature/single-value
-		 (fabricate-closure-type-identifier who.sym lambda-signature))))))
+		 ;;If we fabricate a type identifier for this closure: it is possible
+		 ;;to leak the type identifier out of the local lexical context where
+		 ;;it is defined.  This is an error  we can fix in the typed language
+		 ;;with a  cast operator; for the  untyped language we want  to avoid
+		 ;;it.
+		 (if (option.typed-language?)
+		     (fabricate-closure-type-identifier who.sym lambda-signature)
+		   (procedure-tag-id)))))))
 
 
 (define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
@@ -142,7 +149,14 @@
 		  formals*.lex
 		  (map psi.core-expr body**.psi))
 		(make-retvals-signature/single-value
-		 (fabricate-closure-type-identifier who.sym signature))))))
+		 ;;If we fabricate a type identifier for this closure: it is possible
+		 ;;to leak the type identifier out of the local lexical context where
+		 ;;it is defined.  This is an error  we can fix in the typed language
+		 ;;with a  cast operator; for the  untyped language we want  to avoid
+		 ;;it.
+		 (if (option.typed-language?)
+		     (fabricate-closure-type-identifier who.sym signature)
+		   (procedure-tag-id)))))))
 
 
 ;;;; chi procedures: lambda clauses

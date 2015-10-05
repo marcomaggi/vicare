@@ -608,19 +608,21 @@
        (syntax-match (retvals-signature.tags expr.sig) ()
 	 ((?source-type)
 	  (cond ((top-tag-id? ?target-type)
-		 ;;Whatever  the  type  of  the expression:  casting  to  "<top>"  is
-		 ;;nothing: nothing to do, just return the PSI.
-		 expr.psi)
+		 ;;Casting to "<top>" means that we  do not want the receiver to have
+		 ;;access to the type.  This is useful to avoid leaking types defined
+		 ;;in the local lexical context.
+		 (%do-unsafe-cast))
 		((top-tag-id? ?source-type)
 		 ;;The expression has "<top>" as  single-value type: cast the type to
-		 ;;the target one.
+		 ;;the target one.  This is a true *unsafe* operation.
 		 (%do-unsafe-cast))
 		((let* ((target-ots  (id->object-type-specification __who__ input-form.stx ?target-type lexenv.run))
 			(source-ots  (id->object-type-specification __who__ input-form.stx ?source-type lexenv.run)))
 		   (object-type-spec.subtype-and-supertype? source-ots target-ots lexenv.run))
-		 ;;The expression's type is a subtype  of the target type: nothing to
-		 ;;do, just return it.
-		 expr.psi)
+		 ;;The expression's type  is a subtype of the target  type: the types
+		 ;;are compatible.  Fine.  We still cast  the type: this is useful to
+		 ;;avoid leaking types defined in the local lexical context.
+		 (%do-unsafe-cast))
 		(else
 		 (raise
 		  (condition (make-who-condition __who__)
@@ -630,7 +632,7 @@
 
 	 (?source-type
 	  (list-tag-id? ?source-type)
-	  ;;The expression return avlues are fully unspecified.
+	  ;;The expression return values are fully unspecified.
 	  (%do-unsafe-cast))
 
 	 (_
