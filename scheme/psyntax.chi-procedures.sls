@@ -1792,7 +1792,7 @@
 		(lhs.tag (car lhs*.tag)))
 	    (if (and lhs.tag (not (top-tag-id? lhs.tag)))
 		;;Add a typed lexical variable.
-		(let ((lhs.lex (generate-label-gensym lhs.id)))
+		(let ((lhs.lex (generate-lexical-gensym lhs.id)))
 		  (loop (cdr lhs*.id)
 			(cdr lhs*.tag)
 			(cons lhs.id  typed-var*.id)
@@ -1802,7 +1802,7 @@
 			untyped-var*.lex
 			(cons lhs.lex lhs*.lex)))
 	      ;;Add an UNtyped lexical variable.
-	      (let ((lhs.lex (generate-label-gensym lhs.id)))
+	      (let ((lhs.lex (generate-lexical-gensym lhs.id)))
 		(loop (cdr lhs*.id)
 		      (cdr lhs*.tag)
 		      typed-var*.id
