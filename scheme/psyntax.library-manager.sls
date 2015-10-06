@@ -23,6 +23,8 @@
 (library (psyntax.library-manager)
   (export
     ;; library inspection
+    <library>
+    <library>-rtd			<library>-rcd
     make-library
     library?
     library-uid				library-name
@@ -73,10 +75,10 @@
 
 ;;;; type definitions: library object
 
-(define-record-type library
+(define-record-type (<library> make-library library?)
   (nongenerative vicare:expander:library)
   (fields
-   (immutable uid)
+   (immutable uid library-uid)
 		;A  gensym  uniquely  identifying  this  interned  library;  it  also
 		;identifies the corresponding serialised library.
 		;
@@ -89,7 +91,7 @@
 		;binary file is compared to this field: if they are EQ?  the compiled
 		;versions  are  in sync,  otherwise  the  importing library  must  be
 		;recompiled.
-   (immutable name)
+   (immutable name	library-name)
 		;A library name as defined by R6RS; it is the symbolic expression:
 		;
 		;   (?identifier0 ?identifier ...)
@@ -97,20 +99,20 @@
 		;
 		;where  the  ?IDENTIFIERs are  symbols  and  ?VERSION  is a  list  of
 		;non-negative fixnums representing the version numbers.
-   (immutable imp-lib*)
+   (immutable imp-lib*	library-imp-lib*)
 		;The list of LIBRARY objects selected by the IMPORT syntax.
-   (immutable vis-lib*)
+   (immutable vis-lib*	library-vis-lib*)
 		;The list of LIBRARY objects  selecting libraries needed by the visit
 		;code.
-   (immutable inv-lib*)
+   (immutable inv-lib*	library-inv-lib*)
 		;The list of LIBRARY objects selecting libraries needed by the invoke
 		;code.
-   (immutable export-subst)
+   (immutable export-subst	library-export-subst)
 		;A subst selecting the exported bindings from the GLOBAL-ENV.
-   (immutable global-env)
+   (immutable global-env	library-global-env)
 		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
 		;library body.
-   (immutable typed-locs)
+   (immutable typed-locs	library-typed-locs)
 		;Alist   mapping  label   gensyms  of   whose  descriptor   has  type
 		;"global-typed" or  "global-typed-mutable" to the loc  gensyms of the
 		;actual variables.
@@ -122,25 +124,25 @@
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the invoke code.  When  set to something else: this library
 		;has been already invoked.
-   (immutable visit-code)
+   (immutable visit-code	library-visit-code)
 		;When this object  is created from source code: this  field is a core
 		;language symbolic expression representing the visit code.  When this
 		;object  is created  from a  binary file:  this field  is a  thunk to
 		;evaluate to visit the library.
-   (immutable invoke-code)
+   (immutable invoke-code	library-invoke-code)
 		;When this object  is created from source code: this  field is a core
 		;language  symbolic expression  representing the  invoke code.   When
 		;this object is created from a binary  file: this field is a thunk to
 		;evaluate to invoke the library.
-   (immutable guard-code)
+   (immutable guard-code	library-guard-code)
 		;When this object  is created from source code: this  field is a core
 		;language symbolic expression representing the guard code.  When this
 		;object  is created  from a  binary file:  this field  is a  thunk to
 		;evaluate to run the STALE-WHEN composite test expression.
-   (immutable guard-lib*)
+   (immutable guard-lib*	library-guard-lib*)
 		;The  list  of LIBRARY  objects  selecting  libraries needed  by  the
 		;STALE-WHEN composite test expression.
-   (immutable visible?)
+   (immutable visible?	library-visible?)
 		;A boolean determining if the  library is visible.  This attribute is
 		;used  by  INTERNED-LIBRARIES  to   select  libraries  to  report  as
 		;interned.
@@ -148,12 +150,12 @@
 		;A library should be marked as visible  if it is meant to be imported
 		;by client  code in "normal"  use; unsafe libraries in  the hierarchy
 		;"(vicare system ---)" should *not* be visible.
-   (immutable source-file-name)
+   (immutable source-file-name	library-source-file-name)
 		;False or a  string representing the pathname of the  file from which
 		;the source code of the library was read.
-   (immutable option*)
+   (immutable option*	library-option*)
 		;A sexp holding library options.
-   (immutable foreign-library*)
+   (immutable foreign-library*	library-foreign-library*)
 		;A list of strings representing  identifiers of shared libraries that
 		;must be  loaded before  this library is  invoked.  For  example: for
 		;"libvicare-curl.so", the string identifier is "vicare-curl".
@@ -169,10 +171,13 @@
   ;;   (%display " filename=")	(%write (library-source-file-name S))
   ;;   (%display ">"))
 
+(define <library>-rtd (record-type-descriptor <library>))
+(define <library>-rcd (record-constructor-descriptor <library>))
+
 ;;; --------------------------------------------------------------------
 
 (define* (library-name-identifiers {lib library?})
-  (library-name->identifiers ($library-name lib)))
+  (library-name->identifiers (library-name lib)))
 
 (define* (library-loaded-from-source-file? {lib library?})
   (and (library-source-file-name lib) #t))
@@ -603,7 +608,7 @@
 			     (when (memq (car binding)
 					 '(global global-macro global-macro! global-etv))
 			       (remove-location (cdr binding)))))
-		 ($library-global-env lib))))
+		 (library-global-env lib))))
 	 (else
 	  (when err?
 	    (assertion-violation __who__ "library not uninterned" libname))))))

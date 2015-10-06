@@ -702,7 +702,8 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id ?accessors-alist)
+  ;;   (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id
+  ;;    ?accessors-alist ?mutators-alist)
   ;;
   ;;Syntactic binding descriptors of  type "$core-record-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -721,7 +722,7 @@
 	 (destructor-sexp	#f)
 	 (type-predicate-sexp	(bless (list-ref hard-coded-sexp 4)))
 	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 5))
-	 (mutators-table	'())
+	 (mutators-table	(%alist-ref-or-null hard-coded-sexp 6))
 	 (methods-table		accessors-table)
 	 (ots			(make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
 							    constructor-sexp destructor-sexp type-predicate-sexp

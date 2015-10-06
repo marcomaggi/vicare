@@ -791,39 +791,44 @@ invalid: raise an assertion violation.
 @section Library objects
 
 
-Objects of type @objtype{library} are created when a source library is
+Objects of type @class{library} are created when a source library is
 processed by the expander and when a binary library is loaded from a
-@fasl{} file; @objtype{library} is a disjoint type.
+@fasl{} file; @class{library} is a disjoint type.
 
 @menu
-* libutils libraries typedef::       @objtype{library} object type.
+* libutils libraries typedef::       @class{library} object type.
 * libutils libraries global-env::    The @code{global-env} field.
 * libutils libraries ops::           Library operations.
 @end menu
 
 @c page
 @node libutils libraries typedef
-@subsection @objtype{library} object type
+@subsection @class{library} object type
 
 
 The following bindings are exported by the library @library{vicare
 libraries}.
 
 
+@deftp {Record Type} <library>
+Record type representing Scheme libraries.
+@end deftp
+
+
 @defun library? @var{obj}
-Return @true{} if @var{obj} is an object of type @objtype{library};
+Return @true{} if @var{obj} is an object of type @class{library};
 otherwise return @false{}.
 @end defun
 
 
-@deffn {Accessor for @objtype{library}} library-uid @var{lib}
+@deffn {Accessor for @class{library}} library-uid @var{lib}
 Return a gensym uniquely identifying this interned library; it also
 identifies the corresponding serialised library.  This gensym is
 registered in:
 
 @itemize
 @item
-The @objtype{library} object created by a @value{EXECUTABLE} process at
+The @class{library} object created by a @value{EXECUTABLE} process at
 run--time.
 
 @item
@@ -840,7 +845,7 @@ recompiled.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-name @var{lib}
+@deffn {Accessor for @class{library}} library-name @var{lib}
 A library name as defined by @rnrs{6}; it is the symbolic expression:
 
 @example
@@ -856,31 +861,31 @@ Library name utilities}.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-imp-lib* @var{lib}
-The list of @objtype{library} objects selected by the @clause{import}
+@deffn {Accessor for @class{library}} library-imp-lib* @var{lib}
+The list of @class{library} objects selected by the @clause{import}
 clause in the source code of @var{lib}.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-vis-lib* @var{lib}
-The list of @objtype{library} objects selecting libraries needed by the
+@deffn {Accessor for @class{library}} library-vis-lib* @var{lib}
+The list of @class{library} objects selecting libraries needed by the
 visit code.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-inv-lib* @var{lib}
-The list of @objtype{library} objects selecting libraries needed by the
+@deffn {Accessor for @class{library}} library-inv-lib* @var{lib}
+The list of @class{library} objects selecting libraries needed by the
 invoke code.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
+@deffn {Accessor for @class{library}} library-export-subst @var{lib}
 Return the @code{export-subst} of @var{lib}: an alist representing the
 global bindings exported by the library.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-typed-locs @var{lib}
+@deffn {Accessor for @class{library}} library-typed-locs @var{lib}
 Return an alist having labels as keys and loc gensyms as values.  The
 labels are the ones of the @code{global-env} whose descriptor has type
 @code{global-typed} or @code{global-typed-mutable}.  The loc gensyms are
@@ -890,21 +895,21 @@ gensyms holding the values.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-visit-state @var{lib}
+@deffn {Accessor for @class{library}} library-visit-state @var{lib}
 When set to a procedure: it is the thunk to call to compile and evaluate
 the visit code.  When set to something else: this library has been
 already visited.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-invoke-state @var{lib}
+@deffn {Accessor for @class{library}} library-invoke-state @var{lib}
 When set to a procedure: it is the thunk to call to compile and evaluate
 the invoke code.  When set to something else: this library has been
 already invoked.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-visit-code @var{lib}
+@deffn {Accessor for @class{library}} library-visit-code @var{lib}
 When @var{lib} is created from source code: this field is a core
 language symbolic expression representing the visit code.  When
 @var{lib} is created from a binary file: this field is a thunk to
@@ -912,7 +917,7 @@ evaluate to visit the library.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-invoke-code @var{lib}
+@deffn {Accessor for @class{library}} library-invoke-code @var{lib}
 When @var{lib} is created from source code: this field is a core
 language symbolic expression representing the invoke code.  When
 @var{lib} is created from a binary file: this field is a thunk to
@@ -920,7 +925,7 @@ evaluate to invoke the library.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-guard-code @var{lib}
+@deffn {Accessor for @class{library}} library-guard-code @var{lib}
 When @var{lib} is created from source code: this field is a core
 language symbolic expression representing the guard code.  When
 @var{lib} is created from a binary file: this field is a thunk to
@@ -928,8 +933,8 @@ evaluate to run the @syntax{stale-when} composite test expression.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-guard-lib* @var{lib}
-The list of @objtype{library} objects selecting libraries needed by the
+@deffn {Accessor for @class{library}} library-guard-lib* @var{lib}
+The list of @class{library} objects selecting libraries needed by the
 @syntax{stale-when} composite test expression.
 
 @quotation
@@ -940,7 +945,7 @@ expressions.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-visible? @var{lib}
+@deffn {Accessor for @class{library}} library-visible? @var{lib}
 A boolean determining if the library is visible.  This attribute is used
 by @func{interned-libraries} to select libraries to report as interned.
 
@@ -950,18 +955,18 @@ client code in ``normal'' use; unsafe libraries in the hierarchy
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-source-file-name @var{lib}
+@deffn {Accessor for @class{library}} library-source-file-name @var{lib}
 The boolean @false{} or a string representing the pathname of the file
 from which the source code of the library was read.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-option* @var{lib}
+@deffn {Accessor for @class{library}} library-option* @var{lib}
 A list of symbolic expressions holding library options.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-foreign-library* @var{lib}
+@deffn {Accessor for @class{library}} library-foreign-library* @var{lib}
 A list of strings each representing the identifier of a foreign library
 that must be dynamically loaded for this @var{lib} object.  These
 libraries are the ones especially written to interface @value{PRJNAME}
@@ -970,21 +975,21 @@ with platform--specific services.
 
 
 @defun library-loaded-from-source-file? @var{lib}
-The argument @var{lib} must be a @objtype{library} object.  Return
+The argument @var{lib} must be a @class{library} object.  Return
 @true{} if @var{lib} was loaded from a source file; otherwise return
 @false{}.
 @end defun
 
 
 @defun library-loaded-from-binary-file? @var{lib}
-The argument @var{lib} must be a @objtype{library} object.  Return
+The argument @var{lib} must be a @class{library} object.  Return
 @true{} if @var{lib} was loaded from a binary file; otherwise return
 @false{}.
 @end defun
 
 
 @defun library-descriptor @var{lib}
-Given a @objtype{library} object return an object representing the
+Given a @class{library} object return an object representing the
 library descriptor.  Library descriptors are uniquely associated to a
 compiled library.
 @end defun
@@ -1007,7 +1012,7 @@ Given a library descriptor object return the @rnrs{6} library name.
 
 @c ------------------------------------------------------------------------
 
-As example of @objtype{library} fields, expanding the library:
+As example of @class{library} fields, expanding the library:
 
 @lisp
 (library (ciao)
@@ -1099,8 +1104,8 @@ the @code{guard-code} is:
 @subsection The @code{global-env} field
 
 
-@deffn {Accessor for @objtype{library}} library-global-env @var{lib}
-Return the lexical environment exported by the @objtype{library} object
+@deffn {Accessor for @class{library}} library-global-env @var{lib}
+Return the lexical environment exported by the @class{library} object
 @var{lib}.
 @end deffn
 
@@ -1341,7 +1346,7 @@ libraries}.
 
 
 @defun invoke-library @var{lib}
-Evaluate the invoke code of the @objtype{library} object @var{lib} and
+Evaluate the invoke code of the @class{library} object @var{lib} and
 all its dependency libraries.  When successful: return @var{lib} itself;
 otherwise raise an exception.  If we apply this function to @var{lib}
 multiple times: the code is evaluated only the first time; subsequent
@@ -1350,7 +1355,7 @@ applications do nothing.
 
 
 @defun visit-library @var{lib}
-Evaluate the visit code of the @objtype{library} object @var{lib} and
+Evaluate the visit code of the @class{library} object @var{lib} and
 all its dependency libraries When successful: return @var{lib} itself;
 otherwise raise an exception.  If we apply this function to @var{lib}
 multiple times: the code is evaluated only the first time; subsequent
@@ -1379,7 +1384,7 @@ libraries}.
 
 @defun interned-libraries
 @defunx interned-libraries @var{all?}
-Return a list of @objtype{library} objects representing interned
+Return a list of @class{library} objects representing interned
 libraries.  If @var{all?}  is non--false: return all the interned
 libraries, else return only the visible ones.
 @end defun
@@ -1388,7 +1393,7 @@ libraries, else return only the visible ones.
 @defun find-library-by-name @var{libname}
 Given a @rnrs{6} library name: try to search and intern the
 corresponding library, if it is not already interned; when successful
-return the corresponding @objtype{library} object, otherwise raise an
+return the corresponding @class{library} object, otherwise raise an
 exception.
 
 First search for the library among the interned ones then, if not found,
@@ -1400,7 +1405,7 @@ the parameter @func{current-library-loader}.
 @defun find-library-by-reference @var{libref}
 Given a @rnrs{6} library reference: try to search and intern the
 corresponding library, if it is not already interned; when successful
-return the corresponding @objtype{library} object, otherwise raise an
+return the corresponding @class{library} object, otherwise raise an
 exception.
 
 First search for the library among the interned ones then, if not found,
@@ -1414,7 +1419,7 @@ Given a library descriptor, as generated by the function
 @func{library-descriptor} (@pxref{libutils libraries,
 library-descriptor}): try to search and intern the corresponding
 library, if it is not already interned; when successful return the
-corresponding @objtype{library} object, otherwise raise an exception.
+corresponding @class{library} object, otherwise raise an exception.
 
 First search for the library among the interned ones then, if not found,
 in an external libraries repository using the procedure referenced by
@@ -1428,14 +1433,14 @@ which @var{pred} returns non--false.  If @var{pred} returns @false{} for
 all the interned libraries: return @false{}.
 
 @var{pred} must be a function accepting as single argument a
-@objtype{library} object.
+@class{library} object.
 @end defun
 
 
 @defun find-library-in-collection-by-name @var{libname}
 Given a symbolic expression representing a @rnrs{6} library name: visit
 the collection of interned libraries and return the first
-@objtype{library} object having conforming library name identifiers.  If
+@class{library} object having conforming library name identifiers.  If
 no matching library is found: return @false{}.
 @end defun
 
@@ -1443,7 +1448,7 @@ no matching library is found: return @false{}.
 @defun find-library-in-collection-by-reference @var{libref}
 Given a symbolic expression representing a @rnrs{6} library reference:
 visit the collection of interned libraries and return the first
-@objtype{library} object having conforming library name identifiers.  If
+@class{library} object having conforming library name identifiers.  If
 no matching library is found: return @false{}.
 @end defun
 
@@ -1451,7 +1456,7 @@ no matching library is found: return @false{}.
 @defun find-library-in-collection-by-descriptor @var{libdescr}
 Given a library descriptor, as generated by the function
 @func{library-descriptor}: visit the collection of interned libraries
-and return the first @objtype{library} object having the same library
+and return the first @class{library} object having the same library
 @uid{}.  If no matching library is found: @strong{raise an exception}.
 @end defun
 
@@ -1486,7 +1491,7 @@ libraries}.
 @defunx expand-library @var{sexp} @var{filename} @var{verify-libname}
 Expand the symbolic expression @var{sexp} and intern the result
 (@pxref{libutils interning}).  When successful: return a
-@objtype{library} object; if an error occurs: raise an exception.
+@class{library} object; if an error occurs: raise an exception.
 
 @var{sexp} must be a symbolic expression @code{(library . ---)}
 representing a @rnrs{6} library form with optional @value{PRJNAME}
@@ -3057,7 +3062,7 @@ another example which loads the installed @library{vicare pregexp}:
 @defun library-dynamic-load-and-intern @var{libref}
 Search for a library whose name matches the library reference
 @var{libref}, intern it and invoke it.  When successful return a
-@objtype{library} object.  If an error occurs: raise an exception.
+@class{library} object.  If an error occurs: raise an exception.
 
 This function makes use of @func{find-library-by-name} to search and
 intern the requested library.
@@ -3065,7 +3070,7 @@ intern the requested library.
 
 
 @defun library-dynamic-retrieve @var{lib} @var{name}
-Search in the @GlobalEnv{} of the @objtype{library} object @var{lib} an
+Search in the @GlobalEnv{} of the @class{library} object @var{lib} an
 exported syntactic binding whose public name is the symbol @var{name}.
 When successful: return the value bound to the syntactic binding.  If an
 error occurs: raise an exception.

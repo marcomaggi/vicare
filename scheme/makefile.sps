@@ -781,6 +781,35 @@
 
 ;;;; core syntactic binding descriptors: built-in condition object types
 
+(define-constant VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '((<library>
+     ($core-record-type-name
+      . (<library>-rtd
+	 <library>-rcd
+	 #f make-library library?
+	 ((uid			. library-uid)
+	  (name			. library-name)
+	  (imp-lib*		. library-imp-lib*)
+	  (vis-lib*		. library-vis-lib*)
+	  (inv-lib*		. library-inv-lib*)
+	  (export-subst		. library-export-subst)
+	  (global-env		. library-global-env)
+	  (typed-locs		. library-typed-locs)
+	  (visit-state		. library-visit-state)
+	  (invoke-state		. library-invoke-state)
+	  (visit-code		. library-visit-code)
+	  (invoke-code		. library-invoke-code)
+	  (guard-code		. library-guard-code)
+	  (guard-lib*		. library-guard-lib*)
+	  (visible?		. library-visible?)
+	  (source-file-name	. library-source-file-name)
+	  (option*		. library-option*)
+	  (foreign-library*	. library-foreign-library*)))))
+    ))
+
+
+;;;; core syntactic binding descriptors: built-in condition object types
+
 (define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '((&condition
      ($core-condition-object-type-name
@@ -1494,6 +1523,7 @@
 
 (define-constant VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS
   (append VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
@@ -4537,6 +4567,12 @@
     (expand-library					$libraries)
     (expand-library->sexp				$libraries)
 
+    ;;These are for internal use in the object-type specification of "<library>".
+    (<library>-rtd)
+    (<library>-rcd)
+    (make-library)
+
+    (<library>						$libraries)
     (library?						$libraries)
     (library-uid					$libraries)
     (library-name					$libraries)

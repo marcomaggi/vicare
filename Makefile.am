@@ -824,6 +824,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-io.sps					\
 	tests/test-vicare-letrec-syntax.sps				\
 	tests/test-vicare-library-utils.sps				\
+	tests/test-vicare-library-object-type.sps			\
 	tests/test-vicare-program-utils.sps				\
 	tests/test-vicare-lists.sps					\
 	tests/test-vicare-log.sps					\
