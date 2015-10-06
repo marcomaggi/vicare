@@ -36,9 +36,14 @@
 		  library?
 		  find-library-by-reference
 		  invoke-library
+		  visit-library
 		  library-export-subst
 		  library-global-env)
-	    libs.))
+	    libs.)
+    (prefix (only (psyntax.lexical-environment)
+		  global-typed-variable-spec?
+		  global-typed-variable-spec.variable-loc)
+	    psyntax.))
 
 
 ;;;; public API
@@ -54,11 +59,23 @@
 	      (cond ((assq (cdr name.label) (libs.library-global-env lib))
 		     => (lambda (label.descr)
 			  (let ((type.loc (cdr label.descr)))
-			    (if (eq? 'global (car type.loc))
-				(symbol-value (cdr type.loc))
-			      (error __who__
-				"attempt to dynamically retrieve a syntactic binding that is not a global variable"
-				public-name label.descr)))))
+			    (case (car type.loc)
+			      ((global)
+			       (symbol-value (cdr type.loc)))
+			      ((global-typed)
+			       ;;We need to visit the  library so that the loc gensym
+			       ;;is initialised.
+			       (libs.visit-library lib)
+			       (let ((gts (symbol-value (cdr type.loc))))
+				 (if (psyntax.global-typed-variable-spec? gts)
+				     (symbol-value (psyntax.global-typed-variable-spec.variable-loc gts))
+				   (assertion-violation __who__
+				     "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
+				     public-name label.descr gts lib))))
+			      (else
+			       (error __who__
+				 "attempt to dynamically retrieve a syntactic binding that is not a global variable"
+				 public-name label.descr))))))
 		    (else
 		     (error __who__ "cannot find label in global-env" name.label)))))
 	(else

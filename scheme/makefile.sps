@@ -4648,6 +4648,10 @@
     (make-lexical-typed-variable-spec)
     (make-global-typed-variable-spec)
 
+    ;;These are only for internal use by the dynamic libraries loader.
+    (global-typed-variable-spec?)
+    (global-typed-variable-spec.variable-loc)
+
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
 
