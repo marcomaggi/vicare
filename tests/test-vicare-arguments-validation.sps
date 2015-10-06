@@ -55,9 +55,7 @@
 (define-syntax catch-expand-time-type-mismatch
   (syntax-rules ()
     ((_ print? . ?body)
-     (guard (E ((internal-body
-		  (import (prefix (vicare expander tag-type-specs) typ.))
-		  (typ.expand-time-type-signature-violation? E))
+     (guard (E ((syntax-violation? E)
 		(when print?
 		  (check-pretty-print (condition-message E)))
 		(syntax->datum (syntax-violation-subform E)))

@@ -44,7 +44,7 @@
 	    (fields a b c  d e f))
 	  (define O
 	    (make-alpha 1 2 3 4 5 6))
-	  (values (O a) (O b) (O c) (O d) (O e) (O f)))
+	  (values (alpha-a O) (alpha-b O) (alpha-c O) (alpha-d O) (alpha-e O) (alpha-f O)))
       (lambda args args))
   => '(1 2 3 4 5 6))
 
