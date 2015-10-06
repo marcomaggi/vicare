@@ -213,7 +213,7 @@
 	  (%process-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run)
 	(define validation*.stx
 	  (if (attributes.safe-formals? attributes.sexp)
-	      (%build-formals-validation-form* standard-formals.stx formals-signature.tags #f #f)
+	      (%build-formals-validation-form* __who__ input-form.stx standard-formals.stx formals-signature.tags #f #f)
 	    '()))
 	(define has-arguments-validators?
 	  (not (null? validation*.stx)))
@@ -249,7 +249,7 @@
 	  (append (cdr ghost*.lex) (car ghost*.lex)))
 	(define validation*.stx
 	  (if (attributes.safe-formals? attributes.sexp)
-	      (%build-formals-validation-form* arg*.id arg*.tag rest.id rest.tag)
+	      (%build-formals-validation-form* __who__ input-form.stx arg*.id arg*.tag rest.id rest.tag)
 	    '()))
 	(define has-arguments-validators?
 	  (not (null? validation*.stx)))
@@ -299,7 +299,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-formals-validation-form* arg* tag* rest-arg rest-tag)
+  (define (%build-formals-validation-form* who input-form.stx arg* tag* rest-arg rest-tag)
     ;;Build  and  return a  list  of  syntax  objects representing  expressions  that
     ;;validate the  arguments, excluding  the formals  in which  the tag  is "<top>",
     ;;whose argument are always valid.  When  there is no rest argument: REST-ARG and
@@ -320,15 +320,27 @@
 	     '())
 	    (else
 	     ;;Build a validation form for the objects in the rest argument.
-	     (if (top-tag-id? rest-tag)
-		 '()
-	       (bless
-		(let ((obj.sym (gensym))
-		      (idx.sym (gensym)))
-		  `((fold-left (lambda (,idx.sym ,obj.sym)
-				 (validate-typed-procedure-argument ,rest-arg ,idx.sym ,obj.sym)
-				 (fxadd1 ,idx.sym))
-		      ,idx ,rest-arg)))))))))
+	     (cond ((top-tag-id? rest-tag)
+		    '())
+		   ((list-tag-id? rest-tag)
+		    ;;Nothing to be done because the rest argument is always a list.
+		    '())
+		   ((type-identifier-super-and-sub? (list-tag-id) rest-tag)
+		    ;;FIXME This must be written  correctly by extracting the type of
+		    ;;the items from REST-TAG type specification.
+		    '()
+		    ;; (bless
+		    ;;  (let ((obj.sym (gensym))
+		    ;; 	   (idx.sym (gensym)))
+		    ;;    `((fold-left (lambda (,idx.sym ,obj.sym)
+		    ;; 		      (validate-typed-procedure-argument ,rest-arg ,idx.sym ,obj.sym)
+		    ;; 		      (fxadd1 ,idx.sym))
+		    ;; 	   ,idx ,rest-arg))))
+		    )
+		   (else
+		    (syntax-violation who
+		      "invalid type for  rest argument, it must be  \"<list>\" or its sub-type"
+		      input-form.stx rest-tag)))))))
 
   (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of
@@ -407,7 +419,6 @@
 ;;mode: vicare
 ;;fill-column: 85
 ;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
-;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;End:

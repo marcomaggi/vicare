@@ -1043,9 +1043,7 @@
        (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
       ((global global-typed)
-       (syntax-violation __module_who__
-	 "attempt to assign a variable that is imported from a library"
-	 input-form.stx lhs.id))
+       (syntax-violation __module_who__ "attempt to assign a variable that is imported from a library" input-form.stx lhs.id))
 
       ((global-macro!)
        ;;The syntactic binding's descriptor DESCR has format:
@@ -1104,10 +1102,12 @@
        (raise-unbound-error __module_who__ input-form.stx lhs.id))
 
       ((displaced-lexical)
-       (syntax-violation __module_who__ "identifier out of context" input-form.stx))
+       (syntax-violation __module_who__
+	 "identifier out of context in assignment syntax" input-form.stx lhs.id))
 
       (else
-       (syntax-violation __module_who__ input-form.stx "syntax error"))))
+       (syntax-violation __module_who__
+	 "invalid left-hand side in assignment syntax" input-form.stx lhs.id))))
 
   #| end of module: CHI-SET |# )
 
@@ -1757,15 +1757,13 @@
   ;;                                lexenv.run)
   ;;
   (define (%process-syntactic-bindings lhs*.id lhs*.tag lexenv)
-    (receive (typed-var*.id typed-var*.tag untyped-var*.id)
+    (receive (typed-var*.id typed-var*.tag typed-var*.lex untyped-var*.id untyped-var*.lex lhs*.lex)
 	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
       ;;Prepare the UNtyped lexical variables.
       (let* ((untyped-var*.lab	(map generate-label-gensym   untyped-var*.id))
-	     (untyped-var*.lex	(map generate-lexical-gensym untyped-var*.id))
 	     (lexenv		(lexenv-add-lexical-var-bindings untyped-var*.lab untyped-var*.lex lexenv)))
 	;;Prepare the typed lexical variables.
 	(let* ((typed-var*.lab	  (map generate-label-gensym   typed-var*.id))
-	       (typed-var*.lex    (map generate-lexical-gensym typed-var*.id))
 	       (typed-var*.descr  (map make-syntactic-binding-descriptor/lexical-typed-var/from-data
 				    typed-var*.tag typed-var*.lex))
 	       (lexenv            (fold-left (lambda (lexenv lab descr)
@@ -1773,34 +1771,49 @@
 				    lexenv typed-var*.lab typed-var*.descr))
 	       (rib               (make-rib/from-identifiers-and-labels (append typed-var*.id  untyped-var*.id)
 									(append typed-var*.lab untyped-var*.lab))))
-	  (values rib lexenv (append typed-var*.lex untyped-var*.lex))))))
+	  ;;Beware of  the order of  the lex gensyms in  the return values!   It must
+	  ;;match the order of the identifiers in LHS*.ID.
+	  (values rib lexenv lhs*.lex)))))
 
   (define (%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
     ;;Partition the  syntactic bindings into typed  and untyped.  Those having  #f or
     ;;"<top>" as tag are untyped.
     ;;
-    (let loop ((lhs*.id		lhs*.id)
-	       (lhs*.tag	lhs*.tag)
-	       (typed-var*.id	'())
-	       (typed-var*.tag	'())
-	       (untyped-var*.id	'()))
+    (let loop ((lhs*.id			lhs*.id)
+	       (lhs*.tag		lhs*.tag)
+	       (typed-var*.id		'())
+	       (typed-var*.tag		'())
+	       (typed-var*.lex		'())
+	       (untyped-var*.id		'())
+	       (untyped-var*.lex	'())
+	       (lhs*.lex		'()))
       (if (pair? lhs*.id)
 	  (let ((lhs.id  (car lhs*.id))
 		(lhs.tag (car lhs*.tag)))
 	    (if (and lhs.tag (not (top-tag-id? lhs.tag)))
 		;;Add a typed lexical variable.
+		(let ((lhs.lex (generate-label-gensym lhs.id)))
+		  (loop (cdr lhs*.id)
+			(cdr lhs*.tag)
+			(cons lhs.id  typed-var*.id)
+			(cons lhs.tag typed-var*.tag)
+			(cons lhs.lex typed-var*.lex)
+			untyped-var*.id
+			untyped-var*.lex
+			(cons lhs.lex lhs*.lex)))
+	      ;;Add an UNtyped lexical variable.
+	      (let ((lhs.lex (generate-label-gensym lhs.id)))
 		(loop (cdr lhs*.id)
 		      (cdr lhs*.tag)
-		      (cons lhs.id  typed-var*.id)
-		      (cons lhs.tag typed-var*.tag)
-		      untyped-var*.id)
-	      ;;Add an UNtyped lexical variable.
-	      (loop (cdr lhs*.id)
-		    (cdr lhs*.tag)
-		    typed-var*.id
-		    typed-var*.tag
-		    (cons lhs.id untyped-var*.id))))
-	(values (reverse typed-var*.id) (reverse typed-var*.tag) (reverse untyped-var*.id)))))
+		      typed-var*.id
+		      typed-var*.tag
+		      typed-var*.lex
+		      (cons lhs.id  untyped-var*.id)
+		      (cons lhs.lex untyped-var*.lex)
+		      (cons lhs.lex lhs*.lex)))))
+	(values (reverse typed-var*.id) (reverse typed-var*.tag) (reverse typed-var*.lex)
+		(reverse untyped-var*.id) (reverse untyped-var*.lex)
+		(reverse lhs*.lex)))))
 
   #| end of module |# )
 
@@ -1824,7 +1837,6 @@
 ;;Local Variables:
 ;;fill-column: 85
 ;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
-;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)

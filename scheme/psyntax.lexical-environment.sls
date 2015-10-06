@@ -2694,7 +2694,7 @@
 	 make-macro-use-input-form-condition
 	 raise-compound-condition-object)
 
-  (case-define syntax-violation
+  (case-define* syntax-violation
     ;;Defined by R6RS.  WHO must be false or a string or a symbol.  MESSAGE must be a
     ;;string.  FORM  must be a  syntax object  or a datum  value.  SUBFORM must  be a
     ;;syntax object or a datum value.
@@ -2727,9 +2727,9 @@
     ;;  of its fields.  If SUBFORM is not provided, the value of the subform field is
     ;;  false.
     ;;
-    ((who msg form)
+    ((who {msg string?} form)
      (syntax-violation who msg form #f))
-    ((who msg form subform)
+    ((who {msg string?} form subform)
      (raise-compound-condition-object who msg form (make-syntax-violation form subform))))
 
   (define* (expand-time-retvals-signature-violation source-who form subform

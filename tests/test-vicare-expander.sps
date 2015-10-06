@@ -58,6 +58,7 @@
 #!vicare
 (import (vicare)
   (vicare language-extensions callables)
+  (prefix (vicare expander) expander.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -716,28 +717,28 @@
 (parametrise ((check-test-name	'define-inline))
 
   (check
-      (let ()
-	(define-inline (ciao a b)
-	  (+ a b))
-	(ciao 1 2))
+      (internal-body
+  	(define-inline (ciao a b)
+  	  (+ a b))
+  	(ciao 1 2))
     => 3)
 
   (check
-      (let ()
-	(define-inline (ciao)
-	  (+ 1 2))
-	(ciao))
+      (internal-body
+  	(define-inline (ciao)
+  	  (+ 1 2))
+  	(ciao))
     => 3)
 
   (check
-      (let ()
-	(define-inline (ciao . rest)
-	  (apply + rest))
-	(ciao 1 2))
+      (internal-body
+  	(define-inline (ciao . rest)
+  	  (apply + rest))
+  	(ciao 1 2))
     => 3)
 
   (check
-      (let ()
+      (internal-body
 	(define-inline (ciao a . rest)
 	  (apply + a rest))
 	(ciao 1 2))
@@ -5876,7 +5877,7 @@
     (char->fixnum (string-ref str idx)))
 
   (begin-for-syntax
-    (set-identifier-unsafe-variant! #'string-ref-fx #'~string-ref-fx))
+    (expander.typed-procedure-variable.unsafe-variant-set! #'string-ref-fx #'~string-ref-fx))
 
 ;;; --------------------------------------------------------------------
 
@@ -5885,10 +5886,10 @@
 	(apply string-ref-fx "ciao" 1 '()))
     => `(,(char->fixnum #\i) (safe)))
 
-  (check	;substitution performed by the expander
+  (check
       (with-result
 	(string-ref-fx "ciao" 1))
-    => `(,(char->fixnum #\i) (unsafe)))
+    => `(,(char->fixnum #\i) (safe)))
 
   (check
       (with-result

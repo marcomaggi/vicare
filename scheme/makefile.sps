@@ -3862,8 +3862,8 @@
     (predicate-return-value-validation		v $language)
 ;;;
     (unsafe						v $language)
-    (typed-procedure-variable.unsafe-variant		v $language)
-    (typed-procedure-variable.unsafe-variant-set!	v $language)
+    (typed-procedure-variable.unsafe-variant		$expander)
+    (typed-procedure-variable.unsafe-variant-set!	$expander)
 ;;;
     (eval-for-expand				v $language)
     (begin-for-syntax				v $language)
