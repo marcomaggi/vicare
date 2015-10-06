@@ -67,7 +67,7 @@
 
   (check-for-procedure-argument-violation
       (comparator-comparison-procedure? 123)
-    => '(comparator (123)))
+    => '(comparator-comparison-procedure? (123)))
 
   (check-for-true (comparator-comparison-procedure? default-comparator))
 
@@ -94,7 +94,7 @@
 
   (check-for-procedure-argument-violation
       (comparator-hash-function? 123)
-    => '(comparator (123)))
+    => '(comparator-hash-function? (123)))
 
   (check-for-true (comparator-hash-function? default-comparator))
 

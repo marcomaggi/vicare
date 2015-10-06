@@ -321,6 +321,7 @@
 ;;;; definition of comparator records with accessors and basic comparator
 
 (define-record-type comparator
+  (nongenerative vicare:containers:comparator)
   (fields (immutable type-test		comparator-type-test-procedure)
 	  (immutable equality		comparator-equality-predicate)
 	  (immutable comparison		comparator-comparison-procedure)
