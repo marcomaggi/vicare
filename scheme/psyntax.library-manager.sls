@@ -28,9 +28,9 @@
     library-uid				library-name
     library-imp-lib*			library-vis-lib*
     library-inv-lib*			library-export-subst
-    library-global-env			library-visit-state
-    library-invoke-state		library-visit-code
-    library-invoke-code			library-guard-code
+    library-global-env			library-typed-locs
+    library-visit-state			library-invoke-state
+    library-visit-code			library-invoke-code			library-guard-code
     library-guard-lib*			library-visible?
     library-source-file-name		library-option*
     library-foreign-library*
@@ -110,6 +110,10 @@
    (immutable global-env)
 		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
 		;library body.
+   (immutable typed-locs)
+		;Alist   mapping  label   gensyms  of   whose  descriptor   has  type
+		;"global-typed" or  "global-typed-mutable" to the loc  gensyms of the
+		;actual variables.
    (mutable visit-state	library-visit-state library.visit-state-set!)
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the visit  code.  When set to something  else: this library

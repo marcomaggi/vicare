@@ -4545,6 +4545,7 @@
     (library-inv-lib*					$libraries)
     (library-export-subst				$libraries)
     (library-global-env					$libraries)
+    (library-typed-locs					$libraries)
     (library-visit-state				$libraries)
     (library-invoke-state				$libraries)
     (library-visit-code					$libraries)
@@ -5908,6 +5909,7 @@
 			'()					  ;inv-lib*
 			',subst					  ;export-subst
 			',env					  ;global-env
+			'()					  ;typed-locs
 			void					  ;visit-state
 			void					  ;invoke-state
 			'#f					  ;visit-code

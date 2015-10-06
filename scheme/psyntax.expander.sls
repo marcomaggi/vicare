@@ -338,7 +338,7 @@
   ;;
   ;;To serialise a compiled program: we serialise the RUN-THUNK closure object.
   ;;
-  (receive (invoke-lib* invoke-code visit-env export-subst global-env option* foreign-library*)
+  (receive (invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)
       (expand-top-level-program expr*)
     (lambda ()
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
@@ -371,13 +371,13 @@
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
-	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env)
+	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (let ((option* (%parse-program-options option*))
 		  (mixed-definitions-and-expressions? #t))
 	      (import CORE-BODY-EXPANDER)
 	      (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
 				  %verbose-messages-thunk))
-	  (values invoke-lib* invoke-code visit-env export-subst global-env option* foreign-library*)))))
+	  (values invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
     (when (option.typed-language?)
@@ -463,13 +463,14 @@
   #| end of module: EXPAND-TOP-LEVEL-PROGRAM |# )
 
 (define (expand-top-level-program->sexp sexp)
-  (receive (invoke-lib* invoke-code visit-env export-subst global-env option* foreign-library*)
+  (receive (invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)
       (expand-top-level-program sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
       (visit-code	. ,(build-visit-code-from-visit-env visit-env option*))
       (export-subst	. ,export-subst)
       (global-env	. ,global-env)
+      (typed-locs	. ,typed-locs)
       (option*		. ,option*)
       (foreign-library* . ,foreign-library*))))
 
@@ -506,7 +507,7 @@
    (receive (libname
 	     import-lib* invoke-lib* visit-lib*
 	     invoke-code visit-env
-	     export-subst global-env
+	     export-subst global-env typed-locs
 	     guard-code guard-lib*
 	     option* foreign-library*)
        (parametrise ((libman.source-code-location (or filename (libman.source-code-location))))
@@ -531,7 +532,7 @@
        (libman.intern-library
 	(libman.make-library uid libname
 			     import-lib* visit-lib* invoke-lib*
-			     export-subst global-env
+			     export-subst global-env typed-locs
 			     visit-proc invoke-proc
 			     visit-code invoke-code
 			     guard-code guard-lib*
@@ -549,6 +550,7 @@
       (visit-code	. ,(libman.library-visit-code        lib))
       (export-subst	. ,(libman.library-export-subst      lib))
       (global-env	. ,(libman.library-global-env        lib))
+      (typed-locs	. ,(libman.library-typed-locs        lib))
       (guard-code	. ,(libman.library-guard-code        lib))
       (guard-libdesc*	. ,(map libman.library-descriptor    (libman.library-guard-lib* lib)))
       (option*		. ,(libman.library-option*           lib))
@@ -582,7 +584,7 @@
 	     (foreign-library*	(%parse-foreign-library* foreign-library*))
 	     (stale-clt		(%make-stale-collector)))
 	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
-	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env)
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
 		(import CORE-BODY-EXPANDER)
@@ -594,7 +596,8 @@
 	    (values libname.sexp
 		    import-lib* invoke-lib* visit-lib*
 		    invoke-code visit-env export-subst
-		    global-env guard-code guard-lib*
+		    global-env typed-locs
+		    guard-code guard-lib*
 		    option* foreign-library*))))))
 
   (define (%make-verbose-messages-thunk libname.sexp)
@@ -843,6 +846,11 @@
   ;;       (lab.var2 global       . loc.lex.var2)
   ;;       (lab.mac  global-macro . loc.lab.mac))
   ;;
+  ;;8.   TYPED-LOCS is  an alist  mapping label  gensyms to  loc gensyms.   The label
+  ;;gensyms   are  the   ones  of   the  "global-typed"   and  "global-typed-mutable"
+  ;;descriptors.   The loc  gensyms  are  the ones  actually  holding the  variable's
+  ;;values.
+  ;;
   (define-constant __module_who__ 'core-body-expander)
   (define (core-body-expander export-spec* import-spec* option* body-sexp* mixed-definitions-and-expressions?
 			      verbose-messages-thunk)
@@ -897,8 +905,8 @@
 		     (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
 		     (loc*          (map generate-qrhs-loc qrhs*))
 		     (export-subst  (%make-export-subst export-name* export-id*)))
-		(receive (global-env visit-env)
-		    (%make-global-env/visit-env lex* loc* lexenv.run)
+		(receive (global-env visit-env typed-locs)
+		    (%make-global-env/visit-env/typed-locs lex* loc* lexenv.run)
 		  (%validate-exports export-spec* export-subst global-env lexenv.run)
 		  (let ((invoke-code (build-with-compilation-options option*
 				       (build-library-letrec* no-source
@@ -909,7 +917,7 @@
 					   (build-sequence no-source
 					     (map psi.core-expr init*.psi)))))))
 		    (values (itc) (rtc) (vtc)
-			    invoke-code visit-env export-subst global-env))))))))))
+			    invoke-code visit-env export-subst global-env typed-locs))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -1024,7 +1032,7 @@
 	       (syntax-violation #f "cannot export unbound identifier" export-id))))
       export-name* export-id*))
 
-  (define* (%make-global-env/visit-env lex* loc* lexenv.run)
+  (define* (%make-global-env/visit-env/typed-locs lex* loc* lexenv.run)
     ;;For each entry  in LEXENV.RUN: convert the LEXENV entry  to a GLOBAL-ENV entry,
     ;;accumulating GLOBAL-ENV;  if the  syntactic binding is  a macro  or expand-time
     ;;value: accumulate the VISIT-ENV alist.
@@ -1039,7 +1047,8 @@
     ;;
     (let loop ((lexenv.run	lexenv.run)
 	       (global-env	'())
-	       (visit-env	'()))
+	       (visit-env	'())
+	       (typed-locs	'()))
       (if (pair? lexenv.run)
 	  (let* ((entry		(car lexenv.run))
 		 (label		(lexenv-entry.label entry))
@@ -1085,7 +1094,8 @@
 			       'global)))
 		 (loop (cdr lexenv.run)
 		       (cons (make-global-env-entry label type loc) global-env)
-		       visit-env)))
+		       visit-env
+		       typed-locs)))
 
 	      ((lexical-typed)
 	       ;;This syntactic  binding represents  a typed lexical  variable.  This
@@ -1138,7 +1148,8 @@
 		     (make-global-typed-variable-spec-and-maker-core-expr lts variable-loc)
 		   (loop (cdr lexenv.run)
 			 (cons (make-global-env-entry label type loc) global-env)
-			 (cons (make-visit-env-entry loc gts gts-maker-core-expr) visit-env)))))
+			 (cons (make-visit-env-entry loc gts gts-maker-core-expr) visit-env)
+			 (cons (cons label variable-loc) typed-locs)))))
 
 	      ((local-macro)
 	       ;;When we  define a syntactic  binding representing a  keyword binding
@@ -1163,7 +1174,8 @@
 		     (expanded-expr	(cdr descr.value)))
 		 (loop (cdr lexenv.run)
 		       (cons (make-global-env-entry label 'global-macro loc)      global-env)
-		       (cons (make-visit-env-entry loc transformer expanded-expr) visit-env))))
+		       (cons (make-visit-env-entry loc transformer expanded-expr) visit-env)
+		       typed-locs)))
 
 	      ((local-macro!)
 	       ;;When we  define a syntactic  binding representing a  keyword binding
@@ -1188,7 +1200,8 @@
 		     (expanded-expr	(cdr descr.value)))
 		 (loop (cdr lexenv.run)
 		       (cons (make-global-env-entry label 'global-macro! loc)     global-env)
-		       (cons (make-visit-env-entry loc transformer expanded-expr) visit-env))))
+		       (cons (make-visit-env-entry loc transformer expanded-expr) visit-env)
+		       typed-locs)))
 
 	      ((local-etv)
 	       ;;When we define  a syntactic binding for an  expand-time value (ETV):
@@ -1212,7 +1225,8 @@
 		     (expanded-expr	(cdr descr.value)))
 		 (loop (cdr lexenv.run)
 		       (cons (make-global-env-entry label 'global-etv loc)   global-env)
-		       (cons (make-visit-env-entry loc object expanded-expr) visit-env))))
+		       (cons (make-visit-env-entry loc object expanded-expr) visit-env)
+		       typed-locs)))
 
 	      ((local-object-type-name)
 	       ;;When we define a syntactic binding for an object-type specification:
@@ -1248,7 +1262,7 @@
 		   (let ((hard-coded-sexp (cdr descr.value)))
 		     (loop (cdr lexenv.run)
 			   (cons (make-global-env-entry label '$core-scheme-type-name hard-coded-sexp) global-env)
-			   visit-env)))
+			   visit-env typed-locs)))
 		  ((core-condition-type-spec? ots)
 		   ;;Here we  know that  the syntactic  binding's descriptor  has the
 		   ;;format:
@@ -1263,7 +1277,7 @@
 		   (let ((hard-coded-sexp (cdr descr.value)))
 		     (loop (cdr lexenv.run)
 			   (cons (make-global-env-entry label '$core-condition-object-type-name hard-coded-sexp) global-env)
-			   visit-env)))
+			   visit-env typed-locs)))
 		  ((core-record-type-spec? ots)
 		   ;;Here we  know that  the syntactic  binding's descriptor  has the
 		   ;;format:
@@ -1282,7 +1296,7 @@
 					     '$core-record-type-name)))
 		     (loop (cdr lexenv.run)
 			   (cons (make-global-env-entry label type hard-coded-sexp) global-env)
-			   visit-env)))
+			   visit-env typed-locs)))
 		  (else
 		   ;;This case  is for everything else:  struct-type names, syntactic
 		   ;;record-type  names, custom  object-type  names,  et cetera.   We
@@ -1299,7 +1313,8 @@
 		   (let ((loc (generate-storage-location-gensym label)))
 		     (loop (cdr lexenv.run)
 			   (cons (make-global-env-entry label 'global-object-type-name loc) global-env)
-			   (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)))))))
+			   (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)
+			   typed-locs))))))
 
 	      (($core-scheme-type-name
 		$core-rtd $core-record-type-name $core-condition-object-type-name
@@ -1317,7 +1332,7 @@
 	       ;;just copying the LEXENV entry.
 	       (loop (cdr lexenv.run)
 		     (cons entry global-env)
-		     visit-env))
+		     visit-env typed-locs))
 
 	      ((begin-for-syntax)
 	       ;;This entry is the result of expanding BEGIN-FOR-SYNTAX macro use; we
@@ -1333,13 +1348,14 @@
 	       ;;
 	       (loop (cdr lexenv.run)
 		     global-env
-		     (cons (cons #f descr.value) visit-env)))
+		     (cons (cons #f descr.value) visit-env)
+		     typed-locs))
 
 	      (else
 	       (assertion-violation/internal-error 'core-body-expander
 		 "unknown or unexportable syntactic binding"
 		 descr))))
-	(values global-env visit-env))))
+	(values global-env visit-env typed-locs))))
 
   (define (%validate-exports export-spec* export-subst global-env lexenv.run)
     ;;We want to forbid code like the following:

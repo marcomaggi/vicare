@@ -38,12 +38,9 @@
 		  invoke-library
 		  visit-library
 		  library-export-subst
-		  library-global-env)
-	    libs.)
-    (prefix (only (psyntax.lexical-environment)
-		  global-typed-variable-spec?
-		  global-typed-variable-spec.variable-loc)
-	    psyntax.))
+		  library-global-env
+		  library-typed-locs)
+	    libs.))
 
 
 ;;;; public API
@@ -56,30 +53,28 @@
 (define* (library-dynamic-retrieve {lib libs.library?} {public-name symbol?})
   (cond ((assq public-name (libs.library-export-subst lib))
 	 => (lambda (name.label)
-	      (cond ((assq (cdr name.label) (libs.library-global-env lib))
+	      (define label (cdr name.label))
+	      (cond ((assq label (libs.library-global-env lib))
 		     => (lambda (label.descr)
 			  (let ((type.loc (cdr label.descr)))
 			    (case (car type.loc)
 			      ((global)
 			       (symbol-value (cdr type.loc)))
 			      ((global-typed)
-			       ;;We need to visit the  library so that the loc gensym
-			       ;;is initialised.
-			       (libs.visit-library lib)
-			       (let ((gts (symbol-value (cdr type.loc))))
-				 (if (psyntax.global-typed-variable-spec? gts)
-				     (symbol-value (psyntax.global-typed-variable-spec.variable-loc gts))
-				   (assertion-violation __who__
-				     "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
-				     public-name label.descr gts lib))))
+			       (cond ((assq label (libs.library-typed-locs lib))
+				      => (lambda (label.loc)
+					   (symbol-value (cdr label.loc))))
+				     (else
+				      (error __who__
+					"missing label from library's typed-locs" public-name label.descr lib))))
 			      (else
 			       (error __who__
 				 "attempt to dynamically retrieve a syntactic binding that is not a global variable"
-				 public-name label.descr))))))
+				 public-name label.descr lib))))))
 		    (else
-		     (error __who__ "cannot find label in global-env" name.label)))))
+		     (error __who__ "cannot find label in global-env" name.label lib)))))
 	(else
-	 (error __who__ "cannot find name symbol in export-subst" public-name))))
+	 (error __who__ "cannot find name symbol in export-subst" public-name lib))))
 
 
 ;;;; done

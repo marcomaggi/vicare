@@ -880,6 +880,16 @@ global bindings exported by the library.
 @end deffn
 
 
+@deffn {Accessor for @objtype{library}} library-typed-locs @var{lib}
+Return an alist having labels as keys and loc gensyms as values.  The
+labels are the ones of the @code{global-env} whose descriptor has type
+@code{global-typed} or @code{global-typed-mutable}.  The loc gensyms are
+the ones of the variables actually holding the typed values.  This alist
+allows to map the public name of global typed variables to the loc
+gensyms holding the values.
+@end deffn
+
+
 @deffn {Accessor for @objtype{library}} library-visit-state @var{lib}
 When set to a procedure: it is the thunk to call to compile and evaluate
 the visit code.  When set to something else: this library has been

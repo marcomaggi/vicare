@@ -1048,6 +1048,8 @@
 		;An  alist  label/descriptor  representing  the  top-level  synatctic
 		;bindings defined by this library.  This field is equal to the one of
 		;"library" objects.
+   typed-locs
+		;An alist mapping labels to loc gensyms for global typed variables.
    visit-proc
 		;A thunk to call to evaluate the visit code.
    invoke-proc
@@ -1084,6 +1086,7 @@
    (map libman.library-descriptor (libman.library-inv-lib* lib)) ;invoke-libdesc*
    (libman.library-export-subst lib)
    (libman.library-global-env   lib)
+   (libman.library-typed-locs   lib)
    (compiler.compile-core-expr-to-thunk (libman.library-visit-code  lib)) ;visit-proc
    (compiler.compile-core-expr-to-thunk (libman.library-invoke-code lib)) ;invoke-proc
    (compiler.compile-core-expr-to-thunk (libman.library-guard-code  lib)) ;guard-proc
@@ -1159,6 +1162,7 @@
 	       (map %library-descriptor->library-object (serialised-library-invoke-libdesc* slib))
 	       (serialised-library-export-subst slib)
 	       (serialised-library-global-env   slib)
+	       (serialised-library-typed-locs   slib)
 	       (serialised-library-visit-proc   slib)
 	       (serialised-library-invoke-proc  slib)
 	       #f		  ;visit-code
