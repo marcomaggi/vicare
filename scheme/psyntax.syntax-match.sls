@@ -23,8 +23,7 @@
   (export
     syntax-match
     convert-pattern
-    ellipsis? underscore?
-    %verify-literals
+    verify-syntax-case-literals
     ellipsis-map
     syntax-dispatch
 
@@ -194,7 +193,7 @@
 	   ;;   each-any
 	   ;;
 	   ((?pattern ?dots)
-	    (%ellipsis? (sys.syntax ?dots))
+	    (%sys.ellipsis? (sys.syntax ?dots))
 	    (receive (pattern^ pattern-vars^)
 		(%convert-single-pattern (sys.syntax ?pattern) literals
 					 (+ nesting-level 1) pattern-vars)
@@ -208,7 +207,7 @@
 	   ;;  #(each+ ?pattern-ellipsis (?pattern-following ...) . ?tail-pattern)
 	   ;;
 	   ((?pattern-x ?dots ?pattern-y ... . ?pattern-z)
-	    (%ellipsis? (sys.syntax ?dots))
+	    (%sys.ellipsis? (sys.syntax ?dots))
 	    (let*-values
 		(((pattern-z pattern-vars)
 		  (%convert-single-pattern (sys.syntax ?pattern-z) literals
@@ -280,7 +279,7 @@
 	     (or (sys.bound-identifier=? id (car list-of-ids))
 		 (%bound-identifier-member? id (cdr list-of-ids)))))
 
-      (define (%ellipsis? x)
+      (define (%sys.ellipsis? x)
 	(and (sys.identifier? x)
 	     (sys.free-identifier=? x (sys.syntax (... ...)))))
 
@@ -350,7 +349,7 @@
 				 pvars.levels)))))
 
       ((p dots)
-       (ellipsis? dots)
+       (ellipsis-id? dots)
        (receive (p pvars.levels)
 	   (%convert p (+ ellipsis-nesting-level 1) pvars.levels)
 	 (values (if (eq? p 'any)
@@ -359,7 +358,7 @@
 		 pvars.levels)))
 
       ((x dots ys ... . z)
-       (ellipsis? dots)
+       (ellipsis-id? dots)
        (receive (z pvars.levels)
 	   (%convert z ellipsis-nesting-level pvars.levels)
 	 (receive (ys pvars.levels)
@@ -392,36 +391,21 @@
   (%convert pattern-stx 0 '()))
 
 
-(module (ellipsis? underscore?)
-
-  (define (ellipsis? x)
-    (%free-identifier-and-symbol? x '...))
-
-  (define (underscore? x)
-    (%free-identifier-and-symbol? x '_))
-
-  (define (%free-identifier-and-symbol? x sym)
-    (and (identifier? x)
-	 (~free-identifier=? x (scheme-stx sym))))
-
-  #| end of module |# )
-
-(define (%verify-literals literals use-stx)
-  ;;Verify that  identifiers selected as literals  are: identifiers, not
-  ;;ellipsisi, not usderscore.  If successful: return true, else raise a
-  ;;syntax violation
+(define (verify-syntax-case-literals who input-form.stx literal*)
+  ;;Verify that  identifiers selected as literals  in uses of the  macros SYNTAX-CASE
+  ;;and SYNTAX-RULES are: identifiers, not  ellipsis, not underscore.  If successful:
+  ;;return true, else raise a syntax violation
   ;;
-  ;;LITERALS is  a list  of literals  from SYNTAX-CASE  or SYNTAX-RULES.
-  ;;USE-STX  is a  syntax  object  representing the  full  macro use  of
-  ;;SYNTAX-CASE or SYNTAX-RULES:  it is used here  for descriptive error
-  ;;reporting.
+  ;;LITERAL* is a list of  literals from SYNTAX-CASE or SYNTAX-RULES.  INPUT-FORM.STX
+  ;;is  a  syntax   object  representing  the  full  macro  use   of  SYNTAX-CASE  or
+  ;;SYNTAX-RULES: it is used here for descriptive error reporting.
   ;;
   (for-each (lambda (x)
 	      (when (or (not (identifier? x))
-			(ellipsis? x)
-			(underscore? x))
-		(syntax-violation #f "invalid literal" use-stx x)))
-    literals)
+			(ellipsis-id? x)
+			(underscore-id? x))
+		(syntax-violation who "invalid literal" input-form.stx x)))
+    literal*)
   #t)
 
 

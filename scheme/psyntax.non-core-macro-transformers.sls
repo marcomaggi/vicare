@@ -1229,17 +1229,17 @@
 
 ;;;; non-core macro: SYNTAX-RULES, DEFINE-SYNTAX-RULE
 
-(define (syntax-rules-macro expr-stx)
-  ;;Transformer function  used to  expand R6RS SYNTAX-RULES  macros from
-  ;;the  top-level  built  in  environment.   Process  the  contents  of
-  ;;EXPR-STX; return a syntax object that needs to be further expanded.
+(define (syntax-rules-macro input-form.stx)
+  ;;Transformer function used  to expand R6RS SYNTAX-RULES macros  from the top-level
+  ;;built in  environment.  Process the  contents of INPUT-FORM.STX; return  a syntax
+  ;;object that needs to be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ (?literal* ...)
 	(?pattern* ?template*)
 	...)
      (begin
-       (%verify-literals ?literal* expr-stx)
+       (verify-syntax-case-literals 'syntax-rules input-form.stx ?literal*)
        (bless
 	`(internal-lambda (unsafe) (x)
 	   (syntax-case x ,?literal*
@@ -1249,16 +1249,15 @@
 			 `((g . ,??rest)
 			   (syntax ,template)))
 			(_
-			 (syntax-violation #f "invalid syntax-rules pattern" expr-stx pattern))))
+			 (syntax-violation #f "invalid syntax-rules pattern" input-form.stx pattern))))
 		 ?pattern* ?template*))))))))
 
-(define (define-syntax-rule-macro expr-stx)
-  ;;Transformer  function  used  to expand  Vicare's  DEFINE-SYNTAX-RULE
-  ;;macros  from  the  top-level  built  in  environment.   Process  the
-  ;;contents  of EXPR-STX;  return  a  syntax object  that  needs to  be
-  ;;further expanded.
+(define (define-syntax-rule-macro input-form.stx)
+  ;;Transformer function used  to expand Vicare's DEFINE-SYNTAX-RULE  macros from the
+  ;;top-level built in environment.  Process the contents of INPUT-FORM.STX; return a
+  ;;syntax object that needs to be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ (?name ?arg* ... . ?rest) ?body0 ?body* ...)
      (identifier? ?name)
      (bless

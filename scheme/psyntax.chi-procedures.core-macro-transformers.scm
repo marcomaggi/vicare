@@ -659,7 +659,7 @@
     (syntax-match input-form.stx ()
       ((_ ?template)
        (receive (intermediate-sexp maps)
-	   (%gen-syntax input-form.stx ?template lexenv.run '() ellipsis? #f)
+	   (%gen-syntax input-form.stx ?template lexenv.run '() ellipsis-id? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
 	   (make-psi input-form.stx code))))
@@ -667,7 +667,7 @@
 
   (define-module-who syntax)
 
-  (define (%gen-syntax input-form.stx template-stx lexenv maps ellipsis? vec?)
+  (define (%gen-syntax input-form.stx template-stx lexenv maps ellipsis-id? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
     ;;INPUT-FORM.STX must be the syntax object  containing the original SYNTAX macro use; it
@@ -692,7 +692,7 @@
     ;;the inner ?A is  mapped to a gensym which is used to  generate a binding in the
     ;;output code.
     ;;
-    ;;ELLIPSIS?  must be  a predicate  function returning  true when  applied to  the
+    ;;ELLIPSIS-ID?  must be  a predicate  function returning  true when  applied to  the
     ;;ellipsis identifier  from the built in  environment.  Such function is  made an
     ;;argument, so that it can be changed  to a predicate returning always false when
     ;;we are recursively processing a quoted template:
@@ -708,7 +708,7 @@
       ;;Standalone ellipses are not allowed.
       ;;
       (?dots
-       (ellipsis? ?dots)
+       (ellipsis-id? ?dots)
        (syntax-violation __module_who__ "misplaced ellipsis in syntax form" input-form.stx))
 
       ;;Match a standalone  identifier.  ?ID can be: a reference  to pattern variable
@@ -751,11 +751,11 @@
       ;;   (... ?sub-template)	==> quoted ?SUB-TEMPLATE
       ;;
       ;;so that the ellipses in the  ?SUB-TEMPLATE are treated as normal identifiers.
-      ;;We change  the ELLIPSIS? argument  for recursion  to a predicate  that always
+      ;;We change  the ELLIPSIS-ID? argument  for recursion  to a predicate  that always
       ;;returns false.
       ;;
       ((?dots ?sub-template)
-       (ellipsis? ?dots)
+       (ellipsis-id? ?dots)
        (if vec?
 	   (syntax-violation __module_who__ "misplaced ellipsis in syntax form" input-form.stx)
 	 (%gen-syntax input-form.stx ?sub-template lexenv maps (lambda (x) #f) #f)))
@@ -763,12 +763,12 @@
       ;;Match a template followed by ellipsis.
       ;;
       ((?template ?dots . ?rest)
-       (ellipsis? ?dots)
+       (ellipsis-id? ?dots)
        (let loop
 	   ((rest.stx ?rest)
 	    (kont     (lambda (maps)
 			(receive (template^ maps)
-			    (%gen-syntax input-form.stx ?template lexenv (cons '() maps) ellipsis? #f)
+			    (%gen-syntax input-form.stx ?template lexenv (cons '() maps) ellipsis-id? #f)
 			  (if (null? (car maps))
 			      (syntax-violation __module_who__ "extra ellipsis in syntax form" input-form.stx)
 			    (values (%gen-map template^ (car maps))
@@ -778,7 +778,7 @@
 	    (kont maps))
 
 	   ((?dots . ?tail)
-	    (ellipsis? ?dots)
+	    (ellipsis-id? ?dots)
 	    (loop ?tail (lambda (maps)
 			  (receive (template^ maps)
 			      (kont (cons '() maps))
@@ -789,7 +789,7 @@
 
 	   (_
 	    (receive (rest^ maps)
-		(%gen-syntax input-form.stx rest.stx lexenv maps ellipsis? vec?)
+		(%gen-syntax input-form.stx rest.stx lexenv maps ellipsis-id? vec?)
 	      (receive (template^ maps)
 		  (kont maps)
 		(values (%gen-append template^ rest^) maps))))
@@ -799,9 +799,9 @@
       ;;
       ((?car . ?cdr)
        (receive (car.new maps)
-	   (%gen-syntax input-form.stx ?car lexenv maps ellipsis? #f)
+	   (%gen-syntax input-form.stx ?car lexenv maps ellipsis-id? #f)
 	 (receive (cdr.new maps)
-	     (%gen-syntax input-form.stx ?cdr lexenv maps ellipsis? vec?)
+	     (%gen-syntax input-form.stx ?cdr lexenv maps ellipsis-id? vec?)
 	   (values (%gen-cons template-stx ?car ?cdr car.new cdr.new)
 		   maps))))
 
@@ -809,7 +809,7 @@
       ;;
       (#(?item* ...)
        (receive (item*.new maps)
-	   (%gen-syntax input-form.stx ?item* lexenv maps ellipsis? #t)
+	   (%gen-syntax input-form.stx ?item* lexenv maps ellipsis-id? #t)
 	 (values (%gen-vector template-stx ?item* item*.new)
 		 maps)))
 
@@ -946,7 +946,7 @@
   (define (syntax-case-transformer input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ?expr (?literal* ...) ?clauses* ...)
-       (%verify-literals ?literal* input-form.stx)
+       (verify-syntax-case-literals __module_who__ input-form.stx ?literal*)
        (let* ( ;;The lexical variable to which  the result of evaluating the ?EXPR is
 	      ;;bound.
 	      (expr.sym   (generate-lexical-gensym 'tmp))
@@ -991,7 +991,7 @@
       (((?pattern ?output-expr) . ?unused-clauses)
        (and (identifier? ?pattern)
 	    (not (bound-id-member? ?pattern literals))
-	    (not (ellipsis? ?pattern)))
+	    (not (ellipsis-id? ?pattern)))
        (if (underscore-id? ?pattern)
 	   ;;The clause is:
 	   ;;
@@ -1092,7 +1092,7 @@
 	(unless (distinct-bound-ids? pvars)
 	  (%invalid-ids-error pvars pattern.stx "pattern variable")))
       (unless (for-all (lambda (x)
-			 (not (ellipsis? (car x))))
+			 (not (ellipsis-id? (car x))))
 		pvars.levels)
 	(stx-error pattern.stx "misplaced ellipsis in syntax-case pattern"))
       (let* ((tmp-sym      (generate-lexical-gensym 'tmp))
