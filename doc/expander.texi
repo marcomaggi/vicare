@@ -1715,7 +1715,7 @@ the boot image has descriptor with one of the formats:
   . (@meta{rtd-name} @meta{rcd-name}
      @meta{parent-name}
      @meta{constructor-name} @meta{type-predicate-name}
-     @meta{accessors-alist}))
+     @meta{accessors-alist} @meta{mutators-alist}))
 @end example
 
 @noindent
@@ -1743,9 +1743,10 @@ A symbol representing the public name of the syntactic identifier to
 which the type predicate is bound.
 
 @item accessors-alist
-An alist having: as keys symbols representing field names; as values
+@itemx mutators-alist
+Alists having: as keys symbols representing field names; as values
 symbols representing the public name of the syntactic identifier to
-which the safe field accessor is bound.
+which the safe field accessor or mutator is bound.
 @end table
 
 @c ------------------------------------------------------------------------
