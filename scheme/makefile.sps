@@ -5509,100 +5509,69 @@
     ;;   names and whose values are the exported primitive's location gensyms.
     ;;
     ;;Whenever the boot  image is loaded: the libraries' invoke  code is evaluated in
-    ;;the same order the files appear in FILES;  the last code to be executed must be
-    ;;the one of the library (ikarus main), so the file "ikarus.main.sls" must be the
-    ;;last one.  In addition:
+    ;;the order in which the files appear in FILES; the last code to be executed must
+    ;;be the one  of the library "(ikarus main)", so  the file "ikarus.main.sls" must
+    ;;be the last one.  In addition:
     ;;
     ;;* In this  module the procedure MAKE-INIT-CODE creates a  library; such library
-    ;;  is inserted as first one.
+    ;;is inserted as first one.
     ;;
-    ;;* In  this module  the procedure BUILD-SYSTEM-LIBRARY  creates a  library; such
-    ;;  library is inserted as penultimate one, before (ikarus main).
+    ;;* In  this module  the procedure  BUILD-GLOBAL-INIT-LIBRARY creates  a library;
+    ;;such library is inserted as penultimate one, before "(ikarus main)".
     ;;
     ;;Every time  we expand a  component library with BOOT-LIBRARY-EXPAND,  we expect
     ;;the following return values:
     ;;
-    ;;NAME -
-    ;;   A list of symbols representing the library name.
+    ;;NAME: A list of symbols representing the library name.
     ;;
-    ;;INVOKE-CODE -
-    ;;   A  core language  symbolic expression  representing the  body of  a library;
-    ;;   usually this symbolic expression is a LIBRARY-LETREC* form.
+    ;;INVOKE-CODE:  A core-language  symbolic-expression representing  the body  of a
+    ;;library; usually this symbolic expression is a LIBRARY-LETREC* form.
     ;;
-    ;;EXPORT-SUBST -
-    ;;   An export  subst selecting the lexical  bindings to be exported  by the boot
-    ;;   image between the ones in defined in GLOBAL-ENV.
+    ;;EXPORT-SUBST:  An  EXPORT-SUBST  object   (see  the  expander's  documentation)
+    ;;selecting  the lexical  syntactic bindings  to be  exported by  the boot  image
+    ;;between the ones in GLOBAL-ENV.  The syntactic bindings representing macros are
+    ;;discarded.
     ;;
-    ;;GLOBAL-ENV -
-    ;;    An export  env  representing the  global lexical  bindings  defined by  the
-    ;;   library body.
+    ;;GLOBAL-ENV: A GLOBAL-ENV object (see the expander's documentation) representing
+    ;;the  top-level lexical  syntactic bindings  defined by  the library  body.  The
+    ;;syntactic bindings representing macros are discarded.
     ;;
-    ;;Notice that, from  the results of library expansion, we  discard all the macros
+    ;;Notice that, from  the results of library expansion, we  discard the visit code
     ;;and all the library descriptors representing the library dependencies.
     ;;
-    (receive (name* invoke-code* export-subst global-env)
-	(make-init-code)
-      (debug-printf "\nSource libraries expansion\n")
-      (for-each (lambda (file)
-		  (debug-printf "expanding: ~a\n" file)
-		  ;;For  each library  in the  file apply  the closure  for its  side
-		  ;;effects.
-		  (load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
-			(lambda (library-sexp)
-			  (receive (name code subst env)
-			      (boot-library-expand library-sexp)
-			    ;; (when (equal? name '(ikarus flonum-conversion))
-			    ;;   (debug-print 'invoke-code  code)
-			    ;;   (debug-print 'export-subst subst)
-			    ;;   (debug-print 'global-env   env))
-			    (set! name*        (cons name name*))
-			    (set! invoke-code* (cons code invoke-code*))
-			    (set! export-subst (append subst export-subst))
-			    (set! global-env   (append env   global-env))))))
-	files)
-      (receive (export-subst global-env export-primlocs)
-	  (make-system-data (prune-subst export-subst global-env) global-env)
-	(receive (primlocs-lib-name primlocs-lib-code)
-	    (build-system-library export-subst global-env export-primlocs)
-	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
-		  (reverse (cons* (car invoke-code*) primlocs-lib-code (cdr invoke-code*)))
-		  export-primlocs)))))
+    (define-values (srclibs.name* srclibs.invoke-code* srclibs.export-subst srclibs.global-env)
+      (make-init-code))
+    (debug-printf "\nSource libraries expansion\n")
+    (each-for files
+      (lambda (file)
+	(debug-printf "expanding: ~a\n" file)
+	(load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
+	      (lambda (library-sexp)
+		(receive (name invoke-code export-subst global-env)
+		    (boot-library-expand library-sexp)
+		  ;;This mutation is  ugly, I know, but  it is needed if  we read the
+		  ;;source files with LOAD.  (Marco Maggi)
+		  (set! srclibs.name*		(cons   name          srclibs.name*))
+		  (set! srclibs.invoke-code*	(cons   invoke-code   srclibs.invoke-code*))
+		  (set! srclibs.export-subst	(append export-subst  srclibs.export-subst))
+		  (set! srclibs.global-env	(append global-env    srclibs.global-env)))))))
+    (let*-values
+	(((total.export-subst total.global-env total.export-primlocs)
+	  (make-system-data (prune-subst srclibs.export-subst srclibs.global-env) srclibs.global-env))
+    	 ((global-init-lib.name global-init-lib.invoke-code)
+	  (build-global-init-library total.export-subst total.global-env total.export-primlocs))
+	 ;;Insert the global-init-lib in penultimate position.
+	 ((srclibs.name*)         (cons* (car srclibs.name*)        global-init-lib.name        (cdr srclibs.name*)))
+	 ((srclibs.invoke-code*)  (cons* (car srclibs.invoke-code*) global-init-lib.invoke-code (cdr srclibs.invoke-code*))))
+      (values (reverse srclibs.name*)
+	      (reverse srclibs.invoke-code*)
+	      total.export-primlocs)))
 
   (define (make-init-code)
-    ;;Return  4 values  representing  a fake  library (ikarus.init),  as  if we  have
-    ;;processed a  file "ikarus.init.sls"  as first  library to  include in  the boot
-    ;;image.  The returned values are:
-    ;;
-    ;;NAME* -
-    ;;   A list holding a single item; the item is the library name.
-    ;;
-    ;;INVOKE-CODE* -
-    ;;   A list holding a single item; the  item is a symbolic expression in the core
-    ;;   language representing the invoke code of the library (ikarus.init).
-    ;;
-    ;;EXPORT-SUBST -
-    ;;   A subst selecting  the bindings to be exported from  the ones in GLOBAL-ENV.
-    ;;   For (ikarus.init) there is only one: $INIT-SYMBOL-VALUE!.
-    ;;
-    ;;GLOBAL-ENV -
-    ;;    Represents  the   global  bindings  defined  by  the   library  body.   For
-    ;;   (ikarus.init) there is only one: $INIT-SYMBOL-VALUE!
-    ;;
-    ;;The procedure $INIT-SYMBOL-VALUE! has the following signature:
-    ;;
-    ;;   ($init-symbol-value! primloc val)
-    ;;
-    ;;where: PRIMLOC is  the loc gensym of  a lexical primitive exported  by the boot
-    ;;image; VAL  is the  value of  the primitive,  either a  closure object  or some
-    ;;datum.   $INIT-SYMBOL-VALUE!  stores  VAL in  the field  "value" of  the symbol
-    ;;PRIMLOC; if VAL is a closure object: VAL  is also stored in the field "proc" of
-    ;;the symbol  PRIMLOC.  Whenever  the boot  image is  loaded: $INIT-SYMBOL-VALUE!
-    ;;must be applied  to all the loc  gensyms of the lexical  primitives exported by
-    ;;the boot image.
-    ;;
     ;;The first  code to  run when  initialising the boot  image must  initialise the
-    ;;fields  "value"  and "proc"  of  the  location gensym  for  $INIT-SYMBOL-VALUE!
-    ;;itself.  We fake a library as if we have processed the following form:
+    ;;fields  "value" and  "proc"  of  the location  gensym  associated  to the  core
+    ;;primitive $INIT-SYMBOL-VALUE!.  We  fake a library as if we  have processed the
+    ;;following form:
     ;;
     ;;   (library (ikarus.init)
     ;;     (export $init-symbol-value!)
@@ -5615,111 +5584,141 @@
     ;; 	         (lambda args
     ;; 	           (error 'apply "not a procedure" ($symbol-value primloc)))))))
     ;;
-    ;;but  we cannot  do  it this  way because  $INIT-SYMBOL-VALUE!   must be  itself
-    ;;initialised, by storing the closure object  in the appropriate loc gensym.  So,
-    ;;rather  than generating  a LIBRARY-LETREC*  form,  we generate  an invoke  code
-    ;;expression  that directly  implements  the  procedure $INIT-SYMBOL-VALUE!   and
-    ;;initialises its loc gensym.
+    ;;we   cannot   actualy   do   the  initialisation   with   a   LIBRARY   because
+    ;;$INIT-SYMBOL-VALUE!  must be itself initialised,  by storing the closure object
+    ;;in the  appropriate loc gensym.   So, rather than generating  a LIBRARY-LETREC*
+    ;;form,  we generate  an  invoke  code expression  that  directly implements  the
+    ;;procedure $INIT-SYMBOL-VALUE!  and initialises its loc gensym.
+    ;;
+    ;;Return  values representing  a  fake  library "(ikarus.init)",  as  if we  have
+    ;;processed a  file "ikarus.init.sls"  as first  library to  include in  the boot
+    ;;image.  The returned values are:
+    ;;
+    ;;1. NAME* a list holding a single item; the item is the library name.
+    ;;
+    ;;2.   INVOKE-CODE*  a  list holding  a  single  item;  the  item is  a  symbolic
+    ;;expression in  the core language  representing the  invoke code of  the library
+    ;;(ikarus.init).
+    ;;
+    ;;3. EXPORT-SUBST A subst selecting the bindings  to be exported from the ones in
+    ;;GLOBAL-ENV.  For "(ikarus.init)" there is only one: $INIT-SYMBOL-VALUE!.
+    ;;
+    ;;4. GLOBAL-ENV represents the global bindings  defined by the library body.  For
+    ;;"(ikarus.init)" there is only one: $INIT-SYMBOL-VALUE!.
+    ;;
+    ;;The procedure $INIT-SYMBOL-VALUE! has the following signature:
+    ;;
+    ;;   ($init-symbol-value! ?primloc ?val)
+    ;;
+    ;;where: ?PRIMLOC is the  loc gensym of a lexical primitive  exported by the boot
+    ;;image; ?VAL  is the  value of the  primitive, either a  closure object  or some
+    ;;datum.  $INIT-SYMBOL-VALUE!   stores ?VAL  in the field  "value" of  the gensym
+    ;;?PRIMLOC; if ?VAL is a closure object:  ?VAL is also stored in the field "proc"
+    ;;of the gensym ?PRIMLOC.  Whenever the boot image is loaded: $INIT-SYMBOL-VALUE!
+    ;;must be applied  to all the loc  gensyms of the lexical  primitives exported by
+    ;;the boot image.
     ;;
     ;;NOTE Whenever binary code  performs a call to a global  closure object, it does
     ;;the following:
     ;;
     ;;*  From the  relocation vector  of the  current code  object: retrieve  the loc
-    ;;  gensym of the procedure to call.
+    ;;gensym of the procedure to call.
     ;;
     ;;* From the loc gensym: extract the value  of the "proc" slot, which is meant to
-    ;;  be a closure object.
+    ;;be a closure object.
     ;;
     ;;* Actually call the closure object.
     ;;
     ;;so  the initialisation  code must  check if  a lexical  primitive's value  is a
     ;;closure object, and store it in the "proc" slot.
     ;;
-    (define loc   (gensym)) ;this is the loc   gensym of $INIT-SYMBOL-VALUE!
-    (define label (gensym)) ;this is the label gensym of $INIT-SYMBOL-VALUE!
-    ;;Just to be  safe we use gensyms  for the formal arguments of  procedures in the
-    ;;core language.
-    (let ((proc.arg	(gensym))
+    (let ((loc		(gensym)) ;this is the loc   gensym of $INIT-SYMBOL-VALUE!
+	  (label	(gensym)) ;this is the label gensym of $INIT-SYMBOL-VALUE!
+	  (proc.arg	(gensym))
 	  (primloc.arg	(gensym))
 	  (val.arg	(gensym))
 	  (args		(gensym)))
-      (values (list '(ikarus.init))
-	      (list `((case-lambda
-		       ;;This  CASE-LAMBDA  receives  $INIT-SYMBOL-VALUE!   as  ,PROC
-		       ;;argument and applies  it to its own loc  gensym.  The return
-		       ;;value is unspecified and discarded.
-		       ((,proc.arg)
-			(,proc.arg ',loc ,proc.arg)))
-		      ;;This CASE-LAMBDA implements $INIT-SYMBOL-VALUE!.
+      (values
+       (list '(ikarus.init))
+       ;;This is the INVOKE-CODE.
+       (list `((case-lambda
+		;;This  CASE-LAMBDA receives  $INIT-SYMBOL-VALUE!  as  ,PROC argument
+		;;and  applies  it to  its  own  loc  gensym.   The return  value  is
+		;;unspecified and discarded.
+		((,proc.arg)
+		 (,proc.arg ',loc ,proc.arg)))
+	       ;;This CASE-LAMBDA implements $INIT-SYMBOL-VALUE!.
+	       (case-lambda
+		((,primloc.arg ,val.arg)
+		 (begin
+		   ((primitive $set-symbol-value!) ,primloc.arg ,val.arg)
+		   (if ((primitive procedure?) ,val.arg)
+		       ((primitive $set-symbol-proc!) ,primloc.arg ,val.arg)
+		     ((primitive $set-symbol-proc!) ,primloc.arg
 		      (case-lambda
-		       ((,primloc.arg ,val.arg)
-			(begin
-			  #;(foreign-call (quote "ikrt_scheme_print") ,primloc.arg)
-			  #;(foreign-call (quote "ikrt_scheme_print") ,val.arg)
-			  ((primitive $set-symbol-value!) ,primloc.arg ,val.arg)
-			  (if ((primitive procedure?) ,val.arg)
-			      (begin
-				#;(foreign-call (quote "ikrt_print_emergency") '#ve(ascii "is procedure"))
-				((primitive $set-symbol-proc!) ,primloc.arg ,val.arg))
-			    ((primitive $set-symbol-proc!) ,primloc.arg
-			     (case-lambda
-			      ;;Raise an  error if  this lexical  primitive is  not a
-			      ;;procedure and someone attempts to apply it.
-			      (,args
-			       ((primitive error) 'apply
-				(quote "not a procedure")
-				((primitive $symbol-value) ,primloc.arg))))))
-			  )))))
-	      `(($init-symbol-value! . ,label))
-	      `((,label . (global . ,loc))))))
+		       ;;Raise an error if this  lexical primitive is not a procedure
+		       ;;and someone attempts to apply it.
+		       (,args
+			((primitive error) 'apply
+			 (quote "not a procedure")
+			 ((primitive $symbol-value) ,primloc.arg))))))
+		   )))))
+       ;;This is an EXPORT-SUBST with a single entry.
+       `(($init-symbol-value! . ,label))
+       ;;This is a GLOBAL-ENV with a single entry.
+       `((,label . (global . ,loc))))))
 
-  (define (prune-subst export-subst global-env)
-    ;;Remove  from EXPORT-SUBST  all re-exported  identifiers (those  with labels  in
-    ;;EXPORT-SUBST but no binding in GLOBAL-ENV).
+  (define (prune-subst srclibs.export-subst srclibs.global-env)
+    ;;Remove from SRCLIBS.EXPORT-SUBST all re-exported identifiers (those with labels
+    ;;in SRCLIBS.EXPORT-SUBST but no binding in SRCLIBS.GLOBAL-ENV).
     ;;
-    (cond ((null? export-subst)
+    (cond ((null? srclibs.export-subst)
 	   '())
-	  ((not (assq (cdar export-subst) global-env))
-	   (prune-subst (cdr export-subst) global-env))
+	  ((let ((label (cdar srclibs.export-subst)))
+	     (not (assq label srclibs.global-env)))
+	   ;;Skip this EXPORT-SUBST entry.
+	   (prune-subst (cdr srclibs.export-subst) srclibs.global-env))
 	  (else
-	   (cons (car export-subst)
-		 (prune-subst (cdr export-subst) global-env)))))
+	   ;;Gather this EXPORT-SUBST entry.
+	   (cons (car srclibs.export-subst)
+		 (prune-subst (cdr srclibs.export-subst) srclibs.global-env)))))
 
-  (define (make-system-data export-subst global-env)
-    ;;EXPORT-SUBST has  an entry for  each primitive binding  to export from  all the
-    ;;source libraries  in the boot image.   GLOBAL-ENV has an entry  for each global
-    ;;binding from all the source libraries in the boot image.
+  (define* (make-system-data srclibs.export-subst srclibs.global-env)
+    ;;SRCLIBS.EXPORT-SUBST has  an entry for each  core primitive to export  from all
+    ;;the source  libraries in the boot  image.  SRCLIBS.GLOBAL-ENV has an  entry for
+    ;;each top-level  syntactic binding  from all  the source  libraries in  the boot
+    ;;image.
     ;;
-    ;;Return 4 values: an EXPORT-SUBST alist with entries:
+    ;;Return the following values:
+    ;;
+    ;;1. TOTAL.EXPORT-SUBST: an EXPORT-SUBST alist with entries:
     ;;
     ;;   (?prim-name  . ?label)
     ;;   (?macro-name . ?label)
     ;;
-    ;;an GLOBAL-ENV alist with entries:
+    ;;2. TOTAL.GLOBAL-ENV: a GLOBAL-ENV alist with entries:
     ;;
     ;;   (?label . (core-prim . ?prim-name))
     ;;   (?label . ?macro-binding)
     ;;
-    ;;an EXPORT-PRIMLOCS alist with entries:
+    ;;3. TOTAL.EXPORT-PRIMLOCS: an EXPORT-PRIMLOCS alist with entries:
     ;;
     ;;   (?prim-name . ?loc)
     ;;
-    (define-constant __who__ 'make-system-data)
-    (define-syntax-rule (macro-identifier? x)
+    (define (macro-identifier? x)
       (and (or (assq x VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS)
 	       (assq x VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS))
 	   #t))
-    (define-syntax-rule (procedure-identifier? x)
+    (define (non-syntax-identifier? x)
       (not (macro-identifier? x)))
-    (let ((export-subst-clt    (make-collection))
-	  (global-env-clt      (make-collection))
-	  (export-primlocs-clt (make-collection)))
-      ;;Build bindings for the macros exported by the boot image.  Here we create the
-      ;;binding labels.  The expected format of the entries is:
-      ;;
-      ;;   (?macro-name ?binding)
-      ;;
-      ;;and specifically:
+    (let ((total-export-subst-clt    (make-collection))
+	  (total-global-env-clt      (make-collection))
+	  (total-export-primlocs-clt (make-collection)))
+
+      ;;Build entries  in the EXPORT-SUBST  and GLOBAL-ENV of built-in  libraries, to
+      ;;represent the syntactic bindings of built-in syntaxes.  Here we also generate
+      ;;the label  gensyms for  the exported  syntaxes.  The  expected format  of the
+      ;;entries is:
       ;;
       ;;   (?built-in-macro-name	(?built-in-macro-name))
       ;;   (?core-macro-name		(core-macro	. ?core-macro-name))
@@ -5729,69 +5728,82 @@
       ;;   (?record-type-name		($core-record-type-name	. ...)
       ;;   (?condition-object-name	($core-condition-object-type-name . ...)
       ;;
-      ;;We accumulate  in the subst  and env collections the  associations name/label
-      ;;and label/binding
+      ;;and others.  We accumulate in the  subst and env collections the associations
+      ;;name/label and label/descriptor.
       ;;
       (each-for VICARE-CORE-SYNTACTIC-BINDING-DESCRIPTORS
 	(lambda (entry)
-	  (let* ((name		(car  entry))
-		 (binding	(cadr entry))
-		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
-	    (export-subst-clt (cons name label))
-	    (global-env-clt   (cons label binding)))))
+	  (let* ((name	(car  entry))
+		 (descr	(cadr entry))
+		 (label	(gensym (string-append "prim-label." (symbol->string name)))))
+	    (total-export-subst-clt (cons name  label))
+	    (total-global-env-clt   (cons label descr)))))
       (each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS
 	(lambda (entry)
-	  (let* ((name		(car  entry))
-		 (binding	(cadr entry))
-		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
-	    (export-subst-clt (cons name label))
-	    (global-env-clt   (cons label binding)))))
+	  (let* ((name	(car  entry))
+		 (descr	(cadr entry))
+		 (label	(gensym (string-append "prim-label." (symbol->string name)))))
+	    (total-export-subst-clt (cons name  label))
+	    (total-global-env-clt   (cons label descr)))))
       (each-for VICARE-CORE-FLUIDS-SYNTACTIC-BINDING-DESCRIPTORS-DEFAULTS
 	(lambda (entry)
-	  (let* ((label		(car  entry))
-		 (binding	(cadr entry)))
-	    (global-env-clt   (cons label binding)))))
-      ;;For every  exported primitive function  we expect an  entry to be  present in
-      ;;GLOBAL-ENV with the format:
+	  (let* ((label	(car  entry))
+		 (descr	(cadr entry)))
+	    (total-global-env-clt   (cons label descr)))))
+
+      ;;Build entries in the EXPORT-SUBST, GLOBAL-ENV and EXPORT-PRIMLOCS of built-in
+      ;;libraries, to represent  the syntactic bindings of  built-in core primitives.
+      ;;The  core primitive  are functions  or constant  values like  the record-type
+      ;;descriptors.  The core primitive's label gensyms and loc gensyms are the ones
+      ;;already generated while expanding the source libraries.
       ;;
-      ;;   (?label ?type . ?loc)
+      ;;For  every exported  core  primitive we  expect  an entry  to  be present  in
+      ;;SRCLIBS.GLOBAL-ENV with the format:
       ;;
-      ;;here we add to the subst collection an entry:
+      ;;   (?label . (?type . ?loc))
       ;;
-      ;;   (?prim-name . ?label)
+      ;;here we add:
       ;;
-      ;;to the env collection an entry:
+      ;;* To the subst collection an entry:
       ;;
-      ;;   (?label . (core-prim . ?prim-name))
+      ;;     (?prim-name . ?label)
       ;;
-      ;;to the primlocs collection an entry:
+      ;;* To the env collection an entry:
       ;;
-      ;;   (?prim-name . ?loc)
+      ;;     (?label . (core-prim . ?prim-name))
       ;;
-      (each-for (map car IDENTIFIER->LIBRARY-MAP)
-	(lambda (prim-name)
-	  (when (procedure-identifier? prim-name)
-	    (cond ((assq prim-name (export-subst-clt))
+      ;;* To the primlocs collection an entry:
+      ;;
+      ;;     (?prim-name . ?loc)
+      ;;
+      (each-for IDENTIFIER->LIBRARY-MAP
+	(lambda (identifier.libs)
+	  (define prim-name
+	    (car identifier.libs))
+	  (when (non-syntax-identifier? prim-name)
+	    (cond ((assq prim-name (total-export-subst-clt))
 		   (error __who__ "identifier exported twice?" prim-name))
 
-		  ((assq prim-name export-subst)
+		  ((assq prim-name srclibs.export-subst)
 		   ;;Primitive defined (exported) within the compiled libraries.
 		   => (lambda (name.label)
 			(unless (pair? name.label)
 			  (error __who__ "invalid exports" name.label prim-name))
 			(let ((label (cdr name.label)))
-			  (cond ((assq label global-env)
-				 => (lambda (label.binding)
-				      (let ((binding (cdr label.binding)))
-					(case (car binding)
+			  (cond ((assq label srclibs.global-env)
+				 => (lambda (label.descr)
+				      (let ((descr (cdr label.descr)))
+					;;Here we expect DESCR to have the format:
+					;;
+					;;   (?type . ?loc)
+					;;
+					(case (car descr)
 					  ((global)
-					   (export-subst-clt    (cons prim-name label))
-					   (global-env-clt      (cons label     (cons 'core-prim prim-name)))
-					   (export-primlocs-clt (cons prim-name (cdr binding))))
+					   (total-export-subst-clt    (cons prim-name label))
+					   (total-global-env-clt      (cons label     (cons 'core-prim prim-name)))
+					   (total-export-primlocs-clt (cons prim-name (cdr descr))))
 					  (else
-					   (error __who__
-					     "invalid binding for identifier"
-					     label.binding prim-name))))))
+					   (error __who__ "invalid binding for identifier" label.descr prim-name))))))
 				(else
 				 (error __who__
 				   "binding from the export list not present in the global environment"
@@ -5803,43 +5815,44 @@
 		   ;;
 		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
 		   (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
-		     (export-subst-clt (cons prim-name label))
-		     (global-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
+		     (total-export-subst-clt (cons prim-name label))
+		     (total-global-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
 
-      (values (export-subst-clt) (global-env-clt) (export-primlocs-clt))))
+      (values (total-export-subst-clt) (total-global-env-clt) (total-export-primlocs-clt))))
 
-  (module (build-system-library)
+  (module (build-global-init-library)
 
-    (define (build-system-library export-subst global-env export-primlocs)
-      ;;EXPORT-SUBST is an alist with entries:
+    (define (build-global-init-library total.export-subst total.global-env total.export-primlocs)
+      ;;TOTAL.EXPORT-SUBST is an alist with entries:
       ;;
       ;;   (?prim-name  . ?label)
       ;;   (?macro-name . ?label)
       ;;
-      ;;GLOBAL-ENV is an alist with entries:
+      ;;TOTAL.GLOBAL-ENV is an alist with entries:
       ;;
       ;;   (?label . (core-prim . ?prim-name))
       ;;   (?label . ?macro-binding)
       ;;
-      ;;EXPORT-PRIMLOCS is an alist with entries:
+      ;;TOTAL.EXPORT-PRIMLOCS is an alist with entries:
       ;;
       ;;   (?prim-name . ?loc)
       ;;
-      ;;Build a form for the library "(ikarus primitive-locations-init)" which:
+      ;;Build  a symbolic  expression representing  the "(ikarus  primitive locations
+      ;;init)" and expand it.  This library:
       ;;
       ;;* Iterates the symbol names  representing primitive functions exported by the
-      ;;  boot image, storing the associated loc gensym in their "value" slot.
+      ;;boot image, storing the associated loc gensym in their "value" slot.
       ;;
       ;;*  Initialises  the  compiler  parameter  CURRENT-PRIMITIVE-LOCATIONS  to  an
-      ;;  appropriate  function.  This way  the compile  can retrieve the  loc gensym
-      ;;  from the primitive function symbol name.
+      ;;appropriate function.  This way the compile  can retrieve the loc gensym from
+      ;;the primitive function symbol name.
       ;;
       ;;* Interns all the libraries composing the boot image.
       ;;
-      ;;Return 2 values: the library name and the library invoke-code.
+      ;;Return 2 values: the library's name and the library's invoke-code.
       ;;
       (define library-sexp
-	`(library (ikarus primitive-locations-init)
+	`(library (ikarus primitive locations init)
 	   (export) ;;; must be empty
 	   (import
 	       ;;Notice that the  library (vicare) imported here is the  one from the
@@ -5871,7 +5884,7 @@
 	     (for-each
 		 (lambda (func-name.loc)
 		   ($putprop (car func-name.loc) SYSTEM-VALUE-GENSYM (cdr func-name.loc)))
-	       ',export-primlocs)
+	       ',total.export-primlocs)
 	     ;;Initialise the  internal parameter CURRENT-PRIMITIVE-LOCATIONS  with a
 	     ;;function  capable of  retrieving  a primitive  procedure's loc  gensym
 	     ;;given its symbol name.
@@ -5883,10 +5896,10 @@
 	     (for-each
 		 (lambda (func-name.lab)
 		   ($putprop (car func-name.lab) SYSTEM-LABEL-GENSYM (cdr func-name.lab)))
-	       ',export-subst)
+	       ',total.export-subst)
 	     ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
 	     ,@(map (lambda (legend-entry)
-		      (build-intern-library-form legend-entry export-subst global-env))
+		      (build-intern-library-form legend-entry total.export-subst total.global-env))
 		 LIBRARY-LEGEND))
 	   ;;Set up.
 	   (compiler-initialisation/storage-location-gensyms-associations-func initialise-storage-location-gensyms-associations)
@@ -5904,7 +5917,7 @@
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
-    (define (build-intern-library-form legend-entry export-subst global-env)
+    (define (build-intern-library-form legend-entry total.export-subst total.global-env)
       ;;Return a sexp representing a call to the function INTERN-LIBRARY.
       ;;
       ;;Each entry from the LIBRARY-LEGEND has the format:
@@ -5927,10 +5940,10 @@
 				      (else
 				       '())))
 	     (system-all?	(equal? fullname '(psyntax system $all)))
-	     (env		(if system-all? global-env '()))
+	     (env		(if system-all? total.global-env '()))
 	     (subst		(if system-all?
-				    export-subst
-				  (get-export-subset nickname export-subst)))
+				    total.export-subst
+				  (get-export-subset nickname total.export-subst)))
 	     (source-file-name	#f)
 	     (option*		'()))
 	`(just-intern-system-library
@@ -5954,23 +5967,24 @@
 			'()					  ;foreign-library*
 			))))
 
-    (define (get-export-subset nickname export-subst)
-      ;;Given the alist of substitutions EXPORT-SUBST, build and return the subset of
+    (define (get-export-subset library-nickname total.export-subst)
+      ;;Given EXPORT-SUBST object TOTAL.EXPORT-SUBST, build  and return the subset of
       ;;substitutions  corresponding  to  identifiers  in  the  library  selected  by
-      ;;NICKNAME.
+      ;;LIBRARY-NICKNAME.   Return the  EXPORT-SUBST for  the library  represented by
+      ;;LIBRARY-NICKNAME.
       ;;
-      (let loop ((ls export-subst))
-	(if (null? ls)
+      (let loop ((entry* total.export-subst))
+	(if (null? entry*)
 	    '()
-	  (let ((x (car ls)))
+	  (let ((x (car entry*)))
 	    (let ((name (car x)))
 	      (cond ((assq name IDENTIFIER->LIBRARY-MAP)
 		     => (lambda (q)
-			  (if (memq nickname (cdr q))
-			      (cons x (loop (cdr ls)))
-			    (loop (cdr ls)))))
+			  (if (memq library-nickname (cdr q))
+			      (cons x (loop (cdr entry*)))
+			    (loop (cdr entry*)))))
 		    (else ;not going to any library?
-		     (loop (cdr ls)))))))))
+		     (loop (cdr entry*)))))))))
 
     (define %vicare-version-numbers
       ;;Here we  build a version  list with  fixnums representing: the  major version
@@ -5984,7 +5998,7 @@
 		     BOOT-IMAGE-DAY-VERSION)))
 	(lambda () V)))
 
-    #| end of module: BUILD-SYSTEM-LIBRARY |# )
+    #| end of module: BUILD-GLOBAL-INIT-LIBRARY |# )
 
   (define (boot-library-expand library-sexp)
     ;;This function  is used to expand  the libraries composing the  boot image.  The
@@ -6008,7 +6022,8 @@
     ;;GLOBAL-ENV -
     ;;   Represents the global bindings defined by the library body.
     ;;
-    ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
+    ;;FIXME The  function EXPAND-LIBRARY has changed  return values.  To be  fixed at
+    ;;the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
     (if-building-rotation-boot-image? "extracting values after library expansion"
 	(let ((lib (expand-library library-sexp)))
 	  (values (library-name         lib)
