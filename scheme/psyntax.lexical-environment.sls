@@ -22,6 +22,11 @@
 (library (psyntax.lexical-environment)
   (export
 
+    ;; module interfaces
+    PSYNTAX-SYNTAX-MATCH
+    PSYNTAX-SYNTAX-UTILITIES
+    PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES
+
     ;;configuration
     generate-descriptive-gensyms?
     generate-descriptive-marks?
@@ -48,6 +53,18 @@
     environment-labels
     environment-libraries
     environment-binding
+
+    ;; syntax utilities
+    generate-temporaries
+    syntax-null?
+    syntax-pair?			syntax-list?
+    syntax-car				syntax-cdr
+    syntax->list
+    syntax-vector?			syntax-vector->list
+    syntax-unwrap
+
+    parse-logic-predicate-syntax
+    error-invalid-formals-syntax
 
     ;; label gensyms, lexical variable gensyms, storage location gensyms
     generate-lexical-gensym
@@ -77,6 +94,11 @@
     syntactic-binding-descriptor/lexical-typed-var.value.assigned?
 
     make-global-typed-variable-spec-and-maker-core-expr
+
+    ;; core primitive with type signature
+    syntactic-binding-descriptor/core-prim-typed?
+    core-prim-typed-binding-descriptor.value.prim-name
+    core-prim-typed-binding-descriptor.value.type-id
 
     ;; syntactic bindings utilities: base object-type specifications
     object-type-name-binding-descriptor?
@@ -624,18 +646,21 @@
 	  ;;LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR does.
 	  ;;
 	  ((label->imported-syntactic-binding-descriptor label)
-	   => (lambda (descriptor)
-		;;The first time we access  a syntactic binding descriptor representing
-		;;a core record-type name: we mutate it to a format usable by the code.
-		(cond ((core-condition-object-type-name-binding-descriptor? descriptor)
-		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
-		      ((core-record-type-name-binding-descriptor? descriptor)
-		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
-		      ((core-scheme-type-name-binding-descriptor? descriptor)
-		       (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descriptor))
-		      ((core-rtd-binding-descriptor? descriptor)
-		       (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descriptor)))
-		descriptor))
+	   => (lambda (descr)
+		;;The  first   time  we  access  a   syntactic  binding's  descriptor
+		;;representing a core definition: we mutate  it to a format usable by
+		;;the code.
+		(cond ((syntactic-binding-descriptor/hard-coded-core-prim-typed? descr)
+		       (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor! descr))
+		      ((core-scheme-type-name-binding-descriptor? descr)
+		       (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descr))
+		      ((core-condition-object-type-name-binding-descriptor? descr)
+		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
+		      ((core-record-type-name-binding-descriptor? descr)
+		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
+		      ((core-rtd-binding-descriptor? descr)
+		       (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descr)))
+		descr))
 
 	  ;;Search the given LEXENV.
 	  ;;
@@ -666,19 +691,17 @@
       (%label->descriptor label lexenv '())))
 
   (define (%label->descriptor label lexenv accum-labels)
-    (let ((binding (label->syntactic-binding-descriptor/no-indirection label lexenv)))
-      (cond ((eq? 'displaced-lexical (car binding))
-	     binding)
-	    ((fluid-syntax-binding-descriptor? binding)
-	     (%follow-through-fluid-descriptor binding lexenv accum-labels))
-
-	    ((synonym-syntax-binding-descriptor? binding)
-	     (%follow-through-synonym-descriptor binding lexenv accum-labels))
-
+    (let ((descr (label->syntactic-binding-descriptor/no-indirection label lexenv)))
+      (cond ((eq? 'displaced-lexical (car descr))
+	     descr)
+	    ((fluid-syntax-binding-descriptor? descr)
+	     (%follow-through-fluid-descriptor descr lexenv accum-labels))
+	    ((synonym-syntax-binding-descriptor? descr)
+	     (%follow-through-synonym-descriptor descr lexenv accum-labels))
 	    (else
-	     binding))))
+	     descr))))
 
-  (define (%follow-through-fluid-descriptor binding lexenv accum-labels)
+  (define (%follow-through-fluid-descriptor descr lexenv accum-labels)
     ;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require different logic.
     ;;The lexical environment contains the main fluid syntax definition entry and one
     ;;or more subordinate fluid syntax re-definition entries.
@@ -698,17 +721,17 @@
     ;;
     ;;   (displaced-lexical . #f)
     ;;
-    (let* ((fluid-label   (fluid-syntax-binding-descriptor.fluid-label binding))
-	   (fluid-binding (cond ((assq fluid-label lexenv)
-				 => lexenv-entry.binding-descriptor)
-				(else
-				 (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
-      (if (synonym-syntax-binding-descriptor? fluid-binding)
-	  (%follow-through-synonym-descriptor binding lexenv accum-labels)
-	fluid-binding)))
+    (let* ((fluid-label (fluid-syntax-binding-descriptor.fluid-label descr))
+	   (fluid-descr (cond ((assq fluid-label lexenv)
+			       => lexenv-entry.binding-descriptor)
+			      (else
+			       (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
+      (if (synonym-syntax-binding-descriptor? fluid-descr)
+	  (%follow-through-synonym-descriptor descr lexenv accum-labels)
+	fluid-descr)))
 
-  (define (%follow-through-synonym-descriptor binding lexenv accum-labels)
-    (let ((synonym-label (synonym-syntax-binding-descriptor.synonym-label binding)))
+  (define (%follow-through-synonym-descriptor descr lexenv accum-labels)
+    (let ((synonym-label (synonym-syntax-binding-descriptor.synonym-label descr)))
       (if (memq synonym-label accum-labels)
 	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
 	(%label->descriptor synonym-label lexenv (cons synonym-label accum-labels)))))
@@ -2010,7 +2033,8 @@
 
      (($core-scheme-type-name
        $core-rtd $core-record-type-name $core-condition-object-type-name
-       core-prim lexical lexical-typed macro local-macro local-macro! local-etv)
+       core-prim core-prim-typed
+       lexical lexical-typed macro! macro local-macro local-macro! local-etv)
       (void))
 
      (else
@@ -2519,15 +2543,18 @@
        ($top-tag-id? id)))
 
 
-;;;; errors helpers
+;;;; more external modules
 
-(define (retvals-signature? x)
-  ;;FIXME This  is defined  here to  nothing to avoid  sharing contexts  between this
-  ;;library and the  ones that defines the  correct version.  It is to  be removed in
-  ;;some future.  Maybe at  the next boot image rotation.  (Marco  Maggi; Sat Apr 11,
-  ;;2015)
-  ;;
-  #t)
+(include "psyntax.lexical-environment.syntax-match.scm" #t)
+(include "psyntax.lexical-environment.syntax-utilities.scm" #t)
+(include "psyntax.lexical-environment.type-identifiers-and-signatures.scm" #t)
+
+(import PSYNTAX-SYNTAX-MATCH)
+(import PSYNTAX-SYNTAX-UTILITIES)
+(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
+
+
+;;;; errors helpers
 
 (define (expression-position x)
   (if (stx? x)

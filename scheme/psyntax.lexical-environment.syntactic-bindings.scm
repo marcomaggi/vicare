@@ -94,33 +94,6 @@
 	 (%alist-ref-or-null (cdr ell) (fxsub1 idx)))))
 
 
-;;;; syntactic binding descriptor: core primitive
-
-;;NOTE Commented out because unused.  Kept here for reference.  (Marco Maggi; Sat Apr
-;;18, 2015)
-;;
-(comment
- (define (make-syntactic-binding-descriptor/core-primitive public-name)
-   ;;Build and  return a syntactic  binding descriptor representing a  core primitive.
-   ;;PUBLIC-NAME must be a symbol representing the public name of the primitive.
-   ;;
-   ;;The returned descriptor has format:
-   ;;
-   ;;   (core-prim . ?public-name)
-   ;;
-   (make-syntactic-binding-descriptor core-prim public-name))
-
- (define-syntactic-binding-descriptor-predicate core-primitive-binding-descriptor?
-   core-prim)
-
- (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
-   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
-   ;;public name symbol.
-   ;;
-   (cdr ?descriptor))
- /comment)
-
-
 ;;;; syntactic binding descriptor: lexical variables
 
 (define (make-syntactic-binding-descriptor/lexical-var lex-name)
@@ -507,12 +480,146 @@
 			 "/closure-signature>")))
 
 
+;;;; syntactic binding descriptor: core primitive
+
+;;NOTE Commented out because unused.  Kept here for reference.  (Marco Maggi; Sat Apr
+;;18, 2015)
+;;
+(comment
+ (define (make-syntactic-binding-descriptor/core-primitive public-name)
+   ;;Build and  return a syntactic  binding descriptor representing a  core primitive.
+   ;;PUBLIC-NAME must be a symbol representing the public name of the primitive.
+   ;;
+   ;;The returned descriptor has format:
+   ;;
+   ;;   (core-prim . ?public-name)
+   ;;
+   (make-syntactic-binding-descriptor core-prim public-name))
+
+ (define-syntactic-binding-descriptor-predicate core-primitive-binding-descriptor?
+   core-prim)
+
+ (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
+   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
+   ;;public name symbol.
+   ;;
+   (cdr ?descriptor))
+ /comment)
+
+
+;;;; syntactic binding descriptor: hard-coded core primitive with type signature binding
+
+(module (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor!)
+
+  (define (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor! descriptor)
+    ;;Mutate a syntactic  binding's descriptor from the representation  of a built-in
+    ;;core primitive (established by the boot image) to the representation of a typed
+    ;;core  primitive in  the  format  usable by  the  expander.  Return  unspecified
+    ;;values.
+    ;;
+    ;;We expect the core descriptor to have the format:
+    ;;
+    ;;   ($core-prim-typed . ?hard-coded-sexp)
+    ;;
+    ;;where ?HARD-CODED-SEXP has the format:
+    ;;
+    ;;   (?core-prim-name ?signature-spec0 ?signature-spec ...)
+    ;;
+    ;;?CORE-PRIM-NAME  is a  symbol  representing the  core  primitive's public  name
+    ;;("display", "write", "list", et cetera).  ?SIGNATURE-SPEC has the format:
+    ;;
+    ;;   ?signature-spec    = (?retval-signature ?formals-signature)
+    ;;
+    ;;   ?retval-signature  = <list>
+    ;;                      | <list-sub-type>
+    ;;                      | (?type0 ?type ...)
+    ;;                      | (?type0 ?type ... . <list>)
+    ;;                      | (?type0 ?type ... . <list-sub-type>)
+    ;;
+    ;;   ?formals-signature = <list>
+    ;;                      | <list-sub-type>
+    ;;                      | (?type0 ?type ...)
+    ;;                      | (?type0 ?type ... . <list>)
+    ;;                      | (?type0 ?type ... . <list-sub-type>)
+    ;;
+    ;;The usable descriptor has the format:
+    ;;
+    ;;   (core-prim-typed . ((?core-prim-name . ?type-id) . ?hard-coded-sexp))
+    ;;
+    ;;Syntactic binding's  descriptors of  type "$core-prim-typed" are  hard-coded in
+    ;;the boot image and generated directly by the makefile at boot image build-time.
+    ;;Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used  to retrieve
+    ;;the descriptor from the label: this function is used to convert the descriptor.
+    ;;
+    (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
+	   (descr.value		(syntactic-binding-descriptor.value descriptor))
+	   (core-prim.sym	(car descr.value))
+	   (signature*.sexp	(cdr descr.value))
+	   (signature		(%signature-sexp->callable-signature signature*.sexp))
+	   (type-id		(fabricate-closure-type-identifier core-prim.sym signature))
+	   (type-id		#f))
+      (set-car! descriptor 'core-prim-typed)
+      (set-cdr! descriptor (cons (cons core-prim.sym type-id) descr.value))))
+
+  (define (%signature-sexp->callable-signature signature*.sexp)
+    (if (null? (cdr signature*.sexp))
+  	(%signature-sexp->lambda-signature (car signature*.sexp))
+      (make-clambda-compound (map %signature-sexp->lambda-signature signature*.sexp))))
+
+  (define (%signature-sexp->lambda-signature sexp)
+    (let* ((retvals.sexp (car  sexp))
+  	   (formals.sexp (cadr sexp))
+  	   (retvals.stx  (%any-list->ids retvals.sexp))
+  	   (formals.stx  (%any-list->ids formals.sexp)))
+      (make-lambda-signature (make-retvals-signature retvals.stx)
+  			     (make-formals-signature formals.stx))))
+
+  (define (%any-list->ids ell)
+    ;;Convert a proper  or improper list of symbols representing  core type identifiers
+    ;;into the corresponding proper or improper list of type identifiers.
+    ;;
+    (cond ((symbol? ell)
+  	   (core-prim-id ell))
+  	  ((pair? ell)
+  	   (cons (core-prim-id   (car ell))
+  		 (%any-list->ids (cdr ell))))
+  	  (else '())))
+
+  #| end of module |# )
+
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;hard-coded typed core primitive; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-prim-typed?
+  $core-prim-typed)
+
+
+;;;; syntactic binding descriptor: core primitive with type signature binding
+;;
+;;The syntactic binding's descriptor has the format:
+;;
+;;   (core-prim-typed . ((?core-prim-name . ?type-id) . ?hard-coded-sexp))
+;;
+
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;typed core primitive, in a format usable by the expander; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-prim-typed?
+  core-prim-typed)
+
+(define-syntax-rule (core-prim-typed-binding-descriptor.value.prim-name ?descriptor-value)
+  (caar ?descriptor-value))
+
+(define-syntax-rule (core-prim-typed-binding-descriptor.value.type-id ?descriptor-value)
+  (cdar ?descriptor-value))
+
+
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding
 
 (define (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descriptor)
-  ;;Mutate a syntactic binding descriptor from  the representation of a core built-in
-  ;;object-type  name (established  by  the boot  image) to  a  representation of  an
-  ;;object-type  name in  the  format  usable by  the  expander.  Return  unspecified
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
+  ;;built-in object-type name (established by the  boot image) to a representation of
+  ;;an object-type  name in the  format usable  by the expander.   Return unspecified
   ;;values.
   ;;
   ;;We expect the core descriptor to have the format:
@@ -560,7 +667,8 @@
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings
 
 (define* (make-syntactic-binding-descriptor/struct-type-name {sts struct-type-spec?} expanded-expr)
-  ;;Build and return a syntactic binding descriptor representing a struct-type name.
+  ;;Build  and return  a syntactic  binding's descriptor  representing a  struct-type
+  ;;name.
   ;;
   ;;The argument STS must be an instance of "<struct-type-spec>".
   ;;

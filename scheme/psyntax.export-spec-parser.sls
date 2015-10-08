@@ -25,8 +25,10 @@
     (psyntax.compat)
     (only (psyntax.lexical-environment)
 	  ~bound-identifier=?
-	  valid-bound-ids?)
-    (psyntax.syntax-match))
+	  valid-bound-ids?
+	  PSYNTAX-SYNTAX-MATCH))
+
+(import PSYNTAX-SYNTAX-MATCH)
 
 
 (define* (parse-export-spec* export-spec*)

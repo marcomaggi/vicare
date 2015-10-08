@@ -86,10 +86,14 @@
   (export parse-import-spec*)
   (import (rnrs)
     (psyntax.compat)
-    (psyntax.syntax-match)
+    (only (psyntax.lexical-environment)
+	  PSYNTAX-SYNTAX-MATCH)
     (psyntax.library-collectors)
     (psyntax.library-utils)
     (prefix (psyntax.library-manager) libman.))
+
+;; module interfaces
+(import PSYNTAX-SYNTAX-MATCH)
 
 
 ;;;; helpers

@@ -21,9 +21,7 @@
 
 ;;;; stuff
 
-(import (prefix (rnrs syntax-case) sys.)
-  (only (psyntax.syntax-utilities)
-	generate-temporaries))
+(import (prefix (rnrs syntax-case) sys.))
 
 (define-syntax (define-core-transformer stx)
   (sys.syntax-case stx ()

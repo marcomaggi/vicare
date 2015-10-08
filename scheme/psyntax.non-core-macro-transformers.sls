@@ -80,21 +80,17 @@
 		  syntax-violation	make-variable-transformer)
     (psyntax.compat)
     (prefix (rnrs syntax-case) sys.)
-    (only (psyntax.syntax-utilities)
-	  syntax-unwrap
-	  parse-logic-predicate-syntax)
     (psyntax.lexical-environment)
-    (psyntax.syntax-match)
-    (only (psyntax.syntax-utilities)
-	  generate-temporaries
-	  parse-logic-predicate-syntax
-	  error-invalid-formals-syntax)
-    (psyntax.type-identifiers-and-signatures)
     (only (psyntax.library-manager)
 	  current-include-loader
 	  source-code-location))
 
   (include "psyntax.helpers.scm" #t)
+
+;; module interfaces
+(import PSYNTAX-SYNTAX-MATCH)
+(import PSYNTAX-SYNTAX-UTILITIES)
+(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
 
 
 (define* (non-core-macro-transformer {x symbol?})

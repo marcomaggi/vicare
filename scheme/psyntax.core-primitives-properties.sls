@@ -24,12 +24,11 @@
     (psyntax.compat)
     (prefix (psyntax.config) config.)
     (only (psyntax.lexical-environment)
-	  core-prim-id)
-    (only (psyntax.type-identifiers-and-signatures)
-	  make-lambda-signature
-	  make-retvals-signature
-	  make-formals-signature
-	  make-clambda-compound))
+	  core-prim-id
+	  PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES))
+
+;; module interfaces
+(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
 
 
 ;;;; helpers

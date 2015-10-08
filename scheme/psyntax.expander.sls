@@ -115,21 +115,21 @@
     (psyntax.builders)
     (psyntax.special-transformers)
     (psyntax.lexical-environment)
-    (psyntax.syntax-match)
     (psyntax.syntactic-binding-properties)
-    (psyntax.syntax-utilities)
     (only (psyntax.import-spec-parser) parse-import-spec*)
     (only (psyntax.export-spec-parser) parse-export-spec*)
-    (psyntax.type-identifiers-and-signatures)
     (only (psyntax.core-primitives-properties)
 	  initialise-core-prims-tagging)
-    (psyntax.import-spec-parser)
-    (psyntax.export-spec-parser)
     (psyntax.library-utils)
     (psyntax.library-collectors)
     (psyntax.chi-procedures)
     (prefix (psyntax.library-manager) libman.)
     (psyntax.internal))
+
+;; module interfaces
+(import PSYNTAX-SYNTAX-MATCH)
+(import PSYNTAX-SYNTAX-UTILITIES)
+(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
 
 
 ;;; helpers

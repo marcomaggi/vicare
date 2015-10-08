@@ -1,4 +1,4 @@
-;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
+;;;Copyright (c) 2006, 2007, Abdulaziz Ghuloum and Kent Dybvig
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -19,29 +19,15 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(library (psyntax.syntax-match)
-  (export
-    syntax-match
-    convert-pattern
-    verify-syntax-case-literals
-    ellipsis-map
-    syntax-dispatch
+(module PSYNTAX-SYNTAX-MATCH
+  (verify-syntax-case-literals
+   syntax-match convert-pattern
+   ellipsis-map
+   syntax-dispatch
 
-    ;; helpers using SYNTAX-MATCH
-    improper-list->list-and-rest
-    proper-list->head-and-last)
-  (import (except (rnrs)
-		  eval
-		  environment		environment?
-		  null-environment	scheme-report-environment
-		  identifier?
-		  bound-identifier=?	free-identifier=?
-		  generate-temporaries
-		  datum->syntax		syntax->datum
-		  syntax-violation	make-variable-transformer)
-    (prefix (rnrs syntax-case) sys.)
-    (psyntax.lexical-environment)
-    (psyntax.compat))
+   ;; helpers using SYNTAX-MATCH
+   improper-list->list-and-rest
+   proper-list->head-and-last)
 
 
 (define-syntax syntax-match
@@ -763,10 +749,11 @@
 
 ;;;; done
 
-#| end of library |# )
+#| end of module: PSYNTAX-SYNTAX-MATCH |# )
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; coding: utf-8-unix
 ;; eval: (put 'syntax-case	'scheme-indent-function 2)
 ;; End:

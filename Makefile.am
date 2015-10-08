@@ -456,10 +456,10 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.lexical-environment.object-type-specs.scm	\
 	scheme/psyntax.lexical-environment.typed-variable-specs.scm	\
 	scheme/psyntax.lexical-environment.syntactic-bindings.scm	\
-	scheme/psyntax.syntax-match.sls					\
+	scheme/psyntax.lexical-environment.syntax-match.scm		\
+	scheme/psyntax.lexical-environment.syntax-utilities.scm		\
+	scheme/psyntax.lexical-environment.type-identifiers-and-signatures.scm	\
 	scheme/psyntax.syntactic-binding-properties.sls			\
-	scheme/psyntax.syntax-utilities.sls				\
-	scheme/psyntax.type-identifiers-and-signatures.sls		\
 	scheme/psyntax.core-primitives-properties.sls			\
 	scheme/psyntax.library-collectors.sls				\
 	scheme/psyntax.import-spec-parser.sls				\

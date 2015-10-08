@@ -556,6 +556,7 @@
 			       global-object-type-name)
 			      (cons* (car type.value) lib (cdr type.value)))
 			     ((core-prim
+			       #;core-prim-typed
 			       library import export
 			       internal-define define-syntax define-alias
 			       define-fluid-syntax

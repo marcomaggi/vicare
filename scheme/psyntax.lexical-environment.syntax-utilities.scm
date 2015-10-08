@@ -19,34 +19,18 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(library (psyntax.syntax-utilities)
-  (export
+(module PSYNTAX-SYNTAX-UTILITIES
+  ;; high-level syntax objects utilities
+  (generate-temporaries
+   syntax-null?
+   syntax-pair?			syntax-list?
+   syntax-car			syntax-cdr
+   syntax->list
+   syntax-vector?		syntax-vector->list
+   syntax-unwrap
 
-    ;; high-level syntax objects utilities
-    generate-temporaries
-    syntax-null?
-    syntax-pair?			syntax-list?
-    syntax-car				syntax-cdr
-    syntax->list
-    syntax-vector?			syntax-vector->list
-    syntax-unwrap
-
-    parse-logic-predicate-syntax
-    error-invalid-formals-syntax)
-  (import (except (rnrs)
-		  generate-temporaries)
-    (psyntax.compat)
-    (psyntax.syntax-match)
-    (only (psyntax.lexical-environment)
-	  mkstx
-	  make-syntactic-identifier-for-temporary-variable
-	  bound-id-member?
-	  bless
-	  stx?
-	  stx-expr
-	  stx-mark*
-	  stx-rib*
-	  stx-annotated-expr*))
+   parse-logic-predicate-syntax
+   error-invalid-formals-syntax)
 
 
 ;;;; high-level syntax object utilities
@@ -273,9 +257,10 @@
 
 ;;;; done
 
-#| end of library |# )
+#| end of module: PSYNTAX-SYNTAX-UTILITIES |# )
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; coding: utf-8-unix
 ;; End:

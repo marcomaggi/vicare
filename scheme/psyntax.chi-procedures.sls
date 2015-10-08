@@ -41,14 +41,9 @@
     (psyntax.compat)
     (psyntax.builders)
     (psyntax.lexical-environment)
-    (psyntax.syntax-match)
     (only (psyntax.import-spec-parser)
 	  parse-import-spec*)
-    (only (psyntax.syntax-utilities)
-	  syntax->list
-	  error-invalid-formals-syntax)
     (psyntax.library-collectors)
-    (psyntax.type-identifiers-and-signatures)
     (only (psyntax.special-transformers)
 	  variable-transformer?		variable-transformer-procedure
 	  synonym-transformer?		synonym-transformer-identifier
@@ -59,6 +54,11 @@
     (psyntax.non-core-macro-transformers)
     (psyntax.library-manager)
     (psyntax.internal))
+
+;; module interfaces
+(import PSYNTAX-SYNTAX-MATCH)
+(import PSYNTAX-SYNTAX-UTILITIES)
+(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
 
 
 ;;The  "chi-*" functions  are the  ones visiting  syntax objects  and performing  the
@@ -239,7 +239,7 @@
 		 (let* ((descr (label->syntactic-binding-descriptor label lexenv))
 			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
-		     ((core-prim
+		     ((core-prim core-prim-typed
 		       lexical lexical-typed
 		       global global-mutable global-typed global-typed-mutable
 		       macro macro! global-macro global-macro! local-macro local-macro!
@@ -275,8 +275,8 @@
 		       displaced-lexical)
 		      (values type descr ?car))
 		     (else
-		      ;;This   case   includes   TYPE  being:   CORE-PRIM,   LEXICAL,
-		      ;;LEXICAL-TYPED,    GLOBAL,    GLOBAL-MUTABLE,    GLOBAL-TYPED,
+		      ;;This  case includes  TYPE being:  CORE-PRIM, CORE-PRIM-TYPED,
+		      ;;LEXICAL, LEXICAL-TYPED, GLOBAL, GLOBAL-MUTABLE, GLOBAL-TYPED,
 		      ;;GLOBAL-TYPED-MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
@@ -665,6 +665,19 @@
 		       (build-primref no-source name)
 		       (make-retvals-signature/single-top))))
 
+	  ((core-prim-typed)
+	   ;;Core  primitive with  type signatures  specification; it  is a  built-in
+	   ;;procedure.  We expect the syntactic binding's descriptor DESCR to be:
+	   ;;
+	   ;;   (core-prim-typed . ((?core-prim-name . ?type-id) . ?hard-coded-sexp))
+	   ;;
+	   (let* ((descr.value	(syntactic-binding-descriptor.value descr))
+		  (name		(core-prim-typed-binding-descriptor.value.prim-name descr.value))
+		  (type-id	(core-prim-typed-binding-descriptor.value.type-id   descr.value)))
+	     (make-psi expr.stx
+		       (build-primref no-source name)
+		       (make-retvals-signature/single-value type-id))))
+
 	  ((call)
 	   ;;A function call; this means EXPR.STX has one of the formats:
 	   ;;
@@ -1039,7 +1052,7 @@
 		     (psi.core-expr rhs.psi))
 		   (make-retvals-signature/single-void))))
 
-      ((core-prim)
+      ((core-prim core-prim-typed)
        (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
       ((global global-typed)

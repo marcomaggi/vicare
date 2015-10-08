@@ -341,10 +341,10 @@
 ;;
 ;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
 ;;
-;;that are defined by the boot image's  makefile and are hard-coded in the boot image
-;;itself.   Whenever  the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR  is  used  to
-;;retrieve  the descriptor  from  the label:  the descriptor  is  converted from  the
-;;hard-coded format to the format holding this value.
+;;The source entries are  defined by the boot image's makefile  and are hard-coded in
+;;the boot  image itself.  Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR
+;;is used to retrieve the descriptor from the label: the descriptor is converted from
+;;the hard-coded format to the format holding this value.
 ;;
 (define-record-type (<core-scheme-type-spec> make-core-scheme-type-spec core-scheme-type-spec?)
   (nongenerative vicare:expander:<core-scheme-type-spec>)
