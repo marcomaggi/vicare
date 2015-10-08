@@ -507,7 +507,6 @@
     "psyntax.import-spec-parser.sls"
     "psyntax.export-spec-parser.sls"
     "psyntax.syntactic-binding-properties.sls"
-    "psyntax.core-primitives-properties.sls"
     "psyntax.non-core-macro-transformers.sls"
     "psyntax.chi-procedures.sls"
     "psyntax.expander.sls"
@@ -5852,7 +5851,7 @@
 		   expander-initialisation/initialise-label-gensyms-and-interned-libraries)
 	     (only (psyntax.library-manager)
 		   make-library
-		   just-intern-library)
+		   just-intern-system-library)
 	     (only (ikarus.compiler)
 		   compiler-initialisation/storage-location-gensyms-associations-func
 		   system-value-gensym
@@ -5934,7 +5933,7 @@
 				  (get-export-subset nickname export-subst)))
 	     (source-file-name	#f)
 	     (option*		'()))
-	`(just-intern-library
+	`(just-intern-system-library
 	  (make-library ',id					  ;uid
 			(quote ,(append fullname (list version))) ;name
 			'()					  ;imp-lib*

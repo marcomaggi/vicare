@@ -118,8 +118,6 @@
     (psyntax.syntactic-binding-properties)
     (only (psyntax.import-spec-parser) parse-import-spec*)
     (only (psyntax.export-spec-parser) parse-export-spec*)
-    (only (psyntax.core-primitives-properties)
-	  initialise-core-prims-tagging)
     (psyntax.library-utils)
     (psyntax.library-collectors)
     (psyntax.chi-procedures)

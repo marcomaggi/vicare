@@ -41,7 +41,8 @@
     library-descriptor-uid		library-descriptor-name
 
     ;; interning libraries
-    intern-library			just-intern-library
+    intern-library
+    just-intern-library			just-intern-system-library
     unintern-library			interned-libraries
 
     ;; library operations
@@ -542,10 +543,17 @@
   lib)
 
 (define* (just-intern-library lib)
+  (%just-intern-library __who__ lib #f))
+
+(define* (just-intern-system-library lib)
+  (%just-intern-library __who__ lib #t))
+
+(define* (%just-intern-library who lib system-library?)
   ;;See the documentation of the expander  for the format of the GLOBAL-ENV.  Entries
   ;;in the GLOBAL-ENV are  different from entries in the LEXENV;  here we transform a
   ;;GLOBAL-ENV entry into a syntactic binding  descriptor stored in the VALUE slot of
   ;;its label gensym.
+  ;;
   (for-each
       (lambda (label.descriptor)
 	(let* ((label      (car label.descriptor))
@@ -555,22 +563,37 @@
 			       global-macro global-macro! global-etv
 			       global-object-type-name)
 			      (cons* (car type.value) lib (cdr type.value)))
+			     (($module $fluid $synonym global-mutable)
+			      type.value)
+			     ;;This  function is  used  also to  intern the  built-in
+			     ;;libraries.   So the  types  used by  the boot  image's
+			     ;;syntactic bindings are to be included too.
 			     ((core-prim
-			       #;core-prim-typed
+			       $core-prim-typed
 			       library import export
 			       internal-define define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
-			       global-mutable
 			       core-macro macro macro!
-			       $core-rtd $core-record-type-name $core-condition-object-type-name $core-scheme-type-name
-			       $module $fluid $synonym)
-			      type.value)
+			       $core-rtd $core-record-type-name $core-condition-object-type-name
+			       $core-scheme-type-name)
+			      (if system-library?
+				  type.value
+				(assertion-violation who
+				  "system syntactic binding's descriptor type invalid in GLOBAL-ENV entry of non-system library"
+				  label.descriptor (library-name lib))))
+			     ;;These  are   run-time  types  for   built-in  bindings
+			     ;;established by  the boot image.  They  should never be
+			     ;;included in the GLOBAL-ENV of a library.
+			     ((core-prim-typed)
+			      (assertion-violation who
+				"run-time syntactic binding's descriptor type invalid in GLOBAL-ENV entry"
+				label.descriptor (library-name lib)))
 			     (else
-			      (assertion-violation __who__
+			      (assertion-violation who
 				"invalid syntactic binding descriptor type in GLOBAL-ENV entry"
-				lib label.descriptor)))))
+				label.descriptor (library-name lib))))))
 	  ;;When the library  is serialised: the content of the  label's "value" slot
 	  ;;is not saved, so we have to set it here every time the library is loaded.
 	  (set-label-binding! label descr)))

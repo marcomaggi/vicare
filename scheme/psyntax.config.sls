@@ -23,15 +23,11 @@
 (library (psyntax.config)
   (export
     initialise-expander
-    expander-initialisation/initialise-label-gensyms-and-interned-libraries
-    expander-initialisation/initialise-core-prims-tagging)
+    expander-initialisation/initialise-label-gensyms-and-interned-libraries)
   (import (rnrs)
     (psyntax.compat))
 
   (define expander-initialisation/initialise-label-gensyms-and-interned-libraries
-    (make-parameter #f))
-
-  (define expander-initialisation/initialise-core-prims-tagging
     (make-parameter #f))
 
   (define initialise-expander
@@ -40,8 +36,6 @@
 	(unless expander-initialised?
 	  (print-expander-debug-message "initialising expander internals")
 	  (let ((func (expander-initialisation/initialise-label-gensyms-and-interned-libraries)))
-	    (when func (func)))
-	  (let ((func (expander-initialisation/initialise-core-prims-tagging)))
 	    (when func (func)))
 	  (set! expander-initialised? #t)))))
 
