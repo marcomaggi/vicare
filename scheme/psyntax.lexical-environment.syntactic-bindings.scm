@@ -55,13 +55,23 @@
 
 ;;; helpers
 
-(define-syntax-rule (define-syntactic-binding-descriptor-predicate ?who ?type)
-  (define (?who obj)
-    ;;Return true if  OBJ is a syntactic binding descriptor  of type ?TYPE; otherwise
-    ;;return false.
-    ;;
-    (and (pair? obj)
-	 (eq? (quote ?type) (syntactic-binding-descriptor.type obj)))))
+(define-syntax define-syntactic-binding-descriptor-predicate
+  (syntax-rules ()
+    ((_ ?who ?type)
+     (define (?who obj)
+       ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor of  type  ?TYPE;
+       ;;otherwise return false.
+       ;;
+       (and (pair? obj)
+	    (eq? (quote ?type) (syntactic-binding-descriptor.type obj)))))
+    ((_ ?who ?type0 ?type1 ?type ...)
+     (define (?who obj)
+       ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor of  type  ?TYPE;
+       ;;otherwise return false.
+       ;;
+       (and (pair? obj)
+	    (memq (quote (?type0 ?type1 ?type ...)) (syntactic-binding-descriptor.type obj)))))
+    ))
 
 (define (%alist-ref-or-null ell idx)
   ;;Traverse the proper  list ELL until the contained object  at zero-based index IDX
@@ -176,6 +186,15 @@
 
 
 ;;;; syntactic binding descriptor: typed lexical variables
+;;
+;;A  syntactic binding  representing a  typed  lexical variable  has descriptor  with
+;;format:
+;;
+;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+;;
+;;where ?EXPANDED-EXPR is  a core language expression which,  when evaluated, returns
+;;rebuilds the record of type "<lexical-typed-variable-spec>".
+;;
 
 (define* (make-syntactic-binding-descriptor/lexical-typed-var {lts lexical-typed-variable-spec?} lts.core-expr)
   ;;Build  and return  a syntactic  binding descriptor  representing a  typed lexical
@@ -202,21 +221,18 @@
 	    (build-data no-source lex))))
   (make-syntactic-binding-descriptor/lexical-typed-var lts expanded-expr))
 
-(define* (make-global-typed-variable-spec-and-maker-core-expr {lts lexical-typed-variable-spec?} variable-loc)
-  (let* ((type-id		(typed-variable-spec.type-id             lts))
-	 (unsafe-variant	(typed-variable-spec.unsafe-variant-sexp lts))
-	 (gts			(make-global-typed-variable-spec type-id unsafe-variant variable-loc))
-	 (core-expr		(build-application no-source
-				  (build-primref no-source 'make-global-typed-variable-spec)
-				  (list (build-data no-source type-id)
-					(build-data no-source unsafe-variant)
-					(build-data no-source variable-loc)))))
-    (values gts core-expr)))
+;;; --------------------------------------------------------------------
+
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/lexical-typed-var?
+  lexical-typed)
 
 ;;; --------------------------------------------------------------------
 
-(define-syntactic-binding-descriptor-predicate lexical-typed-var-binding-descriptor?
-  lexical-typed)
+(define-syntax-rule (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec ?descriptor)
+  ;;Extract the  record of  type "<typed-variable-spec>"  from a  syntactic binding's
+  ;;descriptor of type "lexical-typed".
+  ;;
+  (cadr ?descriptor))
 
 ;;; --------------------------------------------------------------------
 
@@ -224,7 +240,7 @@
   ;;Accessor for the  lexical gensym in a typed lexical  variable's syntactic binding
   ;;descriptor.
   ;;
-  ;;A  syntactic binding  representing a  type lexical  variable has  descriptor with
+  ;;A syntactic  binding representing  a typed lexical  variable has  descriptor with
   ;;format:
   ;;
   ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
@@ -248,6 +264,42 @@
     ((_ ?descriptor-value ?bool)
      (lexical-typed-variable-spec.assigned?-set! (car ?descriptor-value) (and ?bool #t)))
     ))
+
+
+;;;; syntactic binding descriptor: global typed lexical variables
+;;
+;;A syntactic binding  representing a global typed lexical  variable has descriptor
+;;with format:
+;;
+;;   (global-typed         . (#<library> . ?loc))
+;;   (global-typed-mutable . (#<library> . ?loc))
+;;
+;;where ?LOC is a loc gensym holding an instance of "<global-typed-variable-spec>".
+;;
+
+(define* (make-global-typed-variable-spec-and-maker-core-expr {lts lexical-typed-variable-spec?} variable-loc)
+  (let* ((type-id		(typed-variable-spec.type-id             lts))
+	 (unsafe-variant	(typed-variable-spec.unsafe-variant-sexp lts))
+	 (gts			(make-global-typed-variable-spec type-id unsafe-variant variable-loc))
+	 (core-expr		(build-application no-source
+				  (build-primref no-source 'make-global-typed-variable-spec)
+				  (list (build-data no-source type-id)
+					(build-data no-source unsafe-variant)
+					(build-data no-source variable-loc)))))
+    (values gts core-expr)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/global-typed-var?
+  global-typed global-typed-mutable)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (syntactic-binding-descriptor/global-typed-var.typed-variable-spec ?descriptor)
+  ;;Extract the  record of  type "<typed-variable-spec>"  from a  syntactic binding's
+  ;;descriptor of type "global-typed" or "global-typed-mutable".
+  ;;
+  (symbol-value (cddr ?descriptor)))
 
 
 ;;;; syntactic binding descriptor: local macro with non-variable transformer bindings
@@ -606,6 +658,19 @@
 ;;
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-prim-typed?
   core-prim-typed)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (core-prim-typed-binding-descriptor.prim-name ?descriptor)
+  (car  (cadr ?descriptor)))
+
+(define-syntax-rule (core-prim-typed-binding-descriptor.type-id ?descriptor)
+  (cadr (cadr ?descriptor)))
+
+(define-syntax-rule (core-prim-typed-binding-descriptor.unsafe-variant-id ?descriptor)
+  (cddr (cadr ?descriptor)))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.value.prim-name ?descriptor-value)
   (caar ?descriptor-value))

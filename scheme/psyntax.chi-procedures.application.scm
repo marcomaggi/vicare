@@ -569,36 +569,77 @@
 	   ;;We rely on run-time checking.
 	   (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
 	  ((%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-							   rator.lambda-signature rator.psi rand*.psi)
+							   rator.lambda-signature rator.psi rand*.psi #t)
 	   ;;The signatures  do match: we  are applying a  closure object rator  to a
 	   ;;tuple of rands that have the right type.
-	   (let ((rator.stx (psi.input-form rator.psi)))
-	     (cond ((identifier? rator.stx)
-		    ;;Here  we do  not  want  to raise  an  error  if the  identifier
-		    ;;RATOR.STX is not a typed lexical variable.
-		    (let* ((rator.label (id->label/or-error __module_who__ input-form.stx rator.stx))
-			   (rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run))
-			   (rator.spec  (syntactic-binding-descriptor.value rator.descr)))
-		      (cond ((and (typed-variable-spec? rator.spec)
-				  (typed-variable-spec.unsafe-variant-sexp rator.spec))
-			     => (lambda (unsafe-rator.sexp)
-				  (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
-					 (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-				    (%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi))))
-			    (else
-			     (%no-optimisation-possible)))))
-		   (else
-		    (%no-optimisation-possible)))))
+	   (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+							 rator.psi rand*.psi))
 	  (else
 	   ;;It is not possible to validate the signatures at expand-time; we rely on
 	   ;;run-time checking.
 	   (%no-optimisation-possible))))
 
   (define (%process-clambda-application input-form.stx lexenv.run lexenv.expand
-					rator.callable rator.psi rand*.psi)
-    ;;FIXME Insert here  something special for CLAMBDA-COMPOUNDs.   (Marco Maggi; Thu
-    ;;Apr 10, 2014)
-    (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
+					rator.clambda-compound rator.psi rand*.psi)
+    ;;For rators having  a CLAMBDA-COMPOUND signature: we iterate,  in order, through
+    ;;the LAMBDA-SIGNATUREs looking for the first that matches.
+    ;;
+    (define (%no-optimisation-possible)
+      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
+    (cond ((option.strict-r6rs)
+	   ;;We rely on run-time checking.
+	   (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
+	  ((find (lambda (signature)
+		   (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
+								   signature rator.psi rand*.psi #f))
+	     (clambda-compound.lambda-signature* rator.clambda-compound))
+	   => (lambda (signature)
+		;;The operands match the SIGNATURE:  we are applying a closure object
+		;;rator to a tuple of rands that have the right type.
+		(%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+							      rator.psi rand*.psi)))
+	  (else
+	   ;;It is not possible to validate the signatures at expand-time; we rely on
+	   ;;run-time checking.
+	   (%no-optimisation-possible))))
+
+  (define (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+							rator.psi rand*.psi)
+    (define (%no-optimisation-possible)
+      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
+    (define (%build-unsafe-variant-application unsafe-rator.sexp)
+      (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
+	     (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
+	(%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi)))
+    (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
+      (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
+	     => %build-unsafe-variant-application)
+	    (else
+	     (%no-optimisation-possible))))
+    (define rator.stx (psi.input-form rator.psi))
+    (cond ((identifier? rator.stx)
+	   ;;Here we do not want to raise an error if the identifier RATOR.STX is not
+	   ;;a typed lexical variable (it might be an identifier expression returning
+	   ;;a closure object).
+	   (let* ((rator.label (id->label/or-error __module_who__ input-form.stx rator.stx))
+		  (rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
+	     (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
+		    (cond ((core-prim-typed-binding-descriptor.unsafe-variant-id rator.descr)
+			   => %build-unsafe-variant-application)
+			  (else
+			   (%no-optimisation-possible))))
+		   ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
+		    (%build-typed-variable-application
+		     (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec rator.descr)))
+		   ((syntactic-binding-descriptor/global-typed-var? rator.descr)
+		    (%build-typed-variable-application
+		     (syntactic-binding-descriptor/global-typed-var.typed-variable-spec rator.descr)))
+		   (else
+		    (%no-optimisation-possible)))))
+	  (else
+	   ;;If we  are here  the rator  is a  non-identifier expression  returning a
+	   ;;closure object with known signature.
+	   (%no-optimisation-possible))))
 
   (define (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi)
     (let* ((rator.core (psi.core-expr rator.psi))
@@ -682,7 +723,8 @@
 ;;; --------------------------------------------------------------------
 
   (define (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-							  rator.lambda-signature rator.psi rand*.psi)
+							  rator.lambda-signature rator.psi rand*.psi
+							  raise-error-if-no-match?)
     ;;In a closure object application: compare  the signature tags of the operator to
     ;;the retvals signatures of the operands:
     ;;

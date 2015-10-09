@@ -1076,7 +1076,7 @@
 				  input-form.stx lexenv.run #f)
 		 lexenv.run lexenv.expand))
 
-      ((global-mutable)
+      ((global-mutable global-typed-mutable)
        ;;Imported variable in reference position,  whose binding is assigned at least
        ;;once in the code of the imported library.
        ;;

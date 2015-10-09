@@ -88,17 +88,24 @@
 
     make-syntactic-binding-descriptor/lexical-typed-var
     make-syntactic-binding-descriptor/lexical-typed-var/from-data
-    lexical-typed-var-binding-descriptor?
+    syntactic-binding-descriptor/lexical-typed-var?
+    syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
     syntactic-binding-descriptor/lexical-typed-var.value.lex
     syntactic-binding-descriptor/lexical-typed-var.value.type-id
     syntactic-binding-descriptor/lexical-typed-var.value.assigned?
 
     make-global-typed-variable-spec-and-maker-core-expr
+    syntactic-binding-descriptor/global-typed-var?
+    syntactic-binding-descriptor/global-typed-var.typed-variable-spec
 
     ;; core primitive with type signature
     syntactic-binding-descriptor/core-prim-typed?
+    core-prim-typed-binding-descriptor.prim-name
+    core-prim-typed-binding-descriptor.type-id
+    core-prim-typed-binding-descriptor.unsafe-variant-id
     core-prim-typed-binding-descriptor.value.prim-name
     core-prim-typed-binding-descriptor.value.type-id
+    core-prim-typed-binding-descriptor.value.unsafe-variant-id
 
     ;; syntactic bindings utilities: base object-type specifications
     object-type-name-binding-descriptor?
