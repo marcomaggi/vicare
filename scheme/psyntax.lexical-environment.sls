@@ -158,6 +158,10 @@
     <core-scheme-type-spec>
     make-core-scheme-type-spec				core-scheme-type-spec?
 
+    <list-type-spec>
+    make-list-type-spec					list-type-spec?
+    list-type-spec.type-id
+
     <closure-type-spec>
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature
@@ -278,6 +282,7 @@
     ;; core type identifiers
     procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
     list-tag-id			$list-tag-id?		list-tag-id?
+    nlist-tag-id		$nlist-tag-id?		nlist-tag-id?
     top-tag-id			$top-tag-id?		top-tag-id?
     boolean-tag-id		void-tag-id
     struct-tag-id		record-tag-id		predicate-tag-id
@@ -2512,6 +2517,7 @@
   (define-tag-retriever procedure-tag-id	<procedure>)
   (define-tag-retriever predicate-tag-id	<predicate>)
   (define-tag-retriever list-tag-id		<list>)
+  (define-tag-retriever nlist-tag-id		<nlist>)
   (define-tag-retriever boolean-tag-id		<boolean>)
   (define-tag-retriever struct-tag-id		<struct>)
   (define-tag-retriever record-tag-id		<record>)
@@ -2525,6 +2531,9 @@
 (define ($list-tag-id? id)
   (~free-identifier=? id (list-tag-id)))
 
+(define ($nlist-tag-id? id)
+  (~free-identifier=? id (nlist-tag-id)))
+
 (define ($top-tag-id? id)
   (~free-identifier=? id (top-tag-id)))
 
@@ -2537,6 +2546,10 @@
 (define (list-tag-id? id)
   (and (identifier? id)
        ($list-tag-id? id)))
+
+(define (nlist-tag-id? id)
+  (and (identifier? id)
+       ($nlist-tag-id? id)))
 
 (define (top-tag-id? id)
   (and (identifier? id)

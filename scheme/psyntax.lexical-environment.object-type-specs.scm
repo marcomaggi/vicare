@@ -38,6 +38,10 @@
 	 <core-scheme-type-spec>
 	 make-core-scheme-type-spec			core-scheme-type-spec?
 
+	 <list-type-spec>
+	 make-list-type-spec				list-type-spec?
+	 list-type-spec.type-id
+
 	 <struct-type-spec>
 	 make-struct-type-spec				struct-type-spec?
 	 struct-type-spec.std
@@ -284,6 +288,63 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 
+;;;; core Scheme object-type specification
+;;
+;;This  record-type is  used as  syntactic binding  descriptor's values  for built-in
+;;Vicare object types: fixnums, pairs, strings, vectors, et cetera.  The LEXENV entry
+;;has the format:
+;;
+;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
+;;
+;;It is built at run-time by converting entries with format:
+;;
+;;   ($core-scheme-type-name . ?hard-coded-sexp)
+;;
+;;where ?HARD-CODED-SEXP has the format:
+;;
+;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
+;;
+;;The source entries are  defined by the boot image's makefile  and are hard-coded in
+;;the boot  image itself.  Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR
+;;is used to retrieve the descriptor from the label: the descriptor is converted from
+;;the hard-coded format to the format holding this value.
+;;
+(define-record-type (<core-scheme-type-spec> make-core-scheme-type-spec core-scheme-type-spec?)
+  (nongenerative vicare:expander:<core-scheme-type-spec>)
+  (parent <scheme-type-spec>)
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define (make-core-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+	((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)))
+      make-core-scheme-type-spec)))
+
+
+;;;; list object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<nlist>" representing non-empty proper list objects holding items of a known type.
+;;The lexenv entry has the format:
+;;
+;;   (local-object-type-name . (#<list-type-spec> . ?expanded-expr))
+;;
+(define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
+  (nongenerative vicare:expander:<list-type-spec>)
+  (parent <scheme-type-spec>)
+  (fields (immutable type-id		list-type-spec.type-id))
+		;A type identifier representing the type of items.
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define* (make-list-type-spec {type-id type-identifier?})
+	(let ((parent-id		(nlist-tag-id))
+	      (constructor.sexp		#f)
+	      (predicate.sexp		#f)
+	      (methods-table		'()))
+	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+	   type-id)))
+      make-list-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
 ;;;; closure object signature spec
 ;;
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
@@ -319,37 +380,6 @@
       make-closure-type-spec))
 
   #| end of DEFINE-RECORD-TYPE |# )
-
-
-;;;; core Scheme object-type specification
-;;
-;;This  record-type is  used as  syntactic binding  descriptor's values  for built-in
-;;Vicare object types: fixnums, pairs, strings, vectors, et cetera.  The LEXENV entry
-;;has the format:
-;;
-;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
-;;
-;;It is built at run-time by converting entries with format:
-;;
-;;   ($core-scheme-type-name . ?hard-coded-sexp)
-;;
-;;where ?HARD-CODED-SEXP has the format:
-;;
-;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
-;;
-;;The source entries are  defined by the boot image's makefile  and are hard-coded in
-;;the boot  image itself.  Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR
-;;is used to retrieve the descriptor from the label: the descriptor is converted from
-;;the hard-coded format to the format holding this value.
-;;
-(define-record-type (<core-scheme-type-spec> make-core-scheme-type-spec core-scheme-type-spec?)
-  (nongenerative vicare:expander:<core-scheme-type-spec>)
-  (parent <scheme-type-spec>)
-  (protocol
-    (lambda (make-scheme-type-spec)
-      (define (make-core-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-	((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)))
-      make-core-scheme-type-spec)))
 
 
 ;;;; Vicare's struct-type specification

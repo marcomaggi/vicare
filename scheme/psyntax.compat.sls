@@ -40,6 +40,8 @@
     (rename (records.record-type-printer-set!	record-type-printer-set!)
 	    (records.record-printer		record-printer))
 
+    (rename (lists.nlist?			nlist?))
+
     define-struct			make-struct-type
     make-parameter			parametrise
     symbol-value			set-symbol-value!
@@ -148,6 +150,11 @@
 		  record-type-printer-set!
 		  record-printer)
 	    records.)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 9,
+    ;;2015)
+    (prefix (only (ikarus lists)
+		  nlist?)
+	    lists.)
     (only (vicare language-extensions posix) #;(ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.

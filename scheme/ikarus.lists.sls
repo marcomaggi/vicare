@@ -17,24 +17,26 @@
 
 #!vicare
 (library (ikarus lists)
-  (export list? list cons* make-list append length list-ref reverse
-          last-pair memq memp memv member find assq assp assv assoc
-          remq remv remove remp filter map for-each
-	  (rename (for-each for-each-in-order)) andmap ormap list-tail
-          partition for-all exists fold-left fold-right
-	  make-queue-procs
+  (export
+    list? nlist?
+    list cons* make-list append length list-ref reverse
+    last-pair memq memp memv member find assq assp assv assoc
+    remq remv remove remp filter map for-each
+    (rename (for-each for-each-in-order)) andmap ormap list-tail
+    partition for-all exists fold-left fold-right
+    make-queue-procs
 
-	  ;; unsafe bindings
-	  $length
-	  map1		for-each1
-	  for-all1	exists1)
+    ;; unsafe bindings
+    $length
+    map1		for-each1
+    for-all1	exists1)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Mon May 4, 2015)
 		  procedure-arguments-consistency-violation
 		  ;;;
 
-		  list? list cons* make-list append reverse
+		  list? nlist? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
@@ -104,7 +106,15 @@
 	fst
       (cons fst (loop ($car rest) ($cdr rest))))))
 
-(define (list? x)
+(module (list? nlist?)
+
+  (define (list? x)
+    (%race x x))
+
+  (define (nlist? x)
+    (and (pair? x)
+	 (%race x x)))
+
   (define (%race h t)
     (if (pair? h)
 	(let ((h ($cdr h)))
@@ -113,7 +123,8 @@
 		   (%race ($cdr h) ($cdr t)))
 	    (null? h)))
       (null? h)))
-  (%race x x))
+
+  #| end of module |# )
 
 (case-define* make-list
   (({n list-length?})

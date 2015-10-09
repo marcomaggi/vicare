@@ -324,6 +324,7 @@
 
 	       ((string?  datum)	(core-prim-id '<string>))
 	       ((vector?  datum)	(core-prim-id '<vector>))
+	       ((nlist?   datum)	(core-prim-id '<nlist>))
 	       ((list?    datum)	(core-prim-id '<list>))
 	       ((pair?    datum)	(core-prim-id '<pair>))
 	       ((bytevector? datum)	(core-prim-id '<bytevector>))

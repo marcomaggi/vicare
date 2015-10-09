@@ -1409,6 +1409,10 @@
 	 <top>
        list list?)
 
+    ,(declare-scheme-type <nlist>
+	 <list>
+       #f nlist?)
+
     ,(declare-scheme-type <bytevector>
 	 <top>
        make-bytevector bytevector?)
@@ -2639,6 +2643,7 @@
     (list-ref					v r ba se)
     (list-tail					v r ba se)
     (list?					v r ba se)
+    (nlist?					v $language)
     (log					v r ba se)
     (magnitude					v r ba se)
     (make-polar					v r ba se)
@@ -4100,6 +4105,7 @@
     (<vector>					v $language)
     (<pair>					v $language)
     (<list>					v $language)
+    (<nlist>					v $language)
     (<bytevector>				v $language)
     (<hashtable>				v $language)
     (<hashtable-eq>				v $language)
