@@ -11542,6 +11542,12 @@ Like @func{record-mutator}, but return an unsafe field mutator that will
 not validate its arguments.
 @end defun
 
+
+@defun record-ref @var{reco} @var{index}
+Return the value of the field at absolute index @var{index} for the
+record @var{reco}.
+@end defun
+
 @c page
 @node iklib records final
 @subsection Automatic finalisation of records

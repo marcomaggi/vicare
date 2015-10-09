@@ -1746,6 +1746,60 @@
 
     #f)
 
+;;; --------------------------------------------------------------------
+;;; record-ref
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+
+	(define O
+	  (make-duo 10 20))
+
+	(values (record-ref O 0)
+		(record-ref O 1)))
+    => 10 20)
+
+  (check
+      (internal-body
+	(define-record-type low
+	  (fields a b))
+	(define-record-type high
+	  (parent low)
+	  (fields c d))
+
+	(define O
+	  (make-high 10 20 30 40))
+
+	(values (record-ref O 0)
+		(record-ref O 1)
+		(record-ref O 2)
+		(record-ref O 3)))
+    => 10 20 30 40)
+
+  (check
+      (internal-body
+	(define-record-type low
+	  (fields a b))
+	(define-record-type middle
+	  (parent low)
+	  (fields c d))
+	(define-record-type high
+	  (parent middle)
+	  (fields e f))
+
+	(define O
+	  (make-high 10 20 30 40 50 60))
+
+	(values (record-ref O 0)
+		(record-ref O 1)
+		(record-ref O 2)
+		(record-ref O 3)
+		(record-ref O 4)
+		(record-ref O 5)))
+    => 10 20 30 40 50 60)
+
   #t)
 
 
