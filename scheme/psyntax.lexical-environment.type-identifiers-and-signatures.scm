@@ -301,7 +301,7 @@
 	 (type-id.lab  (generate-label-gensym type-id.sym)))
     (receive-and-return (type-id)
 	(make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
-      (let ((spec          (make-closure-type-spec type-id signature))
+      (let ((spec          (make-closure-type-spec signature))
 	    (expanded-expr #f))
 	(set-symbol-value! type-id.lab (make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
 

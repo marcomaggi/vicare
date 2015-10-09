@@ -273,12 +273,8 @@
   (parent <object-type-spec>)
   (protocol
     (lambda (make-object-type-spec)
-      (define (make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
-	(let ((constructor.sexp         (or constructor.sexp
-					    (let ((arg (gensym)))
-					      `(named-lambda* ,type-id ({,arg ,predicate.sexp})
-						 ,arg))))
-	      (destructor.sexp		#f)
+      (define (make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+	(let ((destructor.sexp		#f)
 	      (safe-accessors-table	'())
 	      (safe-mutators-table	'()))
 	  ((make-object-type-spec parent-id
@@ -313,12 +309,12 @@
 
   (protocol
     (lambda (make-scheme-type-spec)
-      (define (make-closure-type-spec type-id signature)
+      (define* (make-closure-type-spec {signature callable-signature?})
 	(let ((parent-id		(procedure-tag-id))
 	      (constructor.sexp		#f)
 	      (predicate.sexp		#f)
 	      (methods-table		'()))
-	  ((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)
+	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
 	   signature)))
       make-closure-type-spec))
 
@@ -351,9 +347,8 @@
   (parent <scheme-type-spec>)
   (protocol
     (lambda (make-scheme-type-spec)
-      (define (make-core-scheme-type-spec type-id parent-id
-					  constructor.sexp predicate.sexp methods-table)
-	((make-scheme-type-spec type-id parent-id constructor.sexp predicate.sexp methods-table)))
+      (define (make-core-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+	((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)))
       make-core-scheme-type-spec)))
 
 

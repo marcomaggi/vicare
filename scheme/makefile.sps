@@ -1524,6 +1524,39 @@
 	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
+;;;; core syntactic binding descriptors: typed core primitives
+
+(define-syntax unsafe-variant (syntax-rules ()))
+(define-syntax signatures (syntax-rules ()))
+
+(define-syntax declare-typed-core-prim
+  (syntax-rules (unsafe-variant signatures)
+    ((_ ?prim-name
+	(signatures ?signature0 ?signature ...))
+     (declare-typed-core-prim ?prim-name
+       (unsafe-variant #f)
+       (signatures ?signature0 ?signature ...)))
+    ((_ ?prim-name
+	(unsafe-variant ?unsafe-prim-name)
+	(signatures ?signature0 ?signature ...))
+     (cons (quote ?prim-name)
+	   (list '$core-prim-typed
+		 (quote ?prim-name)
+		 (quote ?unsafe-prim-name)
+		 (quote (?signature0 ?signature ...)))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES
+  (list
+   (declare-typed-core-prim car
+     (unsafe-variant $car)
+     (signatures
+      ((<top>) (<pair>))))
+   ))
+
+
 (define-constant LIBRARY-LEGEND
   ;;The library legend lists all the libraries  that will be implemented by the newly
   ;;built boot image.  If a library is  listed here: after building and loading a new
@@ -3590,6 +3623,7 @@
     (record-mutator				v r rp)
     (unsafe-record-accessor			v $language)
     (unsafe-record-mutator			v $language)
+    (record-ref					v $language)
     (syntax-violation				v r sc)
     (bound-identifier=?				v r sc)
     (datum->syntax				v r sc)
@@ -5764,15 +5798,15 @@
       ;;
       ;;here we add:
       ;;
-      ;;* To the subst collection an entry:
+      ;;* To the EXPORT-SUBST collection an entry:
       ;;
       ;;     (?prim-name . ?label)
       ;;
-      ;;* To the env collection an entry:
+      ;;* To the GLOBAL-ENV collection an entry:
       ;;
       ;;     (?label . (core-prim . ?prim-name))
       ;;
-      ;;* To the primlocs collection an entry:
+      ;;* To the EXPORT-PRIMLOCS collection an entry:
       ;;
       ;;     (?prim-name . ?loc)
       ;;
@@ -5800,7 +5834,11 @@
 					(case (car descr)
 					  ((global)
 					   (total-export-subst-clt    (cons prim-name label))
-					   (total-global-env-clt      (cons label     (cons 'core-prim prim-name)))
+					   (total-global-env-clt
+					    (cons label (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
+							       => cdr)
+							      (else
+							       (cons 'core-prim prim-name)))))
 					   (total-export-primlocs-clt (cons prim-name (cdr descr))))
 					  (else
 					   (error __who__ "invalid binding for identifier" label.descr prim-name))))))
@@ -6109,4 +6147,5 @@
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
 ;; eval: (put 'declare-scheme-type			'scheme-indent-function 2)
+;; eval: (put 'declare-typed-core-prim			'scheme-indent-function 1)
 ;; End:

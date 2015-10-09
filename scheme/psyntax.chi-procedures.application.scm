@@ -546,7 +546,7 @@
 					       rator.tag rator.psi rand*.psi)
     (let* ((label (id->label/or-error __module_who__ input-form.stx rator.tag))
 	   (descr (label->syntactic-binding-descriptor label lexenv.run))
-	   (spec  (syntactic-binding-descriptor.value descr)))
+	   (spec  (car (syntactic-binding-descriptor.value descr))))
       (define (%no-optimisations-possible)
 	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
       (if (closure-type-spec? spec)

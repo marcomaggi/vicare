@@ -1486,7 +1486,7 @@
   (if (symbol? raw-expr)
       (%display "#<syntactic-identifier")
     (%display "#<syntax"))
-  (%display " expr=")	(%display raw-expr)
+  (%display " expr=")	(%write raw-expr)
   (%display " mark*=")	(%display (stx-mark* S))
   (let ((expr (stx-expr S)))
     (when (annotation? expr)

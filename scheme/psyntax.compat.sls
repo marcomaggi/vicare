@@ -37,7 +37,8 @@
 
     __who__				brace
 
-    (rename (records.record-type-printer-set! record-type-printer-set!))
+    (rename (records.record-type-printer-set!	record-type-printer-set!)
+	    (records.record-printer		record-printer))
 
     define-struct			make-struct-type
     make-parameter			parametrise
@@ -144,7 +145,8 @@
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
     ;;2015)
     (prefix (only (ikarus records procedural)
-		  record-type-printer-set!)
+		  record-type-printer-set!
+		  record-printer)
 	    records.)
     (only (vicare language-extensions posix) #;(ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
