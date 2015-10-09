@@ -853,7 +853,7 @@ ikrt_linux_ether_aton (ikptr_t s_addr_str, ikptr_t s_addr_len, ikpcb_t * pcb)
 ikptr_t
 ikrt_linux_ether_ntoa_r (ikptr_t s_ether_addr_bv, ikpcb_t * pcb)
 {
-#ifdef HAVE_ETHER_NTOA
+#ifdef HAVE_ETHER_NTOA_R
   const struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
   char				buffer[64];
   char *			rv;
@@ -866,7 +866,7 @@ ikrt_linux_ether_ntoa_r (ikptr_t s_ether_addr_bv, ikpcb_t * pcb)
 ikptr_t
 ikrt_linux_ether_aton_r (ikptr_t s_addr_str, ikptr_t s_addr_len, ikpcb_t * pcb)
 {
-#ifdef HAVE_ETHER_ATON
+#ifdef HAVE_ETHER_ATON_R
   const char *		name	= IK_GENERALISED_C_STRING(s_addr_str);
   struct ether_addr	buffer;
   struct ether_addr *	rv;
