@@ -926,7 +926,7 @@ ikrt_posix_file_ctime (ikptr_t s_pathname, ikptr_t s_vector, ikpcb_t* pcb)
     ts.tv_sec  = S.st_ctime;
     ts.tv_nsec = S.st_ctimensec;
 #else
-    ts.tv_sec  = s.st_ctime;
+    ts.tv_sec  = S.st_ctime;
     ts.tv_nsec = 0;
 #endif
     return timespec_vector(&ts, s_vector, pcb);
@@ -955,7 +955,7 @@ ikrt_posix_file_mtime (ikptr_t s_pathname, ikptr_t s_vector, ikpcb_t* pcb)
     ts.tv_sec  = S.st_mtime;
     ts.tv_nsec = S.st_mtimensec;
 #else
-    ts.tv_sec  = s.st_mtime;
+    ts.tv_sec  = S.st_mtime;
     ts.tv_nsec = 0;
 #endif
     return timespec_vector(&ts, s_vector, pcb);
@@ -984,7 +984,7 @@ ikrt_posix_file_atime (ikptr_t s_pathname, ikptr_t s_vector, ikpcb_t* pcb)
     ts.tv_sec  = S.st_atime;
     ts.tv_nsec = S.st_atimensec;
 #else
-    ts.tv_sec  = s.st_atime;
+    ts.tv_sec  = S.st_atime;
     ts.tv_nsec = 0;
 #endif
     return timespec_vector(&ts, s_vector, pcb);
