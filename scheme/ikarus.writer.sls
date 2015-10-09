@@ -61,7 +61,9 @@
 		  record-constructor-descriptor?
 		  record-printer
 		  rcd-rtd
-		  rcd-parent-rcd)
+		  rcd-parent-rcd
+		  record-type-all-field-names
+		  record-ref)
 	    records.))
 
   (include "ikarus.wordsize.scm" #t)
@@ -357,10 +359,14 @@
     (let ((B (hashtable-ref marks-table obj #f)))
       (cond ((fixnum? B)	B)
 	    ((pair?   B)	(car B))
+	    ((not     B)
+	     (assertion-violation who
+	       "missing object from marks table, object has not been processed correctly to handle shared structures"
+	       obj))
 	    (else
 	     (assertion-violation who
-	       "object has not been processed correctly to handle shared structures"
-	       obj)))))
+	       "invalid value in marks table, object has not been processed correctly to handle shared structures"
+	       B obj)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -540,11 +546,11 @@
       ;;
       (let ((rtd (record-rtd reco)))
 	(traverse (record-type-name rtd) marks-table)
-	(let* ((fields.vec	(record-type-field-names rtd))
-	       (fields.num	(vector-length fields.vec)))
+	(let* ((fields.vec	(records.record-type-all-field-names rtd))
+	       (fields.len	(vector-length fields.vec)))
 	  (let loop ((field.idx 0))
-	    (unless (fx=? field.idx fields.num)
-	      (traverse (struct-ref reco field.idx) marks-table)
+	    (when (fx<? field.idx fields.len)
+	      (traverse (records.record-ref reco field.idx) marks-table)
 	      (loop (fxadd1 field.idx)))))))
 
     (define* (%traverse-custom-record reco marks-table printer)
@@ -1260,44 +1266,22 @@
 		(write-object (cache-object cache) p write-style? marks-table next-mark-idx))))
 	(write-char* (car cache-stack) p)))
 
-    (module (%write-record/default-printer)
-
-      (define (%write-record/default-printer record port write-style? marks-table next-mark-idx)
-	(define rtd (record-rtd record))
-	(write-char* (if (record-type-opaque? rtd)
-			 "#[opaque-record "
-		       "#[record ")
-		     port)
-	(write-char* (symbol->string (record-type-name rtd))
-		     port)
-	(receive (next-mark-idx record.idx)
-	    (let upper-rtd ((rtd rtd))
-	      (cond ((record-type-parent rtd)
-		     => (lambda (prtd)
-			  (receive (next-mark-idx record.idx)
-			      (upper-rtd prtd)
-			    (%print-record-fields prtd record.idx record port write-style? marks-table next-mark-idx))))
-		    (else
-		     (values next-mark-idx 0))))
-	  (%print-record-fields rtd record.idx record port write-style? marks-table next-mark-idx)
-	  (write-char #\] port)
-	  next-mark-idx))
-
-      (define (%print-record-fields rtd next-record.idx record port write-style? marks-table next-mark-idx)
-	(let* ((vec      (record-type-field-names rtd))
-	       (vec.len  (vector-length vec)))
-	  (do ((vec.idx    0               (fxadd1 vec.idx))
-	       (record.idx next-record.idx (fxadd1 record.idx)))
-	      ((fx=? vec.idx vec.len)
-	       (values next-mark-idx record.idx))
-	    (let* ((field-nam  (vector-ref vec vec.idx))
-		   (field-val  (struct-ref record record.idx)))
-	      (write-char #\space port)
-	      (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
-		(write-char #\= port)
-		(set! next-mark-idx (write-object field-val port write-style? marks-table next-mark-idx)))))))
-
-      #| end of module: %WRITE-RECORD/DEFAULT-PRINTER |# )
+    (define (%write-record/default-printer record port write-style? marks-table next-mark-idx)
+      (define rtd (record-rtd record))
+      (write-char* (if (record-type-opaque? rtd) "#[opaque-record " "#[record ") port)
+      (write-char* (symbol->string (record-type-name rtd)) port)
+      (let* ((fields.vec  (records.record-type-all-field-names rtd))
+	     (fields.len  (vector-length fields.vec)))
+	(do ((fields.idx 0 (fxadd1 fields.idx)))
+	    ((fx=? fields.idx fields.len)
+	     (write-char #\] port)
+	     next-mark-idx)
+	  (let* ((field-nam  (vector-ref fields.vec fields.idx))
+		 (field-val  (records.record-ref record fields.idx)))
+	    (write-char #\space port)
+	    (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
+	      (write-char #\= port)
+	      (set! next-mark-idx (write-object field-val port write-style? marks-table next-mark-idx)))))))
 
     #| end of module: WRITE-OBJECT-RECORD |# )
 

@@ -64,7 +64,8 @@
     (prefix (only (ikarus records procedural)
 		  record-object?
 		  record-constructor-descriptor?
-		  record-type-all-field-names)
+		  record-type-all-field-names
+		  record-ref)
 	    records.))
 
 
@@ -717,7 +718,7 @@
       (if (pair? field-name*)
 	  ;;First we do the next field...
 	  (let ((box (let* ((box1 (%boxify-object (car field-name*)))
-			    (box2 (%boxify-object (struct-ref reco field-idx)))
+			    (box2 (%boxify-object (records.record-ref reco field-idx)))
 			    (len  (+ (box-length box1) (box-length box2)))
 			    (box  (make-fbox len (list box1 box2) #f)))
 		       (make-cbox (+ 2 len) (list "(" box ")"))))

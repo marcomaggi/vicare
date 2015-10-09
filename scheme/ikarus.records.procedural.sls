@@ -25,6 +25,7 @@
     record-constructor			record-predicate
     record-accessor			record-mutator
     unsafe-record-accessor		unsafe-record-mutator
+    record-ref
 
     ;; bindings for (rnrs records inspection (6))
     record?				record-rtd
@@ -47,6 +48,9 @@
 	    (<rtd>-method-retriever		record-type-method-retriever)
 	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
 
+    ;; unsafe operations
+    $record-ref
+
     ;; syntactic bindings for internal use only
     (rename ($<rtd>-destructor		$record-type-destructor))
     internal-applicable-record-type-destructor
@@ -64,6 +68,7 @@
 		  record-constructor			record-predicate
 		  record-accessor			record-mutator
 		  unsafe-record-accessor		unsafe-record-mutator
+		  record-ref
 
 		  ;; bindings for (rnrs records inspection (6))
 		  record?				record-rtd
@@ -1107,6 +1112,18 @@
 ;;                                 |0, 1, 2|	relative offsets of <GAMMA>
 ;;               |0, 1, 2, 3, 4, 5, 6, 7, 8|	absolute offsets of <GAMMA>
 ;;
+
+(define* (record-ref {reco record-object?} {idx non-negative-fixnum?})
+  ($record-ref reco idx))
+
+(define* ($record-ref reco idx)
+  (let ((max ($<rtd>-total-fields-number ($struct-rtd reco))))
+    (if ($fx< idx max)
+	($struct-ref reco idx)
+      (procedure-arguments-consistency-violation __who__
+	"field index out of range for record" idx max))))
+
+;;; --------------------------------------------------------------------
 
 (module (record-accessor
 	 record-mutator
