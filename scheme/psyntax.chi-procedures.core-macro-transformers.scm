@@ -1396,7 +1396,19 @@
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
   ;;the context of the given LEXENV; return a PSI struct.
   ;;
-  (syntax-match input-form.stx ()
+  (syntax-match input-form.stx (<top>)
+    ((_ ?super-type <top>)
+     (begin
+       (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?super-type)
+       (make-psi input-form.stx
+		 (build-data no-source #f)
+		 (make-retvals-signature/single-boolean))))
+    ((_ <top> ?sub-type)
+     (begin
+       (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?sub-type)
+       (make-psi input-form.stx
+		 (build-data no-source #t)
+		 (make-retvals-signature/single-boolean))))
     ((_ ?super-type ?sub-type)
      (let* ((super-ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?super-type))
 	    (sub-ots   (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?sub-type))

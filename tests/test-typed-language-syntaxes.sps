@@ -51,6 +51,9 @@
       (expansion-of (type-super-and-sub? <number> <string>))
     => '(quote #f))
 
+  (check-for-true	(type-super-and-sub? <top> <number>))
+  (check-for-false	(type-super-and-sub? <number> <top>))
+
   (internal-body
     (define-record-type alpha)
 
@@ -68,6 +71,15 @@
 
     (check-for-true	(type-super-and-sub? beta gamma))
     (check-for-false	(type-super-and-sub? gamma beta))
+
+    (check-for-true	(type-super-and-sub? <top> alpha))
+    (check-for-false	(type-super-and-sub? alpha <top>))
+
+    (check-for-true	(type-super-and-sub? <top> beta))
+    (check-for-false	(type-super-and-sub? beta <top>))
+
+    (check-for-true	(type-super-and-sub? <top> gamma))
+    (check-for-false	(type-super-and-sub? gamma <top>))
 
     (void))
 

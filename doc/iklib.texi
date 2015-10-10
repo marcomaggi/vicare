@@ -2511,11 +2511,14 @@ given @meta{type-id}.
 
 @deffn Syntax type-super-and-sub? @metai{type} @metaii{type}
 Expand to a boolean constant: @true{} if @metai{type} is a super--type
-of @metaii{type}; otherwise @false{}.
+of @metaii{type}; otherwise @false{}.  @class{top} is conventionally the
+super--type of all the types.
 
 @lisp
 (type-super-and-sub? <number> <fixnum>)         @result{} #t
 (type-super-and-sub? <number> <string>)         @result{} #f
+(type-super-and-sub? <top> <number>)            @result{} #t
+(type-super-and-sub? <number> <top>)            @result{} #f
 
 (expansion-of (type-super-and-sub? <number> <fixnum>))
 @result{} (quote #t)
