@@ -152,17 +152,17 @@
 ;;; --------------------------------------------------------------------
 ;;; constructor
 
-  (check
-      (new <boolean> #t)
-    => '#t)
+  ;; (check
+  ;;     (new <boolean> #t)
+  ;;   => '#t)
 
-  (check
-      (new <boolean> #f)
-    => '#f)
+  ;; (check
+  ;;     (new <boolean> #f)
+  ;;   => '#f)
 
-  (check-for-procedure-signature-argument-violation
-      (new <boolean> 123)
-    => '(<boolean> 1 boolean? 123))
+  ;; (check-for-procedure-signature-argument-violation
+  ;;     (new <boolean> 123)
+  ;;   => '(<boolean> 1 boolean? 123))
 
   #t)
 
