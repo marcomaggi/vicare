@@ -2076,6 +2076,7 @@ syntactic identifier.
 * iklib syntaxes types slots::          Slot getter and setter syntaxes.
 * iklib syntaxes types methods::        Calling object-type methods.
 * iklib syntaxes types unsafe-cast::    Casting the type of expressions.
+* iklib syntaxes types super-sub::      Super and sub types.
 @end menu
 
 @c page
@@ -2501,6 +2502,44 @@ the expression as returning a single value of type @meta{type-id}.
 If it is possible to determine at expand--time the type of the
 @meta{expr}: this syntax checks the compatibility of the type with the
 given @meta{type-id}.
+@end deffn
+
+@c page
+@node iklib syntaxes types super-sub
+@subsubsection Super and sub types
+
+
+@deffn Syntax type-super-and-sub? @metai{type} @metaii{type}
+Expand to a boolean constant: @true{} if @metai{type} is a super--type
+of @metaii{type}; otherwise @false{}.
+
+@lisp
+(type-super-and-sub? <number> <fixnum>)         @result{} #t
+(type-super-and-sub? <number> <string>)         @result{} #f
+
+(expansion-of (type-super-and-sub? <number> <fixnum>))
+@result{} (quote #t)
+
+(expansion-of (type-super-and-sub? <number> <string>))
+@result{} (quote #f)
+
+(define-record-type alpha)
+
+(define-record-type beta
+  (parent alpha))
+
+(define-record-type gamma
+  (parent beta))
+
+(type-super-and-sub? alpha beta)        @result{} #t
+(type-super-and-sub? beta alpha)        @result{} #f
+
+(type-super-and-sub? alpha gamma)       @result{} #t
+(type-super-and-sub? gamma alpha)       @result{} #f
+
+(type-super-and-sub? beta gamma)        @result{} #t
+(type-super-and-sub? gamma beta)        @result{} #f
+@end lisp
 @end deffn
 
 @c page

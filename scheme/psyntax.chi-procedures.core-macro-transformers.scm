@@ -123,6 +123,8 @@
     ((assert-retvals-signature-and-return)	assert-retvals-signature-and-return-transformer)
 
     ((type-of)					type-of-transformer)
+    ((type-super-and-sub?)			type-super-and-sub?-transformer)
+
     ((expansion-of)				expansion-of-transformer)
     ((expansion-of*)				expansion-of*-transformer)
     ((visit-code-of)				visit-code-of-transformer)
@@ -1384,6 +1386,24 @@
 		 (build-data no-source
 		   expr.sig)
 		 (make-retvals-signature/single-top))))
+    ))
+
+
+;;;; module core-macro-transformer: TYPE-SUPER-AND-SUB?
+
+(define-core-transformer (type-super-and-sub? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  TYPE-SUPER-AND-SUB?  syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-type ?sub-type)
+     (let* ((super-ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?super-type))
+	    (sub-ots   (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?sub-type))
+	    (bool      (object-type-spec.subtype-and-supertype? sub-ots super-ots lexenv.run)))
+       (make-psi input-form.stx
+		 (build-data no-source bool)
+		 (make-retvals-signature/single-boolean))))
     ))
 
 

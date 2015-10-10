@@ -890,10 +890,12 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-syntactic-extensions.sps			\
 	tests/test-vicare-syntax-utilities.sps				\
 	tests/test-vicare-system.sps					\
-	tests/test-vicare-typed-language-scheme-objects.sps		\
 	tests/test-vicare-unwind-protection.sps				\
 	tests/test-vicare-vectors.sps					\
 	tests/test-vicare-writer.sps					\
+	\
+	tests/test-typed-language-syntaxes.sps				\
+	tests/test-typed-language-scheme-objects.sps			\
 	\
 	tests/test-issue-001-equal-hash.sps				\
 	tests/test-issue-003.sps					\
