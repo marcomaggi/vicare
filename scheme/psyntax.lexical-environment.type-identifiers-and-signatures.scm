@@ -22,10 +22,11 @@
 (module PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES
   (type-identifier?
    all-type-identifiers?
-   type-identifier-super-and-sub?			type-identifier-is-procedure-sub-type?
-   type-identifier-common-ancestor
-   type-identifier-detailed-validation
+   type-identifier-super-and-sub?
+   type-identifier-is-procedure-sub-type?		type-identifier-is-list-sub-type?
+   type-identifier-common-ancestor			type-identifier-detailed-validation
    typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
+
    syntax-object.standard-formals?
    syntax-object.formals-signature?
    syntax-object.retvals-signature?
@@ -199,6 +200,12 @@
    (type-identifier-is-procedure-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
    (type-identifier-super-and-sub? #f lexenv (procedure-tag-id) id)))
+
+(case-define type-identifier-is-list-sub-type?
+  ((id)
+   (type-identifier-is-list-sub-type? id (current-inferior-lexenv)))
+  ((id lexenv)
+   (type-identifier-super-and-sub? #f lexenv (list-tag-id) id)))
 
 
 ;;;; typed variable with procedure sub-type type utilities

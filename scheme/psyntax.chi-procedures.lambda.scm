@@ -213,7 +213,7 @@
 	  (%process-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run)
 	(define validation*.stx
 	  (if (attributes.safe-formals? attributes.sexp)
-	      (%build-formals-validation-form* __who__ input-form.stx standard-formals.stx formals-signature.tags #f #f)
+	      (%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx formals-signature.tags #f #f)
 	    '()))
 	(define has-arguments-validators?
 	  (not (null? validation*.stx)))
@@ -249,7 +249,7 @@
 	  (append (cdr ghost*.lex) (car ghost*.lex)))
 	(define validation*.stx
 	  (if (attributes.safe-formals? attributes.sexp)
-	      (%build-formals-validation-form* __who__ input-form.stx arg*.id arg*.tag rest.id rest.tag)
+	      (%build-formals-validation-form* __who__ input-form.stx lexenv.run arg*.id arg*.tag rest.id rest.tag)
 	    '()))
 	(define has-arguments-validators?
 	  (not (null? validation*.stx)))
@@ -299,7 +299,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-formals-validation-form* who input-form.stx arg* tag* rest-arg rest-tag)
+  (define (%build-formals-validation-form* who input-form.stx lexenv
+					   arg* tag* rest-arg rest-tag)
     ;;Build  and  return a  list  of  syntax  objects representing  expressions  that
     ;;validate the  arguments, excluding  the formals  in which  the tag  is "<top>",
     ;;whose argument are always valid.  When  there is no rest argument: REST-ARG and
@@ -325,18 +326,26 @@
 		   ((list-tag-id? rest-tag)
 		    ;;Nothing to be done because the rest argument is always a list.
 		    '())
-		   ((type-identifier-super-and-sub? (list-tag-id) rest-tag)
-		    ;;FIXME This must be written  correctly by extracting the type of
-		    ;;the items from REST-TAG type specification.
-		    '()
-		    ;; (bless
-		    ;;  (let ((obj.sym (gensym))
-		    ;; 	   (idx.sym (gensym)))
-		    ;;    `((fold-left (lambda (,idx.sym ,obj.sym)
-		    ;; 		      (validate-typed-procedure-argument ,rest-arg ,idx.sym ,obj.sym)
-		    ;; 		      (fxadd1 ,idx.sym))
-		    ;; 	   ,idx ,rest-arg))))
-		    )
+		   ((type-identifier-is-list-sub-type? rest-tag)
+		    (let ((ots (id->object-type-specification who input-form.stx rest-tag lexenv)))
+		      (if (list-type-spec? ots)
+			  ;;The  REST-TAG is  some  sub-type of  "<list>" defined  as
+			  ;;instance of "<list-type-spec>".  We generate a validating
+			  ;;expression that accepts  both null and a  list of objects
+			  ;;of the specified type.
+			  (let ((item-type-id	(list-type-spec.type-id ots))
+				(obj.sym	(gensym))
+				(idx.sym	(gensym)))
+			    (bless
+			     `((fold-left (lambda (,idx.sym ,obj.sym)
+					    (validate-typed-procedure-argument ,item-type-id ,idx.sym ,obj.sym)
+					    (fxadd1 ,idx.sym))
+				 ,idx ,rest-arg))))
+			;;The REST-TAG  is some sub-type  of "<list>" not  defined as
+			;;instance of  "<list-type-spec>".  Just  rely on  the type's
+			;;own predicate.
+			(bless
+			 `(validate-typed-procedure-argument ,rest-tag #f ,rest-arg)))))
 		   (else
 		    (syntax-violation who
 		      "invalid type for  rest argument, it must be  \"<list>\" or its sub-type"
