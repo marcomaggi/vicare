@@ -583,6 +583,7 @@
   ;;The BODY-FORM.STX is  a syntax object representing an  INTERNAL-DEFINE core macro
   ;;use; for example, one among:
   ;;
+  ;;   (internal-define ?attributes ?lhs)
   ;;   (internal-define ?attributes ?lhs ?rhs)
   ;;   (internal-define ?attributes (?lhs . ?formals) . ?body)
   ;;
@@ -590,7 +591,7 @@
   ;;will be expanded later.
   ;;
   ;;Here we  create a new syntactic  binding representing a (possibly  typed) lexical
-  ;;variable in the context of RIB and LEXENV.RUN:
+  ;;variable in the lexical context represented by the arguments RIB and LEXENV.RUN:
   ;;
   ;;* We generate a  label gensym uniquely associated to the  syntactic binding and a
   ;;lex gensym as name of the syntactic binding in the expanded code.
@@ -625,24 +626,8 @@
   ;;extension.   Normally,  in  a  non-interaction environment,  we  would  raise  an
   ;;exception as mandated by R6RS.
   ;;
-  ;;
-  ;;About determining the type of a lexical variable bound to a closure object
-  ;;--------------------------------------------------------------------------
-  ;;
-  ;;We explicitly decide not to rely on RHS type propagation to determine the type of
-  ;;the defined identifier ?LHS.  We could have considered:
-  ;;
-  ;;   (internal-define ?attributes (?lhs . ?formals) . ?body)
-  ;;
-  ;;as equivalent to:
-  ;;
-  ;;   (internal-define ?attributes ?lhs (lambda ?formals . ?body))
-  ;;
-  ;;so: first expand  the QRHS containing the LAMBDA form;  then take its single-type
-  ;;retvals signature and use it as type  for the identifier ?LHS.  But doing it this
-  ;;way: while the LAMBDA is expanded, ?LHS is not yet typed.  Instead by typing ?LHS
-  ;;first we are sure that it is already typed when LAMBDA is expanded.
-  ;;
+  (define-module-who internal-define)
+
   (define* (%chi-internal-define body-form.stx lexenv.run rib kwd* shadow/redefine-bindings?)
     (receive (id type-id qrhs lexenv.run)
 	;;From parsing the  syntactic form, we receive the following  values: ID, the
@@ -665,79 +650,86 @@
 	(values lex qrhs lexenv.run))))
 
   (define* (%parse-internal-define input-form.stx rib lexenv.run shadow/redefine-bindings?)
-    ;;Syntax parser for  Vicare's INTERNAL-DEFINE; this is like  the standard DEFINE,
-    ;;but supports  extended typed bindings  syntax and an additional  first argument
-    ;;being a list of attributes.  Return the following values:
+    ;;Syntax  parser for  Vicare's  INTERNAL-DEFINE  syntax uses;  this  is like  the
+    ;;standard DEFINE, but supports extended  typed bindings syntax and an additional
+    ;;first argument being a list of attributes.  Return the following values:
     ;;
     ;;1. The syntactic identifier of the lexical syntactic binding.
     ;;
-    ;;2. A  syntactic identifier representing  the lexical variable's type.   This is
-    ;;"<top>" when no type is specified.  This  is a sub-type of "<procedure>" when a
+    ;;2.  A  syntactic identifier  representing the lexical  variable's type.   It is
+    ;;false when  no type  is specified.  It  is a sub-type  of "<procedure>"  when a
     ;;procedure is defined.
     ;;
-    ;;3. A  qualified right-hand  side expression  (QRHS) representing  the syntactic
-    ;;binding to create.
-    ;;
-    ;;NOTE The following special case matches fine:
-    ;;
-    ;;   (internal-define ?attributes ((brace ciao))
-    ;;     (void))
+    ;;3.  An object representing a  qualified right-hand side expression (QRHS) fully
+    ;;representing the syntactic binding to create.
     ;;
     (syntax-match input-form.stx (brace)
       ((_ ?attributes ((brace ?lhs ?rv-type* ... . ?rv-rest-type) . ?fmls) ?body0 ?body* ...)
-       ;;Function definition with tagged return values and possibly tagged formals.
-       (identifier? ?lhs)
-       (let* ((formals.stx  (bless `((brace _ ,@?rv-type* . ,?rv-rest-type) . ,?fmls)))
-	      (who.sym      (identifier->symbol ?lhs)))
-	 (define-values (standard-formals.stx signature)
-	   (syntax-object.parse-lambda-clause-signature formals.stx input-form.stx))
-	 (let* ((type-id.name	(make-fabricated-closure-type-name (identifier->symbol ?lhs)))
-		(type-id	(datum->syntax ?lhs type-id.name))
-		(lexenv.run	(make-syntactic-binding/closure-type-name type-id signature rib lexenv.run shadow/redefine-bindings?))
-		(qrhs		(make-qualified-rhs/defun ?lhs input-form.stx type-id)))
-	   (values ?lhs type-id qrhs lexenv.run))))
-
-      ((_ ?attributes (brace ?id ?tag) ?expr)
-       ;;Variable definition with tagged identifier.
-       (type-identifier? ?tag lexenv.run)
-       (let* ((rhs.stx (bless `(assert-retvals-signature-and-return (,?tag) ,?expr)))
-	      (qrhs    (make-qualified-rhs/typed-defvar ?id rhs.stx ?tag)))
-	 (values ?id ?tag qrhs lexenv.run)))
-
-      ((_ ?attributes (brace ?id ?tag))
-       ;;Variable definition with tagged identifier, no init.
-       (type-identifier? ?tag lexenv.run)
-       (let* ((rhs.stx (bless '(void)))
-	      (qrhs    (make-qualified-rhs/typed-defvar ?id rhs.stx ?tag)))
-	 (values ?id ?tag qrhs lexenv.run)))
-
-      ((_ ?attributes (?lhs . ?fmls) ?body0 ?body ...)
-       ;;Function definition with possibly tagged formals.
-       (identifier? ?lhs)
-       (receive (standard-formals.stx signature)
-	   (syntax-object.parse-lambda-clause-signature ?fmls input-form.stx)
-	 (if (lambda-signature.fully-unspecified? signature)
-	     (let ((qrhs (make-qualified-rhs/defun ?lhs input-form.stx)))
-	       (values ?lhs #f qrhs lexenv.run))
+       ;;Function definition with typed return values and possibly typed formals.
+       (begin
+	 (unless (identifier? ?lhs)
+	   (syntax-violation __module_who__ "expected identifier as function name" input-form.stx ?lhs))
+	 (let* ((formals.stx  (bless `((brace _ ,@?rv-type* . ,?rv-rest-type) . ,?fmls)))
+		(who.sym      (identifier->symbol ?lhs)))
+	   (define-values (standard-formals.stx signature)
+	     (syntax-object.parse-lambda-clause-signature formals.stx input-form.stx))
 	   (let* ((type-id.name	(make-fabricated-closure-type-name (identifier->symbol ?lhs)))
 		  (type-id	(datum->syntax ?lhs type-id.name))
 		  (lexenv.run	(make-syntactic-binding/closure-type-name type-id signature rib lexenv.run shadow/redefine-bindings?))
 		  (qrhs		(make-qualified-rhs/defun ?lhs input-form.stx type-id)))
 	     (values ?lhs type-id qrhs lexenv.run)))))
 
-      ((_ ?attributes ?id ?expr)
-       ;;R6RS variable definition.
-       (identifier? ?id)
-       (let ((qrhs (make-qualified-rhs/untyped-defvar ?id ?expr)))
-	 (values ?id #f qrhs lexenv.run)))
+      ((_ ?attributes (brace ?lhs ?tag) ?rhs)
+       ;;Typed lexical variable definition with initialisation expression.
+       (begin
+	 (type-identifier-detailed-validation __module_who__ input-form.stx lexenv.run ?tag)
+	 (let* ((rhs.stx (bless `(assert-retvals-signature-and-return (,?tag) ,?rhs)))
+		(qrhs    (make-qualified-rhs/typed-defvar ?lhs rhs.stx ?tag)))
+	   (values ?lhs ?tag qrhs lexenv.run))))
 
-      ((_ ?attributes ?id)
-       ;;R6RS variable definition, no init.
-       (identifier? ?id)
-       (let* ((rhs.stx (bless '(void)))
-	      (qrhs    (make-qualified-rhs/untyped-defvar ?id rhs.stx)))
-	 (values ?id #f qrhs lexenv.run)))
-      ))
+      ((_ ?attributes (brace ?lhs ?tag))
+       ;;Typed lexical variable definition without initialisation expression.
+       (begin
+	 (type-identifier-detailed-validation __module_who__ input-form.stx lexenv.run ?tag)
+	 (let* ((rhs.stx (bless '(void)))
+		(qrhs    (make-qualified-rhs/typed-defvar ?lhs rhs.stx ?tag)))
+	   (values ?lhs ?tag qrhs lexenv.run))))
+
+      ((_ ?attributes (?lhs . ?fmls) ?body0 ?body ...)
+       ;;Function definition with possibly typed formals.
+       (begin
+	 (unless (identifier? ?lhs)
+	   (syntax-violation __module_who__ "expected identifier as function name" input-form.stx ?lhs))
+	 (receive (standard-formals.stx signature)
+	     (syntax-object.parse-lambda-clause-signature ?fmls input-form.stx)
+	   (if (lambda-signature.fully-unspecified? signature)
+	       (let ((qrhs (make-qualified-rhs/defun ?lhs input-form.stx)))
+		 (values ?lhs #f qrhs lexenv.run))
+	     (let* ((type-id.name	(make-fabricated-closure-type-name (identifier->symbol ?lhs)))
+		    (type-id	(datum->syntax ?lhs type-id.name))
+		    (lexenv.run	(make-syntactic-binding/closure-type-name type-id signature rib lexenv.run shadow/redefine-bindings?))
+		    (qrhs		(make-qualified-rhs/defun ?lhs input-form.stx type-id)))
+	       (values ?lhs type-id qrhs lexenv.run))))))
+
+      ((_ ?attributes ?lhs ?rhs)
+       ;;R6RS variable definition with initialisation expression.
+       (begin
+	 (unless (identifier? ?lhs)
+	   (syntax-violation __module_who__ "expected identifier as variable name" input-form.stx ?lhs))
+	 (let ((qrhs (make-qualified-rhs/untyped-defvar ?lhs ?rhs)))
+	   (values ?lhs #f qrhs lexenv.run))))
+
+      ((_ ?attributes ?lhs)
+       ;;R6RS variable definition without initialisation expression.
+       (begin
+	 (unless (identifier? ?lhs)
+	   (syntax-violation __module_who__ "expected identifier as variable name" input-form.stx ?lhs))
+	 (let* ((rhs.stx (bless '(void)))
+		(qrhs    (make-qualified-rhs/untyped-defvar ?lhs rhs.stx)))
+	   (values ?lhs #f qrhs lexenv.run))))
+
+      (_
+       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   #| end of module: %CHI-INTERNAL-DEFINE |# )
 
