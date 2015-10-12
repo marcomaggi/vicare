@@ -1305,7 +1305,6 @@ We can toy with the @code{global-env} with the following program:
   (vicare libraries))
 
 (library (demo)
-  (options visit-upon-loading)
   (export var macro var-macro macro-id
           etv color <color> modu fluid synonym alias)
   (import (vicare))

@@ -538,8 +538,6 @@
       (assertion-violation __who__
 	"attempt to intern already interned library" name lib)))
   (just-intern-library lib)
-  (when (memq 'visit-upon-loading (library-option* lib))
-    (visit-library lib))
   lib)
 
 (define* (just-intern-library lib)

@@ -2122,7 +2122,6 @@ bindings:
 
 @lisp
 (library (demo)
-  (options visit-upon-loading)
   (export var macro var-macro macro-id
           etv color <color> da-module fluid synonym)
   (import (vicare))

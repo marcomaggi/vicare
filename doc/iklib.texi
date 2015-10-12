@@ -130,36 +130,6 @@ where each @meta{option} is a symbolic expression.  There can be a
 single @clause{options} clause, before the @clause{export} one.
 
 
-@defvr {Library Option} visit-upon-loading
-Forces invoking and visiting a library upon its loading from the source
-or compiled file.
-
-The @rnrs{6} allows, and @value{PRJNAME} implements, a form of lazy
-evaluation of library code; an imported library is loaded but:
-
-@itemize
-@item
-Its code for run--time (the ``invoke code'' in @value{PRJNAME}'s jargon)
-is evaluated only when an exported variable is referenced in the
-importing code.
-
-@item
-Its code for expand--time (the ``visit code'' in @value{PRJNAME}'s
-jargon) is evaluated only when an exported syntax is first referenced in
-the importing code.
-@end itemize
-
-@noindent
-This is the default operations mode for @value{PRJNAME}.  This library
-option rejects this lazy mode, requesting that this library is visited
-when the library is loaded; visiting a library implies invoking it.
-
-This option is especially useful when the library assigns properties to
-syntactic bindings (@pxref{iklib syntaxes properties}) and when adding
-methods to Nausicaa's multimethods.
-@end defvr
-
-
 @defvr {Library Option} typed-language
 Turn on the tagged language extensions (@pxref{types, The typed
 language}).
@@ -3195,12 +3165,6 @@ Examples:
 It is sometimes useful to attach properties to syntactic bindings; the
 following @api{} does so.  The following functions will fail if the
 argument @var{id} is not a bound identifier.
-
-When writing a library making use of syntactic binding properties: we
-must enable the option @code{visit-upon-loading} in the options clause
-of the @syntax{library} form; @ref{iklib syntaxes libraries, Extended
-@syntax{library} syntax}.  Without this option properties may not be
-registered properly.
 
 
 @defun syntactic-binding-putprop @var{id} @var{key} @var{value}

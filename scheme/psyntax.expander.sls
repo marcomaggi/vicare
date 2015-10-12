@@ -621,7 +621,7 @@
     ;;4. The  body of the  library.  A SYNTAX-MATCH expression  argument representing
     ;;the body of the library.
     ;;
-    ;;5. The list of library options (like "strict-r6rs" and "visit-upon-loading").
+    ;;5. The list of library options (like "strict-r6rs" and "typed-language").
     ;;
     ;;6. A list of strings representing platform's shared library identifiers.
     ;;
@@ -691,8 +691,6 @@
        (symbol? (syntax->datum ?opt))
        (let ((sym (syntax->datum ?opt)))
 	 (case sym
-	   ((visit-upon-loading)
-	    (cons sym (%parse-library-options ?other*)))
 	   ((typed-language)
 	    (cons sym (%parse-library-options ?other*)))
 	   ;;"tagged-language"  is  kept  for  backwards  compatibility,  but  it  is
