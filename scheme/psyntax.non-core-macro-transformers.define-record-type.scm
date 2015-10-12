@@ -1160,14 +1160,22 @@
     ;;         ...)
     ;;
     ;;which evaluates to  an aslist whose keys  are field names and  whose values are
-    ;;syntactic identifiers bound to accessors or mutators.
+    ;;syntactic identifiers bound  to accessors or mutators.  When  an OPERATOR.ID is
+    ;;false, an entry with the following format is generated:
+    ;;
+    ;;  (cons (quote ?field-sym) #t)
+    ;;
+    ;;so  an attempt  to call  the mutator  of an  immutable field  can be  correctly
+    ;;detected and reported (with a meaningful error message).
     ;;
     (cons 'list (fold-right
 		    (lambda (key.id operator.id knil)
-		      (if operator.id
-			  (cons (list 'cons `(quote ,(syntax->datum key.id)) `(syntax ,operator.id))
-				knil)
-			knil))
+		      (cons (list 'cons
+				  `(quote ,(syntax->datum key.id))
+				  (if operator.id
+				      `(syntax ,operator.id)
+				    #t))
+			    knil))
 		  '() field-name*.id operator*.id)))
 
   (define (%make-alist-from-syms key*.sym value*.sym)

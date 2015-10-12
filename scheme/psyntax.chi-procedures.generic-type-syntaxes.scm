@@ -447,34 +447,39 @@
 
   (define* (%expand-to-object-mutator-application input-form.stx lexenv.run lexenv.expand
 						  ots {expr.stx syntax-object?} field-name.id new-value.stx)
-    (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
-	   => (lambda (mutator.sexp)
-		(chi-expr (bless
-			   `(,mutator.sexp ,expr.stx ,new-value.stx))
-			  lexenv.run lexenv.expand)))
-	  (else
-	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+    (let ((mutator.sexp (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand ots field-name.id)))
+      (chi-expr (bless
+		 `(,mutator.sexp ,expr.stx ,new-value.stx))
+		lexenv.run lexenv.expand)))
 
 ;;; --------------------------------------------------------------------
 
   (define (%expand-to-object-mutator input-form.stx lexenv.run lexenv.expand
 				     ots field-name.id)
-    (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
-	   => (lambda (mutator.sexp)
-		(chi-expr (bless mutator.sexp) lexenv.run lexenv.expand)))
-	  (else
-	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+    (let ((mutator.sexp (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand ots field-name.id)))
+      (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand)))
 
 ;;; --------------------------------------------------------------------
 
   (define* (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand
 						       ots {expr.psi psi?} field-name.id new-value.stx)
+    (let ((mutator.sexp (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand ots field-name.id)))
+      (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+					 (bless mutator.sexp) expr.psi (list new-value.stx))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand
+				  ots field-name.id)
+    (define (%error message)
+      (syntax-violation __module_who__ message input-form.stx field-name.id))
     (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id) lexenv.run)
 	   => (lambda (mutator.sexp)
-		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   (bless mutator.sexp) expr.psi (list new-value.stx))))
+		(if (boolean? mutator.sexp)
+		    (%error "attempt to mutate immutable field")
+		  mutator.sexp)))
 	  (else
-	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
+	   (%error "unknown field name"))))
 
   #| end of module: SLOT-SET!-TRANSFORMER |# )
 
