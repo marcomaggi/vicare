@@ -139,19 +139,19 @@
 (include "psyntax.helpers.scm" #t)
 
 
-;;;; public interface: tagged language support
+;;;; public interface: typed language support
 
 (module (enable-typed-language
 	 disable-typed-language)
 
   (define (enable-typed-language)
-    ;;This is meant to be used at the  REPL to turn on tagged language support, which
+    ;;This is meant to be used at the  REPL to turn on typed language support, which
     ;;is off by default.
     ;;
     (typed-language-support #t))
 
   (define (disable-typed-language)
-    ;;This is meant to be used at the REPL to turn off tagged language support.
+    ;;This is meant to be used at the REPL to turn off typed language support.
     ;;
     (typed-language-support #f))
 
@@ -379,7 +379,7 @@
 
   (define (%verbose-messages-thunk)
     (when (option.typed-language?)
-      (print-expander-warning-message "enabling tagged language support for program"))
+      (print-expander-warning-message "enabling typed language support for program"))
     (when (option.strict-r6rs)
       (print-expander-warning-message "enabling expander's strict R6RS support for program")))
 
@@ -601,7 +601,7 @@
   (define (%make-verbose-messages-thunk libname.sexp)
     (lambda ()
       (when (option.typed-language?)
-	(print-expander-warning-message "enabling tagged language support for library: ~a" libname.sexp))
+	(print-expander-warning-message "enabling typed language support for library: ~a" libname.sexp))
       (when (option.strict-r6rs)
 	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
 
