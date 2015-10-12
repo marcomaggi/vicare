@@ -755,6 +755,10 @@ given @meta{type}.
 @subsection Super and sub types
 
 
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
 @deffn Syntax type-super-and-sub? @metai{type} @metaii{type}
 Expand to a boolean constant: @true{} if @metai{type} is a super--type
 of @metaii{type}; otherwise @false{}.  @class{top} is conventionally the
