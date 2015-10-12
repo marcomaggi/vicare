@@ -1322,7 +1322,7 @@
 
     ,(declare-scheme-type <predicate>
 	 <procedure>
-       #f procedure?)
+       #f #f)
 
 ;;; --------------------------------------------------------------------
 ;;; numeric types
@@ -1383,7 +1383,7 @@
 
     ,(declare-scheme-type <complex>
 	 <number>
-       #f complex?)
+       make-rectangular complex?)
 
     ,(declare-scheme-type <number>
 	 <top>
@@ -1412,7 +1412,9 @@
 
     ,(declare-scheme-type <nlist>
 	 <list>
-       #f nlist?)
+       #f nlist?
+       (car		car)
+       (cdr		cdr))
 
     ,(declare-scheme-type <bytevector>
 	 <top>
@@ -1424,15 +1426,15 @@
 
     ,(declare-scheme-type <hashtable-eq>
 	 <hashtable>
-       make-eq-hashtable hashtable?)
+       make-eq-hashtable hashtable-eq?)
 
     ,(declare-scheme-type <hashtable-eqv>
 	 <hashtable>
-       make-eqv-hashtable hashtable?)
+       make-eqv-hashtable hashtable-eqv?)
 
-    ,(declare-scheme-type <hashtable-equal>
+    ,(declare-scheme-type <hashtable-equiv>
 	 <hashtable>
-       make-hashtable hashtable?)
+       make-hashtable hashtable-equiv?)
 
 ;;; --------------------------------------------------------------------
 ;;; records and structs
@@ -1464,7 +1466,8 @@
 
     ,(declare-scheme-type <compound-condition>
 	 <condition>
-       condition compound-condition?)
+       condition compound-condition?
+       (print		print-condition))
 
 ;;; --------------------------------------------------------------------
 ;;; input/output ports
@@ -2365,6 +2368,9 @@
     ($set-std-printer!				$structs)
     ($set-std-symbol!				$structs)
     ($set-std-destructor!			$structs)
+
+    ($record-ref)
+    ($record-and-rtd?)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
@@ -3534,6 +3540,9 @@
     (hashtable-size				v r ht)
     (hashtable-update!				v r ht)
     (hashtable?					v r ht)
+    (hashtable-eq?				v $language)
+    (hashtable-eqv?				v $language)
+    (hashtable-equiv?				v $language)
     (make-eq-hashtable				v r ht)
     (make-eqv-hashtable				v r ht)
     (hashtable-hash-function			v r ht)
@@ -4112,7 +4121,7 @@
     (<hashtable>				v $language)
     (<hashtable-eq>				v $language)
     (<hashtable-eqv>				v $language)
-    (<hashtable-equal>				v $language)
+    (<hashtable-equiv>				v $language)
 
     (<record>					v $language)
     (<record-type-descriptor>			v $language)

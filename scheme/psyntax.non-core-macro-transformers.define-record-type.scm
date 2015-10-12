@@ -246,8 +246,10 @@
       (define-syntax ,foo
 	,foo-syntactic-binding-form)
       ;;Type predicate.
-      (define (brace ,foo? <predicate>)
-	(record-predicate ,foo-rtd))
+      (define ((brace ,foo? <boolean>) obj)
+	(unsafe-cast <boolean>
+		     (and ($struct? obj)
+			  ($record-and-rtd? obj ,foo-rtd))))
       ;;Default constructor.
       ;;
       ;;FIXME We would  like the constructor to have a  function signature specifying

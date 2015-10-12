@@ -49,7 +49,7 @@
 	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
 
     ;; unsafe operations
-    $record-ref
+    $record-ref				$record-and-rtd?
 
     ;; syntactic bindings for internal use only
     (rename ($<rtd>-destructor		$record-type-destructor))

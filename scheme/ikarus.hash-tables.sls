@@ -37,6 +37,10 @@
     hashtable-equivalence-function
     hashtable-hash-function
 
+    hashtable-eq?
+    hashtable-eqv?
+    hashtable-equiv?
+
     ;; hash functions
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
@@ -87,6 +91,10 @@
 		  hashtable-copy
 		  hashtable-equivalence-function
 		  hashtable-hash-function
+
+		  hashtable-eq?
+		  hashtable-eqv?
+		  hashtable-equiv?
 
 		  hashtable-map-keys
 		  hashtable-map-entries
@@ -188,6 +196,8 @@
 		;
 		;If this  table has  a user-selected  equivalence function:  the hash
 		;function given to the constructor of this struct.
+   type
+		;A symbol among: eq?, eqv?, equiv.
    ))
 
 
@@ -710,9 +720,11 @@
 		  0					      ;size
 		  tc					      ;tc
 		  mutable?				      ;mutable?
-		  hashf			  ;validated hash function
-		  (hasht-equivf H.src)    ;equivalence function
-		  (hasht-hashf0 H.src)))) ;original hash function
+		  hashf		       ;validated hash function
+		  (hasht-equivf H.src) ;equivalence function
+		  (hasht-hashf0 H.src) ;original hash function
+		  (hasht-type   H.src)
+		  )))
 
   #| end of module: HASHT-COPY |# )
 
@@ -720,6 +732,18 @@
 ;;;; public interface: constructors and predicate
 
 (define hashtable? hasht?)
+
+(define* (hashtable-eq? obj)
+  (and (hashtable? obj)
+       (eq? 'eq? (hasht-type obj))))
+
+(define* (hashtable-eqv? obj)
+  (and (hashtable? obj)
+       (eq? 'eqv? (hasht-type obj))))
+
+(define* (hashtable-equiv? obj)
+  (and (hashtable? obj)
+       (eq? 'equiv (hasht-type obj))))
 
 (case-define* make-eq-hashtable
   (()
@@ -729,7 +753,9 @@
 	       #t			    ;mutable?
 	       #f			    ;hashf
 	       eq?			    ;equivf
-	       #f))			    ;hashf0
+	       #f			    ;hashf0
+	       'eq?			    ;type
+	       ))
   (({cap %initial-capacity?})
    (make-eq-hashtable)))
 
@@ -741,7 +767,9 @@
 	       #t			    ;mutable?
 	       #f			    ;hashf
 	       eqv?			    ;equivf
-	       #f))			    ;hashf0
+	       #f			    ;hashf0
+	       'eqv?			    ;type
+	       ))
   (({cap %initial-capacity?})
    (make-eqv-hashtable)))
 
@@ -755,7 +783,9 @@
 		 #t			       ;mutable?
 		 (%make-hashfun-wrapper hashf) ;hashf
 		 equivf			       ;equivf
-		 hashf))		       ;hashf0
+		 hashf			       ;hashf0
+		 'equiv			       ;type
+		 ))
     (({hashf procedure?} {equivf procedure?} {cap %initial-capacity?})
      (make-hashtable hashf equivf)))
 
