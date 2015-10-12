@@ -285,6 +285,69 @@
 
   (check-for-false (mutable-hashtable? 123))
 
+;;; --------------------------------------------------------------------
+;;; hashtable-eq?
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (hashtable-eq? T)))
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-eqv-hashtable))
+     (hashtable-eq? T)))
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-hashtable string-hash string=?))
+     (hashtable-eq? T)))
+
+;;; --------------------------------------------------------------------
+;;; hashtable-eqv?
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (hashtable-eqv? T)))
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-eqv-hashtable))
+     (hashtable-eqv? T)))
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-hashtable string-hash string=?))
+     (hashtable-eqv? T)))
+
+;;; --------------------------------------------------------------------
+;;; hashtable-equiv?
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (hashtable-equiv? T)))
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-eqv-hashtable))
+     (hashtable-equiv? T)))
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-hashtable string-hash string=?))
+     (hashtable-equiv? T)))
+
   #t)
 
 
