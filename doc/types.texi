@@ -7,8 +7,9 @@ defined by @rnrs{6} that allows the definition of typed syntactic
 bindings.
 
 @menu
-* types intro::                  Introduction to the typed language.
-* types syntaxes::               Convenience syntaxes.
+* types intro::                 Introduction to the typed language.
+* types syntaxes::              Convenience syntaxes.
+* types built-in::              Built-in object types.
 @end menu
 
 @c page
@@ -794,5 +795,766 @@ super--type of all the types.
 (type-super-and-sub? gamma beta)        @result{} #f
 @end lisp
 @end deffn
+
+@c page
+@node types built-in
+@section Built--in object types
+
+
+The library @library{vicare} exports keyword syntactic bindings
+representing the types of built--in objects: fixnum, strings, vectors,
+et cetera.
+
+@menu
+* types built-in top::          The conventional parent of all the types.
+* types built-in void::         Type of the void object.
+* types built-in booleans::     Type of boolean objects.
+* types built-in chars::        Type of character objects.
+* types built-in symbols::      Type of symbol objects.
+* types built-in keywords::     Type of keyword objects.
+* types built-in pointers::     Type of pointer objects.
+* types built-in transcoders::  Type of transcoder objects.
+* types built-in procedures::   Type of procedures objects.
+* types built-in numerics::     Type of numeric objects.
+* types built-in strings::      Type of string objects.
+* types built-in vectors::      Type of vector objects.
+* types built-in pairs::        Types of pairs and lists.
+* types built-in bytevectors::  Type of bytevector objects.
+* types built-in hashtables::   Type of hashtable objects.
+* types built-in structs::      Type of struct objects.
+* types built-in records::      Type of record objects.
+* types built-in conditions::   Type of condition objects.
+* types built-in ports::        Types of input/output ports.
+@end menu
+
+@c page
+@node types built-in top
+@subsection The conventional parent of all the types
+
+
+@deftp {Built--in Type} <top>
+It is the conventional parent of all the types.  It has no fields and no
+methods.  @syntax{is-a?} used with @class{top} always evaluates to
+@true{}.
+@end deftp
+
+@c page
+@node types built-in void
+@subsection The type of the void value
+
+
+@deftp {Built--in Type} <void>
+@deftpx {Parent Type} <top>
+The type of void values.  The constructor is @func{void}, the type
+predicate is @func{void-object?}.
+@end deftp
+
+@c page
+@node types built-in booleans
+@subsection Type of boolean values
+
+
+@deftp {Built--in Type} <boolean>
+@deftpx {Parent Type} <top>
+Type of boolean values @true{} and @false{}.  The type predicate is
+@func{boolean?}.
+@end deftp
+
+@c page
+@node types built-in chars
+@subsection Type of character values
+
+
+@deftp {Built--in Type} <char>
+@deftpx {Parent Type} <top>
+Type of character values.  The constructor is @func{integer->char}.  The
+type predicate is @func{char?}.
+@end deftp
+
+@c page
+@node types built-in symbols
+@subsection Type of symbol values
+
+
+@deftp {Built--in Type} <symbol>
+@deftpx {Parent Type} <top>
+Type of symbol values.  The constructor is @func{string->symbol}.  The
+type predicate @func{symbol?}.
+@end deftp
+
+
+@defmethod @class{symbol} string
+Apply @func{symbol->string} to the instance.
+@end defmethod
+
+
+@defmethod @class{symbol} hash
+Apply @func{symbol-hash} to the instance.
+@end defmethod
+
+
+@defmethod @class{symbol} bound
+Apply @func{?          symbol-bound?} to the instance.
+@end defmethod
+
+
+@defmethod @class{symbol} value
+@defmethodx @class{symbol} value @var{new-value}
+When called with no arguments: apply @func{symbol-value} to the instance
+to retrieve the current value in the @code{value} slot.  When called
+with one argument: apply @func{set-symbol-value!} to the instance to
+store a new value @code{value} slot.
+@end defmethod
+
+
+@defmethod @class{symbol} putprop
+Apply @func{putprop} to the instance.
+@end defmethod
+
+
+@defmethod @class{symbol} getprop
+Apply @func{getprop} to the instance.
+@end defmethod
+
+
+@defmethod @class{symbol} remprop
+Apply @func{remprop} to the instance.
+@end defmethod
+
+
+@defmethod @class{symbol} property-list
+Apply @func{property-list} to the instance.
+@end defmethod
+
+@c page
+@node types built-in keywords
+@subsection Type of keyword values
+
+
+@deftp {Built--in Type} <keyword>
+@deftpx {Parent Type} <top>
+Type of keyword values.  The constructor is @func{symbol->keyword}.  The
+type predicate is @func{keyword?}.
+@end deftp
+
+
+@defmethod @class{keyword} symbol
+Apply @func{keyword->symbol} to the instance.
+@end defmethod
+
+
+@defmethod @class{keyword} string
+Apply @func{keyword->string} to the instance.
+@end defmethod
+
+@c page
+@node types built-in pointers
+@subsection Type of pointer values
+
+
+@deftp {Built--in Type} <pointer>
+@deftpx {Parent Type} <top>
+Type of pointer values.  The constructor is @func{integer->pointer}.
+The type predicate is @func{pointer?}.
+@end deftp
+
+
+@defmethod @class{pointer} null?
+Apply @func{pointer-null?} to the instance.
+@end defmethod
+
+
+@defmethod @class{pointer} integer
+Apply @func{pointer->integer} to the instance.
+@end defmethod
+
+
+@defmethod @class{pointer} = @var{ptr} @dots{}
+Apply @func{pointer=?} to the instance and the arguments.
+@end defmethod
+
+
+@defmethod @class{pointer} != @var{ptr} @dots{}
+Apply @func{pointer!=?} to the instance and the arguments.
+@end defmethod
+
+
+@defmethod @class{pointer} < @var{ptr} @dots{}
+Apply @func{pointer<?} to the instance and the arguments.
+@end defmethod
+
+
+@defmethod @class{pointer} > @var{ptr} @dots{}
+Apply @func{pointer>?} to the instance and the arguments.
+@end defmethod
+
+
+@defmethod @class{pointer} <= @var{ptr} @dots{}
+Apply @func{pointer<=?} to the instance and the arguments.
+@end defmethod
+
+
+@defmethod @class{pointer} >= @var{ptr} @dots{}
+Apply @func{pointer>=?} to the instance and the arguments.
+@end defmethod
+
+
+@defmethod @class{pointer} add @var{diff}
+Apply @func{pointer-add} to the instance and the argument.
+@end defmethod
+
+
+@defmethod @class{pointer} diff @var{pointer}
+Apply @func{pointer-diff} to the instance and the argument.
+@end defmethod
+
+
+@defmethod @class{pointer} clone
+Apply @func{pointer-clone} to the instance.
+@end defmethod
+
+
+@defmethod @class{pointer} set-null!
+Apply @func{set-pointer-null!)} to the instance.
+@end defmethod
+
+@c page
+@node types built-in transcoders
+@subsection Type of transcoder values
+
+
+@deftp {Built--in Type} <transcoder>
+@deftpx {Parent Type} <top>
+Type of transcoder values.  The constructor is @func{make-transcoder}.
+The type predicate is @func{transcoder?}.
+@end deftp
+
+@c page
+@node types built-in procedures
+@subsection Type of procedures values
+
+
+@deftp {Built--in Type} <procedure>
+@deftpx {Parent Type} <top>
+Type of closure object values.  There is no constructor.  The type
+predicate is @func{procedure?}.
+@end deftp
+
+
+@deftp {Built--in Type} <predicate>
+@deftpx {Parent Type} <procedure>
+Type of closure object values accepting a single argument and returning
+a single boolean.  There is no constructor.  There is no type predicate.
+@end deftp
+
+@c page
+@node types built-in numerics
+@subsection Type of numeric values
+
+
+@menu
+* types built-in numerics number::           Type of number values.
+* types built-in numerics complex::          Type of complex values.
+* types built-in numerics real-valued::      Type of real-valued values.
+* types built-in numerics real::             Type of real values.
+* types built-in numerics rational-valued::  Type of rational-valued values.
+* types built-in numerics rational::         Type of rational values.
+* types built-in numerics integer-valued::   Type of integer-valued values.
+* types built-in numerics integer::          Type of integer values.
+* types built-in numerics exact-integer::    Type of exact-integer values.
+* types built-in numerics fixnums::          Type of fixnum values.
+* types built-in numerics bignums::          Type of bignum values.
+* types built-in numerics flonums::          Type of flonum values.
+* types built-in numerics ratnums::          Type of ratnum values.
+* types built-in numerics compnums::         Type of compnum values.
+* types built-in numerics cflonums::         Type of cflonum values.
+@end menu
+
+@c page
+@node types built-in numerics number
+@subsubsection Type of number values
+
+
+@deftp {Built--in Type} <number>
+@deftpx {Parent Type} <top>
+Type of numeric values.  There is no constructor.  The type predicate is
+@func{number?}.
+@end deftp
+
+@c page
+@node types built-in numerics complex
+@subsubsection Type of complex values
+
+
+@deftp {Built--in Type} <complex>
+@deftpx {Parent Type} <number>
+Type of complex numbers.  The constructor is @func{make-rectangular}.
+The type predicate is @func{complex?}.
+@end deftp
+
+@c page
+@node types built-in numerics real-valued
+@subsubsection Type of real--valued values
+
+
+@deftp {Built--in Type} <real-valued>
+@deftpx {Parent Type} <complex>
+Type of real--valued values.  There is no constructor.  The type
+predicate is @func{real-valued?}.
+@end deftp
+
+@c page
+@node types built-in numerics real
+@subsubsection Type of real values
+
+
+@deftp {Built--in Type} <real>
+@deftpx {Parent Type} <real-valued>
+Type of real values.  There is no constructor.  The type predicate is
+@func{real?}.
+@end deftp
+
+@c page
+@node types built-in numerics rational-valued
+@subsubsection Type of rational--valued values
+
+
+@deftp {Built--in Type} <rational-valued>
+@deftpx {Parent Type} <real>
+Type of rational--valued values.  There is no constructor.  The type
+predicate is @func{rational-valued?}.
+@end deftp
+
+@c page
+@node types built-in numerics rational
+@subsubsection Type of rational values
+
+
+@deftp {Built--in Type} <rational>
+@deftpx {Parent Type} <rational-valued>
+Type of rational values.  There is no constructor.  The type predicate
+is @func{rational?}.
+@end deftp
+
+@c page
+@node types built-in numerics integer-valued
+@subsubsection Type of integer--valued values
+
+
+@deftp {Built--in Type} <integer-valued>
+@deftpx {Parent Type} <rational-valued>
+Type of integer--valued values.  There is no constructor.  The type
+predicate is @func{integer-valued?}.
+@end deftp
+
+@c page
+@node types built-in numerics integer
+@subsubsection Type of integer values
+
+
+Notice that @class{integer} is a @class{rational}, not a
+@class{integer-valued}.
+
+
+@deftp {Built--in Type} <integer>
+@deftpx {Parent Type} <rational>
+Type of integer values.  There is no constructor.  The type predicate is
+@func{integer?}.
+@end deftp
+
+@c page
+@node types built-in numerics exact-integer
+@subsubsection Type of exact--integer values
+
+
+@deftp {Built--in Type} <exact-integer>
+@deftpx {Parent Type} <integer>
+Type of exact integers.  There is no constructor.  The type predicate is
+@func{exact-integer?}.
+@end deftp
+
+@c page
+@node types built-in numerics fixnums
+@subsubsection Type of fixnum values
+
+
+@deftp {Built--in Type} <fixnum>
+@deftpx {Parent Type} <exact-integer>
+Type of fixnum values.  There is no constructor.  The type predicate is
+@func{fixnum?}.
+@end deftp
+
+@c page
+@node types built-in numerics bignums
+@subsubsection Type of bignum values
+
+
+@deftp {Built--in Type} <bignum>
+@deftpx {Parent Type} <exact-integer>
+Type of bignum values.  There is no constructor.  The type predicate is
+@func{bignum?}.
+@end deftp
+
+@c page
+@node types built-in numerics flonums
+@subsubsection Type of flonum values
+
+
+@deftp {Built--in Type} <flonum>
+@deftpx {Parent Type} <real-valued>
+Type of flonum values.  There is no constructor.  The type predicate is
+@func{flonum?}.
+@end deftp
+
+@c page
+@node types built-in numerics ratnums
+@subsubsection Type of ratnum values
+
+
+@deftp {Built--in Type} <ratnum>
+@deftpx {Parent Type} <rational>
+Type of ratnum values.  There is no constructor.  The type predicate is
+@func{ratnum?}.
+@end deftp
+
+@c page
+@node types built-in numerics compnums
+@subsubsection Type of compnum values
+
+
+@deftp {Built--in Type} <compnum>
+@deftpx {Parent Type} <complex>
+Type of compnum values.  There is no constructor.  The type predicate is
+@func{compnum?}.
+@end deftp
+
+@c page
+@node types built-in numerics cflonums
+@subsubsection Type of cflonum values
+
+
+@deftp {Built--in Type} <cflonum>
+@deftpx {Parent Type} <complex>
+Type of cflonum values.  There is no constructor.  The type predicate is
+@func{cflonum?}.
+@end deftp
+
+@c page
+@node types built-in strings
+@subsection Type of string values
+
+
+@deftp {Built--in Type} <string>
+@deftpx {Parent Type} <top>
+Type of string values.  The constructor is @func{string}.  The type
+predicate is @func{string?}.
+@end deftp
+
+@c page
+@node types built-in vectors
+@subsection Type of vector values
+
+
+@deftp {Built--in Type} <vector>
+@deftpx {Parent Type}         <top>
+Type of vector values.  The constructor is @func{vector}.  The type
+predicate is @func{vector?}.
+@end deftp
+
+@c page
+@node types built-in pairs
+@subsection Types of pairs and lists
+
+
+@deftp {Built--in Type} <pair>
+@deftpx {Parent Type} <top>
+Type of pairs.  The constructor is @func{cons}.  The type predicate is
+@func{pair?}.
+@end deftp
+
+
+@defmethod @class{pair} car
+Apply @func{car} to the type instance.
+@end defmethod
+
+
+@defmethod @class{pair} cdr
+Apply @func{cdr} to the type instance.
+@end defmethod
+
+
+@deftp {Built--in Type} <list>
+@deftpx {Parent Type} <top>
+Type of proper lists.  The constructor is @func{list}.  The type
+predicate is @func{list?}.
+@end deftp
+
+
+@deftp {Built--in Type} <nlist>
+@deftpx {Parent Type} <list>
+Type of non--empty lists.  There is no constructor.  The type predicate
+is @func{nlist?}.
+@end deftp
+
+
+@defmethod @class{nlist} car
+Apply @func{car} to the type instance.
+@end defmethod
+
+
+@defmethod @class{nlist} cdr
+Apply @func{cdr} to the type instance.
+@end defmethod
+
+@c page
+@node types built-in bytevectors
+@subsection Type of bytevector objects
+
+
+@deftp {Built--in Type} <bytevector>
+@deftpx {Parent Type} <top>
+Type of bytevector objects.  The constructor is @func{make-bytevector}.
+The type predicate is @func{bytevector?}.
+@end deftp
+
+@c page
+@node types built-in hashtables
+@subsection Type of hashtable objects
+
+
+@deftp {Built--in Type} <hashtable>
+@deftpx {Parent Type} <top>
+Base type for hashtable objects.  There is no constructor.  The type
+predicate is @func{hashtable?}.
+@end deftp
+
+
+@deftp {Built--in Type} <hashtable-eq>
+@deftpx {Parent Type} <hashtable>
+Type of @func{eq?} hashtables.  The constructor is
+@func{make-eq-hashtable}.  There type predicate is @func{hashtable-eq?}.
+@end deftp
+
+
+@deftp {Built--in Type} <hashtable-eqv>
+@deftpx {Parent Type} <hashtable>
+Type of @func{eqv?} hashtables.  The constructor is
+@func{make-eqv-hashtable}.  There type predicate is @func{hashtable-eqv?}.
+@end deftp
+
+
+@deftp {Built--in Type} <hashtable-equal>
+@deftpx {Parent Type} <hashtable>
+Type of @func{equal?} hashtables.  The constructor is
+@func{make-hashtable}.  There type predicate is @func{hashtable-equiv?}.
+@end deftp
+
+@c page
+@node types built-in structs
+@subsection Type of struct objects
+
+
+@deftp {Built--in Type} <struct>
+@deftpx {Parent Type} <top>
+Type of struct objects.  There is no constructor.  The type predicate is
+@func{struct?}.
+@end deftp
+
+
+@deftp {Built--in Type} <struct-type-descriptor>
+@deftpx {Parent Type} <struct>
+Type of struct--type descriptor objects.  The constructor is
+@func{make-struct-type}.  The type descriptor is
+@func{struct-type-descriptor?}.
+@end deftp
+
+@c page
+@node types built-in records
+@subsection Type of record objects
+
+
+@deftp {Built--in Type} <record>
+@deftpx {Parent Type} <struct>
+Type of record objects.  There is no constructor.  The type predicate is
+@func{record?}.
+@end deftp
+
+
+@deftp {Built--in Type} <record-type-descriptor>
+@deftpx {Parent Type} <struct>
+Type of record--type descriptor objects.  The constructor is
+@func{make-record-type-descriptor}.  The type predicate is
+@func{record-type-descriptor?}.
+@end deftp
+
+
+@deftp {Built--in Type} <record-constructor-descriptor>
+@deftpx {Parent Type} <struct>
+Type of record--constructor descriptor objects.  The constructor is
+@func{make-record-constructor-descriptor}.  The type predicate is
+@func{record-constructor-descriptor?}.
+@end deftp
+
+@c page
+@node types built-in conditions
+@subsection Type of condition objects
+
+
+@deftp {Built--in Type} <condition>
+@deftpx {Parent Type} <record>
+Type of condition objects.  There is no constructor.  The type predicate
+is @func{condition?}.
+@end deftp
+
+
+@deftp {Built--in Type} <compound-condition>
+@deftpx {Parent Type} <condition>
+Type of compound condition objects.  The constructor is
+@func{condition}.  The type predicate is @func{compound-condition?}.
+@end deftp
+
+
+@defmethod @class{condition} print
+@defmethodx @class{compound-condition} print
+Apply @func{print-condition} to the instance.
+@end defmethod
+
+@c page
+@node types built-in ports
+@subsection Types of input/output ports
+
+
+@menu
+* types built-in ports base::            Base port types.
+* types built-in ports textual::         Textual port types.
+* types built-in ports binary::          Binary port types.
+* types built-in ports textual in::      Textual input port types.
+* types built-in ports textual out::     Textual output port types.
+* types built-in ports textual in/out::  Textual input/output port types.
+* types built-in ports binary in::       Binary input port types.
+* types built-in ports binary out::      Binary output port types.
+* types built-in ports binary in/out::   Binary input/output port types.
+@end menu
+
+@c page
+@node types built-in ports base
+@subsubsection Base port types
+
+
+@deftp {Built--in Type} <port>
+@deftpx {Parent Type} <top>
+Base type for input, output and input/output ports.  There is no
+constructor.  The type predicate is @func{port?}.
+@end deftp
+
+
+@deftp {Built--in Type} <input-port>
+@deftpx {Parent Type} <port>
+Base type for input ports.  There is no constructor.  The type predicate
+is @func{input-port?}.
+@end deftp
+
+
+@deftp {Built--in Type} <output-port>
+@deftpx {Parent Type} <port>
+Base type for output ports.  There is no constructor.  The type
+predicate is @func{output-port?}.
+@end deftp
+
+
+@deftp {Built--in Type} <input/output-port>
+@deftpx {Parent Type} <port>
+Base type for input/output ports.  There is no constructor.  The type
+predicate is @func{input/output-port?}.
+@end deftp
+
+@c page
+@node types built-in ports textual
+@subsubsection Textual port types
+
+
+@deftp {Built--in Type} <textual-port>
+@deftpx {Parent Type} <port>
+Type of textual ports.  There is no constructor.  The type predicate is
+@func{textual-port?}.
+@end deftp
+
+@c page
+@node types built-in ports binary
+@subsubsection Binary port types
+
+
+@deftp {Built--in Type} <binary-port>
+@deftpx {Parent Type} <port>
+Type of binary ports.  There is no constructor.  The type predicate is
+@func{binary-port?}.
+@end deftp
+
+@c page
+@node types built-in ports textual in
+@subsubsection Textual input port types
+
+
+@deftp {Built--in Type} <textual-input-port>
+@deftpx {Parent Type} <input-port>
+Type of textual input ports.  There is no constructor.  The type
+predicate is @func{textual-input-port?}.
+@end deftp
+
+@c page
+@node types built-in ports textual out
+@subsubsection Textual output port types
+
+
+@deftp {Built--in Type} <textual-output-port>
+@deftpx {Parent Type} <output-port>
+Type of textual output port.  There is no constructor.  The type
+predicate is @func{textual-output-port?}.
+@end deftp
+
+@c page
+@node types built-in ports textual in/out
+@subsubsection Textual input/output port types
+
+
+@deftp {Built--in Type} <textual-input/output-port>
+@deftpx {Parent Type} <input/output-port>
+Type of textual input/output ports.  There is no constructor.  The type
+predicate is @func{textual-input/output-port?}.
+@end deftp
+
+@c page
+@node types built-in ports binary in
+@subsubsection Binary input port types
+
+
+@deftp {Built--in Type} <binary-input-port>
+@deftpx {Parent Type} <input-port>
+Type of binary input ports.  There is no constructor.  The type
+predicate is @func{binary-input-port?}.
+@end deftp
+
+@c page
+@node types built-in ports binary out
+@subsubsection Binary output port types
+
+
+@deftp {Built--in Type} <binary-output-port>
+@deftpx {Parent Type} <output-port>
+Type of binary output ports.  There is no constructor.  The type
+predicate is @func{binary-output-port?}.
+@end deftp
+
+@c page
+@node types built-in ports binary in/out
+@subsubsection Binary input/output port types
+
+
+@deftp {Built--in Type} <binary-input/output-port>
+@deftpx {Parent Type} <input/output-port>
+Type of binary input/output ports.  There is no constructor.  The type
+predicate is @func{binary-input/output-port?}.
+@end deftp
+
 
 @c end of file

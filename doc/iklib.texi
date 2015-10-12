@@ -14724,6 +14724,15 @@ Return @true{} if @var{obj} is a hash table and it is mutable; return
 @var{obj} is not a hash table.
 @end defun
 
+
+@defun hashtable-eq? @var{obj}
+@defunx hashtable-eqv? @var{obj}
+@defunx hashtable-equiv? @var{obj}
+Return @true{} if @var{obj} is a hashtable object and it has, as
+equivalence function, respectively: @func{eq?}, @func{eqv?}, a user
+supplied function.
+@end defun
+
 @c page
 @node iklib hashtables iterators
 @subsection Hash table iterators
