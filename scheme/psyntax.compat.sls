@@ -21,7 +21,7 @@
     define*				define-constant
     case-define				case-define*
     case-lambda*			lambda*
-    define-auxiliary-syntaxes
+    define-auxiliary-syntaxes		let*-syntax
     define-inline			define-syntax-rule
     define-fluid-syntax			fluid-let-syntax
     unwind-protect

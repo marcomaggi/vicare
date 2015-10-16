@@ -815,17 +815,25 @@
 ;;;; raising exceptions
 
 (case-define* raise-non-continuable-standard-condition
-  (({who symbol?} {message string?} {irritants list?})
-   (raise
-    (condition (make-who-condition who)
-	       (make-message-condition message)
-	       (make-irritants-condition irritants))))
-  (({who symbol?} {message string?} {irritants list?} {cnd condition?})
-   (raise
-    (condition cnd
-	       (make-who-condition who)
-	       (make-message-condition message)
-	       (make-irritants-condition irritants)))))
+  ((who {message string?} {irritants list?})
+   (let ((C (condition (make-message-condition message)
+		       (make-irritants-condition irritants))))
+     (raise (if who
+		(if (or (symbol? who)
+			(string? who))
+		    (condition (make-who-condition who) C)
+		  (assertion-violation __who__ "invalid value for &who" who))
+	      C))))
+  ((who {message string?} {irritants list?} {cnd condition?})
+   (let ((C (condition cnd
+		       (make-message-condition message)
+		       (make-irritants-condition irritants))))
+     (raise (if who
+		(if (or (symbol? who)
+			(string? who))
+		    (condition (make-who-condition who) C)
+		  (assertion-violation __who__ "invalid value for &who" who))
+	      C)))))
 
 
 (define-syntax (define-condition-type stx)

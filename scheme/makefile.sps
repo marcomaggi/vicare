@@ -612,8 +612,8 @@
     (unsafe-cast				(core-macro . unsafe-cast))
     (validate-typed-procedure-argument		(core-macro . validate-typed-procedure-argument))
     (validate-typed-return-value		(core-macro . validate-typed-return-value))
-    (assert-retvals-signature					(core-macro . assert-retvals-signature))
-    (assert-retvals-signature-and-return			(core-macro . assert-retvals-signature-and-return))
+    (assert-signature					(core-macro . assert-signature))
+    (assert-signature-and-return			(core-macro . assert-signature-and-return))
     (type-of					(core-macro . type-of))
     (type-super-and-sub?			(core-macro . type-super-and-sub?))
     (expansion-of				(core-macro . expansion-of))
@@ -802,6 +802,32 @@
 	  (source-file-name	. library-source-file-name)
 	  (option*		. library-option*)
 	  (foreign-library*	. library-foreign-library*)))))
+
+;;; --------------------------------------------------------------------
+
+    (<list-type-spec>
+     ($core-record-type-name
+      . (<list-type-spec>-rtd
+	 <list-type-spec>-rcd
+	 #f make-list-type-spec list-type-spec?
+	 ((type-id		. list-type-spec.type-id)))))
+
+    (<vector-type-spec>
+     ($core-record-type-name
+      . (<vector-type-spec>-rtd
+	 <vector-type-spec>-rcd
+	 #f make-vector-type-spec vector-type-spec?
+	 ((type-id		. vector-type-spec.type-id)))))
+
+;;; --------------------------------------------------------------------
+
+    (<type-signature>
+     ($core-record-type-name
+      . (<type-signature>-rtd
+	 <type-signature>-rcd
+	 make-type-signature type-signature?
+	 ((tags			. type-signature-tags)))))
+
     ))
 
 
@@ -1245,6 +1271,23 @@
 	 ((bytevector		. utf32-string-decoding-orphan-octets.bytevector)
 	  (index		. utf32-string-decoding-orphan-octets.index)
 	  (octets		. utf32-string-decoding-orphan-octets.octets)))))
+    ;;;
+    (&expand-time-type-signature-violation
+     ($core-condition-object-type-name
+      . (&expand-time-type-signature-violation-rtd
+	 &expand-time-type-signature-violation-rcd
+	 &violation
+	 make-expand-time-type-signature-violation
+	 expand-time-type-signature-violation?)))
+    (&expand-time-retvals-signature-violation
+     ($core-condition-object-type-name
+      . (&expand-time-retvals-signature-violation-rtd
+	 &expand-time-retvals-signature-violation-rcd
+	 &expand-time-type-signature-violation
+	 make-expand-time-retvals-signature-violation
+	 expand-time-retvals-signature-violation?
+	 ((expected-signature	. expand-time-retvals-signature-violation-expected-signature)
+	  (returned-signature	. expand-time-retvals-signature-violation-returned-signature)))))
     ))
 
 
@@ -1558,10 +1601,10 @@
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES
   (list
-   (declare-typed-core-prim car
-     (unsafe-variant $car)
-     (signatures
-      ((<top>) (<pair>))))
+   ;; (declare-typed-core-prim car
+   ;;   (unsafe-variant $car)
+   ;;   (signatures
+   ;;    ((<top>) (<pair>))))
    ))
 
 
@@ -1694,8 +1737,8 @@
     (unsafe-cast				v $language)
     (validate-typed-procedure-argument		v $language)
     (validate-typed-return-value		v $language)
-    (assert-retvals-signature			v $language)
-    (assert-retvals-signature-and-return	v $language)
+    (assert-signature				v $language)
+    (assert-signature-and-return		v $language)
     (struct-type-descriptor			v $language)
     (parameterize				v $language)
     (parameterise				v $language)
@@ -3938,8 +3981,6 @@
     (predicate-return-value-validation		v $language)
 ;;;
     (unsafe						v $language)
-    (typed-procedure-variable.unsafe-variant		$expander)
-    (typed-procedure-variable.unsafe-variant-set!	$expander)
 ;;;
     (eval-for-expand				v $language)
     (begin-for-syntax				v $language)
@@ -4726,6 +4767,9 @@
     (system-id-gensym					$expander)
     (system-id						$expander)
 
+    (typed-procedure-variable.unsafe-variant		$expander)
+    (typed-procedure-variable.unsafe-variant-set!	$expander)
+
     ;;These are only for internal use by the psyntax.
     (make-syntactic-record-type-spec)
     (make-struct-type-spec)
@@ -4735,6 +4779,37 @@
     ;;These are only for internal use by the dynamic libraries loader.
     (global-typed-variable-spec?)
     (global-typed-variable-spec.variable-loc)
+
+    (<list-type-spec>					$expander)
+    (make-list-type-spec				$expander)
+    (list-type-spec?					$expander)
+    (list-type-spec.type-id				$expander)
+
+    (<vector-type-spec>					$expander)
+    (make-vector-type-spec				$expander)
+    (vector-type-spec?					$expander)
+    (vector-type-spec.type-id				$expander)
+
+    (<type-signature>					$expander)
+    (<type-signature>-rtd				$expander)
+    (<type-signature>-rcd				$expander)
+    (make-type-signature				$expander)
+    (type-signature?					$expander)
+    (type-signature-tags				$expander)
+
+    (&expand-time-type-signature-violation		$expander)
+    (&expand-time-type-signature-violation-rtd		$expander)
+    (&expand-time-type-signature-violation-rcd		$expander)
+    (make-expand-time-type-signature-violation		$expander)
+    (expand-time-type-signature-violation?		$expander)
+
+    (&expand-time-retvals-signature-violation		$expander)
+    (&expand-time-retvals-signature-violation-rtd	$expander)
+    (&expand-time-retvals-signature-violation-rcd	$expander)
+    (make-expand-time-retvals-signature-violation	$expander)
+    (expand-time-retvals-signature-violation?		$expander)
+    (expand-time-retvals-signature-violation-expected-signature	$expander)
+    (expand-time-retvals-signature-violation-returned-signature	$expander)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

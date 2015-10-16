@@ -334,6 +334,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes methods::      Calling object-type methods.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes super-sub::    Super and sub types.
+* types syntaxes assert::       Validating signatures.
 @end menu
 
 @c page
@@ -795,6 +796,103 @@ super--type of all the types.
 (type-super-and-sub? gamma beta)        @result{} #f
 @end lisp
 @end deffn
+
+@c page
+@node types syntaxes assert
+@subsection Validating signatures
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax assert-signature @meta{signature} @meta{expr}
+@deffnx Syntax assert-signature-and-return @meta{signature} @meta{expr}
+Validate the type signature of the values returned by @meta{expr},
+either at expand--time or run--time.  @meta{expr} can be any Scheme
+expression.  @meta{signature} must be a proper or improper list of type
+identifiers representing the type signature.  The first syntax returns a
+single unspecified value; the second syntax returns the return values of
+@meta{expr}.
+
+If it is possible to validate the signature at expand--time: when
+successful, the syntax use just expands to the evaluation of
+@meta{expr}; when a type mismatch is detected, an expand--time exception
+is raised.  Otherwise the syntax use expands to an expression that
+validates the values at run--time.
+@end deffn
+
+
+Here are some validation examples:
+
+@lisp
+(assert-signature () (values))
+(assert-signature-and-return (<fixnum>) 123)    @result{} 123
+(assert-signature-and-return (<string>) "ciao") @result{} "ciao"
+
+(assert-signature-and-return (<fixnum> <flonum>) 1 2.0)
+@result{} 1 2.0
+
+(expansion-of
+  (assert-signature (<fixnum>) 123))
+@result{} (begin (quote 123) (quote #!void))
+
+(expansion-of
+  (assert-signature-and-return (<fixnum>) 123))
+@result{} (quote 123)
+
+(expansion-of
+  (assert-signature-and-return (<fixnum>)
+    (unsafe-cast <fixnum> (read))))
+@result{} ((primitive read))
+@end lisp
+
+Given that the signature validation happens at expand--time (when
+possible) there are some interesting special cases:
+
+@itemize
+@item
+If we want to assert that an expression returns zero values, we can do:
+
+@lisp
+(assert-signature () @meta{expr})
+@end lisp
+
+@item
+If we want to assert that an expression returns a single value, of any
+type, we can do:
+
+@lisp
+(assert-signature (<top>) @meta{expr})
+@end lisp
+
+@item
+If we want to assert that an expression returns two values, of any type,
+we can do:
+
+@lisp
+(assert-signature (<top> <top>) @meta{expr})
+@end lisp
+
+@item
+If we want to assert that an expression returns two or more values, of
+any type, we can do:
+
+@lisp
+(assert-signature (<top> <top> . <list>) @meta{expr})
+@end lisp
+
+@item
+If we want to assert nothing, we can do:
+
+@lisp
+(assert-signature <list> @meta{expr})
+@end lisp
+
+@noindent
+which will just expand to the evaluation of @meta{expr}; this might be
+useful when the syntax is used in the output form of another macro use.
+@end itemize
 
 @c page
 @node types built-in

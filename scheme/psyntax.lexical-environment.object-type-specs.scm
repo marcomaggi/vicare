@@ -39,8 +39,14 @@
 	 make-core-scheme-type-spec			core-scheme-type-spec?
 
 	 <list-type-spec>
+	 <list-type-spec>-rtd				<list-type-spec>-rcd
 	 make-list-type-spec				list-type-spec?
 	 list-type-spec.type-id
+
+	 <vector-type-spec>
+	 <vector-type-spec>-rtd				<vector-type-spec>-rcd
+	 make-vector-type-spec				vector-type-spec?
+	 vector-type-spec.type-id
 
 	 <struct-type-spec>
 	 make-struct-type-spec				struct-type-spec?
@@ -323,7 +329,7 @@
 ;;
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<nlist>" representing non-empty proper list objects holding items of a known type.
-;;The lexenv entry has the format:
+;;The LEXENV entry has the format:
 ;;
 ;;   (local-object-type-name . (#<list-type-spec> . ?expanded-expr))
 ;;
@@ -343,6 +349,44 @@
 	   type-id)))
       make-list-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define <list-type-spec>-rtd
+  (record-type-descriptor <list-type-spec>))
+
+(define <list-type-spec>-rcd
+  (record-constructor-descriptor <list-type-spec>))
+
+
+;;;; vector object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<vector>" representing vector  objects holding items of a known  type.  The LEXENV
+;;entry has the format:
+;;
+;;   (local-object-type-name . (#<vector-type-spec> . ?expanded-expr))
+;;
+(define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
+  (nongenerative vicare:expander:<vector-type-spec>)
+  (parent <scheme-type-spec>)
+  (fields (immutable type-id		vector-type-spec.type-id))
+		;A type identifier representing the type of items.
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define* (make-vector-type-spec {type-id type-identifier?})
+	(let ((parent-id		(vector-tag-id))
+	      (constructor.sexp		#f)
+	      (predicate.sexp		#f)
+	      (methods-table		'()))
+	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+	   type-id)))
+      make-vector-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <vector-type-spec>-rtd
+  (record-type-descriptor <vector-type-spec>))
+
+(define <vector-type-spec>-rcd
+  (record-constructor-descriptor <vector-type-spec>))
 
 
 ;;;; closure object signature spec

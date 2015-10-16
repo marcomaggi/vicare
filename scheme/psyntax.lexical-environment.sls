@@ -119,6 +119,12 @@
     make-syntactic-binding/closure-type-name
     make-fabricated-closure-type-name
 
+    make-syntactic-binding-descriptor/list-sub-type-name
+    syntactic-binding-descriptor/list-sub-type-name?
+
+    make-syntactic-binding-descriptor/vector-sub-type-name
+    syntactic-binding-descriptor/vector-sub-type-name?
+
     ;; syntactic bindings utilities: struct-type specifications
     make-syntactic-binding-descriptor/struct-type-name
     struct-type-name-binding-descriptor?
@@ -165,13 +171,20 @@
     <core-scheme-type-spec>
     make-core-scheme-type-spec				core-scheme-type-spec?
 
-    <list-type-spec>
-    make-list-type-spec					list-type-spec?
-    list-type-spec.type-id
-
     <closure-type-spec>
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature
+
+    ;; object-type specifications: compound types
+    <list-type-spec>
+    <list-type-spec>-rtd				<list-type-spec>-rcd
+    make-list-type-spec					list-type-spec?
+    list-type-spec.type-id
+
+    <vector-type-spec>
+    <vector-type-spec>-rtd				<vector-type-spec>-rcd
+    make-vector-type-spec				vector-type-spec?
+    vector-type-spec.type-id
 
     ;; object-type specifications: structs
     <struct-type-spec>
@@ -214,6 +227,12 @@
     label->syntactic-binding-descriptor/no-indirection
 
     system-label	system-label-gensym	SYSTEM-LABEL-GENSYM
+
+    ;; type signature
+    <type-signature>
+    <type-signature>-rtd				<type-signature>-rcd
+    make-type-signature					type-signature?
+    type-signature-tags
 
     ;; marks of lexical contours
     src-marked?
@@ -289,6 +308,7 @@
     ;; core type identifiers
     procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
     list-tag-id			$list-tag-id?		list-tag-id?
+    vector-tag-id		$vector-tag-id?		vector-tag-id?
     nlist-tag-id		$nlist-tag-id?		nlist-tag-id?
     top-tag-id			$top-tag-id?		top-tag-id?
     boolean-tag-id		void-tag-id
@@ -341,11 +361,15 @@
     macro-expansion-trace-form
 
     &expand-time-type-signature-violation
+    &expand-time-type-signature-violation-rtd
+    &expand-time-type-signature-violation-rcd
     make-expand-time-type-signature-violation
     expand-time-type-signature-violation?
 
     &expand-time-retvals-signature-violation
-    ;;%make-expand-time-retvals-signature-violation
+    &expand-time-retvals-signature-violation-rtd
+    &expand-time-retvals-signature-violation-rcd
+    make-expand-time-retvals-signature-violation
     expand-time-retvals-signature-violation?
     expand-time-retvals-signature-violation-expected-signature
     expand-time-retvals-signature-violation-returned-signature
@@ -2527,44 +2551,42 @@
   (define-tag-retriever void-tag-id		<void>)
   (define-tag-retriever procedure-tag-id	<procedure>)
   (define-tag-retriever predicate-tag-id	<predicate>)
-  (define-tag-retriever list-tag-id		<list>)
-  (define-tag-retriever nlist-tag-id		<nlist>)
   (define-tag-retriever boolean-tag-id		<boolean>)
   (define-tag-retriever struct-tag-id		<struct>)
   (define-tag-retriever record-tag-id		<record>)
+  (define-tag-retriever vector-tag-id		<vector>)
+  (define-tag-retriever list-tag-id		<list>)
+  (define-tag-retriever nlist-tag-id		<nlist>)
   #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------
 
-(define ($procedure-tag-id? id)
-  (~free-identifier=? id (procedure-tag-id)))
-
-(define ($list-tag-id? id)
-  (~free-identifier=? id (list-tag-id)))
-
-(define ($nlist-tag-id? id)
-  (~free-identifier=? id (nlist-tag-id)))
-
-(define ($top-tag-id? id)
-  (~free-identifier=? id (top-tag-id)))
+(let-syntax
+    ((define-unsafe-tag-predicate (syntax-rules ()
+				    ((_ ?who ?tag-retriever)
+				     (define (?who id)
+				       (~free-identifier=? id (?tag-retriever)))))))
+  (define-unsafe-tag-predicate $top-tag-id?			top-tag-id)
+  (define-unsafe-tag-predicate $procedure-tag-id?		procedure-tag-id)
+  (define-unsafe-tag-predicate $vector-tag-id?			vector-tag-id)
+  (define-unsafe-tag-predicate $list-tag-id?			list-tag-id)
+  (define-unsafe-tag-predicate $nlist-tag-id?			nlist-tag-id)
+  #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 
-(define (procedure-tag-id? id)
-  (and (identifier? id)
-       ($procedure-tag-id? id)))
-
-(define (list-tag-id? id)
-  (and (identifier? id)
-       ($list-tag-id? id)))
-
-(define (nlist-tag-id? id)
-  (and (identifier? id)
-       ($nlist-tag-id? id)))
-
-(define (top-tag-id? id)
-  (and (identifier? id)
-       ($top-tag-id? id)))
+(let-syntax
+    ((define-tag-predicate (syntax-rules ()
+			     ((_ ?who ?unsafe-pred)
+			      (define (?who obj)
+				(and (identifier? obj)
+				     (?unsafe-pred obj)))))))
+  (define-tag-predicate top-tag-id?			$top-tag-id?)
+  (define-tag-predicate procedure-tag-id?		$procedure-tag-id?)
+  (define-tag-predicate vector-tag-id?			$vector-tag-id?)
+  (define-tag-predicate list-tag-id?			$list-tag-id?)
+  (define-tag-predicate nlist-tag-id?			$nlist-tag-id?)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; more external modules
@@ -2644,7 +2666,7 @@
   retvals-signature-condition?
   (signature retvals-signature-condition-signature))
 
-(define* (make-retvals-signature-condition {sig retvals-signature?})
+(define* (make-retvals-signature-condition {sig type-signature?})
   (%make-retvals-signature-condition sig))
 
 ;;This is used  to describe exceptions in which  the input form of a macro  use has a
@@ -2679,6 +2701,12 @@
   make-expand-time-type-signature-violation
   expand-time-type-signature-violation?)
 
+(define &expand-time-type-signature-violation-rtd
+  (record-type-descriptor &expand-time-type-signature-violation))
+
+(define &expand-time-type-signature-violation-rcd
+  (record-constructor-descriptor &expand-time-type-signature-violation))
+
 ;;; --------------------------------------------------------------------
 
 ;;This is  used to describe  exceptions in which:  after expanding an  expression, we
@@ -2693,8 +2721,14 @@
   (expected-signature expand-time-retvals-signature-violation-expected-signature)
   (returned-signature expand-time-retvals-signature-violation-returned-signature))
 
-(define* (make-expand-time-retvals-signature-violation {expected-signature retvals-signature?}
-						       {returned-signature retvals-signature?})
+(define &expand-time-retvals-signature-violation-rtd
+  (record-type-descriptor &expand-time-retvals-signature-violation))
+
+(define &expand-time-retvals-signature-violation-rcd
+  (record-constructor-descriptor &expand-time-retvals-signature-violation))
+
+(define* (make-expand-time-retvals-signature-violation {expected-signature type-signature?}
+						       {returned-signature type-signature?})
   (%make-expand-time-retvals-signature-violation expected-signature returned-signature))
 
 ;;; --------------------------------------------------------------------
@@ -2784,8 +2818,8 @@
      (raise-compound-condition-object who msg form (make-syntax-violation form subform))))
 
   (define* (expand-time-retvals-signature-violation source-who form subform
-						    {expected-retvals-signature retvals-signature?}
-						    {returned-retvals-signature retvals-signature?})
+						    {expected-retvals-signature type-signature?}
+						    {returned-retvals-signature type-signature?})
     ;;To be used at  expand-time when we were expecting a  signature from an expanded
     ;;expression  and we  received  an incompatible  one, for  example  in the  macro
     ;;transformers of TAG-ASSERT and TAG-ASSERT-AND-RETURN.

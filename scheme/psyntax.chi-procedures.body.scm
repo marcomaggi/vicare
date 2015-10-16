@@ -683,7 +683,7 @@
        ;;Typed lexical variable definition with initialisation expression.
        (begin
 	 (type-identifier-detailed-validation __module_who__ input-form.stx lexenv.run ?tag)
-	 (let* ((rhs.stx (bless `(assert-retvals-signature-and-return (,?tag) ,?rhs)))
+	 (let* ((rhs.stx (bless `(assert-signature-and-return (,?tag) ,?rhs)))
 		(qrhs    (make-qualified-rhs/typed-defvar ?lhs rhs.stx ?tag)))
 	   (values ?lhs ?tag qrhs lexenv.run))))
 

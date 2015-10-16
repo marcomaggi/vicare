@@ -22,49 +22,50 @@
 (module PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES
   (type-identifier?
    all-type-identifiers?
-   type-identifier-super-and-sub?
-   type-identifier-is-procedure-sub-type?		type-identifier-is-list-sub-type?
+   type-identifier=?					type-identifier-super-and-sub?
+   type-identifier-is-procedure-sub-type?		type-identifier-is-procedure-or-procedure-sub-type?
+   type-identifier-is-list-sub-type?			type-identifier-is-list-or-list-sub-type?
+   type-identifier-is-vector-sub-type?			type-identifier-is-vector-or-vector-sub-type?
    type-identifier-common-ancestor			type-identifier-detailed-validation
    typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
-
-   syntax-object.standard-formals?
-   syntax-object.formals-signature?
-   syntax-object.retvals-signature?
-   syntax-object.retvals-signature-super-and-sub?	syntax-object.formals-signature-super-and-sub?
-   retvals-signature-syntax-common-ancestor
-   syntax-object.typed-argument?			syntax-object.parse-typed-argument
-   syntax-object.list-of-typed-bindings?		syntax-object.parse-list-of-typed-bindings
-   syntax-object.parse-formals-signature
-   syntax-object.lambda-clause-signature?		syntax-object.parse-lambda-clause-signature
 
    fabricate-closure-type-identifier
 
 ;;; --------------------------------------------------------------------
+
+   syntax-object.standard-formals?
+
+   syntax-object.type-signature?			syntax-object.type-signature.single-identifier?
+   syntax-object.type-signature.fully-unspecified?	syntax-object.type-signature.partially-untyped?
+   syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
+
+   syntax-object.typed-argument?			syntax-object.parse-typed-argument
+
+   syntax-object.parse-list-of-typed-bindings
+   syntax-object.parse-formals-signature
+
+   syntax-object.lambda-clause-signature?		syntax-object.parse-lambda-clause-signature
+
+;;; --------------------------------------------------------------------
 ;;; signatures internal representation
 
-   <retvals-signature>
-   make-retvals-signature				retvals-signature?
-   retvals-signature.tags
-   make-retvals-signature/single-top			make-retvals-signature/single-void
-   make-retvals-signature/single-boolean		make-retvals-signature/single-procedure
-   make-retvals-signature/standalone-list		make-retvals-signature/fully-unspecified
-   make-retvals-signature/single-value
-   retvals-signature=?
-   retvals-signature.fully-unspecified?
-   retvals-signature.partially-unspecified?
-   retvals-signature.super-and-sub?
-   retvals-signature.single-tag?
-   retvals-signature.single-top-tag?
-   retvals-signature.single-tag-or-fully-unspecified?
+   <type-signature>
+   <type-signature>-rtd					<type-signature>-rcd
+   make-type-signature					type-signature?
+   type-signature-tags
+   make-type-signature/single-top			make-type-signature/single-void
+   make-type-signature/single-boolean			make-type-signature/single-procedure
+   make-type-signature/standalone-list			make-type-signature/fully-unspecified
+   make-type-signature/single-value
+   type-signature=?
+   type-signature.fully-unspecified?
+   type-signature.partially-untyped?
+   type-signature.super-and-sub?
+   type-signature.single-tag?
+   type-signature.single-top-tag?
+   type-signature.single-tag-or-fully-unspecified?
 
-   retvals-signatures-common-ancestor			datum-retvals-signature
-
-   <formals-signature>
-   make-formals-signature				formals-signature?
-   formals-signature.tags
-   formals-signature=?
-   formals-signature.super-and-sub?
-   formals-signature.fully-unspecified?
+   type-signature.common-ancestor			datum-type-signature
 
    <callable-signature>
    callable-signature?
@@ -125,15 +126,40 @@
     (case (syntactic-binding-descriptor.type descr)
       ((displaced-lexical)
        (%synner "identifier out of context as type identifier"))
-      ((local-object-type-name global-object-type-name)
-       (car (syntactic-binding-descriptor.value descr)))
+      ((local-object-type-name)
+       (syntactic-binding-descriptor/local-object-type.object-type-spec  descr))
+      ((global-object-type-name)
+       (syntactic-binding-descriptor/global-object-type.object-type-spec descr))
       (else
        (%synner "expected type identifier but given identifier does not represent an object-type")))))
 
+;;; --------------------------------------------------------------------
+
+(case-define* type-identifier=?
+  ((id1 id2)
+   (type-identifier=? id1 id2 (current-inferior-lexenv)))
+  ((id1 id2 lexenv)
+   (or (free-identifier=? id1 id2)
+       (let ((ots1 (id->object-type-specification __who__ #f id1 lexenv))
+	     (ots2 (id->object-type-specification __who__ #f id2 lexenv)))
+	 (cond ((list-type-spec? ots1)
+		(and (list-type-spec? ots2)
+		     (type-identifier=? (list-type-spec.type-id ots1)
+					(list-type-spec.type-id ots2)
+					lexenv)))
+	       ((vector-type-spec? ots1)
+		(and (vector-type-spec? ots2)
+		     (type-identifier=? (vector-type-spec.type-id ots1)
+					(vector-type-spec.type-id ots2)
+					lexenv)))
+	       (else #f))))))
+
 (case-define* type-identifier-super-and-sub?
   ((sub-type.id super-type.id)
-   (type-identifier-super-and-sub? #f (current-inferior-lexenv) super-type.id sub-type.id))
-  ((input-form.stx lexenv super-type.id sub-type.id)
+   (type-identifier-super-and-sub? super-type.id sub-type.id (current-inferior-lexenv) #f))
+  ((sub-type.id super-type.id lexenv)
+   (type-identifier-super-and-sub? super-type.id sub-type.id lexenv #f))
+  ((super-type.id sub-type.id lexenv input-form.stx)
    ;;Given two  syntactic identifiers having  an instance of  "<object-type-spec>" as
    ;;value in  the syntactic  binding's descriptor: return  true if  SUPER-TYPE.ID is
    ;;FREE-IDENTIFIER=?  to SUB-TYPE.ID or one of its ancestors.
@@ -142,47 +168,63 @@
      (syntax-violation #f
        "the syntactic identifier is not a type identifier"
        input-form.stx id))
-   (or (free-identifier=? sub-type.id super-type.id)
+   (or (free-identifier=? super-type.id sub-type.id)
        ($top-tag-id? super-type.id)
-       (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv)))
-	 (let loop ((sub-type.id sub-type.id))
-	   (let ((sub-ots (id->object-type-specification __who__ input-form.stx sub-type.id lexenv)))
-	     (cond ((object-type-spec.parent-id sub-ots)
-		    => (lambda (parent.id)
-			 (cond (($top-tag-id? parent.id)
-				#f)
-			       ((~free-identifier=? parent.id super-type.id)
-				#t)
-			       (else
-				(loop parent.id)))))
-		   (else #f))))))))
+       (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv))
+	     (sub-ots   (id->object-type-specification __who__ input-form.stx sub-type.id   lexenv)))
+	 (cond ((procedure-tag-id? super-type.id)
+		(closure-type-spec? sub-type.id))
+
+	       ((list-type-spec? super-ots)
+		(and (list-type-spec? sub-ots)
+		     (type-identifier-super-and-sub? (list-type-spec.type-id super-ots)
+						     (list-type-spec.type-id sub-ots)
+						     lexenv input-form.stx)))
+	       ((vector-type-spec? super-ots)
+		(and (vector-type-spec? sub-ots)
+		     (type-identifier-super-and-sub? (vector-type-spec.type-id super-ots)
+						     (vector-type-spec.type-id sub-ots)
+						     lexenv input-form.stx)))
+	       (else
+		(let loop ((sub-ots sub-ots))
+		  (cond ((object-type-spec.parent-id sub-ots)
+			 => (lambda (parent.id)
+			      (cond (($top-tag-id? parent.id)
+				     #f)
+				    ((type-identifier=? parent.id super-type.id lexenv)
+				     #t)
+				    (else
+				     (loop (id->object-type-specification __who__ input-form.stx parent.id lexenv))))))
+			(else #f)))))))))
 
 (case-define* type-identifier-common-ancestor
   ((id1 id2)
    (type-identifier-common-ancestor id1 id2 (current-inferior-lexenv)))
   ((id1 id2 lexenv)
-  ;;Visit the hierarchy of parents of the given type identifiers, determine the first
-  ;;common ancestor and return its identifier.
-  ;;
-  (cond ((~free-identifier=? id1 id2)
-	 id1)
-	((or ($top-tag-id? id1)
-	     ($top-tag-id? id2))
-	 (top-tag-id))
-	(else
-	 (let outer-loop ((type1 id1))
-	   (let inner-loop ((type2 id2))
-	     (if (~free-identifier=? type1 type2)
-		 type1
-	       (let ((ots2 (id->object-type-specification __who__ #f type2 lexenv)))
-		 (cond ((object-type-spec.parent-id ots2)
-			=> inner-loop)
-		       (else
-			(let ((ots1 (id->object-type-specification __who__ #f type1 lexenv)))
-			  (cond ((object-type-spec.parent-id ots1)
-				 => outer-loop)
-				(else
-				 (top-tag-id))))))))))))))
+   (type-identifier-common-ancestor id1 id2 lexenv #f))
+  ((id1 id2 lexenv input-form.stx)
+   ;;Visit the  hierarchy of  parents of  the given  type identifiers,  determine the
+   ;;first common ancestor and return its identifier.
+   ;;
+   (cond ((type-identifier=? id1 id2 lexenv)
+	  id1)
+	 ((or ($top-tag-id? id1)
+	      ($top-tag-id? id2))
+	  (top-tag-id))
+	 (else
+	  (let outer-loop ((type1 id1))
+	    (let inner-loop ((type2 id2))
+	      (if (type-identifier=? type1 type2 lexenv)
+		  type1
+		(let ((ots2 (id->object-type-specification __who__ input-form.stx type2 lexenv)))
+		  (cond ((object-type-spec.parent-id ots2)
+			 => inner-loop)
+			(else
+			 (let ((ots1 (id->object-type-specification __who__ input-form.stx type1 lexenv)))
+			   (cond ((object-type-spec.parent-id ots1)
+				  => outer-loop)
+				 (else
+				  (top-tag-id))))))))))))))
 
 (case-define all-type-identifiers?
   ((stx)
@@ -195,17 +237,50 @@
      (() #t)
      (_  #f))))
 
-(case-define type-identifier-is-procedure-sub-type?
+;;; --------------------------------------------------------------------
+
+(case-define* type-identifier-is-procedure-sub-type?
   ((id)
    (type-identifier-is-procedure-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (type-identifier-super-and-sub? #f lexenv (procedure-tag-id) id)))
+   (closure-type-spec? (id->object-type-specification __who__ #f id lexenv))))
 
-(case-define type-identifier-is-list-sub-type?
+(case-define* type-identifier-is-procedure-or-procedure-sub-type?
+  ((id)
+   (type-identifier-is-procedure-or-procedure-sub-type? id (current-inferior-lexenv)))
+  ((id lexenv)
+   (or (procedure-tag-id? id)
+       (type-identifier-is-procedure-sub-type? id lexenv))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* type-identifier-is-list-sub-type?
   ((id)
    (type-identifier-is-list-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (type-identifier-super-and-sub? #f lexenv (list-tag-id) id)))
+   (list-type-spec? (id->object-type-specification __who__ #f id lexenv))))
+
+(case-define* type-identifier-is-list-or-list-sub-type?
+  ((id)
+   (type-identifier-is-list-or-list-sub-type? id (current-inferior-lexenv)))
+  ((id lexenv)
+   (or (list-tag-id? id)
+       (type-identifier-is-list-sub-type? id lexenv))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* type-identifier-is-vector-sub-type?
+  ((id)
+   (type-identifier-is-vector-sub-type? id (current-inferior-lexenv)))
+  ((id lexenv)
+   (vector-type-spec? (id->object-type-specification __who__ #f id lexenv))))
+
+(case-define* type-identifier-is-vector-or-vector-sub-type?
+  ((id)
+   (type-identifier-is-vector-or-vector-sub-type? id (current-inferior-lexenv)))
+  ((id lexenv)
+   (or (vector-tag-id? id)
+       (type-identifier-is-vector-sub-type? id lexenv))))
 
 
 ;;;; typed variable with procedure sub-type type utilities
@@ -292,8 +367,8 @@
 ;;the LAMBDA proto parser builds the following "lambda-signature" struct:
 ;;
 ;;   #[<lambda-signature>
-;;       retvals=#[<retvals-signature> tags=(#'<exact-integer>)]
-;;       formals=#[<formals-signature> tags=(#'<fixnum> #'<fixnum>)]]
+;;       retvals=#[<type-signature> tags=(#'<exact-integer>)]
+;;       formals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
 ;;
 ;;To represent  the type of  the closure object: we  create a fresh  type identifier,
 ;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
@@ -315,8 +390,8 @@
 
 ;;;; helpers and utilities
 
-(define (datum-retvals-signature datum)
-  (make-retvals-signature
+(define (datum-type-signature datum)
+  (make-type-signature
    (list (cond ((boolean? datum)	(core-prim-id '<boolean>))
 	       ((char?    datum)	(core-prim-id '<char>))
 	       ((symbol?  datum)	(core-prim-id '<symbol>))
@@ -362,285 +437,374 @@
      (identifier? ?rest))
     ))
 
-(case-define syntax-object.formals-signature?
+(case-define syntax-object.type-signature?
   ((stx)
-   (syntax-object.formals-signature? stx (current-inferior-lexenv)))
-  ((stx lexenv)
-   ;;Return true if STX is a syntax object representing the tag signature of a tagged
-   ;;formals syntax; otherwise  return false.  The return  value is true if  STX is a
-   ;;proper  or improper  list of  tag identifiers,  with null  and a  standalone tag
-   ;;identifier being acceptable.  Examples:
-   ;;
-   ;;   (formals-signature-syntax #'<list>)				=> #t
-   ;;   (formals-signature-syntax #'())					=> #t
-   ;;   (formals-signature-syntax #'(<fixnum> <string>))		=> #t
-   ;;   (formals-signature-syntax #'(<fixnum> <string> . <fixnum>))	=> #t
-   ;;
-   ;;A standalone "<list>" identifier means: any number of values of any type.
-   ;;
-   (syntax-match stx ()
-     (() #t)
-     ((?id . ?rest)
-      (type-identifier? ?id lexenv)
-      (syntax-object.formals-signature? ?rest lexenv))
-     (?rest
-      (type-identifier? ?rest lexenv))
-     )))
-
-(case-define syntax-object.retvals-signature?
-  ((stx)
-   (syntax-object.retvals-signature? stx (current-inferior-lexenv)))
+   (syntax-object.type-signature? stx (current-inferior-lexenv)))
   ((stx lexenv)
    ;;Return true if STX  is a syntax object representing the  tag signature of tagged
    ;;return values; otherwise return false.  The return  value is true if STX is null
    ;;or  a  proper  or improper  list  of  tag  identifiers,  with a  standalone  tag
-   ;;identifier being acceptable.  Examples:
+   ;;identifier  being  acceptable  if  it  is "<list>"  of  one  of  its  sub-types.
+   ;;Examples:
    ;;
-   ;;   (retvals-signature-syntax #'<list>)				=> #t
-   ;;   (retvals-signature-syntax #'())					=> #t
-   ;;   (retvals-signature-syntax #'(<fixnum> <string>))		=> #t
-   ;;   (retvals-signature-syntax #'(<fixnum> <string> . <fixnum>))	=> #t
+   ;;   (syntax-object.type-signature? #'<list>)			=> #t
+   ;;   (syntax-object.type-signature? #'())				=> #t
+   ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
+   ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
    ;;
    ;;A standalone "<list>" identifier means: any number of values of any type.
    ;;
-   (syntax-match stx ()
+   (syntax-match stx (<list>)
      (() #t)
      ((?id . ?rest)
       (type-identifier? ?id lexenv)
-      (syntax-object.retvals-signature? ?rest lexenv))
+      (syntax-object.type-signature? ?rest lexenv))
+     (<list>
+      #t)
      (?rest
-      (type-identifier? ?rest lexenv))
+      (type-identifier-is-list-sub-type? ?rest lexenv))
      )))
 
 ;;; --------------------------------------------------------------------
 
-(define* (syntax-object.formals-signature-partially-untyped? {stx syntax-object.formals-signature?})
-  ;;The argument STX must be a  syntax object representing a formals signature syntax
-  ;;according  to SYNTAX-OBJECT.FORMALS-SIGNATURE?.   Return true  if STX  has at  least one
-  ;;"<top>" tag identifier; otherwise return false.
+(define (syntax-object.type-signature.single-identifier? signature.stx)
+  (syntax-match signature.stx ()
+    ((?type)	#t)
+    (else	#f)))
+
+(define* (syntax-object.type-signature.fully-unspecified? signature)
+  ;;Given a  syntax object representing a  valid type signature: areturn  true if the
+  ;;signature specifies  neither object  types, nor  objects count;  otherwise return
+  ;;false.  In other words, return true if the signature is a standalone "<list>".
   ;;
-  ($syntax-object.formals-signature-partially-untyped? stx))
-
-(define ($syntax-object.formals-signature-partially-untyped? stx)
-  (syntax-match stx ()
-    (() #f)
-    ((?tag . ?rest-tags)
-     (or (top-tag-id? ?tag)
-	 ($syntax-object.formals-signature-partially-untyped? ?rest-tags)))
-    (?rest
-     #t)))
-
-(define* (syntax-object.retvals-signature-partially-unspecified? {stx syntax-object.retvals-signature?})
-  ;;The argument STX must be a  syntax object representing a retvals signature syntax
-  ;;according to SYNTAX-OBJECT.RETVALS-SIGNATURE?.  Return true  if STX if the signature has
-  ;;at least one "<top>" tag identifier; otherwise return false.
-  ;;
-  ($syntax-object.retvals-signature-partially-unspecified? stx))
-
-(define $syntax-object.retvals-signature-partially-unspecified?
-  $syntax-object.formals-signature-partially-untyped?)
+  (list-tag-id? signature))
 
 ;;; --------------------------------------------------------------------
 
-(define* (syntax-object.formals-signature-super-and-sub? {super-signature syntax-object.formals-signature?}
-							 {sub-signature   syntax-object.formals-signature?})
-  ;;Return  true if  the super  signature syntax  and the  sub signature  syntax have
-  ;;compatible structure and  the tags from the super signature  are supertags of the
-  ;;tags from the sub signature; otherwise return false.
-  ;;
-  ;;This function can  be used to determine: if a  tuple of arguments (sub-signature)
-  ;;matches  a lambda  formals's signature  (super-signature); if  a tuple  or return
-  ;;values (sub-signature) matches the receiver signature (super-signature).
-  ;;
-  ($syntax-object.formals-signature-super-and-sub? super-signature sub-signature))
+(case-define* syntax-object.type-signature.partially-untyped?
+  ((stx)
+   (syntax-object.type-signature.partially-untyped? stx (current-inferior-lexenv)))
+  ((stx lexenv)
+   ;;Return true if STX  is a type signature syntax object with  at least one "<top>"
+   ;;identifier; otherwise return false.
+   ;;
+   (let loop ((stx stx)
+	      (rv  #f))
+     (syntax-match stx (<top>)
+       (() rv)
+       ((<top> . ?rest)
+	(loop ?rest #t))
+       ((?id . ?rest)
+	(type-identifier? ?id lexenv)
+	(loop ?rest rv))
+       (<list>
+	#t)
+       (?rest
+	(and (type-identifier-is-list-sub-type? ?rest lexenv)
+	     rv))
+       ))))
 
-(define ($syntax-object.formals-signature-super-and-sub? super-signature sub-signature)
-  (syntax-match super-signature ()
-    (()
-     (syntax-match sub-signature ()
-       ;;Both the signatures are proper lists with  the same number of items, and all
-       ;;the items are correct super and sub: success!
-       (() #t)
-       ;;The signatures do not match.
-       (_  #f)))
+;;; --------------------------------------------------------------------
 
-    ((?super-tag . ?super-rest-tags)
-     (syntax-match sub-signature ()
-       ((?sub-tag . ?sub-rest-tags)
-	(and (or (top-tag-id? ?super-tag)
-		 (type-identifier-super-and-sub? ?super-tag ?sub-tag))
-	     ($syntax-object.formals-signature-super-and-sub? ?super-rest-tags ?sub-rest-tags)))
-       (_ #f)))
-
-    (?super-rest-tag
-     (syntax-match sub-signature ()
-       ;;The super signature is an improper list with rest item and the sub signature
-       ;;is finished.  We want the following signatures to match:
-       ;;
-       ;;  super-singature == #'(<number>  <fixnum> . <top>)
-       ;;  sub-signature   == #'(<complex> <fixnum>)
-       ;;
-       ;;because "<top>" in rest position means any number of objects of any type.
+(case-define* syntax-object.type-signature.super-and-sub?
+  ((super-signature sub-signature)
+   (syntax-object.type-signature.super-and-sub? super-signature sub-signature (current-inferior-lexenv)))
+  ((super-signature sub-signature lexenv)
+   ;;Return   true  if:   SUPER-SIGNATURE  and   SUB-SIGNATURE  are   syntax  objects
+   ;;representing type signatures; SUPER-SIGNATURE  and SUB-SIGNATURE have compatible
+   ;;structure;  the type  identifiers from  SUPER-SIGNATURE are  super-types of  the
+   ;;corresponding type identifiers from SUB-SIGNATURE.  Otherwise return false.
+   ;;
+   ;;This function can  be used to determine:
+   ;;
+   ;;* If  the signature  of a  tuple of arguments  (SUB-SIGNATURE) matches  a lambda
+   ;;formals's signature (SUPER-SIGNATURE).
+   ;;
+   ;;*  If the  signature of  a tuple  or return  values (SUB-SIGNATURE)  matches the
+   ;;receiver signature (SUPER-SIGNATURE).
+   ;;
+   (let recur ((super super-signature)
+	       (sub   sub-signature))
+     (syntax-match super (<top> <list>)
        (()
-	(top-tag-id? ?super-rest-tag))
+	(syntax-match sub ()
+	  ;;Both the signatures  are proper lists with the same  number of items, and
+	  ;;all the items are correct super and sub: success!
+	  (() #t)
+	  ;;The signatures do not match.
+	  (_  #f)))
 
-       ;;The super signature is an improper  list shorter than the sub signature.  We
-       ;;want the following signatures to match:
-       ;;
-       ;;  super-signature == #'(<number>  . <top>)
-       ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
-       ;;
-       ;;because "<top>"  in rest position means  any number of objects  of any type.
-       ((?sub-tag . ?sub-rest-tags)
-	(top-tag-id? ?super-rest-tag))
+       ((<top> . ?super-rest-types)
+	(syntax-match sub ()
+	  ((?sub-type . ?sub-rest-types)
+	   (recur ?super-rest-types ?sub-rest-types))
+	  (_ #f)))
 
-       ;;Both the  signatures are improper lists  with the same number  of items, and
-       ;;all the items are  correct super and sub; if the rest  tags are proper super
-       ;;and subs: success!
-       ;;
-       ;;For example, we want the following signatures to match:
-       ;;
-       ;;  super-signature == #'(<string> <string> . <number>)
-       ;;  sub-signature   == #'(<string> <string> . <fixnum>)
-       ;;
-       (?sub-rest-tag
-	(type-identifier-super-and-sub? ?super-rest-tag ?sub-rest-tag))
-       ))
-    ))
+       ((?super-type . ?super-rest-types)
+	(syntax-match sub ()
+	  ((?sub-type . ?sub-rest-types)
+	   (type-identifier-super-and-sub? ?super-type ?sub-type lexenv)
+	   (recur ?super-rest-types ?sub-rest-types))
+	  (_ #f)))
 
-(define* (syntax-object.retvals-signature-super-and-sub? {super-signature syntax-object.retvals-signature?}
-							 {sub-signature   syntax-object.retvals-signature?})
-  ;;Return  true  if the  super  signature  and  the  sub signature  have  compatible
-  ;;structure and the  tags from the super  signature are supertags of  the tags from
-  ;;the sub signature; otherwise return false.
-  ;;
-  ;;This function can be used to determine:  if a tuple of arguments matches a lambda
-  ;;retvals's signaure; if a tuple or return values matches the receiver signature.
-  ;;
-  ($syntax-object.retvals-signature-super-and-sub? super-signature sub-signature))
+       (<list>
+	;;The super signature is an improper list accepting any object as rest.
+	#t)
 
-(define-syntax-rule ($syntax-object.retvals-signature-super-and-sub? ?super-signature ?sub-signature)
-  ($syntax-object.formals-signature-super-and-sub? ?super-signature ?sub-signature))
+       (?super-rest-type
+	(type-identifier-is-list-sub-type? ?super-rest-type lexenv)
+	(syntax-match sub (<list>)
+	  ;;The  super signature  is an  improper  list with  rest item  and the  sub
+	  ;;signature is finished.  We want the following signatures to match:
+	  ;;
+	  ;;  super-signature == #'(<number>  <fixnum> . <list>)
+	  ;;  sub-signature   == #'(<complex> <fixnum>)
+	  ;;
+	  ;;because "<list>"  in rest  position means  any number  of objects  of any
+	  ;;type.
+	  (() #t)
+
+	  ;;The super signature  is an improper list shorter than  the sub signature.
+	  ;;We want the following signatures to match:
+	  ;;
+	  ;;  super-signature == #'(<number>  . <list-of-fixnums>)
+	  ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
+	  ;;
+	  ((?sub-type . ?sub-rest-types)
+	   (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
+	     (and (type-identifier-super-and-sub? item-id ?sub-type lexenv)
+		  (recur ?super-rest-type ?sub-rest-types))))
+
+	  (<list>
+	   ;;Both the  signatures are improper lists  with the same number  of items,
+	   ;;and  all the  items  are correct  super  and sub.   The  rest types  are
+	   ;;mismatching.
+	   #f)
+
+	  ;;Both the signatures are improper lists with the same number of items, and
+	  ;;all the  items are correct  super and sub; if  the rest types  are proper
+	  ;;super and subs:  success!  For example, we want  the following signatures
+	  ;;to match:
+	  ;;
+	  ;;  super-signature == #'(<string> <string> . <list-of-numbers>)
+	  ;;  sub-signature   == #'(<string> <string> . <list-of-fixnums>)
+	  ;;
+	  (?sub-rest-type
+	   (type-identifier-is-list-sub-type? ?sub-rest-type lexenv)
+	   (type-identifier-super-and-sub? ?super-rest-type ?sub-rest-type lexenv))
+
+	  (?sub-rest-type
+	   (syntax-violation __who__
+	     "invalid syntax object as sub type-signature, expected \"<list>\" or its sub-type in improper tail position"
+	     super-signature ?sub-rest-type))
+	  ))
+
+       (?super-rest-type
+	(syntax-violation __who__
+	  "invalid syntax object as super type-signature, expected \"<list>\" or its sub-type in improper tail position"
+	  super-signature ?super-rest-type))
+       ))))
 
 ;;; --------------------------------------------------------------------
 
-(module (retvals-signature-syntax-common-ancestor)
+(case-define syntax-object.type-signature.common-ancestor
+  ((sig1 sig2)
+   (syntax-object.type-signature.common-ancestor sig1 sig2 (current-inferior-lexenv)))
+  ((sig1 sig2 lexenv)
+   ;;Given  two syntax  objects representing  type  signatures: return  a new  syntax
+   ;;object representing the type signature begin their common ancestor.  Examples:
+   ;;
+   ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<fixnum>))
+   ;;  => #'(<fixnum>)
+   ;;
+   ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<flonum>))
+   ;;  => #'(<real>)
+   ;;
+   ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<string>))
+   ;;  => #'(<top>)
+   ;;
+   ;;NOTE The arguments SIG1  and SIG2 are *not* validated here:  they must have been
+   ;;previously validated.
+   ;;
+   (define-syntax-rule (recur ?sig1 ?sig2)
+     (syntax-object.type-signature.common-ancestor ?sig1 ?sig2 lexenv))
+   (syntax-match sig1 ()
+     (()
+      (syntax-match sig2 ()
+	;;Both  the signatures  are  proper  lists with  the  same  number of  items:
+	;;success!
+	(() '())
+	;;SIG1 is a proper list shorter that SIG2.
+	(_
+	 (list-tag-id))))
 
-  (define* (retvals-signature-syntax-common-ancestor {sig1 syntax-object.retvals-signature?}
-						     {sig2 syntax-object.retvals-signature?})
-    ;;Given two signatures syntaxes: return a new signature syntax representing their
-    ;;common ancestor.  Examples:
-    ;;
-    ;;  (retvals-signature-syntax-common-ancestor #'(<fixnum>) #'(<fixnum>))
-    ;;  => #'(<fixnum>)
-    ;;
-    ;;  (retvals-signature-syntax-common-ancestor #'(<fixnum>) #'(<flonum>))
-    ;;  => #'(<real>)
-    ;;
-    ;;  (retvals-signature-syntax-common-ancestor #'(<fixnum>) #'(<string>))
-    ;;  => #'(<top>)
-    ;;
-    ($retvals-signature-syntax-common-ancestor sig1 sig2))
-
-  (define ($retvals-signature-syntax-common-ancestor sig1 sig2)
-    ;;
-    ;;We assume that  both SIG1 and SIG2 are retvals  signature syntaxes according to
-    ;;SYNTAX-OBJECT.RETVALS-SIGNATURE?.
-    ;;
-    (if (or (list-tag-id? sig1)
-	    (list-tag-id? sig2))
-	(list-tag-id)
-      (syntax-match sig1 ()
+     ((?type1 . ?rest1)
+      (syntax-match sig2 ()
+	;;SIG2 is a proper list shorter that SIG1.
 	(()
-	 (syntax-match sig2 ()
-	   (() '())
-	   ((?tag2 . ?rest-tags2)
-	    (top-tag-id))
-	   (_
-	    (top-tag-id))))
+	 (list-tag-id))
+	;;SIG1 and SIG2 have matching type identifiers ?TYPE1 and ?TYPE2.
+	((?type2 . ?rest2)
+	 (cons (type-identifier-common-ancestor ?type1 ?type2 lexenv)
+	       (recur ?rest1 ?rest2)))
+	;;SIG2 is an improper list shorter that SIG1.
+	(?rest2
+	 (list-tag-id))))
 
-	((?tag1 . ?rest-tags1)
-	 (syntax-match sig2 ()
-	   (()
-	    (top-tag-id))
-	   ((?tag2 . ?rest-tags2)
-	    (cons (type-identifier-common-ancestor ?tag1 ?tag2)
-		  ($retvals-signature-syntax-common-ancestor ?rest-tags1 ?rest-tags2)))
-	   (?rest-tag2
-	    (top-tag-id))))
-
-	(?rest-tag1
-	 (syntax-match sig2 ()
-	   (()
-	    (top-tag-id))
-	   ((?tag2 . ?rest-tags2)
-	    (top-tag-id))
-	   (?rest-tag2
-	    (type-identifier-common-ancestor ?rest-tag1 ?rest-tag2))))
-	)))
-
-  #| end of module |# )
+     (?rest1
+      (syntax-match sig2 ()
+	;;Both SIG1 and SIG2 are improper lists with the same number of items.
+	(?rest2
+	 (identifier? ?rest2)
+	 (type-identifier-common-ancestor ?rest1 ?rest2 lexenv))
+	(_
+	 (list-tag-id))))
+     )))
 
 
 ;;;; type definition: return values signature
 
-(define-record-type (<retvals-signature> make-retvals-signature retvals-signature?)
-  (nongenerative vicare:expander:<retvals-signature>)
-  (fields (immutable tags	retvals-signature.tags))
-		;A syntax object representing a retvals signature syntax according to
-		;SYNTAX-OBJECT.RETVALS-SIGNATURE?.
+(define-record-type (<type-signature> make-type-signature type-signature?)
+  (nongenerative vicare:expander:<type-signature>)
+  (fields (immutable tags	type-signature-tags))
+		;A syntax  object representing a  type signature syntax  according to
+		;SYNTAX-OBJECT.TYPE-SIGNATURE?.
   (protocol
     (lambda (make-record)
-      (define* (make-retvals-signature {tags syntax-object.retvals-signature?})
+      (define* (make-type-signature {tags syntax-object.type-signature?})
 	(make-record (syntax-unwrap tags)))
-      make-retvals-signature)))
+      make-type-signature)))
 
+(define <type-signature>-rtd
+  (record-type-descriptor <type-signature>))
+
+(define <type-signature>-rcd
+  (record-constructor-descriptor <type-signature>))
+
+;;; --------------------------------------------------------------------
 ;;; special constructors
 
-(define-syntax define-cached-retvals-maker
-  (syntax-rules ()
-    ((_ ?who ?stx-maker)
-     (define ?who
-       (let ((rvs #f))
-	 (lambda ()
-	   (or rvs
-	       (receive-and-return (S)
-		   (make-retvals-signature ?stx-maker)
-		 (set! rvs S)))))))
-    ))
+(let*-syntax
+    ((define-cached-signature-maker
+       (syntax-rules ()
+	 ((_ ?who ?stx-maker)
+	  (define ?who
+	    (let ((rvs #f))
+	      (lambda ()
+		(or rvs
+		    (receive-and-return (S)
+			(make-type-signature ?stx-maker)
+		      (set! rvs S)))))))))
+     (define-single-type-signature-maker
+       (syntax-rules ()
+	 ((_ ?who ?type-id-maker)
+	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
+  (define-single-type-signature-maker make-type-signature/single-top		top-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-void		void-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-boolean	boolean-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-procedure	procedure-tag-id)
+  (define-cached-signature-maker make-type-signature/standalone-list		(list-tag-id))
+  #| end of LET-SYNTAX |# )
 
-(define-syntax define-single-tag-retvals-maker
-  (syntax-rules ()
-    ((_ ?who ?type-id-maker)
-     (define-cached-retvals-maker ?who (list (?type-id-maker))))
-    ))
+(define-syntax-rule (make-type-signature/fully-unspecified)
+  (make-type-signature/standalone-list))
 
-(define-single-tag-retvals-maker make-retvals-signature/single-top		top-tag-id)
-(define-single-tag-retvals-maker make-retvals-signature/single-void		void-tag-id)
-(define-single-tag-retvals-maker make-retvals-signature/single-boolean		boolean-tag-id)
-(define-single-tag-retvals-maker make-retvals-signature/single-procedure	procedure-tag-id)
+(define* (make-type-signature/single-value {type type-identifier?})
+  (make-type-signature (list type)))
 
-(define-cached-retvals-maker make-retvals-signature/standalone-list		(list-tag-id))
+;;; --------------------------------------------------------------------
 
-(define-syntax-rule (make-retvals-signature/fully-unspecified)
-  (make-retvals-signature/standalone-list))
+(define* (type-signature.fully-unspecified? {signature type-signature?})
+  ;;Return true  if the type  signature specifies  neither object types,  nor objects
+  ;;count; otherwise return false.  In other words, return true if the signature is a
+  ;;standalone "<list>".
+  ;;
+  (list-tag-id? (type-signature-tags signature)))
 
-(define* (make-retvals-signature/single-value {tag type-identifier?})
-  (make-retvals-signature (list tag)))
+(define* (type-signature.partially-untyped? {signature type-signature?})
+  (syntax-object.type-signature.partially-untyped? (type-signature-tags signature)))
 
-
-;;;; type definition: formals signature
+(define* (type-signature.super-and-sub? {super-signature type-signature?}
+					{sub-signature   type-signature?})
+  (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
+					       (type-signature-tags sub-signature)))
 
-(define-record-type (<formals-signature> make-formals-signature formals-signature?)
-  (nongenerative vicare:expander:<formals-signature>)
-  (fields (immutable tags	formals-signature.tags))
-		;A syntax object representing a formals signature syntax according to
-		;SYNTAX-OBJECT.FORMALS-SIGNATURE?.
-  (protocol
-    (lambda (make-record)
-      (define* (make-formals-signature {tags syntax-object.formals-signature?})
-	(make-record (syntax-unwrap tags)))
-      make-formals-signature)))
+(define* (type-signature.single-tag? {signature type-signature?})
+  ;;Return  true if  SIGNATURE represents  a  single return  value, otherwise  return
+  ;;false.  We have to remember that a signature syntax can be:
+  ;;
+  ;;   (#'?tag . #'())
+  ;;
+  ;;with the last element being a syntax  object representing null; so we really need
+  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;
+  (syntax-match (type-signature-tags signature) ()
+    ((?tag)	#t)
+    (_		#f)))
+
+(define* (type-signature.single-top-tag? {signature type-signature?})
+  ;;Return  true if  SIGNATURE represents  a single  return value  with tag  "<top>",
+  ;;otherwise return false.   We have to remember that, after  parsing syntax objects
+  ;;with SYNTAX-MATCH, a signature syntax can result to be:
+  ;;
+  ;;   (#'?tag . #'())
+  ;;
+  ;;with the last element being a syntax  object representing null; so we really need
+  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;
+  (syntax-match (type-signature-tags signature) (<top>)
+    ((<top>)  #t)
+    (_        #f)))
+
+(define* (type-signature.single-tag-or-fully-unspecified? {signature type-signature?})
+  ;;Return true if SIGNATURE represents a single return value or it is the standalone
+  ;;"<list>" identifier,  otherwise return  false.  We have  to remember  that, after
+  ;;parsing syntax objects with SYNTAX-MATCH, a signature syntax can result to be:
+  ;;
+  ;;   (#'?tag . #'())
+  ;;
+  ;;with the last element being a syntax  object representing null; so we really need
+  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;
+  (syntax-match (type-signature-tags signature) (<list>)
+    ((?tag)	#t)
+    (<list>	#t)
+    (_		#f)))
+
+;;; --------------------------------------------------------------------
+
+(define* (type-signature=? {signature1 type-signature?} {signature2 type-signature?})
+  ;;Return true if the signatures are equal; otherwise return false.
+  ;;
+  (define (%syntax=? stx1 stx2)
+    (cond ((and (identifier? stx1)
+		(identifier? stx2))
+	   (type-identifier=? stx1 stx2))
+	  ((and (pair? stx1)
+		(pair? stx2))
+	   (and (type-identifier=? (car stx1) (car stx2))
+		(%syntax=?         (cdr stx1) (cdr stx2))))
+	  (else
+	   (and (null? stx1)
+		(null? stx2)))))
+  (%syntax=? (type-signature-tags signature1)
+	     (type-signature-tags signature2)))
+
+;;; --------------------------------------------------------------------
+
+(case-define* type-signature.common-ancestor
+  (({sig type-signature?})
+   sig)
+
+  (({sig1 type-signature?} {sig2 type-signature?})
+   (make-type-signature
+    (syntax-object.type-signature.common-ancestor (type-signature-tags sig1)
+						  (type-signature-tags sig2))))
+  (({sig1 type-signature?} {sig2 type-signature?} . sig*)
+   (fold-left (lambda (sig-a sig-b)
+		(type-signature.common-ancestor sig-a sig-b))
+     (type-signature.common-ancestor sig1 sig2)
+     sig*)))
 
 
 ;;;; type definition: callable signature
@@ -649,7 +813,7 @@
   (nongenerative vicare:expander:<callable-signature>)
   (fields
    (immutable retvals	callable-signature.retvals)
-		;An instance of "<retvals-signature>".
+		;An instance of "<type-signature>".
 		;
 		;For the "<clambda-compound>" sub-type it represents the signature of
 		;the common retvals from all  the clambda clauses represented by this
@@ -678,16 +842,50 @@
   (parent <callable-signature>)
   (fields
    (immutable formals	lambda-signature.formals)
-		;An instance of "<formals-signature>".
+		;An instance of "<type-signature>".
    #| end of FIELDS |# )
   (protocol
     (lambda (make-callable-signature)
-      (define* (make-lambda-signature {retvals retvals-signature?} {formals formals-signature?})
+      (define* (make-lambda-signature {retvals type-signature?} {formals type-signature?})
 	((make-callable-signature retvals) formals))
       make-lambda-signature)))
 
 (define* (lambda-signature.retvals {sig lambda-signature?})
   (callable-signature.retvals sig))
+
+;;; --------------------------------------------------------------------
+
+(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
+  ;;Return true if the signatures are equal; otherwise return false.
+  ;;
+  (and (type-signature=? (lambda-signature.formals signature1)
+			 (lambda-signature.formals signature2))
+       (type-signature=? (callable-signature.retvals signature1)
+			 (callable-signature.retvals signature2))))
+
+;;; --------------------------------------------------------------------
+
+(define* (lambda-signature.formals.tags {signature lambda-signature?})
+  (type-signature-tags (lambda-signature.formals signature)))
+
+(define* (lambda-signature.retvals.tags {signature lambda-signature?})
+  (type-signature-tags (callable-signature.retvals signature)))
+
+;;; --------------------------------------------------------------------
+
+(define (list-of-lambda-signatures? obj)
+  (if (pair? obj)
+      (and (lambda-signature? (car obj))
+	   (list-of-lambda-signatures? (cdr obj)))
+    (null? obj)))
+
+(define* (lambda-signature.fully-unspecified? {signature lambda-signature?})
+  ;;A LAMBDA signature  has fully unspecified types if its  retvals type signature is
+  ;;the  standalone  "<list>"  and  its  formals type  signature  is  the  standalone
+  ;;"<list>".
+  ;;
+  (and (type-signature.fully-unspecified? (lambda-signature.formals   signature))
+       (type-signature.fully-unspecified? (callable-signature.retvals signature))))
 
 
 ;;;; type definition: CLAMBDA signature
@@ -703,163 +901,16 @@
   (protocol
     (lambda (make-callable-signature)
       (define* (make-clambda-compound {signature* list-of-lambda-signatures?})
-	((make-callable-signature (if (pair? signature*)
-				      (apply retvals-signatures-common-ancestor
-					     (map callable-signature.retvals signature*))
-				    (make-retvals-signature/standalone-list)))
+	((make-callable-signature (fold-left
+				      (lambda (knil signature)
+					(syntax-object.type-signature.common-ancestor knil (lambda-signature.retvals signature)))
+				    (make-type-signature/fully-unspecified)
+				    signature*))
 	 signature*))
       make-clambda-compound)))
 
 (define* (clambda-compound.retvals {sig clambda-compound?})
   (callable-signature.retvals sig))
-
-
-;;;; lambda-signature stuff
-
-(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
-  ;;
-  (and (syntax=? (formals-signature.tags (lambda-signature.formals signature1))
-		 (formals-signature.tags (lambda-signature.formals signature2)))
-       (syntax=? (retvals-signature.tags (callable-signature.retvals signature1))
-		 (retvals-signature.tags (callable-signature.retvals signature2)))))
-
-;;; --------------------------------------------------------------------
-
-(define* (lambda-signature.formals.tags {signature lambda-signature?})
-  (formals-signature.tags (lambda-signature.formals signature)))
-
-(define* (lambda-signature.retvals.tags {signature lambda-signature?})
-  (retvals-signature.tags (callable-signature.retvals signature)))
-
-;;; --------------------------------------------------------------------
-
-(define (list-of-lambda-signatures? obj)
-  (and (list? obj)
-       (for-all lambda-signature? obj)))
-
-(define* (lambda-signature.fully-unspecified? {signature lambda-signature?})
-  ;;A LAMBDA  signature has fully unspecified  types if its retvals  tag signature is
-  ;;the standalone "<list>" tag and its  formals signature is the standalone "<list>"
-  ;;tag.
-  ;;
-  (and (formals-signature.fully-unspecified? (lambda-signature.formals   signature))
-       (retvals-signature.fully-unspecified? (callable-signature.retvals signature))))
-
-
-;;;; formals-signature stuff
-
-(define* (formals-signature=? {signature1 formals-signature?} {signature2 formals-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
-  ;;
-  (syntax=? (formals-signature.tags signature1)
-	    (formals-signature.tags signature2)))
-
-;;; --------------------------------------------------------------------
-
-(define* (formals-signature.super-and-sub? {super-signature formals-signature?}
-					   {sub-signature   formals-signature?})
-  ($syntax-object.formals-signature-super-and-sub? (formals-signature.tags super-signature)
-						   (formals-signature.tags sub-signature)))
-
-(define* (formals-signature.fully-unspecified? {signature formals-signature?})
-  ;;Return  true if  the  formals  signature specifies  neither  argument types,  nor
-  ;;arguments count;  otherwise return  false.  In  other words,  return true  if the
-  ;;signature is a standalone "<list>".
-  ;;
-  (list-tag-id? (formals-signature.tags signature)))
-
-
-;;;; retvals-signature stuff
-
-(define* (retvals-signature.fully-unspecified? {signature retvals-signature?})
-  ;;Return true if the retvals signature  specifies neither object types, nor objects
-  ;;count; otherwise return false.  In other words, return true if the signature is a
-  ;;standalone "<list>".
-  ;;
-  (list-tag-id? (retvals-signature.tags signature)))
-
-(define* (retvals-signature.partially-unspecified? {signature retvals-signature?})
-  ($syntax-object.retvals-signature-partially-unspecified? (retvals-signature.tags signature)))
-
-(define* (retvals-signature.super-and-sub? {super-signature retvals-signature?}
-					   {sub-signature   retvals-signature?})
-  ($syntax-object.retvals-signature-super-and-sub? (retvals-signature.tags super-signature)
-						   (retvals-signature.tags sub-signature)))
-
-(define* (retvals-signature.single-tag? {signature retvals-signature?})
-  ;;Return  true if  SIGNATURE represents  a  single return  value, otherwise  return
-  ;;false.  We have to remember that a signature syntax can be:
-  ;;
-  ;;   (#'?tag . #'())
-  ;;
-  ;;with the last element being a syntax  object representing null; so we really need
-  ;;to use SYNTAX-MATCH here to inspect the tags.
-  ;;
-  (syntax-match (retvals-signature.tags signature) ()
-    ((?tag)	#t)
-    (_		#f)))
-
-(define* (retvals-signature.single-top-tag? {signature retvals-signature?})
-  ;;Return  true if  SIGNATURE represents  a single  return value  with tag  "<top>",
-  ;;otherwise return false.   We have to remember that, after  parsing syntax objects
-  ;;with SYNTAX-MATCH, a signature syntax can result to be:
-  ;;
-  ;;   (#'?tag . #'())
-  ;;
-  ;;with the last element being a syntax  object representing null; so we really need
-  ;;to use SYNTAX-MATCH here to inspect the tags.
-  ;;
-  (syntax-match (retvals-signature.tags signature) ()
-    ((?tag)
-     (top-tag-id? ?tag))
-    (_ #f)))
-
-(define* (retvals-signature.single-tag-or-fully-unspecified? {signature retvals-signature?})
-  ;;Return true if SIGNATURE represents a single return value or it is the standalone
-  ;;"<list>" identifier,  otherwise return  false.  We have  to remember  that, after
-  ;;parsing syntax objects with SYNTAX-MATCH, a signature syntax can result to be:
-  ;;
-  ;;   (#'?tag . #'())
-  ;;
-  ;;with the last element being a syntax  object representing null; so we really need
-  ;;to use SYNTAX-MATCH here to inspect the tags.
-  ;;
-  (let ((tags (retvals-signature.tags signature)))
-    (or (list-tag-id? tags)
-	(syntax-match tags ()
-	  ((?tag)	#t)
-	  (_		#f)))))
-
-;;; --------------------------------------------------------------------
-
-(define* (retvals-signature=? {signature1 retvals-signature?} {signature2 retvals-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
-  ;;
-  (syntax=? (retvals-signature.tags signature1)
-	    (retvals-signature.tags signature2)))
-
-;;; --------------------------------------------------------------------
-
-(case-define* retvals-signatures-common-ancestor
-  (({sig retvals-signature?})
-   sig)
-
-  (({sig1 retvals-signature?} {sig2 retvals-signature?})
-   (make-retvals-signature
-    (retvals-signature-syntax-common-ancestor (retvals-signature.tags sig1)
-					      (retvals-signature.tags sig2))))
-  (({sig1 retvals-signature?} {sig2 retvals-signature?} . sig*)
-   (fold-left (lambda (sig-a sig-b)
-		(retvals-signatures-common-ancestor sig-a sig-b))
-     (retvals-signatures-common-ancestor sig1 sig2)
-     sig*)))
 
 
 ;;;; tagged binding parsing: standalone identifiers
@@ -892,47 +943,45 @@
 
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
-;;
-;;The predicate and parser functions for lists of bindings are used to parse bindings
-;;from LET, DO and similar syntaxes.  For example, when expanding the syntax:
-;;
-;;   (let (({a <fixnum>} 1)
-;;         ({b <string>} "b")
-;;         (c            #t))
-;;     . ?body)
-;;
-;;the argument STX is:
-;;
-;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
-;;
-;;and the return values are:
-;;
-;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
-;;
 
 (case-define* syntax-object.parse-list-of-typed-bindings
-  ((stx)
-   (syntax-object.parse-list-of-typed-bindings stx stx))
-  ((stx input-form.stx)
-   ;;Assume STX  is a  syntax object  representing a proper  list of  possibly tagged
+  ((binding*)
+   (syntax-object.parse-list-of-typed-bindings binding* #f))
+  ((binding* input-form.stx)
+   ;;Parser function for  lists of bindings used  to parse bindings from  LET, DO and
+   ;;similar syntaxes.  For example, when expanding the syntax:
+   ;;
+   ;;   (let (({a <fixnum>} 1)
+   ;;         ({b <string>} "b")
+   ;;         (c            #t))
+   ;;     . ?body)
+   ;;
+   ;;the argument BINDING* is:
+   ;;
+   ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
+   ;;
+   ;;and the return values are:
+   ;;
+   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+   ;;
+   ;;Assume BINDING* is a syntax object representing a proper list of possibly tagged
    ;;binding identifiers; parse  the list and return 2 values:  a list of identifiers
    ;;representing the  binding identifiers,  a list  of identifiers  representing the
    ;;type tags;  "<top>" is  used when no  tag is present.   The identifiers  must be
    ;;distinct.
    ;;
-   (define (%invalid-tagged-bindings-syntax form subform)
-     (syntax-violation __who__ "invalid tagged bindings syntax" form subform))
-   (define (%duplicate-identifiers-in-bindings-specification form subform)
-     (syntax-violation __who__
-       "duplicate identifiers in bindings specification" form subform))
+   (define (%error message)
+     (syntax-violation __who__ message (or input-form.stx binding*) (if input-form.stx binding* #f)))
+   (define lexenv
+     (current-inferior-lexenv))
    (receive-and-return (id* tag*)
-       (let recur ((bind* stx))
+       (let recur ((bind* binding*))
 	 (syntax-match bind* (brace)
 	   (()
 	    (values '() '()))
 	   (((brace ?id ?tag) . ?other-id*)
 	    (begin
-	      (type-identifier-detailed-validation __who__ input-form.stx (current-inferior-lexenv) ?tag)
+	      (type-identifier-detailed-validation __who__ input-form.stx lexenv ?tag)
 	      (receive (id* tag*)
 		  (recur ?other-id*)
 		(values (cons ?id id*) (cons ?tag tag*)))))
@@ -942,202 +991,175 @@
 		(recur ?other-id*)
 	      (values (cons ?id id*) (cons (top-tag-id) tag*))))
 	   (_
-	    (if input-form.stx
-		(%invalid-tagged-bindings-syntax input-form.stx stx)
-	      (%invalid-tagged-bindings-syntax stx #f)))
-	   ))
+	    (%error "invalid tagged bindings syntax"))))
      (unless (distinct-bound-ids? id*)
-       (if input-form.stx
-	   (%duplicate-identifiers-in-bindings-specification input-form.stx stx)
-	 (%duplicate-identifiers-in-bindings-specification stx #f))))))
-
-(define* (syntax-object.list-of-typed-bindings? lhs*)
-  ;;Return true  if LHS* is a  list of possibly tagged  identifiers; otherwise return
-  ;;false.
-  ;;
-  (guard (E ((syntax-violation? E)
-	     #f))
-    (receive (id* tag*)
-	(syntax-object.parse-list-of-typed-bindings lhs*)
-      #t)))
+       (%error "duplicate identifiers in bindings specification")))))
 
 
 ;;;; tagged binding parsing: let-values formals
 
 (module (syntax-object.parse-formals-signature)
-  ;;Given a syntax object representing  tagged LET-VALUES formals: split formals from
-  ;;tags.  Do test for duplicate bindings.
+  ;;Given a  syntax object representing  LAMBDA or LET-VALUES formals:  split formals
+  ;;from type identifiers.  Test for duplicate bindings.  Return 2 values:
   ;;
-  ;;Return 2 values:
+  ;;1. A proper or improper list of identifiers representing the standard formals.
   ;;
-  ;;1..A proper or improper list of identifiers representing the standard formals.
-  ;;
-  ;;2..An object representing the LET-VALUES tagging signature.
+  ;;2.   A   syntax   object   representing   the   type   signature   according   to
+  ;;SYNTAX-OBJECT.TYPE-SIGNATURE?.
   ;;
   (define-module-who syntax-object.parse-formals-signature)
 
-  (case-define* syntax-object.parse-formals-signature
-    (({_ syntax-object.standard-formals? formals-signature?} original-formals.stx)
-     (syntax-object.parse-formals-signature original-formals.stx #f))
-    (({_ syntax-object.standard-formals? formals-signature?} original-formals.stx input-form.stx)
-     (receive (standard-formals formals-tags)
-     	 (%parse-formals input-form.stx original-formals.stx original-formals.stx)
-       (values standard-formals (make-formals-signature formals-tags)))))
-
-  (define (%parse-formals input-form.stx original-formals.stx formals.stx)
+  (define (syntax-object.parse-formals-signature formals.stx input-form.stx)
+    (define (%synner message subform)
+      (syntax-violation __module_who__ message input-form.stx subform))
     (syntax-match formals.stx (brace)
-
-      ;;Tagged args, as in:
-      ;;
-      ;;   (let-values (({args <fixnum>} ?expr)) . ?body)
-      ;;
-      ;;the given tag is the type of each item in ARGS.
+      ;;Typed args, as in: (lambda (brace args <list>) ---)
       ((brace ?args-id ?args-tag)
        (and (identifier? ?args-id)
 	    (identifier? ?args-tag))
-       (values ?args-id ?args-tag))
+       (if (type-identifier-is-list-or-list-sub-type? ?args-tag)
+	   (values ?args-id ?args-tag)
+	 (%synner "expected \"<list>\" or its sub-type as type identifier for the args argument" formals.stx)))
 
-      ;;Possibly tagged identifiers with tagged rest argument, as in:
-      ;;
-      ;;   (let-values (((?arg ... . {rest <fixnum>}) ?expr)) . ?body)
-      ;;
-      ;;the given tag is the type of each item in REST.
-      ((?arg* ... . (brace ?rest-id ?rest-tag))
-       (begin
-	 (unless (and (identifier? ?rest-id)
-		      (identifier? ?rest-tag))
-	   (syntax-violation __module_who__
-	     "invalid rest argument specification" original-formals.stx (list 'brace ?rest-id ?rest-tag)))
-	 (type-identifier-detailed-validation __module_who__ input-form.stx (current-inferior-lexenv) ?rest-tag)
-	 (receive-and-return (standard-formals.stx tags)
-	     (let recur ((?arg* ?arg*))
-	       (if (pair? ?arg*)
-		   (%process-args input-form.stx original-formals.stx recur ?arg*)
-		 ;;Process rest argument.
-		 (values ?rest-id ?rest-tag)))
-	   (%validate-formals input-form.stx original-formals.stx standard-formals.stx))))
-
-      ;;Possibly tagged identifiers with UNtagged rest argument, as in:
-      ;;
-      ;;   (let-values (((?arg ... . rest) ?expr)) . ?body)
-      ;;
-      ((?arg* ... . ?rest-id)
-       (identifier? ?rest-id)
-       (receive-and-return (standard-formals.stx tags)
-	   (let recur ((?arg* ?arg*))
-	     (if (pair? ?arg*)
-		 (%process-args input-form.stx original-formals.stx recur ?arg*)
-	       (values ?rest-id (top-tag-id))))
-	 (%validate-formals input-form.stx original-formals.stx standard-formals.stx)))
-
-      ;;Standard formals: untagged identifiers without rest argument.
-      ;;
-      ((?id* ...)
-       (for-all identifier? ?id*)
-       (begin
-	 (%validate-formals input-form.stx original-formals.stx ?id*)
-	 (values ?id* (map (lambda (id) (top-tag-id)) ?id*))))
-
-      ;;Standard formals: UNtagged identifiers with UNtagged rest argument.
-      ;;
-      ((?id* ... . ?rest-id)
-       (and (for-all identifier? ?id*)
-	    (identifier? ?rest-id))
-       (begin
-	 (%validate-formals input-form.stx original-formals.stx (append ?id* ?rest-id))
-	 (values formals.stx (cons* (map (lambda (id) (top-tag-id)) ?id*) (top-tag-id)))))
-
-      ;;Standard formals: untagged args.
-      ;;
+      ;;Standard formals, UNtyped args as in: (lambda args ---)
       (?args-id
        (identifier? ?args-id)
-       (values ?args-id (top-tag-id)))
+       (values ?args-id (list-tag-id)))
 
-      ;;Possibly tagged identifiers without rest argument.
+      ;; ------------------------------------------------------------
+
+      ;;Standard formals: UNtyped identifiers without rest argument.
+      ((?arg* ...)
+       (for-all identifier? ?arg*)
+       (begin
+	 (%validate-standard-formals ?arg* %synner)
+	 (values ?arg* (%one-top-for-each ?arg*))))
+
+      ;;Standard formals: UNtyped identifiers with UNtyped rest argument.
+      ((?arg* ... . ?rest-id)
+       (and (for-all identifier? ?arg*)
+	    (identifier? ?rest-id))
+       (begin
+	 (%validate-standard-formals (append ?arg* ?rest-id) %synner)
+	 (values formals.stx (append (%one-top-for-each ?arg*) (list-tag-id)))))
+
+      ;; ------------------------------------------------------------
+
+      ;;Possibly typed arguments with typed rest argument.
+      ((?arg* ... . (brace ?rest-id ?rest-tag))
+       (receive-and-return (standard-formals.stx type-signature.stx)
+	   (let process-next-arg ((?arg* ?arg*))
+	     (if (pair? ?arg*)
+		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
+	       (begin
+		 (unless (and (identifier? ?rest-id)
+			      (identifier? ?rest-tag))
+		   (%synner "invalid rest argument specification" (list (brace-id) ?rest-id ?rest-tag)))
+		 (unless (type-identifier-is-list-or-list-sub-type? ?rest-tag)
+		   (%synner "expected \"<list>\" or its sub-type as type identifeir for the rest argument"
+			    (list (brace-id) ?rest-id ?rest-tag)))
+		 (values ?rest-id ?rest-tag))))
+	 (%validate-standard-formals standard-formals.stx %synner)))
+
+      ;;Possibly typed identifiers with UNtyped rest argument.
+      ((?arg* ... . ?rest-id)
+       (identifier? ?rest-id)
+       (receive-and-return (standard-formals.stx type-signature.stx)
+	   (let process-next-arg ((?arg* ?arg*))
+	     (if (pair? ?arg*)
+		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
+	       (if (identifier? ?rest-id)
+		   (values ?rest-id (list-tag-id))
+		 (%synner "invalid rest argument specification" ?rest-id))))
+	 (%validate-standard-formals standard-formals.stx %synner)))
+
+      ;; ------------------------------------------------------------
+
+      ;;Possibly typed identifiers without rest argument.
       ;;
       ((?arg* ...)
-       (receive-and-return (standard-formals.stx tags)
-	   (let recur ((?arg* ?arg*))
+       (receive-and-return (standard-formals.stx type-signature.stx)
+	   (let process-next-arg ((?arg* ?arg*))
 	     (if (pair? ?arg*)
-		 (%process-args input-form.stx original-formals.stx recur ?arg*)
+		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
 	       (values '() '())))
-	 (%validate-formals input-form.stx original-formals.stx standard-formals.stx)))
-      ))
+	 (%validate-standard-formals standard-formals.stx %synner)))
 
-  (define (%process-args input-form.stx original-formals.stx recur args-stx)
-    (receive (standard-formals tags)
-	(recur (cdr args-stx))
-      (let ((arg-stx (car args-stx)))
-	(syntax-match arg-stx (brace)
-	  ;;Untagged argument.
+      (_
+       (%synner "invalid formals specification" formals.stx))))
+
+  (define (%process-arg* arg*.stx process-next-arg input-form.stx %synner)
+    (receive (standard-formals.stx type-signature.stx)
+	(process-next-arg (cdr arg*.stx))
+      (let ((arg.stx (car arg*.stx)))
+	(syntax-match arg.stx (brace)
+	  ;;Untyped argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals) (cons (top-tag-id) tags)))
-	  ;;Tagged argument.
+	   (values (cons ?id standard-formals.stx) (cons (top-tag-id) type-signature.stx)))
+	  ;;Typed argument.
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
 		(identifier? ?tag))
 	   (begin
 	     (type-identifier-detailed-validation __module_who__ input-form.stx (current-inferior-lexenv) ?tag)
-	     (values (cons ?id standard-formals) (cons ?tag tags))))
+	     (values (cons ?id standard-formals.stx) (cons ?tag type-signature.stx))))
 	  (else
-	   (syntax-violation __module_who__
-	     "invalid argument specification"
-	     (or input-form.stx original-formals.stx) arg-stx))))))
+	   (%synner "invalid argument specification" arg.stx))))))
 
-  (define (%validate-formals input-form.stx original-formals.stx standard-formals.stx)
+  (define (%validate-standard-formals standard-formals.stx %synner)
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
-		(syntax-violation __module_who__
-		  "duplicate identifiers in formals specification"
-		  (or input-form.stx original-formals.stx)
-		  duplicate-id)))))
+		(%synner "duplicate identifiers in formals specification" duplicate-id)))))
+
+  (define (%one-top-for-each item*)
+    (map (lambda (x) (top-tag-id)) item*))
 
   #| end of module |# )
 
 
 ;;;; tagged binding parsing: callable signature
 
-(case-define* syntax-object.parse-lambda-clause-signature
-  ;;Given a  syntax object representing  a tagged  callable spec: split  the standard
-  ;;formals from the tags; do test for duplicate bindings.  Return 2 values:
+(define* (syntax-object.parse-lambda-clause-signature callable-signature.stx input-form.stx)
+  ;;Given a  syntax object  representing a  typed callable  spec: split  the standard
+  ;;formals  from the  type  signature; do  test for  duplicate  bindings.  Return  2
+  ;;values:
   ;;
   ;;1. A proper or improper list of identifiers representing the standard formals.
   ;;
-  ;;2. An instance of "lambda-signature".
+  ;;2. An instance of "<lambda-signature>".
   ;;
   ;;This function *does*  enforce the constraint: the identifiers  in type identifier
   ;;positions must  actually be type  identifiers (with syntactic  binding descriptor
   ;;already added to the LEXENV).
   ;;
-  (({_ syntax-object.standard-formals? lambda-signature?} {callable-signature.stx syntax-object?})
-   (syntax-object.parse-lambda-clause-signature callable-signature.stx #f))
-  (({_ syntax-object.standard-formals? lambda-signature?} {callable-signature.stx syntax-object?} {input-form.stx syntax-object?})
-   ;;First we parse  and extract the return  values tagging, if any;  then we parse
-   ;;the rest of the formals.
-   (syntax-match callable-signature.stx (brace)
-     ;;With return values tagging.
-     (((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?formals)
-      (underscore-id? ?who)
-      (let ((retvals.stx (append ?rv-tag*
-				 ;;We  want  a  proper  list when  possible,  not  an
-				 ;;improper list with the syntax object #'() as tail.
-				 (if (null? (syntax->datum ?rv-rest-tag))
-				     '()
-				   ?rv-rest-tag))))
-	(unless (syntax-object.retvals-signature? retvals.stx)
-	  (syntax-violation __who__
-	    "invalid return values signature syntax" input-form.stx retvals.stx))
-	(receive (standard-formals.stx formals-signature)
-	      (syntax-object.parse-formals-signature ?formals input-form.stx)
-	  (values standard-formals.stx
-		  (make-lambda-signature (make-retvals-signature retvals.stx) formals-signature)))))
+  (define (%synner message subform)
+    (syntax-violation __who__ message input-form.stx subform))
+  (syntax-match callable-signature.stx (brace)
+    ;;With return values tagging.
+    (((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?formals)
+     (underscore-id? ?who)
+     (let ((retvals-signature.stx (append ?rv-tag*
+					  ;;We want a proper  list when possible, not
+					  ;;an improper  list with the  syntax object
+					  ;;#'() as tail.
+					  (syntax-match ?rv-rest-tag ()
+					    (() '())
+					    (_  ?rv-rest-tag)))))
+       (unless (syntax-object.type-signature? retvals-signature.stx)
+	 (%synner "invalid syntax for return values' signature" retvals-signature.stx))
+       (receive (standard-formals.stx formals-signature.stx)
+	   (syntax-object.parse-formals-signature ?formals input-form.stx)
+	 (values standard-formals.stx
+		 (make-lambda-signature (make-type-signature retvals-signature.stx)
+					(make-type-signature formals-signature.stx))))))
      ;;Without return values tagging.
      (?formals
-      (receive (standard-formals.stx formals-signature)
+      (receive (standard-formals.stx formals-signature.stx)
 	  (syntax-object.parse-formals-signature ?formals input-form.stx)
 	(values standard-formals.stx
-		(make-lambda-signature (make-retvals-signature/standalone-list) formals-signature)))))))
+		(make-lambda-signature (make-type-signature/fully-unspecified)
+				       (make-type-signature formals-signature.stx)))))))
 
 (define* (syntax-object.lambda-clause-signature? formals-stx)
   ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
@@ -1146,7 +1168,7 @@
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (standard-formals signature-tags)
-	(syntax-object.parse-lambda-clause-signature formals-stx)
+	(syntax-object.parse-lambda-clause-signature formals-stx #f)
       #t)))
 
 

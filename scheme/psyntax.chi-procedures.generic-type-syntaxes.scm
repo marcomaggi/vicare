@@ -29,8 +29,8 @@
 	 unsafe-cast-transformer
 	 validate-typed-procedure-argument-transformer
 	 validate-typed-return-value-transformer
-	 assert-retvals-signature-transformer
-	 assert-retvals-signature-and-return-transformer)
+	 assert-signature-transformer
+	 assert-signature-and-return-transformer)
 
 
 ;;;; helpers
@@ -73,7 +73,7 @@
 		   (define output-form.psi
 		     (chi-expr output-form.stx lexenv.run lexenv.expand))
 		   (define output-form.sig
-		     (retvals-signature.tags (psi.retvals-signature output-form.psi)))
+		     (type-signature-tags (psi.retvals-signature output-form.psi)))
 		   ;;The NEW syntax is special because  we know that it has to return
 		   ;;a single value of type ?TYPE-ID.  So let's check it.
 		   (syntax-match output-form.sig ()
@@ -98,7 +98,7 @@
 		      ;;
                       ;;   (make-psi (psi.input-form input-form.psi)
                       ;;             (psi.core-expr  input-form.psi)
-                      ;;             (make-retvals-signature/single-value ?type-id)))
+                      ;;             (make-type-signature/single-value ?type-id)))
 		      ;;
 		      ;;but it would be unsafe.  So let's just hope for the best.
 		      output-form.psi)
@@ -130,7 +130,7 @@
       ((_ ?expr)
        (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig (psi.retvals-signature expr.psi)))
-	 (syntax-match (retvals-signature.tags expr.sig) ()
+	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
 	    ;;We have determined at expand-time  that the expression returns a single
 	    ;;value.
@@ -199,23 +199,23 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%run-time-predicate)
 	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi %synner))
-	 (syntax-match (retvals-signature.tags expr.sig) ()
-	   ((?expr-type-id)
-	    (top-tag-id? ?expr-type-id)
+	 (syntax-match (type-signature-tags expr.sig) (<top> <list>)
+	   ((<top>)
 	    (%run-time-predicate))
 
 	   ((?expr-type-id)
-	    (if (free-identifier=? ?expr-type-id ?pred-type-id)
+	    (if (type-identifier-super-and-sub? ?pred-type-id ?expr-type-id lexenv.run input-form.stx)
 		(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
-	      (with-object-type-syntactic-binding (__who__ input-form.stx ?expr-type-id lexenv.run expr-ots)
-		(with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
-		  (if (object-type-spec.subtype-and-supertype? expr-ots pred-ots lexenv.run)
-		      (%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
-		    (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))))))
+	      (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand)))
+
+	   (<list>
+	    (%run-time-predicate))
 
 	   (?expr-type-id
-	    (list-tag-id? ?expr-type-id)
-	    (%run-time-predicate))
+	    (type-identifier-is-list-sub-type? ?expr-type-id lexenv.run)
+	    (if (type-identifier-super-and-sub? ?pred-type-id ?expr-type-id lexenv.run input-form.stx)
+		(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
+	      (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand)))
 
 	   (_
 	    ;;We have determined at expand-time  that the expression returns multiple
@@ -252,7 +252,7 @@
 		(build-sequence no-source
 		  (list expr.core
 			(build-data no-source bool)))
-		(make-retvals-signature/single-boolean))))
+		(make-type-signature/single-boolean))))
 
   #| end of module: IS-A?-TRANSFORMER |# )
 
@@ -317,7 +317,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
-	 (syntax-match (retvals-signature.tags expr.sig) ()
+	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
 	    (top-tag-id? ?type-id)
 	    (%error-unknown-type))
@@ -417,7 +417,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
-	 (syntax-match (retvals-signature.tags expr.sig) ()
+	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
 	    (top-tag-id? ?type-id)
 	    (%error-unknown-type))
@@ -504,7 +504,7 @@
 	 (define-syntax-rule (%late-binding)
 	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
 						method-name.sym subject-expr.psi ?arg*))
-	 (syntax-match (retvals-signature.tags subject-expr.sig) ()
+	 (syntax-match (type-signature-tags subject-expr.sig) ()
 	   ((?type-id)
 	    (top-tag-id? ?type-id)
 	    (%late-binding))
@@ -591,7 +591,7 @@
 		  (cons* (build-data no-source method-name.sym)
 			 expr.core
 			 arg*.core))
-		(make-retvals-signature/fully-unspecified))))
+		(make-type-signature/fully-unspecified))))
 
   #| end of module |# )
 
@@ -609,8 +609,14 @@
 	    (expr.core    (psi.core-expr expr.psi))
 	    (expr.sig     (psi.retvals-signature expr.psi)))
        (define (%do-unsafe-cast)
-	 (make-psi input-form.stx expr.core (make-retvals-signature/single-value ?target-type)))
-       (syntax-match (retvals-signature.tags expr.sig) ()
+	 (make-psi input-form.stx expr.core (make-type-signature/single-value ?target-type)))
+       (define (%error-incompatible-types)
+	 (raise
+	  (condition (make-who-condition __who__)
+		     (make-message-condition "expression type is incompatible with the requested tag")
+		     (make-syntax-violation input-form.stx ?expr)
+		     (make-irritants-condition (list expr.sig)))))
+       (syntax-match (type-signature-tags expr.sig) ()
 	 ((?source-type)
 	  (cond ((top-tag-id? ?target-type)
 		 ;;Casting to "<top>" means that we  do not want the receiver to have
@@ -621,24 +627,27 @@
 		 ;;The expression has "<top>" as  single-value type: cast the type to
 		 ;;the target one.  This is a true *unsafe* operation.
 		 (%do-unsafe-cast))
-		((let* ((target-ots  (id->object-type-specification __who__ input-form.stx ?target-type lexenv.run))
-			(source-ots  (id->object-type-specification __who__ input-form.stx ?source-type lexenv.run)))
-		   (object-type-spec.subtype-and-supertype? source-ots target-ots lexenv.run))
+		((type-identifier-super-and-sub? ?target-type ?source-type lexenv.run input-form.stx)
 		 ;;The expression's type  is a subtype of the target  type: the types
 		 ;;are compatible.  Fine.  We still cast  the type: this is useful to
 		 ;;avoid leaking types defined in the local lexical context.
 		 (%do-unsafe-cast))
 		(else
-		 (raise
-		  (condition (make-who-condition __who__)
-			     (make-message-condition "expression type is incompatible with the requested tag")
-			     (make-syntax-violation input-form.stx ?expr)
-			     (make-irritants-condition (list expr.sig)))))))
+		 (%error-incompatible-types))))
 
 	 (?source-type
 	  (list-tag-id? ?source-type)
 	  ;;The expression return values are fully unspecified.
 	  (%do-unsafe-cast))
+
+	 (?source-type
+	  (type-identifier-is-list-sub-type? ?source-type)
+	  (if (type-identifier-super-and-sub? ?target-type ?source-type lexenv.run input-form.stx)
+	      ;;The expression's type is a subtype  of the target type: the types are
+	      ;;compatible.  Fine.  We  still cast the type: this is  useful to avoid
+	      ;;leaking types defined in the local lexical context.
+	      (%do-unsafe-cast)
+	    (%error-incompatible-types)))
 
 	 (_
 	  ;;We have determined at expand-time  that the expression returns multiple
@@ -664,436 +673,309 @@
      (let ((ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type)))
        (unless (identifier? ?arg)
 	 (%synner "expected identifier" ?arg))
-       (unless (let ((idx (syntax->datum ?idx)))
-		 (or (not idx)
-		     (fixnum? idx)
-		     (fxpositive? idx)))
-	 (%synner "expected 1-based fixnum as index of argument") ?idx)
        ;;This syntax is  used to validate a closure object's  application operands at
        ;;run-time; so  we must insert  a run-time validation predicate.   Using IS-A?
        ;;will not do, because IS-A? also performs expand-time type checking.  This is
        ;;why INTERNAL-RUN-TIME-IS-A? exists.
        (chi-expr (bless
-		  `(unless (internal-run-time-is-a? ,?arg ,?type)
+		  `(if (internal-run-time-is-a? ,?arg ,?type)
+		       ,?arg
 		     (procedure-signature-argument-violation __who__ "invalid object type" ,?idx '(is-a? _ ,?type) ,?arg)))
 		 lexenv.run lexenv.expand)))
     ))
 
 (define-core-transformer (validate-typed-return-value input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function   used  to  expand   Vicare's  VALIDATE-TYPED-RETURN-VALUE
-  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
-  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
+  ;;Transformer function used to expand Vicare's VALIDATE-TYPED-RETURN-VALUE syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type ?idx ?rv)
      (let ((ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type)))
        (unless (identifier? ?rv)
 	 (%synner "expected identifier" ?rv))
-       (unless (let ((idx (syntax->datum ?idx)))
-		 (or (not idx)
-		     (fixnum? idx)
-		     (fxpositive? idx)))
-	 (%synner "expected 1-based fixnum as index of return value") ?idx)
        (chi-expr (bless
-		  `(unless (is-a? ,?rv ,?type)
+		  `(if (is-a? ,?rv ,?type)
+		       ,?rv
 		     (procedure-signature-return-value-violation __who__ "invalid object type" ,?idx '(is-a? _ ,?type) ,?rv)))
 		 lexenv.run lexenv.expand)))
     ))
 
 
-;;;; module core-macro-transformer: ASSERT-RETVALS-SIGNATURE
+;;;; module core-macro-transformer: ASSERT-SIGNATURE, ASSERT-SIGNATURE-AND-RETURN
 
-(module (assert-retvals-signature-transformer)
-  ;;Transformer function  used to  expand Vicare's  ASSERT-RETVALS-SIGNATURE syntaxes
-  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
+(module (assert-signature-transformer assert-signature-and-return-transformer)
+  ;;Transformer   function    used   to   expand   Vicare's    ASSERT-SIGNATURE   and
+  ;;ASSERT-SIGNATURE-AND-RETURN  syntaxes from  the top-level  built in  environment.
+  ;;Expand  the syntax  object INPUT-FORM.STX  in the  context of  the given  LEXENV;
+  ;;return a PSI struct.
   ;;
-  (define-core-transformer (assert-retvals-signature input-form.stx lexenv.run lexenv.expand)
+  (define-core-transformer (assert-signature input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
-      ((_ ?retvals-signature ?expr)
-       (syntax-object.retvals-signature? ?retvals-signature)
-       (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
-	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig     (psi.retvals-signature expr.psi)))
-	 (cond ((list-tag-id? ?retvals-signature)
-		;;If we are here the input form is:
-		;;
-		;;   (assert-retvals-signature <list> ?expr)
-		;;
-		;;and  any tuple  of returned  values returned  by ?EXPR  is of  type
-		;;"<list>".
-		(%just-evaluate-the-expression expr.psi))
-
-	       ((retvals-signature.single-top-tag? asserted.sig)
-		;;If we are here the input form is:
-		;;
-		;;   (assert-retvals-signature (<top>) ?expr)
-		;;
-		;;so it is  enough to make sure that the  expression returns a single
-		;;value, whatever its type.
-		(syntax-match (retvals-signature.tags expr.sig) ()
-		  ((?tag)
-		   ;;Success!!!   We   have  determined   at  expand-time   that  the
-		   ;;expression returns a single value.
-		   (%just-evaluate-the-expression expr.psi))
-		  (?tag
-		   (list-tag-id? ?tag)
-		   ;;Damn   it!!!   The   expression's  return   values  have   fully
-		   ;;unspecified signature; we need to insert a run-time check.
-		   (%run-time-validation-of-single-value input-form.stx lexenv.run lexenv.expand
-							 expr.psi))
-		  (_
-		   ;;The  horror!!!   We have  established  at  expand-time that  the
-		   ;;expression returns multiple values; assertion failed.
-		   (expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig))
-		  ))
-
-	       ((retvals-signature.partially-unspecified? expr.sig)
-		;;Damn it!!!  The expression has  no type specification or  a partial
-		;;type specification; we have to insert a run-time check.
-		;;
-		;;FIXME We can  do better here by inserting the  run-time checks only
-		;;for  the "<top>"  return values,  rather than  for all  the values.
-		;;(Marco Maggi; Fri Apr 4, 2014)
-		(%run-time-validation input-form.stx lexenv.run lexenv.expand
-				      asserted.sig expr.psi))
-
-	       ((retvals-signature.super-and-sub? asserted.sig expr.sig)
-		;;Success!!!  We  have established  at expand-time that  the returned
-		;;values are valid; assertion succeeded.
-		(%just-evaluate-the-expression expr.psi))
-
-	       (else
-		;;The horror!!!  We  have established at expand-time  that the returned
-		;;values are of the wrong type; assertion failed.
-		(expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig)))))
-
-       ((_ ?retvals-signature ?expr)
-	;;Let's use a descriptive error message here.
-	(%synner "invalid return values signature" ?retvals-signature))
-       ))
-
-  (define* (%run-time-validation-of-single-value input-form.stx lexenv.run lexenv.expand
-						 expr.psi)
-    ;;This function  is used when the  syntax use specifies that  the expression must
-    ;;return a single value, of any type.
-    ;;
-    (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (expr.core    (psi.core-expr expr.psi))
-	   (checker.sexp (let ((arg.sym  (gensym "arg"))
-			       (rest.sym (gensym "rest")))
-			   `(lambda (,arg.sym . ,rest.sym)
-			      (if (null? ,rest.sym)
-				  ,arg.sym
-				(assertion-violation #f "expected single return value" (cons ,arg.sym ,rest.sym))))))
-	   (checker.psi  (chi-expr (bless checker.sexp) lexenv.run lexenv.expand))
-	   (checker.core (psi.core-expr checker.psi)))
-      (make-psi input-form.stx
-		(build-application no-source
-		  cwv.core
-		  (list (build-lambda no-source
-			  '()
-			  expr.core)
-			checker.core))
-		(make-retvals-signature/single-top))))
-
-  (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
-				 {asserted.sig retvals-signature?} {expr.psi psi?})
-    (define expr.core (psi.core-expr         expr.psi))
-    (define expr.sig  (psi.retvals-signature expr.psi))
-    ;;Here we know that ASSERTED.SIG is a  valid retvals signature, so we can be less
-    ;;strict in the patterns.
-    (syntax-match (retvals-signature.tags asserted.sig) ()
-      ((?rv-tag* ...)
-       (let* ((TMP*         (generate-temporaries ?rv-tag*))
-	      (IDX*         (%fxiota 1 TMP*))
-	      (checker.psi  (chi-expr (bless
-				       `(lambda ,TMP*
-					  ,@(map (lambda (tmp idx tag)
-						   `(validate-typed-return-value ,tag ,idx ,tmp))
-					      TMP* IDX* ?rv-tag*)
-					  (void)))
-				      lexenv.run lexenv.expand)))
-	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-				      expr.core checker.psi)))
-
-      ((?rv-tag* ... . ?rv-rest-tag)
-       (let* ((TMP*         (generate-temporaries ?rv-tag*))
-	      (IDX*         (%fxiota 1 TMP*))
-	      (rest.sym     (gensym "rest"))
-	      (obj.sym      (gensym "obj"))
-	      (idx.sym      (gensym "idx"))
-	      (checker.psi  (chi-expr (bless
-				       `(lambda (,@TMP* . ,rest.sym)
-					  ,@(map (lambda (tmp idx tag)
-						   `(validate-typed-return-value ,tag ,idx ,tmp))
-					      TMP* IDX* ?rv-tag*)
-					  (fold-left (lambda (,idx.sym ,obj.sym)
-						       (validate-typed-return-value ,?rv-rest-tag ,idx.sym ,obj.sym)
-						       (fxadd1 ,idx.sym))
-					    ,(add1 (length TMP*)) ,rest.sym)
-					  (void)))
-				      lexenv.run lexenv.expand)))
-	 (%run-time-check-output-form  input-form.stx lexenv.run lexenv.expand
-				       expr.core checker.psi)))
-
-      (?rv-args-tag
-       (let* ((args.sym     (gensym "args"))
-	      (obj.sym      (gensym "obj"))
-	      (idx.sym      (gensym "idx"))
-	      (checker.psi  (chi-expr (bless
-				       `(lambda ,args.sym
-					  (fold-left (lambda (,idx.sym ,obj.sym)
-						       (validate-typed-return-value ,?rv-args-tag ,idx.sym ,obj.sym)
-						       (fxadd1 ,idx.sym))
-					    1 ,args.sym)
-					  (void)))
-				      lexenv.run lexenv.expand)))
-	 (%run-time-check-output-form  input-form.stx lexenv.run lexenv.expand
-				       expr.core checker.psi)))
+      ((_ ?assert-signature ?expr)
+       (begin
+	 (unless (syntax-object.type-signature? ?assert-signature)
+	   (%synner "invalid return values signature" ?assert-signature))
+	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
+			      ?assert-signature ?expr #f)))
       ))
 
-  (define (%just-evaluate-the-expression expr.psi)
-    (make-psi (psi.input-form expr.psi)
-	      (build-sequence no-source
-		(list (psi.core-expr expr.psi)
-		      (build-void)))
-	      ;;We know that we are returning a single void argument.
-	      (make-retvals-signature/single-top)))
+  (define-core-transformer (assert-signature-and-return input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_ ?assert-signature ?expr)
+       (begin
+	 (unless (syntax-object.type-signature? ?assert-signature)
+	   (%synner "invalid return values signature" ?assert-signature))
+	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
+			      ?assert-signature ?expr #t)))
+      ))
 
-  (define (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-				       expr.core checker.psi)
-    ;;We build a core language expression as follows:
+;;; --------------------------------------------------------------------
+
+  (define (%process-expression who input-form.stx lexenv.run lexenv.expand
+			       asrt.stx expr.stx return-values?)
+    (define asrt.tags  (syntax-unwrap asrt.stx))
+    (define expr.psi   (chi-expr expr.stx lexenv.run lexenv.expand))
+    (define expr.sig   (psi.retvals-signature expr.psi))
+    (define expr.tags  (type-signature-tags expr.sig))
+    (define (%error-mismatching-signatures)
+      (expand-time-retvals-signature-violation who input-form.stx expr.stx (make-type-signature asrt.tags) expr.sig))
+    ;;Most of  the times either  the signatures will match  at expand-time or  a full
+    ;;run-time validation is required.  So let's do first the common cases.
+    (cond
+     ((syntax-object.type-signature.fully-unspecified? asrt.tags)
+      ;;The assertion's signature always matches expression's signature.
+      (%just-evaluate-the-expression expr.psi return-values?))
+
+     ((syntax-object.type-signature.fully-unspecified? expr.tags)
+      ;;When the  assertion's signature has  types and the expression's  signature is
+      ;;unspecified: always do a run-time validation.
+      (%run-time-validation who input-form.stx lexenv.run lexenv.expand
+			    asrt.tags expr.psi return-values?))
+
+     ((and (syntax-object.type-signature.single-identifier? asrt.tags)
+	   (syntax-object.type-signature.single-identifier? expr.tags))
+      ;;The common case of single return value.
+      (let ((asrt.id (car asrt.tags))
+	    (expr.id (car expr.tags)))
+	(cond ((top-tag-id? asrt.id)
+	       ;;Success!!!  The signatures always match.
+	       (%just-evaluate-the-expression expr.psi return-values?))
+	      ((top-tag-id? expr.id)
+	       (%run-time-validation who input-form.stx lexenv.run lexenv.expand
+				     asrt.tags expr.psi return-values?))
+	      ((type-identifier-super-and-sub? asrt.id expr.id lexenv.run input-form.stx)
+	       ;;Success!!!  The signatures do match.
+	       (%just-evaluate-the-expression expr.psi return-values?))
+	      (else
+	       (%error-mismatching-signatures)))))
+
+     ((and (identifier? asrt.tags)
+	   (identifier? expr.tags)
+	   (type-identifier-is-list-sub-type? asrt.tags)
+	   (type-identifier-is-list-sub-type? expr.tags))
+      ;;The case of multiple return values with the same type.
+      (if (type-identifier-super-and-sub? asrt.tags expr.tags lexenv.run input-form.stx)
+	  ;;Success!!!  We have determined at expand-time that the signatures match.
+	  (%just-evaluate-the-expression expr.psi return-values?)
+	(%error-mismatching-signatures)))
+
+     ((and (null? asrt.tags)
+	   (null? expr.tags))
+      ;;The uncommon  case of empty  signatures.  The expression returns  zero values
+      ;;and the assertion expects zero values.  We just evaluate the expression.
+      (%just-evaluate-the-expression expr.psi return-values?))
+
+     ((syntax-object.type-signature.super-and-sub? asrt.tags expr.tags lexenv.run)
+      (%just-evaluate-the-expression expr.psi return-values?))
+
+     (else
+      (%error-mismatching-signatures))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%just-evaluate-the-expression expr.psi return-values?)
+    ;;This  function  is  used  when  it   is  determined  at  expand-time  that  the
+    ;;expression's signature matches the asserted signature.
+    ;;
+    ;;When we  do not need to  return the actual  values, we return the  void object;
+    ;;returning a single  value is faster and, sometimes, returning  void might allow
+    ;;detection of unwanted use of return values.
+    ;;
+    (if return-values?
+	expr.psi
+      (make-psi (psi.input-form expr.psi)
+		(build-sequence no-source
+		  (list (psi.core-expr expr.psi)
+			(build-void)))
+		(make-type-signature/single-void))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%run-time-validation)
+    ;;Let's see some examples of run-time validation.  The input form:
+    ;;
+    ;;   (assert-signature-and-return (<fixnum> <flonum> <string>) ?expr)
+    ;;
+    ;;is expanded to:
     ;;
     ;;   (call-with-values
-    ;;        (lambda () ?expr)
-    ;;     (lambda ?formals
-    ;;       ?check-form ...
-    ;;       (void)))
+    ;;       (lambda () ?expr)
+    ;;     (lambda (arg0 arg1 arg2)
+    ;;       (values (validate-typed-return-value <fixnum> 0 arg0)
+    ;;               (validate-typed-return-value <flonum> 1 arg1)
+    ;;               (validate-typed-return-value <string> 2 arg2))))
     ;;
-    (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (checker.core (psi.core-expr checker.psi)))
-      (make-psi input-form.stx
-		(build-application no-source
-		  cwv.core
-		  (list (build-lambda no-source '() expr.core)
-			checker.core))
-		;;We know that we are returning a single void argument.
-		(make-retvals-signature/single-top))))
-
-  #| end of module: ASSERT-RETVALS-SIGNATURE-TRANSFORMER |# )
-
-
-;;;; module core-macro-transformer: ASSERT-RETVALS-SIGNATURE-AND-RETURN
-
-(module (assert-retvals-signature-and-return-transformer)
-  ;;Transformer function used to  expand Vicare's ASSERT-RETVALS-SIGNATURE-AND-RETURN syntaxes from
-  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
-  ;;the context of the given LEXENV; return a PSI struct.
-  ;;
-  (define-core-transformer (assert-retvals-signature-and-return input-form.stx lexenv.run lexenv.expand)
-    (syntax-match input-form.stx ()
-      ((_ ?retvals-signature ?expr)
-       (syntax-object.retvals-signature? ?retvals-signature)
-       (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
-	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.sig     (psi.retvals-signature expr.psi)))
-	 (cond ((list-tag-id? ?retvals-signature)
-		;;If we are here the input form is:
-		;;
-		;;   (assert-retvals-signature-and-return <list> ?expr)
-		;;
-		;;and  any tuple  of returned  values returned  by ?EXPR  is of  type
-		;;"<list>".  Just evaluate the expression.
-		;;
-		;;NOTE  The signature  validation has  succeeded at  expand-time: the
-		;;returned PSI has the original  ?EXPR signature, not "<list>".  This
-		;;just looks nicer.
-		expr.psi)
-
-	       ((retvals-signature.single-top-tag? asserted.sig)
-		;;If we are here the input form is:
-		;;
-		;;   (assert-retvals-signature-and-return (<top>) ?expr)
-		;;
-		;;so it is  enough to make sure that the  expression returns a single
-		;;value, whatever its type.
-		(syntax-match (retvals-signature.tags expr.sig) ()
-		  ((?tag)
-		   ;;Success!!!   We   have  determined   at  expand-time   that  the
-		   ;;expression returns a single  value.
-		   ;;
-		   ;;IMPORTANT  NOTE  The  signature   validation  has  succeeded  at
-		   ;;expand-time:  the returned  PSI *must*  have the  original ?EXPR
-		   ;;signature,  not ASSERTED.SIG;  this  even  when ASSERTED.SIG  is
-		   ;;"(<top>)".   This  property is  used  in  binding syntaxes  when
-		   ;;propagating a tag from the RHS to the LHS.
-		   expr.psi)
-		  (?tag
-		   (list-tag-id? ?tag)
-		   ;;Damn   it!!!   The   expression's  return   values  have   fully
-		   ;;unspecified signature; we need to insert a run-time check.
-		   (%run-time-validation-of-single-value input-form.stx lexenv.run lexenv.expand
-							 expr.psi))
-		  (_
-		   ;;The  horror!!!   We have  established  at  expand-time that  the
-		   ;;expression returns multiple values; assertion failed.
-		   (expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig))
-		  ))
-
-	       ((retvals-signature.partially-unspecified? expr.sig)
-		;;The asserted  signature has type identifiers  that demand enforcing
-		;;of constraints.  The expression has  no full type specification; we
-		;;have to insert a run-time check.
-		(%run-time-validation input-form.stx lexenv.run lexenv.expand
-				      asserted.sig expr.psi))
-
-	       ((retvals-signature.super-and-sub? asserted.sig expr.sig)
-		;;Fine, we have  established at expand-time that  the returned values
-		;;are valid; assertion succeeded.  Just evaluate the expression.
-		expr.psi)
-
-	       (else
-		;;The horror!!!  We have established at expand-time that the returned
-		;;values are of the wrong type; assertion failed.
-		(expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig)))))
-
-      ((_ ?retvals-signature ?expr)
-       ;;Let's use a descriptive error message here.
-       (%synner "invalid return values signature" ?retvals-signature))
-      ))
-
-  (define* (%run-time-validation-of-single-value input-form.stx lexenv.run lexenv.expand
-						 expr.psi)
-    ;;This function  is used when the  syntax use specifies that  the expression must
-    ;;return a single value, of any type.
+    ;;The input form:
     ;;
-    (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (expr.core    (psi.core-expr expr.psi))
-	   (checker.sexp (let ((arg.sym  (gensym "arg"))
-			       (rest.sym (gensym "rest")))
-			   `(lambda (,arg.sym . ,rest.sym)
-			      (if (null? ,rest.sym)
-				  ,arg.sym
-				(assertion-violation #f "expected single return value" (cons ,arg.sym ,rest.sym))))))
-	   (checker.psi  (chi-expr (bless checker.sexp) lexenv.run lexenv.expand))
-	   (checker.core (psi.core-expr checker.psi)))
-      (make-psi input-form.stx
-		(build-application no-source
-		  cwv.core
-		  (list (build-lambda no-source
-			  '()
-			  expr.core)
-			checker.core))
-		(make-retvals-signature/single-top))))
-
-  (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
-				 {asserted.sig retvals-signature?} {expr.psi psi?})
-    ;;This function  is called when the  syntax use specifies that  the return values
-    ;;must  have  some  specific  types,  but  it  is  impossible  to  determine,  at
-    ;;expand-time, the type of the actually returned values.
+    ;;   (assert-signature (<fixnum> <flonum> <string>) ?expr)
     ;;
-    (define expr.core (psi.core-expr         expr.psi))
-    (define expr.sig  (psi.retvals-signature expr.psi))
-    ;;Here we know that ASSERTED.SIG is a  valid formals signature, so we can be less
-    ;;strict in the patterns.
-    (syntax-match (retvals-signature.tags asserted.sig) ()
-      ;;Special handling for single value: we have established before that ?RV-TAG is
-      ;;not "<top>".
-      ((?rv-tag)
-       (let* ((obj.sym     (gensym "obj"))
-	      (checker.psi (chi-expr (bless
-				      `(lambda (,obj.sym)
-					 (validate-typed-return-value ,?rv-tag 1 ,obj.sym)
-					 ,obj.sym))
-				     lexenv.run lexenv.expand))
-	      (checker.core (psi.core-expr checker.psi)))
-	 (make-psi input-form.stx
-		   (build-application no-source
-		     checker.core
-		     (list expr.core))
-		   ;;The type  of the  value returned by  ?EXPR was  unspecified, but
-		   ;;after asserting the  type at run-time: we know that  the type is
-		   ;;the asserted one.
-		   asserted.sig)))
-
-      ((?rv-tag* ...)
-       (let* ((TMP*         (generate-temporaries ?rv-tag*))
-	      (IDX*         (%fxiota 1 TMP*))
-	      (checker.psi  (chi-expr (bless
-				       `(lambda ,TMP*
-					  ,@(map (lambda (tmp idx tag)
-						   `(validate-typed-return-value ,tag ,idx ,tmp))
-					      TMP* IDX* ?rv-tag*)
-					  (values . ,TMP*)))
-				      lexenv.run lexenv.expand)))
-	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
-						      expr.psi checker.psi asserted.sig)))
-
-      ((?rv-tag* ... . ?rv-rest-tag)
-       (let* ((TMP*         (generate-temporaries ?rv-tag*))
-	      (IDX*         (%fxiota 1 TMP*))
-	      (rest.sym     (gensym "rest"))
-	      (idx.sym      (gensym "idx"))
-	      (obj.sym      (gensym "obj"))
-	      (checker.psi  (chi-expr (bless
-				       `(lambda (,@TMP* . ,rest.sym)
-					  ,@(map (lambda (tmp idx tag)
-						   `(validate-typed-return-value ,tag ,idx ,tmp))
-					      TMP* IDX* ?rv-tag*)
-					  (fold-left (lambda (,idx.sym ,obj.sym)
-						       (validate-typed-return-value ,?rv-rest-tag ,idx.sym ,obj.sym)
-						       (fxadd1 ,idx.sym))
-					    ,(add1 (length TMP*)) ,rest.sym)
-					  (apply values ,@TMP* ,rest.sym)))
-				      lexenv.run lexenv.expand)))
-	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
-						      expr.psi checker.psi asserted.sig)))
-
-      (?rv-args-tag
-       (let* ((args.sym     (gensym "args"))
-	      (idx.sym      (gensym "idx"))
-	      (obj.sym      (gensym "obj"))
-	      (checker.psi  (chi-expr (bless
-				       `(lambda ,args.sym
-					  (fold-left (lambda (,idx.sym ,obj.sym)
-						       (validate-typed-return-value ,?rv-args-tag ,idx.sym ,obj.sym)
-						       (fxadd1 ,idx.sym))
-					    1 ,args.sym)
-					  (apply values ,args.sym)))
-				      lexenv.run lexenv.expand)))
-	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
-						      expr.psi checker.psi asserted.sig)))
-      ))
-
-  (define* (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
-							{expr.psi psi?} {checker.psi psi?} {asserted.sig retvals-signature?})
-    ;;We build a core language expression as follows:
+    ;;is expanded to:
     ;;
     ;;   (call-with-values
-    ;;        (lambda () ?expr)
-    ;;     (lambda ?formals
-    ;;       ?check-form ...
-    ;;       (apply values ?formals)))
+    ;;       (lambda () ?expr)
+    ;;     (lambda (arg0 arg1 arg2)
+    ;;       (begin
+    ;;         (validate-typed-return-value <fixnum> 0 arg0)
+    ;;         (validate-typed-return-value <flonum> 1 arg1)
+    ;;         (validate-typed-return-value <string> 2 arg2)
+    ;;         (void))))
     ;;
-    ;;The returned PSI struct has the given retvals signature.
+    ;;The input form:
     ;;
-    (let* ((cwv.core     (build-primref no-source 'call-with-values))
-	   (expr.core    (psi.core-expr expr.psi))
-	   (checker.core (psi.core-expr checker.psi)))
-      (make-psi input-form.stx
-		(build-application no-source
-		  cwv.core
-		  (list (build-lambda no-source
-			  '()
-			  expr.core)
-			checker.core))
-		;;The type  of values  returned by ?EXPR  was unspecified,  but after
-		;;asserting  the type  at  run-time: we  know that  the  type is  the
-		;;asserted one.
-		asserted.sig)))
+    ;;   (assert-signature-and-return <list-of-fixnums> ?expr)
+    ;;
+    ;;is expanded to:
+    ;;
+    ;;   (call-with-values
+    ;;       (lambda () ?expr)
+    ;;     (lambda rest
+    ;;       (apply values
+    ;;         (begin
+    ;; 	         (fold-left (lambda (idx obj)
+    ;;                        (validate-typed-return-value <fixnum> idx obj)
+    ;;                        (fxadd1 idx))
+    ;; 	           0 rest)
+    ;; 	         rest))))
+    ;;
+    ;;The input form:
+    ;;
+    ;;   (assert-signature-and-return (<fixnum> <flonum> . <list-of-fixnums>) ?expr)
+    ;;
+    ;;is expanded to:
+    ;;
+    ;;   (call-with-values
+    ;;       (lambda () ?expr)
+    ;;     (lambda rest
+    ;;       (apply values
+    ;;         (validate-typed-return-value <fixnum> 0 arg0)
+    ;;         (validate-typed-return-value <flonum> 1 arg1)
+    ;;         (begin
+    ;; 	         (fold-left (lambda (idx obj)
+    ;;                        (validate-typed-return-value <fixnum> idx obj)
+    ;;                        (fxadd1 idx))
+    ;; 	           2 rest)
+    ;; 	         rest))))
+    ;;
+    ;;The input form:
+    ;;
+    ;;   (assert-signature (<fixnum> <flonum> . <list-of-fixnums>) ?expr)
+    ;;
+    ;;is expanded to:
+    ;;
+    ;;   (call-with-values
+    ;;       (lambda () ?expr)
+    ;;     (lambda rest
+    ;;       (begin
+    ;;         (validate-typed-return-value <fixnum> 0 arg0)
+    ;;         (validate-typed-return-value <flonum> 1 arg1)
+    ;; 	       (fold-left (lambda (idx obj)
+    ;;                      (validate-typed-return-value <fixnum> idx obj)
+    ;;                      (fxadd1 idx))
+    ;; 	         2 rest))))
+    ;;
+    (define* (%run-time-validation who input-form.stx lexenv.run lexenv.expand
+				   asrt.tags {expr.psi psi?} return-values?)
+      (receive (validating-form*.sexp consumer-formals.sexp has-rest?)
+	  (let recur ((asrt.tags asrt.tags)
+		      (idx       0))
+	    (cond ((pair? asrt.tags)
+		   (let ((consumer-formal.sym (gensym (string-append "arg" (number->string idx)))))
+		     (receive (validating-form*.sexp consumer-formals.sexp has-rest?)
+			 (recur (cdr asrt.tags) (fxadd1 idx))
+		       (values (cons `(validate-typed-return-value ,(car asrt.tags) ,idx ,consumer-formal.sym)
+				     validating-form*.sexp)
+			       (cons consumer-formal.sym consumer-formals.sexp)
+			       has-rest?))))
+		  ((null? asrt.tags)
+		   (values '() '() #f))
+		  ((list-tag-id? asrt.tags)
+		   (let ((consumer-formal.sym (gensym "rest")))
+		     (values (list consumer-formal.sym) consumer-formal.sym #t)))
+		  (else
+		   ;;Here ASRT.TAGS is a standalone identifier, sub-type of "<list>".
+		   (let* ((consumer-formal.sym  (gensym "rest"))
+			  (validating-form.sexp (%build-rest-validator who input-form.stx lexenv.run lexenv.expand
+								       asrt.tags idx consumer-formal.sym return-values?)))
+		     (values (list validating-form.sexp) consumer-formal.sym #t)))))
+	(let* ((producer.core		(build-lambda no-source '() (psi.core-expr expr.psi)))
+	       (consumer-body.sexp	(if return-values?
+					    (cond (has-rest?
+						   `(apply values . ,validating-form*.sexp))
+						  ((null? (cdr validating-form*.sexp))
+						   (car validating-form*.sexp))
+						  (else
+						   `(values . ,validating-form*.sexp)))
+					  `(begin ,@validating-form*.sexp (void))))
+	       (consumer.stx		(bless `(internal-lambda (unsafe) ,consumer-formals.sexp ,consumer-body.sexp)))
+	       ;;We want "__who__"  to be bound in the consumer  expression.  So that
+	       ;;VALIDATE-TYPED-RETURN-VALUE can use it.
+	       (consumer.psi		(let* ((id    (core-prim-id '__who__))
+					       (label (id->label id))
+					       (descr (label->syntactic-binding-descriptor label lexenv.run)))
+					  (case (syntactic-binding-descriptor.type descr)
+					    ((displaced-lexical)
+					     ;;__who__ is unbound.
+					     (receive (lexenv.run lexenv.expand)
+						 (push-fluid-syntax who input-form.stx lexenv.run lexenv.expand
+								    id (bless '(identifier-syntax #f))
+								    (case-lambda
+								     ((message)
+								      (syntax-violation who message input-form.stx))
+								     ((message subform)
+								      (syntax-violation who message input-form.stx subform))))
+					       (chi-expr consumer.stx lexenv.run lexenv.expand)))
+					    (else
+					     ;;__who__ is bound.
+					     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
+	       (consumer.core		(psi.core-expr consumer.psi))
+	       (output-signature	(if return-values?
+					    (make-type-signature asrt.tags)
+					  (make-type-signature/single-void))))
+	  (make-psi input-form.stx
+		    (build-application no-source
+		      (build-primref no-source 'call-with-values)
+		      (list producer.core consumer.core))
+		    output-signature))))
 
-  #| end of module: ASSERT-RETVALS-SIGNATURE-AND-RETURN-TRANSFORMER |# )
+    (define (%build-rest-validator who input-form.stx lexenv.run lexenv.expand
+				   asrt.id idx consumer-formal.sym return-values?)
+      (let* ((asrt.ots	(id->object-type-specification who input-form.stx asrt.id lexenv.run))
+	     (item.id	(list-type-spec.type-id asrt.ots))
+	     (idx.sym	(gensym "idx"))
+	     (obj.sym	(gensym "obj")))
+	(define validator.sexp
+	  `(fold-left (internal-lambda (unsafe) (,idx.sym ,obj.sym)
+			(validate-typed-return-value ,item.id ,idx.sym ,obj.sym)
+			(fxadd1 ,idx.sym))
+	     ,idx ,consumer-formal.sym))
+	(if return-values?
+	    `(begin ,validator.sexp ,consumer-formal.sym)
+	  validator.sexp)))
+
+    #| end of module: %RUN-TIME-VALIDATION |# )
+
+  #| end of module: ASSERT-SIGNATURE-TRANSFORMER |# )
 
 
 ;;;; done

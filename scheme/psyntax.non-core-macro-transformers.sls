@@ -335,7 +335,7 @@
 	     (bless
 	      `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,unsafe-body*.stx)))
 
-	    ((retvals-signature.fully-unspecified? (callable-signature.retvals signature))
+	    ((type-signature.fully-unspecified? (callable-signature.retvals signature))
 	     ;;If only  the return values  have specified type signature:  generate a
 	     ;;single function definition with type checking for the return values.
 	     ;;
@@ -604,7 +604,7 @@
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values `(internal-lambda (unsafe) (,obj.sym)
-		    ((assert-retvals-signature-and-return (<procedure>) ,?closure) ,obj.sym))
+		    ((assert-signature-and-return (<procedure>) ,?closure) ,obj.sym))
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
 				  (entries '()))
@@ -753,7 +753,7 @@
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values (bless
 		  `(,closure.sym (internal-lambda (unsafe) ()
-				   ((assert-retvals-signature-and-return (<procedure>) ,?closure) ,expr.sym))))
+				   ((assert-signature-and-return (<procedure>) ,?closure) ,expr.sym))))
 		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
 		   (,closure.sym)))))
 
@@ -1428,7 +1428,7 @@
 					  ,?body . ,?body*)))
 	    ,?recur)
 	  . ,(map (lambda (rhs tag)
-		    `(assert-retvals-signature-and-return (,tag) ,rhs))
+		    `(assert-signature-and-return (,tag) ,rhs))
 	       ?rhs* tag*)))))
     ))
 
@@ -1476,8 +1476,8 @@
 	       (receive (lhs.standard lhs.signature)
 		   (syntax-object.parse-formals-signature (car lhs*) input-form.stx)
 		 (loop (cdr lhs*)
-		       (cons lhs.standard                           lhs*.standard)
-		       (cons (formals-signature.tags lhs.signature) lhs*.signature)))))
+		       (cons lhs.standard  lhs*.standard)
+		       (cons lhs.signature lhs*.signature)))))
 	 (bless
 	  (let recur ((lhs*.standard  lhs*.standard)
 		      (lhs*.signature lhs*.signature)
@@ -1495,7 +1495,7 @@
 		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
 		   `(call-with-values
 			(internal-lambda (unsafe) ()
-			  (assert-retvals-signature-and-return ,(car lhs*.signature) ,(car rhs*)))
+			  (assert-signature-and-return ,(car lhs*.signature) ,(car rhs*)))
 		      (internal-lambda (unsafe) ,y*
 			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				(cdr rhs*) standard-old* tagged-old* new*)))))
@@ -4198,13 +4198,13 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
-     (receive (standard-formals signature)
+     (receive (standard-formals signature.stx)
 	 (syntax-object.parse-formals-signature ?formals expr-stx)
        (syntax-match standard-formals ()
 	 ((?id* ... ?id0)
 	  (let ((TMP* (generate-temporaries ?id*)))
 	    (receive (tag* tag0)
-		(proper-list->head-and-last (formals-signature.tags signature))
+		(proper-list->head-and-last signature.stx)
 	      (bless
 	       `(begin
 		  ,@(map (lambda (var tag)
@@ -4222,7 +4222,7 @@
 	 (?args
 	  (identifier? ?args)
 	  (bless
-	   `(define (brace ,?args ,(formals-signature.tags signature))
+	   `(define (brace ,?args ,signature.stx)
 	      (call-with-values
 		  (internal-lambda (unsafe) () ,?form0 . ,?form*)
 		(internal-lambda (unsafe) args args)))))
@@ -4230,7 +4230,7 @@
 	 ((?id* ... . ?rest-id)
 	  (let ((TMP* (generate-temporaries ?id*)))
 	    (receive (tag* rest-tag)
-		(improper-list->list-and-rest (formals-signature.tags signature))
+		(improper-list->list-and-rest signature.stx)
 	    (bless
 	     `(begin
 		,@(map (lambda (var tag)
@@ -4254,14 +4254,14 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
-     (receive (standard-formals signature)
+     (receive (standard-formals signature.stx)
 	 (syntax-object.parse-formals-signature ?formals expr-stx)
        (syntax-match standard-formals ()
 	 ((?id* ... ?id0)
 	  (let ((SHADOW* (generate-temporaries ?id*))
 		(TMP*    (generate-temporaries ?id*)))
 	    (receive (tag* tag0)
-		(proper-list->head-and-last (formals-signature.tags signature))
+		(proper-list->head-and-last signature.stx)
 	      (bless
 	       `(begin
 		  ,@(map (lambda (var tag)
@@ -4285,7 +4285,7 @@
 
 	 (?args
 	  (identifier? ?args)
-	  (let ((args-tag (formals-signature.tags signature)))
+	  (let ((args-tag signature.stx))
 	    (bless
 	     `(begin
 		(define (brace shadow ,args-tag)
@@ -4300,7 +4300,7 @@
 	  (let ((SHADOW* (generate-temporaries ?id*))
 		(TMP*    (generate-temporaries ?id*)))
 	    (receive (tag* rest-tag)
-		(improper-list->list-and-rest (formals-signature.tags signature))
+		(improper-list->list-and-rest signature.stx)
 	    (bless
 	     `(begin
 		,@(map (lambda (var tag)
@@ -4334,7 +4334,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals signature)
+     (receive (standard-formals signature.stx)
 	 (syntax-object.parse-formals-signature ?formals input-form.stx)
        (let ((single-return-value? (and (list? standard-formals)
 					(= 1 (length standard-formals)))))
@@ -4354,7 +4354,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals signature)
+     (receive (standard-formals signature.stx)
 	 (syntax-object.parse-formals-signature ?formals input-form.stx)
        (receive (rv-form single-return-value?)
 	   (cond ((list? standard-formals)

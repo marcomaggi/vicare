@@ -214,12 +214,12 @@
 (define (make-syntactic-binding-descriptor/lexical-typed-var/from-data type-id lex)
   (define lts
     (make-lexical-typed-variable-spec type-id lex))
-  (define expanded-expr
+  (define lts-maker.core-expr
     (build-application no-source
       (build-primref no-source 'make-lexical-typed-variable-spec)
       (list (build-data no-source type-id)
 	    (build-data no-source lex))))
-  (make-syntactic-binding-descriptor/lexical-typed-var lts expanded-expr))
+  (make-syntactic-binding-descriptor/lexical-typed-var lts lts-maker.core-expr))
 
 ;;; --------------------------------------------------------------------
 
@@ -531,6 +531,44 @@
 			 "/closure-signature>")))
 
 
+;;;; syntactic binding descriptor: list sub-type binding
+
+(define* (make-syntactic-binding-descriptor/list-sub-type-name {ots list-type-spec?} ots-maker.core-expr)
+  ;;Build and  return a syntactic  binding's descriptor  representing the name  of an
+  ;;object-type which is a sub-type of "<list>".
+  ;;
+  ;;The returned syntactic binding's descriptor has the format:
+  ;;
+  ;;   (local-object-type-name . (#<list-type-spec> . ?ots-maker.core-expr))
+  ;;
+  (make-syntactic-binding-descriptor local-object-type-name (cons ots ots-maker.core-expr)))
+
+;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
+;;object-type specification for a "<list>" sub-type; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/list-sub-type-name?
+  list-type-spec?)
+
+
+;;;; syntactic binding descriptor: vector sub-type binding
+
+(define* (make-syntactic-binding-descriptor/vector-sub-type-name {ots vector-type-spec?} ots-maker.core-expr)
+  ;;Build and  return a syntactic  binding's descriptor  representing the name  of an
+  ;;object-type which is a sub-type of "<vector>".
+  ;;
+  ;;The returned syntactic binding's descriptor has the format:
+  ;;
+  ;;   (local-object-type-name . (#<vector-type-spec> . ?ots-maker.core-expr))
+  ;;
+  (make-syntactic-binding-descriptor local-object-type-name (cons ots ots-maker.core-expr)))
+
+;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
+;;object-type specification for a "<vector>" sub-type; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/vector-sub-type-name?
+  vector-type-spec?)
+
+
 ;;;; syntactic binding descriptor: core primitive
 
 ;;NOTE Commented out because unused.  Kept here for reference.  (Marco Maggi; Sat Apr
@@ -623,8 +661,8 @@
   	   (formals.sexp (cadr sexp))
   	   (retvals.stx  (%any-list->ids retvals.sexp))
   	   (formals.stx  (%any-list->ids formals.sexp)))
-      (make-lambda-signature (make-retvals-signature retvals.stx)
-  			     (make-formals-signature formals.stx))))
+      (make-lambda-signature (make-type-signature retvals.stx)
+  			     (make-type-signature formals.stx))))
 
   (define (%any-list->ids ell)
     ;;Convert a proper  or improper list of symbols representing  core type identifiers

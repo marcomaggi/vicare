@@ -232,7 +232,7 @@
 	    ;;caller  of VALUES  to cast  the arguments,  but it  would be  too much;
 	    ;;remember that  we still do  some signature validation even  when tagged
 	    ;;language support is off.  (Marco Maggi; Mon Mar 31, 2014)
-	    (syntax-match (retvals-signature.tags (car rand*.sig)) ()
+	    (syntax-match (type-signature-tags (car rand*.sig)) ()
 	      ((?tag)
 	       (loop (cdr rand*.sig) (cdr rand*.stx)
 		     (cons ?tag rand*.tag)))
@@ -243,9 +243,9 @@
 	      (_
 	       (expand-time-retvals-signature-violation 'values
 							input-form.stx (car rand*.stx)
-							(make-retvals-signature/single-top)
+							(make-type-signature/single-top)
 							(car rand*.sig))))
-	  (make-retvals-signature (reverse rand*.tag)))))
+	  (make-type-signature (reverse rand*.tag)))))
     (make-psi input-form.stx
 	      (build-application (syntax-annotation input-form.stx)
 		rator.core
@@ -270,11 +270,11 @@
 	   (rator.sig (psi.retvals-signature rator.psi)))
       (define (%error-wrong-rator-sig)
 	(expand-time-retvals-signature-violation 'apply input-form.stx rator.stx
-						 (make-retvals-signature/single-procedure)
+						 (make-type-signature/single-procedure)
 						 rator.sig))
-      (syntax-match (retvals-signature.tags rator.sig) ()
+      (syntax-match (type-signature-tags rator.sig) ()
 	((?rator.tag)
-	 (cond ((type-identifier-is-procedure-sub-type? ?rator.tag lexenv.run)
+	 (cond ((type-identifier-is-procedure-or-procedure-sub-type? ?rator.tag lexenv.run)
 		;;Procedure application: good.
 		(let* ((apply.core (build-primref no-source 'apply))
 		       (rator.core (psi.core-expr rator.psi))
@@ -341,7 +341,7 @@
     ;;We call this function when the operator has already been expanded.
     ;;
     (define rator.sig (psi.retvals-signature rator.psi))
-    (syntax-match (retvals-signature.tags rator.sig) ()
+    (syntax-match (type-signature-tags rator.sig) ()
       (?tag
        (list-tag-id? ?tag)
        ;;The rator type  is unknown: evaluating the rator might  return any number of
@@ -353,7 +353,7 @@
       ((?tag)
        ;;The rator type is a single value.  Good, this is what it is meant to be.
        (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					 rator.psi ?tag rand*.stx))
+					 rator.psi rator.sig ?tag rand*.stx))
 
       (_
        ;;The rator is declared to evaluate to multiple values.
@@ -389,7 +389,7 @@
 		  rand*.core))))
 
   (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					     {rator.psi psi?} rator.tag rand*.stx)
+					     {rator.psi psi?} rator.sig rator.tag rand*.stx)
     ;;Build a  core language expression to  apply the rator  to the rands when  it is
     ;;known that the  rator will return a  single value with specified  type.  Do the
     ;;following:
@@ -403,7 +403,7 @@
     ;;
     ;;* Otherwise raise a syntax violation.
     ;;
-    (cond ((type-identifier-is-procedure-sub-type? rator.tag lexenv.run)
+    (cond ((type-identifier-is-procedure-or-procedure-sub-type? rator.tag lexenv.run)
 	   ;;The rator is  a procedure: very good; return  a procedure application.
 	   (let ((rand*.psi (chi-expr* rand*.stx lexenv.run lexenv.expand)))
 	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
@@ -424,7 +424,7 @@
 		       (syntax-match input-form.stx ()
 			 ((?rator . ?rands)
 			  (make-syntax-violation input-form.stx ?rator)))
-		       (make-retvals-signature-condition rator.tag))))))
+		       (make-retvals-signature-condition rator.sig))))))
 
   #| end of module: CHI-APPLICATION/PSI-RATOR |# )
 
@@ -451,7 +451,7 @@
     (define (%common-rator-application)
       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
 				       rator.psi first-rand.psi other-rand*.stx))
-    (syntax-match (retvals-signature.tags rator.sig) ()
+    (syntax-match (type-signature-tags rator.sig) ()
       (?tag
        (list-tag-id? ?tag)
        ;;The rator type  is unknown: evaluating the rator might  return any number of
@@ -508,7 +508,7 @@
     ;;Build a  core language expression to  apply the rator  to the rands when  it is
     ;;known that the rator will return a single value with specified type.
     ;;
-    (cond ((type-identifier-is-procedure-sub-type? rator.tag lexenv.run)
+    (cond ((type-identifier-is-procedure-or-procedure-sub-type? rator.tag lexenv.run)
 	   ;;The rator is a procedure: very good; return a procedure application.
 	   (let* ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
 		  (rand*.psi       (cons first-rand.psi other-rand*.psi)))
@@ -740,7 +740,7 @@
     (define rator.formals-signature
       (lambda-signature.formals rator.lambda-signature))
     (let loop ((expand-time-match? #t)
-	       (arg*.tag           (formals-signature.tags rator.formals-signature))
+	       (arg*.tag           (type-signature-tags rator.formals-signature))
 	       (rand*.psi          rand*.psi)
 	       (count              0))
       (syntax-match arg*.tag ()
@@ -760,7 +760,7 @@
 	       (%error-more-arguments-than-operands 'chi-application input-form.stx (+ count number-of-mandatory-args) count))
 	   (let* ((rand.psi               (car rand*.psi))
 		  (rand.retvals-signature (psi.retvals-signature rand.psi))
-		  (rand.signature-tags    (retvals-signature.tags rand.retvals-signature)))
+		  (rand.signature-tags    (type-signature-tags rand.retvals-signature)))
 	     (syntax-match rand.signature-tags ()
 	       ((?rand.tag)
 		;;Single return value from operand: good, this is what we want.
@@ -769,7 +769,7 @@
 		       ;;this  is  what  happens   with  standard  (untagged)  Scheme
 		       ;;language.  Let's see at run-time what will happen.
 		       (loop #f ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
-		      ((type-identifier-super-and-sub? input-form.stx lexenv.run ?arg.tag ?rand.tag)
+		      ((type-identifier-super-and-sub? ?arg.tag ?rand.tag lexenv.run input-form.stx)
 		       ;;Argument and  operand do match at  expand-time.  Notice that
 		       ;;this case  includes the one  of expected argument  tagged as
 		       ;;"<top>":  this  is  what happens  with  standard  (untagged)

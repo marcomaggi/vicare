@@ -164,14 +164,14 @@
       (lambda (make-record)
 	(case-define* make-psi
 	  ((stx core-expr)
-	   (make-record stx core-expr (make-retvals-signature/fully-unspecified)))
-	  ((stx core-expr {retvals-signature retvals-signature?})
+	   (make-record stx core-expr (make-type-signature/fully-unspecified)))
+	  ((stx core-expr {retvals-signature type-signature?})
 	   (make-record stx core-expr retvals-signature)))
 	make-psi))
 
     #| end of DEFINE-RECORD-TYPE |# )
 
-  (define* ({psi-application-retvals-signature retvals-signature?} input-form.stx lexenv {rator.psi psi?})
+  (define* ({psi-application-retvals-signature type-signature?} input-form.stx lexenv {rator.psi psi?})
     ;;We  assume  RATOR.PSI is  a  PSI  representing the  first  form  in a  callable
     ;;application:
     ;;
@@ -181,14 +181,14 @@
     ;;We can return a meaningful value if RATOR.PSI has a type which is a sub-type of
     ;;"<procedure>".
     ;;
-    (syntax-match (retvals-signature.tags (psi.retvals-signature rator.psi)) ()
+    (syntax-match (type-signature-tags (psi.retvals-signature rator.psi)) ()
       ((?type-id)
        (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv)))
 	 (if (closure-type-spec? ots)
 	     (callable-signature.retvals (closure-type-spec.signature ots))
-	   (make-retvals-signature/fully-unspecified))))
+	   (make-type-signature/fully-unspecified))))
       (_
-       (make-retvals-signature/fully-unspecified))))
+       (make-type-signature/fully-unspecified))))
 
   #| end of module |# )
 
@@ -416,6 +416,10 @@
 	   (make-syntactic-binding-descriptor/struct-type-name rv rhs-expr.core))
 	  ((closure-type-spec? rv)
 	   (make-syntactic-binding-descriptor/closure-type-name rv rhs-expr.core))
+	  ((list-type-spec? rv)
+	   (make-syntactic-binding-descriptor/list-sub-type-name rv rhs-expr.core))
+	  ((vector-type-spec? rv)
+	   (make-syntactic-binding-descriptor/vector-sub-type-name rv rhs-expr.core))
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
@@ -624,7 +628,7 @@
 	     ((inv-collector) lib)
 	     (make-psi expr.stx
 		       (build-global-reference no-source loc)
-		       (make-retvals-signature/single-top))))
+		       (make-type-signature/single-top))))
 
 	  ((global-typed)
 	   ;;Reference to global imported typed lexical variable; this means EXPR.STX
@@ -645,7 +649,7 @@
 			     (variable-loc	(global-typed-variable-spec.variable-loc gts)))
 			 (make-psi expr.stx
 				   (build-global-reference no-source variable-loc)
-				   (make-retvals-signature/single-value type-id)))
+				   (make-type-signature/single-value type-id)))
 		     (assertion-violation __who__
 		       "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
 		       expr.stx descr)))
@@ -663,7 +667,7 @@
 	   (let ((name (syntactic-binding-descriptor.value descr)))
 	     (make-psi expr.stx
 		       (build-primref no-source name)
-		       (make-retvals-signature/single-top))))
+		       (make-type-signature/single-top))))
 
 	  ((core-prim-typed)
 	   ;;Core  primitive with  type signatures  specification; it  is a  built-in
@@ -676,7 +680,7 @@
 		  (type-id	(core-prim-typed-binding-descriptor.value.type-id   descr.value)))
 	     (make-psi expr.stx
 		       (build-primref no-source name)
-		       (make-retvals-signature/single-value type-id))))
+		       (make-type-signature/single-value type-id))))
 
 	  ((call)
 	   ;;A function call; this means EXPR.STX has one of the formats:
@@ -695,7 +699,7 @@
 	   (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr))))
 	     (make-psi expr.stx
 		       (build-lexical-reference no-source lex)
-		       (make-retvals-signature/single-top))))
+		       (make-type-signature/single-top))))
 
 	  ((lexical-typed)
 	   ;;Reference  to  typed  lexical  variable;   this  means  EXPR.STX  is  an
@@ -708,7 +712,7 @@
 		  (type-id	(syntactic-binding-descriptor/lexical-typed-var.value.type-id descr.value)))
 	     (make-psi expr.stx
 		       (build-lexical-reference no-source lex)
-		       (make-retvals-signature/single-value type-id))))
+		       (make-type-signature/single-value type-id))))
 
 	  ((global-macro global-macro!)
 	   ;;Macro  uses  of macros  imported  from  other  libraries or  defined  by
@@ -752,7 +756,7 @@
 	   (let ((datum descr))
 	     (make-psi expr.stx
 		       (build-data no-source datum)
-		       (datum-retvals-signature datum))))
+		       (datum-type-signature datum))))
 
 	  ((set!)
 	   ;;Macro use of SET!; it means EXPR.STX has the format:
@@ -1031,7 +1035,7 @@
 		     (build-lexical-assignment no-source
 		       (lexical-var-binding-descriptor-value.lex-name descr.value)
 		       (psi.core-expr rhs.psi))
-		     (make-retvals-signature/single-void)))))
+		     (make-type-signature/single-void)))))
 
       ((lexical-typed)
        ;;A typed lexical binding used as LHS of SET!  is mutable and so unexportable.
@@ -1043,14 +1047,14 @@
 	      (lhs.lex		(syntactic-binding-descriptor/lexical-typed-var.value.lex     descr.value))
 	      (lhs.tag		(syntactic-binding-descriptor/lexical-typed-var.value.type-id descr.value))
 	      (rhs.psi		(chi-expr (bless
-					   `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
+					   `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
 					  lexenv.run lexenv.expand)))
 	 (syntactic-binding-descriptor/lexical-typed-var.value.assigned? descr.value #t)
 	 (make-psi input-form.stx
 		   (build-lexical-assignment no-source
 		     lhs.lex
 		     (psi.core-expr rhs.psi))
-		   (make-retvals-signature/single-void))))
+		   (make-type-signature/single-void))))
 
       ((core-prim core-prim-typed)
        (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
@@ -1269,7 +1273,7 @@
 	       (expr.sig (psi.retvals-signature expr.psi)))
 	  ;;All  right, we  have  expanded the  RHS expression.   Now  let's do  some
 	  ;;validation on the type of the expression.
-	  (syntax-match (retvals-signature.tags expr.sig) ()
+	  (syntax-match (type-signature-tags expr.sig) ()
 	    ((?tag)
 	     ;;A single return value.  Good.
 	     expr.psi)
@@ -1284,7 +1288,7 @@
 	     ;;Damn!!!   We have  determined at  expand-time that  the expression
 	     ;;returns multiple return values: syntax violation.
 	     (expand-time-retvals-signature-violation __who__
-	       expr.stx #f (make-retvals-signature/single-top) expr.sig))
+	       expr.stx #f (make-type-signature/single-top) expr.sig))
 	    )))
 
        ((top-expr)
@@ -1294,7 +1298,7 @@
 	  (make-psi expr.stx
 		    (build-sequence no-source
 		      (list expr.core (build-void)))
-		    (make-retvals-signature/single-void))))
+		    (make-type-signature/single-void))))
        ))))
 
 (define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
@@ -1524,45 +1528,41 @@
   ;;
   ;;is  a syntax  violation because  the use  of DEFINE  cannot redefine  the
   ;;binding for "a".
-  (define rib (make-rib/empty))
-  (define-values (trailing-expr-stx*^
-		  lexenv.run^ lexenv.expand^
-		  lex*^ qrhs*^
-		  trailing-mod-expr-stx**^
-		  unused-kwd*^ unused-export-spec*^)
-    (let ((lex*                              '())
-	  (qrhs*                             '())
-	  (mod**                             '())
-	  (kwd*                              '())
-	  (export-spec*                      '())
-	  (mix-definitions-and-expressions?  #f)
-	  (shadow/redefine-bindings?         #f))
-      (chi-body* (map (lambda (x)
-			(push-lexical-contour rib x))
-		   (syntax->list body-form*.stx))
-		 lexenv.run lexenv.expand
-		 lex* qrhs* mod** kwd* export-spec* rib
-		 mix-definitions-and-expressions? shadow/redefine-bindings?)))
-  ;;Upon arriving  here: RIB,  LEXENV.RUN^ and  LEXENV.EXPAND^ contain  the syntactic
-  ;;bindings associated to the QRHS*^.
-  (define init*.stx
-    (reverse-and-append-with-tail trailing-mod-expr-stx**^ trailing-expr-stx*^))
-  (when (null? init*.stx)
-    (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
-  ;;We want  order here!  First we  expand the QRHSs,  then we expande the  INITs; so
-  ;;that the QRHS bindings are typed when the INITs are expanded.
-  (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
-	 (init*.psi      (chi-expr* init*.stx lexenv.run^ lexenv.expand^))
-	 (rhs*.core      (map psi.core-expr rhs*.psi))
-	 (init*.core     (map psi.core-expr init*.psi))
-	 (last-init.psi  (proper-list->last-item init*.psi)))
-    (make-psi (or input-form.stx body-form*.stx)
-	      (build-letrec* (syntax-annotation input-form.stx)
-		(reverse lex*^)
-		rhs*.core
-		(build-sequence no-source
-		  init*.core))
-	      (psi.retvals-signature last-init.psi))))
+  (let*-values
+      (((rib) (make-rib/empty))
+       ((trailing-expr-stx* lexenv.run lexenv.expand lex* qrhs* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
+	(let ((lex*                              '())
+	      (qrhs*                             '())
+	      (mod**                             '())
+	      (kwd*                              '())
+	      (export-spec*                      '())
+	      (mix-definitions-and-expressions?  #f)
+	      (shadow/redefine-bindings?         #f))
+	  (chi-body* (map (lambda (x)
+			    (push-lexical-contour rib x))
+		       (syntax->list body-form*.stx))
+		     lexenv.run lexenv.expand
+		     lex* qrhs* mod** kwd* export-spec* rib
+		     mix-definitions-and-expressions? shadow/redefine-bindings?)))
+       ;;Upon  arriving  here:  RIB,   LEXENV.RUN  and  LEXENV.EXPAND  contain  the
+       ;;syntactic bindings associated to the QRHS*.
+       ((init*.stx) (reverse-and-append-with-tail trailing-mod-expr-stx** trailing-expr-stx*)))
+    (when (null? init*.stx)
+      (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
+    ;;We want order here!   First we expand the QRHSs, then we  expande the INITs; so
+    ;;that the QRHS bindings are typed when the INITs are expanded.
+    (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*) lexenv.run lexenv.expand))
+	   (init*.psi      (chi-expr* init*.stx lexenv.run lexenv.expand))
+	   (rhs*.core      (map psi.core-expr rhs*.psi))
+	   (init*.core     (map psi.core-expr init*.psi))
+	   (last-init.psi  (proper-list->last-item init*.psi)))
+      (make-psi (or input-form.stx body-form*.stx)
+		(build-letrec* (syntax-annotation input-form.stx)
+		  (reverse lex*)
+		  rhs*.core
+		  (build-sequence no-source
+		    init*.core))
+		(psi.retvals-signature last-init.psi)))))
 
 
 ;;;; chi procedures: module processing

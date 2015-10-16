@@ -119,8 +119,8 @@
     ((unsafe-cast)				unsafe-cast-transformer)
     ((validate-typed-procedure-argument)	validate-typed-procedure-argument-transformer)
     ((validate-typed-return-value)		validate-typed-return-value-transformer)
-    ((assert-retvals-signature)			assert-retvals-signature-transformer)
-    ((assert-retvals-signature-and-return)	assert-retvals-signature-and-return-transformer)
+    ((assert-signature)				assert-signature-transformer)
+    ((assert-signature-and-return)		assert-signature-and-return-transformer)
 
     ((type-of)					type-of-transformer)
     ((type-super-and-sub?)			type-super-and-sub?-transformer)
@@ -161,8 +161,8 @@
 		   (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (psi.core-expr alternate.psi))
-		 (retvals-signatures-common-ancestor (psi.retvals-signature consequent.psi)
-						     (psi.retvals-signature alternate.psi)))))
+		 (type-signature.common-ancestor (psi.retvals-signature consequent.psi)
+						 (psi.retvals-signature alternate.psi)))))
     ((_ ?test ?consequent)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
@@ -186,7 +186,7 @@
 		   (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (build-void))
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/fully-unspecified))))
     ))
 
 
@@ -202,7 +202,7 @@
      (let ((datum (syntax->datum ?datum)))
        (make-psi input-form.stx
 		 (build-data no-source datum)
-		 (datum-retvals-signature datum))))
+		 (datum-type-signature datum))))
     ))
 
 
@@ -298,38 +298,35 @@
      ;;
      ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
      ;;
-     (receive (lhs*.id lhs*.tag)
-	 (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
-       ;;If LHS.TAG is  "<top>", we still want  to use the assert and  return form to
-       ;;make sure  that a  single value  is returned.   If the  signature validation
-       ;;succeeds at  expand-time: the  returned PSI has  the RHS  signature inferred
-       ;;from the original RHS.STX, not "(<top>)".
-       (let ((rhs*.psi   (map (lambda (rhs.stx lhs.tag)
-				(chi-expr (bless
-					   `(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx))
-					  lexenv.run lexenv.expand))
-			   ?rhs* lhs*.tag)))
-	 ;;Prepare the ghost lexical variables.
-	 (receive (rib lexenv.run lhs*.lex)
-	     (%process-syntactic-bindings lhs*.id lhs*.tag lexenv.run)
-	   ;;Prepare the body.
-	   (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
-		  (body.psi   (chi-internal-body input-form.stx lexenv.run lexenv.expand body*.stx))
-		  (body.core  (psi.core-expr body.psi))
-		  (rhs*.core  (map psi.core-expr rhs*.psi)))
-	     (make-psi input-form.stx
-		       (build-let (syntax-annotation input-form.stx)
-				  lhs*.lex rhs*.core
-				  body.core)
-		       (psi.retvals-signature body.psi)))))))
+     (let*-values
+	 (((lhs*.id lhs*.tag)
+	   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
+	  ((rhs*.psi)
+	   (map (lambda (rhs.stx lhs.tag)
+		  ;;We insert a signature validation even if LHS.TAG is "<top>": this
+		  ;;way we try to check at  expand-time that there is a single return
+		  ;;value.  At run-time, we rely on the built-in run-time checking of
+		  ;;single-value return.
+		  (chi-expr (bless
+			     `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
+			    lexenv.run lexenv.expand))
+	     ?rhs* lhs*.tag))
+	  ;;Prepare the untyped and typed lexical variables.
+	  ((rib lexenv.run lhs*.lex)
+	   (%process-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
+       ;;Prepare the body.
+       (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
+	      (body.psi   (chi-internal-body input-form.stx lexenv.run lexenv.expand body*.stx))
+	      (body.core  (psi.core-expr body.psi))
+	      (rhs*.core  (map psi.core-expr rhs*.psi)))
+	 (make-psi input-form.stx
+		   (build-let (syntax-annotation input-form.stx)
+			      lhs*.lex rhs*.core
+			      body.core)
+		   (psi.retvals-signature body.psi)))))
 
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;We use an internal define so that we can keep the type signature of ?RECUR.
-     ;;
-     ;;NOTE We want  an implementation in which:  when BREAK is not  used, the escape
-     ;;function is never referenced, so the compiler can remove CALL/CC.  Notice that
-     ;;here the  syntactic binding  CONTINUE makes no  sense, because  calling ?RECUR
-     ;;does the job.
+     ;;We use an INTERNAL-DEFINE so that we can keep the type signature of ?RECUR.
      (receive (recur.id recur.tag)
 	 (syntax-object.parse-typed-argument ?recur)
        (chi-expr (bless
@@ -382,7 +379,7 @@
        ;;Check that the binding names are identifiers and without duplicates.
        (let*-values
 	   (((lhs*.id lhs*.tag)         (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
-	    ;;Prepare the ghost lexical variables.
+	    ;;Prepare the typed and untyped lexical variables.
 	    ((rib lexenv.run lhs*.lex)  (%process-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
 	 ;;NOTE The  region of all the  LETREC and LETREC* bindings  includes all the
 	 ;;right-hand sides.  The new rib is pushed on all the RHS and the body.
@@ -390,7 +387,7 @@
 				 (lambda (rhs.stx lhs.tag)
 				   (chi-expr (push-lexical-contour rib
 					       (bless
-						`(assert-retvals-signature-and-return (,lhs.tag) ,rhs.stx)))
+						`(assert-signature-and-return (,lhs.tag) ,rhs.stx)))
 					     lexenv.run lexenv.expand))
 			       ?rhs* lhs*.tag))
 		(rhs*.core (map psi.core-expr rhs*.psi))
@@ -1324,7 +1321,7 @@
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
 		   (psi.core-expr expr.psi)
-		   (make-retvals-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
+		   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
       ))
 
   (define-core-transformer (type-descriptor input-form.stx lexenv.run lexenv.expand)
@@ -1358,7 +1355,7 @@
     (let* ((std (struct-type-spec.std sts)))
       (make-psi input-form.stx
 		(build-data no-source std)
-		(make-retvals-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
+		(make-type-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
 
   (define (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand
 					rts)
@@ -1366,7 +1363,7 @@
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
 		(psi.core-expr expr.psi)
-		(make-retvals-signature/single-value (core-prim-id '<record-type-descriptor>)))))
+		(make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
 
   #| end of module |# )
 
@@ -1385,7 +1382,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sig)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 
@@ -1402,20 +1399,18 @@
        (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?super-type)
        (make-psi input-form.stx
 		 (build-data no-source #f)
-		 (make-retvals-signature/single-boolean))))
+		 (make-type-signature/single-boolean))))
     ((_ <top> ?sub-type)
      (begin
        (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?sub-type)
        (make-psi input-form.stx
 		 (build-data no-source #t)
-		 (make-retvals-signature/single-boolean))))
+		 (make-type-signature/single-boolean))))
     ((_ ?super-type ?sub-type)
-     (let* ((super-ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?super-type))
-	    (sub-ots   (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?sub-type))
-	    (bool      (object-type-spec.subtype-and-supertype? sub-ots super-ots lexenv.run)))
+     (let ((bool (type-identifier-super-and-sub? ?super-type ?sub-type lexenv.run input-form.stx)))
        (make-psi input-form.stx
 		 (build-data no-source bool)
-		 (make-retvals-signature/single-boolean))))
+		 (make-type-signature/single-boolean))))
     ))
 
 
@@ -1454,7 +1449,7 @@
 	 (make-psi input-form.stx
 		   (build-data no-source
 		     out.sexp)
-		   (make-retvals-signature/single-top)))))
+		   (make-type-signature/single-top)))))
 
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
@@ -1463,7 +1458,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 (define-core-transformer (expansion-of* input-form.stx lexenv.run lexenv.expand)
@@ -1495,7 +1490,7 @@
 	  (make-psi input-form.stx
 		    (build-data no-source
 		      (core-language->sexp expanded-expr))
-		    (make-retvals-signature/single-top))))
+		    (make-type-signature/single-top))))
        (else
 	(%synner "expected identifier of local macro" ?id))))
     ))
@@ -1516,7 +1511,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 (define-core-transformer (optimisation-of* input-form.stx lexenv.run lexenv.expand)
@@ -1533,7 +1528,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 (define-core-transformer (further-optimisation-of input-form.stx lexenv.run lexenv.expand)
@@ -1549,7 +1544,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 (define-core-transformer (further-optimisation-of* input-form.stx lexenv.run lexenv.expand)
@@ -1566,7 +1561,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 
@@ -1585,7 +1580,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
-		 (make-retvals-signature/single-top))))
+		 (make-type-signature/single-top))))
     ))
 
 

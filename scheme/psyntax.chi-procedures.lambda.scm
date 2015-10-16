@@ -75,9 +75,9 @@
 		  formals.core
 		  (psi.core-expr body.psi))
 		(cond ((qualified-rhs.type-id qrhs)
-		       => make-retvals-signature/single-value)
+		       => make-type-signature/single-value)
 		      (else
-		       (make-retvals-signature/single-procedure))))))
+		       (make-type-signature/single-procedure))))))
 
   #| end of module: CHI-DEFUN |# )
 
@@ -102,7 +102,7 @@
 		(build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
 		  (psi.core-expr body.psi))
-		(make-retvals-signature/single-value
+		(make-type-signature/single-value
 		 ;;If we fabricate a type identifier for this closure: it is possible
 		 ;;to leak the type identifier out of the local lexical context where
 		 ;;it is defined.  This is an error  we can fix in the typed language
@@ -148,7 +148,7 @@
 		(build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
 		  (map psi.core-expr body**.psi))
-		(make-retvals-signature/single-value
+		(make-type-signature/single-value
 		 ;;If we fabricate a type identifier for this closure: it is possible
 		 ;;to leak the type identifier out of the local lexical context where
 		 ;;it is defined.  This is an error  we can fix in the typed language
@@ -190,7 +190,7 @@
     ;;     (validate-typed-procedure-argument <string> b)
     ;;     (internal-body
     ;;       ?body ...
-    ;;       (assert-retvals-signature-and-return (<symbol>) ?last-body)))
+    ;;       (assert-signature-and-return (<symbol>) ?last-body)))
     ;;
     (case-define %synner
       ((message)
@@ -209,28 +209,28 @@
      ((list? standard-formals.stx)
       ;;Without  rest argument.   Here  we know  that  both STANDARD-FORMALS.STX  and
       ;;FORMALS-SIGNATURE.TAGS are proper lists with equal length.
-      (receive (rib lexenv.run formals*.lex)
-	  (%process-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run)
-	(define validation*.stx
-	  (if (attributes.safe-formals? attributes.sexp)
-	      (%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx formals-signature.tags #f #f)
-	    '()))
-	(define has-arguments-validators?
-	  (not (null? validation*.stx)))
-	(define body-form^*.stx
-	  (push-lexical-contour
-	      rib
-	    ;;Build a list of syntax objects representing the internal body.
-	    (append validation*.stx
-		    (if (attributes.safe-retvals? attributes.sexp)
-			(%build-retvals-validation-form has-arguments-validators?
-							(callable-signature.retvals signature)
-							body-form*.stx)
-		      body-form*.stx))))
-	(define-values (lexenv.run^ lexenv.expand^)
-	  (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
-					    who.id %synner))
-	(let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
+      (let*-values
+	  (((rib lexenv.run formals*.lex)
+	    (%process-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run))
+	   ((validation*.stx)
+	    (if (attributes.safe-formals? attributes.sexp)
+		(%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx formals-signature.tags #f #f)
+	      '()))
+	   ((has-arguments-validators?) (not (null? validation*.stx)))
+	   ((body-form*.stx)
+	    (push-lexical-contour
+		rib
+	      ;;Build a list of syntax objects representing the internal body.
+	      (append validation*.stx
+		      (if (attributes.safe-retvals? attributes.sexp)
+			  (%build-retvals-validation-form has-arguments-validators?
+							  (callable-signature.retvals signature)
+							  body-form*.stx)
+			body-form*.stx))))
+	   ((lexenv.run lexenv.expand)
+	    (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
+					      who.id %synner)))
+	(let* ((body.psi  (chi-internal-body #f lexenv.run lexenv.expand body-form*.stx))
 	       (signature (%override-retvals-signature signature body.psi)))
 	  (values formals*.lex signature body.psi))))
 
@@ -242,31 +242,32 @@
 	    (improper-list->list-and-rest standard-formals.stx))
 	   ((arg*.tag rest.tag)
 	    (improper-list->list-and-rest formals-signature.tags))
-	   ((rib lexenv.run ghost*.lex)
-	    (%process-syntactic-bindings (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run)))
-	(define formals.lex
-	  ;;Yes, this call to APPEND builds an improper list.
-	  (append (cdr ghost*.lex) (car ghost*.lex)))
-	(define validation*.stx
-	  (if (attributes.safe-formals? attributes.sexp)
-	      (%build-formals-validation-form* __who__ input-form.stx lexenv.run arg*.id arg*.tag rest.id rest.tag)
-	    '()))
-	(define has-arguments-validators?
-	  (not (null? validation*.stx)))
-	(define body-form^*.stx
-	  (push-lexical-contour
-	      rib
-	    ;;Build a list of syntax objects representing the internal body.
-	    (append validation*.stx
-		    (if (attributes.safe-retvals? attributes.sexp)
-			(%build-retvals-validation-form has-arguments-validators?
-							(callable-signature.retvals signature)
-							body-form*.stx)
-		      body-form*.stx))))
-	(define-values (lexenv.run^ lexenv.expand^)
-	  (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
-					    who.id %synner))
-	(let* ((body.psi  (chi-internal-body #f lexenv.run^ lexenv.expand^ body-form^*.stx))
+	   ((rib lexenv.run all*.lex)
+	    (%process-syntactic-bindings (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run))
+	   ((formals.lex)
+	    ;;Yes, this call to APPEND builds an improper list.
+	    (append (cdr all*.lex) (car all*.lex)))
+	   ((validation*.stx)
+	    (if (attributes.safe-formals? attributes.sexp)
+		(%build-formals-validation-form* __who__ input-form.stx lexenv.run
+						 arg*.id arg*.tag rest.id rest.tag)
+	      '()))
+	   ((has-arguments-validators?)
+	    (not (null? validation*.stx)))
+	   ((body-form*.stx)
+	    (push-lexical-contour
+		rib
+	      ;;Build a list of syntax objects representing the internal body.
+	      (append validation*.stx
+		      (if (attributes.safe-retvals? attributes.sexp)
+			  (%build-retvals-validation-form has-arguments-validators?
+							  (callable-signature.retvals signature)
+							  body-form*.stx)
+			body-form*.stx))))
+	   ((lexenv.run lexenv.expand)
+	    (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
+					      who.id %synner)))
+	(let* ((body.psi  (chi-internal-body #f lexenv.run lexenv.expand body-form*.stx))
 	       (signature (%override-retvals-signature signature body.psi)))
 	  (values formals.lex signature body.psi))))))
 
@@ -310,46 +311,42 @@
 		(tag* tag*)
 		(idx  0))
       (cond ((pair? arg*)
-	     (if (top-tag-id? (car tag*))
-		 ;;Insert no validation for an argument typed "<top>".
-		 (recur (cdr arg*) (cdr tag*) (fxadd1 idx))
-	       (cons (bless
-		      `(validate-typed-procedure-argument ,(car tag*) ,idx ,(car arg*)))
-		     (recur (cdr arg*) (cdr tag*) (fxadd1 idx)))))
-	    ((or (not rest-tag)
-		 (top-tag-id? rest-tag))
+	     (let ((following-validations (recur (cdr arg*) (cdr tag*) (fxadd1 idx))))
+	       (if (top-tag-id? (car tag*))
+		   ;;Insert no validation for an argument typed "<top>".
+		   following-validations
+		 (cons (bless
+			`(validate-typed-procedure-argument ,(car tag*) ,idx ,(car arg*)))
+		       following-validations))))
+	    ((not rest-tag)
+	     ;;There is no rest argument.
 	     '())
-	    (else
+	    ((list-tag-id? rest-tag)
+	     ;;Nothing to be done because the rest argument is always a list.
+	     '())
+	    ((type-identifier-is-list-sub-type? rest-tag)
 	     ;;Build a validation form for the objects in the rest argument.
-	     (cond ((top-tag-id? rest-tag)
-		    '())
-		   ((list-tag-id? rest-tag)
-		    ;;Nothing to be done because the rest argument is always a list.
-		    '())
-		   ((type-identifier-is-list-sub-type? rest-tag)
-		    (let ((ots (id->object-type-specification who input-form.stx rest-tag lexenv)))
-		      (if (list-type-spec? ots)
-			  ;;The  REST-TAG is  some  sub-type of  "<list>" defined  as
-			  ;;instance of "<list-type-spec>".  We generate a validating
-			  ;;expression that accepts  both null and a  list of objects
-			  ;;of the specified type.
-			  (let ((item-type-id	(list-type-spec.type-id ots))
-				(obj.sym	(gensym))
-				(idx.sym	(gensym)))
-			    (bless
-			     `((fold-left (lambda (,idx.sym ,obj.sym)
-					    (validate-typed-procedure-argument ,item-type-id ,idx.sym ,obj.sym)
-					    (fxadd1 ,idx.sym))
-				 ,idx ,rest-arg))))
-			;;The REST-TAG  is some sub-type  of "<list>" not  defined as
-			;;instance of  "<list-type-spec>".  Just  rely on  the type's
-			;;own predicate.
-			(bless
-			 `(validate-typed-procedure-argument ,rest-tag #f ,rest-arg)))))
-		   (else
-		    (syntax-violation who
-		      "invalid type for  rest argument, it must be  \"<list>\" or its sub-type"
-		      input-form.stx rest-tag)))))))
+	     (let ((ots (id->object-type-specification who input-form.stx rest-tag lexenv)))
+	       (if (list-type-spec? ots)
+		   ;;The REST-TAG is some sub-type of "<list>" defined as instance of
+		   ;;"<list-type-spec>".   We generate  a validating  expression that
+		   ;;accepts both null and a list of objects of the specified type.
+		   (let ((item-type-id	(list-type-spec.type-id ots))
+			 (obj.sym	(gensym))
+			 (idx.sym	(gensym)))
+		     (bless
+		      `((fold-left (lambda (,idx.sym ,obj.sym)
+				     (validate-typed-procedure-argument ,item-type-id ,idx.sym ,obj.sym)
+				     (fxadd1 ,idx.sym))
+			  ,idx ,rest-arg))))
+		 ;;The REST-TAG is some sub-type  of "<list>" not defined as instance
+		 ;;of "<list-type-spec>".  Just rely on the type's own predicate.
+		 (bless
+		  `(validate-typed-procedure-argument ,rest-tag #f ,rest-arg)))))
+	    (else
+	     (syntax-violation who
+	       "invalid type for  rest argument, it must be  \"<list>\" or its sub-type"
+	       input-form.stx rest-tag)))))
 
   (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of
@@ -364,23 +361,23 @@
     ;;
     (cond (has-arguments-validators?
 	   (bless
-	    (if (retvals-signature.fully-unspecified? retvals-signature)
+	    (if (type-signature.fully-unspecified? retvals-signature)
 		;;The number and type of return values is unknown.
 		`((internal-body . ,body-form*.stx))
 	      (receive (head*.stx last.stx)
 		  (proper-list->head-and-last body-form*.stx)
 		`((internal-body
 		    ,@head*.stx
-		    (assert-retvals-signature-and-return ,(retvals-signature.tags retvals-signature) ,last.stx)))))))
+		    (assert-signature-and-return ,(type-signature-tags retvals-signature) ,last.stx)))))))
 	  (else
-	   (if (retvals-signature.fully-unspecified? retvals-signature)
+	   (if (type-signature.fully-unspecified? retvals-signature)
 	       ;;The number and type of return values is unknown.
 	       body-form*.stx
 	     (receive (head*.stx last.stx)
 		 (proper-list->head-and-last body-form*.stx)
 	       (append head*.stx
 		       (bless
-			`((assert-retvals-signature-and-return ,(retvals-signature.tags retvals-signature) ,last.stx)))))))))
+			`((assert-signature-and-return ,(type-signature-tags retvals-signature) ,last.stx)))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -411,7 +408,7 @@
     ;;we merge its  specification with the specification of  BODY.PSI?  (Marco Maggi;
     ;;Wed Sep 23, 2015)
     ;;
-    (if (retvals-signature.fully-unspecified? (callable-signature.retvals signature))
+    (if (type-signature.fully-unspecified? (callable-signature.retvals signature))
 	(make-lambda-signature (psi.retvals-signature body.psi)
 			       (lambda-signature.formals signature))
       signature))

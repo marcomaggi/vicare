@@ -27,6 +27,7 @@
 (program (test-typed-language-syntaxes)
   (options typed-language)
   (import (vicare)
+    (prefix (vicare expander) xp.)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -35,7 +36,50 @@
 
 ;;;; helpers
 
+(define-syntax-rule (print-expansion ?stx)
+  (debug-print (quote expansion-example:) (quote ?stx) (quote ==>) (expansion-of ?stx)))
 
+(library (types-of-lists)
+  (options strict-r6rs)
+  (export
+    <list-of-fixnums>
+    <list-of-flonums>
+    <list-of-reals>
+    <list-of-numbers>
+    <list-of-strings>)
+  (import (vicare)
+    (prefix (vicare expander) xp.))
+  (define-syntax <list-of-fixnums>	(xp.make-list-type-spec #'<fixnum>))
+  (define-syntax <list-of-flonums>	(xp.make-list-type-spec #'<flonum>))
+  (define-syntax <list-of-numbers>	(xp.make-list-type-spec #'<number>))
+  (define-syntax <list-of-reals>	(xp.make-list-type-spec #'<real>))
+  (define-syntax <list-of-strings>	(xp.make-list-type-spec #'<string>))
+  #| end of LIBRARY |# )
+
+(import (types-of-lists))
+
+;;; --------------------------------------------------------------------
+
+(define-constant EVAL-ENVIRONMENT
+  (environment '(vicare) '(types-of-lists)))
+
+(define (%type-signature->sexp sig)
+  (syntax->datum (xp.type-signature-tags sig)))
+
+(define-syntax check-expand-time-signature-violation
+  (syntax-rules (=>)
+    ((_ ?input-form => ?expected-signature-sexp ?returned-signature-sexp)
+     (check
+	 (try
+	     (eval (quote ?input-form) EVAL-ENVIRONMENT)
+	   (catch E
+	     ((xp.&expand-time-retvals-signature-violation)
+	      #;(print-condition E)
+	      (values (%type-signature->sexp (xp.expand-time-retvals-signature-violation-expected-signature E))
+		      (%type-signature->sexp (xp.expand-time-retvals-signature-violation-returned-signature E))))
+	     (else E)))
+       => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
+    ))
 
 
 (parametrise ((check-test-name	'type-super-and-sub))
@@ -83,7 +127,203 @@
 
     (void))
 
+;;; --------------------------------------------------------------------
+;;; lists
+
+  (check-for-true	(type-super-and-sub? <list-of-numbers> <list-of-reals>))
+  (check-for-false	(type-super-and-sub? <list-of-numbers> <list-of-strings>))
+
   #t)
+
+
+(parametrise ((check-test-name	'assert-signature))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?signature ?expr => ?expected0 ?expected ...)
+       (begin
+	 (check
+	     (assert-signature ?signature ?expr)
+	   => (void))
+	 (check
+	     (assert-signature-and-return ?signature ?expr)
+	   => ?expected0 ?expected ...)
+	 ))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; single return value
+
+  (doit (<fixnum>)	123	=> 123)
+  (doit (<string>)	"ciao"	=> "ciao")
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum>) "ciao")
+    => (<fixnum>) (<string>))
+
+;;; --------------------------------------------------------------------
+;;; multiple return values
+
+  (doit (<fixnum> <flonum>)	(values 1 2.0)			=> 1 2.0)
+  (doit (<string> <pair>)	(values "ciao" '(1 . 2))	=> "ciao" '(1 . 2))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum>) (values "A" "B"))
+    => (<fixnum> <flonum>) (<string> <string>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum>) (values 1 "B"))
+    => (<fixnum> <flonum>) (<fixnum> <string>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum>) (values "A" 2.0))
+    => (<fixnum> <flonum>) (<string> <flonum>))
+
+  ;;Any tuple of values matches.
+  (doit <list>			1				=> 1)
+  (doit <list>			(values 1 2 3)			=> 1 2 3)
+
+  ;;Zero values, empty signature.
+  (check-for-true
+   (begin
+     (assert-signature () (values))
+     #t))
+  (check-for-true
+   (call-with-values
+       (lambda ()
+	 (assert-signature-and-return () (values)))
+     (lambda () #t)))
+
+  (check-expand-time-signature-violation
+      (assert-signature () 1)
+    => () (<fixnum>))
+
+  (check-expand-time-signature-violation
+      (assert-signature () (values 1 2.0))
+    => () (<fixnum> <flonum>))
+
+  ;;Zero values, list signature.
+  (check-for-true
+   (begin
+     (assert-signature <list> (values))
+     #t))
+  (check-for-true
+   (call-with-values
+       (lambda ()
+	 (assert-signature-and-return <list> (values)))
+     (lambda () #t)))
+
+  (doit (<fixnum> . <list-of-flonums>)		(values 1 2.0)		=> 1 2.0)
+  (doit (<fixnum> <flonum> . <list-of-strings>)	(values 1 2.0 "a")	=> 1 2.0 "a")
+  (doit (<fixnum> <flonum> . <list-of-strings>)	(values 1 2.0 "a" "b")	=> 1 2.0 "a" "b")
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (begin
+     (assert-signature <list-of-fixnums> (values))
+     #t))
+
+  (check-for-true
+   (call-with-values
+       (lambda ()
+	 (assert-signature-and-return <list-of-fixnums> (values)))
+     (lambda () #t)))
+
+  (doit (<fixnum> <flonum> . <list-of-strings>) (values 1 2.0)	=> 1 2.0)
+
+  (check-expand-time-signature-violation
+      (assert-signature <list-of-flonums> (values 1 "A"))
+    => <list-of-flonums> (<fixnum> <string>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> . <list-of-flonums>) (values 1 "A"))
+    => (<fixnum> . <list-of-flonums>) (<fixnum> <string>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1))
+    => (<fixnum> <flonum> . <list-of-strings>) (<fixnum>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1.0))
+    => (<fixnum> <flonum> . <list-of-strings>) (<flonum>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1 2))
+    => (<fixnum> <flonum> . <list-of-strings>) (<fixnum> <fixnum>))
+
+  (check-expand-time-signature-violation
+      (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1.0 2.0))
+    => (<fixnum> <flonum> . <list-of-strings>) (<flonum> <flonum>))
+
+;;; --------------------------------------------------------------------
+;;; number of values validation
+
+  (doit (<top>)			1			=> 1)
+  (doit (<top> <top>)		(values 1 2)		=> 1 2)
+  (doit (<top> <top> <top>)	(values 1 2 3)		=> 1 2 3)
+
+  (doit (<top> <top> . <list>)	(values 1 2)		=> 1 2)
+  (doit (<top> <top> . <list>)	(values 1 2 3)		=> 1 2 3)
+  (doit (<top> <top> . <list>)	(values 1 2 3 4)	=> 1 2 3 4)
+
+;;; --------------------------------------------------------------------
+
+  ;;Any tuple of values matches.
+  ;;
+  (check
+      (expansion-of
+       (assert-signature <list> 123))
+    => '(begin (quote 123) (quote #!void)))
+
+  (check
+      (expansion-of
+       (assert-signature (<fixnum>) 123))
+    => '(begin (quote 123) (quote #!void)))
+
+  (check
+      (expansion-of
+       (assert-signature-and-return (<fixnum>) 123))
+    => '(quote 123))
+
+  (check
+      (expansion-of
+       (assert-signature-and-return (<fixnum>) (unsafe-cast <fixnum> (read))))
+    => '((primitive read)))
+
+  (when #f
+    (expansion-of
+     (assert-signature-and-return (<fixnum>) (read))))
+
+;;; --------------------------------------------------------------------
+
+  (parametrise ((print-gensym #f))
+    (begin-for-syntax
+      (xp.generate-descriptive-gensyms? #t))
+
+    (when #f
+      (print-expansion
+       (assert-signature-and-return (<fixnum> <flonum> <string>) (read))))
+
+    (when #f
+      (print-expansion
+       (assert-signature (<fixnum> <flonum> <string>) (read))))
+
+    (when #f
+      (print-expansion
+       (assert-signature-and-return <list-of-fixnums> (read))))
+
+    (when #f
+      (print-expansion
+       (assert-signature-and-return (<fixnum> <flonum> . <list-of-fixnums>) (read))))
+
+    (when #f
+      (print-expansion
+       (assert-signature (<fixnum> <flonum> . <list-of-fixnums>) (read))))
+
+    (void))
+
+  (void))
 
 
 ;;;; done
@@ -96,4 +336,5 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
+;; eval: (put 'check-expand-time-signature-violation 'scheme-indent-function 1)
 ;; End:

@@ -5862,10 +5862,12 @@ Raise a non--continuable exception with a compound condition object of
 types: @condition{who}, @condition{message}, @condition{irritants}; in
 addition, when used, add the condition object @var{cnd} to it.
 
-The argument @var{who} must be a symbol.  The argument @var{message}
-must be a string.  The argument @var{irritants} must be null or a list
-of objects.  The optional argument @var{cnd} must be a simple or
-compound condition object.
+The argument @var{who} must be @false{} or a symbol or a string; if
+@var{who} is @false{}: no @condition{who} condition is included in the
+raised exception.  The argument @var{message} must be a string.  The
+argument @var{irritants} must be null or a list of objects.  The
+optional argument @var{cnd} must be a simple or compound condition
+object.
 @end defun
 
 @c page
