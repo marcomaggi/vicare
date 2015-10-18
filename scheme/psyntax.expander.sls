@@ -857,7 +857,7 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
-      (parametrise ((option.typed-language? (or (memq 'typed-language option*) (option.typed-language?)))
+      (parametrise ((option.typed-language? (memq 'typed-language option*))
 		    (option.strict-r6rs     (or (memq 'strict-r6rs    option*) (option.strict-r6rs))))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
