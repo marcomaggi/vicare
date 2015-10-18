@@ -767,15 +767,17 @@ of @metaii{type}; otherwise @false{}.  @class{top} is conventionally the
 super--type of all the types.
 
 @lisp
-(type-super-and-sub? <number> <fixnum>)         @result{} #t
-(type-super-and-sub? <number> <string>)         @result{} #f
-(type-super-and-sub? <top> <number>)            @result{} #t
-(type-super-and-sub? <number> <top>)            @result{} #f
+(type-super-and-sub? <number> <fixnum>)      @result{} #t
+(type-super-and-sub? <number> <string>)      @result{} #f
+(type-super-and-sub? <top> <number>)         @result{} #t
+(type-super-and-sub? <number> <top>)         @result{} #f
 
-(expansion-of (type-super-and-sub? <number> <fixnum>))
+(expansion-of
+  (type-super-and-sub? <number> <fixnum>))
 @result{} (quote #t)
 
-(expansion-of (type-super-and-sub? <number> <string>))
+(expansion-of
+  (type-super-and-sub? <number> <string>))
 @result{} (quote #f)
 
 (define-record-type alpha)
@@ -794,6 +796,40 @@ super--type of all the types.
 
 (type-super-and-sub? beta gamma)        @result{} #t
 (type-super-and-sub? gamma beta)        @result{} #f
+@end lisp
+@end deffn
+
+
+@deffn signature-super-and-sub? @metai{signature} @metaii{signature}
+Expand to a boolean constant: @true{} if @metai{signature} is a
+super--signature of @metaii{signature}; otherwise @false{}.  A ``type
+signature'' is a proper or improper list of type identifiers, with
+@class{list} or one of its sub--types in tail position when the list is
+improper.
+
+@lisp
+(signature-super-and-sub? (<number>) (<fixnum>))        @result{} #t
+(signature-super-and-sub? (<number>) (<string>))        @result{} #f
+
+(expansion-of
+  (signature-super-and-sub? (<number>) (<fixnum>))
+@result{} (quote #t)
+
+(expansion-of
+  (signature-super-and-sub? (<number>) (<string>))
+@result{} (quote #f)
+
+(signature-super-and-sub? (<top>) (<number>))   @result{} #t
+(signature-super-and-sub? (<number>) (<top>))   @result{} #f
+
+(signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>))
+@result{} #t
+(signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>))
+@result{} #f
+
+(signature-super-and-sub? (<number> <number> . <list>)
+                          (<fixnum> <real>   . <list>))
+@result{} #t
 @end lisp
 @end deffn
 

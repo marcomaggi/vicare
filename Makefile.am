@@ -470,7 +470,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.chi-procedures.lambda.scm			\
 	scheme/psyntax.chi-procedures.application.scm			\
 	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
-	scheme/psyntax.chi-procedures.generic-type-syntaxes.scm		\
+	scheme/psyntax.chi-procedures.type-macro-transformers.scm	\
 	scheme/psyntax.expander.sls					\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-utils.sls				\

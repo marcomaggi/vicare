@@ -26,7 +26,7 @@
    type-identifier-is-procedure-sub-type?		type-identifier-is-procedure-or-procedure-sub-type?
    type-identifier-is-list-sub-type?			type-identifier-is-list-or-list-sub-type?
    type-identifier-is-vector-sub-type?			type-identifier-is-vector-or-vector-sub-type?
-   type-identifier-common-ancestor			type-identifier-detailed-validation
+   type-identifier-common-ancestor
    typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
 
    fabricate-closure-type-identifier
@@ -92,9 +92,15 @@
 ;;;; type identifier utilities
 
 (case-define* type-identifier?
+  ;;Return true if the argument ID is  a type identifier; otherwise return false.  If
+  ;;ID is  not an  identifier or it  is unbound: return  false.  If  ID is an  out of
+  ;;context identifier: raise an exception.
+  ;;
   ((id)
-   (type-identifier? id (current-inferior-lexenv)))
+   (type-identifier? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
 	(cond ((id->label id)
 	       => (lambda (label)
@@ -104,44 +110,28 @@
 			 (raise
 			  (condition (make-who-condition __who__)
 				     (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
-				     (make-syntax-violation id #f)
+				     (make-syntax-violation input-form.stx id)
 				     (make-syntactic-binding-descriptor-condition descr))))
 			((local-object-type-name global-object-type-name)
 			 #t)
 			(else #f)))))
 	      (else #f)))))
 
-(define (type-identifier-detailed-validation who input-form.stx lexenv.run type.id)
-  ;;To  be  used to  validate  TYPE.ID  as  bound  identifier having  an  object-type
-  ;;specification in  its syntactic binding's  descriptor.  If successful  return the
-  ;;instance of  "<object-type-spec>" as  object-type specification  (OTS), otherwise
-  ;;raise an exception.
-  ;;
-  (define (%synner message)
-    (syntax-violation who message input-form.stx type.id))
-  (unless (identifier? type.id)
-    (%synner "expected identifier as type specification"))
-  (let* ((label (id->label/or-error who input-form.stx type.id))
-    	 (descr (label->syntactic-binding-descriptor label lexenv.run)))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (%synner "identifier out of context as type identifier"))
-      ((local-object-type-name)
-       (syntactic-binding-descriptor/local-object-type.object-type-spec  descr))
-      ((global-object-type-name)
-       (syntactic-binding-descriptor/global-object-type.object-type-spec descr))
-      (else
-       (%synner "expected type identifier but given identifier does not represent an object-type")))))
-
 ;;; --------------------------------------------------------------------
 
 (case-define* type-identifier=?
+  ;;The arguments ID1 and ID2 must be type identifiers according to TYPE-IDENTIFIER?,
+  ;;otherwise an exception is raised.  Return true  if ID1 and ID2 represent the same
+  ;;type; otherwise return false.
+  ;;
   ((id1 id2)
-   (type-identifier=? id1 id2 (current-inferior-lexenv)))
+   (type-identifier=? id1 id2 (current-inferior-lexenv) #f))
   ((id1 id2 lexenv)
-   (or (free-identifier=? id1 id2)
-       (let ((ots1 (id->object-type-specification __who__ #f id1 lexenv))
-	     (ots2 (id->object-type-specification __who__ #f id2 lexenv)))
+   (type-identifier=? id1 id2 lexenv #f))
+  ((id1 id2 lexenv input-form.stx)
+   (let ((ots1 (id->object-type-specification __who__ input-form.stx id1 lexenv))
+	 (ots2 (id->object-type-specification __who__ input-form.stx id2 lexenv)))
+     (or (eq? ots1 ots2)
 	 (cond ((list-type-spec? ots1)
 		(and (list-type-spec? ots2)
 		     (type-identifier=? (list-type-spec.type-id ots1)
@@ -155,47 +145,52 @@
 	       (else #f))))))
 
 (case-define* type-identifier-super-and-sub?
-  ((sub-type.id super-type.id)
+  ((super-type.id sub-type.id)
    (type-identifier-super-and-sub? super-type.id sub-type.id (current-inferior-lexenv) #f))
-  ((sub-type.id super-type.id lexenv)
+  ((super-type.id sub-type.id lexenv)
    (type-identifier-super-and-sub? super-type.id sub-type.id lexenv #f))
   ((super-type.id sub-type.id lexenv input-form.stx)
-   ;;Given two  syntactic identifiers having  an instance of  "<object-type-spec>" as
-   ;;value in  the syntactic  binding's descriptor: return  true if  SUPER-TYPE.ID is
-   ;;FREE-IDENTIFIER=?  to SUB-TYPE.ID or one of its ancestors.
+   ;;The arguments SUPER-TYPE.ID  and SUB-TYPE.ID must be  type identifiers according
+   ;;to TYPE-IDENTIFIER?,  otherwise the behaviour  of this function  is unspecified.
+   ;;Return true  if SUPER-TYPE.ID is  a super-type of SUB-TYPE.ID;  otherwise return
+   ;;false.
    ;;
    (define (%error-non-type-identifier id)
      (syntax-violation #f
        "the syntactic identifier is not a type identifier"
        input-form.stx id))
-   (or (free-identifier=? super-type.id sub-type.id)
-       ($top-tag-id? super-type.id)
-       (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv))
-	     (sub-ots   (id->object-type-specification __who__ input-form.stx sub-type.id   lexenv)))
-	 (cond ((procedure-tag-id? super-type.id)
-		(closure-type-spec? sub-type.id))
+   (cond ((~free-identifier=? super-type.id sub-type.id)
+	  #t)
+	 (($top-tag-id? super-type.id)
+	  #t)
+	 (($top-tag-id? sub-type.id)
+	  #f)
+	 (else
+	  (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv))
+		(sub-ots   (id->object-type-specification __who__ input-form.stx sub-type.id   lexenv)))
+	    (cond ((procedure-tag-id? super-type.id)
+		   (closure-type-spec? sub-type.id))
 
-	       ((list-type-spec? super-ots)
-		(and (list-type-spec? sub-ots)
-		     (type-identifier-super-and-sub? (list-type-spec.type-id super-ots)
-						     (list-type-spec.type-id sub-ots)
-						     lexenv input-form.stx)))
-	       ((vector-type-spec? super-ots)
-		(and (vector-type-spec? sub-ots)
-		     (type-identifier-super-and-sub? (vector-type-spec.type-id super-ots)
-						     (vector-type-spec.type-id sub-ots)
-						     lexenv input-form.stx)))
-	       (else
-		(let loop ((sub-ots sub-ots))
-		  (cond ((object-type-spec.parent-id sub-ots)
-			 => (lambda (parent.id)
-			      (cond (($top-tag-id? parent.id)
-				     #f)
-				    ((type-identifier=? parent.id super-type.id lexenv)
-				     #t)
-				    (else
-				     (loop (id->object-type-specification __who__ input-form.stx parent.id lexenv))))))
-			(else #f)))))))))
+		  ((list-type-spec? super-ots)
+		   (and (list-type-spec? sub-ots)
+			(type-identifier-super-and-sub? (list-type-spec.type-id super-ots)
+							(list-type-spec.type-id sub-ots)
+							lexenv input-form.stx)))
+		  ((vector-type-spec? super-ots)
+		   (and (vector-type-spec? sub-ots)
+			(type-identifier-super-and-sub? (vector-type-spec.type-id super-ots)
+							(vector-type-spec.type-id sub-ots)
+							lexenv input-form.stx)))
+		  (else
+		   (let loop ((sub-ots sub-ots))
+		     (cond ((object-type-spec.parent-id sub-ots)
+			    => (lambda (parent.id)
+				 (if ($top-tag-id? parent.id)
+				     #f
+				   (let ((parent-ots (id->object-type-specification __who__ input-form.stx parent.id lexenv)))
+				     (or (eq? super-ots parent-ots)
+					 (loop parent-ots))))))
+			   (else #f))))))))))
 
 (case-define* type-identifier-common-ancestor
   ((id1 id2)
@@ -243,14 +238,16 @@
   ((id)
    (type-identifier-is-procedure-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (closure-type-spec? (id->object-type-specification __who__ #f id lexenv))))
+   (and (identifier? id)
+	(closure-type-spec? (id->object-type-specification __who__ #f id lexenv)))))
 
 (case-define* type-identifier-is-procedure-or-procedure-sub-type?
   ((id)
    (type-identifier-is-procedure-or-procedure-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (or (procedure-tag-id? id)
-       (type-identifier-is-procedure-sub-type? id lexenv))))
+   (and (identifier? id)
+	(or (procedure-tag-id? id)
+	    (type-identifier-is-procedure-sub-type? id lexenv)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -258,14 +255,16 @@
   ((id)
    (type-identifier-is-list-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (list-type-spec? (id->object-type-specification __who__ #f id lexenv))))
+   (and (identifier? id)
+	(list-type-spec? (id->object-type-specification __who__ #f id lexenv)))))
 
 (case-define* type-identifier-is-list-or-list-sub-type?
   ((id)
    (type-identifier-is-list-or-list-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (or (list-tag-id? id)
-       (type-identifier-is-list-sub-type? id lexenv))))
+   (and (identifier? id)
+	(or (list-tag-id? id)
+	    (type-identifier-is-list-sub-type? id lexenv)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -273,14 +272,16 @@
   ((id)
    (type-identifier-is-vector-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (vector-type-spec? (id->object-type-specification __who__ #f id lexenv))))
+   (and (identifier? id)
+	(vector-type-spec? (id->object-type-specification __who__ #f id lexenv)))))
 
 (case-define* type-identifier-is-vector-or-vector-sub-type?
   ((id)
    (type-identifier-is-vector-or-vector-sub-type? id (current-inferior-lexenv)))
   ((id lexenv)
-   (or (vector-tag-id? id)
-       (type-identifier-is-vector-sub-type? id lexenv))))
+   (and (identifier? id)
+	(or (vector-tag-id? id)
+	    (type-identifier-is-vector-sub-type? id lexenv)))))
 
 
 ;;;; typed variable with procedure sub-type type utilities
@@ -457,13 +458,14 @@
    (syntax-match stx (<list>)
      (() #t)
      ((?id . ?rest)
-      (type-identifier? ?id lexenv)
-      (syntax-object.type-signature? ?rest lexenv))
+      (and (type-identifier? ?id lexenv)
+	   (syntax-object.type-signature? ?rest lexenv)))
      (<list>
       #t)
      (?rest
+      (identifier? ?rest)
       (type-identifier-is-list-sub-type? ?rest lexenv))
-     )))
+     (_ #f))))
 
 ;;; --------------------------------------------------------------------
 
@@ -510,100 +512,90 @@
   ((super-signature sub-signature)
    (syntax-object.type-signature.super-and-sub? super-signature sub-signature (current-inferior-lexenv)))
   ((super-signature sub-signature lexenv)
-   ;;Return   true  if:   SUPER-SIGNATURE  and   SUB-SIGNATURE  are   syntax  objects
-   ;;representing type signatures; SUPER-SIGNATURE  and SUB-SIGNATURE have compatible
-   ;;structure;  the type  identifiers from  SUPER-SIGNATURE are  super-types of  the
-   ;;corresponding type identifiers from SUB-SIGNATURE.  Otherwise return false.
+   ;;The  arguments   SUPER-SIGNATURE  and  SUB-SIGNATURE  must   be  syntax  objects
+   ;;representing   type  signatures   according  to   SYNTAX-OBJECT.TYPE-SIGNATURE?,
+   ;;otherwise the behaviour of this function is unspecified.
+   ;;
+   ;;Return true if: SUPER-SIGNATURE and SUB-SIGNATURE have compatible structure; the
+   ;;type identifiers from SUPER-SIGNATURE are  super-types of the corresponding type
+   ;;identifiers from SUB-SIGNATURE.  Otherwise return false.
    ;;
    ;;This function can  be used to determine:
    ;;
-   ;;* If  the signature  of a  tuple of arguments  (SUB-SIGNATURE) matches  a lambda
+   ;;* If  the signature  of a  tuple of arguments  (SUB-SIGNATURE) matches  a LAMBDA
    ;;formals's signature (SUPER-SIGNATURE).
    ;;
    ;;*  If the  signature of  a tuple  or return  values (SUB-SIGNATURE)  matches the
-   ;;receiver signature (SUPER-SIGNATURE).
+   ;;receiver's signature (SUPER-SIGNATURE).
    ;;
-   (let recur ((super super-signature)
-	       (sub   sub-signature))
-     (syntax-match super (<top> <list>)
-       (()
-	(syntax-match sub ()
-	  ;;Both the signatures  are proper lists with the same  number of items, and
-	  ;;all the items are correct super and sub: success!
-	  (() #t)
-	  ;;The signatures do not match.
-	  (_  #f)))
+   (define-syntax-rule (recur ?super ?sub)
+     (syntax-object.type-signature.super-and-sub? ?super ?sub lexenv))
+   (syntax-match super-signature (<top> <list>)
+     (()
+      (syntax-match sub-signature ()
+	;;Both the signatures are proper lists with the same number of items, and all
+	;;the items are correct super and sub: success!
+	(() #t)
+	;;The signatures do not match.
+	(_  #f)))
 
-       ((<top> . ?super-rest-types)
-	(syntax-match sub ()
-	  ((?sub-type . ?sub-rest-types)
-	   (recur ?super-rest-types ?sub-rest-types))
-	  (_ #f)))
+     ((<top> . ?super-rest-types)
+      (syntax-match sub-signature ()
+	((?sub-type . ?sub-rest-types)
+	 (recur ?super-rest-types ?sub-rest-types))
+	(_ #f)))
 
-       ((?super-type . ?super-rest-types)
-	(syntax-match sub ()
-	  ((?sub-type . ?sub-rest-types)
-	   (type-identifier-super-and-sub? ?super-type ?sub-type lexenv)
-	   (recur ?super-rest-types ?sub-rest-types))
-	  (_ #f)))
+     ((?super-type . ?super-rest-types)
+      (syntax-match sub-signature ()
+	((?sub-type . ?sub-rest-types)
+	 (type-identifier-super-and-sub? ?super-type ?sub-type lexenv)
+	 (recur ?super-rest-types ?sub-rest-types))
+	(_ #f)))
 
-       (<list>
-	;;The super signature is an improper list accepting any object as rest.
-	#t)
+     (<list>
+      ;;The super signature is an improper list accepting any object as rest.
+      #t)
 
-       (?super-rest-type
-	(type-identifier-is-list-sub-type? ?super-rest-type lexenv)
-	(syntax-match sub (<list>)
-	  ;;The  super signature  is an  improper  list with  rest item  and the  sub
-	  ;;signature is finished.  We want the following signatures to match:
-	  ;;
-	  ;;  super-signature == #'(<number>  <fixnum> . <list>)
-	  ;;  sub-signature   == #'(<complex> <fixnum>)
-	  ;;
-	  ;;because "<list>"  in rest  position means  any number  of objects  of any
-	  ;;type.
-	  (() #t)
+     (?super-rest-type
+      (type-identifier-is-list-sub-type? ?super-rest-type lexenv)
+      (syntax-match sub-signature (<list>)
+	;;The  super  signature is  an  improper  list with  rest  item  and the  sub
+	;;signature is finished.  We want the following signatures to match:
+	;;
+	;;  super-signature == #'(<number>  <fixnum> . <list>)
+	;;  sub-signature   == #'(<complex> <fixnum>)
+	;;
+	;;because "<list>" in rest position means any number of objects of any type.
+	(() #t)
 
-	  ;;The super signature  is an improper list shorter than  the sub signature.
-	  ;;We want the following signatures to match:
-	  ;;
-	  ;;  super-signature == #'(<number>  . <list-of-fixnums>)
-	  ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
-	  ;;
-	  ((?sub-type . ?sub-rest-types)
-	   (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
-	     (and (type-identifier-super-and-sub? item-id ?sub-type lexenv)
-		  (recur ?super-rest-type ?sub-rest-types))))
+	;;The super signature is an improper list shorter than the sub signature.  We
+	;;want the following signatures to match:
+	;;
+	;;  super-signature == #'(<number>  . <list-of-fixnums>)
+	;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
+	;;
+	((?sub-type . ?sub-rest-types)
+	 (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
+	   (and (type-identifier-super-and-sub? item-id ?sub-type lexenv)
+		(recur ?super-rest-type ?sub-rest-types))))
 
-	  (<list>
-	   ;;Both the  signatures are improper lists  with the same number  of items,
-	   ;;and  all the  items  are correct  super  and sub.   The  rest types  are
-	   ;;mismatching.
-	   #f)
+	(<list>
+	 ;;Both the signatures are improper lists  with the same number of items, and
+	 ;;all the items are correct super and sub.  The rest types are mismatching.
+	 #f)
 
-	  ;;Both the signatures are improper lists with the same number of items, and
-	  ;;all the  items are correct  super and sub; if  the rest types  are proper
-	  ;;super and subs:  success!  For example, we want  the following signatures
-	  ;;to match:
-	  ;;
-	  ;;  super-signature == #'(<string> <string> . <list-of-numbers>)
-	  ;;  sub-signature   == #'(<string> <string> . <list-of-fixnums>)
-	  ;;
-	  (?sub-rest-type
-	   (type-identifier-is-list-sub-type? ?sub-rest-type lexenv)
-	   (type-identifier-super-and-sub? ?super-rest-type ?sub-rest-type lexenv))
-
-	  (?sub-rest-type
-	   (syntax-violation __who__
-	     "invalid syntax object as sub type-signature, expected \"<list>\" or its sub-type in improper tail position"
-	     super-signature ?sub-rest-type))
-	  ))
-
-       (?super-rest-type
-	(syntax-violation __who__
-	  "invalid syntax object as super type-signature, expected \"<list>\" or its sub-type in improper tail position"
-	  super-signature ?super-rest-type))
-       ))))
+	;;Both the signatures  are improper lists with the same  number of items, and
+	;;all the items are correct super and sub; if the rest types are proper super
+	;;and subs: success!  For example, we want the following signatures to match:
+	;;
+	;;  super-signature == #'(<string> <string> . <list-of-numbers>)
+	;;  sub-signature   == #'(<string> <string> . <list-of-fixnums>)
+	;;
+	(?sub-rest-type
+	 (type-identifier-is-list-sub-type? ?sub-rest-type lexenv)
+	 (type-identifier-super-and-sub? ?super-rest-type ?sub-rest-type lexenv))
+	))
+     )))
 
 ;;; --------------------------------------------------------------------
 
@@ -935,7 +927,7 @@
   (syntax-match stx (brace)
     ((brace ?id ?tag)
      (begin
-       (type-identifier-detailed-validation __who__ stx (current-inferior-lexenv) ?tag)
+       (id->object-type-specification __who__ stx ?tag (current-inferior-lexenv))
        (values ?id ?tag)))
     (?id
      (identifier? ?id)
@@ -981,7 +973,7 @@
 	    (values '() '()))
 	   (((brace ?id ?tag) . ?other-id*)
 	    (begin
-	      (type-identifier-detailed-validation __who__ input-form.stx lexenv ?tag)
+	      (id->object-type-specification __who__ input-form.stx ?tag lexenv)
 	      (receive (id* tag*)
 		  (recur ?other-id*)
 		(values (cons ?id id*) (cons ?tag tag*)))))
@@ -1102,7 +1094,7 @@
 	   (and (identifier? ?id)
 		(identifier? ?tag))
 	   (begin
-	     (type-identifier-detailed-validation __module_who__ input-form.stx (current-inferior-lexenv) ?tag)
+	     (id->object-type-specification __module_who__ input-form.stx ?tag (current-inferior-lexenv))
 	     (values (cons ?id standard-formals.stx) (cons ?tag type-signature.stx))))
 	  (else
 	   (%synner "invalid argument specification" arg.stx))))))

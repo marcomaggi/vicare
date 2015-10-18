@@ -124,6 +124,7 @@
 
     ((type-of)					type-of-transformer)
     ((type-super-and-sub?)			type-super-and-sub?-transformer)
+    ((signature-super-and-sub?)			signature-super-and-sub?-transformer)
 
     ((expansion-of)				expansion-of-transformer)
     ((expansion-of*)				expansion-of*-transformer)
@@ -141,7 +142,7 @@
 
 ;;;; external modules
 
-(include "psyntax.chi-procedures.generic-type-syntaxes.scm" #t)
+(include "psyntax.chi-procedures.type-macro-transformers.scm" #t)
 
 
 ;;;; module core-macro-transformer: IF
@@ -1366,52 +1367,6 @@
 		(make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
 
   #| end of module |# )
-
-
-;;;; module core-macro-transformer: TYPE-OF
-
-(define-core-transformer (type-of input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  Vicare's TYPE-OF syntaxes from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?expr)
-     (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.sig (psi.retvals-signature expr.psi)))
-       (make-psi input-form.stx
-		 (build-data no-source
-		   expr.sig)
-		 (make-type-signature/single-top))))
-    ))
-
-
-;;;; module core-macro-transformer: TYPE-SUPER-AND-SUB?
-
-(define-core-transformer (type-super-and-sub? input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand Vicare's  TYPE-SUPER-AND-SUB?  syntaxes from
-  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
-  ;;the context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx (<top>)
-    ((_ ?super-type <top>)
-     (begin
-       (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?super-type)
-       (make-psi input-form.stx
-		 (build-data no-source #f)
-		 (make-type-signature/single-boolean))))
-    ((_ <top> ?sub-type)
-     (begin
-       (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?sub-type)
-       (make-psi input-form.stx
-		 (build-data no-source #t)
-		 (make-type-signature/single-boolean))))
-    ((_ ?super-type ?sub-type)
-     (let ((bool (type-identifier-super-and-sub? ?super-type ?sub-type lexenv.run input-form.stx)))
-       (make-psi input-form.stx
-		 (build-data no-source bool)
-		 (make-type-signature/single-boolean))))
-    ))
 
 
 ;;;; module core-macro-transformer: EXPANSION-OF

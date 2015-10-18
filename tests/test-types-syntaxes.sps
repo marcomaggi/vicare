@@ -136,6 +136,99 @@
   #t)
 
 
+(parametrise ((check-test-name	'signature-super-and-sub))
+
+  (check-for-true	(signature-super-and-sub? (<number>) (<fixnum>)))
+  (check-for-false	(signature-super-and-sub? (<number>) (<string>)))
+
+  (check
+      (expansion-of (signature-super-and-sub? (<number>) (<fixnum>)))
+    => '(quote #t))
+
+  (check
+      (expansion-of (signature-super-and-sub? (<number>) (<string>)))
+    => '(quote #f))
+
+  (check-for-true	(signature-super-and-sub? (<top>) (<number>)))
+  (check-for-false	(signature-super-and-sub? (<number>) (<top>)))
+
+  (internal-body
+    (define-record-type alpha)
+
+    (define-record-type beta
+      (parent alpha))
+
+    (define-record-type gamma
+      (parent beta))
+
+    (check-for-true	(signature-super-and-sub? (alpha) (beta)))
+    (check-for-false	(signature-super-and-sub? (beta) (alpha)))
+
+    (check-for-true	(signature-super-and-sub? (alpha) (gamma)))
+    (check-for-false	(signature-super-and-sub? (gamma) (alpha)))
+
+    (check-for-true	(signature-super-and-sub? (beta) (gamma)))
+    (check-for-false	(signature-super-and-sub? (gamma) (beta)))
+
+    (check-for-true	(signature-super-and-sub? (<top>) (alpha)))
+    (check-for-false	(signature-super-and-sub? (alpha) (<top>)))
+
+    (check-for-true	(signature-super-and-sub? (<top>) (beta)))
+    (check-for-false	(signature-super-and-sub? (beta) (<top>)))
+
+    (check-for-true	(signature-super-and-sub? (<top>) (gamma)))
+    (check-for-false	(signature-super-and-sub? (gamma) (<top>)))
+
+    (void))
+
+;;; --------------------------------------------------------------------
+;;; proper lists
+
+  (check-for-true	(signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>)))
+  (check-for-false	(signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>)))
+  (check-for-false	(signature-super-and-sub? (<number> <number>) (<string> <string>)))
+  (check-for-false	(signature-super-and-sub? (<number> <fixnum>) (<fixnum> <number>)))
+  (check-for-false	(signature-super-and-sub? (<fixnum> <number>) (<number> <fixnum>)))
+
+  (check-for-true	(signature-super-and-sub? (<top> <top>) (<number> <number>)))
+  (check-for-false	(signature-super-and-sub? (<top> <number>) (<number> <top>)))
+  (check-for-false	(signature-super-and-sub? (<number> <top>) (<top> <number>)))
+  (check-for-false	(signature-super-and-sub? (<number> <number>) (<top> <top>)))
+
+  (check-for-false	(signature-super-and-sub? () (<top>)))
+  (check-for-false	(signature-super-and-sub? (<top>) ()))
+  (check-for-false	(signature-super-and-sub? () (<top> <top>)))
+  (check-for-false	(signature-super-and-sub? (<top> <top>) ()))
+
+  (check-for-false	(signature-super-and-sub? (<number> <number>) (<fixnum>)))
+  (check-for-false	(signature-super-and-sub? (<number>) (<fixnum> <fixnum>)))
+
+;;; --------------------------------------------------------------------
+;;; standalone list identifiers
+
+  (check-for-true	(signature-super-and-sub? <list-of-numbers> <list-of-reals>))
+  (check-for-false	(signature-super-and-sub? <list-of-numbers> <list-of-strings>))
+
+  (check-for-true	(signature-super-and-sub? <list> ()))
+  (check-for-true	(signature-super-and-sub? <list> (<top> <top>)))
+  (check-for-true	(signature-super-and-sub? <list> (<top> <top> . <list>)))
+
+;;; --------------------------------------------------------------------
+;;; improper lists
+
+  (check-for-true	(signature-super-and-sub? (<number> . <list-of-numbers>) (<real> . <list-of-reals>)))
+  (check-for-false	(signature-super-and-sub? (<number> . <list-of-numbers>) (<number> . <list-of-strings>)))
+  (check-for-false	(signature-super-and-sub? (<number> . <list-of-numbers>) (<string> . <list-of-numbers>)))
+  (check-for-false	(signature-super-and-sub? (<fixnum> . <list-of-numbers>) (<number> . <list-of-numbers>)))
+
+  (check-for-true	(signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <real> . <list>)))
+
+  (check-for-false	(signature-super-and-sub? (<number> <number> . <list>) (<fixnum>)))
+  (check-for-true	(signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <fixnum>)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'assert-signature))
 
   (define-syntax doit

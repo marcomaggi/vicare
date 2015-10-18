@@ -30,7 +30,10 @@
 	 validate-typed-procedure-argument-transformer
 	 validate-typed-return-value-transformer
 	 assert-signature-transformer
-	 assert-signature-and-return-transformer)
+	 assert-signature-and-return-transformer
+	 type-of-transformer
+	 type-super-and-sub?-transformer
+	 signature-super-and-sub?-transformer)
 
 
 ;;;; helpers
@@ -670,7 +673,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type ?idx ?arg)
-     (let ((ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type)))
+     (let ((ots (id->object-type-specification __who__ input-form.stx ?type lexenv.run)))
        (unless (identifier? ?arg)
 	 (%synner "expected identifier" ?arg))
        ;;This syntax is  used to validate a closure object's  application operands at
@@ -691,7 +694,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type ?idx ?rv)
-     (let ((ots (type-identifier-detailed-validation __who__ input-form.stx lexenv.run ?type)))
+     (let ((ots (id->object-type-specification __who__ input-form.stx ?type lexenv.run)))
        (unless (identifier? ?rv)
 	 (%synner "expected identifier" ?rv))
        (chi-expr (bless
@@ -976,6 +979,64 @@
     #| end of module: %RUN-TIME-VALIDATION |# )
 
   #| end of module: ASSERT-SIGNATURE-TRANSFORMER |# )
+
+
+;;;; module core-macro-transformer: TYPE-OF
+
+(define-core-transformer (type-of input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand  Vicare's TYPE-OF syntaxes from the top-level
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?expr)
+     (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.sig (psi.retvals-signature expr.psi)))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   expr.sig)
+		 (make-type-signature/single-top))))
+    ))
+
+
+;;;; module core-macro-transformer: TYPE-SUPER-AND-SUB?, SIGNATURE-SUPER-AND-SUB?
+
+(define-core-transformer (type-super-and-sub? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  TYPE-SUPER-AND-SUB?  syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-type ?sub-type)
+     (begin
+       (id->object-type-specification __who__ input-form.stx ?super-type lexenv.run)
+       (id->object-type-specification __who__ input-form.stx ?sub-type   lexenv.run)
+       (let ((bool (type-identifier-super-and-sub? ?super-type ?sub-type lexenv.run input-form.stx)))
+	 (make-psi input-form.stx
+		   (build-data no-source bool)
+		   (make-type-signature/single-boolean)))))
+    ))
+
+(define-core-transformer (signature-super-and-sub? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  SIGNATURE-SUPER-AND-SUB?  syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-signature ?sub-signature)
+     (let ((super-signature (syntax-unwrap ?super-signature))
+	   (sub-signature   (syntax-unwrap ?sub-signature)))
+       (unless (syntax-object.type-signature? super-signature lexenv.run)
+	 (syntax-violation __who__
+	   "invalid super signature argument" input-form.stx ?super-signature))
+       (unless (syntax-object.type-signature? sub-signature lexenv.run)
+	 (syntax-violation __who__
+	   "invalid sub signature argument" input-form.stx ?sub-signature))
+       (let ((bool (syntax-object.type-signature.super-and-sub? super-signature sub-signature lexenv.run)))
+	 (make-psi input-form.stx
+		   (build-data no-source bool)
+		   (make-type-signature/single-boolean)))))
+    ))
 
 
 ;;;; done

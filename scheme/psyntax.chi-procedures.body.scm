@@ -682,7 +682,7 @@
       ((_ ?attributes (brace ?lhs ?tag) ?rhs)
        ;;Typed lexical variable definition with initialisation expression.
        (begin
-	 (type-identifier-detailed-validation __module_who__ input-form.stx lexenv.run ?tag)
+	 (id->object-type-specification __module_who__ input-form.stx ?tag lexenv.run)
 	 (let* ((rhs.stx (bless `(assert-signature-and-return (,?tag) ,?rhs)))
 		(qrhs    (make-qualified-rhs/typed-defvar ?lhs rhs.stx ?tag)))
 	   (values ?lhs ?tag qrhs lexenv.run))))
@@ -690,7 +690,7 @@
       ((_ ?attributes (brace ?lhs ?tag))
        ;;Typed lexical variable definition without initialisation expression.
        (begin
-	 (type-identifier-detailed-validation __module_who__ input-form.stx lexenv.run ?tag)
+	 (id->object-type-specification __module_who__ input-form.stx ?tag lexenv.run)
 	 (let* ((rhs.stx (bless '(void)))
 		(qrhs    (make-qualified-rhs/typed-defvar ?lhs rhs.stx ?tag)))
 	   (values ?lhs ?tag qrhs lexenv.run))))
