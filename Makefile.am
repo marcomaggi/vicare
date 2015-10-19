@@ -895,6 +895,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-syntaxes.sps					\
 	tests/test-types-objects-core.sps				\
 	tests/test-types-objects-booleans.sps				\
+	tests/test-types-objects-chars.sps				\
 	tests/test-types-objects-symbols.sps				\
 	tests/test-types-objects-pairs.sps				\
 	tests/test-types-objects-ports.sps				\

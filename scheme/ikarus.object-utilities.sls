@@ -56,7 +56,23 @@
 		  always-true		always-false
 		  procedure-and-error
 		  procedure-argument-validation-with-predicate
-		  return-value-validation-with-predicate)
+		  return-value-validation-with-predicate
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Mon Oct 19, 2015)
+		  keyword-hash			keyword->string
+		  char->fixnum
+		  string-hash			string-ci-hash
+		  symbol-hash			bytevector-hash
+		  equal-hash
+		  fixnum-hash			exact-integer-hash
+		  flonum-hash			number-hash
+		  char-hash			char-ci-hash
+		  boolean-hash			void-hash
+		  eof-object-hash		would-block-hash
+		  struct-hash			record-hash
+		  object-hash
+		  #| end of EXPORT |# )
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
     ;;2015)
     (prefix (only (ikarus conditions)
@@ -72,16 +88,30 @@
 	    records.)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
     ;;2015)
-    (prefix (only (ikarus.keywords)
-		  keyword-hash
-		  keyword->string)
-	    keywords.)
+    (only (ikarus.keywords)
+	  keyword-hash
+	  keyword->string)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 25,
     ;;2015)
     (prefix (only (ikarus structs)
 		  struct-field-method
 		  struct-std)
 	    structs.)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Oct 19,
+    ;;2015)
+    (only (ikarus hash-tables)
+	  string-hash			string-ci-hash
+	  symbol-hash			bytevector-hash
+	  equal-hash
+	  fixnum-hash			exact-integer-hash
+	  flonum-hash			number-hash
+	  char-hash			char-ci-hash
+	  boolean-hash			void-hash
+	  eof-object-hash		would-block-hash
+	  struct-hash			record-hash
+	  object-hash)
+    (only (ikarus fixnums)
+	  char->fixnum)
     (only (vicare system $fx)
 	  $fxadd1))
 
@@ -324,33 +354,36 @@
 		;false.
    ))
 
-(define-syntax define-scheme-type
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?type-name ?parent-name (?method-name ?method-implementation-procedure) ...)
-       (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
-	 (define (%datum->syntax obj)
-	   (datum->syntax #'?type-name obj))
-	 (define (%mk-btd-name type.id)
-	   (%datum->syntax (string->symbol (string-append (symbol->string (syntax->datum type.id))
-							  "-type-descriptor"))))
-	 (with-syntax
-	     ((BTD-NAME		(%mk-btd-name #'?type-name))
-	      (PARENT-NAME	(%mk-btd-name #'?parent-name))
-	      (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str))))
-	      (RETRIEVER	(if (null? (syntax->datum '((?method-name ?method-implementation-procedure) ...)))
-				    #f
-				  #'(lambda (btd method-name.sym)
-				      (case method-name.sym
-					((?method-name) ?method-implementation-procedure)
-					...
-					(else #f))))))
-	   #'(define BTD-NAME
-	       (make-scheme-type PARENT-NAME (quote UID)
-				 (%build-scheme-type-uids-list (quote UID) PARENT-NAME)
-				 RETRIEVER))
-	   )))
-      )))
+(define-auxiliary-syntaxes methods)
+
+(define-syntax (define-scheme-type stx)
+  (syntax-case stx (methods)
+    ((?kwd ?type-name ?parent-name)
+     #'(?kwd ?type-name ?parent-name (methods)))
+    ((_ ?type-name ?parent-name (methods (?method-name ?method-implementation-procedure) ...))
+     (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+       (define (%datum->syntax obj)
+	 (datum->syntax #'?type-name obj))
+       (define (%mk-btd-name type.id)
+	 (%datum->syntax (string->symbol (string-append (symbol->string (syntax->datum type.id))
+							"-type-descriptor"))))
+       (with-syntax
+	   ((BTD-NAME		(%mk-btd-name #'?type-name))
+	    (PARENT-NAME	(%mk-btd-name #'?parent-name))
+	    (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str))))
+	    (RETRIEVER	(if (null? (syntax->datum '((?method-name ?method-implementation-procedure) ...)))
+			    #f
+			  #'(lambda (btd method-name.sym)
+			      (case method-name.sym
+				((?method-name) ?method-implementation-procedure)
+				...
+				(else #f))))))
+	 #'(define BTD-NAME
+	     (make-scheme-type PARENT-NAME (quote UID)
+			       (%build-scheme-type-uids-list (quote UID) PARENT-NAME)
+			       RETRIEVER))
+	 )))
+    ))
 
 (define (%build-scheme-type-uids-list this-uid parent-btd)
   (cons this-uid
@@ -392,39 +425,47 @@
     <top>)
 
 (define-scheme-type <char>
-    <top>)
+    <top>
+  (methods
+   (string		string)
+   (hash		char-hash)
+   (integer		char->integer)
+   (fixnum		char->fixnum)))
 
 (define-scheme-type <symbol>
     <top>
-  (string		symbol->string)
-  (hash			symbol-hash)
-  (bound?		symbol-bound?)
-  (value		<symbol>-value)
-  (putprop		putprop)
-  (getprop		getprop)
-  (remprop		remprop)
-  (property-list	property-list))
+  (methods
+   (string		symbol->string)
+   (hash		symbol-hash)
+   (bound?		symbol-bound?)
+   (value		<symbol>-value)
+   (putprop		putprop)
+   (getprop		getprop)
+   (remprop		remprop)
+   (property-list	property-list)))
 
 (define-scheme-type <keyword>
     <top>
-  (symbol		keyword->symbol)
-  (string		keywords.keyword->string)
-  (hash			keywords.keyword-hash))
+  (methods
+   (symbol		keyword->symbol)
+   (string		keyword->string)
+   (hash		keyword-hash)))
 
 (define-scheme-type <pointer>
     <top>
-  (null?		pointer-null?)
-  (integer		pointer->integer)
-  (=			pointer=?)
-  (!=			pointer!=?)
-  (<			pointer<?)
-  (>			pointer>?)
-  (<=			pointer<=?)
-  (>=			pointer>=?)
-  (add			pointer-add)
-  (diff			pointer-diff)
-  (clone		pointer-clone)
-  (set-null!		set-pointer-null!))
+  (methods
+   (null?		pointer-null?)
+   (integer		pointer->integer)
+   (=			pointer=?)
+   (!=			pointer!=?)
+   (<			pointer<?)
+   (>			pointer>?)
+   (<=			pointer<=?)
+   (>=			pointer>=?)
+   (add			pointer-add)
+   (diff		pointer-diff)
+   (clone		pointer-clone)
+   (set-null!		set-pointer-null!)))
 
 (define-scheme-type <transcoder>
     <top>)
@@ -498,11 +539,18 @@
 
 (define-scheme-type <pair>
     <top>
-  (car car)
-  (cdr cdr))
+  (methods
+   (car		car)
+   (cdr		cdr)))
 
 (define-scheme-type <list>
     <top>)
+
+(define-scheme-type <nlist>
+    <list>
+  (methods
+   (car		car)
+   (cdr		cdr)))
 
 (define-scheme-type <bytevector>
     <top>)
@@ -538,7 +586,8 @@
 
 (define-scheme-type <condition>
     <record>
-  (print	print-condition))
+  (methods
+   (print	print-condition)))
 
 (define-scheme-type <compound-condition>
     <condition>)
