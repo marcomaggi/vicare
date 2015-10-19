@@ -1033,9 +1033,20 @@ The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 
 @deftp {Built--in Type} <char>
 @deftpx {Parent Type} <top>
-Type of character values.  The constructor is @func{integer->char}.  The
-type predicate is @func{char?}.
+Type of character values.
 @end deftp
+
+
+@defop Constructor @class{char} new <char> @var{obj}
+The constructor is @func{integer->char}.
+@end defop
+
+
+@defop {Type predicate} @class{char} is-a? @var{obj} <char>
+@defopx {Type predicate} @class{char} is-a? _ <char>
+The type predicate is @func{char?}.  Return @true{} if @var{obj} is a
+character object; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in symbols
@@ -1044,9 +1055,20 @@ type predicate is @func{char?}.
 
 @deftp {Built--in Type} <symbol>
 @deftpx {Parent Type} <top>
-Type of symbol values.  The constructor is @func{string->symbol}.  The
-type predicate @func{symbol?}.
+Type of symbol values (including gensyms).
 @end deftp
+
+
+@defop Constructor @class{symbol} new <symbol> @var{string}
+The constructor is @func{string->symbol}.
+@end defop
+
+
+@defop {Type predicate} @class{symbol} is-a? @var{obj} <symbol>
+@defopx {Type predicate} @class{symbol} is-a? _ <symbol>
+The type predicate is @func{symbol?}.  Return @true{} if @var{obj} is a
+symbolacter object; otherwise return @false{}.
+@end defop
 
 
 @defmethod @class{symbol} string
@@ -1059,13 +1081,12 @@ Apply @func{symbol-hash} to the instance.
 @end defmethod
 
 
-@defmethod @class{symbol} bound
-Apply @func{?          symbol-bound?} to the instance.
+@defmethod @class{symbol} bound?
+Apply @func{symbol-bound?} to the instance.
 @end defmethod
 
 
 @defmethod @class{symbol} value
-@defmethodx @class{symbol} value @var{new-value}
 When called with no arguments: apply @func{symbol-value} to the instance
 to retrieve the current value in the @code{value} slot.  When called
 with one argument: apply @func{set-symbol-value!} to the instance to

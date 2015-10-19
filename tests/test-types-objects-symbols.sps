@@ -27,6 +27,7 @@
 (program (test-types-symbol-objects)
   (options typed-language)
   (import (vicare)
+    (prefix (vicare expander) xp.)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -47,6 +48,158 @@
 
   (check-for-false	(let (({O <top>} "ciao"))
 			  (is-a? O <symbol>)))
+
+  (void))
+
+
+(parametrise ((check-test-name		'constructor))
+
+  (check
+      (new <symbol> "ciao")
+    => 'ciao)
+
+  (check
+      (xp.type-signature-tags (type-of (new <symbol> (read))))
+    (=> syntax=?)
+    (list #'<symbol>))
+
+  (void))
+
+
+(parametrise ((check-test-name		'methods))
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.string O))
+    => "ciao")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(fixnum? (.hash O)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.bound? O))
+    => #f)
+
+  (check
+      (let (({O <symbol>} (gensym)))
+	(.value O 123)
+	(.bound? O))
+    => #t)
+
+  (check
+      (let (({O <symbol>} (gensym)))
+	(.value O 123)
+	(.value O))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (.putprop 'ciao 'british 'hello)
+  (.putprop 'ciao 'spanish 'hola)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.getprop O 'british))
+    => 'hello)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.getprop O 'spanish))
+    => 'hola)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.property-list O))
+    => '((british . hello)
+	 (spanish . hola)))
+
+  (.remprop 'ciao 'british)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.getprop O 'british))
+    => #f)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(.property-list O))
+    => '((spanish . hola)))
+
+  (void))
+
+
+(parametrise ((check-test-name		'late-binding))
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'string O))
+    => "ciao")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(fixnum? (method-call-late-binding 'hash O)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'bound? O))
+    => #f)
+
+  (check
+      (let (({O <symbol>} (gensym)))
+	(method-call-late-binding 'value O 123)
+	(method-call-late-binding 'bound? O))
+    => #t)
+
+  (check
+      (let (({O <symbol>} (gensym)))
+	(method-call-late-binding 'value O 123)
+	(method-call-late-binding 'value O))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (method-call-late-binding 'putprop 'ciao 'british 'hello)
+  (method-call-late-binding 'putprop 'ciao 'spanish 'hola)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'getprop O 'british))
+    => 'hello)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'getprop O 'spanish))
+    => 'hola)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'property-list O))
+    => '((spanish . hola)
+	 (british . hello)))
+
+  (method-call-late-binding 'remprop 'ciao 'british)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'getprop O 'british))
+    => #f)
+
+  (check
+      (let (({O <symbol>} 'ciao))
+	(method-call-late-binding 'property-list O))
+    => '((spanish . hola)))
 
   (void))
 

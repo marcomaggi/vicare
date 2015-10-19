@@ -1600,27 +1600,130 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-constant VICARE-TYPED-CORE-PRIMITIVES
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/MISC
   (list
 
-   ;;; pairs and lists
+   (declare-typed-core-prim void
+     (signatures
+      ((<void>) ())))
+
+   (declare-typed-core-prim void-object?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   ))
+
+;;; --------------------------------------------------------------------
+;;; symbols
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
+  (list
+
+   (declare-typed-core-prim string->symbol
+     (signatures
+      ((<symbol>) (<string>))))
+
+   (declare-typed-core-prim symbol?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim symbol->string
+     (signatures
+      ((<string>) (<symbol>))))
+
+   (declare-typed-core-prim symbol-hash
+     (signatures
+      ((<fixnum>) (<symbol>))))
+
+   (declare-typed-core-prim symbol-bound?
+     (signatures
+      ((<boolean>) (<symbol>))))
+
+   (declare-typed-core-prim symbol-value
+     (signatures
+      ((<top>) (<symbol>))))
+
+   (declare-typed-core-prim set-symbol-value!
+     (signatures
+      ((<void>) (<symbol> <top>))))
+
+   (declare-typed-core-prim <symbol>-value
+     (signatures
+      ((<top>) <list>)
+      ;;FIXME To be fixed once the  closure object application code supports checking
+      ;;multiple signatures.  (Marco Maggi; Mon Oct 19, 2015)
+      ;;
+      ;; ((<top>) (<symbol>))
+      ;; ((<void>) (<symbol> <top>))
+      ))
+
+   ;;;
+
+   (declare-typed-core-prim putprop
+     (signatures
+      ((<void>) (<symbol> <symbol> <top>))))
+
+   (declare-typed-core-prim getprop
+     (signatures
+      ((<top>) (<symbol> <symbol>))))
+
+   (declare-typed-core-prim remprop
+     (signatures
+      ((<void>) (<symbol> <symbol>))))
+
+   (declare-typed-core-prim property-list
+     (signatures
+      ((<list>) (<symbol>))))
+
+   ))
+
+;;; --------------------------------------------------------------------
+;;; pairs and lists
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/PAIRS
+  (list
 
    (declare-typed-core-prim cons
      (signatures
       ((<pair>) (<top> <top>))))
+
+   (declare-typed-core-prim list
+     (signatures
+      ((<list>) <list>)))
+
+   ;;;
+
+   (declare-typed-core-prim pair?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim list?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim nlist?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   ;;;
 
    ;; (declare-typed-core-prim car
    ;;   (unsafe-variant $car)
    ;;   (signatures
    ;;    ((<top>) (<pair>))))
 
-   ;;;
+   ;; (declare-typed-core-prim cdr
+   ;;   (unsafe-variant $cdr)
+   ;;   (signatures
+   ;;    ((<top>) (<pair>))))
 
-   (declare-typed-core-prim void
-     (signatures
-      ((<void>) ())))
+   ))
 
-   ;;; built-in objects utilities
+;;; --------------------------------------------------------------------
+;;; built-in objects utilities
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
+  (list
 
    (declare-typed-core-prim <top>-constructor
      (signatures
@@ -1635,6 +1738,15 @@
       ((<boolean>) (<top>))))
 
    ))
+
+;;; --------------------------------------------------------------------
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES
+  (append VICARE-TYPED-CORE-PRIMITIVES/MISC
+	  VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
+	  VICARE-TYPED-CORE-PRIMITIVES/PAIRS
+	  VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
+	  ))
 
 
 (define-constant LIBRARY-LEGEND
