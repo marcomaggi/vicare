@@ -346,6 +346,11 @@
     syntax-definition-expression-return-value-condition?
     condition-syntax-definition-expression-return-value
 
+    &application-operator
+    make-application-operator-condition
+    application-operator-condition?
+    application-operator-condition-operator
+
     &retvals-signature-condition
     make-retvals-signature-condition
     retvals-signature-condition?
@@ -2612,6 +2617,13 @@
 
 
 ;;;; condition object types: descriptive objects
+
+;;This used to describe the syntax object acting as operator in an application form.
+(define-condition-type &application-operator
+    &condition
+  make-application-operator-condition
+  application-operator-condition?
+  (operator application-operator-condition-operator))
 
 ;;This is used  to describe a type involved  in an exception.  The field  must be the
 ;;syntactic identifier  bound to the type  specification (for example the  name of an

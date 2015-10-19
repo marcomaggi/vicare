@@ -1294,282 +1294,28 @@
 
 ;;;; core syntactic binding descriptors: built-in Scheme object types
 
-(define-syntax declare-scheme-type
-  (syntax-rules ()
-    ((_ ?type ?parent ?maker ?pred (?method ?method-implementation) ...)
-     (quote (?type
-	     ($core-scheme-type-name
-	      . (?type ?parent ?maker ?pred ((?method . ?method-implementation) ...))))))
+(define-auxiliary-syntaxes methods)
+
+(define-syntax (define-scheme-type stx)
+  (syntax-case stx (methods)
+    ((?kwd ?type-name ?parent-name ?maker ?pred)
+     #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
+    ((_ ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
+     #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+		  (quote (?type-name
+			  ($core-scheme-type-name
+			   . (?type-name ?parent-name ?maker ?pred
+					 ((?method-name . ?method-implementation-procedure) ...)))))))
     ))
 
-(define-constant VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-  (list
-   (declare-scheme-type <top>
-       #f
-     <top>-constructor <top>-type-predicate)
+(define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '())
 
-   (declare-scheme-type <void>
-       <top>
-     void void-object?)
+(define-scheme-type <top>
+    #f
+  <top>-constructor <top>-type-predicate)
 
-   (declare-scheme-type <boolean>
-       <top>
-     <boolean>-constructor boolean?)
-
-   (declare-scheme-type <char>
-       <top>
-     integer->char char?
-     (string		string)
-     (hash		char-hash)
-     (integer		char->integer)
-     (fixnum		char->fixnum))
-
-   (declare-scheme-type <symbol>
-       <top>
-     string->symbol symbol?
-     (string		symbol->string)
-     (hash		symbol-hash)
-     (bound?		symbol-bound?)
-     (value		<symbol>-value)
-     (putprop		putprop)
-     (getprop		getprop)
-     (remprop		remprop)
-     (property-list	property-list))
-
-   (declare-scheme-type <keyword>
-       <top>
-     symbol->keyword keyword?
-     (symbol		keyword->symbol)
-     (string		keyword->string))
-
-   (declare-scheme-type <pointer>
-       <top>
-     integer->pointer pointer?
-     (null?		pointer-null?)
-     (integer		pointer->integer)
-     (=		pointer=?)
-     (!=		pointer!=?)
-     (<		pointer<?)
-     (>		pointer>?)
-     (<=		pointer<=?)
-     (>=		pointer>=?)
-     (add		pointer-add)
-     (diff		pointer-diff)
-     (clone		pointer-clone)
-     (set-null!	set-pointer-null!))
-
-   (declare-scheme-type <transcoder>
-       <top>
-     make-transcoder transcoder?)
-
-;;; --------------------------------------------------------------------
-;;; procedures
-
-   (declare-scheme-type <procedure>
-       <top>
-     #f procedure?)
-
-   (declare-scheme-type <predicate>
-       <procedure>
-     #f #f)
-
-;;; --------------------------------------------------------------------
-;;; numeric types
-
-   (declare-scheme-type <fixnum>
-       <exact-integer>
-     #f fixnum?)
-
-   (declare-scheme-type <flonum>
-       <real-valued>
-     #f flonum?)
-
-   (declare-scheme-type <ratnum>
-       <rational>
-     #f ratnum?)
-
-   (declare-scheme-type <bignum>
-       <exact-integer>
-     #f bignum?)
-
-   (declare-scheme-type <compnum>
-       <complex>
-     #f compnum?)
-
-   (declare-scheme-type <cflonum>
-       <complex>
-     #f cflonum?)
-
-   (declare-scheme-type <exact-integer>
-       <integer>
-     #f exact-integer?)
-
-   ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
-   (declare-scheme-type <integer>
-       <rational>
-     #f integer?)
-
-   ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
-   (declare-scheme-type <integer-valued>
-       <rational-valued>
-     #f integer-valued?)
-
-   (declare-scheme-type <rational>
-       <rational-valued>
-     #f rational?)
-
-   (declare-scheme-type <rational-valued>
-       <real>
-     #f rational-valued?)
-
-   (declare-scheme-type <real>
-       <real-valued>
-     #f real?)
-
-   (declare-scheme-type <real-valued>
-       <complex>
-     #f real-valued?)
-
-   (declare-scheme-type <complex>
-       <number>
-     make-rectangular complex?)
-
-   (declare-scheme-type <number>
-       <top>
-     #f number?)
-
-;;; --------------------------------------------------------------------
-;;; compound types
-
-   (declare-scheme-type <string>
-       <top>
-     string string?)
-
-   (declare-scheme-type <vector>
-       <top>
-     vector vector?)
-
-   (declare-scheme-type <pair>
-       <top>
-     cons pair?
-     (car		car)
-     (cdr		cdr))
-
-   (declare-scheme-type <list>
-       <top>
-     list list?)
-
-   (declare-scheme-type <nlist>
-       <list>
-     #f nlist?
-     (car		car)
-     (cdr		cdr))
-
-   (declare-scheme-type <bytevector>
-       <top>
-     make-bytevector bytevector?)
-
-   (declare-scheme-type <hashtable>
-       <top>
-     #f hashtable?)
-
-   (declare-scheme-type <hashtable-eq>
-       <hashtable>
-     make-eq-hashtable hashtable-eq?)
-
-   (declare-scheme-type <hashtable-eqv>
-       <hashtable>
-     make-eqv-hashtable hashtable-eqv?)
-
-   (declare-scheme-type <hashtable-equiv>
-       <hashtable>
-     make-hashtable hashtable-equiv?)
-
-;;; --------------------------------------------------------------------
-;;; records and structs
-
-   (declare-scheme-type <struct>
-       <top>
-     #f struct?)
-
-   (declare-scheme-type <struct-type-descriptor>
-       <struct>
-     make-struct-type struct-type-descriptor?)
-
-   (declare-scheme-type <record>
-       <struct>
-     #f record?)
-
-   (declare-scheme-type <record-type-descriptor>
-       <struct>
-     make-record-type-descriptor record-type-descriptor?)
-
-   (declare-scheme-type <record-constructor-descriptor>
-       <struct>
-     make-record-constructor-descriptor record-constructor-descriptor?)
-
-   (declare-scheme-type <condition>
-       <record>
-     #f condition?
-     (print		print-condition))
-
-   (declare-scheme-type <compound-condition>
-       <condition>
-     condition compound-condition?
-     (print		print-condition))
-
-;;; --------------------------------------------------------------------
-;;; input/output ports
-
-   (declare-scheme-type <port>
-       <top>
-     #f port?)
-
-   (declare-scheme-type <input-port>
-       <port>
-     #f input-port?)
-
-   (declare-scheme-type <output-port>
-       <port>
-     #f output-port?)
-
-   (declare-scheme-type <input/output-port>
-       <port>
-     #f input/output-port?)
-
-   (declare-scheme-type <textual-port>
-       <port>
-     #f textual-port?)
-
-   (declare-scheme-type <binary-port>
-       <port>
-     #f binary-port?)
-
-   (declare-scheme-type <textual-input-port>
-       <input-port>
-     #f textual-input-port?)
-
-   (declare-scheme-type <textual-output-port>
-       <output-port>
-     #f textual-output-port?)
-
-   (declare-scheme-type <textual-input/output-port>
-       <input/output-port>
-     #f textual-input/output-port?)
-
-   (declare-scheme-type <binary-input-port>
-       <input-port>
-     #f binary-input-port?)
-
-   (declare-scheme-type <binary-output-port>
-       <output-port>
-     #f binary-output-port?)
-
-   (declare-scheme-type <binary-input/output-port>
-       <input/output-port>
-     #f binary-input/output-port?)
-
-   ))
+(include "scheme-object-types.scm" #t)
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
@@ -1714,6 +1460,34 @@
    ))
 
 ;;; --------------------------------------------------------------------
+;;; keywords
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
+  (list
+
+   (declare-typed-core-prim symbol->keyword
+     (signatures
+      ((<keyword>) (<symbol>))))
+
+   (declare-typed-core-prim keyword?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim keyword->symbol
+     (signatures
+      ((<symbol>) (<keyword>))))
+
+   (declare-typed-core-prim keyword->string
+     (signatures
+      ((<string>) (<keyword>))))
+
+   (declare-typed-core-prim keyword-hash
+     (signatures
+      ((<fixnum>) (<keyword>))))
+
+   ))
+
+;;; --------------------------------------------------------------------
 ;;; pairs and lists
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/PAIRS
@@ -1781,6 +1555,7 @@
   (append VICARE-TYPED-CORE-PRIMITIVES/MISC
 	  VICARE-TYPED-CORE-PRIMITIVES/CHARS
 	  VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
+	  VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
 	  VICARE-TYPED-CORE-PRIMITIVES/PAIRS
 	  VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
 	  ))
@@ -6419,6 +6194,6 @@
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
-;; eval: (put 'declare-scheme-type			'scheme-indent-function 2)
+;; eval: (put 'define-scheme-type			'scheme-indent-function 2)
 ;; eval: (put 'declare-typed-core-prim			'scheme-indent-function 1)
 ;; End:

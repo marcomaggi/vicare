@@ -520,6 +520,7 @@ VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
 	ikarus.config.scm				\
 	scheme/makefile.sps				\
+	scheme/scheme-object-types.scm			\
 	\
 	lib/vicare/platform/words.vicare.sls		\
 	lib/vicare/platform/constants.vicare.sls	\
@@ -897,6 +898,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-booleans.sps				\
 	tests/test-types-objects-chars.sps				\
 	tests/test-types-objects-symbols.sps				\
+	tests/test-types-objects-keywords.sps				\
 	tests/test-types-objects-pairs.sps				\
 	tests/test-types-objects-ports.sps				\
 	\

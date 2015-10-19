@@ -469,7 +469,7 @@
       ((?tag)
        ;;The rator type is a single value.  Good, this is what it is meant to be.
        (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					 rator.psi ?tag first-rand.psi other-rand*.stx))
+					 rator.psi rator.stx ?tag first-rand.psi other-rand*.stx))
 
       (_
        ;;The rator  is declared to  evaluate to multiple  values; this is  invalid in
@@ -479,9 +479,8 @@
        (raise
 	(condition (make-who-condition __who__)
 		   (make-message-condition "call operator declared to evaluate to multiple values")
-		   (syntax-match input-form.stx ()
-		     ((?rator . ?rands)
-		      (make-syntax-violation input-form.stx ?rator)))
+		   (make-syntax-violation input-form.stx #f)
+		   (make-application-operator-condition rator.stx)
 		   (make-retvals-signature-condition rator.sig))))
       ))
 
@@ -503,7 +502,7 @@
 		  (cons first-rand.core other-rand*.core)))))
 
   (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					     {rator.psi psi?} rator.tag
+					     {rator.psi psi?} rator.stx rator.tag
 					     {first-rand.psi psi?} other-rand*.stx)
     ;;Build a  core language expression to  apply the rator  to the rands when  it is
     ;;known that the rator will return a single value with specified type.
@@ -521,10 +520,9 @@
 	   (raise
 	    (condition (make-who-condition __who__)
 		       (make-message-condition "call operator declared to evaluate to non-procedure value")
-		       (syntax-match input-form.stx ()
-			 ((?rator . ?rands)
-			  (make-syntax-violation input-form.stx ?rator)))
-		       (make-retvals-signature-condition rator.tag))))))
+		       (make-syntax-violation input-form.stx #f)
+		       (make-application-operator-condition rator.stx)
+		       (make-type-syntactic-identifier-condition rator.tag))))))
 
   #| end of module: CHI-APPLICATION/PSI-FIRST-OPERAND |# )
 
