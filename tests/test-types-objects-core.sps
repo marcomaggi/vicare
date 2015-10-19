@@ -58,56 +58,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'pair))
-
-;;; type predicate
-
-  (check-for-true
-   (is-a? '(1 . 2) <pair>))
-
-  (check-for-true
-   (let ((O '(1 . 2)))
-     (is-a? O <pair>)))
-
-  (check-for-true
-   (let (({O <pair>} '(1 . 2)))
-     (is-a? O <pair>)))
-
-  (check-for-false
-   (is-a? 123 <pair>))
-
-;;; --------------------------------------------------------------------
-;;; constructor
-
-  (check
-      (new <pair> 1 2)
-    => '(1 . 2))
-
-;;; --------------------------------------------------------------------
-;;; expand-time methods call
-
-  (check
-      (.car (new <pair> 1 2))
-    => 1)
-
-  (check
-      (.cdr (new <pair> 1 2))
-    => 2)
-
-;;; --------------------------------------------------------------------
-;;; run-time methods call
-
-  (check
-      (method-call-late-binding 'car (new <pair> 1 2))
-    => 1)
-
-  (check
-      (method-call-late-binding 'cdr (new <pair> 1 2))
-    => 2)
-
-  #t)
-
-
 (parametrise ((check-test-name	'void))
 
 ;;; type predicate

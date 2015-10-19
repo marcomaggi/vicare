@@ -42,8 +42,10 @@
 
   (check-for-true	(let (({O <pair>} '(1 . 2)))
 			  (is-a? O <pair>)))
+
   (check-for-true	(let (({O <top>} '(1 . 2)))
 			  (is-a? O <pair>)))
+
   (check-for-false	(let (({O <top>} "ciao"))
 			  (is-a? O <pair>)))
 
@@ -60,6 +62,32 @@
       (xp.type-signature-tags (type-of (new <pair> (read) (read))))
     (=> syntax=?)
     (list #'<pair>))
+
+  #t)
+
+
+(parametrise ((check-test-name	'methods))
+
+;;; expand-time methods call
+
+  (check
+      (.car (new <pair> 1 2))
+    => 1)
+
+  (check
+      (.cdr (new <pair> 1 2))
+    => 2)
+
+;;; --------------------------------------------------------------------
+;;; run-time methods call
+
+  (check
+      (method-call-late-binding 'car (new <pair> 1 2))
+    => 1)
+
+  (check
+      (method-call-late-binding 'cdr (new <pair> 1 2))
+    => 2)
 
   #t)
 

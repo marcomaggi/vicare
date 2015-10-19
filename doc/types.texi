@@ -952,7 +952,8 @@ et cetera.
 * types built-in numerics::     Type of numeric objects.
 * types built-in strings::      Type of string objects.
 * types built-in vectors::      Type of vector objects.
-* types built-in pairs::        Types of pairs and lists.
+* types built-in pairs::        Type of pair objects.
+* types built-in lists::        Types of lists.
 * types built-in bytevectors::  Type of bytevector objects.
 * types built-in hashtables::   Type of hashtable objects.
 * types built-in structs::      Type of struct objects.
@@ -1428,14 +1429,26 @@ predicate is @func{vector?}.
 
 @c page
 @node types built-in pairs
-@subsection Types of pairs and lists
+@subsection Type of pair objects
 
 
 @deftp {Built--in Type} <pair>
 @deftpx {Parent Type} <top>
-Type of pairs.  The constructor is @func{cons}.  The type predicate is
-@func{pair?}.
+Type of pair objects.
 @end deftp
+
+
+@defop Constructor @class{pair} new <pair> @var{A} @var{D}
+The constructor is @func{cons}.  Return a new pair having @var{A} and
+@var{D} as car and cdr.
+@end defop
+
+
+@defop {Type predicate} @class{pair} is-a? @var{obj} <pair>
+@defopx {Type predicate} @class{pair} is-a? _ <pair>
+The type predicate is @func{pair?}.  Return @true{} if @var{obj} is a
+pair object; otherwise return @false{}.
+@end defop
 
 
 @defmethod @class{pair} car
@@ -1447,12 +1460,32 @@ Apply @func{car} to the type instance.
 Apply @func{cdr} to the type instance.
 @end defmethod
 
+@c page
+@node types built-in lists
+@subsection Types of lists
+
 
 @deftp {Built--in Type} <list>
 @deftpx {Parent Type} <top>
-Type of proper lists.  The constructor is @func{list}.  The type
-predicate is @func{list?}.
+Type of proper lists, both null and non--empty.
 @end deftp
+
+
+@defop Constructor @class{list} new <list> @var{obj} @dots{}
+The constructor is @func{list}.  Return a new list having the given
+@var{obj} arguments as items.
+@end defop
+
+
+@defop {Type predicate} @class{list} is-a? @var{obj} <list>
+@defopx {Type predicate} @class{list} is-a? _ <list>
+The type predicate is @func{list?}.  Return @true{} if @var{obj} is null
+or a proper list object; otherwise return @false{}.
+@end defop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Non--empty lists
 
 
 @deftp {Built--in Type} <nlist>
@@ -1460,6 +1493,13 @@ predicate is @func{list?}.
 Type of non--empty lists.  There is no constructor.  The type predicate
 is @func{nlist?}.
 @end deftp
+
+
+@defop {Type predicate} @class{nlist} is-a? @var{obj} <nlist>
+@defopx {Type predicate} @class{nlist} is-a? _ <nlist>
+The type predicate is @func{nlist?}.  Return @true{} if @var{obj} is a
+proper non--empty list object; otherwise return @false{}.
+@end defop
 
 
 @defmethod @class{nlist} car
