@@ -967,10 +967,19 @@ et cetera.
 
 
 @deftp {Built--in Type} <top>
-It is the conventional parent of all the types.  It has no fields and no
-methods.  @syntax{is-a?} used with @class{top} always evaluates to
-@true{}.
+The conventional parent of all the types.
 @end deftp
+
+
+@defop Constructor @class{top} new <top> @var{obj}
+Return @var{obj} itself.
+@end defop
+
+
+@defop {Type predicate} @class{top} is-a? @var{obj} <top>
+@defopx {Type predicate} @class{top} is-a? _ <top>
+Always return @true{}.
+@end defop
 
 @c page
 @node types built-in void
@@ -979,9 +988,20 @@ methods.  @syntax{is-a?} used with @class{top} always evaluates to
 
 @deftp {Built--in Type} <void>
 @deftpx {Parent Type} <top>
-The type of void values.  The constructor is @func{void}, the type
-predicate is @func{void-object?}.
+The type of the void object.
 @end deftp
+
+
+@defop Constructor @class{void} new <void>
+Return the void object.
+@end defop
+
+
+@defop {Type predicate} @class{void} is-a? @var{obj} <void>
+@defopx {Type predicate} @class{void} is-a? _ <void>
+The type predicate is @func{void-object?}.  Return @true{} if @var{obj}
+is void; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in booleans
@@ -990,9 +1010,20 @@ predicate is @func{void-object?}.
 
 @deftp {Built--in Type} <boolean>
 @deftpx {Parent Type} <top>
-Type of boolean values @true{} and @false{}.  The type predicate is
-@func{boolean?}.
+Type of the boolean values @true{} and @false{}.
 @end deftp
+
+
+@defop Constructor @class{boolean} new <boolean> @var{obj}
+Return @true{} if @var{obj} is true; otherwise return @false{}.
+@end defop
+
+
+@defop {Type predicate} @class{boolean} is-a? @var{obj} <boolean>
+@defopx {Type predicate} @class{boolean} is-a? _ <boolean>
+The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
+@true{} or @false{}; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in chars

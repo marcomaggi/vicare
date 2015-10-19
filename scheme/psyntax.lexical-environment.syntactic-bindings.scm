@@ -647,7 +647,8 @@
 	   (signature*.sexp		(list-ref descr.value 2))
 	   (signature			(%signature-sexp->callable-signature signature*.sexp))
 	   (type-id			(fabricate-closure-type-identifier core-prim.sym signature))
-	   (unsafe-variant.id		(core-prim-id unsafe-core-prim.sym)))
+	   (unsafe-variant.id		(and unsafe-core-prim.sym
+					     (core-prim-id unsafe-core-prim.sym))))
       (set-car! descriptor 'core-prim-typed)
       (set-cdr! descriptor (cons (cons* core-prim.sym type-id unsafe-variant.id) descr.value))))
 

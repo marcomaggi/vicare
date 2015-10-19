@@ -1305,7 +1305,7 @@
 (define-constant VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   `(,(declare-scheme-type <top>
 	 #f
-       #f <top>-type-predicate)
+       <top>-constructor <top>-type-predicate)
 
     ,(declare-scheme-type <void>
 	 <top>
@@ -1313,7 +1313,7 @@
 
     ,(declare-scheme-type <boolean>
 	 <top>
-       #f boolean?)
+       <boolean>-constructor boolean?)
 
     ,(declare-scheme-type <char>
 	 <top>
@@ -1602,10 +1602,38 @@
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES
   (list
+
+   ;;; pairs and lists
+
+   (declare-typed-core-prim cons
+     (signatures
+      ((<pair>) (<top> <top>))))
+
    ;; (declare-typed-core-prim car
    ;;   (unsafe-variant $car)
    ;;   (signatures
    ;;    ((<top>) (<pair>))))
+
+   ;;;
+
+   (declare-typed-core-prim void
+     (signatures
+      ((<void>) ())))
+
+   ;;; built-in objects utilities
+
+   (declare-typed-core-prim <top>-constructor
+     (signatures
+      ((<top>) (<top>))))
+
+   (declare-typed-core-prim <top>-type-predicate
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim <boolean>-constructor
+     (signatures
+      ((<boolean>) (<top>))))
+
    ))
 
 
@@ -4187,7 +4215,9 @@
     (<binary-output-port>			v $language)
     (<binary-input/output-port>			v $language)
 
+    (<top>-constructor)
     (<top>-type-predicate)
+    (<boolean>-constructor)
     (<symbol>-value)
 
 ;;; --------------------------------------------------------------------

@@ -46,8 +46,10 @@
     signature-rest-argument-validation-with-predicate
 
     ;; built-in object-type specification utilities, for internal use
-    <top>-type-predicate
-    <symbol>-value)
+    <top>-constructor			<top>-type-predicate
+    <boolean>-constructor
+    <symbol>-value
+    #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
 		  any->symbol		any->string
@@ -363,11 +365,17 @@
 (define (<top>-type-predicate obj)
   #t)
 
+(define (<top>-constructor obj)
+  obj)
+
 (case-define <symbol>-value
   ((sym)
    (symbol-value sym))
   ((sym val)
    (set-symbol-value! sym val)))
+
+(define (<boolean>-constructor obj)
+  (if obj #t #f))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

@@ -27,6 +27,7 @@
 (program (test-vicare-typed-language-scheme-objects)
   (options typed-language)
   (import (vicare)
+    (prefix (vicare expander) xp.)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -42,6 +43,17 @@
   (check
       (procedure? (is-a? _ <top>))
     => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (new <top> 123)
+    => 123)
+
+  (check
+      (xp.type-signature-tags (type-of (new <top> (read))))
+    (=> syntax=?)
+    (list #'<top>))
 
   #t)
 
@@ -121,75 +133,10 @@
       (new <void>)
     => '#!void)
 
-  #t)
-
-
-(parametrise ((check-test-name	'boolean))
-
-;;; type predicate
-
-  (check-for-true
-   (is-a? #t <boolean>))
-
-  (check-for-true
-   (is-a? #f <boolean>))
-
-  (check-for-true
-   (let ((O '#t))
-     (is-a? O <boolean>)))
-
-  (check-for-true
-   (let ((O '#f))
-     (is-a? O <boolean>)))
-
-  (check-for-true
-   (let (({O <boolean>} '#t))
-     (is-a? O <boolean>)))
-
-  (check-for-false
-   (is-a? 123 <boolean>))
-
-;;; --------------------------------------------------------------------
-;;; constructor
-
-  ;; (check
-  ;;     (new <boolean> #t)
-  ;;   => '#t)
-
-  ;; (check
-  ;;     (new <boolean> #f)
-  ;;   => '#f)
-
-  ;; (check-for-procedure-signature-argument-violation
-  ;;     (new <boolean> 123)
-  ;;   => '(<boolean> 1 boolean? 123))
-
-  #t)
-
-
-(parametrise ((check-test-name	'ports))
-
-;;; type predicates
-
-  (check-for-true	(is-a? (current-input-port)	<port>))
-  (check-for-true	(is-a? (current-output-port)	<port>))
-  (check-for-true	(is-a? (current-error-port)	<port>))
-
-  (check-for-true
-   (let (({P <textual-output-port>} (current-error-port)))
-     (is-a? P <port>)))
-
-  (check-for-true
-   (let (({P <textual-output-port>} (current-error-port)))
-     (is-a? P <output-port>)))
-
-  (check-for-true
-   (let (({P <textual-output-port>} (current-error-port)))
-     (is-a? P <textual-output-port>)))
-
-  (check-for-false
-   (let (({P <textual-output-port>} (current-error-port)))
-     (is-a? P <input-port>)))
+  (check
+      (xp.type-signature-tags (type-of (new <void>)))
+    (=> syntax=?)
+    (list #'<void>))
 
   #t)
 

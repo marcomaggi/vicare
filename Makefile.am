@@ -893,7 +893,11 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-writer.sps					\
 	\
 	tests/test-types-syntaxes.sps					\
-	tests/test-types-scheme-objects.sps				\
+	tests/test-types-objects-core.sps				\
+	tests/test-types-objects-booleans.sps				\
+	tests/test-types-objects-symbols.sps				\
+	tests/test-types-objects-pairs.sps				\
+	tests/test-types-objects-ports.sps				\
 	\
 	tests/test-issue-001-equal-hash.sps				\
 	tests/test-issue-003.sps					\
