@@ -112,7 +112,7 @@
 
   (check
       (catch-procedure-argument-violation #f
-	(char->integer 123))
+	(char->integer (unsafe-cast <top> 123)))
     => #t)
 
   #t)
