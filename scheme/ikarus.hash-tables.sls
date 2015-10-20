@@ -71,7 +71,8 @@
 
     ;; unsafe operations
     $string-hash		$string-ci-hash
-    $symbol-hash		$bytevector-hash)
+    $symbol-hash		$bytevector-hash
+    $exact-integer-hash)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Fri Mar 20, 2015)
@@ -972,6 +973,9 @@
 ;;; --------------------------------------------------------------------
 
 (define* (exact-integer-hash {N exact-integer?})
+  ($exact-integer-hash N))
+
+(define ($exact-integer-hash N)
   (if (fixnum? N)
       ($fixnum-hash N)
     ($bignum-hash N)))

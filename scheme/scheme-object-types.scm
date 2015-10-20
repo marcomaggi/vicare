@@ -9,7 +9,7 @@
    (hash		object-hash)))
 
 
-;;;; immediate object types
+;;;; standalone object types
 
 (define-scheme-type <void>
     <top>
@@ -64,7 +64,8 @@
    (add			pointer-add)
    (diff		pointer-diff)
    (clone		pointer-clone)
-   (set-null!		set-pointer-null!)))
+   (set-null!		set-pointer-null!)
+   (hash		pointer-hash)))
 
 (define-scheme-type <transcoder>
     <top>

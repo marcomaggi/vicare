@@ -71,7 +71,7 @@
 		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
 		  struct-hash			record-hash
-		  object-hash
+		  object-hash			pointer-hash
 		  #| end of EXPORT |# )
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
     ;;2015)
@@ -110,6 +110,8 @@
 	  eof-object-hash		would-block-hash
 	  struct-hash			record-hash
 	  object-hash)
+    (only (ikarus.pointers)
+	  pointer-hash)
     (only (ikarus fixnums)
 	  char->fixnum)
     (only (vicare system $fx)
@@ -199,6 +201,7 @@
 	((char?    subject)	(%built-in-scheme-object-call <char>-type-descriptor))
 	((symbol?  subject)	(%built-in-scheme-object-call <symbol>-type-descriptor))
 	((keyword? subject)	(%built-in-scheme-object-call <keyword>-type-descriptor))
+	((pointer? subject)	(%built-in-scheme-object-call <pointer>-type-descriptor))
 
 	((struct? subject)	(%struct-object-call (structs.struct-std subject)))
 

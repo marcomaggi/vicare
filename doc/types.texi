@@ -978,7 +978,6 @@ Return @var{obj} itself.
 
 
 @defop {Type predicate} @class{top} is-a? @var{obj} @aclass{top}
-@defopx {Type predicate} @class{top} is-a? _ @aclass{top}
 Always return @true{}.
 @end defop
 
@@ -1004,7 +1003,6 @@ Return the void object.
 
 
 @defop {Type predicate} @class{void} is-a? @var{obj} @aclass{void}
-@defopx {Type predicate} @class{void} is-a? _ @aclass{void}
 The type predicate is @func{void-object?}.  Return @true{} if @var{obj}
 is void; otherwise return @false{}.
 @end defop
@@ -1026,7 +1024,6 @@ Return @true{} if @var{obj} is true; otherwise return @false{}.
 
 
 @defop {Type predicate} @class{boolean} is-a? @var{obj} @aclass{boolean}
-@defopx {Type predicate} @class{boolean} is-a? _ @aclass{boolean}
 The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @true{} or @false{}; otherwise return @false{}.
 @end defop
@@ -1048,7 +1045,6 @@ The constructor is @func{integer->char}.
 
 
 @defop {Type predicate} @class{char} is-a? @var{obj} @aclass{char}
-@defopx {Type predicate} @class{char} is-a? _ @aclass{char}
 The type predicate is @func{char?}.  Return @true{} if @var{obj} is a
 character object; otherwise return @false{}.
 @end defop
@@ -1090,7 +1086,6 @@ The constructor is @func{string->symbol}.
 
 
 @defop {Type predicate} @class{symbol} is-a? @var{obj} @aclass{symbol}
-@defopx {Type predicate} @class{symbol} is-a? _ @aclass{symbol}
 The type predicate is @func{symbol?}.  Return @true{} if @var{obj} is a
 symbol object; otherwise return @false{}.
 @end defop
@@ -1156,7 +1151,6 @@ The constructor is @func{symbol->keyword}.
 
 
 @defop {Type predicate} @class{keyword} is-a? @var{obj} @aclass{keyword}
-@defopx {Type predicate} @class{keyword} is-a? _ @aclass{keyword}
 The type predicate is @func{keyword?}.  Return @true{} if @var{obj} is a
 keyword object; otherwise return @false{}.
 @end defop
@@ -1181,71 +1175,86 @@ Apply @func{keyword-hash} to the instance.
 @subsection Type of pointer values
 
 
-@deftp {Built--in Type} <pointer>
-@deftpx {Parent Type} <top>
-Type of pointer values.  The constructor is @func{integer->pointer}.
-The type predicate is @func{pointer?}.
+@deftp {Built--in Type} @aclass{pointer}
+@deftpx {Parent Type} @class{top}
+Type of pointer values.
 @end deftp
 
 
-@defmethod @class{pointer} null?
+@defop Constructor @class{pointer} new @aclass{pointer} @var{int}
+The constructor is @func{integer->pointer}.
+@end defop
+
+
+@defop {Type predicate} @class{pointer} is-a? @var{obj} @aclass{pointer}
+The type predicate is @func{pointer?}.  Return @true{} if @var{obj} is a
+pointer object; otherwise return @false{}.
+@end defop
+
+
+@deftypemethod @class{pointer} @aclass{boolean} null? @var{self}
 Apply @func{pointer-null?} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} integer
+@deftypemethod @class{pointer} @aclass{exact-integer} integer @var{self}
 Apply @func{pointer->integer} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} = @var{ptr} @dots{}
+@deftypemethod @class{pointer} @aclass{boolean} = @var{self} @var{ptr} @dots{}
 Apply @func{pointer=?} to the instance and the arguments.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} != @var{ptr} @dots{}
+@deftypemethod @class{pointer} @aclass{boolean} != @var{self} @var{ptr} @dots{}
 Apply @func{pointer!=?} to the instance and the arguments.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} < @var{ptr} @dots{}
+@deftypemethod @class{pointer} @aclass{boolean} < @var{self} @var{ptr} @dots{}
 Apply @func{pointer<?} to the instance and the arguments.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} > @var{ptr} @dots{}
+@deftypemethod @class{pointer} @aclass{boolean} > @var{self} @var{ptr} @dots{}
 Apply @func{pointer>?} to the instance and the arguments.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} <= @var{ptr} @dots{}
+@deftypemethod @class{pointer} @aclass{boolean} <= @var{self} @var{ptr} @dots{}
 Apply @func{pointer<=?} to the instance and the arguments.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} >= @var{ptr} @dots{}
+@deftypemethod @class{pointer} @aclass{boolean} >= @var{self} @var{ptr} @dots{}
 Apply @func{pointer>=?} to the instance and the arguments.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} add @var{diff}
+@deftypemethod @class{pointer} @aclass{pointer} add @var{diff}
 Apply @func{pointer-add} to the instance and the argument.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} diff @var{pointer}
+@deftypemethod @class{pointer} @aclass{pointer} diff @var{self} @var{pointer}
 Apply @func{pointer-diff} to the instance and the argument.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} clone
+@deftypemethod @class{pointer} @aclass{pointer} clone @var{self}
 Apply @func{pointer-clone} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{pointer} set-null!
+@deftypemethod @class{pointer} @aclass{void} set-null! @var{self}
 Apply @func{set-pointer-null!)} to the instance.
-@end defmethod
+@end deftypemethod
+
+
+@deftypemethod @class{pointer} @aclass{fixnum} hash @var{self}
+Apply @func{pointer-hash} to the instance.
+@end deftypemethod
 
 @c page
 @node types built-in transcoders

@@ -18303,6 +18303,11 @@ addition would cause an overflow or underflow in machine words: raise an
 assertion violation.
 @end defun
 
+
+@defun pointer-hash @var{ptr}
+Return a fixnum representing the hash value of @var{ptr}.
+@end defun
+
 @c page
 @node iklib pointers poke
 @subsection Poking values

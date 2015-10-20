@@ -67,6 +67,7 @@
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
+    pointer-hash
     pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?

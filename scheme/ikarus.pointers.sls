@@ -30,6 +30,7 @@
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     pointer-min				pointer-max
+    pointer-hash
 
     ;; memory blocks
     memory-block?			memory-block?/non-null
@@ -190,6 +191,7 @@
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
 		  pointer-min				pointer-max
+		  pointer-hash
 
 		  ;; memory blocks
 		  make-memory-block			make-memory-block/guarded
@@ -348,6 +350,8 @@
     ;;2015)
     (only (ikarus conditions)
 	  procedure-arguments-consistency-violation)
+    (only (ikarus hash-tables)
+	  $exact-integer-hash)
     (except (vicare unsafe operations)
 	    $memory-block-pointer
 	    $memory-block-size
@@ -615,6 +619,9 @@
 
 (define (pointer+ ptr off)
   (integer->pointer (+ (pointer->integer ptr) off)))
+
+(define* (pointer-hash {P pointer?})
+  ($exact-integer-hash (capi.ffi-pointer->integer P)))
 
 
 ;;;; comparison

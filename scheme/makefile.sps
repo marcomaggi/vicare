@@ -1323,7 +1323,7 @@
 	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
-;;;; core syntactic binding descriptors: typed core primitives
+;;;; core syntactic binding descriptors: typed core primitives infrastructure
 
 (define-syntax unsafe-variant (syntax-rules ()))
 (define-syntax signatures (syntax-rules ()))
@@ -1345,7 +1345,8 @@
 		 (quote (?signature0 ?signature ...)))))
     ))
 
-;;; --------------------------------------------------------------------
+
+;;;; core syntactic binding descriptors, typed core primitives: miscellanous primitives
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/MISC
   (list
@@ -1360,7 +1361,8 @@
 
    ))
 
-;;; --------------------------------------------------------------------
+
+;;;; core syntactic binding descriptors, typed core primitives: char primitives
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/CHARS
   (list
@@ -1391,8 +1393,8 @@
 
    ))
 
-;;; --------------------------------------------------------------------
-;;; symbols
+
+;;;; core syntactic binding descriptors, typed core primitives: symbol primitives
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
   (list
@@ -1455,8 +1457,8 @@
 
    ))
 
-;;; --------------------------------------------------------------------
-;;; keywords
+
+;;;; core syntactic binding descriptors, typed core primitives: keyword primitives
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
   (list
@@ -1483,8 +1485,76 @@
 
    ))
 
-;;; --------------------------------------------------------------------
-;;; pairs and lists
+
+;;;; core syntactic binding descriptors, typed core primitives: pointer primitives
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/POINTERS
+  (list
+
+   (declare-typed-core-prim integer->pointer
+     (signatures
+      ((<pointer>) (<exact-integer>))))
+
+   (declare-typed-core-prim pointer?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim pointer-null?
+     (signatures
+      ((<boolean>) (<pointer>))))
+
+   (declare-typed-core-prim pointer->integer
+     (signatures
+      ((<exact-integer>) (<pointer>))))
+
+   (declare-typed-core-prim pointer=?
+     (signatures
+      ((<boolean>) <list>)))
+
+   (declare-typed-core-prim pointer!=?
+     (signatures
+      ((<boolean>) <list>)))
+
+   (declare-typed-core-prim pointer<?
+     (signatures
+      ((<boolean>) <list>)))
+
+   (declare-typed-core-prim pointer>?
+     (signatures
+      ((<boolean>) <list>)))
+
+   (declare-typed-core-prim pointer<=?
+     (signatures
+      ((<boolean>) <list>)))
+
+   (declare-typed-core-prim pointer>=?
+     (signatures
+      ((<boolean>) <list>)))
+
+   (declare-typed-core-prim pointer-hash
+     (signatures
+      ((<fixnum>) (<pointer>))))
+
+   (declare-typed-core-prim pointer-add
+     (signatures
+      ((<pointer>) (<pointer> <exact-integer>))))
+
+   (declare-typed-core-prim pointer-diff
+     (signatures
+      ((<pointer>) (<pointer> <pointer>))))
+
+   (declare-typed-core-prim pointer-clone
+     (signatures
+      ((<pointer>) (<pointer>))))
+
+   (declare-typed-core-prim set-pointer-null!
+     (signatures
+      ((<void>) (<pointer>))))
+
+  ))
+
+
+;;;; core syntactic binding descriptors, typed core primitives: pairs and lists primitives
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/PAIRS
   (list
@@ -1525,8 +1595,8 @@
 
    ))
 
-;;; --------------------------------------------------------------------
-;;; built-in objects utilities
+
+;;;; core syntactic binding descriptors, typed core primitives: utilities
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
   (list
@@ -1545,13 +1615,15 @@
 
    ))
 
-;;; --------------------------------------------------------------------
+
+;;;; core syntactic binding descriptors, typed core primitives: all declarations
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES
   (append VICARE-TYPED-CORE-PRIMITIVES/MISC
 	  VICARE-TYPED-CORE-PRIMITIVES/CHARS
 	  VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
 	  VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
+	  VICARE-TYPED-CORE-PRIMITIVES/POINTERS
 	  VICARE-TYPED-CORE-PRIMITIVES/PAIRS
 	  VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
 	  ))
@@ -4274,6 +4346,7 @@
     (pointer-diff				v $language $for)
     (pointer-add				v $language $for)
     (pointer-and-offset?			v $language $for)
+    (pointer-hash				v $language $for)
     (pointer=?					v $language $for)
     (pointer!=?					v $language $for)
     (pointer<?					v $language $for)
