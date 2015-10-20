@@ -55,6 +55,17 @@
     (=> syntax=?)
     (list #'<top>))
 
+;;; --------------------------------------------------------------------
+;;; methods
+
+  (check
+      (fixnum? (.hash (unsafe-cast <top> 123)))
+    => #t)
+
+  (check
+      (fixnum? (method-call-late-binding 'hash (unsafe-cast <top> 123)))
+    => #t)
+
   #t)
 
 

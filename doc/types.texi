@@ -982,6 +982,11 @@ Return @var{obj} itself.
 Always return @true{}.
 @end defop
 
+
+@defmethod @class{top} hash @var{self}
+Apply @func{object-hash} to the instance.
+@end defmethod
+
 @c page
 @node types built-in void
 @subsection The type of the void value

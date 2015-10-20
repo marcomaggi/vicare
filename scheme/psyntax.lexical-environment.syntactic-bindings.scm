@@ -729,15 +729,16 @@
   ;;an object-type  name in the  format usable  by the expander.   Return unspecified
   ;;values.
   ;;
-  ;;We expect the core descriptor to have the format:
+  ;;The core descriptor has the format:
   ;;
   ;;   ($core-scheme-type-name . ?hard-coded-sexp)
   ;;
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
+  ;;   (?type-name ?parent-name ?constructor-name ?type-predicate-name
+  ;;     ((?method-name . ?method-implementation-procedure) ...))
   ;;
-  ;;and the usable descriptor to have the format:
+  ;;and the usable descriptor has the format:
   ;;
   ;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
   ;;

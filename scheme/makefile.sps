@@ -1311,10 +1311,6 @@
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
-(define-scheme-type <top>
-    #f
-  <top>-constructor <top>-type-predicate)
-
 (include "scheme-object-types.scm" #t)
 
 

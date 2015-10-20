@@ -2,6 +2,12 @@
 ;;
 ;; Definitions of built-in Scheme object types.
 
+(define-scheme-type <top>
+    #f
+  <top>-constructor <top>-type-predicate
+  (methods
+   (hash		object-hash)))
+
 
 ;;;; immediate object types
 

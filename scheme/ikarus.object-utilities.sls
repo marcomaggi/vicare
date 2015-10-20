@@ -332,7 +332,7 @@
     (expression-return-value-violation type-name "invalid object type" obj)))
 
 
-;;;; built-in object-type specification utilities
+;;;; built-in object-types descriptor
 
 ;;Instances of this type are used at  run-time to describe the built-in Scheme object
 ;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
@@ -342,8 +342,6 @@
   (parent
 		;False  if  this  type  has  no  parent;  otherwise  an  instance  of
 		;"scheme-type" representing the parent of this type.
-   uid
-		;A symbol representing the unique identifier for this type.
    uids-list
 		;A list of symbols representing the  hierarchy of UIDs for this type.
 		;The  first item  in the  list  is the  UID  of this  type, then  the
@@ -354,6 +352,9 @@
 		;false.
    ))
 
+
+;;;; built-in object-types descriptors: definitions
+
 (define-auxiliary-syntaxes methods)
 
 (define-syntax (define-scheme-type stx)
@@ -361,36 +362,33 @@
     ((?kwd ?type-name ?parent-name ?maker ?pred)
      #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
     ((_ ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
-     (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+     (let* ((type-name.sym	(syntax->datum #'?type-name))
+	    (parent-name.sexp	(syntax->datum #'?parent-name))
+	    (type-uid.sym	(string->symbol (string-append "vicare:scheme-type:" (symbol->string type-name.sym))))
+	    (type-uids-list	(cons type-uid.sym (if parent-name.sexp
+						       (getprop parent-name.sexp 'type-uids-list)
+						     '()))))
        (define (%datum->syntax obj)
 	 (datum->syntax #'?type-name obj))
-       (define (%mk-btd-name type.id)
-	 (%datum->syntax (string->symbol (string-append (symbol->string (syntax->datum type.id))
-							"-type-descriptor"))))
+       (define (%mk-btd-name type.sym)
+	 (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
+       (putprop type-name.sym 'type-uids-list type-uids-list)
+       ;;BTD stands for "Built-in Type Descriptor".
        (with-syntax
-	   ((BTD-NAME		(%mk-btd-name #'?type-name))
-	    (PARENT-NAME	(%mk-btd-name #'?parent-name))
-	    (UID		(%datum->syntax (string->symbol (string-append "vicare:scheme-type:" type-name.str))))
-	    (RETRIEVER	(if (null? (syntax->datum '((?method-name ?method-implementation-procedure) ...)))
-			    #f
-			  #'(lambda (btd method-name.sym)
-			      (case method-name.sym
-				((?method-name) ?method-implementation-procedure)
-				...
-				(else #f))))))
+	   ((BTD-NAME		(%mk-btd-name type-name.sym))
+	    (PARENT-NAME	(and parent-name.sexp
+				     (%mk-btd-name parent-name.sexp)))
+	    (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
+	    (RETRIEVER		(if (null? (syntax->datum #'((?method-name ?method-implementation-procedure) ...)))
+				    #f
+				  #'(lambda (btd method-name.sym)
+				      (case method-name.sym
+					((?method-name) ?method-implementation-procedure)
+					...
+					(else #f))))))
 	 #'(define BTD-NAME
-	     (make-scheme-type PARENT-NAME (quote UID)
-			       (%build-scheme-type-uids-list (quote UID) PARENT-NAME)
-			       RETRIEVER))
-	 )))
+	     (make-scheme-type PARENT-NAME TYPE-UIDS-LIST RETRIEVER)))))
     ))
-
-(define (%build-scheme-type-uids-list this-uid parent-btd)
-  (cons this-uid
-	(if parent-btd
-	    (%build-scheme-type-uids-list (scheme-type-uid    parent-btd)
-					  (scheme-type-parent parent-btd))
-	  '())))
 
 ;;; --------------------------------------------------------------------
 ;;; type helpers
@@ -412,9 +410,6 @@
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors
-
-(define-constant <top>-type-descriptor
-  (make-scheme-type #f 'vicare:scheme-type:<top> '() #f))
 
 (include "scheme-object-types.scm" #t)
 
