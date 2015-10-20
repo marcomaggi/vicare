@@ -396,13 +396,6 @@ and make it become the new:
 
     $(top_srcdir)/boot/vicare.boot.8.prebuilt
 
-  When building the 64-bit image, the file:
-
-    $(builddir)/ikarus.config.ss
-
-is filled with values that are invalid on a 32-bit system, so we have to
-remove it to return to building 32-bit images.
-
 
 E. Automatically building dependencies
 --------------------------------------

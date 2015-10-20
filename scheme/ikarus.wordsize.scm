@@ -1,12 +1,12 @@
 ;; ikarus.wordsize.scm --
 ;;
+;;
 
 (module (wordsize
 	 boot.case-word-size
 	 fixnum-width
 	 greatest-fixnum
-	 least-fixnum
-	 )
+	 least-fixnum)
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
@@ -49,3 +49,6 @@
   #| end of module |# )
 
 ;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; End:

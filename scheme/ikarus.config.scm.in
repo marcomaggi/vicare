@@ -1,0 +1,35 @@
+;; ikarus.config.scm --
+;;
+;; Boot image configuration values.
+
+(define vicare-version "@PACKAGE_VERSION@")
+(define vicare-lib-dir "@libdir@/@PACKAGE@")
+(define scheme-lib-dir "@libdir@/scheme/r6rs")
+(define (host-info) "@target@")
+(define target-os-uid (quote @VICARE_TARGET_OS_UID@))
+(module (wordsize)
+  (define-syntax make-wordsize
+    (lambda (stx)
+      (import (only (vicare) getenv))
+      (string->number (getenv "VICARE_WORDSIZE"))))
+  (define wordsize (make-wordsize)))
+(define platform-endianness (quote @VICARE_PLATFORM_ENDIANNESS@))
+(define arguments-validation #@VICARE_ARGUMENTS_VALIDATION@)
+(define bootfile "@libdir@/@PACKAGE@/vicare.boot")
+(define BOOT-IMAGE-MAJOR-VERSION @BOOT_IMAGE_MAJOR_VERSION@)
+(define BOOT-IMAGE-MINOR-VERSION @BOOT_IMAGE_MINOR_VERSION@)
+(define BOOT-IMAGE-YEAR-VERSION  @BOOT_IMAGE_YEAR_VERSION@)
+(define BOOT-IMAGE-MONTH-VERSION @BOOT_IMAGE_MONTH_VERSION@)
+(define BOOT-IMAGE-DAY-VERSION   @BOOT_IMAGE_DAY_VERSION@)
+(define VICARE_BUILT_WITH_SRFI_ENABLED     #@VICARE_BUILT_WITH_SRFI_ENABLED@)
+(define VICARE_BUILT_WITH_ICONV_ENABLED    #@VICARE_BUILT_WITH_ICONV_ENABLED@)
+(define VICARE_BUILT_WITH_FFI_ENABLED      #@VICARE_BUILT_WITH_FFI_ENABLED@)
+(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #@VICARE_BUILT_WITH_NAUSICAA_ENABLED@)
+(define VICARE_BUILT_WITH_POSIX_ENABLED    #@VICARE_BUILT_WITH_POSIX_ENABLED@)
+(define VICARE_BUILT_WITH_GLIBC_ENABLED    #@VICARE_BUILT_WITH_GLIBC_ENABLED@)
+(define VICARE_BUILT_WITH_LINUX_ENABLED    #@VICARE_BUILT_WITH_LINUX_ENABLED@)
+
+;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; End:

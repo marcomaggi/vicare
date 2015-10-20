@@ -497,6 +497,7 @@ EXTRA_DIST += \
 #### compiling the boot image: build rules
 
 VICARE_NEW_BOOT		= vicare.boot
+EXTRA_DIST		+= scheme/scheme-object-types.scm
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
@@ -507,6 +508,7 @@ bootexec_DATA		= $(VICARE_NEW_BOOT)
 BOOT_SEARCH_PATH	= $(srcdir)/scheme:$(builddir)/scheme:$(slsdir):$(fasldir):$(builddir)
 VICARE_PREBUILT_BOOT	= $(srcdir)/boot/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 VICARE_BOOT_ENV		= \
+	VICARE_WORDSIZE=$(VICARE_SIZE_OF_VOIDP);	export VICARE_WORDSIZE;		\
 	VICARE_SRC_DIR=$(srcdir)/scheme;		export VICARE_SRC_DIR;		\
 	VICARE_BUILD_DIR=$(builddir)/scheme;		export VICARE_BUILD_DIR;	\
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
@@ -514,11 +516,11 @@ VICARE_BOOT_ENV		= \
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 			  --no-rcfile --library-locator source --r6rs-script
 
-CLEANFILES		+= ikarus.config.scm $(VICARE_NEW_BOOT)
+CLEANFILES		+= $(VICARE_NEW_BOOT)
 
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
-	ikarus.config.scm				\
+	scheme/ikarus.config.scm			\
 	scheme/makefile.sps				\
 	scheme/scheme-object-types.scm			\
 	\
@@ -531,31 +533,6 @@ VICARE_BOOT_PREREQUISITES	= \
 	lib/vicare/unsafe/operations.vicare.sls
 
 ## --------------------------------------------------------------------
-
-# Strictly speaking: this  target should depend on  Makfile, but doing
-# it that way causes a lot of unnecessary rebuilds.
-ikarus.config.scm: Makefile
-	echo '(define vicare-version "$(PACKAGE_VERSION)")'			>$@
-	echo '(define vicare-lib-dir "$(pkglibdir)")'				>>$@
-	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'			>>$@
-	echo '(define (host-info) "$(target)")'					>>$@
-	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))'		>>$@
-	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))'			>>$@
-	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
-	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'	>>$@
-	echo '(define bootfile "$(pkglibdir)/vicare.boot")'			>>$@
-	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'	>>$@
-	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'	>>$@
-	echo '(define BOOT-IMAGE-YEAR-VERSION $(BOOT_IMAGE_YEAR_VERSION))'	>>$@
-	echo '(define BOOT-IMAGE-MONTH-VERSION $(BOOT_IMAGE_MONTH_VERSION))'	>>$@
-	echo '(define BOOT-IMAGE-DAY-VERSION $(BOOT_IMAGE_DAY_VERSION))'	>>$@
-	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))'	      >>$@
-	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))'	      >>$@
-	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))'	      >>$@
-	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))'     >>$@
-	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))'	      >>$@
-	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))'	      >>$@
-	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))'	      >>$@
 
 # To  create the  new boot  image we  use a  prebuilt boot  image; the
 # environment variable names are  hardcoded in the prebuilt boot image
@@ -578,54 +555,14 @@ $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) $(VICARE_BOOT_PREREQUISITES)
 .PHONY: boot-image-32-bit boot-image-64-bit
 
 boot-image-32-bit: vicare
-	echo '(define vicare-version "$(PACKAGE_VERSION)")'				>ikarus.config.scm
-	echo '(define vicare-lib-dir "$(pkglibdir)")'					>>ikarus.config.scm
-	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'				>>ikarus.config.scm
-	echo '(define (host-info) "$(target)")'						>>ikarus.config.scm
-	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))'			>>ikarus.config.scm
-	echo '(define wordsize 4)'							>>ikarus.config.scm
-	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
-	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
-	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-YEAR-VERSION $(BOOT_IMAGE_YEAR_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-MONTH-VERSION $(BOOT_IMAGE_MONTH_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-DAY-VERSION $(BOOT_IMAGE_DAY_VERSION))'		>>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.scm
-	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV); VICARE_WORDSIZE=4; export VICARE_WORDSIZE; \
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
 boot-image-64-bit: vicare
-	echo '(define vicare-version "$(PACKAGE_VERSION)")'				>ikarus.config.scm
-	echo '(define vicare-lib-dir "$(pkglibdir)")'					>>ikarus.config.scm
-	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'				>>ikarus.config.scm
-	echo '(define (host-info) "$(target)")'						>>ikarus.config.scm
-	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))'			>>ikarus.config.scm
-	echo '(define wordsize 8)'							>>ikarus.config.scm
-	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
-	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
-	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-YEAR-VERSION $(BOOT_IMAGE_YEAR_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-MONTH-VERSION $(BOOT_IMAGE_MONTH_VERSION))'		>>ikarus.config.scm
-	echo '(define BOOT-IMAGE-DAY-VERSION $(BOOT_IMAGE_DAY_VERSION))'		>>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.scm
-	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.scm
-	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV); VICARE_WORDSIZE=8; export VICARE_WORDSIZE; \
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.8.prebuilt
 
@@ -651,7 +588,7 @@ boot-image-64-bit: vicare
 #
 # but keep backups of the original one!!!
 #
-try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.scm
+try-vicare-boot: $(VICARE_BOOT_SRCS) vicare
 	BUILDING_ROTATION_BOOT_IMAGE=yes; export BUILDING_ROTATION_BOOT_IMAGE;		\
 	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try	\
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
