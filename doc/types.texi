@@ -967,44 +967,44 @@ et cetera.
 @subsection The conventional parent of all the types
 
 
-@deftp {Built--in Type} <top>
+@deftp {Built--in Type} @aclass{top}
 The conventional parent of all the types.
 @end deftp
 
 
-@defop Constructor @class{top} new <top> @var{obj}
+@defop Constructor @class{top} new @aclass{top} @var{obj}
 Return @var{obj} itself.
 @end defop
 
 
-@defop {Type predicate} @class{top} is-a? @var{obj} <top>
-@defopx {Type predicate} @class{top} is-a? _ <top>
+@defop {Type predicate} @class{top} is-a? @var{obj} @aclass{top}
+@defopx {Type predicate} @class{top} is-a? _ @aclass{top}
 Always return @true{}.
 @end defop
 
 
-@defmethod @class{top} hash @var{self}
+@deftypemethod @class{top} @aclass{fixnum} hash @var{self}
 Apply @func{object-hash} to the instance.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node types built-in void
 @subsection The type of the void value
 
 
-@deftp {Built--in Type} <void>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{void}
+@deftpx {Parent Type} @aclass{top}
 The type of the void object.
 @end deftp
 
 
-@defop Constructor @class{void} new <void>
+@defop Constructor @class{void} new @aclass{void}
 Return the void object.
 @end defop
 
 
-@defop {Type predicate} @class{void} is-a? @var{obj} <void>
-@defopx {Type predicate} @class{void} is-a? _ <void>
+@defop {Type predicate} @class{void} is-a? @var{obj} @aclass{void}
+@defopx {Type predicate} @class{void} is-a? _ @aclass{void}
 The type predicate is @func{void-object?}.  Return @true{} if @var{obj}
 is void; otherwise return @false{}.
 @end defop
@@ -1014,19 +1014,19 @@ is void; otherwise return @false{}.
 @subsection Type of boolean values
 
 
-@deftp {Built--in Type} <boolean>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{boolean}
+@deftpx {Parent Type} @aclass{top}
 Type of the boolean values @true{} and @false{}.
 @end deftp
 
 
-@defop Constructor @class{boolean} new <boolean> @var{obj}
+@defop Constructor @class{boolean} new @aclass{boolean} @var{obj}
 Return @true{} if @var{obj} is true; otherwise return @false{}.
 @end defop
 
 
-@defop {Type predicate} @class{boolean} is-a? @var{obj} <boolean>
-@defopx {Type predicate} @class{boolean} is-a? _ <boolean>
+@defop {Type predicate} @class{boolean} is-a? @var{obj} @aclass{boolean}
+@defopx {Type predicate} @class{boolean} is-a? _ @aclass{boolean}
 The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @true{} or @false{}; otherwise return @false{}.
 @end defop
@@ -1036,129 +1036,145 @@ The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @subsection Type of character values
 
 
-@deftp {Built--in Type} <char>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{char}
+@deftpx {Parent Type} @aclass{top}
 Type of character values.
 @end deftp
 
 
-@defop Constructor @class{char} new <char> @var{obj}
+@defop Constructor @class{char} new @aclass{char} @var{obj}
 The constructor is @func{integer->char}.
 @end defop
 
 
-@defop {Type predicate} @class{char} is-a? @var{obj} <char>
-@defopx {Type predicate} @class{char} is-a? _ <char>
+@defop {Type predicate} @class{char} is-a? @var{obj} @aclass{char}
+@defopx {Type predicate} @class{char} is-a? _ @aclass{char}
 The type predicate is @func{char?}.  Return @true{} if @var{obj} is a
 character object; otherwise return @false{}.
 @end defop
 
 
-@defmethod @class{char} string @var{self}
+@deftypemethod @class{char} @aclass{string} string @var{self}
 Apply @func{string} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{char} hash @var{self}
+@deftypemethod @class{char} @aclass{fixnum} hash @var{self}
 Apply @func{char-hash} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{char}	integer	@var{self}
+@deftypemethod @class{char} @aclass{fixnum} integer @var{self}
 Apply @func{char->integer} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{char} fixnum @var{self}
+@deftypemethod @class{char} @aclass{fixnum} fixnum @var{self}
 Apply @func{char->fixnum} to the instance.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node types built-in symbols
 @subsection Type of symbol values
 
 
-@deftp {Built--in Type} <symbol>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{symbol}
+@deftpx {Parent Type} @aclass{top}
 Type of symbol values (including gensyms).
 @end deftp
 
 
-@defop Constructor @class{symbol} new <symbol> @var{string}
+@defop Constructor @class{symbol} new @aclass{symbol} @var{string}
 The constructor is @func{string->symbol}.
 @end defop
 
 
-@defop {Type predicate} @class{symbol} is-a? @var{obj} <symbol>
-@defopx {Type predicate} @class{symbol} is-a? _ <symbol>
+@defop {Type predicate} @class{symbol} is-a? @var{obj} @aclass{symbol}
+@defopx {Type predicate} @class{symbol} is-a? _ @aclass{symbol}
 The type predicate is @func{symbol?}.  Return @true{} if @var{obj} is a
-symbolacter object; otherwise return @false{}.
+symbol object; otherwise return @false{}.
 @end defop
 
 
-@defmethod @class{symbol} string @var{self}
+@deftypemethod @class{symbol} @aclass{string} string @var{self}
 Apply @func{symbol->string} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} hash @var{self}
+@deftypemethod @class{symbol} @aclass{fixnum} hash @var{self}
 Apply @func{symbol-hash} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} bound? @var{self}
+@deftypemethod @class{symbol} @aclass{boolean} bound? @var{self}
 Apply @func{symbol-bound?} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} value @var{self}
-@defmethodx @class{symbol} value @var{self} @var{new-value}
+@deftypemethod @class{symbol} @aclass{top} value @var{self}
+@deftypemethodx @class{symbol} @aclass{void} value @var{self} @var{new-value}
 When called with no arguments: apply @func{symbol-value} to the instance
 to retrieve the current value in the @code{value} slot.  When called
 with one argument: apply @func{set-symbol-value!} to the instance to
 store a new value @code{value} slot.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} putprop @var{self} @var{key} @var{value}
+@deftypemethod @class{symbol} @aclass{void} putprop @var{self} (@var{key} @aclass{symbol}) @var{value}
 Apply @func{putprop} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} getprop @var{self} @var{key}
+@deftypemethod @class{symbol} @aclass{top} getprop @var{self} (@var{key} @aclass{symbol})
 Apply @func{getprop} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} remprop @var{self} @var{key}
+@deftypemethod @class{symbol} @aclass{void} remprop @var{self} (@var{key} @aclass{symbol})
 Apply @func{remprop} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{symbol} property-list @var{self}
+@deftypemethod @class{symbol} @aclass{list} property-list @var{self}
 Apply @func{property-list} to the instance.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node types built-in keywords
 @subsection Type of keyword values
 
 
-@deftp {Built--in Type} <keyword>
-@deftpx {Parent Type} <top>
-Type of keyword values.  The constructor is @func{symbol->keyword}.  The
-type predicate is @func{keyword?}.
+@deftp {Built--in Type} @aclass{keyword}
+@deftpx {Parent Type} @aclass{top}
+Type of keyword values.
 @end deftp
 
 
-@defmethod @class{keyword} symbol
+@defop Constructor @class{keyword} new @aclass{keyword} @var{symbol}
+The constructor is @func{symbol->keyword}.
+@end defop
+
+
+@defop {Type predicate} @class{keyword} is-a? @var{obj} @aclass{keyword}
+@defopx {Type predicate} @class{keyword} is-a? _ @aclass{keyword}
+The type predicate is @func{keyword?}.  Return @true{} if @var{obj} is a
+keyword object; otherwise return @false{}.
+@end defop
+
+
+@deftypemethod @class{keyword} @aclass{symbol} symbol @var{self}
 Apply @func{keyword->symbol} to the instance.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @class{keyword} string
+@deftypemethod @class{keyword} @aclass{string} string @var{self}
 Apply @func{keyword->string} to the instance.
-@end defmethod
+@end deftypemethod
+
+
+@deftypemethod @class{keyword} @aclass{fixnum} hash @var{self}
+Apply @func{keyword-hash} to the instance.
+@end deftypemethod
 
 @c page
 @node types built-in pointers
