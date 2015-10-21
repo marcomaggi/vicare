@@ -349,7 +349,7 @@
     ;;       (typed-procedure-variable.unsafe-variant-set! #'add #'~add)))
     ;;
     (receive (standard-formals.stx clause-signature)
-	(syntax-object.parse-clambda-clause-signature (bless prototype.sexp) input-form.stx)
+	(syntax-object.parse-typed-clambda-clause-formals (bless prototype.sexp) input-form.stx)
       (cond ((clambda-clause-signature.untyped? clause-signature)
 	     ;;If the  signature only  specifies the number  of formals  and retvals:
 	     ;;generate a singlae function definition with type checking.
@@ -1322,10 +1322,10 @@
 
 ;;;; non-core macro: WITH-SYNTAX
 
-(define (with-syntax-macro expr-stx)
-  ;;Transformer function used to expand R6RS WITH-SYNTAX macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define (with-syntax-macro input-form.stx)
+  ;;Transformer function  used to expand  R6RS WITH-SYNTAX macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
   ;;A WITH-SYNTAX form:
   ;;
@@ -1345,7 +1345,7 @@
   ;;     (_
   ;;      (assertion-violation ---)))
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ((?pat* ?expr*) ...) ?body ?body* ...)
      (let ((idn* (let recur ((pat* ?pat*))
 		   (if (null? pat*)
@@ -1355,7 +1355,7 @@
 		       (append idn* (recur (cdr pat*))))))))
        (let ((formals (map car idn*)))
 	 (unless (syntax-object.standard-formals? formals)
-	   (error-invalid-formals-syntax expr-stx formals)))
+	   (error-invalid-formals-syntax input-form.stx formals)))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
 	  `(let ,(map list t* ?expr*)
@@ -1455,13 +1455,13 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (if (option.strict-r6rs)
-	 (let ((lhs* (syntax-object.parse-list-of-standard-bindings ?lhs* input-form.stx)))
+	 (let ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx)))
 	   (bless
 	    `((letrec ((,?recur (trace-lambda ,?recur ,lhs* ,?body . ,?body*)))
 		,?recur)
 	      . ?rhs*)))
        (receive (lhs* tag*)
-	   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
+	   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx)
 	 (bless
 	  `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
 					    ,?body . ,?body*)))
@@ -1513,7 +1513,7 @@
 		 (values (reverse lhs*.standard)
 			 (reverse lhs*.signature))
 	       (receive (lhs.standard lhs.signature)
-		   (syntax-object.parse-formals-signature (car lhs*) input-form.stx)
+		   (syntax-object.parse-typed-formals (car lhs*) input-form.stx)
 		 (loop (cdr lhs*)
 		       (cons lhs.standard  lhs*.standard)
 		       (cons lhs.signature lhs*.signature)))))
@@ -2401,7 +2401,7 @@
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (syntax-object.parse-clambda-clause-signature ?formal* expr-stx)
+       (syntax-object.parse-typed-clambda-clause-formals ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(internal-lambda (unsafe) ,?formal*
@@ -2410,7 +2410,7 @@
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (syntax-object.parse-clambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
+       (syntax-object.parse-typed-clambda-clause-formals (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(internal-lambda (unsafe) (,@?formal* . ,?rest-formal)
@@ -2427,7 +2427,7 @@
       ((_ (?who ?formal* ...) ?body ?body* ...)
        (begin
 	 ;;We parse the formals for validation purposes.
-	 (syntax-object.parse-clambda-clause-signature ?formal* expr-stx)
+	 (syntax-object.parse-typed-clambda-clause-formals ?formal* expr-stx)
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
@@ -2437,7 +2437,7 @@
       ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
        (begin
 	 ;;We parse the formals for validation purposes.
-	 (syntax-object.parse-clambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
+	 (syntax-object.parse-typed-clambda-clause-formals (append ?formal* ?rest-formal) expr-stx)
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
@@ -4238,7 +4238,7 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
      (receive (standard-formals signature.stx)
-	 (syntax-object.parse-formals-signature ?formals expr-stx)
+	 (syntax-object.parse-typed-formals ?formals expr-stx)
        (syntax-match standard-formals ()
 	 ((?id* ... ?id0)
 	  (let ((TMP* (generate-temporaries ?id*)))
@@ -4294,7 +4294,7 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
      (receive (standard-formals signature.stx)
-	 (syntax-object.parse-formals-signature ?formals expr-stx)
+	 (syntax-object.parse-typed-formals ?formals expr-stx)
        (syntax-match standard-formals ()
 	 ((?id* ... ?id0)
 	  (let ((SHADOW* (generate-temporaries ?id*))
@@ -4374,7 +4374,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature.stx)
-	 (syntax-object.parse-formals-signature ?formals input-form.stx)
+	 (syntax-object.parse-typed-formals ?formals input-form.stx)
        (let ((single-return-value? (and (list? standard-formals)
 					(= 1 (length standard-formals)))))
 	 (if single-return-value?
@@ -4394,7 +4394,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature.stx)
-	 (syntax-object.parse-formals-signature ?formals input-form.stx)
+	 (syntax-object.parse-typed-formals ?formals input-form.stx)
        (receive (rv-form single-return-value?)
 	   (cond ((list? standard-formals)
 		  (if (= 1 (length standard-formals))
@@ -4517,7 +4517,7 @@
   (syntax-match input-form.stx ()
     ((_ (?name ?arg* ... . ?rest) ?body0 ?body* ...)
      (and (identifier? ?name)
-	  (syntax-object.clambda-clause-signature? (append ?arg* ?rest)))
+	  (syntax-object.typed-clambda-clause-formals? (append ?arg* ?rest)))
      (let* ((TMP*	(generate-temporaries ?arg*))
 	    (rest.datum	(syntax->datum ?rest))
 	    (REST	(if (null? rest.datum) '() (gensym)))

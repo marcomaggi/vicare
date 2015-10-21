@@ -70,7 +70,7 @@
 
 (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
   (define-values (field*.id field*.tag)
-    (syntax-object.parse-list-of-typed-bindings field*.stx))
+    (syntax-object.parse-typed-list-of-bindings field*.stx))
   (unless (all-identifiers? field*.id)
     (syntax-violation __module_who__
       "expected list of identifiers as fields speciication"

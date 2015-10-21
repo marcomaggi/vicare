@@ -203,7 +203,7 @@
     (define-values (standard-formals.stx clause-signature)
       (if (option.strict-r6rs)
 	  (syntax-object.parse-standard-clambda-clause-formals formals.stx input-form.stx)
-	(syntax-object.parse-clambda-clause-signature formals.stx input-form.stx)))
+	(syntax-object.parse-typed-clambda-clause-formals formals.stx input-form.stx)))
     (define argvals-signature.tags
       (clambda-clause-signature.argvals.tags clause-signature))
     (define retvals-signature.tags

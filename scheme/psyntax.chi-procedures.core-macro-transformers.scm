@@ -302,7 +302,7 @@
      (receive (lhs*.lex rhs*.psi rib lexenv.run)
 	 (if (option.strict-r6rs)
 	     ;;Prepare standard, untyped syntactic bindings.
-	     (let* ((lhs*.id	(syntax-object.parse-list-of-standard-bindings ?lhs* input-form.stx))
+	     (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
 		    (rhs*.psi	(map (lambda (rhs.stx)
 				       (chi-expr rhs.stx lexenv.run lexenv.expand))
 				  ?rhs*))
@@ -314,7 +314,7 @@
 	   ;;Prepare extended, possibly typed syntactic bindings.
 	   (let*-values
 	       (((lhs*.id lhs*.tag)
-		 (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
+		 (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
 		((rhs*.psi)
 		 (map (lambda (rhs.stx lhs.tag)
 			;;We  insert  a  signature  validation  even  if  LHS.TAG  is
@@ -394,7 +394,7 @@
        (receive (lhs*.lex rhs*.psi rib lexenv.run)
 	   (if (option.strict-r6rs)
 	       ;;Prepare standard, untyped syntactic bindings.
-	       (let* ((lhs*.id		(syntax-object.parse-list-of-standard-bindings ?lhs* input-form.stx))
+	       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
 		      (lhs*.lab		(map generate-label-gensym   lhs*.id))
 		      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
 		      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
@@ -409,7 +409,7 @@
 	     ;;Prepare extended, possibly typed syntactic bindings.
 	     (let*-values
 		 (((lhs*.id lhs*.tag)
-		   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
+		   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
 		  ;;Prepare the typed and untyped lexical variables.
 		  ((rib lexenv.run lhs*.lex)
 		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run))

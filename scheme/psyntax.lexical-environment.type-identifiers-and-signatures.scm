@@ -33,18 +33,19 @@
 
 ;;; --------------------------------------------------------------------
 
-   syntax-object.standard-formals?
+   syntax-object.typed-argument?			syntax-object.parse-typed-argument
 
    syntax-object.type-signature?			syntax-object.type-signature.single-identifier?
    syntax-object.type-signature.fully-unspecified?	syntax-object.type-signature.partially-untyped?
    syntax-object.type-signature.untyped?
    syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
 
-   syntax-object.typed-argument?			syntax-object.parse-typed-argument
-   syntax-object.parse-list-of-typed-bindings		syntax-object.parse-formals-signature
-   syntax-object.parse-standard-formals			syntax-object.parse-list-of-standard-bindings
-   syntax-object.clambda-clause-signature?		syntax-object.parse-clambda-clause-signature
-   syntax-object.parse-standard-clambda-clause-formals
+   syntax-object.parse-standard-formals			syntax-object.parse-typed-formals
+   syntax-object.parse-standard-list-of-bindings	syntax-object.parse-typed-list-of-bindings
+   syntax-object.parse-standard-clambda-clause-formals	syntax-object.parse-typed-clambda-clause-formals
+
+   syntax-object.standard-formals?			syntax-object.typed-formals?
+   syntax-object.standard-clambda-clause-formals?	syntax-object.typed-clambda-clause-formals?
 
 ;;; --------------------------------------------------------------------
 ;;; signatures internal representation
@@ -415,27 +416,7 @@
 	       (else			(top-tag-id))))))
 
 
-;;;; formals, retvals, signature syntaxes predicates
-
-(define (syntax-object.standard-formals? stx)
-  ;;Return  true if  STX is  a syntax  object representing  R6RS standard  LAMBDA and
-  ;;LET-VALUES formals; otherwise return false.  The return value is true if STX is a
-  ;;proper or  improper list of  identifiers, with  null and a  standalone identifier
-  ;;being acceptable.  Examples:
-  ;;
-  ;;   (standard-formals-syntax #'args)		=> #t
-  ;;   (standard-formals-syntax #'())		=> #t
-  ;;   (standard-formals-syntax #'(a b))	=> #t
-  ;;   (standard-formals-syntax #'(a b . rest))	=> #t
-  ;;
-  (syntax-match stx ()
-    (() #t)
-    ((?id . ?rest)
-     (identifier? ?id)
-     (syntax-object.standard-formals? ?rest))
-    (?rest
-     (identifier? ?rest))
-    ))
+;;;; type signature syntaxes predicates
 
 (case-define syntax-object.type-signature?
   ((stx)
@@ -958,9 +939,9 @@
 
 ;;;; standard binding parsing: proper lists of bindings left-hand sides
 
-(case-define* syntax-object.parse-list-of-standard-bindings
+(case-define* syntax-object.parse-standard-list-of-bindings
   ((binding*)
-   (syntax-object.parse-list-of-standard-bindings binding* #f))
+   (syntax-object.parse-standard-list-of-bindings binding* #f))
   ((binding* input-form.stx)
    ;;Parser function for  lists of bindings used  to parse bindings from  LET, DO and
    ;;similar syntaxes.  For example, when expanding the syntax:
@@ -1001,9 +982,9 @@
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
-(case-define* syntax-object.parse-list-of-typed-bindings
+(case-define* syntax-object.parse-typed-list-of-bindings
   ((binding*)
-   (syntax-object.parse-list-of-typed-bindings binding* #f))
+   (syntax-object.parse-typed-list-of-bindings binding* #f))
   ((binding* input-form.stx)
    ;;Parser function for  lists of bindings used  to parse bindings from  LET, DO and
    ;;similar syntaxes.  For example, when expanding the syntax:
@@ -1091,21 +1072,42 @@
     (_
      (%synner "invalid standard formals specification" formals.stx))))
 
+(define (syntax-object.standard-formals? stx)
+  ;;Return  true if  STX is  a syntax  object representing  R6RS standard  LAMBDA and
+  ;;LET-VALUES formals; otherwise return false.  The return value is true if STX is a
+  ;;proper or  improper list of  identifiers, with  null and a  standalone identifier
+  ;;being acceptable.  Examples:
+  ;;
+  ;;   (standard-formals-syntax #'args)		=> #t
+  ;;   (standard-formals-syntax #'())		=> #t
+  ;;   (standard-formals-syntax #'(a b))	=> #t
+  ;;   (standard-formals-syntax #'(a b . rest))	=> #t
+  ;;
+  (syntax-match stx ()
+    (() #t)
+    ((?id . ?rest)
+     (identifier? ?id)
+     (syntax-object.standard-formals? ?rest))
+    (?rest
+     (identifier? ?rest))
+    ))
+
 
 ;;;; tagged binding parsing: typed LAMBDA formals
 
-(module (syntax-object.parse-formals-signature)
-  ;;Given a  syntax object representing  LAMBDA or LET-VALUES formals:  split formals
-  ;;from type identifiers.  Test for duplicate bindings.  Return 2 values:
+(module (syntax-object.parse-typed-formals)
+  ;;Given a syntax  object representing possibly typed LAMBDA  or LET-VALUES formals:
+  ;;split  formals from  type identifiers.   Test for  duplicate bindings.   Return 2
+  ;;values:
   ;;
   ;;1. A proper or improper list of identifiers representing the standard formals.
   ;;
   ;;2.   A   syntax   object   representing   the   type   signature   according   to
   ;;SYNTAX-OBJECT.TYPE-SIGNATURE?.
   ;;
-  (define-module-who syntax-object.parse-formals-signature)
+  (define-module-who syntax-object.parse-typed-formals)
 
-  (define (syntax-object.parse-formals-signature formals.stx input-form.stx)
+  (define (syntax-object.parse-typed-formals formals.stx input-form.stx)
     (define (%synner message subform)
       (syntax-violation __module_who__ message input-form.stx subform))
     (syntax-match formals.stx (brace)
@@ -1213,6 +1215,16 @@
 
   #| end of module |# )
 
+(define (syntax-object.typed-formals? formals.stx)
+  ;;Return true  if FORMALS.STX is a  syntax object representing valid  typed formals
+  ;;for a LAMBDA or LET-VALUES syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (standard-formals.stx formals-signature.stx)
+	(syntax-object.parse-typed-formals formals.stx #f)
+      #t)))
+
 
 ;;;; standard formals parsing
 
@@ -1229,10 +1241,20 @@
     (values formals.stx (make-clambda-clause-signature (make-type-signature/fully-unspecified)
 						       (make-type-signature signature.stx)))))
 
+(define* (syntax-object.standard-clambda-clause-formals? formals.stx)
+  ;;Return true if FORMALS.STX is a syntax object representing valid standard formals
+  ;;for a LAMBDA or LET-VALUES syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (standard-formals.stx formals-signature.stx)
+	(syntax-object.parse-standard-clambda-clause-formals formals.stx #f)
+      #t)))
+
 
 ;;;; tagged binding parsing: callable signature
 
-(define* (syntax-object.parse-clambda-clause-signature callable-signature.stx input-form.stx)
+(define* (syntax-object.parse-typed-clambda-clause-formals callable-signature.stx input-form.stx)
   ;;Given a  syntax object  representing a  typed callable  spec: split  the standard
   ;;formals  from the  type  signature; do  test for  duplicate  bindings.  Return  2
   ;;values:
@@ -1261,26 +1283,26 @@
        (unless (syntax-object.type-signature? retvals-signature.stx)
 	 (%synner "invalid syntax for return values' signature" retvals-signature.stx))
        (receive (standard-formals.stx formals-signature.stx)
-	   (syntax-object.parse-formals-signature ?formals input-form.stx)
+	   (syntax-object.parse-typed-formals ?formals input-form.stx)
 	 (values standard-formals.stx
 		 (make-clambda-clause-signature (make-type-signature retvals-signature.stx)
 						(make-type-signature formals-signature.stx))))))
     ;;Without return values tagging.
     (?formals
      (receive (standard-formals.stx formals-signature.stx)
-	 (syntax-object.parse-formals-signature ?formals input-form.stx)
+	 (syntax-object.parse-typed-formals ?formals input-form.stx)
        (values standard-formals.stx
 	       (make-clambda-clause-signature (make-type-signature/fully-unspecified)
 					      (make-type-signature formals-signature.stx)))))))
 
-(define* (syntax-object.clambda-clause-signature? formals-stx)
-  ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
+(define* (syntax-object.typed-clambda-clause-formals? formals.stx)
+  ;;Return true if  FORMALS.STX is a syntax object representing  valid tagged formals
   ;;for a LAMBDA syntax.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (standard-formals signature-tags)
-	(syntax-object.parse-clambda-clause-signature formals-stx #f)
+	(syntax-object.parse-typed-clambda-clause-formals formals.stx #f)
       #t)))
 
 
