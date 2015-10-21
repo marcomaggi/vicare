@@ -738,7 +738,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-collect.sps					\
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-conditions-core.sps				\
-	tests/test-vicare-conditions-typed.sps				\
 	tests/test-vicare-convert-bytevectors.sps			\
 	tests/test-vicare-coroutines.sps				\
 	tests/test-vicare-enumerations.sps				\
@@ -816,12 +815,10 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-reader.sps					\
 	tests/test-vicare-records-procedural.sps			\
 	tests/test-vicare-records-syntactic.sps				\
-	tests/test-vicare-records-typed.sps				\
 	tests/test-vicare-round.sps					\
 	tests/test-vicare-string-to-number.sps				\
 	tests/test-vicare-strings.sps					\
 	tests/test-vicare-structs-core.sps				\
-	tests/test-vicare-structs-typed.sps				\
 	tests/test-vicare-symbols.sps					\
 	tests/test-vicare-syntactic-extensions.sps			\
 	tests/test-vicare-syntax-utilities.sps				\
@@ -840,6 +837,9 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-transcoders.sps			\
 	tests/test-types-objects-pairs.sps				\
 	tests/test-types-objects-ports.sps				\
+	tests/test-types-structs.sps					\
+	tests/test-types-records.sps					\
+	tests/test-types-conditions.sps					\
 	\
 	tests/test-issue-001-equal-hash.sps				\
 	tests/test-issue-003.sps					\
