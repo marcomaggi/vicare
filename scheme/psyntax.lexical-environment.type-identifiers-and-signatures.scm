@@ -41,10 +41,8 @@
    syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
 
    syntax-object.typed-argument?			syntax-object.parse-typed-argument
-
-   syntax-object.parse-list-of-typed-bindings
-   syntax-object.parse-formals-signature
-
+   syntax-object.parse-list-of-typed-bindings		syntax-object.parse-formals-signature
+   syntax-object.parse-standard-formals			syntax-object.parse-list-of-standard-bindings
    syntax-object.clambda-clause-signature?		syntax-object.parse-clambda-clause-signature
 
 ;;; --------------------------------------------------------------------
@@ -957,6 +955,49 @@
      (values ?id (top-tag-id)))))
 
 
+;;;; standard binding parsing: proper lists of bindings left-hand sides
+
+(case-define* syntax-object.parse-list-of-standard-bindings
+  ((binding*)
+   (syntax-object.parse-list-of-standard-bindings binding* #f))
+  ((binding* input-form.stx)
+   ;;Parser function for  lists of bindings used  to parse bindings from  LET, DO and
+   ;;similar syntaxes.  For example, when expanding the syntax:
+   ;;
+   ;;   (let ((a 1)
+   ;;         (b "b")
+   ;;         (c #t))
+   ;;     . ?body)
+   ;;
+   ;;the argument BINDING* is:
+   ;;
+   ;;   (#'a #'b #'c)
+   ;;
+   ;;and the return value is:
+   ;;
+   ;;   (#'a #'b #'c)
+   ;;
+   ;;Assume  BINDING* is  a  syntax object  representing a  proper  list of  standard
+   ;;binding identifiers; parse  the list and a list of  identifiers representing the
+   ;;binding identifiers.  The identifiers must be distinct.
+   ;;
+   (define (%error message)
+     (syntax-violation __who__ message (or input-form.stx binding*) (if input-form.stx binding* #f)))
+   (define lexenv
+     (current-inferior-lexenv))
+   (receive-and-return (id*)
+       (let recur ((bind* binding*))
+	 (syntax-match bind* (brace)
+	   (() '())
+	   ((?id . ?other-id*)
+	    (identifier? ?id)
+	    (cons ?id (recur ?other-id*)))
+	   (_
+	    (%error "invalid standard syntactic bindings syntax"))))
+     (unless (distinct-bound-ids? id*)
+       (%error "duplicate identifiers in syntactic bindings specification")))))
+
+
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
 (case-define* syntax-object.parse-list-of-typed-bindings
@@ -1011,7 +1052,42 @@
        (%error "duplicate identifiers in bindings specification")))))
 
 
-;;;; tagged binding parsing: let-values formals
+;;;; standard binding parsing: standard LAMBDA formals
+
+(define* (syntax-object.parse-standard-formals formals.stx input-form.stx)
+  ;;Parse the given syntax object and raise an exception if the syntax does not match
+  ;;athe standard LAMBDA or LET-VALUES  formals.  Test for duplicate bindings.  Return
+  ;;a proper or improper list of identifiers representing the standard formals.
+  ;;
+  (define (%synner message subform)
+    (syntax-violation __who__ message input-form.stx subform))
+  (define (%validate-standard-formals standard-formals.stx %synner)
+    (cond ((duplicate-bound-formals? standard-formals.stx)
+	   => (lambda (duplicate-id)
+		(%synner "duplicate identifiers in formals specification" duplicate-id)))))
+  (syntax-match formals.stx (brace)
+    (?args-id
+     (identifier? ?args-id)
+     ?args-id)
+
+    ((?arg* ...)
+     (for-all identifier? ?arg*)
+     (begin
+       (%validate-standard-formals ?arg* %synner)
+       ?arg*))
+
+    ((?arg* ... . ?rest-id)
+     (and (for-all identifier? ?arg*)
+	  (identifier? ?rest-id))
+     (begin
+       (%validate-standard-formals (append ?arg* ?rest-id) %synner)
+       formals.stx))
+
+    (_
+     (%synner "invalid standard formals specification" formals.stx))))
+
+
+;;;; tagged binding parsing: typed LAMBDA formals
 
 (module (syntax-object.parse-formals-signature)
   ;;Given a  syntax object representing  LAMBDA or LET-VALUES formals:  split formals

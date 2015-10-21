@@ -270,39 +270,59 @@
     ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
     ;;object that must be further expanded.
     ;;
-    (syntax-match input-form.stx (brace)
-      ;;Tagged return values and possibly tagged formals.
-      ((_ ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) . ?body)
-       (%process-function-definition input-form.stx
-				     (lambda (who)
-				       `((brace ,who ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
-				     ?who `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls) ?body))
+    (if (option.strict-r6rs)
+	(syntax-match input-form.stx (brace)
+	  ;;Untagged return values and possibly tagged formals.
+	  ((_ (?who . ?fmls) . ?body)
+	   (begin
+	     (unless (identifier? ?who)
+	       (syntax-violation 'define "expected identifier as function name" input-form.stx ?who))
+	     (let ((formals.stx (syntax-object.parse-standard-formals ?fmls input-form.stx)))
+	       (bless
+		`(internal-define (unsafe) (,?who . ,formals.stx) . ,?body)))))
+	  ((_ ?id ?expr)
+	   (identifier? ?id)
+	   (bless
+	    `(internal-define () ,?id ,?expr)))
+	  ((_ ?id)
+	   (identifier? ?id)
+	   (bless
+	    `(internal-define () ,?id)))
+	  (_
+	   (syntax-violation 'define "invalid syntax" input-form.stx)))
+      (syntax-match input-form.stx (brace)
+	;;Tagged return values and possibly tagged formals.
+	((_ ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) . ?body)
+	 (%process-function-definition input-form.stx
+				       (lambda (who)
+					 `((brace ,who ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
+				       ?who `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls) ?body))
 
-      ((_ (brace ?id ?tag) ?expr)
-       (bless
-	`(internal-define () (brace ,?id ,?tag) ,?expr)))
+	((_ (brace ?id ?tag) ?expr)
+	 (bless
+	  `(internal-define () (brace ,?id ,?tag) ,?expr)))
 
-      ((_ (brace ?id ?tag))
-       (bless
-	`(internal-define () (brace ,?id ,?tag))))
+	((_ (brace ?id ?tag))
+	 (bless
+	  `(internal-define () (brace ,?id ,?tag))))
 
-      ;;Untagged return values and possibly tagged formals.
-      ((_ (?who . ?fmls) . ?body)
-       (%process-function-definition input-form.stx
-				     (lambda (who)
-				       (cons who ?fmls))
-				     ?who ?fmls ?body))
+	;;Untagged return values and possibly tagged formals.
+	((_ (?who . ?fmls) . ?body)
+	 (%process-function-definition input-form.stx
+				       (lambda (who)
+					 (cons who ?fmls))
+				       ?who ?fmls ?body))
 
-      ((_ ?id ?expr)
-       (bless
-	`(internal-define () ,?id ,?expr)))
+	((_ ?id ?expr)
+	 (bless
+	  `(internal-define () ,?id ,?expr)))
 
-      ((_ ?id)
-       (bless
-	`(internal-define () ,?id)))
-      ))
+	((_ ?id)
+	 (bless
+	  `(internal-define () ,?id)))
+	)))
 
-  (define* (%process-function-definition input-form.stx make-define-formals who.id prototype.stx unsafe-body*.stx)
+  (define* (%process-function-definition input-form.stx make-define-formals who.id prototype.sexp unsafe-body*.stx)
     ;;When the function definition is fully untagged:
     ;;
     ;;   (define (add a b) (+ a b))
@@ -328,7 +348,7 @@
     ;;       (typed-procedure-variable.unsafe-variant-set! #'add #'~add)))
     ;;
     (receive (standard-formals.stx clause-signature)
-	(syntax-object.parse-clambda-clause-signature (bless prototype.stx) input-form.stx)
+	(syntax-object.parse-clambda-clause-signature (bless prototype.sexp) input-form.stx)
       (cond ((clambda-clause-signature.untyped? clause-signature)
 	     ;;If the  signature only  specifies the number  of formals  and retvals:
 	     ;;generate a singlae function definition with type checking.
@@ -1396,40 +1416,58 @@
 
 ;;;; non-core macro: LET*, TRACE-LET
 
-(define (let*-macro expr-stx)
+(define (let*-macro input-form.stx)
   ;;Transformer function used to expand R6RS  LET* macros from the top-level built in
-  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
-  ;;be further expanded.
+  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+  ;;must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (define (%build-output-form lhs* rhs* body)
+    ;;Build the output form as nested LET forms.
+    (bless
+     (let recur ((x* (map list lhs* rhs*)))
+       (if (pair? x*)
+	   `(let (,(car x*)) ,(recur (cdr x*)))
+	 `(internal-body . ,body)))))
+  (syntax-match input-form.stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
+     ;;use SYNTAX-OBJECT.LIST-OF-STANDARD-BINDINGS? here.
+     (option.strict-r6rs)
+     (begin
+       (unless (all-identifiers? ?lhs*)
+	 (syntax-violation 'let* "invalid syntactic binding identifiers" input-form.stx ?lhs*))
+       (%build-output-form ?lhs* ?rhs* (cons ?body ?body*))))
+
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
      ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
      (for-all syntax-object.typed-argument? ?lhs*)
-     (bless
-      (let recur ((x* (map list ?lhs* ?rhs*)))
-	(if (null? x*)
-	    `(internal-body ,?body . ,?body*)
-	  `(let (,(car x*)) ,(recur (cdr x*)))))))
+     (%build-output-form ?lhs* ?rhs* (cons ?body ?body*)))
     ))
 
-(define (trace-let-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  TRACE-LET macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (trace-let-macro input-form.stx)
+  ;;Transformer function used to expand  Vicare's TRACE-LET macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
-     (receive (lhs* tag*)
-	 (syntax-object.parse-list-of-typed-bindings ?lhs* expr-stx)
-       (bless
-	`((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
-					  ,?body . ,?body*)))
-	    ,?recur)
-	  . ,(map (lambda (rhs tag)
-		    `(assert-signature-and-return (,tag) ,rhs))
-	       ?rhs* tag*)))))
+     (if (option.strict-r6rs)
+	 (let ((lhs* (syntax-object.parse-list-of-standard-bindings ?lhs* input-form.stx)))
+	   (bless
+	    `((letrec ((,?recur (trace-lambda ,?recur ,lhs* ,?body . ,?body*)))
+		,?recur)
+	      . ?rhs*)))
+       (receive (lhs* tag*)
+	   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx)
+	 (bless
+	  `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
+					    ,?body . ,?body*)))
+	      ,?recur)
+	    . ,(map (lambda (rhs tag)
+		      `(assert-signature-and-return (,tag) ,rhs))
+		 ?rhs* tag*))))))
     ))
 
 

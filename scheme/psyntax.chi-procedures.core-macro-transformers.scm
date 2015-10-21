@@ -299,22 +299,36 @@
      ;;
      ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
      ;;
-     (let*-values
-	 (((lhs*.id lhs*.tag)
-	   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
-	  ((rhs*.psi)
-	   (map (lambda (rhs.stx lhs.tag)
-		  ;;We insert a signature validation even if LHS.TAG is "<top>": this
-		  ;;way we try to check at  expand-time that there is a single return
-		  ;;value.  At run-time, we rely on the built-in run-time checking of
-		  ;;single-value return.
-		  (chi-expr (bless
-			     `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
-			    lexenv.run lexenv.expand))
-	     ?rhs* lhs*.tag))
-	  ;;Prepare the untyped and typed lexical variables.
-	  ((rib lexenv.run lhs*.lex)
-	   (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
+     (receive (lhs*.lex rhs*.psi rib lexenv.run)
+	 (if (option.strict-r6rs)
+	     ;;Prepare standard, untyped syntactic bindings.
+	     (let* ((lhs*.id	(syntax-object.parse-list-of-standard-bindings ?lhs* input-form.stx))
+		    (rhs*.psi	(map (lambda (rhs.stx)
+				       (chi-expr rhs.stx lexenv.run lexenv.expand))
+				  ?rhs*))
+		    (lhs*.lab	(map generate-label-gensym   lhs*.id))
+		    (lhs*.lex	(map generate-lexical-gensym lhs*.id))
+		    (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+		    (rib	(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
+	       (values lhs*.lex rhs*.psi rib lexenv.run))
+	   ;;Prepare extended, possibly typed syntactic bindings.
+	   (let*-values
+	       (((lhs*.id lhs*.tag)
+		 (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
+		((rhs*.psi)
+		 (map (lambda (rhs.stx lhs.tag)
+			;;We  insert  a  signature  validation  even  if  LHS.TAG  is
+			;;"<top>": this way we try to check at expand-time that there
+			;;is  a single  return value.   At run-time,  we rely  on the
+			;;built-in run-time checking of single-value return.
+			(chi-expr (bless
+				   `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
+				  lexenv.run lexenv.expand))
+		   ?rhs* lhs*.tag))
+		;;Prepare the untyped and typed lexical variables.
+		((rib lexenv.run lhs*.lex)
+		 (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
+	     (values lhs*.lex rhs*.psi rib lexenv.run)))
        ;;Prepare the body.
        (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
 	      (body.psi   (chi-internal-body input-form.stx lexenv.run lexenv.expand body*.stx))
@@ -377,31 +391,52 @@
   (define* (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;Check that the binding names are identifiers and without duplicates.
-       (let*-values
-	   (((lhs*.id lhs*.tag)         (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
-	    ;;Prepare the typed and untyped lexical variables.
-	    ((rib lexenv.run lhs*.lex)  (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
-	 ;;NOTE The  region of all the  LETREC and LETREC* bindings  includes all the
-	 ;;right-hand sides.  The new rib is pushed on all the RHS and the body.
-	 (let* ((rhs*.psi    ($map-in-order
-				 (lambda (rhs.stx lhs.tag)
-				   (chi-expr (push-lexical-contour rib
-					       (bless
-						`(assert-signature-and-return (,lhs.tag) ,rhs.stx)))
-					     lexenv.run lexenv.expand))
-			       ?rhs* lhs*.tag))
-		(rhs*.core (map psi.core-expr rhs*.psi))
-		(body*.stx   (cons ?body ?body*))
-		(body.psi    (chi-internal-body input-form.stx lexenv.run lexenv.expand
-						(push-lexical-contour rib body*.stx)))
-		(body.core (psi.core-expr body.psi))
-		;;Build the LETREC or LETREC* expression in the core language.
-		(expr.core (core-lang-builder (syntax-annotation input-form.stx)
-			     lhs*.lex rhs*.core
-			     body.core)))
-	   (make-psi input-form.stx expr.core
-		     (psi.retvals-signature body.psi)))))
+       (receive (lhs*.lex rhs*.psi rib lexenv.run)
+	   (if (option.strict-r6rs)
+	       ;;Prepare standard, untyped syntactic bindings.
+	       (let* ((lhs*.id		(syntax-object.parse-list-of-standard-bindings ?lhs* input-form.stx))
+		      (lhs*.lab		(map generate-label-gensym   lhs*.id))
+		      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
+		      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+		      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
+		      ;;NOTE  The  region of  all  the  LETREC and  LETREC*  bindings
+		      ;;includes all the right-hand sides.   The new rib is pushed on
+		      ;;all the RHS and the body.
+		      (rhs*.psi		($map-in-order (lambda (rhs.stx)
+							 (chi-expr (push-lexical-contour rib rhs.stx) lexenv.run lexenv.expand))
+					  ?rhs*)))
+		 (values lhs*.lex rhs*.psi rib lexenv.run))
+	     ;;Prepare extended, possibly typed syntactic bindings.
+	     (let*-values
+		 (((lhs*.id lhs*.tag)
+		   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
+		  ;;Prepare the typed and untyped lexical variables.
+		  ((rib lexenv.run lhs*.lex)
+		   (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv.run))
+		  ;;NOTE The region  of all the LETREC and  LETREC* bindings includes
+		  ;;all the right-hand  sides.  The new rib is pushed  on all the RHS
+		  ;;and the body.
+		  ((rhs*.psi)
+		   ($map-in-order
+		       (lambda (rhs.stx lhs.tag)
+			 (chi-expr (push-lexical-contour rib
+				     (bless
+				      `(assert-signature-and-return (,lhs.tag) ,rhs.stx)))
+				   lexenv.run lexenv.expand))
+		     ?rhs* lhs*.tag)))
+	       (values lhs*.lex rhs*.psi rib lexenv.run)))
+	 ;;Prepare the body.
+	 (let* ((body*.stx	(cons ?body ?body*))
+		(body.psi	(chi-internal-body input-form.stx lexenv.run lexenv.expand
+						   (push-lexical-contour rib body*.stx)))
+		(body.core	(psi.core-expr body.psi)))
+	   ;;Build the LETREC or LETREC* expression in the core language.
+	   (let ((rhs*.core (map psi.core-expr rhs*.psi)))
+	     (make-psi input-form.stx
+		       (core-lang-builder (syntax-annotation input-form.stx)
+			 lhs*.lex rhs*.core
+			 body.core)
+		       (psi.retvals-signature body.psi))))))
       ))
 
   #| end of module |# )

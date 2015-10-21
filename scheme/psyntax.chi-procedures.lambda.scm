@@ -201,7 +201,9 @@
     ;;LAMBDA  clause  as  required  by  R6RS.  CLAUSE-SIGNATURE  is  an  instance  of
     ;;"<clambda-clause-signature>" representing the types of formals and retvals.
     (define-values (standard-formals.stx clause-signature)
-      (syntax-object.parse-clambda-clause-signature formals.stx input-form.stx))
+      (if (option.strict-r6rs)
+	  (syntax-object.parse-clambda-clause-signature formals.stx input-form.stx)
+	(syntax-object.parse-clambda-clause-signature formals.stx input-form.stx)))
     (define formals-signature.tags
       (clambda-clause-signature.formals.tags clause-signature))
     (define retvals-signature.tags
