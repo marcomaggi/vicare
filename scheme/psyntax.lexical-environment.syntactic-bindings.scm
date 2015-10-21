@@ -617,15 +617,15 @@
     ;;?CORE-PRIM-NAME  is a  symbol  representing the  core  primitive's public  name
     ;;("display", "write", "list", et cetera).  ?SIGNATURE-SPEC has the format:
     ;;
-    ;;   ?signature-spec    = (?retval-signature ?formals-signature)
+    ;;   ?signature-spec    = (?retvals-signature ?argvals-signature)
     ;;
-    ;;   ?retval-signature  = <list>
+    ;;   ?retvals-signature = <list>
     ;;                      | <list-sub-type>
     ;;                      | (?type0 ?type ...)
     ;;                      | (?type0 ?type ... . <list>)
     ;;                      | (?type0 ?type ... . <list-sub-type>)
     ;;
-    ;;   ?formals-signature = <list>
+    ;;   ?argvals-signature = <list>
     ;;                      | <list-sub-type>
     ;;                      | (?type0 ?type ...)
     ;;                      | (?type0 ?type ... . <list>)

@@ -1037,11 +1037,13 @@
 ;;;; standard binding parsing: standard LAMBDA formals
 
 (define* (syntax-object.parse-standard-formals formals.stx input-form.stx)
-  ;;Parse the given syntax object and raise an exception if the syntax does not match
-  ;;athe standard LAMBDA or LET-VALUES  formals.  Test for duplicate bindings.
+  ;;Parse the  given syntax  object as standard  (untyped) LET-VALUES  formals (these
+  ;;formals are equal  to the ones of LAMBDA clauses).   Test for duplicate bindings.
+  ;;If the syntax is invalid: raise an exception.
   ;;
-  ;;Return two  values: a  proper or  improper list  of identifiers  representing the
-  ;;standard formals; a syntax object representing the type signature.
+  ;;When  successful return  two values:  a proper  or improper  list of  identifiers
+  ;;representing  the  standard  formals;  a  syntax  object  representing  the  type
+  ;;signature as defined by SYNTAX-OBJECT.TYPE-SIGNATURE?.
   ;;
   (define (%synner message subform)
     (syntax-violation __who__ message input-form.stx subform))
@@ -1096,14 +1098,14 @@
 ;;;; tagged binding parsing: typed LAMBDA formals
 
 (module (syntax-object.parse-typed-formals)
-  ;;Given a syntax  object representing possibly typed LAMBDA  or LET-VALUES formals:
-  ;;split  formals from  type identifiers.   Test for  duplicate bindings.   Return 2
-  ;;values:
+  ;;Parse a  syntax object as  possibly typed  LET-VALUES formals (these  formals are
+  ;;different  from the  one of  LAMBDA clauses  because they  have no  return values
+  ;;types).   Test for  duplicate  bindings.   If the  syntax  is  invalid: raise  an
+  ;;exception.
   ;;
-  ;;1. A proper or improper list of identifiers representing the standard formals.
-  ;;
-  ;;2.   A   syntax   object   representing   the   type   signature   according   to
-  ;;SYNTAX-OBJECT.TYPE-SIGNATURE?.
+  ;;When  successful return  two values:  a proper  or improper  list of  identifiers
+  ;;representing  the  standard  formals;  a  syntax  object  representing  the  type
+  ;;signature as defined by SYNTAX-OBJECT.TYPE-SIGNATURE?.
   ;;
   (define-module-who syntax-object.parse-typed-formals)
 
