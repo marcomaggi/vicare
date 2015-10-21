@@ -66,7 +66,7 @@
 		   attributes.sexp who.id formals.stx body*.stx)
     ;;This procedure is like CHI-LAMBDA, but, in addition, it puts WHO.ID in the core
     ;;language LAMBDA sexp's annotation.
-    (receive (formals.core lambda-signature body.psi)
+    (receive (formals.core clambda-signature body.psi)
 	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
 			    attributes.sexp who.id formals.stx body*.stx)
       ;;FORMALS.CORE is composed of lex gensyms.
@@ -94,7 +94,7 @@
   ;;LAMBDA syntax.
   ;;
   (define attributes.sexp (syntax->datum attributes.stx))
-  (receive (formals.lex lambda-signature body.psi)
+  (receive (formals.lex clause-signature body.psi)
       (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
 			  attributes.sexp who.id formals.stx body*.stx)
     (let ((who.sym (and who.id (identifier->symbol who.id))))
@@ -109,7 +109,7 @@
 		 ;;with a  cast operator; for the  untyped language we want  to avoid
 		 ;;it.
 		 (if (option.typed-language?)
-		     (fabricate-closure-type-identifier who.sym lambda-signature)
+		     (fabricate-closure-type-identifier who.sym (make-clambda-signature (list clause-signature)))
 		   (procedure-tag-id)))))))
 
 
@@ -139,10 +139,10 @@
   ;;    lexenv.run lexenv.expand)
   ;;
   (define attributes.sexp (syntax->datum attributes.stx))
-  (receive (formals*.lex lambda-signature* body**.psi)
+  (receive (formals*.lex clause-signature* body**.psi)
       (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
 			   attributes.sexp who.id formals*.stx body**.stx)
-    (let ((signature (make-clambda-compound lambda-signature*))
+    (let ((signature (make-clambda-signature clause-signature*))
 	  (who.sym   (and who.id (identifier->symbol who.id))))
       (make-psi input-form.stx
 		(build-case-lambda (syntax-annotation input-form.stx)
@@ -167,9 +167,9 @@
 			       attributes.sexp who.id formals.stx body-form*.stx)
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
-    ;;formals; an instance  of "lambda-signature" representing the  tag signature for
-    ;;this  LAMBDA   clause;  a  PSI   struct  containing  the   language  expression
-    ;;representing the body of the clause.
+    ;;formals;  an  instance  of "<clambda-clause-signature>"  representing  the  tag
+    ;;signature  for  this  LAMBDA  clause;  a PSI  struct  containing  the  language
+    ;;expression representing the body of the clause.
     ;;
     ;;A LAMBDA or CASE-LAMBDA clause defines a lexical contour; so we build a new rib
     ;;for it, initialised with the id/label  associations of the formals; we push new
@@ -198,41 +198,46 @@
       ((message subform)
        (syntax-violation __who__ message input-form.stx subform)))
     ;;STANDARD-FORMALS.STX is a syntax object representing the formal argument of the
-    ;;LAMBDA   clause  as   required  by   R6RS.    SIGNATURE  is   an  instance   of
-    ;;"<lambda-signature>"  representing the  types  of arguments  and return  values
-    ;;specified in the extended Vicare syntax.
-    (define-values (standard-formals.stx signature)
-      (syntax-object.parse-lambda-clause-signature formals.stx input-form.stx))
+    ;;LAMBDA  clause  as  required  by  R6RS.  CLAUSE-SIGNATURE  is  an  instance  of
+    ;;"<clambda-clause-signature>" representing the types of formals and retvals.
+    (define-values (standard-formals.stx clause-signature)
+      (syntax-object.parse-clambda-clause-signature formals.stx input-form.stx))
     (define formals-signature.tags
-      (lambda-signature.formals.tags signature))
+      (clambda-clause-signature.formals.tags clause-signature))
+    (define retvals-signature.tags
+      (clambda-clause-signature.retvals.tags clause-signature))
     (cond
      ((list? standard-formals.stx)
       ;;Without  rest argument.   Here  we know  that  both STANDARD-FORMALS.STX  and
       ;;FORMALS-SIGNATURE.TAGS are proper lists with equal length.
       (let*-values
 	  (((rib lexenv.run formals*.lex)
-	    (%process-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run))
+	    (%process-formals-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run))
+	   ;;Proper list of syntax objects representing validation forms.
 	   ((validation*.stx)
 	    (if (attributes.safe-formals? attributes.sexp)
 		(%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx formals-signature.tags #f #f)
 	      '()))
-	   ((has-arguments-validators?) (not (null? validation*.stx)))
+	   ;;True if there is at least one formals argument validation form.
+	   ((has-arguments-validators?)
+	    (not (null? validation*.stx)))
+	   ;;A proper  list of syntax  objects representing the body  forms; possibly
+	   ;;with arguments validation forms;  possibly with return values validation
+	   ;;forms.
 	   ((body-form*.stx)
 	    (push-lexical-contour
 		rib
 	      ;;Build a list of syntax objects representing the internal body.
 	      (append validation*.stx
 		      (if (attributes.safe-retvals? attributes.sexp)
-			  (%build-retvals-validation-form has-arguments-validators?
-							  (callable-signature.retvals signature)
-							  body-form*.stx)
+			  (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
 			body-form*.stx))))
 	   ((lexenv.run lexenv.expand)
 	    (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
-					      who.id %synner)))
-	(let* ((body.psi  (chi-internal-body #f lexenv.run lexenv.expand body-form*.stx))
-	       (signature (%override-retvals-signature signature body.psi)))
-	  (values formals*.lex signature body.psi))))
+					      who.id %synner))
+	   ((body.psi)
+	    (chi-internal-body #f lexenv.run lexenv.expand body-form*.stx)))
+	(values formals*.lex clause-signature body.psi)))
 
      (else
       ;;With  rest  argument.   Here  we  know  that  both  STANDARD-FORMALS.STX  and
@@ -242,34 +247,37 @@
 	    (improper-list->list-and-rest standard-formals.stx))
 	   ((arg*.tag rest.tag)
 	    (improper-list->list-and-rest formals-signature.tags))
-	   ((rib lexenv.run all*.lex)
-	    (%process-syntactic-bindings (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run))
-	   ((formals.lex)
-	    ;;Yes, this call to APPEND builds an improper list.
-	    (append (cdr all*.lex) (car all*.lex)))
+	   ((rib lexenv.run formals.lex)
+	    (receive (rib lexenv.run all*.lex)
+		(%process-formals-syntactic-bindings (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run)
+	      ;;Yes, this call to APPEND builds an improper list.
+	      (values rib lexenv.run (append (cdr all*.lex) (car all*.lex)))))
+	   ;;Proper list of syntax objects representing validation forms.
 	   ((validation*.stx)
 	    (if (attributes.safe-formals? attributes.sexp)
 		(%build-formals-validation-form* __who__ input-form.stx lexenv.run
 						 arg*.id arg*.tag rest.id rest.tag)
 	      '()))
+	   ;;True if there is at least one formals argument validation form.
 	   ((has-arguments-validators?)
 	    (not (null? validation*.stx)))
+	   ;;A proper  list of syntax  objects representing the body  forms; possibly
+	   ;;with arguments validation forms;  possibly with return values validation
+	   ;;forms.
 	   ((body-form*.stx)
 	    (push-lexical-contour
 		rib
 	      ;;Build a list of syntax objects representing the internal body.
 	      (append validation*.stx
 		      (if (attributes.safe-retvals? attributes.sexp)
-			  (%build-retvals-validation-form has-arguments-validators?
-							  (callable-signature.retvals signature)
-							  body-form*.stx)
+			  (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
 			body-form*.stx))))
 	   ((lexenv.run lexenv.expand)
 	    (%push-who-fluid-syntax-on-lexenv __who__ input-form.stx lexenv.run lexenv.expand
-					      who.id %synner)))
-	(let* ((body.psi  (chi-internal-body #f lexenv.run lexenv.expand body-form*.stx))
-	       (signature (%override-retvals-signature signature body.psi)))
-	  (values formals.lex signature body.psi))))))
+					      who.id %synner))
+	   ((body.psi)
+	    (chi-internal-body input-form.stx lexenv.run lexenv.expand body-form*.stx)))
+	(values formals.lex clause-signature body.psi)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -280,23 +288,23 @@
     ;;1. A  list of subslist,  each sublist  being a proper  or improper list  of lex
     ;;gensyms representing the formals.
     ;;
-    ;;2. A list of "<lambda-signature>" instances representing the signatures of each
-    ;;clause.
+    ;;2. A list of "<clambda-clause-signature>" instances representing the signatures
+    ;;of each clause.
     ;;
     ;;3.  A  list  of  PSI  structs   each  containing  a  core  language  expression
     ;;representing the body of a clause.
     ;;
     (if (null? formals*.stx)
 	(values '() '() '())
-      (receive (formals-lex signature body.psi)
+      (receive (formals-lex clause-signature body.psi)
 	  (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
 			      attributes.sexp who.id (car formals*.stx) (car body-form**.stx))
-	(receive (formals-lex* signature* body*.psi)
+	(receive (formals-lex* clause-signature* body*.psi)
 	    (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
 				 attributes.sexp who.id (cdr formals*.stx) (cdr body-form**.stx))
-	  (values (cons formals-lex  formals-lex*)
-		  (cons signature    signature*)
-		  (cons body.psi     body*.psi))))))
+	  (values (cons formals-lex		formals-lex*)
+		  (cons clause-signature	clause-signature*)
+		  (cons body.psi		body*.psi))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -348,7 +356,7 @@
 	       "invalid type for  rest argument, it must be  \"<list>\" or its sub-type"
 	       input-form.stx rest-tag)))))
 
-  (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
+  (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of
     ;;body forms.
     ;;
@@ -361,23 +369,23 @@
     ;;
     (cond (has-arguments-validators?
 	   (bless
-	    (if (type-signature.fully-unspecified? retvals-signature)
+	    (if (syntax-object.type-signature.fully-unspecified? retvals-signature.tags)
 		;;The number and type of return values is unknown.
 		`((internal-body . ,body-form*.stx))
 	      (receive (head*.stx last.stx)
 		  (proper-list->head-and-last body-form*.stx)
 		`((internal-body
 		    ,@head*.stx
-		    (assert-signature-and-return ,(type-signature-tags retvals-signature) ,last.stx)))))))
+		    (assert-signature-and-return ,retvals-signature.tags ,last.stx)))))))
 	  (else
-	   (if (type-signature.fully-unspecified? retvals-signature)
+	   (if (syntax-object.type-signature.fully-unspecified? retvals-signature.tags)
 	       ;;The number and type of return values is unknown.
 	       body-form*.stx
 	     (receive (head*.stx last.stx)
 		 (proper-list->head-and-last body-form*.stx)
 	       (append head*.stx
 		       (bless
-			`((assert-signature-and-return ,(type-signature-tags retvals-signature) ,last.stx)))))))))
+			`((assert-signature-and-return ,retvals-signature.tags ,last.stx)))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -394,24 +402,6 @@
 			   (core-prim-id '__who__) (bless `(identifier-syntax (quote ,lhs.id)))
 			   %synner)
       (values lexenv.run lexenv.expand)))
-
-  (define (%override-retvals-signature signature body.psi)
-    ;;SIGNATURE must  be an  instance of  "<lambda-signature>" representing  the type
-    ;;signature of the  LAMBDA clause.  BODY.PSI must be the  result of expanding the
-    ;;body of the LAMBDA clause.
-    ;;
-    ;;If the SIGNATURE does not specify any type for the return values of the clause:
-    ;;build  and return  a new  "<lambda-signature>" instance  having the  retvals of
-    ;;BODY.PSI.  Otherwise return SIGNATURE itself.
-    ;;
-    ;;FIXME Can we  do better here?  If SIGNATURE partially  specifies the types: can
-    ;;we merge its  specification with the specification of  BODY.PSI?  (Marco Maggi;
-    ;;Wed Sep 23, 2015)
-    ;;
-    (if (type-signature.fully-unspecified? (callable-signature.retvals signature))
-	(make-lambda-signature (psi.retvals-signature body.psi)
-			       (lambda-signature.formals signature))
-      signature))
 
   #| end of module: CHI-LAMBDA-CLAUSES |# )
 

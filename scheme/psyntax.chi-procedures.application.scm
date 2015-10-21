@@ -549,48 +549,28 @@
 	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
       (if (closure-type-spec? spec)
 	  (let ((signature (closure-type-spec.signature spec)))
-	    (cond ((lambda-signature? signature)
-		   (%process-lambda-application  input-form.stx lexenv.run lexenv.expand
-						 signature rator.psi rand*.psi))
-		  ((clambda-compound? signature)
+	    (cond ((clambda-signature? signature)
 		   (%process-clambda-application input-form.stx lexenv.run lexenv.expand
 						 signature rator.psi rand*.psi))
 		  (else
 		   (%no-optimisations-possible))))
 	(%no-optimisations-possible))))
 
-  (define (%process-lambda-application input-form.stx lexenv.run lexenv.expand
-				       rator.lambda-signature rator.psi rand*.psi)
-    (define (%no-optimisation-possible)
-      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-    (cond ((option.strict-r6rs)
-	   ;;We rely on run-time checking.
-	   (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-	  ((%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-							   rator.lambda-signature rator.psi rand*.psi #t)
-	   ;;The signatures  do match: we  are applying a  closure object rator  to a
-	   ;;tuple of rands that have the right type.
-	   (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							 rator.psi rand*.psi))
-	  (else
-	   ;;It is not possible to validate the signatures at expand-time; we rely on
-	   ;;run-time checking.
-	   (%no-optimisation-possible))))
-
   (define (%process-clambda-application input-form.stx lexenv.run lexenv.expand
-					rator.clambda-compound rator.psi rand*.psi)
-    ;;For rators having  a CLAMBDA-COMPOUND signature: we iterate,  in order, through
-    ;;the LAMBDA-SIGNATUREs looking for the first that matches.
+					rator.clambda-signature rator.psi rand*.psi)
+    ;;For  rators having  a "<clambda-signature>"  signature: we  iterate, in  order,
+    ;;through the  "<clambda-clause-signature>" instances-SIGNATUREs looking  for the
+    ;;first that matches.
     ;;
     (define (%no-optimisation-possible)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
     (cond ((option.strict-r6rs)
 	   ;;We rely on run-time checking.
 	   (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-	  ((find (lambda (signature)
+	  ((find (lambda (clause-signature)
 		   (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-								   signature rator.psi rand*.psi #f))
-	     (clambda-compound.lambda-signature* rator.clambda-compound))
+								   clause-signature rator.psi rand*.psi #f))
+	     (clambda-signature.clause-signature* rator.clambda-signature))
 	   => (lambda (signature)
 		;;The operands match the SIGNATURE:  we are applying a closure object
 		;;rator to a tuple of rands that have the right type.
@@ -721,7 +701,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-							  rator.lambda-signature rator.psi rand*.psi
+							  rator.clause-signature rator.psi rand*.psi
 							  raise-error-if-no-match?)
     ;;In a closure object application: compare  the signature tags of the operator to
     ;;the retvals signatures of the operands:
@@ -736,7 +716,7 @@
     ;;
     (import CLOSURE-APPLICATION-ERRORS)
     (define rator.formals-signature
-      (lambda-signature.formals rator.lambda-signature))
+      (clambda-clause-signature.formals rator.clause-signature))
     (let loop ((expand-time-match? #t)
 	       (arg*.tag           (type-signature-tags rator.formals-signature))
 	       (rand*.psi          rand*.psi)

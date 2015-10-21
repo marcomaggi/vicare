@@ -37,6 +37,7 @@
 
    syntax-object.type-signature?			syntax-object.type-signature.single-identifier?
    syntax-object.type-signature.fully-unspecified?	syntax-object.type-signature.partially-untyped?
+   syntax-object.type-signature.untyped?
    syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
 
    syntax-object.typed-argument?			syntax-object.parse-typed-argument
@@ -44,7 +45,7 @@
    syntax-object.parse-list-of-typed-bindings
    syntax-object.parse-formals-signature
 
-   syntax-object.lambda-clause-signature?		syntax-object.parse-lambda-clause-signature
+   syntax-object.clambda-clause-signature?		syntax-object.parse-clambda-clause-signature
 
 ;;; --------------------------------------------------------------------
 ;;; signatures internal representation
@@ -58,9 +59,8 @@
    make-type-signature/standalone-list			make-type-signature/fully-unspecified
    make-type-signature/single-value
    type-signature=?
-   type-signature.fully-unspecified?
-   type-signature.partially-untyped?
-   type-signature.super-and-sub?
+   type-signature.fully-unspecified?			type-signature.partially-untyped?
+   type-signature.untyped?				type-signature.super-and-sub?
    type-signature.single-tag?
    type-signature.single-top-tag?
    type-signature.single-tag-or-fully-unspecified?
@@ -71,17 +71,17 @@
    callable-signature?
    callable-signature.retvals
 
-   <lambda-signature>
-   make-lambda-signature				lambda-signature?
-   lambda-signature.retvals				lambda-signature.formals
-   lambda-signature=?
-   lambda-signature.formals.tags			lambda-signature.retvals.tags
-   lambda-signature.fully-unspecified?
-   list-of-lambda-signatures?
+   <clambda-clause-signature>
+   make-clambda-clause-signature			clambda-clause-signature?
+   clambda-clause-signature.retvals			clambda-clause-signature.formals
+   clambda-clause-signature=?
+   clambda-clause-signature.formals.tags		clambda-clause-signature.retvals.tags
+   clambda-clause-signature.fully-unspecified?		clambda-clause-signature.untyped?
+   list-of-clambda-clause-signatures?
 
-   <clambda-compound>
-   make-clambda-compound				clambda-compound?
-   clambda-compound.retvals				clambda-compound.lambda-signature*)
+   <clambda-signature>
+   make-clambda-signature				clambda-signature?
+   clambda-signature.retvals				clambda-signature.clause-signature*)
 
 
 ;;;; helpers
@@ -359,7 +359,7 @@
 ;;
 ;;When the use of a core macro LAMBDA or CASE-LAMBDA is expanded: a signature for the
 ;;resulting closure object is built; it is either an instance of "<lambda-signature>"
-;;or an  instance of  "<clambda-compound>".  For example,  when the  following LAMBDA
+;;or an  instance of  "<clambda-signature>".  For example,  when the  following LAMBDA
 ;;syntax is expanded:
 ;;
 ;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
@@ -505,6 +505,25 @@
 	(and (type-identifier-is-list-sub-type? ?rest lexenv)
 	     rv))
        ))))
+
+(case-define* syntax-object.type-signature.untyped?
+  ((stx)
+   (syntax-object.type-signature.untyped? stx (current-inferior-lexenv)))
+  ((stx lexenv)
+   ;;The argument STX must be a syntax object representing a type signature according
+   ;;to SYNTAX-OBJECT.TYPE-SIGNATURE?,  otherwise the  behaviour of this  function is
+   ;;unspecified.  Return true if STX is an "untyped" type signature: for both formal
+   ;;arguments and return  values, only "<top>" and "<list>" are  used to specify the
+   ;;types.
+   ;;
+   (define-syntax-rule (recur ?stx)
+     (syntax-object.type-signature.untyped? ?stx lexenv))
+   (syntax-match stx (<top> <list>)
+     (()			#t)
+     ((<top> . ?rest)		(recur ?rest))
+     ((?id   . ?rest)		#f)
+     (<list>			#t)
+     (?rest			#f))))
 
 ;;; --------------------------------------------------------------------
 
@@ -716,6 +735,9 @@
 (define* (type-signature.partially-untyped? {signature type-signature?})
   (syntax-object.type-signature.partially-untyped? (type-signature-tags signature)))
 
+(define* (type-signature.untyped? {signature type-signature?})
+  (syntax-object.type-signature.untyped? (type-signature-tags signature)))
+
 (define* (type-signature.super-and-sub? {super-signature type-signature?}
 					{sub-signature   type-signature?})
   (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
@@ -807,7 +829,7 @@
    (immutable retvals	callable-signature.retvals)
 		;An instance of "<type-signature>".
 		;
-		;For the "<clambda-compound>" sub-type it represents the signature of
+		;For the "<clambda-signature>" sub-type it represents the signature of
 		;the common retvals from all  the clambda clauses represented by this
 		;struct.  For example:
 		;
@@ -829,75 +851,80 @@
 
 ;;;; type definition: LAMBDA signature
 
-(define-record-type (<lambda-signature> make-lambda-signature lambda-signature?)
-  (nongenerative vicare:expander:<lambda-signature>)
-  (parent <callable-signature>)
+(define-record-type (<clambda-clause-signature> make-clambda-clause-signature clambda-clause-signature?)
+  (nongenerative vicare:expander:<clambda-clause-signature>)
   (fields
-   (immutable formals	lambda-signature.formals)
-		;An instance of "<type-signature>".
+   (immutable retvals	clambda-clause-signature.retvals)
+		;An instance of "<type-signature>"  representing the signature of the
+		;return values.
+   (immutable formals	clambda-clause-signature.formals)
+		;An instance of "<type-signature>"  representing the signature of the
+		;formals.
    #| end of FIELDS |# )
   (protocol
-    (lambda (make-callable-signature)
-      (define* (make-lambda-signature {retvals type-signature?} {formals type-signature?})
-	((make-callable-signature retvals) formals))
-      make-lambda-signature)))
+    (lambda (make-record)
+      (define* (make-clambda-clause-signature {retvals type-signature?} {formals type-signature?})
+	(make-record retvals formals))
+      make-clambda-clause-signature)))
 
-(define* (lambda-signature.retvals {sig lambda-signature?})
-  (callable-signature.retvals sig))
-
-;;; --------------------------------------------------------------------
-
-(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  (and (type-signature=? (lambda-signature.formals signature1)
-			 (lambda-signature.formals signature2))
-       (type-signature=? (callable-signature.retvals signature1)
-			 (callable-signature.retvals signature2))))
-
-;;; --------------------------------------------------------------------
-
-(define* (lambda-signature.formals.tags {signature lambda-signature?})
-  (type-signature-tags (lambda-signature.formals signature)))
-
-(define* (lambda-signature.retvals.tags {signature lambda-signature?})
-  (type-signature-tags (callable-signature.retvals signature)))
-
-;;; --------------------------------------------------------------------
-
-(define (list-of-lambda-signatures? obj)
+(define (list-of-clambda-clause-signatures? obj)
   (if (pair? obj)
-      (and (lambda-signature? (car obj))
-	   (list-of-lambda-signatures? (cdr obj)))
+      (and (clambda-clause-signature? (car obj))
+	   (list-of-clambda-clause-signatures? (cdr obj)))
     (null? obj)))
 
-(define* (lambda-signature.fully-unspecified? {signature lambda-signature?})
+(define* (clambda-clause-signature.formals.tags {signature clambda-clause-signature?})
+  (type-signature-tags (clambda-clause-signature.formals signature)))
+
+(define* (clambda-clause-signature.retvals.tags {signature clambda-clause-signature?})
+  (type-signature-tags (clambda-clause-signature.retvals signature)))
+
+;;; --------------------------------------------------------------------
+
+(define* (clambda-clause-signature=? {signature1 clambda-clause-signature?} {signature2 clambda-clause-signature?})
+  ;;Return true if the signatures are equal; otherwise return false.
+  ;;
+  (and (type-signature=? (clambda-clause-signature.formals signature1)
+			 (clambda-clause-signature.formals signature2))
+       (type-signature=? (clambda-clause-signature.retvals signature1)
+			 (clambda-clause-signature.retvals signature2))))
+
+;;; --------------------------------------------------------------------
+
+(define* (clambda-clause-signature.fully-unspecified? {clause-signature clambda-clause-signature?})
   ;;A LAMBDA signature  has fully unspecified types if its  retvals type signature is
   ;;the  standalone  "<list>"  and  its  formals type  signature  is  the  standalone
   ;;"<list>".
   ;;
-  (and (type-signature.fully-unspecified? (lambda-signature.formals   signature))
-       (type-signature.fully-unspecified? (callable-signature.retvals signature))))
+  (and (type-signature.fully-unspecified? (clambda-clause-signature.formals clause-signature))
+       (type-signature.fully-unspecified? (clambda-clause-signature.retvals clause-signature))))
+
+(define* (clambda-clause-signature.untyped? {clause-signature clambda-clause-signature?})
+  ;;A  clambda  clause has  "untyped"  signature  if  both  its formals  and  retvals
+  ;;signatures only use "<top>" and "<list>" as type identifiers.
+  ;;
+  (and (type-signature.untyped? (clambda-clause-signature.formals clause-signature))
+       (type-signature.untyped? (clambda-clause-signature.retvals clause-signature))))
 
 
 ;;;; type definition: CLAMBDA signature
 
-(define-record-type (<clambda-compound> make-clambda-compound clambda-compound?)
-  (nongenerative vicare:expander:<clambda-compound>)
+(define-record-type (<clambda-signature> make-clambda-signature clambda-signature?)
+  (nongenerative vicare:expander:<clambda-signature>)
   (parent <callable-signature>)
   (fields
-   (immutable lambda-signature*	clambda-compound.lambda-signature*)
-		;A  proper list  of "<lambda-signature>"  instances representing  the
-		;signatures of the CASE-LAMBDA clauses.
+   (immutable clause-signature*	clambda-signature.clause-signature*)
+		;A proper list of "<clambda-clause-signature>" instances representing
+		;the signatures of the CASE-LAMBDA clauses.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-callable-signature)
-      (define* (make-clambda-compound {signature* list-of-lambda-signatures?})
-	((make-callable-signature (apply type-signature.common-ancestor (map lambda-signature.retvals signature*)))
+      (define* (make-clambda-signature {signature* list-of-clambda-clause-signatures?})
+	((make-callable-signature (apply type-signature.common-ancestor (map clambda-clause-signature.retvals signature*)))
 	 signature*))
-      make-clambda-compound)))
+      make-clambda-signature)))
 
-(define* (clambda-compound.retvals {sig clambda-compound?})
+(define* (clambda-signature.retvals {sig clambda-signature?})
   (callable-signature.retvals sig))
 
 
@@ -1108,14 +1135,14 @@
 
 ;;;; tagged binding parsing: callable signature
 
-(define* (syntax-object.parse-lambda-clause-signature callable-signature.stx input-form.stx)
+(define* (syntax-object.parse-clambda-clause-signature callable-signature.stx input-form.stx)
   ;;Given a  syntax object  representing a  typed callable  spec: split  the standard
   ;;formals  from the  type  signature; do  test for  duplicate  bindings.  Return  2
   ;;values:
   ;;
   ;;1. A proper or improper list of identifiers representing the standard formals.
   ;;
-  ;;2. An instance of "<lambda-signature>".
+  ;;2. An instance of "<clambda-clause-signature>".
   ;;
   ;;This function *does*  enforce the constraint: the identifiers  in type identifier
   ;;positions must  actually be type  identifiers (with syntactic  binding descriptor
@@ -1139,24 +1166,24 @@
        (receive (standard-formals.stx formals-signature.stx)
 	   (syntax-object.parse-formals-signature ?formals input-form.stx)
 	 (values standard-formals.stx
-		 (make-lambda-signature (make-type-signature retvals-signature.stx)
-					(make-type-signature formals-signature.stx))))))
+		 (make-clambda-clause-signature (make-type-signature retvals-signature.stx)
+						(make-type-signature formals-signature.stx))))))
      ;;Without return values tagging.
      (?formals
       (receive (standard-formals.stx formals-signature.stx)
 	  (syntax-object.parse-formals-signature ?formals input-form.stx)
 	(values standard-formals.stx
-		(make-lambda-signature (make-type-signature/fully-unspecified)
-				       (make-type-signature formals-signature.stx)))))))
+		(make-clambda-clause-signature (make-type-signature/fully-unspecified)
+					       (make-type-signature formals-signature.stx)))))))
 
-(define* (syntax-object.lambda-clause-signature? formals-stx)
+(define* (syntax-object.clambda-clause-signature? formals-stx)
   ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
   ;;for a LAMBDA syntax.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (standard-formals signature-tags)
-	(syntax-object.parse-lambda-clause-signature formals-stx #f)
+	(syntax-object.parse-clambda-clause-signature formals-stx #f)
       #t)))
 
 

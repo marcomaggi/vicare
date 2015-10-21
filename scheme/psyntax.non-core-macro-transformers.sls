@@ -327,15 +327,15 @@
     ;;     (begin-for-syntax
     ;;       (typed-procedure-variable.unsafe-variant-set! #'add #'~add)))
     ;;
-    (receive (standard-formals.stx signature)
-	(syntax-object.parse-lambda-clause-signature (bless prototype.stx) input-form.stx)
-      (cond ((lambda-signature.fully-unspecified? signature)
-	     ;;If  no type  is specified:  just generate  a standard  Scheme function
-	     ;;definition.
+    (receive (standard-formals.stx clause-signature)
+	(syntax-object.parse-clambda-clause-signature (bless prototype.stx) input-form.stx)
+      (cond ((clambda-clause-signature.untyped? clause-signature)
+	     ;;If the  signature only  specifies the number  of formals  and retvals:
+	     ;;generate a singlae function definition with type checking.
 	     (bless
-	      `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,unsafe-body*.stx)))
+	      `(internal-define (safe) ,(make-define-formals who.id) . ,unsafe-body*.stx)))
 
-	    ((type-signature.fully-unspecified? (callable-signature.retvals signature))
+	    ((type-signature.fully-unspecified? (clambda-clause-signature.retvals clause-signature))
 	     ;;If only  the return values  have specified type signature:  generate a
 	     ;;single function definition with type checking for the return values.
 	     ;;
@@ -2362,7 +2362,7 @@
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (syntax-object.parse-lambda-clause-signature ?formal* expr-stx)
+       (syntax-object.parse-clambda-clause-signature ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(internal-lambda (unsafe) ,?formal*
@@ -2371,7 +2371,7 @@
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (syntax-object.parse-lambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
+       (syntax-object.parse-clambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(internal-lambda (unsafe) (,@?formal* . ,?rest-formal)
@@ -2388,7 +2388,7 @@
       ((_ (?who ?formal* ...) ?body ?body* ...)
        (begin
 	 ;;We parse the formals for validation purposes.
-	 (syntax-object.parse-lambda-clause-signature ?formal* expr-stx)
+	 (syntax-object.parse-clambda-clause-signature ?formal* expr-stx)
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
@@ -2398,7 +2398,7 @@
       ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
        (begin
 	 ;;We parse the formals for validation purposes.
-	 (syntax-object.parse-lambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
+	 (syntax-object.parse-clambda-clause-signature (append ?formal* ?rest-formal) expr-stx)
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
@@ -4478,7 +4478,7 @@
   (syntax-match input-form.stx ()
     ((_ (?name ?arg* ... . ?rest) ?body0 ?body* ...)
      (and (identifier? ?name)
-	  (syntax-object.lambda-clause-signature? (append ?arg* ?rest)))
+	  (syntax-object.clambda-clause-signature? (append ?arg* ?rest)))
      (let* ((TMP*	(generate-temporaries ?arg*))
 	    (rest.datum	(syntax->datum ?rest))
 	    (REST	(if (null? rest.datum) '() (gensym)))

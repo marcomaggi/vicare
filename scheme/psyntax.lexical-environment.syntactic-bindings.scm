@@ -653,15 +653,15 @@
       (set-cdr! descriptor (cons (cons* core-prim.sym type-id unsafe-variant.id) descr.value))))
 
   (define (%signature-sexp->callable-signature signature*.sexp)
-    (make-clambda-compound (map %signature-sexp->lambda-signature signature*.sexp)))
+    (make-clambda-signature (map %signature-sexp->clause-signature signature*.sexp)))
 
-  (define (%signature-sexp->lambda-signature sexp)
+  (define (%signature-sexp->clause-signature sexp)
     (let* ((retvals.sexp (car  sexp))
   	   (formals.sexp (cadr sexp))
   	   (retvals.stx  (%any-list->ids retvals.sexp))
   	   (formals.stx  (%any-list->ids formals.sexp)))
-      (make-lambda-signature (make-type-signature retvals.stx)
-  			     (make-type-signature formals.stx))))
+      (make-clambda-clause-signature (make-type-signature retvals.stx)
+				     (make-type-signature formals.stx))))
 
   (define (%any-list->ids ell)
     ;;Convert a proper  or improper list of symbols representing  core type identifiers
