@@ -129,6 +129,9 @@
   ((id1 id2 lexenv)
    (type-identifier=? id1 id2 lexenv #f))
   ((id1 id2 lexenv input-form.stx)
+   ;;These calls to ID->OBJECT-TYPE-SPECIFICATION serve two purposes: to validate the
+   ;;arguments  as  type   identifiers;  to  retrieve  the   associated  instance  of
+   ;;"<object-type-spec>".
    (let ((ots1 (id->object-type-specification __who__ input-form.stx id1 lexenv))
 	 (ots2 (id->object-type-specification __who__ input-form.stx id2 lexenv)))
      (or (eq? ots1 ots2)
@@ -155,10 +158,6 @@
    ;;Return true  if SUPER-TYPE.ID is  a super-type of SUB-TYPE.ID;  otherwise return
    ;;false.
    ;;
-   (define (%error-non-type-identifier id)
-     (syntax-violation #f
-       "the syntactic identifier is not a type identifier"
-       input-form.stx id))
    (cond ((~free-identifier=? super-type.id sub-type.id)
 	  #t)
 	 (($top-tag-id? super-type.id)
@@ -193,14 +192,21 @@
 			   (else #f))))))))))
 
 (case-define* type-identifier-common-ancestor
+  ;;The arguments ID1 and ID2 must be type identifiers according to TYPE-IDENTIFIER?,
+  ;;otherwise the behaviour of this function  is unspecified.  Visit the hierarchy of
+  ;;parents of  the given type identifiers,  determine the first common  ancestor and
+  ;;return its identifier.
+  ;;
+  ;;Examples:
+  ;;
+  ;;   (type-identifier-common-ancestor #'<fixnum> #'<bignum>) => #'<exact-integer>
+  ;;   (type-identifier-common-ancestor #'<string> #'<vector>) => #'<top>
+  ;;
   ((id1 id2)
    (type-identifier-common-ancestor id1 id2 (current-inferior-lexenv)))
   ((id1 id2 lexenv)
    (type-identifier-common-ancestor id1 id2 lexenv #f))
   ((id1 id2 lexenv input-form.stx)
-   ;;Visit the  hierarchy of  parents of  the given  type identifiers,  determine the
-   ;;first common ancestor and return its identifier.
-   ;;
    (cond ((type-identifier=? id1 id2 lexenv)
 	  id1)
 	 ((or ($top-tag-id? id1)
@@ -222,6 +228,9 @@
 				  (top-tag-id))))))))))))))
 
 (case-define all-type-identifiers?
+  ;;Inspect the argument STX and return true  if it is a syntax object representing a
+  ;;proper list of type identifiers; otherwise return false.
+  ;;
   ((stx)
    (all-type-identifiers? stx (current-inferior-lexenv)))
   ((stx lexenv)
@@ -235,53 +244,95 @@
 ;;; --------------------------------------------------------------------
 
 (case-define* type-identifier-is-procedure-sub-type?
+  ;;The  argument  ID  must  be  a type  identifier  according  to  TYPE-IDENTIFIER?,
+  ;;otherwise the behaviour of this function is  unspecified.  Return true if ID is a
+  ;;type identifier representing a sub-type of "<procedure>"; otherwise return false.
+  ;;If ID is "<procedure>" itself: the return value is false.
+  ;;
   ((id)
-   (type-identifier-is-procedure-sub-type? id (current-inferior-lexenv)))
+   (type-identifier-is-procedure-sub-type? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier-is-procedure-sub-type? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
-	(closure-type-spec? (id->object-type-specification __who__ #f id lexenv)))))
+	(closure-type-spec? (id->object-type-specification __who__ input-form.stx id lexenv)))))
 
 (case-define* type-identifier-is-procedure-or-procedure-sub-type?
+  ;;The  argument  ID  must  be  a type  identifier  according  to  TYPE-IDENTIFIER?,
+  ;;otherwise the  behaviour of this function  is unspecified.  Return true  if ID is
+  ;;the type identifier "<procedure>" or a type identifier representing a sub-type of
+  ;;"<procedure>"; otherwise return false.
+  ;;
   ((id)
-   (type-identifier-is-procedure-or-procedure-sub-type? id (current-inferior-lexenv)))
+   (type-identifier-is-procedure-or-procedure-sub-type? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier-is-procedure-or-procedure-sub-type? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
 	(or (procedure-tag-id? id)
-	    (type-identifier-is-procedure-sub-type? id lexenv)))))
+	    (type-identifier-is-procedure-sub-type? id lexenv input-form.stx)))))
 
 ;;; --------------------------------------------------------------------
 
 (case-define* type-identifier-is-list-sub-type?
+  ;;The  argument  ID  must  be  a type  identifier  according  to  TYPE-IDENTIFIER?,
+  ;;otherwise the behaviour of this function is  unspecified.  Return true if ID is a
+  ;;type identifier representing a sub-type  of "<list>"; otherwise return false.  If
+  ;;ID is "<list>" itself: the return value is false.
+  ;;
   ((id)
-   (type-identifier-is-list-sub-type? id (current-inferior-lexenv)))
+   (type-identifier-is-list-sub-type? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier-is-list-sub-type? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
-	(list-type-spec? (id->object-type-specification __who__ #f id lexenv)))))
+	(list-type-spec? (id->object-type-specification __who__ input-form.stx id lexenv)))))
 
 (case-define* type-identifier-is-list-or-list-sub-type?
+  ;;The  argument  ID  must  be  a type  identifier  according  to  TYPE-IDENTIFIER?,
+  ;;otherwise the  behaviour of this function  is unspecified.  Return true  if ID is
+  ;;the type  identifier "<list>"  or a  type identifier  representing a  sub-type of
+  ;;"<list>"; otherwise return false.
+  ;;
   ((id)
-   (type-identifier-is-list-or-list-sub-type? id (current-inferior-lexenv)))
+   (type-identifier-is-list-or-list-sub-type? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier-is-list-or-list-sub-type? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
 	(or (list-tag-id? id)
-	    (type-identifier-is-list-sub-type? id lexenv)))))
+	    (type-identifier-is-list-sub-type? id lexenv input-form.stx)))))
 
 ;;; --------------------------------------------------------------------
 
 (case-define* type-identifier-is-vector-sub-type?
+  ;;The  argument  ID  must  be  a type  identifier  according  to  TYPE-IDENTIFIER?,
+  ;;otherwise the behaviour of this function is  unspecified.  Return true if ID is a
+  ;;type identifier  representing a sub-type  of "<vector>"; otherwise  return false.
+  ;;If ID is "<vector>" itself: the return value is false.
+  ;;
   ((id)
-   (type-identifier-is-vector-sub-type? id (current-inferior-lexenv)))
+   (type-identifier-is-vector-sub-type? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier-is-vector-sub-type? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
-	(vector-type-spec? (id->object-type-specification __who__ #f id lexenv)))))
+	(vector-type-spec? (id->object-type-specification __who__ input-form.stx id lexenv)))))
 
 (case-define* type-identifier-is-vector-or-vector-sub-type?
+  ;;The  argument  ID  must  be  a type  identifier  according  to  TYPE-IDENTIFIER?,
+  ;;otherwise the  behaviour of this function  is unspecified.  Return true  if ID is
+  ;;the type  identifier "<vector>" or a  type identifier representing a  sub-type of
+  ;;"<vector>"; otherwise return false.
+  ;;
   ((id)
-   (type-identifier-is-vector-or-vector-sub-type? id (current-inferior-lexenv)))
+   (type-identifier-is-vector-or-vector-sub-type? id (current-inferior-lexenv) #f))
   ((id lexenv)
+   (type-identifier-is-vector-or-vector-sub-type? id lexenv #f))
+  ((id lexenv input-form.stx)
    (and (identifier? id)
 	(or (vector-tag-id? id)
-	    (type-identifier-is-vector-sub-type? id lexenv)))))
+	    (type-identifier-is-vector-sub-type? id lexenv input-form.stx)))))
 
 
 ;;;; typed variable with procedure sub-type type utilities
@@ -308,9 +359,11 @@
   ;;symbolic expression representing its unsafe variant.
   ;;
   ((id)
-   (typed-procedure-variable.unsafe-variant id (current-inferior-lexenv)))
+   (typed-procedure-variable.unsafe-variant id (current-inferior-lexenv) #f))
   ((id lexenv)
-   (let ((tvs (id->typed-variable-spec __who__ #f id lexenv)))
+   (typed-procedure-variable.unsafe-variant id lexenv #f))
+  ((id lexenv input-form.stx)
+   (let ((tvs (id->typed-variable-spec __who__ input-form.stx id lexenv)))
      (if (type-identifier-is-procedure-sub-type? (typed-variable-spec.type-id tvs))
 	 (typed-variable-spec.unsafe-variant-sexp tvs)
        (assertion-violation __who__
@@ -327,9 +380,11 @@
   ;;the ID is a global lexical typed variable.
   ;;
   ((id unsafe-variant.sexp)
-   (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp (current-inferior-lexenv)))
+   (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp (current-inferior-lexenv) #f))
   ((id unsafe-variant.sexp lexenv)
-   (let ((tvs (id->typed-variable-spec __who__ #f id lexenv)))
+   (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp lexenv #f))
+  ((id unsafe-variant.sexp lexenv input-form.stx)
+   (let ((tvs (id->typed-variable-spec __who__ input-form.stx id lexenv)))
      (if (type-identifier-is-procedure-sub-type? (typed-variable-spec.type-id tvs))
 	 (typed-variable-spec.unsafe-variant-sexp-set! tvs unsafe-variant.sexp)
        (assertion-violation __who__
@@ -357,19 +412,18 @@
 ;;sure it must be a sub-type of "<procedure>", but we would like to keep informations
 ;;about the signature of the closure object definition.
 ;;
-;;When the use of a core macro LAMBDA or CASE-LAMBDA is expanded: a signature for the
-;;resulting closure object is built; it is either an instance of "<lambda-signature>"
-;;or an  instance of  "<clambda-signature>".  For example,  when the  following LAMBDA
-;;syntax is expanded:
+;;Similarly,  when the  use of  a core  macro LAMBDA  or CASE-LAMBDA  is expanded:  a
+;;signature  for  the  resulting closure  object  is  built;  it  is an  instance  of
+;;"<clambda-signature>".  For example, when the following LAMBDA syntax is expanded:
 ;;
 ;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
 ;;     (+ 1 a b))
 ;;
-;;the LAMBDA proto parser builds the following "lambda-signature" struct:
+;;the LAMBDA parser builds the following "<clambda-clause-signature>" struct:
 ;;
-;;   #[<lambda-signature>
+;;   #[<clambda-clause-signature>
 ;;       retvals=#[<type-signature> tags=(#'<exact-integer>)]
-;;       formals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
+;;       argvals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
 ;;
 ;;To represent  the type of  the closure object: we  create a fresh  type identifier,
 ;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
@@ -392,6 +446,10 @@
 ;;;; helpers and utilities
 
 (define (datum-type-signature datum)
+  ;;Build and  return a new instance  of "<type-signature>" representing the  type of
+  ;;the single value returned by the expression  DATUM, which must be a Scheme object
+  ;;extracted from a syntax object representing a literal expression.
+  ;;
   (make-type-signature
    (list (cond ((boolean? datum)	(core-prim-id '<boolean>))
 	       ((char?    datum)	(core-prim-id '<char>))
@@ -419,22 +477,23 @@
 ;;;; type signature syntaxes predicates
 
 (case-define syntax-object.type-signature?
+  ;;Return true  if STX  is a  syntax object  representing the  type signature  of an
+  ;;expression's return values; otherwise return false.   The return value is true if
+  ;;STX is null or  a proper or improper list of type  identifiers, with a standalone
+  ;;type identifier being acceptable if it is "<list>" or one of its sub-types.
+  ;;
+  ;;Examples:
+  ;;
+  ;;   (syntax-object.type-signature? #'<list>)				=> #t
+  ;;   (syntax-object.type-signature? #'())				=> #t
+  ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
+  ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
+  ;;
+  ;;A standalone "<list>" identifier means: any number of values of any type.
+  ;;
   ((stx)
    (syntax-object.type-signature? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   ;;Return true if STX  is a syntax object representing the  tag signature of tagged
-   ;;return values; otherwise return false.  The return  value is true if STX is null
-   ;;or  a  proper  or improper  list  of  tag  identifiers,  with a  standalone  tag
-   ;;identifier  being  acceptable  if  it  is "<list>"  of  one  of  its  sub-types.
-   ;;Examples:
-   ;;
-   ;;   (syntax-object.type-signature? #'<list>)			=> #t
-   ;;   (syntax-object.type-signature? #'())				=> #t
-   ;;   (syntax-object.type-signature? #'(<fixnum> <string>))		=> #t
-   ;;   (syntax-object.type-signature? #'(<fixnum> <string> . <list>))	=> #t
-   ;;
-   ;;A standalone "<list>" identifier means: any number of values of any type.
-   ;;
    (syntax-match stx (<list>)
      (() #t)
      ((?id . ?rest)
@@ -449,27 +508,42 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (syntax-object.type-signature.single-identifier? signature.stx)
-  (syntax-match signature.stx ()
+(define (syntax-object.type-signature.single-identifier? stx)
+  ;;The argument STX must be a  syntax object representing a type signature according
+  ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
+  ;;unspecified.   Return true  if  STX  is a  syntax  object  representing the  type
+  ;;signature of an expression returning a single value; otherwise return false.
+  ;;
+  (syntax-match stx ()
     ((?type)	#t)
     (else	#f)))
 
-(define* (syntax-object.type-signature.fully-unspecified? signature)
-  ;;Given a  syntax object representing a  valid type signature: areturn  true if the
-  ;;signature specifies  neither object  types, nor  objects count;  otherwise return
-  ;;false.  In other words, return true if the signature is a standalone "<list>".
+(define* (syntax-object.type-signature.fully-unspecified? stx)
+  ;;The argument STX must be a  syntax object representing a type signature according
+  ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
+  ;;unspecified.   Return true  if  STX  is a  syntax  object  representing the  type
+  ;;signature of an expression returning any number of values of any types; otherwise
+  ;;return false.
   ;;
-  (list-tag-id? signature))
+  ;;In other words, return true if STX is a standalone "<list>".
+  ;;
+  (list-tag-id? stx))
 
 ;;; --------------------------------------------------------------------
 
 (case-define* syntax-object.type-signature.partially-untyped?
+  ;;The argument STX must be a  syntax object representing a type signature according
+  ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
+  ;;unspecified.   Return true  if  STX  is a  syntax  object  representing the  type
+  ;;signature of  an expression's  return values, and  at least one  of the  types is
+  ;;unspecified; otherwise return false.
+  ;;
+  ;;In other words, return true if at least  one type identifier is "<top>" or STX is
+  ;;an improper list with "<list>" or one of its sub-types in "improper" position.
+  ;;
   ((stx)
    (syntax-object.type-signature.partially-untyped? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   ;;Return true if STX  is a type signature syntax object with  at least one "<top>"
-   ;;identifier; otherwise return false.
-   ;;
    (let loop ((stx stx)
 	      (rv  #f))
      (syntax-match stx (<top>)
@@ -487,15 +561,14 @@
        ))))
 
 (case-define* syntax-object.type-signature.untyped?
+  ;;The argument STX must be a  syntax object representing a type signature according
+  ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
+  ;;unspecified.  Return  true if STX  is an "untyped"  type signature: all  the type
+  ;;identifiers are either "<top>" or "<list>"; otherwise return false.
+  ;;
   ((stx)
    (syntax-object.type-signature.untyped? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   ;;The argument STX must be a syntax object representing a type signature according
-   ;;to SYNTAX-OBJECT.TYPE-SIGNATURE?,  otherwise the  behaviour of this  function is
-   ;;unspecified.  Return true if STX is an "untyped" type signature: for both formal
-   ;;arguments and return  values, only "<top>" and "<list>" are  used to specify the
-   ;;types.
-   ;;
    (define-syntax-rule (recur ?stx)
      (syntax-object.type-signature.untyped? ?stx lexenv))
    (syntax-match stx (<top> <list>)
@@ -508,25 +581,25 @@
 ;;; --------------------------------------------------------------------
 
 (case-define* syntax-object.type-signature.super-and-sub?
+  ;;The  arguments   SUPER-SIGNATURE  and   SUB-SIGNATURE  must  be   syntax  objects
+  ;;representing   type   signatures  according   to   SYNTAX-OBJECT.TYPE-SIGNATURE?,
+  ;;otherwise the behaviour of this function is unspecified.
+  ;;
+  ;;Return true if: SUPER-SIGNATURE and  SUB-SIGNATURE have compatible structure; the
+  ;;type identifiers from  SUPER-SIGNATURE are super-types of  the corresponding type
+  ;;identifiers from SUB-SIGNATURE.  Otherwise return false.
+  ;;
+  ;;This function can  be used to determine:
+  ;;
+  ;;*  If the  signature of  a tuple  of arguments  (SUB-SIGNATURE) matches  a LAMBDA
+  ;;argvals's signature (SUPER-SIGNATURE).
+  ;;
+  ;;*  If the  signature of  a  tuple or  return values  (SUB-SIGNATURE) matches  the
+  ;;receiver's signature (SUPER-SIGNATURE).
+  ;;
   ((super-signature sub-signature)
    (syntax-object.type-signature.super-and-sub? super-signature sub-signature (current-inferior-lexenv)))
   ((super-signature sub-signature lexenv)
-   ;;The  arguments   SUPER-SIGNATURE  and  SUB-SIGNATURE  must   be  syntax  objects
-   ;;representing   type  signatures   according  to   SYNTAX-OBJECT.TYPE-SIGNATURE?,
-   ;;otherwise the behaviour of this function is unspecified.
-   ;;
-   ;;Return true if: SUPER-SIGNATURE and SUB-SIGNATURE have compatible structure; the
-   ;;type identifiers from SUPER-SIGNATURE are  super-types of the corresponding type
-   ;;identifiers from SUB-SIGNATURE.  Otherwise return false.
-   ;;
-   ;;This function can  be used to determine:
-   ;;
-   ;;* If  the signature  of a  tuple of arguments  (SUB-SIGNATURE) matches  a LAMBDA
-   ;;formals's signature (SUPER-SIGNATURE).
-   ;;
-   ;;*  If the  signature of  a tuple  or return  values (SUB-SIGNATURE)  matches the
-   ;;receiver's signature (SUPER-SIGNATURE).
-   ;;
    (define-syntax-rule (recur ?super ?sub)
      (syntax-object.type-signature.super-and-sub? ?super ?sub lexenv))
    (syntax-match super-signature (<top> <list>)
@@ -599,24 +672,24 @@
 ;;; --------------------------------------------------------------------
 
 (case-define syntax-object.type-signature.common-ancestor
+  ;;Given two syntax objects representing type signatures: return a new syntax object
+  ;;representing the type signature being their common ancestor.  Examples:
+  ;;
+  ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<fixnum>))
+  ;;  => #'(<fixnum>)
+  ;;
+  ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<flonum>))
+  ;;  => #'(<real>)
+  ;;
+  ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<string>))
+  ;;  => #'(<top>)
+  ;;
+  ;;NOTE The arguments  SIG1 and SIG2 are  *not* validated here: they  must have been
+  ;;previously validated.
+  ;;
   ((sig1 sig2)
    (syntax-object.type-signature.common-ancestor sig1 sig2 (current-inferior-lexenv)))
   ((sig1 sig2 lexenv)
-   ;;Given  two syntax  objects representing  type  signatures: return  a new  syntax
-   ;;object representing the type signature begin their common ancestor.  Examples:
-   ;;
-   ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<fixnum>))
-   ;;  => #'(<fixnum>)
-   ;;
-   ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<flonum>))
-   ;;  => #'(<real>)
-   ;;
-   ;;  (syntax-object.type-signature.common-ancestor #'(<fixnum>) #'(<string>))
-   ;;  => #'(<top>)
-   ;;
-   ;;NOTE The arguments SIG1  and SIG2 are *not* validated here:  they must have been
-   ;;previously validated.
-   ;;
    (define-syntax-rule (recur ?sig1 ?sig2)
      (syntax-object.type-signature.common-ancestor ?sig1 ?sig2 lexenv))
    (syntax-match sig1 ()
@@ -658,7 +731,7 @@
 (define-record-type (<type-signature> make-type-signature type-signature?)
   (nongenerative vicare:expander:<type-signature>)
   (fields (immutable tags	type-signature-tags))
-		;A syntax  object representing a  type signature syntax  according to
+		;A  syntax   object  representing  a  type   signature  according  to
 		;SYNTAX-OBJECT.TYPE-SIGNATURE?.
   (protocol
     (lambda (make-record)
