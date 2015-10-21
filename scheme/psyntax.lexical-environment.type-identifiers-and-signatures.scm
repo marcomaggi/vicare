@@ -44,6 +44,7 @@
    syntax-object.parse-list-of-typed-bindings		syntax-object.parse-formals-signature
    syntax-object.parse-standard-formals			syntax-object.parse-list-of-standard-bindings
    syntax-object.clambda-clause-signature?		syntax-object.parse-clambda-clause-signature
+   syntax-object.parse-standard-clambda-clause-formals
 
 ;;; --------------------------------------------------------------------
 ;;; signatures internal representation
@@ -1056,11 +1057,15 @@
 
 (define* (syntax-object.parse-standard-formals formals.stx input-form.stx)
   ;;Parse the given syntax object and raise an exception if the syntax does not match
-  ;;athe standard LAMBDA or LET-VALUES  formals.  Test for duplicate bindings.  Return
-  ;;a proper or improper list of identifiers representing the standard formals.
+  ;;athe standard LAMBDA or LET-VALUES  formals.  Test for duplicate bindings.
+  ;;
+  ;;Return two  values: a  proper or  improper list  of identifiers  representing the
+  ;;standard formals; a syntax object representing the type signature.
   ;;
   (define (%synner message subform)
     (syntax-violation __who__ message input-form.stx subform))
+  (define (%one-top-for-each item*)
+    (map (lambda (x) (top-tag-id)) item*))
   (define (%validate-standard-formals standard-formals.stx %synner)
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
@@ -1068,20 +1073,20 @@
   (syntax-match formals.stx (brace)
     (?args-id
      (identifier? ?args-id)
-     ?args-id)
+     (values ?args-id (list-tag-id)))
 
     ((?arg* ...)
      (for-all identifier? ?arg*)
      (begin
        (%validate-standard-formals ?arg* %synner)
-       ?arg*))
+       (values ?arg* (%one-top-for-each ?arg*))))
 
     ((?arg* ... . ?rest-id)
      (and (for-all identifier? ?arg*)
 	  (identifier? ?rest-id))
      (begin
        (%validate-standard-formals (append ?arg* ?rest-id) %synner)
-       formals.stx))
+       (values formals.stx (append (%one-top-for-each ?arg*) (list-tag-id)))))
 
     (_
      (%synner "invalid standard formals specification" formals.stx))))
@@ -1209,6 +1214,22 @@
   #| end of module |# )
 
 
+;;;; standard formals parsing
+
+(define* (syntax-object.parse-standard-clambda-clause-formals formals.stx input-form.stx)
+  ;;Given a syntax object parse it as  standard LAMBDA formals; do test for duplicate
+  ;;bindings.  Return 2 values:
+  ;;
+  ;;1. A proper or improper list of identifiers representing the standard formals.
+  ;;
+  ;;2. An instance of "<clambda-clause-signature>".
+  ;;
+  (receive (formals.stx signature.stx)
+      (syntax-object.parse-standard-formals formals.stx input-form.stx)
+    (values formals.stx (make-clambda-clause-signature (make-type-signature/fully-unspecified)
+						       (make-type-signature signature.stx)))))
+
+
 ;;;; tagged binding parsing: callable signature
 
 (define* (syntax-object.parse-clambda-clause-signature callable-signature.stx input-form.stx)
@@ -1244,13 +1265,13 @@
 	 (values standard-formals.stx
 		 (make-clambda-clause-signature (make-type-signature retvals-signature.stx)
 						(make-type-signature formals-signature.stx))))))
-     ;;Without return values tagging.
-     (?formals
-      (receive (standard-formals.stx formals-signature.stx)
-	  (syntax-object.parse-formals-signature ?formals input-form.stx)
-	(values standard-formals.stx
-		(make-clambda-clause-signature (make-type-signature/fully-unspecified)
-					       (make-type-signature formals-signature.stx)))))))
+    ;;Without return values tagging.
+    (?formals
+     (receive (standard-formals.stx formals-signature.stx)
+	 (syntax-object.parse-formals-signature ?formals input-form.stx)
+       (values standard-formals.stx
+	       (make-clambda-clause-signature (make-type-signature/fully-unspecified)
+					      (make-type-signature formals-signature.stx)))))))
 
 (define* (syntax-object.clambda-clause-signature? formals-stx)
   ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals

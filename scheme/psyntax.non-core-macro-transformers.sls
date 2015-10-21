@@ -277,7 +277,8 @@
 	   (begin
 	     (unless (identifier? ?who)
 	       (syntax-violation 'define "expected identifier as function name" input-form.stx ?who))
-	     (let ((formals.stx (syntax-object.parse-standard-formals ?fmls input-form.stx)))
+	     (receive (formals.stx clause-signature.stx)
+		 (syntax-object.parse-standard-formals ?fmls input-form.stx)
 	       (bless
 		`(internal-define (unsafe) (,?who . ,formals.stx) . ,?body)))))
 	  ((_ ?id ?expr)
