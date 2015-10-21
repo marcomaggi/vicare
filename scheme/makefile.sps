@@ -1554,6 +1554,43 @@
   ))
 
 
+;;;; core syntactic binding descriptors, typed core primitives: transcoders
+
+(define-constant VICARE-TYPED-CORE-PRIMITIVES/TRANSCODERS
+  (list
+
+   (declare-typed-core-prim make-transcoder
+     (signatures
+      ((<transcoder>) (<symbol> <symbol> <symbol>))
+      ;; ((<transcoder>) (<symbol> <symbol>))
+      ;; ((<transcoder>) (<symbol>))
+      ))
+
+   (declare-typed-core-prim transcoder?
+     (signatures
+      ((<boolean>) (<top>))))
+
+   (declare-typed-core-prim transcoder-codec
+     (signatures
+      ((<symbol>) (<transcoder>))))
+
+   (declare-typed-core-prim transcoder-eol-style
+     (signatures
+      ((<symbol>) (<transcoder>))))
+
+   (declare-typed-core-prim transcoder-error-handling-mode
+     (signatures
+      ((<symbol>) (<transcoder>))))
+
+   (declare-typed-core-prim native-transcoder
+     (signatures
+      ((<transcoder>) ())
+      ((<void>) (<transcoder>))
+      ((<void>) (<transcoder> <top>))))
+
+   ))
+
+
 ;;;; core syntactic binding descriptors, typed core primitives: pairs and lists primitives
 
 (define-constant VICARE-TYPED-CORE-PRIMITIVES/PAIRS
@@ -1624,6 +1661,7 @@
 	  VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
 	  VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
 	  VICARE-TYPED-CORE-PRIMITIVES/POINTERS
+	  VICARE-TYPED-CORE-PRIMITIVES/TRANSCODERS
 	  VICARE-TYPED-CORE-PRIMITIVES/PAIRS
 	  VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
 	  ))

@@ -202,6 +202,7 @@
 	((symbol?  subject)	(%built-in-scheme-object-call <symbol>-type-descriptor))
 	((keyword? subject)	(%built-in-scheme-object-call <keyword>-type-descriptor))
 	((pointer? subject)	(%built-in-scheme-object-call <pointer>-type-descriptor))
+	((transcoder? subject)	(%built-in-scheme-object-call <transcoder>-type-descriptor))
 
 	((struct? subject)	(%struct-object-call (structs.struct-std subject)))
 

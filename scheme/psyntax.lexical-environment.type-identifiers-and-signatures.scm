@@ -893,11 +893,7 @@
   (protocol
     (lambda (make-callable-signature)
       (define* (make-clambda-compound {signature* list-of-lambda-signatures?})
-	((make-callable-signature (fold-left
-				      (lambda (knil signature)
-					(syntax-object.type-signature.common-ancestor knil (lambda-signature.retvals signature)))
-				    (make-type-signature/fully-unspecified)
-				    signature*))
+	((make-callable-signature (apply type-signature.common-ancestor (map lambda-signature.retvals signature*)))
 	 signature*))
       make-clambda-compound)))
 

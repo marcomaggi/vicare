@@ -1261,11 +1261,38 @@ Apply @func{pointer-hash} to the instance.
 @subsection Type of transcoder values
 
 
-@deftp {Built--in Type} <transcoder>
-@deftpx {Parent Type} <top>
-Type of transcoder values.  The constructor is @func{make-transcoder}.
-The type predicate is @func{transcoder?}.
+@deftp {Built--in Type} @aclass{transcoder}
+@deftpx {Parent Type} @aclass{top}
+Type of transcoder values.
 @end deftp
+
+
+@defop Constructor @class{transcoder} new @aclass{transcoder} @var{codec}
+@defopx Constructor @class{transcoder} new @aclass{transcoder} @var{codec} @var{eol-style}
+@defopx Constructor @class{transcoder} new @aclass{transcoder} @var{codec} @var{eol-style} @var{handling-mode}
+The constructor is @func{make-transcoder}.
+@end defop
+
+
+@defop {Type predicate} @class{transcoder} is-a? @var{obj} @aclass{transcoder}
+The type predicate is @func{transcoder?}.  Return @true{} if @var{obj}
+is a transcoder object; otherwise return @false{}.
+@end defop
+
+
+@deftypemethod @class{transcoder} @aclass{symbol} codec @var{self}
+Apply @func{transcoder-codec} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @class{transcoder} @aclass{symbol} eol-style @var{self}
+Apply @func{transcoder-eol-style} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @class{transcoder} @aclass{symbol} handling-mode @var{self}
+Apply @func{transcoder-error-handling-mode} to the instance.
+@end deftypemethod
 
 @c page
 @node types built-in procedures

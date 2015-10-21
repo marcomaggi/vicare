@@ -653,9 +653,7 @@
       (set-cdr! descriptor (cons (cons* core-prim.sym type-id unsafe-variant.id) descr.value))))
 
   (define (%signature-sexp->callable-signature signature*.sexp)
-    (if (null? (cdr signature*.sexp))
-  	(%signature-sexp->lambda-signature (car signature*.sexp))
-      (make-clambda-compound (map %signature-sexp->lambda-signature signature*.sexp))))
+    (make-clambda-compound (map %signature-sexp->lambda-signature signature*.sexp)))
 
   (define (%signature-sexp->lambda-signature sexp)
     (let* ((retvals.sexp (car  sexp))

@@ -69,7 +69,11 @@
 
 (define-scheme-type <transcoder>
     <top>
-  make-transcoder transcoder?)
+  make-transcoder transcoder?
+  (methods
+   (codec		transcoder-codec)
+   (eol-style		transcoder-eol-style)
+   (handling-mode	transcoder-error-handling-mode)))
 
 
 ;;;; procedures
