@@ -61,9 +61,9 @@
    type-signature=?
    type-signature.fully-unspecified?			type-signature.partially-untyped?
    type-signature.untyped?				type-signature.super-and-sub?
-   type-signature.single-tag?
+   type-signature.single-type?
    type-signature.single-top-tag?
-   type-signature.single-tag-or-fully-unspecified?
+   type-signature.single-type-or-fully-unspecified?
 
    type-signature.common-ancestor			datum-type-signature
 
@@ -731,8 +731,8 @@
 (define-record-type (<type-signature> make-type-signature type-signature?)
   (nongenerative vicare:expander:<type-signature>)
   (fields (immutable tags	type-signature-tags))
-		;A  syntax   object  representing  a  type   signature  according  to
-		;SYNTAX-OBJECT.TYPE-SIGNATURE?.
+		;A  fully  unwrapped  syntax  object representing  a  type  signature
+		;according to SYNTAX-OBJECT.TYPE-SIGNATURE?.
   (protocol
     (lambda (make-record)
       (define* (make-type-signature {tags syntax-object.type-signature?})
@@ -780,58 +780,48 @@
 
 (define* (type-signature.fully-unspecified? {signature type-signature?})
   ;;Return true  if the type  signature specifies  neither object types,  nor objects
-  ;;count; otherwise return false.  In other words, return true if the signature is a
-  ;;standalone "<list>".
+  ;;count; otherwise return false.
   ;;
-  (list-tag-id? (type-signature-tags signature)))
+  (syntax-object.type-signature.fully-unspecified? (type-signature-tags signature)))
 
 (define* (type-signature.partially-untyped? {signature type-signature?})
+  ;;Return true if the type signature as at least one untyped item, either "<top>" or
+  ;;"<list>"; otherwise return false.
+  ;;
   (syntax-object.type-signature.partially-untyped? (type-signature-tags signature)))
 
 (define* (type-signature.untyped? {signature type-signature?})
+  ;;Return  true if  the type  signature  as only  untyped items,  either "<top>"  or
+  ;;"<list>"; otherwise return false.
+  ;;
   (syntax-object.type-signature.untyped? (type-signature-tags signature)))
 
 (define* (type-signature.super-and-sub? {super-signature type-signature?}
 					{sub-signature   type-signature?})
+  ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE  have the same structure and the
+  ;;identifiers in  the homologous  position are  super-type and  sub-type; otherwise
+  ;;return false.
+  ;;
   (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
 					       (type-signature-tags sub-signature)))
 
-(define* (type-signature.single-tag? {signature type-signature?})
-  ;;Return  true if  SIGNATURE represents  a  single return  value, otherwise  return
-  ;;false.  We have to remember that a signature syntax can be:
+(define* (type-signature.single-type? {signature type-signature?})
+  ;;Return  true if  SIGNATURE represents  a  single return  value; otherwise  return
+  ;;false.
   ;;
-  ;;   (#'?tag . #'())
-  ;;
-  ;;with the last element being a syntax  object representing null; so we really need
-  ;;to use SYNTAX-MATCH here to inspect the tags.
-  ;;
-  (syntax-match (type-signature-tags signature) ()
-    ((?tag)	#t)
-    (_		#f)))
+  (syntax-object.type-signature.single-identifier? (type-signature-tags signature)))
 
 (define* (type-signature.single-top-tag? {signature type-signature?})
   ;;Return  true if  SIGNATURE represents  a single  return value  with tag  "<top>",
-  ;;otherwise return false.   We have to remember that, after  parsing syntax objects
-  ;;with SYNTAX-MATCH, a signature syntax can result to be:
-  ;;
-  ;;   (#'?tag . #'())
-  ;;
-  ;;with the last element being a syntax  object representing null; so we really need
-  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;otherwise return false.
   ;;
   (syntax-match (type-signature-tags signature) (<top>)
     ((<top>)  #t)
     (_        #f)))
 
-(define* (type-signature.single-tag-or-fully-unspecified? {signature type-signature?})
+(define* (type-signature.single-type-or-fully-unspecified? {signature type-signature?})
   ;;Return true if SIGNATURE represents a single return value or it is the standalone
-  ;;"<list>" identifier,  otherwise return  false.  We have  to remember  that, after
-  ;;parsing syntax objects with SYNTAX-MATCH, a signature syntax can result to be:
-  ;;
-  ;;   (#'?tag . #'())
-  ;;
-  ;;with the last element being a syntax  object representing null; so we really need
-  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;"<list>" identifier, otherwise return false.
   ;;
   (syntax-match (type-signature-tags signature) (<list>)
     ((?tag)	#t)
@@ -860,6 +850,9 @@
 ;;; --------------------------------------------------------------------
 
 (case-define* type-signature.common-ancestor
+  ;;Given a  multitude of type signatures:  return a new type  signature representing
+  ;;their common ancestor.
+  ;;
   (({sig type-signature?})
    sig)
 
@@ -876,6 +869,13 @@
 
 ;;;; type definition: callable signature
 
+;;This is the  base type of every object  that can be in operator position  in a form
+;;like:
+;;
+;;   (?rator ?rand ...)
+;;
+;;representing a function application.
+;;
 (define-record-type (<callable-signature> dummy-make-callable-signature callable-signature?)
   (nongenerative vicare:expander:<callable-signature>)
   (fields
@@ -902,7 +902,7 @@
    #| end of FIELDS |# ))
 
 
-;;;; type definition: LAMBDA signature
+;;;; type definition: CASE-LAMBDA clause signature
 
 (define-record-type (<clambda-clause-signature> make-clambda-clause-signature clambda-clause-signature?)
   (nongenerative vicare:expander:<clambda-clause-signature>)
@@ -945,9 +945,9 @@
 ;;; --------------------------------------------------------------------
 
 (define* (clambda-clause-signature.fully-unspecified? {clause-signature clambda-clause-signature?})
-  ;;A LAMBDA signature  has fully unspecified types if its  retvals type signature is
-  ;;the  standalone  "<list>"  and  its  argvals type  signature  is  the  standalone
-  ;;"<list>".
+  ;;A  clambda clause  signature  has fully  unspecified types  if  its retvals  type
+  ;;signature  is the  standalone  "<list>" and  its argvals  type  signature is  the
+  ;;standalone "<list>".
   ;;
   (and (type-signature.fully-unspecified? (clambda-clause-signature.argvals clause-signature))
        (type-signature.fully-unspecified? (clambda-clause-signature.retvals clause-signature))))
@@ -962,11 +962,13 @@
 
 ;;;; type definition: CLAMBDA signature
 
+;;Type representing the full type signature of closure objects.
+;;
 (define-record-type (<clambda-signature> make-clambda-signature clambda-signature?)
   (nongenerative vicare:expander:<clambda-signature>)
   (parent <callable-signature>)
   (fields
-   (immutable clause-signature*	clambda-signature.clause-signature*)
+   (immutable clause-signature* clambda-signature.clause-signature*)
 		;A proper list of "<clambda-clause-signature>" instances representing
 		;the signatures of the CASE-LAMBDA clauses.
    #| end of FIELDS |# )
@@ -984,8 +986,8 @@
 ;;;; tagged binding parsing: standalone identifiers
 
 (define (syntax-object.typed-argument? stx)
-  ;;Return  true  if  STX is  a  syntax  object  representing  a tagged  or  untagged
-  ;;identifier, otherwise return false.
+  ;;Return true if STX is a syntax object representing a typed or untyped identifier;
+  ;;otherwise return false.
   ;;
   (syntax-match stx (brace)
     ((brace ?id ?tag)
@@ -994,48 +996,52 @@
     (?id
      (identifier? ?id))))
 
-(define* (syntax-object.parse-typed-argument stx)
-  ;;If  STX is  a tagged  or  untagged identifier,  return 2  values: the  identifier
-  ;;representing the binding name and  the identifier representing the tag; otherwise
-  ;;raise  an exception.   When no  tag is  present: the  tag identifier  defaults to
-  ;;"<top>".
+(case-define* syntax-object.parse-typed-argument
+  ;;If  STX  is  a  typed  or  typed identifier,  return  2  values:  the  identifier
+  ;;representing the syntactic binding name and the identifier representing the type;
+  ;;otherwise  raise an  exception.  When  no type  is present:  the type  identifier
+  ;;defaults to "<top>".
   ;;
-  (syntax-match stx (brace)
-    ((brace ?id ?tag)
-     (begin
-       (id->object-type-specification __who__ stx ?tag (current-inferior-lexenv))
-       (values ?id ?tag)))
-    (?id
-     (identifier? ?id)
-     (values ?id (top-tag-id)))))
+  ((stx)
+   (syntax-object.parse-typed-argument stx (current-inferior-lexenv)))
+  ((stx lexenv)
+   (syntax-match stx (brace)
+     ((brace ?id ?tag)
+      (begin
+	(id->object-type-specification __who__ stx ?tag lexenv)
+	(values ?id ?tag)))
+     (?id
+      (identifier? ?id)
+      (values ?id (top-tag-id))))))
 
 
 ;;;; standard binding parsing: proper lists of bindings left-hand sides
 
 (case-define* syntax-object.parse-standard-list-of-bindings
+  ;;Parser function  for lists of standard  syntactic bindings.  It is  used to parse
+  ;;bindings from  LET, DO  and similar  syntaxes.  For  example, when  expanding the
+  ;;syntax:
+  ;;
+  ;;   (let ((a 1)
+  ;;         (b "b")
+  ;;         (c #t))
+  ;;     . ?body)
+  ;;
+  ;;the argument BINDING* is:
+  ;;
+  ;;   (#'a #'b #'c)
+  ;;
+  ;;and the return value is:
+  ;;
+  ;;   (#'a #'b #'c)
+  ;;
+  ;;Assume BINDING* is a syntax object representing a proper list of standard binding
+  ;;identifiers; parse  the list and a  list of identifiers representing  the binding
+  ;;identifiers.  The identifiers must be distinct.
+  ;;
   ((binding*)
    (syntax-object.parse-standard-list-of-bindings binding* #f))
   ((binding* input-form.stx)
-   ;;Parser function for  lists of bindings used  to parse bindings from  LET, DO and
-   ;;similar syntaxes.  For example, when expanding the syntax:
-   ;;
-   ;;   (let ((a 1)
-   ;;         (b "b")
-   ;;         (c #t))
-   ;;     . ?body)
-   ;;
-   ;;the argument BINDING* is:
-   ;;
-   ;;   (#'a #'b #'c)
-   ;;
-   ;;and the return value is:
-   ;;
-   ;;   (#'a #'b #'c)
-   ;;
-   ;;Assume  BINDING* is  a  syntax object  representing a  proper  list of  standard
-   ;;binding identifiers; parse  the list and a list of  identifiers representing the
-   ;;binding identifiers.  The identifiers must be distinct.
-   ;;
    (define (%error message)
      (syntax-violation __who__ message (or input-form.stx binding*) (if input-form.stx binding* #f)))
    (define lexenv
@@ -1056,31 +1062,31 @@
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
 (case-define* syntax-object.parse-typed-list-of-bindings
+  ;;Parser  function for  lists of  typed syntactic  bindings.  It  is used  to parse
+  ;;bindings from  LET, DO  and similar  syntaxes.  For  example, when  expanding the
+  ;;syntax:
+  ;;
+  ;;   (let (({a <fixnum>} 1)
+  ;;         ({b <string>} "b")
+  ;;         (c            #t))
+  ;;     . ?body)
+  ;;
+  ;;the argument BINDING* is:
+  ;;
+  ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
+  ;;
+  ;;and the return values are:
+  ;;
+  ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+  ;;
+  ;;Assume BINDING* is a syntax object  representing a proper list of possibly tagged
+  ;;binding identifiers;  parse the list and  return 2 values: a  list of identifiers
+  ;;representing the binding identifiers, a list of identifiers representing the type
+  ;;tags; "<top>" is used when no tag is present.  The identifiers must be distinct.
+  ;;
   ((binding*)
    (syntax-object.parse-typed-list-of-bindings binding* #f))
   ((binding* input-form.stx)
-   ;;Parser function for  lists of bindings used  to parse bindings from  LET, DO and
-   ;;similar syntaxes.  For example, when expanding the syntax:
-   ;;
-   ;;   (let (({a <fixnum>} 1)
-   ;;         ({b <string>} "b")
-   ;;         (c            #t))
-   ;;     . ?body)
-   ;;
-   ;;the argument BINDING* is:
-   ;;
-   ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
-   ;;
-   ;;and the return values are:
-   ;;
-   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
-   ;;
-   ;;Assume BINDING* is a syntax object representing a proper list of possibly tagged
-   ;;binding identifiers; parse  the list and return 2 values:  a list of identifiers
-   ;;representing the  binding identifiers,  a list  of identifiers  representing the
-   ;;type tags;  "<top>" is  used when no  tag is present.   The identifiers  must be
-   ;;distinct.
-   ;;
    (define (%error message)
      (syntax-violation __who__ message (or input-form.stx binding*) (if input-form.stx binding* #f)))
    (define lexenv
@@ -1172,7 +1178,7 @@
 
 (module (syntax-object.parse-typed-formals)
   ;;Parse a  syntax object as  possibly typed  LET-VALUES formals (these  formals are
-  ;;different  from the  one of  LAMBDA clauses  because they  have no  return values
+  ;;different from  the one  of LAMBDA  clauses because they  have no  return values'
   ;;types).   Test for  duplicate  bindings.   If the  syntax  is  invalid: raise  an
   ;;exception.
   ;;

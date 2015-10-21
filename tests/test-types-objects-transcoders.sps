@@ -53,13 +53,13 @@
 
 (parametrise ((check-test-name		'constructor))
 
-  ;; (check
-  ;;     (transcoder? (new <transcoder> (utf-8-codec)))
-  ;;   => #t)
+  (check
+      (transcoder? (new <transcoder> (utf-8-codec)))
+    => #t)
 
-  ;; (check
-  ;;     (transcoder? (new <transcoder> (utf-8-codec) (eol-style lf)))
-  ;;   => #t)
+  (check
+      (transcoder? (new <transcoder> (utf-8-codec) (eol-style lf)))
+    => #t)
 
   (check
       (transcoder? (new <transcoder> (utf-8-codec) (eol-style lf) (error-handling-mode ignore)))
