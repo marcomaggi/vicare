@@ -72,9 +72,9 @@
 
    <clambda-clause-signature>
    make-clambda-clause-signature			clambda-clause-signature?
-   clambda-clause-signature.retvals			clambda-clause-signature.formals
    clambda-clause-signature=?
-   clambda-clause-signature.formals.tags		clambda-clause-signature.retvals.tags
+   clambda-clause-signature.retvals			clambda-clause-signature.retvals.tags
+   clambda-clause-signature.argvals			clambda-clause-signature.argvals.tags
    clambda-clause-signature.fully-unspecified?		clambda-clause-signature.untyped?
    list-of-clambda-clause-signatures?
 
@@ -856,14 +856,14 @@
    (immutable retvals	clambda-clause-signature.retvals)
 		;An instance of "<type-signature>"  representing the signature of the
 		;return values.
-   (immutable formals	clambda-clause-signature.formals)
+   (immutable argvals	clambda-clause-signature.argvals)
 		;An instance of "<type-signature>"  representing the signature of the
-		;formals.
+		;argument values.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define* (make-clambda-clause-signature {retvals type-signature?} {formals type-signature?})
-	(make-record retvals formals))
+      (define* (make-clambda-clause-signature {retvals type-signature?} {argvals type-signature?})
+	(make-record retvals argvals))
       make-clambda-clause-signature)))
 
 (define (list-of-clambda-clause-signatures? obj)
@@ -872,8 +872,8 @@
 	   (list-of-clambda-clause-signatures? (cdr obj)))
     (null? obj)))
 
-(define* (clambda-clause-signature.formals.tags {signature clambda-clause-signature?})
-  (type-signature-tags (clambda-clause-signature.formals signature)))
+(define* (clambda-clause-signature.argvals.tags {signature clambda-clause-signature?})
+  (type-signature-tags (clambda-clause-signature.argvals signature)))
 
 (define* (clambda-clause-signature.retvals.tags {signature clambda-clause-signature?})
   (type-signature-tags (clambda-clause-signature.retvals signature)))
@@ -883,8 +883,8 @@
 (define* (clambda-clause-signature=? {signature1 clambda-clause-signature?} {signature2 clambda-clause-signature?})
   ;;Return true if the signatures are equal; otherwise return false.
   ;;
-  (and (type-signature=? (clambda-clause-signature.formals signature1)
-			 (clambda-clause-signature.formals signature2))
+  (and (type-signature=? (clambda-clause-signature.argvals signature1)
+			 (clambda-clause-signature.argvals signature2))
        (type-signature=? (clambda-clause-signature.retvals signature1)
 			 (clambda-clause-signature.retvals signature2))))
 
@@ -892,17 +892,17 @@
 
 (define* (clambda-clause-signature.fully-unspecified? {clause-signature clambda-clause-signature?})
   ;;A LAMBDA signature  has fully unspecified types if its  retvals type signature is
-  ;;the  standalone  "<list>"  and  its  formals type  signature  is  the  standalone
+  ;;the  standalone  "<list>"  and  its  argvals type  signature  is  the  standalone
   ;;"<list>".
   ;;
-  (and (type-signature.fully-unspecified? (clambda-clause-signature.formals clause-signature))
+  (and (type-signature.fully-unspecified? (clambda-clause-signature.argvals clause-signature))
        (type-signature.fully-unspecified? (clambda-clause-signature.retvals clause-signature))))
 
 (define* (clambda-clause-signature.untyped? {clause-signature clambda-clause-signature?})
-  ;;A  clambda  clause has  "untyped"  signature  if  both  its formals  and  retvals
+  ;;A  clambda  clause has  "untyped"  signature  if  both  its argvals  and  retvals
   ;;signatures only use "<top>" and "<list>" as type identifiers.
   ;;
-  (and (type-signature.untyped? (clambda-clause-signature.formals clause-signature))
+  (and (type-signature.untyped? (clambda-clause-signature.argvals clause-signature))
        (type-signature.untyped? (clambda-clause-signature.retvals clause-signature))))
 
 

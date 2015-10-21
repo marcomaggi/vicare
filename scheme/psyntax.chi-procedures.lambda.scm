@@ -204,21 +204,21 @@
       (if (option.strict-r6rs)
 	  (syntax-object.parse-standard-clambda-clause-formals formals.stx input-form.stx)
 	(syntax-object.parse-clambda-clause-signature formals.stx input-form.stx)))
-    (define formals-signature.tags
-      (clambda-clause-signature.formals.tags clause-signature))
+    (define argvals-signature.tags
+      (clambda-clause-signature.argvals.tags clause-signature))
     (define retvals-signature.tags
       (clambda-clause-signature.retvals.tags clause-signature))
     (cond
      ((list? standard-formals.stx)
       ;;Without  rest argument.   Here  we know  that  both STANDARD-FORMALS.STX  and
-      ;;FORMALS-SIGNATURE.TAGS are proper lists with equal length.
+      ;;ARGVALS-SIGNATURE.TAGS are proper lists with equal length.
       (let*-values
 	  (((rib lexenv.run formals*.lex)
-	    (%process-formals-syntactic-bindings standard-formals.stx formals-signature.tags lexenv.run))
+	    (%process-typed-syntactic-bindings-lhs* standard-formals.stx argvals-signature.tags lexenv.run))
 	   ;;Proper list of syntax objects representing validation forms.
 	   ((validation*.stx)
 	    (if (attributes.safe-formals? attributes.sexp)
-		(%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx formals-signature.tags #f #f)
+		(%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx argvals-signature.tags #f #f)
 	      '()))
 	   ;;True if there is at least one formals argument validation form.
 	   ((has-arguments-validators?)
@@ -243,15 +243,15 @@
 
      (else
       ;;With  rest  argument.   Here  we  know  that  both  STANDARD-FORMALS.STX  and
-      ;;FORMALS-SIGNATURE.TAGS are improper lists with equal length.
+      ;;ARGVALS-SIGNATURE.TAGS are improper lists with equal length.
       (let*-values
 	  (((arg*.id  rest.id)
 	    (improper-list->list-and-rest standard-formals.stx))
 	   ((arg*.tag rest.tag)
-	    (improper-list->list-and-rest formals-signature.tags))
+	    (improper-list->list-and-rest argvals-signature.tags))
 	   ((rib lexenv.run formals.lex)
 	    (receive (rib lexenv.run all*.lex)
-		(%process-formals-syntactic-bindings (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run)
+		(%process-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run)
 	      ;;Yes, this call to APPEND builds an improper list.
 	      (values rib lexenv.run (append (cdr all*.lex) (car all*.lex)))))
 	   ;;Proper list of syntax objects representing validation forms.

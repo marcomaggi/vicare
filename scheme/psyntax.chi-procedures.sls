@@ -1729,7 +1729,7 @@
 		(c (psi.core-expr guard-expr.psi) (stc)))))))
 
 
-(module (%process-formals-syntactic-bindings)
+(module (%process-typed-syntactic-bindings-lhs*)
   ;;This function is meant to be used by syntaxes that create new syntactic bindings:
   ;;INTERNAL-LAMBDA, INTERNAL-CASE-LAMBDA, LET, LETREC, LETREC*.  These syntaxes need
   ;;to create both typed and untyped syntactic bindings.
@@ -1754,7 +1754,7 @@
   ;;
   ;;this function must be called as:
   ;;
-  ;;   (%process-formals-syntactic-bindings
+  ;;   (%process-typed-syntactic-bindings-lhs*
   ;;      (list #'A #'B)
   ;;      (list #'<fixnum> #'<string>)
   ;;      lexenv.run)
@@ -1766,12 +1766,12 @@
   ;;
   ;;this function must be called as:
   ;;
-  ;;   (%process-formals-syntactic-bindings
+  ;;   (%process-typed-syntactic-bindings-lhs*
   ;;      (list #'C #'A #'B)
   ;;      (list #'<list> #'<fixnum> #'<string>)
   ;;      lexenv.run)
   ;;
-  (define (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv)
+  (define (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv)
     (receive (typed-var*.id typed-var*.tag typed-var*.lex untyped-var*.id untyped-var*.lex lhs*.lex)
 	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
       ;;Prepare the UNtyped lexical variables.

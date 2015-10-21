@@ -715,10 +715,10 @@
     ;;  raise an exception.
     ;;
     (import CLOSURE-APPLICATION-ERRORS)
-    (define rator.formals-signature
-      (clambda-clause-signature.formals rator.clause-signature))
+    (define rator.argvals-signature
+      (clambda-clause-signature.argvals rator.clause-signature))
     (let loop ((expand-time-match? #t)
-	       (arg*.tag           (type-signature-tags rator.formals-signature))
+	       (arg*.tag           (type-signature-tags rator.argvals-signature))
 	       (rand*.psi          rand*.psi)
 	       (count              0))
       (syntax-match arg*.tag ()
@@ -800,7 +800,7 @@
 	 ;;This should never happen.
 	 (assertion-violation/internal-error __module_who__
 	   "invalid closure object operator formals"
-	   input-form.stx rator.formals-signature))
+	   input-form.stx rator.argvals-signature))
 	)))
 
   #| end of module: PROCESS-CLOSURE-OBJECT-APPLICATION |# )

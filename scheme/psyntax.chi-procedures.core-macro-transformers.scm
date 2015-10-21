@@ -327,7 +327,7 @@
 		   ?rhs* lhs*.tag))
 		;;Prepare the untyped and typed lexical variables.
 		((rib lexenv.run lhs*.lex)
-		 (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv.run)))
+		 (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run)))
 	     (values lhs*.lex rhs*.psi rib lexenv.run)))
        ;;Prepare the body.
        (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
@@ -412,7 +412,7 @@
 		   (syntax-object.parse-list-of-typed-bindings ?lhs* input-form.stx))
 		  ;;Prepare the typed and untyped lexical variables.
 		  ((rib lexenv.run lhs*.lex)
-		   (%process-formals-syntactic-bindings lhs*.id lhs*.tag lexenv.run))
+		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run))
 		  ;;NOTE The region  of all the LETREC and  LETREC* bindings includes
 		  ;;all the right-hand  sides.  The new rib is pushed  on all the RHS
 		  ;;and the body.
