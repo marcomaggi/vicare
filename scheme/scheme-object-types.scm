@@ -177,7 +177,7 @@
 
 (define-scheme-type <nlist>
     <list>
-  #f nlist?
+  nlist nlist?
   (methods
    (car		car)
    (cdr		cdr)))

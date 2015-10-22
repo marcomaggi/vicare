@@ -1619,15 +1619,25 @@
 
    ;;;
 
-   ;; (declare-typed-core-prim car
-   ;;   (unsafe-variant $car)
-   ;;   (signatures
-   ;;    ((<top>) (<pair>))))
+   (declare-typed-core-prim car
+     #;(unsafe-variant $car)
+     (signatures
+      ((<top>) (<pair>))
+      ((<top>) (<nlist>))
+      ;;FIXME Strictly speaking this is wrong: "<list>" can also be null, so applying
+      ;;CAR is an  error.  This is why  the unsafe variant is  commented out.  (Marco
+      ;;Maggi; Thu Oct 22, 2015)
+      ((<top>) (<list>))))
 
-   ;; (declare-typed-core-prim cdr
-   ;;   (unsafe-variant $cdr)
-   ;;   (signatures
-   ;;    ((<top>) (<pair>))))
+   (declare-typed-core-prim cdr
+     #;(unsafe-variant $cdr)
+     (signatures
+      ((<top>) (<pair>))
+      ((<top>) (<nlist>))
+      ;;FIXME Strictly speaking this is wrong: "<list>" can also be null, so applying
+      ;;CDR is an  error.  This is why  the unsafe variant is  commented out.  (Marco
+      ;;Maggi; Thu Oct 22, 2015)
+      ((<top>) (<list>))))
 
    ))
 
@@ -2748,6 +2758,7 @@
     (lcm					v r ba se)
     (length					v r ba se)
     (list					v r ba se)
+    (nlist					v $language)
     (list->string				v r ba se)
     (list->vector				v r ba se)
     (list-ref					v r ba se)

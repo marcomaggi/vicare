@@ -72,6 +72,7 @@
 		  eof-object-hash		would-block-hash
 		  struct-hash			record-hash
 		  object-hash			pointer-hash
+		  nlist?
 		  #| end of EXPORT |# )
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
     ;;2015)
@@ -110,10 +111,18 @@
 	  eof-object-hash		would-block-hash
 	  struct-hash			record-hash
 	  object-hash)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
+    ;;2015)
     (only (ikarus.pointers)
 	  pointer-hash)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
+    ;;2015)
     (only (ikarus fixnums)
 	  char->fixnum)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
+    ;;2015)
+    (only (ikarus lists)
+	  nlist?)
     (only (vicare system $fx)
 	  $fxadd1))
 
@@ -176,7 +185,8 @@
 
 	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
 	((vector?  subject)	(%built-in-scheme-object-call <vector>-type-descriptor))
-	((list?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
+	((nlist?   subject)	(%built-in-scheme-object-call <nlist>-type-descriptor))
+	((null?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
 	((pair?    subject)	(%built-in-scheme-object-call <pair>-type-descriptor))
 	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-type-descriptor))
 

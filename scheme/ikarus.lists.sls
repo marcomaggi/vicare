@@ -19,7 +19,7 @@
 (library (ikarus lists)
   (export
     list? nlist?
-    list cons* make-list append length list-ref reverse
+    list nlist cons* make-list append length list-ref reverse
     last-pair memq memp memv member find assq assp assv assoc
     remq remv remove remp filter map for-each
     (rename (for-each for-each-in-order)) andmap ormap list-tail
@@ -36,7 +36,7 @@
 		  procedure-arguments-consistency-violation
 		  ;;;
 
-		  list? nlist? list cons* make-list append reverse
+		  list? nlist? list nlist cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
@@ -99,6 +99,9 @@
 ;; 	 ($memq x ($cdr ls)))))
 
 (define list (lambda x x))
+
+(define (nlist item . item*)
+  (cons item item*))
 
 (define (cons* fst . rest)
   (let loop ((fst fst) (rest rest))

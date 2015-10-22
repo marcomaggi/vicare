@@ -1564,20 +1564,19 @@ Apply @func{cdr} to the type instance.
 @subsection Types of lists
 
 
-@deftp {Built--in Type} <list>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{list}
+@deftpx {Parent Type} @aclass{top}
 Type of proper lists, both null and non--empty.
 @end deftp
 
 
-@defop Constructor @class{list} new <list> @var{obj} @dots{}
+@defop Constructor @class{list} new @aclass{list} @var{obj} @dots{}
 The constructor is @func{list}.  Return a new list having the given
 @var{obj} arguments as items.
 @end defop
 
 
-@defop {Type predicate} @class{list} is-a? @var{obj} <list>
-@defopx {Type predicate} @class{list} is-a? _ <list>
+@defop {Type predicate} @class{list} is-a? @var{obj} @aclass{list}
 The type predicate is @func{list?}.  Return @true{} if @var{obj} is null
 or a proper list object; otherwise return @false{}.
 @end defop
@@ -1587,15 +1586,20 @@ or a proper list object; otherwise return @false{}.
 @subsubheading Non--empty lists
 
 
-@deftp {Built--in Type} <nlist>
-@deftpx {Parent Type} <list>
-Type of non--empty lists.  There is no constructor.  The type predicate
-is @func{nlist?}.
+@deftp {Built--in Type} @aclass{nlist}
+@deftpx {Parent Type} @aclass{list}
+Type of non--empty lists.
 @end deftp
 
 
-@defop {Type predicate} @class{nlist} is-a? @var{obj} <nlist>
-@defopx {Type predicate} @class{nlist} is-a? _ <nlist>
+@defop Constructor @class{nlist} new @aclass{nlist} @varo{obj} @var{obj} @dots{}
+The constructor is @func{nlist}.  Return a new list having the given
+@var{obj} arguments as items.
+@end defop
+
+
+
+@defop {Type predicate} @class{nlist} is-a? @var{obj} @aclass{nlist}
 The type predicate is @func{nlist?}.  Return @true{} if @var{obj} is a
 proper non--empty list object; otherwise return @false{}.
 @end defop
