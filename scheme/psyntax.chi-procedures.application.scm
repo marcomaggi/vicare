@@ -674,18 +674,21 @@
 	(let loop ((clause-signature*	(clambda-signature.clause-signature* rator.clambda-signature))
 		   (state		'no-match))
 	  (if (pair? clause-signature*)
-	      (case (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-								    (clambda-clause-signature.argvals.tags (car clause-signature*))
-								    rand*.sig)
-		((exact-match)
-		 ;;The operands match the signature: we are applying a closure object
-		 ;;rator to a tuple of rands that have the right type.
-		 (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							       rator.psi rand*.psi))
-		((possible-match)
-		 (loop (cdr clause-signature*) 'possible-match))
-		((no-match)
-		 (loop (cdr clause-signature*) state)))
+	      (let ((argvals.sig (clambda-clause-signature.argvals (car clause-signature*))))
+		(case (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
+								      (type-signature-tags argvals.sig)
+								      rand*.sig)
+		  ((exact-match)
+		   ;;The  operands match  the signature:  we are  applying a  closure
+		   ;;object rator to a tuple of rands that have the right type.
+		   (if (type-signature.untyped? argvals.sig)
+		       (%no-optimisation-possible)
+		     (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+								   rator.psi rand*.psi)))
+		  ((possible-match)
+		   (loop (cdr clause-signature*) 'possible-match))
+		  ((no-match)
+		   (loop (cdr clause-signature*) state))))
 	    (case state
 	      ((possible-match)
 	       ;;It is  not possible  to validate the  signatures at  expand-time; we
