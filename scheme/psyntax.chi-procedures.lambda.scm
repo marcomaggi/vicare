@@ -371,7 +371,7 @@
     ;;
     (cond (has-arguments-validators?
 	   (bless
-	    (if (syntax-object.type-signature.fully-unspecified? retvals-signature.tags)
+	    (if (syntax-object.type-signature.fully-untyped? retvals-signature.tags)
 		;;The number and type of return values is unknown.
 		`((internal-body . ,body-form*.stx))
 	      (receive (head*.stx last.stx)
@@ -380,7 +380,7 @@
 		    ,@head*.stx
 		    (assert-signature-and-return ,retvals-signature.tags ,last.stx)))))))
 	  (else
-	   (if (syntax-object.type-signature.fully-unspecified? retvals-signature.tags)
+	   (if (syntax-object.type-signature.fully-untyped? retvals-signature.tags)
 	       ;;The number and type of return values is unknown.
 	       body-form*.stx
 	     (receive (head*.stx last.stx)

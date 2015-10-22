@@ -356,7 +356,7 @@
 	     (bless
 	      `(internal-define (safe) ,(make-define-formals who.id) . ,unsafe-body*.stx)))
 
-	    ((type-signature.fully-unspecified? (clambda-clause-signature.retvals clause-signature))
+	    ((type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 	     ;;If only  the return values  have specified type signature:  generate a
 	     ;;single function definition with type checking for the return values.
 	     ;;

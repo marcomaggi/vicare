@@ -164,7 +164,7 @@
       (lambda (make-record)
 	(case-define* make-psi
 	  ((stx core-expr)
-	   (make-record stx core-expr (make-type-signature/fully-unspecified)))
+	   (make-record stx core-expr (make-type-signature/fully-untyped)))
 	  ((stx core-expr {retvals-signature type-signature?})
 	   (make-record stx core-expr retvals-signature)))
 	make-psi))
@@ -186,9 +186,9 @@
        (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv)))
 	 (if (closure-type-spec? ots)
 	     (callable-signature.retvals (closure-type-spec.signature ots))
-	   (make-type-signature/fully-unspecified))))
+	   (make-type-signature/fully-untyped))))
       (_
-       (make-type-signature/fully-unspecified))))
+       (make-type-signature/fully-untyped))))
 
   #| end of module |# )
 

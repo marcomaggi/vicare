@@ -594,7 +594,7 @@
 		  (cons* (build-data no-source method-name.sym)
 			 expr.core
 			 arg*.core))
-		(make-type-signature/fully-unspecified))))
+		(make-type-signature/fully-untyped))))
 
   #| end of module |# )
 
@@ -746,11 +746,11 @@
     ;;Most of  the times either  the signatures will match  at expand-time or  a full
     ;;run-time validation is required.  So let's do first the common cases.
     (cond
-     ((syntax-object.type-signature.fully-unspecified? asrt.tags)
+     ((syntax-object.type-signature.fully-untyped? asrt.tags)
       ;;The assertion's signature always matches expression's signature.
       (%just-evaluate-the-expression expr.psi return-values?))
 
-     ((syntax-object.type-signature.fully-unspecified? expr.tags)
+     ((syntax-object.type-signature.fully-untyped? expr.tags)
       ;;When the  assertion's signature has  types and the expression's  signature is
       ;;unspecified: always do a run-time validation.
       (%run-time-validation who input-form.stx lexenv.run lexenv.expand

@@ -559,8 +559,8 @@
   (define (%process-clambda-application input-form.stx lexenv.run lexenv.expand
 					rator.clambda-signature rator.psi rand*.psi)
     ;;For  rators having  a "<clambda-signature>"  signature: we  iterate, in  order,
-    ;;through the  "<clambda-clause-signature>" instances-SIGNATUREs looking  for the
-    ;;first that matches.
+    ;;through  the  "<clambda-clause-signature>"  instances representing  the  clause
+    ;;signatures, looking for the first that matches.
     ;;
     (define (%no-optimisation-possible)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))

@@ -187,7 +187,7 @@
 		   (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (build-void))
-		 (make-type-signature/fully-unspecified))))
+		 (make-type-signature/fully-untyped))))
     ))
 
 

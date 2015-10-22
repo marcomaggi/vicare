@@ -36,7 +36,7 @@
    syntax-object.typed-argument?			syntax-object.parse-typed-argument
 
    syntax-object.type-signature?			syntax-object.type-signature.single-identifier?
-   syntax-object.type-signature.fully-unspecified?	syntax-object.type-signature.partially-untyped?
+   syntax-object.type-signature.fully-untyped?		syntax-object.type-signature.partially-untyped?
    syntax-object.type-signature.untyped?
    syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
 
@@ -56,14 +56,14 @@
    type-signature-tags
    make-type-signature/single-top			make-type-signature/single-void
    make-type-signature/single-boolean			make-type-signature/single-procedure
-   make-type-signature/standalone-list			make-type-signature/fully-unspecified
+   make-type-signature/standalone-list			make-type-signature/fully-untyped
    make-type-signature/single-value
    type-signature=?
-   type-signature.fully-unspecified?			type-signature.partially-untyped?
+   type-signature.fully-untyped?			type-signature.partially-untyped?
    type-signature.untyped?				type-signature.super-and-sub?
    type-signature.single-type?
    type-signature.single-top-tag?
-   type-signature.single-type-or-fully-unspecified?
+   type-signature.single-type-or-fully-untyped?
 
    type-signature.common-ancestor			datum-type-signature
 
@@ -76,7 +76,7 @@
    clambda-clause-signature=?
    clambda-clause-signature.retvals			clambda-clause-signature.retvals.tags
    clambda-clause-signature.argvals			clambda-clause-signature.argvals.tags
-   clambda-clause-signature.fully-unspecified?		clambda-clause-signature.untyped?
+   clambda-clause-signature.fully-untyped?		clambda-clause-signature.untyped?
    list-of-clambda-clause-signatures?
 
    <clambda-signature>
@@ -518,7 +518,7 @@
     ((?type)	#t)
     (else	#f)))
 
-(define* (syntax-object.type-signature.fully-unspecified? stx)
+(define* (syntax-object.type-signature.fully-untyped? stx)
   ;;The argument STX must be a  syntax object representing a type signature according
   ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
   ;;unspecified.   Return true  if  STX  is a  syntax  object  representing the  type
@@ -730,13 +730,18 @@
 
 (define-record-type (<type-signature> make-type-signature type-signature?)
   (nongenerative vicare:expander:<type-signature>)
-  (fields (immutable tags	type-signature-tags))
+  (fields
+   (immutable tags	type-signature-tags)
 		;A  fully  unwrapped  syntax  object representing  a  type  signature
 		;according to SYNTAX-OBJECT.TYPE-SIGNATURE?.
+   (mutable memoised-fully-untyped?	type-signature.memoised-fully-untyped?		type-signature.memoised-fully-untyped?-set!)
+   (mutable memoised-partially-untyped?	type-signature.memoised-partially-untyped?	type-signature.memoised-partially-untyped?-set!)
+   (mutable memoised-untyped?		type-signature.memoised-untyped?		type-signature.memoised-untyped?-set!)
+   #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
       (define* (make-type-signature {tags syntax-object.type-signature?})
-	(make-record (syntax-unwrap tags)))
+	(make-record (syntax-unwrap tags) #f #f #f))
       make-type-signature)))
 
 (define <type-signature>-rtd
@@ -770,7 +775,7 @@
   (define-cached-signature-maker make-type-signature/standalone-list		(list-tag-id))
   #| end of LET-SYNTAX |# )
 
-(define-syntax-rule (make-type-signature/fully-unspecified)
+(define-syntax-rule (make-type-signature/fully-untyped)
   (make-type-signature/standalone-list))
 
 (define* (make-type-signature/single-value {type type-identifier?})
@@ -778,23 +783,32 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (type-signature.fully-unspecified? {signature type-signature?})
+(define* (type-signature.fully-untyped? {signature type-signature?})
   ;;Return true  if the type  signature specifies  neither object types,  nor objects
   ;;count; otherwise return false.
   ;;
-  (syntax-object.type-signature.fully-unspecified? (type-signature-tags signature)))
+  (or (type-signature.memoised-fully-untyped? signature)
+      (receive-and-return (bool)
+	  (syntax-object.type-signature.fully-untyped? (type-signature-tags signature))
+	(type-signature.memoised-fully-untyped?-set! signature bool))))
 
 (define* (type-signature.partially-untyped? {signature type-signature?})
   ;;Return true if the type signature as at least one untyped item, either "<top>" or
   ;;"<list>"; otherwise return false.
   ;;
-  (syntax-object.type-signature.partially-untyped? (type-signature-tags signature)))
+  (or (type-signature.memoised-partially-untyped? signature)
+      (receive-and-return (bool)
+	  (syntax-object.type-signature.partially-untyped? (type-signature-tags signature))
+	(type-signature.memoised-partially-untyped?-set! signature bool))))
 
 (define* (type-signature.untyped? {signature type-signature?})
   ;;Return  true if  the type  signature  as only  untyped items,  either "<top>"  or
   ;;"<list>"; otherwise return false.
   ;;
-  (syntax-object.type-signature.untyped? (type-signature-tags signature)))
+  (or (type-signature.memoised-untyped? signature)
+      (receive-and-return (bool)
+	  (syntax-object.type-signature.untyped? (type-signature-tags signature))
+	(type-signature.memoised-untyped?-set! signature bool))))
 
 (define* (type-signature.super-and-sub? {super-signature type-signature?}
 					{sub-signature   type-signature?})
@@ -819,7 +833,7 @@
     ((<top>)  #t)
     (_        #f)))
 
-(define* (type-signature.single-type-or-fully-unspecified? {signature type-signature?})
+(define* (type-signature.single-type-or-fully-untyped? {signature type-signature?})
   ;;Return true if SIGNATURE represents a single return value or it is the standalone
   ;;"<list>" identifier, otherwise return false.
   ;;
@@ -944,13 +958,13 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (clambda-clause-signature.fully-unspecified? {clause-signature clambda-clause-signature?})
+(define* (clambda-clause-signature.fully-untyped? {clause-signature clambda-clause-signature?})
   ;;A  clambda clause  signature  has fully  unspecified types  if  its retvals  type
   ;;signature  is the  standalone  "<list>" and  its argvals  type  signature is  the
   ;;standalone "<list>".
   ;;
-  (and (type-signature.fully-unspecified? (clambda-clause-signature.argvals clause-signature))
-       (type-signature.fully-unspecified? (clambda-clause-signature.retvals clause-signature))))
+  (and (type-signature.fully-untyped? (clambda-clause-signature.argvals clause-signature))
+       (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))))
 
 (define* (clambda-clause-signature.untyped? {clause-signature clambda-clause-signature?})
   ;;A  clambda  clause has  "untyped"  signature  if  both  its argvals  and  retvals
@@ -1319,7 +1333,7 @@
   ;;
   (receive (formals.stx signature.stx)
       (syntax-object.parse-standard-formals formals.stx input-form.stx)
-    (values formals.stx (make-clambda-clause-signature (make-type-signature/fully-unspecified)
+    (values formals.stx (make-clambda-clause-signature (make-type-signature/fully-untyped)
 						       (make-type-signature signature.stx)))))
 
 (define* (syntax-object.standard-clambda-clause-formals? formals.stx)
@@ -1373,7 +1387,7 @@
      (receive (standard-formals.stx formals-signature.stx)
 	 (syntax-object.parse-typed-formals ?formals input-form.stx)
        (values standard-formals.stx
-	       (make-clambda-clause-signature (make-type-signature/fully-unspecified)
+	       (make-clambda-clause-signature (make-type-signature/fully-untyped)
 					      (make-type-signature formals-signature.stx)))))))
 
 (define* (syntax-object.typed-clambda-clause-formals? formals.stx)
