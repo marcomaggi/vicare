@@ -49,6 +49,7 @@
 	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
 
     ;; unsafe operations
+    $record-constructor
     $record-ref				$record-and-rtd?
 
     ;; syntactic bindings for internal use only
@@ -994,6 +995,9 @@
 
 
 (define* (record-constructor {rcd record-constructor-descriptor?})
+  ($<rcd>-builder rcd))
+
+(define ($record-constructor rcd)
   ($<rcd>-builder rcd))
 
 (module (make-record-constructor-descriptor)

@@ -251,11 +251,8 @@
 		     (and ($struct? obj)
 			  ($record-and-rtd? obj ,foo-rtd))))
       ;;Default constructor.
-      ;;
-      ;;FIXME We would  like the constructor to have a  function signature specifying
-      ;;the return type.  (Marco Maggi; Tue Sep 22, 2015)
-      (define (brace ,make-foo <procedure>)
-	(record-constructor ,foo-rcd))
+      (define ((brace ,make-foo ,foo) . args)
+	(apply ($record-constructor ,foo-rcd) args))
       ;;Methods.
       ,@method-form*.sexp
       ;;When there are  no fields: this form  expands to "(module ())"  which is just

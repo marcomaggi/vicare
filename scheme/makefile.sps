@@ -2483,6 +2483,7 @@
 
     ($record-ref)
     ($record-and-rtd?)
+    ($record-constructor)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)

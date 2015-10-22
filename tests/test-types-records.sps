@@ -27,6 +27,7 @@
 (program (test-vicare-records-typed)
   (options typed-language)
   (import (vicare)
+    (prefix (vicare expander) xp.)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -67,6 +68,16 @@
 	(let ((reco (new beta 1 2)))
 	  (beta? reco))
       => #t)
+
+    (check
+	(xp.type-signature-tags (type-of (new alpha 1 2 3)))
+      (=> syntax=?)
+      (list #'alpha))
+
+    (check
+	(xp.type-signature-tags (type-of (make-alpha 1 2 3)))
+      (=> syntax=?)
+      (list #'alpha))
 
     (void))
 
