@@ -54,7 +54,8 @@
     fprintf				debug-print
     print-gensym			print-graph
     pretty-width
-    void				port-id
+    void				void-object?
+    port-id
     console-error-port			all-identifiers?
     string-empty?			syntax=?
     ratnum?				bignum?
@@ -121,7 +122,8 @@
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Sep 30, 2015)
-		  with-blocked-exceptions)
+		  with-blocked-exceptions
+		  void-object?)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk
@@ -250,6 +252,9 @@
   (fx>=? 3 (compiler.optimize-level)))
 
 ;;; --------------------------------------------------------------------
+
+(define (void-object? obj)
+  (eq? obj (void)))
 
 (define (non-compound-sexp? obj)
   (or (null? obj)

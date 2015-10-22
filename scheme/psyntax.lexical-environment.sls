@@ -349,7 +349,12 @@
     &application-operator
     make-application-operator-condition
     application-operator-condition?
-    application-operator-condition-operator
+    application-operator-condition.operator
+
+    &application-operands
+    make-application-operands-condition
+    application-operands-condition?
+    application-operands-condition.operands
 
     &retvals-signature-condition
     make-retvals-signature-condition
@@ -2618,12 +2623,24 @@
 
 ;;;; condition object types: descriptive objects
 
-;;This used to describe the syntax object acting as operator in an application form.
+;;This used to describe the syntax object  acting as operator in an application form.
+;;The single  argument to the  constructor must be  a syntax object  representing the
+;;operator.
+;;
 (define-condition-type &application-operator
     &condition
   make-application-operator-condition
   application-operator-condition?
-  (operator application-operator-condition-operator))
+  (operator application-operator-condition.operator))
+
+;;This used to describe the syntax object  acting as operator in an application form.
+;;The  single  argument  to  the  constructor  must  be  a  list  of  syntax  objects
+;;representing the operands.
+(define-condition-type &application-operands
+    &condition
+  make-application-operands-condition
+  application-operands-condition?
+  (operands application-operands-condition.operands))
 
 ;;This is used  to describe a type involved  in an exception.  The field  must be the
 ;;syntactic identifier  bound to the type  specification (for example the  name of an

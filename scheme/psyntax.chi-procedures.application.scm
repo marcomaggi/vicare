@@ -527,6 +527,106 @@
   #| end of module: CHI-APPLICATION/PSI-FIRST-OPERAND |# )
 
 
+(module CLOSURE-APPLICATION-ERRORS
+  ( ;;
+   %error-number-of-operands-exceeds-maximum-arguments-count
+   %error-number-of-operands-deceeds-minimum-arguments-count
+   %error-operand-with-multiple-return-values
+   %error-mismatch-between-argvals-signature-and-operands-signature)
+
+  (define-condition-type &wrong-number-of-arguments-error
+      &error
+    make-wrong-number-of-arguments-error-condition
+    wrong-number-of-arguments-error-condition?)
+
+  (define-condition-type &maximum-arguments-count
+      &condition
+    make-maximum-arguments-count-condition
+    maximum-arguments-count-condition?
+    (count maximum-arguments-count))
+
+  (define-condition-type &minimum-arguments-count
+      &condition
+    make-minimum-arguments-count-condition
+    minimum-arguments-count-condition?
+    (count minimum-arguments-count))
+
+  (define-condition-type &given-operands-count
+      &condition
+    make-given-operands-count-condition
+    given-operands-count-condition?
+    (count given-operands-count))
+
+  ;; (define-condition-type &argument-description
+  ;;     &condition
+  ;;   make-argument-description-condition
+  ;;   argument-description-condition?
+  ;;   (zero-based-argument-index argument-description-index)
+  ;;   (expected-argument-tag     argument-description-expected-tag))
+
+  (define-condition-type &clambda-signature
+      &condition
+    make-clambda-signature-condition
+    clambda-signature-condition?
+    (signature		clambda-signature-condition.signature))
+
+  (define-condition-type &operands-signature
+      &condition
+    make-operands-signature-condition
+    operands-signature-condition?
+    (operands-signature	operands-signature-condition.operands-signature))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+	    rator.stx rand*.stx maximum-arguments-count given-operands-count)
+    (raise-compound-condition-object 'chi-application
+      "while expanding, detected wrong number of operands in function application: number of operands exceeds maximum number of arguments"
+      input-form.stx
+      (condition
+       (make-syntax-violation input-form.stx #f)
+       (make-wrong-number-of-arguments-error-condition)
+       (make-application-operator-condition rator.stx)
+       (make-application-operands-condition rand*.stx)
+       (make-maximum-arguments-count-condition maximum-arguments-count)
+       (make-given-operands-count-condition given-operands-count))))
+
+  (define (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+	    rator.stx rand*.stx minimum-arguments-count given-operands-count)
+    (raise-compound-condition-object 'chi-application
+      "while expanding, detected wrong number of operands in function application: number of operands deceeds minimum number of arguments"
+      input-form.stx
+      (condition
+       (make-syntax-violation input-form.stx #f)
+       (make-wrong-number-of-arguments-error-condition)
+       (make-application-operator-condition rator.stx)
+       (make-application-operands-condition rand*.stx)
+       (make-minimum-arguments-count-condition minimum-arguments-count)
+       (make-given-operands-count-condition given-operands-count))))
+
+  (define (%error-operand-with-multiple-return-values input-form.stx rand.stx rand.sig)
+    (raise-compound-condition-object 'chi-application
+      "expand-time error: operand with multiple return values"
+      input-form.stx
+      (condition
+       (make-expand-time-type-signature-violation)
+       (make-syntax-violation input-form.stx rand.stx)
+       (make-operands-signature-condition (list rand.sig)))))
+
+  (define (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+	    clambda-signature operands-signature)
+    (raise-compound-condition-object 'chi-application
+      "expand-time mismatch between closure object's arguments signatures and operands signature"
+      input-form.stx
+      (condition
+       (make-expand-time-type-signature-violation)
+       (make-syntax-violation input-form.stx #f)
+       (make-clambda-signature-condition clambda-signature)
+       (make-operands-signature-condition operands-signature))))
+
+  #| end of module: CLOSURE-APPLICATION-ERRORS |# )
+
+
 ;;;; chi procedures: closure object application processing
 
 (module (%process-closure-object-application)
@@ -562,24 +662,72 @@
     ;;through  the  "<clambda-clause-signature>"  instances representing  the  clause
     ;;signatures, looking for the first that matches.
     ;;
+    (import CLOSURE-APPLICATION-ERRORS)
     (define (%no-optimisation-possible)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-    (cond ((option.strict-r6rs)
-	   ;;We rely on run-time checking.
-	   (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-	  ((find (lambda (clause-signature)
-		   (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-								   clause-signature rator.psi rand*.psi #f))
-	     (clambda-signature.clause-signature* rator.clambda-signature))
-	   => (lambda (signature)
-		;;The operands match the SIGNATURE:  we are applying a closure object
-		;;rator to a tuple of rands that have the right type.
-		(%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							      rator.psi rand*.psi)))
-	  (else
-	   ;;It is not possible to validate the signatures at expand-time; we rely on
-	   ;;run-time checking.
-	   (%no-optimisation-possible))))
+    (if (option.strict-r6rs)
+	;;We rely on run-time checking.
+	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi)
+      (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
+	(%validate-clambda-number-of-arguments input-form.stx rator.clambda-signature rator.psi rand*.psi rand*.sig)
+	(%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
+	(let loop ((clause-signature*	(clambda-signature.clause-signature* rator.clambda-signature))
+		   (state		'no-match))
+	  (if (pair? clause-signature*)
+	      (case (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
+								    (clambda-clause-signature.argvals.tags (car clause-signature*))
+								    rand*.sig)
+		((exact-match)
+		 ;;The operands match the signature: we are applying a closure object
+		 ;;rator to a tuple of rands that have the right type.
+		 (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+							       rator.psi rand*.psi))
+		((possible-match)
+		 (loop (cdr clause-signature*) 'possible-match))
+		((no-match)
+		 (loop (cdr clause-signature*) state)))
+	    (case state
+	      ((possible-match)
+	       ;;It is  not possible  to validate the  signatures at  expand-time; we
+	       ;;rely on run-time checking.
+	       (%no-optimisation-possible))
+	      ((no-match)
+	       ;;Arguments and operands do *not* match at expand-time.
+	       (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+		 rator.clambda-signature rand*.sig))))))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%validate-clambda-number-of-arguments input-form.stx rator.clambda-signature rator.psi rand*.psi rand*.sig)
+    (import CLOSURE-APPLICATION-ERRORS)
+    (receive (minimum-arguments-count maximum-arguments-count)
+	(clambda-signature.min-and-max-argvals rator.clambda-signature)
+      (let ((given-operands-count (length rand*.sig)))
+	(cond ((< maximum-arguments-count given-operands-count)
+	       (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+		 (psi.input-form rator.psi) (map psi.input-form rand*.psi)
+		 maximum-arguments-count given-operands-count))
+	      ((> minimum-arguments-count given-operands-count)
+	       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+		 (psi.input-form rator.psi) (map psi.input-form rand*.psi)
+		 minimum-arguments-count given-operands-count))
+	      (else
+	       (void))))))
+
+  (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
+    (import CLOSURE-APPLICATION-ERRORS)
+    (for-each (lambda (rand.psi rand.sig)
+		(syntax-match (type-signature-tags rand.sig) (<list>)
+		  ((?type0 ?type1 . ?rest)
+		   ;;Two or more return values.  Wrong.
+		   (%error-operand-with-multiple-return-values input-form.stx (psi.input-form rand.psi) rand.sig))
+		  (_
+		   ;;Everything   else  is   possibly  good,   maybe  with   run-time
+		   ;;validation.
+		   (void))))
+      rand*.psi rand*.sig))
+
+;;; --------------------------------------------------------------------
 
   (define (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
 							rator.psi rand*.psi)
@@ -630,178 +778,99 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module CLOSURE-APPLICATION-ERRORS
-    (%error-more-operands-than-arguments
-     %error-more-arguments-than-operands
-     %error-mismatch-between-argument-tag-and-operand-retvals-signature)
-
-    (define-condition-type &wrong-number-of-arguments-error
-	&error
-      make-wrong-number-of-arguments-error-condition
-      wrong-number-of-arguments-error-condition?)
-
-    (define-condition-type &expected-arguments-count
-	&condition
-      make-expected-arguments-count-condition
-      expected-arguments-count-condition?
-      (count expected-arguments-count))
-
-    (define-condition-type &given-operands-count
-	&condition
-      make-given-operands-count-condition
-      given-operands-count-condition?
-      (count given-operands-count))
-
-    (define-condition-type &argument-description
-	&condition
-      make-argument-description-condition
-      argument-description-condition?
-      (zero-based-argument-index argument-description-index)
-      (expected-argument-tag     argument-description-expected-tag))
-
-    (define-condition-type &operand-retvals-signature
-	&condition
-      make-operand-retvals-signature-condition
-      operand-retvals-signature-condition?
-      (signature operand-retvals-signature))
-
-    (define (%error-more-operands-than-arguments who input-form.stx expected-arguments-count given-operands-count)
-      (raise-compound-condition-object who
-	"while expanding, detected wrong number of operands in function application: more given operands than expected arguments"
-	input-form.stx
-	(condition
-	 (make-syntax-violation input-form.stx #f)
-	 (make-wrong-number-of-arguments-error-condition)
-	 (make-expected-arguments-count-condition expected-arguments-count)
-	 (make-given-operands-count-condition given-operands-count))))
-
-    (define (%error-more-arguments-than-operands who input-form.stx expected-arguments-count given-operands-count)
-      (raise-compound-condition-object who
-	"while expanding, detected wrong number of operands in function application: more expected arguments than given operands"
-	input-form.stx
-	(condition
-	 (make-syntax-violation input-form.stx #f)
-	 (make-wrong-number-of-arguments-error-condition)
-	 (make-expected-arguments-count-condition expected-arguments-count)
-	 (make-given-operands-count-condition given-operands-count))))
-
-    (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature who input-form.stx rand.stx
-										arg.idx arg.tag rand.retvals-signature)
-      (raise-compound-condition-object who
-	"expand-time mismatch between expected argument tag and operand retvals signature"
-	input-form.stx
-	(condition
-	 (make-expand-time-type-signature-violation)
-	 (make-syntax-violation input-form.stx rand.stx)
-	 (make-argument-description-condition arg.idx arg.tag)
-	 (make-operand-retvals-signature-condition rand.retvals-signature))))
-
-    #| end of module: CLOSURE-APPLICATION-ERRORS |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
-							  rator.clause-signature rator.psi rand*.psi
-							  raise-error-if-no-match?)
-    ;;In a closure object application: compare  the signature tags of the operator to
-    ;;the retvals signatures of the operands:
+  (define* (%match-rator-signature-against-rand-signatures input-form.stx lexenv.run lexenv.expand
+							   argvals.tags rand*.sig)
+    ;;In a closure  object application, compare the type signature  of the operator's
+    ;;argvals  to the  type  signatures  of the  operands.   Return  a symbol  among:
+    ;;exact-match, possible-match, no-match.
     ;;
-    ;;* If they match at expand-time: return true.
+    ;;ARGVALS.TAGS is a syntax object representing the type signature of the argvals.
     ;;
-    ;;* If  they do  *not* match at  expand-time, but they  could match  at run-time:
-    ;;  return false.
+    ;;RAND*.SIG must be a list of "<type-signature>" instances representing the types
+    ;;of the operands.
     ;;
-    ;;* If  they do  *not* match at  expand-time, and will  *not* match  at run-time:
-    ;;  raise an exception.
-    ;;
-    (import CLOSURE-APPLICATION-ERRORS)
-    (define rator.argvals-signature
-      (clambda-clause-signature.argvals rator.clause-signature))
-    (let loop ((expand-time-match? #t)
-	       (arg*.tag           (type-signature-tags rator.argvals-signature))
-	       (rand*.psi          rand*.psi)
-	       (count              0))
-      (syntax-match arg*.tag ()
+    (let loop ((state		'exact-match)
+	       (argvals.tags	argvals.tags)
+	       (rand*.sig	rand*.sig))
+      (syntax-match argvals.tags (<top> <list>)
 	(()
-	 (if (null? rand*.psi)
-	     expand-time-match?
-	   (%error-more-operands-than-arguments 'chi-application input-form.stx
-						count (+ count (length rand*.psi)))))
+	 (if (null? rand*.sig)
+	     ;;No more arguments and no more operands.  Good.
+	     state
+	   ;;No more arguments and leftover operands.  Bad.
+	   'no-match))
 
-	((?arg.tag . ?rest-arg*.tag)
-	 (if (null? rand*.psi)
-	     (let ((number-of-mandatory-args (if (list? arg*.tag)
-						 (length arg*.tag)
-					       (receive (proper tail)
-						   (improper-list->list-and-rest arg*.tag)
-						 (length proper)))))
-	       (%error-more-arguments-than-operands 'chi-application input-form.stx (+ count number-of-mandatory-args) count))
-	   (let* ((rand.psi               (car rand*.psi))
-		  (rand.retvals-signature (psi.retvals-signature rand.psi))
-		  (rand.signature-tags    (type-signature-tags rand.retvals-signature)))
-	     (syntax-match rand.signature-tags ()
-	       ((?rand.tag)
-		;;Single return value from operand: good, this is what we want.
-		(cond ((top-tag-id? ?rand.tag)
-		       ;;The  argument expression  returns a  single "<top>"  object;
-		       ;;this  is  what  happens   with  standard  (untagged)  Scheme
-		       ;;language.  Let's see at run-time what will happen.
-		       (loop #f ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
-		      ((type-identifier-super-and-sub? ?arg.tag ?rand.tag lexenv.run input-form.stx)
-		       ;;Argument and  operand do match at  expand-time.  Notice that
-		       ;;this case  includes the one  of expected argument  tagged as
-		       ;;"<top>":  this  is  what happens  with  standard  (untagged)
-		       ;;Scheme language.
-		       (loop expand-time-match? ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
-		      (else
-		       ;;Argument and operand do *not* match at expand-time.
-		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
-											   input-form.stx
-											   (psi.input-form rand.psi)
-											   count ?arg.tag
-											   rand.retvals-signature))))
-	       (?rand.tag
-		(if (list-tag-id? ?rand.tag)
-		    ;;The operand expression returns an unspecified number of objects
-		    ;;of unspecified  type of return  values: it could be  one value.
-		    ;;Let's accept it for now, and  move on to the other operands: we
-		    ;;will see at run-time.
-		    (loop #f ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count))
-		  ;;The operand expression returns zero or more values of a specified
-		  ;;type: we consider this invalid even though if the operand returns
-		  ;;a single value the application could succeed.
-		  ;;
-		  ;;FIXME The  validity of this  rejection must be  verified.  (Marco
-		  ;;Maggi; Fri Apr 11, 2014)
-		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
-										      input-form.stx
-										      (psi.input-form rand.psi)
-										      count ?arg.tag
-										      rand.retvals-signature)))
-	       (_
-		;;The operand returns multiple values for sure.
-		(%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
-										    input-form.stx
-										    (psi.input-form rand.psi)
-										    count ?arg.tag
-										    rand.retvals-signature))
-	       ))))
+	((<top> . ?argvals.tags)
+	 (if (pair? rand*.sig)
+	     ;;One argument matches one operand.  Good.
+	     (loop state ?argvals.tags (cdr rand*.sig))
+	   ;;More arguments and no more operands.  Bad.
+	   'no-match))
 
-	(?arg.tag
-	 (if (list-tag-id? ?arg.tag)
-	     ;;From now on: the rator accepts any number of operands, of any type.
-	     expand-time-match?
-	   ;;If we are  here: ?ARG.TAG is a  sub-tag of "<list>".  From  now on: the
-	   ;;rator accepts any  number of operands, of a specified  type.  Let's see
-	   ;;at run-time what happens.
-	   #f))
+	((?argval.tag . ?argvals.tags)
+	 (if (pair? rand*.sig)
+	     (let ((rand.tags (type-signature-tags (car rand*.sig))))
+	       (syntax-match rand.tags (<top> <list>)
+		 ((<top>)
+		  ;;One argument possibly matches one operand.  Good.
+		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
+		 ((?rand.type)
+		  (if (type-identifier-super-and-sub? ?argval.tag ?rand.type lexenv.run)
+		      ;;One argument matches one operand.  Good.
+		      (loop state ?argvals.tags (cdr rand*.sig))
+		    'no-match))
+		 (<list>
+		  ;;Operand with unspecified return values.  Will check at run-time.
+		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
+		 (?rand-list-sub-type
+		  ;;The  operand  returns  an   unspecified  number  of  values  with
+		  ;;specified type.
+		  (let ((ots (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run)))
+		    (if (and (list-type-spec? ots)
+			     (type-identifier-super-and-sub? ?argval.tag (list-type-spec.type-id ots) lexenv.run))
+			(loop 'possible-match ?argvals.tags (cdr rand*.sig))
+		      'no-match)))))
+	   ;;More arguments and no more operands.  Bad.
+	   'no-match))
 
-	(_
-	 ;;This should never happen.
-	 (assertion-violation/internal-error __module_who__
-	   "invalid closure object operator formals"
-	   input-form.stx rator.argvals-signature))
-	)))
+	(<list>
+	 ;;Any number of operands of any type are accepted.
+	 state)
+
+	(?arg-list-sub-type
+	 ;;Any number of operands of a specified type are accepted.
+	 (if (pair? rand*.sig)
+	     (let* ((argval.ots   (id->object-type-specification __who__ input-form.stx ?arg-list-sub-type lexenv.run))
+		    (argitem.tag  (list-type-spec.type-id argval.ots)))
+	       (let inner-loop ((state		state)
+				(rand.tags	(type-signature-tags (car rand*.sig)))
+				(rand*.sig	(cdr rand*.sig)))
+		 (define (%recursion state)
+		   (if (pair? rand*.sig)
+		       (inner-loop state (type-signature-tags (car rand*.sig)) (cdr rand*.sig))
+		     state))
+		 (syntax-match rand.tags (<top> <list>)
+		   ((<top>)
+		    ;;One argument possibly matches one operand.  Good.
+		    (%recursion 'possible-match))
+		   ((?rand.type)
+		    (if (type-identifier-super-and-sub? argitem.tag ?rand.type lexenv.run)
+			;;One argument matches one operand.  Good.
+			(%recursion state)
+		      'no-match))
+		   (<list>
+		    ;;Operand with unspecified return values.  Will check at run-time.
+		    (%recursion 'possible-match))
+		   (?rand-list-sub-type
+		    ;;The  operand  returns  an   unspecified  number  of  values  with
+		    ;;specified type.
+		    (let* ((rand.ots      (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run))
+			   (randitem.tag  (list-type-spec.type-id rand.ots)))
+		      (if (type-identifier-super-and-sub? argitem.tag randitem.tag lexenv.run)
+			  (%recursion 'possible-match)
+			'no-match))))))
+	   ;;No more operands.  Good.
+	   state)))))
 
   #| end of module: PROCESS-CLOSURE-OBJECT-APPLICATION |# )
 
@@ -818,4 +887,7 @@
 ;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
+;;eval: (put '%error-mismatch-between-argvals-signature-and-operands-signature	'scheme-indent-function 1)
+;;eval: (put '%error-number-of-operands-exceeds-maximum-arguments-count		'scheme-indent-function 1)
+;;eval: (put '%error-number-of-operands-deceeds-minimum-arguments-count		'scheme-indent-function 1)
 ;;End:

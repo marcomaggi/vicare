@@ -39,6 +39,7 @@
    syntax-object.type-signature.fully-untyped?		syntax-object.type-signature.partially-untyped?
    syntax-object.type-signature.untyped?
    syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
+   syntax-object.type-signature.min-and-max-count
 
    syntax-object.parse-standard-formals			syntax-object.parse-typed-formals
    syntax-object.parse-standard-list-of-bindings	syntax-object.parse-typed-list-of-bindings
@@ -61,9 +62,9 @@
    type-signature=?
    type-signature.fully-untyped?			type-signature.partially-untyped?
    type-signature.untyped?				type-signature.super-and-sub?
-   type-signature.single-type?
-   type-signature.single-top-tag?
+   type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?
+   type-signature.min-count				type-signature.max-count
 
    type-signature.common-ancestor			datum-type-signature
 
@@ -77,7 +78,7 @@
    clambda-clause-signature.retvals			clambda-clause-signature.retvals.tags
    clambda-clause-signature.argvals			clambda-clause-signature.argvals.tags
    clambda-clause-signature.fully-untyped?		clambda-clause-signature.untyped?
-   list-of-clambda-clause-signatures?
+   clambda-signature.min-and-max-argvals
 
    <clambda-signature>
    make-clambda-signature				clambda-signature?
@@ -580,6 +581,26 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (syntax-object.type-signature.min-and-max-count stx)
+  ;;The argument STX must be a  syntax object representing a type signature according
+  ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
+  ;;unspecified.  Return two non-negative real  numbers: the minimum number of values
+  ;;that can match  the type signature; the  maximum number of values  that can match
+  ;;the type signature, possibly infinite.
+  ;;
+  (let recur ((stx  stx)
+	      (min  0)
+	      (max  0))
+    (syntax-match stx ()
+      (()
+       (values min max))
+      ((?type . ?rest)
+       (recur ?rest (fxadd1 min) (fxadd1 max)))
+      (?type
+       (values min +inf.0)))))
+
+;;; --------------------------------------------------------------------
+
 (case-define* syntax-object.type-signature.super-and-sub?
   ;;The  arguments   SUPER-SIGNATURE  and   SUB-SIGNATURE  must  be   syntax  objects
   ;;representing   type   signatures  according   to   SYNTAX-OBJECT.TYPE-SIGNATURE?,
@@ -737,11 +758,15 @@
    (mutable memoised-fully-untyped?	type-signature.memoised-fully-untyped?		type-signature.memoised-fully-untyped?-set!)
    (mutable memoised-partially-untyped?	type-signature.memoised-partially-untyped?	type-signature.memoised-partially-untyped?-set!)
    (mutable memoised-untyped?		type-signature.memoised-untyped?		type-signature.memoised-untyped?-set!)
+   (mutable memoised-min-count		type-signature.memoised-min-count		type-signature.memoised-min-count-set!)
+		;Memoised minimum number of values matching this signature.
+   (mutable memoised-max-count		type-signature.memoised-max-count		type-signature.memoised-max-count-set!)
+		;Memoised maximum number of values matching this signature.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
       (define* (make-type-signature {tags syntax-object.type-signature?})
-	(make-record (syntax-unwrap tags) #f #f #f))
+	(make-record (syntax-unwrap tags) (void) (void) (void) #f #f))
       make-type-signature)))
 
 (define <type-signature>-rtd
@@ -787,28 +812,34 @@
   ;;Return true  if the type  signature specifies  neither object types,  nor objects
   ;;count; otherwise return false.
   ;;
-  (or (type-signature.memoised-fully-untyped? signature)
-      (receive-and-return (bool)
-	  (syntax-object.type-signature.fully-untyped? (type-signature-tags signature))
-	(type-signature.memoised-fully-untyped?-set! signature bool))))
+  (let ((obj (type-signature.memoised-fully-untyped? signature)))
+    (if (void-object? obj)
+	(receive-and-return (bool)
+	    (syntax-object.type-signature.fully-untyped? (type-signature-tags signature))
+	  (type-signature.memoised-fully-untyped?-set! signature bool))
+      obj)))
 
 (define* (type-signature.partially-untyped? {signature type-signature?})
   ;;Return true if the type signature as at least one untyped item, either "<top>" or
   ;;"<list>"; otherwise return false.
   ;;
-  (or (type-signature.memoised-partially-untyped? signature)
-      (receive-and-return (bool)
-	  (syntax-object.type-signature.partially-untyped? (type-signature-tags signature))
-	(type-signature.memoised-partially-untyped?-set! signature bool))))
+  (let ((obj (type-signature.memoised-partially-untyped? signature)))
+    (if (void-object? obj)
+	(receive-and-return (bool)
+	    (syntax-object.type-signature.partially-untyped? (type-signature-tags signature))
+	  (type-signature.memoised-partially-untyped?-set! signature bool))
+      obj)))
 
 (define* (type-signature.untyped? {signature type-signature?})
   ;;Return  true if  the type  signature  as only  untyped items,  either "<top>"  or
   ;;"<list>"; otherwise return false.
   ;;
-  (or (type-signature.memoised-untyped? signature)
-      (receive-and-return (bool)
-	  (syntax-object.type-signature.untyped? (type-signature-tags signature))
-	(type-signature.memoised-untyped?-set! signature bool))))
+  (let ((obj (type-signature.memoised-untyped? signature)))
+    (if (void-object? obj)
+	(receive-and-return (bool)
+	    (syntax-object.type-signature.untyped? (type-signature-tags signature))
+	  (type-signature.memoised-untyped?-set! signature bool))
+      obj)))
 
 (define* (type-signature.super-and-sub? {super-signature type-signature?}
 					{sub-signature   type-signature?})
@@ -841,6 +872,38 @@
     ((?tag)	#t)
     (<list>	#t)
     (_		#f)))
+
+;;; --------------------------------------------------------------------
+
+(module (type-signature.min-count
+	 type-signature.max-count
+	 type-signature.min-and-max-counts)
+
+  (define* (type-signature.min-count {signature type-signature?})
+    ;;Return a non-negative fixnum representing the minimum number of values that can
+    ;;match the signature.
+    ;;
+    (or (type-signature.memoised-min-count signature)
+	(receive (min-count max-count)
+	    (type-signature.min-and-max-counts signature)
+	  min-count)))
+
+  (define* (type-signature.max-count {signature type-signature?})
+    ;;Return a non-negative fixnum representing the maximum number of values that can
+    ;;match the signature; if the number of values is infinite: return +inf.0.
+    ;;
+    (or (type-signature.memoised-max-count signature)
+	(receive (min-count max-count)
+	    (type-signature.min-and-max-counts signature)
+	  max-count)))
+
+  (define (type-signature.min-and-max-counts signature)
+    (receive-and-return (min-count max-count)
+	(syntax-object.type-signature.min-and-max-count (type-signature-tags signature))
+      (type-signature.memoised-min-count-set! signature min-count)
+      (type-signature.memoised-max-count-set! signature max-count)))
+
+  #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -934,11 +997,14 @@
 	(make-record retvals argvals))
       make-clambda-clause-signature)))
 
-(define (list-of-clambda-clause-signatures? obj)
-  (if (pair? obj)
-      (and (clambda-clause-signature? (car obj))
-	   (list-of-clambda-clause-signatures? (cdr obj)))
-    (null? obj)))
+(define (not-empty-list-of-clambda-clause-signatures? obj)
+  (and (pair? obj)
+       (and (clambda-clause-signature? (car obj))
+	    (let loop ((obj (cdr obj)))
+	      (if (pair? obj)
+		  (and (clambda-clause-signature? (car obj))
+		       (loop (cdr obj)))
+		(null? obj))))))
 
 (define* (clambda-clause-signature.argvals.tags {signature clambda-clause-signature?})
   (type-signature-tags (clambda-clause-signature.argvals signature)))
@@ -985,16 +1051,48 @@
    (immutable clause-signature* clambda-signature.clause-signature*)
 		;A proper list of "<clambda-clause-signature>" instances representing
 		;the signatures of the CASE-LAMBDA clauses.
+   (mutable memoised-min-count	clambda-signature.memoised-min-count	clambda-signature.memoised-min-count-set!)
+   (mutable memoised-max-count	clambda-signature.memoised-max-count	clambda-signature.memoised-max-count-set!)
    #| end of FIELDS |# )
   (protocol
     (lambda (make-callable-signature)
-      (define* (make-clambda-signature {signature* list-of-clambda-clause-signatures?})
+      (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
 	((make-callable-signature (apply type-signature.common-ancestor (map clambda-clause-signature.retvals signature*)))
-	 signature*))
+	 signature* #f #f))
       make-clambda-signature)))
 
 (define* (clambda-signature.retvals {sig clambda-signature?})
   (callable-signature.retvals sig))
+
+(define* (clambda-signature.min-and-max-argvals {sig clambda-signature?})
+  ;;Return two non-negative real numbers  representing the minimum and maximum number
+  ;;of values that can match the argvals type signatures of all the clauses.
+  ;;
+  (cond ((clambda-signature.memoised-min-count sig)
+	 => (lambda (min-count)
+	      (values min-count (clambda-signature.memoised-max-count sig))))
+	(else
+	 (let ((clause-signature* (clambda-signature.clause-signature* sig)))
+	   (receive (min-count max-count)
+	       (if (and (pair? clause-signature*)
+			(null? (cdr clause-signature*)))
+		   ;;There is only one clause signature.
+		   (type-signature.min-and-max-counts (clambda-clause-signature.argvals (car clause-signature*)))
+		 ;;There are two or more clause signatures.
+		 (let ((cnts (fold-left
+				 (lambda (knil clause-signature)
+				   (receive (min-count max-count)
+				       (type-signature.min-and-max-counts (clambda-clause-signature.argvals clause-signature))
+				     (cons (min (car knil) min-count)
+					   (max (cdr knil) max-count))))
+			       (receive (min-count max-count)
+				   (type-signature.min-and-max-counts (clambda-clause-signature.argvals (car clause-signature*)))
+				 (cons min-count max-count))
+			       (cdr clause-signature*))))
+		   (values (car cnts) (cdr cnts))))
+	     (clambda-signature.memoised-min-count-set! sig min-count)
+	     (clambda-signature.memoised-max-count-set! sig max-count)
+	     (values min-count max-count))))))
 
 
 ;;;; tagged binding parsing: standalone identifiers

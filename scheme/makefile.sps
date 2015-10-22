@@ -1562,9 +1562,8 @@
    (declare-typed-core-prim make-transcoder
      (signatures
       ((<transcoder>) (<symbol> <symbol> <symbol>))
-      ;; ((<transcoder>) (<symbol> <symbol>))
-      ;; ((<transcoder>) (<symbol>))
-      ))
+      ((<transcoder>) (<symbol> <symbol>))
+      ((<transcoder>) (<symbol>))))
 
    (declare-typed-core-prim transcoder?
      (signatures
