@@ -28,9 +28,11 @@
 
 
 #!r6rs
-(import (vicare)
-  (prefix (vicare posix) px.) ;for FILE-SIZE
-  (vicare checks))
+(program (long-test-ikarus-io)
+  (options strict-r6rs)
+  (import (vicare)
+    (prefix (vicare posix) px.) ;for FILE-SIZE
+    (vicare checks))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -211,10 +213,9 @@
 
   (check
       (guard (E ((assertion-violation? E)
-;;;		 (pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-transcoder 123))
+  		 (condition-irritants E))
+  		(else E))
+  	(make-transcoder 123))
     => '(123))
 
   (check
@@ -1614,5 +1615,7 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
