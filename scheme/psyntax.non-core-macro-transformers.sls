@@ -172,6 +172,9 @@
     ((with-blocked-exceptions)		with-blocked-exceptions-macro)
     ((with-current-dynamic-environment)	with-current-dynamic-environment-macro)
 
+    ((shift)				shift-macro)
+    ((reset)				reset-macro)
+
     ;; non-Scheme style syntaxes
     ((while)				while-macro)
     ((until)				until-macro)
@@ -3595,6 +3598,51 @@
 					  ,?exception-retvals-maker
 					,?thunk))
 				  reinstate-thunk-call-continuation))))))))))))))
+    ))
+
+
+;;;; non-core macro: SHIFT, RESET
+
+(define (reset-macro input-form.stx)
+  ;;Transformer  function used  to expand  Vicare's RESET  macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?body)
+     (let ((mc.sym      (gensym "meta-continuation"))
+	   (escape.sym  (gensym "escape"))
+	   (value.sym   (gensym "value"))
+	   (result.sym  (gensym "result")))
+       (bless
+	`(let ((,mc.sym (private-shift-meta-continuation)))
+	   (call-with-current-continuation
+	       (lambda (,escape.sym)
+		 (private-shift-meta-continuation (lambda (,value.sym)
+						    (private-shift-meta-continuation ,mc.sym)
+						    (,escape.sym ,value.sym)))
+		 (let ((,result.sym ,?body))
+		   ((private-shift-meta-continuation) ,result.sym))))))))
+    ))
+
+(define (shift-macro input-form.stx)
+  ;;Transformer  function used  to expand  Vicare's SHIFT  macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?var ?body)
+     (identifier? ?var)
+     (let ((escape.sym  (gensym "escape"))
+	   (value.sym   (gensym "value"))
+	   (result.sym  (gensym "result")))
+       (bless
+	`(call-with-current-continuation
+	     (lambda (,escape.sym)
+	       (let ((,result.sym (let ((,?var (lambda (,value.sym)
+						 (reset (,escape.sym ,value.sym)))))
+				    ,?body)))
+		 ((private-shift-meta-continuation) ,result.sym)))))))
     ))
 
 

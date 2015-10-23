@@ -42,6 +42,8 @@
 	  run-unwind-protection-cleanup-upon-exit?)
     (only (ikarus cafe)
 	  cafe-nested-depth)
+    (only (ikarus control)
+	  private-shift-meta-continuation)
     (vicare system $pairs))
 
 
@@ -188,7 +190,8 @@
   (parametrise
       ((run-unwind-protection-cleanup-upon-exit?	#f)
        (%current-coroutine-uid				uid)
-       (cafe-nested-depth				(cafe-nested-depth)))
+       (cafe-nested-depth				(cafe-nested-depth))
+       (private-shift-meta-continuation			(private-shift-meta-continuation)))
     (%enqueue-coroutine thunk)))
 
 (define (yield)
