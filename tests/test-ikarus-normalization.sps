@@ -27,7 +27,8 @@
 ;;;
 
 #!ikarus
-(import (vicare)
+(import (except (vicare)
+		reset)
   (libtest ikarus-test-framework)
   (unicode-data)
   (vicare checks))
