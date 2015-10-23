@@ -5311,6 +5311,31 @@
   #t)
 
 
+(parametrise ((check-test-name	'shift-and-reset))
+
+  (check
+      (+ 1 (reset 2))
+    => 3)
+
+  (check
+      (reset (* 2 (shift K (K 3))))
+    => 6)
+
+  (check
+      (+ 1 (reset (* 2 (shift K (K 3)))))
+    => 7)
+
+  (check
+      (reset (* 2 (shift K (K (K 2)))))
+    => 8)
+
+  (check
+      (reset (* 2 (shift K (K (K (K 2))))))
+    => 16)
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

@@ -742,6 +742,9 @@
     (with-blocked-exceptions			(macro . with-blocked-exceptions))
     (with-current-dynamic-environment		(macro . with-current-dynamic-environment))
 
+    (shift					(macro . shift))
+    (reset					(macro . reset))
+
     (with-implicits				(macro . with-implicits))
     (include					(macro . include))
     (set-cons!					(macro . set-cons!))
@@ -3817,6 +3820,12 @@
     (monitor					v $language)
     ;;This is for internal use.
     (do-monitor)
+
+;;; --------------------------------------------------------------------
+
+    (shift					v $language)
+    (reset					v $language)
+    (private-shift-meta-continuation)
 
 ;;; --------------------------------------------------------------------
 ;;; immutable pairs

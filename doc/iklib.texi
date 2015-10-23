@@ -627,6 +627,7 @@ Example:
 * iklib syntaxes infix::        Infix to prefix transformer.
 * iklib syntaxes increments::   Incrementing and decrementing.
 * iklib syntaxes unsafe::       Unsafe binding variants.
+* iklib syntaxes delimcc::      Delimited continuations.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
@@ -3432,6 +3433,43 @@ Expand into the syntax object registered as unsafe variant of the bound
 identifier @var{safe.id}; raise a syntax violation if @meta{safe.id} has
 no unsafe variant.
 @end deffn
+
+@c page
+@node iklib syntaxes delimcc
+@subsection Delimited continuations
+
+
+@deffn Syntax reset @meta{body}
+Sets the limit for the delimited continuation and evaluate the
+expression @meta{body}.
+@end deffn
+
+
+@deffn Syntax shift @meta{var} @meta{body}
+Capture the current continuation up to the innermost @syntax{reset}
+syntax use.  The escape function of the delimited continuation is bound
+to @meta{var}, the the expression @meta{body} is evaluated.
+@end deffn
+
+
+Examples:
+
+@lisp
+(+ 1 (reset 2))
+@result{} 3
+
+(reset (* 2 (shift K (K 3))))
+@result{} 6
+
+(+ 1 (reset (* 2 (shift K (K 3)))))
+@result{} 7
+
+(reset (* 2 (shift K (K (K 2)))))
+@result{} 8
+
+(reset (* 2 (shift K (K (K (K 2))))))
+@result{} 16
+@end lisp
 
 @c page
 @node iklib syntaxes misc

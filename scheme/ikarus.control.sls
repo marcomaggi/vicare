@@ -21,6 +21,7 @@
     call/cf		call/cc
     dynamic-wind
     (rename (call/cc call-with-current-continuation))
+    private-shift-meta-continuation
     exit		exit-hooks)
   (import (except (vicare)
 		  call/cc		call-with-current-continuation
@@ -342,6 +343,13 @@
 	(apply values v1 v2 v*))))))
 
 
+;;;; shift and reset utilities
+
+(define private-shift-meta-continuation
+  (make-parameter (lambda (value)
+		    (error 'shift "used out of context" value))))
+
+
 ;;;; other functions
 
 (define exit
@@ -367,6 +375,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

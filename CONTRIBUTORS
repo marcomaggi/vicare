@@ -103,6 +103,26 @@
   by S.  Carton.   The site claims that the code  is available under the
   Creative Commons CC0 1.0 Universal Public Domain Dedication.
 
+* The implementation  of the SHIFT  and RESET syntaxes based  on CALL/CC
+  comes from:
+
+     <http://mumble.net/~campbell/scheme/shift-reset.scm>
+
+  this file claims:
+
+     This code  is written by Taylor  Campbell and placed in  the Public
+     Domain.  All warranties are disclaimed.
+
+  NOTE I do not  know the story of this implementation.   I can see that
+  it is similar to the one in the paper:
+
+     Martin Gasbichler, Michael Sperber: Final Shift for Call/cc: Direct
+     Implementation  of  Shift  and  Reset,  In  The  2002  ACM  SIGPLAN
+     Conference on  Functional Programming (ICFP '02),  Pittsburgh, Pa.,
+     October 2002, pages 271-282.
+
+  (Marco Maggi; Fri Oct 23, 2015)
+
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
 
