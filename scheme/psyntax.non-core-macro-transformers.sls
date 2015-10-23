@@ -3349,7 +3349,7 @@
   ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (with-who 'do
+  (with-who do
     (define (%normalise-binding binding-stx)
       (syntax-match binding-stx ()
 	((?var ?init)
@@ -3440,7 +3440,7 @@
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
-  (with-who 'do*
+  (with-who do*
   (define (%make-init-binding binding-stx)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -3873,7 +3873,7 @@
   ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
   ;;be further expanded.
   ;;
-  (with-who 'cond
+  (with-who cond
     (syntax-match expr-stx ()
       ((_ ?cls ?cls* ...)
        (bless
@@ -4786,7 +4786,7 @@
   ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
   ;;that must be further expanded.
   ;;
-  (with-who 'include
+  (with-who include
     (define (main expr-stx)
       (syntax-match expr-stx ()
 	((?context ?filename)
