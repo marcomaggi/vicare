@@ -3439,6 +3439,9 @@ no unsafe variant.
 @subsection Delimited continuations
 
 
+@cindex Delimited continuations
+
+
 @deffn Syntax reset @meta{body}
 Sets the limit for the delimited continuation and evaluate the
 expression @meta{body}.
