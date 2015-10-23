@@ -165,13 +165,13 @@
 	  #t)
 	 (($top-tag-id? sub-type.id)
 	  #f)
+	 ((procedure-tag-id? super-type.id)
+	  (or (predicate-tag-id? sub-type.id)
+	      (closure-type-spec? (id->object-type-specification __who__ input-form.stx sub-type.id lexenv))))
 	 (else
 	  (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv))
 		(sub-ots   (id->object-type-specification __who__ input-form.stx sub-type.id   lexenv)))
-	    (cond ((procedure-tag-id? super-type.id)
-		   (closure-type-spec? sub-type.id))
-
-		  ((list-type-spec? super-ots)
+	    (cond ((list-type-spec? super-ots)
 		   (and (list-type-spec? sub-ots)
 			(type-identifier-super-and-sub? (list-type-spec.type-id super-ots)
 							(list-type-spec.type-id sub-ots)
@@ -271,6 +271,7 @@
   ((id lexenv input-form.stx)
    (and (identifier? id)
 	(or (procedure-tag-id? id)
+	    (predicate-tag-id? id)
 	    (type-identifier-is-procedure-sub-type? id lexenv input-form.stx)))))
 
 ;;; --------------------------------------------------------------------
@@ -797,6 +798,7 @@
   (define-single-type-signature-maker make-type-signature/single-void		void-tag-id)
   (define-single-type-signature-maker make-type-signature/single-boolean	boolean-tag-id)
   (define-single-type-signature-maker make-type-signature/single-procedure	procedure-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-predicate	predicate-tag-id)
   (define-cached-signature-maker make-type-signature/standalone-list		(list-tag-id))
   #| end of LET-SYNTAX |# )
 

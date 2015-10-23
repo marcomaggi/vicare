@@ -42,11 +42,11 @@
 (library (types-of-lists)
   (options strict-r6rs)
   (export
-    <list-of-fixnums>
-    <list-of-flonums>
-    <list-of-reals>
-    <list-of-numbers>
-    <list-of-strings>)
+    <list-of-fixnums>		<vector-of-fixnums>
+    <list-of-flonums>		<vector-of-flonums>
+    <list-of-reals>		<vector-of-reals>
+    <list-of-numbers>		<vector-of-numbers>
+    <list-of-strings>		<vector-of-strings>)
   (import (vicare)
     (prefix (vicare expander) xp.))
   (define-syntax <list-of-fixnums>	(xp.make-list-type-spec #'<fixnum>))
@@ -54,6 +54,11 @@
   (define-syntax <list-of-numbers>	(xp.make-list-type-spec #'<number>))
   (define-syntax <list-of-reals>	(xp.make-list-type-spec #'<real>))
   (define-syntax <list-of-strings>	(xp.make-list-type-spec #'<string>))
+  (define-syntax <vector-of-fixnums>	(xp.make-vector-type-spec #'<fixnum>))
+  (define-syntax <vector-of-flonums>	(xp.make-vector-type-spec #'<flonum>))
+  (define-syntax <vector-of-numbers>	(xp.make-vector-type-spec #'<number>))
+  (define-syntax <vector-of-reals>	(xp.make-vector-type-spec #'<real>))
+  (define-syntax <vector-of-strings>	(xp.make-vector-type-spec #'<string>))
   #| end of LIBRARY |# )
 
 (import (types-of-lists))
@@ -132,6 +137,12 @@
 
   (check-for-true	(type-super-and-sub? <list-of-numbers> <list-of-reals>))
   (check-for-false	(type-super-and-sub? <list-of-numbers> <list-of-strings>))
+
+;;; --------------------------------------------------------------------
+;;; vectors
+
+  (check-for-true	(type-super-and-sub? <vector-of-numbers> <vector-of-reals>))
+  (check-for-false	(type-super-and-sub? <vector-of-numbers> <vector-of-strings>))
 
   #t)
 

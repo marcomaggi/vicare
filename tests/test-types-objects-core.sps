@@ -102,6 +102,63 @@
   #t)
 
 
+(parametrise ((check-test-name	'procedure))
+
+;;; type predicate
+
+  (check-for-true
+   (is-a? display <procedure>))
+
+  (check-for-true
+   (let ((O display))
+     (is-a? O <procedure>)))
+
+  (check-for-true
+   (let (({O <procedure>} display))
+     (is-a? O <procedure>)))
+
+  (check-for-false
+   (is-a? 123 <procedure>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let (({f <procedure>} (lambda (x) x)))
+	(xp.type-signature-tags (type-of (f 1))))
+    (=> syntax=?)
+    #'<list>)
+
+  (check
+      (let (({f <procedure>} (unsafe-cast <procedure> (lambda (x) x))))
+	(xp.type-signature-tags (type-of f)))
+    (=> syntax=?)
+    (list #'<procedure>))
+
+;;; --------------------------------------------------------------------
+;;; <predicate>
+
+  (check-for-true	(type-super-and-sub? <procedure> <predicate>))
+  (check-for-false	(type-super-and-sub? <predicate> <procedure>))
+
+  (check
+      (xp.type-signature-tags (type-of (unsafe-cast <predicate> (read))))
+    (=> syntax=?)
+    (list #'<predicate>))
+
+  (check
+      (xp.type-signature-tags (type-of ((unsafe-cast <predicate> (read)) 123)))
+    (=> syntax=?)
+    (list #'<boolean>))
+
+  (check
+      (let (({f <predicate>} (unsafe-cast <predicate> (lambda (x) x))))
+	(xp.type-signature-tags (type-of f)))
+    (=> syntax=?)
+    (list #'<predicate>))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

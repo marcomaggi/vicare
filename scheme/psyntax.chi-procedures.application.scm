@@ -642,19 +642,34 @@
 
   (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
 					       rator.tag rator.psi rand*.psi)
-    (let* ((label (id->label/or-error __module_who__ input-form.stx rator.tag))
-	   (descr (label->syntactic-binding-descriptor label lexenv.run))
-	   (spec  (car (syntactic-binding-descriptor.value descr))))
-      (define (%no-optimisations-possible)
-	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-      (if (closure-type-spec? spec)
-	  (let ((signature (closure-type-spec.signature spec)))
-	    (cond ((clambda-signature? signature)
-		   (%process-clambda-application input-form.stx lexenv.run lexenv.expand
-						 signature rator.psi rand*.psi))
-		  (else
-		   (%no-optimisations-possible))))
-	(%no-optimisations-possible))))
+    (define (%no-optimisations-possible)
+      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
+    (if (predicate-tag-id? rator.tag)
+	(%process-predicate-application input-form.stx lexenv.run lexenv.expand
+					rator.psi rand*.psi)
+      (let* ((label (id->label/or-error __module_who__ input-form.stx rator.tag))
+	     (descr (label->syntactic-binding-descriptor label lexenv.run))
+	     (spec  (car (syntactic-binding-descriptor.value descr))))
+	(if (closure-type-spec? spec)
+	    (let ((signature (closure-type-spec.signature spec)))
+	      (cond ((clambda-signature? signature)
+		     (%process-clambda-application input-form.stx lexenv.run lexenv.expand
+						   signature rator.psi rand*.psi))
+		    (else
+		     (%no-optimisations-possible))))
+	  (%no-optimisations-possible)))))
+
+  (define (%process-predicate-application input-form.stx lexenv.run lexenv.expand
+					  rator.psi rand*.psi)
+    (define (%no-optimisation-possible)
+      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
+    (if (option.strict-r6rs)
+	;;We rely on run-time checking.
+	(%no-optimisation-possible))
+      (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
+	(%validate-clambda-number-of-arguments input-form.stx 1 1 rator.psi rand*.psi rand*.sig)
+	(%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
+	(%no-optimisation-possible)))
 
   (define (%process-clambda-application input-form.stx lexenv.run lexenv.expand
 					rator.clambda-signature rator.psi rand*.psi)
@@ -669,7 +684,10 @@
 	;;We rely on run-time checking.
 	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi)
       (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
-	(%validate-clambda-number-of-arguments input-form.stx rator.clambda-signature rator.psi rand*.psi rand*.sig)
+	(receive (minimum-arguments-count maximum-arguments-count)
+	    (clambda-signature.min-and-max-argvals rator.clambda-signature)
+	  (%validate-clambda-number-of-arguments input-form.stx minimum-arguments-count maximum-arguments-count
+						 rator.psi rand*.psi rand*.sig))
 	(%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
 	(let loop ((clause-signature*	(clambda-signature.clause-signature* rator.clambda-signature))
 		   (state		'no-match))
@@ -701,21 +719,19 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%validate-clambda-number-of-arguments input-form.stx rator.clambda-signature rator.psi rand*.psi rand*.sig)
+  (define* (%validate-clambda-number-of-arguments input-form.stx minimum-arguments-count maximum-arguments-count rator.psi rand*.psi rand*.sig)
     (import CLOSURE-APPLICATION-ERRORS)
-    (receive (minimum-arguments-count maximum-arguments-count)
-	(clambda-signature.min-and-max-argvals rator.clambda-signature)
-      (let ((given-operands-count (length rand*.sig)))
-	(cond ((< maximum-arguments-count given-operands-count)
-	       (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-		 (psi.input-form rator.psi) (map psi.input-form rand*.psi)
-		 maximum-arguments-count given-operands-count))
-	      ((> minimum-arguments-count given-operands-count)
-	       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-		 (psi.input-form rator.psi) (map psi.input-form rand*.psi)
-		 minimum-arguments-count given-operands-count))
-	      (else
-	       (void))))))
+    (let ((given-operands-count (length rand*.sig)))
+      (cond ((< maximum-arguments-count given-operands-count)
+	     (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+	       (psi.input-form rator.psi) (map psi.input-form rand*.psi)
+	       maximum-arguments-count given-operands-count))
+	    ((> minimum-arguments-count given-operands-count)
+	     (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+	       (psi.input-form rator.psi) (map psi.input-form rand*.psi)
+	       minimum-arguments-count given-operands-count))
+	    (else
+	     (void)))))
 
   (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
     (import CLOSURE-APPLICATION-ERRORS)

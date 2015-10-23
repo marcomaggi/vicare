@@ -181,7 +181,9 @@
     ;;We can return a meaningful value if RATOR.PSI has a type which is a sub-type of
     ;;"<procedure>".
     ;;
-    (syntax-match (type-signature-tags (psi.retvals-signature rator.psi)) ()
+    (syntax-match (type-signature-tags (psi.retvals-signature rator.psi)) (<predicate>)
+      ((<predicate>)
+       (make-type-signature/single-boolean))
       ((?type-id)
        (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv)))
 	 (if (closure-type-spec? ots)

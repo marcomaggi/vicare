@@ -307,12 +307,13 @@
 
     ;; core type identifiers
     procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
+    predicate-tag-id		$predicate-tag-id?	predicate-tag-id?
     list-tag-id			$list-tag-id?		list-tag-id?
     vector-tag-id		$vector-tag-id?		vector-tag-id?
     nlist-tag-id		$nlist-tag-id?		nlist-tag-id?
     top-tag-id			$top-tag-id?		top-tag-id?
     boolean-tag-id		void-tag-id
-    struct-tag-id		record-tag-id		predicate-tag-id
+    struct-tag-id		record-tag-id
 
     ;; utilities for identifiers
     valid-bound-ids?			distinct-bound-ids?
@@ -2578,6 +2579,7 @@
 				       (~free-identifier=? id (?tag-retriever)))))))
   (define-unsafe-tag-predicate $top-tag-id?			top-tag-id)
   (define-unsafe-tag-predicate $procedure-tag-id?		procedure-tag-id)
+  (define-unsafe-tag-predicate $predicate-tag-id?		predicate-tag-id)
   (define-unsafe-tag-predicate $vector-tag-id?			vector-tag-id)
   (define-unsafe-tag-predicate $list-tag-id?			list-tag-id)
   (define-unsafe-tag-predicate $nlist-tag-id?			nlist-tag-id)
@@ -2593,6 +2595,7 @@
 				     (?unsafe-pred obj)))))))
   (define-tag-predicate top-tag-id?			$top-tag-id?)
   (define-tag-predicate procedure-tag-id?		$procedure-tag-id?)
+  (define-tag-predicate predicate-tag-id?		$predicate-tag-id?)
   (define-tag-predicate vector-tag-id?			$vector-tag-id?)
   (define-tag-predicate list-tag-id?			$list-tag-id?)
   (define-tag-predicate nlist-tag-id?			$nlist-tag-id?)

@@ -1299,15 +1299,21 @@ Apply @func{transcoder-error-handling-mode} to the instance.
 @subsection Type of procedures values
 
 
-@deftp {Built--in Type} <procedure>
-@deftpx {Parent Type} <top>
-Type of closure object values.  There is no constructor.  The type
-predicate is @func{procedure?}.
+@deftp {Built--in Type} @aclass{procedure}
+@deftpx {Parent Type} @aclass{top}
+Type of closure object values.  There is no constructor.
 @end deftp
 
 
-@deftp {Built--in Type} <predicate>
-@deftpx {Parent Type} <procedure>
+@defop {Type predicate} @class{procedure} is-a? @var{obj} @aclass{procedure}
+The type predicate is @func{procedure?}.  Return @true{} if @var{obj} is
+a closure object; otherwise return @false{}.
+@end defop
+
+@c ------------------------------------------------------------------------
+
+@deftp {Built--in Type} @aclass{predicate}
+@deftpx {Parent Type} @aclass{procedure}
 Type of closure object values accepting a single argument and returning
 a single boolean.  There is no constructor.  There is no type predicate.
 @end deftp

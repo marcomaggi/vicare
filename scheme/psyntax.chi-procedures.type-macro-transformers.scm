@@ -630,6 +630,14 @@
 		 ;;The expression has "<top>" as  single-value type: cast the type to
 		 ;;the target one.  This is a true *unsafe* operation.
 		 (%do-unsafe-cast))
+		((type-identifier-is-procedure-or-procedure-sub-type? ?source-type)
+		 ;;With procedure types we trust the programmer.
+		 ;;
+		 ;;FIXME We can  do better here by comparing the  signatures.  (Marco Maggi;
+		 ;;Fri Oct 23, 2015)
+		 (if (type-identifier-is-procedure-or-procedure-sub-type? ?target-type)
+		     (%do-unsafe-cast)
+		   (%error-incompatible-types)))
 		((type-identifier-super-and-sub? ?target-type ?source-type lexenv.run input-form.stx)
 		 ;;The expression's type  is a subtype of the target  type: the types
 		 ;;are compatible.  Fine.  We still cast  the type: this is useful to
@@ -644,7 +652,8 @@
 	  (%do-unsafe-cast))
 
 	 (?source-type
-	  (type-identifier-is-list-sub-type? ?source-type)
+	  (or (type-identifier-is-list-sub-type?   ?source-type)
+	      (type-identifier-is-vector-sub-type? ?source-type))
 	  (if (type-identifier-super-and-sub? ?target-type ?source-type lexenv.run input-form.stx)
 	      ;;The expression's type is a subtype  of the target type: the types are
 	      ;;compatible.  Fine.  We  still cast the type: this is  useful to avoid
