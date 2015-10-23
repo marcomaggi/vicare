@@ -51,9 +51,9 @@ process.
 
 @defun default-include-loader @var{include-pathname} @var{verbose?} @var{synner}
 Default value for the parameter @func{current-include-loader}.  Search
-an include file with name @func{include-pathname}.  When successful
+an include file with name @var{include-pathname}.  When successful
 return two values: the absolute pathname from which the file was loaded,
-a symbolic expresison representing the file contents.  When an error
+a symbolic expression representing the file contents.  When an error
 occurs: call the procedure @var{synner}, which is meant to raise an
 exception.
 

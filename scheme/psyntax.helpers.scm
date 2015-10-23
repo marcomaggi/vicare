@@ -103,10 +103,13 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax with-who
-  (syntax-rules ()
+(define-syntax (with-who stx)
+  (sys.syntax-case stx ()
     ((_ ?who ?body0 ?body ...)
-     (fluid-let-syntax ((__who__ (identifier-syntax (quote ?who)))) ?body0 ?body ...))
+     (sys.identifier? #'?who)
+     (sys.syntax (fluid-let-syntax
+		     ((__who__ (identifier-syntax (quote ?who))))
+		   ?body0 ?body ...)))
     ))
 
 (define-syntax define-module-who
