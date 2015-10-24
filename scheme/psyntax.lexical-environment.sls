@@ -108,14 +108,14 @@
     core-prim-typed-binding-descriptor.value.unsafe-variant-id
 
     ;; syntactic bindings utilities: base object-type specifications
-    object-type-name-binding-descriptor?
+    syntactic-binding-descriptor/object-type-name?
 
     ;; Scheme object-type specifications
-    scheme-type-name-binding-descriptor?
-    core-scheme-type-name-binding-descriptor?
+    syntactic-binding-descriptor/scheme-type-name?
+    syntactic-binding-descriptor/core-scheme-type-name?
 
     make-syntactic-binding-descriptor/closure-type-name
-    closure-type-name-binding-descriptor?
+    syntactic-binding-descriptor/closure-type-name?
     make-syntactic-binding/closure-type-name
     make-fabricated-closure-type-name
 
@@ -127,21 +127,21 @@
 
     ;; syntactic bindings utilities: struct-type specifications
     make-syntactic-binding-descriptor/struct-type-name
-    struct-type-name-binding-descriptor?
+    syntactic-binding-descriptor/struct-type-name?
     struct-type-name-binding-descriptor.type-descriptor
 
     ;; syntactic bindings utilities: record-type specifications
-    record-type-name-binding-descriptor?
+    syntactic-binding-descriptor/record-type-name?
     make-syntactic-binding-descriptor/syntactic-record-type-name
-    syntactic-record-type-name-binding-descriptor?
+    syntactic-binding-descriptor/syntactic-record-type-name?
 
     ;; syntactic bindings utilities: macros
     make-syntactic-binding-descriptor/local-macro/non-variable-transformer
-    local-macro/non-variable-transformer-binding-descriptor?
+    syntactic-binding-descriptor/local-macro/non-variable-transformer?
     make-syntactic-binding-descriptor/local-macro/variable-transformer
-    local-macro/variable-transformer-binding-descriptor?
+    syntactic-binding-descriptor/local-macro/variable-transformer?
     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
-    fluid-syntax-binding-descriptor?
+    syntactic-binding-descriptor/fluid-syntax?
     fluid-syntax-binding-descriptor.fluid-label
     make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
     make-syntactic-binding-descriptor/local-macro/expand-time-value
@@ -151,7 +151,7 @@
     make-syntactic-binding-descriptor/local-global-macro/module-interface
 
     make-syntactic-binding-descriptor/pattern-variable
-    pattern-variable-binding-descriptor?
+    syntactic-binding-descriptor/pattern-variable?
 
     ;; object types specifications: base types
     <object-type-spec>
@@ -699,13 +699,13 @@
 		;;the code.
 		(cond ((syntactic-binding-descriptor/hard-coded-core-prim-typed? descr)
 		       (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor! descr))
-		      ((core-scheme-type-name-binding-descriptor? descr)
+		      ((syntactic-binding-descriptor/core-scheme-type-name? descr)
 		       (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descr))
-		      ((core-condition-object-type-name-binding-descriptor? descr)
+		      ((syntactic-binding-descriptor/core-condition-object-type-name? descr)
 		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
-		      ((core-record-type-name-binding-descriptor? descr)
+		      ((syntactic-binding-descriptor/core-record-type-name? descr)
 		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
-		      ((core-rtd-binding-descriptor? descr)
+		      ((syntactic-binding-descriptor/core-rtd? descr)
 		       (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descr)))
 		descr))
 
@@ -741,9 +741,9 @@
     (let ((descr (label->syntactic-binding-descriptor/no-indirection label lexenv)))
       (cond ((eq? 'displaced-lexical (car descr))
 	     descr)
-	    ((fluid-syntax-binding-descriptor? descr)
+	    ((syntactic-binding-descriptor/fluid-syntax? descr)
 	     (%follow-through-fluid-descriptor descr lexenv accum-labels))
-	    ((synonym-syntax-binding-descriptor? descr)
+	    ((syntactic-binding-descriptor/synonym-syntax? descr)
 	     (%follow-through-synonym-descriptor descr lexenv accum-labels))
 	    (else
 	     descr))))
@@ -773,7 +773,7 @@
 			       => lexenv-entry.binding-descriptor)
 			      (else
 			       (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
-      (if (synonym-syntax-binding-descriptor? fluid-descr)
+      (if (syntactic-binding-descriptor/synonym-syntax? fluid-descr)
 	  (%follow-through-synonym-descriptor descr lexenv accum-labels)
 	fluid-descr)))
 

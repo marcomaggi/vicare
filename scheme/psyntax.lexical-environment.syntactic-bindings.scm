@@ -118,7 +118,7 @@
   ;;
   (make-syntactic-binding-descriptor lexical (cons lex-name #f)))
 
-(define-syntactic-binding-descriptor-predicate lexical-var-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/lexical-var?
   lexical)
 
 (define-syntax-rule (lexical-var-binding-descriptor-value.lex-name ?descriptor-value)
@@ -329,7 +329,7 @@
 ;;Return true if  the argument is a syntactic binding  descriptor representing alocal
 ;;keyword syntactic binding with variable transformer.
 ;;
-(define-syntactic-binding-descriptor-predicate local-macro/non-variable-transformer-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/local-macro/non-variable-transformer?
   local-macro)
 
 
@@ -361,7 +361,7 @@
 ;;Return true if  the argument is a syntactic binding  descriptor representing alocal
 ;;keyword syntactic binding with variable transformer.
 ;;
-(define-syntactic-binding-descriptor-predicate local-macro/variable-transformer-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/local-macro/variable-transformer?
   local-macro!)
 
 
@@ -393,7 +393,7 @@
 ;;such syntactic  binding descriptors  can be  used with  the generic  syntaxes: NEW,
 ;;IS-A?, SLOT-REF, SLOT-SET!, METHOD-CALL.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec object-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/object-type-name?
   object-type-spec?)
 
 ;;; --------------------------------------------------------------------
@@ -468,7 +468,7 @@
 ;;
 ;;where ?SPEC is an instance of a sub-type of "<scheme-type-spec>".
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec scheme-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/scheme-type-name?
   scheme-type-spec?)
 
 
@@ -487,7 +487,7 @@
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;closure object-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec closure-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/closure-type-name?
   closure-type-spec?)
 
 (case-define* make-syntactic-binding/closure-type-name
@@ -585,7 +585,7 @@
    ;;
    (make-syntactic-binding-descriptor core-prim public-name))
 
- (define-syntactic-binding-descriptor-predicate core-primitive-binding-descriptor?
+ (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-primitive?
    core-prim)
 
  (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
@@ -764,7 +764,7 @@
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;built-in Scheme object-type name; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate core-scheme-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-scheme-type-name?
   $core-scheme-type-name)
 
 
@@ -798,7 +798,7 @@
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;struct-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec struct-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/struct-type-name?
   struct-type-spec?)
 
 (define-syntax-rule (struct-type-name-binding-descriptor.type-descriptor ?descriptor)
@@ -819,7 +819,7 @@
 ;;
 ;;where ?SPEC is an instance of a sub-type of "<record-type-spec>".
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec record-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/record-type-name?
   record-type-spec?)
 
 
@@ -851,7 +851,7 @@
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;record-type name defined by the syntactic layer; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-record-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/syntactic-record-type-name?
   syntactic-record-type-spec?)
 
 
@@ -892,7 +892,7 @@
     (set-car! descriptor 'local-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
-(define-syntactic-binding-descriptor-predicate core-rtd-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-rtd?
   $core-rtd)
 
 
@@ -945,7 +945,7 @@
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
 ;;record-type descriptor established by the boot image; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate core-record-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-record-type-name?
   $core-record-type-name)
 
 
@@ -999,7 +999,7 @@
 ;;condition object record-type descriptor established  by the boot image (for example
 ;;"&who", "&error", et cetera); otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate core-condition-object-type-name-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-condition-object-type-name?
   $core-condition-object-type-name)
 
 
@@ -1031,7 +1031,7 @@
   ;;
   (make-syntactic-binding-descriptor $fluid ?fluid-label))
 
-(define-syntactic-binding-descriptor-predicate fluid-syntax-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/fluid-syntax?
   $fluid)
 
 (define-syntax-rule (fluid-syntax-binding-descriptor.fluid-label ?binding)
@@ -1061,7 +1061,7 @@
   ;;
   (make-syntactic-binding-descriptor $synonym (id->label/or-error 'expander src-id src-id)))
 
-(define-syntactic-binding-descriptor-predicate synonym-syntax-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/synonym-syntax?
   $synonym)
 
 (define-syntax-rule (synonym-syntax-binding-descriptor.synonym-label ?binding)
@@ -1209,7 +1209,7 @@
   ;;
   (make-syntactic-binding-descriptor pattern-variable (cons name ellipsis-nesting-level)))
 
-(define-syntactic-binding-descriptor-predicate pattern-variable-binding-descriptor?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/pattern-variable?
   pattern-variable)
 
 
