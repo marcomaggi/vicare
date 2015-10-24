@@ -744,6 +744,7 @@
 
     (shift					(macro . shift))
     (reset					(macro . reset))
+    (inner-reset				(macro . inner-reset))
 
     (with-implicits				(macro . with-implicits))
     (include					(macro . include))
@@ -4309,6 +4310,7 @@
 
     (shift					v $language)
     (reset					v $language)
+    (inner-reset)
     (private-shift-meta-continuation)
 
 ;;; --------------------------------------------------------------------

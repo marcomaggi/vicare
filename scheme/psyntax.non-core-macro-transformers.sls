@@ -174,6 +174,7 @@
 
     ((shift)				shift-macro)
     ((reset)				reset-macro)
+    ((inner-reset)			inner-reset-macro)
 
     ;; non-Scheme style syntaxes
     ((while)				while-macro)
@@ -3618,11 +3619,11 @@
 	`(let ((,mc.sym (private-shift-meta-continuation)))
 	   (call-with-current-continuation
 	       (lambda (,escape.sym)
-		 (private-shift-meta-continuation (lambda (,value.sym)
-						    (private-shift-meta-continuation ,mc.sym)
-						    (,escape.sym ,value.sym)))
-		 (let ((,result.sym ,?body))
-		   ((private-shift-meta-continuation) ,result.sym))))))))
+		 (parametrise ((private-shift-meta-continuation (lambda (,value.sym)
+								  (private-shift-meta-continuation ,mc.sym)
+								  (,escape.sym ,value.sym))))
+		   (let ((,result.sym ,?body))
+		     ((private-shift-meta-continuation) ,result.sym)))))))))
     ))
 
 (define (shift-macro input-form.stx)
@@ -3640,9 +3641,34 @@
 	`(call-with-current-continuation
 	     (lambda (,escape.sym)
 	       (let ((,result.sym (let ((,?var (lambda (,value.sym)
-						 (reset (,escape.sym ,value.sym)))))
+						 (inner-reset (,escape.sym ,value.sym)))))
 				    ,?body)))
 		 ((private-shift-meta-continuation) ,result.sym)))))))
+    ))
+
+(define (inner-reset-macro input-form.stx)
+  ;;Transformer  function  used  to  expand  Vicare's  INNER-RESET  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  ;;RESET and  INNER-RESET are almost equal;  the differenc is that  INNER-RESET does
+  ;;not use PARAMETRISE to set PRIVATE-SHIFT-META-CONTINUATION.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?body)
+     (let ((mc.sym      (gensym "meta-continuation"))
+	   (escape.sym  (gensym "escape"))
+	   (value.sym   (gensym "value"))
+	   (result.sym  (gensym "result")))
+       (bless
+	`(let ((,mc.sym (private-shift-meta-continuation)))
+	   (call-with-current-continuation
+	       (lambda (,escape.sym)
+		 (private-shift-meta-continuation (lambda (,value.sym)
+						    (private-shift-meta-continuation ,mc.sym)
+						    (,escape.sym ,value.sym)))
+		 (let ((,result.sym ,?body))
+		   ((private-shift-meta-continuation) ,result.sym))))))))
     ))
 
 
