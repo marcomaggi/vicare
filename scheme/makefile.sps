@@ -783,62 +783,89 @@
 
 ;;;; core syntactic binding descriptors: built-in condition object types
 
-(define-constant VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-  '((<library>
-     ($core-record-type-name
-      . (<library>-rtd
-	 <library>-rcd
-	 #f make-library library?
-	 ((uid			. library-uid)
-	  (name			. library-name)
-	  (imp-lib*		. library-imp-lib*)
-	  (vis-lib*		. library-vis-lib*)
-	  (inv-lib*		. library-inv-lib*)
-	  (export-subst		. library-export-subst)
-	  (global-env		. library-global-env)
-	  (typed-locs		. library-typed-locs)
-	  (visit-state		. library-visit-state)
-	  (invoke-state		. library-invoke-state)
-	  (visit-code		. library-visit-code)
-	  (invoke-code		. library-invoke-code)
-	  (guard-code		. library-guard-code)
-	  (guard-lib*		. library-guard-lib*)
-	  (visible?		. library-visible?)
-	  (source-file-name	. library-source-file-name)
-	  (option*		. library-option*)
-	  (foreign-library*	. library-foreign-library*)))))
+(define-auxiliary-syntaxes methods)
 
-;;; --------------------------------------------------------------------
+(define-syntax (define-built-in-record-type stx)
+  (syntax-case stx (methods)
+    ((?kwd ?type-name ?parent-name ?constructor ?predicate)
+     (and (identifier? #'?type-name)
+	  (or (identifier? #'?parent-name)
+	      (not (syntax->datum #'?parent-name)))
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate))
+     #'(?kwd ?type-name ?parent-name ?constructor ?predicate (methods)))
 
-    (<list-type-spec>
-     ($core-record-type-name
-      . (<list-type-spec>-rtd
-	 <list-type-spec>-rcd
-	 #f make-list-type-spec list-type-spec?
-	 ((type-id		. list-type-spec.type-id)))))
-
-    (<vector-type-spec>
-     ($core-record-type-name
-      . (<vector-type-spec>-rtd
-	 <vector-type-spec>-rcd
-	 #f make-vector-type-spec vector-type-spec?
-	 ((type-id		. vector-type-spec.type-id)))))
-
-;;; --------------------------------------------------------------------
-
-    (<type-signature>
-     ($core-record-type-name
-      . (<type-signature>-rtd
-	 <type-signature>-rcd
-	 make-type-signature type-signature?
-	 ((tags			. type-signature-tags)))))
-
+    ((_    ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
+     (and (identifier? #'?type-name)
+	  (or (identifier? #'?parent-name)
+	      (not (syntax->datum #'?parent-name)))
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate))
+     (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+       (define (mkid . str*)
+	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
+       (with-syntax
+	   ((TYPE-RTD (mkid type-name.str "-rtd"))
+	    (TYPE-RCD (mkid type-name.str "-rcd")))
+	 #'(quote (?type-name
+		   ($core-record-type-name
+		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-constant VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  (list
+
+   (define-built-in-record-type <library>
+       #f
+     make-library library?
+     (methods
+      (uid			library-uid)
+      (name			library-name)
+      (imp-lib*			library-imp-lib*)
+      (vis-lib*			library-vis-lib*)
+      (inv-lib*			library-inv-lib*)
+      (export-subst		library-export-subst)
+      (global-env		library-global-env)
+      (typed-locs		library-typed-locs)
+      (visit-state		library-visit-state)
+      (invoke-state		library-invoke-state)
+      (visit-code		library-visit-code)
+      (invoke-code		library-invoke-code)
+      (guard-code		library-guard-code)
+      (guard-lib*		library-guard-lib*)
+      (visible?			library-visible?)
+      (source-file-name		library-source-file-name)
+      (option*			library-option*)
+      (foreign-library*		library-foreign-library*)))
+
+;;; --------------------------------------------------------------------
+
+   (define-built-in-record-type <list-type-spec>
+       #f
+     make-list-type-spec list-type-spec?
+     (methods
+      (type-id			list-type-spec.type-id)))
+
+   (define-built-in-record-type <vector-type-spec>
+       #f
+     make-vector-type-spec vector-type-spec?
+     (methods
+      (type-id			vector-type-spec.type-id)))
+
+;;; --------------------------------------------------------------------
+
+   (define-built-in-record-type <type-signature>
+       #f
+     make-type-signature type-signature?
+     (methods
+      (tags			type-signature-tags)))
+
+   ))
 
 
 ;;;; core syntactic binding descriptors: built-in condition object types
-
-(define-auxiliary-syntaxes methods)
 
 (define-syntax (define-built-in-condition-type stx)
   (syntax-case stx (methods)
@@ -865,6 +892,8 @@
 		   ($core-condition-object-type-name
 		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
     ))
+
+;;; --------------------------------------------------------------------
 
 (define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   (list
@@ -6346,7 +6375,8 @@
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
-;; eval: (put 'define-built-in-condition-type		'scheme-indent-function 2)
 ;; eval: (put 'define-scheme-type			'scheme-indent-function 2)
+;; eval: (put 'define-built-in-condition-type		'scheme-indent-function 2)
+;; eval: (put 'define-built-in-record-type 		'scheme-indent-function 2)
 ;; eval: (put 'declare-typed-core-prim			'scheme-indent-function 1)
 ;; End:
