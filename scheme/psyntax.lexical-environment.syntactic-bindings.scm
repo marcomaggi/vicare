@@ -768,6 +768,48 @@
   $core-scheme-type-name)
 
 
+;;;; syntactic binding descriptor: core built-in list object-type descriptor binding
+
+(define (core-list-type-name-binding-descriptor->list-type-name-binding-descriptor! descriptor)
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
+  ;;built-in  list   object-type  name   (established  by  the   boot  image)   to  a
+  ;;representation of a  list object-type name in the format  usable by the expander.
+  ;;Return unspecified values.
+  ;;
+  ;;The core descriptor has the format:
+  ;;
+  ;;   ($core-list-type-name . ?hard-coded-sexp)
+  ;;
+  ;;and ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?type-name ?item-name)
+  ;;
+  ;;and the usable descriptor has the format:
+  ;;
+  ;;   (local-object-type-name . (#<core-list-type-spec> . ?hard-coded-sexp))
+  ;;
+  ;;?ITEM-NAME is the symbol name of the type of contained in the list.
+  ;;
+  ;;Syntactic binding  descriptors of  type "$core-list-type-name" are  hard-coded in
+  ;;the boot image  and generated directly by the makefile  at boot image build-time.
+  ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
+  ;;descriptor from the label: this function is used to convert the descriptor.
+  ;;
+  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
+	 (descr.value		(syntactic-binding-descriptor.value descriptor))
+	 (item-id		(core-prim-id (list-ref descr.value 1))))
+    (define spec
+      (make-core-list-type-spec item-id))
+    (set-car! descriptor 'local-object-type-name)
+    (set-cdr! descriptor (cons spec descr.value))))
+
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;built-in Scheme object-type name; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-list-type-name?
+  $core-list-type-name)
+
+
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings
 
 (define* (make-syntactic-binding-descriptor/struct-type-name {sts struct-type-spec?} expanded-expr)

@@ -47,7 +47,7 @@
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
-    <boolean>-constructor
+    <boolean>-constructor		<null>-constructor
     <symbol>-value
     #| end of EXPORT |# )
   (import (except (vicare)
@@ -421,6 +421,9 @@
 
 (define (<boolean>-constructor obj)
   (if obj #t #f))
+
+(define (<null>-constructor)
+  '())
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

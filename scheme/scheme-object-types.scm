@@ -171,17 +171,6 @@
    (car		car)
    (cdr		cdr)))
 
-(define-scheme-type <list>
-    <top>
-  list list?)
-
-(define-scheme-type <nlist>
-    <list>
-  nlist nlist?
-  (methods
-   (car		car)
-   (cdr		cdr)))
-
 (define-scheme-type <bytevector>
     <top>
   make-bytevector bytevector?)
@@ -301,10 +290,35 @@
   #f binary-input/output-port?)
 
 
+;;;; list types
+
+(define-scheme-type <list>
+    <top>
+  list list?
+  (methods
+   (car		car)
+   (cdr		cdr)))
+
+(define-scheme-type <nlist>
+    <list>
+  nlist nlist?
+  (methods
+   (car		car)
+   (cdr		cdr)))
+
+(define-scheme-type <null>
+    <list>
+  <null>-constructor null?)
+
+#;(define-list-type <char*>
+    <char>)
+
+
 ;;;; done
 
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
 ;; eval: (put 'define-scheme-type	'scheme-indent-function 2)
+;; eval: (put 'define-list-type		'scheme-indent-function 2)
 ;; End:

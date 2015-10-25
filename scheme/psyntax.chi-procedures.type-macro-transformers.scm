@@ -60,64 +60,171 @@
 
 ;;;; module core-macro-transformer: NEW
 
-(define-core-transformer (new input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand NEW  syntaxes from  the top-level  built in
-  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-  ;;LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-id ?arg* ...)
-     (identifier? ?type-id)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
-       (cond ((object-type-spec.constructor-sexp ots)
-	      => (lambda (constructor.sexp)
-		   (define output-form.stx
-		     (cons (bless constructor.sexp) ?arg*))
-		   (define output-form.psi
-		     (chi-expr output-form.stx lexenv.run lexenv.expand))
-		   (define output-form.sig
-		     (type-signature-tags (psi.retvals-signature output-form.psi)))
-		   ;;The NEW syntax is special because  we know that it has to return
-		   ;;a single value of type ?TYPE-ID.  So let's check it.
-		   (syntax-match output-form.sig ()
-		     ((?retvals-type-id)
-		      ;;We have determined at expand-time that the expression returns
-		      ;;a single value.  Good.
-		      (if (free-identifier=? ?type-id ?retvals-type-id)
-			  output-form.psi
-			(raise
-			 (condition
-			  (make-who-condition __who__)
-			  (make-message-condition
-			   "the expression used as constructor operand returns a type different from the requested one")
-			  (make-syntax-violation input-form.stx output-form.stx)
-			  (make-irritants-condition (list ?type-id ?retvals-type-id))))))
-		     (?tag
-		      (list-tag-id? ?tag)
-		      ;;Damn  it!!!   The  expression's   return  values  have  fully
-		      ;;UNspecified signature.
-		      ;;
-		      ;;We could patch it as follows:
-		      ;;
-                      ;;   (make-psi (psi.input-form input-form.psi)
-                      ;;             (psi.core-expr  input-form.psi)
-                      ;;             (make-type-signature/single-value ?type-id)))
-		      ;;
-		      ;;but it would be unsafe.  So let's just hope for the best.
-		      output-form.psi)
-		     (_
-		      ;;The horror!!!   We have  established at expand-time  that the
-		      ;;expression returns multiple values; type violation.
-		      (raise
-		       (condition
-			(make-who-condition __who__)
-			(make-message-condition "the expression used as constructor operand returns multiple values")
-			(make-syntax-violation input-form.stx output-form.stx)
-			(make-irritants-condition (list output-form.sig)))))
-		     )))
-	     (else
-	      (%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
-    ))
+(module (new-transformer)
+
+  (define-module-who new)
+
+  (define-core-transformer (new input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function  used to expand NEW  syntaxes from the top-level  built in
+    ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
+    ;;given LEXENV; return a PSI struct.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?type-id ?rand* ...)
+       (identifier? ?type-id)
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+	 (cond ((list-type-spec? ots)
+		(%build-list-constructor input-form.stx lexenv.run lexenv.expand
+					 ?type-id (list-type-spec.type-id ots) ?rand*))
+	       ((object-type-spec.constructor-sexp ots)
+		=> (lambda (constructor.sexp)
+		     (%build-object-constructor input-form.stx lexenv.run lexenv.expand ?type-id constructor.sexp ?rand*)))
+	       (else
+		(%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-object-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
+    (define output-form.stx
+      (cons (bless constructor.sexp) rand*.stx))
+    (define output-form.psi
+      (chi-expr output-form.stx lexenv.run lexenv.expand))
+    (define output-form.sig
+      (type-signature-tags (psi.retvals-signature output-form.psi)))
+    ;;The NEW syntax is special because we know  that it has to return a single value
+    ;;of type OBJECT-TYPE.ID.  So let's check it.
+    (syntax-match output-form.sig (<list>)
+      ((?retvals-type-id)
+       ;;We  have determined  at expand-time  that  the expression  returns a  single
+       ;;value.  Good.
+       (if (free-identifier=? object-type.id ?retvals-type-id)
+	   output-form.psi
+	 (raise
+	  (condition
+	   (make-who-condition __module_who__)
+	   (make-message-condition "the expression used as constructor returns a type different from the requested one")
+	   (make-syntax-violation input-form.stx output-form.stx)
+	   (make-irritants-condition (list object-type.id ?retvals-type-id))))))
+      (<list>
+       ;;Damn it!!!  The expression's return values have fully UNspecified signature.
+       ;;
+       ;;We could patch it as follows:
+       ;;
+       ;;   (make-psi (psi.input-form input-form.psi)
+       ;;             (psi.core-expr  input-form.psi)
+       ;;             (make-type-signature/single-value object-type.id)))
+       ;;
+       ;;but it would be unsafe.  So let's just hope for the best.
+       output-form.psi)
+      (_
+       ;;The  horror!!!   We have  established  at  expand-time that  the  expression
+       ;;returns multiple values; type violation.
+       (raise
+	(condition
+	 (make-who-condition __module_who__)
+	 (make-message-condition "the expression used as constructor operand returns multiple values")
+	 (make-syntax-violation input-form.stx output-form.stx)
+	 (make-irritants-condition (list output-form.sig)))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (module (%build-list-constructor)
+
+    (define (%build-list-constructor input-form.stx lexenv.run lexenv.expand
+				     list-type.id item.id rand*.stx)
+      (if (null? rand*.stx)
+	  (make-psi input-form.stx
+		    (build-data no-source '())
+		    (make-type-signature/single-value list-type.id))
+	(let ((rand*.core (map (lambda (rand.stx rand.idx)
+				 (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
+								    list-type.id item.id rand.stx rand.idx))
+			    rand*.stx (%fxiota 0 rand*.stx))))
+	  (make-psi input-form.stx
+		    (build-application input-form.stx
+		      (build-primref no-source 'list)
+		      (cons* rand*.core))
+		    (make-type-signature/single-value list-type.id)))))
+
+    (define (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
+					       list-type.id item.id rand.stx rand.idx)
+      (define rand.psi (chi-expr rand.stx lexenv.run lexenv.expand))
+      (define rand.sig (psi.retvals-signature rand.psi))
+      (define (%run-time-validation)
+	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
+					 list-type.id item.id rand.stx rand.idx (psi.core-expr rand.psi)))
+      (syntax-match (type-signature-tags rand.sig) (<top> <list>)
+	((<top>)
+	 ;;Integrate a run-time validator for the single return value.
+	 (%run-time-validation))
+
+	((?operand-id)
+	 (if (type-identifier-super-and-sub? item.id ?operand-id lexenv.run input-form.stx)
+	     ;;Success!!!
+	     (psi.core-expr rand.psi)
+	   (%error-expand-time/argument-and-operand-type-mismatch input-form.stx rand.stx rand.idx item.id ?operand-id)))
+
+	(<list>
+	 ;;The  retvals signature  is  fully unspecified.   We  integrate a  run-time
+	 ;;validator  expecting a  single  return value.   We  use the  automatically
+	 ;;generated machine code to validate the number of return values.
+	 (%run-time-validation))
+
+	(?operand-some-list-type
+	 (identifier? ?operand-some-list-type)
+	 (with-object-type-syntactic-binding (__module_who__ input-form.stx ?operand-some-list-type lexenv.run operand-ots)
+	   (let ((operand-item.id (list-type-spec.type-id operand-ots)))
+	     (if (type-identifier-super-and-sub? item.id operand-item.id lexenv.run input-form.stx)
+		 ;;We let the  integrated single-value validation do the  rest of the
+		 ;;job.
+		 (psi.core-expr rand.psi)
+	       (%error-expand-time/argument-and-operand-type-mismatch input-form.stx rand.stx rand.idx item.id ?operand-some-list-type)))))
+
+	(_
+	 ;;The horror!!!   We have established at  expand-time that the
+	 ;;expression returns multiple values; type violation.
+	 (%error-expand-time/operand-returns-multiple-values input-form.stx rand.stx rand.sig))))
+
+    (define (%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
+					     list-type.id item.id rand.stx rand.idx rand.core)
+      (let* ((validator.sexp	(let ((arg.sym (gensym "arg")))
+				  `(lambda (,arg.sym)
+				     (if (is-a? ,arg.sym ,item.id)
+					 ,arg.sym
+				       (procedure-signature-argument-violation (quote ,list-type.id)
+					 "invalid object type" ,rand.idx '(is-a? _ ,item.id) ,arg.sym)))))
+	     (validator.psi	(chi-expr (bless validator.sexp) lexenv.run lexenv.expand))
+	     (validator.core	(psi.core-expr validator.psi)))
+	(build-application no-source
+	  validator.core
+	  (list rand.core))))
+
+    #| end of module: %BUILD-LIST-CONSTRUCTOR |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expand-time/argument-and-operand-type-mismatch input-form.stx rand.stx rand.idx item.id rand.id)
+    (raise-compound-condition-object __module_who__
+      "expand-time mismatch between list's item type and operand signature"
+      input-form.stx
+      (condition
+       (make-expand-time-type-signature-violation)
+       (make-syntax-violation input-form.stx rand.stx)
+       (make-argument-index-condition rand.idx)
+       (make-argument-type-syntactic-identifier-condition item.id)
+       (make-operand-type-syntactic-identifier-condition rand.id))))
+
+  (define (%error-expand-time/operand-returns-multiple-values input-form.stx rand.stx rand.sig)
+    (raise
+     (condition
+      (make-who-condition __module_who__)
+      (make-message-condition "the expression used as constructor's operand returns multiple values")
+      (make-syntax-violation input-form.stx rand.stx)
+      (make-irritants-condition (list rand.sig)))))
+
+  #| end of module |# )
 
 
 ;;;; module core-macro-transformer: DELETE
@@ -207,7 +314,9 @@
 	    (%run-time-predicate))
 
 	   ((?expr-type-id)
-	    (if (type-identifier-super-and-sub? ?pred-type-id ?expr-type-id lexenv.run input-form.stx)
+	    (if (or (and (null-tag-id? ?expr-type-id)
+			 (type-identifier-is-list-or-list-sub-type? ?pred-type-id))
+		    (type-identifier-super-and-sub? ?pred-type-id ?expr-type-id lexenv.run input-form.stx))
 		(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
 	      (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand)))
 

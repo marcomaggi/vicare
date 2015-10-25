@@ -18,7 +18,7 @@
 #!vicare
 (library (ikarus lists)
   (export
-    list? nlist?
+    list? nlist? make-list-of-predicate
     list nlist cons* make-list append length list-ref reverse
     last-pair memq memp memv member find assq assp assv assoc
     remq remv remove remp filter map for-each
@@ -36,7 +36,8 @@
 		  procedure-arguments-consistency-violation
 		  ;;;
 
-		  list? nlist? list nlist cons* make-list append reverse
+		  list? nlist? make-list-of-predicate
+		  list nlist cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
@@ -119,6 +120,7 @@
 	 (%race x x)))
 
   (define (%race h t)
+    ;;Tortoise and hare algorithm to detect circular lists.
     (if (pair? h)
 	(let ((h ($cdr h)))
 	  (if (pair? h)
@@ -128,6 +130,25 @@
       (null? h)))
 
   #| end of module |# )
+
+(define (make-list-of-predicate item-pred)
+  (define (%race h t)
+    ;;Tortoise and hare algorithm to detect circular lists.
+    (if (pair? h)
+	(begin
+	  (debug-print 'list-of (car h))
+	  (and (item-pred ($car h))
+	       (let ((h ($cdr h)))
+		 (if (pair? h)
+		     (begin
+		       (debug-print 'list-of (car h))
+		       (and (item-pred ($car h))
+			    (not (eq? h t))
+			    (%race ($cdr h) ($cdr t))))
+		   (null? h)))))
+      (null? h)))
+  (lambda (obj)
+    (%race obj obj)))
 
 (case-define* make-list
   (({n list-length?})

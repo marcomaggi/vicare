@@ -1570,6 +1570,18 @@ Apply @func{cdr} to the type instance.
 @subsection Types of lists
 
 
+@menu
+* types built-in lists proper::         Proper lists.
+* types built-in lists null::           Empty lists.
+* types built-in lists not-empty::      Not-empty proper lists.
+* types built-in lists chars::          Proper lists of @class{char}.
+@end menu
+
+@c page
+@node types built-in lists proper
+@subsubsection Proper lists
+
+
 @deftp {Built--in Type} @aclass{list}
 @deftpx {Parent Type} @aclass{top}
 Type of proper lists, both null and non--empty.
@@ -1587,9 +1599,25 @@ The type predicate is @func{list?}.  Return @true{} if @var{obj} is null
 or a proper list object; otherwise return @false{}.
 @end defop
 
-@c ------------------------------------------------------------------------
+@c page
+@node types built-in lists null
+@subsubsection Empty lists
 
-@subsubheading Non--empty lists
+
+@deftp {Built--in Type} @aclass{null}
+@deftpx {Parent Type} @aclass{list}
+Type of the null object.
+@end deftp
+
+
+@defop {Type predicate} @class{null} is-a? @var{obj} @aclass{null}
+The type predicate is @func{null?}.  Return @true{} if @var{obj} is
+null; otherwise return @false{}.
+@end defop
+
+@c page
+@node types built-in lists not-empty
+@subsubsection Not--empty proper lists
 
 
 @deftp {Built--in Type} @aclass{nlist}
@@ -1602,7 +1630,6 @@ Type of non--empty lists.
 The constructor is @func{nlist}.  Return a new list having the given
 @var{obj} arguments as items.
 @end defop
-
 
 
 @defop {Type predicate} @class{nlist} is-a? @var{obj} @aclass{nlist}
@@ -1619,6 +1646,23 @@ Apply @func{car} to the type instance.
 @defmethod @class{nlist} cdr
 Apply @func{cdr} to the type instance.
 @end defmethod
+
+@c page
+@node types built-in lists chars
+@subsubsection Proper lists of @class{char}
+
+
+@deftp {Built--in Type} @aclass{char*}
+@deftpx {Parent Type} @aclass{list}
+Type of lists of @class{char} objects.
+@end deftp
+
+
+@defop {Type predicate} @class{char*} is-a? @var{obj} @aclass{char*}
+The type predicate for the list's items is the type predicate of
+@class{char}.  Return @true{} if @var{obj} is a proper non--empty list
+object; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in bytevectors

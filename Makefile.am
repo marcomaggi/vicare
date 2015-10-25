@@ -836,6 +836,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-pointers.sps				\
 	tests/test-types-objects-transcoders.sps			\
 	tests/test-types-objects-pairs.sps				\
+	tests/test-types-objects-lists.sps				\
 	tests/test-types-objects-ports.sps				\
 	tests/test-types-structs.sps					\
 	tests/test-types-records.sps					\

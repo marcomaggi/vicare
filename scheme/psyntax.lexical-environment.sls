@@ -113,6 +113,7 @@
     ;; Scheme object-type specifications
     syntactic-binding-descriptor/scheme-type-name?
     syntactic-binding-descriptor/core-scheme-type-name?
+    syntactic-binding-descriptor/core-list-type-name?
 
     make-syntactic-binding-descriptor/closure-type-name
     syntactic-binding-descriptor/closure-type-name?
@@ -185,6 +186,9 @@
     <vector-type-spec>-rtd				<vector-type-spec>-rcd
     make-vector-type-spec				vector-type-spec?
     vector-type-spec.type-id
+
+    <core-list-type-spec>
+    make-core-list-type-spec				core-list-type-spec?
 
     ;; object-type specifications: structs
     <struct-type-spec>
@@ -309,6 +313,7 @@
     procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
     predicate-tag-id		$predicate-tag-id?	predicate-tag-id?
     list-tag-id			$list-tag-id?		list-tag-id?
+    null-tag-id			$null-tag-id?		null-tag-id?
     vector-tag-id		$vector-tag-id?		vector-tag-id?
     nlist-tag-id		$nlist-tag-id?		nlist-tag-id?
     top-tag-id			$top-tag-id?		top-tag-id?
@@ -323,9 +328,31 @@
 
     ;; condition object types
     &type-syntactic-identifier
+    &type-syntactic-identifier-rtd
+    &type-syntactic-identifier-rcd
     make-type-syntactic-identifier-condition
-    condition-type-syntactic-identifier?
-    condition-type-syntactic-identifier
+    type-syntactic-identifier-condition?
+
+    &argument-type-syntactic-identifier
+    &argument-type-syntactic-identifier-rtd
+    &argument-type-syntactic-identifier-rcd
+    make-argument-type-syntactic-identifier-condition
+    argument-type-syntactic-identifier-condition?
+    condition-argument-type-syntactic-identifier
+
+    &operand-type-syntactic-identifier
+    &operand-type-syntactic-identifier-rtd
+    &operand-type-syntactic-identifier-rcd
+    make-operand-type-syntactic-identifier-condition
+    operand-type-syntactic-identifier-condition?
+    condition-operand-type-syntactic-identifier
+
+    &argument-index
+    &argument-index-rtd
+    &argument-index-rcd
+    make-argument-index-condition
+    argument-index-condition?
+    condition-argument-index
 
     &type-method-name
     make-type-method-name-condition
@@ -703,6 +730,8 @@
 		       (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-condition-object-type-name? descr)
 		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
+		      ((syntactic-binding-descriptor/core-list-type-name? descr)
+		       (core-list-type-name-binding-descriptor->list-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-record-type-name? descr)
 		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-rtd? descr)
@@ -2567,6 +2596,7 @@
   (define-tag-retriever record-tag-id		<record>)
   (define-tag-retriever vector-tag-id		<vector>)
   (define-tag-retriever list-tag-id		<list>)
+  (define-tag-retriever null-tag-id		<null>)
   (define-tag-retriever nlist-tag-id		<nlist>)
   #| end of let-syntax |# )
 
@@ -2582,6 +2612,7 @@
   (define-unsafe-tag-predicate $predicate-tag-id?		predicate-tag-id)
   (define-unsafe-tag-predicate $vector-tag-id?			vector-tag-id)
   (define-unsafe-tag-predicate $list-tag-id?			list-tag-id)
+  (define-unsafe-tag-predicate $null-tag-id?			null-tag-id)
   (define-unsafe-tag-predicate $nlist-tag-id?			nlist-tag-id)
   #| end of LET-SYNTAX |# )
 
@@ -2598,6 +2629,7 @@
   (define-tag-predicate predicate-tag-id?		$predicate-tag-id?)
   (define-tag-predicate vector-tag-id?			$vector-tag-id?)
   (define-tag-predicate list-tag-id?			$list-tag-id?)
+  (define-tag-predicate null-tag-id?			$null-tag-id?)
   (define-tag-predicate nlist-tag-id?			$nlist-tag-id?)
   #| end of LET-SYNTAX |# )
 
@@ -2651,8 +2683,41 @@
 (define-condition-type &type-syntactic-identifier
     &condition
   make-type-syntactic-identifier-condition
-  condition-type-syntactic-identifier?
-  (id condition-type-syntactic-identifier))
+  type-syntactic-identifier-condition?)
+(define &type-syntactic-identifier-rtd
+  (record-type-descriptor &type-syntactic-identifier))
+(define &type-syntactic-identifier-rcd
+  (record-constructor-descriptor &type-syntactic-identifier))
+
+(define-condition-type &argument-type-syntactic-identifier
+    &type-syntactic-identifier
+  make-argument-type-syntactic-identifier-condition
+  argument-type-syntactic-identifier-condition?
+  (argument-type-identifier	condition-argument-type-syntactic-identifier))
+(define &argument-type-syntactic-identifier-rtd
+  (record-type-descriptor &argument-type-syntactic-identifier))
+(define &argument-type-syntactic-identifier-rcd
+  (record-constructor-descriptor &argument-type-syntactic-identifier))
+
+(define-condition-type &operand-type-syntactic-identifier
+    &type-syntactic-identifier
+  make-operand-type-syntactic-identifier-condition
+  operand-type-syntactic-identifier-condition?
+  (operand-type-identifier	condition-operand-type-syntactic-identifier))
+(define &operand-type-syntactic-identifier-rtd
+  (record-type-descriptor &operand-type-syntactic-identifier))
+(define &operand-type-syntactic-identifier-rcd
+  (record-constructor-descriptor &operand-type-syntactic-identifier))
+
+(define-condition-type &argument-index
+    &condition
+  make-argument-index-condition
+  argument-index-condition?
+  (argument-index	condition-argument-index))
+(define &argument-index-rtd
+  (record-type-descriptor &argument-index))
+(define &argument-index-rcd
+  (record-constructor-descriptor &argument-index))
 
 ;;This is used to describe a type's  method name involved in an exception.  The field
 ;;must be a symbol representing the method name.

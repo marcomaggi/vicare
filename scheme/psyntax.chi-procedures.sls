@@ -139,25 +139,26 @@
 		;not be a problem.  It is kept here for debugging purposes: it can be
 		;used  as  "form"  or  "subform"  argument  for  "&syntax"  condition
 		;objects.
+
      (immutable core-expr		psi.core-expr)
 		;Either:
 		;
 		;* A symbolic expression in the core language representing the result
-		;  of fully expanding a syntax object.
+		;of fully expanding a syntax object.
 		;
 		;* An  instance of  "splice-first-envelope".  This happens  only when
-		;   this  PSI   struct  is  the  return  value  of   the  core  macro
-		;  SPLICE-FIRST-EXPAND.
+		;this   PSI  struct   is  the   return  value   of  the   core  macro
+		;SPLICE-FIRST-EXPAND.
+
      (immutable retvals-signature	psi.retvals-signature)
-		;An instance of "retvals-signature".
+		;An instance of "<type-signature>".
 		;
 		;When  this  PSI is  a  callable  object:  we  expect this  field  to
 		;represent a signature like:
 		;
 		;   (?tag)
 		;
-		;where ?TAG  is "<procedure>" or a  subtag of it; in  the latter case
-		;?TAG has an associated callable spec object in its property list.
+		;where ?TAG is "<procedure>" or a sub-type of it.
      #| end of FIELDS |# )
 
     (protocol

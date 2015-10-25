@@ -43,6 +43,9 @@
 	 make-list-type-spec				list-type-spec?
 	 list-type-spec.type-id
 
+	 <core-list-type-spec>
+	 make-core-list-type-spec			core-list-type-spec?
+
 	 <vector-type-spec>
 	 <vector-type-spec>-rtd				<vector-type-spec>-rcd
 	 make-vector-type-spec				vector-type-spec?
@@ -341,9 +344,9 @@
   (protocol
     (lambda (make-scheme-type-spec)
       (define* (make-list-type-spec {type-id type-identifier?})
-	(let ((parent-id		(nlist-tag-id))
+	(let ((parent-id		(list-tag-id))
 	      (constructor.sexp		#f)
-	      (predicate.sexp		#f)
+	      (predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
 	      (methods-table		'()))
 	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
 	   type-id)))
@@ -355,6 +358,36 @@
 
 (define <list-type-spec>-rcd
   (record-constructor-descriptor <list-type-spec>))
+
+
+;;;; core list object-type specification
+;;
+;;This  record-type is  used as  syntactic binding  descriptor's values  for built-in
+;;Vicare list object types.  The LEXENV entry has the format:
+;;
+;;   (local-object-type-name . (#<core-list-type-spec> . ?hard-coded-sexp))
+;;
+;;It is built at run-time by converting entries with format:
+;;
+;;   ($core-list-type-name . ?hard-coded-sexp)
+;;
+;;where ?HARD-CODED-SEXP has the format:
+;;
+;;   (?type-name ?item-name)
+;;
+;;The source entries are  defined by the boot image's makefile  and are hard-coded in
+;;the boot  image itself.  Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR
+;;is used to retrieve the descriptor from the label: the descriptor is converted from
+;;the hard-coded format to the format holding this value.
+;;
+(define-record-type (<core-list-type-spec> make-core-list-type-spec core-list-type-spec?)
+  (nongenerative vicare:expander:<core-list-type-spec>)
+  (parent <list-type-spec>)
+  (protocol
+    (lambda (make-list-type-spec)
+      (define (make-core-list-type-spec item-id)
+	((make-list-type-spec item-id)))
+      make-core-list-type-spec)))
 
 
 ;;;; vector object spec

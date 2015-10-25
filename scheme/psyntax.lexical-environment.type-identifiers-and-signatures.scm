@@ -467,7 +467,11 @@
 
 	       ((string?  datum)	(core-prim-id '<string>))
 	       ((vector?  datum)	(core-prim-id '<vector>))
-	       ((nlist?   datum)	(core-prim-id '<nlist>))
+	       ((nlist?   datum)	(cond ((for-all char? datum)
+					       (core-prim-id '<char*>))
+					      (else
+					       (core-prim-id '<nlist>))))
+	       ((null?    datum)	(core-prim-id '<null>))
 	       ((list?    datum)	(core-prim-id '<list>))
 	       ((pair?    datum)	(core-prim-id '<pair>))
 	       ((bytevector? datum)	(core-prim-id '<bytevector>))

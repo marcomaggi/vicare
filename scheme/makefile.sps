@@ -1293,6 +1293,38 @@
 	 expand-time-retvals-signature-violation?
 	 ((expected-signature	. expand-time-retvals-signature-violation-expected-signature)
 	  (returned-signature	. expand-time-retvals-signature-violation-returned-signature)))))
+    ;;;
+    (&type-syntactic-identifier
+     ($core-condition-object-type-name
+      . (&type-syntactic-identifier
+	 &type-syntactic-identifier-rtd
+	 &type-syntactic-identifier-rcd
+	 make-type-syntactic-identifier-condition
+	 type-syntactic-identifier-condition?)))
+    (&argument-type-syntactic-identifier
+     ($core-condition-object-type-name
+      . (&argument-type-syntactic-identifier
+	 &argument-type-syntactic-identifier-rtd
+	 &argument-type-syntactic-identifier-rcd
+	 make-argument-type-syntactic-identifier-condition
+	 argument-type-syntactic-identifier-condition?
+	 ((argument-type-identifier	. condition-operand-type-syntactic-identifier)))))
+    (&operand-type-syntactic-identifier
+     ($core-condition-object-type-name
+      . (&operand-type-syntactic-identifier
+	 &operand-type-syntactic-identifier-rtd
+	 &operand-type-syntactic-identifier-rcd
+	 make-operand-type-syntactic-identifier-condition
+	 operand-type-syntactic-identifier-condition?
+	 ((operand-type-identifier	. condition-operand-type-syntactic-identifier)))))
+    (&argument-index
+     ($core-condition-object-type-name
+      . (&argument-index
+	 &argument-index-rtd
+	 &argument-index-rcd
+	 make-argument-index-condition
+	 argument-index-condition?
+	 ((argument-index		. condition-argument-index)))))
     ))
 
 
@@ -1312,8 +1344,20 @@
 					 ((?method-name . ?method-implementation-procedure) ...)))))))
     ))
 
+(define-syntax (define-list-type stx)
+  (syntax-case stx ()
+    ((?kwd ?type-name ?item-name)
+     #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+		  (quote (?type-name
+			  ($core-list-type-name
+			   . (?type-name ?item-name))))))
+    ))
+
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
+
+(define-list-type <char*>
+    <char>)
 
 (include "scheme-object-types.scm" #t)
 
@@ -1606,6 +1650,12 @@
    (declare-typed-core-prim list
      (signatures
       ((<list>) <list>)))
+
+   ;;;
+
+   (declare-typed-core-prim <null>-constructor
+     (signatures
+      ((<null>) ())))
 
    ;;;
 
@@ -4233,6 +4283,7 @@
     (<pair>					v $language)
     (<list>					v $language)
     (<nlist>					v $language)
+    (<null>					v $language)
     (<bytevector>				v $language)
     (<hashtable>				v $language)
     (<hashtable-eq>				v $language)
@@ -4260,10 +4311,20 @@
     (<binary-output-port>			v $language)
     (<binary-input/output-port>			v $language)
 
+    ;; helpers
     (<top>-constructor)
     (<top>-type-predicate)
     (<boolean>-constructor)
     (<symbol>-value)
+    (<null>-constructor)
+
+;;; --------------------------------------------------------------------
+;;; built-in Scheme list object types
+
+    (<char*>					v $language)
+
+    ;; helpers
+    (make-list-of-predicate)
 
 ;;; --------------------------------------------------------------------
 ;;; keywords
@@ -4895,6 +4956,33 @@
     (expand-time-retvals-signature-violation?		$expander)
     (expand-time-retvals-signature-violation-expected-signature	$expander)
     (expand-time-retvals-signature-violation-returned-signature	$expander)
+
+    (&type-syntactic-identifier				$expander)
+    (&type-syntactic-identifier-rtd			$expander)
+    (&type-syntactic-identifier-rcd			$expander)
+    (make-type-syntactic-identifier-condition		$expander)
+    (type-syntactic-identifier-condition?		$expander)
+
+    (&argument-type-syntactic-identifier		$expander)
+    (&argument-type-syntactic-identifier-rtd		$expander)
+    (&argument-type-syntactic-identifier-rcd		$expander)
+    (make-argument-type-syntactic-identifier-condition	$expander)
+    (argument-type-syntactic-identifier-condition?	$expander)
+    (condition-argument-type-syntactic-identifier	$expander)
+
+    (&operand-type-syntactic-identifier			$expander)
+    (&operand-type-syntactic-identifier-rtd		$expander)
+    (&operand-type-syntactic-identifier-rcd		$expander)
+    (make-operand-type-syntactic-identifier-condition	$expander)
+    (operand-type-syntactic-identifier-condition?	$expander)
+    (condition-operand-type-syntactic-identifier	$expander)
+
+    (&argument-index					$expander)
+    (&argument-index-rtd				$expander)
+    (&argument-index-rcd				$expander)
+    (make-argument-index-condition			$expander)
+    (argument-index-condition?				$expander)
+    (condition-argument-index				$expander)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
