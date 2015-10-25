@@ -838,499 +838,426 @@
 
 ;;;; core syntactic binding descriptors: built-in condition object types
 
-(define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-  '((&condition
-     ($core-condition-object-type-name
-      . (&condition-rtd &condition-rcd #f condition condition?)))
-    (&message
-     ($core-condition-object-type-name
-      . (&message-rtd
-	 &message-rcd
-	 &condition make-message-condition message-condition?
-	 ((message . condition-message)))))
-    (&warning
-     ($core-condition-object-type-name
-      . (&warning-rtd
-	 &warning-rcd
-	 &condition make-warning warning?)))
-    (&serious
-     ($core-condition-object-type-name
-      . (&serious-rtd
-	 &serious-rcd
-	 &condition make-serious-condition serious-condition?)))
-    (&error
-     ($core-condition-object-type-name
-      . (&error-rtd
-	 &error-rcd
-	 &serious make-error error?)))
-    (&violation
-     ($core-condition-object-type-name
-      . (&violation-rtd
-	 &violation-rcd
-	 &serious make-violation violation?)))
-    (&assertion
-     ($core-condition-object-type-name
-      . (&assertion-rtd
-	 &assertion-rcd
-	 &violation make-assertion-violation assertion-violation?)))
-    (&irritants
-     ($core-condition-object-type-name
-      . (&irritants-rtd
-	 &irritants-rcd
-	 &condition make-irritants-condition irritants-condition?
-	 ((irritants . condition-irritants)))))
-    (&who
-     ($core-condition-object-type-name
-      . (&who-rtd
-	 &who-rcd
-	 &condition make-who-condition who-condition?
-	 ((who . condition-who)))))
-    (&non-continuable
-     ($core-condition-object-type-name
-      . (&non-continuable-rtd
-	 &non-continuable-rcd
-	 &violation make-non-continuable-violation non-continuable-violation?)))
-    (&implementation-restriction
-     ($core-condition-object-type-name
-      . (&implementation-restriction-rtd
-	 &implementation-restriction-rcd
-	 &violation
-	 make-implementation-restriction-violation implementation-restriction-violation?)))
-    (&lexical
-     ($core-condition-object-type-name
-      . (&lexical-rtd
-	 &lexical-rcd
-	 &violation make-lexical-violation lexical-violation?)))
-    (&syntax
-     ($core-condition-object-type-name
-      . (&syntax-rtd
-	 &syntax-rcd
-	 &violation make-syntax-violation syntax-violation?
-	 ((form	. syntax-violation-form)
-	  (subform	. syntax-violation-subform)))))
-    (&undefined
-     ($core-condition-object-type-name
-      . (&undefined-rtd
-	 &undefined-rcd
-	 &violation make-undefined-violation undefined-violation?)))
-    (&i/o
-     ($core-condition-object-type-name
-      . (&i/o-rtd
-	 &i/o-rcd
-	 &error make-i/o-error i/o-error?)))
-    (&i/o-read
-     ($core-condition-object-type-name
-      . (&i/o-read-rtd
-	 &i/o-read-rcd
-	 &i/o make-i/o-read-error i/o-read-error?)))
-    (&i/o-write
-     ($core-condition-object-type-name
-      . (&i/o-write-rtd
-	 &i/o-write-rcd
-	 &i/o make-i/o-write-error i/o-write-error?)))
-    (&i/o-invalid-position
-     ($core-condition-object-type-name
-      . (&i/o-invalid-position-rtd
-	 &i/o-invalid-position-rcd
-	 &i/o make-i/o-invalid-position-error i/o-invalid-position-error?
-	 ((position . i/o-error-position)))))
-    (&i/o-filename
-     ($core-condition-object-type-name
-      . (&i/o-filename-rtd
-	 &i/o-filename-rcd
-	 &i/o make-i/o-filename-error i/o-filename-error?
-	 ((filename . i/o-error-filename)))))
-    (&i/o-file-protection
-     ($core-condition-object-type-name
-      . (&i/o-file-protection-rtd
-	 &i/o-file-protection-rcd
-	 &i/o-filename make-i/o-file-protection-error i/o-file-protection-error?)))
-    (&i/o-file-is-read-only
-     ($core-condition-object-type-name
-      . (&i/o-file-is-read-only-rtd
-	 &i/o-file-is-read-only-rcd
-	 &i/o-file-protection
-	 make-i/o-file-is-read-only-error i/o-file-is-read-only-error?)))
-    (&i/o-file-already-exists
-     ($core-condition-object-type-name
-      . (&i/o-file-already-exists-rtd
-	 &i/o-file-already-exists-rcd
-	 &i/o-filename
-	 make-i/o-file-already-exists-error i/o-file-already-exists-error?)))
-    (&i/o-file-does-not-exist
-     ($core-condition-object-type-name
-      . (&i/o-file-does-not-exist-rtd
-	 &i/o-file-does-not-exist-rcd
-	 &i/o-filename
-	 make-i/o-file-does-not-exist-error i/o-file-does-not-exist-error?)))
-    (&i/o-port
-     ($core-condition-object-type-name
-      . (&i/o-port-rtd
-	 &i/o-port-rcd
-	 &i/o
-	 make-i/o-port-error i/o-port-error?
-	 ((port . i/o-error-port)))))
-    (&i/o-decoding
-     ($core-condition-object-type-name
-      . (&i/o-decoding-rtd
-	 &i/o-decoding-rcd
-	 &i/o-port
-	 make-i/o-decoding-error i/o-decoding-error?)))
-    (&i/o-encoding
-     ($core-condition-object-type-name
-      . (&i/o-encoding-rtd
-	 &i/o-encoding-rcd
-	 &i/o-port
-	 make-i/o-encoding-error i/o-encoding-error?
-	 ((char . i/o-encoding-error-char)))))
-    (&no-infinities
-     ($core-condition-object-type-name
-      . (&no-infinities-rtd
-	 &no-infinities-rcd
-	 &implementation-restriction
-	 make-no-infinities-violation no-infinities-violation?)))
-    (&no-nans
-     ($core-condition-object-type-name
-      . (&no-nans-rtd
-	 &no-nans-rcd
-	 &implementation-restriction
-	 make-no-nans-violation no-nans-violation?)))
+(define-auxiliary-syntaxes methods)
 
-    ;; Ikarus specific
-    (&interrupted
-     ($core-condition-object-type-name
-      . (&interrupted-rtd
-	 &interrupted-rcd
-	 &serious
-	 make-interrupted-condition interrupted-condition?)))
-    (&source-position
-     ($core-condition-object-type-name
-      . (&source-position-rtd
-	 &source-position-rcd
-	 &condition
-	 make-source-position-condition source-position-condition?
-	 ((port-id		. source-position-port-id)
-	  (byte		. source-position-byte)
-	  (character	. source-position-character)
-	  (line		. source-position-line)
-	  (column		. source-position-column)))))
-
-    ;; Vicare specific
-    (&i/o-eagain
-     ($core-condition-object-type-name
-      . (&i/o-eagain-rtd
-	 &i/o-eagain-rcd
-	 &i/o
-	 make-i/o-eagain i/o-eagain-error?)))
-    (&errno
-     ($core-condition-object-type-name
-      . (&errno-rtd
-	 &errno-rcd
-	 &condition
-	 make-errno-condition errno-condition?
-	 ((code		. condition-errno)))))
-    (&h_errno
-     ($core-condition-object-type-name
-      . (&h_errno-rtd
-	 &h_errno-rcd
-	 &condition
-	 make-h_errno-condition h_errno-condition?
-	 ((code		. condition-h_errno)))))
-    (&out-of-memory-error
-     ($core-condition-object-type-name
-      . (&out-of-memory-error-rtd
-	 &out-of-memory-error-rcd
-	 &error
-	 make-out-of-memory-error out-of-memory-error?)))
-    (&failed-expression-condition
-     ($core-condition-object-type-name
-      . (&failed-expression-condition-rtd
-	 &failed-expression-condition-rcd
-	 &condition
-	 make-failed-expression-condition
-	 failed-expression-condition?
-	 ((failed-expression	. condition-failed-expression)))))
-    (&procedure-precondition-violation
-     ($core-condition-object-type-name
-      . (&procedure-precondition-violation-rtd
-	 &procedure-precondition-violation-rcd
-	 &assertion
-	 make-procedure-precondition-violation procedure-precondition-violation?)))
-    (&procedure-postcondition-violation
-     ($core-condition-object-type-name
-      . (&procedure-postcondition-violation-rtd
-	 &procedure-postcondition-violation-rcd
-	 &assertion
-	 make-procedure-postcondition-violation procedure-postcondition-violation?)))
-    (&procedure-argument-violation
-     ($core-condition-object-type-name
-      . (&procedure-argument-violation-rtd
-	 &procedure-argument-violation-rcd
-	 &procedure-precondition-violation
-	 make-procedure-argument-violation procedure-argument-violation?)))
-    (&procedure-signature-argument-violation
-     ($core-condition-object-type-name
-      . (&procedure-signature-argument-violation-rtd
-	 &procedure-signature-argument-violation-rcd
-	 &procedure-argument-violation
-	 make-procedure-signature-argument-violation
-	 procedure-signature-argument-violation?
-	 ((one-based-argument-index	. procedure-signature-argument-violation.one-based-argument-index)
-	  (failed-expression		. procedure-signature-argument-violation.failed-expression)
-	  (offending-value		. procedure-signature-argument-violation.offending-value)))))
-    (&procedure-signature-return-value-violation
-     ($core-condition-object-type-name
-      . (&procedure-signature-return-value-violation-rtd
-	 &procedure-signature-return-value-violation-rcd
-	 &procedure-postcondition-violation
-	 make-procedure-signature-return-value-violation
-	 procedure-signature-return-value-violation?
-	 ((one-based-return-value-index . procedure-signature-return-value-violation.one-based-return-value-index)
-	  (failed-expression		. procedure-signature-return-value-violation.failed-expression)
-	  (offending-value		. procedure-signature-return-value-violation.offending-value)))))
-    (&procedure-arguments-consistency-violation
-     ($core-condition-object-type-name
-      . (&procedure-arguments-consistency-violation-rtd
-	 &procedure-arguments-consistency-violation-rcd
-	 &procedure-precondition-violation
-	 make-procedure-arguments-consistency-violation procedure-arguments-consistency-violation?)))
-    (&expression-return-value-violation
-     ($core-condition-object-type-name
-      . (&expression-return-value-violation-rtd
-	 &expression-return-value-violation-rcd
-	 &assertion make-expression-return-value-violation expression-return-value-violation?)))
-    (&non-reinstatable
-     ($core-condition-object-type-name
-      . (&non-reinstatable-rtd
-	 &non-reinstatable-rcd
-	 &violation make-non-reinstatable-violation non-reinstatable-violation?)))
-;;;
-    (&string-encoding
-     ($core-condition-object-type-name
-      . (&string-encoding-rtd
-	 &string-encoding-rcd
-	 &error	make-string-encoding-error	      string-encoding-error?)))
-    (&string-decoding
-     ($core-condition-object-type-name
-      . (&string-decoding-rtd
-	 &string-decoding-rcd
-	 &error	make-string-decoding-error	      string-decoding-error?)))
-    (&utf8-string-encoding
-     ($core-condition-object-type-name
-      . (&utf8-string-encoding-rtd
-	 &utf8-string-encoding-rcd
-	 &error	make-utf8-string-encoding-error	      utf8-string-encoding-error?)))
-    (&utf16-string-encoding
-     ($core-condition-object-type-name
-      . (&utf16-string-encoding-rtd
-	 &utf16-string-encoding-rcd
-	 &error	make-utf16-string-encoding-error      utf16-string-encoding-error?)))
-    (&utf32-string-encoding
-     ($core-condition-object-type-name
-      . (&utf32-string-encoding-rtd
-	 &utf32-string-encoding-rcd
-	 &error	make-utf32-string-encoding-error      utf32-string-encoding-error?)))
-    (&utf8-string-decoding
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-rtd
-	 &utf8-string-decoding-rcd
-	 &error	make-utf8-string-decoding-error	      utf8-string-decoding-error?)))
-    (&utf16-string-decoding
-     ($core-condition-object-type-name
-      . (&utf16-string-decoding-rtd
-	 &utf16-string-decoding-rcd
-	 &error	make-utf16-string-decoding-error      utf16-string-decoding-error?)))
-    (&utf32-string-decoding
-     ($core-condition-object-type-name
-      . (&utf32-string-decoding-rtd
-	 &utf32-string-decoding-rcd
-	 &error	make-utf32-string-decoding-error      utf32-string-decoding-error?)))
-    (&utf8-string-decoding-invalid-octet
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-invalid-octet-rtd
-	 &utf8-string-decoding-invalid-octet-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-invalid-octet
-	 utf8-string-decoding-invalid-octet?
-	 ((bytevector		. utf8-string-decoding-invalid-octet.bytevector)
-	  (index		. utf8-string-decoding-invalid-octet.index)
-	  (octets		. utf8-string-decoding-invalid-octet.octets)))))
-    (&utf8-string-decoding-invalid-2-tuple
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-invalid-2-tuple-rtd
-	 &utf8-string-decoding-invalid-2-tuple-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-invalid-2-tuple
-	 utf8-string-decoding-invalid-2-tuple?
-	 ((bytevector		. utf8-string-decoding-invalid-2-tuple.bytevector)
-	  (index		. utf8-string-decoding-invalid-2-tuple.index)
-	  (octets		. utf8-string-decoding-invalid-2-tuple.octets)))))
-    (&utf8-string-decoding-invalid-3-tuple
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-invalid-3-tuple-rtd
-	 &utf8-string-decoding-invalid-3-tuple-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-invalid-3-tuple
-	 utf8-string-decoding-invalid-3-tuple?
-	 ((bytevector		. utf8-string-decoding-invalid-3-tuple.bytevector)
-	  (index		. utf8-string-decoding-invalid-3-tuple.index)
-	  (octets		. utf8-string-decoding-invalid-3-tuple.octets)))))
-    (&utf8-string-decoding-invalid-4-tuple
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-invalid-4-tuple-rtd
-	 &utf8-string-decoding-invalid-4-tuple-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-invalid-4-tuple
-	 utf8-string-decoding-invalid-4-tuple?
-	 ((bytevector		. utf8-string-decoding-invalid-4-tuple.bytevector)
-	  (index		. utf8-string-decoding-invalid-4-tuple.index)
-	  (octets		. utf8-string-decoding-invalid-4-tuple.octets)))))
-    (&utf8-string-decoding-incomplete-2-tuple
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-incomplete-2-tuple-rtd
-	 &utf8-string-decoding-incomplete-2-tuple-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-incomplete-2-tuple
-	 utf8-string-decoding-incomplete-2-tuple?
-	 ((bytevector		. utf8-string-decoding-incomplete-2-tuple.bytevector)
-	  (index		. utf8-string-decoding-incomplete-2-tuple.index)
-	  (octets		. utf8-string-decoding-incomplete-2-tuple.octets)))))
-    (&utf8-string-decoding-incomplete-3-tuple
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-incomplete-3-tuple-rtd
-	 &utf8-string-decoding-incomplete-3-tuple-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-incomplete-3-tuple
-	 utf8-string-decoding-incomplete-3-tuple?
-	 ((bytevector		. utf8-string-decoding-incomplete-3-tuple.bytevector)
-	  (index		. utf8-string-decoding-incomplete-3-tuple.index)
-	  (octets		. utf8-string-decoding-incomplete-3-tuple.octets)))))
-    (&utf8-string-decoding-incomplete-4-tuple
-     ($core-condition-object-type-name
-      . (&utf8-string-decoding-incomplete-4-tuple-rtd
-	 &utf8-string-decoding-incomplete-4-tuple-rcd
-	 &utf8-string-decoding
-	 make-utf8-string-decoding-incomplete-4-tuple
-	 utf8-string-decoding-incomplete-4-tuple?
-	 ((bytevector		. utf8-string-decoding-incomplete-4-tuple.bytevector)
-	  (index		. utf8-string-decoding-incomplete-4-tuple.index)
-	  (octets		. utf8-string-decoding-incomplete-4-tuple.octets)))))
-    (&utf16-string-decoding-invalid-first-word
-     ($core-condition-object-type-name
-      . (&utf16-string-decoding-invalid-first-word-rtd
-	 &utf16-string-decoding-invalid-first-word-rcd
-	 &utf16-string-decoding
-	 make-utf16-string-decoding-invalid-first-word
-	 utf16-string-decoding-invalid-first-word?
-	 ((bytevector		. utf16-string-decoding-invalid-first-word.bytevector)
-	  (index		. utf16-string-decoding-invalid-first-word.index)
-	  (word			. utf16-string-decoding-invalid-first-word.word)))))
-    (&utf16-string-decoding-invalid-second-word
-     ($core-condition-object-type-name
-      . (&utf16-string-decoding-invalid-second-word-rtd
-	 &utf16-string-decoding-invalid-second-word-rcd
-	 &utf16-string-decoding
-	 make-utf16-string-decoding-invalid-second-word
-	 utf16-string-decoding-invalid-second-word?
-	 ((bytevector		. utf16-string-decoding-invalid-second-word.bytevector)
-	  (index		. utf16-string-decoding-invalid-second-word.index)
-	  (first-word		. utf16-string-decoding-invalid-second-word.first-word)
-	  (second-word		. utf16-string-decoding-invalid-second-word.second-word)))))
-    (&utf16-string-decoding-missing-second-word
-     ($core-condition-object-type-name
-      . (&utf16-string-decoding-missing-second-word-rtd
-	 &utf16-string-decoding-missing-second-word-rcd
-	 &utf16-string-decoding
-	 make-utf16-string-decoding-missing-second-word
-	 utf16-string-decoding-missing-second-word?
-	 ((bytevector		. utf16-string-decoding-missing-second-word.bytevector)
-	  (index		. utf16-string-decoding-missing-second-word.index)
-	  (word			. utf16-string-decoding-missing-second-word.word)))))
-    (&utf16-string-decoding-standalone-octet
-     ($core-condition-object-type-name
-      . (&utf16-string-decoding-standalone-octet-rtd
-	 &utf16-string-decoding-standalone-octet-rcd
-	 &utf16-string-decoding
-	 make-utf16-string-decoding-standalone-octet
-	 utf16-string-decoding-standalone-octet?
-	 ((bytevector		. utf16-string-decoding-standalone-octet.bytevector)
-	  (index		. utf16-string-decoding-standalone-octet.index)
-	  (octet		. utf16-string-decoding-standalone-octet.octet)))))
-    (&utf32-string-decoding-invalid-word
-     ($core-condition-object-type-name
-      . (&utf32-string-decoding-invalid-word-rtd
-	 &utf32-string-decoding-invalid-word-rcd
-	 &utf32-string-decoding
-	 make-utf32-string-decoding-invalid-word
-	 utf32-string-decoding-invalid-word?
-	 ((bytevector		. utf32-string-decoding-invalid-word.bytevector)
-	  (index		. utf32-string-decoding-invalid-word.index)
-	  (word			. utf32-string-decoding-invalid-word.word)))))
-    (&utf32-string-decoding-orphan-octets
-     ($core-condition-object-type-name
-      . (&utf32-string-decoding-orphan-octets-rtd
-	 &utf32-string-decoding-orphan-octets-rcd
-	 &utf32-string-decoding
-	 make-utf32-string-decoding-orphan-octets
-	 utf32-string-decoding-orphan-octets?
-	 ((bytevector		. utf32-string-decoding-orphan-octets.bytevector)
-	  (index		. utf32-string-decoding-orphan-octets.index)
-	  (octets		. utf32-string-decoding-orphan-octets.octets)))))
-    ;;;
-    (&expand-time-type-signature-violation
-     ($core-condition-object-type-name
-      . (&expand-time-type-signature-violation-rtd
-	 &expand-time-type-signature-violation-rcd
-	 &violation
-	 make-expand-time-type-signature-violation
-	 expand-time-type-signature-violation?)))
-    (&expand-time-retvals-signature-violation
-     ($core-condition-object-type-name
-      . (&expand-time-retvals-signature-violation-rtd
-	 &expand-time-retvals-signature-violation-rcd
-	 &expand-time-type-signature-violation
-	 make-expand-time-retvals-signature-violation
-	 expand-time-retvals-signature-violation?
-	 ((expected-signature	. expand-time-retvals-signature-violation-expected-signature)
-	  (returned-signature	. expand-time-retvals-signature-violation-returned-signature)))))
-    ;;;
-    (&type-syntactic-identifier
-     ($core-condition-object-type-name
-      . (&type-syntactic-identifier
-	 &type-syntactic-identifier-rtd
-	 &type-syntactic-identifier-rcd
-	 make-type-syntactic-identifier-condition
-	 type-syntactic-identifier-condition?)))
-    (&argument-type-syntactic-identifier
-     ($core-condition-object-type-name
-      . (&argument-type-syntactic-identifier
-	 &argument-type-syntactic-identifier-rtd
-	 &argument-type-syntactic-identifier-rcd
-	 make-argument-type-syntactic-identifier-condition
-	 argument-type-syntactic-identifier-condition?
-	 ((argument-type-identifier	. condition-operand-type-syntactic-identifier)))))
-    (&operand-type-syntactic-identifier
-     ($core-condition-object-type-name
-      . (&operand-type-syntactic-identifier
-	 &operand-type-syntactic-identifier-rtd
-	 &operand-type-syntactic-identifier-rcd
-	 make-operand-type-syntactic-identifier-condition
-	 operand-type-syntactic-identifier-condition?
-	 ((operand-type-identifier	. condition-operand-type-syntactic-identifier)))))
-    (&argument-index
-     ($core-condition-object-type-name
-      . (&argument-index
-	 &argument-index-rtd
-	 &argument-index-rcd
-	 make-argument-index-condition
-	 argument-index-condition?
-	 ((argument-index		. condition-argument-index)))))
+(define-syntax (define-built-in-condition-type stx)
+  (syntax-case stx (methods)
+    ((?kwd ?type-name ?parent-name ?constructor ?predicate)
+     (and (identifier? #'?type-name)
+	  (or (identifier? #'?parent-name)
+	      (not (syntax->datum #'?parent-name)))
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate))
+     #'(?kwd ?type-name ?parent-name ?constructor ?predicate (methods)))
+    ((_    ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
+     (and (identifier? #'?type-name)
+	  (or (identifier? #'?parent-name)
+	      (not (syntax->datum #'?parent-name)))
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate))
+     (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+       (define (mkid . str*)
+	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
+       (with-syntax
+	   ((TYPE-RTD (mkid type-name.str "-rtd"))
+	    (TYPE-RCD (mkid type-name.str "-rcd")))
+	 #'(quote (?type-name
+		   ($core-condition-object-type-name
+		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
     ))
+
+(define VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  (list
+   (define-built-in-condition-type &condition
+       #f
+     condition condition?)
+
+   (define-built-in-condition-type &message
+       &condition
+     make-message-condition message-condition?
+     (methods
+      (message		condition-message)))
+
+   (define-built-in-condition-type &warning
+       &condition
+     make-warning warning?)
+
+   (define-built-in-condition-type &serious
+       &condition
+     make-serious-condition serious-condition?)
+
+   (define-built-in-condition-type &error
+       &serious
+     make-error error?)
+
+   (define-built-in-condition-type &violation
+       &serious
+     make-violation violation?)
+
+   (define-built-in-condition-type &assertion
+       &violation
+     make-assertion-violation assertion-violation?)
+
+   (define-built-in-condition-type &irritants
+       &condition
+     make-irritants-condition irritants-condition?
+     (methods
+      (irritants	condition-irritants)))
+
+   (define-built-in-condition-type &who
+       &condition
+     make-who-condition who-condition?
+     (methods
+      (who		condition-who)))
+
+   (define-built-in-condition-type &non-continuable
+       &violation
+     make-non-continuable-violation non-continuable-violation?)
+
+   (define-built-in-condition-type &implementation-restriction
+       &violation
+     make-implementation-restriction-violation implementation-restriction-violation?)
+
+   (define-built-in-condition-type &lexical
+       &violation
+     make-lexical-violation lexical-violation?)
+
+   (define-built-in-condition-type &syntax
+       &violation
+     make-syntax-violation syntax-violation?
+     (methods
+      (form		syntax-violation-form)
+      (subform		syntax-violation-subform)))
+
+   (define-built-in-condition-type &undefined
+       &violation
+     make-undefined-violation undefined-violation?)
+
+   (define-built-in-condition-type &i/o
+       &error
+     make-i/o-error i/o-error?)
+
+   (define-built-in-condition-type &i/o-read
+       &i/o make-i/o-read-error i/o-read-error?)
+
+   (define-built-in-condition-type &i/o-write
+       &i/o
+     make-i/o-write-error i/o-write-error?)
+
+   (define-built-in-condition-type &i/o-invalid-position
+       &i/o
+     make-i/o-invalid-position-error i/o-invalid-position-error?
+     (methods
+      (position		i/o-error-position)))
+
+
+   (define-built-in-condition-type &i/o-filename
+       &i/o
+     make-i/o-filename-error i/o-filename-error?
+     (methods
+      (filename		i/o-error-filename)))
+
+   (define-built-in-condition-type &i/o-file-protection
+       &i/o-filename
+     make-i/o-file-protection-error i/o-file-protection-error?)
+
+   (define-built-in-condition-type &i/o-file-is-read-only
+       &i/o-file-protection
+     make-i/o-file-is-read-only-error i/o-file-is-read-only-error?)
+
+   (define-built-in-condition-type &i/o-file-already-exists
+       &i/o-filename
+     make-i/o-file-already-exists-error i/o-file-already-exists-error?)
+
+   (define-built-in-condition-type &i/o-file-does-not-exist
+       &i/o-filename
+     make-i/o-file-does-not-exist-error i/o-file-does-not-exist-error?)
+
+   (define-built-in-condition-type &i/o-port
+       &i/o
+     make-i/o-port-error i/o-port-error?
+     (methods
+      (port		i/o-error-port)))
+
+   (define-built-in-condition-type &i/o-decoding
+       &i/o-port
+     make-i/o-decoding-error i/o-decoding-error?)
+
+   (define-built-in-condition-type &i/o-encoding
+       &i/o-port
+     make-i/o-encoding-error i/o-encoding-error?
+     (methods
+      (char		i/o-encoding-error-char)))
+
+   (define-built-in-condition-type &no-infinities
+       &implementation-restriction
+     make-no-infinities-violation no-infinities-violation?)
+
+   (define-built-in-condition-type &no-nans
+       &implementation-restriction
+     make-no-nans-violation no-nans-violation?)
+
+;;; --------------------------------------------------------------------
+;;; Ikarus specific
+
+   (define-built-in-condition-type &interrupted
+       &serious
+     make-interrupted-condition interrupted-condition?)
+
+   (define-built-in-condition-type &source-position
+       &condition
+     make-source-position-condition source-position-condition?
+     (methods
+      (port-id		source-position-port-id)
+      (byte		source-position-byte)
+      (character	source-position-character)
+      (line		source-position-line)
+      (column		source-position-column)))
+
+;;; --------------------------------------------------------------------
+;;; Vicare specific
+
+   (define-built-in-condition-type &i/o-eagain
+       &i/o
+     make-i/o-eagain i/o-eagain-error?)
+
+   (define-built-in-condition-type &errno
+       &condition
+     make-errno-condition errno-condition?
+     (methods
+      (code		condition-errno)))
+
+   (define-built-in-condition-type &h_errno
+       &condition
+     make-h_errno-condition h_errno-condition?
+     (methods
+      (code		condition-h_errno)))
+
+   (define-built-in-condition-type &out-of-memory-error
+       &error
+     make-out-of-memory-error out-of-memory-error?)
+
+   (define-built-in-condition-type &failed-expression-condition
+       &condition
+     make-failed-expression-condition
+     failed-expression-condition?
+     (methods
+      (failed-expression	condition-failed-expression)))
+
+   (define-built-in-condition-type &procedure-precondition-violation
+       &assertion
+     make-procedure-precondition-violation procedure-precondition-violation?)
+
+   (define-built-in-condition-type &procedure-postcondition-violation
+       &assertion
+     make-procedure-postcondition-violation procedure-postcondition-violation?)
+
+   (define-built-in-condition-type &procedure-argument-violation
+       &procedure-precondition-violation
+     make-procedure-argument-violation procedure-argument-violation?)
+
+   (define-built-in-condition-type &procedure-signature-argument-violation
+       &procedure-argument-violation
+     make-procedure-signature-argument-violation procedure-signature-argument-violation?
+     (methods
+      (one-based-argument-index	procedure-signature-argument-violation.one-based-argument-index)
+      (failed-expression	procedure-signature-argument-violation.failed-expression)
+      (offending-value		procedure-signature-argument-violation.offending-value)))
+
+   (define-built-in-condition-type &procedure-signature-return-value-violation
+       &procedure-postcondition-violation
+     make-procedure-signature-return-value-violation procedure-signature-return-value-violation?
+     (methods
+      (one-based-return-value-index	procedure-signature-return-value-violation.one-based-return-value-index)
+      (failed-expression		procedure-signature-return-value-violation.failed-expression)
+      (offending-value			procedure-signature-return-value-violation.offending-value)))
+
+   (define-built-in-condition-type &procedure-arguments-consistency-violation
+       &procedure-precondition-violation
+     make-procedure-arguments-consistency-violation procedure-arguments-consistency-violation?)
+
+   (define-built-in-condition-type &expression-return-value-violation
+       &assertion
+     make-expression-return-value-violation expression-return-value-violation?)
+
+   (define-built-in-condition-type &non-reinstatable
+       &violation
+     make-non-reinstatable-violation non-reinstatable-violation?)
+;;;
+   (define-built-in-condition-type &string-encoding
+       &error
+     make-string-encoding-error string-encoding-error?)
+
+   (define-built-in-condition-type &string-decoding
+       &error
+     make-string-decoding-error string-decoding-error?)
+
+   (define-built-in-condition-type &utf8-string-encoding
+       &error
+     make-utf8-string-encoding-error utf8-string-encoding-error?)
+
+   (define-built-in-condition-type &utf16-string-encoding
+       &error
+     make-utf16-string-encoding-error utf16-string-encoding-error?)
+
+   (define-built-in-condition-type &utf32-string-encoding
+       &error
+     make-utf32-string-encoding-error      utf32-string-encoding-error?)
+
+   (define-built-in-condition-type &utf8-string-decoding
+       &error
+     make-utf8-string-decoding-error	      utf8-string-decoding-error?)
+
+   (define-built-in-condition-type &utf16-string-decoding
+       &error
+     make-utf16-string-decoding-error      utf16-string-decoding-error?)
+
+   (define-built-in-condition-type &utf32-string-decoding
+       &error
+     make-utf32-string-decoding-error      utf32-string-decoding-error?)
+
+   (define-built-in-condition-type &utf8-string-decoding-invalid-octet
+       &utf8-string-decoding
+     make-utf8-string-decoding-invalid-octet utf8-string-decoding-invalid-octet?
+     (methods
+      (bytevector	utf8-string-decoding-invalid-octet.bytevector)
+      (index		utf8-string-decoding-invalid-octet.index)
+      (octets		utf8-string-decoding-invalid-octet.octets)))
+
+   (define-built-in-condition-type &utf8-string-decoding-invalid-2-tuple
+       &utf8-string-decoding
+     make-utf8-string-decoding-invalid-2-tuple utf8-string-decoding-invalid-2-tuple?
+     (methods
+      (bytevector	utf8-string-decoding-invalid-2-tuple.bytevector)
+      (index		utf8-string-decoding-invalid-2-tuple.index)
+      (octets		utf8-string-decoding-invalid-2-tuple.octets)))
+
+   (define-built-in-condition-type &utf8-string-decoding-invalid-3-tuple
+       &utf8-string-decoding
+     make-utf8-string-decoding-invalid-3-tuple utf8-string-decoding-invalid-3-tuple?
+     (methods
+      (bytevector	utf8-string-decoding-invalid-3-tuple.bytevector)
+      (index		utf8-string-decoding-invalid-3-tuple.index)
+      (octets		utf8-string-decoding-invalid-3-tuple.octets)))
+
+   (define-built-in-condition-type &utf8-string-decoding-invalid-4-tuple
+       &utf8-string-decoding
+     make-utf8-string-decoding-invalid-4-tuple utf8-string-decoding-invalid-4-tuple?
+     (methods
+      (bytevector	utf8-string-decoding-invalid-4-tuple.bytevector)
+      (index		utf8-string-decoding-invalid-4-tuple.index)
+      (octets		utf8-string-decoding-invalid-4-tuple.octets)))
+
+   (define-built-in-condition-type &utf8-string-decoding-incomplete-2-tuple
+       &utf8-string-decoding
+     make-utf8-string-decoding-incomplete-2-tuple utf8-string-decoding-incomplete-2-tuple?
+     (methods
+      (bytevector	utf8-string-decoding-incomplete-2-tuple.bytevector)
+      (index		utf8-string-decoding-incomplete-2-tuple.index)
+      (octets		utf8-string-decoding-incomplete-2-tuple.octets)))
+
+   (define-built-in-condition-type &utf8-string-decoding-incomplete-3-tuple
+       &utf8-string-decoding
+     make-utf8-string-decoding-incomplete-3-tuple utf8-string-decoding-incomplete-3-tuple?
+     (methods
+      (bytevector	utf8-string-decoding-incomplete-3-tuple.bytevector)
+      (index		utf8-string-decoding-incomplete-3-tuple.index)
+      (octets		utf8-string-decoding-incomplete-3-tuple.octets)))
+
+   (define-built-in-condition-type &utf8-string-decoding-incomplete-4-tuple
+       &utf8-string-decoding
+     make-utf8-string-decoding-incomplete-4-tuple	utf8-string-decoding-incomplete-4-tuple?
+     (methods
+      (bytevector	utf8-string-decoding-incomplete-4-tuple.bytevector)
+      (index		utf8-string-decoding-incomplete-4-tuple.index)
+      (octets		utf8-string-decoding-incomplete-4-tuple.octets)))
+
+   (define-built-in-condition-type &utf16-string-decoding-invalid-first-word
+       &utf16-string-decoding
+     make-utf16-string-decoding-invalid-first-word utf16-string-decoding-invalid-first-word?
+     (methods
+      (bytevector	utf16-string-decoding-invalid-first-word.bytevector)
+      (index		utf16-string-decoding-invalid-first-word.index)
+      (word		utf16-string-decoding-invalid-first-word.word)))
+
+   (define-built-in-condition-type &utf16-string-decoding-invalid-second-word
+       &utf16-string-decoding
+     make-utf16-string-decoding-invalid-second-word utf16-string-decoding-invalid-second-word?
+     (methods
+      (bytevector	utf16-string-decoding-invalid-second-word.bytevector)
+      (index		utf16-string-decoding-invalid-second-word.index)
+      (first-word	utf16-string-decoding-invalid-second-word.first-word)
+      (second-word	utf16-string-decoding-invalid-second-word.second-word)))
+
+   (define-built-in-condition-type &utf16-string-decoding-missing-second-word
+       &utf16-string-decoding
+     make-utf16-string-decoding-missing-second-word utf16-string-decoding-missing-second-word?
+     (methods
+      (bytevector	utf16-string-decoding-missing-second-word.bytevector)
+      (index		utf16-string-decoding-missing-second-word.index)
+      (word		utf16-string-decoding-missing-second-word.word)))
+
+   (define-built-in-condition-type &utf16-string-decoding-standalone-octet
+       &utf16-string-decoding
+     make-utf16-string-decoding-standalone-octet utf16-string-decoding-standalone-octet?
+     (methods
+      (bytevector	utf16-string-decoding-standalone-octet.bytevector)
+      (index		utf16-string-decoding-standalone-octet.index)
+      (octet		utf16-string-decoding-standalone-octet.octet)))
+
+   (define-built-in-condition-type &utf32-string-decoding-invalid-word
+       &utf32-string-decoding
+     make-utf32-string-decoding-invalid-word utf32-string-decoding-invalid-word?
+     (methods
+      (bytevector	utf32-string-decoding-invalid-word.bytevector)
+      (index		utf32-string-decoding-invalid-word.index)
+      (word		utf32-string-decoding-invalid-word.word)))
+
+   (define-built-in-condition-type &utf32-string-decoding-orphan-octets
+       &utf32-string-decoding
+     make-utf32-string-decoding-orphan-octets utf32-string-decoding-orphan-octets?
+     (methods
+      (bytevector	utf32-string-decoding-orphan-octets.bytevector)
+      (index		utf32-string-decoding-orphan-octets.index)
+      (octets		utf32-string-decoding-orphan-octets.octets)))
+;;;
+   (define-built-in-condition-type &expand-time-type-signature-violation
+       &violation
+     make-expand-time-type-signature-violation expand-time-type-signature-violation?)
+
+   (define-built-in-condition-type &expand-time-retvals-signature-violation
+       &expand-time-type-signature-violation
+     make-expand-time-retvals-signature-violation expand-time-retvals-signature-violation?
+     (methods
+      (expected-signature	expand-time-retvals-signature-violation-expected-signature)
+      (returned-signature	expand-time-retvals-signature-violation-returned-signature)))
+;;;
+   (define-built-in-condition-type &type-syntactic-identifier
+       &condition
+     make-type-syntactic-identifier-condition type-syntactic-identifier-condition?)
+
+   (define-built-in-condition-type &argument-type-syntactic-identifier
+       &type-syntactic-identifier
+     make-argument-type-syntactic-identifier-condition argument-type-syntactic-identifier-condition?
+     (methods
+      (argument-type-identifier	condition-operand-type-syntactic-identifier)))
+
+   (define-built-in-condition-type &operand-type-syntactic-identifier
+       &type-syntactic-identifier
+     make-operand-type-syntactic-identifier-condition operand-type-syntactic-identifier-condition?
+     (methods
+      (operand-type-identifier	condition-operand-type-syntactic-identifier)))
+
+   (define-built-in-condition-type &argument-index
+       &condition
+     make-argument-index-condition argument-index-condition?
+     (methods
+      (argument-index		condition-argument-index)))
+
+   ))
 
 
 ;;;; core syntactic binding descriptors: built-in Scheme object types
-
-(define-auxiliary-syntaxes methods)
 
 (define-syntax (define-scheme-type stx)
   (syntax-case stx (methods)
@@ -6411,6 +6338,7 @@
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
+;; eval: (put 'define-built-in-condition-type		'scheme-indent-function 2)
 ;; eval: (put 'define-scheme-type			'scheme-indent-function 2)
 ;; eval: (put 'declare-typed-core-prim			'scheme-indent-function 1)
 ;; End:

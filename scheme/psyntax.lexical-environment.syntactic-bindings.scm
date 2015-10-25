@@ -1009,7 +1009,8 @@
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
-  ;;   (?rtd-name ?rcd-name ?parent-id ?constructor-id ?type-predicate-id ?accessors-alist)
+  ;;   (?type-name ?rtd-name ?rcd-name
+  ;;    ?parent-name ?constructor-name ?type-predicate-name ?accessors-alist)
   ;;
   ;;Syntactic  binding  descriptors  of type  "$core-condition-object-type-name"  are
   ;;hard-coded in the boot image and generated directly by the makefile at boot image
@@ -1019,16 +1020,16 @@
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
-	 (rtd-id		(core-prim-id (car  hard-coded-sexp)))
-	 (rcd-id		(core-prim-id (cadr hard-coded-sexp)))
+	 (rtd-id		(core-prim-id (list-ref hard-coded-sexp 1)))
+	 (rcd-id		(core-prim-id (list-ref hard-coded-sexp 2)))
 	 (super-protocol-id	#f)
-	 (parent-id		(cond ((list-ref hard-coded-sexp 2)
+	 (parent-id		(cond ((list-ref hard-coded-sexp 3)
 				       => core-prim-id)
 				      (else #f)))
-	 (constructor-id	(bless (list-ref hard-coded-sexp 3)))
+	 (constructor-id	(bless (list-ref hard-coded-sexp 4)))
 	 (destructor-id		#f)
-	 (type-predicate-id	(bless (list-ref hard-coded-sexp 4)))
-	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 5))
+	 (type-predicate-id	(bless (list-ref hard-coded-sexp 5)))
+	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
 	 (mutators-table	'())
 	 (methods-table		accessors-table)
 	 (ots			(make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
