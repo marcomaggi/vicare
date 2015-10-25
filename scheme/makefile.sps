@@ -866,7 +866,7 @@
 		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
     ))
 
-(define VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+(define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   (list
    (define-built-in-condition-type &condition
        #f
@@ -1261,9 +1261,9 @@
 
 (define-syntax (define-scheme-type stx)
   (syntax-case stx (methods)
-    ((?kwd ?type-name ?parent-name ?maker ?pred)
+    ((?kwd   ?type-name ?parent-name ?maker ?pred)
      #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
-    ((_ ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
+    ((_      ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
      #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		  (quote (?type-name
 			  ($core-scheme-type-name
@@ -1271,22 +1271,29 @@
 					 ((?method-name . ?method-implementation-procedure) ...)))))))
     ))
 
-(define-syntax (define-list-type stx)
-  (syntax-case stx ()
-    ((?kwd ?type-name ?item-name)
-     #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-		  (quote (?type-name
-			  ($core-list-type-name
-			   . (?type-name ?item-name))))))
-    ))
-
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
-(define-list-type <char*>
-    <char>)
-
 (include "scheme-object-types.scm" #t)
+
+
+;;;; core syntactic binding descriptors: built-in list object types
+
+(define-syntax (define-list-type stx)
+  (syntax-case stx ()
+    ((_ ?type-name ?item-name)
+     #'(quote (?type-name
+	       ($core-list-type-name
+		. (?type-name ?item-name)))))
+    ))
+
+(define-constant VICARE-CORE-BUILT-IN-LIST-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  (list
+
+   (define-list-type <char*>
+       <char>)
+
+   ))
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
@@ -1295,7 +1302,8 @@
   (append VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
+	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-LIST-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure

@@ -310,9 +310,6 @@
     <list>
   <null>-constructor null?)
 
-#;(define-list-type <char*>
-    <char>)
-
 
 ;;;; done
 
