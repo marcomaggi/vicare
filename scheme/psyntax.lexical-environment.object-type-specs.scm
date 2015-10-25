@@ -307,7 +307,7 @@
 ;;
 ;;It is built at run-time by converting entries with format:
 ;;
-;;   ($core-scheme-type-name . ?hard-coded-sexp)
+;;   ($core-scheme-object-type-name . ?hard-coded-sexp)
 ;;
 ;;where ?HARD-CODED-SEXP has the format:
 ;;
@@ -369,7 +369,7 @@
 ;;
 ;;It is built at run-time by converting entries with format:
 ;;
-;;   ($core-list-type-name . ?hard-coded-sexp)
+;;   ($core-list-object-type-name . ?hard-coded-sexp)
 ;;
 ;;where ?HARD-CODED-SEXP has the format:
 ;;

@@ -1266,7 +1266,7 @@
     ((_      ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
      #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 		  (quote (?type-name
-			  ($core-scheme-type-name
+			  ($core-scheme-object-type-name
 			   . (?type-name ?parent-name ?maker ?pred
 					 ((?method-name . ?method-implementation-procedure) ...)))))))
     ))
@@ -1283,7 +1283,7 @@
   (syntax-case stx ()
     ((_ ?type-name ?item-name)
      #'(quote (?type-name
-	       ($core-list-type-name
+	       ($core-list-object-type-name
 		. (?type-name ?item-name)))))
     ))
 

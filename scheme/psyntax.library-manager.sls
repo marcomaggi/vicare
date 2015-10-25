@@ -575,7 +575,7 @@
 			       module begin set! stale-when
 			       core-macro macro macro!
 			       $core-rtd $core-record-type-name $core-condition-object-type-name
-			       $core-scheme-type-name $core-list-type-name)
+			       $core-scheme-object-type-name $core-list-object-type-name)
 			      (if system-library?
 				  type.value
 				(assertion-violation who

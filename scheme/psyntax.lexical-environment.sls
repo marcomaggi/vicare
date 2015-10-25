@@ -2111,7 +2111,7 @@
 ;;                  ;;If needed: visit the library from which this type was imported.
 ;;                  (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv))))))
 ;;
-;;      (($core-scheme-type-name
+;;      (($core-scheme-object-type-name
 ;;        $core-rtd $core-record-type-name $core-condition-object-type-name
 ;;        core-prim core-prim-typed
 ;;        lexical lexical-typed macro! macro local-macro local-macro! local-etv)

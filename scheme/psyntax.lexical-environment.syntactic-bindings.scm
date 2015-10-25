@@ -729,7 +729,7 @@
   ;;
   ;;The core descriptor has the format:
   ;;
-  ;;   ($core-scheme-type-name . ?hard-coded-sexp)
+  ;;   ($core-scheme-object-type-name . ?hard-coded-sexp)
   ;;
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
@@ -740,7 +740,7 @@
   ;;
   ;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
   ;;
-  ;;Syntactic binding descriptors of  type "$core-scheme-type-name" are hard-coded in
+  ;;Syntactic binding descriptors of  type "$core-scheme-object-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
   ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
   ;;descriptor from the label: this function is used to convert the descriptor.
@@ -765,7 +765,7 @@
 ;;built-in Scheme object-type name; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-scheme-type-name?
-  $core-scheme-type-name)
+  $core-scheme-object-type-name)
 
 
 ;;;; syntactic binding descriptor: core built-in list object-type descriptor binding
@@ -778,7 +778,7 @@
   ;;
   ;;The core descriptor has the format:
   ;;
-  ;;   ($core-list-type-name . ?hard-coded-sexp)
+  ;;   ($core-list-object-type-name . ?hard-coded-sexp)
   ;;
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
@@ -790,7 +790,7 @@
   ;;
   ;;?ITEM-NAME is the symbol name of the type of contained in the list.
   ;;
-  ;;Syntactic binding  descriptors of  type "$core-list-type-name" are  hard-coded in
+  ;;Syntactic binding  descriptors of  type "$core-list-object-type-name" are  hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
   ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
   ;;descriptor from the label: this function is used to convert the descriptor.
@@ -807,7 +807,7 @@
 ;;built-in Scheme object-type name; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-list-type-name?
-  $core-list-type-name)
+  $core-list-object-type-name)
 
 
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings

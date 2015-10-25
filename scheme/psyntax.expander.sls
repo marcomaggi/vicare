@@ -1253,11 +1253,11 @@
 		   ;;
 		   ;;Add to the GLOBAL-ENV an entry like:
 		   ;;
-		   ;;   (?label . ($core-scheme-type-name . ?hard-coded-sexp))
+		   ;;   (?label . ($core-scheme-object-type-name . ?hard-coded-sexp))
 		   ;;
 		   (let ((hard-coded-sexp (cdr descr.value)))
 		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label '$core-scheme-type-name hard-coded-sexp) global-env)
+			   (cons (make-global-env-entry label '$core-scheme-object-type-name hard-coded-sexp) global-env)
 			   visit-env typed-locs)))
 		  ((core-list-type-spec? ots)
 		   ;;This case  is for  the syntactic bindings  representing built-in
@@ -1269,11 +1269,11 @@
 		   ;;
 		   ;;Add to the GLOBAL-ENV an entry like:
 		   ;;
-		   ;;   (?label . ($core-list-type-name . ?hard-coded-sexp))
+		   ;;   (?label . ($core-list-object-type-name . ?hard-coded-sexp))
 		   ;;
 		   (let ((hard-coded-sexp (cdr descr.value)))
 		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label '$core-list-type-name hard-coded-sexp) global-env)
+			   (cons (make-global-env-entry label '$core-list-object-type-name hard-coded-sexp) global-env)
 			   visit-env typed-locs)))
 		  ((core-condition-type-spec? ots)
 		   ;;Here we  know that  the syntactic  binding's descriptor  has the
@@ -1328,8 +1328,8 @@
 			   (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)
 			   typed-locs))))))
 
-	      (($core-scheme-type-name
-		$core-list-type-name
+	      (($core-scheme-object-type-name
+		$core-list-object-type-name
 		$core-rtd $core-record-type-name $core-condition-object-type-name
 		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:
