@@ -48,7 +48,7 @@
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
     <boolean>-constructor		<null>-constructor
-    <symbol>-value
+    <symbol>-value			<string>-for-each
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
@@ -60,7 +60,8 @@
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Mon Oct 19, 2015)
-		  keyword-hash			keyword->string
+		  keyword->string		string->keyword
+		  keyword-hash
 		  char->fixnum
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
@@ -91,7 +92,8 @@
     ;;2015)
     (only (ikarus.keywords)
 	  keyword-hash
-	  keyword->string)
+	  keyword->string
+	  string->keyword)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 25,
     ;;2015)
     (prefix (only (ikarus structs)
@@ -424,6 +426,12 @@
 
 (define (<null>-constructor)
   '())
+
+(case-define <string>-for-each
+  ((str func)
+   (string-for-each func str))
+  ((str func . str*)
+   (apply string-for-each func str str*)))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

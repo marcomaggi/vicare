@@ -332,6 +332,7 @@
     &type-syntactic-identifier-rcd
     make-type-syntactic-identifier-condition
     type-syntactic-identifier-condition?
+    condition-type-syntactic-identifier
 
     &argument-type-syntactic-identifier
     &argument-type-syntactic-identifier-rtd
@@ -2677,20 +2678,26 @@
   application-operands-condition?
   (operands application-operands-condition.operands))
 
-;;This is used  to describe a type involved  in an exception.  The field  must be the
+;;This is used to describe a type involved in an exception, for example when the type
+;;identifier is  used by  the syntax  IS-A? or  METHOD-CALL.  The  field must  be the
 ;;syntactic identifier  bound to the type  specification (for example the  name of an
 ;;R6RS record type).
+;;
 (define-condition-type &type-syntactic-identifier
     &condition
   make-type-syntactic-identifier-condition
-  type-syntactic-identifier-condition?)
+  type-syntactic-identifier-condition?
+  (type-identifier	condition-type-syntactic-identifier))
 (define &type-syntactic-identifier-rtd
   (record-type-descriptor &type-syntactic-identifier))
 (define &type-syntactic-identifier-rcd
   (record-constructor-descriptor &type-syntactic-identifier))
 
+;;This  is used  to describe  the type  identifier of  an argument  to function,  the
+;;expected type of object used in the function call.
+;;
 (define-condition-type &argument-type-syntactic-identifier
-    &type-syntactic-identifier
+    &condition
   make-argument-type-syntactic-identifier-condition
   argument-type-syntactic-identifier-condition?
   (argument-type-identifier	condition-argument-type-syntactic-identifier))
@@ -2699,8 +2706,11 @@
 (define &argument-type-syntactic-identifier-rcd
   (record-constructor-descriptor &argument-type-syntactic-identifier))
 
+;;This is used to describe the type identifier of an operand to function, the type of
+;;the actual object used as operand in a specific function call.
+;;
 (define-condition-type &operand-type-syntactic-identifier
-    &type-syntactic-identifier
+    &condition
   make-operand-type-syntactic-identifier-condition
   operand-type-syntactic-identifier-condition?
   (operand-type-identifier	condition-operand-type-syntactic-identifier))

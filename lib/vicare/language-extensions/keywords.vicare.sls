@@ -7,7 +7,7 @@
 ;;;
 ;;;	This library is derived from old code in Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2009-2010, 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -44,15 +44,6 @@
   (import (vicare)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
-
-
-;;;; string utilities
-
-(define (string->keyword str)
-  (define who 'string->keyword)
-  (with-arguments-validation (who)
-      ((string	str))
-    (symbol->keyword (string->symbol str))))
 
 
 (define-syntax let-keywords

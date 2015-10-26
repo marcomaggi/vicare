@@ -158,7 +158,70 @@
 
 (define-scheme-type <string>
     <top>
-  string string?)
+  string string?
+  (methods
+   (empty?			string-empty?)
+
+   (copy			string-copy)
+   (append			string-append)
+
+   (length			string-length)
+   (for-each			<string>-for-each)
+   (ref				string-ref)
+   (set!			string-set!)
+   (fill!			string-fill!)
+
+   (ascii-encoded?		ascii-encoded-string?)
+   (latin1-encoded?		latin1-encoded-string?)
+   (octets-encoded?		octets-encoded-string?)
+   (uri-encoded			uri-encoded-string?)
+   (pencent-encoded?		percent-encoded-string?)
+
+   (<=				string<=?)
+   (<				string<?)
+   (=				string=?)
+   (>=				string>=?)
+   (>				string>?)
+
+   (ci<=			string-ci<=?)
+   (ci<				string-ci<?)
+   (ci=				string-ci=?)
+   (ci>=			string-ci>=?)
+   (ci>				string-ci>?)
+
+   (titlecase			string-titlecase)
+   (upcase			string-upcase)
+   (downcase			string-downcase)
+   (foldcase			string-foldcase)
+
+   (normalize-nfc		string-normalize-nfc)
+   (normalize-nfd		string-normalize-nfd)
+   (normalize-nfkc		string-normalize-nfkc)
+   (normalize-nfkd		string-normalize-nfkd)
+
+   (flonum			string->flonum)
+   (number			string->number)
+   (utf8			string->utf8)
+   (utf16			string->utf16)
+   (utf32			string->utf32)
+   (bytevector			string->bytevector)
+
+   (ascii			string->ascii)
+   (latin1			string->latin1)
+   (octets			string->octets)
+   (percent-encoding		string->percent-encoding)
+   (uri-encoding		string->uri-encoding)
+   (utf16be			string->utf16be)
+   (utf16le			string->utf16le)
+   (utf16n			string->utf16n)
+   (base64->bytevector		string-base64->bytevector)
+   (hex->bytevector		string-hex->bytevector)
+
+   (hash			string-hash)
+   (symbol			string->symbol)
+   (keyword			string->keyword)
+   (list			string->list)
+   ))
 
 (define-scheme-type <vector>
     <top>

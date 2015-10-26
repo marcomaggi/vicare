@@ -1515,11 +1515,293 @@ Type of cflonum values.  There is no constructor.  The type predicate is
 @subsection Type of string values
 
 
-@deftp {Built--in Type} <string>
-@deftpx {Parent Type} <top>
-Type of string values.  The constructor is @func{string}.  The type
-predicate is @func{string?}.
+@deftp {Built--in Type} @class{string}
+@deftpx {Parent Type} @aclass{top}
+Type of string values.
 @end deftp
+
+
+@defop Constructor @class{string} new @aclass{string} @var{char} @dots{}
+The constructor is @func{string}.
+@end defop
+
+
+@defop {Type predicate} @class{string} is-a? @var{obj} @aclass{string}
+The type predicate is @func{string?}.  Return @true{} if @var{obj} is a
+string object; otherwise return @false{}.
+@end defop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Inspection
+
+
+@deftypemethod @class{string} @aclass{boolean} empty? @var{self}
+Apply @func{string-empty?} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} length @var{self}
+Apply @func{string-length} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} for-each @var{self} @var{func} @var{str} @dots{}
+Apply @func{string-for-each} to the function @var{func}, the instance
+and the arguments.  Example:
+
+@lisp
+(.for-each "ciao" display)
+@end lisp
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Constructors
+
+
+@deftypemethod @aclass{string} copy @var{self}
+Apply @func{string-copy} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} append @var{self}
+Apply @func{string-append} to the instance.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Accessors and mutators
+
+
+@deftypemethod @aclass{string} ref @var{self} @var{idx}
+Apply @func{string-ref} to the instance and the index @var{idx}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} set! @var{self} @var{idx} @var{char}
+Apply @func{string-set!} to the instance, the index @var{idx} and the
+character @var{char}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} fill! @var{self} @var{char}
+Apply @func{string-fill!} to the instance.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding inspection
+
+
+@deftypemethod @aclass{string} ascii-encoded? @var{self}
+Apply @func{ascii-encoded-string?} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} latin1-encoded? @var{self}
+Apply @func{latin1-encoded-string?} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} octets-encoded? @var{self}
+Apply @func{octets-encoded-string?} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} uri-encoded @var{self}
+Apply @func{uri-encoded-string?} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} pencent-encoded? @var{self}
+Apply @func{percent-encoded-string?} to the instance.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
+
+@deftypemethod @aclass{string} = @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} < @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} > @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} <= @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} >= @var{self} @var{str} @dots{}
+Apply @func{string=?}, @func{string<?}, @func{string>?},
+@func{string<=?}, @func{string>=?} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} ci= @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci< @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci> @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci<= @var{self} @var{str} @dots{}
+@deftypemethodx @aclass{string} ci>= @var{self} @var{str} @dots{}
+Apply @func{string-ci=?}, @func{string-ci<?}, @func{string-ci>?},
+@func{string-ci<=?}, @func{string-ci>=?}, to the instance and the
+arguments.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Case handling
+
+
+@deftypemethod @aclass{string} titlecase @var{self}
+Apply @func{string-titlecase} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} upcase @var{self}
+Apply @func{string-upcase} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} downcase @var{self}
+Apply @func{string-downcase} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} foldcase @var{self}
+Apply @func{string-foldcase} to the instance.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Normalisation
+
+
+@deftypemethod @aclass{string} normalize-nfc @var{self}
+Apply @func{string-normalize-nfc} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} normalize-nfd @var{self}
+Apply @func{string-normalize-nfd} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} normalize-nfkc @var{self}
+Apply @func{string-normalize-nfkc} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} normalize-nfkd @var{self}
+Apply @func{string-normalize-nfkd} to the instance.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Conversion
+
+
+@deftypemethod @aclass{string} flonum @var{self}
+Apply @func{string->flonum} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} number @var{self}
+@deftypemethodx @aclass{string} number @var{self} @var{radix}
+Apply @func{string->number} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} utf8 @var{self}
+Apply @func{string->utf8} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} utf16 @var{self}
+@deftypemethodx @aclass{string} utf16 @var{self} @var{endianness}
+Apply @func{string->utf16} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} utf16be @var{self}
+Apply @func{string->utf16be} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} utf16le @var{self}
+Apply @func{string->utf16le} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} utf16n @var{self}
+Apply @func{string->utf16n} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} utf32 @var{self}
+@deftypemethodx @aclass{string} utf32 @var{self} @var{endianness}
+Apply @func{string->utf32} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} bytevector @var{self}
+@deftypemethodx @aclass{string} bytevector @var{self} @var{transcoder}
+Apply @func{string->bytevector} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} ascii @var{self}
+Apply @func{string->ascii} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} latin1 @var{self}
+Apply @func{string->latin1} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} octets @var{self}
+Apply @func{string->octets} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} percent-encoding @var{self}
+Apply @func{string->percent-encoding} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} uri-encoding @var{self}
+Apply @func{string->uri-encoding} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} base64->bytevector @var{self}
+Apply @func{string-base64->bytevector} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} hex->bytevector @var{self}
+Apply @func{string-hex->bytevector} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} symbol @var{self}
+Apply @func{string->symbol} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} keyword @var{self}
+Apply @func{string->keyword} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @aclass{string} list @var{self}
+Apply @func{string->list} to the instance.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Miscellaneous
+
+
+@deftypemethod @aclass{string} hash @var{self}
+Apply @func{string-hash} to the instance.
+@end deftypemethod
 
 @c page
 @node types built-in vectors

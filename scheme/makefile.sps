@@ -1263,16 +1263,18 @@
 ;;;
    (define-built-in-condition-type &type-syntactic-identifier
        &condition
-     make-type-syntactic-identifier-condition type-syntactic-identifier-condition?)
+     make-type-syntactic-identifier-condition type-syntactic-identifier-condition?
+     (methods
+      (type-identifier		condition-type-syntactic-identifier)))
 
    (define-built-in-condition-type &argument-type-syntactic-identifier
-       &type-syntactic-identifier
+       &condition
      make-argument-type-syntactic-identifier-condition argument-type-syntactic-identifier-condition?
      (methods
       (argument-type-identifier	condition-operand-type-syntactic-identifier)))
 
    (define-built-in-condition-type &operand-type-syntactic-identifier
-       &type-syntactic-identifier
+       &condition
      make-operand-type-syntactic-identifier-condition operand-type-syntactic-identifier-condition?
      (methods
       (operand-type-identifier	condition-operand-type-syntactic-identifier)))
@@ -4281,6 +4283,7 @@
     (<boolean>-constructor)
     (<symbol>-value)
     (<null>-constructor)
+    (<string>-for-each)
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme list object types
@@ -4293,6 +4296,7 @@
 ;;; --------------------------------------------------------------------
 ;;; keywords
 
+    (string->keyword				v $language)
     (symbol->keyword				v $language)
     (keyword->symbol				v $language)
     (keyword->string				v $language)
@@ -4926,6 +4930,7 @@
     (&type-syntactic-identifier-rcd			$expander)
     (make-type-syntactic-identifier-condition		$expander)
     (type-syntactic-identifier-condition?		$expander)
+    (condition-type-syntactic-identifier		$expander)
 
     (&argument-type-syntactic-identifier		$expander)
     (&argument-type-syntactic-identifier-rtd		$expander)

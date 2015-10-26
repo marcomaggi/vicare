@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,6 +28,7 @@
 #!vicare
 (library (ikarus.keywords)
   (export
+    string->keyword
     symbol->keyword
     keyword->symbol
     keyword->string
@@ -41,6 +42,7 @@
     $keyword-hash
     $keyword=?)
   (import (except (vicare)
+		  string->keyword
 		  symbol->keyword
 		  keyword->symbol
 		  keyword->string
@@ -55,6 +57,9 @@
 
 (define-struct keyword
   (symbol))
+
+(define* (string->keyword {S string?})
+  (make-keyword (string->symbol S)))
 
 (define* (symbol->keyword {S symbol?})
   (make-keyword S))

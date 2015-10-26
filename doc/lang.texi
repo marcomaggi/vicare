@@ -51,12 +51,6 @@ keyword-hash
 @end example
 
 
-@defun string->keyword @var{string}
-Convert a string to a keyword object.  The string is the name of the
-symbol embedded in the keyword.
-@end defun
-
-
 @deffn Syntax let-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
 @deffnx Syntax let*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
 @deffnx Syntax letrec-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...

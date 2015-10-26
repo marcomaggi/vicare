@@ -12426,6 +12426,19 @@ Convert between a symbol and a keyword.
 
 @defun keyword->string @var{keyword}
 Return the string representation of a keyword.
+
+@lisp
+(keyword->string #:ciao)        @result{} "#:ciao"
+@end lisp
+@end defun
+
+
+@defun string->keyword @var{string}
+Build a new keyword object having @var{string} as name.
+
+@lisp
+(string->keyword "ciao")        @result{} #:ciao
+@end lisp
 @end defun
 
 
