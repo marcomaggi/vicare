@@ -497,7 +497,9 @@ EXTRA_DIST += \
 #### compiling the boot image: build rules
 
 VICARE_NEW_BOOT		= vicare.boot
-EXTRA_DIST		+= scheme/scheme-object-types.scm
+EXTRA_DIST		+= \
+	scheme/scheme-object-types.scm				\
+	scheme/typed-core-primitives.scm
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
@@ -523,6 +525,7 @@ VICARE_BOOT_PREREQUISITES	= \
 	scheme/ikarus.config.scm			\
 	scheme/makefile.sps				\
 	scheme/scheme-object-types.scm			\
+	scheme/typed-core-primitives.scm		\
 	\
 	lib/vicare/platform/words.vicare.sls		\
 	lib/vicare/platform/constants.vicare.sls	\

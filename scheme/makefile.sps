@@ -1324,6 +1324,9 @@
    (define-list-type <char*>
        <char>)
 
+   (define-list-type <string*>
+       <string>)
+
    ))
 
 
@@ -1352,348 +1355,18 @@
     ((_ ?prim-name
 	(unsafe-variant ?unsafe-prim-name)
 	(signatures ?signature0 ?signature ...))
-     (cons (quote ?prim-name)
-	   (list '$core-prim-typed
-		 (quote ?prim-name)
-		 (quote ?unsafe-prim-name)
-		 (quote (?signature0 ?signature ...)))))
+     (set-cons! VICARE-TYPED-CORE-PRIMITIVES
+		(cons (quote ?prim-name)
+		      (list '$core-prim-typed
+			    (quote ?prim-name)
+			    (quote ?unsafe-prim-name)
+			    (quote (?signature0 ?signature ...))))))
     ))
 
-
-;;;; core syntactic binding descriptors, typed core primitives: miscellanous primitives
+(define VICARE-TYPED-CORE-PRIMITIVES
+  '())
 
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/MISC
-  (list
-
-   (declare-typed-core-prim void
-     (signatures
-      ((<void>) ())))
-
-   (declare-typed-core-prim void-object?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: char primitives
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/CHARS
-  (list
-
-   (declare-typed-core-prim integer->char
-     (signatures
-      ((<char>) (<fixnum>))))
-
-   (declare-typed-core-prim char?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim string
-     (signatures
-      ((<string>) <list>)))
-
-   (declare-typed-core-prim char-hash
-     (signatures
-      ((<fixnum>) (<char>))))
-
-   (declare-typed-core-prim char->integer
-     (signatures
-      ((<fixnum>) (<char>))))
-
-   (declare-typed-core-prim char->fixnum
-     (signatures
-      ((<fixnum>) (<char>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: symbol primitives
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
-  (list
-
-   (declare-typed-core-prim string->symbol
-     (signatures
-      ((<symbol>) (<string>))))
-
-   (declare-typed-core-prim symbol?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim symbol->string
-     (signatures
-      ((<string>) (<symbol>))))
-
-   (declare-typed-core-prim symbol-hash
-     (signatures
-      ((<fixnum>) (<symbol>))))
-
-   (declare-typed-core-prim symbol-bound?
-     (signatures
-      ((<boolean>) (<symbol>))))
-
-   (declare-typed-core-prim symbol-value
-     (signatures
-      ((<top>) (<symbol>))))
-
-   (declare-typed-core-prim set-symbol-value!
-     (signatures
-      ((<void>) (<symbol> <top>))))
-
-   (declare-typed-core-prim <symbol>-value
-     (signatures
-      ((<top>) <list>)
-      ;;FIXME To be fixed once the  closure object application code supports checking
-      ;;multiple signatures.  (Marco Maggi; Mon Oct 19, 2015)
-      ;;
-      ;; ((<top>) (<symbol>))
-      ;; ((<void>) (<symbol> <top>))
-      ))
-
-   ;;;
-
-   (declare-typed-core-prim putprop
-     (signatures
-      ((<void>) (<symbol> <symbol> <top>))))
-
-   (declare-typed-core-prim getprop
-     (signatures
-      ((<top>) (<symbol> <symbol>))))
-
-   (declare-typed-core-prim remprop
-     (signatures
-      ((<void>) (<symbol> <symbol>))))
-
-   (declare-typed-core-prim property-list
-     (signatures
-      ((<list>) (<symbol>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: keyword primitives
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
-  (list
-
-   (declare-typed-core-prim symbol->keyword
-     (signatures
-      ((<keyword>) (<symbol>))))
-
-   (declare-typed-core-prim keyword?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim keyword->symbol
-     (signatures
-      ((<symbol>) (<keyword>))))
-
-   (declare-typed-core-prim keyword->string
-     (signatures
-      ((<string>) (<keyword>))))
-
-   (declare-typed-core-prim keyword-hash
-     (signatures
-      ((<fixnum>) (<keyword>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: pointer primitives
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/POINTERS
-  (list
-
-   (declare-typed-core-prim integer->pointer
-     (signatures
-      ((<pointer>) (<exact-integer>))))
-
-   (declare-typed-core-prim pointer?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim pointer-null?
-     (signatures
-      ((<boolean>) (<pointer>))))
-
-   (declare-typed-core-prim pointer->integer
-     (signatures
-      ((<exact-integer>) (<pointer>))))
-
-   (declare-typed-core-prim pointer=?
-     (signatures
-      ((<boolean>) <list>)))
-
-   (declare-typed-core-prim pointer!=?
-     (signatures
-      ((<boolean>) <list>)))
-
-   (declare-typed-core-prim pointer<?
-     (signatures
-      ((<boolean>) <list>)))
-
-   (declare-typed-core-prim pointer>?
-     (signatures
-      ((<boolean>) <list>)))
-
-   (declare-typed-core-prim pointer<=?
-     (signatures
-      ((<boolean>) <list>)))
-
-   (declare-typed-core-prim pointer>=?
-     (signatures
-      ((<boolean>) <list>)))
-
-   (declare-typed-core-prim pointer-hash
-     (signatures
-      ((<fixnum>) (<pointer>))))
-
-   (declare-typed-core-prim pointer-add
-     (signatures
-      ((<pointer>) (<pointer> <exact-integer>))))
-
-   (declare-typed-core-prim pointer-diff
-     (signatures
-      ((<pointer>) (<pointer> <pointer>))))
-
-   (declare-typed-core-prim pointer-clone
-     (signatures
-      ((<pointer>) (<pointer>))))
-
-   (declare-typed-core-prim set-pointer-null!
-     (signatures
-      ((<void>) (<pointer>))))
-
-  ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: transcoders
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/TRANSCODERS
-  (list
-
-   (declare-typed-core-prim make-transcoder
-     (signatures
-      ((<transcoder>) (<symbol> <symbol> <symbol>))
-      ((<transcoder>) (<symbol> <symbol>))
-      ((<transcoder>) (<symbol>))))
-
-   (declare-typed-core-prim transcoder?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim transcoder-codec
-     (signatures
-      ((<symbol>) (<transcoder>))))
-
-   (declare-typed-core-prim transcoder-eol-style
-     (signatures
-      ((<symbol>) (<transcoder>))))
-
-   (declare-typed-core-prim transcoder-error-handling-mode
-     (signatures
-      ((<symbol>) (<transcoder>))))
-
-   (declare-typed-core-prim native-transcoder
-     (signatures
-      ((<transcoder>) ())
-      ((<void>) (<transcoder>))
-      ((<void>) (<transcoder> <top>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: pairs and lists primitives
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/PAIRS
-  (list
-
-   (declare-typed-core-prim cons
-     (signatures
-      ((<pair>) (<top> <top>))))
-
-   (declare-typed-core-prim list
-     (signatures
-      ((<list>) <list>)))
-
-   ;;;
-
-   (declare-typed-core-prim <null>-constructor
-     (signatures
-      ((<null>) ())))
-
-   ;;;
-
-   (declare-typed-core-prim pair?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim list?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim nlist?
-     (signatures
-      ((<boolean>) (<top>))))
-
-   ;;;
-
-   (declare-typed-core-prim car
-     #;(unsafe-variant $car)
-     (signatures
-      ((<top>) (<pair>))
-      ((<top>) (<nlist>))
-      ;;FIXME Strictly speaking this is wrong: "<list>" can also be null, so applying
-      ;;CAR is an  error.  This is why  the unsafe variant is  commented out.  (Marco
-      ;;Maggi; Thu Oct 22, 2015)
-      ((<top>) (<list>))))
-
-   (declare-typed-core-prim cdr
-     #;(unsafe-variant $cdr)
-     (signatures
-      ((<top>) (<pair>))
-      ((<top>) (<nlist>))
-      ;;FIXME Strictly speaking this is wrong: "<list>" can also be null, so applying
-      ;;CDR is an  error.  This is why  the unsafe variant is  commented out.  (Marco
-      ;;Maggi; Thu Oct 22, 2015)
-      ((<top>) (<list>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: utilities
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
-  (list
-
-   (declare-typed-core-prim <top>-constructor
-     (signatures
-      ((<top>) (<top>))))
-
-   (declare-typed-core-prim <top>-type-predicate
-     (signatures
-      ((<boolean>) (<top>))))
-
-   (declare-typed-core-prim <boolean>-constructor
-     (signatures
-      ((<boolean>) (<top>))))
-
-   ))
-
-
-;;;; core syntactic binding descriptors, typed core primitives: all declarations
-
-(define-constant VICARE-TYPED-CORE-PRIMITIVES
-  (append VICARE-TYPED-CORE-PRIMITIVES/MISC
-	  VICARE-TYPED-CORE-PRIMITIVES/CHARS
-	  VICARE-TYPED-CORE-PRIMITIVES/SYMBOLS
-	  VICARE-TYPED-CORE-PRIMITIVES/KEYWORDS
-	  VICARE-TYPED-CORE-PRIMITIVES/POINTERS
-	  VICARE-TYPED-CORE-PRIMITIVES/TRANSCODERS
-	  VICARE-TYPED-CORE-PRIMITIVES/PAIRS
-	  VICARE-TYPED-CORE-PRIMITIVES/OBJECT-UTILITIES
-	  ))
+(include "typed-core-primitives.scm" #t)
 
 
 (define-constant LIBRARY-LEGEND
@@ -4289,6 +3962,7 @@
 ;;; built-in Scheme list object types
 
     (<char*>					v $language)
+    (<string*>					v $language)
 
     ;; helpers
     (make-list-of-predicate)

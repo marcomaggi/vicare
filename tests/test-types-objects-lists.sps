@@ -232,6 +232,137 @@
   #t)
 
 
+(parametrise ((check-test-name	'strings))
+
+;;; predicate
+
+  (check-for-true	(is-a? '() <string*>))
+  (check-for-true	(is-a? '("a") <string*>))
+  (check-for-true	(is-a? '("a" "b") <string*>))
+  (check-for-false	(is-a? '(1 2) <string*>))
+
+;;; --------------------------------------------------------------------
+;;; constructor
+
+  (check
+      (new <string*>)
+    => '())
+
+  (check
+      (new <string*> "a" "b")
+    => '("a" "b"))
+
+  (check
+      (xp.type-signature-tags (type-of (new <string*> "a" "b")))
+    (=> syntax=?)
+    (list #'<string*>))
+
+  ;;Expand-time signature violation.  First operand.
+  ;;
+  (check
+      (try
+	  (%eval (new <string*> 1))
+	(catch E
+	  ((xp.&expand-time-type-signature-violation)
+	   (list (xp.condition-argument-type-syntactic-identifier E)
+		 (xp.condition-operand-type-syntactic-identifier  E)
+		 (xp.condition-argument-index                     E)))
+	  (else E)))
+    (=> syntax=?)
+    (list #'<string> #'<fixnum> 0))
+
+  ;;Expand-time signature violation.  Second operand.
+  ;;
+  (check
+      (try
+	  (%eval (new <string*> "a" 1))
+	(catch E
+	  ((xp.&expand-time-type-signature-violation)
+	   (list (xp.condition-argument-type-syntactic-identifier E)
+		 (xp.condition-operand-type-syntactic-identifier  E)
+		 (xp.condition-argument-index                     E)))
+	  (else E)))
+    (=> syntax=?)
+    (list #'<string> #'<fixnum> 1))
+
+  ;;Run-time validation.
+  ;;
+  (check
+      (let ((port (open-string-input-port "\"a\" \"b\"")))
+	(new <string*> (read port) (read port)))
+    => '("a" "b"))
+
+  ;;Run-time validation.  Operands with signature "(<top>)".
+  ;;
+  (check
+      (let ((port (open-string-input-port "\"a\" \"b\"")))
+	(define ({read-it <top>})
+	  (read port))
+	(new <string*> (read-it) (read-it)))
+    => '("a" "b"))
+
+  ;;Run-time validation.  Operands with signature "<list>".
+  ;;
+  (check
+      (let ((port (open-string-input-port "\"a\" \"b\"")))
+	(define ({read-it . <list>})
+	  (read port))
+	(new <string*> (read-it) (read-it)))
+    => '("a" "b"))
+
+  ;;Run-time validation.  Bad first operand.
+  ;;
+  (check
+      (try
+	  (let ((port (open-string-input-port "123 \"b\"")))
+	    (new <string*> (read port) (read port)))
+	(catch E
+	  ((&procedure-signature-argument-violation)
+	   (list (procedure-signature-argument-violation.one-based-argument-index E)
+		 (procedure-signature-argument-violation.offending-value          E)
+		 (procedure-signature-argument-violation.failed-expression        E)))
+	  (else E)))
+    => '(0 123 (is-a? _ <string>)))
+
+  ;;Run-time validation.  Bad second operand.
+  ;;
+  (check
+      (try
+	  (let ((port (open-string-input-port "\"a\" 123")))
+	    (new <string*> (read port) (read port)))
+	(catch E
+	  ((&procedure-signature-argument-violation)
+	   (list (procedure-signature-argument-violation.one-based-argument-index E)
+		 (procedure-signature-argument-violation.offending-value          E)
+		 (procedure-signature-argument-violation.failed-expression        E)))
+	  (else E)))
+    => '(1 123 (is-a? _ <string>)))
+
+;;; --------------------------------------------------------------------
+;;; methods
+
+  (check
+      (.car (new <string*> "a" "b"))
+    => "a")
+
+  (check
+      (.cdr (new <string*>  "a" "b"))
+    => '("b"))
+
+;;; --------------------------------------------------------------------
+;;; late binding
+
+  (check
+      (method-call-late-binding 'car (new <string*> "a" "b"))
+    => "a")
+
+  (check
+      (method-call-late-binding 'cdr (new <string*> "a" "b"))
+    => '("b"))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

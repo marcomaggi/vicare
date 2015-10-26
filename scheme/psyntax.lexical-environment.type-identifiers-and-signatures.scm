@@ -467,14 +467,13 @@
 
 	       ((string?  datum)	(core-prim-id '<string>))
 	       ((vector?  datum)	(core-prim-id '<vector>))
-	       ((nlist?   datum)	(cond ((for-all char? datum)
-					       (core-prim-id '<char*>))
-					      (else
-					       (core-prim-id '<nlist>))))
-	       ((null?    datum)	(core-prim-id '<null>))
-	       ((list?    datum)	(core-prim-id '<list>))
-	       ((pair?    datum)	(core-prim-id '<pair>))
 	       ((bytevector? datum)	(core-prim-id '<bytevector>))
+
+	       ((list?    datum)	(cond ((null? datum)		(core-prim-id '<null>))
+					      ((for-all char?   datum)	(core-prim-id '<char*>))
+					      ((for-all string? datum)	(core-prim-id '<string*>))
+					      (else			(core-prim-id '<nlist>))))
+	       ((pair?    datum)	(core-prim-id '<pair>))
 
 	       ((eq? datum (void))	(core-prim-id '<void>))
 	       (else			(top-tag-id))))))
