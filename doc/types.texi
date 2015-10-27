@@ -1028,6 +1028,21 @@ The type predicate is @func{boolean?}.  Return @true{} if @var{obj} is
 @true{} or @false{}; otherwise return @false{}.
 @end defop
 
+@c ------------------------------------------------------------------------
+
+@deftp {Built--in Type} @aclass{true}
+@deftpx {Parent Type} @aclass{boolean}
+Type of the boolean value @true{}.  There is no constructor.  There is
+no predicate.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{false}
+@deftpx {Parent Type} @aclass{boolean}
+Type of the boolean value @false{}.  There is no constructor.  There is
+no predicate.
+@end deftp
+
 @c page
 @node types built-in chars
 @subsection Type of character values
@@ -1857,6 +1872,8 @@ Apply @func{cdr} to the type instance.
 * types built-in lists null::           Empty lists.
 * types built-in lists not-empty::      Not-empty proper lists.
 * types built-in lists chars::          Proper lists of @class{char}.
+* types built-in lists strings::        Proper lists of @class{string}.
+* types built-in lists pointers::       Proper lists of @class{pointer}.
 @end menu
 
 @c page
@@ -1944,6 +1961,40 @@ Type of lists of @class{char} objects.
 The type predicate for the list's items is the type predicate of
 @class{char}.  Return @true{} if @var{obj} is a proper non--empty list
 object; otherwise return @false{}.
+@end defop
+
+@c page
+@node types built-in lists strings
+@subsubsection Proper lists of @class{string}
+
+
+@deftp {Built--in Type} @aclass{string*}
+@deftpx {Parent Type} @aclass{list}
+Type of lists of @class{string} objects.
+@end deftp
+
+
+@defop {Type predicate} @class{string*} is-a? @var{obj} @aclass{string*}
+The type predicate for the list's items is the type predicate of
+@class{string}.  Return @true{} if @var{obj} is a proper non--empty list
+object; otherwise return @false{}.
+@end defop
+
+@c page
+@node types built-in lists pointers
+@subsubsection Proper lists of @class{pointer}
+
+
+@deftp {Built--in Type} @aclass{pointer*}
+@deftpx {Parent Type} @aclass{list}
+Type of lists of @class{pointer} objects.
+@end deftp
+
+
+@defop {Type predicate} @class{pointer*} is-a? @var{obj} @aclass{pointer*}
+The type predicate for the list's items is the type predicate of
+@class{pointer}.  Return @true{} if @var{obj} is a proper non--empty
+list object; otherwise return @false{}.
 @end defop
 
 @c page

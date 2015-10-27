@@ -612,12 +612,14 @@
     ;;
     ;;where ?HARD-CODED-SEXP has the format:
     ;;
-    ;;   (?core-prim-name ?unsafe-core-prim-name (?signature-spec0 ?signature-spec ...))
+    ;;   #(?core-prim-name ?safety-boolean
+    ;;      (?signature-spec0 ?signature-spec ...)
+    ;;      (?unsafe-variant-name ...))
     ;;
     ;;?CORE-PRIM-NAME  is a  symbol  representing the  core  primitive's public  name
     ;;("display", "write", "list", et cetera).  ?SIGNATURE-SPEC has the format:
     ;;
-    ;;   ?signature-spec    = (?retvals-signature ?argvals-signature)
+    ;;   ?signature-spec    = (?retvals-signature . ?argvals-signature)
     ;;
     ;;   ?retvals-signature = <list>
     ;;                      | <list-sub-type>
@@ -633,31 +635,33 @@
     ;;
     ;;The usable descriptor has the format:
     ;;
-    ;;   (core-prim-typed . ((?core-prim-name ?type-id . ?unsafe-variant.id) . ?hard-coded-sexp))
+    ;;   (core-prim-typed . (#<core-prim-type-spec> . ?hard-coded-sexp))
     ;;
     ;;Syntactic binding's  descriptors of  type "$core-prim-typed" are  hard-coded in
     ;;the boot image and generated directly by the makefile at boot image build-time.
     ;;Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used  to retrieve
     ;;the descriptor from the label: this function is used to convert the descriptor.
     ;;
-    (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
-	   (descr.value			(syntactic-binding-descriptor.value descriptor))
-	   (core-prim.sym		(car descr.value))
-	   (unsafe-core-prim.sym	(cadr descr.value))
-	   (signature*.sexp		(list-ref descr.value 2))
-	   (signature			(%signature-sexp->callable-signature signature*.sexp))
-	   (type-id			(fabricate-closure-type-identifier core-prim.sym signature))
-	   (unsafe-variant.id		(and unsafe-core-prim.sym
-					     (core-prim-id unsafe-core-prim.sym))))
-      (set-car! descriptor 'core-prim-typed)
-      (set-cdr! descriptor (cons (cons* core-prim.sym type-id unsafe-variant.id) descr.value))))
+    (let ((hard-coded-sexp		(syntactic-binding-descriptor.value descriptor)))
+      (let ((core-prim.sym		(vector-ref hard-coded-sexp 0))
+	    (safety.boolean		(vector-ref hard-coded-sexp 1))
+	    (signature*.sexp		(vector-ref hard-coded-sexp 2))
+	    (unsafe-variant*.sym	(vector-ref hard-coded-sexp 3)))
+	(let ((type-id			(fabricate-closure-type-identifier core-prim.sym
+									   (%signature-sexp->callable-signature signature*.sexp)))
+	      (unsafe-variants		(if (null? unsafe-variant*.sym)
+					    #f
+					  (list->vector (map core-prim-id unsafe-variant*.sym)))))
+	  (set-car! descriptor 'core-prim-typed)
+	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean type-id unsafe-variants)
+				     hard-coded-sexp))))))
 
   (define (%signature-sexp->callable-signature signature*.sexp)
     (make-clambda-signature (map %signature-sexp->clause-signature signature*.sexp)))
 
   (define (%signature-sexp->clause-signature sexp)
-    (let* ((retvals.sexp (car  sexp))
-  	   (formals.sexp (cadr sexp))
+    (let* ((retvals.sexp (car sexp))
+  	   (formals.sexp (cdr sexp))
   	   (retvals.stx  (%any-list->ids retvals.sexp))
   	   (formals.stx  (%any-list->ids formals.sexp)))
       (make-clambda-clause-signature (make-type-signature retvals.stx)
@@ -687,7 +691,7 @@
 ;;
 ;;The syntactic binding's descriptor has the format:
 ;;
-;;   (core-prim-typed . ((?core-prim-name ?type-id . ?unsafe-core-prim.id) . ?hard-coded-sexp))
+;;   (core-prim-typed . (#<core-prim-type-spec> . ?hard-coded-sexp))
 ;;
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
@@ -699,24 +703,24 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.prim-name ?descriptor)
-  (car  (cadr ?descriptor)))
+  (core-prim-type-spec.name (cadr ?descriptor)))
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.type-id ?descriptor)
-  (cadr (cadr ?descriptor)))
+  (typed-variable-spec.type-id (cadr ?descriptor)))
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.unsafe-variant-id ?descriptor)
-  (cddr (cadr ?descriptor)))
+  (typed-variable-spec.unsafe-variant-sexp (cadr ?descriptor)))
 
 ;;; --------------------------------------------------------------------
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.value.prim-name ?descriptor-value)
-  (caar ?descriptor-value))
+  (core-prim-type-spec.name (car ?descriptor-value)))
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.value.type-id ?descriptor-value)
-  (cadar ?descriptor-value))
+  (typed-variable-spec.type-id (car ?descriptor-value)))
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.value.unsafe-variant-id ?descriptor-value)
-  (cddar ?descriptor-value))
+  (typed-variable-spec.unsafe-variant-sexp (car ?descriptor-value)))
 
 
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding

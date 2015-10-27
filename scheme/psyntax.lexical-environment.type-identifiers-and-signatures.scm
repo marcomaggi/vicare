@@ -453,7 +453,10 @@
   ;;extracted from a syntax object representing a literal expression.
   ;;
   (make-type-signature
-   (list (cond ((boolean? datum)	(core-prim-id '<boolean>))
+   (list (cond ((boolean? datum)	(cond (datum
+					       (core-prim-id '<true>))
+					      (else
+					       (core-prim-id '<false>))))
 	       ((char?    datum)	(core-prim-id '<char>))
 	       ((symbol?  datum)	(core-prim-id '<symbol>))
 	       ((keyword? datum)	(core-prim-id '<keyword>))

@@ -1327,6 +1327,9 @@
    (define-list-type <string*>
        <string>)
 
+   (define-list-type <pointer*>
+       <pointer>)
+
    ))
 
 
@@ -1341,27 +1344,6 @@
 
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure
-
-(define-syntax unsafe-variant (syntax-rules ()))
-(define-syntax signatures (syntax-rules ()))
-
-(define-syntax declare-typed-core-prim
-  (syntax-rules (unsafe-variant signatures)
-    ((_ ?prim-name
-	(signatures ?signature0 ?signature ...))
-     (declare-typed-core-prim ?prim-name
-       (unsafe-variant #f)
-       (signatures ?signature0 ?signature ...)))
-    ((_ ?prim-name
-	(unsafe-variant ?unsafe-prim-name)
-	(signatures ?signature0 ?signature ...))
-     (set-cons! VICARE-TYPED-CORE-PRIMITIVES
-		(cons (quote ?prim-name)
-		      (list '$core-prim-typed
-			    (quote ?prim-name)
-			    (quote ?unsafe-prim-name)
-			    (quote (?signature0 ?signature ...))))))
-    ))
 
 (define VICARE-TYPED-CORE-PRIMITIVES
   '())
@@ -3893,6 +3875,8 @@
     (<top>					v $language)
     (<void>					v $language)
     (<boolean>					v $language)
+    (<true>					v $language)
+    (<false>					v $language)
     (<char>					v $language)
     (<symbol>					v $language)
     (<keyword>					v $language)
@@ -3963,6 +3947,7 @@
 
     (<char*>					v $language)
     (<string*>					v $language)
+    (<pointer*>					v $language)
 
     ;; helpers
     (make-list-of-predicate)
@@ -6057,5 +6042,5 @@
 ;; eval: (put 'define-scheme-type			'scheme-indent-function 2)
 ;; eval: (put 'define-built-in-condition-type		'scheme-indent-function 2)
 ;; eval: (put 'define-built-in-record-type 		'scheme-indent-function 2)
-;; eval: (put 'declare-typed-core-prim			'scheme-indent-function 1)
+;; eval: (put 'declare-core-primitive			'scheme-indent-function 2)
 ;; End:

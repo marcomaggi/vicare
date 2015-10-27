@@ -2,223 +2,413 @@
 ;;
 ;;Typed core primitive properties.
 
+;; Create a lexical contour.
+(let ()
+
+
+;;;; helpers
+
+(define-auxiliary-syntaxes /comment)
+
+(define-syntax comment
+  (syntax-rules (/comment)
+    ((comment ?form ... /comment)
+     (void))
+    ))
+
+
+;;;; basic definition syntaxes
+
+(define-auxiliary-syntaxes signatures attributes replacements safe unsafe)
+
+(define-syntax (declare-core-primitive stx)
+  (define (main input-form.stx)
+    (syntax-case input-form.stx (=> replacements signatures attributes)
+      ;; signatures
+      ((_ ?prim-name ?safety
+	  (signatures
+	   (?argvals-signature0 => ?retvals-signature0)
+	   (?argvals-signature  => ?retvals-signature)
+	   ...))
+       (%output #'?prim-name #'?safety
+		#'((?argvals-signature0 ?retvals-signature0) (?argvals-signature ?retvals-signature) ...)
+		#'()))
+
+      ;; signatures, replacements
+      ((_ ?prim-name ?safety
+	  (signatures
+	   (?argvals-signature0 => ?retvals-signature0)
+	   (?argvals-signature  => ?retvals-signature)
+	   ...)
+	  (replacements ?unsafe-prim-name ...))
+       (%output #'?prim-name #'?safety
+		#'((?argvals-signature0 ?retvals-signature0) (?argvals-signature ?retvals-signature) ...)
+		#'(?unsafe-prim-name ...)))
+
+      ;; signatures, attributes
+      ((_ ?prim-name ?safety
+	  (signatures
+	   (?argvals-signature0 => ?retvals-signature0)
+	   (?argvals-signature  => ?retvals-signature)
+	   ...)
+	  (attributes . ?stuff))
+       (%output #'?prim-name #'?safety
+		#'((?argvals-signature0 ?retvals-signature0) (?argvals-signature ?retvals-signature) ...)
+		#'()))
+
+      ;; signatures, attributes, replacements
+      ((_ ?prim-name ?safety
+	  (signatures
+	   (?argvals-signature0 => ?retvals-signature0)
+	   (?argvals-signature  => ?retvals-signature)
+	   ...)
+	  (attributes . ?stuff)
+	  (replacements ?unsafe-prim-name ...))
+       (%output #'?prim-name #'?safety
+		#'((?argvals-signature0 ?retvals-signature0) (?argvals-signature ?retvals-signature) ...)
+		#'(?unsafe-prim-name ...)))
+      ))
+
+  (define (%output prim-name.id safety.id signatures.stx replacements.stx)
+    (define safety.datum
+      (%validate-safety safety.id))
+    (%validate-signatures signatures.stx)
+    (%validate-replacements replacements.stx)
+    (with-syntax
+	((((?argvals-signature0 ?retvals-signature0) (?argvals-signature ?retvals-signature) ...) signatures.stx))
+      #`(set-cons! VICARE-TYPED-CORE-PRIMITIVES
+		   (cons* (quote #,prim-name.id)
+			  (quote $core-prim-typed)
+			  (quote #(#,prim-name.id
+				   #,safety.datum
+				   ((?retvals-signature0 . ?argvals-signature0)
+				    (?retvals-signature  . ?argvals-signature)
+				    ...)
+				   #,replacements.stx))))))
+
+  (define (%validate-safety safety.stx)
+    (syntax-case safety.stx (safe unsafe)
+      ((safe)		#t)
+      ((unsafe)		#t)
+      (_
+       (synner "invalid safety specification" safety.stx))))
+
+  (define (%validate-signatures signatures.stx)
+    (syntax-case signatures.stx ()
+      (()
+       (void))
+
+      (((?argvals-signature ?retvals-signature) . ?rest)
+       (begin
+	 (%validate-type-signature #'?argvals-signature)
+	 (%validate-type-signature #'?retvals-signature)
+	 (%validate-signatures #'?rest)))
+
+      ((?signature . ?rest)
+       (synner "invalid signature specification" #'?signature))))
+
+  (define (%validate-type-signature type-signature.stx)
+    (syntax-case type-signature.stx ()
+      (()
+       (void))
+      ((?type0 ?type ...)
+       (all-identifiers? #'(?type0 ?type ...))
+       (void))
+      ((?type0 ?type ... . ?tail-type)
+       (all-identifiers? #'(?tail-type ?type0 ?type ...))
+       (void))
+      (?type
+       (identifier? #'?type)
+       (void))
+      (_
+       (synner "invalida type signature" type-signature.stx))))
+
+  (define (%validate-replacements replacements.stx)
+    (unless (all-identifiers? replacements.stx)
+      (synner "invalid replacements specification" replacements.stx)))
+
+  (case-define synner
+    ((message subform)
+     (syntax-violation 'declare-core-primitive message stx subform))
+    ((message)
+     (syntax-violation 'declare-core-primitive message stx)))
+
+  (main stx))
+
+
+;;;; helpers
+
+(define-syntax declare-type-predicate
+  ;;Usage examples:
+  ;;
+  ;;   (declare-type-predicate fixnum? <fixnum>)
+  ;;   (declare-type-predicate vector? <vector>)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?obj-tag ...)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((?obj-tag)	=> (<true>))
+	...
+	((<top>)	=> (<boolean>)))
+       (attributes
+	((_)		foldable effect-free))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (declare-hash-function ?prim-name ?type ?safety)
+  (declare-core-primitive ?prim-name
+      (?safety)
+    (signatures
+     ((?type)		=> (<fixnum>)))))
+
+(define-syntax-rule (declare-parameter ?prim-name ?type)
+  (declare-core-primitive ?prim-name
+      (safe)
+    (signatures
+     (()			=> (?type))
+     ((?type)			=> (<void>))
+     ((?type <top>)		=> (<void>)))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax declare-string-predicate
+  (syntax-rules (replacements)
+    ((_ ?prim-name)
+     (declare-core-primitive ?prim-name
+         (safe)
+       (signatures
+	((<string>) => (<boolean>)))))
+    ((_ ?prim-name (replacements ?unsafe-prim-name ...))
+     (declare-core-primitive ?prim-name
+	 (safe)
+       (signatures
+	((<string>) => (<boolean>)))
+       (replacements ?unsafe-prim-name ...)))
+    ))
+
 
 ;;;; core syntactic binding descriptors, typed core primitives: miscellanous primitives
 
-(declare-typed-core-prim void
+(declare-core-primitive void
+    (safe)
   (signatures
-   ((<void>) ())))
+   (() => (<void>))))
 
-(declare-typed-core-prim void-object?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate void-object? <void>)
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: char primitives
 
-(declare-typed-core-prim integer->char
+(declare-core-primitive integer->char
+    (safe)
   (signatures
-   ((<char>) (<fixnum>))))
+   ((<fixnum>) => (<char>))))
 
-(declare-typed-core-prim char?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate char? <char>)
 
-(declare-typed-core-prim string
-  (signatures
-   ((<string>) <char*>)))
+(declare-hash-function char-hash <char> safe)
 
-(declare-typed-core-prim char-hash
+(declare-core-primitive char->integer
+    (safe)
   (signatures
-   ((<fixnum>) (<char>))))
+   ((<char>) => (<fixnum>))))
 
-(declare-typed-core-prim char->integer
+(declare-core-primitive char->fixnum
+    (safe)
   (signatures
-   ((<fixnum>) (<char>))))
-
-(declare-typed-core-prim char->fixnum
-  (signatures
-   ((<fixnum>) (<char>))))
+   ((<char>) => (<fixnum>))))
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: symbol primitives
 
-(declare-typed-core-prim string->symbol
+(declare-core-primitive string->symbol
+    (safe)
   (signatures
-   ((<symbol>) (<string>))))
+   ((<string>) => (<symbol>))))
 
-(declare-typed-core-prim symbol?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate symbol? <symbol>)
 
-(declare-typed-core-prim symbol->string
+(declare-core-primitive symbol->string
+    (safe)
   (signatures
-   ((<string>) (<symbol>))))
+   ((<symbol>) => (<string>))))
 
-(declare-typed-core-prim symbol-hash
-  (signatures
-   ((<fixnum>) (<symbol>))))
+(declare-hash-function symbol-hash <symbol> safe)
 
-(declare-typed-core-prim symbol-bound?
+(declare-core-primitive symbol-bound?
+    (safe)
   (signatures
-   ((<boolean>) (<symbol>))))
+   ((<symbol>) => (<boolean>))))
 
-(declare-typed-core-prim symbol-value
+(declare-core-primitive symbol-value
+    (safe)
   (signatures
-   ((<top>) (<symbol>))))
+   ((<symbol>) => (<top>))))
 
-(declare-typed-core-prim set-symbol-value!
+(declare-core-primitive set-symbol-value!
+    (safe)
   (signatures
-   ((<void>) (<symbol> <top>))))
+   ((<symbol> <top>) => (<void>))))
 
-(declare-typed-core-prim <symbol>-value
+(declare-core-primitive <symbol>-value
+    (safe)
   (signatures
-   ((<top>) (<symbol>))
-   ((<void>) (<symbol> <top>))))
+   ((<symbol>)		=> (<top>))
+   ((<symbol> <top>)	=> (<void>))))
 
 ;;;
 
-(declare-typed-core-prim putprop
+(declare-core-primitive putprop
+    (safe)
   (signatures
-   ((<void>) (<symbol> <symbol> <top>))))
+   ((<symbol> <symbol> <top>)	=> (<void>))))
 
-(declare-typed-core-prim getprop
+(declare-core-primitive getprop
+    (safe)
   (signatures
-   ((<top>) (<symbol> <symbol>))))
+   ((<symbol> <symbol>)		=> (<top>))))
 
-(declare-typed-core-prim remprop
+(declare-core-primitive remprop
+    (safe)
   (signatures
-   ((<void>) (<symbol> <symbol>))))
+   ((<symbol> <symbol>)		=> (<void>))))
 
-(declare-typed-core-prim property-list
+(declare-core-primitive property-list
+    (safe)
   (signatures
-   ((<list>) (<symbol>))))
+   ((<symbol>)			=> (<list>))))
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: keyword primitives
 
-(declare-typed-core-prim symbol->keyword
+(declare-core-primitive symbol->keyword
+    (safe)
   (signatures
-   ((<keyword>) (<symbol>))))
+   ((<symbol>)		=> (<keyword>))))
 
-(declare-typed-core-prim keyword?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate keyword? <keyword>)
 
-(declare-typed-core-prim keyword->symbol
+(declare-core-primitive keyword->symbol
+    (safe)
   (signatures
-   ((<symbol>) (<keyword>))))
+   ((<keyword>)		=> (<symbol>))))
 
-(declare-typed-core-prim keyword->string
+(declare-core-primitive keyword->string
+    (safe)
   (signatures
-   ((<string>) (<keyword>))))
+   ((<keyword>)		=> (<string>))))
 
-(declare-typed-core-prim keyword-hash
-  (signatures
-   ((<fixnum>) (<keyword>))))
+(declare-hash-function keyword-hash <keyword> safe)
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: pointer primitives
 
-(declare-typed-core-prim integer->pointer
+(declare-core-primitive integer->pointer
+    (safe)
   (signatures
-   ((<pointer>) (<exact-integer>))))
+   ((<exact-integer>)	=> (<pointer>))))
 
-(declare-typed-core-prim pointer?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate pointer? <pointer>)
 
-(declare-typed-core-prim pointer-null?
+(declare-core-primitive pointer-null?
+    (safe)
   (signatures
-   ((<boolean>) (<pointer>))))
+   ((<pointer>)		=> (<boolean>))))
 
-(declare-typed-core-prim pointer->integer
+(declare-core-primitive pointer->integer
+    (safe)
   (signatures
-   ((<exact-integer>) (<pointer>))))
+   ((<pointer>)		=> (<exact-integer>))))
 
-(declare-typed-core-prim pointer=?
+(declare-core-primitive pointer=?
+    (safe)
   (signatures
-   ((<boolean>) <list>)))
+   (<pointer*>		=> (<boolean>))))
 
-(declare-typed-core-prim pointer!=?
+(declare-core-primitive pointer!=?
+    (safe)
   (signatures
-   ((<boolean>) <list>)))
+   (<pointer*>		=> (<boolean>))))
 
-(declare-typed-core-prim pointer<?
+(declare-core-primitive pointer<?
+    (safe)
   (signatures
-   ((<boolean>) <list>)))
+   (<pointer*>		=> (<boolean>))))
 
-(declare-typed-core-prim pointer>?
+(declare-core-primitive pointer>?
+    (safe)
   (signatures
-   ((<boolean>) <list>)))
+   (<pointer*>		=> (<boolean>))))
 
-(declare-typed-core-prim pointer<=?
+(declare-core-primitive pointer<=?
+    (safe)
   (signatures
-   ((<boolean>) <list>)))
+   (<pointer*>		=> (<boolean>))))
 
-(declare-typed-core-prim pointer>=?
+(declare-core-primitive pointer>=?
+    (safe)
   (signatures
-   ((<boolean>) <list>)))
+   (<pointer*>		=> (<boolean>))))
 
-(declare-typed-core-prim pointer-hash
-  (signatures
-   ((<fixnum>) (<pointer>))))
+(declare-hash-function pointer-hash <pointer> safe)
 
-(declare-typed-core-prim pointer-add
+(declare-core-primitive pointer-add
+    (safe)
   (signatures
-   ((<pointer>) (<pointer> <exact-integer>))))
+   ((<pointer> <exact-integer>)	=> (<pointer>))))
 
-(declare-typed-core-prim pointer-diff
+(declare-core-primitive pointer-diff
+    (safe)
   (signatures
-   ((<pointer>) (<pointer> <pointer>))))
+   ((<pointer> <pointer>)	=> (<pointer>))))
 
-(declare-typed-core-prim pointer-clone
+(declare-core-primitive pointer-clone
+    (safe)
   (signatures
-   ((<pointer>) (<pointer>))))
+   ((<pointer>)			=> (<pointer>))))
 
-(declare-typed-core-prim set-pointer-null!
+(declare-core-primitive set-pointer-null!
+    (safe)
   (signatures
-   ((<void>) (<pointer>))))
+   ((<pointer>)			=> (<void>))))
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: transcoders
 
-(declare-typed-core-prim make-transcoder
+(declare-core-primitive make-transcoder
+    (safe)
   (signatures
-   ((<transcoder>) (<symbol> <symbol> <symbol>))
-   ((<transcoder>) (<symbol> <symbol>))
-   ((<transcoder>) (<symbol>))))
+   ((<symbol> <symbol> <symbol>)	=> (<transcoder>))
+   ((<symbol> <symbol>)			=> (<transcoder>))
+   ((<symbol>)				=> (<transcoder>))))
 
-(declare-typed-core-prim transcoder?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate transcoder? <transcoder>)
 
-(declare-typed-core-prim transcoder-codec
+(declare-core-primitive transcoder-codec
+    (safe)
   (signatures
-   ((<symbol>) (<transcoder>))))
+   ((<transcoder>)			=> (<symbol>))))
 
-(declare-typed-core-prim transcoder-eol-style
+(declare-core-primitive transcoder-eol-style
+    (safe)
   (signatures
-   ((<symbol>) (<transcoder>))))
+   ((<transcoder>)			=> (<symbol>))))
 
-(declare-typed-core-prim transcoder-error-handling-mode
+(declare-core-primitive transcoder-error-handling-mode
+    (safe)
   (signatures
-   ((<symbol>) (<transcoder>))))
+   ((<transcoder>)			=> (<symbol>))))
 
-(declare-typed-core-prim native-transcoder
-  (signatures
-   ((<transcoder>) ())
-   ((<void>) (<transcoder>))
-   ((<void>) (<transcoder> <top>))))
+(declare-parameter native-transcoder <transcoder>)
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: strings
 
-#|
-(declare-type-predicate string? T:string)
-
+(declare-type-predicate string? <string>)
 (declare-string-predicate string-empty?			(replacements $string-empty?))
-
 (declare-string-predicate ascii-encoded-string?		(replacements $ascii-encoded-string?))
 (declare-string-predicate latin1-encoded-string?	(replacements $latin1-encoded-string?))
 (declare-string-predicate octets-encoded-string?	(replacements $octets-encoded-string?))
@@ -231,8 +421,8 @@
 (declare-core-primitive string
     (safe)
   (signatures
-   (()			=> (T:string))
-   (T:char		=> (T:string)))
+   (()			=> (<string>))
+   (<char*>		=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -242,8 +432,8 @@
 (declare-core-primitive make-string
     (safe)
   (signatures
-   ((T:fixnum)		=> (T:string))
-   ((T:fixnum T:char)	=> (T:string)))
+   ((<fixnum>)		=> (<string>))
+   ((<fixnum> <char>)	=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -254,7 +444,7 @@
 (declare-core-primitive substring
     (safe)
   (signatures
-   ((T:string T:fixnum T:fixnum)	=> (T:string)))
+   ((<string> <fixnum> <fixnum>)	=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -263,28 +453,28 @@
 (declare-core-primitive string-copy
     (safe)
   (signatures
-   ((T:string)		=> (T:void)))
+   ((<string>)		=> (<void>)))
   (attributes
    ((_)			effect-free result-true)))
 
 (declare-core-primitive string-copy!
     (safe)
   (signatures
-   ((T:string T:fixnum T:string T:fixnum T:fixnum)	=> (T:void)))
+   ((<string> <fixnum> <string> <fixnum> <fixnum>)	=> (<void>)))
   (attributes
    ((_ _)		result-true)))
 
 (declare-core-primitive string-append
     (safe)
   (signatures
-   (T:string			=> (T:string)))
+   (<string*>			=> (<string>)))
   (attributes
    (_				effect-free result-true)))
 
 (declare-core-primitive string-reverse-and-concatenate
     (safe)
   (signatures
-   ((T:proper-list)		=> (T:string)))
+   ((<list>)			=> (<string>)))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -294,7 +484,7 @@
 (declare-core-primitive string-length
     (safe)
   (signatures
-   ((T:string)		=> (T:fixnum)))
+   ((<string>)		=> (<fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true))
   (replacements $string-length))
@@ -302,7 +492,7 @@
 (declare-core-primitive string-for-each
     (safe)
   (signatures
-   ((T:procedure T:string . T:string)		=> (T:void)))
+   ((<procedure> <string> . <string*>)		=> (<void>)))
   (attributes
    ;;Not foldable and not effect-free because it applies an unknown procedure.
    ((_ _ . _)					result-true)))
@@ -313,35 +503,36 @@
 ;;FIXME  This cannot  have $STRING-REF  as  replacement because  there is  no way  to
 ;;validate the index with respect to the string.  But in future another primitive can
 ;;be added that does not validate the  types, but validates the range.  (Marco Maggi;
-;;Mon Nov 10, 2014)
+;;Tue Oct 27, 2015)
 (declare-core-primitive string-ref
     (safe)
   (signatures
-   ((T:string T:fixnum)	=> (T:char)))
+   ((<string> <fixnum>)	=> (<char>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
 ;;FIXME This  cannot have  $STRING-SET!  as  replacement because there  is no  way to
 ;;validate the index with respect to the string.  But in future another primitive can
 ;;be added that does not validate the  types, but validates the range.  (Marco Maggi;
-;;Mon Nov 10, 2014)
+;;Tue Oct 27, 2015)
 (declare-core-primitive string-set!
     (safe)
   (signatures
-   ((T:string T:fixnum T:char)	=> (T:void)))
+   ((<string> <fixnum> <char>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 
 (declare-core-primitive string-fill!
     (safe)
   (signatures
-   ((T:string T:char)	=> (T:void)))
+   ((<string> <char>)	=> (<void>)))
   (attributes
    ((_ _)		result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
+(comment
 (declare-string-binary/multi-comparison string<=?)
 (declare-string-binary/multi-comparison string<?)
 (declare-string-binary/multi-comparison string=?)
@@ -366,6 +557,7 @@
 (declare-string-unary string-normalize-nfd)
 (declare-string-unary string-normalize-nfkc)
 (declare-string-unary string-normalize-nfkd)
+/comment)
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -373,15 +565,17 @@
 (declare-core-primitive string->flonum
     (safe)
   (signatures
-   ((T:string)		=> (T:flonum)))
+   ((<string>)		=> (<flonum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive string->number
     (safe)
   (signatures
-   ((T:string)		=> (T:number/false))
-   ((T:string T:fixnum)	=> (T:number/false)))
+   ;; ((<string>)               => ((or <number> <false>)))
+   ;; ((<string> <fixnum>)      => ((or <number> <false>)))
+   ((<string>)		=> (<top>))
+   ((<string> <fixnum>)	=> (<top>)))
   (attributes
    ((_)			foldable effect-free)
    ((_ _)		foldable effect-free)))
@@ -389,7 +583,7 @@
 (declare-core-primitive string->utf8
     (safe)
   (signatures
-   ((T:string)			=> (T:bytevector)))
+   ((<string>)			=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_)				effect-free result-true)))
@@ -397,8 +591,8 @@
 (declare-core-primitive string->utf16
     (safe)
   (signatures
-   ((T:string)			=> (T:bytevector))
-   ((T:string T:symbol)		=> (T:bytevector)))
+   ((<string>)			=> (<bytevector>))
+   ((<string> <symbol>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_ _)			effect-free result-true)))
@@ -406,8 +600,8 @@
 (declare-core-primitive string->utf32
     (safe)
   (signatures
-   ((T:string)			=> (T:bytevector))
-   ((T:string T:symbol)		=> (T:bytevector)))
+   ((<string>)			=> (<bytevector>))
+   ((<string> <symbol>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_)				effect-free result-true)
@@ -416,7 +610,7 @@
 (declare-core-primitive string->bytevector
     (safe)
   (signatures
-   ((T:string T:transcoder)	=> (T:bytevector)))
+   ((<string> <transcoder>)	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_ _)			effect-free result-true)))
@@ -428,7 +622,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:string)		=> (T:bytevector)))
+	    ((<string>)		=> (<bytevector>)))
 	   (attributes
 	    ;;Not  foldable  because  it  must  return  a  new  bytevector  at  every
 	    ;;application.
@@ -451,15 +645,15 @@
 (declare-core-primitive string->symbol
     (safe)
   (signatures
-   ((T:string)			=> (T:symbol)))
+   ((<string>)			=> (<symbol>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive string-or-symbol->string
     (safe)
   (signatures
-   ((T:string)			=> (T:string))
-   ((T:symbol)			=> (T:string)))
+   ((<string>)			=> (<string>))
+   ((<symbol>)			=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string at every application.
    ((_)				effect-free result-true)))
@@ -467,15 +661,15 @@
 (declare-core-primitive string-or-symbol->symbol
     (safe)
   (signatures
-   ((T:string)			=> (T:symbol))
-   ((T:symbol)			=> (T:symbol)))
+   ((<string>)			=> (<symbol>))
+   ((<symbol>)			=> (<symbol>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive string->keyword
     (safe)
   (signatures
-   ((T:string)			=> (T:other-object)))
+   ((<string>)			=> (<keyword>)))
   (attributes
    ;;Not foldable because keywords cannot be serialised in fasl files.
    ((_)				effect-free result-true)))
@@ -483,7 +677,7 @@
 (declare-core-primitive string->list
     (safe)
   (signatures
-   ((T:string)			=> (T:proper-list)))
+   ((<string>)			=> (<list>)))
   (attributes
    ;;Not foldable because it must return a new list at every application.
    ((_)				effect-free result-true)))
@@ -506,7 +700,7 @@
 (declare-core-primitive $make-string
     (unsafe)
   (signatures
-   ((T:fixnum)		=> (T:string)))
+   ((<fixnum>)		=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string every time.
    ((_)			effect-free result-true)))
@@ -514,7 +708,7 @@
 (declare-core-primitive $string
     (unsafe)
   (signatures
-   (T:char		=> (T:string)))
+   (<char*>		=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string every time.
    (_			effect-free result-true)))
@@ -522,7 +716,7 @@
 (declare-core-primitive $string-concatenate
     (unsafe)
   (signatures
-   ((T:exact-integer T:proper-list)	=> (T:string)))
+   ((<exact-integer> <list>)	=> (<string>)))
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
@@ -531,7 +725,7 @@
 (declare-core-primitive $string-reverse-and-concatenate
     (unsafe)
   (signatures
-   ((T:exact-integer T:proper-list)	=> (T:string)))
+   ((<exact-integer> <list>)	=> (<string>)))
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
@@ -543,14 +737,14 @@
 (declare-core-primitive $string-length
     (unsafe)
   (signatures
-   ((T:string)		=> (T:fixnum)))
+   ((<string>)		=> (<fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive $string-total-length
     (unsafe)
   (signatures
-   ((T:exact-integer T:proper-list)	=> (T:exact-integer)))
+   ((<exact-integer> <list>)	=> (<exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -560,21 +754,23 @@
 (declare-core-primitive $string-ref
     (unsafe)
   (signatures
-   ((T:string T:fixnum)	=> (T:char)))
+   ((<string> <fixnum>)	=> (<char>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
 (declare-core-primitive $string-set!
     (unsafe)
   (signatures
-   ((T:string T:fixnum T:char)	=> (T:void)))
+   ((<string> <fixnum> <char>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
+(comment
 (declare-string-binary-comparison $string=)
+/comment)
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -582,7 +778,7 @@
 (declare-core-primitive $string->ascii
     (unsafe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((<string>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector every time.
    ((_)			effect-free result-true)))
@@ -590,7 +786,7 @@
 (declare-core-primitive $string->octets
     (unsafe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((<string>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector every time.
    ((_)			effect-free result-true)))
@@ -598,7 +794,7 @@
 (declare-core-primitive $string->latin1
     (unsafe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((<string>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector every time.
    ((_)			effect-free result-true)))
@@ -606,7 +802,7 @@
 (declare-core-primitive $string-base64->bytevector
     (unsafe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((<string>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a new bytevector every time.
    ((_)			effect-free result-true)))
@@ -614,7 +810,7 @@
 (declare-core-primitive $string->symbol
     (unsafe)
   (signatures
-   ((T:string)		=> (T:symbol)))
+   ((<string>)		=> (<symbol>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
@@ -624,86 +820,93 @@
 (declare-core-primitive $interned-strings
     (unsafe)
   (signatures
-   (()			=> (T:vector)))
+   (()			=> (<vector>)))
   (attributes
    ((_)			effect-free result-true)))
 
-
-|#
-
 ;;; --------------------------------------------------------------------
 
-(declare-typed-core-prim <string>-for-each
+(declare-core-primitive <string>-for-each
+    (safe)
   (signatures
-   ((<void>) (<string> <procedure> . <string*>))))
+   ((<string> <procedure> . <string*>)	=> (<void>))))
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: pairs and lists primitives
 
-(declare-typed-core-prim cons
+(declare-core-primitive cons
+    (safe)
   (signatures
-   ((<pair>) (<top> <top>))))
+   ((<top> <top>)		=> (<pair>))))
 
-(declare-typed-core-prim list
+(declare-core-primitive list
+    (safe)
   (signatures
-   ((<list>) <list>)))
+   (<list>			=> (<list>))))
 
 ;;;
 
-(declare-typed-core-prim <null>-constructor
+(declare-core-primitive <null>-constructor
+    (safe)
   (signatures
-   ((<null>) ())))
+   (()				=> (<null>))))
 
 ;;;
 
-(declare-typed-core-prim pair?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate pair? <pair> <nlist>)
 
-(declare-typed-core-prim list?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate list? <list>)
 
-(declare-typed-core-prim nlist?
-  (signatures
-   ((<boolean>) (<top>))))
+(declare-type-predicate nlist? <nlist>)
 
 ;;;
 
-(declare-typed-core-prim car
-  #;(unsafe-variant $car)
+(declare-core-primitive car
+    (safe)
   (signatures
-   ((<top>) (<pair>))
-   ((<top>) (<nlist>))
+   ((<pair>)		=> (<top>))
+   ((<nlist>)		=> (<top>))
    ;;FIXME Strictly  speaking this is wrong:  "<list>" can also be  null, so applying
-   ;;CAR is  an error.   This is  why the  unsafe variant  is commented  out.  (Marco
-   ;;Maggi; Thu Oct 22, 2015)
-   ((<top>) (<list>))))
+   ;;CAR is an error.   This is why the replacement is  commented out.  (Marco Maggi;
+   ;;Thu Oct 22, 2015)
+   ((<list>)		=> (<top>)))
+  ;;(replacements $car)
+  #| end of DECLARE-CORE-PRIMITIVE |# )
 
-(declare-typed-core-prim cdr
-  #;(unsafe-variant $cdr)
+(declare-core-primitive cdr
+    (safe)
   (signatures
-   ((<top>) (<pair>))
-   ((<top>) (<nlist>))
+   ((<pair>)		=> (<top>))
+   ((<nlist>)		=> (<top>))
    ;;FIXME Strictly  speaking this is wrong:  "<list>" can also be  null, so applying
-   ;;CDR is  an error.   This is  why the  unsafe variant  is commented  out.  (Marco
-   ;;Maggi; Thu Oct 22, 2015)
-   ((<top>) (<list>))))
+   ;;CDR is an error.   This is why the replacement is  commented out.  (Marco Maggi;
+   ;;Thu Oct 22, 2015)
+   ((<list>)		=> (<top>)))
+  ;;(replacements $cdr)
+  #| end of DECLARE-CORE-PRIMITIVE |# )
 
 
 ;;;; core syntactic binding descriptors, typed core primitives: utilities
 
-(declare-typed-core-prim <top>-constructor
+(declare-core-primitive <top>-constructor
+    (safe)
   (signatures
-   ((<top>) (<top>))))
+   ((<top>)		=> (<top>))))
 
-(declare-typed-core-prim <top>-type-predicate
+(declare-core-primitive <top>-type-predicate
+    (safe)
   (signatures
-   ((<boolean>) (<top>))))
+   ((<top>)		=> (<true>))))
 
-(declare-typed-core-prim <boolean>-constructor
+(declare-core-primitive <boolean>-constructor
+    (safe)
   (signatures
-   ((<boolean>) (<top>))))
+   ((<top>)		=> (<boolean>))))
+
+
+;;;; done
+
+#| close lexical contour |# (void))
 
 ;;; end of file
 ;; Local Variables:

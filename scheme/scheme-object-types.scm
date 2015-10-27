@@ -19,6 +19,14 @@
     <top>
   <boolean>-constructor boolean?)
 
+(define-scheme-type <true>
+    <boolean>
+  #f #f)
+
+(define-scheme-type <false>
+    <boolean>
+  #f #f)
+
 (define-scheme-type <char>
     <top>
   integer->char char?

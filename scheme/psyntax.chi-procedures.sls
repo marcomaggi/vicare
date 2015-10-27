@@ -676,7 +676,7 @@
 	   ;;Core  primitive with  type signatures  specification; it  is a  built-in
 	   ;;procedure.  We expect the syntactic binding's descriptor DESCR to be:
 	   ;;
-	   ;;   (core-prim-typed . ((?core-prim-name . ?type-id) . ?hard-coded-sexp))
+	   ;;   (core-prim-typed . (#<core-prim-type-spec> . ?hard-coded-sexp))
 	   ;;
 	   (let* ((descr.value	(syntactic-binding-descriptor.value descr))
 		  (name		(core-prim-typed-binding-descriptor.value.prim-name descr.value))

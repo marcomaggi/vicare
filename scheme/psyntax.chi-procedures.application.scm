@@ -257,7 +257,7 @@
 
   (define (%chi-apply-application input-form.stx lexenv.run lexenv.expand
 				  rator.stx rand*.stx)
-    ;;The input form is a call to the core primitive APPY:
+    ;;The input form is a call to the core primitive APPLY:
     ;;
     ;;   (apply ?rator ?rand ...)
     ;;

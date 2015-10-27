@@ -31,7 +31,12 @@
 
 	 <global-typed-variable-spec>
 	 make-global-typed-variable-spec		global-typed-variable-spec?
-	 global-typed-variable-spec.variable-loc	global-typed-variable-spec.type-id)
+	 global-typed-variable-spec.variable-loc	global-typed-variable-spec.type-id
+
+	 <core-prim-type-spec>
+	 make-core-prim-type-spec			core-prim-type-spec?
+	 core-prim-type-spec.name
+	 core-prim-type-spec.safety)
 
 
 ;;;; lexical variable specification: base type
@@ -111,6 +116,34 @@
 
 (define-syntax-rule (global-typed-variable-spec.type-id gts)
   (typed-variable-spec.type-id gts))
+
+
+;;;; typed core primitive
+
+(define-record-type (<core-prim-type-spec> make-core-prim-type-spec core-prim-type-spec?)
+  (nongenerative vicare:expander:<core-prim-type-spec>)
+  (parent <typed-variable-spec>)
+  (fields
+   (immutable name			core-prim-type-spec.name)
+		;A symbol representing the public name of this core primitive.
+   (immutable safety			core-prim-type-spec.safety)
+		;Boolean.  True if this core primitive is safe.
+   #| end of FIELDS |# )
+  (protocol
+    (lambda (make-typed-variable-spec)
+      (define (make-core-prim-type-spec core-prim.sym safety type-id unsafe-variants)
+	;;CORE-PRIM.SYM  is  a  symbol  representing  the public  name  of  the  core
+	;;primitive.
+	;;
+	;;SAFETY is a boolean, true if this primitive is safe.
+	;;
+	;;TYPE-ID is a syntactic identifier representing the type of this function.
+	;;
+	;;UNSAFE-VARIANTS is false or a vector  of syntactic identifiers bound to the
+	;;unsafe variants of this core primitive.
+	((make-typed-variable-spec type-id (and unsafe-variants (vector-ref unsafe-variants 0)))
+	 core-prim.sym safety))
+      make-core-prim-type-spec)))
 
 
 ;;;; done
