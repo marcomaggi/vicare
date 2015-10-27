@@ -195,6 +195,8 @@
     (srfi :14 char-sets)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
+    (only (vicare)
+	  fxsub1 fxadd1)
     (except (vicare unsafe operations)
 	    $string-copy!
 	    $string-fill!)
@@ -1556,9 +1558,9 @@
   ($string-reverse!))
 
 (define ($string-reverse! str start past)
-  (do ((i ($fxsub1 past) ($fxsub1 i))
-       (j start          ($fxadd1 j)))
-      (($fx<= i j)
+  (do ((i (fxsub1 past) (fxsub1 i))
+       (j start         (fxadd1 j)))
+      ((fx<=? i j)
        str)
     (let ((ci ($string-ref str i)))
       ($string-set! str i ($string-ref str j))
