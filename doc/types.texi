@@ -1464,10 +1464,41 @@ Type of exact integers.  There is no constructor.  The type predicate is
 @subsubsection Type of fixnum values
 
 
-@deftp {Built--in Type} <fixnum>
-@deftpx {Parent Type} <exact-integer>
+@deftp {Built--in Type} @aclass{fixnum}
+@deftpx {Parent Type} @aclass{exact-integer}
 Type of fixnum values.  There is no constructor.  The type predicate is
 @func{fixnum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{non-negative-fixnum}
+@deftpx {Parent Type} @aclass{fixnum}
+Type of non--negative fixnum values.  There is no constructor.
+@end deftp
+
+
+@c @deftp {Built--in Type} @aclass{non-positive-fixnum}
+@c @deftpx {Parent Type} @aclass{fixnum}
+@c Type of non--positive fixnum values.  There is no constructor.
+@c @end deftp
+
+
+@deftp {Built--in Type} @aclass{positive-fixnum}
+@deftpx {Parent Type} @aclass{non-negative-fixnum}
+Type of positive fixnum values.  There is no constructor.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{negative-fixnum}
+@deftpx {Parent Type} @aclass{fixnum}
+@c @deftpx {Parent Type} @aclass{non-positive-fixnum}
+Type of negative fixnum values.  There is no constructor.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{zero-fixnum}
+@deftpx {Parent Type} @aclass{non-negative-fixnum}
+Type of the zero fixnum value.  There is no constructor.
 @end deftp
 
 @c page
@@ -1823,11 +1854,81 @@ Apply @func{string-hash} to the instance.
 @subsection Type of vector values
 
 
-@deftp {Built--in Type} <vector>
-@deftpx {Parent Type}         <top>
-Type of vector values.  The constructor is @func{vector}.  The type
-predicate is @func{vector?}.
+@deftp {Built--in Type} @aclass{vector}
+@deftpx {Parent Type} @aclass{top}
+Type of vector values.
 @end deftp
+
+
+@defop Constructor @class{vector} new @aclass{vector} @var{obj} @dots{}
+The constructor is @func{vector}.
+@end defop
+
+
+@defop {Type predicate} @class{vector} is-a? @var{obj} @aclass{vector}
+The type predicate is @func{vector?}.  Return @true{} if @var{obj} is a
+vector object; otherwise return @false{}.
+@end defop
+
+
+@deftypemethod @class{vector} @aclass{boolean} length @var{self}
+Apply @func{vector-length} to the instance.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} ref @var{self} @var{idx}
+Apply @func{vector-ref} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} set! @var{self} @var{idx} @var{obj}
+Apply @func{vector-set!} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} ref @var{self} @var{obj}
+Apply @func{vector-fill!} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} subvector @var{self} @var{begin} @var{end}
+Apply @func{subvector} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} map @var{self} @var{proc} @var{vec} @dots{}
+Apply @func{vector-map} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} for-each @var{self} @var{proc} @var{vec} @dots{}
+Apply @func{vector-for-each} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} for-all @var{self} @var{proc} @var{vec} @dots{}
+Apply @func{vector-for-all} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} exists @var{self} @var{proc} @var{vec} @dots{}
+Apply @func{vector-exists} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} find @var{self} @var{proc}
+Apply @func{vector-find} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} fold-left @var{self} @var{proc} @var{knil} @var{vec} @dots{}
+Apply @func{vector-fold-left} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{boolean} fold-right @var{self} @var{proc} @var{knil} @var{vec} @dots{}
+Apply @func{vector-fold-right} to the instance and the arguments.
+@end deftypemethod
 
 @c page
 @node types built-in pairs

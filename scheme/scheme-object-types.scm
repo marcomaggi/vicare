@@ -161,6 +161,28 @@
     <complex>
   #f cflonum?)
 
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <non-negative-fixnum>
+    <fixnum>
+  #f non-negative-fixnum?)
+
+;; (define-scheme-type <non-positive-fixnum>
+;;     <fixnum>
+;;   #f non-positive-fixnum?)
+
+(define-scheme-type <negative-fixnum>
+    <fixnum>
+  #f negative-fixnum?)
+
+(define-scheme-type <positive-fixnum>
+    <non-negative-fixnum>
+  #f positive-fixnum?)
+
+(define-scheme-type <zero-fixnum>
+    <non-negative-fixnum>
+  #f fxzero?)
+
 
 ;;;; compound types
 
@@ -233,7 +255,20 @@
 
 (define-scheme-type <vector>
     <top>
-  vector vector?)
+  vector vector?
+  (methods
+   (length			vector-length)
+   (ref				vector-ref)
+   (set!			vector-set!)
+   (fill!			vector-fill!)
+   (subvector			subvector)
+   (map				<vector>-map)
+   (for-each			<vector>-for-each)
+   (for-all			<vector>-for-all)
+   (exists			<vector>-exists)
+   (find			<vector>-find)
+   (fold-left			<vector>-fold-left)
+   (fold-right			<vector>-fold-right)))
 
 (define-scheme-type <pair>
     <top>

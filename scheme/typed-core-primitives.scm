@@ -1241,8 +1241,8 @@
 (declare-core-primitive make-string
     (safe)
   (signatures
-   ((<fixnum>)		=> (<string>))
-   ((<fixnum> <char>)	=> (<string>)))
+   ((<non-negative-fixnum>)		=> (<string>))
+   ((<non-negative-fixnum> <char>)	=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -1253,7 +1253,7 @@
 (declare-core-primitive substring
     (safe)
   (signatures
-   ((<string> <fixnum> <fixnum>)	=> (<string>)))
+   ((<string> <non-negative-fixnum> <non-negative-fixnum>)	=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -1269,7 +1269,7 @@
 (declare-core-primitive string-copy!
     (safe)
   (signatures
-   ((<string> <fixnum> <string> <fixnum> <fixnum>)	=> (<void>)))
+   ((<string> <non-negative-fixnum> <string> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>)))
   (attributes
    ((_ _)		result-true)))
 
@@ -1293,7 +1293,7 @@
 (declare-core-primitive string-length
     (safe)
   (signatures
-   ((<string>)		=> (<fixnum>)))
+   ((<string>)		=> (<non-negative-fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true))
   (replacements $string-length))
@@ -1316,7 +1316,7 @@
 (declare-core-primitive string-ref
     (safe)
   (signatures
-   ((<string> <fixnum>)	=> (<char>)))
+   ((<string> <non-negative-fixnum>)	=> (<char>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
@@ -1327,7 +1327,7 @@
 (declare-core-primitive string-set!
     (safe)
   (signatures
-   ((<string> <fixnum> <char>)	=> (<void>)))
+   ((<string> <non-negative-fixnum> <char>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 
@@ -1381,9 +1381,9 @@
     (safe)
   (signatures
    ;; ((<string>)               => ((or <number> <false>)))
-   ;; ((<string> <fixnum>)      => ((or <number> <false>)))
+   ;; ((<string> <non-negative-fixnum>)      => ((or <number> <false>)))
    ((<string>)		=> (<top>))
-   ((<string> <fixnum>)	=> (<top>)))
+   ((<string> <non-negative-fixnum>)	=> (<top>)))
   (attributes
    ((_)			foldable effect-free)
    ((_ _)		foldable effect-free)))
@@ -1508,7 +1508,7 @@
 (declare-core-primitive $make-string
     (unsafe)
   (signatures
-   ((<fixnum>)		=> (<string>)))
+   ((<non-negative-fixnum>)		=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string every time.
    ((_)			effect-free result-true)))
@@ -1545,7 +1545,7 @@
 (declare-core-primitive $string-length
     (unsafe)
   (signatures
-   ((<string>)		=> (<fixnum>)))
+   ((<string>)		=> (<non-negative-fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
@@ -1562,14 +1562,14 @@
 (declare-core-primitive $string-ref
     (unsafe)
   (signatures
-   ((<string> <fixnum>)	=> (<char>)))
+   ((<string> <non-negative-fixnum>)	=> (<char>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
 (declare-core-primitive $string-set!
     (unsafe)
   (signatures
-   ((<string> <fixnum> <char>)	=> (<void>)))
+   ((<string> <non-negative-fixnum> <char>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 
@@ -1636,6 +1636,312 @@
     (safe)
   (signatures
    ((<string> <procedure> . <string>)	=> (<void>))))
+
+/section)
+
+
+;;;; core syntactic binding descriptors, typed core primitives: vectors
+
+(section
+
+;;; predicates
+
+(declare-type-predicate vector? <vector>)
+
+(declare-vector-predicate vector-empty?)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive vector
+    (safe)
+  (signatures
+   (()				=> (<vector>))
+   (_				=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   (()				effect-free result-true)
+   (_				effect-free result-true)))
+
+(declare-core-primitive subvector
+    (safe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_ _ _)			effect-free result-true)))
+
+(declare-core-primitive make-vector
+    (safe)
+  (signatures
+   ((<fixnum>)			=> (<vector>))
+   ((<fixnum> _)		=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((0)				effect-free result-true)
+   ((0 _)			effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive vector-resize
+    (safe)
+  (signatures
+   ((<vector> <non-negative-fixnum>)		=> (<vector>))
+   ((<vector> <non-negative-fixnum> <top>)	=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_ _)			effect-free result-true)
+   ((_ _ _)			effect-free result-true)))
+
+(declare-core-primitive vector-append
+    (safe)
+  (signatures
+   (<vector>			=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   (_				effect-free result-true)))
+
+(declare-core-primitive vector-copy
+    (safe)
+  (signatures
+   ((<vector>)			=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-core-primitive vector-length
+    (safe)
+  (signatures
+   ((<vector>)			=> (<fixnum>)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements
+   $vector-length))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
+;;FIXME  This cannot  have $VECTOR-REF  as  replacement because  there is  no way  to
+;;validate the index with respect to the vector.  But in future another primitive can
+;;be added that does not validate the  types, but validates the range.  (Marco Maggi;
+;;Mon Nov 10, 2014)
+(declare-core-primitive vector-ref
+    (safe)
+  (signatures
+   ((<vector> <fixnum>)	=> (<top>)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+;;FIXME This  cannot have  $VECTOR-SET!  as  replacement because there  is no  way to
+;;validate the index with respect to the vector.  But in future another primitive can
+;;be added that does not validate the  types, but validates the range.  (Marco Maggi;
+;;Mon Nov 10, 2014)
+(declare-core-primitive vector-set!
+    (safe)
+  (signatures
+   ((<vector> <fixnum> _)	=> (<void>)))
+  (attributes
+   ((_ _ _)			result-true)))
+
+(declare-core-primitive vector-copy!
+    (safe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <vector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>)))
+  ;;Not foldable  because it must return  a newly allocated vector.   Not effect free
+  ;;because it mutates the operand.
+  (attributes
+   ((_ _ _ _ _)			result-true)))
+
+(declare-core-primitive vector-fill!
+    (safe)
+  (signatures
+   ((<vector> <top>)		=> (<void>)))
+  ;;Not effect free because it mutates the operand.
+  (attributes
+   ((_ _)			foldable result-true)))
+
+;;; --------------------------------------------------------------------
+;;; sorting
+
+(declare-core-primitive vector-sort
+    (safe)
+  (signatures
+   ((<procedure> <vector>)	=> (<vector>)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free because it invokes an unknown procedure.
+   ((_ _)			result-true)))
+
+(declare-core-primitive vector-sort!
+    (safe)
+  (signatures
+   ((<procedure> <vector>)	=> (<void>)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free because it invokes an unknown procedure and it mutates the operand.
+   ((_ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; iterations
+
+(declare-core-primitive vector-for-each
+    (safe)
+  (signatures
+   ((<procedure> <vector> . <vector>)		=> (<void>)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+(declare-core-primitive vector-map
+    (safe)
+  (signatures
+   ((<procedure> <vector> . <vector>)		=> (<vector>)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+(declare-core-primitive vector-for-all
+    (safe)
+  (signatures
+   ((<procedure> <vector> . <vector>)		=> (<void>)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+(declare-core-primitive vector-exists
+    (safe)
+  (signatures
+   ((<procedure> <vector> . <vector>)		=> (<void>)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive vector->list
+    (safe)
+  (signatures
+   ((<vector>)			=> (<list>)))
+  (attributes
+   ;;Not foldable because it must return a new list at every application.
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; unsafe functions
+
+;;; constructors
+
+(declare-core-primitive $make-vector
+    (unsafe)
+  (signatures
+   ((<fixnum>)			=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-vector-predicate $vector-empty? unsafe)
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-core-primitive $vector-length
+    (unsafe)
+  (signatures
+   ((<vector>)			=> (<fixnum>)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
+(declare-core-primitive $vector-ref
+    (unsafe)
+  (signatures
+   ((<vector> <fixnum>)		=> (<top>)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $vector-set!
+    (unsafe)
+  (signatures
+   ((<vector> <fixnum> _)	=> (<void>)))
+  (attributes
+   ((_ _ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; iterations
+
+(declare-core-primitive $vector-map1
+    (unsafe)
+  (signatures
+   ((<procedure> <vector>)	=> (<vector>)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive $vector-for-each1
+    (unsafe)
+  (signatures
+   ((<procedure> <vector>)	=> (<void>)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive $vector-for-all1
+    (unsafe)
+  (signatures
+   ((<procedure> <vector>)	=> (<top>))))
+
+(declare-core-primitive $vector-exists1
+    (unsafe)
+  (signatures
+   ((<procedure> <vector>)	=> (<vector>))))
+
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive <vector>-map
+    (safe)
+  (signatures
+   ((<vector> <procedure> . <vector>)	=> (<vector>))))
+
+(declare-core-primitive <vector>-for-each
+    (safe)
+  (signatures
+   ((<vector> <procedure> . <vector>)	=> (<void>))))
+
+(declare-core-primitive <vector>-for-all
+    (safe)
+  (signatures
+   ((<vector> <procedure> . <vector>)	=> (<top>))))
+
+(declare-core-primitive <vector>-exists
+    (safe)
+  (signatures
+   ((<vector> <procedure> . <vector>)	=> (<top>))))
+
+(declare-core-primitive <vector>-find
+    (safe)
+  (signatures
+   ((<vector> <procedure>>)		=> (<top>))))
+
+(declare-core-primitive <vector>-fold-left
+    (safe)
+  (signatures
+   ((<vector> <procedure> <top> . <vector>)	=> (<top>))))
+
+(declare-core-primitive <vector>-fold-right
+    (safe)
+  (signatures
+   ((<vector> <procedure> <top> . <vector>)	=> (<top>))))
 
 /section)
 

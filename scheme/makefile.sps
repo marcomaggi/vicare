@@ -3901,6 +3901,12 @@
     (<complex>					v $language)
     (<number>					v $language)
 
+    (<non-negative-fixnum>			v $language)
+    ;;(<non-positive-fixnum>			v $language)
+    (<negative-fixnum>				v $language)
+    (<positive-fixnum>				v $language)
+    (<zero-fixnum>				v $language)
+
     (<string>					v $language)
     (<vector>					v $language)
     (<pair>					v $language)
@@ -3941,6 +3947,13 @@
     (<symbol>-value)
     (<null>-constructor)
     (<string>-for-each)
+    (<vector>-map)
+    (<vector>-for-each)
+    (<vector>-for-all)
+    (<vector>-exists)
+    (<vector>-find)
+    (<vector>-fold-right)
+    (<vector>-fold-left)
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme list object types

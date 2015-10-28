@@ -138,7 +138,7 @@
 		 (xp.condition-argument-index                     E)))
 	  (else E)))
     (=> syntax=?)
-    (list #'<char> #'<fixnum> 0))
+    (list #'<char> #'<positive-fixnum> 0))
 
   ;;Expand-time signature violation.  Second operand.
   ;;
@@ -152,7 +152,7 @@
 		 (xp.condition-argument-index                     E)))
 	  (else E)))
     (=> syntax=?)
-    (list #'<char> #'<fixnum> 1))
+    (list #'<char> #'<positive-fixnum> 1))
 
   ;;Run-time validation.
   ;;
@@ -269,7 +269,7 @@
 		 (xp.condition-argument-index                     E)))
 	  (else E)))
     (=> syntax=?)
-    (list #'<string> #'<fixnum> 0))
+    (list #'<string> #'<positive-fixnum> 0))
 
   ;;Expand-time signature violation.  Second operand.
   ;;
@@ -283,7 +283,7 @@
 		 (xp.condition-argument-index                     E)))
 	  (else E)))
     (=> syntax=?)
-    (list #'<string> #'<fixnum> 1))
+    (list #'<string> #'<positive-fixnum> 1))
 
   ;;Run-time validation.
   ;;

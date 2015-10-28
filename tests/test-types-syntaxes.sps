@@ -277,7 +277,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum>) (values 1 "B"))
-    => (<fixnum> <flonum>) (<fixnum> <string>))
+    => (<fixnum> <flonum>) (<positive-fixnum> <string>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum>) (values "A" 2.0))
@@ -300,11 +300,11 @@
 
   (check-expand-time-signature-violation
       (assert-signature () 1)
-    => () (<fixnum>))
+    => () (<positive-fixnum>))
 
   (check-expand-time-signature-violation
       (assert-signature () (values 1 2.0))
-    => () (<fixnum> <flonum>))
+    => () (<positive-fixnum> <flonum>))
 
   ;;Zero values, list signature.
   (check-for-true
@@ -338,15 +338,15 @@
 
   (check-expand-time-signature-violation
       (assert-signature <list-of-flonums> (values 1 "A"))
-    => <list-of-flonums> (<fixnum> <string>))
+    => <list-of-flonums> (<positive-fixnum> <string>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> . <list-of-flonums>) (values 1 "A"))
-    => (<fixnum> . <list-of-flonums>) (<fixnum> <string>))
+    => (<fixnum> . <list-of-flonums>) (<positive-fixnum> <string>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1))
-    => (<fixnum> <flonum> . <list-of-strings>) (<fixnum>))
+    => (<fixnum> <flonum> . <list-of-strings>) (<positive-fixnum>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1.0))
@@ -354,7 +354,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1 2))
-    => (<fixnum> <flonum> . <list-of-strings>) (<fixnum> <fixnum>))
+    => (<fixnum> <flonum> . <list-of-strings>) (<positive-fixnum> <positive-fixnum>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1.0 2.0))

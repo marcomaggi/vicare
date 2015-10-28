@@ -49,6 +49,10 @@
     <top>-constructor			<top>-type-predicate
     <boolean>-constructor		<null>-constructor
     <symbol>-value			<string>-for-each
+    <vector>-map			<vector>-for-each
+    <vector>-for-all			<vector>-exists
+    <vector>-find
+    <vector>-fold-right			<vector>-fold-left
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
@@ -74,6 +78,9 @@
 		  struct-hash			record-hash
 		  object-hash			pointer-hash
 		  nlist?
+		  vector-for-all		vector-exists
+		  vector-find			vector-fold-left
+		  vector-fold-right
 		  #| end of EXPORT |# )
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
     ;;2015)
@@ -126,7 +133,13 @@
     (only (ikarus lists)
 	  nlist?)
     (only (vicare system $fx)
-	  $fxadd1))
+	  $fxadd1)
+    (only (ikarus vectors)
+	  vector-for-all
+	  vector-exists
+	  vector-find
+	  vector-fold-left
+	  vector-fold-right))
 
 
 ;;;; helpers for object-type method calls
@@ -432,6 +445,47 @@
    (string-for-each func str))
   ((str func . str*)
    (apply string-for-each func str str*)))
+
+;;;
+
+(case-define <vector>-for-each
+  ((vec func)
+   (vector-for-each func vec))
+  ((vec func . vec*)
+   (apply vector-for-each func vec vec*)))
+
+(case-define <vector>-map
+  ((vec func)
+   (vector-map func vec))
+  ((vec func . vec*)
+   (apply vector-map func vec vec*)))
+
+(case-define <vector>-for-all
+  ((vec func)
+   (vector-for-all func vec))
+  ((vec func . vec*)
+   (apply vector-for-all func vec vec*)))
+
+(case-define <vector>-exists
+  ((vec func)
+   (vector-exists func vec))
+  ((vec func . vec*)
+   (apply vector-exists func vec vec*)))
+
+(define (<vector>-find vec func)
+  (vector-find func vec))
+
+(case-define <vector>-fold-right
+  ((vec combine knil)
+   (vector-fold-right combine knil vec))
+  ((vec combine knil . vec*)
+   (apply vector-fold-right combine knil vec vec*)))
+
+(case-define <vector>-fold-left
+  ((vec combine knil)
+   (vector-fold-left combine knil vec))
+  ((vec combine knil . vec*)
+   (apply vector-fold-left combine knil vec vec*)))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

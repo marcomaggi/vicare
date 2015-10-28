@@ -77,7 +77,8 @@
 ;;; --------------------------------------------------------------------
 
   (check-for-assertion-violation
-      (vector-length 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-length (read port)))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -107,7 +108,8 @@
 ;;; arguments validation: vector
 
   (check-for-assertion-violation
-      (vector-ref 123 1)
+      (let ((port (open-string-input-port "123")))
+	(vector-ref (read port) 1))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -164,14 +166,16 @@
 ;;; arguments validation: vector
 
   (check-for-assertion-violation
-      (vector-set! 123 1 'a)
+      (let ((port (open-string-input-port "123")))
+	(vector-set! (read port) 1 'a))
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   (check-for-assertion-violation
-      (vector-set! (vector 'a 'b 'c) 'a 'b)
+      (let ((port (open-string-input-port "a")))
+	(vector-set! (vector 'a 'b 'c) (read port) 'b))
     => '(a))
 
   (check-for-assertion-violation
@@ -225,7 +229,8 @@
 ;;; arguments validation: length
 
   (check-for-assertion-violation ;not a number
-      (make-vector #\t 'A)
+      (let ((port (open-string-input-port "#\\t")))
+	(make-vector (read port) 'A))
     => '(#\t))
 
   ;;negative
@@ -318,7 +323,8 @@
 ;;; arguments validation: vector
 
   (check-for-assertion-violation
-      (subvector 123 1 1)
+      (let ((port (open-string-input-port "123")))
+	(subvector (read port) 1 1))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -326,12 +332,14 @@
 
   ;;not a number
   (check-for-assertion-violation
-      (subvector '#(a b c d) #t 1)
+      (let ((port (open-string-input-port "#t")))
+	(subvector '#(a b c d) (read port) 1))
     => '(#t))
 
   ;;negative
   (check-for-assertion-violation
-      (subvector '#(a b c d) -1 1)
+      (let ((port (open-string-input-port "-1")))
+	(subvector '#(a b c d) (read port) 1))
     => '(-1))
 
   ;;not a fixnum
@@ -349,12 +357,14 @@
 
   ;;not a number
   (check-for-assertion-violation
-      (subvector '#(a b c d) 1 #t)
+      (let ((port (open-string-input-port "#t")))
+	(subvector '#(a b c d) 1 (read port)))
     => '(#t))
 
   ;;negative
   (check-for-assertion-violation
-      (subvector '#(a b c d) 1 -1)
+      (let ((port (open-string-input-port "-1")))
+	(subvector '#(a b c d) 1 (read port)))
     => '(-1))
 
   ;;not a fixnum
@@ -396,7 +406,8 @@
 ;;; arguments validation: vector
 
   (check-for-assertion-violation
-      (vector-copy 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-copy (read port)))
     => '(123))
 
   #t)
@@ -438,14 +449,16 @@
 ;;; arguments validation: vector
 
   (check-for-assertion-violation
-      (vector-resize 123 1)
+      (let ((port (open-string-input-port "123")))
+	(vector-resize (read port) 1))
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: new-len
 
   (check-for-assertion-violation
-      (vector-resize '#(1 2 3) -123)
+      (let ((port (open-string-input-port "-123")))
+	(vector-resize '#(1 2 3) (read port)))
     => '(-123))
 
   #t)
@@ -469,7 +482,8 @@
 ;;; arguments validation
 
   (check-for-assertion-violation
-      (vector->list 123)
+      (let ((port (open-string-input-port "123")))
+	(vector->list (read port)))
     => '(123))
 
   #t)
@@ -586,27 +600,33 @@
 ;;; arguments validation
 
   (check-for-assertion-violation
-      (vector-append 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-append (read port)))
     => '(123))
 
   (check-for-assertion-violation
-      (vector-append '#(a) 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-append '#(a) (read port)))
     => '(123))
 
   (check-for-assertion-violation
-      (vector-append '#(a) '#(b) 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-append '#(a) '#(b) (read port)))
     => '(123))
 
   (check-for-assertion-violation
-      (vector-append '#(a) '#(b) '#(c) 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-append '#(a) '#(b) '#(c) (read port)))
     => '(123))
 
   (check-for-procedure-argument-violation
-      (vector-append '#(a) '#(b) '#(c) '#(d) 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-append '#(a) '#(b) '#(c) '#(d) (read port)))
     => '(vector-append (123)))
 
   (check-for-procedure-argument-violation
-      (vector-append '#(a) '#(b) '#(c) '#(d) '#(e) 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-append '#(a) '#(b) '#(c) '#(d) '#(e) (read port)))
     => '(vector-append (123)))
 
   #t)
@@ -689,34 +709,41 @@
 ;;; arguments validation: procedure
 
   (check-for-assertion-violation
-      (vector-for-each 123 '#())
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each (read port) '#()))
     => '(123))
 
   (check-for-assertion-violation
-      (vector-for-each 123 '#() '#())
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each (read port) '#() '#()))
     => '(123))
 
   (check-for-assertion-violation
-      (vector-for-each 123 '#() '#() '#())
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each (read port) '#() '#() '#()))
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vectors
 
   (check-for-assertion-violation
-      (vector-for-each values 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each values (read port)))
     => '(123))
 
   (check-for-assertion-violation
-      (vector-for-each values '#() 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each values '#() (read port)))
     => '(123))
 
   (check-for-procedure-argument-violation
-      (vector-for-each values '#() '#() 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each values '#() '#() (read port)))
     => '(vector-for-each (123)))
 
   (check-for-procedure-argument-violation
-      (vector-for-each values '#() '#() '#() 123)
+      (let ((port (open-string-input-port "123")))
+	(vector-for-each values '#() '#() '#() (read port)))
     => '(vector-for-each (123)))
 
 ;;; --------------------------------------------------------------------
@@ -770,7 +797,8 @@
 ;;; arguments validation: vector
 
   (check-for-assertion-violation
-      (vector-fill! 123 'a)
+      (let ((port (open-string-input-port "123")))
+	(vector-fill! (read port) 'a))
     => '(123))
 
   #t)
