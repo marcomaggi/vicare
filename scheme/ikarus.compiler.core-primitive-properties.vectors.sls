@@ -81,8 +81,8 @@
 (declare-core-primitive make-vector
     (safe)
   (signatures
-   ((T:fixnum)			=> (T:vector))
-   ((T:fixnum _)		=> (T:vector)))
+   ((T:non-negative-fixnum)	=> (T:vector))
+   ((T:non-negative-fixnum _)	=> (T:vector)))
   ;;Not foldable because it must return a newly allocated vector.
   (attributes
    ((0)				effect-free result-true)
@@ -121,7 +121,7 @@
 (declare-core-primitive vector-length
     (safe)
   (signatures
-   ((T:vector)			=> (T:fixnum)))
+   ((T:vector)			=> (T:non-negative-fixnum)))
   (attributes
    ((_)				foldable effect-free result-true))
   (replacements
@@ -137,7 +137,7 @@
 (declare-core-primitive vector-ref
     (safe)
   (signatures
-   ((T:vector T:fixnum)	=> (T:char)))
+   ((T:vector T:non-negative-fixnum)	=> (_)))
   (attributes
    ((_ _)		foldable effect-free)))
 
@@ -148,7 +148,7 @@
 (declare-core-primitive vector-set!
     (safe)
   (signatures
-   ((T:vector T:fixnum _)	=> (T:void)))
+   ((T:vector T:non-negative-fixnum _)	=> (T:void)))
   (attributes
    ((_ _ _)			result-true)))
 
@@ -248,7 +248,7 @@
 (declare-core-primitive $make-vector
     (unsafe)
   (signatures
-   ((T:fixnum)			=> (T:vector)))
+   ((T:non-negative-fixnum)	=> (T:vector)))
   ;;Not foldable because it must return a newly allocated bytevector.
   (attributes
    ((_)				effect-free result-true)))
@@ -264,7 +264,7 @@
 (declare-core-primitive $vector-length
     (unsafe)
   (signatures
-   ((T:vector)			=> (T:fixnum)))
+   ((T:vector)			=> (T:non-negative-fixnum)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -274,14 +274,14 @@
 (declare-core-primitive $vector-ref
     (unsafe)
   (signatures
-   ((T:vector T:fixnum)		=> (T:char)))
+   ((T:vector T:non-negative-fixnum)		=> (_)))
   (attributes
    ((_ _)			foldable effect-free)))
 
 (declare-core-primitive $vector-set!
     (unsafe)
   (signatures
-   ((T:vector T:fixnum _)	=> (T:void)))
+   ((T:vector T:non-negative-fixnum _)	=> (T:void)))
   (attributes
    ((_ _ _)			result-true)))
 
