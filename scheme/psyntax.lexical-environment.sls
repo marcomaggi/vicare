@@ -162,6 +162,7 @@
     object-type-spec.type-predicate-sexp
     object-type-spec.safe-accessor-sexp			object-type-spec.safe-mutator-sexp
     object-type-spec.applicable-method-sexp
+    object-type-spec.memoised-list-id			object-type-spec.memoised-list-id-set!
 
     ;; object-type specifications: utilities
     object-type-spec.subtype-and-supertype?		object-type-spec-override-predicate

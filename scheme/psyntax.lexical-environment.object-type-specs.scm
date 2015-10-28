@@ -26,6 +26,7 @@
 	 object-type-spec.type-predicate-sexp
 	 object-type-spec.safe-accessor-sexp		object-type-spec.safe-mutator-sexp
 	 object-type-spec.applicable-method-sexp
+	 object-type-spec.memoised-list-id		object-type-spec.memoised-list-id-set!
 
 	 object-type-spec.subtype-and-supertype?	object-type-spec-override-predicate
 
@@ -87,7 +88,9 @@
 	 object-type-spec.type-predicate-sexp-set!
 	 object-type-spec.safe-accessors-table
 	 object-type-spec.safe-mutators-table
-	 object-type-spec.methods-table)
+	 object-type-spec.methods-table
+	 object-type-spec.memoised-list-id
+	 object-type-spec.memoised-list-id-set!)
 
   (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
     (nongenerative vicare:expander:<object-type-spec>)
@@ -164,6 +167,12 @@
 		;
 		;and called explicitly with the METHOD-CALL syntax.
 
+     (mutable memoised-list-id
+	      object-type-spec.memoised-list-id
+	      object-type-spec.memoised-list-id-set!)
+		;False or  a type  identifier representin  a (possibly  empty) proper
+		;list of objects of this type.
+
      #| end of FIELDS |# )
 
     (protocol
@@ -177,13 +186,16 @@
 		       '() ;safe-accessors-table
 		       '() ;safe-mutators-table
 		       '() ;methods-table
+		       #f  ;memoised-list-id
 		       ))
 	 ((parent-id
 	   constructor-sexp destructor-sexp type-predicate-sexp
 	   safe-accessors-table safe-mutators-table methods-table)
 	  (make-record parent-id
 		       constructor-sexp destructor-sexp type-predicate-sexp
-		       safe-accessors-table safe-mutators-table methods-table)))))
+		       safe-accessors-table safe-mutators-table methods-table
+		       #f #;memoised-list-id
+		       )))))
 
     #| end of DEFINE-RECORD-TYPE |# )
 
@@ -345,7 +357,7 @@
     (lambda (make-scheme-type-spec)
       (define* (make-list-type-spec {type-id type-identifier?})
 	(let ((parent-id		(list-tag-id))
-	      (constructor.sexp		#f)
+	      (constructor.sexp	#f)
 	      (predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
 	      (methods-table		'()))
 	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)

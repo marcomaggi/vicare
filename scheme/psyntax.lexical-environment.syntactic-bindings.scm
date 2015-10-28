@@ -671,8 +671,12 @@
     ;;Convert a proper  or improper list of symbols representing  core type identifiers
     ;;into the corresponding proper or improper list of type identifiers.
     ;;
+    ;;NOTE When  ELL is  an improper  list: in  the "improper"  position there  is as
+    ;;symbol representing an  object-type name, not a list-type  name.  (Marco Maggi;
+    ;;Wed Oct 28, 2015)
+    ;;
     (cond ((symbol? ell)
-  	   (core-prim-id ell))
+  	   (fabricate-list-type-identifier (core-prim-id ell)))
   	  ((pair? ell)
   	   (cons (core-prim-id   (car ell))
   		 (%any-list->ids (cdr ell))))
