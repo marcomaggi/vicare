@@ -1880,7 +1880,7 @@
     ((_ ?who)
      (declare-parameter ?who T:object))
     ((_ ?who ?value-tag)
-     (declare-core-primitive current-input-port
+     (declare-core-primitive ?who
 	 (safe)
        (signatures
 	(()			=> (?value-tag))
