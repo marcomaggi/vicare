@@ -137,7 +137,7 @@
 (declare-core-primitive vector-ref
     (safe)
   (signatures
-   ((T:vector T:fixnum)	=> (T:char)))
+   ((T:vector T:fixnum)	=> (T:object)))
   (attributes
    ((_ _)		foldable effect-free)))
 
@@ -274,7 +274,7 @@
 (declare-core-primitive $vector-ref
     (unsafe)
   (signatures
-   ((T:vector T:fixnum)		=> (T:char)))
+   ((T:vector T:fixnum)		=> (T:object)))
   (attributes
    ((_ _)			foldable effect-free)))
 
