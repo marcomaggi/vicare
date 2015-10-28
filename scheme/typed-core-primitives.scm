@@ -992,7 +992,7 @@
 (declare-core-primitive integer->char
     (safe)
   (signatures
-   ((<fixnum>) => (<char>))))
+   ((<non-negative-fixnum>) => (<char>))))
 
 (declare-type-predicate char? <char>)
 
@@ -1001,12 +1001,12 @@
 (declare-core-primitive char->integer
     (safe)
   (signatures
-   ((<char>) => (<fixnum>))))
+   ((<char>) => (<non-negative-fixnum>))))
 
 (declare-core-primitive char->fixnum
     (safe)
   (signatures
-   ((<char>) => (<fixnum>))))
+   ((<char>) => (<non-negative-fixnum>))))
 
 /section)
 
@@ -1674,8 +1674,8 @@
 (declare-core-primitive make-vector
     (safe)
   (signatures
-   ((<fixnum>)			=> (<vector>))
-   ((<fixnum> _)		=> (<vector>)))
+   ((<non-negative-fixnum>)			=> (<vector>))
+   ((<non-negative-fixnum> _)		=> (<vector>)))
   ;;Not foldable because it must return a newly allocated vector.
   (attributes
    ((0)				effect-free result-true)
@@ -1714,7 +1714,7 @@
 (declare-core-primitive vector-length
     (safe)
   (signatures
-   ((<vector>)			=> (<fixnum>)))
+   ((<vector>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true))
   (replacements
@@ -1730,7 +1730,7 @@
 (declare-core-primitive vector-ref
     (safe)
   (signatures
-   ((<vector> <fixnum>)	=> (<top>)))
+   ((<vector> <non-negative-fixnum>)	=> (<top>)))
   (attributes
    ((_ _)		foldable effect-free)))
 
@@ -1741,7 +1741,7 @@
 (declare-core-primitive vector-set!
     (safe)
   (signatures
-   ((<vector> <fixnum> _)	=> (<void>)))
+   ((<vector> <non-negative-fixnum> _)	=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 
@@ -1841,7 +1841,7 @@
 (declare-core-primitive $make-vector
     (unsafe)
   (signatures
-   ((<fixnum>)			=> (<vector>)))
+   ((<non-negative-fixnum>)			=> (<vector>)))
   ;;Not foldable because it must return a newly allocated bytevector.
   (attributes
    ((_)				effect-free result-true)))
@@ -1857,7 +1857,7 @@
 (declare-core-primitive $vector-length
     (unsafe)
   (signatures
-   ((<vector>)			=> (<fixnum>)))
+   ((<vector>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -1867,14 +1867,14 @@
 (declare-core-primitive $vector-ref
     (unsafe)
   (signatures
-   ((<vector> <fixnum>)		=> (<top>)))
+   ((<vector> <non-negative-fixnum>)		=> (<top>)))
   (attributes
    ((_ _)			foldable effect-free)))
 
 (declare-core-primitive $vector-set!
     (unsafe)
   (signatures
-   ((<vector> <fixnum> _)	=> (<void>)))
+   ((<vector> <non-negative-fixnum> _)	=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 

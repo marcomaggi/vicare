@@ -179,7 +179,8 @@
     => '(a))
 
   (check-for-assertion-violation
-      (vector-set! (vector 'a 'b 'c) -1 'a)
+      (let ((port (open-string-input-port "-1")))
+	(vector-set! (vector 'a 'b 'c) (read port) 'a))
     => '(-1))
 
   (check-for-assertion-violation
@@ -235,7 +236,8 @@
 
   ;;negative
   (check-for-assertion-violation
-      (make-vector -1 'A)
+      (let ((port (open-string-input-port "-1")))
+	(make-vector (read port) 'A))
     => '(-1))
 
   ;;not a fixnum
