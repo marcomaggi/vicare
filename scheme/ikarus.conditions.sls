@@ -408,7 +408,10 @@
 		  make-h_errno-condition h_errno-condition?
 		  condition-h_errno
 
+		  &interrupted &interrupted-rtd &interrupted-rcd
 		  interrupted-condition? make-interrupted-condition
+
+		  &source-position &source-position-rtd &source-position-rcd
 		  make-source-position-condition source-position-condition?
 		  source-position-port-id
 		  source-position-byte source-position-character

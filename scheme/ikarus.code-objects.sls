@@ -38,7 +38,8 @@
     ;;everything here using the system  libraries and not loading external libraries.
     ;;(Marco Maggi; Fri May 23, 2014)
     (vicare system $fx)
-    (vicare system $codes)
+    (except (vicare system $codes)
+	    code-reloc-vector->sexp)
     (prefix (vicare platform words)
 	    words.))
 
