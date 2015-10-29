@@ -1870,64 +1870,111 @@ The type predicate is @func{vector?}.  Return @true{} if @var{obj} is a
 vector object; otherwise return @false{}.
 @end defop
 
+@c ------------------------------------------------------------------------
 
-@deftypemethod @class{vector} @aclass{boolean} length @var{self}
+@subsubheading Inspection
+
+
+@deftypemethod @class{vector} @aclass{non-negative-fixnum} length @var{self}
 Apply @func{vector-length} to the instance.
 @end deftypemethod
 
+@c ------------------------------------------------------------------------
 
-@deftypemethod @class{vector} @aclass{boolean} ref @var{self} @var{idx}
+@subsubheading Accessors and mutators
+
+
+@deftypemethod @class{vector} @aclass{top} ref @var{self} @var{idx}
 Apply @func{vector-ref} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} set! @var{self} @var{idx} @var{obj}
+@deftypemethod @class{vector} @aclass{void} set! @var{self} @var{idx} @var{obj}
 Apply @func{vector-set!} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} ref @var{self} @var{obj}
+@deftypemethod @class{vector} @aclass{void} fill! @var{self} @var{obj}
 Apply @func{vector-fill!} to the instance and the argument.
 @end deftypemethod
 
+@c ------------------------------------------------------------------------
 
-@deftypemethod @class{vector} @aclass{boolean} subvector @var{self} @var{begin} @var{end}
+@subsubheading Other constructors
+
+
+@deftypemethod @class{vector} @aclass{vector} subvector @var{self} @var{begin} @var{end}
 Apply @func{subvector} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} map @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{vector} append @var{self} @var{vec} @dots{}
+Apply @func{vector-append} to the instance and the arguments.
+@end deftypemethod
+
+
+@deftypemethod @class{vector} @aclass{vector} resize @var{self} @var{new-length}
+@deftypemethodx @class{vector} @aclass{vector} resize @var{self} @var{new-length} @var{fill}
+Apply @func{vector-resize} to the instance and the arguments.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Iteration and searching
+
+
+@deftypemethod @class{vector} @aclass{vector} map @var{self} @var{proc} @var{vec} @dots{}
 Apply @func{vector-map} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} for-each @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{void} for-each @var{self} @var{proc} @var{vec} @dots{}
 Apply @func{vector-for-each} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} for-all @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} for-all @var{self} @var{proc} @var{vec} @dots{}
 Apply @func{vector-for-all} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} exists @var{self} @var{proc} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} exists @var{self} @var{proc} @var{vec} @dots{}
 Apply @func{vector-exists} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} find @var{self} @var{proc}
+@deftypemethod @class{vector} @aclass{top} find @var{self} @var{proc}
 Apply @func{vector-find} to the instance and the argument.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} fold-left @var{self} @var{proc} @var{knil} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} fold-left @var{self} @var{proc} @var{knil} @var{vec} @dots{}
 Apply @func{vector-fold-left} to the instance and the arguments.
 @end deftypemethod
 
 
-@deftypemethod @class{vector} @aclass{boolean} fold-right @var{self} @var{proc} @var{knil} @var{vec} @dots{}
+@deftypemethod @class{vector} @aclass{top} fold-right @var{self} @var{proc} @var{knil} @var{vec} @dots{}
 Apply @func{vector-fold-right} to the instance and the arguments.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Sorting
+
+
+@deftypemethod @class{vector} @aclass{vector} sort @var{self} @var{proc}
+@deftypemethodx @class{vector} @aclass{vector} sort! @var{self} @var{proc}
+Apply @func{vector-sort} or @func{vector-sort!} to the instance and the
+argument.
+@end deftypemethod
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Conversion
+
+
+@deftypemethod @class{vector} @aclass{list} list @var{self}
+Apply @func{vector->list} to the instance.
 @end deftypemethod
 
 @c page

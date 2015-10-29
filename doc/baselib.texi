@@ -36,7 +36,6 @@ associated with Scheme.
 * baselib tail call::           Tail calls and tail contexts.
 @end menu
 
-
 @c page
 @node baselib types
 @section Base types
@@ -3292,7 +3291,7 @@ initialized to the elements of the list @var{list}.
 
 @deffn Procedure {vector-fill!} @var{vector fill}
 Store @var{fill} in every element of @var{vector} and returns
-unspecified.
+unspecified values.
 @end deffn
 
 

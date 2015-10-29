@@ -53,6 +53,7 @@
     <vector>-for-all			<vector>-exists
     <vector>-find
     <vector>-fold-right			<vector>-fold-left
+    <vector>-sort			<vector>-sort!
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
@@ -486,6 +487,12 @@
    (vector-fold-left combine knil vec))
   ((vec combine knil . vec*)
    (apply vector-fold-left combine knil vec vec*)))
+
+(define (<vector>-sort vec proc)
+  (vector-sort proc vec))
+
+(define (<vector>-sort! vec proc)
+  (vector-sort! proc vec))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

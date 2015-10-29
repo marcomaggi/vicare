@@ -3954,6 +3954,8 @@
     (<vector>-find)
     (<vector>-fold-right)
     (<vector>-fold-left)
+    (<vector>-sort)
+    (<vector>-sort!)
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme list object types

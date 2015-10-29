@@ -257,18 +257,24 @@
     <top>
   vector vector?
   (methods
+   (empty?			vector-empty?)
    (length			vector-length)
    (ref				vector-ref)
    (set!			vector-set!)
    (fill!			vector-fill!)
+   (append			vector-append)
    (subvector			subvector)
+   (resize			vector-resize)
    (map				<vector>-map)
    (for-each			<vector>-for-each)
    (for-all			<vector>-for-all)
    (exists			<vector>-exists)
    (find			<vector>-find)
    (fold-left			<vector>-fold-left)
-   (fold-right			<vector>-fold-right)))
+   (fold-right			<vector>-fold-right)
+   (sort			<vector>-sort)
+   (sort!			<vector>-sort!)
+   (list			vector->list)))
 
 (define-scheme-type <pair>
     <top>

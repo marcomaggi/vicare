@@ -1,7 +1,7 @@
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for the <string> type
-;;;Date: Mon Oct 26, 2015
+;;;Contents: tests for the <vector> type
+;;;Date: Thu Oct 29, 2015
 ;;;
 ;;;Abstract
 ;;;
@@ -24,14 +24,14 @@
 
 
 #!vicare
-(program (test-types-objects-strings)
+(program (test-types-objects-vectors)
   (options typed-language)
   (import (vicare)
     (prefix (vicare expander) xp.)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare typed language: tests for <string> objects\n")
+(check-display "*** testing Vicare typed language: tests for <vector> objects\n")
 
 
 ;;;; helpers
@@ -45,17 +45,17 @@
 
 (parametrise ((check-test-name		'predicate))
 
-  (check-for-true	(is-a? "ciao" <string>))
-  (check-for-false	(is-a? 123 <string>))
+  (check-for-true	(is-a? '#(1 2 3 4) <vector>))
+  (check-for-false	(is-a? 123 <vector>))
 
-  (check-for-true	(let (({O <string>} "ciao"))
-			  (is-a? O <string>)))
+  (check-for-true	(let (({O <vector>} '#(1 2 3 4)))
+			  (is-a? O <vector>)))
 
-  (check-for-true	(let (({O <top>} "ciao"))
-			  (is-a? O <string>)))
+  (check-for-true	(let (({O <top>} '#(1 2 3 4)))
+			  (is-a? O <vector>)))
 
   (check-for-false	(let (({O <top>} 123))
-			  (is-a? O <string>)))
+			  (is-a? O <vector>)))
 
   (void))
 
@@ -63,13 +63,13 @@
 (parametrise ((check-test-name		'constructor))
 
   (check
-      (new <string> #\a #\b #\c)
-    => "abc")
+      (new <vector> 1 2 3)
+    => '#(1 2 3))
 
   (check
-      (xp.type-signature-tags (type-of (new <string> (read))))
+      (xp.type-signature-tags (type-of (new <vector> (read))))
     (=> syntax=?)
-    (list #'<string>))
+    (list #'<vector>))
 
   (void))
 
@@ -77,35 +77,40 @@
 (parametrise ((check-test-name		'methods))
 
   (check
-      (let (({O <string>} "ciao"))
+      (let (({O <vector>} '#(1 2 3 4)))
 	(.empty? O))
     => #f)
 
   (check
-      (let (({O <string>} ""))
+      (let (({O <vector>} '#()))
 	(.empty? O))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (({O <string>} "ciao")
-	    ({P <string>} " mamma"))
+      (let (({O <vector>} '#(1 2 3 4))
+	    ({P <vector>} '#(5 6 7 8)))
 	(.append O P))
-    => "ciao mamma")
+    => '#(1 2 3 4 5 6 7 8))
+
+  (check
+      (let (({O <vector>} '#(1 2 3 4)))
+	(.resize O 2))
+    => '#(1 2))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (with-result
-	(let (({O <string>} "ciao"))
+	(let (({O <vector>} '#(1 2 3 4)))
 	  (.for-each O add-result)))
-    => '(#!void (#\c #\i #\a #\o)))
+    => '(#!void (1 2 3 4)))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (({O <string>} "ciao"))
+      (let (({O <vector>} '#(1 2 3 4)))
 	(fixnum? (.hash O)))
     => #t)
 
@@ -115,14 +120,14 @@
 (parametrise ((check-test-name		'late-binding))
 
   (check
-      (let (({O <string>} "ciao"))
+      (let (({O <vector>} '#(1 2 3 4)))
 	(method-call-late-binding 'empty? O))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (({O <string>} "ciao"))
+      (let (({O <vector>} '#(1 2 3 4)))
 	(fixnum? (method-call-late-binding 'hash O)))
     => #t)
 
