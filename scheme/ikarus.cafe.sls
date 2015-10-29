@@ -19,6 +19,7 @@
     new-cafe waiter-prompt-string cafe-input-port
     cafe-nested-depth)
   (import (except (vicare)
+		  reset
 		  new-cafe
 		  waiter-prompt-string
 		  cafe-input-port))

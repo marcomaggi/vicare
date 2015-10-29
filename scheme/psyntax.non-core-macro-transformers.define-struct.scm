@@ -117,6 +117,9 @@
 	     (string->id (string-append "$set-" type.str "-" x "!")))
 	field*.str))
 
+    (define constructor-arg*.sym
+      (map gensym field*.str))
+
 ;;; --------------------------------------------------------------------
 
     (define accessor-sexp*
@@ -191,9 +194,9 @@
 				 ,safe-accessors-table.sexp
 				 ,safe-mutators-table.sexp
 				 (quote ())))
-	(define ((brace ,constructor.id ,type.id) . ,field*.stx)
+	(define ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
 	  (receive-and-return (S)
-	      ($struct ',std ,@field*.id)
+	      ($struct ',std . ,constructor-arg*.sym)
 	    (when ($std-destructor ',std)
 	      ($struct-guardian S))))
 	,@unsafe-accessor-sexp*

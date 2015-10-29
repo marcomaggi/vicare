@@ -1951,6 +1951,8 @@
 (declare-core-primitive cons
     (safe)
   (signatures
+   ((<top> <nlist>)		=> (<nlist>))
+   ((<top> <list>)		=> (<nlist>))
    ((<top> <top>)		=> (<pair>))))
 
 (declare-core-primitive list

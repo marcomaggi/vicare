@@ -5735,18 +5735,21 @@
 			  (cond ((assq label srclibs.global-env)
 				 => (lambda (label.descr)
 				      (let ((descr (cdr label.descr)))
-					;;Here we expect DESCR to have the format:
-					;;
-					;;   (?type . ?loc)
-					;;
 					(case (car descr)
-					  ((global)
-					   (total-export-subst-clt    (cons prim-name label))
+					  ((global global-typed)
+					   ;;Here we expect DESCR to have the format:
+					   ;;
+					   ;;   (global       . ?loc)
+					   ;;   (global-typed . ?loc)
+					   ;;
+					   (total-export-subst-clt
+					    (cons prim-name label))
 					   (total-global-env-clt
-					    (cons label (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
-							       => cdr)
-							      (else
-							       (cons 'core-prim prim-name)))))
+					    (cons label
+						  (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
+							 => cdr)
+							(else
+							 (cons 'core-prim prim-name)))))
 					   (total-export-primlocs-clt (cons prim-name (cdr descr))))
 					  (else
 					   (error __who__ "invalid binding for identifier" label.descr prim-name))))))

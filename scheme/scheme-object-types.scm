@@ -276,13 +276,6 @@
    (sort!			<vector>-sort!)
    (list			vector->list)))
 
-(define-scheme-type <pair>
-    <top>
-  cons pair?
-  (methods
-   (car		car)
-   (cdr		cdr)))
-
 (define-scheme-type <bytevector>
     <top>
   make-bytevector bytevector?)
@@ -403,6 +396,13 @@
 
 
 ;;;; list types
+
+(define-scheme-type <pair>
+    <top>
+  cons pair?
+  (methods
+   (car		car)
+   (cdr		cdr)))
 
 (define-scheme-type <list>
     <top>
