@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,16 +25,26 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.strings-table)
   (export
+    ;;These are only for internal use.
     $initialize-interned-strings-table!
     intern-string
     $interned-strings)
-  (import (except (vicare)
-		  intern-string)
-    (vicare arguments validation)
-    (vicare unsafe operations))
+  (import (vicare)
+    (only (vicare system $strings)
+	  $string-length
+	  $string=)
+    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Thu Oct
+    ;;29, 2015)
+    #;(only (vicare system $hashtables) $string-hash)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 29,
+    ;;2015)
+    (only (ikarus hash-tables)
+	  $string-hash)
+    (only (vicare system $fx)
+	  $fxzero?))
 
 
 (define STRING-TABLE #f)
@@ -42,16 +52,16 @@
 (define ($initialize-interned-strings-table!)
   (set! STRING-TABLE (make-hashtable $string-hash $string=)))
 
-(define (intern-string str)
-  (define who 'intern-string)
-  (with-arguments-validation (who)
-      ((string	str))
-    (if ($fxzero? ($string-length str))
-	str
-      (or (hashtable-ref STRING-TABLE str #f)
-	  (begin
-	    (hashtable-set! STRING-TABLE str str)
-	    str)))))
+(define* (intern-string {str string?})
+  ;;We do  not cache  empty strings,  because sometimes  an empty  string is  used as
+  ;;small-memory-usage unique  object.  For example:  the expander's marks  are empty
+  ;;strings.
+  (if ($fxzero? ($string-length str))
+      str
+    (or (hashtable-ref STRING-TABLE str #f)
+	(begin
+	  (hashtable-set! STRING-TABLE str str)
+	  str))))
 
 (define ($interned-strings)
   (hashtable-keys STRING-TABLE))
@@ -59,6 +69,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
