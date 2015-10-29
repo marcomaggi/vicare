@@ -177,7 +177,7 @@
   (signatures
    ((T:procedure T:vector)	=> (T:vector)))
   (attributes
-   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;Not foldable  because it  must return  a new vector  at every  application.  Not
    ;;effect-free because it invokes an unknown procedure.
    ((_ _)			result-true)))
 
@@ -186,8 +186,8 @@
   (signatures
    ((T:procedure T:vector)	=> (T:void)))
   (attributes
-   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
-   ;;effect-free because it invokes an unknown procedure and it mutates the operand.
+   ;;Not foldable and not effect-free because  it invokes an unknown procedure and it
+   ;;mutates the operand.
    ((_ _)			result-true)))
 
 ;;; --------------------------------------------------------------------
@@ -198,7 +198,7 @@
   (signatures
    ((T:procedure T:vector . T:vector)		=> (T:void)))
   (attributes
-   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;Not  foldable because  it must  return  a new  vector at  every application.   Not
    ;;effect-free becuse it invokes an unknown procedure.
    ((_ _ . _)			result-true)))
 
@@ -207,27 +207,21 @@
   (signatures
    ((T:procedure T:vector . T:vector)		=> (T:vector)))
   (attributes
-   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;Not foldable  because it  must return  a new vector  at every  application.  Not
    ;;effect-free becuse it invokes an unknown procedure.
    ((_ _ . _)			result-true)))
 
 (declare-core-primitive vector-for-all
     (safe)
+  ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
   (signatures
-   ((T:procedure T:vector . T:vector)		=> (T:void)))
-  (attributes
-   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
-   ;;effect-free becuse it invokes an unknown procedure.
-   ((_ _ . _)			result-true)))
+   ((T:procedure T:vector . T:vector)		=> (T:void))))
 
 (declare-core-primitive vector-exists
     (safe)
+  ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
   (signatures
-   ((T:procedure T:vector . T:vector)		=> (T:void)))
-  (attributes
-   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
-   ;;effect-free becuse it invokes an unknown procedure.
-   ((_ _ . _)			result-true)))
+   ((T:procedure T:vector . T:vector)		=> (T:void))))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -249,7 +243,7 @@
     (unsafe)
   (signatures
    ((T:non-negative-fixnum)	=> (T:vector)))
-  ;;Not foldable because it must return a newly allocated bytevector.
+  ;;Not foldable because it must return a newly allocated vector.
   (attributes
    ((_)				effect-free result-true)))
 
@@ -310,7 +304,7 @@
 (declare-core-primitive $vector-exists1
     (unsafe)
   (signatures
-   ((T:procedure T:vector)	=> (T:vector))))
+   ((T:procedure T:vector)	=> (T:object))))
 
 
 ;;;; done
