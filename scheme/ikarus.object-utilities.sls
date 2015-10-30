@@ -497,7 +497,7 @@
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors
 
-(include "scheme-object-types.scm" #t)
+(include "makefile.scheme-object-types.scm" #t)
 
 
 ;;;; done

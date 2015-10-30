@@ -183,6 +183,16 @@
     <non-negative-fixnum>
   #f fxzero?)
 
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <byte>
+    <fixnum>
+  #f fixnum?)
+
+(define-scheme-type <octet>
+    <non-negative-fixnum>
+  #f fixnum?)
+
 
 ;;;; compound types
 

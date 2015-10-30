@@ -1305,7 +1305,7 @@
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
-(include "scheme-object-types.scm" #t)
+(include "makefile.scheme-object-types.scm" #t)
 
 
 ;;;; core syntactic binding descriptors: built-in list object types
@@ -1348,7 +1348,7 @@
 (define VICARE-TYPED-CORE-PRIMITIVES
   '())
 
-(include "typed-core-primitives.scm" #t)
+(include "makefile.typed-core-primitives.scm" #t)
 
 
 (define-constant LIBRARY-LEGEND
