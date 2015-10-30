@@ -73,6 +73,23 @@
     (=> syntax=?)
     (list #'<list>))
 
+  (check
+      (xp.type-signature-tags (type-of (new <list>)))
+    (=> syntax=?)
+    (list #'<list>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (xp.type-signature-tags (type-of (list)))
+    (=> syntax=?)
+    (list #'<null>))
+
+  (check
+      (xp.type-signature-tags (type-of (list 1)))
+    (=> syntax=?)
+    (list #'<nlist>))
+
   #t)
 
 

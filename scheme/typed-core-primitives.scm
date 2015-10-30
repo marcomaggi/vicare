@@ -1952,13 +1952,14 @@
     (safe)
   (signatures
    ((<top> <nlist>)		=> (<nlist>))
-   ((<top> <list>)		=> (<nlist>))
+   ((<top> <null>)		=> (<nlist>))
    ((<top> <top>)		=> (<pair>))))
 
 (declare-core-primitive list
     (safe)
   (signatures
-   (<top>			=> (<list>))))
+   (()				=> (<null>))
+   ((<top> . <top>)		=> (<nlist>))))
 
 ;;;
 

@@ -66,6 +66,23 @@
     (=> syntax=?)
     (list #'<pair>))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (xp.type-signature-tags (type-of (cons 1 2)))
+    (=> syntax=?)
+    (list #'<pair>))
+
+  (check
+      (xp.type-signature-tags (type-of (list 1 '(2 3))))
+    (=> syntax=?)
+    (list #'<nlist>))
+
+  (check
+      (xp.type-signature-tags (type-of (list 1 '())))
+    (=> syntax=?)
+    (list #'<nlist>))
+
   #t)
 
 
