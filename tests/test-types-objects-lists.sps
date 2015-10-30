@@ -45,7 +45,8 @@
 
 (parametrise ((check-test-name	'predicate))
 
-  (check-for-false	(is-a? '(1 . 2) <list>))
+  (check-for-true	(is-a? '(1 . 2) <list>))
+  (check-for-true	(is-a? '() <list>))
   (check-for-false	(is-a? 123 <list>))
 
   (check-for-true	(is-a? '(1) <list>))
@@ -71,12 +72,12 @@
   (check
       (xp.type-signature-tags (type-of (new <list> (read) (read))))
     (=> syntax=?)
-    (list #'<list>))
+    (list #'<nlist>))
 
   (check
       (xp.type-signature-tags (type-of (new <list>)))
     (=> syntax=?)
-    (list #'<list>))
+    (list #'<null>))
 
 ;;; --------------------------------------------------------------------
 

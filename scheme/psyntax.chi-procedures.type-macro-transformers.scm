@@ -99,12 +99,17 @@
     ;;   (assert-signature-and-return (<fixnum>) 123)
     ;;
     (chi-expr (bless
-	       `(assert-signature-and-return (,object-type.id) . ,rand*.stx))
+	       `(assert-signature-and-return (,object-type.id) (values . ,rand*.stx)))
 	      lexenv.run lexenv.expand))
 
 ;;; --------------------------------------------------------------------
 
   (define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
+    (chi-expr (bless
+	       `(assert-signature-and-return (,object-type.id) (,constructor.sexp . ,rand*.stx)))
+	      lexenv.run lexenv.expand))
+
+  #;(define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
     (define output-form.stx
       (cons (bless constructor.sexp) rand*.stx))
     (define output-form.psi

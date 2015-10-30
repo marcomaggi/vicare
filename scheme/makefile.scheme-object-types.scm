@@ -407,13 +407,6 @@
 
 ;;;; list types
 
-(define-scheme-type <pair>
-    <top>
-  cons pair?
-  (methods
-   (car		car)
-   (cdr		cdr)))
-
 (define-scheme-type <list>
     <top>
   list list?
@@ -421,16 +414,23 @@
    (car		car)
    (cdr		cdr)))
 
-(define-scheme-type <nlist>
+(define-scheme-type <null>
     <list>
-  nlist nlist?
+  <null>-constructor null?)
+
+(define-scheme-type <pair>
+    <list>
+  cons pair?
   (methods
    (car		car)
    (cdr		cdr)))
 
-(define-scheme-type <null>
-    <list>
-  <null>-constructor null?)
+(define-scheme-type <nlist>
+    <pair>
+  nlist nlist?
+  (methods
+   (car		car)
+   (cdr		cdr)))
 
 
 ;;;; done

@@ -952,8 +952,7 @@ et cetera.
 * types built-in numerics::     Type of numeric objects.
 * types built-in strings::      Type of string objects.
 * types built-in vectors::      Type of vector objects.
-* types built-in pairs::        Type of pair objects.
-* types built-in lists::        Types of lists.
+* types built-in lists::        Types of pairs and lists.
 * types built-in bytevectors::  Type of bytevector objects.
 * types built-in hashtables::   Type of hashtable objects.
 * types built-in structs::      Type of struct objects.
@@ -2026,46 +2025,14 @@ Apply @func{vector->list} to the instance.
 @end deftypemethod
 
 @c page
-@node types built-in pairs
-@subsection Type of pair objects
-
-
-@deftp {Built--in Type} <pair>
-@deftpx {Parent Type} <top>
-Type of pair objects.
-@end deftp
-
-
-@defop Constructor @class{pair} new <pair> @var{A} @var{D}
-The constructor is @func{cons}.  Return a new pair having @var{A} and
-@var{D} as car and cdr.
-@end defop
-
-
-@defop {Type predicate} @class{pair} is-a? @var{obj} <pair>
-@defopx {Type predicate} @class{pair} is-a? _ <pair>
-The type predicate is @func{pair?}.  Return @true{} if @var{obj} is a
-pair object; otherwise return @false{}.
-@end defop
-
-
-@defmethod @class{pair} car
-Apply @func{car} to the type instance.
-@end defmethod
-
-
-@defmethod @class{pair} cdr
-Apply @func{cdr} to the type instance.
-@end defmethod
-
-@c page
 @node types built-in lists
-@subsection Types of lists
+@subsection Types of pairs and lists
 
 
 @menu
-* types built-in lists proper::         Proper lists.
+* types built-in lists base::           Lists.
 * types built-in lists null::           Empty lists.
+* types built-in lists pairs::          Type of pair objects.
 * types built-in lists not-empty::      Not-empty proper lists.
 * types built-in lists chars::          Proper lists of @class{char}.
 * types built-in lists strings::        Proper lists of @class{string}.
@@ -2073,13 +2040,15 @@ Apply @func{cdr} to the type instance.
 @end menu
 
 @c page
-@node types built-in lists proper
-@subsubsection Proper lists
+@node types built-in lists base
+@subsubsection Lists
 
 
 @deftp {Built--in Type} @aclass{list}
 @deftpx {Parent Type} @aclass{top}
-Type of proper lists, both null and non--empty.
+Type of lists, whatever their structure.  The fact that a list structure
+is non--empty, non--circular, proper or improper must be checked at
+run--time.
 @end deftp
 
 
@@ -2111,12 +2080,44 @@ null; otherwise return @false{}.
 @end defop
 
 @c page
+@node types built-in lists pairs
+@subsubsection Type of pair objects
+
+
+@deftp {Built--in Type} @aclass{pair}
+@deftpx {Parent Type} @aclass{list}
+Type of pair objects.
+@end deftp
+
+
+@defop Constructor @class{pair} new @aclass{pair} @var{A} @var{D}
+The constructor is @func{cons}.  Return a new pair having @var{A} and
+@var{D} as car and cdr.
+@end defop
+
+
+@defop {Type predicate} @class{pair} is-a? @var{obj} @aclass{pair}
+The type predicate is @func{pair?}.  Return @true{} if @var{obj} is a
+pair object; otherwise return @false{}.
+@end defop
+
+
+@defmethod @class{pair} car
+Apply @func{car} to the type instance.
+@end defmethod
+
+
+@defmethod @class{pair} cdr
+Apply @func{cdr} to the type instance.
+@end defmethod
+
+@c page
 @node types built-in lists not-empty
 @subsubsection Not--empty proper lists
 
 
 @deftp {Built--in Type} @aclass{nlist}
-@deftpx {Parent Type} @aclass{list}
+@deftpx {Parent Type} @aclass{pair}
 Type of non--empty lists.
 @end deftp
 

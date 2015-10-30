@@ -1283,7 +1283,7 @@
 (declare-core-primitive string-reverse-and-concatenate
     (safe)
   (signatures
-   ((<list>)			=> (<string>)))
+   ((<string*>)			=> (<string>)))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -1485,7 +1485,7 @@
 (declare-core-primitive string->list
     (safe)
   (signatures
-   ((<string>)			=> (<list>)))
+   ((<string>)			=> (<char*>)))
   (attributes
    ;;Not foldable because it must return a new list at every application.
    ((_)				effect-free result-true)))
@@ -1524,7 +1524,7 @@
 (declare-core-primitive $string-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> <list>)	=> (<string>)))
+   ((<exact-integer> <string*>)	=> (<string>)))
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
@@ -1533,7 +1533,7 @@
 (declare-core-primitive $string-reverse-and-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> <list>)	=> (<string>)))
+   ((<exact-integer> <string*>)	=> (<string>)))
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
@@ -1552,7 +1552,7 @@
 (declare-core-primitive $string-total-length
     (unsafe)
   (signatures
-   ((<exact-integer> <list>)	=> (<exact-integer>)))
+   ((<exact-integer> <string*>)	=> (<exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -1951,8 +1951,7 @@
 (declare-core-primitive cons
     (safe)
   (signatures
-   ((<top> <nlist>)		=> (<nlist>))
-   ((<top> <null>)		=> (<nlist>))
+   ((<top> <list>)		=> (<nlist>))
    ((<top> <top>)		=> (<pair>))))
 
 (declare-core-primitive list
@@ -1970,7 +1969,7 @@
 
 ;;;
 
-(declare-type-predicate pair? <pair> <nlist>)
+(declare-type-predicate pair? <pair>)
 
 (declare-type-predicate list? <list>)
 
