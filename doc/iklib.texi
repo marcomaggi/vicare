@@ -14061,6 +14061,18 @@ negative, non--positive, non--negative; otherwise return @false{}.  If
 @var{obj} is not a fixnum: return @false{}.
 @end defun
 
+
+@defun byte-fixnum? @var{obj}
+Return @true{} if @var{obj} is a byte value.  A ``byte'' is a fixnum in
+the range @math{[-128, 127]}.
+@end defun
+
+
+@defun octet-fixnum? @var{obj}
+Return @true{} if @var{obj} is an octet value.  An ``octet'' is a fixnum
+in the range @math{[0, 255]}.
+@end defun
+
 @c page
 @node iklib fixnums comparison
 @subsection Comparison functions

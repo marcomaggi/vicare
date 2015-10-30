@@ -1354,6 +1354,8 @@ a single boolean.  There is no constructor.  There is no type predicate.
 * types built-in numerics ratnums::          Type of ratnum values.
 * types built-in numerics compnums::         Type of compnum values.
 * types built-in numerics cflonums::         Type of cflonum values.
+* types built-in numerics bytes::            Type of byte values.
+* types built-in numerics octets::           Type of octet values.
 @end menu
 
 @c page
@@ -1555,6 +1557,52 @@ Type of compnum values.  There is no constructor.  The type predicate is
 Type of cflonum values.  There is no constructor.  The type predicate is
 @func{cflonum?}.
 @end deftp
+
+@c page
+@node types built-in numerics bytes
+@subsubsection Type of byte values
+
+
+@deftp {Built--in Type} @class{byte}
+@deftpx {Parent Type} @aclass{fixnum}
+Type of byte values.  A ``byte'' is a fixnum in the range @math{[-128,
+127]}.
+@end deftp
+
+
+@defop Constructor @class{byte} new @aclass{byte} @var{obj}
+There is no constructor.  Validate @var{obj} as byte value and return
+it.
+@end defop
+
+
+@defop {Type predicate} @class{byte} is-a? @var{obj} @aclass{byte}
+The type predicate is @func{byte-fixnum?}.  Return @true{} if @var{obj}
+is a byte value; otherwise return @false{}.
+@end defop
+
+@c page
+@node types built-in numerics octets
+@subsubsection Type of octet values
+
+
+@deftp {Built--in Type} @class{octet}
+@deftpx {Parent Type} @aclass{non-negative-fixnum}
+Type of octet values.  An ``octet'' is a fixnum in the range @math{[0,
+255]}.  There is no constructor.
+@end deftp
+
+
+@defop Constructor @class{byte} new @aclass{octet} @var{obj}
+There is no constructor.  Validate @var{obj} as octet value and return
+it.
+@end defop
+
+
+@defop {Type predicate} @class{octet} is-a? @var{obj} @aclass{octet}
+The type predicate is @func{octet-fixnum?}.  Return @true{} if @var{obj}
+is a octet value; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in strings

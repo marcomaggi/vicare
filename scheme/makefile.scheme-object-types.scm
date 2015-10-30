@@ -99,7 +99,7 @@
 
 (define-scheme-type <number>
     <top>
-  #f number?)
+  #t number?)
 
 (define-scheme-type <complex>
     <number>
@@ -107,91 +107,91 @@
 
 (define-scheme-type <real-valued>
     <complex>
-  #f real-valued?)
+  #t real-valued?)
 
 (define-scheme-type <real>
     <real-valued>
-  #f real?)
+  #t real?)
 
 (define-scheme-type <rational-valued>
     <real>
-  #f rational-valued?)
+  #t rational-valued?)
 
 (define-scheme-type <rational>
     <rational-valued>
-  #f rational?)
+  #t rational?)
 
 ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
 ;;
 (define-scheme-type <integer-valued>
     <rational-valued>
-  #f integer-valued?)
+  #t integer-valued?)
 
 ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
 ;;
 (define-scheme-type <integer>
     <rational>
-  #f integer?)
+  #t integer?)
 
 (define-scheme-type <exact-integer>
     <integer>
-  #f exact-integer?)
+  #t exact-integer?)
 
 (define-scheme-type <fixnum>
     <exact-integer>
-  #f fixnum?)
+  #t fixnum?)
 
 (define-scheme-type <flonum>
     <real-valued>
-  #f flonum?)
+  #t flonum?)
 
 (define-scheme-type <ratnum>
     <rational>
-  #f ratnum?)
+  #t ratnum?)
 
 (define-scheme-type <bignum>
     <exact-integer>
-  #f bignum?)
+  #t bignum?)
 
 (define-scheme-type <compnum>
     <complex>
-  #f compnum?)
+  #t compnum?)
 
 (define-scheme-type <cflonum>
     <complex>
-  #f cflonum?)
+  #t cflonum?)
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <non-negative-fixnum>
     <fixnum>
-  #f non-negative-fixnum?)
+  #t non-negative-fixnum?)
 
 ;; (define-scheme-type <non-positive-fixnum>
 ;;     <fixnum>
-;;   #f non-positive-fixnum?)
+;;   #t non-positive-fixnum?)
 
 (define-scheme-type <negative-fixnum>
     <fixnum>
-  #f negative-fixnum?)
+  #t negative-fixnum?)
 
 (define-scheme-type <positive-fixnum>
     <non-negative-fixnum>
-  #f positive-fixnum?)
+  #t positive-fixnum?)
 
 (define-scheme-type <zero-fixnum>
     <non-negative-fixnum>
-  #f fxzero?)
+  #t fxzero?)
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <byte>
     <fixnum>
-  #f fixnum?)
+  #t byte-fixnum?)
 
 (define-scheme-type <octet>
     <non-negative-fixnum>
-  #f fixnum?)
+  #t octet-fixnum?)
 
 
 ;;;; compound types

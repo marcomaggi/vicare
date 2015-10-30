@@ -68,6 +68,7 @@
 		  keyword->string		string->keyword
 		  keyword-hash
 		  char->fixnum
+		  byte-fixnum?			octet-fixnum?
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
 		  equal-hash
@@ -128,7 +129,9 @@
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
     ;;2015)
     (only (ikarus fixnums)
-	  char->fixnum)
+	  char->fixnum
+	  byte-fixnum?
+	  octet-fixnum?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
     ;;2015)
     (only (ikarus lists)
@@ -383,45 +386,7 @@
    ))
 
 
-;;;; built-in object-types descriptors: definitions
-
-(define-auxiliary-syntaxes methods)
-
-(define-syntax (define-scheme-type stx)
-  (syntax-case stx (methods)
-    ((?kwd ?type-name ?parent-name ?maker ?pred)
-     #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
-    ((_ ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
-     (let* ((type-name.sym	(syntax->datum #'?type-name))
-	    (parent-name.sexp	(syntax->datum #'?parent-name))
-	    (type-uid.sym	(string->symbol (string-append "vicare:scheme-type:" (symbol->string type-name.sym))))
-	    (type-uids-list	(cons type-uid.sym (if parent-name.sexp
-						       (getprop parent-name.sexp 'type-uids-list)
-						     '()))))
-       (define (%datum->syntax obj)
-	 (datum->syntax #'?type-name obj))
-       (define (%mk-btd-name type.sym)
-	 (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
-       (putprop type-name.sym 'type-uids-list type-uids-list)
-       ;;BTD stands for "Built-in Type Descriptor".
-       (with-syntax
-	   ((BTD-NAME		(%mk-btd-name type-name.sym))
-	    (PARENT-NAME	(and parent-name.sexp
-				     (%mk-btd-name parent-name.sexp)))
-	    (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
-	    (RETRIEVER		(if (null? (syntax->datum #'((?method-name ?method-implementation-procedure) ...)))
-				    #f
-				  #'(lambda (btd method-name.sym)
-				      (case method-name.sym
-					((?method-name) ?method-implementation-procedure)
-					...
-					(else #f))))))
-	 #'(define BTD-NAME
-	     (make-scheme-type PARENT-NAME TYPE-UIDS-LIST RETRIEVER)))))
-    ))
-
-;;; --------------------------------------------------------------------
-;;; type helpers
+;;;; object type helpers: <top>
 
 (define (<top>-type-predicate obj)
   #t)
@@ -429,17 +394,29 @@
 (define (<top>-constructor obj)
   obj)
 
+
+;;;; object type helpers: <boolean>
+
+(define (<boolean>-constructor obj)
+  (if obj #t #f))
+
+
+;;;; object type helpers: <symbol>
+
 (case-define <symbol>-value
   ((sym)
    (symbol-value sym))
   ((sym val)
    (set-symbol-value! sym val)))
 
-(define (<boolean>-constructor obj)
-  (if obj #t #f))
+
+;;;; object type helpers: <null>
 
 (define (<null>-constructor)
   '())
+
+
+;;;; object type helpers: <string>
 
 (case-define <string>-for-each
   ((str func)
@@ -447,7 +424,8 @@
   ((str func . str*)
    (apply string-for-each func str str*)))
 
-;;;
+
+;;;; object type helpers: <vector>
 
 (case-define <vector>-for-each
   ((vec func)
@@ -493,6 +471,44 @@
 
 (define (<vector>-sort! vec proc)
   (vector-sort! proc vec))
+
+
+;;;; built-in object-types descriptors: definitions
+
+(define-auxiliary-syntaxes methods)
+
+(define-syntax (define-scheme-type stx)
+  (syntax-case stx (methods)
+    ((?kwd ?type-name ?parent-name ?maker ?pred)
+     #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
+    ((_ ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
+     (let* ((type-name.sym	(syntax->datum #'?type-name))
+	    (parent-name.sexp	(syntax->datum #'?parent-name))
+	    (type-uid.sym	(string->symbol (string-append "vicare:scheme-type:" (symbol->string type-name.sym))))
+	    (type-uids-list	(cons type-uid.sym (if parent-name.sexp
+						       (getprop parent-name.sexp 'type-uids-list)
+						     '()))))
+       (define (%datum->syntax obj)
+	 (datum->syntax #'?type-name obj))
+       (define (%mk-btd-name type.sym)
+	 (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
+       (putprop type-name.sym 'type-uids-list type-uids-list)
+       ;;BTD stands for "Built-in Type Descriptor".
+       (with-syntax
+	   ((BTD-NAME		(%mk-btd-name type-name.sym))
+	    (PARENT-NAME	(and parent-name.sexp
+				     (%mk-btd-name parent-name.sexp)))
+	    (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
+	    (RETRIEVER		(if (null? (syntax->datum #'((?method-name ?method-implementation-procedure) ...)))
+				    #f
+				  #'(lambda (btd method-name.sym)
+				      (case method-name.sym
+					((?method-name) ?method-implementation-procedure)
+					...
+					(else #f))))))
+	 #'(define BTD-NAME
+	     (make-scheme-type PARENT-NAME TYPE-UIDS-LIST RETRIEVER)))))
+    ))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

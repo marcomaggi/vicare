@@ -78,14 +78,33 @@
 					 ?type-id (list-type-spec.type-id ots) ?rand*))
 	       ((object-type-spec.constructor-sexp ots)
 		=> (lambda (constructor.sexp)
-		     (%build-object-constructor input-form.stx lexenv.run lexenv.expand ?type-id constructor.sexp ?rand*)))
+		     (if (boolean? constructor.sexp)
+			 (%build-object-with-validator input-form.stx lexenv.run lexenv.expand ?type-id ?rand*)
+		       (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand ?type-id constructor.sexp ?rand*))))
 	       (else
 		(%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-object-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
+  (define (%build-object-with-validator input-form.stx lexenv.run lexenv.expand object-type.id rand*.stx)
+    ;;The  type identifier  OBJECT-TYPE.ID  references  an object-type  specification
+    ;;having  no constructor,  but requesting  validation of  a single  operand.  For
+    ;;example:
+    ;;
+    ;;   (new <fixnum> 123)
+    ;;
+    ;;must expand to:
+    ;;
+    ;;   (assert-signature-and-return (<fixnum>) 123)
+    ;;
+    (chi-expr (bless
+	       `(assert-signature-and-return (,object-type.id) . ,rand*.stx))
+	      lexenv.run lexenv.expand))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
     (define output-form.stx
       (cons (bless constructor.sexp) rand*.stx))
     (define output-form.psi

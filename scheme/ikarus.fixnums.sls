@@ -28,6 +28,7 @@
     non-zero-fixnum?
     positive-fixnum?		negative-fixnum?
     non-negative-fixnum?	non-positive-fixnum?
+    byte-fixnum?		octet-fixnum?
 
     fxadd1			fxsub1
     fx+				fx-
@@ -98,6 +99,7 @@
 		  non-zero-fixnum?
 		  positive-fixnum?		negative-fixnum?
 		  non-negative-fixnum?		non-positive-fixnum?
+		  byte-fixnum?			octet-fixnum?
 
 		  fxquotient			fxremainder
 		  fxmodulo			fxsign
@@ -203,6 +205,16 @@
 ;;;; predicates
 
 (define-list-of-type-predicate list-of-fixnums? fixnum?)
+
+(define (byte-fixnum? obj)
+  (and (fixnum? obj)
+       ($fx>= obj -128)
+       ($fx<= obj +127)))
+
+(define (octet-fixnum? obj)
+  (and (fixnum? obj)
+       ($fxnonnegative? obj)
+       ($fx<= obj 255)))
 
 (define* (fxzero? {x fixnum?})
   (eq? x 0))

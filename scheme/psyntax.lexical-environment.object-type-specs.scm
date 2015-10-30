@@ -99,9 +99,25 @@
 		;False  or a  syntactic identifier  representing the  parent of  this
 		;record-type.
      (immutable constructor-sexp		object-type-spec.constructor-sexp)
-		;False or a symbolic expression  (to be BLESSed later) representing a
-		;Scheme expression that, expanded  and evaluated at run-time, returns
-		;the default constructor.  The constructor is meant to be used as:
+		;A  boolean value  or a  symbolic  expression (to  be BLESSed  later)
+		;representing  a Scheme  expression that,  expanded and  evaluated at
+		;run-time, returns the default constructor function.
+		;
+		;When  this field  is #f:  this  object-type has  no constructor,  so
+		;trying to use the syntax NEW will cause an expand-time exception.
+		;
+		;When  this field  is #t:  this object-type  has no  constructor, but
+		;requires the  object to be  supplied in its already-built  form. For
+		;example:
+		;
+		;   (new <fixnum> 123)
+		;
+		;must expand to:
+		;
+		;   (assert-signature-and-return (<fixnum>) 123)
+		;
+		;When this field  is a symbolic expression: the  constructor is meant
+		;to be used as:
 		;
 		;   (?constructor ?arg ...)
 		;
