@@ -866,10 +866,19 @@
 		  ;;One argument possibly matches one operand.  Good.
 		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
 		 ((?rand.type)
-		  (if (type-identifier-super-and-sub? ?argval.tag ?rand.type lexenv.run)
-		      ;;One argument matches one operand.  Good.
-		      (loop state ?argvals.tags (cdr rand*.sig))
-		    'no-match))
+		  (cond ((type-identifier-super-and-sub? ?argval.tag ?rand.type lexenv.run)
+			 ;;One argument matches one operand.  Good.
+			 (loop state ?argvals.tags (cdr rand*.sig)))
+			((type-identifier-super-and-sub? ?rand.type ?argval.tag lexenv.run)
+			 ;;One argument possibly matches one operand.  Good.
+			 ;;
+			 ;;This may happen when the operand is built by an expression
+			 ;;that does  not specify the  type with the full  depth; for
+			 ;;example:  LIST  may  return   a  "<list>"  rather  than  a
+			 ;;"<string*>" list sub-type.
+			 (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
+			(else
+			 'no-match)))
 		 (<list>
 		  ;;Operand with unspecified return values.  Will check at run-time.
 		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))

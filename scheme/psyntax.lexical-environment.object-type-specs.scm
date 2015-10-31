@@ -372,7 +372,7 @@
   (protocol
     (lambda (make-scheme-type-spec)
       (define* (make-list-type-spec {type-id type-identifier?})
-	(let ((parent-id		(list-tag-id))
+	(let ((parent-id		(nlist-tag-id))
 	      (constructor.sexp	#f)
 	      (predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
 	      (methods-table		'()))
