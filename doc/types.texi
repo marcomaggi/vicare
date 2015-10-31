@@ -335,6 +335,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes super-sub::    Super and sub types.
 * types syntaxes assert::       Validating signatures.
+* types syntaxes case-type::    Branching on type of expression.
 @end menu
 
 @c page
@@ -929,6 +930,58 @@ If we want to assert nothing, we can do:
 which will just expand to the evaluation of @meta{expr}; this might be
 useful when the syntax is used in the output form of another macro use.
 @end itemize
+
+@c page
+@node types syntaxes case-type
+@subsection Branching on type of expression
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax case-type @meta{expr} @metao{clause} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} =>
+@deffnx {Auxiliary Syntax} else
+Similar to @syntax{case} but branches based on the type of the single
+value returned by @meta{expr}.  Each @meta{clause} must have one of the
+formats:
+
+@lisp
+((@meta{type-id}) . @meta{body})
+((@meta{type-id}) => @meta{receiver-expr})
+(else . @meta{body})
+@end lisp
+
+@noindent
+where: @meta{type-id} must be a type identifier; the @syntax{else}
+clause is valid only as last clause; @meta{receiver-expr} must be an
+expression evaluating to a closure object accepting a single argument.
+
+Examples:
+
+@lisp
+(case-type 123
+  ((<vector>)   'vector)
+  ((<fixnum>)   'fixnum)
+  ((<string>)   'string))
+@result{} fixnum
+
+(case-type 123
+  ((<vector>)   'vector)
+  ((<fixnum>)   => (lambda (arg) (list arg 'fixnum)))
+  ((<string>)   'string)
+  (else   'else))
+@result{} (123 fixnum)
+
+(case-type #t
+  ((<vector>)   'vector)
+  ((<fixnum>)   'fixnum)
+  ((<string>)   'string)
+  (else         'else))
+@result{} else
+@end lisp
+@end deffn
 
 @c page
 @node types built-in

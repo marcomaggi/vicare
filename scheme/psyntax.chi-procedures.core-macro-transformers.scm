@@ -113,6 +113,7 @@
     ((slot-ref)					slot-ref-transformer)
     ((slot-set!)				slot-set!-transformer)
     ((method-call)				method-call-transformer)
+    ((case-type)				case-type-transformer)
 
     ((internal-run-time-is-a?)			internal-run-time-is-a?-transformer)
 

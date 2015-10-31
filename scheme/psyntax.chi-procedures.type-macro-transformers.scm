@@ -27,6 +27,7 @@
 	 slot-set!-transformer
 	 method-call-transformer
 	 unsafe-cast-transformer
+	 case-type-transformer
 	 validate-typed-procedure-argument-transformer
 	 validate-typed-return-value-transformer
 	 assert-signature-transformer
@@ -108,49 +109,6 @@
     (chi-expr (bless
 	       `(assert-signature-and-return (,object-type.id) (,constructor.sexp . ,rand*.stx)))
 	      lexenv.run lexenv.expand))
-
-  #;(define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
-    (define output-form.stx
-      (cons (bless constructor.sexp) rand*.stx))
-    (define output-form.psi
-      (chi-expr output-form.stx lexenv.run lexenv.expand))
-    (define output-form.sig
-      (type-signature-tags (psi.retvals-signature output-form.psi)))
-    ;;The NEW syntax is special because we know  that it has to return a single value
-    ;;of type OBJECT-TYPE.ID.  So let's check it.
-    (syntax-match output-form.sig (<list>)
-      ((?retvals-type-id)
-       ;;We  have determined  at expand-time  that  the expression  returns a  single
-       ;;value.  Good.
-       (if (free-identifier=? object-type.id ?retvals-type-id)
-	   output-form.psi
-	 (raise
-	  (condition
-	   (make-who-condition __module_who__)
-	   (make-message-condition "the expression used as constructor returns a type different from the requested one")
-	   (make-syntax-violation input-form.stx output-form.stx)
-	   (make-irritants-condition (list object-type.id ?retvals-type-id))))))
-      (<list>
-       ;;Damn it!!!  The expression's return values have fully UNspecified signature.
-       ;;
-       ;;We could patch it as follows:
-       ;;
-       ;;   (make-psi (psi.input-form input-form.psi)
-       ;;             (psi.core-expr  input-form.psi)
-       ;;             (make-type-signature/single-value object-type.id)))
-       ;;
-       ;;but it would be unsafe.  So let's just hope for the best.
-       output-form.psi)
-      (_
-       ;;The  horror!!!   We have  established  at  expand-time that  the  expression
-       ;;returns multiple values; type violation.
-       (raise
-	(condition
-	 (make-who-condition __module_who__)
-	 (make-message-condition "the expression used as constructor operand returns multiple values")
-	 (make-syntax-violation input-form.stx output-form.stx)
-	 (make-irritants-condition (list output-form.sig)))))
-      ))
 
 ;;; --------------------------------------------------------------------
 
@@ -804,6 +762,68 @@
 		      (make-irritants-condition (list expr.sig)))))
 	 )))
     ))
+
+
+;;;; module core-macro-transformer: CASE-TYPE
+
+(define-core-transformer (case-type input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand  Vicare's  CASE-TYPE  syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define (main)
+    (syntax-match input-form.stx ()
+      ((_ ?expr ?case-clause0 ?case-clause* ...)
+       (%build-output-form input-form.stx lexenv.run lexenv.expand
+			   ?expr (cons ?case-clause0 ?case-clause*)))
+      ))
+
+  (define (%build-output-form input-form.stx lexenv.run lexenv.expand
+			      expr.stx case-clause*.stx)
+    (let* ((expr.psi     (chi-expr expr.stx lexenv.run lexenv.expand))
+	   (expr.sig     (psi.retvals-signature expr.psi)))
+      (let* ((matcher.sexp	(let ((arg.sym (gensym "arg")))
+				  `(internal-lambda () (,arg.sym)
+				     (cond ,@(%build-branches input-form.stx arg.sym case-clause*.stx)))))
+	     (matcher.psi	(chi-expr (bless matcher.sexp) lexenv.run lexenv.expand)))
+	(make-psi input-form.stx
+		  (build-application no-source
+		    (psi.core-expr matcher.psi)
+		    (list (psi.core-expr expr.psi)))
+		  (psi-application-retvals-signature input-form.stx lexenv.run matcher.psi)))))
+
+  (define (%build-branches input-form.stx arg.sym case-clause*.stx)
+    ;;This loop is like MAP, but we want  to detect if the ELSE clause (when present)
+    ;;is used only as last clause.
+    (let recur ((case-clause*.stx case-clause*.stx))
+      (if (pair? case-clause*.stx)
+	  (let ((case-clause.stx (car case-clause*.stx)))
+	    (cons (syntax-match case-clause.stx (=> else)
+		    (((?type) => ?receiver-expr)
+		     `((is-a? ,arg.sym ,?type)
+		       (,?receiver-expr ,arg.sym)))
+
+		    (((?type) ?body0 ?body* ...)
+		     `((is-a? ,arg.sym ,?type)
+		       ,?body0 . ,?body*))
+
+		    ((else ?body0 ?body* ...)
+		     (if (null? (cdr case-clause*.stx))
+			 `(else ,?body0 . ,?body*)
+		       (synner "the ELSE clause is not the last clause" case-clause.stx)))
+
+		    (else
+		     (synner "invalid clause syntax" case-clause.stx)))
+		  (recur (cdr case-clause*.stx))))
+	'())))
+
+  (case-define synner
+    ((message)
+     (synner message #f))
+    ((message subform)
+     (syntax-violation 'case-type message input-form.stx subform)))
+
+  (main))
 
 
 ;;;; module core-macro-transformer: VALIDATE-TYPED-PROCEDURE-ARGUMENT, VALIDATE-TYPED-RETURN-VALUE

@@ -430,6 +430,106 @@
   (void))
 
 
+(parametrise ((check-test-name	'case-type))
+
+  (check
+      (case-type 123
+	((<fixnum>)		'fixnum))
+    => 'fixnum)
+
+  (check
+      (case-type "123"
+	((<fixnum>)		'fixnum)
+	((<string>)		'string))
+    => 'string)
+
+  (check
+      (case-type 123
+	((<vector>)		'vector)
+	((<fixnum>)		'fixnum)
+	((<string>)		'string))
+    => 'fixnum)
+
+  (check
+      (case-type #t
+	((<vector>)		'vector)
+	((<fixnum>)		'fixnum)
+	((<string>)		'string))
+    => (void))
+
+;;; --------------------------------------------------------------------
+;;; with ELSE clause
+
+  (check
+      (case-type 123
+	((<fixnum>)		'fixnum)
+	(else			'else))
+    => 'fixnum)
+
+  (check
+      (case-type "123"
+	((<fixnum>)		'fixnum)
+	((<string>)		'string)
+	(else			'else))
+    => 'string)
+
+  (check
+      (case-type 123
+	((<vector>)		'vector)
+	((<fixnum>)		'fixnum)
+	((<string>)		'string)
+	(else			'else))
+    => 'fixnum)
+
+  (check
+      (case-type #t
+	((<vector>)		'vector)
+	((<fixnum>)		'fixnum)
+	((<string>)		'string)
+	(else			'else))
+    => 'else)
+
+;;; --------------------------------------------------------------------
+;;; with receiver
+
+  (check
+      (case-type 123
+	((<fixnum>)		=> (lambda (arg) (list arg 'fixnum)))
+	(else			'else))
+    => '(123 fixnum))
+
+  (check
+      (case-type "123"
+	((<string>)		=> (lambda ({arg <string>}) (list (.length arg) 'string)))
+	(else			'else))
+    => '(3 string))
+
+  (check
+      (case-type "123"
+	((<fixnum>)		=> (lambda (arg) (list arg 'fixnum)))
+	((<string>)		'string)
+	(else			'else))
+    => 'string)
+
+  (check
+      (case-type 123
+	((<vector>)		'vector)
+	((<fixnum>)		=> (lambda (arg) (list arg 'fixnum)))
+	((<string>)		'string)
+	(else			'else))
+    => '(123 fixnum))
+
+  (check
+      (case-type #t
+	((<vector>)		'vector)
+	((<fixnum>)		=> (lambda (arg) (list arg 'fixnum)))
+	((<string>)		'string)
+	(else			'else))
+    => 'else)
+
+  (void))
+
+
 ;;;; done
 
 (check-report)
