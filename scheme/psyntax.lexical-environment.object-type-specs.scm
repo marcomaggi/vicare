@@ -44,9 +44,6 @@
 	 make-list-type-spec				list-type-spec?
 	 list-type-spec.type-id
 
-	 <core-list-type-spec>
-	 make-core-list-type-spec			core-list-type-spec?
-
 	 <vector-type-spec>
 	 <vector-type-spec>-rtd				<vector-type-spec>-rcd
 	 make-vector-type-spec				vector-type-spec?
@@ -364,20 +361,35 @@
 ;;
 ;;   (local-object-type-name . (#<list-type-spec> . ?expanded-expr))
 ;;
+;;There  can be  only one  instance of  type "<list-type-spec>"  representing a  list
+;;collecting items of a specific type.
+;;
 (define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
   (nongenerative vicare:expander:<list-type-spec>)
   (parent <scheme-type-spec>)
+  (sealed #t)
   (fields (immutable type-id		list-type-spec.type-id))
 		;A type identifier representing the type of items.
   (protocol
     (lambda (make-scheme-type-spec)
+      ;;This table maps the label gensym of  item's type identifier to the OTS of the
+      ;;associated list type.
+      ;;
+      ;;FIXME  Entries should  be  removed from  this table  whenever  the list  type
+      ;;identifier is garbage collected.  (Marco Maggi; Sun Nov 1, 2015)
+      (define table
+	(make-eq-hashtable))
       (define* (make-list-type-spec {type-id type-identifier?})
-	(let ((parent-id		(nlist-tag-id))
-	      (constructor.sexp	#f)
-	      (predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
-	      (methods-table		'()))
-	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-	   type-id)))
+	(let ((label (id->label type-id)))
+	  (or (hashtable-ref table label #f)
+	      (receive-and-return (ots)
+		  (let ((parent-id		(nlist-tag-id))
+			(constructor.sexp	#f)
+			(predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
+			(methods-table		'()))
+		    ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+		     type-id))
+		(hashtable-set! table label ots)))))
       make-list-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -388,36 +400,6 @@
   (record-constructor-descriptor <list-type-spec>))
 
 
-;;;; core list object-type specification
-;;
-;;This  record-type is  used as  syntactic binding  descriptor's values  for built-in
-;;Vicare list object types.  The LEXENV entry has the format:
-;;
-;;   (local-object-type-name . (#<core-list-type-spec> . ?hard-coded-sexp))
-;;
-;;It is built at run-time by converting entries with format:
-;;
-;;   ($core-list-object-type-name . ?hard-coded-sexp)
-;;
-;;where ?HARD-CODED-SEXP has the format:
-;;
-;;   (?type-name ?item-name)
-;;
-;;The source entries are  defined by the boot image's makefile  and are hard-coded in
-;;the boot  image itself.  Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR
-;;is used to retrieve the descriptor from the label: the descriptor is converted from
-;;the hard-coded format to the format holding this value.
-;;
-(define-record-type (<core-list-type-spec> make-core-list-type-spec core-list-type-spec?)
-  (nongenerative vicare:expander:<core-list-type-spec>)
-  (parent <list-type-spec>)
-  (protocol
-    (lambda (make-list-type-spec)
-      (define (make-core-list-type-spec item-id)
-	((make-list-type-spec item-id)))
-      make-core-list-type-spec)))
-
-
 ;;;; vector object spec
 ;;
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
@@ -426,20 +408,35 @@
 ;;
 ;;   (local-object-type-name . (#<vector-type-spec> . ?expanded-expr))
 ;;
+;;There can be  only one instance of type "<vector-type-spec>"  representing a vector
+;;collecting items of a specific type.
+;;
 (define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
   (nongenerative vicare:expander:<vector-type-spec>)
   (parent <scheme-type-spec>)
+  (sealed #t)
   (fields (immutable type-id		vector-type-spec.type-id))
 		;A type identifier representing the type of items.
   (protocol
     (lambda (make-scheme-type-spec)
-      (define* (make-vector-type-spec {type-id type-identifier?})
-	(let ((parent-id		(vector-tag-id))
-	      (constructor.sexp		#f)
-	      (predicate.sexp		#f)
-	      (methods-table		'()))
-	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-	   type-id)))
+      ;;This table maps the label gensym of  item's type identifier to the OTS of the
+      ;;associated vector type.
+      ;;
+      ;;FIXME Entries  should be  removed from  this table  whenever the  vector type
+      ;;identifier is garbage collected.  (Marco Maggi; Sun Nov 1, 2015)
+      (define table
+	(make-eq-hashtable))
+      (define* (make-vector-type-spec {item-type-id type-identifier?})
+	(let ((label (id->label item-type-id)))
+	  (or (hashtable-ref table label #f)
+	      (receive-and-return (ots)
+		  (let ((parent-id		(vector-tag-id))
+			(constructor.sexp	#f)
+			(predicate.sexp		#f)
+			(methods-table		'()))
+		    ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+		     item-type-id))
+		(hashtable-set! table label ots)))))
       make-vector-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 

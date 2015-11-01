@@ -188,9 +188,6 @@
     make-vector-type-spec				vector-type-spec?
     vector-type-spec.type-id
 
-    <core-list-type-spec>
-    make-core-list-type-spec				core-list-type-spec?
-
     ;; object-type specifications: structs
     <struct-type-spec>
     make-struct-type-spec				struct-type-spec?

@@ -1236,97 +1236,22 @@
 	       ;;     . (local-object-type-name
 	       ;;         . (#<object-type-spec> . ?symbolic-expr)))
 	       ;;
-	       ;;where for  some types  ?SYMBOLIC-EXPR is an  expression in  the core
-	       ;;language; for other types it is  a symbolic expression hard coded in
-	       ;;the boot image.
+	       ;;where ?SYMBOLIC-EXPR is an expression  in the core language.  We add
+	       ;;to the GLOBAL-ENV an entry like:
+	       ;;
+	       ;;   (?label . (global-object-type-name . ?loc))
+	       ;;
+	       ;;and to the VISIT-ENV an entry like:
+	       ;;
+	       ;;   (?loc . (#<object-type-spec> . ?expanded-expr))
 	       ;;
 	       (let ((ots		(car descr.value))
-		     (expanded-expr	(cdr descr.value)))
-		 (cond
-		  ((core-scheme-type-spec? ots)
-		   ;;This case  is for  the syntactic bindings  representing built-in
-		   ;;types ("<top>", "<fixnum>",  et cetera).  Here we  know that the
-		   ;;syntactic binding's descriptor has the format:
-		   ;;
-		   ;;   (local-object-type-name
-		   ;;     . (#<core-scheme-type-spec> . ?hard-coded-sexp-expr))
-		   ;;
-		   ;;Add to the GLOBAL-ENV an entry like:
-		   ;;
-		   ;;   (?label . ($core-scheme-object-type-name . ?hard-coded-sexp))
-		   ;;
-		   (let ((hard-coded-sexp (cdr descr.value)))
-		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label '$core-scheme-object-type-name hard-coded-sexp) global-env)
-			   visit-env typed-locs)))
-		  ((core-list-type-spec? ots)
-		   ;;This case  is for  the syntactic bindings  representing built-in
-		   ;;list  types  ("<char*>", et  cetera).   Here  we know  that  the
-		   ;;syntactic binding's descriptor has the format:
-		   ;;
-		   ;;   (local-object-type-name
-		   ;;     . (#<core-list-type-spec> . ?hard-coded-sexp-expr))
-		   ;;
-		   ;;Add to the GLOBAL-ENV an entry like:
-		   ;;
-		   ;;   (?label . ($core-list-object-type-name . ?hard-coded-sexp))
-		   ;;
-		   (let ((hard-coded-sexp (cdr descr.value)))
-		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label '$core-list-object-type-name hard-coded-sexp) global-env)
-			   visit-env typed-locs)))
-		  ((core-condition-type-spec? ots)
-		   ;;Here we  know that  the syntactic  binding's descriptor  has the
-		   ;;format:
-		   ;;
-		   ;;   (local-object-type-name
-		   ;;     . (#<core-condition-type-spec> . ?hard-coded-sexp-expr))
-		   ;;
-		   ;;Add to the GLOBAL-ENV an entry like:
-		   ;;
-		   ;;   (?label . ($core-condition-object-type-name . ?hard-coded-sexp))
-		   ;;
-		   (let ((hard-coded-sexp (cdr descr.value)))
-		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label '$core-condition-object-type-name hard-coded-sexp) global-env)
-			   visit-env typed-locs)))
-		  ((core-record-type-spec? ots)
-		   ;;Here we  know that  the syntactic  binding's descriptor  has the
-		   ;;format:
-		   ;;
-		   ;;   (local-object-type-name
-		   ;;     . (#<core-record-type-spec> . ?hard-coded-sexp-expr))
-		   ;;
-		   ;;Add to the GLOBAL-ENV an entry like:
-		   ;;
-		   ;;   (?label . ($core-rtd              . ?hard-coded-sexp))
-		   ;;   (?label . ($core-record-type-name . ?hard-coded-sexp))
-		   ;;
-		   (let* ((hard-coded-sexp (cdr descr.value))
-			  (type            (if (fx=? 2 (length hard-coded-sexp))
-					       '$core-rtd
-					     '$core-record-type-name)))
-		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label type hard-coded-sexp) global-env)
-			   visit-env typed-locs)))
-		  (else
-		   ;;This case  is for everything else:  struct-type names, syntactic
-		   ;;record-type  names, custom  object-type  names,  et cetera.   We
-		   ;;handle these entries like they are macros.
-		   ;;
-		   ;;We add to the GLOBAL-ENV an entry like:
-		   ;;
-		   ;;   (?label . (global-object-type-name . ?loc))
-		   ;;
-		   ;;and to the VISIT-ENV an entry like:
-		   ;;
-		   ;;   (?loc . (#<object-type-spec> . ?expanded-expr))
-		   ;;
-		   (let ((loc (generate-storage-location-gensym label)))
-		     (loop (cdr lexenv.run)
-			   (cons (make-global-env-entry label 'global-object-type-name loc) global-env)
-			   (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)
-			   typed-locs))))))
+		     (expanded-expr	(cdr descr.value))
+		     (loc		(generate-storage-location-gensym label)))
+		 (loop (cdr lexenv.run)
+		       (cons (make-global-env-entry label 'global-object-type-name loc) global-env)
+		       (cons (make-visit-env-entry loc ots expanded-expr)               visit-env)
+		       typed-locs)))
 
 	      (($core-scheme-object-type-name
 		$core-list-object-type-name

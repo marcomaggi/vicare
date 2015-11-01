@@ -794,7 +794,7 @@
   ;;
   ;;and the usable descriptor has the format:
   ;;
-  ;;   (local-object-type-name . (#<core-list-type-spec> . ?hard-coded-sexp))
+  ;;   (local-object-type-name . (#<list-type-spec> . ?hard-coded-sexp))
   ;;
   ;;?ITEM-NAME is the symbol name of the type of contained in the list.
   ;;
@@ -806,10 +806,10 @@
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
 	 (descr.value		(syntactic-binding-descriptor.value descriptor))
 	 (item-id		(core-prim-id (list-ref descr.value 1))))
-    (define spec
-      (make-core-list-type-spec item-id))
+    (define ots
+      (make-list-type-spec item-id))
     (set-car! descriptor 'local-object-type-name)
-    (set-cdr! descriptor (cons spec descr.value))))
+    (set-cdr! descriptor (cons ots descr.value))))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;built-in Scheme object-type name; otherwise return false.
