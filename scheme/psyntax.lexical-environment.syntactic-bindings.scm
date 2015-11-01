@@ -386,6 +386,8 @@
 	      (?pred (syntactic-binding-descriptor/local-object-type.object-type-spec  obj)))
 	     ((global-object-type-name)
 	      (?pred (syntactic-binding-descriptor/global-object-type.object-type-spec obj)))
+	     ((core-object-type-name)
+	      (?pred (syntactic-binding-descriptor/core-object-type.object-type-spec obj)))
 	     (else #f))))))
 
 ;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
@@ -455,6 +457,17 @@
       (assertion-violation __who__
 	"unbound loc gensym associated to syntactic binding's descriptor of global object-type name"
 	descr))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (syntactic-binding-descriptor/core-object-type.object-type-spec ?descriptor)
+  ;;We expect ?DESCRIPTOR to have the format:
+  ;;
+  ;;   (core-object-type-name . (#<object-type-spec> . ?symbolic-expr))
+  ;;
+  ;;and we return #<object-type-spec>.
+  ;;
+  (car (syntactic-binding-descriptor.value ?descriptor)))
 
 
 ;;;; syntactic binding descriptor: usable built-in object type binding
@@ -729,7 +742,7 @@
 
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding
 
-(define (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descriptor)
+(define (core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;built-in object-type name (established by the  boot image) to a representation of
   ;;an object-type  name in the  format usable  by the expander.   Return unspecified
@@ -746,7 +759,7 @@
   ;;
   ;;and the usable descriptor has the format:
   ;;
-  ;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
   ;;
   ;;Syntactic binding descriptors of  type "$core-scheme-object-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -766,7 +779,7 @@
 	 (methods-table		(%alist-ref-or-null descr.value 4)))
     (define spec
       (make-core-scheme-type-spec parent-id constructor.sexp type-predicate.sexp methods-table))
-    (set-car! descriptor 'local-object-type-name)
+    (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons spec descr.value))))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
@@ -778,7 +791,7 @@
 
 ;;;; syntactic binding descriptor: core built-in list object-type descriptor binding
 
-(define (core-list-type-name-binding-descriptor->list-type-name-binding-descriptor! descriptor)
+(define (core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;built-in  list   object-type  name   (established  by  the   boot  image)   to  a
   ;;representation of a  list object-type name in the format  usable by the expander.
@@ -794,7 +807,7 @@
   ;;
   ;;and the usable descriptor has the format:
   ;;
-  ;;   (local-object-type-name . (#<list-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<list-type-spec> . ?hard-coded-sexp))
   ;;
   ;;?ITEM-NAME is the symbol name of the type of contained in the list.
   ;;
@@ -808,7 +821,7 @@
 	 (item-id		(core-prim-id (list-ref descr.value 1))))
     (define ots
       (make-list-type-spec item-id))
-    (set-car! descriptor 'local-object-type-name)
+    (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots descr.value))))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
@@ -907,7 +920,7 @@
 
 ;;;; syntactic binding descriptor: old-style core R6RS record-type descriptor binding
 
-(define (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descriptor)
+(define (core-rtd-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
   ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
@@ -919,7 +932,7 @@
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   (local-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
@@ -939,7 +952,7 @@
 	 (rtd-id		(core-prim-id (car  hard-coded-sexp)))
 	 (rcd-id		(core-prim-id (cadr hard-coded-sexp)))
 	 (ots			(make-core-record-type-spec rtd-id rcd-id)))
-    (set-car! descriptor 'local-object-type-name)
+    (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-rtd?
@@ -948,7 +961,7 @@
 
 ;;;; syntactic binding descriptor: new-style core R6RS record-type descriptor binding
 
-(define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
+(define (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
   ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
@@ -960,7 +973,7 @@
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   (local-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
@@ -990,7 +1003,7 @@
 	 (ots			(make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
 							    constructor-sexp destructor-sexp type-predicate-sexp
 							    accessors-table mutators-table methods-table)))
-    (set-car! descriptor 'local-object-type-name)
+    (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
@@ -1002,7 +1015,7 @@
 
 ;;;; syntactic binding descriptor: core R6RS condition object record-type descriptor binding
 
-(define (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
+(define (core-condition-object-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;condition  object  record-type  name  (established   by  the  boot  image)  to  a
   ;;representation  of a  record-type  name in  the format  usable  by the  expander.
@@ -1014,7 +1027,7 @@
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   (local-object-type-name . (#<core-condition-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<core-condition-type-spec> . ?hard-coded-sexp))
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
@@ -1044,7 +1057,7 @@
 	 (ots			(make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
 							       constructor-id destructor-id type-predicate-id
 							       accessors-table mutators-table methods-table)))
-    (set-car! descriptor 'local-object-type-name)
+    (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS

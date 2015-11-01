@@ -113,7 +113,7 @@
 				     (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
 				     (make-syntax-violation input-form.stx id)
 				     (make-syntactic-binding-descriptor-condition descr))))
-			((local-object-type-name global-object-type-name)
+			((core-object-type-name local-object-type-name global-object-type-name)
 			 #t)
 			(else #f)))))
 	      (else #f)))))

@@ -726,15 +726,15 @@
 		(cond ((syntactic-binding-descriptor/hard-coded-core-prim-typed? descr)
 		       (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-scheme-type-name? descr)
-		       (core-scheme-type-name-binding-descriptor->scheme-type-name-binding-descriptor! descr))
+		       (core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-condition-object-type-name? descr)
-		       (core-condition-object-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
+		       (core-condition-object-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-list-type-name? descr)
-		       (core-list-type-name-binding-descriptor->list-type-name-binding-descriptor! descr))
+		       (core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-record-type-name? descr)
-		       (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descr))
+		       (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-rtd? descr)
-		       (core-rtd-binding-descriptor->record-type-name-binding-descriptor! descr)))
+		       (core-rtd-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
 		descr))
 
 	  ;;Search the given LEXENV.
@@ -1920,11 +1920,11 @@
       "expected identifier as object-type name" input-form.stx id))
   (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
     ((local-object-type-name)
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
      (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__))
     ((global-object-type-name)
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
      (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__))
+    ((core-object-type-name)
+     (syntactic-binding-descriptor/core-object-type.object-type-spec __descr__))
     (else
      (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
 
@@ -1954,15 +1954,18 @@
       "expected identifier as record-type name" input-form.stx id))
   (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
     ((local-object-type-name)
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
      (receive-and-return (ots)
 	 (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__)
        (unless (record-type-spec? ots)
 	 (%error-wrong-type-identifier __descr__))))
     ((global-object-type-name)
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
      (receive-and-return (ots)
 	 (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__)
+       (unless (record-type-spec? ots)
+	 (%error-wrong-type-identifier __descr__))))
+    ((core-object-type-name)
+     (receive-and-return (ots)
+	 (syntactic-binding-descriptor/core-object-type.object-type-spec __descr__)
        (unless (record-type-spec? ots)
 	 (%error-wrong-type-identifier __descr__))))
     (else
@@ -1994,15 +1997,18 @@
       "expected identifier as struct-type name" input-form.stx id))
   (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
     ((local-object-type-name)
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
      (receive-and-return (ots)
 	 (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__)
        (unless (struct-type-spec? ots)
 	 (%error-wrong-type-identifier __descr__))))
     ((global-object-type-name)
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
      (receive-and-return (ots)
 	 (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__)
+       (unless (struct-type-spec? ots)
+	 (%error-wrong-type-identifier __descr__))))
+    ((core-object-type-name)
+     (receive-and-return (ots)
+	 (syntactic-binding-descriptor/core-object-type.object-type-spec __descr__)
        (unless (struct-type-spec? ots)
 	 (%error-wrong-type-identifier __descr__))))
     (else
@@ -2047,8 +2053,6 @@
      ;;
      ;;where ?LOC  is a loc gensym  containing in its  VALUE slots a reference  to an
      ;;instance of "<global-typed-variable-spec>".
-     #;(visit-library-of-imported-syntactic-binding who input-form.stx id lexenv)
-     #;(visit-library (car (syntactic-binding-descriptor.value descr)))
      (let ((tvs (symbol-value (cdr (syntactic-binding-descriptor.value __descr__)))))
        (if (global-typed-variable-spec? tvs)
 	   tvs
@@ -2057,72 +2061,6 @@
 	   id __descr__ tvs))))
     (else
      (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
-
-
-;;; visiting libraries
-
-;;NOTE Commented out because, whenever a library is loaded for expansion purposes, it
-;;is  automatically visited.   Still this  code might  be useful  in future.   (Marco
-;;Maggi; Mon Oct 12, 2015)
-;;
-;; (case-define* visit-library-of-imported-syntactic-binding
-;;   ((who input-form.stx id lexenv)
-;;    (let* ((label (id->label/or-error who input-form.stx id))
-;;           (descr (label->syntactic-binding-descriptor label lexenv)))
-;;      (visit-library-of-imported-syntactic-binding who input-form.stx id lexenv descr)))
-;;   ((who input-form.stx id lexenv descr)
-;;    (case (syntactic-binding-descriptor.type descr)
-;;      ((global global-macro global-macro! global-etv)
-;;       ;;We expect the syntactic binding's descriptor to be one among:
-;;       ;;
-;;       ;;   (global         . (#<library> . ?loc))
-;;       ;;   (global-macro   . (#<library> . ?loc))
-;;       ;;   (global-macro!  . (#<library> . ?loc))
-;;       ;;   (global-etv     . (#<library> . ?loc))
-;;       ;;
-;;       (let ((lib (car (syntactic-binding-descriptor.value descr))))
-;;         (print-library-debug-message "for identifier ~a, visiting library: ~a" id (library-name lib))
-;;         (visit-library lib)))
-;;
-;;      ((global-typed global-typed-mutable global-object-type-name)
-;;       ;;We expect the syntactic binding's descriptor to be one among:
-;;       ;;
-;;       ;;   (global-typed            . (#<library> . ?loc))
-;;       ;;   (global-typed-mutable    . (#<library> . ?loc))
-;;       ;;   (global-object-type-name . (#<library> . ?loc))
-;;       ;;
-;;       (let ((lib (car (syntactic-binding-descriptor.value descr))))
-;;         (print-library-debug-message "for identifier ~a, visiting library: ~a" id (library-name lib))
-;;         (visit-library lib)))
-;;
-;;      ((local-object-type-name)
-;;       ;;We expect the syntactic binding's descriptor to be:
-;;       ;;
-;;       ;;   (local-object-type-name . (#<object-type-spec> . ?expanded-expr))
-;;       ;;
-;;       (let ((ots (syntactic-binding-descriptor/local-object-type.object-type-spec descr)))
-;;         (cond ((syntactic-record-type-spec? ots)
-;;                (let ((rtd-id (record-type-spec.rtd-id ots)))
-;;                  ;;If needed: visit the library from which the parent was imported.
-;;                  (cond ((object-type-spec.parent-id ots)
-;;                         => (lambda (parent-id)
-;;                              (visit-library-of-imported-syntactic-binding who input-form.stx parent-id lexenv))))
-;;                  ;;If needed: visit the library from which this type was imported.
-;;                  (visit-library-of-imported-syntactic-binding who input-form.stx rtd-id lexenv))))))
-;;
-;;      (($core-scheme-object-type-name
-;;        $core-rtd $core-record-type-name $core-condition-object-type-name
-;;        core-prim core-prim-typed
-;;        lexical lexical-typed macro! macro local-macro local-macro! local-etv)
-;;       (void))
-;;
-;;      (else
-;;       (raise
-;;        (condition (make-syntax-violation input-form.stx id)
-;;                   (make-who-condition who)
-;;                   (make-message-condition "attempt to force library visit, \
-;;                       but it is impossible to find a library exporting the given syntactic binding identifier")
-;;                   (make-syntactic-binding-descriptor-condition descr)))))))
 
 
 ;;;; identifier to syntactic binding's descriptor
