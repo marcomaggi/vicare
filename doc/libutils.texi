@@ -810,7 +810,7 @@ The following bindings are exported by the library @library{vicare
 libraries}.
 
 
-@deftp {Record Type} <library>
+@deftp {Record Type} @aclass{library}
 Record type representing Scheme libraries.
 @end deftp
 
@@ -881,7 +881,34 @@ invoke code.
 
 @deffn {Accessor for @class{library}} library-export-subst @var{lib}
 Return the @code{export-subst} of @var{lib}: an alist representing the
-global bindings exported by the library.
+global bindings exported by the library.  The cars of the alist are
+symbols representing the public names of the exported syntactic
+bindings.  The cdrs of the alist are the label gensyms of the exported
+syntactic bindings.
+
+The @code{export-subst} includes both syntactic bindings defined by the
+library itself and syntactic bindings imported and re--exported by the
+library.  For example:
+
+@lisp
+(define ell
+  (expand-library->sexp
+     '(library (demo)
+        (options typed-language)
+        (export display <fixnum>)
+        (import (vicare))
+        (define @{x <fixnum>@} 123))))
+
+(cdr (assq 'export-subst ell))
+@result{} ((<fixnum> . prim-label.<fixnum>) (display . g14256))
+
+(cdr (assq 'global-env ell))
+@result{} ((g9 . (global-typed . g8)))
+@end lisp
+
+@noindent
+notice that the re--exported bindings do not appear in the
+@code{global-env}.
 @end deffn
 
 
