@@ -1343,7 +1343,7 @@ let-syntax letrec-syntax stale-when
 begin-for-syntax begin-for-syntax
 
 core-macro macro core-prim
-$core-rtd $core-record-type-name
+$core-record-type-name
 $core-condition-object-type-name
 
 global global-macro global-macro! global-etv
@@ -1678,34 +1678,7 @@ primitive.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Primitive binding: old--style core record--type name
-
-A syntactic binding representing @rnrs{6}'s record--type name defined by
-the boot image has descriptor with one of the formats:
-
-@example
-($core-rtd . (@meta{rtd-name} @meta{rcd-name}))
-@end example
-
-@noindent
-where the values are:
-
-@table @asis
-@item @meta{rtd-name}
-A symbol representing the public name of the syntactic identifier to
-which the record--type descriptor is bound.
-
-@item @meta{rcd-name}
-A symbol representing the public name of the syntactic identifier to
-which the default record--constructor descriptor is bound.
-@end table
-
-This style is deprecate and should be removed from the boot image; it is
-kept to show ``how it is done'' (it takes very little space).
-
-@c ------------------------------------------------------------------------
-
-@subsubheading Primitive binding: new--style core record--type name
+@subsubheading Primitive binding: core record--type name
 
 A syntactic binding representing @rnrs{6}'s record--type name defined by
 the boot image has descriptor with one of the formats:

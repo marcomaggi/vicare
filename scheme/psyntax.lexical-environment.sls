@@ -731,9 +731,7 @@
 		      ((syntactic-binding-descriptor/core-list-type-name? descr)
 		       (core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-record-type-name? descr)
-		       (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr))
-		      ((syntactic-binding-descriptor/core-rtd? descr)
-		       (core-rtd-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
+		       (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
 		descr))
 
 	  ;;Search the given LEXENV.

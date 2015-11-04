@@ -918,47 +918,6 @@
   syntactic-record-type-spec?)
 
 
-;;;; syntactic binding descriptor: old-style core R6RS record-type descriptor binding
-
-(define (core-rtd-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
-  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
-  ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
-  ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
-  ;;values.
-  ;;
-  ;;We expect the core descriptor to have the format:
-  ;;
-  ;;   ($core-rtd . ?hard-coded-sexp)
-  ;;
-  ;;and the usable descriptor to have the format:
-  ;;
-  ;;   (core-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
-  ;;
-  ;;where ?HARD-CODED-SEXP has the format:
-  ;;
-  ;;   (?rtd-name ?rcd-name)
-  ;;
-  ;;Syntactic  binding descriptors  of type  "$core-rtd" are  hard-coded in  the boot
-  ;;image and generated directly by the  makefile at boot image build-time.  Whenever
-  ;;the  function   LABEL->SYNTACTIC-BINDING-DESCRIPTOR  is  used  to   retrieve  the
-  ;;descriptor from the label: this function is used to convert the descriptor.
-  ;;
-  ;;NOTE This old  style of record-type definition is deprecated:  it has very little
-  ;;informations  about   the  type.   We  should   use  the  new  style   with  type
-  ;;"$core-record-type-name".
-  ;;
-  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
-	 (rtd-id		(core-prim-id (car  hard-coded-sexp)))
-	 (rcd-id		(core-prim-id (cadr hard-coded-sexp)))
-	 (ots			(make-core-record-type-spec rtd-id rcd-id)))
-    (set-car! descriptor 'core-object-type-name)
-    (set-cdr! descriptor (cons ots hard-coded-sexp))))
-
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-rtd?
-  $core-rtd)
-
-
 ;;;; syntactic binding descriptor: new-style core R6RS record-type descriptor binding
 
 (define (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)

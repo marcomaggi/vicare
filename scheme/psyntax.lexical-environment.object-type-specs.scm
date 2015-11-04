@@ -496,23 +496,19 @@
    #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (case-define make-record-type-spec
-	((rtd-id rcd-id)
-	 ((make-object-type-spec) rtd-id rcd-id #f))
-
-	((rtd-id rcd-id super-protocol-id parent-id
-		 constructor.sexp destructor.sexp predicate.sexp
-		 safe-accessors-table safe-mutators-table methods-table)
-	 (let ((constructor.sexp  (or constructor.sexp
-				      `(record-constructor ,rcd-id)))
-	       (predicate.sexp    (or predicate.sexp
-				      (let ((arg.sym (gensym)))
-					`(internal-lambda (unsafe) (,arg.sym)
-					   (record-and-rtd? ,arg.sym ,rtd-id))))))
-	   ((make-object-type-spec parent-id
-				   constructor.sexp destructor.sexp predicate.sexp
-				   safe-accessors-table safe-mutators-table methods-table)
-	    rtd-id rcd-id super-protocol-id))))
+      (define (make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+				     constructor.sexp destructor.sexp predicate.sexp
+				     safe-accessors-table safe-mutators-table methods-table)
+	(let ((constructor.sexp  (or constructor.sexp
+				     `(record-constructor ,rcd-id)))
+	      (predicate.sexp    (or predicate.sexp
+				     (let ((arg.sym (gensym)))
+				       `(internal-lambda (unsafe) (,arg.sym)
+					  (record-and-rtd? ,arg.sym ,rtd-id))))))
+	  ((make-object-type-spec parent-id
+				  constructor.sexp destructor.sexp predicate.sexp
+				  safe-accessors-table safe-mutators-table methods-table)
+	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -550,27 +546,23 @@
 ;;   (?rtd-name ?rcd-name)
 ;;
 ;;Instances of this type are built by the expander from syntactic binding descriptors
-;;of type "$core-rtd" and "$core-record-type-name",  which are hard-coded in the boot
-;;image and  generated directly by the  makefile at boot image  build-time.  Whenever
-;;the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the descriptor
-;;from  the label:  the descriptor  is converted  from the  hard-coded format  to the
-;;format holding this value.
+;;of  type "$core-record-type-name",  which  are  hard-coded in  the  boot image  and
+;;generated directly by the makefile at boot image build-time.  Whenever the function
+;;LABEL->SYNTACTIC-BINDING-DESCRIPTOR  is used  to retrieve  the descriptor  from the
+;;label: the descriptor is converted from the hard-coded format to the format holding
+;;this value.
 ;;
 (define-record-type (<core-record-type-spec> make-core-record-type-spec core-record-type-spec?)
   (nongenerative vicare:expander:<core-record-type-spec>)
   (parent <record-type-spec>)
   (protocol
     (lambda (make-record-type-spec)
-      (case-define make-core-record-type-spec
-	((rtd-id rcd-id)
-	 ((make-record-type-spec rtd-id rcd-id)))
-
-	((rtd-id rcd-id super-protocol-id parent-id
-		 constructor.sexp destructor.sexp predicate.sexp
-		 safe-accessors-table safe-mutators-table methods-table)
-	 ((make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-				 constructor.sexp destructor.sexp predicate.sexp
-				 safe-accessors-table safe-mutators-table methods-table))))
+      (define (make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+					  constructor.sexp destructor.sexp predicate.sexp
+					  safe-accessors-table safe-mutators-table methods-table)
+	((make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+				constructor.sexp destructor.sexp predicate.sexp
+				safe-accessors-table safe-mutators-table methods-table)))
       make-core-record-type-spec)))
 
 
@@ -591,16 +583,12 @@
   (parent <core-record-type-spec>)
   (protocol
     (lambda (make-core-record-type-spec)
-      (case-define make-core-condition-type-spec
-	((rtd-id rcd-id)
-	 ((make-core-record-type-spec rtd-id rcd-id)))
-
-	((rtd-id rcd-id super-protocol-id parent-id
-		 constructor.sexp destructor.sexp predicate.sexp
-		 safe-accessors-table safe-mutators-table methods-table)
-	 ((make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-				      constructor.sexp destructor.sexp predicate.sexp
-				      safe-accessors-table safe-mutators-table methods-table))))
+      (define (make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
+					     constructor.sexp destructor.sexp predicate.sexp
+					     safe-accessors-table safe-mutators-table methods-table)
+	((make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+				     constructor.sexp destructor.sexp predicate.sexp
+				     safe-accessors-table safe-mutators-table methods-table)))
       make-core-condition-type-spec)))
 
 

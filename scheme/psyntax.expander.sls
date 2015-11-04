@@ -1255,7 +1255,7 @@
 
 	      (($core-scheme-object-type-name
 		$core-list-object-type-name
-		$core-rtd $core-record-type-name $core-condition-object-type-name
+		$core-record-type-name $core-condition-object-type-name
 		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:
 	       ;;

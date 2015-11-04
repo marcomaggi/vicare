@@ -5672,7 +5672,6 @@
       ;;   (?core-macro-name		(core-macro	. ?core-macro-name))
       ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
       ;;   (?fluid-macro-name		($fluid		. ?fluid-macro-name))
-      ;;   (?record-type-name		($core-rtd	. (?condition-rtd ?condition-rcd)))
       ;;   (?record-type-name		($core-record-type-name	. ...)
       ;;   (?condition-object-name	($core-condition-object-type-name . ...)
       ;;
