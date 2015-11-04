@@ -132,9 +132,8 @@
     struct-type-name-binding-descriptor.type-descriptor
 
     ;; syntactic bindings utilities: record-type specifications
+    make-syntactic-binding-descriptor/record-type-name
     syntactic-binding-descriptor/record-type-name?
-    make-syntactic-binding-descriptor/syntactic-record-type-name
-    syntactic-binding-descriptor/syntactic-record-type-name?
 
     ;; syntactic bindings utilities: macros
     make-syntactic-binding-descriptor/local-macro/non-variable-transformer
@@ -193,18 +192,10 @@
     struct-type-spec.std
 
     ;; object types specifications: R6RS records
-    <record-type-spec>					record-type-spec?
+    <record-type-spec>
+    make-record-type-spec				record-type-spec?
     record-type-spec.rtd-id				record-type-spec.rcd-id
     record-type-spec.super-protocol-id
-
-    <syntactic-record-type-spec>
-    make-syntactic-record-type-spec			syntactic-record-type-spec?
-
-    <core-record-type-spec>
-    make-core-record-type-spec				core-record-type-spec?
-
-    <core-condition-type-spec>
-    make-core-condition-type-spec			core-condition-type-spec?
 
     ;; typed variable specification: base type
     <typed-variable-spec>

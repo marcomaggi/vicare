@@ -871,24 +871,9 @@
   (struct-type-spec.std (car (syntactic-binding-descriptor.value ?descriptor))))
 
 
-;;;; syntactic binding descriptor: base record-type descriptor binding
-
-;;Return true if the argument is a syntactic binding's descriptor representing a base
-;;R6RS record-type specification; otherwise return false.
-;;
-;;We expect these syntactic binding's descriptors to have the format:
-;;
-;;   (local-object-type-spec . (?spec . ?expanded-expr))
-;;
-;;where ?SPEC is an instance of a sub-type of "<record-type-spec>".
-;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/record-type-name?
-  record-type-spec?)
-
-
 ;;;; syntactic binding descriptor: usable R6RS record-type descriptor binding
 
-(define* (make-syntactic-binding-descriptor/syntactic-record-type-name {rts syntactic-record-type-spec?} expanded-expr)
+(define* (make-syntactic-binding-descriptor/record-type-name {rts record-type-spec?} expanded-expr)
   ;;Build and return a syntactic binding's descriptor representing a record-type name
   ;;defined by the syntactic layer.  We handle this entry in a way that is similar to
   ;;a local macro.
@@ -903,19 +888,25 @@
   ;;     (make-record-type-spec ?arg ...))
   ;;
   ;;Syntactic bindings of this type are generated when evaluating the right-hand side
-  ;;of a DEFINE-SYNTAX returns an instance of "<syntactic-record-type-spec>".
+  ;;of a DEFINE-SYNTAX returns an instance of "<record-type-spec>".
   ;;
   ;;The returned descriptor has the format:
   ;;
-  ;;   (local-object-type-name . (#<syntactic-record-type-spec> . ?expanded-expr))
+  ;;   (local-object-type-name . (#<record-type-spec> . ?expanded-expr))
   ;;
   (make-syntactic-binding-descriptor local-object-type-name (cons rts expanded-expr)))
 
-;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
-;;record-type name defined by the syntactic layer; otherwise return false.
+;;Return true if the argument is a syntactic binding's descriptor representing a base
+;;R6RS record-type specification; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/syntactic-record-type-name?
-  syntactic-record-type-spec?)
+;;We expect these syntactic binding's descriptors to have the format:
+;;
+;;   (local-object-type-spec . (?spec . ?expanded-expr))
+;;
+;;where ?SPEC is an instance of a sub-type of "<record-type-spec>".
+;;
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/record-type-name?
+  record-type-spec?)
 
 
 ;;;; syntactic binding descriptor: new-style core R6RS record-type descriptor binding
@@ -932,7 +923,7 @@
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   (core-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<record-type-spec> . ?hard-coded-sexp))
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
@@ -959,9 +950,9 @@
 	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
 	 (mutators-table	'())
 	 (methods-table		accessors-table)
-	 (ots			(make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-							    constructor-sexp destructor-sexp type-predicate-sexp
-							    accessors-table mutators-table methods-table)))
+	 (ots			(make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+						       constructor-sexp destructor-sexp type-predicate-sexp
+						       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
@@ -986,7 +977,7 @@
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   (core-object-type-name . (#<core-condition-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<record-type-spec> . ?hard-coded-sexp))
   ;;
   ;;where ?HARD-CODED-SEXP has the format:
   ;;
@@ -1013,9 +1004,9 @@
 	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
 	 (mutators-table	'())
 	 (methods-table		accessors-table)
-	 (ots			(make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
-							       constructor-id destructor-id type-predicate-id
-							       accessors-table mutators-table methods-table)))
+	 (ots			(make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+						       constructor-id destructor-id type-predicate-id
+						       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 

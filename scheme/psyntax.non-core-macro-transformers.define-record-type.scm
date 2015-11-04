@@ -1242,7 +1242,7 @@
   (define foo-methods.table
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
-  `(make-syntactic-record-type-spec
+  `(make-record-type-spec
     (syntax ,foo-rtd.sym)
     (syntax ,foo-rcd.sym)
     ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))

@@ -51,18 +51,10 @@
 	 make-struct-type-spec				struct-type-spec?
 	 struct-type-spec.std
 
-	 <record-type-spec>				record-type-spec?
+	 <record-type-spec>
+	 make-record-type-spec				record-type-spec?
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
-	 record-type-spec.super-protocol-id
-
-	 <syntactic-record-type-spec>
-	 make-syntactic-record-type-spec		syntactic-record-type-spec?
-
-	 <core-record-type-spec>
-	 make-core-record-type-spec			core-record-type-spec?
-
-	 <core-condition-type-spec>
-	 make-core-condition-type-spec			core-condition-type-spec?)
+	 record-type-spec.super-protocol-id)
 
 
 ;;;; basic object-type specification
@@ -475,13 +467,12 @@
 ;;;; R6RS's record-type specification
 ;;
 ;;This  record-type  is  used  as  syntactic  binding  descriptor's  value  for  R6RS
-;;record-types.  This type must never be instantiated directly, rather sub-types must
-;;be created and instantiated.
+;;record-types.
 ;;
 ;;Lexical  variables bound  to instances  of this  type and  its sub-types  should be
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
-(define-record-type (<record-type-spec> dummy-make-record-type-spec record-type-spec?)
+(define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
   (nongenerative vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (fields
@@ -511,85 +502,6 @@
 	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
-
-
-;;;; syntactic R6RS's record-type specification
-;;
-;;This record-type is  used as syntactic binding descriptor's values  for R6RS record
-;;types defined with the syntactic layer.
-;;
-(define-record-type (<syntactic-record-type-spec> make-syntactic-record-type-spec syntactic-record-type-spec?)
-  (nongenerative vicare:expander:<syntactic-record-type-spec>)
-  (parent <record-type-spec>)
-  (protocol
-    (lambda (make-record-type-spec)
-      (define (make-syntactic-record-type-spec rtd-id rcd-id
-					       super-protocol-id parent-id
-					       constructor.sexp destructor.sexp predicate.sexp
-					       safe-accessors-table safe-mutators-table methods-table)
-	((make-record-type-spec rtd-id rcd-id
-				super-protocol-id parent-id
-				constructor.sexp destructor.sexp predicate.sexp
-				safe-accessors-table safe-mutators-table methods-table)))
-      make-syntactic-record-type-spec)))
-
-
-;;;; core R6RS's record-type specification
-
-;;This record type  is used as syntactic binding descriptor's  values for R6RS record
-;;types defined by the boot image.  The lexenv entry has the format:
-;;
-;;   (local-object-type-name . (#<core-record-type-spec> . ?hard-coded-sexp))
-;;
-;;where ?HARD-CODED-SEXP has one of the formats:
-;;
-;;   (?rtd-name ?rcd-name)
-;;
-;;Instances of this type are built by the expander from syntactic binding descriptors
-;;of  type "$core-record-type-name",  which  are  hard-coded in  the  boot image  and
-;;generated directly by the makefile at boot image build-time.  Whenever the function
-;;LABEL->SYNTACTIC-BINDING-DESCRIPTOR  is used  to retrieve  the descriptor  from the
-;;label: the descriptor is converted from the hard-coded format to the format holding
-;;this value.
-;;
-(define-record-type (<core-record-type-spec> make-core-record-type-spec core-record-type-spec?)
-  (nongenerative vicare:expander:<core-record-type-spec>)
-  (parent <record-type-spec>)
-  (protocol
-    (lambda (make-record-type-spec)
-      (define (make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-					  constructor.sexp destructor.sexp predicate.sexp
-					  safe-accessors-table safe-mutators-table methods-table)
-	((make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-				constructor.sexp destructor.sexp predicate.sexp
-				safe-accessors-table safe-mutators-table methods-table)))
-      make-core-record-type-spec)))
-
-
-;;;; core R6RS's condition object record-type specification
-
-;;This record type is used as syntactic binding descriptor's value for R6RS condition
-;;object types defined by the boot image (exmples: "&who", "&error", et cetera).
-;;
-;;Instances of this type are built by the expander from syntactic binding descriptors
-;;of type "$core-condition-object-type-name", which are  hard-coded in the boot image
-;;and generated  directly by  the makefile  at boot  image build-time.   Whenever the
-;;function  LABEL->SYNTACTIC-BINDING-DESCRIPTOR is  used to  retrieve the  descriptor
-;;from  the label:  the descriptor  is converted  from the  hard-coded format  to the
-;;format holding this value.
-;;
-(define-record-type (<core-condition-type-spec> make-core-condition-type-spec core-condition-type-spec?)
-  (nongenerative vicare:expander:<core-condition-type-spec>)
-  (parent <core-record-type-spec>)
-  (protocol
-    (lambda (make-core-record-type-spec)
-      (define (make-core-condition-type-spec rtd-id rcd-id super-protocol-id parent-id
-					     constructor.sexp destructor.sexp predicate.sexp
-					     safe-accessors-table safe-mutators-table methods-table)
-	((make-core-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-				     constructor.sexp destructor.sexp predicate.sexp
-				     safe-accessors-table safe-mutators-table methods-table)))
-      make-core-condition-type-spec)))
 
 
 ;;;; done
