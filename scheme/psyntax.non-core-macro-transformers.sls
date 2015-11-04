@@ -894,11 +894,14 @@
 		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
 	   (bless
 	    `(module (,?name ,?constructor ,?predicate . ,?accessor*)
-	       (define-record-type (,?name ,internal-constructor.sym ,(gensym))
+	       (define-record-type (,?name ,internal-constructor.sym ,?predicate)
 		 (parent ,?super)
 		 (fields ,@(map (lambda (field.stx record-accessor.sym)
 				  `(immutable ,field.stx ,record-accessor.sym))
 			     ?field* record-accessor*.sym))
+		 (custom-predicate
+		   (lambda (,arg.sym)
+		     (condition-predicate (record-type-descriptor ,?name))))
 		 (nongenerative)
 		 (sealed #f)
 		 (opaque #f))
@@ -908,16 +911,9 @@
 	       ;; 						      `(brace ,field-arg.sym ,type.id))
 	       ;; 						 field-arg*.sym field-type*.id))
 	       ;; 	 (unsafe-cast ,?name (,internal-constructor.sym . ,field-arg*.sym)))
-	       (define ,internal-predicate.sym
-		 ;;Remember that  the predicate has  to recognise a  simple condition
-		 ;;object embedded in a compound condition object.
-		 (condition-predicate (record-type-descriptor ,?name)))
-	       (define ((brace ,?predicate <boolean>) ,arg.sym)
-		 (unsafe-cast <boolean> (,internal-predicate.sym ,arg.sym)))
-	       (begin-for-syntax
-		 (object-type-spec-override-predicate (syntax ,?name) (syntax ,?predicate)))
 	       ,@accessor-definition*.stx
-	       #| end of module |# )))))
+	       #| end of module |# )
+	    ))))
       ))
 
   (define (%parse-field-spec field-spec.stx)
