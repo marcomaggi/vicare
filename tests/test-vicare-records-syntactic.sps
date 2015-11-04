@@ -1733,6 +1733,58 @@
   (void))
 
 
+(parametrise ((check-test-name		'custom-predicate))
+
+  ;;Custom predicate that just uses the default type predicate.
+  ;;
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (custom-predicate
+	    (lambda (duo?)
+	      duo?)))
+
+	(define O
+	  (make-duo 1 2))
+
+	(values (duo? O)
+		(duo? 123)
+		;;Remember that condition objects are records.
+		(duo? (make-warning))))
+    => #t #f #f)
+
+  ;;Custom predicate that accepts records wrapped into lists and vectors.
+  ;;
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (custom-predicate
+	    (lambda (duo?)
+	      (lambda (obj)
+		(or (duo? obj)
+		    (and (list? obj)
+			 (duo?  (car obj))
+			 (null? (cdr obj)))
+		    (and (vector? obj)
+			 (= 1 (vector-length obj))
+			 (duo? (vector-ref obj 0))))))))
+
+	(define O
+	  (make-duo 1 2))
+
+	(values (duo? O)
+		(duo? (list O))
+		(duo? (vector O))
+		(duo? 123)
+		;;Remember that condition objects are records.
+		(duo? (make-warning))))
+    => #t #t #t #f #f)
+
+  (void))
+
+
 (parametrise ((check-test-name	'misc))
 
   (let ()

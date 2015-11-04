@@ -248,9 +248,8 @@
 	  unsyntax unsyntax-splicing
 	  fields mutable immutable parent protocol
 	  sealed opaque nongenerative parent-rtd
-	  destructor-protocol custom-printer
-	  catch finally
-	  method case-method super-protocol)
+	  super-protocol destructor-protocol custom-predicate custom-printer method case-method
+	  catch finally)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 

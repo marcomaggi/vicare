@@ -10611,6 +10611,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} case-method
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
+@deffnx {Auxiliary Syntax} custom-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
@@ -10639,14 +10640,18 @@ concatenated in the order in which they are given.  Example:
 
 @menu
 * iklib records defs super-proto:: The super-type protocol.
-* iklib records defs methods::     Record-type methods.
 * iklib records defs destructor::  The destructor protocol.
+* iklib records defs predicate::   The custom predicate.
 * iklib records defs printer::     The custom printer.
+* iklib records defs methods::     Record-type methods.
 @end menu
 
 @c page
 @node iklib records defs super-proto
 @subsubsection The super--type protocol
+
+
+@cindex @syntax{super-protocol}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
@@ -10704,8 +10709,214 @@ the default constructor function @func{make-alpha} builds instances of
 the @clause{super-protocol} of @objtype{alpha}.
 
 @c page
+@node iklib records defs destructor
+@subsubsection The destructor protocol
+
+
+@cindex @syntax{destructor-protocol}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(destructor-protocol @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which must
+evaluate to the destructor protocol function; this function is used as
+explained below to construct a destructor function to be called:
+
+@itemize
+@item
+Implicitly by the garbage collector when a record of this type is
+collected.
+
+@item
+Explicitly with the @syntax{delete} syntax.
+@end itemize
+
+@noindent
+@ref{iklib records final} for further details.
+
+Here is how the destructor function is built:
+
+@itemize
+@item
+If this type has a @syntax{destructor-protocol} clause and no parent:
+@meta{expr} must evaluate to a closure object accepting no arguments and
+returning a closure object acting as destructor function for records of
+this type.  For example:
+
+@lisp
+(define-record-type <port>
+  (fields port)
+  (destructor-protocol
+    (lambda ()
+      (lambda (record)
+        (close-port (<port>-port record))))))
+@end lisp
+
+@item
+If this type has a @syntax{destructor-protocol} clause and a parent
+specified with the @clause{parent} or @clause{parent-rtd} clauses:
+@meta{expr} must evaluate to a closure object accepting as single
+argument the parent's destructor function and returning as single value
+a closure object acting as destructor function for records of this type.
+For example:
+
+@lisp
+(define-record-type <port>
+  (fields port)
+  (destructor-protocol
+    (lambda ()
+      (lambda (record)
+        (close-port (<port>-port record))))))
+
+(define-record-type <file>
+  (parent <port>)
+  (fields filename)
+  (destructor-protocol
+    (lambda (destroy-<port>)
+      (lambda (record)
+        (destroy-<port> record)))))
+@end lisp
+
+@noindent
+notice that the destructor of @samp{<file>} is meant to call the
+destructor of its supertype @samp{<port>} at some point; however calling
+the supertype's destructor is optional.
+
+@item
+If this type has no @clause{destructor-protocol} clause, it has a parent
+and the parent has a destructor function: the parent's destructor
+function becomes this type's destructor function.
+@end itemize
+
+@c page
+@node iklib records defs predicate
+@subsubsection The custom predicate
+
+
+@cindex @syntax{custom-predicate}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(custom-predicate @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which, applied to
+the default type predicate, must evaluate to a custom predicate function
+for instances of the record--type.
+
+When the clause @syntax{custom-predicate} @strong{is not} used, the
+syntax @syntax{define-record-type} just defines the default record--type
+predicate:
+
+@lisp
+(define-record-type duo
+  (fields one two))
+
+(duo? (make-duo 1 2))   @result{} #t
+(duo? (make-warning))   @result{} #f
+(duo? 123)              @result{} #f
+@end lisp
+
+When the clause @syntax{custom-predicate} @strong{is} used, the syntax
+@syntax{define-record-type} binds to the type predicate's syntactic
+identifier the result of applying @meta{expr} to the default type
+predicate.  In the following example the custom predicate is just the
+default predicate itself:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (custom-predicate
+    (lambda (duo?)
+      duo?)))
+
+(duo? (make-duo 1 2))   @result{} #t
+(duo? (make-warning))   @result{} #f
+(duo? 123)              @result{} #f
+@end lisp
+
+@noindent
+in the following example the custom predicate accepts records wrapped
+into lists and vectors:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (custom-predicate
+    (lambda (duo?)
+      (lambda (obj)
+        (or (duo? obj)
+            (and (list? obj)
+                 (duo?  (car obj))
+                 (null? (cdr obj)))
+            (and (vector? obj)
+                 (= 1 (vector-length obj))
+                 (duo? (vector-ref obj 0))))))))
+
+(define O
+  (make-duo 1 2))
+
+(duo? O)                @result{} #t
+(duo? (list O))         @result{} #t
+(duo? (vector O))       @result{} #t
+(duo? (make-warning))   @result{} #f
+(duo? 123)              @result{} #f
+@end lisp
+
+@c page
+@node iklib records defs printer
+@subsubsection The custom printer
+
+
+@cindex @syntax{custom-printer}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(custom-printer @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which must
+evaluate to a custom printer function for instances of the record--type;
+@ref{iklib records printer}, for details on record's custom printers.
+
+Usage example:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (custom-printer
+    (lambda (record port sub-printer)
+      (display "#@{record duo one=" port)
+      (display (duo-one record) port)
+      (display " two=" port)
+      (display (duo-two record) port)
+      (display "@}" port))))
+
+(display (make-duo 1 2))
+@print{} #@{record duo one=1 two=2@}
+@end lisp
+
+@c page
 @node iklib records defs methods
 @subsubsection Record--type methods
+
+
+@cindex @syntax{method}, record--type definition clause
+@cindex @syntax{case-method}, record--type definition clause
 
 
 The syntactic bindings @clause{method} and @clause{case-method} are used
@@ -10820,123 +11031,6 @@ and with dot notation (@pxref{types syntaxes methods, Dot notation}):
 (.a O)          @result{} 1
 (.a O 2)
 (.a O)          @result{} 2
-@end lisp
-
-@c page
-@node iklib records defs destructor
-@subsubsection The destructor protocol
-
-
-In a use of the syntax @syntax{define-record-type}, the definition
-clause:
-
-@lisp
-(destructor-protocol @meta{expr})
-@end lisp
-
-@noindent
-allows the specification of an expression @meta{expr} which must
-evaluate to the destructor protocol function; this function is used as
-explained below to construct a destructor function to be called:
-
-@itemize
-@item
-Implicitly by the garbage collector when a record of this type is
-collected.
-
-@item
-Explicitly with the @syntax{delete} syntax.
-@end itemize
-
-@noindent
-@ref{iklib records final} for further details.
-
-Here is how the destructor function is built:
-
-@itemize
-@item
-If this type has a @syntax{destructor-protocol} clause and no parent:
-@meta{expr} must evaluate to a closure object accepting no arguments and
-returning a closure object acting as destructor function for records of
-this type.  For example:
-
-@lisp
-(define-record-type <port>
-  (fields port)
-  (destructor-protocol
-    (lambda ()
-      (lambda (record)
-        (close-port (<port>-port record))))))
-@end lisp
-
-@item
-If this type has a @syntax{destructor-protocol} clause and a parent
-specified with the @clause{parent} or @clause{parent-rtd} clauses:
-@meta{expr} must evaluate to a closure object accepting as single
-argument the parent's destructor function and returning as single value
-a closure object acting as destructor function for records of this type.
-For example:
-
-@lisp
-(define-record-type <port>
-  (fields port)
-  (destructor-protocol
-    (lambda ()
-      (lambda (record)
-        (close-port (<port>-port record))))))
-
-(define-record-type <file>
-  (parent <port>)
-  (fields filename)
-  (destructor-protocol
-    (lambda (destroy-<port>)
-      (lambda (record)
-        (destroy-<port> record)))))
-@end lisp
-
-@noindent
-notice that the destructor of @samp{<file>} is meant to call the
-destructor of its supertype @samp{<port>} at some point; however calling
-the supertype's destructor is optional.
-
-@item
-If this type has no @clause{destructor-protocol} clause, it has a parent
-and the parent has a destructor function: the parent's destructor
-function becomes this type's destructor function.
-@end itemize
-
-@c page
-@node iklib records defs printer
-@subsubsection The custom printer
-
-
-In a use of the syntax @syntax{define-record-type}, the definition
-clause:
-
-@lisp
-(custom-printer @meta{expr})
-@end lisp
-
-@noindent
-allows the specification of an expression @meta{expr} which must
-evaluate to a custom printer function for instances of the record type;
-@ref{iklib records printer}, for details on record's custom printers.
-
-Usage example:
-
-@lisp
-(define-record-type duo
-  (fields one two)
-  (custom-printer
-    (lambda (record port sub-printer)
-      (display "#@{record duo one=" port)
-      (display (duo-one record) port)
-      (display " two=" port)
-      (display (duo-two record) port)
-      (display "@}" port))))
-
-(display (make-duo 1 2))
-@print{} #@{record duo one=1 two=2@}
 @end lisp
 
 @c page

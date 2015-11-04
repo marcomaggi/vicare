@@ -159,6 +159,11 @@
   (define constructor-protocol-code
     (%get-constructor-protocol-code clause* synner))
 
+  ;;Code for predicate and optional custom  predicate.  False or a form evaluating to
+  ;;the predicate definitions.
+  (define foo-predicate-definitions
+    (%make-predicate-definitions clause* foo? foo-rtd synner))
+
   ;;Code  for custom  printer.  False  or  a form  evaluating to  the custom  printer
   ;;function.
   (define foo-custom-printer-code
@@ -201,7 +206,8 @@
     (define foo-printer-definition
       (if foo-custom-printer-code
 	  `((define ,foo-custom-printer ,foo-custom-printer-code))
-	'())))
+	'()))
+    #| end of definition forms |# )
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
@@ -248,11 +254,8 @@
       ;;Syntactic binding for record-type name.
       (define-syntax ,foo
 	,foo-syntactic-binding-form)
-      ;;Type predicate.
-      (define ((brace ,foo? <boolean>) ,tmp)
-	(unsafe-cast <boolean>
-		     (and ($struct? ,tmp)
-			  ($record-and-rtd? ,tmp ,foo-rtd))))
+      ;;Type predicate definitions.
+      ,@foo-predicate-definitions
       ;;Default constructor.
       (define ((brace ,make-foo ,foo) . ,tmp)
 	(apply ($record-constructor ,foo-rcd) ,tmp))
@@ -334,7 +337,9 @@
 	    (receive-and-return (rv)
 		(append (%r6rs-valid-keywords)
 			(map core-prim-id
-			  '(destructor-protocol custom-printer method case-method super-protocol)))
+			  '(super-protocol destructor-protocol
+			    custom-printer custom-predicate
+			    method case-method)))
 	      (set! cached rv))))))
 
   (define keyword-allowed-multiple-times?
@@ -948,6 +953,43 @@
   ;;record-constructor descriptor.
   ;;
   `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,foo-constructor-protocol))
+
+
+(define (%make-predicate-definitions clause* foo? foo-rtd synner)
+  ;;Return a list  of symbolic expressions (to be BLESSed  later) representing Scheme
+  ;;definitions  defining the  record-type  predicate which,  possibly,  is the  type
+  ;;custom predicate.
+  ;;
+  ;;FOO? must  be the syntactic  identifier that will be  bound to the  (custom) type
+  ;;predicate.
+  ;;
+  ;;FOO-RTD must be a symbol representing  the name of the syntactic identifier bound
+  ;;to this type's RTD.
+  ;;
+  (syntax-match (%get-clause 'custom-predicate clause*) ()
+    ((_ ?custom-predicate-expr)
+     ;;There is a CUSTOM-PREDICATE clause in this record-type definition.
+     (let ((arg.sym			(gensym))
+	   (internal-predicate.sym	(gensym)))
+       `((define ,internal-predicate.sym
+	   (,?custom-predicate-expr (internal-lambda (unsafe) (,arg.sym)
+				      (unsafe-cast <boolean>
+						   (and ($struct? ,arg.sym)
+							($record-and-rtd? ,arg.sym ,foo-rtd))))))
+	 (define ((brace ,foo? <boolean>) ,arg.sym)
+	   (,internal-predicate.sym ,arg.sym)))))
+
+    (#f
+     ;;No CUSTOM-PREDICATE clause  in this record-type definition.  Return  a list of
+     ;;definitions representing the default record-type predicate definition.
+     (let ((arg.sym (gensym)))
+       `((define ((brace ,foo? <boolean>) ,arg.sym)
+	   (unsafe-cast <boolean>
+			(and ($struct? ,arg.sym)
+			     ($record-and-rtd? ,arg.sym ,foo-rtd)))))))
+
+    (?invalid-clause
+     (synner "invalid syntax in CUSTOM-PREDICATE clause" ?invalid-clause))))
 
 
 (define (%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.sym synner)
