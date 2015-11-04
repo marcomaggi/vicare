@@ -101,6 +101,17 @@
 	)))
     ))
 
+(define* (map-for-two-retvals proc . ell*)
+  (cond ((for-all pair? ell*)
+	 (let-values
+	     (((rv1  rv2)  (apply proc (map car ell*)))
+	      ((rv1* rv2*) (apply map-for-two-retvals proc (map cdr ell*))))
+	   (values (cons rv1 rv1*) (cons rv2 rv2*))))
+	((for-all null? ell*)
+	 (values '() '()))
+	(else
+	 (assertion-violation 'map-for-two-retvals "length mismatch" ell*))))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax (with-who stx)

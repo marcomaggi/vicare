@@ -1,5 +1,5 @@
+;;;Copyright (c) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
 ;;;this software and associated documentation files  (the "Software"), to deal in the
@@ -30,14 +30,12 @@
 
 	 object-type-spec.subtype-and-supertype?	object-type-spec-override-predicate
 
-	 <scheme-type-spec>				scheme-type-spec?
+	 <scheme-type-spec>
+	 make-scheme-type-spec				scheme-type-spec?
 
 	 <closure-type-spec>
 	 make-closure-type-spec				closure-type-spec?
 	 closure-type-spec.signature
-
-	 <core-scheme-type-spec>
-	 make-core-scheme-type-spec			core-scheme-type-spec?
 
 	 <list-type-spec>
 	 <list-type-spec>-rtd				<list-type-spec>-rcd
@@ -68,34 +66,22 @@
 
 
 ;;;; basic object-type specification
-
-;;This  record-type is  used as  root  type for  all the  Scheme objects  expand-time
-;;specification.
+;;
+;;This  record-type is  used as  base  type for  all the  Scheme objects  expand-time
+;;specifications.
 ;;
 ;;We must handle this type as if it  is an "abstract" type: we must never instantiate
 ;;it directly, rather we  must define subtype and instantiate that.   This is why the
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
-(module (<object-type-spec>
-	 object-type-spec?
-	 object-type-spec.parent-id
-	 object-type-spec.constructor-sexp
-	 object-type-spec.destructor-sexp
-	 object-type-spec.type-predicate-sexp
-	 object-type-spec.type-predicate-sexp-set!
-	 object-type-spec.safe-accessors-table
-	 object-type-spec.safe-mutators-table
-	 object-type-spec.methods-table
-	 object-type-spec.memoised-list-id
-	 object-type-spec.memoised-list-id-set!)
-
-  (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
-    (nongenerative vicare:expander:<object-type-spec>)
-    (fields
-     (immutable parent-id		object-type-spec.parent-id)
+(define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
+  (nongenerative vicare:expander:<object-type-spec>)
+  (fields
+   (immutable parent-id			object-type-spec.parent-id)
 		;False  or a  syntactic identifier  representing the  parent of  this
 		;record-type.
-     (immutable constructor-sexp		object-type-spec.constructor-sexp)
+
+   (immutable constructor-sexp		object-type-spec.constructor-sexp)
 		;A  boolean value  or a  symbolic  expression (to  be BLESSed  later)
 		;representing  a Scheme  expression that,  expanded and  evaluated at
 		;run-time, returns the default constructor function.
@@ -124,7 +110,7 @@
 		;"$make-clean-vector" or a closure object  like "vector" or the maker
 		;of R6RS records.
 
-     (immutable destructor-sexp		object-type-spec.destructor-sexp)
+   (immutable destructor-sexp		object-type-spec.destructor-sexp)
 		;False or a symbolic expression  (to be BLESSed later) representing a
 		;Scheme expression that, expanded  and evaluated at run-time, returns
 		;a destructor function.  The destructor is meant to be used as:
@@ -133,9 +119,9 @@
 		;
 		;and called explicitly with the DELETE syntax.
 
-     (mutable type-predicate-sexp
-	      object-type-spec.type-predicate-sexp
-	      object-type-spec.type-predicate-sexp-set!)
+   (mutable type-predicate-sexp
+	    object-type-spec.type-predicate-sexp
+	    object-type-spec.type-predicate-sexp-set!)
 		;False or a symbolic expression  (to be BLESSed later) representing a
 		;Scheme expression that, expanded  and evaluated at run-time, returns
 		;a type predicate.  The predicate is meant to be used as:
@@ -146,11 +132,16 @@
 		;
 		;The type  predicate can be a  syntax or core operation  or a closure
 		;object like "vector?" or the predicate of R6RS records.
+		;
+		;This field is mutable because:  when defining the type specification
+		;of record-types  representing condition  objects, we  want to  set a
+		;predicate  that  works  with  both simple  conditions  and  compound
+		;conditions.
 
-     (immutable safe-accessors-table		object-type-spec.safe-accessors-table)
+   (immutable safe-accessors-table		object-type-spec.safe-accessors-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
-		;expression  that, expanded  and  evaluated at  run-time, return  the
+		;expressions  that, expanded  and evaluated  at run-time,  return the
 		;associated safe  field accessor.   A field accessor  is meant  to be
 		;used as:
 		;
@@ -158,10 +149,10 @@
 		;
 		;and called explicitly with the SLOT-REF syntax.
 
-     (immutable safe-mutators-table		object-type-spec.safe-mutators-table)
+   (immutable safe-mutators-table		object-type-spec.safe-mutators-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
-		;expression  that, expanded  and  evaluated at  run-time, return  the
+		;expressions  that, expanded  and evaluated  at run-time,  return the
 		;associated safe field mutator.  A field  mutator is meant to be used
 		;as:
 		;
@@ -169,53 +160,60 @@
 		;
 		;and called explicitly with the SLOT-SET! syntax.
 
-     (immutable methods-table			object-type-spec.methods-table)
+   (immutable methods-table			object-type-spec.methods-table)
 		;Null or  an alist mapping  symbols representing the method  names to
-		;symboli  expression  (to  be   BLESSed  later)  representing  Scheme
+		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
 		;expressions  that, expanded  and evaluated  at run-time,  return the
-		;associated method  applicable.  A method  applicable is meant  to be
-		;used as:
+		;associated method.  A method is meant to be used as:
 		;
 		;   (?method ?instance ?arg ...)
 		;
 		;and called explicitly with the METHOD-CALL syntax.
 
-     (mutable memoised-list-id
-	      object-type-spec.memoised-list-id
-	      object-type-spec.memoised-list-id-set!)
-		;False or  a type  identifier representin  a (possibly  empty) proper
+   (mutable memoised-list-id
+	    object-type-spec.memoised-list-id
+	    object-type-spec.memoised-list-id-set!)
+		;False or  a type identifier  representing a (possibly  empty) proper
 		;list of objects of this type.
+		;
+		;For example, if we create a list type identifier with:
+		;
+		;   (define-syntax <fixnum*>
+		;      (make-list-type-spec #'<fixnum>))
+		;
+		;the  syntactic  identifier  "<fixnum*>"   is  stored  in  the  field
+		;"memoised-list-id" of  the "<object-type-spec>"  instance associated
+		;to the  type identifier "<fixnum>".  This  way multiple applications
+		;of  MAKE-LIST-TYPE-SPEC  to #'<fixnum>  return  the  same list  type
+		;specification object.
 
-     #| end of FIELDS |# )
+   #| end of FIELDS |# )
 
-    (protocol
-      (lambda (make-record)
-	(case-lambda
-	 (()
-	  (make-record #f  ;parent-id
-		       #f  ;constructor-sexp
-		       #f  ;destructor-sexp
-		       #f  ;type-predicate-sexp
-		       '() ;safe-accessors-table
-		       '() ;safe-mutators-table
-		       '() ;methods-table
-		       #f  ;memoised-list-id
-		       ))
-	 ((parent-id
-	   constructor-sexp destructor-sexp type-predicate-sexp
-	   safe-accessors-table safe-mutators-table methods-table)
-	  (make-record parent-id
-		       constructor-sexp destructor-sexp type-predicate-sexp
-		       safe-accessors-table safe-mutators-table methods-table
-		       #f #;memoised-list-id
-		       )))))
+  (protocol
+    (lambda (make-record)
+      (case-lambda
+       (()
+	(make-record #f	   ;parent-id
+		     #f	   ;constructor-sexp
+		     #f	   ;destructor-sexp
+		     #f	   ;type-predicate-sexp
+		     '()   ;safe-accessors-table
+		     '()   ;safe-mutators-table
+		     '()   ;methods-table
+		     #f	   ;memoised-list-id
+		     ))
+       ((parent-id
+	 constructor-sexp destructor-sexp type-predicate-sexp
+	 safe-accessors-table safe-mutators-table methods-table)
+	(make-record parent-id
+		     constructor-sexp destructor-sexp type-predicate-sexp
+		     safe-accessors-table safe-mutators-table methods-table
+		     #f #;memoised-list-id
+		     )))))
 
-    #| end of DEFINE-RECORD-TYPE |# )
+  #| end of DEFINE-RECORD-TYPE |# )
 
-  #| end of module |# )
-
-
-;;;; basic object-type specification: accessor, mutator, method retrieval
+;;; --------------------------------------------------------------------
 
 (module (object-type-spec.safe-accessor-sexp
 	 object-type-spec.safe-mutator-sexp
@@ -225,36 +223,36 @@
     ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
-    ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
+    ;;If  FIELD-NAME.SYM  is EQ?   to  an  object's  field  name: return  a  symbolic
     ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
     ;;expanded  and  evaluated  at  run-time,  returns  the  field's  safe  accessor;
     ;;otherwise return false.
     ;;
-    (%spec-actor ots field-name.sym lexenv object-type-spec.safe-accessors-table))
+    (%sexp-retriever ots field-name.sym lexenv object-type-spec.safe-accessors-table))
 
   (define* (object-type-spec.safe-mutator-sexp {ots object-type-spec?} field-name.sym lexenv)
     ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
-    ;;If FIELD-NAME.SYM is  EQ?  to the name  of a object's field:  return a symbolic
+    ;;If  FIELD-NAME.SYM  is EQ?   to  an  object's  field  name: return  a  symbolic
     ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
     ;;expanded and evaluated at run-time, returns the field's safe mutator; otherwise
     ;;return false.
     ;;
-    (%spec-actor ots field-name.sym lexenv object-type-spec.safe-mutators-table))
+    (%sexp-retriever ots field-name.sym lexenv object-type-spec.safe-mutators-table))
 
   (define* (object-type-spec.applicable-method-sexp {ots object-type-spec?} method-name.sym lexenv)
     ;;OTS must an object-type specification record.  METHOD-NAME.SYM must be a symbol
     ;;representing a method name in the object-type specification.
     ;;
-    ;;If METHOD-NAME.SYM is EQ?  to the name  of a object's method: return a symbolic
+    ;;If  METHOD-NAME.SYM is  EQ?   to an  object's method  name:  return a  symbolic
     ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
     ;;expanded and evaluated at run-time,  returns the method's applicable; otherwise
     ;;return false.
     ;;
-    (%spec-actor ots method-name.sym lexenv object-type-spec.methods-table))
+    (%sexp-retriever ots method-name.sym lexenv object-type-spec.methods-table))
 
-  (define (%spec-actor ots name.sym lexenv table-getter)
+  (define (%sexp-retriever ots name.sym lexenv table-getter)
     ;;TABLE-GETTER must be a function which, applied to the OTS, returns the required
     ;;association list.
     (cond ((assq name.sym (table-getter ots))
@@ -272,8 +270,8 @@
 
   #| end of module |# )
 
-
-;;;; basic object-type specification: ancestor predicate
+;;; --------------------------------------------------------------------
+;;; ancestor predicate
 
 (define* (object-type-spec.subtype-and-supertype? {sub-ots object-type-spec?} {super-ots object-type-spec?} lexenv)
   ;;Return true if SUB-OTS is a subtype of SUPER-OTS; otherwise return false.
@@ -286,8 +284,8 @@
 		  (recurse (id->object-type-specification #f #f parent-id lexenv))))
 	    (else #f))))
 
-
-;;;; basic object-type specification: miscellaneous operations
+;;; --------------------------------------------------------------------
+;;; miscellaneous operations
 
 (define (object-type-spec-override-predicate name.id predicate.stx)
   ;;Assume  NAME.ID  is a  syntactic  identifier  representing an  object-type  name.
@@ -304,9 +302,9 @@
 ;;;; built-in Scheme object-type specification
 ;;
 ;;This record-type  is the  base type  for all  the type  specifications representing
-;;Scheme objects.  It must not be instantiated directly.
+;;Scheme objects, not records, not structs.
 ;;
-(define-record-type (<scheme-type-spec> dummy-make-scheme-type-spec scheme-type-spec?)
+(define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
   (nongenerative vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (protocol
@@ -322,44 +320,10 @@
   #| end of DEFINE-RECORD-TYPE |# )
 
 
-;;;; core Scheme object-type specification
-;;
-;;This  record-type is  used as  syntactic binding  descriptor's values  for built-in
-;;Vicare object types: fixnums, pairs, strings, vectors, et cetera.  The LEXENV entry
-;;has the format:
-;;
-;;   (local-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
-;;
-;;It is built at run-time by converting entries with format:
-;;
-;;   ($core-scheme-object-type-name . ?hard-coded-sexp)
-;;
-;;where ?HARD-CODED-SEXP has the format:
-;;
-;;   (?parent-name ?constructor-name ?type-predicate-name ?methods-alist)
-;;
-;;The source entries are  defined by the boot image's makefile  and are hard-coded in
-;;the boot  image itself.  Whenever the  function LABEL->SYNTACTIC-BINDING-DESCRIPTOR
-;;is used to retrieve the descriptor from the label: the descriptor is converted from
-;;the hard-coded format to the format holding this value.
-;;
-(define-record-type (<core-scheme-type-spec> make-core-scheme-type-spec core-scheme-type-spec?)
-  (nongenerative vicare:expander:<core-scheme-type-spec>)
-  (parent <scheme-type-spec>)
-  (protocol
-    (lambda (make-scheme-type-spec)
-      (define (make-core-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-	((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)))
-      make-core-scheme-type-spec)))
-
-
 ;;;; list object spec
 ;;
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<nlist>" representing non-empty proper list objects holding items of a known type.
-;;The LEXENV entry has the format:
-;;
-;;   (local-object-type-name . (#<list-type-spec> . ?expanded-expr))
 ;;
 ;;There  can be  only one  instance of  type "<list-type-spec>"  representing a  list
 ;;collecting items of a specific type.
@@ -403,10 +367,7 @@
 ;;;; vector object spec
 ;;
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
-;;"<vector>" representing vector  objects holding items of a known  type.  The LEXENV
-;;entry has the format:
-;;
-;;   (local-object-type-name . (#<vector-type-spec> . ?expanded-expr))
+;;"<vector>" representing vector objects holding items of a known type.
 ;;
 ;;There can be  only one instance of type "<vector-type-spec>"  representing a vector
 ;;collecting items of a specific type.
@@ -450,10 +411,7 @@
 ;;;; closure object signature spec
 ;;
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
-;;"<procedure>" representing closure objects defined  in the source code.  The lexenv
-;;entry has the format:
-;;
-;;   (local-object-type-name . (#<closure-type-spec> . ?expanded-expr))
+;;"<procedure>" representing closure objects defined in the source code.
 ;;
 ;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
 ;;signature of arguments and return values.
@@ -485,14 +443,12 @@
 
 
 ;;;; Vicare's struct-type specification
-
-;;This record type is used as  syntactic binding descriptor's values for struct types
-;;defined by DEFINE-STRUCT.  The lexenv entry has the format:
 ;;
-;;   (local-object-type-name . (#<struct-type-spec> . ?expanded-expr))
+;;This record-type is  used as syntactic binding descriptor's  value for struct-types
+;;defined by DEFINE-STRUCT.
 ;;
 ;;Lexical variables  bound to  instances of  this type  should be  called STS  (as in
-;;"Struct-Type Spec").
+;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
 (define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
   (nongenerative vicare:expander:<struct-type-spec>)
@@ -517,13 +473,13 @@
 
 
 ;;;; R6RS's record-type specification
-
-;;This record type  is used as syntactic binding descriptor's  values for R6RS record
-;;types.  This  type must never  be instantiated  directly, rather sub-types  must be
-;;created and instantiated.
+;;
+;;This  record-type  is  used  as  syntactic  binding  descriptor's  value  for  R6RS
+;;record-types.  This type must never be instantiated directly, rather sub-types must
+;;be created and instantiated.
 ;;
 ;;Lexical  variables bound  to instances  of this  type and  its sub-types  should be
-;;called RTS (as in "Record-Type Spec").
+;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
 (define-record-type (<record-type-spec> dummy-make-record-type-spec record-type-spec?)
   (nongenerative vicare:expander:<record-type-spec>)
@@ -534,8 +490,9 @@
    (immutable rcd-id			record-type-spec.rcd-id)
 		;The syntactic identifier bound to the record-constructor descriptor.
    (immutable super-protocol-id		record-type-spec.super-protocol-id)
-		;False if this record-type  has no super-type constructor descriptor;
-		;otherwise the syntactic identifier to which the super-RCD is bound.
+		;False  if  this  record-type has  no  super-type  record-constructor
+		;descriptor;  otherwise   the  syntactic  identifier  to   which  the
+		;super-RCD is bound.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -563,9 +520,7 @@
 ;;;; syntactic R6RS's record-type specification
 ;;
 ;;This record-type is  used as syntactic binding descriptor's values  for R6RS record
-;;types defined with the syntactic layer.  The lexenv entry has the format:
-;;
-;;   (local-object-type-name . (#<syntactic-record-type-spec> . ?expanded-expr))
+;;types defined with the syntactic layer.
 ;;
 (define-record-type (<syntactic-record-type-spec> make-syntactic-record-type-spec syntactic-record-type-spec?)
   (nongenerative vicare:expander:<syntactic-record-type-spec>)
@@ -622,10 +577,7 @@
 ;;;; core R6RS's condition object record-type specification
 
 ;;This record type is used as syntactic binding descriptor's value for R6RS condition
-;;object types defined by the boot image (exmples: "&who", "&error", et cetera).  The
-;;lexenv entry has the format:
-;;
-;;   (local-object-type-name . (#<core-condition-type-spec> . #f))
+;;object types defined by the boot image (exmples: "&who", "&error", et cetera).
 ;;
 ;;Instances of this type are built by the expander from syntactic binding descriptors
 ;;of type "$core-condition-object-type-name", which are  hard-coded in the boot image

@@ -145,7 +145,23 @@
 	(is-a? (new duo 1 2) duo))
     => #t)
 
-  #t)
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+	(xp.type-signature-tags (type-of (is-a? (read) duo))))
+    (=> syntax=?)
+    (list #'<boolean>))
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two))
+	(xp.type-signature-tags (type-of (duo? (read)))))
+    (=> syntax=?)
+    (list #'<boolean>))
+
+  (void))
 
 
 (parametrise ((check-test-name	'slots-syntax))
@@ -1182,6 +1198,60 @@
 		(method-call-late-binding 'e O)
 		(method-call-late-binding 'f O)))
     => 11 22 33 44 55 66)
+
+  (void))
+
+
+(parametrise ((check-test-name	'typed-fields))
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields {one <fixnum>} {two <flonum>}))
+	(define {O duo}
+	  (new duo 1 2.3))
+	(values (.one O)
+		(.two O)))
+    => 1 2.3)
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields {one <fixnum>} {two <flonum>}))
+	(define {O duo}
+	  (new duo 1 2.3))
+	(values (xp.type-signature-tags (type-of (.one O)))
+		(xp.type-signature-tags (type-of (.two O)))))
+    (=> syntax=?)
+    (list #'<fixnum>)
+    (list #'<flonum>))
+
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields {one <fixnum>} {two <flonum>}))
+	(define {O duo}
+	  (new duo 1 2.3))
+	(values (xp.type-signature-tags (type-of (duo-one O)))
+		(xp.type-signature-tags (type-of (duo-two O)))))
+    (=> syntax=?)
+    (list #'<fixnum>)
+    (list #'<flonum>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>}
+		  (mutable   {b <flonum>})
+		  (immutable {c <flonum>})
+		  (mutable   {d <flonum>} get-alpha-d set-alpha-d)
+		  (immutable {e <flonum>} get-alpha-e)))
+	(define {O alpha}
+	  (new alpha 1 2 3 4 5))
+	(values (.a O) (.b O) (.c O) (.d O) (.e O)))
+    => 1 2 3 4 5)
 
   (void))
 

@@ -224,6 +224,9 @@
 					    safe-field-accessor* safe-field-mutator*
 					    method-name*.sym method-procname*.sym))
 
+  (define tmp
+    (gensym))
+
   (bless
    `(begin
       ;;Parent record-type descriptor.
@@ -246,13 +249,13 @@
       (define-syntax ,foo
 	,foo-syntactic-binding-form)
       ;;Type predicate.
-      (define ((brace ,foo? <boolean>) obj)
+      (define ((brace ,foo? <boolean>) ,tmp)
 	(unsafe-cast <boolean>
-		     (and ($struct? obj)
-			  ($record-and-rtd? obj ,foo-rtd))))
+		     (and ($struct? ,tmp)
+			  ($record-and-rtd? ,tmp ,foo-rtd))))
       ;;Default constructor.
-      (define ((brace ,make-foo ,foo) . args)
-	(apply ($record-constructor ,foo-rcd) args))
+      (define ((brace ,make-foo ,foo) . ,tmp)
+	(apply ($record-constructor ,foo-rcd) ,tmp))
       ;;Methods.
       ,@method-form*.sexp
       ;;When there are  no fields: this form  expands to "(module ())"  which is just
@@ -522,11 +525,11 @@
        (receive (field-name.id field-type.id)
 	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
-	       (cons ?name field-name*.sym)
+	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
 	       (cons field-type.id field-type*.id)
 	       (cons ?accessor safe-field-accessor*)
-	       (cons (%gen-unsafe-accessor-name ?name) unsafe-field-accessor*)
+	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
 	       (cons #f unsafe-field-mutator*)
 	       (cons (%gen-safe-method-name     field-name.id) safe-field-method*)

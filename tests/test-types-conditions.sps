@@ -383,6 +383,22 @@
   (void))
 
 
+(parametrise ((check-test-name	'typed-fields))
+
+  (define-condition-type &demo
+      &condition
+    make-demo-condition
+    condition-demo?
+    ({fx <fixnum>}	condition-demo.fx))
+
+  (check
+      (let (({O &demo} (make-demo-condition 123)))
+	(.fx O))
+    => 123)
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

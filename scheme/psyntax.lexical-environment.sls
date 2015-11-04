@@ -167,22 +167,21 @@
     ;; object-type specifications: utilities
     object-type-spec.subtype-and-supertype?		object-type-spec-override-predicate
 
-    ;; object types specifications: built-in object types
+    ;; object-type specifications: built-in object types
     <scheme-type-spec>					scheme-type-spec?
 
-    <core-scheme-type-spec>
-    make-core-scheme-type-spec				core-scheme-type-spec?
-
+    ;; object-type specifications: closure object
     <closure-type-spec>
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature
 
-    ;; object-type specifications: compound types
+    ;; object-type specifications: compound types, lists
     <list-type-spec>
     <list-type-spec>-rtd				<list-type-spec>-rcd
     make-list-type-spec					list-type-spec?
     list-type-spec.type-id
 
+    ;; object-type specifications: compound types, vectors
     <vector-type-spec>
     <vector-type-spec>-rtd				<vector-type-spec>-rcd
     make-vector-type-spec				vector-type-spec?
@@ -2508,7 +2507,7 @@
 				       ((identifier? x)
 					(symbol->string (syntax->datum x)))
 				       (else
-					(assertion-violation __who__ "BUG"))))
+					(assertion-violation __who__ "BUG" ctxt str*))))
 			    str*)))))
 
 

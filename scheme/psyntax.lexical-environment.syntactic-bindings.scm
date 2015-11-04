@@ -759,7 +759,7 @@
   ;;
   ;;and the usable descriptor has the format:
   ;;
-  ;;   (core-object-type-name . (#<core-scheme-type-spec> . ?hard-coded-sexp))
+  ;;   (core-object-type-name . (#<scheme-type-spec> . ?hard-coded-sexp))
   ;;
   ;;Syntactic binding descriptors of  type "$core-scheme-object-type-name" are hard-coded in
   ;;the boot image  and generated directly by the makefile  at boot image build-time.
@@ -778,7 +778,7 @@
 	 (type-predicate.sexp	(bless (list-ref descr.value 3)))
 	 (methods-table		(%alist-ref-or-null descr.value 4)))
     (define spec
-      (make-core-scheme-type-spec parent-id constructor.sexp type-predicate.sexp methods-table))
+      (make-scheme-type-spec parent-id constructor.sexp type-predicate.sexp methods-table))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons spec descr.value))))
 

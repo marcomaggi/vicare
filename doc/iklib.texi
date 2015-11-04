@@ -5941,7 +5941,7 @@ condition objects; otherwise return @false{}.
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftp {Condition Type} &source-position
+@deftp {Condition Type} @acondition{source-position}
 Condition type used to represent a position in Scheme source code read
 from a textual input port; it is derived from @condition{condition}.  It
 has the following fields:
@@ -5999,7 +5999,7 @@ Accessors for the fields of condition objects of type
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftp {Condition Type} &i/o-eagain
+@deftp {Condition Type} @acondition{i/o-eagain}
 Used to signal that a system call returned with @code{errno} set to
 @code{EAGAIN}.  It is derived from @condition{i/o}.
 @end deftp
@@ -6023,7 +6023,7 @@ Return @true{} if @var{obj} is a condition object of type
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftp {Condition Type} &errno
+@deftp {Condition Type} @acondition{errno}
 Condition object type representing system errors described by an encoded
 @code{errno} value; it is derived from @condition{condition}.
 @end deftp
@@ -6050,7 +6050,7 @@ an instance of @condition{errno}.
 @subsection Failed expression conditions
 
 
-@deftp {Condition Type} &failed-expression-condition
+@deftp {Condition Type} @acondition{failed-expression-condition}
 Condition type used to describe a failed expression, for example in a
 procedure argument validation predicate.  It is derived from
 @condition{condition}.  It has the following fields:
@@ -6085,7 +6085,7 @@ Given a condition object off type
 @subsection Procedure precondition violations
 
 
-@deftp {Condition Type} &procedure-precondition-violation
+@deftp {Condition Type} @acondition{procedure-precondition-violation}
 Base condition object type representing invalid state or argument for a
 procedure application; it is derived from @condition{assertion}.
 @end deftp
@@ -6108,7 +6108,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsection Procedure postcondition violations
 
 
-@deftp {Condition Type} &procedure-postcondition-violation
+@deftp {Condition Type} @acondition{procedure-postcondition-violation}
 Base condition object type representing invalid state or return values
 for a procedure application; it is derived from @condition{assertion}.
 @end deftp
@@ -6131,7 +6131,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsection Procedure argument violations
 
 
-@deftp {Condition Type} &procedure-argument-violation
+@deftp {Condition Type} @acondition{procedure-argument-violation}
 Condition object type representing, generically, one or more invalid
 values handed as arguments to a procedure application; it is derived
 from @condition{procedure-precondition-violation}.
@@ -6161,7 +6161,7 @@ component types: @condition{who}, @condition{message},
 @subsection Procedure signature argument violations
 
 
-@deftp {Condition Type} &procedure-signature-argument-violation
+@deftp {Condition Type} @acondition{procedure-signature-argument-violation}
 Condition object type representing an invalid value handed as argument
 to a procedure application; it is derived from
 @condition{procedure-argument-violation}.
@@ -6223,7 +6223,7 @@ component types: @condition{who}, @condition{message},
 @subsection Procedure signature return value violations
 
 
-@deftp {Condition Type} &procedure-signature-return-value-violation
+@deftp {Condition Type} @acondition{procedure-signature-return-value-violation}
 Condition object type representing invalid values returned from an
 expression; it is derived from
 @condition{procedure-postcondition-violation}.  It has the following
@@ -6276,7 +6276,7 @@ component types: @condition{who}, @condition{message},
 @subsection Procedure argument consistency violations
 
 
-@deftp {Condition Type} &procedure-arguments-consistency-violation
+@deftp {Condition Type} @acondition{procedure-arguments-consistency-violation}
 Condition object type representing a set of inconsistent arguments to a
 procedure application; it is derived from
 @condition{procedure-precondition-violation}.
@@ -6316,7 +6316,7 @@ attach to the raised condition object a component with type
 @subsection Expression return value violations
 
 
-@deftp {Condition Type} &expression-return-value-violation
+@deftp {Condition Type} @acondition{expression-return-value-violation}
 Condition object type representing invalid values returned from an
 expression; it is derived from @condition{assertion}.
 @end deftp
@@ -6347,7 +6347,7 @@ component types: @condition{who}, @condition{message},
 
 
 @anchor{&non-reinstatable}
-@deftp {Condition Type} &non-reinstatable
+@deftp {Condition Type} @acondition{non-reinstatable}
 Condition object type representing an attempt to reinstate a
 continuation in an invalid context; it is derived from
 @condition{violation}.
@@ -6391,7 +6391,7 @@ Raise a compound condition object with components: @condition{who},
 
 @subsubheading Encoding strings
 
-@deftp {Condition Type} &string-encoding
+@deftp {Condition Type} @acondition{string-encoding}
 Condition object type representing an error while encoding a string into
 a bytevector; it is derived from @condition{error}.
 @end deftp
@@ -6412,7 +6412,7 @@ Return @true{} if @var{obj} is a condition object of type
 
 @subsubheading Decoding strings
 
-@deftp {Condition Type} &string-decoding
+@deftp {Condition Type} @acondition{string-decoding}
 Condition object type representing an error while encoding a bytevector
 into a string; it is derived from @condition{error}.
 @end deftp
@@ -6437,7 +6437,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsubheading Encoding strings into @utf{}-8 bytevectors
 
 
-@deftp {Condition Type} &utf8-string-encoding
+@deftp {Condition Type} @acondition{utf8-string-encoding}
 Condition object type representing an error while encoding a string into
 a @utf{}-8 bytevector; it is derived from @condition{string-encoding}.
 @end deftp
@@ -6459,7 +6459,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsubheading Decoding strings from @utf{}-8 bytevectors
 
 
-@deftp {Condition Type} &utf8-string-decoding
+@deftp {Condition Type} @acondition{utf8-string-decoding}
 Condition object type representing an error while decoding a @utf{}-8
 bytevector into a string; it is derived from
 @condition{string-decoding}.
@@ -6481,7 +6481,7 @@ Return @true{} if @var{obj} is a condition object of type
 
 @subsubheading Invalid octet in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-invalid-octet
+@deftp {Condition Type} @acondition{utf8-string-decoding-invalid-octet}
 Condition object type representing an invalid octet in a @utf{}-8
 bytevector; it is derived from @condition{utf8-string-decoding}.  It has
 the following fields:
@@ -6523,7 +6523,7 @@ Field accessors for condition objects of type
 
 @subsubheading Invalid 2-octets sequence in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-invalid-2-tuple
+@deftp {Condition Type} @acondition{utf8-string-decoding-invalid-2-tuple}
 Condition object type representing an invalid 2-octets sequence in a
 @utf{}-8 bytevector: the first octet is valid, the second one is
 invalid.  It is derived from @condition{utf8-string-decoding}.  It has
@@ -6566,7 +6566,7 @@ Field accessors for condition objects of type
 
 @subsubheading Invalid 3-octets sequence in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-invalid-3-tuple
+@deftp {Condition Type} @acondition{utf8-string-decoding-invalid-3-tuple}
 Condition object type representing an invalid 3-octets sequence in a
 @utf{}-8 bytevector: the first octet is valid, the second and/or third
 ones are invalid.  It is derived from @condition{utf8-string-decoding}.
@@ -6609,7 +6609,7 @@ Field accessors for condition objects of type
 
 @subsubheading Invalid 4-octets sequence in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-invalid-4-tuple
+@deftp {Condition Type} @acondition{utf8-string-decoding-invalid-4-tuple}
 Condition object type representing an invalid 4-octets sequence in a
 @utf{}-8 bytevector: the first octet is valid, one or more among the
 second, third and fourth ones are invalid.  It is derived from
@@ -6652,7 +6652,7 @@ Field accessors for condition objects of type
 
 @subsubheading Incomplete 2-octets sequence in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-incomplete-2-tuple
+@deftp {Condition Type} @acondition{utf8-string-decoding-incomplete-2-tuple}
 Condition object type representing an incomplete 2-octets sequence in a
 @utf{}-8 bytevector: the first octet is present, the second one is
 missing because we are at the end of the bytevector.  It is derived from
@@ -6696,7 +6696,7 @@ Field accessors for condition objects of type
 
 @subsubheading Incomplete 3-octets sequence in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-incomplete-3-tuple
+@deftp {Condition Type} @acondition{utf8-string-decoding-incomplete-3-tuple}
 Condition object type representing an incomplete 3-octets sequence in a
 @utf{}-8 bytevector: the first octet is present, the second and/or third
 ones are missing because we are at the end of the bytevector.  It is
@@ -6741,7 +6741,7 @@ Field accessors for condition objects of type
 
 @subsubheading Incomplete 4-octets sequence in @utf{}-8 bytevector
 
-@deftp {Condition Type} &utf8-string-decoding-incomplete-4-tuple
+@deftp {Condition Type} @acondition{utf8-string-decoding-incomplete-4-tuple}
 Condition object type representing an incomplete 4-octets sequence in a
 @utf{}-8 bytevector: the first octet is present, one or more among the
 second, third and fourth ones are missing because we are at the end of
@@ -6790,7 +6790,7 @@ Field accessors for condition objects of type
 @subsubheading Encoding strings into @utf{}-16 bytevectors
 
 
-@deftp {Condition Type} &utf16-string-encoding
+@deftp {Condition Type} @acondition{utf16-string-encoding}
 Condition object type representing an error while encoding a string into
 a @utf{}-16 bytevector; it is derived from @condition{string-encoding}.
 @end deftp
@@ -6812,7 +6812,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsubheading Decoding strings from @utf{}-16 bytevectors
 
 
-@deftp {Condition Type} &utf16-string-decoding
+@deftp {Condition Type} @acondition{utf16-string-decoding}
 Condition object type representing an error while decoding a @utf{}-16
 bytevector into a string; it is derived from
 @condition{string-decoding}.
@@ -6834,7 +6834,7 @@ Return @true{} if @var{obj} is a condition object of type
 
 @subsubheading Invalid first word in @utf{}-16 bytevectors
 
-@deftp {Condition Type} &utf16-string-decoding-invalid-first-word
+@deftp {Condition Type} @acondition{utf16-string-decoding-invalid-first-word}
 Condition object type representing an invalid 16-bit word in the
 position of standalone word or first word of a surrogate pair; it is
 derived from @condition{utf16-string-decoding}.  It has the following
@@ -6877,7 +6877,7 @@ Field accessors for condition objects of type
 
 @subsubheading Invalid second word in @utf{}-16 bytevectors
 
-@deftp {Condition Type} &utf16-string-decoding-invalid-second-word
+@deftp {Condition Type} @acondition{utf16-string-decoding-invalid-second-word}
 Condition object type representing an invalid 16-bit word in the
 position of second word of a surrogate pair; it is derived from
 @condition{utf16-string-decoding}.  It has the following fields:
@@ -6924,7 +6924,7 @@ Field accessors for condition objects of type
 @subsubheading Missing second word in @utf{}-16 bytevectors
 
 
-@deftp {Condition Type} &utf16-string-decoding-missing-second-word
+@deftp {Condition Type} @acondition{utf16-string-decoding-missing-second-word}
 Condition object type representing a missing 16-bit word in the position
 of second word of a surrogate pair; it is derived from
 @condition{utf16-string-decoding}.  It has the following fields:
@@ -6967,7 +6967,7 @@ Field accessors for condition objects of type
 @subsubheading Standalone octet in @utf{}-16 bytevectors
 
 
-@deftp {Condition Type} &utf16-string-decoding-standalone-octet
+@deftp {Condition Type} @acondition{utf16-string-decoding-standalone-octet}
 Condition object type representing a standalone octet at the end of the
 byte vector; it is derived from @condition{utf16-string-decoding}.  It
 has the following fields:
@@ -7013,7 +7013,7 @@ Field accessors for condition objects of type
 @subsubheading Encoding strings into @utf{}-32 bytevectors
 
 
-@deftp {Condition Type} &utf32-string-encoding
+@deftp {Condition Type} @acondition{utf32-string-encoding}
 Condition object type representing an error while encoding a string into
 a @utf{}-32 bytevector; it is derived from @condition{string-encoding}.
 @end deftp
@@ -7035,7 +7035,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsubheading Decoding strings from @utf{}-32 bytevectors
 
 
-@deftp {Condition Type} &utf32-string-decoding
+@deftp {Condition Type} @acondition{utf32-string-decoding}
 Condition object type representing an error while decoding a @utf{}-32
 bytevector into a string; it is derived from
 @condition{string-decoding}.
@@ -7058,7 +7058,7 @@ Return @true{} if @var{obj} is a condition object of type
 @subsubheading Invalid 32-bit word in @utf{}-32 bytevectors
 
 
-@deftp {Condition Type} &utf32-string-decoding-invalid-word
+@deftp {Condition Type} @acondition{utf32-string-decoding-invalid-word}
 Condition object type representing an invalid 32-bit word; it is derived
 from @condition{utf32-string-decoding}.  It has the following fields:
 
@@ -7100,7 +7100,7 @@ Field accessors for condition objects of type
 @subsubheading Orphan octets at end of @utf{}-32 bytevectors
 
 
-@deftp {Condition Type} &utf32-string-decoding-orphan-octets
+@deftp {Condition Type} @acondition{utf32-string-decoding-orphan-octets}
 Condition object type representing the presence of 1, 2 or 3 orphan
 octets at the end of the @utf{}-32 bytevector; it is derived from
 @condition{utf32-string-decoding}.  It has the following fields:

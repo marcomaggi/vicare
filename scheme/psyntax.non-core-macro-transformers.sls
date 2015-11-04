@@ -93,6 +93,27 @@
 (import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
 
 
+;;;; helpers
+
+(define-syntax (define-macro-transformer stx)
+  (sys.syntax-case stx ()
+    ((?kwd (?who ?input-form.stx) ?body0 ?body ...)
+     (and (sys.identifier? (sys.syntax ?who))
+	  (sys.identifier? (sys.syntax ?input-form.stx)))
+     (sys.with-syntax
+	 ((SYNNER (sys.datum->syntax (sys.syntax ?who) 'synner)))
+       (sys.syntax
+	(define (?who ?input-form.stx)
+	  (with-who ?who
+	    (case-define SYNNER
+	      ((message)
+	       (SYNNER message #f))
+	      ((message subform)
+	       (syntax-violation __who__ message ?input-form.stx subform)))
+	    ?body0 ?body ...)))))
+    ))
+
+
 (define* (non-core-macro-transformer {x symbol?})
   ;;Map symbols representing non-core macros to their macro transformers.
   ;;
@@ -832,49 +853,96 @@
 
 ;;;; non-core macro: DEFINE-CONDITION-TYPE
 
-(define (define-condition-type-macro expr-stx)
-  ;;Transformer  function  used  to  expand  R6RS  RECORD-CONDITION-TYPE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (define-condition-type-macro input-form.stx)
+  ;;Transformer function  used to expand  R6RS RECORD-CONDITION-TYPE macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
-     (and (identifier? ?name)
-	  (identifier? ?super)
-	  (identifier? ?constructor)
-	  (identifier? ?predicate)
-	  (for-all identifier? ?field*)
-	  (for-all identifier? ?accessor*))
-     (let ((aux-accessor* (map (lambda (x)
-				 (gensym))
-			    ?accessor*)))
-       (bless
-	`(module (,?name ,?constructor ,?predicate . ,?accessor*)
-	   (define-record-type (,?name ,?constructor ,(gensym))
-	     (parent ,?super)
-	     (fields ,@(map (lambda (field aux)
-			      `(immutable ,field ,aux))
-			 ?field* aux-accessor*))
-	     (nongenerative)
-	     (sealed #f)
-	     (opaque #f))
-	   (define ,?predicate
-	     ;;Remember  that the  predicate has  to recognise  a simple
-	     ;;condition object embedded in a compound condition object.
-	     (condition-predicate (record-type-descriptor ,?name)))
-	   (begin-for-syntax
-	     (object-type-spec-override-predicate (syntax ,?name) (syntax ,?predicate)))
-	   ,@(map
-		 (lambda (accessor aux)
-		   `(define ,accessor
-		      ;;Remember  that  the  accessor has  to  access  a
-		      ;;simple condition  object embedded in  a compound
-		      ;;condition object.
-		      (condition-accessor (record-type-descriptor ,?name) ,aux)))
-	       ?accessor* aux-accessor*)
-	   #| end of module |# )
-	)))
-    ))
+  (define (main)
+    (syntax-match input-form.stx ()
+      ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
+       (begin
+	 (unless (identifier? ?name)
+	   (synner "expected identifier as condition type name" ?name))
+	 (unless (identifier? ?super)
+	   (synner "expected identifier as condition type super-type name" ?super))
+	 (unless (identifier? ?constructor)
+	   (synner "expected identifier as condition type constructor name" ?constructor))
+	 (unless (identifier? ?predicate)
+	   (synner "expected identifier as condition type predicate name" ?predicate))
+	 (for-each (lambda (accessor.id)
+		     (unless (identifier? accessor.id)
+		       (synner "expected identifier as condition type field accessor name" accessor.id)))
+	   ?accessor*)
+	 (let*-values
+	     (((field-name*.id field-type*.id)	(map-for-two-retvals %parse-field-spec ?field*))
+	      ((internal-constructor.sym)	(gensym (identifier->symbol ?constructor)))
+	      ((internal-predicate.sym)		(gensym (identifier->symbol ?predicate)))
+	      ((record-accessor*.sym)		(map (lambda (x) (gensym)) ?accessor*))
+	      ((internal-accessor*.sym)		(map (lambda (x) (gensym)) ?accessor*))
+	      ((arg.sym)			(gensym))
+	      ((field-arg*.sym)			(map (lambda (x) (gensym)) ?field*))
+	      ((accessor-definition*.stx)
+	       (map (lambda (field-name.id field-type.id accessor.id record-accessor.sym internal-accessor.sym)
+		      `(begin
+			 (define ,internal-accessor.sym
+			   ;;Remember  that  the  accessor  has to  access  a  simple
+			   ;;condition  object  embedded   in  a  compound  condition
+			   ;;object.
+			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym))
+			 (define ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
+			   (unsafe-cast ,field-type.id (,internal-accessor.sym ,arg.sym)))))
+		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
+	   (bless
+	    `(module (,?name ,?constructor ,?predicate . ,?accessor*)
+	       (define-record-type (,?name ,internal-constructor.sym ,(gensym))
+		 (parent ,?super)
+		 (fields ,@(map (lambda (field.stx record-accessor.sym)
+				  `(immutable ,field.stx ,record-accessor.sym))
+			     ?field* record-accessor*.sym))
+		 (nongenerative)
+		 (sealed #f)
+		 (opaque #f))
+	       (define ((brace ,?constructor ,?name) . ,arg.sym)
+		 (unsafe-cast ,?name (apply ,internal-constructor.sym ,arg.sym)))
+	       ;; (define ((brace ,?constructor ,?name) ,@(map (lambda (field-arg.sym type.id)
+	       ;; 						      `(brace ,field-arg.sym ,type.id))
+	       ;; 						 field-arg*.sym field-type*.id))
+	       ;; 	 (unsafe-cast ,?name (,internal-constructor.sym . ,field-arg*.sym)))
+	       (define ,internal-predicate.sym
+		 ;;Remember that  the predicate has  to recognise a  simple condition
+		 ;;object embedded in a compound condition object.
+		 (condition-predicate (record-type-descriptor ,?name)))
+	       (define ((brace ,?predicate <boolean>) ,arg.sym)
+		 (unsafe-cast <boolean> (,internal-predicate.sym ,arg.sym)))
+	       (begin-for-syntax
+		 (object-type-spec-override-predicate (syntax ,?name) (syntax ,?predicate)))
+	       ,@accessor-definition*.stx
+	       #| end of module |# )))))
+      ))
+
+  (define (%parse-field-spec field-spec.stx)
+    (syntax-match field-spec.stx (brace)
+      ((brace ?field-name ?field-type)
+       (option.typed-language?)
+       (begin
+	 (unless (identifier? ?field-name)
+	   (synner "expected identifier as condition type field name" ?field-name))
+	 (unless (identifier? ?field-type)
+	   (synner "expected identifier as condition type field type" ?field-type))
+	 (values ?field-name ?field-type)))
+
+      (?field-name
+       (identifier? ?field-name)
+       (values ?field-name (top-tag-id)))
+
+      (_
+       (synner (if (option.typed-language?)
+		   "expected identifier or typed identifier as condition type field specification"
+		 "expected identifier as condition type field name")
+	       field-spec.stx))))
+
+  (main))
 
 
 ;;;; non-core macro: PARAMETERIZE and PARAMETRISE
@@ -5029,4 +5097,7 @@
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;eval: (put 'with-who				'scheme-indent-function 1)
 ;;eval: (put '$fold-left/stx			'scheme-indent-function 1)
+;;eval: (put 'sys.with-syntax			'scheme-indent-function 1)
+;;eval: (put 'define-macro-transformer		'scheme-indent-function 1)
+;;eval: (put 'map-for-two-retvals		'scheme-indent-function 1)
 ;;End:
