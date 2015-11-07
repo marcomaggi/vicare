@@ -8,8 +8,8 @@
 
 @value{PRJNAME}'s expander is a development of the expander library
 @code{psyntax} written by Abdulaziz Ghuloum and Kent Dybvig and released
-to the public under a very liberal license.  @ref{references expander}
-for the bibliography on the expansion process.
+to the public under a very liberal license (@pxref{references expander}
+for the bibliography on the expansion process).
 
 The library @library{vicare expander} exports bindings that allow
 inspection of the expander operations.  To avoid collisions between
@@ -80,7 +80,7 @@ so if we understand how libraries are expanded, we also understand how
 programs are expanded.
 
 @menu
-* expander intro intro::        Core macros, non-core macros,
+* expander intro macros::       Core macros, non-core macros,
                                 user-defined macros.
 * expander intro times::        Evaluation times.
 * expander intro bindings::     Syntactic bindings.
@@ -89,16 +89,29 @@ programs are expanded.
 @end menu
 
 @c page
-@node expander intro intro
-@subsection Core macros, non--core macros, user--defined macros
+@node expander intro macros
+@subsection Primitive core macros, primitive non--core macros, user--defined macros
 
 
-@subsubheading Core macros
+A big portion of what the expander does is processing macros; converting
+input syntactic forms with format:
+
+@lisp
+(@meta{keyword} @meta{subform} @dots{})
+@end lisp
+
+@noindent
+into some output syntactic forms.  What kind of macros are implemented?
+And which part of the expander's source code implements them?
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Primitive core macros
 
 These are basic syntaxes into which all the other macros are expanded;
 despite being called ``core'', they are neither part of the expanded
 language nor of the core language.  Core macros are split into three
-groups, those that can appear in definition context only:
+groups, those that can appear in definition--context only:
 
 @example
 define             define-syntax
@@ -111,7 +124,7 @@ eval-for-expand
 @end example
 
 @noindent
-and maybe others; those that can appear only in expression context only:
+and maybe others; those that can appear in expression--context only:
 
 @example
 foreign-call             quote
@@ -129,40 +142,58 @@ predicate-return-value-validation
 @end example
 
 @noindent
-and maybe others; those that can appear in both definition context and
-expression context:
+and maybe others; those that can appear in both definition--context and
+expression--context:
 
 @example
 let-syntax               letrec-syntax
 @end example
 
-The implementation of core macros that appear in definition context only
-is integrated in the function @func{chi-body*}.
+Which part of the expander's source code implements core macros?
 
-The implementation of core macros that appear in definition context only
+@itemize
+@item
+The implementation of core macros that appear in definition--context is
+integrated in the function @func{chi-body*}.  The implementation is
+sophisticated because, in a body, syntactic bindings defined by
+@syntax{define-syntax} must be processed before syntactic bindings
+defined by @syntax{define}, so multiple passes are required.
+
+@item
+The implementation of core macros that appear in expression--context
 consists of proper transformer functions selected by the function
 @func{core-macro-transformer}.  Such transformers are applied to input
 forms by the function @func{chi-expr}.
 
+A core transformer function accepts as arguments: a syntax object
+representing the input form; values representing the lexical context in
+which the input form is present.  A core transformer function returns an
+instance of type @class{psi} representing an expanded language
+expression.
+
+@item
 Macros that can appear in both definition context and expression context
 have double implementation: one in the function @func{chi-body*} and one
 in the function @func{chi-expr}.
+@end itemize
 
-Core macros can introduce bindings by direct access to the lexical
-environment.
+Core macros can establish new syntactic bindings by direct access to the
+data structures representing the lexical environment.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Non--core macros
+@subsubheading Primitive non--core macros
 
-These are macros that expand themselves into uses of core macros; they
-have a proper transformer function accepting as single argument the
-input form syntax object and returning as single value the output form
-syntax object.  The only difference between a non--core macro and a
+These are macros that expand themselves into uses of core macros or
+other non--core macros; they have a proper transformer function
+accepting, as single argument, a syntax object representing the input
+form and returning, as single value, a syntax object representing the
+output form.  The only difference between a non--core macro and a
 user--defined macro is that the former is integrated in the expander.
 
 Non--core macro transformers are selected by the function
-@func{non-core-macro-transformer}.
+@func{non-core-macro-transformer}.  The transformers are applied to
+input forms by the function @func{chi-expr}.
 
 @c ------------------------------------------------------------------------
 
@@ -171,9 +202,9 @@ Non--core macro transformers are selected by the function
 These are macros defined by @syntax{define-syntax}, @syntax{let-syntax},
 @syntax{letrec-syntax}, @syntax{define-fluid-syntax} and their
 derivatives.  Such syntaxes expand themselves into uses of core or
-non--core macros.  Their transformer functions accept as single argument
-the input form syntax object and return as single value the output form
-syntax object.
+non--core macros.  Their transformer functions accept, as single
+argument, a syntax object representing the input form and return, as
+single value, a syntax object representing the output form.
 
 @c page
 @node expander intro times
@@ -253,10 +284,11 @@ result of evaluating an expression; there are different kinds:
 
 @table @dfn
 @item primitive syntax bindings
-Basic syntactic forms built into the language.  They are
-@syntax{lambda}, @syntax{define}, @syntax{let} and similar,
-@syntax{define-syntax}, @syntax{letrec-syntax}, @syntax{if},
-@syntax{and}, @syntax{or} and all the rest.
+Syntactic forms built into the language, they are called primitive core
+macros and primitive non--core macros.  They are @syntax{lambda},
+@syntax{define}, @syntax{let} and similar, @syntax{define-syntax},
+@syntax{letrec-syntax}, @syntax{if}, @syntax{and}, @syntax{or} and all
+the rest.
 
 @item variable bindings
 Associations between identifiers and expressions evaluated at run--time.
@@ -266,23 +298,10 @@ and similar.
 @item keyword bindings
 Associations between identifiers and expressions evaluated at
 expand--time.  The identifiers in this role are called @dfn{syntactic
-keywords} (not to be confused with keyword objects).  Keyword bindings
-are also named @dfn{macros} or just @dfn{syntaxes}.
+keywords} (not to be confused with keyword objects like @samp{#:hello}).
+Examples of keyword bindings are @dfn{user--defined macros} (also named
+@dfn{user--defined syntaxes}).
 @end table
-
-@noindent
-we see that primitive syntax bindings are like keyword bindings built
-into the language.
-
-A syntactic binding descriptor is a pair with the following format:
-
-@example
-(@meta{binding-type} . @meta{binding-value})
-@end example
-
-@noindent
-where @meta{binding-type} is a symbol and the format of
-@meta{binding-value} depends on the binding type.
 
 @c ------------------------------------------------------------------------
 
