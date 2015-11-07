@@ -102,7 +102,8 @@
 		  conforming-version-and-version-reference?
 		  conforming-library-name-and-library-reference?)
     (prefix (ikarus.posix) posix.)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
     (vicare language-extensions simple-match)
     (prefix (only (ikarus.options)
 		  print-loaded-libraries?
