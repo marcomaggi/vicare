@@ -2,19 +2,19 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus fasl read)
   (export
     fasl-read
@@ -24,7 +24,6 @@
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
-		  __who__
 		  fasl-read
 		  fasl-read-header
 		  fasl-read-object)
@@ -34,33 +33,40 @@
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  dynamically-load-shared-object-from-identifier)
-    (except (vicare unsafe operations)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Nov 7,
+    ;;2015)
+    (only (ikarus structs)
+	  $make-clean-struct)
+    (vicare system $fx)
+    (vicare system $chars)
+    (vicare system $flonums)
+    (vicare system $pairs)
+    (vicare system $strings)
+    (vicare system $vectors)
+    (except (vicare system $structs)
+	    ;;FIXME this  EXCEPT is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Sat Nov 7, 2015)
 	    $make-clean-struct)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+    (only (vicare system $codes)
+	  $code->closure)
+    #| end of IMPORT |# )
 
   (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; main functions
 
-(define-constant __who__ 'fasl-read)
+(define-constant __library_who__ 'fasl-read)
 
-(define (fasl-read port)
+(define* (fasl-read {port binary-input-port?})
   ;;Read and  validate the  FASL header,  then load  the whole  file and
   ;;return the result.
   ;;
-  (define (%assert x y)
-    (unless (eq? x y)
-      (assertion-violation __who__
-	(format "while reading fasl header expected ~s, got ~s\n" y x))))
-  (with-arguments-validation (__who__)
-      ((input-port	port))
-    ($fasl-read-header port)
-    (let ((v ($fasl-read-object port)))
-      (if (port-eof? port)
- 	  v
- 	(assertion-violation __who__ "port did not reach EOF at the end of fasl file")))))
+  ($fasl-read-header port)
+  (let ((v ($fasl-read-object port)))
+    (if (port-eof? port)
+	v
+      (assertion-violation __library_who__ "port did not reach EOF at the end of fasl file"))))
 
 (define* (fasl-read-header {port binary-input-port?})
   ($fasl-read-header port))
@@ -76,7 +82,7 @@
       (raise
        (condition (make-assertion-violation)
 		  (make-i/o-wrong-fasl-header-error)
-		  (make-who-condition __who__)
+		  (make-who-condition __library_who__)
 		  (make-message-condition (format "while reading fasl header expected ~s, got ~s\n" y x))
 		  (make-irritants-condition (list port))))))
   (%assert-chars (read-u8-as-char port) #\#)
@@ -121,7 +127,7 @@
 	;;in generating the code.  (Marco Maggi; Oct 7, 2012)
 	(let ((good ($vector-ref MARKS m)))
 	  (if good
-	      (assertion-violation __who__ "mark set twice" m port)
+	      (assertion-violation __library_who__ "mark set twice" m port)
 	    ($vector-set! MARKS m obj)))
       (let* ((n MARKS.len)
 	     (v (make-vector ($fxmax ($fx* n 2) ($fxadd1 m)) #f)))
@@ -260,8 +266,8 @@
 	 (let ((m (read-u32 port)))
 	   (if ($fx< m MARKS.len)
 	       (or ($vector-ref MARKS m)
-		   (error __who__ "uninitialized mark" m))
-	     (assertion-violation __who__ "invalid mark" m))))
+		   (error __library_who__ "uninitialized mark" m))
+	     (assertion-violation __library_who__ "invalid mark" m))))
 	((#\l) ;chain of pairs with <= 255 items
 	 (%read-list (read-u8 port) m))
 	((#\L) ;chain of pairs with  > 255 items
@@ -334,7 +340,7 @@
 	 ;;recurse to satisfy the request to return an object
 	 (%read/mark m))
 	(else
-	 (assertion-violation __who__ "unexpected char as fasl object header" ch port)))))
+	 (assertion-violation __library_who__ "unexpected char as fasl object header" ch port)))))
 
   (define (%read-code code-mark closure-mark)
     ;;Read and  return a  code object.  Unless  CODE-MARK is  false: the
@@ -388,7 +394,7 @@
 	((#\<)
 	 (let ((closure-mark (read-u32 port)))
 	   (unless ($fx< closure-mark MARKS.len)
-	     (assertion-violation __who__ "invalid mark" mark))
+	     (assertion-violation __library_who__ "invalid mark" mark))
 	   (let* ((code ($vector-ref MARKS closure-mark))
 		  (proc ($code->closure code)))
 	     (when mark (%put-mark mark proc))
@@ -397,13 +403,13 @@
 	 (let ((closure-mark (read-u32 port))
 	       (ch           (read-u8-as-char port)))
 	   (unless ($char= ch #\x)
-	     (assertion-violation __who__ "expected char \"x\"" ch))
+	     (assertion-violation __library_who__ "expected char \"x\"" ch))
 	   (let ((code (%read-code closure-mark mark)))
 	     (if mark
 		 ($vector-ref MARKS mark)
 	       ($code->closure code)))))
 	(else
-	 (assertion-violation __who__ "invalid code header" ch)))))
+	 (assertion-violation __library_who__ "invalid code header" ch)))))
 
   (define (%read-list N mark)
     ;;Read and return a chain of pairs.  Unless MARK is false: mark the first pair of
@@ -458,9 +464,6 @@
 
 ;;;; utilities
 
-(define-syntax-rule ($make-clean-struct ?std)
-  (foreign-call "ikrt_make_struct" ?std))
-
 (define (make-struct rtd n)
   ;;Build  and return  a new  struct  object of  type RTD  and having  N
   ;;fields.  Initialise all the fields to the fixnum 0.
@@ -475,7 +478,7 @@
 (define (read-u8 port)
   (let ((byte (get-u8 port)))
     (if (eof-object? byte)
-	(error __who__ "invalid eof encountered" port)
+	(error __library_who__ "invalid eof encountered" port)
       byte)))
 
 (define (read-u8-as-char port)
@@ -484,7 +487,7 @@
 (define (char->int x)
   (if (char? x)
       ($char->fixnum x)
-    (assertion-violation __who__ "unexpected EOF inside a fasl object")))
+    (assertion-violation __library_who__ "unexpected EOF inside a fasl object")))
 
 (define (read-u32 port)
   ;;Read from  the input PORT 4  bytes representing an  exact integer in
@@ -589,6 +592,6 @@
 
 ;;;;done
 
-)
+#| end of library |# )
 
 ;;; end of file

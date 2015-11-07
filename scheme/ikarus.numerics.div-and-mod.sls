@@ -28,9 +28,7 @@
   (import (except (vicare)
 		  div			div0
 		  mod			mod0
-		  div-and-mod		div0-and-mod0)
-    (vicare arguments validation)
-    (vicare language-extensions syntaxes))
+		  div-and-mod		div0-and-mod0))
 
 
 (module (div-and-mod*)
@@ -139,14 +137,13 @@
 (define (div-and-mod n m)
   (div-and-mod* n m 'div-and-mod))
 
-(define (div n m)
-  (define who 'div)
+(define* (div n m)
   (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
       (case m
 	((0)
-	 (assertion-violation who "division by 0"))
+	 (assertion-violation __who__ "division by 0"))
 	((-1)
 	 ;;Notice  that we  *cannot* use  $fx-  here because  when N  is
 	 ;;(least-fixnum)   it  would   result   in   an  overflow:   (-
@@ -163,17 +160,16 @@
 		 (else
 		  ($fx+ d0 1))))))
     (receive (a b)
-	(div-and-mod* n m who)
+	(div-and-mod* n m __who__)
       a)))
 
-(define (mod n m)
-  (define who 'mod)
+(define* (mod n m)
   (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
       (case m
 	((0)
-	 (assertion-violation who "division by 0"))
+	 (assertion-violation __who__ "division by 0"))
 	((-1)
 	 0)
 	(else
@@ -190,13 +186,13 @@
 		 (else
 		  ($fx- m0 m))))))
     (receive (a b)
-	(div-and-mod* n m who)
+	(div-and-mod* n m __who__)
       b)))
 
 
-(define (div0-and-mod0 x y)
+(define* (div0-and-mod0 x y)
   (receive (d m)
-      (div-and-mod* x y 'div0-and-mod0)
+      (div-and-mod* x y __who__)
     (if (> y 0)
 	(if (< m (/ y 2))
 	    (values d m)
@@ -205,9 +201,9 @@
 	  (values (- d 1) (+ m y))
 	(values d m)))))
 
-(define (div0 x y)
+(define* (div0 x y)
   (receive (d m)
-      (div-and-mod* x y 'div0)
+      (div-and-mod* x y __who__)
     (if (> y 0)
 	(if (< m (/ y 2))
 	    d
@@ -216,9 +212,9 @@
 	  (- d 1)
 	d))))
 
-(define (mod0 x y)
+(define* (mod0 x y)
   (receive (d m)
-      (div-and-mod* x y 'mod0)
+      (div-and-mod* x y __who__)
     (if (> y 0)
 	(if (< m (/ y 2))
 	    m

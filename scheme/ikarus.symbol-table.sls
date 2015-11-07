@@ -30,8 +30,6 @@
 	    $string->symbol
 	    $symbol-table-size
 	    $log-symbol-table-status)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $symbol->string
 	    $string->symbol))
