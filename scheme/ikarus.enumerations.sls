@@ -42,6 +42,7 @@
 ;;
 
 
+#!vicare
 (library (ikarus enumerations)
   (export
     enum-set->list
@@ -85,6 +86,7 @@
 		  make-file-options
 		  make-expander-options
 		  make-compiler-options)
+    (vicare system $vectors)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Apr 1,
     ;;2015)
     (only (ikarus.symbols)
@@ -92,10 +94,7 @@
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon May 4,
     ;;2015)
     (only (ikarus conditions)
-	  procedure-arguments-consistency-violation)
-    (vicare language-extensions syntaxes)
-    (vicare unsafe operations)
-    (vicare arguments validation))
+	  procedure-arguments-consistency-violation))
 
 
 ;;;; record types
@@ -132,11 +131,11 @@
   (let ((symbol-to-index (make-eq-hashtable)))
     (let next-symbol ((index		0)
 		      (list-of-symbols	list-of-symbols))
-      (if (null? list-of-symbols)
-	  symbol-to-index
-	(begin
-	  (symbol-to-index-set! symbol-to-index (car list-of-symbols) index)
-	  (next-symbol (+ 1 index) (cdr list-of-symbols)))))))
+      (if (pair? list-of-symbols)
+	  (begin
+	    (symbol-to-index-set! symbol-to-index (car list-of-symbols) index)
+	    (next-symbol (fxadd1 index) (cdr list-of-symbols)))
+	symbol-to-index))))
 (define symbol-to-index-set!		hashtable-set!)
 (define-syntax-rule (symbol-to-index-ref table key)
   (hashtable-ref table key #f))
@@ -168,15 +167,15 @@
   ;;Return an exact integer having at least NUMBER-OF-BITS all set to 1 and the other
   ;;bits set to zero.
   ;;
-  (- (bitwise-arithmetic-shift-left 1 number-of-bits) 1)
-  #;(- (expt 2 number-of-bits) 1))
+  ;;(- (expt 2 number-of-bits) 1)
+  (sub1 (bitwise-arithmetic-shift-left 1 number-of-bits)))
 
 (define-syntax-rule (%single-bitmask bit-offset)
   ;;Return an exact integer  having the bit at BIT-OFFSET set to 1  and all the other
   ;;bits set to zero.
   ;;
-  (bitwise-arithmetic-shift-left 1 bit-offset)
-  #;(expt 2 bit-offset))
+  ;;(expt 2 bit-offset)
+  (bitwise-arithmetic-shift-left 1 bit-offset))
 
 
 (define* (make-enumeration {ell list-of-symbols?})
@@ -231,13 +230,12 @@
       (lambda (ell)
 	(unless (list-of-symbols? ell)
 	  (procedure-argument-violation __who__
-	    "expected list of symbols as argument"
-	    ell))
+	    "expected list of symbols as argument" ell))
 	(let loop ((ell			ell)
 		   (newset.bitvector	0))
-	  (if (null? ell)
-	      (make-enum-set set.type newset.bitvector)
-	    (loop (cdr ell) (bitwise-ior newset.bitvector (make-bitmask-for-symbol (car ell))))))))))
+	  (if (pair? ell)
+	      (loop (cdr ell) (bitwise-ior newset.bitvector (make-bitmask-for-symbol (car ell))))
+	    (make-enum-set set.type newset.bitvector)))))))
 
 (define* (enum-set->list {set enum-set?})
   ;;Return a list of the symbols that  belong to its argument, in the canonical order
@@ -249,7 +247,7 @@
 	       (ell		'()))
       (if (zero? bitvector)
 	  (reverse ell)
-	(loop (>> bitvector) (+ 1 index)
+	(loop (>> bitvector) (fxadd1 index)
 	      (if (%rightmost-bit-set-to-zero? bitvector)
 		  ell
 		(cons (index-to-symbol-ref set.index-to-symbol index) ell)))))))
