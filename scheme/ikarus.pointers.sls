@@ -2,19 +2,19 @@
 ;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus.pointers)
   (export
 
@@ -348,10 +348,13 @@
     ;;2015)
     (only (ikarus conditions)
 	  procedure-arguments-consistency-violation)
-    (except (vicare unsafe operations)
-	    $memory-block-pointer
-	    $memory-block-size
-	    $memory-block-owner?)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors)
+    (except (vicare system $bytevectors)
+	    ;;FIXME This  EXCEPT must  be removed  at the  next boot  image rotation.
+	    ;;(Marco Maggi; Sat Nov 7, 2015)
+	    $bytevector-copy!/count)
     (prefix (vicare unsafe capi)
 	    capi.)
     (prefix (vicare platform words)
