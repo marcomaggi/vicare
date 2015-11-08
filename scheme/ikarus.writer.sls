@@ -1375,9 +1375,9 @@
 		 p)
     (write-char* "-port " p)
     (write-char* (if (binary-port? x) "(binary) " "(textual) ") p)
-    (begin0
-	(write-object (port-id x) p #t marks-table next-mark-idx)
-      (write-char #\> p)))
+    (write-char* (port-id x) p)
+    (write-char #\> p)
+    next-mark-idx)
 
 ;;; --------------------------------------------------------------------
 
