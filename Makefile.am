@@ -398,6 +398,13 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.hash-tables.sls					\
 	scheme/ikarus.keywords.sls					\
 	scheme/ikarus.io.sls						\
+	scheme/ikarus.io.port-attributes.scm				\
+	scheme/ikarus.io.port-constructors.scm				\
+	scheme/ikarus.io.port-predicates.scm				\
+	scheme/ikarus.io.port-procedures.scm				\
+	scheme/ikarus.io.reading.scm					\
+	scheme/ikarus.io.writing.scm					\
+	scheme/ikarus.io.file-descriptor-ports.scm			\
 	scheme/ikarus.lists.sls						\
 	scheme/ikarus.load.sls						\
 	scheme/ikarus.load.dynamic-library-loading.sls			\
