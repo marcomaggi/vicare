@@ -242,16 +242,16 @@
 ;;;; low-level put-char functions
 
 (module PUT-CHAR-PROCEDURES
-  (%unsafe.put-char-to-port-with-fast-char-tag
-   %unsafe.put-char-to-port-with-fast-utf8-tag
-   %unsafe.put-char-utf8-multioctet-char
-   %unsafe.put-char-to-port-with-fast-utf16xe-tag
-   %unsafe.put-char-to-port-with-fast-latin1-tag)
+  (%put-char-to-port-with-fast-char-tag
+   %put-char-to-port-with-fast-utf8-tag
+   %put-char-utf8-multioctet-char
+   %put-char-to-port-with-fast-utf16xe-tag
+   %put-char-to-port-with-fast-latin1-tag)
 
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with string buffer
 
-  (define (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)
+  (define (%put-char-to-port-with-fast-char-tag port ch code-point who)
     (with-port-having-string-buffer (port)
       (let retry-after-flushing-buffer ()
 	(let* ((buffer.offset	port.buffer.index)
@@ -269,7 +269,7 @@
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and UTF-8 transcoder
 
-  (define-inline (%unsafe.put-char-to-port-with-fast-utf8-tag ?port ch code-point who)
+  (define-inline (%put-char-to-port-with-fast-utf8-tag ?port ch code-point who)
     ;;Write to  PORT the character  CODE-POINT encoded  by UTF-8.  Expand  inline the
     ;;common  case  of   single-octet  encoding,  call  a   function  for  multioctet
     ;;characters.
@@ -289,9 +289,9 @@
 		  (begin
 		    (%flush-output-port port who)
 		    (retry-after-flushing-buffer))))))
-	(%unsafe.put-char-utf8-multioctet-char port ch code-point who))))
+	(%put-char-utf8-multioctet-char port ch code-point who))))
 
-  (define (%unsafe.put-char-utf8-multioctet-char port ch code-point who)
+  (define (%put-char-utf8-multioctet-char port ch code-point who)
     ;;Write to  PORT the possibly multioctet  CODE-POINT encoded by UTF-8.   No error
     ;;handling is performed because UTF-8 can encode all the Unicode characters.
     ;;
@@ -389,7 +389,7 @@
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and UTF-16 transcoder
 
-  (define (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who endianness)
+  (define (%put-char-to-port-with-fast-utf16xe-tag port ch code-point who endianness)
     (cond ((unicode.utf-16-single-word-code-point? code-point)
 	   (let ((word0 (unicode.utf-16-encode-single-word code-point)))
 	     (with-port-having-bytevector-buffer (port)
@@ -431,7 +431,7 @@
 ;;; --------------------------------------------------------------------
 ;;; PUT-CHAR for port with bytevector buffer and Latin-1 transcoder
 
-  (define (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)
+  (define (%put-char-to-port-with-fast-latin1-tag port ch code-point who)
     ;;Write to  PORT the character  CODE-POINT encoded  by Latin-1.  Honor  the error
     ;;handling in the PORT's transcoder, selecting #\?  as replacement character.
     ;;
@@ -502,76 +502,76 @@
   (define (%do-put-char port ch who)
     (let* ((code-point	($char->fixnum ch))
 	   (newline?	($fx= code-point LINEFEED-CODE-POINT))
-	   (eol-bits	(%unsafe.port-eol-style-bits port)))
+	   (eol-bits	(%port-eol-style-bits port)))
       (%case-textual-output-port-fast-tag (port who)
 	((FAST-PUT-UTF8-TAG)
 	 (if newline?
 	     (%case-eol-style (eol-bits who)
 	       ((EOL-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who))
+		(%put-char-to-port-with-fast-utf8-tag port ch code-point who))
 	       ((EOL-CARRIAGE-RETURN-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
 	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port LINEFEED-CHAR LINEFEED-CODE-POINT who))
 	       ((EOL-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
 	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
 	       ((EOL-LINE-SEPARATOR-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf8-tag
+		(%put-char-to-port-with-fast-utf8-tag
 		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
 	       (else
-		(%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who)))
-	   (%unsafe.put-char-to-port-with-fast-utf8-tag port ch code-point who)))
+		(%put-char-to-port-with-fast-utf8-tag port ch code-point who)))
+	   (%put-char-to-port-with-fast-utf8-tag port ch code-point who)))
 
 	((FAST-PUT-CHAR-TAG)
 	 (if newline?
 	     (%case-eol-style (eol-bits who)
 	       ((EOL-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who))
+		(%put-char-to-port-with-fast-char-tag port ch code-point who))
 	       ((EOL-CARRIAGE-RETURN-TAG)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
 	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port LINEFEED-CHAR LINEFEED-CODE-POINT who))
 	       ((EOL-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
 	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who))
 	       ((EOL-LINE-SEPARATOR-TAG)
-		(%unsafe.put-char-to-port-with-fast-char-tag
+		(%put-char-to-port-with-fast-char-tag
 		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who))
 	       (else
-		(%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)))
-	   (%unsafe.put-char-to-port-with-fast-char-tag port ch code-point who)))
+		(%put-char-to-port-with-fast-char-tag port ch code-point who)))
+	   (%put-char-to-port-with-fast-char-tag port ch code-point who)))
 
 	((FAST-PUT-LATIN-TAG)
 	 (if newline?
 	     (%case-eol-style (eol-bits who)
 	       ((EOL-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who))
+		(%put-char-to-port-with-fast-latin1-tag port ch code-point who))
 	       ((EOL-CARRIAGE-RETURN-TAG)
-		(%unsafe.put-char-to-port-with-fast-latin1-tag
+		(%put-char-to-port-with-fast-latin1-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who))
 	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-latin1-tag
+		(%put-char-to-port-with-fast-latin1-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who)
-		(%unsafe.put-char-to-port-with-fast-latin1-tag
+		(%put-char-to-port-with-fast-latin1-tag
 		 port LINEFEED-CHAR LINEFEED-CODE-POINT who))
 	       ((EOL-NEXT-LINE-TAG)
 		(assertion-violation who
@@ -583,64 +583,64 @@
 		(assertion-violation who
 		  "EOL style LS unsupported by Latin-1 transcoders" port))
 	       (else
-		(%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)))
-	   (%unsafe.put-char-to-port-with-fast-latin1-tag port ch code-point who)))
+		(%put-char-to-port-with-fast-latin1-tag port ch code-point who)))
+	   (%put-char-to-port-with-fast-latin1-tag port ch code-point who)))
 
 	((FAST-PUT-UTF16LE-TAG)
 	 (if newline?
 	     (%case-eol-style (eol-bits who)
 	       ((EOL-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))
+		(%put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little))
 	       ((EOL-CARRIAGE-RETURN-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little))
 	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port LINEFEED-CHAR LINEFEED-CODE-POINT who 'little))
 	       ((EOL-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
 	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'little)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'little))
 	       ((EOL-LINE-SEPARATOR-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'little))
 	       (else
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
-	   (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
+		(%put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
+	   (%put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'little)))
 
 	((FAST-PUT-UTF16BE-TAG)
 	 (if newline?
 	     (%case-eol-style (eol-bits who)
 	       ((EOL-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))
+		(%put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))
 	       ((EOL-CARRIAGE-RETURN-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big))
 	       ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port LINEFEED-CHAR LINEFEED-CODE-POINT who 'big))
 	       ((EOL-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
 	       ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port CARRIAGE-RETURN-CHAR CARRIAGE-RETURN-CODE-POINT who 'big)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port NEXT-LINE-CHAR NEXT-LINE-CODE-POINT who 'big))
 	       ((EOL-LINE-SEPARATOR-TAG)
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag
+		(%put-char-to-port-with-fast-utf16xe-tag
 		 port LINE-SEPARATOR-CHAR LINE-SEPARATOR-CODE-POINT who 'big))
 	       (else
-		(%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big)))
-	   (%unsafe.put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))))
+		(%put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big)))
+	   (%put-char-to-port-with-fast-utf16xe-tag port ch code-point who 'big))))
 
       (when (or ($port-buffer-mode-none? port)
 		(and newline? ($port-buffer-mode-line? port)))
@@ -710,18 +710,18 @@
 	      (%flush-output-port port who)))
 	  (next-char ($fxadd1 src.index) src.past))))
     (define-inline (%put-utf16le ?port ?ch ?code-point ?who)
-      (%unsafe.put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'little))
+      (%put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'little))
     (define-inline (%put-utf16be ?port ?ch ?code-point ?who)
-      (%unsafe.put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'big))
+      (%put-char-to-port-with-fast-utf16xe-tag ?port ?ch ?code-point ?who 'big))
     (let ((buffer-mode-line? ($port-buffer-mode-line? port))
-	  (eol-bits          (%unsafe.port-eol-style-bits port)))
+	  (eol-bits          (%port-eol-style-bits port)))
       (%case-textual-output-port-fast-tag (port who)
 	((FAST-PUT-UTF8-TAG)
-	 (%put-it buffer-mode-line? eol-bits %unsafe.put-char-to-port-with-fast-utf8-tag))
+	 (%put-it buffer-mode-line? eol-bits %put-char-to-port-with-fast-utf8-tag))
 	((FAST-PUT-CHAR-TAG)
-	 (%put-it buffer-mode-line? eol-bits %unsafe.put-char-to-port-with-fast-char-tag))
+	 (%put-it buffer-mode-line? eol-bits %put-char-to-port-with-fast-char-tag))
 	((FAST-PUT-LATIN-TAG)
-	 (%put-it buffer-mode-line? eol-bits %unsafe.put-char-to-port-with-fast-latin1-tag))
+	 (%put-it buffer-mode-line? eol-bits %put-char-to-port-with-fast-latin1-tag))
 	((FAST-PUT-UTF16LE-TAG)
 	 (%put-it buffer-mode-line? eol-bits %put-utf16le))
 	((FAST-PUT-UTF16BE-TAG)

@@ -956,7 +956,7 @@
 						 (%select-input-fast-tag-from-transcoder __who__ transcoder))
 						(else
 						 (assertion-violation __who__ "port is neither input nor output!" port)))
-					  (%unsafe.port-nullify-eol-style-bits port.other-attributes)
+					  (%port-nullify-eol-style-bits port.other-attributes)
 					  (%select-eol-style-from-transcoder __who__ transcoder))
 				  port.buffer.index port.buffer.used-size port.buffer
 				  transcoder port.id

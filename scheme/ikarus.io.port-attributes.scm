@@ -406,20 +406,20 @@
 	 (assertion-violation who
 	   "vicare internal error: invalid EOL style extracted from transcoder" style))))))
 
-(define-inline (%unsafe.port-eol-style-bits ?port)
+(define-inline (%port-eol-style-bits ?port)
   ($fxand EOL-STYLE-MASK ($port-attrs ?port)))
 
-(define-inline (%unsafe.port-nullify-eol-style-bits attributes)
+(define-inline (%port-nullify-eol-style-bits attributes)
   ($fxand EOL-STYLE-NOT-MASK attributes))
 
-(define-inline (%unsafe.port-eol-style-is-none? port)
-  ($fxzero? (%unsafe.port-eol-style-bits port)))
+(define-inline (%port-eol-style-is-none? port)
+  ($fxzero? (%port-eol-style-bits port)))
 
 (define-syntax %case-eol-style
   ;;Select a body to be evaluated  if a port has the selected EOL style.
   ;;?EOL-BITS must be an identifier bound to the result of:
   ;;
-  ;;   (%unsafe.port-eol-style-bits port)
+  ;;   (%port-eol-style-bits port)
   ;;
   (lambda (stx)
     (syntax-case stx ( ;;
@@ -466,7 +466,7 @@
 	       ((and (port? ?port)
 		     ($input/output-port? ?port)
 		     ($fx= m FAST-PUT-BYTE-TAG))
-		(%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
+		(%reconfigure-output-buffer-to-input-buffer ?port ?who)
 		($set-port-fast-attrs! ?port FAST-GET-BYTE-TAG)
 		(retry-after-tagging FAST-GET-BYTE-TAG))
 	       (else
@@ -492,7 +492,7 @@
 	       ((and (port? ?port)
 		     ($input/output-port? ?port)
 		     ($fx= m FAST-GET-BYTE-TAG))
-		(%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
+		(%reconfigure-input-buffer-to-output-buffer ?port ?who)
 		($set-port-fast-attrs! ?port FAST-PUT-BYTE-TAG)
 		(retry-after-tagging FAST-PUT-BYTE-TAG))
 	       (else
@@ -535,7 +535,7 @@
 	     (if-end-of-file: (eof-object))
 	     (if-no-match-raise-assertion-violation)))
 	 (define (%reconfigure-as-input fast-attrs)
-	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
+	   (%reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
 	 ($case-fixnums m
@@ -545,7 +545,7 @@
 	   ((FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
 	   ((FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
 	   ((INIT-GET-UTF16-TAG)
-	    (if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
+	    (if (%parse-utf16-bom-and-add-fast-tag ?who ?port)
 		(eof-object)
 	      (retry-after-tagging-port ($port-fast-attrs ?port))))
 	   ((FAST-GET-BYTE-TAG)
@@ -598,7 +598,7 @@
 	       (assertion-violation ?who "unsupported port transcoder" ?port)
 	     (procedure-argument-violation ?who "expected open textual output port" ?port)))
 	 (define (%reconfigure-as-output fast-attrs)
-	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
+	   (%reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
 	 ($case-fixnums m

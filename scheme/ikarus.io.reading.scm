@@ -566,17 +566,17 @@
       (%case-textual-input-port-fast-tag (port who)
 	((FAST-GET-UTF8-TAG)
 	 (%read-it 1
-		   %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		   %unsafe.peek-char-from-port-with-fast-get-utf8-tag
-		   %unsafe.peek-char-from-port-with-utf8-codec))
+		   %read-char-from-port-with-fast-get-utf8-tag
+		   %peek-char-from-port-with-fast-get-utf8-tag
+		   %peek-char-from-port-with-utf8-codec))
 	((FAST-GET-CHAR-TAG)
 	 (%read-it 1
-		   %unsafe.read-char-from-port-with-fast-get-char-tag
+		   %read-char-from-port-with-fast-get-char-tag
 		   %peek-char
 		   %peek-char/offset))
 	((FAST-GET-LATIN-TAG)
 	 (%read-it 1
-		   %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		   %read-char-from-port-with-fast-get-latin1-tag
 		   %peek-latin1
 		   %peek-latin1/offset))
 	((FAST-GET-UTF16LE-TAG)
@@ -653,7 +653,7 @@
 	      ch))
 	   ;;If no  end-of-line conversion is  configured for this port:  consume the
 	   ;;character and return it.
-	   ((%unsafe.port-eol-style-is-none? port)
+	   ((%port-eol-style-is-none? port)
 	    (?read-char-proc port who))
 	   ;;End-of-line  conversion   is  configured   for  this  port:   every  EOL
 	   ;;single-char must be converted to  #\linefeed.  Consume the character and
@@ -701,46 +701,46 @@
     ;;
 
     (define-syntax-rule (%read-char port who)
-      (%unsafe.read-char-from-port-with-fast-get-char-tag port who))
+      (%read-char-from-port-with-fast-get-char-tag port who))
 
     (define-syntax-rule (%peek-char port who)
-      (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
+      (%peek-char-from-port-with-fast-get-char-tag port who))
 
     (define-syntax-rule (%peek-char/offset port who offset)
-      (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
+      (%read/peek-char-from-port-with-string-buffer port who 0 offset))
 
     ;;
 
     (define-syntax-rule (%read-latin1 port who)
-      (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who))
+      (%read-char-from-port-with-fast-get-latin1-tag port who))
 
     (define-syntax-rule (%peek-latin1 port who)
-      (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
+      (%peek-char-from-port-with-fast-get-latin1-tag port who))
 
     (define-syntax-rule (%peek-latin1/offset port who offset)
-      (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
+      (%read/peek-char-from-port-with-latin1-codec port who 0 offset))
 
     ;;
 
     (define-syntax-rule (%read-utf16le port who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
+      (%read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
 
     (define-syntax-rule (%peek-utf16le port who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
     (define-syntax-rule (%peek-utf16le/offset port who offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
 
     ;;
 
     (define-syntax-rule (%read-utf16be port who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
+      (%read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
 
     (define-syntax-rule (%peek-utf16be port who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
 
     (define-syntax-rule (%peek-utf16be/offset port who offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
 
     (main))
 
@@ -764,8 +764,8 @@
       (%case-textual-input-port-fast-tag (port who)
 	((FAST-GET-UTF8-TAG)
 	 (%peek-it 1
-		   %unsafe.peek-char-from-port-with-fast-get-utf8-tag
-		   %unsafe.peek-char-from-port-with-utf8-codec))
+		   %peek-char-from-port-with-fast-get-utf8-tag
+		   %peek-char-from-port-with-utf8-codec))
 	((FAST-GET-CHAR-TAG)
 	 (%peek-it 1 %peek-char %peek-char/offset))
 	((FAST-GET-LATIN-TAG)
@@ -802,7 +802,7 @@
 	       ch) ;return EOF object or would-block object
 	      ;;If no end-of-line conversion is configured for this port: just return
 	      ;;the character.
-	      ((%unsafe.port-eol-style-is-none? port)
+	      ((%port-eol-style-is-none? port)
 	       ch)
 	      ;;End-of-line conversion is configured for  this port: every EOL single
 	      ;;char must be converted to #\linefeed.
@@ -833,34 +833,34 @@
     ;;
 
     (define-syntax-rule (%peek-char port who)
-      (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
+      (%peek-char-from-port-with-fast-get-char-tag port who))
 
     (define-syntax-rule (%peek-char/offset port who offset)
-      (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
+      (%read/peek-char-from-port-with-string-buffer port who 0 offset))
 
     ;;
 
     (define-syntax-rule (%peek-latin1 port who)
-      (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
+      (%peek-char-from-port-with-fast-get-latin1-tag port who))
 
     (define-syntax-rule (%peek-latin1/offset port who offset)
-      (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
+      (%read/peek-char-from-port-with-latin1-codec port who 0 offset))
 
     ;;
 
     (define-syntax-rule (%peek-utf16le port who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
     (define-syntax-rule (%peek-utf16le/offset port who offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
 
     ;;
 
     (define-syntax-rule (%peek-utf16be port who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
 
     (define-syntax-rule (%peek-utf16be/offset port who offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
 
     (main))
 
@@ -1049,19 +1049,19 @@
 	  ((FAST-GET-UTF8-TAG)
 	   (%get-it dst.past
 		    1
-		    %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		    %unsafe.peek-char-from-port-with-fast-get-utf8-tag
-		    %unsafe.peek-char-from-port-with-utf8-codec))
+		    %read-char-from-port-with-fast-get-utf8-tag
+		    %peek-char-from-port-with-fast-get-utf8-tag
+		    %peek-char-from-port-with-utf8-codec))
 	  ((FAST-GET-CHAR-TAG)
 	   (%get-it dst.past
 		    1
-		    %unsafe.read-char-from-port-with-fast-get-char-tag
+		    %read-char-from-port-with-fast-get-char-tag
 		    %peek-char
 		    %peek-char/offset))
 	  ((FAST-GET-LATIN-TAG)
 	   (%get-it dst.past
 		    1
-		    %unsafe.read-char-from-port-with-fast-get-latin1-tag
+		    %read-char-from-port-with-fast-get-latin1-tag
 		    %peek-latin1
 		    %peek-latin1/offset))
 	  ((FAST-GET-UTF16LE-TAG)
@@ -1162,7 +1162,7 @@
 		($fx- dst.index dst.start))))
 	   ;;If no  end-of-line conversion is  configured for this port:  consume the
 	   ;;character, store it and loop.
-	   ((%unsafe.port-eol-style-is-none? port)
+	   ((%port-eol-style-is-none? port)
 	    (?read-char-proc port who)
 	    (%store-char-then-loop-or-return ch))
 	   ;;End-of-line  conversion   is  configured   for  this  port:   every  EOL
@@ -1220,46 +1220,46 @@
     ;;
 
     (define-syntax-rule (%read-char port who)
-      (%unsafe.read-char-from-port-with-fast-get-char-tag port who))
+      (%read-char-from-port-with-fast-get-char-tag port who))
 
     (define-syntax-rule (%peek-char port who)
-      (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
+      (%peek-char-from-port-with-fast-get-char-tag port who))
 
     (define-syntax-rule (%peek-char/offset port who offset)
-      (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
+      (%read/peek-char-from-port-with-string-buffer port who 0 offset))
 
     ;;
 
     (define-syntax-rule (%read-latin1 port who)
-      (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who))
+      (%read-char-from-port-with-fast-get-latin1-tag port who))
 
     (define-syntax-rule (%peek-latin1 port who)
-      (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
+      (%peek-char-from-port-with-fast-get-latin1-tag port who))
 
     (define-syntax-rule (%peek-latin1/offset port who offset)
-      (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
+      (%read/peek-char-from-port-with-latin1-codec port who 0 offset))
 
     ;;
 
     (define-syntax-rule (%read-utf16le port who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
+      (%read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
 
     (define-syntax-rule (%peek-utf16le port who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
     (define-syntax-rule (%peek-utf16le/offset port who offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
 
     ;;
 
     (define-syntax-rule (%read-utf16be port who)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
+      (%read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
 
     (define-syntax-rule (%peek-utf16be port who)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
 
     (define-syntax-rule (%peek-utf16be/offset port who offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
 
 
     (main))
@@ -1303,21 +1303,21 @@
   (define-inline (main)
     (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
-       (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag
-		%unsafe.peek-char-from-port-with-fast-get-utf8-tag))
+       (%get-it %read-char-from-port-with-fast-get-utf8-tag
+		%peek-char-from-port-with-fast-get-utf8-tag))
       ((FAST-GET-CHAR-TAG)
-       (%get-it %unsafe.read-char-from-port-with-fast-get-char-tag
-		%unsafe.peek-char-from-port-with-fast-get-char-tag))
+       (%get-it %read-char-from-port-with-fast-get-char-tag
+		%peek-char-from-port-with-fast-get-char-tag))
       ((FAST-GET-LATIN-TAG)
-       (%get-it %unsafe.read-char-from-port-with-fast-get-latin1-tag
-		%unsafe.peek-char-from-port-with-fast-get-latin1-tag))
+       (%get-it %read-char-from-port-with-fast-get-latin1-tag
+		%peek-char-from-port-with-fast-get-latin1-tag))
       ((FAST-GET-UTF16LE-TAG)
        (%get-it %read-utf16le %peek-utf16le))
       ((FAST-GET-UTF16BE-TAG)
        (%get-it %read-utf16be %peek-utf16be))))
 
   (define-syntax-rule (%get-it ?read-char ?peek-char)
-    (let ((eol-bits (%unsafe.port-eol-style-bits port)))
+    (let ((eol-bits (%port-eol-style-bits port)))
       (let loop ((port			port)
 		 (number-of-chars	0)
 		 (reverse-chars		'()))
@@ -1325,14 +1325,14 @@
 	  (cond ((eof-object? ch)
 		 (if (null? reverse-chars)
 		     ch
-		   (%unsafe.reversed-chars->string number-of-chars reverse-chars)))
+		   (%reversed-chars->string number-of-chars reverse-chars)))
 		;;We are waiting for the end of line here.
 		((would-block-object? ch)
 		 (loop port number-of-chars reverse-chars))
 		(else
 		 (let ((ch (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)))
 		   (if ($char= ch LINEFEED-CHAR)
-		       (%unsafe.reversed-chars->string number-of-chars reverse-chars)
+		       (%reversed-chars->string number-of-chars reverse-chars)
 		     (loop port ($fxadd1 number-of-chars) (cons ch reverse-chars))))))))))
 
   (define-syntax-rule (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
@@ -1349,7 +1349,7 @@
 	     LINEFEED-CHAR))
 	  (else ch)))
 
-  (define (%unsafe.reversed-chars->string dst.len reverse-chars)
+  (define (%reversed-chars->string dst.len reverse-chars)
     (let next-char ((dst.str       ($make-string dst.len))
 		    (dst.index     ($fxsub1 dst.len))
 		    (reverse-chars reverse-chars))
@@ -1360,23 +1360,23 @@
 	  (next-char dst.str ($fxsub1 dst.index) (cdr reverse-chars))))))
 
   (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+    (%read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
 
   (define-inline (%peek-utf16le ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+    (%peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
 
   (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+    (%read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
 
   (define-inline (%peek-utf16be ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+    (%peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
 
   (main))
 
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
 
-(define-inline (%unsafe.read-char-from-port-with-fast-get-utf8-tag port who)
+(define-inline (%read-char-from-port-with-fast-get-utf8-tag port who)
   ;;PORT  is a  textual  input  port with  bytevector  buffer and  UTF-8
   ;;transcoder.   We  process  here   the  simple  case  of  single-byte
   ;;character already available in the buffer, for multi-byte characters
@@ -1395,10 +1395,10 @@
 		  ;;character.
 		  (set! port.buffer.index ($fxadd1 buffer.offset-byte0))
 		  ($fixnum->char N))
-	      (%unsafe.read-char-from-port-with-utf8-codec port who)))
-	(%unsafe.read-char-from-port-with-utf8-codec port who)))))
+	      (%read-char-from-port-with-utf8-codec port who)))
+	(%read-char-from-port-with-utf8-codec port who)))))
 
-(define-inline (%unsafe.peek-char-from-port-with-fast-get-utf8-tag port who)
+(define-inline (%peek-char-from-port-with-fast-get-utf8-tag port who)
   ;;PORT must be  a textual input port with bytevector  buffer and UTF-8
   ;;transcoder.   We  process  here   the  simple  case  of  single-byte
   ;;character already available in the buffer, for multi-byte characters
@@ -1412,10 +1412,10 @@
 	  (let ((byte0 ($bytevector-u8-ref port.buffer buffer.offset-byte0)))
 	    (if (unicode.utf-8-single-octet? byte0)
 		($fixnum->char (unicode.utf-8-decode-single-octet byte0))
-	      (%unsafe.peek-char-from-port-with-utf8-codec port who 0)))
-	(%unsafe.peek-char-from-port-with-utf8-codec port who 0)))))
+	      (%peek-char-from-port-with-utf8-codec port who 0)))
+	(%peek-char-from-port-with-utf8-codec port who 0)))))
 
-(define (%unsafe.read-char-from-port-with-utf8-codec port who)
+(define (%read-char-from-port-with-utf8-codec port who)
   ;;PORT must be  a textual input port with bytevector  buffer and UTF-8
   ;;transcoder.  Read from PORT a  UTF-8 encoded character for the cases
   ;;of 1, 2,  3 and 4 bytes  encoding; return a Scheme  character or the
@@ -1603,7 +1603,7 @@
 	(case mode
 	  ((ignore)
 	   ;;To ignore means to jump to the next.
-	   (%unsafe.read-char-from-port-with-utf8-codec port who))
+	   (%read-char-from-port-with-utf8-codec port who))
 	  ((replace)
 	   #\xFFFD)
 	  ((raise)
@@ -1617,7 +1617,7 @@
 
     (main)))
 
-(define (%unsafe.peek-char-from-port-with-utf8-codec port who buffer-offset)
+(define (%peek-char-from-port-with-utf8-codec port who buffer-offset)
   ;;Subroutine of %DO-PEEK-CHAR.  Peek from a textual input PORT a UTF-8
   ;;encoded character  for the cases of  2, 3 and 4  bytes encoding; the
   ;;case of 1-byte encoding is handled by %DO-PEEK-CHAR.
@@ -1636,7 +1636,7 @@
   (with-port-having-bytevector-buffer (port)
 
     (define-inline (recurse buffer-offset)
-      (%unsafe.peek-char-from-port-with-utf8-codec port who buffer-offset))
+      (%peek-char-from-port-with-utf8-codec port who buffer-offset))
 
     (define-inline (main)
       (let retry-after-filling-buffer ()
@@ -1825,7 +1825,7 @@
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-16 transcoder
 
-(define (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who endianness)
+(define (%read-char-from-port-with-fast-get-utf16xe-tag port who endianness)
   ;;Read  and return  from PORT  a UTF-16  encoded character;  leave the
   ;;input buffer pointing to the first byte after the read character.
   ;;
@@ -1842,7 +1842,7 @@
   ;;
   (with-port-having-bytevector-buffer (port)
     (define-inline (recurse)
-      (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who endianness))
+      (%read-char-from-port-with-fast-get-utf16xe-tag port who endianness))
 
     (define (%error-handler message . irritants)
       ;;Handle  the error  honoring the  error handling  mode  in port's
@@ -1989,7 +1989,7 @@
 		(recurse))
 	       ))))))
 
-(define (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset)
+(define (%peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset)
   ;;Peek  and return  from PORT  a UTF-16  encoded character;  leave the
   ;;input buffer  pointing to the same  byte it was  pointing before the
   ;;call to this function.
@@ -2014,7 +2014,7 @@
   ;;
   (with-port-having-bytevector-buffer (port)
     (define-inline (recurse buffer-offset)
-      (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset))
+      (%peek-char-from-port-with-fast-get-utf16xe-tag port who endianness buffer-offset))
 
     (define (%error-handler buffer-offset message . irritants)
       ;;Handle  the error  honoring the  error handling  mode  in port's
@@ -2160,11 +2160,11 @@
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with Latin-1 transcoder
 
-(module (%unsafe.read-char-from-port-with-fast-get-latin1-tag
-	 %unsafe.peek-char-from-port-with-fast-get-latin1-tag
-	 %unsafe.read/peek-char-from-port-with-latin1-codec)
+(module (%read-char-from-port-with-fast-get-latin1-tag
+	 %peek-char-from-port-with-fast-get-latin1-tag
+	 %read/peek-char-from-port-with-latin1-codec)
 
-  (define-inline (%unsafe.read-char-from-port-with-fast-get-latin1-tag port who)
+  (define-inline (%read-char-from-port-with-fast-get-latin1-tag port who)
     ;;PORT  must be  a textual  input  port with  bytevector buffer  and
     ;;Latin-1 transcoder.   Knowing that  Latin-1 characters are  1 byte
     ;;wide: we process here the simple case of one char available in the
@@ -2194,9 +2194,9 @@
 				   (make-irritants-condition (list octet ($fixnum->char octet))))))
 		      (else
 		       (assertion-violation who "vicare internal error: invalid error handling mode" port mode)))))))
-	  (%unsafe.read/peek-char-from-port-with-latin1-codec port who 1 0)))))
+	  (%read/peek-char-from-port-with-latin1-codec port who 1 0)))))
 
-  (define-inline (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who)
+  (define-inline (%peek-char-from-port-with-fast-get-latin1-tag port who)
     ;;PORT  must be  a textual  input  port with  bytevector buffer  and
     ;;Latin-1 transcoder.   Knowing that  Latin-1 characters are  1 byte
     ;;wide: we process here the simple case of one char available in the
@@ -2222,9 +2222,9 @@
 				 (make-irritants-condition (list octet ($fixnum->char octet))))))
 		    (else
 		     (assertion-violation who "vicare internal error: invalid error handling mode" port mode))))))
-	  (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 0)))))
+	  (%read/peek-char-from-port-with-latin1-codec port who 0 0)))))
 
-  (define (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset)
+  (define (%read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset)
     ;;Subroutine  of %DO-READ-CHAR  or  %DO-PEEK-CHAR.  PORT  must be  a
     ;;textual input port with  bytevector buffer and Latin-1 transcoder;
     ;;such buffer must be already fully consumed.
@@ -2261,7 +2261,7 @@
 	      (case mode
 		((ignore)
 		 ;;To ignore means jump to the next.
-		 (%unsafe.read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset))
+		 (%read/peek-char-from-port-with-latin1-codec port who buffer-index-increment offset))
 		((replace)
 		 #\xFFFD)
 		((raise)
@@ -2289,7 +2289,7 @@
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with string buffer
 
-(define-inline (%unsafe.read-char-from-port-with-fast-get-char-tag ?port ?who)
+(define-inline (%read-char-from-port-with-fast-get-char-tag ?port ?who)
   ;;PORT must  be a textual input  port with a Scheme  string as buffer.
   ;;We process here the simple case of one char available in the buffer,
   ;;else we call the specialised function for reading characters.
@@ -2301,9 +2301,9 @@
 	    (begin
 	      (set! port.buffer.index ($fxadd1 buffer.offset))
 	      ($string-ref port.buffer buffer.offset))
-	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 1 0))))))
+	  (%read/peek-char-from-port-with-string-buffer port ?who 1 0))))))
 
-(define-inline (%unsafe.peek-char-from-port-with-fast-get-char-tag ?port ?who)
+(define-inline (%peek-char-from-port-with-fast-get-char-tag ?port ?who)
   ;;PORT must  be a textual input  port with a Scheme  string as buffer.
   ;;We process here the simple case of one char available in the buffer,
   ;;else we call the specialised function for reading characters.
@@ -2313,9 +2313,9 @@
       (let ((buffer.offset-char port.buffer.index))
 	(if ($fx< buffer.offset-char port.buffer.used-size)
 	    ($string-ref port.buffer buffer.offset-char)
-	  (%unsafe.read/peek-char-from-port-with-string-buffer port ?who 0 0))))))
+	  (%read/peek-char-from-port-with-string-buffer port ?who 0 0))))))
 
-(define (%unsafe.read/peek-char-from-port-with-string-buffer
+(define (%read/peek-char-from-port-with-string-buffer
 	 port who buffer-index-increment offset)
   ;;Subroutine  of  %DO-READ-CHAR  or  %DO-PEEK-CHAR.  PORT  must  be  a
   ;;textual input port with a  Scheme string as buffer; such buffer must

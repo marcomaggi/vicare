@@ -47,13 +47,13 @@
   ;;If it is an integer object, the integer object does not necessarily correspond to
   ;;a octet or character position.
   ;;
-  (%unsafe.port-position __who__ port))
+  (%port-position __who__ port))
 
-(define (%unsafe.port-position who port)
+(define (%port-position who port)
   ;;Return the current port position for PORT.
   ;;
   (with-port (port)
-    (let ((device-position (%unsafe.device-position who port)))
+    (let ((device-position (%device-position who port)))
       ;;DEVICE-POSITION is  the position  in the  underlying device,  but we  have to
       ;;return the port  position taking into account the offset  in the input/output
       ;;buffer.
@@ -61,7 +61,7 @@
 	  (+ device-position port.buffer.index)
 	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
-(define (%unsafe.device-position who port)
+(define (%device-position who port)
   ;;Return the current device position for PORT.
   ;;
   (with-port (port)
@@ -86,23 +86,23 @@
 	       "port does not support port-position operation"
 	       port))))))
 
-(define (%unsafe.port-position/tracked-position who port)
+(define (%port-position/tracked-position who port)
   ;;If the port  supports the GET-POSITION operation: use its  own policy; else trust
   ;;the value in the POS cookie field.
   ;;
   (with-port (port)
-    (let ((device-position (%unsafe.device-position/tracked-position who port)))
+    (let ((device-position (%device-position/tracked-position who port)))
       (if port.last-operation-was-output?
 	  (+ device-position port.buffer.index)
 	(- device-position (- port.buffer.used-size port.buffer.index))))))
 
-(define (%unsafe.device-position/tracked-position who port)
+(define (%device-position/tracked-position who port)
   ;;If the port  supports the GET-POSITION operation: use its  own policy; else trust
   ;;the value in the POS cookie field.
   ;;
   (with-port (port)
     (if port.get-position
-	(%unsafe.device-position who port)
+	(%device-position who port)
       port.device.position)))
 
 ;;; --------------------------------------------------------------------
@@ -132,7 +132,7 @@
     (define-syntax-rule (main)
       (let ((set-position! port.set-position!))
 	(cond ((procedure? set-position!)
-	       (let ((port.old-position (%unsafe.port-position/tracked-position __who__ port)))
+	       (let ((port.old-position (%port-position/tracked-position __who__ port)))
 		 (unless (= port.old-position requested-port-position)
 		   (%set-with-procedure port set-position! port.old-position))))
 	      ((and (boolean? set-position!) set-position!)
@@ -245,7 +245,7 @@
 		   ;;               = dev.old-pos - delta-idx + delta-pos
 		   ;;
 		   (let ((delta-idx           ($fx- port.buffer.used-size port.buffer.index))
-			 (device.old-position (%unsafe.device-position/tracked-position __who__ port)))
+			 (device.old-position (%device-position/tracked-position __who__ port)))
 		     (+ (- device.old-position delta-idx) delta-pos)))))
 	    ;;If SET-POSITION!  fails we can assume nothing about the position in the
 	    ;;device.
@@ -270,7 +270,7 @@
       ;;Note that the generally correct implementation of this case is the following,
       ;;which considers the buffer not being equal to the device:
       ;;
-      ;; (let ((port.old-position (%unsafe.port-position __who__ port)))
+      ;; (let ((port.old-position (%port-position __who__ port)))
       ;;   (unless (= port.old-position requested-port-position)
       ;;     (let ((delta-pos (- requested-port-position port.old-position)))
       ;;       (if (<= 0 delta port.buffer.used-size)
@@ -288,7 +288,7 @@
 
     (main)))
 
-(define (%unsafe.reconfigure-input-buffer-to-output-buffer port who)
+(define (%reconfigure-input-buffer-to-output-buffer port who)
   ;;Assuming PORT  is an  input port:  set the  device position  to the  current port
   ;;position taking into account the buffer index and reset the buffer to empty.  The
   ;;device position may change, but the port position is unchanged.
@@ -320,7 +320,7 @@
 	     ;;
 	     ;;which is fine for an output port with empty buffer.
 	     ;;
-	     (let* ((device.old-position (%unsafe.device-position/tracked-position who port))
+	     (let* ((device.old-position (%device-position/tracked-position who port))
 		    (delta-idx           ($fx- port.buffer.used-size port.buffer.index))
 		    (device.new-position (- device.old-position delta-idx)))
 	       (set-position! device.new-position)
@@ -344,7 +344,7 @@
 	     ;;network socket), we just reset the buffer to empty state.
 	     (port.buffer.reset-to-empty!))))))
 
-(define (%unsafe.reconfigure-output-buffer-to-input-buffer port who)
+(define (%reconfigure-output-buffer-to-input-buffer port who)
   ;;Assuming PORT  is an  output port: set  the device position  to the  current port
   ;;position taking into account the buffer index and reset the buffer to empty.  The
   ;;device position may change, but the port position is left unchanged.
@@ -383,7 +383,7 @@
 	     ;;          0 = index = used-size
 	     ;;
 	     ;;which is fine for an input port with empty buffer.
-	     (let* ((port.old-position   (%unsafe.port-position who port))
+	     (let* ((port.old-position   (%port-position who port))
 		    (device.new-position port.old-position))
                (%flush-output-port port who)
 	       (set-position! device.new-position)
@@ -426,7 +426,7 @@
       (lambda ()
 	(proc port))
     (lambda args
-      (%unsafe.close-port port __who__)
+      (%close-port port __who__)
       (apply values args))))
 
 (define* (with-output-to-port {port open-textual-output-port?} {proc procedure?})
@@ -449,19 +449,19 @@
   ;;This has no effect if the port has already been closed.  A closed port is still a
   ;;port.  The CLOSE-PORT procedure returns unspecified values.
   ;;
-  (%unsafe.close-port port __who__))
+  (%close-port port __who__))
 
 (define* (close-input-port {port input-port?})
   ;;Define by R6RS.  Close an input port.
   ;;
-  (%unsafe.close-port port __who__))
+  (%close-port port __who__))
 
 (define* (close-output-port {port output-port?})
   ;;Define by R6RS.  Close an output port.
   ;;
-  (%unsafe.close-port port __who__))
+  (%close-port port __who__))
 
-(define (%unsafe.close-port port who)
+(define (%close-port port who)
   ;;Subroutine for  CLOSE-PORT, CLOSE-INPUT-PORT and CLOSE-OUTPUT-PORT.   Assume that
   ;;PORT is a port object.
   ;;

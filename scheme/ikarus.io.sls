@@ -933,68 +933,72 @@
 
 ;;;; Byte Order Mark (BOM) parsing
 
-(define-syntax %parse-byte-order-mark
-  (syntax-rules (if-successful-match: if-no-match: if-end-of-file:)
-    ((%parse-byte-order-mark (?who ?port ?bom)
-       (if-successful-match:	. ?matched-body)
-       (if-no-match:		. ?failure-body)
-       (if-end-of-file:		. ?eof-body))
-     (let ((result (%unsafe.parse-byte-order-mark ?who ?port ?bom)))
-       (cond ((boolean? result)
-	      (if result
-		  (begin . ?matched-body)
-		(begin . ?failure-body)))
-	     ((eof-object? result)
-	      (begin . ?eof-body))
-	     (else
-	      (assertion-violation ?who
-		"vicare internal error: invalid return value while parsing BOM" result)))))))
+(module (%parse-byte-order-mark)
 
-(define (%unsafe.parse-byte-order-mark who port bom)
-  ;;Assuming PORT is  an open input port with  a bytevector buffer: read
-  ;;and consume octets from PORT  verifying if they match the given list
-  ;;of octets representing a Byte Order Mark (BOM).
-  ;;
-  ;;PORT must be an open textual  or binary input port with a bytevector
-  ;;buffer.  BOM  must be  a list of  fixnums representing  the expected
-  ;;Byte Order Mark sequence.
-  ;;
-  ;;Return #t  if the whole  BOM sequence is  read and matched;  in this
-  ;;case the port position is left right after the BOM sequence.
-  ;;
-  ;;Return #f if the octets from the port do not match the BOM sequence;
-  ;;in this  case the  port position is  left at  the same point  it was
-  ;;before this function call.
-  ;;
-  ;;Return the EOF  object if the port reaches EOF  before the whole BOM
-  ;;is matched; in this case the port position is left at the same point
-  ;;it was before this function call.
-  ;;
-  (with-port (port)
-    (let next-octet-in-bom ((number-of-consumed-octets 0)
-			    (bom bom))
-      (if (null? bom)
-	  ;;Full success: all the octets in the given BOM sequence where
-	  ;;matched.
-	  (begin
-	    (port.buffer.index.incr! number-of-consumed-octets)
-	    #t)
-	(let retry-after-filling-buffer ()
-	  (let ((buffer.offset ($fx+ number-of-consumed-octets port.buffer.index)))
-	    (maybe-refill-bytevector-buffer-and-evaluate (port who)
-	      (data-is-needed-at: buffer.offset)
-	      (if-end-of-file:
-	       (eof-object))
-	      (if-empty-buffer-and-refilling-would-block:
-	       WOULD-BLOCK-OBJECT)
-	      (if-successful-refill:
-	       (retry-after-filling-buffer))
-	      (if-available-data:
-	       (and ($fx= (car bom) ($bytevector-u8-ref port.buffer buffer.offset))
-		    (next-octet-in-bom ($fxadd1 number-of-consumed-octets) (cdr bom))))
-	      )))))))
+  (define-syntax %parse-byte-order-mark
+    (syntax-rules (if-successful-match: if-no-match: if-end-of-file:)
+      ((%parse-byte-order-mark (?who ?port ?bom)
+	 (if-successful-match:	. ?matched-body)
+	 (if-no-match:		. ?failure-body)
+	 (if-end-of-file:		. ?eof-body))
+       (let ((result (%parse-it ?who ?port ?bom)))
+	 (cond ((boolean? result)
+		(if result
+		    (begin . ?matched-body)
+		  (begin . ?failure-body)))
+	       ((eof-object? result)
+		(begin . ?eof-body))
+	       (else
+		(assertion-violation ?who
+		  "vicare internal error: invalid return value while parsing BOM" result)))))))
 
-(define (%unsafe.parse-utf16-bom-and-add-fast-tag who port)
+  (define (%parse-it who port bom)
+    ;;Assuming PORT is  an open input port with  a bytevector buffer: read
+    ;;and consume octets from PORT  verifying if they match the given list
+    ;;of octets representing a Byte Order Mark (BOM).
+    ;;
+    ;;PORT must be an open textual  or binary input port with a bytevector
+    ;;buffer.  BOM  must be  a list of  fixnums representing  the expected
+    ;;Byte Order Mark sequence.
+    ;;
+    ;;Return #t  if the whole  BOM sequence is  read and matched;  in this
+    ;;case the port position is left right after the BOM sequence.
+    ;;
+    ;;Return #f if the octets from the port do not match the BOM sequence;
+    ;;in this  case the  port position is  left at  the same point  it was
+    ;;before this function call.
+    ;;
+    ;;Return the EOF  object if the port reaches EOF  before the whole BOM
+    ;;is matched; in this case the port position is left at the same point
+    ;;it was before this function call.
+    ;;
+    (with-port (port)
+      (let next-octet-in-bom ((number-of-consumed-octets 0)
+			      (bom bom))
+	(if (null? bom)
+	    ;;Full success: all the octets in the given BOM sequence where
+	    ;;matched.
+	    (begin
+	      (port.buffer.index.incr! number-of-consumed-octets)
+	      #t)
+	  (let retry-after-filling-buffer ()
+	    (let ((buffer.offset ($fx+ number-of-consumed-octets port.buffer.index)))
+	      (maybe-refill-bytevector-buffer-and-evaluate (port who)
+		(data-is-needed-at: buffer.offset)
+		(if-end-of-file:
+		 (eof-object))
+		(if-empty-buffer-and-refilling-would-block:
+		 WOULD-BLOCK-OBJECT)
+		(if-successful-refill:
+		 (retry-after-filling-buffer))
+		(if-available-data:
+		 (and ($fx= (car bom) ($bytevector-u8-ref port.buffer buffer.offset))
+		      (next-octet-in-bom ($fxadd1 number-of-consumed-octets) (cdr bom))))
+		)))))))
+
+  #| end of module |# )
+
+(define (%parse-utf16-bom-and-add-fast-tag who port)
   ;;Assuming PORT is an open textual input port object with a bytevector
   ;;buffer  and   a  UTF-16  transcoder  not  yet   specialised  for  an
   ;;endianness:  read  the  Byte   Order  Mark  and  mutate  the  port's
@@ -1020,92 +1024,96 @@
 	   (if-end-of-file: result-if-end-of-file)))
 	(if-end-of-file: result-if-end-of-file)))))
 
-(define-syntax %parse-bom-and-add-fast-tag
-  (syntax-rules (if-successful-match: if-end-of-file: if-no-match-raise-assertio-violation)
-    ((%parse-bom-and-add-fast-tag (?who ?port)
-       (if-successful-match:	. ?matched-body)
-       (if-end-of-file:		. ?eof-body)
-       (if-no-match-raise-assertion-violation))
-     (if (%unsafe.parse-bom-and-add-fast-tag ?who ?port)
-	 (begin . ?eof-body)
-       (begin . ?matched-body)))))
+(module (%parse-bom-and-add-fast-tag)
 
-(define (%unsafe.parse-bom-and-add-fast-tag who port)
-  ;;Assuming  PORT is  an  open  textual input  port  with a  bytevector
-  ;;buffer: read the Byte Order  Mark expected for the port's transcoder
-  ;;and mutate the port's fast attributes, tagging the port accordingly.
-  ;;Return #t if port is at EOF, #f otherwise.
-  ;;
-  ;;If PORT is already tagged: existing fast attributes are ignored.
-  ;;
-  ;;If  the input  octects  do not  match  the requested  BOM: raise  an
-  ;;assertion violation.
-  ;;
-  ;;Notice that Latin-1 encoding has no BOM.
-  ;;
-  (with-port-having-bytevector-buffer (port)
-    (debug-assert port.transcoder)
-    (case (transcoder-codec port.transcoder)
-      ((utf-8-codec)
-       (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
-	 (if-successful-match:
-	  (set! port.fast-attributes FAST-GET-UTF8-TAG)
-	  #f)
-	 (if-no-match:
-	  (assertion-violation who
-	    "expected to read UTF-8 big endian Byte Order Mark from port" port))
-	 (if-end-of-file: #t)))
+  (define-syntax %parse-bom-and-add-fast-tag
+    (syntax-rules (if-successful-match: if-end-of-file: if-no-match-raise-assertion-violation)
+      ((%parse-bom-and-add-fast-tag (?who ?port)
+	 (if-successful-match:	. ?matched-body)
+	 (if-end-of-file:		. ?eof-body)
+	 (if-no-match-raise-assertion-violation))
+       (if (%parse-it ?who ?port)
+	   (begin . ?eof-body)
+	 (begin . ?matched-body)))))
 
-      ((utf-16-codec)
-       (%unsafe.parse-utf16-bom-and-add-fast-tag who port))
+  (define (%parse-it who port)
+    ;;Assuming  PORT is  an  open  textual input  port  with a  bytevector
+    ;;buffer: read the Byte Order  Mark expected for the port's transcoder
+    ;;and mutate the port's fast attributes, tagging the port accordingly.
+    ;;Return #t if port is at EOF, #f otherwise.
+    ;;
+    ;;If PORT is already tagged: existing fast attributes are ignored.
+    ;;
+    ;;If  the input  octects  do not  match  the requested  BOM: raise  an
+    ;;assertion violation.
+    ;;
+    ;;Notice that Latin-1 encoding has no BOM.
+    ;;
+    (with-port-having-bytevector-buffer (port)
+      (debug-assert port.transcoder)
+      (case (transcoder-codec port.transcoder)
+	((utf-8-codec)
+	 (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
+	   (if-successful-match:
+	    (set! port.fast-attributes FAST-GET-UTF8-TAG)
+	    #f)
+	   (if-no-match:
+	    (assertion-violation who
+	      "expected to read UTF-8 big endian Byte Order Mark from port" port))
+	   (if-end-of-file: #t)))
 
-      ((utf-16be-codec)
-       (%parse-byte-order-mark (who port UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)
-	 (if-successful-match:
-	  (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
-	  #f)
-	 (if-no-match:
-	  (assertion-violation who
-	    "expected to read UTF-16 big endian Byte Order Mark from port" port))
-	 (if-end-of-file: #t)))
+	((utf-16-codec)
+	 (%parse-utf16-bom-and-add-fast-tag who port))
 
-      ((utf-16le-codec)
-       (%parse-byte-order-mark (who port UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)
-	 (if-successful-match:
-	  (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
-	  #f)
-	 (if-no-match:
-	  (assertion-violation who
-	    "expected to read UTF-16 little endian Byte Order Mark from port" port))
-	 (if-end-of-file: #t)))
+	((utf-16be-codec)
+	 (%parse-byte-order-mark (who port UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)
+	   (if-successful-match:
+	    (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
+	    #f)
+	   (if-no-match:
+	    (assertion-violation who
+	      "expected to read UTF-16 big endian Byte Order Mark from port" port))
+	   (if-end-of-file: #t)))
 
-      ((utf-bom-codec)
-       ;;Try  all the  UTF  encodings in  the  order: UTF-8,  UTF-16-be,
-       ;;UTF-16-le.
-       (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
-	 (if-successful-match:
-	  (set! port.fast-attributes FAST-GET-UTF8-TAG)
-	  #f)
-	 (if-no-match:
-	  (%parse-byte-order-mark (who port UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)
-	    (if-successful-match:
-	     (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
-	     #f)
-	    (if-no-match:
-	     (%parse-byte-order-mark (who port UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)
-	       (if-successful-match:
-		(set! port.fast-attributes FAST-GET-UTF16LE-TAG)
-		#f)
-	       (if-no-match:
-		(assertion-violation who
-		  "expected to read supported UTF Byte Order Mark from port" port))
-	       (if-end-of-file: #t)))
-	    (if-end-of-file: #t)))
-	 (if-end-of-file: #t)))
+	((utf-16le-codec)
+	 (%parse-byte-order-mark (who port UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)
+	   (if-successful-match:
+	    (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
+	    #f)
+	   (if-no-match:
+	    (assertion-violation who
+	      "expected to read UTF-16 little endian Byte Order Mark from port" port))
+	   (if-end-of-file: #t)))
 
-      (else
-       (assertion-violation who
-	 "codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
+	((utf-bom-codec)
+	 ;;Try  all the  UTF  encodings in  the  order: UTF-8,  UTF-16-be,
+	 ;;UTF-16-le.
+	 (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
+	   (if-successful-match:
+	    (set! port.fast-attributes FAST-GET-UTF8-TAG)
+	    #f)
+	   (if-no-match:
+	    (%parse-byte-order-mark (who port UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST)
+	      (if-successful-match:
+	       (set! port.fast-attributes FAST-GET-UTF16BE-TAG)
+	       #f)
+	      (if-no-match:
+	       (%parse-byte-order-mark (who port UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST)
+		 (if-successful-match:
+		  (set! port.fast-attributes FAST-GET-UTF16LE-TAG)
+		  #f)
+		 (if-no-match:
+		  (assertion-violation who
+		    "expected to read supported UTF Byte Order Mark from port" port))
+		 (if-end-of-file: #t)))
+	      (if-end-of-file: #t)))
+	   (if-end-of-file: #t)))
+
+	(else
+	 (assertion-violation who
+	   "codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
+
+  #| end of module |# )
 
 
 ;;;; dot notation macros for port structures
@@ -1436,7 +1444,7 @@
   ;;
   (let ((cookie ($port-cookie port)))
     (make-source-position-condition (port-id port)
-				    (%unsafe.port-position __who__ port)
+				    (%port-position __who__ port)
 				    (cookie-character-offset cookie)
 				    (cookie-row-number       cookie)
 				    (cookie-column-number    cookie))))
@@ -1568,15 +1576,15 @@
     (case mode
       ((line)
        (if ($textual-port? port)
-	   (set! port.attributes ($fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+	   (set! port.attributes ($fxior (%port-nullify-eol-style-bits port.attributes)
 					 BUFFER-MODE-LINE-TAG))
 	 (procedure-argument-violation __who__
 	   "expected textual port if buffer mode is \"line\"" port)))
       ((none)
-       (set! port.attributes   ($fxior (%unsafe.port-nullify-eol-style-bits port.attributes)
+       (set! port.attributes   ($fxior (%port-nullify-eol-style-bits port.attributes)
 				       BUFFER-MODE-NONE-TAG)))
       ((block)
-       (set! port.attributes (%unsafe.port-nullify-eol-style-bits port.attributes)))
+       (set! port.attributes (%port-nullify-eol-style-bits port.attributes)))
       (else
        (procedure-signature-argument-violation __who__
 	 "failed argument validation" 2 '(port-buffer-mode? mode) mode)))))
