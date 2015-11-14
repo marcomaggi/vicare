@@ -1221,10 +1221,9 @@
 			 (eval sexp (interaction-environment)))))
   (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
    (print-library-verbose-message "~a: loading script: ~a" __who__ file-pathname)
-   (let next-form ((ls (reader.read-script-from-file file-pathname)))
-     (unless (null? ls)
-       (eval-proc (car ls))
-       (next-form (cdr ls))))))
+   (let ((form* (reader.read-script-from-file file-pathname)))
+     (unless (null? form*)
+       (eval-proc (cons 'begin form*))))))
 
 
 ;;;; compiling libraries
