@@ -879,12 +879,12 @@
 ;;ALL-DATA-IN-BUFFER is  used in place  of the READ!   procedure to mark  ports whose
 ;;buffer is all the data there is, that is: there is no underlying device.
 ;;
-(define all-data-in-buffer
-  'all-data-in-buffer)
+(define-syntax all-data-in-buffer
+  (identifier-syntax 'all-data-in-buffer))
 
-(define UTF-8-BYTE-ORDER-MARK-LIST			'(#xEF #xBB #xBF))
-(define UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST		'(#xFE #xFF))
-(define UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST	'(#xFF #xFE))
+(define-constant UTF-8-BYTE-ORDER-MARK-LIST			'(#xEF #xBB #xBF))
+(define-constant UTF-16-BIG-ENDIAN-BYTE-ORDER-MARK-LIST		'(#xFE #xFF))
+(define-constant UTF-16-LITTLE-ENDIAN-BYTE-ORDER-MARK-LIST	'(#xFF #xFE))
 
 (define-auxiliary-syntaxes
   data-is-needed-at:
@@ -917,7 +917,7 @@
 	      . ?body)
 	     ...
 	     (else
-	      (assertion-violation #f "unknown errno code" errno)))))
+	      (assertion-violation #f "unexpected errno code" errno)))))
     ))
 
 (define-syntax ($case-fixnums stx)
@@ -940,7 +940,7 @@
       ((%parse-byte-order-mark (?who ?port ?bom)
 	 (if-successful-match:	. ?matched-body)
 	 (if-no-match:		. ?failure-body)
-	 (if-end-of-file:		. ?eof-body))
+	 (if-end-of-file:	. ?eof-body))
        (let ((result (%parse-it ?who ?port ?bom)))
 	 (cond ((boolean? result)
 		(if result
@@ -953,58 +953,56 @@
 		  "vicare internal error: invalid return value while parsing BOM" result)))))))
 
   (define (%parse-it who port bom)
-    ;;Assuming PORT is  an open input port with  a bytevector buffer: read
-    ;;and consume octets from PORT  verifying if they match the given list
-    ;;of octets representing a Byte Order Mark (BOM).
+    ;;Assuming PORT is an open input port  with a bytevector buffer: read and consume
+    ;;octets from PORT verifying if they  match the given list of octets representing
+    ;;a Byte Order Mark (BOM).
     ;;
-    ;;PORT must be an open textual  or binary input port with a bytevector
-    ;;buffer.  BOM  must be  a list of  fixnums representing  the expected
-    ;;Byte Order Mark sequence.
+    ;;PORT must  be an open  textual or binary input  port with a  bytevector buffer.
+    ;;BOM  must be  a  list of  fixnums  representing the  expected  Byte Order  Mark
+    ;;sequence.
     ;;
-    ;;Return #t  if the whole  BOM sequence is  read and matched;  in this
-    ;;case the port position is left right after the BOM sequence.
+    ;;Return #t if the whole BOM sequence is  read and matched; in this case the port
+    ;;position is left right after the BOM sequence.
     ;;
-    ;;Return #f if the octets from the port do not match the BOM sequence;
-    ;;in this  case the  port position is  left at  the same point  it was
-    ;;before this function call.
+    ;;Return #f if  the octets from the port  do not match the BOM  sequence; in this
+    ;;case the port  position is left at  the same point it was  before this function
+    ;;call.
     ;;
-    ;;Return the EOF  object if the port reaches EOF  before the whole BOM
-    ;;is matched; in this case the port position is left at the same point
-    ;;it was before this function call.
+    ;;Return the EOF object if the port  reaches EOF before the whole BOM is matched;
+    ;;in this  case the port position  is left at the  same point it was  before this
+    ;;function call.
     ;;
     (with-port (port)
       (let next-octet-in-bom ((number-of-consumed-octets 0)
 			      (bom bom))
-	(if (null? bom)
-	    ;;Full success: all the octets in the given BOM sequence where
-	    ;;matched.
-	    (begin
-	      (port.buffer.index.incr! number-of-consumed-octets)
-	      #t)
-	  (let retry-after-filling-buffer ()
-	    (let ((buffer.offset ($fx+ number-of-consumed-octets port.buffer.index)))
-	      (maybe-refill-bytevector-buffer-and-evaluate (port who)
-		(data-is-needed-at: buffer.offset)
-		(if-end-of-file:
-		 (eof-object))
-		(if-empty-buffer-and-refilling-would-block:
-		 WOULD-BLOCK-OBJECT)
-		(if-successful-refill:
-		 (retry-after-filling-buffer))
-		(if-available-data:
-		 (and ($fx= (car bom) ($bytevector-u8-ref port.buffer buffer.offset))
-		      (next-octet-in-bom ($fxadd1 number-of-consumed-octets) (cdr bom))))
-		)))))))
+	(if (pair? bom)
+	    (let retry-after-filling-buffer ()
+	      (let ((buffer.offset (fx+ number-of-consumed-octets port.buffer.index)))
+		(maybe-refill-bytevector-buffer-and-evaluate (port who)
+		  (data-is-needed-at: buffer.offset)
+		  (if-end-of-file:
+		   (eof-object))
+		  (if-empty-buffer-and-refilling-would-block:
+		   WOULD-BLOCK-OBJECT)
+		  (if-successful-refill:
+		   (retry-after-filling-buffer))
+		  (if-available-data:
+		   (and (fx= (car bom) ($bytevector-u8-ref port.buffer buffer.offset))
+			(next-octet-in-bom (fxadd1 number-of-consumed-octets) (cdr bom))))
+		  )))
+	  ;;Full success: all the octets in the given BOM sequence where matched.
+	  (begin
+	    (port.buffer.index.incr! number-of-consumed-octets)
+	    #t)))))
 
   #| end of module |# )
 
 (define (%parse-utf16-bom-and-add-fast-tag who port)
-  ;;Assuming PORT is an open textual input port object with a bytevector
-  ;;buffer  and   a  UTF-16  transcoder  not  yet   specialised  for  an
-  ;;endianness:  read  the  Byte   Order  Mark  and  mutate  the  port's
-  ;;attributes   tagging    the   port   as    FAST-GET-UTF16BE-TAG   or
-  ;;FAST-GET-UTF16LE-TAG.  Return  #t if port  is at EOF,  #f otherwise.
-  ;;If no BOM is present, select big endian by default.
+  ;;Assuming PORT is an open textual input port object with a bytevector buffer and a
+  ;;UTF-16 transcoder not yet specialised for an endianness: read the Byte Order Mark
+  ;;and  mutate the  port's attributes  tagging the  port as  FAST-GET-UTF16BE-TAG or
+  ;;FAST-GET-UTF16LE-TAG.  Return #t if  port is at EOF, #f otherwise.   If no BOM is
+  ;;present, select big endian by default.
   ;;
   (with-port-having-bytevector-buffer (port)
     (let ((result-if-successful-tagging		#f)
@@ -1029,7 +1027,7 @@
   (define-syntax %parse-bom-and-add-fast-tag
     (syntax-rules (if-successful-match: if-end-of-file: if-no-match-raise-assertion-violation)
       ((%parse-bom-and-add-fast-tag (?who ?port)
-	 (if-successful-match:	. ?matched-body)
+	 (if-successful-match:		. ?matched-body)
 	 (if-end-of-file:		. ?eof-body)
 	 (if-no-match-raise-assertion-violation))
        (if (%parse-it ?who ?port)
@@ -1037,15 +1035,15 @@
 	 (begin . ?matched-body)))))
 
   (define (%parse-it who port)
-    ;;Assuming  PORT is  an  open  textual input  port  with a  bytevector
-    ;;buffer: read the Byte Order  Mark expected for the port's transcoder
-    ;;and mutate the port's fast attributes, tagging the port accordingly.
-    ;;Return #t if port is at EOF, #f otherwise.
+    ;;Assuming PORT is an open textual input  port with a bytevector buffer: read the
+    ;;Byte Order Mark  expected for the port's transcoder and  mutate the port's fast
+    ;;attributes, tagging  the port  accordingly.  Return  #t if port  is at  EOF, #f
+    ;;otherwise.
     ;;
     ;;If PORT is already tagged: existing fast attributes are ignored.
     ;;
-    ;;If  the input  octects  do not  match  the requested  BOM: raise  an
-    ;;assertion violation.
+    ;;If  the input  octects  do not  match  the requested  BOM:  raise an  assertion
+    ;;violation.
     ;;
     ;;Notice that Latin-1 encoding has no BOM.
     ;;
@@ -1086,8 +1084,7 @@
 	   (if-end-of-file: #t)))
 
 	((utf-bom-codec)
-	 ;;Try  all the  UTF  encodings in  the  order: UTF-8,  UTF-16-be,
-	 ;;UTF-16-le.
+	 ;;Try all the UTF encodings in the order: UTF-8, UTF-16-be, UTF-16-le.
 	 (%parse-byte-order-mark (who port UTF-8-BYTE-ORDER-MARK-LIST)
 	   (if-successful-match:
 	    (set! port.fast-attributes FAST-GET-UTF8-TAG)
@@ -1118,294 +1115,289 @@
 
 ;;;; dot notation macros for port structures
 
-(define-syntax with-port
-  (syntax-rules ()
-    ((_ (?port) . ?body)
-     (%with-port (?port #f) . ?body))))
+(module (with-port with-port-having-bytevector-buffer with-port-having-string-buffer)
 
-(define-syntax with-port-having-bytevector-buffer
-  (syntax-rules ()
-    ((_ (?port) . ?body)
-     (%with-port (?port $bytevector-length) . ?body))))
+  (define-syntax with-port
+    (syntax-rules ()
+      ((_ (?port) . ?body)
+       (%with-port (?port #f) . ?body))))
 
-(define-syntax with-port-having-string-buffer
-  (syntax-rules ()
-    ((_ (?port) . ?body)
-     (%with-port (?port $string-length) . ?body))))
+  (define-syntax with-port-having-bytevector-buffer
+    (syntax-rules ()
+      ((_ (?port) . ?body)
+       (%with-port (?port $bytevector-length) . ?body))))
 
-(define-syntax (%with-port stx)
-  (syntax-case stx ()
-    ((_ (?port ?buffer-length) . ?body)
-     (let* ((port-id	#'?port)
-	    (port-str	(symbol->string (syntax->datum port-id))))
-       (define (%dot-id field-str)
-	 (datum->syntax port-id (string->symbol (string-append port-str field-str))))
-       (with-syntax
-	   ((PORT.TAG				(%dot-id ".tag"))
+  (define-syntax with-port-having-string-buffer
+    (syntax-rules ()
+      ((_ (?port) . ?body)
+       (%with-port (?port $string-length) . ?body))))
+
+  (define-syntax (%with-port stx)
+    (syntax-case stx ()
+      ((_ (?port ?buffer-length) . ?body)
+       (let* ((port-id	#'?port)
+	      (port-str	(symbol->string (syntax->datum port-id))))
+	 (define (%dot-id field-str)
+	   (datum->syntax port-id (string->symbol (string-append port-str field-str))))
+	 (with-syntax
+	     ((PORT.TAG				(%dot-id ".tag"))
 		;fixnum, bits representing the port tag
-	    (PORT.ATTRIBUTES			(%dot-id ".attributes"))
+	      (PORT.ATTRIBUTES			(%dot-id ".attributes"))
 		;fixnum, bits representing the port attributes
-	    (PORT.BUFFER.INDEX			(%dot-id ".buffer.index"))
+	      (PORT.BUFFER.INDEX		(%dot-id ".buffer.index"))
 		;fixnum, the offset from the buffer beginning
-	    (PORT.BUFFER.USED-SIZE		(%dot-id ".buffer.used-size"))
+	      (PORT.BUFFER.USED-SIZE		(%dot-id ".buffer.used-size"))
 		;fixnum, number of octets used in the buffer
-	    (PORT.BUFFER			(%dot-id ".buffer"))
+	      (PORT.BUFFER			(%dot-id ".buffer"))
 		;bytevector, the buffer
-	    (PORT.TRANSCODER			(%dot-id ".transcoder"))
+	      (PORT.TRANSCODER			(%dot-id ".transcoder"))
 		;the transcoder or false
-	    (PORT.ID				(%dot-id ".id"))
+	      (PORT.ID				(%dot-id ".id"))
 		;string, describes the port
-	    (PORT.READ!				(%dot-id ".read!"))
+	      (PORT.READ!			(%dot-id ".read!"))
 		;function or false, the read function
-	    (PORT.WRITE!			(%dot-id ".write!"))
+	      (PORT.WRITE!			(%dot-id ".write!"))
 		;function or false, the write function
-	    (PORT.SET-POSITION!			(%dot-id ".set-position!"))
+	      (PORT.SET-POSITION!		(%dot-id ".set-position!"))
 		;function or false, the function to set the position
-	    (PORT.GET-POSITION			(%dot-id ".get-position"))
+	      (PORT.GET-POSITION		(%dot-id ".get-position"))
 		;function or false, the function to get the position
-	    (PORT.CLOSE				(%dot-id ".close"))
+	      (PORT.CLOSE			(%dot-id ".close"))
 		;function or false, the function to close the port
-	    (PORT.COOKIE			(%dot-id ".cookie"))
+	      (PORT.COOKIE			(%dot-id ".cookie"))
 		;cookie record
-	    (PORT.BUFFER.FULL?			(%dot-id ".buffer.full?"))
+	      (PORT.BUFFER.FULL?		(%dot-id ".buffer.full?"))
 		;true if the buffer is full
-	    (PORT.CLOSED?			(%dot-id ".closed?"))
+	      (PORT.CLOSED?			(%dot-id ".closed?"))
 		;true if the port is closed
-	    (PORT.GUARDED?			(%dot-id ".guarded?"))
+	      (PORT.GUARDED?			(%dot-id ".guarded?"))
 		;true if the port is registered in the port guardian
-	    (PORT.FD-DEVICE?			(%dot-id ".fd-device?"))
+	      (PORT.FD-DEVICE?			(%dot-id ".fd-device?"))
 		;true if the port has a file descriptor as device
-	    (PORT.WITH-EXTRACTION?		(%dot-id ".with-extraction?"))
+	      (PORT.WITH-EXTRACTION?		(%dot-id ".with-extraction?"))
 		;true if the port has an associated extraction function
-	    (PORT.IS-INPUT-AND-OUTPUT?		(%dot-id ".is-input-and-output?"))
+	      (PORT.IS-INPUT-AND-OUTPUT?	(%dot-id ".is-input-and-output?"))
 		;true if the port is both input and output
-	    (PORT.IS-INPUT?			(%dot-id ".is-input?"))
+	      (PORT.IS-INPUT?			(%dot-id ".is-input?"))
 		;true if the port is an input or input/output port
-	    (PORT.IS-OUTPUT?			(%dot-id ".is-output?"))
+	      (PORT.IS-OUTPUT?			(%dot-id ".is-output?"))
 		;true if the port is an output or input/output port
-	    (PORT.IS-INPUT-ONLY?		(%dot-id ".is-input-only?"))
+	      (PORT.IS-INPUT-ONLY?		(%dot-id ".is-input-only?"))
 		;true if the port is an input-only port
-	    (PORT.IS-OUTPUT-ONLY?		(%dot-id ".is-output-only?"))
+	      (PORT.IS-OUTPUT-ONLY?		(%dot-id ".is-output-only?"))
 		;true if the port is an output-only port
-	    (PORT.LAST-OPERATION-WAS-INPUT?	(%dot-id ".last-operation-was-input?"))
+	      (PORT.LAST-OPERATION-WAS-INPUT?	(%dot-id ".last-operation-was-input?"))
 		;true if the  port is input or the  port is input/output
 		;and the  last operation was input; in  other words: the
 		;buffer may contain input bytes
-	    (PORT.LAST-OPERATION-WAS-OUTPUT?	(%dot-id ".last-operation-was-output?"))
+	      (PORT.LAST-OPERATION-WAS-OUTPUT?	(%dot-id ".last-operation-was-output?"))
 		;true if the port is  output or the port is input/output
 		;and the last operation  was output; in other words: the
 		;buffer may contain output bytes
-	    (PORT.BUFFER-MODE-LINE?		(%dot-id ".buffer-mode-line?"))
+	      (PORT.BUFFER-MODE-LINE?		(%dot-id ".buffer-mode-line?"))
 		;true if the port has LINE as buffer mode
-	    (PORT.BUFFER-MODE-NONE?		(%dot-id ".buffer-mode-none?"))
+	      (PORT.BUFFER-MODE-NONE?		(%dot-id ".buffer-mode-none?"))
 		;true if the port has NONE as buffer mode
-	    (PORT.FAST-ATTRIBUTES		(%dot-id ".fast-attributes"))
+	      (PORT.FAST-ATTRIBUTES		(%dot-id ".fast-attributes"))
 		;fixnum, the fast tag attributes bits
-	    (PORT.OTHER-ATTRIBUTES		(%dot-id ".other-attributes"))
+	      (PORT.OTHER-ATTRIBUTES		(%dot-id ".other-attributes"))
 		;fixnum, the non-fast-tag attributes bits
-	    (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
+	      (PORT.BUFFER.SIZE			(%dot-id ".buffer.size"))
 		;fixnum, the buffer size
-	    (PORT.BUFFER.RESET-TO-EMPTY!	(%dot-id ".buffer.reset-to-empty!"))
+	      (PORT.BUFFER.RESET-TO-EMPTY!	(%dot-id ".buffer.reset-to-empty!"))
 		;method, set the buffer index and used size to zero
-	    (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
+	      (PORT.BUFFER.ROOM			(%dot-id ".buffer.room"))
 		;method, the number of octets available in the buffer
-	    (PORT.BUFFER.INDEX.INCR!		(%dot-id ".buffer.index.incr!"))
+	      (PORT.BUFFER.INDEX.INCR!		(%dot-id ".buffer.index.incr!"))
 		;method, increment the buffer index
-	    (PORT.BUFFER.USED-SIZE.INCR!	(%dot-id ".buffer.used-size.incr!"))
+	      (PORT.BUFFER.USED-SIZE.INCR!	(%dot-id ".buffer.used-size.incr!"))
 		;method, increment
-	    (PORT.MARK-AS-CLOSED!		(%dot-id ".mark-as-closed!"))
+	      (PORT.MARK-AS-CLOSED!		(%dot-id ".mark-as-closed!"))
 		;method, mark the port as closed
-	    (PORT.DEVICE			(%dot-id ".device"))
+	      (PORT.DEVICE			(%dot-id ".device"))
 		;false or Scheme value, references the underlying device
-	    (PORT.DEVICE.POSITION		(%dot-id ".device.position"))
+	      (PORT.DEVICE.POSITION		(%dot-id ".device.position"))
 		;exact integer, track the current device position
-	    (PORT.DEVICE.POSITION.INCR!		(%dot-id ".device.position.incr!"))
+	      (PORT.DEVICE.POSITION.INCR!		(%dot-id ".device.position.incr!"))
 		;method, increment the POS field of the cookie
-	    (PORT.MODE				(%dot-id ".mode"))
+	      (PORT.MODE				(%dot-id ".mode"))
 		;Scheme symbol, select the port mode
-	    )
-	 #'(let-syntax
-	       ((PORT.TAG		(identifier-syntax ($port-tag		?port)))
-		(PORT.BUFFER		(identifier-syntax ($port-buffer	?port)))
-		(PORT.TRANSCODER	(identifier-syntax ($port-transcoder	?port)))
-		(PORT.ID		(identifier-syntax ($port-id		?port)))
-		(PORT.READ!		(identifier-syntax ($port-read!		?port)))
-		(PORT.WRITE!		(identifier-syntax ($port-write!	?port)))
-		(PORT.SET-POSITION!	(identifier-syntax ($port-set-position!	?port)))
-		(PORT.GET-POSITION	(identifier-syntax ($port-get-position	?port)))
-		(PORT.CLOSE		(identifier-syntax ($port-close		?port)))
-		(PORT.COOKIE		(identifier-syntax ($port-cookie	?port)))
-		(PORT.CLOSED?		(identifier-syntax ($port-closed? ?port)))
-		(PORT.GUARDED?		(identifier-syntax ($guarded-port? ?port)))
-		(PORT.FD-DEVICE?	(identifier-syntax ($port-with-fd-device? ?port)))
-		(PORT.WITH-EXTRACTION?	(identifier-syntax ($port-with-extraction? ?port)))
-		(PORT.IS-INPUT-AND-OUTPUT? (identifier-syntax ($input/output-port? ?port)))
-		(PORT.IS-INPUT?		(identifier-syntax ($input-port? ?port)))
-		(PORT.IS-OUTPUT?	(identifier-syntax ($output-port? ?port)))
-		(PORT.IS-INPUT-ONLY?	(identifier-syntax ($input-only-port? ?port)))
-		(PORT.IS-OUTPUT-ONLY?	(identifier-syntax ($output-only-port? ?port)))
-		(PORT.LAST-OPERATION-WAS-INPUT?
-		 (identifier-syntax ($last-port-operation-was-input? ?port)))
-		(PORT.LAST-OPERATION-WAS-OUTPUT?
-		 (identifier-syntax ($last-port-operation-was-output? ?port)))
-		(PORT.BUFFER-MODE-LINE?	(identifier-syntax ($port-buffer-mode-line? ?port)))
-		(PORT.BUFFER-MODE-NONE?	(identifier-syntax ($port-buffer-mode-none? ?port)))
-		(PORT.ATTRIBUTES	(identifier-syntax
-					 (_		($port-attrs ?port))
-					 ((set! id ?value) ($set-port-attrs! ?port ?value))))
-		(PORT.FAST-ATTRIBUTES	(identifier-syntax
-					 (_		($port-fast-attrs ?port))
-					 ((set! _ ?tag)	($set-port-fast-attrs! ?port ?tag))))
-		(PORT.OTHER-ATTRIBUTES	(identifier-syntax ($port-other-attrs ?port)))
-		(PORT.BUFFER.SIZE	(identifier-syntax (?buffer-length ($port-buffer ?port))))
-		(PORT.BUFFER.INDEX	(identifier-syntax
-					 (_			($port-index ?port))
-					 ((set! _ ?value)	($set-port-index! ?port ?value))))
-		(PORT.BUFFER.USED-SIZE	(identifier-syntax
-					 (_			($port-size ?port))
-					 ((set! _ ?value)	($set-port-size! ?port ?value)))))
-	     (let-syntax
-		 ((PORT.BUFFER.FULL?
-		   (identifier-syntax ($fx= PORT.BUFFER.USED-SIZE PORT.BUFFER.SIZE)))
-		  (PORT.BUFFER.ROOM
-		   (syntax-rules ()
-		     ((_)
-		      ($fx- PORT.BUFFER.SIZE PORT.BUFFER.INDEX))))
-		  (PORT.BUFFER.RESET-TO-EMPTY!
-		   (syntax-rules ()
-		     ((_)
-		      (begin
-			(set! PORT.BUFFER.INDEX     0)
-			(set! PORT.BUFFER.USED-SIZE 0)))))
-		  (PORT.BUFFER.INDEX.INCR!
-		   (syntax-rules ()
-		     ((_)
-		      (set! PORT.BUFFER.INDEX ($fxadd1 PORT.BUFFER.INDEX)))
-		     ((_ ?step)
-		      (set! PORT.BUFFER.INDEX ($fx+ ?step PORT.BUFFER.INDEX)))))
-		  (PORT.BUFFER.USED-SIZE.INCR!
-		   (syntax-rules ()
-		     ((_)
-		      (set! PORT.BUFFER.USED-SIZE ($fxadd1 PORT.BUFFER.USED-SIZE)))
-		     ((_ ?step)
-		      (set! PORT.BUFFER.USED-SIZE ($fx+ ?step PORT.BUFFER.USED-SIZE)))))
-		  (PORT.MARK-AS-CLOSED!
-		   (syntax-rules ()
-		     ((_)
-		      ($mark-port-closed! ?port))))
-		  (PORT.DEVICE
-		   (identifier-syntax
-		    (_ (cookie-dest PORT.COOKIE))
-		    ((set! _ ?new-device)
-		     (set-cookie-dest! PORT.COOKIE ?new-device))))
-		  (PORT.DEVICE.POSITION
-		   (identifier-syntax
-		    (_ (cookie-pos PORT.COOKIE))
-		    ((set! _ ?new-position)
-		     (set-cookie-pos! PORT.COOKIE ?new-position))))
-		  (PORT.DEVICE.POSITION.INCR!
-		   (syntax-rules ()
-		     ((_ ?step)
-		      (let ((cookie PORT.COOKIE))
-			(set-cookie-pos! cookie (+ ?step (cookie-pos cookie)))))))
-		  (PORT.MODE
-		   (identifier-syntax
-		    (_			(cookie-mode PORT.COOKIE))
-		    ((set! _ ?new-mode)	(set-cookie-mode! PORT.COOKIE ?new-mode))))
-		  )
-	       . ?body)))))))
+	      )
+	   #'(let-syntax
+		 ((PORT.TAG				(identifier-syntax ($port-tag		?port)))
+		  (PORT.BUFFER				(identifier-syntax ($port-buffer	?port)))
+		  (PORT.TRANSCODER			(identifier-syntax ($port-transcoder	?port)))
+		  (PORT.ID				(identifier-syntax ($port-id		?port)))
+		  (PORT.READ!				(identifier-syntax ($port-read!		?port)))
+		  (PORT.WRITE!				(identifier-syntax ($port-write!	?port)))
+		  (PORT.SET-POSITION!			(identifier-syntax ($port-set-position!	?port)))
+		  (PORT.GET-POSITION			(identifier-syntax ($port-get-position	?port)))
+		  (PORT.CLOSE				(identifier-syntax ($port-close		?port)))
+		  (PORT.COOKIE				(identifier-syntax ($port-cookie	?port)))
+		  (PORT.CLOSED?				(identifier-syntax ($port-closed? ?port)))
+		  (PORT.GUARDED?			(identifier-syntax ($guarded-port? ?port)))
+		  (PORT.FD-DEVICE?			(identifier-syntax ($port-with-fd-device? ?port)))
+		  (PORT.WITH-EXTRACTION?		(identifier-syntax ($port-with-extraction? ?port)))
+		  (PORT.IS-INPUT-AND-OUTPUT?		(identifier-syntax ($input/output-port? ?port)))
+		  (PORT.IS-INPUT?			(identifier-syntax ($input-port? ?port)))
+		  (PORT.IS-OUTPUT?			(identifier-syntax ($output-port? ?port)))
+		  (PORT.IS-INPUT-ONLY?			(identifier-syntax ($input-only-port? ?port)))
+		  (PORT.IS-OUTPUT-ONLY?			(identifier-syntax ($output-only-port? ?port)))
+		  (PORT.LAST-OPERATION-WAS-INPUT?	(identifier-syntax ($last-port-operation-was-input? ?port)))
+		  (PORT.LAST-OPERATION-WAS-OUTPUT?	(identifier-syntax ($last-port-operation-was-output? ?port)))
+		  (PORT.BUFFER-MODE-LINE?		(identifier-syntax ($port-buffer-mode-line? ?port)))
+		  (PORT.BUFFER-MODE-NONE?		(identifier-syntax ($port-buffer-mode-none? ?port)))
+		  (PORT.ATTRIBUTES			(identifier-syntax
+							 (_		($port-attrs ?port))
+							 ((set! id ?value) ($set-port-attrs! ?port ?value))))
+		  (PORT.FAST-ATTRIBUTES			(identifier-syntax
+							 (_		($port-fast-attrs ?port))
+							 ((set! _ ?tag)	($set-port-fast-attrs! ?port ?tag))))
+		  (PORT.OTHER-ATTRIBUTES		(identifier-syntax ($port-other-attrs ?port)))
+		  (PORT.BUFFER.SIZE			(identifier-syntax (?buffer-length ($port-buffer ?port))))
+		  (PORT.BUFFER.INDEX			(identifier-syntax
+							 (_			($port-index ?port))
+							 ((set! _ ?value)	($set-port-index! ?port ?value))))
+		  (PORT.BUFFER.USED-SIZE		(identifier-syntax
+							 (_			($port-size ?port))
+							 ((set! _ ?value)	($set-port-size! ?port ?value)))))
+	       (let-syntax
+		   ((PORT.BUFFER.FULL?
+		     (identifier-syntax ($fx= PORT.BUFFER.USED-SIZE PORT.BUFFER.SIZE)))
+		    (PORT.BUFFER.ROOM
+		     (syntax-rules ()
+		       ((_)
+			($fx- PORT.BUFFER.SIZE PORT.BUFFER.INDEX))))
+		    (PORT.BUFFER.RESET-TO-EMPTY!
+		     (syntax-rules ()
+		       ((_)
+			(begin
+			  (set! PORT.BUFFER.INDEX     0)
+			  (set! PORT.BUFFER.USED-SIZE 0)))))
+		    (PORT.BUFFER.INDEX.INCR!
+		     (syntax-rules ()
+		       ((_)
+			(set! PORT.BUFFER.INDEX ($fxadd1 PORT.BUFFER.INDEX)))
+		       ((_ ?step)
+			(set! PORT.BUFFER.INDEX ($fx+ ?step PORT.BUFFER.INDEX)))))
+		    (PORT.BUFFER.USED-SIZE.INCR!
+		     (syntax-rules ()
+		       ((_)
+			(set! PORT.BUFFER.USED-SIZE ($fxadd1 PORT.BUFFER.USED-SIZE)))
+		       ((_ ?step)
+			(set! PORT.BUFFER.USED-SIZE ($fx+ ?step PORT.BUFFER.USED-SIZE)))))
+		    (PORT.MARK-AS-CLOSED!
+		     (syntax-rules ()
+		       ((_)
+			($mark-port-closed! ?port))))
+		    (PORT.DEVICE
+		     (identifier-syntax
+		      (_ (cookie-dest PORT.COOKIE))
+		      ((set! _ ?new-device)
+		       (set-cookie-dest! PORT.COOKIE ?new-device))))
+		    (PORT.DEVICE.POSITION
+		     (identifier-syntax
+		      (_ (cookie-pos PORT.COOKIE))
+		      ((set! _ ?new-position)
+		       (set-cookie-pos! PORT.COOKIE ?new-position))))
+		    (PORT.DEVICE.POSITION.INCR!
+		     (syntax-rules ()
+		       ((_ ?step)
+			(let ((cookie PORT.COOKIE))
+			  (set-cookie-pos! cookie (+ ?step (cookie-pos cookie)))))))
+		    (PORT.MODE
+		     (identifier-syntax
+		      (_			(cookie-mode PORT.COOKIE))
+		      ((set! _ ?new-mode)	(set-cookie-mode! PORT.COOKIE ?new-mode))))
+		    )
+		 . ?body)))))))
+
+  #| end of module |# )
 
 
 ;;;; cookie data structure
 ;;
-;;An instance of  this structure is referenced by  every port structure;
-;;it  registers  the  underlying  device  (if any)  and  it  tracks  the
-;;underlying  device's  position,  number  of  rows  and  columns  (when
-;;possible).
+;;An instance of  this structure is referenced by every  port structure; it registers
+;;the underlying  device (if  any) and  it tracks  the underlying  device's position,
+;;number of rows and columns (when possible).
 ;;
-;;The  reason  the full  port  data structure  is  split  into the  PORT
-;;structure and the  COOKIE structure, is that, in  some port types, the
-;;port's own internal  functions must reference some of  the guts of the
-;;data  structure but cannot  reference the  port itself.   This problem
-;;shows  its uglyness  when TRANSCODED-PORT  is applied  to a  port: the
-;;original  port is  closed  and its  guts  are transferred  to the  new
-;;transcoded port.   By partitioning the  fields, we allow  the internal
-;;functions to reference only the cookie and be free of the port value.
+;;The reason the  full port data structure  is split into the PORT  structure and the
+;;COOKIE structure,  is that, in some  port types, the port's  own internal functions
+;;must reference some of the guts of the data structure but cannot reference the port
+;;itself.  This problem shows its uglyness when TRANSCODED-PORT is applied to a port:
+;;the original  port is  closed and its  guts are transferred  to the  new transcoded
+;;port.  By  partitioning the fields,  we allow  the internal functions  to reference
+;;only the cookie and be free of the port value.
 ;;
-;;Why are the fields not all  in the cookie then?  Because accessing the
-;;port is faster than accessing  the cookie and many operations on ports
-;;only require  access to  the buffer, which  is referenced by  the PORT
-;;structure.
+;;Why are  the fields  not all  in the cookie  then?  Because  accessing the  port is
+;;faster than accessing  the cookie and many operations on  ports only require access
+;;to the buffer, which is referenced by the PORT structure.
 ;;
-;;NOTE: It  is impossible to track  the row number  for ports supporting
-;;the SET-PORT-POSITION! operation.  The  ROW-NUM field of the cookie is
-;;meaningful  only  for  ports  whose position  increases  monotonically
-;;because of read or write operations, it should be invalidated whenever
-;;the port  position is moved with SET-PORT-POSITION!.   Notice that the
-;;input port used to read Scheme source code satisfies this requirement.
+;;NOTE:  It  is  impossible  to  track  the  row  number  for  ports  supporting  the
+;;SET-PORT-POSITION! operation.  The  ROW-NUM field of the cookie  is meaningful only
+;;for  ports  whose  position  increases  monotonically  because  of  read  or  write
+;;operations,  it should  be invalidated  whenever the  port position  is moved  with
+;;SET-PORT-POSITION!.  Notice  that the input  port used  to read Scheme  source code
+;;satisfies this requirement.
 ;;
 
 ;;Constructor: (make-cookie DEST MODE POS CH-OFF ROW-NUM COL-NUM UID HASH)
 ;;
 ;;Field name: dest
 ;;Accessor name: (cookie-dest COOKIE)
-;;  If an underlying device exists:  this field holds a reference to it,
-;;  for  example   a  fixnum  representing  an   operating  system  file
-;;  descriptor.
+;;  If an underlying device exists: this field holds a reference to it, for example a
+;;  fixnum representing an operating system file descriptor.
 ;;
 ;;  If no device exists: this field is set to false.
 ;;
-;;  As a  special case: this field can  hold a Scheme list  managed as a
-;;  stack in which data is temporarily stored.  For example: this is the
-;;  case of output bytevector ports.
+;;  As a special case: this field can hold  a Scheme list managed as a stack in which
+;;  data is temporarily  stored.  For example: this is the  case of output bytevector
+;;  ports.
 ;;
 ;;Field name: mode
 ;;Accessor name: (cookie-mode COOKIE)
 ;;Mutator name: (set-cookie-mode! COOKIE MODE-SYMBOL)
-;;  Hold  the symbol  representing  the current  port  mode, one  among:
-;;  "vicare", "r6rs".
+;;  Hold the symbol representing the current port mode, one among: "vicare", "r6rs".
 ;;
 ;;Field name: pos
 ;;Accessor name: (cookie-pos COOKIE)
 ;;Mutator name: (set-cookie-pos! COOKIE NEW-POS)
-;;  If  an  underlying  device  exists:  this field  holds  the  current
-;;  position in the underlying  device.  If no underlying device exists:
-;;  this field is set to zero.
+;;  If an  underlying device  exists: this  field holds the  current position  in the
+;;  underlying device.  If no underlying device exists: this field is set to zero.
 ;;
-;;  It  is the  responsibility of  the *callers*  of the  port functions
-;;  READ!, WRITE!  and SET-POSITION!   to update this field.  The port's
-;;  own functions  READ!, WRITE!  and SET-POSITION!  must  not touch the
-;;  cookie.
+;;  It is  the responsibility of  the *callers* of  the port functions  READ!, WRITE!
+;;  and SET-POSITION!  to update this field.   The port's own functions READ!, WRITE!
+;;  and SET-POSITION!  must not touch the cookie.
 ;;
 ;;Field name: character-offset
 ;;Accessor name: (cookie-character-offset COOKIE)
 ;;Mutator name: (set-cookie-character-offset! COOKIE NEW-CH-OFF)
-;;  Zero-based offset  of the current  position in a textual  input port
-;;  expressed in characters.
+;;  Zero-based offset  of the current position  in a textual input  port expressed in
+;;  characters.
 ;;
 ;;Field name: row-number
 ;;Accessor name: (cookie-row-number COOKIE)
 ;;Mutator name: (set-cookie-row-number! COOKIE NEW-POS)
-;;  One-based  row number  of the  current position  in a  textual input
-;;  port.
+;;  One-based row number of the current position in a textual input port.
 ;;
 ;;Field name: column-number
 ;;Accessor name: (cookie-column-number COOKIE)
 ;;Mutator name: (set-cookie-column-number! COOKIE NEW-POS)
-;;  One-based column number  of the current position in  a textual input
-;;  port.
+;;  One-based column number of the current position in a textual input port.
 ;;
 ;;Field name: uid
 ;;Accessor name: (cookie-uid COOKIE)
 ;;Mutator name: (set-cookie-uid! COOKIE GENSYM)
-;;  Gensym uniquely associated to the port.  To be used, for example, to
-;;  generate hash keys.
+;;  Gensym uniquely  associated to the  port.  To be  used, for example,  to generate
+;;  hash keys.  The  gensym is generated only when needed;  this field is initialised
+;;  to #f.
 ;;
 ;;Field name: hash
 ;;Accessor name: (cookie-hash COOKIE)
 ;;Mutator name: (set-cookie-hash! COOKIE HASH)
-;;  Hash value  to be  used by  hashtables.  It  should be  generated by
-;;  applying SYMBOL-HASH to the gensym in the UID field.
+;;  Hash  value  to be  used  by  hashtables.  It  should  be  generated by  applying
+;;  SYMBOL-HASH to  the gensym in  the UID field.  The  hash value is  generated when
+;;  needed; this field is initialised to #f.
 ;;
 (define-struct cookie
   (dest mode pos character-offset row-number column-number uid hash))
@@ -1416,8 +1408,8 @@
 	       #f #;uid #f #;hash))
 
 (define (get-char-and-track-textual-position port)
-  ;;Defined by  Vicare.  Like GET-CHAR  but track the  textual position.
-  ;;Recognise only linefeed characters as line-ending.
+  ;;Defined by Vicare.  Like GET-CHAR but track the textual position.  Recognise only
+  ;;linefeed characters as line-ending.
   ;;
   (let* ((ch     (get-char port))
 	 (cookie ($port-cookie port)))
@@ -1438,9 +1430,9 @@
 	   ch))))
 
 (define* (port-textual-position {port textual-port?})
-  ;;Defined by Vicare.  Given a textual port, return the current textual
-  ;;position  as  a vector:  0-based  byte  position, 0-based  character
-  ;;offset, 1-based row number, 1-based column number.
+  ;;Defined by Vicare.  Given a textual  port, return the current textual position as
+  ;;a vector:  0-based byte position,  0-based character offset, 1-based  row number,
+  ;;1-based column number.
   ;;
   (let ((cookie ($port-cookie port)))
     (make-source-position-condition (port-id port)
@@ -1471,15 +1463,13 @@
 
 ;;;; port's buffer size customisation
 
-;;For ports  having a  Scheme bytevector as  buffer: the  minimum buffer
-;;size  must be big  enough to  allow the  buffer to  hold the  full UTF
-;;encoding of two Unicode  characters for all the supported transcoders.
-;;For  ports having  a Scheme  string as  buffer: there  is  no rational
-;;constraint on the buffer size.
+;;For ports having a Scheme bytevector as buffer: the minimum buffer size must be big
+;;enough to allow the buffer to hold  the full UTF encoding of two Unicode characters
+;;for all  the supported transcoders.   For ports having  a Scheme string  as buffer:
+;;there is no rational constraint on the buffer size.
 ;;
-;;It makes sense  to have "as small as possible"  minimum buffer size to
-;;allow  easy writing  of test  suites  exercising the  logic of  buffer
-;;flushing and filling.
+;;It makes  sense to have "as  small as possible"  minimum buffer size to  allow easy
+;;writing of test suites exercising the logic of buffer flushing and filling.
 ;;
 (define BUFFER-SIZE-LOWER-LIMIT		8)
 
