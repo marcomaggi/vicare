@@ -1471,82 +1471,91 @@
 ;;It makes  sense to have "as  small as possible"  minimum buffer size to  allow easy
 ;;writing of test suites exercising the logic of buffer flushing and filling.
 ;;
-(define BUFFER-SIZE-LOWER-LIMIT		8)
+(define-constant BUFFER-SIZE-LOWER-LIMIT	8)
 
-;;The maximum  buffer size must  be small enough  to fit into  a fixnum,
-;;which is defined by R6RS to be capable of holding at least 24 bits.
+;;The maximum buffer size must be small enough to fit into a fixnum, which is defined
+;;by R6RS  to be capable  of holding  at least 24  bits.  Under Vicare:  the greatest
+;;fixnum is the greatest length of strings and bytevectors.
 ;;
-(define BUFFER-SIZE-UPPER-LIMIT		(greatest-fixnum))
+(define-constant BUFFER-SIZE-UPPER-LIMIT	(greatest-fixnum))
 
-;;For binary ports: the default  buffer size should be selected to allow
-;;efficient  caching of  portions of  binary  data blobs,  which may  be
-;;megabytes wide.
+;;For binary  ports: the default  buffer size should  be selected to  allow efficient
+;;caching of portions of binary data blobs, which may be megabytes wide.
 ;;
-(define DEFAULT-BINARY-BLOCK-SIZE	(* 4 4096))
+(define-constant DEFAULT-BINARY-BLOCK-SIZE	(* 4 4096))
 
-;;For textual ports: the default buffer size should be selected to allow
-;;efficient  caching of  portions of  text for  the most  recurring use,
-;;which includes  accumulation of  "small" strings, like  in the  use of
-;;printf-like functions.
+;;For textual  ports: the default buffer  size should be selected  to allow efficient
+;;caching of portions of text for the most recurring use, which includes accumulation
+;;of "small" strings, like in the use of printf-like functions.
 ;;
-(define DEFAULT-STRING-BLOCK-SIZE	256)
+(define-constant DEFAULT-STRING-BLOCK-SIZE	256)
 
 (define-inline (%valid-buffer-size? obj)
   (and (fixnum? obj)
-       ($fx>= obj BUFFER-SIZE-LOWER-LIMIT)
-       ($fx<  obj BUFFER-SIZE-UPPER-LIMIT)))
+       (fx>=? obj BUFFER-SIZE-LOWER-LIMIT)
+       (fx<?  obj BUFFER-SIZE-UPPER-LIMIT)))
 
-(define %make-buffer-size-parameter
-  (let ((error-message/invalid-buffer-size
-	 (string-append "expected fixnum in range "
-			(number->string BUFFER-SIZE-LOWER-LIMIT)
-			" <= x < "
-			(number->string BUFFER-SIZE-UPPER-LIMIT)
-			" as buffer size")))
-    (lambda (init who)
-      (make-parameter init
-	(lambda (obj)
-	  (if (%valid-buffer-size? obj)
-	      obj
-	    (error who error-message/invalid-buffer-size obj)))))))
+(module (bytevector-port-buffer-size
+	 string-port-buffer-size
+	 input-file-buffer-size
+	 output-file-buffer-size
+	 input/output-file-buffer-size
+	 input/output-socket-buffer-size)
 
-(let-syntax ((define-buffer-size-parameter (syntax-rules ()
-					     ((_ ?who ?init)
-					      (define ?who
-						(%make-buffer-size-parameter ?init '?who))))))
+  (define %make-buffer-size-parameter
+    (let ((error-message/invalid-buffer-size
+	   (string-append "expected fixnum in range "
+			  (number->string BUFFER-SIZE-LOWER-LIMIT)
+			  " <= x < "
+			  (number->string BUFFER-SIZE-UPPER-LIMIT)
+			  " as buffer size")))
+      (lambda (init who)
+	(make-parameter init
+	  (lambda (obj)
+	    (if (%valid-buffer-size? obj)
+		obj
+	      (error who error-message/invalid-buffer-size obj)))))))
 
-  ;;Customisable buffer size for bytevector ports.  To be used by:
-  ;;
-  ;;   OPEN-BYTEVECTOR-OUTPUT-PORT
-  ;;
-  ;;and similar.
-  ;;
-  (define-buffer-size-parameter bytevector-port-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
+  (let-syntax
+      ((define-buffer-size-parameter (syntax-rules ()
+				       ((_ ?who ?init)
+					(define ?who
+					  (%make-buffer-size-parameter ?init '?who))))))
 
-  ;;Customisable buffer size for string ports.  To be used by:
-  ;;
-  ;;   OPEN-STRING-OUTPUT-PORT
-  ;;
-  ;;and similar.
-  ;;
-  (define-buffer-size-parameter string-port-buffer-size		DEFAULT-STRING-BLOCK-SIZE)
+    ;;Customisable buffer size for bytevector ports.  To be used by:
+    ;;
+    ;;   OPEN-BYTEVECTOR-OUTPUT-PORT
+    ;;
+    ;;and similar.
+    ;;
+    (define-buffer-size-parameter bytevector-port-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
 
-  ;;Customisable buffer size for file ports.  To be used by:
-  ;;
-  ;;  OPEN-FILE-INPUT-PORT
-  ;;  OPEN-FILE-OUTPUT-PORT
-  ;;
-  ;;and similar.
-  ;;
-  (define-buffer-size-parameter input-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
-  (define-buffer-size-parameter output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
-  (define-buffer-size-parameter input/output-file-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
+    ;;Customisable buffer size for string ports.  To be used by:
+    ;;
+    ;;   OPEN-STRING-OUTPUT-PORT
+    ;;
+    ;;and similar.
+    ;;
+    (define-buffer-size-parameter string-port-buffer-size		DEFAULT-STRING-BLOCK-SIZE)
 
-  ;;Customisable buffer size for socket ports.
-  ;;
-  (define-buffer-size-parameter input/output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
+    ;;Customisable buffer size for file ports.  To be used by:
+    ;;
+    ;;  OPEN-FILE-INPUT-PORT
+    ;;  OPEN-FILE-OUTPUT-PORT
+    ;;
+    ;;and similar.
+    ;;
+    (define-buffer-size-parameter input-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+    (define-buffer-size-parameter output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+    (define-buffer-size-parameter input/output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
 
-  #| end of LET-SYNTAX |# )
+    ;;Customisable buffer size for socket ports.
+    ;;
+    (define-buffer-size-parameter input/output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
+
+    #| end of LET-SYNTAX |# )
+
+  #| end of module |# )
 
 
 ;;;; buffer mode
