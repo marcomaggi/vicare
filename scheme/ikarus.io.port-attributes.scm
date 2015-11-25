@@ -16,24 +16,23 @@
 
 ;;;; port attributes
 ;;
-;;Each  port has  a tag  retrievable with  the $PORT-TAG  or $PORT-ATTRS
-;;primitive  operations.   All  the   tags  have  24  bits.   The  least
-;;significant  14 bits  are reserved  as  "fast attributes"  and can  be
-;;independently extracted as a fixnum used by the macros:
+;;Each port object has a tag  retrievable with the $PORT-TAG or $PORT-ATTRS primitive
+;;operations.  All the tags have 24 bits.  The least significant 14 bits are reserved
+;;as "fast  attributes" and can  be independently extracted as  a fixnum used  by the
+;;macros:
 ;;
 ;;   %CASE-TEXTUAL-INPUT-PORT-FAST-TAG
 ;;   %CASE-TEXTUAL-OUTPUT-PORT-FAST-TAG
 ;;   %CASE-BINARY-INPUT-PORT-FAST-TAG
 ;;   %CASE-BINARY-OUTPUT-PORT-FAST-TAG
 ;;
-;;to  quickly select  code to  run for  I/O operations  on a  port.  The
-;;following bitpatterns  are used to  compose the fast  attributes; note
-;;that bits  9, 10,  11 and  12 are currently  unused and  available for
-;;additional codecs.  Notice that the fixnum  0 is not a valid fast tag,
-;;this fact can be used to speed up a little dispatching of evaluation.
+;;to  quickly select  code  to run  for  I/O  operations on  a  port.  The  following
+;;bitpatterns are used to  compose the fast attributes; note that bits  9, 10, 11 and
+;;12  are currently  unused and  available for  additional codecs.   Notice that  the
+;;fixnum 0  is not  a valid fast  tag, this  fact can  be used to  speed up  a little
+;;dispatching of evaluation.
 ;;
-;;These  values  must  be  kept  in   sync  with  the  ones  defined  in
-;;"ikarus.compiler.sls".
+;;These values must be kept in sync with the ones defined in "ikarus.compiler.sls".
 ;;
 ;;					  32109876543210
 ;;                type bits                         ||||
@@ -53,12 +52,12 @@
 (define INIT-U16-TEXT-TAG		#b00000110000000)
 (define CLOSED-PORT-TAG			#b10000000000000)
 
-;;The following bitpatterns are  used for additional attributes ("other"
-;;attributes in the code).
+;;The following bitpatterns are used for additional attributes ("other" attributes in
+;;the code).
 ;;
-;;Notice that there  is no BUFFER-MODE-BLOCK-TAG bit: only  for LINE and
-;;NONE  buffering  something  must   be  done.   BLOCK  buffer  mode  is
-;;represented by setting to zero the 2 block mode bits.
+;;Notice that there is no BUFFER-MODE-BLOCK-TAG bit: only for LINE and NONE buffering
+;;something must be done.  BLOCK buffer mode  is represented by setting to zero the 2
+;;block mode bits.
 ;;
 ;;                                        321098765432109876543210
 ;;                      non-fast-tag bits ||||||||||
@@ -77,17 +76,16 @@
 (define BUFFER-MODE-LINE-TAG		#b000000010000000000000000)
 		;Used to tag ports having LINE as buffer mode.
 (define GUARDED-PORT-TAG		#b000000100000000000000000)
-		;Used  to tag  ports which  must be  closed by  the port
-		;guardian   after  being   collected   by  the   garbage
-		;collector.  See the definition of PORT-GUARDIAN.
+		;Used to  tag ports which must  be closed by the  port guardian after
+		;being collected  by the  garbage collector.   See the  definition of
+		;PORT-GUARDIAN.
 (define PORT-WITH-EXTRACTION-TAG	#b000001000000000000000000)
-		;Used to tag binary  output ports which accumulate bytes
-		;to be later retrieved by an extraction function.  These
-		;ports need special treatement when a transcoded port is
-		;created on top of them.  See TRANSCODED-PORT.
+		;Used to tag  binary output ports which accumulate bytes  to be later
+		;retrieved  by  an extraction  function.   These  ports need  special
+		;treatement when  a transcoded port is  created on top of  them.  See
+		;TRANSCODED-PORT.
 (define PORT-WITH-FD-DEVICE		#b010000000000000000000000)
-		;Used  to  tag ports  that  have  a  file descriptor  as
-		;device.
+		;Used to tag ports that have a file descriptor as device.
 
 ;;                                                321098765432109876543210
 (define EOL-STYLE-MASK				#b001110000000000000000000)
@@ -98,15 +96,14 @@
 (define EOL-NEXT-LINE-TAG			#b001000000000000000000000) ;;symbol -> nel
 (define EOL-CARRIAGE-RETURN-NEXT-LINE-TAG	#b001010000000000000000000) ;;symbol -> crnel
 (define EOL-LINE-SEPARATOR-TAG			#b001100000000000000000000) ;;symbol -> ls
-		;Used  to  tag  textual  ports  with  end-of-line  (EOL)
-		;conversion style.
+		;Used to tag textual ports with end-of-line (EOL) conversion style.
 
 (define DEFAULT-OTHER-ATTRS			#b000000000000000000000000)
-		;Default  non-fast attributes:  non-guarded  port, block
-		;buffer mode, no extraction function, EOL style none.
+		;Default non-fast attributes: non-guarded port, block buffer mode, no
+		;extraction function, EOL style none.
 
-;;If we are just interested in the port type: input or output, binary or
-;;textual bits, we can do:
+;;If we are just interested in the port  type: input or output, binary or textual, we
+;;can do:
 ;;
 ;;  (let ((type-bits ($fxand ($port-attrs port) PORT-TYPE-MASK)))
 ;;    ($fx= type-bits *-PORT-BITS))
@@ -116,8 +113,8 @@
 ;;  (let ((type-bits ($fxand ($port-attrs port) *-PORT-BITS)))
 ;;    ($fx= type-bits *-PORT-BITS))
 ;;
-;;where *-PORT-BITS  is one  of the constants  below.  Notice  that this
-;;predicate is not influenced by the fact that the port is closed.
+;;where *-PORT-BITS is one of the constants below.  Notice that this predicate is not
+;;influenced by the fact that the port is closed.
 ;;
 ;;					  32109876543210
 (define PORT-TYPE-MASK			#b00000000001111)
@@ -126,166 +123,173 @@
 (define TEXTUAL-INPUT-PORT-BITS		($fxior TEXTUAL-PORT-TAG INPUT-PORT-TAG))
 (define TEXTUAL-OUTPUT-PORT-BITS	($fxior TEXTUAL-PORT-TAG OUTPUT-PORT-TAG))
 
-;;The following  tag constants allow  fast classification of  open input
-;;ports by doing:
+;;The following tag constants allow fast classification of open input ports by doing:
 ;;
 ;;   ($fx= ($port-fast-attrs port) FAST-GET-*-TAG)
 ;;
-;;where FAST-GET-*-TAG  is one of  the constants below.  Notice  that if
-;;the port is closed the predicate will fail because the return value of
-;;$PORT-FAST-ATTRS includes the true-if-closed bit.
+;;where FAST-GET-*-TAG  is one of  the constants below.  Notice  that if the  port is
+;;closed  the  predicate will  fail  because  the  return value  of  $PORT-FAST-ATTRS
+;;includes the true-if-closed bit.
 
-;;This one is  used for binary input ports,  having a bytevector buffer,
-;;from which raw octets must be read.
+;;This one is used for binary input ports, having a bytevector buffer, from which raw
+;;octets must be read.
 (define FAST-GET-BYTE-TAG        BINARY-INPUT-PORT-BITS)
 ;;
 ;;This one is used for textual input ports, having a string buffer.
 (define FAST-GET-CHAR-TAG	($fxior FAST-CHAR-TEXT-TAG  TEXTUAL-INPUT-PORT-BITS))
 ;;
-;;The following  are used for  textual input ports, having  a bytevector
-;;buffer and a  transcoder, from which characters in  some encoding must
-;;be read.
+;;The following are  used for textual input  ports, having a bytevector  buffer and a
+;;transcoder, from which characters in some encoding must be read.
 (define FAST-GET-UTF8-TAG	($fxior FAST-U8-TEXT-TAG    TEXTUAL-INPUT-PORT-BITS))
-		;Tag for textual input  ports with bytevector buffer and
-		;UTF-8 transcoder.
+		;Tag  for  textual  input  ports with  bytevector  buffer  and  UTF-8
+		;transcoder.
 (define FAST-GET-LATIN-TAG	($fxior FAST-LATIN-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
-		;Tag for textual input  ports with bytevector buffer and
-		;Latin-1 transcoder.
+		;Tag  for textual  input  ports with  bytevector  buffer and  Latin-1
+		;transcoder.
 (define FAST-GET-UTF16BE-TAG	($fxior FAST-U16BE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
-		;Tag for textual input  ports with bytevector buffer and
-		;UTF-16 big endian transcoder.
+		;Tag for  textual input ports  with bytevector buffer and  UTF-16 big
+		;endian transcoder.
 (define FAST-GET-UTF16LE-TAG	($fxior FAST-U16LE-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
-		;Tag for textual input  ports with bytevector buffer and
-		;UTF-16 little endian transcoder.
+		;Tag for textual input ports with bytevector buffer and UTF-16 little
+		;endian transcoder.
 (define INIT-GET-UTF16-TAG	($fxior INIT-U16-TEXT-TAG TEXTUAL-INPUT-PORT-BITS))
-		;Tag for textual input  ports with bytevector buffer and
-		;UTF-16 transcoder  not yet recognised as  little or big
-		;endian:  endianness selection  is performed  by reading
-		;the Byte Order Mark (BOM) at the beginning of the input
-		;data.
+		;Tag  for  textual input  ports  with  bytevector buffer  and  UTF-16
+		;transcoder not  yet recognised as  little or big  endian: endianness
+		;selection is performed  by reading the Byte Order Mark  (BOM) at the
+		;beginning of the input data.
 
-;;The following  tag constants allow fast classification  of open output
-;;ports by doing:
+;;The  following tag  constants allow  fast classification  of open  output ports  by
+;;doing:
 ;;
 ;;   ($fx= ($port-fast-attrs port) FAST-PUT-*-TAG)
 ;;
-;;where FAST-PUT-*-TAG  is one of  the constants below.  Notice  that if
-;;the port is closed the predicate will fail because the return value of
-;;$PORT-FAST-ATTRS includes the true-if-closed bit.
+;;where FAST-PUT-*-TAG  is one of  the constants below.  Notice  that if the  port is
+;;closed  the  predicate will  fail  because  the  return value  of  $PORT-FAST-ATTRS
+;;includes the true-if-closed bit.
 
-;;This one is used for binary output ports, having bytevector buffer, to
-;;which raw bytes must be written.
+;;This one is  used for binary output  ports, having bytevector buffer,  to which raw
+;;bytes must be written.
 (define FAST-PUT-BYTE-TAG	BINARY-OUTPUT-PORT-BITS)
 ;;
 ;;This one is used for textual output ports, having a string buffer.
 (define FAST-PUT-CHAR-TAG	($fxior FAST-CHAR-TEXT-TAG  TEXTUAL-OUTPUT-PORT-BITS))
 ;;
-;;The following are  used for textual output ports,  having a bytevector
-;;buffer and a transcoder, to  which characters in some encoding must be
-;;written.
+;;The following are used  for textual output ports, having a  bytevector buffer and a
+;;transcoder, to which characters in some encoding must be written.
 (define FAST-PUT-UTF8-TAG	($fxior FAST-U8-TEXT-TAG    TEXTUAL-OUTPUT-PORT-BITS))
-		;Tag for textual output ports with bytevector buffer and
-		;UTF-8 transcoder.
+		;Tag  for  textual output  ports  with  bytevector buffer  and  UTF-8
+		;transcoder.
 (define FAST-PUT-LATIN-TAG	($fxior FAST-LATIN-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
-		;Tag for textual output ports with bytevector buffer and
-		;Latin-1 transcoder.
+		;Tag  for textual  output ports  with bytevector  buffer and  Latin-1
+		;transcoder.
 (define FAST-PUT-UTF16BE-TAG	($fxior FAST-U16BE-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
-		;Tag for textual output ports with bytevector buffer and
-		;UTF-16 big endian transcoder.
+		;Tag for textual  output ports with bytevector buffer  and UTF-16 big
+		;endian transcoder.
 (define FAST-PUT-UTF16LE-TAG	($fxior FAST-U16LE-TEXT-TAG TEXTUAL-OUTPUT-PORT-BITS))
-		;Tag for textual output ports with bytevector buffer and
-		;UTF-16 little endian transcoder.
+		;Tag  for textual  output  ports with  bytevector  buffer and  UTF-16
+		;little endian transcoder.
 (define INIT-PUT-UTF16-TAG	($fxior FAST-PUT-UTF16BE-TAG FAST-PUT-UTF16LE-TAG))
-		;Tag for textual output ports with bytevector buffer and
-		;UTF-16 transcoder  with data  not yet recognised  to be
-		;little  or  big endian:  selection  is performed  after
-		;writing  the  Byte Order  Mark  (BOM).   FIXME This  is
-		;currently not supported.
+		;Tag  for textual  output  ports with  bytevector  buffer and  UTF-16
+		;transcoder with data not yet recognised  to be little or big endian:
+		;selection  is performed  after writing  the Byte  Order Mark  (BOM).
+		;
+		;FIXME This is currently not supported.
+
+
+;;;; syntaxes
+
+(module (%select-input-fast-tag-from-transcoder)
+
+  (define-syntax %select-input-fast-tag-from-transcoder
+    ;;When  using this  macro without  specifying the  other attributes:  the default
+    ;;attributes  are   automatically  included.   When  we   specify  some  non-fast
+    ;;attribute, it  is our responsibility  to specify  the default attributes  if we
+    ;;want them included.
+    ;;
+    (syntax-rules ()
+      ((_ ?who ?transcoder)
+       (%%select-input-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
+      ((_ ?who ?transcoder ?other-attribute)
+       (%%select-input-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
+      ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
+       (%%select-input-fast-tag-from-transcoder ?who ?transcoder
+						($fxior ?other-attribute . ?other-attributes)))))
+
+  (define (%%select-input-fast-tag-from-transcoder who maybe-transcoder other-attributes)
+    ;;Return  a  fixnum  containing  the  tag attributes  for  an  input  port  using
+    ;;MAYBE-TRANSCODER.  OTHER-ATTRIBUTES must be  a fixnum representing the non-fast
+    ;;attributes to compose with the selected fast attributes.
+    ;;
+;;;NOTE  We  cannot  put  assertions  here  because  this  function  is  called  upon
+;;;initialisation of  the library  when the  standard ports have  not yet  been fully
+;;;constructed.   A  failing  assertion  would  use the  standard  ports,  causing  a
+;;;segfault.
+    (if (not maybe-transcoder)
+	($fxior other-attributes FAST-GET-BYTE-TAG)
+      (case (transcoder-codec maybe-transcoder)
+	((utf-8-codec)	($fxior other-attributes FAST-GET-UTF8-TAG))
+	((latin-1-codec)	($fxior other-attributes FAST-GET-LATIN-TAG))
+	((utf-16le-codec)	($fxior other-attributes FAST-GET-UTF16LE-TAG))
+	((utf-16be-codec)	($fxior other-attributes FAST-GET-UTF16BE-TAG))
+	;;The  selection  between  FAST-GET-UTF16LE-TAG and  FAST-GET-UTF16BE-TAG  is
+	;;performed as part  of the Byte Order Mark (BOM)  reading operation when the
+	;;first char is read.
+	((utf-16-codec)		($fxior other-attributes INIT-GET-UTF16-TAG))
+	;;If no codec is recognised, wait to read the first character to tag the port
+	;;according to the Byte Order Mark.
+	(else			($fxior other-attributes TEXTUAL-INPUT-PORT-BITS)))))
+
+  #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax %select-input-fast-tag-from-transcoder
-  ;;When using  this macro without specifying the  other attributes: the
-  ;;default attributes are automatically included.  When we specify some
-  ;;non-fast attribute, it is  our responsibility to specify the default
-  ;;attributes if we want them included.
-  ;;
-  (syntax-rules ()
-    ((_ ?who ?transcoder)
-     (%%select-input-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
-    ((_ ?who ?transcoder ?other-attribute)
-     (%%select-input-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
-    ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
-     (%%select-input-fast-tag-from-transcoder ?who ?transcoder
-					      ($fxior ?other-attribute . ?other-attributes)))))
+(module (%select-output-fast-tag-from-transcoder)
 
-(define (%%select-input-fast-tag-from-transcoder who maybe-transcoder other-attributes)
-  ;;Return  a fixnum  containing the  tag attributes  for an  input port
-  ;;using   MAYBE-TRANSCODER.   OTHER-ATTRIBUTES   must   be  a   fixnum
-  ;;representing the  non-fast attributes  to compose with  the selected
-  ;;fast attributes.
-  ;;
-;;;NOTE We  cannot put assertions  here because this function  is called
-;;;upon initialisation  of the library  when the standard port  have not
-;;;yet  been  fully constructed.   A  failing  assertion  would use  the
-;;;standard ports, causing a segfault.
-  (if (not maybe-transcoder)
-      ($fxior other-attributes FAST-GET-BYTE-TAG)
-    (case (transcoder-codec maybe-transcoder)
-      ((utf-8-codec)	($fxior other-attributes FAST-GET-UTF8-TAG))
-      ((latin-1-codec)	($fxior other-attributes FAST-GET-LATIN-TAG))
-      ((utf-16le-codec)	($fxior other-attributes FAST-GET-UTF16LE-TAG))
-      ((utf-16be-codec)	($fxior other-attributes FAST-GET-UTF16BE-TAG))
-      ;;The      selection     between      FAST-GET-UTF16LE-TAG     and
-      ;;FAST-GET-UTF16BE-TAG is performed as part of the Byte Order Mark
-      ;;(BOM) reading operation when the first char is read.
-      ((utf-16-codec)	($fxior other-attributes INIT-GET-UTF16-TAG))
-      ;;If no codec  is recognised, wait to read  the first character to
-      ;;tag the port according to the Byte Order Mark.
-      (else		($fxior other-attributes TEXTUAL-INPUT-PORT-BITS)))))
+  (define-syntax %select-output-fast-tag-from-transcoder
+    ;;When  using this  macro without  specifying the  other attributes:  the default
+    ;;attributes  are   automatically  included.   When  we   specify  some  non-fast
+    ;;attribute, it  is our responsibility  to specify  the default attributes  if we
+    ;;want them included.
+    ;;
+    (syntax-rules ()
+      ((_ ?who ?transcoder)
+       (%%select-output-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
+      ((_ ?who ?transcoder ?other-attribute)
+       (%%select-output-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
+      ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
+       (%%select-output-fast-tag-from-transcoder ?who ?transcoder
+						 ($fxior ?other-attribute . ?other-attributes)))))
 
-(define-syntax %select-output-fast-tag-from-transcoder
-  ;;When using  this macro without specifying the  other attributes: the
-  ;;default attributes are automatically included.  When we specify some
-  ;;non-fast attribute, it is  our responsibility to specify the default
-  ;;attributes if we want them included.
-  ;;
-  (syntax-rules ()
-    ((_ ?who ?transcoder)
-     (%%select-output-fast-tag-from-transcoder ?who ?transcoder DEFAULT-OTHER-ATTRS))
-    ((_ ?who ?transcoder ?other-attribute)
-     (%%select-output-fast-tag-from-transcoder ?who ?transcoder ?other-attribute))
-    ((_ ?who ?transcoder ?other-attribute . ?other-attributes)
-     (%%select-output-fast-tag-from-transcoder ?who ?transcoder
-					       ($fxior ?other-attribute . ?other-attributes)))))
+  (define (%%select-output-fast-tag-from-transcoder who maybe-transcoder other-attributes)
+    ;;Return  a  fixnum containing  the  tag  attributes  for  an output  port  using
+    ;;MAYBE-TRANSCODER.  OTHER-ATTRIBUTES must be  a fixnum representing the non-fast
+    ;;attributes to compose with the selected fast attributes.
+    ;;
+    ;;Notice  that an  output port  is never  tagged as  UTF-16 without  selection of
+    ;;endianness;  by default  big  endianness is  selected because  it  seems to  be
+    ;;mandated by  the Unicode Consortium,  see <http://unicode.org/faq/utf_bom.html>
+    ;;question: "Why  do some of  the UTFs have  a BE or LE  in their label,  such as
+    ;;UTF-16LE?"
+    ;;
+;;;NOTE  We  cannot  put  assertions  here  because  this  function  is  called  upon
+;;;initialisation  of the  library when  the standard  port have  not yet  been fully
+;;;constructed.   A  failing  assertion  would  use the  standard  ports,  causing  a
+;;;segfault.
+    (if (not maybe-transcoder)
+	($fxior other-attributes FAST-PUT-BYTE-TAG)
+      (case (transcoder-codec maybe-transcoder)
+	((utf-8-codec)		($fxior other-attributes FAST-PUT-UTF8-TAG))
+	((latin-1-codec)	($fxior other-attributes FAST-PUT-LATIN-TAG))
+	((utf-16le-codec)	($fxior other-attributes FAST-PUT-UTF16LE-TAG))
+	((utf-16be-codec)	($fxior other-attributes FAST-PUT-UTF16BE-TAG))
+	;;By default we select big endian UTF-16.
+	((utf-16-codec)		($fxior other-attributes FAST-PUT-UTF16BE-TAG))
+	(else
+	 (assertion-violation who "unsupported codec" (transcoder-codec maybe-transcoder))))))
 
-(define (%%select-output-fast-tag-from-transcoder who maybe-transcoder other-attributes)
-  ;;Return a  fixnum containing  the tag attributes  for an  output port
-  ;;using   MAYBE-TRANSCODER.   OTHER-ATTRIBUTES   must   be  a   fixnum
-  ;;representing the  non-fast attributes  to compose with  the selected
-  ;;fast attributes.
-  ;;
-  ;;Notice  that  an output  port  is  never  tagged as  UTF-16  without
-  ;;selection  of  endianness; by  default  big  endianness is  selected
-  ;;because  it seems  to be  mandated  by the  Unicode Consortium,  see
-  ;;<http://unicode.org/faq/utf_bom.html> question: "Why  do some of the
-  ;;UTFs have a BE or LE in their label, such as UTF-16LE?"
-  ;;
-;;;NOTE We  cannot put assertions  here because this function  is called
-;;;upon initialisation  of the library  when the standard port  have not
-;;;yet  been  fully constructed.   A  failing  assertion  would use  the
-;;;standard ports, causing a segfault.
-  (if (not maybe-transcoder)
-      ($fxior other-attributes FAST-PUT-BYTE-TAG)
-    (case (transcoder-codec maybe-transcoder)
-      ((utf-8-codec)	($fxior other-attributes FAST-PUT-UTF8-TAG))
-      ((latin-1-codec)	($fxior other-attributes FAST-PUT-LATIN-TAG))
-      ((utf-16le-codec)	($fxior other-attributes FAST-PUT-UTF16LE-TAG))
-      ((utf-16be-codec)	($fxior other-attributes FAST-PUT-UTF16BE-TAG))
-      ;;By default we select big endian UTF-16.
-      ((utf-16-codec)	($fxior other-attributes FAST-PUT-UTF16BE-TAG))
-      (else
-       (assertion-violation who "unsupported codec" (transcoder-codec maybe-transcoder))))))
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
 (define-syntax-rule (%select-input/output-fast-tag-from-transcoder . ?args)
   ;;Return  a fixnum  containing the  tag  attributes for  an input  and
@@ -299,8 +303,8 @@
   ;;
   ($set-port-attrs! ?port ($fxior CLOSED-PORT-TAG ($port-attrs ?port))))
 
-;;This  mask  is used  to  nullify  the buffer  mode  bits  in a  fixnum
-;;representing port attributes.
+;;This mask  is used to nullify  the buffer mode  bits in a fixnum  representing port
+;;attributes.
 ;;
 ;;					  321098765432109876543210
 (define BUFFER-MODE-NOT-MASK		#b111111100111111111111111)
@@ -345,7 +349,8 @@
   ($fxand ($port-tag obj) FAST-ATTRS-MASK))
 
 
-;;; --------------------------------------------------------------------
+
+;;;; end-of-line stuff
 
 (define NEWLINE-CODE-POINT		#x000A) ;; U+000A
 (define LINEFEED-CODE-POINT		#x000A) ;; U+000A
@@ -371,13 +376,13 @@
     (else	#f)))
 
 (define (%select-eol-style-from-transcoder who maybe-transcoder)
-  ;;Given a  transcoder return the non-fast  attributes representing the
-  ;;selected end of line conversion style.
+  ;;Given a transcoder  return the non-fast attributes representing  the selected end
+  ;;of line conversion style.
   ;;
-;;;NOTE We  cannot put assertions  here because this function  is called
-;;;upon initialisation  of the library  when the standard port  have not
-;;;yet  been  fully constructed.   A  failing  assertion  would use  the
-;;;standard ports, causing a segfault.
+;;;NOTE  We  cannot  put  assertions  here  because  this  function  is  called  upon
+;;;initialisation  of the  library when  the standard  port have  not yet  been fully
+;;;constructed.   A  failing  assertion  would  use the  standard  ports,  causing  a
+;;;segfault.
   (if (not maybe-transcoder)
       0		;EOL style none
     (let ((style (transcoder-eol-style maybe-transcoder))
@@ -416,8 +421,8 @@
   ($fxzero? (%port-eol-style-bits port)))
 
 (define-syntax %case-eol-style
-  ;;Select a body to be evaluated  if a port has the selected EOL style.
-  ;;?EOL-BITS must be an identifier bound to the result of:
+  ;;Select a body  to be evaluated if  a port has the selected  EOL style.  ?EOL-BITS
+  ;;must be an identifier bound to the result of:
   ;;
   ;;   (%port-eol-style-bits port)
   ;;
@@ -447,13 +452,14 @@
 	   ((EOL-LINE-SEPARATOR-TAG)		. ?line-separator-body))
        ))))
 
-;;; --------------------------------------------------------------------
+
+;;;; syntaxes
 
 (define-syntax (%case-binary-input-port-fast-tag stx)
-  ;;Assuming ?PORT  has already been  validated as a port  value, select
-  ;;code to be evaluated  if it is a binary input port.   If the port is
-  ;;I/O and tagged  as binary output: retag it as  binary input.  If the
-  ;;port is textual, output or closed: raise an assertion violation.
+  ;;Assuming ?PORT  has already been  validated as a port  object, select code  to be
+  ;;evaluated if it is a binary input port.   If the port is I/O and tagged as binary
+  ;;output: retag  it as  binary input.  If  the port is  textual, output  or closed:
+  ;;raise an assertion violation.
   ;;
   (syntax-case stx (FAST-GET-BYTE-TAG else)
     ((%case-binary-input-port-fast-tag (?port ?who)
@@ -476,10 +482,10 @@
     ))
 
 (define-syntax (%case-binary-output-port-fast-tag stx)
-  ;;Assuming ?PORT  has already been  validated as a port  value, select
-  ;;code to be evaluated if it is  a binary output port.  If the port is
-  ;;I/O and tagged  as binary input: retag it as  binary output.  If the
-  ;;port is textual, input or closed: raise an assertion violation.
+  ;;Assuming ?PORT  has already been  validated as a port  object, select code  to be
+  ;;evaluated if it is a binary output port.  If the port is I/O and tagged as binary
+  ;;input: retag it as binary output.  If the port is textual, input or closed: raise
+  ;;an assertion violation.
   ;;
   (syntax-case stx (FAST-PUT-BYTE-TAG else)
     ((%case-binary-input-port-fast-tag (?port ?who)
@@ -502,17 +508,15 @@
     ))
 
 (define-syntax (%case-textual-input-port-fast-tag stx)
-  ;;For  a port  fast tagged  for input:  select a  body of  code  to be
-  ;;evaluated.
+  ;;For a port fast tagged for input: select a body of code to be evaluated.
   ;;
-  ;;If the port is tagged for output and it is an I/O port: retag it for
-  ;;input and select a body of code to be evaluated.
+  ;;If the port  is tagged for output and it  is an I/O port: retag it  for input and
+  ;;select a body of code to be evaluated.
   ;;
-  ;;If the  port is  untagged: validate it  as open textual  input port,
-  ;;then try to  tag it reading the Byte Order  Mark.  If the validation
-  ;;fails:  raise an  assertion violation.   If reading  the  BOM fails:
-  ;;raise an exception of type &i/o-read.  If the port is at EOF: return
-  ;;the EOF object.
+  ;;If the port is untagged: validate it as  open textual input port, then try to tag
+  ;;it reading  the Byte  Order Mark.   If the validation  fails: raise  an assertion
+  ;;violation.  If reading  the BOM fails: raise an exception  of type &i/o-read.  If
+  ;;the port is at EOF: return the EOF object.
   ;;
   (syntax-case stx ( ;;
 		    FAST-GET-UTF8-TAG FAST-GET-CHAR-TAG FAST-GET-LATIN-TAG
@@ -572,14 +576,13 @@
 	 ))))
 
 (define-syntax (%case-textual-output-port-fast-tag stx)
-  ;;For  a port fast  tagged for  output: select  a body  of code  to be
-  ;;evaluated.
+  ;;For a port fast tagged for output: select a body of code to be evaluated.
   ;;
-  ;;If the port is tagged for input  and it is an I/O port: retag it for
-  ;;output and select a body of code to be evaluated.
+  ;;If the port  is tagged for input and it  is an I/O port: retag it  for output and
+  ;;select a body of code to be evaluated.
   ;;
-  ;;If the  port is untagged: validate  it as open  textual output port.
-  ;;If the validation fails: raise an assertion violation.
+  ;;If  the port  is untagged:  validate  it as  open  textual output  port.  If  the
+  ;;validation fails: raise an assertion violation.
   ;;
   (syntax-case stx ( ;;
 		    FAST-PUT-UTF8-TAG FAST-PUT-CHAR-TAG FAST-PUT-LATIN-TAG
@@ -630,34 +633,11 @@
 	      (%validate))))
 	 ))))
 
-;;; --------------------------------------------------------------------
-;;; Backup of original Ikarus values
-
-;;(define PORT-TYPE-MASK		#b00000000001111)
-;;(define BINARY-INPUT-PORT-BITS	#b00000000001001)
-;;(define BINARY-OUTPUT-PORT-BITS	#b00000000001010)
-;;(define TEXTUAL-INPUT-PORT-BITS	#b00000000000101)
-;;(define TEXTUAL-OUTPUT-PORT-BITS	#b00000000000110)
-
-;;(define FAST-GET-BYTE-TAG		#b00000000001001)
-;;(define FAST-GET-CHAR-TAG		#b00000000010101)
-;;(define FAST-GET-UTF8-TAG		#b00000000100101)
-;;(define FAST-GET-LATIN-TAG		#b00000001100101)
-;;(define FAST-GET-UTF16BE-TAG		#b00000010000101)
-;;(define FAST-GET-UTF16LE-TAG		#b00000100000101)
-
-;;(define FAST-PUT-BYTE-TAG		#b00000000001010)
-;;(define FAST-PUT-CHAR-TAG		#b00000000010110)
-;;(define FAST-PUT-UTF8-TAG		#b00000000100110)
-;;(define FAST-PUT-LATIN-TAG		#b00000001100110)
-;;(define FAST-PUT-UTF16BE-TAG		#b00000010000110)
-;;(define FAST-PUT-UTF16LE-TAG		#b00000100000110)
-;;(define INIT-PUT-UTF16-TAG		#b00000110000110)
-
 
 ;;;; done
 
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
+;; eval: (font-lock-mode 0)
 ;; End:
