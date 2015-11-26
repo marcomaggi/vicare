@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#!r6rs
+#!vicare
 (library (ikarus control)
   (export
     call/cf		call/cc
@@ -33,8 +33,7 @@
 		  call/cf)
     (vicare system $stack)
     (vicare system $pairs)
-    (vicare system $fx)
-    (vicare arguments validation))
+    (vicare system $fx))
 
 
 ;;;; helpers
@@ -208,37 +207,31 @@
     (begin
       ($seal-frame-and-call func))))
 
-(define (call/cf func)
-  (define who 'call/cf)
-  (with-arguments-validation (who)
-      ((procedure	func))
-    (%primitive-call/cf func)))
+(define* (call/cf {func procedure?})
+  (%primitive-call/cf func))
 
 (module (call/cc)
   (import winders-handling)
 
-  (define (call/cc func)
-    (define who 'call/cc)
-    (with-arguments-validation (who)
-	((procedure	func))
-      (define (func-with-winders escape-function)
-	(let ((save (%current-winders)))
-	  (define (%do-wind-maybe)
-	    (unless (%winders-eq? save)
-	      (%do-wind save)))
-	  (define escape-function-with-winders
-	    (case-lambda
-	     ((v)
-	      (%do-wind-maybe)
-	      (escape-function v))
-	     (()
-	      (%do-wind-maybe)
-	      (escape-function))
-	     ((v1 v2 . v*)
-	      (%do-wind-maybe)
-	      (apply escape-function v1 v2 v*))))
-	  (func escape-function-with-winders)))
-      (%primitive-call/cc func-with-winders)))
+  (define* (call/cc {func procedure?})
+    (define (func-with-winders escape-function)
+      (let ((save (%current-winders)))
+	(define (%do-wind-maybe)
+	  (unless (%winders-eq? save)
+	    (%do-wind save)))
+	(define escape-function-with-winders
+	  (case-lambda
+	   ((v)
+	    (%do-wind-maybe)
+	    (escape-function v))
+	   (()
+	    (%do-wind-maybe)
+	    (escape-function))
+	   ((v1 v2 . v*)
+	    (%do-wind-maybe)
+	    (apply escape-function v1 v2 v*))))
+	(func escape-function-with-winders)))
+    (%primitive-call/cc func-with-winders))
 
   (define (%primitive-call/cc func-with-winders)
     ;;In tail position: applies  FUNC-WITH-WINDERS to an escape function
@@ -315,32 +308,27 @@
 
 ;;;; dynamic wind
 
-(define (dynamic-wind in-guard body out-guard)
-  (define who 'dynamic-wind)
+(define* (dynamic-wind {in-guard procedure?} {body procedure?} {out-guard procedure?})
   (import winders-handling)
-  (with-arguments-validation (who)
-      ((procedure	in-guard)
-       (procedure	body)
-       (procedure	out-guard))
-    (in-guard)
-    ;;We  do *not*  push  the guards  if an  error  occurs when  running
-    ;;IN-GUARD.
-    (%winders-push! in-guard out-guard)
-    (call-with-values
-	body
-      (case-lambda
-       ((v)
-	(%winders-pop!)
-	(out-guard)
-	v)
-       (()
-	(%winders-pop!)
-	(out-guard)
-	(values))
-       ((v1 v2 . v*)
-	(%winders-pop!)
-	(out-guard)
-	(apply values v1 v2 v*))))))
+  (in-guard)
+  ;;We  do *not*  push  the guards  if an  error  occurs when  running
+  ;;IN-GUARD.
+  (%winders-push! in-guard out-guard)
+  (call-with-values
+      body
+    (case-lambda
+     ((v)
+      (%winders-pop!)
+      (out-guard)
+      v)
+     (()
+      (%winders-pop!)
+      (out-guard)
+      (values))
+     ((v1 v2 . v*)
+      (%winders-pop!)
+      (out-guard)
+      (apply values v1 v2 v*)))))
 
 
 ;;;; shift and reset utilities

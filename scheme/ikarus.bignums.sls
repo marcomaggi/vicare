@@ -46,8 +46,7 @@
 	    $bignum-non-positive?	$bignum-non-negative?
 	    $bignum-even?		$bignum-odd?
 	    $bignum->flonum)
-    (vicare system $flonums)
-    (vicare arguments validation))
+    (vicare system $flonums))
 
 
 ;;;; limits

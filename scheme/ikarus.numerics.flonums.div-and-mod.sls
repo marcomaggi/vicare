@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus flonums div-and-mod)
   (export
     fldiv		flmod
@@ -32,8 +33,7 @@
     (except (vicare system $flonums)
 	    $fldiv		$flmod
 	    $fldiv0		$flmod0
-	    $fldiv-and-mod	$fldiv0-and-mod0)
-    (vicare arguments validation))
+	    $fldiv-and-mod	$fldiv0-and-mod0))
 
 
 ;;;; helpers
@@ -41,12 +41,8 @@
 (define-syntax define-fl-operation/two
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x y)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((flonum	x)
-	    (flonum	y))
-	 (?unsafe-who x y))))))
+     (define* (?safe-who {x flonum?} {y flonum?})
+       (?unsafe-who x y)))))
 
 
 (define-fl-operation/two fldiv			$fldiv)
@@ -130,6 +126,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

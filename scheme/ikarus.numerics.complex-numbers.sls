@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus numerics complex-numbers)
   (export
     make-rectangular		make-polar
@@ -56,7 +57,6 @@
 	    ($abs-bignum		$magnitude-bignum)
 	    ($abs-ratnum		$magnitude-ratnum)
 	    ($abs-flonum		$magnitude-flonum))
-    (vicare arguments validation)
     (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand))
 

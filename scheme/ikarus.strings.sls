@@ -126,7 +126,6 @@
     ;;NOTE Let's try  to import unsafe operations only from  built-in libraries, when
     ;;possible, avoiding the use of external libraries of macros.
     (except (vicare system $fx)
-	    $fx<=
 	    ;;FIXME This  except must  be removed  at the  next boot  image rotation.
 	    ;;(Marco Maggi; Fri Mar 27, 2015)
 	    $fx!=)
@@ -162,9 +161,6 @@
 	  $string-set!
 	  $ascii->string
 	  $string->ascii)
-    (only (vicare unsafe operations)
-	  $fx<=
-	  $fxincr!)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
     ;;2015)
     (only (ikarus chars)
@@ -285,6 +281,19 @@
 (define ($string-last-index str)
   ;;To be called only if BV is not empty!!!
   ($fxsub1 ($string-length str)))
+
+(let-syntax ((define-compar (syntax-rules ()
+			      ((_ ?who ?unsafe-who)
+			       (define-syntax ?who
+				 (syntax-rules ()
+				   ((_ ?op1 ?op2)
+				    (?unsafe-who ?op1 ?op2))
+				   ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
+				    (let ((op2 ?op2))
+				      (and (?unsafe-who ?op1 op2)
+					   (?who op2 ?op3 ?op4 (... ...))))))))
+			      )))
+  (define-compar $fxleq $fx<=))
 
 
 ;;;; predicates
@@ -546,7 +555,7 @@
   (or (eq? str1 str2)
       (let ((len1 ($string-length str1))
 	    (len2 ($string-length str2)))
-	(if ($fx<= len1 len2)
+	(if ($fxleq len1 len2)
 	    (let next-char ((idx  0)
 			    (len1 len1)
 			    (str1 str1)
@@ -1226,7 +1235,7 @@
 				 (set! i ($fxadd1 i))
 				 (and ($is-hex-digit? ($bytevector-u8-ref bv i))
 				      (loop ($fxadd1 i))))))))
-		  ((and ($fx<= 32 chi 126)
+		  ((and ($fxleq 32 chi 126)
 			($is-unreserved? chi))
 		   (loop ($fxadd1 i)))
 		  (else #f))))))
@@ -1248,17 +1257,17 @@
 	    (cond (($fx= chi INT-PERCENT)
 		   (and ($two-more-chars-after-this? str i)
 			(begin
-			  ;;The first char must represent a HEX digit in
-			  ;;ASCII encoding.
-			  ($fxincr! i)
+			  ;;The  first  char must  represent  a  HEX digit  in  ASCII
+			  ;;encoding.
+			  (set! i ($fxadd1 i))
 			  (and ($is-hex-digit? ($string-chi-ref str i))
 			       (begin
-				 ;;The second octet must represent a
-				 ;;HEX digit in ASCII encoding.
-				 ($fxincr! i)
+				 ;;The  second octet  must represent  a HEX  digit in
+				 ;;ASCII encoding.
+				 (set! i ($fxadd1 i))
 				 (and ($is-hex-digit? ($string-chi-ref str i))
 				      (loop ($fxadd1 i))))))))
-		  ((and ($fx<= 32 chi 126)
+		  ((and ($fxleq 32 chi 126)
 			($is-unreserved? chi))
 		   (loop ($fxadd1 i)))
 		  (else #f))))))
@@ -1293,8 +1302,8 @@
 
   (define-inline ($is-hex-digit? chi)
     (or ($is-dec-digit? chi)
-	($fx<= INT-a chi INT-f)
-	($fx<= INT-A chi INT-F)))
+	($fxleq INT-a chi INT-f)
+	($fxleq INT-A chi INT-F)))
 
   (define-inline-constant INT-a			(char->integer #\a))
   (define-inline-constant INT-f			(char->integer #\f))

@@ -2,19 +2,19 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus time-and-date)
   (export
     current-time	time-from-now
@@ -40,10 +40,7 @@
 		  time-addition		time-difference
 		  time=?
 		  time<?		time<=?
-		  time>?		time>=?)
-    (rename (vicare arguments validation)
-	    (time.vicare-arguments-validation		time-struct.vicare-arguments-validation)
-	    (time/false.vicare-arguments-validation	time-struct/false.vicare-arguments-validation)))
+		  time>?		time>=?))
 
 
 (define-struct time
@@ -58,46 +55,30 @@
 (define (current-time)
   (foreign-call "ikrt_current_time" (make-time 0 0 0)))
 
-(define (time-from-now delta)
-  (define who 'time-from-now)
-  (with-arguments-validation (who)
-      ((time-struct	delta))
-    ($time-addition (current-time) delta)))
+(define* (time-from-now {delta time?})
+  ($time-addition (current-time) delta))
 
 ;;; --------------------------------------------------------------------
 
-(define (time-second x)
-  (define who 'time-second)
-  (with-arguments-validation (who)
-      ((time-struct	x))
-    (+ (* ($time-megasecs x) #e1e6)
-       ($time-secs x))))
+(define* (time-second {x time?})
+  (+ (* ($time-megasecs x) #e1e6)
+     ($time-secs x)))
 
-(define (time-nanosecond x)
-  (define who 'time-nanosecond)
-  (with-arguments-validation (who)
-      ((time-struct	x))
-    (* ($time-microsecs x) 1000)))
+(define* (time-nanosecond {x time?})
+  (* ($time-microsecs x) 1000))
 
-(define (time-gmt-offset x)
-  (define who 'time-gmt-offset)
-  (with-arguments-validation (who)
-      ((time-struct	x))
-    (foreign-call "ikrt_gmt_offset" x)))
+(define* (time-gmt-offset {x time?})
+  (foreign-call "ikrt_gmt_offset" x))
 
 
 ;;;; time operations
 
-(define (make-time-struct secs nanos)
-  (define who 'make-time)
-  (with-arguments-validation (who)
-      ((exact-integer	secs)
-       (exact-integer	nanos))
-    ($normalise-and-make 0 secs (div nanos 1000))))
+(define* (make-time-struct {secs exact-integer?} {nanos exact-integer?})
+  ($normalise-and-make 0 secs (div nanos 1000)))
 
 (define ($normalise-and-make megas secs micros)
-  ;;Normalise a triplet: megaseconds, seconds, microseconds and return a
-  ;;TIME structure representing the result.
+  ;;Normalise  a  triplet:  megaseconds,  seconds, microseconds  and  return  a  TIME
+  ;;structure representing the result.
   ;;
   (let-values (((micros.secs micros.micros) (div-and-mod micros #e1e6)))
     (let ((secs (+ secs micros.secs)))
@@ -107,15 +88,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (time-addition time1 time2)
-  ;;Compute the addition  between two times: time1 - time2  and return a
-  ;;time struct representing it.
+(define* (time-addition {time1 time?} {time2 time?})
+  ;;Compute the addition  between two times: time1  - time2 and return  a time struct
+  ;;representing it.
   ;;
-  (define who 'time-addition)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time-addition time1 time2)))
+  ($time-addition time1 time2))
 
 (define ($time-addition time1 time2)
   ($normalise-and-make (+ ($time-megasecs  time1) ($time-megasecs  time2))
@@ -124,15 +101,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (time-difference time1 time2)
-  ;;Compute the difference between two times: time1 - time2 and return a
-  ;;time struct representing it.
+(define* (time-difference {time1 time?} {time2 time?})
+  ;;Compute the difference between two times: time1  - time2 and return a time struct
+  ;;representing it.
   ;;
-  (define who 'time-difference)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time-difference time1 time2)))
+  ($time-difference time1 time2))
 
 (define ($time-difference time1 time2)
   ($normalise-and-make (- ($time-megasecs  time1) ($time-megasecs  time2))
@@ -142,14 +115,10 @@
 
 ;;;; time comparison
 
-(define (time=? time1 time2)
+(define* (time=? {time1 time?} {time2 time?})
   ;;Return true if the time objects are equal, else return false.
   ;;
-  (define who 'time=?)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time=? time1 time2)))
+  ($time=? time1 time2))
 
 (define ($time=? time1 time2)
   (and (= ($time-megasecs  time1) ($time-megasecs  time2))
@@ -158,14 +127,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (time<? time1 time2)
+(define* (time<? {time1 time?} {time2 time?})
   ;;Return true if TIME1 is less than TIME2, else return false.
   ;;
-  (define who 'time<?)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time<? time1 time2)))
+  ($time<? time1 time2))
 
 (define ($time<? time1 time2)
   (or (< ($time-megasecs time1)
@@ -181,15 +146,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (time<=? time1 time2)
-  ;;Return true  if TIME1 is  less than or  equal to TIME2,  else return
-  ;;false.
+(define* (time<=? {time1 time?} {time2 time?})
+  ;;Return true if TIME1 is less than or equal to TIME2, else return false.
   ;;
-  (define who 'time<=?)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time<=? time1 time2)))
+  ($time<=? time1 time2))
 
 (define ($time<=? time1 time2)
   (or (< ($time-megasecs time1)
@@ -205,14 +165,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (time>? time1 time2)
+(define* (time>? {time1 time?} {time2 time?})
   ;;Return true if TIME1 is greater than TIME2, else return false.
   ;;
-  (define who 'time>?)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time>? time1 time2)))
+  ($time>? time1 time2))
 
 (define ($time>? time1 time2)
   (or (> ($time-megasecs time1)
@@ -228,15 +184,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (time>=? time1 time2)
-  ;;Return true if TIME1 is greater  than or equal to TIME2, else return
-  ;;false.
+(define* (time>=? {time1 time?} {time2 time?})
+  ;;Return true if TIME1 is greater than or equal to TIME2, else return false.
   ;;
-  (define who 'time>=?)
-  (with-arguments-validation (who)
-      ((time-struct	time1)
-       (time-struct	time2))
-    ($time>=? time1 time2)))
+  ($time>=? time1 time2))
 
 (define ($time>=? time1 time2)
   (or (> ($time-megasecs time1)
@@ -261,6 +212,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

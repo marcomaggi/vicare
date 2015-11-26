@@ -26,15 +26,21 @@
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (except (vicare system $strings)
+	    ;;FIXME This  EXCEPT is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Sat Nov 7, 2015)
+	    $string-hash)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Nov 7,
+    ;;2015)
+    (only (ikarus hash-tables)
+	  $string-hash)
+    (vicare system $vectors)
     (except (vicare system $symbols)
 	    $string->symbol
 	    $symbol-table-size
-	    $log-symbol-table-status)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation)
-    (except (vicare unsafe operations)
-	    $symbol->string
-	    $string->symbol))
+	    $log-symbol-table-status))
 
 
 ;;;; helpers
@@ -130,7 +136,7 @@
     (when (pair? x)
       (let ((sym ($car x)))
 	(intern-symbol! sym
-			($fxand (%compute-symbol-hash sym)
+			($fxlogand (%compute-symbol-hash sym)
 				(symbol-table-mask THE-SYMBOL-TABLE))
 			THE-SYMBOL-TABLE))
       (intern-car ($cdr x))))
@@ -171,7 +177,7 @@
     ;;Lookup the  symbol in the  symbol table:  if it is  already there,
     ;;return it; else create a new entry and return the new symbol.
     ;;
-    (let* ((idx ($fxand (%compute-string-hash str)
+    (let* ((idx ($fxlogand (%compute-string-hash str)
 			(symbol-table-mask THE-SYMBOL-TABLE)))
 	   (list-of-interned-symbols ($vector-ref ($symbol-table-buckets THE-SYMBOL-TABLE) idx)))
       (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols)))
@@ -267,7 +273,7 @@
   ;;Remove the interned symbol SYM from TABLE.
   ;;
   (set-symbol-table-size! table ($fxsub1 (symbol-table-size table)))
-  (let ((idx ($fxand (%compute-symbol-hash sym) (symbol-table-mask table)))
+  (let ((idx ($fxlogand (%compute-symbol-hash sym) (symbol-table-mask table)))
 	(vec (symbol-table-buckets table)))
     (let ((ls ($vector-ref vec idx)))
       (if (eq? ($car ls) sym)
@@ -300,7 +306,7 @@
 		  (rest ($cdr p)))
 	      ;;Recycle this pair by setting its cdr to the value in the
 	      ;;vector.
-	      (let ((idx ($fxand (%compute-symbol-hash a) mask)))
+	      (let ((idx ($fxlogand (%compute-symbol-hash a) mask)))
 		($set-cdr! p ($vector-ref vec2 idx))
 		($vector-set! vec2 idx p))
 	      (insert rest))))

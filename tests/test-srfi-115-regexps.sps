@@ -111,17 +111,14 @@
   (check-for-false
    (regexp-search '(~ ("Aab")) "b"))
 
-  ;;FIXME These  are described in  the SRFI document as  returning a match,  but both
-  ;;this port and the original Chibi return false.
-  ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(w/nocase (~ ("Aab"))) "B"))
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(w/nocase (~ ("Aab"))) "b"))
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(~ (w/nocase ("Aab"))) "B"))
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(~ (w/nocase ("Aab"))) "b"))
+  (check-for-false
+   (regexp-search '(w/nocase (~ ("Aab"))) "B"))
+  (check-for-false
+   (regexp-search '(w/nocase (~ ("Aab"))) "b"))
+  (check-for-false
+   (regexp-search '(~ (w/nocase ("Aab"))) "B"))
+  (check-for-false
+   (regexp-search '(~ (w/nocase ("Aab"))) "b"))
 
   (check-for-regexp-match
    (regexp-search '(w/nocase "abc") "abc"))
@@ -154,12 +151,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;FIXME
-  ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(w/ascii bos (* letter) eos) "English"))
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(w/ascii bos (* "[a-zA-Z]") eos) "English"))
+  (check-for-regexp-match
+   (regexp-search '(w/ascii bos (* alpha) eos) "English"))
 
   (check-for-regexp-match
    (regexp-search '(w/ascii bos (* "[a-zA-Z]")) "English"))
@@ -168,7 +161,7 @@
    (regexp-search '(w/ascii (* "[a-zA-Z]") eos) "English"))
 
   (check-for-regexp-match
-   (regexp-search '(w/ascii bos (* "[a-zA-Z]") eos) "English"))
+   (regexp-search '(w/ascii bos (* (/ "azAZ")) eos) "English"))
 
   (check-for-regexp-match
    (regexp-search '(* "[a-zA-Z]") "English"))
@@ -182,12 +175,10 @@
    (regexp-search '(w/unicode (* "[a-zA-Z]") eos) "English"))
 
   (check-for-regexp-match
-   (regexp-search '(w/unicode bos (* "[a-zA-Z]") eos) "English"))
+   (regexp-search '(w/unicode bos (* (/ "azAZ")) eos) "English"))
 
-  ;;FIXME The pattern "letter" is unknown.
-  ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(w/unicode bos (* letter) eos) "English"))
+  (check-for-regexp-match
+   (regexp-search '(w/unicode bos (* alpha) eos) "English"))
 
 ;;; --------------------------------------------------------------------
 

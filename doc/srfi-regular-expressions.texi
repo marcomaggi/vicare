@@ -759,10 +759,10 @@ with the letter property but no case.
 
 (regexp-search '(~ ("Aab")) "B") @result{} #<regexp-match>
 (regexp-search '(~ ("Aab")) "b") @result{} #f
-(regexp-search '(w/nocase (~ ("Aab"))) "B") @result{} #<regexp-match>
-(regexp-search '(w/nocase (~ ("Aab"))) "b") @result{} #<regexp-match>
-(regexp-search '(~ (w/nocase ("Aab"))) "B") @result{} #<regexp-match>
-(regexp-search '(~ (w/nocase ("Aab"))) "b") @result{} #<regexp-match>
+(regexp-search '(w/nocase (~ ("Aab"))) "B") @result{} #f
+(regexp-search '(w/nocase (~ ("Aab"))) "b") @result{} #f
+(regexp-search '(~ (w/nocase ("Aab"))) "B") @result{} #f
+(regexp-search '(~ (w/nocase ("Aab"))) "b") @result{} #f
 @end lisp
 
 @item (w/case sre ...)
@@ -785,7 +785,7 @@ characters are relevant.  Switching to @ascii{} mode can improve
 performance in some implementations.
 
 @lisp
-(regexp-search '(w/ascii bos (* letter) eos) "English")
+(regexp-search '(w/ascii bos (* alpha) eos) "English")
 @result{} #<regexp-match>
 @end lisp
 

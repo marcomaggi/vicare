@@ -9,7 +9,7 @@
 ;;;	adapted  to  the Nausicaa  distributiona,  then  adapted to  the
 ;;;	Vicare Scheme distribution.
 ;;;
-;;;Copyright (c) 2008, 2009, 2013 Marco Maggi <marco.maggi-ipsu@poste.itn>
+;;;Copyright (c) 2008, 2009, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.itn>
 ;;;Copyright (c) 2005-2009 Alex Shinn.  All rights reserved.
 ;;;Sometests adapted from SCSH SRE tests by Christoph Hetz.
 ;;;
@@ -316,6 +316,7 @@
   ;;Grouping parentheses.
   (let ((match (irregex-search "c(i(a(o)))"
 			       "hello ciao salut")))
+;;;                             0123456789012345
     (check (irregex-match-substring match) => "ciao")
     (check (irregex-match-substring match 0) => "ciao")
     (check (irregex-match-substring match 1) => "iao")
@@ -323,6 +324,7 @@
     (check (irregex-match-substring match 3) => "o")
 
     (check (irregex-match-start-index match 0) => 6)
+    (check (irregex-match-end-index   match 0) => 10)
     )
 
   ;;Non-grouping parentheses.

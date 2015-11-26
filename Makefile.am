@@ -396,6 +396,13 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.hash-tables.sls					\
 	scheme/ikarus.keywords.sls					\
 	scheme/ikarus.io.sls						\
+	scheme/ikarus.io.port-attributes.scm				\
+	scheme/ikarus.io.port-constructors.scm				\
+	scheme/ikarus.io.port-predicates.scm				\
+	scheme/ikarus.io.port-procedures.scm				\
+	scheme/ikarus.io.reading.scm					\
+	scheme/ikarus.io.writing.scm					\
+	scheme/ikarus.io.file-descriptor-ports.scm			\
 	scheme/ikarus.lists.sls						\
 	scheme/ikarus.load.sls						\
 	scheme/ikarus.load.dynamic-library-loading.sls			\
@@ -1190,8 +1197,7 @@ EXTRA_DIST	+= \
 
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME_LONG_TESTS)
 XFAIL_TESTS	= \
-	tests/test-issue-058-lalr-unary-prec.sps	\
-	tests/test-srfi-115-regexps.sps
+	tests/test-issue-058-lalr-unary-prec.sps
 
 # The following tests fails because Nausicaa and the half-written type
 # system  in  (vicare)  are  incompatible.  In  future  they  will  be

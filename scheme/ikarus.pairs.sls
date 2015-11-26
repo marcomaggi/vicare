@@ -14,6 +14,8 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!vicare
 (library (ikarus pairs)
   (export
     cons weak-cons set-car! set-cdr!  car cdr caar cdar cadr cddr
@@ -29,8 +31,6 @@
     (rename (only (vicare)
 		  cons)
 	    (cons sys:cons))
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation)
     (vicare system $pairs))
 
 
@@ -40,38 +40,32 @@
 (define (weak-cons a d)
   (foreign-call "ikrt_weak_cons" a d))
 
-(define (set-car! x y)
-  (define who 'set-car!)
-  (with-arguments-validation (who)
-      ((pair x))
-    ($set-car! x y)))
+(define* (set-car! {x pair?} y)
+  ($set-car! x y))
 
-(define (set-cdr! x y)
-  (define who 'set-cdr!)
-  (with-arguments-validation (who)
-      ((pair x))
-    ($set-cdr! x y)))
+(define* (set-cdr! {x pair?} y)
+  ($set-cdr! x y))
 
 (define-syntax cxr
   (syntax-rules ()
     ((_ ?who ?obj $car/$cdr)
-     (let ((x   ?obj)
-	   (who '?who))
-       (with-arguments-validation (who)
-	   ((pair x))
-	 ($car/$cdr x))))
+     (let ((x ?obj))
+       (if (pair? x)
+	   ($car/$cdr x)
+	 (procedure-argument-violation __who__ "expected pair as component of argument" x))))
+
     ((_ ?who ?obj ?op ... $car/$cdr)
-     (let ((x   ?obj)
-	   (who '?who))
-       (with-arguments-validation (who)
-	   ((pair x))
-	 (cxr ?who ($car/$cdr x) ?op ...))))))
+     (let ((x ?obj))
+       (if (pair? x)
+	   (cxr ?who ($car/$cdr x) ?op ...)
+	 (procedure-argument-violation __who__ "expected pair as component of argument" x))))
+    ))
 
 (define-syntax define-cxr*
   (syntax-rules ()
     ((_ (?name ?operation ...) ...)
      (begin
-       (define (?name x)
+       (define* (?name x)
 	 (cxr ?name x ?operation ...))
        ...))))
 
@@ -110,7 +104,7 @@
 
 ;;;; end of library (ikarus pairs)
 
-)
+#| end of library |# )
 
 
 (library (vicare system pairs)

@@ -45,11 +45,8 @@
 		  make-queue-procs
 		  map1		for-each1
 		  for-all1	exists1)
-    (vicare language-extensions syntaxes)
-    (except (vicare unsafe operations)
-	    $length
-	    for-all1		exists1
-	    map1		for-each1))
+    (vicare system $fx)
+    (vicare system $pairs))
 
 
 ;;;; arguments validation

@@ -2,18 +2,19 @@
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!vicare
 (library (ikarus.apropos)
   (export apropos)
   (import (except (vicare)
@@ -22,7 +23,10 @@
 	  library-export-subst
 	  library-name-identifiers
 	  interned-libraries)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (vicare system $chars)
+    (vicare system $pairs)
+    (vicare system $strings))
 
 
 (define (apropos key)
@@ -39,11 +43,11 @@
     ($apropos-list key 'apropos)))
 
 (define (match-maker str1)
-  ;;Given a matcher  string STR1, return a matcher  closure accepting as
-  ;;argument a pair whose car is a string STR2.
+  ;;Given a  matcher string STR1,  return a matcher  closure accepting as  argument a
+  ;;pair whose car is a string STR2.
   ;;
-  ;;The matcher closure compares STR2 to  STR1 returning #t if STR1 is a
-  ;;substring of STR2, else it returns #f.
+  ;;The matcher closure compares STR2 to STR1  returning #t if STR1 is a substring of
+  ;;STR2, else it returns #f.
   ;;
   (let ((len1 ($string-length str1)))
     (lambda (x)
@@ -72,9 +76,8 @@
     (string<? (symbol->string s1)
 	      (symbol->string s2)))
   (fold-right (lambda (lib rest)
-		;;The return  value of LIBRARY-EXPORT-SUBST is  the list
-		;;of substitutions  for the identifiers exported  by the
-		;;library.
+		;;The   return  value   of  LIBRARY-EXPORT-SUBST   is  the   list  of
+		;;substitutions for the identifiers exported by the library.
 		(let ((ls (filter matcher (library-export-subst lib))))
 		  (if (null? ls)
 		      rest
@@ -82,9 +85,9 @@
 		      (cons (cons (library-name-identifiers lib) ls) rest)))))
     '()
     (list-sort (lambda (lib1 lib2)
-		 ;;Compare the  components of a library  name (which are
-		 ;;symbols)  and   return  #t  if   LIB1's  symbols  are
-		 ;;lexicographically lesser than LIB2's symbols.
+		 ;;Compare the components  of a library name (which  are symbols) and
+		 ;;return  #t if  LIB1's  symbols are  lexicographically lesser  than
+		 ;;LIB2's symbols.
 		 ;;
 		 (let loop ((ls1 (library-name-identifiers lib1))
 			    (ls2 (library-name-identifiers lib2)))
@@ -100,6 +103,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

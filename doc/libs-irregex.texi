@@ -387,7 +387,6 @@ so the above chunker could simply be defined as:
 Chunked version of @func{irregex-fold}.
 @end defun
 
-
 @c page
 @node irregex misc
 @section Miscellaneous functions
