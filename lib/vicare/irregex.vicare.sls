@@ -82,7 +82,7 @@
     string->irregex sre->irregex irregex?
     irregex-search irregex-match irregex-match-data?
     irregex-match-substring irregex-match-start-index
-    irregex-match-subchunk
+    irregex-match-subchunk  irregex-match-end-index
     irregex-replace irregex-replace/all irregex-fold
     make-irregex-chunker irregex-search/chunked
     irregex-match/chunked
