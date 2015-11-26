@@ -478,7 +478,9 @@
 	       (else
 		(if (open-binary-input-port? ?port)
 		    (assertion-violation ?who "vicare internal error: corrupted port" ?port)
-		  (procedure-argument-violation ?who "expected open binary input port as argument" ?port))))))
+		  (procedure-signature-argument-violation ?who
+		    "expected open binary input port as argument"
+		    #f '(open-binary-input-port? ?port) ?port))))))
     ))
 
 (define-syntax (%case-binary-output-port-fast-tag stx)
@@ -504,7 +506,9 @@
 	       (else
 		(if (open-binary-output-port? ?port)
 		    (assertion-violation ?who "vicare internal error: corrupted port" ?port)
-		  (procedure-argument-violation ?who "expected open binary output port as argument" ?port))))))
+		  (procedure-signature-argument-violation ?who
+		    "expected open binary output port as argument"
+		    #f '(open-binary-output-port? ?port) ?port))))))
     ))
 
 (define-syntax (%case-textual-input-port-fast-tag stx)
@@ -532,7 +536,7 @@
      #'(let retry-after-tagging-port ((m ($port-fast-attrs-or-zero ?port)))
 	 (define (%validate-and-tag)
 	   (unless (open-textual-input-port? ?port)
-	     (procedure-argument-violation ?who "expected open binary input port as argument" ?port))
+	     (%raise-invalid-port-exception))
 	   (%parse-bom-and-add-fast-tag (?who ?port)
 	     (if-successful-match:
 	      (retry-after-tagging-port ($port-fast-attrs ?port)))
@@ -542,6 +546,10 @@
 	   (%reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
+	 (define (%raise-invalid-port-exception)
+	   (procedure-signature-argument-violation ?who
+	     "expected open textual input port as argument"
+	     #f '(open-textual-input-port? ?port) ?port))
 	 ($case-fixnums m
 	   ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
 	   ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
@@ -553,7 +561,7 @@
 		(eof-object)
 	      (retry-after-tagging-port ($port-fast-attrs ?port))))
 	   ((FAST-GET-BYTE-TAG)
-	    (assertion-violation ?who "expected textual port" ?port))
+	    (%raise-invalid-port-exception))
 	   (else
 	    (if (and (port? ?port)
 		     ($input/output-port? ?port))
@@ -569,7 +577,7 @@
 		  ((FAST-PUT-UTF16BE-TAG)
 		   (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
 		  ((FAST-PUT-BYTE-TAG)
-		   (assertion-violation ?who "expected textual port" ?port))
+		   (%raise-invalid-port-exception))
 		  (else
 		   (%validate-and-tag)))
 	      (%validate-and-tag))))
@@ -599,11 +607,15 @@
 	 (define (%validate)
 	   (if (open-textual-output-port? ?port)
 	       (assertion-violation ?who "unsupported port transcoder" ?port)
-	     (procedure-argument-violation ?who "expected open textual output port" ?port)))
+	     (%raise-invalid-port-exception)))
 	 (define (%reconfigure-as-output fast-attrs)
 	   (%reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
+	 (define (%raise-invalid-port-exception)
+	   (procedure-signature-argument-violation ?who
+	       "expected open textual output port"
+	       #f '(open-textual-output-port? ?port) ?port))
 	 ($case-fixnums m
 	   ((FAST-PUT-UTF8-TAG)		. ?utf8-tag-body)
 	   ((FAST-PUT-CHAR-TAG)		. ?char-tag-body)
@@ -611,7 +623,7 @@
 	   ((FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
 	   ((FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body)
 	   ((FAST-PUT-BYTE-TAG)
-	    (assertion-violation ?who "expected textual port" ?port))
+	    (%raise-invalid-port-exception))
 	   (else
 	    (if (and (port? ?port)
 		     ($input/output-port? ?port))
@@ -627,7 +639,7 @@
 		  ((FAST-GET-UTF16BE-TAG)
 		   (%reconfigure-as-output FAST-PUT-UTF16BE-TAG))
 		  ((FAST-GET-BYTE-TAG)
-		   (assertion-violation ?who "expected textual port" ?port))
+		   (%raise-invalid-port-exception))
 		  (else
 		   (%validate)))
 	      (%validate))))

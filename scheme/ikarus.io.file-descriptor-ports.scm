@@ -443,7 +443,9 @@
     ((line)	BUFFER-MODE-LINE-TAG)
     ((none)	BUFFER-MODE-NONE-TAG)
     (else
-     (assertion-violation who "invalid buffer-mode argument" buffer-mode))))
+     (procedure-signature-argument-violation who
+       "invalid buffer-mode argument"
+       #f '(buffer-mode? buffer-mode) buffer-mode))))
 
 
 ;;;; input ports wrapping platform file descriptors

@@ -1,6 +1,5 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Vicare
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for port related functions
 ;;;Date: Thu Oct  6, 2011
 ;;;
@@ -10,18 +9,17 @@
 ;;;
 ;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -75,6 +73,54 @@
   (make-transcoder codec
 		   (eol-style none)
 		   (error-handling-mode replace)))
+
+;;; --------------------------------------------------------------------
+
+(define (condition-irritants->irritants E)
+  ;;This  function expects  E to  be a  compound condition  object with  "&irritants"
+  ;;component.  Such component should have value with the following format:
+  ;;
+  ;;   ((procedure? read!) 123)
+  ;;
+  ;;as produced  by a  function defined  by DEFINE*.   Extract and  return a  list of
+  ;;irritant values, discarding  the predicate symbolic expression.   In the example:
+  ;;this function returns "(123)".
+  ;;
+  (cdr (condition-irritants E)))
+
+(define-syntax check-argument-violation
+  (syntax-rules (=>)
+    ((_ ?body (=> ?equal) ?irritants)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-arguments-consistency-violation? E)
+		    (condition-irritants E))
+		   ((procedure-argument-violation? E)
+		    (cdr (condition-irritants E)))
+		   (else E))
+	   ?body)
+       (=> ?equal)
+       ?irritants))
+
+    ((_ ?body => ?irritants)
+     (check-argument-violation ?body (=> equal?) ?irritants))
+    ))
+
+(define-syntax check-irritants
+  (syntax-rules (=>)
+    ((_ ?body (=> ?equal) ?irritants)
+     (check
+	 (guard (E ((procedure-argument-violation? E)
+		    (condition-irritants E))
+		   (else E))
+	   ?body)
+       (=> ?equal)
+       ?irritants))
+
+    ((_ ?body => ?irritants)
+     (check-irritants ?body (=> equal?) ?irritants))
+    ))
 
 
 ;;;; binary data
@@ -736,64 +782,44 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;ID is not a string
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-input-port 123	     ;id
-				       (lambda args #f)   ;read!
-				       (lambda args #f)   ;get-position
-				       (lambda args #f)   ;set-position!
-				       (lambda args #f))) ;close
+  (check-argument-violation	;ID is not a string
+      (make-custom-binary-input-port 123	     ;id
+				     (lambda args #f)     ;read!
+				     (lambda args #f)     ;get-position
+				     (lambda args #f)     ;set-position!
+				     (lambda args #f))   ;close
     => '(123))
 
-  (check	;READ! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-input-port "test"	     ;id
-				       123	     ;read!
-				       (lambda args #f)   ;get-position
-				       (lambda args #f)   ;set-position!
-				       (lambda args #f))) ;close
+  (check-argument-violation	;READ! is not a procedure
+      (make-custom-binary-input-port "test"	     ;id
+				     123	     ;read!
+				     (lambda args #f)     ;get-position
+				     (lambda args #f)     ;set-position!
+				     (lambda args #f))   ;close
     => '(123))
 
-  (check	;GET-POSITION is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-input-port "test"	     ;id
-				       (lambda args #f)   ;read!
-				       123	     ;get-position
-				       (lambda args #f)   ;set-position!
-				       (lambda args #f))) ;close
+  (check-argument-violation	;GET-POSITION is not a procedure
+      (make-custom-binary-input-port "test"	     ;id
+				     (lambda args #f)     ;read!
+				     123	     ;get-position
+				     (lambda args #f)     ;set-position!
+				     (lambda args #f))   ;close
     => '(123))
 
-  (check	;SET-POSITION! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-input-port "test"	     ;id
-				       (lambda args #f)   ;read!
-				       (lambda args #f)   ;get-position
-				       123	     ;set-position!
-				       (lambda args #f))) ;close
+  (check-argument-violation	;SET-POSITION! is not a procedure
+      (make-custom-binary-input-port "test"	     ;id
+				     (lambda args #f)     ;read!
+				     (lambda args #f)     ;get-position
+				     123	     ;set-position!
+				     (lambda args #f))   ;close
     => '(123))
 
-  (check	;CLOSE is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-input-port "test"	   ;id
-				       (lambda args #f) ;read!
-				       (lambda args #f) ;get-position
-				       (lambda args #f) ;set-position!
-				       123))	   ;close
+  (check-argument-violation	;CLOSE is not a procedure
+      (make-custom-binary-input-port "test"	   ;id
+				     (lambda args #f)   ;read!
+				     (lambda args #f)   ;get-position
+				     (lambda args #f)   ;set-position!
+				     123)	   ;close
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -1008,64 +1034,44 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;ID is not a string
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-output-port 123	      ;id
-					(lambda args #f)   ;write!
-					(lambda args #f)   ;get-position
-					(lambda args #f)   ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;ID is not a string
+      (make-custom-binary-output-port 123	      ;id
+				      (lambda args #f)     ;write!
+				      (lambda args #f)     ;get-position
+				      (lambda args #f)     ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;WRITE! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-output-port "test"	      ;id
-					123	      ;write!
-					(lambda args #f)   ;get-position
-					(lambda args #f)   ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;WRITE! is not a procedure
+      (make-custom-binary-output-port "test"	      ;id
+				      123	      ;write!
+				      (lambda args #f)     ;get-position
+				      (lambda args #f)     ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;GET-POSITION is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-output-port "test"	      ;id
-					(lambda args #f)   ;write!
-					123	      ;get-position
-					(lambda args #f)   ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;GET-POSITION is not a procedure
+      (make-custom-binary-output-port "test"	      ;id
+				      (lambda args #f)     ;write!
+				      123	      ;get-position
+				      (lambda args #f)     ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;SET-POSITION! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-output-port "test"	      ;id
-					(lambda args #f)   ;write!
-					(lambda args #f)   ;get-position
-					123	      ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;SET-POSITION! is not a procedure
+      (make-custom-binary-output-port "test"	      ;id
+				      (lambda args #f)     ;write!
+				      (lambda args #f)     ;get-position
+				      123	      ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;CLOSE is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-binary-output-port "test"	    ;id
-					(lambda args #f) ;write!
-					(lambda args #f) ;get-position
-					(lambda args #f) ;set-position!
-					123))	    ;close
+  (check-argument-violation	;CLOSE is not a procedure
+      (make-custom-binary-output-port "test"	    ;id
+				      (lambda args #f)   ;write!
+				      (lambda args #f)   ;get-position
+				      (lambda args #f)   ;set-position!
+				      123)	    ;close
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -1359,64 +1365,44 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;ID is not a string
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-input-port 123	     ;id
-					(lambda args #f)  ;read!
-					(lambda args #f)  ;get-position
-					(lambda args #f)  ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;ID is not a string
+      (make-custom-textual-input-port 123	      ;id
+				      (lambda args #f)     ;read!
+				      (lambda args #f)     ;get-position
+				      (lambda args #f)     ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;READ! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-input-port "test"	     ;id
-					123	     ;read!
-					(lambda args #f)  ;get-position
-					(lambda args #f)  ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;READ! is not a procedure
+      (make-custom-textual-input-port "test"	      ;id
+				      123	      ;read!
+				      (lambda args #f)     ;get-position
+				      (lambda args #f)     ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;GET-POSITION is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-input-port "test"	     ;id
-					(lambda args #f)  ;read!
-					123	     ;get-position
-					(lambda args #f)  ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;GET-POSITION is not a procedure
+      (make-custom-textual-input-port "test"	      ;id
+				      (lambda args #f)     ;read!
+				      123	      ;get-position
+				      (lambda args #f)     ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;SET-POSITION! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-input-port "test"	     ;id
-					(lambda args #f)  ;read!
-					(lambda args #f)  ;get-position
-					123	     ;set-position!
-					(lambda args #f))) ;close
+  (check-argument-violation	;SET-POSITION! is not a procedure
+      (make-custom-textual-input-port "test"	      ;id
+				      (lambda args #f)     ;read!
+				      (lambda args #f)     ;get-position
+				      123	      ;set-position!
+				      (lambda args #f))   ;close
     => '(123))
 
-  (check	;CLOSE is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-input-port "test"	   ;id
-					(lambda args #f) ;read!
-					(lambda args #f) ;get-position
-					(lambda args #f) ;set-position!
-					123))	    ;close
+  (check-argument-violation	;CLOSE is not a procedure
+      (make-custom-textual-input-port "test"	    ;id
+				      (lambda args #f)   ;read!
+				      (lambda args #f)   ;get-position
+				      (lambda args #f)   ;set-position!
+				      123)	    ;close
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -1603,64 +1589,44 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;ID is not a string
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-output-port 123	       ;id
-					 (lambda args #f)   ;write!
-					 (lambda args #f)   ;get-position
-					 (lambda args #f)   ;set-position!
-					 (lambda args #f))) ;close
+  (check-argument-violation		    ;ID is not a string
+      (make-custom-textual-output-port 123	    ;id
+				       (lambda args #f)  ;write!
+				       (lambda args #f)  ;get-position
+				       (lambda args #f)  ;set-position!
+				       (lambda args #f)) ;close
     => '(123))
 
-  (check	;WRITE! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-output-port "test"	       ;id
-					 123	       ;write!
-					 (lambda args #f)   ;get-position
-					 (lambda args #f)   ;set-position!
-					 (lambda args #f))) ;close
+  (check-argument-violation			    ;WRITE! is not a procedure
+      (make-custom-textual-output-port "test"	    ;id
+				       123	    ;write!
+				       (lambda args #f)  ;get-position
+				       (lambda args #f)  ;set-position!
+				       (lambda args #f)) ;close
     => '(123))
 
-  (check	;GET-POSITION is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-output-port "test"	       ;id
-					 (lambda args #f)   ;write!
-					 123	       ;get-position
-					 (lambda args #f)   ;set-position!
-					 (lambda args #f))) ;close
+  (check-argument-violation	;GET-POSITION is not a procedure
+      (make-custom-textual-output-port "test"	       ;id
+				       (lambda args #f)     ;write!
+				       123	       ;get-position
+				       (lambda args #f)     ;set-position!
+				       (lambda args #f))   ;close
     => '(123))
 
-  (check	;SET-POSITION! is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-output-port "test"	       ;id
-					 (lambda args #f)   ;write!
-					 (lambda args #f)   ;get-position
-					 123	       ;set-position!
-					 (lambda args #f))) ;close
+  (check-argument-violation	;SET-POSITION! is not a procedure
+      (make-custom-textual-output-port "test"	       ;id
+				       (lambda args #f)     ;write!
+				       (lambda args #f)     ;get-position
+				       123	       ;set-position!
+				       (lambda args #f))   ;close
     => '(123))
 
-  (check	;CLOSE is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(make-custom-textual-output-port "test"	     ;id
-					 (lambda args #f) ;write!
-					 (lambda args #f) ;get-position
-					 (lambda args #f) ;set-position!
-					 123))	     ;close
+  (check-argument-violation	;CLOSE is not a procedure
+      (make-custom-textual-output-port "test"	     ;id
+				       (lambda args #f)   ;write!
+				       (lambda args #f)   ;get-position
+				       (lambda args #f)   ;set-position!
+				       123)	     ;close
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -1923,20 +1889,12 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a bytevector
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-bytevector-input-port 123))
+  (check-argument-violation ;argument is not a bytevector
+      (open-bytevector-input-port 123)
     => '(123))
 
-  (check	;argument is not a transcoder
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-bytevector-input-port '#vu8(1) 123))
+  (check-argument-violation	;argument is not a transcoder
+      (open-bytevector-input-port '#vu8(1) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -2076,15 +2034,12 @@
 
 (parametrise ((check-test-name	'open-string-input-port))
 
+
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a string
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-string-input-port 123))
+  (check-argument-violation ;argument is not a string
+      (open-string-input-port 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -2227,20 +2182,12 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a string
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-input-from-string 123 values))
+  (check-argument-violation	;argument is not a string
+      (with-input-from-string 123 values)
     => '(123))
 
-  (check	;argument is not a thunk
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-input-from-string "ciao" 123))
+  (check-argument-violation	;argument is not a thunk
+      (with-input-from-string "ciao" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -2424,13 +2371,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a transcoder
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let-values (((port extract) (open-bytevector-output-port 123)))
-	  #f))
+  (check-argument-violation	;argument is not a transcoder
+      (let-values (((port extract) (open-bytevector-output-port 123)))
+	#f)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -2703,20 +2646,12 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-bytevector-output-port 123 #f))
+  (check-argument-violation	;argument is not a procedure
+      (call-with-bytevector-output-port 123 #f)
     => '(123))
 
-  (check	;argument is not a transcoder
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-bytevector-output-port (lambda (port) #f) 123))
+  (check-argument-violation	;argument is not a transcoder
+      (call-with-bytevector-output-port (lambda (port) #f) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -3476,12 +3411,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-string-output-port 123))
+  (check-argument-violation	;argument is not a procedure
+      (call-with-string-output-port 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -3724,12 +3655,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;argument is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-output-to-string 123))
+  (check-argument-violation	;argument is not a procedure
+      (with-output-to-string 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -3959,37 +3886,21 @@
 
 ;;; arguments validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-output-to-port 123 (lambda () #f)))
+  (check-argument-violation	;argument is not a port
+      (with-output-to-port 123 (lambda () #f))
     => '(123))
 
-  (check	;argument is not an output port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (car (condition-irritants E)))
-		(else E))
-	(with-output-to-port (current-input-port) (lambda () #f)))
-    (=> eq?) (current-input-port))
+  (check-argument-violation	;argument is not an output port
+      (with-output-to-port (current-input-port) (lambda () #f))
+    => (list (current-input-port)))
 
-  (check	;argument is not a textual port
-      (let-values (((port extract) (open-bytevector-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (with-output-to-port port (lambda () #f))))
-    => #t)
+  (let-values (((port extract) (open-bytevector-output-port)))
+    (check-argument-violation ;argument is not a textual port
+	(with-output-to-port port (lambda () #f))
+      => (list port)))
 
-  (check	;argument is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-output-to-port (current-output-port) 123))
+  (check-argument-violation	;argument is not a procedure
+      (with-output-to-port (current-output-port) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -4010,30 +3921,19 @@
 
 ;;; arguments validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-port 123 values))
+  (check-argument-violation	;argument is not a port
+      (call-with-port 123 values)
     => '(123))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-port port)
-	  (call-with-port port values)))
-    => #t)
+	  (call-with-port port values))
+      => (list port)))
 
-  (check	;argument is not a procedure
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-port (current-output-port) 123))
+  (check-argument-violation	;argument is not a procedure
+      (call-with-port (current-output-port) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -4055,21 +3955,13 @@
 
 ;;; arguments validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(transcoded-port 123 (native-transcoder)))
+  (check-argument-violation	;argument is not a port
+      (transcoded-port 123 (native-transcoder))
     => '(123))
 
-  (check	;argument is not a transcoder
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((bin-port (open-bytevector-input-port '#vu8())))
-	  (transcoded-port bin-port 123)))
+  (check-argument-violation	;argument is not a transcoder
+      (let ((bin-port (open-bytevector-input-port '#vu8())))
+	(transcoded-port bin-port 123))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -4206,12 +4098,8 @@
       (port-id (open-string-input-port ""))
     => "*string-input-port*")
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(port-id 123))
+  (check-argument-violation
+      (port-id 123)
     => '(123))
 
   #t)
@@ -4219,12 +4107,8 @@
 
 (parametrise ((check-test-name	'port-mode))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(port-mode 123))
+  (check-argument-violation
+      (port-mode 123)
     => '(123))
 
   (check
@@ -4237,21 +4121,13 @@
 (parametrise ((check-test-name	'set-port-mode-bang))
 
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(set-port-mode! 123 'vicare))
+  (check-argument-violation
+      (set-port-mode! 123 'vicare)
     => '(123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(set-port-mode! (open-bytevector-input-port '#vu8())
-			123))
+  (check-argument-violation
+      (set-port-mode! (open-bytevector-input-port '#vu8())
+		      123)
     => '(123))
 
   (check
@@ -4265,12 +4141,8 @@
 
 (parametrise ((check-test-name	'output-port-buffer-mode))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(output-port-buffer-mode 123))
+  (check-argument-violation
+      (output-port-buffer-mode 123)
     => '(123))
 
   (check
@@ -4317,63 +4189,42 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(set-port-buffer-mode! 123 (buffer-mode none)))
+  (check-argument-violation
+      (set-port-buffer-mode! 123 (buffer-mode none))
     => '(123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(set-port-buffer-mode! (%open-disposable-textual-output-port)
-			       'ciao))
-    => '(ciao))
+  (check-argument-violation
+      (set-port-buffer-mode! (%open-disposable-textual-output-port)
+			     'ciao)
+    => 'ciao)
 
-  (check
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (equal? port (car (condition-irritants E))))
-		  (else E))
-	  (set-port-buffer-mode! port (buffer-mode line))))
-    => #t)
+  ;;Invalid mode "line" with binary output port.
+  ;;
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation
+	(set-port-buffer-mode! port (buffer-mode line))
+      => port))
 
   #t)
 
 
 (parametrise ((check-test-name	'port-eof?))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(port-eof? 123))
+  (check-argument-violation
+      (port-eof? 123)
     => '(123))
 
-  (check
-      (let-values (((port extract) (open-bytevector-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (port-eof? port)))
-    => #t)
+  (let-values (((port extract) (open-bytevector-output-port)))
+    (check-argument-violation
+	(port-eof? port)
+      => (list port)))
 
-  (check
-      (let ((port (open-bytevector-input-port '#vu8())))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (open-bytevector-input-port '#vu8())))
+    (check-argument-violation
+	(begin
 	  (close-input-port port)
-	  (port-eof? port)))
-    => #t)
+	  (port-eof? port))
+      => (list port)))
 
   (check
       (port-eof? (open-bytevector-input-port '#vu8()))
@@ -4396,32 +4247,21 @@
 
 (parametrise ((check-test-name	'flush-output-port))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(flush-output-port 123))
+  (check-argument-violation
+      (flush-output-port 123)
     => '(123))
 
-  (check
-      (let ((port (open-bytevector-input-port '#vu8())))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (flush-output-port port)))
-    => #t)
+  (let ((port (open-bytevector-input-port '#vu8())))
+    (check-argument-violation
+	(flush-output-port port)
+      => (list port)))
 
-  (check
-      (let-values (((port extract) (open-bytevector-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let-values (((port extract) (open-bytevector-output-port)))
+    (check-argument-violation
+	(begin
 	  (close-output-port port)
-	  (flush-output-port port)))
-    => #t)
+	  (flush-output-port port))
+      => (list port)))
 
 ;;; --------------------------------------------------------------------
 
@@ -4795,70 +4635,43 @@
 
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(get-bytevector-n 123 1))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (get-bytevector-n 123 1)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-n port 1)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(get-bytevector-n port 1)
+      => port))
 
-  (check	;argument is not a binary port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-n port 1)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not a binary port
+	(get-bytevector-n port 1)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation	;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (get-bytevector-n port 1)))
-    => #t)
+	  (get-bytevector-n port 1))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; count argument validation
 
-  (check	;count is not an integer
+  (check-argument-violation	;count is not an integer
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n port #\a)))
+	(get-bytevector-n port #\a))
     => '(#\a))
 
-  (check 	;count is not an exact integer
+  (check-argument-violation 	;count is not an exact integer
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n port 1.0)))
+	(get-bytevector-n port 1.0))
     => '(1.0))
 
-  (check 	;count is negative
+  (check-argument-violation 	;count is negative
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n port -3)))
+	(get-bytevector-n port -3))
     => '(-3))
 
 ;;; --------------------------------------------------------------------
@@ -4955,139 +4768,84 @@
 
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(get-bytevector-n! 123 (make-bytevector 1) 0 1))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (get-bytevector-n! 123 (make-bytevector 1) 0 1)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-n! port (make-bytevector 1) 0 1)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(get-bytevector-n! port (make-bytevector 1) 0 1)
+      => port))
 
-  (check	;argument is not a binary port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-n! port  (make-bytevector 1) 0 1)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation	;argument is not a binary port
+	(get-bytevector-n! port  (make-bytevector 1) 0 1)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation	;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (get-bytevector-n! port  (make-bytevector 1) 0 1)))
-    => #t)
+	  (get-bytevector-n! port  (make-bytevector 1) 0 1))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; bytevector argument validation
 
-  (check	;argument is not a bytevector
+  (check-argument-violation ;argument is not a bytevector
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port  123 0 1)))
+	(get-bytevector-n! port  123 0 1))
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; start index argument validation
 
-  (check	;argument start index is not an integer
+  (check-argument-violation	;argument start index is not an integer
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port  (make-bytevector 1) #\a 1)))
+	(get-bytevector-n! port  (make-bytevector 1) #\a 1))
     => '(#\a))
 
-  (check	;argument start index is not an exact integer
+  (check-argument-violation	;argument start index is not an exact integer
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port  (make-bytevector 1) 1.0 1)))
+	(get-bytevector-n! port  (make-bytevector 1) 1.0 1))
     => '(1.0))
 
-  (check	;argument start index is negative
+  (check-argument-violation	;argument start index is negative
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port  (make-bytevector 1) -1 1)))
+	(get-bytevector-n! port  (make-bytevector 1) -1 1))
     => '(-1))
 
-  (check	;argument start index is too big
+  (check-argument-violation	;argument start index is too big
       (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port  (make-bytevector 1) 2 1)))
-    => '(2))
+	(get-bytevector-n! port  '#vu8(0) 2 1))
+    => '(#vu8(0) 2))
 
 ;;; --------------------------------------------------------------------
 ;;; count argument validation
 
-  (check	;count is not an integer
+  (check-argument-violation	;count is not an integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port (make-bytevector 1) 0 #\a)))
+	(get-bytevector-n! port (make-bytevector 1) 0 #\a))
     => '(#\a))
 
-  (check	;count is not an exact integer
+  (check-argument-violation	;count is not an exact integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port (make-bytevector 1) 0 1.0)))
+	(get-bytevector-n! port (make-bytevector 1) 0 1.0))
     => '(1.0))
 
-  (check	;count is negative
+  (check-argument-violation	;count is negative
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port (make-bytevector 1) 0 -1)))
+	(get-bytevector-n! port (make-bytevector 1) 0 -1))
     => '(-1))
 
-  (check	;count is too big
+  (check-argument-violation	;count is too big
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port (make-bytevector 1) 0 123)))
+	(get-bytevector-n! port (make-bytevector 1) 0 123))
     => '(0 123 1))
 
-  (check	;count is too big
+  (check-argument-violation	;count is too big
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-bytevector-n! port (make-bytevector 1) 0 2)))
+	(get-bytevector-n! port (make-bytevector 1) 0 2))
     => '(0 2 1))
 
 ;;; --------------------------------------------------------------------
@@ -5233,41 +4991,26 @@
 
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(get-bytevector-some 123))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (get-bytevector-some 123)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-some port)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(get-bytevector-some port)
+      => port))
 
-  (check	;argument is not a binary port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-some port)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation	;argument is not a binary port
+	(get-bytevector-some port)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (get-bytevector-some port)))
-    => #t)
+	  (get-bytevector-some port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a bytevector port
@@ -5332,41 +5075,26 @@
 
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(get-bytevector-all 123))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (get-bytevector-all 123)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-all port)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(get-bytevector-all port)
+      => port))
 
-  (check	;argument is not a binary port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-bytevector-all port)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not a binary port
+	(get-bytevector-all port)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (get-bytevector-all port)))
-    => #t)
+	  (get-bytevector-all port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a bytevector port
@@ -5417,41 +5145,26 @@
 
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(read-char 123))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (read-char 123)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (read-char port)))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(read-char port)
+      => port))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (read-char port)))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation	;argument is not a textual port
+	(read-char port)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (read-char port)))
-    => #t)
+	  (read-char port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; reading from string input port
@@ -6048,41 +5761,26 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(peek-char 123))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (peek-char 123)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (peek-char port)))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation	;argument is not an input port
+	(peek-char port)
+      => port))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (peek-char port)))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not a textual port
+	(peek-char port)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (peek-char port)))
-    => #t)
+	  (peek-char port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; peeking from bytevector input port, transcoded UTF-8
@@ -6650,79 +6348,48 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(get-string-n 123 1))
+  (check-argument-violation	;argument is not a port
+      (get-string-n 123 1)
     => '(123))
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-string-n port 1)))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation	;argument is not an input port
+	(get-string-n port 1)
+      => (list port)))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-string-n port 1)))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not a textual port
+	(get-string-n port 1)
+      => (list port)))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (get-string-n port 1)))
-    => #t)
+	  (get-string-n port 1))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; count argument validation
 
-  (check	;count is not an integer
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-string-n port #\a)))
-    => '(#\a))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation	;count is not an integer
+	(get-string-n port #\a)
+      => '(#\a)))
 
-  (check 	;count is not an exact integer
+  (check-argument-violation ;count is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-string-n port 1.0)))
+	(get-string-n port 1.0))
     => '(1.0))
 
-  (check 	;count is negative
+  (check-argument-violation 	;count is negative
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-string-n port -3)))
+	(get-string-n port -3))
     => '(-3))
 
-  (check 	;count is not a fixnum
+  (check-argument-violation 	;count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (get-string-n port (+ 1 (greatest-fixnum)))))
+	(get-string-n port (+ 1 (greatest-fixnum))))
     => (list (+ 1 (greatest-fixnum))))
 
 ;;; --------------------------------------------------------------------
@@ -6906,179 +6573,126 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port		123)
+  (check-argument-violation	;argument is not a port
+      (let ((port		123)
+	    (dst.str		(make-string 1))
+	    (dst.start		0)
+	    (count		1))
+	(get-string-n! port dst.str dst.start count))
+    => '(123))
+
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(let ((dst.str		(make-string 1))
+	      (dst.start	0)
+	      (count		1))
+	  (get-string-n! port dst.str dst.start count))
+      => (list port)))
+
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation	;argument is not a textual port
+	(let ((port		port)
 	      (dst.str		(make-string 1))
 	      (dst.start	0)
 	      (count		1))
-	  (get-string-n! port dst.str dst.start count)))
-    => '(123))
+	  (get-string-n! port dst.str dst.start count))
+      => (list port)))
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	0)
-		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
-    => #t)
-
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	0)
-		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
-    => #t)
-
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation	;argument is not an open port
+	(begin
 	  (close-input-port port)
 	  (let ((port		port)
 		(dst.str	(make-string 1))
 		(dst.start	0)
 		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
-    => #t)
+	    (get-string-n! port dst.str dst.start count)))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; start argument validation
 
-  (check	;start is not an integer
+  (check-argument-violation	;start is not an integer
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	#\a)
-		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((dst.str		(make-string 1))
+	      (dst.start	#\a)
+	      (count		1))
+	  (get-string-n! port dst.str dst.start count)))
     => '(#\a))
 
-  (check 	;start is not an exact integer
+  (check-argument-violation 	;start is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	1.0)
-		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((dst.str		(make-string 1))
+	      (dst.start	1.0)
+	      (count		1))
+	  (get-string-n! port dst.str dst.start count)))
     => '(1.0))
 
-  (check  	;start is not a fixnum
+  (check-argument-violation  	;start is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	(+ 1 (greatest-fixnum)))
-		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((port		port)
+	      (dst.str		(make-string 1))
+	      (dst.start	(+ 1 (greatest-fixnum)))
+	      (count		1))
+	  (get-string-n! port dst.str dst.start count)))
     => (list (+ 1 (greatest-fixnum))))
 
-  (check 	;start is negative
+  (check-argument-violation 	;start is negative
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	-3)
-		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((port		port)
+	      (dst.str	(make-string 1))
+	      (dst.start	-3)
+	      (count		1))
+	  (get-string-n! port dst.str dst.start count)))
     => '(-3))
 
-  (check 	;start is too big for string
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
+  (let ((str (make-string 10)))
+    (check-argument-violation ;start is too big for string
+	(let ((port (%open-disposable-textual-input-port)))
 	  (let ((port		port)
-		(dst.str	(make-string 10))
+		(dst.str		str)
 		(dst.start	12)
 		(count		1))
-	    (get-string-n! port dst.str dst.start count))))
-    => '(12))
+	    (get-string-n! port dst.str dst.start count)))
+      => (list str 12)))
 
 ;;; --------------------------------------------------------------------
 ;;; count argument validation
 
-  (check	;count is not an integer
+  (check-argument-violation	;count is not an integer
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	0)
-		(count		#\a))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((port		port)
+	      (dst.str	(make-string 1))
+	      (dst.start	0)
+	      (count		#\a))
+	  (get-string-n! port dst.str dst.start count)))
     => '(#\a))
 
-  (check 	;count is not an exact integer
+  (check-argument-violation 	;count is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	0)
-		(count		1.0))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((port		port)
+	      (dst.str	(make-string 1))
+	      (dst.start	0)
+	      (count		1.0))
+	  (get-string-n! port dst.str dst.start count)))
     => '(1.0))
 
-  (check 	;count is not a fixnum
+  (check-argument-violation 	;count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	0)
-		(count		(+ 1 (greatest-fixnum))))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((port		port)
+	      (dst.str	(make-string 1))
+	      (dst.start	0)
+	      (count		(+ 1 (greatest-fixnum))))
+	  (get-string-n! port dst.str dst.start count)))
     => (list (+ 1 (greatest-fixnum))))
 
-  (check 	;count is negative
+  (check-argument-violation 	;count is negative
       (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (let ((port		port)
-		(dst.str	(make-string 1))
-		(dst.start	0)
-		(count		-3))
-	    (get-string-n! port dst.str dst.start count))))
+	(let ((port		port)
+	      (dst.str	(make-string 1))
+	      (dst.start	0)
+	      (count		-3))
+	  (get-string-n! port dst.str dst.start count)))
     => '(-3))
 
 ;;; --------------------------------------------------------------------
@@ -7340,41 +6954,26 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(get-string-all 123))
+  (check-argument-violation	;argument is not a port
+      (get-string-all 123)
     => '(123))
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-string-all port)))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(get-string-all port)
+      => (list port)))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (get-string-all port)))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not a textual port
+	(get-string-all port)
+      => (list port)))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (get-string-all port)))
-    => #t)
+	  (get-string-all port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a string port
@@ -7527,41 +7126,26 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(read-line 123))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (read-line 123)
+    => 123)
 
-  (check	;argument is not an input port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (read-line port)))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an input port
+	(read-line port)
+      => port))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (read-line port)))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not a textual port
+	(read-line port)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-input-port port)
-	  (read-line port)))
-    => #t)
+	  (read-line port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a string port
@@ -7702,88 +7286,53 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(put-u8 123 1))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (put-u8 123 1)
+    => 123)
 
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-u8 port 1)))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not an output port
+	(put-u8 port 1)
+      => port))
 
-  (check	;argument is not a binary port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-u8 port 1)))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not a binary port
+	(put-u8 port 1)
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-output-port port)
-	  (put-u8 port 1)))
-    => #t)
+	  (put-u8 port 1))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; octet argument validation
 
-  (check	;octet is not an integer
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-binary-output-port)))
-	  (put-u8 port #\a)))
+  (check-argument-violation	;octet is not an integer
+      (let ((port (%open-disposable-binary-output-port)))
+	(put-u8 port #\a))
     => '(#\a))
 
-  (check	;octet is not an exact integer
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-binary-output-port)))
-	  (put-u8 port 1.0)))
+  (check-argument-violation	;octet is not an exact integer
+      (let ((port (%open-disposable-binary-output-port)))
+	(put-u8 port 1.0))
     => '(1.0))
 
-  (check	;octet is negative
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-binary-output-port)))
-	  (put-u8 port -1)))
+  (check-argument-violation	;octet is negative
+      (let ((port (%open-disposable-binary-output-port)))
+	(put-u8 port -1))
     => '(-1))
 
-  (check	;octet is too big
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-binary-output-port)))
-	  (put-u8 port 256)))
+  (check-argument-violation	;octet is too big
+      (let ((port (%open-disposable-binary-output-port)))
+	(put-u8 port 256))
     => '(256))
 
-  (check	;octet is not a fixnum
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-binary-output-port)))
-	  (put-u8 port (+ 1 (greatest-fixnum)))))
+  (check-argument-violation	;octet is not a fixnum
+      (let ((port (%open-disposable-binary-output-port)))
+	(put-u8 port (+ 1 (greatest-fixnum))))
     => (list (+ 1 (greatest-fixnum))))
 
 ;;; --------------------------------------------------------------------
@@ -7818,166 +7367,99 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(put-bytevector 123 '#vu8()))
-    => '(123))
+  (check-argument-violation	;argument is not a port
+      (put-bytevector 123 '#vu8())
+    => 123)
 
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-binary-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-bytevector port '#vu8())))
-    => #t)
+  (let ((port (%open-disposable-binary-input-port)))
+    (check-argument-violation ;argument is not an output port
+	(put-bytevector port '#vu8())
+      => port))
 
-  (check	;argument is not a binary port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-bytevector port '#vu8())))
-    => #t)
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation	;argument is not a binary port
+	(put-bytevector port '#vu8())
+      => port))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-output-port port)
-	  (put-bytevector port '#vu8())))
-    => #t)
+	  (put-bytevector port '#vu8()))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; bytevector argument validation
 
-  (check	;argument is not a bytevector
+  (check-argument-violation	;argument is not a bytevector
       (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (put-bytevector port #\a)))
+	(put-bytevector port #\a))
     => '(#\a))
 
 ;;; --------------------------------------------------------------------
 ;;; start argument validation
 
-  (check	;argument is not an integer
+  (check-argument-violation	;argument is not an integer
       (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (put-bytevector port '#vu8() #\a)))
+	(put-bytevector port '#vu8() #\a))
     => '(#\a))
 
-  (check	;argument is not an exact integer
+  (check-argument-violation	;argument is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (put-bytevector port '#vu8() 1.0)))
+	(put-bytevector port '#vu8() 1.0))
     => '(1.0))
 
-  (check	;argument is not a fixnum
+  (check-argument-violation	;argument is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (put-bytevector port '#vu8() (+ 1 (greatest-fixnum)))))
+	(put-bytevector port '#vu8() (+ 1 (greatest-fixnum))))
     => (list (+ 1 (greatest-fixnum))))
 
-  (check	;argument is negative
+  (check-argument-violation	;argument is negative
       (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (put-bytevector port '#vu8() -1)))
+	(put-bytevector port '#vu8() -1))
     => '(-1))
 
-  (check	;argument is out of range for bytevector
+  (check-argument-violation	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (condition-irritants E))
-		  (else E))
-	  (put-bytevector port '#vu8() 1)))
-    => '(1))
+	(put-bytevector port '#vu8() 1))
+    => '(#vu8() 1))
 
 ;;; --------------------------------------------------------------------
 ;;; count argument validation
 
-  (check	;argument is not an integer
+  (check-argument-violation	;argument is not an integer
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8() 0 #\a)))
+	(put-bytevector port '#vu8() 0 #\a))
     => '(#\a))
 
-  (check	;argument is not an exact integer
+  (check-argument-violation	;argument is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8() 0 1.0)))
+	(put-bytevector port '#vu8() 0 1.0))
     => '(1.0))
 
-  (check	;argument is not a fixnum
+  (check-argument-violation	;argument is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8() 0 (+ 1 (greatest-fixnum)))))
+	(put-bytevector port '#vu8() 0 (+ 1 (greatest-fixnum))))
     => (list (+ 1 (greatest-fixnum))))
 
-  (check	;argument is negative
+  (check-argument-violation	;argument is negative
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8() 0 -1)))
+	(put-bytevector port '#vu8() 0 -1))
     => '(-1))
 
-  (check	;argument is out of range for bytevector
+  (check-argument-violation	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8() 0 1)))
+	(put-bytevector port '#vu8() 0 1))
     => '(0 1 0))
 
-  (check	;argument is out of range for bytevector
+  (check-argument-violation	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 0 11)))
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 0 11))
     => '(0 11 10))
 
-  (check	;argument is out of range for bytevector
+  (check-argument-violation	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (condition-irritants E))
-  		  (else E))
-  	  (put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 5 6)))
+	(put-bytevector port '#vu8(0 1 2 3 4 5 6 7 8 9) 5 6))
     => '(5 6 10))
 
 ;;; --------------------------------------------------------------------
@@ -8091,52 +7573,33 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(put-char 123 #\a))
+  (check-argument-violation	;argument is not a port
+      (put-char 123 #\a)
     => '(123))
 
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-char port #\a)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an output port
+	(put-char port #\a)
+      => (list port)))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-char port #\a)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not a textual port
+	(put-char port #\a)
+      => (list port)))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-output-port port)
-	  (put-char port #\a)))
-    => #t)
+	  (put-char port #\a))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; char argument validation
 
-  (check	;argument is not a char
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-textual-output-port)))
-	  (put-char port 123)))
+  (check-argument-violation	;argument is not a char
+      (let ((port (%open-disposable-textual-output-port)))
+	(put-char port 123))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -8260,52 +7723,33 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(write-char #\a 123))
+  (check-argument-violation	;argument is not a port
+      (write-char #\a 123)
     => '(123))
 
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (write-char #\a port)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an output port
+	(write-char #\a port)
+      => (list port)))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (write-char #\a port)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not a textual port
+	(write-char #\a port)
+      => (list port)))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-output-port port)
-	  (write-char #\a port)))
-    => #t)
+	  (write-char #\a port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; char argument validation
 
-  (check	;argument is not a char
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-textual-output-port)))
-	  (write-char 123 port)))
+  (check-argument-violation	;argument is not a char
+      (let ((port (%open-disposable-textual-output-port)))
+	(write-char 123 port))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -8429,52 +7873,33 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(put-string 123 "a"))
+  (check-argument-violation	;argument is not a port
+      (put-string 123 "a")
     => '(123))
 
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-textual-input-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-string port "a")))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an output port
+	(put-string port "a")
+      => (list port)))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
-	  (put-string port "a")))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not a textual port
+	(put-string port "a")
+      => (list port)))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-output-port)))
-	(guard (E ((assertion-violation? E)
-;;;		   (check-pretty-print (condition-message E))
-		   (eq? port (car (condition-irritants E))))
-		  (else E))
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
 	  (close-output-port port)
-	  (put-string port "a")))
-    => #t)
+	  (put-string port "a"))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; char argument validation
 
-  (check	;argument is not a char
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(let ((port (%open-disposable-textual-output-port)))
-	  (put-string port 123)))
+  (check-argument-violation	;argument is not a char
+      (let ((port (%open-disposable-textual-output-port)))
+	(put-string port 123))
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -8574,41 +7999,26 @@
 ;;; --------------------------------------------------------------------
 ;;; port argument validation
 
-  (check	;argument is not a port
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(newline 123))
+  (check-argument-violation	;argument is not a port
+      (newline 123)
     => '(123))
 
-  (check	;argument is not an output port
-      (let ((port (%open-disposable-textual-input-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (eq? port (car (condition-irritants E))))
-  		  (else E))
-  	  (newline port)))
-    => #t)
+  (let ((port (%open-disposable-textual-input-port)))
+    (check-argument-violation ;argument is not an output port
+	(newline port)
+      => (list port)))
 
-  (check	;argument is not a textual port
-      (let ((port (%open-disposable-binary-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (eq? port (car (condition-irritants E))))
-  		  (else E))
-  	  (newline port)))
-    => #t)
+  (let ((port (%open-disposable-binary-output-port)))
+    (check-argument-violation ;argument is not a textual port
+	(newline port)
+      => (list port)))
 
-  (check	;argument is not an open port
-      (let ((port (%open-disposable-textual-output-port)))
-  	(guard (E ((assertion-violation? E)
-;;;  		   (check-pretty-print (condition-message E))
-  		   (eq? port (car (condition-irritants E))))
-  		  (else E))
+  (let ((port (%open-disposable-textual-output-port)))
+    (check-argument-violation ;argument is not an open port
+	(begin
   	  (close-output-port port)
-  	  (newline port)))
-    => #t)
+  	  (newline port))
+      => port))
 
 ;;; --------------------------------------------------------------------
 ;;; string port
@@ -8687,45 +8097,29 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input-port 123))
+  (check-argument-violation
+      (open-file-input-port 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; file-options argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input-port "123" 123))
+  (check-argument-violation
+      (open-file-input-port "123" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; buffer-mode argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input-port "123" (file-options) 'ciao))
-    => '(ciao))
+  (check-argument-violation
+      (open-file-input-port "123" (file-options) 'ciao)
+    => 'ciao)
 
 ;;; --------------------------------------------------------------------
 ;;; transcoder argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input-port "123" (file-options) (buffer-mode block) 123))
+  (check-argument-violation
+      (open-file-input-port "123" (file-options) (buffer-mode block) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -8827,12 +8221,8 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-input-file 123))
+  (check-argument-violation
+      (open-input-file 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -8914,23 +8304,15 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-input-from-file 123 values))
+  (check-argument-violation
+      (with-input-from-file 123 values)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-input-from-file "ciao" 123))
+  (check-argument-violation
+      (with-input-from-file "ciao" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -9004,23 +8386,15 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-input-file 123 values))
+  (check-argument-violation
+      (call-with-input-file 123 values)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-input-file "ciao" 123))
+  (check-argument-violation
+      (call-with-input-file "ciao" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -9109,45 +8483,29 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-output-port 123))
+  (check-argument-violation
+      (open-file-output-port 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; file-options argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-output-port "123" 123))
+  (check-argument-violation
+      (open-file-output-port "123" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; buffer-mode argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-output-port "123" (file-options) 'ciao))
-    => '(ciao))
+  (check-argument-violation
+      (open-file-output-port "123" (file-options) 'ciao)
+    => 'ciao)
 
 ;;; --------------------------------------------------------------------
 ;;; transcoder argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-output-port "123" (file-options) (buffer-mode block) 123))
+  (check-argument-violation
+      (open-file-output-port "123" (file-options) (buffer-mode block) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -9242,12 +8600,8 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-output-file 123))
+  (check-argument-violation
+      (open-output-file 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -9329,23 +8683,15 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-output-to-file 123 values))
+  (check-argument-violation
+      (with-output-to-file 123 values)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(with-output-to-file "ciao" 123))
+  (check-argument-violation
+      (with-output-to-file "ciao" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -9410,23 +8756,15 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-output-file 123 values))
+  (check-argument-violation
+      (call-with-output-file 123 values)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(call-with-output-file "ciao" 123))
+  (check-argument-violation
+      (call-with-output-file "ciao" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -9571,45 +8909,29 @@
 ;;; --------------------------------------------------------------------
 ;;; filename argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input/output-port 123))
+  (check-argument-violation
+      (open-file-input/output-port 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; file-options argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input/output-port "123" 123))
+  (check-argument-violation
+      (open-file-input/output-port "123" 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; buffer-mode argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input/output-port "123" (file-options) 'ciao))
-    => '(ciao))
+  (check-argument-violation
+      (open-file-input/output-port "123" (file-options) 'ciao)
+    => 'ciao)
 
 ;;; --------------------------------------------------------------------
 ;;; transcoder argument validation
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(open-file-input/output-port "123" (file-options) (buffer-mode block) 123))
+  (check-argument-violation
+      (open-file-input/output-port "123" (file-options) (buffer-mode block) 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -11635,8 +10957,11 @@
 
 ;;; end of file
 ;;; Local Variables:
-;;; eval: (put 'with-input-test-pathname	'scheme-indent-function 1)
-;;; eval: (put 'check.with-result		'scheme-indent-function 1)
-;;; eval: (put 'position-and-contents		'scheme-indent-function 1)
+;;; coding: utf-8-unix
+;;; eval: (put 'with-input-test-pathname		'scheme-indent-function 1)
+;;; eval: (put 'check.with-result			'scheme-indent-function 1)
+;;; eval: (put 'position-and-contents			'scheme-indent-function 1)
 ;;; eval: (put 'with-textual-output-test-pathname	'scheme-indent-function 1)
+;;; eval: (put 'check-argument-violation		'scheme-indent-function 1)
+;;; eval: (put 'check-irritants				'scheme-indent-function 1)
 ;;; End:

@@ -1239,8 +1239,7 @@ EXTRA_DIST	+= \
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME_LONG_TESTS)
 XFAIL_TESTS	= \
 	tests/test-issue-058-lalr-unary-prec.sps	\
-	tests/test-srfi-115-regexps.sps			\
-	tests/test-vicare-io.sps
+	tests/test-srfi-115-regexps.sps
 
 # The following tests fails because Nausicaa and the half-written type
 # system  in  (vicare)  are  incompatible.  In  future  they  will  be

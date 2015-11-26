@@ -764,11 +764,11 @@
 
 (define-syntax-rule (assert-start-index-for-bytevector ?bv ?idx)
   (unless ($fx<= ?idx ($bytevector-length ?bv))
-    (procedure-argument-violation __who__
+    (procedure-arguments-consistency-violation __who__
       (string-append "start index argument " (number->string ?idx)
 		     " too big for bytevector of length "
 		     (number->string ($bytevector-length ?bv)))
-      ?idx)))
+      ?bv ?idx)))
 
 (define-syntax-rule (assert-count-from-start-index-for-bytevector ?bv ?start ?count)
   ;;We know  that COUNT and START  are fixnums, but  not if START+COUNT is  a fixnum,
@@ -787,11 +787,11 @@
 
 (define-syntax-rule (assert-start-index-for-string ?str ?idx)
   (unless ($fx<= ?idx ($string-length ?str))
-    (procedure-argument-violation __who__
+    (procedure-arguments-consistency-violation __who__
       (string-append "start index argument " (number->string ?idx)
 		     " too big for string of length "
 		     (number->string ($string-length ?str)))
-      ?idx)))
+      ?str ?idx)))
 
 (define-syntax-rule (assert-count-from-start-index-for-string ?str ?start ?count)
   ;;We know  that COUNT and START  are fixnums, but  not if START+COUNT is  a fixnum,
@@ -1577,8 +1577,8 @@
        (if ($textual-port? port)
 	   (set! port.attributes ($fxior (%port-nullify-eol-style-bits port.attributes)
 					 BUFFER-MODE-LINE-TAG))
-	 (procedure-argument-violation __who__
-	   "expected textual port if buffer mode is \"line\"" port)))
+	 (procedure-signature-argument-violation __who__
+	   "expected textual port if buffer mode is \"line\"" 1 '(textual-port? port) port)))
       ((none)
        (set! port.attributes   ($fxior (%port-nullify-eol-style-bits port.attributes)
 				       BUFFER-MODE-NONE-TAG)))
@@ -1656,10 +1656,6 @@
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-string-buffer		'scheme-indent-function 1)
 ;;; eval: (put '%implementation-violation		'scheme-indent-function 1)
-;;; eval: (put '%case-binary-input-port-fast-tag	'scheme-indent-function 1)
-;;; eval: (put '%case-binary-output-port-fast-tag	'scheme-indent-function 1)
-;;; eval: (put '%case-textual-input-port-fast-tag	'scheme-indent-function 1)
-;;; eval: (put '%case-textual-output-port-fast-tag	'scheme-indent-function 1)
 ;;; eval: (put '%case-eol-style				'scheme-indent-function 1)
 ;;; eval: (put '%parse-byte-order-mark			'scheme-indent-function 1)
 ;;; eval: (put '%parse-bom-and-add-fast-tag		'scheme-indent-function 1)

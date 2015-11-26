@@ -1647,109 +1647,112 @@
 
 ;;;; string line input
 
-(define (get-line port)
-  ;;Defined  by  R6RS.  Read  from  the textual  input  PORT  up to  and
-  ;;including the linefeed character or end of file, decoding characters
-  ;;in the same manner as GET-STRING-N and GET-STRING-N!.
-  ;;
-  ;;If a linefeed character is read, a string containing all of the text
-  ;;up to  (but not including)  the linefeed character is  returned, and
-  ;;the port is updated to point just past the linefeed character.
-  ;;
-  ;;If an  end of file is  encountered before any linefeed  character is
-  ;;read, but  some bytes have  been read  and decoded as  characters, a
-  ;;string containing those characters is returned.
-  ;;
-  ;;If an end of file is encountered before any characters are read, the
-  ;;EOF object is returned.
-  ;;
-  ;;NOTE The end-of-line style, if not NONE, will cause all line endings
-  ;;to be read as linefeed characters.
-  ;;
-  (%do-get-line port 'get-line))
+(module (get-line read-line)
 
-(define read-line
-  ;;Defined by Ikarus.  Like GET-LINE.
-  ;;
-  (case-lambda
-   (()
-    (%do-get-line (current-input-port) 'read-line))
-   ((port)
-    (%do-get-line port 'read-line))))
+  (define (get-line port)
+    ;;Defined by  R6RS.  Read  from the textual  input PORT up  to and  including the
+    ;;linefeed character  or end of file,  decoding characters in the  same manner as
+    ;;GET-STRING-N and GET-STRING-N!.
+    ;;
+    ;;If a linefeed character is read, a string containing all of the text up to (but
+    ;;not including) the  linefeed character is returned, and the  port is updated to
+    ;;point just past the linefeed character.
+    ;;
+    ;;If an  end of file  is encountered before any  linefeed character is  read, but
+    ;;some bytes have been read and  decoded as characters, a string containing those
+    ;;characters is returned.
+    ;;
+    ;;If an end of file is encountered before any characters are read, the EOF object
+    ;;is returned.
+    ;;
+    ;;NOTE The end-of-line style, if not NONE, will cause all line endings to be read
+    ;;as linefeed characters.
+    ;;
+    (%do-get-line port 'get-line))
 
-(define (%do-get-line port who)
-  (define-inline (main)
-    (%case-textual-input-port-fast-tag (port who)
-      ((FAST-GET-UTF8-TAG)
-       (%get-it %read-char-from-port-with-fast-get-utf8-tag
-		%peek-char-from-port-with-fast-get-utf8-tag))
-      ((FAST-GET-CHAR-TAG)
-       (%get-it %read-char-from-port-with-fast-get-char-tag
-		%peek-char-from-port-with-fast-get-char-tag))
-      ((FAST-GET-LATIN-TAG)
-       (%get-it %read-char-from-port-with-fast-get-latin1-tag
-		%peek-char-from-port-with-fast-get-latin1-tag))
-      ((FAST-GET-UTF16LE-TAG)
-       (%get-it %read-utf16le %peek-utf16le))
-      ((FAST-GET-UTF16BE-TAG)
-       (%get-it %read-utf16be %peek-utf16be))))
+  (case-define read-line
+    ;;Defined by Ikarus.  Like GET-LINE.
+    ;;
+    (()
+     (%do-get-line (current-input-port) 'read-line))
+    ((port)
+     (%do-get-line port 'read-line)))
 
-  (define-syntax-rule (%get-it ?read-char ?peek-char)
-    (let ((eol-bits (%port-eol-style-bits port)))
-      (let loop ((port			port)
-		 (number-of-chars	0)
-		 (reverse-chars		'()))
-	(let ((ch (?read-char port who)))
-	  (cond ((eof-object? ch)
-		 (if (null? reverse-chars)
-		     ch
-		   (%reversed-chars->string number-of-chars reverse-chars)))
-		;;We are waiting for the end of line here.
-		((would-block-object? ch)
-		 (loop port number-of-chars reverse-chars))
-		(else
-		 (let ((ch (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)))
-		   (if ($char= ch LINEFEED-CHAR)
-		       (%reversed-chars->string number-of-chars reverse-chars)
-		     (loop port ($fxadd1 number-of-chars) (cons ch reverse-chars))))))))))
+  (define (%do-get-line port who)
+    (define-inline (main)
+      (%case-textual-input-port-fast-tag (port who)
+	((FAST-GET-UTF8-TAG)
+	 (%get-it %read-char-from-port-with-fast-get-utf8-tag
+		  %peek-char-from-port-with-fast-get-utf8-tag))
+	((FAST-GET-CHAR-TAG)
+	 (%get-it %read-char-from-port-with-fast-get-char-tag
+		  %peek-char-from-port-with-fast-get-char-tag))
+	((FAST-GET-LATIN-TAG)
+	 (%get-it %read-char-from-port-with-fast-get-latin1-tag
+		  %peek-char-from-port-with-fast-get-latin1-tag))
+	((FAST-GET-UTF16LE-TAG)
+	 (%get-it %read-utf16le %peek-utf16le))
+	((FAST-GET-UTF16BE-TAG)
+	 (%get-it %read-utf16be %peek-utf16be))))
 
-  (define-syntax-rule (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
-    (cond (($fxzero? eol-bits) ;EOL style none
-	   ch)
-	  (($char-is-single-char-line-ending? ch)
-	   LINEFEED-CHAR)
-	  (($char-is-carriage-return? ch)
-	   (let ((ch1 (?peek-char port who)))
-	     (cond ((eof-object? ch1)
-		    (void))
-		   (($char-is-newline-after-carriage-return? ch1)
-		    (?read-char port who)))
-	     LINEFEED-CHAR))
-	  (else ch)))
+    (define-syntax-rule (%get-it ?read-char ?peek-char)
+      (let ((eol-bits (%port-eol-style-bits port)))
+	(let loop ((port			port)
+		   (number-of-chars	0)
+		   (reverse-chars		'()))
+	  (let ((ch (?read-char port who)))
+	    (cond ((eof-object? ch)
+		   (if (null? reverse-chars)
+		       ch
+		     (%reversed-chars->string number-of-chars reverse-chars)))
+		  ;;We are waiting for the end of line here.
+		  ((would-block-object? ch)
+		   (loop port number-of-chars reverse-chars))
+		  (else
+		   (let ((ch (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)))
+		     (if ($char= ch LINEFEED-CHAR)
+			 (%reversed-chars->string number-of-chars reverse-chars)
+		       (loop port ($fxadd1 number-of-chars) (cons ch reverse-chars))))))))))
 
-  (define (%reversed-chars->string dst.len reverse-chars)
-    (let next-char ((dst.str       ($make-string dst.len))
-		    (dst.index     ($fxsub1 dst.len))
-		    (reverse-chars reverse-chars))
-      (if (null? reverse-chars)
-	  dst.str
-	(begin
-	  ($string-set! dst.str dst.index (car reverse-chars))
-	  (next-char dst.str ($fxsub1 dst.index) (cdr reverse-chars))))))
+    (define-syntax-rule (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
+      (cond (($fxzero? eol-bits) ;EOL style none
+	     ch)
+	    (($char-is-single-char-line-ending? ch)
+	     LINEFEED-CHAR)
+	    (($char-is-carriage-return? ch)
+	     (let ((ch1 (?peek-char port who)))
+	       (cond ((eof-object? ch1)
+		      (void))
+		     (($char-is-newline-after-carriage-return? ch1)
+		      (?read-char port who)))
+	       LINEFEED-CHAR))
+	    (else ch)))
 
-  (define-inline (%read-utf16le ?port ?who)
-    (%read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+    (define (%reversed-chars->string dst.len reverse-chars)
+      (let next-char ((dst.str       ($make-string dst.len))
+		      (dst.index     ($fxsub1 dst.len))
+		      (reverse-chars reverse-chars))
+	(if (null? reverse-chars)
+	    dst.str
+	  (begin
+	    ($string-set! dst.str dst.index (car reverse-chars))
+	    (next-char dst.str ($fxsub1 dst.index) (cdr reverse-chars))))))
 
-  (define-inline (%peek-utf16le ?port ?who)
-    (%peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+    (define-inline (%read-utf16le ?port ?who)
+      (%read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
 
-  (define-inline (%read-utf16be ?port ?who)
-    (%read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+    (define-inline (%peek-utf16le ?port ?who)
+      (%peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
 
-  (define-inline (%peek-utf16be ?port ?who)
-    (%peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+    (define-inline (%read-utf16be ?port ?who)
+      (%read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
 
-  (main))
+    (define-inline (%peek-utf16be ?port ?who)
+      (%peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+
+    (main))
+
+  #| end of module |# )
 
 
 ;;;; GET-CHAR and LOOKAHEAD-CHAR for ports with UTF-8 transcoder
