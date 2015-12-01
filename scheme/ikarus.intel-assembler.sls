@@ -29,7 +29,7 @@
     ;;2014)
     (ikarus.compiler.condition-types)
     (prefix (ikarus.code-objects)
-	    code.)
+	    code-objects::)
     (except (vicare system $codes)
 	    assembler-property-key))
 
@@ -332,8 +332,8 @@
 	     (octets-and-sexps* (map %optimize-local-jumps octets-and-sexps*)))
 	(let ((code-size*  (map %compute-code-size         octets-and-sexps*))
 	      (reloc-size* (map %compute-reloc-vector-size octets-and-sexps*)))
-	  (let ((code-objects* (map code.make-code   code-size* code.num-of-freevars*))
-		(reloc-vector* (map make-vector      reloc-size*)))
+	  (let ((code-objects* (map code-objects::make-code code-size* code.num-of-freevars*))
+		(reloc-vector* (map make-vector             reloc-size*)))
 	    (let ((reloc** (map store-binary-code-in-code-objects
 			     code-objects* octets-and-sexps*)))
 	      (for-each
@@ -344,11 +344,11 @@
 		code-objects* reloc-vector* reloc**)
 	      ;;Store the reloc vectors in the associated code objects.  Process each
 	      ;;code object with the C function "ik_relocate_code()".
-	      (for-each code.set-code-reloc-vector! code-objects* reloc-vector*)
+	      (for-each code-objects::set-code-reloc-vector! code-objects* reloc-vector*)
 	      ;;Store the annotations in the associated code objects.
 	      (for-each (lambda (code annotation)
 			  (when annotation
-			    (code.set-code-annotation! code annotation)))
+			    (code-objects::set-code-annotation! code annotation)))
 		code-objects* code.annotation*)
 	      code-objects*))))))
 
@@ -850,9 +850,9 @@
 				     (idx  (cadr p)))
 				 (unless (fxzero? idx)
 				   (%error "cannot create a thunk pointing" idx))
-				 (let ((thunk (code.code->thunk code)))
-				   (set-cdr! (cdr p) (list thunk))
-				   thunk)))
+				 (receive-and-return (thunk)
+				     (code-objects::code->thunk code)
+				   (set-cdr! (cdr p) (list thunk)))))
 			      (else
 			       (caddr p))))))
 		(else v))))

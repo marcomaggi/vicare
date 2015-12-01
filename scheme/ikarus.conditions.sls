@@ -659,16 +659,13 @@
     ;;2015)
     (only (ikarus fixnums)
 	  non-negative-fixnum?)
-    (only (vicare language-extensions syntaxes)
-	  define-list-of-type-predicate
-	  define-min/max-comparison
-	  define-equality/sorting-predicate
-	  define-inequality-predicate)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 25,
     ;;2015)
     (prefix (only (ikarus records procedural)
 		  record-type-method-retriever-set!)
-	    records.))
+	    records.)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate))
 
 
 ;;;; arguments validation
@@ -825,7 +822,8 @@
 		(if (or (symbol? who)
 			(string? who))
 		    (condition (make-who-condition who) C)
-		  (assertion-violation __who__ "invalid value for &who" who))
+		  (procedure-signature-argument-violation __who__
+		    "invalid value for &who" 1 '(or (symbol? who) (string? who)) who))
 	      C))))
   ((who {message string?} {irritants list?} {cnd condition?})
    (let ((C (condition cnd
@@ -835,7 +833,8 @@
 		(if (or (symbol? who)
 			(string? who))
 		    (condition (make-who-condition who) C)
-		  (assertion-violation __who__ "invalid value for &who" who))
+		  (procedure-signature-argument-violation __who__
+		    "invalid value for &who" 1 '(or (symbol? who) (string? who)) who))
 	      C)))))
 
 

@@ -5493,16 +5493,17 @@
     (each-for files
       (lambda (file)
 	(debug-printf "expanding: ~a\n" file)
-	(load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
-	      (lambda (library-sexp)
-		(receive (name invoke-code export-subst global-env)
-		    (boot-library-expand library-sexp)
-		  ;;This mutation is  ugly, I know, but  it is needed if  we read the
-		  ;;source files with LOAD.  (Marco Maggi)
-		  (set! srclibs.name*		(cons   name          srclibs.name*))
-		  (set! srclibs.invoke-code*	(cons   invoke-code   srclibs.invoke-code*))
-		  (set! srclibs.export-subst	(append export-subst  srclibs.export-subst))
-		  (set! srclibs.global-env	(append global-env    srclibs.global-env)))))))
+	(process-libraries-from-file
+	 (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
+	 (lambda (library-sexp)
+	   (receive (name invoke-code export-subst global-env)
+	       (boot-library-expand library-sexp)
+	     ;;This mutation is  ugly, I know, but  it is needed if  we read the
+	     ;;source files with LOAD.  (Marco Maggi)
+	     (set! srclibs.name*		(cons   name          srclibs.name*))
+	     (set! srclibs.invoke-code*	(cons   invoke-code   srclibs.invoke-code*))
+	     (set! srclibs.export-subst	(append export-subst  srclibs.export-subst))
+	     (set! srclibs.global-env	(append global-env    srclibs.global-env)))))))
     (let*-values
 	(((total.export-subst total.global-env total.export-primlocs)
 	  (make-system-data (prune-subst srclibs.export-subst srclibs.global-env) srclibs.global-env))
@@ -5514,6 +5515,18 @@
       (values (reverse srclibs.name*)
 	      (reverse srclibs.invoke-code*)
 	      total.export-primlocs)))
+
+  (define (process-libraries-from-file filename processor)
+    ;;Open the  file selected by  FILENAME; read annotated symbolic  expressions from
+    ;;it; apply PROCESSOR to each symbolic expression for its side effects.
+    ;;
+    (let ((port (open-input-file filename)))
+      (unwind-protect
+	  (let recur ((obj (get-annotated-datum port)))
+	    (unless (eof-object? obj)
+	      (processor obj)
+	      (recur (get-annotated-datum port))))
+	(close-input-port port))))
 
   (define (make-init-code)
     ;;The first  code to  run when  initialising the boot  image must  initialise the

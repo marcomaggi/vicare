@@ -28,7 +28,7 @@
 		  fasl-read-header
 		  fasl-read-object)
     (prefix (ikarus.code-objects)
-	    code.)
+	    code-objects::)
     (only (ikarus.strings-table)
 	  intern-string)
     (only (vicare.foreign-libraries)
@@ -358,14 +358,14 @@
     ;;
     (let* ((code-size (read-integer-word port))
 	   (freevars  (read-fixnum       port))
-	   (code      (code.make-code code-size freevars)))
+	   (code      (code-objects::make-code code-size freevars)))
       (when code-mark (%put-mark code-mark code))
       (let ((annotation (%read-without-mark)))
-	(code.set-code-annotation! code annotation))
+	(code-objects::set-code-annotation! code annotation))
       ;;Read the actual code one byte at a time.
       (let loop ((i 0))
 	(unless ($fx= i code-size)
-	  (code.code-set! code i (char->int (read-u8-as-char port)))
+	  (code-objects::code-set! code i (char->int (read-u8-as-char port)))
 	  (loop ($fxadd1 i))))
       (if closure-mark
 	  ;;First  build the  closure and  mark it,  then read  the code
@@ -373,10 +373,10 @@
 	  (let ((closure ($code->closure code)))
 	    (%put-mark closure-mark closure)
 	    ;;Setting the code reloc vector also process it.
-	    (code.set-code-reloc-vector! code (%read-without-mark))
+	    (code-objects::set-code-reloc-vector! code (%read-without-mark))
 	    code)
 	(begin
-	  (code.set-code-reloc-vector! code (%read-without-mark))
+	  (code-objects::set-code-reloc-vector! code (%read-without-mark))
 	  code))))
 
   (define (%read-procedure mark)
