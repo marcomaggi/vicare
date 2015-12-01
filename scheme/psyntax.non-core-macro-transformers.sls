@@ -3976,12 +3976,12 @@
       ((_ (unquote ?expr0 ?expr* ...))
        (synner "invalid multi-operand UNQUOTE form outside list and vector templates"
 	       (bless
-		`(unquote ,?expr0 . ,?expr*))))
+		(cons* 'unquote ?expr0 ?expr*))))
 
       ((_ (unquote-splicing ?expr* ...))
        (synner "invalid UNQUOTE-SPLICING form outside list and vector templates"
 	       (bless
-		`(unquote-splicing . ,?expr*))))
+		(cons 'unquote-splicing ?expr*))))
 
       ((_ (?car . ?cdr))
        (%quasi (cons ?car ?cdr) 0))
@@ -4044,7 +4044,7 @@
       (((unquote ?input-car-subexpr* ... . ?input-car-tail) . ?input-cdr)
        (synner "invalid improper list as UNQUOTE form"
 	       (bless
-		`(unquote ,@?input-car-subexpr* . ,?input-car-tail))))
+		(append '(unquote) ?input-car-subexpr* ?input-car-tail))))
 
       ;;This happens when the input form is:
       ;;
@@ -4096,7 +4096,7 @@
       (((unquote-splicing ?input-car-subexpr* ... . ?input-car-tail) . ?input-cdr)
        (synner "invalid improper list as UNQUOTE-SPLICING form"
 	       (bless
-		`(unquote-splicing ,@?input-car-subexpr* . ,?input-car-tail))))
+		(append '(unquote-splicing) ?input-car-subexpr* ?input-car-tail))))
 
       ((quasiquote ?nested-expr* ...)
        (%quasicons (make-top-level-syntax-object/quoted-quoting 'quasiquote)
@@ -4304,7 +4304,7 @@
 	   ((unquote ?input-car-subexpr* ... . ?input-car-tail)
 	    (synner "invalid improper list as UNQUOTE form"
 		    (bless
-		     `(unquote ,@?input-car-subexpr* . ,?input-car-tail))))
+		     (append '(unquote) ?input-car-subexpr* ?input-car-tail))))
 
 	   ((unquote-splicing ?input-car-subexpr* ...)
 	    ;;When the nesting level requires processing of unquoted expressions:
@@ -4336,7 +4336,7 @@
 	   ((unquote-splicing ?input-car-subexpr* ... . ?input-car-tail)
 	    (synner "invalid improper list as UNQUOTE-SPLICING form"
 		    (bless
-		     `(unquote-splicing ,@?input-car-subexpr* . ,?input-car-tail))))
+		     (append '(unquote-splicing) ?input-car-subexpr* ?input-car-tail))))
 
 	   ((quasiquote ?nested-expr* ...)
 	    (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'quasiquote)

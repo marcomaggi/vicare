@@ -408,7 +408,10 @@
 		  make-h_errno-condition h_errno-condition?
 		  condition-h_errno
 
+		  &interrupted &interrupted-rtd &interrupted-rcd
 		  interrupted-condition? make-interrupted-condition
+
+		  &source-position &source-position-rtd &source-position-rcd
 		  make-source-position-condition source-position-condition?
 		  source-position-port-id
 		  source-position-byte source-position-character
@@ -657,10 +660,7 @@
     (only (ikarus fixnums)
 	  non-negative-fixnum?)
     (only (vicare language-extensions syntaxes)
-	  define-list-of-type-predicate
-	  define-min/max-comparison
-	  define-equality/sorting-predicate
-	  define-inequality-predicate))
+	  define-list-of-type-predicate))
 
 
 ;;;; arguments validation
@@ -810,17 +810,27 @@
 ;;;; raising exceptions
 
 (case-define* raise-non-continuable-standard-condition
-  (({who symbol?} {message string?} {irritants list?})
-   (raise
-    (condition (make-who-condition who)
-	       (make-message-condition message)
-	       (make-irritants-condition irritants))))
-  (({who symbol?} {message string?} {irritants list?} {cnd condition?})
-   (raise
-    (condition cnd
-	       (make-who-condition who)
-	       (make-message-condition message)
-	       (make-irritants-condition irritants)))))
+  ((who {message string?} {irritants list?})
+   (let ((C (condition (make-message-condition message)
+		       (make-irritants-condition irritants))))
+     (raise (if who
+		(if (or (symbol? who)
+			(string? who))
+		    (condition (make-who-condition who) C)
+		  (procedure-signature-argument-violation __who__
+		    "invalid value for &who" 1 '(or (symbol? who) (string? who)) who))
+	      C))))
+  ((who {message string?} {irritants list?} {cnd condition?})
+   (let ((C (condition cnd
+		       (make-message-condition message)
+		       (make-irritants-condition irritants))))
+     (raise (if who
+		(if (or (symbol? who)
+			(string? who))
+		    (condition (make-who-condition who) C)
+		  (procedure-signature-argument-violation __who__
+		    "invalid value for &who" 1 '(or (symbol? who) (string? who)) who))
+	      C)))))
 
 
 (define-syntax (define-condition-type stx)
