@@ -44,7 +44,7 @@
 	  base-rtd
 	  $struct-rtd)
     (prefix (ikarus.code-objects)
-    	    code.)
+    	    code-objects::)
     (prefix (only (ikarus.options)
 		  debug-mode-enabled?)
 	    option.))
@@ -245,7 +245,7 @@
 		  (void))
 		 ((code? x)
 		  (make-graph ($code-annotation x) h)
-		  (make-graph (code.code-reloc-vector x) h))
+		  (make-graph (code-objects::code-reloc-vector x) h))
 		 ((hashtable? x)
 		  (when (hashtable-hash-function x)
 		    (assertion-violation who "not fasl-writable" x))
@@ -280,10 +280,10 @@
 				      (f (+ i 1) n)))))))))
 		 ((procedure? x)
 		  (let ((code ($closure-code x)))
-		    (unless (fxzero? (code.code-freevars code))
+		    (unless (fxzero? (code-objects::code-freevars code))
 		      (assertion-violation who
 			"cannot fasl-write a non-thunk procedure; the one given has free vars"
-			(code.code-freevars code)))
+			(code-objects::code-freevars code)))
 		    (make-graph code h)))
 		 ((bytevector? x)
 		  (void))
@@ -510,9 +510,9 @@
 			      (fasl-write-immediate #f port)
 			      next-mark))))
 	   ;;Write an array of bytes being the binary code.
-	   (let next-byte ((i 0) (x.len (code.code-size x)))
+	   (let next-byte ((i 0) (x.len (code-objects::code-size x)))
 	     (unless ($fx= i x.len)
-	       (write-byte (code.code-ref x i) port)
+	       (write-byte (code-objects::code-ref x i) port)
 	       (next-byte ($fxadd1 i) x.len)))
 	   ;;Write the relocation vector as Scheme vector.
 	   (%write-single-object ($code-reloc-vector x) next-mark)))
