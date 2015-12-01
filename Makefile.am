@@ -231,6 +231,9 @@ AM_CPPFLAGS	= -I $(srcdir)/src -I $(builddir)/src
 AM_CFLAGS	= -Wall
 EXTRA_DIST	+= src/vicare-platform.h.in
 
+CLEANFILES	+= bootfileloc.h
+BUILT_SOURCES	+= bootfileloc.h
+
 bin_PROGRAMS	= vicare
 vicare_SOURCES	= \
 	src/ikarus.c			\
@@ -265,10 +268,6 @@ vicare_DEPENDENCIES	= src/vicare.h
 include_HEADERS		= src/vicare.h src/vicare-platform.h
 
 ikarus.$(OBJEXT) ikarus-main.$(OBJEXT): bootfileloc.h
-
-CLEANFILES		+= bootfileloc.h
-
-BUILT_SOURCES		+= bootfileloc.h
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
