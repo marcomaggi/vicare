@@ -5386,18 +5386,19 @@
 		  (debug-printf "expanding: ~a\n" file)
 		  ;;For  each library  in the  file apply  the closure  for its  side
 		  ;;effects.
-		  (load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
-			(lambda (library-sexp)
-			  (receive (name code subst env)
-			      (boot-library-expand library-sexp)
-			    ;; (when (equal? name '(ikarus flonum-conversion))
-			    ;;   (debug-print 'invoke-code  code)
-			    ;;   (debug-print 'export-subst subst)
-			    ;;   (debug-print 'global-env   env))
-			    (set! name*        (cons name name*))
-			    (set! invoke-code* (cons code invoke-code*))
-			    (set! export-subst (append subst export-subst))
-			    (set! global-env   (append env   global-env))))))
+		  (process-libraries-from-file
+		   (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
+		   (lambda (library-sexp)
+		     (receive (name code subst env)
+			 (boot-library-expand library-sexp)
+		       ;; (when (equal? name '(ikarus flonum-conversion))
+		       ;;   (debug-print 'invoke-code  code)
+		       ;;   (debug-print 'export-subst subst)
+		       ;;   (debug-print 'global-env   env))
+		       (set! name*        (cons name name*))
+		       (set! invoke-code* (cons code invoke-code*))
+		       (set! export-subst (append subst export-subst))
+		       (set! global-env   (append env   global-env))))))
 	files)
       (receive (export-subst global-env export-primlocs)
 	  (make-system-data (prune-subst export-subst global-env) global-env)
@@ -5406,6 +5407,18 @@
 	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
 		  (reverse (cons* (car invoke-code*) primlocs-lib-code (cdr invoke-code*)))
 		  export-primlocs)))))
+
+  (define (process-libraries-from-file filename processor)
+    ;;Open the  file selected by  FILENAME; read annotated symbolic  expressions from
+    ;;it; apply PROCESSOR to each symbolic expression for its side effects.
+    ;;
+    (let ((port (open-input-file filename)))
+      (unwind-protect
+	  (let recur ((obj (get-annotated-datum port)))
+	    (unless (eof-object? obj)
+	      (processor obj)
+	      (recur (get-annotated-datum port))))
+	(close-input-port port))))
 
   (define (make-init-code)
     ;;Return  4 values  representing  a fake  library (ikarus.init),  as  if we  have
