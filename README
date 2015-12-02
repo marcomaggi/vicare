@@ -84,17 +84,10 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 To install Vicare  Scheme from a proper release tarball,  we must unpack
 the archive then do:
 
-   $ cd vicare-scheme-0.3d1
-   $ mkdir build
-   $ cd build
-   $ ../configure
+   $ cd vicare-scheme-0.4.0
+   $ ./configure
    $ make
    $ make install
-
-notice  that the  "configure" script  is prepared  to enable  C language
-shared libraries and disable C  language static libraries: this must not
-be changed, because  the package is meant to install  a C shared library
-to be dynamically loaded.
 
   To run the test suite we do:
 
@@ -110,7 +103,7 @@ significantly.
   By default  only compiled Scheme  libraries are installed;  to install
 also the source libraries we must configure with:
 
-   $ ../configure --enable-sources-installation ...
+   $ ./configure --enable-sources-installation ...
 
   If, instead,  we have checked out  a revision from the  repository, we
 will have  to first build the  infrastructure by running a  Bourne shell
@@ -126,13 +119,14 @@ notice  that  "autogen.sh"  will   run  the  programs  "autoreconf"  and
 
    $ LIBTOOLIZE=glibtoolize sh autogen.sh
 
+GNU Libtool is not directly needed by Vicare Scheme, but it is needed to
+correctly link libraries (like GNU Libiconv) which make use of it.
+
   After this the  procedure is the same  as the one for  building from a
 proper release tarball, but we  must enable maintainer mode when running
 the "configure" script:
 
-   $ mkdir build
-   $ cd build
-   $ ../configure --enable-maintainer-mode
+   $ ./configure --enable-maintainer-mode
    $ make
    $ make install
 
@@ -143,14 +137,14 @@ again to run the test suite we do:
   To make use  of the POSIX semaphore functions, we  need to include the
 pthread library using the option:
 
-   $ ../configure --with-pthread [... other options ...]
+   $ ./configure --with-pthread [... other options ...]
 
 by default pthread is linked to the executable if found on the host.
 
   A  bare build  (without  support for  optional  features and  external
 libraries) can be obtained with:
 
-   $ ../configure \
+   $ ./configure \
          --disable-posix	\
 	 --disable-glibc	\
 	 --disable-linux	\
@@ -183,7 +177,7 @@ and 64-bit binary libraries under:
 
 by configuring, for example, with:
 
-   $ ../configure --libdir=/usr/local/lib64 ...
+   $ ./configure --libdir=/usr/local/lib64 ...
 
   The variable VFLAGS is available  to the user when running "configure"
 and "make" to add command line options to the execution of "vicare" when
@@ -205,7 +199,7 @@ lalr-test		- rebuild the tests for the LALR parser
 and the  following DANGEROUS  rule, use  only if you  know what  you are
 doing:
 
-silex-internals - rebuild the internal tables of SILex itself
+silex-internals		- rebuild the internal tables of SILex itself
 
 
 4. Testing
@@ -218,22 +212,22 @@ be executed  by a  powerless computer; the  files whose name  start with
 "test" can  be run in  reasonable time on  any system.  The  files whose
 name contains "r6rs" are R6RS compliance tests by Matthew Flatt.
 
-  The "make check",  "make test" and "make tests" commands  run the same
-set of  "quick" tests; the "check"  makefile rule uses the  GNU Automake
+  The command "make  check" will run all the tests,  quick and long; the
+commands "make test" and "make tests" run the same set of "quick" tests;
+the commands "make long-test" and "make  long-tests" run the same set of
+time-consuming  tests.    The  "check"   rule  uses  the   GNU  Automake
 infrastructure (parallel test harness,  see Automake's documentation for
-details).   After the  installation: we  can run  these tests  using the
-"make installcheck" rule.
-
-  The "make long-test"  and "make long-tests" commands run  the same set
-of time-consuming tests.
+details).  After  package installation: we  can run the tests  using the
+"make installcheck" rule which will load the installed libraries.
 
   It  is possible  to select  a  single test  file by  using the  "file"
 variable on the command line of "make"; for example:
 
    $ make test file=equal-hash
 
-will run the  "test-issue-001-equal-hash.sps" file.  The "file" variable
-is used to expand a file name with wildcards as in "test-*$(file)*.sps".
+will  run  the   program  "test-issue-001-equal-hash.sps".   The  "file"
+variable  is  used   to  expand  a  file  name  with   wildcards  as  in
+"test-*$(file)*.sps".
 
   It  is possible to  run "vicare"  from the  build directory  with user
 selected command line arguments doing:
@@ -374,27 +368,6 @@ images do not contain the latest version of the code.
 
 and this image is then installed  on the system by "make install".  This
 new boot image is the one containing the latest version of the code.
-
-  On a 32-bit system, when the maintainer feels it is time to rotate the
-boot images, he just replaces by hand:
-
-    $(top_srcdir)/boot/vicare.boot.4.prebuilt
-
-with:
-
-    $(builddir)/vicare.boot
-
-then he does:
-
-    $ make boot-image-64-bit
-
-to (blindly) generate:
-
-    $(builddir)/vicare.boot.8.prebuilt
-
-and make it become the new:
-
-    $(top_srcdir)/boot/vicare.boot.8.prebuilt
 
 
 E. Automatically building dependencies

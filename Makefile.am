@@ -263,15 +263,23 @@ vicare_SOURCES	= \
 	src/ikarus-debugging.c		\
 	src/internals.h
 
-nodist_vicare_SOURCES	= bootfileloc.h
+nodist_vicare_SOURCES	= src/bootfileloc.h
 vicare_DEPENDENCIES	= src/vicare.h
 include_HEADERS		= src/vicare.h src/vicare-platform.h
 
-ikarus.$(OBJEXT) ikarus-main.$(OBJEXT): bootfileloc.h
+CLEANFILES		+= src/bootfileloc.h
+BUILT_SOURCES		+= src/bootfileloc.h
+
+# The target "src/bootfileloc.h" is  automatically built by "make all"
+# and "make  check" because we  have included it in  the BUILT_SOURCES
+# variable.  But  when doint "make vicare"  it is not built  unless we
+# declare the dependency below.
+#
+src/ikarus.$(OBJEXT): src/bootfileloc.h
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
-bootfileloc.h:
+src/bootfileloc.h:
 	echo '#define BOOTFILE "$(pkglibdir)/vicare.boot"' >$@
 	echo '#define EXEFILE "$(bindir)/vicare"' >>$@
 
