@@ -21,7 +21,6 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
-#include "bootfileloc.h"
 #include "internals.h"
 #include <fcntl.h>
 #include <gmp.h>
