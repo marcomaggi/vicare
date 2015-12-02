@@ -119,6 +119,9 @@ notice  that  "autogen.sh"  will   run  the  programs  "autoreconf"  and
 
    $ LIBTOOLIZE=glibtoolize sh autogen.sh
 
+GNU Libtool is not directly needed by Vicare Scheme, but it is needed to
+correctly link libraries (like GNU Libiconv) which make use of it.
+
   After this the  procedure is the same  as the one for  building from a
 proper release tarball, but we  must enable maintainer mode when running
 the "configure" script:
