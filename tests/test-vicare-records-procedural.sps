@@ -602,7 +602,7 @@
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
 		(builder1 (record-constructor rcd))
 		(builder2 (record-constructor rcd)))
-	   #t))
+	   ((record-predicate rtd) (builder1))))
       => '(#t (0))))
 
   (let* ((builder	(lambda ()
