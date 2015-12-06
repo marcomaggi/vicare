@@ -853,6 +853,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-issue-024.sps					\
 	tests/test-issue-025-sign-in-exact-rationals.sps		\
 	tests/test-issue-070.sps					\
+	tests/test-issue-086.sps					\
 	\
 	tests/test-vicare-unsafe-operations.sps				\
 	\
@@ -1178,7 +1179,8 @@ EXTRA_DIST	+= \
 
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME_LONG_TESTS)
 XFAIL_TESTS	= \
-	tests/test-issue-058-lalr-unary-prec.sps
+	tests/test-issue-058-lalr-unary-prec.sps	\
+	tests/test-issue-086.sps
 
 # The following tests fails because Nausicaa and the half-written type
 # system  in  (vicare)  are  incompatible.  In  future  they  will  be
