@@ -128,7 +128,9 @@
     (vicare system $symbols)
     (vicare system $pairs)
     (vicare system $vectors)
-    (vicare system $tcbuckets))
+    (vicare system $tcbuckets)
+    (only (vicare system $structs)
+	  $set-std-printer!))
 
 
 ;;;; helpers
@@ -1270,8 +1272,9 @@
 ;; #!vicare
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.hash-tables before"))
 
-(set-rtd-printer! (type-descriptor hasht)	(lambda (x p wr)
-						  (display "#<hashtable>" p)))
+($set-std-printer! (type-descriptor hasht)
+		   (lambda (x p wr)
+		     (display "#<hashtable>" p)))
 
 ;; #!vicare
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.hash-tables after"))

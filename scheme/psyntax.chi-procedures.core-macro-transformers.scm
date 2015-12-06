@@ -2832,9 +2832,9 @@
 		  (?tag
 		   (list-tag-id? ?tag)
 		   ;;Damn   it!!!   The   expression's  return   values  have   fully
-		   ;;unspecified signature; we need to insert a run-time check.
-		   (%run-time-validation input-form.stx lexenv.run lexenv.expand
-					 asserted.sig expr.psi))
+		   ;;unspecified signature;  we rely on the  low-level built-in check
+		   ;;for single return value.
+		   (make-psi input-form.stx (psi-core-expr expr.psi) asserted.sig))
 		  (_
 		   ;;The  horror!!!   We have  established  at  expand-time that  the
 		   ;;expression returns multiple values; assertion failed.

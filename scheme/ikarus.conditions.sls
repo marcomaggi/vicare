@@ -654,6 +654,8 @@
 		  utf32-string-decoding-orphan-octets.octets
 		  )
     (only (ikarus records procedural)
+	  $make-record-type-descriptor
+	  $make-record-constructor-descriptor
 	  rtd-subtype?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Jun 3,
     ;;2015)
@@ -667,7 +669,7 @@
 
 (define (simple-condition-rtd-subtype? obj)
   (and (record-type-descriptor? obj)
-       (rtd-subtype? obj (record-type-descriptor &condition))))
+       (rtd-subtype? obj &condition-rtd)))
 
 (define-list-of-type-predicate list-of-conditions? condition?)
 (define-list-of-type-predicate list-of-simple-conditions? simple-condition?)
@@ -675,22 +677,47 @@
 
 ;;;; data types and some predicates
 
-(define-record-type (&condition make-simple-condition simple-condition?)
-  (nongenerative))
+;;NOTE We could  use the records syntactic  layer as shown below, but  instead we use
+;;the procedural  layer to allow  boot image  initialisation (without crashes  due to
+;;not-yet-initialised core primitives).
+;;
+;; (begin
+;;   (define-record-type (&condition make-simple-condition simple-condition?)
+;;     (nongenerative))
+;;   (define &condition-rtd
+;;     (record-type-descriptor &condition))
+;;   (define &condition-rcd
+;;     (record-constructor-descriptor &condition))
+;;   (define-record-type compound-condition
+;;     (nongenerative)
+;;     (fields (immutable components))
+;;     (sealed #t)
+;;     (opaque #f))
+;;   #| end of BEGIN |# )
 
-(define &condition-rtd
-  (record-type-descriptor &condition))
+(begin
+  (define &condition-rtd
+    ($make-record-type-descriptor '&condition #f 'vicare:conditions:&condition #f #f '#()))
+  (define &condition-rcd
+    ($make-record-constructor-descriptor &condition-rtd #f (lambda (make-it) make-it)))
+  (define make-simple-condition
+    (record-constructor &condition-rcd))
+  (define simple-condition?
+    (record-predicate &condition-rtd))
+  #| end of BEGIN |# )
 
-(define &condition-rcd
-  (record-constructor-descriptor &condition))
-
-;;; --------------------------------------------------------------------
-
-(define-record-type compound-condition
-  (nongenerative)
-  (fields (immutable components))
-  (sealed #t)
-  (opaque #f))
+(begin
+  (define compound-condition-rtd
+    ($make-record-type-descriptor 'compound-condition #f 'vicare:conditions:compound-condition #t #t '#((immutable components))))
+  (define compound-condition-rcd
+    ($make-record-constructor-descriptor compound-condition-rtd #f (lambda (make-it) make-it)))
+  (define make-compound-condition
+    (record-constructor compound-condition-rcd))
+  (define compound-condition?
+    (record-predicate compound-condition-rtd))
+  (define compound-condition-components
+    (record-accessor compound-condition-rtd 0))
+  #| end of BEGIN |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -878,10 +905,13 @@
 								(hashtable-set! table (quote ?field) ?accessor)
 								...)))
 						   ))
-					       )))
+					       ))
+	    (PARENT-CLAUSE (if (eq? '&condition (syntax->datum #'?super))
+			       #'(parent-rtd &condition-rtd &condition-rcd)
+			     #'(parent ?super))))
 	 #'(begin
 	     (define-record-type (?name ?constructor p?)
-	       (parent ?super)
+	       PARENT-CLAUSE #;(parent ?super)
 	       (fields (immutable ?field AUX-ACCESSOR*) ...)
 	       (nongenerative)
 	       (sealed #f) (opaque #f))
@@ -1428,7 +1458,7 @@
 
 ;;;; done
 
-;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions"))
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions end"))
 
 #| end of library |# )
 

@@ -526,7 +526,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(set-struct-type-printer! (type-descriptor immutable-pair)
+($set-std-printer! (type-descriptor immutable-pair)
   (lambda (stru port sub-printer)
     (define-syntax-rule (%display ?obj)
       (display ?obj port))

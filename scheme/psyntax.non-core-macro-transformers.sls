@@ -804,8 +804,8 @@
 	(%parse-field-specs input-form.stx type.id field*.stx))
       (let* ((field*.sym     (map syntax->datum  field*.id))
 	     (field*.str     (map symbol->string field*.sym))
-	     (field*.arg     (map (lambda (id tag)
-				    `(brace ,id ,tag))
+	     (field*.arg     (map (lambda (sym tag)
+				    `(brace ,sym ,tag))
 			       field*.sym field*.tag))
 	     (uid            (if uid
 				 (identifier->symbol uid)
