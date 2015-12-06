@@ -1188,6 +1188,7 @@ XFAIL_TESTS	+= \
 	tests/test-nausicaa-oopp-binding-constructs.sps		\
 	tests/test-nausicaa-oopp-cast-operator.sps		\
 	tests/test-nausicaa-oopp-core.sps			\
+	tests/test-nausicaa-oopp-builtin-labels.sps		\
 	tests/test-nausicaa-conditions.sps			\
 	tests/test-nausicaa-containers-iterators.sps		\
 	tests/test-mehve-language-numerics-arithmetics.sps	\
