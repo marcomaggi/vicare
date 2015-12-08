@@ -373,8 +373,6 @@
 (define-struct loc
   (value value/ann set? textual-position))
 
-(define EMPTY-LOCATIONS-COLLECTION '())
-
 
 ;;;; source position handling
 ;;
@@ -594,7 +592,7 @@
     (%assert-argument-is-source-code-port 'read port)
     (get-datum port))))
 
-(define (get-datum port)
+(define* (get-datum port)
   ;;Defined by  R6RS.  Read an external representation  from the textual
   ;;input  PORT  and return  the  datum  it  represents.  The  GET-DATUM
   ;;procedure returns the  next datum that can be  parsed from the given
@@ -614,12 +612,12 @@
   ;;incomplete  and  therefore  cannot  be  parsed,  an  exception  with
   ;;condition types "&lexical" and "&i/o-read" is raised.
   ;;
-  (define who 'get-datum)
-  (%assert-argument-is-source-code-port who port)
+  (%assert-argument-is-source-code-port __who__ port)
   (parametrise ((shared-library-loading-enabled? #f))
-    (let-values (((expr expr/ann locations kont)
-		  (parametrise ((custom-named-chars (make-eq-hashtable)))
-		    (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
+    (receive (expr expr/ann locations kont)
+	(parametrise ((custom-named-chars (make-eq-hashtable)))
+	  (let ((empty-locations-collection '()))
+	    (read-expr port empty-locations-collection void)))
       (if (null? locations)
 	  expr
 	(begin
@@ -638,17 +636,17 @@
   (parametrise ((shared-library-loading-enabled? #f))
     ($get-annotated-datum port)))
 
-(define ($get-annotated-datum port)
-  (define who 'get-annotated-datum)
+(define* ($get-annotated-datum port)
   (define (%return-annotated x)
     (if (and (annotation? x)
 	     (eof-object? (annotation-expression x)))
 	(eof-object)
       x))
-  (%assert-argument-is-source-code-port who port)
-  (let-values (((expr expr/ann locations kont)
-		(parametrise ((custom-named-chars (make-eq-hashtable)))
-		  (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
+  (%assert-argument-is-source-code-port __who__ port)
+  (receive (expr expr/ann locations kont)
+      (parametrise ((custom-named-chars (make-eq-hashtable)))
+	(let ((empty-locations-collection '()))
+	  (read-expr port empty-locations-collection void)))
     (if (null? locations)
 	(%return-annotated expr/ann)
       (begin
