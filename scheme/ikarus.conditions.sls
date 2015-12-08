@@ -85,41 +85,44 @@
     &interrupted-rtd &interrupted-rcd
     &source-position-rtd &source-position-rcd
 
-    &i/o-eagain make-i/o-eagain i/o-eagain-error?
+    ;;&i/o-eagain
+    make-i/o-eagain i/o-eagain-error?
     &i/o-eagain-rtd &i/o-eagain-rcd
 
-    &errno &errno-rtd &errno-rcd
+    ;;&errno
+    &errno-rtd &errno-rcd
     make-errno-condition errno-condition? condition-errno
-    &h_errno &h_errno-rtd &h_errno-rcd
+    ;;&h_errno
+    &h_errno-rtd &h_errno-rcd
     make-h_errno-condition h_errno-condition? condition-h_errno
 
-    &failed-expression-condition
+    ;;&failed-expression-condition
     &failed-expression-condition-rtd
     &failed-expression-condition-rcd
     make-failed-expression-condition
     failed-expression-condition?
     condition-failed-expression
 
-    &procedure-precondition-violation
+    ;;&procedure-precondition-violation
     &procedure-precondition-violation-rtd
     &procedure-precondition-violation-rcd
     make-procedure-precondition-violation
     procedure-precondition-violation?
 
-    &procedure-postcondition-violation
+    ;;&procedure-postcondition-violation
     &procedure-postcondition-violation-rtd
     &procedure-postcondition-violation-rcd
     make-procedure-postcondition-violation
     procedure-postcondition-violation?
 
-    &procedure-argument-violation
+    ;;&procedure-argument-violation
     &procedure-argument-violation-rtd
     &procedure-argument-violation-rcd
     make-procedure-argument-violation
     procedure-argument-violation?
     procedure-argument-violation
 
-    &procedure-signature-argument-violation
+    ;;&procedure-signature-argument-violation
     &procedure-signature-argument-violation-rtd
     &procedure-signature-argument-violation-rcd
     make-procedure-signature-argument-violation
@@ -129,7 +132,7 @@
     procedure-signature-argument-violation.offending-value
     procedure-signature-argument-violation
 
-    &procedure-signature-return-value-violation
+    ;;&procedure-signature-return-value-violation
     &procedure-signature-return-value-violation-rtd
     &procedure-signature-return-value-violation-rcd
     make-procedure-signature-return-value-violation
@@ -139,7 +142,7 @@
     procedure-signature-return-value-violation.offending-value
     procedure-signature-return-value-violation
 
-    &procedure-arguments-consistency-violation
+    ;;&procedure-arguments-consistency-violation
     &procedure-arguments-consistency-violation-rtd
     &procedure-arguments-consistency-violation-rcd
     make-procedure-arguments-consistency-violation
@@ -147,26 +150,28 @@
     procedure-arguments-consistency-violation
     procedure-arguments-consistency-violation/failed-expression
 
-    &expression-return-value-violation
+    ;;&expression-return-value-violation
     &expression-return-value-violation-rtd
     &expression-return-value-violation-rcd
     make-expression-return-value-violation
     expression-return-value-violation?
     expression-return-value-violation
 
-    &non-reinstatable
+    ;;&non-reinstatable
+    &non-reinstatable-rtd
+    &non-reinstatable-rcd
     make-non-reinstatable-violation
     non-reinstatable-violation?
     non-reinstatable-violation
 
     ;; string encoding and decoding
-    &string-encoding
+    ;;&string-encoding
     &string-encoding-rtd
     &string-encoding-rcd
     make-string-encoding-error
     string-encoding-error?
 
-    &string-decoding
+    ;;&string-decoding
     &string-decoding-rtd
     &string-decoding-rcd
     make-string-decoding-error
@@ -174,37 +179,37 @@
 
 ;;;
 
-    &utf8-string-encoding
+    ;;&utf8-string-encoding
     &utf8-string-encoding-rtd
     &utf8-string-encoding-rcd
     make-utf8-string-encoding-error
     utf8-string-encoding-error?
 
-    &utf16-string-encoding
+    ;;&utf16-string-encoding
     &utf16-string-encoding-rtd
     &utf16-string-encoding-rcd
     make-utf16-string-encoding-error
     utf16-string-encoding-error?
 
-    &utf32-string-encoding
+    ;;&utf32-string-encoding
     &utf32-string-encoding-rtd
     &utf32-string-encoding-rcd
     make-utf32-string-encoding-error
     utf32-string-encoding-error?
 
-    &utf8-string-decoding
+    ;;&utf8-string-decoding
     &utf8-string-decoding-rtd
     &utf8-string-decoding-rcd
     make-utf8-string-decoding-error
     utf8-string-decoding-error?
 
-    &utf16-string-decoding
+    ;;&utf16-string-decoding
     &utf16-string-decoding-rtd
     &utf16-string-decoding-rcd
     make-utf16-string-decoding-error
     utf16-string-decoding-error?
 
-    &utf32-string-decoding
+    ;;&utf32-string-decoding
     &utf32-string-decoding-rtd
     &utf32-string-decoding-rcd
     make-utf32-string-decoding-error
@@ -212,7 +217,7 @@
 
 ;;;
 
-    &utf8-string-decoding-invalid-octet
+    ;;&utf8-string-decoding-invalid-octet
     &utf8-string-decoding-invalid-octet-rtd
     &utf8-string-decoding-invalid-octet-rcd
     make-utf8-string-decoding-invalid-octet
@@ -221,7 +226,7 @@
     utf8-string-decoding-invalid-octet.index
     utf8-string-decoding-invalid-octet.octets
 
-    &utf8-string-decoding-invalid-2-tuple
+    ;;&utf8-string-decoding-invalid-2-tuple
     &utf8-string-decoding-invalid-2-tuple-rtd
     &utf8-string-decoding-invalid-2-tuple-rcd
     make-utf8-string-decoding-invalid-2-tuple
@@ -230,7 +235,7 @@
     utf8-string-decoding-invalid-2-tuple.index
     utf8-string-decoding-invalid-2-tuple.octets
 
-    &utf8-string-decoding-invalid-3-tuple
+    ;;&utf8-string-decoding-invalid-3-tuple
     &utf8-string-decoding-invalid-3-tuple-rtd
     &utf8-string-decoding-invalid-3-tuple-rcd
     make-utf8-string-decoding-invalid-3-tuple
@@ -239,7 +244,7 @@
     utf8-string-decoding-invalid-3-tuple.index
     utf8-string-decoding-invalid-3-tuple.octets
 
-    &utf8-string-decoding-invalid-4-tuple
+    ;;&utf8-string-decoding-invalid-4-tuple
     &utf8-string-decoding-invalid-4-tuple-rtd
     &utf8-string-decoding-invalid-4-tuple-rcd
     make-utf8-string-decoding-invalid-4-tuple
@@ -248,7 +253,7 @@
     utf8-string-decoding-invalid-4-tuple.index
     utf8-string-decoding-invalid-4-tuple.octets
 
-    &utf8-string-decoding-incomplete-2-tuple
+    ;;&utf8-string-decoding-incomplete-2-tuple
     &utf8-string-decoding-incomplete-2-tuple-rtd
     &utf8-string-decoding-incomplete-2-tuple-rcd
     make-utf8-string-decoding-incomplete-2-tuple
@@ -257,7 +262,7 @@
     utf8-string-decoding-incomplete-2-tuple.index
     utf8-string-decoding-incomplete-2-tuple.octets
 
-    &utf8-string-decoding-incomplete-3-tuple
+    ;;&utf8-string-decoding-incomplete-3-tuple
     &utf8-string-decoding-incomplete-3-tuple-rtd
     &utf8-string-decoding-incomplete-3-tuple-rcd
     make-utf8-string-decoding-incomplete-3-tuple
@@ -266,7 +271,7 @@
     utf8-string-decoding-incomplete-3-tuple.index
     utf8-string-decoding-incomplete-3-tuple.octets
 
-    &utf8-string-decoding-incomplete-4-tuple
+    ;;&utf8-string-decoding-incomplete-4-tuple
     &utf8-string-decoding-incomplete-4-tuple-rtd
     &utf8-string-decoding-incomplete-4-tuple-rcd
     make-utf8-string-decoding-incomplete-4-tuple
@@ -277,7 +282,7 @@
 
 ;;;
 
-    &utf16-string-decoding-invalid-first-word
+    ;;&utf16-string-decoding-invalid-first-word
     &utf16-string-decoding-invalid-first-word-rtd
     &utf16-string-decoding-invalid-first-word-rcd
     make-utf16-string-decoding-invalid-first-word
@@ -286,7 +291,7 @@
     utf16-string-decoding-invalid-first-word.index
     utf16-string-decoding-invalid-first-word.word
 
-    &utf16-string-decoding-invalid-second-word
+    ;;&utf16-string-decoding-invalid-second-word
     &utf16-string-decoding-invalid-second-word-rtd
     &utf16-string-decoding-invalid-second-word-rcd
     make-utf16-string-decoding-invalid-second-word
@@ -296,7 +301,7 @@
     utf16-string-decoding-invalid-second-word.first-word
     utf16-string-decoding-invalid-second-word.second-word
 
-    &utf16-string-decoding-missing-second-word
+    ;;&utf16-string-decoding-missing-second-word
     &utf16-string-decoding-missing-second-word-rtd
     &utf16-string-decoding-missing-second-word-rcd
     make-utf16-string-decoding-missing-second-word
@@ -305,7 +310,7 @@
     utf16-string-decoding-missing-second-word.index
     utf16-string-decoding-missing-second-word.word
 
-    &utf16-string-decoding-standalone-octet
+    ;;&utf16-string-decoding-standalone-octet
     &utf16-string-decoding-standalone-octet-rtd
     &utf16-string-decoding-standalone-octet-rcd
     make-utf16-string-decoding-standalone-octet
@@ -316,7 +321,7 @@
 
 ;;;
 
-    &utf32-string-decoding-invalid-word
+    ;;&utf32-string-decoding-invalid-word
     &utf32-string-decoding-invalid-word-rtd
     &utf32-string-decoding-invalid-word-rcd
     make-utf32-string-decoding-invalid-word
@@ -325,7 +330,7 @@
     utf32-string-decoding-invalid-word.index
     utf32-string-decoding-invalid-word.word
 
-    &utf32-string-decoding-orphan-octets
+    ;;&utf32-string-decoding-orphan-octets
     &utf32-string-decoding-orphan-octets-rtd
     &utf32-string-decoding-orphan-octets-rcd
     make-utf32-string-decoding-orphan-octets
@@ -656,7 +661,10 @@
     (only (ikarus records procedural)
 	  $make-record-type-descriptor
 	  $make-record-constructor-descriptor
-	  rtd-subtype?)
+	  $record-and-rtd?
+	  $record-constructor
+	  $rtd-subtype?)
+    (vicare system $structs)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Jun 3,
     ;;2015)
     (only (ikarus fixnums)
@@ -669,10 +677,14 @@
 
 (define (simple-condition-rtd-subtype? obj)
   (and (record-type-descriptor? obj)
-       (rtd-subtype? obj &condition-rtd)))
+       ($rtd-subtype? obj &condition-rtd)))
 
 (define-list-of-type-predicate list-of-conditions? condition?)
 (define-list-of-type-predicate list-of-simple-conditions? simple-condition?)
+
+(define-syntax-rule ($record-of-type ?obj ?rtd)
+  (and ($struct? ?obj)
+       ($record-and-rtd? ?obj ?rtd)))
 
 
 ;;;; data types and some predicates
@@ -699,24 +711,26 @@
   (define &condition-rtd
     ($make-record-type-descriptor '&condition #f 'vicare:conditions:&condition #f #f '#()))
   (define &condition-rcd
-    ($make-record-constructor-descriptor &condition-rtd #f (lambda (make-it) make-it)))
+    ($make-record-constructor-descriptor &condition-rtd #f #f))
   (define make-simple-condition
-    (record-constructor &condition-rcd))
-  (define simple-condition?
-    (record-predicate &condition-rtd))
+    ($record-constructor &condition-rcd))
+  (define (simple-condition? X)
+    ($record-of-type X &condition-rtd))
   #| end of BEGIN |# )
 
 (begin
   (define compound-condition-rtd
     ($make-record-type-descriptor 'compound-condition #f 'vicare:conditions:compound-condition #t #t '#((immutable components))))
   (define compound-condition-rcd
-    ($make-record-constructor-descriptor compound-condition-rtd #f (lambda (make-it) make-it)))
+    ($make-record-constructor-descriptor compound-condition-rtd #f #f))
   (define make-compound-condition
-    (record-constructor compound-condition-rcd))
-  (define compound-condition?
-    (record-predicate compound-condition-rtd))
+    ($record-constructor compound-condition-rcd))
+  (define (compound-condition? X)
+    ($record-of-type X compound-condition-rtd))
   (define compound-condition-components
     (record-accessor compound-condition-rtd 0))
+  (define ($compound-condition-components cnd)
+    ($struct-ref cnd 0))
   #| end of BEGIN |# )
 
 ;;; --------------------------------------------------------------------
@@ -729,15 +743,14 @@
       (compound-condition? x)))
 
 (define* (condition-and-rtd? obj {rtd simple-condition-rtd-subtype?})
-  (let ((p? (record-predicate rtd)))
-    (cond ((compound-condition? obj)
-	   (let loop ((ls (compound-condition-components obj)))
-	     (and (pair? ls)
-		  (or (p? (car ls))
-		      (loop (cdr ls))))))
-	  ((simple-condition? obj)
-	   (p? obj))
-	  (else #f))))
+  (cond ((compound-condition? obj)
+	 (let loop ((ls (compound-condition-components obj)))
+	   (and (pair? ls)
+		(or ($record-of-type (car ls) rtd)
+		    (loop (cdr ls))))))
+	((simple-condition? obj)
+	 ($record-of-type obj rtd))
+	(else #f)))
 
 
 (case-define* condition
@@ -795,14 +808,13 @@
   ;;that record type (or  one of its subtypes) or a compound  conditition with such a
   ;;simple condition as one of its components, and #f otherwise.
   ;;
-  (let ((p? (record-predicate rtd)))
-    (lambda (x)
-      (or (p? x)
-	  (and (compound-condition? x)
-	       (let loop ((ls (compound-condition-components x)))
-		 (and (pair? ls)
-		      (or (p? (car ls))
-			  (loop (cdr ls))))))))))
+  (lambda (X)
+    (or (and (compound-condition? X)
+	     (let loop ((ls ($compound-condition-components X)))
+	       (and (pair? ls)
+		    (or ($record-of-type (car ls) rtd)
+			(loop (cdr ls))))))
+	($record-of-type X rtd))))
 
 (define* (condition-accessor {rtd simple-condition-rtd-subtype?} {proc procedure?})
   ;;Defined  by  R6RS.   RTD  must  be  a record-type  descriptor  of  a  subtype  of
@@ -814,24 +826,23 @@
   ;;procedure extracts the  first component of the condition of  the type represented
   ;;by RTD, and returns the result of applying PROC to that component.
   ;;
-  (let ((p? (record-predicate rtd)))
-    (lambda (x)
-      (fluid-let-syntax
-	  ((__who__ (identifier-syntax 'anonymous-condition-accessor)))
-	(define (%error)
-	  (procedure-arguments-consistency-violation __who__ "not a condition of correct type" x rtd))
-	(cond ((p? x)
-	       (proc x))
-	      ((compound-condition? x)
-	       (let loop ((ls (compound-condition-components x)))
-		 (cond ((pair? ls)
-			(if (p? (car ls))
-			    (proc (car ls))
-			  (loop (cdr ls))))
-		       (else
-			(%error)))))
-	      (else
-	       (%error)))))))
+  (lambda (X)
+    (fluid-let-syntax
+	((__who__ (identifier-syntax 'anonymous-condition-accessor)))
+      (define (%error)
+	(procedure-arguments-consistency-violation __who__ "not a condition of correct type" X rtd))
+      (cond ((compound-condition? X)
+	     (let loop ((ls ($compound-condition-components X)))
+	       (cond ((pair? ls)
+		      (if ($record-of-type (car ls) rtd)
+			  (proc (car ls))
+			(loop (cdr ls))))
+		     (else
+		      (%error)))))
+	    (($record-of-type X rtd)
+	     (proc X))
+	    (else
+	     (%error))))))
 
 
 ;;;; raising exceptions
@@ -867,61 +878,56 @@
   ;;transformer of  the keyword  binding DEFINE-CONDITION-TYPE  exported by  the boot
   ;;image is integrated in the expander.
   ;;
-  (define (mkname name suffix)
-    (datum->syntax name
-		   (string->symbol
-		    (string-append (symbol->string (syntax->datum name))
-				   suffix))))
+  (define (mkname prefix name suffix)
+    (datum->syntax name (string->symbol (string-append prefix
+						       (symbol->string (syntax->datum name))
+						       suffix))))
+  (define (iota idx stx)
+    (syntax-case stx ()
+      (()	'())
+      ((?x . ?x*)
+       (cons idx (iota (fxadd1 idx) #'?x*)))))
   (syntax-case stx ()
-    ((_ ?name ?super ?constructor ?predicate (?field ?accessor) ...)
+    ((_ ?name ?parent-name ?constructor ?predicate (?field ?accessor) ...)
      (and (identifier? #'?name)
-	  (identifier? #'?super)
+	  (identifier? #'?parent-name)
 	  (identifier? #'?constructor)
 	  (identifier? #'?predicate)
 	  (andmap identifier? #'(?field ...))
 	  (andmap identifier? #'(?accessor ...)))
      (with-syntax
-	 (((DUMMY AUX-ACCESSOR* ...) (generate-temporaries #'(#f ?accessor ...)))
-	  (RTD (mkname #'?name "-rtd"))
-	  (RCD (mkname #'?name "-rcd")))
+	 ((UID			(mkname "vicare:condition:" #'?name ""))
+	  (RTD			(mkname "" #'?name "-rtd"))
+	  (RCD			(mkname "" #'?name "-rcd"))
+	  (PARENT-RTD		(mkname "" #'?parent-name "-rtd"))
+	  (PARENT-RCD		(mkname "" #'?parent-name "-rcd"))
+	  ((ACCESSOR-IDX ...)	(iota 0 #'(?accessor ...)))
+	  (SEALED?		#f)
+	  (OPAQUE?		#f))
        (with-syntax
 	   (((LATE-BINDING-METHODS-FORM ...) (syntax-case #'(?field ...) ()
 					       ;;No fields.
 					       (()	'())
 					       ;;At least one field.
 					       (_
-						;;We define a dummy syntactic binding
-						;;here: it  makes sure the  forms are
-						;;evaluated  right  after  the  other
-						;;definitions  above, and  before any
-						;;initialisation  expression  in  the
-						;;body  of the  enclosing program  or
-						;;library.
-						#'((define DUMMY
-						     (putprop (record-type-uid RTD)
-							      'late-binding-methods-table
-							      (receive-and-return (table)
-								  (make-eq-hashtable)
-								(hashtable-set! table (quote ?field) ?accessor)
-								...)))
-						   ))
-					       ))
-	    (PARENT-CLAUSE (if (eq? '&condition (syntax->datum #'?super))
-			       #'(parent-rtd &condition-rtd &condition-rcd)
-			     #'(parent ?super))))
-	 #'(begin
-	     (define-record-type (?name ?constructor p?)
-	       PARENT-CLAUSE #;(parent ?super)
-	       (fields (immutable ?field AUX-ACCESSOR*) ...)
-	       (nongenerative)
-	       (sealed #f) (opaque #f))
-	     (define ?predicate (condition-predicate (record-type-descriptor ?name)))
-	     (define ?accessor  (condition-accessor  (record-type-descriptor ?name) AUX-ACCESSOR*))
+						#'((putprop (quote UID) 'late-binding-methods-table
+							    (receive-and-return (table)
+								(make-eq-hashtable)
+							      (hashtable-set! table (quote ?field) ?accessor)
+							      ...))))
+					       )))
+	 ;;We use  the records procedural layer  and the unsafe functions  to make it
+	 ;;easier to rotate the boot images.
+	 #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
+	     (define RTD
+	       ($make-record-type-descriptor (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE? '#((immutable ?field) ...)))
+	     (define RCD
+	       ($make-record-constructor-descriptor RTD PARENT-RCD #f))
+	     (define ?constructor	($record-constructor RCD))
+	     (define ?predicate		(condition-predicate RTD))
+	     (define ?accessor		(condition-accessor  RTD (record-accessor RTD ACCESSOR-IDX)))
 	     ...
-	     (define RTD (record-type-descriptor ?name))
-	     (define RCD (record-constructor-descriptor ?name))
-	     LATE-BINDING-METHODS-FORM ...
-	     ))))
+	     LATE-BINDING-METHODS-FORM ...))))
     ))
 
 
@@ -1458,7 +1464,8 @@
 
 ;;;; done
 
-;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions end"))
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions end")))
 
 #| end of library |# )
 

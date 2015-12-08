@@ -36,8 +36,8 @@
 
     ;; extension utility functions, non-R6RS
     rtd-subtype?			record-type-all-field-names
-    (rename (<rcd>-rtd		rcd-rtd)
-	    (<rcd>-parent-rcd	rcd-parent-rcd))
+    (rename (<rcd>-rtd			rcd-rtd)
+	    (<rcd>-parent-rcd		rcd-parent-rcd))
     record-reset			record=?
     record-and-rtd?			record-object?
     record-printer			record-destructor
@@ -47,7 +47,9 @@
 
     ;; syntactic bindings for internal use only
     $make-record-type-descriptor	$make-record-constructor-descriptor
-    (rename ($<rtd>-destructor		$record-type-destructor))
+    (rename ($<rtd>-destructor		$record-type-destructor)
+	    ($<rcd>-builder		$record-constructor))
+    $record-and-rtd?			$rtd-subtype?
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
@@ -1294,6 +1296,9 @@
 (define* (rtd-subtype? {rtd record-type-descriptor?} {prtd record-type-descriptor?})
   ;;Return true if PRTD is a parent of RTD or they are equal.
   ;;
+  ($rtd-subtype? rtd prtd))
+
+(define ($rtd-subtype? rtd prtd)
   (or (eq? rtd prtd)
       (let upper-parent ((prtd^ ($<rtd>-parent rtd)))
 	(and prtd^
