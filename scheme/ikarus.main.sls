@@ -103,6 +103,9 @@
 		  real-pathname
 		  split-search-path-string)
 	    posix.)
+    (prefix (only (ikarus conditions)
+		  initialise-condition-objects-late-binding)
+	    conditions::)
     (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
@@ -1119,6 +1122,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ($initialize-symbol-table!)
   ;;See "ikarus.strings.table.sls".
   ($initialize-interned-strings-table!)
+
+  (conditions::initialise-condition-objects-late-binding)
 
   #| end of module |# )
 

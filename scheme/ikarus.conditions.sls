@@ -340,7 +340,10 @@
     utf32-string-decoding-orphan-octets.octets
 
     ;; macros
-    preconditions)
+    preconditions
+
+    ;; for internal use only
+    initialise-condition-objects-late-binding)
   (import (except (vicare)
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
@@ -673,6 +676,26 @@
 	  define-list-of-type-predicate))
 
 
+;;;; helpers
+
+(begin-for-syntax
+  ;;List of syntax objects to be put in the body of the records' methods late binding
+  ;;initialisation function.
+  (define late-binding-form* '()))
+
+(define-syntax (define-late-binding-init-func stx)
+  ;;Define the  records' methods late  binding initialisation function.   When called
+  ;;the function  initialises the tables used  for late binding of  records' methods.
+  ;;The  use  of  an  initialisation  function   to  be  called  later  (rather  than
+  ;;initialisation expressions  at the  end of  in this library)  makes it  easier to
+  ;;rotate the boot images.
+  ;;
+  (syntax-case stx ()
+    ((_ ?who)
+     #`(define (?who) #,@(reverse late-binding-form*)))
+    ))
+
+
 ;;;; arguments validation
 
 (define (simple-condition-rtd-subtype? obj)
@@ -904,30 +927,33 @@
 	  ((ACCESSOR-IDX ...)	(iota 0 #'(?accessor ...)))
 	  (SEALED?		#f)
 	  (OPAQUE?		#f))
-       (with-syntax
-	   (((LATE-BINDING-METHODS-FORM ...) (syntax-case #'(?field ...) ()
-					       ;;No fields.
-					       (()	'())
-					       ;;At least one field.
-					       (_
-						#'((putprop (quote UID) 'late-binding-methods-table
-							    (receive-and-return (table)
-								(make-eq-hashtable)
-							      (hashtable-set! table (quote ?field) ?accessor)
-							      ...))))
-					       )))
-	 ;;We use  the records procedural layer  and the unsafe functions  to make it
-	 ;;easier to rotate the boot images.
-	 #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
-	     (define RTD
-	       ($make-record-type-descriptor (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE? '#((immutable ?field) ...)))
-	     (define RCD
-	       ($make-record-constructor-descriptor RTD PARENT-RCD #f))
-	     (define ?constructor	($record-constructor RCD))
-	     (define ?predicate		(condition-predicate RTD))
-	     (define ?accessor		(condition-accessor  RTD (record-accessor RTD ACCESSOR-IDX)))
-	     ...
-	     LATE-BINDING-METHODS-FORM ...))))
+       ;;Register  a syntax  object representing  an expression  which, expanded  and
+       ;;evalualated, will initialise  the record's methods late  binding table.  The
+       ;;expression  will be  included  in a  global  initialisation function.   This
+       ;;allows for easier rotation of boot images.
+       (set-cons! late-binding-form*
+		  (syntax-case #'(?field ...) ()
+		    ;;No fields.
+		    (()	#'(void))
+		    ;;At least one field.
+		    (_
+		     #'(putprop (quote UID) 'late-binding-methods-table
+				(receive-and-return (table)
+				    (make-eq-hashtable)
+				  (hashtable-set! table (quote ?field) ?accessor)
+				  ...)))
+		    ))
+       ;;We use  the records procedural layer  and the unsafe functions  to make it
+       ;;easier to rotate the boot images.
+       #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
+	   (define RTD
+	     ($make-record-type-descriptor (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE? '#((immutable ?field) ...)))
+	   (define RCD
+	     ($make-record-constructor-descriptor RTD PARENT-RCD #f))
+	   (define ?constructor		($record-constructor RCD))
+	   (define ?predicate		(condition-predicate RTD))
+	   (define ?accessor		(condition-accessor  RTD (record-accessor RTD ACCESSOR-IDX)))
+	   ...)))
     ))
 
 
@@ -1463,6 +1489,8 @@
 
 
 ;;;; done
+
+(define-late-binding-init-func initialise-condition-objects-late-binding)
 
 ;; (define end-of-file-dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions end")))
