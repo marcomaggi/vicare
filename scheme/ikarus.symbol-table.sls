@@ -42,6 +42,10 @@
 	    $symbol-table-size
 	    $log-symbol-table-status))
 
+;; #!vicare
+;; (define dummy-begin
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbol-table begin")))
+
 
 ;;;; helpers
 
@@ -320,8 +324,8 @@
 ;;;; done
 
 ;; #!vicare
-;; (define dummy
-;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbol-table")))
+;; (define dummy-end-of-file
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbol-table end")))
 
 #| end of library |# )
 

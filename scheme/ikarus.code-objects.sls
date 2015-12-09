@@ -214,6 +214,9 @@
 
 ;;;; done
 
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.code-objects end")))
+
 #| end of library |# )
 
 ;;; end of file

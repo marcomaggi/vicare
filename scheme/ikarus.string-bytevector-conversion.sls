@@ -128,6 +128,10 @@
 	  make-utf32-string-decoding-invalid-word
 	  make-utf32-string-decoding-orphan-octets))
 
+;; #!vicare
+;; (define dummy-enter
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.string-bytevector-conversion enter")))
+
 
 ;;;; helpers
 
@@ -1785,6 +1789,10 @@
 
 
 ;;;; done
+
+;; #!vicare
+;; (define dummy-end
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.string-bytevector-conversion end")))
 
 #| end of library |# )
 
