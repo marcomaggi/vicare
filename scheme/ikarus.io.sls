@@ -359,6 +359,7 @@
 ;;
 
 
+#!vicare
 (library (ikarus.io)
   (export
 
@@ -504,7 +505,10 @@
     make-textual-socket-output-port
     make-textual-socket-output-port*
     make-textual-socket-input/output-port
-    make-textual-socket-input/output-port*)
+    make-textual-socket-input/output-port*
+
+    ;; for internal use only
+    initialise-io-ports)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Mon May 4, 2015)
@@ -659,6 +663,7 @@
     (vicare system $fx)
     (vicare system $chars)
     (vicare system $pairs)
+    (vicare system $structs)
     (except (vicare system $strings)
 	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun
 	    ;;Mar 22, 2015)
@@ -689,14 +694,14 @@
 	  $bytevector-fill!
 	  $bytevector-u16-set!		$bytevector-s16-set!
 	  $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
+    ;;bindings.
+    (vicare system $io)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon May 4,
     ;;2015)
     (only (ikarus conditions)
 	  procedure-arguments-consistency-violation
 	  procedure-signature-argument-violation)
-    ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
-    ;;bindings.
-    (vicare system $io)
     (prefix (only (vicare) port?) primop.)
     (prefix (vicare unsafe capi) capi.)
     (prefix (vicare unsafe unicode) unicode.)
@@ -1448,7 +1453,7 @@
   ())
 
 (define-constant WOULD-BLOCK-OBJECT
-  (make-unique-object))
+  ($struct (type-descriptor unique-object)))
 
 (define (would-block-object)
   WOULD-BLOCK-OBJECT)
@@ -1646,8 +1651,7 @@
 
 ;;;; done
 
-;; (define end-of-file-dummy
-;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.io end")))
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.io end"))
 
 #| end of library |# )
 

@@ -63,10 +63,6 @@
 
     with-local-storage
 
-    &out-of-memory-error
-    &out-of-memory-error-rtd		&out-of-memory-error-rcd
-    make-out-of-memory-error		out-of-memory-error?
-
     ;; C strings
     strlen
     strcmp				strncmp
@@ -167,7 +163,10 @@
     $pointer!=
     $pointer<				$pointer>
     $pointer<=				$pointer>=
-    $pointer-min			$pointer-max)
+    $pointer-min			$pointer-max
+
+    ;; for internal use only
+    initialise-pointers-stuff)
   (import (except (vicare)
 		  ;;FIXME These  excepts are  to be  removed at  the next  boot image
 		  ;;rotation.  (Marco Maggi; Sun Mar 29, 2015)
@@ -344,9 +343,10 @@
     ;;2015)
     (only (ikarus fixnums)
 	  non-negative-fixnum?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 29,
-    ;;2015)
     (only (ikarus conditions)
+	  %raise-out-of-memory
+	  ;;FIXME This identifier  is to be removed at the  next boot image rotation.
+	  ;;(Marco Maggi; Sun Mar 29, 2015)
 	  procedure-arguments-consistency-violation)
     (vicare system $fx)
     (vicare system $pairs)
@@ -474,10 +474,6 @@
     (capi.ffi-free ($memory-block-pointer S))
     ($set-memory-block-pointer! S (void))
     ($set-memory-block-size!    S (void))))
-
-(module ()
-  (set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
-  (set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor))
 
 ;;; --------------------------------------------------------------------
 
@@ -833,25 +829,6 @@
 
 ;;; raw memory management
 
-(define-condition-type &out-of-memory-error
-    &error
-  make-out-of-memory-error
-  out-of-memory-error?)
-
-(define &out-of-memory-error-rtd
-  (record-type-descriptor &out-of-memory-error))
-
-(define &out-of-memory-error-rcd
-  (record-constructor-descriptor &out-of-memory-error))
-
-(define (%raise-out-of-memory who)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition "failed raw memory allocation")
-	      (make-out-of-memory-error))))
-
-;;; --------------------------------------------------------------------
-
 (define* (malloc {number-of-bytes number-of-bytes?})
   (capi.ffi-malloc number-of-bytes))
 
@@ -954,9 +931,6 @@
     (unless (capi.ffi-pointer-null? pointer)
       (capi.ffi-free pointer)
       (capi.ffi-set-pointer-null! pointer))))
-
-(module ()
-  (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks))))
 
 (define (guarded-malloc number-of-bytes)
   (let ((rv (malloc number-of-bytes)))
@@ -1548,6 +1522,11 @@
 
 
 ;;;; done
+
+(define (initialise-pointers-stuff)
+  (set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
+  (set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
+  (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks))))
 
 ;; (define end-of-file-dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.pointers end")))

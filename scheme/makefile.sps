@@ -5264,9 +5264,6 @@
 ;;;; built-in object types utilities
 
     ;;These are exported only by "(psyntax system $all)".
-    (procedure-argument-validation-with-predicate)
-    (return-value-validation-with-predicate)
-    (signature-rest-argument-validation-with-predicate)
     (any->symbol)
     (any->string)
     (internal-delete)

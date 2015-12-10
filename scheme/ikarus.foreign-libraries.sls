@@ -28,7 +28,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare.foreign-libraries)
   (export
     dynamically-load-shared-object-from-identifier)
@@ -74,6 +74,8 @@
 
 ;;;; done
 
-)
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.foreign-libraries end"))
+
+#| end of file |# )
 
 ;;; end of file

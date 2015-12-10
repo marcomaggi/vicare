@@ -36,7 +36,8 @@
 	  "expected string as parameter value" obj)))))
 
 (define cafe-input-port
-  (make-parameter (console-input-port)
+  (make-parameter
+      #f
     (lambda (obj)
       (if (textual-input-port? obj)
 	  obj

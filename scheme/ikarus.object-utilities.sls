@@ -40,11 +40,6 @@
     ;; predicates
     always-true			always-false
 
-    ;; validation
-    procedure-argument-validation-with-predicate
-    return-value-validation-with-predicate
-    signature-rest-argument-validation-with-predicate
-
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor
     <top>-type-predicate)
@@ -160,79 +155,6 @@
 
 (define (always-false . args)
   #f)
-
-(define (signature-rest-argument-validation-with-predicate who arg-counter pred pred-sexp arg*)
-  ;;This is used by LAMBDA* and similar syntaxes to validate rest and args arguments.
-  ;;
-  ;;Let's say we have:
-  ;;
-  ;;   (define* (doit a . {rest fixnum?})
-  ;;     ---)
-  ;;
-  ;;   (doit 1 2 3 4)
-  ;;
-  ;;we know that REST will be a proper list (possibly null), so we only need to check
-  ;;that every item  in REST is a fixnum,  this is what this function  does; for this
-  ;;example this function must be called as:
-  ;;
-  ;;   (signature-rest-argument-validation-with-predicate 'doit 2 fixnum? 'fixnum? rest)
-  ;;
-  ;;notice that the argument counter is 1-based.
-  ;;
-  ;;Let's say we have:
-  ;;
-  ;;   (define* (doit . {args fixnum?})
-  ;;     ---)
-  ;;
-  ;;   (doit 1 2 3 4)
-  ;;
-  ;;we know that ARGS will be a proper list (possibly null), so we only need to check
-  ;;that every item  in ARGS is a fixnum,  this is what this function  does; for this
-  ;;example this function must be called as:
-  ;;
-  ;;   (signature-rest-argument-validation-with-predicate 'doit 1 fixnum? 'fixnum? args)
-  ;;
-  ;;notice that the argument counter is 1-based.
-  ;;
-  (when (pair? arg*)
-    (if (pred (car arg*))
-	(signature-rest-argument-validation-with-predicate who ($fxadd1 arg-counter) pred pred-sexp (cdr arg*))
-      (conditions.procedure-signature-argument-violation who
-	"failed argument validation"
-	arg-counter pred-sexp (car arg*)))))
-
-
-;;;; object type validation
-
-(define* (procedure-argument-validation-with-predicate {type-name symbol?} {pred procedure?} obj)
-  ;;Validate  OBJ as  Scheme object  satisfying  the predicate  PRED.  If  successful
-  ;;return OBJ  itself, otherwise raise  an exception with compound  condition object
-  ;;type "&procedure-argument-violation".
-  ;;
-  ;;This function is used  as tag validator by the tagged  language.  It validates an
-  ;;object type as  belonging to a tag  specification; it must raise  an exception or
-  ;;just return the object  itself.  TYPE-NAME is typically the symbol  name of a tag
-  ;;identifier.  PRED is typically the predicate function from the "tag-type-spec" of
-  ;;a tag identifier.
-  ;;
-  (if (pred obj)
-      obj
-    (procedure-argument-violation type-name "invalid object type" obj)))
-
-(define* (return-value-validation-with-predicate {type-name symbol?} {pred procedure?} obj)
-  ;;Validate  OBJ as  Scheme object  satisfying  the predicate  PRED.  If  successful
-  ;;return OBJ  itself, otherwise raise  an exception with compound  condition object
-  ;;type "&expression-return-value-violation".
-  ;;
-  ;;This function is used  as tag validator by the tagged  language.  It validates an
-  ;;object type as  belonging to a tag  specification; it must raise  an exception or
-  ;;just return the object  itself.  TYPE-NAME is typically the symbol  name of a tag
-  ;;identifier.  PRED is typically the predicate function from the "tag-type-spec" of
-  ;;a tag identifier.
-  ;;
-  (if (pred obj)
-      obj
-    (expression-return-value-violation type-name "invalid object type" obj)))
 
 
 ;;;; built-in object-type specification utilities

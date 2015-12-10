@@ -2,17 +2,16 @@
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #!vicare
@@ -42,7 +41,6 @@
 	    $symbol-table-size
 	    $log-symbol-table-status))
 
-;; #!vicare
 ;; (define dummy-begin
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbol-table begin")))
 
@@ -60,11 +58,10 @@
 
 ;;;; symbol table data structure
 
-;;A SYMBOL-TABLE  structure is, in  practice, a hash table  holding weak
-;;references to  interned symbols.  When the number  of interned symbols
-;;equals the number of buckets (whatever the distribution), the table is
-;;enlarged  doubling  the  number   of  buckets.   The  table  is  never
-;;restricted by reducing the number of buckets.
+;;A SYMBOL-TABLE structure  is, in practice, a hash table  holding weak references to
+;;interned symbols.  When the number of interned symbols equals the number of buckets
+;;(whatever the distribution), the table is  enlarged doubling the number of buckets.
+;;The table is never restricted by reducing the number of buckets.
 ;;
 ;;Constructor: make-symbol-table SIZE MASK VECTOR GUARDIAN
 ;;
@@ -73,65 +70,54 @@
 ;;Field name: size
 ;;Accessor: symbol-table-size TABLE
 ;;Mutator: set-symbol-table-size! TABLE
-;;  The number of symbols interned  in the table.  The maximum number of
-;;  interned symbols is the greatest fixnum.
+;;  The number  of symbols  interned in  the table.  The  maximum number  of interned
+;;  symbols is the greatest fixnum.
 ;;
 ;;Field name: mask
 ;;Accessor: symbol-table-mask TABLE
 ;;Mutator: set-symbol-table-mask! TABLE
-;;  A bitmask used to convert a  symbol's hash number into an index into
-;;  the vector in the VEC field as follows:
+;;  A bitmask used to convert a symbol's hash number into an index into the vector in
+;;  the VEC field as follows:
 ;;
 ;;    (define index ($fxlogand mask (symbol-hash symbol)))
 ;;
 ;;Field name: buckets
 ;;Accessor: symbol-table-buckets TABLE
 ;;Mutator: set-symbol-table-buckets! TABLE
-;;  Actual collection of interned symbols, this is the vector of buckets
-;;  of the  hash table.  Each  element in the  vector is a list  of weak
-;;  pairs holding  the interned symbols.  The maximum  number of buckets
-;;  is half the greatest fixnum.
+;;  Actual collection of interned symbols, this is  the vector of buckets of the hash
+;;  table.  Each element in  the vector is a list of weak  pairs holding the interned
+;;  symbols.  The maximum number of buckets is half the greatest fixnum.
 ;;
 ;;Field name: guardian
 ;;Accessor: symbol-table-guardian TABLE
 ;;Mutator: set-symbol-table-guardian! TABLE
-;;  A guardian  in which interned  symbols are registered.   Whenever an
-;;  interned symbol is garbage  collected, the guardian extracts it from
-;;  the table.
+;;  A guardian in which interned symbols are registered.  Whenever an interned symbol
+;;  is garbage collected, the guardian extracts it from the table.
 ;;
-;;  FIXME The guardian is scanned  for symbols to be uninterned whenever
-;;  a new symbol is interned.
+;;  FIXME The guardian is scanned for symbols  to be uninterned whenever a new symbol
+;;  is interned.
 ;;
 (define-struct symbol-table
   (size mask buckets guardian))
 
 
-;;This is  the actual table used  at run-time.  Notice that  the mask is
-;;always one less than the vector size.
+;;This is the actual table used at run-time.  Notice that the mask is always one less
+;;than the vector size.
 ;;
-;;By  experiments it has  been determined  that, after  initialising the
-;;table with the symbols from the boot process, the number of buckets is
-;;4096.  (Marco Maggi; Oct 31, 2011)
+;;By experiments it  has been determined that, after initialising  the table with the
+;;symbols from the  boot process, the number  of buckets is 4096.   (Marco Maggi; Oct
+;;31, 2011)
 ;;
 (define THE-SYMBOL-TABLE
-  (let* ((G (make-guardian))
-	 (T (make-symbol-table 0 4095 (make-vector 4096 '()) G)
-	    #;(make-symbol-table 0 #b11 (make-vector 4 '()) G)))
-    (define (cleanup)
-      (do ((sym (G) (G)))
-	  ((not sym))
-	(if (dead? sym)
-	    (unintern sym T)
-	  (G sym))))
-    (post-gc-hooks (cons cleanup (post-gc-hooks)))
-    T))
+  (void))
 
 (define MAX-NUMBER-OF-BUCKETS
   (fxdiv (greatest-fixnum) 2))
 
 (define ($initialize-symbol-table!)
-  ;;Retrieve  the vector  used by  the  symbol table  in the  "vicare"
-  ;;executable (constructed  while booting), retrieve  all the entries
+  ;;Allocate the global  symbol table.  Register a post  garbage-collection hook that
+  ;;cleans the table of  dead symbols.  Retrieve the vector used  by the symbol table
+  ;;in the "vicare" executable (constructed  while booting), retrieve all the entries
   ;;from it and store them in THE-SYMBOL-TABLE.
   ;;
   ;;This function must be called only once at start up.
@@ -144,14 +130,25 @@
 				(symbol-table-mask THE-SYMBOL-TABLE))
 			THE-SYMBOL-TABLE))
       (intern-car ($cdr x))))
+  (set! THE-SYMBOL-TABLE
+	(let ((G (make-guardian)))
+	  (receive-and-return (T)
+	      ;;(make-symbol-table 0 #b11 (make-vector 4 '()) G)
+	      (make-symbol-table 0 4095 (make-vector 4096 '()) G)
+	    (define (cleanup)
+	      (do ((sym (G) (G)))
+		  ((not sym))
+		(if (dead? sym)
+		    (unintern sym T)
+		  (G sym))))
+	    (post-gc-hooks (cons cleanup (post-gc-hooks))))))
   (vector-for-each intern-car (foreign-call "ikrt_get_symbol_table")))
 
 (define (%symbol-table-size)
   (symbol-table-size THE-SYMBOL-TABLE))
 
 (define ($log-symbol-table-status)
-  ;;Write to the current error  port a description of the current symbol
-  ;;table status.
+  ;;Write to the current error port a description of the current symbol table status.
   ;;
   (define port
     (current-error-port))
@@ -178,8 +175,8 @@
     ($string->symbol str))
 
   (define ($string->symbol str)
-    ;;Lookup the  symbol in the  symbol table:  if it is  already there,
-    ;;return it; else create a new entry and return the new symbol.
+    ;;Lookup the symbol in the symbol table:  if it is already there, return it; else
+    ;;create a new entry and return the new symbol.
     ;;
     (let* ((idx ($fxlogand (%compute-string-hash str)
 			(symbol-table-mask THE-SYMBOL-TABLE)))
@@ -198,21 +195,21 @@
 
 
 (define (intern str idx table)
-  ;;Given a string STR being the  name of a symbol to be interned, store
-  ;;it in the  symbol TABLE and return the  associated symbol.  IDX must
-  ;;be the index in the TABLE's vector.
+  ;;Given a  string STR being the  name of a symbol  to be interned, store  it in the
+  ;;symbol TABLE  and return  the associated symbol.   IDX must be  the index  in the
+  ;;TABLE's vector.
   ;;
-  (let ((sym ($make-symbol str)))
+  (receive-and-return (sym)
+      ($make-symbol str)
     ($set-symbol-unique-string! sym #f)
-    (intern-symbol! sym idx table)
-    sym))
+    (intern-symbol! sym idx table)))
 
 (define (intern-symbol! sym idx table)
-  ;;Given a symbol  SYM to be interned, store it in  the TABLE; IDX must
-  ;;be the index in the TABLE's vector.  Return unspecified values.
+  ;;Given a symbol SYM  to be interned, store it in the TABLE;  IDX must be the index
+  ;;in the TABLE's vector.  Return unspecified values.
   ;;
-  ;;The symbol is registered in the  TABLE's guardian, so that it can be
-  ;;removed if garbage collected.
+  ;;The symbol is  registered in the TABLE's  guardian, so that it can  be removed if
+  ;;garbage collected.
   ;;
   (let ((number-of-interned-symbols (symbol-table-size table)))
     (if ($fx= number-of-interned-symbols (greatest-fixnum))
@@ -228,38 +225,35 @@
 
 
 (define (dead? sym)
-  ;;Evaluate to true if  SYM is unused, even by the REPL  and as UID for
-  ;;data structures.
+  ;;Evaluate  to true  if  SYM is  unused,  even by  the  REPL and  as  UID for  data
+  ;;structures.
   ;;
   (and ($unbound-object? ($symbol-value sym))
        (null? ($symbol-plist sym))))
 
 (define (bleed-guardian sym table)
-  ;;Subroutine of LOOKUP.  Scan the  symbols queried in the guardian for
-  ;;removal from TABLE.
+  ;;Subroutine of LOOKUP.  Scan the symbols  queried in the guardian for removal from
+  ;;TABLE.
   ;;
-  ;;*NOTE* The  original version of  this function was written  when the
-  ;;CLEANUP function for the guardian was not called by the POST-GC-HOOK
-  ;;as it is now; rather, the guardian was cleared by this function when
-  ;;a new symbol was interned by STRING->SYMBOL.  We are keeping the old
-  ;;logic in this function because  it does not hurt.  (Marco Maggi; Nov
-  ;;1, 2011)
+  ;;*NOTE*  The original  version  of  this function  was  written  when the  CLEANUP
+  ;;function  for the  guardian was  not called  by the  POST-GC-HOOK as  it is  now;
+  ;;rather, the guardian was cleared by this  function when a new symbol was interned
+  ;;by STRING->SYMBOL.  We are keeping the old logic in this function because it does
+  ;;not hurt.  (Marco Maggi; Nov 1, 2011)
   ;;
   ;;Notice that this can happen:
   ;;
   ;;1. The symbol CIAO is interned.
-		;,
-  ;;2.  CIAO  is garbage  collected.   It is  still  in  TABLE but  also
-  ;;registered in the guardian for removal.
+  ;;
+  ;;2.  CIAO is garbage  collected.  It is still in TABLE but  also registered in the
+  ;;guardian for removal.
   ;;
   ;;3. CIAO is created again before the guardian uninterns it.
   ;;
-  ;;If  the symbol  SYM is  interned in  TABLE but  already  queried for
-  ;;removal in the guardian: do not unintern it and register it again in
-  ;;the guardian.
+  ;;If the  symbol SYM is interned  in TABLE but  already queried for removal  in the
+  ;;guardian: do not unintern it and register it again in the guardian.
   ;;
-  ;;If  a symbol queried  in the  guardian for  removal is  not unbound:
-  ;;unintern it.
+  ;;If a symbol queried in the guardian for removal is not unbound: unintern it.
   ;;
   (let ((g (symbol-table-guardian table)))
     (cond ((g) => (lambda (a)
@@ -290,26 +284,25 @@
 
 
 (define (extend-table table)
-  ;;Double the size of the vector in TABLE, which must be an instance of
-  ;;SYMBOL-TABLE structure.
+  ;;Double the size of the vector in TABLE, which must be an instance of SYMBOL-TABLE
+  ;;structure.
   ;;
   (let* ((vec1	(symbol-table-buckets table))
 	 (len1	($vector-length vec1)))
     ;;Do not allow the vector length to exceed the maximum fixnum.
     (when ($fx< len1 MAX-NUMBER-OF-BUCKETS)
-      ;;If  we start  with an  even and  power of  2 vector  length, the
-      ;;length is always even and power of 2...
+      ;;If we start with  an even and power of 2 vector length,  the length is always
+      ;;even and power of 2...
       (let* ((len2	($fx+ len1 len1))
-	     ;;... and the mask is always composed by all the significant
-	     ;;bits set to 1.
+	     ;;... and the mask is always composed by all the significant bits set to
+	     ;;1.
 	     (mask	($fxsub1 len2))
 	     (vec2	(make-vector len2 '())))
 	(define (insert p)
 	  (unless (null? p)
 	    (let ((a    ($car p))
 		  (rest ($cdr p)))
-	      ;;Recycle this pair by setting its cdr to the value in the
-	      ;;vector.
+	      ;;Recycle this pair by setting its cdr to the value in the vector.
 	      (let ((idx ($fxlogand (%compute-symbol-hash a) mask)))
 		($set-cdr! p ($vector-ref vec2 idx))
 		($vector-set! vec2 idx p))
@@ -323,7 +316,6 @@
 
 ;;;; done
 
-;; #!vicare
 ;; (define dummy-end-of-file
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbol-table end")))
 

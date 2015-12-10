@@ -94,9 +94,14 @@
 	  $bytevector-s64n-ref			$bytevector-s64n-set!
 	  $bytevector-u64-ref			$bytevector-u64-set!
 	  $bytevector-s64-ref			$bytevector-s64-set!)
+    (only (vicare system $structs)
+	  $set-std-printer!)
     (prefix (vicare platform words) words.)
     (only (vicare language-extensions posix)
 	  file-string-pathname?))
+
+;; (define enter-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader begin")))
 
 
 ;;;; arguments validation helpers
@@ -3423,9 +3428,14 @@
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor annotation) %annotation-printer)
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader almost end")))
 
-)
+($set-std-printer! (type-descriptor annotation) %annotation-printer)
+
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader end"))
+
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:

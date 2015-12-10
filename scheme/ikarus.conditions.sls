@@ -96,6 +96,10 @@
     &h_errno-rtd &h_errno-rcd
     make-h_errno-condition h_errno-condition? condition-h_errno
 
+    ;;&out-of-memory-error
+    &out-of-memory-error-rtd &out-of-memory-error-rcd
+    make-out-of-memory-error out-of-memory-error?
+
     ;;&failed-expression-condition
     &failed-expression-condition-rtd
     &failed-expression-condition-rcd
@@ -343,7 +347,8 @@
     preconditions
 
     ;; for internal use only
-    initialise-condition-objects-late-binding)
+    initialise-condition-objects-late-binding
+    %raise-out-of-memory)
   (import (except (vicare)
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
@@ -415,6 +420,9 @@
 		  &h_errno &h_errno-rtd &h_errno-rcd
 		  make-h_errno-condition h_errno-condition?
 		  condition-h_errno
+
+		  &out-of-memory-error-rtd &out-of-memory-error-rcd
+		  make-out-of-memory-error out-of-memory-error?
 
 		  &interrupted &interrupted-rtd &interrupted-rcd
 		  interrupted-condition? make-interrupted-condition
@@ -1080,6 +1088,19 @@
     &condition
   make-h_errno-condition h_errno-condition?
   (code		condition-h_errno))
+
+(define-condition-type &out-of-memory-error
+    &error
+  make-out-of-memory-error
+  out-of-memory-error?)
+
+(define (%raise-out-of-memory who)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition "failed raw memory allocation")
+	      (make-out-of-memory-error))))
+
+;;; --------------------------------------------------------------------
 
 (define-condition-type &failed-expression-condition
     &condition

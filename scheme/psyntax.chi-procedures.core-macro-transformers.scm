@@ -2608,15 +2608,20 @@
   (syntax-match input-form.stx (<>)
     ((_ ?tag <>)
      (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(lambda (obj)
-		   (procedure-argument-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj)))
-	       lexenv.run lexenv.expand))
+     (let* ((obj.sym		(gensym))
+	    (output-form.sexp	`(lambda (,obj.sym)
+				   (if ((tag-predicate ,?tag) ,obj.sym)
+				       ,obj.sym
+				     (procedure-argument-violation (quote ,?tag) "invalid object type" ,obj.sym)))))
+       (chi-expr (bless output-form.sexp) lexenv.run lexenv.expand)))
     ((_ ?tag ?expr)
      (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(procedure-argument-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr))
-	       lexenv.run lexenv.expand))
+     (let* ((obj.sym		(gensym))
+	    (output-form.sexp	`(let ((,obj.sym ,?expr))
+				   (if ((tag-predicate ,?tag) ,obj.sym)
+				       ,obj.sym
+				     (procedure-argument-violation (quote ,?tag) "invalid object type" ,obj.sym)))))
+       (chi-expr (bless output-form.sexp) lexenv.run lexenv.expand)))
     ))
 
 (define-core-transformer (tag-return-value-validator input-form.stx lexenv.run lexenv.expand)
@@ -2627,15 +2632,20 @@
   (syntax-match input-form.stx (<>)
     ((_ ?tag <>)
      (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(lambda (obj)
-		   (return-value-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj)))
-	       lexenv.run lexenv.expand))
+     (let* ((obj.sym		(gensym))
+	    (output-form.sexp	`(lambda (,obj.sym)
+				   (if ((tag-predicate ,?tag) ,obj.sym)
+				       ,obj.sym
+				     (expression-return-value-violation (quote ,?tag) "invalid object type" ,obj.sym)))))
+       (chi-expr (bless output-form.sexp) lexenv.run lexenv.expand)))
     ((_ ?tag ?expr)
      (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(return-value-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr))
-	       lexenv.run lexenv.expand))
+     (let* ((obj.sym		(gensym))
+	    (output-form.sexp	`(let ((,obj.sym ,?expr))
+				   (if ((tag-predicate ,?tag) ,obj.sym)
+				       ,obj.sym
+				     (expression-return-value-violation (quote ,?tag) "invalid object type" ,obj.sym)))))
+       (chi-expr (bless output-form.sexp) lexenv.run lexenv.expand)))
     ))
 
 
@@ -3126,12 +3136,21 @@
 			      (syntax->datum target-tag)))
   	   (predicate.psi   (chi-expr (tag-identifier-predicate target-tag input-form.stx)
 				      lexenv.run lexenv.expand))
-  	   (predicate.core  (psi-core-expr predicate.psi)))
+  	   (predicate.core  (psi-core-expr predicate.psi))
+	   (validator.sexp  (let ((obj.sym		(gensym))
+				  (type-name.sym	(gensym))
+				  (pred.sym		(gensym)))
+			      `(lambda (,type-name.sym ,pred.sym ,obj.sym)
+				 (if (,pred.sym ,obj.sym)
+				     ,obj.sym
+				   (expression-return-value-violation ,type-name.sym "invalid object type" ,obj.sym)))))
+	   (validator.psi   (chi-expr (bless validator.sexp) lexenv.run lexenv.expand))
+	   (validator.core  (psi-core-expr validator.psi)))
       ;;This form will either  succeed or raise an exception, so we  can tag this PSI
       ;;with the target tag.
       (make-psi (psi-stx expr.psi)
 		(build-application no-source
-		  (build-primref no-source 'return-value-validation-with-predicate)
+		  validator.core
   		  (list type-name.core predicate.core expr.core))
   		(make-retvals-signature (list target-tag)))))
 

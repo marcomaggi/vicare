@@ -933,7 +933,7 @@
   ;;is implementation dependent.
   ;;
   (make-parameter
-      (transcoded-port (standard-input-port) (native-transcoder))
+      #f
     (lambda (obj)
       (if (textual-input-port? obj)
 	  obj
@@ -950,7 +950,7 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (transcoded-port (standard-output-port) (native-transcoder))
+      #f
     (lambda (obj)
       (if (textual-output-port? obj)
 	  obj
@@ -967,9 +967,7 @@
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (receive-and-return (port)
-	  (transcoded-port (standard-error-port) (native-transcoder))
-	(set-port-buffer-mode! port (buffer-mode line)))
+      #f
     (lambda (obj)
       (if (textual-output-port? obj)
 	  obj
@@ -978,43 +976,55 @@
 
 ;;; --------------------------------------------------------------------
 
-(define console-output-port
-  ;;Defined by Ikarus.  Return the default  textual output port: the default value of
-  ;;the parameter CURRENT-OUTPUT-PORT; each call returns the same port.  When applied
-  ;;to an argument:  the argument must be  a textual output port and  it replaces the
-  ;;old value; the old port is left untouched (it is not closed).
-  ;;
-  (let ((port (current-output-port)))
-    (case-lambda*
-      (() port)
-      (({P textual-output-port?})
-       (set! port P)))))
+(define %console-input-port	#f)
+(define %console-output-port	#f)
+(define %console-error-port	#f)
 
-(define console-error-port
-  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
-  ;;the parameter CURRENT-ERROR-PORT; each call  returns the same port.  When applied
-  ;;to an argument:  the argument must be  a textual output port and  it replaces the
-  ;;old value; the old port is left untouched (it is not closed).
-  ;;
-  (let ((port (current-error-port)))
-    (case-lambda*
-      (() port)
-      (({P textual-output-port?})
-       (set! port P)))))
-
-(define console-input-port
+(case-define* console-input-port
   ;;Defined by Ikarus.   Return the default textual error port:  the default value of
   ;;the parameter CURRENT-INPUT-PORT; each call  returns the same port.  When applied
   ;;to an argument:  the argument must be  a textual output port and  it replaces the
   ;;old value; the old port is left untouched (it is not closed).
   ;;
-  (let ((port (current-input-port)))
-    (case-lambda*
-      (() port)
-      (({P textual-input-port?})
-       (set! port P)))))
+  (()
+   %console-input-port)
+  (({P textual-input-port?})
+   (set! %console-input-port P)))
 
+(case-define* console-output-port
+  ;;Defined by Ikarus.  Return the default  textual output port: the default value of
+  ;;the parameter CURRENT-OUTPUT-PORT; each call returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
+  ;;
+  (()
+   %console-output-port)
+  (({P textual-output-port?})
+   (set! %console-output-port P)))
 
+(case-define* console-error-port
+  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
+  ;;the parameter CURRENT-ERROR-PORT; each call  returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
+  ;;
+  (()
+   %console-error-port)
+  (({P textual-output-port?})
+   (set! %console-error-port P)))
+
+;;; --------------------------------------------------------------------
+
+(define (initialise-io-ports)
+  ;;This function is needed to allow easy rotation of boot images.
+  ;;
+  (current-input-port	(transcoded-port (standard-input-port)  (native-transcoder)))
+  (current-output-port	(transcoded-port (standard-output-port) (native-transcoder)))
+  (current-error-port	(transcoded-port (standard-error-port)  (native-transcoder)))
+  (set-port-buffer-mode! (current-error-port) (buffer-mode line))
+  (set! %console-input-port	(current-input-port))
+  (set! %console-output-port	(current-output-port))
+  (set! %console-error-port	(current-error-port)))
 
 
 ;;;; done
