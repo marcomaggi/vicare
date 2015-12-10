@@ -191,7 +191,8 @@
 	  module
 	  pretty-print
 	  define-auxiliary-syntaxes
-	  receive-and-return)
+	  receive-and-return
+	  fxadd1 fxsub1)
     (srfi :14 char-sets)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
@@ -1558,6 +1559,8 @@
   ($string-reverse!))
 
 (define ($string-reverse! str start past)
+  ;;FIXME We use the safe fx functions  because using the unsafe ones crashes vicare.
+  ;;This is, most likely, a genuine compiler error.  (Marco Maggi; Sun Dec 6, 2015)
   (do ((i (fxsub1 past) (fxsub1 i))
        (j start         (fxadd1 j)))
       ((fx<=? i j)

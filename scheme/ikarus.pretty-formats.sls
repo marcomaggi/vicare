@@ -14,80 +14,88 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#!r6rs
+#!vicare
 (library (ikarus.pretty-formats)
-  (export get-fmt pretty-format)
-  (import (except (vicare) pretty-format))
+  (export
+    get-fmt pretty-format
+    ;; for internal use only
+    initialise-pretty-formats)
+  (import (except (vicare)
+		  pretty-format))
 
-  (define h (make-eq-hashtable))
+  (define PRETTY-FORMAT-TABLE #f)
 
   (define (get-fmt name)
-    (hashtable-ref h name #f))
+    (hashtable-ref PRETTY-FORMAT-TABLE name #f))
 
   (define (set-fmt! name fmt)
-    (hashtable-set! h name fmt))
+    (hashtable-set! PRETTY-FORMAT-TABLE name fmt))
 
-  (define pretty-format
-    (lambda (x)
-      (unless (symbol? x)
-        (die 'pretty-format "not a symbol" x))
-      (case-lambda
-       [() (hashtable-ref h x #f)]
-       [(v) (hashtable-set! h x v)])))
+  (define* (pretty-format {x symbol?})
+    (case-lambda
+     (()
+      (hashtable-ref PRETTY-FORMAT-TABLE x #f))
+     ((v)
+      (hashtable-set! PRETTY-FORMAT-TABLE x v))))
 
 
 ;;;; standard formats
 
-(set-fmt! 'quote '(pretty-format-reader-macro . "'"))
-(set-fmt! 'unquote '(pretty-format-reader-macro . ","))
-(set-fmt! 'unquote-splicing '(pretty-format-reader-macro . ",@"))
-(set-fmt! 'quasiquote '(pretty-format-reader-macro . "`"))
-(set-fmt! 'syntax '(pretty-format-reader-macro . "#'"))
-(set-fmt! 'quasisyntax '(pretty-format-reader-macro . "#`"))
-(set-fmt! 'unsyntax '(pretty-format-reader-macro . "#,"))
-(set-fmt! 'unsyntax-splicing '(pretty-format-reader-macro . "#,@"))
-;;(set-fmt! '|#primitive| '(pretty-format-reader-macro . "#%"))
-(set-fmt! 'let '(alt
-		 (_ (0 [e 0 e] ...) tab e ...)
-		 (_ x (0 [e 0 e] ...) tab e ...)))
-(set-fmt! 'letrec '(_ (0 [e 0 e] ...) tab e ...))
-(set-fmt! 'letrec* '(_ (0 [e 0 e] ...) tab e ...))
-(set-fmt! 'let-syntax '(_ (0 [e 0 e] ...) tab e ...))
-(set-fmt! 'letrec-syntax '(_ (0 [e 0 e] ...) tab e ...))
-(set-fmt! 'let* '(_ (0 [e 0 e] ...) tab e ...))
-(set-fmt! 'let-values '(_ (0 [e 0 e] ...) tab e tab e* ...))
-(set-fmt! 'cond '(_ tab [0 e ...] ...))
-(set-fmt! 'define '(_ name tab e ...))
-(set-fmt! 'set! '(_ name tab e))
-(set-fmt! 'case-lambda
-	  '(_ tab [0 e ...] ...))
-(set-fmt! 'struct-case
-	  '(_ e tab [e 0 e ...] ...))
-(set-fmt! 'if '(_ test 3 e ...))
-(set-fmt! 'and '(and test 4 e ...))
-(set-fmt! 'or '(or test 3 e ...))
-(set-fmt! 'begin '(_ tab e ...))
-(set-fmt! 'lambda '(_ fmls tab e tab e* ...))
-(set-fmt! 'case '(_ e tab [e 0 e] ...))
-(set-fmt! 'syntax-rules '(_ kwd* tab [e 0 e] ...))
-(set-fmt! 'syntax-case '(_ expr kwd*
-			   tab (e 0 e 0 e ...) ...))
-(set-fmt! 'module '(alt (_ (fill ...) tab e ...)
-			(_ name (fill ...) tab e ...)))
-(set-fmt! 'library '(_ name tab e ...))
-(set-fmt! 'import '(_ tab e ...))
+(define (initialise-pretty-formats)
+  (set! PRETTY-FORMAT-TABLE (make-eq-hashtable))
 
-(set-fmt! 'receive
-	  '(_ (var ...)
-	      tab expr
-	      tab body0 body ...))
-(set-fmt! 'receive-and-return
-	  '(_ (var ...)
-	      tab expr
-	      tab body0 body ...))
+  (set-fmt! 'quote '(pretty-format-reader-macro . "'"))
+  (set-fmt! 'unquote '(pretty-format-reader-macro . ","))
+  (set-fmt! 'unquote-splicing '(pretty-format-reader-macro . ",@"))
+  (set-fmt! 'quasiquote '(pretty-format-reader-macro . "`"))
+  (set-fmt! 'syntax '(pretty-format-reader-macro . "#'"))
+  (set-fmt! 'quasisyntax '(pretty-format-reader-macro . "#`"))
+  (set-fmt! 'unsyntax '(pretty-format-reader-macro . "#,"))
+  (set-fmt! 'unsyntax-splicing '(pretty-format-reader-macro . "#,@"))
+  ;;(set-fmt! '|#primitive| '(pretty-format-reader-macro . "#%"))
+  (set-fmt! 'let '(alt
+		   (_ (0 [e 0 e] ...) tab e ...)
+		   (_ x (0 [e 0 e] ...) tab e ...)))
+  (set-fmt! 'letrec '(_ (0 [e 0 e] ...) tab e ...))
+  (set-fmt! 'letrec* '(_ (0 [e 0 e] ...) tab e ...))
+  (set-fmt! 'let-syntax '(_ (0 [e 0 e] ...) tab e ...))
+  (set-fmt! 'letrec-syntax '(_ (0 [e 0 e] ...) tab e ...))
+  (set-fmt! 'let* '(_ (0 [e 0 e] ...) tab e ...))
+  (set-fmt! 'let-values '(_ (0 [e 0 e] ...) tab e tab e* ...))
+  (set-fmt! 'cond '(_ tab [0 e ...] ...))
+  (set-fmt! 'define '(_ name tab e ...))
+  (set-fmt! 'set! '(_ name tab e))
+  (set-fmt! 'case-lambda
+	    '(_ tab [0 e ...] ...))
+  (set-fmt! 'struct-case
+	    '(_ e tab [e 0 e ...] ...))
+  (set-fmt! 'if '(_ test 3 e ...))
+  (set-fmt! 'and '(and test 4 e ...))
+  (set-fmt! 'or '(or test 3 e ...))
+  (set-fmt! 'begin '(_ tab e ...))
+  (set-fmt! 'lambda '(_ fmls tab e tab e* ...))
+  (set-fmt! 'case '(_ e tab [e 0 e] ...))
+  (set-fmt! 'syntax-rules '(_ kwd* tab [e 0 e] ...))
+  (set-fmt! 'syntax-case '(_ expr kwd*
+			     tab (e 0 e 0 e ...) ...))
+  (set-fmt! 'module '(alt (_ (fill ...) tab e ...)
+			  (_ name (fill ...) tab e ...)))
+  (set-fmt! 'library '(_ name tab e ...))
+  (set-fmt! 'import '(_ tab e ...))
+
+  (set-fmt! 'receive
+	    '(_ (var ...)
+		tab expr
+		tab body0 body ...))
+  (set-fmt! 'receive-and-return
+	    '(_ (var ...)
+		tab expr
+		tab body0 body ...)))
 
 
 ;;;; done
+
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.pretty-formats end"))
 
 #| end of library |# )
 

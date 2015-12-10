@@ -454,6 +454,10 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("read %d: null object", object_count);
     return IK_NULL_OBJECT;
   }
+  else if (c == 'U') {
+    if (DEBUG_FASL) ik_debug_message("read %d: void object", object_count);
+    return IK_VOID_OBJECT;
+  }
   else if (c == 'c') {	/* ASCII char object */
     if (DEBUG_FASL) ik_debug_message("open %d: char object in ASCII encoding", object_count++);
     unsigned char x = (unsigned char) fasl_read_byte(p);

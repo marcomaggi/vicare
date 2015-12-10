@@ -102,6 +102,10 @@
 
 ;;;; done
 
+;; #!vicare
+;; (define end-of-file-dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.unwind-protection end")))
+
 #| end of library |#)
 
 ;;; end of file

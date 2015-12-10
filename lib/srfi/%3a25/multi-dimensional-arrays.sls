@@ -191,7 +191,12 @@
       ((array	a))
     (let ((shape ($array-type-shape a)))
       (if (null? xs)
-	  (array:check-indices "array-set!" '() shape)
+	  ;;FIXME I  have commented out this  check call because it  causes a compile
+	  ;;error    when   the    procedure   is    integrated   and    applied   to
+	  ;;null. ARRAY:CHECK-INDICES expects a non-empty list as argument.  It is no
+	  ;;clear to me  what this check should  do when XS is  empty.  (Marco Maggi;
+	  ;;Sat Dec 5, 2015)
+	  (void) #;(array:check-indices "array-set!" '() shape)
         (if (vector? x)
             (array:check-index-vector "array-set!" x shape)
 	  (if (integer? x)
@@ -1320,9 +1325,11 @@
                           " not in bounds " bounds))))
 
 (define (array:list->string ks)
+  ;;KS must be a non-empty list.
+  ;;
   (do ((index "" (string-append index (array:thing->string (car ks)) " "))
        (ks ks (cdr ks)))
-    ((null? ks) index)))
+      ((null? ks) index)))
 
 (define (array:shape-vector->string shv)
   (do ((bounds "" (string-append bounds

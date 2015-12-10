@@ -1467,6 +1467,8 @@
 
 ;;;; done
 
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.writer end"))
+
 #| end of library |# )
 
 ;;; end of file

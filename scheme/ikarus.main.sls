@@ -96,6 +96,15 @@
 	  $initialize-interned-strings-table!)
     (only (ikarus records procedural)
 	  $record-type-destructor)
+    (prefix (only (ikarus.pointers)
+		  initialise-pointers-stuff)
+	    pointers::)
+    (prefix (only (ikarus.io)
+		  initialise-io-ports)
+	    io::)
+    (prefix (only (ikarus.pretty-formats)
+		  initialise-pretty-formats)
+	    pretty-formats::)
     (prefix (ikarus load) load.)
     (prefix (only (psyntax.library-utils)
 		  init-search-paths-and-directories)
@@ -105,6 +114,9 @@
 		  real-pathname
 		  split-search-path-string)
 	    posix.)
+    (prefix (only (ikarus conditions)
+		  initialise-condition-objects-late-binding)
+	    conditions::)
     (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
@@ -1114,12 +1126,21 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 ;;;; some basic initialisation
 
 (module ()
+  ;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main begin initialisation"))
+
   ;;See "ikarus.symbol-table.sls"  for an explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
   ($initialize-symbol-table!)
   ;;See "ikarus.strings.table.sls".
   ($initialize-interned-strings-table!)
 
+  (conditions::initialise-condition-objects-late-binding)
+  (pointers::initialise-pointers-stuff)
+  (io::initialise-io-ports)
+  (cafe-input-port (console-input-port))
+  (pretty-formats::initialise-pretty-formats)
+
+  ;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main finished initialisation"))
   #| end of module |# )
 
 

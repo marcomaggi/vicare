@@ -48,12 +48,11 @@
 	    (<rtd>-method-retriever		record-type-method-retriever)
 	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
 
-    ;; unsafe operations
-    $record-constructor
-    $record-ref				$record-and-rtd?
-
     ;; syntactic bindings for internal use only
-    (rename ($<rtd>-destructor		$record-type-destructor))
+    $make-record-type-descriptor	$make-record-constructor-descriptor
+    $record-constructor			$record-type-destructor
+    $rtd-subtype?			$record-and-rtd?
+    $record-ref
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
@@ -685,6 +684,10 @@
 
 (module RECORD-BUILDER
   (%the-builder record-being-built)
+  ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
+  ;;image  to  be initialised  correctly.   These  accessors have  no  infrastructure
+  ;;checking  the  type of  values,  so  they can  be  used  when the  infrastructure
+  ;;functions are not yet initialised.  (Marco Maggi; Fri Dec 4, 2015)
 
   (define record-being-built
     ;;Hold the record structure while it is built.
@@ -715,10 +718,10 @@
     ;;an instance of <RTD>.
     ;;
     (let loop ((S ($make-clean-struct rtd))
-	       (N (<rtd>-total-fields-number rtd))
+	       (N ($<rtd>-total-fields-number rtd))
 	       (i 0))
       (if ($fx= i N)
-	  (cond ((<rtd>-destructor rtd)
+	  (cond (($<rtd>-destructor rtd)
 		 => (lambda (destructor)
 		      ($record-guardian S)))
 		(else S))
@@ -731,10 +734,40 @@
 
 (module RECORD-INITIALISERS
   (%make-record-initialiser)
-  (module (record-being-built)
-    (import RECORD-BUILDER))
+  ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
+  ;;image  to  be initialised  correctly.   These  accessors have  no  infrastructure
+  ;;checking  the  type of  values,  so  they can  be  used  when the  infrastructure
+  ;;functions are not yet initialised.  (Marco Maggi; Fri Dec 4, 2015)
 
-  (define-syntax-rule (%record-being-built ?who)
+  (define (%make-record-initialiser rtd)
+    ;;Return  the initialiser  function for  an R6RS  record.  The  initialiser is  a
+    ;;function that stores field values in a newly allocated record object.
+    ;;
+    (let ((fields-number  ($<rtd>-fields-number rtd))
+	  (prnt-rtd       ($<rtd>-parent rtd)))
+      (if prnt-rtd
+	  (let ((start-index ($<rtd>-total-fields-number prnt-rtd)))
+	    (lambda field-values
+	      (%fill-record-fields (%record-being-built 'initialiser-with-parent)
+				   rtd start-index fields-number
+				   field-values field-values)))
+	(case ($<rtd>-fields-number rtd)
+	  ((0)  %initialiser-without-parent-0)
+	  ((1)  %initialiser-without-parent-1)
+	  ((2)  %initialiser-without-parent-2)
+	  ((3)  %initialiser-without-parent-3)
+	  ((4)  %initialiser-without-parent-4)
+	  ((5)  %initialiser-without-parent-5)
+	  ((6)  %initialiser-without-parent-6)
+	  ((7)  %initialiser-without-parent-7)
+	  ((8)  %initialiser-without-parent-8)
+	  ((9)  %initialiser-without-parent-9)
+	  (else (lambda field-values
+		  (%initialiser-without-parent+ rtd field-values)))))))
+
+  (define (%record-being-built who)
+    (module (record-being-built)
+      (import RECORD-BUILDER))
     (or (record-being-built)
 	;;This assertion may  happen if a protocol function calls  its maker argument
 	;;directly, rather  than returning  a function  which in  turn will  call the
@@ -758,33 +791,8 @@
 	;;         (make-record 1 2 3))))
 	;;
 	;;this assertion happens.
-	(assertion-violation ?who
+	(assertion-violation who
 	  "called record initialiser or maker without going through a proper constructor")))
-
-  (define (%make-record-initialiser rtd)
-    ;;Return the initialiser function for an R6RS record.
-    ;;
-    (let ((fields-number  (<rtd>-fields-number rtd))
-	  (prnt-rtd       (<rtd>-parent rtd)))
-      (if prnt-rtd
-	  (let ((start-index (<rtd>-total-fields-number prnt-rtd)))
-	    (lambda field-values
-	      (%fill-record-fields (%record-being-built 'initialiser-with-parent)
-				   rtd start-index fields-number
-				   field-values field-values)))
-	(case (<rtd>-fields-number rtd)
-	  ((0)  %initialiser-without-parent-0)
-	  ((1)  %initialiser-without-parent-1)
-	  ((2)  %initialiser-without-parent-2)
-	  ((3)  %initialiser-without-parent-3)
-	  ((4)  %initialiser-without-parent-4)
-	  ((5)  %initialiser-without-parent-5)
-	  ((6)  %initialiser-without-parent-6)
-	  ((7)  %initialiser-without-parent-7)
-	  ((8)  %initialiser-without-parent-8)
-	  ((9)  %initialiser-without-parent-9)
-	  (else (lambda field-values
-		  (%initialiser-without-parent+ rtd field-values)))))))
 
   (define (%initialiser-without-parent-0)
     ;;Just return the record itself.
@@ -825,15 +833,15 @@
   (define (%initialiser-without-parent+ rtd field-values)
     (let ((the-record (%record-being-built '%initialiser-without-parent+)))
       (assert the-record)
-      (%fill-record-fields the-record rtd 0 (<rtd>-fields-number rtd)
+      (%fill-record-fields the-record rtd 0 ($<rtd>-fields-number rtd)
 			   field-values field-values)))
 
   (define (%fill-record-fields the-record rtd field-index fields-number
 			       all-field-values field-values)
     (define (%wrong-num-args)
-      (assertion-violation (<rtd>-name rtd)
+      (assertion-violation ($<rtd>-name rtd)
 	(string-append "wrong number of arguments to record initialiser, expected "
-		       (number->string (<rtd>-fields-number rtd))
+		       (number->string ($<rtd>-fields-number rtd))
 		       " given " (number->string (length all-field-values)))
 	rtd all-field-values))
     (if (null? field-values)
@@ -852,6 +860,10 @@
 
 (module RECORD-DEFAULT-PROTOCOL
   (%make-default-protocol)
+  ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
+  ;;image  to  be initialised  correctly.   These  accessors have  no  infrastructure
+  ;;checking  the  type of  values,  so  they can  be  used  when the  infrastructure
+  ;;functions are not yet initialised.  (Marco Maggi; Fri Dec 4, 2015)
 
   (define (%make-default-protocol rtd)
     ;;Build and return a default protocol function to be used whenever a a request to
@@ -859,17 +871,17 @@
     ;;function  returns the  default  protocol stored  in RTD,  else  a new  protocol
     ;;function is built and cached in RTD.
     ;;
-    (or (<rtd>-default-protocol rtd)
+    (or ($<rtd>-default-protocol rtd)
 	(receive-and-return (proto)
-	    (if (<rtd>-parent rtd)
+	    (if ($<rtd>-parent rtd)
 		(%make-protocol/with-parent rtd)
 	      (lambda (make-this-record)
 		make-this-record))
-	  (set-<rtd>-default-protocol! rtd proto))))
+	  ($set-<rtd>-default-protocol! rtd proto))))
 
   (define (%make-protocol/with-parent rtd)
     (define record-fields-number
-      (<rtd>-fields-number rtd))
+      ($<rtd>-fields-number rtd))
     (lambda (make-parent-record) ;default protocol function
       (lambda given-field-values
 	(define given-args-number
@@ -903,20 +915,33 @@
   #| end of module |# )
 
 
-(module (make-record-type-descriptor)
+(module (make-record-type-descriptor $make-record-type-descriptor)
+  ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
+  ;;image  to  be initialised  correctly.   These  accessors have  no  infrastructure
+  ;;checking  the  type of  values,  so  they can  be  used  when the  infrastructure
+  ;;functions are not yet initialised.  (Marco Maggi; Fri Dec 4, 2015)
   (module (%make-record-initialiser)
     (import RECORD-INITIALISERS))
 
   (define* (make-record-type-descriptor {name    record-type-name?}
-					{parent  false/non-sealed-record-type-descriptor?}
-					{uid     uid-specification?}
-					{sealed? sealed-specification?}
-					{opaque? opaque-specification?}
-					{fields  record-fields-specification-vector?})
+  					{parent  false/non-sealed-record-type-descriptor?}
+  					{uid     uid-specification?}
+  					{sealed? sealed-specification?}
+  					{opaque? opaque-specification?}
+  					{fields  record-fields-specification-vector?})
+    ($make-record-type-descriptor name parent uid sealed? opaque? fields))
+
+  (define ($make-record-type-descriptor name parent uid sealed? opaque? fields)
     ;;Return a  record-type descriptor representing  a record type distinct  from all
     ;;the built-in types and other record types.
     ;;
     ;;See the R6RS document for details on the arguments.
+    ;;
+    ;;NOTE  This function  is called  while initialising  the boot  image.  For  this
+    ;;reason it may be  necessary to use peculiar function calls  rather than what is
+    ;;normally used when dealing  with record types; this is to  avoid crashes due to
+    ;;some core primitive's loc gensyms not being initialised.  (Marco Maggi; Fri Dec
+    ;;4, 2015)
     ;;
     (let ((normalised-fields-description (%normalise-fields-vector fields)))
       (receive-and-return (rtd)
@@ -925,28 +950,32 @@
 	    (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields-description))
 	($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd)))))
 
-  (define* (%generate-rtd name parent-rtd {uid symbol?} generative? sealed? opaque? normalised-fields)
+  (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
     ;;
-    (%intern-nongenerative-rtd! uid (let ((fields-number ($vector-length normalised-fields)))
-				      (make-<rtd> name
-						  (if parent-rtd
-						      (fx+ fields-number (<rtd>-total-fields-number parent-rtd))
-						    fields-number) ;total-fields-number
-						  fields-number    ;fields-number
-						  (if parent-rtd
-						      (<rtd>-total-fields-number parent-rtd)
-						    0) ;first-field-index
-						  parent-rtd sealed?
-						  (or opaque? (and parent-rtd (<rtd>-opaque? parent-rtd)))
-						  uid generative? normalised-fields
-						  (void) ;initialiser
-						  #f     ;default-protocol
-						  #f     ;default-rcd
-						  #f     ;destructor
-						  #f     ;printer
-						  #f     ;method-retriever
-						  ))))
+    (let* ((fields-number	($vector-length normalised-fields))
+	   (total-fields-number	(if parent-rtd
+				    (fx+ fields-number ($<rtd>-total-fields-number parent-rtd))
+				  fields-number))
+	   (first-field-index	(if parent-rtd
+				    ($<rtd>-total-fields-number parent-rtd)
+				  0))
+	   (opaque?		(or opaque? (and parent-rtd ($<rtd>-opaque? parent-rtd)))))
+      (receive-and-return (rtd)
+	  ;;We  use  "$struct"  rather  than  "make-<rtd>"  to  avoid  crashes  while
+	  ;;initialising the boot  image!!!  This way we separate  this function from
+	  ;;whatever is the expansion of DEFINE-STRUCT.
+	  ($struct (type-descriptor <rtd>) name
+		   total-fields-number fields-number first-field-index
+		   parent-rtd sealed? opaque? uid generative? normalised-fields
+		   (void) ;initialiser
+		   #f     ;default-protocol
+		   #f     ;default-rcd
+		   #f     ;destructor
+		   #f     ;printer
+		   #f     ;method-retriever
+		   )
+	(%intern-nongenerative-rtd! uid rtd))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and
@@ -981,9 +1010,7 @@
 	   (%generate-rtd name parent-rtd uid #f sealed? opaque? normalised-fields))))
 
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
-    (receive-and-return (rtd)
-	?rtd
-      ($set-symbol-value! ?uid rtd)))
+    ($set-symbol-value! ?uid ?rtd))
 
   (define-syntax-rule (%lookup-nongenerative-rtd ?uid)
     (let ((rtd ($symbol-value ?uid)))
@@ -994,15 +1021,17 @@
   #| end of module: MAKE-RECORD-TYPE-DESCRIPTOR |# )
 
 
-(define* (record-constructor {rcd record-constructor-descriptor?})
-  ($<rcd>-builder rcd))
-
-(define ($record-constructor rcd)
-  ($<rcd>-builder rcd))
-
-(module (make-record-constructor-descriptor)
+(module (make-record-constructor-descriptor
+	 $make-record-constructor-descriptor)
+  ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
+  ;;image  to  be initialised  correctly.   These  accessors have  no  infrastructure
+  ;;checking  the  type of  values,  so  they can  be  used  when the  infrastructure
+  ;;functions are not yet initialised.  (Marco Maggi; Fri Dec 4, 2015)
   (module (record-being-built %the-builder %make-default-protocol)
     (import RECORD-INITIALISERS RECORD-BUILDER RECORD-DEFAULT-PROTOCOL))
+
+  (define-syntax __module_who__
+    (identifier-syntax 'make-record-constructor-descriptor))
 
   (define* (make-record-constructor-descriptor {rtd record-type-descriptor?}
 					       {parent-rcd false/record-constructor-descriptor?}
@@ -1019,51 +1048,54 @@
     ;;used and cached in the RTD struct.
     ;;
     (assert-rtd-and-parent-rcd rtd parent-rcd)
-    (let* ((parent-rtd     (<rtd>-parent rtd))
+    ($make-record-constructor-descriptor rtd parent-rcd protocol))
+
+  (define ($make-record-constructor-descriptor rtd parent-rcd protocol)
+    (let* ((parent-rtd     ($<rtd>-parent rtd))
 	   ;;If there is a parent RTD, but not a specific parent RCD: make use of the
 	   ;;default RCD for the parent RTD.
 	   (parent-rcd     (and parent-rtd
 				(or parent-rcd
 				    (%make-default-constructor-descriptor parent-rtd))))
 	   (protocol-func  (or protocol (%make-default-protocol rtd)))
-	   (maker-func     (let ((initialiser (<rtd>-initialiser rtd)))
+	   (maker-func     (let ((initialiser ($<rtd>-initialiser rtd)))
 			     (if parent-rtd
-				 (let ((parent-constructor (<rcd>-constructor parent-rcd)))
+				 (let ((parent-constructor ($<rcd>-constructor parent-rcd)))
 				   (lambda parent-constructor-args
 				     (%the-maker initialiser parent-constructor parent-constructor-args)))
 			       initialiser)))
 	   (constructor    (protocol-func maker-func)))
       (unless (procedure? constructor)
-	(expression-return-value-violation __who__
+	(expression-return-value-violation __module_who__
 	  "expected procedure as return value of R6RS record protocol function"
 	  constructor))
-      (let ((builder (let ((name (record-type-name rtd)))
+      (let ((builder (let ((name ($<rtd>-name rtd)))
 		       (lambda constructor-args
 			 (%the-builder rtd name constructor constructor-args)))))
-	(make-<rcd> rtd parent-rcd maker-func constructor builder))))
+	($struct (type-descriptor <rcd>) rtd parent-rcd maker-func constructor builder))))
 
   (define (%make-default-constructor-descriptor rtd)
     ;;Similar  to  MAKE-RECORD-CONSTRUCTOR-DESCRIPTOR  but   makes  use  of  all  the
     ;;defaults.  If available:  this function returns the default RCD  stored in RTD,
     ;;else a new RCD is built and cached in RTD.
     ;;
-    (or (<rtd>-default-rcd rtd)
-	(let* ((parent-rtd	(<rtd>-parent rtd))
+    (or ($<rtd>-default-rcd rtd)
+	(let* ((parent-rtd	($<rtd>-parent rtd))
 	       (parent-rcd	(and parent-rtd
 				     (%make-default-constructor-descriptor rtd)))
 	       (protocol	(%make-default-protocol rtd))
-	       (initialiser	(<rtd>-initialiser rtd))
+	       (initialiser	($<rtd>-initialiser rtd))
 	       (maker		(if parent-rtd
-				    (let ((parent-constructor (<rcd>-constructor parent-rcd)))
+				    (let ((parent-constructor ($<rcd>-constructor parent-rcd)))
 				      (lambda parent-constructor-args
 					(%the-maker initialiser parent-constructor
 						    parent-constructor-args)))
 				  initialiser))
 	       (constructor	(protocol maker))
 	       (builder		(lambda constructor-args
-				  (%the-builder rtd (record-type-name rtd) constructor constructor-args)))
-	       (default-rcd	(make-<rcd> rtd parent-rcd maker constructor builder)))
-	  (set-<rtd>-default-rcd! rtd default-rcd)
+				  (%the-builder rtd ($<rtd>-name rtd) constructor constructor-args)))
+	       (default-rcd	($struct (type-descriptor <rcd>) rtd parent-rcd maker constructor builder)))
+	  ($set-<rtd>-default-rcd! rtd default-rcd)
 	  default-rcd)))
 
   (define (%the-maker initialiser parent-constructor parent-constructor-args)
@@ -1090,6 +1122,23 @@
       initialiser))
 
   #| end of module |# )
+
+
+(define* (record-constructor {rcd record-constructor-descriptor?})
+  ($<rcd>-builder rcd))
+
+(define ($record-constructor rtd)
+  ;;Remember that "$<rcd>-builder" is a syntax, so it cannot be exported by "(psyntax
+  ;;system $all)".  This wrapper function can be exported.
+  ;;
+  ($<rcd>-builder rtd))
+
+(define* (record-predicate {rtd record-type-descriptor?})
+  ;;Return a function being the predicate for RTD.
+  ;;
+  (lambda (record)
+    (and ($struct? record)
+	 ($record-and-rtd? record rtd))))
 
 
 ;;;; record accessors and mutators
@@ -1249,14 +1298,6 @@
   #| end of module |# )
 
 
-(define* (record-predicate {rtd record-type-descriptor?})
-  ;;Return a function being the predicate for RTD.
-  ;;
-  (lambda (record)
-    (and ($struct? record)
-	 ($record-and-rtd? record rtd))))
-
-
 ;;;; non-R6RS extensions
 
 (define (record-and-rtd? record rtd)
@@ -1283,6 +1324,9 @@
 (define* (rtd-subtype? {rtd record-type-descriptor?} {prtd record-type-descriptor?})
   ;;Return true if PRTD is a parent of RTD or they are equal.
   ;;
+  ($rtd-subtype? rtd prtd))
+
+(define ($rtd-subtype? rtd prtd)
   (or (eq? rtd prtd)
       (let upper-parent ((prtd^ ($<rtd>-parent rtd)))
 	(and prtd^
@@ -1346,6 +1390,12 @@
   ;;
   ($<rtd>-destructor rtd))
 
+(define ($record-type-destructor rtd)
+  ;;Remember  that "$<rcd>-destructor"  is  a syntax,  so it  cannot  be exported  by
+  ;;"(psyntax system $all)".  This wrapper function can be exported.
+  ;;
+  ($<rtd>-destructor rtd))
+
 (define* (record-destructor {rtd record-object?})
   ($<rtd>-destructor (record-rtd rtd)))
 
@@ -1373,6 +1423,10 @@
 
 
 ;;;; done
+
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.records.procedural")))
 
 #| end of library |# )
 

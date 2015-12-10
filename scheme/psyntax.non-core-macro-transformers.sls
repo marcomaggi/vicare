@@ -2387,25 +2387,36 @@
 
   (define (%make-arg-validation-forms arg-validation-spec* synner)
     (reverse
-     (cdr ($fold-left/stx (lambda (knil spec)
-			    (let ((arg-counter    (car knil))
-				  (rev-head-forms (cdr knil)))
-			      (if spec
-				  ;;This argument HAS a logic predicate specification.
-				  (let ((?expr   (argument-validation-spec-expr   spec))
-					(?pred   (argument-validation-spec-pred   spec))
-					(?arg-id (argument-validation-spec-arg-id spec)))
-				    (cons* (fxadd1 arg-counter)
-					   (if (argument-validation-spec-list-arg? spec)
-					       `(signature-rest-argument-validation-with-predicate
-						 __who__ ,arg-counter ,?expr (quote ,?pred) ,?arg-id)
-					     `(unless ,?expr
-						(procedure-signature-argument-violation __who__
-						  "failed argument validation"
-						  ,arg-counter (quote ,?pred) ,?arg-id)))
-					   rev-head-forms))
-				;;This argument HAS NO logic predicate specification.
-				(cons (fxadd1 arg-counter) rev-head-forms))))
+     (cdr ($fold-left/stx
+	      (lambda (knil spec)
+		(let ((arg-counter    (car knil))
+		      (rev-head-forms (cdr knil)))
+		  (if spec
+		      ;;This argument HAS a logic predicate specification.
+		      (let ((?expr   (argument-validation-spec-expr   spec))
+			    (?pred   (argument-validation-spec-pred   spec))
+			    (?arg-id (argument-validation-spec-arg-id spec)))
+			(cons* (fxadd1 arg-counter)
+			       (if (argument-validation-spec-list-arg? spec)
+				   (let ((pred.sym		(gensym))
+					 (arg-counter.sym	(gensym))
+					 (arg*.sym		(gensym)))
+				     `(let loop ((,pred.sym		,?expr)
+						 (,arg-counter.sym	,arg-counter)
+						 (,arg*.sym		,?arg-id))
+					(when (pair? ,arg*.sym)
+					  (if (,pred.sym (car ,arg*.sym))
+					      (loop ,pred.sym ($fxadd1 ,arg-counter.sym) (cdr ,arg*.sym))
+					    (procedure-signature-argument-violation __who__
+					      "failed argument validation"
+					      ,arg-counter.sym (quote ,?pred) (car ,arg*.sym))))))
+				 `(unless ,?expr
+				    (procedure-signature-argument-violation __who__
+				      "failed argument validation"
+				      ,arg-counter (quote ,?pred) ,?arg-id)))
+			       rev-head-forms))
+		    ;;This argument HAS NO logic predicate specification.
+		    (cons (fxadd1 arg-counter) rev-head-forms))))
 	    '(1 . ())
 	    arg-validation-spec*))))
 

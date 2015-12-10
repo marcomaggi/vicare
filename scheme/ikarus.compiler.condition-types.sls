@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.compiler.condition-types)
   (export
     make-library-condition library-condition? library-condition-name
@@ -112,7 +112,9 @@
 
 ;;;; done
 
-)
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.compiler.condition-types end"))
+
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

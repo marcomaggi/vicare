@@ -373,7 +373,9 @@
   (signatures
    ((T:binary-port T:transcoder)	=> (T:textual-port)))
   (attributes
-   ((_ _)			effect-free result-true)))
+   ;;NOTE This  is not  effect-free because  the source  binary port  is closed  in a
+   ;;special way.
+   ((_ _)				result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; closing

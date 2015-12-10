@@ -5372,9 +5372,6 @@
 ;;;; built-in object types utilities
 
     ;;These are exported only by "(psyntax system $all)".
-    (procedure-argument-validation-with-predicate)
-    (return-value-validation-with-predicate)
-    (signature-rest-argument-validation-with-predicate)
     (any->symbol)
     (any->string)
     (internal-delete)
@@ -5487,34 +5484,38 @@
     ;;Notice that, from  the results of library expansion, we  discard the visit code
     ;;and all the library descriptors representing the library dependencies.
     ;;
-    (define-values (srclibs.name* srclibs.invoke-code* srclibs.export-subst srclibs.global-env)
-      (make-init-code))
-    (debug-printf "\nSource libraries expansion\n")
-    (each-for files
-      (lambda (file)
-	(debug-printf "expanding: ~a\n" file)
-	(process-libraries-from-file
-	 (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
-	 (lambda (library-sexp)
-	   (receive (name invoke-code export-subst global-env)
-	       (boot-library-expand library-sexp)
-	     ;;This mutation is  ugly, I know, but  it is needed if  we read the
-	     ;;source files with LOAD.  (Marco Maggi)
-	     (set! srclibs.name*		(cons   name          srclibs.name*))
-	     (set! srclibs.invoke-code*	(cons   invoke-code   srclibs.invoke-code*))
-	     (set! srclibs.export-subst	(append export-subst  srclibs.export-subst))
-	     (set! srclibs.global-env	(append global-env    srclibs.global-env)))))))
-    (let*-values
-	(((total.export-subst total.global-env total.export-primlocs)
-	  (make-system-data (prune-subst srclibs.export-subst srclibs.global-env) srclibs.global-env))
-    	 ((global-init-lib.name global-init-lib.invoke-code)
-	  (build-global-init-library total.export-subst total.global-env total.export-primlocs))
-	 ;;Insert the global-init-lib in penultimate position.
-	 ((srclibs.name*)         (cons* (car srclibs.name*)        global-init-lib.name        (cdr srclibs.name*)))
-	 ((srclibs.invoke-code*)  (cons* (car srclibs.invoke-code*) global-init-lib.invoke-code (cdr srclibs.invoke-code*))))
-      (values (reverse srclibs.name*)
-	      (reverse srclibs.invoke-code*)
-	      total.export-primlocs)))
+    (receive (name* invoke-code* export-subst global-env)
+	(make-init-code)
+      (debug-printf "\nSource libraries expansion\n")
+      (for-each (lambda (file)
+		  (debug-printf "expanding: ~a\n" file)
+		  ;;For  each library  in the  file apply  the closure  for its  side
+		  ;;effects.
+		  (process-libraries-from-file
+		   (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
+		   (lambda (library-sexp)
+		     (receive (name code subst env)
+			 (boot-library-expand library-sexp)
+                       ;; (when (equal? name '(ikarus records procedural))
+                       ;;   (when (file-exists? "/tmp/marco/ikarus.records.procedural.invoke-code.scm")
+                       ;;     (delete-file "/tmp/marco/ikarus.records.procedural.invoke-code.scm"))
+                       ;;   (with-output-to-file "/tmp/marco/ikarus.records.procedural.invoke-code.scm"
+                       ;;     (lambda ()
+                       ;;       (parametrise ((print-gensym #f)
+                       ;;                     (print-graph #f))
+                       ;;         (pretty-print code (current-output-port))))))
+		       (set! name*        (cons name name*))
+		       (set! invoke-code* (cons code invoke-code*))
+		       (set! export-subst (append subst export-subst))
+		       (set! global-env   (append env   global-env))))))
+	files)
+      (receive (export-subst global-env export-primlocs)
+	  (make-system-data (prune-subst export-subst global-env) global-env)
+	(receive (primlocs-lib-name primlocs-lib-code)
+	    (build-global-init-library export-subst global-env export-primlocs)
+	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
+		  (reverse (cons* (car invoke-code*) primlocs-lib-code (cdr invoke-code*)))
+		  export-primlocs)))))
 
   (define (process-libraries-from-file filename processor)
     ;;Open the  file selected by  FILENAME; read annotated symbolic  expressions from

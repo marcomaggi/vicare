@@ -34,7 +34,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.foldable)
   (export
     foldable-cons
@@ -56,6 +56,7 @@
   (define foldable-string	string)
   (define foldable-list->vector	list->vector)
   (define foldable-append	append)
+  ;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.foldable end"))
   #| end of library |# )
 
 ;;; end of file
