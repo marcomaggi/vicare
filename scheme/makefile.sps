@@ -180,6 +180,8 @@
 		find-library-by-name
 		current-library-collection)
 	  bootstrap.)
+  (vicare libraries)
+
   ;;The following libraries are read, expanded and compiled from the source tree.
   (prefix (ikarus.options) option.)
   (prefix (only (ikarus.compiler)
@@ -226,11 +228,6 @@
 	 (%log (syntax->datum #'?description))
 	 (if rotating? #'?true-body #'?false-body)))
       )))
-
-;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
-(if-building-rotation-boot-image? "importing EXPAND-LIBRARY"
-    (import (vicare libraries))
-  (import (only (vicare) expand-library)))
 
 
 ;;;; configuration inspection
@@ -1339,9 +1336,7 @@
     ($fx		(vicare system $fx)			#f	#t)
     ($rat		(vicare system $ratnums)		#f	#t)
     ($comp		(vicare system $compnums)		#f	#t)
-    ;;FIXME To be made  required at the next boot image  rotation.  (Marco Maggi; Sat
-    ;;Mar 28, 2015)
-    ($bools		(vicare system $booleans)		#f	#f)
+    ($bools		(vicare system $booleans)		#f	#t)
     ($symbols		(vicare system $symbols)		#f	#t)
     ($keywords		(vicare system $keywords)		#f	#t)
     ($structs		(vicare system $structs)		#f	#t)
@@ -1370,15 +1365,9 @@
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
-    ;;FIXME At  the next boot  image rotation  these libraries must  become required.
-    ;;(Marco Maggi; Mon Apr 14, 2014)
-    ,@(if-building-rotation-boot-image? "expander built-in libraries requirements"
-	  '(($type-specs	(vicare expander tag-type-specs)	#t	#t)
-	    ($expander-tags	(vicare expander tags)			#t	#t)
-	    ($expander		(vicare expander)			#t	#t))
-	'(($type-specs		(vicare expander tag-type-specs)	#t	#f)
-	  ($expander-tags	(vicare expander tags)			#t	#f)
-	  ($expander		(vicare expander)			#t	#f)))))
+    ($type-specs	(vicare expander tag-type-specs)	#t	#t)
+    ($expander-tags	(vicare expander tags)			#t	#t)
+    ($expander		(vicare expander)			#t	#t)))
 
 
 (define-constant IDENTIFIER->LIBRARY-MAP
@@ -2284,9 +2273,6 @@
     (cddddr					v r ba se)
     (call-with-current-continuation		v r ba se)
     (call/cc					v r ba)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Mar 26,
-    ;;2015)
-    (call/cf)
     (call-with-values				v r ba se)
     (ceiling					v r ba se)
 ;;
@@ -4150,10 +4136,6 @@
     (ellipsis-map)
     (debug-call)
 
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sat Apr 12, 2014)
-    (syntax-error)
-
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
 
@@ -5861,7 +5843,12 @@
     ;;   Represents the global bindings defined by the library body.
     ;;
     ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
-    (if-building-rotation-boot-image? "extracting values after library expansion"
+    (let ((lib (expand-library library-sexp)))
+      (values (library-name         lib)
+	      (library-invoke-code  lib)
+	      (library-export-subst lib)
+	      (library-global-env   lib)))
+    #;(if-building-rotation-boot-image? "extracting values after library expansion"
 	(let ((lib (expand-library library-sexp)))
 	  (values (library-name         lib)
 		  (library-invoke-code  lib)

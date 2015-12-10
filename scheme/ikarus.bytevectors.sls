@@ -176,13 +176,6 @@
     $bytevector-self-copy-forwards!/count	$bytevector-self-copy-backwards!/count
     $bytevector-fill!)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sun May 3, 2015)
-		  procedure-arguments-consistency-violation
-		  positive-fixnum?
-		  non-negative-fixnum?
-		  ;;;
-
 		  make-bytevector			bytevector-length
 		  bytevector-empty?
 		  bytevector-copy!			bytevector-fill!
@@ -301,13 +294,7 @@
 	  $bytevector-ieee-single-nonnative-set!)
     (prefix (vicare platform words) words.)
     (only (ikarus conditions)
-	  procedure-arguments-consistency-violation
 	  preconditions)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
-    ;;2015)
-    (only (ikarus fixnums)
-	  positive-fixnum?
-	  non-negative-fixnum?)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
 	  define-min/max-comparison
@@ -1145,16 +1132,10 @@
 
 ;;;; appending and concatenating
 
-(define* (bytevector-append . bv*)
+(define* (bytevector-append . {bv* bytevector?})
   ;;Defined by Vicare.   Concatenate the bytevector arguments and  return the result.
   ;;If no arguments are given: return the empty bytevector.
   ;;
-  ;;FIXME At  the next boot image  rotation: this validation must  be integrated with
-  ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-  (for-each (lambda (item)
-	      (unless (bytevector? item)
-		(procedure-argument-violation __who__ "failed argument validation" item)))
-    bv*)
   (let ((total-length ($bytevector-total-length 0 bv*)))
     (assert-total-string-length total-length)
     ($bytevector-concatenate total-length bv*)))

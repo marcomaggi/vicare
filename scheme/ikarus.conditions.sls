@@ -350,11 +350,6 @@
     initialise-condition-objects-late-binding
     %raise-out-of-memory)
   (import (except (vicare)
-
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed Jun 3, 2015)
-		  non-negative-fixnum?
-
 		  ;;We use an internal macro  definition to define condition types in
 		  ;;this library.
 		  define-condition-type
@@ -676,10 +671,6 @@
 	  $record-constructor
 	  $rtd-subtype?)
     (vicare system $structs)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Jun 3,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate))
 
