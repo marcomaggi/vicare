@@ -231,9 +231,6 @@ AM_CPPFLAGS	= -I $(srcdir)/src -I $(builddir)/src
 AM_CFLAGS	= -Wall
 EXTRA_DIST	+= src/vicare-platform.h.in
 
-CLEANFILES	+= bootfileloc.h
-BUILT_SOURCES	+= bootfileloc.h
-
 bin_PROGRAMS	= vicare
 vicare_SOURCES	= \
 	src/ikarus.c			\
