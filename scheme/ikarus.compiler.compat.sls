@@ -65,14 +65,7 @@
     reset-symbol-proc!
     procedure-argument-violation
     expression-return-value-violation)
-  (import (except (vicare)
-		  void-object?))
-
-  ;;FIXME To be removed  at the next boot image rotation.  (Marco  Maggi; Tue Sep 30,
-  ;;2014)
-  (define (void-object? x)
-    (eq? x (void)))
-
+  (import (vicare))
   #| end of library |# )
 
 ;;; end of file
