@@ -1973,6 +1973,7 @@
     ($fx>					$fx)
     ($fx<					$fx)
     ($fx=					$fx)
+    ($fx!=					$fx)
     ($fxmin					$fx)
     ($fxmax					$fx)
     ($fxsll					$fx)

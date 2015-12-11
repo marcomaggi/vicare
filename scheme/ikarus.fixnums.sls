@@ -266,14 +266,7 @@
 			    (({x fixnum?} {y fixnum?})
 			     (?unsafe-op x y))
 
-			    (({x fixnum?} {y fixnum?} {z fixnum?} . rest)
-			     ;;FIXME At the next boot image rotation: this validation
-			     ;;must be integrated with  the signature.  (Marco Maggi;
-			     ;;Sun May 10, 2015)
-			     (for-each (lambda (item)
-					 (unless (fixnum? item)
-					   (procedure-argument-violation __who__ "failed argument validation" item)))
-			       rest)
+			    (({x fixnum?} {y fixnum?} {z fixnum?} . {rest fixnum?})
 			     (let loop ((accum  (?unsafe-op (?unsafe-op x y) z))
 					(rest   rest))
 			       (if (pair? rest)
@@ -463,13 +456,10 @@
 (define-inequality-predicate       fx!=?	$fx!=	fixnum?)
 
 (define ($fx!= fx1 fx2)
-  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
-  ;;implementation must be changed to:
+  ;;FIXME To be changed at the next boot image rotation.
   ;;
-  ;;   (import (prefix (vicare system $fx) sys.))
-  ;;   (sys.$fx!= fx1 fx2)
-  ;;
-  ;;(Marco Maggi; Fri Mar 27, 2015)
+  ;; (import (prefix (vicare system $fx) sys::))
+  ;; (sys::$fx!= fx1 fx2)
   (not ($fx= fx1 fx2)))
 
 (define fx=	fx=?)
