@@ -117,13 +117,6 @@ ikrt_get_argv0_string (ikpcb_t * pcb)
 {
   return ika_string_from_cstring(pcb, pcb->argv0);
 }
-/* FIXME To be  removed at the next boot image  rotation.  (Marco Maggi;
-   Wed Mar 11, 2015) */
-ikptr_t
-ikrt_get_last_revision (ikpcb_t * pcb)
-{
-  return ika_string_from_cstring(pcb, "unknown-revision");
-}
 
 
 /* Notice how the BSD manpages have incorrect type for the handler.

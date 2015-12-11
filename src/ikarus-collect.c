@@ -290,13 +290,6 @@ ik_automatic_collect_from_C (ikuword_t aligned_size, ikpcb_t* pcb)
     return perform_garbage_collection(aligned_size, IK_FALSE, pcb);
   }
 }
-ikpcb_t *
-ik_collect (ikuword_t mem_req, ikpcb_t* pcb)
-/* FIXME  To be  removed after  the  next boot  image rotation.   (Marco
-   Maggi; Tue Jun 30, 2015) */
-{
-  return ik_automatic_collect_from_C(mem_req, pcb);
-}
 
 /* ------------------------------------------------------------------ */
 
@@ -373,21 +366,6 @@ ikrt_automatic_collect_from_scheme_check_after_gc_hooks (ikptr_t s_number_of_wor
     perform_garbage_collection(requested_bytes, IK_FALSE, pcb);
     return IK_FALSE;
   }
-}
-
-ikpcb_t *
-ik_collect_gen (ikuword_t mem_req, ikptr_t s_requested_generation, ikpcb_t* pcb)
-/* FIXME  To be  removed after  the  next boot  image rotation.   (Marco
-   Maggi; Sat Jun 27, 2015) */
-{
-  return ik_automatic_collect_from_scheme_with_hooks(mem_req, s_requested_generation, pcb);
-}
-ikptr_t
-ik_collect_check (ikptr_t s_number_of_words, ikpcb_t* pcb)
-/* FIXME This function is to be removed at the next boot image rotation.
-   (Marco Maggi; Wed Mar 25, 2015) */
-{
-  return ikrt_automatic_collect_from_scheme_check_after_gc_hooks (s_number_of_words, pcb);
 }
 
 /* ------------------------------------------------------------------ */
