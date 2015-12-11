@@ -118,14 +118,7 @@
 		  #| end of except |# )
     ;;NOTE Let's try  to import unsafe operations only from  built-in libraries, when
     ;;possible, avoiding the use of external libraries of macros.
-    (except (vicare system $fx)
-	    ;;FIXME This  except must  be removed  at the  next boot  image rotation.
-	    ;;(Marco Maggi; Fri Mar 27, 2015)
-	    $fx!=)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 27,
-    ;;2015)
-    (only (ikarus fixnums)
-	  $fx!=)
+    (vicare system $fx)
     (vicare system $pairs)
     (only (vicare system $chars)
 	  $char=

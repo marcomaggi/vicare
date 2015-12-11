@@ -150,6 +150,9 @@
 	    $fxdiv-and-mod	$fxdiv0-and-mod0
 	    $fxabs
 	    $fixnum->string)
+    (prefix (only (vicare system $fx)
+		  $fx!=)
+	    sys::)
     (vicare system $chars)
     (vicare system $pairs)
     (vicare system $strings)
@@ -456,11 +459,7 @@
 (define-inequality-predicate       fx!=?	$fx!=	fixnum?)
 
 (define ($fx!= fx1 fx2)
-  ;;FIXME To be changed at the next boot image rotation.
-  ;;
-  ;; (import (prefix (vicare system $fx) sys::))
-  ;; (sys::$fx!= fx1 fx2)
-  (not ($fx= fx1 fx2)))
+  (sys::$fx!= fx1 fx2))
 
 (define fx=	fx=?)
 (define fx<	fx<?)
