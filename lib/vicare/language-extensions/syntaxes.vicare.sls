@@ -1,30 +1,28 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Vicare
+;;;Part of: Vicare Scheme
 ;;;Contents: utility syntaxes
 ;;;Date: Fri Oct 21, 2011
 ;;;
 ;;;Abstract
 ;;;
-;;;	This library is both  installed and used when expanding Vicare's
-;;;	own source code.  For this  reason it must export only: bindings
-;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
-;;;	only bindings imported by Vicare itself.
+;;;	This library  is both installed and  used when expanding Vicare's  own source
+;;;	code.   For this  reason it  must export  only: bindings  imported by  Vicare
+;;;	itself, syntaxes whose  expansion reference only bindings  imported by Vicare
+;;;	itself.
 ;;;
 ;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -175,13 +173,7 @@
        (({x ?type-pred} {y ?type-pred})
 	(?unsafe-who x y))
 
-       (({x ?type-pred} {y ?type-pred} {z ?type-pred} . rest)
-	;;FIXME At the  next boot image rotation: this validation  must be integrated
-	;;with the signature.  (Marco Maggi; Sun May 10, 2015)
-	(for-each (lambda (item)
-		    (unless (?type-pred item)
-		      (procedure-argument-violation __who__ "failed argument validation" item)))
-	  rest)
+       (({x ?type-pred} {y ?type-pred} {z ?type-pred} . {rest ?type-pred})
 	(let loop ((a  (?unsafe-who x y))
 		   (b  z)
 		   (ls rest))
@@ -207,13 +199,7 @@
        (({fl ?type-pred})
 	#t)
 
-       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . obj*)
-	;;FIXME At the  next boot image rotation: this validation  must be integrated
-	;;with the signature.  (Marco Maggi; Sun May 10, 2015)
-	(for-each (lambda (item)
-		    (unless (?type-pred item)
-		      (procedure-argument-violation __who__ "failed argument validation" item)))
-	  obj*)
+       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . {obj* ?type-pred})
 	(and (?unsafe-who obj1 obj2)
 	     (?unsafe-who obj2 obj3)
 	     (?unsafe-who obj3 obj4)
@@ -245,13 +231,7 @@
 	     (?unsafe-who obj2 obj3)
 	     (?unsafe-who obj3 obj1)))
 
-       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . obj*)
-	;;FIXME At the  next boot image rotation: this validation  must be integrated
-	;;with the signature.  (Marco Maggi; Sun May 10, 2015)
-	(for-each (lambda (item)
-		    (unless (?type-pred item)
-		      (procedure-argument-violation __who__ "failed argument validation" item)))
-	  obj*)
+       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . {obj* ?type-pred})
 	;;We must compare every argument to all the other arguments.
 	(let outer-loop ((objX   obj1)
 			 (obj*  (cons* obj2 obj3 obj4 obj*)))
@@ -595,10 +575,11 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'case-one-operand 'scheme-indent-function 1)
-;;eval: (put 'case-two-operands 'scheme-indent-function 1)
+;;coding: utf-8-unix
+;;eval: (put 'case-one-operand		'scheme-indent-function 1)
+;;eval: (put 'case-two-operands		'scheme-indent-function 1)
 ;;End:
