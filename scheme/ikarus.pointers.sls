@@ -168,15 +168,6 @@
     ;; for internal use only
     initialise-pointers-stuff)
   (import (except (vicare)
-		  ;;FIXME These  excepts are  to be  removed at  the next  boot image
-		  ;;rotation.  (Marco Maggi; Sun Mar 29, 2015)
-		  non-negative-fixnum?
-		  list-of-strings?
-		  list-of-bytevectors?
-		  list-of-symbols?
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  ;; pointer objects
 		  pointer?				list-of-pointers?
 		  false-or-pointer?			maybe-pointer?
@@ -322,39 +313,12 @@
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (vicare system $pointers)
 	  $pointer=)
-    (except (vicare system $bytevectors)
-	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
-	    ;;Mar 23, 2015)
-	    $bytevector-copy!/count)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
-    ;;2015)
-    (only (ikarus bytevectors)
-	  $bytevector-copy!/count
-	  list-of-bytevectors?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
-    ;;2015)
-    (only (ikarus strings)
-	  list-of-strings?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
-    ;;2015)
-    (only (ikarus.symbols)
-	  list-of-symbols?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 29,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?)
+    (vicare system $bytevectors)
     (only (ikarus conditions)
-	  %raise-out-of-memory
-	  ;;FIXME This identifier  is to be removed at the  next boot image rotation.
-	  ;;(Marco Maggi; Sun Mar 29, 2015)
-	  procedure-arguments-consistency-violation)
+	  %raise-out-of-memory)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $vectors)
-    (except (vicare system $bytevectors)
-	    ;;FIXME This  EXCEPT must  be removed  at the  next boot  image rotation.
-	    ;;(Marco Maggi; Sat Nov 7, 2015)
-	    $bytevector-copy!/count)
     (prefix (vicare unsafe capi)
 	    capi.)
     (prefix (vicare platform words)
