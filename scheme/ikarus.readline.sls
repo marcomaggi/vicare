@@ -36,18 +36,28 @@
 		  readline
 		  make-readline-input-port)
     (vicare system $fx)
-    (except (vicare system $strings)
-	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun
-	    ;;Mar 22, 2015)
-	    $string-copy!/count
-	    $substring)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
-    ;;2015)
-    (only (ikarus strings)
-	  $string-copy!/count
-	  $substring)
-    (only (vicare language-extensions syntaxes)
-	  with-bytevectors/or-false))
+    (vicare system $strings))
+
+
+;;;; helpers
+
+(define-syntax with-bytevectors/or-false
+  ;;Used  to preprocess  function arguments  which  must be  bytevectors, strings  or
+  ;;false; the  strings are converted  to bytevectors.   This macro assumes  that the
+  ;;arguments have already been validated.
+  ;;
+  ;;The ?VALUE.BV and ?VALUE input forms must be identifiers.
+  ;;
+  (syntax-rules ()
+    ((_ ((?value.bv ?value) ...) . ?body)
+     (let ((?value.bv (let ((V ?value))
+			(cond ((bytevector? V)
+			       V)
+			      ((string? V)
+			       (string->latin1 V))
+			      (else V))))
+	   ...)
+       . ?body))))
 
 
 ;;;; arguments validation
