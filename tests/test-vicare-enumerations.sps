@@ -74,7 +74,9 @@
   (syntax-rules (=>)
     ((_ ?body => ?result)
      (check
-	 (guard (E ((procedure-argument-violation? E)
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-argument-violation? E)
 		    (when #f
 		      (debug-print (condition-message E)))
 		    (let ((D (cdr (condition-irritants E))))
