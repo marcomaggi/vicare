@@ -34,11 +34,7 @@
 
 		  display write newline printf
 		  pretty-print pretty-print* write-char
-		  print-condition
-
-		  ;;FIXME To be  removed after the next boot  image rotation.  (Marco
-		  ;;Maggi; Wed Dec 10, 2014)
-		  call/cf)
+		  print-condition)
     (prefix (only (vicare)
 		  display write newline printf
 		  pretty-print pretty-print* write-char

@@ -63,12 +63,6 @@
     make-expander-options
     make-compiler-options)
   (import (except (vicare)
-		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
-		  ;;rotation.  (Marco Maggi; Wed Apr 1, 2015)
-		  list-of-symbols?
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  enum-set->list
 		  enum-set-complement
 		  enum-set-constructor
@@ -86,15 +80,7 @@
 		  make-file-options
 		  make-expander-options
 		  make-compiler-options)
-    (vicare system $vectors)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Apr 1,
-    ;;2015)
-    (only (ikarus.symbols)
-	  list-of-symbols?)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon May 4,
-    ;;2015)
-    (only (ikarus conditions)
-	  procedure-arguments-consistency-violation))
+    (vicare system $vectors))
 
 
 ;;;; record types
