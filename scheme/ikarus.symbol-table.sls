@@ -27,15 +27,10 @@
 		  $log-symbol-table-status)
     (vicare system $fx)
     (vicare system $pairs)
-    (except (vicare system $strings)
-	    ;;FIXME This  EXCEPT is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Sat Nov 7, 2015)
-	    $string-hash)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Nov 7,
-    ;;2015)
-    (only (ikarus hash-tables)
-	  $string-hash)
+    (vicare system $strings)
     (vicare system $vectors)
+    (only (vicare system $hashtables)
+	  $string-hash)
     (except (vicare system $symbols)
 	    $string->symbol
 	    $symbol-table-size

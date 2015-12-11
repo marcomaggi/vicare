@@ -46,23 +46,10 @@
 	  base-rtd)
     (only (vicare system $codes)
 	  $code-annotation)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
-    ;;2015)
-    (prefix (only (ikarus.io)
-		  open-textual-output-port?)
-	    io.)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
-    ;;2015)
-    (prefix (only (ikarus.keywords)
-		  keyword->string)
-	    keywords.)
     (prefix (only (ikarus records procedural)
-		  record-object?
-		  record-constructor-descriptor?
-		  record-printer
 		  rcd-rtd
 		  rcd-parent-rcd)
-	    records.))
+	    records::))
 
   (include "ikarus.wordsize.scm" #t)
 
@@ -132,11 +119,11 @@
     ((x)
      (%write-to-port x (current-output-port))
      (void))
-    ((x {p io.open-textual-output-port?})
+    ((x {p open-textual-output-port?})
      (%write-to-port x p)
      (void)))
 
-  (define* (put-datum {p io.open-textual-output-port?} x)
+  (define* (put-datum {p open-textual-output-port?} x)
     (%write-to-port x p)
     (void))
 
@@ -144,13 +131,13 @@
     ((x)
      (%display-to-port x (current-output-port))
      (void))
-    ((x {p io.open-textual-output-port?})
+    ((x {p open-textual-output-port?})
      (%display-to-port x p)
      (void)))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (fprintf {p io.open-textual-output-port?} {fmt string?} . args)
+  (define* (fprintf {p open-textual-output-port?} {fmt string?} . args)
     (%formatter __who__ p fmt args)
     (void))
 
@@ -526,9 +513,9 @@
     ;;records; R6RS record-type descriptors.
     ;;
     (define (traverse-struct stru marks-table)
-      (if (records.record-object? stru)
+      (if (record-object? stru)
 	  ;;It is an R6RS record.
-	  (cond ((records.record-printer stru)
+	  (cond ((record-printer stru)
 		 => (lambda (printer)
 		      (%traverse-custom-struct stru marks-table printer)))
 		(else
@@ -715,7 +702,7 @@
 	  ((keyword? x)
 	   ;;At present  keywords are Vicare  structs, so we  have to make  sure this
 	   ;;branch comes before the one below.
-	   (write-char* (keywords.keyword->string x) p)
+	   (write-char* (keyword->string x) p)
 	   next-mark-idx)
 
 	  ((struct? x)
@@ -1225,7 +1212,7 @@
       (cond ((record-type-descriptor? stru)
 	     (%write-r6rs-record-type-descriptor stru p write-style? marks-table next-mark-idx))
 
-	    ((records.record-constructor-descriptor? stru)
+	    ((record-constructor-descriptor? stru)
 	     (%write-r6rs-record-constructor-descriptor stru p write-style? marks-table next-mark-idx))
 
 	    ((record-type-descriptor? (struct-rtd stru))
@@ -1250,7 +1237,7 @@
 	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? marks-table next-mark-idx)))
 
     (define (%write-r6rs-record-constructor-descriptor rcd port write-style? marks-table next-mark-idx)
-      (let ((rtd (records.rcd-rtd rcd)))
+      (let ((rtd (records::rcd-rtd rcd)))
 	(write-char* "#[rcd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
 	(write-char #\space port)
@@ -1259,7 +1246,7 @@
 	  (write-char #\space port)
 	  (write-char* "parent-rcd=" port)
 	  (begin0
-	      (write-object (records.rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
+	      (write-object (records::rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
 	    (write-char #\] port)))))
 
     (define (%write-vicare-struct stru port write-style? marks-table next-mark-idx)
