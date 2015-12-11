@@ -5848,21 +5848,7 @@
       (values (library-name         lib)
 	      (library-invoke-code  lib)
 	      (library-export-subst lib)
-	      (library-global-env   lib)))
-    #;(if-building-rotation-boot-image? "extracting values after library expansion"
-	(let ((lib (expand-library library-sexp)))
-	  (values (library-name         lib)
-		  (library-invoke-code  lib)
-		  (library-export-subst lib)
-		  (library-global-env   lib)))
-      (receive (uid libname
-		    imp-libdesc* vis-libdesc* inv-libdesc*
-		    invoke-code visit-code
-		    export-subst global-env
-		    guard-code guard-libdesc*
-		    option*)
-	  (expand-library library-sexp)
-	(values libname invoke-code export-subst global-env))))
+	      (library-global-env   lib))))
 
   #| end of module: EXPAND-ALL |# )
 

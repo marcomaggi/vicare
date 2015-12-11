@@ -77,10 +77,6 @@
     print-library-verbose-message
     print-library-debug-message)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Thu Mar 5, 2015)
-		  with-blocked-exceptions
-
 		  ;; library names and version numbers
 		  library-name?
 		  library-version-numbers?		library-version-number?
@@ -155,21 +151,6 @@
   ;;  (%string-desuffix "ciao mamma" "ciao ")	=> "mamma"
   ;;
   (substring str 0 (fx- (string-length str) (string-length suffix))))
-
-;;; --------------------------------------------------------------------
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Thu  Mar 5,
-;;2015)
-;;
-(define-syntax with-blocked-exceptions
-  (syntax-rules ()
-    ((_ ?thunk)
-     (call/cc
-	 (lambda (reinstate-with-blocked-exceptions-continuation)
-	   (with-exception-handler
-	       reinstate-with-blocked-exceptions-continuation
-	     ?thunk))))
-    ))
 
 
 ;;;; printing messages
