@@ -1369,14 +1369,7 @@
 	  (posix.split-pathname-root-and-tail binary-filename)
 	(unless (string-empty? dir)
 	  (posix.mkdir/parents dir #o755)))
-      (let ((port (open-file-output-port binary-filename
-					 ;;FIXME To  be uncommented at the  next boot
-					 ;;image rotation.  (Marco Maggi; Mon Dec 15,
-					 ;;2014)
-					 #;(file-options no-fail executable)
-					 (let ()
-					   (import (ikarus enumerations))
-					   (make-file-options '(no-fail executable))))))
+      (let ((port (open-file-output-port binary-filename (file-options no-fail executable))))
 	(unwind-protect
 	    (fasl-write (make-serialised-program lib-descr* run-thunk option* foreign-library*)
 			port foreign-library*)

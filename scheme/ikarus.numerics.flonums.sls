@@ -625,14 +625,8 @@
 (define-inequality-predicate       fl!=?	$fl!=	flonum?)
 
 (define ($fl!= fl1 fl2)
-  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
-  ;;implementation must be changed to:
-  ;;
-  ;;   (import (prefix (vicare system $flonums) sys.))
-  ;;   (sys.$fl!= fl1 fl2)
-  ;;
-  ;;(Marco Maggi; Fri Mar 27, 2015)
-  (not ($fl= fl1 fl2)))
+  (import (prefix (vicare system $flonums) sys::))
+  (sys::$fl!= fl1 fl2))
 
 
 ;;;; arithmetic
@@ -648,13 +642,7 @@
 	    (({x ?type-pred} {y ?type-pred} {z ?type-pred})
 	     (?binary-unsafe-who (?binary-unsafe-who x y) z))
 
-	    (({x ?type-pred} {y ?type-pred} {z ?type-pred} {w ?type-pred} . rest)
-	     ;;FIXME  At  the next  boot  image  rotation:  this validation  must  be
-	     ;;integrated with the signature.  (Marco Maggi; Sun May 10, 2015)
-	     (for-each (lambda (item)
-			 (unless (flonum? item)
-			   (procedure-argument-violation __who__ "failed argument validation" item)))
-	       rest)
+	    (({x ?type-pred} {y ?type-pred} {z ?type-pred} {w ?type-pred} . {rest flonum?})
 	     (let loop ((ac   (?binary-unsafe-who (?binary-unsafe-who (?binary-unsafe-who x y) z) w))
 			(rest rest))
 	       (if (pair? rest)

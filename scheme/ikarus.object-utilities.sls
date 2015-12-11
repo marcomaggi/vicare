@@ -50,20 +50,10 @@
 		  procedure-and-error
 		  procedure-argument-validation-with-predicate
 		  return-value-validation-with-predicate)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
-    ;;2015)
-    (prefix (only (ikarus conditions)
-		  procedure-signature-argument-violation)
-	    conditions.)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Sep 5,
-    ;;2015)
-    (prefix (only (ikarus records procedural)
-		  record-object?
-		  record-destructor
-		  internal-applicable-record-destructor)
-	    records.)
     (only (vicare system $fx)
-	  $fxadd1))
+	  $fxadd1)
+    (only (psyntax system $all)
+	  internal-applicable-record-destructor))
 
 
 ;;;; helpers for object-type method calls
@@ -83,7 +73,7 @@
     (%error "object type has no methods table"))
   (define (%error-record-type-has-no-matching-method)
     (%error "record type has no matching method"))
-  (cond ((records.record-object? subject)
+  (cond ((record-object? subject)
 	 ;;Here we  expect the record-type  descriptor to have  a symbol as  UID: the
 	 ;;property  list   of  the   symbol  should  contain   an  entry   with  key
 	 ;;"late-binding-methods-table"; the value  of the entry must  be a hashtable
@@ -118,8 +108,8 @@
   ;;This  is not  a public  syntactic binding:  it is  exported only  by the  library
   ;;"(psyntax system $all)".
   ;;
-  (cond ((records.record-object? obj)
-	 ((records.internal-applicable-record-destructor obj) obj))
+  (cond ((record-object? obj)
+	 ((internal-applicable-record-destructor obj) obj))
 	((struct? obj)
 	 ((struct-destructor obj) obj))
 	(else
@@ -178,5 +168,4 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'conditions.procedure-signature-argument-violation 'scheme-indent-function 1)
 ;; End:

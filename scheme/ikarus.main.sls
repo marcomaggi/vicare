@@ -49,11 +49,7 @@
 		  struct-guardian-log
 		  $record-guardian
 		  record-guardian-logger
-		  record-guardian-log
-
-		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
-		  ;;rotation.  (Marco Maggi; Wed Apr 1, 2015)
-		  cafe-input-port)
+		  record-guardian-log)
     (prefix (ikarus startup) config.)
     (prefix (only (ikarus.options)
 		  verbose?
@@ -118,10 +114,6 @@
     (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Apr 1,
-    ;;2015)
-    (only (ikarus cafe)
-	  cafe-input-port)
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)

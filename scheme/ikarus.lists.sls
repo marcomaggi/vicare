@@ -29,11 +29,6 @@
 	  map1		for-each1
 	  for-all1	exists1)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Mon May 4, 2015)
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
@@ -53,10 +48,6 @@
 
 (define (list-index? obj)
   (and (fixnum? obj) ($fxnonnegative? obj)))
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Mon  May 4,
-;;2015)
-(define procedure-arguments-consistency-violation assertion-violation)
 
 (define-syntax-rule (%error-list-was-altered-while-processing)
   (assertion-violation __who__ "list was altered while processing"))
