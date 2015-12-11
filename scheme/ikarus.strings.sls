@@ -345,7 +345,7 @@
      ($string-set! str 2 three)
      ($string-set! str 3 four)))
 
-  (({one char?} {two char?} {three char?} {four char?} {five char?} . {char* list-of-chars?})
+  (({one char?} {two char?} {three char?} {four char?} {five char?} . {char* char?})
    (define len
      (+ 5 (length char*)))
    (assert-total-string-length len)

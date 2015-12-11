@@ -24,7 +24,7 @@
 
 
 #!r6rs
-(import (except (vicare) catch)
+(import (vicare)
   (vicare platform errno)
   (prefix (vicare platform words)
 	  words.)
@@ -41,15 +41,17 @@
 
 ;;;; helpers
 
-(define-syntax catch
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
-	       (else E))
-       (begin . ?body)))))
+(define environment-for-syntax-errors
+  (environment '(vicare)
+	       '(vicare platform errno)
+	       '(prefix (vicare platform words)
+			words.)
+	       '(prefix (vicare platform constants)
+			plat.)
+	       '(vicare unsafe operations)))
+
+(define environment-for-assertion-errors
+  environment-for-syntax-errors)
 
 (define-syntax catch-assertion
   (syntax-rules ()
@@ -63,14 +65,31 @@
        (let () . ?body)))))
 
 (define-syntax check-argument-violation
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((procedure-argument-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(cdr (condition-irritants E)))
-	       (else E))
-       (begin . ?body)))))
+  (syntax-rules (=>)
+    ((_ ?body => ?result)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    #;(print-condition E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-arguments-consistency-violation? E)
+		    #;(print-condition E)
+		    (condition-irritants E))
+		   ((procedure-argument-violation? E)
+		    (when #f
+		      (debug-print (condition-message E)))
+		    (let ((D (cdr (condition-irritants E))))
+		      (if (pair? D)
+			  (car D)
+			(condition-irritants E))))
+		   ((assertion-violation? E)
+		    (condition-irritants E))
+		   (else
+		    (print-condition E)
+		    E))
+	   (eval (quote ?body) environment-for-assertion-errors
+		 (expander-options strict-r6rs)
+		 (compiler-options strict-r6rs)))
+       => ?result))))
 
 
 (parametrise ((check-test-name	'pointers))
@@ -119,10 +138,10 @@
       (pointer->integer (integer->pointer (words.greatest-machine-word)))
     => (words.greatest-machine-word))
 
-  (check	;error, integer too big
-      (catch #f
-	(integer->pointer (+ 10 (words.greatest-machine-word))))
-    => (list '(words.machine-word? x) (+ 10 (words.greatest-machine-word))))
+  ;;error, integer too big
+  (check-argument-violation
+      (integer->pointer (+ 10 (words.greatest-machine-word)))
+    => (+ 10 (words.greatest-machine-word)))
 
 ;;; --------------------------------------------------------------------
 
@@ -267,21 +286,21 @@
 	(pointer-add P D))
     => (integer->pointer (words.greatest-c-ptrdiff_t)))
 
-  (check
-      (let ((P (integer->pointer (words.greatest-machine-word)))
-  	    (D 1))
-  	(equal? (list P D)
-  		(catch #f
-  		  (pointer-add P D))))
-    => #t)
+  (let ((P (integer->pointer (words.greatest-machine-word)))
+	(D 1))
+    (check-argument-violation
+	(let ((P (integer->pointer (words.greatest-machine-word)))
+	      (D 1))
+	  (pointer-add P D))
+      => (list P D)))
 
-  (check
-      (let ((P (null-pointer))
-	    (D -1))
-	(equal? (list P D)
-		(catch #f
-		  (pointer-add P D))))
-    => #t)
+  (let ((P (null-pointer))
+	(D -1))
+    (check-argument-violation
+	(let ((P (null-pointer))
+	      (D -1))
+	  (pointer-add P D))
+      => (list P D)))
 
 ;;; --------------------------------------------------------------------
 
@@ -728,17 +747,15 @@
 	(pointer-ref-c-uint8  P 2))
     => (words.least-u8))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint8! P 2 (words.greatest-u8*))))
-    => `(,(words.greatest-u8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint8! P 2 (words.greatest-u8*)))
+    => (words.greatest-u8*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint8! P 2 (words.least-u8*))))
-    => `(,(words.least-u8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint8! P 2 (words.least-u8*)))
+    => (words.least-u8*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint8
@@ -761,17 +778,15 @@
 	(pointer-ref-c-sint8  P 2))
     => (words.least-s8))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint8! P 2 (words.greatest-s8*))))
-    => `(,(words.greatest-s8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint8! P 2 (words.greatest-s8*)))
+    => (words.greatest-s8*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint8! P 2 (words.least-s8*))))
-    => `(,(words.least-s8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint8! P 2 (words.least-s8*)))
+    => (words.least-s8*))
 
 ;;; --------------------------------------------------------------------
 ;;; uint16
@@ -794,17 +809,15 @@
 	(pointer-ref-c-uint16  P 2))
     => (words.greatest-u16))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint16! P 2 (words.greatest-u16*))))
-    => `(,(words.greatest-u16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint16! P 2 (words.greatest-u16*)))
+    => (words.greatest-u16*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint16! P 2 (words.least-u16*))))
-    => `(,(words.least-u16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint16! P 2 (words.least-u16*)))
+    => (words.least-u16*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint16
@@ -827,17 +840,15 @@
 	(pointer-ref-c-sint16  P 2))
     => (words.greatest-s16))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint16! P 2 (words.greatest-s16*))))
-    => `(,(words.greatest-s16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint16! P 2 (words.greatest-s16*)))
+    => (words.greatest-s16*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint16! P 2 (words.least-s16*))))
-    => `(,(words.least-s16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint16! P 2 (words.least-s16*)))
+    => (words.least-s16*))
 
 ;;; --------------------------------------------------------------------
 ;;; uint32
@@ -860,17 +871,15 @@
 	(pointer-ref-c-uint32  P 2))
     => (words.least-u32))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint32! P 2 (words.greatest-u32*))))
-    => `(,(words.greatest-u32*)))
+  (check-argument-violation
+    (let ((P (guarded-malloc 32)))
+      (pointer-set-c-uint32! P 2 (words.greatest-u32*)))
+    => (words.greatest-u32*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint32! P 2 (words.least-u32*))))
-    => `(,(words.least-u32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint32! P 2 (words.least-u32*)))
+    => (words.least-u32*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint32
@@ -893,17 +902,15 @@
 	(pointer-ref-c-sint32  P 2))
     => (words.least-s32))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint32! P 2 (words.greatest-s32*))))
-    => `(,(words.greatest-s32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint32! P 2 (words.greatest-s32*)))
+    => (words.greatest-s32*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint32! P 2 (words.least-s32*))))
-    => `(,(words.least-s32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint32! P 2 (words.least-s32*)))
+    => (words.least-s32*))
 
 ;;; --------------------------------------------------------------------
 ;;; uint64
@@ -926,17 +933,15 @@
 	(pointer-ref-c-uint64  P 2))
     => (words.least-u64))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint64! P 2 (words.greatest-u64*))))
-    => `(,(words.greatest-u64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint64! P 2 (words.greatest-u64*)))
+    => (words.greatest-u64*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-uint64! P 2 (words.least-u64*))))
-    => `(,(words.least-u64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-uint64! P 2 (words.least-u64*)))
+    => (words.least-u64*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint64
@@ -959,17 +964,15 @@
 	(pointer-ref-c-sint64  P 2))
     => (words.least-s64))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint64! P 2 (words.greatest-s64*))))
-    => `(,(words.greatest-s64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint64! P 2 (words.greatest-s64*)))
+    => (words.greatest-s64*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-sint64! P 2 (words.least-s64*))))
-    => `(,(words.least-s64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-sint64! P 2 (words.least-s64*)))
+    => (words.least-s64*))
 
 ;;; --------------------------------------------------------------------
 ;;; float
@@ -1028,17 +1031,15 @@
 	(pointer-ref-c-signed-char  P 2))
     => (words.least-c-signed-char))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-char! P 2 (words.greatest-c-signed-char*))))
-    => `(,(words.greatest-c-signed-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-char! P 2 (words.greatest-c-signed-char*)))
+    => (words.greatest-c-signed-char*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-char! P 2 (words.least-c-signed-char*))))
-    => `(,(words.least-c-signed-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-char! P 2 (words.least-c-signed-char*)))
+    => (words.least-c-signed-char*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-char
@@ -1061,17 +1062,15 @@
 	(pointer-ref-c-unsigned-char  P 2))
     => (words.least-c-unsigned-char))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-char! P 2 (words.greatest-c-unsigned-char*))))
-    => `(,(words.greatest-c-unsigned-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-char! P 2 (words.greatest-c-unsigned-char*)))
+    => (words.greatest-c-unsigned-char*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-char! P 2 (words.least-c-unsigned-char*))))
-    => `(,(words.least-c-unsigned-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-char! P 2 (words.least-c-unsigned-char*)))
+    => (words.least-c-unsigned-char*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-short
@@ -1094,17 +1093,15 @@
 	(pointer-ref-c-signed-short  P 2))
     => (words.least-c-signed-short))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-short! P 2 (words.greatest-c-signed-short*))))
-    => `(,(words.greatest-c-signed-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-short! P 2 (words.greatest-c-signed-short*)))
+    => (words.greatest-c-signed-short*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-short! P 2 (words.least-c-signed-short*))))
-    => `(,(words.least-c-signed-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-short! P 2 (words.least-c-signed-short*)))
+    => (words.least-c-signed-short*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-short
@@ -1127,17 +1124,15 @@
 	(pointer-ref-c-unsigned-short  P 2))
     => (words.least-c-unsigned-short))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-short! P 2 (words.greatest-c-unsigned-short*))))
-    => `(,(words.greatest-c-unsigned-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-short! P 2 (words.greatest-c-unsigned-short*)))
+    => (words.greatest-c-unsigned-short*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-short! P 2 (words.least-c-unsigned-short*))))
-    => `(,(words.least-c-unsigned-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-short! P 2 (words.least-c-unsigned-short*)))
+    => (words.least-c-unsigned-short*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-int
@@ -1160,17 +1155,15 @@
 	(pointer-ref-c-signed-int  P 2))
     => (words.least-c-signed-int))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-int! P 2 (words.greatest-c-signed-int*))))
-    => `(,(words.greatest-c-signed-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-int! P 2 (words.greatest-c-signed-int*)))
+    => (words.greatest-c-signed-int*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-int! P 2 (words.least-c-signed-int*))))
-    => `(,(words.least-c-signed-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-int! P 2 (words.least-c-signed-int*)))
+    => (words.least-c-signed-int*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-int
@@ -1193,17 +1186,15 @@
 	(pointer-ref-c-unsigned-int  P 2))
     => (words.least-c-unsigned-int))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-int! P 2 (words.greatest-c-unsigned-int*))))
-    => `(,(words.greatest-c-unsigned-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-int! P 2 (words.greatest-c-unsigned-int*)))
+    => (words.greatest-c-unsigned-int*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-int! P 2 (words.least-c-unsigned-int*))))
-    => `(,(words.least-c-unsigned-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-int! P 2 (words.least-c-unsigned-int*)))
+    => (words.least-c-unsigned-int*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-long
@@ -1226,17 +1217,15 @@
 	(pointer-ref-c-signed-long  P 2))
     => (words.least-c-signed-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-long! P 2 (words.greatest-c-signed-long*))))
-    => `(,(words.greatest-c-signed-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-long! P 2 (words.greatest-c-signed-long*)))
+    => (words.greatest-c-signed-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-long! P 2 (words.least-c-signed-long*))))
-    => `(,(words.least-c-signed-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-long! P 2 (words.least-c-signed-long*)))
+    => (words.least-c-signed-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-long
@@ -1259,17 +1248,15 @@
 	(pointer-ref-c-unsigned-long  P 2))
     => (words.least-c-unsigned-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-long! P 2 (words.greatest-c-unsigned-long*))))
-    => `(,(words.greatest-c-unsigned-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-long! P 2 (words.greatest-c-unsigned-long*)))
+    => (words.greatest-c-unsigned-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-long! P 2 (words.least-c-unsigned-long*))))
-    => `(,(words.least-c-unsigned-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-long! P 2 (words.least-c-unsigned-long*)))
+    => (words.least-c-unsigned-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-long-long
@@ -1292,17 +1279,15 @@
 	(pointer-ref-c-signed-long-long  P 2))
     => (words.least-c-signed-long-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-long-long! P 2 (words.greatest-c-signed-long-long*))))
-    => `(,(words.greatest-c-signed-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-long-long! P 2 (words.greatest-c-signed-long-long*)))
+    => (words.greatest-c-signed-long-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-signed-long-long! P 2 (words.least-c-signed-long-long*))))
-    => `(,(words.least-c-signed-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-signed-long-long! P 2 (words.least-c-signed-long-long*)))
+    => (words.least-c-signed-long-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-long-long
@@ -1325,17 +1310,15 @@
 	(pointer-ref-c-unsigned-long-long  P 2))
     => (words.least-c-unsigned-long-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-long-long! P 2 (words.greatest-c-unsigned-long-long*))))
-    => `(,(words.greatest-c-unsigned-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-long-long! P 2 (words.greatest-c-unsigned-long-long*)))
+    => (words.greatest-c-unsigned-long-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-unsigned-long-long! P 2 (words.least-c-unsigned-long-long*))))
-    => `(,(words.least-c-unsigned-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-unsigned-long-long! P 2 (words.least-c-unsigned-long-long*)))
+    => (words.least-c-unsigned-long-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-size_t
@@ -1358,17 +1341,15 @@
 	(pointer-ref-c-size_t  P 2))
     => (words.least-c-size_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-size_t! P 2 (words.greatest-c-size_t*))))
-    => `(,(words.greatest-c-size_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-size_t! P 2 (words.greatest-c-size_t*)))
+    => (words.greatest-c-size_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-size_t! P 2 (words.least-c-size_t*))))
-    => `(,(words.least-c-size_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-size_t! P 2 (words.least-c-size_t*)))
+    => (words.least-c-size_t*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-ssize_t
@@ -1391,17 +1372,15 @@
 	(pointer-ref-c-ssize_t  P 2))
     => (words.least-c-ssize_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-ssize_t! P 2 (words.greatest-c-ssize_t*))))
-    => `(,(words.greatest-c-ssize_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ssize_t! P 2 (words.greatest-c-ssize_t*)))
+    => (words.greatest-c-ssize_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-ssize_t! P 2 (words.least-c-ssize_t*))))
-    => `(,(words.least-c-ssize_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ssize_t! P 2 (words.least-c-ssize_t*)))
+    => (words.least-c-ssize_t*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-off_t
@@ -1424,17 +1403,15 @@
 	(pointer-ref-c-off_t  P 2))
     => (words.least-c-off_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-off_t! P 2 (words.greatest-c-off_t*))))
-    => `(,(words.greatest-c-off_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-off_t! P 2 (words.greatest-c-off_t*)))
+    => (words.greatest-c-off_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-off_t! P 2 (words.least-c-off_t*))))
-    => `(,(words.least-c-off_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-off_t! P 2 (words.least-c-off_t*)))
+    => (words.least-c-off_t*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-ptrdiff_t
@@ -1457,17 +1434,15 @@
 	(pointer-ref-c-ptrdiff_t  P 2))
     => (words.least-c-ptrdiff_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t*))))
-    => `(,(words.greatest-c-ptrdiff_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t*)))
+    => (words.greatest-c-ptrdiff_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (pointer-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t*))))
-    => `(,(words.least-c-ptrdiff_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t*)))
+    => (words.least-c-ptrdiff_t*))
 
   (collect))
 
@@ -1494,17 +1469,15 @@
 	(array-ref-c-uint8  P 2))
     => (words.least-u8))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint8! P 2 (words.greatest-u8*))))
-    => `(,(words.greatest-u8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint8! P 2 (words.greatest-u8*)))
+    => (words.greatest-u8*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint8! P 2 (words.least-u8*))))
-    => `(,(words.least-u8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint8! P 2 (words.least-u8*)))
+    => (words.least-u8*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint8
@@ -1527,17 +1500,15 @@
 	(array-ref-c-sint8  P 2))
     => (words.least-s8))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint8! P 2 (words.greatest-s8*))))
-    => `(,(words.greatest-s8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint8! P 2 (words.greatest-s8*)))
+    => (words.greatest-s8*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint8! P 2 (words.least-s8*))))
-    => `(,(words.least-s8*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint8! P 2 (words.least-s8*)))
+    => (words.least-s8*))
 
 ;;; --------------------------------------------------------------------
 ;;; uint16
@@ -1560,17 +1531,15 @@
 	(array-ref-c-uint16  P 2))
     => (words.greatest-u16))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint16! P 2 (words.greatest-u16*))))
-    => `(,(words.greatest-u16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint16! P 2 (words.greatest-u16*)))
+    => (words.greatest-u16*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint16! P 2 (words.least-u16*))))
-    => `(,(words.least-u16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint16! P 2 (words.least-u16*)))
+    => (words.least-u16*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint16
@@ -1593,17 +1562,15 @@
 	(array-ref-c-sint16  P 2))
     => (words.greatest-s16))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint16! P 2 (words.greatest-s16*))))
-    => `(,(words.greatest-s16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint16! P 2 (words.greatest-s16*)))
+    => (words.greatest-s16*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint16! P 2 (words.least-s16*))))
-    => `(,(words.least-s16*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint16! P 2 (words.least-s16*)))
+    => (words.least-s16*))
 
 ;;; --------------------------------------------------------------------
 ;;; uint32
@@ -1626,17 +1593,15 @@
 	(array-ref-c-uint32  P 2))
     => (words.least-u32))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint32! P 2 (words.greatest-u32*))))
-    => `(,(words.greatest-u32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint32! P 2 (words.greatest-u32*)))
+    => (words.greatest-u32*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint32! P 2 (words.least-u32*))))
-    => `(,(words.least-u32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint32! P 2 (words.least-u32*)))
+    => (words.least-u32*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint32
@@ -1659,17 +1624,15 @@
 	(array-ref-c-sint32  P 2))
     => (words.least-s32))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint32! P 2 (words.greatest-s32*))))
-    => `(,(words.greatest-s32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint32! P 2 (words.greatest-s32*)))
+    => (words.greatest-s32*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint32! P 2 (words.least-s32*))))
-    => `(,(words.least-s32*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint32! P 2 (words.least-s32*)))
+    => (words.least-s32*))
 
 ;;; --------------------------------------------------------------------
 ;;; uint64
@@ -1692,17 +1655,15 @@
 	(array-ref-c-uint64  P 2))
     => (words.least-u64))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint64! P 2 (words.greatest-u64*))))
-    => `(,(words.greatest-u64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint64! P 2 (words.greatest-u64*)))
+    => (words.greatest-u64*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-uint64! P 2 (words.least-u64*))))
-    => `(,(words.least-u64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint64! P 2 (words.least-u64*)))
+    => (words.least-u64*))
 
 ;;; --------------------------------------------------------------------
 ;;; sint64
@@ -1725,17 +1686,15 @@
 	(array-ref-c-sint64  P 2))
     => (words.least-s64))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint64! P 2 (words.greatest-s64*))))
-    => `(,(words.greatest-s64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint64! P 2 (words.greatest-s64*)))
+    => (words.greatest-s64*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-sint64! P 2 (words.least-s64*))))
-    => `(,(words.least-s64*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint64! P 2 (words.least-s64*)))
+    => (words.least-s64*))
 
 ;;; --------------------------------------------------------------------
 ;;; float
@@ -1794,17 +1753,15 @@
 	(array-ref-c-signed-char  P 2))
     => (words.least-c-signed-char))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-char! P 2 (words.greatest-c-signed-char*))))
-    => `(,(words.greatest-c-signed-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-char! P 2 (words.greatest-c-signed-char*)))
+    => (words.greatest-c-signed-char*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-char! P 2 (words.least-c-signed-char*))))
-    => `(,(words.least-c-signed-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-char! P 2 (words.least-c-signed-char*)))
+    => (words.least-c-signed-char*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-char
@@ -1827,17 +1784,15 @@
 	(array-ref-c-unsigned-char  P 2))
     => (words.least-c-unsigned-char))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-char! P 2 (words.greatest-c-unsigned-char*))))
-    => `(,(words.greatest-c-unsigned-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-char! P 2 (words.greatest-c-unsigned-char*)))
+    => (words.greatest-c-unsigned-char*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-char! P 2 (words.least-c-unsigned-char*))))
-    => `(,(words.least-c-unsigned-char*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-char! P 2 (words.least-c-unsigned-char*)))
+    => (words.least-c-unsigned-char*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-short
@@ -1860,17 +1815,15 @@
 	(array-ref-c-signed-short  P 2))
     => (words.least-c-signed-short))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-short! P 2 (words.greatest-c-signed-short*))))
-    => `(,(words.greatest-c-signed-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-short! P 2 (words.greatest-c-signed-short*)))
+    => (words.greatest-c-signed-short*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-short! P 2 (words.least-c-signed-short*))))
-    => `(,(words.least-c-signed-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-short! P 2 (words.least-c-signed-short*)))
+    => (words.least-c-signed-short*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-short
@@ -1893,17 +1846,15 @@
 	(array-ref-c-unsigned-short  P 2))
     => (words.least-c-unsigned-short))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-short! P 2 (words.greatest-c-unsigned-short*))))
-    => `(,(words.greatest-c-unsigned-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-short! P 2 (words.greatest-c-unsigned-short*)))
+    => (words.greatest-c-unsigned-short*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-short! P 2 (words.least-c-unsigned-short*))))
-    => `(,(words.least-c-unsigned-short*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-short! P 2 (words.least-c-unsigned-short*)))
+    => (words.least-c-unsigned-short*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-int
@@ -1926,17 +1877,15 @@
 	(array-ref-c-signed-int  P 2))
     => (words.least-c-signed-int))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-int! P 2 (words.greatest-c-signed-int*))))
-    => `(,(words.greatest-c-signed-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-int! P 2 (words.greatest-c-signed-int*)))
+    => (words.greatest-c-signed-int*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-int! P 2 (words.least-c-signed-int*))))
-    => `(,(words.least-c-signed-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-int! P 2 (words.least-c-signed-int*)))
+    => (words.least-c-signed-int*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-int
@@ -1959,17 +1908,15 @@
 	(array-ref-c-unsigned-int  P 2))
     => (words.least-c-unsigned-int))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-int! P 2 (words.greatest-c-unsigned-int*))))
-    => `(,(words.greatest-c-unsigned-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-int! P 2 (words.greatest-c-unsigned-int*)))
+    => (words.greatest-c-unsigned-int*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-int! P 2 (words.least-c-unsigned-int*))))
-    => `(,(words.least-c-unsigned-int*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-int! P 2 (words.least-c-unsigned-int*)))
+    => (words.least-c-unsigned-int*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-long
@@ -1992,17 +1939,15 @@
 	(array-ref-c-signed-long  P 2))
     => (words.least-c-signed-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-long! P 2 (words.greatest-c-signed-long*))))
-    => `(,(words.greatest-c-signed-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-long! P 2 (words.greatest-c-signed-long*)))
+    => (words.greatest-c-signed-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-long! P 2 (words.least-c-signed-long*))))
-    => `(,(words.least-c-signed-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-long! P 2 (words.least-c-signed-long*)))
+    => (words.least-c-signed-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-long
@@ -2025,17 +1970,15 @@
 	(array-ref-c-unsigned-long  P 2))
     => (words.least-c-unsigned-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-long! P 2 (words.greatest-c-unsigned-long*))))
-    => `(,(words.greatest-c-unsigned-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-long! P 2 (words.greatest-c-unsigned-long*)))
+    => (words.greatest-c-unsigned-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-long! P 2 (words.least-c-unsigned-long*))))
-    => `(,(words.least-c-unsigned-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-long! P 2 (words.least-c-unsigned-long*)))
+    => (words.least-c-unsigned-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-signed-long-long
@@ -2058,17 +2001,15 @@
 	(array-ref-c-signed-long-long  P 2))
     => (words.least-c-signed-long-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-long-long! P 2 (words.greatest-c-signed-long-long*))))
-    => `(,(words.greatest-c-signed-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-long-long! P 2 (words.greatest-c-signed-long-long*)))
+    => (words.greatest-c-signed-long-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-signed-long-long! P 2 (words.least-c-signed-long-long*))))
-    => `(,(words.least-c-signed-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-long-long! P 2 (words.least-c-signed-long-long*)))
+    => (words.least-c-signed-long-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-unsigned-long-long
@@ -2091,17 +2032,15 @@
 	(array-ref-c-unsigned-long-long  P 2))
     => (words.least-c-unsigned-long-long))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-long-long! P 2 (words.greatest-c-unsigned-long-long*))))
-    => `(,(words.greatest-c-unsigned-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-long-long! P 2 (words.greatest-c-unsigned-long-long*)))
+    => (words.greatest-c-unsigned-long-long*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-unsigned-long-long! P 2 (words.least-c-unsigned-long-long*))))
-    => `(,(words.least-c-unsigned-long-long*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-long-long! P 2 (words.least-c-unsigned-long-long*)))
+    => (words.least-c-unsigned-long-long*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-size_t
@@ -2124,17 +2063,15 @@
 	(array-ref-c-size_t  P 2))
     => (words.least-c-size_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-size_t! P 2 (words.greatest-c-size_t*))))
-    => `(,(words.greatest-c-size_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-size_t! P 2 (words.greatest-c-size_t*)))
+    => (words.greatest-c-size_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-size_t! P 2 (words.least-c-size_t*))))
-    => `(,(words.least-c-size_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-size_t! P 2 (words.least-c-size_t*)))
+    => (words.least-c-size_t*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-ssize_t
@@ -2157,17 +2094,15 @@
 	(array-ref-c-ssize_t  P 2))
     => (words.least-c-ssize_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-ssize_t! P 2 (words.greatest-c-ssize_t*))))
-    => `(,(words.greatest-c-ssize_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ssize_t! P 2 (words.greatest-c-ssize_t*)))
+    => (words.greatest-c-ssize_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-ssize_t! P 2 (words.least-c-ssize_t*))))
-    => `(,(words.least-c-ssize_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ssize_t! P 2 (words.least-c-ssize_t*)))
+    => (words.least-c-ssize_t*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-off_t
@@ -2190,17 +2125,15 @@
 	(array-ref-c-off_t  P 2))
     => (words.least-c-off_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-off_t! P 2 (words.greatest-c-off_t*))))
-    => `(,(words.greatest-c-off_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-off_t! P 2 (words.greatest-c-off_t*)))
+    => (words.greatest-c-off_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-off_t! P 2 (words.least-c-off_t*))))
-    => `(,(words.least-c-off_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-off_t! P 2 (words.least-c-off_t*)))
+    => (words.least-c-off_t*))
 
 ;;; --------------------------------------------------------------------
 ;;; c-ptrdiff_t
@@ -2223,17 +2156,15 @@
 	(array-ref-c-ptrdiff_t  P 2))
     => (words.least-c-ptrdiff_t))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t*))))
-    => `(,(words.greatest-c-ptrdiff_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t*)))
+    => (words.greatest-c-ptrdiff_t*))
 
-  (check
-      (check-argument-violation #f
-	(let ((P (guarded-malloc 32)))
-	  (array-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t*))))
-    => `(,(words.least-c-ptrdiff_t*)))
+  (check-argument-violation
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t*)))
+    => (words.least-c-ptrdiff_t*))
 
   (collect))
 
@@ -2452,11 +2383,11 @@
 	       (pointer-ref-c-sint64 &int64 0)))))
     => 15)
 
-  (check	;exception going through
-      (catch #f
-	(with-local-storage '#(4)
-	  (lambda (&int32)
-	    (assertion-violation #f "the error" 1 2 3))))
+  ;;exception going through
+  (check-argument-violation
+      (with-local-storage '#(4)
+	(lambda (&int32)
+	  (assertion-violation #f "the error" 1 2 3)))
     => '(1 2 3))
 
   #t)
@@ -2471,8 +2402,8 @@
 ;; Local Variables:
 ;; coding: utf-8-unix
 ;; eval: (put 'case-errno			'scheme-indent-function 1)
-;; eval: (put 'catch				'scheme-indent-function 1)
 ;; eval: (put 'check-argument-validation	'scheme-indent-function 1)
+;; eval: (put 'check-argument-violation		'scheme-indent-function 1)
 ;; eval: (put 'with-local-storage		'scheme-indent-function 1)
 ;; eval: (put 'check-assertion			'scheme-indent-function 1)
 ;; End:

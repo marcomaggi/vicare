@@ -554,15 +554,15 @@
 	       (cond ((pair? h)
 		      (if (not (eq? h t))
 			  (race ($cdr h) ($cdr t) ls ($fx+ n 2))
-			(procedure-argument-violation __who__ "circular list is invalid as argument" ls)))
+			(procedure-signature-argument-violation __who__ "circular list is invalid as argument" 1 '(list? ls) ls)))
 		     ((null? h)
 		      ($fx+ n 1))
 		     (else
-		      (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
+		      (procedure-signature-argument-violation __who__ "expected proper list as argument" 1 '(list? ls) ls)))))
 	    ((null? h)
 	     n)
 	    (else
-	     (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
+	     (procedure-signature-argument-violation __who__ "expected proper list as argument" 1 '(list? ls) ls)))))
 
   (let ((len (race ls ls ls 0)))
     (preconditions

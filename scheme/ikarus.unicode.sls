@@ -155,7 +155,7 @@
 			 (case-define* ?who
 			   (({c1 char?} {c2 char?})
 			    (?case-insensitive-cmp ($char-foldcase c1) ($char-foldcase c2)))
-			   (({ch char?} . {ch* list-of-chars?})
+			   (({ch char?} . {ch* char?})
 			    (%do-char-cmp ch ch* (lambda (x y)
 						   (?case-insensitive-cmp x y))))
 			   #| end of CASE-DEFINE* |# ))
@@ -179,7 +179,7 @@
 	  ($char!= ch2 ch3)
 	  ($char!= ch3 ch1))))
 
-  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* char?})
    ;;We must compare every argument to all the other arguments.
    (let outer-loop ((chX    ($char-foldcase ch1))
 		    (char*  (cons* ($char-foldcase ch2)

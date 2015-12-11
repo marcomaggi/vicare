@@ -26,7 +26,7 @@
 #!vicare
 (program (test)
   (options strict-r6rs)
-  (import (except (vicare) catch)
+  (import (vicare)
     (vicare system $strings)
     (vicare checks))
 
@@ -35,6 +35,12 @@
 
 
 ;;;; syntax helpers
+
+(define environment-for-syntax-errors
+  (environment '(vicare)))
+
+(define environment-for-assertion-errors
+  environment-for-syntax-errors)
 
 (define-syntax check-procedure-arguments-violation
   (syntax-rules ()
@@ -61,6 +67,28 @@
        (eval '(begin . ?body)
 	     (environment '(vicare)
 			  '(vicare system $strings)))))))
+
+(define-syntax check-argument-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?result)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    #;(print-condition E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-argument-violation? E)
+		    (when #f
+		      (debug-print (condition-message E)))
+		    (let ((D (cdr (condition-irritants E))))
+		      (if (pair? D)
+			  (car D)
+			(condition-irritants E))))
+		   (else
+		    #;(print-condition E)
+		    E))
+	   (eval (quote ?body) environment-for-assertion-errors
+		 (expander-options strict-r6rs)
+		 (compiler-options strict-r6rs)))
+       => ?result))))
 
 
 (parametrise ((check-test-name	'string-length))
@@ -116,33 +144,25 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  ;;The tests  commented out  trigger an error  while compiling  (in the
-  ;;source optimization phase or the code generation phase).
+  (check-argument-violation
+      (string-ref "ciao" #\d)
+    => #\d)
 
-  ;; (check
-  ;;     (catch #f
-  ;; 	(string-ref "ciao" #\d))
-  ;;   => '(#\d))
+  (check-argument-violation
+      (string-ref "ciao" 'd)
+    => 'd)
 
-  ;; (check
-  ;;     (catch #f
-  ;; 	(string-ref "ciao" 'd))
-  ;;   => '(d))
+  (check-argument-violation
+      (string-ref "ciao" "d")
+    => "d")
 
-  ;; (check
-  ;;     (catch #f
-  ;; 	(string-ref "ciao" "d"))
-  ;;   => '("d"))
+  (check-argument-violation
+      (string-ref "" -1)
+    => -1)
 
-  ;; (check
-  ;;     (catch #f
-  ;; 	(string-ref "" -1))
-  ;;   => '(-1))
-
-  ;; (check
-  ;;     (catch #f
-  ;; 	(string-ref "" (+ 1 (greatest-fixnum))))
-  ;;   => (list (+ 1 (greatest-fixnum))))
+  (check-argument-violation
+      (string-ref "" (+ 1 (greatest-fixnum)))
+    => (+ 1 (greatest-fixnum)))
 
   (check-procedure-arguments-violation
    (string-ref "" 0))
@@ -847,7 +867,7 @@
   ;; (let* ((tail (make-list (greatest-fixnum) #\a))
   ;; 	 (ell  (cons #\a tail)))
   ;;   (check
-  ;; 	(catch #f
+  ;; 	(catch-assertion-violation #f
   ;; 	  (list->string ell))
   ;;     => ell))
 
@@ -1285,21 +1305,13 @@
 ;;; --------------------------------------------------------------------
 ;;; argument check
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->octets 123))
-    => '((string? str) 123))
+  (check-argument-violation
+      (string->octets 123)
+    => 123)
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(octets->string 123))
-    => '((bytevector? bv) 123))
+  (check-argument-violation
+      (octets->string 123)
+    => 123)
 
 ;;; --------------------------------------------------------------------
 
@@ -2075,6 +2087,6 @@
 ;;; end of file
 ;;Local Variables:
 ;;coding: utf-8-unix
-;;eval: (put 'catch 'scheme-indent-function 1)
-;;eval: (put 'catch-expand-time-type-mismatch 'scheme-indent-function 1)
+;;eval: (put 'catch-assertion-violation		'scheme-indent-function 1)
+;;eval: (put 'catch-expand-time-type-mismatch	'scheme-indent-function 1)
 ;;End:
