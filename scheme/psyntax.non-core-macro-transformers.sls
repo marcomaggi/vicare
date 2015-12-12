@@ -1103,7 +1103,7 @@
 		      ;;Remember  that  the  accessor has  to  access  a
 		      ;;simple condition  object embedded in  a compound
 		      ;;condition object.
-		      (condition-accessor (record-type-descriptor ,?name) ,aux)))
+		      (condition-accessor (record-type-descriptor ,?name) ,aux (quote ,accessor))))
 	       ?accessor* aux-accessor*)
 	   #| end of module |# )
 	)))
