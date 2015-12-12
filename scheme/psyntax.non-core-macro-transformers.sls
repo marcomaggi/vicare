@@ -2071,7 +2071,7 @@
 	     ,(if (option.enable-arguments-validation?)
 		  ;;With validation.
 		  `(begin
-		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
 		     (internal-body . ,body*.stx))
 		;;Without validation
 		`(begin . ,body*.stx))))))
@@ -2092,13 +2092,14 @@
 		  ;;With validation.
 		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      who.id
 					      (map (lambda (rv.id pred.stx)
 						     (make-retval-validation-spec rv.id pred.stx
 										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
 						RETVAL* ret-pred*.stx)
 					      synner)))
 		    `(begin
-		       ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		       ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
 		       (receive-and-return ,RETVAL*
 			   (internal-body . ,body*.stx)
 			 . ,RETVAL-VALIDATION*)))
@@ -2156,7 +2157,7 @@
 	    ,(if (option.enable-arguments-validation?)
 		 ;;With validation.
 		 `(begin
-		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		    ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
 		    (internal-body . ,body*.stx))
 	       ;;Without validation.
 	       `(begin . ,body*.stx))))))
@@ -2177,13 +2178,14 @@
 		 ;;With validation.
 		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     who.id
 					     (map (lambda (rv.id pred.stx)
 						    (make-retval-validation-spec rv.id pred.stx
 										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
 					       RETVAL* ret-pred*.stx)
 					     synner)))
 		   `(begin
-		      ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		      ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
 		      (receive-and-return ,RETVAL*
 			  (internal-body . ,body*.stx)
 			. ,RETVAL-VALIDATION*)))
@@ -2231,7 +2233,7 @@
 	     ,(if (option.enable-arguments-validation?)
 		  ;;With validation.
 		  `(begin
-		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
 		     (internal-body . ,body*.stx))
 		;;Without validation.
 		`(begin . ,body*.stx))))))
@@ -2252,13 +2254,14 @@
 		  ;;With validation.
 		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      #f
 					      (map (lambda (rv.id pred.stx)
 						     (make-retval-validation-spec rv.id pred.stx
 										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
 						RETVAL* ret-pred*.stx)
 					      synner)))
 		    `(begin
-		       ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		       ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
 		       (receive-and-return ,RETVAL*
 			   (internal-body . ,body*.stx)
 			 . ,RETVAL-VALIDATION*)))
@@ -2314,7 +2317,7 @@
 	    ,(if (option.enable-arguments-validation?)
 		 ;;With validation.
 		 `(begin
-		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		    ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
 		    (internal-body . ,body*.stx))
 	       ;;Without validation.
 	       `(begin . ,body*.stx))))))
@@ -2335,13 +2338,14 @@
 		 ;;With validation
 		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     #f
 					     (map (lambda (rv.id pred.stx)
 						    (make-retval-validation-spec rv.id pred.stx
 										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
 					       RETVAL* ret-pred*.stx)
 					     synner)))
 		   `(begin
-		      ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		      ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
 		      (receive-and-return ,RETVAL*
 			  (internal-body . ,body*.stx)
 			. ,RETVAL-VALIDATION*)))
@@ -2509,7 +2513,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-arg-validation-forms arg-validation-spec* synner)
+  (define (%make-arg-validation-forms who.id arg-validation-spec* synner)
     (reverse
      (cdr ($fold-left/stx
 	      (lambda (knil spec)
@@ -2522,20 +2526,21 @@
 			    (?arg-id (argument-validation-spec-arg-id spec)))
 			(cons* (fxadd1 arg-counter)
 			       (if (argument-validation-spec-list-arg? spec)
-				   (let ((pred.sym		(gensym))
+				   (let ((loop.sym		(gensym))
+					 (pred.sym		(gensym))
 					 (arg-counter.sym	(gensym))
 					 (arg*.sym		(gensym)))
-				     `(let loop ((,pred.sym		,?expr)
-						 (,arg-counter.sym	,arg-counter)
-						 (,arg*.sym		,?arg-id))
+				     `(let ,loop.sym ((,pred.sym		,?expr)
+						      (,arg-counter.sym		,arg-counter)
+						      (,arg*.sym		,?arg-id))
 					(when (pair? ,arg*.sym)
 					  (if (,pred.sym (car ,arg*.sym))
-					      (loop ,pred.sym ($fxadd1 ,arg-counter.sym) (cdr ,arg*.sym))
-					    (procedure-signature-argument-violation __who__
+					      (,loop.sym ,pred.sym ($fxadd1 ,arg-counter.sym) (cdr ,arg*.sym))
+					    (procedure-signature-argument-violation (quote ,who.id)
 					      "failed argument validation"
 					      ,arg-counter.sym (quote ,?pred) (car ,arg*.sym))))))
 				 `(unless ,?expr
-				    (procedure-signature-argument-violation __who__
+				    (procedure-signature-argument-violation (quote ,who.id)
 				      "failed argument validation"
 				      ,arg-counter (quote ,?pred) ,?arg-id)))
 			       rev-head-forms))
@@ -2544,7 +2549,7 @@
 	    '(1 . ())
 	    arg-validation-spec*))))
 
-  (define (%make-ret-validation-forms retval-validation-spec* synner)
+  (define (%make-ret-validation-forms who.id retval-validation-spec* synner)
     (reverse
      (cdr ($fold-left/stx (lambda (knil spec)
 			    (let ((retval-counter (car knil))
@@ -2559,7 +2564,7 @@
 				  ;;This return value HAS a logic predicate specification.
 				  (cons* (fxadd1 retval-counter)
 					 `(unless ,?expr
-					    (procedure-signature-return-value-violation __who__
+					    (procedure-signature-return-value-violation (quote ,who.id)
 					      "failed return value validation"
 					      ,retval-counter (quote ,?pred) ,?ret))
 					 rev-head-forms)))))
