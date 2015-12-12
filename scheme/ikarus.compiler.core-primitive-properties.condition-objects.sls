@@ -75,9 +75,11 @@
 (declare-core-primitive condition-accessor
     (safe)
   (signatures
-   ((T:record-type-descriptor T:procedure)	=> (T:procedure)))
+   ((T:record-type-descriptor T:procedure)		=> (T:procedure))
+   ((T:record-type-descriptor T:procedure T:symbol)	=> (T:procedure)))
   (attributes
-   ((_ _)		effect-free result-true)))
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
 
 (declare-core-primitive print-condition
     (safe)

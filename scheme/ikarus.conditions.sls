@@ -838,7 +838,7 @@
 			(loop (cdr ls))))))
 	($record-of-type X rtd))))
 
-(define* (condition-accessor {rtd simple-condition-rtd-subtype?} {proc procedure?})
+(case-define* condition-accessor
   ;;Defined  by  R6RS.   RTD  must  be  a record-type  descriptor  of  a  subtype  of
   ;;"&condition".  PROC  should accept one argument,  a record of the  record type of
   ;;RTD.
@@ -848,23 +848,24 @@
   ;;procedure extracts the  first component of the condition of  the type represented
   ;;by RTD, and returns the result of applying PROC to that component.
   ;;
-  (lambda (X)
-    (fluid-let-syntax
-	((__who__ (identifier-syntax 'anonymous-condition-accessor)))
-      (define (%error)
-	(procedure-arguments-consistency-violation __who__ "not a condition of correct type" X rtd))
-      (cond ((compound-condition? X)
-	     (let loop ((ls ($compound-condition-components X)))
-	       (cond ((pair? ls)
-		      (if ($record-of-type (car ls) rtd)
-			  (proc (car ls))
-			(loop (cdr ls))))
-		     (else
-		      (%error)))))
-	    (($record-of-type X rtd)
-	     (proc X))
-	    (else
-	     (%error))))))
+  ((rtd proc)
+   (condition-accessor rtd proc 'anonymous-condition-accessor))
+  (({rtd simple-condition-rtd-subtype?} {proc procedure?} {accessor-who (or not symbol?)})
+   (lambda (X)
+     (define (%error)
+       (procedure-arguments-consistency-violation accessor-who "not a condition of correct type" X rtd))
+     (cond ((compound-condition? X)
+	    (let loop ((ls ($compound-condition-components X)))
+	      (cond ((pair? ls)
+		     (if ($record-of-type (car ls) rtd)
+			 (proc (car ls))
+		       (loop (cdr ls))))
+		    (else
+		     (%error)))))
+	   (($record-of-type X rtd)
+	    (proc X))
+	   (else
+	    (%error))))))
 
 
 ;;;; raising exceptions
@@ -951,7 +952,7 @@
 	     ($make-record-constructor-descriptor RTD PARENT-RCD #f))
 	   (define ?constructor		($record-constructor RCD))
 	   (define ?predicate		(condition-predicate RTD))
-	   (define ?accessor		(condition-accessor  RTD (record-accessor RTD ACCESSOR-IDX)))
+	   (define ?accessor		(condition-accessor  RTD (record-accessor RTD ACCESSOR-IDX (quote ?accessor)) (quote ?accessor)))
 	   ...)))
     ))
 
