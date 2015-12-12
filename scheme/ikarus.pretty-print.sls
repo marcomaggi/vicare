@@ -30,7 +30,8 @@
 		  debug-print-enabled?
 		  debug-print			debug-print*)
     (only (vicare system $structs)
-	  base-rtd)
+	  base-rtd
+	  $struct-rtd)
     (prefix (only (ikarus writer)
 		  the-printer-printing-style
 		  case-printing-style
@@ -586,7 +587,7 @@
       ;;        (one 1)
       ;;        (two 2))
       ;;
-      (let* ((rtd		(record-rtd stru))
+      (let* ((rtd		($struct-rtd stru))
 	     (field-name*	(vector->list (record-type-all-field-names rtd))))
 	(receive (field-box* field-sep*)
 	    (%boxify-struct-fields stru 0 field-name*)

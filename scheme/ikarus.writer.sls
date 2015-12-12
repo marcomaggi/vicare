@@ -43,7 +43,8 @@
     (only (vicare system $symbols)
 	  $unbound-object?)
     (only (vicare system $structs)
-	  base-rtd)
+	  base-rtd
+	  $struct-rtd)
     (only (vicare system $codes)
 	  $code-annotation)
     (prefix (only (ikarus records procedural)
@@ -1293,7 +1294,7 @@
     (module (%write-r6rs-record)
 
       (define (%write-r6rs-record record port write-style? marks-table next-mark-idx)
-	(define rtd (record-rtd record))
+	(define rtd ($struct-rtd record))
 	(write-char* (if (record-type-opaque? rtd)
 			 "#[opaque-record "
 		       "#[record ")
