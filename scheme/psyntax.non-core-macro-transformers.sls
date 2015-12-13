@@ -2233,7 +2233,7 @@
 	     ,(if (option.enable-arguments-validation?)
 		  ;;With validation.
 		  `(begin
-		     ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
+		     ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
 		     (internal-body . ,body*.stx))
 		;;Without validation.
 		`(begin . ,body*.stx))))))
@@ -2254,14 +2254,14 @@
 		  ;;With validation.
 		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			 (RETVAL-VALIDATION* (%make-ret-validation-forms
-					      #f
+					      (quote _)
 					      (map (lambda (rv.id pred.stx)
 						     (make-retval-validation-spec rv.id pred.stx
 										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
 						RETVAL* ret-pred*.stx)
 					      synner)))
 		    `(begin
-		       ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
+		       ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
 		       (receive-and-return ,RETVAL*
 			   (internal-body . ,body*.stx)
 			 . ,RETVAL-VALIDATION*)))
@@ -2317,7 +2317,7 @@
 	    ,(if (option.enable-arguments-validation?)
 		 ;;With validation.
 		 `(begin
-		    ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
+		    ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
 		    (internal-body . ,body*.stx))
 	       ;;Without validation.
 	       `(begin . ,body*.stx))))))
@@ -2338,14 +2338,14 @@
 		 ;;With validation
 		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			(RETVAL-VALIDATION* (%make-ret-validation-forms
-					     #f
+					     (quote _)
 					     (map (lambda (rv.id pred.stx)
 						    (make-retval-validation-spec rv.id pred.stx
 										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
 					       RETVAL* ret-pred*.stx)
 					     synner)))
 		   `(begin
-		      ,@(%make-arg-validation-forms #f arg-validation-spec* synner)
+		      ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
 		      (receive-and-return ,RETVAL*
 			  (internal-body . ,body*.stx)
 			. ,RETVAL-VALIDATION*)))
