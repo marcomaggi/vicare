@@ -522,9 +522,9 @@
 	 ((big)		. ?big-body)
 	 ((little)	. ?lit-body)
 	 (else
-	  (procedure-argument-violation ?who
+	  (procedure-signature-argument-violation ?who
 	    "expected endianness symbol as argument"
-	    ?endianness))))
+	    #f 'endianness? ?endianness))))
     ))
 
 
