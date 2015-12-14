@@ -246,7 +246,7 @@
 	     (seq
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (asmcall mref (constant (object +)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 	     (constant 8)
 	     (constant 16)))))
 
@@ -264,7 +264,7 @@
 		(asm-instr move %eax tmp_0)
 		(asmcall return %eax %ebp %esp %esi))
 	    (seq
-	      (asm-instr move tmp_1 (disp (constant (object +)) (constant 19)))
+	      (asm-instr move tmp_1 (disp (constant (object loc.+)) (constant 19)))
 	      (asm-instr move fvar.1 (constant 8))
 	      (asm-instr move fvar.2 (constant 16))
 	      (asm-instr move %edi tmp_1)
@@ -285,7 +285,7 @@
 		(asm-instr move %eax tmp_0)
 		(asmcall return %eax %ebp %esp %esi))
 	    (seq
-	      (asm-instr move tmp_1 (disp (constant (object +)) (constant 19)))
+	      (asm-instr move tmp_1 (disp (constant (object loc.+)) (constant 19)))
 	      (asm-instr move fvar.1 (constant 8))
 	      (asm-instr move fvar.2 (constant 16))
 	      (asm-instr move %edi tmp_1)
@@ -306,7 +306,7 @@
 	       (asm-instr move %eax %eax)
 	       (asmcall return %eax %ebp %esp %esi))
 	   (seq
-	     (asm-instr move %eax (constant (object +)))
+	     (asm-instr move %eax (constant (object loc.+)))
 	     (asm-instr move %eax (disp %eax (constant 19)))
 	     (asm-instr move fvar.1 (constant 8))
 	     (asm-instr move fvar.2 (constant 16))
@@ -327,7 +327,7 @@
 	  (nop)
 	  ;;Implementation of primitive operation "+": SHORTCUT's interrupt handler.
 	  (label L_shortcut_interrupt_handler_0)
-	  (movl (obj +) %eax)
+	  (movl (obj loc.+) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 8 (disp -8 %esp))
 	  (movl 16 (disp -16 %esp))
@@ -355,7 +355,7 @@
 	  (label L_return_from_interrupt_0)
 
 	  ;;Call the primitive READ.
-	  (movl (obj read) %eax)     ;Load the loc gensym from the relocation vector.
+	  (movl (obj loc.read) %eax)     ;Load the loc gensym from the relocation vector.
 	  (movl (disp %eax 19) %eax) ;Retrieve the value of the PROC field.
 	  (movl %eax %edi)	     ;Load in CPR the entry point of READ.
 	  (movl 0 %eax)		     ;Load in AAR the number of arguments.
@@ -375,7 +375,7 @@
 	  (je (label L_conditional_altern_0))
 
 	  ;;This is the CONSEQ branch of the CONDITIONAL.
-	  (movl (obj display) %eax)
+	  (movl (obj loc.display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 8 (disp -8 %esp)) ;Put the fixnum 1 on the stack as argument.
 	  (movl %eax %edi)
@@ -384,7 +384,7 @@
 
 	  ;;This is the ALTERN branch of the CONDITIONAL.
 	  (label L_conditional_altern_0)
-	  (movl (obj display) %eax)
+	  (movl (obj loc.display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 16 (disp -8 %esp)) ;Put the fixnum 2 on the stack as argument.
 	  (movl %eax %edi)
@@ -431,7 +431,7 @@
 	  (label L_return_from_interrupt_0)
 
 	  ;;Call the primitive READ.
-	  (movl (obj read) %eax)     ;Load the loc gensym from the relocation vector.
+	  (movl (obj loc.read) %eax)     ;Load the loc gensym from the relocation vector.
 	  (movl (disp %eax 19) %eax) ;Retrieve the value of the PROC field.
 	  (movl %eax %edi)	     ;Load in CPR the Assembly entry point of READ.
 	  (movl 0 %eax)		     ;Load the number of argument in AAR.
@@ -452,7 +452,7 @@
 
 	  ;;This is the CONSEQ branch of the CONDITIONAL.
 	  (movl 8 (disp -16 %esp))   ;Put the fixnum 1 on the stack as argument.
-	  (movl (obj display) %eax)  ;Load the loc gensym from the relocation vector.
+	  (movl (obj loc.display) %eax)  ;Load the loc gensym from the relocation vector.
 	  (movl (disp %eax 19) %eax) ;Retrieve the value of the PROC field.
 	  (movl %eax %edi) ;Load in CPR the Assembly entry point of DISPLAY.
 	  (movl -8 %eax)   ;Load the number of arguments in AAR.
@@ -473,7 +473,7 @@
 	  ;;This is the CONSEQ branch of the CONDITIONAL.
 	  (label L_conditional_altern_0)
 	  (movl 16 (disp -16 %esp))  ;Put the fixnum 2 on the stack as argument.
-	  (movl (obj display) %eax)  ;Load the loc gensym from the relocation vector.
+	  (movl (obj loc.display) %eax)  ;Load the loc gensym from the relocation vector.
 	  (movl (disp %eax 19) %eax) ;Retrieve the value of the PROC field.
 	  (movl %eax %edi) ;Load in CPR the Assembly entry point of DISPLAY.
 	  (movl -8 %eax)   ;Load the number of arguments in AAR.
@@ -492,7 +492,7 @@
 	  (label L_conditional_end_0)
 
 	  ;;Here we are past the conditional.
-	  (movl (obj newline) %eax)  ;Load the loc gensym from the relocation vector.
+	  (movl (obj loc.newline) %eax)  ;Load the loc gensym from the relocation vector.
 	  (movl (disp %eax 19) %eax) ;Retrieve the value of the PROC field.
 	  (movl %eax %edi)	     ;Load in CPR the entry point of NEWLINE.
 	  (movl 0 %eax)		     ;Load in AAR the number of arguments.
@@ -540,7 +540,7 @@
 
 	  ;;This is  the TEST  expression of  the inner  CONDITIONAL.  Call  the READ
 	  ;;primitive.
-	  (movl (obj read) %eax)
+	  (movl (obj loc.read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -561,7 +561,7 @@
 
 	  ;;This is  the CONSEQ expression of  the inner CONDITIONAL.  Call  the READ
 	  ;;primitive.
-	  (movl (obj read) %eax)
+	  (movl (obj loc.read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -585,7 +585,7 @@
 	  ;;This is  the ALTERN expression of  the inner CONDITIONAL.  Call  the READ
 	  ;;primitive.
 	  (label L_inner_conditional_altern_0)
-	  (movl (obj read) %eax)
+	  (movl (obj loc.read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -607,7 +607,7 @@
 
 	  ;;This is the CONSEQ expression of the outer CONDITIONAL.
 	  (label L_outer_conditional_conseq_0)
-	  (movl (obj display) %eax)
+	  (movl (obj loc.display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 8 (disp -8 %esp))
 	  (movl %eax %edi)
@@ -616,7 +616,7 @@
 
 	  ;;This is the ALTERN expression of the outer CONDITIONAL.
 	  (label L_conditional_altern_0)
-	  (movl (obj display) %eax)
+	  (movl (obj loc.display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 16 (disp -8 %esp))
 	  (movl %eax %edi)
@@ -665,7 +665,7 @@
 	  (label L_return_from_interrupt_0)
 
 	  ;;Call the READ primitive.
-	  (movl (obj read) %eax)
+	  (movl (obj loc.read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -705,7 +705,7 @@
 	  (label L_shortcut_end_0)
 
 	  ;;This is the CONSEQ.
-	  (movl (obj newline) %eax)
+	  (movl (obj loc.newline) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -713,7 +713,7 @@
 
 	  ;;This is the ALTERN.
 	  (label L_conditional_altern_0)
-	  (movl (obj newline) %eax)
+	  (movl (obj loc.newline) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -745,7 +745,7 @@
 	  (movl %ebx (disp -16 %esp))	;Put the first operand on the stack.
 	  (movl (obj 1.0) %eax)		;Load the second operand.
 	  (movl %eax (disp -24 %esp))	;Put the second operand on the stack.
-	  (movl (obj fl=?) %eax)	;Retrieve the loc gensym.
+	  (movl (obj loc.fl=?) %eax)	;Retrieve the loc gensym.
 	  (movl (disp %eax 19) %eax)	;Retrieve the PROC field of the loc gensym.
 	  (movl %eax %edi)		;Put the function entry point in the CPR.
 	  (movl -16 %eax)		;Store in AAR the encoded number of arguments.
@@ -786,7 +786,7 @@
 	  (label L_return_from_interrupt_0)
 
 	  ;;Call the primitive READ.
-	  (movl (obj read) %eax)
+	  (movl (obj loc.read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)
@@ -852,7 +852,7 @@
 	  (label L_return_from_interrupt_0)
 
 	  ;;Call the primitive READ.
-	  (movl (obj read) %eax)
+	  (movl (obj loc.read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
 	  (movl 0 %eax)

@@ -217,7 +217,7 @@
 	     (seq
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (asmcall mref (constant (object +)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 	     (constant 8)
 	     (constant 16)))))
 
@@ -235,7 +235,7 @@
 		(asm-instr move %eax tmp_0)
 		(asmcall return %eax %ebp %esp %esi))
 	    (seq
-	      (asm-instr move tmp_1 (disp (constant (object +)) (constant 19)))
+	      (asm-instr move tmp_1 (disp (constant (object loc.+)) (constant 19)))
 	      (asm-instr move fvar.1 (constant 8))
 	      (asm-instr move fvar.2 (constant 16))
 	      (asm-instr move %edi tmp_1)
@@ -256,7 +256,7 @@
 		(asm-instr move %eax tmp_0)
 		(asmcall return %eax %ebp %esp %esi))
 	    (seq
-	      (asm-instr move tmp_1 (disp (constant (object +)) (constant 19)))
+	      (asm-instr move tmp_1 (disp (constant (object loc.+)) (constant 19)))
 	      (asm-instr move fvar.1 (constant 8))
 	      (asm-instr move fvar.2 (constant 16))
 	      (asm-instr move %edi tmp_1)
@@ -276,7 +276,7 @@
 	       (asm-instr move %eax %eax)
 	       (asmcall return %eax %ebp %esp %esi))
 	   (seq
-	     (asm-instr move %eax (constant (object +)))
+	     (asm-instr move %eax (constant (object loc.+)))
 	     (asm-instr move %eax (disp %eax (constant 19)))
 	     (asm-instr move fvar.1 (constant 8))
 	     (asm-instr move fvar.2 (constant 16))
