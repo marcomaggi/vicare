@@ -179,11 +179,12 @@
   (prefix (only (psyntax system $all)
 		find-library-by-name
 		current-library-collection)
-	  bootstrap.)
+	  bootstrap::)
   (vicare libraries)
 
   ;;The following libraries are read, expanded and compiled from the source tree.
-  (prefix (ikarus.options) option.)
+  (prefix (ikarus.options)
+	  option::)
   (prefix (only (ikarus.compiler)
 		current-primitive-locations
 		compile-core-expr-to-port
@@ -195,10 +196,10 @@
 		generate-debug-calls
 		check-compiler-pass-preconditions
 		generate-descriptive-labels?)
-	  compiler.)
+	  compiler::)
   (prefix (only (ikarus.fasl.write)
 		writing-boot-image?)
-	  fasl-write.))
+	  fasl-write::))
 
 (module (BOOT-IMAGE-MAJOR-VERSION
 	 BOOT-IMAGE-MINOR-VERSION
@@ -265,35 +266,35 @@
 
 ;;; --------------------------------------------------------------------
 
-(option.verbose? #t)
-(option.print-debug-messages? (equal? "yes" (getenv "DEBUG_MESSAGES")))
+(option::verbose? #t)
+(option::print-debug-messages? (equal? "yes" (getenv "DEBUG_MESSAGES")))
 
-(fasl-write.writing-boot-image? #t)
+(fasl-write::writing-boot-image? #t)
 
-;; (compiler.perform-core-type-inference? #f)
-;; (compiler.perform-unsafe-primrefs-introduction? #f)
+;; (compiler::perform-core-type-inference? #f)
+;; (compiler::perform-unsafe-primrefs-introduction? #f)
 (pretty-width 160)
 ((pretty-format 'fix)
  ((pretty-format 'letrec)))
-(compiler.strip-source-info #t)
-(compiler.current-letrec-pass 'scc)
+(compiler::strip-source-info #t)
+(compiler::current-letrec-pass 'scc)
 
 ;;NOTE This turns off some debug mode features  that cannot be used in the boot image
 ;;because it would become too big.  (Marco Maggi; Wed Apr 2, 2014)
 ;;
-(compiler.generate-debug-calls #f)
+(compiler::generate-debug-calls #f)
 
 ;;NOTE This  can be #t  while developing and  #f in distributed  tarballs.  Obviously
 ;;someone has  to remember to set  it to #f; but  it is not bad  if it is set  to #t,
 ;;because it only affects bulding the boot image.  (Marco Maggi; Wed Oct 29, 2014)
 ;;
-(compiler.check-compiler-pass-preconditions #t)
+(compiler::check-compiler-pass-preconditions #t)
 
 ;;NOTE  This is  for debugging  purposes: it  causes the  compiler to  generate human
 ;;readable labels.  Generating  descriptive labels is slower, so this  is usually set
 ;;to false.  (Marco Maggi; Sun Nov 16, 2014)
 ;;
-(compiler.generate-descriptive-labels? #f)
+(compiler::generate-descriptive-labels? #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
@@ -319,7 +320,7 @@
       (set! set (cons x set))))))
 
 (define debug-printf
-  (if (option.verbose?)
+  (if (option::verbose?)
       (lambda args
 	(let ((port (console-error-port)))
 	  (apply fprintf port args)
@@ -5298,7 +5299,7 @@
 		   ((entry.required? (car entries))
 		    (fprintf (current-error-port)
 			     " ~a" (entry.library-name (car entries)))
-		    (cons (bootstrap.find-library-by-name (entry.library-name (car entries)))
+		    (cons (bootstrap::find-library-by-name (entry.library-name (car entries)))
 			  (next-library-entry (cdr entries))))
 		   (else
 		    (next-library-entry (cdr entries))))))))
@@ -5879,7 +5880,7 @@
     (receive (name* invoke-code* export-primlocs)
 	(time-it "macro expansion"
 	  (lambda ()
-	    (parameterize ((bootstrap.current-library-collection bootstrap-collection))
+	    (parameterize ((bootstrap::current-library-collection bootstrap-collection))
 	      (expand-all SCHEME-LIBRARY-FILES))))
       ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
       ;;we must register  in the state of  the compiler a closure  capable of mapping
@@ -5888,7 +5889,7 @@
       ;;
       ;;EXPORT-PRIMLOCS is an  alist whose keys are the primitive's  symbol names and
       ;;whose values are the primitive's location gensyms.
-      (compiler.current-primitive-locations
+      (compiler::current-primitive-locations
        (lambda (primitive-name.sym)
 	 (cond ((assq primitive-name.sym export-primlocs)
 		=> cdr)
@@ -5906,7 +5907,7 @@
 			;;   (when (equal? name '(ikarus chars))
 			;;     (pretty-print (syntax->datum core))))
 			(debug-printf "compiling: ~s\n" name)
-			(compiler.compile-core-expr-to-port core port))
+			(compiler::compile-core-expr-to-port core port))
 	      name*
 	      invoke-code*)))
 	(close-output-port port)))))
