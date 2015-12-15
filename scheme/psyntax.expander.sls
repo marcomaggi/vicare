@@ -80,9 +80,6 @@
 
     ;; exception raisers
     syntax-violation			assertion-error
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Apr 12,
-    ;;2014)
-    syntax-error
 
     ;;SYNTAX-CASE subroutines
     syntax-dispatch			ellipsis-map
@@ -131,10 +128,6 @@
 
 
 ;;; helpers
-
-;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Apr 12,
-;;2014)
-(define syntax-error)
 
 (include "psyntax.helpers.scm" #t)
 

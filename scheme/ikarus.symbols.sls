@@ -98,24 +98,7 @@
     ;;external dependencies.  (Marco Maggi; Mon Apr 14, 2014)
     (vicare system $fx)
     (vicare system $pairs)
-    (except (vicare system $strings)
-	    ;;FIXME These excepts are to be  removed at the next boot image rotation.
-	    ;;(Marco Maggi; Sat Mar 28, 2015)
-	    $string=
-	    $string!=
-	    $string>
-	    $string<
-	    $string>=
-	    $string<=)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 28,
-    ;;2015)
-    (only (ikarus strings)
-	  $string=
-	  $string!=
-	  $string>
-	  $string<
-	  $string>=
-	  $string<=)
+    (vicare system $strings)
     (only (vicare system $numerics)
 	  $add1-integer)
     (except (vicare system $symbols)
@@ -128,12 +111,7 @@
 	    $symbol=			$symbol!=
 	    $symbol<			$symbol<=
 	    $symbol>			$symbol>=
-	    $symbol-max			$symbol-min
-	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri
-	    ;;May 23, 2014)
-	    system-value-gensym)
-    (for (prefix (vicare) sys.)
-      expand)
+	    $symbol-max			$symbol-min)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
 	  define-min/max-comparison

@@ -410,12 +410,6 @@
 
 
 (import (except (vicare)
-		;;FIXME To be removed at the next boot image rotation.  (Marco Maggi;
-		;;Tue May 5, 2015)
-		procedure-arguments-consistency-violation
-		non-negative-fixnum?
-		;;;
-
 		+ - * / = != < <= > >=
 		min				max
 		add1				sub1
@@ -511,14 +505,6 @@
   (vicare system $compnums)
   (vicare system $chars)
   (vicare system $strings)
-  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue May 5,
-  ;;2015)
-  (only (ikarus conditions)
-	procedure-arguments-consistency-violation)
-  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue May 5,
-  ;;2015)
-  (only (ikarus fixnums)
-	non-negative-fixnum?)
   (only (vicare language-extensions syntaxes)
 	cond-numeric-operand
 	cond-real-numeric-operand

@@ -74,12 +74,6 @@
     $symbol-hash		$bytevector-hash
     $exact-integer-hash)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Fri Mar 20, 2015)
-		  vector-find
-		  vector-fold-right
-		  ;;;
-
 		  make-eq-hashtable		make-eqv-hashtable
 		  make-hashtable
 		  hashtable?			hashtable-mutable?	mutable-hashtable?
@@ -122,11 +116,6 @@
 		  eof-object-hash		would-block-hash
 		  struct-hash			record-hash
 		  object-hash)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 20,
-    ;;2015)
-    (only (ikarus vectors)
-	  vector-find
-	  vector-fold-right)
     (vicare system $fx)
     (vicare system $bignums)
     (vicare system $ratnums)

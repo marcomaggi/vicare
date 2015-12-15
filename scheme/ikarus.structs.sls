@@ -62,11 +62,6 @@
     ;; syntactic bindings for internal use only
     internal-applicable-struct-type-destructor)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed May 6, 2015)
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  ;;This is redefined in this library.
 		  list-of-symbols?
 
@@ -122,10 +117,6 @@
 
 
 ;;;; helpers
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
-;;2015)
-(define procedure-arguments-consistency-violation assertion-violation)
 
 (define-list-of-type-predicate list-of-symbols? symbol?)
 

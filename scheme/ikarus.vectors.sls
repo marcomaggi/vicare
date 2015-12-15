@@ -160,12 +160,6 @@
     $vector-copy-source-count!
     $fill-vector-from-list!)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed May 6, 2015)
-		  non-negative-fixnum?
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  list-of-vectors?
 		  make-vector		vector
 		  subvector		vector-length
@@ -197,10 +191,6 @@
 	    $vector-copy-source-range!
 	    $vector-copy-source-count!
 	    $fill-vector-from-list!)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed May 6,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate))
 
@@ -238,12 +228,6 @@
     ))
 
 ;;; --------------------------------------------------------------------
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
-;;2015)
-;;
-(define procedure-arguments-consistency-violation
-  assertion-violation)
 
 (define-syntax-rule (valid-index-for-vector-slot vec idx)
   ;;Assume VEC and IDX have been already validated as vector and non-negative fixnum.
@@ -431,13 +415,7 @@
    (let ((len0 ($vector-length v0)))
      (and ($fx= len0 ($vector-length v1))
 	  ($fx= len0 ($vector-length v2)))))
-  (({v0 vector?} . v*)
-   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
-   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-   (for-each (lambda (item)
-	       (unless (vector? item)
-		 (procedure-argument-violation __who__ "failed argument validation" item)))
-     v*)
+  (({v0 vector?} . {v* vector?})
    (let ((len ($vector-length v0)))
      (for-all (lambda (V)
 		($fx= len ($vector-length V)))
@@ -576,15 +554,15 @@
 	       (cond ((pair? h)
 		      (if (not (eq? h t))
 			  (race ($cdr h) ($cdr t) ls ($fx+ n 2))
-			(procedure-argument-violation __who__ "circular list is invalid as argument" ls)))
+			(procedure-signature-argument-violation __who__ "circular list is invalid as argument" 1 '(list? ls) ls)))
 		     ((null? h)
 		      ($fx+ n 1))
 		     (else
-		      (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
+		      (procedure-signature-argument-violation __who__ "expected proper list as argument" 1 '(list? ls) ls)))))
 	    ((null? h)
 	     n)
 	    (else
-	     (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
+	     (procedure-signature-argument-violation __who__ "expected proper list as argument" 1 '(list? ls) ls)))))
 
   (let ((len (race ls ls ls 0)))
     (preconditions
@@ -689,13 +667,7 @@
 	 (f p v0 v1 ($fxadd1 i) n
 	    (cons (p ($vector-ref v0 i) ($vector-ref v1 i)) ac)))))
 
-    (({p procedure?} {v0 vector?} {v1 vector?} . v*)
-     ;;FIXME At the next boot image  rotation this validation should be integrated in
-     ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-     (for-each (lambda (item)
-		 (unless (vector? item)
-		   (procedure-argument-violation __who__ "failed argument validation" item)))
-       v*)
+    (({p procedure?} {v0 vector?} {v1 vector?} . {v* vector?})
      (preconditions
       (vectors-of-same-length v0 v1 v*))
      (let loop ((i 0) (len (vector-length v0)) (ac '()))
@@ -749,13 +721,7 @@
 	    ($vector-ref v1 i))
 	 (loop ($fxadd1 i) len)))))
 
-  (({p procedure?} {v0 vector?} {v1 vector?} . v*)
-   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
-   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-   (for-each (lambda (item)
-	       (unless (vector? item)
-		 (procedure-argument-violation __who__ "failed argument validation" item)))
-     v*)
+  (({p procedure?} {v0 vector?} {v1 vector?} . {v* vector?})
    (preconditions
     (vectors-of-same-length v0 v1 v*))
    (let loop ((i 0) (len ($vector-length v0)))
@@ -817,13 +783,7 @@
 					($vector-ref v1 i))
 				  (loop ($fxadd1 i)))))))))
 
-       (({proc procedure?} {v0 vector?} {v1 vector?} . v*)
-	;;FIXME At the next boot image  rotation this validation should be integrated
-	;;in the signature.  (Marco Maggi; Sun May 10, 2015)
-	(for-each (lambda (item)
-		    (unless (vector? item)
-		      (procedure-argument-violation __who__ "failed argument validation" item)))
-	  v*)
+       (({proc procedure?} {v0 vector?} {v1 vector?} . {v* vector?})
 	(preconditions
 	 (vectors-of-same-length v0 v1 v*))
 	(let ((len ($vector-length v0)))
@@ -883,13 +843,7 @@
 	     (doit i)
 	   (loop (fxadd1 i) imax (doit i)))))))
 
-  (({combine procedure?} knil {v0 vector?} {v1 vector?} . v*)
-   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
-   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-   (for-each (lambda (item)
-	       (unless (vector? item)
-		 (procedure-argument-violation __who__ "failed argument validation" item)))
-     v*)
+  (({combine procedure?} knil {v0 vector?} {v1 vector?} . {v* vector?})
    (preconditions
     (vectors-of-same-length v0 v1 v*))
    (let ((len (vector-length v0)))
@@ -946,13 +900,7 @@
 	     (doit i)
 	   (loop (fxsub1 i) imin (doit i)))))))
 
-  (({combine procedure?} knil {v0 vector?} {v1 vector?} . v*)
-   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
-   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-   (for-each (lambda (item)
-	       (unless (vector? item)
-		 (procedure-argument-violation __who__ "failed argument validation" item)))
-     v*)
+  (({combine procedure?} knil {v0 vector?} {v1 vector?} . {v* vector?})
    (preconditions
     (vectors-of-same-length v0 v1 v*))
    (let ((len (vector-length v0)))

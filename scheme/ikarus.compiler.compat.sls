@@ -65,20 +65,10 @@
     reset-symbol-proc!
     procedure-argument-violation
     expression-return-value-violation
-
-    print-stderr-message
-    print-error-message
-    print-verbose-message
-    print-debug-message)
-  (import (except (vicare)
-		  void-object?)
-    (ikarus.printing-messages))
-
-  ;;FIXME To be removed  at the next boot image rotation.  (Marco  Maggi; Tue Sep 30,
-  ;;2014)
-  (define (void-object? x)
-    (eq? x (void)))
-
+    print-stderr-message)
+  (import (vicare)
+    (only (ikarus.printing-messages)
+	  print-stderr-message))
   #| end of library |# )
 
 ;;; end of file

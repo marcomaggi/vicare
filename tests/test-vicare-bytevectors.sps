@@ -1,6 +1,5 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Vicare
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for bytevector functions
 ;;;Date: Fri Oct 21, 2011
 ;;;
@@ -10,23 +9,22 @@
 ;;;
 ;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
-(import (except (vicare) catch)
+(import (vicare)
   (prefix (vicare platform words) words.)
   (vicare system $bytevectors)
   (vicare checks))
@@ -36,53 +34,6 @@
 
 
 ;;;; syntax helpers
-
-(define-syntax catch
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((procedure-argument-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
-	       (else E))
-       (begin . ?body)))))
-
-(define-syntax (with-check-for-procedure-argument-validation stx)
-  (syntax-case stx ()
-    ((?kwd (?who ?validation-expr) ?test0 ?test ...)
-     (datum->syntax #'?kwd
-		    (syntax->datum
-		     #'(let-syntax ((doit (syntax-rules ()
-					    ((_ ?body ?arg (... ...))
-					     (check-for-procedure-argument-violation
-						 ?body
-					       => (quasiquote (?who (?validation-expr ?arg (... ...)))))
-					     ))))
-			 ?test0 ?test ...))))
-    ))
-
-(define-syntax check-argument-validation
-  (syntax-rules ()
-    ((_ ?body ?irritant0 ?irritant ...)
-     (check
-	 (guard (E ((procedure-argument-violation? E)
-		    (cdr (condition-irritants E)))
-		   (else E))
-	   ?body)
-       => (list ?irritant0 ?irritant ...)))
-    ))
-
-(define-syntax check-procedure-arguments-violation
-  (syntax-rules ()
-    ((_ ?body)
-     (check-for-true
-      (guard (E ((procedure-argument-violation? E)
-		 (when #f
-		   (check-pretty-print (condition-message E))
-		   (check-pretty-print (condition-irritants E)))
-		 #t)
-		(else E))
-	?body)))))
 
 (define-syntax check-consistency-violation
   (syntax-rules ()
@@ -94,6 +45,37 @@
 	   ?body)
        => (list ?irritant0 ?irritant ...)))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax check-argument-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?result)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    #;(print-condition E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-signature-return-value-violation? E)
+		    #;(print-condition E)
+		    (procedure-signature-return-value-violation.offending-value E))
+		   ((procedure-arguments-consistency-violation? E)
+		    #;(print-condition E)
+		    (condition-irritants E))
+		   ((procedure-argument-violation? E)
+		    (when #f
+		      (debug-print (condition-message E)))
+		    (let ((D (cdr (condition-irritants E))))
+		      (if (pair? D)
+			  (car D)
+			(condition-irritants E))))
+		   ((assertion-violation? E)
+		    (condition-irritants E))
+		   (else
+		    (print-condition E)
+		    E))
+	   ?body)
+       => ?result))))
+
 
 
 ;;;; helpers
@@ -131,28 +113,28 @@
 ;;; arguments validation: length
 
   ;;length is not an integer
-  (check-argument-validation (make-bytevector #\a) #\a)
+  (check-argument-violation (make-bytevector #\a) => #\a)
 
   ;;length is not an exact integer
-  (check-argument-validation (make-bytevector 1.0) 1.0)
+  (check-argument-violation (make-bytevector 1.0) => 1.0)
 
   ;;length is not a fixnum
-  (check-argument-validation (make-bytevector (least-positive-bignum)) (least-positive-bignum))
+  (check-argument-violation (make-bytevector (least-positive-bignum)) => (least-positive-bignum))
 
   ;;length is negative
-  (check-argument-validation (make-bytevector -2) -2)
+  (check-argument-violation (make-bytevector -2) => -2)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: byte filler
 
   ;;filler is not a fixnum
-  (check-argument-validation (make-bytevector 3 #\a) #\a)
+  (check-argument-violation (make-bytevector 3 #\a) => #\a)
 
   ;;filler is too positive
-  (check-argument-validation (make-bytevector 2 256) 256)
+  (check-argument-violation (make-bytevector 2 256) => 256)
 
   ;;filler is too negative
-  (check-argument-validation (make-bytevector 2 -129) -129)
+  (check-argument-violation (make-bytevector 2 -129) => -129)
 
   #t)
 
@@ -180,17 +162,17 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-fill! #\a 1) #\a)
+  (check-argument-violation (bytevector-fill! #\a 1) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: byte filler
 
   ;;filler is not a fixnum
-  (check-argument-validation (bytevector-fill! #vu8() #\a) #\a)
+  (check-argument-violation (bytevector-fill! #vu8() #\a) => #\a)
   ;;filler is too positive
-  (check-argument-validation (bytevector-fill! #vu8() 256) 256)
+  (check-argument-violation (bytevector-fill! #vu8() 256) => 256)
   ;;filler is too negative
-  (check-argument-validation (bytevector-fill! #vu8() -129) -129)
+  (check-argument-violation (bytevector-fill! #vu8() -129) => -129)
 
   #t)
 
@@ -215,7 +197,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-length #\a) #\a)
+  (check-argument-violation (bytevector-length #\a) => #\a)
 
   #t)
 
@@ -233,7 +215,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-empty? #\a) #\a)
+  (check-argument-violation (bytevector-empty? #\a) => #\a)
 
   #t)
 
@@ -289,9 +271,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector=? #\a #vu8()) #\a)
+  (check-argument-violation (bytevector=? #\a #vu8()) => #\a)
 
-  (check-argument-validation (bytevector=? #vu8() #\a) #\a)
+  (check-argument-violation (bytevector=? #vu8() #\a) => #\a)
 
   #t)
 
@@ -382,14 +364,17 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check-procedure-arguments-violation
-   (bytevector!=? 123 '#vu8()))
+  (check-argument-violation
+      (bytevector!=? 123 '#vu8())
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector!=? '#vu8() 123))
+  (check-argument-violation
+      (bytevector!=? '#vu8() 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector!=? '#vu8() '#vu8() 123))
+  (check-argument-violation
+      (bytevector!=? '#vu8() '#vu8() 123)
+    => 123)
 
   #t)
 
@@ -489,41 +474,53 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check-procedure-arguments-violation
-   (bytevector-u8<? 123 '#ve(ascii "abc")))
+  (check-argument-violation
+      (bytevector-u8<? 123 '#ve(ascii "abc"))
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8<? '#ve(ascii "abc") 123))
+  (check-argument-violation
+      (bytevector-u8<? '#ve(ascii "abc") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8<? '#ve(ascii "abc") '#ve(ascii "def") 123))
+  (check-argument-violation
+      (bytevector-u8<? '#ve(ascii "abc") '#ve(ascii "def") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8<=? 123 '#ve(ascii "abc")))
+  (check-argument-violation
+      (bytevector-u8<=? 123 '#ve(ascii "abc"))
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8<=? '#ve(ascii "abc") 123))
+  (check-argument-violation
+      (bytevector-u8<=? '#ve(ascii "abc") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8<=? '#ve(ascii "abc") '#ve(ascii "def") 123))
+  (check-argument-violation
+      (bytevector-u8<=? '#ve(ascii "abc") '#ve(ascii "def") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8>? 123 '#ve(ascii "abc")))
+  (check-argument-violation
+      (bytevector-u8>? 123 '#ve(ascii "abc"))
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8>? '#ve(ascii "abc") 123))
+  (check-argument-violation
+      (bytevector-u8>? '#ve(ascii "abc") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8>? '#ve(ascii "abc") '#ve(ascii "def") 123))
+  (check-argument-violation
+      (bytevector-u8>? '#ve(ascii "abc") '#ve(ascii "def") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8>=? 123 '#ve(ascii "abc")))
+  (check-argument-violation
+      (bytevector-u8>=? 123 '#ve(ascii "abc"))
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8>=? '#ve(ascii "abc") 123))
+  (check-argument-violation
+      (bytevector-u8>=? '#ve(ascii "abc") 123)
+    => 123)
 
-  (check-procedure-arguments-violation
-   (bytevector-u8>=? '#ve(ascii "abc") '#ve(ascii "def") 123))
+  (check-argument-violation
+      (bytevector-u8>=? '#ve(ascii "abc") '#ve(ascii "def") 123)
+    => 123)
 
   #t)
 
@@ -576,7 +573,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-copy #\a) #\a)
+  (check-argument-violation (bytevector-copy #\a) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe operation
@@ -673,25 +670,25 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-copy! #\a 0 #vu8() 0 1) #\a)
+  (check-argument-violation (bytevector-copy! #\a 0 #vu8() 0 1) => #\a)
 
-  (check-argument-validation (bytevector-copy! #vu8() 0 #\a 0 1) #\a)
+  (check-argument-violation (bytevector-copy! #vu8() 0 #\a 0 1) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: start index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-copy! #vu8() #\a #vu8() 0 1) #\a)
-  (check-argument-validation (bytevector-copy! #vu8() -1 #vu8()  0 1) -1)
+  (check-argument-violation (bytevector-copy! #vu8() #\a #vu8() 0 1) => #\a)
+  (check-argument-violation (bytevector-copy! #vu8() -1 #vu8()  0 1) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-copy! #vu8()     1 #vu8()    0 1) #vu8()     1 1)
   (check-consistency-violation (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10 1)
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() #\b 1) #\b)
+  (check-argument-violation (bytevector-copy! #vu8() 0 #vu8() #\b 1) => #\b)
   ;;negative
-  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() -2 1) -2)
+  (check-argument-violation (bytevector-copy! #vu8() 0 #vu8() -2 1) => -2)
 
   ;;too high
   (check-consistency-violation (bytevector-copy! #vu8(1)   0 #vu8()     2 1) #vu8()     2 1)
@@ -701,9 +698,9 @@
 ;;; arguments validation: count
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() 0 #\a) #\a)
+  (check-argument-violation (bytevector-copy! #vu8() 0 #vu8() 0 #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() 0 -2)  -2)
+  (check-argument-violation (bytevector-copy! #vu8() 0 #vu8() 0 -2)  => -2)
 
   ;;too big for source
   (check-consistency-violation (bytevector-copy! #vu8(1 2) 0 #vu8() 0 3)  #vu8(1 2) 0 3)
@@ -718,17 +715,17 @@
 
 ;;; argument validation, bytevector
 
-  (check-argument-validation (subbytevector-u8 "ciao" 1) "ciao")
+  (check-argument-violation (subbytevector-u8 "ciao" 1) => "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
   ;;start index not an integer
-  (check-argument-validation (subbytevector-u8 '#vu8() #\a) #\a)
+  (check-argument-violation (subbytevector-u8 '#vu8() #\a) => #\a)
   ;;start index not an exact integer
-  (check-argument-validation (subbytevector-u8 '#vu8() 1.0) 1.0)
+  (check-argument-violation (subbytevector-u8 '#vu8() 1.0) => 1.0)
   ;;start index is negative
-  (check-argument-validation (subbytevector-u8 '#vu8() -1) -1)
+  (check-argument-violation (subbytevector-u8 '#vu8() -1) => -1)
 
   ;;start index too big
   (check-consistency-violation (subbytevector-u8 '#vu8() 1) '#vu8() 1 0)
@@ -737,11 +734,11 @@
 ;;; argument validation, end index
 
   ;;end index not an integer
-  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 #\a) #\a)
+  (check-argument-violation (subbytevector-u8 '#vu8(1) 0 #\a) => #\a)
   ;;end index not an exact integer
-  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 1.0) 1.0)
+  (check-argument-violation (subbytevector-u8 '#vu8(1) 0 1.0) => 1.0)
   ;;end index is negative
-  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 -1) -1)
+  (check-argument-violation (subbytevector-u8 '#vu8(1) 0 -1) => -1)
 
   ;;end index too big
   (check-consistency-violation (subbytevector-u8 '#vu8(1) 0 2) #vu8(1) 0 2)
@@ -784,17 +781,17 @@
 ;;; argument validation, bytevector
 
   ;;argument is not a bytevector
-  (check-argument-validation (subbytevector-u8/count "ciao" 1 1) "ciao")
+  (check-argument-violation (subbytevector-u8/count "ciao" 1 1) => "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
   ;;start index not an integer
-  (check-argument-validation (subbytevector-u8/count '#vu8() #\a 1) #\a)
+  (check-argument-violation (subbytevector-u8/count '#vu8() #\a 1) => #\a)
   ;;start index not an exact integer
-  (check-argument-validation (subbytevector-u8/count '#vu8() 1.0 1) 1.0)
+  (check-argument-violation (subbytevector-u8/count '#vu8() 1.0 1) => 1.0)
   ;;start index is negative
-  (check-argument-validation (subbytevector-u8/count '#vu8() -1 1) -1)
+  (check-argument-violation (subbytevector-u8/count '#vu8() -1 1) => -1)
 
   ;;start index too big
   (check-consistency-violation (subbytevector-u8/count '#vu8() 1 1) #vu8() 1 1)
@@ -803,11 +800,11 @@
 ;;; argument validation, word count
 
   ;;word count not an integer
-  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 #\a) #\a)
+  (check-argument-violation (subbytevector-u8/count '#vu8(1) 0 #\a) => #\a)
   ;;word count not an exact integer
-  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 1.0) 1.0)
+  (check-argument-violation (subbytevector-u8/count '#vu8(1) 0 1.0) => 1.0)
   ;;word count is negative
-  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 -1) -1)
+  (check-argument-violation (subbytevector-u8/count '#vu8(1) 0 -1) => -1)
 
   ;;end index too big
   (check-consistency-violation (subbytevector-u8/count '#vu8(1) 0 2) #vu8(1) 0 2)
@@ -849,17 +846,17 @@
 
 ;;; argument validation, bytevector
 
-  (check-argument-validation (subbytevector-s8 "ciao" 1) "ciao")
+  (check-argument-violation (subbytevector-s8 "ciao" 1) => "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
   ;;start index not an integer
-  (check-argument-validation (subbytevector-s8 '#vs8() #\a) #\a)
+  (check-argument-violation (subbytevector-s8 '#vs8() #\a) => #\a)
   ;;start index not an exact integer
-  (check-argument-validation (subbytevector-s8 '#vs8() 1.0) 1.0)
+  (check-argument-violation (subbytevector-s8 '#vs8() 1.0) => 1.0)
   ;;start index is negative
-  (check-argument-validation (subbytevector-s8 '#vs8() -1) -1)
+  (check-argument-violation (subbytevector-s8 '#vs8() -1) => -1)
 
   ;;start index too big
   (check-consistency-violation (subbytevector-s8 '#vs8() 1) #vs8() 1 0)
@@ -868,11 +865,11 @@
 ;;; argument validation, end index
 
   ;;end index not an integer
-  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 #\a) #\a)
+  (check-argument-violation (subbytevector-s8 '#vs8(1) 0 #\a) => #\a)
   ;;end index not an exact integer
-  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 1.0) 1.0)
+  (check-argument-violation (subbytevector-s8 '#vs8(1) 0 1.0) => 1.0)
   ;;end index is negative
-  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 -1) -1)
+  (check-argument-violation (subbytevector-s8 '#vs8(1) 0 -1) => -1)
 
   ;;end index too big
   (check-consistency-violation (subbytevector-s8 '#vs8(1) 0 2) #vs8(1) 0 2)
@@ -915,17 +912,17 @@
 ;;; argument validation, bytevector
 
   ;;argument is not a bytevector
-  (check-argument-validation (subbytevector-s8/count "ciao" 1 1) "ciao")
+  (check-argument-violation (subbytevector-s8/count "ciao" 1 1) => "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
   ;;start index not an integer
-  (check-argument-validation (subbytevector-s8/count '#vs8() #\a 1) #\a)
+  (check-argument-violation (subbytevector-s8/count '#vs8() #\a 1) => #\a)
   ;;start index not an exact integer
-  (check-argument-validation (subbytevector-s8/count '#vs8() 1.0 1) 1.0)
+  (check-argument-violation (subbytevector-s8/count '#vs8() 1.0 1) => 1.0)
   ;;start index is negative
-  (check-argument-validation (subbytevector-s8/count '#vs8() -1 1) -1)
+  (check-argument-violation (subbytevector-s8/count '#vs8() -1 1) => -1)
 
   ;;start index too big
   (check-consistency-violation (subbytevector-s8/count '#vs8() 1 1) #vs8() 1 1)
@@ -934,11 +931,11 @@
 ;;; argument validation, word count
 
   ;;word count not an integer
-  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 #\a) #\a)
+  (check-argument-violation (subbytevector-s8/count '#vs8(1) 0 #\a) => #\a)
   ;;word count not an exact integer
-  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 1.0) 1.0)
+  (check-argument-violation (subbytevector-s8/count '#vs8(1) 0 1.0) => 1.0)
   ;;word count is negative
-  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 -1) -1)
+  (check-argument-violation (subbytevector-s8/count '#vs8(1) 0 -1) => -1)
 
   ;;end index too big
   (check-consistency-violation (subbytevector-s8/count '#vs8(1) 0 2) #vs8(1) 0 2)
@@ -1039,8 +1036,8 @@
 
 ;;; arguments validation
 
-  (check-argument-validation (bytevector-concatenate 123) 123)
-  (check-argument-validation (bytevector-concatenate '(123)) '(123))
+  (check-argument-violation (bytevector-concatenate 123) => 123)
+  (check-argument-violation (bytevector-concatenate '(123)) => '(123))
 
 ;;; --------------------------------------------------------------------
 
@@ -1077,8 +1074,8 @@
 
 ;;; arguments validation
 
-  (check-argument-validation (bytevector-reverse-and-concatenate 123) 123)
-  (check-argument-validation (bytevector-reverse-and-concatenate '(123)) '(123))
+  (check-argument-violation (bytevector-reverse-and-concatenate 123) => 123)
+  (check-argument-violation (bytevector-reverse-and-concatenate '(123)) => '(123))
 
 ;;; --------------------------------------------------------------------
 
@@ -1113,7 +1110,7 @@
 
 (parametrise ((check-test-name	'bytevector-hash))
 
-  (check-argument-validation (bytevector-hash 123) 123)
+  (check-argument-violation (bytevector-hash 123) => 123)
 
 ;;; --------------------------------------------------------------------
 
@@ -1141,15 +1138,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u8-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-u8-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) #\a 2) #\a)
+  (check-argument-violation (bytevector-u8-set! #vu8(1 2 3) #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) -1 2) -1)
+  (check-argument-violation (bytevector-u8-set! #vu8(1 2 3) -1 2) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u8-set! #vu8(1 2 3) 4 2) '#vu8(1 2 3) 4)
@@ -1160,11 +1157,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 1 #\a) #\a)
+  (check-argument-violation (bytevector-u8-set! #vu8(1 2 3) 1 #\a) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)) (words.least-u8*))
+  (check-argument-violation (bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)) => (words.least-u8*))
   ;;too high
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)) (words.greatest-u8*))
+  (check-argument-violation (bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)) => (words.greatest-u8*))
 
   #t)
 
@@ -1181,15 +1178,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u8-ref #\a 1) #\a)
+  (check-argument-violation (bytevector-u8-ref #\a 1) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) #\a) #\a)
+  (check-argument-violation (bytevector-u8-ref #vu8(1 2 3) #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) -1) -1)
+  (check-argument-violation (bytevector-u8-ref #vu8(1 2 3) -1) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u8-ref #vu8(1 2 3) 4) #vu8(1 2 3) 4)
@@ -1212,15 +1209,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s8-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-s8-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) #\a 2) #\a)
+  (check-argument-violation (bytevector-s8-set! #vs8(1 2 3) #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) -1 2) -1)
+  (check-argument-violation (bytevector-s8-set! #vs8(1 2 3) -1 2) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s8-set! #vs8(1 2 3) 4 2) #vs8(1 2 3) 4)
@@ -1231,11 +1228,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 1 #\a) #\a)
+  (check-argument-violation (bytevector-s8-set! #vs8(1 2 3) 1 #\a) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)) (words.least-s8*))
+  (check-argument-violation (bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)) => (words.least-s8*))
   ;;too high
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)) (words.greatest-s8*))
+  (check-argument-violation (bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)) => (words.greatest-s8*))
 
   #t)
 
@@ -1252,15 +1249,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s8-ref #\a 1) #\a)
+  (check-argument-violation (bytevector-s8-ref #\a 1) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) #\a) #\a)
+  (check-argument-violation (bytevector-s8-ref #vs8(1 2 3) #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) -1) -1)
+  (check-argument-violation (bytevector-s8-ref #vs8(1 2 3) -1) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s8-ref #vs8(1 2 3) 4) #vs8(1 2 3) 4)
@@ -1317,15 +1314,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u16-set! #\a 1 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u16-set! #\a 1 2 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) #\a 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) #\a 2 (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) -1)
+  (check-argument-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 4))
@@ -1336,19 +1333,18 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 #\a (endianness little)) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)) (words.least-u16*))
+  (check-argument-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)) => (words.least-u16*))
   ;;too high
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)) (words.greatest-u16*))
+  (check-argument-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)) => (words.greatest-u16*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -1392,15 +1388,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u16-ref #\a 1 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u16-ref #\a 1 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-u16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1)
+  (check-argument-violation (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
@@ -1410,10 +1406,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check
-      (catch #f
-	(bytevector-u16-ref #vu8(1 0 2 0 3 0) 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-u16-ref #vu8(1 0 2 0 3 0) 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -1437,15 +1432,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u16-native-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-u16-native-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
+  (check-argument-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
+  (check-argument-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) -1 2) => -1)
 
   ;;not aligned to 2
   (check-consistency-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
@@ -1459,11 +1454,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
+  (check-argument-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*)) (words.least-u16*))
+  (check-argument-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*)) => (words.least-u16*))
   ;;too high
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*)) (words.greatest-u16*))
+  (check-argument-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*)) => (words.greatest-u16*))
 
   #t)
 
@@ -1485,15 +1480,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u16-native-ref #\a 1) #\a)
+  (check-argument-violation (bytevector-u16-native-ref #\a 1) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) #\a) #\a)
+  (check-argument-violation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) -1) -1)
+  (check-argument-violation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) -1) => -1)
 
   ;;not aligned to 2
   (check-consistency-violation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
@@ -1553,15 +1548,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s16-set! #\a 1 2 (native-endianness)) #\a)
+  (check-argument-violation (bytevector-s16-set! #\a 1 2 (native-endianness)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) #\a 2 (native-endianness)) #\a)
+  (check-argument-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) #\a 2 (native-endianness)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) -1 2 (native-endianness)) -1)
+  (check-argument-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) -1 2 (native-endianness)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (native-endianness))  #vu8(1 0 2 0 3 0) (mult 4))
@@ -1572,19 +1567,18 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 #\a (native-endianness)) #\a)
+  (check-argument-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 #\a (native-endianness)) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*) (native-endianness)) (words.least-s16*))
+  (check-argument-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*) (native-endianness)) => (words.least-s16*))
   ;;too high
-  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*) (native-endianness)) (words.greatest-s16*))
+  (check-argument-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*) (native-endianness)) => (words.greatest-s16*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check
-      (catch #f
-	(bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -1652,15 +1646,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s16-ref #\a 1 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s16-ref #\a 1 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-s16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1)
+  (check-argument-violation (bytevector-s16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
@@ -1670,10 +1664,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check
-      (catch #f
-	(bytevector-s16-ref #vu8(1 0 2 0 3 0) 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-s16-ref #vu8(1 0 2 0 3 0) 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -1697,15 +1690,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s16-native-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-s16-native-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
+  (check-argument-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
+  (check-argument-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) => -1)
 
   ;;not aligned to 2
   (check-consistency-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
@@ -1719,11 +1712,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
+  (check-argument-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) (words.least-s16*))
+  (check-argument-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) => (words.least-s16*))
   ;;too high
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) (words.greatest-s16*))
+  (check-argument-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) => (words.greatest-s16*))
 
   #t)
 
@@ -1761,15 +1754,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s16-native-ref #\a 1) #\a)
+  (check-argument-violation (bytevector-s16-native-ref #\a 1) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) #\a) #\a)
+  (check-argument-violation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) -1) -1)
+  (check-argument-violation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) -1) => -1)
 
   ;;not aligned to 2
   (check-consistency-violation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
@@ -1835,15 +1828,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u32-set! #\a 1 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u32-set! #\a 1 2 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u32-set! TEST-BV-1 #\a 2 (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 -1 2 (endianness little)) -1)
+  (check-argument-violation (bytevector-u32-set! TEST-BV-1 -1 2 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
@@ -1854,19 +1847,18 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-u32-set! TEST-BV-1 1 #\a (endianness little)) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 1 (words.least-u32*) (endianness little)) (words.least-u32*))
+  (check-argument-violation (bytevector-u32-set! TEST-BV-1 1 (words.least-u32*) (endianness little)) => (words.least-u32*))
   ;;too high
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 1 (words.greatest-u32*) (endianness little)) (words.greatest-u32*))
+  (check-argument-violation (bytevector-u32-set! TEST-BV-1 1 (words.greatest-u32*) (endianness little)) => (words.greatest-u32*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-set! TEST-BV-1 1 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-u32-set! TEST-BV-1 1 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -1923,15 +1915,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u32-ref #\a 1 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u32-ref #\a 1 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u32-ref TEST-BV-1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-u32-ref TEST-BV-1 #\a (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u32-ref TEST-BV-1 -1  (endianness little)) -1)
+  (check-argument-violation (bytevector-u32-ref TEST-BV-1 -1  (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
@@ -1941,10 +1933,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-u32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -1969,15 +1960,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u32-native-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-u32-native-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 #\a 2) #\a)
+  (check-argument-violation (bytevector-u32-native-set! TEST-BV-1 #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 -1 2) -1)
+  (check-argument-violation (bytevector-u32-native-set! TEST-BV-1 -1 2) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-u32-native-set! TEST-BV-1 1 0) 1)
@@ -1991,11 +1982,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 #\a) #\a)
+  (check-argument-violation (bytevector-u32-native-set! TEST-BV-1 1 #\a) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 (words.least-u32*)) (words.least-u32*))
+  (check-argument-violation (bytevector-u32-native-set! TEST-BV-1 1 (words.least-u32*)) => (words.least-u32*))
   ;;too high
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 (words.greatest-u32*)) (words.greatest-u32*))
+  (check-argument-violation (bytevector-u32-native-set! TEST-BV-1 1 (words.greatest-u32*)) => (words.greatest-u32*))
 
   #t)
 
@@ -2020,15 +2011,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u32-native-ref #\a 0) #\a)
+  (check-argument-violation (bytevector-u32-native-ref #\a 0) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 #\a) #\a)
+  (check-argument-violation (bytevector-u32-native-ref TEST-BV-1 #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 -1) -1)
+  (check-argument-violation (bytevector-u32-native-ref TEST-BV-1 -1) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-u32-native-ref TEST-BV-1 1) 1)
@@ -2097,15 +2088,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s32-set! #\a 1 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s32-set! #\a 1 2 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s32-set! TEST-BV-1 #\a 2 (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 -1 2 (endianness little)) -1)
+  (check-argument-violation (bytevector-s32-set! TEST-BV-1 -1 2 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
@@ -2116,19 +2107,18 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-s32-set! TEST-BV-1 1 #\a (endianness little)) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 1 (words.least-s32*) (endianness little)) (words.least-s32*))
+  (check-argument-violation (bytevector-s32-set! TEST-BV-1 1 (words.least-s32*) (endianness little)) => (words.least-s32*))
   ;;too high
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 1 (words.greatest-s32*) (endianness little)) (words.greatest-s32*))
+  (check-argument-violation (bytevector-s32-set! TEST-BV-1 1 (words.greatest-s32*) (endianness little)) => (words.greatest-s32*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -2203,15 +2193,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s32-ref #\a 1 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s32-ref #\a 1 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s32-ref TEST-BV-1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-s32-ref TEST-BV-1 #\a (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s32-ref TEST-BV-1 -1  (endianness little)) -1)
+  (check-argument-violation (bytevector-s32-ref TEST-BV-1 -1  (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
@@ -2221,10 +2211,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-s32-ref #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -2249,15 +2238,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s32-native-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-s32-native-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 #\a 2) #\a)
+  (check-argument-violation (bytevector-s32-native-set! TEST-BV-1 #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 -1 2) -1)
+  (check-argument-violation (bytevector-s32-native-set! TEST-BV-1 -1 2) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-s32-native-set! TEST-BV-1 1 0) 1)
@@ -2271,11 +2260,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 #\a) #\a)
+  (check-argument-violation (bytevector-s32-native-set! TEST-BV-1 1 #\a) => #\a)
   ;;too low
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 (words.least-s32*)) (words.least-s32*))
+  (check-argument-violation (bytevector-s32-native-set! TEST-BV-1 1 (words.least-s32*)) => (words.least-s32*))
   ;;too high
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 (words.greatest-s32*)) (words.greatest-s32*))
+  (check-argument-violation (bytevector-s32-native-set! TEST-BV-1 1 (words.greatest-s32*)) => (words.greatest-s32*))
 
   #t)
 
@@ -2316,15 +2305,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s32-native-ref #\a 0) #\a)
+  (check-argument-violation (bytevector-s32-native-ref #\a 0) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 #\a) #\a)
+  (check-argument-violation (bytevector-s32-native-ref TEST-BV-1 #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 -1) -1)
+  (check-argument-violation (bytevector-s32-native-ref TEST-BV-1 -1) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-s32-native-ref TEST-BV-1 1) 1)
@@ -2439,15 +2428,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u64-set! #\a 1 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u64-set! #\a 1 2 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-set! THE-BV #\a 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u64-set! THE-BV #\a 2 (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u64-set! THE-BV -1 2 (endianness little)) -1)
+  (check-argument-violation (bytevector-u64-set! THE-BV -1 2 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u64-set! THE-BV (mult 5) 2 (endianness little)) THE-BV (mult 5))
@@ -2458,21 +2447,20 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-set! THE-BV 1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-u64-set! THE-BV 1 #\a (endianness little)) => #\a)
   ;;negative fixnum
-  (check-argument-validation (bytevector-u64-set! THE-BV 1 -1 (endianness little))  -1)
+  (check-argument-violation (bytevector-u64-set! THE-BV 1 -1 (endianness little))  => -1)
   ;;negative bignum
-  (check-argument-validation (bytevector-u64-set! THE-BV 1 (words.least-u64*) (endianness little)) (words.least-u64*))
+  (check-argument-violation (bytevector-u64-set! THE-BV 1 (words.least-u64*) (endianness little)) => (words.least-u64*))
   ;;too high
-  (check-argument-validation (bytevector-u64-set! THE-BV 1 (words.greatest-u64*) (endianness little)) (words.greatest-u64*))
+  (check-argument-violation (bytevector-u64-set! THE-BV 1 (words.greatest-u64*) (endianness little)) => (words.greatest-u64*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;invalid endianness symbol
-      (catch #f
-	(bytevector-u64-set! THE-BV 1 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-u64-set! THE-BV 1 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -2533,15 +2521,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u64-ref #\a 1 (endianness little)) #\a)
+  (check-argument-violation (bytevector-u64-ref #\a 1 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-ref THE-BV-BE #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-u64-ref THE-BV-BE #\a (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u64-ref THE-BV-BE -1  (endianness little)) -1)
+  (check-argument-violation (bytevector-u64-ref THE-BV-BE -1  (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-u64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
@@ -2551,10 +2539,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-u64-ref THE-BV-BE 1 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-u64-ref THE-BV-BE 1 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -2585,15 +2572,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u64-native-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-u64-native-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-native-set! THE-BV #\a 2) #\a)
+  (check-argument-violation (bytevector-u64-native-set! THE-BV #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u64-native-set! THE-BV -1 2) -1)
+  (check-argument-violation (bytevector-u64-native-set! THE-BV -1 2) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-u64-native-set! THE-BV 1 2) 1)
@@ -2607,13 +2594,13 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 #\a) #\a)
+  (check-argument-violation (bytevector-u64-native-set! THE-BV 1 #\a) => #\a)
   ;;negative fixnum
-  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 -1)  -1)
+  (check-argument-violation (bytevector-u64-native-set! THE-BV 1 -1)  => -1)
   ;;negative bignum
-  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 (words.least-u64*)) (words.least-u64*))
+  (check-argument-violation (bytevector-u64-native-set! THE-BV 1 (words.least-u64*)) => (words.least-u64*))
   ;;too high
-  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 (words.greatest-u64*)) (words.greatest-u64*))
+  (check-argument-violation (bytevector-u64-native-set! THE-BV 1 (words.greatest-u64*)) => (words.greatest-u64*))
 
   #t)
 
@@ -2652,15 +2639,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u64-native-ref #\a 0) #\a)
+  (check-argument-violation (bytevector-u64-native-ref #\a 0) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
+  (check-argument-violation (bytevector-u64-native-ref THE-BV-BE #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE -1) -1)
+  (check-argument-violation (bytevector-u64-native-ref THE-BV-BE -1) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE 1) 1)
@@ -2762,15 +2749,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s64-set! #\a 1 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s64-set! #\a 1 2 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE #\a 2 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s64-set! THE-BV-BE #\a 2 (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE -1 2 (endianness little)) -1)
+  (check-argument-violation (bytevector-s64-set! THE-BV-BE -1 2 (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s64-set! THE-BV-BE (mult 5) 2 (endianness little)) THE-BV-BE (mult 5))
@@ -2781,19 +2768,18 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE 1 #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-s64-set! THE-BV-BE 1 #\a (endianness little)) => #\a)
   ;;negative bignum
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE 1 (words.least-s64*) (endianness little)) (words.least-s64*))
+  (check-argument-violation (bytevector-s64-set! THE-BV-BE 1 (words.least-s64*) (endianness little)) => (words.least-s64*))
   ;;too high
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE 1 (words.greatest-s64*) (endianness little)) (words.greatest-s64*))
+  (check-argument-violation (bytevector-s64-set! THE-BV-BE 1 (words.greatest-s64*) (endianness little)) => (words.greatest-s64*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-set! THE-BV-LE 1 0 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-s64-set! THE-BV-LE 1 0 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -2854,15 +2840,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s64-ref #\a 1 (endianness little)) #\a)
+  (check-argument-violation (bytevector-s64-ref #\a 1 (endianness little)) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s64-ref THE-BV-BE #\a (endianness little)) #\a)
+  (check-argument-violation (bytevector-s64-ref THE-BV-BE #\a (endianness little)) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s64-ref THE-BV-BE -1  (endianness little)) -1)
+  (check-argument-violation (bytevector-s64-ref THE-BV-BE -1  (endianness little)) => -1)
 
   ;;too high
   (check-consistency-violation (bytevector-s64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
@@ -2872,10 +2858,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
 
-  (check	;not a fixnum
-      (catch #f
-	(bytevector-s64-ref THE-BV-LE 1 'dummy))
-    => '(dummy))
+  (check-argument-violation
+      (bytevector-s64-ref THE-BV-LE 1 'dummy)
+    => 'dummy)
 
   #t)
 
@@ -2931,15 +2916,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s64-native-set! #\a 1 2) #\a)
+  (check-argument-violation (bytevector-s64-native-set! #\a 1 2) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE #\a 2) #\a)
+  (check-argument-violation (bytevector-s64-native-set! THE-BV-BE #\a 2) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE -1 2) -1)
+  (check-argument-violation (bytevector-s64-native-set! THE-BV-BE -1 2) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-s64-native-set! THE-BV-BE 1 2) 1)
@@ -2953,11 +2938,11 @@
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 #\a) #\a)
+  (check-argument-violation (bytevector-s64-native-set! THE-BV-BE 1 #\a) => #\a)
   ;;negative bignum
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 (words.least-s64*)) (words.least-s64*))
+  (check-argument-violation (bytevector-s64-native-set! THE-BV-BE 1 (words.least-s64*)) => (words.least-s64*))
   ;;too high
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 (words.greatest-s64*)) (words.greatest-s64*))
+  (check-argument-violation (bytevector-s64-native-set! THE-BV-BE 1 (words.greatest-s64*)) => (words.greatest-s64*))
 
   #t)
 
@@ -2996,15 +2981,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-u64-native-ref #\a 0) #\a)
+  (check-argument-violation (bytevector-u64-native-ref #\a 0) => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
+  (check-argument-violation (bytevector-u64-native-ref THE-BV-BE #\a) => #\a)
   ;;negative
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE -1) -1)
+  (check-argument-violation (bytevector-u64-native-ref THE-BV-BE -1) => -1)
 
   ;;not aligned
   (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE 1) 1)
@@ -3483,6 +3468,6 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'catch 'scheme-indent-function 1)
-;;eval: (put 'with-check-for-procedure-argument-validation 'scheme-indent-function 1)
+;;coding: utf-8-unix
+;;eval: (put 'check-argument-violation 'scheme-indent-function 1)
 ;;End:

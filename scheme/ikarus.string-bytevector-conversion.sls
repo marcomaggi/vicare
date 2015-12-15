@@ -48,24 +48,6 @@
 	  $latin1-encoded-bytevector?	$latin1-encoded-string?
 	  )
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed Jun 3, 2015)
-		  make-utf8-string-decoding-invalid-octet
-		  make-utf8-string-decoding-invalid-2-tuple
-		  make-utf8-string-decoding-invalid-3-tuple
-		  make-utf8-string-decoding-invalid-4-tuple
-		  make-utf8-string-decoding-incomplete-2-tuple
-		  make-utf8-string-decoding-incomplete-3-tuple
-		  make-utf8-string-decoding-incomplete-4-tuple
-		  make-utf16-string-decoding-invalid-first-word
-		  make-utf16-string-decoding-invalid-second-word
-		  make-utf16-string-decoding-missing-second-word
-		  make-utf16-string-decoding-standalone-octet
-		  make-utf32-string-decoding-invalid-word
-		  make-utf32-string-decoding-orphan-octets
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  string->utf8		utf8->string
 		  string->utf16		utf16->string
 		  string->utf16le	utf16le->string
@@ -92,41 +74,19 @@
 	  $string-length
 	  $string-ref
 	  $string-set!)
-    (except (only (vicare system $bytevectors)
-		  $make-bytevector
-		  $bytevector-length
-		  $bytevector-u8-ref
-		  $bytevector-set!)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Tue Jun 2, 2015)
-	    $bytevector-u16-ref
-	    $bytevector-u16b-ref
-	    $bytevector-u16l-ref
-	    $bytevector-u32-set!
-	    $bytevector-u32b-set!
-	    $bytevector-u32l-set!
-	    $bytevector-u32-ref
-	    $bytevector-u32b-ref)
+    (except (vicare system $bytevectors)
+	    $string->octets			$octets->string
+	    $octets-encoded-bytevector?		$octets-encoded-string?
+
+	    $string->ascii			$ascii->string
+	    $ascii-encoded-bytevector?		$ascii-encoded-string?
+
+	    $string->latin1			$latin1->string
+	    $latin1-encoded-bytevector?		$latin1-encoded-string?)
     (vicare system $fx)
     (vicare system $chars)
     ;;See the documentation of this library for details on Unicode.
-    (prefix (vicare unsafe unicode) unicode.)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Jun 3,
-    ;;2015)
-    (only (ikarus conditions)
-	  make-utf8-string-decoding-invalid-octet
-	  make-utf8-string-decoding-invalid-2-tuple
-	  make-utf8-string-decoding-invalid-3-tuple
-	  make-utf8-string-decoding-invalid-4-tuple
-	  make-utf8-string-decoding-incomplete-2-tuple
-	  make-utf8-string-decoding-incomplete-3-tuple
-	  make-utf8-string-decoding-incomplete-4-tuple
-	  make-utf16-string-decoding-invalid-first-word
-	  make-utf16-string-decoding-invalid-second-word
-	  make-utf16-string-decoding-missing-second-word
-	  make-utf16-string-decoding-standalone-octet
-	  make-utf32-string-decoding-invalid-word
-	  make-utf32-string-decoding-orphan-octets))
+    (prefix (vicare unsafe unicode) unicode::))
 
 ;; #!vicare
 ;; (define dummy-enter
@@ -134,12 +94,6 @@
 
 
 ;;;; helpers
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
-;;2015)
-;;
-(define procedure-arguments-consistency-violation
-  assertion-violation)
 
 (define (endianness? obj)
   (memq obj '(little big)))
@@ -175,7 +129,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define ($bytevector-u16b-ref bv index)
+#;(define ($bytevector-u16b-ref bv index)
   ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue Jun 2,
   ;;2015)
   ($fxlogor
@@ -184,7 +138,7 @@
    ;; highest memory location -> least significant byte
    ($bytevector-u8-ref bv ($fxadd1 index))))
 
-(define ($bytevector-u16l-ref bv index)
+#;(define ($bytevector-u16l-ref bv index)
   ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue Jun 2,
   ;;2015)
   ($fxlogor
@@ -193,7 +147,7 @@
    ;; lowest memory location -> least significant byte
    ($bytevector-u8-ref bv index)))
 
-(define ($bytevector-u16-ref bv index endianness)
+#;(define ($bytevector-u16-ref bv index endianness)
   ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue Jun 2,
   ;;2015)
   (case endianness
@@ -204,7 +158,7 @@
 
 ;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  Jun 3,
 ;;2015)
-(module ($bytevector-u32-set!
+#;(module ($bytevector-u32-set!
 	 $bytevector-u32b-set!
 	 $bytevector-u32l-set!
 	 $bytevector-u32-ref
@@ -269,7 +223,7 @@
     ((_ ?str ?code-point)
      (and (identifier? #'?str)
 	  (identifier? #'?code-point))
-     #'(unless (unicode.unicode-code-point-representable-as-latin-1-code-point? ?code-point)
+     #'(unless (unicode::unicode-code-point-representable-as-latin-1-code-point? ?code-point)
 	 (procedure-arguments-consistency-violation __who__
 	   "expected only Latin-1 code points in string argument"
 	   (integer->char ?code-point) ?str)))
@@ -280,7 +234,7 @@
     ((_ ?bv ?octet)
      (and (identifier? #'?bv)
 	  (identifier? #'?octet))
-     #'(unless (unicode.latin-1-code-point? ?octet)
+     #'(unless (unicode::latin-1-code-point? ?octet)
 	 (procedure-arguments-consistency-violation __who__
 	   "expected only Latin-1 octets in bytevector argument"
 	   (integer->char ?octet) ?bv)))
@@ -293,7 +247,7 @@
     ((_ ?str ?code-point)
      (and (identifier? #'?str)
 	  (identifier? #'?code-point))
-     #'(unless (unicode.ascii-code-point? ?code-point)
+     #'(unless (unicode::ascii-code-point? ?code-point)
 	 (procedure-arguments-consistency-violation __who__
 	   "expected only ASCII code points in string argument"
 	   (integer->char ?code-point) ?str)))
@@ -304,7 +258,7 @@
     ((_ ?bv ?octet)
      (and (identifier? #'?bv)
 	  (identifier? #'?octet))
-     #'(unless (unicode.ascii-octet? ?octet)
+     #'(unless (unicode::ascii-octet? ?octet)
 	 (procedure-arguments-consistency-violation __who__
 	   "expected only ASCII octets in bytevector argument"
 	   (integer->char ?octet) ?bv)))
@@ -337,31 +291,31 @@
       (if ($fx= str.idx str.len)
 	  bv
 	(let ((code-point ($char->fixnum ($string-ref str str.idx))))
-	  (unicode.utf-8-case-code-point code-point
+	  (unicode::utf-8-case-code-point code-point
 	    ((1)
 	     ;;CODE-POINT fits in a 1-octet sequence.
-	     ($bytevector-set! bv bv.idx (unicode.utf-8-encode-single-octet code-point))
+	     ($bytevector-set! bv bv.idx (unicode::utf-8-encode-single-octet code-point))
 	     (loop bv ($fxadd1 bv.idx) str ($fxadd1 str.idx) str.len))
 
 	    ((2)
 	     ;;CODE-POINT fits in a 2-octect sequence.
-	     ($bytevector-set! bv bv.idx           (unicode.utf-8-encode-first-of-two-octets  code-point))
-	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode.utf-8-encode-second-of-two-octets code-point))
+	     ($bytevector-set! bv bv.idx           (unicode::utf-8-encode-first-of-two-octets  code-point))
+	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode::utf-8-encode-second-of-two-octets code-point))
 	     (loop bv ($fxadd2 bv.idx) str ($fxadd1 str.idx) str.len))
 
 	    ((3)
 	     ;;CODE-POINT fits in a 3-octect sequence.
-	     ($bytevector-set! bv bv.idx           (unicode.utf-8-encode-first-of-three-octets  code-point))
-	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode.utf-8-encode-second-of-three-octets code-point))
-	     ($bytevector-set! bv ($fxadd2 bv.idx) (unicode.utf-8-encode-third-of-three-octets  code-point))
+	     ($bytevector-set! bv bv.idx           (unicode::utf-8-encode-first-of-three-octets  code-point))
+	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode::utf-8-encode-second-of-three-octets code-point))
+	     ($bytevector-set! bv ($fxadd2 bv.idx) (unicode::utf-8-encode-third-of-three-octets  code-point))
 	     (loop bv ($fxadd3 bv.idx) str ($fxadd1 str.idx) str.len))
 
 	    ((4)
 	     ;;CODE-POINT fits in a 4-octect sequence.
-	     ($bytevector-set! bv bv.idx           (unicode.utf-8-encode-first-of-four-octets  code-point))
-	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode.utf-8-encode-second-of-four-octets code-point))
-	     ($bytevector-set! bv ($fxadd2 bv.idx) (unicode.utf-8-encode-third-of-four-octets  code-point))
-	     ($bytevector-set! bv ($fxadd3 bv.idx) (unicode.utf-8-encode-fourth-of-four-octets code-point))
+	     ($bytevector-set! bv bv.idx           (unicode::utf-8-encode-first-of-four-octets  code-point))
+	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode::utf-8-encode-second-of-four-octets code-point))
+	     ($bytevector-set! bv ($fxadd2 bv.idx) (unicode::utf-8-encode-third-of-four-octets  code-point))
+	     ($bytevector-set! bv ($fxadd3 bv.idx) (unicode::utf-8-encode-fourth-of-four-octets code-point))
 	     (loop bv ($fxadd4 bv.idx) str ($fxadd1 str.idx) str.len)))))))
 
   (define* (string->utf8-length {str string?})
@@ -372,7 +326,7 @@
       (if ($fx= str.idx str.len)
 	  accum-len
 	(let* ((code-point ($char->fixnum ($string-ref str str.idx)))
-	       (accum-len (+ accum-len (unicode.utf-8-case-code-point code-point
+	       (accum-len (+ accum-len (unicode::utf-8-case-code-point code-point
 					 ((1)	1)
 					 ((2)	2)
 					 ((3)	3)
@@ -579,44 +533,44 @@
     (if ($fx= bv.idx bv.end)
 	accum-len
       (let ((octet0 ($bytevector-u8-ref bv bv.idx)))
-	(cond ((unicode.utf-8-single-octet? octet0)
+	(cond ((unicode::utf-8-single-octet? octet0)
 	       (%recurse ($fxadd1 bv.idx) ($fxadd1 accum-len)))
 
-	      ((unicode.utf-8-first-of-two-octets? octet0)
+	      ((unicode::utf-8-first-of-two-octets? octet0)
 	       (if ($fx< ($fxadd1 bv.idx) bv.end)
 		   ;;Good, there is  still one octect which may be  the second in a
 		   ;;2-octet sequence.
 		   (let ((octet1 ($bytevector-u8-ref bv ($fxadd1 bv.idx))))
-		     (if (unicode.utf-8-second-of-two-octets? octet1)
+		     (if (unicode::utf-8-second-of-two-octets? octet1)
 			 (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len))
 		       (%error-invalid-2-tuple bv.idx ($fxadd2 bv.idx) accum-len octet0 octet1)))
 		 (%error-incomplete-2-tuple bv.idx accum-len octet0)))
 
-	      ((unicode.utf-8-first-of-three-octets? octet0)
+	      ((unicode::utf-8-first-of-three-octets? octet0)
 	       (if ($fx< ($fxadd2 bv.idx) bv.end)
 		   ;;Good, there are still two octects  which may be the second and
 		   ;;third in a 3-octet sequence.
 		   (let ((octet1      ($bytevector-u8-ref bv ($fxadd1 bv.idx)))
 			 (octet2      ($bytevector-u8-ref bv ($fxadd2 bv.idx))))
-		     (if (unicode.utf-8-second-and-third-of-three-octets? octet1 octet2)
+		     (if (unicode::utf-8-second-and-third-of-three-octets? octet1 octet2)
 			 ;;The sequence of  3 octets is the one that  could, but must
 			 ;;not, encode the forbidden  range [#xD800, #xDFFF] that are
 			 ;;not Unicode code points.
-			 (let ((code-point (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
-			   (if (unicode.utf-8-valid-code-point-from-3-octets? code-point)
+			 (let ((code-point (unicode::utf-8-decode-three-octets octet0 octet1 octet2)))
+			   (if (unicode::utf-8-valid-code-point-from-3-octets? code-point)
 			       (%recurse ($fxadd3 bv.idx) ($fxadd1 accum-len))
 			     (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) accum-len octet0 octet1 octet2)))
 		       (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) accum-len octet0 octet1 octet2)))
 		 (%error-incomplete-3-tuple bv.idx accum-len octet0)))
 
-	      ((unicode.utf-8-first-of-four-octets? octet0)
+	      ((unicode::utf-8-first-of-four-octets? octet0)
 	       (if ($fx< ($fxadd3 bv.idx) bv.end)
 		   ;;Good, there are  still three octects which may  be the second,
 		   ;;third and fourth in a 4-octet sequence.
 		   (let ((octet1      ($bytevector-u8-ref bv ($fxadd1 bv.idx)))
 			 (octet2      ($bytevector-u8-ref bv ($fxadd2 bv.idx)))
 			 (octet3      ($bytevector-u8-ref bv ($fxadd3 bv.idx))))
-		     (if (unicode.utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+		     (if (unicode::utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
 			 (%recurse ($fxadd4 bv.idx) ($fxadd1 accum-len))
 		       (%error-invalid-4-tuple bv.idx ($fxadd4 bv.idx) accum-len octet0 octet1 octet2 octet3)))
 		 (%error-incomplete-4-tuple bv.idx accum-len octet0)))
@@ -777,51 +731,51 @@
     (if ($fx= bv.idx bv.end)
 	str
       (let ((octet0 ($bytevector-u8-ref bv bv.idx)))
-	(cond ((unicode.utf-8-single-octet? octet0)
-	       ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-single-octet octet0)))
+	(cond ((unicode::utf-8-single-octet? octet0)
+	       ($string-set! str str.idx ($fixnum->char (unicode::utf-8-decode-single-octet octet0)))
 	       (%recurse ($fxadd1 bv.idx) ($fxadd1 str.idx)))
 
-	      ((unicode.utf-8-first-of-two-octets? octet0)
+	      ((unicode::utf-8-first-of-two-octets? octet0)
 	       (if ($fx< ($fxadd1 bv.idx) bv.end)
 		   ;;Good, there is  still one octect which may be  the second in a
 		   ;;2-octet sequence.
 		   (let ((octet1 ($bytevector-u8-ref bv ($fxadd1 bv.idx))))
-		     (if (unicode.utf-8-second-of-two-octets? octet1)
+		     (if (unicode::utf-8-second-of-two-octets? octet1)
 			 (begin
-			   ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-two-octets octet0 octet1)))
+			   ($string-set! str str.idx ($fixnum->char (unicode::utf-8-decode-two-octets octet0 octet1)))
 			   (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
 		       (%error-invalid-2-tuple bv.idx ($fxadd2 bv.idx) str.idx octet0 octet1)))
 		 (%error-incomplete-2-tuple bv.idx str.idx octet0)))
 
-	      ((unicode.utf-8-first-of-three-octets? octet0)
+	      ((unicode::utf-8-first-of-three-octets? octet0)
 	       (if ($fx< ($fxadd2 bv.idx) bv.end)
 		   ;;Good, there are still two octects  which may be the second and
 		   ;;third in a 3-octet sequence.
 		   (let* ((octet1 ($bytevector-u8-ref bv ($fxadd1 bv.idx)))
 			  (octet2 ($bytevector-u8-ref bv ($fxadd2 bv.idx))))
-		     (if (unicode.utf-8-second-and-third-of-three-octets? octet1 octet2)
+		     (if (unicode::utf-8-second-and-third-of-three-octets? octet1 octet2)
 			 ;;The sequence of  3 octets is the one that  could, but must
 			 ;;not, encode the forbidden  range [#xD800, #xDFFF] that are
 			 ;;not Unicode code points.
-			 (let ((code-point (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
-			   (if (unicode.utf-8-valid-code-point-from-3-octets? code-point)
+			 (let ((code-point (unicode::utf-8-decode-three-octets octet0 octet1 octet2)))
+			   (if (unicode::utf-8-valid-code-point-from-3-octets? code-point)
 			       (begin
-				 ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
+				 ($string-set! str str.idx ($fixnum->char (unicode::utf-8-decode-three-octets octet0 octet1 octet2)))
 				 (%recurse ($fxadd3 bv.idx) ($fxadd1 str.idx)))
 			     (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) str.idx octet0 octet1 octet2)))
 		       (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) str.idx octet0 octet1 octet2)))
 		 (%error-incomplete-3-tuple bv.idx str.idx octet0)))
 
-	      ((unicode.utf-8-first-of-four-octets? octet0)
+	      ((unicode::utf-8-first-of-four-octets? octet0)
 	       (if ($fx< ($fxadd3 bv.idx) bv.end)
 		   ;;Good, there are  still three octects which may  be the second,
 		   ;;third and fourth in a 4-octet sequence.
 		   (let* ((octet1      ($bytevector-u8-ref bv ($fxadd1 bv.idx)))
 			  (octet2      ($bytevector-u8-ref bv ($fxadd2 bv.idx)))
 			  (octet3      ($bytevector-u8-ref bv ($fxadd3 bv.idx))))
-		     (if (unicode.utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+		     (if (unicode::utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
 			 (begin
-			   ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
+			   ($string-set! str str.idx ($fixnum->char (unicode::utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
 			   (%recurse ($fxadd4 bv.idx) ($fxadd1 str.idx)))
 		       (%error-invalid-4-tuple bv.idx ($fxadd4 bv.idx) str.idx octet0 octet1 octet2 octet3)))
 		 (%error-incomplete-4-tuple bv.idx str.idx octet0)))
@@ -900,7 +854,7 @@
 	accum-count
       ;;Code points in the range [0, #x10000)  are encoded with a single UTF-16 word;
       ;;code points in the range [#x10000, #x10FFFF] are encoded in a surrogate pair.
-      (if (unicode.utf-16-single-word-code-point? ($char->fixnum ($string-ref str i)))
+      (if (unicode::utf-16-single-word-code-point? ($char->fixnum ($string-ref str i)))
 	  (%count-surrogate-pairs str str.len ($fxadd1 i) accum-count)
 	(%count-surrogate-pairs str str.len ($fxadd1 i) ($fxadd1 accum-count)))))
 
@@ -908,13 +862,13 @@
     (if ($fx= str.idx str.len)
 	bv
       (let ((code-point ($char->fixnum ($string-ref str str.idx))))
-	(if (unicode.utf-16-single-word-code-point? code-point)
+	(if (unicode::utf-16-single-word-code-point? code-point)
 	    (begin
-	      (bytevector-u16-set! bv bv.idx (unicode.utf-16-encode-single-word code-point) endianness)
+	      (bytevector-u16-set! bv bv.idx (unicode::utf-16-encode-single-word code-point) endianness)
 	      (%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv ($fxadd2 bv.idx) endianness))
 	  (begin
-	    (bytevector-u16-set! bv bv.idx           (unicode.utf-16-encode-first-of-two-words  code-point) endianness)
-	    (bytevector-u16-set! bv ($fxadd2 bv.idx) (unicode.utf-16-encode-second-of-two-words code-point) endianness)
+	    (bytevector-u16-set! bv bv.idx           (unicode::utf-16-encode-first-of-two-words  code-point) endianness)
+	    (bytevector-u16-set! bv ($fxadd2 bv.idx) (unicode::utf-16-encode-second-of-two-words code-point) endianness)
 	    (%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv ($fxadd4 bv.idx) endianness))))))
 
   #| end of module |# )
@@ -1071,15 +1025,15 @@
     (cond (($fx<= bv.idx ($fxsub2 bv.len))
 	   ;;Good there is room for at least one more 16-bit word.
 	   (let ((word0 ($bytevector-u16-ref bv bv.idx endianness)))
-	     (cond ((unicode.utf-16-single-word? word0)
+	     (cond ((unicode::utf-16-single-word? word0)
 		    (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
-		   ((unicode.utf-16-first-of-two-words? word0)
+		   ((unicode::utf-16-first-of-two-words? word0)
 		    (let ((bv.idx1 ($fxadd2 bv.idx)))
 		      (cond (($fx<= bv.idx1 ($fxsub2 bv.len))
 			     ;;Good there  is room  for the second  16-bit word  in a
 			     ;;surrogate pair.
 			     (let ((word1 ($bytevector-u16-ref bv bv.idx1 endianness)))
-			       (if (unicode.utf-16-second-of-two-words? word1)
+			       (if (unicode::utf-16-second-of-two-words? word1)
 				   ;;Good there is a full surrogate pair.
 				   (%recurse ($fxadd2 bv.idx1) ($fxadd1 accum-len))
 				 ;;Error: at index BV.IDX1 there should be the second
@@ -1194,19 +1148,19 @@
     (cond (($fx<= bv.idx ($fxsub2 bv.len))
 	   ;;Good there is room for at least one more 16-bit word.
 	   (let ((word0 ($bytevector-u16-ref bv bv.idx endianness)))
-	     (cond ((unicode.utf-16-single-word? word0)
-		    ($string-set! str str.idx ($fixnum->char (unicode.utf-16-decode-single-word word0)))
+	     (cond ((unicode::utf-16-single-word? word0)
+		    ($string-set! str str.idx ($fixnum->char (unicode::utf-16-decode-single-word word0)))
 		    (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
-		   ((unicode.utf-16-first-of-two-words? word0)
+		   ((unicode::utf-16-first-of-two-words? word0)
 		    (let ((bv.idx1 ($fxadd2 bv.idx)))
 		      (cond (($fx<= bv.idx1 ($fxsub2 bv.len))
 			     ;;Good there  is room  for the second  16-bit word  in a
 			     ;;surrogate pair.
 			     (let ((word1 ($bytevector-u16-ref bv bv.idx1 endianness)))
-			       (if (unicode.utf-16-second-of-two-words? word1)
+			       (if (unicode::utf-16-second-of-two-words? word1)
 				   ;;Good there is a full surrogate pair.
 				   (begin
-				     ($string-set! str str.idx ($fixnum->char (unicode.utf-16-decode-surrogate-pair word0 word1)))
+				     ($string-set! str str.idx ($fixnum->char (unicode::utf-16-decode-surrogate-pair word0 word1)))
 				     (%recurse ($fxadd2 bv.idx1) ($fxadd1 str.idx)))
 				 ;;Error: at index BV.IDX1 there should be the second
 				 ;;word in a surrogate pair.
@@ -1285,7 +1239,7 @@
 	bv
       (let ((code-point ($char->fixnum ($string-ref str str.idx)))
 	    (bv.idx     ($fxsll str.idx 2)))
-	($bytevector-u32b-set! bv bv.idx (unicode.utf-32-encode code-point))
+	($bytevector-u32b-set! bv bv.idx (unicode::utf-32-encode code-point))
 	(%encode-and-fill-bytevector/big str ($fxadd1 str.idx) str.len bv))))
 
   (define (%encode-and-fill-bytevector/little str str.idx str.len bv)
@@ -1293,7 +1247,7 @@
 	bv
       (let ((code-point ($char->fixnum ($string-ref str str.idx)))
 	    (bv.idx     ($fxsll str.idx 2)))
-	($bytevector-u32l-set! bv bv.idx (unicode.utf-32-encode code-point))
+	($bytevector-u32l-set! bv bv.idx (unicode::utf-32-encode code-point))
 	(%encode-and-fill-bytevector/little str ($fxadd1 str.idx) str.len bv))))
 
   #| end of module: STRING->UTF32 |# )
@@ -1523,7 +1477,7 @@
 	     (%error-orphan-octets-at-end bv.idx accum-len)))
 	  (else
 	   (let ((word ($bytevector-u32-ref bv bv.idx endianness)))
-	     (if (unicode.utf-32-word? word)
+	     (if (unicode::utf-32-word? word)
 		 (%recurse ($fxadd4 bv.idx) ($fxadd1 accum-len))
 	       (%error-invalid-word bv.idx accum-len))))))
 
@@ -1581,9 +1535,9 @@
 	  (else
 	   (let ((word ($bytevector-u32-ref bv bv.idx endianness)))
 
-	     (if (unicode.utf-32-word? word)
+	     (if (unicode::utf-32-word? word)
 		 (begin
-		   ($string-set! str str.idx ($fixnum->char (unicode.utf-32-decode word)))
+		   ($string-set! str str.idx ($fixnum->char (unicode::utf-32-decode word)))
 		   (%recurse ($fxadd4 bv.idx) ($fxadd1 str.idx)))
 	       (%error-invalid-word bv.idx str.idx))))))
 
@@ -1659,7 +1613,7 @@
 	 bv)
       (let ((code-point ($char->fixnum ($string-ref str i))))
 	(assert-string-code-point-is-latin-1-code-point str code-point)
-	($bytevector-set! bv i (unicode.latin-1-encode code-point))))))
+	($bytevector-set! bv i (unicode::latin-1-encode code-point))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1678,7 +1632,7 @@
 	 str)
       (let ((octet ($bytevector-u8-ref bv i)))
 	(assert-bytevector-octet-is-latin-1-octet bv octet)
-	($string-set! str i ($fixnum->char (unicode.latin-1-decode octet)))))))
+	($string-set! str i ($fixnum->char (unicode::latin-1-decode octet)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1690,7 +1644,7 @@
 (define ($latin1-encoded-bytevector? bv)
   (let loop ((i 0))
     (or ($fx= i ($bytevector-length bv))
-  	(and (unicode.latin-1-code-point? ($bytevector-u8-ref bv i))
+  	(and (unicode::latin-1-code-point? ($bytevector-u8-ref bv i))
   	     (loop ($fxadd1 i))))))
 
 ;;; --------------------------------------------------------------------
@@ -1703,7 +1657,7 @@
 (define ($latin1-encoded-string? str)
   (let loop ((i 0))
     (or ($fx= i ($string-length str))
-  	(and (unicode.unicode-code-point-representable-as-latin-1-code-point? ($char->fixnum ($string-ref str i)))
+  	(and (unicode::unicode-code-point-representable-as-latin-1-code-point? ($char->fixnum ($string-ref str i)))
   	     (loop ($fxadd1 i))))))
 
 
@@ -1724,7 +1678,7 @@
 	 bv)
       (let ((code-point ($char->fixnum ($string-ref str i))))
 	(assert-string-code-point-is-ascii-code-point str code-point)
-	($bytevector-set! bv i (unicode.ascii-encode code-point))))))
+	($bytevector-set! bv i (unicode::ascii-encode code-point))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1743,7 +1697,7 @@
 	 str)
       (let ((octet ($bytevector-u8-ref bv i)))
 	(assert-bytevector-octet-is-ascii-octet bv octet)
-	($string-set! str i ($fixnum->char (unicode.ascii-decode octet)))))))
+	($string-set! str i ($fixnum->char (unicode::ascii-decode octet)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1755,7 +1709,7 @@
 (define ($ascii-encoded-bytevector? bv)
   (let loop ((i 0))
     (or ($fx= i ($bytevector-length bv))
-	(and (unicode.ascii-octet? ($bytevector-u8-ref bv i))
+	(and (unicode::ascii-octet? ($bytevector-u8-ref bv i))
 	     (loop ($fxadd1 i))))))
 
 ;;; --------------------------------------------------------------------
@@ -1768,7 +1722,7 @@
 (define ($ascii-encoded-string? str)
   (let loop ((i 0))
     (or ($fx= i ($string-length str))
-  	(and (unicode.ascii-code-point? ($char->fixnum ($string-ref str i)))
+  	(and (unicode::ascii-code-point? ($char->fixnum ($string-ref str i)))
   	     (loop ($fxadd1 i))))))
 
 
@@ -1798,5 +1752,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'unicode.utf-8-case-code-point 'scheme-indent-function 1)
+;; eval: (put 'unicode::utf-8-case-code-point 'scheme-indent-function 1)
 ;; End:

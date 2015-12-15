@@ -177,13 +177,13 @@
 		     (asmcall interrupt))
 		   ;;Attempt to sum the fixnums.
 		   (asmcall int+/overflow (constant 8) x_0))
-	       (funcall (asmcall mref (constant (object +)) (constant 19))
+	       (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 		 (constant 8)
 		 x_0))))
 	 (seq
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   (jmpcall asmlabel:F:clambda:case-1
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
 		      tmp_0)
@@ -226,7 +226,7 @@
 		    (asm-instr move tmp_2 fvar.1)
 		    ;;Load in a  temporary location, from the  relocation vector, the
 		    ;;reference to closure object.
-		    (asm-instr move tmp_3 (disp (constant (object +)) (constant 19)))
+		    (asm-instr move tmp_3 (disp (constant (object loc.+)) (constant 19)))
 		    ;;Stack operands: load them in the stack slots.
 		    (asm-instr move fvar.1 (constant 8))
 		    (asm-instr move fvar.2 tmp_2)
@@ -255,7 +255,7 @@
 		(seq
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
 		  ;;reference to closure object implementing $DO-EVENT.
-		  (asm-instr move tmp_4 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_4 (disp (constant (object loc.$do-event)) (constant 19)))
 		  ;;Register parameter: load in  CP-REGISTER the reference to closure
 		  ;;object.
 		  (asm-instr move %edi tmp_4)
@@ -310,7 +310,7 @@
 		   ;;Attempt to sum the fixnum argument X_0 and the fixnum constant.
 		   (asmcall int+/overflow (constant 8) x_0))
 	       ;;This is the interrupt handler of the core primitive operation "+".
-	       (funcall (asmcall mref (constant (object +)) (constant 19))
+	       (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 		 (constant 8)
 		 x_0))))
 	 (seq
@@ -327,7 +327,7 @@
 	   ;;Check if the PCB's engine counter is set.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   ;;Perfor the non-tail call to the combinator function.
 	   (jmpcall asmlabel:F:clambda:case-1
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
@@ -374,7 +374,7 @@
 		    ;;Move the old operand in a temporary location.
 		    (asm-instr move tmp_2 fvar.1)
 		    ;;Load the reference to closure object.
-		    (asm-instr move tmp_3 (disp (constant (object +)) (constant 19)))
+		    (asm-instr move tmp_3 (disp (constant (object loc.+)) (constant 19)))
 		    ;;Stack operands: put them in the stack slots.
 		    (asm-instr move fvar.1 (constant 8))
 		    (asm-instr move fvar.2 tmp_2)
@@ -418,7 +418,7 @@
 		(rand*: #f)
 		(live: #f)
 		(seq
-		  (asm-instr move tmp_4 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_4 (disp (constant (object loc.$do-event)) (constant 19)))
 		  (asm-instr move %edi tmp_4)
 		  (asm-instr move %eax (constant 0))
 		  (non-tail-call
@@ -483,7 +483,7 @@
 				     (asmcall int+/overflow (constant 8) x_0)
 				     y_0)
 			    z_0))
-	       (funcall (asmcall mref (constant (object +)) (constant 19))
+	       (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 		 (constant 8) x_0 y_0 z_0))))
 	 (seq
 	   ;;Core primitive operation $STACK-OVERFLOW-CHECK.
@@ -495,7 +495,7 @@
 	   ;;Core primitive operation $DO-EVENT.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   (jmpcall asmlabel:F:clambda:case-3
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
 		      tmp_0)
@@ -537,7 +537,7 @@
 			 (asm-instr move tmp_5 fvar.2)
 			 (asm-instr move tmp_6 fvar.1)
 			 (asm-instr move tmp_7
-				    (disp (constant (object +)) (constant 19)))
+				    (disp (constant (object loc.+)) (constant 19)))
 			 (asm-instr move fvar.1 (constant 8))
 			 (asm-instr move fvar.2 tmp_6)
 			 (asm-instr move fvar.3 tmp_5)
@@ -566,7 +566,7 @@
 		     (non-tail-call-frame (rand*: #f) (live: #f)
 					  (seq
 					    (asm-instr move tmp_8
-						       (disp (constant (object $do-event))
+						       (disp (constant (object loc.$do-event))
 							     (constant 19)))
 					    (asm-instr move %edi tmp_8)
 					    (asm-instr move %eax (constant 0))
@@ -624,7 +624,7 @@
 		     ;;Attempt to sum the operands.
 		     (asmcall int+/overflow tmp_0 y_0))
 		 ;;This is the interrupt handler of the core primitive operation "+".
-		 (funcall (asmcall mref (constant (object +)) (constant 19))
+		 (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 		   tmp_0 y_0)))))
 	 (seq
 	   ;;Check the use of the Scheme stack.
@@ -640,9 +640,9 @@
 	   ;;Check if the PCB engine counter is set.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   ;;Here is the actual expression.
-	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	   (bind ((x_0 (funcall (asmcall mref (constant (object loc.read)) (constant 19)))))
 	     ;;Allocate the run-time closure object.
 	     (bind ((F_0 (asmcall alloc (constant 16) (constant 3))))
 	       (seq
@@ -701,7 +701,7 @@
 		    (asm-instr move tmp_5 tmp_0)
 		    ;;Load in a  temporary location, from the  relocation vector, the
 		    ;;reference to the closure object implementing "+".
-		    (asm-instr move tmp_6 (disp (constant (object +)) (constant 19)))
+		    (asm-instr move tmp_6 (disp (constant (object loc.+)) (constant 19)))
 		    ;;Stack operands: put them on the stack in the correct order.
 		    (asm-instr move fvar.1 tmp_5)
 		    (asm-instr move fvar.2 tmp_4)
@@ -752,7 +752,7 @@
 		(seq
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
 		  ;;reference to closure object implementing $DO-EVENT.
-		  (asm-instr move tmp_7 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_7 (disp (constant (object loc.$do-event)) (constant 19)))
 		  ;;Register operand:  load in  CP-REGISTER the reference  to closure
 		  ;;object.
 		  (asm-instr move %edi tmp_7)
@@ -773,7 +773,7 @@
 	      (seq
 		;;Load  in a  temporary  location, from  the  relocation vector,  the
 		;;reference to closure object implementing READ.
-		(asm-instr move tmp_8 (disp (constant (object read)) (constant 19)))
+		(asm-instr move tmp_8 (disp (constant (object loc.read)) (constant 19)))
 		;;Register  operand: load  in  CP-REGISTER the  reference to  closure
 		;;object.
 		(asm-instr move %edi tmp_8)
@@ -810,7 +810,7 @@
 		  (asm-instr move nfv.1_0 (constant 16))
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
 		  ;;reference to the closure object implementing DO-OVERFLOW.
-		  (asm-instr move tmp_9 (disp (constant (object do-overflow)) (constant 27)))
+		  (asm-instr move tmp_9 (disp (constant (object loc.do-overflow)) (constant 27)))
 		  ;;Register operand:  load in  CP-REGISTER the reference  to closure
 		  ;;object.
 		  (asm-instr move %edi tmp_9)
@@ -874,7 +874,7 @@
 		   (asmcall interrupt)
 		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (funcall (asmcall mref (constant (object display)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.display)) (constant 19))
 	     (constant 8))
 	   (constant 16))))
 
@@ -912,7 +912,7 @@
 		(asm-instr move nfv.1_0 (constant 8))
 		;;Load  in a  temporary  location, from  the  relocation vector,  the
 		;;reference to closure object implementing DISPLAY.
-		(asm-instr move tmp_0 (disp (constant (object display)) (constant 19)))
+		(asm-instr move tmp_0 (disp (constant (object loc.display)) (constant 19)))
 		;;Register  operand: load  in  CP-REGISTER the  reference to  closure
 		;;object.
 		(asm-instr move %edi tmp_0)
@@ -948,7 +948,7 @@
 	       ;;Check if the PCB's engine counter has changed.
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	       ;;Perform the recursive tail-call.
 	       (jmpcall asmlabel:F:clambda:case-2
 			(bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
@@ -958,7 +958,7 @@
 	   ;;Check if the PCB's engine counter has changed.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   ;;Perform the tail-call to F.
 	   (jmpcall asmlabel:F:clambda:case-2
 		    (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
@@ -982,7 +982,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_0 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_0)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -1007,7 +1007,7 @@
 		(rand*: #f)
 		(live: #f)
 		(seq
-		  (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_3 (disp (constant (object loc.$do-event)) (constant 19)))
 		  (asm-instr move %edi tmp_3)
 		  (asm-instr move %eax (constant 0))
 		  (non-tail-call
@@ -1035,8 +1035,8 @@
 ;;;stack operands for a non-tail call.
 
   (check
-      (%before-impose-eval-order '(let ((f (lambda (x) (+ '1 x)))
-					(g (lambda (y) (+ '2 y))))
+      (%before-impose-eval-order '(let ((f (lambda (x) (dummy '1 x)))
+					(g (lambda (y) (dummy2 '2 y))))
 				    (begin
 				      (f (g '3))
 				      '4)))
@@ -1046,18 +1046,18 @@
 	       ;;Core primitive operation $DO-EVENT.
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
-	       ;;Tail call to the core primitive function "+".
-	       (funcall (asmcall mref (constant (object +)) (constant 27))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
+	       ;;Tail call to the non-existent function "dummy2".
+	       (funcall (asmcall mref (constant (object dummy2)) (constant 27))
 		 (constant 16) y_0)))
 	  (lambda (label: asmlabel:f:clambda) (cp_1 x_0)
 	     (seq
 	       ;;Core primitive operation $DO-EVENT.
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
-	       ;;Tail call to the core primitive function "+".
-	       (funcall (asmcall mref (constant (object +)) (constant 27))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
+	       ;;Tail call to the non-existent function "dummy".
+	       (funcall (asmcall mref (constant (object dummy)) (constant 27))
 		 (constant 8) x_0))))
 	 (seq
 	   ;;Core primitive operation $STACK-OVERFLOW-CHECK.
@@ -1069,7 +1069,7 @@
 	   ;;Core primitive operation $DO-EVENT.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   (jmpcall asmlabel:f:clambda:case-1
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
 		      tmp_0)
@@ -1081,8 +1081,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (doit (let ((f (lambda (x) (+ '1 x)))
-	      (g (lambda (y) (+ '2 y))))
+  (doit (let ((f (lambda (x) (dummy  '1 x)))
+	      (g (lambda (y) (dummy2 '2 y))))
 	  (begin
 	    (f (g '3))
 	    '4))
@@ -1098,7 +1098,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_0 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_0)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -1107,9 +1107,9 @@
 			(all-rand*: %eax %ebp %edi %esp %esi)
 			(mask: #f)
 			(size: #f)))))
-		;;Tail call to the core primitive function "+".
+		;;Tail call to the non-existent function "dummy2".
 		(asm-instr move tmp_1 fvar.1)
-		(asm-instr move tmp_2 (disp (constant (object +)) (constant 27)))
+		(asm-instr move tmp_2 (disp (constant (object dummy2)) (constant 27)))
 		(asm-instr move fvar.1 (constant 16))
 		(asm-instr move fvar.2 tmp_1)
 		(asm-instr move %edi tmp_2)
@@ -1127,7 +1127,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_3 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_3)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -1136,9 +1136,9 @@
 			(all-rand*: %eax %ebp %edi %esp %esi)
 			(mask: #f)
 			(size: #f)))))
-		;;Tail call to the core primitive function "+".
+		;;Tail call to the non-existent function "dummy".
 		(asm-instr move tmp_4 fvar.1)
-		(asm-instr move tmp_5 (disp (constant (object +)) (constant 27)))
+		(asm-instr move tmp_5 (disp (constant (object dummy)) (constant 27)))
 		(asm-instr move fvar.1 (constant 8))
 		(asm-instr move fvar.2 tmp_4)
 		(asm-instr move %edi tmp_5)
@@ -1168,7 +1168,7 @@
 		(rand*: #f)
 		(live: #f)
 		(seq
-		  (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_6 (disp (constant (object loc.$do-event)) (constant 19)))
 		  (asm-instr move %edi tmp_6)
 		  (asm-instr move %eax (constant 0))
 		  (non-tail-call

@@ -129,14 +129,7 @@
     (vicare system $bytevectors)
     (vicare system $chars)
     (vicare system $strings)
-    (except (vicare system $vectors)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Mon May 18, 2015)
-	    $make-clean-vector)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
-    ;;2015)
-    (only (ikarus vectors)
-	  $make-clean-vector)
+    (vicare system $vectors)
     (vicare platform constants)
     (prefix (vicare unsafe capi)
 	    capi.)

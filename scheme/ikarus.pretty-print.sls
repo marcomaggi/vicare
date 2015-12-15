@@ -24,49 +24,22 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
-		  ;;FIXME  These  except must  be  removed  at  the next  boot  image
-		  ;;rotation.  (Marco Maggi; Mon Mar 30, 2015)
-		  non-negative-fixnum?
-		  record-object?
-		  ;;;
-
 		  pretty-print			pretty-print*
 		  pretty-width
 
 		  debug-print-enabled?
 		  debug-print			debug-print*)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 30,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?)
     (only (vicare system $structs)
-	  base-rtd)
+	  base-rtd
+	  $struct-rtd)
     (prefix (only (ikarus writer)
 		  the-printer-printing-style
 		  case-printing-style
 		  traverse
 		  TRAVERSAL-HELPERS)
-	    writer.)
+	    writer::)
     (only (ikarus.pretty-formats)
-	  get-fmt)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
-    ;;2015)
-    (prefix (only (ikarus structs)
-		  struct-field-names)
-	    structs.)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
-    ;;2015)
-    (prefix (only (ikarus.keywords)
-		  keyword->string)
-	    keywords.)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun May 10,
-    ;;2015)
-    (prefix (only (ikarus records procedural)
-		  record-object?
-		  record-constructor-descriptor?
-		  record-type-all-field-names
-		  record-ref)
-	    records.))
+	  get-fmt))
 
 
 ;;;; helpers
@@ -174,9 +147,9 @@
     (%pretty x port start-column ending-newline?))
 
   (define (%pretty x port start-column ending-newline?)
-    (parametrise ((writer.the-printer-printing-style 'pretty-print))
+    (parametrise ((writer::the-printer-printing-style 'pretty-print))
       (let ((marks-table (make-eq-hashtable)))
-	(writer.traverse x marks-table)
+	(writer::traverse x marks-table)
 	(output (boxify x marks-table) port start-column)))
     (when ending-newline?
       (newline port)))
@@ -248,7 +221,7 @@
     (format "~s" obj))
 
   (define (%boxify-object-keyword x)
-    (keywords.keyword->string x))
+    (keyword->string x))
 
 ;;; --------------------------------------------------------------------
 
@@ -547,7 +520,7 @@
       ;;                | next --> #f
       ;;               ---
       ;;
-      (import writer.TRAVERSAL-HELPERS)
+      (import writer::TRAVERSAL-HELPERS)
       ;;This RECUR  loop is conceptually  a fold-right for  the linked list  of CACHE
       ;;structs.  We traverse the  linked list of CACHE structs from  the tail to the
       ;;end, boxifying the  tail objects first; this way the  marks "#N=" are defined
@@ -604,7 +577,7 @@
 	     (field-name*  (struct-type-field-names std))
 	     (instance?    (or (not (eq? std (base-rtd)))
 			       (record-type-descriptor? std)
-			       (records.record-constructor-descriptor? std))))
+			       (record-constructor-descriptor? std))))
 	(receive (field-box* field-sep*)
 	    (%boxify-struct-fields stru
 				   (if instance? 0 1)
@@ -759,7 +732,7 @@
 	'())))
 
   (define* (graphed? x)
-    (import writer.TRAVERSAL-HELPERS)
+    (import writer::TRAVERSAL-HELPERS)
     (let ((b (get-writer-marks-bitfield __who__ marks-table x)))
       (cond ((writer-marks-bitfield.cyclic-set? b)	#t)
 	    ((writer-marks-bitfield.shared-set? b)	(print-graph))
@@ -778,7 +751,7 @@
 		    (loop (cdr D)))))))
 
   (define* (boxify-shared x boxify-kont)
-    (import writer.TRAVERSAL-HELPERS)
+    (import writer::TRAVERSAL-HELPERS)
     (let ((b (get-writer-marks-bitfield __who__ marks-table x)))
       (cond ((writer-marks-bitfield.mark-set? b)
 	     (string-append "#" (fixnum->string (writer-marks-bitfield.decode-mark b)) "#"))

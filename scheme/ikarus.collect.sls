@@ -34,10 +34,6 @@
 		  post-gc-hooks		automatic-garbage-collection
 		  automatic-collect
 
-		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
-		  ;;rotation.  (Marco Maggi; Sun Mar 29, 2015)
-		  non-null-pointer?
-
 		  register-to-avoid-collecting
 		  forget-to-avoid-collecting
 		  replace-to-avoid-collecting

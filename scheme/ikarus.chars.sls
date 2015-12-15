@@ -26,13 +26,9 @@
 
     char-in-ascii-range?	list-of-chars?
 
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
-    ;;2014)
-    $char!=
-
-
     ;; unsafe operations for (vicare system $chars)
-    $chmax			$chmin)
+    $chmax			$chmin
+    $char!=)
   (import (except (vicare)
 		  char->integer		integer->char
 		  char=?		char!=?
@@ -44,8 +40,6 @@
     (except (vicare system $chars)
 	    $chmax
 	    $chmin
-	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat
-	    ;;Nov 22, 2014)
 	    $char!=)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
@@ -84,14 +78,8 @@
 (define-inequality-predicate       char!=?	$char!=	char?)
 
 (define ($char!= ch1 ch2)
-  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
-  ;;implementation must be changed to:
-  ;;
-  ;;   (import (prefix (vicare system $chars) sys.))
-  ;;   (sys.$char!= ch1 ch2)
-  ;;
-  ;;(Marco Maggi; Wed Mar 25, 2015)
-  (not ($char= ch1 ch2)))
+  (import (prefix (vicare system $chars) sys.))
+  (sys.$char!= ch1 ch2))
 
 
 ;;;; min max

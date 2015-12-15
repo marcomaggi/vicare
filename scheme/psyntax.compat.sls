@@ -164,6 +164,8 @@
     (prefix (only (vicare.foreign-libraries)
 		  dynamically-load-shared-object-from-identifier)
 	    foreign.)
+    (only (vicare libraries)
+	  expand-library)
     ;;NOTE Let's  try to import  the unsafe  operations from the  built-in libraries,
     ;;when possible, rather that using external libraries of macros.
     (only (vicare system $symbols)
@@ -179,29 +181,29 @@
 	  $vector-ref $vector-set!))
 
 
-;;;; configuration to build boot image
-
-(define-syntax if-building-rotation-boot-image?
-  (lambda (stx)
-    (define rotating?
-      (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
-    (fprintf (current-error-port)
-	     "makefile.sps: conditional for ~a boot image\n"
-	     (if rotating? "rotation" "normal"))
-    (syntax-case stx ()
-      ((_ ?true-body)
-       (if rotating? #'?true-body #'(module ())))
-      ((_ ?true-body ?false-body)
-       (if rotating? #'?true-body #'?false-body))
-      )))
-
-;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
-(if-building-rotation-boot-image?
-    (import (only (vicare libraries) expand-library))
-  (import (only (vicare) expand-library)))
-
-
 ;;;; printing debug and verbose messages
+
+(define (print-expander-warning-message template . args)
+  (when (option.verbose?)
+    (let ((P (current-error-port)))
+      (display "vicare: expander warning: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
+(define (print-expander-debug-message template . args)
+  (when (option.print-debug-messages?)
+    (let ((P (current-error-port)))
+      (display "vicare: expander: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
+(define (library-debug-message template . args)
+  (when (option.print-debug-messages?)
+    ;;We do not want an exception from the I/O layer to ruin things.
+    (guard (E (else (void)))
+      (let ((P (current-error-port)))
+	(apply fprintf P (string-append "vicare: " template "\n") args)
+	(flush-output-port P)))))
 
 (module (print-expander-warning-message)
 

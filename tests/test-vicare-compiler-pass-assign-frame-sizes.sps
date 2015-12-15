@@ -202,7 +202,7 @@
 	       ;;Core primitive operation $DO-EVENT.
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	       ;;Tail call to the fake function "_".
 	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 (constant 16) y_0)))
@@ -211,7 +211,7 @@
 	       ;;Core primitive operation $DO-EVENT.
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	       ;;Tail call to the core primitive function "_".
 	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 (constant 8) x_0))))
@@ -225,7 +225,7 @@
 	   ;;Core primitive operation $DO-EVENT.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   (jmpcall asmlabel:f:clambda:case-1
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
 		      tmp_0)
@@ -255,7 +255,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_0 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_0)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -284,7 +284,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_3 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_3)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -327,7 +327,7 @@
 		(rand*: #f)
 		(live: #f)
 		(seq
-		  (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_6 (disp (constant (object loc.$do-event)) (constant 19)))
 		  (asm-instr move %edi tmp_6)
 		  (asm-instr move %eax (constant 0))
 		  (non-tail-call
@@ -388,7 +388,7 @@
 		(shortcut
 		    (asmcall incr/zero? %esi (constant 72) (constant 8))
 		  (seq
-		    (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move tmp_0 (disp (constant (object loc.$do-event)) (constant 19)))
 		    (asm-instr move %edi tmp_0)
 		    (asm-instr move %eax (constant 0))
 		    (non-tail-call
@@ -413,7 +413,7 @@
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
 		 (seq
-		   (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		   (asm-instr move tmp_3 (disp (constant (object loc.$do-event)) (constant 19)))
 		   (asm-instr move %edi tmp_3)
 		   (asm-instr move %eax (constant 0))
 		   (non-tail-call
@@ -449,7 +449,7 @@
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (seq
-		(asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		(asm-instr move tmp_6 (disp (constant (object loc.$do-event)) (constant 19)))
 		(asm-instr move %edi tmp_6)
 		(asm-instr move %eax (constant 0))
 		(non-tail-call
@@ -507,21 +507,21 @@
 	     (seq
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 (constant 16) z_0)))
 	  (lambda (label: asmlabel:g:clambda) (cp_1 y_0)
 	     (seq
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 (constant 8) y_0)))
 	  (lambda (label: asmlabel:f:clambda) (cp_2 a_0 b_0)
 	     (seq
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
-		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+		 (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 a_0 b_0))))
 	 (seq
@@ -532,7 +532,7 @@
 	     (foreign-call "ik_stack_overflow"))
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   (jmpcall asmlabel:f:clambda:case-2
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
 		      tmp_0)
@@ -567,7 +567,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_0 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_0)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -594,7 +594,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_3 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_3)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -621,7 +621,7 @@
 		    (rand*: #f)
 		    (live: #f)
 		    (seq
-		      (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move tmp_6 (disp (constant (object loc.$do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_6)
 		      (asm-instr move %eax (constant 0))
 		      (non-tail-call
@@ -659,7 +659,7 @@
 		(rand*: #f)
 		(live: #f)
 		(seq
-		  (asm-instr move tmp_8 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_8 (disp (constant (object loc.$do-event)) (constant 19)))
 		  (asm-instr move %edi tmp_8)
 		  (asm-instr move %eax (constant 0))
 		  (non-tail-call
@@ -739,7 +739,7 @@
 		(shortcut
 		    (asmcall incr/zero? %esi (constant 72) (constant 8))
 		  (seq
-		    (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move tmp_0 (disp (constant (object loc.$do-event)) (constant 19)))
 		    (asm-instr move %edi tmp_0)
 		    (asm-instr move %eax (constant 0))
 		    (non-tail-call
@@ -764,7 +764,7 @@
 		(shortcut
 		    (asmcall incr/zero? %esi (constant 72) (constant 8))
 		  (seq
-		    (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move tmp_3 (disp (constant (object loc.$do-event)) (constant 19)))
 		    (asm-instr move %edi tmp_3)
 		    (asm-instr move %eax (constant 0))
 		    (non-tail-call
@@ -789,7 +789,7 @@
 		(shortcut
 		    (asmcall incr/zero? %esi (constant 72) (constant 8))
 		  (seq
-		    (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move tmp_6 (disp (constant (object loc.$do-event)) (constant 19)))
 		    (asm-instr move %edi tmp_6)
 		    (asm-instr move %eax (constant 0))
 		    (non-tail-call
@@ -822,7 +822,7 @@
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (seq
-		(asm-instr move tmp_8 (disp (constant (object $do-event)) (constant 19)))
+		(asm-instr move tmp_8 (disp (constant (object loc.$do-event)) (constant 19)))
 		(asm-instr move %edi tmp_8)
 		(asm-instr move %eax (constant 0))
 		(non-tail-call

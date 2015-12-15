@@ -94,12 +94,6 @@
     syntax-clauses-validate-specs
     syntax-clauses-fold-specs)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Sat Nov 7, 2015)
-		  procedure-arguments-consistency-violation
-		  non-negative-fixnum?
-		  ;;
-
 		  ;; identifier processing: generic functions
 		  identifier-prefix		identifier-suffix
 		  identifier-append		identifier-format
@@ -164,14 +158,6 @@
 		  syntax-clauses-single-spec
 		  syntax-clauses-validate-specs
 		  syntax-clauses-fold-specs)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Nov 7,
-    ;;2015)
-    (only (ikarus conditions)
-	  procedure-arguments-consistency-violation)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Nov 7,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate))
 

@@ -62,6 +62,31 @@
 	     (environment '(vicare)
 			  '(vicare system $strings)))))))
 
+(define-syntax check-argument-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?result)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    #;(print-condition E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-arguments-consistency-violation? E)
+		    #;(print-condition E)
+		    (condition-irritants E))
+		   ((procedure-argument-violation? E)
+		    (when #f
+		      (debug-print (condition-message E)))
+		    (let ((D (cdr (condition-irritants E))))
+		      (if (pair? D)
+			  (car D)
+			(condition-irritants E))))
+		   ((assertion-violation? E)
+		    (condition-irritants E))
+		   (else
+		    (print-condition E)
+		    E))
+	   ?body)
+       => ?result))))
+
 
 (parametrise ((check-test-name	'symbol-cmp))
 
@@ -166,88 +191,88 @@
 
   (check-for-procedure-argument-violation
       (symbol<? 123 'abc)
-    => '(symbol<? ((symbol? obj1) 123)))
+    => '(symbol<? (123)))
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 123)
-    => '(symbol<? ((symbol? obj2) 123)))
+    => '(symbol<? (123)))
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 'def 123)
-    => '(symbol<? ((symbol? obj3) 123)))
+    => '(symbol<? (123)))
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 'def 'ghi 123)
-    => '(symbol<? ((symbol? obj4) 123)))
-
-  (check-for-procedure-argument-violation
-      (symbol<? 'abc 'def 'ghi 'lmn 123)
     => '(symbol<? (123)))
+
+  (check-argument-violation
+      (symbol<? 'abc 'def 'ghi 'lmn 123)
+    => 123)
 
 ;;;
 
   (check-for-procedure-argument-violation
       (symbol<=? 123 'abc)
-    => '(symbol<=? ((symbol? obj1) 123)))
+    => '(symbol<=? (123)))
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 123)
-    => '(symbol<=? ((symbol? obj2) 123)))
+    => '(symbol<=? (123)))
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 'def 123)
-    => '(symbol<=? ((symbol? obj3) 123)))
+    => '(symbol<=? (123)))
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 'def 'ghi 123)
-    => '(symbol<=? ((symbol? obj4) 123)))
-
-  (check-for-procedure-argument-violation
-      (symbol<=? 'abc 'def 'ghi 'lmn 123)
     => '(symbol<=? (123)))
+
+  (check-argument-violation
+      (symbol<=? 'abc 'def 'ghi 'lmn 123)
+    => 123)
 
 ;;;
 
   (check-for-procedure-argument-violation
       (symbol>? 123 'abc)
-    => '(symbol>? ((symbol? obj1) 123)))
+    => '(symbol>? (123)))
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 123)
-    => '(symbol>? ((symbol? obj2) 123)))
+    => '(symbol>? (123)))
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 'def 123)
-    => '(symbol>? ((symbol? obj3) 123)))
+    => '(symbol>? (123)))
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 'def 'ghi 123)
-    => '(symbol>? ((symbol? obj4) 123)))
-
-  (check-for-procedure-argument-violation
-      (symbol>? 'abc 'def 'ghi 'lmn 123)
     => '(symbol>? (123)))
+
+  (check-argument-violation
+      (symbol>? 'abc 'def 'ghi 'lmn 123)
+    => 123)
 ;;;
 
   (check-for-procedure-argument-violation
       (symbol>=? 123 'abc)
-    => '(symbol>=? ((symbol? obj1) 123)))
+    => '(symbol>=? (123)))
 
   (check-for-procedure-argument-violation
       (symbol>=? 'abc 123)
-    => '(symbol>=? ((symbol? obj2) 123)))
+    => '(symbol>=? (123)))
 
   (check-for-procedure-argument-violation
       (symbol>=? 'abc 'def 123)
-    => '(symbol>=? ((symbol? obj3) 123)))
-
-  (check-for-procedure-argument-violation
-      (symbol>=? 'abc 'def 'ghi 123)
-    => '(symbol>=? ((symbol? obj4) 123)))
-
-  (check-for-procedure-argument-violation
-      (symbol>=? 'abc 'def 'ghi 'lmn 123)
     => '(symbol>=? (123)))
+
+  (check-argument-violation
+      (symbol>=? 'abc 'def 'ghi 123)
+    => 123)
+
+  (check-argument-violation
+      (symbol>=? 'abc 'def 'ghi 'lmn 123)
+    => 123)
   #t)
 
 

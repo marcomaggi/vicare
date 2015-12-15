@@ -32,27 +32,12 @@
     $interned-strings)
   (import (except (vicare)
 		  intern-string)
-    (only (vicare system $fx)
-	  $fxzero?)
+    (vicare system $fx)
+    (only (vicare system $hashtables)
+	  $string-hash)
     (only (vicare system $strings)
 	  $string-length
-	  $string=)
-    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Thu Oct
-    ;;29, 2015)
-    #;(only (vicare system $hashtables) $string-hash)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 29,
-    ;;2015)
-    (only (ikarus hash-tables)
-	  $string-hash)
-    (except (vicare system $strings)
-	    ;;FIXME This  EXCEPT is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Sat Nov 7, 2015)
-	    $string-hash
-	    $interned-strings)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Nov 7,
-    ;;2015)
-    (only (ikarus hash-tables)
-	  $string-hash))
+	  $string=))
 
   (define STRING-TABLE #f)
 

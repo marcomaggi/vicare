@@ -936,10 +936,7 @@
 	       (core-type-tag-and T:cflonum T:zero)
 	     T:cflonum))
 	  ((compnum? x)
-	   ;;FIXME After  the next boot image  rotation the test must  be the simple:
-	   ;;"(zero? x)".  (Marco Maggi; Tue Nov 11, 2014)
-	   (if (and (zero? (real-part x))
-		    (zero? (imag-part x)))
+	   (if (zero? x)
 	       (core-type-tag-and T:compnum T:zero)
 	     T:compnum))
 	  (else

@@ -173,19 +173,19 @@
 	      (seq
 		(asmcall nop)
 		(asmcall int+/overflow (constant 8) (constant 16)))
-	    (funcall (asmcall mref (constant (object error@fx+)) (constant 19))
+	    (funcall (asmcall mref (constant (object loc.error@fx+)) (constant 19))
 	      (constant 8) (constant 16)))))
 
   ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
   (doit* (display (fx+ 1 2))
 	 (codes
 	  ()
-	  (funcall (asmcall mref (constant (object display)) (constant 19))
+	  (funcall (asmcall mref (constant (object loc.display)) (constant 19))
 	    (shortcut
 		(seq
 		  (asmcall nop)
 		  (asmcall int+/overflow (constant 8) (constant 16)))
-	      (funcall (asmcall mref (constant (object error@fx+)) (constant 19))
+	      (funcall (asmcall mref (constant (object loc.error@fx+)) (constant 19))
 		(constant 8) (constant 16))))))
 
 ;;; --------------------------------------------------------------------
@@ -197,7 +197,7 @@
 	      (seq
 		(asmcall nop)
 		(asmcall int-/overflow (constant 8) (constant 16)))
-	    (funcall (asmcall mref (constant (object error@fx-)) (constant 19))
+	    (funcall (asmcall mref (constant (object loc.error@fx-)) (constant 19))
 	      (constant 8) (constant 16)))))
 
 ;;; --------------------------------------------------------------------
@@ -261,7 +261,7 @@
 		    (asmcall interrupt))
 		  (asmcall int*/overflow (constant 2) b_0)))
 	    (funcall
-		(asmcall mref (constant (object error@fx*)) (constant 19))
+		(asmcall mref (constant (object loc.error@fx*)) (constant 19))
 	      (constant 16) (constant 32)))))
 
   ;;Here the type of the operands is unknown.
@@ -279,8 +279,8 @@
 		  (asmcall nop))
 	      (foreign-call "ik_stack_overflow"))
 	    ;;Here we start the actual form implementation.
-	    (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19))))
-		   (tmp_1 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	    (bind ((tmp_0 (funcall (asmcall mref (constant (object loc.read)) (constant 19))))
+		   (tmp_1 (funcall (asmcall mref (constant (object loc.read)) (constant 19)))))
 	      (shortcut
 		  (bind ((a_0 tmp_0)
 			 (b_0 tmp_1))
@@ -300,7 +300,7 @@
 		;;exception.  The single primitive function "error@fx*" is called for
 		;;both the causes  or error: first it validates  (again) the operands
 		;;as fixnums, and if they are: it means the error is an overflow.
-		(funcall (asmcall mref (constant (object error@fx*)) (constant 19))
+		(funcall (asmcall mref (constant (object loc.error@fx*)) (constant 19))
 		  tmp_0 tmp_1))))))
 
 ;;; --------------------------------------------------------------------
@@ -308,7 +308,7 @@
   (doit* (fxdiv 6 3)
 	 (codes
 	  ()
-	  (funcall (asmcall mref (constant (object fxdiv)) (constant 19))
+	  (funcall (asmcall mref (constant (object loc.fxdiv)) (constant 19))
 	    (constant 48) (constant 24))))
 
   #t)
@@ -333,19 +333,19 @@
 	     (seq
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (asmcall mref (constant (object +)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 	     (constant 8) (constant 16)))))
 
   ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
   (doit* (display (+ 1 2))
 	 (codes
 	  ()
-	  (funcall (asmcall mref (constant (object display)) (constant 19))
+	  (funcall (asmcall mref (constant (object loc.display)) (constant 19))
 	    (shortcut
 		(seq
 		  (asmcall nop)
 		  (asmcall int+/overflow (constant 8) (constant 16)))
-	      (funcall (asmcall mref (constant (object +)) (constant 19))
+	      (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 		(constant 8) (constant 16))))))
 
   #t)
@@ -374,7 +374,7 @@
 		   (asmcall interrupt)
 		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	   (bind ((tmp_0 (funcall (asmcall mref (constant (object loc.read)) (constant 19)))))
 	     ;;If the operand is a pair...
 	     (conditional (asmcall =
 				   (asmcall logand tmp_0 (constant 7))
@@ -429,7 +429,7 @@
 		   (asmcall interrupt)
 		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	   (bind ((tmp_0 (funcall (asmcall mref (constant (object loc.read)) (constant 19)))))
 	     (shortcut
 		 (seq
 		   ;;If the primary tag is the pair tag...
@@ -442,7 +442,7 @@
 		     (asmcall interrupt))
 		   ;;Extract the car.
 		   (asmcall mref tmp_0 (constant -1)))
-	       (funcall (asmcall mref (constant (object car)) (constant 19))
+	       (funcall (asmcall mref (constant (object loc.car)) (constant 19))
 		 tmp_0))))))
 
   #t)
@@ -476,7 +476,7 @@
 		   (asmcall interrupt)
 		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	   (bind ((tmp_0 (funcall (asmcall mref (constant (object loc.read)) (constant 19)))))
 	     (shortcut
 		 (seq
 		   ;;If the operand is a tagged pointer tagged as vector...
@@ -497,7 +497,7 @@
 		       vec.len_0)))
 	       ;;Interrupt handler: perform a full call to the primitive function and
 	       ;;let it raise an exception if there is the need.
-	       (funcall (asmcall mref (constant (object vector-length)) (constant 19))
+	       (funcall (asmcall mref (constant (object loc.vector-length)) (constant 19))
 		 tmp_0))))))
 
   #t)
@@ -519,7 +519,7 @@
 	 (seq
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
 	   (jmpcall asmlabel:f:clambda:case-0
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
 		      tmp_0)))))
@@ -528,7 +528,7 @@
   (doit (let ((a (lambda () '1))
 	      (b (lambda () '2))
 	      (c (lambda () '3)))
-	  (list a b c))
+	  (dummy a b c))
 	(codes
 	 ((lambda (label: asmlabel:c:clambda) (cp_0) (constant 24))
 	  (lambda (label: asmlabel:b:clambda) (cp_1) (constant 16))
@@ -537,8 +537,8 @@
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
 	     (funcall
-		 (asmcall mref (constant (object $do-event)) (constant 19))))
-	   (funcall (asmcall mref (constant (object list)) (constant 27))
+		 (asmcall mref (constant (object loc.$do-event)) (constant 19))))
+	   (funcall (asmcall mref (constant (object dummy)) (constant 27))
 	     (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
 	       tmp_0)
 	     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))
@@ -556,11 +556,11 @@
   ;;   |----------|----------|----------|----------|----------|----------|
   ;;
   ;;
-  (doit (let ((x (read)))
+  (doit (let ((x (dummy1)))
 	  (let ((a (lambda () x))
 		(b (lambda () x))
 		(c (lambda () x)))
-	    (list a b c)))
+	    (dummy2 a b c)))
 	(codes
 	 ((lambda (label: asmlabel:c:clambda) (cp_0) (asmcall mref cp_0 (constant 5)))
 	  (lambda (label: asmlabel:b:clambda) (cp_1) (asmcall mref cp_1 (constant 5)))
@@ -573,8 +573,8 @@
 	     (foreign-call "ik_stack_overflow"))
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
-	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 27)))))
+	     (funcall (asmcall mref (constant (object loc.$do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (asmcall mref (constant (object dummy1)) (constant 27)))))
 	     (bind ((c_0 (asmcall alloc (constant 48) (constant 3))))
 	       (bind ((b_0 (asmcall int+ c_0 (constant 16)))
 		      (a_0 (asmcall int+ c_0 (constant 32))))
@@ -585,16 +585,16 @@
 		   (asmcall mset b_0 (constant  5) x_0)
 		   (asmcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
 		   (asmcall mset a_0 (constant  5) x_0)
-		   (funcall (asmcall mref (constant (object list)) (constant 27))
+		   (funcall (asmcall mref (constant (object dummy2)) (constant 27))
 		     a_0 b_0 c_0))))))))
 
   ;;Mixed combinator/non-combinator bindings.
-  (doit (let ((x (read)))
+  (doit (let ((x (dummy1)))
 	  (let ((a (lambda () '1))
 		(b (lambda () '2))
 		(c (lambda () x))
 		(d (lambda () x)))
-	    (list a b c)))
+	    (dummy2 a b c)))
 	(codes
 	 ((lambda (label: asmlabel:d:clambda) (cp_0) (asmcall mref cp_0 (constant 5)))
 	  (lambda (label: asmlabel:c:clambda) (cp_1) (asmcall mref cp_1 (constant 5)))
@@ -609,8 +609,8 @@
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
 	     (funcall
-		 (asmcall mref (constant (object $do-event)) (constant 19))))
-	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 27)))))
+		 (asmcall mref (constant (object loc.$do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (asmcall mref (constant (object dummy1)) (constant 27)))))
 	     (bind ((d_0 (asmcall alloc (constant 32) (constant 3))))
 	       (bind ((c_0 (asmcall int+ d_0 (constant 16))))
 		 (seq
@@ -618,7 +618,7 @@
 		   (asmcall mset d_0 (constant  5) x_0)
 		   (asmcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
 		   (asmcall mset c_0 (constant  5) x_0)
-		   (funcall (asmcall mref (constant (object list)) (constant 27))
+		   (funcall (asmcall mref (constant (object dummy2)) (constant 27))
 		     (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
 		       tmp_0)
 		     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))
@@ -636,9 +636,9 @@
   (doit (annotated-call (read) (primitive read))
 	(codes
 	 ()
-	 (funcall (asmcall mref (constant (object debug-call)) (constant 19))
+	 (funcall (asmcall mref (constant (object loc.debug-call)) (constant 19))
 	   (constant (object (#f . (read))))
-	   (asmcall mref (constant (object read)) (constant 19)))))
+	   (asmcall mref (constant (object loc.read)) (constant 19)))))
 
   ;;The core primitive operation/function LIST cannot fail.
   (doit (annotated-call (list 1 2) (primitive list) '1 '2)
@@ -664,9 +664,9 @@
 	     (seq
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (asmcall mref (constant (object debug-call)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.debug-call)) (constant 19))
 	     (constant (object (#f . (fx+ 1 2))))
-	     (asmcall mref (constant (object fx+)) (constant 19))
+	     (asmcall mref (constant (object loc.fx+)) (constant 19))
 	     (constant 8)
 	     (constant 16)))))
 
@@ -679,9 +679,9 @@
 	     (seq
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (asmcall mref (constant (object debug-call)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.debug-call)) (constant 19))
 	     (constant (object (#f . (+ 1 2))))
-	     (asmcall mref (constant (object +)) (constant 19))
+	     (asmcall mref (constant (object loc.+)) (constant 19))
 	     (constant 8)
 	     (constant 16)))))
 

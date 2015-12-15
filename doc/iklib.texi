@@ -5874,6 +5874,7 @@ waiting for its termination in a coroutine; it assumes that
 
 
 @menu
+* iklib conditions core::       Core functions.
 * iklib conditions raising::    Raising conditions.
 * iklib conditions preds::      Predicates for condition objects.
 * iklib conditions spos::       Scheme source code position.
@@ -5891,6 +5892,18 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions string::     String encoding and decoding.
 * iklib conditions misc::       Miscellaneous primitives.
 @end menu
+
+@c page
+@node iklib conditions core
+@subsection Core functions
+
+
+@defun condition-accessor @var{rtd} @var{record-accessor}
+@defunx condition-accessor @var{rtd} @var{record-accessor} @var{accessor-who}
+@value{PRJNAME} extends the definition of @func{condition-accessor}
+specified by @rnrs{6} by accepting a third argument: a symbol
+representing the name of the accessor.
+@end defun
 
 @c page
 @node iklib conditions raising

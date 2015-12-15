@@ -26,11 +26,7 @@
   (import (except (vicare)
 		  call/cc		call-with-current-continuation
 		  dynamic-wind
-		  exit			exit-hooks
-
-		  ;;FIXME To be  removed after the next boot  image rotation.  (Marco
-		  ;;Maggi; Wed Dec 10, 2014)
-		  call/cf)
+		  exit			exit-hooks)
     (vicare system $stack)
     (vicare system $pairs)
     (vicare system $fx))

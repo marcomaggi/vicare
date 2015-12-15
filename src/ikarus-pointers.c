@@ -175,7 +175,11 @@ ikrt_pointer_to_int (ikptr_t pointer, ikpcb_t* pcb)
 {
   void *	memory;
   memory = IK_POINTER_DATA_VOIDP(pointer);
+#if (VICARE_SIZE_OF_VOIDP == 8)
   return ika_integer_from_ullong(pcb, (ik_ullong)memory);
+#else
+  return ika_integer_from_uint32(pcb, ((uint32_t)memory));
+#endif
 }
 ikptr_t
 ikrt_fx_to_pointer(ikptr_t x, ikpcb_t* pcb)

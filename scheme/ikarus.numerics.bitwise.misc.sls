@@ -32,11 +32,6 @@
     $fxcopy-bit			$fxcopy-bit-field
     $fxrotate-bit-field		$fxbit-field)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Tue May 5, 2015)
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
@@ -60,12 +55,6 @@
 
 
 ;;;; helpers
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Tue  May 5,
-;;2015)
-;;
-(define procedure-arguments-consistency-violation
-  assertion-violation)
 
 (define (non-negative-bit-index-in-fixnum-representation? obj)
   (and (fixnum? obj)

@@ -888,7 +888,7 @@
 			   ;;Remember  that  the  accessor  has to  access  a  simple
 			   ;;condition  object  embedded   in  a  compound  condition
 			   ;;object.
-			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym))
+			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym (quote ,accessor.id)))
 			 (define ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
 			   (unsafe-cast ,field-type.id (,internal-accessor.sym ,arg.sym)))))
 		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
@@ -1915,13 +1915,15 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(define (,who.id . ,standard-formals.stx)
-	   ,(if (option.enable-arguments-validation?)
-		;;With validation.
-		`(begin
-		   ,@(%make-arg-validation-forms arg-validation-spec* synner)
-		   (internal-body . ,body*.stx))
-	      ;;Without validation
-	      `(begin . ,body*.stx)))))
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ,who.id))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  `(begin
+		     ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
+		     (internal-body . ,body*.stx))
+		;;Without validation
+		`(begin . ,body*.stx))))))
 
     (define (%generate-define-output-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
@@ -1933,22 +1935,25 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(define (,who.id . ,standard-formals.stx)
-	   ,(if (option.enable-arguments-validation?)
-		;;With validation.
-		(let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
-		       (RETVAL-VALIDATION* (%make-ret-validation-forms
-					    (map (lambda (rv.id pred.stx)
-						   (make-retval-validation-spec rv.id pred.stx
-										(%parse-logic-predicate-syntax pred.stx rv.id synner)))
-					      RETVAL* ret-pred*.stx)
-					    synner)))
-		  `(begin
-		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
-		     (receive-and-return ,RETVAL*
-			 (internal-body . ,body*.stx)
-		       . ,RETVAL-VALIDATION*)))
-	      ;;Without validation.
-	      `(begin . ,body*.stx)))))
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ,who.id))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      who.id
+					      (map (lambda (rv.id pred.stx)
+						     (make-retval-validation-spec rv.id pred.stx
+										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+						RETVAL* ret-pred*.stx)
+					      synner)))
+		    `(begin
+		       ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
+		       (receive-and-return ,RETVAL*
+			   (internal-body . ,body*.stx)
+			 . ,RETVAL-VALIDATION*)))
+		;;Without validation.
+		`(begin . ,body*.stx))))))
 
     #| end of module: DEFINE*-MACRO |# )
 
@@ -1996,13 +2001,15 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  ,(if (option.enable-arguments-validation?)
-	       ;;With validation.
-	       `(begin
-		  ,@(%make-arg-validation-forms arg-validation-spec* synner)
-		  (internal-body . ,body*.stx))
-	     ;;Without validation.
-	     `(begin . ,body*.stx)))))
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote ,who.id))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 `(begin
+		    ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
+		    (internal-body . ,body*.stx))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
     (define (%generate-case-define-clause-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
       ;;Build and return  a symbolic expression, to be BLESSed  later, representing a
@@ -2014,22 +2021,25 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  ,(if (option.enable-arguments-validation?)
-	       ;;With validation.
-	       (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
-		      (RETVAL-VALIDATION* (%make-ret-validation-forms
-					   (map (lambda (rv.id pred.stx)
-						  (make-retval-validation-spec rv.id pred.stx
-									       (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-					     RETVAL* ret-pred*.stx)
-					   synner)))
-		 `(begin
-		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
-		    (receive-and-return ,RETVAL*
-			(internal-body . ,body*.stx)
-		      . ,RETVAL-VALIDATION*)))
-	     ;;Without validation.
-	     `(begin . ,body*.stx)))))
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote ,who.id))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     who.id
+					     (map (lambda (rv.id pred.stx)
+						    (make-retval-validation-spec rv.id pred.stx
+										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					       RETVAL* ret-pred*.stx)
+					     synner)))
+		   `(begin
+		      ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
+		      (receive-and-return ,RETVAL*
+			  (internal-body . ,body*.stx)
+			. ,RETVAL-VALIDATION*)))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
     #| end of module: CASE-DEFINE*-MACRO |# )
 
@@ -2090,11 +2100,11 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(named-lambda ,who.id ,standard-formals.stx
+        `(named-lambda ,who.id ,standard-formals.stx
 	   ,(if (option.enable-arguments-validation?)
 		;;With validation.
 		`(begin
-		   ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		   ,@(%make-arg-validation-forms (quote ,who.id) arg-validation-spec* synner)
 		   (internal-body . ,body*.stx))
 	      ;;Without validation.
 	      `(begin . ,body*.stx)))))
@@ -2113,6 +2123,7 @@
 		;;With validation.
 		(let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 		       (RETVAL-VALIDATION* (%make-ret-validation-forms
+					    (quote ,who.id)
 					    (map (lambda (rv.id pred.stx)
 						   (make-retval-validation-spec rv.id pred.stx
 										(%parse-logic-predicate-syntax pred.stx rv.id synner)))
@@ -2189,13 +2200,15 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  ,(if (option.enable-arguments-validation?)
-	       ;;With validation.
-	       `(begin
-		  ,@(%make-arg-validation-forms arg-validation-spec* synner)
-		  (internal-body . ,body*.stx))
-	     ;;Without validation.
-	     `(begin . ,body*.stx)))))
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote _))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 `(begin
+		    ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
+		    (internal-body . ,body*.stx))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
     (define (%generate-case-lambda-clause-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
@@ -2207,22 +2220,25 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  ,(if (option.enable-arguments-validation?)
-	       ;;With validation
-	       (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
-		      (RETVAL-VALIDATION* (%make-ret-validation-forms
-					   (map (lambda (rv.id pred.stx)
-						  (make-retval-validation-spec rv.id pred.stx
-									       (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-					     RETVAL* ret-pred*.stx)
-					   synner)))
-		 `(begin
-		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
-		    (receive-and-return ,RETVAL*
-			(internal-body . ,body*.stx)
-		      . ,RETVAL-VALIDATION*)))
-	     ;;Without validation.
-	     `(begin . ,body*.stx)))))
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote _))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation
+		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     (quote _)
+					     (map (lambda (rv.id pred.stx)
+						    (make-retval-validation-spec rv.id pred.stx
+										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					       RETVAL* ret-pred*.stx)
+					     synner)))
+		   `(begin
+		      ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
+		      (receive-and-return ,RETVAL*
+			  (internal-body . ,body*.stx)
+			. ,RETVAL-VALIDATION*)))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
     #| end of module: CASE-LAMBDA*-MACRO |# )
 
@@ -2385,7 +2401,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-arg-validation-forms arg-validation-spec* synner)
+  (define (%make-arg-validation-forms who.id arg-validation-spec* synner)
     (reverse
      (cdr ($fold-left/stx
 	      (lambda (knil spec)
@@ -2398,20 +2414,21 @@
 			    (?arg-id (argument-validation-spec-arg-id spec)))
 			(cons* (fxadd1 arg-counter)
 			       (if (argument-validation-spec-list-arg? spec)
-				   (let ((pred.sym		(gensym))
+				   (let ((loop.sym		(gensym))
+					 (pred.sym		(gensym))
 					 (arg-counter.sym	(gensym))
 					 (arg*.sym		(gensym)))
-				     `(let loop ((,pred.sym		,?expr)
-						 (,arg-counter.sym	,arg-counter)
-						 (,arg*.sym		,?arg-id))
+				     `(let ,loop.sym ((,pred.sym		,?expr)
+						      (,arg-counter.sym		,arg-counter)
+						      (,arg*.sym		,?arg-id))
 					(when (pair? ,arg*.sym)
 					  (if (,pred.sym (car ,arg*.sym))
-					      (loop ,pred.sym ($fxadd1 ,arg-counter.sym) (cdr ,arg*.sym))
-					    (procedure-signature-argument-violation __who__
+					      (,loop.sym ,pred.sym ($fxadd1 ,arg-counter.sym) (cdr ,arg*.sym))
+					    (procedure-signature-argument-violation (quote ,who.id)
 					      "failed argument validation"
 					      ,arg-counter.sym (quote ,?pred) (car ,arg*.sym))))))
 				 `(unless ,?expr
-				    (procedure-signature-argument-violation __who__
+				    (procedure-signature-argument-violation (quote ,who.id)
 				      "failed argument validation"
 				      ,arg-counter (quote ,?pred) ,?arg-id)))
 			       rev-head-forms))
@@ -2420,7 +2437,7 @@
 	    '(1 . ())
 	    arg-validation-spec*))))
 
-  (define (%make-ret-validation-forms retval-validation-spec* synner)
+  (define (%make-ret-validation-forms who.id retval-validation-spec* synner)
     (reverse
      (cdr ($fold-left/stx (lambda (knil spec)
 			    (let ((retval-counter (car knil))
@@ -2435,7 +2452,7 @@
 				  ;;This return value HAS a logic predicate specification.
 				  (cons* (fxadd1 retval-counter)
 					 `(unless ,?expr
-					    (procedure-signature-return-value-violation __who__
+					    (procedure-signature-return-value-violation (quote ,who.id)
 					      "failed return value validation"
 					      ,retval-counter (quote ,?pred) ,?ret))
 					 rev-head-forms)))))

@@ -30,28 +30,9 @@
     print-error-message
     print-verbose-message
     print-debug-message)
-  (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed Sep 30, 2015)
-		  with-blocked-exceptions)
+  (import (vicare)
     (prefix (ikarus.options)
-	    option.))
-
-
-;;;; helpers
-
-;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Wed  Sep 30,
-;;2015)
-;;
-(define-syntax with-blocked-exceptions
-  (syntax-rules ()
-    ((_ ?thunk)
-     (call/cc
-	 (lambda (reinstate-with-blocked-exceptions-continuation)
-	   (with-exception-handler
-	       reinstate-with-blocked-exceptions-continuation
-	     ?thunk))))
-    ))
+	    options::))
 
 
 (define (print-stderr-message prefix template arg*)
@@ -71,7 +52,7 @@
 (module (print-verbose-message)
 
   (define-syntax-rule (print-verbose-message . ?args)
-    (when (option.print-verbose-messages?)
+    (when (options::print-verbose-messages?)
       (%print-verbose-message . ?args)))
 
   (define (%print-verbose-message template . args)
@@ -82,7 +63,7 @@
 (module (print-debug-message)
 
   (define-syntax-rule (print-debug-message . ?args)
-    (when (option.print-debug-messages?)
+    (when (options::print-debug-messages?)
       (%print-debug-message . ?args)))
 
   (define (%print-debug-message template . args)

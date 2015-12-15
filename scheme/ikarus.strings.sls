@@ -84,13 +84,6 @@
 	    ($uri-encoded-string?	$percent-encoded-string?))
     #| end of export |# )
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed May 6, 2015)
-		  procedure-arguments-consistency-violation
-		  non-negative-fixnum?
-		  list-of-chars?
-		  ;;;
-
 		  make-string			string
 		  substring			string-length
 		  string-empty?
@@ -125,27 +118,13 @@
 		  #| end of except |# )
     ;;NOTE Let's try  to import unsafe operations only from  built-in libraries, when
     ;;possible, avoiding the use of external libraries of macros.
-    (except (vicare system $fx)
-	    ;;FIXME This  except must  be removed  at the  next boot  image rotation.
-	    ;;(Marco Maggi; Fri Mar 27, 2015)
-	    $fx!=)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 27,
-    ;;2015)
-    (only (ikarus fixnums)
-	  $fx!=)
+    (vicare system $fx)
     (vicare system $pairs)
     (only (vicare system $chars)
 	  $char=
 	  $char<
 	  $char->fixnum
 	  $fixnum->char
-	  ;;FIXME This  is to be  included at the  next boot image  rotation.  (Marco
-	  ;;Maggi; Fri Mar 27, 2015)
-	  #;$char!=
-	  )
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 27,
-    ;;2015)
-    (only (ikarus chars)
 	  $char!=)
     (only (vicare system $vectors)
 	  $vector-ref)
@@ -161,14 +140,6 @@
 	  $string-set!
 	  $ascii->string
 	  $string->ascii)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
-    ;;2015)
-    (only (ikarus chars)
-	  list-of-chars?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 21,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
 	  define-min/max-comparison
@@ -177,12 +148,6 @@
 
 
 ;;;; arguments validation
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
-;;2015)
-;;
-(define procedure-arguments-consistency-violation
-  assertion-violation)
 
 (define string-index?	non-negative-fixnum?)
 (define string-length?	non-negative-fixnum?)
@@ -380,7 +345,7 @@
      ($string-set! str 2 three)
      ($string-set! str 3 four)))
 
-  (({one char?} {two char?} {three char?} {four char?} {five char?} . {char* list-of-chars?})
+  (({one char?} {two char?} {three char?} {four char?} {five char?} . {char* char?})
    (define len
      (+ 5 (length char*)))
    (assert-total-string-length len)
@@ -679,7 +644,7 @@
        ($string-copy! str2 0 dst.str len1 len2)
        ($string-copy! str3 0 dst.str ($fx+ len1 len2) len3))))
 
-  (({str1 string?} {str2 string?} {str3 string?} {str4 string?} . str*)
+  (({str1 string?} {str2 string?} {str3 string?} {str4 string?} . {str* string?})
 
    (define (%compute-total-string-length len str*)
      (if (pair? str*)
@@ -696,12 +661,6 @@
 	     (%fill-strings dst.str ($cdr str*) ($fx+ dst.start src.len))))
        dst.str))
 
-   ;;FIXME At the  next boot image rotation: this validation  must be integrated with
-   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-   (for-each (lambda (item)
-	       (unless (string? item)
-		 (procedure-argument-violation __who__ "failed argument validation" item)))
-     str*)
    (let* ((len1		($string-length str1))
 	  (len2		($string-length str2))
 	  (len3		($string-length str3))
@@ -827,13 +786,7 @@
 	     ($string-ref str1 str.index))
        (next-char ($fxadd1 str.index) str.len))))
 
-  (({proc procedure?} {str0 string?} {str1 string?} {str2 string?} . str*)
-   ;;FIXME At the  next boot image rotation: this validation  must be integrated with
-   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
-   (for-each (lambda (item)
-	       (unless (string? item)
-		 (procedure-argument-violation __who__ "failed argument validation" item)))
-     str*)
+  (({proc procedure?} {str0 string?} {str1 string?} {str2 string?} . {str* string?})
    (assert-equal-length-strings (cons* str0 str1 str2 str*))
    (let next-char ((str*	str*)
 		   (str.index	0)

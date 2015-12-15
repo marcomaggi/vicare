@@ -56,12 +56,6 @@
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Tue Mar 31, 2015)
-		  non-negative-fixnum?
-		  procedure-arguments-consistency-violation
-		  ;;;
-
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
 		  record-type-descriptor?		record-constructor-descriptor?
@@ -88,27 +82,9 @@
 		  record-type-method-retriever		record-type-method-retriever-set!)
     (vicare system $fx)
     (vicare system $pairs)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
-    ;;2015)
-    (only (ikarus structs)
-	  $make-clean-struct)
-    (except (vicare system $structs)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Mon May 18, 2015)
-	    $make-clean-struct)
+    (vicare system $structs)
     (vicare system $symbols)
-    (except (vicare system $vectors)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Mon May 18, 2015)
-	    $make-clean-vector)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
-    ;;2015)
-    (only (ikarus vectors)
-	  $make-clean-vector)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Mar 31,
-    ;;2015)
-    (only (ikarus fixnums)
-	  non-negative-fixnum?))
+    (vicare system $vectors))
 
 
 ;;;; type definitions
@@ -424,12 +400,6 @@
 
 
 ;;;; helpers
-
-;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
-;;2015)
-;;
-(define procedure-arguments-consistency-violation
-  assertion-violation)
 
 (define (record-fields-specification-vector? V)
   ;;Return true if  V is valid as vector  specifying the fields of a  record type.  A

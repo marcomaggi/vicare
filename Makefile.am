@@ -1202,8 +1202,7 @@ EXTRA_DIST	+= \
 
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME_LONG_TESTS)
 XFAIL_TESTS	= \
-	tests/test-issue-058-lalr-unary-prec.sps	\
-	tests/test-issue-086.sps
+	tests/test-issue-058-lalr-unary-prec.sps
 
 # The following tests fails because Nausicaa and the half-written type
 # system  in  (vicare)  are  incompatible.  In  future  they  will  be
@@ -1221,6 +1220,7 @@ XFAIL_TESTS	+= \
 
 if WANT_64BIT_SUPPORT
 TESTS		+= $(VICARE_SCHEME_COMPILER_TESTS)
+XFAIL_TESTS	+= tests/test-issue-086.sps
 endif
 
 if WANT_SRFI

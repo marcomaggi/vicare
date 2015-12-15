@@ -50,7 +50,8 @@
 (declare-core-primitive eval
     (safe)
   (signatures
-   ((_ T:lexical-environment)	=> T:object)))
+   ((_ T:lexical-environment)				=> T:object)
+   ((_ T:lexical-environment T:enum-set T:enum-set)	=> T:object)))
 
 ;;; --------------------------------------------------------------------
 

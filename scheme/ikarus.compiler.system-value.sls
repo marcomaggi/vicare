@@ -73,12 +73,10 @@
    #| end of branch |# )
 
   ((building-normal-boot-image)
-   (import (prefix (only (vicare)
-			 system-value)
-		   old-boot-image.)
-     (prefix (only (vicare system $symbols)
-		   system-value-gensym)
-	     old-boot-image.))
+   (import (prefix (only (vicare compiler)
+			 system-value
+			 system-value-gensym)
+		   old-boot-image.))
    (define (system-value arg)
      (old-boot-image.system-value arg))
    (define (system-value-gensym)

@@ -43,11 +43,6 @@
     string-normalize-nfd	string-normalize-nfkd
     string-normalize-nfc	string-normalize-nfkc)
   (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed May 13, 2015)
-		  list-of-strings? char!=? list-of-chars?
-		  ;;;
-
 		  unicode-printable-char?
 
 		  char-upcase			char-downcase
@@ -71,20 +66,7 @@
     (vicare system $pairs)
     (vicare system $strings)
     (vicare system $vectors)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed May 13,
-    ;;2015)
-    (only (ikarus strings)
-	  list-of-strings?)
-    (except (vicare system $chars)
-	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
-	    ;;(Marco Maggi; Wed Mar 25, 2015)
-	    $char!=)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
-    ;;2014)
-    (only (ikarus chars)
-	  list-of-chars?
-	  char!=?
-	  $char!=))
+    (vicare system $chars))
 
 
 ;;;; helper
@@ -173,7 +155,7 @@
 			 (case-define* ?who
 			   (({c1 char?} {c2 char?})
 			    (?case-insensitive-cmp ($char-foldcase c1) ($char-foldcase c2)))
-			   (({ch char?} . {ch* list-of-chars?})
+			   (({ch char?} . {ch* char?})
 			    (%do-char-cmp ch ch* (lambda (x y)
 						   (?case-insensitive-cmp x y))))
 			   #| end of CASE-DEFINE* |# ))
@@ -197,7 +179,7 @@
 	  ($char!= ch2 ch3)
 	  ($char!= ch3 ch1))))
 
-  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* char?})
    ;;We must compare every argument to all the other arguments.
    (let outer-loop ((chX    ($char-foldcase ch1))
 		    (char*  (cons* ($char-foldcase ch2)

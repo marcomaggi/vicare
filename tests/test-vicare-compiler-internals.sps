@@ -2891,19 +2891,19 @@
 	     (seq
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (asmcall mref (constant (object +)) (constant 19))
+	   (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 	     (constant 8) (constant 16)))))
 
   ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
   (doit* (display (+ 1 2))
 	 (codes
 	  ()
-	  (funcall (asmcall mref (constant (object display)) (constant 19))
+	  (funcall (asmcall mref (constant (object loc.display)) (constant 19))
 	    (shortcut
 		(seq
 		  (asmcall nop)
 		  (asmcall int+/overflow (constant 8) (constant 16)))
-	      (funcall (asmcall mref (constant (object +)) (constant 19))
+	      (funcall (asmcall mref (constant (object loc.+)) (constant 19))
 		(constant 8) (constant 16))))))
 
   #t)

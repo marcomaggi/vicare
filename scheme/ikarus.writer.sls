@@ -43,28 +43,14 @@
     (only (vicare system $symbols)
 	  $unbound-object?)
     (only (vicare system $structs)
-	  base-rtd)
+	  base-rtd
+	  $struct-rtd)
     (only (vicare system $codes)
 	  $code-annotation)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
-    ;;2015)
-    (prefix (only (ikarus.io)
-		  open-textual-output-port?)
-	    io.)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Thu Sep 3,
-    ;;2015)
-    (prefix (only (ikarus.keywords)
-		  keyword->string)
-	    keywords.)
     (prefix (only (ikarus records procedural)
-		  record-object?
-		  record-constructor-descriptor?
-		  record-printer
 		  rcd-rtd
-		  rcd-parent-rcd
-		  record-type-all-field-names
-		  record-ref)
-	    records.))
+		  rcd-parent-rcd)
+	    records::))
 
   (include "ikarus.wordsize.scm" #t)
 
@@ -134,11 +120,11 @@
     ((x)
      (%write-to-port x (current-output-port))
      (void))
-    ((x {p io.open-textual-output-port?})
+    ((x {p open-textual-output-port?})
      (%write-to-port x p)
      (void)))
 
-  (define* (put-datum {p io.open-textual-output-port?} x)
+  (define* (put-datum {p open-textual-output-port?} x)
     (%write-to-port x p)
     (void))
 
@@ -146,13 +132,13 @@
     ((x)
      (%display-to-port x (current-output-port))
      (void))
-    ((x {p io.open-textual-output-port?})
+    ((x {p open-textual-output-port?})
      (%display-to-port x p)
      (void)))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (fprintf {p io.open-textual-output-port?} {fmt string?} . args)
+  (define* (fprintf {p open-textual-output-port?} {fmt string?} . args)
     (%formatter __who__ p fmt args)
     (void))
 
@@ -501,8 +487,7 @@
 	  ;;At present  keywords are  Vicare structs,  so we have  to make  sure this
 	  ;;branch comes before the one below.
 	  ((keyword?	X)	(void))
-	  ((records.record-object? X)
-	   (traverse-shared X marks-table traverse-record))
+	  ((record-object? X)	(traverse-shared X marks-table traverse-record))
 	  ((struct?     X)	(traverse-shared X marks-table traverse-struct))
 	  ((bytevector? X)	(traverse-shared X marks-table traverse-noop))
 	  ((gensym?     X)	(traverse-shared X marks-table traverse-noop))
@@ -535,7 +520,7 @@
     ;;This module processes R6RS records.
     ;;
     (define (traverse-record reco marks-table)
-      (cond ((records.record-printer reco)
+      (cond ((record-printer reco)
 	     => (lambda (printer)
 		  (%traverse-custom-record reco marks-table printer)))
 	    (else
@@ -546,11 +531,11 @@
       ;;
       (let ((rtd (record-rtd reco)))
 	(traverse (record-type-name rtd) marks-table)
-	(let* ((fields.vec	(records.record-type-all-field-names rtd))
+	(let* ((fields.vec	(record-type-all-field-names rtd))
 	       (fields.len	(vector-length fields.vec)))
 	  (let loop ((field.idx 0))
 	    (when (fx<? field.idx fields.len)
-	      (traverse (records.record-ref reco field.idx) marks-table)
+	      (traverse (record-ref reco field.idx) marks-table)
 	      (loop (fxadd1 field.idx)))))))
 
     (define* (%traverse-custom-record reco marks-table printer)
@@ -759,10 +744,10 @@
 	  ((keyword? x)
 	   ;;At present  keywords are Vicare  structs, so we  have to make  sure this
 	   ;;branch comes before the one below.
-	   (write-char* (keywords.keyword->string x) p)
+	   (write-char* (keyword->string x) p)
 	   next-mark-idx)
 
-	  ((records.record-object? x)
+	  ((record-object? x)
 	   (write-shared x p write-style? marks-table next-mark-idx write-object-record))
 
 	  ((struct? x)
@@ -1270,14 +1255,14 @@
       (define rtd (record-rtd record))
       (write-char* (if (record-type-opaque? rtd) "#[opaque-record " "#[record ") port)
       (write-char* (symbol->string (record-type-name rtd)) port)
-      (let* ((fields.vec  (records.record-type-all-field-names rtd))
+      (let* ((fields.vec  (record-type-all-field-names rtd))
 	     (fields.len  (vector-length fields.vec)))
 	(do ((fields.idx 0 (fxadd1 fields.idx)))
 	    ((fx=? fields.idx fields.len)
 	     (write-char #\] port)
 	     next-mark-idx)
 	  (let* ((field-nam  (vector-ref fields.vec fields.idx))
-		 (field-val  (records.record-ref record fields.idx)))
+		 (field-val  (record-ref record fields.idx)))
 	    (write-char #\space port)
 	    (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
 	      (write-char #\= port)
@@ -1319,7 +1304,7 @@
       (cond ((record-type-descriptor? stru)
 	     (%write-r6rs-record-type-descriptor stru p write-style? marks-table next-mark-idx))
 
-	    ((records.record-constructor-descriptor? stru)
+	    ((record-constructor-descriptor? stru)
 	     (%write-r6rs-record-constructor-descriptor stru p write-style? marks-table next-mark-idx))
 
 	    ;;We do not handle opaque records specially.
@@ -1341,7 +1326,7 @@
 	(%write-struct-fields rtd 1 (cdr (struct-type-field-names std)) port write-style? marks-table next-mark-idx)))
 
     (define (%write-r6rs-record-constructor-descriptor rcd port write-style? marks-table next-mark-idx)
-      (let ((rtd (records.rcd-rtd rcd)))
+      (let ((rtd (records::rcd-rtd rcd)))
 	(write-char* "#[rcd " port)
 	(write-char* (symbol->string (record-type-name rtd)) port)
 	(write-char #\space port)
@@ -1350,7 +1335,7 @@
 	  (write-char #\space port)
 	  (write-char* "parent-rcd=" port)
 	  (begin0
-	      (write-object (records.rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
+	      (write-object (records::rcd-parent-rcd rcd) port write-style? marks-table next-mark-idx)
 	    (write-char #\] port)))))
 
     (define (%write-vicare-struct stru port write-style? marks-table next-mark-idx)

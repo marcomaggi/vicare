@@ -66,9 +66,6 @@
 
 ;;; --------------------------------------------------------------------
 
-;;FIXME At the next boot image rotation: this syntax must be replaced with the one in
-;;the library (vicare language-extensions syntaxes).  (Marco Maggi; Sun May 3, 2015)
-;;
 (define-syntax (preconditions stx)
   (module (vicare-built-with-arguments-validation-enabled)
     (module (arguments-validation)
@@ -83,9 +80,8 @@
      (identifier? #'?who)
      (if (vicare-built-with-arguments-validation-enabled)
 	 #'(unless (?predicate ?arg ...)
-	     (assertion-violation __who__
-	       "failed precondition"
-	       '(?predicate ?arg ...) ?arg ...))
+	     (procedure-arguments-consistency-violation/failed-expression __who__
+	       "failed precondition" '(?predicate ?arg ...) ?arg ...))
        #'(void)))
 
     ;;Multiple preconditions.

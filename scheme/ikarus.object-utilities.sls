@@ -53,92 +53,11 @@
   (import (except (vicare)
 		  method-call-late-binding
 		  any->symbol		any->string
-		  always-true		always-false
-		  procedure-and-error
-		  procedure-argument-validation-with-predicate
-		  return-value-validation-with-predicate
-
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Mon Oct 19, 2015)
-		  keyword->string		string->keyword
-		  keyword-hash
-		  char->fixnum
-		  byte-fixnum?			octet-fixnum?
-		  string-hash			string-ci-hash
-		  symbol-hash			bytevector-hash
-		  equal-hash
-		  fixnum-hash			exact-integer-hash
-		  flonum-hash			number-hash
-		  char-hash			char-ci-hash
-		  boolean-hash			void-hash
-		  eof-object-hash		would-block-hash
-		  struct-hash			record-hash
-		  object-hash			pointer-hash
-		  nlist?
-		  vector-for-all		vector-exists
-		  vector-find			vector-fold-left
-		  vector-fold-right
-		  #| end of EXPORT |# )
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
-    ;;2015)
-    (prefix (only (ikarus conditions)
-		  procedure-signature-argument-violation)
-	    conditions.)
-    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Sep 5,
-    ;;2015)
-    (prefix (only (ikarus records procedural)
-		  record-object?
-		  record-destructor
-		  internal-applicable-record-destructor
-		  record-type-method-retriever)
-	    records.)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
-    ;;2015)
-    (only (ikarus.keywords)
-	  keyword-hash
-	  keyword->string
-	  string->keyword)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 25,
-    ;;2015)
-    (prefix (only (ikarus structs)
-		  struct-field-method
-		  struct-std)
-	    structs.)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Oct 19,
-    ;;2015)
-    (only (ikarus hash-tables)
-	  string-hash			string-ci-hash
-	  symbol-hash			bytevector-hash
-	  equal-hash
-	  fixnum-hash			exact-integer-hash
-	  flonum-hash			number-hash
-	  char-hash			char-ci-hash
-	  boolean-hash			void-hash
-	  eof-object-hash		would-block-hash
-	  struct-hash			record-hash
-	  object-hash)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
-    ;;2015)
-    (only (ikarus.pointers)
-	  pointer-hash)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
-    ;;2015)
-    (only (ikarus fixnums)
-	  char->fixnum
-	  byte-fixnum?
-	  octet-fixnum?)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Oct 22,
-    ;;2015)
-    (only (ikarus lists)
-	  nlist?)
+		  always-true		always-false)
     (only (vicare system $fx)
 	  $fxadd1)
-    (only (ikarus vectors)
-	  vector-for-all
-	  vector-exists
-	  vector-find
-	  vector-fold-left
-	  vector-fold-right))
+    (only (psyntax system $all)
+	  internal-applicable-record-destructor))
 
 
 ;;;; helpers for object-type method calls
@@ -183,7 +102,7 @@
     (define (%recurse)
       (%record-object-call (record-type-parent rtd)))
     (if rtd
-	(cond ((records.record-type-method-retriever rtd)
+	(cond ((record-type-method-retriever rtd)
 	       => (lambda (method-retriever)
 		    (cond ((method-retriever rtd method-name.sym)
 			   => (lambda (proc)
@@ -194,7 +113,7 @@
 	       (%recurse)))
       (%error-record-type-has-no-matching-method)))
 
-  (cond ((records.record-object? subject)
+  (cond ((record-object? subject)
 	 (%record-object-call (record-rtd subject)))
 
 	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
@@ -246,8 +165,8 @@
   ;;This  is not  a public  syntactic binding:  it is  exported only  by the  library
   ;;"(psyntax system $all)".
   ;;
-  (cond ((records.record-object? obj)
-	 ((records.internal-applicable-record-destructor obj) obj))
+  (cond ((record-object? obj)
+	 ((internal-applicable-record-destructor obj) obj))
 	((struct? obj)
 	 ((struct-destructor obj) obj))
 	((port? obj)
@@ -448,6 +367,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'conditions.procedure-signature-argument-violation 'scheme-indent-function 1)
 ;; eval: (put 'define-scheme-type		'scheme-indent-function 2)
 ;; End:

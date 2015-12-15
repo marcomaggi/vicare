@@ -1,6 +1,5 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Vicare
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for structs
 ;;;Date: Mon Oct 24, 2011
 ;;;
@@ -8,25 +7,24 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2012, 2014-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
-(import (except (vicare) catch)
+(import (vicare)
   (vicare checks)
   (vicare system $structs))
 
@@ -37,15 +35,28 @@
 
 ;;;; helpers
 
-(define-syntax catch
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
-	       (else E))
-       (begin . ?body)))))
+(define-syntax check-argument-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?result)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    #;(print-condition E)
+		    (procedure-signature-argument-violation.offending-value E))
+		   ((procedure-arguments-consistency-violation? E)
+		    #;(print-condition E)
+		    (condition-irritants E))
+		   ((procedure-argument-violation? E)
+		    (when #f
+		      (debug-print (condition-message E)))
+		    (let ((D (cdr (condition-irritants E))))
+		      (if (pair? D)
+			  (car D)
+			(condition-irritants E))))
+		   (else
+		    (print-condition E)
+		    E))
+	   ?body)
+       => ?result))))
 
 
 (parametrise ((check-test-name	'definition))
@@ -180,20 +191,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (catch #f
-	(struct-type-name 123))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-type-name 123)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-type-symbol 123))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-type-symbol 123)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-type-field-names 123))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-type-field-names 123)
+    => 123)
 
   #t)
 
@@ -292,34 +300,28 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (catch #f
-	(struct-constructor 123))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-constructor 123)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-predicate 123))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-predicate 123)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-field-accessor 123 0))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-field-accessor 123 0)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-field-mutator 123 0))
-    => '((struct-type-descriptor? std) 123))
+  (check-argument-violation
+      (struct-field-mutator 123 0)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-field-accessor color-rtd 3))
+  (check-argument-violation
+      (struct-field-accessor color-rtd 3)
     => (list 3 color-rtd))
 
-  (check
-      (catch #f
-	(struct-field-mutator color-rtd 3))
+  (check-argument-violation
+      (struct-field-mutator color-rtd 3)
     => (list 3 color-rtd))
 
   #t)
@@ -399,34 +401,28 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (catch #f
-	(struct-length 123))
-    => '((struct? stru) 123))
+  (check-argument-violation
+      (struct-length 123)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-name 123))
-    => '((struct? stru) 123))
+  (check-argument-violation
+      (struct-name 123)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-set! 123 0 0))
-    => '((struct? stru) 123))
+  (check-argument-violation
+      (struct-set! 123 0 0)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-ref 123 0))
-    => '((struct? stru) 123))
+  (check-argument-violation
+      (struct-ref 123 0)
+    => 123)
 
-  (check
-      (catch #f
-	(struct-set! S 4 0))
+  (check-argument-violation
+      (struct-set! S 4 0)
     => (list 4 S))
 
-  (check
-      (catch #f
-	(struct-ref S 4))
+  (check-argument-violation
+      (struct-ref S 4)
     => (list 4 S))
 
 ;;; --------------------------------------------------------------------
@@ -813,3 +809,7 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; eval: (put 'check-argument-violation		'scheme-indent-function 1)
+;; End:

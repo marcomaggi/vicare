@@ -788,7 +788,7 @@
 				     (lambda args #f)     ;get-position
 				     (lambda args #f)     ;set-position!
 				     (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;READ! is not a procedure
       (make-custom-binary-input-port "test"	     ;id
@@ -796,7 +796,7 @@
 				     (lambda args #f)     ;get-position
 				     (lambda args #f)     ;set-position!
 				     (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;GET-POSITION is not a procedure
       (make-custom-binary-input-port "test"	     ;id
@@ -804,7 +804,7 @@
 				     123	     ;get-position
 				     (lambda args #f)     ;set-position!
 				     (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;SET-POSITION! is not a procedure
       (make-custom-binary-input-port "test"	     ;id
@@ -812,7 +812,7 @@
 				     (lambda args #f)     ;get-position
 				     123	     ;set-position!
 				     (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;CLOSE is not a procedure
       (make-custom-binary-input-port "test"	   ;id
@@ -820,7 +820,7 @@
 				     (lambda args #f)   ;get-position
 				     (lambda args #f)   ;set-position!
 				     123)	   ;close
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -1040,7 +1040,7 @@
 				      (lambda args #f)     ;get-position
 				      (lambda args #f)     ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;WRITE! is not a procedure
       (make-custom-binary-output-port "test"	      ;id
@@ -1048,7 +1048,7 @@
 				      (lambda args #f)     ;get-position
 				      (lambda args #f)     ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;GET-POSITION is not a procedure
       (make-custom-binary-output-port "test"	      ;id
@@ -1056,7 +1056,7 @@
 				      123	      ;get-position
 				      (lambda args #f)     ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;SET-POSITION! is not a procedure
       (make-custom-binary-output-port "test"	      ;id
@@ -1064,7 +1064,7 @@
 				      (lambda args #f)     ;get-position
 				      123	      ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;CLOSE is not a procedure
       (make-custom-binary-output-port "test"	    ;id
@@ -1072,7 +1072,7 @@
 				      (lambda args #f)   ;get-position
 				      (lambda args #f)   ;set-position!
 				      123)	    ;close
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -1371,7 +1371,7 @@
 				      (lambda args #f)     ;get-position
 				      (lambda args #f)     ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;READ! is not a procedure
       (make-custom-textual-input-port "test"	      ;id
@@ -1379,7 +1379,7 @@
 				      (lambda args #f)     ;get-position
 				      (lambda args #f)     ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;GET-POSITION is not a procedure
       (make-custom-textual-input-port "test"	      ;id
@@ -1387,7 +1387,7 @@
 				      123	      ;get-position
 				      (lambda args #f)     ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;SET-POSITION! is not a procedure
       (make-custom-textual-input-port "test"	      ;id
@@ -1395,7 +1395,7 @@
 				      (lambda args #f)     ;get-position
 				      123	      ;set-position!
 				      (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;CLOSE is not a procedure
       (make-custom-textual-input-port "test"	    ;id
@@ -1403,7 +1403,7 @@
 				      (lambda args #f)   ;get-position
 				      (lambda args #f)   ;set-position!
 				      123)	    ;close
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -1595,7 +1595,7 @@
 				       (lambda args #f)  ;get-position
 				       (lambda args #f)  ;set-position!
 				       (lambda args #f)) ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation			    ;WRITE! is not a procedure
       (make-custom-textual-output-port "test"	    ;id
@@ -1603,7 +1603,7 @@
 				       (lambda args #f)  ;get-position
 				       (lambda args #f)  ;set-position!
 				       (lambda args #f)) ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;GET-POSITION is not a procedure
       (make-custom-textual-output-port "test"	       ;id
@@ -1611,7 +1611,7 @@
 				       123	       ;get-position
 				       (lambda args #f)     ;set-position!
 				       (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;SET-POSITION! is not a procedure
       (make-custom-textual-output-port "test"	       ;id
@@ -1619,7 +1619,7 @@
 				       (lambda args #f)     ;get-position
 				       123	       ;set-position!
 				       (lambda args #f))   ;close
-    => '(123))
+    => 123)
 
   (check-argument-violation	;CLOSE is not a procedure
       (make-custom-textual-output-port "test"	     ;id
@@ -1627,7 +1627,7 @@
 				       (lambda args #f)   ;get-position
 				       (lambda args #f)   ;set-position!
 				       123)	     ;close
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -1891,11 +1891,11 @@
 
   (check-argument-violation ;argument is not a bytevector
       (open-bytevector-input-port 123)
-    => '(123))
+    => 123)
 
   (check-argument-violation	;argument is not a transcoder
       (open-bytevector-input-port '#vu8(1) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -2040,7 +2040,7 @@
 
   (check-argument-violation ;argument is not a string
       (open-string-input-port 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -2184,11 +2184,11 @@
 
   (check-argument-violation	;argument is not a string
       (with-input-from-string 123 values)
-    => '(123))
+    => 123)
 
   (check-argument-violation	;argument is not a thunk
       (with-input-from-string "ciao" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -2374,7 +2374,7 @@
   (check-argument-violation	;argument is not a transcoder
       (let-values (((port extract) (open-bytevector-output-port 123)))
 	#f)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -2648,11 +2648,11 @@
 
   (check-argument-violation	;argument is not a procedure
       (call-with-bytevector-output-port 123 #f)
-    => '(123))
+    => 123)
 
   (check-argument-violation	;argument is not a transcoder
       (call-with-bytevector-output-port (lambda (port) #f) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -3413,7 +3413,7 @@
 
   (check-argument-violation	;argument is not a procedure
       (call-with-string-output-port 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -3657,7 +3657,7 @@
 
   (check-argument-violation	;argument is not a procedure
       (with-output-to-string 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; port operations support
@@ -3888,20 +3888,20 @@
 
   (check-argument-violation	;argument is not a port
       (with-output-to-port 123 (lambda () #f))
-    => '(123))
+    => 123)
 
   (check-argument-violation	;argument is not an output port
       (with-output-to-port (current-input-port) (lambda () #f))
-    => (list (current-input-port)))
+    => (current-input-port))
 
   (let-values (((port extract) (open-bytevector-output-port)))
     (check-argument-violation ;argument is not a textual port
 	(with-output-to-port port (lambda () #f))
-      => (list port)))
+      => port))
 
   (check-argument-violation	;argument is not a procedure
       (with-output-to-port (current-output-port) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; textual port
@@ -3923,18 +3923,18 @@
 
   (check-argument-violation	;argument is not a port
       (call-with-port 123 values)
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-binary-input-port)))
     (check-argument-violation ;argument is not an open port
 	(begin
 	  (close-port port)
 	  (call-with-port port values))
-      => (list port)))
+      => port))
 
   (check-argument-violation	;argument is not a procedure
       (call-with-port (current-output-port) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; textual port
@@ -3957,12 +3957,12 @@
 
   (check-argument-violation	;argument is not a port
       (transcoded-port 123 (native-transcoder))
-    => '(123))
+    => 123)
 
   (check-argument-violation	;argument is not a transcoder
       (let ((bin-port (open-bytevector-input-port '#vu8())))
 	(transcoded-port bin-port 123))
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; operation behaviour
@@ -4100,7 +4100,7 @@
 
   (check-argument-violation
       (port-id 123)
-    => '(123))
+    => 123)
 
   #t)
 
@@ -4109,7 +4109,7 @@
 
   (check-argument-violation
       (port-mode 123)
-    => '(123))
+    => 123)
 
   (check
       (port-mode (open-bytevector-input-port '#vu8()))
@@ -4123,12 +4123,12 @@
 
   (check-argument-violation
       (set-port-mode! 123 'vicare)
-    => '(123))
+    => 123)
 
   (check-argument-violation
       (set-port-mode! (open-bytevector-input-port '#vu8())
 		      123)
-    => '(123))
+    => 123)
 
   (check
       (let ((port (open-bytevector-input-port '#vu8())))
@@ -4143,7 +4143,7 @@
 
   (check-argument-violation
       (output-port-buffer-mode 123)
-    => '(123))
+    => 123)
 
   (check
       (let-values (((port extract) (open-bytevector-output-port)))
@@ -4191,7 +4191,7 @@
 
   (check-argument-violation
       (set-port-buffer-mode! 123 (buffer-mode none))
-    => '(123))
+    => 123)
 
   (check-argument-violation
       (set-port-buffer-mode! (%open-disposable-textual-output-port)
@@ -4212,19 +4212,19 @@
 
   (check-argument-violation
       (port-eof? 123)
-    => '(123))
+    => 123)
 
   (let-values (((port extract) (open-bytevector-output-port)))
     (check-argument-violation
 	(port-eof? port)
-      => (list port)))
+      => port))
 
   (let ((port (open-bytevector-input-port '#vu8())))
     (check-argument-violation
 	(begin
 	  (close-input-port port)
 	  (port-eof? port))
-      => (list port)))
+      => port))
 
   (check
       (port-eof? (open-bytevector-input-port '#vu8()))
@@ -4249,19 +4249,19 @@
 
   (check-argument-violation
       (flush-output-port 123)
-    => '(123))
+    => 123)
 
   (let ((port (open-bytevector-input-port '#vu8())))
     (check-argument-violation
 	(flush-output-port port)
-      => (list port)))
+      => port))
 
   (let-values (((port extract) (open-bytevector-output-port)))
     (check-argument-violation
 	(begin
 	  (close-output-port port)
 	  (flush-output-port port))
-      => (list port)))
+      => port))
 
 ;;; --------------------------------------------------------------------
 
@@ -4662,17 +4662,17 @@
   (check-argument-violation	;count is not an integer
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n port #\a))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation 	;count is not an exact integer
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n port 1.0))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation 	;count is negative
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n port -3))
-    => '(-3))
+    => -3)
 
 ;;; --------------------------------------------------------------------
 ;;; input from a bytevector port
@@ -4795,7 +4795,7 @@
   (check-argument-violation ;argument is not a bytevector
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n! port  123 0 1))
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; start index argument validation
@@ -4803,17 +4803,17 @@
   (check-argument-violation	;argument start index is not an integer
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n! port  (make-bytevector 1) #\a 1))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation	;argument start index is not an exact integer
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n! port  (make-bytevector 1) 1.0 1))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation	;argument start index is negative
       (let ((port (%open-disposable-binary-input-port)))
 	(get-bytevector-n! port  (make-bytevector 1) -1 1))
-    => '(-1))
+    => -1)
 
   (check-argument-violation	;argument start index is too big
       (let ((port (%open-disposable-binary-input-port)))
@@ -4826,17 +4826,17 @@
   (check-argument-violation	;count is not an integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(get-bytevector-n! port (make-bytevector 1) 0 #\a))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation	;count is not an exact integer
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(get-bytevector-n! port (make-bytevector 1) 0 1.0))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation	;count is negative
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
 	(get-bytevector-n! port (make-bytevector 1) 0 -1))
-    => '(-1))
+    => -1)
 
   (check-argument-violation	;count is too big
       (let ((port (open-bytevector-input-port '#vu8(1 2 3))))
@@ -6350,17 +6350,17 @@
 
   (check-argument-violation	;argument is not a port
       (get-string-n 123 1)
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation	;argument is not an input port
 	(get-string-n port 1)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-input-port)))
     (check-argument-violation ;argument is not a textual port
 	(get-string-n port 1)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation ;argument is not an open port
@@ -6375,22 +6375,22 @@
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation	;count is not an integer
 	(get-string-n port #\a)
-      => '(#\a)))
+      => #\a))
 
   (check-argument-violation ;count is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
 	(get-string-n port 1.0))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation 	;count is negative
       (let ((port (%open-disposable-textual-input-port)))
 	(get-string-n port -3))
-    => '(-3))
+    => -3)
 
   (check-argument-violation 	;count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
 	(get-string-n port (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum))))
+    => (+ 1 (greatest-fixnum)))
 
 ;;; --------------------------------------------------------------------
 ;;; input from a string port
@@ -6579,7 +6579,7 @@
 	    (dst.start		0)
 	    (count		1))
 	(get-string-n! port dst.str dst.start count))
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation ;argument is not an input port
@@ -6587,7 +6587,7 @@
 	      (dst.start	0)
 	      (count		1))
 	  (get-string-n! port dst.str dst.start count))
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-input-port)))
     (check-argument-violation	;argument is not a textual port
@@ -6596,7 +6596,7 @@
 	      (dst.start	0)
 	      (count		1))
 	  (get-string-n! port dst.str dst.start count))
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation	;argument is not an open port
@@ -6618,7 +6618,7 @@
 	      (dst.start	#\a)
 	      (count		1))
 	  (get-string-n! port dst.str dst.start count)))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation 	;start is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
@@ -6626,7 +6626,7 @@
 	      (dst.start	1.0)
 	      (count		1))
 	  (get-string-n! port dst.str dst.start count)))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation  	;start is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
@@ -6635,7 +6635,7 @@
 	      (dst.start	(+ 1 (greatest-fixnum)))
 	      (count		1))
 	  (get-string-n! port dst.str dst.start count)))
-    => (list (+ 1 (greatest-fixnum))))
+    => (+ 1 (greatest-fixnum)))
 
   (check-argument-violation 	;start is negative
       (let ((port (%open-disposable-textual-input-port)))
@@ -6644,7 +6644,7 @@
 	      (dst.start	-3)
 	      (count		1))
 	  (get-string-n! port dst.str dst.start count)))
-    => '(-3))
+    => -3)
 
   (let ((str (make-string 10)))
     (check-argument-violation ;start is too big for string
@@ -6666,7 +6666,7 @@
 	      (dst.start	0)
 	      (count		#\a))
 	  (get-string-n! port dst.str dst.start count)))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation 	;count is not an exact integer
       (let ((port (%open-disposable-textual-input-port)))
@@ -6675,7 +6675,7 @@
 	      (dst.start	0)
 	      (count		1.0))
 	  (get-string-n! port dst.str dst.start count)))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation 	;count is not a fixnum
       (let ((port (%open-disposable-textual-input-port)))
@@ -6684,7 +6684,7 @@
 	      (dst.start	0)
 	      (count		(+ 1 (greatest-fixnum))))
 	  (get-string-n! port dst.str dst.start count)))
-    => (list (+ 1 (greatest-fixnum))))
+    => (+ 1 (greatest-fixnum)))
 
   (check-argument-violation 	;count is negative
       (let ((port (%open-disposable-textual-input-port)))
@@ -6693,7 +6693,7 @@
 	      (dst.start	0)
 	      (count		-3))
 	  (get-string-n! port dst.str dst.start count)))
-    => '(-3))
+    => -3)
 
 ;;; --------------------------------------------------------------------
 ;;; start+count arguments validation
@@ -6956,17 +6956,17 @@
 
   (check-argument-violation	;argument is not a port
       (get-string-all 123)
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation ;argument is not an input port
 	(get-string-all port)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-input-port)))
     (check-argument-violation ;argument is not a textual port
 	(get-string-all port)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation ;argument is not an open port
@@ -7313,27 +7313,27 @@
   (check-argument-violation	;octet is not an integer
       (let ((port (%open-disposable-binary-output-port)))
 	(put-u8 port #\a))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation	;octet is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
 	(put-u8 port 1.0))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation	;octet is negative
       (let ((port (%open-disposable-binary-output-port)))
 	(put-u8 port -1))
-    => '(-1))
+    => -1)
 
   (check-argument-violation	;octet is too big
       (let ((port (%open-disposable-binary-output-port)))
 	(put-u8 port 256))
-    => '(256))
+    => 256)
 
   (check-argument-violation	;octet is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
 	(put-u8 port (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum))))
+    =>  (+ 1 (greatest-fixnum)))
 
 ;;; --------------------------------------------------------------------
 
@@ -7394,7 +7394,7 @@
   (check-argument-violation	;argument is not a bytevector
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port #\a))
-    => '(#\a))
+    => #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; start argument validation
@@ -7402,22 +7402,22 @@
   (check-argument-violation	;argument is not an integer
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() #\a))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation	;argument is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() 1.0))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation	;argument is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum))))
+    => (+ 1 (greatest-fixnum)))
 
   (check-argument-violation	;argument is negative
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() -1))
-    => '(-1))
+    => -1)
 
   (check-argument-violation	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
@@ -7430,22 +7430,22 @@
   (check-argument-violation	;argument is not an integer
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() 0 #\a))
-    => '(#\a))
+    => #\a)
 
   (check-argument-violation	;argument is not an exact integer
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() 0 1.0))
-    => '(1.0))
+    => 1.0)
 
   (check-argument-violation	;argument is not a fixnum
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() 0 (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum))))
+    => (+ 1 (greatest-fixnum)))
 
   (check-argument-violation	;argument is negative
       (let ((port (%open-disposable-binary-output-port)))
 	(put-bytevector port '#vu8() 0 -1))
-    => '(-1))
+    => -1)
 
   (check-argument-violation	;argument is out of range for bytevector
       (let ((port (%open-disposable-binary-output-port)))
@@ -7575,17 +7575,17 @@
 
   (check-argument-violation	;argument is not a port
       (put-char 123 #\a)
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation ;argument is not an output port
 	(put-char port #\a)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-output-port)))
     (check-argument-violation ;argument is not a textual port
 	(put-char port #\a)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation ;argument is not an open port
@@ -7600,7 +7600,7 @@
   (check-argument-violation	;argument is not a char
       (let ((port (%open-disposable-textual-output-port)))
 	(put-char port 123))
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; string port
@@ -7725,17 +7725,17 @@
 
   (check-argument-violation	;argument is not a port
       (write-char #\a 123)
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation ;argument is not an output port
 	(write-char #\a port)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-output-port)))
     (check-argument-violation ;argument is not a textual port
 	(write-char #\a port)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation ;argument is not an open port
@@ -7750,7 +7750,7 @@
   (check-argument-violation	;argument is not a char
       (let ((port (%open-disposable-textual-output-port)))
 	(write-char 123 port))
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; string port
@@ -7875,17 +7875,17 @@
 
   (check-argument-violation	;argument is not a port
       (put-string 123 "a")
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation ;argument is not an output port
 	(put-string port "a")
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-output-port)))
     (check-argument-violation ;argument is not a textual port
 	(put-string port "a")
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation ;argument is not an open port
@@ -7900,7 +7900,7 @@
   (check-argument-violation	;argument is not a char
       (let ((port (%open-disposable-textual-output-port)))
 	(put-string port 123))
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; string port
@@ -8001,17 +8001,17 @@
 
   (check-argument-violation	;argument is not a port
       (newline 123)
-    => '(123))
+    => 123)
 
   (let ((port (%open-disposable-textual-input-port)))
     (check-argument-violation ;argument is not an output port
 	(newline port)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-binary-output-port)))
     (check-argument-violation ;argument is not a textual port
 	(newline port)
-      => (list port)))
+      => port))
 
   (let ((port (%open-disposable-textual-output-port)))
     (check-argument-violation ;argument is not an open port
@@ -8099,14 +8099,14 @@
 
   (check-argument-violation
       (open-file-input-port 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; file-options argument validation
 
   (check-argument-violation
       (open-file-input-port "123" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; buffer-mode argument validation
@@ -8120,7 +8120,7 @@
 
   (check-argument-violation
       (open-file-input-port "123" (file-options) (buffer-mode block) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; reading whole binary data
@@ -8223,7 +8223,7 @@
 
   (check-argument-violation
       (open-input-file 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; reading whole textual data
@@ -8306,14 +8306,14 @@
 
   (check-argument-violation
       (with-input-from-file 123 values)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
   (check-argument-violation
       (with-input-from-file "ciao" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; reading whole textual data
@@ -8388,14 +8388,14 @@
 
   (check-argument-violation
       (call-with-input-file 123 values)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
   (check-argument-violation
       (call-with-input-file "ciao" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; reading whole textual data
@@ -8485,14 +8485,14 @@
 
   (check-argument-violation
       (open-file-output-port 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; file-options argument validation
 
   (check-argument-violation
       (open-file-output-port "123" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; buffer-mode argument validation
@@ -8506,7 +8506,7 @@
 
   (check-argument-violation
       (open-file-output-port "123" (file-options) (buffer-mode block) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; writing whole binary data
@@ -8602,7 +8602,7 @@
 
   (check-argument-violation
       (open-output-file 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; writing whole textual data
@@ -8685,14 +8685,14 @@
 
   (check-argument-violation
       (with-output-to-file 123 values)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
   (check-argument-violation
       (with-output-to-file "ciao" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; writing whole textual data
@@ -8758,14 +8758,14 @@
 
   (check-argument-violation
       (call-with-output-file 123 values)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; procedure argument validation
 
   (check-argument-violation
       (call-with-output-file "ciao" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; writing whole textual data
@@ -8911,14 +8911,14 @@
 
   (check-argument-violation
       (open-file-input/output-port 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; file-options argument validation
 
   (check-argument-violation
       (open-file-input/output-port "123" 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; buffer-mode argument validation
@@ -8932,7 +8932,7 @@
 
   (check-argument-violation
       (open-file-input/output-port "123" (file-options) (buffer-mode block) 123)
-    => '(123))
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; reading whole binary data

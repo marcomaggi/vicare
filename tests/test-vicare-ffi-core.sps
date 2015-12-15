@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (except (vicare) catch)
+(import (vicare)
   (vicare checks)
   (vicare language-extensions syntaxes)
   (prefix (vicare platform words)
@@ -42,7 +42,7 @@
 
 ;;;; helpers
 
-(define-syntax catch
+(define-syntax catch-assertion-violation
   (syntax-rules ()
     ((_ print? . ?body)
      (guard (E ((assertion-violation? E)
@@ -89,9 +89,13 @@
     => (words.greatest-machine-word))
 
   (check	;error, integer too big
-      (catch #f
-	(ffi.integer->pointer (+ 10 (words.greatest-machine-word))))
-    => (list '(words.machine-word? x) (+ 10 (words.greatest-machine-word))))
+      (try
+	  (ffi.integer->pointer (+ 10 (words.greatest-machine-word)))
+	(catch E
+	  ((&assertion)
+	   (condition-irritants E))
+	  (else E)))
+    => (list (+ 10 (words.greatest-machine-word))))
 
 ;;; --------------------------------------------------------------------
 
@@ -181,7 +185,7 @@
       (let ((P (ffi.null-pointer))
 	    (D -1))
 	(equal? (list P D)
-		(catch #f
+		(catch-assertion-violation #f
 		  (ffi.pointer-add P D))))
     => #t)
 
@@ -827,7 +831,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (catch #f
+      (catch-assertion-violation #f
 	(ffi.case-errno plat.EFAULT
 	  ((ENOMEM EPERM)	1)
 	  ((EAGAIN)		3)))
@@ -996,7 +1000,7 @@
 	     (result		(identity 123)))
 	(ffi.free-c-callback callback)
 	(equal? `(,callback)
-		(catch #f
+		(catch-assertion-violation #f
 		  (ffi.free-c-callback callback))))
     => #t)
 
@@ -1145,7 +1149,7 @@
     => 15)
 
   (check	;exception going through
-      (catch #f
+      (catch-assertion-violation #f
 	(ffi.with-local-storage '#(4)
 	  (lambda (&int32)
 	    (assertion-violation #f "the error" 1 2 3))))
@@ -1298,7 +1302,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'catch			'scheme-indent-function 1)
-;; eval: (put 'ffi.case-errno		'scheme-indent-function 1)
-;; eval: (put 'ffi.with-local-storage	'scheme-indent-function 1)
+;; eval: (put 'catch-assertion-violation	'scheme-indent-function 1)
+;; eval: (put 'ffi.case-errno			'scheme-indent-function 1)
+;; eval: (put 'ffi.with-local-storage		'scheme-indent-function 1)
 ;; End:

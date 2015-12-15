@@ -1963,6 +1963,12 @@
    ((E x y)
     (nop)))
 
+ (define-core-primitive-operation $fx!= unsafe
+   ((P x y)
+    (asm '!= (V-simple-operand x) (V-simple-operand y)))
+   ((E x y)
+    (nop)))
+
  (define-core-primitive-operation $fx< unsafe
    ((P x y)
     (asm '< (V-simple-operand x) (V-simple-operand y)))
