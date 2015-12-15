@@ -49,7 +49,8 @@
 	  $code-annotation)
     (prefix (only (ikarus records procedural)
 		  rcd-rtd
-		  rcd-parent-rcd)
+		  rcd-parent-rcd
+		  record-ref)
 	    records::))
 
   (include "ikarus.wordsize.scm" #t)
@@ -535,7 +536,7 @@
 	       (fields.len	(vector-length fields.vec)))
 	  (let loop ((field.idx 0))
 	    (when (fx<? field.idx fields.len)
-	      (traverse (record-ref reco field.idx) marks-table)
+	      (traverse (records::record-ref reco field.idx) marks-table)
 	      (loop (fxadd1 field.idx)))))))
 
     (define* (%traverse-custom-record reco marks-table printer)
@@ -1262,7 +1263,7 @@
 	     (write-char #\] port)
 	     next-mark-idx)
 	  (let* ((field-nam  (vector-ref fields.vec fields.idx))
-		 (field-val  (record-ref record fields.idx)))
+		 (field-val  (records::record-ref record fields.idx)))
 	    (write-char #\space port)
 	    (let ((next-mark-idx (write-object field-nam port write-style? marks-table next-mark-idx)))
 	      (write-char #\= port)

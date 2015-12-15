@@ -70,6 +70,7 @@
 			  (car D)
 			(condition-irritants E))))
 		   ((assertion-violation? E)
+		    #;(print-condition E)
 		    (condition-irritants E))
 		   (else
 		    (print-condition E)
@@ -534,30 +535,40 @@
   ;;A correct  PROT function  would accept  as single  argument the  super-type maker
   ;;function.
   (let ((prot (lambda (a b) (void))))
-    (check-argument-violation	;;protocol accepting wrong num of args
-	(let* ((rtd	(make-record-type-descriptor
+    (check
+	(try
+	    (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
-	       (rcd	(make-record-constructor-descriptor
+		   (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-	       (constr	(record-constructor rcd)))
-	  (constr))
-      => (list prot 1)))
+		   (constr	(record-constructor rcd)))
+	      (constr))
+	  (catch E
+	    ((&assertion)
+	     (car (condition-irritants E)))
+	    (else E)))
+      => prot))
 
   ;;builder accepting wrong num of args
   (let* ((builder	(lambda (a b)
 			  (list a b)))
 	 (prot		(lambda (make-top)
 			  builder)))
-    (check-argument-violation
-	(let* ((rtd	(make-record-type-descriptor
+    (check
+	(try
+	    (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
-	       (rcd	(make-record-constructor-descriptor
+		   (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: prot)))
-	       (builder	(record-constructor rcd)))
-	  (builder))
-      => (list builder 0)))
+		   (constr	(record-constructor rcd)))
+	      (constr))
+	  (catch E
+	    ((&assertion)
+	     (car (condition-irritants E)))
+	    (else E)))
+      => builder))
 
   (let ((prot (lambda (make-top)
 		(add-result 1)

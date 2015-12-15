@@ -671,9 +671,9 @@
 	  $record-constructor
 	  $rtd-subtype?)
     (vicare system $structs)
-    (prefix (only (psyntax system $all)
+    (prefix (only (ikarus records procedural)
 		  record-type-method-retriever-set!)
-	    system::)
+	    records::)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate))
 
@@ -940,11 +940,11 @@
 		    (()	#'(void))
 		    ;;At least one field.
 		    (_
-		     #'(system::record-type-method-retriever-set! RTD (lambda (rtd name)
-									(case name
-									  ((?field) ?accessor)
-									  ...
-									  (else #f)))))
+		     #'(records::record-type-method-retriever-set! RTD (lambda (rtd name)
+									 (case name
+									   ((?field) ?accessor)
+									   ...
+									   (else #f)))))
 		    ))
        ;;We use  the records procedural layer  and the unsafe functions  to make it
        ;;easier to rotate the boot images.

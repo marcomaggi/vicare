@@ -1449,6 +1449,9 @@
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
+    ;;FIXME  This library  "$tag-types"  is to  be  removed at  the  next boot  image
+    ;;rotation in the typed language branch.  (Marco Maggi; Tue Dec 15, 2015)
+    ($tag-types		(vicare expander tag-type-specs)	#t	#t)
     ($expander		(vicare expander)			#t	#t)))
 
 

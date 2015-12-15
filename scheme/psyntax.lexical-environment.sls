@@ -526,7 +526,7 @@
 	  ))
 
 (module ()
-  (record-type-printer-set! (record-type-descriptor env)
+  ($record-type-printer-set! (record-type-descriptor env)
     (lambda (S port sub-printer)
       (display "#<environment>" port))))
 
@@ -541,7 +541,7 @@
 	  ))
 
 (module ()
-  (record-type-printer-set! (record-type-descriptor interaction-env)
+  ($record-type-printer-set! (record-type-descriptor interaction-env)
     (lambda (S port sub-printer)
       (display "#<interaction-environment>" port))))
 
@@ -891,7 +891,7 @@
    ))
 
 (module ()
-  (record-type-printer-set! (record-type-descriptor rib)
+  ($record-type-printer-set! (record-type-descriptor rib)
     (lambda (S port subwriter) ;record printer function
       (define-syntax-rule (%display ?thing)
 	(display ?thing port))
@@ -3005,7 +3005,7 @@
 
 ;;;; done
 
-(record-type-printer-set! (record-type-descriptor stx) stx-record-printer)
+($record-type-printer-set! (record-type-descriptor stx) stx-record-printer)
 
 #| end of library |# )
 

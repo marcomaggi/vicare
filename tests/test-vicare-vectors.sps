@@ -26,10 +26,11 @@
 
 
 #!vicare
-(import (vicare)
-  (except (vicare checks)
-	  check-for-assertion-violation)
-  (vicare system $vectors))
+(program (test-vicare-vectors)
+  (import (vicare)
+    (except (vicare checks)
+	    check-for-assertion-violation)
+    (vicare system $vectors))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare vector functions\n")
@@ -44,12 +45,6 @@
     (read (open-string-input-port (extract)))))
 
 ;;; --------------------------------------------------------------------
-
-(define environment-for-syntax-errors
-  (environment '(vicare)))
-
-(define environment-for-assertion-errors
-  environment-for-syntax-errors)
 
 (define-syntax check-for-assertion-violation
   (syntax-rules (=>)
@@ -90,14 +85,13 @@
 		      (if (pair? D)
 			  (car D)
 			(condition-irritants E))))
+		   ((assertion-violation? E)
+		    (condition-irritants E))
 		   (else
 		    (print-condition E)
 		    E))
-	   (eval (quote ?body) environment-for-assertion-errors
-		 (expander-options strict-r6rs)
-		 (compiler-options strict-r6rs)))
+	   ?body)
        => ?result))))
-
 
 
 (parametrise ((check-test-name	'vector-length))
@@ -216,12 +210,12 @@
   (check-argument-violation
       (let ((port (open-string-input-port "a")))
 	(vector-set! (vector 'a 'b 'c) (read port) 'b))
-    => '(a))
+    => 'a)
 
   (check-argument-violation
       (let ((port (open-string-input-port "-1")))
 	(vector-set! (vector 'a 'b 'c) (read port) 'a))
-    => '(-1))
+    => -1)
 
   (check-argument-violation
       (vector-set! (vector 'a 'b 'c) (+ 1 (greatest-fixnum)) 'a)
@@ -841,7 +835,8 @@
 ;;; arguments validation: vector
 
   (check-argument-violation
-      (vector-fill! (A 123) 'a)
+      (let ((port (open-string-input-port "123")))
+	(vector-fill! (read port) 'a))
     => 123)
 
   #t)
@@ -1167,6 +1162,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;;Local Variables:

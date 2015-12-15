@@ -2104,7 +2104,7 @@
 	   ,(if (option.enable-arguments-validation?)
 		;;With validation.
 		`(begin
-		   ,@(%make-arg-validation-forms (quote ,who.id) arg-validation-spec* synner)
+		   ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
 		   (internal-body . ,body*.stx))
 	      ;;Without validation.
 	      `(begin . ,body*.stx)))))
@@ -2123,14 +2123,14 @@
 		;;With validation.
 		(let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 		       (RETVAL-VALIDATION* (%make-ret-validation-forms
-					    (quote ,who.id)
+					    who.id
 					    (map (lambda (rv.id pred.stx)
 						   (make-retval-validation-spec rv.id pred.stx
 										(%parse-logic-predicate-syntax pred.stx rv.id synner)))
 					      RETVAL* ret-pred*.stx)
 					    synner)))
 		  `(begin
-		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
 		     (receive-and-return ,RETVAL*
 			 (internal-body . ,body*.stx)
 		       . ,RETVAL-VALIDATION*)))
@@ -2157,7 +2157,7 @@
 	 (bless
 	  `(named-case-lambda _
 	    ,@(map (lambda (clause.stx)
-		     (%generate-case-lambda-form clause.stx %synner))
+		     (%generate-case-lambda-form (quote _) clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
 	))
 
@@ -2174,23 +2174,23 @@
 	 (bless
 	  `(named-case-lambda ,?who
 	    ,@(map (lambda (clause.stx)
-		     (%generate-case-lambda-form clause.stx %synner))
+		     (%generate-case-lambda-form ?who clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
 	))
 
-    (define (%generate-case-lambda-form clause.stx synner)
+    (define (%generate-case-lambda-form who.id clause.stx synner)
       (syntax-match clause.stx (brace)
 	;;Ret-pred with list spec.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (underscore-id? ?underscore)
-	 (%generate-case-lambda-clause-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
+	 (%generate-case-lambda-clause-form/with-ret-pred who.id (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-lambda-clause-form/without-ret-pred ?formals (cons ?body0 ?body*) synner))
+	 (%generate-case-lambda-clause-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) synner))
 	))
 
-    (define (%generate-case-lambda-clause-form/without-ret-pred predicate-formals.stx body*.stx synner)
+    (define (%generate-case-lambda-clause-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
       ;;CASE-LAMBDA clause.
       ;;
@@ -2200,17 +2200,15 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  (fluid-let-syntax
-	      ((__who__ (identifier-syntax (quote _))))
-	    ,(if (option.enable-arguments-validation?)
-		 ;;With validation.
-		 `(begin
-		    ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
-		    (internal-body . ,body*.stx))
-	       ;;Without validation.
-	       `(begin . ,body*.stx))))))
+	  ,(if (option.enable-arguments-validation?)
+	       ;;With validation.
+	       `(begin
+		  ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
+		  (internal-body . ,body*.stx))
+	     ;;Without validation.
+	     `(begin . ,body*.stx)))))
 
-    (define (%generate-case-lambda-clause-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+    (define (%generate-case-lambda-clause-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
       ;;Build and return a symbolic expression, to be BLESSed later, representing the
       ;;CASE-LAMBDA clause.
       ;;
@@ -2220,25 +2218,23 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  (fluid-let-syntax
-	      ((__who__ (identifier-syntax (quote _))))
-	    ,(if (option.enable-arguments-validation?)
-		 ;;With validation
-		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
-			(RETVAL-VALIDATION* (%make-ret-validation-forms
-					     (quote _)
-					     (map (lambda (rv.id pred.stx)
-						    (make-retval-validation-spec rv.id pred.stx
-										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-					       RETVAL* ret-pred*.stx)
-					     synner)))
-		   `(begin
-		      ,@(%make-arg-validation-forms (quote _) arg-validation-spec* synner)
-		      (receive-and-return ,RETVAL*
-			  (internal-body . ,body*.stx)
-			. ,RETVAL-VALIDATION*)))
-	       ;;Without validation.
-	       `(begin . ,body*.stx))))))
+	  ,(if (option.enable-arguments-validation?)
+	       ;;With validation
+	       (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+		      (RETVAL-VALIDATION* (%make-ret-validation-forms
+					   who.id
+					   (map (lambda (rv.id pred.stx)
+						  (make-retval-validation-spec rv.id pred.stx
+									       (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					     RETVAL* ret-pred*.stx)
+					   synner)))
+		 `(begin
+		    ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
+		    (receive-and-return ,RETVAL*
+			(internal-body . ,body*.stx)
+		      . ,RETVAL-VALIDATION*)))
+	     ;;Without validation.
+	     `(begin . ,body*.stx)))))
 
     #| end of module: CASE-LAMBDA*-MACRO |# )
 

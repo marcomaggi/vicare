@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: utility functions for built-in Scheme objects
@@ -53,11 +52,44 @@
   (import (except (vicare)
 		  method-call-late-binding
 		  any->symbol		any->string
-		  always-true		always-false)
+		  always-true		always-false
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Tue Dec 15, 2015)
+		  keyword-hash		pointer-hash)
     (only (vicare system $fx)
 	  $fxadd1)
-    (only (psyntax system $all)
-	  internal-applicable-record-destructor))
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
+    ;;2015)
+    (prefix (only (ikarus structs)
+		  struct-field-method
+		  struct-std)
+	    structs::)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
+    ;;2015)
+    (prefix (only (ikarus lists)
+		  nlist?)
+	    lists::)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
+    ;;2015)
+    (only (ikarus.pointers)
+	  pointer-hash)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
+    ;;2015)
+    (only (ikarus.keywords)
+	  keyword-hash
+	  string->keyword)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
+    ;;2015)
+    (prefix (only (ikarus records procedural)
+		  record-type-method-retriever)
+	    system::)
+    (prefix (only (psyntax system $all)
+		  internal-applicable-record-destructor
+		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco
+		  ;;Maggi; Tue Dec 15, 2015)
+		  #;record-type-method-retriever)
+	    system::))
 
 
 ;;;; helpers for object-type method calls
@@ -96,13 +128,13 @@
       (%error-scheme-type-has-no-matching-method)))
 
   (define (%struct-object-call std)
-    (apply (structs.struct-field-method std method-name.sym) subject args))
+    (apply (structs::struct-field-method std method-name.sym) subject args))
 
   (define (%record-object-call rtd)
     (define (%recurse)
       (%record-object-call (record-type-parent rtd)))
     (if rtd
-	(cond ((record-type-method-retriever rtd)
+	(cond ((system::record-type-method-retriever rtd)
 	       => (lambda (method-retriever)
 		    (cond ((method-retriever rtd method-name.sym)
 			   => (lambda (proc)
@@ -118,7 +150,7 @@
 
 	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
 	((vector?  subject)	(%built-in-scheme-object-call <vector>-type-descriptor))
-	((nlist?   subject)	(%built-in-scheme-object-call <nlist>-type-descriptor))
+	((lists::nlist? subject)(%built-in-scheme-object-call <nlist>-type-descriptor))
 	((null?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
 	((pair?    subject)	(%built-in-scheme-object-call <pair>-type-descriptor))
 	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-type-descriptor))
@@ -147,7 +179,7 @@
 	((pointer? subject)	(%built-in-scheme-object-call <pointer>-type-descriptor))
 	((transcoder? subject)	(%built-in-scheme-object-call <transcoder>-type-descriptor))
 
-	((struct? subject)	(%struct-object-call (structs.struct-std subject)))
+	((struct? subject)	(%struct-object-call (structs::struct-std subject)))
 
 	((eq? subject (void))	(%built-in-scheme-object-call <void>-type-descriptor))
 
@@ -166,7 +198,7 @@
   ;;"(psyntax system $all)".
   ;;
   (cond ((record-object? obj)
-	 ((internal-applicable-record-destructor obj) obj))
+	 ((system::internal-applicable-record-destructor obj) obj))
 	((struct? obj)
 	 ((struct-destructor obj) obj))
 	((port? obj)
@@ -367,5 +399,6 @@
 
 ;;; end of file
 ;; Local Variables:
+;; coding: utf-8-unix
 ;; eval: (put 'define-scheme-type		'scheme-indent-function 2)
 ;; End:

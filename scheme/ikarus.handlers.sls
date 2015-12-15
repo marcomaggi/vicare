@@ -95,7 +95,7 @@
 	      (make-message-condition "incorrect number of arguments")
 	      (make-affected-procedure-condition proc)
 	      (make-wrong-num-args-condition wrong-num-of-args)
-	      (make-irritants-condition list-of-args))))
+	      (make-irritants-condition (cons proc list-of-args)))))
 
 (define ($multiple-values-error . args)
   ;;Whenever an attempt to return zero  or multiple, but not one, values

@@ -53,6 +53,7 @@
     $record-constructor			$record-type-destructor
     $rtd-subtype?			$record-and-rtd?
     $record-ref
+    (rename ($set-<rtd>-printer!	$record-type-printer-set!))
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)

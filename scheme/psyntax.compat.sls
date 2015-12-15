@@ -38,6 +38,7 @@
     __who__				brace
 
     (rename (records.record-type-printer-set!	record-type-printer-set!)
+	    (records.$record-type-printer-set!	$record-type-printer-set!)
 	    (records.record-printer		record-printer))
 
     (rename (lists.nlist?			nlist?))
@@ -150,6 +151,7 @@
     ;;2015)
     (prefix (only (ikarus records procedural)
 		  record-type-printer-set!
+		  $record-type-printer-set!
 		  record-printer)
 	    records.)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 9,
@@ -182,28 +184,6 @@
 
 
 ;;;; printing debug and verbose messages
-
-(define (print-expander-warning-message template . args)
-  (when (option.verbose?)
-    (let ((P (current-error-port)))
-      (display "vicare: expander warning: " P)
-      (apply fprintf P template args)
-      (newline P))))
-
-(define (print-expander-debug-message template . args)
-  (when (option.print-debug-messages?)
-    (let ((P (current-error-port)))
-      (display "vicare: expander: " P)
-      (apply fprintf P template args)
-      (newline P))))
-
-(define (library-debug-message template . args)
-  (when (option.print-debug-messages?)
-    ;;We do not want an exception from the I/O layer to ruin things.
-    (guard (E (else (void)))
-      (let ((P (current-error-port)))
-	(apply fprintf P (string-append "vicare: " template "\n") args)
-	(flush-output-port P)))))
 
 (module (print-expander-warning-message)
 

@@ -38,6 +38,9 @@
 		  traverse
 		  TRAVERSAL-HELPERS)
 	    writer::)
+    (prefix (only (ikarus records procedural)
+		  record-ref)
+	    records::)
     (only (ikarus.pretty-formats)
 	  get-fmt))
 
@@ -203,8 +206,7 @@
      ;;At present  keywords are  structs, so  we must process  them before  the other
      ;;structs.  We do not want them to be printed as shared objects.
      ((keyword? x)		(%boxify-object-keyword x))
-     ((records.record-object? x)
-      (boxify-shared x %boxify-object-record))
+     ((record-object? x)	(boxify-shared x %boxify-object-record))
      ((struct? x)		(boxify-shared x %boxify-object-struct))
      ((gensym? x)		(boxify-shared x %boxify-object-format))
      ((string? x)		(boxify-shared x %boxify-object-format))
@@ -632,7 +634,7 @@
     (define (%boxify-record/custom-printer cache-stack)
       ;;Boxify a record object that makes use of a custom printer function.
       ;;
-      (import writer.TRAVERSAL-HELPERS)
+      (import writer::TRAVERSAL-HELPERS)
       (define pair*
 	(let recur ((cache (cdr cache-stack)))
 	  (if cache
@@ -669,7 +671,7 @@
       ;;        (two 2))
       ;;
       (let* ((rtd		(record-rtd reco))
-	     (field-name*	(vector->list (records.record-type-all-field-names rtd))))
+	     (field-name*	(vector->list (record-type-all-field-names rtd))))
 	(receive (field-box* field-sep*)
 	    (%boxify-record-fields reco 0 field-name*)
 	  (let* ((record-box	(%boxify-object 'record))
@@ -691,7 +693,7 @@
       (if (pair? field-name*)
 	  ;;First we do the next field...
 	  (let ((box (let* ((box1 (%boxify-object (car field-name*)))
-			    (box2 (%boxify-object (records.record-ref reco field-idx)))
+			    (box2 (%boxify-object (records::record-ref reco field-idx)))
 			    (len  (+ (box-length box1) (box-length box2)))
 			    (box  (make-fbox len (list box1 box2) #f)))
 		       (make-cbox (+ 2 len) (list "(" box ")"))))

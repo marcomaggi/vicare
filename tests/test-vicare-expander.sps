@@ -2405,7 +2405,7 @@
 	(doit 4 #\5 6))
     => '(_ (#\5)))
 
-  (check-for-procedure-signature-return-value-violation
+  (check-argument-violation
       (let ()
 	(define doit
 	  (lambda* ({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
