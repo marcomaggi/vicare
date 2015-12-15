@@ -56,7 +56,8 @@
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
-		  keyword-hash		pointer-hash)
+		  keyword-hash		pointer-hash
+		  string->keyword)
     (only (vicare system $fx)
 	  $fxadd1)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
