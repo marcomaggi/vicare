@@ -54,6 +54,7 @@
 		  assembler-output
 		  optimizer-output
 		  source-optimizer-passes-count
+		  current-letrec-pass
 		  generate-descriptive-labels?
 		  perform-core-type-inference?
 		  perform-unsafe-primrefs-introduction?)
@@ -105,7 +106,19 @@
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
-	    readline::))
+	    readline::)
+    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed Dec
+    ;;16, 2015)
+    #;(prefix (only (vicare system $runtime)
+		  scheme-heap-nursery-size
+		  scheme-stack-size)
+	    runtime::)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Dec 16,
+    ;;2015)
+    (prefix (only (ikarus run-time-configuration)
+		  scheme-heap-nursery-size
+		  scheme-stack-size)
+	    runtime::))
 
   (module (case-word-size)
     (include "ikarus.wordsize.scm" #t))
@@ -597,6 +610,24 @@
 		       (%error-and-exit "invalid library location selection"))))
 	       (next-option (cddr args) k))))
 
+	  ((%option= "--scheme-heap-nursery-size")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--scheme-heap-nursery-size requires a numeric argument")
+	     (cond ((string->number (cadr args))
+		    => (lambda (size)
+			 (next-option (cddr args) (lambda () (k) (runtime::scheme-heap-nursery-size size)))))
+		   (else
+		    (%error-and-exit "--scheme-heap-nursery-size requires a positive exact integer argument fitting a long data type")))))
+
+	  ((%option= "--scheme-stack-size")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--scheme-stack-size requires a numeric argument")
+	     (cond ((string->number (cadr args))
+		    => (lambda (size)
+			 (next-option (cddr args) (lambda () (k) (runtime::scheme-stack-size size)))))
+		   (else
+		    (%error-and-exit "--scheme-stack-size requires a positive exact integer argument fitting a long data type")))))
+
 	  ((%option= "--option")
 	   (if (null? (cdr args))
 	       (%error-and-exit "--option requires a string argument")
@@ -645,6 +676,11 @@
 		 (("no-debug-messages")
 		  (options::print-debug-messages? #f))
 
+		 (("enable-runtime-messages")
+		  (foreign-call "ikrt_enable_runtime_messages"))
+		 (("disable-runtime-messages")
+		  (foreign-call "ikrt_enable_runtime_messages"))
+
 		 (("expander-descriptive-gensyms")
 		  (psyntax::generate-descriptive-gensyms? #t))
 
@@ -664,6 +700,18 @@
 		 (("no-compiler-introduce-primrefs")
 		  (compiler::perform-unsafe-primrefs-introduction? #f))
 
+		 (("enable-automatic-gc")
+		  (automatic-garbage-collection #t))
+		 (("disable-automatic-gc")
+		  (automatic-garbage-collection #f))
+
+		 (("basic-letrec-pass")
+		  (compiler::current-letrec-pass 'basic))
+		 (("waddell-letrec-pass")
+		  (compiler::current-letrec-pass 'waddell))
+		 (("scc-letrec-pass")
+		  (compiler::current-letrec-pass 'scc))
+
 		 (else
 		  (%error-and-exit "invalid --option argument: ~a" (cadr args))))
 	       (next-option (cddr args) k))))
@@ -671,22 +719,15 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler options with argument
 
-	  ;; ((%option= "--compiler-letrec-pass")
-	  ;;  (if (null? (cdr args))
-	  ;;      (%error-and-exit "--compiler-letrec-pass requires a mode argument")
-	  ;;    (begin
-	  ;;      (guard (E (else
-	  ;; 		  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
-	  ;; 	 ($current-letrec-pass (string->symbol (cadr args))))
-	  ;;      (next-option (cddr args) k))))
-
 	  ((%option= "--optimizer-passes-count")
 	   (if (null? (cdr args))
 	       (%error-and-exit "--optimizer-passes-count requires a number argument")
 	     (begin
-	       (guard (E (else
-			  (%error-and-exit "invalid argument to --optimizer-passes-count")))
-		 (compiler::source-optimizer-passes-count (string->number (cadr args))))
+	       (try
+		   (compiler::source-optimizer-passes-count (string->number (cadr args)))
+		 (catch E
+		   (else
+		    (%error-and-exit "invalid argument to --optimizer-passes-count"))))
 	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
@@ -914,21 +955,26 @@ Other options:
         Turn on or off a  compiler or expander option.  OPTION-VALUE can
         be one among:
 
-	   debug			no-debug
-	   strict-r6rs			no-strict-r6rs
-	   drop-assertions		no-drop-assertions
-	   gc-integrity-checks		no-gc-integrity-checks
-	   print-loaded-libraries	no-print-loaded-libraries
-	   debug-messages		no-debug-messages
-	   print-assembly		print-optimizer
-	   print-optimiser
-	   check-compiler-pass-preconditions
-	   no-check-compiler-pass-preconditions
+           debug                        no-debug
+           strict-r6rs                  no-strict-r6rs
+           drop-assertions              no-drop-assertions
+           gc-integrity-checks          no-gc-integrity-checks
+           print-loaded-libraries       no-print-loaded-libraries
+           debug-messages               no-debug-messages
+           enable-automatic-gc          disable-automatic-gc
+           enable-runtime-messages      disable-runtime-messages
+           print-assembly               print-optimizer
+           print-optimiser
+           check-compiler-pass-preconditions
+           no-check-compiler-pass-preconditions
            expander-descriptive-gensyms
            expander-descriptive-marks
            compiler-descriptive-labels
            compiler-core-type-inference no-compiler-core-type-inference
            compiler-introduce-primrefs  no-compiler-introduce-primrefs
+           basic-letrec-pass
+           waddell-letrec-pass
+           scc-letrec-pass
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,
@@ -1142,12 +1188,14 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (define ($struct-guardian S)
     (let ((logger (struct-guardian-logger)))
       (cond ((procedure? logger)
-	     (guard (E (else (void)))
-	       (logger S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (logger S #f 'registration)))
 	     (%struct-guardian S))
 	    (logger
-	     (guard (E (else (void)))
-	       (struct-guardian-log S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (struct-guardian-log S #f 'registration)))
 	     (%struct-guardian S))
 	    (else
 	     (%struct-guardian S)))))
@@ -1187,38 +1235,47 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (define FIELD-INDEX-OF-DESTRUCTOR-IN-STD 5)
 
   (define (%struct-guardian-destructor)
-    (guard (E (else (void)))
-      (define-syntax-rule (%execute ?S ?body0 . ?body)
-	(do ((?S (%struct-guardian) (%struct-guardian)))
-	    ((not ?S))
-	  ?body0 . ?body))
-      (define-inline (%extract-destructor S)
-	($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
-      (define-inline (%call-logger ?logger ?struct ?exception ?action)
-	(guard (E (else (void)))
-	  (?logger ?struct ?exception ?action)))
-      (let ((logger (struct-guardian-logger)))
-	(cond ((procedure? logger)
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger logger S E 'exception)))
-		   (%call-logger logger S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger logger S #f 'after-destruction)
-		   (struct-reset S))))
-	      (logger
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger struct-guardian-log S E 'exception)))
-		   (%call-logger struct-guardian-log S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger struct-guardian-log S #f 'after-destruction)
-		   (struct-reset S))))
-	      (else
-	       (%execute S
-		 (guard (E (else (void)))
-		   ((%extract-destructor S) S)
-		   (struct-reset S))))))))
+    (with-blocked-exceptions
+	(lambda ()
+	  (define-syntax-rule (%execute ?S ?body0 . ?body)
+	    (do ((?S (%struct-guardian) (%struct-guardian)))
+		((not ?S))
+	      ?body0 . ?body))
+	  (define-inline (%extract-destructor S)
+	    ($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
+	  (define-inline (%call-logger ?logger ?struct ?exception ?action)
+	    (with-blocked-exceptions
+		(lambda ()
+		  (?logger ?struct ?exception ?action))))
+	  (let ((logger (struct-guardian-logger)))
+	    (cond ((procedure? logger)
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger logger S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger logger S #f 'after-destruction)
+			   (struct-reset S))
+		       (catch E
+			 (else
+			  (%call-logger logger S E 'exception))))))
+		  (logger
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger struct-guardian-log S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger struct-guardian-log S #f 'after-destruction)
+			   (struct-reset S))
+		       (catch E
+			 (else
+			  (%call-logger struct-guardian-log S E 'exception))))))
+		  (else
+		   (%execute S
+		     (with-blocked-exceptions
+			 (lambda ()
+			   ((%extract-destructor S) S)
+			   (struct-reset S))))))))))
 
   (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
 
@@ -1241,12 +1298,14 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;
     (let ((logger (record-guardian-logger)))
       (cond ((procedure? logger)
-	     (guard (E (else (void)))
-	       (logger S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (logger S #f 'registration)))
 	     (%record-guardian S))
 	    (logger
-	     (guard (E (else (void)))
-	       (record-guardian-log S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (record-guardian-log S #f 'registration)))
 	     (%record-guardian S))
 	    (else
 	     (%record-guardian S)))))
@@ -1295,38 +1354,47 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;The finalisation  function called  to handle the  record instances
     ;;collected by the guardian.
     ;;
-    (guard (E (else (void)))
-      (define-syntax-rule (%execute ?S ?body0 . ?body)
-	(do ((?S (%record-guardian) (%record-guardian)))
-	    ((not ?S))
-	  ?body0 . ?body))
-      (define-syntax-rule (%extract-destructor S)
-	($record-type-destructor ($struct-rtd S)))
-      (define (%call-logger logger record exception action)
-	(guard (E (else (void)))
-	  (logger record exception action)))
-      (let ((logger (record-guardian-logger)))
-	(cond ((procedure? logger)
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger logger S E 'exception)))
-		   (%call-logger logger S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger logger S #f 'after-destruction)
-		   (record-reset S))))
-	      (logger
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger record-guardian-log S E 'exception)))
-		   (%call-logger record-guardian-log S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger record-guardian-log S #f 'after-destruction)
-		   (record-reset S))))
-	      (else
-	       (%execute S
-		 (guard (E (else (void)))
-		   ((%extract-destructor S) S)
-		   (record-reset S))))))))
+    (with-blocked-exceptions
+	(lambda ()
+	  (define-syntax-rule (%execute ?S ?body0 . ?body)
+	    (do ((?S (%record-guardian) (%record-guardian)))
+		((not ?S))
+	      ?body0 . ?body))
+	  (define-syntax-rule (%extract-destructor S)
+	    ($record-type-destructor ($struct-rtd S)))
+	  (define (%call-logger logger record exception action)
+	    (with-blocked-exceptions
+		(lambda ()
+		  (logger record exception action))))
+	  (let ((logger (record-guardian-logger)))
+	    (cond ((procedure? logger)
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger logger S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger logger S #f 'after-destruction)
+			   (record-reset S))
+		       (catch E
+			 (else
+			  (%call-logger logger S E 'exception))))))
+		  (logger
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger record-guardian-log S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger record-guardian-log S #f 'after-destruction)
+			   (record-reset S))
+		       (catch E
+			 (else
+			  (%call-logger record-guardian-log S E 'exception))))))
+		  (else
+		   (%execute S
+		     (with-blocked-exceptions
+			 (lambda ()
+			   ((%extract-destructor S) S)
+			   (record-reset S))))))))))
 
   (post-gc-hooks (cons %record-guardian-destructor (post-gc-hooks)))
 

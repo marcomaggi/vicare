@@ -29,14 +29,14 @@
     scheme-heap-nursery-size
     scheme-stack-size)
   (import (vicare)
-    (prefix (vicare platform words) words.))
+    (prefix (vicare platform words) words::))
 
   (define (num-of-bytes? obj)
     ;;Positive exact integer greater than 3 Vicare pages (4096 * 3).
     ;;
-    (and (words.unsigned-long? obj)
+    (and (words::unsigned-long? obj)
 	 (positive? obj)
-	 (< obj (* 3 4096))))
+	 (> obj (* 3 4096))))
 
   (case-define* scheme-heap-nursery-size
     (()
