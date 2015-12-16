@@ -107,15 +107,7 @@
 		  readline-enabled?
 		  make-readline-input-port)
 	    readline::)
-    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed Dec
-    ;;16, 2015)
-    #;(prefix (only (vicare system $runtime)
-		  scheme-heap-nursery-size
-		  scheme-stack-size)
-	    runtime::)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Dec 16,
-    ;;2015)
-    (prefix (only (ikarus run-time-configuration)
+    (prefix (only (vicare system $runtime)
 		  scheme-heap-nursery-size
 		  scheme-stack-size)
 	    runtime::))

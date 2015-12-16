@@ -24,7 +24,6 @@ LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
     CFLAGS='-m32 -O3 -pedantic'							\
     CPPFLAGS=""									\
     LDFLAGS='-m32'								\
-    VFLAGS='--no-drop-assertions --check-compiler-pass-preconditions'		\
     "$@"
 
 ### end of file

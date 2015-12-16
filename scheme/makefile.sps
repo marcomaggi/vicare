@@ -1360,9 +1360,7 @@
     ($for		(vicare system $foreign)		#f	#t)
     ($numerics		(vicare system $numerics)		#f	#t)
     ($hashtables	(vicare system $hashtables)		#f	#t)
-    ;;FIXME The library "(vicare system $runtime)" is to be made required at the next
-    ;;boot image rotation.  (Marco Maggi; Wed Dec 16, 2015)
-    ($runtime		(vicare system $runtime)		#t	#t)
+    ($runtime		(vicare system $runtime)		#f	#t)
 ;;;
     ($all		(psyntax system $all)			#f	#t)
 ;;;
@@ -5855,7 +5853,6 @@
     ;;GLOBAL-ENV -
     ;;   Represents the global bindings defined by the library body.
     ;;
-    ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
     (let ((lib (libraries::expand-library library-sexp)))
       (values (libraries::library-name         lib)
 	      (libraries::library-invoke-code  lib)
