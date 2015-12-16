@@ -126,7 +126,7 @@
   (define (pos-fxbitcount n)
       ;;; nifty parrallel count from:
       ;;; http://infolab.stanford.edu/~manku/bitcount/bitcount.html
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (let ((m0 #x15555555)
 	    (m1 #x13333333)
@@ -194,7 +194,7 @@
     (let ((x^ (if ($fxnegative? x)
 		  ($fxlognot x)
 		x)))
-      (boot.case-word-size
+      (case-word-size
        ((32)
 	(%fxlength32 x^))
        ((64)

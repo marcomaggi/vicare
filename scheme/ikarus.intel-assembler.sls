@@ -34,7 +34,7 @@
     (except (vicare system $codes)
 	    assembler-property-key))
 
-  (module (wordsize boot.case-word-size off-code-data)
+  (module (wordsize case-word-size off-code-data)
     (include "ikarus.compiler.scheme-objects-layout.scm" #t))
 
 
@@ -754,7 +754,7 @@
     ;;Store a  machine word, whose value  is X, in the  data area of the  code object
     ;;CODE at index IDX.  The machine word is stored encoded as fixnum.
     ;;
-    (boot.case-word-size
+    (case-word-size
      ((32)
       ;;On 32-bit platforms, we know that X has a  payload of 32 - 2 = 30 bits in the
       ;;bit range [0, 29].  We split such bits as follows:
@@ -1247,7 +1247,7 @@
     (byte? ?x))
 
   (define (imm32? x)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (imm? x))
      ((64)
@@ -1263,7 +1263,7 @@
 
   (define* (IMM n ac)
     (cond ((immediate-int? n)
-	   (boot.case-word-size
+	   (case-word-size
 	    ((32)
 	     (%IMM/imm32 n ac))
 	    ((64)
@@ -1358,7 +1358,7 @@
     (cons (byte n) ac))
 
   (define* (IMM32 n ac)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (IMM n ac))
      ((64)
@@ -1544,14 +1544,14 @@
 ;;; --------------------------------------------------------------------
 
   (define* (REX.R bits ac)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (%compiler-internal-error __who__ "invalid use in 32-bit mode"))
      ((64)
       (cons (fxlogor #b01001000 bits) ac))))
 
   (define (REX+r r ac)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       ac)
      ((64)
@@ -1575,7 +1575,7 @@
     ;;
     #;(assert (reg? r))
     #;(assert (reg/mem? rm))
-    (boot.case-word-size
+    (case-word-size
      ((32)
       ac)
      ((64)
@@ -1651,7 +1651,7 @@
 	   (REX.R bits ac)))))))
 
   (define (C c ac)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (CODE c ac))
      ((64)
@@ -1712,7 +1712,7 @@
        (ModRM 3 /d dst ac))))
 
   (define* (jmp-pc-relative code0 code1 dst ac)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (%compiler-internal-error __who__ "no pc-relative jumps in 32-bit mode"))
      ((64)
@@ -1942,7 +1942,7 @@
        ((imm? disp?)		(CR*/no-rex #xC7 '/0 dst (IMM32 src ac)))
        ((reg? reg?)		(%compiler-internal-error __who__ "invalid operands" asm-sexp)) ;;;(CR* #x89 src dst ac)
        ((reg? disp?)		(CR*/no-rex #x89 src dst ac))
-       ((disp? reg?)		(boot.case-word-size
+       ((disp? reg?)		(case-word-size
 				 ((32)	(CR*        #x8B dst src ac))
 				 ((64)	(CR*/no-rex #x8B dst src ac))))))
 
@@ -2090,7 +2090,7 @@
        ;;
        ;;this happens, for example, in the implementation of the IF syntax.
        ((label?/local)		(CODE #xE9 (cons `(local-relative . ,(label-name dst)) ac)))
-       ((imm?)			(boot.case-word-size
+       ((imm?)			(case-word-size
 				 ((32)		(CODE #xE9 (IMM32 dst ac)))
 				 ((64)		(jmp-pc-relative #xFF #x25 dst ac))))
        ((disp?)			(CR*  #xFF '/4 dst ac))))
@@ -2098,7 +2098,7 @@
     ((call dst)
      (match-operands (dst)
        ((label?/local)		(CODE #xE8 (cons `(local-relative . ,(label-name dst)) ac)))
-       ((imm?)			(boot.case-word-size
+       ((imm?)			(case-word-size
 				 ((32)		(CODE #xE8 (IMM32 dst ac)))
 				 ((64)		(jmp-pc-relative #xFF #x15 dst ac))))
        ((disp?)			(CR* #xFF '/2 dst ac))

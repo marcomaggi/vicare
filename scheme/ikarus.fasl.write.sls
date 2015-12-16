@@ -60,7 +60,7 @@
   (make-parameter #f))
 
 (define fxshift
-  (boot.case-word-size
+  (case-word-size
    ((32)	2)
    ((64)	3)))
 
@@ -124,7 +124,7 @@
   ;;endian 32-bit integers.
   ;;
   (assert (int? x))
-  (boot.case-word-size
+  (case-word-size
    ((32)
     (write-int32 x port))
    ((64)
@@ -169,7 +169,7 @@
   (put-tag #\I port)
   (put-tag #\K port)
   (put-tag #\0 port)
-  (put-tag (boot.case-word-size
+  (put-tag (case-word-size
 	    ((32)	#\1)
 	    ((64)	#\2))
 	   port))

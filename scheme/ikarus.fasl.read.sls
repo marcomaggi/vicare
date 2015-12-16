@@ -84,7 +84,7 @@
   (%assert-chars (read-u8-as-char port) #\I)
   (%assert-chars (read-u8-as-char port) #\K)
   (%assert-chars (read-u8-as-char port) #\0)
-  (boot.case-word-size
+  (case-word-size
    ((32)
     (%assert-chars (read-u8-as-char port) #\1))
    ((64)
@@ -522,7 +522,7 @@
   ;;         |      least significant
   ;;         most significant
   ;;
-  (boot.case-word-size
+  (case-word-size
     ((32)
      (let* ((c0 (read-u8 port))
 	    (c1 (read-u8 port))
@@ -554,7 +554,7 @@
   ;;Read from the  input PORT an exact integer  represented as 32-bit or
   ;;64-bit value depending on the underlying platform's word size.
   ;;
-  (boot.case-word-size
+  (case-word-size
     ((32)	;32-bit platform
      (let* ((c0 (char->int (read-u8-as-char port)))
 	    (c1 (char->int (read-u8-as-char port)))

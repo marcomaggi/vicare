@@ -155,14 +155,14 @@
 ;;temporary results.
 ;;
 (define-constant ALL-REGISTERS
-  (boot.case-word-size
+  (case-word-size
    ((32)
     '(%eax %edi %ebx %edx %ecx))
    ((64)
     '(%eax %edi %ebx %edx %ecx %r8 %r9 %r10 %r11 %r14 %r15))))
 
 (define-constant NON-8BIT-REGISTERS
-  (boot.case-word-size
+  (case-word-size
    ((32)	'(%edi))
    ((64)	'(%edi))))
 
@@ -319,7 +319,7 @@
 ;;call-frames are laid out (search for livemask).
 ;;
 (define-constant CALL-INSTRUCTION-SIZE
-  (boot.case-word-size
+  (case-word-size
    ((32) 5)
    ((64) 10)))
 

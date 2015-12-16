@@ -729,7 +729,7 @@
   (define (write-object-pointer ptr port)
     (write-char* "#<pointer #x" port)
     (write-hex (pointer->integer ptr)
-	       (boot.case-word-size
+	       (case-word-size
 		((32)		8)
 		((64)		16))
 	       port)

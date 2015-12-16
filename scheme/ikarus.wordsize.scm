@@ -2,18 +2,17 @@
 ;;
 
 (module (wordsize
-	 boot.case-word-size
+	 case-word-size
 	 fixnum-width
 	 greatest-fixnum
-	 least-fixnum
-	 )
+	 least-fixnum)
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
     (include "ikarus.config.scm" #t))
 
-  (define-syntax boot.case-word-size
+  (define-syntax case-word-size
     ;;We really need to  define this macro so that it  uses the value of
     ;;WORDSIZE just defined by the "ikarus.config.scm" file.
     ;;
@@ -28,9 +27,9 @@
 	   ((8)
 	    #'(begin . ?body-64))
 	   (else
-	    (syntax-violation 'boot.case-word-size "invalid wordsize" stx wordsize)))))))
+	    (syntax-violation 'case-word-size "invalid wordsize" stx wordsize)))))))
 
-  (boot.case-word-size
+  (case-word-size
    ((32)
     (define-syntax-rule (fixnum-width)
       30)
@@ -49,3 +48,7 @@
   #| end of module |# )
 
 ;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; coding: utf-8-unix
+;; End:

@@ -747,7 +747,7 @@
     (newline port))
   (%display "Vicare Scheme version ")
   (%display config.vicare-version)
-  (boot.case-word-size
+  (case-word-size
    ((32)
     (%display ", 32-bit"))
    ((64)

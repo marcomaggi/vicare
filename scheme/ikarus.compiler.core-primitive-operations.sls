@@ -2707,7 +2707,7 @@
 
  (define-core-primitive-operation $fixnum->flonum unsafe
    ((V fx)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (with-tmp ((flonum.tagged-ptr (asm 'alloc
 					 (K (align flonum-size))
@@ -4398,7 +4398,7 @@
 
  (define-core-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (with-tmp ((flo (asm 'alloc
 			   (K (align flonum-size))
@@ -4458,7 +4458,7 @@
 
  (define-core-primitive-operation $bytevector-ieee-double-nonnative-set! unsafe
    ((E bv idx flo)
-    (boot.case-word-size
+    (case-word-size
      ((32)
       (with-tmp ((t (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand idx)))))
 	(with-tmp ((x0 (asm 'mref (V-simple-operand flo) (K off-flonum-data))))
@@ -4556,7 +4556,7 @@
 	;;Store the single  into the bytevector data area.  This  is only a temporary
 	;;store to get the single float out of the floating point registers.
 	(asm 'fl:store-single t (K off-bytevector-data))
-	(boot.case-word-size
+	(case-word-size
 	 ((32)
 	  ;;Load the single into a register.
 	  (with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
@@ -4630,7 +4630,7 @@
       (else
        ;;NUM-OF-CHARS is a struct  instance representing recordized code
        ;;which, when evaluated, must return a fixnum.
-       (boot.case-word-size
+       (case-word-size
 	((32)
 	 (with-tmp ((str (asm 'alloc
 			      (align-code (V-simple-operand num-of-chars) disp-string-data)
@@ -4679,7 +4679,7 @@
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluated, must return a fixnum.
-       (asm 'mref32 (V-simple-operand str) (asm 'int+ (boot.case-word-size
+       (asm 'mref32 (V-simple-operand str) (asm 'int+ (case-word-size
 					;;IDX is a fixnum representing a
 					;;character  index  and its  raw
 					;;value  is also  the offset  in
@@ -4709,19 +4709,16 @@
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluated, must return a fixnum.
-       (asm 'mset32 (V-simple-operand str) (asm 'int+ (boot.case-word-size
-					;;IDX is a fixnum representing a
-					;;character  index  and its  raw
-					;;value  is also  the offset  in
-					;;bytes.
-					((32)	(V-simple-operand idx))
-					;;IDX is a fixnum representing a
-					;;character  index   and,  after
-					;;shifting  one   bit,  its  raw
-					;;value  is also  the offset  in
-					;;bytes.
-					((64)	(asm 'sra (V-simple-operand idx) (K 1))))
-				 (K off-string-data))
+       (asm 'mset32 (V-simple-operand str)
+	    (asm 'int+ (case-word-size
+			;;IDX is a fixnum representing  a character index and its raw
+			;;value is also the offset in bytes.
+			((32)	(V-simple-operand idx))
+			;;IDX is a  fixnum representing a character  index and, after
+			;;shifting  one bit,  its raw  value  is also  the offset  in
+			;;bytes.
+			((64)	(asm 'sra (V-simple-operand idx) (K 1))))
+		 (K off-string-data))
 	    (V-simple-operand ch))))))
 
 ;;; --------------------------------------------------------------------
