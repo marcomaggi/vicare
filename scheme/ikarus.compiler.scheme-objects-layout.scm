@@ -14,7 +14,7 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (boot.case-word-size wordsize)
+(module (case-word-size wordsize)
   (include "ikarus.wordsize.scm" #t))
 
 
@@ -22,7 +22,7 @@
 ;;;the C language header files "internals.h" and "vicare.h".
 
 (define-constant wordshift
-  (boot.case-word-size
+  (case-word-size
    ((32) 2)
    ((64) 3)))
 

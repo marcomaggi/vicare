@@ -925,7 +925,7 @@
       ;;                  (not (var-loc x)))
       ;;             (register? x)
       ;;             (constant? x)))
-      (boot.case-word-size
+      (case-word-size
        ((32)
 	(not (disp/fvar? x)))
        ((64)

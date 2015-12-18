@@ -2,33 +2,21 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-;;This is  here to test that  we can import things  from other libraries
-;;within the compiler itself.
-(library (ikarus startup)
-  (export
-    vicare-version
-    bootfile
-    host-info)
-  (import (except (vicare)
-		  host-info))
-  (include "ikarus.config.scm" #t))
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus main)
   (export
+    host-info
 
     ;; automatic structs finalisation
     $struct-guardian
@@ -42,6 +30,7 @@
 		  greatest-fixnum
 		  least-fixnum
 
+		  host-info
 		  load-r6rs-script
 		  load
 		  $struct-guardian
@@ -50,7 +39,6 @@
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log)
-    (prefix (ikarus startup) config.)
     (prefix (only (ikarus.options)
 		  print-verbose-messages?
 		  debug-mode-enabled?
@@ -59,7 +47,7 @@
 		  print-debug-messages?
 		  print-library-debug-messages?
 		  strict-r6rs)
-	    option.)
+	    options::)
     (ikarus.printing-messages)
     (prefix (only (ikarus.compiler)
 		  optimize-level
@@ -68,24 +56,28 @@
 		  assembler-output
 		  optimizer-output
 		  source-optimizer-passes-count
+		  current-letrec-pass
 		  generate-descriptive-labels?
 		  perform-core-type-inference?
 		  perform-unsafe-primrefs-introduction?)
-	    compiler.)
+	    compiler::)
     (prefix (only (ikarus.debugger)
 		  guarded-start)
-	    debugger.)
+	    debugger::)
+    (prefix (only (psyntax.library-utils)
+		  init-search-paths-and-directories)
+	    psyntax::)
     (prefix (only (psyntax.library-manager)
 		  current-library-expander
 		  source-code-location)
-	    psyntax.)
+	    psyntax::)
     (prefix (only (psyntax.lexical-environment)
 		  generate-descriptive-gensyms?
 		  generate-descriptive-marks?)
-	    psyntax.)
+	    psyntax::)
     (prefix (only (ikarus.reader)
 		  read-libraries-from-file)
-	    reader.)
+	    reader::)
     (only (ikarus.symbol-table)
 	  $initialize-symbol-table!)
     (only (ikarus.strings-table)
@@ -102,14 +94,11 @@
 		  initialise-pretty-formats)
 	    pretty-formats::)
     (prefix (ikarus load) load.)
-    (prefix (only (psyntax.library-utils)
-		  init-search-paths-and-directories)
-	    libutils.)
     (prefix (only (ikarus.posix)
 		  getenv
 		  real-pathname
 		  split-search-path-string)
-	    posix.)
+	    posix::)
     (prefix (only (ikarus conditions)
 		  initialise-condition-objects-late-binding)
 	    conditions::)
@@ -119,9 +108,22 @@
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
-	    readline.))
+	    readline::)
+    (prefix (only (vicare system $runtime)
+		  scheme-heap-nursery-size
+		  scheme-stack-size)
+	    runtime::))
 
-  (include "ikarus.wordsize.scm" #t)
+  (module (case-word-size)
+    (include "ikarus.wordsize.scm" #t))
+
+  (module (config::vicare-version
+	   config::bootfile
+	   host-info)
+    (module (vicare-version bootfile host-info)
+      (include "ikarus.config.scm" #t))
+    (define-alias config::vicare-version	vicare-version)
+    (define-alias config::bootfile		bootfile))
 
 
 ;;;; helpers
@@ -501,8 +503,8 @@
 ;;; Vicare options without argument
 
 	  ((%option= "-d" "-g")
-	   (option.debug-mode-enabled? #t)
-	   (compiler.generate-debug-calls #t)
+	   (options::debug-mode-enabled? #t)
+	   (compiler::generate-debug-calls #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-greetings")
@@ -522,11 +524,11 @@
 	   (next-option (cdr args) k))
 
 	  ((%option= "-v" "--verbose")
-	   (option.print-verbose-messages? #t)
+           (options::print-verbose-messages? #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--silent")
-	   (option.print-verbose-messages? #f)
+	   (options::print-verbose-messages? #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -595,6 +597,24 @@
 		       (%error-and-exit "invalid library location selection"))))
 	       (next-option (cddr args) k))))
 
+	  ((%option= "--scheme-heap-nursery-size")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--scheme-heap-nursery-size requires a numeric argument")
+	     (cond ((string->number (cadr args))
+		    => (lambda (size)
+			 (next-option (cddr args) (lambda () (k) (runtime::scheme-heap-nursery-size size)))))
+		   (else
+		    (%error-and-exit "--scheme-heap-nursery-size requires a positive exact integer argument fitting a long data type")))))
+
+	  ((%option= "--scheme-stack-size")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--scheme-stack-size requires a numeric argument")
+	     (cond ((string->number (cadr args))
+		    => (lambda (size)
+			 (next-option (cddr args) (lambda () (k) (runtime::scheme-stack-size size)))))
+		   (else
+		    (%error-and-exit "--scheme-stack-size requires a positive exact integer argument fitting a long data type")))))
+
 	  ((%option= "--option")
 	   (if (null? (cdr args))
 	       (%error-and-exit "--option requires a string argument")
@@ -602,26 +622,26 @@
 	       (string-case (cadr args)
 
 		 (("debug")
-		  (option.debug-mode-enabled?    #t)
-		  (compiler.generate-debug-calls #t))
+		  (options::debug-mode-enabled?    #t)
+		  (compiler::generate-debug-calls #t))
 		 (("no-debug")
-		  (option.debug-mode-enabled?    #f)
-		  (compiler.generate-debug-calls #f))
+		  (options::debug-mode-enabled?    #f)
+		  (compiler::generate-debug-calls #f))
 
 		 (("strict-r6rs")
-		  (option.strict-r6rs #t))
+		  (options::strict-r6rs #t))
 		 (("no-strict-r6rs")
-		  (option.strict-r6rs #f))
+		  (options::strict-r6rs #f))
 
 		 (("drop-assertions")
-		  (option.drop-assertions? #t))
+		  (options::drop-assertions? #t))
 		 (("no-drop-assertions")
-		  (option.drop-assertions? #f))
+		  (options::drop-assertions? #f))
 
 		 (("check-compiler-pass-preconditions")
-		  (compiler.check-compiler-pass-preconditions #t))
+		  (compiler::check-compiler-pass-preconditions #t))
 		 (("no-check-compiler-pass-preconditions")
-		  (compiler.check-compiler-pass-preconditions #f))
+		  (compiler::check-compiler-pass-preconditions #f))
 
 		 (("gc-integrity-checks")
 		  (foreign-call "ikrt_enable_gc_integrity_checks"))
@@ -629,43 +649,60 @@
 		  (foreign-call "ikrt_disable_gc_integrity_checks"))
 
 		 (("print-assembly")
-		  (compiler.assembler-output #t))
+		  (compiler::assembler-output #t))
 		 (("print-optimizer" "print-optimiser")
-		  (compiler.optimizer-output #t))
+		  (compiler::optimizer-output #t))
 
 		 (("print-loaded-libraries")
-		  (option.print-loaded-libraries? #t))
+		  (options::print-loaded-libraries? #t))
 		 (("no-print-loaded-libraries")
-		  (option.print-loaded-libraries? #f))
+		  (options::print-loaded-libraries? #f))
 
 		 (("debug-messages")
-		  (option.print-debug-messages? #t))
+		  (options::print-debug-messages? #t))
 		 (("no-debug-messages")
-		  (option.print-debug-messages? #f))
+		  (options::print-debug-messages? #f))
+
+		 (("enable-runtime-messages")
+		  (foreign-call "ikrt_enable_runtime_messages"))
+		 (("disable-runtime-messages")
+		  (foreign-call "ikrt_enable_runtime_messages"))
 
 		 (("library-debug-messages")
-		  (option.print-library-debug-messages? #t))
+		  (options::print-library-debug-messages? #t))
 		 (("no-library-debug-messages")
-		  (option.print-library-debug-messages? #f))
+		  (options::print-library-debug-messages? #f))
 
 		 (("expander-descriptive-gensyms")
-		  (psyntax.generate-descriptive-gensyms? #t))
+		  (psyntax::generate-descriptive-gensyms? #t))
 
 		 (("expander-descriptive-marks")
-		  (psyntax.generate-descriptive-marks? #t))
+		  (psyntax::generate-descriptive-marks? #t))
 
 		 (("compiler-descriptive-labels")
-		  (compiler.generate-descriptive-labels? #t))
+		  (compiler::generate-descriptive-labels? #t))
 
 		 (("compiler-core-type-inference")
-		  (compiler.perform-core-type-inference? #t))
+		  (compiler::perform-core-type-inference? #t))
 		 (("no-compiler-core-type-inference")
-		  (compiler.perform-core-type-inference? #f))
+		  (compiler::perform-core-type-inference? #f))
 
 		 (("compiler-introduce-primrefs")
-		  (compiler.perform-unsafe-primrefs-introduction? #t))
+		  (compiler::perform-unsafe-primrefs-introduction? #t))
 		 (("no-compiler-introduce-primrefs")
-		  (compiler.perform-unsafe-primrefs-introduction? #f))
+		  (compiler::perform-unsafe-primrefs-introduction? #f))
+
+		 (("enable-automatic-gc")
+		  (automatic-garbage-collection #t))
+		 (("disable-automatic-gc")
+		  (automatic-garbage-collection #f))
+
+		 (("basic-letrec-pass")
+		  (compiler::current-letrec-pass 'basic))
+		 (("waddell-letrec-pass")
+		  (compiler::current-letrec-pass 'waddell))
+		 (("scc-letrec-pass")
+		  (compiler::current-letrec-pass 'scc))
 
 		 (else
 		  (%error-and-exit "invalid --option argument: ~a" (cadr args))))
@@ -674,41 +711,34 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler options with argument
 
-	  ;; ((%option= "--compiler-letrec-pass")
-	  ;;  (if (null? (cdr args))
-	  ;;      (%error-and-exit "--compiler-letrec-pass requires a mode argument")
-	  ;;    (begin
-	  ;;      (guard (E (else
-	  ;; 		  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
-	  ;; 	 ($current-letrec-pass (string->symbol (cadr args))))
-	  ;;      (next-option (cddr args) k))))
-
 	  ((%option= "--optimizer-passes-count")
 	   (if (null? (cdr args))
 	       (%error-and-exit "--optimizer-passes-count requires a number argument")
 	     (begin
-	       (guard (E (else
-			  (%error-and-exit "invalid argument to --optimizer-passes-count")))
-		 (compiler.source-optimizer-passes-count (string->number (cadr args))))
+	       (try
+		   (compiler::source-optimizer-passes-count (string->number (cadr args)))
+		 (catch E
+		   (else
+		    (%error-and-exit "invalid argument to --optimizer-passes-count"))))
 	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
 ;;; compiler options without argument
 
 	  ((%option= "-O3")
-	   (compiler.optimize-level 3)
+	   (compiler::optimize-level 3)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-O2")
-	   (compiler.optimize-level 2)
+	   (compiler::optimize-level 2)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-O1")
-	   (compiler.optimize-level 1)
+	   (compiler::optimize-level 1)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-O0")
-	   (compiler.optimize-level 0)
+	   (compiler::optimize-level 0)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -746,8 +776,8 @@
   (define-inline (%newline)
     (newline port))
   (%display "Vicare Scheme version ")
-  (%display config.vicare-version)
-  (boot.case-word-size
+  (%display config::vicare-version)
+  (case-word-size
    ((32)
     (%display ", 32-bit"))
    ((64)
@@ -795,7 +825,7 @@ Software Foundation,  Inc., 59  Temple Place -  Suite 330,  Boston, MA
 
 (define (print-version-only)
   (define port (current-output-port))
-  (display config.vicare-version port)
+  (display config::vicare-version port)
   (newline port)
   (flush-output-port port))
 
@@ -853,7 +883,7 @@ Other options:
 
    -b BOOTFILE
    --boot BOOTFILE
-        Select the boot image.  The default is " config.bootfile "
+        Select the boot image.  The default is " config::bootfile "
 
    --no-rcfile
         Disable loading of run-command files.
@@ -917,21 +947,26 @@ Other options:
         Turn on or off a  compiler or expander option.  OPTION-VALUE can
         be one among:
 
-	   debug			no-debug
-	   strict-r6rs			no-strict-r6rs
-	   drop-assertions		no-drop-assertions
-	   gc-integrity-checks		no-gc-integrity-checks
-	   print-loaded-libraries	no-print-loaded-libraries
-	   debug-messages		no-debug-messages
-	   print-assembly		print-optimizer
-	   print-optimiser
-	   check-compiler-pass-preconditions
-	   no-check-compiler-pass-preconditions
+           debug                        no-debug
+           strict-r6rs                  no-strict-r6rs
+           drop-assertions              no-drop-assertions
+           gc-integrity-checks          no-gc-integrity-checks
+           print-loaded-libraries       no-print-loaded-libraries
+           debug-messages               no-debug-messages
+           enable-automatic-gc          disable-automatic-gc
+           enable-runtime-messages      disable-runtime-messages
+           print-assembly               print-optimizer
+           print-optimiser
+           check-compiler-pass-preconditions
+           no-check-compiler-pass-preconditions
            expander-descriptive-gensyms
            expander-descriptive-marks
            compiler-descriptive-labels
            compiler-core-type-inference no-compiler-core-type-inference
            compiler-introduce-primrefs  no-compiler-introduce-primrefs
+           basic-letrec-pass
+           waddell-letrec-pass
+           scc-letrec-pass
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,
@@ -1003,7 +1038,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       (case cfg.rcfiles
 	((#t)
 	 (cond ((and (eq? 'repl cfg.exec-mode)
-		     (posix.getenv "HOME"))
+		     (posix::getenv "HOME"))
 		=> (lambda (home)
 		     (if (string-empty? home)
 			 '()
@@ -1024,9 +1059,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit (for-each (lambda (source-filename)
 		      (for-each (lambda (library-form)
-				  (parametrise ((psyntax.source-code-location source-filename))
-				    ((psyntax.current-library-expander) library-form)))
-			(reader.read-libraries-from-file source-filename)))
+				  (parametrise ((psyntax::source-code-location source-filename))
+				    ((psyntax::current-library-expander) library-form)))
+			(reader::read-libraries-from-file source-filename)))
 	    cfg.load-libraries))))
 
 
@@ -1038,8 +1073,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
      (start (lambda () ?body0 ?body ...)))))
 
 (define (start proc)
-  (if (compiler.generate-debug-calls)
-      (debugger.guarded-start proc)
+  (if (compiler::generate-debug-calls)
+      (debugger::guarded-start proc)
     (proc)))
 
 
@@ -1145,12 +1180,14 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (define ($struct-guardian S)
     (let ((logger (struct-guardian-logger)))
       (cond ((procedure? logger)
-	     (guard (E (else (void)))
-	       (logger S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (logger S #f 'registration)))
 	     (%struct-guardian S))
 	    (logger
-	     (guard (E (else (void)))
-	       (struct-guardian-log S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (struct-guardian-log S #f 'registration)))
 	     (%struct-guardian S))
 	    (else
 	     (%struct-guardian S)))))
@@ -1190,38 +1227,47 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (define FIELD-INDEX-OF-DESTRUCTOR-IN-STD 5)
 
   (define (%struct-guardian-destructor)
-    (guard (E (else (void)))
-      (define-syntax-rule (%execute ?S ?body0 . ?body)
-	(do ((?S (%struct-guardian) (%struct-guardian)))
-	    ((not ?S))
-	  ?body0 . ?body))
-      (define-inline (%extract-destructor S)
-	($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
-      (define-inline (%call-logger ?logger ?struct ?exception ?action)
-	(guard (E (else (void)))
-	  (?logger ?struct ?exception ?action)))
-      (let ((logger (struct-guardian-logger)))
-	(cond ((procedure? logger)
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger logger S E 'exception)))
-		   (%call-logger logger S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger logger S #f 'after-destruction)
-		   (struct-reset S))))
-	      (logger
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger struct-guardian-log S E 'exception)))
-		   (%call-logger struct-guardian-log S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger struct-guardian-log S #f 'after-destruction)
-		   (struct-reset S))))
-	      (else
-	       (%execute S
-		 (guard (E (else (void)))
-		   ((%extract-destructor S) S)
-		   (struct-reset S))))))))
+    (with-blocked-exceptions
+	(lambda ()
+	  (define-syntax-rule (%execute ?S ?body0 . ?body)
+	    (do ((?S (%struct-guardian) (%struct-guardian)))
+		((not ?S))
+	      ?body0 . ?body))
+	  (define-inline (%extract-destructor S)
+	    ($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
+	  (define-inline (%call-logger ?logger ?struct ?exception ?action)
+	    (with-blocked-exceptions
+		(lambda ()
+		  (?logger ?struct ?exception ?action))))
+	  (let ((logger (struct-guardian-logger)))
+	    (cond ((procedure? logger)
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger logger S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger logger S #f 'after-destruction)
+			   (struct-reset S))
+		       (catch E
+			 (else
+			  (%call-logger logger S E 'exception))))))
+		  (logger
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger struct-guardian-log S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger struct-guardian-log S #f 'after-destruction)
+			   (struct-reset S))
+		       (catch E
+			 (else
+			  (%call-logger struct-guardian-log S E 'exception))))))
+		  (else
+		   (%execute S
+		     (with-blocked-exceptions
+			 (lambda ()
+			   ((%extract-destructor S) S)
+			   (struct-reset S))))))))))
 
   (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
 
@@ -1244,12 +1290,14 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;
     (let ((logger (record-guardian-logger)))
       (cond ((procedure? logger)
-	     (guard (E (else (void)))
-	       (logger S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (logger S #f 'registration)))
 	     (%record-guardian S))
 	    (logger
-	     (guard (E (else (void)))
-	       (record-guardian-log S #f 'registration))
+	     (with-blocked-exceptions
+		 (lambda ()
+		   (record-guardian-log S #f 'registration)))
 	     (%record-guardian S))
 	    (else
 	     (%record-guardian S)))))
@@ -1298,38 +1346,47 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;The finalisation  function called  to handle the  record instances
     ;;collected by the guardian.
     ;;
-    (guard (E (else (void)))
-      (define-syntax-rule (%execute ?S ?body0 . ?body)
-	(do ((?S (%record-guardian) (%record-guardian)))
-	    ((not ?S))
-	  ?body0 . ?body))
-      (define-syntax-rule (%extract-destructor S)
-	($record-type-destructor ($struct-rtd S)))
-      (define (%call-logger logger record exception action)
-	(guard (E (else (void)))
-	  (logger record exception action)))
-      (let ((logger (record-guardian-logger)))
-	(cond ((procedure? logger)
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger logger S E 'exception)))
-		   (%call-logger logger S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger logger S #f 'after-destruction)
-		   (record-reset S))))
-	      (logger
-	       (%execute S
-		 (guard (E (else
-			    (%call-logger record-guardian-log S E 'exception)))
-		   (%call-logger record-guardian-log S #f 'before-destruction)
-		   ((%extract-destructor S) S)
-		   (%call-logger record-guardian-log S #f 'after-destruction)
-		   (record-reset S))))
-	      (else
-	       (%execute S
-		 (guard (E (else (void)))
-		   ((%extract-destructor S) S)
-		   (record-reset S))))))))
+    (with-blocked-exceptions
+	(lambda ()
+	  (define-syntax-rule (%execute ?S ?body0 . ?body)
+	    (do ((?S (%record-guardian) (%record-guardian)))
+		((not ?S))
+	      ?body0 . ?body))
+	  (define-syntax-rule (%extract-destructor S)
+	    ($record-type-destructor ($struct-rtd S)))
+	  (define (%call-logger logger record exception action)
+	    (with-blocked-exceptions
+		(lambda ()
+		  (logger record exception action))))
+	  (let ((logger (record-guardian-logger)))
+	    (cond ((procedure? logger)
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger logger S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger logger S #f 'after-destruction)
+			   (record-reset S))
+		       (catch E
+			 (else
+			  (%call-logger logger S E 'exception))))))
+		  (logger
+		   (%execute S
+		     (try
+			 (begin
+			   (%call-logger record-guardian-log S #f 'before-destruction)
+			   ((%extract-destructor S) S)
+			   (%call-logger record-guardian-log S #f 'after-destruction)
+			   (record-reset S))
+		       (catch E
+			 (else
+			  (%call-logger record-guardian-log S E 'exception))))))
+		  (else
+		   (%execute S
+		     (with-blocked-exceptions
+			 (lambda ()
+			   ((%extract-destructor S) S)
+			   (record-reset S))))))))))
 
   (post-gc-hooks (cons %record-guardian-destructor (post-gc-hooks)))
 
@@ -1361,7 +1418,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;We  must initialise  first  the  library locator,  then  the  search paths  and
     ;;directories.
     ;;
-    (libutils.init-search-paths-and-directories (reverse cfg.library-source-search-path)
+    (psyntax::init-search-paths-and-directories (reverse cfg.library-source-search-path)
 						(reverse cfg.library-binary-search-path)
 						cfg.build-directory
 						cfg.more-file-extensions)
@@ -1372,8 +1429,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	  (cfg.script
 	   (command-line-arguments (cons cfg.script      cfg.program-options))))
 
-    (when (and (readline.readline-enabled?) (not cfg.raw-repl))
-      (cafe-input-port (readline.make-readline-input-port)))
+    (when (and (readline::readline-enabled?) (not cfg.raw-repl))
+      (cafe-input-port (readline::make-readline-input-port)))
 
     ;;Evaluate code before the main action.
     (load-rc-files-as-r6rs-scripts cfg)

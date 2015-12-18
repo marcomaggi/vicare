@@ -1434,6 +1434,7 @@
     ($for		(vicare system $foreign)		#f	#t)
     ($numerics		(vicare system $numerics)		#f	#t)
     ($hashtables	(vicare system $hashtables)		#f	#t)
+    ($runtime		(vicare system $runtime)		#f	#t)
 ;;;
     ($all		(psyntax system $all)			#f	#t)
 ;;;
@@ -1442,7 +1443,6 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
-    ($runtime		(vicare system $runtime)		#t	#f)
     ($compiler		(vicare compiler)			#t	#f)
     ($libraries		(vicare libraries)			#t	#t)
     ($programs		(vicare programs)			#t	#f)
