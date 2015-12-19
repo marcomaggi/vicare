@@ -14,10 +14,10 @@ for the bibliography on the expansion process).
 The library @library{vicare expander} exports bindings that allow
 inspection of the expander operations.  To avoid collisions between
 syntactic binding names, it is suggested to import it with prefix
-@samp{xp.}:
+@samp{xp::}:
 
 @lisp
-(import (prefix (vicare expander) xp.))
+(import (prefix (vicare expander) xp::))
 @end lisp
 
 @menu
@@ -2187,9 +2187,9 @@ As example, to just print the @lexenv{} we can do:
 (import (vicare))
 
 (define-syntax (print-lexenv stx)
-  (import (prefix (vicare expander) xp.))
+  (import (prefix (vicare expander) xp::))
   (print-gensym #f)
-  (pretty-print (xp.current-inferior-lexenv)
+  (pretty-print (xp::current-inferior-lexenv)
                 (current-error-port))
   #'(void))
 
@@ -2633,9 +2633,9 @@ successful: return the syntactic binding's label gensym; otherwise
 return @false{}.
 
 @lisp
-(import (vicare) (prefix (vicare expander) xp.))
+(import (vicare) (prefix (vicare expander) xp::))
 
-(xp.syntactic-identifier->label #'display)
+(xp::syntactic-identifier->label #'display)
 @result{} #@{lab.display |PeEZ8c2>r<R&lTRg|@}
 @end lisp
 @end defun
@@ -2659,24 +2659,24 @@ If the binding descriptor represents a fluid syntax or synonym syntax:
 follow through and return the innermost redefinition of the binding.
 
 @lisp
-(import (vicare) (prefix (vicare expander) xp.))
+(import (vicare) (prefix (vicare expander) xp::))
 
 (begin-for-syntax
-  (xp.label->syntactic-binding-descriptor
-      (xp.syntactic-identifier->label #'display)
-      (xp.current-inferior-lexenv)))
+  (xp::label->syntactic-binding-descriptor
+      (xp::syntactic-identifier->label #'display)
+      (xp::current-inferior-lexenv)))
 @result{} (core-prim . display)
 
 (begin-for-syntax
-  (xp.label->syntactic-binding-descriptor
+  (xp::label->syntactic-binding-descriptor
       'label
-      (xp.current-inferior-lexenv)))
+      (xp::current-inferior-lexenv)))
 @result{} (displaced-lexical . #f)
 
 (begin-for-syntax
-  (xp.label->syntactic-binding-descriptor
+  (xp::label->syntactic-binding-descriptor
       123
-      (xp.current-inferior-lexenv)))
+      (xp::current-inferior-lexenv)))
 @result{} (displaced-lexical . ())
 @end lisp
 @end defun
@@ -2690,21 +2690,21 @@ the fluid or synonym syntax definition.
 
 @lisp
 (import (vicare)
-   (prefix (vicare expander) xp.))
+   (prefix (vicare expander) xp::))
 
 (define-fluid-syntax flu
   (identifier-syntax 123))
 
 (begin-for-syntax
-  (xp.label->syntactic-binding-descriptor
-    (xp.syntactic-identifier->label #'flu)
-    (xp.current-inferior-lexenv)))
+  (xp::label->syntactic-binding-descriptor
+    (xp::syntactic-identifier->label #'flu)
+    (xp::current-inferior-lexenv)))
 @result{} (local-macro . (?procedure . ?sexp))
 
 (begin-for-syntax
-  (xp.label->syntactic-binding-descriptor/no-indirection
-    (xp.syntactic-identifier->label #'flu)
-    (xp.current-inferior-lexenv)))
+  (xp::label->syntactic-binding-descriptor/no-indirection
+    (xp::syntactic-identifier->label #'flu)
+    (xp::current-inferior-lexenv)))
 @result{} ($fluid . lab.flu)
 @end lisp
 @end defun
@@ -2742,10 +2742,10 @@ Example:
 
 @example
 (import (vicare)
-  (prefix (vicare expander) xp.))
+  (prefix (vicare expander) xp::))
 
 (receive (code libs)
-     (xp.expand-form-to-core-language
+     (xp::expand-form-to-core-language
         '(define (doit x)
            (if (null? x)
                #f
@@ -2787,16 +2787,16 @@ inspect such situation as follows:
 
 @example
 (import (vicare)
-  (prefix (vicare expander) xp.))
+  (prefix (vicare expander) xp::))
 
-(getprop 'display (xp.system-label-gensym))
+(getprop 'display (xp::system-label-gensym))
 @result{} lab.display
 
 ;; extract the lexical environment entry describing DISPLAY
-(symbol-value (getprop 'display (xp.system-label-gensym)))
+(symbol-value (getprop 'display (xp::system-label-gensym)))
 @result{} (core-prim . display)
 
-(xp.system-label 'display)
+(xp::system-label 'display)
 @result{} lab.display
 @end example
 
@@ -2835,12 +2835,12 @@ name; we can easily inspect such situation as follows:
 
 @example
 (import (vicare)
-  (prefix (vicare expander) xp.))
+  (prefix (vicare expander) xp::))
 
-(getprop 'procedure? (xp.system-id-gensym))
+(getprop 'procedure? (xp::system-id-gensym))
 @result{} #<syntax expr=procedure? ...>
 
-(xp.system-id 'procedure?)
+(xp::system-id 'procedure?)
 @result{} #<syntax expr=procedure? ...>
 @end example
 
@@ -2886,25 +2886,25 @@ starting with the prelude:
 
 @lisp
 (import (vicare)
-  (prefix (vicare expander) xp.))
+  (prefix (vicare expander) xp::))
 
 (begin-for-syntax
 
   (define (id->label id)
-    (xp.syntactic-identifier->label id))
+    (xp::syntactic-identifier->label id))
 
   (define (label->descriptor lab)
-    (xp.label->syntactic-binding-descriptor lab
-      (xp.current-inferior-lexenv)))
+    (xp::label->syntactic-binding-descriptor lab
+      (xp::current-inferior-lexenv)))
 
   (define (id->descriptor id)
     (label->descriptor (id->label id)))
 
   (define (id-rib*/no-top id)
-    (reverse (cdr (reverse (xp.stx-rib* id)))))
+    (reverse (cdr (reverse (xp::stx-rib* id)))))
 
   (define (eq-ribs? id1 id2)
-    (eq? (xp.stx-rib* id1) (xp.stx-rib* id2)))
+    (eq? (xp::stx-rib* id1) (xp::stx-rib* id2)))
 
   #| end of BEGIN-FOR-SYNTAX |# )
 @end lisp
@@ -2947,7 +2947,7 @@ because it is too long.  We can inspect the list of @rib{} objects too:
 
 @lisp
 (begin-for-syntax
-  (pretty-print (xp.stx-rib* #'display)))
+  (pretty-print (xp::stx-rib* #'display)))
 @print{} (#<rib name*=(...) mark**=(...) label*=(...) sealed/freq=#f>)
 @end lisp
 
@@ -3043,7 +3043,7 @@ Let's see the @rib{} objects:
 (internal-body
   (define B 2)
   (begin-for-syntax
-    (let ((ribs (xp.stx-rib* #'A)))
+    (let ((ribs (xp::stx-rib* #'A)))
       (pretty-print (length ribs))
       (pretty-print ribs)))
   (void))
@@ -3103,7 +3103,7 @@ Let's create two nested lexical contours with the syntax
       (pretty-print #'A)
       (pretty-print #'B)
       (pretty-print (eq-ribs? #'A #'B))
-      (pretty-print (length (xp.stx-rib* #'A)))
+      (pretty-print (length (xp::stx-rib* #'A)))
       (pretty-print (id-rib*/no-top #'A)))
     (void)))
 @print{} #<syntactic-identifier expr=A mark*=(src)>
@@ -3164,7 +3164,7 @@ Now let's create two syntactic bindings with the same source name:
     (define A 2)
     (begin-for-syntax
       (pretty-print #'A)
-      (pretty-print (length (xp.stx-rib* #'A)))
+      (pretty-print (length (xp::stx-rib* #'A)))
       (pretty-print (id-rib*/no-top #'A)))
     (void)))
 @print{} #<syntactic-identifier expr=A mark*=(src)>
