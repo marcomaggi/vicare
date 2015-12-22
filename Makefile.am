@@ -509,8 +509,19 @@ EXTRA_DIST += \
 
 VICARE_NEW_BOOT		= vicare.boot
 EXTRA_DIST		+= \
-	scheme/makefile.scheme-object-types.scm			\
-	scheme/makefile.typed-core-primitives.scm
+	scheme/makefile.scheme-object-types.scm					\
+	scheme/makefile.typed-core-primitives.scm				\
+	scheme/makefile.typed-core-primitives.generic-primitives.scm		\
+	scheme/makefile.typed-core-primitives.booleans.scm			\
+	scheme/makefile.typed-core-primitives.characters.scm			\
+	scheme/makefile.typed-core-primitives.transcoders.scm			\
+	scheme/makefile.typed-core-primitives.strings.scm			\
+	scheme/makefile.typed-core-primitives.symbols.scm			\
+	scheme/makefile.typed-core-primitives.keywords.scm			\
+	scheme/makefile.typed-core-primitives.pointers.scm			\
+	scheme/makefile.typed-core-primitives.vectors.scm			\
+	scheme/makefile.typed-core-primitives.pairs-and-lists.scm		\
+	scheme/makefile.typed-core-primitives.numerics.scm
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
