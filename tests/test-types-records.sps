@@ -1256,35 +1256,6 @@
   (void))
 
 
-(parametrise ((check-test-name	'reader-annotations))
-
-  (check
-      (let* ((port	(open-string-input-port "123"))
-	     (datum	(get-annotated-datum port)))
-	(is-a? datum <annotation>))
-    => #t)
-
-
-  ;;Method call early binding.
-  ;;
-  (check
-      (let* ((port			(open-string-input-port "123"))
-	     ({datum <annotation>}	(get-annotated-datum port)))
-	#;(annotation-stripped datum)
-	(.stripped datum))
-    => 123)
-
-  ;;Method call late binding.
-  ;;
-  (check
-      (let* ((port		(open-string-input-port "123"))
-	     ({datum <top>}	(get-annotated-datum port)))
-	(.stripped datum))
-    => 123)
-
-  #t)
-
-
 ;;;; done
 
 (collect 'fullest)

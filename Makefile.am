@@ -869,6 +869,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-ports.sps				\
 	tests/test-types-structs.sps					\
 	tests/test-types-records.sps					\
+	tests/test-types-reader-annotations.sps				\
 	tests/test-types-conditions.sps					\
 	\
 	tests/test-issue-001-equal-hash.sps				\
