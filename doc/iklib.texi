@@ -7701,7 +7701,7 @@ expression in the input.  For example:
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftp {Object type} annotation
+@deftp {Object type} @class{annotation}
 Disjoint object type representing source code read from a textual input
 port.  The source code expression is annotated with informations from
 its textual input.
@@ -7709,30 +7709,30 @@ its textual input.
 
 
 @defun annotation? @var{obj}
-Return @true{} if @var{obj} is an @objtype{annotation} object, else return
+Return @true{} if @var{obj} is an @class{annotation} object, else return
 @false{}.
 @end defun
 
 
-@defop {Field accessor} @objtype{annotation} annotation-expression @var{ann}
+@defop {Field accessor} @class{annotation} annotation-expression @var{ann}
 Return a list, vector, identifier, what--have--you that may contain
 further annotations.
 @end defop
 
 
-@defop {Field accessor} @objtype{annotation} annotation-stripped @var{ann}
+@defop {Field accessor} @class{annotation} annotation-stripped @var{ann}
 Return the same symbolic expression of the @code{expression} field with
 no annotations.
 @end defop
 
 
-@defop {Field accessor} @objtype{annotation} annotation-textual-position @var{ann}
+@defop {Field accessor} @class{annotation} annotation-textual-position @var{ann}
 Return a condition object of type @condition{source-position}
 representing the position of the expression in the source code.
 @end defop
 
 
-@defop {Field accessor} @objtype{annotation} annotation-source @var{ann}
+@defop {Field accessor} @class{annotation} annotation-source @var{ann}
 Return a pair whose car is the port identifier and whose cdr is the
 offset of the first character of the source expression in the textual
 input.
@@ -7741,7 +7741,7 @@ input.
 
 @defun get-annotated-datum @var{port}
 Like @func{get-datum}, but rather than returning a datum return a
-hierarchy of @objtype{annotation} objects with the same hierarchy of the
+hierarchy of @class{annotation} objects with the same hierarchy of the
 datum and embedding the datum itself.
 @end defun
 

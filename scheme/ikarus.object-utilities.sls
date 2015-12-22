@@ -105,7 +105,7 @@
   ;;null or a list of method arguments.
   ;;
   (define (%error message)
-    (error __who__ message method-name.sym subject args))
+    (error 'method-call-late-binding message method-name.sym subject args))
   (define (%error-object-type-has-no-methods-table)
     (%error "object type has no methods table"))
   (define (%error-record-type-has-no-matching-method)

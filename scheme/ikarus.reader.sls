@@ -1,18 +1,17 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012, 2013, 2014  Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2015  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -27,7 +26,8 @@
     annotation-expression	annotation-stripped
     annotation-source		annotation-textual-position
 
-    ;; internal functions only for Vicare
+    ;; internal bindings only for Vicare
+    <annotation>-rtd		<annotation>-rcd
     read-libraries-from-file	read-script-from-file
     read-library-from-file	read-library-from-port)
   (import (except (vicare)
@@ -40,7 +40,8 @@
 		  annotation-expression		annotation-stripped
 		  annotation-source		annotation-textual-position
 
-		  ;; internal functions only for Vicare
+		  ;; internal bindings only for Vicare
+		  <annotation>-rtd		<annotation>-rcd
 		  read-libraries-from-file	read-script-from-file
 		  read-library-from-file	read-library-from-port)
     (vicare system $fx)
@@ -50,6 +51,8 @@
     (vicare system $bytevectors)
     (only (vicare system $structs)
 	  $set-std-printer!)
+    (only (ikarus records procedural)
+	  $record-type-printer-set!)
     (prefix (vicare platform words) words.)
     (only (vicare language-extensions posix)
 	  file-string-pathname?))
@@ -222,38 +225,67 @@
 ;;  position of  the expression in the  source code.  It is  used by the
 ;;  expander.
 ;;
-(define-struct annotation
-  (expression stripped source textual-position))
+(module (<annotation>-rtd
+	 <annotation>-rcd
+	 annotate
+	 annotate-simple
+	 annotation?
+	 annotation-expression
+	 annotation-stripped
+	 annotation-source
+	 annotation-textual-position)
 
-(define-inline (annotate-simple datum textual-pos)
-  (make-annotation datum datum
-		   (cons (source-position-port-id   textual-pos)
-			 (source-position-character textual-pos))
-		   textual-pos))
+  (define-record-type (<annotation> make-annotation annotation?)
+    (nongenerative)
+    (fields (immutable expression		annotation-expression)
+	    (immutable stripped			annotation-stripped)
+	    (immutable source			annotation-source)
+	    (immutable textual-position		annotation-textual-position))
+    (protocol
+      (lambda (make-record)
+	(define (make-annotation expression stripped source textual-position)
+	  (make-record expression stripped source textual-position))
+	make-annotation)))
 
-(define-inline (annotate stripped expression textual-pos)
-  (make-annotation expression stripped
-		   (cons (source-position-port-id   textual-pos)
-			 (source-position-character textual-pos))
-		   textual-pos))
+  (define <annotation>-rtd
+    (record-type-descriptor <annotation>))
+  (define <annotation>-rcd
+    (record-constructor-descriptor <annotation>))
 
-(define (%annotation-printer S port sub-printer)
-  (define-inline (%display thing)
-    (display thing port))
-  (define-inline (%write thing)
-    (write thing port))
-    (define-inline (%pretty-print thing)
-      (pretty-print* thing port 0 #f))
-  (%display "#[annotation")
-  ;;Writing   the  annotation   expression  makes   the  output   really
-  ;;unreadable.
-  (%display " expression=#<omitted>")
-  (%display " stripped=")		(%pretty-print (annotation-stripped S))
-  ;;Avoid printing  the SOURCE field  because it  may be removed  in the
-  ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
-  ;;field.
-  (%display " textual-position=")	(%write (annotation-textual-position S))
-  (%display "]"))
+  (define-inline (annotate-simple datum textual-pos)
+    (make-annotation datum datum
+		     (cons (source-position-port-id   textual-pos)
+			   (source-position-character textual-pos))
+		     textual-pos))
+
+  (define-inline (annotate stripped expression textual-pos)
+    (make-annotation expression stripped
+		     (cons (source-position-port-id   textual-pos)
+			   (source-position-character textual-pos))
+		     textual-pos))
+
+  (module ()
+    (define (%annotation-printer S port sub-printer)
+      (define-inline (%display thing)
+	(display thing port))
+      (define-inline (%write thing)
+	(write thing port))
+      (define-inline (%pretty-print thing)
+	(pretty-print* thing port 0 #f))
+      (%display "#[annotation")
+      ;;Writing   the  annotation   expression  makes   the  output   really
+      ;;unreadable.
+      (%display " expression=#<omitted>")
+      (%display " stripped=")		(%pretty-print (annotation-stripped S))
+      ;;Avoid printing  the SOURCE field  because it  may be removed  in the
+      ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
+      ;;field.
+      (%display " textual-position=")	(%write (annotation-textual-position S))
+      (%display "]"))
+
+    ($record-type-printer-set! (record-type-descriptor <annotation>) %annotation-printer))
+
+  #| end of module |# )
 
 
 ;;;; graph notation location structures
@@ -3384,8 +3416,6 @@
 
 ;; (define end-of-file-dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader almost end")))
-
-($set-std-printer! (type-descriptor annotation) %annotation-printer)
 
 ;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader end"))
 

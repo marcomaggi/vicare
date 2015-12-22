@@ -2,6 +2,9 @@
 ;;
 ;; Definitions of built-in Scheme object types.
 
+
+;;;; core syntactic binding descriptors: built-in Scheme object types
+
 (define-scheme-type <top>
     #f
   <top>-constructor <top>-type-predicate

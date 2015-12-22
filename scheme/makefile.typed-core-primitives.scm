@@ -982,6 +982,7 @@
 (include "makefile.typed-core-primitives.pointers.scm"			#t)
 (include "makefile.typed-core-primitives.vectors.scm"			#t)
 (include "makefile.typed-core-primitives.pairs-and-lists.scm"		#t)
+(include "makefile.typed-core-primitives.annotation-objects.scm"	#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)
 
 
