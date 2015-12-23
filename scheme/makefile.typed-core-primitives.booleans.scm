@@ -22,6 +22,22 @@
 ;;
 
 
+;;;; booleans, safe procedures
+
+(section
+
+(declare-type-predicate boolean?	<boolean>)
+
+(declare-core-primitive boolean=?
+    (safe)
+  (signatures
+   ((<boolean> <boolean>)		=> (<boolean>)))
+  (attributes
+   ((_ _)				foldable effect-free)))
+
+/section)
+
+
 ;;;; core syntactic binding descriptors, typed safe OOP core primitives: booleans
 
 (section

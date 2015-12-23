@@ -490,12 +490,12 @@
 	       ((symbol?  datum)	(core-prim-id '<symbol>))
 	       ((keyword? datum)	(core-prim-id '<keyword>))
 
-	       ((fixnum?  datum)	(cond ((fx<? 0 datum)
+	       ((fixnum?  datum)	(cond ((fxpositive? datum)
 					       (core-prim-id '<positive-fixnum>))
-					      ((fx>? 0 datum)
-					       (core-prim-id '<negative-fixnum>))
+					      ((fxzero? datum)
+					       (core-prim-id '<non-negative-fixnum>))
 					      (else
-					       (core-prim-id '<zero-fixnum>))))
+					       (core-prim-id '<fixnum>))))
 	       ((flonum?  datum)	(core-prim-id '<flonum>))
 	       ((ratnum?  datum)	(core-prim-id '<ratnum>))
 	       ((bignum?  datum)	(core-prim-id '<bignum>))

@@ -3410,10 +3410,7 @@
     (<number>					v $language)
 
     (<non-negative-fixnum>			v $language)
-    ;;(<non-positive-fixnum>			v $language)
-    (<negative-fixnum>				v $language)
     (<positive-fixnum>				v $language)
-    (<zero-fixnum>				v $language)
 
     (<string>					v $language)
     (<vector>					v $language)

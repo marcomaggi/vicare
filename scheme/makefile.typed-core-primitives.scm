@@ -870,8 +870,8 @@
 (define-syntax declare-unsafe-bytevector-accessor
   ;;Usage examples:
   ;;
-  ;;   (declare-unsafe-bytevector-accessor $bytevector-u8-ref <octet>)
-  ;;   (declare-unsafe-bytevector-accessor $bytevector-s8-ref <byte>)
+  ;;   (declare-unsafe-bytevector-accessor $bytevector-u8-ref <non-negative-fixnum>)
+  ;;   (declare-unsafe-bytevector-accessor $bytevector-s8-ref <fixnum>)
   ;;
   (syntax-rules ()
     ((_ ?who ?return-value-tag)
@@ -886,7 +886,7 @@
 (define-syntax declare-unsafe-bytevector-mutator
   ;;Usage examples:
   ;;
-  ;;   (declare-unsafe-bytevector-mutator $bytevector-set! <octet>/byte)
+  ;;   (declare-unsafe-bytevector-mutator $bytevector-set! <fixnum>)
   ;;
   (syntax-rules ()
     ((_ ?who ?new-value-tag)
@@ -972,18 +972,20 @@
 
 ;;;; include files
 
-(include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
+(include "makefile.typed-core-primitives.annotation-objects.scm"	#t)
+(include "makefile.typed-core-primitives.bignums.scm"			#t)
 (include "makefile.typed-core-primitives.booleans.scm"			#t)
+(include "makefile.typed-core-primitives.bytevectors.scm"		#t)
 (include "makefile.typed-core-primitives.characters.scm"		#t)
-(include "makefile.typed-core-primitives.transcoders.scm"		#t)
+(include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
+(include "makefile.typed-core-primitives.keywords.scm"			#t)
+(include "makefile.typed-core-primitives.numerics.scm"			#t)
+(include "makefile.typed-core-primitives.pairs-and-lists.scm"		#t)
+(include "makefile.typed-core-primitives.pointers.scm"			#t)
 (include "makefile.typed-core-primitives.strings.scm"			#t)
 (include "makefile.typed-core-primitives.symbols.scm"			#t)
-(include "makefile.typed-core-primitives.keywords.scm"			#t)
-(include "makefile.typed-core-primitives.pointers.scm"			#t)
+(include "makefile.typed-core-primitives.transcoders.scm"		#t)
 (include "makefile.typed-core-primitives.vectors.scm"			#t)
-(include "makefile.typed-core-primitives.pairs-and-lists.scm"		#t)
-(include "makefile.typed-core-primitives.annotation-objects.scm"	#t)
-(include "makefile.typed-core-primitives.numerics.scm"			#t)
 
 
 ;;;; done

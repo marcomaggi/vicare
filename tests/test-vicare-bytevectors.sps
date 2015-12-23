@@ -24,13 +24,15 @@
 
 
 #!vicare
-(import (vicare)
-  (prefix (vicare platform words) words.)
-  (vicare system $bytevectors)
-  (vicare checks))
+(program (test-vicare-bytevectors)
+  (options strict-r6rs)
+  (import (vicare)
+    (prefix (vicare platform words) words.)
+    (vicare system $bytevectors)
+    (vicare checks))
 
-(check-set-mode! 'report-failed)
-(check-display "*** testing Vicare bytevector functions\n")
+  (check-set-mode! 'report-failed)
+  (check-display "*** testing Vicare bytevector functions\n")
 
 
 ;;;; syntax helpers
@@ -3465,6 +3467,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;;Local Variables:

@@ -170,31 +170,9 @@
     <fixnum>
   #t non-negative-fixnum?)
 
-;; (define-scheme-type <non-positive-fixnum>
-;;     <fixnum>
-;;   #t non-positive-fixnum?)
-
-(define-scheme-type <negative-fixnum>
-    <fixnum>
-  #t negative-fixnum?)
-
 (define-scheme-type <positive-fixnum>
     <non-negative-fixnum>
   #t positive-fixnum?)
-
-(define-scheme-type <zero-fixnum>
-    <non-negative-fixnum>
-  #t fxzero?)
-
-;;; --------------------------------------------------------------------
-
-(define-scheme-type <byte>
-    <fixnum>
-  #t byte-fixnum?)
-
-(define-scheme-type <octet>
-    <non-negative-fixnum>
-  #t octet-fixnum?)
 
 
 ;;;; compound types
