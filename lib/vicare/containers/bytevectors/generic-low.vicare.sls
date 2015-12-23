@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2011, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -240,7 +240,9 @@
 	     ((char-set? criterion)
 	      (let loop ((i start))
 		(or (<= past i)
-		    (and (char-set-contains? criterion (integer->char (sequence-ref bv i)))
+		    (and (let ((X (sequence-ref bv i)))
+			   (and (fixnum-in-character-range? X)
+				(char-set-contains? criterion (integer->char X))))
 			 (loop (+ 1 i))))))
 
 	     ((procedure? criterion)
@@ -276,7 +278,9 @@
 	     ((char-set? criterion)
 	      (let loop ((i start))
 		(and (< i past)
-		     (or (char-set-contains? criterion (integer->char (sequence-ref bv i)))
+		     (or (let ((X (sequence-ref bv i)))
+			   (and (fixnum-in-character-range? X)
+				(char-set-contains? criterion (integer->char X))))
 			 (loop (+ i 1))))))
 
 	     ((procedure? criterion)
@@ -882,21 +886,24 @@
     (cond ((%sequence-index byte-cased? bv i past)
 	   => (lambda (i)
 		(sequence-set! bv i
-				    (char->integer
-				     (char-titlecase
-				      (integer->char (sequence-ref bv i)))))
+			       (char->integer
+				(char-titlecase
+				 (integer->char (let ((X (sequence-ref bv i)))
+						  (if (fixnum-in-character-range? X)
+						      X
+						    (assertion-violation #f "expected fixnum in character range" X)))))))
 		(let ((i1 (+ i 1)))
 		  (cond ((%sequence-skip byte-cased? bv i1 past)
 			 => (lambda (j)
 			      (%subsequence-map! (lambda (b)
-							(char->integer
-							 (char-downcase (integer->char b))))
-						      bv i1 j)
+						   (char->integer
+						    (char-downcase (integer->char b))))
+						 bv i1 j)
 			      (loop (+ j 1))))
 			(else
 			 (%subsequence-map! (lambda (b)
-						   (char->integer (char-downcase (integer->char b))))
-						 bv i1 past)))))))))
+					      (char->integer (char-downcase (integer->char b))))
+					    bv i1 past)))))))))
 
 
 ;;;; folding
@@ -1215,9 +1222,10 @@
 	((char? criterion)
 	 (%sequence-index (char->integer criterion) bv start past))
 	((char-set? criterion)
-	 (%sequence-index (lambda (byte)
-				 (char-set-contains? criterion (integer->char byte)))
-			       bv start past))
+	 (%sequence-index (lambda (X)
+			    (and (fixnum-in-character-range? X)
+				 (char-set-contains? criterion (integer->char X))))
+			  bv start past))
 	((procedure? criterion)
 	 (let loop ((i start))
 	   (and (< i past)
@@ -1234,8 +1242,9 @@
 	((char? criterion)
 	 (%sequence-index-right (char->integer criterion) bv start past))
 	((char-set? criterion)
-	 (%sequence-index-right (lambda (byte)
-				       (char-set-contains? criterion (integer->char byte)))
+	 (%sequence-index-right (lambda (X)
+				  (and (fixnum-in-character-range? X)
+				       (char-set-contains? criterion (integer->char X))))
 			       bv start past))
 	((procedure? criterion)
 	 (let loop ((i (- past 1)))

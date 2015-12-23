@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2010, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2011, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -127,6 +127,7 @@
 
 #!r6rs
 (library (vicare containers bytevectors s8low)
+  (options strict-r6rs)
   (export
 
     bytevector->s8-list		s8-list->bytevector
@@ -237,6 +238,9 @@
     %bytevector-s8-reverse  %bytevector-s8-reverse!
     %bytevector-s8-replace)
   (import (rnrs)
+    (only (vicare)
+	  define*
+	  fixnum-in-character-range?)
     (vicare containers bytevectors generic-low)
     (vicare containers char-sets)
     (vicare containers knuth-morris-pratt))

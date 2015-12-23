@@ -26,6 +26,7 @@
 
 #!vicare
 (library (vicare posix sendmail)
+  (options strict-r6rs)
   (export sendmail)
   (import (vicare)
     (prefix (vicare posix) px.))
