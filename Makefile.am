@@ -513,7 +513,10 @@ EXTRA_DIST		+= \
 	scheme/makefile.built-in-record-types.scm				\
 	scheme/makefile.typed-core-primitives.scm				\
 	scheme/makefile.typed-core-primitives.annotation-objects.scm		\
+	scheme/makefile.typed-core-primitives.bignums.scm			\
 	scheme/makefile.typed-core-primitives.booleans.scm			\
+	scheme/makefile.typed-core-primitives.bytevectors.scm			\
+	scheme/makefile.typed-core-primitives.cflonums.scm			\
 	scheme/makefile.typed-core-primitives.characters.scm			\
 	scheme/makefile.typed-core-primitives.generic-primitives.scm		\
 	scheme/makefile.typed-core-primitives.keywords.scm			\

@@ -976,6 +976,7 @@
 (include "makefile.typed-core-primitives.bignums.scm"			#t)
 (include "makefile.typed-core-primitives.booleans.scm"			#t)
 (include "makefile.typed-core-primitives.bytevectors.scm"		#t)
+(include "makefile.typed-core-primitives.cflonums.scm"			#t)
 (include "makefile.typed-core-primitives.characters.scm"		#t)
 (include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
