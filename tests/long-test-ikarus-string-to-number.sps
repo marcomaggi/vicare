@@ -58,7 +58,7 @@
 	(unless (number? result)
 	  (error 'test "did not parse as number" string))
       (when result
-	(error test "incorrectly parse as non-#f" string)))
+	(error 'test "incorrectly parse as non-#f" string)))
     (check result (=> equal-results?) expected)
     (unless (equal-results? result expected)
       (error 'test "failed/expected/got" string expected result))
