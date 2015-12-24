@@ -347,6 +347,7 @@
     preconditions
 
     ;; for internal use only
+    make-simple-condition
     initialise-condition-objects-late-binding
     %raise-out-of-memory)
   (import (except (vicare)

@@ -689,7 +689,9 @@
     ;;Wed Oct 28, 2015)
     ;;
     (cond ((symbol? ell)
-  	   (fabricate-list-type-identifier (core-prim-id ell)))
+	   (if (eq? ell '<no-return>)
+	       (core-prim-id ell)
+	     (fabricate-list-type-identifier (core-prim-id ell))))
   	  ((pair? ell)
   	   (cons (core-prim-id   (car ell))
   		 (%any-list->ids (cdr ell))))

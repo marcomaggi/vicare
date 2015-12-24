@@ -37,7 +37,7 @@
 
    syntax-object.type-signature?			syntax-object.type-signature.single-identifier?
    syntax-object.type-signature.fully-untyped?		syntax-object.type-signature.partially-untyped?
-   syntax-object.type-signature.untyped?
+   syntax-object.type-signature.untyped?		syntax-object.type-signature.no-return?
    syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.common-ancestor
    syntax-object.type-signature.min-and-max-count
 
@@ -213,6 +213,10 @@
 	 ((or ($top-tag-id? id1)
 	      ($top-tag-id? id2))
 	  (top-tag-id))
+	 (($no-return-tag-id? id1)
+	  id2)
+	 (($no-return-tag-id? id2)
+	  id1)
 	 (else
 	  (let outer-loop ((type1 id1))
 	    (let inner-loop ((type2 id2))
@@ -536,12 +540,14 @@
   ((stx)
    (syntax-object.type-signature? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   (syntax-match stx (<list>)
+   (syntax-match stx (<list> <no-return>)
      (() #t)
      ((?id . ?rest)
       (and (type-identifier? ?id lexenv)
 	   (syntax-object.type-signature? ?rest lexenv)))
      (<list>
+      #t)
+     (<no-return>
       #t)
      (?rest
       (identifier? ?rest)
@@ -570,6 +576,17 @@
   ;;In other words, return true if STX is a standalone "<list>".
   ;;
   (list-tag-id? stx))
+
+(define* (syntax-object.type-signature.no-return? stx)
+  ;;The argument STX must be a  syntax object representing a type signature according
+  ;;to  SYNTAX-OBJECT.TYPE-SIGNATURE?, otherwise  the behaviour  of this  function is
+  ;;unspecified.   Return true  if  STX  is a  syntax  object  representing the  type
+  ;;signature  of   an  expression  that,   rather  than  returning,  will   raise  a
+  ;;non-continuable exception.
+  ;;
+  ;;In other words, return true if STX is a standalone "<no-return>".
+  ;;
+  (no-return-tag-id? stx))
 
 ;;; --------------------------------------------------------------------
 

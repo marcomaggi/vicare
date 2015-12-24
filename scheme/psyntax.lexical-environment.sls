@@ -298,15 +298,18 @@
     syntax-parameter-value
 
     ;; core type identifiers
-    procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
-    predicate-tag-id		$predicate-tag-id?	predicate-tag-id?
-    list-tag-id			$list-tag-id?		list-tag-id?
-    null-tag-id			$null-tag-id?		null-tag-id?
-    vector-tag-id		$vector-tag-id?		vector-tag-id?
-    nlist-tag-id		$nlist-tag-id?		nlist-tag-id?
-    top-tag-id			$top-tag-id?		top-tag-id?
+    no-return-tag-id		$no-return-tag-id?		no-return-tag-id?
+    procedure-tag-id		$procedure-tag-id?		procedure-tag-id?
+    predicate-tag-id		$predicate-tag-id?		predicate-tag-id?
+    list-tag-id			$list-tag-id?			list-tag-id?
+    null-tag-id			$null-tag-id?			null-tag-id?
+    vector-tag-id		$vector-tag-id?			vector-tag-id?
+    nlist-tag-id		$nlist-tag-id?			nlist-tag-id?
+    top-tag-id			$top-tag-id?			top-tag-id?
     boolean-tag-id		void-tag-id
     struct-tag-id		record-tag-id
+    simple-condition-tag-id	$simple-condition-tag-id?	simple-condition-tag-id?
+    compound-condition-tag-id	$compound-condition-tag-id?	compound-condition-tag-id?
 
     ;; utilities for identifiers
     valid-bound-ids?			distinct-bound-ids?
@@ -2512,18 +2515,22 @@
 					(receive-and-return (id)
 					    (core-prim-id '?tag)
 					  (set! memoized-id id))))))))))
-  (define-tag-retriever top-tag-id		<top>)
-  (define-tag-retriever void-tag-id		<void>)
-  (define-tag-retriever procedure-tag-id	<procedure>)
-  (define-tag-retriever predicate-tag-id	<predicate>)
-  (define-tag-retriever boolean-tag-id		<boolean>)
-  (define-tag-retriever struct-tag-id		<struct>)
-  (define-tag-retriever record-tag-id		<record>)
-  (define-tag-retriever vector-tag-id		<vector>)
-  (define-tag-retriever list-tag-id		<list>)
-  (define-tag-retriever null-tag-id		<null>)
-  (define-tag-retriever nlist-tag-id		<nlist>)
+  (define-tag-retriever no-return-tag-id		<no-return>)
+  (define-tag-retriever top-tag-id			<top>)
+  (define-tag-retriever void-tag-id			<void>)
+  (define-tag-retriever procedure-tag-id		<procedure>)
+  (define-tag-retriever predicate-tag-id		<predicate>)
+  (define-tag-retriever boolean-tag-id			<boolean>)
+  (define-tag-retriever struct-tag-id			<struct>)
+  (define-tag-retriever record-tag-id			<record>)
+  (define-tag-retriever vector-tag-id			<vector>)
+  (define-tag-retriever list-tag-id			<list>)
+  (define-tag-retriever null-tag-id			<null>)
+  (define-tag-retriever nlist-tag-id			<nlist>)
+  (define-tag-retriever simple-condition-tag-id		&condition)
+  (define-tag-retriever compound-condition-tag-id	<compound-condition>)
   #| end of let-syntax |# )
+
 
 ;;; --------------------------------------------------------------------
 
@@ -2532,6 +2539,7 @@
 				    ((_ ?who ?tag-retriever)
 				     (define (?who id)
 				       (~free-identifier=? id (?tag-retriever)))))))
+  (define-unsafe-tag-predicate $no-return-tag-id?		no-return-tag-id)
   (define-unsafe-tag-predicate $top-tag-id?			top-tag-id)
   (define-unsafe-tag-predicate $procedure-tag-id?		procedure-tag-id)
   (define-unsafe-tag-predicate $predicate-tag-id?		predicate-tag-id)
@@ -2539,6 +2547,8 @@
   (define-unsafe-tag-predicate $list-tag-id?			list-tag-id)
   (define-unsafe-tag-predicate $null-tag-id?			null-tag-id)
   (define-unsafe-tag-predicate $nlist-tag-id?			nlist-tag-id)
+  (define-unsafe-tag-predicate $simple-condition-tag-id?	simple-condition-tag-id)
+  (define-unsafe-tag-predicate $compound-condition-tag-id?	compound-condition-tag-id)
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -2549,6 +2559,7 @@
 			      (define (?who obj)
 				(and (identifier? obj)
 				     (?unsafe-pred obj)))))))
+  (define-tag-predicate no-return-tag-id?		$no-return-tag-id?)
   (define-tag-predicate top-tag-id?			$top-tag-id?)
   (define-tag-predicate procedure-tag-id?		$procedure-tag-id?)
   (define-tag-predicate predicate-tag-id?		$predicate-tag-id?)
@@ -2556,6 +2567,8 @@
   (define-tag-predicate list-tag-id?			$list-tag-id?)
   (define-tag-predicate null-tag-id?			$null-tag-id?)
   (define-tag-predicate nlist-tag-id?			$nlist-tag-id?)
+  (define-tag-predicate simple-condition-tag-id?	$simple-condition-tag-id?)
+  (define-tag-predicate compound-condition-tag-id?	$compound-condition-tag-id?)
   #| end of LET-SYNTAX |# )
 
 

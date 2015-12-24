@@ -11,6 +11,10 @@
   (methods
    (hash		object-hash)))
 
+(define-scheme-type <no-return>
+    #f
+  #f always-false)
+
 
 ;;;; standalone object types
 
@@ -289,6 +293,12 @@
     <hashtable>
   make-hashtable hashtable-equiv?)
 
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <code>
+    <top>
+  #f code?)
+
 
 ;;;; records and structs
 
@@ -316,6 +326,9 @@
 
 ;;; --------------------------------------------------------------------
 
+;;This is the root of all the  condition object types, both simple and compound.  All
+;;the simple condition types are derived from "&condition".
+;;
 (define-scheme-type <condition>
     <record>
   #f condition?

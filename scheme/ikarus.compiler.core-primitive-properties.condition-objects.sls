@@ -68,7 +68,7 @@
 (declare-core-primitive condition-predicate
     (safe)
   (signatures
-   ((T:object)		=> (T:boolean)))
+   ((T:record-type-descriptor)		=> (T:procedure)))
   (attributes
    ((_)			effect-free)))
 

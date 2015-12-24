@@ -508,9 +508,11 @@ EXTRA_DIST += \
 #### compiling the boot image: build rules
 
 VICARE_NEW_BOOT		= vicare.boot
-EXTRA_DIST		+= \
+VICARE_BOOT_MAKEFILES	= \
+	scheme/makefile.sps							\
 	scheme/makefile.scheme-object-types.scm					\
 	scheme/makefile.built-in-record-types.scm				\
+	\
 	scheme/makefile.typed-core-primitives.scm				\
 	scheme/makefile.typed-core-primitives.annotation-objects.scm		\
 	scheme/makefile.typed-core-primitives.bignums.scm			\
@@ -518,6 +520,9 @@ EXTRA_DIST		+= \
 	scheme/makefile.typed-core-primitives.bytevectors.scm			\
 	scheme/makefile.typed-core-primitives.cflonums.scm			\
 	scheme/makefile.typed-core-primitives.characters.scm			\
+	scheme/makefile.typed-core-primitives.code-objects.scm			\
+	scheme/makefile.typed-core-primitives.compnums.scm			\
+	scheme/makefile.typed-core-primitives.condition-objects.scm		\
 	scheme/makefile.typed-core-primitives.generic-primitives.scm		\
 	scheme/makefile.typed-core-primitives.keywords.scm			\
 	scheme/makefile.typed-core-primitives.numerics.scm			\
@@ -527,6 +532,8 @@ EXTRA_DIST		+= \
 	scheme/makefile.typed-core-primitives.symbols.scm			\
 	scheme/makefile.typed-core-primitives.transcoders.scm			\
 	scheme/makefile.typed-core-primitives.vectors.scm
+
+EXTRA_DIST		+= $(VICARE_BOOT_MAKEFILES)
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
@@ -550,9 +557,7 @@ CLEANFILES		+= $(VICARE_NEW_BOOT)
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
 	scheme/ikarus.config.scm			\
-	scheme/makefile.sps				\
-	scheme/makefile.scheme-object-types.scm		\
-	scheme/makefile.typed-core-primitives.scm	\
+	$(VICARE_BOOT_MAKEFILES)			\
 	\
 	lib/vicare/platform/words.vicare.sls		\
 	lib/vicare/platform/constants.vicare.sls	\

@@ -291,9 +291,19 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%run-time-predicate)
 	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi %synner))
-	 (syntax-match (type-signature-tags expr.sig) (<top> <list>)
+	 (syntax-match (type-signature-tags expr.sig) (<top> <list> <condition> <compound-condition>)
 	   ((<top>)
 	    (%run-time-predicate))
+
+	   ((<compound-condition>)
+	    (cond ((type-identifier-super-and-sub? ?pred-type-id (compound-condition-tag-id) lexenv.run input-form.stx)
+		   (%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand))
+		  ((type-identifier-super-and-sub? (compound-condition-tag-id) ?pred-type-id lexenv.run input-form.stx)
+		   (%run-time-predicate))
+		  ((type-identifier-super-and-sub? (simple-condition-tag-id)   ?pred-type-id lexenv.run input-form.stx)
+		   (%run-time-predicate))
+		  (else
+		   (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))))
 
 	   ((?expr-type-id)
 	    (if (or (and (null-tag-id? ?expr-type-id)
@@ -917,6 +927,9 @@
       ;;unspecified: always do a run-time validation.
       (%run-time-validation who input-form.stx lexenv.run lexenv.expand
 			    asrt.tags expr.psi return-values?))
+
+     ((syntax-object.type-signature.no-return? expr.tags)
+      (%just-evaluate-the-expression expr.psi return-values?))
 
      ((and (syntax-object.type-signature.single-identifier? asrt.tags)
 	   (syntax-object.type-signature.single-identifier? expr.tags))

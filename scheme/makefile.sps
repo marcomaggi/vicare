@@ -3377,9 +3377,12 @@
     (&source-position-rtd)
     (&source-position-rcd)
 
+    (make-simple-condition)
+
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme object types
 
+    (<no-return>				v $language)
     (<top>					v $language)
     (<void>					v $language)
     (<boolean>					v $language)
@@ -3423,6 +3426,7 @@
     (<hashtable-eq>				v $language)
     (<hashtable-eqv>				v $language)
     (<hashtable-equiv>				v $language)
+    (<code>					v $language)
 
     (<record>					v $language)
     (<record-type-descriptor>			v $language)

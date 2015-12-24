@@ -151,8 +151,8 @@
 (define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   (list
    (define-built-in-condition-type &condition
-       #f
-     condition condition?)
+       <condition>
+     make-simple-condition condition?)
 
    (define-built-in-condition-type &message
        &condition
