@@ -6044,7 +6044,7 @@ Condition object type representing system errors described by an encoded
 
 @defun make-errno-condition @var{errno}
 Build and return a new @condition{errno} condition object holding the
-given encoded @code{errno} value.
+given encoded @var{errno} value.
 @end defun
 
 
