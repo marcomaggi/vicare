@@ -26,13 +26,15 @@
 
 
 #!vicare
-(import (vicare)
-  (prefix (vicare unsafe operations)
-	  unsafe.)
-  (vicare checks))
+(program (test-vicare-chars)
+  (options strict-r6rs)
+  (import (vicare)
+    (prefix (vicare unsafe operations)
+	    unsafe.)
+    (vicare checks))
 
-(check-set-mode! 'report-failed)
-(check-display "*** testing Vicare char functions\n")
+  (check-set-mode! 'report-failed)
+  (check-display "*** testing Vicare char functions\n")
 
 
 ;;;; syntax helpers
@@ -1008,6 +1010,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;;Local Variables:
