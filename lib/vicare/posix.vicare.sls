@@ -1388,7 +1388,7 @@
     ((define-file-is (syntax-rules ()
 		       ((_ ?who ?flag)
 			(define (?who mode)
-			  (with-arguments-validation (?who)
+			  (with-arguments-validation (__who__)
 			      ((fixnum  mode))
 			    ($fx= ?flag ($fxand ?flag mode))))
 			))))
