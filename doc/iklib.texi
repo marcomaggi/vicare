@@ -9772,12 +9772,12 @@ report errors at run--time, rather than at compile--time.
 @end deffn
 
 
-@defun make-expander-options @var{symbol} @dots{}
+@defun make-expander-options @var{list-of-symbols}
 Return an enumeration set as defined by @func{expander-options}.
 @end defun
 
 
-@defun make-compiler-options @var{symbol} @dots{}
+@defun make-compiler-options @var{list-of-symbols}
 Return an enumeration set as defined by @func{compiler-options}.
 @end defun
 
@@ -18258,7 +18258,7 @@ port's underlying device is stateless, for example at the @repl{}.
 @end defun
 
 
-@defun make-file-options @var{symbol} ...
+@defun make-file-options @var{list-of-symbols}
 Return an enumeration set as defined by @func{file-options}.
 @end defun
 
