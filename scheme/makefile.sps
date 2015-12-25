@@ -3436,6 +3436,7 @@
     (<condition>				v $language)
     (<compound-condition>			v $language)
     (<annotation>				v $language)
+    (<promise>					v $language)
 
     (<port>					v $language)
     (<input-port>				v $language)

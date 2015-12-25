@@ -339,6 +339,14 @@
     <condition>
   condition compound-condition?)
 
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <promise>
+    <struct>
+  make-promise promise?
+  (methods
+   (force	force)))
+
 
 ;;;; input/output ports
 
