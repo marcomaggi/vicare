@@ -342,7 +342,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <promise>
-    <struct>
+    <record>
   make-promise promise?
   (methods
    (force	force)))

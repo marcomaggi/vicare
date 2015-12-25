@@ -14,33 +14,39 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus promises)
   (export
-    force
-    (rename (public-make-promise make-promise))
-    promise?)
+    make-promise
+    promise?
+    force)
   (import (except (vicare)
 		  force
 		  make-promise
 		  promise?))
 
 
-(define-struct promise
-  (proc results))
+(define-record-type promise
+  (nongenerative)
+  (fields (immutable proc)
+	  (mutable results))
+  (protocol
+    (lambda (make-record)
+      (define* (make-promise {proc procedure?})
+	(make-record proc #f))
+      make-promise)))
 
 (define* (force {P promise?})
   (if ($promise-results P)
       (apply values ($promise-results P))
-    (call-with-values ($promise-proc P)
-      (lambda x*
+    (call-with-values
+	($promise-proc P)
+      (lambda args
 	(if ($promise-results P)
 	    (apply values ($promise-results P))
 	  (begin
-	    ($set-promise-results! P x*)
-	    (apply values x*)))))))
-
-(define* (public-make-promise {proc procedure?})
-  (make-promise proc #f))
+	    ($promise-results-set! P args)
+	    (apply values args)))))))
 
 
 ;;;; done
