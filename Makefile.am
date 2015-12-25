@@ -525,6 +525,8 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.typed-core-primitives.condition-objects.scm		\
 	scheme/makefile.typed-core-primitives.configuration.scm			\
 	scheme/makefile.typed-core-primitives.control.scm			\
+	scheme/makefile.typed-core-primitives.enum-sets.scm			\
+	scheme/makefile.typed-core-primitives.environment-inquiry.scm		\
 	scheme/makefile.typed-core-primitives.generic-primitives.scm		\
 	scheme/makefile.typed-core-primitives.keywords.scm			\
 	scheme/makefile.typed-core-primitives.numerics.scm			\

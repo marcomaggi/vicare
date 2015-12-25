@@ -462,20 +462,26 @@
   ((item-type.id lexenv input-form.stx)
    (define (make-fabricated-list-type-name id)
      (gensym (string-append (symbol->string (identifier->symbol id)) "*")))
-   (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
-     (or (object-type-spec.memoised-list-id item-ots)
-	 (cond ((top-tag-id? item-type.id)
-		(receive-and-return (list-type.id)
-		    (list-tag-id)
-		  (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
-	       (else
-		(let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))
-		       (list-type.lab	(generate-label-gensym list-type.sym))
-		       (list-ots	(make-list-type-spec item-type.id)))
-		  (receive-and-return (list-type.id)
-		      (make-top-level-syntactic-identifier-from-source-name-and-label list-type.sym list-type.lab)
-		    (set-symbol-value! list-type.lab (make-syntactic-binding-descriptor/list-sub-type-name list-ots #f))
-		    (object-type-spec.memoised-list-id-set! item-ots list-type.id)))))))))
+   (syntax-match item-type.id (<char> <string> <pointer> <symbol>)
+     (<char>		(core-prim-id '<char*>))
+     (<string>		(core-prim-id '<string*>))
+     (<symbol>		(core-prim-id '<symbol*>))
+     (<pointer>		(core-prim-id '<pointer*>))
+     (else
+      (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
+	(or (object-type-spec.memoised-list-id item-ots)
+	    (cond ((top-tag-id? item-type.id)
+		   (receive-and-return (list-type.id)
+		       (list-tag-id)
+		     (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
+		  (else
+		   (let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))
+			  (list-type.lab	(generate-label-gensym list-type.sym))
+			  (list-ots	(make-list-type-spec item-type.id)))
+		     (receive-and-return (list-type.id)
+			 (make-top-level-syntactic-identifier-from-source-name-and-label list-type.sym list-type.lab)
+		       (set-symbol-value! list-type.lab (make-syntactic-binding-descriptor/list-sub-type-name list-ots #f))
+		       (object-type-spec.memoised-list-id-set! item-ots list-type.id)))))))))))
 
 
 ;;;; helpers and utilities
@@ -513,6 +519,7 @@
 	       ((list?    datum)	(cond ((null? datum)		(core-prim-id '<null>))
 					      ((for-all char?   datum)	(core-prim-id '<char*>))
 					      ((for-all string? datum)	(core-prim-id '<string*>))
+					      ((for-all symbol? datum)	(core-prim-id '<symbol*>))
 					      (else			(core-prim-id '<nlist>))))
 	       ((pair?    datum)	(core-prim-id '<pair>))
 

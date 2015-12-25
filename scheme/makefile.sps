@@ -837,6 +837,9 @@
    (define-list-type <pointer*>
        <pointer>)
 
+   (define-list-type <symbol*>
+       <symbol>)
+
    ))
 
 
@@ -3437,6 +3440,8 @@
     (<compound-condition>			v $language)
     (<annotation>				v $language)
     (<promise>					v $language)
+    (<enum-set>					v $language)
+    (<utsname>					v $language)
 
     (<port>					v $language)
     (<input-port>				v $language)
@@ -3474,6 +3479,7 @@
     (<char*>					v $language)
     (<string*>					v $language)
     (<pointer*>					v $language)
+    (<symbol*>					v $language)
 
     ;; helpers
     (make-list-of-predicate)

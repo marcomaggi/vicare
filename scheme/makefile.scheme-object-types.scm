@@ -347,6 +347,33 @@
   (methods
    (force	force)))
 
+(define-scheme-type <enum-set>
+    <struct>
+  make-enumeration enum-set?
+  (methods
+   (list		enum-set->list)
+   (complement		enum-set-complement)
+   (constructor		enum-set-constructor)
+   (difference		enum-set-difference)
+   (indexer		enum-set-indexer)
+   (intersection	enum-set-intersection)
+   (member?		enum-set-member?)
+   (projection		enum-set-projection)
+   (subset?		enum-set-subset?)
+   (union		enum-set-union)
+   (universe		enum-set-universe)
+   (=?			enum-set=?)))
+
+(define-scheme-type <utsname>
+    <struct>
+  uname utsname?
+  (methods
+   (sysname		utsname-sysname)
+   (nodename		utsname-nodename)
+   (release		utsname-release)
+   (version		utsname-version)
+   (machine		utsname-machine)))
+
 
 ;;;; input/output ports
 
