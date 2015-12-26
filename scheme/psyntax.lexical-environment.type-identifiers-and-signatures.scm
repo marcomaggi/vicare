@@ -840,6 +840,13 @@
 (define <type-signature>-rcd
   (record-constructor-descriptor <type-signature>))
 
+(module ()
+  ($record-type-printer-set! (record-type-descriptor <type-signature>)
+    (lambda (S port sub-printer)
+      (display "#[type-signature" port)
+      (sub-printer (type-signature-tags S))
+      (display "]" port))))
+
 ;;; --------------------------------------------------------------------
 ;;; special constructors
 
