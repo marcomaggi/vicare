@@ -85,9 +85,9 @@
     foreign::dynamically-load-shared-object-from-identifier
 
     ;; interpreting the result of reading annotated sources
-    annotation?				annotation-expression
-    annotation-stripped			annotation-source
-    annotation-textual-position
+    reader-annotation?			reader-annotation-expression
+    reader-annotation-stripped		reader-annotation-source
+    reader-annotation-textual-position
 
     ;; source position condition objects
     make-source-position-condition	source-position-condition?
@@ -147,6 +147,14 @@
 		     enable-arguments-validation?))
 	    options::)
     (ikarus.printing-messages)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Dec 26,
+    ;;2015)
+    (only (ikarus.reader)
+	  reader-annotation?
+	  reader-annotation-expression
+	  reader-annotation-stripped
+	  reader-annotation-source
+	  reader-annotation-textual-position)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
     ;;2015)
     (prefix (only (ikarus records procedural)

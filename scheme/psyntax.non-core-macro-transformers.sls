@@ -256,8 +256,8 @@
     ((__file__)
      (lambda (stx)
        (let ((expr (stx-expr stx)))
-	 (if (annotation? expr)
-	     (let ((pos (annotation-textual-position expr)))
+	 (if (reader-annotation? expr)
+	     (let ((pos (reader-annotation-textual-position expr)))
 	       (if (source-position-condition? pos)
 		   (bless
 		    `(quote ,(source-position-port-id pos)))
@@ -269,8 +269,8 @@
     ((__line__)
      (lambda (stx)
        (let ((expr (stx-expr stx)))
-	 (if (annotation? expr)
-	     (let ((pos (annotation-textual-position expr)))
+	 (if (reader-annotation? expr)
+	     (let ((pos (reader-annotation-textual-position expr)))
 	       (if (source-position-condition? pos)
 		   (bless
 		    `(quote ,(source-position-line pos)))

@@ -71,8 +71,8 @@
   (define (syntax-kind? x pred?)
     (cond ((stx? x)
 	   (syntax-kind? (stx-expr x) pred?))
-	  ((annotation? x)
-	   (syntax-kind? (annotation-expression x) pred?))
+	  ((reader-annotation? x)
+	   (syntax-kind? (reader-annotation-expression x) pred?))
 	  (else
 	   (pred? x))))
 
@@ -92,8 +92,8 @@
 		(stx-mark* x)
 		(stx-rib*  x)
 		(stx-annotated-expr*   x)))
-	((annotation? x)
-	 (syntax-car (annotation-expression x)))
+	((reader-annotation? x)
+	 (syntax-car (reader-annotation-expression x)))
 	((pair? x)
 	 ($car x))
 	(else
@@ -105,8 +105,8 @@
 		(stx-mark* x)
 		(stx-rib*  x)
 		(stx-annotated-expr*   x)))
-	((annotation? x)
-	 (syntax-cdr (annotation-expression x)))
+	((reader-annotation? x)
+	 (syntax-cdr (reader-annotation-expression x)))
 	((pair? x)
 	 ($cdr x))
 	(else
@@ -130,8 +130,8 @@
 	   (map (lambda (x)
 		  (mkstx x mark* rib* ae*))
 	     ls)))
-	((annotation? x)
-	 (syntax-vector->list (annotation-expression x)))
+	((reader-annotation? x)
+	 (syntax-vector->list (reader-annotation-expression x)))
 	((vector? x)
 	 (vector->list x))
 	(else

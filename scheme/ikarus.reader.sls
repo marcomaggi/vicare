@@ -18,30 +18,34 @@
 (library (ikarus.reader)
   (export
     ;; public functions
-    read			get-datum
+    read				get-datum
     get-annotated-datum
 
     ;; annotated datum inspection
-    annotation?
-    annotation-expression	annotation-stripped
-    annotation-source		annotation-textual-position
+    reader-annotation?
+    reader-annotation-expression	reader-annotation-stripped
+    reader-annotation-source		reader-annotation-textual-position
+
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Dec 26,
+    ;;2015)
+    (rename (reader-annotation?		annotation?))
 
     ;; internal bindings only for Vicare
-    <annotation>-rtd		<annotation>-rcd
-    read-libraries-from-file	read-script-from-file
-    read-library-from-file	read-library-from-port)
+    <reader-annotation>-rtd		<reader-annotation>-rcd
+    read-libraries-from-file		read-script-from-file
+    read-library-from-file		read-library-from-port)
   (import (except (vicare)
 		  ;; public functions
 		  read				get-datum
 		  get-annotated-datum
 
 		  ;; annotated datum inspection
-		  annotation?
-		  annotation-expression		annotation-stripped
-		  annotation-source		annotation-textual-position
+		  reader-annotation?
+		  reader-annotation-expression	reader-annotation-stripped
+		  reader-annotation-source	reader-annotation-textual-position
 
 		  ;; internal bindings only for Vicare
-		  <annotation>-rtd		<annotation>-rcd
+		  <reader-annotation>-rtd	<reader-annotation>-rcd
 		  read-libraries-from-file	read-script-from-file
 		  read-library-from-file	read-library-from-port)
     (vicare system $fx)
@@ -201,68 +205,54 @@
 
 
 ;;;; annotated datums
-;;
-;;Constructor: make-annotation EXPR STRIPPED SOURCE POS
-;;Predicate: annotation? OBJ
-;;
-;;Field name: expression
-;;Field accessor: annotation-expression ANN
-;;  A list,  vector, identifier, what-have-you that  may contain further
-;;  annotations.
-;;
-;;Field name: stripped
-;;Field accessor: annotation-stripped ANN
-;;  The same S-expression of the EXPRESSION field with no annotations.
-;;
-;;Field name: source
-;;Field accessor: annotation-source ANN
-;;  A pair whose car is the port  identifier and whose cdr is the offset
-;;  of the character.
-;;
-;;Field name: textual-position
-;;Field accessor: annotation-textual-position ANN
-;;  A  condition  object  of  type "&source-position"  representing  the
-;;  position of  the expression in the  source code.  It is  used by the
-;;  expander.
-;;
-(module (<annotation>-rtd
-	 <annotation>-rcd
+
+(module (<reader-annotation>-rtd
+	 <reader-annotation>-rcd
 	 annotate
 	 annotate-simple
-	 annotation?
-	 annotation-expression
-	 annotation-stripped
-	 annotation-source
-	 annotation-textual-position)
+	 reader-annotation?
+	 reader-annotation-expression
+	 reader-annotation-stripped
+	 reader-annotation-source
+	 reader-annotation-textual-position)
 
-  (define-record-type (<annotation> make-annotation annotation?)
+  (define-record-type (<reader-annotation> make-reader-annotation reader-annotation?)
     (nongenerative)
-    (fields (immutable expression		annotation-expression)
-	    (immutable stripped			annotation-stripped)
-	    (immutable source			annotation-source)
-	    (immutable textual-position		annotation-textual-position))
+    (fields (immutable expression		reader-annotation-expression)
+		;A  list,  vector, identifier,  what-have-you  that  may contain  further
+		;annotations.
+	    (immutable stripped			reader-annotation-stripped)
+		;The same S-expression of the EXPRESSION field with no annotations.
+	    (immutable source			reader-annotation-source)
+		;A pair whose car is the port  identifier and whose cdr is the offset
+		;of the character.
+	    (immutable textual-position		reader-annotation-textual-position)
+		;A  condition  object  of type  "&source-position"  representing  the
+		;position of  the expression in the  source code.  It is  used by the
+		;expander.
+	    #| end of FIELDS |# )
     (protocol
       (lambda (make-record)
-	(define (make-annotation expression stripped source textual-position)
+	(define (make-reader-annotation expression stripped source textual-position)
 	  (make-record expression stripped source textual-position))
-	make-annotation)))
+	make-reader-annotation)))
 
-  (define <annotation>-rtd
-    (record-type-descriptor <annotation>))
-  (define <annotation>-rcd
-    (record-constructor-descriptor <annotation>))
+  (define <reader-annotation>-rtd
+    (record-type-descriptor <reader-annotation>))
+  (define <reader-annotation>-rcd
+    (record-constructor-descriptor <reader-annotation>))
 
   (define-inline (annotate-simple datum textual-pos)
-    (make-annotation datum datum
-		     (cons (source-position-port-id   textual-pos)
-			   (source-position-character textual-pos))
-		     textual-pos))
+    (make-reader-annotation datum datum
+			    (cons (source-position-port-id   textual-pos)
+				  (source-position-character textual-pos))
+			    textual-pos))
 
   (define-inline (annotate stripped expression textual-pos)
-    (make-annotation expression stripped
-		     (cons (source-position-port-id   textual-pos)
-			   (source-position-character textual-pos))
-		     textual-pos))
+    (make-reader-annotation expression stripped
+			    (cons (source-position-port-id   textual-pos)
+				  (source-position-character textual-pos))
+			    textual-pos))
 
   (module ()
     (define (%annotation-printer S port sub-printer)
@@ -272,18 +262,18 @@
 	(write thing port))
       (define-inline (%pretty-print thing)
 	(pretty-print* thing port 0 #f))
-      (%display "#[annotation")
+      (%display "#[reader-annotation")
       ;;Writing   the  annotation   expression  makes   the  output   really
       ;;unreadable.
       (%display " expression=#<omitted>")
-      (%display " stripped=")		(%pretty-print (annotation-stripped S))
+      (%display " stripped=")		(%pretty-print (reader-annotation-stripped S))
       ;;Avoid printing  the SOURCE field  because it  may be removed  in the
       ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
       ;;field.
-      (%display " textual-position=")	(%write (annotation-textual-position S))
+      (%display " textual-position=")	(%write (reader-annotation-textual-position S))
       (%display "]"))
 
-    ($record-type-printer-set! (record-type-descriptor <annotation>) %annotation-printer))
+    ($record-type-printer-set! (record-type-descriptor <reader-annotation>) %annotation-printer))
 
   #| end of module |# )
 
@@ -418,7 +408,7 @@
   (die/pos p -1 who msg . irritants))
 
 (define-syntax-rule (die/ann ann who msg . irritants)
-  (die/lex (annotation-textual-position ann) who msg . irritants))
+  (die/lex (reader-annotation-textual-position ann) who msg . irritants))
 
 
 ;;;; characters classification helpers
@@ -629,8 +619,8 @@
 
 (define* ($get-annotated-datum port)
   (define (%return-annotated x)
-    (if (and (annotation? x)
-	     (eof-object? (annotation-expression x)))
+    (if (and (reader-annotation? x)
+	     (eof-object? (reader-annotation-expression x)))
 	(eof-object)
       x))
   (%assert-argument-is-source-code-port __who__ port)

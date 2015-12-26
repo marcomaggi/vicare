@@ -26,10 +26,10 @@
 
 (section
 
-(declare-core-primitive annotation?
+(declare-core-primitive reader-annotation?
     (safe)
   (signatures
-   ((<annotation>)		=> (<boolean>)))
+   ((<reader-annotation>)		=> (<boolean>)))
   (attributes
    ((#f)			foldable effect-free result-false)
    ((_)				foldable effect-free)))
@@ -41,27 +41,27 @@
   (signatures
    ((<textual-input-port>)	=> (_))))
 
-(declare-core-primitive annotation-expression
+(declare-core-primitive reader-annotation-expression
     (safe)
   (signatures
-   ((<annotation>)		=> (_))))
+   ((<reader-annotation>)		=> (_))))
 
-(declare-core-primitive annotation-stripped
+(declare-core-primitive reader-annotation-stripped
     (safe)
   (signatures
-   ((<annotation>)		=> (_)))
+   ((<reader-annotation>)		=> (_)))
   (attributes
    ((#f)			foldable effect-free result-false)))
 
-(declare-core-primitive annotation-textual-position
+(declare-core-primitive reader-annotation-textual-position
     (safe)
   (signatures
-   ((<annotation>)		=> (_))))
+   ((<reader-annotation>)		=> (_))))
 
-(declare-core-primitive annotation-source
+(declare-core-primitive reader-annotation-source
     (safe)
   (signatures
-   ((<annotation>)		=> (_))))
+   ((<reader-annotation>)		=> (_))))
 
 /section)
 

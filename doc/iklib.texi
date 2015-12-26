@@ -7687,7 +7687,7 @@ expression in the input.  For example:
 (define port  (open-string-input-port "(list var)"))
 (define datum (get-annotated-datum port))
 (pretty-print datum)
-@print{} #[annotation
+@print{} #[reader-annotation
         expression=#<omitted>
         stripped=(list var)
         textual-position=#[r6rs-record: &source-position
@@ -7701,38 +7701,38 @@ expression in the input.  For example:
 The following bindings are exported by the library @library{vicare}.
 
 
-@deftp {Object type} @class{annotation}
+@deftp {Object type} @class{reader-annotation}
 Disjoint object type representing source code read from a textual input
 port.  The source code expression is annotated with informations from
 its textual input.
 @end deftp
 
 
-@defun annotation? @var{obj}
-Return @true{} if @var{obj} is an @class{annotation} object, else return
+@defun reader-annotation? @var{obj}
+Return @true{} if @var{obj} is an @class{reader-annotation} object, else return
 @false{}.
 @end defun
 
 
-@defop {Field accessor} @class{annotation} annotation-expression @var{ann}
+@defop {Field accessor} @class{reader-annotation} reader-annotation-expression @var{ann}
 Return a list, vector, identifier, what--have--you that may contain
 further annotations.
 @end defop
 
 
-@defop {Field accessor} @class{annotation} annotation-stripped @var{ann}
+@defop {Field accessor} @class{reader-annotation} reader-annotation-stripped @var{ann}
 Return the same symbolic expression of the @code{expression} field with
 no annotations.
 @end defop
 
 
-@defop {Field accessor} @class{annotation} annotation-textual-position @var{ann}
+@defop {Field accessor} @class{reader-annotation} reader-annotation-textual-position @var{ann}
 Return a condition object of type @condition{source-position}
 representing the position of the expression in the source code.
 @end defop
 
 
-@defop {Field accessor} @class{annotation} annotation-source @var{ann}
+@defop {Field accessor} @class{reader-annotation} reader-annotation-source @var{ann}
 Return a pair whose car is the port identifier and whose cdr is the
 offset of the first character of the source expression in the textual
 input.
@@ -7741,8 +7741,8 @@ input.
 
 @defun get-annotated-datum @var{port}
 Like @func{get-datum}, but rather than returning a datum return a
-hierarchy of @class{annotation} objects with the same hierarchy of the
-datum and embedding the datum itself.
+hierarchy of @class{reader-annotation} objects with the same hierarchy
+of the datum and embedding the datum itself.
 @end defun
 
 @c page

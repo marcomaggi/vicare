@@ -27,7 +27,6 @@
 (program (test-vicare-records-typed)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -39,26 +38,29 @@
   (check
       (let* ((port	(open-string-input-port "123"))
 	     (datum	(get-annotated-datum port)))
-	(is-a? datum <annotation>))
+	(is-a? datum <reader-annotation>))
     => #t)
 
 
   ;;Method call early binding.
   ;;
   (check
-      (let* ((port			(open-string-input-port "123"))
-	     ({datum <annotation>}	(get-annotated-datum port)))
-	#;(annotation-stripped datum)
+      (let* ((port				(open-string-input-port "123"))
+	     ({datum <reader-annotation>}	(get-annotated-datum port)))
+	#;(reader-annotation-stripped datum)
 	(.stripped datum))
     => 123)
 
   ;;Method call late binding.
   ;;
-  (check
-      (let* ((port		(open-string-input-port "123"))
-	     ({datum <top>}	(get-annotated-datum port)))
-	(method-call-late-binding 'stripped datum))
-    => 123)
+  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Sat Dec
+  ;;26, 2015)
+  ;;
+  ;; (check
+  ;;     (let* ((port		(open-string-input-port "123"))
+  ;; 	     ({datum <top>}	(get-annotated-datum port)))
+  ;; 	(method-call-late-binding 'stripped datum))
+  ;;   => 123)
 
   #t)
 

@@ -32,8 +32,8 @@
     make-parameter
     define-struct			struct?
     type-descriptor
-    annotation?
-    annotation-source			annotation-stripped
+    reader-annotation?
+    reader-annotation-source		reader-annotation-stripped
     getenv
     printf				fprintf
     format
@@ -65,10 +65,109 @@
     reset-symbol-proc!
     procedure-argument-violation
     expression-return-value-violation
-    print-stderr-message)
+    print-stderr-message
+
+    ;; syntax helpers
+    cond-compiler-expansion
+    building-normal-boot-image
+    building-rotation-boot-image
+    inclusion-in-boot-image)
   (import (vicare)
     (only (ikarus.printing-messages)
 	  print-stderr-message))
-  #| end of library |# )
+
+
+;;;; helper syntaxes
+
+(define-auxiliary-syntaxes
+  building-normal-boot-image
+  building-rotation-boot-image
+  inclusion-in-boot-image)
+
+(define-syntax (cond-compiler-expansion stx)
+
+  ;;This is  true when the compiler  libraries are expanded  to be included in  a new
+  ;;boot image, either  normal or rotation.  It is false  when the compiler libraries
+  ;;are expanded to build a new boot image, not to be included in it.
+  ;;
+  (define expanding-for-inclusion-in-boot-image?
+    (equal? "yes" (getenv "BUILDING_FOR_INCLUSION_IN_BOOT_IMAGE")))
+
+  ;;This is meaningful only  when the compiler libraries are expanded  to build a new
+  ;;boot image, not  to be included in it.  It  is true when the new boot  image is a
+  ;;rotation one; it is false when the new boot image is a normal one.
+  ;;
+  (define expanding-to-build-new-rotation-boot-image?
+    (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
+
+  (define (log description.stx)
+    (fprintf (current-error-port)
+	     "ikarus.compiler: conditional for ~a: ~a\n"
+	     (syntax->datum description.stx)
+	     (cond (expanding-for-inclusion-in-boot-image?
+		    "inclusion in a new boot image")
+		   (expanding-to-build-new-rotation-boot-image?
+		    "building a new rotation boot image")
+		   (else
+		    "building a new normal boot image"))))
+
+  (syntax-case stx (building-normal-boot-image
+		    building-rotation-boot-image
+		    inclusion-in-boot-image)
+    ((_ ?description
+	((inclusion-in-boot-image)	. ?inclusion-in-boot-body)
+	((building-normal-boot-image)	. ?building-normal-body)
+	((building-rotation-boot-image)	. ?building-rotation-body))
+     (begin
+       (log #'?description)
+       (cond (expanding-for-inclusion-in-boot-image?
+	      #'(begin . ?inclusion-in-boot-body))
+	     (expanding-to-build-new-rotation-boot-image?
+	      #'(begin . ?building-rotation-body))
+	     (else
+	      #'(begin . ?building-normal-body)))))
+    ))
+
+
+;;;; reader annotation objects API
+
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Dec 26,
+;;2015)
+(cond-compiler-expansion "reader annotation object API"
+  ((inclusion-in-boot-image)
+   (import (only (ikarus.reader)
+		 reader-annotation?
+		 reader-annotation-source
+		 reader-annotation-stripped)))
+  #;((inclusion-in-boot-image)
+   ;;This is used  when the compiler's source  code is expanded for  inclusion in the
+   ;;boot image.
+   (define reader-annotation?			annotation?)
+   (define reader-annotation-source		annotation-source)
+   (define reader-annotation-stripped		annotation-stripped))
+
+  ((building-normal-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a normal boot image.
+   (import (rename (only (vicare)
+			 annotation?
+			 annotation-source
+			 annotation-stripped)
+		   (annotation?			reader-annotation?)
+		   (annotation-source		reader-annotation-source)
+		   (annotation-stripped		reader-annotation-stripped))))
+
+  ((building-rotation-boot-image)
+   ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
+   ;;build a rotation boot image.
+   (void)))
+
+
+;;;; done
+
+#| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'cond-compiler-expansion		'scheme-indent-function 1)
+;; End:

@@ -1564,8 +1564,8 @@
     (%display " expr=")	(%write raw-expr)
     (%display " mark*=")	(%display (stx-mark* S))
     (let ((expr (stx-expr S)))
-      (when (annotation? expr)
-	(let ((pos (annotation-textual-position expr)))
+      (when (reader-annotation? expr)
+	(let ((pos (reader-annotation-textual-position expr)))
 	  (when (source-position-condition? pos)
 	    (%display " line=")		(%display (source-position-line    pos))
 	    (%display " column=")	(%display (source-position-column  pos))
@@ -1711,20 +1711,20 @@
     ;;is not a syntax object.
     ;;
     (if (src-marked? mark*)
-	(if (or (annotation? expr)
+	(if (or (reader-annotation? expr)
 		(and (pair? expr)
-		     (annotation? ($car expr)))
+		     (reader-annotation? ($car expr)))
 		(and (vector? expr)
 		     (not ($vector-empty? expr))
-		     (annotation? ($vector-ref expr 0))))
+		     (reader-annotation? ($vector-ref expr 0))))
 	    ;;TODO Ask Kent why this is a sufficient test.  (Abdulaziz Ghuloum)
 	    (%strip-annotations expr)
 	  expr)
       (let f ((x expr))
 	(cond ((stx? x)
 	       (syntax-object-strip-annotations ($stx-expr x) ($stx-mark* x)))
-	      ((annotation? x)
-	       (annotation-stripped x))
+	      ((reader-annotation? x)
+	       (reader-annotation-stripped x))
 	      ((pair? x)
 	       (let ((a (f ($car x)))
 		     (d (f ($cdr x))))
@@ -1746,8 +1746,8 @@
 		 (%strip-annotations ($cdr x))))
 	  ((vector? x)
 	   (vector-map %strip-annotations x))
-	  ((annotation? x)
-	   (annotation-stripped x))
+	  ((reader-annotation? x)
+	   (reader-annotation-stripped x))
 	  (else x)))
 
   #| end of module: SYNTAX-OBJECT-STRIP-ANNOTATIONS |# )
@@ -2318,8 +2318,8 @@
   ;;
   (and (stx? x)
        (let ((expr ($stx-expr x)))
-	 (symbol? (if (annotation? expr)
-		      (annotation-stripped expr)
+	 (symbol? (if (reader-annotation? expr)
+		      (reader-annotation-stripped expr)
 		    expr)))))
 
 (define (false-or-identifier? x)
@@ -2374,8 +2374,8 @@
 
 (define ($identifier->symbol x)
   (let ((expr ($stx-expr x)))
-    (if (annotation? expr)
-	(annotation-stripped expr)
+    (if (reader-annotation? expr)
+	(reader-annotation-stripped expr)
       expr)))
 
 
@@ -2599,8 +2599,8 @@
 (define (expression-position x)
   (if (stx? x)
       (let ((x (stx-expr x)))
-	(if (annotation? x)
-	    (annotation-textual-position x)
+	(if (reader-annotation? x)
+	    (reader-annotation-textual-position x)
 	  (condition)))
     (condition)))
 
@@ -3014,7 +3014,7 @@
 	     (apply condition
 		    (make-macro-expansion-trace X)
 		    (map loop (stx-annotated-expr* X))))
-	    ((annotation? X)
+	    ((reader-annotation? X)
 	     ;;Here we  only want to wrap  X into an  "stx" object, we do  not care
 	     ;;about the context.  (Marco Maggi; Sat Apr 11, 2015)
 	     (make-macro-expansion-trace (make-stx X '() '() '())))

@@ -84,14 +84,14 @@
 
 ;;; --------------------------------------------------------------------
 
-   (define-built-in-record-type <annotation>
+   (define-built-in-record-type <reader-annotation>
        #f
-     get-annotated-datum annotation?
+     get-annotated-datum reader-annotation?
      (methods
-      (expression		annotation-expression)
-      (stripped			annotation-stripped)
-      (source			annotation-source)
-      (textual-position		annotation-textual-position)))
+      (expression		reader-annotation-expression)
+      (stripped			reader-annotation-stripped)
+      (source			reader-annotation-source)
+      (textual-position		reader-annotation-textual-position)))
 
 ;;; --------------------------------------------------------------------
 

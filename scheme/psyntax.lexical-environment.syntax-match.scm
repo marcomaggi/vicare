@@ -479,9 +479,9 @@
 		(receive (mark*^ rib*^ annotated-expr*^)
 		    (join-wraps mark* rib* annotated-expr* expr)
 		  (%match (stx-expr expr) pattern mark*^ rib*^ annotated-expr*^ pvar*))))
-	  ((annotation? expr)
+	  ((reader-annotation? expr)
 	   ;;Visit the ANNOTATION struct.
-	   (%match (annotation-expression expr) pattern mark* rib* annotated-expr* pvar*))
+	   (%match (reader-annotation-expression expr) pattern mark* rib* annotated-expr* pvar*))
 	  (else
 	   (%match* expr pattern mark* rib* annotated-expr* pvar*))))
 
@@ -632,8 +632,8 @@
 		(receive (mark*^ rib*^ annotated-expr*^)
 		    (join-wraps mark* rib* annotated-expr* expr)
 		  (%match-each (stx-expr expr) pattern mark*^ rib*^ annotated-expr*^))))
-	  ((annotation? expr)
-	   (%match-each (annotation-expression expr) pattern mark* rib* annotated-expr*))
+	  ((reader-annotation? expr)
+	   (%match-each (reader-annotation-expression expr) pattern mark* rib* annotated-expr*))
 	  (else #f)))
 
   (define (%match-each+ e x-pat y-pat z-pat mark* rib* annotated-expr* pvar*)
@@ -657,8 +657,8 @@
 	       (receive (mark* rib* annotated-expr*)
 		   (join-wraps mark* rib* annotated-expr* e)
 		 (loop (stx-expr e) mark* rib* annotated-expr*))))
-	    ((annotation? e)
-	     (loop (annotation-expression e) mark* rib* annotated-expr*))
+	    ((reader-annotation? e)
+	     (loop (reader-annotation-expression e) mark* rib* annotated-expr*))
 	    (else
 	     (values '() y-pat (%match e z-pat mark* rib* annotated-expr* pvar*))))))
 
@@ -673,8 +673,8 @@
 		(receive (mark* rib* annotated-expr*)
 		    (join-wraps mark* rib* annotated-expr* e)
 		  (%match-each-any (stx-expr e) mark* rib* annotated-expr*))))
-	  ((annotation? e)
-	   (%match-each-any (annotation-expression e) mark* rib* annotated-expr*))
+	  ((reader-annotation? e)
+	   (%match-each-any (reader-annotation-expression e) mark* rib* annotated-expr*))
 	  (else #f)))
 
   (define (%match-empty p pvar*)

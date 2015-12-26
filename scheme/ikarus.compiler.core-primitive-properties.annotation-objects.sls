@@ -47,7 +47,7 @@
 
 ;;;; annotations
 
-(declare-core-primitive annotation?
+(declare-core-primitive reader-annotation?
     (safe)
   (signatures
    ((T:other-struct)		=> (T:boolean)))
@@ -62,24 +62,24 @@
   (signatures
    ((T:input-port)		=> (_))))
 
-(declare-core-primitive annotation-expression
+(declare-core-primitive reader-annotation-expression
     (safe)
   (signatures
    ((T:other-struct)		=> (_))))
 
-(declare-core-primitive annotation-stripped
+(declare-core-primitive reader-annotation-stripped
     (safe)
   (signatures
    ((T:other-struct)		=> (_)))
   (attributes
    ((#f)			foldable effect-free result-false)))
 
-(declare-core-primitive annotation-textual-position
+(declare-core-primitive reader-annotation-textual-position
     (safe)
   (signatures
    ((T:other-struct)		=> (_))))
 
-(declare-core-primitive annotation-source
+(declare-core-primitive reader-annotation-source
     (safe)
   (signatures
    ((T:other-struct)		=> (_))))

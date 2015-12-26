@@ -1040,7 +1040,7 @@
        (values (extend-env rand T:struct-type-descriptor env)
 	       env))
 
-      ((annotation?)
+      ((reader-annotation?)
        (values (extend-env rand T:other-struct env)
 	       env))
 

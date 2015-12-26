@@ -377,8 +377,8 @@
 			    ;;boot image.
 			    (and (not (strip-source-info))
 				 (let ((annotated-expr (cadr X)))
-				   (and (annotation?       annotated-expr)
-					(annotation-source annotated-expr))))))
+				   (and (reader-annotation?       annotated-expr)
+					(reader-annotation-source annotated-expr))))))
 	    (asmlabel (%name->asmlabel name))
 	    (cases    (E-clambda-case* asmlabel (cddr X) ctxt)))
        (let ((cp       #f)
@@ -616,9 +616,9 @@
   (module (%make-funcall-maker)
 
     (define (%make-funcall-maker anno)
-      (let ((src/expr (make-constant (if (annotation? anno)
-					 (cons (annotation-source   anno)
-					       (annotation-stripped anno))
+      (let ((src/expr (make-constant (if (reader-annotation? anno)
+					 (cons (reader-annotation-source   anno)
+					       (reader-annotation-stripped anno))
 				       (cons #f (syntax->datum anno))))))
 	(lambda (op rands)
 	  (if (%core-primitive-reference? op)
