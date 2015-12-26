@@ -65,7 +65,6 @@
     library-name-identifiers
     label->imported-syntactic-binding-descriptor)
   (import (rnrs)
-    (prefix (rnrs syntax-case) sys.)
     (psyntax.compat)
     (only (psyntax.config)
 	  initialise-expander)

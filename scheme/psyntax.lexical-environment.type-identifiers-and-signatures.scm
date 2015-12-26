@@ -1574,6 +1574,4 @@
 ;; mode: vicare
 ;; coding: utf-8-unix
 ;; eval: (put 'set-identifier-tag-type-spec!		'scheme-indent-function 1)
-;; eval: (put 'sys.syntax-case				'scheme-indent-function 2)
-;; eval: (put 'sys.with-syntax				'scheme-indent-function 1)
 ;; End:

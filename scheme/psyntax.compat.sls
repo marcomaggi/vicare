@@ -37,11 +37,11 @@
 
     __who__				brace
 
-    (rename (records.record-type-printer-set!	record-type-printer-set!)
-	    (records.$record-type-printer-set!	$record-type-printer-set!)
-	    (records.record-printer		record-printer))
+    (rename (records::record-type-printer-set!	record-type-printer-set!)
+	    (records::$record-type-printer-set!	$record-type-printer-set!)
+	    (records::record-printer		record-printer))
 
-    (rename (lists.nlist?			nlist?))
+    (rename (lists::nlist?			nlist?))
 
     define-struct			make-struct-type
     make-parameter			parametrise
@@ -67,22 +67,22 @@
     uuid
 
     ;; compiler related operations
-    compiler.eval-core			compiler.core-expr->optimized-code
-    compiler.core-expr->optimisation-and-core-type-inference-code
-    compiler.core-expr->assembly-code	compiler.compile-core-expr-to-thunk
+    compiler::eval-core			compiler::core-expr->optimized-code
+    compiler::core-expr->optimisation-and-core-type-inference-code
+    compiler::core-expr->assembly-code	compiler::compile-core-expr-to-thunk
 
     ;; runtime options
-    option.debug-mode-enabled?
-    option.drop-assertions?
-    option.typed-language?
-    option.strict-r6rs
-    option.enable-arguments-validation?
-    option.print-loaded-libraries?
-    option.print-debug-messages?
-    option.print-library-debug-messages?
+    options::debug-mode-enabled?
+    options::drop-assertions?
+    options::typed-language?
+    options::strict-r6rs
+    options::enable-arguments-validation?
+    options::print-loaded-libraries?
+    options::print-debug-messages?
+    options::print-library-debug-messages?
 
     expander-option.integrate-special-list-functions?
-    foreign.dynamically-load-shared-object-from-identifier
+    foreign::dynamically-load-shared-object-from-identifier
 
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
@@ -132,7 +132,7 @@
 		  core-expr->optimisation-and-core-type-inference-code
 		  core-expr->assembly-code
 		  optimize-level)
-	    compiler.)
+	    compiler::)
     (prefix (rename (only (ikarus.options)
 			  debug-mode-enabled?
 			  drop-assertions?
@@ -145,7 +145,7 @@
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
-	    option.)
+	    options::)
     (ikarus.printing-messages)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
     ;;2015)
@@ -153,19 +153,19 @@
 		  record-type-printer-set!
 		  $record-type-printer-set!
 		  record-printer)
-	    records.)
+	    records::)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 9,
     ;;2015)
     (prefix (only (ikarus lists)
 		  nlist?)
-	    lists.)
+	    lists::)
     (only (vicare language-extensions posix) #;(ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
 	  file-modification-time)
     (prefix (only (vicare.foreign-libraries)
 		  dynamically-load-shared-object-from-identifier)
-	    foreign.)
+	    foreign::)
     (only (vicare libraries)
 	  expand-library)
     ;;NOTE Let's  try to import  the unsafe  operations from the  built-in libraries,
@@ -188,7 +188,7 @@
 (module (print-expander-warning-message)
 
   (define-syntax-rule (print-expander-warning-message . ?args)
-    (when (option.print-verbose-messages?)
+    (when (options::print-verbose-messages?)
       (%print-expander-warning-message . ?args)))
 
   (define (%print-expander-warning-message template . args)
@@ -199,7 +199,7 @@
 (module (print-expander-debug-message)
 
   (define-syntax-rule (print-expander-debug-message . ?args)
-    (when (option.print-debug-messages?)
+    (when (options::print-debug-messages?)
       (%print-expander-debug-message . ?args)))
 
   (define (%print-expander-debug-message template . args)
@@ -210,7 +210,7 @@
 (module (print-library-debug-message)
 
   (define-syntax-rule (print-library-debug-message . ?args)
-    (when (option.print-library-debug-messages?)
+    (when (options::print-library-debug-messages?)
       (%print-library-debug-message . ?args)))
 
   (define (%print-library-debug-message template . args)
@@ -231,7 +231,7 @@
   ($unintern-gensym x))
 
 (define (expander-option.integrate-special-list-functions?)
-  (fx>=? 3 (compiler.optimize-level)))
+  (fx>=? 3 (compiler::optimize-level)))
 
 ;;; --------------------------------------------------------------------
 

@@ -37,7 +37,7 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
-    (prefix (rnrs syntax-case) sys.)
+    (prefix (rnrs syntax-case) sys::)
     (psyntax.compat)
     (psyntax.builders)
     (psyntax.lexical-environment)
@@ -408,7 +408,7 @@
   ;;
   ;;If the return value is not of such type: we raise an assertion violation.
   ;;
-  (let ((rv (compiler.eval-core (expanded->core rhs-expr.core))))
+  (let ((rv (compiler::eval-core (expanded->core rhs-expr.core))))
     (cond ((procedure? rv)
 	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
 	  ((variable-transformer? rv)
@@ -600,7 +600,7 @@
 	   (let ((transformer    (let ()
 				   (import CORE-MACRO-TRANSFORMER)
 				   (core-macro-transformer (syntactic-binding-descriptor.value descr)))))
-	     (transformer (if (option.debug-mode-enabled?)
+	     (transformer (if (options::debug-mode-enabled?)
 			      ;;Here we push the input  form on the stack of annotated
 			      ;;expressions,  to improve  error  messages  in case  of
 			      ;;syntax violations.  When expanding non-core macros the
@@ -1237,13 +1237,13 @@
 
 (define-syntax case-qrhs-category
   (lambda (stx)
-    (sys.syntax-case stx (defun typed-defvar untyped-defvar top-expr)
+    (sys::syntax-case stx (defun typed-defvar untyped-defvar top-expr)
       ((_ ?category
 	  ((defun)		. ?defun-body)
 	  ((typed-defvar)	. ?typed-defvar-body)
 	  ((untyped-defvar)	. ?untyped-defvar-body)
 	  ((top-expr)		. ?top-expr-body))
-       (sys.syntax
+       (sys::syntax
 	(let ((category ?category))
 	  (case category
 	    ((defun)		. ?defun-body)
@@ -1413,7 +1413,7 @@
 		(init*.out)
 		(else #f))))
       (when visit-code.core
-	(compiler.eval-core (expanded->core visit-code.core)))
+	(compiler::eval-core (expanded->core visit-code.core)))
       ;;Done!  Push on the LEXENV an entry like:
       ;;
       ;;   (?unused-label . (begin-for-syntax . ?core-code))
@@ -1859,4 +1859,5 @@
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
 ;;eval: (put 'case-qrhs-category			'scheme-indent-function 1)
+;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
 ;;End:

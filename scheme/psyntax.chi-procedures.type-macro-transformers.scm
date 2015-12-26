@@ -40,15 +40,15 @@
 ;;;; helpers
 
 (define-syntax (with-object-type-syntactic-binding stx)
-  (sys.syntax-case stx ()
+  (sys::syntax-case stx ()
     ((_ (?who ?input-form.stx ?type-id ?lexenv ?object-type-spec)
 	. ?body)
-     (and (sys.identifier? (sys.syntax ?who))
-	  (sys.identifier? (sys.syntax ?input-form.stx))
-	  (sys.identifier? (sys.syntax ?type-id))
-	  (sys.identifier? (sys.syntax ?lexenv))
-	  (sys.identifier? (sys.syntax ?object-type-spec)))
-     (sys.syntax
+     (and (sys::identifier? (sys::syntax ?who))
+	  (sys::identifier? (sys::syntax ?input-form.stx))
+	  (sys::identifier? (sys::syntax ?type-id))
+	  (sys::identifier? (sys::syntax ?lexenv))
+	  (sys::identifier? (sys::syntax ?object-type-spec)))
+     (sys::syntax
       (let ((?object-type-spec (id->object-type-specification ?who ?input-form.stx ?type-id ?lexenv)))
 	. ?body)))
     ))
@@ -1237,7 +1237,7 @@
 ;;eval: (put 'with-object-type-syntactic-binding	'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour			'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop			'scheme-indent-function 1)
-;;eval: (put 'sys.syntax-case				'scheme-indent-function 2)
+;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
 ;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
 ;;eval: (put '$map-in-order				'scheme-indent-function 1)
 ;;End:

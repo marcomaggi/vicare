@@ -101,7 +101,6 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
-    (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
     (except (psyntax.compat)
 	    expand-library)
@@ -118,7 +117,7 @@
     (psyntax.library-utils)
     (psyntax.library-collectors)
     (psyntax.chi-procedures)
-    (prefix (psyntax.library-manager) libman.)
+    (prefix (psyntax.library-manager) libman::)
     (psyntax.internal))
 
 ;; module interfaces
@@ -149,7 +148,7 @@
     (typed-language-support #f))
 
   (define (typed-language-support enable?)
-    (option.typed-language? enable?))
+    (options::typed-language? enable?))
 
   #| end of module |# )
 
@@ -168,14 +167,14 @@
        (parametrise
 	   ;;Here we  want to override  the value  of the parameters  STRICT-R6RS and
 	   ;;TYPED-LANGUAGE?.
-	   ((option.strict-r6rs      (and expander-options (enum-set-member? 'strict-r6rs    expander-options)))
-	    (option.typed-language?  (and expander-options (enum-set-member? 'typed-language expander-options))))
+	   ((options::strict-r6rs      (and expander-options (enum-set-member? 'strict-r6rs    expander-options)))
+	    (options::typed-language?  (and expander-options (enum-set-member? 'typed-language expander-options))))
 	 (expand-form-to-core-language x env))
      ;;Here we use the expander and compiler options from the libraries.
-     (for-each libman.invoke-library invoke-req*)
-     (parametrise ((option.strict-r6rs (and compiler-options
+     (for-each libman::invoke-library invoke-req*)
+     (parametrise ((options::strict-r6rs (and compiler-options
 					    (enum-set-member? 'strict-r6rs compiler-options))))
-       (compiler.eval-core (expanded->core x))))))
+       (compiler::eval-core (expanded->core x))))))
 
 (define (environment . import-spec*)
   ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
@@ -224,12 +223,12 @@
    (new-interaction-environment (base-of-interaction-library)))
   (({libref library-reference?})
    (config.initialise-expander)
-   (let* ((lib    (libman.find-library-by-reference libref))
-	  (rib    (export-subst->rib (libman.library-export-subst lib)))
+   (let* ((lib    (libman::find-library-by-reference libref))
+	  (rib    (export-subst->rib (libman::library-export-subst lib)))
 	  (lexenv '()))
      ;;Here we know that we are loading  a library for future expansion of code (that
      ;;is the whole point of environment objects) so let's visit it right away.
-     (libman.visit-library lib)
+     (libman::visit-library lib)
      (make-interaction-lexical-environment rib lexenv))))
 
 (define interaction-environment
@@ -331,14 +330,14 @@
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
       ;;evaluated.  The storage location gensyms  associated to the exported bindings
       ;;are initialised with the global values.
-      (for-each libman.invoke-library invoke-lib*)
+      (for-each libman::invoke-library invoke-lib*)
       ;;Store the  expanded code representing  the macros in the  associated location
       ;;gensyms.
       (initial-visit! visit-env)
-      (values (map libman.library-descriptor invoke-lib*)
+      (values (map libman::library-descriptor invoke-lib*)
 	      ;;Convert  the  expanded language  code  to  core language  code,  then
 	      ;;compile it and wrap it into a thunk.
-	      (compiler.compile-core-expr-to-thunk (expanded->core invoke-code))
+	      (compiler::compile-core-expr-to-thunk (expanded->core invoke-code))
 	      option*
 	      foreign-library*))))
 
@@ -357,7 +356,7 @@
     (receive (import-spec* body* option* foreign-library*)
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
-	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
+	(map foreign::dynamically-load-shared-object-from-identifier foreign-library*)
 	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (let ((option* (%parse-program-options option*))
 		  (mixed-definitions-and-expressions? #t))
@@ -367,9 +366,9 @@
 	  (values invoke-lib* invoke-code visit-env export-subst global-env typed-locs option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
-    (when (option.typed-language?)
+    (when (options::typed-language?)
       (print-expander-warning-message "enabling typed language support for program"))
-    (when (option.strict-r6rs)
+    (when (options::strict-r6rs)
       (print-expander-warning-message "enabling expander's strict R6RS support for program")))
 
   (define (%parse-top-level-program program-form*)
@@ -497,7 +496,7 @@
 	     export-subst global-env typed-locs
 	     guard-code guard-lib*
 	     option* foreign-library*)
-       (parametrise ((libman.source-code-location (or filename (libman.source-code-location))))
+       (parametrise ((libman::source-code-location (or filename (libman::source-code-location))))
 	 (let ()
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-libname)))
@@ -509,15 +508,15 @@
 			  (initial-visit! visit-env)))
 	   ;;Thunk to eval to invoke the library.
 	   (invoke-proc	(lambda ()
-			  (compiler.eval-core (expanded->core invoke-code))))
+			  (compiler::eval-core (expanded->core invoke-code))))
 	   ;;This visit code is compiled and stored in FASL files; the resulting code
 	   ;;objects are the ones evaluated whenever a compiled library is loaded and
 	   ;;visited.
 	   (visit-code	(build-visit-code-from-visit-env visit-env option*))
 	   (visible?	#t))
        ;;This call returns a "library" object.
-       (libman.intern-library
-	(libman.make-library uid libname
+       (libman::intern-library
+	(libman::make-library uid libname
 			     import-lib* visit-lib* invoke-lib*
 			     export-subst global-env typed-locs
 			     visit-proc invoke-proc
@@ -528,20 +527,20 @@
 
 (define (expand-library->sexp libsexp)
   (let ((lib (expand-library libsexp)))
-    `((uid		. ,(libman.library-uid               lib))
-      (libname		. ,(libman.library-name              lib))
-      (import-libdesc*	. ,(map libman.library-descriptor    (libman.library-imp-lib* lib)))
-      (visit-libdesc*	. ,(map libman.library-descriptor    (libman.library-vis-lib* lib)))
-      (invoke-libdesc*	. ,(map libman.library-descriptor    (libman.library-inv-lib* lib)))
-      (invoke-code	. ,(libman.library-invoke-code       lib))
-      (visit-code	. ,(libman.library-visit-code        lib))
-      (export-subst	. ,(libman.library-export-subst      lib))
-      (global-env	. ,(libman.library-global-env        lib))
-      (typed-locs	. ,(libman.library-typed-locs        lib))
-      (guard-code	. ,(libman.library-guard-code        lib))
-      (guard-libdesc*	. ,(map libman.library-descriptor    (libman.library-guard-lib* lib)))
-      (option*		. ,(libman.library-option*           lib))
-      (foreign-library*	. ,(libman.library-foreign-library*  lib)))))
+    `((uid		. ,(libman::library-uid               lib))
+      (libname		. ,(libman::library-name              lib))
+      (import-libdesc*	. ,(map libman::library-descriptor    (libman::library-imp-lib* lib)))
+      (visit-libdesc*	. ,(map libman::library-descriptor    (libman::library-vis-lib* lib)))
+      (invoke-libdesc*	. ,(map libman::library-descriptor    (libman::library-inv-lib* lib)))
+      (invoke-code	. ,(libman::library-invoke-code       lib))
+      (visit-code	. ,(libman::library-visit-code        lib))
+      (export-subst	. ,(libman::library-export-subst      lib))
+      (global-env	. ,(libman::library-global-env        lib))
+      (typed-locs	. ,(libman::library-typed-locs        lib))
+      (guard-code	. ,(libman::library-guard-code        lib))
+      (guard-libdesc*	. ,(map libman::library-descriptor    (libman::library-guard-lib* lib)))
+      (option*		. ,(libman::library-option*           lib))
+      (foreign-library*	. ,(libman::library-foreign-library*  lib)))))
 
 
 (module CORE-LIBRARY-EXPANDER
@@ -570,7 +569,7 @@
 	     (option*		(%parse-library-options libopt*))
 	     (foreign-library*	(%parse-foreign-library* foreign-library*))
 	     (stale-clt		(%make-stale-collector)))
-	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
+	(map foreign::dynamically-load-shared-object-from-identifier foreign-library*)
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-env export-subst global-env typed-locs)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
@@ -589,9 +588,9 @@
 
   (define (%make-verbose-messages-thunk libname.sexp)
     (lambda ()
-      (when (option.typed-language?)
+      (when (options::typed-language?)
 	(print-expander-warning-message "enabling typed language support for library: ~a" libname.sexp))
-      (when (option.strict-r6rs)
+      (when (options::strict-r6rs)
 	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
 
   (define (%parse-library library-sexp)
@@ -846,8 +845,8 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap-source-expression-with-top-rib expr)
 	(wrap-source-expression expr rib))
-      (parametrise ((option.typed-language? (memq 'typed-language option*))
-		    (option.strict-r6rs     (or (memq 'strict-r6rs    option*) (option.strict-r6rs))))
+      (parametrise ((options::typed-language? (memq 'typed-language option*))
+		    (options::strict-r6rs     (or (memq 'strict-r6rs    option*) (options::strict-r6rs))))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
 	      (rtc	(make-collector))
@@ -1425,7 +1424,7 @@
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander before"))
 
 ;;Register the expander with the library manager.
-(libman.current-library-expander expand-library)
+(libman::current-library-expander expand-library)
 
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander after"))
 ;; (void)
@@ -1449,5 +1448,4 @@
 ;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
-;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;End:

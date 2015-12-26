@@ -267,7 +267,7 @@
 	       ,@(%filter-out-falses safe-field-mutator*)
 	       ;;We want  to create  the syntactic bindings  of unsafe  accessors and
 	       ;;mutators only when STRICT-R6RS mode is DISabled.
-	       ,@(if (option.strict-r6rs)
+	       ,@(if (options::strict-r6rs)
 		     '()
 		   (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
 
@@ -293,7 +293,7 @@
 
   (define (%validate-definition-clauses clause* synner)
     (define-constant VALID-KEYWORDS
-      (if (option.strict-r6rs)
+      (if (options::strict-r6rs)
 	  (%r6rs-valid-keywords)
 	(%extended-valid-keywords)))
     (let loop ((clause*  clause*)
@@ -450,7 +450,7 @@
 	       (field-spec**  '()))
       (syntax-match clause* (fields)
 	(()
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     (if (pair? field-spec**)
 		 ;;If there is only one list of field specs, fine; otherwise raise an
 		 ;;error.

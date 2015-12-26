@@ -48,7 +48,7 @@
   ;;
   (let ()
     (define (transformer stx)
-      (sys.syntax-case stx ()
+      (sys::syntax-case stx ()
 
 	;;No more clauses.  This clause matches STX when:
 	;;
@@ -72,21 +72,21 @@
 	;;expanded code.
 	;;
 	((_ ?input-form (?literals ...))
-	 (for-all sys.identifier? (sys.syntax (?literals ...)))
-	 (sys.syntax
+	 (for-all sys::identifier? (sys::syntax (?literals ...)))
+	 (sys::syntax
 	  (syntax-violation 'syntax-match
 	    "invalid syntax, no clause matches the input form" ?input-form)))
 
 	;;The next clause has a fender.
 	;;
 	((_ ?input-form (?literals ...) (?pattern ?fender ?body) ?clause* ...)
-	 (for-all sys.identifier? (sys.syntax (?literals ...)))
+	 (for-all sys::identifier? (sys::syntax (?literals ...)))
 	 (receive (pattern ptnvars/levels)
-	     (%convert-single-pattern (sys.syntax ?pattern) (sys.syntax (?literals ...)))
+	     (%convert-single-pattern (sys::syntax ?pattern) (sys::syntax (?literals ...)))
 	   (with-syntax
-	       ((PATTERN                   (sys.datum->syntax (sys.syntax here) pattern))
+	       ((PATTERN                   (sys::datum->syntax (sys::syntax here) pattern))
 		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
-	     (sys.syntax
+	     (sys::syntax
 	      (let ((T ?input-form))
 		;;If the input expression matches the symbolic expression PATTERN...
 		(let ((ls/false (syntax-dispatch T 'PATTERN)))
@@ -101,13 +101,13 @@
 	;;The next clause has NO fender.
 	;;
 	((_ ?input-form (?literals ...) (?pattern ?body) clause* ...)
-	 (for-all sys.identifier? (sys.syntax (?literals ...)))
+	 (for-all sys::identifier? (sys::syntax (?literals ...)))
 	 (receive (pattern ptnvars/levels)
-	     (%convert-single-pattern (sys.syntax ?pattern) (sys.syntax (?literals ...)))
+	     (%convert-single-pattern (sys::syntax ?pattern) (sys::syntax (?literals ...)))
 	   (with-syntax
-	       ((PATTERN                   (sys.datum->syntax (sys.syntax here) pattern))
+	       ((PATTERN                   (sys::datum->syntax (sys::syntax here) pattern))
 		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
-	     (sys.syntax
+	     (sys::syntax
 	      (let ((T ?input-form))
 		;;If the input expression matches the symbolic expression PATTERN...
 		(let ((ls/false (syntax-dispatch T 'PATTERN)))
@@ -120,7 +120,7 @@
 	;;This is a true error in he use of SYNTAX-MATCH.
 	;;
 	(?stuff
-	 (sys.syntax-violation 'syntax-match "invalid syntax in macro use" stx))
+	 (sys::syntax-violation 'syntax-match "invalid syntax in macro use" stx))
 	))
 
     (module (%convert-single-pattern)
@@ -145,7 +145,7 @@
 	 (%convert-single-pattern pattern-stx literals 0 '()))
 
 	((pattern-stx literals nesting-level pattern-vars)
-	 (sys.syntax-case pattern-stx ()
+	 (sys::syntax-case pattern-stx ()
 
 	   ;;A literal identifier is encoded as:
 	   ;;
@@ -160,10 +160,10 @@
 	   ;;   any
 	   ;;
 	   (?identifier
-	    (sys.identifier? (sys.syntax ?identifier))
+	    (sys::identifier? (sys::syntax ?identifier))
 	    (cond ((%bound-identifier-member? pattern-stx literals)
-		   (values `#(scheme-id ,(sys.syntax->datum pattern-stx)) pattern-vars))
-		  ((sys.free-identifier=? pattern-stx (sys.syntax _))
+		   (values `#(scheme-id ,(sys::syntax->datum pattern-stx)) pattern-vars))
+		  ((sys::free-identifier=? pattern-stx (sys::syntax _))
 		   (values '_ pattern-vars))
 		  (else
 		   (values 'any (cons (cons pattern-stx nesting-level)
@@ -179,9 +179,9 @@
 	   ;;   each-any
 	   ;;
 	   ((?pattern ?dots)
-	    (%sys.ellipsis? (sys.syntax ?dots))
+	    (%sys::ellipsis? (sys::syntax ?dots))
 	    (receive (pattern^ pattern-vars^)
-		(%convert-single-pattern (sys.syntax ?pattern) literals
+		(%convert-single-pattern (sys::syntax ?pattern) literals
 					 (+ nesting-level 1) pattern-vars)
 	      (values (if (eq? pattern^ 'any)
 			  'each-any
@@ -193,18 +193,18 @@
 	   ;;  #(each+ ?pattern-ellipsis (?pattern-following ...) . ?tail-pattern)
 	   ;;
 	   ((?pattern-x ?dots ?pattern-y ... . ?pattern-z)
-	    (%sys.ellipsis? (sys.syntax ?dots))
+	    (%sys::ellipsis? (sys::syntax ?dots))
 	    (let*-values
 		(((pattern-z pattern-vars)
-		  (%convert-single-pattern (sys.syntax ?pattern-z) literals
+		  (%convert-single-pattern (sys::syntax ?pattern-z) literals
 					   nesting-level pattern-vars))
 
 		 ((pattern-y* pattern-vars)
-		  (%convert-multi-pattern  (sys.syntax (?pattern-y ...)) literals
+		  (%convert-multi-pattern  (sys::syntax (?pattern-y ...)) literals
 					   nesting-level pattern-vars))
 
 		 ((pattern-x pattern-vars)
-		  (%convert-single-pattern (sys.syntax ?pattern-x) literals
+		  (%convert-single-pattern (sys::syntax ?pattern-x) literals
 					   (+ nesting-level 1) pattern-vars)))
 	      (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
 		      pattern-vars)))
@@ -214,11 +214,11 @@
 	   ((?car . ?cdr)
 	    (let*-values
 		(((pattern-cdr pattern-vars)
-		  (%convert-single-pattern (sys.syntax ?cdr) literals
+		  (%convert-single-pattern (sys::syntax ?cdr) literals
 					   nesting-level pattern-vars))
 
 		 ((pattern-car pattern-vars)
-		  (%convert-single-pattern (sys.syntax ?car) literals
+		  (%convert-single-pattern (sys::syntax ?car) literals
 					   nesting-level pattern-vars)))
 	      (values (cons pattern-car pattern-cdr) pattern-vars)))
 
@@ -233,7 +233,7 @@
 	   ;;
 	   (#(?item ...)
 	    (receive (pattern-item* pattern-vars)
-		(%convert-single-pattern (sys.syntax (?item ...)) literals
+		(%convert-single-pattern (sys::syntax (?item ...)) literals
 					 nesting-level pattern-vars)
 	      (values `#(vector ,pattern-item*) pattern-vars)))
 
@@ -242,7 +242,7 @@
 	   ;;   #(atom ?datum)
 	   ;;
 	   (?datum
-	    (values `#(atom ,(sys.syntax->datum (sys.syntax ?datum))) pattern-vars))
+	    (values `#(atom ,(sys::syntax->datum (sys::syntax ?datum))) pattern-vars))
 	   )))
 
       (define (%convert-multi-pattern pattern* literals nesting-level pattern-vars)
@@ -262,12 +262,12 @@
 	;;identifiers in LIST-OF-IDS.
 	;;
 	(and (pair? list-of-ids)
-	     (or (sys.bound-identifier=? id (car list-of-ids))
+	     (or (sys::bound-identifier=? id (car list-of-ids))
 		 (%bound-identifier-member? id (cdr list-of-ids)))))
 
-      (define (%sys.ellipsis? x)
-	(and (sys.identifier? x)
-	     (sys.free-identifier=? x (sys.syntax (... ...)))))
+      (define (%sys::ellipsis? x)
+	(and (sys::identifier? x)
+	     (sys::free-identifier=? x (sys::syntax (... ...)))))
 
       #| end of module: %CONVERT-SINGLE-PATTERN |# )
 

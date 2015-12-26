@@ -703,7 +703,7 @@
 	   (syntax-violation __module_who__ "expected identifier as function name" input-form.stx ?lhs))
 	 (receive (standard-formals.stx clause-signature)
 	     (syntax-object.parse-typed-clambda-clause-formals ?fmls input-form.stx)
-	   (if (option.strict-r6rs)
+	   (if (options::strict-r6rs)
 	       (let ((qrhs (make-qualified-rhs/defun ?lhs input-form.stx)))
 		 (values ?lhs #f qrhs lexenv.run))
 	     (let* ((type-id.name	(make-fabricated-closure-type-name (identifier->symbol ?lhs)))

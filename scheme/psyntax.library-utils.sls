@@ -77,7 +77,7 @@
     print-library-info-message)
   (import (rnrs)
     (psyntax.compat)
-    (prefix (ikarus.posix) posix.)
+    (prefix (ikarus.posix) posix::)
     (vicare language-extensions simple-match))
 
 
@@ -88,18 +88,18 @@
        (for-all string? obj)))
 
 (define (%get-existent-directory-real-pathname-from-env system-environment-variable)
-  (let ((X (posix.getenv system-environment-variable)))
+  (let ((X (posix::getenv system-environment-variable)))
     (if (and X
-	     (posix.file-string-pathname? X)
-	     (posix.directory-exists?     X))
-	(posix.real-pathname X)
+	     (posix::file-string-pathname? X)
+	     (posix::directory-exists?     X))
+	(posix::real-pathname X)
       #f)))
 
 (define (%get-directory-real-pathname-from-env system-environment-variable)
-  (let ((X (posix.getenv system-environment-variable)))
-    (if (and X (posix.file-string-pathname? X))
-	(if (posix.directory-exists? X)
-	    (posix.real-pathname X)
+  (let ((X (posix::getenv system-environment-variable)))
+    (if (and X (posix::file-string-pathname? X))
+	(if (posix::directory-exists? X)
+	    (posix::real-pathname X)
 	  X)
       #f)))
 
@@ -129,8 +129,8 @@
 ;;;; printing messages
 
 (define (print-library-info-message template . args)
-  (when (and (option.print-loaded-libraries?)
-	     (option.print-library-debug-messages?))
+  (when (and (options::print-loaded-libraries?)
+	     (options::print-library-debug-messages?))
     ;;We do not want an exception from the I/O layer to ruin things.
     (with-blocked-exceptions
 	(lambda ()
@@ -664,7 +664,7 @@
 ;;
 (define library-source-search-path
   (make-parameter '()
-    (lambda* ({P posix.list-of-string-pathnames?})
+    (lambda* ({P posix::list-of-string-pathnames?})
       P)))
 
 (define* (default-library-source-search-path-scanner {libref library-reference?})
@@ -697,7 +697,7 @@
 		  (continue-thunk  (lambda ()
 				     (loop stem directories (cdr extensions)))))
 	     (if (file-exists? source-pathname)
-		 (let ((source-pathname (posix.real-pathname source-pathname)))
+		 (let ((source-pathname (posix::real-pathname source-pathname)))
 		   (print-library-info-message "~a: found: ~a" __who__ source-pathname)
 		   (values source-pathname continue-thunk))
 	       (continue-thunk)))))))
@@ -743,7 +743,7 @@
 ;;
 (define library-binary-search-path
   (make-parameter '()
-    (lambda* ({P posix.list-of-string-pathnames?})
+    (lambda* ({P posix::list-of-string-pathnames?})
       P)))
 
 (define* (default-library-binary-search-path-scanner {libref library-reference?})
@@ -766,7 +766,7 @@
 				  (loop stem (cdr directories)))))
 	  (print-library-info-message "~a: trying: ~a" __who__ binary-pathname)
 	  (if (file-exists? binary-pathname)
-	      (let ((binary-pathname (posix.real-pathname binary-pathname)))
+	      (let ((binary-pathname (posix::real-pathname binary-pathname)))
 		(print-library-info-message "~a: found: ~a" __who__ binary-pathname)
 		(values binary-pathname continue-thunk))
 	    (begin
@@ -847,7 +847,7 @@
   (define compiled-libraries-build-directory
     (make-parameter
 	DEFAULT-COMPILED-LIBRARIES-BUILD-DIRECTORY
-      (lambda* ({pathname posix.file-string-pathname?})
+      (lambda* ({pathname posix::file-string-pathname?})
 	pathname)))
 
   #| end of module |# )
@@ -877,8 +877,8 @@
   ;;
   (library-source-search-path
    (append library-source-search-path-directory*
-	   (cond ((posix.getenv "VICARE_SOURCE_PATH")
-		  => posix.split-search-path-string)
+	   (cond ((posix::getenv "VICARE_SOURCE_PATH")
+		  => posix::split-search-path-string)
 		 (else '()))
 	   (library-source-search-path)))
 
@@ -894,8 +894,8 @@
   ;;
   (library-binary-search-path
    (append library-binary-search-path-directory*
-	   (cond ((posix.getenv "VICARE_LIBRARY_PATH")
-		  => posix.split-search-path-string)
+	   (cond ((posix::getenv "VICARE_LIBRARY_PATH")
+		  => posix::split-search-path-string)
 		 (else '()))
 	   (let ()
 	     (module (target-os-uid vicare-lib-dir)
@@ -914,9 +914,9 @@
   (when build-directory
     ;;A  pathname was  selected from  the command  line.  BUILD-DIRECTORY  must be  a
     ;;string representing the pathname of an existent directory.
-    (if (posix.file-string-pathname? build-directory)
-	(compiled-libraries-build-directory (if (posix.directory-exists? build-directory)
-						(posix.real-pathname build-directory)
+    (if (posix::file-string-pathname? build-directory)
+	(compiled-libraries-build-directory (if (posix::directory-exists? build-directory)
+						(posix::real-pathname build-directory)
 					      build-directory))
       (raise
        (condition (make-i/o-file-does-not-exist-error build-directory)
@@ -1049,7 +1049,7 @@
   (define (%build-pathname who directory stem extension)
     (receive-and-return (pathname)
 	(string-append directory stem extension)
-      (unless (posix.file-string-pathname? pathname)
+      (unless (posix::file-string-pathname? pathname)
 	(raise
 	 (condition (make-who-condition who)
 		    (make-message-condition "invalid string as pathname from given arguments")
@@ -1078,7 +1078,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (library-source-pathname->library-stem-pathname {source-pathname posix.file-string-pathname?})
+(define* (library-source-pathname->library-stem-pathname {source-pathname posix::file-string-pathname?})
   (cond ((%string-suffix?  source-pathname ".vicare.sls")
 	 (%string-desuffix source-pathname ".vicare.sls"))
 	((%string-suffix?  source-pathname ".sls")
@@ -1100,7 +1100,7 @@
 
 ;;;; program pathnames construction
 
-(define* (program-source-pathname->program-binary-pathname {source-pathname posix.file-string-pathname?})
+(define* (program-source-pathname->program-binary-pathname {source-pathname posix::file-string-pathname?})
   (define (%error ptn)
     (assertion-violation __who__
       "unable to build valid FASL file pathname from program source pathname"
@@ -1109,9 +1109,9 @@
 		    (%string-desuffix source-pathname PROGRAM-SOURCE-EXTENSION))
 		   (else
 		    (string-append source-pathname PROGRAM-BINARY-EXTENSION)))))
-    (if (posix.file-string-pathname? ptn)
+    (if (posix::file-string-pathname? ptn)
 	(let ((binary-pathname ptn))
-	  (if (posix.file-string-pathname? binary-pathname)
+	  (if (posix::file-string-pathname? binary-pathname)
 	      binary-pathname
 	    (%error binary-pathname)))
       (%error ptn))))

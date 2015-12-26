@@ -79,7 +79,7 @@
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
     (psyntax.compat)
-    (prefix (rnrs syntax-case) sys.)
+    (prefix (rnrs syntax-case) sys::)
     (psyntax.lexical-environment)
     (only (psyntax.library-manager)
 	  current-include-loader
@@ -96,13 +96,13 @@
 ;;;; helpers
 
 (define-syntax (define-macro-transformer stx)
-  (sys.syntax-case stx ()
+  (sys::syntax-case stx ()
     ((?kwd (?who ?input-form.stx) ?body0 ?body ...)
-     (and (sys.identifier? (sys.syntax ?who))
-	  (sys.identifier? (sys.syntax ?input-form.stx)))
-     (sys.with-syntax
-	 ((SYNNER (sys.datum->syntax (sys.syntax ?who) 'synner)))
-       (sys.syntax
+     (and (sys::identifier? (sys::syntax ?who))
+	  (sys::identifier? (sys::syntax ?input-form.stx)))
+     (sys::with-syntax
+	 ((SYNNER (sys::datum->syntax (sys::syntax ?who) 'synner)))
+       (sys::syntax
 	(define (?who ?input-form.stx)
 	  (with-who ?who
 	    (case-define SYNNER
@@ -294,7 +294,7 @@
     ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
     ;;object that must be further expanded.
     ;;
-    (if (option.strict-r6rs)
+    (if (options::strict-r6rs)
 	(syntax-match input-form.stx (brace)
 	  ;;Untagged return values and possibly tagged formals.
 	  ((_ (?who . ?fmls) . ?body)
@@ -919,7 +919,7 @@
   (define (%parse-field-spec field-spec.stx)
     (syntax-match field-spec.stx (brace)
       ((brace ?field-name ?field-type)
-       (option.typed-language?)
+       (options::typed-language?)
        (begin
 	 (unless (identifier? ?field-name)
 	   (synner "expected identifier as condition type field name" ?field-name))
@@ -932,7 +932,7 @@
        (values ?field-name (top-tag-id)))
 
       (_
-       (synner (if (option.typed-language?)
+       (synner (if (options::typed-language?)
 		   "expected identifier or typed identifier as condition type field specification"
 		 "expected identifier as condition type field name")
 	       field-spec.stx))))
@@ -1500,7 +1500,7 @@
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
      ;;use SYNTAX-OBJECT.LIST-OF-STANDARD-BINDINGS? here.
-     (option.strict-r6rs)
+     (options::strict-r6rs)
      (begin
        (unless (all-identifiers? ?lhs*)
 	 (syntax-violation 'let* "invalid syntactic binding identifiers" input-form.stx ?lhs*))
@@ -1521,7 +1521,7 @@
   (syntax-match input-form.stx ()
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
-     (if (option.strict-r6rs)
+     (if (options::strict-r6rs)
 	 (let ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx)))
 	   (bless
 	    `((letrec ((,?recur (trace-lambda ,?recur ,lhs* ,?body . ,?body*)))
@@ -1580,7 +1580,7 @@
 		 (values (reverse lhs*.standard)
 			 (reverse lhs*.signature))
 	       (receive (lhs.standard lhs.signature)
-		   (if (option.strict-r6rs)
+		   (if (options::strict-r6rs)
 		       (syntax-object.parse-standard-formals (car lhs*) input-form.stx)
 		     (syntax-object.parse-typed-formals (car lhs*) input-form.stx))
 		 (loop (cdr lhs*)
@@ -1917,7 +1917,7 @@
 	`(define (,who.id . ,standard-formals.stx)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ,who.id))))
-	     ,(if (option.enable-arguments-validation?)
+	     ,(if (options::enable-arguments-validation?)
 		  ;;With validation.
 		  `(begin
 		     ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
@@ -1937,7 +1937,7 @@
 	`(define (,who.id . ,standard-formals.stx)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ,who.id))))
-	     ,(if (option.enable-arguments-validation?)
+	     ,(if (options::enable-arguments-validation?)
 		  ;;With validation.
 		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			 (RETVAL-VALIDATION* (%make-ret-validation-forms
@@ -2003,7 +2003,7 @@
 	`(,standard-formals.stx
 	  (fluid-let-syntax
 	      ((__who__ (identifier-syntax (quote ,who.id))))
-	    ,(if (option.enable-arguments-validation?)
+	    ,(if (options::enable-arguments-validation?)
 		 ;;With validation.
 		 `(begin
 		    ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
@@ -2023,7 +2023,7 @@
 	`(,standard-formals.stx
 	  (fluid-let-syntax
 	      ((__who__ (identifier-syntax (quote ,who.id))))
-	    ,(if (option.enable-arguments-validation?)
+	    ,(if (options::enable-arguments-validation?)
 		 ;;With validation.
 		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 			(RETVAL-VALIDATION* (%make-ret-validation-forms
@@ -2101,7 +2101,7 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
         `(named-lambda ,who.id ,standard-formals.stx
-	   ,(if (option.enable-arguments-validation?)
+	   ,(if (options::enable-arguments-validation?)
 		;;With validation.
 		`(begin
 		   ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
@@ -2119,7 +2119,7 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(named-lambda ,who.id ,standard-formals.stx
-	   ,(if (option.enable-arguments-validation?)
+	   ,(if (options::enable-arguments-validation?)
 		;;With validation.
 		(let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 		       (RETVAL-VALIDATION* (%make-ret-validation-forms
@@ -2200,7 +2200,7 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  ,(if (option.enable-arguments-validation?)
+	  ,(if (options::enable-arguments-validation?)
 	       ;;With validation.
 	       `(begin
 		  ,@(%make-arg-validation-forms who.id arg-validation-spec* synner)
@@ -2218,7 +2218,7 @@
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
 	`(,standard-formals.stx
-	  ,(if (option.enable-arguments-validation?)
+	  ,(if (options::enable-arguments-validation?)
 	       ;;With validation
 	       (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
 		      (RETVAL-VALIDATION* (%make-ret-validation-forms
@@ -4401,7 +4401,7 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
      (receive (standard-formals signature.stx)
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     (syntax-object.parse-standard-formals ?formals expr-stx)
 	   (syntax-object.parse-typed-formals ?formals expr-stx))
        (syntax-match standard-formals ()
@@ -4459,7 +4459,7 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?form0 ?form* ...)
      (receive (standard-formals signature.stx)
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     (syntax-object.parse-standard-formals ?formals expr-stx)
 	   (syntax-object.parse-typed-formals ?formals expr-stx))
        (syntax-match standard-formals ()
@@ -4541,7 +4541,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals.stx formals-signature.stx)
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     (syntax-object.parse-standard-formals ?formals input-form.stx)
 	   (syntax-object.parse-typed-formals ?formals input-form.stx))
        (let ((single-return-value? (and (list? standard-formals.stx)
@@ -4563,7 +4563,7 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals.stx formals-signature.stx)
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     (syntax-object.parse-standard-formals ?formals input-form.stx)
 	   (syntax-object.parse-typed-formals ?formals input-form.stx))
        (receive (rv-form single-return-value?)
@@ -5004,7 +5004,7 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?expr)
-     (if (option.drop-assertions?)
+     (if (options::drop-assertions?)
 	 ?expr
        (let ((pos (or (expression-position expr-stx)
 		      (expression-position ?expr))))
@@ -5113,10 +5113,10 @@
 ;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
-;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'sys::syntax-case			'scheme-indent-function 2)
 ;;eval: (put 'with-who				'scheme-indent-function 1)
 ;;eval: (put '$fold-left/stx			'scheme-indent-function 1)
-;;eval: (put 'sys.with-syntax			'scheme-indent-function 1)
+;;eval: (put 'sys::with-syntax			'scheme-indent-function 1)
 ;;eval: (put 'define-macro-transformer		'scheme-indent-function 1)
 ;;eval: (put 'map-for-two-retvals		'scheme-indent-function 1)
 ;;End:

@@ -108,7 +108,7 @@
 		 ;;it is defined.  This is an error  we can fix in the typed language
 		 ;;with a  cast operator; for the  untyped language we want  to avoid
 		 ;;it.
-		 (if (option.typed-language?)
+		 (if (options::typed-language?)
 		     (fabricate-closure-type-identifier who.sym (make-clambda-signature (list clause-signature)))
 		   (procedure-tag-id)))))))
 
@@ -154,7 +154,7 @@
 		 ;;it is defined.  This is an error  we can fix in the typed language
 		 ;;with a  cast operator; for the  untyped language we want  to avoid
 		 ;;it.
-		 (if (option.typed-language?)
+		 (if (options::typed-language?)
 		     (fabricate-closure-type-identifier who.sym signature)
 		   (procedure-tag-id)))))))
 
@@ -201,7 +201,7 @@
     ;;LAMBDA  clause  as  required  by  R6RS.  CLAUSE-SIGNATURE  is  an  instance  of
     ;;"<clambda-clause-signature>" representing the types of formals and retvals.
     (define-values (standard-formals.stx clause-signature)
-      (if (option.strict-r6rs)
+      (if (options::strict-r6rs)
 	  (syntax-object.parse-standard-clambda-clause-formals formals.stx input-form.stx)
 	(syntax-object.parse-typed-clambda-clause-formals formals.stx input-form.stx)))
     (define argvals-signature.tags

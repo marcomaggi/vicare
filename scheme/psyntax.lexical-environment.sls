@@ -433,7 +433,7 @@
 		  syntax-violation	make-variable-transformer)
     (vicare system $symbols)
     (rnrs mutable-pairs)
-    (prefix (rnrs syntax-case) sys.)
+    (prefix (rnrs syntax-case) sys::)
     (psyntax.setup)
     (psyntax.compat)
     (psyntax.builders)
@@ -2069,7 +2069,7 @@
 
 (define-fluid-syntax __descr__
   (lambda (stx)
-    (sys.syntax-violation '__descr__ "unset fluid syntax" stx)))
+    (sys::syntax-violation '__descr__ "unset fluid syntax" stx)))
 
 (module (case-identifier-syntactic-binding-descriptor case-identifier-syntactic-binding-descriptor/no-indirection)
 
@@ -2104,19 +2104,19 @@
   (define-syntax %case-identifier-syntactic-binding-descriptor
     (lambda (stx)
       (define (%id-or-false X)
-	(or (sys.identifier? X)
-	    (not (sys.syntax->datum X))))
-      (sys.syntax-case stx (else)
+	(or (sys::identifier? X)
+	    (not (sys::syntax->datum X))))
+      (sys::syntax-case stx (else)
 	((_ ?label->descr
 	    (?who ?input-form.stx ?id ?lexenv)
 	    ((?type0 ?type ...) . ?body)
 	    ...
 	    (else . ?else-body))
-	 (and (%id-or-false (sys.syntax ?who))
-	      (%id-or-false (sys.syntax ?input-form.stx))
-	      (sys.identifier? (sys.syntax ?lexenv))
-	      (sys.identifier? (sys.syntax ?id)))
-	 (sys.syntax
+	 (and (%id-or-false (sys::syntax ?who))
+	      (%id-or-false (sys::syntax ?input-form.stx))
+	      (sys::identifier? (sys::syntax ?lexenv))
+	      (sys::identifier? (sys::syntax ?id)))
+	 (sys::syntax
 	  (let* ((label (id->label/or-error ?who ?input-form.stx ?id))
 		 (descr (?label->descr label ?lexenv)))
 	    (fluid-let-syntax ((__descr__ (identifier-syntax descr)))

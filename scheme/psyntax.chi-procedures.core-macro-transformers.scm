@@ -21,18 +21,18 @@
 
 ;;;; stuff
 
-(import (prefix (rnrs syntax-case) sys.))
+(import (prefix (rnrs syntax-case) sys::))
 
 (define-syntax (define-core-transformer stx)
-  (sys.syntax-case stx ()
+  (sys::syntax-case stx ()
     ((_ (?who ?input-form.stx ?lexenv.run ?lexenv.expand) ?body0 ?body ...)
-     (let* ((who.sym (sys.syntax->datum (sys.syntax ?who)))
+     (let* ((who.sym (sys::syntax->datum (sys::syntax ?who)))
 	    (who.str (symbol->string who.sym))
 	    (who.out (string->symbol (string-append who.str "-transformer"))))
-       (sys.with-syntax
-	   ((WHO    (sys.datum->syntax (sys.syntax ?who) who.out))
-	    (SYNNER (sys.datum->syntax (sys.syntax ?who) '%synner)))
-	 (sys.syntax
+       (sys::with-syntax
+	   ((WHO    (sys::datum->syntax (sys::syntax ?who) who.out))
+	    (SYNNER (sys::datum->syntax (sys::syntax ?who) '%synner)))
+	 (sys::syntax
 	  (define (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
 	    (with-who ?who
 	      (define SYNNER
@@ -301,7 +301,7 @@
      ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
      ;;
      (receive (lhs*.lex rhs*.psi rib lexenv.run)
-	 (if (option.strict-r6rs)
+	 (if (options::strict-r6rs)
 	     ;;Prepare standard, untyped syntactic bindings.
 	     (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
 		    (rhs*.psi	(map (lambda (rhs.stx)
@@ -393,7 +393,7 @@
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (receive (lhs*.lex rhs*.psi rib lexenv.run)
-	   (if (option.strict-r6rs)
+	   (if (options::strict-r6rs)
 	       ;;Prepare standard, untyped syntactic bindings.
 	       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
 		      (lhs*.lab		(map generate-label-gensym   lhs*.id))
@@ -1498,7 +1498,7 @@
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi.core-expr expr.psi))
-	    (expr.sexp (compiler.core-expr->optimized-code expr.core)))
+	    (expr.sexp (compiler::core-expr->optimized-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
@@ -1515,7 +1515,7 @@
      (let* ((expr.psi  (chi-expr (bless `(internal-body ,?expr0 ,@?expr* (void)))
 				 lexenv.run lexenv.expand))
 	    (expr.core (psi.core-expr expr.psi))
-	    (expr.sexp (compiler.core-expr->optimized-code expr.core)))
+	    (expr.sexp (compiler::core-expr->optimized-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
@@ -1531,7 +1531,7 @@
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi.core-expr expr.psi))
-	    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
+	    (expr.sexp (compiler::core-expr->optimisation-and-core-type-inference-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
@@ -1548,7 +1548,7 @@
      (let* ((expr.psi  (chi-expr (bless `(internal-body ,?expr0 ,@?expr* (void)))
 				 lexenv.run lexenv.expand))
 	    (expr.core (psi.core-expr expr.psi))
-	    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
+	    (expr.sexp (compiler::core-expr->optimisation-and-core-type-inference-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
@@ -1567,7 +1567,7 @@
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi.core-expr expr.psi))
-	    (expr.sexp (compiler.core-expr->assembly-code expr.core)))
+	    (expr.sexp (compiler::core-expr->assembly-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
@@ -1596,7 +1596,7 @@
 ;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
-;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'sys::syntax-case			'scheme-indent-function 2)
 ;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
 ;;eval: (put '$map-in-order			'scheme-indent-function 1)
 ;;End:

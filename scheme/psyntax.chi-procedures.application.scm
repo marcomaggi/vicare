@@ -357,7 +357,7 @@
 
       (_
        ;;The rator is declared to evaluate to multiple values.
-       (if (option.strict-r6rs)
+       (if (options::strict-r6rs)
 	   ;;According to the standard we must  insert a normal rator application and
 	   ;;raise an exception at run-time.
 	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
@@ -663,7 +663,7 @@
 					  rator.psi rand*.psi)
     (define (%no-optimisation-possible)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-    (if (option.strict-r6rs)
+    (if (options::strict-r6rs)
 	;;We rely on run-time checking.
 	(%no-optimisation-possible))
     (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
@@ -683,7 +683,7 @@
        (%no-optimisation-possible #f))
       ((retvals.sig)
        (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi retvals.sig)))
-    (if (option.strict-r6rs)
+    (if (options::strict-r6rs)
 	;;We rely on run-time checking.
 	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi)
       (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
