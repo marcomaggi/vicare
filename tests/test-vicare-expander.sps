@@ -58,7 +58,7 @@
 #!vicare
 (import (vicare)
   (vicare language-extensions callables)
-  (prefix (vicare expander) expander.)
+  (prefix (vicare expander) expander::)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -4594,13 +4594,19 @@
 	      (environment '(vicare))))
     => "incorrect usage of auxiliary keyword")
 
-  ;; (check	;receiver form does not evaluate to function
-  ;;     (catch-expand-time-signature-violation #f
-  ;; 	(%eval '(case 2
-  ;; 		  ((a b c)	'symbol)
-  ;; 		  ((1 2 3)	=> 123)
-  ;; 		  (else		'else))))
-  ;;   => '(<procedure>) '(<fixnum>))
+  (check	;receiver form does not evaluate to function
+      (try
+	  (%eval '(case 2
+		    ((a b c)	'symbol)
+		    ((1 2 3)	=> 123)
+		    (else	'else)))
+	(catch E
+	  ((expander::&expand-time-retvals-signature-violation)
+	   (values (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-expected-signature E))
+		   (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-returned-signature E))))
+	  (else E)))
+    (=> syntax=?)
+    #'(<procedure>) #'(<positive-fixnum>))
 
   #t)
 
@@ -4682,13 +4688,19 @@
   	      (environment '(vicare))))
     => "incorrect usage of auxiliary keyword")
 
-  ;; (check	;receiver form does not evaluate to function
-  ;;     (catch-expand-time-signature-violation #f
-  ;; 	(%eval '(case-identifiers #'two
-  ;; 		  ((a b c)		'symbol)
-  ;; 		  ((one two three)	=> 'one-two-three)
-  ;; 		  (else			'else))))
-  ;;   => '(<procedure>) '(<symbol>))
+  (check	;receiver form does not evaluate to function
+      (try
+	  (%eval '(case-identifiers #'two
+		    ((a b c)		'symbol)
+		    ((one two three)	=> 'one-two-three)
+		    (else		'else)))
+	(catch E
+	  ((expander::&expand-time-retvals-signature-violation)
+	   (values (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-expected-signature E))
+		   (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-returned-signature E))))
+	  (else E)))
+    (=> syntax=?)
+    #'(<procedure>) #'(<symbol>))
 
   (check	;datum is not an identifier
       (guard (E ((syntax-violation? E)
@@ -5911,7 +5923,7 @@
     (char->fixnum (string-ref str idx)))
 
   (begin-for-syntax
-    (expander.typed-procedure-variable.unsafe-variant-set! #'string-ref-fx #'~string-ref-fx))
+    (expander::typed-procedure-variable.unsafe-variant-set! #'string-ref-fx #'~string-ref-fx))
 
 ;;; --------------------------------------------------------------------
 
@@ -6215,6 +6227,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'typ.set-identifier-tag-type-spec! 'scheme-indent-function 1)
-;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-tag-type-spec!	'scheme-indent-function 1)
+;; eval: (put 'catch-syntax-violation			'scheme-indent-function 1)
+;; eval: (put 'case-identifiers				'scheme-indent-function 1)
 ;; End:
