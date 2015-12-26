@@ -39,7 +39,7 @@
 (declare-core-primitive get-annotated-datum
     (safe)
   (signatures
-   ((<textual-input-port>)	=> (_))))
+   ((<textual-input-port>)		=> (<reader-annotation>))))
 
 (declare-core-primitive reader-annotation-expression
     (safe)
@@ -56,7 +56,7 @@
 (declare-core-primitive reader-annotation-textual-position
     (safe)
   (signatures
-   ((<reader-annotation>)		=> (_))))
+   ((<reader-annotation>)		=> (&source-position))))
 
 (declare-core-primitive reader-annotation-source
     (safe)
