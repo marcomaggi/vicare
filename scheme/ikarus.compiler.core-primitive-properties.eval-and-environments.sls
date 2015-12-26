@@ -60,7 +60,7 @@
   (signatures
    (T:object			=> (T:lexical-environment)))
   (attributes
-   ((_)				effect-free result-true)))
+   ((_)				result-true)))
 
 (let-syntax
     ((declare (syntax-rules ()
@@ -70,7 +70,7 @@
 		   (signatures
 		    ((T:fixnum)		=> (T:lexical-environment)))
 		   (attributes
-		    (()			effect-free result-true))))
+		    (()			result-true))))
 		)))
   (declare null-environment)
   (declare scheme-report-environment)
@@ -82,16 +82,16 @@
    (()				=> (T:lexical-environment))
    ((T:lexical-environment)	=> (T:void)))
   (attributes
-   (()			effect-free result-true)
+   (()			result-true)
    ((_)			result-true)))
 
 (declare-core-primitive new-interaction-environment
     (safe)
   (signatures
    (()				=> (T:lexical-environment))
-   ((T:proper-list)		=> (T:void)))
+   ((T:proper-list)		=> (T:lexical-environment)))
   (attributes
-   (()			effect-free result-true)
+   (()			result-true)
    ((_)			result-true)))
 
 ;;; --------------------------------------------------------------------
@@ -113,7 +113,7 @@
 		   (signatures
 		    ((T:lexical-environment)	=> (?return-value-tag)))
 		   (attributes
-		    ((_)		effect-free))))
+		    ((_)		effect-free result-true))))
 		)))
   (declare environment-symbols		T:proper-list)
   (declare environment-libraries	T:library)

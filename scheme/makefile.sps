@@ -1114,11 +1114,20 @@
     (readline					v $language)
     (make-readline-input-port			v $language)
 ;;;
+    (non-interaction-lexical-environment?	v $language)
+    (interaction-lexical-environment?		v $language)
     (environment?				v $language)
     (environment-symbols			v $language)
     (environment-libraries			v $language)
     (environment-labels				v $language)
     (environment-binding			v $language)
+
+    (<lexical-environment>-rtd)
+    (<lexical-environment>-rcd)
+    (<non-interaction-lexical-environment>-rtd)
+    (<non-interaction-lexical-environment>-rcd)
+    (<interaction-lexical-environment>-rtd)
+    (<interaction-lexical-environment>-rcd)
 ;;;
     (time-and-gather				v $language)
     (stats?					v $language)
@@ -3442,6 +3451,9 @@
     (<promise>					v $language)
     (<enum-set>					v $language)
     (<utsname>					v $language)
+    (<lexical-environment>			v $language)
+    (<interaction-lexical-environment>		v $language)
+    (<non-interaction-lexical-environment>	v $language)
 
     (<port>					v $language)
     (<input-port>				v $language)

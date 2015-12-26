@@ -9529,7 +9529,19 @@ The following bindings are exported by the library @library{vicare}.
 
 
 @defun environment? @var{env}
-Return @true{} if @var{env} is an environment object.
+Return @true{} if @var{env} is a lexical environment object.
+@end defun
+
+
+@defun non-interaction-lexical-environment? @var{obj}
+Return @true{} if @var{env} is a non--interaction lexical environment
+object object.
+@end defun
+
+
+@defun interaction-lexical-environment? @var{obj}
+Return @true{} if @var{env} is an interaction lexical environment object
+object.
 @end defun
 
 

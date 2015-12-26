@@ -670,7 +670,8 @@
       ;;        (one 1)
       ;;        (two 2))
       ;;
-      (let* ((rtd		(record-rtd reco))
+      ;;Here we want to extract the RTD from both opaque and non-opaque records.
+      (let* ((rtd		($struct-rtd reco))
 	     (field-name*	(vector->list (record-type-all-field-names rtd))))
 	(receive (field-box* field-sep*)
 	    (%boxify-record-fields reco 0 field-name*)

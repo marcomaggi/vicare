@@ -194,7 +194,7 @@
       ;;gensyms uniquely associated to the imported bindings.
       (receive (name-vec label-vec)
 	  (parse-import-spec* import-spec*)
-	(make-env name-vec label-vec itc)))))
+	(make-non-interaction-lexical-environment name-vec label-vec itc)))))
 
 
 ;;;; built-in environment objects
@@ -217,12 +217,12 @@
       "only report version 5 is supported" n))
   (environment '(psyntax scheme-report-environment-5)))
 
-(case-define new-interaction-environment
+(case-define* new-interaction-environment
   ;;Build and return a new interaction environment.
   ;;
   (()
    (new-interaction-environment (base-of-interaction-library)))
-  ((libref)
+  (({libref library-reference?})
    (config.initialise-expander)
    (let* ((lib    (libman.find-library-by-reference libref))
 	  (rib    (export-subst->rib (libman.library-export-subst lib)))
@@ -230,27 +230,23 @@
      ;;Here we know that we are loading  a library for future expansion of code (that
      ;;is the whole point of environment objects) so let's visit it right away.
      (libman.visit-library lib)
-     (make-interaction-env rib lexenv))))
+     (make-interaction-lexical-environment rib lexenv))))
 
 (define interaction-environment
-  ;;When  called  with  no   arguments:  return  an  environment  object
-  ;;representing  the environment  active at  the  REPL; to  be used  as
-  ;;argument for EVAL.
+  ;;When  called with  no arguments:  return an  environment object  representing the
+  ;;environment active at the REPL; to be used as argument for EVAL.
   ;;
-  ;;When  called with  the argument  ENV, which  must be  an environment
-  ;;object: set ENV as interaction environment.
+  ;;When called with the  argument ENV, which must be an  environment object: set ENV
+  ;;as interaction environment.
   ;;
   (let ((current-env #f))
-    (case-lambda
+    (case-lambda*
      (()
       (or current-env
-	  (begin
-	    (set! current-env (new-interaction-environment))
-	    current-env)))
-     ((env)
-      (unless (environment? env)
-	(assertion-violation 'interaction-environment
-	  "expected environment object as argument" env))
+	  (receive-and-return (env)
+	      (new-interaction-environment)
+	    (set! current-env env))))
+     (({env interaction-lexical-environment?})
       (set! current-env env)))))
 
 
@@ -260,7 +256,7 @@
   ;;libraries that must be invoked before evaluating the core expr.
   ;;
   (config.initialise-expander)
-  (cond ((env? env)
+  (cond ((non-interaction-lexical-environment? env)
 	 (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
 							       (vector->list (env-labels env)))))
 	   (let ((expr.stx (wrap-source-expression expr rib))
@@ -277,7 +273,7 @@
 	       (seal-rib! rib)
 	       (values (psi.core-expr psi) (rtc))))))
 
-	((interaction-env? env)
+	((interaction-lexical-environment? env)
 	 (let ((rib         (interaction-env-rib    env))
 	       (lexenv.run  (interaction-env-lexenv env)))
 	   (let* ((expr.stx (wrap-source-expression expr rib))

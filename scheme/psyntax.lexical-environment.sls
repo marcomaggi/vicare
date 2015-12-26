@@ -34,21 +34,24 @@
     top-level-context
     self-evaluating?
 
+    ;; lexical environment
+    <lexical-environment>-rtd			<lexical-environment>-rcd
+    environment?
+
     ;; non-interaction environment objects
-    env
-    make-env				env?
+    <non-interaction-lexical-environment>-rtd	<non-interaction-lexical-environment>-rcd
+    make-non-interaction-lexical-environment	non-interaction-lexical-environment?
     env-names
     env-labels
     env-itc
 
     ;; interaction environment objects
-    interaction-env
-    make-interaction-env		interaction-env?
-    interaction-env-rib			set-interaction-env-rib!
-    interaction-env-lexenv		set-interaction-env-lexenv!
+    <interaction-lexical-environment>-rtd	<interaction-lexical-environment>-rcd
+    make-interaction-lexical-environment	interaction-lexical-environment?
+    interaction-env-rib
+    interaction-env-lexenv			set-interaction-env-lexenv!
 
     ;; operations
-    environment?
     environment-symbols
     environment-labels
     environment-libraries
@@ -508,34 +511,49 @@
 
 ;;;; top level environment objects: type definitions
 
+(define-record-type (<lexical-environment> unused-make-lexical-environment environment?)
+  (nongenerative vicare:expander:<lexical-environment>))
+
+(define <lexical-environment>-rtd (record-type-descriptor        <lexical-environment>))
+(define <lexical-environment>-rcd (record-constructor-descriptor <lexical-environment>))
+
+;;; --------------------------------------------------------------------
+
 ;;An ENV record encapsulates a substitution and a set of libraries.
 ;;
-(define-record-type env
-  (nongenerative vicare:expander:env)
-  (fields names
+(define-record-type (<non-interaction-lexical-environment> make-non-interaction-lexical-environment non-interaction-lexical-environment?)
+  (nongenerative vicare:expander:<non-interaction-lexical-environment>)
+  (parent <lexical-environment>)
+  (fields (immutable names	env-names)
 		;A vector of symbols representing the public names of bindings from a
 		;set of  import specifications as  defined by R6RS.  These  names are
 		;from  the  subst  of  the  libraries,  already  processed  with  the
 		;directives  in  the import  sets  (prefix,  deprefix, only,  except,
 		;rename).
-	  labels
+	  (immutable labels	env-labels)
 		;A vector of  gensyms representing the labels of bindings  from a set
 		;of import specifications as defined  by R6RS.  These labels are from
 		;the subst of the libraries.
-	  itc
+	  (immutable itc	env-itc)
 		;A  collector  function  (see  MAKE-COLLECTOR)  holding  the  LIBRARY
 		;records  representing the  libraries selected  by the  source IMPORT
 		;specifications.  These libraries have already been interned.
-	  ))
+	  #| end of FIELDS |# ))
+
+(define <non-interaction-lexical-environment>-rtd (record-type-descriptor        <non-interaction-lexical-environment>))
+(define <non-interaction-lexical-environment>-rcd (record-constructor-descriptor <non-interaction-lexical-environment>))
 
 (module ()
-  ($record-type-printer-set! (record-type-descriptor env)
+  ($record-type-printer-set! (record-type-descriptor <non-interaction-lexical-environment>)
     (lambda (S port sub-printer)
-      (display "#<environment>" port))))
+      (display "#<non-interaction-lexical-environment>" port))))
 
-(define-record-type interaction-env
-  (nongenerative vicare:expander:interaction-env)
-  (fields (mutable rib		interaction-env-rib	set-interaction-env-rib!)
+;;; --------------------------------------------------------------------
+
+(define-record-type (<interaction-lexical-environment> make-interaction-lexical-environment interaction-lexical-environment?)
+  (nongenerative vicare:expander:<interaction-lexical-environment>)
+  (parent <lexical-environment>)
+  (fields (immutable rib	interaction-env-rib)
 		;The  top  RIB   structure  for  the  evaluation  of   code  in  this
 		;environment.  It maps bound identifiers to labels.
 	  (mutable lexenv	interaction-env-lexenv	set-interaction-env-lexenv!)
@@ -543,56 +561,45 @@
 		;syntactic binding descriptors.
 	  ))
 
+(define <interaction-lexical-environment>-rtd (record-type-descriptor        <interaction-lexical-environment>))
+(define <interaction-lexical-environment>-rcd (record-constructor-descriptor <interaction-lexical-environment>))
+
 (module ()
-  ($record-type-printer-set! (record-type-descriptor interaction-env)
+  ($record-type-printer-set! (record-type-descriptor <interaction-lexical-environment>)
     (lambda (S port sub-printer)
-      (display "#<interaction-environment>" port))))
+      (display "#<interaction-lexical-environment>" port))))
 
 
 ;;;; top level environment objects: operations
 
-(define (environment? obj)
-  (or (env? obj)
-      (interaction-env? obj)))
-
-(define* (environment-symbols x)
+(define* (environment-symbols {x environment?})
   ;;Return a list of symbols representing the names of the bindings from
   ;;the given environment.
   ;;
-  (cond ((env? x)
-	 (vector->list (env-names x)))
-	((interaction-env? x)
-	 (map values (rib-name* ($interaction-env-rib x))))
-	(else
-	 (assertion-violation __who__ "not an environment" x))))
+  (if (non-interaction-lexical-environment? x)
+      (vector->list (env-names x))
+    (begin
+      #;(assert (interaction-lexical-environment? x))
+      (map values (rib-name* (interaction-env-rib x))))))
 
-(define* (environment-labels x)
-  ;;Return a  list of  symbols representing the  labels of  the bindings
-  ;;from the given environment.
+(define* (environment-labels {x non-interaction-lexical-environment?})
+  ;;Return a list of  symbols representing the labels of the  bindings from the given
+  ;;environment.
   ;;
-  (unless (env? x)
-    (assertion-violation __who__
-      "expected non-interaction environment object as argument" x))
   (vector->list (env-labels x)))
 
-(define* (environment-libraries x)
-  ;;Return  the  list  of  LIBRARY records  representing  the  libraries
-  ;;forming the environment.
+(define* (environment-libraries {x non-interaction-lexical-environment?})
+  ;;Return  the  list of  LIBRARY  records  representing  the libraries  forming  the
+  ;;environment.
   ;;
-  (unless (env? x)
-    (assertion-violation __who__
-      "expected non-interaction environment object as argument" x))
   ((env-itc x)))
 
-(define* (environment-binding sym env)
-  ;;Search the symbol SYM in the non-interaction environment ENV; if SYM
-  ;;is the public  name of a binding  in ENV return 2  values: the label
-  ;;associated  to the  binding,  the list  of  values representing  the
-  ;;binding.  If SYM is not present in ENV return false and false.
+(define* (environment-binding {sym symbol?} {env non-interaction-lexical-environment?})
+  ;;Search  the symbol  SYM in  the non-interaction  environment ENV;  if SYM  is the
+  ;;public name  of a binding  in ENV  return 2 values:  the label associated  to the
+  ;;binding, the list of  values representing the binding.  If SYM  is not present in
+  ;;ENV return false and false.
   ;;
-  (unless (env? env)
-    (assertion-violation __who__
-      "expected non-interaction environment object as argument" env))
   (let ((P (vector-exists (lambda (name label)
 			    (import (vicare system $symbols))
 			    (and (eq? sym name)
@@ -1540,28 +1547,32 @@
 		;form of a macro call, but is later discarded.
 	  ))
 
-(define (stx-record-printer S port subwriter)
-  (define-syntax-rule (%display ?thing)
-    (display ?thing port))
-  (define-syntax-rule (%write ?thing)
-    (write ?thing port))
-  (define-syntax-rule (%pretty-print ?thing)
-    (pretty-print* ?thing port 0 #f))
-  (define raw-expr
-    (syntax->datum S))
-  (if (symbol? raw-expr)
-      (%display "#<syntactic-identifier")
-    (%display "#<syntax"))
-  (%display " expr=")	(%write raw-expr)
-  (%display " mark*=")	(%display (stx-mark* S))
-  (let ((expr (stx-expr S)))
-    (when (annotation? expr)
-      (let ((pos (annotation-textual-position expr)))
-	(when (source-position-condition? pos)
-	  (%display " line=")	(%display (source-position-line    pos))
-	  (%display " column=")	(%display (source-position-column  pos))
-	  (%display " source=")	(%display (source-position-port-id pos))))))
-  (%display ">"))
+(module ()
+
+  (define (stx-record-printer S port subwriter)
+    (define-syntax-rule (%display ?thing)
+      (display ?thing port))
+    (define-syntax-rule (%write ?thing)
+      (write ?thing port))
+    (define-syntax-rule (%pretty-print ?thing)
+      (pretty-print* ?thing port 0 #f))
+    (define raw-expr
+      (syntax->datum S))
+    (if (symbol? raw-expr)
+	(%display "#<syntactic-identifier")
+      (%display "#<syntax"))
+    (%display " expr=")	(%write raw-expr)
+    (%display " mark*=")	(%display (stx-mark* S))
+    (let ((expr (stx-expr S)))
+      (when (annotation? expr)
+	(let ((pos (annotation-textual-position expr)))
+	  (when (source-position-condition? pos)
+	    (%display " line=")		(%display (source-position-line    pos))
+	    (%display " column=")	(%display (source-position-column  pos))
+	    (%display " source=")	(%display (source-position-port-id pos))))))
+    (%display ">"))
+
+  ($record-type-printer-set! (record-type-descriptor stx) stx-record-printer))
 
 ;;; --------------------------------------------------------------------
 
@@ -2931,7 +2942,7 @@
      (%extract-macro-expansion-trace stx)))
 
   (define (%extract-macro-expansion-trace stx)
-    ;;Extraxt from the (wrapped or unwrapped) syntax object STX the sequence of macro
+    ;;Extract from the (wrapped or unwrapped) syntax object STX the sequence of macro
     ;;expansion traces  from the AE* field  of "stx" records and  return a compound
     ;;condition object representing them, as instances of "&macro-expansion-trace".
     ;;
@@ -3017,8 +3028,6 @@
 
 
 ;;;; done
-
-($record-type-printer-set! (record-type-descriptor stx) stx-record-printer)
 
 #| end of library |# )
 

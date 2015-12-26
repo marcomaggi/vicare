@@ -985,6 +985,7 @@
 (include "makefile.typed-core-primitives.control.scm"			#t)
 (include "makefile.typed-core-primitives.enum-sets.scm"			#t)
 (include "makefile.typed-core-primitives.environment-inquiry.scm"	#t)
+(include "makefile.typed-core-primitives.eval-and-environments.scm"	#t)
 (include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)

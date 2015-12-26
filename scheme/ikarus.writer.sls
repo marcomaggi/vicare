@@ -530,7 +530,8 @@
     (define (%traverse-vanilla-record reco marks-table)
       ;;Traverse a record object that is meant to use the built-in printer function.
       ;;
-      (let ((rtd (record-rtd reco)))
+      ;;Here we want to extract the RTD from both opaque and non-opaque records.
+      (let ((rtd ($struct-rtd reco)))
 	(traverse (record-type-name rtd) marks-table)
 	(let* ((fields.vec	(record-type-all-field-names rtd))
 	       (fields.len	(vector-length fields.vec)))
@@ -1253,7 +1254,8 @@
 	(write-char* (car cache-stack) p)))
 
     (define (%write-record/default-printer record port write-style? marks-table next-mark-idx)
-      (define rtd (record-rtd record))
+      ;;Here we want to extract the RTD from both opaque and non-opaque records.
+      (define rtd ($struct-rtd record))
       (write-char* (if (record-type-opaque? rtd) "#[opaque-record " "#[record ") port)
       (write-char* (symbol->string (record-type-name rtd)) port)
       (let* ((fields.vec  (record-type-all-field-names rtd))

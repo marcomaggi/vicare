@@ -95,6 +95,20 @@
 
 ;;; --------------------------------------------------------------------
 
+   (define-built-in-record-type <lexical-environment>
+       #f
+     #f environment?)
+
+   (define-built-in-record-type <interaction-lexical-environment>
+       <lexical-environment>
+     new-interaction-environment interaction-lexical-environment?)
+
+   (define-built-in-record-type <non-interaction-lexical-environment>
+       <lexical-environment>
+     environment non-interaction-lexical-environment?)
+
+;;; --------------------------------------------------------------------
+
    (define-built-in-record-type <list-type-spec>
        #f
      make-list-type-spec list-type-spec?
