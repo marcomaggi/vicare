@@ -58,7 +58,6 @@
 
      (vicare language-extensions cond-expand)
      (vicare language-extensions cond-expand OS-id-features)
-     (vicare language-extensions cond-expand feature-cond)
      (vicare language-extensions cond-expand helpers)
      (vicare language-extensions cond-expand platform-features)
      (vicare language-extensions cond-expand configuration-features)

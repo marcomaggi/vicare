@@ -207,21 +207,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/cond-expand/configuration-features.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/configuration-features.fasl
 
-lib/vicare/language-extensions/cond-expand/feature-cond.fasl: \
-		lib/vicare/language-extensions/cond-expand/feature-cond.vicare.sls \
-		lib/vicare/language-extensions/cond-expand/registry.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_cond_expand_feature_cond_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_feature_cond_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-nodist_lib_vicare_language_extensions_cond_expand_feature_cond_fasl_DATA = lib/vicare/language-extensions/cond-expand/feature-cond.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_feature_cond_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/feature-cond.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/feature-cond.vicare.sls
-CLEANFILES += lib/vicare/language-extensions/cond-expand/feature-cond.fasl
-
 lib/vicare/language-extensions/cond-expand/helpers.fasl: \
 		lib/vicare/language-extensions/cond-expand/helpers.vicare.sls \
 		$(FASL_PREREQUISITES)
