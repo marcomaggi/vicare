@@ -248,12 +248,16 @@
     extend-rib!					export-subst->rib
 
     ;; syntax objects basics
-    syntax-object?			stx?
-    stx					mkstx
-    make-stx
-    stx-expr				stx-mark*
-    stx-rib*				stx-annotated-expr*
-    datum->syntax			~datum->syntax
+    <stx>
+    <stx>-rtd					<stx>-rcd
+    stx?
+    stx-expr					stx-mark*
+    stx-rib*					stx-annotated-expr*
+    <syntactic-identifier>-rtd			<syntactic-identifier>-rcd
+    make-syntactic-identifier			syntactic-identifier?
+    stx-push-annotated-expr
+    syntax-object?
+    datum->syntax				~datum->syntax
     syntax->datum
     push-lexical-contour
     syntax-annotation			syntax-object-strip-annotations
@@ -308,6 +312,8 @@
     null-tag-id			$null-tag-id?			null-tag-id?
     vector-tag-id		$vector-tag-id?			vector-tag-id?
     nlist-tag-id		$nlist-tag-id?			nlist-tag-id?
+    stx-tag-id			$stx-tag-id?			stx-tag-id?
+    syntactic-identifier-tag-id	$syntactic-identifier-tag-id?	syntactic-identifier-tag-id?
     top-tag-id			$top-tag-id?			top-tag-id?
     boolean-tag-id		void-tag-id
     struct-tag-id		record-tag-id
@@ -383,11 +389,6 @@
     make-retvals-signature-condition
     retvals-signature-condition?
     retvals-signature-condition-signature
-
-    &macro-use-input-form-condition
-    make-macro-use-input-form-condition
-    macro-use-input-form-condition?
-    condition-macro-use-input-form
 
     &macro-expansion-trace
     make-macro-expansion-trace macro-expansion-trace?
@@ -538,15 +539,13 @@
 		;A  collector  function  (see  MAKE-COLLECTOR)  holding  the  LIBRARY
 		;records  representing the  libraries selected  by the  source IMPORT
 		;specifications.  These libraries have already been interned.
-	  #| end of FIELDS |# ))
+	  #| end of FIELDS |# )
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#<non-interaction-lexical-environment>" port))))
 
 (define <non-interaction-lexical-environment>-rtd (record-type-descriptor        <non-interaction-lexical-environment>))
 (define <non-interaction-lexical-environment>-rcd (record-constructor-descriptor <non-interaction-lexical-environment>))
-
-(module ()
-  ($record-type-printer-set! (record-type-descriptor <non-interaction-lexical-environment>)
-    (lambda (S port sub-printer)
-      (display "#<non-interaction-lexical-environment>" port))))
 
 ;;; --------------------------------------------------------------------
 
@@ -559,15 +558,13 @@
 	  (mutable lexenv	interaction-env-lexenv	set-interaction-env-lexenv!)
 		;The LEXENV  for both run  time and expand  time.  It maps  labels to
 		;syntactic binding descriptors.
-	  ))
+	  #| end of FIELDS |# )
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#<interaction-lexical-environment>" port))))
 
 (define <interaction-lexical-environment>-rtd (record-type-descriptor        <interaction-lexical-environment>))
 (define <interaction-lexical-environment>-rcd (record-constructor-descriptor <interaction-lexical-environment>))
-
-(module ()
-  ($record-type-printer-set! (record-type-descriptor <interaction-lexical-environment>)
-    (lambda (S port sub-printer)
-      (display "#<interaction-lexical-environment>" port))))
 
 
 ;;;; top level environment objects: operations
@@ -898,10 +895,8 @@
 		;extensible, that is new bindings can be added to it.  When a vector:
 		;this RIB is  sealed; see the documentation in Texinfo  format for an
 		;explanation of the frequency vector.
-   ))
-
-(module ()
-  ($record-type-printer-set! (record-type-descriptor rib)
+   #| end of FIELDS |# )
+  (custom-printer
     (lambda (S port subwriter) ;record printer function
       (define-syntax-rule (%display ?thing)
 	(display ?thing port))
@@ -914,7 +909,8 @@
       ;; (%display " mark**=")		(subwriter (rib-mark** S))
       ;; (%display " label*=")		(subwriter (rib-label* S))
       ;; (%display " sealed/freq=")	(subwriter (rib-sealed/freq S))
-      (%display ">"))))
+      (%display ">"))
+    ))
 
 ;;; --------------------------------------------------------------------
 
@@ -1118,7 +1114,7 @@
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
     (let ((id.source-name  ($identifier->symbol id))
-	  (id.mark*        ($stx-mark*  id))
+	  (id.mark*        ($<stx>-mark*  id))
 	  (rib.name*       (rib-name*  rib))
 	  (rib.mark**      (rib-mark** rib))
 	  (rib.label*      (rib-label* rib)))
@@ -1334,9 +1330,9 @@
   ;;annihilation and the associated removal of shifts from the ribs.
   ;;
   (import WRAPS-UTILITIES)
-  (let ((stx2.mark* ($stx-mark* stx2))
-	(stx2.rib*  ($stx-rib*  stx2))
-	(stx2.ae*   ($stx-annotated-expr*   stx2)))
+  (let ((stx2.mark* ($<stx>-mark* stx2))
+	(stx2.rib*  ($<stx>-rib*  stx2))
+	(stx2.ae*   ($<stx>-annotated-expr*   stx2)))
     ;;If the first item in stx2.mark* is an anti-mark...
     (if (and (not (null? stx1.mark*))
 	     (not (null? stx2.mark*))
@@ -1450,14 +1446,14 @@
 	       (list->vector ls2))))
 
 	  ((stx? expr)
-	   (let ((expr.mark* ($stx-mark* expr))
-		 (expr.rib*  ($stx-rib*  expr)))
+	   (let ((expr.mark* ($<stx>-mark* expr))
+		 (expr.rib*  ($<stx>-rib*  expr)))
 	     (cond ((null? expr.mark*)
 		    ;;EXPR  with  empty  MARK*: collect  its  RIB*  then
 		    ;;recurse into its expression.
-		    (%recurse ($stx-expr expr)
+		    (%recurse ($<stx>-expr expr)
 			      (append accum-rib* expr.rib*)
-			      (%merge-annotated-expr* ae* ($stx-annotated-expr* expr))))
+			      (%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr))))
 
 		   ((anti-mark? (car expr.mark*))
 		    ;;EXPR with non-empty MARK*  having the anti-mark as
@@ -1478,9 +1474,9 @@
 				     (eq? 'shift (car expr.rib*)))))
 		    (let* ((result.rib* (append accum-rib* expr.rib*))
 			   (result.rib* (cdr result.rib*)))
-		      (make-stx ($stx-expr expr) (cdr expr.mark*)
-				  result.rib*
-				  (%merge-annotated-expr* ae* ($stx-annotated-expr* expr)))))
+		      (make-stx-or-syntactic-identifier ($<stx>-expr expr) (cdr expr.mark*)
+							result.rib*
+							(%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr)))))
 
 		   (else
 		    ;;EXPR with non-empty MARK*  having a proper mark as
@@ -1499,9 +1495,9 @@
 			   (result.rib* (if rib
 					    (cons rib result.rib*)
 					  result.rib*)))
-		      (make-stx ($stx-expr expr) (cons new-mark expr.mark*)
-				  result.rib*
-				  (%merge-annotated-expr* ae* ($stx-annotated-expr* expr))))))))
+		      (make-stx-or-syntactic-identifier ($<stx>-expr expr) (cons new-mark expr.mark*)
+							result.rib*
+							(%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr))))))))
 
 	  ((symbol? expr)
 	   ;;A raw symbol is invalid.
@@ -1518,16 +1514,16 @@
   #| end of module: ADD-MARK |# )
 
 
-;;;; syntax object type definition
+;;;; wrapped syntax object type definition
 
-(define-record-type stx
-  (nongenerative vicare:expander:stx)
-  (fields expr
+(define-record-type (<stx> make-stx stx?)
+  (nongenerative vicare:expander:<stx>)
+  (fields (immutable expr		stx-expr)
 		;A symbolic expression, possibly  annotated, whose subexpressions can
 		;also be instances of stx.
-	  mark*
+	  (immutable mark*		stx-mark*)
 		;Null or a proper list of marks, including the symbol "src".
-	  rib*
+	  (immutable rib*		stx-rib*)
 		;Null or  a proper list of  rib instances or "shift"  symbols.  Every
 		;rib represents  a nested lexical  contour; a "shift"  represents the
 		;return from a macro transformer application.
@@ -1537,7 +1533,7 @@
 		;the whole structure of nested stx  instances: the items in all the
 		;MARK* fields  are associated to the  items in all the  RIB*, see the
 		;functions JOIN-WRAPS and ADD-MARK for details.
-	  annotated-expr*
+	  (immutable annotated-expr*	stx-annotated-expr*)
 		;List of annotated expressions: null or a proper list whose items are
 		;#f or input  forms of macro transformer calls.  It  is used to trace
 		;the transformations a  form undergoes when it is  processed as macro
@@ -1545,36 +1541,84 @@
 		;
 		;The #f items  are inserted when this instance is  processed as input
 		;form of a macro call, but is later discarded.
-	  ))
+	  #| end of FIELDS |# )
+  ;;While it is fine for the super-type  constructor (this one) to accept a symbol as
+  ;;expression, it is not fine for the  public constructor MAKE-STX to do so.  If the
+  ;;expression is a symbol we have to use MAKE-SYNTACTIC-IDENTIFIER.
+  (protocol
+    (lambda (make-record)
+      (lambda* ({expr not-symbol?} mark* rib* annotated-expr*)
+	(make-record expr mark* rib* annotated-expr*))))
+  (super-protocol
+    (lambda (make-record)
+      (lambda* (expr mark* rib* annotated-expr*)
+	(make-record expr mark* rib* annotated-expr*))))
+  (custom-printer
+    (lambda (S port sub-printer)
+      (define-syntax-rule (%display ?thing)
+	(display ?thing port))
+      (define-syntax-rule (%write ?thing)
+	(write ?thing port))
+      (define-syntax-rule (%pretty-print ?thing)
+	(pretty-print* ?thing port 0 #f))
+      (define raw-expr
+	(syntax->datum S))
+      (if (symbol? raw-expr)
+	  (%display "#<syntactic-identifier")
+	(%display "#<syntax"))
+      (%display " expr=")	(%write raw-expr)
+      (%display " mark*=")	(%display (stx-mark* S))
+      (let ((expr (stx-expr S)))
+	(when (reader-annotation? expr)
+	  (let ((pos (reader-annotation-textual-position expr)))
+	    (when (source-position-condition? pos)
+	      (%display " line=")	(%display (source-position-line    pos))
+	      (%display " column=")	(%display (source-position-column  pos))
+	      (%display " source=")	(%display (source-position-port-id pos))))))
+      (%display ">"))))
 
-(module ()
+(define <stx>-rtd (record-type-descriptor        <stx>))
+(define <stx>-rcd (record-constructor-descriptor <stx>))
 
-  (define (stx-record-printer S port subwriter)
-    (define-syntax-rule (%display ?thing)
-      (display ?thing port))
-    (define-syntax-rule (%write ?thing)
-      (write ?thing port))
-    (define-syntax-rule (%pretty-print ?thing)
-      (pretty-print* ?thing port 0 #f))
-    (define raw-expr
-      (syntax->datum S))
-    (if (symbol? raw-expr)
-	(%display "#<syntactic-identifier")
-      (%display "#<syntax"))
-    (%display " expr=")	(%write raw-expr)
-    (%display " mark*=")	(%display (stx-mark* S))
-    (let ((expr (stx-expr S)))
-      (when (reader-annotation? expr)
-	(let ((pos (reader-annotation-textual-position expr)))
-	  (when (source-position-condition? pos)
-	    (%display " line=")		(%display (source-position-line    pos))
-	    (%display " column=")	(%display (source-position-column  pos))
-	    (%display " source=")	(%display (source-position-port-id pos))))))
-    (%display ">"))
+
+;;;; syntactic identifier type definition
 
-  ($record-type-printer-set! (record-type-descriptor stx) stx-record-printer))
+(define-record-type (<syntactic-identifier> make-syntactic-identifier syntactic-identifier?)
+  (nongenerative vicare:expander:<syntactic-identifier>)
+  (parent <stx>)
+  (protocol
+    (lambda (make-stx)
+      (define* (make-syntactic-identifier {sym symbol-or-annotated-symbol?} mark* rib* annotated-expr*)
+	((make-stx sym mark* rib* annotated-expr*)))
+      make-syntactic-identifier))
+  (custom-printer
+    (lambda (S port subwriter)
+      (define-syntax-rule (%display ?thing)
+	(display ?thing port))
+      (define-syntax-rule (%write ?thing)
+	(write ?thing port))
+      (define-syntax-rule (%pretty-print ?thing)
+	(pretty-print* ?thing port 0 #f))
+      (define raw-expr
+	(syntax->datum S))
+      (assert (symbol? raw-expr))
+      (%display "#<syntactic-identifier")
+      (%display " expr=")	(%write raw-expr)
+      (%display " mark*=")	(%display (stx-mark* S))
+      (let ((expr (stx-expr S)))
+	(when (reader-annotation? expr)
+	  (let ((pos (reader-annotation-textual-position expr)))
+	    (when (source-position-condition? pos)
+	      (%display " line=")	(%display (source-position-line    pos))
+	      (%display " column=")	(%display (source-position-column  pos))
+	      (%display " source=")	(%display (source-position-port-id pos))))))
+      (%display ">"))))
 
-;;; --------------------------------------------------------------------
+(define <syntactic-identifier>-rtd (record-type-descriptor        <syntactic-identifier>))
+(define <syntactic-identifier>-rcd (record-constructor-descriptor <syntactic-identifier>))
+
+
+;;;; unwrapped syntax object operations
 
 (define (syntax-object? obj)
   ;;Return #t if  OBJ is a wrapped  or unwrapped syntax object;  otherwise return #f.
@@ -1600,12 +1644,12 @@
 (define (~datum->syntax id datum)
   ;;Since all the identifier->label bindings  are encapsulated within the identifier,
   ;;converting  a datum  to  a syntax  object (non-hygienically)  is  done simply  by
-  ;;creating an stx that has the same marks and ribs as the identifier.
+  ;;creating an "<stx>" that has the same marks and ribs as the identifier.
   ;;
   ;;We include also  the annotated expression from ID because,  when showing an error
   ;;trace, it helps to understand from where the returned object comes.
   ;;
-  (make-stx datum ($stx-mark* id) ($stx-rib* id) ($stx-annotated-expr* id)))
+  (make-stx-or-syntactic-identifier datum ($<stx>-mark* id) ($<stx>-rib* id) ($<stx>-annotated-expr* id)))
 
 (define (syntax->datum S)
   (syntax-object-strip-annotations S '()))
@@ -1619,7 +1663,7 @@
   ;;SOURCE-NAME: usually we should use GENSYM  for this.  The returned identifier can
   ;;be an item in the list generated by GENERATE-TEMPORARIES.
   ;;
-  (make-stx source-name SRC-MARK* '() '()))
+  (make-syntactic-identifier source-name SRC-MARK* '() '()))
 
 (define* (make-top-level-syntax-object/quoted-quoting sym)
   ;;Return a src-marked syntax object representing one among:
@@ -1631,7 +1675,7 @@
   (case sym
     ((quasiquote unquote unquote-splicing)
      (let ((Q (core-prim-id 'quote)))
-       (list Q (make-stx sym SRC-MARK* (stx-rib* Q) '()))))
+       (list Q (make-syntactic-identifier sym SRC-MARK* (stx-rib* Q) '()))))
     (else
      (syntax-violation __who__
        "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
@@ -1644,9 +1688,14 @@
   ;;EXPR   must  be   a  symbolic   expression,   possibly  annotated   as  read   by
   ;;GET-ANNOTATED-DATUM.
   ;;
-  (make-stx expr SRC-MARK* (list rib) '()))
+  (make-stx-or-syntactic-identifier expr SRC-MARK* (list rib) '()))
 
 ;;; --------------------------------------------------------------------
+
+(define (make-stx-or-syntactic-identifier sexp mark* rib* annotated-expr*)
+  (if (symbol-or-annotated-symbol? sexp)
+      (make-syntactic-identifier sexp mark* rib* annotated-expr*)
+    (make-stx sexp mark* rib* annotated-expr*)))
 
 (define* (mkstx expr-stx mark* {rib* list-of-ribs-and-shifts?} annotated-expr*)
   ;;This is the proper constructor for wrapped syntax objects.
@@ -1667,12 +1716,17 @@
   ;;When EXPR-STX is a  stx instance: join the wraps from  EXPR-STX with given wraps,
   ;;making sure that marks and anti-marks and corresponding shifts cancel properly.
   ;;
-  (if (and (stx? expr-stx)
-	   (not (src-marked? mark*)))
-      (receive (mark* rib* annotated-expr*)
-	  (join-wraps mark* rib* annotated-expr* expr-stx)
-	(make-stx (stx-expr expr-stx) mark* rib* annotated-expr*))
-    (make-stx expr-stx mark* rib* annotated-expr*)))
+  (if (stx? expr-stx)
+      (if (src-marked? mark*)
+	  ;;Here we just replace the wraps in EXPR-STX with the given ones.
+	  (make-stx-or-syntactic-identifier (stx-expr expr-stx) mark* rib* annotated-expr*)
+	;;Here we know EXPR-STX is an instance of "<stx>" and a new set of wraps need
+	;;to be pushed on it.  So we join the wraps first.
+	(receive (mark* rib* annotated-expr*)
+	    (join-wraps mark* rib* annotated-expr* expr-stx)
+	  (make-stx-or-syntactic-identifier (stx-expr expr-stx) mark* rib* annotated-expr*)))
+    ;;Here we just wrap a source expression with the given ones.
+    (make-stx-or-syntactic-identifier expr-stx mark* rib* annotated-expr*)))
 
 (define* (push-lexical-contour {rib rib?} expr-stx)
   ;;Add  a rib  to a  syntax object  or expression  and return  the resulting  syntax
@@ -1691,6 +1745,17 @@
   (let ((mark*	'())
 	(ae*	'()))
     (mkstx expr-stx mark* (list rib) ae*)))
+
+(define* (stx-push-annotated-expr {stx stx?} annotated-expr)
+  ;;Build  and return  a new  syntax object  with the  same wraps  of STX  and having
+  ;;ANNOTATED-EXPR pushed on  top of the annotated expressions list.   This is useful
+  ;;when expanding the  input form of a macro:  the input form must be  pushed on the
+  ;;stack of annotated expressions.
+  ;;
+  (import WRAPS-UTILITIES)
+  (make-stx-or-syntactic-identifier (stx-expr stx) (stx-mark* stx) (stx-rib* stx)
+				    (%merge-annotated-expr* (list annotated-expr)
+							    (stx-annotated-expr* stx))))
 
 (define (syntax-annotation x)
   (if (stx? x)
@@ -1722,7 +1787,7 @@
 	  expr)
       (let f ((x expr))
 	(cond ((stx? x)
-	       (syntax-object-strip-annotations ($stx-expr x) ($stx-mark* x)))
+	       (syntax-object-strip-annotations ($<stx>-expr x) ($<stx>-mark* x)))
 	      ((reader-annotation? x)
 	       (reader-annotation-stripped x))
 	      ((pair? x)
@@ -1768,8 +1833,8 @@
     ;;
     (define id.source-name ($identifier->symbol id))
     #;(debug-print __who__ id.source-name)
-    (let search ((rib*  ($stx-rib* id))
-		 (mark* ($stx-mark* id)))
+    (let search ((rib*  ($<stx>-rib* id))
+		 (mark* ($<stx>-mark* id)))
       (and (pair? rib*)
 	   (if (eq? ($car rib*) 'shift)
 	       ;;This is the only  place in the expander where a  symbol "shift" in a
@@ -2237,7 +2302,7 @@
 	     ;;identifier.   Such free  identifier  will work  just  fine in  binding
 	     ;;position.
 	     (receive-and-return (stx)
-		 (make-stx sym SRC-MARK* '() '())
+		 (make-syntactic-identifier sym SRC-MARK* '() '())
 	       (putprop sym '*vicare-scheme-temporary-variable-id* stx))))))
 
 ;;; --------------------------------------------------------------------
@@ -2264,7 +2329,7 @@
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
 
 (define* (make-syntactic-identifier-for-fake-core-primitive {source-name symbol?})
-  (make-stx source-name '() '() '()))
+  (make-syntactic-identifier source-name '() '() '()))
 
 (let-syntax
     ((define-core-prim-id-retriever (syntax-rules ()
@@ -2317,10 +2382,7 @@
   ;;is a symbol.
   ;;
   (and (stx? x)
-       (let ((expr ($stx-expr x)))
-	 (symbol? (if (reader-annotation? expr)
-		      (reader-annotation-stripped expr)
-		    expr)))))
+       (symbol-or-annotated-symbol? ($<stx>-expr x))))
 
 (define (false-or-identifier? x)
   (or (not x)
@@ -2336,7 +2398,7 @@
   ;;same set of marks.
   ;;
   (and (eq? ($identifier->symbol id1) ($identifier->symbol id2))
-       (same-marks? ($stx-mark* id1) ($stx-mark* id2))))
+       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
 
 (define* (free-identifier=? {x identifier?} {y identifier?})
   (~free-identifier=? x y))
@@ -2373,7 +2435,7 @@
   ($identifier->symbol x))
 
 (define ($identifier->symbol x)
-  (let ((expr ($stx-expr x)))
+  (let ((expr ($<stx>-expr x)))
     (if (reader-annotation? expr)
 	(reader-annotation-stripped expr)
       expr)))
@@ -2538,6 +2600,8 @@
   (define-tag-retriever list-tag-id			<list>)
   (define-tag-retriever null-tag-id			<null>)
   (define-tag-retriever nlist-tag-id			<nlist>)
+  (define-tag-retriever stx-tag-id			<stx>)
+  (define-tag-retriever syntactic-identifier-tag-id	<syntactic-identifier>)
   (define-tag-retriever simple-condition-tag-id		&condition)
   (define-tag-retriever compound-condition-tag-id	<compound-condition>)
   #| end of let-syntax |# )
@@ -2558,6 +2622,8 @@
   (define-unsafe-tag-predicate $list-tag-id?			list-tag-id)
   (define-unsafe-tag-predicate $null-tag-id?			null-tag-id)
   (define-unsafe-tag-predicate $nlist-tag-id?			nlist-tag-id)
+  (define-unsafe-tag-predicate $stx-tag-id?			stx-tag-id)
+  (define-unsafe-tag-predicate $syntactic-identifier-tag-id?	syntactic-identifier-tag-id)
   (define-unsafe-tag-predicate $simple-condition-tag-id?	simple-condition-tag-id)
   (define-unsafe-tag-predicate $compound-condition-tag-id?	compound-condition-tag-id)
   #| end of LET-SYNTAX |# )
@@ -2578,6 +2644,8 @@
   (define-tag-predicate list-tag-id?			$list-tag-id?)
   (define-tag-predicate null-tag-id?			$null-tag-id?)
   (define-tag-predicate nlist-tag-id?			$nlist-tag-id?)
+  (define-tag-predicate stx-tag-id?			$stx-tag-id?)
+  (define-tag-predicate syntactic-identifier-tag-id?	$syntactic-identifier-tag-id?)
   (define-tag-predicate simple-condition-tag-id?	$simple-condition-tag-id?)
   (define-tag-predicate compound-condition-tag-id?	$compound-condition-tag-id?)
   #| end of LET-SYNTAX |# )
@@ -2724,22 +2792,10 @@
 (define* (make-retvals-signature-condition {sig type-signature?})
   (%make-retvals-signature-condition sig))
 
-;;This is used  to describe exceptions in which  the input form of a macro  use has a
-;;role.  The value  in the FORM slot  must be a syntax object  representing the macro
-;;use input form.
-;;
-;;See MAKE-MACRO-USE-INPUT-FORM-CONDITION for details.
-(define-condition-type &macro-use-input-form-condition
-    &condition
-  %make-macro-use-input-form-condition
-  macro-use-input-form-condition?
-  (form condition-macro-use-input-form))
-
 ;;This is used to represent the succession  of transformations a macro use input form
 ;;undergoes while  expanded; there is  an instance of  this condition type  for every
 ;;transformation.
 ;;
-;;See MAKE-MACRO-USE-INPUT-FORM-CONDITION for details.
 (define-condition-type &macro-expansion-trace
     &condition
   make-macro-expansion-trace macro-expansion-trace?
@@ -2831,7 +2887,6 @@
 (module (raise-unbound-error
 	 syntax-violation
 	 expand-time-retvals-signature-violation
-	 make-macro-use-input-form-condition
 	 raise-compound-condition-object)
 
   (case-define* syntax-violation
@@ -2936,11 +2991,6 @@
 		  (%expression->source-position-condition input-form.stx)
 		  (%extract-macro-expansion-trace input-form.stx)))))
 
-  (define* (make-macro-use-input-form-condition stx)
-    (condition
-     (%make-macro-use-input-form-condition stx)
-     (%extract-macro-expansion-trace stx)))
-
   (define (%extract-macro-expansion-trace stx)
     ;;Extract from the (wrapped or unwrapped) syntax object STX the sequence of macro
     ;;expansion traces  from the AE* field  of "stx" records and  return a compound
@@ -3017,7 +3067,7 @@
 	    ((reader-annotation? X)
 	     ;;Here we  only want to wrap  X into an  "stx" object, we do  not care
 	     ;;about the context.  (Marco Maggi; Sat Apr 11, 2015)
-	     (make-macro-expansion-trace (make-stx X '() '() '())))
+	     (make-macro-expansion-trace (make-stx-or-syntactic-identifier X '() '() '())))
 	    (else
 	     (condition)))))
 

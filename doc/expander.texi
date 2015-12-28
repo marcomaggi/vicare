@@ -1166,7 +1166,7 @@ syntax object: an attempt to use an unwrapped syntax object holding an
 unwrapped symbol will, sooner or later, cause an exception to be raised.
 
 
-@deftp {Object Type} stx
+@deftp {Object Type} @aclass{stx}
 Disjoint object type representing wrapped syntax objects: source code
 expressions associated to meta data representing their lexical contour.
 

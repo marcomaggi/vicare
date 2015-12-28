@@ -149,7 +149,7 @@
   #t fixnum?)
 
 (define-scheme-type <flonum>
-    <real-valued>
+    <real>
   #t flonum?)
 
 (define-scheme-type <ratnum>
@@ -462,11 +462,30 @@
    (cdr		cdr)))
 
 
+;;;; miscellaneous compound types
+
+;;FIXME When type unions are implemented we should uncomment this.  (Marco Maggi; Sun
+;;Dec 27, 2015)
+;;
+;; (define-union-type <syntax-object>
+;;     syntax-object?
+;;   (or <syntactic-identifier>
+;;       <boolean>
+;;       <char>
+;;       <number>
+;;       <string>
+;;       <bytevector>
+;;       <vector-of-syntax-objects>
+;;       <list-of-syntax-objects>
+;;       ))
+
+
 ;;;; done
 
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
 ;; eval: (put 'define-scheme-type	'scheme-indent-function 2)
+;; eval: (put 'define-union-type	'scheme-indent-function 2)
 ;; eval: (put 'define-list-type		'scheme-indent-function 2)
 ;; End:

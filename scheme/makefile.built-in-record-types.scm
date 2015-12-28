@@ -129,6 +129,37 @@
      (methods
       (tags			type-signature-tags)))
 
+;;; --------------------------------------------------------------------
+
+   (define-built-in-record-type <stx>
+       #f
+     #f stx?
+     (methods
+      (expr			stx-expr)
+      (mark*			stx-mark*)
+      (rib*			stx-rib*)
+      (annotated-expr*		stx-annotated-expr*)))
+
+   (define-built-in-record-type <syntactic-identifier>
+       <stx>
+     #f syntactic-identifier?
+     (methods
+      (string			identifier->string)
+      (label			syntactic-identifier->label)))
+
+   (define-built-in-record-type <syntax-clause-spec>
+       #f
+     make-syntax-clause-spec syntax-clause-spec?
+     (methods
+      (keyword				syntax-clause-spec-keyword)
+      (min-number-of-occurrences	syntax-clause-spec-min-number-of-occurrences)
+      (max-number-of-occurrences	syntax-clause-spec-max-number-of-occurrences)
+      (min-number-of-arguments		syntax-clause-spec-min-number-of-arguments)
+      (max-number-of-arguments		syntax-clause-spec-max-number-of-arguments)
+      (mutually-inclusive		syntax-clause-spec-mutually-inclusive)
+      (mutually-exclusive		syntax-clause-spec-mutually-exclusive)
+      (custom-data			syntax-clause-spec-custom-data)))
+
    ))
 
 

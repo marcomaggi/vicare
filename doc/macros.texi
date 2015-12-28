@@ -644,7 +644,7 @@ Revised^6 Report on the algorithmic language Scheme
 @end macro
 
 @macro stx{}
-@objtype{stx}
+@class{stx}
 @end macro
 
 @macro urldate{DATE}

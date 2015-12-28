@@ -177,16 +177,12 @@
 		 (%parse-define-syntax body-form.stx)
 	       (when (bound-id-member? id keyword*)
 		 (stx-error body-form.stx "cannot redefine keyword"))
-	       (let ((rhs.core (with-exception-handler/input-form
-				   rhs.stx
-				 (expand-macro-transformer rhs.stx lexenv.expand)))
+	       (let ((rhs.core (expand-macro-transformer rhs.stx lexenv.expand))
 		     (lab      (generate-label-gensym id)))
 		 ;;This call will raise an exception if it represents an attempt to
 		 ;;illegally redefine a binding.
 		 (extend-rib! rib id lab shadow/redefine-bindings?)
-		 (let ((entry (cons lab (with-exception-handler/input-form
-					    rhs.stx
-					  (eval-macro-transformer rhs.core lexenv.run)))))
+		 (let ((entry (cons lab (eval-macro-transformer rhs.core lexenv.run))))
 		   (chi-body* (cdr body-form*.stx)
 			      (cons entry lexenv.run)
 			      (cons entry lexenv.expand)
@@ -219,16 +215,12 @@
 		 (%parse-define-syntax body-form.stx)
 	       (when (bound-id-member? id keyword*)
 		 (stx-error body-form.stx "cannot redefine keyword"))
-	       (let ((rhs.core (with-exception-handler/input-form
-				   rhs.stx
-				 (expand-macro-transformer rhs.stx lexenv.expand)))
+	       (let ((rhs.core (expand-macro-transformer rhs.stx lexenv.expand))
 		     (lab      (generate-label-gensym id)))
 		 ;;This call will raise an exception if it represents an attempt to
 		 ;;illegally redefine a binding.
 		 (extend-rib! rib id lab shadow/redefine-bindings?)
-		 (let* ((binding  (with-exception-handler/input-form
-				      rhs.stx
-				    (eval-macro-transformer rhs.core lexenv.run)))
+		 (let* ((binding  (eval-macro-transformer rhs.core lexenv.run))
 			(flab     (generate-label-gensym id))
 			;;This LEXENV entry represents  the definition of the fluid
 			;;syntax.
@@ -288,10 +280,8 @@
 				      (let ((in-form (if (eq? type 'let-syntax)
 							 x
 						       (push-lexical-contour xrib x))))
-					(with-exception-handler/input-form
-					    in-form
-					  (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-								  lexenv.run))))
+					(eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+								lexenv.run)))
 				 ?xrhs*)))
 		  (chi-body*
 		   ;;Splice the internal  body forms but add a  lexical contour to
@@ -744,7 +734,6 @@
 ;;Local Variables:
 ;;mode: vicare
 ;;fill-column: 85
-;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;End:

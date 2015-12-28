@@ -119,7 +119,14 @@
     ;;signature, with the identifiers "_" replaced with "<top>".
     ;;
     (define (%replace id)
-      (if (free-identifier=? #'_ id) #'<top> id))
+      (cond ((free-identifier=? #'_ id)
+	     #'<top>)
+	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
+	    ;;implemented  we should  remove this  and  use a  proper definition  for
+	    ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
+	    ((free-identifier=? #'<syntax-object> id)
+	     #'<top>)
+	    (else id)))
     (let recur ((sig type-signature.stx))
       (syntax-case sig ()
 	(()
@@ -986,6 +993,7 @@
 (include "makefile.typed-core-primitives.enum-sets.scm"			#t)
 (include "makefile.typed-core-primitives.environment-inquiry.scm"	#t)
 (include "makefile.typed-core-primitives.eval-and-environments.scm"	#t)
+(include "makefile.typed-core-primitives.expander.scm"		#t)
 (include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)

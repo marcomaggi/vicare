@@ -479,10 +479,8 @@
 				   (%lookup-binding-in-lexenv.run __who__ input-form.stx lhs.id lexenv.run %synner))
 			      ?lhs*))
 	      (binding*     (map (lambda (rhs.stx)
-				   (with-exception-handler/input-form
-				       rhs.stx
-				     (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
-							     lexenv.run)))
+				   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
+							   lexenv.run))
 			      ?rhs*))
 	      (entry*       (map cons fluid-label* binding*)))
 	 (chi-internal-body #f
@@ -497,10 +495,8 @@
     ;;values: the updated LEXENV.RUN and LEXENV.EXPAND.
     ;;
     (let* ((fluid-label  (%lookup-binding-in-lexenv.run __who__ input-form.stx lhs.id lexenv.run synner))
-	   (binding      (with-exception-handler/input-form
-			     rhs.stx
-			   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
-						   lexenv.run)))
+	   (binding      (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
+						 lexenv.run))
 	   (entry        (cons fluid-label binding)))
       (values (cons entry lexenv.run)
 	      (cons entry lexenv.expand))))
@@ -696,7 +692,15 @@
 	   (%gen-syntax input-form.stx ?template lexenv.run '() ellipsis-id? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
-	   (make-psi input-form.stx code))))
+	   (make-psi input-form.stx code
+		     (if (identifier? ?template)
+			 (make-type-signature/single-syntactic-identifier)
+		       ;;FIXME The  form #'(1  .  2) returns  an instance  of wrapped
+		       ;;syntax object; if X is a  pattern variable, the form #'(X X)
+		       ;;returns a list of wrapped syntax objects.  So here we should
+		       ;;implement type  signature tracking  to be  able to  return a
+		       ;;meaning ful signature.  (Marco Maggi; Mon Dec 28, 2015)
+		       (make-type-signature/single-top))))))
       ))
 
   (define-module-who syntax)
@@ -1597,6 +1601,5 @@
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys::syntax-case			'scheme-indent-function 2)
-;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
 ;;eval: (put '$map-in-order			'scheme-indent-function 1)
 ;;End:

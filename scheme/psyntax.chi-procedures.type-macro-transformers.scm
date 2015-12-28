@@ -1238,6 +1238,5 @@
 ;;eval: (put 'push-lexical-contour			'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop			'scheme-indent-function 1)
 ;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
-;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
 ;;eval: (put '$map-in-order				'scheme-indent-function 1)
 ;;End:

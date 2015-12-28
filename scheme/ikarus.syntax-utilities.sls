@@ -80,6 +80,8 @@
     syntax-clauses-verify-mutually-exclusive
 
     ;; clause specification structs
+    <syntax-clause-spec>-rtd
+    <syntax-clause-spec>-rcd
     make-syntax-clause-spec
     syntax-clause-spec?
     syntax-clause-spec-keyword
@@ -729,88 +731,90 @@
 
 ;;;; clause specification structs
 
-(define-record-type syntax-clause-spec
-  (opaque #t)
-  (nongenerative vicare:syntax-clause-spec)
-  (fields (immutable keyword)
+(define-record-type (<syntax-clause-spec> make-syntax-clause-spec syntax-clause-spec?)
+  (nongenerative vicare:<syntax-clause-spec>)
+  (fields (immutable keyword				syntax-clause-spec-keyword)
 		;An identifier representing the keyword for this clause.
-	  (immutable min-number-of-occurrences)
+	  (immutable min-number-of-occurrences		syntax-clause-spec-min-number-of-occurrences)
 		;A non-negative  real number representing the  allowed minimum number
 		;of occurrences for  this clause.  0 means the clause  is optional; 1
 		;means the clause is mandatory.
-	  (immutable max-number-of-occurrences)
+	  (immutable max-number-of-occurrences		syntax-clause-spec-max-number-of-occurrences)
 		;A non-negative  real number representing the  allowed maximum number
 		;of occurrences for this clause.  0  means the clause is forbidden; 1
 		;means the clause  must appear at most once; +inf.0  means the clause
 		;can appear any number of times.
-	  (immutable min-number-of-arguments)
+	  (immutable min-number-of-arguments		syntax-clause-spec-min-number-of-arguments)
 		;A non-negative  real number representing the  allowed minimum number
 		;of  arguments for  this  clause.  0  means the  clause  can have  no
 		;arguments; 1 means the clause must have at least one argument.
-	  (immutable max-number-of-arguments)
+	  (immutable max-number-of-arguments		syntax-clause-spec-max-number-of-arguments)
 		;A non-negative  real number representing the  allowed maximum number
 		;of arguments for this clause.  0  means the clause has no arguments;
 		;1 means the clause must have at most one arguments; +inf.0 means the
 		;clause can have any number of arguments.
-	  (immutable mutually-inclusive)
+	  (immutable mutually-inclusive			syntax-clause-spec-mutually-inclusive)
 		;A list  identifiers representing  clauses keywords that  must appear
 		;along with this one.
-	  (immutable mutually-exclusive)
+	  (immutable mutually-exclusive			syntax-clause-spec-mutually-exclusive)
 		;A  list  identifiers representing  clauses  keywords  that must  not
 		;appear along with this one.
-	  (immutable custom-data)
+	  (immutable custom-data			syntax-clause-spec-custom-data)
 		;Free field available for the user.  It is initialised to false.
 	  #| end of fields |# )
   (protocol
-   (lambda (make-record)
-     (define (count? obj)
-       (or (non-negative-fixnum? obj)
-	   (and (real? obj)
-		(= obj +inf.0))))
-     (case-define* make-syntax-clause-spec
-       ((keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive)
-	(make-syntax-clause-spec keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive #f))
-       (({keyword identifier?}
-	 {min-occur count?} {max-occur count?}
-	 {min-args  count?} {max-args  count?}
-	 {mutually-inclusive list-of-identifiers?} {mutually-exclusive list-of-identifiers?}
-	 custom-data)
-	(unless (<= min-occur max-occur)
-	  (procedure-arguments-consistency-violation __who__
-	    "the minimum number of occurrences must be less than or equal to the maximum number of occurrences"
-	    min-occur max-occur))
-	(unless (<= min-args max-args)
-	  (procedure-arguments-consistency-violation __who__
-	    "the minimum number of arguments must be less than or equal to the maximum number of arguments"
-	    min-occur max-occur))
-	(cond ((identifier-memq keyword mutually-inclusive)
-	       => (lambda (pair)
-		    (procedure-arguments-consistency-violation __who__
-		      "syntax clause keyword used in its own list of mutually inclusive clauses"
-		      (car pair)))))
-	(cond ((identifier-memq keyword mutually-exclusive)
-	       => (lambda (pair)
-		    (procedure-arguments-consistency-violation __who__
-		      "syntax clause keyword used in its own list of mutually exclusive clauses"
-		      (car pair)))))
-	(let ((in-both (fold-left (lambda (knil inclusive)
-				    (cond ((identifier-memq inclusive mutually-exclusive)
-					   => (lambda (pair)
-						(cons (car pair) knil)))
-					  (else
-					   knil)))
-			 '()
-			 mutually-inclusive)))
-	  (unless (null? in-both)
-	    (procedure-arguments-consistency-violation __who__
-	      "syntax clause includes the same keywords in both mutually inclusive and exclusive clauses"
-	      (reverse in-both))))
-	(make-record keyword
-		     min-occur max-occur
-		     min-args max-args
-		     mutually-inclusive mutually-exclusive
-		     custom-data)))
-     make-syntax-clause-spec)))
+    (lambda (make-record)
+      (define (count? obj)
+	(or (non-negative-fixnum? obj)
+	    (and (real? obj)
+		 (= obj +inf.0))))
+      (case-define* make-syntax-clause-spec
+	((keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive)
+	 (make-syntax-clause-spec keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive #f))
+	(({keyword identifier?}
+	  {min-occur count?} {max-occur count?}
+	  {min-args  count?} {max-args  count?}
+	  {mutually-inclusive list-of-identifiers?} {mutually-exclusive list-of-identifiers?}
+	  custom-data)
+	 (unless (<= min-occur max-occur)
+	   (procedure-arguments-consistency-violation __who__
+	     "the minimum number of occurrences must be less than or equal to the maximum number of occurrences"
+	     min-occur max-occur))
+	 (unless (<= min-args max-args)
+	   (procedure-arguments-consistency-violation __who__
+	     "the minimum number of arguments must be less than or equal to the maximum number of arguments"
+	     min-occur max-occur))
+	 (cond ((identifier-memq keyword mutually-inclusive)
+		=> (lambda (pair)
+		     (procedure-arguments-consistency-violation __who__
+		       "syntax clause keyword used in its own list of mutually inclusive clauses"
+		       (car pair)))))
+	 (cond ((identifier-memq keyword mutually-exclusive)
+		=> (lambda (pair)
+		     (procedure-arguments-consistency-violation __who__
+		       "syntax clause keyword used in its own list of mutually exclusive clauses"
+		       (car pair)))))
+	 (let ((in-both (fold-left (lambda (knil inclusive)
+				     (cond ((identifier-memq inclusive mutually-exclusive)
+					    => (lambda (pair)
+						 (cons (car pair) knil)))
+					   (else
+					    knil)))
+			  '()
+			  mutually-inclusive)))
+	   (unless (null? in-both)
+	     (procedure-arguments-consistency-violation __who__
+	       "syntax clause includes the same keywords in both mutually inclusive and exclusive clauses"
+	       (reverse in-both))))
+	 (make-record keyword
+		      min-occur max-occur
+		      min-args max-args
+		      mutually-inclusive mutually-exclusive
+		      custom-data)))
+      make-syntax-clause-spec)))
+
+(define <syntax-clause-spec>-rtd	(record-type-descriptor <syntax-clause-spec>))
+(define <syntax-clause-spec>-rcd	(record-constructor-descriptor <syntax-clause-spec>))
 
 (case-define* syntax-clauses-single-spec
   ((spec clauses)

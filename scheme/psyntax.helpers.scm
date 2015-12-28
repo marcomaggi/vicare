@@ -146,6 +146,9 @@
   (or (not     obj)
       (symbol? obj)))
 
+(define (not-symbol? obj)
+  (not (symbol? obj)))
+
 (define (non-empty-list-of-symbols? obj)
   (and (not (null? obj))
        (list? obj)
@@ -159,6 +162,11 @@
       (lambda retvals
 	(debug-print (quote ?name) 'retvals retvals)
 	(apply values retvals)))))
+
+(define (symbol-or-annotated-symbol? expr)
+  (symbol? (if (reader-annotation? expr)
+	       (reader-annotation-stripped expr)
+	     expr)))
 
 ;;; end of file
 ;; Local Variables:

@@ -57,6 +57,7 @@
    type-signature-tags
    make-type-signature/single-top			make-type-signature/single-void
    make-type-signature/single-boolean			make-type-signature/single-procedure
+   make-type-signature/single-stx			make-type-signature/single-syntactic-identifier
    make-type-signature/standalone-list			make-type-signature/fully-untyped
    make-type-signature/single-value
    type-signature=?
@@ -832,20 +833,16 @@
     (lambda (make-record)
       (define* (make-type-signature {tags syntax-object.type-signature?})
 	(make-record (syntax-unwrap tags) (void) (void) (void) #f #f))
-      make-type-signature)))
+      make-type-signature))
+  (custom-printer
+    (lambda (S port sub-printer)
+      (sub-printer `(<type-signature> ,(type-signature-tags S))))))
 
 (define <type-signature>-rtd
   (record-type-descriptor <type-signature>))
 
 (define <type-signature>-rcd
   (record-constructor-descriptor <type-signature>))
-
-(module ()
-  ($record-type-printer-set! (record-type-descriptor <type-signature>)
-    (lambda (S port sub-printer)
-      (display "#[type-signature" port)
-      (sub-printer (type-signature-tags S))
-      (display "]" port))))
 
 ;;; --------------------------------------------------------------------
 ;;; special constructors
@@ -865,12 +862,14 @@
        (syntax-rules ()
 	 ((_ ?who ?type-id-maker)
 	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
-  (define-single-type-signature-maker make-type-signature/single-top		top-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-void		void-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-boolean	boolean-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-procedure	procedure-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-predicate	predicate-tag-id)
-  (define-cached-signature-maker make-type-signature/standalone-list		(list-tag-id))
+  (define-single-type-signature-maker make-type-signature/single-top			top-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-void			void-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-boolean		boolean-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-procedure		procedure-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-predicate		predicate-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-stx			stx-tag-id)
+  (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	syntactic-identifier-tag-id)
+  (define-cached-signature-maker make-type-signature/standalone-list			(list-tag-id))
   #| end of LET-SYNTAX |# )
 
 (define-syntax-rule (make-type-signature/fully-untyped)
@@ -1068,7 +1067,12 @@
     (lambda (make-record)
       (define* (make-clambda-clause-signature {retvals type-signature?} {argvals type-signature?})
 	(make-record retvals argvals))
-      make-clambda-clause-signature)))
+      make-clambda-clause-signature))
+  (custom-printer
+    (lambda (S port sub-printer)
+      (sub-printer `(<clambda-clause-signature>
+		     (:retvals ,(type-signature-tags (clambda-clause-signature.retvals S)))
+		     (:argvals ,(type-signature-tags (clambda-clause-signature.argvals S))))))))
 
 (define (not-empty-list-of-clambda-clause-signatures? obj)
   (and (pair? obj)
@@ -1132,7 +1136,12 @@
       (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
 	((make-callable-signature (apply type-signature.common-ancestor (map clambda-clause-signature.retvals signature*)))
 	 signature* #f #f))
-      make-clambda-signature)))
+      make-clambda-signature))
+  (custom-printer
+    (lambda (S port sub-printer)
+      (sub-printer `(<clambda-signature>
+		     (:common-retvals ,(callable-signature.retvals S))
+		     (:clause-signatures . ,(clambda-signature.clause-signature* S)))))))
 
 (define* (clambda-signature.retvals {sig clambda-signature?})
   (callable-signature.retvals sig))
@@ -1581,4 +1590,5 @@
 ;; mode: vicare
 ;; coding: utf-8-unix
 ;; eval: (put 'set-identifier-tag-type-spec!		'scheme-indent-function 1)
+;; eval: (put '$record-type-printer-set!		'scheme-indent-function 1)
 ;; End:

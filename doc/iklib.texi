@@ -8930,6 +8930,11 @@ other Scheme object types, representing the constraints enforceable on a
 syntax clause.
 
 
+@deftp {Object Type} @aclass{syntax-clause-spec}
+Type of objects representing a syntax clause specification.
+@end deftp
+
+
 @defun make-syntax-clause-spec @var{keyword} @var{min-occur} @var{max-occur} @var{min-args} @var{max-args} @var{mutually-inclusive} @var{mutually-exclusive}
 @defunx make-syntax-clause-spec @var{keyword} @var{min-occur} @var{max-occur} @var{min-args} @var{max-args} @var{mutually-inclusive} @var{mutually-exclusive} @var{custom-data}
 Build and return a new syntax clause specification object.  The

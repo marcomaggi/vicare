@@ -78,23 +78,6 @@
      (syntax-violation #f "syntax error" ?stx))
     ))
 
-(define-syntax with-exception-handler/input-form
-  ;;This macro is typically used as follows:
-  ;;
-  ;;   (with-exception-handler/input-form
-  ;;       input-form.stx
-  ;;     (eval-macro-transformer
-  ;;        (expand-macro-transformer input-form.stx lexenv.expand)
-  ;;        lexenv.run))
-  ;;
-  (syntax-rules ()
-    ((_ ?input-form . ?body)
-     (with-exception-handler
-	 (lambda (E)
-	   (raise (condition E (make-macro-use-input-form-condition ?input-form))))
-       (lambda () . ?body)))
-    ))
-
 ;;; --------------------------------------------------------------------
 
 (define* (proper-list->last-item ell)
@@ -615,7 +598,7 @@
 			      ;;can  be 25%  greater.  For  this reason  this step  is
 			      ;;performed only when debugging mode is enabled.  (Marco
 			      ;;Maggi; Wed Apr 2, 2014)
-			      (make-stx expr.stx '() '() (list expr.stx))
+			      (stx-push-annotated-expr expr.stx expr.stx)
 			    expr.stx)
 			  lexenv.run lexenv.expand)))
 
@@ -811,10 +794,8 @@
 				   (let ((in-form (if (eq? type 'let-syntax)
 						      x
 						    (push-lexical-contour xrib x))))
-				     (with-exception-handler/input-form
-					 in-form
-				       (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
-							       lexenv.run))))
+				     (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+							     lexenv.run)))
 			      ?xrhs*)))
 		(let ((body*.psi (chi-expr* (map (lambda (x)
 						   (push-lexical-contour xrib x))
@@ -1628,10 +1609,10 @@
 				      (lambda (id)
 					;;For every exported identifier there must be
 					;;a label already in the rib.
-					(or (id->label (make-stx (identifier->symbol id)
-								   (stx-mark* id)
-								   (list module-rib)
-								   '()))
+					(or (id->label (make-syntactic-identifier (identifier->symbol id)
+										  (stx-mark* id)
+										  (list module-rib)
+										  '()))
 					    (stx-error id "cannot find module export")))
 				    all-export-id*))
 		 (mod**           (cons leftover-body-expr* mod**)))
@@ -1650,10 +1631,7 @@
 					;;identifier.
 					(let ((rib* '())
 					      (ae*  '()))
-					  (make-stx (stx-expr x)
-						      (stx-mark* x)
-						      rib*
-						      ae*)))
+					  (make-syntactic-identifier (stx-expr x) (stx-mark* x) rib* ae*)))
 				    all-export-id*)
 				  all-export-lab*))
 		     (binding    (make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
@@ -1699,10 +1677,9 @@
 	      (lambda (x)
 		(let ((rib* '())
 		      (ae*  '()))
-		  (make-stx (stx-expr x)
-			      (append diff (stx-mark* x))
-			      rib*
-			      ae*)))
+		  (make-syntactic-identifier (stx-expr x)
+					     (append diff (stx-mark* x))
+					     rib* ae*)))
 	    id-vec))))
 
     (define (%diff-marks mark* the-mark)
@@ -1854,7 +1831,6 @@
 ;;; end of file
 ;;Local Variables:
 ;;fill-column: 85
-;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)

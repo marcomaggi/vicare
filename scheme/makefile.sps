@@ -3915,6 +3915,9 @@
     (syntax-clauses-verify-mutually-exclusive	v $language)
 
     ;; clause specification structs
+    (<syntax-clause-spec>			v $language)
+    (<syntax-clause-spec>-rtd)
+    (<syntax-clause-spec>-rcd)
     (make-syntax-clause-spec			v $language)
     (syntax-clause-spec?			v $language)
     (syntax-clause-spec-keyword			v $language)
@@ -4061,12 +4064,25 @@
     (generate-descriptive-gensyms?			$expander)
     (generate-descriptive-marks?			$expander)
 
-    (syntax-object?					$expander)
+    (<stx>						$expander)
+    (<stx>-rtd)
+    (<stx>-rcd)
     (stx?						$expander)
     (stx-expr						$expander)
     (stx-mark*						$expander)
     (stx-rib*						$expander)
     (stx-annotated-expr*				$expander)
+
+    (<syntactic-identifier>				$expander)
+    (<syntactic-identifier>-rtd)
+    (<syntactic-identifier>-rcd)
+    (syntactic-identifier?				$expander)
+
+    ;;FIXME This  is a temporary substitution.   When type unions are  implemented we
+    ;;should  uncomment  this and  use  a  proper definition  for  "<syntax-object>".
+    ;;(Marco Maggi; Sun Dec 27, 2015)
+    #;(<syntax-object>					$expander)
+    (syntax-object?					$expander)
 
     (expand-form-to-core-language			$expander)
     (current-inferior-lexenv				$expander)

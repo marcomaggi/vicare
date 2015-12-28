@@ -32,6 +32,7 @@
     define-list-of-type-predicate
     expand-time-gensym			expand-library
     with-blocked-exceptions
+    custom-printer			super-protocol
 
     non-compound-sexp?			self-evaluating?
 
