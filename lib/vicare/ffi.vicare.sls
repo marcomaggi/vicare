@@ -83,14 +83,10 @@
     malloc				guarded-malloc
     realloc				guarded-realloc
     calloc				guarded-calloc
-    ;; malloc*				guarded-malloc*
-    ;; realloc*				guarded-realloc*
-    ;; calloc*				guarded-calloc*
     free				memcmp
     memcpy				memmove
     memset				memory-copy
-    bytevector->memory			bytevector->memory*
-    bytevector->guarded-memory		bytevector->guarded-memory*
+    bytevector->memory			bytevector->guarded-memory
     memory->bytevector
 
     with-local-storage

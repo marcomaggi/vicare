@@ -3673,12 +3673,6 @@
     (guarded-malloc				v $language $for)
     (guarded-realloc				v $language $for)
     (guarded-calloc				v $language $for)
-    ;; (malloc*					v $language $for)
-    ;; (realloc*					v $language $for)
-    ;; (calloc*					v $language $for)
-    ;; (guarded-malloc*				v $language $for)
-    ;; (guarded-realloc*				v $language $for)
-    ;; (guarded-calloc*				v $language $for)
     (free					v $language $for)
     (memcpy					v $language $for)
     (memcmp					v $language $for)
@@ -3688,8 +3682,6 @@
     (memory->bytevector				v $language $for)
     (bytevector->memory				v $language $for)
     (bytevector->guarded-memory			v $language $for)
-    (bytevector->memory*			v $language $for)
-    (bytevector->guarded-memory*		v $language $for)
 ;;;
     (with-local-storage				v $language $for)
 ;;;

@@ -187,27 +187,11 @@
 (declare-core-primitive bytevector->memory
     (safe)
   (signatures
-   #;((<bytevector>)			=> (<pointer>/false <fixnum>/false))
-   ((<bytevector>)			=> (<top> <top>)))
-  (attributes
-   ((_ _)				effect-free)))
-
-(declare-core-primitive bytevector->guarded-memory
-    (safe)
-  (signatures
-   #;((<bytevector>)			=> (<pointer>/false <fixnum>/false))
-   ((<bytevector>)			=> (<top> <top>)))
-  (attributes
-   ((_ _)				effect-free)))
-
-(declare-core-primitive bytevector->memory*
-    (safe)
-  (signatures
    ((<bytevector>)			=> (<pointer> <fixnum>)))
   (attributes
    ((_ _)				effect-free)))
 
-(declare-core-primitive bytevector->guarded-memory*
+(declare-core-primitive bytevector->guarded-memory
     (safe)
   (signatures
    ((<bytevector>)			=> (<pointer> <fixnum>)))

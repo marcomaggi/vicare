@@ -342,20 +342,6 @@
 	(positive? (ffi.memcmp P Q count)))
     => #t)
 
-  (check
-      (let*-values (((count)	4)
-		    ((P P.len)	(ffi.bytevector->memory* '#vu8(1 2 8 4)))
-		    ((Q Q.len)	(ffi.bytevector->memory* '#vu8(1 2 3 4))))
-	(positive? (ffi.memcmp P Q count)))
-    => #t)
-
-  (check
-      (let*-values (((count)	4)
-		    ((P P.len)	(ffi.bytevector->guarded-memory* '#vu8(1 2 8 4)))
-		    ((Q Q.len)	(ffi.bytevector->guarded-memory* '#vu8(1 2 3 4))))
-	(positive? (ffi.memcmp P Q count)))
-    => #t)
-
 ;;; --------------------------------------------------------------------
 ;;; memory-copy
 

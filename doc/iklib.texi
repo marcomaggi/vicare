@@ -19400,21 +19400,14 @@ must be a non--negative fixnum.
 Allocate a new raw memory block and copy into it the contents of
 @var{bv}.  If successful return two values being the pointer object
 referencing the memory and a fixnum representing the length of the
-memory block; if allocating memory fails return @false{} and @false{}.
+memory block; if allocation fails raise a non--continuable exception
+with components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
 
 Memory allocated by @func{bytevector->memory} must be released by
 @func{free}; memory allocated by @func{bytevector->guarded-memory} is
 automatically released whenever the returned pointer object is garbage
 collected.
-@end defun
-
-
-@defun bytevector->memory* @var{bv}
-@defunx bytevector->guarded-memory* @var{bv}
-Like @func{bytevector->memory*} and @func{bytevector->guarded-memory*},
-but if allocation fails raise a non--continuable exception with
-components: @condition{who}, @condition{message},
-@condition{out-of-memory-error}.
 @end defun
 
 @c page

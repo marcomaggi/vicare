@@ -55,8 +55,7 @@
     free				memcmp
     memcpy				memmove
     memset				memory-copy
-    bytevector->memory			bytevector->memory*
-    bytevector->guarded-memory		bytevector->guarded-memory*
+    bytevector->memory			bytevector->guarded-memory
     memory->bytevector
 
     with-local-storage
@@ -868,16 +867,11 @@
   (capi.ffi-memory->bytevector pointer length))
 
 (define* (bytevector->memory {bv bytevector?})
-  (let ((rv (capi.ffi-bytevector->memory bv)))
-    (if rv
-	(values rv ($bytevector-length bv))
-      (values #f #f))))
-
-(define* (bytevector->memory* {bv bytevector?})
-  (let ((rv (capi.ffi-bytevector->memory bv)))
-    (if rv
-	(values rv ($bytevector-length bv))
-      (%raise-out-of-memory __who__))))
+  (cond ((capi.ffi-bytevector->memory bv)
+	 => (lambda (rv)
+	      (values rv ($bytevector-length bv))))
+	(else
+	 (%raise-out-of-memory __who__))))
 
 ;;; --------------------------------------------------------------------
 
@@ -916,18 +910,11 @@
 	 (%raise-out-of-memory __who__))))
 
 (define* (bytevector->guarded-memory {bv bytevector?})
-  (receive (ptr len)
-      (bytevector->memory bv)
-    (if ptr
-	(values (%memory-guardian ptr) len)
-      (values #f #f))))
-
-(define* (bytevector->guarded-memory* {bv bytevector?})
-  (receive (ptr len)
-      (bytevector->memory bv)
-    (if ptr
-	(values (%memory-guardian ptr) len)
-      (%raise-out-of-memory __who__))))
+  (cond ((capi.ffi-bytevector->memory bv)
+	 => (lambda (ptr)
+	      (values (%memory-guardian ptr) ($bytevector-length bv))))
+	(else
+	 (%raise-out-of-memory __who__))))
 
 
 ;;;; C strings

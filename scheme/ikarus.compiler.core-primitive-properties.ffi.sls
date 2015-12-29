@@ -208,25 +208,11 @@
 (declare-core-primitive bytevector->memory
     (safe)
   (signatures
-   ((T:bytevector)			=> (T:pointer/false T:fixnum/false)))
-  (attributes
-   ((_ _)				effect-free)))
-
-(declare-core-primitive bytevector->guarded-memory
-    (safe)
-  (signatures
-   ((T:bytevector)			=> (T:pointer/false T:fixnum/false)))
-  (attributes
-   ((_ _)				effect-free)))
-
-(declare-core-primitive bytevector->memory*
-    (safe)
-  (signatures
    ((T:bytevector)			=> (T:pointer T:fixnum)))
   (attributes
    ((_ _)				effect-free)))
 
-(declare-core-primitive bytevector->guarded-memory*
+(declare-core-primitive bytevector->guarded-memory
     (safe)
   (signatures
    ((T:bytevector)			=> (T:pointer T:fixnum)))
