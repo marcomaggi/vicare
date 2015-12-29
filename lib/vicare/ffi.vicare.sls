@@ -83,9 +83,9 @@
     malloc				guarded-malloc
     realloc				guarded-realloc
     calloc				guarded-calloc
-    malloc*				guarded-malloc*
-    realloc*				guarded-realloc*
-    calloc*				guarded-calloc*
+    ;; malloc*				guarded-malloc*
+    ;; realloc*				guarded-realloc*
+    ;; calloc*				guarded-calloc*
     free				memcmp
     memcpy				memmove
     memset				memory-copy

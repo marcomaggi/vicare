@@ -19196,20 +19196,13 @@ and @library{vicare system $foreign} and reexported by the library
 Interface to the C function @cfunc{malloc}, @glibcref{Basic Allocation,
 malloc}.  Allocate a block of memory @var{number-of-bytes} wide;
 @var{number-of-bytes} must be an exact integer in the range of the C
-language type @code{size_t}.  If successful return a pointer object,
-else return @false{}.
+language type @code{size_t}.  If successful return a pointer object; if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
 
 Memory allocated by @func{malloc} must be released by @func{free};
 memory allocated by @func{guarded-malloc} is automatically released
 whenever the returned pointer object is garbage collected.
-@end defun
-
-
-@defun malloc* @var{number-of-bytes}
-@defunx guarded-malloc* @var{number-of-bytes}
-Like @func{malloc} and @func{guarded-malloc}, but if allocation fails
-raise a non--continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -19227,8 +19220,9 @@ language type @code{size_t}.
 If successful: mutate the pointer in @var{memory} to reference the new
 memory block and return @var{memory} itself; when @var{memory} is a
 @code{memory-block}: mutate the size field to @var{number-of-bytes}.  If
-an error occurs: return @false{} and leave untouched both @var{memory}
-and its referenced memory.
+reallocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}
+and leave untouched both @var{memory} and its referenced memory.
 
 Memory allocated by @func{realloc} must be released by @func{free},
 unless @var{memory} was already scheduled to be removed by the garbage
@@ -19250,34 +19244,19 @@ memory is automatically released by the garbage collector only if
 @end defun
 
 
-@defun realloc* @var{pointer} @var{number-of-bytes}
-@defunx guarded-realloc* @var{pointer} @var{number-of-bytes}
-Like @func{realloc} and @func{guarded-realloc}, but if allocation fails
-raise a non--continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}.
-@end defun
-
-
 @defun calloc @var{number-of-elements} @var{element-size}
 @defunx guarded-calloc @var{number-of-elements} @var{element-size}
 Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
 Space, calloc}.  Allocate and clear to zero a block of memory capable of
 holding @var{number-of-elements} each @var{element-size} wide; both the
 arguments must be exact integers in the range of the C language type
-@code{size_t}.  If successful return a pointer object, else return
-@false{}.
+@code{size_t}.  If successful return a pointer object; if allocation
+fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
 
 Memory allocated by @func{calloc} must be released by @func{free};
 memory allocated by @func{guarded-calloc} is automatically released
 whenever the returned pointer object is garbage collected.
-@end defun
-
-
-@defun calloc @var{number-of-elements} @var{element-size}
-@defunx guarded-calloc @var{number-of-elements} @var{element-size}
-Like @func{calloc} and @func{guarded-calloc}, but if allocation fails
-raise a non--continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -19448,8 +19427,8 @@ and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
-@deftp {Struct Type} memory-block
-Data structure used to reference a raw memory block through a pointer
+@deftp {Object Type} @class{memory-block}
+Disjoint object used to reference a raw memory block through a pointer
 and number of bytes.  It has the following public fields:
 
 @table @code

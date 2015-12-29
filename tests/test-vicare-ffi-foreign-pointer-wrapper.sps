@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -279,37 +279,37 @@
 
   ;; Printer check.
   (when (or #f verbose?)
-    (check-pretty-print (make-alpha/owner (ffi.malloc* 1024))))
+    (check-pretty-print (make-alpha/owner (ffi.malloc 1024))))
 
 ;;; --------------------------------------------------------------------
 ;;; owner constructor
 
   (check	;owner constructor
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	(alpha? S))
     => #t)
 
   (check	;alive predicate
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	(alpha?/alive S))
     => #t)
 
   (check	;unsafe alive predicate
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-alive? S))
     => #t)
 
   (check	;owner constructor, getter
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	(alpha-pointer-owner? S))
     => #t)
 
   (check	;owner constructor, unsafe getter
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-pointer-owner? S))
     => #t)
@@ -318,31 +318,31 @@
 ;;; not-owner constructor
 
   (check	;not owner constructor
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	(alpha? S))
     => #t)
 
   (check	;alive predicate
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	(alpha?/alive S))
     => #t)
 
   (check	;unsafe alive predicate
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	($alpha-alive? S))
     => #t)
 
   (check	;not-owner constructor, getter
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	(alpha-pointer-owner? S))
     => #f)
 
   (check	;not-owner constructor, unsafe getter
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	($alpha-pointer-owner? S))
     => #f)
@@ -351,27 +351,27 @@
 ;;; unsafe destructor, owner struct
 
   (check	;unsafe destructor invocation
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S))
     => #t)
 
   (check	;unsafe destructor invocation, twice
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	($alpha-finalise S))
     => #f)
 
   (check	;unsafe destructor invocation, dead struct safe pred
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	(alpha?/alive S))
     => #f)
 
   (check	;unsafe destructor invocation, dead struct unsafe pred
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	($alpha-alive? S))
@@ -381,7 +381,7 @@
 ;;; unsafe destructor, not owner struct
 
   (check	;unsafe destructor invocation
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	($alpha-finalise S)
 	(list (alpha?/alive S)
@@ -390,7 +390,7 @@
     => '(#f #f #f))
 
   (check	;owner struct finalised before not owner struct
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (Q (ffi.pointer-clone P))
 	     (S (make-alpha/owner P))
 	     (R (make-alpha/not-owner Q)))
@@ -408,7 +408,7 @@
 
   (check	;custom destructor invocation
       (with-result
-       (let* ((P (ffi.malloc* 1024))
+       (let* ((P (ffi.malloc 1024))
 	      (S (make-alpha/owner P))
 	      (D (lambda (S)
 		   (add-result (pointer? (alpha-pointer S))))))
@@ -419,7 +419,7 @@
   (check	;custom  destructor   invocation,  invoking   twice  the
 		;destructor
       (with-result
-       (let* ((P (ffi.malloc* 1024))
+       (let* ((P (ffi.malloc 1024))
 	      (S (make-alpha/owner P))
 	      (D (lambda (S)
 		   (add-result (pointer? (alpha-pointer S))))))
@@ -432,13 +432,13 @@
 ;;; UID gensym
 
   (check	;safe getter
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	(symbol? (alpha-uid S)))
     => #t)
 
   (check	;unsafe getter
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P)))
 	(symbol? ($alpha-uid S)))
     => #t)
@@ -447,7 +447,7 @@
 ;;; argument validators
 
   (check	;struct validator, success
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P))
 	     (who 'test))
 	(with-arguments-validation (who)
@@ -467,7 +467,7 @@
     => #t)
 
   (check	;alive struct validator
-      (let* ((P (ffi.malloc* 1024))
+      (let* ((P (ffi.malloc 1024))
 	     (S (make-alpha/owner P))
 	     (who 'test))
 	(with-arguments-validation (who)
@@ -490,7 +490,7 @@
       (guard (E ((assertion-violation? E)
 		 #t)
 		(else E))
-	(let* ((P (ffi.malloc* 1024))
+	(let* ((P (ffi.malloc 1024))
 	       (S (make-alpha/owner P))
 	       (who 'test))
 	  ($alpha-finalise S)

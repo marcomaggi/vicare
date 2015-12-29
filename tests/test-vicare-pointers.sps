@@ -2172,7 +2172,7 @@
 (parametrise ((check-test-name	'mblock-access))
 
   (define (block-malloc number-of-bytes)
-    (make-memory-block/guarded (malloc* number-of-bytes) number-of-bytes))
+    (make-memory-block/guarded (malloc number-of-bytes) number-of-bytes))
 
 ;;; --------------------------------------------------------------------
 

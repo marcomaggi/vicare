@@ -178,6 +178,19 @@
     <non-negative-fixnum>
   #t positive-fixnum?)
 
+(define-scheme-type <positive-bignum>
+    <exact-integer>
+  #t bignum-positive?)
+
+;;FIXME When type unions are implemented we should uncomment this.  (Marco Maggi; Sun
+;;Dec 27, 2015)
+;;
+;; (define-union-type <non-negative-exact-integer>
+;;     non-negative-exact-integer?
+;;   (or <non-negative-fixnum>
+;;       <positive-bignum>))
+;;
+
 
 ;;;; compound types
 
@@ -364,6 +377,8 @@
    (universe		enum-set-universe)
    (=?			enum-set=?)))
 
+;;; --------------------------------------------------------------------
+
 (define-scheme-type <utsname>
     <struct>
   uname utsname?
@@ -373,6 +388,16 @@
    (release		utsname-release)
    (version		utsname-version)
    (machine		utsname-machine)))
+
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <memory-block>
+    <struct>
+  make-memory-block memory-block?
+  (methods
+   (pointer		memory-block-pointer)
+   (size		memory-block-size)
+   (reset		memory-block-reset)))
 
 
 ;;;; input/output ports

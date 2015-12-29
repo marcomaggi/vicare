@@ -58,39 +58,22 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-core-primitive malloc
-    (safe)
-  (signatures
-   ((T:exact-integer)			=> (T:pointer/false))))
-
-(declare-core-primitive realloc
-    (safe)
-  (signatures
-   ((T:pointer T:exact-integer)		=> (T:pointer/false))))
-
-(declare-core-primitive calloc
-    (safe)
-  (signatures
-   ((T:exact-integer T:exact-integer)	=> (T:pointer/false))))
-
 (declare-core-primitive free
     (safe)
   (signatures
    ((T:pointer/memory-block)		=> (T:void))))
 
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive malloc*
+(declare-core-primitive malloc
     (safe)
   (signatures
    ((T:exact-integer)		=> (T:pointer))))
 
-(declare-core-primitive realloc*
+(declare-core-primitive realloc
     (safe)
   (signatures
    ((T:pointer T:exact-integer)	=> (T:pointer))))
 
-(declare-core-primitive calloc*
+(declare-core-primitive calloc
     (safe)
   (signatures
    ((T:exact-integer T:exact-integer)	=> (T:pointer))))
@@ -100,35 +83,17 @@
 (declare-core-primitive guarded-malloc
     (safe)
   (signatures
-   ((T:exact-integer)			=> (T:pointer/false))))
+   ((T:exact-integer)		=> (T:pointer))))
 
 (declare-core-primitive guarded-realloc
     (safe)
   (signatures
-   ((T:pointer T:exact-integer)		=> (T:pointer/false))))
+   ((T:pointer T:exact-integer)	=> (T:pointer))))
 
 (declare-core-primitive guarded-calloc
     (safe)
   (signatures
-   ((T:exact-integer T:exact-integer)	=> (T:pointer/false))))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive guarded-malloc*
-    (safe)
-  (signatures
-   ((T:exact-integer)		=> (T:pointer))))
-
-(declare-core-primitive guarded-realloc*
-    (safe)
-  (signatures
-   ((T:pointer T:exact-integer)	=> (T:pointer))))
-
-(declare-core-primitive guarded-calloc*
-    (safe)
-  (signatures
    ((T:exact-integer T:exact-integer)	=> (T:pointer))))
-
 
 ;;; --------------------------------------------------------------------
 

@@ -284,7 +284,7 @@ ikptr_t
 ikrt_realloc (ikptr_t s_memory, ikptr_t s_number_of_bytes, ikpcb_t* pcb)
 {
   int		isptr		= IK_IS_POINTER(s_memory);
-  ikptr_t		s_pointer	= (isptr)? s_memory : IK_MBLOCK_POINTER(s_memory);
+  ikptr_t	s_pointer	= (isptr)? s_memory : IK_MBLOCK_POINTER(s_memory);
   void *	memory		= IK_POINTER_DATA_VOIDP(s_pointer);
   void *	new_memory;
   if (memory) {

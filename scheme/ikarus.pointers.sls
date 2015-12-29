@@ -52,9 +52,6 @@
     malloc				guarded-malloc
     realloc				guarded-realloc
     calloc				guarded-calloc
-    malloc*				guarded-malloc*
-    realloc*				guarded-realloc*
-    calloc*				guarded-calloc*
     free				memcmp
     memcpy				memmove
     memset				memory-copy
@@ -202,9 +199,6 @@
 		  malloc				guarded-malloc
 		  realloc				guarded-realloc
 		  calloc				guarded-calloc
-		  malloc*				guarded-malloc*
-		  realloc*				guarded-realloc*
-		  calloc*				guarded-calloc*
 		  free					memcmp
 		  memcpy				memmove
 		  memset				memory-copy
@@ -801,25 +795,20 @@
 ;;; raw memory management
 
 (define* (malloc {number-of-bytes number-of-bytes?})
-  (capi.ffi-malloc number-of-bytes))
-
-(define* (malloc* number-of-bytes)
-  (or (malloc number-of-bytes)
+  ;;CAPI.FFI-MALLOC returns either a pointer or false.
+  (or (capi.ffi-malloc number-of-bytes)
       (%raise-out-of-memory __who__)))
 
 (define* (realloc {memory pointer/memory-block?} {number-of-bytes number-of-bytes?})
   ;;Take care at the C level not to  realloc NULL pointers and of mutating POINTER to
   ;;NULL.  If MEMORY is a MEMORY-BLOCK: update both the pointer and size fields.
-  (capi.ffi-realloc memory number-of-bytes))
-
-(define* (realloc* pointer number-of-bytes)
-  (or (realloc pointer number-of-bytes)
+  ;;
+  ;;CAPI.FFI-REALLOC returns either a pointer or false.
+  (or (capi.ffi-realloc memory number-of-bytes)
       (%raise-out-of-memory __who__)))
 
 (define* (calloc {number-of-elements number-of-elements?} {element-size number-of-bytes?})
-  (capi.ffi-calloc number-of-elements element-size))
-
-(define* (calloc* {number-of-elements number-of-elements?} {element-size number-of-bytes?})
+  ;;CAPI.FFI-CALLOC returns either a pointer or false.
   (or (capi.ffi-calloc number-of-elements element-size)
       (%raise-out-of-memory __who__)))
 
@@ -903,31 +892,28 @@
       (capi.ffi-free pointer)
       (capi.ffi-set-pointer-null! pointer))))
 
-(define (guarded-malloc number-of-bytes)
-  (let ((rv (malloc number-of-bytes)))
-    (and rv (%memory-guardian rv))))
+;;; --------------------------------------------------------------------
 
-(define* (guarded-malloc* number-of-bytes)
-  (or (guarded-malloc number-of-bytes)
-      (%raise-out-of-memory __who__)))
+(define* (guarded-malloc {number-of-bytes number-of-bytes?})
+  ;;CAPI.FFI-MALLOC returns either a pointer or false.
+  (cond ((capi.ffi-malloc number-of-bytes)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
-(define (guarded-realloc pointer number-of-bytes)
-  (let ((rv (realloc pointer number-of-bytes)))
-    (and rv (if (pointer? rv)
-		(%memory-guardian rv)
-	      rv))))
+(define* (guarded-realloc {memory pointer/memory-block?} {number-of-bytes number-of-bytes?})
+  ;;CAPI.FFI-REALLOC returns either a pointer or false.
+  (cond ((capi.ffi-realloc memory number-of-bytes)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
-(define* (guarded-realloc* pointer number-of-bytes)
-  (or (guarded-realloc pointer number-of-bytes)
-      (%raise-out-of-memory __who__)))
-
-(define (guarded-calloc number-of-elements element-size)
-  (let ((rv (calloc number-of-elements element-size)))
-    (and rv (%memory-guardian rv))))
-
-(define* (guarded-calloc* number-of-elements element-size)
-  (or (guarded-calloc number-of-elements element-size)
-      (%raise-out-of-memory __who__)))
+(define* (guarded-calloc {number-of-elements number-of-elements?} {element-size number-of-bytes?})
+  ;;CAPI.FFI-calloc returns either a pointer or false.
+  (cond ((capi.ffi-calloc number-of-elements element-size)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
 (define* (bytevector->guarded-memory {bv bytevector?})
   (receive (ptr len)

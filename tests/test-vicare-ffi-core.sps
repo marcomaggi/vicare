@@ -259,18 +259,6 @@
 	(ffi.pointer->integer P))
     => 0)
 
-  (check
-      (let ((P (ffi.malloc* 10)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
-    => 0)
-
-  (check
-      (let ((P (ffi.guarded-malloc* 10)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
-    => 0)
-
 ;;; --------------------------------------------------------------------
 
   (check
@@ -289,14 +277,6 @@
 	      (ffi.pointer->integer Q)))
     => '(0 0))
 
-  (check
-      (let* ((P (ffi.malloc* 10))
-	     (Q (ffi.realloc* P 20)))
-	(ffi.free Q)
-	(list (ffi.pointer->integer P)
-	      (ffi.pointer->integer Q)))
-    => '(0 0))
-
 ;;; --------------------------------------------------------------------
 
   (check
@@ -307,18 +287,6 @@
 
   (check
       (let ((P (ffi.guarded-calloc 10 20)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
-    => 0)
-
-  (check
-      (let ((P (ffi.calloc* 10 20)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
-    => 0)
-
-  (check
-      (let ((P (ffi.guarded-calloc* 10 20)))
 	(ffi.free P)
 	(ffi.pointer->integer P))
     => 0)

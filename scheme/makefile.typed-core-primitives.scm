@@ -126,6 +126,12 @@
 	    ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
 	    ((free-identifier=? #'<syntax-object> id)
 	     #'<top>)
+	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
+	    ;;implemented,  we should  remove this  and use  a proper  definition for
+	    ;;"<non-negative-exact-integer>" as union  of "<non-negative-fixnum>" and
+	    ;;"<positive-bignum>".
+	    ((free-identifier=? #'<non-negative-exact-integer> id)
+	     #'<exact-integer>)
 	    (else id)))
     (let recur ((sig type-signature.stx))
       (syntax-case sig ()
@@ -233,6 +239,25 @@
 	((<top>)	=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))
+    ))
+
+(define-syntax declare-condition-type-predicate
+  ;;Usage examples:
+  ;;
+  ;;   (declare-type-predicate fixnum? <fixnum>)
+  ;;   (declare-type-predicate vector? <vector>)
+  ;;   (declare-type-predicate exact-integer? <fixnum> <bignum> <exact-integer>)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((?tag)				=> (<true>))
+	((<condition>)			=> (<boolean>))
+	((<top>)			=> (<false>)))
+       (attributes
+	((_)				foldable effect-free))))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -993,7 +1018,8 @@
 (include "makefile.typed-core-primitives.enum-sets.scm"			#t)
 (include "makefile.typed-core-primitives.environment-inquiry.scm"	#t)
 (include "makefile.typed-core-primitives.eval-and-environments.scm"	#t)
-(include "makefile.typed-core-primitives.expander.scm"		#t)
+(include "makefile.typed-core-primitives.expander.scm"			#t)
+(include "makefile.typed-core-primitives.ffi.scm"			#t)
 (include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)
