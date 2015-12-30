@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -103,7 +103,7 @@
 	      (condition-message "while creating lock PID file: ~a")
 	    (log "creating lock PID file: ~a" lock-pathname)
 	    (px.open lock-pathname
-		     (fxior O_CREAT O_EXCL O_WRONLY)
+		     (fxior O_CREAT (fxior O_EXCL O_WRONLY))
 		     (fxior S_IRUSR S_IWUSR)))
 	  (with
 	   (with-logging-handler

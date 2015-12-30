@@ -96,6 +96,7 @@
   (import (vicare)
     (vicare system $fx)
     (vicare system $pairs)
+    (vicare system $chars)
     (vicare system $strings)
     (vicare system $bytevectors)
     (vicare arguments validation)
@@ -1063,8 +1064,8 @@
       ;;*  Chars having  (positive?  A.idx)  and (positive?   B.idx) are
       ;;  different: return false.
       ;;
-      (and ($fx= ($string-ref A A.idx)
-		 ($string-ref B B.idx))
+      (and ($char= ($string-ref A A.idx)
+		   ($string-ref B B.idx))
 	   (cond (($fxzero? A.idx)
 		  0)
 		 (($fxzero? B.idx)

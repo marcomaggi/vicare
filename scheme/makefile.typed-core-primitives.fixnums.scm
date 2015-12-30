@@ -1,77 +1,56 @@
-;;; -*- coding: utf-8-unix -*-
-;;;
-;;;Part of: Vicare Scheme
-;;;Contents: compile-time property definitions for core primitives
-;;;Date: Mon Sep 22, 2014
-;;;
-;;;Abstract
-;;;
-;;;	The purpose of this module is to  associate values to the public name of core
-;;;	primitive.  The values represent core  primitive properties: the arity of the
-;;;	primitive; the  number of  returned values;  the core  types of  the expected
-;;;	arguments; the  core types of  the returned values;  miscellaneous properties
-;;;	used by the source optimiser.
-;;;
-;;;	  Scheme  object's core  types  are  defined by  the  module "Scheme  objects
-;;;	ontology".  This file contains a table  of core primitive properties for both
-;;;	primitive functions and primitive operations.
-;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;
-;;;This program is free software: you can  redistribute it and/or modify it under the
-;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
-;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
-;;;version.
-;;;
-;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
-;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
-;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-;;;
-;;;You should have received a copy of  the GNU General Public License along with this
-;;;program.  If not, see <http://www.gnu.org/licenses/>.
-;;;
-
-
-#!vicare
-(library (ikarus.compiler.core-primitive-properties.fixnums)
-  (export initialise-core-primitive-properties/fixnums)
-  (import (except (vicare) unsafe)
-    (ikarus.compiler.core-primitive-properties.base)
-    (ikarus.compiler.scheme-objects-ontology))
-
-  (import SCHEME-OBJECTS-ONTOLOGY)
-
-  (define (initialise-core-primitive-properties/fixnums)
+;;
+;;Part of: Vicare Scheme
+;;Contents: table of expand-time properties for fixnums core primitives
+;;Date: Tue Dec 30, 2015
+;;
+;;Abstract
+;;
+;;
+;;
+;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;
+;;This program is free  software: you can redistribute it and/or  modify it under the
+;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
+;;Foundation, either version 3 of the License, or (at your option) any later version.
+;;
+;;This program  is distributed in the  hope that it  will be useful, but  WITHOUT ANY
+;;WARRANTY; without  even the implied  warranty of  MERCHANTABILITY or FITNESS  FOR A
+;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+;;
+;;You should have received  a copy of the GNU General Public  License along with this
+;;program.  If not, see <http://www.gnu.org/licenses/>.
+;;
 
 
 ;;;; fixnums safe operations
 
+(section
+
 (declare-core-primitive greatest-fixnum
     (unsafe)
   (signatures
-   (()				=> (T:positive-fixnum)))
+   (()				=> (<positive-fixnum>)))
   (attributes
    (()				foldable effect-free result-true)))
 
 (declare-core-primitive least-fixnum
     (unsafe)
   (signatures
-   (()				=> (T:negative-fixnum)))
+   (()				=> (<fixnum>)))
   (attributes
    (()				foldable effect-free result-true)))
 
 (declare-core-primitive fixnum-width
     (unsafe)
   (signatures
-   (()				=> (T:positive-fixnum)))
+   (()				=> (<positive-fixnum>)))
   (attributes
    (()				foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
-(declare-type-predicate fixnum? T:fixnum)
+(declare-type-predicate fixnum? <fixnum>)
 
 (declare-fixnum-predicate fxzero?		(replacements $fxzero?))
 (declare-fixnum-predicate fxpositive?		(replacements $fxpositive?))
@@ -105,35 +84,35 @@
 (declare-core-primitive fx+/carry
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>) => (<fixnum> <fixnum>)))
   (attributes
    ((_ _ _)			foldable effect-free result-true)))
 
 (declare-core-primitive fx-/carry
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>) => (<fixnum> <fixnum>)))
   (attributes
    ((_ _ _)			foldable effect-free result-true)))
 
 (declare-core-primitive fx*/carry
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>) => (<fixnum> <fixnum>)))
   (attributes
    ((_ _ _)			foldable effect-free result-true)))
 
 (declare-core-primitive fxdiv-and-mod
     (safe)
   (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum>)		=> (<fixnum> <fixnum>)))
   (attributes
    ((_ _)			effect-free)))
 
 (declare-core-primitive fxdiv0-and-mod0
     (safe)
   (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum>)		=> (<fixnum> <fixnum>)))
   (attributes
    ((_ _)			effect-free)))
 
@@ -161,49 +140,49 @@
 (declare-core-primitive fxbit-field
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _)				foldable effect-free result-true)))
 
 (declare-core-primitive fxbit-set?
     (safe)
   (signatures
-   ((T:fixnum T:fixnum)			=> (T:boolean)))
+   ((<fixnum> <fixnum>)			=> (<boolean>)))
   (attributes
    ((_ _)				foldable effect-free)))
 
 (declare-core-primitive fxreverse-bit-field
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _)				foldable effect-free result-true)))
 
 (declare-core-primitive fxcopy-bit
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _)				foldable effect-free result-true)))
 
 (declare-core-primitive fxcopy-bit-field
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _ _)					foldable effect-free result-true)))
 
 (declare-core-primitive fxrotate-bit-field
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _ _)				foldable effect-free result-true)))
 
 (declare-core-primitive fxif
     (safe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _)				foldable effect-free result-true)))
 
@@ -237,21 +216,25 @@
 (declare-core-primitive fixnum->flonum
     (safe)
   (signatures
-   ((T:fixnum)		=> (T:flonum)))
+   ((<fixnum>)		=> (<flonum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive fixnum->string
     (safe)
   (signatures
-   ((T:fixnum)		=> (T:string))
-   ((T:fixnum T:fixnum)	=> (T:string)))
+   ((<fixnum>)		=> (<string>))
+   ((<fixnum> <fixnum>)	=> (<string>)))
   (attributes
    ((_)			foldable effect-free result-true)
    ((_ _)		foldable effect-free result-true)))
 
+/section)
+
 
 ;;;; fixnums unsafe operations
+
+(section
 
 ;;; predicates
 
@@ -277,14 +260,14 @@
 (declare-core-primitive $fxdiv-and-mod
     (unsafe)
   (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum>)		=> (<fixnum> <fixnum>)))
   (attributes
    ((_ _)			effect-free)))
 
 (declare-core-primitive $fxdiv0-and-mod0
     (unsafe)
   (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+   ((<fixnum> <fixnum>)		=> (<fixnum> <fixnum>)))
   (attributes
    ((_ _)			effect-free)))
 
@@ -312,28 +295,28 @@
 (declare-core-primitive $fxcopy-bit
     (unsafe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _)				foldable effect-free result-true)))
 
 (declare-core-primitive $fxcopy-bit-field
     (unsafe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _ _)					foldable effect-free result-true)))
 
 (declare-core-primitive $fxrotate-bit-field
     (unsafe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _ _)					foldable effect-free result-true)))
 
 (declare-core-primitive $fxbit-field
     (unsafe)
   (signatures
-   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+   ((<fixnum> <fixnum> <fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _ _)				foldable effect-free result-true)))
 
@@ -356,22 +339,22 @@
 (declare-core-primitive $fixnum->flonum
     (unsafe)
   (signatures
-   ((T:fixnum)			=> (T:flonum)))
+   ((<fixnum>)			=> (<flonum>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive $fixnum->char
     (unsafe)
   (signatures
-   ((T:fixnum)			=> (T:char)))
+   ((<fixnum>)			=> (<char>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive $fixnum->string
     (unsafe)
   (signatures
-   ((T:fixnum)			=> (T:string))
-   ((T:fixnum T:fixnum)		=> (T:string)))
+   ((<fixnum>)			=> (<string>))
+   ((<fixnum> <fixnum>)		=> (<string>)))
   (attributes
    ((_)				foldable effect-free result-true)
    ((_ _)			foldable effect-free result-true)))
@@ -382,15 +365,15 @@
 (declare-core-primitive $fxinthash
     (unsafe)
   (signatures
-   ((T:fixnum)			=> (T:fixnum)))
+   ((<fixnum>)			=> (<fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
-
-;;;; done
+/section)
 
- #| end of DEFINE |# )
-
-#| end of library |# )
-
-;;; end o file
+;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; coding: utf-8-unix
+;; eval: (put 'declare-core-primitive		'scheme-indent-function 2)
+;; End:
