@@ -205,29 +205,11 @@
 (declare-core-primitive bytevector->cstring
     (safe)
   (signatures
-   #;((<bytevector>)		=> ((or <false> <pointer>)))
-   ((<bytevector>)		=> (<top>)))
-  (attributes
-   ((_)			effect-free)))
-
-(declare-core-primitive bytevector->guarded-cstring
-    (safe)
-  (signatures
-   #;((<bytevector>)		=> ((or <false> <pointer>)))
-   ((<bytevector>)		=> (<top>)))
-  (attributes
-   ((_)			effect-free)))
-
-;;;
-
-(declare-core-primitive bytevector->cstring*
-    (safe)
-  (signatures
    ((<bytevector>)		=> (<pointer>)))
   (attributes
    ((_)			effect-free)))
 
-(declare-core-primitive bytevector->guarded-cstring*
+(declare-core-primitive bytevector->guarded-cstring
     (safe)
   (signatures
    ((<bytevector>)		=> (<pointer>)))
@@ -239,29 +221,11 @@
 (declare-core-primitive string->cstring
     (safe)
   (signatures
-   #;((<string>)			=> ([or <false> <pointer>]))
-   ((<string>)			=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive string->guarded-cstring
-    (safe)
-  (signatures
-   #;((<string>)			=> ([or <false> <pointer>]))
-   ((<string>)			=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-;;;
-
-(declare-core-primitive string->cstring*
-    (safe)
-  (signatures
    ((<string>)			=> (<pointer>)))
   (attributes
    ((_)				effect-free)))
 
-(declare-core-primitive string->guarded-cstring*
+(declare-core-primitive string->guarded-cstring
     (safe)
   (signatures
    ((<string>)			=> (<pointer>)))
@@ -346,29 +310,11 @@
 (declare-core-primitive strdup
     (safe)
   (signatures
-   #;((<pointer>)			=> ([or <false> <pointer>]))
-   ((<pointer>)			=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive guarded-strdup
-    (safe)
-  (signatures
-   #;((<pointer>)			=> ([or <false> <pointer>]))
-   ((<pointer>)			=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-;;;
-
-(declare-core-primitive strdup*
-    (safe)
-  (signatures
    ((<pointer>)			=> (<pointer>)))
   (attributes
    ((_)				effect-free result-true)))
 
-(declare-core-primitive guarded-strdup*
+(declare-core-primitive guarded-strdup
     (safe)
   (signatures
    ((<pointer>)			=> (<pointer>)))
@@ -380,29 +326,11 @@
 (declare-core-primitive strndup
     (safe)
   (signatures
-   #;((<pointer> <exact-integer>)		=> ([or <false> <pointer>]))
-   ((<pointer> <exact-integer>)		=> (<top>)))
-  (attributes
-   ((_ _)				effect-free)))
-
-(declare-core-primitive guarded-strndup
-    (safe)
-  (signatures
-   #;((<pointer> <exact-integer>)		=> ([or <false> <pointer>]))
-   ((<pointer> <exact-integer>)		=> (<top>)))
-  (attributes
-   ((_ _)				effect-free)))
-
-;;;
-
-(declare-core-primitive strndup*
-    (safe)
-  (signatures
    ((<pointer> <exact-integer>)		=> (<pointer>)))
   (attributes
    ((_ _)				effect-free result-true)))
 
-(declare-core-primitive guarded-strndup*
+(declare-core-primitive guarded-strndup
     (safe)
   (signatures
    ((<pointer> <exact-integer>)		=> (<pointer>)))
@@ -414,30 +342,14 @@
 (declare-core-primitive bytevectors->argv
     (safe)
   (signatures
-   #;((<list>)		=> ([or <false> <pointer>]))
-   ((<list>)		=> (<top>)))
+   ((<list>)			=> (<pointer>)))
   (attributes
    ((_)				effect-free)))
 
 (declare-core-primitive bytevectors->guarded-argv
     (safe)
   (signatures
-   #;((<list>)		=> ([or <false> <pointer>]))
-   ((<list>)		=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive bytevectors->argv*
-    (safe)
-  (signatures
-   ((<list>)		=> (<pointer>)))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive bytevectors->guarded-argv*
-    (safe)
-  (signatures
-   ((<list>)		=> (<pointer>)))
+   ((<list>)			=> (<pointer>)))
   (attributes
    ((_)				effect-free)))
 
@@ -446,27 +358,11 @@
 (declare-core-primitive strings->argv
     (safe)
   (signatures
-   #;((<list>)		=> ([or <false> <pointer>]))
-   ((<list>)		=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive strings->guarded-argv
-    (safe)
-  (signatures
-   #;((<list>)		=> ([or <false> <pointer>]))
-   ((<list>)		=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive strings->argv*
-    (safe)
-  (signatures
    ((<list>)		=> (<pointer>)))
   (attributes
    ((_)				effect-free)))
 
-(declare-core-primitive strings->guarded-argv*
+(declare-core-primitive strings->guarded-argv
     (safe)
   (signatures
    ((<list>)		=> (<pointer>)))

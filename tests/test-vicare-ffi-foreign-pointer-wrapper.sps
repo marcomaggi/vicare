@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for foreign pointer wrapper data structure
@@ -10,27 +9,26 @@
 ;;;
 ;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!r6rs
 (import (vicare)
   (prefix (vicare ffi)
-	  ffi.)
+	  ffi::)
   (prefix (vicare ffi foreign-pointer-wrapper)
-	  ffi.)
+	  ffi::)
   (vicare arguments validation)
   (vicare checks))
 
@@ -49,9 +47,9 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type #f))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type #f))
 
   ;; Printer check.
   (when #f
@@ -263,53 +261,53 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.foreign-destructor foreign-alpha-destructor)
-    (ffi.collector-struct-type #f))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::foreign-destructor foreign-alpha-destructor)
+    (ffi::collector-struct-type #f))
 
   (define verbose? #f)
 
   (define (foreign-alpha-destructor S)
     (when (or #f verbose?)
       (check-pretty-print (list 'enter-foreign-destructor S)))
-    (ffi.free ($alpha-pointer S))
+    (ffi::free ($alpha-pointer S))
     (when (or #f verbose?)
       (check-pretty-print (list 'leave-foreign-destructor S)))
     #t)
 
   ;; Printer check.
   (when (or #f verbose?)
-    (check-pretty-print (make-alpha/owner (ffi.malloc 1024))))
+    (check-pretty-print (make-alpha/owner (ffi::malloc 1024))))
 
 ;;; --------------------------------------------------------------------
 ;;; owner constructor
 
   (check	;owner constructor
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	(alpha? S))
     => #t)
 
   (check	;alive predicate
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	(alpha?/alive S))
     => #t)
 
   (check	;unsafe alive predicate
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-alive? S))
     => #t)
 
   (check	;owner constructor, getter
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	(alpha-pointer-owner? S))
     => #t)
 
   (check	;owner constructor, unsafe getter
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-pointer-owner? S))
     => #t)
@@ -318,31 +316,31 @@
 ;;; not-owner constructor
 
   (check	;not owner constructor
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	(alpha? S))
     => #t)
 
   (check	;alive predicate
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	(alpha?/alive S))
     => #t)
 
   (check	;unsafe alive predicate
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	($alpha-alive? S))
     => #t)
 
   (check	;not-owner constructor, getter
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	(alpha-pointer-owner? S))
     => #f)
 
   (check	;not-owner constructor, unsafe getter
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	($alpha-pointer-owner? S))
     => #f)
@@ -351,27 +349,27 @@
 ;;; unsafe destructor, owner struct
 
   (check	;unsafe destructor invocation
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S))
     => #t)
 
   (check	;unsafe destructor invocation, twice
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	($alpha-finalise S))
     => #f)
 
   (check	;unsafe destructor invocation, dead struct safe pred
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	(alpha?/alive S))
     => #f)
 
   (check	;unsafe destructor invocation, dead struct unsafe pred
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	($alpha-alive? S))
@@ -381,26 +379,26 @@
 ;;; unsafe destructor, not owner struct
 
   (check	;unsafe destructor invocation
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/not-owner P)))
 	($alpha-finalise S)
 	(list (alpha?/alive S)
 	      ($alpha-alive? S)
-	      (ffi.pointer-null? P)))
+	      (ffi::pointer-null? P)))
     => '(#f #f #f))
 
   (check	;owner struct finalised before not owner struct
-      (let* ((P (ffi.malloc 1024))
-	     (Q (ffi.pointer-clone P))
+      (let* ((P (ffi::malloc 1024))
+	     (Q (ffi::pointer-clone P))
 	     (S (make-alpha/owner P))
 	     (R (make-alpha/not-owner Q)))
 	($alpha-finalise S)
 	(list (alpha?/alive S)
 	      ($alpha-alive? S)
-	      (ffi.pointer-null? P)
+	      (ffi::pointer-null? P)
 	      (alpha?/alive R)
 	      ($alpha-alive? R)
-	      (ffi.pointer-null? Q)))
+	      (ffi::pointer-null? Q)))
     => '(#f #f #t #t #t #f))
 
 ;;; --------------------------------------------------------------------
@@ -408,7 +406,7 @@
 
   (check	;custom destructor invocation
       (with-result
-       (let* ((P (ffi.malloc 1024))
+       (let* ((P (ffi::malloc 1024))
 	      (S (make-alpha/owner P))
 	      (D (lambda (S)
 		   (add-result (pointer? (alpha-pointer S))))))
@@ -419,7 +417,7 @@
   (check	;custom  destructor   invocation,  invoking   twice  the
 		;destructor
       (with-result
-       (let* ((P (ffi.malloc 1024))
+       (let* ((P (ffi::malloc 1024))
 	      (S (make-alpha/owner P))
 	      (D (lambda (S)
 		   (add-result (pointer? (alpha-pointer S))))))
@@ -432,13 +430,13 @@
 ;;; UID gensym
 
   (check	;safe getter
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	(symbol? (alpha-uid S)))
     => #t)
 
   (check	;unsafe getter
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P)))
 	(symbol? ($alpha-uid S)))
     => #t)
@@ -447,7 +445,7 @@
 ;;; argument validators
 
   (check	;struct validator, success
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P))
 	     (who 'test))
 	(with-arguments-validation (who)
@@ -467,7 +465,7 @@
     => #t)
 
   (check	;alive struct validator
-      (let* ((P (ffi.malloc 1024))
+      (let* ((P (ffi::malloc 1024))
 	     (S (make-alpha/owner P))
 	     (who 'test))
 	(with-arguments-validation (who)
@@ -490,7 +488,7 @@
       (guard (E ((assertion-violation? E)
 		 #t)
 		(else E))
-	(let* ((P (ffi.malloc 1024))
+	(let* ((P (ffi::malloc 1024))
 	       (S (make-alpha/owner P))
 	       (who 'test))
 	  ($alpha-finalise S)
@@ -513,10 +511,10 @@
   ;;
   ;;* With collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type #f)
-    (ffi.collected-struct-type beta))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type #f)
+    (ffi::collected-struct-type beta))
 
   ;;Type definition:
   ;;
@@ -526,9 +524,9 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper beta
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type alpha))
+  (ffi::define-foreign-pointer-wrapper beta
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type alpha))
 
   (define verbose? #f)
 
@@ -646,11 +644,11 @@
   ;;
   ;;* With collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type #f)
-    (ffi.collected-struct-type beta)
-    (ffi.collected-struct-type gamma))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type #f)
+    (ffi::collected-struct-type beta)
+    (ffi::collected-struct-type gamma))
 
   ;;Type definition:
   ;;
@@ -660,9 +658,9 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper beta
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type alpha))
+  (ffi::define-foreign-pointer-wrapper beta
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type alpha))
 
   ;;Type definition:
   ;;
@@ -672,9 +670,9 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-foreign-pointer-wrapper gamma
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type alpha))
+  (ffi::define-foreign-pointer-wrapper gamma
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type alpha))
 
   (define verbose? #f)
 
@@ -775,10 +773,10 @@
   ;;
   ;;* With custom fields.
   ;;
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.fields a b c)
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type #f))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::fields a b c)
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type #f))
 
   ;; Printer check.
   (when #f
@@ -802,9 +800,9 @@
 
 (parametrise ((check-test-name	'plists))
 
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type #f))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type #f))
 
 ;;; --------------------------------------------------------------------
 
@@ -849,9 +847,9 @@
 
 (parametrise ((check-test-name	'misc))
 
-  (ffi.define-foreign-pointer-wrapper alpha
-    (ffi.foreign-destructor #f)
-    (ffi.collector-struct-type #f))
+  (ffi::define-foreign-pointer-wrapper alpha
+    (ffi::foreign-destructor #f)
+    (ffi::collector-struct-type #f))
 
 ;;; --------------------------------------------------------------------
 
@@ -870,5 +868,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'ffi.define-foreign-pointer-wrapper 'scheme-indent-function 1)
+;; coding: utf-8-unix
+;; eval: (put 'ffi::define-foreign-pointer-wrapper 'scheme-indent-function 1)
 ;; End:

@@ -94,23 +94,17 @@
     ;; C arrays of C strings
     argv-length
     argv->bytevectors			argv->strings
-    bytevectors->argv			bytevectors->argv*
-    bytevectors->guarded-argv		bytevectors->guarded-argv*
-    strings->argv			strings->argv*
-    strings->guarded-argv		strings->guarded-argv*
+    bytevectors->argv			bytevectors->guarded-argv
+    strings->argv			strings->guarded-argv
 
     ;; C strings
     strlen
     strcmp				strncmp
-    strdup				strdup*
-    strndup				strndup*
-    guarded-strdup			guarded-strdup*
-    guarded-strndup			guarded-strndup*
+    strdup				strndup
+    guarded-strdup			guarded-strndup
     cstring->bytevector			cstring->string
-    bytevector->cstring			bytevector->cstring*
-    bytevector->guarded-cstring		bytevector->guarded-cstring*
-    string->cstring			string->cstring*
-    string->guarded-cstring		string->guarded-cstring*
+    bytevector->cstring			bytevector->guarded-cstring
+    string->cstring			string->guarded-cstring
 
     ;; errno interface
     errno

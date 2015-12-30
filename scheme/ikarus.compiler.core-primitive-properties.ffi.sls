@@ -226,27 +226,11 @@
 (declare-core-primitive bytevector->cstring
     (safe)
   (signatures
-   ((T:bytevector)		=> ((or T:false T:pointer))))
-  (attributes
-   ((_)			effect-free)))
-
-(declare-core-primitive bytevector->guarded-cstring
-    (safe)
-  (signatures
-   ((T:bytevector)		=> ((or T:false T:pointer))))
-  (attributes
-   ((_)			effect-free)))
-
-;;;
-
-(declare-core-primitive bytevector->cstring*
-    (safe)
-  (signatures
    ((T:bytevector)		=> (T:pointer)))
   (attributes
    ((_)			effect-free)))
 
-(declare-core-primitive bytevector->guarded-cstring*
+(declare-core-primitive bytevector->guarded-cstring
     (safe)
   (signatures
    ((T:bytevector)		=> (T:pointer)))
@@ -258,27 +242,11 @@
 (declare-core-primitive string->cstring
     (safe)
   (signatures
-   ((T:string)			=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive string->guarded-cstring
-    (safe)
-  (signatures
-   ((T:string)			=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-;;;
-
-(declare-core-primitive string->cstring*
-    (safe)
-  (signatures
    ((T:string)			=> (T:pointer)))
   (attributes
    ((_)				effect-free)))
 
-(declare-core-primitive string->guarded-cstring*
+(declare-core-primitive string->guarded-cstring
     (safe)
   (signatures
    ((T:string)			=> (T:pointer)))
@@ -363,27 +331,11 @@
 (declare-core-primitive strdup
     (safe)
   (signatures
-   ((T:pointer)			=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive guarded-strdup
-    (safe)
-  (signatures
-   ((T:pointer)			=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-;;;
-
-(declare-core-primitive strdup*
-    (safe)
-  (signatures
    ((T:pointer)			=> (T:pointer)))
   (attributes
    ((_)				effect-free result-true)))
 
-(declare-core-primitive guarded-strdup*
+(declare-core-primitive guarded-strdup
     (safe)
   (signatures
    ((T:pointer)			=> (T:pointer)))
@@ -395,27 +347,11 @@
 (declare-core-primitive strndup
     (safe)
   (signatures
-   ((T:pointer T:exact-integer)		=> ([or T:false T:pointer])))
-  (attributes
-   ((_ _)				effect-free)))
-
-(declare-core-primitive guarded-strndup
-    (safe)
-  (signatures
-   ((T:pointer T:exact-integer)		=> ([or T:false T:pointer])))
-  (attributes
-   ((_ _)				effect-free)))
-
-;;;
-
-(declare-core-primitive strndup*
-    (safe)
-  (signatures
    ((T:pointer T:exact-integer)		=> (T:pointer)))
   (attributes
    ((_ _)				effect-free result-true)))
 
-(declare-core-primitive guarded-strndup*
+(declare-core-primitive guarded-strndup
     (safe)
   (signatures
    ((T:pointer T:exact-integer)		=> (T:pointer)))
@@ -427,25 +363,11 @@
 (declare-core-primitive bytevectors->argv
     (safe)
   (signatures
-   ((T:proper-list)		=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive bytevectors->guarded-argv
-    (safe)
-  (signatures
-   ((T:proper-list)		=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive bytevectors->argv*
-    (safe)
-  (signatures
    ((T:proper-list)		=> (T:pointer)))
   (attributes
    ((_)				effect-free)))
 
-(declare-core-primitive bytevectors->guarded-argv*
+(declare-core-primitive bytevectors->guarded-argv
     (safe)
   (signatures
    ((T:proper-list)		=> (T:pointer)))
@@ -457,25 +379,11 @@
 (declare-core-primitive strings->argv
     (safe)
   (signatures
-   ((T:proper-list)		=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive strings->guarded-argv
-    (safe)
-  (signatures
-   ((T:proper-list)		=> ([or T:false T:pointer])))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive strings->argv*
-    (safe)
-  (signatures
    ((T:proper-list)		=> (T:pointer)))
   (attributes
    ((_)				effect-free)))
 
-(declare-core-primitive strings->guarded-argv*
+(declare-core-primitive strings->guarded-argv
     (safe)
   (signatures
    ((T:proper-list)		=> (T:pointer)))

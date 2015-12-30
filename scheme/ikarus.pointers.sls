@@ -63,25 +63,19 @@
     ;; C strings
     strlen
     strcmp				strncmp
-    strdup				strdup*
-    strndup				strndup*
-    guarded-strdup			guarded-strdup*
-    guarded-strndup			guarded-strndup*
+    strdup				strndup
+    guarded-strdup			guarded-strndup
     cstring->bytevector			cstring->string
     cstring16->bytevector		cstring16n->string
     cstring16le->string			cstring16be->string
-    bytevector->cstring			bytevector->cstring*
-    bytevector->guarded-cstring		bytevector->guarded-cstring*
-    string->cstring			string->cstring*
-    string->guarded-cstring		string->guarded-cstring*
+    bytevector->cstring			bytevector->guarded-cstring
+    string->cstring			string->guarded-cstring
 
     ;; C array of C strings
     argv-length
     argv->bytevectors			argv->strings
-    bytevectors->argv			bytevectors->argv*
-    bytevectors->guarded-argv		bytevectors->guarded-argv*
-    strings->argv			strings->argv*
-    strings->guarded-argv		strings->guarded-argv*
+    bytevectors->argv			bytevectors->guarded-argv
+    strings->argv			strings->guarded-argv
 
     ;; errno interface
     errno
@@ -214,25 +208,19 @@
 		  ;; C strings
 		  strlen
 		  strcmp				strncmp
-		  strdup				strdup*
-		  strndup				strndup*
-		  guarded-strdup			guarded-strdup*
-		  guarded-strndup			guarded-strndup*
+		  strdup				strndup
+		  guarded-strdup			guarded-strndup
 		  cstring->bytevector			cstring->string
 		  cstring16->bytevector			cstring16n->string
 		  cstring16le->string			cstring16be->string
-		  bytevector->cstring			bytevector->cstring*
-		  bytevector->guarded-cstring		bytevector->guarded-cstring*
-		  string->cstring			string->cstring*
-		  string->guarded-cstring		string->guarded-cstring*
+		  bytevector->cstring			bytevector->guarded-cstring
+		  string->cstring			string->guarded-cstring
 
 		  ;; C array of C strings
 		  argv-length
 		  argv->bytevectors			argv->strings
-		  bytevectors->argv			bytevectors->argv*
-		  bytevectors->guarded-argv		bytevectors->guarded-argv*
-		  strings->argv				strings->argv*
-		  strings->guarded-argv			strings->guarded-argv*
+		  bytevectors->argv			bytevectors->guarded-argv
+		  strings->argv				strings->guarded-argv
 
 		  ;; errno interface
 		  errno
@@ -929,25 +917,16 @@
   (capi.ffi-strncmp pointer1 pointer2 count))
 
 (define* (strdup {pointer pointer?})
-  (capi.ffi-strdup pointer))
-
-(define* (strdup* {pointer pointer?})
   (or (capi.ffi-strdup pointer)
       (%raise-out-of-memory __who__)))
 
 (define* (strndup {pointer pointer?} {count number-of-bytes?})
-  (capi.ffi-strndup pointer count))
-
-(define* (strndup* {pointer pointer?} {count number-of-bytes?})
   (or (capi.ffi-strndup pointer count)
       (%raise-out-of-memory __who__)))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector->cstring {bv bytevector?})
-  (capi.ffi-bytevector->cstring bv))
-
-(define* (bytevector->cstring* {bv bytevector?})
   (or (capi.ffi-bytevector->cstring bv)
       (%raise-out-of-memory __who__)))
 
@@ -978,18 +957,12 @@
   (utf16be->string (capi.ffi-cstring16->bytevector pointer)))
 
 (define* (string->cstring {str string?})
-  (capi.ffi-bytevector->cstring (string->ascii str)))
-
-(define* (string->cstring* {str string?})
   (or (capi.ffi-bytevector->cstring (string->ascii str))
       (%raise-out-of-memory __who__)))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevectors->argv {bv* list-of-bytevectors?})
-  (capi.ffi-bytevectors->argv bv*))
-
-(define* (bytevectors->argv* {bv* list-of-bytevectors?})
   (or (capi.ffi-bytevectors->argv bv*)
       (%raise-out-of-memory __who__)))
 
@@ -997,9 +970,6 @@
   (capi.ffi-argv->bytevectors pointer))
 
 (define* (strings->argv {str* list-of-strings?})
-  (capi.ffi-bytevectors->argv (map string->ascii str*)))
-
-(define* (strings->argv* {str* list-of-strings?})
   (or (capi.ffi-bytevectors->argv (map string->ascii str*))
       (%raise-out-of-memory __who__)))
 
@@ -1012,54 +982,42 @@
 ;;; --------------------------------------------------------------------
 
 (define* (guarded-strdup {pointer pointer?})
-  (let ((rv (strdup pointer)))
-    (and rv (%memory-guardian rv))))
-
-(define* (guarded-strdup* {pointer pointer?})
-  (or (guarded-strdup pointer)
-      (%raise-out-of-memory __who__)))
+  (cond ((capi.ffi-strdup pointer)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
 (define* (guarded-strndup {pointer pointer?} {count number-of-bytes?})
-  (let ((rv (strndup pointer count)))
-    (and rv (%memory-guardian rv))))
-
-(define* (guarded-strndup* {pointer pointer?} {count number-of-bytes?})
-  (or (guarded-strndup pointer count)
-      (%raise-out-of-memory __who__)))
+  (cond ((capi.ffi-strndup pointer count)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
 (define* (bytevector->guarded-cstring {bv bytevector?})
-  (let ((rv (bytevector->cstring bv)))
-    (and rv (%memory-guardian rv))))
-
-(define* (bytevector->guarded-cstring* {bv bytevector?})
-  (or (bytevector->guarded-cstring bv)
-      (%raise-out-of-memory __who__)))
+  (cond ((capi.ffi-bytevector->cstring bv)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
 (define* (string->guarded-cstring {str string?})
-  (let ((rv (bytevector->cstring (string->latin1 str))))
-    (and rv (%memory-guardian rv))))
-
-(define* (string->guarded-cstring* {str string?})
-  (or (string->guarded-cstring str)
-      (%raise-out-of-memory __who__)))
-
-(define* (bytevectors->guarded-argv {bv* list-of-bytevectors?})
-  (let ((rv (bytevectors->argv bv*)))
-    (and rv (%memory-guardian rv))))
-
-(define* (bytevectors->guarded-argv* {bv* list-of-bytevectors?})
-  (or (bytevectors->guarded-argv bv*)
-      (%raise-out-of-memory __who__)))
+  (cond ((capi.ffi-bytevector->cstring (string->latin1 str))
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
 ;;; --------------------------------------------------------------------
 
-(define* (strings->guarded-argv {bv* list-of-strings?})
-  (let ((rv (strings->argv bv*)))
-    (and rv (%memory-guardian rv))))
+(define* (bytevectors->guarded-argv {bv* list-of-bytevectors?})
+  (cond ((capi.ffi-bytevectors->argv bv*)
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
-(define* (strings->guarded-argv* {bv* list-of-strings?})
-  (or (strings->guarded-argv bv*)
-      (%raise-out-of-memory __who__)))
+(define* (strings->guarded-argv {str* list-of-strings?})
+  (cond ((capi.ffi-bytevectors->argv (map string->ascii str*))
+	 => %memory-guardian)
+	(else
+	 (%raise-out-of-memory __who__))))
 
 
 ;;;; local storage

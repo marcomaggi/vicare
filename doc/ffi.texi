@@ -10,13 +10,13 @@
 
 The library @library{vicare ffi} interfaces with the host operating
 system and other external libraries exposing a C language interface; it
-is suggested to import the @ffi{} library with the prefix @code{ffi.},
+is suggested to import the @ffi{} library with the prefix @code{ffi::},
 as in the following prelude:
 
 @example
 #!r6rs
 (import (rnrs)
-  (prefix (vicare ffi) ffi.))
+  (prefix (vicare ffi) ffi::))
 @end example
 
 The facilities of the @library{vicare ffi} give the Scheme program
@@ -375,13 +375,13 @@ callback:
 @example
 #!r6rs
 (import (rnrs)
-  (prefix (vicare ffi) ffi.))
+  (prefix (vicare ffi) ffi::))
 
 (define callout-maker
-  (ffi.make-c-callout-maker  'unsigned-int '(unsigned-int)))
+  (ffi::make-c-callout-maker  'unsigned-int '(unsigned-int)))
 
 (define callback-maker
-  (ffi.make-c-callback-maker 'unsigned-int '(unsigned-int)))
+  (ffi::make-c-callback-maker 'unsigned-int '(unsigned-int)))
 
 (define callback
   (callback-maker values))
@@ -391,7 +391,7 @@ callback:
 
 (callout 123)   @result{} 123
 
-(ffi.free-c-callback callback)
+(ffi::free-c-callback callback)
 @end example
 
 @menu
@@ -515,16 +515,16 @@ interface to the C function @cfunc{sinh}:
 @example
 #!r6rs
 (import (vicare)
-  (prefix (vicare ffi) ffi.))
+  (prefix (vicare ffi) ffi::))
 
 (define libc
-  (ffi.dlopen))
+  (ffi::dlopen))
 
 (define sinh-address
-  (ffi.dlsym libc "sinh"))
+  (ffi::dlsym libc "sinh"))
 
 (define callout-maker
-  (ffi.make-c-callout-maker 'double '(double)))
+  (ffi::make-c-callout-maker 'double '(double)))
 
 (define sinh
   (callout-maker sinh-address))
@@ -598,13 +598,13 @@ function, calling back to the Scheme function @func{values}:
 @example
 #!r6rs
 (import (vicare)
-  (prefix (vicare ffi) ffi.))
+  (prefix (vicare ffi) ffi::))
 
 (define callout-maker
-  (ffi.make-c-callout-maker  'unsigned-int '(unsigned-int)))
+  (ffi::make-c-callout-maker  'unsigned-int '(unsigned-int)))
 
 (define callback-maker
-  (ffi.make-c-callback-maker 'unsigned-int '(unsigned-int)))
+  (ffi::make-c-callback-maker 'unsigned-int '(unsigned-int)))
 
 (define identity
   (callout-maker (callback-maker values)))

@@ -19623,8 +19623,9 @@ the @asciiz{} strings referenced by @vari{pointer} and @varii{pointer}.
 @defunx guarded-strdup @var{pointer}
 Interface to the C function @cfunc{strdup}, @glibcref{Copying and
 Concatenation, strdup}.  Duplicate the @asciiz{} string referenced by
-@var{pointer}; if successful return a new pointer object, else return
-@false{}.
+@var{pointer}; if successful return a new pointer object, if allocation
+fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}
 
 Memory allocated by @func{strdup} must be explicitly released by
 @func{free}; memory allocated by @func{guarded-strdup} is automatically
@@ -19632,13 +19633,6 @@ released by the garbage collector whenever the returned pointer is
 garbage collected.
 @end defun
 
-
-@defun strdup* @var{pointer}
-@defunx guarded-strdup* @var{pointer}
-Like @func{strdup} and @func{guarded-strdup}, but if allocation fails
-raise a non--continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}.
-@end defun
 
 
 @defun strndup @var{pointer} @var{count}
@@ -19646,21 +19640,15 @@ raise a non--continuable exception with components: @condition{who},
 Interface to the C function @cfunc{strndup}, @glibcref{Copying and
 Concatenation, strndup}.  Duplicate the first @var{count} bytes in the
 @asciiz{} string referenced by @var{pointer}; if successful return a new
-pointer object, else return @false{}.  @var{count} must be an exact
-integer in the range of the C language type @code{size_t}.
+pointer object, if allocation fails raise a non--continuable exception
+with components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.  @var{count} must be an exact integer
+in the range of the C language type @code{size_t}.
 
 Memory allocated by @func{strdup} must be explicitly released by
 @func{free}; memory allocated by @func{guarded-strdup} is automatically
 released by the garbage collector whenever the returned pointer is
 garbage collected.
-@end defun
-
-
-@defun strndup* @var{pointer} @var{count}
-@defunx guarded-strndup* @var{pointer} @var{count}
-Like @func{strndup} and @func{guarded-strndup}, but if allocation fails
-raise a non--continuable exception with components: @condition{who},
-@condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -19669,21 +19657,14 @@ raise a non--continuable exception with components: @condition{who},
 Given a list of bytevectors: convert them into @asciiz{} strings and
 build a @cnull{} terminated array of C pointers referencing the strings.
 The strings and the array are stored in a single memory block.  If
-successful return the pointer object, otherwise return @false{}.
+successful return the pointer object; if allocation fails raise a
+non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
 
 Memory allocated by @func{bytevectors->argv} must be explicitly released
 by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is
 automatically released by the garbage collector whenever the returned
 pointer is garbage collected.
-@end defun
-
-
-@defun bytevectors->argv* @var{list-of-bytevectors}
-@defunx bytevectors->guarded-argv* @var{list-of-bytevectors}
-Like @func{bytevectors->argv*} and @func{bytevectors->guarded-argv*},
-but if allocation fails raise a non--continuable exception with
-components: @condition{who}, @condition{message},
-@condition{out-of-memory-error}.
 @end defun
 
 
@@ -19698,8 +19679,10 @@ same bytes of the strings.
 @defunx strings->guarded-argv @var{list-of-strings}
 Given a list of Scheme strings: convert them into @asciiz{} strings and
 build a @cnull{} terminated array of C pointers referencing the strings.
-Return a pointer to the array.  The strings and the array are stored in
-a single memory block.
+If successful return a pointer to the array; if allocation fails raise a
+non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.  The strings and
+the array are stored in a single memory block.
 
 The string arguments must contain only characters with Unicode code
 points in the range @math{[0, 255]}.
@@ -19710,13 +19693,6 @@ automatically released by the garbage collector whenever the returned
 pointer is garbage collected.
 @end defun
 
-
-@defun strings->argv* @var{list-of-strings}
-@defunx strings->guarded-argv* @var{list-of-strings}
-Like @func{strings->argv} and @func{strings->guarded-argv}, but if
-allocation fails raise a non--continuable exception with components:
-@condition{who}, @condition{message}, @condition{out-of-memory-error}.
-@end defun
 
 @defun argv->strings @var{pointer}
 Given a pointer to a @cnull{} terminated array of C pointers referencing

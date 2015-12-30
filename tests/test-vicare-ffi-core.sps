@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
 ;;;Contents: tests for FFI functions
@@ -10,18 +9,17 @@
 ;;;
 ;;;Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -30,11 +28,11 @@
   (vicare checks)
   (vicare language-extensions syntaxes)
   (prefix (vicare platform words)
-	  words.)
+	  words::)
   (prefix (vicare ffi)
-	  ffi.)
+	  ffi::)
   (prefix (vicare platform constants)
-	  plat.))
+	  plat::))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare FFI\n")
@@ -56,189 +54,189 @@
 (parametrise ((check-test-name	'pointers))
 
   (check
-      (ffi.pointer? (ffi.integer->pointer 123))
+      (ffi::pointer? (ffi::integer->pointer 123))
     => #t)
 
   (check
-      (ffi.pointer? '#(123))
+      (ffi::pointer? '#(123))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check-for-true
-   (ffi.maybe-pointer? (ffi.integer->pointer 123)))
+   (ffi::maybe-pointer? (ffi::integer->pointer 123)))
 
   (check-for-false
-   (ffi.maybe-pointer? '#(123)))
+   (ffi::maybe-pointer? '#(123)))
 
   (check-for-true
-   (ffi.maybe-pointer? (void)))
+   (ffi::maybe-pointer? (void)))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (ffi.pointer->integer (ffi.integer->pointer 0))
+      (ffi::pointer->integer (ffi::integer->pointer 0))
     => 0)
 
   (check
-      (ffi.pointer->integer (ffi.integer->pointer 123))
+      (ffi::pointer->integer (ffi::integer->pointer 123))
     => 123)
 
   (check
-      (ffi.pointer->integer (ffi.integer->pointer (words.greatest-machine-word)))
-    => (words.greatest-machine-word))
+      (ffi::pointer->integer (ffi::integer->pointer (words::greatest-machine-word)))
+    => (words::greatest-machine-word))
 
   (check	;error, integer too big
       (try
-	  (ffi.integer->pointer (+ 10 (words.greatest-machine-word)))
+	  (ffi::integer->pointer (+ 10 (words::greatest-machine-word)))
 	(catch E
 	  ((&assertion)
 	   (condition-irritants E))
 	  (else E)))
-    => (list (+ 10 (words.greatest-machine-word))))
+    => (list (+ 10 (words::greatest-machine-word))))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (ffi.pointer? (ffi.null-pointer))
+      (ffi::pointer? (ffi::null-pointer))
     => #t)
 
   (check
-      (ffi.pointer->integer (ffi.null-pointer))
+      (ffi::pointer->integer (ffi::null-pointer))
     => 0)
 
   (check
-      (ffi.pointer-null? (ffi.null-pointer))
+      (ffi::pointer-null? (ffi::null-pointer))
     => #t)
 
   (check
-      (ffi.pointer-null? (ffi.integer->pointer 123))
+      (ffi::pointer-null? (ffi::integer->pointer 123))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (ffi.pointer-diff (ffi.integer->pointer 123)
-			(ffi.integer->pointer 100))
+      (ffi::pointer-diff (ffi::integer->pointer 123)
+			(ffi::integer->pointer 100))
     => 23)
 
   (check
-      (ffi.pointer-diff (ffi.integer->pointer 10)
-			(ffi.integer->pointer 10))
+      (ffi::pointer-diff (ffi::integer->pointer 10)
+			(ffi::integer->pointer 10))
     => 0)
 
   (check
-      (let ((one (ffi.integer->pointer (words.greatest-machine-word)))
-	    (two (ffi.integer->pointer 0)))
-	(ffi.pointer-diff one two))
-    => (words.greatest-machine-word))
+      (let ((one (ffi::integer->pointer (words::greatest-machine-word)))
+	    (two (ffi::integer->pointer 0)))
+	(ffi::pointer-diff one two))
+    => (words::greatest-machine-word))
 
   (check
-      (let ((one (ffi.integer->pointer (words.greatest-machine-word)))
-	    (two (ffi.integer->pointer 0)))
-	(ffi.pointer-diff two one))
-    => (- (words.greatest-machine-word)))
+      (let ((one (ffi::integer->pointer (words::greatest-machine-word)))
+	    (two (ffi::integer->pointer 0)))
+	(ffi::pointer-diff two one))
+    => (- (words::greatest-machine-word)))
 
   (check
-      (let* ((one (ffi.integer->pointer 123))
-	     (two (ffi.integer->pointer 456))
-	     (D   (ffi.pointer-diff one two)))
+      (let* ((one (ffi::integer->pointer 123))
+	     (two (ffi::integer->pointer 456))
+	     (D   (ffi::pointer-diff one two)))
 ;;;(check-pretty-print (list one two D))
-	(ffi.pointer=? one (ffi.pointer-add two D)))
+	(ffi::pointer=? one (ffi::pointer-add two D)))
     => #t)
 
   (check
-      (let* ((one (ffi.integer->pointer 456))
-	     (two (ffi.integer->pointer 123))
-	     (D   (ffi.pointer-diff one two)))
+      (let* ((one (ffi::integer->pointer 456))
+	     (two (ffi::integer->pointer 123))
+	     (D   (ffi::pointer-diff one two)))
 ;;;(check-pretty-print (list one two D))
-	(ffi.pointer=? one (ffi.pointer-add two D)))
+	(ffi::pointer=? one (ffi::pointer-add two D)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (ffi.pointer-add (ffi.integer->pointer 123) 1000)
-    => (ffi.integer->pointer 1123))
+      (ffi::pointer-add (ffi::integer->pointer 123) 1000)
+    => (ffi::integer->pointer 1123))
 
   (check
-      (ffi.pointer-add (ffi.integer->pointer 123) 0)
-    => (ffi.integer->pointer 123))
+      (ffi::pointer-add (ffi::integer->pointer 123) 0)
+    => (ffi::integer->pointer 123))
 
   (check
-      (ffi.pointer-add (ffi.integer->pointer 123) -100)
-    => (ffi.integer->pointer 23))
+      (ffi::pointer-add (ffi::integer->pointer 123) -100)
+    => (ffi::integer->pointer 23))
 
   (check
-      (let ((P (ffi.integer->pointer (words.greatest-machine-word)))
+      (let ((P (ffi::integer->pointer (words::greatest-machine-word)))
 	    (D 0))
-	(ffi.pointer=? P (ffi.pointer-add P D)))
+	(ffi::pointer=? P (ffi::pointer-add P D)))
     => #t)
 
   (check
-      (let ((P (ffi.null-pointer))
+      (let ((P (ffi::null-pointer))
 	    (D 0))
-	(ffi.pointer=? P (ffi.pointer-add P D)))
+	(ffi::pointer=? P (ffi::pointer-add P D)))
     => #t)
 
   (check
-      (let ((P (ffi.null-pointer))
+      (let ((P (ffi::null-pointer))
 	    (D -1))
 	(equal? (list P D)
 		(catch-assertion-violation #f
-		  (ffi.pointer-add P D))))
+		  (ffi::pointer-add P D))))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((one (ffi.integer->pointer 123))
-	    (two (ffi.integer->pointer 456)))
+      (let ((one (ffi::integer->pointer 123))
+	    (two (ffi::integer->pointer 456)))
 	(eq? one two))
     => #f)
 
   (check
-      (let ((one (ffi.integer->pointer 123))
-	    (two (ffi.integer->pointer 456)))
+      (let ((one (ffi::integer->pointer 123))
+	    (two (ffi::integer->pointer 456)))
 	(eqv? one two))
     => #f)
 
   (check
-      (let ((one (ffi.integer->pointer 123))
-	    (two (ffi.integer->pointer 456)))
+      (let ((one (ffi::integer->pointer 123))
+	    (two (ffi::integer->pointer 456)))
 	(equal? one two))
     => #f)
 
   (check
-      (let ((one (ffi.integer->pointer 123)))
+      (let ((one (ffi::integer->pointer 123)))
 	(eq? one one))
     => #t)
 
   (check
-      (let ((one (ffi.integer->pointer 123)))
+      (let ((one (ffi::integer->pointer 123)))
 	(eqv? one one))
     => #t)
 
   (check
-      (let ((one (ffi.integer->pointer 123)))
+      (let ((one (ffi::integer->pointer 123)))
 	(equal? one one))
     => #t)
 
   (check
-      (let ((one (ffi.integer->pointer 123))
-	    (two (ffi.integer->pointer 123)))
+      (let ((one (ffi::integer->pointer 123))
+	    (two (ffi::integer->pointer 123)))
 	(eq? one two))
     => #f)
 
   (check
-      (let ((one (ffi.integer->pointer 123))
-	    (two (ffi.integer->pointer 123)))
+      (let ((one (ffi::integer->pointer 123))
+	    (two (ffi::integer->pointer 123)))
 	(eqv? one two))
     => #t)
 
   (check
-      (let ((one (ffi.integer->pointer 123))
-	    (two (ffi.integer->pointer 123)))
+      (let ((one (ffi::integer->pointer 123))
+	    (two (ffi::integer->pointer 123)))
 	(equal? one two))
     => #t)
 
@@ -248,47 +246,47 @@
 (parametrise ((check-test-name	'allocation))
 
   (check
-      (let ((P (ffi.malloc 10)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
+      (let ((P (ffi::malloc 10)))
+	(ffi::free P)
+	(ffi::pointer->integer P))
     => 0)
 
   (check
-      (let ((P (ffi.guarded-malloc 10)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
+      (let ((P (ffi::guarded-malloc 10)))
+	(ffi::free P)
+	(ffi::pointer->integer P))
     => 0)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let* ((P (ffi.malloc 10))
-	     (Q (ffi.realloc P 20)))
-	(ffi.free Q)
-	(list (ffi.pointer->integer P)
-	      (ffi.pointer->integer Q)))
+      (let* ((P (ffi::malloc 10))
+	     (Q (ffi::realloc P 20)))
+	(ffi::free Q)
+	(list (ffi::pointer->integer P)
+	      (ffi::pointer->integer Q)))
     => '(0 0))
 
   (check
-      (let* ((P (ffi.guarded-malloc 10))
-	     (Q (ffi.guarded-realloc P 20)))
-	(ffi.free Q)
-	(list (ffi.pointer->integer P)
-	      (ffi.pointer->integer Q)))
+      (let* ((P (ffi::guarded-malloc 10))
+	     (Q (ffi::guarded-realloc P 20)))
+	(ffi::free Q)
+	(list (ffi::pointer->integer P)
+	      (ffi::pointer->integer Q)))
     => '(0 0))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.calloc 10 20)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
+      (let ((P (ffi::calloc 10 20)))
+	(ffi::free P)
+	(ffi::pointer->integer P))
     => 0)
 
   (check
-      (let ((P (ffi.guarded-calloc 10 20)))
-	(ffi.free P)
-	(ffi.pointer->integer P))
+      (let ((P (ffi::guarded-calloc 10 20)))
+	(ffi::free P)
+	(ffi::pointer->integer P))
     => 0)
 
   #t)
@@ -298,23 +296,23 @@
 
   (check
       (let* ((count	123)
-	     (P		(ffi.guarded-malloc count))
-	     (Q		(ffi.guarded-malloc count))
+	     (P		(ffi::guarded-malloc count))
+	     (Q		(ffi::guarded-malloc count))
 	     (bv	(make-bytevector count)))
-	(ffi.memset P -9 count)
-	(ffi.memcpy Q P count)
-	(ffi.memory-copy bv 0 Q 0 count)
+	(ffi::memset P -9 count)
+	(ffi::memcpy Q P count)
+	(ffi::memory-copy bv 0 Q 0 count)
 	bv)
     => (make-bytevector 123 -9))
 
   (check
       (let* ((count	123)
-	     (P		(ffi.guarded-malloc count))
-	     (Q		(ffi.guarded-malloc count))
+	     (P		(ffi::guarded-malloc count))
+	     (Q		(ffi::guarded-malloc count))
 	     (bv	(make-bytevector count)))
-	(ffi.memset P -9 count)
-	(ffi.memmove Q P count)
-	(ffi.memory-copy bv 0 Q 0 count)
+	(ffi::memset P -9 count)
+	(ffi::memmove Q P count)
+	(ffi::memory-copy bv 0 Q 0 count)
 	bv)
     => (make-bytevector 123 -9))
 
@@ -323,23 +321,23 @@
 
   (check
       (let*-values (((count)	4)
-		    ((P P.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4)))
-		    ((Q Q.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4))))
-	(ffi.memcmp P Q count))
+		    ((P P.len)	(ffi::bytevector->guarded-memory '#vu8(1 2 3 4)))
+		    ((Q Q.len)	(ffi::bytevector->guarded-memory '#vu8(1 2 3 4))))
+	(ffi::memcmp P Q count))
     => 0)
 
   (check
       (let*-values (((count)	4)
-		    ((P P.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4)))
-		    ((Q Q.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 8 4))))
-	(negative? (ffi.memcmp P Q count)))
+		    ((P P.len)	(ffi::bytevector->guarded-memory '#vu8(1 2 3 4)))
+		    ((Q Q.len)	(ffi::bytevector->guarded-memory '#vu8(1 2 8 4))))
+	(negative? (ffi::memcmp P Q count)))
     => #t)
 
   (check
       (let*-values (((count)	4)
-		    ((P P.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 8 4)))
-		    ((Q Q.len)	(ffi.bytevector->guarded-memory '#vu8(1 2 3 4))))
-	(positive? (ffi.memcmp P Q count)))
+		    ((P P.len)	(ffi::bytevector->guarded-memory '#vu8(1 2 8 4)))
+		    ((Q Q.len)	(ffi::bytevector->guarded-memory '#vu8(1 2 3 4))))
+	(positive? (ffi::memcmp P Q count)))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -348,31 +346,31 @@
   (check	;bytevector to bytevector
       (let ((src '#vu8(1 2 3 4))
 	    (dst (make-bytevector 2)))
-	(ffi.memory-copy dst 0 src 2 2)
+	(ffi::memory-copy dst 0 src 2 2)
 	dst)
     => '#vu8(3 4))
 
   (check	;bytevector to memory
-      (let ((src (ffi.guarded-malloc 4))
+      (let ((src (ffi::guarded-malloc 4))
 	    (dst (make-bytevector 2)))
-	(ffi.pointer-set-c-uint8! src 0 1)
-	(ffi.pointer-set-c-uint8! src 1 2)
-	(ffi.pointer-set-c-uint8! src 2 3)
-	(ffi.pointer-set-c-uint8! src 3 4)
-	(ffi.memory-copy dst 0 src 2 2)
+	(ffi::pointer-set-c-uint8! src 0 1)
+	(ffi::pointer-set-c-uint8! src 1 2)
+	(ffi::pointer-set-c-uint8! src 2 3)
+	(ffi::pointer-set-c-uint8! src 3 4)
+	(ffi::memory-copy dst 0 src 2 2)
 	dst)
     => '#vu8(3 4))
 
   (check	;memory to memory and memory to bytevector
-      (let ((src (ffi.guarded-malloc 4))
-	    (dst (ffi.guarded-malloc 2))
+      (let ((src (ffi::guarded-malloc 4))
+	    (dst (ffi::guarded-malloc 2))
 	    (bv  (make-bytevector 2)))
-	(ffi.pointer-set-c-uint8! src 0 1)
-	(ffi.pointer-set-c-uint8! src 1 2)
-	(ffi.pointer-set-c-uint8! src 2 3)
-	(ffi.pointer-set-c-uint8! src 3 4)
-	(ffi.memory-copy dst 0 src 2 2)
-	(ffi.memory-copy bv  0 dst 0 2)
+	(ffi::pointer-set-c-uint8! src 0 1)
+	(ffi::pointer-set-c-uint8! src 1 2)
+	(ffi::pointer-set-c-uint8! src 2 3)
+	(ffi::pointer-set-c-uint8! src 3 4)
+	(ffi::memory-copy dst 0 src 2 2)
+	(ffi::memory-copy bv  0 dst 0 2)
 	bv)
     => '#vu8(3 4))
 
@@ -382,149 +380,133 @@
 (parametrise ((check-test-name	'cstrings))
 
   (check
-      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	     (bv   (ffi.cstring->bytevector cstr)))
+      (let* ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (bv   (ffi::cstring->bytevector cstr)))
 	bv)
     => '#vu8(65 66 67 68))
 
   (check
-      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	     (bv   (ffi.cstring->bytevector cstr 2)))
+      (let* ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (bv   (ffi::cstring->bytevector cstr 2)))
 	bv)
     => '#vu8(65 66))
 
   (check
-      (let* ((cstr (ffi.bytevector->cstring* '#vu8(65 66 67 68)))
-	     (bv   (ffi.cstring->bytevector cstr)))
+      (let* ((cstr (ffi::bytevector->cstring '#vu8(65 66 67 68)))
+	     (bv   (ffi::cstring->bytevector cstr)))
 	bv)
     => '#vu8(65 66 67 68))
 
   (check
-      (let* ((cstr (ffi.bytevector->guarded-cstring* '#vu8(65 66 67 68)))
-	     (bv   (ffi.cstring->bytevector cstr)))
+      (let* ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (bv   (ffi::cstring->bytevector cstr)))
 	bv)
     => '#vu8(65 66 67 68))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let* ((cstr (ffi.string->guarded-cstring "ABCD"))
-	     (str  (ffi.cstring->string cstr)))
+      (let* ((cstr (ffi::string->guarded-cstring "ABCD"))
+	     (str  (ffi::cstring->string cstr)))
 	str)
     => "ABCD")
 
   (check
-      (let* ((cstr (ffi.string->guarded-cstring "ABCD"))
-	     (str  (ffi.cstring->string cstr 2)))
+      (let* ((cstr (ffi::string->guarded-cstring "ABCD"))
+	     (str  (ffi::cstring->string cstr 2)))
 	str)
     => "AB")
 
   (check
-      (let* ((cstr (ffi.string->guarded-cstring* "ABCD"))
-	     (str  (ffi.cstring->string cstr 2)))
-	str)
-    => "AB")
-
-  (check
-      (let* ((cstr (ffi.string->cstring* "ABCD"))
-	     (str  (ffi.cstring->string cstr 2)))
+      (let* ((cstr (ffi::string->cstring "ABCD"))
+	     (str  (ffi::cstring->string cstr 2)))
 	str)
     => "AB")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
-	(ffi.strlen cstr))
+      (let ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(ffi::strlen cstr))
     => 4)
 
   (check
-      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	     (cstr (ffi.strdup cstr)))
-	(ffi.strlen cstr))
+      (let* ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (cstr (ffi::strdup cstr)))
+	(ffi::strlen cstr))
     => 4)
 
   (check
-      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	     (cstr (ffi.strndup cstr 4)))
-	(ffi.strlen cstr))
+      (let* ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (cstr (ffi::strndup cstr 4)))
+	(ffi::strlen cstr))
     => 4)
 
   (check
-      (let* ((cstr (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	     (cstr (ffi.strndup cstr 3)))
-	(ffi.strlen cstr))
+      (let* ((cstr (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	     (cstr (ffi::strndup cstr 3)))
+	(ffi::strlen cstr))
     => 3)
 
 ;;; --------------------------------------------------------------------
 ;;; strcmp
 
   (check
-      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
-	(ffi.strcmp cstr1 cstr2))
+      (let ((cstr1 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(ffi::strcmp cstr1 cstr2))
     => 0)
 
   (check
-      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68)))
-	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
-	(positive?(ffi.strcmp cstr1 cstr2)))
+      (let ((cstr1 (ffi::bytevector->guarded-cstring '#vu8(65 66 69 68)))
+	    (cstr2 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(positive?(ffi::strcmp cstr1 cstr2)))
     => #t)
 
   (check
-      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68))))
-	(negative? (ffi.strcmp cstr1 cstr2)))
+      (let ((cstr1 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi::bytevector->guarded-cstring '#vu8(65 66 69 68))))
+	(negative? (ffi::strcmp cstr1 cstr2)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; strncmp
 
   (check
-      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
-	(ffi.strncmp cstr1 cstr2 4))
+      (let ((cstr1 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(ffi::strncmp cstr1 cstr2 4))
     => 0)
 
   (check
-      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68)))
-	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68))))
-	(positive? (ffi.strncmp cstr1 cstr2 3)))
+      (let ((cstr1 (ffi::bytevector->guarded-cstring '#vu8(65 66 69 68)))
+	    (cstr2 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68))))
+	(positive? (ffi::strncmp cstr1 cstr2 3)))
     => #t)
 
   (check
-      (let ((cstr1 (ffi.bytevector->guarded-cstring '#vu8(65 66 67 68)))
-	    (cstr2 (ffi.bytevector->guarded-cstring '#vu8(65 66 69 68))))
-	(negative? (ffi.strncmp cstr1 cstr2 3)))
+      (let ((cstr1 (ffi::bytevector->guarded-cstring '#vu8(65 66 67 68)))
+	    (cstr2 (ffi::bytevector->guarded-cstring '#vu8(65 66 69 68))))
+	(negative? (ffi::strncmp cstr1 cstr2 3)))
     => #t)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let* ((argv (ffi.bytevectors->guarded-argv '(#vu8(65 66 67 68)
-						    #vu8(75 77 77 78)
-						    #vu8(85 86 87 88))))
-	     (strs (ffi.argv->bytevectors argv)))
+      (let* ((argv (ffi::bytevectors->guarded-argv '(#vu8(65 66 67 68)
+							#vu8(75 77 77 78)
+							#vu8(85 86 87 88))))
+	     (strs (ffi::argv->bytevectors argv)))
 	strs)
     => '(#vu8(65 66 67 68)
 	     #vu8(75 77 77 78)
 	     #vu8(85 86 87 88)))
 
   (check
-      (let* ((argv (ffi.bytevectors->guarded-argv* '(#vu8(65 66 67 68)
-							 #vu8(75 77 77 78)
-							 #vu8(85 86 87 88))))
-	     (strs (ffi.argv->bytevectors argv)))
-	strs)
-    => '(#vu8(65 66 67 68)
-	     #vu8(75 77 77 78)
-	     #vu8(85 86 87 88)))
-
-  (check
-      (let* ((argv (ffi.bytevectors->argv* '(#vu8(65 66 67 68)
+      (let* ((argv (ffi::bytevectors->argv '(#vu8(65 66 67 68)
 						 #vu8(75 77 77 78)
 						 #vu8(85 86 87 88))))
-	     (strs (ffi.argv->bytevectors argv)))
+	     (strs (ffi::argv->bytevectors argv)))
 	(free argv)
 	strs)
     => '(#vu8(65 66 67 68)
@@ -532,29 +514,23 @@
 	     #vu8(85 86 87 88)))
 
   (check
-      (let* ((argv (ffi.strings->guarded-argv '("ciao" "hello" "salut")))
-	     (strs (ffi.argv->strings argv)))
+      (let* ((argv (ffi::strings->guarded-argv '("ciao" "hello" "salut")))
+	     (strs (ffi::argv->strings argv)))
 	strs)
     => '("ciao" "hello" "salut"))
 
   (check
-      (let* ((argv (ffi.strings->guarded-argv* '("ciao" "hello" "salut")))
-	     (strs (ffi.argv->strings argv)))
-	strs)
-    => '("ciao" "hello" "salut"))
-
-  (check
-      (let* ((argv (ffi.strings->argv* '("ciao" "hello" "salut")))
-	     (strs (ffi.argv->strings argv)))
+      (let* ((argv (ffi::strings->argv '("ciao" "hello" "salut")))
+	     (strs (ffi::argv->strings argv)))
 	(free argv)
 	strs)
     => '("ciao" "hello" "salut"))
 
   (check
-      (let ((argv (ffi.bytevectors->guarded-argv '(#vu8(65 66 67 68)
+      (let ((argv (ffi::bytevectors->guarded-argv '(#vu8(65 66 67 68)
 						       #vu8(75 77 77 78)
 						       #vu8(85 86 87 88)))))
-	(ffi.argv-length argv))
+	(ffi::argv-length argv))
     => 3)
 
   #t)
@@ -563,173 +539,173 @@
 (parametrise ((check-test-name	'access))
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-uint8! P 2 123)
-	(ffi.pointer-ref-c-uint8  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-uint8! P 2 123)
+	(ffi::pointer-ref-c-uint8  P 2))
     => 123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-uint8! P 2 (words.greatest-u8))
-	(ffi.pointer-ref-c-uint8  P 2))
-    => (words.greatest-u8))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-uint8! P 2 (words::greatest-u8))
+	(ffi::pointer-ref-c-uint8  P 2))
+    => (words::greatest-u8))
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-uint8! P 2 (words.least-u8))
-	(ffi.pointer-ref-c-uint8  P 2))
-    => (words.least-u8))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-uint8! P 2 (words::least-u8))
+	(ffi::pointer-ref-c-uint8  P 2))
+    => (words::least-u8))
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-sint8! P 2 -123)
-	(ffi.pointer-ref-c-sint8  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-sint8! P 2 -123)
+	(ffi::pointer-ref-c-sint8  P 2))
     => -123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-sint8! P 2 (words.greatest-s8))
-	(ffi.pointer-ref-c-sint8  P 2))
-    => (words.greatest-s8))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-sint8! P 2 (words::greatest-s8))
+	(ffi::pointer-ref-c-sint8  P 2))
+    => (words::greatest-s8))
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-sint8! P 2 (words.least-s8))
-	(ffi.pointer-ref-c-sint8  P 2))
-    => (words.least-s8))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-sint8! P 2 (words::least-s8))
+	(ffi::pointer-ref-c-sint8  P 2))
+    => (words::least-s8))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-uint16! P 2 123)
-	(ffi.pointer-ref-c-uint16  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-uint16! P 2 123)
+	(ffi::pointer-ref-c-uint16  P 2))
     => 123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-sint16! P 2 -123)
-	(ffi.pointer-ref-c-sint16  P 2))
-    => -123)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-uint32! P 2 123)
-	(ffi.pointer-ref-c-uint32  P 2))
-    => 123)
-
-  (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-sint32! P 2 -123)
-	(ffi.pointer-ref-c-sint32  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-sint16! P 2 -123)
+	(ffi::pointer-ref-c-sint16  P 2))
     => -123)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-uint64! P 2 123)
-	(ffi.pointer-ref-c-uint64  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-uint32! P 2 123)
+	(ffi::pointer-ref-c-uint32  P 2))
     => 123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-sint64! P 2 -123)
-	(ffi.pointer-ref-c-sint64  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-sint32! P 2 -123)
+	(ffi::pointer-ref-c-sint32  P 2))
     => -123)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-float! P 2 1.23)
-	(fl>? 0.0001 (fl- 1.23 (ffi.pointer-ref-c-float  P 2))))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-uint64! P 2 123)
+	(ffi::pointer-ref-c-uint64  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-sint64! P 2 -123)
+	(ffi::pointer-ref-c-sint64  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-float! P 2 1.23)
+	(fl>? 0.0001 (fl- 1.23 (ffi::pointer-ref-c-float  P 2))))
     => #t)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-double! P 2 -1.23)
-	(ffi.pointer-ref-c-double  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-double! P 2 -1.23)
+	(ffi::pointer-ref-c-double  P 2))
     => -1.23)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-pointer! P 2 (ffi.integer->pointer 123))
-	(ffi.pointer-ref-c-pointer  P 2))
-    => (ffi.integer->pointer 123))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-pointer! P 2 (ffi::integer->pointer 123))
+	(ffi::pointer-ref-c-pointer  P 2))
+    => (ffi::integer->pointer 123))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-signed-char! P 2 123)
-	(ffi.pointer-ref-c-signed-char  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-signed-char! P 2 123)
+	(ffi::pointer-ref-c-signed-char  P 2))
     => 123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-unsigned-char! P 2 123)
-	(ffi.pointer-ref-c-unsigned-char  P 2))
-    => 123)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-signed-short! P 2 123)
-	(ffi.pointer-ref-c-signed-short  P 2))
-    => 123)
-
-  (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-unsigned-short! P 2 123)
-	(ffi.pointer-ref-c-unsigned-short  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-unsigned-char! P 2 123)
+	(ffi::pointer-ref-c-unsigned-char  P 2))
     => 123)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-signed-int! P 2 123)
-	(ffi.pointer-ref-c-signed-int  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-signed-short! P 2 123)
+	(ffi::pointer-ref-c-signed-short  P 2))
     => 123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-unsigned-int! P 2 123)
-	(ffi.pointer-ref-c-unsigned-int  P 2))
-    => 123)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-signed-long! P 2 123)
-	(ffi.pointer-ref-c-signed-long  P 2))
-    => 123)
-
-  (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-unsigned-long! P 2 123)
-	(ffi.pointer-ref-c-unsigned-long  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-unsigned-short! P 2 123)
+	(ffi::pointer-ref-c-unsigned-short  P 2))
     => 123)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-signed-long-long! P 2 123)
-	(ffi.pointer-ref-c-signed-long-long  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-signed-int! P 2 123)
+	(ffi::pointer-ref-c-signed-int  P 2))
     => 123)
 
   (check
-      (let ((P (ffi.guarded-malloc 32)))
-	(ffi.pointer-set-c-unsigned-long-long! P 2 123)
-	(ffi.pointer-ref-c-unsigned-long-long  P 2))
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-unsigned-int! P 2 123)
+	(ffi::pointer-ref-c-unsigned-int  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-signed-long! P 2 123)
+	(ffi::pointer-ref-c-signed-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-unsigned-long! P 2 123)
+	(ffi::pointer-ref-c-unsigned-long  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-signed-long-long! P 2 123)
+	(ffi::pointer-ref-c-signed-long-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (ffi::guarded-malloc 32)))
+	(ffi::pointer-set-c-unsigned-long-long! P 2 123)
+	(ffi::pointer-ref-c-unsigned-long-long  P 2))
     => 123)
 
   #t)
@@ -738,14 +714,14 @@
 (parametrise ((check-test-name	'case-errno))
 
   (check
-      (ffi.case-errno plat.EPERM
+      (ffi::case-errno plat::EPERM
 	((EPERM)	1)
 	((ENOMEM)	2)
 	((EAGAIN)	3))
     => 1)
 
   (check
-      (ffi.case-errno plat.EPERM
+      (ffi::case-errno plat::EPERM
 	((EPERM)	1)
 	((ENOMEM)	2)
 	((EAGAIN)	3)
@@ -755,13 +731,13 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (ffi.case-errno plat.EPERM
+      (ffi::case-errno plat::EPERM
 	((ENOMEM EPERM)	1)
 	((EAGAIN)	3))
     => 1)
 
   (check
-      (ffi.case-errno plat.EPERM
+      (ffi::case-errno plat::EPERM
 	((ENOMEM EPERM)	1)
 	((EAGAIN)	3)
 	(else		#f))
@@ -770,13 +746,13 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (ffi.case-errno plat.EAGAIN
+      (ffi::case-errno plat::EAGAIN
 	((ENOMEM EPERM)	1)
 	((EAGAIN)	3))
     => 3)
 
   (check
-      (ffi.case-errno plat.EAGAIN
+      (ffi::case-errno plat::EAGAIN
 	((ENOMEM EPERM)	1)
 	((EAGAIN)	3)
 	(else		#f))
@@ -786,13 +762,13 @@
 
   (check
       (catch-assertion-violation #f
-	(ffi.case-errno plat.EFAULT
+	(ffi::case-errno plat::EFAULT
 	  ((ENOMEM EPERM)	1)
 	  ((EAGAIN)		3)))
-    => (list plat.EFAULT))
+    => (list plat::EFAULT))
 
   (check
-      (ffi.case-errno plat.EFAULT
+      (ffi::case-errno plat::EFAULT
 	((ENOMEM EPERM)	1)
 	((EAGAIN)	3)
 	(else		#f))
@@ -800,11 +776,19 @@
 
 ;;; --------------------------------------------------------------------
 
-;;;Syntax error "unknown symbolic error code"
-;;;
-  #;(ffi.case-errno plat.EFAULT
-  ((ENOMEM EPERM)	1)
-  ((ciao)		2))
+  ;;Syntax error "unknown symbolic error code".
+  (check
+      (try
+	  (eval '(ffi::case-errno plat::EFAULT
+		   ((ENOMEM EPERM)	1)
+		   ((ciao)		2))
+		(environment '(vicare)
+			     '(prefix (vicare ffi) ffi::)))
+	(catch E
+	  ((&syntax)
+	   (syntax->datum (syntax-violation-form E)))
+	  (else E)))
+    => 'ciao)
 
   #t)
 
@@ -814,26 +798,26 @@
   (check
       (let* ((rv-t		'unsigned-int)
 	     (args-t		'(unsigned-int))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (callback		(callback-maker
 				 (lambda args
 				   (apply values args))))
 	     (identity		(callout-maker callback))
 	     (result		(identity 123)))
-	(ffi.free-c-callback callback)
+	(ffi::free-c-callback callback)
 	result)
     => 123)
 
   (check	;void arguments and return value
-      (let* ((callout-maker	(ffi.make-c-callout-maker  'void '(void)))
-	     (callback-maker	(ffi.make-c-callback-maker 'void '(void)))
+      (let* ((callout-maker	(ffi::make-c-callout-maker  'void '(void)))
+	     (callback-maker	(ffi::make-c-callback-maker 'void '(void)))
 	     (result		#f)
 	     (callback		(callback-maker (lambda ()
 						  (set! result 123))))
 	     (callout		(callout-maker callback)))
 	(callout)
-	(ffi.free-c-callback callback)
+	(ffi::free-c-callback callback)
 	result)
     => 123)
 
@@ -842,8 +826,8 @@
   (check
       (let* ((rv-t		'signed-char)
 	     (args-t		'(signed-int double float))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (function		(callout-maker (callback-maker (lambda (a b c)
 								 (exact (floor (+ a b c))))))))
 	(function 10 1.4 3.7))
@@ -852,8 +836,8 @@
   (check
       (let* ((rv-t		'signed-char)
 	     (args-t		'(signed-long signed-long-long))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (function		(callout-maker (callback-maker (lambda (a b)
 								 (+ a b))))))
 	(function 10 12))
@@ -862,83 +846,83 @@
   (check
       (let* ((rv-t		'int8_t)
 	     (args-t		'(int16_t int32_t int64_t))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (args		#f)
 	     (function		(callout-maker
 				 (callback-maker
 				  (lambda (a b c)
 				    (set! args (list a b c))
-				    (words.greatest-s8)))))
-	     (rv		(function (words.greatest-s16)
-					  (words.greatest-s32)
-					  (words.greatest-s64))))
+				    (words::greatest-s8)))))
+	     (rv		(function (words::greatest-s16)
+					  (words::greatest-s32)
+					  (words::greatest-s64))))
 	(list rv args))
-    => `(,(words.greatest-s8) (,(words.greatest-s16) ,(words.greatest-s32) ,(words.greatest-s64))))
+    => `(,(words::greatest-s8) (,(words::greatest-s16) ,(words::greatest-s32) ,(words::greatest-s64))))
 
   (check	;size_t
       (let* ((rv-t		'size_t)
 	     (args-t		'(size_t))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (args		#f)
 	     (function		(callout-maker
 				 (callback-maker
 				  (lambda (a)
 				    (set! args (list a))
 				    a))))
-	     (rv		(function (words.greatest-c-size_t))))
+	     (rv		(function (words::greatest-c-size_t))))
 	(list rv args))
-    => `(,(words.greatest-c-size_t)
-	 (,(words.greatest-c-size_t))))
+    => `(,(words::greatest-c-size_t)
+	 (,(words::greatest-c-size_t))))
 
   (check	;ssize_t
       (let* ((rv-t		'ssize_t)
 	     (args-t		'(ssize_t))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (args		#f)
 	     (function		(callout-maker
 				 (callback-maker
 				  (lambda (a)
 				    (set! args (list a))
 				    a))))
-	     (rv		(function (words.greatest-c-ssize_t))))
+	     (rv		(function (words::greatest-c-ssize_t))))
 	(list rv args))
-    => `(,(words.greatest-c-ssize_t)
-	 (,(words.greatest-c-ssize_t))))
+    => `(,(words::greatest-c-ssize_t)
+	 (,(words::greatest-c-ssize_t))))
 
   (check	;off_t
       (let* ((rv-t		'off_t)
 	     (args-t		'(off_t))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (args		#f)
 	     (function		(callout-maker
 				 (callback-maker
 				  (lambda (a)
 				    (set! args (list a))
 				    a))))
-	     (rv		(function (words.greatest-c-off_t))))
+	     (rv		(function (words::greatest-c-off_t))))
 	(list rv args))
-    => `(,(words.greatest-c-off_t)
-	 (,(words.greatest-c-off_t))))
+    => `(,(words::greatest-c-off_t)
+	 (,(words::greatest-c-off_t))))
 
   (check	;ptrdiff_t
       (let* ((rv-t		'ptrdiff_t)
 	     (args-t		'(ptrdiff_t))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (args		#f)
 	     (function		(callout-maker
 				 (callback-maker
 				  (lambda (a)
 				    (set! args (list a))
 				    a))))
-	     (rv		(function (words.greatest-c-ptrdiff_t))))
+	     (rv		(function (words::greatest-c-ptrdiff_t))))
 	(list rv args))
-    => `(,(words.greatest-c-ptrdiff_t)
-	 (,(words.greatest-c-ptrdiff_t))))
+    => `(,(words::greatest-c-ptrdiff_t)
+	 (,(words::greatest-c-ptrdiff_t))))
 
 ;;; --------------------------------------------------------------------
 ;;; releasing callbacks
@@ -946,21 +930,21 @@
   (check	;try to free twice
       (let* ((rv-t		'signed-int)
 	     (args-t		'(signed-int))
-	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (callback		(callback-maker (lambda args
 						  (apply values args))))
 	     (identity		(callout-maker callback))
 	     (result		(identity 123)))
-	(ffi.free-c-callback callback)
+	(ffi::free-c-callback callback)
 	(equal? `(,callback)
 		(catch-assertion-violation #f
-		  (ffi.free-c-callback callback))))
+		  (ffi::free-c-callback callback))))
     => #t)
 
   (check	;create and release in order many callbacks
-      (let* ((callout-maker	(ffi.make-c-callout-maker  'signed-int '(signed-int)))
-	     (callback-maker	(ffi.make-c-callback-maker 'signed-int '(signed-int)))
+      (let* ((callout-maker	(ffi::make-c-callout-maker  'signed-int '(signed-int)))
+	     (callback-maker	(ffi::make-c-callback-maker 'signed-int '(signed-int)))
 	     (callback1		(callback-maker values))
 	     (callback2		(callback-maker values))
 	     (callback3		(callback-maker values))
@@ -988,21 +972,21 @@
 				      (identity7 7)
 				      (identity8 8)
 				      (identity9 9))))
-	(ffi.free-c-callback callback1)
-	(ffi.free-c-callback callback2)
-	(ffi.free-c-callback callback3)
-	(ffi.free-c-callback callback4)
-	(ffi.free-c-callback callback5)
-	(ffi.free-c-callback callback6)
-	(ffi.free-c-callback callback7)
-	(ffi.free-c-callback callback8)
-	(ffi.free-c-callback callback9)
+	(ffi::free-c-callback callback1)
+	(ffi::free-c-callback callback2)
+	(ffi::free-c-callback callback3)
+	(ffi::free-c-callback callback4)
+	(ffi::free-c-callback callback5)
+	(ffi::free-c-callback callback6)
+	(ffi::free-c-callback callback7)
+	(ffi::free-c-callback callback8)
+	(ffi::free-c-callback callback9)
 	result)
     => '(1 2 3 4 5 6 7 8 9))
 
   (check	;create and release in mixed order many callbacks
-      (let* ((callout-maker	(ffi.make-c-callout-maker  'signed-int '(signed-int)))
-	     (callback-maker	(ffi.make-c-callback-maker 'signed-int '(signed-int)))
+      (let* ((callout-maker	(ffi::make-c-callout-maker  'signed-int '(signed-int)))
+	     (callback-maker	(ffi::make-c-callback-maker 'signed-int '(signed-int)))
 	     (callback1		(callback-maker values))
 	     (callback2		(callback-maker values))
 	     (callback3		(callback-maker values))
@@ -1030,15 +1014,15 @@
 				      (identity7 7)
 				      (identity8 8)
 				      (identity9 9))))
-	(ffi.free-c-callback callback6)
-	(ffi.free-c-callback callback2)
-	(ffi.free-c-callback callback8)
-	(ffi.free-c-callback callback4)
-	(ffi.free-c-callback callback9)
-	(ffi.free-c-callback callback5)
-	(ffi.free-c-callback callback1)
-	(ffi.free-c-callback callback7)
-	(ffi.free-c-callback callback3)
+	(ffi::free-c-callback callback6)
+	(ffi::free-c-callback callback2)
+	(ffi::free-c-callback callback8)
+	(ffi::free-c-callback callback4)
+	(ffi::free-c-callback callback9)
+	(ffi::free-c-callback callback5)
+	(ffi::free-c-callback callback1)
+	(ffi::free-c-callback callback7)
+	(ffi::free-c-callback callback3)
 	result)
     => '(1 2 3 4 5 6 7 8 9))
 
@@ -1048,28 +1032,28 @@
 (parametrise ((check-test-name	'calls-with-errno))
 
   (define libc
-    (ffi.dlopen))
+    (ffi::dlopen))
 
   (check
       (let* ((rv-t		'unsigned-int)
 	     (args-t		'(unsigned-int))
-	     (callout-maker	(ffi.make-c-callout-maker/with-errno  rv-t args-t))
-	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (callout-maker	(ffi::make-c-callout-maker/with-errno  rv-t args-t))
+	     (callback-maker	(ffi::make-c-callback-maker rv-t args-t))
 	     (callback		(callback-maker
 				 (lambda args
 				   (apply values args))))
 	     (identity		(callout-maker callback)))
 	(let-values (((result errno) (identity 123)))
-	  (ffi.free-c-callback callback)
+	  (ffi::free-c-callback callback)
 	  (list result errno)))
     => '(123 0))
 
   (check
-      (let* ((callout-maker	(ffi.make-c-callout-maker/with-errno 'pointer '(pointer)))
-	     (callout		(callout-maker (ffi.dlsym libc "opendir"))))
-	(let-values (((rv errno) (callout (ffi.bytevector->guarded-cstring '#vu8(65)))))
+      (let* ((callout-maker	(ffi::make-c-callout-maker/with-errno 'pointer '(pointer)))
+	     (callout		(callout-maker (ffi::dlsym libc "opendir"))))
+	(let-values (((rv errno) (callout (ffi::bytevector->guarded-cstring '#vu8(65)))))
 	  (list rv errno)))
-    => `(,(ffi.null-pointer) ,(ffi.errno-code ENOENT)))
+    => `(,(ffi::null-pointer) ,(ffi::errno-code ENOENT)))
 
   #t)
 
@@ -1078,33 +1062,33 @@
 
   (check
       (let ((a 1) (b 2))
-	(ffi.with-local-storage '#()
+	(ffi::with-local-storage '#()
 	  (lambda ()
 	    (+ a b 4))))
     => 7)
 
   (check
       (let ((a 1) (b 2))
-	(ffi.with-local-storage '#(4)
+	(ffi::with-local-storage '#(4)
 	  (lambda (&int32)
-	    (ffi.pointer-set-c-sint32! &int32 0 4)
-	    (+ a b (ffi.pointer-ref-c-sint32 &int32 0)))))
+	    (ffi::pointer-set-c-sint32! &int32 0 4)
+	    (+ a b (ffi::pointer-ref-c-sint32 &int32 0)))))
     => 7)
 
   (check
       (let ((a 1) (b 2))
-	(ffi.with-local-storage '#(4 8)
+	(ffi::with-local-storage '#(4 8)
 	  (lambda (&int32 &int64)
-	    (ffi.pointer-set-c-sint32! &int32 0 4)
-	    (ffi.pointer-set-c-sint64! &int64 0 8)
+	    (ffi::pointer-set-c-sint32! &int32 0 4)
+	    (ffi::pointer-set-c-sint64! &int64 0 8)
 	    (+ a b
-	       (ffi.pointer-ref-c-sint32 &int32 0)
-	       (ffi.pointer-ref-c-sint64 &int64 0)))))
+	       (ffi::pointer-ref-c-sint32 &int32 0)
+	       (ffi::pointer-ref-c-sint64 &int64 0)))))
     => 15)
 
   (check	;exception going through
       (catch-assertion-violation #f
-	(ffi.with-local-storage '#(4)
+	(ffi::with-local-storage '#(4)
 	  (lambda (&int32)
 	    (assertion-violation #f "the error" 1 2 3))))
     => '(1 2 3))
@@ -1115,25 +1099,25 @@
 (parametrise ((check-test-name	'libc))
 
   (define libc
-    (ffi.dlopen))
+    (ffi::dlopen))
 
   (when libc
 
-    (let* ((maker	(ffi.make-c-callout-maker 'double '(double)))
-	   (sinh	(maker (ffi.dlsym libc "sinh"))))
+    (let* ((maker	(ffi::make-c-callout-maker 'double '(double)))
+	   (sinh	(maker (ffi::dlsym libc "sinh"))))
       (check
 	  (flonum? (sinh 1.2))
 	=> #t))
 
-    (let* ((maker	(ffi.make-c-callout-maker 'double '(double double)))
-	   (atan2	(maker (ffi.dlsym libc "atan2"))))
+    (let* ((maker	(ffi::make-c-callout-maker 'double '(double double)))
+	   (atan2	(maker (ffi::dlsym libc "atan2"))))
       (check
 	  (flonum? (atan2 1.2 3.4))
 	=> #t))
 
     (check
-	(let* ((maker	(ffi.make-c-callout-maker 'void '(pointer pointer unsigned-long)))
-	       (memcpy	(maker (ffi.dlsym libc "memcpy")))
+	(let* ((maker	(ffi::make-c-callout-maker 'void '(pointer pointer unsigned-long)))
+	       (memcpy	(maker (ffi::dlsym libc "memcpy")))
 	       (bv.src	'#vu8(0 1 2 3 4))
 	       (bv.dst	(make-bytevector 5)))
 	  (memcpy bv.dst bv.src 5)
@@ -1149,34 +1133,34 @@
 
   (guard (E (else #f)) ;catch exceptions in case zlib is not loadable
     (define zlib
-      (ffi.dlopen "libz.so"))
+      (ffi::dlopen "libz.so"))
 
     (when zlib
       (check
-	  (let* ((maker		(ffi.make-c-callout-maker
+	  (let* ((maker		(ffi::make-c-callout-maker
 				 'signed-int '(pointer pointer pointer unsigned-long)))
-		 (compress*	(maker (ffi.dlsym zlib "compress")))
-		 (uncompress*	(maker (ffi.dlsym zlib "uncompress"))))
+		 (compress*	(maker (ffi::dlsym zlib "compress")))
+		 (uncompress*	(maker (ffi::dlsym zlib "uncompress"))))
 
 	    (define (compress src.bv)
-	      (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
+	      (let-values (((src.ptr src.len) (ffi::bytevector->guarded-memory src.bv)))
 		(let* ((dst.len	src.len)
-		       (&dst.len	(ffi.guarded-calloc 1 8))
-		       (dst.ptr	(ffi.guarded-malloc dst.len)))
-		  (ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
+		       (&dst.len	(ffi::guarded-calloc 1 8))
+		       (dst.ptr	(ffi::guarded-malloc dst.len)))
+		  (ffi::pointer-set-c-unsigned-long! &dst.len 0 dst.len)
 		  (compress* dst.ptr &dst.len src.ptr src.len)
-		  (let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
-		    (ffi.memory->bytevector dst.ptr dst.len)))))
+		  (let ((dst.len (ffi::pointer-ref-c-unsigned-long &dst.len 0)))
+		    (ffi::memory->bytevector dst.ptr dst.len)))))
 
 	    (define (uncompress src.bv out-len)
-	      (let-values (((src.ptr src.len) (ffi.bytevector->guarded-memory src.bv)))
+	      (let-values (((src.ptr src.len) (ffi::bytevector->guarded-memory src.bv)))
 		(let* ((dst.len	out-len)
-		       (&dst.len	(ffi.guarded-malloc 8))
-		       (dst.ptr	(ffi.guarded-malloc dst.len)))
-		  (ffi.pointer-set-c-unsigned-long! &dst.len 0 dst.len)
+		       (&dst.len	(ffi::guarded-malloc 8))
+		       (dst.ptr	(ffi::guarded-malloc dst.len)))
+		  (ffi::pointer-set-c-unsigned-long! &dst.len 0 dst.len)
 		  (uncompress* dst.ptr &dst.len src.ptr src.len)
-		  (let ((dst.len (ffi.pointer-ref-c-unsigned-long &dst.len 0)))
-		    (ffi.memory->bytevector dst.ptr dst.len)))))
+		  (let ((dst.len (ffi::pointer-ref-c-unsigned-long &dst.len 0)))
+		    (ffi::memory->bytevector dst.ptr dst.len)))))
 
 	    (let* ((src.len 4096)
 		   (src.bv  (make-bytevector src.len 99))
@@ -1193,36 +1177,36 @@
 (parametrise ((check-test-name	'agnostic))
 
   (check
-      (ffi.pointer? (ffi.open-shared-object))
+      (ffi::pointer? (ffi::open-shared-object))
     => #t)
 
   (check
-      (guard (E ((ffi.shared-object-opening-error? E)
+      (guard (E ((ffi::shared-object-opening-error? E)
 ;;;		 (check-pretty-print E)
-		 (list (ffi.condition-shared-object-opening-name E)
+		 (list (ffi::condition-shared-object-opening-name E)
 		       (condition-who E))))
-	(ffi.open-shared-object "ciao"))
+	(ffi::open-shared-object "ciao"))
     => '("ciao" open-shared-object))
 
   (guard (E (else #f)) ;catch exceptions in case zlib is not loadable
-    (let ((zlib (ffi.open-shared-object "libz.so")))
+    (let ((zlib (ffi::open-shared-object "libz.so")))
       (unwind-protect
 	  (begin
 	    (check
-		(pointer? (ffi.lookup-shared-object zlib "compress"))
+		(pointer? (ffi::lookup-shared-object zlib "compress"))
 	      => #t)
 
 	    (check
-		(guard (E ((ffi.shared-object-lookup-error? E)
+		(guard (E ((ffi::shared-object-lookup-error? E)
 ;;;			   (check-pretty-print E)
-			   (list (ffi.condition-shared-object-lookup-so-handle E)
-				 (ffi.condition-shared-object-lookup-foreign-symbol E)
+			   (list (ffi::condition-shared-object-lookup-so-handle E)
+				 (ffi::condition-shared-object-lookup-foreign-symbol E)
 				 (condition-who E))))
-		  (ffi.lookup-shared-object zlib "ciao"))
+		  (ffi::lookup-shared-object zlib "ciao"))
 	      => `(,zlib "ciao" lookup-shared-object))
 
 	    #f)
-	(ffi.close-shared-object zlib)))
+	(ffi::close-shared-object zlib)))
     #f)
 
   #t)
@@ -1231,21 +1215,21 @@
 (parametrise ((check-test-name	'predicates))
 
   (check-for-false
-   (ffi.c-callback? 123))
+   (ffi::c-callback? 123))
 
   (check-for-true
-   (ffi.c-callback? (null-pointer)))
+   (ffi::c-callback? (null-pointer)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-false
-   (ffi.false-or-c-callback? 123))
+   (ffi::false-or-c-callback? 123))
 
   (check-for-true
-   (ffi.false-or-c-callback? #f))
+   (ffi::false-or-c-callback? #f))
 
   (check-for-true
-   (ffi.false-or-c-callback? (null-pointer)))
+   (ffi::false-or-c-callback? (null-pointer)))
 
   #t)
 
@@ -1256,7 +1240,8 @@
 
 ;;; end of file
 ;; Local Variables:
+;; coding: utf-8-unix
 ;; eval: (put 'catch-assertion-violation	'scheme-indent-function 1)
-;; eval: (put 'ffi.case-errno			'scheme-indent-function 1)
-;; eval: (put 'ffi.with-local-storage		'scheme-indent-function 1)
+;; eval: (put 'ffi::case-errno			'scheme-indent-function 1)
+;; eval: (put 'ffi::with-local-storage		'scheme-indent-function 1)
 ;; End:
