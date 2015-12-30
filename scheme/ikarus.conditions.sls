@@ -875,6 +875,10 @@
 ;;;; raising exceptions
 
 (case-define* raise-non-continuable-standard-condition
+  ;;NOTE Remember that the order in  which we concatenate simple condition objects in
+  ;;compound condition  objects is  important: it  is the order  in which  the simple
+  ;;objects  will  be shown  to  the  user, when  an  exception  is raised  and  goes
+  ;;uncatched.
   ((who {message string?} {irritants list?})
    (let ((C (condition (make-message-condition message)
 		       (make-irritants-condition irritants))))
@@ -886,8 +890,8 @@
 		    "invalid value for &who" 1 '(or (symbol? who) (string? who)) who))
 	      C))))
   ((who {message string?} {irritants list?} {cnd condition?})
-   (let ((C (condition cnd
-		       (make-message-condition message)
+   (let ((C (condition (make-message-condition message)
+		       cnd
 		       (make-irritants-condition irritants))))
      (raise (if who
 		(if (or (symbol? who)

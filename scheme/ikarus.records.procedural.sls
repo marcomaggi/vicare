@@ -586,11 +586,7 @@
 (define* (record-rtd {x non-opaque-record?})
   ;;Defined by R6RS.  Return the record-type descriptor of the record X.
   ;;
-  (receive-and-return (rtd)
-      ($struct-rtd x)
-    (when ($<rtd>-opaque? rtd)
-      (assertion-violation __who__
-	"attempt to inspect opaque R6RS record" x))))
+  ($struct-rtd x))
 
 
 ;;;; record-type descriptor inspection
@@ -1345,7 +1341,7 @@
       ($struct-set! x i (void)))))
 
 (define* (record-printer {x record-object?})
-  (<rtd>-printer (record-rtd x)))
+  ($<rtd>-printer ($struct-rtd x)))
 
 
 ;;;; non-R6RS extensions: record destructor
@@ -1368,7 +1364,7 @@
   ($<rtd>-destructor rtd))
 
 (define* (record-destructor {rtd record-object?})
-  ($<rtd>-destructor (record-rtd rtd)))
+  ($<rtd>-destructor ($struct-rtd rtd)))
 
 ;;; --------------------------------------------------------------------
 
