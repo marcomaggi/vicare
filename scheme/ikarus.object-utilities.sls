@@ -60,6 +60,8 @@
 		  string->keyword)
     (only (vicare system $fx)
 	  $fxadd1)
+    (only (vicare system $structs)
+	  $struct-rtd)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus structs)
@@ -147,7 +149,9 @@
       (%error-record-type-has-no-matching-method)))
 
   (cond ((record-object? subject)
-	 (%record-object-call (record-rtd subject)))
+	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
+	 ;;record object.
+	 (%record-object-call ($struct-rtd subject)))
 
 	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
 	((vector?  subject)	(%built-in-scheme-object-call <vector>-type-descriptor))
