@@ -14391,8 +14391,10 @@ Notice the following behaviour with zero:
 @subsubheading Comparison
 
 @defun fl!=? @varo{fl} @var{fl} @dots{}
-Return @true{} if the operands are equal; else return @false{}.  The
-operands must be flonums, otherwise an exception is raised.
+Return @true{} if all the operands are equal, no two operands are equal;
+else return @false{}.  The operands must be flonums, otherwise an
+exception is raised.  When applied to a single argument: return
+@false{}.
 @end defun
 
 @c ------------------------------------------------------------

@@ -816,15 +816,15 @@ format of @ieee{} double precision flonums.
 @subsection Arithmetic operations
 
 
-@deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl* @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl/ @vari{fl} @varii{fl}
+@deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl} @var{fl} @dots{}
+@deffnx {Unsafe Operation} $fl* @vari{fl} @varii{fl} @var{fl} @dots{}
+@deffnx {Unsafe Operation} $fl/ @vari{fl} @varii{fl} @var{fl} @dots{}
 Perform arithmetic operations.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fl- @var{fl}
-@deffnx {Unsafe Operation} $fl- @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl- @vari{fl} @varii{fl} @var{fl} @dots{}
 With one operand: return @var{fl} negated.  With two operands: subtract
 the operands and return the result.
 @end deffn
@@ -942,28 +942,28 @@ with the exception of infinities and not--a--number.
 @subsection Comparison functions
 
 
-@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
-Perform comparison operations
+@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl} @var{fl} @dots{}
+@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl} @var{fl} @dots{}
+@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl} @var{fl} @dots{}
+@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl} @var{fl} @dots{}
+@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl} @var{fl} @dots{}
+Perform comparison operations.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl}
-Return true if the operands are equal; otherwise return @false{}.  This
-operation does @strong{not} distinguish between @code{+0.0} and
-@code{-0.0}.
+@deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl} @var{fl} @dots{}
+Return true if the operands are all different, no two operands are
+equal; otherwise return @false{}.  This operation does @strong{not}
+distinguish between @code{+0.0} and @code{-0.0}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
+@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl} . @var{fl}
 Return the maximum between the operands.
 @end deffn
 
 
-@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
+@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl} . @var{fl}
 Return the minimum between the operands.
 @end deffn
 
@@ -1024,7 +1024,13 @@ Return the sine, cosine and tangent of the operand.
 @deffn {Unsafe Operation} $flasin @var{fl}
 @deffnx {Unsafe Operation} $flacos @var{fl}
 @deffnx {Unsafe Operation} $flatan @var{fl}
-Return the arcsine, arccosine and arctangent of the operand.
+@deffnx {Unsafe Operation} $flatan @vari{fl} @varii{fl}
+Return the arcsine, arccosine and arctangent of the operand.  When
+@func{$flatan} is applied to two arguments, it returns an equivalent of:
+
+@example
+(angle (make-rectangular @varii{fl} @vari{fl}))
+@end example
 @end deffn
 
 
@@ -1070,15 +1076,20 @@ Return the base @math{e} exponential of the operand.
 
 
 @deffn {Unsafe Operation} $fllog @var{fl}
-Return the natural logarithm of the operand.  For non--negative @var{fl}
-the return value is a numeric flonum; for negative @var{fl} the return
-value is not--a--number.  See also @func{$log-flonum} to compute the
-logarithm of negative flonums as a complex number.
+@deffnx {Unsafe Operation} $fllog @vari{fl} @varii{fl}
+When applied to one argument: return the natural logarithm of the
+operand.  For non--negative @var{fl} the return value is a numeric
+flonum; for negative @var{fl} the return value is not--a--number.  See
+also @func{$log-flonum} to compute the logarithm of negative flonums as
+a complex number.
+
+When applied to two arguments: return the base--@varii{fl} logarithm of
+@vari{fl}.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fllog2 @vari{fl} @varii{fl}
-Return the base--@varii{fl} logarithme of @vari{fl}.
+Return the base--@varii{fl} logarithm of @vari{fl}.
 @end deffn
 
 

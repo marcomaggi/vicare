@@ -20,7 +20,7 @@
     list-of-flonums?
 
     inexact->exact	exact		$flonum->exact
-    fixnum->flonum
+    fixnum->flonum	$fixnum->flonum
 
     flzero?		$flzero?
     flzero?/positive	$flzero?/positive
@@ -74,9 +74,9 @@
     flfinite?		$flfinite?
     flinfinite?		$flinfinite?
 
-    fl=?		fl!=?		$fl!=
-    fl<?		fl>?
-    fl<=?		fl>=?
+    fl=?		fl!=?		$fl=		$fl!=
+    fl<?		fl>?		$fl<		$fl<=
+    fl<=?		fl>=?		$fl>		$fl>=
     fl+			fl-
     fl*			fl/
 
@@ -119,6 +119,7 @@
     (vicare system $ratnums)
     (vicare system $bytevectors)
     (except (vicare system $flonums)
+	    $fixnum->flonum
 	    $flonum->exact
 	    $flzero?
 	    $flzero?/positive
@@ -165,14 +166,19 @@
 	    $flhypot
 	    $flmax
 	    $flmin
-	    $fl!=)
+	    $fl=		$fl!=
+	    $fl<		$fl<=
+	    $fl>		$fl>=)
+    (prefix (vicare system $flonums) sys::)
     (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand
 	  cond-exact-integer-operand
 	  define-list-of-type-predicate
 	  define-min/max-comparison
 	  define-equality/sorting-predicate
-	  define-inequality-predicate))
+	  define-unsafe-equality/sorting-predicate
+	  define-inequality-predicate
+	  define-unsafe-inequality-predicate))
 
 
 ;;;; helpers
@@ -444,10 +450,10 @@
 (define-fl-operation/one flnonnegative?		$flnonnegative?)
 
 (define ($flpositive? x)
-  ($fl> x +0.0))
+  (sys::$fl> x +0.0))
 
 (define ($flnegative? x)
-  ($fl< x -0.0))
+  (sys::$fl< x -0.0))
 ;;NOTE Below is an old implementation from Ikarus.  It does not behave correctly when
 ;;X = -0.0, which should return #f.  (Marco Maggi; Sat Nov 17, 2012)
 ;;
@@ -507,13 +513,16 @@
 	  (($fx< be ($fx+ 1075 -52)) ;too small to be an integer
 	   #f)
 	  (else
-	   ($fl= x (foreign-call "ikrt_fl_round" x ($make-flonum)))))))
+	   (sys::$fl= x (foreign-call "ikrt_fl_round" x ($make-flonum)))))))
 
 
 ;;;; exactness
 
 (define* (fixnum->flonum {x fixnum?})
   ($fixnum->flonum x))
+
+(define ($fixnum->flonum fx)
+  (sys::$fixnum->flonum fx))
 
 (module (inexact->exact
 	 exact
@@ -602,31 +611,42 @@
 (define-min/max-comparison flmax $flmax flonum?)
 (define-min/max-comparison flmin $flmin flonum?)
 
-(define ($flmax x y)
-  (cond (($flnan? x)	+nan.0)
-	(($flnan? y)	+nan.0)
-	(($fl< x y)	y)
-	(else		x)))
+(case-define $flmax
+  ((x) x)
+  ((x y)
+   (cond (($flnan? x)		+nan.0)
+	 (($flnan? y)		+nan.0)
+	 ((sys::$fl< x y)	y)
+	 (else			x)))
+  ((x y . z*)
+   (apply $flmax ($flmax x y) z*)))
 
-(define ($flmin x y)
-  (cond (($flnan? x)	+nan.0)
-	(($flnan? y)	+nan.0)
-	(($fl< x y)	x)
-	(else		y)))
+(case-define $flmin
+  ((x) x)
+  ((x y)
+   (cond (($flnan? x)		+nan.0)
+	 (($flnan? y)		+nan.0)
+	 ((sys::$fl< x y)	x)
+	 (else			y)))
+  ((x y . z*)
+   (apply $flmin ($flmin x y) z*)))
 
 
 ;;;; comparison
 
-(define-equality/sorting-predicate fl=?		$fl=	flonum?)
-(define-equality/sorting-predicate fl<?		$fl<	flonum?)
-(define-equality/sorting-predicate fl<=?	$fl<=	flonum?)
-(define-equality/sorting-predicate fl>?		$fl>	flonum?)
-(define-equality/sorting-predicate fl>=?	$fl>=	flonum?)
-(define-inequality-predicate       fl!=?	$fl!=	flonum?)
+(define-equality/sorting-predicate fl=?		sys::$fl=	flonum?)
+(define-equality/sorting-predicate fl<?		sys::$fl<	flonum?)
+(define-equality/sorting-predicate fl<=?	sys::$fl<=	flonum?)
+(define-equality/sorting-predicate fl>?		sys::$fl>	flonum?)
+(define-equality/sorting-predicate fl>=?	sys::$fl>=	flonum?)
+(define-inequality-predicate       fl!=?	sys::$fl!=	flonum?)
 
-(define ($fl!= fl1 fl2)
-  (import (prefix (vicare system $flonums) sys::))
-  (sys::$fl!= fl1 fl2))
+(define-unsafe-equality/sorting-predicate $fl=		sys::$fl=)
+(define-unsafe-equality/sorting-predicate $fl<		sys::$fl<)
+(define-unsafe-equality/sorting-predicate $fl>		sys::$fl>)
+(define-unsafe-equality/sorting-predicate $fl<=		sys::$fl<=)
+(define-unsafe-equality/sorting-predicate $fl>=		sys::$fl>=)
+(define-unsafe-inequality-predicate       $fl!=		sys::$fl!=)
 
 
 ;;;; arithmetic
@@ -697,8 +717,11 @@
   (({x flonum?} {y flonum?})
    ($flatan2 x y)))
 
-(define ($flatan x)
-  (foreign-call "ikrt_fl_atan" x))
+(case-define $flatan
+  ((x)
+   (foreign-call "ikrt_fl_atan" x))
+  ((x y)
+   (foreign-call "ikrt_atan2" x y)))
 
 (define ($flatan2 x y)
   (foreign-call "ikrt_atan2" x y))
@@ -733,8 +756,12 @@
   (({x flonum?} {y flonum?})
    ($fllog2 x y)))
 
-(define ($fllog x)
-  (foreign-call "ikrt_fl_log" x))
+(case-define $fllog
+  ((x)
+   (foreign-call "ikrt_fl_log" x))
+  ((x y)
+   ($fl/ (foreign-call "ikrt_fl_log" x)
+	 (foreign-call "ikrt_fl_log" y))))
 
 (define ($fllog2 x y)
   ($fl/ (foreign-call "ikrt_fl_log" x)
@@ -783,11 +810,6 @@
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.flonums"))
 
 #| end of library |# )
-
-(library (vicare system flonums)
-  (export $fixnum->flonum)
-  (import (vicare))
-  (define $fixnum->flonum fixnum->flonum))
 
 ;;; end of file
 ;; Local Variables:

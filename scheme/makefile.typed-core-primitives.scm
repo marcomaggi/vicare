@@ -1021,6 +1021,7 @@
 (include "makefile.typed-core-primitives.expander.scm"			#t)
 (include "makefile.typed-core-primitives.ffi.scm"			#t)
 (include "makefile.typed-core-primitives.fixnums.scm"			#t)
+(include "makefile.typed-core-primitives.flonums.scm"			#t)
 (include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)

@@ -3427,6 +3427,8 @@
     (<non-negative-fixnum>			v $language)
     (<positive-fixnum>				v $language)
     (<positive-bignum>				v $language)
+    (<non-negative-flonum>			v $language)
+    (<positive-flonum>				v $language)
 
     (<string>					v $language)
     (<vector>					v $language)

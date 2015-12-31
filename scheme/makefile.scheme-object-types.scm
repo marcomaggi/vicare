@@ -191,6 +191,16 @@
 ;;       <positive-bignum>))
 ;;
 
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <non-negative-flonum>
+    <flonum>
+  #t non-negative-flonum?)
+
+(define-scheme-type <positive-flonum>
+    <non-negative-flonum>
+  #t positive-flonum?)
+
 
 ;;;; compound types
 

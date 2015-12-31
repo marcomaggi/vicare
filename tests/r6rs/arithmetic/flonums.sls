@@ -1,19 +1,18 @@
 ;;;Copyright (c) 2008 Matthew Flatt
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>, Thu Dec 31, 2015
 ;;;
-;;;This library is free software;  you can redistribute it and/or modify
-;;;it  under the  terms of  the GNU  Library General  Public  License as
-;;;published by  the Free Software  Foundation; either version 2  of the
-;;;License, or (at your option) any later version.
+;;;This library is free software; you can  redistribute it and/or modify it under the
+;;;terms of the GNU Library General Public  License as published by the Free Software
+;;;Foundation;  either version  2  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This library is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;Library General Public License for more details.
+;;;This library is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU Library General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU Library  General Public
-;;;License along with  this library; if not, write  to the Free Software
-;;;Foundation,  Inc.,  51  Franklin  Street,  Fifth  Floor,  Boston,  MA
-;;;02110-1301 USA.
+;;;You should have  received a copy of  the GNU Library General  Public License along
+;;;with  this library;  if  not, write  to  the Free  Software  Foundation, Inc.,  51
+;;;Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 #!r6rs
 
@@ -80,8 +79,8 @@
     (test (fldenominator +inf.0)          1.0)
     (test (fldenominator -inf.0)          1.0)
 
-    ;; (test (flnumerator 0.75)              3.0) ; probably
-    ;; (test (fldenominator 0.75)            4.0) ; probably
+    (test (flnumerator 0.75)              3.0) ; probably
+    (test (fldenominator 0.75)            4.0) ; probably
 
     (test (flnumerator -0.0)             -0.0)
 
@@ -166,7 +165,8 @@
              (test (flmax a b) b)
              (test (flmax b c) c)
              (test (flmax a c) c)
-             (test (flmax b c a) c))])
+             (test (flmax b c a) c)
+	     )])
       (test-ordered 1.0 2.0 3.0)
       (test-ordered -1.0 0.0 1.0)
       (test-ordered -1.0e5 0.0 1.0e-5))
@@ -268,10 +268,10 @@
     (test (flround -3.1) -3.0)
     (test (flround 3.8) 4.0)
     (test (flround -3.8) -4.0)
-    ;; (test (flround 3.5) 4.0) ; probably
-    ;; (test (flround -3.5) -4.0) ; probably
-    ;; (test (flround 2.5) 2.0) ; probably
-    ;; (test (flround -2.5) -2.0) ; probably
+    (test (flround 3.5) 4.0) ; probably
+    (test (flround -3.5) -4.0) ; probably
+    (test (flround 2.5) 2.0) ; probably
+    (test (flround -2.5) -2.0) ; probably
 
     (test/approx (flexp 2.0) 7.389)
     (test/approx (fllog 7.389) 2.0)

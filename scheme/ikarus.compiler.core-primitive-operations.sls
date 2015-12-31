@@ -2585,9 +2585,9 @@
      (asm 'fl:store flonum.tagged-ptr      (KN off-flonum-data))
      flonum.tagged-ptr))
 
- (define ($flop-aux* op fl fl*)
+ (define ($flop-aux* op fl flo*)
    ;;Flonum  operation  between three  or  more  operands  (but  also upon  a  single
-   ;;operand).  We expect FL and FL* to reference Scheme objects of type flonum.
+   ;;operand).  We expect FL and FLO* to reference Scheme objects of type flonum.
    ;;
    (with-tmp ((flonum.tagged-ptr (asm 'alloc
 				      (K (align flonum-size))
@@ -2596,12 +2596,12 @@
      (asm 'mset flonum.tagged-ptr (K off-flonum-tag) (K flonum-tag))
      ;;Load the first operand in a register for flonums.
      (asm 'fl:load (V-simple-operand fl) (K off-flonum-data))
-     (let recur ((fl* fl*))
-       (if (pair? fl*)
+     (let recur ((flo* flo*))
+       (if (pair? flo*)
 	   (make-seq
 	     ;;Perform the operation between the register and the next operand.
-	     (asm op (V-simple-operand (car fl*)) (K off-flonum-data))
-	     (recur (cdr fl*)))
+	     (asm op (V-simple-operand (car flo*)) (K off-flonum-data))
+	     (recur (cdr flo*)))
 	 (nop)))
      ;;Store the result from the register into memory referenced by FLONUM.TAGGED-PTR.
      (asm 'fl:store flonum.tagged-ptr (K off-flonum-data))
@@ -2789,8 +2789,16 @@
 ;;; UNsafe arithmetic primitive operations
 
  (define-core-primitive-operation $fl+ unsafe
+   ((V x)
+    (V-simple-operand x))
    ((V x y)
-    ($flop-aux 'fl:add! x y)))
+    ($flop-aux 'fl:add! x y))
+   ((V x y . z*)
+    ($flop-aux* 'fl:add! x (cons y z*)))
+   ((E . x*)
+    (nop))
+   ((P . x*)
+    (K #t)))
 
  (define-core-primitive-operation $fl- unsafe
    ((V x)
@@ -2798,15 +2806,37 @@
     ;;does not handle correctly the case: +0.0 - +0.0 = -0.0.
     ($flop-aux 'fl:mul! (K -1.0) x))
    ((V x y)
-    ($flop-aux 'fl:sub! x y)))
+    ($flop-aux 'fl:sub! x y))
+   ((V x y . z*)
+    ($flop-aux* 'fl:sub! x (cons y z*)))
+   ((E . x*)
+    (nop))
+   ((P . x*)
+    (K #t)))
 
  (define-core-primitive-operation $fl* unsafe
+   ((V x)
+    (V-simple-operand x))
    ((V x y)
-    ($flop-aux 'fl:mul! x y)))
+    ($flop-aux 'fl:mul! x y))
+   ((V x y . z*)
+    ($flop-aux* 'fl:mul! x (cons y z*)))
+   ((E . x*)
+    (nop))
+   ((P . x*)
+    (K #t)))
 
  (define-core-primitive-operation $fl/ unsafe
+   ((V x)
+    ($flop-aux 'fl:div! (K +1.0) x))
    ((V x y)
-    ($flop-aux 'fl:div! x y)))
+    ($flop-aux 'fl:div! x y))
+   ((V x y . z*)
+    ($flop-aux* 'fl:div! x (cons y z*)))
+   ((E . x*)
+    (nop))
+   ((P . x*)
+    (K #t)))
 
 ;;; --------------------------------------------------------------------
 ;;; safe arithmetic primitive operations
@@ -2877,28 +2907,75 @@
    ;;Notice that  this predicate does  not distinguish between  +0.0 and
    ;;-0.0 and this is compliant with what R6RS states.
    ;;
+   ((P x)
+    (K #t))
    ((P x y)
-    ($flcmp-aux 'fl:= x y)))
+    ($flcmp-aux 'fl:= x y))
+   ((P x y . z*)
+    (make-conditional ($flcmp-aux 'fl:= x y)
+	(apply cogen-pred-$fl= y z*)
+      (K #f)))
+   ((E . x*)
+    (nop)))
 
  (define-core-primitive-operation $fl!= unsafe
+   ((P x)
+    (K #f))
    ((P x y)
-    ($flcmp-aux 'fl:!= x y)))
+    ($flcmp-aux 'fl:!= x y))
+   ((P x y . z*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
+   ((E . x*)
+    (nop)))
 
  (define-core-primitive-operation $fl< unsafe
+   ((P x)
+    (K #t))
    ((P x y)
-    ($flcmp-aux 'fl:< x y)))
+    ($flcmp-aux 'fl:< x y))
+   ((P x y z . flo*)
+    (make-conditional ($flcmp-aux 'fl:< x y)
+	(apply cogen-pred-$fl< y (cons z flo*))
+      (K #f)))
+   ((E . x*)
+    (nop)))
 
  (define-core-primitive-operation $fl<= unsafe
+   ((P x)
+    (K #t))
    ((P x y)
-    ($flcmp-aux 'fl:<= x y)))
+    ($flcmp-aux 'fl:<= x y))
+   ((P x y . z*)
+    (make-conditional ($flcmp-aux 'fl:<= x y)
+	(apply cogen-pred-$fl<= y z*)
+      (K #f)))
+   ((E . x*)
+    (nop)))
 
  (define-core-primitive-operation $fl> unsafe
+   ((P x)
+    (K #t))
    ((P x y)
-    ($flcmp-aux 'fl:> x y)))
+    ($flcmp-aux 'fl:> x y))
+   ((P x y . z*)
+    (make-conditional ($flcmp-aux 'fl:> x y)
+	(apply cogen-pred-$fl> y z*)
+      (K #f)))
+   ((E . x*)
+    (nop)))
 
  (define-core-primitive-operation $fl>= unsafe
+   ((P x)
+    (K #t))
    ((P x y)
-    ($flcmp-aux 'fl:>= x y)))
+    ($flcmp-aux 'fl:>= x y))
+   ((P x y . z*)
+    (make-conditional ($flcmp-aux 'fl:>= x y)
+	(apply cogen-pred-$fl>= y z*)
+      (K #f)))
+   ((E . x*)
+    (nop)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2918,43 +2995,99 @@
 ;;; safe comparison primitive operations
 
  (define-core-primitive-operation fl=? safe
+   ((P x)
+    (K #t))
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:= x y)))
+   ((P x y z . flo*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
    ((E x y)
     (check-flonums (list x y)
+      (nop)))
+   ((E x y . z*)
+    (check-flonums (cons* x y z*)
+      (nop))))
+
+ (define-core-primitive-operation fl!=? safe
+   ((P x)
+    (K #f))
+   ((P x y)
+    (check-flonums (list x y)
+      ($flcmp-aux 'fl:!= x y)))
+   ((P x y z . flo*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
+   ((E x y)
+    (check-flonums (list x y)
+      (nop)))
+   ((E x y . z*)
+    (check-flonums (cons* x y z*)
       (nop))))
 
  (define-core-primitive-operation fl<? safe
+   ((P x)
+    (K #t))
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:< x y)))
+   ((P x y z . flo*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
    ((E x y)
     (check-flonums (list x y)
+      (nop)))
+   ((E x y . z*)
+    (check-flonums (cons* x y z*)
       (nop))))
 
  (define-core-primitive-operation fl<=? safe
+   ((P x)
+    (K #t))
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:<= x y)))
+   ((P x y z . flo*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
    ((E x y)
     (check-flonums (list x y)
+      (nop)))
+   ((E x y . z*)
+    (check-flonums (cons* x y z*)
       (nop))))
 
  (define-core-primitive-operation fl>? safe
+   ((P x)
+    (K #t))
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:> x y)))
+   ((P x y z . flo*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
    ((E x y)
     (check-flonums (list x y)
+      (nop)))
+   ((E x y . z*)
+    (check-flonums (cons* x y z*)
       (nop))))
 
  (define-core-primitive-operation fl>=? safe
+   ((P x)
+    (K #t))
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:>= x y)))
+   ((P x y z . flo*)
+    ;;Jump directly to the function implementation.
+    (interrupt))
    ((E x y)
     (check-flonums (list x y)
+      (nop)))
+   ((E x y . z*)
+    (check-flonums (cons* x y z*)
       (nop))))
 
 ;;; --------------------------------------------------------------------

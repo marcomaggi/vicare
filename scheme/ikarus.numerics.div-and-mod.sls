@@ -34,8 +34,8 @@
 (module (div-and-mod*)
   (import (vicare system $fx)
     (only (vicare system $flonums)
-	  $fl=)
-    (ikarus flonums))
+	  $fl=
+	  $flonum->exact))
 
   (define (div-and-mod* n m who)
     (cond ((fixnum? m)

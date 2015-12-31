@@ -30,18 +30,18 @@
 (library (vicare language-extensions syntaxes)
   (export
     ;; miscellaneous extensions
-    define-struct-extended	define-record-type-extended
-    let-inline			let*-inline
+    define-struct-extended			define-record-type-extended
+    let-inline					let*-inline
     debug-assert
     with-pathnames
-    with-bytevectors		with-bytevectors/or-false
-    callet			callet*
+    with-bytevectors				with-bytevectors/or-false
+    callet					callet*
     define-exact-integer->symbol-function
 
     define-list-of-type-predicate
     define-min/max-comparison
-    define-equality/sorting-predicate
-    define-inequality-predicate
+    define-equality/sorting-predicate		define-unsafe-equality/sorting-predicate
+    define-inequality-predicate			define-unsafe-inequality-predicate
 
     ;; arguments validation
     define-argument-validation
@@ -196,7 +196,7 @@
 	(and (?unsafe-who obj1 obj2)
 	     (?unsafe-who obj2 obj3)))
 
-       (({fl ?type-pred})
+       (({obj ?type-pred})
 	#t)
 
        (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . {obj* ?type-pred})
@@ -211,6 +211,35 @@
 			  (loop objY (cdr obj*))))
 		 #t))))))
     ))
+
+(define-syntax define-unsafe-equality/sorting-predicate
+  (syntax-rules ()
+    ((_ ?who ?unsafe-who)
+     (case-define* ?who
+       ((obj1 obj2)
+	(?unsafe-who obj1 obj2))
+
+       ((obj1 obj2 obj3)
+	(and (?unsafe-who obj1 obj2)
+	     (?unsafe-who obj2 obj3)))
+
+       ((obj)
+	#t)
+
+       ((obj1 obj2 obj3 obj4 . obj*)
+	(and (?unsafe-who obj1 obj2)
+	     (?unsafe-who obj2 obj3)
+	     (?unsafe-who obj3 obj4)
+	     (let loop ((objX  obj4)
+			(obj*  obj*))
+	       (if (pair? obj*)
+		   (let ((objY (car obj*)))
+		     (and (?unsafe-who objX objY)
+			  (loop objY (cdr obj*))))
+		 #t))))))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax define-inequality-predicate
   ;;Usage examples:
@@ -245,7 +274,41 @@
 		  (else #t)))))
 
        (({obj1 ?type-pred})
-	#t)))
+	#f)))
+    ))
+
+(define-syntax define-unsafe-inequality-predicate
+  ;;Usage examples:
+  ;;
+  ;;   (import (prefix (vicare system $flonums) sys::))
+  ;;   (define-unsafe-inequality-predicate $fl!= sys::$fl!=)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?unsafe-who)
+     (case-define ?who
+       ((obj1 obj2)
+	(?unsafe-who obj1 obj2))
+
+       ((obj1 obj2 obj3)
+	(and (?unsafe-who obj1 obj2)
+	     (?unsafe-who obj2 obj3)
+	     (?unsafe-who obj3 obj1)))
+
+       ((obj1 obj2 obj3 obj4 . obj*)
+	;;We must compare every argument to all the other arguments.
+	(let outer-loop ((objX   obj1)
+			 (obj*  (cons* obj2 obj3 obj4 obj*)))
+	  (let inner-loop ((objX   objX)
+			   (obj^*  obj*))
+	    (cond ((pair? obj^*)
+		   (and (?unsafe-who objX (car obj^*))
+			(inner-loop  objX (cdr obj^*))))
+		  ((pair? obj*)
+		   (outer-loop (car obj*) (cdr obj*)))
+		  (else #t)))))
+
+       ((obj1)
+	#f)))
     ))
 
 

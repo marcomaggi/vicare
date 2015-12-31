@@ -531,6 +531,7 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.typed-core-primitives.expander.scm			\
 	scheme/makefile.typed-core-primitives.ffi.scm				\
 	scheme/makefile.typed-core-primitives.fixnums.scm			\
+	scheme/makefile.typed-core-primitives.flonums.scm			\
 	scheme/makefile.typed-core-primitives.generic-primitives.scm		\
 	scheme/makefile.typed-core-primitives.keywords.scm			\
 	scheme/makefile.typed-core-primitives.numerics.scm			\

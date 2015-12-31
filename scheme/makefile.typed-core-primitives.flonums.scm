@@ -1,48 +1,25 @@
-;;; -*- coding: utf-8-unix -*-
-;;;
-;;;Part of: Vicare Scheme
-;;;Contents: compile-time property definitions for core primitives
-;;;Date: Mon Sep 22, 2014
-;;;
-;;;Abstract
-;;;
-;;;	The purpose of this module is to  associate values to the public name of core
-;;;	primitive.  The values represent core  primitive properties: the arity of the
-;;;	primitive; the  number of  returned values;  the core  types of  the expected
-;;;	arguments; the  core types of  the returned values;  miscellaneous properties
-;;;	used by the source optimiser.
-;;;
-;;;	  Scheme  object's core  types  are  defined by  the  module "Scheme  objects
-;;;	ontology".  This file contains a table  of core primitive properties for both
-;;;	primitive functions and primitive operations.
-;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;
-;;;This program is free software: you can  redistribute it and/or modify it under the
-;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
-;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
-;;;version.
-;;;
-;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
-;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
-;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-;;;
-;;;You should have received a copy of  the GNU General Public License along with this
-;;;program.  If not, see <http://www.gnu.org/licenses/>.
-;;;
-
-
-#!vicare
-(library (ikarus.compiler.core-primitive-properties.flonums)
-  (export initialise-core-primitive-properties/flonums)
-  (import (except (vicare) unsafe)
-    (ikarus.compiler.core-primitive-properties.base)
-    (ikarus.compiler.scheme-objects-ontology))
-
-  (import SCHEME-OBJECTS-ONTOLOGY)
-
-  (define (initialise-core-primitive-properties/flonums)
+;;
+;;Part of: Vicare Scheme
+;;Contents: table of expand-time properties for flonums core primitives
+;;Date: Tue Dec 31, 2015
+;;
+;;Abstract
+;;
+;;
+;;
+;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;
+;;This program is free  software: you can redistribute it and/or  modify it under the
+;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
+;;Foundation, either version 3 of the License, or (at your option) any later version.
+;;
+;;This program  is distributed in the  hope that it  will be useful, but  WITHOUT ANY
+;;WARRANTY; without  even the implied  warranty of  MERCHANTABILITY or FITNESS  FOR A
+;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+;;
+;;You should have received  a copy of the GNU General Public  License along with this
+;;program.  If not, see <http://www.gnu.org/licenses/>.
+;;
 
 
 ;;;; flonums, safe functions
@@ -51,7 +28,7 @@
 
 ;;; predicates
 
- (declare-type-predicate flonum? T:flonum)
+ (declare-type-predicate flonum? <flonum>)
 
  (declare-flonum-predicate flzero?		(replacements $flzero?))
  (declare-flonum-predicate flzero?/negative	(replacements $flzero?/negative))
@@ -64,49 +41,33 @@
  (declare-flonum-predicate flodd?		(replacements $flodd?))
 
  (declare-core-primitive flinteger?
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum-integer)		=> (T:true))
-    ((T:flonum-fractional)	=> (T:false))
-    ((T:flonum-infinite)	=> (T:false))
-    ((T:flonum-nan)		=> (T:false))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free))
    (replacements $flonum-integer?))
 
  (declare-core-primitive flfinite?
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum-integer)		=> (T:true))
-    ((T:flonum-fractional)	=> (T:true))
-    ((T:flonum-infinite)	=> (T:false))
-    ((T:flonum-nan)		=> (T:false))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free))
    (replacements $flonum-rational?))
 
  (declare-core-primitive flinfinite?
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum-integer)		=> (T:false))
-    ((T:flonum-fractional)	=> (T:false))
-    ((T:flonum-infinite)	=> (T:true))
-    ((T:flonum-nan)		=> (T:false))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free))
    (replacements $flinfinite?))
 
  (declare-core-primitive flnan?
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum-integer)		=> (T:false))
-    ((T:flonum-fractional)	=> (T:false))
-    ((T:flonum-infinite)	=> (T:false))
-    ((T:flonum-nan)		=> (T:true))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free))
    (replacements $flnan?))
@@ -118,9 +79,9 @@
      ((declare-flonum-rounding (syntax-rules ()
 				 ((_ ?who ?replacement)
 				  (declare-core-primitive ?who
-				      (safe)
+				    (safe)
 				    (signatures
-				     ((T:flonum)	=> (T:flonum-integer)))
+				     ((<flonum>)	=> (<flonum>)))
 				    (attributes
 				     ((_)		foldable effect-free result-true))
 				    (replacements ?replacement))))))
@@ -138,17 +99,17 @@
  (declare-flonum-unary flabs		(replacements $flabs))
 
  (declare-core-primitive flonum-bytes
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum)				=> (T:flonum T:flonum T:flonum T:flonum
-						     T:flonum T:flonum T:flonum T:flonum)))
+    ((<flonum>)				=> (<flonum> <flonum> <flonum> <flonum>
+						     <flonum> <flonum> <flonum> <flonum>)))
    (attributes
     ((_)				effect-free)))
 
  (declare-core-primitive flonum-parts
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum)				=> (T:boolean T:fixnum T:exact-integer)))
+    ((<flonum>)				=> (<boolean> <fixnum> <exact-integer>)))
    (attributes
     ((_)				effect-free)))
 
@@ -162,10 +123,10 @@
  (declare-flonum-unary flacos		(replacements $flacos))
 
  (declare-core-primitive flatan
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum)			=> (T:flonum))
-    ((T:flonum T:flonum)	=> (T:flonum)))
+    ((<flonum>)			=> (<flonum>))
+    ((<flonum> <flonum>)	=> (<flonum>)))
    (attributes
     ((_)			foldable effect-free result-true)
     ((_ _)			foldable effect-free result-true))
@@ -222,16 +183,16 @@
  (declare-flonum-binary flmod0		(replacements $flmod0))
 
  (declare-core-primitive fldiv-and-mod
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum T:flonum)		=> (T:flonum T:flonum)))
+    ((<flonum> <flonum>)		=> (<flonum> <flonum>)))
    (attributes
     ((_ _)				effect-free)))
 
  (declare-core-primitive fldiv0-and-mod0
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum T:flonum)		=> (T:flonum T:flonum)))
+    ((<flonum> <flonum>)		=> (<flonum> <flonum>)))
    (attributes
     ((_ _)				effect-free)))
 
@@ -239,38 +200,38 @@
 ;;; conversion
 
  (declare-core-primitive flonum->string
-     (safe)
+   (safe)
    (signatures
-    ((T:flonum)		=> (T:string)))
+    ((<flonum>)		=> (<string>)))
    (attributes
     ((_)			foldable effect-free result-true)))
 
  (declare-core-primitive real->flonum
-     (safe)
+   (safe)
    (signatures
-    ((T:real)		=> (T:flonum)))
+    ((<real>)		=> (<flonum>)))
    (attributes
     ((_)			foldable effect-free result-true)))
 
- /section)
+/section)
 
 
 ;;;; flonums, unsafe functions
 
 (section
 
- (declare-core-primitive $make-flonum
-     (unsafe)
-   (signatures
-    (()				=> (T:flonum)))
-   ;;Not foldable because $MAKE-FLONUM must return a new flonum every time.
-   (attributes
-    (()				effect-free result-true)))
+(declare-core-primitive $make-flonum
+  (unsafe)
+  (signatures
+   (()				=> (<flonum>)))
+  ;;Not foldable because $MAKE-FLONUM must return a new flonum every time.
+  (attributes
+   (()				effect-free result-true)))
 
  (declare-core-primitive $flonum->exact
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum)			=> (T:exact-real)))
+    ((<flonum>)			=> (<exact-real>)))
    (attributes
     ((_)			foldable effect-free result-true)))
 
@@ -289,46 +250,30 @@
  (declare-flonum-predicate $flodd? unsafe)
 
  (declare-core-primitive $flonum-integer?
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum-integer)		=> (T:true))
-    ((T:flonum-fractional)	=> (T:false))
-    ((T:flonum-infinite)	=> (T:false))
-    ((T:flonum-nan)		=> (T:false))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free)))
 
  (declare-core-primitive $flonum-rational?
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum-integer)		=> (T:true))
-    ((T:flonum-fractional)	=> (T:true))
-    ((T:flonum-infinite)	=> (T:false))
-    ((T:flonum-nan)		=> (T:false))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free)))
 
  (declare-core-primitive $flinfinite?
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum-integer)		=> (T:false))
-    ((T:flonum-fractional)	=> (T:false))
-    ((T:flonum-infinite)	=> (T:true))
-    ((T:flonum-nan)		=> (T:false))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free)))
 
  (declare-core-primitive $flnan?
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum-integer)		=> (T:false))
-    ((T:flonum-fractional)	=> (T:false))
-    ((T:flonum-infinite)	=> (T:false))
-    ((T:flonum-nan)		=> (T:true))
-    ((T:flonum)			=> (T:boolean)))
+    ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free)))
 
@@ -339,9 +284,9 @@
      ((declare-flonum-rounding (syntax-rules ()
 				 ((_ ?who)
 				  (declare-core-primitive ?who
-				      (unsafe)
+				    (unsafe)
 				    (signatures
-				     ((T:flonum)	=> (T:flonum-integer)))
+				     ((<flonum>)	=> (<flonum>)))
 				    (attributes
 				     ((_)		foldable effect-free result-true)))))))
    (declare-flonum-rounding $flround)
@@ -358,23 +303,23 @@
  (declare-flonum-unary $flabs unsafe)
 
  (declare-core-primitive $flonum-u8-ref
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum T:fixnum)		=> (T:fixnum)))
+    ((<flonum> <fixnum>)		=> (<fixnum>)))
    (attributes
     ((_ _)			effect-free result-true)))
 
  (declare-core-primitive $flonum-sbe
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum)			=> (T:fixnum)))
+    ((<flonum>)			=> (<fixnum>)))
    (attributes
     ((_)				effect-free result-true)))
 
  (declare-core-primitive $flonum-set!
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum T:fixnum T:fixnum)	=> (T:void)))
+    ((<flonum> <fixnum> <fixnum>)	=> (<void>)))
    (attributes
     ((_ _ _)				result-true)))
 
@@ -441,28 +386,24 @@
  (declare-flonum-multi $flmin unsafe)
 
  (declare-core-primitive $fldiv-and-mod
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum T:flonum)	=> (T:flonum T:flonum)))
+    ((<flonum> <flonum>)	=> (<flonum> <flonum>)))
    (attributes
     ((_ _)			effect-free)))
 
  (declare-core-primitive $fldiv0-and-mod0
-     (unsafe)
+   (unsafe)
    (signatures
-    ((T:flonum T:flonum)	=> (T:flonum T:flonum)))
+    ((<flonum> <flonum>)	=> (<flonum> <flonum>)))
    (attributes
     ((_ _)			effect-free)))
 
  /section)
 
-
-
-
-;;;; done
-
- #| end of DEFINE |# )
-
-#| end of library |# )
-
-;;; end o file
+;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; coding: utf-8-unix
+;; eval: (put 'declare-core-primitive		'scheme-indent-function 2)
+;; End:
