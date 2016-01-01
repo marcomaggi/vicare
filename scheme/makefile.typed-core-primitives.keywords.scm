@@ -7,7 +7,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -28,17 +28,85 @@
 
 (declare-type-predicate keyword? <keyword>)
 
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive symbol->keyword
+    (safe)
+  (signatures
+   ((<symbol>)			=> (<keyword>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-keyword-binary-comparison keyword=?)
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
 (declare-core-primitive keyword->symbol
     (safe)
   (signatures
-   ((<keyword>)		=> (<symbol>))))
+   ((<keyword>)			=> (<symbol>)))
+  (attributes
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive keyword->string
     (safe)
   (signatures
-   ((<keyword>)		=> (<string>))))
+   ((<keyword>)			=> (<string>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
 
 (declare-hash-function keyword-hash <keyword> safe)
+
+/section)
+
+
+;;;; keywords, unsafe functions
+
+(section
+
+;;; constructors
+
+(declare-core-primitive $symbol->keyword
+    (unsafe)
+  (signatures
+   ((<symbol>)			=> (<keyword>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-keyword-binary-comparison $keyword=? unsafe)
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $keyword->symbol
+    (unsafe)
+  (signatures
+   ((<keyword>)			=> (<symbol>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive $keyword->string
+    (unsafe)
+  (signatures
+   ((<keyword>)			=> (<string>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-hash-function $keyword-hash <keyword> unsafe)
 
 /section)
 
