@@ -22,6 +22,14 @@
     <top>
   void void-object?)
 
+(define-scheme-type <eof>
+    <top>
+  eof-object eof-object?)
+
+(define-scheme-type <would-block>
+    <top>
+  would-block-object would-block-object?)
+
 (define-scheme-type <boolean>
     <top>
   <boolean>-constructor boolean?)

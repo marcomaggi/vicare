@@ -3397,6 +3397,8 @@
     (<no-return>				v $language)
     (<top>					v $language)
     (<void>					v $language)
+    (<eof>					v $language)
+    (<would-block>				v $language)
     (<boolean>					v $language)
     (<true>					v $language)
     (<false>					v $language)
