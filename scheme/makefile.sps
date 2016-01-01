@@ -3459,6 +3459,9 @@
     (<interaction-lexical-environment>		v $language)
     (<non-interaction-lexical-environment>	v $language)
 
+    (<opaque-record>)
+    (<stats>					v $language)
+
     (<port>					v $language)
     (<input-port>				v $language)
     (<output-port>				v $language)

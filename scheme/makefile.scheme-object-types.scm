@@ -349,6 +349,12 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-scheme-type <opaque-record>
+    <top>
+  #f always-false)
+
+;;; --------------------------------------------------------------------
+
 ;;This is the root of all the  condition object types, both simple and compound.  All
 ;;the simple condition types are derived from "&condition".
 ;;
@@ -408,6 +414,28 @@
    (pointer		memory-block-pointer)
    (size		memory-block-size)
    (reset		memory-block-reset)))
+
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <stats>
+    <opaque-record>
+  #f stats?
+  (methods
+   (user-secs		stats-user-secs)
+   (user-usecs		stats-user-usecs)
+   (sys-secs		stats-sys-secs)
+   (sys-usecs		stats-sys-usecs)
+   (real-secs		stats-real-secs)
+   (real-usecs		stats-real-usecs)
+   (collection-id	stats-collection-id)
+   (gc-user-secs	stats-gc-user-secs)
+   (gc-user-usecs	stats-gc-user-usecs)
+   (gc-sys-secs		stats-gc-sys-secs)
+   (gc-sys-usecs	stats-gc-sys-usecs)
+   (gc-real-secs	stats-gc-real-secs)
+   (gc-real-usecs	stats-gc-real-usecs)
+   (bytes-minor		stats-bytes-minor)
+   (bytes-major		stats-bytes-major)))
 
 
 ;;;; input/output ports
