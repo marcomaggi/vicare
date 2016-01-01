@@ -132,6 +132,9 @@
 	    ;;"<positive-bignum>".
 	    ((free-identifier=? #'<non-negative-exact-integer> id)
 	     #'<exact-integer>)
+	    ;;FIXME What should I do about this?  (Marco Maggi; Fri Jan 1, 2016)
+	    ((free-identifier=? #'<file-descriptor> id)
+	     #'<non-negative-fixnum>)
 	    (else id)))
     (let recur ((sig type-signature.stx))
       (syntax-case sig ()
@@ -1024,6 +1027,7 @@
 (include "makefile.typed-core-primitives.flonums.scm"			#t)
 (include "makefile.typed-core-primitives.generic-primitives.scm"	#t)
 (include "makefile.typed-core-primitives.hash-tables.scm"		#t)
+(include "makefile.typed-core-primitives.input-output.scm"		#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)
 (include "makefile.typed-core-primitives.pairs-and-lists.scm"		#t)

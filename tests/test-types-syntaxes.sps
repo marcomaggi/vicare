@@ -405,25 +405,28 @@
     (begin-for-syntax
       (xp.generate-descriptive-gensyms? #t))
 
-    (when #f
-      (print-expansion
-       (assert-signature-and-return (<fixnum> <flonum> <string>) (read))))
+    (define (f)
+      (values 1 2 3))
 
     (when #f
       (print-expansion
-       (assert-signature (<fixnum> <flonum> <string>) (read))))
+       (assert-signature-and-return (<fixnum> <flonum> <string>) (f))))
 
     (when #f
       (print-expansion
-       (assert-signature-and-return <list-of-fixnums> (read))))
+       (assert-signature (<fixnum> <flonum> <string>) (f))))
 
     (when #f
       (print-expansion
-       (assert-signature-and-return (<fixnum> <flonum> . <list-of-fixnums>) (read))))
+       (assert-signature-and-return <list-of-fixnums> (f))))
 
     (when #f
       (print-expansion
-       (assert-signature (<fixnum> <flonum> . <list-of-fixnums>) (read))))
+       (assert-signature-and-return (<fixnum> <flonum> . <list-of-fixnums>) (f))))
+
+    (when #f
+      (print-expansion
+       (assert-signature (<fixnum> <flonum> . <list-of-fixnums>) (f))))
 
     (void))
 

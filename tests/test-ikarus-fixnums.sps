@@ -63,12 +63,12 @@
       (check (fx= s0 s2) => #t)
       (unless (fx= s0 s2)
 	(error name
-	  (printf "failed (value1) on ~s ~s ~s, got ~s, should be ~s"
+	  (format "failed (value1) on ~s ~s ~s, got ~s, should be ~s"
 		  fx1 fx2 fx3 s0 s2)))
       (check (fx= s1 s3) => #t)
       (unless (fx= s1 s3)
 	(error name
-	  (printf "failed (value2) on ~s ~s ~s, got ~s, should be ~s"
+	  (format "failed (value2) on ~s ~s ~s, got ~s, should be ~s"
 		  fx1 fx2 fx3 s1 s3)))))
   (define ls
     (list 0 1 2 -1 -2 38734 -3843 2484598 -348732487 (greatest-fixnum) (least-fixnum)))

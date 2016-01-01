@@ -3431,6 +3431,7 @@
     (<positive-bignum>				v $language)
     (<non-negative-flonum>			v $language)
     (<positive-flonum>				v $language)
+    #;(<file-descriptor>			v $language)
 
     (<string>					v $language)
     (<vector>					v $language)

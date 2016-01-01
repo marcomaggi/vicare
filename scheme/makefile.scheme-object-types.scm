@@ -201,6 +201,12 @@
 
 ;;; --------------------------------------------------------------------
 
+;; (define-scheme-type <file-descriptor>
+;;     <non-negative-fixnum>
+;;   #f #f)
+
+;;; --------------------------------------------------------------------
+
 (define-scheme-type <non-negative-flonum>
     <flonum>
   #t non-negative-flonum?)
