@@ -1029,6 +1029,7 @@
 (include "makefile.typed-core-primitives.hash-tables.scm"		#t)
 (include "makefile.typed-core-primitives.input-output.scm"		#t)
 (include "makefile.typed-core-primitives.keywords.scm"			#t)
+(include "makefile.typed-core-primitives.library-utils.scm"		#t)
 (include "makefile.typed-core-primitives.numerics.scm"			#t)
 (include "makefile.typed-core-primitives.pairs-and-lists.scm"		#t)
 (include "makefile.typed-core-primitives.pointers.scm"			#t)

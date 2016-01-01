@@ -536,6 +536,7 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.typed-core-primitives.hash-tables.scm			\
 	scheme/makefile.typed-core-primitives.input-output.scm			\
 	scheme/makefile.typed-core-primitives.keywords.scm			\
+	scheme/makefile.typed-core-primitives.library-utils.scm			\
 	scheme/makefile.typed-core-primitives.numerics.scm			\
 	scheme/makefile.typed-core-primitives.pairs-and-lists.scm		\
 	scheme/makefile.typed-core-primitives.pointers.scm			\
