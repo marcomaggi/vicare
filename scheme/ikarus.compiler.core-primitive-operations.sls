@@ -1949,6 +1949,18 @@
    ((E x)
     (nop)))
 
+ (define-core-primitive-operation $fxnonnegative? unsafe
+   ((P x)
+    (asm '>= (V-simple-operand x) (K 0)))
+   ((E x)
+    (nop)))
+
+ (define-core-primitive-operation $fxnonpositive? unsafe
+   ((P x)
+    (asm '<= (V-simple-operand x) (K 0)))
+   ((E x)
+    (nop)))
+
  ;; (define-core-primitive-operation $fxeven? unsafe
  ;;   ((P x)
  ;;    (asm '= (asm 'logand (V-simple-operand x) (K 1)) (K 0)))
@@ -3544,6 +3556,57 @@
     (interrupt))
    ((E a . a*)
     (assert-fixnums a a*)))
+
+;;; --------------------------------------------------------------------
+;;;
+
+ (define-core-primitive-operation zero-fixnum? safe
+   ((P x)
+    (with-tmp ((A (V-simple-operand x)))
+      (assert-fixnum A)
+      (asm '= A (K 0))))
+   ((E x)
+    (nop)))
+
+ (define-core-primitive-operation fxzero? safe
+   ((P x)
+    (with-tmp ((A (V-simple-operand x)))
+      (assert-fixnum A)
+      (asm '= A (K 0))))
+   ((E x)
+    (nop)))
+
+ (define-core-primitive-operation fxnegative? safe
+   ((P x)
+    (with-tmp ((A (V-simple-operand x)))
+      (assert-fixnum A)
+      (asm '< A (K 0))))
+   ((E x)
+    (nop)))
+
+ (define-core-primitive-operation fxpositive? safe
+   ((P x)
+    (with-tmp ((A (V-simple-operand x)))
+      (assert-fixnum A)
+      (asm '> A (K 0))))
+   ((E x)
+    (nop)))
+
+ (define-core-primitive-operation fxnonnegative? safe
+   ((P x)
+    (with-tmp ((A (V-simple-operand x)))
+      (assert-fixnum A)
+      (asm '>= A (K 0))))
+   ((E x)
+    (nop)))
+
+ (define-core-primitive-operation fxnonpositive? safe
+   ((P x)
+    (with-tmp ((A (V-simple-operand x)))
+      (assert-fixnum A)
+      (asm '<= A (K 0))))
+   ((E x)
+    (nop)))
 
 ;;; --------------------------------------------------------------------
 ;;; safe fixnum arithmetic

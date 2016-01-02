@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
 ;;;Contents: tests
@@ -27,9 +26,11 @@
 ;;;
 
 #!ikarus
-(import (vicare)
-  (libtest ikarus-test-framework)
-  (vicare checks))
+(program (test-ikarus-lists)
+  (options strict-r6rs)
+  (import (vicare)
+    (libtest ikarus-test-framework)
+    (vicare checks))
 
 (define (run-tests) (test-lists))
 
@@ -75,4 +76,9 @@
 (run-tests)
 (check-display "; *** done\n\n")
 
+#| end of program |# )
+
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; End:

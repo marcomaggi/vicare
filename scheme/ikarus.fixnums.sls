@@ -25,7 +25,7 @@
     fxnonnegative?		fxnonpositive?
     fxeven?			fxodd?
 
-    non-zero-fixnum?
+    zero-fixnum?		non-zero-fixnum?
     positive-fixnum?		negative-fixnum?
     non-negative-fixnum?	non-positive-fixnum?
     byte-fixnum?		octet-fixnum?
@@ -243,6 +243,9 @@
 (define-fx-operation/one fxodd?		$fxodd?)
 
 ;;; --------------------------------------------------------------------
+
+(define (zero-fixnum? obj)
+  (eq? 0 obj))
 
 (define (non-zero-fixnum? fx)
   (if (eq? 0 fx)

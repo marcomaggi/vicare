@@ -7,7 +7,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -71,6 +71,58 @@
    (attributes
     ((_)			foldable effect-free))
    (replacements $flnan?))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive zero-flonum?
+    (safe)
+  (signatures
+   ((<zero-flonum>)		=> (<true>))
+   ((<positive-flonum>)		=> (<false>))
+   ((<negative-flonum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive positive-flonum?
+    (safe)
+  (signatures
+   ((<zero-flonum>)		=> (<false>))
+   ((<positive-flonum>)		=> (<true>))
+   ((<negative-flonum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive negative-flonum?
+    (safe)
+  (signatures
+   ((<zero-flonum>)		=> (<false>))
+   ((<positive-flonum>)		=> (<false>))
+   ((<negative-flonum>)		=> (<true>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-positive-flonum?
+    (safe)
+  (signatures
+   ((<zero-flonum>)		=> (<true>))
+   ((<positive-flonum>)		=> (<false>))
+   ((<negative-flonum>)		=> (<true>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-negative-flonum?
+    (safe)
+  (signatures
+   ((<zero-flonum>)		=> (<true>))
+   ((<positive-flonum>)		=> (<true>))
+   ((<negative-flonum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding

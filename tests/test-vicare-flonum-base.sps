@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -35,93 +35,160 @@
 
 (parametrise ((check-test-name	'predicates))
 
-  (check
-      (flzero? +0.0)
-    => #t)
+  (check-for-true  (flzero? +0.0))
+  (check-for-true  (flzero? -0.0))
+  (check-for-false (flzero? -123.0))
+  (check-for-false (flzero? -123.0))
 
-  (check
-      (flzero? -0.0)
-    => #t)
+  (check-for-true  (flzero?/positive +0.0))
+  (check-for-false (flzero?/positive -0.0))
+  (check-for-false (flzero?/positive -123.0))
+  (check-for-false (flzero?/positive -123.0))
 
-  (check
-      (flzero? -123.0)
-    => #f)
-
-  (check
-      (flzero? -123.0)
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (flzero?/positive +0.0)
-    => #t)
-
-  (check
-      (flzero?/positive -0.0)
-    => #f)
-
-  (check
-      (flzero?/positive -123.0)
-    => #f)
-
-  (check
-      (flzero?/positive -123.0)
-    => #f)
+  (check-for-false (flzero?/negative +0.0))
+  (check-for-true  (flzero?/negative -0.0))
+  (check-for-false (flzero?/negative -123.0))
+  (check-for-false (flzero?/negative -123.0))
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (flzero?/negative +0.0)
-    => #f)
+  (check-for-true  (apply flzero? '(+0.0)))
+  (check-for-true  (apply flzero? '(-0.0)))
+  (check-for-false (apply flzero? '(-123.0)))
+  (check-for-false (apply flzero? '(-123.0)))
 
-  (check
-      (flzero?/negative -0.0)
-    => #t)
+  (check-for-true  (apply flzero?/positive '(+0.0)))
+  (check-for-false (apply flzero?/positive '(-0.0)))
+  (check-for-false (apply flzero?/positive '(-123.0)))
+  (check-for-false (apply flzero?/positive '(-123.0)))
 
-  (check
-      (flzero?/negative -123.0)
-    => #f)
-
-  (check
-      (flzero?/negative -123.0)
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check ($flpositive? +0.0)		=> #f)
-  (check ($flpositive? -0.0)		=> #f)
-  (check ($flpositive? +123.0)		=> #t)
-  (check ($flpositive? -123.0)		=> #f)
-
-  (check ($flnegative? +0.0)		=> #f)
-  (check ($flnegative? -0.0)		=> #f)
-  (check ($flnegative? +123.0)		=> #f)
-  (check ($flnegative? -123.0)		=> #t)
-
-  (check ($flnonpositive? +0.0)		=> #f)
-  (check ($flnonpositive? -0.0)		=> #t)
-  (check ($flnonpositive? +123.0)	=> #f)
-  (check ($flnonpositive? -123.0)	=> #t)
-
-  (check ($flnonnegative? +0.0)		=> #t)
-  (check ($flnonnegative? -0.0)		=> #f)
-  (check ($flnonnegative? +123.0)	=> #t)
-  (check ($flnonnegative? -123.0)	=> #f)
+  (check-for-false (apply flzero?/negative '(+0.0)))
+  (check-for-true  (apply flzero?/negative '(-0.0)))
+  (check-for-false (apply flzero?/negative '(-123.0)))
+  (check-for-false (apply flzero?/negative '(-123.0)))
 
 ;;; --------------------------------------------------------------------
 
-  (check (flnonpositive? +0.0)		=> #f)
-  (check (flnonpositive? -0.0)		=> #t)
-  (check (flnonpositive? +123.0)	=> #f)
-  (check (flnonpositive? -123.0)	=> #t)
+  (check-for-true  ($flzero? +0.0))
+  (check-for-true  ($flzero? -0.0))
+  (check-for-false ($flzero? -123.0))
+  (check-for-false ($flzero? -123.0))
 
-  (check (flnonnegative? +0.0)		=> #t)
-  (check (flnonnegative? -0.0)		=> #f)
-  (check (flnonnegative? +123.0)	=> #t)
-  (check (flnonnegative? -123.0)	=> #f)
+  (check-for-true  ($flzero?/positive +0.0))
+  (check-for-false ($flzero?/positive -0.0))
+  (check-for-false ($flzero?/positive -123.0))
+  (check-for-false ($flzero?/positive -123.0))
+
+  (check-for-false ($flzero?/negative +0.0))
+  (check-for-true  ($flzero?/negative -0.0))
+  (check-for-false ($flzero?/negative -123.0))
+  (check-for-false ($flzero?/negative -123.0))
 
 ;;; --------------------------------------------------------------------
+
+  (check-for-true  (apply $flzero? '(+0.0)))
+  (check-for-true  (apply $flzero? '(-0.0)))
+  (check-for-false (apply $flzero? '(-123.0)))
+  (check-for-false (apply $flzero? '(-123.0)))
+
+  (check-for-true  (apply $flzero?/positive '(+0.0)))
+  (check-for-false (apply $flzero?/positive '(-0.0)))
+  (check-for-false (apply $flzero?/positive '(-123.0)))
+  (check-for-false (apply $flzero?/positive '(-123.0)))
+
+  (check-for-false (apply $flzero?/negative '(+0.0)))
+  (check-for-true  (apply $flzero?/negative '(-0.0)))
+  (check-for-false (apply $flzero?/negative '(-123.0)))
+  (check-for-false (apply $flzero?/negative '(-123.0)))
+
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false ($flpositive? +0.0))
+  (check-for-false ($flpositive? -0.0))
+  (check-for-true  ($flpositive? +123.0))
+  (check-for-false ($flpositive? -123.0))
+
+  (check-for-false ($flnegative? +0.0))
+  (check-for-false ($flnegative? -0.0))
+  (check-for-false ($flnegative? +123.0))
+  (check-for-true  ($flnegative? -123.0))
+
+  (check-for-false ($flnonpositive? +0.0))
+  (check-for-true  ($flnonpositive? -0.0))
+  (check-for-false ($flnonpositive? +123.0))
+  (check-for-true  ($flnonpositive? -123.0))
+
+  (check-for-true  ($flnonnegative? +0.0))
+  (check-for-false ($flnonnegative? -0.0))
+  (check-for-true  ($flnonnegative? +123.0))
+  (check-for-false ($flnonnegative? -123.0))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (apply $flpositive? '(+0.0)))
+  (check-for-false (apply $flpositive? '(-0.0)))
+  (check-for-true  (apply $flpositive? '(+123.0)))
+  (check-for-false (apply $flpositive? '(-123.0)))
+
+  (check-for-false (apply $flnegative? '(+0.0)))
+  (check-for-false (apply $flnegative? '(-0.0)))
+  (check-for-false (apply $flnegative? '(+123.0)))
+  (check-for-true  (apply $flnegative? '(-123.0)))
+
+  (check-for-false (apply $flnonpositive? '(+0.0)))
+  (check-for-true  (apply $flnonpositive? '(-0.0)))
+  (check-for-false (apply $flnonpositive? '(+123.0)))
+  (check-for-true  (apply $flnonpositive? '(-123.0)))
+
+  (check-for-true  (apply $flnonnegative? '(+0.0)))
+  (check-for-false (apply $flnonnegative? '(-0.0)))
+  (check-for-true  (apply $flnonnegative? '(+123.0)))
+  (check-for-false (apply $flnonnegative? '(-123.0)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (flnonpositive? +0.0))
+  (check-for-true  (flnonpositive? -0.0))
+  (check-for-false (flnonpositive? +123.0))
+  (check-for-true  (flnonpositive? -123.0))
+
+  (check-for-true  (flnonnegative? +0.0))
+  (check-for-false (flnonnegative? -0.0))
+  (check-for-true  (flnonnegative? +123.0))
+  (check-for-false (flnonnegative? -123.0))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (apply flnonpositive? '(+0.0)))
+  (check-for-true  (apply flnonpositive? '(-0.0)))
+  (check-for-false (apply flnonpositive? '(+123.0)))
+  (check-for-true  (apply flnonpositive? '(-123.0)))
+
+  (check-for-true  (apply flnonnegative? '(+0.0)))
+  (check-for-false (apply flnonnegative? '(-0.0)))
+  (check-for-true  (apply flnonnegative? '(+123.0)))
+  (check-for-false (apply flnonnegative? '(-123.0)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (zero-flonum? +0.0))
+  (check-for-true  (zero-flonum? -0.0))
+  (check-for-false (zero-flonum? +1.0))
+  (check-for-false (zero-flonum? -1.0))
+  (check-for-false (zero-flonum? "ciao"))
+
+  (check-for-true  (positive-zero-flonum? +0.0))
+  (check-for-false (positive-zero-flonum? -0.0))
+  (check-for-false (positive-zero-flonum? +1.0))
+  (check-for-false (positive-zero-flonum? -1.0))
+  (check-for-false (positive-zero-flonum? "ciao"))
+
+  (check-for-false (negative-zero-flonum? +0.0))
+  (check-for-true  (negative-zero-flonum? -0.0))
+  (check-for-false (negative-zero-flonum? +1.0))
+  (check-for-false (negative-zero-flonum? -1.0))
+  (check-for-false (negative-zero-flonum? "ciao"))
 
   (check-for-true  (positive-flonum? +123.0))
   (check-for-false (positive-flonum? +0.0))
@@ -146,6 +213,50 @@
   (check-for-true  (non-negative-flonum? +123.0))
   (check-for-false (non-negative-flonum? -123.0))
   (check-for-false (non-negative-flonum? "ciao"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (apply zero-flonum? '(+0.0)))
+  (check-for-true  (apply zero-flonum? '(-0.0)))
+  (check-for-false (apply zero-flonum? '(+1.0)))
+  (check-for-false (apply zero-flonum? '(-1.0)))
+  (check-for-false (apply zero-flonum? '("ciao")))
+
+  (check-for-true  (apply positive-zero-flonum? '(+0.0)))
+  (check-for-false (apply positive-zero-flonum? '(-0.0)))
+  (check-for-false (apply positive-zero-flonum? '(+1.0)))
+  (check-for-false (apply positive-zero-flonum? '(-1.0)))
+  (check-for-false (apply positive-zero-flonum? '("ciao")))
+
+  (check-for-false (apply negative-zero-flonum? '(+0.0)))
+  (check-for-true  (apply negative-zero-flonum? '(-0.0)))
+  (check-for-false (apply negative-zero-flonum? '(+1.0)))
+  (check-for-false (apply negative-zero-flonum? '(-1.0)))
+  (check-for-false (apply negative-zero-flonum? '("ciao")))
+
+  (check-for-true  (apply positive-flonum? '(+123.0)))
+  (check-for-false (apply positive-flonum? '(+0.0)))
+  (check-for-false (apply positive-flonum? '(-0.0)))
+  (check-for-false (apply positive-flonum? '(-123.0)))
+  (check-for-false (apply positive-flonum? '("ciao")))
+
+  (check-for-true  (apply negative-flonum? '(-123.0)))
+  (check-for-false (apply negative-flonum? '(+0.0)))
+  (check-for-false (apply negative-flonum? '(-0.0)))
+  (check-for-false (apply negative-flonum? '(+123.0)))
+  (check-for-false (apply negative-flonum? '("ciao")))
+
+  (check-for-false (apply non-positive-flonum? '(+0.0)))
+  (check-for-true  (apply non-positive-flonum? '(-0.0)))
+  (check-for-true  (apply non-positive-flonum? '(-123.0)))
+  (check-for-false (apply non-positive-flonum? '(+123.0)))
+  (check-for-false (apply non-positive-flonum? '("ciao")))
+
+  (check-for-true  (apply non-negative-flonum? '(+0.0)))
+  (check-for-false (apply non-negative-flonum? '(-0.0)))
+  (check-for-true  (apply non-negative-flonum? '(+123.0)))
+  (check-for-false (apply non-negative-flonum? '(-123.0)))
+  (check-for-false (apply non-negative-flonum? '("ciao")))
 
   #t)
 

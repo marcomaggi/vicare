@@ -18,12 +18,15 @@
 #!vicare
 (library (ikarus pairs)
   (export
+    standalone-pair?
     cons weak-cons set-car! set-cdr!  car cdr caar cdar cadr cddr
     caaar cdaar cadar cddar caadr cdadr caddr cdddr caaaar cdaaar
     cadaar cddaar caadar cdadar caddar cdddar caaadr cdaadr cadadr
     cddadr caaddr cdaddr cadddr cddddr)
   (import
-    (except (vicare) cons weak-cons set-car! set-cdr! car cdr caar
+    (except (vicare)
+	    standalone-pair?
+	    cons weak-cons set-car! set-cdr! car cdr caar
             cdar cadr cddr caaar cdaar cadar cddar caadr cdadr caddr
             cdddr caaaar cdaaar cadaar cddaar caadar cdadar caddar
             cdddar caaadr cdaadr cadadr cddadr caaddr cdaddr cadddr
@@ -39,6 +42,10 @@
 
 (define (weak-cons a d)
   (foreign-call "ikrt_weak_cons" a d))
+
+(define (standalone-pair? obj)
+  (and (pair? obj)
+       (not (pair? (cdr obj)))))
 
 (define* (set-car! {x pair?} y)
   ($set-car! x y))

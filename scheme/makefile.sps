@@ -2164,6 +2164,7 @@
     (fxnegative?				v r fx)
     (fxnonpositive?				v $language)
     (fxnonnegative?				v $language)
+    (zero-fixnum?				v $language)
     (non-zero-fixnum?				v $language)
     (positive-fixnum?				v $language)
     (negative-fixnum?				v $language)
@@ -2221,6 +2222,9 @@
     (flpositive?				v r fl)
     (flnonpositive?				v $language)
     (flnonnegative?				v $language)
+    (zero-flonum?				v $language)
+    (positive-zero-flonum?			v $language)
+    (negative-zero-flonum?			v $language)
     (positive-flonum?				v $language)
     (negative-flonum?				v $language)
     (non-negative-flonum?			v $language)
@@ -3427,15 +3431,25 @@
     (<number>					v $language)
 
     (<non-negative-fixnum>			v $language)
+    (<zero-fixnum>				v $language)
     (<positive-fixnum>				v $language)
+    (<negative-fixnum>				v $language)
+
     (<positive-bignum>				v $language)
+
     (<non-negative-flonum>			v $language)
     (<positive-flonum>				v $language)
+    (<negative-flonum>				v $language)
+    (<zero-flonum>				v $language)
+    (<positive-zero-flonum>			v $language)
+    (<negative-zero-flonum>			v $language)
+
     #;(<file-descriptor>			v $language)
 
     (<string>					v $language)
     (<vector>					v $language)
     (<pair>					v $language)
+    (<standalone-pair>				v $language)
     (<list>					v $language)
     (<nlist>					v $language)
     (<null>					v $language)

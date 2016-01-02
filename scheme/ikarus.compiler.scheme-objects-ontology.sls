@@ -125,6 +125,7 @@
 
    T:zero	T:positive	T:negative	T:non-positive	T:non-negative
 
+   T:zero-fixnum	T:zero-flonum
    T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
    T:positive-bignum	T:negative-bignum
    T:positive-flonum	T:negative-flonum	T:non-positive-flonum	T:non-negative-flonum
@@ -790,6 +791,9 @@
 ;;; --------------------------------------------------------------------
 ;;; more fixnum types
 
+(define-underspecified-core-type T:zero-fixnum
+  (core-type-tag-and T:fixnum T:zero))
+
 (define-underspecified-core-type T:positive-fixnum
   (core-type-tag-and T:fixnum T:positive))
 
@@ -825,6 +829,9 @@
 
 ;;; --------------------------------------------------------------------
 ;;; more flonum types
+
+(define-underspecified-core-type T:zero-flonum
+  (core-type-tag-and T:flonum T:zero))
 
 (define-underspecified-core-type T:positive-flonum
   (core-type-tag-and T:flonum T:positive))

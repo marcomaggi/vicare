@@ -14170,9 +14170,10 @@ non--negative; else return @false{}.
 @end defun
 
 
-@defun non-zero-fixnum? @var{obj}
-Return @true{} if @var{obj} is a non--zero fixnum; otherwise return
-@false{}.  If @var{obj} is not a fixnum: return @false{}.
+@defun zero-fixnum? @var{obj}
+@defunx non-zero-fixnum? @var{obj}
+Return @true{} if @var{obj} is a zero or non--zero fixnum; otherwise
+return @false{}.  If @var{obj} is not a fixnum: return @false{}.
 @end defun
 
 
@@ -14358,6 +14359,15 @@ otherwise return @false{}.
 @defunx flnonnegative? @var{fl}
 Return @true{} if @var{fl} is, respectively, non--positive or
 non--negative; else return @false{}.
+@end defun
+
+
+@defun zero-flonum? @var{obj}
+@defunx positive-zero-flonum? @var{obj}
+@defunx negative-zero-flonum? @var{obj}
+Return @true{} if @var{obj} is a flonum representing zero, positive zero
+or negative zero; otherwise return @false{}.  If @var{obj} is not a
+flonum: return @false{}.
 @end defun
 
 

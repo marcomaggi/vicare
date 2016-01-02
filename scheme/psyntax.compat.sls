@@ -65,7 +65,9 @@
     fx=
     fxadd1				fxsub1
     fxnonnegative?
+    flzero?/positive			flzero?/negative
     uuid
+    standalone-pair?
 
     ;; compiler related operations
     compiler::eval-core			compiler::core-expr->optimized-code
@@ -125,7 +127,8 @@
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Sep 30, 2015)
 		  with-blocked-exceptions
-		  void-object?)
+		  void-object?
+		  stadalone-pair?)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk
@@ -156,6 +159,10 @@
 	  reader-annotation-stripped
 	  reader-annotation-source
 	  reader-annotation-textual-position)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Sat Jan 2,
+    ;;2016)
+    (only (ikarus pairs)
+	  standalone-pair?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
     ;;2015)
     (prefix (only (ikarus records procedural)

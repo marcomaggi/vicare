@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>, 2015
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,12 +26,14 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
-#!ikarus
-(import (vicare)
-  (vicare checks))
+#!vicare
+(program (test-ikarus-sorting)
+  (options typed-language)
+  (import (vicare)
+    (vicare checks))
 
-(define (permutations ls)
-  (define (rem* ls)
+(define (permutations {ls <list>})
+  (define (rem* {ls <list>})
     (cond
      [(null? ls) '()]
      [else
@@ -134,5 +137,7 @@
 (check-display "*** testing Ikarus sorting\n\n")
 (run-tests)
 (check-display "; *** done\n\n")
+
+#| end of program |# )
 
 ;;; end of file

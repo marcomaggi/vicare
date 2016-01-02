@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -685,6 +685,7 @@
 
 	 T:zero		T:positive	T:negative	T:non-positive		T:non-negative
 
+	 T:zero-fixnum		T:zero-flonum
 	 T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
 	 T:positive-bignum	T:negative-bignum
 	 T:positive-flonum	T:negative-flonum	T:non-positive-flonum	T:non-negative-flonum
@@ -790,6 +791,7 @@
       (T:exact-compnum			type)
       (T:exact-real			type)
       (T:non-real			type)
+      (T:zero-fixnum			type)
       (T:positive-fixnum		type)
       (T:negative-fixnum		type)
       (T:non-positive-fixnum		type)
@@ -798,6 +800,7 @@
       (T:negative-bignum		type)
       (T:positive-flonum		type)
       (T:negative-flonum		type)
+      (T:zero-flonum			type)
       (T:non-positive-flonum		type)
       (T:non-negative-flonum		type)
       (T:positive-exact-integer		type)

@@ -793,7 +793,7 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((<pair>)		=> (_)))
+	  ((<pair>)		=> (<top>)))
 	 (attributes
 	  ((_)			foldable effect-free))
 	 (replacements . ?replacements)))

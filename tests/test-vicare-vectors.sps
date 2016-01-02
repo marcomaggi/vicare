@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!vicare
 (program (test-vicare-vectors)
+  (options strict-r6rs)
   (import (vicare)
     (except (vicare checks)
 	    check-for-assertion-violation)

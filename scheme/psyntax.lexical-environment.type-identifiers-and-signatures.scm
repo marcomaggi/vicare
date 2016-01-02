@@ -504,10 +504,17 @@
 	       ((fixnum?  datum)	(cond ((fxpositive? datum)
 					       (core-prim-id '<positive-fixnum>))
 					      ((fxzero? datum)
-					       (core-prim-id '<non-negative-fixnum>))
+					       (core-prim-id '<zero-fixnum>))
 					      (else
 					       (core-prim-id '<fixnum>))))
-	       ((flonum?  datum)	(core-prim-id '<flonum>))
+	       ((flonum?  datum)	(cond ((flpositive? datum)
+					       (core-prim-id '<positive-flonum>))
+					      ((flzero?/positive datum)
+					       (core-prim-id '<positive-zero-flonum>))
+					      ((flzero?/negative datum)
+					       (core-prim-id '<negative-zero-flonum>))
+					      (else
+					       (core-prim-id '<flonum>))))
 	       ((ratnum?  datum)	(core-prim-id '<ratnum>))
 	       ((bignum?  datum)	(core-prim-id '<bignum>))
 	       ((compnum? datum)	(core-prim-id '<compnum>))
@@ -522,7 +529,10 @@
 					      ((for-all string? datum)	(core-prim-id '<string*>))
 					      ((for-all symbol? datum)	(core-prim-id '<symbol*>))
 					      (else			(core-prim-id '<nlist>))))
-	       ((pair?    datum)	(core-prim-id '<pair>))
+	       ((pair?    datum)	(cond ((standalone-pair? datum)
+					       (core-prim-id '<standalone-pair>))
+					      (else
+					       (core-prim-id '<pair>))))
 
 	       ((eq? datum (void))	(core-prim-id '<void>))
 	       (else			(top-tag-id))))))

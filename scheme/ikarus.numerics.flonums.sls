@@ -34,6 +34,8 @@
 			$flonum-integer?
 			$flonum-rational?
 
+    zero-flonum?
+    positive-zero-flonum?	negative-zero-flonum?
     positive-flonum?		negative-flonum?
     non-negative-flonum?	non-positive-flonum?
 
@@ -91,6 +93,8 @@
 		  flzero?		flpositive?	flnegative?
 		  flzero?/positive	flzero?/negative
 		  flnonnegative?	flnonpositive?
+		  zero-flonum?
+		  positive-zero-flonum?	negative-zero-flonum?
 		  positive-flonum?	negative-flonum?
 		  non-negative-flonum?	non-positive-flonum?
 		  fleven?		flodd?		flround
@@ -471,6 +475,18 @@
       ($flpositive? x)))
 
 ;;; --------------------------------------------------------------------
+
+(define (zero-flonum? obj)
+  (and (flonum?  obj)
+       ($flzero? obj)))
+
+(define (positive-zero-flonum? obj)
+  (and (flonum?           obj)
+       ($flzero?/positive obj)))
+
+(define (negative-zero-flonum? obj)
+  (and (flonum?           obj)
+       ($flzero?/negative obj)))
 
 (define (positive-flonum? obj)
   (and (flonum?      obj)

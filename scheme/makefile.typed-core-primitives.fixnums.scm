@@ -7,7 +7,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -61,6 +61,67 @@
 (declare-fixnum-predicate fxodd?		(replacements $fxodd?))
 
 (declare-fixnum-predicate fixnum-in-character-range?)
+
+(declare-core-primitive zero-fixnum?
+    (safe)
+  (signatures
+   ((<zero-fixnum>)		=> (<true>))
+   ((<positive-fixnum>)		=> (<false>))
+   ((<negative-fixnum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free))
+  (replacements $fxzero?))
+
+(declare-core-primitive non-zero-fixnum?
+    (safe)
+  (signatures
+   ((<zero-fixnum>)		=> (<false>))
+   ((<positive-fixnum>)		=> (<true>))
+   ((<negative-fixnum>)		=> (<true>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive positive-fixnum?
+    (safe)
+  (signatures
+   ((<zero-fixnum>)		=> (<false>))
+   ((<positive-fixnum>)		=> (<true>))
+   ((<negative-fixnum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive negative-fixnum?
+    (safe)
+  (signatures
+   ((<zero-fixnum>)		=> (<false>))
+   ((<positive-fixnum>)		=> (<false>))
+   ((<negative-fixnum>)		=> (<true>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-positive-fixnum?
+    (safe)
+  (signatures
+   ((<zero-fixnum>)		=> (<true>))
+   ((<positive-fixnum>)		=> (<false>))
+   ((<negative-fixnum>)		=> (<true>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-negative-fixnum?
+    (safe)
+  (signatures
+   ((<zero-fixnum>)		=> (<true>))
+   ((<positive-fixnum>)		=> (<true>))
+   ((<negative-fixnum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics

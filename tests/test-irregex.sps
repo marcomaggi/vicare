@@ -9,7 +9,7 @@
 ;;;	adapted  to  the Nausicaa  distributiona,  then  adapted to  the
 ;;;	Vicare Scheme distribution.
 ;;;
-;;;Copyright (c) 2008, 2009, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.itn>
+;;;Copyright (c) 2008, 2009, 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.itn>
 ;;;Copyright (c) 2005-2009 Alex Shinn.  All rights reserved.
 ;;;Sometests adapted from SCSH SRE tests by Christoph Hetz.
 ;;;
@@ -42,11 +42,13 @@
 ;;;IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-#!r6rs
-(import (vicare)
-  (vicare irregex)
-  (vicare checks)
-  (only (srfi :1 lists) iota))
+#!vicare
+(program (test-irregex)
+  (options strict-r6rs)
+  (import (vicare)
+    (vicare irregex)
+    (vicare checks)
+    (only (srfi :1 lists) iota))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing irregex\n")
@@ -619,5 +621,7 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file

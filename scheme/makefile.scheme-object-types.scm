@@ -182,9 +182,19 @@
     <fixnum>
   #t non-negative-fixnum?)
 
+(define-scheme-type <zero-fixnum>
+    <non-negative-fixnum>
+  #t zero-fixnum?)
+
 (define-scheme-type <positive-fixnum>
     <non-negative-fixnum>
   #t positive-fixnum?)
+
+(define-scheme-type <negative-fixnum>
+    <fixnum>
+  #t negative-fixnum?)
+
+;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-bignum>
     <exact-integer>
@@ -214,6 +224,22 @@
 (define-scheme-type <positive-flonum>
     <non-negative-flonum>
   #t positive-flonum?)
+
+(define-scheme-type <zero-flonum>
+    <non-negative-flonum>
+  #t zero-flonum?)
+
+(define-scheme-type <negative-flonum>
+    <flonum>
+  #t negative-flonum?)
+
+(define-scheme-type <positive-zero-flonum>
+    <zero-flonum>
+  #t positive-zero-flonum?)
+
+(define-scheme-type <negative-zero-flonum>
+    <zero-flonum>
+  #t negative-zero-flonum?)
 
 
 ;;;; compound types
@@ -537,6 +563,10 @@
   (methods
    (car		car)
    (cdr		cdr)))
+
+(define-scheme-type <standalone-pair>
+    <pair>
+  #f standalone-pair?)
 
 
 ;;;; miscellaneous compound types

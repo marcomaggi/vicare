@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -82,6 +82,67 @@
 (declare-fixnum-predicate fxodd?		(replacements $fxodd?))
 
 (declare-fixnum-predicate fixnum-in-character-range?)
+
+(declare-core-primitive zero-fixnum?
+    (safe)
+  (signatures
+   ((T:zero-fixnum)		=> (T:true))
+   ((T:positive-fixnum)		=> (T:false))
+   ((T:negative-fixnum)		=> (T:false))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free))
+  (replacements $fxzero?))
+
+(declare-core-primitive non-zero-fixnum?
+    (safe)
+  (signatures
+   ((T:zero-fixnum)		=> (T:false))
+   ((T:positive-fixnum)		=> (T:true))
+   ((T:negative-fixnum)		=> (T:true))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive positive-fixnum?
+    (safe)
+  (signatures
+   ((T:zero-fixnum)		=> (T:false))
+   ((T:positive-fixnum)		=> (T:true))
+   ((T:negative-fixnum)		=> (T:false))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive negative-fixnum?
+    (safe)
+  (signatures
+   ((T:zero-fixnum)		=> (T:false))
+   ((T:positive-fixnum)		=> (T:false))
+   ((T:negative-fixnum)		=> (T:true))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-positive-fixnum?
+    (safe)
+  (signatures
+   ((T:zero-fixnum)		=> (T:true))
+   ((T:positive-fixnum)		=> (T:false))
+   ((T:negative-fixnum)		=> (T:true))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-negative-fixnum?
+    (safe)
+  (signatures
+   ((T:zero-fixnum)		=> (T:true))
+   ((T:positive-fixnum)		=> (T:true))
+   ((T:negative-fixnum)		=> (T:false))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics

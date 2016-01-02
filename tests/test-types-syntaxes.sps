@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -281,7 +281,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum>) (values "A" 2.0))
-    => (<fixnum> <flonum>) (<string> <flonum>))
+    => (<fixnum> <flonum>) (<string> <positive-flonum>))
 
   ;;Any tuple of values matches.
   (doit <list>			1				=> 1)
@@ -304,7 +304,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature () (values 1 2.0))
-    => () (<positive-fixnum> <flonum>))
+    => () (<positive-fixnum> <positive-flonum>))
 
   ;;Zero values, list signature.
   (check-for-true
@@ -350,7 +350,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1.0))
-    => (<fixnum> <flonum> . <list-of-strings>) (<flonum>))
+    => (<fixnum> <flonum> . <list-of-strings>) (<positive-flonum>))
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1 2))
@@ -358,7 +358,7 @@
 
   (check-expand-time-signature-violation
       (assert-signature (<fixnum> <flonum> . <list-of-strings>) (values 1.0 2.0))
-    => (<fixnum> <flonum> . <list-of-strings>) (<flonum> <flonum>))
+    => (<fixnum> <flonum> . <list-of-strings>) (<positive-flonum> <positive-flonum>))
 
 ;;; --------------------------------------------------------------------
 ;;; number of values validation

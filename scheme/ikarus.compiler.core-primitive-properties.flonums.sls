@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -110,6 +110,56 @@
    (attributes
     ((_)			foldable effect-free))
    (replacements $flnan?))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive zero-flonum?
+    (safe)
+  (signatures
+   ((T:flonum)			=> (T:boolean))
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive positive-flonum?
+    (safe)
+  (signatures
+   ((T:zero-flonum)		=> (T:false))
+   ((T:positive-flonum)		=> (T:true))
+   ((T:negative-flonum)		=> (T:false))
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive negative-flonum?
+    (safe)
+  (signatures
+   ((T:zero-flonum)		=> (T:false))
+   ((T:positive-flonum)		=> (T:false))
+   ((T:negative-flonum)		=> (T:true))
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-positive-flonum?
+    (safe)
+  (signatures
+   ((T:zero-flonum)		=> (T:true))
+   ((T:positive-flonum)		=> (T:false))
+   ((T:negative-flonum)		=> (T:true))
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-negative-flonum?
+    (safe)
+  (signatures
+   ((T:zero-flonum)		=> (T:true))
+   ((T:positive-flonum)		=> (T:true))
+   ((T:negative-flonum)		=> (T:false))
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
