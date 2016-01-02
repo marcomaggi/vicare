@@ -540,6 +540,7 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.typed-core-primitives.numerics.scm			\
 	scheme/makefile.typed-core-primitives.pairs-and-lists.scm		\
 	scheme/makefile.typed-core-primitives.pointers.scm			\
+	scheme/makefile.typed-core-primitives.posix.scm				\
 	scheme/makefile.typed-core-primitives.strings.scm			\
 	scheme/makefile.typed-core-primitives.symbols.scm			\
 	scheme/makefile.typed-core-primitives.transcoders.scm			\
