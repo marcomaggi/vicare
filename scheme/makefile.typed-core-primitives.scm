@@ -1035,6 +1035,7 @@
 (include "makefile.typed-core-primitives.pairs-and-lists.scm"		#t)
 (include "makefile.typed-core-primitives.pointers.scm"			#t)
 (include "makefile.typed-core-primitives.posix.scm"			#t)
+(include "makefile.typed-core-primitives.ratnums.scm"			#t)
 (include "makefile.typed-core-primitives.strings.scm"			#t)
 (include "makefile.typed-core-primitives.symbols.scm"			#t)
 (include "makefile.typed-core-primitives.transcoders.scm"		#t)
