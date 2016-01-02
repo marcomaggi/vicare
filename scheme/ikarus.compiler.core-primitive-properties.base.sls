@@ -96,6 +96,7 @@
     declare-fixnum-unary/multi-comparison
     declare-flonum-unary/multi-comparison
     declare-string-unary/multi-comparison
+    declare-pointer-unary/multi-comparison
 
     define-object-binary/multi-comparison-declarer
     declare-number-binary/multi-comparison
@@ -1350,6 +1351,7 @@
 (define-object-unary/multi-comparison-declarer declare-fixnum-unary/multi-comparison T:fixnum)
 (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison T:flonum)
 (define-object-unary/multi-comparison-declarer declare-string-unary/multi-comparison T:string)
+(define-object-unary/multi-comparison-declarer declare-pointer-unary/multi-comparison T:pointer)
 
 ;;; --------------------------------------------------------------------
 

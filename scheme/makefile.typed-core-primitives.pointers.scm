@@ -7,7 +7,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -22,85 +22,111 @@
 ;;
 
 
-;;;; core syntactic binding descriptors, typed core primitives: safe pointer primitives
+;;;; pointers, safe functions
 
 (section
 
-(declare-core-primitive integer->pointer
-    (safe)
-  (signatures
-   ((<exact-integer>)	=> (<pointer>))))
+(declare-type-predicate       pointer?		<pointer>)
+(declare-type-predicate/false false-or-pointer?	<pointer>)
+(declare-type-predicate/maybe maybe-pointer?	<pointer>)
+(declare-type-predicate/list  list-of-pointers?	<pointer>)
 
-(declare-type-predicate pointer? <pointer>)
+;;; --------------------------------------------------------------------
 
 (declare-core-primitive pointer-null?
     (safe)
   (signatures
-   ((<pointer>)		=> (<boolean>))))
+   ((<pointer>)			=> (<boolean>)))
+  (attributes
+   ((_)				effect-free)))
 
-(declare-core-primitive pointer->integer
+(declare-core-primitive null-pointer
     (safe)
   (signatures
-   ((<pointer>)		=> (<exact-integer>))))
-
-(declare-core-primitive pointer=?
-    (safe)
-  (signatures
-   (<pointer>		=> (<boolean>))))
-
-(declare-core-primitive pointer!=?
-    (safe)
-  (signatures
-   (<pointer>		=> (<boolean>))))
-
-(declare-core-primitive pointer<?
-    (safe)
-  (signatures
-   (<pointer>		=> (<boolean>))))
-
-(declare-core-primitive pointer>?
-    (safe)
-  (signatures
-   (<pointer>		=> (<boolean>))))
-
-(declare-core-primitive pointer<=?
-    (safe)
-  (signatures
-   (<pointer>		=> (<boolean>))))
-
-(declare-core-primitive pointer>=?
-    (safe)
-  (signatures
-   (<pointer>		=> (<boolean>))))
-
-(declare-hash-function pointer-hash <pointer> safe)
-
-(declare-core-primitive pointer-add
-    (safe)
-  (signatures
-   ((<pointer> <exact-integer>)	=> (<pointer>))))
-
-(declare-core-primitive pointer-diff
-    (safe)
-  (signatures
-   ((<pointer> <pointer>)	=> (<pointer>))))
-
-(declare-core-primitive pointer-clone
-    (safe)
-  (signatures
-   ((<pointer>)			=> (<pointer>))))
+   (()				=> (<pointer>)))
+  (attributes
+   (()				effect-free result-true)))
 
 (declare-core-primitive set-pointer-null!
     (safe)
   (signatures
-   ((<pointer>)			=> (<void>))))
+   ((<pointer>)			=> (<void>)))
+  (attributes
+   ((_)				result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive pointer-clone
+    (safe)
+  (signatures
+   ((<pointer>)			=> (<pointer>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive pointer-diff
+    (safe)
+  (signatures
+   ((<pointer> <pointer>)	=> (<exact-integer>)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive pointer-add
+    (safe)
+  (signatures
+   ((<pointer> <exact-integer>)	=> (<pointer>)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive pointer-and-offset?
+    (safe)
+  (signatures
+   ((<pointer> <exact-integer>)	=> (<boolean>)))
+  (attributes
+   ((_ _)			effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-pointer-unary/multi-comparison pointer=?)
+(declare-pointer-unary/multi-comparison pointer!=?)
+(declare-pointer-unary/multi-comparison pointer<?)
+(declare-pointer-unary/multi-comparison pointer>?)
+(declare-pointer-unary/multi-comparison pointer<=?)
+(declare-pointer-unary/multi-comparison pointer>=?)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive pointer->integer
+    (safe)
+  (signatures
+   ((<pointer>)			=> (<exact-integer>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;This is not foldable because we do not want poiner objects to go in fasl files.
+;;
+(declare-core-primitive integer->pointer
+    (safe)
+  (signatures
+   ((<exact-integer>)		=> (<pointer>)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-hash-function pointer-hash <pointer> safe)
 
 /section)
 
+
+;;;; pointers, unsafe functions
+
+(section
+
+(declare-pointer-binary-comparison $pointer= unsafe)
+
+/section)
 
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8-unix
-;; eval: (put 'declare-core-primitive		'scheme-indent-function 1)
+;; eval: (put 'declare-core-primitive		'scheme-indent-function 2)
 ;; End:

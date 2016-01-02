@@ -428,6 +428,7 @@
 (define-object-unary/multi-comparison-declarer declare-fixnum-unary/multi-comparison <fixnum>)
 (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison <flonum>)
 (define-object-unary/multi-comparison-declarer declare-string-unary/multi-comparison <string>)
+(define-object-unary/multi-comparison-declarer declare-pointer-unary/multi-comparison <pointer>)
 
 ;;; --------------------------------------------------------------------
 
