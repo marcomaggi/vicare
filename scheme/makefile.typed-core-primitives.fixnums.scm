@@ -126,7 +126,16 @@
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
-(declare-fixnum-binary fx+)
+(declare-core-primitive fx+
+    (safe)
+  (signatures
+   ((<positive-fixnum> <positive-fixnum>)		=> (<positive-fixnum>))
+   ((<negative-fixnum> <negative-fixnum>)		=> (<negative-fixnum>))
+   ((<non-negative-fixnum> <non-negative-fixnum>)	=> (<non-negative-fixnum>))
+   ((<fixnum> <fixnum>)					=> (<fixnum>)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
 (declare-fixnum-unary/binary fx-)
 (declare-fixnum-binary fx*)
 (declare-fixnum-binary fxdiv)
