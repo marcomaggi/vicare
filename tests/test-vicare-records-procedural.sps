@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -24,11 +24,13 @@
 
 
 #!r6rs
-(import (rename (vicare)
-		(make-record-type-descriptor		make-record-type-descriptor*)
-		(make-record-constructor-descriptor	make-record-constructor-descriptor*))
-  (vicare language-extensions syntaxes)
-  (vicare checks))
+(program (test-vicare-records-procedural)
+  (options strict-r6rs)
+  (import (rename (vicare)
+		  (make-record-type-descriptor		make-record-type-descriptor*)
+		  (make-record-constructor-descriptor	make-record-constructor-descriptor*))
+    (vicare language-extensions syntaxes)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare R6RS records, procedural layer\n")
@@ -843,6 +845,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;;Local Variables:

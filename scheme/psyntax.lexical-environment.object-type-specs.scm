@@ -1,4 +1,4 @@
-;;;Copyright (c) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2015-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -67,7 +67,7 @@
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
 (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
-  (nongenerative vicare:expander:<object-type-spec>)
+  #;(nongenerative vicare:expander:<object-type-spec>)
   (fields
    (immutable parent-id			object-type-spec.parent-id)
 		;False  or a  syntactic identifier  representing the  parent of  this
@@ -297,7 +297,7 @@
 ;;Scheme objects, not records, not structs.
 ;;
 (define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
-  (nongenerative vicare:expander:<scheme-type-spec>)
+  #;(nongenerative vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (protocol
     (lambda (make-object-type-spec)
@@ -321,7 +321,7 @@
 ;;collecting items of a specific type.
 ;;
 (define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
-  (nongenerative vicare:expander:<list-type-spec>)
+  #;(nongenerative vicare:expander:<list-type-spec>)
   (parent <scheme-type-spec>)
   (sealed #t)
   (fields (immutable type-id		list-type-spec.type-id))
@@ -365,7 +365,7 @@
 ;;collecting items of a specific type.
 ;;
 (define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
-  (nongenerative vicare:expander:<vector-type-spec>)
+  #;(nongenerative vicare:expander:<vector-type-spec>)
   (parent <scheme-type-spec>)
   (sealed #t)
   (fields (immutable type-id		vector-type-spec.type-id))
@@ -412,7 +412,7 @@
 ;;the signature of a closure object.
 ;;
 (define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
-  (nongenerative vicare:expander:<closure-type-spec>)
+  #;(nongenerative vicare:expander:<closure-type-spec>)
   (parent <scheme-type-spec>)
 
   (fields
@@ -443,7 +443,7 @@
 ;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
 (define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
-  (nongenerative vicare:expander:<struct-type-spec>)
+  #;(nongenerative vicare:expander:<struct-type-spec>)
   (parent <object-type-spec>)
   (fields
    (immutable std			struct-type-spec.std)
@@ -473,7 +473,7 @@
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
 (define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
-  (nongenerative vicare:expander:<record-type-spec>)
+  #;(nongenerative vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (fields
    (immutable rtd-id			record-type-spec.rtd-id)

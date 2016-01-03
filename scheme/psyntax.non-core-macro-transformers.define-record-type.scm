@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -43,6 +43,27 @@
 	    (cons A (%filter-out-falses D))
 	  (%filter-out-falses D)))
     '()))
+
+(define-syntax (%maybe-brace stx)
+  ;;We want:
+  ;;
+  ;;   ,(%maybe-brace tmp '<fixnum>)
+  ;;
+  ;;to expand to the following when typed language is enabled:
+  ;;
+  ;;   `(brace ,tmp <fixnum>)
+  ;;
+  ;;and to the following when strict-R6RS is enabled:
+  ;;
+  ;;   ,tmp
+  ;;
+  (syntax-case stx ()
+    ((_ ?one ?two)
+     ;;We want to evaluate OPTIONS::STRICT-R6RS at run-time, not at expand-time.
+     #'(if (options::strict-r6rs)
+	   ?one
+	 (quasiquote (brace (unquote ?one) (unquote ?two)))))
+    ))
 
 
 (define (define-record-type-macro input-form.stx)
@@ -257,7 +278,7 @@
       ;;Type predicate definitions.
       ,@foo-predicate-definitions
       ;;Default constructor.
-      (define ((brace ,make-foo ,foo) . ,tmp)
+      (define (,(%maybe-brace make-foo foo) . ,tmp)
 	(apply ($record-constructor ,foo-rcd) ,tmp))
       ;;Methods.
       ,@method-form*.sexp
@@ -696,16 +717,16 @@
       '()
     `((module (,@unsafe-field-accessor*
 	       ,@(%filter-out-falses unsafe-field-mutator*))
-	(define ,foo-first-field-offset
+	(define ,(%maybe-brace foo-first-field-offset '<non-negative-fixnum>)
 	  ;;The field at index  3 in the RTD is: the index of  the first field of this
 	  ;;subtype in the  layout of instances; it  is the total number  of fields of
 	  ;;the parent type.
-	  ($struct-ref ,foo-rtd 3))
+	  (unsafe-cast <non-negative-fixnum> ($struct-ref ,foo-rtd 3)))
 
 	;;all fields indexes
 	,@(map (lambda (x idx)
 		 (let ((the-index (%make-field-index-varname x)))
-		   `(define (brace ,the-index <fixnum>)
+		   `(define ,(%maybe-brace the-index '<non-negative-fixnum>)
 		      (fx+ ,idx ,foo-first-field-offset))))
 	    field-name*.sym field-relative-idx*)
 
@@ -714,8 +735,11 @@
 		 (let ((the-index  (%make-field-index-varname x))
 		       (record.sym (gensym "?record")))
 		   `(define-syntax ,unsafe-foo-x
-		      (identifier-syntax (internal-lambda (unsafe) ((brace _ ,field-type.id) ,record.sym)
-					   ($struct-ref ,record.sym ,the-index))))))
+		      (identifier-syntax
+		       (internal-lambda (unsafe) ,(if (options::strict-r6rs)
+						      `(,record.sym)
+						    `((brace _ ,field-type.id) ,record.sym))
+			 ($struct-ref ,record.sym ,the-index))))))
 	    unsafe-field-accessor* field-name*.sym field-type*.id)
 
 	;;unsafe record fields mutators
@@ -726,8 +750,11 @@
 				(record.sym (gensym "?record"))
 				(value.sym  (gensym "?new-value")))
 			    `(define-syntax ,unsafe-field-mutator
-			       (identifier-syntax (internal-lambda (unsafe) ((brace _ <void>) ,record.sym ,value.sym)
-						    ($struct-set! ,record.sym ,the-index ,value.sym)))))
+			       (identifier-syntax
+				(internal-lambda (unsafe) ,(if (options::strict-r6rs)
+							       `(,record.sym ,value.sym)
+							     `((brace _ <void>) ,record.sym ,value.sym))
+				  ($struct-set! ,record.sym ,the-index ,value.sym)))))
 			  knil)
 		  knil))
 	    '() unsafe-field-mutator* field-name*.sym)
@@ -781,11 +808,13 @@
     (map (lambda (safe-field-accessor unsafe-field-accessor field-type.id)
 	   (let ((record.sym (gensym "record")))
 	     `(begin
-		(internal-define (safe) ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
+		(internal-define (safe) (,(%maybe-brace safe-field-accessor field-type.id) ,(%maybe-brace record.sym foo))
 		  (,unsafe-field-accessor ,record.sym))
-		(begin-for-syntax
-		  (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-accessor)
-								(syntax ,unsafe-field-accessor))))))
+		,@(if (options::strict-r6rs)
+		      '()
+		    `((begin-for-syntax
+			(typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-accessor)
+								      (syntax ,unsafe-field-accessor))))))))
       safe-field-accessor* unsafe-field-accessor* field-type*.id))
 
   (define safe-field-mutator-form*
@@ -795,11 +824,15 @@
 	      (cons (let ((record.sym (gensym "record"))
 			  (val.sym    (gensym "new-value")))
 		      `(begin
-			 (internal-define (safe) ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
+			 (internal-define (safe) (,(%maybe-brace safe-field-mutator '<void>)
+						  ,(%maybe-brace record.sym foo)
+						  ,(%maybe-brace val.sym field-type.id))
 			   (,unsafe-field-mutator ,record.sym ,val.sym))
-			 (begin-for-syntax
-			   (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-mutator)
-									 (syntax ,unsafe-field-mutator)))))
+			 ,@(if (options::strict-r6rs)
+			       '()
+			     `((begin-for-syntax
+				 (typed-procedure-variable.unsafe-variant-set! (syntax ,safe-field-mutator)
+									       (syntax ,unsafe-field-mutator)))))))
 		    knil)
 	    knil))
       '() safe-field-mutator* unsafe-field-mutator* field-type*.id))
@@ -832,14 +865,20 @@
   ;;accessors and mutators.
   ;;
   (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.id)
-	 (if unsafe-field-mutator
-	     `(case-define ,safe-field-method
-		(((brace _ ,field-type.id) (brace record ,foo))
-		 (,unsafe-field-accessor record))
-		(((brace _ <void>) (brace record ,foo) (brace new-value ,field-type.id))
-		 (,unsafe-field-mutator record new-value)))
-	   `(define ((brace ,safe-field-method ,field-type.id) (brace record ,foo))
-	      (,unsafe-field-accessor record))))
+	 (let ((record.sym	(gensym "record"))
+	       (new-value.sym	(gensym "new-value")))
+	   (if unsafe-field-mutator
+	       `(case-define ,safe-field-method
+		  (,(if (options::strict-r6rs)
+			`(,record.sym)
+		      `((brace _ ,field-type.id) (brace ,record.sym ,foo)))
+		   (,unsafe-field-accessor ,record.sym))
+		  (,(if (options::strict-r6rs)
+			`(,record.sym ,new-value.sym)
+		      `((brace _ <void>) (brace ,record.sym ,foo) (brace ,new-value.sym ,field-type.id)))
+		   (,unsafe-field-mutator ,record.sym ,new-value.sym)))
+	     `(define (,(%maybe-brace safe-field-method field-type.id) ,(%maybe-brace record.sym foo))
+		(,unsafe-field-accessor ,record.sym)))))
     safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.id))
 
 
@@ -976,14 +1015,14 @@
 				      (unsafe-cast <boolean>
 						   (and ($struct? ,arg.sym)
 							($record-and-rtd? ,arg.sym ,foo-rtd))))))
-	 (define ((brace ,foo? <boolean>) ,arg.sym)
+	 (define (,(%maybe-brace foo? '<boolean>) ,arg.sym)
 	   (,internal-predicate.sym ,arg.sym)))))
 
     (#f
      ;;No CUSTOM-PREDICATE clause  in this record-type definition.  Return  a list of
      ;;definitions representing the default record-type predicate definition.
      (let ((arg.sym (gensym)))
-       `((define ((brace ,foo? <boolean>) ,arg.sym)
+       `((define (,(%maybe-brace foo? '<boolean>) ,arg.sym)
 	   (unsafe-cast <boolean>
 			(and ($struct? ,arg.sym)
 			     ($record-and-rtd? ,arg.sym ,foo-rtd)))))))

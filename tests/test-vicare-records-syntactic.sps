@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -31,6 +31,7 @@
     (vicare language-extensions syntaxes)
     (vicare system $structs)
     (libtest records-lib)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1241,11 +1242,14 @@
     => (list (void) (void) (void)))
 
   (check
-      (guard (E ((assertion-violation? E)
-		 (condition-who E))
-		(else E))
-	(record-reset 123))
-    => 'record-reset)
+      (try
+	  (eval '(record-reset 123)
+		(environment '(vicare)))
+	(catch E
+	  ((expander::&expand-time-type-signature-violation)
+	   #t)
+	  (else E)))
+    => #t)
 
   #t)
 
