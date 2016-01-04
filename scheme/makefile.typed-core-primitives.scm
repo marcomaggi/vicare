@@ -1038,6 +1038,7 @@
 (include "makefile.typed-core-primitives.ratnums.scm"			#t)
 (include "makefile.typed-core-primitives.records.scm"			#t)
 (include "makefile.typed-core-primitives.strings.scm"			#t)
+(include "makefile.typed-core-primitives.structs.scm"			#t)
 (include "makefile.typed-core-primitives.symbols.scm"			#t)
 (include "makefile.typed-core-primitives.transcoders.scm"		#t)
 (include "makefile.typed-core-primitives.vectors.scm"			#t)

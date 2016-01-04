@@ -49,6 +49,27 @@
 		     (list 'cons `(quote ,key.sym) `(syntax ,operator.id)))
 		field-name*.sym operator*.id)))
 
+(define-syntax (%maybe-brace stx)
+  ;;We want:
+  ;;
+  ;;   ,(%maybe-brace tmp '<fixnum>)
+  ;;
+  ;;to expand to the following when typed language is enabled:
+  ;;
+  ;;   `(brace ,tmp <fixnum>)
+  ;;
+  ;;and to the following when strict-R6RS is enabled:
+  ;;
+  ;;   ,tmp
+  ;;
+  (syntax-case stx ()
+    ((_ ?one ?two)
+     ;;We want to evaluate OPTIONS::STRICT-R6RS at run-time, not at expand-time.
+     #'(if (options::strict-r6rs)
+	   ?one
+	 (quasiquote (brace (unquote ?one) (unquote ?two)))))
+    ))
+
 
 (define (define-struct-macro input-form.stx)
   (syntax-match input-form.stx (nongenerative)
@@ -126,10 +147,12 @@
       (map (lambda (accessor.id unsafe-accessor.id field.tag)
 	     (let ((stru.sym (gensym "stru")))
 	       `(begin
-		  (define ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
+		  (define (,(%maybe-brace accessor.id field.tag) ,(%maybe-brace stru.sym type.id))
 		    (,unsafe-accessor.id ,stru.sym))
-		  (begin-for-syntax
-		    (typed-procedure-variable.unsafe-variant-set! (syntax ,accessor.id) (syntax ,unsafe-accessor.id))))))
+		  ,@(if (options::strict-r6rs)
+			'()
+		      `((begin-for-syntax
+			  (typed-procedure-variable.unsafe-variant-set! (syntax ,accessor.id) (syntax ,unsafe-accessor.id))))))))
 	accessor*.id unsafe-accessor*.id field*.tag))
 
     (define mutator-sexp*
@@ -137,10 +160,12 @@
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(begin
-		  (define ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+		  (define (,(%maybe-brace mutator.id '<void>) ,(%maybe-brace stru.sym type.id) ,(%maybe-brace val.sym field.tag))
 		    (,unsafe-mutator.id ,stru.sym ,val.sym))
-		  (begin-for-syntax
-		    (typed-procedure-variable.unsafe-variant-set! (syntax ,mutator.id) (syntax ,unsafe-mutator.id))))))
+		  ,@(if (options::strict-r6rs)
+			'()
+		      `((begin-for-syntax
+			  (typed-procedure-variable.unsafe-variant-set! (syntax ,mutator.id) (syntax ,unsafe-mutator.id))))))))
 	mutator*.id unsafe-mutator*.id field*.tag))
 
     (define method-sexp*
@@ -148,9 +173,13 @@
     	     (let ((stru.sym (gensym "stru"))
     		   (val.sym  (gensym "val")))
     	       `(case-define ,method.id
-    		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
+    		  (,(if (options::strict-r6rs)
+			`(,stru.sym)
+		      `((brace _ ,field.tag) (brace ,stru.sym ,type.id)))
     		   (,unsafe-accessor.id ,stru.sym))
-    		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+    		  (,(if (options::strict-r6rs)
+			`(,stru.sym ,val.sym)
+		      `((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag)))
     		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
     	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.tag))
 
@@ -160,8 +189,11 @@
       (map (lambda (unsafe-accessor.id field.idx field.tag)
 	     (let ((stru.sym (gensym "stru")))
 	       `(define-syntax ,unsafe-accessor.id
-		  (identifier-syntax (internal-lambda (unsafe) ((brace _ ,field.tag) ,stru.sym)
-				       ($struct-ref ,stru.sym ,field.idx))))))
+		  (identifier-syntax
+		   (internal-lambda (unsafe) ,(if (options::strict-r6rs)
+						  `(,stru.sym)
+						`((brace _ ,field.tag) ,stru.sym))
+		     ($struct-ref ,stru.sym ,field.idx))))))
 	unsafe-accessor*.id field*.idx field*.tag))
 
     (define unsafe-mutator-sexp*
@@ -169,8 +201,11 @@
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
-		  (identifier-syntax (internal-lambda (unsafe) ((brace _ <void>) ,stru.sym ,val.sym)
-				       ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
+		  (identifier-syntax
+		   (internal-lambda (unsafe) ,(if (options::strict-r6rs)
+						  `(,stru.sym ,val.sym)
+						`((brace _ <void>) ,stru.sym ,val.sym))
+		     ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
 
 ;;; --------------------------------------------------------------------
@@ -186,7 +221,7 @@
 	       ,constructor.id ,predicate.id
 	       ,@accessor*.id ,@unsafe-accessor*.id
 	       ,@mutator*.id  ,@unsafe-mutator*.id)
-	(define ((brace ,predicate.id <boolean>) obj)
+	(define (,(%maybe-brace predicate.id '<boolean>) obj)
 	  ($struct/rtd? obj ',std))
 	(define-syntax ,type.id
 	  (make-struct-type-spec ',std
@@ -194,7 +229,7 @@
 				 ,safe-accessors-table.sexp
 				 ,safe-mutators-table.sexp
 				 (quote ())))
-	(define ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
+	(define (,(%maybe-brace constructor.id type.id) . ,constructor-arg*.sym)
 	  (receive-and-return (S)
 	      ($struct ',std . ,constructor-arg*.sym)
 	    (when ($std-destructor ',std)

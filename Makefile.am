@@ -544,6 +544,7 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.typed-core-primitives.ratnums.scm			\
 	scheme/makefile.typed-core-primitives.records.scm			\
 	scheme/makefile.typed-core-primitives.strings.scm			\
+	scheme/makefile.typed-core-primitives.structs.scm			\
 	scheme/makefile.typed-core-primitives.symbols.scm			\
 	scheme/makefile.typed-core-primitives.transcoders.scm			\
 	scheme/makefile.typed-core-primitives.vectors.scm

@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2012, 2014-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2012, 2014-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -24,9 +24,11 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare checks)
-  (vicare system $structs))
+(program (test-vicare-structs-core)
+  (options strict-r6rs)
+  (import (vicare)
+    (vicare checks)
+    (vicare system $structs))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -807,6 +809,8 @@
 
 (collect)
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

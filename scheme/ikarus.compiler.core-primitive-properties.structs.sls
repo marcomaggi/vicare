@@ -309,7 +309,6 @@
    ((T:struct)		=> (T:void))))
 
 
-
 ;;;; done
 
  #| end of DEFINE |# )
