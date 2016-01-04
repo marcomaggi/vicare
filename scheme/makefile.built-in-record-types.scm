@@ -61,7 +61,7 @@
   (list
 
    (define-built-in-record-type <library>
-       #f
+       <record>
      make-library library?
      (methods
       (uid			library-uid)
@@ -86,7 +86,7 @@
 ;;; --------------------------------------------------------------------
 
    (define-built-in-record-type <reader-annotation>
-       #f
+       <record>
      get-annotated-datum reader-annotation?
      (methods
       (expression		reader-annotation-expression)
@@ -97,7 +97,7 @@
 ;;; --------------------------------------------------------------------
 
    (define-built-in-record-type <lexical-environment>
-       #f
+       <record>
      #f environment?)
 
    (define-built-in-record-type <interaction-lexical-environment>
@@ -111,13 +111,13 @@
 ;;; --------------------------------------------------------------------
 
    (define-built-in-record-type <list-type-spec>
-       #f
+       <record>
      make-list-type-spec list-type-spec?
      (methods
       (type-id			list-type-spec.type-id)))
 
    (define-built-in-record-type <vector-type-spec>
-       #f
+       <record>
      make-vector-type-spec vector-type-spec?
      (methods
       (type-id			vector-type-spec.type-id)))
@@ -125,7 +125,7 @@
 ;;; --------------------------------------------------------------------
 
    (define-built-in-record-type <type-signature>
-       #f
+       <record>
      make-type-signature type-signature?
      (methods
       (tags			type-signature-tags)))
@@ -142,7 +142,7 @@
 ;;; --------------------------------------------------------------------
 
    (define-built-in-record-type <stx>
-       #f
+       <record>
      #f stx?
      (methods
       (expr			stx-expr)
@@ -158,7 +158,7 @@
       (label			syntactic-identifier->label)))
 
    (define-built-in-record-type <syntax-clause-spec>
-       #f
+       <record>
      make-syntax-clause-spec syntax-clause-spec?
      (methods
       (keyword				syntax-clause-spec-keyword)
