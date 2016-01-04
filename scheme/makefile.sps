@@ -1149,6 +1149,8 @@
     (time-it					v $language)
     (verbose-timer				v $language)
 ;;;
+    (<time>-rtd)
+    (<time>-rcd)
     (current-time				v $language)
     (time-from-now				v $language)
     (time?					v $language)
@@ -3475,6 +3477,7 @@
     (<lexical-environment>			v $language)
     (<interaction-lexical-environment>		v $language)
     (<non-interaction-lexical-environment>	v $language)
+    (<time>					v $language)
 
     (<opaque-record>)
     (<stats>					v $language)

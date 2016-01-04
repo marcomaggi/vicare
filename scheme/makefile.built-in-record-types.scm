@@ -7,7 +7,7 @@
 ;;
 ;;
 ;;
-;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;This program is free  software: you can redistribute it and/or  modify it under the
 ;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
@@ -54,7 +54,8 @@
 		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
     ))
 
-;;; --------------------------------------------------------------------
+
+;;;; built-in record types
 
 (define-constant VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   (list
@@ -128,6 +129,15 @@
      make-type-signature type-signature?
      (methods
       (tags			type-signature-tags)))
+
+;;; --------------------------------------------------------------------
+
+   (define-built-in-record-type <time>
+       <record>
+     current-time time?
+     (methods
+      (second			time-second)
+      (nanosecond		time-nanosecond)))
 
 ;;; --------------------------------------------------------------------
 

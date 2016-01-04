@@ -26,7 +26,10 @@
     time-addition	time-difference
     time=?
     time<?		time<=?
-    time>?		time>=?)
+    time>?		time>=?
+
+    ;;reserved
+    <time>-rtd		<time>-rcd)
   (import (except (vicare)
 		  ;;This is the function TIME!!!
 		  time
@@ -43,29 +46,37 @@
 		  time>?		time>=?))
 
 
-(define-struct time
-  (megasecs
+(define-record-type (<time> make-time time?)
+  (fields (immutable megasecs		time-megasecs)
 		;Exact integer representing the megaseconds.
-   secs
+	  (immutable secs		time-secs)
 		;Exact integer representing the seconds
-   microsecs
+	  (immutable microsecs		time-microsecs)
 		;Exact integer representing the microseconds.
-   ))
+	  #| end of FIELDS |# )
+  (protocol
+    (lambda (make-record)
+      (define* (make-time {megasecs exact-integer?} {secs exact-integer?} {microsecs exact-integer?})
+	(make-record megasecs secs microsecs))
+      make-time)))
+
+(define <time>-rtd (record-type-descriptor        <time>))
+(define <time>-rcd (record-constructor-descriptor <time>))
 
 (define (current-time)
   (foreign-call "ikrt_current_time" (make-time 0 0 0)))
 
 (define* (time-from-now {delta time?})
-  ($time-addition (current-time) delta))
+  ($<time>-addition (current-time) delta))
 
 ;;; --------------------------------------------------------------------
 
 (define* (time-second {x time?})
-  (+ (* ($time-megasecs x) #e1e6)
-     ($time-secs x)))
+  (+ (* ($<time>-megasecs x) #e1e6)
+     ($<time>-secs x)))
 
 (define* (time-nanosecond {x time?})
-  (* ($time-microsecs x) 1000))
+  (* ($<time>-microsecs x) 1000))
 
 (define* (time-gmt-offset {x time?})
   (foreign-call "ikrt_gmt_offset" x))
@@ -92,12 +103,12 @@
   ;;Compute the addition  between two times: time1  - time2 and return  a time struct
   ;;representing it.
   ;;
-  ($time-addition time1 time2))
+  ($<time>-addition time1 time2))
 
-(define ($time-addition time1 time2)
-  ($normalise-and-make (+ ($time-megasecs  time1) ($time-megasecs  time2))
-		       (+ ($time-secs      time1) ($time-secs      time2))
-		       (+ ($time-microsecs time1) ($time-microsecs time2))))
+(define ($<time>-addition time1 time2)
+  ($normalise-and-make (+ ($<time>-megasecs  time1) ($<time>-megasecs  time2))
+		       (+ ($<time>-secs      time1) ($<time>-secs      time2))
+		       (+ ($<time>-microsecs time1) ($<time>-microsecs time2))))
 
 ;;; --------------------------------------------------------------------
 
@@ -105,12 +116,12 @@
   ;;Compute the difference between two times: time1  - time2 and return a time struct
   ;;representing it.
   ;;
-  ($time-difference time1 time2))
+  ($<time>-difference time1 time2))
 
-(define ($time-difference time1 time2)
-  ($normalise-and-make (- ($time-megasecs  time1) ($time-megasecs  time2))
-		       (- ($time-secs      time1) ($time-secs      time2))
-		       (- ($time-microsecs time1) ($time-microsecs time2))))
+(define ($<time>-difference time1 time2)
+  ($normalise-and-make (- ($<time>-megasecs  time1) ($<time>-megasecs  time2))
+		       (- ($<time>-secs      time1) ($<time>-secs      time2))
+		       (- ($<time>-microsecs time1) ($<time>-microsecs time2))))
 
 
 ;;;; time comparison
@@ -121,9 +132,9 @@
   ($time=? time1 time2))
 
 (define ($time=? time1 time2)
-  (and (= ($time-megasecs  time1) ($time-megasecs  time2))
-       (= ($time-secs      time1) ($time-secs      time2))
-       (= ($time-microsecs time1) ($time-microsecs time2))))
+  (and (= ($<time>-megasecs  time1) ($<time>-megasecs  time2))
+       (= ($<time>-secs      time1) ($<time>-secs      time2))
+       (= ($<time>-microsecs time1) ($<time>-microsecs time2))))
 
 ;;; --------------------------------------------------------------------
 
@@ -133,16 +144,16 @@
   ($time<? time1 time2))
 
 (define ($time<? time1 time2)
-  (or (< ($time-megasecs time1)
-	 ($time-megasecs time2))
-      (and (= ($time-megasecs time1)
-	      ($time-megasecs time2))
-	   (or (< ($time-secs time1)
-		  ($time-secs time2))
-	       (and (= ($time-secs time1)
-		       ($time-secs time2))
-		    (< ($time-microsecs time1)
-		       ($time-microsecs time2)))))))
+  (or (< ($<time>-megasecs time1)
+	 ($<time>-megasecs time2))
+      (and (= ($<time>-megasecs time1)
+	      ($<time>-megasecs time2))
+	   (or (< ($<time>-secs time1)
+		  ($<time>-secs time2))
+	       (and (= ($<time>-secs time1)
+		       ($<time>-secs time2))
+		    (< ($<time>-microsecs time1)
+		       ($<time>-microsecs time2)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -152,16 +163,16 @@
   ($time<=? time1 time2))
 
 (define ($time<=? time1 time2)
-  (or (< ($time-megasecs time1)
-	 ($time-megasecs time2))
-      (and (= ($time-megasecs time1)
-	      ($time-megasecs time2))
-	   (or (< ($time-secs time1)
-		  ($time-secs time2))
-	       (and (= ($time-secs time1)
-		       ($time-secs time2))
-		    (<= ($time-microsecs time1)
-			($time-microsecs time2)))))))
+  (or (< ($<time>-megasecs time1)
+	 ($<time>-megasecs time2))
+      (and (= ($<time>-megasecs time1)
+	      ($<time>-megasecs time2))
+	   (or (< ($<time>-secs time1)
+		  ($<time>-secs time2))
+	       (and (= ($<time>-secs time1)
+		       ($<time>-secs time2))
+		    (<= ($<time>-microsecs time1)
+			($<time>-microsecs time2)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -171,16 +182,16 @@
   ($time>? time1 time2))
 
 (define ($time>? time1 time2)
-  (or (> ($time-megasecs time1)
-	 ($time-megasecs time2))
-      (and (= ($time-megasecs time1)
-	      ($time-megasecs time2))
-	   (or (> ($time-secs time1)
-		  ($time-secs time2))
-	       (and (= ($time-secs time1)
-		       ($time-secs time2))
-		    (> ($time-microsecs time1)
-		       ($time-microsecs time2)))))))
+  (or (> ($<time>-megasecs time1)
+	 ($<time>-megasecs time2))
+      (and (= ($<time>-megasecs time1)
+	      ($<time>-megasecs time2))
+	   (or (> ($<time>-secs time1)
+		  ($<time>-secs time2))
+	       (and (= ($<time>-secs time1)
+		       ($<time>-secs time2))
+		    (> ($<time>-microsecs time1)
+		       ($<time>-microsecs time2)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -190,16 +201,16 @@
   ($time>=? time1 time2))
 
 (define ($time>=? time1 time2)
-  (or (> ($time-megasecs time1)
-	 ($time-megasecs time2))
-      (and (= ($time-megasecs time1)
-	      ($time-megasecs time2))
-	   (or (> ($time-secs time1)
-		  ($time-secs time2))
-	       (and (= ($time-secs time1)
-		       ($time-secs time2))
-		    (>= ($time-microsecs time1)
-			($time-microsecs time2)))))))
+  (or (> ($<time>-megasecs time1)
+	 ($<time>-megasecs time2))
+      (and (= ($<time>-megasecs time1)
+	      ($<time>-megasecs time2))
+	   (or (> ($<time>-secs time1)
+		  ($<time>-secs time2))
+	       (and (= ($<time>-secs time1)
+		       ($<time>-secs time2))
+		    (>= ($<time>-microsecs time1)
+			($<time>-microsecs time2)))))))
 
 
 ;;;; date functions

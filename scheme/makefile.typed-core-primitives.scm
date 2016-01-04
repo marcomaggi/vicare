@@ -1040,6 +1040,7 @@
 (include "makefile.typed-core-primitives.strings.scm"			#t)
 (include "makefile.typed-core-primitives.structs.scm"			#t)
 (include "makefile.typed-core-primitives.symbols.scm"			#t)
+(include "makefile.typed-core-primitives.times-and-dates.scm"		#t)
 (include "makefile.typed-core-primitives.transcoders.scm"		#t)
 (include "makefile.typed-core-primitives.vectors.scm"			#t)
 
