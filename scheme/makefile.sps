@@ -1067,6 +1067,7 @@
     (bignum?					v $language)
     (ratnum?					v $language)
     (compnum?					v $language)
+    (exact-compnum?				v $language)
     (cflonum?					v $language)
     (flonum-parts				v $language)
     (flonum-bytes				v $language)
@@ -3422,6 +3423,7 @@
     (<bignum>					v $language)
     (<compnum>					v $language)
     (<cflonum>					v $language)
+    (<exact-compnum>				v $language)
     (<exact-integer>				v $language)
     (<integer-valued>				v $language)
     (<integer>					v $language)
@@ -3438,6 +3440,7 @@
     (<negative-fixnum>				v $language)
 
     (<positive-bignum>				v $language)
+    (<negative-bignum>				v $language)
 
     (<non-negative-flonum>			v $language)
     (<positive-flonum>				v $language)

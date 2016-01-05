@@ -517,7 +517,10 @@
 					       (core-prim-id '<flonum>))))
 	       ((ratnum?  datum)	(core-prim-id '<ratnum>))
 	       ((bignum?  datum)	(core-prim-id '<bignum>))
-	       ((compnum? datum)	(core-prim-id '<compnum>))
+	       ((compnum? datum)	(cond ((exact-compnum? datum)
+					       (core-prim-id '<exact-compnum>))
+					      (else
+					       (core-prim-id '<compnum>))))
 	       ((cflonum? datum)	(core-prim-id '<cflonum>))
 
 	       ((string?  datum)	(core-prim-id '<string>))

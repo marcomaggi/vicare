@@ -197,8 +197,12 @@
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-bignum>
-    <exact-integer>
+    <bignum>
   #t bignum-positive?)
+
+(define-scheme-type <negative-bignum>
+    <bignum>
+  #t bignum-negative?)
 
 ;;FIXME When type unions are implemented we should uncomment this.  (Marco Maggi; Sun
 ;;Dec 27, 2015)
@@ -240,6 +244,12 @@
 (define-scheme-type <negative-zero-flonum>
     <zero-flonum>
   #t negative-zero-flonum?)
+
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <exact-compnum>
+    <compnum>
+  #t exact-compnum?)
 
 
 ;;;; compound types

@@ -67,7 +67,7 @@
     fxnonnegative?
     flzero?/positive			flzero?/negative
     uuid
-    standalone-pair?
+    standalone-pair?			exact-compnum?
 
     ;; compiler related operations
     compiler::eval-core			compiler::core-expr->optimized-code
@@ -163,6 +163,10 @@
     ;;2016)
     (only (ikarus pairs)
 	  standalone-pair?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Jan 4,
+    ;;2016)
+    (only (ikarus numerics complex-numbers)
+	  exact-compnum?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
     ;;2015)
     (prefix (only (ikarus records procedural)

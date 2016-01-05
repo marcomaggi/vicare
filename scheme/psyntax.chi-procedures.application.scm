@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -615,14 +615,18 @@
 
   (define (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
 	    clambda-signature operands-signature)
-    (raise-compound-condition-object 'chi-application
-      "expand-time mismatch between closure object's arguments signatures and operands signature"
-      input-form.stx
-      (condition
-       (make-expand-time-type-signature-violation)
-       (make-syntax-violation input-form.stx #f)
-       (make-clambda-signature-condition clambda-signature)
-       (make-operands-signature-condition operands-signature))))
+    (syntax-match input-form.stx ()
+      ((?rator . ?rand*)
+       (raise-compound-condition-object 'chi-application
+	 "expand-time mismatch between closure object's arguments signatures and operands signature"
+	 input-form.stx
+	 (condition
+	  (make-expand-time-type-signature-violation)
+	  (make-syntax-violation input-form.stx ?rator)
+	  (make-application-operator-condition ?rator)
+	  (make-application-operands-condition ?rand*)
+	  (make-clambda-signature-condition clambda-signature)
+	  (make-operands-signature-condition operands-signature))))))
 
   #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 

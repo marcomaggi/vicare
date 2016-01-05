@@ -2685,7 +2685,7 @@
   application-operator-condition?
   (operator application-operator-condition.operator))
 
-;;This used to describe the syntax object  acting as operator in an application form.
+;;This used to describe the syntax objects acting as operands in an application form.
 ;;The  single  argument  to  the  constructor  must  be  a  list  of  syntax  objects
 ;;representing the operands.
 (define-condition-type &application-operands
