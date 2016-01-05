@@ -1,90 +1,77 @@
-;;; -*- coding: utf-8-unix -*-
-;;;
-;;;Part of: Vicare Scheme
-;;;Contents: compile-time property definitions for core primitives
-;;;Date: Mon Sep 22, 2014
-;;;
-;;;Abstract
-;;;
-;;;	The purpose of this module is to  associate values to the public name of core
-;;;	primitive.  The values represent core  primitive properties: the arity of the
-;;;	primitive; the  number of  returned values;  the core  types of  the expected
-;;;	arguments; the  core types of  the returned values;  miscellaneous properties
-;;;	used by the source optimiser.
-;;;
-;;;	  Scheme  object's core  types  are  defined by  the  module "Scheme  objects
-;;;	ontology".  This file contains a table  of core primitive properties for both
-;;;	primitive functions and primitive operations.
-;;;
-;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;
-;;;This program is free software: you can  redistribute it and/or modify it under the
-;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
-;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
-;;;version.
-;;;
-;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
-;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
-;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-;;;
-;;;You should have received a copy of  the GNU General Public License along with this
-;;;program.  If not, see <http://www.gnu.org/licenses/>.
-;;;
+;;
+;;Part of: Vicare Scheme
+;;Contents: table of expand-time properties for generic core primitives
+;;Date: Tue Dec 22, 2015
+;;
+;;Abstract
+;;
+;;
+;;
+;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;
+;;This program is free  software: you can redistribute it and/or  modify it under the
+;;terms  of  the  GNU General  Public  License  as  published  by the  Free  Software
+;;Foundation, either version 3 of the License, or (at your option) any later version.
+;;
+;;This program  is distributed in the  hope that it  will be useful, but  WITHOUT ANY
+;;WARRANTY; without  even the implied  warranty of  MERCHANTABILITY or FITNESS  FOR A
+;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+;;
+;;You should have received  a copy of the GNU General Public  License along with this
+;;program.  If not, see <http://www.gnu.org/licenses/>.
+;;
 
-
 #!vicare
-(library (ikarus.compiler.core-primitive-properties.generic-primitives)
-  (export initialise-core-primitive-properties/generic-primitives)
-  (import (except (vicare) unsafe)
-    (ikarus.compiler.core-primitive-properties.base)
-    (ikarus.compiler.scheme-objects-ontology))
+(library (typed-core-primitives generic-primitives)
+  (export typed-core-primitives.generic-primitives)
+  (import (vicare)
+    (typed-core-primitives syntaxes))
 
-  (import SCHEME-OBJECTS-ONTOLOGY)
-
-  (define (initialise-core-primitive-properties/generic-primitives)
+(define (typed-core-primitives.generic-primitives)
 
 
 ;;;; generic primitives
 
+(section
+
 (declare-core-primitive immediate?
     (safe)
   (signatures
-   ((T:fixnum)		=> (T:true))
-   ((T:char)		=> (T:true))
-   ((T:null)		=> (T:true))
-   ((T:boolean)		=> (T:true))
-   ((T:eof)		=> (T:true))
-   ((T:void)		=> (T:true))
-   ((T:transcoder)	=> (T:true))
+   ((<fixnum>)		=> (<true>))
+   ((<char>)		=> (<true>))
+   ((<null>)		=> (<true>))
+   ((<boolean>)		=> (<true>))
+   ((<eof>)		=> (<true>))
+   ((<void>)		=> (<true>))
+   ((<transcoder>)	=> (<true>))
 
-   ((T:bignum)		=> (T:false))
-   ((T:flonum)		=> (T:false))
-   ((T:ratnum)		=> (T:false))
-   ((T:compnum)		=> (T:false))
-   ((T:cflonum)		=> (T:false))
-   ((T:pair)		=> (T:false))
-   ((T:string)		=> (T:false))
-   ((T:vector)		=> (T:false))
-   ((T:bytevector)	=> (T:false))
-   ((T:struct)		=> (T:false))
-   ((T:port)		=> (T:false))
-   ((T:symbol)		=> (T:false))
-   ((T:keyword)		=> (T:false))
-   ((T:hashtable)	=> (T:false))
-   ((T:would-block)	=> (T:false))
+   ((<bignum>)		=> (<false>))
+   ((<flonum>)		=> (<false>))
+   ((<ratnum>)		=> (<false>))
+   ((<compnum>)		=> (<false>))
+   ((<cflonum>)		=> (<false>))
+   ((<pair>)		=> (<false>))
+   ((<string>)		=> (<false>))
+   ((<vector>)		=> (<false>))
+   ((<bytevector>)	=> (<false>))
+   ((<struct>)		=> (<false>))
+   ((<port>)		=> (<false>))
+   ((<symbol>)		=> (<false>))
+   ((<keyword>)		=> (<false>))
+   ((<hashtable>)	=> (<false>))
+   ((<would-block>)	=> (<false>))
 
-   ((T:object)		=> (T:boolean)))
+   ((<top>)		=> (<boolean>)))
   (attributes
    ((_)			foldable effect-free)))
 
-(declare-type-predicate code?		T:code)
-(declare-type-predicate procedure?	T:procedure)
+(declare-type-predicate code?		<code>)
+(declare-type-predicate procedure?	<procedure>)
 
 (declare-core-primitive procedure-annotation
     (safe)
   (signatures
-   ((T:procedure)	=> (T:object)))
+   ((<procedure>)	=> (<top>)))
   (attributes
    ((_)			effect-free)))
 
@@ -100,14 +87,14 @@
 (declare-core-primitive vicare-argv0
     (safe)
   (signatures
-   (()			=> (T:bytevector)))
+   (()			=> (<bytevector>)))
   (attributes
    (()			effect-free result-true)))
 
 (declare-core-primitive vicare-argv0-string
     (safe)
   (signatures
-   (()			=> (T:string)))
+   (()			=> (<string>)))
   (attributes
    (()			effect-free result-true)))
 
@@ -116,27 +103,29 @@
 (declare-core-primitive void
     (safe)
   (signatures
-   (()				=> (T:void)))
+   (()				=> (<void>)))
   (attributes
    (()				foldable effect-free result-true)))
+
+(declare-type-predicate void-object? <void>)
 
 (declare-core-primitive load
     (safe)
   (signatures
-   ((T:string)			=> T:object)
-   ((T:string T:procedure)	=> T:object)))
+   ((<string>)			=> <top>)
+   ((<string> <procedure>)	=> <top>)))
 
 (declare-core-primitive make-traced-procedure
     (safe)
   (signatures
-   ((T:symbol T:procedure)	=> (T:procedure)))
+   ((<symbol> <procedure>)	=> (<procedure>)))
   (attributes
    ((_ _)		effect-free result-true)))
 
 (declare-core-primitive make-traced-macro
     (safe)
   (signatures
-   ((T:symbol T:procedure)	=> (T:procedure)))
+   ((<symbol> <procedure>)	=> (<procedure>)))
   (attributes
    ((_ _)		effect-free result-true)))
 
@@ -145,7 +134,7 @@
 (declare-core-primitive  random
     (safe)
   (signatures
-   ((T:fixnum)		=> (T:fixnum)))
+   ((<fixnum>)		=> (<fixnum>)))
   (attributes
    ;;Not foldable  because the random number  must be generated at  run-time, one for
    ;;each invocation.
@@ -153,7 +142,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-object-retriever uuid			T:string)
+(declare-object-retriever uuid			<string>)
 
 (declare-object-retriever bwp-object)
 (declare-object-predicate bwp-object?)
@@ -165,22 +154,22 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-parameter interrupt-handler	T:procedure)
-(declare-parameter engine-handler	T:procedure)
+(declare-parameter interrupt-handler	<procedure>)
+(declare-parameter engine-handler	<procedure>)
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive always-true
     (safe)
   (signatures
-   (_				=> (T:true)))
+   (_				=> (<true>)))
   (attributes
    (_				foldable effect-free result-true)))
 
 (declare-core-primitive always-false
     (safe)
   (signatures
-   (_				=> (T:false)))
+   (_				=> (<false>)))
   (attributes
    (_				foldable effect-free result-false)))
 
@@ -189,19 +178,19 @@
 (declare-core-primitive new-cafe
     (safe)
   (signatures
-   (()			=> (T:void))
-   ((T:procedure)	=> (T:void)))
+   (()			=> (<void>))
+   ((<procedure>)	=> (<void>)))
   (attributes
    (()			result-true)
    ((_)			result-true)))
 
-(declare-parameter waiter-prompt-string		T:string)
-(declare-parameter cafe-input-port		T:textual-input-port)
+(declare-parameter waiter-prompt-string		<string>)
+(declare-parameter cafe-input-port		<textual-input-port>)
 
 (declare-core-primitive apropos
     (safe)
   (signatures
-   ((T:string)		=> (T:void)))
+   ((<string>)		=> (<void>)))
   (attributes
    ((_)			result-true)))
 
@@ -210,15 +199,17 @@
 (declare-core-primitive readline-enabled?
     (safe)
   (signatures
-   (()			=> (T:boolean)))
+   (()			=> (<boolean>)))
   (attributes
    (()			effect-free)))
 
 (declare-core-primitive readline
     (safe)
   (signatures
-   (()						=> (T:string))
-   (((or T:false T:bytevector T:string))	=> (T:string)))
+   (()						=> (<string>))
+   ((<false>)					=> (<string>))
+   ((<bytevector>)				=> (<string>))
+   ((<string>)					=> (<string>)))
   (attributes
    (()			result-true)
    ((_)			result-true)))
@@ -226,8 +217,9 @@
 (declare-core-primitive make-readline-input-port
     (safe)
   (signatures
-   (()					=> (T:textual-input-port))
-   (((or T:false T:procedure))		=> (T:textual-input-port)))
+   (()					=> (<textual-input-port>))
+   ((<false>)				=> (<textual-input-port>))
+   ((<procedure>)			=> (<textual-input-port>)))
   (attributes
    (()			result-true)
    ((_)			result-true)))
@@ -237,8 +229,8 @@
 (declare-core-primitive fasl-write
     (safe)
   (signatures
-   ((T:object T:binary-output-port)			=> (T:void))
-   ((T:object T:binary-output-port T:proper-list)	=> (T:void)))
+   ((<top> <binary-output-port>)			=> (<void>))
+   ((<top> <binary-output-port> <list>)	=> (<void>)))
   (attributes
    ((_ _)		result-true)
    ((_ _ _)		result-true)))
@@ -246,23 +238,27 @@
 (declare-core-primitive fasl-read
     (safe)
   (signatures
-   ((T:binary-input-port)	=> (T:object))))
+   ((<binary-input-port>)	=> (<top>))))
+
+/section)
 
 
 ;;;; foldable core primitive variants
 
+(section
+
 (declare-core-primitive foldable-cons
     (safe)
   (signatures
-   ((_ _)		=> (T:pair)))
+   ((_ _)		=> (<pair>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
 (declare-core-primitive foldable-list
     (safe)
   (signatures
-   (()			=> (T:null))
-   ((_ . _)		=> (T:non-empty-proper-list)))
+   (()			=> (<null>))
+   ((_ . _)		=> (<nlist>)))
   (attributes
    (()			foldable effect-free result-true)
    ((_ . _)		foldable effect-free result-true)))
@@ -270,8 +266,8 @@
 (declare-core-primitive foldable-string
     (safe)
   (signatures
-   (()			=> (T:string))
-   (T:char		=> (T:string)))
+   (()			=> (<string>))
+   (<char>		=> (<string>)))
   (attributes
    (()			foldable effect-free result-true)
    (_			foldable effect-free result-true)))
@@ -279,8 +275,8 @@
 (declare-core-primitive foldable-vector
     (safe)
   (signatures
-   (()				=> (T:vector))
-   (_				=> (T:vector)))
+   (()				=> (<vector>))
+   (_				=> (<vector>)))
   (attributes
    (()				foldable effect-free result-true)
    (_				foldable effect-free result-true)))
@@ -288,28 +284,32 @@
 (declare-core-primitive foldable-list->vector
     (safe)
   (signatures
-   ((T:proper-list)		=> (T:vector)))
+   ((<list>)			=> (<vector>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive foldable-append
     (safe)
   (signatures
-   (()				=> (T:null))
-   ((T:object . T:object)	=> (T:improper-list)))
+   (()				=> (<null>))
+   ((<top> . <top>)		=> (<pair>)))
   (attributes
    (()				foldable effect-free result-true)
    ((_ . _)			foldable effect-free result-true)))
 
+/section)
+
 
 ;;;; debugging helpers
+
+(section
 
 (declare-exact-integer-unary integer->machine-word)
 
 (declare-core-primitive machine-word->integer
   (safe)
   (signatures
-   ((T:object)			=> (T:exact-integer)))
+   ((<top>)			=> (<exact-integer>)))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -318,14 +318,14 @@
 (declare-core-primitive flonum->bytevector
     (safe)
   (signatures
-   ((T:flonum)		=> (T:bytevector)))
+   ((<flonum>)		=> (<bytevector>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive bytevector->flonum
     (safe)
   (signatures
-   ((T:bytevector)	=> (T:flonum)))
+   ((<bytevector>)	=> (<flonum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
@@ -334,14 +334,14 @@
 (declare-core-primitive bignum->bytevector
     (safe)
   (signatures
-   ((T:bignum)		=> (T:bytevector)))
+   ((<bignum>)		=> (<bytevector>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive bytevector->bignum
     (safe)
   (signatures
-   ((T:bytevector)	=> (T:bignum)))
+   ((<bytevector>)	=> (<bignum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
@@ -350,53 +350,76 @@
 (declare-core-primitive time-it
     (safe)
   (signatures
-   ((T:string T:procedure)	=> T:object)))
+   ((<string> <procedure>)	=> <top>)))
 
 (declare-core-primitive time-and-gather
     (safe)
   (signatures
-   ((T:procedure T:procedure)	=> T:object)))
+   ((<procedure> <procedure>)	=> <top>)))
 
 (declare-parameter verbose-timer)
 
 ;;;
 
-(declare-type-predicate stats?		T:stats)
+(declare-type-predicate stats?		<stats>)
 
 (letrec-syntax
     ((declare (syntax-rules ()
 		((_ ?who)
-		 (declare ?who T:object))
+		 (declare ?who <top>))
 		((_ ?who ?return-value-tag)
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    ((T:stats)		=> (?return-value-tag)))
+		    ((<stats>)		=> (?return-value-tag)))
 		   (attributes
 		    ((_)		effect-free))))
 		)))
   (declare stats-collection-id)
-  (declare stats-user-secs	T:exact-integer)
-  (declare stats-user-usecs	T:exact-integer)
-  (declare stats-sys-secs	T:exact-integer)
-  (declare stats-sys-usecs	T:exact-integer)
-  (declare stats-real-secs	T:exact-integer)
-  (declare stats-real-usecs	T:exact-integer)
-  (declare stats-gc-user-secs	T:exact-integer)
-  (declare stats-gc-user-usecs	T:exact-integer)
-  (declare stats-gc-sys-secs	T:exact-integer)
-  (declare stats-gc-sys-usecs	T:exact-integer)
-  (declare stats-gc-real-secs	T:exact-integer)
-  (declare stats-gc-real-usecs	T:exact-integer)
-  (declare stats-bytes-minor	T:exact-integer)
-  (declare stats-bytes-major	T:exact-integer)
+  (declare stats-user-secs	<exact-integer>)
+  (declare stats-user-usecs	<exact-integer>)
+  (declare stats-sys-secs	<exact-integer>)
+  (declare stats-sys-usecs	<exact-integer>)
+  (declare stats-real-secs	<exact-integer>)
+  (declare stats-real-usecs	<exact-integer>)
+  (declare stats-gc-user-secs	<exact-integer>)
+  (declare stats-gc-user-usecs	<exact-integer>)
+  (declare stats-gc-sys-secs	<exact-integer>)
+  (declare stats-gc-sys-usecs	<exact-integer>)
+  (declare stats-gc-real-secs	<exact-integer>)
+  (declare stats-gc-real-usecs	<exact-integer>)
+  (declare stats-bytes-minor	<exact-integer>)
+  (declare stats-bytes-major	<exact-integer>)
   #| end of LET-SYNTAX |# )
+
+/section)
+
+
+;;;; core syntactic binding descriptors, typed safe OOP core primitives: generic objects
+
+(section
+
+(declare-core-primitive <top>-constructor
+    (safe)
+  (signatures
+   ((<top>)		=> (<top>))))
+
+(declare-core-primitive <top>-type-predicate
+    (safe)
+  (signatures
+   ((<top>)		=> (<true>))))
+
+/section)
 
 
 ;;;; done
 
- #| end of DEFINE |# )
+#| end of define |# )
 
 #| end of library |# )
 
-;;; end o file
+;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; eval: (put 'declare-core-primitive		'scheme-indent-function 1)
+;; End:

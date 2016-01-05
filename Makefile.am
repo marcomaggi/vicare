@@ -511,46 +511,51 @@ VICARE_NEW_BOOT		= vicare.boot
 VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.sps							\
 	scheme/makefile.scheme-object-types.scm					\
-	scheme/makefile.built-in-record-types.scm				\
-	\
-	scheme/makefile.typed-core-primitives.scm				\
-	scheme/makefile.typed-core-primitives.annotation-objects.scm		\
-	scheme/makefile.typed-core-primitives.bignums.scm			\
-	scheme/makefile.typed-core-primitives.booleans.scm			\
-	scheme/makefile.typed-core-primitives.bytevectors.scm			\
-	scheme/makefile.typed-core-primitives.cflonums.scm			\
-	scheme/makefile.typed-core-primitives.characters.scm			\
-	scheme/makefile.typed-core-primitives.code-objects.scm			\
-	scheme/makefile.typed-core-primitives.compnums.scm			\
-	scheme/makefile.typed-core-primitives.condition-objects.scm		\
-	scheme/makefile.typed-core-primitives.configuration.scm			\
-	scheme/makefile.typed-core-primitives.control.scm			\
-	scheme/makefile.typed-core-primitives.enum-sets.scm			\
-	scheme/makefile.typed-core-primitives.environment-inquiry.scm		\
-	scheme/makefile.typed-core-primitives.eval-and-environments.scm		\
-	scheme/makefile.typed-core-primitives.expander.scm			\
-	scheme/makefile.typed-core-primitives.ffi.scm				\
-	scheme/makefile.typed-core-primitives.fixnums.scm			\
-	scheme/makefile.typed-core-primitives.flonums.scm			\
-	scheme/makefile.typed-core-primitives.generic-primitives.scm		\
-	scheme/makefile.typed-core-primitives.hash-tables.scm			\
-	scheme/makefile.typed-core-primitives.input-output.scm			\
-	scheme/makefile.typed-core-primitives.keywords.scm			\
-	scheme/makefile.typed-core-primitives.library-utils.scm			\
-	scheme/makefile.typed-core-primitives.numerics.scm			\
-	scheme/makefile.typed-core-primitives.pairs-and-lists.scm		\
-	scheme/makefile.typed-core-primitives.pointers.scm			\
-	scheme/makefile.typed-core-primitives.posix.scm				\
-	scheme/makefile.typed-core-primitives.ratnums.scm			\
-	scheme/makefile.typed-core-primitives.records.scm			\
-	scheme/makefile.typed-core-primitives.strings.scm			\
-	scheme/makefile.typed-core-primitives.structs.scm			\
-	scheme/makefile.typed-core-primitives.symbols.scm			\
-	scheme/makefile.typed-core-primitives.times-and-dates.scm		\
-	scheme/makefile.typed-core-primitives.transcoders.scm			\
-	scheme/makefile.typed-core-primitives.vectors.scm
+	scheme/makefile.built-in-record-types.scm
 
-EXTRA_DIST		+= $(VICARE_BOOT_MAKEFILES)
+VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
+	typed-core-primitives/build-specs.sps			\
+	typed-core-primitives/syntaxes.sls			\
+	\
+	typed-core-primitives/annotation-objects.sls		\
+	typed-core-primitives/bignums.sls			\
+	typed-core-primitives/booleans.sls			\
+	typed-core-primitives/bytevectors.sls			\
+	typed-core-primitives/cflonums.sls			\
+	typed-core-primitives/characters.sls			\
+	typed-core-primitives/code-objects.sls			\
+	typed-core-primitives/compnums.sls			\
+	typed-core-primitives/condition-objects.sls		\
+	typed-core-primitives/configuration.sls			\
+	typed-core-primitives/control.sls			\
+	typed-core-primitives/enum-sets.sls			\
+	typed-core-primitives/environment-inquiry.sls		\
+	typed-core-primitives/eval-and-environments.sls		\
+	typed-core-primitives/expander.sls			\
+	typed-core-primitives/ffi.sls				\
+	typed-core-primitives/fixnums.sls			\
+	typed-core-primitives/flonums.sls			\
+	typed-core-primitives/generic-primitives.sls		\
+	typed-core-primitives/hash-tables.sls			\
+	typed-core-primitives/input-output.sls			\
+	typed-core-primitives/keywords.sls			\
+	typed-core-primitives/library-utils.sls			\
+	typed-core-primitives/numerics.sls			\
+	typed-core-primitives/pairs-and-lists.sls		\
+	typed-core-primitives/pointers.sls			\
+	typed-core-primitives/posix.sls				\
+	typed-core-primitives/ratnums.sls			\
+	typed-core-primitives/records.sls			\
+	typed-core-primitives/strings.sls			\
+	typed-core-primitives/structs.sls			\
+	typed-core-primitives/symbols.sls			\
+	typed-core-primitives/times-and-dates.sls		\
+	typed-core-primitives/transcoders.sls			\
+	typed-core-primitives/vectors.sls
+
+EXTRA_DIST		+= \
+	$(VICARE_BOOT_MAKEFILES)				\
+	$(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS)
 
 # The  "exec" portion  of the  Makefile variable  names will  instruct
 # Automake to  generate installation rules  to install the  boot image
@@ -575,6 +580,7 @@ VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
 	scheme/ikarus.config.scm			\
 	$(VICARE_BOOT_MAKEFILES)			\
+	typed-core-primitives-specs.scm			\
 	\
 	lib/vicare/platform/words.vicare.sls		\
 	lib/vicare/platform/constants.vicare.sls	\
@@ -585,6 +591,11 @@ VICARE_BOOT_PREREQUISITES	= \
 	lib/vicare/unsafe/operations.vicare.sls
 
 ## --------------------------------------------------------------------
+
+typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS)
+	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
+		--option print-loaded-libraries						\
+		--r6rs-script $(srcdir)/typed-core-primitives/build-specs.sps >$@
 
 # To  create the  new boot  image we  use a  prebuilt boot  image; the
 # environment variable names are  hardcoded in the prebuilt boot image

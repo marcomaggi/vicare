@@ -855,10 +855,7 @@
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure
 
-(define VICARE-TYPED-CORE-PRIMITIVES
-  '())
-
-(include "makefile.typed-core-primitives.scm" #t)
+(include "typed-core-primitives-specs.scm" #t)
 
 
 (define-constant LIBRARY-LEGEND
