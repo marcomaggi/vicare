@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -1000,7 +1000,7 @@
    ((T:cflonum)			=> (T:cflonum)))
   (attributes
    ((_)				foldable effect-free result-true))
-  (replacements $square-fixnum $square-bignum $square-flonum $square-ratnum $square-compnum $square-cflonum))
+  (replacements $square-fixnum $square-bignum $flsquare $square-ratnum $square-compnum $square-cflonum))
 
 (declare-core-primitive cube
     (safe)
@@ -1013,7 +1013,7 @@
    ((T:cflonum)			=> (T:cflonum)))
   (attributes
    ((_)				foldable effect-free result-true))
-  (replacements $cube-fixnum $cube-bignum $cube-flonum $cube-ratnum $cube-compnum $cube-cflonum))
+  (replacements $cube-fixnum $cube-bignum $flcube $cube-ratnum $cube-compnum $cube-cflonum))
 
 (declare-core-primitive sqrt
     (safe)

@@ -981,7 +981,7 @@
    ((<cflonum>)			=> (<cflonum>)))
   (attributes
    ((_)				foldable effect-free result-true))
-  (replacements $square-fixnum $square-bignum $square-flonum $square-ratnum $square-compnum $square-cflonum))
+  (replacements $square-fixnum $square-bignum $flsquare $square-ratnum $square-compnum $square-cflonum))
 
 (declare-core-primitive cube
     (safe)
@@ -994,7 +994,7 @@
    ((<cflonum>)			=> (<cflonum>)))
   (attributes
    ((_)				foldable effect-free result-true))
-  (replacements $cube-fixnum $cube-bignum $cube-flonum $cube-ratnum $cube-compnum $cube-cflonum))
+  (replacements $cube-fixnum $cube-bignum $flcube $cube-ratnum $cube-compnum $cube-cflonum))
 
 (declare-core-primitive sqrt
     (safe)
