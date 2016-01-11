@@ -7,18 +7,107 @@
 
 
 Include files are loaded at expand--time by the syntax @syntax{include}.
-The following bindings are exported by the library @library{vicare}.
+Here is a usage example with the default configuration for searching and
+loading files:
+
+@enumerate
+@item
+Let's create a source file in the current directory:
+
+@lisp
+;; demo.scm --
+;;
+
+(define (doit)
+  (display "hello world!\n"))
+
+;;; end of file
+@end lisp
+
+@item
+Let's create a library file in the current directory, including the
+source file:
+
+@lisp
+;; demo.sls --
+;;
+
+(library (demo)
+  (export doit)
+  (import (vicare))
+  (include "demo.scm" #t))
+
+;;; end of file
+@end lisp
+
+@item
+Let's enter the @repl{}, adding the current directory to the search path
+for source files:
+
+@example
+$ vicare --source-path $PWD --option print-loaded-libraries
+...
+vicare> (import (demo))
+vicare: searching include file: demo.scm
+vicare: including file: /tmp/demo.scm
+vicare: loaded library "(demo)" from: /tmp/demo.sls
+vicare> (doit)
+hello world!
+vicare>
+@end example
+
+@noindent
+the syntax @syntax{include} makes uses the same search path selected for
+source libraries.
+
+@item
+Now we can compile the library:
+
+@example
+$ vicare --source-path $PWD --option print-loaded-libraries \
+   --compile-library demo.sls --output demo.fasl
+vicare: compile-source-library: loading library: demo.sls
+vicare: searching include file: demo.scm
+vicare: including file: /tmp/demo.scm
+vicare: serialising library: demo.fasl
+vicare: library serialisation done
+@end example
+
+@noindent
+and remember that @syntax{include} is and expand--time thing, so the
+compiled library will not perform any inclusion.
+
+@item
+Finally we enter the @repl{} adding the current directory to the search
+path for binary libraries:
+
+@example
+$ vicare -L $PWD --option print-loaded-libraries
+...
+vicare> (import (demo))
+vicare: loaded library "(demo)" from: /tmp/demo.fasl
+vicare> (doit)
+hello world!
+vicare>
+@end example
+@end enumerate
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
 
 
 @deffn Syntax include @meta{filename}
 @deffnx Syntax include @meta{filename} #t
-Include in the current source file the contents of the file selected by
-the pathname @meta{filename}, which must be a string.  Everything
+Include in the enclosing source file the contents of the file selected
+by the pathname @meta{filename}, which must be a string.  Everything
 happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Customisation of include operation
 
 @deffn Parameter current-include-loader
 Hold a function used to load an include file.  The referenced function
@@ -50,12 +139,11 @@ process.
 
 
 @defun default-include-loader @var{include-pathname} @var{verbose?} @var{synner}
-Default value for the parameter @func{current-include-loader}.  Search
-an include file with name @var{include-pathname}.  When successful
-return two values: the absolute pathname from which the file was loaded,
-a symbolic expression representing the file contents.  When an error
-occurs: call the procedure @var{synner}, which is meant to raise an
-exception.
+Default value for the parameter @func{current-include-loader}.  Load the
+file with pathname @var{include-pathname}.  When successful return two
+values: the absolute pathname from which the file was loaded, a symbolic
+expression representing the file contents.  When an error occurs: call
+the procedure @var{synner}, which is meant to raise an exception.
 
 If @var{verbose?}  is non--false: display verbose messages on the
 current error port describing the including process.
@@ -66,6 +154,9 @@ the procedure referenced by the parameter
 @func{current-include-file-loader}.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Locating the file to be included
 
 @deffn Parameter current-include-file-locator
 Hold a function used to convert an include file name into the
@@ -73,19 +164,6 @@ corresponding file pathname.  The referenced function must accept three
 arguments: a string representing the include file name; a boolean, true
 if the process of loading must display verbose messages on the current
 error port; a synner function used to report errors.
-
-The synner function is called as:
-
-@example
-(synner @meta{error-message} @meta{irritants})
-@end example
-@end deffn
-
-
-@deffn Parameter current-include-file-loader
-Hold a function used to load an include file.  The referenced function
-must accept two arguments: a string representing an existent file
-pathname; a synner function used to report errors.
 
 The synner function is called as:
 
@@ -103,18 +181,36 @@ existing file, as string.  Return the absolute string pathname.
 
 If @var{include-pathname} is a relative pathname: the file is searched
 in the search path represented by @func{library-source-search-path}, by
-appending @var{include-pathname} to the directories in the search path.
+appending @var{include-pathname} to the directories in the search path;
+@ref{library-source-search-path, Search path for source libraries}.
 
 @var{synner} must be a procedure used to raise an exception when an
 error occurs.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Loading the file to be included
+
+@deffn Parameter current-include-file-loader
+Hold a function used to load an include file.  The referenced function
+must accept two arguments: a string representing an existent file
+pathname; a synner function used to report errors.
+
+The synner function is called as:
+
+@example
+(synner @meta{error-message} @meta{irritants})
+@end example
+@end deffn
+
 
 @defun default-include-file-loader @var{include-pathname} @var{synner}
 Default value for the parameter @func{current-include-file-loader}.
 Open the file @var{include-pathname}, read all the datums and return
-them.  If an error occurs call @var{synner}.  The returned contents must
-be a list of annotated symbolic expressions as generated by the reader.
+them.  If an error occurs call @var{synner}.  The returned value is a
+list of annotated symbolic expressions as generated by @value{PRJNAME}'s
+source code reader.
 @end defun
 
 
