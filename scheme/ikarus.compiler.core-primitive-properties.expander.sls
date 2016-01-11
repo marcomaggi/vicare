@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -330,8 +330,8 @@
    ((T:syntax-object)			=> (T:syntax-object))
    ((T:syntax-object T:procedure)	=> (T:syntax-object)))
   (attributes
-   ((_)			result-true)
-   ((_ _)		result-true)))
+   ((_)			effect-free)
+   ((_ _)		effect-free)))
 
 (declare-core-primitive syntax-cdr
     (safe)
@@ -339,8 +339,8 @@
    ((T:syntax-object)			=> (T:syntax-object))
    ((T:syntax-object T:procedure)	=> (T:syntax-object)))
   (attributes
-   ((_)			effect-free result-true)
-   ((_ _)		effect-free result-true)))
+   ((_)			effect-free)
+   ((_ _)		effect-free)))
 
 (declare-core-primitive syntax->list
     (safe)
@@ -381,7 +381,7 @@
 (declare-core-primitive all-identifiers?
     (safe)
   (signatures
-   ((T:proper-list)	=> (T:boolean)))
+   ((T:object)		=> (T:boolean)))
   (attributes
    ((_)			effect-free)))
 

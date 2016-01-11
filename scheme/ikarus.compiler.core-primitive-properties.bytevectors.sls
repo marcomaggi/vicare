@@ -177,14 +177,14 @@
 (declare-core-primitive bytevector-s8-ref
     (safe)
   (signatures
-   ((T:bytevector T:fixnum)	=> (T:byte)))
+   ((T:bytevector T:non-negative-fixnum)	=> (T:byte)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
 (declare-core-primitive bytevector-u8-ref
     (safe)
   (signatures
-   ((T:bytevector T:fixnum)	=> (T:octet)))
+   ((T:bytevector T:non-negative-fixnum)	=> (T:octet)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
@@ -204,7 +204,7 @@
   (declare-safe-bytevector-accessor bytevector-s32-native-ref		T:sint32)
   (declare-safe-bytevector-accessor bytevector-u32-native-ref		T:uint32)
   (declare-safe-bytevector-accessor bytevector-s64-native-ref		T:sint64)
-  (declare-safe-bytevector-accessor bytevector-u64-native-ref		T:sint64)
+  (declare-safe-bytevector-accessor bytevector-u64-native-ref		T:uint64)
   (declare-safe-bytevector-accessor bytevector-ieee-double-native-ref	T:flonum)
   (declare-safe-bytevector-accessor bytevector-ieee-single-native-ref	T:flonum)
   #| end of LET-SYNTAX |# )
@@ -225,7 +225,7 @@
   (declare-safe-bytevector-accessor bytevector-s32-ref		T:sint32)
   (declare-safe-bytevector-accessor bytevector-u32-ref		T:uint32)
   (declare-safe-bytevector-accessor bytevector-s64-ref		T:sint64)
-  (declare-safe-bytevector-accessor bytevector-u64-ref		T:sint64)
+  (declare-safe-bytevector-accessor bytevector-u64-ref		T:uint64)
   (declare-safe-bytevector-accessor bytevector-ieee-double-ref	T:flonum)
   (declare-safe-bytevector-accessor bytevector-ieee-single-ref	T:flonum)
   #| end of LET-SYNTAX |# )
