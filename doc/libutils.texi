@@ -2239,6 +2239,7 @@ of @func{library-binary-search-path}.
 @c ------------------------------------------------------------
 
 @deffn Parameter library-source-search-path
+@anchor{library-source-search-path}
 Hold a list of strings representing relative or absolute directory
 pathnames; the strings must represent syntactically valid pathname
 specifications, but the directories might not exist.  The list is used

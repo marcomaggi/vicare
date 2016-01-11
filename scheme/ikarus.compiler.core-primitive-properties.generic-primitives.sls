@@ -305,7 +305,6 @@
 ;;;; debugging helpers
 
 (declare-exact-integer-unary integer->machine-word)
-
 (declare-core-primitive machine-word->integer
   (safe)
   (signatures
