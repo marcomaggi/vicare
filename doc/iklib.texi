@@ -6183,8 +6183,8 @@ This condition type has the following fields:
 
 @table @code
 @item index
-One--base index of the offending operand.  It is @false{} when the index
-is unknown.
+One--based index of the offending operand.  It is @false{} when the
+index is unknown.
 
 @item failed-expression
 Symbolic expression representing the predicate used to validate the
@@ -6244,7 +6244,7 @@ fields:
 
 @table @code
 @item index
-One--base index of the offending return value in the tuple of values
+One--based index of the offending return value in the tuple of values
 returned by the expression.  It is @false{} when the index is unknown.
 
 @item failed-expression
