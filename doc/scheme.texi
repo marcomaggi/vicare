@@ -1112,8 +1112,9 @@ by this report.  @code{#!r6rs} is otherwise treated as a comment;
 
 
 The formal syntax for Scheme is written in an extended @acronym{BNF}.
-Non--terminals are written using angle brackets.  Case is insignificant
-for non--terminal names.
+@c Non--terminals are written using angle brackets.
+Non--terminals are written as @meta{non-terminal}.
+Case is insignificant for non--terminal names.
 
 All spaces in the grammar are for legibility.  @meta{empty} stands for
 the empty string.
