@@ -155,19 +155,26 @@
 
 ;;;
 
-(declare-core-primitive make-compile-time-value
+(declare-core-primitive make-expand-time-value
     (safe)
   (signatures
    ((T:object)		=> (T:object)))
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-object-predicate compile-time-value?)
+(declare-object-predicate expand-time-value?)
 
-(declare-core-primitive compile-time-value-object
+(declare-core-primitive expand-time-value-object
     (safe)
   (signatures
    ((T:object)		=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive retrieve-expand-time-value
+    (safe)
+  (signatures
+   ((T:identifier)	=> (T:object)))
   (attributes
    ((_)			effect-free)))
 
@@ -569,3 +576,6 @@
 #| end of library |# )
 
 ;;; end o file
+;; Local Variables:
+;; eval: (put 'declare-core-primitive	'scheme-indent-function 2)
+;; End:
