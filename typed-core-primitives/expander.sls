@@ -142,19 +142,26 @@
 
 ;;;
 
-(declare-core-primitive make-compile-time-value
+(declare-core-primitive make-expand-time-value
     (safe)
   (signatures
    ((<top>)		=> (<top>)))
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-object-predicate compile-time-value?)
+(declare-object-predicate expand-time-value?)
 
-(declare-core-primitive compile-time-value-object
+(declare-core-primitive expand-time-value-object
     (safe)
   (signatures
    ((<top>)		=> (<top>)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive retrieve-expand-time-value
+    (safe)
+  (signatures
+   ((<syntactic-identifier>)	=> (<top>)))
   (attributes
    ((_)			effect-free)))
 
