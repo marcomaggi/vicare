@@ -3300,14 +3300,6 @@ Return @true{} if @var{obj} is a callable object, otherwise return
 @end defun
 
 
-@deffn {Validation Clause} callable @var{obj}
-@deffnx {Validation Clause} callable/false @var{obj}
-Validation clause to be used with the facilities of the library
-@library{vicare arguments validation}.  Succeed if @var{obj} is a
-callable object; the second clause also accepts @false{}.
-@end deffn
-
-
 @defun callable-object @var{callable}
 @defunx $callable-object @var{callable}
 Return the object associated to the callable object @var{callable}.
