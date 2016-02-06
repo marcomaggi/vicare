@@ -852,7 +852,7 @@
 (declare-core-primitive make-rectangular
     (safe)
   (signatures
-   ((<real> <real>)		=> (<non-real>)))
+   ((<real> <real>)		=> (<complex>)))
   (attributes
    ((_ _)			foldable effect-free result-true))
   (replacements $make-cflonum $make-compnum $make-rectangular))
@@ -860,7 +860,7 @@
 (declare-core-primitive make-polar
     (safe)
   (signatures
-   ((<real> <real>)		=> (<non-real>)))
+   ((<real> <real>)		=> (<complex>)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
@@ -1339,7 +1339,7 @@
 (declare-core-primitive $make-rectangular
     (unsafe)
   (signatures
-   ((<real> <real>)		=> (<non-real>)))
+   ((<real> <real>)		=> (<complex>)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
@@ -1360,7 +1360,7 @@
 (declare-unsafe-unary-operation $inv-bignum	<bignum>	<ratnum>)
 (declare-unsafe-unary-operation $inv-flonum	<flonum>	<flonum>)
 (declare-unsafe-unary-operation $inv-ratnum	<ratnum>	<exact-real>)
-(declare-unsafe-unary-operation $inv-compnum	<compnum>	<non-real>)
+(declare-unsafe-unary-operation $inv-compnum	<compnum>	<complex>)
 (declare-unsafe-unary-operation $inv-cflonum	<cflonum>	<cflonum>)
 
 ;;; --------------------------------------------------------------------
@@ -1451,7 +1451,7 @@
 
 (declare-unsafe-binary-operation $add-compnum-fixnum	<compnum>	<fixnum>	<compnum>)
 (declare-unsafe-binary-operation $add-compnum-bignum	<compnum>	<bignum>	<compnum>)
-(declare-unsafe-binary-operation $add-compnum-flonum	<compnum>	<flonum>	<non-real>)
+(declare-unsafe-binary-operation $add-compnum-flonum	<compnum>	<flonum>	<complex>)
 (declare-unsafe-binary-operation $add-compnum-ratnum	<compnum>	<ratnum>	<compnum>)
 (declare-unsafe-binary-operation $add-compnum-compnum	<compnum>	<compnum>	<number>)
 (declare-unsafe-binary-operation $add-compnum-cflonum	<compnum>	<cflonum>	<cflonum>)
@@ -1499,7 +1499,7 @@
 (declare-unsafe-binary-operation $sub-flonum-bignum	<flonum>	<bignum>	<flonum>)
 (declare-unsafe-binary-operation $sub-flonum-flonum	<flonum>	<flonum>	<flonum>)
 (declare-unsafe-binary-operation $sub-flonum-ratnum	<flonum>	<ratnum>	<flonum>)
-(declare-unsafe-binary-operation $sub-flonum-compnum	<flonum>	<compnum>	<non-real>)
+(declare-unsafe-binary-operation $sub-flonum-compnum	<flonum>	<compnum>	<complex>)
 (declare-unsafe-binary-operation $sub-flonum-cflonum	<flonum>	<cflonum>	<cflonum>)
 
 (declare-unsafe-binary-operation $sub-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
@@ -1511,7 +1511,7 @@
 
 (declare-unsafe-binary-operation $sub-compnum-fixnum	<compnum>	<fixnum>	<compnum>)
 (declare-unsafe-binary-operation $sub-compnum-bignum	<compnum>	<bignum>	<compnum>)
-(declare-unsafe-binary-operation $sub-compnum-flonum	<compnum>	<flonum>	<non-real>)
+(declare-unsafe-binary-operation $sub-compnum-flonum	<compnum>	<flonum>	<complex>)
 (declare-unsafe-binary-operation $sub-compnum-ratnum	<compnum>	<ratnum>	<compnum>)
 (declare-unsafe-binary-operation $sub-compnum-compnum	<compnum>	<compnum>	<number>)
 (declare-unsafe-binary-operation $sub-compnum-cflonum	<compnum>	<cflonum>	<cflonum>)
