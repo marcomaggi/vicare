@@ -811,7 +811,7 @@
 	  (eval '(fl- 1)
 		(environment '(rnrs)))
 	(catch E
-	  ((expander::&expand-time-type-signature-violation)
+	  ((expander::&expand-time-type-signature-warning)
 	   #t)
 	  (else E)))
     => #t)

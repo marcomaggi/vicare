@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2012, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2012, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -44,7 +44,7 @@
 	(eval '(fxreverse-bit-field 'ciao 1 4)
 	      (environment '(rnrs)))
       (catch E
-	((expander::&expand-time-type-signature-violation)
+	((expander::&expand-time-type-signature-warning)
 	 #t)
 	(else E)))
   => #t)
@@ -54,7 +54,7 @@
 	(eval '(fxreverse-bit-field #b1010010 'ciao 4)
 	      (environment '(rnrs)))
       (catch E
-	((expander::&expand-time-type-signature-violation)
+	((expander::&expand-time-type-signature-warning)
 	 #t)
 	(else E)))
   => #t)
@@ -64,7 +64,7 @@
 	(eval '(fxreverse-bit-field #b1010010 1 'ciao)
 	      (environment '(rnrs)))
       (catch E
-	((expander::&expand-time-type-signature-violation)
+	((expander::&expand-time-type-signature-warning)
 	 #t)
 	(else E)))
   => #t)
