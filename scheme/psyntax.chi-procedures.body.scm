@@ -762,7 +762,7 @@
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let ((qrhs (make-qualified-rhs/standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (untyped-tag-id) qrhs lexenv.run)))
+	(values lhs.id (top-tag-id) qrhs lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -900,7 +900,7 @@
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let ((qrhs (make-qualified-rhs/standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (untyped-tag-id) qrhs lexenv.run)))
+	(values lhs.id (top-tag-id) qrhs lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 

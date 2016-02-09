@@ -15,10 +15,6 @@
     #f
   #f always-false)
 
-(define-scheme-type <untyped>
-    #f
-  #f always-true)
-
 
 ;;;; standalone object types
 

@@ -98,8 +98,8 @@
   ;;
   ;;This  function  builds  and  returns   a  list  of  syntax  objects  representing
   ;;expressions that validate  (at run-time) the arguments (excluding  the formals in
-  ;;which the tag  is "<top>" or "<untyped>", whose arguments  are always valid).  If
-  ;;there are no arguments: return null.
+  ;;which the  tag is "<top>",  whose arguments are always  valid).  If there  are no
+  ;;arguments: return null.
   ;;
   ;;Since we want run-time validation: using  IS-A?  will not do, because IS-A?  also
   ;;performs expand-time  type checking; this is  why INTERNAL-RUN-TIME-IS-A?  exists
@@ -125,10 +125,8 @@
 	   (let ((following-validations (recur (cdr arg*) (cdr tag*) (fxadd1 idx))))
 	     (let ((arg (car arg*))
 		   (tag (car tag*)))
-	       (cond ((or (top-tag-id?     tag)
-			  (untyped-tag-id? tag))
-		      ;;Insert  no  validation  for  an  argument  typed  "<top>"  or
-		      ;;"<untyped>".
+	       (cond ((top-tag-id? tag)
+		      ;;Insert no validation for an argument typed "<top>".
 		      following-validations)
 		     (else
 		      (cons (bless
@@ -139,10 +137,9 @@
 
 	  ((or (not             rest-tag)
 	       (list-tag-id?    rest-tag)
-	       (top-tag-id?     rest-tag)
-	       (untyped-tag-id? rest-tag))
-	   ;;There is no rest  argument or it is tagged as  "<top>" or "<untyped>" or
-	   ;;"<list>"; insert no validation.
+	       (top-tag-id?     rest-tag))
+	   ;;There is  no rest argument  or it is tagged  as "<top>" or  or "<list>";
+	   ;;insert no validation.
 	   '())
 
 	  ((type-identifier-is-list-sub-type? rest-tag)

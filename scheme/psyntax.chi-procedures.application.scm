@@ -242,7 +242,7 @@
 	      (?tag
 	       (list-tag-id? ?tag)
 	       (loop (cdr rand*.sig) (cdr rand*.stx)
-		     (cons (untyped-tag-id) rand*.tag)))
+		     (cons (top-tag-id) rand*.tag)))
 	      (_
 	       (let ((expected-retvals-signature (make-type-signature/single-top)))
 		 (expand-time-retvals-signature-violation 'values
@@ -289,8 +289,7 @@
 			      apply.core
 			      (cons rator.core rand*.core))
 			    (psi-application-retvals-signature input-form.stx lexenv.run rator.psi))))
-	       ((or (top-tag-id?     ?rator.tag)
-		    (untyped-tag-id? ?rator.tag))
+	       ((top-tag-id? ?rator.tag)
 		;;Let's do it and we will see at run-time what happens.  Notice that,
 		;;in this case: we do not know the signature of the return values.
 		(%build-application-no-signature input-form.stx lexenv.run lexenv.expand
@@ -403,8 +402,8 @@
     ;;return a PSI struct as per standard Scheme behaviour and, when possible, select
     ;;the appropriate retvals signature for the returned PSI.
     ;;
-    ;;* If the type  of rator is "<top>" or "<untyped>": expand  to an application as
-    ;;per standard Scheme behaviour.
+    ;;* If  the type of rator  is "<top>": expand  to an application as  per standard
+    ;;Scheme behaviour.
     ;;
     ;;* Otherwise raise a syntax violation.
     ;;
@@ -414,8 +413,7 @@
 	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
 						  rator.tag rator.psi rand*.psi)))
 
-	  ((or (top-tag-id?     rator.tag)
-	       (untyped-tag-id? rator.tag))
+	  ((top-tag-id? rator.tag)
 	   ;;The rator  type is  unknown, we  only know  that it  is a  single value.
 	   ;;Return a procedure application and we will see at run-time what happens.
 	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
@@ -466,8 +464,7 @@
        (%common-rator-application))
 
       ((?tag)
-       (or (top-tag-id?     ?tag)
-	   (untyped-tag-id? ?tag))
+       (top-tag-id? ?tag)
        ;;The rator type is unknown, we only know  that it is a single value; it might
        ;;be a closure object or not.  Return  a procedure application and we will see
        ;;at run-time what happens.
@@ -881,7 +878,7 @@
     (let loop ((state		'exact-match)
 	       (argvals.tags	argvals.tags)
 	       (rand*.sig	rand*.sig))
-      (syntax-match argvals.tags (<top> <untyped> <list>)
+      (syntax-match argvals.tags (<top> <list>)
 	(()
 	 (if (null? rand*.sig)
 	     ;;No more arguments and no more operands.  Good.
@@ -896,22 +893,12 @@
 	   ;;More arguments and no more operands.  Bad.
 	   'no-match))
 
-	((<untyped> . ?argvals.tags)
-	 (if (pair? rand*.sig)
-	     ;;One argument matches one operand.  Good.
-	     (loop state ?argvals.tags (cdr rand*.sig))
-	   ;;More arguments and no more operands.  Bad.
-	   'no-match))
-
 	((?argval.tag . ?argvals.tags)
 	 (if (pair? rand*.sig)
 	     (let ((rand.tags (type-signature-tags (car rand*.sig))))
-	       (syntax-match rand.tags (<top> <untyped> <list>)
+	       (syntax-match rand.tags (<top> <list>)
 		 ((<top>)
 		  ;;One argument possibly matches one operand.  Good.
-		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
-		 ((<untyped>)
-		  ;;The argument exactly matches the operand.  Good.
 		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
 		 ((?rand.type)
 		  (cond ((type-identifier-super-and-sub?/matching ?argval.tag ?rand.type lexenv.run)
@@ -958,11 +945,8 @@
 		   (if (pair? rand*.sig)
 		       (inner-loop state (type-signature-tags (car rand*.sig)) (cdr rand*.sig))
 		     state))
-		 (syntax-match rand.tags (<top> <untyped> <list>)
+		 (syntax-match rand.tags (<top> <list>)
 		   ((<top>)
-		    ;;One argument possibly matches one operand.  Good.
-		    (%recursion 'possible-match))
-		   ((<untyped>)
 		    ;;One argument possibly matches one operand.  Good.
 		    (%recursion 'possible-match))
 		   ((?rand.type)

@@ -314,7 +314,6 @@
     nlist-tag-id		$nlist-tag-id?			nlist-tag-id?
     stx-tag-id			$stx-tag-id?			stx-tag-id?
     syntactic-identifier-tag-id	$syntactic-identifier-tag-id?	syntactic-identifier-tag-id?
-    untyped-tag-id		$untyped-tag-id?		untyped-tag-id?
     top-tag-id			$top-tag-id?			top-tag-id?
     boolean-tag-id		void-tag-id
     struct-tag-id		record-tag-id
@@ -2601,7 +2600,6 @@
 					    (core-prim-id '?tag)
 					  (set! memoized-id id))))))))))
   (define-tag-retriever no-return-tag-id		<no-return>)
-  (define-tag-retriever untyped-tag-id			<untyped>)
   (define-tag-retriever top-tag-id			<top>)
   (define-tag-retriever void-tag-id			<void>)
   (define-tag-retriever procedure-tag-id		<procedure>)
@@ -2628,7 +2626,6 @@
 				     (define (?who id)
 				       (~free-identifier=? id (?tag-retriever)))))))
   (define-unsafe-tag-predicate $no-return-tag-id?		no-return-tag-id)
-  (define-unsafe-tag-predicate $untyped-tag-id?			untyped-tag-id)
   (define-unsafe-tag-predicate $top-tag-id?			top-tag-id)
   (define-unsafe-tag-predicate $procedure-tag-id?		procedure-tag-id)
   (define-unsafe-tag-predicate $predicate-tag-id?		predicate-tag-id)
@@ -2651,7 +2648,6 @@
 				(and (identifier? obj)
 				     (?unsafe-pred obj)))))))
   (define-tag-predicate no-return-tag-id?		$no-return-tag-id?)
-  (define-tag-predicate untyped-tag-id?			$untyped-tag-id?)
   (define-tag-predicate top-tag-id?			$top-tag-id?)
   (define-tag-predicate procedure-tag-id?		$procedure-tag-id?)
   (define-tag-predicate predicate-tag-id?		$predicate-tag-id?)

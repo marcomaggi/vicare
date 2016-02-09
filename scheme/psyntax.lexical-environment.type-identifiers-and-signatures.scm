@@ -62,7 +62,7 @@
    make-type-signature/single-boolean			make-type-signature/single-procedure
    make-type-signature/single-stx			make-type-signature/single-syntactic-identifier
    make-type-signature/standalone-list			make-type-signature/fully-untyped
-   make-type-signature/single-untyped			make-type-signature/single-value
+   make-type-signature/single-value
    type-signature=?
    type-signature.fully-untyped?			type-signature.partially-untyped?
    type-signature.untyped?
@@ -168,9 +168,7 @@
 	  #t)
 	 (($top-tag-id? super-type.id)
 	  #t)
-	 ((or ($untyped-tag-id? super-type.id)
-	      ($untyped-tag-id? sub-type.id)
-	      ($top-tag-id?     sub-type.id))
+	 (($top-tag-id? sub-type.id)
 	  #f)
 	 ((procedure-tag-id? super-type.id)
 	  (or (predicate-tag-id? sub-type.id)
@@ -213,11 +211,9 @@
    ;;
    (cond ((~free-identifier=? super-type.id sub-type.id)
 	  #t)
-	 ((or ($top-tag-id?     super-type.id)
-	      ($untyped-tag-id? super-type.id))
+	 (($top-tag-id? super-type.id)
 	  #t)
-	 ((or ($top-tag-id?     sub-type.id)
-	      ($untyped-tag-id? sub-type.id))
+	 (($top-tag-id? sub-type.id)
 	  #f)
 	 ((procedure-tag-id? super-type.id)
 	  (or (predicate-tag-id? sub-type.id)
@@ -267,9 +263,6 @@
 	 ((or ($top-tag-id? id1)
 	      ($top-tag-id? id2))
 	  (top-tag-id))
-	 ((or ($untyped-tag-id? id1)
-	      ($untyped-tag-id? id2))
-	  (untyped-tag-id))
 	 (($no-return-tag-id? id1)
 	  id2)
 	 (($no-return-tag-id? id2)
@@ -527,8 +520,7 @@
      (else
       (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
 	(or (object-type-spec.memoised-list-id item-ots)
-	    (cond ((or (top-tag-id?     item-type.id)
-		       (untyped-tag-id? item-type.id))
+	    (cond ((top-tag-id?     item-type.id)
 		   (receive-and-return (list-type.id)
 		       (list-tag-id)
 		     (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
@@ -708,10 +700,9 @@
   ((stx lexenv)
    (define-syntax-rule (recur ?stx)
      (syntax-object.type-signature.untyped? ?stx lexenv))
-   (syntax-match stx (<top> <untyped> <list>)
+   (syntax-match stx (<top> <list>)
      (()			#t)
      ((<top>     . ?rest)	(recur ?rest))
-     ((<untyped> . ?rest)	(recur ?rest))
      ((?id   . ?rest)		#f)
      (<list>			#t)
      (?rest			#f))))
@@ -845,7 +836,7 @@
   ((super-signature sub-signature lexenv)
    (define-syntax-rule (recur ?super ?sub)
      (syntax-object.type-signature.super-and-sub?/matching ?super ?sub lexenv))
-   (syntax-match super-signature (<top> <untyped> <list>)
+   (syntax-match super-signature (<top> <list>)
      (()
       (syntax-match sub-signature ()
 	;;Both the signatures are proper lists with the same number of items, and all
@@ -855,12 +846,6 @@
 	(_  #f)))
 
      ((<top> . ?super-rest-types)
-      (syntax-match sub-signature ()
-	((?sub-type . ?sub-rest-types)
-	 (recur ?super-rest-types ?sub-rest-types))
-	(_ #f)))
-
-     ((<untyped> . ?super-rest-types)
       (syntax-match sub-signature ()
 	((?sub-type . ?sub-rest-types)
 	 (recur ?super-rest-types ?sub-rest-types))
@@ -881,7 +866,6 @@
       (type-identifier-is-list-sub-type? ?super-rest-type lexenv)
       (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
 	(or (top-tag-id?     item-id)
-	    (untyped-tag-id? item-id)
 	    (syntax-match sub-signature (<list>)
 	      ;;The super  signature is an improper  list with rest item  and the sub
 	      ;;signature is finished.  We want the following signatures to match:
@@ -1036,7 +1020,6 @@
   (define-single-type-signature-maker make-type-signature/single-predicate		predicate-tag-id)
   (define-single-type-signature-maker make-type-signature/single-stx			stx-tag-id)
   (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	syntactic-identifier-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-untyped		untyped-tag-id)
   (define-cached-signature-maker make-type-signature/standalone-list			(list-tag-id))
   #| end of LET-SYNTAX |# )
 
@@ -1385,7 +1368,7 @@
 	(values ?id ?tag)))
      (?id
       (identifier? ?id)
-      (values ?id (untyped-tag-id))))))
+      (values ?id (top-tag-id))))))
 
 
 ;;;; standard binding parsing: proper lists of bindings left-hand sides
@@ -1479,7 +1462,7 @@
 	    (identifier? ?id)
 	    (receive (id* tag*)
 		(recur ?other-id*)
-	      (values (cons ?id id*) (cons (untyped-tag-id) tag*))))
+	      (values (cons ?id id*) (cons (top-tag-id) tag*))))
 	   (_
 	    (%error "invalid tagged bindings syntax"))))
      (unless (distinct-bound-ids? id*)
@@ -1516,7 +1499,7 @@
   (define (%synner message subform)
     (syntax-violation __func_who__ message input-form.stx subform))
   (define (%one-untyped-for-each item*)
-    (map (lambda (x) (untyped-tag-id)) item*))
+    (map (lambda (x) (top-tag-id)) item*))
   (define (%validate-standard-formals standard-formals.stx %synner)
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
@@ -1664,7 +1647,7 @@
 	  ;;Untyped argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals.stx) (cons (untyped-tag-id) type-signature.stx)))
+	   (values (cons ?id standard-formals.stx) (cons (top-tag-id) type-signature.stx)))
 	  ;;Typed argument.
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
@@ -1681,7 +1664,7 @@
 		(%synner "duplicate identifiers in formals specification" duplicate-id)))))
 
   (define (%one-untyped-for-each item*)
-    (map (lambda (x) (untyped-tag-id)) item*))
+    (map (lambda (x) (top-tag-id)) item*))
 
   #| end of module |# )
 

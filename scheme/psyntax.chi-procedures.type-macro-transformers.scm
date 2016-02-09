@@ -137,12 +137,8 @@
       (define (%run-time-validation)
 	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
 					 list-type.id item.id rand.stx rand.idx (psi.core-expr rand.psi)))
-      (syntax-match (type-signature-tags rand.sig) (<top> <untyped> <list>)
+      (syntax-match (type-signature-tags rand.sig) (<top> <list>)
 	((<top>)
-	 ;;Integrate a run-time validator for the single return value.
-	 (%run-time-validation))
-
-	((<untyped>)
 	 ;;Integrate a run-time validator for the single return value.
 	 (%run-time-validation))
 
@@ -295,11 +291,8 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%run-time-predicate)
 	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi %synner))
-	 (syntax-match (type-signature-tags expr.sig) (<top> <untyped> <list> <condition> <compound-condition>)
+	 (syntax-match (type-signature-tags expr.sig) (<top> <list> <condition> <compound-condition>)
 	   ((<top>)
-	    (%run-time-predicate))
-
-	   ((<untyped>)
 	    (%run-time-predicate))
 
 	   ((<compound-condition>)
@@ -430,8 +423,7 @@
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
 	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
-	    (or (top-tag-id?     ?type-id)
-		(untyped-tag-id? ?type-id))
+	    (top-tag-id?     ?type-id)
 	    (%error-unknown-type))
 
 	   ((?type-id)
@@ -531,8 +523,7 @@
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
 	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
-	    (or (top-tag-id?     ?type-id)
-		(untyped-tag-id? ?type-id))
+	    (top-tag-id?     ?type-id)
 	    (%error-unknown-type))
 
 	   ((?type-id)
@@ -619,8 +610,7 @@
 						method-name.sym subject-expr.psi ?arg*))
 	 (syntax-match (type-signature-tags subject-expr.sig) ()
 	   ((?type-id)
-	    (or (top-tag-id?     ?type-id)
-		(untyped-tag-id? ?type-id))
+	    (top-tag-id?     ?type-id)
 	    (%late-binding))
 
 	   ((?type-id)
@@ -732,17 +722,14 @@
 		     (make-irritants-condition (list expr.sig)))))
        (syntax-match (type-signature-tags expr.sig) ()
 	 ((?source-type)
-	  (cond ((or (top-tag-id?     ?target-type)
-		     (untyped-tag-id? ?target-type))
-		 ;;Casting to  "<top>" or "<untyped>" means  that we do not  want the
-		 ;;receiver to  have access  to the  type.  This  is useful  to avoid
-		 ;;leaking types defined in the local lexical context.
+	  (cond ((top-tag-id? ?target-type)
+		 ;;Casting to "<top>" means that we  do not want the receiver to have
+		 ;;access to the type.  This is useful to avoid leaking types defined
+		 ;;in the local lexical context.
 		 (%do-unsafe-cast))
-		((or (top-tag-id?     ?source-type)
-		     (untyped-tag-id? ?source-type))
-		 ;;The expression  has "<top>"  or "<untyped>" as  single-value type:
-		 ;;cast  the  type to  the  target  one.   This  is a  true  *unsafe*
-		 ;;operation.
+		((top-tag-id? ?source-type)
+		 ;;The expression has "<top>" as  single-value type: cast the type to
+		 ;;the target one.  This is a true *unsafe* operation.
 		 (%do-unsafe-cast))
 		((type-identifier-is-procedure-or-procedure-sub-type? ?source-type)
 		 ;;With procedure types we trust the programmer.
@@ -949,12 +936,10 @@
       ;;The common case of single return value.
       (let ((asrt.id (car asrt.tags))
 	    (expr.id (car expr.tags)))
-	(cond ((or (top-tag-id?     asrt.id)
-		   (untyped-tag-id? asrt.id))
+	(cond ((top-tag-id?     asrt.id)
 	       ;;Success!!!  The signatures always match.
 	       (%just-evaluate-the-expression expr.psi return-values?))
-	      ((or (top-tag-id?     expr.id)
-		   (untyped-tag-id? expr.id))
+	      ((top-tag-id?     expr.id)
 	       (%run-time-validation who input-form.stx lexenv.run lexenv.expand
 				     asrt.tags expr.psi return-values?))
 	      ((type-identifier-super-and-sub?/matching asrt.id expr.id lexenv.run input-form.stx)

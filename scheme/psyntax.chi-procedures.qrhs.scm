@@ -93,7 +93,7 @@
 		;identifier.
 		;
 		;*  When the  QRHS  is a  "top-expr": this  field  contains the  type
-		;identifier "<untyped>".
+		;identifier "<top>".
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
@@ -200,7 +200,7 @@
   (protocol
     (lambda (make-qualified-rhs/defvar)
       (define* (make-qualified-rhs/standard-defvar input-form.stx {lhs.id identifier?} rhs.stx)
-	((make-qualified-rhs/defvar input-form.stx lhs.id rhs.stx (untyped-tag-id))))
+	((make-qualified-rhs/defvar input-form.stx lhs.id rhs.stx (top-tag-id))))
       make-qualified-rhs/standard-defvar)))
 
 (define qualified-rhs/standard-defvar-rtd
@@ -246,7 +246,7 @@
   (protocol
     (lambda (make-qualified-rhs)
       (define* (make-qualified-rhs/top-expr input-form.stx lhs.id)
-	((make-qualified-rhs input-form.stx lhs.id (untyped-tag-id))))
+	((make-qualified-rhs input-form.stx lhs.id (top-tag-id))))
       make-qualified-rhs/top-expr)))
 
 (define qualified-rhs/top-expr-rtd

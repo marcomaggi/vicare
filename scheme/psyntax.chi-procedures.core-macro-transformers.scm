@@ -514,10 +514,9 @@
 		  ((rhs*.psi)
 		   (map (lambda (rhs.stx lhs.tag)
 			  ;;We  insert  a signature  validation  even  if LHS.TAG  is
-			  ;;"<top>"  or "<untyped>":  this  way we  try  to check  at
-			  ;;expand-time  that there  is  a single  return value.   At
-			  ;;run-time, we  rely on  the built-in run-time  checking of
-			  ;;single-value return.
+			  ;;"<top>": this  way we  try to  check at  expand-time that
+			  ;;there is a single return  value.  At run-time, we rely on
+			  ;;the built-in run-time checking of single-value return.
 			  (chi-expr (bless
 				     `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
 				    lexenv.run lexenv.expand))

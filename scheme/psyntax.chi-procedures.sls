@@ -38,6 +38,11 @@
 ;;evaluation; the code representing the handling  of the resulting value is generated
 ;;somewhere else.
 ;;
+;;CHI-INTERACTION-QRHS:  fully  expands  a  qualified right-hand  side  object  in  a
+;;specified  lexical context  in an  interaction environment.   The result  is a  PSI
+;;object   representing  the   right-hand  side   expression  evaluation;   the  code
+;;representing the handling of the resulting value is generated somewhere else.
+;;
 ;;CHI-EXPR: fully expands an expression in a specified lexical context; the result is
 ;;a  PSI  object.   It  is  used   for:  trailing  expressions  in  bodies;  function
 ;;application's  operators  and  operands;  SET!  right-hand  side  expressions;  LET
@@ -721,7 +726,7 @@
 	 ((inv-collector) lib)
 	 (make-psi expr.stx
 		   (build-global-reference no-source loc)
-		   (make-type-signature/single-untyped))))
+		   (make-type-signature/single-top))))
 
       ((global-typed)
        ;;Reference to global imported typed  lexical variable; this means EXPR.STX is
@@ -760,7 +765,7 @@
        (let ((name (syntactic-binding-descriptor.value descr)))
 	 (make-psi expr.stx
 		   (build-primref no-source name)
-		   (make-type-signature/single-untyped))))
+		   (make-type-signature/single-top))))
 
       ((core-prim-typed)
        ;;Core  primitive  with  type  signatures  specification;  it  is  a  built-in
@@ -792,7 +797,7 @@
        (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr))))
 	 (make-psi expr.stx
 		   (build-lexical-reference no-source lex)
-		   (make-type-signature/single-untyped))))
+		   (make-type-signature/single-top))))
 
       ((lexical-typed)
        ;;Reference to typed  lexical variable; this means EXPR.STX  is an identifier.
@@ -1687,7 +1692,7 @@
 
   (define (%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
     ;;Partition the  syntactic bindings into typed  and untyped.  Those having  #f or
-    ;;"<top>" or "<untyped>" as tag are untyped.
+    ;;"<top>" as tag are untyped.
     ;;
     (let loop ((lhs*.id			lhs*.id)
 	       (lhs*.tag		lhs*.tag)
@@ -1701,8 +1706,7 @@
 	  (let ((lhs.id  (car lhs*.id))
 		(lhs.tag (car lhs*.tag)))
 	    (if (and lhs.tag
-		     (not (top-tag-id?     lhs.tag))
-		     (not (untyped-tag-id? lhs.tag)))
+		     (not (top-tag-id? lhs.tag)))
 		;;Add a typed lexical variable.
 		(let ((lhs.lex (generate-lexical-gensym lhs.id)))
 		  (loop (cdr lhs*.id)

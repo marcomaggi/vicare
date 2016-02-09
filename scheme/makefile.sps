@@ -3426,7 +3426,6 @@
 ;;; built-in Scheme object types
 
     (<no-return>				v $language)
-    (<untyped>					v $language)
     (<top>					v $language)
     (<void>					v $language)
     (<eof>					v $language)
