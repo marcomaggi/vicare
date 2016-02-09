@@ -725,10 +725,12 @@
 		   ;;"exact-match".  It never degrades.
 		   (state		'no-match))
 	  (if (pair? clause-signature*)
-	      (let* ((clause.csig (car clause-signature*))
-		     (argvals.sig (clambda-clause-signature.argvals clause.csig)))
-		(case (type-signature.match-arguments-against-operands input-form.stx lexenv.run lexenv.expand
-								       argvals.sig rand*.sig)
+	      (let* ((clause.csig	(car clause-signature*))
+		     (argvals.sig	(clambda-clause-signature.argvals clause.csig))
+		     (clause-state	(type-signature.match-arguments-against-operands
+					 input-form.stx lexenv.run lexenv.expand
+					 argvals.sig rand*.sig)))
+		(case clause-state
 		  ((exact-match)
 		   ;;The  operands match  the signature:  we are  applying a  closure
 		   ;;object rator to a tuple of rands that have the right type.
@@ -871,11 +873,11 @@
     ;;RAND*.SIG must be a list  of "<type-signature>" instances representing the type
     ;;signatures of the operands.
     ;;
+    (define argvals.tags
+      (type-signature-tags argvals.sig))
     ;;In  this  loop  the  variable  STATE always  degrades:  from  "exact-match"  to
     ;;"possible-match" or "no-match"; from  "possible-match" to "no-match".  It never
     ;;upgrades.
-    (define argvals.tags
-      (type-signature-tags argvals.sig))
     (let loop ((state		'exact-match)
 	       (argvals.tags	argvals.tags)
 	       (rand*.sig	rand*.sig))
@@ -910,7 +912,7 @@
 		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
 		 ((<untyped>)
 		  ;;The argument exactly matches the operand.  Good.
-		  (loop state           ?argvals.tags (cdr rand*.sig)))
+		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
 		 ((?rand.type)
 		  (cond ((type-identifier-super-and-sub?/matching ?argval.tag ?rand.type lexenv.run)
 			 ;;One argument matches one operand.  Good.
@@ -944,6 +946,7 @@
 	 state)
 
 	(?arg-list-sub-type
+	 (identifier? ?arg-list-sub-type)
 	 ;;Any number of operands of a specified type are accepted.
 	 (if (pair? rand*.sig)
 	     (let* ((argval.ots   (id->object-type-specification __who__ input-form.stx ?arg-list-sub-type lexenv.run))
@@ -960,8 +963,8 @@
 		    ;;One argument possibly matches one operand.  Good.
 		    (%recursion 'possible-match))
 		   ((<untyped>)
-		    ;;The argument exactly matches the operand.  Good.
-		    (%recursion state))
+		    ;;One argument possibly matches one operand.  Good.
+		    (%recursion 'possible-match))
 		   ((?rand.type)
 		    (if (type-identifier-super-and-sub?/matching argitem.tag ?rand.type lexenv.run)
 			;;One argument matches one operand.  Good.
