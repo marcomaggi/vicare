@@ -254,6 +254,29 @@
   ;;an  environment.  Return  two values:  the resulting  core-expression, a  list of
   ;;libraries that must be invoked before evaluating the core expr.
   ;;
+  ;;NOTE Beware of  the difference between evaluating forms with  EVAL in the context
+  ;;of  an  interaction   environment  and  in  the  context   of  a  non-interaction
+  ;;environment.  Examples:
+  ;;
+  ;;  (eval '(begin (define a 1) a) (environment '(rnrs)))
+  ;;  error --> a definition was found where an expression was expected
+  ;;
+  ;;  (eval '(begin (define a 1) a) (interaction-environment))
+  ;;  => 1
+  ;;
+  ;;  (eval '(define a 1) (environment '(rnrs)))
+  ;;  error --> a definition was found where an expression was expected
+  ;;
+  ;;  (eval '(define a 1) (interaction-environment))
+  ;;  => #<void>
+  ;;
+  ;;* When the  environment is non-interaction: the input expression  must be a valid
+  ;;standalone expression, expandable with CHI-EXPR.
+  ;;
+  ;;*  When the  environment is  interaction: the  input expression  must be  a valid
+  ;;definition  or   expression  at  the   top-level  of  a  body,   expandable  with
+  ;;CHI-INTERACTION-EXPR which in turn calls CHI-BODY*.
+  ;;
   (config.initialise-expander)
   (cond ((non-interaction-lexical-environment? env)
 	 (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
@@ -728,7 +751,7 @@
 	 ((new-test-code requested-lib*)
 	  (set! accumulated-code
 		(build-conditional no-source
-		  accumulated-code	    ;test
+		    accumulated-code	    ;test
 		  (build-data no-source #t) ;consequent
 		  new-test-code))	    ;alternate
 	  (set! accumulated-requested-lib*
@@ -887,7 +910,7 @@
 	      ;;established before expanding the init forms.
 	      (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
 		     (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
-		     (loc*          (map generate-qrhs-loc qrhs*))
+		     (loc*          (map qrhs-generate-loc qrhs*))
 		     (export-subst  (%make-export-subst export-name* export-id*)))
 		(receive (global-env visit-env typed-locs)
 		    (%make-global-env/visit-env/typed-locs lex* loc* lexenv.run)
@@ -1438,9 +1461,6 @@
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
-;;eval: (put 'build-case-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-foreign-call		'scheme-indent-function 1)
 ;;eval: (put 'build-sequence			'scheme-indent-function 1)
 ;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)

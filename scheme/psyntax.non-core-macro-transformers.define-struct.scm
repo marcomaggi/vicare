@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -48,27 +48,6 @@
   (cons 'list (map (lambda (key.sym operator.id)
 		     (list 'cons `(quote ,key.sym) `(syntax ,operator.id)))
 		field-name*.sym operator*.id)))
-
-(define-syntax (%maybe-brace stx)
-  ;;We want:
-  ;;
-  ;;   ,(%maybe-brace tmp '<fixnum>)
-  ;;
-  ;;to expand to the following when typed language is enabled:
-  ;;
-  ;;   `(brace ,tmp <fixnum>)
-  ;;
-  ;;and to the following when strict-R6RS is enabled:
-  ;;
-  ;;   ,tmp
-  ;;
-  (syntax-case stx ()
-    ((_ ?one ?two)
-     ;;We want to evaluate OPTIONS::STRICT-R6RS at run-time, not at expand-time.
-     #'(if (options::strict-r6rs)
-	   ?one
-	 (quasiquote (brace (unquote ?one) (unquote ?two)))))
-    ))
 
 
 (define (define-struct-macro input-form.stx)
@@ -147,7 +126,7 @@
       (map (lambda (accessor.id unsafe-accessor.id field.tag)
 	     (let ((stru.sym (gensym "stru")))
 	       `(begin
-		  (define (,(%maybe-brace accessor.id field.tag) ,(%maybe-brace stru.sym type.id))
+		  (define/typed ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
 		    (,unsafe-accessor.id ,stru.sym))
 		  ,@(if (options::strict-r6rs)
 			'()
@@ -160,7 +139,7 @@
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(begin
-		  (define (,(%maybe-brace mutator.id '<void>) ,(%maybe-brace stru.sym type.id) ,(%maybe-brace val.sym field.tag))
+		  (define/typed ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
 		    (,unsafe-mutator.id ,stru.sym ,val.sym))
 		  ,@(if (options::strict-r6rs)
 			'()
@@ -172,14 +151,10 @@
       (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.tag)
     	     (let ((stru.sym (gensym "stru"))
     		   (val.sym  (gensym "val")))
-    	       `(case-define ,method.id
-    		  (,(if (options::strict-r6rs)
-			`(,stru.sym)
-		      `((brace _ ,field.tag) (brace ,stru.sym ,type.id)))
+    	       `(case-define/typed ,method.id
+    		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
     		   (,unsafe-accessor.id ,stru.sym))
-    		  (,(if (options::strict-r6rs)
-			`(,stru.sym ,val.sym)
-		      `((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag)))
+    		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
     		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
     	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.tag))
 
@@ -190,9 +165,7 @@
 	     (let ((stru.sym (gensym "stru")))
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
-		   (internal-lambda (unsafe) ,(if (options::strict-r6rs)
-						  `(,stru.sym)
-						`((brace _ ,field.tag) ,stru.sym))
+		   (lambda/standard (,stru.sym)
 		     ($struct-ref ,stru.sym ,field.idx))))))
 	unsafe-accessor*.id field*.idx field*.tag))
 
@@ -202,9 +175,7 @@
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (internal-lambda (unsafe) ,(if (options::strict-r6rs)
-						  `(,stru.sym ,val.sym)
-						`((brace _ <void>) ,stru.sym ,val.sym))
+		   (lambda/standard (,stru.sym ,val.sym)
 		     ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
 
@@ -221,7 +192,7 @@
 	       ,constructor.id ,predicate.id
 	       ,@accessor*.id ,@unsafe-accessor*.id
 	       ,@mutator*.id  ,@unsafe-mutator*.id)
-	(define (,(%maybe-brace predicate.id '<boolean>) obj)
+	(define/typed ((brace ,predicate.id <boolean>) obj)
 	  ($struct/rtd? obj ',std))
 	(define-syntax ,type.id
 	  (make-struct-type-spec ',std
@@ -229,7 +200,7 @@
 				 ,safe-accessors-table.sexp
 				 ,safe-mutators-table.sexp
 				 (quote ())))
-	(define (,(%maybe-brace constructor.id type.id) . ,constructor-arg*.sym)
+	(define/typed ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
 	  (receive-and-return (S)
 	      ($struct ',std . ,constructor-arg*.sym)
 	    (when ($std-destructor ',std)

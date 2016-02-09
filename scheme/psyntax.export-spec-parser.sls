@@ -62,9 +62,9 @@
   ;;
   (case-define %synner
     ((message)
-     (syntax-violation __who__ message export-spec*))
+     (syntax-violation (quote parse-export-spec*) message export-spec*))
     ((message subform)
-     (syntax-violation __who__ message export-spec* subform)))
+     (syntax-violation (quote parse-export-spec*) message export-spec* subform)))
   (let loop ((export-spec*          export-spec*)
 	     (internal-identifier*  '())
 	     (external-identifier*  '()))

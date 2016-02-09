@@ -494,7 +494,7 @@
 				     `(record-constructor ,rcd-id)))
 	      (predicate.sexp    (or predicate.sexp
 				     (let ((arg.sym (gensym)))
-				       `(internal-lambda (unsafe) (,arg.sym)
+				       `(lambda/standard (,arg.sym)
 					  (record-and-rtd? ,arg.sym ,rtd-id))))))
 	  ((make-object-type-spec parent-id
 				  constructor.sexp destructor.sexp predicate.sexp

@@ -56,11 +56,14 @@
      (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
 				    (cons ?nested-rator ?nested-rand*) ?rand*))
 
-    ((values ?rand* ...)
+    ((values ?rand)
+     (chi-expr ?rand lexenv.run lexenv.expand))
+
+    ((values ?rand ?rand* ...)
      ;;A call to VALUES is special because  VALUES does not have a predefined retvals
      ;;signature, but the retvals signature equals the arguments' signature.
      (%chi-values-application input-form.stx lexenv.run lexenv.expand
-			      ?rand*))
+			      (cons ?rand ?rand*)))
 
     ((apply ?rator ?rand* ...)
      (%chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -239,12 +242,13 @@
 	      (?tag
 	       (list-tag-id? ?tag)
 	       (loop (cdr rand*.sig) (cdr rand*.stx)
-		     (cons (top-tag-id) rand*.tag)))
+		     (cons (untyped-tag-id) rand*.tag)))
 	      (_
-	       (expand-time-retvals-signature-violation 'values
-							input-form.stx (car rand*.stx)
-							(make-type-signature/single-top)
-							(car rand*.sig))))
+	       (let ((expected-retvals-signature (make-type-signature/single-top)))
+		 (expand-time-retvals-signature-violation 'values
+		   input-form.stx (car rand*.stx)
+		   expected-retvals-signature
+		   (car rand*.sig)))))
 	  (make-type-signature (reverse rand*.tag)))))
     (make-psi input-form.stx
 	      (build-application (syntax-annotation input-form.stx)
@@ -285,7 +289,8 @@
 			      apply.core
 			      (cons rator.core rand*.core))
 			    (psi-application-retvals-signature input-form.stx lexenv.run rator.psi))))
-	       ((top-tag-id? ?rator.tag)
+	       ((or (top-tag-id?     ?rator.tag)
+		    (untyped-tag-id? ?rator.tag))
 		;;Let's do it and we will see at run-time what happens.  Notice that,
 		;;in this case: we do not know the signature of the return values.
 		(%build-application-no-signature input-form.stx lexenv.run lexenv.expand
@@ -398,8 +403,8 @@
     ;;return a PSI struct as per standard Scheme behaviour and, when possible, select
     ;;the appropriate retvals signature for the returned PSI.
     ;;
-    ;;* If  the type of rator  is "<top>": expand  to an application as  per standard
-    ;;Scheme behaviour.
+    ;;* If the type  of rator is "<top>" or "<untyped>": expand  to an application as
+    ;;per standard Scheme behaviour.
     ;;
     ;;* Otherwise raise a syntax violation.
     ;;
@@ -409,7 +414,8 @@
 	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
 						  rator.tag rator.psi rand*.psi)))
 
-	  ((top-tag-id? rator.tag)
+	  ((or (top-tag-id?     rator.tag)
+	       (untyped-tag-id? rator.tag))
 	   ;;The rator  type is  unknown, we  only know  that it  is a  single value.
 	   ;;Return a procedure application and we will see at run-time what happens.
 	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
@@ -460,7 +466,8 @@
        (%common-rator-application))
 
       ((?tag)
-       (top-tag-id? ?tag)
+       (or (top-tag-id?     ?tag)
+	   (untyped-tag-id? ?tag))
        ;;The rator type is unknown, we only know  that it is a single value; it might
        ;;be a closure object or not.  Return  a procedure application and we will see
        ;;at run-time what happens.
@@ -532,7 +539,8 @@
    %error-number-of-operands-exceeds-maximum-arguments-count
    %error-number-of-operands-deceeds-minimum-arguments-count
    %error-operand-with-multiple-return-values
-   %error-mismatch-between-argvals-signature-and-operands-signature)
+   %error-mismatch-between-argvals-signature-and-operands-signature
+   %warning-mismatch-between-argvals-signature-and-operands-signature)
 
   (define-condition-type &wrong-number-of-arguments-error
       &error
@@ -628,6 +636,21 @@
 	  (make-clambda-signature-condition clambda-signature)
 	  (make-operands-signature-condition operands-signature))))))
 
+  (define (%warning-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+									      clambda-signature operands-signature)
+    (syntax-match input-form.stx ()
+      ((?rator . ?rand*)
+       (raise-compound-condition-object/continuable 'chi-application
+	 "expand-time mismatch between closure object's arguments signatures and operands signature"
+	 input-form.stx
+	 (condition
+	  (make-expand-time-type-signature-warning)
+	  (make-syntax-warning input-form.stx ?rator)
+	  (make-application-operator-condition ?rator)
+	  (make-application-operands-condition ?rand*)
+	  (make-clambda-signature-condition clambda-signature)
+	  (make-operands-signature-condition operands-signature))))))
+
   #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 
 
@@ -669,11 +692,11 @@
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
     (if (options::strict-r6rs)
 	;;We rely on run-time checking.
-	(%no-optimisation-possible))
-    (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
-      (%validate-clambda-number-of-arguments input-form.stx 1 1 rator.psi rand*.psi rand*.sig)
-      (%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
-      (%no-optimisation-possible)))
+	(%no-optimisation-possible)
+      (let ((rand*.sig (map psi.retvals-signature rand*.psi)))
+	(%validate-clambda-number-of-arguments input-form.stx 1 1 rator.psi rand*.psi rand*.sig)
+	(%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
+	(%no-optimisation-possible))))
 
   (define (%process-clambda-application input-form.stx lexenv.run lexenv.expand
 					rator.clambda-signature rator.psi rand*.psi)
@@ -731,8 +754,13 @@
 	       (%no-optimisation-possible))
 	      ((no-match)
 	       ;;Arguments and operands do *not* match at expand-time.
-	       (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
-		 rator.clambda-signature rand*.sig))))))))
+	       (if (options::typed-language?)
+		   (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+		     rator.clambda-signature rand*.sig)
+		 (begin
+		   (%warning-mismatch-between-argvals-signature-and-operands-signature
+		    input-form.stx rator.clambda-signature rand*.sig)
+		   (%no-optimisation-possible))))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -795,7 +823,11 @@
 	   (let* ((rator.label (id->label/or-error __module_who__ input-form.stx rator.stx))
 		  (rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
 	     (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
-		    (cond ((core-prim-typed-binding-descriptor.unsafe-variant-id rator.descr)
+		    ;;FIXME  Unsafe  variants  for  core  primitives  is  temporarily
+		    ;;disabled until the table of primitive properties declaration is
+		    ;;rewritten  in a  format that  allows correct  selection of  the
+		    ;;replacement.  (Marco Maggi; Sun Jan 10, 2016)
+		    (cond ((and #f (core-prim-typed-binding-descriptor.unsafe-variant-id rator.descr))
 			   => %build-unsafe-variant-application)
 			  (else
 			   (%no-optimisation-possible))))
@@ -847,7 +879,7 @@
     (let loop ((state		'exact-match)
 	       (argvals.tags	argvals.tags)
 	       (rand*.sig	rand*.sig))
-      (syntax-match argvals.tags (<top> <list>)
+      (syntax-match argvals.tags (<top> <untyped> <list>)
 	(()
 	 (if (null? rand*.sig)
 	     ;;No more arguments and no more operands.  Good.
@@ -862,18 +894,28 @@
 	   ;;More arguments and no more operands.  Bad.
 	   'no-match))
 
+	((<untyped> . ?argvals.tags)
+	 (if (pair? rand*.sig)
+	     ;;One argument matches one operand.  Good.
+	     (loop state ?argvals.tags (cdr rand*.sig))
+	   ;;More arguments and no more operands.  Bad.
+	   'no-match))
+
 	((?argval.tag . ?argvals.tags)
 	 (if (pair? rand*.sig)
 	     (let ((rand.tags (type-signature-tags (car rand*.sig))))
-	       (syntax-match rand.tags (<top> <list>)
+	       (syntax-match rand.tags (<top> <untyped> <list>)
 		 ((<top>)
 		  ;;One argument possibly matches one operand.  Good.
 		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
+		 ((<untyped>)
+		  ;;The argument exactly matches the operand.  Good.
+		  (loop state           ?argvals.tags (cdr rand*.sig)))
 		 ((?rand.type)
-		  (cond ((type-identifier-super-and-sub? ?argval.tag ?rand.type lexenv.run)
+		  (cond ((type-identifier-super-and-sub?/matching ?argval.tag ?rand.type lexenv.run)
 			 ;;One argument matches one operand.  Good.
 			 (loop state ?argvals.tags (cdr rand*.sig)))
-			((type-identifier-super-and-sub? ?rand.type ?argval.tag lexenv.run)
+			((type-identifier-super-and-sub?/matching ?rand.type ?argval.tag lexenv.run)
 			 ;;One argument possibly matches one operand.  Good.
 			 ;;
 			 ;;This may happen when the operand is built by an expression
@@ -891,7 +933,7 @@
 		  ;;specified type.
 		  (let ((ots (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run)))
 		    (if (and (list-type-spec? ots)
-			     (type-identifier-super-and-sub? ?argval.tag (list-type-spec.type-id ots) lexenv.run))
+			     (type-identifier-super-and-sub?/matching ?argval.tag (list-type-spec.type-id ots) lexenv.run))
 			(loop 'possible-match ?argvals.tags (cdr rand*.sig))
 		      'no-match)))))
 	   ;;More arguments and no more operands.  Bad.
@@ -913,12 +955,15 @@
 		   (if (pair? rand*.sig)
 		       (inner-loop state (type-signature-tags (car rand*.sig)) (cdr rand*.sig))
 		     state))
-		 (syntax-match rand.tags (<top> <list>)
+		 (syntax-match rand.tags (<top> <untyped> <list>)
 		   ((<top>)
 		    ;;One argument possibly matches one operand.  Good.
 		    (%recursion 'possible-match))
+		   ((<untyped>)
+		    ;;The argument exactly matches the operand.  Good.
+		    (%recursion state))
 		   ((?rand.type)
-		    (if (type-identifier-super-and-sub? argitem.tag ?rand.type lexenv.run)
+		    (if (type-identifier-super-and-sub?/matching argitem.tag ?rand.type lexenv.run)
 			;;One argument matches one operand.  Good.
 			(%recursion state)
 		      'no-match))
@@ -930,7 +975,7 @@
 		    ;;specified type.
 		    (let* ((rand.ots      (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run))
 			   (randitem.tag  (list-type-spec.type-id rand.ots)))
-		      (if (type-identifier-super-and-sub? argitem.tag randitem.tag lexenv.run)
+		      (if (type-identifier-super-and-sub?/matching argitem.tag randitem.tag lexenv.run)
 			  (%recursion 'possible-match)
 			'no-match))))))
 	   ;;No more operands.  Good.
@@ -947,9 +992,10 @@
 ;;Local Variables:
 ;;mode: vicare
 ;;fill-column: 85
-;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
-;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
-;;eval: (put 'with-who					'scheme-indent-function 1)
+;;eval: (put 'raise-compound-condition-object			'scheme-indent-function 1)
+;;eval: (put 'raise-compound-condition-object/continuable	'scheme-indent-function 1)
+;;eval: (put 'assertion-violation/internal-error		'scheme-indent-function 1)
+;;eval: (put 'with-who						'scheme-indent-function 1)
 ;;eval: (put '%error-mismatch-between-argvals-signature-and-operands-signature	'scheme-indent-function 1)
 ;;eval: (put '%error-number-of-operands-exceeds-maximum-arguments-count		'scheme-indent-function 1)
 ;;eval: (put '%error-number-of-operands-deceeds-minimum-arguments-count		'scheme-indent-function 1)

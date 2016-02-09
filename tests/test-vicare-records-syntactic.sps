@@ -1246,7 +1246,7 @@
 	  (eval '(record-reset 123)
 		(environment '(vicare)))
 	(catch E
-	  ((expander::&expand-time-type-signature-violation)
+	  ((expander::&expand-time-type-signature-warning)
 	   #t)
 	  (else E)))
     => #t)

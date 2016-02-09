@@ -620,7 +620,9 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
-   ((<integer> <integer>)		=> (<integer>)))
+   ((<integer> <integer>)		=> (<integer>))
+   ;;This is needed because integer flonums are valid operands.
+   ((<real> <real>)			=> (<real>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
@@ -629,7 +631,9 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
-   ((<integer> <integer>)		=> (<integer>)))
+   ((<integer> <integer>)		=> (<integer>))
+   ;;This is needed because integer flonums are valid operands.
+   ((<real> <real>)			=> (<real>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
@@ -638,7 +642,9 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum> <fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer> <exact-integer>))
-   ((<integer> <integer>)		=> (<integer> <integer>)))
+   ((<integer> <integer>)		=> (<integer> <integer>))
+   ;;This is needed because integer flonums are valid operands.
+   ((<real> <real>)			=> (<real> <real>)))
   (attributes
    ((_ _)				effect-free)))
 

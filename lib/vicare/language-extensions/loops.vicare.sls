@@ -1,7 +1,8 @@
 ;;;Eager Comprehensions in [outer..inner|expr]-Convention
 ;;;sebastian.egner@philips.com, Eindhoven, The Netherlands, 25-Apr-2005
 ;;;Copyright (c) 2008 Derick Eddington
-;;;Nausicaa integration by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Vicare Scheme integration by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Tue Feb  9, 2016: modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
 ;;;a  copy of  this  software and  associated  documentation files  (the
@@ -916,12 +917,12 @@
 (define-syntax min-ec
   (syntax-rules ()
     ((min-ec etc1 etc ...)
-     (fold3-ec (min) etc1 etc ... min min) )))
+     (fold3-ec (assertion-violation 'min-ec "invalid use with no operands") etc1 etc ... min min) )))
 
 (define-syntax max-ec
   (syntax-rules ()
     ((max-ec etc1 etc ...)
-     (fold3-ec (max) etc1 etc ... max max) )))
+     (fold3-ec (assertion-violation 'max-ec "invalid use with no operands") etc1 etc ... max max) )))
 
 (define-syntax last-ec
   (syntax-rules (nested)

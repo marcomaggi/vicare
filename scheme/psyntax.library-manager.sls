@@ -1,4 +1,4 @@
-;;;Copyright (c) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -568,7 +568,8 @@
 			     ((core-prim
 			       $core-prim-typed
 			       library import export
-			       internal-define define-syntax define-alias
+			       define/standard define/typed case-define/standard case-define/typed
+			       define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when

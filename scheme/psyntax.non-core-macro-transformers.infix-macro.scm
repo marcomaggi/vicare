@@ -15,7 +15,7 @@
 ;;;        of Technology.  Proceedings of the 1st Annual ACM SIGACT-SIGPLAN Symposium
 ;;;        on Principles of Programming Languages (1973).
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -32,34 +32,35 @@
 
 
 #!vicare
+(module (infix-macro)
 
-(define-module-who infix)
+  (define-module-who infix)
 
-(define (synner-internal-error message subform)
-  (assertion-violation/internal-error __module_who__ message subform))
+  (define (synner-internal-error message subform)
+    (assertion-violation/internal-error __module_who__ message subform))
 
-(define (infix-macro input-form.stx)
-  ;;Transformer  function used  to expand  Vicare's INFIX  macros from  the top-level
-  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
-  ;;object that must be further expanded.
-  ;;
-  (define (synner message subform)
-    (syntax-violation __module_who__ message input-form.stx subform))
-  (define (immediate-end-of-input-handler)
-    ;;Special case: no input tokens.
-    (bless
-     '(values)))
-  (syntax-match input-form.stx ()
-    ((_ . ?expr)
-     (let* ((obj*   (reverse (flatten ?expr synner)))
-	    (token* (map (lambda (obj)
-			   (tokenise obj synner))
-		      obj*))
-	    (lexer  (make-lexer token*))
-	    (expr   (parse lexer synner MINIMUM-BINDING-POWER
-			   immediate-end-of-input-handler)))
-       expr))
-    ))
+  (define (infix-macro input-form.stx)
+    ;;Transformer function  used to expand  Vicare's INFIX macros from  the top-level
+    ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
+    ;;object that must be further expanded.
+    ;;
+    (define (synner message subform)
+      (syntax-violation __module_who__ message input-form.stx subform))
+    (define (immediate-end-of-input-handler)
+      ;;Special case: no input tokens.
+      (bless
+       '(values)))
+    (syntax-match input-form.stx ()
+      ((_ . ?expr)
+       (let* ((obj*   (reverse (flatten ?expr synner)))
+	      (token* (map (lambda (obj)
+			     (tokenise obj synner))
+			obj*))
+	      (lexer  (make-lexer token*))
+	      (expr   (parse lexer synner MINIMUM-BINDING-POWER
+			     immediate-end-of-input-handler)))
+	 expr))
+      ))
 
 
 ;;;; helpers
@@ -1336,6 +1337,11 @@
 
 (define-memoized COLON-TOKEN
   (make-<colon>))
+
+
+;;;; done
+
+#| end of module |# )
 
 ;;; end of file
 ;; Local Variables:

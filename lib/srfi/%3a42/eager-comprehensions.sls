@@ -1,6 +1,8 @@
 ;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
 ;;;named LICENSE from  the original collection this  file is distributed
 ;;;with.
+;;;
+;;;Tue Feb  9, 2016: modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 
 ; <PLAINTEXT>
 ; Eager Comprehensions in [outer..inner|expr]-Convention
@@ -962,12 +964,12 @@
 (define-syntax min-ec
   (syntax-rules ()
     ((min-ec etc1 etc ...)
-     (fold3-ec (min) etc1 etc ... min min) )))
+     (fold3-ec (assertion-violation 'min-ec "invalid use with no operands") etc1 etc ... min min) )))
 
 (define-syntax max-ec
   (syntax-rules ()
     ((max-ec etc1 etc ...)
-     (fold3-ec (max) etc1 etc ... max max) )))
+     (fold3-ec (assertion-violation 'max-ec "invalid use with no operands") etc1 etc ... max max) )))
 
 (define-syntax last-ec
   (syntax-rules (nested)

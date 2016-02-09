@@ -10,7 +10,7 @@
 ;;;	version 1.3 (2009-03-14).
 ;;;
 ;;;Copyright (C) 2004-2009 Neil Van Dyke
-;;;Port to R6RS by Marco Maggi
+;;;Port to R6RS by Marco Maggi, 2011, 2015
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -32,6 +32,7 @@
 
 #!r6rs
 (library (vicare containers levenshtein)
+  (options strict-r6rs)
   (export
     levenshtein
     levenshtein/predicate

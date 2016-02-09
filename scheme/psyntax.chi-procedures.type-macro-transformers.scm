@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -137,8 +137,12 @@
       (define (%run-time-validation)
 	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
 					 list-type.id item.id rand.stx rand.idx (psi.core-expr rand.psi)))
-      (syntax-match (type-signature-tags rand.sig) (<top> <list>)
+      (syntax-match (type-signature-tags rand.sig) (<top> <untyped> <list>)
 	((<top>)
+	 ;;Integrate a run-time validator for the single return value.
+	 (%run-time-validation))
+
+	((<untyped>)
 	 ;;Integrate a run-time validator for the single return value.
 	 (%run-time-validation))
 
@@ -291,8 +295,11 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%run-time-predicate)
 	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi %synner))
-	 (syntax-match (type-signature-tags expr.sig) (<top> <list> <condition> <compound-condition>)
+	 (syntax-match (type-signature-tags expr.sig) (<top> <untyped> <list> <condition> <compound-condition>)
 	   ((<top>)
+	    (%run-time-predicate))
+
+	   ((<untyped>)
 	    (%run-time-predicate))
 
 	   ((<compound-condition>)
@@ -423,7 +430,8 @@
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
 	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
-	    (top-tag-id? ?type-id)
+	    (or (top-tag-id?     ?type-id)
+		(untyped-tag-id? ?type-id))
 	    (%error-unknown-type))
 
 	   ((?type-id)
@@ -489,7 +497,7 @@
   (define-module-who slot-set!)
 
   (define-core-transformer (slot-set! input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer  function  used  to  expand Vicare's  SLOT-SET!  syntaxes  from  the
+    ;;Transformer  function used  to  expand Vicare's  SLOT-SET!   syntaxes from  the
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return a PSI struct.
     ;;
@@ -523,7 +531,8 @@
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
 	 (syntax-match (type-signature-tags expr.sig) ()
 	   ((?type-id)
-	    (top-tag-id? ?type-id)
+	    (or (top-tag-id?     ?type-id)
+		(untyped-tag-id? ?type-id))
 	    (%error-unknown-type))
 
 	   ((?type-id)
@@ -610,7 +619,8 @@
 						method-name.sym subject-expr.psi ?arg*))
 	 (syntax-match (type-signature-tags subject-expr.sig) ()
 	   ((?type-id)
-	    (top-tag-id? ?type-id)
+	    (or (top-tag-id?     ?type-id)
+		(untyped-tag-id? ?type-id))
 	    (%late-binding))
 
 	   ((?type-id)
@@ -722,14 +732,17 @@
 		     (make-irritants-condition (list expr.sig)))))
        (syntax-match (type-signature-tags expr.sig) ()
 	 ((?source-type)
-	  (cond ((top-tag-id? ?target-type)
-		 ;;Casting to "<top>" means that we  do not want the receiver to have
-		 ;;access to the type.  This is useful to avoid leaking types defined
-		 ;;in the local lexical context.
+	  (cond ((or (top-tag-id?     ?target-type)
+		     (untyped-tag-id? ?target-type))
+		 ;;Casting to  "<top>" or "<untyped>" means  that we do not  want the
+		 ;;receiver to  have access  to the  type.  This  is useful  to avoid
+		 ;;leaking types defined in the local lexical context.
 		 (%do-unsafe-cast))
-		((top-tag-id? ?source-type)
-		 ;;The expression has "<top>" as  single-value type: cast the type to
-		 ;;the target one.  This is a true *unsafe* operation.
+		((or (top-tag-id?     ?source-type)
+		     (untyped-tag-id? ?source-type))
+		 ;;The expression  has "<top>"  or "<untyped>" as  single-value type:
+		 ;;cast  the  type to  the  target  one.   This  is a  true  *unsafe*
+		 ;;operation.
 		 (%do-unsafe-cast))
 		((type-identifier-is-procedure-or-procedure-sub-type? ?source-type)
 		 ;;With procedure types we trust the programmer.
@@ -793,7 +806,7 @@
     (let* ((expr.psi     (chi-expr expr.stx lexenv.run lexenv.expand))
 	   (expr.sig     (psi.retvals-signature expr.psi)))
       (let* ((matcher.sexp	(let ((arg.sym (gensym "arg")))
-				  `(internal-lambda () (,arg.sym)
+				  `(lambda/standard (,arg.sym)
 				     (cond ,@(%build-branches input-form.stx arg.sym case-clause*.stx)))))
 	     (matcher.psi	(chi-expr (bless matcher.sexp) lexenv.run lexenv.expand)))
 	(make-psi input-form.stx
@@ -936,13 +949,15 @@
       ;;The common case of single return value.
       (let ((asrt.id (car asrt.tags))
 	    (expr.id (car expr.tags)))
-	(cond ((top-tag-id? asrt.id)
+	(cond ((or (top-tag-id?     asrt.id)
+		   (untyped-tag-id? asrt.id))
 	       ;;Success!!!  The signatures always match.
 	       (%just-evaluate-the-expression expr.psi return-values?))
-	      ((top-tag-id? expr.id)
+	      ((or (top-tag-id?     expr.id)
+		   (untyped-tag-id? expr.id))
 	       (%run-time-validation who input-form.stx lexenv.run lexenv.expand
 				     asrt.tags expr.psi return-values?))
-	      ((type-identifier-super-and-sub? asrt.id expr.id lexenv.run input-form.stx)
+	      ((type-identifier-super-and-sub?/matching asrt.id expr.id lexenv.run input-form.stx)
 	       ;;Success!!!  The signatures do match.
 	       (%just-evaluate-the-expression expr.psi return-values?))
 	      (else
@@ -953,7 +968,7 @@
 	   (type-identifier-is-list-sub-type? asrt.tags)
 	   (type-identifier-is-list-sub-type? expr.tags))
       ;;The case of multiple return values with the same type.
-      (if (type-identifier-super-and-sub? asrt.tags expr.tags lexenv.run input-form.stx)
+      (if (type-identifier-super-and-sub?/matching asrt.tags expr.tags lexenv.run input-form.stx)
 	  ;;Success!!!  We have determined at expand-time that the signatures match.
 	  (%just-evaluate-the-expression expr.psi return-values?)
 	(%error-mismatching-signatures)))
@@ -964,7 +979,7 @@
       ;;and the assertion expects zero values.  We just evaluate the expression.
       (%just-evaluate-the-expression expr.psi return-values?))
 
-     ((syntax-object.type-signature.super-and-sub? asrt.tags expr.tags lexenv.run)
+     ((syntax-object.type-signature.super-and-sub?/matching asrt.tags expr.tags lexenv.run)
       (%just-evaluate-the-expression expr.psi return-values?))
 
      (else
@@ -1105,7 +1120,7 @@
 						  (else
 						   `(values . ,validating-form*.sexp)))
 					  `(begin ,@validating-form*.sexp (void))))
-	       (consumer.stx		(bless `(internal-lambda (unsafe) ,consumer-formals.sexp ,consumer-body.sexp)))
+	       (consumer.stx		(bless `(lambda/standard ,consumer-formals.sexp ,consumer-body.sexp)))
 	       ;;We want "__who__"  to be bound in the consumer  expression.  So that
 	       ;;VALIDATE-TYPED-RETURN-VALUE can use it.
 	       (consumer.psi		(let* ((id    (core-prim-id '__who__))
@@ -1115,13 +1130,8 @@
 					    ((displaced-lexical)
 					     ;;__who__ is unbound.
 					     (receive (lexenv.run lexenv.expand)
-						 (push-fluid-syntax who input-form.stx lexenv.run lexenv.expand
-								    id (bless '(identifier-syntax #f))
-								    (case-lambda
-								     ((message)
-								      (syntax-violation who message input-form.stx))
-								     ((message subform)
-								      (syntax-violation who message input-form.stx subform))))
+						 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
+										   __who__ (core-prim-id 'assert-signature))
 					       (chi-expr consumer.stx lexenv.run lexenv.expand)))
 					    (else
 					     ;;__who__ is bound.
@@ -1143,7 +1153,7 @@
 	     (idx.sym	(gensym "idx"))
 	     (obj.sym	(gensym "obj")))
 	(define validator.sexp
-	  `(fold-left (internal-lambda (unsafe) (,idx.sym ,obj.sym)
+	  `(fold-left (lambda/standard (,idx.sym ,obj.sym)
 			(validate-typed-return-value ,item.id ,idx.sym ,obj.sym)
 			(fxadd1 ,idx.sym))
 	     ,idx ,consumer-formal.sym))
@@ -1170,7 +1180,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sig)
-		 (make-type-signature/single-top))))
+		 (make-type-signature/single-value (core-prim-id '<type-signature>)))))
     ))
 
 

@@ -31,6 +31,7 @@
 
 #!vicare
 (library (vicare containers comparators)
+  (options strict-r6rs)
   (export
     ;;
     comparator? comparator-comparison-procedure?

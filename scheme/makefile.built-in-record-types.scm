@@ -562,6 +562,10 @@
        &violation
      make-expand-time-type-signature-violation expand-time-type-signature-violation?)
 
+   (define-built-in-condition-type &expand-time-type-signature-warning
+       &warning
+     make-expand-time-type-signature-warning expand-time-type-signature-warning?)
+
    (define-built-in-condition-type &expand-time-retvals-signature-violation
        &expand-time-type-signature-violation
      make-expand-time-retvals-signature-violation expand-time-retvals-signature-violation?

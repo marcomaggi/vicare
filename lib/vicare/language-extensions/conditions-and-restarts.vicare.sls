@@ -19,7 +19,7 @@
 ;;;	9.1 Condition System Concepts -
 ;;;     <http://www.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/sec_9-1.htm>
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -35,7 +35,9 @@
 ;;;
 
 
+#!vicare
 (library (vicare language-extensions conditions-and-restarts)
+  (options typed-language)
   (export
     with-return-to-signal-on-unhandled-exception
     signal

@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8 -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for infix syntax
@@ -8,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -645,10 +644,12 @@
     (infix list("ciao", 'hello, '#ve(ascii "salut")))
   => '("ciao" hello #ve(ascii "salut")))
 
-
 
 ;;;; done
 
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; End:

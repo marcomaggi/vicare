@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for callable objects
@@ -8,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -81,12 +80,15 @@
     => #f)
 
   (check
-      (guard (E ((assertion-violation? E)
-		 (condition-message E))
-		(else E))
-	(let ((self 123))
-	  (callable-object (lambda (obj) (list self obj)))))
-    => "expected callable object as argument")
+      (try
+	  (let ((self 123))
+	    (callable-object (lambda (obj) (list self obj))))
+	(catch E
+	  ((&procedure-signature-argument-violation)
+	   #;(condition-message E)
+	   #t)
+	  (else E)))
+    => #t)
 
   #t)
 
@@ -96,3 +98,6 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; End:

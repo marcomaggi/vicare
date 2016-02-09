@@ -314,6 +314,7 @@
     nlist-tag-id		$nlist-tag-id?			nlist-tag-id?
     stx-tag-id			$stx-tag-id?			stx-tag-id?
     syntactic-identifier-tag-id	$syntactic-identifier-tag-id?	syntactic-identifier-tag-id?
+    untyped-tag-id		$untyped-tag-id?		untyped-tag-id?
     top-tag-id			$top-tag-id?			top-tag-id?
     boolean-tag-id		void-tag-id
     struct-tag-id		record-tag-id
@@ -408,6 +409,19 @@
     expand-time-retvals-signature-violation-expected-signature
     expand-time-retvals-signature-violation-returned-signature
 
+    &expand-time-type-signature-warning
+    &expand-time-type-signature-warning-rtd
+    &expand-time-type-signature-warning-rcd
+    make-expand-time-type-signature-warning
+    expand-time-type-signature-warning?
+
+    &syntax-warning
+    &syntax-warning-rtd
+    &syntax-warning-rcd
+    make-syntax-warning syntax-warning?
+    syntax-warning-form
+    syntax-warning-subform
+
     assertion-error
     syntax-violation/internal-error
     assertion-violation/internal-error
@@ -415,6 +429,7 @@
     expand-time-retvals-signature-violation
     raise-unbound-error
     raise-compound-condition-object
+    raise-compound-condition-object/continuable
 
     ;; helpers
     expression-position
@@ -1559,23 +1574,20 @@
 	(display ?thing port))
       (define-syntax-rule (%write ?thing)
 	(write ?thing port))
-      (define-syntax-rule (%pretty-print ?thing)
-	(pretty-print* ?thing port 0 #f))
       (define raw-expr
 	(syntax->datum S))
-      (if (symbol? raw-expr)
-	  (%display "#<syntactic-identifier")
-	(%display "#<syntax"))
+      (%display "#[syntax")
       (%display " expr=")	(%write raw-expr)
-      (%display " mark*=")	(%display (stx-mark* S))
+      ;;Seeing the mark is almost always useless.
+      #;(%display " mark*=")	#;(%display (stx-mark* S))
       (let ((expr (stx-expr S)))
 	(when (reader-annotation? expr)
 	  (let ((pos (reader-annotation-textual-position expr)))
 	    (when (source-position-condition? pos)
 	      (%display " line=")	(%display (source-position-line    pos))
 	      (%display " column=")	(%display (source-position-column  pos))
-	      (%display " source=")	(%display (source-position-port-id pos))))))
-      (%display ">"))))
+	      (%display " source=")	(%write   (source-position-port-id pos))))))
+      (%display "]"))))
 
 (define <stx>-rtd (record-type-descriptor        <stx>))
 (define <stx>-rcd (record-constructor-descriptor <stx>))
@@ -1597,22 +1609,22 @@
 	(display ?thing port))
       (define-syntax-rule (%write ?thing)
 	(write ?thing port))
-      (define-syntax-rule (%pretty-print ?thing)
-	(pretty-print* ?thing port 0 #f))
       (define raw-expr
 	(syntax->datum S))
       (assert (symbol? raw-expr))
-      (%display "#<syntactic-identifier")
-      (%display " expr=")	(%write raw-expr)
-      (%display " mark*=")	(%display (stx-mark* S))
+      #;(%display "#<syntactic-identifier")
+      #;(%display " expr=")	#;(%write raw-expr)
+      (%display "#[id ")	(%write raw-expr)
+      ;;Seeing the mark is almost always useless.
+      #;(%display " mark*=")	#;(%display (stx-mark* S))
       (let ((expr (stx-expr S)))
 	(when (reader-annotation? expr)
 	  (let ((pos (reader-annotation-textual-position expr)))
 	    (when (source-position-condition? pos)
 	      (%display " line=")	(%display (source-position-line    pos))
 	      (%display " column=")	(%display (source-position-column  pos))
-	      (%display " source=")	(%display (source-position-port-id pos))))))
-      (%display ">"))))
+	      (%display " source=")	(%write   (source-position-port-id pos))))))
+      (%display "]"))))
 
 (define <syntactic-identifier>-rtd (record-type-descriptor        <syntactic-identifier>))
 (define <syntactic-identifier>-rcd (record-constructor-descriptor <syntactic-identifier>))
@@ -2589,6 +2601,7 @@
 					    (core-prim-id '?tag)
 					  (set! memoized-id id))))))))))
   (define-tag-retriever no-return-tag-id		<no-return>)
+  (define-tag-retriever untyped-tag-id			<untyped>)
   (define-tag-retriever top-tag-id			<top>)
   (define-tag-retriever void-tag-id			<void>)
   (define-tag-retriever procedure-tag-id		<procedure>)
@@ -2615,6 +2628,7 @@
 				     (define (?who id)
 				       (~free-identifier=? id (?tag-retriever)))))))
   (define-unsafe-tag-predicate $no-return-tag-id?		no-return-tag-id)
+  (define-unsafe-tag-predicate $untyped-tag-id?			untyped-tag-id)
   (define-unsafe-tag-predicate $top-tag-id?			top-tag-id)
   (define-unsafe-tag-predicate $procedure-tag-id?		procedure-tag-id)
   (define-unsafe-tag-predicate $predicate-tag-id?		predicate-tag-id)
@@ -2637,6 +2651,7 @@
 				(and (identifier? obj)
 				     (?unsafe-pred obj)))))))
   (define-tag-predicate no-return-tag-id?		$no-return-tag-id?)
+  (define-tag-predicate untyped-tag-id?			$untyped-tag-id?)
   (define-tag-predicate top-tag-id?			$top-tag-id?)
   (define-tag-predicate procedure-tag-id?		$procedure-tag-id?)
   (define-tag-predicate predicate-tag-id?		$predicate-tag-id?)
@@ -2818,6 +2833,31 @@
 (define &expand-time-type-signature-violation-rcd
   (record-constructor-descriptor &expand-time-type-signature-violation))
 
+(define-condition-type &expand-time-type-signature-warning
+    &warning
+  make-expand-time-type-signature-warning
+  expand-time-type-signature-warning?)
+
+(define &expand-time-type-signature-warning-rtd
+  (record-type-descriptor &expand-time-type-signature-warning))
+
+(define &expand-time-type-signature-warning-rcd
+  (record-constructor-descriptor &expand-time-type-signature-warning))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &syntax-warning
+    &warning
+  make-syntax-warning syntax-warning?
+  (form syntax-warning-form)
+  (subform syntax-warning-subform))
+
+(define &syntax-warning-rtd
+  (record-type-descriptor &syntax-warning))
+
+(define &syntax-warning-rcd
+  (record-constructor-descriptor &syntax-warning))
+
 ;;; --------------------------------------------------------------------
 
 ;;This is  used to describe  exceptions in which:  after expanding an  expression, we
@@ -2887,7 +2927,8 @@
 (module (raise-unbound-error
 	 syntax-violation
 	 expand-time-retvals-signature-violation
-	 raise-compound-condition-object)
+	 raise-compound-condition-object
+	 raise-compound-condition-object/continuable)
 
   (case-define* syntax-violation
     ;;Defined by R6RS.  WHO must be false or a string or a symbol.  MESSAGE must be a
@@ -2952,44 +2993,59 @@
 				      (make-undefined-violation)
 				      (make-syntax-violation input-form.stx id))))
 
-  (define* (raise-compound-condition-object source-who {msg string?} input-form.stx condition-object)
-    ;;Raise a compound condition object.
-    ;;
-    ;;SOURCE-WHO can be  a string, symbol or  false; it is used as  value for "&who".
-    ;;When  false: INPUT-FORM.STX  is inspected  to  determine a  possible value  for
-    ;;"&who".
-    ;;
-    ;;MSG must be a string; it is used as value for "&message".
-    ;;
-    ;;INPUT-FORM.STX must be a (wrapped  or unwrapped) syntax object representing the
-    ;;subject of  the raised exception.   It is used for  both inferring a  value for
-    ;;"&who" and retrieving source location informations.
-    ;;
-    ;;CONDITION-OBJECT is  an already  built condition  object that  is added  to the
-    ;;raised compound.
-    ;;
-    (let ((source-who (cond ((or (string? source-who)
-				 (symbol? source-who))
-			     source-who)
-			    ((not source-who)
-			     (syntax-case input-form.stx ()
-			       (?id
-				(identifier? #'?id)
-				(syntax->datum #'?id))
-			       ((?id . ?rest)
-				(identifier? #'?id)
-				(syntax->datum #'?id))
-			       (_  #f)))
-			    (else
-			     (assertion-violation __who__ "invalid who argument" source-who)))))
-      (raise
-       (condition (if source-who
-		      (make-who-condition source-who)
-		    (condition))
-		  (make-message-condition msg)
-		  condition-object
-		  (%expression->source-position-condition input-form.stx)
-		  (%extract-macro-expansion-trace input-form.stx)))))
+  (module (raise-compound-condition-object raise-compound-condition-object/continuable)
+
+    (define* (raise-compound-condition-object source-who {msg string?} input-form.stx condition-object)
+      (%raise-compound-condition-object #f source-who msg input-form.stx condition-object))
+
+    (define* (raise-compound-condition-object/continuable source-who {msg string?} input-form.stx condition-object)
+      (%raise-compound-condition-object #t source-who msg input-form.stx condition-object))
+
+    (define (%raise-compound-condition-object continuable? source-who msg input-form.stx condition-object)
+      ;;Raise a compound condition object.
+      ;;
+      ;;SOURCE-WHO can be a string, symbol or  false; it is used as value for "&who".
+      ;;When false:  INPUT-FORM.STX is  inspected to determine  a possible  value for
+      ;;"&who".
+      ;;
+      ;;MSG must be a string; it is used as value for "&message".
+      ;;
+      ;;INPUT-FORM.STX must  be a (wrapped  or unwrapped) syntax  object representing
+      ;;the subject of the  raised exception.  It is used for  both inferring a value
+      ;;for "&who" and retrieving source location informations.
+      ;;
+      ;;CONDITION-OBJECT is  an already built condition  object that is added  to the
+      ;;raised compound.
+      ;;
+      (define the-who
+	(cond ((or (string? source-who)
+		   (symbol? source-who))
+	       source-who)
+	      ((not source-who)
+	       (syntax-case input-form.stx ()
+		 (?id
+		  (identifier? #'?id)
+		  (syntax->datum #'?id))
+		 ((?id . ?rest)
+		  (identifier? #'?id)
+		  (syntax->datum #'?id))
+		 (_  #f)))
+	      (else
+	       (assertion-violation __who__ "invalid who argument" source-who))))
+      (define C1
+	(condition (make-message-condition msg)
+		   condition-object
+		   (%expression->source-position-condition input-form.stx)
+		   (%extract-macro-expansion-trace input-form.stx)))
+      (define C2
+	(if the-who
+	    (condition (make-who-condition the-who) C1)
+	  C1))
+      (if continuable?
+	  (raise-continuable C2)
+	(raise C2)))
+
+    #| end of module |# )
 
   (define (%extract-macro-expansion-trace stx)
     ;;Extract from the (wrapped or unwrapped) syntax object STX the sequence of macro

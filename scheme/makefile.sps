@@ -1,6 +1,6 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2010-2016  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
 ;;;
@@ -574,7 +574,11 @@
 ;;;; core syntactic binding descriptors: built-in syntaxes
 
 (define-constant VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
-  '((internal-define				(internal-define))
+  '( ;;;Core macros that can appear only in a body.
+    (define/standard				(define/standard))
+    (define/typed				(define/typed))
+    (case-define/standard			(case-define/standard))
+    (case-define/typed				(case-define/typed))
     (define-syntax				(define-syntax))
     (define-alias				(define-alias))
     (define-fluid-syntax			(define-fluid-syntax))
@@ -589,6 +593,8 @@
     (stale-when					(stale-when))
     (begin-for-syntax				(begin-for-syntax))
     (eval-for-expand				(begin-for-syntax))
+
+;;;Core macros that can appear only in an expression.
     (foreign-call				(core-macro . foreign-call))
     (quote					(core-macro . quote))
     (syntax-case				(core-macro . syntax-case))
@@ -597,12 +603,20 @@
     (letrec					(core-macro . letrec))
     (letrec*					(core-macro . letrec*))
     (if						(core-macro . if))
+    ;;
     (lambda						(core-macro . lambda))
+    (lambda/standard				(core-macro . lambda/standard))
+    (lambda/typed				(core-macro . lambda/typed))
     (case-lambda				(core-macro . case-lambda))
+    (case-lambda/standard			(core-macro . case-lambda/standard))
+    (case-lambda/typed				(core-macro . case-lambda/typed))
     (named-lambda				(core-macro . named-lambda))
+    (named-lambda/standard			(core-macro . named-lambda/standard))
+    (named-lambda/typed				(core-macro . named-lambda/typed))
     (named-case-lambda				(core-macro . named-case-lambda))
-    (internal-lambda				(core-macro . internal-lambda))
-    (internal-case-lambda			(core-macro . internal-case-lambda))
+    (named-case-lambda/standard			(core-macro . named-case-lambda/standard))
+    (named-case-lambda/typed			(core-macro . named-case-lambda/typed))
+    ;;
     (internal-body				(core-macro . internal-body))
     (fluid-let-syntax				(core-macro . fluid-let-syntax))
     (struct-type-descriptor			(core-macro . struct-type-descriptor))
@@ -636,6 +650,8 @@
     (splice-first-expand			(core-macro . splice-first-expand))
     (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
     (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
+
+;;;Non-core macros.
     (__file__					(macro! . __file__))
     (__line__					(macro! . __line__))
     (let-values					(macro . let-values))
@@ -717,9 +733,10 @@
     (define-condition-type			(macro . define-condition-type))
 ;;;
     (define					(macro . define))
+    (case-define				(macro . case-define))
+;;;
     (define-auxiliary-syntaxes			(macro . define-auxiliary-syntaxes))
     (define-syntax*				(macro . define-syntax*))
-    (case-define				(macro . case-define))
     (define*					(macro . define*))
     (case-define*				(macro . case-define*))
     (lambda*					(macro . lambda*))
@@ -1769,24 +1786,34 @@
     (error@fxsub1)
     (fasl-write					v $language)
     (fasl-read					v $language)
+;;;
     (lambda						v r ba se ne)
+    (lambda/standard)
+    (lambda/typed)
     (named-lambda				v $language)
+    (named-lambda/standard)
+    (named-lambda/typed)
     (named-case-lambda				v $language)
+    (named-case-lambda/standard)
+    (named-case-lambda/typed)
+    (define					v r ba se ne)
+    (define/standard)
+    (define/typed)
+    (case-define				v $language)
+    (case-define/standard)
+    (case-define/typed)
+;;;
     (lambda*					v $language)
     (case-lambda*				v $language)
     (named-lambda*				v $language)
     (named-case-lambda*				v $language)
-    (case-define				v $language)
     (case-define*				v $language)
+;;;
     (and					v r ba se ne)
     (begin					v r ba se ne)
     (case					v r ba se ne)
     (case-identifiers				v $language)
     (cond					v r ba se ne)
-    (define					v r ba se ne)
-    (internal-define)
-    (internal-lambda)
-    (internal-case-lambda)
     (define-syntax				v r ba se ne)
     (define-syntax*				v $language)
     (define*					v $language)
@@ -3399,6 +3426,7 @@
 ;;; built-in Scheme object types
 
     (<no-return>				v $language)
+    (<untyped>					v $language)
     (<top>					v $language)
     (<void>					v $language)
     (<eof>					v $language)
@@ -4137,6 +4165,12 @@
     (&expand-time-type-signature-violation-rcd		$expander)
     (make-expand-time-type-signature-violation		$expander)
     (expand-time-type-signature-violation?		$expander)
+
+    (&expand-time-type-signature-warning		$expander)
+    (&expand-time-type-signature-warning-rtd		$expander)
+    (&expand-time-type-signature-warning-rcd		$expander)
+    (make-expand-time-type-signature-warning		$expander)
+    (expand-time-type-signature-warning?		$expander)
 
     (&expand-time-retvals-signature-violation		$expander)
     (&expand-time-retvals-signature-violation-rtd	$expander)

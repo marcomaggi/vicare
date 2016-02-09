@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -18,10 +18,11 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-;;;; stuff
+(module (core-macro-transformer)
+  (import (prefix (rnrs syntax-case) sys::))
 
-(import (prefix (rnrs syntax-case) sys::))
+
+;;;; helpers
 
 (define-syntax (define-core-transformer stx)
   (sys::syntax-case stx ()
@@ -40,7 +41,7 @@
 		 ((message)
 		  (SYNNER message #f))
 		 ((message subform)
-		  (syntax-violation __who__ message ?input-form.stx subform))))
+		  (syntax-violation (quote ?who) message ?input-form.stx subform))))
 	      ?body0 ?body ...))))))
     ))
 
@@ -70,24 +71,74 @@
 
   #| end of module |# )
 
+(define (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx syntax.sym formals.stx body.stx body*.stx)
+  ;;When expanding core  macros like LAMBDA and NAMED-LAMBDA  we internally transform
+  ;;an INPUT-FORM.STX like:
+  ;;
+  ;;   (lambda ?formals ?body . ?body*)
+  ;;
+  ;;into one of the following output forms:
+  ;;
+  ;;   (lambda/standard ?formals ?body . ?body*)
+  ;;   (lambda/typed    ?formals ?body . ?body*)
+  ;;
+  ;;When debugging mode  is enabled: we want to include  this internal transformation
+  ;;in the stack of annotated expressions of INPUT-FORM.STX.
+  ;;
+  ;;NOTE  We push  the  annotated expression  only when  debugging  mode is  enabled,
+  ;;because this operation may slow down significantly the expansion process.
+  ;;
+  (if (options::debug-mode-enabled?)
+      (stx-push-annotated-expr input-form.stx (bless `(,syntax.sym ,formals.stx ,body.stx . ,body*.stx)))
+    input-form.stx))
+
+(define (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx syntax.sym formals*.stx body**.stx)
+  ;;When expanding core  macros like CASE-LAMBDA and  NAMED-CASE-LAMBDA we internally
+  ;;transform an INPUT-FORM.STX like:
+  ;;
+  ;;   (case-lambda (?formals ?body . ?body*) ...)
+  ;;
+  ;;into one of the following output forms:
+  ;;
+  ;;   (case-lambda/standard (?formals ?body . ?body*) ...)
+  ;;   (case-lambda/typed    (?formals ?body . ?body*) ...)
+  ;;
+  ;;When debugging mode  is enabled: we want to include  this internal transformation
+  ;;in the stack of annotated expressions of INPUT-FORM.STX.
+  ;;
+  ;;NOTE  We push  the  annotated expression  only when  debugging  mode is  enabled,
+  ;;because this operation may slow down significantly the expansion process.
+  ;;
+  (if (options::debug-mode-enabled?)
+      (stx-push-annotated-expr input-form.stx (bless `(,syntax.sym ,(map cons formals*.stx body**.stx))))
+    input-form.stx))
+
 
-;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
-;;non-core macros to their macro transformers.
+;;The function CORE-MACRO-TRANSFORMER maps symbols  representing core macros to their
+;;macro transformers.
 ;;
 ;;We distinguish between "non-core macros" and "core macros".
 ;;
-;;NOTE This  module is very  long, so it  is split into  multiple code
-;;pages.  (Marco Maggi; Sat Apr 27, 2013)
+;;NOTE This  module is very long,  so it is  split into multiple code  pages.  (Marco
+;;Maggi; Sat Apr 27, 2013)
 ;;
 (define* (core-macro-transformer name)
   (case name
     ((quote)					quote-transformer)
+    ;;
     ((lambda)					lambda-transformer)
+    ((lambda/standard)				lambda/standard-transformer)
+    ((lambda/typed)				lambda/typed-transformer)
     ((case-lambda)				case-lambda-transformer)
+    ((case-lambda/standard)			case-lambda/standard-transformer)
+    ((case-lambda/typed)			case-lambda/typed-transformer)
     ((named-lambda)				named-lambda-transformer)
+    ((named-lambda/standard)			named-lambda/standard-transformer)
+    ((named-lambda/typed)			named-lambda/typed-transformer)
     ((named-case-lambda)			named-case-lambda-transformer)
-    ((internal-lambda)				internal-lambda-transformer)
-    ((internal-case-lambda)			internal-case-lambda-transformer)
+    ((named-case-lambda/standard)		named-case-lambda/standard-transformer)
+    ((named-case-lambda/typed)			named-case-lambda/typed-transformer)
+    ;;
     ((let)					let-transformer)
     ((letrec)					letrec-transformer)
     ((letrec*)					letrec*-transformer)
@@ -146,12 +197,241 @@
 (include "psyntax.chi-procedures.type-macro-transformers.scm" #t)
 
 
+;;;; module core-macro-transformer: LAMBDA and variants
+
+(define-core-transformer (lambda/standard input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand LAMBDA/STANDARD syntaxes  from the top-level
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI object.
+  ;;
+  ;;The syntax  LAMBDA/STANDARD is  strictly compatible with  the R6RS  definition of
+  ;;LAMBDA; this syntax must be used in code that rejects typed language extensions.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?body ?body* ...)
+     (chi-lambda/standard input-form.stx lexenv.run lexenv.expand
+			  ?formals (cons ?body ?body*)))
+    ))
+
+(define-core-transformer (lambda/typed input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  LAMBDA/TYPED syntaxes  from the  top-level
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI object.
+  ;;
+  ;;The syntax  LAMBDA/TYPED is  compatible with  the R6RS  definition of  LAMBDA and
+  ;;extends it with  typed language features; this  syntax must be used  in code that
+  ;;accepts typed language extensions.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?body ?body* ...)
+     (chi-lambda/typed input-form.stx lexenv.run lexenv.expand
+		       ?formals (cons ?body ?body*)))
+    ))
+
+(define-core-transformer (lambda input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand LAMBDA syntaxes from the  top-level built in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return a PSI object.
+  ;;
+  ;;The expansion of the  syntax LAMBDA is influenced by state  of the typed language
+  ;;option:  if typed  language  enabled, LAMBDA  is  transformed into  LAMBDA/TYPED;
+  ;;otherwise it is transformed into LAMBDA/STANDARD.
+  ;;
+  ;;NOTE The LAMBDA  syntax as implemented here would be  more cleanly implemented as
+  ;;non-core  macro.  But  implementing it  here as  core macro  makes the  expansion
+  ;;process faster.  (Marco Maggi; Sun Jan 17, 2016)
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?body ?body* ...)
+     (if (options::typed-language?)
+	 (chi-lambda/typed (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+			     'lambda/typed ?formals ?body ?body*)
+			   lexenv.run lexenv.expand
+			   ?formals (cons ?body ?body*))
+       (chi-lambda/standard (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+			      'lambda/standard ?formals ?body ?body*)
+			    lexenv.run lexenv.expand
+			    ?formals (cons ?body ?body*))))
+    ))
+
+
+;;;; module core-macro-transformer: NAMED-LAMBDA and variants
+
+(define-core-transformer (named-lambda/standard input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's NAMED-LAMBDA/STANDARD syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI object.
+  ;;
+  ;;The syntax NAMED-LAMBDA/STANDARD is compatible with the R6RS definition of LAMBDA
+  ;;and in addition accepts a name for the generated closure object; this syntax must
+  ;;be used in code that rejects  typed language extensions.  This syntax establishes
+  ;;a syntactic binding between the fluid syntax "__who__" and the quoted name of the
+  ;;lambda.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who ?formals ?body ?body* ...)
+     (identifier? ?who)
+     (chi-named-lambda/standard input-form.stx lexenv.run lexenv.expand
+				?who ?formals (cons ?body ?body*)))
+    ))
+
+(define-core-transformer (named-lambda/typed input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's NAMED-LAMBDA/TYPED syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI object.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who ?formals ?body ?body* ...)
+     (identifier? ?who)
+     (chi-named-lambda/typed input-form.stx lexenv.run lexenv.expand
+			     ?who ?formals (cons ?body ?body*)))
+    ))
+
+(define-core-transformer (named-lambda input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to  expand Vicare's  NAMED-LAMBDA  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI object.
+  ;;
+  ;;NOTE  The  NAMED-LAMBDA  syntax  as   implemented  here  would  be  more  cleanly
+  ;;implemented as non-core macro.  But implementing  it here as core macro makes the
+  ;;expansion process faster.  (Marco Maggi; Sun Jan 17, 2016)
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who ?formals ?body ?body* ...)
+     (identifier? ?who)
+     (if (options::typed-language?)
+	 (chi-named-lambda/typed (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+				   'named-lambda/typed ?formals ?body ?body*)
+				 lexenv.run lexenv.expand
+				 ?who ?formals (cons ?body ?body*))
+       (chi-named-lambda/standard (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+				    'named-lambda/standard ?formals ?body ?body*)
+				  lexenv.run lexenv.expand
+				  ?who ?formals (cons ?body ?body*))))
+    ))
+
+
+;;;; module core-macro-transformer: CASE-LAMBDA and variants
+
+(define-core-transformer (case-lambda/standard input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand CASE-LAMBDA/STANDARD  syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return an PSI object.
+  ;;
+  ;;The syntax CASE-LAMBDA/STANDARD  is strictly compatible with  the R6RS definition
+  ;;of CASE-LAMBDA;  this syntax  must be  used in code  that rejects  typed language
+  ;;extensions.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ (?formals* ?body* ?body** ...) ...)
+     (chi-case-lambda/standard input-form.stx lexenv.run lexenv.expand
+			       ?formals* (map cons ?body* ?body**)))
+    ))
+
+(define-core-transformer (case-lambda/typed input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand CASE-LAMBDA/TYPED syntaxes from the top-level
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return an PSI object.
+  ;;
+  ;;The  syntax  CASE-LAMBDA/TYPED   is  compatible  with  the   R6RS  definition  of
+  ;;CASE-LAMBDA and extends it with typed language features.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ (?formals* ?body* ?body** ...) ...)
+     (chi-case-lambda/typed input-form.stx lexenv.run lexenv.expand
+			    ?formals* (map cons ?body* ?body**)))
+    ))
+
+(define-core-transformer (case-lambda input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand CASE-LAMBDA syntaxes from the top-level built
+  ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
+  ;;given LEXENV; return an PSI object.
+  ;;
+  ;;The  expansion of  the syntax  CASE-LAMBDA is  influenced by  state of  the typed
+  ;;language  option: if  typed  language enabled,  CASE-LAMBDA  is transformed  into
+  ;;CASE-LAMBDA/TYPED; otherwise it is transformed into CASE-LAMBDA/STANDARD.
+  ;;
+  ;;NOTE The CASE-LAMBDA syntax as implemented here would be more cleanly implemented
+  ;;as non-core  macro.  But implementing it  here as core macro  makes the expansion
+  ;;process faster.  (Marco Maggi; Sun Jan 17, 2016)
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ (?formals* ?body* ?body** ...) ...)
+     (let ((body**.stx (map cons ?body* ?body**)))
+       (if (options::typed-language?)
+	   (chi-case-lambda/typed (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+				    'case-lambda/typed ?formals* body**.stx)
+				  lexenv.run lexenv.expand
+				  ?formals* body**.stx)
+	 (chi-case-lambda/standard (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+				     'case-lambda/standard ?formals* body**.stx)
+				   lexenv.run lexenv.expand
+				   ?formals* body**.stx))))
+    ))
+
+
+;;;; module core-macro-transformer: NAMED-CASE-LAMBDA and variants
+
+(define-core-transformer (named-case-lambda/standard input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's NAMED-CASE-LAMBDA/STANDARD syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return an PSI object.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who (?formals* ?body* ?body** ...) ...)
+     (identifier? ?who)
+     (chi-named-case-lambda/standard input-form.stx lexenv.run lexenv.expand
+				     ?who ?formals* (map cons ?body* ?body**)))
+    ))
+
+(define-core-transformer (named-case-lambda/typed input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's NAMED-CASE-LAMBDA/TYPED  syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return an PSI object.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who (?formals* ?body* ?body** ...) ...)
+     (identifier? ?who)
+     (chi-named-case-lambda/typed input-form.stx lexenv.run lexenv.expand
+				  ?who ?formals* (map cons ?body* ?body**)))
+    ))
+
+(define-core-transformer (named-case-lambda input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand  Vicare's NAMED-CASE-LAMBDA syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return an PSI object.
+  ;;
+  ;;The expansion of the syntax NAMED-CASE-LAMBDA is influenced by state of the typed
+  ;;language option: if typed language enabled, NAMED-CASE-LAMBDA is transformed into
+  ;;NAMED-CASE-LAMBDA/TYPED;      otherwise      it     is      transformed      into
+  ;;NAMED-CASE-LAMBDA/STANDARD.
+  ;;
+  ;;NOTE  The NAMED-CASE-LAMBDA  syntax as  implemented  here would  be more  cleanly
+  ;;implemented as non-core macro.  But implementing  it here as core macro makes the
+  ;;expansion process faster.  (Marco Maggi; Sun Jan 17, 2016)
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who (?formals* ?body* ?body** ...) ...)
+     (identifier? ?who)
+     (let ((body**.stx (map cons ?body* ?body**)))
+       (if (options::strict-r6rs)
+	   (chi-named-case-lambda/typed (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+					  'named-case-lambda/typed ?formals* body**.stx)
+					lexenv.run lexenv.expand
+					?who ?formals* body**.stx)
+	 (chi-named-case-lambda/standard (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+					   'named-case-lambda/standard ?formals* body**.stx)
+					 lexenv.run lexenv.expand
+					 ?who ?formals* body**.stx))))
+    ))
+
+
 ;;;; module core-macro-transformer: IF
 
 (define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS  IF syntaxes from the top-level built in
   ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-  ;;LEXENV; return a PSI struct.
+  ;;LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?test ?consequent ?alternate)
@@ -160,7 +440,7 @@
 	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
        (make-psi input-form.stx
 		 (build-conditional no-source
-		   (psi.core-expr test.psi)
+		     (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (psi.core-expr alternate.psi))
 		 (type-signature.common-ancestor (psi.retvals-signature consequent.psi)
@@ -185,7 +465,7 @@
        ;;value must be the return value of the last expression in the body.
        (make-psi input-form.stx
 		 (build-conditional no-source
-		   (psi.core-expr test.psi)
+		     (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (build-void))
 		 (make-type-signature/fully-untyped))))
@@ -197,7 +477,7 @@
 (define-core-transformer (quote input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS  QUOTE syntaxes from the top-level built
   ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
-  ;;given LEXENV; return a PSI struct.
+  ;;given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?datum)
@@ -208,87 +488,12 @@
     ))
 
 
-;;;; module core-macro-transformer: LAMBDA, CASE-LAMBDA, NAMED-LAMBDA, NAMED-CASE-LAMBDA, INTERNAL-LAMBDA, INTERNAL-CASE-LAMBDA
-
-(define-core-transformer (case-lambda input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  R6RS CASE-LAMBDA syntaxes from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return an PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ (?formals* ?body* ?body** ...) ...)
-     (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-		      '(safe) (underscore-id) ?formals* (map cons ?body* ?body**)))
-    ))
-
-(define-core-transformer (lambda input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand R6RS LAMBDA syntaxes from the top-level built
-  ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
-  ;;given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?formals ?body ?body* ...)
-     (chi-lambda input-form.stx lexenv.run lexenv.expand
-		 '(safe) (underscore-id) ?formals (cons ?body ?body*)))
-    ))
-
-;;; --------------------------------------------------------------------
-
-(define-core-transformer (named-case-lambda input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  Vicare's NAMED-CASE-LAMBDA syntaxes from the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return an PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?who (?formals* ?body* ?body** ...) ...)
-     (identifier? ?who)
-     (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-		      '(safe) ?who ?formals* (map cons ?body* ?body**)))
-    ))
-
-(define-core-transformer (named-lambda input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to  expand Vicare's  NAMED-LAMBDA  syntaxes from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?who ?formals ?body ?body* ...)
-     (identifier? ?who)
-     (chi-lambda input-form.stx lexenv.run lexenv.expand
-		 '(safe) ?who ?formals (cons ?body ?body*)))
-    ))
-
-;;; --------------------------------------------------------------------
-
-(define-core-transformer (internal-case-lambda input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand Vicare's  INTERNAL-CASE-LAMBDA syntaxes from
-  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
-  ;;the context of the given LEXENV; return an PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?attributes (?formals* ?body* ?body** ...) ...)
-     (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-		      ?attributes #f ?formals* (map cons ?body* ?body**)))
-    ))
-
-(define-core-transformer (internal-lambda input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand  Vicare's INTERNAL-LAMBDA syntaxes  from the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?attributes ?formals ?body ?body* ...)
-     (chi-lambda input-form.stx lexenv.run lexenv.expand
-		 ?attributes #f ?formals (cons ?body ?body*)))
-    ))
-
-
 ;;;; module core-macro-transformer: LET
 
 (define* (let-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer functions  used to expand  LET syntaxes  from the top-level  built in
   ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-  ;;LEXENV; return a PSI struct.
+  ;;LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -301,34 +506,35 @@
      ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
      ;;
      (receive (lhs*.lex rhs*.psi rib lexenv.run)
-	 (if (options::strict-r6rs)
-	     ;;Prepare standard, untyped syntactic bindings.
-	     (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
-		    (rhs*.psi	(map (lambda (rhs.stx)
+	 (if (options::typed-language?)
+	     ;;Prepare extended, possibly typed syntactic bindings.
+	     (let*-values
+		 (((lhs*.id lhs*.tag)
+		   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
+		  ((rhs*.psi)
+		   (map (lambda (rhs.stx lhs.tag)
+			  ;;We  insert  a signature  validation  even  if LHS.TAG  is
+			  ;;"<top>"  or "<untyped>":  this  way we  try  to check  at
+			  ;;expand-time  that there  is  a single  return value.   At
+			  ;;run-time, we  rely on  the built-in run-time  checking of
+			  ;;single-value return.
+			  (chi-expr (bless
+				     `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
+				    lexenv.run lexenv.expand))
+		     ?rhs* lhs*.tag))
+		  ;;Prepare the untyped and typed lexical variables.
+		  ((rib lexenv.run lhs*.lex)
+		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run)))
+	       (values lhs*.lex rhs*.psi rib lexenv.run))
+	   ;;Prepare standard, untyped syntactic bindings.
+	   (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
+		  (rhs*.psi	(map (lambda (rhs.stx)
 				       (chi-expr rhs.stx lexenv.run lexenv.expand))
 				  ?rhs*))
-		    (lhs*.lab	(map generate-label-gensym   lhs*.id))
-		    (lhs*.lex	(map generate-lexical-gensym lhs*.id))
-		    (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
-		    (rib	(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
-	       (values lhs*.lex rhs*.psi rib lexenv.run))
-	   ;;Prepare extended, possibly typed syntactic bindings.
-	   (let*-values
-	       (((lhs*.id lhs*.tag)
-		 (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
-		((rhs*.psi)
-		 (map (lambda (rhs.stx lhs.tag)
-			;;We  insert  a  signature  validation  even  if  LHS.TAG  is
-			;;"<top>": this way we try to check at expand-time that there
-			;;is  a single  return value.   At run-time,  we rely  on the
-			;;built-in run-time checking of single-value return.
-			(chi-expr (bless
-				   `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
-				  lexenv.run lexenv.expand))
-		   ?rhs* lhs*.tag))
-		;;Prepare the untyped and typed lexical variables.
-		((rib lexenv.run lhs*.lex)
-		 (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run)))
+		  (lhs*.lab	(map generate-label-gensym   lhs*.id))
+		  (lhs*.lex	(map generate-lexical-gensym lhs*.id))
+		  (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+		  (rib	(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
 	     (values lhs*.lex rhs*.psi rib lexenv.run)))
        ;;Prepare the body.
        (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
@@ -342,16 +548,18 @@
 		   (psi.retvals-signature body.psi)))))
 
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;We use an INTERNAL-DEFINE so that we can keep the type signature of ?RECUR.
-     (receive (recur.id recur.tag)
-	 (syntax-object.parse-typed-argument ?recur)
-       (chi-expr (bless
-		  `(internal-body
-		     ;;We do not want "__who__" and RETURN to be bound here.
-		     (internal-define () ,?recur
-		       (internal-lambda (safe) ,?lhs* ,?body . ,?body*))
-		     (,recur.id . ,?rhs*)))
-		 lexenv.run lexenv.expand)))
+     (identifier? ?recur)
+     (chi-expr (bless
+		`(internal-body
+		   ;;Here we  use DEFINE/TYPE so  that we  can easily define  a typed
+		   ;;function.   Using  LETREC would  be  more  descriptive, but  not
+		   ;;significantly better.
+		   ;;
+		   ;;FIXME We do not want "__who__"  to be bound here.  (Marco Maggi;
+		   ;;Sat Feb 6, 2016)
+		   (define/typed (,?recur . ,?lhs*) ,?body . ,?body*)
+		   (,?recur . ,?rhs*)))
+	       lexenv.run lexenv.expand))
 
     (_
      (syntax-violation __who__ "invalid syntax" input-form.stx))))
@@ -362,7 +570,7 @@
 (module (letrec-transformer letrec*-transformer)
   ;;Transformer functions  used to expand LET,  LETREC and LETREC* syntaxes  from the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   ;;In practice, below we convert the standard syntaxes:
   ;;
@@ -378,14 +586,14 @@
   (define (letrec-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand LETREC syntaxes from the top-level built in
     ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
-    ;;given LEXENV; return a PSI struct.
+    ;;given LEXENV; return a PSI object.
     ;;
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec))
 
   (define (letrec*-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand LETREC* syntaxes from  the top-level built
     ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
-    ;;given LEXENV; return a PSI struct.
+    ;;given LEXENV; return a PSI object.
     ;;
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
@@ -393,38 +601,38 @@
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (receive (lhs*.lex rhs*.psi rib lexenv.run)
-	   (if (options::strict-r6rs)
-	       ;;Prepare standard, untyped syntactic bindings.
-	       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
-		      (lhs*.lab		(map generate-label-gensym   lhs*.id))
-		      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
-		      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
-		      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
-		      ;;NOTE  The  region of  all  the  LETREC and  LETREC*  bindings
-		      ;;includes all the right-hand sides.   The new rib is pushed on
-		      ;;all the RHS and the body.
-		      (rhs*.psi		($map-in-order (lambda (rhs.stx)
+	   (if (options::typed-language?)
+	       ;;Prepare extended, possibly typed syntactic bindings.
+	       (let*-values
+		   (((lhs*.id lhs*.tag)
+		     (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
+		    ;;Prepare the typed and untyped lexical variables.
+		    ((rib lexenv.run lhs*.lex)
+		     (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run))
+		    ;;NOTE The region of all the LETREC and LETREC* bindings includes
+		    ;;all the right-hand sides.  The new rib is pushed on all the RHS
+		    ;;and the body.
+		    ((rhs*.psi)
+		     ($map-in-order
+			 (lambda (rhs.stx lhs.tag)
+			   (chi-expr (push-lexical-contour rib
+				       (bless
+					`(assert-signature-and-return (,lhs.tag) ,rhs.stx)))
+				     lexenv.run lexenv.expand))
+		       ?rhs* lhs*.tag)))
+		 (values lhs*.lex rhs*.psi rib lexenv.run))
+	     ;;Prepare standard, untyped syntactic bindings.
+	     (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
+		    (lhs*.lab		(map generate-label-gensym   lhs*.id))
+		    (lhs*.lex		(map generate-lexical-gensym lhs*.id))
+		    (lexenv.run		(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+		    (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
+		    ;;NOTE The region of all the LETREC and LETREC* bindings includes
+		    ;;all the right-hand sides.  The new rib is pushed on all the RHS
+		    ;;and the body.
+		    (rhs*.psi		($map-in-order (lambda (rhs.stx)
 							 (chi-expr (push-lexical-contour rib rhs.stx) lexenv.run lexenv.expand))
 					  ?rhs*)))
-		 (values lhs*.lex rhs*.psi rib lexenv.run))
-	     ;;Prepare extended, possibly typed syntactic bindings.
-	     (let*-values
-		 (((lhs*.id lhs*.tag)
-		   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
-		  ;;Prepare the typed and untyped lexical variables.
-		  ((rib lexenv.run lhs*.lex)
-		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run))
-		  ;;NOTE The region  of all the LETREC and  LETREC* bindings includes
-		  ;;all the right-hand  sides.  The new rib is pushed  on all the RHS
-		  ;;and the body.
-		  ((rhs*.psi)
-		   ($map-in-order
-		       (lambda (rhs.stx lhs.tag)
-			 (chi-expr (push-lexical-contour rib
-				     (bless
-				      `(assert-signature-and-return (,lhs.tag) ,rhs.stx)))
-				   lexenv.run lexenv.expand))
-		     ?rhs* lhs*.tag)))
 	       (values lhs*.lex rhs*.psi rib lexenv.run)))
 	 ;;Prepare the body.
 	 (let* ((body*.stx	(cons ?body ?body*))
@@ -445,75 +653,45 @@
 
 ;;;; module core-macro-transformer: FLUID-LET-SYNTAX
 
-(module (fluid-let-syntax-transformer push-fluid-syntax)
-
-  (define-core-transformer (fluid-let-syntax input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer  function  used  to   expand  FLUID-LET-SYNTAX  syntaxes  from  the
-    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
-    ;;context of the given LEXENV; return a PSI struct.
-    ;;
-    ;;FLUID-LET-SYNTAX is similar, but not equal, to LET-SYNTAX; rather than defining
-    ;;new  ?LHS bindings,  it temporarily  rebinds the  keywords to  new transformers
-    ;;while expanding the ?BODY forms.  The given ?LHS must be already bound to fluid
-    ;;syntaxes defined by DEFINE-FLUID-SYNTAX.
-    ;;
-    ;;There   are   two   differences  between   FLUID-LET-SYNTAX   and   LET-SYNTAX:
-    ;;FLUID-LET-SYNTAX must  appear in  expression context  only; the  internal ?BODY
-    ;;forms are *not* spliced in the enclosing body.
-    ;;
-    ;;NOTE We  would truly  like to splice  the inner body  forms in  the surrounding
-    ;;body, so that  this syntax could act  like LET-SYNTAX, which is  useful; but we
-    ;;really cannot do  it with this implementation of the  expander algorithm.  This
-    ;;is because LET-SYNTAX both  creates a new rib and adds  new id/label entries to
-    ;;it, and pushes label/descriptor entries to the LEXENV; instead FLUID-LET-SYNTAX
-    ;;only pushes  entries to the LEXENV:  there is no  way to keep the  fluid LEXENV
-    ;;entries visible only  to a subsequence of  forms in a body.   (Marco Maggi; Tue
-    ;;Feb 18, 2014)
-    ;;
-    (syntax-match input-form.stx ()
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;Check that the ?LHS* are all identifiers with no duplicates.
-       (unless (valid-bound-ids? ?lhs*)
-	 (error-invalid-formals-syntax input-form.stx ?lhs*))
-       (let* ((fluid-label* (map (lambda (lhs.id)
-				   (%lookup-binding-in-lexenv.run __who__ input-form.stx lhs.id lexenv.run %synner))
-			      ?lhs*))
-	      (binding*     (map (lambda (rhs.stx)
-				   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
-							   lexenv.run))
-			      ?rhs*))
-	      (entry*       (map cons fluid-label* binding*)))
-	 (chi-internal-body #f
-			    (append entry* lexenv.run)
-			    (append entry* lexenv.expand)
-			    (cons ?body ?body*))))))
-
-  (define* (push-fluid-syntax who input-form.stx lexenv.run lexenv.expand
-			      lhs.id rhs.stx synner)
-    ;;Push on the LEXENVs the result of defining the single syntactic binding for the
-    ;;identifier LHS.ID,  having RHS.STX as  right-hand side expression.   Return two
-    ;;values: the updated LEXENV.RUN and LEXENV.EXPAND.
-    ;;
-    (let* ((fluid-label  (%lookup-binding-in-lexenv.run __who__ input-form.stx lhs.id lexenv.run synner))
-	   (binding      (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
-						 lexenv.run))
-	   (entry        (cons fluid-label binding)))
-      (values (cons entry lexenv.run)
-	      (cons entry lexenv.expand))))
-
-  (define (%lookup-binding-in-lexenv.run who input-form.stx lhs.id lexenv synner)
-    ;;Search the binding of the identifier LHS.ID retrieving its label; if such label
-    ;;is present and  its associated syntactic binding descriptor  from LEXENV.RUN is
-    ;;of type "fluid syntax":  return the associated fluid label that  can be used to
-    ;;rebind the identifier.
-    ;;
-    (case-identifier-syntactic-binding-descriptor/no-indirection (who input-form.stx lhs.id lexenv)
-      (($fluid)
-       (fluid-syntax-binding-descriptor.fluid-label __descr__))
-      (else
-       (synner "not a fluid identifier" lhs.id))))
-
-  #| end of module |# )
+(define-core-transformer (fluid-let-syntax input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand uses  of the syntax FLUID-LET-SYNTAX from the
+  ;;top-level built-in environment.   Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI object.
+  ;;
+  ;;FLUID-LET-SYNTAX is similar,  but not equal, to LET-SYNTAX;  rather than defining
+  ;;new ?LHS keyword  syntactic bindings, it temporarily rebinds the  keywords to new
+  ;;transformers while  expanding the ?BODY  forms.  The  given ?LHS must  be already
+  ;;bound to fluid syntaxes defined by DEFINE-FLUID-SYNTAX.
+  ;;
+  ;;There   are   two   differences    between   FLUID-LET-SYNTAX   and   LET-SYNTAX:
+  ;;FLUID-LET-SYNTAX must appear in expression context only; the internal ?BODY forms
+  ;;are *not* spliced in the enclosing body.
+  ;;
+  ;;NOTE We would truly like to splice  the inner body forms in the surrounding body,
+  ;;so that  this syntax could  act like LET-SYNTAX, which  is useful; but  we really
+  ;;cannot do it with this implementation of the expander algorithm.  This is because
+  ;;LET-SYNTAX both creates a new rib and adds new id/label entries to it, and pushes
+  ;;label/descriptor  entries to  the  LEXENV; instead  FLUID-LET-SYNTAX only  pushes
+  ;;entries to the LEXENV:  there is no way to keep the  fluid LEXENV entries visible
+  ;;only to a subsequence  of forms in a body (or there is?).   (Marco Maggi; Tue Feb
+  ;;18, 2014)
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     ;;Check that the ?LHS* are all identifiers with no duplicates.
+     (unless (valid-bound-ids? ?lhs*)
+       (error-invalid-formals-syntax input-form.stx ?lhs*))
+     (let loop ((lhs*.id	?lhs*)
+		(rhs*.stx	?rhs*)
+		(lexenv.run	lexenv.run)
+		(lexenv.expand	lexenv.expand))
+       (if (pair? lhs*.id)
+	   (receive (lexenv.run lexenv.expand)
+	       (fluid-syntax-push-redefinition-on-lexenvs input-form.stx lexenv.run lexenv.expand
+							  __who__ (car lhs*.id) (car rhs*.stx))
+	     (loop (cdr lhs*.id) (cdr rhs*.stx) lexenv.run lexenv.expand))
+	 (chi-internal-body input-form.stx lexenv.run lexenv.expand (cons ?body ?body*)))))
+    ))
 
 
 ;;;; module core-macro-transformer: FOREIGN-CALL
@@ -521,14 +699,14 @@
 (define-core-transformer (foreign-call input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  FOREIGN-CALL  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?name ?arg* ...)
      (let* ((name.psi  (chi-expr  ?name lexenv.run lexenv.expand))
 	    (arg*.psi  (chi-expr* ?arg* lexenv.run lexenv.expand))
 	    (expr.core (build-foreign-call no-source
-			 (psi.core-expr name.psi)
+			   (psi.core-expr name.psi)
 			 (map psi.core-expr arg*.psi))))
        (make-psi input-form.stx expr.core)))
     ))
@@ -539,7 +717,7 @@
 (module (syntax-transformer)
   ;;Transformer function  used to  expand R6RS's SYNTAX  syntaxes from  the top-level
   ;;built in  environment.  Process  the contents  of USE-STX in  the context  of the
-  ;;lexical environments LEXENV.RUN and LEXENV.EXPAND.  Return a PSI struct.
+  ;;lexical environments LEXENV.RUN and LEXENV.EXPAND.  Return a PSI object.
   ;;
   ;;According to R6RS, the use of the SYNTAX macro must have the format:
   ;;
@@ -1002,7 +1180,7 @@
 	 (make-psi input-form.stx
 		   (build-application no-source
 		     (build-lambda no-source
-		       (list expr.sym)
+			 (list expr.sym)
 		       body.core)
 		     (list expr.core)))))
       ))
@@ -1061,7 +1239,7 @@
 	     (%chi-expr.core output-expr^ lexenv.run^ lexenv.expand))
 	   (build-application no-source
 	     (build-lambda no-source
-	       (list lex)
+		 (list lex)
 	       output-expr.core)
 	     (list (build-lexical-reference no-source expr.sym))))))
 
@@ -1140,7 +1318,7 @@
 						      next-clauses)))
 	(build-application no-source
 	  (build-lambda no-source
-	    (list tmp-sym)
+	      (list tmp-sym)
 	    fender-cond)
 	  (list
 	   (build-application no-source
@@ -1176,7 +1354,7 @@
 			tmp-sym
 		      ;;There is a fender.
 		      (build-conditional no-source
-			(build-lexical-reference no-source tmp-sym)
+			  (build-lexical-reference no-source tmp-sym)
 			(%build-call fender.stx)
 			(build-data no-source #f))))
 	  (conseq    (%build-call output-expr.stx))
@@ -1261,7 +1439,7 @@
 (define-core-transformer (splice-first-expand input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's SPLICE-FIRST-EXPAND  syntaxes from
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
-  ;;the context of  the given LEXENV; return  a PSI struct containing  an instance of
+  ;;the context of  the given LEXENV; return  a PSI object containing  an instance of
   ;;"splice-first-envelope".
   ;;
   (syntax-match input-form.stx ()
@@ -1278,7 +1456,7 @@
 (define-core-transformer (internal-body input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's INTERNAL-BODY  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context  of the  given LEXENV;  return  a PSI  struct containing  an instance  of
+  ;;context  of the  given LEXENV;  return  a PSI  object containing  an instance  of
   ;;"splice-first-envelope".
   ;;
   (syntax-match input-form.stx ()
@@ -1294,7 +1472,7 @@
   ;;Transformer        function         used        to         expand        Vicare's
   ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from   the  top-level  built  in
   ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
-  ;;LEXENV; return a PSI struct.
+  ;;LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?id)
@@ -1309,7 +1487,7 @@
 (define-core-transformer (predicate-return-value-validation input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's PREDICATE-RETURN-VALUE-VALIDATION
   ;;macros  from  the  top-level  built  in  environment.   Expand  the  contents  of
-  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?id)
@@ -1332,7 +1510,7 @@
   (define-core-transformer (struct-type-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
-    ;;context of the given LEXENV; return a PSI struct.
+    ;;context of the given LEXENV; return a PSI object.
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
@@ -1343,7 +1521,7 @@
   (define-core-transformer (record-type-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand RECORD-TYPE-DESCRIPTOR syntaxes  from the
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
-    ;;context of the given LEXENV; return a PSI struct.
+    ;;context of the given LEXENV; return a PSI object.
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
@@ -1353,7 +1531,7 @@
   (define-core-transformer (record-constructor-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from
     ;;the top-level built in environment.  Expand the syntax object INPUT-FORM.STX in
-    ;;the context of the given LEXENV; return a PSI struct.
+    ;;the context of the given LEXENV; return a PSI object.
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
@@ -1368,7 +1546,7 @@
   (define-core-transformer (type-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand TYPE-DESCRIPTOR syntaxes from the top-level
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
-    ;;of the given LEXENV; return a PSI struct.
+    ;;of the given LEXENV; return a PSI object.
     ;;
     ;;The result must be an expression evaluating to:
     ;;
@@ -1414,7 +1592,7 @@
 (define-core-transformer (expansion-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  EXPANSION-OF  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ;;Special case to allow easy inspection of definitions.  We transform:
@@ -1459,7 +1637,7 @@
 (define-core-transformer (expansion-of* input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's EXPANSION-OF*  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr0 ?expr* ...)
@@ -1473,7 +1651,7 @@
 (define-core-transformer (visit-code-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's VISIT-CODE-OF  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?id)
@@ -1496,7 +1674,7 @@
 (define-core-transformer (optimisation-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand  Vicare's OPTIMISATION-OF syntaxes  from the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr)
@@ -1512,7 +1690,7 @@
 (define-core-transformer (optimisation-of* input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand Vicare's OPTIMISATION-OF*  syntaxes from the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr0 ?expr* ...)
@@ -1529,7 +1707,7 @@
 (define-core-transformer (further-optimisation-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's FURTHER-OPTIMISATION-OF  syntaxes
   ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;in the context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr)
@@ -1545,7 +1723,7 @@
 (define-core-transformer (further-optimisation-of* input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's  FURTHER-OPTIMISATION-OF* syntaxes
   ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;in the context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr0 ?expr* ...)
@@ -1565,7 +1743,7 @@
 (define-core-transformer (assembly-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used to  expand  Vicare's  ASSEMBLY-OF syntaxes  from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;context of the given LEXENV; return a PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr)
@@ -1581,16 +1759,17 @@
 
 ;;;; done
 
+#| end of module |# )
+
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
 ;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
-;;eval: (put 'build-conditional			'scheme-indent-function 1)
-;;eval: (put 'build-case-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-foreign-call		'scheme-indent-function 1)
+;;eval: (put 'build-conditional			'scheme-indent-function 2)
+;;eval: (put 'build-lambda			'scheme-indent-function 2)
+;;eval: (put 'build-foreign-call		'scheme-indent-function 2)
 ;;eval: (put 'build-sequence			'scheme-indent-function 1)
 ;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
@@ -1602,4 +1781,6 @@
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys::syntax-case			'scheme-indent-function 2)
 ;;eval: (put '$map-in-order			'scheme-indent-function 1)
+;;eval: (put '%maybe-push-annotated-expr-on-lambda-input-form		'scheme-indent-function 1)
+;;eval: (put '%maybe-push-annotated-expr-on-case-lambda-input-form	'scheme-indent-function 1)
 ;;End:

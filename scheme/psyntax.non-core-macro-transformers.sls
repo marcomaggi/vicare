@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -118,7 +118,6 @@
   ;;Map symbols representing non-core macros to their macro transformers.
   ;;
   (case x
-    ((define)				define-macro)
     ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
@@ -153,14 +152,17 @@
     ((let*-constants)			let*-constants-macro)
     ((letrec-constants)			letrec-constants-macro)
     ((letrec*-constants)		letrec*-constants-macro)
+    ;;
+    ((define)				define-macro)
     ((case-define)			case-define-macro)
+    ;;
     ((define*)				define*-macro)
     ((case-define*)			case-define*-macro)
     ((lambda*)				lambda*-macro)
     ((case-lambda*)			case-lambda*-macro)
     ((named-lambda*)			named-lambda*-macro)
     ((named-case-lambda*)		named-case-lambda*-macro)
-
+    ;;
     ((trace-lambda)			trace-lambda-macro)
     ((trace-define)			trace-define-macro)
     ((trace-let)			trace-let-macro)
@@ -285,132 +287,11 @@
      (assertion-violation/internal-error __who__ "unknown non-core macro name" x))))
 
 
-;;;; non-core macro: DEFINE
+;;;; external modules
 
-(module (define-macro)
-
-  (define (define-macro input-form.stx)
-    ;;Transformer function used  to expand Vicare's DEFINE macros  from the top-level
-    ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
-    ;;object that must be further expanded.
-    ;;
-    (if (options::strict-r6rs)
-	(syntax-match input-form.stx (brace)
-	  ;;Untagged return values and possibly tagged formals.
-	  ((_ (?who . ?fmls) . ?body)
-	   (begin
-	     (unless (identifier? ?who)
-	       (syntax-violation 'define "expected identifier as function name" input-form.stx ?who))
-	     (receive (formals.stx clause-signature.stx)
-		 (syntax-object.parse-standard-formals ?fmls input-form.stx)
-	       (bless
-		`(internal-define (unsafe) (,?who . ,formals.stx) . ,?body)))))
-	  ((_ ?id ?expr)
-	   (identifier? ?id)
-	   (bless
-	    `(internal-define () ,?id ,?expr)))
-	  ((_ ?id)
-	   (identifier? ?id)
-	   (bless
-	    `(internal-define () ,?id)))
-	  (_
-	   (syntax-violation 'define "invalid syntax" input-form.stx)))
-      (syntax-match input-form.stx (brace)
-	;;Tagged return values and possibly tagged formals.
-	((_ ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) . ?body)
-	 (%process-function-definition input-form.stx
-				       (lambda (who)
-					 `((brace ,who ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
-				       ?who `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls) ?body))
-
-	((_ (brace ?id ?tag) ?expr)
-	 (bless
-	  `(internal-define () (brace ,?id ,?tag) ,?expr)))
-
-	((_ (brace ?id ?tag))
-	 (bless
-	  `(internal-define () (brace ,?id ,?tag))))
-
-	;;Untagged return values and possibly tagged formals.
-	((_ (?who . ?fmls) . ?body)
-	 (%process-function-definition input-form.stx
-				       (lambda (who)
-					 (cons who ?fmls))
-				       ?who ?fmls ?body))
-
-	((_ ?id ?expr)
-	 (bless
-	  `(internal-define () ,?id ,?expr)))
-
-	((_ ?id)
-	 (bless
-	  `(internal-define () ,?id)))
-	)))
-
-  (define* (%process-function-definition input-form.stx make-define-formals who.id prototype.sexp unsafe-body*.stx)
-    ;;When the function definition is fully untagged:
-    ;;
-    ;;   (define (add a b) (+ a b))
-    ;;
-    ;;we just want to  return the transformed version in which  DEFINE is replaced by
-    ;;INTERNAL-DEFINE:
-    ;;
-    ;;   (internal-define (unsafe) (add a b) (+ a b))
-    ;;
-    ;;When there are tags:
-    ;;
-    ;;   (define ({add <real>} {a <real>} {b <real>})
-    ;;     (+ a b))
-    ;;
-    ;;we want the full transformation:
-    ;;
-    ;;   (begin
-    ;;     (internal-define (safe)   ({add <real>} {a <real>} {b <real>})
-    ;;       ($add a b))
-    ;;     (internal-define (safe-retvals unsafe-formals) ({~add <real>} {a <real>} {b <real>})
-    ;;       (+ a b))
-    ;;     (begin-for-syntax
-    ;;       (typed-procedure-variable.unsafe-variant-set! #'add #'~add)))
-    ;;
-    (receive (standard-formals.stx clause-signature)
-	(syntax-object.parse-typed-clambda-clause-formals (bless prototype.sexp) input-form.stx)
-      (cond ((clambda-clause-signature.untyped? clause-signature)
-	     ;;If the  signature only  specifies the number  of formals  and retvals:
-	     ;;generate a singlae function definition with type checking.
-	     (bless
-	      `(internal-define (safe) ,(make-define-formals who.id) . ,unsafe-body*.stx)))
-
-	    ((type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
-	     ;;If only  the return values  have specified type signature:  generate a
-	     ;;single function definition with type checking for the return values.
-	     ;;
-	     ;;This is the  case, for example, of predicate functions:  we known that
-	     ;;there is a single argument of any  type and a single return value with
-	     ;;type "<boolean>".
-	     (bless
-	      `(internal-define (safe-retvals unsafe-formals) ,(make-define-formals who.id)
-		 . ,unsafe-body*.stx)))
-
-	    (else
-	     ;;Both  the  arguments  and  the return  values  have  type  signatures:
-	     ;;generate 2 function definitions, the safe and the unsafe one.
-	     (let* ((UNSAFE-WHO    (identifier-append who.id "~" who.id))
-		    (safe-body.stx (if (list? standard-formals.stx)
-				       (cons UNSAFE-WHO standard-formals.stx)
-				     (receive (arg*.id rest.id)
-					 (improper-list->list-and-rest standard-formals.stx)
-				       `(apply ,UNSAFE-WHO ,@arg*.id ,rest.id)))))
-	       (bless
-		`(begin
-		   (internal-define (safe) ,(make-define-formals who.id)
-		     ,safe-body.stx)
-		   (internal-define (safe-retvals unsafe-formals) ,(make-define-formals UNSAFE-WHO)
-		     . ,unsafe-body*.stx)
-		   (begin-for-syntax
-		     (typed-procedure-variable.unsafe-variant-set! (syntax ,who.id) (syntax ,UNSAFE-WHO)))))
-	       )))))
-
-  #| end of module |# )
+(include "psyntax.non-core-macro-transformers.define-struct.scm"	#t)
+(include "psyntax.non-core-macro-transformers.define-record-type.scm"	#t)
+(include "psyntax.non-core-macro-transformers.infix-macro.scm"		#t)
 
 
 ;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
@@ -551,7 +432,7 @@
 	(bless
 	 `(letrec ((,expr.sym ,expr.stx)
 		   ,@branch-binding*
-		   (,else.sym (internal-lambda (unsafe) () . ,else-body*.stx)))
+		   (,else.sym (lambda/standard () . ,else-body*.stx)))
 	    (cond ,@cond-clause* (else (,else.sym))))))))
 
   (define (%process-clauses input-form.stx expr.sym else.sym clause*.stx)
@@ -648,7 +529,7 @@
 	     (obj.sym		(gensym)))
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
-	 (values `(internal-lambda (unsafe) (,obj.sym)
+	 (values `(lambda/standard (,obj.sym)
 		    ((assert-signature-and-return (<procedure>) ,?closure) ,obj.sym))
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
@@ -662,7 +543,7 @@
 		     )))))
       ((?datum* . ?body)
        (let ((closure.sym (gensym)))
-	 (values `(internal-lambda (unsafe) () . ,?body)
+	 (values `(lambda/standard () . ,?body)
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
 				  (entries '()))
@@ -772,7 +653,7 @@
 	(bless
 	 `(letrec ((,expr.sym ,expr.stx)
 		   ,@branch-binding*
-		   (,else.sym (internal-lambda (unsafe) () . ,else-body*.stx)))
+		   (,else.sym (lambda/standard () . ,else-body*.stx)))
 	    (if (identifier? ,expr.sym)
 		(cond ,@cond-clause* (else (,else.sym)))
 	      (,else.sym)))))))
@@ -797,14 +678,14 @@
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values (bless
-		  `(,closure.sym (internal-lambda (unsafe) ()
+		  `(,closure.sym (lambda/standard ()
 				   ((assert-signature-and-return (<procedure>) ,?closure) ,expr.sym))))
 		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
 		   (,closure.sym)))))
 
       ((?datum* . ?body)
        (let ((closure.sym	(gensym)))
-	 (values `(,closure.sym (internal-lambda (unsafe) () . ,?body))
+	 (values `(,closure.sym (lambda/standard () . ,?body))
 		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
 		   (,closure.sym)))))
 
@@ -825,12 +706,6 @@
       ))
 
   #| end of module: CASE-IDENTIFIERS-MACRO |# )
-
-
-;;;; non-core macro: DEFINE-STRUCT, DEFINE-RECORD-TYPE
-
-(include "psyntax.non-core-macro-transformers.define-struct.scm"      #t)
-(include "psyntax.non-core-macro-transformers.define-record-type.scm" #t)
 
 
 ;;;; non-core macro: RECORD-TYPE-AND-RECORD?
@@ -889,7 +764,7 @@
 			   ;;condition  object  embedded   in  a  compound  condition
 			   ;;object.
 			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym (quote ,accessor.id)))
-			 (define ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
+			 (define/typed ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
 			   (unsafe-cast ,field-type.id (,internal-accessor.sym ,arg.sym)))))
 		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
 	   (bless
@@ -905,12 +780,11 @@
 		 (nongenerative)
 		 (sealed #f)
 		 (opaque #f))
-	       (define ((brace ,?constructor ,?name) . ,arg.sym)
-		 (unsafe-cast ,?name (apply ,internal-constructor.sym ,arg.sym)))
-	       ;; (define ((brace ,?constructor ,?name) ,@(map (lambda (field-arg.sym type.id)
-	       ;; 						      `(brace ,field-arg.sym ,type.id))
-	       ;; 						 field-arg*.sym field-type*.id))
-	       ;; 	 (unsafe-cast ,?name (,internal-constructor.sym . ,field-arg*.sym)))
+	       ;;At present  we cannot  know the  exact number  of arguments  for the
+	       ;;constructor: we should take into account the arguments needed by the
+	       ;;parent constructor.
+	       (define/typed ((brace ,?constructor ,?name) . ,arg.sym)
+	       	 (unsafe-cast ,?name (apply ,internal-constructor.sym ,arg.sym)))
 	       ,@accessor-definition*.stx
 	       #| end of module |# )
 	    ))))
@@ -929,7 +803,7 @@
 
       (?field-name
        (identifier? ?field-name)
-       (values ?field-name (top-tag-id)))
+       (values ?field-name (untyped-tag-id)))
 
       (_
        (synner (if (options::typed-language?)
@@ -976,9 +850,9 @@
 	   (swap    (gensym "swap"))
 	   (t       (gensym "t")))
        (bless
-	`((internal-lambda (unsafe) ,(append lhs* rhs*)
+	`((lambda/standard ,(append lhs* rhs*)
 	    (let* ((,guard? #t) ;apply the guard function only the first time
-		   (,swap   (internal-lambda (unsafe) ()
+		   (,swap   (lambda/standard ()
 			      ,@(map (lambda (lhs rhs)
 				       `(let ((,t (,lhs)))
 					  (,lhs ,rhs ,guard?)
@@ -987,7 +861,7 @@
 			      (set! ,guard? #f))))
 	      (dynamic-wind
 		  ,swap
-		  (internal-lambda (unsafe) () ,?body . ,?body*)
+		  (lambda/standard () ,?body . ,?body*)
 		  ,swap)))
 	  ,@(append ?lhs* ?rhs*)))))
     ))
@@ -1013,15 +887,15 @@
 	       ;;performing a normal return.
 	       (,normal-exit?  #f))
 	   (dynamic-wind
-	       (internal-lambda (unsafe) ()
+	       (lambda/standard ()
 		 (when ,terminated?
 		   (non-reinstatable-violation 'with-unwind-protection
 		     "attempt to reenter thunk with terminated dynamic extent")))
-	       (internal-lambda (unsafe) ()
+	       (lambda/standard ()
 		 (begin0
 		     (,?thunk)
 		   (set! ,normal-exit? #t)))
-	       (internal-lambda (unsafe) ()
+	       (lambda/standard ()
 		 (unless ,terminated? ;be safe
 		   (cond ((if ,normal-exit?
 			      'return
@@ -1037,14 +911,14 @@
 			    ;;because an unwinding escape procedure has been called.
 			    ;;
 			    (run-unwind-protection-cleanup-upon-exit?))
-			  => (internal-lambda (unsafe) (,why)
+			  => (lambda/standard (,why)
 			       (set! ,terminated? #t)
 			       ;;We want to discard any exception raised by the cleanup thunk.
 			       (call/cc
-				   (internal-lambda (unsafe) (,escape)
+				   (lambda/standard (,escape)
 				     (with-exception-handler
 					 ,escape
-				       (internal-lambda (unsafe) ()
+				       (lambda/standard ()
 					 (,?unwind-handler ,why)))))))))))))))
     ))
 
@@ -1064,8 +938,8 @@
      (let ((why (gensym)))
        (bless
 	`(with-unwind-protection
-	     (internal-lambda (unsafe) (,why) ,?cleanup0 . ,?cleanup*)
-	   (internal-lambda (unsafe) () ,?body)))))
+	     (lambda/standard (,why) ,?cleanup0 . ,?cleanup*)
+	   (lambda/standard () ,?body)))))
     ))
 
 
@@ -1165,10 +1039,10 @@
 	  `(let ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
-		   (internal-lambda (unsafe) (,why)
+		   (lambda/standard (,why)
 		     (when (eq? ,why 'exception)
 		       (run-compensations-store ,store)))
-		 (internal-lambda (unsafe) ()
+		 (lambda/standard ()
 		   ,?body0 . ,?body*)))))))
       ))
 
@@ -1186,9 +1060,9 @@
 	  `(let ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
-		   (internal-lambda (unsafe) (,why)
+		   (lambda/standard (,why)
 		     (run-compensations-store ,store))
-		 (internal-lambda (unsafe) ()
+		 (lambda/standard ()
 		   ,?body0 . ,?body*)))))))
       ))
 
@@ -1214,7 +1088,7 @@
   (syntax-match expr-stx ()
     ((_ ?release0 ?release* ...)
      (bless
-      `(push-compensation-thunk (internal-lambda (unsafe) () ,?release0 ,@?release*))))
+      `(push-compensation-thunk (lambda/standard () ,?release0 ,@?release*))))
     ))
 
 (define (with-compensation-handler-macro expr-stx)
@@ -1235,9 +1109,8 @@
   ;;the  top-level  built  in   environment.   Expand  the  contents  of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (define-constant __who__ 'compensate)
   (define (%synner message subform)
-    (syntax-violation __who__ message expr-stx subform))
+    (syntax-violation 'compensate message expr-stx subform))
   (syntax-match expr-stx ()
     ((_ ?alloc0 ?form* ...)
      (let ((free #f))
@@ -1286,13 +1159,13 @@
 	`(let ((,counter 0))
 	   (begin
 	     (set! ,counter (add1 ,counter))
-	     (coroutine (internal-lambda (unsafe) () (,?thunk0) (set! ,counter (sub1 ,counter)))))
+	     (coroutine (lambda/standard () (,?thunk0) (set! ,counter (sub1 ,counter)))))
 	   ,@(map (lambda (thunk)
 		    `(begin
 		       (set! ,counter (add1 ,counter))
-		       (coroutine (internal-lambda (unsafe) () (,thunk)  (set! ,counter (sub1 ,counter))))))
+		       (coroutine (lambda/standard () (,thunk)  (set! ,counter (sub1 ,counter))))))
 	       ?thunk*)
-	   (finish-coroutines (internal-lambda (unsafe) ()
+	   (finish-coroutines (lambda/standard ()
 				(zero? ,counter)))))))
     ))
 
@@ -1325,7 +1198,7 @@
      (begin
        (verify-syntax-case-literals 'syntax-rules input-form.stx ?literal*)
        (bless
-	`(internal-lambda (unsafe) (x)
+	`(lambda/standard (x)
 	   (syntax-case x ,?literal*
 	     ,@(map (lambda (pattern template)
 		      (syntax-match pattern ()
@@ -1354,16 +1227,18 @@
 
 ;;;; non-core macro: DEFINE-SYNTAX*
 
-(define (define-syntax*-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (define-syntax*-macro input-form.stx)
+  ;;Transformer  function used  to  expand Vicare's  DEFINE-SYNTAX*  macros from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?name)
      (identifier? ?name)
      (bless
-      `(define-syntax ,?name (syntax-rules ()))))
+      `(define-syntax ,?name
+	 (lambda/standard (stx)
+	   (syntax-violation (quote ?name) "invalid syntax use" stx)))))
 
     ((_ ?name ?expr)
      (identifier? ?name)
@@ -1376,9 +1251,9 @@
      (let ((SYNNER (datum->syntax ?name 'synner)))
        (bless
 	`(define-syntax ,?name
-	   (named-lambda ,?name (,?stx)
+	   (named-lambda/standard ,?name (,?stx)
 	     (letrec
-		 ((,SYNNER (named-case-lambda ,?name
+		 ((,SYNNER (named-case-lambda/standard ,?name
 			     ((message)
 			      (,SYNNER message #f))
 			     ((message subform)
@@ -1442,22 +1317,22 @@
 
 ;;;; non-core macro: IDENTIFIER-SYNTAX
 
-(define (identifier-syntax-macro stx)
-  ;;Transformer function  used to  expand R6RS  IDENTIFIER-SYNTAX macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (identifier-syntax-macro input-form.stx)
+  ;;Transformer  function  used to  expand  R6RS  IDENTIFIER-SYNTAX macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match stx (set!)
+  (syntax-match input-form.stx (set!)
     ((_ ?expr)
      (bless
-      `(internal-lambda (unsafe) (x)
+      `(lambda/standard (x)
 	 (syntax-case x ()
 	   (??id
 	    (identifier? (syntax ??id))
 	    (syntax ,?expr))
-	   ((??id ??expr* ...)
+	   ((??id . ??expr*)
 	    (identifier? (syntax ??id))
-	    (cons (syntax ,?expr) (syntax (??expr* ...))))
+	    (syntax (,?expr . ??expr*)))
 	   ))))
 
     ((_ (?id1
@@ -1469,16 +1344,16 @@
 	  (identifier? ?expr2))
      (bless
       `(make-variable-transformer
-	(internal-lambda (unsafe) (x)
+	(lambda/standard (x)
 	  (syntax-case x (set!)
 	    (??id
 	     (identifier? (syntax ??id))
 	     (syntax ,?expr1))
 	    ((set! ??id ,?expr2)
 	     (syntax ,?expr3))
-	    ((??id ??expr* ...)
+	    ((??id . ??expr*)
 	     (identifier? (syntax ??id))
-	     (syntax (,?expr1 ??expr* ...))))))))
+	     (syntax (,?expr1 . ??expr*))))))))
     ))
 
 
@@ -1499,18 +1374,18 @@
   (syntax-match input-form.stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
+     ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
+     (and (options::typed-language?)
+	  (for-all syntax-object.typed-argument? ?lhs*))
+     (%build-output-form ?lhs* ?rhs* (cons ?body ?body*)))
+
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
      ;;use SYNTAX-OBJECT.LIST-OF-STANDARD-BINDINGS? here.
-     (options::strict-r6rs)
      (begin
        (unless (all-identifiers? ?lhs*)
 	 (syntax-violation 'let* "invalid syntactic binding identifiers" input-form.stx ?lhs*))
        (%build-output-form ?lhs* ?rhs* (cons ?body ?body*))))
-
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
-     ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
-     (for-all syntax-object.typed-argument? ?lhs*)
-     (%build-output-form ?lhs* ?rhs* (cons ?body ?body*)))
     ))
 
 (define (trace-let-macro input-form.stx)
@@ -1521,21 +1396,21 @@
   (syntax-match input-form.stx ()
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
-     (if (options::strict-r6rs)
-	 (let ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx)))
+     (if (options::typed-language?)
+	 (receive (lhs* tag*)
+	     (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx)
 	   (bless
-	    `((letrec ((,?recur (trace-lambda ,?recur ,lhs* ,?body . ,?body*)))
+	    `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
+					      ,?body . ,?body*)))
 		,?recur)
-	      . ?rhs*)))
-       (receive (lhs* tag*)
-	   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx)
+	      . ,(map (lambda (rhs tag)
+			`(assert-signature-and-return (,tag) ,rhs))
+		   ?rhs* tag*))))
+       (let ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx)))
 	 (bless
-	  `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
-					    ,?body . ,?body*)))
+	  `((letrec ((,?recur (trace-lambda ,?recur ,lhs* ,?body . ,?body*)))
 	      ,?recur)
-	    . ,(map (lambda (rhs tag)
-		      `(assert-signature-and-return (,tag) ,rhs))
-		 ?rhs* tag*))))))
+	    . ?rhs*)))))
     ))
 
 
@@ -1580,9 +1455,9 @@
 		 (values (reverse lhs*.standard)
 			 (reverse lhs*.signature))
 	       (receive (lhs.standard lhs.signature)
-		   (if (options::strict-r6rs)
-		       (syntax-object.parse-standard-formals (car lhs*) input-form.stx)
-		     (syntax-object.parse-typed-formals (car lhs*) input-form.stx))
+		   (if (options::typed-language?)
+		       (syntax-object.parse-typed-formals (car lhs*) input-form.stx)
+		     (syntax-object.parse-standard-formals (car lhs*) input-form.stx))
 		 (loop (cdr lhs*)
 		       (cons lhs.standard  lhs*.standard)
 		       (cons lhs.signature lhs*.signature)))))
@@ -1602,9 +1477,9 @@
 		 (receive (y* standard-old* tagged-old* new*)
 		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
 		   `(call-with-values
-			(internal-lambda (unsafe) ()
+			(lambda/standard ()
 			  (assert-signature-and-return ,(car lhs*.signature) ,(car rhs*)))
-		      (internal-lambda (unsafe) ,y*
+		      (lambda/standard ,y*
 			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				(cdr rhs*) standard-old* tagged-old* new*)))))
 
@@ -1617,8 +1492,8 @@
 			((y* standard-old* tagged-old* new*)
 			 (%rename* ?standard-formal*     tagged-formal*     standard-old* tagged-old* new* input-form.stx)))
 		     `(call-with-values
-			  (internal-lambda (unsafe) () ,(car rhs*))
-			(internal-lambda (unsafe) ,(append y* y)
+			  (lambda/standard () ,(car rhs*))
+			(lambda/standard ,(append y* y)
 			  ,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				  (cdr rhs*) standard-old* tagged-old* new*))))))
 		(?others
@@ -1694,7 +1569,7 @@
     ((_ ?expr)
      (bless
       `(call-with-values
-	   (internal-lambda (unsafe) () ,?expr)
+	   (lambda/standard () ,?expr)
 	 list)))))
 
 
@@ -1822,19 +1697,32 @@
     ))
 
 
-;;;; non-core macro: CASE-DEFINE
+;;;; non-core macro: DEFINE, CASE-DEFINE
 
-(define (case-define-macro expr-stx)
-  ;;Transformer function used to expand Vicare's CASE-DEFINE macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (define-macro input-form.stx)
+  ;;Transformer function  used to  expand Vicare's DEFINE  macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?who ?cl-clause ?cl-clause* ...)
-     (identifier? ?who)
-     (bless
-      `(define ,?who
-	 (named-case-lambda ,?who ,?cl-clause . ,?cl-clause*))))
+  (syntax-match input-form.stx ()
+    ((_ . ?stuff)
+     (cons (if (options::typed-language?)
+	       (core-prim-id 'define/typed)
+	     (core-prim-id 'define/standard))
+	   ?stuff))
+    ))
+
+(define (case-define-macro input-form.stx)
+  ;;Transformer  function  used  to  expand  Vicare's  CASE-DEFINE  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ . ?stuff)
+     (cons (if (options::typed-language?)
+	       (core-prim-id 'case-define/typed)
+	     (core-prim-id 'case-define/standard))
+	   ?stuff))
     ))
 
 
@@ -1895,13 +1783,13 @@
 
 	 ((_ ?who ?expr)
 	  (identifier? ?who)
-	  `(define ,?who
+	  `(define/standard ,?who
 	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
 	       ,?expr)))
 
 	 ((_ ?who)
 	  (identifier? ?who)
-	  `(define ,?who (void)))
+	  `(define/standard ,?who))
 
 	 )))
 
@@ -1914,7 +1802,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(define (,who.id . ,standard-formals.stx)
+	`(define/standard (,who.id . ,standard-formals.stx)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ,who.id))))
 	     ,(if (options::enable-arguments-validation?)
@@ -1934,7 +1822,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(define (,who.id . ,standard-formals.stx)
+	`(define/standard (,who.id . ,standard-formals.stx)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ,who.id))))
 	     ,(if (options::enable-arguments-validation?)
@@ -1972,23 +1860,22 @@
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
-	  `(define ,?who
-	     (named-case-lambda ,?who
-	       ,@(map (lambda (?clause)
-			(%generate-case-define-form ?who ?clause %synner))
-		   (cons ?clause0 ?clause*))))))
+	  `(case-define/standard ,?who
+	     ,@(map (lambda (clause.stx)
+		      (%generate-case-define-form ?who clause.stx %synner))
+		 (cons ?clause0 ?clause*)))))
 	))
 
-    (define (%generate-case-define-form ?who ?clause synner)
-      (syntax-match ?clause (brace)
+    (define (%generate-case-define-form who.id clause.stx synner)
+      (syntax-match clause.stx (brace)
 	;;Return value predicates.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (underscore-id? ?underscore)
-	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
+	 (%generate-case-define-clause-form/with-ret-pred who.id (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) synner))
+	 (%generate-case-define-clause-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) synner))
 	))
 
     (define (%generate-case-define-clause-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
@@ -2100,7 +1987,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-        `(named-lambda ,who.id ,standard-formals.stx
+        `(named-lambda/standard ,who.id ,standard-formals.stx
 	   ,(if (options::enable-arguments-validation?)
 		;;With validation.
 		`(begin
@@ -2118,7 +2005,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(named-lambda ,who.id ,standard-formals.stx
+	`(named-lambda/standard ,who.id ,standard-formals.stx
 	   ,(if (options::enable-arguments-validation?)
 		;;With validation.
 		(let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
@@ -2155,7 +2042,7 @@
       (syntax-match expr.stx ()
 	((_ ?clause0 ?clause* ...)
 	 (bless
-	  `(named-case-lambda _
+	  `(named-case-lambda/standard _
 	    ,@(map (lambda (clause.stx)
 		     (%generate-case-lambda-form (quote _) clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
@@ -2172,7 +2059,7 @@
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
-	  `(named-case-lambda ,?who
+	  `(named-case-lambda/standard ,?who
 	    ,@(map (lambda (clause.stx)
 		     (%generate-case-lambda-form ?who clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
@@ -2470,7 +2357,7 @@
   (define (%parse-list-logic-predicate-syntax pred.stx var.id synner)
     ;;This is used for rest and args arguments.
     ;;
-    `(internal-lambda (unsafe) (,var.id)
+    `(lambda/standard (,var.id)
        ,(parse-logic-predicate-syntax pred.stx
 				      (lambda (pred.id)
 					(syntax-match pred.id ()
@@ -2497,7 +2384,7 @@
        (syntax-object.parse-typed-clambda-clause-formals ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
-				(internal-lambda (unsafe) ,?formal*
+				(lambda/standard ,?formal*
 				  ,?body . ,?body*)))))
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
@@ -2506,7 +2393,7 @@
        (syntax-object.parse-typed-clambda-clause-formals (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
-				(internal-lambda (unsafe) (,@?formal* . ,?rest-formal)
+				(lambda/standard (,@?formal* . ,?rest-formal)
 				  ,?body . ,?body*)))))
     ))
 
@@ -2524,7 +2411,7 @@
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
-				    (internal-lambda (unsafe) ,?formal*
+				    (lambda/standard ,?formal*
 				      ,?body . ,?body*))))))
 
       ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
@@ -2534,7 +2421,7 @@
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
-				    (internal-lambda (unsafe) (,@?formal* . ,?rest-formal)
+				    (lambda/standard (,@?formal* . ,?rest-formal)
 				      ,?body . ,?body*))))))
 
       ((_ ?who ?expr)
@@ -2842,17 +2729,17 @@
 	     (raised-obj-id                    (gensym "raised-obj")))
 	 (bless
 	  `((call/cc
-		(internal-lambda (unsafe) (,reinstate-guard-continuation-id)
-		  (internal-lambda (unsafe) ()
+		(lambda/standard (,reinstate-guard-continuation-id)
+		  (lambda/standard ()
 		    (with-exception-handler
-			(internal-lambda (unsafe) (,raised-obj-id)
+			(lambda/standard (,raised-obj-id)
 			  ;;If we  raise an exception from  a DYNAMIC-WIND's in-guard
 			  ;;or out-guard while trying to  call the cleanups: we reset
 			  ;;it to avoid leaving it true.
 			  (run-unwind-protection-cleanup-upon-exit? #f)
 			  (let ((,?variable ,raised-obj-id))
 			    ,(gen-clauses raised-obj-id reinstate-guard-continuation-id ?clause*)))
-		      (internal-lambda (unsafe) ()
+		      (lambda/standard ()
 			,?body . ,?body*)))))))))
       ))
 
@@ -2864,9 +2751,9 @@
       (receive (code-stx reinstate-exception-handler-continuation-id)
 	  (%process-multi-cond-clauses raised-obj-id clause* run-unwind-protect-cleanups-id)
 	`((call/cc
-	      (internal-lambda (unsafe) (,reinstate-exception-handler-continuation-id)
+	      (lambda/standard (,reinstate-exception-handler-continuation-id)
 		(,reinstate-guard-continuation-id
-		 (internal-lambda (unsafe) ()
+		 (lambda/standard ()
 		   (define (,run-unwind-protect-cleanups-id)
 		     ;;If we are  here: a test in the clauses  returned non-false and
 		     ;;the execution  flow is at  the beginning of  the corresponding
@@ -2882,9 +2769,9 @@
 		     ;;handlers.
 		     (run-unwind-protection-cleanup-upon-exit? 'exception)
 		     (call/cc
-			 (internal-lambda (unsafe) (,reinstate-clause-expression-continuation-id)
+			 (lambda/standard (,reinstate-clause-expression-continuation-id)
 			   (,reinstate-exception-handler-continuation-id
-			    (internal-lambda (unsafe) ()
+			    (lambda/standard ()
 			      (,reinstate-clause-expression-continuation-id)))))
 		     (run-unwind-protection-cleanup-upon-exit? #f))
 		   ,code-stx)))))))
@@ -2896,7 +2783,7 @@
 	(()
 	 (let ((reinstate-exception-handler-continuation-id (gensym "reinstate-exception-handler-continuation")))
 	   (values `(,reinstate-exception-handler-continuation-id
-		     (internal-lambda (unsafe) ()
+		     (lambda/standard ()
 		       (raise-continuable ,raised-obj-id)))
 		   reinstate-exception-handler-continuation-id)))
 
@@ -3007,13 +2894,13 @@
 	      (raised-obj-id (gensym)))
 	  (bless
 	   `((call/cc
-		 (internal-lambda (unsafe) (,outerk-id)
-		   (internal-lambda (unsafe) ()
+		 (lambda/standard (,outerk-id)
+		   (lambda/standard ()
 		     (with-exception-handler
-			 (internal-lambda (unsafe) (,raised-obj-id)
+			 (lambda/standard (,raised-obj-id)
 			   (let ((,?variable ,raised-obj-id))
 			     ,(gen-clauses raised-obj-id outerk-id ?clause*)))
-		       (internal-lambda (unsafe) ()
+		       (lambda/standard ()
 			 ,?body . ,?body*))))))
 	   )))
        ))
@@ -3049,7 +2936,7 @@
 	 (()
 	  (let ((return-to-exception-handler-k (gensym)))
 	    (values `(,return-to-exception-handler-k
-		      (internal-lambda (unsafe) ()
+		      (lambda/standard ()
 			(raise-continuable ,raised-obj-id)))
 		    return-to-exception-handler-k)))
 
@@ -3072,9 +2959,9 @@
 	 (%process-multi-cond-clauses clause*)
        (if return-to-exception-handler-k
 	   `((call/cc
-		 (internal-lambda (unsafe) (,return-to-exception-handler-k)
-		   (,outerk-id (internal-lambda (unsafe) () ,code-stx)))))
-	 `(,outerk-id (internal-lambda (unsafe) () ,code-stx)))))
+		 (lambda/standard (,return-to-exception-handler-k)
+		   (,outerk-id (lambda/standard () ,code-stx)))))
+	 `(,outerk-id (lambda/standard () ,code-stx)))))
 
    #| end of module: GUARD-MACRO |# ))
 
@@ -3121,7 +3008,7 @@
 	       ;;the result  of the  expansion is equivalent  to ?ARG.
 	       ;;It is a syntax violation if it is not.
 	       ;;
-	       (internal-lambda (unsafe) (x)
+	       (lambda/standard (x)
 		 (define universe-of-symbols ',symbol*)
 		 (define (%synner message subform)
 		   (syntax-violation ',?name message
@@ -3153,7 +3040,7 @@
 	       ;;symbol is in the universe  associated with ?NAME; it is
 	       ;;a syntax violation if one or more is not.
 	       ;;
-	       (internal-lambda (unsafe) (x)
+	       (lambda/standard (x)
 		 (define universe-of-symbols ',symbol*)
 		 (define (%synner message subform-stx)
 		   (syntax-violation ',?maker
@@ -3217,7 +3104,9 @@
     ))
 
 
-;;;; non-core macro: DO, DO*, WHILE, UNTIL, FOR
+;;;; non-core macro: DO, DO*, DOLIST, DOTIMES, WHILE, UNTIL, FOR
+
+(module (do-macro do*-macro dolist-macro dotimes-macro while-macro until-macro for-macro)
 
 (define (with-escape-fluids escape next-iteration body*)
   ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
@@ -3275,10 +3164,10 @@
 	     (loop           (gensym "loop")))
 	 (bless
 	  `(unwinding-call/cc
-	       (internal-lambda (unsafe) (,escape)
+	       (lambda/standard (,escape)
 		 (let ,loop ()
 		   (unwinding-call/cc
-		       (internal-lambda (unsafe) (,next-iteration)
+		       (lambda/standard (,next-iteration)
 			 ,(with-escape-fluids escape next-iteration (list ?body))))
 		   (when ,?test
 		     (,loop))))))))
@@ -3295,10 +3184,10 @@
 	     (loop           (gensym "loop")))
 	 (bless
 	  `(unwinding-call/cc
-	       (internal-lambda (unsafe) (,escape)
+	       (lambda/standard (,escape)
 		 (let ,loop ()
 		   (unwinding-call/cc
-		       (internal-lambda (unsafe) (,next-iteration)
+		       (lambda/standard (,next-iteration)
 			 ,(with-escape-fluids escape next-iteration (list ?body))))
 		   (until ,?test
 		     (,loop))))))))
@@ -3317,10 +3206,10 @@
 		(loop           (gensym "loop")))
 	    (bless
 	     `(unwinding-call/cc
-		  (internal-lambda (unsafe) (,escape)
-		    (letrec ((,loop (internal-lambda (unsafe) ,?var*
+		  (lambda/standard (,escape)
+		    (letrec ((,loop (lambda/standard ,?var*
 				     (if (unwinding-call/cc
-					     (internal-lambda (unsafe) (,next-iteration)
+					     (lambda/standard (,next-iteration)
 					       (if ,?test
 						   #f
 						 ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
@@ -3379,11 +3268,11 @@
 	    (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (internal-lambda (unsafe) (,escape)
+	     (lambda/standard (,escape)
 	       (let* ,init-binding*
-		 (letrec ((,loop (internal-lambda (unsafe) ()
+		 (letrec ((,loop (lambda/standard ()
 				  (if (unwinding-call/cc
-					  (internal-lambda (unsafe) (,next-iteration)
+					  (lambda/standard (,next-iteration)
 					    (if ,?test
 						#f
 					      ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
@@ -3463,10 +3352,10 @@
 	   (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (internal-lambda (unsafe) (,escape)
+	     (lambda/standard (,escape)
 	       (let ,loop ()
 		 (when (unwinding-call/cc
-			   (internal-lambda (unsafe) (,next-iteration)
+			   (lambda/standard (,next-iteration)
 			     (if ,?test
 				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
 			       #f)))
@@ -3488,10 +3377,10 @@
 	   (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (internal-lambda (unsafe) (,escape)
+	     (lambda/standard (,escape)
 	       (let ,loop ()
 		 (when (unwinding-call/cc
-			   (internal-lambda (unsafe) (,next-iteration)
+			   (lambda/standard (,next-iteration)
 			     (if ,?test
 				 #f
 			       ,(with-escape-fluids escape next-iteration `(,@?body* #t)))))
@@ -3515,17 +3404,19 @@
 	   (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (internal-lambda (unsafe) (,escape)
+	     (lambda/standard (,escape)
 	       ,?init
 	       (let ,loop ()
 		 (when (unwinding-call/cc
-			   (internal-lambda (unsafe) (,next-iteration)
+			   (lambda/standard (,next-iteration)
 			     (if ,?test
 				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
 			       #f)))
 		   ,?incr
 		   (,loop))))))))
     ))
+
+#| end of module |# )
 
 
 ;;;; non-core macro: RETURNABLE
@@ -3540,7 +3431,7 @@
      (let ((escape (gensym "escape")))
        (bless
 	`(unwinding-call/cc
-	     (internal-lambda (unsafe) (,escape)
+	     (lambda/standard (,escape)
 	       (fluid-let-syntax ((return (syntax-rules ()
 					    ((_ . ?args)
 					     (,escape . ?args)))))
@@ -3568,9 +3459,9 @@
 	       (why           (gensym)))
 	   (bless
 	    `(with-unwind-protection
-		 (internal-lambda (unsafe) (,why)
+		 (lambda/standard (,why)
 		   ,?finally-body0 . ,?finally-body*)
-	       (internal-lambda (unsafe) ()
+	       (lambda/standard ()
 		 (guard (,?var . ,GUARD-CLAUSE*)
 		   ,?body)))))))
 
@@ -3586,9 +3477,9 @@
        (let ((why (gensym)))
 	 (bless
 	  `(with-unwind-protection
-	       (internal-lambda (unsafe) (,why)
+	       (lambda/standard (,why)
 		 ,?finally-body0 . ,?finally-body*)
-	     (internal-lambda (unsafe) ()
+	     (lambda/standard ()
 	       ,?body)))))
       ))
 
@@ -3645,18 +3536,18 @@
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
-	   (internal-lambda (unsafe) (reinstate-with-blocked-exceptions-continuation)
+	   (lambda/standard (reinstate-with-blocked-exceptions-continuation)
 	     (with-exception-handler
-		 (internal-lambda (unsafe) (E)
+		 (lambda/standard (E)
 		   (call-with-values
-		       (internal-lambda (unsafe) ()
+		       (lambda/standard ()
 			 (,?exception-retvals-maker E))
 		     reinstate-with-blocked-exceptions-continuation))
 	       ,?thunk)))))
     ((_ ?thunk)
      (bless
       `(call/cc
-	   (internal-lambda (unsafe) (reinstate-with-blocked-exceptions-continuation)
+	   (lambda/standard (reinstate-with-blocked-exceptions-continuation)
 	     (with-exception-handler
 		 reinstate-with-blocked-exceptions-continuation
 	       ,?thunk)))))
@@ -3671,17 +3562,17 @@
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
-	   (internal-lambda (unsafe) (return-thunk-with-packed-environment)
+	   (lambda/standard (return-thunk-with-packed-environment)
 	     ((call/cc
-		  (internal-lambda (unsafe) (reinstate-target-environment-continuation)
+		  (lambda/standard (reinstate-target-environment-continuation)
 		    (return-thunk-with-packed-environment
-		     (internal-lambda (unsafe) ()
+		     (lambda/standard ()
 		       (call/cc
-			   (internal-lambda (unsafe) (reinstate-thunk-call-continuation)
+			   (lambda/standard (reinstate-thunk-call-continuation)
 			     (reinstate-target-environment-continuation
-			      (internal-lambda (unsafe) ()
+			      (lambda/standard ()
 				(call-with-values
-				    (internal-lambda (unsafe) ()
+				    (lambda/standard ()
 				      (with-blocked-exceptions
 					  ,?exception-retvals-maker
 					,?thunk))
@@ -4391,144 +4282,319 @@
   #| end of module |# )
 
 
-;;;; non-core macro: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
+;;;; non-core macro: DEFINE-VALUES
 
-(define (define-values-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?form0 ?form* ...)
-     (receive (standard-formals signature.stx)
-	 (if (options::strict-r6rs)
-	     (syntax-object.parse-standard-formals ?formals expr-stx)
-	   (syntax-object.parse-typed-formals ?formals expr-stx))
-       (syntax-match standard-formals ()
-	 ((?id* ... ?id0)
-	  (let ((TMP* (generate-temporaries ?id*)))
-	    (receive (tag* tag0)
-		(proper-list->head-and-last signature.stx)
-	      (bless
-	       `(begin
-		  ,@(map (lambda (var tag)
-			   `(define (brace ,var ,tag)))
-		      ?id* tag*)
-		  (define (brace ,?id0 ,tag0)
-		    (call-with-values
-			(internal-lambda (unsafe) () ,?form0 . ,?form*)
-		      (internal-lambda (unsafe) (,@TMP* T0)
-			,@(map (lambda (var TMP)
-				 `(set! ,var ,TMP))
-			    ?id* TMP*)
-			T0))))))))
+(module (define-values-macro)
 
-	 (?args
-	  (identifier? ?args)
-	  (bless
-	   `(define (brace ,?args ,signature.stx)
-	      (call-with-values
-		  (internal-lambda (unsafe) () ,?form0 . ,?form*)
-		(internal-lambda (unsafe) args args)))))
+  (define (define-values-macro input-form.stx)
+    ;;Transformer  function used  to expand  Vicare's DEFINE-VALUES  macros from  the
+    ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
+    ;;a syntax object that must be further expanded.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?formals ?body0 ?body* ...)
+       (if (options::typed-language?)
+	   (define-values/typed-macro input-form.stx ?formals (cons ?body0 ?body*))
+	 (define-values/standard-macro input-form.stx ?formals (cons ?body0 ?body*))))
+      ))
 
-	 ((?id* ... . ?rest-id)
-	  (let ((TMP* (generate-temporaries ?id*)))
-	    (receive (tag* rest-tag)
-		(improper-list->list-and-rest signature.stx)
-	    (bless
-	     `(begin
-		,@(map (lambda (var tag)
-			 `(define (brace ,var ,tag)))
-		    ?id* tag*)
-		(define (brace ,?rest-id ,rest-tag)
-		  (call-with-values
-		      (internal-lambda (unsafe) () ,?form0 . ,?form*)
-		    (internal-lambda (unsafe) (,@TMP* . rest)
-		      ,@(map (lambda (var TMP)
-			       `(set! ,var ,TMP))
-			  ?id* TMP*)
-		      rest))))))))
-	 )))
-    ))
+  (define (define-values/standard-macro input-form.stx input-formals.stx body*.stx)
+    (receive (standard-formals.stx signature.stx)
+	(syntax-object.parse-standard-formals input-formals.stx input-form.stx)
+      (syntax-match standard-formals.stx ()
+	((?id* ... ?id0)
+	 ;;We want this expansion:
+	 ;;
+	 ;;  (define/standard ?id)
+	 ;;  ...
+	 ;;  (define/standard ?id0
+	 ;;    (call-with-values
+	 ;;        (lambda/standard () ?body0 . ?body*)
+	 ;;      (lambda/standard (TMP ... TMP0)
+	 ;;        (set! ?id TMP)
+	 ;;        ...
+	 ;;        TMP0)))
+	 ;;
+	 (let ((TMP* (generate-temporaries ?id*)))
+	   (bless
+	    `(begin
+	       ,@(map (lambda (var)
+			`(define/standard ,var))
+		   ?id*)
+	       (define/standard ,?id0
+		 (call-with-values
+		     (lambda/standard () . ,body*.stx)
+		   (lambda/standard (,@TMP* TMP0)
+		     ,@(map (lambda (var TMP)
+			      `(set! ,var ,TMP))
+			 ?id* TMP*)
+		     TMP0)))))))
 
-(define (define-constant-values-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's DEFINE-CONSTANT-VALUES
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?form0 ?form* ...)
-     (receive (standard-formals signature.stx)
-	 (if (options::strict-r6rs)
-	     (syntax-object.parse-standard-formals ?formals expr-stx)
-	   (syntax-object.parse-typed-formals ?formals expr-stx))
-       (syntax-match standard-formals ()
-	 ((?id* ... ?id0)
-	  (let ((SHADOW* (generate-temporaries ?id*))
-		(TMP*    (generate-temporaries ?id*)))
-	    (receive (tag* tag0)
-		(proper-list->head-and-last signature.stx)
-	      (bless
-	       `(begin
-		  ,@(map (lambda (var tag)
-			   `(define (brace ,var ,tag)))
-		      SHADOW* tag*)
-		  (define (brace SHADOW0 ,tag0)
-		    (call-with-values
-			(internal-lambda (unsafe) () ,?form0 . ,?form*)
-		      (internal-lambda (unsafe) (,@TMP* T0)
-			,@(map (lambda (var TMP)
-				 `(set! ,var ,TMP))
-			    SHADOW* TMP*)
-			T0)))
-		  ,@(map (lambda (var SHADOW)
-			   `(define-syntax ,var
-			      (identifier-syntax ,SHADOW)))
-		      ?id* SHADOW*)
-		  (define-syntax ,?id0
-		    (identifier-syntax SHADOW0))
-		  )))))
+	((?id* ... . ?rest-id)
+	 ;;We want this expansion:
+	 ;;
+	 ;;  (define/standard ?id)
+	 ;;  ...
+	 ;;  (define/standard ?rest-id
+	 ;;    (call-with-values
+	 ;;        (lambda/standard () ?body0 . ?body*)
+	 ;;      (lambda/standard (TMP ... . TMP-REST)
+	 ;;        (set! ?id TMP)
+	 ;;        ...
+	 ;;        TMP-REST)))
+	 ;;
+	 (let ((TMP* (generate-temporaries ?id*)))
+	   (bless
+	    `(begin
+	       ,@(map (lambda (var)
+			`(define/standard ,var))
+		   ?id*)
+	       (define/standard ,?rest-id
+		 (call-with-values
+		     (lambda/standard () . ,body*.stx)
+		   (lambda/standard (,@TMP* . rest)
+		     ,@(map (lambda (var TMP)
+			      `(set! ,var ,TMP))
+			 ?id* TMP*)
+		     rest)))))))
 
-	 (?args
-	  (identifier? ?args)
-	  (let ((args-tag signature.stx))
-	    (bless
-	     `(begin
-		(define (brace shadow ,args-tag)
-		  (call-with-values
-		      (internal-lambda (unsafe) () ,?form0 . ,?form*)
-		    (internal-lambda (unsafe) args args)))
-		(define-syntax ,?args
-		  (identifier-syntax shadow))
-		))))
+	(?args
+	 (identifier? ?args)
+	 (bless
+	  `(define/standard ,?args
+	     (call-with-values
+		 (lambda/standard () . ,body*.stx)
+	       (lambda/standard args args)))))
+	)))
 
-	 ((?id* ... . ?rest-id)
-	  (let ((SHADOW* (generate-temporaries ?id*))
-		(TMP*    (generate-temporaries ?id*)))
-	    (receive (tag* rest-tag)
-		(improper-list->list-and-rest signature.stx)
-	    (bless
-	     `(begin
-		,@(map (lambda (var tag)
-			 `(define (brace ,var ,tag)))
-		    SHADOW* tag*)
-		(define (brace rest-shadow ,rest-tag)
-		  (call-with-values
-		      (internal-lambda (unsafe) () ,?form0 . ,?form*)
-		    (internal-lambda (unsafe) (,@TMP* . rest)
-		      ,@(map (lambda (var TMP)
-			       `(set! ,var ,TMP))
-			  SHADOW* TMP*)
-		      rest)))
-		,@(map (lambda (var SHADOW)
-			 `(define-syntax ,var
-			    (identifier-syntax ,SHADOW)))
-		    ?id* SHADOW*)
-		(define-syntax ,?rest-id
-		  (identifier-syntax rest-shadow))
-		)))))
-	 )))
-    ))
+  (define (define-values/typed-macro input-form.stx input-formals.stx body*.stx)
+    (receive (standard-formals.stx signature.stx)
+	(syntax-object.parse-typed-formals input-formals.stx input-form.stx)
+      (syntax-match standard-formals.stx ()
+	((?id* ... ?id0)
+	 ;;We want this expansion:
+	 ;;
+	 ;;  (define/typed {?id ?type})
+	 ;;  ...
+	 ;;  (define/typed {?id0 ?type0}
+	 ;;    (call-with-values
+	 ;;        (lambda/standard () ?body0 . ?body*)
+	 ;;      (lambda/standard (TMP ... TMP0)
+	 ;;        (set! ?id TMP)
+	 ;;        ...
+	 ;;        (assert-signature-and-return (?type0) TMP0)))))
+	 ;;
+	 (receive (tag* tag0)
+	     (proper-list->head-and-last signature.stx)
+	   (let ((TMP* (generate-temporaries ?id*)))
+	     (bless
+	      `(begin
+		 ,@(map (lambda (var tag)
+			  `(define/typed (brace ,var ,tag)))
+		     ?id* tag*)
+		 (define/typed (brace ,?id0 ,tag0)
+		   (call-with-values
+		       (lambda/standard () . ,body*.stx)
+		     (lambda/standard (,@TMP* TMP0)
+		       ;;These set forms do the type validation.
+		       ,@(map (lambda (var TMP)
+				`(set! ,var ,TMP))
+			   ?id* TMP* tag*)
+		       (assert-signature-and-return (,tag0) TMP0)))))))))
+
+	((?id* ... . ?rest-id)
+	 ;;We want this expansion:
+	 ;;
+	 ;;  (define/typed {?id ?type})
+	 ;;  ...
+	 ;;  (define/typed {?rest-id ?rest-type}
+	 ;;    (call-with-values
+	 ;;        (lambda/standard () ?body0 . ?body*)
+	 ;;      (lambda/standard (TMP ... . TMP-REST)
+	 ;;        (set! ?id TMP)
+	 ;;        ...
+	 ;;        (assert-signature-and-return (?rest-type) TMP-REST)))))
+	 ;;
+	 (let ((TMP* (generate-temporaries ?id*)))
+	   (receive (tag* rest-tag)
+	       (improper-list->list-and-rest signature.stx)
+	     (bless
+	      `(begin
+		 ,@(map (lambda (var tag)
+			  `(define/typed (brace ,var ,tag)))
+		     ?id* tag*)
+		 (define/typed (brace ,?rest-id ,rest-tag)
+		   (call-with-values
+		       (lambda/standard () . ,body*.stx)
+		     (lambda/standard (,@TMP* . rest)
+		       ;;These set forms do the type validation.
+		       ,@(map (lambda (var TMP)
+				`(set! ,var ,TMP))
+			   ?id* TMP*)
+		       (assert-signature-and-return (,rest-tag) rest)))))))))
+
+	(?args
+	 (identifier? ?args)
+	 (bless
+	  `(define/typed (brace ,?args ,signature.stx)
+	     (call-with-values
+		 (lambda/standard () . ,body*.stx)
+	       (lambda/standard args
+		 (assert-signature-and-return (,signature.stx) args))))))
+	)))
+
+  #| end of module: DEFINE-VALUES-MACRO |# )
+
+
+;;;; non-core macro: DEFINE-CONSTANT-VALUES
+
+(module (define-constant-values-macro)
+
+  (define (define-constant-values-macro input-form.stx)
+    ;;Transformer function used to expand Vicare's DEFINE-CONSTANT-VALUES macros from
+    ;;the top-level  built in  environment.  Expand  the contents  of INPUT-FORM.STX;
+    ;;return a syntax object that must be further expanded.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ?formals ?body0 ?body* ...)
+       (if (options::typed-language?)
+	   (define-constant-values/typed-macro input-form.stx ?formals (cons ?body0 ?body*))
+	 (define-constant-values/standard-macro input-form.stx ?formals (cons ?body0 ?body*))))
+      ))
+
+  (define (define-constant-values/standard-macro input-form.stx formals.stx body*.stx)
+    (receive (standard-formals.stx signature.stx)
+	(syntax-object.parse-standard-formals formals.stx input-form.stx)
+      (syntax-match standard-formals.stx ()
+	((?id* ... ?id0)
+	 (let ((SHADOW* (generate-temporaries ?id*))
+	       (TMP*    (generate-temporaries ?id*)))
+	   (receive (tag* tag0)
+	       (proper-list->head-and-last signature.stx)
+	     (bless
+	      `(begin
+		 ,@(map (lambda (var)
+			  `(define/standard ,var))
+		     SHADOW*)
+		 (define/standard SHADOW0
+		   (call-with-values
+		       (lambda/standard () . ,body*.stx)
+		     (lambda/standard (,@TMP* TMP0)
+		       ,@(map (lambda (var TMP)
+				`(set! ,var ,TMP))
+			   SHADOW* TMP*)
+		       TMP0)))
+		 ,@(map (lambda (var SHADOW)
+			  `(define-syntax ,var (identifier-syntax ,SHADOW)))
+		     ?id* SHADOW*)
+		 (define-syntax ,?id0 (identifier-syntax SHADOW0))
+		 #| end of BEGIN |# )))))
+
+	((?id* ... . ?rest-id)
+	 (let ((SHADOW* (generate-temporaries ?id*))
+	       (TMP*    (generate-temporaries ?id*)))
+	   (receive (tag* rest-tag)
+	       (improper-list->list-and-rest signature.stx)
+	     (bless
+	      `(begin
+		 ,@(map (lambda (var)
+			  `(define/standard ,var))
+		     SHADOW*)
+		 (define/standard rest-shadow
+		   (call-with-values
+		       (lambda/standard () . ,body*.stx)
+		     (lambda/standard (,@TMP* . rest)
+		       ,@(map (lambda (var TMP)
+				`(set! ,var ,TMP))
+			   SHADOW* TMP*)
+		       rest)))
+		 ,@(map (lambda (var SHADOW)
+			  `(define-syntax ,var (identifier-syntax ,SHADOW)))
+		     ?id* SHADOW*)
+		 (define-syntax ,?rest-id (identifier-syntax rest-shadow))
+		 #| end of BEGIN |# )))))
+
+	(?args
+	 (identifier? ?args)
+	 (let ((args-tag signature.stx))
+	   (bless
+	    `(begin
+	       (define/standard shadow
+		 (call-with-values
+		     (lambda/standard () . ,body*.stx)
+		   (lambda/standard args args)))
+	       (define-syntax ,?args (identifier-syntax shadow))))))
+	)))
+
+  (define (define-constant-values/typed-macro input-form.stx formals.stx body*.stx)
+    (receive (standard-formals.stx signature.stx)
+	(syntax-object.parse-typed-formals formals.stx input-form.stx)
+      (syntax-match standard-formals.stx ()
+	((?id* ... ?id0)
+	 (let ((SHADOW* (generate-temporaries ?id*))
+	       (TMP*    (generate-temporaries ?id*)))
+	   (receive (tag* tag0)
+	       (proper-list->head-and-last signature.stx)
+	     (bless
+	      `(begin
+		 ,@(map (lambda (var tag)
+			  `(define/typed (brace ,var ,tag)))
+		     SHADOW* tag*)
+		 (define/typed (brace SHADOW0 ,tag0)
+		   (call-with-values
+		       (lambda/standard () . ,body*.stx)
+		     (lambda/standard (,@TMP* TMP0)
+		       ;;These SET! form do the type validation.
+		       ,@(map (lambda (var TMP)
+				`(set! ,var ,TMP))
+			   SHADOW* TMP*)
+		       (assert-signature-and-return (,tag0) TMP0))))
+		 ,@(map (lambda (var SHADOW)
+			  `(define-syntax ,var (identifier-syntax ,SHADOW)))
+		     ?id* SHADOW*)
+		 (define-syntax ,?id0 (identifier-syntax SHADOW0))
+		 #| end of BEGIN |# )))))
+
+	((?id* ... . ?rest-id)
+	 (let ((SHADOW* (generate-temporaries ?id*))
+	       (TMP*    (generate-temporaries ?id*)))
+	   (receive (tag* rest-tag)
+	       (improper-list->list-and-rest signature.stx)
+	     (bless
+	      `(begin
+		 ,@(map (lambda (var tag)
+			  `(define/typed (brace ,var ,tag)))
+		     SHADOW* tag*)
+		 (define/typed (brace rest-shadow ,rest-tag)
+		   (call-with-values
+		       (lambda/standard () . ,body*.stx)
+		     (lambda/standard (,@TMP* . rest)
+		       ;;These SET! forms do the type validation.
+		       ,@(map (lambda (var TMP)
+				`(set! ,var ,TMP))
+			   SHADOW* TMP*)
+		       (assert-signature-and-return (,rest-tag) rest))))
+		 ,@(map (lambda (var SHADOW)
+			  `(define-syntax ,var (identifier-syntax ,SHADOW)))
+		     ?id* SHADOW*)
+		 (define-syntax ,?rest-id (identifier-syntax rest-shadow))
+		 #| end of BEGIN |# )))))
+
+	(?args
+	 (identifier? ?args)
+	 (let ((args-tag signature.stx))
+	   (bless
+	    `(begin
+	       (define/typed (brace shadow ,args-tag)
+		 (call-with-values
+		     (lambda/standard () . ,body*.stx)
+		   (lambda/standard args
+		     (assert-signature-and-return (,args-tag) args))))
+	       (define-syntax ,?args
+		 (identifier-syntax shadow))))))
+	)))
+
+  #| end of module: DEFINE-CONSTANT-VALUES-MACRO |# )
 
 
 ;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
@@ -4541,18 +4607,18 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals.stx formals-signature.stx)
-	 (if (options::strict-r6rs)
-	     (syntax-object.parse-standard-formals ?formals input-form.stx)
-	   (syntax-object.parse-typed-formals ?formals input-form.stx))
+	 (if (options::typed-language?)
+	     (syntax-object.parse-typed-formals ?formals input-form.stx)
+	   (syntax-object.parse-standard-formals ?formals input-form.stx))
        (let ((single-return-value? (and (list? standard-formals.stx)
 					(= 1 (length standard-formals.stx)))))
 	 (if single-return-value?
 	     (bless
-	      `((internal-lambda (safe) ,?formals ,?body0 ,@?body*) ,?producer-expression))
+	      `((lambda/typed ,?formals ,?body0 ,@?body*) ,?producer-expression))
 	   (bless
 	    `(call-with-values
-		 (internal-lambda (unsafe) () ,?producer-expression)
-	       (internal-lambda (safe) ,?formals ,?body0 ,@?body*)))))))
+		 (lambda/standard () ,?producer-expression)
+	       (lambda/typed ,?formals ,?body0 ,@?body*)))))))
     ))
 
 (define (receive-and-return-macro input-form.stx)
@@ -4563,9 +4629,9 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals.stx formals-signature.stx)
-	 (if (options::strict-r6rs)
-	     (syntax-object.parse-standard-formals ?formals input-form.stx)
-	   (syntax-object.parse-typed-formals ?formals input-form.stx))
+	 (if (options::typed-language?)
+	     (syntax-object.parse-typed-formals ?formals input-form.stx)
+	   (syntax-object.parse-standard-formals ?formals input-form.stx))
        (receive (rv-form single-return-value?)
 	   (cond ((list? standard-formals.stx)
 		  (if (= 1 (length standard-formals.stx))
@@ -4580,11 +4646,11 @@
 		  (values standard-formals.stx #f)))
 	 (if single-return-value?
 	     (bless
-	      `((internal-lambda (unsafe) ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
+	      `((lambda/standard ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
 	   (bless
 	    `(call-with-values
-		 (internal-lambda (unsafe) () ,?producer-expression)
-	       (internal-lambda (safe) ,?formals ,?body0 ,@?body* ,rv-form)))))))
+		 (lambda/standard () ,?producer-expression)
+	       (lambda/typed ,?formals ,?body0 ,@?body* ,rv-form)))))))
     ))
 
 (define (begin0-macro input-form.stx)
@@ -4596,8 +4662,8 @@
     ((_ ?form0 ?form* ...)
      (bless
       `(call-with-values
-	   (internal-lambda (safe) () ,?form0)
-	 (internal-lambda (safe) args
+	   (lambda/standard () ,?form0)
+	 (lambda/standard args
 	   ,@?form*
 	   (apply values args)))))
     ))
@@ -4671,7 +4737,7 @@
      (bless
       `(define-syntax ,?name
 	 (let ((const ,?expr))
-	   (internal-lambda (unsafe) (stx)
+	   (lambda/standard (stx)
 	     (if (identifier? stx)
 		 ;;By  using DATUM->SYNTAX  we avoid  the  "raw symbol  in output  of
 		 ;;macro" error whenever the CONST is a symbol or contains a symbol.
@@ -4699,7 +4765,9 @@
 				      ((symbol? rest.datum)
 				       ;;If the  rest argument is untagged,  we tag
 				       ;;it by default with "<list>".
-				       `(((brace ,?rest <list>) (list . ,REST))))
+				       (if (options::typed-language?)
+					   `(((brace ,?rest <list>) (list . ,REST)))
+					 `((,?rest (list . ,REST)))))
 				      (else
 				       `((,?rest (list . ,REST))))))))
        (bless
@@ -4707,7 +4775,7 @@
 	   (syntax-rules ()
 	     ((_ ,@TMP* . ,REST)
 	      (fluid-let-syntax
-		  ((,?name (internal-lambda (unsafe) (,STX)
+		  ((,?name (lambda/standard (,STX)
 			     (syntax-violation (quote ,?name) "cannot recursively expand inline expression" ,STX)))
 		   (__who__  (identifier-syntax (quote ,?name))))
 		(let ,BINDING* ,?body0 . ,?body*))))))))
@@ -4750,7 +4818,7 @@
 		 contents)))))
 
     (define (%synner message subform)
-      (syntax-violation __who__ message expr-stx subform))
+      (syntax-violation 'include message expr-stx subform))
 
     (main expr-stx)))
 
@@ -4772,7 +4840,7 @@
      (bless
       `(begin
 	 (define-fluid-syntax ,?name
-	   (internal-lambda (unsafe) (x)
+	   (lambda/standard (x)
 	     (syntax-case x ()
 	       (_
 		(identifier? x)
@@ -4781,11 +4849,11 @@
 	       ((_ arg ...)
 		#'((fluid-let-syntax
 		       ((,?name (identifier-syntax xname)))
-		     (internal-lambda (unsafe) ,?formals ,?form0 ,@?form*))
+		     (lambda/standard ,?formals ,?form0 ,@?form*))
 		   arg ...)))))
 	 (define xname
 	   (fluid-let-syntax ((,?name (identifier-syntax xname)))
-	     (internal-lambda (unsafe) ,?formals ,?form0 ,@?form*)))
+	     (lambda/standard ,?formals ,?form0 ,@?form*)))
 	 )))
     ))
 
@@ -4956,13 +5024,6 @@
     ))
 
 
-;;;; non-core macro: INFIX
-
-(module (infix-macro)
-  (include "psyntax.non-core-macro-transformers.infix-macro.scm" #t)
-  #| end of module: INFIX-MACRO |# )
-
-
 ;;;; non-core macro: miscellanea
 
 (define (time-macro expr-stx)
@@ -4977,7 +5038,7 @@
 		  (write (syntax->datum ?expr) port)
 		  (getter))))
        (bless
-	`(time-it ,str (internal-lambda (unsafe) () ,?expr)))))))
+	`(time-it ,str (lambda/standard () ,?expr)))))))
 
 (define (delay-macro expr-stx)
   ;;Transformer  function used  to  expand R6RS  DELAY  macros from  the
@@ -4987,7 +5048,7 @@
   (syntax-match expr-stx ()
     ((_ ?expr)
      (bless
-      `(make-promise (internal-lambda (unsafe) ()
+      `(make-promise (lambda/standard ()
 		       ,?expr))))))
 
 (define (assert-macro expr-stx)
@@ -5100,23 +5161,10 @@
 ;;; end of file
 ;;Local Variables:
 ;;fill-column: 85
-;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
-;;eval: (put 'build-application			'scheme-indent-function 1)
-;;eval: (put 'build-conditional			'scheme-indent-function 1)
-;;eval: (put 'build-case-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-lambda			'scheme-indent-function 1)
-;;eval: (put 'build-foreign-call		'scheme-indent-function 1)
-;;eval: (put 'build-sequence			'scheme-indent-function 1)
-;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
-;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
-;;eval: (put 'build-letrec*			'scheme-indent-function 1)
-;;eval: (put 'build-data			'scheme-indent-function 1)
-;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
-;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys::syntax-case			'scheme-indent-function 2)
+;;eval: (put 'sys::with-syntax			'scheme-indent-function 1)
 ;;eval: (put 'with-who				'scheme-indent-function 1)
 ;;eval: (put '$fold-left/stx			'scheme-indent-function 1)
-;;eval: (put 'sys::with-syntax			'scheme-indent-function 1)
 ;;eval: (put 'define-macro-transformer		'scheme-indent-function 1)
 ;;eval: (put 'map-for-two-retvals		'scheme-indent-function 1)
 ;;End:

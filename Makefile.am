@@ -478,6 +478,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.non-core-macro-transformers.infix-macro.scm	\
 	scheme/psyntax.chi-procedures.sls				\
 	scheme/psyntax.chi-procedures.body.scm				\
+	scheme/psyntax.chi-procedures.qrhs.scm				\
 	scheme/psyntax.chi-procedures.lambda.scm			\
 	scheme/psyntax.chi-procedures.application.scm			\
 	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
@@ -807,7 +808,11 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-environment-inquiry.sps			\
 	tests/test-vicare-equality.sps					\
 	tests/test-vicare-errno.sps					\
-	tests/test-vicare-expander.sps					\
+	tests/test-vicare-expander-basic.sps				\
+	tests/test-vicare-expander-lambda-extensions.sps		\
+	tests/test-vicare-expander-lambda-star.sps			\
+	tests/test-vicare-expander-loops.sps				\
+	tests/test-vicare-expander-dynamic-environment.sps		\
 	tests/test-vicare-debugging.sps					\
 	tests/test-vicare-dynamic-environment.sps			\
 	tests/test-vicare-dynamic-library-loading.sps			\

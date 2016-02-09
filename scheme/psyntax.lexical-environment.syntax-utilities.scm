@@ -232,7 +232,7 @@
   ;;formals validation.
   ;;
   (define (%synner message subform)
-    (syntax-violation #f message input-form-stx subform))
+    (syntax-violation 'error-invalid-formals-syntax message input-form-stx subform))
   (syntax-match formals-stx ()
     ((?id* ... . ?last)
      (let recur ((?id* (cond ((identifier? ?last)
