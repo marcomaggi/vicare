@@ -22,7 +22,7 @@
 ;;;     set-* and  bag-* procedures,  which are externally  exposed (but  trivial and
 ;;;     mostly uncommented below).
 ;;;
-;;;Copyright (C) John Cowan 2013.  All Rights Reserved.
+;;;Copyright (C) John Cowan 2013, 2016.  All Rights Reserved.
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -46,6 +46,7 @@
 
 #!vicare
 (library (vicare containers sets-and-bags)
+  (options typed-language)
   (export
     ;;
     set set-unfold

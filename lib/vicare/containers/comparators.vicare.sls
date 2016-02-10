@@ -31,7 +31,7 @@
 
 #!vicare
 (library (vicare containers comparators)
-  (options strict-r6rs)
+  (options typed-language)
   (export
     ;;
     comparator? comparator-comparison-procedure?
@@ -330,53 +330,53 @@
 	  (immutable comparison?	comparator-comparison-procedure?)
 	  (immutable hash?		comparator-hash-function?))
   (protocol
-   (lambda (make-record)
-     (lambda (type-test equality compare hash)
-       (fluid-let-syntax ((__who__ (identifier-syntax 'comparator)))
-	 (letrec ((cmp (make-record (cond ((eq? type-test #t)
-					   (lambda (x) #t))
-					  ((procedure? type-test)
-					   type-test)
-					  (else
-					   (procedure-argument-violation __who__
-					     "expected procedure or #t as TYPE-TEST argument"
-					     type-test)))
-				    (cond ((eq? equality #t)
-					   (lambda (x y)
-					     (eqv? (compare x y) 0)))
-					  ((procedure? equality)
-					   equality)
-					  (else
-					   (procedure-argument-violation __who__
-					     "expected procedure or #t as EQUALITY argument"
-					     equality)))
-				    (cond ((not compare)
-					   (lambda (x y)
-					     (raise-unsupported-comparator-operation-error
-					      'anonymous-comparator
-					      "compare not supported by this comparator"
-					      cmp)))
-					  ((procedure? compare)
-					   compare)
-					  (else
-					   (procedure-argument-violation __who__
-					     "expected procedure or #t as COMPARE argument"
-					     equality)))
-				    (cond ((not hash)
-					   (lambda (x y)
-					     (raise-unsupported-comparator-operation-error
-					      'anonymous-comparator
-					      "hashing not supported by this comparator"
-					      cmp)))
-					  ((procedure? hash)
-					   hash)
-					  (else
-					   (procedure-argument-violation __who__
-					     "expected procedure or #t as HASH argument"
-					     hash)))
-				    (if compare #t #f)
-				    (if hash    #t #f))))
-	   cmp)))))
+    (lambda (make-record)
+      (define (make-comparator type-test equality compare hash)
+	(letrec ((cmp (make-record (cond ((eq? type-test #t)
+					  (lambda (x) #t))
+					 ((procedure? type-test)
+					  type-test)
+					 (else
+					  (procedure-argument-violation __who__
+					    "expected procedure or #t as TYPE-TEST argument"
+					    type-test)))
+				   (cond ((eq? equality #t)
+					  (lambda (x y)
+					    (eqv? (compare x y) 0)))
+					 ((procedure? equality)
+					  equality)
+					 (else
+					  (procedure-argument-violation __who__
+					    "expected procedure or #t as EQUALITY argument"
+					    equality)))
+				   (cond ((not compare)
+					  (lambda (x y)
+					    (raise-unsupported-comparator-operation-error
+					     'anonymous-comparator
+					     "compare not supported by this comparator"
+					     cmp)))
+					 ((procedure? compare)
+					  compare)
+					 (else
+					  (procedure-argument-violation __who__
+					    "expected procedure or #t as COMPARE argument"
+					    equality)))
+				   (cond ((not hash)
+					  (lambda (x y)
+					    (raise-unsupported-comparator-operation-error
+					     'anonymous-comparator
+					     "hashing not supported by this comparator"
+					     cmp)))
+					 ((procedure? hash)
+					  hash)
+					 (else
+					  (procedure-argument-violation __who__
+					    "expected procedure or #t as HASH argument"
+					    hash)))
+				   (if compare #t #f)
+				   (if hash    #t #f))))
+	  cmp))
+      make-comparator))
   #| end of DEFINE-RECORD-TYPE |# )
 
 (define* (comparator-check-type-procedure {K comparator?})

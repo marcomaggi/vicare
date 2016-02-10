@@ -7,7 +7,7 @@
 ;;;
 ;;;	An instance of <slots> is a chain (doubly-linked list) of built-in vectors.
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -138,6 +138,7 @@
 
 #!vicare
 (library (vicare containers slots)
+  (options typed-language)
   (export
     <slots>
     make-slots			slots?

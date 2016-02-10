@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -17,6 +17,7 @@
 
 #!vicare
 (library (vicare posix)
+  (options typed-language)
   (export
     cond-expand
 
