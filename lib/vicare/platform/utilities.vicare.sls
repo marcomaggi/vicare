@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: utility functions related to hosting platform features
@@ -8,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare platform utilities)
   (export
     errno-code->symbol
@@ -99,9 +98,7 @@
 (define-syntax define-fixnum->symbol-function
   (syntax-rules ()
     ((_ ?who (?code ...))
-     (define (?who code)
-       (define who '?who)
-       (assert (fixnum? code))
+     (define* (?who {code fixnum?})
        (case-fixnums code
 	 ((?code)	'?code)
 	 ...
@@ -110,10 +107,7 @@
 (define-syntax define-integer->symbol-function
   (syntax-rules ()
     ((_ ?who (?code ...))
-     (define (?who code)
-       (define who '?who)
-       (assert (integer? code))
-       (assert (exact?   code))
+     (define* (?who {code exact-integer?})
        (case-integers/false code
 	 ((?code)	'?code)
 	 ...
@@ -187,6 +181,11 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; eval: (put 'case-fixnum		'scheme-indent-function 1)
+;; eval: (put 'case-integers/false	'scheme-indent-function 1)
+;; End:
