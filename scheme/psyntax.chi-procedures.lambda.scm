@@ -29,7 +29,9 @@
 	 chi-named-case-lambda/typed
 	 ;;
 	 chi-defun/standard
-	 chi-defun/typed)
+	 chi-defun/typed
+	 chi-case-defun/standard
+	 chi-case-defun/typed)
 
 
 ;;;; lambda clause attributes
@@ -196,7 +198,7 @@
 	 (assert-signature-and-return ,retvals-signature.tags ,last.stx))))))
 
 
-;;;; chi procedures: standard function definition
+;;;; chi procedures: standard single-clause function definition
 
 (define (chi-defun/standard qrhs lexenv.run lexenv.expand)
   ;;Expand a qualified  RHS (QRHS) representing a DEFINE/STANDARD syntax  use for the
@@ -230,7 +232,7 @@
 		  (make-type-signature/single-value (qualified-rhs.type-id qrhs)))))))
 
 
-;;;; chi procedures: typed function definition
+;;;; chi procedures: typed single-clause function definition
 
 (define (chi-defun/typed qrhs lexenv.run lexenv.expand)
   ;;Expand a qualified RHS (QRHS) representing a DEFINE/TYPED syntax use for the case
@@ -263,6 +265,71 @@
 		    standard-formals.lex
 		    (psi.core-expr body.psi))
 		  (make-type-signature/single-value (qualified-rhs.type-id qrhs)))))))
+
+
+;;;; chi procedures: standard and typed multi-clause function definition
+
+(module (chi-case-defun/standard chi-case-defun/typed)
+
+  (define (chi-case-defun/standard qrhs lexenv.run lexenv.expand)
+    ;;Expand a  qualified RHS (QRHS)  representing a CASE-DEFINE/STANDARD  syntax use
+    ;;for the case of function definition; the original input form is something like:
+    ;;
+    ;;   (case-define/standard ?lhs (?formals0 . ?body0) (?formals . ?body) ...)
+    ;;
+    ;;Return a  PSI object holding a  lambda core language expression.   The returned
+    ;;expression will be coupled (by the caller) with an already generated lex gensym
+    ;;serving as lexical variable name; for this  reason we return a lambda core form
+    ;;rather than a define core form.
+    ;;
+    ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
+    ;;binding has already been added to LEXENV.
+    ;;
+    (%chi-case-defun #t qrhs lexenv.run lexenv.expand))
+
+  (define (chi-case-defun/typed qrhs lexenv.run lexenv.expand)
+    ;;Expand a qualified  RHS (QRHS) representing a CASE-DEFINE/TYPED  syntax use for
+    ;;the case of function definition; the original input form is something like:
+    ;;
+    ;;   (case-define/typed ?lhs (?formals0 . ?body0) (?formals . ?body) ...)
+    ;;
+    ;;Return a  PSI object holding a  lambda core language expression.   The returned
+    ;;expression will be coupled (by the caller) with an already generated lex gensym
+    ;;serving as lexical variable name; for this  reason we return a lambda core form
+    ;;rather than a define core form.
+    ;;
+    ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
+    ;;binding has already been added to LEXENV.
+    ;;
+    (%chi-case-defun #f qrhs lexenv.run lexenv.expand))
+
+  (define (%chi-case-defun standard? qrhs lexenv.run lexenv.expand)
+    (define-constant input-form.stx		(qualified-rhs.input-form qrhs))
+    (define-constant standard-formals*.stx	(qualified-rhs/case-defun.standard-formals* qrhs))
+    (define-constant body**.stx			(qualified-rhs/case-defun.body** qrhs))
+    (define-constant clause-signature*		(clambda-signature.clause-signature* (qualified-rhs/case-defun.signature qrhs)))
+    (receive (lexenv.run lexenv.expand)
+	;;We  establish the  syntactic binding  for "__who__"  before processing  the
+	;;body.  So the formals may shadow this binding.
+	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
+      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	(receive (standard-formals*.stx clause-signature*)
+	    (if standard?
+		(syntax-object.parse-standard-clambda-multi-clauses-formals standard-formals*.stx input-form.stx)
+	      (syntax-object.parse-typed-clambda-multi-clauses-formals standard-formals*.stx input-form.stx))
+	  (receive (formals*.lex body*.psi)
+	      (if standard?
+		  (chi-case-lambda-clause*/standard input-form.stx lexenv.run lexenv.expand
+						    standard-formals*.stx clause-signature* body**.stx)
+		(chi-case-lambda-clause*/typed input-form.stx lexenv.run lexenv.expand
+					       standard-formals*.stx clause-signature* body**.stx))
+	    (make-psi input-form.stx
+		      (build-case-lambda (syntax-annotation input-form.stx)
+			  formals*.lex
+			(map psi.core-expr body*.psi))
+		      (make-type-signature/single-value (qualified-rhs.type-id qrhs))))))))
+
+  #| end of module |# )
 
 
 ;;;; standard LAMBDA expansion and variants

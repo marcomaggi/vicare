@@ -63,6 +63,8 @@
 	 qualified-rhs/typed-defun	make-qualified-rhs/typed-defun		qualified-rhs/typed-defun?
 	 qualified-rhs/typed-defvar	make-qualified-rhs/typed-defvar		qualified-rhs/typed-defvar?
 	 qualified-rhs/top-expr		make-qualified-rhs/top-expr		qualified-rhs/top-expr?
+	 qualified-rhs/standard-case-defun	make-qualified-rhs/standard-case-defun	qualified-rhs/standard-case-defun?
+	 qualified-rhs/typed-case-defun		make-qualified-rhs/typed-case-defun	qualified-rhs/typed-case-defun?
 	 ;;
 	 qualified-rhs.input-form
 	 qualified-rhs.lhs
@@ -70,7 +72,10 @@
 	 qualified-rhs/defun.standard-formals
 	 qualified-rhs/defun.body*
 	 qualified-rhs/defun.signature
-	 qualified-rhs/defvar.rhs)
+	 qualified-rhs/defvar.rhs
+	 qualified-rhs/case-defun.standard-formals*
+	 qualified-rhs/case-defun.body**
+	 qualified-rhs/case-defun.signature)
 
 
 ;;;; type definitions: qualified RHS base type
@@ -105,7 +110,7 @@
   (generate-storage-location-gensym (qualified-rhs.lhs qrhs)))
 
 
-;;;; type definitions: qualified RHS function definition
+;;;; type definitions: qualified RHS single-clause function definition
 
 (define-record-type qualified-rhs/defun
   (nongenerative vicare:expander:qualified-rhs/defun)
@@ -168,6 +173,79 @@
 
 (define qualified-rhs/typed-defun-rtd
   (record-type-descriptor qualified-rhs/typed-defun))
+
+
+;;;; type definitions: qualified RHS multiple-clause function definition
+
+(define-record-type qualified-rhs/case-defun
+  (nongenerative vicare:expander:qualified-rhs/case-defun)
+  (parent qualified-rhs)
+  (fields
+    (immutable formals*			qualified-rhs/case-defun.standard-formals*)
+		;A  proper  or  improper  list   of  syntax  objects  representing  a
+		;case-lambda clause's standard formals.
+    (immutable body**			qualified-rhs/case-defun.body**)
+		;A  list of  lists  of syntax  objects  representing lambda  clause's
+		;bodies forms.
+    (immutable signature		qualified-rhs/case-defun.signature)
+		;An instance  of "<clambda-signature>" representing the  signature of
+		;the function.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-qualified-rhs)
+      (define* (make-qualified-rhs/case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
+					      {signature-type.id identifier?} {signature clambda-signature?})
+	((make-qualified-rhs input-form.stx lhs.id signature-type.id) standard-formals*.stx body**.stx signature))
+      make-qualified-rhs/case-defun)))
+
+;;; --------------------------------------------------------------------
+;;; standard function definition, case variant
+
+(define-record-type qualified-rhs/standard-case-defun
+  ;;This type  is used to represent  non-typed function definitions from  syntax uses
+  ;;like:
+  ;;
+  ;;   (case-define/standard ?lhs ?clause0 ?clause ...)
+  ;;
+  ;;which are meant to be equivalent to:
+  ;;
+  ;;   (define ?lhs (case-lambda/standard ?clause0 ?clause ...))
+  ;;
+  (nongenerative vicare:expander:qualified-rhs/standard-case-defun)
+  (parent qualified-rhs/case-defun)
+  (protocol
+    (lambda (make-qualified-rhs/case-defun)
+      (define* (make-qualified-rhs/standard-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
+						       {signature-type.id identifier?} {signature clambda-signature?})
+	((make-qualified-rhs/case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
+      make-qualified-rhs/standard-case-defun)))
+
+(define qualified-rhs/standard-case-defun-rtd
+  (record-type-descriptor qualified-rhs/standard-case-defun))
+
+;;; --------------------------------------------------------------------
+;;; typed function definition
+
+(define-record-type qualified-rhs/typed-case-defun
+  ;;This type is used to represent typed function definitions from syntax uses like:
+  ;;
+  ;;   (case-define/typed ?lhs ?clause0 ?clause ...)
+  ;;
+  ;;which are meant to be equivalent to:
+  ;;
+  ;;   (define ?lhs (case-lambda/typed ?clause0 ?clause ...))
+  ;;
+  (nongenerative vicare:expander:qualified-rhs/typed-case-defun)
+  (parent qualified-rhs/case-defun)
+  (protocol
+    (lambda (make-qualified-rhs/case-defun)
+      (define* (make-qualified-rhs/typed-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
+						    {signature-type.id identifier?} {signature clambda-signature?})
+	((make-qualified-rhs/case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
+      make-qualified-rhs/typed-case-defun)))
+
+(define qualified-rhs/typed-case-defun-rtd
+  (record-type-descriptor qualified-rhs/typed-case-defun))
 
 
 ;;;; type definitions: qualified RHS variable definition
@@ -282,16 +360,18 @@
     ;;
     (while-not-expanding-application-first-subform
      (let ((rtd (record-rtd qrhs)))
-       (cond ((eq? rtd qualified-rhs/standard-defun-rtd)	(chi-defun/standard	qrhs lexenv.run lexenv.expand))
-	     ((eq? rtd qualified-rhs/typed-defun-rtd)		(chi-defun/typed	qrhs lexenv.run lexenv.expand))
-	     ((eq? rtd qualified-rhs/standard-defvar-rtd)	(chi-defvar/standard	qrhs lexenv.run lexenv.expand))
-	     ((eq? rtd qualified-rhs/typed-defvar-rtd)		(chi-defvar/typed	qrhs lexenv.run lexenv.expand))
-	     ((eq? rtd qualified-rhs/top-expr-rtd)
-	      (if interaction?
-		  (chi-interaction-top-expr qrhs lexenv.run lexenv.expand)
-		(chi-top-expr qrhs lexenv.run lexenv.expand)))
-	     (else
-	      (assertion-violation __who__ "invalid QRHS type" qrhs))))))
+       (cond
+	((eq? rtd qualified-rhs/standard-defun-rtd)		(chi-defun/standard	qrhs lexenv.run lexenv.expand))
+	((eq? rtd qualified-rhs/typed-defun-rtd)		(chi-defun/typed	qrhs lexenv.run lexenv.expand))
+	((eq? rtd qualified-rhs/standard-defvar-rtd)		(chi-defvar/standard	qrhs lexenv.run lexenv.expand))
+	((eq? rtd qualified-rhs/typed-defvar-rtd)		(chi-defvar/typed	qrhs lexenv.run lexenv.expand))
+	((eq? rtd qualified-rhs/top-expr-rtd)			(if interaction?
+								    (chi-interaction-top-expr qrhs lexenv.run lexenv.expand)
+								  (chi-top-expr qrhs lexenv.run lexenv.expand)))
+	((eq? rtd qualified-rhs/standard-case-defun-rtd)	(chi-case-defun/standard qrhs lexenv.run lexenv.expand))
+	((eq? rtd qualified-rhs/typed-case-defun-rtd)		(chi-case-defun/typed	 qrhs lexenv.run lexenv.expand))
+	(else
+	 (assertion-violation __who__ "invalid QRHS type" qrhs))))))
 
   #| end of module |# )
 

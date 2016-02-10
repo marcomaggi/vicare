@@ -771,16 +771,87 @@
 
 ;;;; core macros: CASE-DEFINE/STANDARD
 
-(define* (chi-case-define/standard input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-  (define-constant __who__ 'case-define/standard)
-  (syntax-match input-form.stx ()
-    ((_ ?who ?cl-clause ?cl-clause* ...)
-     ;;FIXME Temporary implementation.  (Marco Maggi; Tue Feb 2, 2016)
-     (chi-define/standard (bless
-			   `(define/standard ,?who
-			      (case-lambda/standard ,?cl-clause . ,?cl-clause*)))
-			  rib lexenv.run kwd* shadow/redefine-bindings?))
-    ))
+(module (chi-case-define/standard)
+
+  (define-constant __module_who__ 'case-define/standard)
+
+  (define* (chi-case-define/standard input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+    (case-define %synner
+      ((message)
+       (syntax-violation __module_who__ message input-form.stx))
+      ((message subform)
+       (syntax-violation __module_who__ message input-form.stx subform)))
+    (receive (lhs.id lhs.type qrhs lexenv.run)
+	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
+	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
+	;;syntactic  identifier representing  the  type of  this  binding; QRHS,  the
+	;;qualified RHS object to be expanded later.
+	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
+      (if (bound-id-member? lhs.id kwd*)
+	  (%synner "cannot redefine keyword")
+	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
+	       (lhs.lex		(generate-lexical-gensym lhs.id))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type lhs.lex))
+	       ;;An untyped syntactic binding's descriptor is created as follows.
+	       #;(descr		(make-syntactic-binding-descriptor/lexical-var lhs.lex))
+	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
+	  ;;This rib extension will raise an exception if it represents an attempt to
+	  ;;illegally redefine a binding.
+	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	  (values lhs.lex qrhs lexenv.run)))))
+
+  (module (%parse-macro-use)
+
+    (define (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
+      (syntax-match input-form.stx ()
+	((_ ?who ?cl-clause ?cl-clause* ...)
+	 (begin
+	   (unless (identifier? ?who)
+	     (synner "expected identifier as function name" ?who))
+	   (receive (standard-formals*.stx clause-signature* body**.stx)
+	       (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
+	     ;;This is  a standard variable  syntactic binding, so the  arguments and
+	     ;;return values are untyped.  However, we still want to generate a typed
+	     ;;syntactic binding so  that we can validate the number  of operands and
+	     ;;return values.   So we fabricate a  type identifier and put  it on the
+	     ;;lexenv to represent the type of this function.
+	     (let* ((lhs.type	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
+		    (signature	(make-clambda-signature clause-signature*))
+		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
+		    (qrhs		(make-qualified-rhs/standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx
+										lhs.type signature)))
+	       (values ?who lhs.type qrhs lexenv.run)))))
+	))
+
+    (define (%parse-clauses input-form.stx clause*.stx
+			    standard-formals*.stx clause-signature* body**.stx)
+      ;;Recursive function.
+      ;;
+      (if (pair? clause*.stx)
+	  (receive (standard-formals.stx clause-signature body*.stx)
+	      (%parse-single-clause input-form.stx (car clause*.stx))
+	    (receive (standard-formals*.stx clause-signature* body**.stx)
+		(%parse-clauses input-form.stx (cdr clause*.stx) standard-formals*.stx clause-signature* body**.stx)
+	      (values (cons standard-formals.stx	standard-formals*.stx)
+		      (cons clause-signature		clause-signature*)
+		      (cons body*.stx			body**.stx))))
+	(values standard-formals*.stx clause-signature* body**.stx)))
+
+    (define (%parse-single-clause input-form.stx clause.stx)
+      (syntax-match clause.stx ()
+	((?formals ?body ?body* ...)
+	 ;;From parsing  the standard formals we  get 2 values: a  proper or improper
+	 ;;list  of identifiers  representing the  standard formals;  an instance  of
+	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
+	 ;;while parsing.
+	 (receive (standard-formals.stx clause-signature)
+	     (syntax-object.parse-standard-clambda-clause-formals ?formals input-form.stx)
+	   (values standard-formals.stx clause-signature (cons ?body ?body*))))
+	))
+
+    #| end of module: %PARSE-MACRO-USE |# )
+
+  #| end of module: CHI-CASE-DEFINE/STANDARD |# )
 
 
 ;;;; core macros: DEFINE/TYPED
