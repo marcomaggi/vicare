@@ -198,73 +198,68 @@
 	 (assert-signature-and-return ,retvals-signature.tags ,last.stx))))))
 
 
-;;;; chi procedures: standard single-clause function definition
+;;;; chi procedures: standard and typed single-clause function definition
 
-(define (chi-defun/standard qrhs lexenv.run lexenv.expand)
-  ;;Expand a qualified  RHS (QRHS) representing a DEFINE/STANDARD syntax  use for the
-  ;;case of function definition; the original input form is something like:
-  ;;
-  ;;   (define/standard (?lhs . ?formals) . ?body)
-  ;;
-  ;;Return a  PSI object  holding a  lambda core  language expression.   The returned
-  ;;expression will be  coupled (by the caller) with an  already generated lex gensym
-  ;;serving as lexical  variable name; for this  reason we return a  lambda core form
-  ;;rather than a define core form.
-  ;;
-  ;;NOTE  This function  assumes that:  the left-hand  side (LHS)  variable syntactic
-  ;;binding has already been added to LEXENV.
-  ;;
-  (define-constant input-form.stx (qualified-rhs.input-form qrhs))
-  (receive (lexenv.run lexenv.expand)
-      ;;We establish the syntactic binding  for "__who__" before processing the body.
-      ;;So the formals may shadow this binding.
-      (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
+(module (chi-defun/standard chi-defun/typed)
+
+  (define (chi-defun/standard qrhs lexenv.run lexenv.expand)
+    ;;Expand a qualified RHS (QRHS) representing a DEFINE/STANDARD syntax use for the
+    ;;case of function definition; the original input form is something like:
+    ;;
+    ;;   (define/standard (?lhs . ?formals) . ?body)
+    ;;
+    ;;Return a  PSI object holding a  lambda core language expression.   The returned
+    ;;expression will be coupled (by the caller) with an already generated lex gensym
+    ;;serving as lexical variable name; for this  reason we return a lambda core form
+    ;;rather than a define core form.
+    ;;
+    ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
+    ;;binding has already been added to LEXENV.
+    ;;
+    (%chi-defun #t qrhs lexenv.run lexenv.expand))
+
+  (define (chi-defun/typed qrhs lexenv.run lexenv.expand)
+    ;;Expand a  qualified RHS (QRHS) representing  a DEFINE/TYPED syntax use  for the
+    ;;case of function definition; the original input form is something like:
+    ;;
+    ;;   (define/typed (?lhs . ?formals) . ?body)
+    ;;   (define/typed ((brace ?lhs ?rv-type ... . ?rv-type-rest) . ?formals) . ?body)
+    ;;
+    ;;Return a  PSI object holding a  lambda core language expression.   The returned
+    ;;expression will be coupled (by the caller) with an already generated lex gensym
+    ;;serving as lexical variable name; for this  reason we return a lambda core form
+    ;;rather than a define core form.
+    ;;
+    ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
+    ;;binding has already been added to LEXENV.
+    ;;
+    (%chi-defun #f qrhs lexenv.run lexenv.expand))
+
+  (define (%chi-defun standard? qrhs lexenv.run lexenv.expand)
+    (define-constant input-form.stx (qualified-rhs.input-form qrhs))
     (parametrise ((current-run-lexenv (lambda () lexenv.run)))
       (receive (standard-formals.lex body.psi)
-	  (chi-lambda-clause/standard input-form.stx lexenv.run lexenv.expand
-				      (qualified-rhs/defun.standard-formals qrhs)
-				      (car (clambda-signature.clause-signature* (qualified-rhs/defun.signature qrhs)))
-				      (qualified-rhs/defun.body* qrhs))
+	  (if standard?
+	      (chi-lambda-clause/standard input-form.stx lexenv.run lexenv.expand
+					  (qualified-rhs/defun.standard-formals qrhs)
+					  (car (clambda-signature.clause-signature* (qualified-rhs/defun.signature qrhs)))
+					  (qualified-rhs/defun.body* qrhs))
+	    (receive (lexenv.run lexenv.expand)
+		;;We  establish   the  syntactic   binding  for   "__who__"  before
+		;;processing the body.  So the formals may shadow this binding.
+		(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
+
+	      (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
+				       (qualified-rhs/defun.standard-formals qrhs)
+				       (car (clambda-signature.clause-signature* (qualified-rhs/defun.signature qrhs)))
+				       (qualified-rhs/defun.body* qrhs))))
 	(make-psi input-form.stx
 		  (build-lambda (syntax-annotation input-form.stx)
-		    standard-formals.lex
+		      standard-formals.lex
 		    (psi.core-expr body.psi))
-		  (make-type-signature/single-value (qualified-rhs.type-id qrhs)))))))
+		  (make-type-signature/single-value (qualified-rhs.type-id qrhs))))))
 
-
-;;;; chi procedures: typed single-clause function definition
-
-(define (chi-defun/typed qrhs lexenv.run lexenv.expand)
-  ;;Expand a qualified RHS (QRHS) representing a DEFINE/TYPED syntax use for the case
-  ;;of function definition; the original input form is something like:
-  ;;
-  ;;   (define/typed (?lhs . ?formals) . ?body)
-  ;;   (define/typed ((brace ?lhs ?rv-type ... . ?rv-type-rest) . ?formals) . ?body)
-  ;;
-  ;;Return a  PSI object  holding a  lambda core  language expression.   The returned
-  ;;expression will be  coupled (by the caller) with an  already generated lex gensym
-  ;;serving as lexical  variable name; for this  reason we return a  lambda core form
-  ;;rather than a define core form.
-  ;;
-  ;;NOTE  This function  assumes that:  the left-hand  side (LHS)  variable syntactic
-  ;;binding has already been added to LEXENV.
-  ;;
-  (define-constant input-form.stx (qualified-rhs.input-form qrhs))
-  (receive (lexenv.run lexenv.expand)
-      ;;We establish the syntactic binding  for "__who__" before processing the body.
-      ;;So the formals may shadow this binding.
-      (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
-    (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-      (receive (standard-formals.lex body.psi)
-	  (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-				   (qualified-rhs/defun.standard-formals qrhs)
-				   (car (clambda-signature.clause-signature* (qualified-rhs/defun.signature qrhs)))
-				   (qualified-rhs/defun.body* qrhs))
-	(make-psi input-form.stx
-		  (build-lambda (syntax-annotation input-form.stx)
-		    standard-formals.lex
-		    (psi.core-expr body.psi))
-		  (make-type-signature/single-value (qualified-rhs.type-id qrhs)))))))
+  #| end of module |# )
 
 
 ;;;; chi procedures: standard and typed multi-clause function definition
@@ -313,21 +308,17 @@
 	;;body.  So the formals may shadow this binding.
 	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(receive (standard-formals*.stx clause-signature*)
+	(receive (formals*.lex body*.psi)
 	    (if standard?
-		(syntax-object.parse-standard-clambda-multi-clauses-formals standard-formals*.stx input-form.stx)
-	      (syntax-object.parse-typed-clambda-multi-clauses-formals standard-formals*.stx input-form.stx))
-	  (receive (formals*.lex body*.psi)
-	      (if standard?
-		  (chi-case-lambda-clause*/standard input-form.stx lexenv.run lexenv.expand
-						    standard-formals*.stx clause-signature* body**.stx)
-		(chi-case-lambda-clause*/typed input-form.stx lexenv.run lexenv.expand
-					       standard-formals*.stx clause-signature* body**.stx))
-	    (make-psi input-form.stx
-		      (build-case-lambda (syntax-annotation input-form.stx)
-			  formals*.lex
-			(map psi.core-expr body*.psi))
-		      (make-type-signature/single-value (qualified-rhs.type-id qrhs))))))))
+		(chi-case-lambda-clause*/standard input-form.stx lexenv.run lexenv.expand
+						  standard-formals*.stx clause-signature* body**.stx)
+	      (chi-case-lambda-clause*/typed input-form.stx lexenv.run lexenv.expand
+					     standard-formals*.stx clause-signature* body**.stx))
+	  (make-psi input-form.stx
+		    (build-case-lambda (syntax-annotation input-form.stx)
+			formals*.lex
+		      (map psi.core-expr body*.psi))
+		    (make-type-signature/single-value (qualified-rhs.type-id qrhs)))))))
 
   #| end of module |# )
 
