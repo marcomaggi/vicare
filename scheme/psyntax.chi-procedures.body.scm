@@ -980,16 +980,80 @@
 
 ;;;; core macros: CASE-DEFINE/TYPED
 
-(define* (chi-case-define/typed input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
-  (define-constant __who__ 'case-define/typed)
-  (syntax-match input-form.stx ()
-    ((_ ?who ?cl-clause ?cl-clause* ...)
-     ;;FIXME Temporary implementation.  (Marco Maggi; Tue Feb 2, 2016)
-     (chi-define/typed (bless
-			`(define/typed ,?who
-			   (case-lambda/typed ,?cl-clause . ,?cl-clause*)))
-		       rib lexenv.run kwd* shadow/redefine-bindings?))
-    ))
+(module (chi-case-define/typed)
+
+  (define-constant __module_who__ 'case-define/typed)
+
+  (define* (chi-case-define/typed input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+    (case-define %synner
+      ((message)
+       (syntax-violation __module_who__ message input-form.stx))
+      ((message subform)
+       (syntax-violation __module_who__ message input-form.stx subform)))
+    (receive (lhs.id lhs.type qrhs lexenv.run)
+	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
+	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
+	;;syntactic  identifier representing  the  type of  this  binding; QRHS,  the
+	;;qualified RHS object to be expanded later.
+	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
+      (if (bound-id-member? lhs.id kwd*)
+	  (%synner "cannot redefine keyword")
+	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
+	       (lhs.lex		(generate-lexical-gensym lhs.id))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type lhs.lex))
+	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
+	  ;;This rib extension will raise an exception if it represents an attempt to
+	  ;;illegally redefine a binding.
+	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	  (values lhs.lex qrhs lexenv.run)))))
+
+  (module (%parse-macro-use)
+
+    (define (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
+      (syntax-match input-form.stx ()
+	((_ ?who ?cl-clause ?cl-clause* ...)
+	 (begin
+	   (unless (identifier? ?who)
+	     (synner "expected identifier as function name" ?who))
+	   (receive (standard-formals*.stx clause-signature* body**.stx)
+	       (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
+	     (let* ((lhs.type	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
+		    (signature	(make-clambda-signature clause-signature*))
+		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
+		    (qrhs	(make-qualified-rhs/typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx
+								     lhs.type signature)))
+	       (values ?who lhs.type qrhs lexenv.run)))))
+	))
+
+    (define (%parse-clauses input-form.stx clause*.stx
+			    standard-formals*.stx clause-signature* body**.stx)
+      ;;Recursive function.
+      ;;
+      (if (pair? clause*.stx)
+	  (receive (standard-formals.stx clause-signature body*.stx)
+	      (%parse-single-clause input-form.stx (car clause*.stx))
+	    (receive (standard-formals*.stx clause-signature* body**.stx)
+		(%parse-clauses input-form.stx (cdr clause*.stx) standard-formals*.stx clause-signature* body**.stx)
+	      (values (cons standard-formals.stx	standard-formals*.stx)
+		      (cons clause-signature		clause-signature*)
+		      (cons body*.stx			body**.stx))))
+	(values standard-formals*.stx clause-signature* body**.stx)))
+
+    (define (%parse-single-clause input-form.stx clause.stx)
+      (syntax-match clause.stx ()
+	((?formals ?body ?body* ...)
+	 ;;From parsing  the standard formals we  get 2 values: a  proper or improper
+	 ;;list  of identifiers  representing the  standard formals;  an instance  of
+	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
+	 ;;while parsing.
+	 (receive (standard-formals.stx clause-signature)
+	     (syntax-object.parse-typed-clambda-clause-formals ?formals input-form.stx)
+	   (values standard-formals.stx clause-signature (cons ?body ?body*))))
+	))
+
+    #| end of module: %PARSE-MACRO-USE |# )
+
+  #| end of module: CHI-CASE-DEFINE/TYPED |# )
 
 
 ;;;; parsing DEFINE forms: end of module
