@@ -1335,9 +1335,10 @@
 	;;and expressions as in a top-level program.
 	(assert (null? empty))
 	;;Expand the definitions and the module trailing expressions.
-	(let* ((lhs*.lex  (reverse (map qualified-rhs.lex qrhs*)))
-	       (rhs*.psi  (chi-qrhs* (reverse qrhs*)                    lexenv.expand^ lexenv.super^))
-	       (init*.psi (chi-expr* (reverse-and-append module-init**) lexenv.expand^ lexenv.super^)))
+	(let* ((qrhs*		(reverse qrhs*))
+	       (lhs*.lex	(map qualified-rhs.lex qrhs*))
+	       (rhs*.psi	(chi-qrhs* qrhs* lexenv.expand^ lexenv.super^))
+	       (init*.psi	(chi-expr* (reverse-and-append module-init**) lexenv.expand^ lexenv.super^)))
 	  ;;Now that  we have fully expanded  the forms: we invoke  all the libraries
 	  ;;needed to evaluate them.
 	  (for-each
@@ -1432,15 +1433,16 @@
       (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
     ;;We want order here!   First we expand the QRHSs, then we  expande the INITs; so
     ;;that the QRHS bindings are typed when the INITs are expanded.
-    (let* ((rhs*.psi		(chi-qrhs* (reverse qrhs*) lexenv.run lexenv.expand))
+    (let* ((qrhs*		(reverse qrhs*))
+	   (rhs*.psi		(chi-qrhs* qrhs* lexenv.run lexenv.expand))
 	   (init*.psi		(chi-expr* init*.stx lexenv.run lexenv.expand))
-	   (lhs*.lex		(reverse (map qualified-rhs.lex qrhs*)))
+	   (lhs*.lex		(map qualified-rhs.lex qrhs*))
 	   (rhs*.core		(map psi.core-expr rhs*.psi))
 	   (init*.core		(map psi.core-expr init*.psi))
 	   (last-init.psi	(proper-list->last-item init*.psi)))
       (make-psi (or input-form.stx body-form*.stx)
 		(build-letrec* (syntax-annotation input-form.stx)
-		  lhs*.lex rhs*.core
+		    lhs*.lex rhs*.core
 		  (build-sequence no-source
 		    init*.core))
 		(psi.retvals-signature last-init.psi)))))
@@ -1734,4 +1736,5 @@
 ;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
 ;;eval: (put 'case-qrhs-category			'scheme-indent-function 1)
 ;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
+;;eval: (put 'build-letrec*				'scheme-indent-function 3)
 ;;End:
