@@ -888,7 +888,7 @@
 	      (identifier? #'?new-lhs-id))
 	 #'(let-values (((?new-env ?new-lhs-id) (%extend-env ?old-env ?args1 ?rands)))
 	     (begin0
-		 (let () ?body0 ?body ...)
+		 (internal-body ?body0 ?body ...)
 	       (%copy-assigned-fields-to-source-fields! ?new-lhs-id)))))))
 
   (define-auxiliary-syntaxes <==)

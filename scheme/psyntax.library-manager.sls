@@ -710,7 +710,7 @@
 
 ;; #!vicare
 ;; (define dummy
-;;   (let ()
+;;   (internal-body
 ;;     (import (vicare))
 ;;     (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.library-manager"))))
 

@@ -236,7 +236,7 @@
     ;;
     ((typed-expr)
      (let ((expr      (E (cadr X)))
-	   (core-type (let ()
+	   (core-type (internal-body
 			(module (name->core-type-tag)
 			  (import SCHEME-OBJECTS-ONTOLOGY))
 			(name->core-type-tag (caddr X)))))

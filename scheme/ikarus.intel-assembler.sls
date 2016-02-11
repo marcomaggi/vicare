@@ -626,7 +626,7 @@
 		 ;;
 		 ;;   (label ?gensym)
 		 ;;
-		 (let ()
+		 (internal-body
 		   (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS)
 		   (recur (cons (label-name entry) names))))
 		((seq)

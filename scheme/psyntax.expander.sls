@@ -520,7 +520,7 @@
 	     guard-code guard-lib*
 	     option* foreign-library*)
        (parametrise ((libman::source-code-location (or filename (libman::source-code-location))))
-	 (let ()
+	 (internal-body
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-libname)))
      (let ((uid		(gensym)) ;library unique-symbol identifier

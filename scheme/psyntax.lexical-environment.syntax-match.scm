@@ -46,7 +46,7 @@
   ;;the function  SYNTAX-DISPATCH; the  patterns in SYNTAX-MATCH  are converted  to a
   ;;sexps and handed to SYNTAX-DISPATCH along with the input expression.
   ;;
-  (let ()
+  (internal-body
     (define (transformer stx)
       (sys::syntax-case stx ()
 

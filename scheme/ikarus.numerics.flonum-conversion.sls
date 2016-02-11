@@ -84,7 +84,7 @@
 		(list (chr (+ q 1)))))))))
 
     (define invlog2of
-      (let ()
+      (internal-body
 	(define-syntax at-expand-time
 	  (lambda (stx)
 	    (let ((table (make-vector 37))
@@ -105,7 +105,7 @@
 	    (/ log2 (log B))))))
 
     (define exptt
-      (let ()
+      (internal-body
 	(define-syntax at-expand-time
 	  (lambda (stx)
 	    (let ((table (make-vector 326)))

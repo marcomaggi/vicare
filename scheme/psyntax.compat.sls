@@ -27,7 +27,7 @@
     receive				receive-and-return
     module				import
     begin0				define-values
-    include
+    include				internal-body
     define-list-of-type-predicate
     expand-time-gensym			expand-library
     with-blocked-exceptions

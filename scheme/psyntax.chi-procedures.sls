@@ -861,7 +861,7 @@
        ;;
        ;;   (set! ?lhs ?rhs)
        ;;
-       (let ()
+       (internal-body
 	 (import CHI-SET)
 	 (chi-set! expr.stx lexenv.run lexenv.expand)))
 

@@ -17,7 +17,7 @@
 (library (ikarus.compiler.compat)
   (export
     import				module
-    include
+    include				internal-body
     define*				lambda*
     case-define*			case-lambda*
     case-define				define-inline

@@ -25,7 +25,7 @@
     ;;
     ;;are expanded by the compiler with the actual implementation.
     ;;
-    (let ()
+    (internal-body
       (import (vicare))
       (case-lambda
         ((x guard)

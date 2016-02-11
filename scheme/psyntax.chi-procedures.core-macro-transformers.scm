@@ -1444,7 +1444,7 @@
   (syntax-match input-form.stx ()
     ((_ ?form)
      (make-psi input-form.stx
-	       (let ()
+	       (internal-body
 		 (import SPLICE-FIRST-ENVELOPE)
 		 (make-splice-first-envelope ?form))))
     ))

@@ -234,7 +234,7 @@
   ;;   ;;LET*.
   ;;   (syntax-case stx ()
   ;;     ((_ () ?body0 ?body ...)
-  ;;      #'(let () ?body0 ?body ...))
+  ;;      #'(internal-body ?body0 ?body ...))
   ;;     ((_ ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body0 ?body ...)
   ;;      #'(with-tmp ((?lhs0 ?rhs0))
   ;; 	   (with-tmp* ((?lhs ?rhs) ...)
@@ -1736,7 +1736,7 @@
 	  ;;2014)
 	  ;;
 	  ;;((transcoder? x.const)
-	  ;; (let ()
+	  ;; (internal-body
 	  ;;   (import (only (vicare system $transcoders)
 	  ;;		   $transcoder->data))
 	  ;;   (make-constant (fxlogor transcoder-tag
