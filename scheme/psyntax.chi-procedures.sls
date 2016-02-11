@@ -1039,24 +1039,18 @@
 	  (chi-body* (list expr.stx) lexenv.all lexenv.all
 		     qrhs* trailing-module-expression** defined-names* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
-      (let ((expr*.core (%expand-qrhs*-then-init*
-			 (reverse qrhs*)
-			 (reverse-and-append-with-tail module-trailing-form**.stx trailing-init-form*.stx)
-			 lexenv.run^ lexenv.expand^)))
-	(let ((expr.core (cond ((null? expr*.core)
-				(build-void))
-			       ((null? (cdr expr*.core))
-				(car expr*.core))
-			       (else
-				(build-sequence no-source expr*.core)))))
-	  (values expr.core lexenv.run^)))))
+      (values (build-sequence no-source
+		(let ((init*.stx (reverse-and-append-with-tail module-trailing-form**.stx trailing-init-form*.stx)))
+		  (%expand-qrhs*-then-init* (reverse qrhs*) init*.stx lexenv.run^ lexenv.expand^)))
+	      lexenv.run^)))
 
   (define (%expand-qrhs*-then-init* qrhs* init*.stx lexenv.run lexenv.expand)
     ;;Recursive  function.   Return  a  list   of  core  language  expressions,  some
     ;;representing global assignments  and some discarding the  return values; notice
     ;;that we do not care if there are no trailing expressions (INIT*.STX is null).
     ;;
-    ;;NOTE Remember that the QRHS* are accumulated in reverse order!
+    ;;NOTE Remember that the QRHS* are  accumulated in reverse order in CHI-BODY* but
+    ;;they are handed to this function already reordered!
     ;;
     (define-syntax-rule (%recurse ?qrhs*)
       (%expand-qrhs*-then-init* ?qrhs* init*.stx lexenv.run lexenv.expand))
@@ -1292,48 +1286,28 @@
     (receive (lhs*.lex init*.core rhs*.core lexenv.expand^)
 	(%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
       ;;Build an expanded  code expression and evaluate it.
-      ;;
-      ;;NOTE This variable is set to #f (which is invalid core code) when there is no
-      ;;code after the expansion.  This can happen, for example, when doing:
-      ;;
-      ;;   (begin-for-syntax
-      ;;     (define-syntax ?lhs ?rhs))
-      ;;
-      ;;because the expansion of a DEFINE-SYNTAX use is nothing.
-      (define visit-code.core
-	(let ((rhs*.out  (if (null? rhs*.core)
-			     #f
-			   (build-sequence no-source
-			     (map (lambda (lhs.lex rhs.core)
-				    (build-global-assignment no-source
-				      lhs.lex rhs.core))
-			       lhs*.lex rhs*.core))))
-	      (init*.out (if (null? init*.core)
-			     #f
-			   (build-sequence no-source
-			     init*.core))))
-	  (cond ((and rhs*.out init*.out)
-		 (build-sequence no-source
-		   (list rhs*.out init*.out)))
-		(rhs*.out)
-		(init*.out)
-		(else #f))))
-      (when visit-code.core
-	(compiler::eval-core (expanded->core visit-code.core)))
-      ;;Done!  Push on the LEXENV an entry like:
-      ;;
-      ;;   (?unused-label . (begin-for-syntax . ?core-code))
-      ;;
-      ;;then go on with the next body forms.
-      (let ((lexenv.run^ (if visit-code.core
-			     (let ((entry (cons (gensym "begin-for-syntax-label")
-						(cons 'begin-for-syntax visit-code.core))))
-			       (cons entry lexenv.run))
-			   lexenv.run)))
-	(chi-body* (cdr body-form*.stx)
-		   lexenv.run^ lexenv.expand^
-		   qrhs* mod** kwd* export-spec* rib
-		   mix? shadow/redefine-bindings?))))
+      (let ((visit-code.core (build-sequence no-source
+			       (append (map (lambda (lhs.lex rhs.core)
+					      (build-global-assignment no-source
+						lhs.lex rhs.core))
+					 lhs*.lex rhs*.core)
+				       init*.core))))
+	(unless (void-core-expression? visit-code.core)
+	  (compiler::eval-core (expanded->core visit-code.core)))
+	;;Done!  Push on the LEXENV an entry like:
+	;;
+	;;   (?unused-label . (begin-for-syntax . ?core-code))
+	;;
+	;;then go on with the next body forms.
+	(let ((lexenv.run^ (if (void-core-expression? visit-code.core)
+			       lexenv.run
+			     (cons (cons (gensym "begin-for-syntax-label")
+					 (cons 'begin-for-syntax visit-code.core))
+				   lexenv.run))))
+	  (chi-body* (cdr body-form*.stx)
+		     lexenv.run^ lexenv.expand^
+		     qrhs* mod** kwd* export-spec* rib
+		     mix? shadow/redefine-bindings?)))))
 
   (define (%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
     (define rtc

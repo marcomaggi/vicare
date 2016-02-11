@@ -1769,7 +1769,6 @@
 ;;eval: (put 'build-conditional			'scheme-indent-function 2)
 ;;eval: (put 'build-lambda			'scheme-indent-function 2)
 ;;eval: (put 'build-foreign-call		'scheme-indent-function 2)
-;;eval: (put 'build-sequence			'scheme-indent-function 1)
 ;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-letrec*			'scheme-indent-function 1)

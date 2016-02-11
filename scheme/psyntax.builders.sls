@@ -48,6 +48,7 @@
     build-library-letrec*
 
     build-with-compilation-options
+    void-core-expression?
 
     core-language->sexp)
   (import (rnrs)
@@ -67,14 +68,21 @@
 
 
 (define (build-void)
-  (build-data #f (void)))
+  THE-VOID)
 ;; (define (build-void)
 ;;   '((primitive void)))
 
+(define-constant THE-VOID	(build-data #f (void)))
+(define-constant THE-VOID2	'(funcall (primitive void)))
+
+(define (void-core-expression? expr.core)
+  (or (equal? expr.core THE-VOID)
+      (equal? expr.core THE-VOID2)))
+
 (define (build-global-define x)
   (if-wants-global-defines
-   `(define ,x '#f)
-   (build-void)))
+      `(define ,x '#f)
+    (build-void)))
 
 (define (build-application ae fun-exp arg-exps)
   (if ae
@@ -115,52 +123,52 @@
 
 (define (build-lambda ae vars exp)
   (if-wants-case-lambda
-   (build-case-lambda ae (list vars) (list exp))
-   `(lambda ,vars ,exp)))
+      (build-case-lambda ae (list vars) (list exp))
+    `(lambda ,vars ,exp)))
 
 (define build-case-lambda
   (if-wants-case-lambda
-   (lambda (ae vars* exp*)
-     (if ae
-	 `(annotated-case-lambda ,ae . ,(map list vars* exp*))
-       `(case-lambda . ,(map list vars* exp*))))
-   (lambda (ae vars* exp*)
-     (define (build-error ae)
-       (build-application ae
-			  (build-primref ae 'error)
-			  (list (build-data ae 'apply)
-				(build-data ae "invalid arg count"))))
-     (define (build-pred ae n vars)
-       (let-values (((count pred)
-		     (let f ((vars vars) (count 0))
-		       (cond
-			((pair? vars) (f (cdr vars) (+ count 1)))
-			((null? vars) (values count '=))
-			(else (values count '>=))))))
-	 (build-application ae (build-primref ae pred)
-			    (list (build-lexical-reference ae n)
-				  (build-data ae count)))))
-     (define (build-apply ae g vars exp)
-       (build-application ae (build-primref ae 'apply)
-			  (list (build-lambda ae vars exp)
-				(build-lexical-reference ae g))))
-     (define (expand-case-lambda ae vars exp*)
-       (let ((g (gensym)) (n (gensym)))
-	 `(lambda ,g
-	    ,(build-let ae
-			(list n) (list (build-application ae
-							  (build-primref ae 'length)
-							  (list (build-lexical-reference ae g))))
-			(let f ((vars* vars*) (exp* exp*))
-			  (if (null? vars*)
-			      (build-error ae)
-			    (build-conditional ae
-					       (build-pred ae n (car vars*))
-					       (build-apply ae g (car vars*) (car exp*))
-					       (f (cdr vars*) (cdr exp*)))))))))
-     (if (= (length exp*) 1)
-	 (build-lambda ae (car vars*) (car exp*))
-       (expand-case-lambda ae vars* exp*)))))
+      (lambda (ae vars* exp*)
+	(if ae
+	    `(annotated-case-lambda ,ae . ,(map list vars* exp*))
+	  `(case-lambda . ,(map list vars* exp*))))
+    (lambda (ae vars* exp*)
+      (define (build-error ae)
+	(build-application ae
+	  (build-primref ae 'error)
+	  (list (build-data ae 'apply)
+		(build-data ae "invalid arg count"))))
+      (define (build-pred ae n vars)
+	(let-values (((count pred)
+		      (let f ((vars vars) (count 0))
+			(cond
+			 ((pair? vars) (f (cdr vars) (+ count 1)))
+			 ((null? vars) (values count '=))
+			 (else (values count '>=))))))
+	  (build-application ae (build-primref ae pred)
+			     (list (build-lexical-reference ae n)
+				   (build-data ae count)))))
+      (define (build-apply ae g vars exp)
+	(build-application ae (build-primref ae 'apply)
+			   (list (build-lambda ae vars exp)
+				 (build-lexical-reference ae g))))
+      (define (expand-case-lambda ae vars exp*)
+	(let ((g (gensym)) (n (gensym)))
+	  `(lambda ,g
+	     ,(build-let ae
+		  (list n) (list (build-application ae
+				   (build-primref ae 'length)
+				   (list (build-lexical-reference ae g))))
+		(let f ((vars* vars*) (exp* exp*))
+		  (if (null? vars*)
+		      (build-error ae)
+		    (build-conditional ae
+			(build-pred ae n (car vars*))
+		      (build-apply ae g (car vars*) (car exp*))
+		      (f (cdr vars*) (cdr exp*)))))))))
+      (if (= (length exp*) 1)
+	  (build-lambda ae (car vars*) (car exp*))
+	(expand-case-lambda ae vars* exp*)))))
 
 
 (define (build-let ae lhs* rhs* body)
@@ -194,20 +202,41 @@
   (syntax-rules ()
     ((_ ae exp) `',exp)))
 
-(define (build-sequence ae exps)
-  ;;Given a list of expressions to be evaluated in sequence wrap it in a
-  ;;BEGIN syntax.  Discard useless void expressions.
-  ;;
-  (let ((the-void1 (build-void))
-	(the-void2 '(funcall (primitive void))))
-    (let loop ((exps exps))
-      (cond ((null? (cdr exps))
-	     (car exps))
-	    ((or (equal? (car exps) the-void1)
-		 (equal? (car exps) the-void2))
-	     (loop (cdr exps)))
-	    (else
-	     `(begin ,@exps))))))
+(module (build-sequence)
+
+  (define (build-sequence ae expr*.core)
+    ;;Given a list of expressions to be evaluated in sequence wrap it in a BEGIN core
+    ;;language syntax:
+    ;;
+    ;;  (begin ?expr0.core ?expr.core ...)
+    ;;
+    ;;If there  are no expressions  (EXPR*.CORE is null):  just return a  single void
+    ;;expression.  If there is a single  expression: just return it.  Discard useless
+    ;;void expressions: discard all the voids, except in tail position.
+    ;;
+    (cond ((null? expr*.core)
+	   THE-VOID)
+	  ((null? (cdr expr*.core))
+	   (car expr*.core))
+	  (else
+	   (let ((expr*.core (%filter-useless-voids expr*.core)))
+	     (cond ((null? expr*.core)
+		    THE-VOID)
+		   ((null? (cdr expr*.core))
+		    (car expr*.core))
+		   (else
+		    `(begin . ,expr*.core)))))))
+
+  (define (%filter-useless-voids expr*.core)
+    (if (pair? (cdr expr*.core))
+	(let ((head (car expr*.core))
+	      (tail (%filter-useless-voids (cdr expr*.core))))
+	  (if (void-core-expression? head)
+	      tail
+	    (cons head tail)))
+      expr*.core))
+
+  #| end of module: BUILD-SEQUENCE |# )
 
 
 (define (build-letrec ae vars val-exps body-exp)
@@ -219,27 +248,29 @@
   (if (null? vars)
       body-exp
     (if-wants-letrec*
-     `(letrec* ,(map list vars val-exps) ,body-exp)
-     (build-let ae vars (map (lambda (x)
-			       (build-data ae #f))
-			  vars)
-		(build-sequence ae
-				(append (map (lambda (lhs rhs)
-					       (build-lexical-assignment ae lhs rhs))
-					  vars val-exps)
-				 (list body-exp)))))))
+	`(letrec* ,(map list vars val-exps) ,body-exp)
+      (build-let ae
+	  vars (map (lambda (x)
+		      (build-data ae #f))
+		 vars)
+	(build-sequence ae
+	  (append (map (lambda (lhs rhs)
+			 (build-lexical-assignment ae lhs rhs))
+		    vars val-exps)
+		  (list body-exp)))))))
 
 (define (build-library-letrec* ae top? vars locs val-exps body-exp)
   (if-wants-library-letrec*
-   `(library-letrec* ,(map list vars locs val-exps) ,body-exp)
-   (build-letrec* ae vars val-exps
-		  (if top?
-		      body-exp
-		    (build-sequence ae
-				    (cons body-exp
-					  (map (lambda (var loc)
-						 (build-global-assignment ae loc var))
-					    vars locs)))))))
+      `(library-letrec* ,(map list vars locs val-exps) ,body-exp)
+    (build-letrec* ae
+	vars val-exps
+      (if top?
+	  body-exp
+	(build-sequence ae
+	  (cons body-exp
+		(map (lambda (var loc)
+		       (build-global-assignment ae loc var))
+		  vars locs)))))))
 
 
 (module (core-language->sexp)
@@ -335,6 +366,14 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'build-let			'scheme-indent-function 3)
+;; eval: (put 'build-letrec*			'scheme-indent-function 3)
+;; eval: (put 'if-wants-global-defines		'scheme-indent-function 1)
+;; eval: (put 'if-wants-case-lambda		'scheme-indent-function 1)
+;; eval: (put 'if-wants-letrec*			'scheme-indent-function 1)
+;; eval: (put 'if-wants-library-letrec*		'scheme-indent-function 1)
+;; End:
