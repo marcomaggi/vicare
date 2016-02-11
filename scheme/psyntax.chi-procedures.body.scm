@@ -32,7 +32,7 @@
 ;;
 ;;but expand  neither the core  macros nor the  right-hand sides of  lexical variable
 ;;definitions (DEFINE forms)  and trailing expressions: the  variable definitions are
-;;accumulated  in the  argument  and  return value  QRHS*  for  later expansion;  the
+;;accumulated  in the  argument  and  return value  QDEF*  for  later expansion;  the
 ;;trailing   expressions  are   accumulated  in   the  argument   and  return   value
 ;;BODY-FORM*.STX for later expansion.
 ;;
@@ -116,7 +116,7 @@
 (module (chi-body*)
 
 
-(define* (chi-body* body-form*.stx lexenv.run lexenv.expand qrhs* mod** kwd* export-spec* rib
+(define* (chi-body* body-form*.stx lexenv.run lexenv.expand qdef* mod** kwd* export-spec* rib
 		    mix? shadow/redefine-bindings?)
   (import CHI-DEFINE)
   (if (pair? body-form*.stx)
@@ -132,14 +132,14 @@
 	(define-syntax-rule (%expand-internal-definition ?expander-who)
 	  ;;Used  to  process an  internal  definition  core macro:  DEFINE/STANDARD,
 	  ;;DEFINE/TYPED, CASE-DEFINE/STANDARD, CASE-DEFINE/TYPED.  We parse the body
-	  ;;form and generate a qualified right-hand  side (QRHS) object that will be
+	  ;;form and generate a qualified right-hand  side (QDEF) object that will be
 	  ;;expanded later.
 	  ;;
-	  (receive (qrhs lexenv.run)
+	  (receive (qdef lexenv.run)
 	      (?expander-who body-form.stx rib lexenv.run keyword* shadow/redefine-bindings?)
 	    (chi-body* (cdr body-form*.stx)
 		       lexenv.run lexenv.expand
-		       (cons qrhs qrhs*)
+		       (cons qdef qdef*)
 		       mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
@@ -219,7 +219,7 @@
 		   (chi-body* (cdr body-form*.stx)
 			      (cons entry lexenv.run)
 			      (cons entry lexenv.expand)
-			      qrhs* mod** keyword* export-spec* rib
+			      qdef* mod** keyword* export-spec* rib
 			      mix? shadow/redefine-bindings?)))))
 
 	    ((define-fluid-syntax)
@@ -264,7 +264,7 @@
 		   (chi-body* (cdr body-form*.stx)
 			      (cons* keyword-entry fluid-entry lexenv.run)
 			      (cons* keyword-entry fluid-entry lexenv.expand)
-			      qrhs* mod** keyword* export-spec* rib
+			      qdef* mod** keyword* export-spec* rib
 			      mix? shadow/redefine-bindings?)))))
 
 	    ((define-alias)
@@ -283,7 +283,7 @@
 			   (extend-rib! rib alias-id label shadow/redefine-bindings?)
 			   (chi-body* (cdr body-form*.stx)
 				      lexenv.run lexenv.expand
-				      qrhs* mod** keyword* export-spec* rib
+				      qdef* mod** keyword* export-spec* rib
 				      mix? shadow/redefine-bindings?)))
 		     (else
 		      (stx-error body-form.stx "unbound source identifier")))))
@@ -330,12 +330,12 @@
 		   ;;because the labels cannot be seen by the rest of the body.
 		   (append (map cons xlab* xbind*) lexenv.run)
 		   (append (map cons xlab* xbind*) lexenv.expand)
-		   qrhs* mod** keyword* export-spec* rib
+		   qdef* mod** keyword* export-spec* rib
 		   mix? shadow/redefine-bindings?)))))
 
 	    ((begin-for-syntax)
 	     (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand
-				   qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
+				   qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
 
 	    ((begin)
 	     ;;The body form  is a BEGIN syntax use.  Just  splice the expressions
@@ -345,7 +345,7 @@
 	       ((_ ?expr* ...)
 		(chi-body* (append ?expr* (cdr body-form*.stx))
 			   lexenv.run lexenv.expand
-			   qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))))
+			   qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	    ((stale-when)
 	     ;;The  body form  is a  STALE-WHEN syntax  use.  Process  the stale-when
@@ -358,7 +358,7 @@
 		  (handle-stale-when ?guard lexenv.expand)
 		  (chi-body* (append ?expr* (cdr body-form*.stx))
 			     lexenv.run lexenv.expand
-			     qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))))
+			     qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))))
 
 	    ((global-macro global-macro!)
 	     ;;The body  form is  a macro  use, where  the macro  is imported  from a
@@ -373,7 +373,7 @@
 						     body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
+			  qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((local-macro local-macro!)
 	     ;;The body form is a macro use,  where the macro is locally defined.  We
@@ -387,7 +387,7 @@
 						    body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
+			  qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((macro macro!)
 	     ;;The body  form is  a macro use,  where the macro  is a  non-core macro
@@ -402,14 +402,14 @@
 						       body-form.stx lexenv.run rib)))
 	       (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			  lexenv.run lexenv.expand
-			  qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
+			  qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((module)
 	     ;;The body  form is  an internal module  definition.  We  process the
 	     ;;module, then recurse on the rest of the body.
 	     ;;
-	     (receive (qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** keyword*)
-		 (chi-internal-module body-form.stx lexenv.run lexenv.expand qrhs* mod** keyword*)
+	     (receive (qdef* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** keyword*)
+		 (chi-internal-module body-form.stx lexenv.run lexenv.expand qdef* mod** keyword*)
 	       ;;Extend the rib with the syntactic bindings exported by the module.
 	       (vector-for-each (lambda (id lab)
 				  ;;This  call  will  raise   an  exception  if  it
@@ -418,7 +418,7 @@
 				  (extend-rib! rib id lab shadow/redefine-bindings?))
 		 m-exp-id* m-exp-lab*)
 	       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			  qrhs* mod** keyword* export-spec*
+			  qdef* mod** keyword* export-spec*
 			  rib mix? shadow/redefine-bindings?)))
 
 	    ((library)
@@ -428,7 +428,7 @@
 	     (expand-library (syntax->datum body-form.stx))
 	     (chi-body* (cdr body-form*.stx)
 			lexenv.run lexenv.expand
-			qrhs* mod** keyword* export-spec*
+			qdef* mod** keyword* export-spec*
 			rib mix? shadow/redefine-bindings?))
 
 	    ((export)
@@ -440,7 +440,7 @@
 	       ((_ ?export-spec* ...)
 		(chi-body* (cdr body-form*.stx)
 			   lexenv.run lexenv.expand
-			   qrhs* mod** keyword*
+			   qdef* mod** keyword*
 			   (append ?export-spec* export-spec*)
 			   rib mix? shadow/redefine-bindings?))))
 
@@ -451,7 +451,7 @@
 	     ;;
 	     (chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
 	     (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			qrhs* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
+			qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
 
 	    ((standalone-unbound-identifier)
 	     (raise-unbound-error __who__ body-form.stx body-form.stx))
@@ -475,7 +475,7 @@
 	     ;;   (define/standard dummy ?body-form)
 	     ;;
 	     ;;which is not really part of  the lexical environment: we only generate
-	     ;;a lex and a qrhs for it, without adding entries to LEXENV.RUN; then we
+	     ;;a lex and a qdef for it, without adding entries to LEXENV.RUN; then we
 	     ;;move on to the next body form.
 	     ;;
 	     ;;If mixed  definitions and expressions  are forbidden: we  have reached
@@ -484,14 +484,14 @@
 	     ;;"trailing expressions" return value.
 	     ;;
 	     (if mix?
-		 ;;There must be a LEX for every QRHS, really.
-		 (let ((qrhs (make-qualified-rhs/top-expr body-form.stx)))
+		 ;;There must be a LEX for every QDEF, really.
+		 (let ((qdef (make-qdef-top-expr body-form.stx)))
 		   (chi-body* (cdr body-form*.stx)
 			      lexenv.run lexenv.expand
-			      (cons qrhs qrhs*)
+			      (cons qdef qdef*)
 			      mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
-	       (values body-form*.stx lexenv.run lexenv.expand qrhs* mod** keyword* export-spec*))))))
-    (values body-form*.stx lexenv.run lexenv.expand qrhs* mod** kwd* export-spec*)))
+	       (values body-form*.stx lexenv.run lexenv.expand qdef* mod** keyword* export-spec*))))))
+    (values body-form*.stx lexenv.run lexenv.expand qdef* mod** kwd* export-spec*)))
 
 
 ;;;; helpers
@@ -661,7 +661,7 @@
   ;;is fine, because DEFINE can redefine the binding for "a".
   ;;
   (define (chi-begin-for-syntax input-form.stx body-form*.stx lexenv.run lexenv.expand
-				qrhs* mod** kwd* export-spec* rib mix?
+				qdef* mod** kwd* export-spec* rib mix?
 				shadow/redefine-bindings?)
     (receive (lhs*.lex init*.core rhs*.core lexenv.expand^)
 	(%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
@@ -686,7 +686,7 @@
 				   lexenv.run))))
 	  (chi-body* (cdr body-form*.stx)
 		     lexenv.run^ lexenv.expand^
-		     qrhs* mod** kwd* export-spec* rib
+		     qdef* mod** kwd* export-spec* rib
 		     mix? shadow/redefine-bindings?)))))
 
   (define (%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
@@ -696,11 +696,11 @@
 		  (vis-collector (lambda (x) (void))))
       (receive (empty
 		lexenv.expand^ lexenv.super^
-		qrhs* module-init** kwd* export-spec*)
+		qdef* module-init** kwd* export-spec*)
 	  ;;Expand  the sequence  of  forms  as a  top-level  body, accumulating  the
 	  ;;definitions.
 	  (let ((lexenv.super                     lexenv.expand)
-		(qrhs*                            '())
+		(qdef*                            '())
 		(mod**                            '())
 		(kwd*                             '())
 		(export-spec*                     '())
@@ -709,15 +709,15 @@
 	      ((_ ?expr ?expr* ...)
 	       (chi-body* (cons ?expr ?expr*)
 			  lexenv.expand lexenv.super
-			  qrhs* mod** kwd* export-spec* rib
+			  qdef* mod** kwd* export-spec* rib
 			  mix-definitions-and-expressions? shadow/redefine-bindings?))))
 	;;There must be no trailing expressions because we allowed mixing definitions
 	;;and expressions as in a top-level program.
 	(assert (null? empty))
 	;;Expand the definitions and the module trailing expressions.
-	(let* ((qrhs*		(reverse qrhs*))
-	       (lhs*.lex	(map qualified-rhs.lex qrhs*))
-	       (rhs*.psi	(chi-qrhs* qrhs* lexenv.expand^ lexenv.super^))
+	(let* ((qdef*		(reverse qdef*))
+	       (lhs*.lex	(map qdef.lex qdef*))
+	       (rhs*.psi	(chi-qdef* qdef* lexenv.expand^ lexenv.super^))
 	       (init*.psi	(chi-expr* (reverse-and-append module-init**) lexenv.expand^ lexenv.super^)))
 	  ;;Now that  we have fully expanded  the forms: we invoke  all the libraries
 	  ;;needed to evaluate them.
@@ -752,7 +752,7 @@
 		;field EXP-ID-VEC.
 	    ))
 
-  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand qrhs* mod** kwd*)
+  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand qdef* mod** kwd*)
     ;;Expand  the syntax  object  MODULE-FORM-STX which  represents  a core  langauge
     ;;MODULE syntax use.
     ;;
@@ -765,7 +765,7 @@
 	     (internal-body-form*/rib  (map (lambda (form)
 					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
-	(receive (leftover-body-expr* lexenv.run lexenv.expand qrhs* mod** kwd* _export-spec*)
+	(receive (leftover-body-expr* lexenv.run lexenv.expand qdef* mod** kwd* _export-spec*)
 	    ;;In a module: we do not want the trailing expressions to be converted to
 	    ;;dummy definitions; rather  we want them to be accumulated  in the MOD**
 	    ;;argument, for later expansion and evaluation.  So we set MIX? to false.
@@ -785,7 +785,7 @@
 		  (redefine-bindings?	#f))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
-			 qrhs* mod** kwd* empty-export-spec*
+			 qdef* mod** kwd* empty-export-spec*
 			 module-rib mix? redefine-bindings?))
 	  ;;The list  of exported  identifiers is  not only the  one from  the MODULE
 	  ;;argument, but  also the  one from  all the EXPORT  forms in  the MODULE's
@@ -805,7 +805,7 @@
 	    (if (not name)
 		;;The module has no name.  All the exported identifier will go in the
 		;;enclosing lexical environment.
-		(values qrhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
+		(values qdef* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
 	      ;;The module has a name.  Only the name itself will go in the enclosing
 	      ;;lexical environment.
 	      (let* ((name-label (generate-label-gensym 'module))
@@ -822,7 +822,7 @@
 				  all-export-lab*))
 		     (binding    (make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
 		     (entry      (cons name-label binding)))
-		(values qrhs*
+		(values qdef*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.
 			(vector name)
 			(vector name-label)
@@ -899,7 +899,7 @@
   ;;   (define ?lhs ?rhs)
   ;;   (define (?lhs . ?formals) . ?body)
   ;;
-  ;;The functions  parse the body form  and build a qualified  right-hand side (QRHS)
+  ;;The functions  parse the body form  and build a qualified  right-hand side (QDEF)
   ;;object that will be expanded later.
   ;;
   ;;Here we  establish a new syntactic  binding representing lexical variable  in the
@@ -912,7 +912,7 @@
   ;;
   ;;* We push an entry on LEXENV.RUN to represent the association label/lex.
   ;;
-  ;;Finally we return the lex, the QRHS  and the updated LEXENV.RUN to recurse on the
+  ;;Finally we return the lex, the QDEF  and the updated LEXENV.RUN to recurse on the
   ;;rest of the body.
   ;;
   ;;
@@ -922,12 +922,12 @@
   ;;Notice that:
   ;;
   ;;* If the syntactic  binding is at the top-level of a program  or library body: we
-  ;;need a  loc gensym to store  the result of evaluating  the RHS in QRHS;  this loc
+  ;;need a  loc gensym to store  the result of evaluating  the RHS in QDEF;  this loc
   ;;will be generated later.
   ;;
   ;;* If the  syntactic binding is at  the top-level of an expression  expanded in an
   ;;interaction environment: we  need a loc gensym to store  the result of evaluating
-  ;;the RHS  in QRHS; in  this case the  lex gensym generated  here also acts  as loc
+  ;;the RHS  in QDEF; in  this case the  lex gensym generated  here also acts  as loc
   ;;gensym.
   ;;
   ;;
@@ -952,7 +952,7 @@
   ;;   (define/standard ?lhs ?rhs)
   ;;   (define/standard (?lhs . ?formals) . ?body)
   ;;
-  ;;we parse  the form and  generate a qualified  right-hand side (QRHS)  object that
+  ;;we parse  the form and  generate a qualified  right-hand side (QDEF)  object that
   ;;will be expanded later.  Here we establish a new syntactic binding representing a
   ;;fully R6RS compliant  lexical variable in the lexical context  represented by the
   ;;arguments RIB and LEXENV.RUN.
@@ -965,21 +965,21 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qrhs lexenv.run)
+    (receive (lhs.id lhs.type qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QRHS,  the
+	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qualified-rhs.lex qrhs)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
 	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-	  (values qrhs lexenv.run)))))
+	  (values qdef lexenv.run)))))
 
   (module (%parse-macro-use)
 
@@ -993,7 +993,7 @@
       ;;false when no  type is specified.  It  is a sub-type of  "<procedure>" when a
       ;;procedure is defined.
       ;;
-      ;;3.   An object  representing a  qualified right-hand  side expression  (QRHS)
+      ;;3.   An object  representing a  qualified right-hand  side expression  (QDEF)
       ;;fully representing the syntactic binding to create.
       ;;
       ;;4. A possibly updated LEXENV.RUN.
@@ -1030,15 +1030,15 @@
 	(let* ((lhs.type	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
 	       (signature	(make-clambda-signature (list clause-signature)))
 	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-	       (qrhs		(make-qualified-rhs/standard-defun input-form.stx lhs.id standard-formals.stx body*.stx
+	       (qdef		(make-qdef-standard-defun input-form.stx lhs.id standard-formals.stx body*.stx
 								   lhs.type signature)))
-	  (values lhs.id lhs.type qrhs lexenv.run))))
+	  (values lhs.id lhs.type qdef lexenv.run))))
 
     (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run lhs.id rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (let ((qrhs (make-qualified-rhs/standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (top-tag-id) qrhs lexenv.run)))
+      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
+	(values lhs.id (top-tag-id) qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1057,21 +1057,21 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qrhs lexenv.run)
+    (receive (lhs.id lhs.type qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QRHS,  the
+	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qualified-rhs.lex qrhs)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
 	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-	  (values qrhs lexenv.run)))))
+	  (values qdef lexenv.run)))))
 
   (module (%parse-macro-use)
 
@@ -1091,9 +1091,9 @@
 	     (let* ((lhs.type	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
 		    (signature	(make-clambda-signature clause-signature*))
 		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-		    (qrhs		(make-qualified-rhs/standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx
+		    (qdef		(make-qdef-standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx
 										lhs.type signature)))
-	       (values ?who lhs.type qrhs lexenv.run)))))
+	       (values ?who lhs.type qdef lexenv.run)))))
 	))
 
     (define (%parse-clauses input-form.stx clause*.stx
@@ -1140,7 +1140,7 @@
   ;;   (define/typed (brace ?lhs ?lhs.type) ?rhs)
   ;;   (define/typed ((brace ?lhs ?lhs.type) . ?formals) . ?body)
   ;;
-  ;;we parse  the form and  generate a qualified  right-hand side (QRHS)  object that
+  ;;we parse  the form and  generate a qualified  right-hand side (QDEF)  object that
   ;;will be expanded later.  Here we establish a new syntactic binding representing a
   ;;typed lexical  variable in the lexical  context represented by the  arguments RIB
   ;;and LEXENV.RUN.
@@ -1153,21 +1153,21 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qrhs lexenv.run)
+    (receive (lhs.id lhs.type qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QRHS,  the
+	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qualified-rhs.lex qrhs)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
 	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-	  (values qrhs lexenv.run)))))
+	  (values qdef lexenv.run)))))
 
   (module (%parse-macro-use)
 
@@ -1182,7 +1182,7 @@
       ;;false when no  type is specified.  It  is a sub-type of  "<procedure>" when a
       ;;procedure is defined.
       ;;
-      ;;3.   An object  representing a  qualified right-hand  side expression  (QRHS)
+      ;;3.   An object  representing a  qualified right-hand  side expression  (QDEF)
       ;;fully representing the syntactic binding to create.
       ;;
       ;;4. A possibly updated LEXENV.RUN.
@@ -1225,9 +1225,9 @@
 	(let* ((lhs.type	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
 	       (signature	(make-clambda-signature (list clause-signature)))
 	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-	       (qrhs		(make-qualified-rhs/typed-defun input-form.stx lhs.id standard-formals.stx body*.stx
+	       (qdef		(make-qdef-typed-defun input-form.stx lhs.id standard-formals.stx body*.stx
 								lhs.type signature)))
-	  (values lhs.id lhs.type qrhs lexenv.run))))
+	  (values lhs.id lhs.type qdef lexenv.run))))
 
     (define (%process-typed-variable-definition-with-init-expr input-form.stx lexenv.run
 							       lhs.id rhs.stx lhs.type synner)
@@ -1235,15 +1235,15 @@
 	(synner "expected identifier as variable name" lhs.id))
       (unless (type-identifier? lhs.type)
 	(synner "expected type identifier as type annotation for variable name" lhs.type))
-      (let ((qrhs (make-qualified-rhs/typed-defvar input-form.stx lhs.id rhs.stx lhs.type)))
-	(values lhs.id lhs.type qrhs lexenv.run)))
+      (let ((qdef (make-qdef-typed-defvar input-form.stx lhs.id rhs.stx lhs.type)))
+	(values lhs.id lhs.type qdef lexenv.run)))
 
     (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run
 								  lhs.id rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (let ((qrhs (make-qualified-rhs/standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (top-tag-id) qrhs lexenv.run)))
+      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
+	(values lhs.id (top-tag-id) qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1262,21 +1262,21 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qrhs lexenv.run)
+    (receive (lhs.id lhs.type qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
 	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QRHS,  the
+	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qualified-rhs.lex qrhs)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
 	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-	  (values qrhs lexenv.run)))))
+	  (values qdef lexenv.run)))))
 
   (module (%parse-macro-use)
 
@@ -1291,9 +1291,9 @@
 	     (let* ((lhs.type	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
 		    (signature	(make-clambda-signature clause-signature*))
 		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-		    (qrhs	(make-qualified-rhs/typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx
-								     lhs.type signature)))
-	       (values ?who lhs.type qrhs lexenv.run)))))
+		    (qdef	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx
+							    lhs.type signature)))
+	       (values ?who lhs.type qdef lexenv.run)))))
 	))
 
     (define (%parse-clauses input-form.stx clause*.stx

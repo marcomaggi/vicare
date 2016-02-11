@@ -30,15 +30,15 @@
 ;;CHI-BODY*:  partially expands  the  forms in  a  top-level or  internal  body in  a
 ;;specified lexical context; it performs the first of the two passes needed to expand
 ;;body forms.   The results of  this first pass are:  a list of  qualified right-hand
-;;side objects  (QRHS) describing the body's  variable definitions; a list  of syntax
+;;side objects  (QDEF) describing the body's  variable definitions; a list  of syntax
 ;;objects representing trailing expressions.
 ;;
-;;CHI-QRHS: fully expands  a qualified right-hand side object in  a specified lexical
+;;CHI-QDEF: fully expands  a qualified right-hand side object in  a specified lexical
 ;;context.  The  result is a PSI  object representing the right-hand  side expression
 ;;evaluation; the code representing the handling  of the resulting value is generated
 ;;somewhere else.
 ;;
-;;CHI-INTERACTION-QRHS:  fully  expands  a  qualified right-hand  side  object  in  a
+;;CHI-INTERACTION-QDEF:  fully  expands  a  qualified right-hand  side  object  in  a
 ;;specified  lexical context  in an  interaction environment.   The result  is a  PSI
 ;;object   representing  the   right-hand  side   expression  evaluation;   the  code
 ;;representing the handling of the resulting value is generated somewhere else.
@@ -79,9 +79,9 @@
     psi.core-expr
     chi-interaction-expr
     chi-expr			chi-expr*
-    chi-body*			chi-qrhs*
+    chi-body*			chi-qdef*
     ;;;chi-application/psi-first-operand
-    qrhs-generate-loc		qualified-rhs.lex
+    qdef-generate-loc		qdef.lex
     SPLICE-FIRST-ENVELOPE)
   (import (except (rnrs)
 		  eval
@@ -1028,42 +1028,42 @@
   (define (chi-interaction-expr expr.stx rib lexenv.all)
     (receive (trailing-init-form*.stx
 	      lexenv.run^ lexenv.expand^
-	      qrhs* module-trailing-form**.stx
+	      qdef* module-trailing-form**.stx
 	      kwd*.unused internal-export*.unused)
-	(let ((qrhs*					'())
+	(let ((qdef*					'())
 	      (trailing-module-expression**		'())
 	      (defined-names*				'())
 	      (export-spec*				'())
 	      (mixed-definitions-and-expressions?	#t)
 	      (shadow/redefine-bindings?		#t))
 	  (chi-body* (list expr.stx) lexenv.all lexenv.all
-		     qrhs* trailing-module-expression** defined-names* export-spec* rib
+		     qdef* trailing-module-expression** defined-names* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (values (build-sequence no-source
 		(let ((init*.stx (reverse-and-append-with-tail module-trailing-form**.stx trailing-init-form*.stx)))
-		  (%expand-qrhs*-then-init* (reverse qrhs*) init*.stx lexenv.run^ lexenv.expand^)))
+		  (%expand-qdef*-then-init* (reverse qdef*) init*.stx lexenv.run^ lexenv.expand^)))
 	      lexenv.run^)))
 
-  (define (%expand-qrhs*-then-init* qrhs* init*.stx lexenv.run lexenv.expand)
+  (define (%expand-qdef*-then-init* qdef* init*.stx lexenv.run lexenv.expand)
     ;;Recursive  function.   Return  a  list   of  core  language  expressions,  some
     ;;representing global assignments  and some discarding the  return values; notice
     ;;that we do not care if there are no trailing expressions (INIT*.STX is null).
     ;;
-    ;;NOTE Remember that the QRHS* are  accumulated in reverse order in CHI-BODY* but
+    ;;NOTE Remember that the QDEF* are  accumulated in reverse order in CHI-BODY* but
     ;;they are handed to this function already reordered!
     ;;
-    (define-syntax-rule (%recurse ?qrhs*)
-      (%expand-qrhs*-then-init* ?qrhs* init*.stx lexenv.run lexenv.expand))
-    (if (pair? qrhs*)
-	(cons (let ((rhs.core (psi.core-expr (chi-interaction-qrhs (car qrhs*) lexenv.run lexenv.expand))))
-		(if (qualified-rhs/top-expr? (car qrhs*))
+    (define-syntax-rule (%recurse ?qdef*)
+      (%expand-qdef*-then-init* ?qdef* init*.stx lexenv.run lexenv.expand))
+    (if (pair? qdef*)
+	(cons (let ((rhs.core (psi.core-expr (chi-interaction-qdef (car qdef*) lexenv.run lexenv.expand))))
+		(if (qdef-top-expr? (car qdef*))
 		    ;;Notice how here we do *not*  use the lex gensym argument; for a
 		    ;;top-level expression it is useless and inefficient to store the
 		    ;;returned value.
 		    rhs.core
 		  (build-global-assignment no-source
-		    (qualified-rhs.lex (car qrhs*)) rhs.core)))
-	      (%recurse (cdr qrhs*)))
+		    (qdef.lex (car qdef*)) rhs.core)))
+	      (%recurse (cdr qdef*)))
       (map (lambda (init.stx)
 	     (psi.core-expr (chi-expr init.stx lexenv.run lexenv.expand)))
 	init*.stx)))
@@ -1274,8 +1274,8 @@
   ;;binding for "a".
   (let*-values
       (((rib) (make-rib/empty))
-       ((trailing-expr-stx* lexenv.run lexenv.expand qrhs* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
-	(let ((qrhs*                             '())
+       ((trailing-expr-stx* lexenv.run lexenv.expand qdef* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
+	(let ((qdef*                             '())
 	      (mod**                             '())
 	      (kwd*                              '())
 	      (export-spec*                      '())
@@ -1285,19 +1285,19 @@
 			    (push-lexical-contour rib x))
 		       (syntax->list body-form*.stx))
 		     lexenv.run lexenv.expand
-		     qrhs* mod** kwd* export-spec* rib
+		     qdef* mod** kwd* export-spec* rib
 		     mix-definitions-and-expressions? shadow/redefine-bindings?)))
        ;;Upon  arriving  here:  RIB,   LEXENV.RUN  and  LEXENV.EXPAND  contain  the
-       ;;syntactic bindings associated to the QRHS*.
+       ;;syntactic bindings associated to the QDEF*.
        ((init*.stx) (reverse-and-append-with-tail trailing-mod-expr-stx** trailing-expr-stx*)))
     (when (null? init*.stx)
       (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
-    ;;We want order here!   First we expand the QRHSs, then we  expande the INITs; so
-    ;;that the QRHS bindings are typed when the INITs are expanded.
-    (let* ((qrhs*		(reverse qrhs*))
-	   (rhs*.psi		(chi-qrhs* qrhs* lexenv.run lexenv.expand))
+    ;;We want order here!   First we expand the QDEFs, then we  expande the INITs; so
+    ;;that the QDEF bindings are typed when the INITs are expanded.
+    (let* ((qdef*		(reverse qdef*))
+	   (rhs*.psi		(chi-qdef* qdef* lexenv.run lexenv.expand))
 	   (init*.psi		(chi-expr* init*.stx lexenv.run lexenv.expand))
-	   (lhs*.lex		(map qualified-rhs.lex qrhs*))
+	   (lhs*.lex		(map qdef.lex qdef*))
 	   (rhs*.core		(map psi.core-expr rhs*.psi))
 	   (init*.core		(map psi.core-expr init*.psi))
 	   (last-init.psi	(proper-list->last-item init*.psi)))
@@ -1428,7 +1428,7 @@
 
 ;;;; chi procedures: external modules
 
-(include "psyntax.chi-procedures.qrhs.scm"		#t)
+(include "psyntax.chi-procedures.qdef.scm"		#t)
 (include "psyntax.chi-procedures.lambda.scm"		#t)
 (include "psyntax.chi-procedures.application.scm"	#t)
 (include "psyntax.chi-procedures.body.scm"		#t)
@@ -1446,7 +1446,6 @@
 ;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
 ;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
-;;eval: (put 'case-qrhs-category			'scheme-indent-function 1)
 ;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
 ;;eval: (put 'build-letrec*				'scheme-indent-function 3)
 ;;End:

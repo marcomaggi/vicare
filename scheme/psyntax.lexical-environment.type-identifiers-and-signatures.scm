@@ -463,7 +463,7 @@
 ;;
 ;;   (define/typed (?who . ?formals) . ?body)
 ;;
-;;a QRHS is created, then the syntactic identifier ?WHO is bound, finally the QRHS is
+;;a QDEF is created, then the syntactic identifier ?WHO is bound, finally the QDEF is
 ;;expanded.  When the syntactic  binding for ?WHO is created: what  is its type?  For
 ;;sure it must be a sub-type of "<procedure>", but we would like to keep informations
 ;;about the signature of the closure object definition.

@@ -202,8 +202,8 @@
 
 (module (chi-defun/standard chi-defun/typed)
 
-  (define (chi-defun/standard qrhs lexenv.run lexenv.expand)
-    ;;Expand a qualified RHS (QRHS) representing a DEFINE/STANDARD syntax use for the
+  (define (chi-defun/standard qdef lexenv.run lexenv.expand)
+    ;;Expand a qualified RHS (QDEF) representing a DEFINE/STANDARD syntax use for the
     ;;case of function definition; the original input form is something like:
     ;;
     ;;   (define/standard (?lhs . ?formals) . ?body)
@@ -216,10 +216,10 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-defun #t qrhs lexenv.run lexenv.expand))
+    (%chi-defun #t qdef lexenv.run lexenv.expand))
 
-  (define (chi-defun/typed qrhs lexenv.run lexenv.expand)
-    ;;Expand a  qualified RHS (QRHS) representing  a DEFINE/TYPED syntax use  for the
+  (define (chi-defun/typed qdef lexenv.run lexenv.expand)
+    ;;Expand a  qualified RHS (QDEF) representing  a DEFINE/TYPED syntax use  for the
     ;;case of function definition; the original input form is something like:
     ;;
     ;;   (define/typed (?lhs . ?formals) . ?body)
@@ -233,31 +233,31 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-defun #f qrhs lexenv.run lexenv.expand))
+    (%chi-defun #f qdef lexenv.run lexenv.expand))
 
-  (define (%chi-defun standard? qrhs lexenv.run lexenv.expand)
-    (define-constant input-form.stx (qualified-rhs.input-form qrhs))
+  (define (%chi-defun standard? qdef lexenv.run lexenv.expand)
+    (define-constant input-form.stx (qdef.input-form qdef))
     (parametrise ((current-run-lexenv (lambda () lexenv.run)))
       (receive (standard-formals.lex body.psi)
 	  (if standard?
 	      (chi-lambda-clause/standard input-form.stx lexenv.run lexenv.expand
-					  (qualified-rhs/defun.standard-formals qrhs)
-					  (car (clambda-signature.clause-signature* (qualified-rhs/defun.signature qrhs)))
-					  (qualified-rhs/defun.body* qrhs))
+					  (qdef-defun.standard-formals qdef)
+					  (car (clambda-signature.clause-signature* (qdef-defun.signature qdef)))
+					  (qdef-defun.body* qdef))
 	    (receive (lexenv.run lexenv.expand)
 		;;We  establish   the  syntactic   binding  for   "__who__"  before
 		;;processing the body.  So the formals may shadow this binding.
-		(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
+		(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.lhs qdef))
 
 	      (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-				       (qualified-rhs/defun.standard-formals qrhs)
-				       (car (clambda-signature.clause-signature* (qualified-rhs/defun.signature qrhs)))
-				       (qualified-rhs/defun.body* qrhs))))
+				       (qdef-defun.standard-formals qdef)
+				       (car (clambda-signature.clause-signature* (qdef-defun.signature qdef)))
+				       (qdef-defun.body* qdef))))
 	(make-psi input-form.stx
 		  (build-lambda (syntax-annotation input-form.stx)
 		      standard-formals.lex
 		    (psi.core-expr body.psi))
-		  (make-type-signature/single-value (qualified-rhs.type-id qrhs))))))
+		  (make-type-signature/single-value (qdef.type-id qdef))))))
 
   #| end of module |# )
 
@@ -266,8 +266,8 @@
 
 (module (chi-case-defun/standard chi-case-defun/typed)
 
-  (define (chi-case-defun/standard qrhs lexenv.run lexenv.expand)
-    ;;Expand a  qualified RHS (QRHS)  representing a CASE-DEFINE/STANDARD  syntax use
+  (define (chi-case-defun/standard qdef lexenv.run lexenv.expand)
+    ;;Expand a  qualified RHS (QDEF)  representing a CASE-DEFINE/STANDARD  syntax use
     ;;for the case of function definition; the original input form is something like:
     ;;
     ;;   (case-define/standard ?lhs (?formals0 . ?body0) (?formals . ?body) ...)
@@ -280,10 +280,10 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-case-defun #t qrhs lexenv.run lexenv.expand))
+    (%chi-case-defun #t qdef lexenv.run lexenv.expand))
 
-  (define (chi-case-defun/typed qrhs lexenv.run lexenv.expand)
-    ;;Expand a qualified  RHS (QRHS) representing a CASE-DEFINE/TYPED  syntax use for
+  (define (chi-case-defun/typed qdef lexenv.run lexenv.expand)
+    ;;Expand a qualified  RHS (QDEF) representing a CASE-DEFINE/TYPED  syntax use for
     ;;the case of function definition; the original input form is something like:
     ;;
     ;;   (case-define/typed ?lhs (?formals0 . ?body0) (?formals . ?body) ...)
@@ -296,17 +296,17 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-case-defun #f qrhs lexenv.run lexenv.expand))
+    (%chi-case-defun #f qdef lexenv.run lexenv.expand))
 
-  (define (%chi-case-defun standard? qrhs lexenv.run lexenv.expand)
-    (define-constant input-form.stx		(qualified-rhs.input-form qrhs))
-    (define-constant standard-formals*.stx	(qualified-rhs/case-defun.standard-formals* qrhs))
-    (define-constant body**.stx			(qualified-rhs/case-defun.body** qrhs))
-    (define-constant clause-signature*		(clambda-signature.clause-signature* (qualified-rhs/case-defun.signature qrhs)))
+  (define (%chi-case-defun standard? qdef lexenv.run lexenv.expand)
+    (define-constant input-form.stx		(qdef.input-form qdef))
+    (define-constant standard-formals*.stx	(qdef-case-defun.standard-formals* qdef))
+    (define-constant body**.stx			(qdef-case-defun.body** qdef))
+    (define-constant clause-signature*		(clambda-signature.clause-signature* (qdef-case-defun.signature qdef)))
     (receive (lexenv.run lexenv.expand)
 	;;We  establish the  syntactic binding  for "__who__"  before processing  the
 	;;body.  So the formals may shadow this binding.
-	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qualified-rhs.lhs qrhs))
+	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.lhs qdef))
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	(receive (formals*.lex body*.psi)
 	    (if standard?
@@ -318,7 +318,7 @@
 		    (build-case-lambda (syntax-annotation input-form.stx)
 			formals*.lex
 		      (map psi.core-expr body*.psi))
-		    (make-type-signature/single-value (qualified-rhs.type-id qrhs)))))))
+		    (make-type-signature/single-value (qdef.type-id qdef)))))))
 
   #| end of module |# )
 

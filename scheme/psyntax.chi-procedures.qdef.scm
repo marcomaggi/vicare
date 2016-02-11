@@ -19,9 +19,9 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-;;;; chi procedures: lexical bindings qualified right-hand sides
+;;;; chi procedures: qualified definitions
 ;;
-;;A "qualified right-hand side expression" (QRHS)  is an object of type QUALIFIED-RHS
+;;A "qualified  lexical variable  definition" (QDEF)  is an  object of  type "<qdef>"
 ;;(more  precisely:  one of  its  subtypes);  these  objects  are generated  only  by
 ;;CHI-BODY*.
 ;;
@@ -34,177 +34,178 @@
 ;;   (define/standard blue (+ 3 4))
 ;;   (display 5)
 ;;
-;;all the forms are parsed and the following QUALIFIED-RHS objects are created:
+;;all the forms are parsed and the following QDEF objects are created:
 ;;
-;;   #<qualified-rhs/standard-defun  #'fun    #'(define/standard ?attributes (fun x) (list x 1))>
-;;   #<qualified-rhs/standard-defvar #'name   #'(void)>
-;;   #<qualified-rhs/typed-defvar    #'red    #'(+ 1 2)>
-;;   #<qualified-rhs/standard-defvar #'blue   #'(+ 3 4)>
-;;   #<qualified-rhs/top-expr        #'dummy  #'(display 5)>
+;;   #<qdef-standard-defun  #'fun    #'(define/standard ?attributes (fun x) (list x 1))>
+;;   #<qdef-standard-defvar #'name   #'(void)>
+;;   #<qdef-typed-defvar    #'red    #'(+ 1 2)>
+;;   #<qdef-standard-defvar #'blue   #'(+ 3 4)>
+;;   #<qdef-top-expr        #'dummy  #'(display 5)>
 ;;
 ;;the definitions are not immediately expanded.  This allows to expand the macros and
 ;;macro definitions  first, and  to expand the  variable definitions  and expressions
 ;;later.
 ;;
 ;;It is responsibility of the caller  to establish the appropriate variable syntactic
-;;binding to represent the DEFINE syntax;  when CHI-QRHS and CHI-QRHS* are called the
+;;binding to represent the DEFINE syntax;  when CHI-QDEF and CHI-QDEF* are called the
 ;;binding has already been establish.
 ;;
 
 
-;;This module is for  functions needed to create new QRHS objects  and to expand QRHS
+;;This module is for  functions needed to create new QDEF objects  and to expand QDEF
 ;;objects already created.
 ;;
-(module (qrhs-generate-loc
-	 chi-qrhs			chi-qrhs*
-	 chi-interaction-qrhs
-	 qualified-rhs/standard-defun	make-qualified-rhs/standard-defun	qualified-rhs/standard-defun?
-	 qualified-rhs/standard-defvar	make-qualified-rhs/standard-defvar	qualified-rhs/standard-defvar?
-	 qualified-rhs/typed-defun	make-qualified-rhs/typed-defun		qualified-rhs/typed-defun?
-	 qualified-rhs/typed-defvar	make-qualified-rhs/typed-defvar		qualified-rhs/typed-defvar?
-	 qualified-rhs/top-expr		make-qualified-rhs/top-expr		qualified-rhs/top-expr?
-	 qualified-rhs/standard-case-defun	make-qualified-rhs/standard-case-defun	qualified-rhs/standard-case-defun?
-	 qualified-rhs/typed-case-defun		make-qualified-rhs/typed-case-defun	qualified-rhs/typed-case-defun?
+(module (qdef-generate-loc
+	 chi-qdef			chi-qdef*
+	 chi-interaction-qdef
+	 <qdef>				<qdef-defun>			<qdef-defvar>
+	 <qdef-standard-defun>		make-qdef-standard-defun	qdef-standard-defun?
+	 <qdef-standard-defvar>		make-qdef-standard-defvar	qdef-standard-defvar?
+	 <qdef-typed-defun>		make-qdef-typed-defun		qdef-typed-defun?
+	 <qdef-typed-defvar>		make-qdef-typed-defvar		qdef-typed-defvar?
+	 <qdef-top-expr>		make-qdef-top-expr		qdef-top-expr?
+	 <qdef-standard-case-defun>	make-qdef-standard-case-defun	qdef-standard-case-defun?
+	 <qdef-typed-case-defun>	make-qdef-typed-case-defun	qdef-typed-case-defun?
 	 ;;
-	 qualified-rhs.input-form
-	 qualified-rhs.lhs
-	 qualified-rhs.type-id
-	 qualified-rhs.lex
-	 qualified-rhs/defun.standard-formals
-	 qualified-rhs/defun.body*
-	 qualified-rhs/defun.signature
-	 qualified-rhs/defvar.rhs
-	 qualified-rhs/case-defun.standard-formals*
-	 qualified-rhs/case-defun.body**
-	 qualified-rhs/case-defun.signature)
+	 qdef.input-form
+	 qdef.lhs
+	 qdef.type-id
+	 qdef.lex
+	 qdef-defun.standard-formals
+	 qdef-defun.body*
+	 qdef-defun.signature
+	 qdef-defvar.rhs
+	 qdef-case-defun.standard-formals*
+	 qdef-case-defun.body**
+	 qdef-case-defun.signature)
 
 
 ;;;; type definitions: qualified RHS base type
 
-(define-record-type qualified-rhs
-  (nongenerative vicare:expander:qualified-rhs)
+(define-record-type (<qdef> dummy-make-qdef qdef?)
+  (nongenerative vicare:expander:qdef)
   (fields
-    (immutable input-form	qualified-rhs.input-form)
+    (immutable input-form	qdef.input-form)
 		;A syntax object representing the original input form.
-    (immutable lhs		qualified-rhs.lhs)
+    (immutable lhs		qdef.lhs)
 		;The syntactic identifier bound by this expression.
-    (mutable   type-id		qualified-rhs.type-id qualified-rhs.type-id-set!)
+    (mutable   type-id		qdef.type-id qdef.type-id-set!)
 		;False  or  a  syntactic  identifier representing  the  type  of  the
-		;syntactic binding defined by the QRHS.
+		;syntactic binding defined by the QDEF.
 		;
-		;* When the QRHS is a  "defun": this field references the sub-type of
+		;* When the QDEF is a  "defun": this field references the sub-type of
 		;"<procedure>" representing the callable signature.
 		;
-		;*  When  the QRHS  is  a  "defvar":  this  field contains  the  type
+		;*  When  the QDEF  is  a  "defvar":  this  field contains  the  type
 		;identifier.
 		;
-		;*  When the  QRHS  is a  "top-expr": this  field  contains the  type
+		;*  When the  QDEF  is a  "top-expr": this  field  contains the  type
 		;identifier "<top>".
-    (immutable lex		qualified-rhs.lex)
+    (immutable lex		qdef.lex)
 		;The lexical gensym to use for this expression.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define (make-qualified-rhs input-form.stx lhs.id lhs.type)
+      (define (make-qdef input-form.stx lhs.id lhs.type)
 	(make-record input-form.stx lhs.id lhs.type (generate-lexical-gensym lhs.id)))
-      make-qualified-rhs)))
+      make-qdef)))
 
-(define (qrhs-generate-loc qrhs)
-  (generate-storage-location-gensym (qualified-rhs.lhs qrhs)))
+(define (qdef-generate-loc qdef)
+  (generate-storage-location-gensym (qdef.lhs qdef)))
 
 
 ;;;; type definitions: qualified RHS single-clause function definition
 
-(define-record-type qualified-rhs/defun
-  (nongenerative vicare:expander:qualified-rhs/defun)
-  (parent qualified-rhs)
+(define-record-type (<qdef-defun> make-qdef-defun qdef-defun?)
+  (nongenerative vicare:expander:<qdef-defun>)
+  (parent <qdef>)
   (fields
-    (immutable formals			qualified-rhs/defun.standard-formals)
+    (immutable formals			qdef-defun.standard-formals)
 		;A proper  or improper list  of syntax objects representing  a lambda
 		;clause's standard formals.
-    (immutable body*			qualified-rhs/defun.body*)
+    (immutable body*			qdef-defun.body*)
 		;A list of syntax objects representing a lambda clause's body forms.
-    (immutable signature		qualified-rhs/defun.signature)
+    (immutable signature		qdef-defun.signature)
 		;An instance  of "<clambda-signature>" representing the  signature of
 		;the function.
     #| end of FIELDS |# )
   (protocol
-    (lambda (make-qualified-rhs)
-      (define* (make-qualified-rhs/defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
+    (lambda (make-qdef)
+      (define* (make-qdef-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
 					 {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qualified-rhs input-form.stx lhs.id signature-type.id) standard-formals.stx body*.stx signature))
-      make-qualified-rhs/defun)))
+	((make-qdef input-form.stx lhs.id signature-type.id) standard-formals.stx body*.stx signature))
+      make-qdef-defun)))
 
 ;;; --------------------------------------------------------------------
 ;;; standard function definition
 
-(define-record-type qualified-rhs/standard-defun
+(define-record-type (<qdef-standard-defun> make-qdef-standard-defun qdef-standard-defun?)
   ;;This type  is used to  represent standard  R6RS function definitions  from syntax
   ;;uses like:
   ;;
   ;;   (define/standard (fun arg) body)
   ;;
-  (nongenerative vicare:expander:qualified-rhs/standard-defun)
-  (parent qualified-rhs/defun)
+  (nongenerative vicare:expander:<qdef-standard-defun>)
+  (parent <qdef-defun>)
   (protocol
-    (lambda (make-qualified-rhs/defun)
-      (define* (make-qualified-rhs/standard-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
+    (lambda (make-qdef-defun)
+      (define* (make-qdef-standard-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
 						  {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qualified-rhs/defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
-      make-qualified-rhs/standard-defun)))
+	((make-qdef-defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
+      make-qdef-standard-defun)))
 
-(define qualified-rhs/standard-defun-rtd
-  (record-type-descriptor qualified-rhs/standard-defun))
+(define qdef-standard-defun-rtd
+  (record-type-descriptor <qdef-standard-defun>))
 
 ;;; --------------------------------------------------------------------
 ;;; typed function definition
 
-(define-record-type qualified-rhs/typed-defun
+(define-record-type (<qdef-typed-defun> make-qdef-typed-defun qdef-typed-defun?)
   ;;This type is used to represent typed function definitions from syntax uses like:
   ;;
   ;;   (define/typed ((brace fun <fixnum>) (brace arg <string>))
   ;;     body)
   ;;
-  (nongenerative vicare:expander:qualified-rhs/typed-defun)
-  (parent qualified-rhs/defun)
+  (nongenerative vicare:expander:<qdef-typed-defun>)
+  (parent <qdef-defun>)
   (protocol
-    (lambda (make-qualified-rhs/defun)
-      (define* (make-qualified-rhs/typed-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
+    (lambda (make-qdef-defun)
+      (define* (make-qdef-typed-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
 					       {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qualified-rhs/defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
-      make-qualified-rhs/typed-defun)))
+	((make-qdef-defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
+      make-qdef-typed-defun)))
 
-(define qualified-rhs/typed-defun-rtd
-  (record-type-descriptor qualified-rhs/typed-defun))
+(define qdef-typed-defun-rtd
+  (record-type-descriptor <qdef-typed-defun>))
 
 
 ;;;; type definitions: qualified RHS multiple-clause function definition
 
-(define-record-type qualified-rhs/case-defun
-  (nongenerative vicare:expander:qualified-rhs/case-defun)
-  (parent qualified-rhs)
+(define-record-type (<qdef-case-defun> make-qdef-case-defun qdef-case-defun?)
+  (nongenerative vicare:expander:<qdef-case-defun>)
+  (parent <qdef>)
   (fields
-    (immutable formals*			qualified-rhs/case-defun.standard-formals*)
+    (immutable formals*			qdef-case-defun.standard-formals*)
 		;A  proper  or  improper  list   of  syntax  objects  representing  a
 		;case-lambda clause's standard formals.
-    (immutable body**			qualified-rhs/case-defun.body**)
+    (immutable body**			qdef-case-defun.body**)
 		;A  list of  lists  of syntax  objects  representing lambda  clause's
 		;bodies forms.
-    (immutable signature		qualified-rhs/case-defun.signature)
+    (immutable signature		qdef-case-defun.signature)
 		;An instance  of "<clambda-signature>" representing the  signature of
 		;the function.
     #| end of FIELDS |# )
   (protocol
-    (lambda (make-qualified-rhs)
-      (define* (make-qualified-rhs/case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
+    (lambda (make-qdef)
+      (define* (make-qdef-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
 					      {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qualified-rhs input-form.stx lhs.id signature-type.id) standard-formals*.stx body**.stx signature))
-      make-qualified-rhs/case-defun)))
+	((make-qdef input-form.stx lhs.id signature-type.id) standard-formals*.stx body**.stx signature))
+      make-qdef-case-defun)))
 
 ;;; --------------------------------------------------------------------
 ;;; standard function definition, case variant
 
-(define-record-type qualified-rhs/standard-case-defun
+(define-record-type (<qdef-standard-case-defun> make-qdef-standard-case-defun qdef-standard-case-defun?)
   ;;This type  is used to represent  non-typed function definitions from  syntax uses
   ;;like:
   ;;
@@ -214,22 +215,22 @@
   ;;
   ;;   (define ?lhs (case-lambda/standard ?clause0 ?clause ...))
   ;;
-  (nongenerative vicare:expander:qualified-rhs/standard-case-defun)
-  (parent qualified-rhs/case-defun)
+  (nongenerative vicare:expander:qdef-standard-case-defun)
+  (parent <qdef-case-defun>)
   (protocol
-    (lambda (make-qualified-rhs/case-defun)
-      (define* (make-qualified-rhs/standard-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
+    (lambda (make-qdef-case-defun)
+      (define* (make-qdef-standard-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
 						       {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qualified-rhs/case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
-      make-qualified-rhs/standard-case-defun)))
+	((make-qdef-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
+      make-qdef-standard-case-defun)))
 
-(define qualified-rhs/standard-case-defun-rtd
-  (record-type-descriptor qualified-rhs/standard-case-defun))
+(define qdef-standard-case-defun-rtd
+  (record-type-descriptor <qdef-standard-case-defun>))
 
 ;;; --------------------------------------------------------------------
 ;;; typed function definition
 
-(define-record-type qualified-rhs/typed-case-defun
+(define-record-type (<qdef-typed-case-defun> make-qdef-typed-case-defun qdef-typed-case-defun?)
   ;;This type is used to represent typed function definitions from syntax uses like:
   ;;
   ;;   (case-define/typed ?lhs ?clause0 ?clause ...)
@@ -238,78 +239,78 @@
   ;;
   ;;   (define ?lhs (case-lambda/typed ?clause0 ?clause ...))
   ;;
-  (nongenerative vicare:expander:qualified-rhs/typed-case-defun)
-  (parent qualified-rhs/case-defun)
+  (nongenerative vicare:expander:qdef-typed-case-defun)
+  (parent <qdef-case-defun>)
   (protocol
-    (lambda (make-qualified-rhs/case-defun)
-      (define* (make-qualified-rhs/typed-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
+    (lambda (make-qdef-case-defun)
+      (define* (make-qdef-typed-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
 						    {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qualified-rhs/case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
-      make-qualified-rhs/typed-case-defun)))
+	((make-qdef-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
+      make-qdef-typed-case-defun)))
 
-(define qualified-rhs/typed-case-defun-rtd
-  (record-type-descriptor qualified-rhs/typed-case-defun))
+(define qdef-typed-case-defun-rtd
+  (record-type-descriptor <qdef-typed-case-defun>))
 
 
 ;;;; type definitions: qualified RHS variable definition
 
-(define-record-type qualified-rhs/defvar
-  (nongenerative vicare:expander:qualified-rhs/defvar)
-  (parent qualified-rhs)
+(define-record-type (<qdef-defvar> make-qdef-defvar qdef-defvar?)
+  (nongenerative vicare:expander:<qdef-defvar>)
+  (parent <qdef>)
   (fields
-    (immutable rhs		qualified-rhs/defvar.rhs)
+    (immutable rhs		qdef-defvar.rhs)
 		;A syntax  object representing  the right-hand  side expression  of a
 		;variable definition.
     #| end of FIELDS |# )
   (protocol
-    (lambda (make-qualified-rhs)
-      (define* (make-qualified-rhs/defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
-	((make-qualified-rhs input-form.stx lhs.id lhs.type) rhs.stx))
-      make-qualified-rhs/defvar)))
+    (lambda (make-qdef)
+      (define* (make-qdef-defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
+	((make-qdef input-form.stx lhs.id lhs.type) rhs.stx))
+      make-qdef-defvar)))
 
 ;;; --------------------------------------------------------------------
 ;;; standard variable definition
 
-(define-record-type qualified-rhs/standard-defvar
+(define-record-type (<qdef-standard-defvar> make-qdef-standard-defvar qdef-standard-defvar?)
   ;;This type  is used to  represent standard  R6RS variable definitions  from syntax
   ;;uses like:
   ;;
   ;;   (define/standard var val)
   ;;
-  (nongenerative vicare:expander:qualified-rhs/standard-defvar)
-  (parent qualified-rhs/defvar)
+  (nongenerative vicare:expander:<qdef-standard-defvar>)
+  (parent <qdef-defvar>)
   (protocol
-    (lambda (make-qualified-rhs/defvar)
-      (define* (make-qualified-rhs/standard-defvar input-form.stx {lhs.id identifier?} rhs.stx)
-	((make-qualified-rhs/defvar input-form.stx lhs.id rhs.stx (top-tag-id))))
-      make-qualified-rhs/standard-defvar)))
+    (lambda (make-qdef-defvar)
+      (define* (make-qdef-standard-defvar input-form.stx {lhs.id identifier?} rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.id rhs.stx (top-tag-id))))
+      make-qdef-standard-defvar)))
 
-(define qualified-rhs/standard-defvar-rtd
-  (record-type-descriptor qualified-rhs/standard-defvar))
+(define qdef-standard-defvar-rtd
+  (record-type-descriptor <qdef-standard-defvar>))
 
 ;;; --------------------------------------------------------------------
 ;;; typed variable definition
 
-(define-record-type qualified-rhs/typed-defvar
+(define-record-type (<qdef-typed-defvar> make-qdef-typed-defvar qdef-typed-defvar?)
   ;;This type is used to represent typed variable definitions from syntax uses like:
   ;;
   ;;   (define/typed (brace var <fixnum>) val)
   ;;
-  (nongenerative vicare:expander:qualified-rhs/typed-defvar)
-  (parent qualified-rhs/defvar)
+  (nongenerative vicare:expander:<qdef-typed-defvar>)
+  (parent <qdef-defvar>)
   (protocol
-    (lambda (make-qualified-rhs/defvar)
-      (define* (make-qualified-rhs/typed-defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
-	((make-qualified-rhs/defvar input-form.stx lhs.id rhs.stx lhs.type)))
-      make-qualified-rhs/typed-defvar)))
+    (lambda (make-qdef-defvar)
+      (define* (make-qdef-typed-defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
+	((make-qdef-defvar input-form.stx lhs.id rhs.stx lhs.type)))
+      make-qdef-typed-defvar)))
 
-(define qualified-rhs/typed-defvar-rtd
-  (record-type-descriptor qualified-rhs/typed-defvar))
+(define qdef-typed-defvar-rtd
+  (record-type-descriptor <qdef-typed-defvar>))
 
 
 ;;;; type definitions: qualified RHS top-level expression
 
-(define-record-type qualified-rhs/top-expr
+(define-record-type (<qdef-top-expr> make-qdef-top-expr qdef-top-expr?)
   ;;This type is used to represent  expressions mixed with definitions (when they are
   ;;allowed).  For  example, when in a  top-level program's body the  expander parses
   ;;the forms:
@@ -318,76 +319,76 @@
   ;;   (display 123)
   ;;   (define/standard var2 val2)
   ;;
-  ;;the form "(display 123)" is represented by a QRHS of this type.  This QRHS gets a
+  ;;the form "(display 123)" is represented by a QDEF of this type.  This QDEF gets a
   ;;dummy left-hand side syntactic identifier (it  exists but it cannot be referenced
   ;;by the code).
   ;;
-  (nongenerative vicare:expander:qualified-rhs/top-expr)
-  (parent qualified-rhs)
+  (nongenerative vicare:expander:<qdef-top-expr>)
+  (parent <qdef>)
   (protocol
-    (lambda (make-qualified-rhs)
-      (define* (make-qualified-rhs/top-expr input-form.stx)
-	((make-qualified-rhs input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-tag-id))))
-      make-qualified-rhs/top-expr)))
+    (lambda (make-qdef)
+      (define* (make-qdef-top-expr input-form.stx)
+	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-tag-id))))
+      make-qdef-top-expr)))
 
-(define qualified-rhs/top-expr-rtd
-  (record-type-descriptor qualified-rhs/top-expr))
+(define qdef-top-expr-rtd
+  (record-type-descriptor <qdef-top-expr>))
 
 
-;;;; full QRHS expansion
+;;;; full QDEF expansion
 
-(define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
-  ;;Fully expand the  qualified right-hand side expressions  in QRHS*, left-to-right,
+(define (chi-qdef* qdef* lexenv.run lexenv.expand)
+  ;;Fully expand the  qualified right-hand side expressions  in QDEF*, left-to-right,
   ;;in the context  of an internal body  or top-level program.  Return a  list of PSI
   ;;objects.
   ;;
-  (if (pair? qrhs*)
+  (if (pair? qdef*)
       ;;ORDER MATTERS!!!  Make sure that first we do the car, then the rest.
-      (let ((psi (chi-qrhs (car qrhs*) lexenv.run lexenv.expand)))
-	(cons psi (chi-qrhs* (cdr qrhs*) lexenv.run lexenv.expand)))
+      (let ((psi (chi-qdef (car qdef*) lexenv.run lexenv.expand)))
+	(cons psi (chi-qdef* (cdr qdef*) lexenv.run lexenv.expand)))
     '()))
 
-(module (chi-qrhs chi-interaction-qrhs)
+(module (chi-qdef chi-interaction-qdef)
 
-  (define (chi-qrhs qrhs lexenv.run lexenv.expand)
-    (%chi-qrhs #f qrhs lexenv.run lexenv.expand))
+  (define (chi-qdef qdef lexenv.run lexenv.expand)
+    (%chi-qdef #f qdef lexenv.run lexenv.expand))
 
-  (define (chi-interaction-qrhs qrhs lexenv.run lexenv.expand)
-    (%chi-qrhs #t qrhs lexenv.run lexenv.expand))
+  (define (chi-interaction-qdef qdef lexenv.run lexenv.expand)
+    (%chi-qdef #t qdef lexenv.run lexenv.expand))
 
-  (define* (%chi-qrhs interaction? qrhs lexenv.run lexenv.expand)
+  (define* (%chi-qdef interaction? qdef lexenv.run lexenv.expand)
     ;;Fully expand  a qualified right-hand side  expression and return a  PSI object.
     ;;The  generated core  language expression  represents the  standalone right-hand
     ;;side expression; the  code representing the handling of the  resulting value is
     ;;generated somewhere else.
     ;;
     (while-not-expanding-application-first-subform
-     (let ((rtd (record-rtd qrhs)))
+     (let ((rtd (record-rtd qdef)))
        (cond
-	((eq? rtd qualified-rhs/standard-defun-rtd)		(chi-defun/standard	qrhs lexenv.run lexenv.expand))
-	((eq? rtd qualified-rhs/typed-defun-rtd)		(chi-defun/typed	qrhs lexenv.run lexenv.expand))
-	((eq? rtd qualified-rhs/standard-defvar-rtd)		(chi-defvar/standard	qrhs lexenv.run lexenv.expand))
-	((eq? rtd qualified-rhs/typed-defvar-rtd)		(chi-defvar/typed	qrhs lexenv.run lexenv.expand))
-	((eq? rtd qualified-rhs/top-expr-rtd)			(if interaction?
-								    (chi-interaction-top-expr qrhs lexenv.run lexenv.expand)
-								  (chi-top-expr qrhs lexenv.run lexenv.expand)))
-	((eq? rtd qualified-rhs/standard-case-defun-rtd)	(chi-case-defun/standard qrhs lexenv.run lexenv.expand))
-	((eq? rtd qualified-rhs/typed-case-defun-rtd)		(chi-case-defun/typed	 qrhs lexenv.run lexenv.expand))
+	((eq? rtd qdef-standard-defun-rtd)	(chi-defun/standard	qdef lexenv.run lexenv.expand))
+	((eq? rtd qdef-typed-defun-rtd)		(chi-defun/typed	qdef lexenv.run lexenv.expand))
+	((eq? rtd qdef-standard-defvar-rtd)	(chi-defvar/standard	qdef lexenv.run lexenv.expand))
+	((eq? rtd qdef-typed-defvar-rtd)	(chi-defvar/typed	qdef lexenv.run lexenv.expand))
+	((eq? rtd qdef-top-expr-rtd)		(if interaction?
+						    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
+						  (chi-top-expr qdef lexenv.run lexenv.expand)))
+	((eq? rtd qdef-standard-case-defun-rtd)	(chi-case-defun/standard qdef lexenv.run lexenv.expand))
+	((eq? rtd qdef-typed-case-defun-rtd)	(chi-case-defun/typed	 qdef lexenv.run lexenv.expand))
 	(else
-	 (assertion-violation __who__ "invalid QRHS type" qrhs))))))
+	 (assertion-violation __who__ "invalid QDEF type" qdef))))))
 
   #| end of module |# )
 
 
 ;;;; chi procedures: standard and typed variable definition
 
-(define (chi-defvar/standard qrhs lexenv.run lexenv.expand)
+(define (chi-defvar/standard qdef lexenv.run lexenv.expand)
   ;;Expand the  right-hand side expression  of a standard variable  definition; build
   ;;and return a  PSI object.  The generated core language  expression represents the
   ;;standalone right-hand side expression; the  code representing the handling of the
   ;;resulting value is generated somewhere else.
   ;;
-  (let* ((rhs.stx (qualified-rhs/defvar.rhs qrhs))
+  (let* ((rhs.stx (qdef-defvar.rhs qdef))
 	 (rhs.psi (chi-expr rhs.stx lexenv.run lexenv.expand))
 	 (rhs.sig (psi.retvals-signature rhs.psi)))
     ;;All right, we  have expanded the RHS expression.  Now  let's do some validation
@@ -410,18 +411,18 @@
 	 rhs.stx #f (make-type-signature/single-top) rhs.sig))
       )))
 
-(define (chi-defvar/typed qrhs lexenv.run lexenv.expand)
+(define (chi-defvar/typed qdef lexenv.run lexenv.expand)
   ;;Expand the right-hand  side expression of a typed variable  definition; build and
   ;;return  a PSI  object.  The  generated  core language  expression represents  the
   ;;standalone right-hand side expression; the  code representing the handling of the
   ;;resulting value is generated somewhere else.
   ;;
-  (chi-expr (qualified-rhs/defvar.rhs qrhs) lexenv.run lexenv.expand))
+  (chi-expr (qdef-defvar.rhs qdef) lexenv.run lexenv.expand))
 
 
 ;;;; chi procedures: top-level expression to be handled as dummy definition
 
-(define (chi-top-expr qrhs lexenv.run lexenv.expand)
+(define (chi-top-expr qdef lexenv.run lexenv.expand)
   ;;Expand the top  expression in the context  of a program body, build  and return a
   ;;PSI object.
   ;;
@@ -433,7 +434,7 @@
   ;;
   ;;so we must make sure that the RHS returns a single value.
   ;;
-  (let* ((expr.stx  (qualified-rhs.input-form qrhs))
+  (let* ((expr.stx  (qdef.input-form qdef))
 	 (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	 (expr.core (psi.core-expr expr.psi)))
     (make-psi expr.stx
@@ -441,7 +442,7 @@
 		(list expr.core (build-void)))
 	      (make-type-signature/single-void))))
 
-(define (chi-interaction-top-expr qrhs lexenv.run lexenv.expand)
+(define (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
   ;;Expand the top  expression in an interaction environment, build  and return a PSI
   ;;object.
   ;;
@@ -454,7 +455,7 @@
   ;;of an interaction environment (for example  at the REPL): a top-expr is generated
   ;;and we need its return values.  (Marco Maggi; Tue Feb 9, 2016)
   ;;
-  (chi-expr (qualified-rhs.input-form qrhs) lexenv.run lexenv.expand))
+  (chi-expr (qdef.input-form qdef) lexenv.run lexenv.expand))
 
 
 ;;;; done

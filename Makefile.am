@@ -478,7 +478,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.non-core-macro-transformers.infix-macro.scm	\
 	scheme/psyntax.chi-procedures.sls				\
 	scheme/psyntax.chi-procedures.body.scm				\
-	scheme/psyntax.chi-procedures.qrhs.scm				\
+	scheme/psyntax.chi-procedures.qdef.scm				\
 	scheme/psyntax.chi-procedures.lambda.scm			\
 	scheme/psyntax.chi-procedures.application.scm			\
 	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
