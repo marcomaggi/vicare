@@ -752,41 +752,58 @@
 		;field EXP-ID-VEC.
 	    ))
 
-  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand qdef* mod** kwd*)
-    ;;Expand  the syntax  object  MODULE-FORM-STX which  represents  a core  langauge
+  (define (chi-internal-module module-form.stx lexenv.run lexenv.expand
+			       qdef* module-trailing-expression** kwd*)
+    ;;Expand  the syntax  object  MODULE-FORM.STX which  represents  a core  language
     ;;MODULE syntax use.
     ;;
     ;;LEXENV.RUN and  LEXENV.EXPAND must  be lists  representing the  current lexical
     ;;environment for run and expand times.
     ;;
+    ;;Return  the  following values:  QDEF*,  a  list  of QDEF  objects  representing
+    ;;internal definitions;  M-EXP-ID*, a list of  syntactic identifiers representing
+    ;;the exported  syntactic bindings (this can  be only the name  identifier of the
+    ;;module);  M-EXP-LAB*,  a list  of  label  gensyms  for the  exported  syntactic
+    ;;identifiers;  LEXENV.RUN and  LEXENV.EXPAND; MOD**  a list  of lists  of syntax
+    ;;objects  representing the  trailing  module expressions;  KEYWORD*,  a list  of
+    ;;identifiers representing the defined syntactic bindings.
+    ;;
     (receive (name export-id* internal-body-form*)
-	(%parse-module module-form-stx)
+	(%parse-module module-form.stx)
       (let* ((module-rib               (make-rib/empty))
 	     (internal-body-form*/rib  (map (lambda (form)
 					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
-	(receive (leftover-body-expr* lexenv.run lexenv.expand qdef* mod** kwd* _export-spec*)
+	(receive (leftover-body-expr* lexenv.run lexenv.expand qdef* module-trailing-expression** kwd* _export-spec*)
+	    ;;About the argument MIX-DEFINITIONS-AND-EXPRESSIONS?
+	    ;;---------------------------------------------------
+	    ;;
 	    ;;In a module: we do not want the trailing expressions to be converted to
-	    ;;dummy definitions; rather  we want them to be accumulated  in the MOD**
-	    ;;argument, for later expansion and evaluation.  So we set MIX? to false.
-	    (let ((empty-export-spec*	'())
-		  (mix?			#f)
-		  ;;In calling  CHI-BODY* we set the  argument REDEFINE-BINDINGS?  to
-		  ;;false because definitions  at the top level of  the module's body
-		  ;;cannot be redefined.  That is:
-		  ;;
-		  ;; (import (vicare))
-		  ;; (module ()
-		  ;;   (define a 1)
-		  ;;   (define a 2))
-		  ;;
-		  ;;is  a  syntax  violation  because   the  binding  "a"  cannot  be
-		  ;;redefined.
-		  (redefine-bindings?	#f))
+	    ;;dummy  definitions;  rather we  want  them  to  be accumulated  in  the
+	    ;;MODULE-TRAILING-EXPRESSION**   argument,   for  later   expansion   and
+	    ;;evaluation.  So we set MIX-DEFINITIONS-AND-EXPRESSIONS? to false.
+	    ;;
+	    ;;About the argument REDEFINE-BINDINGS?
+	    ;;-------------------------------------
+	    ;;
+	    ;;In calling CHI-BODY*  we set the argument  REDEFINE-BINDINGS?  to false
+	    ;;because definitions  at the top  level of  the module's body  cannot be
+	    ;;redefined.  That is:
+	    ;;
+	    ;; (import (vicare))
+	    ;; (module ()
+	    ;;   (define a 1)
+	    ;;   (define a 2))
+	    ;;
+	    ;;is a syntax violation because the binding "a" cannot be redefined.
+	    ;;
+	    (let ((empty-export-spec*			'())
+		  (mix-definitions-and-expressions?	#f)
+		  (redefine-bindings?			#f))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
-			 qdef* mod** kwd* empty-export-spec*
-			 module-rib mix? redefine-bindings?))
+			 qdef* module-trailing-expression** kwd* empty-export-spec*
+			 module-rib mix-definitions-and-expressions? redefine-bindings?))
 	  ;;The list  of exported  identifiers is  not only the  one from  the MODULE
 	  ;;argument, but  also the  one from  all the EXPORT  forms in  the MODULE's
 	  ;;body.
@@ -801,53 +818,51 @@
 										  '()))
 					    (stx-error id "cannot find module export")))
 				    all-export-id*))
-		 (mod**           (cons leftover-body-expr* mod**)))
+		 (module-trailing-expression** (cons leftover-body-expr* module-trailing-expression**)))
 	    (if (not name)
-		;;The module has no name.  All the exported identifier will go in the
-		;;enclosing lexical environment.
-		(values qdef* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
+		;;The module  has no name.  All  the exported identifiers will  go in
+		;;the enclosing lexical environment.
+		(values qdef* all-export-id* all-export-lab* lexenv.run lexenv.expand module-trailing-expression** kwd*)
 	      ;;The module has a name.  Only the name itself will go in the enclosing
 	      ;;lexical environment.
-	      (let* ((name-label (generate-label-gensym 'module))
-		     (iface      (make-module-interface
-				  (car (stx-mark* name))
-				  (vector-map
-				      (lambda (x)
-					;;This   is  a   syntax  object   holding  an
-					;;identifier.
-					(let ((rib* '())
-					      (ae*  '()))
-					  (make-syntactic-identifier (stx-expr x) (stx-mark* x) rib* ae*)))
-				    all-export-id*)
-				  all-export-lab*))
-		     (binding    (make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
-		     (entry      (cons name-label binding)))
+	      (let* ((name-label	(generate-label-gensym 'module))
+		     (iface		(make-module-interface
+					 (car (stx-mark* name))
+					 (vector-map
+					     (lambda (x)
+					       (let ((rib* '())
+						     (ae*  '()))
+						 (make-syntactic-identifier (stx-expr x) (stx-mark* x) rib* ae*)))
+					   all-export-id*)
+					 all-export-lab*))
+		     (descr		(make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
+		     (entry		(cons name-label descr)))
 		(values qdef*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.
 			(vector name)
 			(vector name-label)
 			(cons entry lexenv.run)
 			(cons entry lexenv.expand)
-			mod** kwd*))))))))
+			module-trailing-expression** kwd*))))))))
 
-  (define (%parse-module module-form-stx)
+  (define (%parse-module module-form.stx)
     ;;Parse  a syntax  object representing  a core  language MODULE  form.  Return  3
     ;;values:  false  or an  identifier  representing  the  module  name; a  list  of
     ;;identifiers selecting the  exported bindings from the first  MODULE argument; a
     ;;list of syntax objects representing the internal body forms.
     ;;
-    (syntax-match module-form-stx ()
+    (syntax-match module-form.stx ()
       ((_ (?export* ...) ?body* ...)
        (begin
 	 (unless (for-all identifier? ?export*)
-	   (stx-error module-form-stx "module exports must be identifiers"))
+	   (stx-error module-form.stx "module exports must be identifiers"))
 	 (values #f (list->vector ?export*) ?body*)))
       ((_ ?name (?export* ...) ?body* ...)
        (begin
 	 (unless (identifier? ?name)
-	   (stx-error module-form-stx "module name must be an identifier"))
+	   (stx-error module-form.stx "module name must be an identifier"))
 	 (unless (for-all identifier? ?export*)
-	   (stx-error module-form-stx "module exports must be identifiers"))
+	   (stx-error module-form.stx "module exports must be identifiers"))
 	 (values ?name (list->vector ?export*) ?body*)))
       ))
 
