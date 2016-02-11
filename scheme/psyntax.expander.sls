@@ -880,16 +880,16 @@
 	    ;;non-definition forms from  the body of the library and  the body of the
 	    ;;internal modules.
 	    ;;
-	    ;;QDEF* is a list of  qualified lexical variable definitions representing
-	    ;;first-pass expanded DEFINE forms from the body of the library.  Here we
-	    ;;want to perform the second pass on them.
+	    ;;REV-QDEF*  is a  list  of qualified  lexical  variable definitions  (in
+	    ;;reverse order)  representing first-pass expanded DEFINE  forms from the
+	    ;;body of the library.  Here we want to perform the second pass on them.
 	    ;;
 	    ;;INTERNAL-EXPORT*  is a  list of  identifiers exported  through internal
 	    ;;EXPORT syntaxes  rather than the  export spec  at the beginning  of the
 	    ;;library.
 	    ;;
 	    (let*-values
-		(((init*.stx lexenv.run lexenv.expand qdef* internal-export*)
+		(((init*.stx lexenv.run lexenv.expand rev-qdef* internal-export*)
 		  (%process-internal-body body-stx* rib mixed-definitions-and-expressions?))
 		 ((export-name* export-id*)
 		  (%parse-all-export-specs export-spec* internal-export* wrap-source-expression-with-top-rib rib)))
@@ -903,7 +903,8 @@
 	      ;;We want order here?  Yes.  We  expand first the definitions, then the
 	      ;;init  forms: typed  variables's  syntactic bindings  must be  already
 	      ;;established before expanding the init forms.
-	      (let* ((rhs*.psi		(chi-qdef* qdef*     lexenv.run lexenv.expand))
+	      (let* ((qdef*		(reverse rev-qdef*))
+		     (rhs*.psi		(chi-qdef* qdef*     lexenv.run lexenv.expand))
 		     (init*.psi		(chi-expr* init*.stx lexenv.run lexenv.expand))
 		     (lhs*.lex		(map qdef.lex qdef*))
 		     (rhs*.core		(map psi.core-expr rhs*.psi))
@@ -948,7 +949,7 @@
     ;;
     (receive (trailing-init-form*.stx
 	      lexenv.run lexenv.expand
-	      qdef* module-init-form**.stx unused-kwd* internal-export*)
+	      rev-qdef* module-init-form**.stx unused-kwd* internal-export*)
 	;;We are about  to expand syntactic forms  from the body in the  context of a
 	;;non-interaction top-level environment.  When  calling CHI-BODY*, we set the
 	;;argument SHADOW/REDEFINE-BINDINGS? to false because:
@@ -973,24 +974,23 @@
 	(let ((shadow/redefine-bindings?	#f)
 	      (lexenv.run			'())
 	      (lexenv.expand			'())
-	      (qdef*				'())
+	      (rev-qdef*			'())
 	      (mod**				'())
 	      (kwd*				'())
 	      (export-spec*			'()))
 	  (chi-body* body-stx*
 		     lexenv.run lexenv.expand
-		     qdef* mod** kwd* export-spec* rib
+		     rev-qdef* mod** kwd* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
+      (when mixed-definitions-and-expressions?
+	(assert (null? trailing-init-form*.stx)))
       ;;We build a list  of init form putting first the trailing  init forms from the
       ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
       ;;library/program body.
       (let ((init-form*.stx (reverse-and-append-with-tail module-init-form**.stx trailing-init-form*.stx)))
 	(values init-form*.stx
 		lexenv.run lexenv.expand
-		;;This  is a  list  of qualified  right-hand  sides representing  the
-		;;right-hand side  expressions in the  DEFINE forms from the  body of
-		;;the library.
-		(reverse qdef*)
+		rev-qdef*
 		;;This   is   a  list   of   identifiers   representing  the   export
 		;;specifications declared using the EXPORT syntax in the body.
 		internal-export*))))

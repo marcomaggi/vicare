@@ -1028,20 +1028,20 @@
   (define (chi-interaction-expr expr.stx rib lexenv.all)
     (receive (trailing-init-form*.stx
 	      lexenv.run^ lexenv.expand^
-	      qdef* module-trailing-form**.stx
+	      rev-qdef* module-trailing-form**.stx
 	      kwd*.unused internal-export*.unused)
-	(let ((qdef*					'())
+	(let ((rev-qdef*				'())
 	      (trailing-module-expression**		'())
 	      (defined-names*				'())
 	      (export-spec*				'())
 	      (mixed-definitions-and-expressions?	#t)
 	      (shadow/redefine-bindings?		#t))
 	  (chi-body* (list expr.stx) lexenv.all lexenv.all
-		     qdef* trailing-module-expression** defined-names* export-spec* rib
+		     rev-qdef* trailing-module-expression** defined-names* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (values (build-sequence no-source
 		(let ((init*.stx (reverse-and-append-with-tail module-trailing-form**.stx trailing-init-form*.stx)))
-		  (%expand-qdef*-then-init* (reverse qdef*) init*.stx lexenv.run^ lexenv.expand^)))
+		  (%expand-qdef*-then-init* (reverse rev-qdef*) init*.stx lexenv.run^ lexenv.expand^)))
 	      lexenv.run^)))
 
   (define (%expand-qdef*-then-init* qdef* init*.stx lexenv.run lexenv.expand)
@@ -1274,27 +1274,27 @@
   ;;binding for "a".
   (let*-values
       (((rib) (make-rib/empty))
-       ((trailing-expr-stx* lexenv.run lexenv.expand qdef* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
-	(let ((qdef*                             '())
-	      (mod**                             '())
-	      (kwd*                              '())
-	      (export-spec*                      '())
-	      (mix-definitions-and-expressions?  #f)
-	      (shadow/redefine-bindings?         #f))
+       ((trailing-expr-stx* lexenv.run lexenv.expand rev-qdef* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
+	(let ((rev-qdef*			'())
+	      (trailing-module-expression**	'())
+	      (defined-keywords*		'())
+	      (export-spec*			'())
+	      (mix-definitions-and-expressions?	#f)
+	      (shadow/redefine-bindings?	#f))
 	  (chi-body* (map (lambda (x)
 			    (push-lexical-contour rib x))
 		       (syntax->list body-form*.stx))
 		     lexenv.run lexenv.expand
-		     qdef* mod** kwd* export-spec* rib
+		     rev-qdef* trailing-module-expression** defined-keywords* export-spec* rib
 		     mix-definitions-and-expressions? shadow/redefine-bindings?)))
        ;;Upon  arriving  here:  RIB,   LEXENV.RUN  and  LEXENV.EXPAND  contain  the
-       ;;syntactic bindings associated to the QDEF*.
+       ;;syntactic bindings associated to the REV-QDEF*.
        ((init*.stx) (reverse-and-append-with-tail trailing-mod-expr-stx** trailing-expr-stx*)))
     (when (null? init*.stx)
       (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
     ;;We want order here!   First we expand the QDEFs, then we  expande the INITs; so
     ;;that the QDEF bindings are typed when the INITs are expanded.
-    (let* ((qdef*		(reverse qdef*))
+    (let* ((qdef*		(reverse rev-qdef*))
 	   (rhs*.psi		(chi-qdef* qdef* lexenv.run lexenv.expand))
 	   (init*.psi		(chi-expr* init*.stx lexenv.run lexenv.expand))
 	   (lhs*.lex		(map qdef.lex qdef*))
