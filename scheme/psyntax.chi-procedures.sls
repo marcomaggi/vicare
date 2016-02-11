@@ -81,7 +81,7 @@
     chi-expr			chi-expr*
     chi-body*			chi-qrhs*
     ;;;chi-application/psi-first-operand
-    qrhs-generate-loc
+    qrhs-generate-loc		qualified-rhs.lex
     SPLICE-FIRST-ENVELOPE)
   (import (except (rnrs)
 		  eval
@@ -1028,17 +1028,20 @@
   (define (chi-interaction-expr expr.stx rib lexenv.all)
     (receive (trailing-init-form*.stx
 	      lexenv.run^ lexenv.expand^
-	      lhs*.lex qrhs*
-	      module-init-form**.stx
+	      qrhs* module-trailing-form**.stx
 	      kwd*.unused internal-export*.unused)
-	(let ((mixed-definitions-and-expressions?	#t)
+	(let ((qrhs*					'())
+	      (trailing-module-expression**		'())
+	      (defined-names*				'())
+	      (export-spec*				'())
+	      (mixed-definitions-and-expressions?	#t)
 	      (shadow/redefine-bindings?		#t))
 	  (chi-body* (list expr.stx) lexenv.all lexenv.all
-		     '() '() '() '() '() rib
+		     qrhs* trailing-module-expression** defined-names* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (let ((expr*.core (%expand-qrhs*-then-init*
-			 (reverse lhs*.lex) (reverse qrhs*)
-			 (reverse-and-append-with-tail module-init-form**.stx trailing-init-form*.stx)
+			 (reverse qrhs*)
+			 (reverse-and-append-with-tail module-trailing-form**.stx trailing-init-form*.stx)
 			 lexenv.run^ lexenv.expand^)))
 	(let ((expr.core (cond ((null? expr*.core)
 				(build-void))
@@ -1048,22 +1051,25 @@
 				(build-sequence no-source expr*.core)))))
 	  (values expr.core lexenv.run^)))))
 
-  (define (%expand-qrhs*-then-init* lhs*.lex qrhs* init*.stx lexenv.run lexenv.expand)
+  (define (%expand-qrhs*-then-init* qrhs* init*.stx lexenv.run lexenv.expand)
     ;;Recursive  function.   Return  a  list   of  core  language  expressions,  some
     ;;representing global assignments  and some discarding the  return values; notice
     ;;that we do not care if there are no trailing expressions (INIT*.STX is null).
     ;;
-    ;;There must be a LHS*.LEX for every QRHS*.
+    ;;NOTE Remember that the QRHS* are accumulated in reverse order!
     ;;
-    (if (pair? lhs*.lex)
+    (define-syntax-rule (%recurse ?qrhs*)
+      (%expand-qrhs*-then-init* ?qrhs* init*.stx lexenv.run lexenv.expand))
+    (if (pair? qrhs*)
 	(cons (let ((rhs.core (psi.core-expr (chi-interaction-qrhs (car qrhs*) lexenv.run lexenv.expand))))
 		(if (qualified-rhs/top-expr? (car qrhs*))
-		    ;;Notice how  here we do  *not* use  the LHS.LEX argument;  for a
+		    ;;Notice how here we do *not*  use the lex gensym argument; for a
 		    ;;top-level expression it is useless and inefficient to store the
 		    ;;returned value.
 		    rhs.core
-		  (build-global-assignment no-source (car lhs*.lex) rhs.core)))
-	      (%expand-qrhs*-then-init* (cdr lhs*.lex) (cdr qrhs*) init*.stx lexenv.run lexenv.expand))
+		  (build-global-assignment no-source
+		    (qualified-rhs.lex (car qrhs*)) rhs.core)))
+	      (%recurse (cdr qrhs*)))
       (map (lambda (init.stx)
 	     (psi.core-expr (chi-expr init.stx lexenv.run lexenv.expand)))
 	init*.stx)))
@@ -1281,7 +1287,7 @@
   ;;is fine, because DEFINE can redefine the binding for "a".
   ;;
   (define (chi-begin-for-syntax input-form.stx body-form*.stx lexenv.run lexenv.expand
-				lex* qrhs* mod** kwd* export-spec* rib mix?
+				qrhs* mod** kwd* export-spec* rib mix?
 				shadow/redefine-bindings?)
     (receive (lhs*.lex init*.core rhs*.core lexenv.expand^)
 	(%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
@@ -1326,7 +1332,7 @@
 			   lexenv.run)))
 	(chi-body* (cdr body-form*.stx)
 		   lexenv.run^ lexenv.expand^
-		   lex* qrhs* mod** kwd* export-spec* rib
+		   qrhs* mod** kwd* export-spec* rib
 		   mix? shadow/redefine-bindings?))))
 
   (define (%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
@@ -1336,11 +1342,10 @@
 		  (vis-collector (lambda (x) (void))))
       (receive (empty
 		lexenv.expand^ lexenv.super^
-		lex* qrhs* module-init** kwd* export-spec*)
+		qrhs* module-init** kwd* export-spec*)
 	  ;;Expand  the sequence  of  forms  as a  top-level  body, accumulating  the
 	  ;;definitions.
 	  (let ((lexenv.super                     lexenv.expand)
-		(lex*                             '())
 		(qrhs*                            '())
 		(mod**                            '())
 		(kwd*                             '())
@@ -1350,13 +1355,13 @@
 	      ((_ ?expr ?expr* ...)
 	       (chi-body* (cons ?expr ?expr*)
 			  lexenv.expand lexenv.super
-			  lex* qrhs* mod** kwd* export-spec* rib
+			  qrhs* mod** kwd* export-spec* rib
 			  mix-definitions-and-expressions? shadow/redefine-bindings?))))
 	;;There must be no trailing expressions because we allowed mixing definitions
 	;;and expressions as in a top-level program.
 	(assert (null? empty))
 	;;Expand the definitions and the module trailing expressions.
-	(let* ((lhs*.lex  (reverse lex*))
+	(let* ((lhs*.lex  (reverse (map qualified-rhs.lex qrhs*)))
 	       (rhs*.psi  (chi-qrhs* (reverse qrhs*)                    lexenv.expand^ lexenv.super^))
 	       (init*.psi (chi-expr* (reverse-and-append module-init**) lexenv.expand^ lexenv.super^)))
 	  ;;Now that  we have fully expanded  the forms: we invoke  all the libraries
@@ -1433,9 +1438,8 @@
   ;;binding for "a".
   (let*-values
       (((rib) (make-rib/empty))
-       ((trailing-expr-stx* lexenv.run lexenv.expand lex* qrhs* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
-	(let ((lex*                              '())
-	      (qrhs*                             '())
+       ((trailing-expr-stx* lexenv.run lexenv.expand qrhs* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
+	(let ((qrhs*                             '())
 	      (mod**                             '())
 	      (kwd*                              '())
 	      (export-spec*                      '())
@@ -1445,7 +1449,7 @@
 			    (push-lexical-contour rib x))
 		       (syntax->list body-form*.stx))
 		     lexenv.run lexenv.expand
-		     lex* qrhs* mod** kwd* export-spec* rib
+		     qrhs* mod** kwd* export-spec* rib
 		     mix-definitions-and-expressions? shadow/redefine-bindings?)))
        ;;Upon  arriving  here:  RIB,   LEXENV.RUN  and  LEXENV.EXPAND  contain  the
        ;;syntactic bindings associated to the QRHS*.
@@ -1454,15 +1458,15 @@
       (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
     ;;We want order here!   First we expand the QRHSs, then we  expande the INITs; so
     ;;that the QRHS bindings are typed when the INITs are expanded.
-    (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*) lexenv.run lexenv.expand))
-	   (init*.psi      (chi-expr* init*.stx lexenv.run lexenv.expand))
-	   (rhs*.core      (map psi.core-expr rhs*.psi))
-	   (init*.core     (map psi.core-expr init*.psi))
-	   (last-init.psi  (proper-list->last-item init*.psi)))
+    (let* ((rhs*.psi		(chi-qrhs* (reverse qrhs*) lexenv.run lexenv.expand))
+	   (init*.psi		(chi-expr* init*.stx lexenv.run lexenv.expand))
+	   (lhs*.lex		(reverse (map qualified-rhs.lex qrhs*)))
+	   (rhs*.core		(map psi.core-expr rhs*.psi))
+	   (init*.core		(map psi.core-expr init*.psi))
+	   (last-init.psi	(proper-list->last-item init*.psi)))
       (make-psi (or input-form.stx body-form*.stx)
 		(build-letrec* (syntax-annotation input-form.stx)
-		  (reverse lex*)
-		  rhs*.core
+		  lhs*.lex rhs*.core
 		  (build-sequence no-source
 		    init*.core))
 		(psi.retvals-signature last-init.psi)))))
@@ -1485,7 +1489,7 @@
 		;field EXP-ID-VEC.
 	    ))
 
-  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
+  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand qrhs* mod** kwd*)
     ;;Expand  the syntax  object  MODULE-FORM-STX which  represents  a core  langauge
     ;;MODULE syntax use.
     ;;
@@ -1498,7 +1502,7 @@
 	     (internal-body-form*/rib  (map (lambda (form)
 					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
-	(receive (leftover-body-expr* lexenv.run lexenv.expand lex* qrhs* mod** kwd* _export-spec*)
+	(receive (leftover-body-expr* lexenv.run lexenv.expand qrhs* mod** kwd* _export-spec*)
 	    ;;In a module: we do not want the trailing expressions to be converted to
 	    ;;dummy definitions; rather  we want them to be accumulated  in the MOD**
 	    ;;argument, for later expansion and evaluation.  So we set MIX? to false.
@@ -1518,7 +1522,7 @@
 		  (redefine-bindings?	#f))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
-			 lex* qrhs* mod** kwd* empty-export-spec*
+			 qrhs* mod** kwd* empty-export-spec*
 			 module-rib mix? redefine-bindings?))
 	  ;;The list  of exported  identifiers is  not only the  one from  the MODULE
 	  ;;argument, but  also the  one from  all the EXPORT  forms in  the MODULE's
@@ -1538,7 +1542,7 @@
 	    (if (not name)
 		;;The module has no name.  All the exported identifier will go in the
 		;;enclosing lexical environment.
-		(values lex* qrhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
+		(values qrhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
 	      ;;The module has a name.  Only the name itself will go in the enclosing
 	      ;;lexical environment.
 	      (let* ((name-label (generate-label-gensym 'module))
@@ -1555,7 +1559,7 @@
 				  all-export-lab*))
 		     (binding    (make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
 		     (entry      (cons name-label binding)))
-		(values lex* qrhs*
+		(values qrhs*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.
 			(vector name)
 			(vector name-label)

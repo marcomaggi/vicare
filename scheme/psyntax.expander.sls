@@ -880,11 +880,6 @@
 	    ;;non-definition forms from  the body of the library and  the body of the
 	    ;;internal modules.
 	    ;;
-	    ;;LEX* is  a list  of left-hand-side  lex gensyms to  be used  in binding
-	    ;;definitions when  building core  language symbolic expressions  for the
-	    ;;glocal DEFINE  forms in the library.   There is a lex  gensym for every
-	    ;;item in QRHS*.
-	    ;;
 	    ;;QRHS*  is  a  list  of  qualified  right-hand  sides  representing  the
 	    ;;right-hand side  expressions in the DEFINE  forms from the body  of the
 	    ;;library.
@@ -894,7 +889,7 @@
 	    ;;library.
 	    ;;
 	    (let*-values
-		(((init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
+		(((init*.stx lexenv.run lexenv.expand qrhs* internal-export*)
 		  (%process-internal-body body-stx* rib mixed-definitions-and-expressions?))
 		 ((export-name* export-id*)
 		  (%parse-all-export-specs export-spec* internal-export* wrap-source-expression-with-top-rib rib)))
@@ -908,21 +903,24 @@
 	      ;;We want order here?  Yes.  We  expand first the definitions, then the
 	      ;;init  forms: typed  variables's  syntactic bindings  must be  already
 	      ;;established before expanding the init forms.
-	      (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
-		     (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
-		     (loc*          (map qrhs-generate-loc qrhs*))
-		     (export-subst  (%make-export-subst export-name* export-id*)))
+	      (let* ((rhs*.psi		(chi-qrhs* qrhs*     lexenv.run lexenv.expand))
+		     (init*.psi		(chi-expr* init*.stx lexenv.run lexenv.expand))
+		     (lhs*.lex		(map qualified-rhs.lex qrhs*))
+		     (rhs*.core		(map psi.core-expr rhs*.psi))
+		     (lhs*.loc		(map qrhs-generate-loc qrhs*))
+		     (init*.core	(map psi.core-expr init*.psi))
+		     (export-subst	(%make-export-subst export-name* export-id*)))
 		(receive (global-env visit-env typed-locs)
-		    (%make-global-env/visit-env/typed-locs lex* loc* lexenv.run)
+		    (%make-global-env/visit-env/typed-locs lhs*.lex lhs*.loc lexenv.run)
 		  (%validate-exports export-spec* export-subst global-env lexenv.run)
 		  (let ((invoke-code (build-with-compilation-options option*
 				       (build-library-letrec* no-source
 					 mixed-definitions-and-expressions?
-					 lex* loc* (map psi.core-expr rhs*.psi)
-					 (if (null? init*.psi)
+					 lhs*.lex lhs*.loc rhs*.core
+					 (if (null? init*.core)
 					     (build-void)
 					   (build-sequence no-source
-					     (map psi.core-expr init*.psi)))))))
+					     init*.core))))))
 		    (values (itc) (rtc) (vtc)
 			    invoke-code visit-env export-subst global-env typed-locs))))))))))
 
@@ -950,8 +948,7 @@
     ;;
     (receive (trailing-init-form*.stx
 	      lexenv.run lexenv.expand
-	      lex* qrhs*
-	      module-init-form**.stx unused-kwd* internal-export*)
+	      qrhs* module-init-form**.stx unused-kwd* internal-export*)
 	;;We are about  to expand syntactic forms  from the body in the  context of a
 	;;non-interaction top-level environment.  When  calling CHI-BODY*, we set the
 	;;argument SHADOW/REDEFINE-BINDINGS? to false because:
@@ -976,14 +973,13 @@
 	(let ((shadow/redefine-bindings?	#f)
 	      (lexenv.run			'())
 	      (lexenv.expand			'())
-	      (lex*				'())
 	      (qrhs*				'())
 	      (mod**				'())
 	      (kwd*				'())
 	      (export-spec*			'()))
 	  (chi-body* body-stx*
 		     lexenv.run lexenv.expand
-		     lex* qrhs* mod** kwd* export-spec* rib
+		     qrhs* mod** kwd* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       ;;We build a list  of init form putting first the trailing  init forms from the
       ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
@@ -991,10 +987,6 @@
       (let ((init-form*.stx (reverse-and-append-with-tail module-init-form**.stx trailing-init-form*.stx)))
 	(values init-form*.stx
 		lexenv.run lexenv.expand
-		;;This is  a list of gensyms  to be used in  binding definitions when
-		;;building core language symbolic expressions for the DEFINE forms in
-		;;the library.  There is a gensym for every item in QRHS*.
-		(reverse lex*)
 		;;This  is a  list  of qualified  right-hand  sides representing  the
 		;;right-hand side  expressions in the  DEFINE forms from the  body of
 		;;the library.

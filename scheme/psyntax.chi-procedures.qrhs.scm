@@ -69,6 +69,7 @@
 	 qualified-rhs.input-form
 	 qualified-rhs.lhs
 	 qualified-rhs.type-id
+	 qualified-rhs.lex
 	 qualified-rhs/defun.standard-formals
 	 qualified-rhs/defun.body*
 	 qualified-rhs/defun.signature
@@ -99,11 +100,13 @@
 		;
 		;*  When the  QRHS  is a  "top-expr": this  field  contains the  type
 		;identifier "<top>".
+    (immutable lex		qualified-rhs.lex)
+		;The lexical gensym to use for this expression.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
       (define (make-qualified-rhs input-form.stx lhs.id lhs.type)
-	(make-record input-form.stx lhs.id lhs.type))
+	(make-record input-form.stx lhs.id lhs.type (generate-lexical-gensym lhs.id)))
       make-qualified-rhs)))
 
 (define (qrhs-generate-loc qrhs)
@@ -323,8 +326,8 @@
   (parent qualified-rhs)
   (protocol
     (lambda (make-qualified-rhs)
-      (define* (make-qualified-rhs/top-expr input-form.stx lhs.id)
-	((make-qualified-rhs input-form.stx lhs.id (top-tag-id))))
+      (define* (make-qualified-rhs/top-expr input-form.stx)
+	((make-qualified-rhs input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-tag-id))))
       make-qualified-rhs/top-expr)))
 
 (define qualified-rhs/top-expr-rtd
