@@ -542,12 +542,12 @@
 			 (extend-rib! rib id lab shadow/redefine-bindings?))
 	id.vec lab.vec)))
 
-  (define (%any-import*-checked import-form lexenv.run)
-    (syntax-match import-form ()
+  (define (%any-import*-checked import-form.stx lexenv.run)
+    (syntax-match import-form.stx ()
       ((?ctxt ?import-spec* ...)
        (%any-import* ?ctxt ?import-spec* lexenv.run))
       (_
-       (stx-error import-form "invalid import form"))))
+       (stx-error import-form.stx "invalid import form"))))
 
   (define (%any-import* ctxt import-spec* lexenv.run)
     (if (null? import-spec*)
@@ -563,24 +563,24 @@
 	(%module-import (list ctxt import-spec) lexenv.run)
       (%library-import (list ctxt import-spec))))
 
-  (define (%module-import import-form lexenv.run)
-    (syntax-match import-form ()
-      ((_ ?id)
-       (identifier? ?id)
+  (define (%module-import import-form.stx lexenv.run)
+    (syntax-match import-form.stx ()
+      ((_ ?module-name-id)
+       (identifier? ?module-name-id)
        (receive (type descr kwd)
-	   (syntactic-form-type __module_who__ ?id lexenv.run)
+	   (syntactic-form-type __module_who__ ?module-name-id lexenv.run)
 	 (case type
 	   (($module)
 	    (let ((iface (syntactic-binding-descriptor.value descr)))
-	      (values (module-interface-exp-id*     iface ?id)
+	      (values (module-interface-exp-id*     iface (stx-mark* ?module-name-id))
 		      (module-interface-exp-lab-vec iface))))
 	   ((standalone-unbound-identifier)
-	    (raise-unbound-error __module_who__ import-form ?id))
+	    (raise-unbound-error __module_who__ import-form.stx ?module-name-id))
 	   (else
-	    (stx-error import-form "invalid import")))))))
+	    (stx-error import-form.stx "invalid import")))))))
 
-  (define (%library-import import-form)
-    (syntax-match import-form ()
+  (define (%library-import import-form.stx)
+    (syntax-match import-form.stx ()
       ((?ctxt ?imp* ...)
        ;;NAME-VEC is  a vector of  symbols representing  the external names  of the
        ;;imported  bindings.   LABEL-VEC is  a  vector  of label  gensyms  uniquely
@@ -592,7 +592,7 @@
 		   name-vec)
 		 label-vec)))
       (_
-       (stx-error import-form "invalid import form"))))
+       (stx-error import-form.stx "invalid import form"))))
 
   #| end of module: CHI-IMPORT |# )
 
@@ -868,31 +868,41 @@
 
   (module (module-interface-exp-id*)
 
-    (define (module-interface-exp-id* iface id-for-marks)
-      (let ((diff   (%diff-marks (stx-mark* id-for-marks)
-				 (module-interface-first-mark iface)))
-	    (id-vec (module-interface-exp-id-vec iface)))
-	(if (null? diff)
+    (define (module-interface-exp-id* iface import-mark*)
+      ;;IFACE is  an instance of MODULE-INTERFACE.   IMPORT-MARK* is a list  of marks
+      ;;representing the lexical  context of the IMPORT syntax use  that is importing
+      ;;the module.
+      ;;
+      ;;Return  a vector  of  syntactic identifiers  representing syntactic  bindings
+      ;;exported by the module; each identifier  has the marks of the lexical context
+      ;;in which the module is imported.
+      ;;
+      (let ((mark-diff*	(%diff-marks import-mark* (module-interface-first-mark iface)))
+	    (id-vec	(module-interface-exp-id-vec iface)))
+	(if (null? mark-diff*)
 	    id-vec
 	  (vector-map
 	      (lambda (x)
 		(let ((rib* '())
 		      (ae*  '()))
 		  (make-syntactic-identifier (stx-expr x)
-					     (append diff (stx-mark* x))
+					     (append mark-diff* (stx-mark* x))
 					     rib* ae*)))
 	    id-vec))))
 
-    (define (%diff-marks mark* the-mark)
+    (define* (%diff-marks mark* the-mark)
       ;;MARK* must be  a non-empty list of  marks; THE-MARK must be a  mark in MARK*.
-      ;;Return a list of the elements of MARK* up to and not including THE-MARK.
+      ;;Return a  sublist of  the elements  of MARK* from  the head  up to  and *not*
+      ;;including THE-MARK.
       ;;
-      (when (null? mark*)
-	(error '%diff-marks "BUG: should not happen"))
-      (let ((a (car mark*)))
-	(if (eq? a the-mark)
-	    '()
-	  (cons a (%diff-marks (cdr mark*) the-mark)))))
+      ;;   (%diff-marks '(m1 m2 m3 m4) 'm3) => (m1 m2)
+      ;;
+      (if (pair? mark*)
+	  (let ((a (car mark*)))
+	    (if (eq? a the-mark)
+		'()
+	      (cons a (%diff-marks (cdr mark*) the-mark))))
+	(assertion-violation __who__ "internal error: null marks should not happen")))
 
     #| end of module: MODULE-INTERFACE-EXP-ID* |# )
 
