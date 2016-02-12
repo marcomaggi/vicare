@@ -71,7 +71,6 @@
      (vicare language-extensions simple-match)
      (vicare language-extensions keywords)
      (vicare language-extensions sentinels)
-     (vicare language-extensions namespaces)
      (vicare language-extensions custom-ports)
      (vicare language-extensions variables)
      (vicare language-extensions streams)

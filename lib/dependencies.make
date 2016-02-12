@@ -347,20 +347,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/sentinels.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/sentinels.fasl
 
-lib/vicare/language-extensions/namespaces.fasl: \
-		lib/vicare/language-extensions/namespaces.vicare.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_namespaces_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_namespaces_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_namespaces_fasl_DATA = lib/vicare/language-extensions/namespaces.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_namespaces_vicare_sls_DATA = lib/vicare/language-extensions/namespaces.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/namespaces.vicare.sls
-CLEANFILES += lib/vicare/language-extensions/namespaces.fasl
-
 lib/vicare/language-extensions/custom-ports.fasl: \
 		lib/vicare/language-extensions/custom-ports.vicare.sls \
 		$(FASL_PREREQUISITES)
@@ -511,7 +497,6 @@ CLEANFILES += lib/vicare/language-extensions/hooks.fasl
 
 lib/vicare/language-extensions/callables.fasl: \
 		lib/vicare/language-extensions/callables.vicare.sls \
-		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

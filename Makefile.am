@@ -956,7 +956,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-keywords.sps		\
 	tests/test-vicare-language-extensions-loops.sps			\
 	tests/test-vicare-language-extensions-makers.sps		\
-	tests/test-vicare-language-extensions-namespaces.sps		\
 	tests/test-vicare-language-extensions-pipelines.sps		\
 	tests/test-vicare-language-extensions-restarts.sps		\
 	tests/test-vicare-language-extensions-sentinels.sps		\
