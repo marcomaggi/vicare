@@ -15424,20 +15424,27 @@ modules.
 
 
 The following example defines an anonymous module, without expressions,
-and invokes its functions from the enclosing region (which is the top
-level):
+and invokes its functions from the enclosing region (which is a
+top--level program):
 
-@example
+@lisp
 (import (vicare))
 
 (module (one two three)
-    (define (one)       'one)
-    (define (two)       'two)
-    (define (three)     (cons 'three (hidden)))
-    (define (hidden)    'hidden))
+  (define (one)       'one)
+  (define (two)       'two)
+  (define (three)     (cons 'three (hidden)))
+  (define (hidden)    'hidden))
 
 (fprintf (current-error-port)
-         "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
+  "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
+@end lisp
+
+@noindent
+the output of the program is:
+
+@example
+calling anonymous: one two (three . hidden)
 @end example
 
 @noindent
@@ -15445,68 +15452,26 @@ notice that the @func{hidden} function is visible inside the module but
 not in the enclosing region.
 
 The following example defines a module, with expressions, and invokes
-its functions from the enclosing region (which is the top level):
+its functions from the enclosing region (which is a top--level program):
 
-@example
+@lisp
 (import (vicare))
 
 (module (one two three)
-    (define (one)       'one)
-    (define (two)       'two)
-    (define (three)     (cons 'three (hidden)))
-    (define (hidden)    'hidden)
+  (define (one)       'one)
+  (define (two)       'two)
+  (define (three)     (cons 'three (hidden)))
+  (define (hidden)    'hidden)
 
-    (fprintf (current-error-port)
-             "defining an anonymous module\n"))
+  (fprintf (current-error-port)
+    "defining an anonymous module\n"))
 
 (fprintf (current-error-port)
-         "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
-@end example
+  "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
+@end lisp
 
 @noindent
-notice that when the enclosing region is the top level: the expressions
-at the end of a module are evaluated @strong{after} the expressions at
-the top level; so the output from the example is:
-
-@example
-calling anonymous: one two (three . hidden)
-defining an anonymous module
-@end example
-
-@noindent
-this can lead to undesired results if the module's expressions are meant
-to initialise the state of the module, and the expressions at the top
-level invoke the module's functions (before initialisation).  On the
-other hand: this behaviour allows the module to access definitions from
-the enclosing region and the top level region despite their placement in
-the file; see below for an example.  The same behaviour is shown by
-named modules.
-
-The following example defines a module, with expressions, and invokes
-its functions from the enclosing region (which is a @func{let} form):
-
-@example
-(import (vicare))
-
-(let ()
-  (module (one two three)
-      (define (one)       'one)
-      (define (two)       'two)
-      (define (three)     (cons 'three (hidden)))
-      (define (hidden)    'hidden)
-
-      (printf (current-error-port)
-              "defining an anonymous module\n"))
-
-  (fprintf (current-error-port)
-           "calling anonymous: ~s ~s ~s\n" (one) (two) (three)))
-@end example
-
-@noindent
-notice that when the enclosing region is @strong{not} the top level: the
-expressions at the end of a module are evaluated @strong{before} the
-expressions in the body of the enclosing region; so the output from the
-example is:
+the output of the program is:
 
 @example
 defining an anonymous module
@@ -15514,42 +15479,86 @@ calling anonymous: one two (three . hidden)
 @end example
 
 @noindent
-so the state of the module can be correctly initialised before its
-functions are invoked.  The same behaviour is shown by named modules.
+notice how the expressions at the end of a module are evaluated
+@strong{before} the expressions at the end of the top--level program.
 
-The following example shows that bindings from the enclosing region and
-the top level environment are accessible from the modules:
+When a module definition is present at the top--level of a program:
+trailing expressions at the end of the module definitions are handled
+like top--level expressions mixed between top--level definitions.  We
+can verify this with the following program:
 
-@example
+@lisp
 (import (vicare))
 
-(define (top-level-before) 'top-level-before)
+(define a
+  (begin
+    (fprintf (current-error-port) "before\n")
+    (void)))
 
-(let ()
+(module ()
+  (fprintf (current-error-port) "module\n"))
 
-  (define (outer-before) 'outer-before)
+(define b
+  (begin
+    (fprintf (current-error-port) "after\n")
+    (void)))
+@end lisp
 
-  (module (one two three)
-    (define (one)       'one)
-    (define (two)       'two)
-    (define (three)     (list 'three
-                              (outer-before)
-                              (outer-after)
-                              (top-level-before)
-                              (top-level-after))))
+@noindent
+whose output is:
 
-  (define (outer-after) 'outer-after)
+@lisp
+before
+module
+after
+@end lisp
 
-  (fprintf (current-error-port)
-           "calling anonymous: ~s ~s ~s\n" (one) (two) (three)))
+Let's see, instead, what happens when the module definition is at the
+top--level of a library, which does not allow mixed definitions and
+expressions.  The following program defines a library using the
+@syntax{library} syntax:
 
-(define (top-level-after) 'top-level-after)
+@lisp
+(import (vicare))
+
+(library (the-demo)
+  (export a)
+  (import (vicare))
+  (define a
+    (begin
+      (fprintf (current-error-port) "before\n")
+      123))
+
+  (module ()
+    (fprintf (current-error-port) "module\n"))
+
+  (define b
+    (begin
+      (fprintf (current-error-port) "after\n")
+      (void)))
+
+  (fprintf (current-error-port) "library: ~a\n" a)
+  #| end of library |# )
+
+(import (the-demo))
+(fprintf (current-error-port) "program: ~a\n" a)
+@end lisp
+
+@noindent
+the output is:
+
+@example
+before
+after
+module
+library: 123
+program: 123
 @end example
 
 @noindent
-this happens both when the enclosing region is the top level and when
-the enclosing region is not the top level.  The same behaviour is shown
-by named modules.
+here the module's trailing expressions are evaluated @strong{after} all
+the library's definitions but @strong{before} the library's top--level
+trailing expressions.
 
 @c page
 @node iklib modules examples named
@@ -15562,13 +15571,14 @@ functions from it in the top level region:
 @example
 (import (vicare))
 
-(module blue (blue-one blue-two blue-three)
-    (define (blue-one)          'blue-one)
-    (define (blue-two)          'blue-two)
-    (define (blue-three)        (cons 'blue-three (hidden)))
-    (define (hidden)            'blue-hidden))
+(module BLUE
+    (blue-one blue-two blue-three)
+  (define (blue-one)          'blue-one)
+  (define (blue-two)          'blue-two)
+  (define (blue-three)        (cons 'blue-three (hidden)))
+  (define (hidden)            'blue-hidden))
 
-(import blue)
+(import BLUE)
 (fprintf (current-error-port)
          "calling blue: ~s ~s ~s\n"
          (blue-one) (blue-two) (blue-three))
@@ -15586,27 +15596,27 @@ The following example defines two modules named @code{green} and
 
 (internal-body
 
-  (module green (one two three)
+  (module GREEN (one two three)
     (define (one)       'green-one)
     (define (two)       'green-two)
     (define (three)     (cons 'green-three (hidden)))
     (define (hidden)    'green-hidden))
 
-  (module red (one two three)
+  (module RED (one two three)
     (define (one)       'red-one)
     (define (two)       'red-two)
     (define (three)     (cons 'red-three (hidden)))
     (define (hidden)    'red-hidden))
 
-  (import green)
+  (import GREEN)
 
   (internal-body
-    (import red)
+    (import RED)
     (fprintf (current-error-port)
-             "calling red: ~s ~s ~s\n" (one) (two) (three)))
+      "calling red: ~s ~s ~s\n" (one) (two) (three)))
 
   (fprintf (current-error-port)
-           "calling green: ~s ~s ~s\n" (one) (two) (three)))
+    "calling green: ~s ~s ~s\n" (one) (two) (three)))
 @end example
 
 The following example shows that modules in the same enclosing region
@@ -15628,7 +15638,7 @@ can import their bindings:
 
   (import red)
   (fprintf (current-error-port)
-           "calling red: ~s ~s\n" (f) (g)))
+    "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @noindent
@@ -15651,7 +15661,7 @@ region:
 
   (import red)
   (fprintf (current-error-port)
-           "calling red: ~s ~s\n" (f) (g)))
+    "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @noindent
@@ -15674,7 +15684,7 @@ does not matter in determining visibility of bindings from
 
   (import red)
   (fprintf (current-error-port)
-           "calling red: ~s ~s\n" (f) (g)))
+    "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @noindent
@@ -15697,7 +15707,7 @@ from a @strong{named} module before its definition:
 
   (import red)
   (fprintf (current-error-port)
-           "calling red: ~s ~s\n" (f) (g)))
+    "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @c page

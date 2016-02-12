@@ -983,7 +983,10 @@
 		     rev-qdef* mod** kwd* export-spec* rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (when mixed-definitions-and-expressions?
-	(assert (null? trailing-init-form*.stx)))
+	;;All of these top-level expression become dummy definitions, so they go into
+	;;REF-QDEF*.
+	(assert (null? trailing-init-form*.stx))
+	(assert (null? module-init-form**.stx)))
       ;;We build a list  of init form putting first the trailing  init forms from the
       ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
       ;;library/program body.

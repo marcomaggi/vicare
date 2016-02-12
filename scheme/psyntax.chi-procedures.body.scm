@@ -409,7 +409,7 @@
 	     ;;module, then recurse on the rest of the body.
 	     ;;
 	     (receive (rev-qdef* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** keyword*)
-		 (chi-internal-module body-form.stx lexenv.run lexenv.expand rev-qdef* mod** keyword*)
+		 (chi-internal-module body-form.stx lexenv.run lexenv.expand rev-qdef* mod** keyword* mix?)
 	       ;;Extend the rib with the syntactic bindings exported by the module.
 	       (vector-for-each (lambda (id lab)
 				  ;;This  call  will  raise   an  exception  if  it
@@ -774,14 +774,15 @@
 	    ))
 
   (define (chi-internal-module module-form.stx lexenv.run lexenv.expand
-			       qdef* module-trailing-expression** kwd*)
+			       rev-qdef* module-trailing-expression** kwd*
+			       mix-definitions-and-expressions?)
     ;;Expand  the syntax  object  MODULE-FORM.STX which  represents  a core  language
     ;;MODULE syntax use.
     ;;
     ;;LEXENV.RUN and  LEXENV.EXPAND must  be lists  representing the  current lexical
     ;;environment for run and expand times.
     ;;
-    ;;Return  the  following values:  QDEF*,  a  list  of QDEF  objects  representing
+    ;;Return the  following values:  REV-QDEF*, a list  of QDEF  objects representing
     ;;internal definitions;  M-EXP-ID*, a list of  syntactic identifiers representing
     ;;the exported  syntactic bindings (this can  be only the name  identifier of the
     ;;module);  M-EXP-LAB*,  a list  of  label  gensyms  for the  exported  syntactic
@@ -795,15 +796,7 @@
 	     (internal-body-form*/rib  (map (lambda (form)
 					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
-	(receive (leftover-body-expr* lexenv.run lexenv.expand qdef* module-trailing-expression** kwd* _export-spec*)
-	    ;;About the argument MIX-DEFINITIONS-AND-EXPRESSIONS?
-	    ;;---------------------------------------------------
-	    ;;
-	    ;;In a module: we do not want the trailing expressions to be converted to
-	    ;;dummy  definitions;  rather we  want  them  to  be accumulated  in  the
-	    ;;MODULE-TRAILING-EXPRESSION**   argument,   for  later   expansion   and
-	    ;;evaluation.  So we set MIX-DEFINITIONS-AND-EXPRESSIONS? to false.
-	    ;;
+	(receive (leftover-body-expr* lexenv.run lexenv.expand rev-qdef* module-trailing-expression** kwd* _export-spec*)
 	    ;;About the argument REDEFINE-BINDINGS?
 	    ;;-------------------------------------
 	    ;;
@@ -819,12 +812,15 @@
 	    ;;is a syntax violation because the binding "a" cannot be redefined.
 	    ;;
 	    (let ((empty-export-spec*			'())
-		  (mix-definitions-and-expressions?	#f)
 		  (redefine-bindings?			#f))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
-			 qdef* module-trailing-expression** kwd* empty-export-spec*
+			 rev-qdef* module-trailing-expression** kwd* empty-export-spec*
 			 module-rib mix-definitions-and-expressions? redefine-bindings?))
+	  (when mix-definitions-and-expressions?
+	    ;;All of these top-level expression  become dummy definitions, so they go
+	    ;;into REV-QDEF*.
+	    (assert (null? leftover-body-expr*)))
 	  ;;The list  of exported  identifiers is  not only the  one from  the MODULE
 	  ;;argument, but  also the  one from  all the EXPORT  forms in  the MODULE's
 	  ;;body.
@@ -839,11 +835,13 @@
 										  '()))
 					    (stx-error id "cannot find module export")))
 				    all-export-id*))
-		 (module-trailing-expression** (cons leftover-body-expr* module-trailing-expression**)))
+		 (module-trailing-expression** (if (pair? leftover-body-expr*)
+						   (cons leftover-body-expr* module-trailing-expression**)
+						 module-trailing-expression**)))
 	    (if (not name)
 		;;The module  has no name.  All  the exported identifiers will  go in
 		;;the enclosing lexical environment.
-		(values qdef* all-export-id* all-export-lab* lexenv.run lexenv.expand module-trailing-expression** kwd*)
+		(values rev-qdef* all-export-id* all-export-lab* lexenv.run lexenv.expand module-trailing-expression** kwd*)
 	      ;;The module has a name.  Only the name itself will go in the enclosing
 	      ;;lexical environment.
 	      (let* ((name-label	(generate-label-gensym 'module))
@@ -858,7 +856,7 @@
 					 all-export-lab*))
 		     (descr		(make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
 		     (entry		(cons name-label descr)))
-		(values qdef*
+		(values rev-qdef*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.
 			(vector name)
 			(vector name-label)
