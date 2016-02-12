@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -1249,9 +1249,9 @@
 		  (mutable   {d <flonum>} get-alpha-d set-alpha-d)
 		  (immutable {e <flonum>} get-alpha-e)))
 	(define {O alpha}
-	  (new alpha 1 2 3 4 5))
+	  (new alpha 1 2. 3. 4. 5.))
 	(values (.a O) (.b O) (.c O) (.d O) (.e O)))
-    => 1 2 3 4 5)
+    => 1 2. 3. 4. 5.)
 
   (void))
 
