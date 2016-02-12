@@ -561,32 +561,53 @@
   (define (%any-import ctxt import-spec lexenv.run)
     (if (identifier? import-spec)
 	(%module-import (list ctxt import-spec) lexenv.run)
-      (%library-import (list ctxt import-spec))))
+      (%library-or-module-import (list ctxt import-spec) lexenv.run)))
 
   (define (%module-import import-form.stx lexenv.run)
     (syntax-match import-form.stx ()
-      ((_ ?module-name-id)
-       (identifier? ?module-name-id)
-       (receive (type descr kwd)
-	   (syntactic-form-type __module_who__ ?module-name-id lexenv.run)
-	 (case type
-	   (($module)
-	    (let ((iface (syntactic-binding-descriptor.value descr)))
-	      (values (module-interface-exp-id*     iface (stx-mark* ?module-name-id))
-		      (module-interface-exp-lab-vec iface))))
-	   ((standalone-unbound-identifier)
-	    (raise-unbound-error __module_who__ import-form.stx ?module-name-id))
-	   (else
-	    (stx-error import-form.stx "invalid import")))))))
+      ((_ ?module-name)
+       (identifier? ?module-name)
+       (module-id->id-and-lab-vecs import-form.stx lexenv.run ?module-name))
+      ))
 
-  (define (%library-import import-form.stx)
+  (define (module-id->id-and-lab-vecs import-form.stx lexenv.run module-name.id)
+    ;;Given a syntactic identifier representing a module's name, return two values: a
+    ;;vector holding the syntactic identifiers  representing the exported bindings; a
+    ;;vector holding the corresponding label gensyms.
+    ;;
+    (receive (type descr kwd)
+	(syntactic-form-type __module_who__ module-name.id lexenv.run)
+      (case type
+	(($module)
+	 (let ((iface (syntactic-binding-descriptor.value descr)))
+	   (values (module-interface-exp-id*     iface (stx-mark* module-name.id))
+		   (module-interface-exp-lab-vec iface))))
+	((standalone-unbound-identifier)
+	 (raise-unbound-error __module_who__ import-form.stx module-name.id))
+	(else
+	 (stx-error import-form.stx "invalid import")))))
+
+  (define (module-id->module-subst import-form.stx lexenv.run module-name.id)
+    ;;Given a syntactic identifier representing  a module's name, return the module's
+    ;;export  subst: an  a  list whose  cars are  symbols  representing the  exported
+    ;;bindings' names and whose cdrs are the associated label gensyms.
+    ;;
+    (receive (exported-id-vec exported-lab-vec)
+	(module-id->id-and-lab-vecs import-form.stx lexenv.run module-name.id)
+      (vector-fold-right (lambda (id lab knil)
+			   (cons (cons (identifier->symbol id) lab) knil))
+	'() exported-id-vec exported-lab-vec)))
+
+  (define (%library-or-module-import import-form.stx lexenv.run)
     (syntax-match import-form.stx ()
       ((?ctxt ?imp* ...)
        ;;NAME-VEC is  a vector of  symbols representing  the external names  of the
        ;;imported  bindings.   LABEL-VEC is  a  vector  of label  gensyms  uniquely
        ;;associated to the imported bindings.
        (receive (name-vec label-vec)
-	   (parse-import-spec* (syntax->datum ?imp*))
+	   (parse-import-spec* ?imp*
+			       (lambda (module-name.id)
+				 (module-id->module-subst import-form.stx lexenv.run module-name.id)))
 	 (values (vector-map (lambda (name)
 			       (~datum->syntax ?ctxt name))
 		   name-vec)
@@ -741,13 +762,13 @@
 	 module-interface-exp-id*
 	 module-interface-exp-lab-vec)
 
-  (define-record-type module-interface
-    (nongenerative vicare:expander:module-interface)
-    (fields first-mark
+  (define-record-type (<module-interface> make-module-interface module-interface?)
+    (nongenerative vicare:expander:<module-interface>)
+    (fields (immutable first-mark	module-interface-first-mark)
 		;The first mark in the lexical context of the MODULE form.
-	    exp-id-vec
+	    (immutable exp-id-vec	module-interface-exp-id-vec)
 		;A vector of identifiers exported by the module.
-	    exp-lab-vec
+	    (immutable exp-lab-vec	module-interface-exp-lab-vec)
 		;A vector  of gensyms  acting as  labels for  the identifiers  in the
 		;field EXP-ID-VEC.
 	    ))

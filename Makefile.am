@@ -809,6 +809,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-equality.sps					\
 	tests/test-vicare-errno.sps					\
 	tests/test-vicare-expander-basic.sps				\
+	tests/test-vicare-expander-modules.sps				\
 	tests/test-vicare-expander-lambda-extensions.sps		\
 	tests/test-vicare-expander-lambda-star.sps			\
 	tests/test-vicare-expander-loops.sps				\

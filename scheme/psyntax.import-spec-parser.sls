@@ -161,9 +161,19 @@
 
 
 (module (parse-import-spec*)
-  ;;Given   a  list   of  SYNTAX-MATCH   expression  arguments   representing  import
-  ;;specifications from  a LIBRARY form,  as defined  by R6RS plus  Vicare extensions
-  ;;(which can simply be the raw sexp argument to the ENVIRONMENT function):
+  ;;Parse a  list of import  specifications from a LIBRARY  form, as defined  by R6RS
+  ;;plus  Vicare  extensions (which  can  simply  be the  raw  sexp  argument to  the
+  ;;ENVIRONMENT function).
+  ;;
+  ;;The argument IMPORT-SPEC* must be a list of SYNTAX-MATCH expressions representing
+  ;;the import specifications.
+  ;;
+  ;;When  the  argument  MODULE-ID->MODULE-SUBST   is  false:  importing  modules  is
+  ;;forbidden.   Otherwise the  argument  MODULE-ID->MODULE-SUBST must  be a  closure
+  ;;which, applied to the syntactic  identifier representing a module's name, returns
+  ;;the module's export subst.
+  ;;
+  ;;Do the following:
   ;;
   ;;1. Parse and validate the import specs.
   ;;
@@ -183,33 +193,36 @@
   ;;2. LABEL-VEC  is a vector  of label gensyms  uniquely associated to  the imported
   ;;   bindings.  This vector has no duplicates.
   ;;
-  (define (parse-import-spec* import-spec*)
-    (let loop ((import-spec*  import-spec*)
-	       (export-table  (make-eq-hashtable)))
-      ;;EXPORT-TABLE  has  EXPORT-SUBST names  as  keys  and EXPORT-SUBST  labels  as
-      ;;values.  It is used to check for duplicate names with different labels, which
-      ;;is an error.  Example:
-      ;;
-      ;;   (import (rename (french)
-      ;;                   (salut	ciao))	;ERROR!
-      ;;           (rename (british)
-      ;;                   (hello	ciao)))	;ERROR!
-      ;;
-      (if (pair? import-spec*)
-	  (begin
-	    (for-each (lambda (name.label)
-			(%add-subst-entry! export-table name.label))
-	      (%import-spec->export-subst ($car import-spec*)))
-	    (loop ($cdr import-spec*) export-table))
-	(hashtable-entries export-table))))
+  (case-define parse-import-spec*
+    ((import-spec*)
+     (parse-import-spec* import-spec* #f))
+    ((import-spec* module-id->module-subst)
+     (let loop ((import-spec*  import-spec*)
+		(export-table  (make-eq-hashtable)))
+       ;;EXPORT-TABLE  has EXPORT-SUBST  names  as keys  and  EXPORT-SUBST labels  as
+       ;;values.  It  is used  to check  for duplicate  names with  different labels,
+       ;;which is an error.  Example:
+       ;;
+       ;;   (import (rename (french)
+       ;;                   (salut	ciao))	;ERROR!
+       ;;           (rename (british)
+       ;;                   (hello	ciao)))	;ERROR!
+       ;;
+       (if (pair? import-spec*)
+	   (begin
+	     (for-each (lambda (name.label)
+			 (%add-subst-entry! export-table name.label))
+	       (%import-spec->export-subst (car import-spec*) module-id->module-subst))
+	     (loop (cdr import-spec*) export-table))
+	 (hashtable-entries export-table)))))
 
   (define (%add-subst-entry! export-table name.label)
     ;;Add  the   given  NAME.LABEL   entry  to   EXPORT-TABLE;  return
     ;;unspecified values.  Raise a  syntax violation if NAME.LABEL has
     ;;the same name of an entry in EXPORT-TABLE, but different label.
     ;;
-    (let ((name  ($car name.label))
-	  (label ($cdr name.label)))
+    (let ((name  (car name.label))
+	  (label (cdr name.label)))
       (cond ((hashtable-ref export-table name #f)
 	     => (lambda (already-existent-label)
 		  (unless (eq? already-existent-label label)
@@ -222,7 +235,7 @@
 
 (module (%import-spec->export-subst)
 
-  (define (%import-spec->export-subst import-spec)
+  (define (%import-spec->export-subst import-spec module-id->module-subst)
     ;;Process the IMPORT-SPEC and return the corresponding subst.
     ;;
     ;;The IMPORT-SPEC is parsed; the specified library is loaded and interned, if not
@@ -237,21 +250,26 @@
        ;;FIXME  Here we  should validate  ?IMPORT-LEVELS even  if it  is not  used by
        ;;Vicare.  (Marco Maggi; Tue Apr 23, 2013)
        (eq? (syntax->datum ?for) 'for)
-       (%import-set->export-subst ?import-set import-spec))
+       (%import-set->export-subst ?import-set import-spec module-id->module-subst))
 
       (?import-set
-       (%import-set->export-subst ?import-set import-spec))))
+       (%import-set->export-subst ?import-set import-spec module-id->module-subst))))
 
-  (define (%import-set->export-subst import-set import-spec)
+  (define (%import-set->export-subst import-set import-spec module-id->module-subst)
     ;;Recursive  function.   Process  the  IMPORT-SET and  return  the  corresponding
     ;;EXPORT-SUBST.  IMPORT-SPEC  is the  full import  specification from  the IMPORT
     ;;clause: it is used for descriptive error reporting.
     ;;
     (define (%recurse import-set)
-      (%import-set->export-subst import-set import-spec))
+      (%import-set->export-subst import-set import-spec module-id->module-subst))
     (define (%local-synner message)
       (%synner message import-spec import-set))
     (syntax-match import-set ()
+      (?module-id
+       (and (identifier? ?module-id)
+	    module-id->module-subst)
+       (module-id->module-subst ?module-id))
+
       ((?spec ?spec* ...)
        ;;According  to R6RS,  the  symbol LIBRARY  can  be used  to  quote a  library
        ;;reference whose first identifier is "for", "rename", etc.

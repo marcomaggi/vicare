@@ -297,67 +297,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'import))
-
-  (check	;import separately a named module and a library, library
-		;first
-      (let ()
-	(module ciao
-	  (hello salut)
-	  (define (hello) 'hello)
-	  (define (salut) 'salut))
-	(import (vicare language-extensions syntaxes))
-	(import ciao)
-	(list (hello) (salut)))
-    => '(hello salut))
-
-  (check	;import separately a named  module and a library, module
-		;first
-      (let ()
-	(module ciao
-	  (hello salut)
-	  (define (hello) 'hello)
-	  (define (salut) 'salut))
-	(import ciao)
-	(import (vicare language-extensions syntaxes))
-	(list (hello) (salut)))
-    => '(hello salut))
-
-  (check	;import both a named module and a library, library first
-      (let ()
-	(module ciao
-	  (hello salut)
-	  (define (hello) 'hello)
-	  (define (salut) 'salut))
-	(import (vicare language-extensions syntaxes)
-	  ciao)
-	(list (hello) (salut)))
-    => '(hello salut))
-
-  (check	;import both a named module and a library, module first
-      (let ()
-	(module ciao
-	  (hello salut)
-	  (define (hello) 'hello)
-	  (define (salut) 'salut))
-	(import ciao
-	  (vicare language-extensions syntaxes))
-	(list (hello) (salut)))
-    => '(hello salut))
-
-  #;(check	;import a named module with some name mangling
-      (let ()
-	(module ciao
-	  (hello salut)
-	  (define (hello) 'hello)
-	  (define (salut) 'salut))
-	(import (prefix ciao ciao.))
-	(list (ciao.hello) (ciao.salut)))
-    => '(hello salut))
-
-  #t)
-
-
 (parametrise ((check-test-name	'export))
 
   (check

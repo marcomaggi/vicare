@@ -7916,7 +7916,7 @@ command line option @option{--strict-r6rs}.
 @cindex @clause{import}, conditionally importing libraries
 
 
-Local @func{import} forms are useful for the following reasons:
+Local @syntax{import} forms are useful for the following reasons:
 
 @enumerate
 @item
@@ -7940,7 +7940,7 @@ no longer used anywhere in the code (say when the code that uses it is
 deleted), it becomes very hard to delete the import without first
 examiniming the entire library body for potential usage leaks.  By
 locally importing a library into the appropriate scope, we gain the
-ability to delete the @func{import} form when the procedure that was
+ability to delete the @syntax{import} form when the procedure that was
 using it is deleted.
 
 
@@ -7958,9 +7958,9 @@ At library's top--level.
 In internal definitions context.
 @end enumerate
 
-The syntax of the local @func{import} form is similar to the
-@func{import} that appears at the top of a library or a script form, and
-carries with it the same restrictions:
+The syntax of the local @syntax{import} form is similar to the
+@clause{import} that appears at the top of a library or a script form,
+and carries with it the same restrictions:
 
 @itemize
 @item
@@ -7976,8 +7976,7 @@ Imported identifiers are immutable.
 
 Each @meta{import-spec} can be as defined by @rnrs{6} or a symbol
 representing the name of a module; notice that module import
-specifications can be only symbols, @strong{without} prefixes, renaming
-and the features allowed for libraries.
+specifications support all the renaming facilities.
 @end deffn
 
 
@@ -15329,7 +15328,7 @@ to objects that are meant to be compared with @func{eq?}.
 
 
 Loading of source files can be done explicitly or by requesting a
-library with the @func{import} form.  Here we see how to load files by
+library with the @syntax{import} form.  Here we see how to load files by
 specifying their pathname on the file system.
 
 
@@ -15356,26 +15355,40 @@ The format of the annotated source is the one which is comprehensible by
 
 
 Modules are somewhat like libraries in that they define a set of
-bindings in a ``private namespace''; bindings can be exported from a
-module and imported into other modules and libraries.  The main
-difference between modules and @rnrs{6} libraries is that modules are
-defined in a single form nested into a library; so, in a way, they are
-sub--libraries.
+syntactic bindings in a ``private namespace''; syntactic bindings can be
+exported from a module and imported into other modules and libraries.
+The main difference between modules and @rnrs{6} libraries is that
+modules are defined in a single form nested into a library; so, in a
+way, they are sub--libraries.
+
+@menu
+* iklib modules api::           Defining modules.
+* iklib modules examples::      Usage examples for modules.
+@end menu
+
+@c page
+@node iklib modules api
+@subsection Defining modules
+
+
+Modules are defined with the @syntax{module} syntax and named modules
+are imported in the local context with the @syntax{import} syntax.
 
 
 @deffn Syntax module @meta{interface} @meta{definition} ... @meta{expression} ...
 @deffnx Syntax module @meta{name} @meta{interface} @meta{definition} ... @meta{expression} ...
 Define a new local module.  The first form defines an @emph{anonymous}
 module, while the second form defines a @emph{named} module called
-@meta{name}, which must be a symbol.
+@meta{name}, which must be an identifier.
 
-@meta{interface} is a list of symbols selecting bindings from this
-module to be exported; every listed symbol must be bound in this
-module's @meta{definition}, otherwise an error is raised.
+@meta{interface} is a list of identifiers selecting syntactic bindings
+from this module to be exported; every listed identifier must be bound
+in this module's @meta{definition}, otherwise an error is raised.
 
-@meta{definition} is a set of bindings like the one that may appear at
-the beginning of a @func{let} body, with the addition of @func{import}
-forms that may import bindings from libraries and other modules.
+@meta{definition} is a set of syntactic binding definitions like the one
+that may appear at the beginning of a @func{let} body, with the addition
+of @syntax{import} forms that may import syntactic bindings from libraries
+and other modules.
 
 @meta{expression} is a set of expressions that is evaluated at module's
 definition time.
@@ -15387,17 +15400,28 @@ regions nesting hierarchy.
 
 Bindings in the @meta{interface} declared by anonymous modules are
 imported by default in the enclosing region: there is no need to use
-@func{import}.  Bindings in the @meta{interface} declared by named
-modules are visible only in regions that @func{import} the module.
-
-@meta{definition} and @meta{expression} have no default access to the
-bindings in the enclosing region; only imported bindings are visible
-from the module.
+@syntax{import}.  Bindings in the @meta{interface} declared by named
+modules are visible only in regions that @syntax{import} the module; all
+the renaming facilities of the @syntax{import} syntax are available for
+modules.
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node iklib modules examples
+@subsection Usage examples for modules
 
-@subsubheading Examples of anonymous modules
+
+@menu
+* iklib modules examples anonymous::  Anonymous modules examples.
+* iklib modules examples named::      Named modules examples.
+* iklib modules examples import::     Importing named modules examples.
+* iklib modules examples utilities::  Utilities examples.
+@end menu
+
+@c page
+@node iklib modules examples anonymous
+@subsubsection Anonymous modules examples
+
 
 The following example defines an anonymous module, without expressions,
 and invokes its functions from the enclosing region (which is the top
@@ -15527,9 +15551,9 @@ this happens both when the enclosing region is the top level and when
 the enclosing region is not the top level.  The same behaviour is shown
 by named modules.
 
-@c ------------------------------------------------------------
-
-@subsubheading Named modules
+@c page
+@node iklib modules examples named
+@subsubsection Named modules examples
 
 
 The following example defines a module named @code{blue} and invokes
@@ -15560,7 +15584,7 @@ The following example defines two modules named @code{green} and
 @example
 (import (vicare))
 
-(let ()
+(internal-body
 
   (module green (one two three)
     (define (one)       'green-one)
@@ -15576,7 +15600,7 @@ The following example defines two modules named @code{green} and
 
   (import green)
 
-  (let ()
+  (internal-body
     (import red)
     (fprintf (current-error-port)
              "calling red: ~s ~s ~s\n" (one) (two) (three)))
@@ -15591,7 +15615,7 @@ can import their bindings:
 @example
 (import (vicare))
 
-(let ()
+(internal-body
 
   (module green (one two)
     (define (one)       'one)
@@ -15615,7 +15639,7 @@ region:
 @example
 (import (vicare))
 
-(let ()
+(internal-body
 
   (module (one two)
     (define (one)       'one)
@@ -15638,7 +15662,7 @@ does not matter in determining visibility of bindings from
 @example
 (import (vicare))
 
-(let ()
+(internal-body
 
   (module red (f g)
     (define (f)         (cons 'f (one)))
@@ -15660,7 +15684,7 @@ from a @strong{named} module before its definition:
 @example
 (import (vicare))
 
-(let ()
+(internal-body
 
   (module red (f g)
     (import green) ;; error here!!!
@@ -15676,37 +15700,87 @@ from a @strong{named} module before its definition:
            "calling red: ~s ~s\n" (f) (g)))
 @end example
 
-@c ------------------------------------------------------------
+@c page
+@node iklib modules examples import
+@subsubsection Importing named modules examples
 
-@subsubheading Utilities examples
+
+Import a named module with prefix:
+
+@lisp
+(import (vicare))
+
+(module CIAO
+  (hello salut)
+  (define (hello) 'hello)
+  (define (salut) 'salut))
+
+(import (prefix CIAO ciao::))
+(ciao::hello)   @result{} hello
+(ciao::salut)   @result{} salut
+@end lisp
+
+Import a named module with prefix then deprefix:
+
+@lisp
+(import (vicare))
+
+(module CIAO
+  (hello salut)
+  (define (hello) 'hello)
+  (define (salut) 'salut))
+
+(import (deprefix (prefix CIAO hey-ciao::) hey-))
+(ciao::hello)   @result{} hello
+(ciao::salut)   @result{} salut
+@end lisp
+
+Import a named module with renaming:
+
+@lisp
+(import (vicare))
+
+(module CIAO
+  (hello salut)
+  (define (hello) 'hello)
+  (define (salut) 'salut))
+
+(import (rename CIAO
+                (hello  Hello)
+                (salut  Salut)))
+(Hello)         @result{} hello
+(Salut)         @result{} salut
+@end lisp
+
+@c page
+@node iklib modules examples utilities
+@subsubsection Utilities examples
 
 
 The following example shows how syntactic abstractions can be used to
 access definitions in a module without explicitly using the
-@func{import} form:
+@syntax{import} form:
 
 @example
 (import (vicare))
 
-(let ()
+(define-syntax in-module
+  (syntax-rules ()
+    ((_ ?module ?expr ...)
+     (internal-body (import ?module) ?expr ...))))
 
-  (define-syntax in-module
-    (syntax-rules ()
-      ((_ ?module ?expr ...)
-       (let () (import ?module) ?expr ...))))
+(module red (one two)
+  (define (one arg)   (cons 'red-one arg))
+  (define (two arg)   (cons 'red-two arg)))
 
-  (module red (one two)
-    (define (one arg)   (cons 'red-one arg))
-    (define (two arg)   (cons 'red-two arg)))
+(module green (one two)
+  (define (one arg)   (cons 'green-one arg))
+  (define (two arg)   (cons 'green-two arg)))
 
-  (module green (one two)
-    (define (one arg)   (cons 'green-one arg))
-    (define (two arg)   (cons 'green-two arg)))
-
-  (fprintf (current-error-port)
-           "calling ones: ~s ~s\n"
-           ((in-module red one)   123)
-           ((in-module green one) 456)))
+(fprintf (current-error-port)
+         "calling ones: ~s ~s\n"
+         ((in-module red one)   123)
+         ((in-module green one) 456))
 @end example
 
 @c page

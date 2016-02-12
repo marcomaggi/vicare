@@ -50,6 +50,7 @@
     keyword?
     gensym				gensym?
     vector-append			vector-exists
+    vector-fold-right
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print
