@@ -1100,7 +1100,8 @@
 	       (consumer-body.sexp	(if return-values?
 					    (cond (has-rest?
 						   `(apply values . ,validating-form*.sexp))
-						  ((null? (cdr validating-form*.sexp))
+						  ((and (pair? validating-form*.sexp)
+							(null? (cdr validating-form*.sexp)))
 						   (car validating-form*.sexp))
 						  (else
 						   `(values . ,validating-form*.sexp)))

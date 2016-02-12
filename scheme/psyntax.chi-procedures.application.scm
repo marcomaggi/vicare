@@ -56,14 +56,10 @@
      (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
 				    (cons ?nested-rator ?nested-rand*) ?rand*))
 
-    ((values ?rand)
-     (chi-expr ?rand lexenv.run lexenv.expand))
-
-    ((values ?rand ?rand* ...)
+    ((values . ?rand*)
      ;;A call to VALUES is special because  VALUES does not have a predefined retvals
      ;;signature, but the retvals signature equals the arguments' signature.
-     (%chi-values-application input-form.stx lexenv.run lexenv.expand
-			      (cons ?rand ?rand*)))
+     (%chi-values-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((apply ?rator ?rand* ...)
      (%chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -201,60 +197,74 @@
 
 
 (define (%chi-values-application input-form.stx lexenv.run lexenv.expand
-				 rand*.stx)
+				 rands.stx)
   ;;The input form has the syntax:
   ;;
   ;;   (values ?rand ...)
   ;;
-  ;;and RAND*.STX is the syntax object:
+  ;;and RANDS.STX is the syntax object:
   ;;
-  ;;   (#'?rand ...)
+  ;;   #'(?rand ...)
   ;;
   ;;A call  to VALUES is  special because VALUES does  not have a  predefined retvals
   ;;signature, but the retvals signature equals the operands' signature.
   ;;
-  (let* ((rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
-	 (rand*.core (map psi.core-expr rand*.psi))
-	 (rand*.sig  (map psi.retvals-signature rand*.psi))
-	 (rator.core (build-primref no-source 'values)))
-    (define application.sig
-      (let loop ((rand*.sig rand*.sig)
-		 (rand*.stx rand*.stx)
-		 (rand*.tag '()))
-	(if (pair? rand*.sig)
-	    ;;To be a valid VALUES argument an expression must have as signature:
-	    ;;
-	    ;;   (?tag)
-	    ;;
-	    ;;which means a single return value.   Here we allow "<list>", too, which
-	    ;;means we  accept an  argument having unknown  retval signature,  and we
-	    ;;will see what happens at run-time; we accept only "<list>", we reject a
-	    ;;signature if it is a standalone sub-tag of "<list>".
-	    ;;
-	    ;;NOTE  We could  reject "<list>"  as argument  signature and  demand the
-	    ;;caller  of VALUES  to cast  the arguments,  but it  would be  too much;
-	    ;;remember that  we still do  some signature validation even  when tagged
-	    ;;language support is off.  (Marco Maggi; Mon Mar 31, 2014)
-	    (syntax-match (type-signature-tags (car rand*.sig)) ()
-	      ((?tag)
-	       (loop (cdr rand*.sig) (cdr rand*.stx)
-		     (cons ?tag rand*.tag)))
-	      (?tag
-	       (list-tag-id? ?tag)
-	       (loop (cdr rand*.sig) (cdr rand*.stx)
-		     (cons (top-tag-id) rand*.tag)))
-	      (_
-	       (let ((expected-retvals-signature (make-type-signature/single-top)))
-		 (expand-time-retvals-signature-violation 'values
-		   input-form.stx (car rand*.stx)
-		   expected-retvals-signature
-		   (car rand*.sig)))))
-	  (make-type-signature (reverse rand*.tag)))))
-    (make-psi input-form.stx
-	      (build-application (syntax-annotation input-form.stx)
-		rator.core
-		rand*.core)
-	      application.sig)))
+  (syntax-match rands.stx ()
+    (()
+     (make-psi input-form.stx
+	       (build-application (syntax-annotation input-form.stx)
+		 (build-primref no-source 'values)
+		 '())
+	       (make-type-signature '())))
+
+    ((?rand)
+     (chi-expr ?rand lexenv.run lexenv.expand))
+
+    ((?rand ?rand* ...)
+     (let* ((rand*.stx  (cons ?rand ?rand*))
+	    (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
+	    (rand*.core (map psi.core-expr rand*.psi))
+	    (rand*.sig  (map psi.retvals-signature rand*.psi))
+	    (rator.core (build-primref no-source 'values)))
+       (define application.sig
+	 (let loop ((rand*.sig rand*.sig)
+		    (rand*.stx rand*.stx)
+		    (rand*.tag '()))
+	   (if (pair? rand*.sig)
+	       ;;To be a valid VALUES argument an expression must have as signature:
+	       ;;
+	       ;;   (?tag)
+	       ;;
+	       ;;which means  a single  return value.  Here  we allow  "<list>", too,
+	       ;;which means we  accept an argument having  unknown retval signature,
+	       ;;and we will  see what happens at run-time; we  accept only "<list>",
+	       ;;we reject a signature if it is a standalone sub-tag of "<list>".
+	       ;;
+	       ;;NOTE We could  reject "<list>" as argument signature  and demand the
+	       ;;caller of  VALUES to cast the  arguments, but it would  be too much;
+	       ;;remember that we still do some signature validation even when tagged
+	       ;;language support is off.  (Marco Maggi; Mon Mar 31, 2014)
+	       (syntax-match (type-signature-tags (car rand*.sig)) ()
+		 ((?tag)
+		  (loop (cdr rand*.sig) (cdr rand*.stx)
+			(cons ?tag rand*.tag)))
+		 (?tag
+		  (list-tag-id? ?tag)
+		  (loop (cdr rand*.sig) (cdr rand*.stx)
+			(cons (top-tag-id) rand*.tag)))
+		 (_
+		  (let ((expected-retvals-signature (make-type-signature/single-top)))
+		    (expand-time-retvals-signature-violation 'values
+		      input-form.stx (car rand*.stx)
+		      expected-retvals-signature
+		      (car rand*.sig)))))
+	     (make-type-signature (reverse rand*.tag)))))
+       (make-psi input-form.stx
+		 (build-application (syntax-annotation input-form.stx)
+		   rator.core
+		   rand*.core)
+		 application.sig)))
+    ))
 
 
 (module (%chi-apply-application)

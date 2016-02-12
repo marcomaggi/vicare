@@ -27,7 +27,7 @@
 (program (test-typed-language-syntaxes)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -48,17 +48,17 @@
     <list-of-numbers>		<vector-of-numbers>
     <list-of-strings>		<vector-of-strings>)
   (import (vicare)
-    (prefix (vicare expander) xp.))
-  (define-syntax <list-of-fixnums>	(xp.make-list-type-spec #'<fixnum>))
-  (define-syntax <list-of-flonums>	(xp.make-list-type-spec #'<flonum>))
-  (define-syntax <list-of-numbers>	(xp.make-list-type-spec #'<number>))
-  (define-syntax <list-of-reals>	(xp.make-list-type-spec #'<real>))
-  (define-syntax <list-of-strings>	(xp.make-list-type-spec #'<string>))
-  (define-syntax <vector-of-fixnums>	(xp.make-vector-type-spec #'<fixnum>))
-  (define-syntax <vector-of-flonums>	(xp.make-vector-type-spec #'<flonum>))
-  (define-syntax <vector-of-numbers>	(xp.make-vector-type-spec #'<number>))
-  (define-syntax <vector-of-reals>	(xp.make-vector-type-spec #'<real>))
-  (define-syntax <vector-of-strings>	(xp.make-vector-type-spec #'<string>))
+    (prefix (vicare expander) expander::))
+  (define-syntax <list-of-fixnums>	(expander::make-list-type-spec #'<fixnum>))
+  (define-syntax <list-of-flonums>	(expander::make-list-type-spec #'<flonum>))
+  (define-syntax <list-of-numbers>	(expander::make-list-type-spec #'<number>))
+  (define-syntax <list-of-reals>	(expander::make-list-type-spec #'<real>))
+  (define-syntax <list-of-strings>	(expander::make-list-type-spec #'<string>))
+  (define-syntax <vector-of-fixnums>	(expander::make-vector-type-spec #'<fixnum>))
+  (define-syntax <vector-of-flonums>	(expander::make-vector-type-spec #'<flonum>))
+  (define-syntax <vector-of-numbers>	(expander::make-vector-type-spec #'<number>))
+  (define-syntax <vector-of-reals>	(expander::make-vector-type-spec #'<real>))
+  (define-syntax <vector-of-strings>	(expander::make-vector-type-spec #'<string>))
   #| end of LIBRARY |# )
 
 (import (types-of-lists))
@@ -69,7 +69,7 @@
   (environment '(vicare) '(types-of-lists)))
 
 (define (%type-signature->sexp sig)
-  (syntax->datum (xp.type-signature-tags sig)))
+  (syntax->datum (expander::type-signature-tags sig)))
 
 (define-syntax check-expand-time-signature-violation
   (syntax-rules (=>)
@@ -78,10 +78,10 @@
 	 (try
 	     (eval (quote ?input-form) EVAL-ENVIRONMENT)
 	   (catch E
-	     ((xp.&expand-time-retvals-signature-violation)
+	     ((expander::&expand-time-retvals-signature-violation)
 	      #;(print-condition E)
-	      (values (%type-signature->sexp (xp.expand-time-retvals-signature-violation-expected-signature E))
-		      (%type-signature->sexp (xp.expand-time-retvals-signature-violation-returned-signature E))))
+	      (values (%type-signature->sexp (expander::expand-time-retvals-signature-violation-expected-signature E))
+		      (%type-signature->sexp (expander::expand-time-retvals-signature-violation-returned-signature E))))
 	     (else E)))
        => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
     ))
@@ -292,6 +292,12 @@
    (begin
      (assert-signature () (values))
      #t))
+
+  (check-for-true
+   (begin
+     (assert-signature-and-return () (values))
+     #t))
+
   (check-for-true
    (call-with-values
        (lambda ()
@@ -403,7 +409,7 @@
 
   (parametrise ((print-gensym #f))
     (begin-for-syntax
-      (xp.generate-descriptive-gensyms? #t))
+      (expander::generate-descriptive-gensyms? #t))
 
     (define (f)
       (values 1 2 3))
