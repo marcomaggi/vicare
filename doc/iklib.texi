@@ -15387,11 +15387,12 @@ in this module's @meta{definition}, otherwise an error is raised.
 
 @meta{definition} is a set of syntactic binding definitions like the one
 that may appear at the beginning of a @func{let} body, with the addition
-of @syntax{import} forms that may import syntactic bindings from libraries
-and other modules.
-
-@meta{expression} is a set of expressions that is evaluated at module's
-definition time.
+of @syntax{import} forms that may import syntactic bindings from
+libraries and other modules.  @meta{expression} is a set of expressions
+that is evaluated at module's definition time.  At run--time: the
+@meta{expression} forms are always evaluated right after the right-hand
+sides of the @meta{definition} forms and before everything that comes
+after the module definition.
 
 Modules ``exist'' only in the enclosing region, bindings exported from a
 module are not accessible outside of the enclosing region.  Modules can
@@ -15549,16 +15550,16 @@ the output is:
 
 @example
 before
-after
 module
+after
 library: 123
 program: 123
 @end example
 
 @noindent
 here the module's trailing expressions are evaluated @strong{after} all
-the library's definitions but @strong{before} the library's top--level
-trailing expressions.
+the module's definitions and before the following library's definitions
+and expressions.
 
 @c page
 @node iklib modules examples named

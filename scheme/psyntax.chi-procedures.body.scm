@@ -409,7 +409,7 @@
 	     ;;module, then recurse on the rest of the body.
 	     ;;
 	     (receive (rev-qdef* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** keyword*)
-		 (chi-internal-module body-form.stx lexenv.run lexenv.expand rev-qdef* mod** keyword* mix?)
+		 (chi-internal-module body-form.stx lexenv.run lexenv.expand rev-qdef* mod** keyword*)
 	       ;;Extend the rib with the syntactic bindings exported by the module.
 	       (vector-for-each (lambda (id lab)
 				  ;;This  call  will  raise   an  exception  if  it
@@ -774,8 +774,7 @@
 	    ))
 
   (define (chi-internal-module module-form.stx lexenv.run lexenv.expand
-			       rev-qdef* module-trailing-expression** kwd*
-			       mix-definitions-and-expressions?)
+			       rev-qdef* module-trailing-expression** kwd*)
     ;;Expand  the syntax  object  MODULE-FORM.STX which  represents  a core  language
     ;;MODULE syntax use.
     ;;
@@ -811,16 +810,16 @@
 	    ;;
 	    ;;is a syntax violation because the binding "a" cannot be redefined.
 	    ;;
-	    (let ((empty-export-spec*			'())
+	    (let ((mix-definitions-and-expressions?	#t)
+		  (empty-export-spec*			'())
 		  (redefine-bindings?			#f))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
 			 rev-qdef* module-trailing-expression** kwd* empty-export-spec*
 			 module-rib mix-definitions-and-expressions? redefine-bindings?))
-	  (when mix-definitions-and-expressions?
-	    ;;All of these top-level expression  become dummy definitions, so they go
-	    ;;into REV-QDEF*.
-	    (assert (null? leftover-body-expr*)))
+	  ;;All of  these top-level expression  become dummy definitions, so  they go
+	  ;;into REV-QDEF*.
+	  (assert (null? leftover-body-expr*))
 	  ;;The list  of exported  identifiers is  not only the  one from  the MODULE
 	  ;;argument, but  also the  one from  all the EXPORT  forms in  the MODULE's
 	  ;;body.

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -462,6 +462,11 @@
   (pointer from to))
 
 (module ()
+  (define ($iconv-destructor handle)
+    (let ((P ($iconv-pointer handle)))
+      (unless (pointer-null? P)
+	(capi.glibc-iconv-close P))))
+
   (set-rtd-destructor! (type-descriptor iconv) $iconv-destructor))
 
 (define (%struct-iconv-printer S port sub-printer)
@@ -472,11 +477,6 @@
   (%display " from-encoding=")	(%display (enum-set->list (iconv-from S)))
   (%display " to-encoding=")	(%display (enum-set->list (iconv-to   S)))
   (%display "]"))
-
-(define ($iconv-destructor handle)
-  (let ((P ($iconv-pointer handle)))
-    (unless (pointer-null? P)
-      (capi.glibc-iconv-close P))))
 
 (define (iconv-open from to)
   (define who 'iconv-open)

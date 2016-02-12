@@ -85,10 +85,6 @@
   (fields (mutable descriptor socket-descriptor set-socket-descriptor!)
 	  node service ai-family ai-socktype ai-flags ai-protocol))
 
-(module ()
-  (record-type-destructor-set! (record-type-descriptor :socket)
-			       socket-close))
-
 ;;; --------------------------------------------------------------------
 
 (define-constant DEFAULT-AI-FLAGS
@@ -244,6 +240,8 @@
 
 ;;;; done
 
-)
+(record-type-destructor-set! (record-type-descriptor :socket)
+			     socket-close)
+#| end of library |# )
 
 ;;; end of file
