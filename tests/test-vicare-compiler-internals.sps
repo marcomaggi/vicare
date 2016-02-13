@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -243,8 +243,15 @@
 		       (lex.a-rcd_0 (funcall (primref make-record-constructor-descriptor)
 				      lex.a-rtd_0 (constant #f)
 				      lex.a-constructor-protocol_0))
-		       (lex.a?_0 (funcall (primref record-predicate) lex.a-rtd_0))
-		       (lex.make-a_0 (funcall (primref record-constructor) lex.a-rcd_0)))
+		       (lex.a?_0 (lambda (lex.obj_0)
+				   (conditional (funcall (primref $struct?) lex.obj_0)
+				       (funcall (primref $record-and-rtd?) lex.obj_0
+						lex.a-rtd_0)
+				     (constant #f))))
+		       (lex.make-a_0 (lambda lex.args_0
+				       (funcall (primref apply)
+					 (funcall (primref $record-constructor) lex.a-rcd_0)
+					 lex.args_0))))
 	      (constant #!void)))
 
 ;;; --------------------------------------------------------------------
@@ -1577,14 +1584,21 @@
 			      (constant a) (constant #f) (constant #f)
 			      (constant #f) (constant #f) (constant #()))))
 	  (bind ((lex.a-constructor-protocol_0 (constant #f)))
-	    (bind ((lex.a-rcd_0 (funcall
-				    (primref make-record-constructor-descriptor)
+	    (bind ((lex.a-rcd_0 (funcall (primref make-record-constructor-descriptor)
 				  lex.a-rtd_0 (constant #f)
 				  lex.a-constructor-protocol_0)))
-	      (bind ((lex.a?_0 (funcall (primref record-predicate) lex.a-rtd_0)))
-		(bind ((lex.make-a_0 (funcall (primref record-constructor)
-				       lex.a-rcd_0)))
-		  (constant #!void)))))))
+	      (fix ((lex.a?_0 (lambda (lex.obj_0)
+				(conditional
+				    (funcall (primref $struct?) lex.obj_0)
+				    (funcall (primref $record-and-rtd?) lex.obj_0
+					     lex.a-rtd_0)
+				  (constant #f))))
+		    (lex.make-a_0 (lambda lex.args_0
+				    (funcall (primref apply)
+				      (funcall (primref $record-constructor)
+					lex.a-rcd_0)
+				      lex.args_0))))
+		(constant #!void))))))
 
   #t)
 
@@ -1788,16 +1802,21 @@
 			      (constant #f) (constant #f) (constant #()))))
 	  (bind ((lex.a-constructor-protocol_0 (constant #f)))
 	    (bind ((lex.a-rcd_0 (funcall (primref make-record-constructor-descriptor)
-				  (funcall (primref $symbol-value)
-				    (constant loc.a-rtd))
+				  (funcall (primref $symbol-value) (constant loc.a-rtd))
 				  (constant #f) (constant #f))))
-	      (bind ((lex.a?_0 (funcall (primref record-predicate)
-				 (funcall (primref $symbol-value)
-				   (constant loc.a-rtd)))))
-		(bind ((lex.make-a_0 (funcall (primref record-constructor)
-				       (funcall (primref $symbol-value)
-					 (constant loc.a-rcd)))))
-		  (constant #!void)))))))
+	      (fix ((lex.a?_0 (lambda (lex.obj_0)
+				(conditional
+				    (funcall (primref $struct?) lex.obj_0)
+				    (funcall (primref $record-and-rtd?) lex.obj_0
+					     (funcall (primref $symbol-value)
+					       (constant loc.a-rtd)))
+				  (constant #f))))
+		    (lex.make-a_0 (lambda lex.args_0
+				    (funcall (primref apply)
+				      (funcall (primref $record-constructor)
+					(funcall (primref $symbol-value) (constant loc.a-rcd)))
+				      lex.args_0))))
+		(constant #!void))))))
 
   #f)
 

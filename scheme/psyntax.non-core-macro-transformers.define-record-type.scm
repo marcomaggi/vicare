@@ -264,7 +264,7 @@
       ,@foo-predicate-definitions
       ;;Default constructor.
       (define/typed ((brace ,make-foo ,foo) . ,args.sym)
-	(apply ($record-constructor ,foo-rcd) ,args.sym))
+	(unsafe-cast ,foo (apply ($record-constructor ,foo-rcd) ,args.sym)))
       ;;Methods.
       ,@method-form*.sexp
       ;;When there are  no fields: this form  expands to "(module ())"  which is just
