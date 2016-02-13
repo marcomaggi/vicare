@@ -154,9 +154,6 @@
 	((make-qdef-defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
       make-qdef-standard-defun)))
 
-(define qdef-standard-defun-rtd
-  (record-type-descriptor <qdef-standard-defun>))
-
 ;;; --------------------------------------------------------------------
 ;;; typed function definition
 
@@ -174,9 +171,6 @@
 					       {signature-type.id identifier?} {signature clambda-signature?})
 	((make-qdef-defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
       make-qdef-typed-defun)))
-
-(define qdef-typed-defun-rtd
-  (record-type-descriptor <qdef-typed-defun>))
 
 
 ;;;; type definitions: qualified RHS multiple-clause function definition
@@ -224,9 +218,6 @@
 	((make-qdef-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
       make-qdef-standard-case-defun)))
 
-(define qdef-standard-case-defun-rtd
-  (record-type-descriptor <qdef-standard-case-defun>))
-
 ;;; --------------------------------------------------------------------
 ;;; typed function definition
 
@@ -247,9 +238,6 @@
 						    {signature-type.id identifier?} {signature clambda-signature?})
 	((make-qdef-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
       make-qdef-typed-case-defun)))
-
-(define qdef-typed-case-defun-rtd
-  (record-type-descriptor <qdef-typed-case-defun>))
 
 
 ;;;; type definitions: qualified RHS variable definition
@@ -285,9 +273,6 @@
 	((make-qdef-defvar input-form.stx lhs.id rhs.stx (top-tag-id))))
       make-qdef-standard-defvar)))
 
-(define qdef-standard-defvar-rtd
-  (record-type-descriptor <qdef-standard-defvar>))
-
 ;;; --------------------------------------------------------------------
 ;;; typed variable definition
 
@@ -303,9 +288,6 @@
       (define* (make-qdef-typed-defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
 	((make-qdef-defvar input-form.stx lhs.id rhs.stx lhs.type)))
       make-qdef-typed-defvar)))
-
-(define qdef-typed-defvar-rtd
-  (record-type-descriptor <qdef-typed-defvar>))
 
 
 ;;;; type definitions: qualified RHS top-level expression
@@ -330,9 +312,6 @@
       (define* (make-qdef-top-expr input-form.stx)
 	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-tag-id))))
       make-qdef-top-expr)))
-
-(define qdef-top-expr-rtd
-  (record-type-descriptor <qdef-top-expr>))
 
 
 ;;;; full QDEF expansion
@@ -365,15 +344,15 @@
     (while-not-expanding-application-first-subform
      (let ((rtd (record-rtd qdef)))
        (cond
-	((eq? rtd qdef-standard-defun-rtd)	(chi-defun/standard	qdef lexenv.run lexenv.expand))
-	((eq? rtd qdef-typed-defun-rtd)		(chi-defun/typed	qdef lexenv.run lexenv.expand))
-	((eq? rtd qdef-standard-defvar-rtd)	(chi-defvar/standard	qdef lexenv.run lexenv.expand))
-	((eq? rtd qdef-typed-defvar-rtd)	(chi-defvar/typed	qdef lexenv.run lexenv.expand))
-	((eq? rtd qdef-top-expr-rtd)		(if interaction?
-						    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
-						  (chi-top-expr qdef lexenv.run lexenv.expand)))
-	((eq? rtd qdef-standard-case-defun-rtd)	(chi-case-defun/standard qdef lexenv.run lexenv.expand))
-	((eq? rtd qdef-typed-case-defun-rtd)	(chi-case-defun/typed	 qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/standard	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-defun>))		(chi-defun/typed	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/standard	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-defvar>))		(chi-defvar/typed	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-top-expr>))		(if interaction?
+									    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
+									  (chi-top-expr qdef lexenv.run lexenv.expand)))
+	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/standard qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed	 qdef lexenv.run lexenv.expand))
 	(else
 	 (assertion-violation __who__ "invalid QDEF type" qdef))))))
 
