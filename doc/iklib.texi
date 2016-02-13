@@ -8753,7 +8753,7 @@ identifier @var{id}.
 @subsection Syntax clauses helpers
 
 
-When writing definition macros similar to @func{define-record-type} it
+When writing definition macros similar to @syntax{define-record-type} it
 is quite useful to include in the syntax ``clauses'' that optionally
 specify the behaviour of the defined thing.  A list of clauses is a
 syntax object with the format:
@@ -10620,7 +10620,7 @@ Reset to void all the fields of a structure.
 
 
 @menu
-* iklib records defs::          Defining record types.
+* iklib records defs::          Extensions to record type definitions.
 * iklib records predicates::    Record predicates.
 * iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
@@ -10631,7 +10631,7 @@ Reset to void all the fields of a structure.
 
 @c page
 @node iklib records defs
-@subsection Defining record types
+@subsection Extensions to record type definitions
 
 
 @deffn Syntax define-record-type @meta{name-spec} @meta{record-clause} @dots{}
@@ -10642,10 +10642,10 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} custom-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
+@deffnx {Auxiliary Syntax} define-type-descriptors
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
-@value{PRJNAME} extensions, when the selected language is not strict
-@rnrs{6}.
+@value{PRJNAME} extensions.
 
 When the selected language is non--strict @rnrs{6}: multiple
 @clause{fields} clauses are accepted and the field specifications
@@ -10673,6 +10673,7 @@ concatenated in the order in which they are given.  Example:
 * iklib records defs predicate::   The custom predicate.
 * iklib records defs printer::     The custom printer.
 * iklib records defs methods::     Record-type methods.
+* iklib records defs descriptors:: Defining type descriptors.
 @end menu
 
 @c page
@@ -11060,6 +11061,39 @@ and with dot notation (@pxref{types syntaxes methods, Dot notation}):
 (.a O)          @result{} 1
 (.a O 2)
 (.a O)          @result{} 2
+@end lisp
+
+@c page
+@node iklib records defs descriptors
+@subsubsection Defining type descriptors
+
+
+@cindex @syntax{define-type-descriptors}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(define-type-descriptors)
+@end lisp
+
+@noindent
+defines two additional syntactic bindings: one to access the
+record--type descriptor, the other to access the default constructor
+descriptor.
+
+The syntactic identifier bound to the record--type descriptor has name
+equal to the record--type name with @samp{-rtd} appended.  The syntactic
+identifier bound to the constructor descriptor has name equal to the
+record--type name with @samp{-rcd} appended.  Example:
+
+@lisp
+(define-record-type alpha
+  (define-type-descriptors))
+
+alpha-rtd       @result{} #<record-type-descriptor>
+alpha-rcd       @result{} #<record-constructor-descriptor>
 @end lisp
 
 @c page

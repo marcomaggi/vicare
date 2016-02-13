@@ -1990,9 +1990,10 @@ library.  Some details of the specification are explained in terms of
 the specification of the procedural layer.  @ref{stdlib records
 procedural layer, Procedural layer}
 
-The record--type--defining form @func{define-record-type} is a
+The record--type--defining form @syntax{define-record-type} is a
 definition and can appear anywhere any other @meta{definition} can
-appear.
+appear (for @value{PRJNAME}'s extensions to record type definitions see
+@pxref{iklib records defs, define-record-type}).
 
 
 @deffn Syntax define-record-type @meta{name-spec} @arbno{@meta{record-clause}}
@@ -2005,11 +2006,11 @@ appear.
 @c @deffnx {Auxiliary Syntax} opaque
 @c @deffnx {Auxiliary Syntax} nongenerative
 @c @deffnx {Auxiliary Syntax} parent-rtd
-A @func{define-record-type} form defines a record type along with
+A @syntax{define-record-type} form defines a record type along with
 associated constructor descriptor and constructor, predicate, field
-accessors, and field mutators.  The @func{define-record-type} form
+accessors, and field mutators.  The @syntax{define-record-type} form
 expands into a set of definitions in the environment where
-@func{define-record-type} appears; hence, it is possible to refer to the
+@syntax{define-record-type} appears; hence, it is possible to refer to the
 bindings (except for that of the record type itself) recursively.
 
 The @meta{name-spec} specifies the names of the record type,
@@ -2051,7 +2052,7 @@ is @func{make-frob}, and the predicate name is @func{frob?}.
 
 Each @meta{record-clause} must take one of the following forms; it is a
 syntax violation if multiple @meta{record-clause}s of the same kind
-appear in a @func{define-record-type} form.
+appear in a @syntax{define-record-type} form.
 @end deffn
 
 
@@ -2097,7 +2098,7 @@ The @samp{fields} clause may be absent; this is equivalent to an empty
 @deffn {Auxiliary Syntax} parent @meta{parent-name}
 Specifies that the record type is to have parent type
 @meta{parent-name}, where @meta{parent-name} is the @meta{record-name}
-of a record type previously defined using @func{define-record-type}.
+of a record type previously defined using @syntax{define-record-type}.
 The record--type definition associated with @meta{parent-name} must not
 be sealed.  If no @samp{parent} clause and no @samp{parent-rtd}
 (@ref{stdlib records procedural layer}) clause is present, the record
@@ -2107,7 +2108,7 @@ type is a base type.
 
 @deffn {Auxiliary Syntax} protocol @meta{expression}
 @meta{expression} is evaluated in the same environment as the
-@func{define-record-type} form, and must evaluate to a protocol
+@syntax{define-record-type} form, and must evaluate to a protocol
 appropriate for the record type being defined.
 
 The protocol is used to create a record--constructor descriptor as
@@ -2152,7 +2153,7 @@ condition is met, a single record type is generated for both
 definitions.
 
 In the absence of a @samp{nongenerative} clause, a new record type is
-generated every time a @func{define-record-type} form is evaluated:
+generated every time a @syntax{define-record-type} form is evaluated:
 
 @example
 (let ((f (lambda (x)
@@ -2183,7 +2184,7 @@ both a @samp{parent} and a @samp{parent-rtd} clause.
 @quotation
 @strong{Note} The syntactic layer is designed to allow record--instance
 sizes and field offsets to be determined at expand time, i.e., by a
-macro definition of @func{define-record-type}, as long as the parent (if
+macro definition of @syntax{define-record-type}, as long as the parent (if
 any) is known.  Implementations that take advantage of this may generate
 less efficient constructor, accessor, and mutator code when the
 @samp{parent-rtd} clause is used, since the type of the parent is
@@ -2192,11 +2193,11 @@ therefore be used instead when possible.
 @end quotation
 @end deffn
 
-All bindings created by @func{define-record-type} (for the record type,
+All bindings created by @syntax{define-record-type} (for the record type,
 the constructor, the predicate, the accessors, and the mutators) must
 have names that are pairwise distinct.
 
-The constructor created by a @func{define-record-type} form is a
+The constructor created by a @syntax{define-record-type} form is a
 procedure as follows:
 
 @itemize
@@ -2210,7 +2211,7 @@ object with the fields initialized to the corresponding arguments.
 If there is no @samp{parent} or @samp{parent-rtd} clause and a
 @samp{protocol} clause, the protocol expression must evaluate to a
 procedure that accepts a single argument.  The protocol procedure is
-called once during the evaluation of the @func{define-record-type} form
+called once during the evaluation of the @syntax{define-record-type} form
 with a procedure @var{p} as its argument.  It should return a procedure,
 which will become the constructor bound to @meta{constructor-name}.  The
 procedure @var{p} accepts as many arguments as there are fields, in the
@@ -2575,7 +2576,7 @@ be a procedure or @false{}.  If it is @false{}, a default @var{protocol}
 procedure is supplied.
 
 If @var{protocol} is a procedure, it is handled analogously to the
-protocol expression in a @func{define-record-type} form.
+protocol expression in a @syntax{define-record-type} form.
 
 If @var{rtd} is a base record type @var{parent-constructor-descriptor}
 must be @false{}.  In this case, @var{protocol} is called by

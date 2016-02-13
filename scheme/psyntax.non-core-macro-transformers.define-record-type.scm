@@ -61,8 +61,14 @@
 (define (%do-define-record input-form.stx namespec clause* synner)
   (define-values (foo make-foo foo?)
     (%parse-full-name-spec namespec))
-  (define foo-rtd			(%named-gensym/suffix foo "-rtd"))
-  (define foo-rcd			(%named-gensym/suffix foo "-rcd"))
+  (define define-type-descriptors?
+    (%get-define-type-descriptors clause* synner))
+  (define foo-rtd			(if define-type-descriptors?
+					    (identifier-append foo foo "-rtd")
+					  (%named-gensym/suffix foo "-rtd")))
+  (define foo-rcd			(if define-type-descriptors?
+					    (identifier-append foo foo "-rcd")
+					  (%named-gensym/suffix foo "-rcd")))
   (define foo-constructor-protocol	(%named-gensym/suffix foo "-constructor-protocol"))
   (define foo-custom-printer		(%named-gensym/suffix foo "-custom-printer"))
   (define-values
@@ -239,11 +245,12 @@
       ;;Parent record-constructor descriptor.
       ,@parent-rcd-definition
       ;;Record-type descriptor.
-      (define ,foo-rtd ,foo-rtd-code)
+      (define/typed (brace ,foo-rtd <record-type-descriptor>)
+	,foo-rtd-code)
       ;;Protocol function.
-      (define ,foo-constructor-protocol ,constructor-protocol-code)
+      (define/standard ,foo-constructor-protocol ,constructor-protocol-code)
       ;;Record-constructor descriptor.
-      (define ,foo-rcd ,foo-rcd-code)
+      (define/typed (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
       ;;Super-type record-constructor descriptor.
       ,@super-rcd-definition
       ;;Record destructor function.
@@ -327,7 +334,7 @@
 		    fields parent parent-rtd protocol sealed opaque nongenerative
 			   ;;These are the Vicare extensions.
 		    super-protocol destructor-protocol
-		    custom-printer custom-predicate
+		    custom-printer custom-predicate define-type-descriptors
 		    method case-method))
 	      (set! cached rv))))))
 
@@ -405,6 +412,15 @@
 
       (_
        (synner "invalid syntax in PROTOCOL clause" clause)))))
+
+(define (%get-define-type-descriptors clause* synner)
+  (let ((clause (%get-clause 'define-type-descriptors clause*)))
+    (syntax-match clause ()
+      ((_)	#t)
+      ;;No matching clause found.
+      (#f	#f)
+      (_
+       (synner "expected no argument in define-type-descriptors clause" clause)))))
 
 
 (define (%parse-field-specs type-id clause* synner)

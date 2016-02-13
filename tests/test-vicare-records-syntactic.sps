@@ -1873,6 +1873,19 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-type-descriptors))
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (define-type-descriptors))
+	(values (record-type-descriptor? alpha-rtd)
+		(record-constructor-descriptor? alpha-rcd)))
+    => #t #t)
+
+  (void))
+
+
 ;;;; done
 
 (collect 4)
