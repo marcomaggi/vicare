@@ -254,7 +254,7 @@
 				       (car (clambda-signature.clause-signature* (qdef-defun.signature qdef)))
 				       (qdef-defun.body* qdef))))
 	(make-psi input-form.stx
-		  (build-lambda (syntax-annotation input-form.stx)
+		  (build-lambda (identifier->symbol (qdef.lhs qdef))
 		      standard-formals.lex
 		    (psi.core-expr body.psi))
 		  (make-type-signature/single-value (qdef.type-id qdef))))))
