@@ -23,7 +23,7 @@
   (type-identifier?
    all-type-identifiers?
    type-identifier=?
-   type-identifier-super-and-sub?			type-identifier-super-and-sub?/matching
+   type-identifier-super-and-sub?
    type-identifier-is-procedure-sub-type?		type-identifier-is-procedure-or-procedure-sub-type?
    type-identifier-is-list-sub-type?			type-identifier-is-list-or-list-sub-type?
    type-identifier-is-vector-sub-type?			type-identifier-is-vector-or-vector-sub-type?
@@ -39,7 +39,7 @@
    syntax-object.type-signature?			syntax-object.type-signature.single-identifier?
    syntax-object.type-signature.fully-untyped?		syntax-object.type-signature.partially-untyped?
    syntax-object.type-signature.untyped?		syntax-object.type-signature.no-return?
-   syntax-object.type-signature.super-and-sub?		syntax-object.type-signature.super-and-sub?/matching
+   syntax-object.type-signature.super-and-sub?
    syntax-object.type-signature.common-ancestor
    syntax-object.type-signature.min-and-max-count
 
@@ -66,7 +66,7 @@
    type-signature=?
    type-signature.fully-untyped?			type-signature.partially-untyped?
    type-signature.untyped?
-   type-signature.super-and-sub?			type-signature.super-and-sub?/matching
+   type-signature.super-and-sub?
    type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?
    type-signature.min-count				type-signature.max-count
@@ -162,51 +162,6 @@
    ;;The arguments SUPER-TYPE.ID  and SUB-TYPE.ID must be  type identifiers according
    ;;to TYPE-IDENTIFIER?,  otherwise the behaviour  of this function  is unspecified.
    ;;Return true  if SUPER-TYPE.ID is  a super-type of SUB-TYPE.ID;  otherwise return
-   ;;false.
-   ;;
-   (cond ((~free-identifier=? super-type.id sub-type.id)
-	  #t)
-	 (($top-tag-id? super-type.id)
-	  #t)
-	 (($top-tag-id? sub-type.id)
-	  #f)
-	 ((procedure-tag-id? super-type.id)
-	  (or (predicate-tag-id? sub-type.id)
-	      (closure-type-spec? (id->object-type-specification __who__ input-form.stx sub-type.id lexenv))))
-	 (else
-	  (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv))
-		(sub-ots   (id->object-type-specification __who__ input-form.stx sub-type.id   lexenv)))
-	    (cond ((list-type-spec? super-ots)
-		   (and (list-type-spec? sub-ots)
-			(type-identifier-super-and-sub? (list-type-spec.type-id super-ots)
-							(list-type-spec.type-id sub-ots)
-							lexenv input-form.stx)))
-		  ((vector-type-spec? super-ots)
-		   (and (vector-type-spec? sub-ots)
-			(type-identifier-super-and-sub? (vector-type-spec.type-id super-ots)
-							(vector-type-spec.type-id sub-ots)
-							lexenv input-form.stx)))
-		  (else
-		   (let loop ((sub-ots sub-ots))
-		     (cond ((object-type-spec.parent-id sub-ots)
-			    => (lambda (parent.id)
-				 (if ($top-tag-id? parent.id)
-				     #f
-				   (let ((parent-ots (id->object-type-specification __who__ input-form.stx parent.id lexenv)))
-				     (or (eq? super-ots parent-ots)
-					 (loop parent-ots))))))
-			   (else #f))))))))))
-
-(case-define* type-identifier-super-and-sub?/matching
-  ((super-type.id sub-type.id)
-   (type-identifier-super-and-sub?/matching super-type.id sub-type.id (current-inferior-lexenv) #f))
-  ((super-type.id sub-type.id lexenv)
-   (type-identifier-super-and-sub?/matching super-type.id sub-type.id lexenv #f))
-  ((super-type.id sub-type.id lexenv input-form.stx)
-   ;;The arguments SUPER-TYPE.ID  and SUB-TYPE.ID must be  type identifiers according
-   ;;to TYPE-IDENTIFIER?,  otherwise the behaviour  of this function  is unspecified.
-   ;;Return true if  SUPER-TYPE.ID is a super-type of SUB-TYPE.ID  or an operand with
-   ;;type SUB-TYPE.ID matches  an argument with type  SUPER-TYPE.ID; otherwise return
    ;;false.
    ;;
    (cond ((~free-identifier=? super-type.id sub-type.id)
@@ -814,99 +769,6 @@
 	      ))))
      )))
 
-(case-define* syntax-object.type-signature.super-and-sub?/matching
-  ;;The  arguments   SUPER-SIGNATURE  and   SUB-SIGNATURE  must  be   syntax  objects
-  ;;representing   type   signatures  according   to   SYNTAX-OBJECT.TYPE-SIGNATURE?,
-  ;;otherwise the behaviour of this function is unspecified.
-  ;;
-  ;;Return true if: SUPER-SIGNATURE and  SUB-SIGNATURE have compatible structure; the
-  ;;type identifiers  from SUPER-SIGNATURE  match the corresponding  type identifiers
-  ;;from SUB-SIGNATURE.  Otherwise return false.
-  ;;
-  ;;This function can  be used to determine:
-  ;;
-  ;;*  If the  signature of  a tuple  of arguments  (SUB-SIGNATURE) matches  a LAMBDA
-  ;;argvals's signature (SUPER-SIGNATURE).
-  ;;
-  ;;*  If the  signature of  a  tuple or  return values  (SUB-SIGNATURE) matches  the
-  ;;receiver's signature (SUPER-SIGNATURE).
-  ;;
-  ((super-signature sub-signature)
-   (syntax-object.type-signature.super-and-sub?/matching super-signature sub-signature (current-inferior-lexenv)))
-  ((super-signature sub-signature lexenv)
-   (define-syntax-rule (recur ?super ?sub)
-     (syntax-object.type-signature.super-and-sub?/matching ?super ?sub lexenv))
-   (syntax-match super-signature (<top> <list>)
-     (()
-      (syntax-match sub-signature ()
-	;;Both the signatures are proper lists with the same number of items, and all
-	;;the items are correct super and sub: success!
-	(() #t)
-	;;The signatures do not match.
-	(_  #f)))
-
-     ((<top> . ?super-rest-types)
-      (syntax-match sub-signature ()
-	((?sub-type . ?sub-rest-types)
-	 (recur ?super-rest-types ?sub-rest-types))
-	(_ #f)))
-
-     ((?super-type . ?super-rest-types)
-      (syntax-match sub-signature ()
-	((?sub-type . ?sub-rest-types)
-	 (type-identifier-super-and-sub? ?super-type ?sub-type lexenv)
-	 (recur ?super-rest-types ?sub-rest-types))
-	(_ #f)))
-
-     (<list>
-      ;;The super signature is an improper list accepting any object as rest.
-      #t)
-
-     (?super-rest-type
-      (type-identifier-is-list-sub-type? ?super-rest-type lexenv)
-      (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
-	(or (top-tag-id?     item-id)
-	    (syntax-match sub-signature (<list>)
-	      ;;The super  signature is an improper  list with rest item  and the sub
-	      ;;signature is finished.  We want the following signatures to match:
-	      ;;
-	      ;;  super-signature == #'(<number>  <fixnum> . <list>)
-	      ;;  sub-signature   == #'(<complex> <fixnum>)
-	      ;;
-	      ;;because "<list>" in rest position means  any number of objects of any
-	      ;;type.
-	      (() #t)
-
-	      ;;The  super  signature  is  an  improper list  shorter  than  the  sub
-	      ;;signature.  We want the following signatures to match:
-	      ;;
-	      ;;  super-signature == #'(<number>  . <list-of-fixnums>)
-	      ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
-	      ;;
-	      ((?sub-type . ?sub-rest-types)
-	       (and (type-identifier-super-and-sub? item-id ?sub-type lexenv)
-		    (recur ?super-rest-type ?sub-rest-types)))
-
-	      (<list>
-	       ;;Both  the signatures  are improper  lists  with the  same number  of
-	       ;;items, and all the items are  correct super and sub.  The rest types
-	       ;;are mismatching.
-	       #f)
-
-	      ;;Both the signatures are improper lists with the same number of items,
-	      ;;and all the  items are correct super  and sub; if the  rest types are
-	      ;;proper super and  subs: success!  For example, we  want the following
-	      ;;signatures to match:
-	      ;;
-	      ;;  super-signature == #'(<string> <string> . <list-of-numbers>)
-	      ;;  sub-signature   == #'(<string> <string> . <list-of-fixnums>)
-	      ;;
-	      (?sub-rest-type
-	       (type-identifier-is-list-sub-type? ?sub-rest-type lexenv)
-	       (type-identifier-super-and-sub? ?super-rest-type ?sub-rest-type lexenv))
-	      ))))
-     )))
-
 ;;; --------------------------------------------------------------------
 
 (case-define syntax-object.type-signature.common-ancestor
@@ -1075,15 +937,6 @@
    (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
 						(type-signature-tags sub-signature)
 						lexenv)))
-
-(define* (type-signature.super-and-sub?/matching {super-signature type-signature?}
-						 {sub-signature   type-signature?})
-  ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE  have the same structure and the
-  ;;identifiers in the homologous position match each other as argument and operands;
-  ;;otherwise return false.
-  ;;
-  (syntax-object.type-signature.super-and-sub?/matching (type-signature-tags super-signature)
-							(type-signature-tags sub-signature)))
 
 (define* (type-signature.single-type? {signature type-signature?})
   ;;Return  true if  SIGNATURE represents  a  single return  value; otherwise  return

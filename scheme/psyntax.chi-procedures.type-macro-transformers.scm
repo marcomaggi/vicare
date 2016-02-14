@@ -1096,7 +1096,7 @@
 	      (expr.sig		(psi.retvals-signature expr.psi)))
 	 (define (%do-unsafe-cast-signature)
 	   (make-psi input-form.stx expr.core target.sig))
-	 (cond ((type-signature.super-and-sub? target.sig expr.sig)
+	 (cond ((type-signature.super-and-sub? target.sig expr.sig lexenv.run)
 		;;Good,  matching  type  signatures:   we  are  generalising  the  type
 		;;specification.  For example:
 		;;
