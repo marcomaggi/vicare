@@ -57,20 +57,40 @@
 	  (%filter-out-falses D)))
     '()))
 
+(define (%build-foo-for-id-generation foo strip-angular-parentheses?)
+  ;;It works like this:
+  ;;
+  ;;  (%build-foo-for-id-generation #'ciao #t)		=> #'ciao
+  ;;  (%build-foo-for-id-generation #'ciao #f)		=> #'ciao
+  ;;  (%build-foo-for-id-generation #'<ciao> #t)	=> #'ciao
+  ;;  (%build-foo-for-id-generation #'<ciao> #f)	=> #'<ciao>
+  ;;
+  (if strip-angular-parentheses?
+      (let* ((str     (symbol->string (identifier->symbol foo)))
+	     (str.len (string-length str)))
+	(if (and (fx>=? str.len 3)
+		 (char=? #\< (string-ref str 0))
+		 (char=? #\> (string-ref str (fxsub1 str.len))))
+	    (datum->syntax foo (string->symbol (substring str 1 (fxsub1 str.len))))
+	  str))
+    foo))
+
 
 (define (%do-define-record input-form.stx namespec clause* synner)
-  (define-values (foo make-foo foo?)
-    (%parse-full-name-spec namespec))
+  (define strip-angular-parentheses?
+    (%get-strip-angular-parentheses clause* synner))
+  (define-values (foo make-foo foo? foo-for-id-generation)
+    (%parse-full-name-spec namespec strip-angular-parentheses?))
   (define define-type-descriptors?
     (%get-define-type-descriptors clause* synner))
   (define foo-rtd			(if define-type-descriptors?
-					    (identifier-append foo foo "-rtd")
-					  (%named-gensym/suffix foo "-rtd")))
+					    (identifier-append foo foo-for-id-generation "-rtd")
+					  (%named-gensym/suffix foo-for-id-generation "-rtd")))
   (define foo-rcd			(if define-type-descriptors?
-					    (identifier-append foo foo "-rcd")
+					    (identifier-append foo foo-for-id-generation "-rcd")
 					  (%named-gensym/suffix foo "-rcd")))
-  (define foo-constructor-protocol	(%named-gensym/suffix foo "-constructor-protocol"))
-  (define foo-custom-printer		(%named-gensym/suffix foo "-custom-printer"))
+  (define foo-constructor-protocol	(%named-gensym/suffix foo-for-id-generation "-constructor-protocol"))
+  (define foo-custom-printer		(%named-gensym/suffix foo-for-id-generation "-custom-printer"))
   (define-values
     (field-name*.sym
 		;A list of symbols representing all the field names.
@@ -98,7 +118,7 @@
 		;A  vector to  be  used as  FIELDS argument  for  the core  primitive
 		;function MAKE-RECORD-TYPE-DESCRIPTOR.
      )
-    (%parse-field-specs foo clause* synner))
+    (%parse-field-specs foo foo-for-id-generation clause* synner))
 
   ;;Code  for  parent  record-type  descriptor  and  parent  record-type  constructor
   ;;descriptor retrieval.
@@ -216,7 +236,7 @@
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
-    (%parse-method-clauses clause* foo synner))
+    (%parse-method-clauses clause* foo foo-for-id-generation synner))
 
   ;;Null or  a symbolic  expression (to be  BLESSed later and  spliced in  the output
   ;;form) representing the Scheme definition of the methods retriever function.
@@ -334,7 +354,8 @@
 		    fields parent parent-rtd protocol sealed opaque nongenerative
 			   ;;These are the Vicare extensions.
 		    super-protocol destructor-protocol
-		    custom-printer custom-predicate define-type-descriptors
+		    custom-printer custom-predicate
+		    define-type-descriptors strip-angular-parentheses
 		    method case-method))
 	      (set! cached rv))))))
 
@@ -367,22 +388,24 @@
 	   `(,?key . ,?rest)
 	 (next id ?clause*))))))
 
-(define (%parse-full-name-spec spec)
+(define (%parse-full-name-spec spec strip-angular-parentheses?)
   ;;Given a syntax object representing  a full record-type name specification: return
-  ;;the 3 syntactic  identifiers: the type name, the constructor  name, the predicate
-  ;;name.
+  ;;the syntactic  identifiers: the  type name, the  constructor name,  the predicate
+  ;;name, the type name with stripped angular parentheses (if requested).
   ;;
   (syntax-match spec ()
     ((?foo ?make-foo ?foo?)
      (and (identifier? ?foo)
 	  (identifier? ?make-foo)
 	  (identifier? ?foo?))
-     (values ?foo ?make-foo ?foo?))
+     (values ?foo ?make-foo ?foo? (%build-foo-for-id-generation ?foo strip-angular-parentheses?)))
     (?foo
      (identifier? ?foo)
-     (values ?foo
-	     (identifier-append ?foo "make-" (syntax->datum ?foo))
-	     (identifier-append ?foo ?foo "?")))
+     (let ((foo-for-id-generation (%build-foo-for-id-generation ?foo strip-angular-parentheses?)))
+       (values ?foo
+	       (identifier-append ?foo "make-" (syntax->datum foo-for-id-generation))
+	       (identifier-append ?foo foo-for-id-generation "?")
+	       foo-for-id-generation)))
     ))
 
 (define (%get-uid foo clause* synner)
@@ -422,8 +445,17 @@
       (_
        (synner "expected no argument in define-type-descriptors clause" clause)))))
 
+(define (%get-strip-angular-parentheses clause* synner)
+  (let ((clause (%get-clause 'strip-angular-parentheses clause*)))
+    (syntax-match clause ()
+      ((_)	#t)
+      ;;No matching clause found.
+      (#f	#f)
+      (_
+       (synner "expected no argument in strip-angular-parentheses clause" clause)))))
+
 
-(define (%parse-field-specs type-id clause* synner)
+(define (%parse-field-specs type-id foo-for-id-generation clause* synner)
   ;;Given the definition  clauses CLAUSE* extract the FIELDS clauses  and parse them.
   ;;Return the following values:
   ;;
@@ -476,15 +508,15 @@
 	((_ . ?clauses)
 	 (loop ?clauses field-spec**)))))
   (define (%gen-safe-accessor-name field-name.id)
-    (identifier-append type-id type-id "-" field-name.id))
+    (identifier-append type-id foo-for-id-generation "-" field-name.id))
   (define (%gen-unsafe-accessor-name field-name.id)
-    (identifier-append type-id "$" type-id "-" field-name.id))
+    (identifier-append type-id "$" foo-for-id-generation "-" field-name.id))
   (define (%gen-safe-mutator-name field-name.id)
-    (identifier-append type-id type-id "-" field-name.id "-set!"))
+    (identifier-append type-id foo-for-id-generation "-" field-name.id "-set!"))
   (define (%gen-unsafe-mutator-name field-name.id)
-    (identifier-append type-id "$" type-id "-" field-name.id "-set!"))
+    (identifier-append type-id "$" foo-for-id-generation "-" field-name.id "-set!"))
   (define (%gen-safe-method-name field-name.id)
-    (identifier-append type-id type-id "-" field-name.id "-method"))
+    (identifier-append type-id foo-for-id-generation "-" field-name.id "-method"))
 
   (let loop ((fields-clause*			fields-clause*)
 	     (i					0)
@@ -591,13 +623,13 @@
        (synner "invalid field specification in DEFINE-RECORD-TYPE syntax" ?spec)))))
 
 
-(define (%parse-method-clauses clause* foo synner)
+(define (%parse-method-clauses clause* foo foo-for-id-generation synner)
   ;;Return two  values: a list  of symbols representing the  method names; a  list of
   ;;symbolic  expressions  (to  be  BLESSed later)  representing  expressions  which,
   ;;expanded and evaluated at run-time, define the method procedures.
   ;;
   (define-syntax-rule (recurse ?clause*)
-    (%parse-method-clauses ?clause* foo synner))
+    (%parse-method-clauses ?clause* foo foo-for-id-generation synner))
   (syntax-match clause* ()
     (()
      (values '() '() '()))
@@ -608,7 +640,7 @@
      (receive (method-name*.sym method-procname*.sym method-form*.sexp)
 	 (recurse ?clause*)
        (let* ((name.sym		(identifier->symbol ?who))
-	      (procname.sym	(%named-gensym/suffix foo (string-append "-" (symbol->string name.sym))))
+	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
 	      (form.sexp	`(define/typed (,procname.sym . ,?args) . ,?body)))
 	 (if (memq name.sym method-name*.sym)
 	     (synner "multiple method definitions with the same name" ?who)
@@ -623,7 +655,7 @@
      (receive (method-name*.sym method-procname*.sym method-form*.sexp)
 	 (recurse ?clause*)
        (let* ((name.sym		(identifier->symbol ?who))
-	      (procname.sym	(%named-gensym/suffix foo (string-append "-" (symbol->string name.sym))))
+	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
 	      (form.sexp	`(define/typed ((brace ,procname.sym ,?rv-tag0 . ,?rv-tag*) . ,?args) . ,?body)))
 	 (if (memq name.sym method-name*.sym)
 	     (synner "multiple method definitions with the same name" ?who)
@@ -643,7 +675,7 @@
      (receive (method-name*.sym method-procname*.sym method-form*.sexp)
 	 (recurse ?clause*)
        (let* ((name.sym		(identifier->symbol ?who))
-	      (procname.sym	(%named-gensym/suffix foo (string-append "-" (symbol->string name.sym))))
+	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
 	      (form.sexp	`(case-define ,procname.sym . ,?stuff)))
 	 (if (memq name.sym method-name*.sym)
 	     (synner "multiple method definitions with the same name" ?who)

@@ -10643,6 +10643,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} custom-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
 @deffnx {Auxiliary Syntax} define-type-descriptors
+@deffnx {Auxiliary Syntax} strip-angular-parentheses
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.  This syntax supports some
 @value{PRJNAME} extensions.
@@ -10674,6 +10675,7 @@ concatenated in the order in which they are given.  Example:
 * iklib records defs printer::     The custom printer.
 * iklib records defs methods::     Record-type methods.
 * iklib records defs descriptors:: Defining type descriptors.
+* iklib records defs angular::     Stripping angular parentheses.
 @end menu
 
 @c page
@@ -11094,6 +11096,81 @@ record--type name with @samp{-rcd} appended.  Example:
 
 alpha-rtd       @result{} #<record-type-descriptor>
 alpha-rcd       @result{} #<record-constructor-descriptor>
+@end lisp
+
+@c page
+@node iklib records defs angular
+@subsubsection Stripping angular parentheses
+
+
+@cindex @syntax{strip-angular-parentheses}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(strip-angular-parentheses)
+@end lisp
+
+@noindent
+causes angular parentheses to be stripped from the record--type name
+when automatically generating other syntactic identifiers related to the
+record--type.  With a standard definition we get:
+
+@lisp
+(define-record-type <alpha>)
+(<alpha>? (make-<alpha>))       @result{} #t
+@end lisp
+
+@noindent
+and using @clause{strip-angular-parentheses}:
+
+@lisp
+(define-record-type <alpha>
+  (strip-angular-parentheses))
+(alpha? (make-alpha))           @result{} #t
+@end lisp
+
+Similarly for field accessors and mutators, with a standard definitions:
+
+@lisp
+(define-record-type <alpha>
+  (strip-angular-parentheses)
+  (fields (mutable a)
+          (mutable b)
+          (mutable c)))
+
+(define O
+  (make-<alpha> 1 2 3))
+
+(<alpha>-a-set! O 10)
+(<alpha>-b-set! O 20)
+(<alpha>-c-set! O 30)
+(<alpha>-a O)   @result{} 10
+(<alpha>-b O)   @result{} 20
+(<alpha>-c O)   @result{} 30
+@end lisp
+
+@noindent
+and using @clause{strip-angular-parentheses}:
+
+@lisp
+(define-record-type <alpha>
+  (strip-angular-parentheses)
+  (fields (mutable a)
+          (mutable b)
+          (mutable c)))
+
+(define O
+  (make-alpha 1 2 3))
+
+(alpha-a-set! O 10)
+(alpha-b-set! O 20)
+(alpha-c-set! O 30)
+(alpha-a O)     @result{} 10
+(alpha-b O)     @result{} 20
+(alpha-c O)     @result{} 30
 @end lisp
 
 @c page

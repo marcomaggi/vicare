@@ -1886,6 +1886,82 @@
   (void))
 
 
+(parametrise ((check-test-name	'strip-angular-parentheses))
+
+  (check
+      (internal-body
+	(define-record-type <alpha>)
+	(<alpha>? (make-<alpha>)))
+    => #t)
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (strip-angular-parentheses))
+	(alpha? (make-alpha)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; immutable fields
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (fields a b c))
+	(let ((O (make-<alpha> 1 2 3)))
+	  (values (<alpha>-a O)
+		  (<alpha>-b O)
+		  (<alpha>-c O))))
+    => 1 2 3)
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (strip-angular-parentheses)
+	  (fields a b c))
+	(let ((O (make-alpha 1 2 3)))
+	  (values (alpha-a O)
+		  (alpha-b O)
+		  (alpha-c O))))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; mutable fields
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(let ((O (make-<alpha> 1 2 3)))
+	  (<alpha>-a-set! O 10)
+	  (<alpha>-b-set! O 20)
+	  (<alpha>-c-set! O 30)
+	  (values (<alpha>-a O)
+		  (<alpha>-b O)
+		  (<alpha>-c O))))
+    => 10 20 30)
+
+  (check
+      (internal-body
+	(define-record-type <alpha>
+	  (strip-angular-parentheses)
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(let ((O (make-alpha 1 2 3)))
+	  (alpha-a-set! O 10)
+	  (alpha-b-set! O 20)
+	  (alpha-c-set! O 30)
+	  (values (alpha-a O)
+		  (alpha-b O)
+		  (alpha-c O))))
+    => 10 20 30)
+
+  (void))
+
+
 ;;;; done
 
 (collect 4)
