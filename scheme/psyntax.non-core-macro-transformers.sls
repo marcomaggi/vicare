@@ -765,7 +765,7 @@
 			   ;;object.
 			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym (quote ,accessor.id)))
 			 (define/typed ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
-			   (unsafe-cast ,field-type.id (,internal-accessor.sym ,arg.sym)))))
+			   (unsafe-cast-signature (,field-type.id) (,internal-accessor.sym ,arg.sym)))))
 		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
 	   (bless
 	    `(module (,?name ,?constructor ,?predicate . ,?accessor*)
@@ -784,7 +784,7 @@
 	       ;;constructor: we should take into account the arguments needed by the
 	       ;;parent constructor.
 	       (define/typed ((brace ,?constructor ,?name) . ,arg.sym)
-	       	 (unsafe-cast ,?name (apply ,internal-constructor.sym ,arg.sym)))
+	       	 (unsafe-cast-signature (,?name) (apply ,internal-constructor.sym ,arg.sym)))
 	       ,@accessor-definition*.stx
 	       #| end of module |# )
 	    ))))

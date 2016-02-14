@@ -264,7 +264,7 @@
       ,@foo-predicate-definitions
       ;;Default constructor.
       (define/typed ((brace ,make-foo ,foo) . ,args.sym)
-	(unsafe-cast ,foo (apply ($record-constructor ,foo-rcd) ,args.sym)))
+	(unsafe-cast-signature (,foo) (apply ($record-constructor ,foo-rcd) ,args.sym)))
       ;;Methods.
       ,@method-form*.sexp
       ;;When there are  no fields: this form  expands to "(module ())"  which is just
@@ -705,7 +705,7 @@
 	  ;;The field at index  3 in the RTD is: the index of  the first field of this
 	  ;;subtype in the  layout of instances; it  is the total number  of fields of
 	  ;;the parent type.
-	  (unsafe-cast <non-negative-fixnum> ($struct-ref ,foo-rtd 3)))
+	  (unsafe-cast-signature (<non-negative-fixnum>) ($struct-ref ,foo-rtd 3)))
 
 	;;all fields indexes
 	,@(map (lambda (x idx)
@@ -974,9 +974,9 @@
 	   (internal-predicate.sym	(gensym (string-append "internal-predicate-" (identifier->string foo?)))))
        `((define/standard ,internal-predicate.sym
 	   (,?custom-predicate-expr (lambda/standard (,arg.sym)
-				      (unsafe-cast <boolean>
-						   (and ($struct? ,arg.sym)
-							($record-and-rtd? ,arg.sym ,foo-rtd))))))
+				      (unsafe-cast-signature (<boolean>)
+					(and ($struct? ,arg.sym)
+					     ($record-and-rtd? ,arg.sym ,foo-rtd))))))
 	 (define/typed ((brace ,foo? <boolean>) ,arg.sym)
 	   (,internal-predicate.sym ,arg.sym)))))
 
@@ -985,9 +985,9 @@
      ;;definitions representing the default record-type predicate definition.
      (let ((arg.sym (gensym "obj")))
        `((define/typed ((brace ,foo? <boolean>) ,arg.sym)
-	   (unsafe-cast <boolean>
-			(and ($struct? ,arg.sym)
-			     ($record-and-rtd? ,arg.sym ,foo-rtd)))))))
+	   (unsafe-cast-signature (<boolean>)
+	     (and ($struct? ,arg.sym)
+		  ($record-and-rtd? ,arg.sym ,foo-rtd)))))))
 
     (?invalid-clause
      (synner "invalid syntax in CUSTOM-PREDICATE clause" ?invalid-clause))))

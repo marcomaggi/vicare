@@ -911,10 +911,10 @@
 		  ;;One argument possibly matches one operand.  Good.
 		  (loop 'possible-match ?argvals.tags (cdr rand*.sig)))
 		 ((?rand.type)
-		  (cond ((type-identifier-super-and-sub?/matching ?argval.tag ?rand.type lexenv.run)
+		  (cond ((type-identifier-super-and-sub? ?argval.tag ?rand.type lexenv.run)
 			 ;;One argument matches one operand.  Good.
 			 (loop state ?argvals.tags (cdr rand*.sig)))
-			((type-identifier-super-and-sub?/matching ?rand.type ?argval.tag lexenv.run)
+			((type-identifier-super-and-sub? ?rand.type ?argval.tag lexenv.run)
 			 ;;One argument possibly matches one operand.  Good.
 			 ;;
 			 ;;This may happen when the operand is built by an expression
@@ -932,7 +932,7 @@
 		  ;;specified type.
 		  (let ((ots (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run)))
 		    (if (and (list-type-spec? ots)
-			     (type-identifier-super-and-sub?/matching ?argval.tag (list-type-spec.type-id ots) lexenv.run))
+			     (type-identifier-super-and-sub? ?argval.tag (list-type-spec.type-id ots) lexenv.run))
 			(loop 'possible-match ?argvals.tags (cdr rand*.sig))
 		      'no-match)))))
 	   ;;More arguments and no more operands.  Bad.
@@ -960,7 +960,7 @@
 		    ;;One argument possibly matches one operand.  Good.
 		    (%recursion 'possible-match))
 		   ((?rand.type)
-		    (if (type-identifier-super-and-sub?/matching argitem.tag ?rand.type lexenv.run)
+		    (if (type-identifier-super-and-sub? argitem.tag ?rand.type lexenv.run)
 			;;One argument matches one operand.  Good.
 			(%recursion state)
 		      'no-match))
@@ -972,7 +972,7 @@
 		    ;;specified type.
 		    (let* ((rand.ots      (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run))
 			   (randitem.tag  (list-type-spec.type-id rand.ots)))
-		      (if (type-identifier-super-and-sub?/matching argitem.tag randitem.tag lexenv.run)
+		      (if (type-identifier-super-and-sub? argitem.tag randitem.tag lexenv.run)
 			  (%recursion 'possible-match)
 			'no-match))))))
 	   ;;No more operands.  Good.

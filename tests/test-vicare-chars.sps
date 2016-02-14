@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -114,7 +114,7 @@
 
   (check
       (catch-procedure-argument-violation #f
-	(char->integer (unsafe-cast <top> 123)))
+	(char->integer (unsafe-cast-signature (<top>) 123)))
     => #t)
 
   #t)

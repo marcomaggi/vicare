@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -59,11 +59,11 @@
 ;;; methods
 
   (check
-      (fixnum? (.hash (unsafe-cast <top> 123)))
+      (fixnum? (.hash (unsafe-cast-signature (<top>) 123)))
     => #t)
 
   (check
-      (fixnum? (method-call-late-binding 'hash (unsafe-cast <top> 123)))
+      (fixnum? (method-call-late-binding 'hash (unsafe-cast-signature (<top>) 123)))
     => #t)
 
   #t)
@@ -129,7 +129,7 @@
     #'<list>)
 
   (check
-      (let (({f <procedure>} (unsafe-cast <procedure> (lambda (x) x))))
+      (let (({f <procedure>} (unsafe-cast-signature (<procedure>) (lambda (x) x))))
 	(xp.type-signature-tags (type-of f)))
     (=> syntax=?)
     (list #'<procedure>))
@@ -141,20 +141,23 @@
   (check-for-false	(type-super-and-sub? <predicate> <procedure>))
 
   (check
-      (xp.type-signature-tags (type-of (unsafe-cast <predicate> (read))))
+      (xp.type-signature-tags (type-of (unsafe-cast-signature (<predicate>) (read))))
     (=> syntax=?)
     (list #'<predicate>))
 
   (check
-      (xp.type-signature-tags (type-of ((unsafe-cast <predicate> (read)) 123)))
+      (xp.type-signature-tags (type-of ((unsafe-cast-signature (<predicate>) (read)) 123)))
     (=> syntax=?)
     (list #'<boolean>))
 
-  (check
-      (let (({f <predicate>} (unsafe-cast <predicate> (lambda (x) x))))
-	(xp.type-signature-tags (type-of f)))
-    (=> syntax=?)
-    (list #'<predicate>))
+  ;;FIXME This test  is commented out because handling of  procedure types must still
+  ;;be developed to make sense.  (Marco Maggi; Sun Feb 14, 2016)
+  ;;
+  ;; (check
+  ;;     (let (({f <predicate>} (unsafe-cast-signature (<predicate>) (lambda (x) x))))
+  ;; 	(xp.type-signature-tags (type-of f)))
+  ;;   (=> syntax=?)
+  ;;   (list #'<predicate>))
 
   #t)
 

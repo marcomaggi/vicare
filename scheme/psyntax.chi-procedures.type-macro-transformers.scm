@@ -26,7 +26,7 @@
 	 slot-ref-transformer
 	 slot-set!-transformer
 	 method-call-transformer
-	 unsafe-cast-transformer
+	 unsafe-cast-signature-transformer
 	 case-type-transformer
 	 validate-typed-procedure-argument-transformer
 	 validate-typed-return-value-transformer
@@ -700,80 +700,6 @@
   #| end of module |# )
 
 
-;;;; module core-macro-transformer: UNSAFE-CAST
-
-(define-core-transformer (unsafe-cast input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used to  expand  Vicare's  UNSAFE-CAST syntaxes  from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?target-type ?expr)
-     (let* ((expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core    (psi.core-expr expr.psi))
-	    (expr.sig     (psi.retvals-signature expr.psi)))
-       (define (%do-unsafe-cast)
-	 (make-psi input-form.stx expr.core (make-type-signature/single-value ?target-type)))
-       (define (%error-incompatible-types)
-	 (raise
-	  (condition (make-who-condition __who__)
-		     (make-message-condition "expression type is incompatible with the requested tag")
-		     (make-syntax-violation input-form.stx ?expr)
-		     (make-irritants-condition (list expr.sig)))))
-       (syntax-match (type-signature-tags expr.sig) ()
-	 ((?source-type)
-	  (cond ((top-tag-id? ?target-type)
-		 ;;Casting to "<top>" means that we  do not want the receiver to have
-		 ;;access to the type.  This is useful to avoid leaking types defined
-		 ;;in the local lexical context.
-		 (%do-unsafe-cast))
-		((top-tag-id? ?source-type)
-		 ;;The expression has "<top>" as  single-value type: cast the type to
-		 ;;the target one.  This is a true *unsafe* operation.
-		 (%do-unsafe-cast))
-		((type-identifier-is-procedure-or-procedure-sub-type? ?source-type)
-		 ;;With procedure types we trust the programmer.
-		 ;;
-		 ;;FIXME We can  do better here by comparing the  signatures.  (Marco Maggi;
-		 ;;Fri Oct 23, 2015)
-		 (if (type-identifier-is-procedure-or-procedure-sub-type? ?target-type)
-		     (%do-unsafe-cast)
-		   (%error-incompatible-types)))
-		((type-identifier-super-and-sub? ?target-type ?source-type lexenv.run input-form.stx)
-		 ;;The expression's type  is a subtype of the target  type: the types
-		 ;;are compatible.  Fine.  We still cast  the type: this is useful to
-		 ;;avoid leaking types defined in the local lexical context.
-		 (%do-unsafe-cast))
-		(else
-		 (%error-incompatible-types))))
-
-	 (?source-type
-	  (list-tag-id? ?source-type)
-	  ;;The expression return values are fully unspecified.
-	  (%do-unsafe-cast))
-
-	 (?source-type
-	  (or (type-identifier-is-list-sub-type?   ?source-type)
-	      (type-identifier-is-vector-sub-type? ?source-type))
-	  (if (type-identifier-super-and-sub? ?target-type ?source-type lexenv.run input-form.stx)
-	      ;;The expression's type is a subtype  of the target type: the types are
-	      ;;compatible.  Fine.  We  still cast the type: this is  useful to avoid
-	      ;;leaking types defined in the local lexical context.
-	      (%do-unsafe-cast)
-	    (%error-incompatible-types)))
-
-	 (_
-	  ;;We have determined at expand-time  that the expression returns multiple
-	  ;;values.
-	  (raise
-	   (condition (make-who-condition __who__)
-		      (make-message-condition "subject expression of unsafe cast returns multiple values")
-		      (make-syntax-violation input-form.stx ?expr)
-		      (make-irritants-condition (list expr.sig)))))
-	 )))
-    ))
-
-
 ;;;; module core-macro-transformer: CASE-TYPE
 
 (define-core-transformer (case-type input-form.stx lexenv.run lexenv.expand)
@@ -942,7 +868,7 @@
 	      ((top-tag-id?     expr.id)
 	       (%run-time-validation who input-form.stx lexenv.run lexenv.expand
 				     asrt.tags expr.psi return-values?))
-	      ((type-identifier-super-and-sub?/matching asrt.id expr.id lexenv.run input-form.stx)
+	      ((type-identifier-super-and-sub? asrt.id expr.id lexenv.run input-form.stx)
 	       ;;Success!!!  The signatures do match.
 	       (%just-evaluate-the-expression expr.psi return-values?))
 	      (else
@@ -953,7 +879,7 @@
 	   (type-identifier-is-list-sub-type? asrt.tags)
 	   (type-identifier-is-list-sub-type? expr.tags))
       ;;The case of multiple return values with the same type.
-      (if (type-identifier-super-and-sub?/matching asrt.tags expr.tags lexenv.run input-form.stx)
+      (if (type-identifier-super-and-sub? asrt.tags expr.tags lexenv.run input-form.stx)
 	  ;;Success!!!  We have determined at expand-time that the signatures match.
 	  (%just-evaluate-the-expression expr.psi return-values?)
 	(%error-mismatching-signatures)))
@@ -964,7 +890,7 @@
       ;;and the assertion expects zero values.  We just evaluate the expression.
       (%just-evaluate-the-expression expr.psi return-values?))
 
-     ((syntax-object.type-signature.super-and-sub?/matching asrt.tags expr.tags lexenv.run)
+     ((syntax-object.type-signature.super-and-sub? asrt.tags expr.tags lexenv.run)
       (%just-evaluate-the-expression expr.psi return-values?))
 
      (else
@@ -1150,6 +1076,56 @@
     #| end of module: %RUN-TIME-VALIDATION |# )
 
   #| end of module: ASSERT-SIGNATURE-TRANSFORMER |# )
+
+
+;;;; module core-macro-transformer: UNSAFE-CAST-SIGNATURE
+
+(define-core-transformer (unsafe-cast-signature input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used to  expand  Vicare's  UNSAFE-CAST-SIGNATURE syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?target-signature ?expr)
+     (begin
+       (unless (syntax-object.type-signature? ?target-signature lexenv.run)
+	 (syntax-violation __who__ "invalid type signature" input-form.stx ?target-signature))
+       (let* ((target.sig	(make-type-signature ?target-signature))
+	      (expr.psi		(chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.core	(psi.core-expr expr.psi))
+	      (expr.sig		(psi.retvals-signature expr.psi)))
+	 (define (%do-unsafe-cast-signature)
+	   (make-psi input-form.stx expr.core target.sig))
+	 (cond ((type-signature.super-and-sub? target.sig expr.sig)
+		;;Good,  matching  type  signatures:   we  are  generalising  the  type
+		;;specification.  For example:
+		;;
+		;;   (unsafe-cast-signature (<number>) 123)
+		;;
+		;;which generalises from "<fixnum>" to "<number>".
+		(%do-unsafe-cast-signature))
+	       ((type-signature.super-and-sub? expr.sig target.sig)
+		;;Good,   non-matching  but   compatible   type   signatures:  we   are
+		;;specialising the type specification.  For example:
+		;;
+		;;   (define ({fun <number>})
+		;;     123)
+		;;   (unsafe-cast-signature (<fixnum>) (fun))
+		;;
+		;;which specialises from "<number>" to "<fixnum>".
+		(%do-unsafe-cast-signature))
+	       (else
+		;;Bad, non-matching and incompatible signatures.  For example:
+		;;
+		;;   (unsafe-cast-signature (<fixnum>) "ciao")
+		;;
+		(raise
+		 (condition (make-who-condition __who__)
+			    (make-message-condition "source expression's signature is incompatible with the requested target signature")
+			    (make-syntax-violation input-form.stx ?expr)
+			    (make-irritants-condition (list expr.sig))))))
+	 )))
+    ))
 
 
 ;;;; module core-macro-transformer: TYPE-OF

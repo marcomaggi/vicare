@@ -1064,14 +1064,17 @@
 	  (type-signature.memoised-untyped?-set! signature bool))
       obj)))
 
-(define* (type-signature.super-and-sub? {super-signature type-signature?}
-					{sub-signature   type-signature?})
-  ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE  have the same structure and the
-  ;;identifiers in  the homologous  position are  super-type and  sub-type; otherwise
-  ;;return false.
-  ;;
-  (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
-					       (type-signature-tags sub-signature)))
+(case-define* type-signature.super-and-sub?
+  ((super-signature sub-signature)
+   (type-signature.super-and-sub? super-signature sub-signature (current-inferior-lexenv)))
+  (({super-signature type-signature?} {sub-signature type-signature?} lexenv)
+   ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE have the same structure and the
+   ;;identifiers in  the homologous position  are super-type and  sub-type; otherwise
+   ;;return false.
+   ;;
+   (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
+						(type-signature-tags sub-signature)
+						lexenv)))
 
 (define* (type-signature.super-and-sub?/matching {super-signature type-signature?}
 						 {sub-signature   type-signature?})

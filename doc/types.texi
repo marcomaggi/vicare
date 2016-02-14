@@ -692,65 +692,60 @@ might write:
 and everything is all right, but we are not specifying that the return
 value is a fixnum.
 
-In these corner cases, we can use the syntax @syntax{unsafe-cast}: at
-expand--time, it tags an expression as returning a single value of the
-declared type.  So, in the above example, we could write:
+In these corner cases, we can use the syntax
+@syntax{unsafe-cast-signature}: at expand--time, it tags an expression
+as returning values of a specified type signature.  So, in the above
+example, we could write:
 
 @lisp
-(unsafe-cast <fixnum>
+(unsafe-cast-signature (<fixnum>)
   ($vector-ref @meta{expr} 1))
 @end lisp
 
-We can easily check how @syntax{unsafe-cast} works at the @repl{}:
+We can easily check how @syntax{unsafe-cast-signature} works at the @repl{}:
 
 @example
-vicare> (unsafe-cast <fixnum> 123)
+vicare> (unsafe-cast-signature (<fixnum>) 123)
 $1 = 123
-vicare> (expansion-of (unsafe-cast <fixnum> 123))
+vicare> (expansion-of (unsafe-cast-signature (<fixnum>) 123))
 $1 = '123
-vicare> (type-of (unsafe-cast <fixnum> 123))
-$1 = (struct <retvals-signature>
-       (tags (#<syntactic-identifier expr=<fixnum> mark*=(src)>)))
+vicare> (type-of (unsafe-cast-signature (<fixnum>) 123))
+$1 = (<type-signature> (#[id <fixnum>]))
 @end example
 
 @noindent
 for a truly untyped expression:
 
 @example
-vicare> (expansion-of (unsafe-cast <fixnum> (read)))
+vicare> (expansion-of (unsafe-cast-signature (<fixnum>) (read)))
 $1 = ((primitive read))
-vicare> (type-of (unsafe-cast <fixnum> (read)))
-$1 = (struct <retvals-signature>
-       (tags (#<syntactic-identifier expr=<fixnum> mark*=(src)>)))
+vicare> (type-of (unsafe-cast-signature (<fixnum>) (read)))
+$1 = (<type-signature> (#[id <fixnum>]))
 @end example
 
 @noindent
-if the type is wrong, and we know it at expand--time:
+if the type is incompatible, and we know it at expand--time:
 
-@example
-vicare> (unsafe-cast <fixnum> "ciao")
+@smallexample
+vicare> (unsafe-cast-signature (<fixnum>) "ciao")
 Unhandled exception
  Condition components:
-   1. &who: unsafe-cast
+   1. &who: unsafe-cast-signature
    2. &message: "expression type is incompatible with the requested tag"
    3. &syntax:
-       form: #<syntax expr=(unsafe-cast <fixnum> "ciao") mark*=(src)>
+       form: #<syntax expr=(unsafe-cast-signature (<fixnum>) "ciao")>
        subform: #<syntax expr="ciao" mark*=(src)>
-   4. &irritants: ((struct <retvals-signature>
-   (tags (#<syntactic-identifier expr=<string> mark*=(src)>))))
-@end example
+   4. &irritants: ((<type-signature> (#[id <string>])))
+@end smallexample
 
 The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
-@deffn Syntax unsafe-cast @meta{type} @meta{expr}
-Expand to the @meta{expr} expression itself, but, in the expander, tags
-the expression as returning a single value of type @meta{type}.
-
-If it is possible to determine at expand--time the type of the
-@meta{expr}: this syntax checks the compatibility of the type with the
-given @meta{type}.
+@deffn Syntax unsafe-cast-signature @meta{signature} @meta{expr}
+Expand to the @meta{expr} expression itself, but, in the expander, tag
+the expression as returning a tuple of values with type signature
+@meta{signature}.
 @end deffn
 
 @c page

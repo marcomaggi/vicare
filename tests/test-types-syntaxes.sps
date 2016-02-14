@@ -398,7 +398,7 @@
 
   (check
       (expansion-of
-       (assert-signature-and-return (<fixnum>) (unsafe-cast <fixnum> (read))))
+       (assert-signature-and-return (<fixnum>) (unsafe-cast-signature (<fixnum>) (read))))
     => '((primitive read)))
 
   (when #f
