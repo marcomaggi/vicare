@@ -62,8 +62,10 @@
     syntax-null?
     syntax-pair?			syntax-list?
     syntax-car				syntax-cdr
-    syntax->list
+    syntax->list			identifiers->list
+    all-identifiers?
     syntax-vector?			syntax-vector->list
+    syntax->vector
     syntax-unwrap
 
     parse-logic-predicate-syntax
@@ -302,6 +304,7 @@
     free-identifier=?			~free-identifier=?
     identifier-bound?			~identifier-bound?
     identifier->symbol
+    identifier->string			string->identifier
     syntax-parameter-value
 
     ;; core type identifiers
@@ -2451,6 +2454,12 @@
 	(reader-annotation-stripped expr)
       expr)))
 
+(define* (identifier->string {id identifier?})
+  (symbol->string (syntax->datum id)))
+
+(define* (string->identifier {ctx identifier?} {str string?})
+  (datum->syntax ctx (string->symbol str)))
+
 
 ;;;; current inferior lexenv
 ;;
@@ -2583,7 +2592,8 @@
 				       ((identifier? x)
 					(symbol->string (syntax->datum x)))
 				       (else
-					(assertion-violation __who__ "BUG" ctxt str*))))
+					(assertion-violation __who__
+					  "expected string, symbol or identifier as item argument" x))))
 			    str*)))))
 
 

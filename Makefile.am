@@ -446,7 +446,6 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.structs.sls					\
 	scheme/ikarus.symbol-table.sls					\
 	scheme/ikarus.symbols.sls					\
-	scheme/ikarus.syntax-utilities.sls				\
 	scheme/ikarus.time-and-date.sls					\
 	scheme/ikarus.timer.sls						\
 	scheme/ikarus.string-bytevector-conversion.sls			\
@@ -468,6 +467,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.lexical-environment.syntax-match.scm		\
 	scheme/psyntax.lexical-environment.syntax-utilities.scm		\
 	scheme/psyntax.lexical-environment.type-identifiers-and-signatures.scm	\
+	scheme/psyntax.syntax-utilities.sls				\
 	scheme/psyntax.syntactic-binding-properties.sls			\
 	scheme/psyntax.library-collectors.sls				\
 	scheme/psyntax.import-spec-parser.sls				\

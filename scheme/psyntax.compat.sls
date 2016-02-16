@@ -50,25 +50,25 @@
     keyword?
     gensym				gensym?
     vector-append			vector-exists
-    vector-fold-right
+    vector-fold-right			vector-for-all
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print
     print-gensym			print-graph
     pretty-width
     void				void-object?
-    port-id
-    console-error-port			all-identifiers?
-    string-empty?			syntax=?
+    port-id				format
+    console-error-port
+    string-empty?
     ratnum?				bignum?
     compnum?				cflonum?
     fx=
     fxadd1				fxsub1
-    fxnonnegative?
+    fxnonnegative?			non-negative-fixnum?
     flzero?/positive			flzero?/negative
     uuid
     standalone-pair?			exact-compnum?
-    identifier->string
+    procedure-arguments-consistency-violation
 
     ;; compiler related operations
     compiler::eval-core			compiler::core-expr->optimized-code

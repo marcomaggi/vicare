@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: utility functions for macro-writing
@@ -8,31 +7,29 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 #!vicare
-(library (ikarus.syntax-utilities)
+(library (psyntax.syntax-utilities)
   (export
 
     ;; identifier processing: generic functions
     identifier-prefix		identifier-suffix
-    identifier-append		identifier-format
-    identifier->string		string->identifier
+    identifier-format
 
     duplicate-identifiers?	delete-duplicate-identifiers
     identifier-memq
@@ -48,11 +45,6 @@
     identifier-struct-predicate
     identifier-struct-field-accessor
     identifier-struct-field-mutator
-
-    ;; pairs processing
-    syntax-car			syntax-cdr
-    syntax->list		identifiers->list
-    all-identifiers?
 
     ;; vectors processing
     syntax->vector
@@ -95,73 +87,14 @@
     syntax-clauses-single-spec
     syntax-clauses-validate-specs
     syntax-clauses-fold-specs)
-  (import (except (vicare)
-		  ;; identifier processing: generic functions
-		  identifier-prefix		identifier-suffix
-		  identifier-append		identifier-format
-		  identifier->string		string->identifier
-
-		  duplicate-identifiers?	delete-duplicate-identifiers
-		  identifier-memq
-
-		  ;; identifier processing: records API
-		  identifier-record-constructor
-		  identifier-record-predicate
-		  identifier-record-field-accessor
-		  identifier-record-field-mutator
-
-		  ;; identifier processing: structs API
-		  identifier-struct-constructor
-		  identifier-struct-predicate
-		  identifier-struct-field-accessor
-		  identifier-struct-field-mutator
-
-		  ;; pairs processing
-		  syntax-car			syntax-cdr
-		  syntax->list			identifiers->list
-		  all-identifiers?
-
-		  ;; vectors processing
-		  syntax->vector
-
-		  ;; unwrapping
-		  syntax-unwrap
-
-		  ;; comparison
-		  syntax=?
-		  identifier=symbol?
-
-		  ;; inspection
-		  #;quoted-syntax-object?
-
-		  ;; clauses helpers
-		  syntax-clauses-unwrap
-		  syntax-clauses-filter
-		  syntax-clauses-remove
-		  syntax-clauses-partition
-		  syntax-clauses-collapse
-		  syntax-clauses-verify-at-least-once
-		  syntax-clauses-verify-at-most-once
-		  syntax-clauses-verify-exactly-once
-		  syntax-clauses-verify-mutually-inclusive
-		  syntax-clauses-verify-mutually-exclusive
-
-		  ;; clause specification structs
-		  make-syntax-clause-spec
-		  syntax-clause-spec?
-		  syntax-clause-spec-keyword
-		  syntax-clause-spec-min-number-of-occurrences
-		  syntax-clause-spec-max-number-of-occurrences
-		  syntax-clause-spec-min-number-of-arguments
-		  syntax-clause-spec-max-number-of-arguments
-		  syntax-clause-spec-mutually-inclusive
-		  syntax-clause-spec-mutually-exclusive
-		  syntax-clause-spec-custom-data
-		  syntax-clauses-single-spec
-		  syntax-clauses-validate-specs
-		  syntax-clauses-fold-specs)
-    (only (vicare language-extensions syntaxes)
-	  define-list-of-type-predicate))
+  (import (except (rnrs)
+		  identifier?
+		  bound-identifier=?	free-identifier=?
+		  generate-temporaries
+		  datum->syntax		syntax->datum
+		  syntax-violation	make-variable-transformer)
+    (psyntax.compat)
+    (psyntax.lexical-environment))
 
 
 ;;;; helpers
@@ -204,23 +137,6 @@
 			      (assertion-violation __who__
 				"expected string, symbol or identifier as suffix argument" suffix))))))
 
-(define* (identifier-append {ctx identifier?} . items)
-  (receive (port getter)
-      (open-string-output-port)
-    (for-each (lambda (item)
-		(display (cond ((string? item)
-				item)
-			       ((symbol? item)
-				(symbol->string item))
-			       ((identifier? item)
-				(symbol->string (syntax->datum item)))
-			       (else
-				(assertion-violation __who__
-				  "expected string, symbol or identifier as item argument" item)))
-			 port))
-      items)
-    (string->identifier ctx (getter))))
-
 (define* (identifier-format {ctx identifier?} {template string?} . items)
   (string->identifier ctx
 		      (apply format template
@@ -235,14 +151,6 @@
 					   (assertion-violation __who__
 					     "expected string, symbol or identifier as item argument" item))))
 			       items))))
-
-;;; --------------------------------------------------------------------
-
-(define* (identifier->string {id identifier?})
-  (symbol->string (syntax->datum id)))
-
-(define* (string->identifier {ctx identifier?} {str string?})
-  (datum->syntax ctx (string->symbol str)))
 
 ;;; --------------------------------------------------------------------
 
@@ -326,101 +234,6 @@
 
 (define (identifier-struct-field-mutator type-id field-name)
   (identifier-append type-id "set-" type-id "-" field-name "!"))
-
-
-;;;; pairs processing
-
-(case-define* syntax-car
-  ((stx)
-   (syntax-car stx (%make-synner __who__)))
-  ((stx {synner procedure?})
-   (syntax-case stx ()
-     ((?car . ?cdr)
-      #'?car)
-     (_
-      (synner "expected syntax object holding pair as argument" stx)))))
-
-(case-define* syntax-cdr
-  ((stx)
-   (syntax-cdr stx (%make-synner __who__)))
-  ((stx {synner procedure?})
-   (syntax-case stx ()
-     ((?car . ?cdr)
-      #'?cdr)
-     (_
-      (synner "expected syntax object holding pair as argument" stx)))))
-
-(case-define* syntax->list
-  ((stx)
-   (syntax->list stx (%make-synner __who__)))
-  ((stx {synner procedure?})
-   (let recur ((stx stx))
-     (syntax-case stx ()
-       (() '())
-       ((?car . ?cdr)
-	(identifier? #'?car)
-	(cons #'?car (recur #'?cdr)))
-       ((?car . ?cdr)
-	(cons (syntax-unwrap #'?car) (recur #'?cdr)))
-       (_
-	(synner "expected syntax object holding proper list as argument" stx))))))
-
-(case-define* identifiers->list
-  ((stx)
-   (identifiers->list stx (%make-synner __who__)))
-  ((stx {synner procedure?})
-   (let recur ((stx stx))
-     (syntax-case stx ()
-       (() '())
-       ((?car . ?cdr)
-	(identifier? #'?car)
-	(cons #'?car (recur #'?cdr)))
-       (_
-	(synner "expected syntax object holding proper list of identifiers as argument" stx))))))
-
-(define (all-identifiers? stx)
-  (syntax-case stx ()
-    (() #t)
-    ((?car . ?cdr)
-     (identifier? #'?car)
-     (all-identifiers? #'?cdr))
-    (_ #f)))
-
-
-;;;; vectors processing
-
-(case-define* syntax->vector
-  ((stx)
-   (syntax->vector stx (%make-synner __who__)))
-  ((stx synner)
-   (syntax-case stx ()
-     (() '())
-     (#(?item ...)
-      (list->vector (syntax->list #'(?item ...) synner)))
-     (_
-      (synner "expected syntax object holding vector as argument" stx)))))
-
-
-;;;; unwrapping
-
-(define (syntax-unwrap stx)
-  ;;Given a syntax object STX decompose  it and return the corresponding S-expression
-  ;;holding datums  and identifiers.  Take care  of returning a proper  list when the
-  ;;input is a syntax object holding a proper list.
-  ;;
-  (syntax-case stx ()
-    (()
-     '())
-    ((?car . ?cdr)
-     (cons (syntax-unwrap (syntax ?car))
-	   (syntax-unwrap (syntax ?cdr))))
-    (#(?item ...)
-     (list->vector (syntax-unwrap (syntax (?item ...)))))
-    (?atom
-     (identifier? (syntax ?atom))
-     (syntax ?atom))
-    (?atom
-     (syntax->datum (syntax ?atom)))))
 
 
 ;;;; comparison
@@ -965,3 +778,6 @@
 #| end of library |# )
 
 ;;; end of file
+;; Local Variables.
+;; coding: utf-8-unix
+;; End:

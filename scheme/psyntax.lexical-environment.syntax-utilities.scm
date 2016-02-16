@@ -25,8 +25,10 @@
    syntax-null?
    syntax-pair?			syntax-list?
    syntax-car			syntax-cdr
-   syntax->list
+   syntax->list			identifiers->list
+   all-identifiers?
    syntax-vector?		syntax-vector->list
+   syntax->vector
    syntax-unwrap
 
    parse-logic-predicate-syntax
@@ -86,40 +88,76 @@
       (and (syntax-pair? x)
 	   (syntax-list? (syntax-cdr x)))))
 
-(define* (syntax-car x)
-  (cond ((stx? x)
-	 (mkstx (syntax-car (stx-expr x))
-		(stx-mark* x)
-		(stx-rib*  x)
-		(stx-annotated-expr*   x)))
-	((reader-annotation? x)
-	 (syntax-car (reader-annotation-expression x)))
-	((pair? x)
-	 ($car x))
-	(else
-	 (assertion-violation __who__ "not a pair" x))))
+(case-define* syntax-car
+  ((stx)
+   (syntax-car stx (lambda (message subform)
+		     (syntax-violation __who__ message stx subform))))
+  ((stx synner)
+   (cond ((stx? stx)
+	  (mkstx (syntax-car (stx-expr stx))
+		 (stx-mark* stx)
+		 (stx-rib*  stx)
+		 (stx-annotated-expr* stx)))
+	 ((reader-annotation? stx)
+	  (syntax-car (reader-annotation-expression stx)))
+	 ((pair? stx)
+	  (car stx))
+	 (else
+	  (synner "expected syntax object holding pair as argument" stx)))))
 
-(define* (syntax-cdr x)
-  (cond ((stx? x)
-	 (mkstx (syntax-cdr (stx-expr x))
-		(stx-mark* x)
-		(stx-rib*  x)
-		(stx-annotated-expr*   x)))
-	((reader-annotation? x)
-	 (syntax-cdr (reader-annotation-expression x)))
-	((pair? x)
-	 ($cdr x))
-	(else
-	 (assertion-violation __who__ "not a pair" x))))
+(case-define* syntax-cdr
+  ((stx)
+   (syntax-cdr stx (lambda (message subform)
+		     (syntax-violation __who__ message stx subform))))
+  ((stx synner)
+   (cond ((stx? stx)
+	  (mkstx (syntax-cdr (stx-expr stx))
+		 (stx-mark* stx)
+		 (stx-rib*  stx)
+		 (stx-annotated-expr* stx)))
+	 ((reader-annotation? stx)
+	  (syntax-cdr (reader-annotation-expression stx)))
+	 ((pair? stx)
+	  (cdr stx))
+	 (else
+	  (synner "expected syntax object holding pair as argument" stx)))))
 
-(define* (syntax->list x)
-  (cond ((syntax-pair? x)
-	 (cons (syntax-car x)
-	       (syntax->list (syntax-cdr x))))
-	((syntax-null? x)
-	 '())
-	(else
-	 (assertion-violation __who__ "invalid argument" x))))
+(case-define* syntax->list
+  ((stx)
+   (syntax->list stx (lambda (message subform)
+		       (syntax-violation __who__ message stx subform))))
+  ((stx synner)
+   (cond ((syntax-pair? stx)
+	  (cons (syntax-car stx synner)
+		(syntax->list (syntax-cdr stx synner))))
+	 ((syntax-null? stx)
+	  '())
+	 (else
+	  (synner "expected syntax object holding proper list as argument" stx)))))
+
+(case-define* identifiers->list
+  ((stx)
+   (identifiers->list stx (lambda (message subform)
+			    (syntax-violation __who__ message stx subform))))
+  ((stx {synner procedure?})
+   (let recur ((stx stx))
+     (syntax-match stx ()
+       (() '())
+       ((?car . ?cdr)
+	(identifier? ?car)
+	(cons ?car (recur ?cdr)))
+       (_
+	(synner "expected syntax object holding proper list of identifiers as argument" stx))))))
+
+(define (all-identifiers? stx)
+  (syntax-match stx ()
+    (() #t)
+    ((?car . ?cdr)
+     (identifier? ?car)
+     (all-identifiers? ?cdr))
+    (_ #f)))
+
+;;; --------------------------------------------------------------------
 
 (define* (syntax-vector->list x)
   (cond ((stx? x)
@@ -136,6 +174,20 @@
 	 (vector->list x))
 	(else
 	 (assertion-violation __who__ "not a syntax vector" x))))
+
+(case-define* syntax->vector
+  ((stx)
+   (syntax->vector stx (lambda (message subform)
+			 (syntax-violation __who__ message stx subform))))
+  ((stx synner)
+   (syntax-match stx ()
+     (() '())
+     (#(?item* ...)
+      (list->vector (syntax->list ?item* synner)))
+     (_
+      (synner "expected syntax object holding vector as argument" stx)))))
+
+;;; --------------------------------------------------------------------
 
 (define (syntax-unwrap stx)
   ;;Given a syntax object STX  decompose it and return the corresponding

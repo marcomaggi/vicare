@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -218,14 +218,20 @@
       (for-all (lambda (obj1 obj2)
 		 (if (identifier? obj2)
 		     (bound-identifier=? obj1 obj2)
-		   (equal? obj1 obj2)))
+		   (syntax=? obj1 obj2)))
 	(syntax->list #'(display 123 write))
 	(list #'display 123 #'write))
     => #t)
 
-  (%guard-syntax-error
-      (syntax->list #'ciao)
-    => ("expected syntax object holding proper list as argument" #'ciao #f))
+  (check
+      (try
+	  (syntax->list #'ciao)
+	(catch E
+	  ((&syntax)
+	   (syntax-violation-form E))
+	  (else E)))
+    (=> free-identifier=?)
+    #'ciao)
 
 ;;; --------------------------------------------------------------------
 
@@ -255,7 +261,7 @@
        (lambda (obj1 obj2)
 	 (if (identifier? obj2)
 	     (bound-identifier=? obj1 obj2)
-	   (equal? obj1 obj2)))
+	   (syntax=? obj1 obj2)))
        (syntax->vector #'#(display 123 write))
        (vector #'display 123 #'write))
     => #t)
