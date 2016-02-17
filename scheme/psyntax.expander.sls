@@ -87,6 +87,11 @@
     typed-procedure-variable.unsafe-variant
     typed-procedure-variable.unsafe-variant-set!
 
+    <type-signature>
+    make-type-signature
+    type-signature?
+    type-signature-tags
+
     ;; expand-time type checking exception stuff
     expand-time-type-signature-violation?
     expand-time-retvals-signature-violation?
@@ -123,7 +128,8 @@
 ;; module interfaces
 (import PSYNTAX-SYNTAX-MATCH)
 (import PSYNTAX-SYNTAX-UTILITIES)
-(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
+(import PSYNTAX-TYPE-IDENTIFIERS)
+(import PSYNTAX-TYPE-SIGNATURES)
 
 
 ;;; helpers

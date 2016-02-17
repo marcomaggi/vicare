@@ -21,6 +21,8 @@
 (module (core-macro-transformer)
   (import (prefix (rnrs syntax-case) sys::))
 
+(import PSYNTAX-TYPE-SYNTAX-OBJECTS)
+
 
 ;;;; helpers
 

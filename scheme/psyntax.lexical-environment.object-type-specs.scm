@@ -56,6 +56,8 @@
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
 	 record-type-spec.super-protocol-id)
 
+(import PSYNTAX-TYPE-IDENTIFIERS)
+
 
 ;;;; basic object-type specification
 ;;
@@ -422,7 +424,7 @@
 
   (protocol
     (lambda (make-scheme-type-spec)
-      (define* (make-closure-type-spec {signature callable-signature?})
+      (define* (make-closure-type-spec signature)
 	(let ((parent-id		(procedure-tag-id))
 	      (constructor.sexp		#f)
 	      (predicate.sexp		#f)

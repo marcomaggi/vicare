@@ -4157,8 +4157,8 @@
     (vector-type-spec.type-id				$expander)
 
     (<type-signature>					$expander)
-    (<type-signature>-rtd				$expander)
-    (<type-signature>-rcd				$expander)
+    (<type-signature>-rtd)
+    (<type-signature>-rcd)
     (make-type-signature				$expander)
     (type-signature?					$expander)
     (type-signature-tags				$expander)

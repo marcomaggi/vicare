@@ -1,5 +1,5 @@
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
 ;;;this software and associated documentation files  (the "Software"), to deal in the
@@ -25,7 +25,10 @@
     ;; module interfaces
     PSYNTAX-SYNTAX-MATCH
     PSYNTAX-SYNTAX-UTILITIES
-    PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES
+    PSYNTAX-TYPE-IDENTIFIERS
+    PSYNTAX-TYPE-SYNTAX-OBJECTS
+    PSYNTAX-TYPE-SIGNATURES
+    PSYNTAX-TYPE-CALLABLES
 
     ;;configuration
     generate-descriptive-gensyms?
@@ -116,7 +119,6 @@
     syntactic-binding-descriptor/object-type-name?
 
     ;; Scheme object-type specifications
-    syntactic-binding-descriptor/scheme-type-name?
     syntactic-binding-descriptor/core-scheme-type-name?
     syntactic-binding-descriptor/core-list-type-name?
 
@@ -224,12 +226,6 @@
     label->syntactic-binding-descriptor/no-indirection
 
     system-label	system-label-gensym	SYSTEM-LABEL-GENSYM
-
-    ;; type signature
-    <type-signature>
-    <type-signature>-rtd				<type-signature>-rcd
-    make-type-signature					type-signature?
-    type-signature-tags
 
     ;; marks of lexical contours
     src-marked?
@@ -625,18 +621,6 @@
       (values #f #f))))
 
 
-;;;; include modules
-
-;; Definitions and utilities for object type specification.
-(include "psyntax.lexical-environment.object-type-specs.scm" #t)
-
-;; Definitions and utilities for typed lexical variables specification.
-(include "psyntax.lexical-environment.typed-variable-specs.scm" #t)
-
-;; Lexical environment: LEXENV entries and syntactic bindings helpers.
-(include "psyntax.lexical-environment.syntactic-bindings.scm" #t)
-
-
 ;;;; label gensym, lexical variable gensyms, storage location gensyms
 
 (define-syntax-rule (%fastest-gensym)
@@ -738,15 +722,15 @@
 		;;representing a core definition: we mutate  it to a format usable by
 		;;the code.
 		(cond ((syntactic-binding-descriptor/hard-coded-core-prim-typed? descr)
-		       (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor! descr))
+		       (hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-scheme-type-name? descr)
 		       (core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-condition-object-type-name? descr)
-		       (core-condition-object-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr))
+		       (hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-list-type-name? descr)
 		       (core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor! descr))
 		      ((syntactic-binding-descriptor/core-record-type-name? descr)
-		       (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
+		       (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
 		descr))
 
 	  ;;Search the given LEXENV.
@@ -2672,15 +2656,25 @@
   #| end of LET-SYNTAX |# )
 
 
-;;;; more external modules
+;;;; external modules
 
 (include "psyntax.lexical-environment.syntax-match.scm" #t)
-(include "psyntax.lexical-environment.syntax-utilities.scm" #t)
-(include "psyntax.lexical-environment.type-identifiers-and-signatures.scm" #t)
-
 (import PSYNTAX-SYNTAX-MATCH)
+
+(include "psyntax.lexical-environment.syntax-utilities.scm" #t)
 (import PSYNTAX-SYNTAX-UTILITIES)
-(import PSYNTAX-TYPE-IDENTIFIERS-AND-SIGNATURES)
+
+(include "psyntax.lexical-environment.type-identifiers.scm"	#t)
+(include "psyntax.lexical-environment.object-type-specs.scm"	#t)
+(include "psyntax.lexical-environment.type-syntax-objects.scm"	#t)
+(include "psyntax.lexical-environment.type-signatures.scm"	#t)
+(import PSYNTAX-TYPE-SIGNATURES)
+(include "psyntax.lexical-environment.type-callables.scm"	#t)
+
+(import PSYNTAX-TYPE-CALLABLES)
+
+(include "psyntax.lexical-environment.syntactic-bindings.scm"	#t)
+(include "psyntax.lexical-environment.typed-variable-specs.scm"	#t)
 
 
 ;;;; errors helpers

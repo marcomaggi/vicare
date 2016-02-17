@@ -19,6 +19,141 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+(module
+    (
+;;; core definitions
+     make-lexenv-entry
+     lexenv-entry.label
+     lexenv-entry.binding-descriptor
+     push-entry-on-lexenv
+
+     make-syntactic-binding-descriptor
+     syntactic-binding-descriptor.type
+     syntactic-binding-descriptor.value
+
+;;; local lexical variables, standard variant
+     make-syntactic-binding-descriptor/lexical-var
+     syntactic-binding-descriptor/lexical-var?
+     lexical-var-binding-descriptor-value.lex-name
+     lexical-var-binding-descriptor-value.assigned?
+     lexenv-add-lexical-var-binding
+     lexenv-add-lexical-var-bindings
+
+;;; local lexical variables, typed variant
+     make-syntactic-binding-descriptor/lexical-typed-var
+     make-syntactic-binding-descriptor/lexical-typed-var/from-data
+     syntactic-binding-descriptor/lexical-typed-var?
+     syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
+     syntactic-binding-descriptor/lexical-typed-var.value.lex
+     syntactic-binding-descriptor/lexical-typed-var.value.type-id
+     syntactic-binding-descriptor/lexical-typed-var.value.assigned?
+
+;;; global lexical variables, typed variant
+     make-global-typed-variable-spec-and-maker-core-expr
+     syntactic-binding-descriptor/global-typed-var?
+     syntactic-binding-descriptor/global-typed-var.typed-variable-spec
+
+;;; local macro with non-variable transformer bindings
+     make-syntactic-binding-descriptor/local-macro/non-variable-transformer
+     syntactic-binding-descriptor/local-macro/non-variable-transformer?
+
+;;; local macro with variable transformer bindings
+     make-syntactic-binding-descriptor/local-macro/variable-transformer
+     syntactic-binding-descriptor/local-macro/variable-transformer?
+
+;;; base object-type descriptors
+     syntactic-binding-descriptor/object-type-name?
+     syntactic-binding-descriptor/local-object-type.object-type-spec
+     syntactic-binding-descriptor/local-object-type.expanded-expr
+     syntactic-binding-descriptor/global-object-type.library
+     syntactic-binding-descriptor/global-object-type.loc
+     syntactic-binding-descriptor/global-object-type.object-type-spec
+     syntactic-binding-descriptor/core-object-type.object-type-spec
+
+;;; closure type binding
+     make-syntactic-binding-descriptor/closure-type-name
+     syntactic-binding-descriptor/closure-type-name?
+     make-syntactic-binding/closure-type-name
+     make-fabricated-closure-type-name
+
+;;; list sub-type binding
+     make-syntactic-binding-descriptor/list-sub-type-name
+     syntactic-binding-descriptor/list-sub-type-name?
+
+;;; vector sub-type binding
+     make-syntactic-binding-descriptor/vector-sub-type-name
+     syntactic-binding-descriptor/vector-sub-type-name?
+
+;;; hard-coded core primitive with type signature binding
+     hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor!
+     syntactic-binding-descriptor/hard-coded-core-prim-typed?
+
+;;; core primitive with type signature binding
+     syntactic-binding-descriptor/core-prim-typed?
+     core-prim-typed-binding-descriptor.prim-name
+     core-prim-typed-binding-descriptor.type-id
+     core-prim-typed-binding-descriptor.unsafe-variant-id
+     core-prim-typed-binding-descriptor.value.prim-name
+     core-prim-typed-binding-descriptor.value.type-id
+     core-prim-typed-binding-descriptor.value.unsafe-variant-id
+
+;;; core built-in object-type descriptor binding
+     core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
+     syntactic-binding-descriptor/core-scheme-type-name?
+
+;;; core built-in list object-type descriptor binding
+     core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor!
+     syntactic-binding-descriptor/core-list-type-name?
+
+;;; Vicare struct-type name bindings
+     make-syntactic-binding-descriptor/struct-type-name
+     syntactic-binding-descriptor/struct-type-name?
+     struct-type-name-binding-descriptor.type-descriptor
+
+;;; usable R6RS record-type descriptor binding
+     make-syntactic-binding-descriptor/record-type-name
+     syntactic-binding-descriptor/record-type-name?
+
+;;; hard-coded core R6RS record-type descriptor binding
+     hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
+     syntactic-binding-descriptor/core-record-type-name?
+
+;;; core R6RS condition object record-type descriptor binding
+     hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
+     syntactic-binding-descriptor/core-condition-object-type-name?
+
+;;; fluid syntax bindings
+     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
+     syntactic-binding-descriptor/fluid-syntax?
+     fluid-syntax-binding-descriptor.fluid-label
+
+;;; synonym bindings
+     make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
+     syntactic-binding-descriptor/synonym-syntax?
+     synonym-syntax-binding-descriptor.synonym-label
+
+;;; compile-time values bindings
+     make-syntactic-binding-descriptor/local-macro/expand-time-value
+     local-expand-time-value-binding-descriptor.object
+     retrieve-expand-time-value
+     global-expand-time-value-binding-descriptor.lib
+     global-expand-time-value-binding-descriptor.loc
+     global-expand-time-value-binding-descriptor.object
+
+;;; module bindings
+     make-syntactic-binding-descriptor/local-global-macro/module-interface
+
+;;; pattern variable bindings
+     make-syntactic-binding-descriptor/pattern-variable
+     syntactic-binding-descriptor/pattern-variable?
+
+     #| end of exports |# )
+
+(import PSYNTAX-TYPE-IDENTIFIERS)
+(import PSYNTAX-TYPE-SIGNATURES)
+(import PSYNTAX-TYPE-CALLABLES)
+
+
 ;;;; syntactic bindings core definitions
 
 (define-syntax-rule (make-lexenv-entry ?label ?descr)
@@ -470,21 +605,6 @@
   (car (syntactic-binding-descriptor.value ?descriptor)))
 
 
-;;;; syntactic binding descriptor: usable built-in object type binding
-
-;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
-;;Scheme object-type specification; otherwise return false.
-;;
-;;We expect the syntactic binding's descriptor to have the format:
-;;
-;;   (local-object-type-name . (?spec . ?expanded-expr))
-;;
-;;where ?SPEC is an instance of a sub-type of "<scheme-type-spec>".
-;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/scheme-type-name?
-  scheme-type-spec?)
-
-
 ;;;; syntactic binding descriptor: closure type binding
 
 (define* (make-syntactic-binding-descriptor/closure-type-name {ots closure-type-spec?} ots-maker.core-expr)
@@ -611,9 +731,9 @@
 
 ;;;; syntactic binding descriptor: hard-coded core primitive with type signature binding
 
-(module (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor!)
+(module (hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor!)
 
-  (define (hard-coded-core-prim-typed-binding-descriptor->core-closure-type-name-binding-descriptor! descriptor)
+  (define (hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor! descriptor)
     ;;Mutate a syntactic  binding's descriptor from the representation  of a built-in
     ;;core primitive (established by the boot image) to the representation of a typed
     ;;core  primitive in  the  format  usable by  the  expander.  Return  unspecified
@@ -911,9 +1031,9 @@
   record-type-spec?)
 
 
-;;;; syntactic binding descriptor: new-style core R6RS record-type descriptor binding
+;;;; syntactic binding descriptor: hard-coded core R6RS record-type descriptor binding
 
-(define (core-record-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
+(define (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
   ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
@@ -967,7 +1087,7 @@
 
 ;;;; syntactic binding descriptor: core R6RS condition object record-type descriptor binding
 
-(define (core-condition-object-type-name-symbolic-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
+(define (hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;condition  object  record-type  name  (established   by  the  boot  image)  to  a
   ;;representation  of a  record-type  name in  the format  usable  by the  expander.
@@ -1177,10 +1297,6 @@
   ;;
   (let ((lib (global-expand-time-value-binding-descriptor.lib descriptor))
 	(loc (global-expand-time-value-binding-descriptor.loc descriptor)))
-    ;;If this global binding use is the first  time a binding from LIB is used: visit
-    ;;the library.   This makes  sure that  the actual  object is  stored in  the loc
-    ;;gensym.
-    #;(visit-library lib)
     ;;When the  library LIB  has been  loaded from  source: the  compile-time value's
     ;;object is stored in the loc gensym.   When the library LIB has been loaded from
     ;;a compiled file: the compile-time value itself is in the loc gensym, so we have
@@ -1232,6 +1348,7 @@
 
 ;;;; done
 
+#| end of module |# )
 
 ;;; end of file
 ;; Local Variables:
