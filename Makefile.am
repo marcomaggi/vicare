@@ -579,7 +579,7 @@ VICARE_BOOT_ENV		= \
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 			  --no-rcfile --library-locator source --r6rs-script
 
-CLEANFILES		+= $(VICARE_NEW_BOOT)
+CLEANFILES		+= $(VICARE_NEW_BOOT) typed-core-primitives-specs.scm
 
 VICARE_BOOT_PREREQUISITES	= \
 	vicare						\
@@ -597,7 +597,7 @@ VICARE_BOOT_PREREQUISITES	= \
 
 ## --------------------------------------------------------------------
 
-typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS)
+typed-core-primitives-specs.scm: $(VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS) vicare
 	$(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) --source-path $(srcdir)	\
 		--option print-loaded-libraries						\
 		--r6rs-script $(srcdir)/typed-core-primitives/build-specs.sps >$@
