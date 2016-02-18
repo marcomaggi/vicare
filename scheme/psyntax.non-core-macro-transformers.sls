@@ -222,8 +222,6 @@
     ((concurrently)			concurrently-macro)
     ((monitor)				monitor-macro)
 
-    ((unsafe)				unsafe-macro)
-
     ((pre-incr)				pre-incr-macro)
     ((pre-decr)				pre-decr-macro)
     ((post-incr)			post-incr-macro)
@@ -4889,23 +4887,6 @@
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
     ))
-
-
-;;;; non-core macro: UNSAFE
-
-(define (unsafe-macro input-form.stx)
-  ;;Transformer function  used to  expand Vicare's UNSAFE  macros from  the top-level
-  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
-  ;;object that must be further expanded.
-  ;;
-  (with-who unsafe
-    (syntax-match input-form.stx ()
-      ((_ ?safe-id)
-       (identifier? ?safe-id)
-       (or (typed-procedure-variable.unsafe-variant ?safe-id)
-	   (syntax-violation __who__
-	     "identifier has no unsafe variant" input-form.stx ?safe-id)))
-      )))
 
 
 ;;;; non-core macro: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!

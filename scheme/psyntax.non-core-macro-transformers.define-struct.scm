@@ -125,26 +125,16 @@
     (define accessor-sexp*
       (map (lambda (accessor.id unsafe-accessor.id field.tag)
 	     (let ((stru.sym (gensym "stru")))
-	       `(begin
-		  (define/typed ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
-		    (,unsafe-accessor.id ,stru.sym))
-		  ,@(if (options::strict-r6rs)
-			'()
-		      `((begin-for-syntax
-			  (typed-procedure-variable.unsafe-variant-set! (syntax ,accessor.id) (syntax ,unsafe-accessor.id))))))))
+	       `(define/typed ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
+		  (,unsafe-accessor.id ,stru.sym))))
 	accessor*.id unsafe-accessor*.id field*.tag))
 
     (define mutator-sexp*
       (map (lambda (mutator.id unsafe-mutator.id field.tag)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
-	       `(begin
-		  (define/typed ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
-		    (,unsafe-mutator.id ,stru.sym ,val.sym))
-		  ,@(if (options::strict-r6rs)
-			'()
-		      `((begin-for-syntax
-			  (typed-procedure-variable.unsafe-variant-set! (syntax ,mutator.id) (syntax ,unsafe-mutator.id))))))))
+	       `(define/typed ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
 	mutator*.id unsafe-mutator*.id field*.tag))
 
     (define method-sexp*
