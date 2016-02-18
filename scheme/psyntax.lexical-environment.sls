@@ -138,7 +138,6 @@
     <typed-variable-spec>
     typed-variable-spec?
     typed-variable-spec.type-id
-    typed-variable-spec.unsafe-variant-sexp		typed-variable-spec.unsafe-variant-sexp-set!
 
     ;; typed lexical variable specification
     <lexical-typed-variable-spec>

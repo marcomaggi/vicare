@@ -83,10 +83,8 @@
      syntactic-binding-descriptor/core-prim-typed?
      core-prim-typed-binding-descriptor.prim-name
      core-prim-typed-binding-descriptor.type-id
-     core-prim-typed-binding-descriptor.unsafe-variant-id
      core-prim-typed-binding-descriptor.value.prim-name
      core-prim-typed-binding-descriptor.value.type-id
-     core-prim-typed-binding-descriptor.value.unsafe-variant-id
 
 ;;; core built-in object-type descriptor binding
      core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
@@ -370,12 +368,10 @@
 
 (define* (make-global-typed-variable-spec-and-maker-core-expr {lts lexical-typed-variable-spec?} variable-loc)
   (let* ((type-id		(typed-variable-spec.type-id             lts))
-	 (unsafe-variant	(typed-variable-spec.unsafe-variant-sexp lts))
-	 (gts			(make-global-typed-variable-spec type-id unsafe-variant variable-loc))
+	 (gts			(make-global-typed-variable-spec type-id variable-loc))
 	 (core-expr		(build-application no-source
 				  (build-primref no-source 'make-global-typed-variable-spec)
 				  (list (build-data no-source type-id)
-					(build-data no-source unsafe-variant)
 					(build-data no-source variable-loc)))))
     (values gts core-expr)))
 
@@ -752,9 +748,7 @@
     ;;
     ;;where ?HARD-CODED-SEXP has the format:
     ;;
-    ;;   #(?core-prim-name ?safety-boolean
-    ;;      (?signature-spec0 ?signature-spec ...)
-    ;;      (?unsafe-variant-name ...))
+    ;;   #(?core-prim-name ?safety-boolean (?signature-spec0 ?signature-spec ...))
     ;;
     ;;?CORE-PRIM-NAME  is a  symbol  representing the  core  primitive's public  name
     ;;("display", "write", "list", et cetera).  ?SIGNATURE-SPEC has the format:
@@ -785,15 +779,11 @@
     (let ((hard-coded-sexp		(syntactic-binding-descriptor.value descriptor)))
       (let ((core-prim.sym		(vector-ref hard-coded-sexp 0))
 	    (safety.boolean		(vector-ref hard-coded-sexp 1))
-	    (signature*.sexp		(vector-ref hard-coded-sexp 2))
-	    (unsafe-variant*.sym	(vector-ref hard-coded-sexp 3)))
+	    (signature*.sexp		(vector-ref hard-coded-sexp 2)))
 	(let ((type-id			(fabricate-closure-type-identifier core-prim.sym
-									   (%signature-sexp->callable-signature signature*.sexp)))
-	      (unsafe-variants		(if (null? unsafe-variant*.sym)
-					    #f
-					  (list->vector (map core-prim-id unsafe-variant*.sym)))))
+									   (%signature-sexp->callable-signature signature*.sexp))))
 	  (set-car! descriptor 'core-prim-typed)
-	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean type-id unsafe-variants)
+	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean type-id)
 				     hard-coded-sexp))))))
 
   (define (%signature-sexp->callable-signature signature*.sexp)
@@ -888,9 +878,6 @@
 (define-syntax-rule (core-prim-typed-binding-descriptor.type-id ?descriptor)
   (typed-variable-spec.type-id (cadr ?descriptor)))
 
-(define-syntax-rule (core-prim-typed-binding-descriptor.unsafe-variant-id ?descriptor)
-  (typed-variable-spec.unsafe-variant-sexp (cadr ?descriptor)))
-
 ;;; --------------------------------------------------------------------
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.value.prim-name ?descriptor-value)
@@ -898,9 +885,6 @@
 
 (define-syntax-rule (core-prim-typed-binding-descriptor.value.type-id ?descriptor-value)
   (typed-variable-spec.type-id (car ?descriptor-value)))
-
-(define-syntax-rule (core-prim-typed-binding-descriptor.value.unsafe-variant-id ?descriptor-value)
-  (typed-variable-spec.unsafe-variant-sexp (car ?descriptor-value)))
 
 
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding

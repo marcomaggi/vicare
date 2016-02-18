@@ -32,7 +32,6 @@
 
 ;;; inspection
      type-identifier-common-ancestor
-     typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
 
      #| end of exports |# )
 
@@ -290,63 +289,6 @@
 				  => outer-loop)
 				 (else
 				  (top-tag-id))))))))))))))
-
-
-;;;; typed variable with procedure sub-type type utilities
-;;
-;;The following  functions are used  to deal with  lexical variables, both  local and
-;;global,  that  are  typed  with  a  sub-type of  "<procedure>".   It  is  known  at
-;;expand-time that such  lexical variables are bound to a  closure object; this means
-;;their syntactic binding descriptor has one of the formats:
-;;
-;;   (lexical-typed         . (#<lexical-typed-variable-spec> . ?expanded-expr))
-;;   (global-typed          . (#<library> . ?loc))
-;;   (global-typed-mutable  . (#<library> . ?loc))
-;;
-;;and  ?LOC  is  a  loc  gensym  containing,  in  its  VALUE  slot,  an  instance  of
-;;"<global-typed-variable-spec>".
-;;
-;;The two spec types are sub-types of "<typed-variable-spec>", which has some special
-;;fields to represent expand-time properties of closure object's syntactic bindings.
-;;
-
-(case-define* typed-procedure-variable.unsafe-variant
-  ;;Given  an identifier  representing  a typed,  imported  or non-imported,  lexical
-  ;;variable which  is meant to  be bound  to a closure  object: return false  or the
-  ;;symbolic expression representing its unsafe variant.
-  ;;
-  ((id)
-   (typed-procedure-variable.unsafe-variant id (current-inferior-lexenv) #f))
-  ((id lexenv)
-   (typed-procedure-variable.unsafe-variant id lexenv #f))
-  ((id lexenv input-form.stx)
-   (let ((tvs (id->typed-variable-spec __who__ input-form.stx id lexenv)))
-     (if (type-identifier-is-procedure-sub-type? (typed-variable-spec.type-id tvs))
-	 (typed-variable-spec.unsafe-variant-sexp tvs)
-       (assertion-violation __who__
-	 "the type of typed variable is not a sub-type of \"<procedure>\""
-	 id tvs)))))
-
-(case-define* typed-procedure-variable.unsafe-variant-set!
-  ;;Given an  identifier representing a typed  lexical variable which is  meant to be
-  ;;bound to  a closure object: set  the symbolic expression representing  its unsafe
-  ;;variant.
-  ;;
-  ;;When this  function is  called while expanding  code: the ID  is a  local lexical
-  ;;typed variable.   When this function is  called while evaluating the  visit code:
-  ;;the ID is a global lexical typed variable.
-  ;;
-  ((id unsafe-variant.sexp)
-   (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp (current-inferior-lexenv) #f))
-  ((id unsafe-variant.sexp lexenv)
-   (typed-procedure-variable.unsafe-variant-set! id unsafe-variant.sexp lexenv #f))
-  ((id unsafe-variant.sexp lexenv input-form.stx)
-   (let ((tvs (id->typed-variable-spec __who__ input-form.stx id lexenv)))
-     (if (type-identifier-is-procedure-sub-type? (typed-variable-spec.type-id tvs))
-	 (typed-variable-spec.unsafe-variant-sexp-set! tvs unsafe-variant.sexp)
-       (assertion-violation __who__
-	 "the type of typed variable is not a sub-type of \"<procedure>\""
-	 id tvs)))))
 
 
 ;;;; done

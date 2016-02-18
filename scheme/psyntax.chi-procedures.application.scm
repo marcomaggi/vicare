@@ -816,14 +816,16 @@
     (define (%no-optimisation-possible)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi retvals.sig))
     (define (%build-unsafe-variant-application unsafe-rator.sexp)
-      (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
-	     (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-	(%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi retvals.sig)))
+      ;; (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
+      ;;        (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
+      ;;   (%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi retvals.sig))
+      (%no-optimisation-possible))
     (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
-      (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
-	     => %build-unsafe-variant-application)
-	    (else
-	     (%no-optimisation-possible))))
+      ;; (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
+      ;;        => %build-unsafe-variant-application)
+      ;;       (else
+      ;;        (%no-optimisation-possible)))
+      (%no-optimisation-possible))
     (define rator.stx (psi.input-form rator.psi))
     (cond ((identifier? rator.stx)
 	   ;;Here we do not want to raise an error if the identifier RATOR.STX is not
@@ -836,7 +838,7 @@
 		    ;;disabled until the table of primitive properties declaration is
 		    ;;rewritten  in a  format that  allows correct  selection of  the
 		    ;;replacement.  (Marco Maggi; Sun Jan 10, 2016)
-		    (cond ((and #f (core-prim-typed-binding-descriptor.unsafe-variant-id rator.descr))
+		    (cond (#f
 			   => %build-unsafe-variant-application)
 			  (else
 			   (%no-optimisation-possible))))

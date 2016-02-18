@@ -84,9 +84,6 @@
     ;;SYNTAX-CASE subroutines
     syntax-dispatch			ellipsis-map
 
-    typed-procedure-variable.unsafe-variant
-    typed-procedure-variable.unsafe-variant-set!
-
     <type-signature>
     make-type-signature
     type-signature?

@@ -1,5 +1,5 @@
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
 ;;;this software and associated documentation files  (the "Software"), to deal in the
@@ -22,7 +22,6 @@
 (module (<typed-variable-spec>
 	 typed-variable-spec?
 	 typed-variable-spec.type-id
-	 typed-variable-spec.unsafe-variant-sexp	typed-variable-spec.unsafe-variant-sexp-set!
 
 	 <lexical-typed-variable-spec>
 	 make-lexical-typed-variable-spec		lexical-typed-variable-spec?
@@ -46,25 +45,11 @@
   (fields
    (immutable type-id		typed-variable-spec.type-id)
 		;A syntactic identifier representing the type of this variable.
-   (mutable   unsafe-variant	typed-variable-spec.unsafe-variant-sexp typed-variable-spec.unsafe-variant-sexp-set!)
-		;This  field is  used only  when this  variable binding  references a
-		;closure object.
-		;
-		;False or a symbolic expression  (to be BLESSed later) representing a
-		;Scheme expression which, expanded and evaluated at run-time, returns
-		;the unsafe variant of this closure object.
-		;
-		;The  unsafe variant  is meant  to be  used in  place of  the closure
-		;object, when we know, at expand-time,  that the type of the operands
-		;in a closure application is correct.
    #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (case-define make-typed-variable-spec
-	((type-id)
-	 (make-record type-id #f))
-	((type-id unsafe-variant.sexp)
-	 (make-record type-id unsafe-variant.sexp)))
+      (define (make-typed-variable-spec type-id)
+	(make-record type-id))
       make-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -109,8 +94,8 @@
    #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-global-typed-variable-spec type-id unsafe-variant.sexp variable-loc)
-	((make-typed-variable-spec type-id unsafe-variant.sexp) variable-loc))
+      (define* (make-global-typed-variable-spec type-id variable-loc)
+	((make-typed-variable-spec type-id) variable-loc))
       make-global-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -131,7 +116,7 @@
    #| end of FIELDS |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define (make-core-prim-type-spec core-prim.sym safety type-id unsafe-variants)
+      (define (make-core-prim-type-spec core-prim.sym safety type-id)
 	;;CORE-PRIM.SYM  is  a  symbol  representing  the public  name  of  the  core
 	;;primitive.
 	;;
@@ -139,10 +124,7 @@
 	;;
 	;;TYPE-ID is a syntactic identifier representing the type of this function.
 	;;
-	;;UNSAFE-VARIANTS is false or a vector  of syntactic identifiers bound to the
-	;;unsafe variants of this core primitive.
-	((make-typed-variable-spec type-id (and unsafe-variants (vector-ref unsafe-variants 0)))
-	 core-prim.sym safety))
+	((make-typed-variable-spec type-id) core-prim.sym safety))
       make-core-prim-type-spec)))
 
 
@@ -154,5 +136,4 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8-unix
-;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
 ;; End:
