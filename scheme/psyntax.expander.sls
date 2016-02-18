@@ -1053,6 +1053,7 @@
     ;;binding names.  LOC* must be a list  of storage location gensyms for the global
     ;;lexical variables: there must be a loc in LOC* for every lex in LEX*.
     ;;
+    (import PSYNTAX-SYNTACTIC-BINDINGS)
     (let loop ((lexenv.run	lexenv.run)
 	       (global-env	'())
 	       (visit-env	'())
@@ -1323,6 +1324,7 @@
     ;;exported: entries  of this type  can be in the  GLOBAL-ENV, but they  cannot be
     ;;referenced in the EXPORT-SUBST.
     ;;
+    (import PSYNTAX-SYNTACTIC-BINDINGS)
     (define export-subst.entry-name  car)
     (define export-subst.entry-label cdr)
     (unless (%expanding-program? export-spec*)

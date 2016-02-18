@@ -34,8 +34,6 @@
      type-identifier-common-ancestor
      typed-procedure-variable.unsafe-variant		typed-procedure-variable.unsafe-variant-set!
 
-     fabricate-list-type-identifier
-
      #| end of exports |# )
 
 
@@ -349,41 +347,6 @@
        (assertion-violation __who__
 	 "the type of typed variable is not a sub-type of \"<procedure>\""
 	 id tvs)))))
-
-
-;;;; list type identifiers
-
-(case-define* fabricate-list-type-identifier
-  ;;Given a type identifier return a  type identifier representing a (possibly empty)
-  ;;list of items having that type.
-  ;;
-  ((item-type.id)
-   (fabricate-list-type-identifier item-type.id (current-inferior-lexenv) #f))
-  ((item-type.id lexenv)
-   (fabricate-list-type-identifier item-type.id lexenv #f))
-  ((item-type.id lexenv input-form.stx)
-   (define (make-fabricated-list-type-name id)
-     (gensym (string-append (symbol->string (identifier->symbol id)) "*")))
-   (syntax-match item-type.id (<char> <string> <pointer> <symbol>)
-     (<char>		(core-prim-id '<char*>))
-     (<string>		(core-prim-id '<string*>))
-     (<symbol>		(core-prim-id '<symbol*>))
-     (<pointer>		(core-prim-id '<pointer*>))
-     (else
-      (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
-	(or (object-type-spec.memoised-list-id item-ots)
-	    (cond ((top-tag-id?     item-type.id)
-		   (receive-and-return (list-type.id)
-		       (list-tag-id)
-		     (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
-		  (else
-		   (let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))
-			  (list-type.lab	(generate-label-gensym list-type.sym))
-			  (list-ots	(make-list-type-spec item-type.id)))
-		     (receive-and-return (list-type.id)
-			 (make-top-level-syntactic-identifier-from-source-name-and-label list-type.sym list-type.lab)
-		       (set-symbol-value! list-type.lab (make-syntactic-binding-descriptor/list-sub-type-name list-ots #f))
-		       (object-type-spec.memoised-list-id-set! item-ots list-type.id)))))))))))
 
 
 ;;;; done

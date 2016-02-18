@@ -136,10 +136,10 @@
   (cdr x))
 
 
-;;;; public interface: compile-time values
+;;;; public interface: expand-time values
 ;;
-;;Compile-time values are  objects computed at expand-time and stored  in the lexical
-;;environment.   We can  define  a compile-time  value  and push  it  on the  lexical
+;;Expand-time values  are objects computed at  expand-time and stored in  the lexical
+;;environment.   We can  define  an expand-time  value  and push  it  on the  lexical
 ;;environment with:
 ;;
 ;;   (define-syntax it
@@ -152,7 +152,7 @@
 ;;     (lambda (stx)
 ;;       (retrieve-expand-time-value #'it))) => 3
 ;;
-;;Let's say we define a compile-time value with:
+;;Let's say we define a expand-time value with:
 ;;
 ;;   (define-syntax ?kwd ?expression)
 ;;
@@ -174,7 +174,7 @@
 ;;
 ;;      (local-etv . ?obj)
 ;;
-;;   where ?OBJ is the actual compile-time value.
+;;   where ?OBJ is the actual expand-time value.
 ;;
 ;;4..%EVAL-MACRO-TRANSFORMER    recognises    the     value    as    special    using
 ;;   EXPAND-TIME-VALUE?  and transforms it to a "local-etv" syntactic binding.
@@ -188,8 +188,7 @@
        (eq? 'etv (car obj))))
 
 (define expand-time-value-object
-  ;;Given  a compile-time  value datum:  return the  actual compile-time
-  ;;object.
+  ;;Given a expand-time value datum: return the actual expand-time object.
   ;;
   cdr)
 

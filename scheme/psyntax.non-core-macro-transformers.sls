@@ -4862,12 +4862,12 @@
 
 ;;;; non-core macro: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
 
-(define (define-syntax-parameter-macro expr-stx)
-  ;;Transformer function used to expand Vicare's DEFINE-SYNTAX-PARAMETER
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define (define-syntax-parameter-macro input-form.stx)
+  ;;Transformer function used to  expand Vicare's DEFINE-SYNTAX-PARAMETER macros from
+  ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?param-id ?param-expr)
      (identifier? ?param-id)
      (bless
@@ -4875,13 +4875,12 @@
 	 (make-expand-time-value ,?param-expr))))
     ))
 
-(define (syntax-parametrise-macro expr-stx)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;SYNTAX-PARAMETRISE-MACRO   macros  from   the  top-level   built  in
-  ;;environment.   Expand  the contents  of  EXPR-STX;  return a  syntax
-  ;;object that must be further expanded.
+(define (syntax-parametrise-macro input-form.stx)
+  ;;Transformer function used to expand Vicare's SYNTAX-PARAMETRISE-MACRO macros from
+  ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
      (for-all identifier? ?lhs*)
      (bless

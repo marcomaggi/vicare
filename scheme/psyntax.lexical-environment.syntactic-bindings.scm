@@ -19,18 +19,8 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(module
+(module PSYNTAX-SYNTACTIC-BINDINGS
     (
-;;; core definitions
-     make-lexenv-entry
-     lexenv-entry.label
-     lexenv-entry.binding-descriptor
-     push-entry-on-lexenv
-
-     make-syntactic-binding-descriptor
-     syntactic-binding-descriptor.type
-     syntactic-binding-descriptor.value
-
 ;;; local lexical variables, standard variant
      make-syntactic-binding-descriptor/lexical-var
      syntactic-binding-descriptor/lexical-var?
@@ -75,6 +65,7 @@
      syntactic-binding-descriptor/closure-type-name?
      make-syntactic-binding/closure-type-name
      make-fabricated-closure-type-name
+     fabricate-closure-type-identifier
 
 ;;; list sub-type binding
      make-syntactic-binding-descriptor/list-sub-type-name
@@ -135,7 +126,6 @@
 ;;; compile-time values bindings
      make-syntactic-binding-descriptor/local-macro/expand-time-value
      local-expand-time-value-binding-descriptor.object
-     retrieve-expand-time-value
      global-expand-time-value-binding-descriptor.lib
      global-expand-time-value-binding-descriptor.loc
      global-expand-time-value-binding-descriptor.object
@@ -152,40 +142,6 @@
 (import PSYNTAX-TYPE-IDENTIFIERS)
 (import PSYNTAX-TYPE-SIGNATURES)
 (import PSYNTAX-TYPE-CALLABLES)
-
-
-;;;; syntactic bindings core definitions
-
-(define-syntax-rule (make-lexenv-entry ?label ?descr)
-  (cons ?label ?descr))
-
-;;Given the entry from a lexical environment: return the gensym acting as label.
-;;
-(define lexenv-entry.label car)
-
-;;Given the entry from a lexical environment: return the binding value.
-;;
-(define lexenv-entry.binding-descriptor cdr)
-
-(define-syntax-rule (push-entry-on-lexenv ?label ?descr ?lexenv)
-  (cons (make-lexenv-entry ?label ?descr) ?lexenv))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax-rule (make-syntactic-binding-descriptor ?bind-type ?bind-val)
-  ;;Build and return a new syntactic binding descriptor.
-  ;;
-  (cons (quote ?bind-type) ?bind-val))
-
-(define-syntax-rule (syntactic-binding-descriptor.type ?binding-descriptor)
-  ;;Given a syntactic binding descriptor, return its type: a symbol.
-  ;;
-  (car ?binding-descriptor))
-
-(define-syntax-rule (syntactic-binding-descriptor.value ?binding-descriptor)
-  ;;Given a syntactic binding descriptor, return its value: a pair.
-  ;;
-  (cdr ?binding-descriptor))
 
 
 ;;; helpers
@@ -651,10 +607,10 @@
 				  (build-primref no-source 'make-closure-type-spec)
 				  (list (build-data no-source signature))))
 	  (type-id.descr	(make-syntactic-binding-descriptor/closure-type-name ots ots.core-expr))
-	  (type-id.lab		(generate-label-gensym type-id))
-	  (lexenv^		(push-entry-on-lexenv type-id.lab type-id.descr lexenv)))
-     (extend-rib! rib type-id type-id.lab shadow/redefine-bindings?)
-     lexenv^)))
+	  (type-id.lab		(generate-label-gensym type-id)))
+     (receive-and-return (lexenv^)
+	 (push-entry-on-lexenv type-id.lab type-id.descr lexenv)
+       (extend-rib! rib type-id type-id.lab shadow/redefine-bindings?)))))
 
 (define* (make-fabricated-closure-type-name {who false-or-symbol?})
   (gensym (string-append "<"
@@ -662,6 +618,57 @@
 			     (symbol->string who)
 			   "anonymous")
 			 "/closure-signature>")))
+
+;;; --------------------------------------------------------------------
+;;; fabricated procedure type identifiers
+;;
+;;Let's consider the following code in the C language:
+;;
+;;   int func (double a, char * b) { ... }
+;;   typedef int func_t (double a, char * b);
+;;   func_t * the_func = func;
+;;
+;;we need a pointer to the function "func()",  so we define the type "func_t" as type
+;;of the pointer to function "the_func".  We do something similar in Vicare.
+;;
+;;When the use of a core macro DEFINE/TYPED is expanded from the input form:
+;;
+;;   (define/typed (?who . ?formals) . ?body)
+;;
+;;a QDEF is created, then the syntactic identifier ?WHO is bound, finally the QDEF is
+;;expanded.  When the syntactic  binding for ?WHO is created: what  is its type?  For
+;;sure it must be a sub-type of "<procedure>", but we would like to keep informations
+;;about the signature of the closure object definition.
+;;
+;;Similarly,  when the  use of  a core  macro LAMBDA  or CASE-LAMBDA  is expanded:  a
+;;signature  for  the  resulting closure  object  is  built;  it  is an  instance  of
+;;"<clambda-signature>".  For example, when the following LAMBDA syntax is expanded:
+;;
+;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
+;;     (+ 1 a b))
+;;
+;;the LAMBDA parser builds the following "<clambda-clause-signature>" struct:
+;;
+;;   #[<clambda-clause-signature>
+;;       retvals=#[<type-signature> tags=(#'<exact-integer>)]
+;;       argvals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
+;;
+;;To represent  the type of  the closure object: we  create a fresh  type identifier,
+;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
+;;VALUE field of the label gensym.
+;;
+(define* ({fabricate-closure-type-identifier type-identifier?} {who false-or-symbol?} {signature callable-signature?})
+  ;;WHO must be false or a symbol representing the name of the closure object; it can
+  ;;be a  random gensym  when no  name is given.   SIGNATURE must  be an  instance of
+  ;;"<callable-signature>" or one of its sub-types.
+  ;;
+  (let* ((type-id.sym  (make-fabricated-closure-type-name who))
+	 (type-id.lab  (generate-label-gensym type-id.sym)))
+    (receive-and-return (type-id)
+	(make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
+      (let ((spec          (make-closure-type-spec signature))
+	    (expanded-expr #f))
+	(set-symbol-value! type-id.lab (make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
 
 
 ;;;; syntactic binding descriptor: list sub-type binding
@@ -824,6 +831,40 @@
 ;;
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-prim-typed?
   $core-prim-typed)
+
+;;; --------------------------------------------------------------------
+
+(case-define* fabricate-list-type-identifier
+  ;;Given a type identifier return a  type identifier representing a (possibly empty)
+  ;;list of items having that type.
+  ;;
+  ((item-type.id)
+   (fabricate-list-type-identifier item-type.id (current-inferior-lexenv) #f))
+  ((item-type.id lexenv)
+   (fabricate-list-type-identifier item-type.id lexenv #f))
+  ((item-type.id lexenv input-form.stx)
+   (define (make-fabricated-list-type-name id)
+     (gensym (string-append (symbol->string (identifier->symbol id)) "*")))
+   (syntax-match item-type.id (<char> <string> <pointer> <symbol>)
+     (<char>		(core-prim-id '<char*>))
+     (<string>		(core-prim-id '<string*>))
+     (<symbol>		(core-prim-id '<symbol*>))
+     (<pointer>		(core-prim-id '<pointer*>))
+     (else
+      (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
+	(or (object-type-spec.memoised-list-id item-ots)
+	    (cond ((top-tag-id?     item-type.id)
+		   (receive-and-return (list-type.id)
+		       (list-tag-id)
+		     (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
+		  (else
+		   (let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))
+			  (list-type.lab	(generate-label-gensym list-type.sym))
+			  (list-ots	(make-list-type-spec item-type.id)))
+		     (receive-and-return (list-type.id)
+			 (make-top-level-syntactic-identifier-from-source-name-and-label list-type.sym list-type.lab)
+		       (set-symbol-value! list-type.lab (make-syntactic-binding-descriptor/list-sub-type-name list-ots #f))
+		       (object-type-spec.memoised-list-id-set! item-ots list-type.id)))))))))))
 
 
 ;;;; syntactic binding descriptor: core primitive with type signature binding
@@ -1234,32 +1275,6 @@
   ;;and we want to return ?OBJ.
   ;;
   (car (syntactic-binding-descriptor.value ?descriptor)))
-
-(define* (retrieve-expand-time-value {id identifier?})
-  ;;This is the compile-time values  retriever function.  Given an identifier: search
-  ;;an  entry in  the lexical  environment; when  found return  its value,  otherwise
-  ;;return false.
-  ;;
-  (let* ((label (id->label/or-error __who__ #f id))
-	 (descr (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (assertion-violation __who__
-	 "identifier out of context (identifier's label not in LEXENV)" id))
-      ;;The given  identifier is  bound to  a local  compile-time value.   The actual
-      ;;object is stored in the descriptor itself.
-      ((local-etv)
-       (local-expand-time-value-binding-descriptor.object descr))
-      ;;The given identifier is bound to a compile-time value imported from a library
-      ;;or the  top-level environment.  The  actual object  is stored in  the "value"
-      ;;field of a loc gensym.
-      ((global-etv)
-       (global-expand-time-value-binding-descriptor.object descr))
-      (else
-       ;; (assertion-violation __who__
-       ;;   "identifier not bound to an object-type specification"
-       ;;   id descr)
-       #f))))
 
 ;;; --------------------------------------------------------------------
 

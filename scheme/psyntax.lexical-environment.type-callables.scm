@@ -37,8 +37,6 @@
      make-clambda-signature				clambda-signature?
      clambda-signature.retvals				clambda-signature.clause-signature*
 
-     fabricate-closure-type-identifier
-
 ;;; syntax objects
      syntax-object.parse-standard-clambda-clause-formals	syntax-object.parse-typed-clambda-clause-formals
      syntax-object.parse-standard-clambda-multi-clauses-formals syntax-object.parse-typed-clambda-multi-clauses-formals
@@ -211,57 +209,6 @@
 	     (clambda-signature.memoised-min-count-set! sig min-count)
 	     (clambda-signature.memoised-max-count-set! sig max-count)
 	     (values min-count max-count))))))
-
-
-;;;; fabricated procedure type identifiers
-;;
-;;Let's consider the following code in the C language:
-;;
-;;   int func (double a, char * b) { ... }
-;;   typedef int func_t (double a, char * b);
-;;   func_t * the_func = func;
-;;
-;;we need a pointer to the function "func()",  so we define the type "func_t" as type
-;;of the pointer to function "the_func".  We do something similar in Vicare.
-;;
-;;When the use of a core macro DEFINE/TYPED is expanded from the input form:
-;;
-;;   (define/typed (?who . ?formals) . ?body)
-;;
-;;a QDEF is created, then the syntactic identifier ?WHO is bound, finally the QDEF is
-;;expanded.  When the syntactic  binding for ?WHO is created: what  is its type?  For
-;;sure it must be a sub-type of "<procedure>", but we would like to keep informations
-;;about the signature of the closure object definition.
-;;
-;;Similarly,  when the  use of  a core  macro LAMBDA  or CASE-LAMBDA  is expanded:  a
-;;signature  for  the  resulting closure  object  is  built;  it  is an  instance  of
-;;"<clambda-signature>".  For example, when the following LAMBDA syntax is expanded:
-;;
-;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
-;;     (+ 1 a b))
-;;
-;;the LAMBDA parser builds the following "<clambda-clause-signature>" struct:
-;;
-;;   #[<clambda-clause-signature>
-;;       retvals=#[<type-signature> tags=(#'<exact-integer>)]
-;;       argvals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
-;;
-;;To represent  the type of  the closure object: we  create a fresh  type identifier,
-;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
-;;VALUE field of the label gensym.
-;;
-(define* ({fabricate-closure-type-identifier type-identifier?} {who false-or-symbol?} {signature callable-signature?})
-  ;;WHO must be false or a symbol representing the name of the closure object; it can
-  ;;be a  random gensym  when no  name is given.   SIGNATURE must  be an  instance of
-  ;;"<callable-signature>" or one of its sub-types.
-  ;;
-  (let* ((type-id.sym  (make-fabricated-closure-type-name who))
-	 (type-id.lab  (generate-label-gensym type-id.sym)))
-    (receive-and-return (type-id)
-	(make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
-      (let ((spec          (make-closure-type-spec signature))
-	    (expanded-expr #f))
-	(set-symbol-value! type-id.lab (make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
 
 
 ;;;; type syntax objects: standard formals parsing
