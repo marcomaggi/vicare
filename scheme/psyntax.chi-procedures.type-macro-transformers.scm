@@ -222,13 +222,12 @@
       ((_ ?expr)
        (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig (psi.retvals-signature expr.psi)))
-	 (syntax-match (type-signature-tags expr.sig) ()
+	 (syntax-match (type-signature-tags expr.sig) (<list>)
 	   ((?type-id)
 	    ;;We have determined at expand-time  that the expression returns a single
 	    ;;value.
 	    (%apply-appropriate-destructor __who__ input-form.stx lexenv.run lexenv.expand ?type-id expr.psi))
-	   (?tag
-	    (list-tag-id? ?tag)
+	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature; we need to insert a run-time dispatch.
 	    (%run-time-destruction input-form.stx lexenv.run lexenv.expand expr.psi))
@@ -296,17 +295,17 @@
 	    (%run-time-predicate))
 
 	   ((<compound-condition>)
-	    (cond ((type-identifier-super-and-sub? ?pred-type-id (compound-condition-tag-id) lexenv.run input-form.stx)
+	    (cond ((type-identifier-super-and-sub? ?pred-type-id (compound-condition-type-id) lexenv.run input-form.stx)
 		   (%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand))
-		  ((type-identifier-super-and-sub? (compound-condition-tag-id) ?pred-type-id lexenv.run input-form.stx)
+		  ((type-identifier-super-and-sub? (compound-condition-type-id) ?pred-type-id lexenv.run input-form.stx)
 		   (%run-time-predicate))
-		  ((type-identifier-super-and-sub? (simple-condition-tag-id)   ?pred-type-id lexenv.run input-form.stx)
+		  ((type-identifier-super-and-sub? (simple-condition-type-id)   ?pred-type-id lexenv.run input-form.stx)
 		   (%run-time-predicate))
 		  (else
 		   (%make-false-psi input-form.stx ?expr lexenv.run lexenv.expand))))
 
 	   ((?expr-type-id)
-	    (if (or (and (null-tag-id? ?expr-type-id)
+	    (if (or (and (null-type-id? ?expr-type-id)
 			 (type-identifier-is-list-or-list-sub-type? ?pred-type-id))
 		    (type-identifier-super-and-sub? ?pred-type-id ?expr-type-id lexenv.run input-form.stx))
 		(%make-true-psi input-form.stx ?expr lexenv.run lexenv.expand)
@@ -421,17 +420,15 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
-	 (syntax-match (type-signature-tags expr.sig) ()
-	   ((?type-id)
-	    (top-tag-id?     ?type-id)
+	 (syntax-match (type-signature-tags expr.sig) (<top> <list>)
+	   ((<top>)
 	    (%error-unknown-type))
 
 	   ((?type-id)
 	    (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
 	      (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand ots expr.psi ?field-name)))
 
-	   (?type-id
-	    (list-tag-id? ?type-id)
+	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature.
 	    (%error-unknown-type))
@@ -521,17 +518,15 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
-	 (syntax-match (type-signature-tags expr.sig) ()
-	   ((?type-id)
-	    (top-tag-id?     ?type-id)
+	 (syntax-match (type-signature-tags expr.sig) (<top> <list>)
+	   ((<top>)
 	    (%error-unknown-type))
 
 	   ((?type-id)
 	    (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
 	      (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand ots expr.psi ?field-name ?new-value)))
 
-	   (?type-id
-	    (list-tag-id? ?type-id)
+	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature.
 	    (%error-unknown-type))
@@ -608,9 +603,8 @@
 	 (define-syntax-rule (%late-binding)
 	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
 						method-name.sym subject-expr.psi ?arg*))
-	 (syntax-match (type-signature-tags subject-expr.sig) ()
-	   ((?type-id)
-	    (top-tag-id?     ?type-id)
+	 (syntax-match (type-signature-tags subject-expr.sig) (<top> <list>)
+	   ((<top>)
 	    (%late-binding))
 
 	   ((?type-id)
@@ -619,8 +613,7 @@
 						  ?type-id
 						  ?subject-expr subject-expr.psi ?arg*))
 
-	   (?type-id
-	    (list-tag-id? ?type-id)
+	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature; we need to insert a run-time dispatch.
 	    (%late-binding))
@@ -862,10 +855,10 @@
       ;;The common case of single return value.
       (let ((asrt.id (car asrt.tags))
 	    (expr.id (car expr.tags)))
-	(cond ((top-tag-id?     asrt.id)
+	(cond ((top-type-id?     asrt.id)
 	       ;;Success!!!  The signatures always match.
 	       (%just-evaluate-the-expression expr.psi return-values?))
-	      ((top-tag-id?     expr.id)
+	      ((top-type-id?     expr.id)
 	       (%run-time-validation who input-form.stx lexenv.run lexenv.expand
 				     asrt.tags expr.psi return-values?))
 	      ((type-identifier-super-and-sub? asrt.id expr.id lexenv.run input-form.stx)
@@ -1013,7 +1006,7 @@
 			       has-rest?))))
 		  ((null? asrt.tags)
 		   (values '() '() #f))
-		  ((list-tag-id? asrt.tags)
+		  ((list-type-id? asrt.tags)
 		   (let ((consumer-formal.sym (gensym "rest")))
 		     (values (list consumer-formal.sym) consumer-formal.sym #t)))
 		  (else

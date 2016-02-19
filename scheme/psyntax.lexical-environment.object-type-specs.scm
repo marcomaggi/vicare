@@ -341,7 +341,7 @@
 	(let ((label (id->label type-id)))
 	  (or (hashtable-ref table label #f)
 	      (receive-and-return (ots)
-		  (let ((parent-id		(nlist-tag-id))
+		  (let ((parent-id		(nlist-type-id))
 			(constructor.sexp	#f)
 			(predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
 			(methods-table		'()))
@@ -385,7 +385,7 @@
 	(let ((label (id->label item-type-id)))
 	  (or (hashtable-ref table label #f)
 	      (receive-and-return (ots)
-		  (let ((parent-id		(vector-tag-id))
+		  (let ((parent-id		(vector-type-id))
 			(constructor.sexp	#f)
 			(predicate.sexp		#f)
 			(methods-table		'()))
@@ -400,40 +400,6 @@
 
 (define <vector-type-spec>-rcd
   (record-constructor-descriptor <vector-type-spec>))
-
-
-;;;; closure object signature spec
-;;
-;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
-;;"<procedure>" representing closure objects defined in the source code.
-;;
-;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
-;;signature of arguments and return values.
-;;
-;;NOTE There is  no predicate sexp because,  at run-time, there is no  way to inspect
-;;the signature of a closure object.
-;;
-(define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
-  #;(nongenerative vicare:expander:<closure-type-spec>)
-  (parent <scheme-type-spec>)
-
-  (fields
-   (immutable signature		closure-type-spec.signature)
-		;An instance of "<callable-signature>".
-   #| end of FIELDS |# )
-
-  (protocol
-    (lambda (make-scheme-type-spec)
-      (define* (make-closure-type-spec signature)
-	(let ((parent-id		(procedure-tag-id))
-	      (constructor.sexp		#f)
-	      (predicate.sexp		#f)
-	      (methods-table		'()))
-	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-	   signature)))
-      make-closure-type-spec))
-
-  #| end of DEFINE-RECORD-TYPE |# )
 
 
 ;;;; Vicare's struct-type specification
@@ -503,6 +469,40 @@
 				  safe-accessors-table safe-mutators-table methods-table)
 	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+
+;;;; closure object signature spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<procedure>" representing closure objects defined in the source code.
+;;
+;;It is built  when expanding a DEFINE,  LAMBDA or CASE-LAMBDA form  to represent the
+;;signature of arguments and return values.
+;;
+;;NOTE There is  no predicate sexp because,  at run-time, there is no  way to inspect
+;;the signature of a closure object.
+;;
+(define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
+  #;(nongenerative vicare:expander:<closure-type-spec>)
+  (parent <scheme-type-spec>)
+
+  (fields
+   (immutable signature		closure-type-spec.signature)
+		;An instance of "<callable-signature>".
+   #| end of FIELDS |# )
+
+  (protocol
+    (lambda (make-scheme-type-spec)
+      (define* (make-closure-type-spec signature)
+	(let ((parent-id		(procedure-type-id))
+	      (constructor.sexp		#f)
+	      (predicate.sexp		#f)
+	      (methods-table		'()))
+	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
+	   signature)))
+      make-closure-type-spec))
+
   #| end of DEFINE-RECORD-TYPE |# )
 
 

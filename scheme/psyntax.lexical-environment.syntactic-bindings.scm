@@ -843,9 +843,9 @@
      (else
       (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
 	(or (object-type-spec.memoised-list-id item-ots)
-	    (cond ((top-tag-id?     item-type.id)
+	    (cond ((top-type-id?     item-type.id)
 		   (receive-and-return (list-type.id)
-		       (list-tag-id)
+		       (list-type-id)
 		     (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
 		  (else
 		   (let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))

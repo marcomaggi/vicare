@@ -104,14 +104,14 @@
        (syntax-rules ()
 	 ((_ ?who ?type-id-maker)
 	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
-  (define-single-type-signature-maker make-type-signature/single-top			top-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-void			void-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-boolean		boolean-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-procedure		procedure-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-predicate		predicate-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-stx			stx-tag-id)
-  (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	syntactic-identifier-tag-id)
-  (define-cached-signature-maker make-type-signature/standalone-list			(list-tag-id))
+  (define-single-type-signature-maker make-type-signature/single-top			top-type-id)
+  (define-single-type-signature-maker make-type-signature/single-void			void-type-id)
+  (define-single-type-signature-maker make-type-signature/single-boolean		boolean-type-id)
+  (define-single-type-signature-maker make-type-signature/single-procedure		procedure-type-id)
+  (define-single-type-signature-maker make-type-signature/single-predicate		predicate-type-id)
+  (define-single-type-signature-maker make-type-signature/single-stx			stx-type-id)
+  (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	syntactic-identifier-type-id)
+  (define-cached-signature-maker make-type-signature/standalone-list			(list-type-id))
   #| end of LET-SYNTAX |# )
 
 (define-syntax-rule (make-type-signature/fully-untyped)
@@ -312,7 +312,7 @@
 					       (core-prim-id '<pair>))))
 
 	       ((eq? datum (void))	(core-prim-id '<void>))
-	       (else			(top-tag-id))))))
+	       (else			(top-type-id))))))
 
 
 ;;;; done

@@ -106,8 +106,8 @@
    (type-identifier-is-procedure-or-procedure-sub-type? id lexenv #f))
   ((id lexenv input-form.stx)
    (and (identifier? id)
-	(or (procedure-tag-id? id)
-	    (predicate-tag-id? id)
+	(or (procedure-type-id? id)
+	    (predicate-type-id? id)
 	    (type-identifier-is-procedure-sub-type? id lexenv input-form.stx)))))
 
 ;;; --------------------------------------------------------------------
@@ -138,7 +138,7 @@
    (type-identifier-is-list-or-list-sub-type? id lexenv #f))
   ((id lexenv input-form.stx)
    (and (identifier? id)
-	(or (list-tag-id? id)
+	(or (list-type-id? id)
 	    (type-identifier-is-list-sub-type? id lexenv input-form.stx)))))
 
 ;;; --------------------------------------------------------------------
@@ -169,7 +169,7 @@
    (type-identifier-is-vector-or-vector-sub-type? id lexenv #f))
   ((id lexenv input-form.stx)
    (and (identifier? id)
-	(or (vector-tag-id? id)
+	(or (vector-type-id? id)
 	    (type-identifier-is-vector-sub-type? id lexenv input-form.stx)))))
 
 
@@ -216,12 +216,12 @@
    ;;
    (cond ((~free-identifier=? super-type.id sub-type.id)
 	  #t)
-	 (($top-tag-id? super-type.id)
+	 (($top-type-id? super-type.id)
 	  #t)
-	 (($top-tag-id? sub-type.id)
+	 (($top-type-id? sub-type.id)
 	  #f)
-	 ((procedure-tag-id? super-type.id)
-	  (or (predicate-tag-id? sub-type.id)
+	 ((procedure-type-id? super-type.id)
+	  (or (predicate-type-id? sub-type.id)
 	      (closure-type-spec? (id->object-type-specification __who__ input-form.stx sub-type.id lexenv))))
 	 (else
 	  (let ((super-ots (id->object-type-specification __who__ input-form.stx super-type.id lexenv))
@@ -240,7 +240,7 @@
 		   (let loop ((sub-ots sub-ots))
 		     (cond ((object-type-spec.parent-id sub-ots)
 			    => (lambda (parent.id)
-				 (if ($top-tag-id? parent.id)
+				 (if ($top-type-id? parent.id)
 				     #f
 				   (let ((parent-ots (id->object-type-specification __who__ input-form.stx parent.id lexenv)))
 				     (or (eq? super-ots parent-ots)
@@ -268,12 +268,12 @@
   ((id1 id2 lexenv input-form.stx)
    (cond ((type-identifier=? id1 id2 lexenv)
 	  id1)
-	 ((or ($top-tag-id? id1)
-	      ($top-tag-id? id2))
-	  (top-tag-id))
-	 (($no-return-tag-id? id1)
+	 ((or ($top-type-id? id1)
+	      ($top-type-id? id2))
+	  (top-type-id))
+	 (($no-return-type-id? id1)
 	  id2)
-	 (($no-return-tag-id? id2)
+	 (($no-return-type-id? id2)
 	  id1)
 	 (else
 	  (let outer-loop ((type1 id1))
@@ -288,7 +288,7 @@
 			   (cond ((object-type-spec.parent-id ots1)
 				  => outer-loop)
 				 (else
-				  (top-tag-id))))))))))))))
+				  (top-type-id))))))))))))))
 
 
 ;;;; done

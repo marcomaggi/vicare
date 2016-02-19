@@ -803,7 +803,7 @@
 
       (?field-name
        (identifier? ?field-name)
-       (values ?field-name (top-tag-id)))
+       (values ?field-name (top-type-id)))
 
       (_
        (synner (if (options::typed-language?)

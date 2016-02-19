@@ -94,7 +94,7 @@
   ;;
   ;;In other words, return true if STX is a standalone "<list>".
   ;;
-  (list-tag-id? stx))
+  (list-type-id? stx))
 
 (define* (syntax-object.type-signature.no-return? stx)
   ;;The argument STX must be a  syntax object representing a type signature according
@@ -105,7 +105,7 @@
   ;;
   ;;In other words, return true if STX is a standalone "<no-return>".
   ;;
-  (no-return-tag-id? stx))
+  (no-return-type-id? stx))
 
 ;;; --------------------------------------------------------------------
 
@@ -221,7 +221,7 @@
      (?super-rest-type
       (type-identifier-is-list-sub-type? ?super-rest-type lexenv)
       (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
-	(or (top-tag-id? item-id)
+	(or (top-type-id? item-id)
 	    (syntax-match sub-signature (<list>)
 	      ;;The super  signature is an improper  list with rest item  and the sub
 	      ;;signature is finished.  We want the following signatures to match:
@@ -294,20 +294,20 @@
 	(() '())
 	;;SIG1 is a proper list shorter that SIG2.
 	(_
-	 (list-tag-id))))
+	 (list-type-id))))
 
      ((?type1 . ?rest1)
       (syntax-match sig2 ()
 	;;SIG2 is a proper list shorter that SIG1.
 	(()
-	 (list-tag-id))
+	 (list-type-id))
 	;;SIG1 and SIG2 have matching type identifiers ?TYPE1 and ?TYPE2.
 	((?type2 . ?rest2)
 	 (cons (type-identifier-common-ancestor ?type1 ?type2 lexenv)
 	       (recur ?rest1 ?rest2)))
 	;;SIG2 is an improper list shorter that SIG1.
 	(?rest2
-	 (list-tag-id))))
+	 (list-type-id))))
 
      (?rest1
       (syntax-match sig2 ()
@@ -316,7 +316,7 @@
 	 (identifier? ?rest2)
 	 (type-identifier-common-ancestor ?rest1 ?rest2 lexenv))
 	(_
-	 (list-tag-id))))
+	 (list-type-id))))
      )))
 
 
@@ -351,7 +351,7 @@
 	(values ?id ?tag)))
      (?id
       (identifier? ?id)
-      (values ?id (top-tag-id))))))
+      (values ?id (top-type-id))))))
 
 
 ;;;; standard binding parsing: proper lists of bindings left-hand sides
@@ -445,7 +445,7 @@
 	    (identifier? ?id)
 	    (receive (id* tag*)
 		(recur ?other-id*)
-	      (values (cons ?id id*) (cons (top-tag-id) tag*))))
+	      (values (cons ?id id*) (cons (top-type-id) tag*))))
 	   (_
 	    (%error "invalid tagged bindings syntax"))))
      (unless (distinct-bound-ids? id*)
@@ -482,7 +482,7 @@
   (define (%synner message subform)
     (syntax-violation __func_who__ message input-form.stx subform))
   (define (%one-untyped-for-each item*)
-    (map (lambda (x) (top-tag-id)) item*))
+    (map (lambda (x) (top-type-id)) item*))
   (define (%validate-standard-formals standard-formals.stx %synner)
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
@@ -490,7 +490,7 @@
   (syntax-match formals.stx (brace)
     (?args-id
      (identifier? ?args-id)
-     (values ?args-id (list-tag-id)))
+     (values ?args-id (list-type-id)))
 
     ((?arg* ...)
      (for-all identifier? ?arg*)
@@ -505,7 +505,7 @@
        (%validate-standard-formals (append ?arg* ?rest-id) %synner)
        ;;These APPEND applications return an improper list.
        (values (append ?arg* ?rest-id)
-	       (append (%one-untyped-for-each ?arg*) (list-tag-id)))))
+	       (append (%one-untyped-for-each ?arg*) (list-type-id)))))
 
     (_
      (%synner "invalid standard formals specification" formals.stx))))
@@ -564,7 +564,7 @@
       ;;Standard formals, UNtyped args as in: (lambda args ---)
       (?args-id
        (identifier? ?args-id)
-       (values ?args-id (list-tag-id)))
+       (values ?args-id (list-type-id)))
 
       ;;Non-standard formals: possibly typed arguments with typed rest argument.
       ((?arg* ... . (brace ?rest-id ?rest-tag))
@@ -595,7 +595,7 @@
 	    (identifier? ?rest-id))
        (begin
 	 (%validate-standard-formals (append ?arg* ?rest-id) %synner)
-	 (values formals.stx (append (%one-untyped-for-each ?arg*) (list-tag-id)))))
+	 (values formals.stx (append (%one-untyped-for-each ?arg*) (list-type-id)))))
 
       ;;Non-standard formals: possibly typed identifiers with UNtyped rest argument.
       ((?arg* ... . ?rest-id)
@@ -605,7 +605,7 @@
 	     (if (pair? ?arg*)
 		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
 	       (if (identifier? ?rest-id)
-		   (values ?rest-id (list-tag-id))
+		   (values ?rest-id (list-type-id))
 		 (%synner "invalid rest argument specification" ?rest-id))))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
@@ -630,7 +630,7 @@
 	  ;;Untyped argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals.stx) (cons (top-tag-id) type-signature.stx)))
+	   (values (cons ?id standard-formals.stx) (cons (top-type-id) type-signature.stx)))
 	  ;;Typed argument.
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
@@ -647,7 +647,7 @@
 		(%synner "duplicate identifiers in formals specification" duplicate-id)))))
 
   (define (%one-untyped-for-each item*)
-    (map (lambda (x) (top-tag-id)) item*))
+    (map (lambda (x) (top-type-id)) item*))
 
   #| end of module |# )
 

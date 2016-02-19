@@ -270,7 +270,7 @@
   (protocol
     (lambda (make-qdef-defvar)
       (define* (make-qdef-standard-defvar input-form.stx {lhs.id identifier?} rhs.stx)
-	((make-qdef-defvar input-form.stx lhs.id rhs.stx (top-tag-id))))
+	((make-qdef-defvar input-form.stx lhs.id rhs.stx (top-type-id))))
       make-qdef-standard-defvar)))
 
 ;;; --------------------------------------------------------------------
@@ -310,7 +310,7 @@
   (protocol
     (lambda (make-qdef)
       (define* (make-qdef-top-expr input-form.stx)
-	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-tag-id))))
+	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-type-id))))
       make-qdef-top-expr)))
 
 
@@ -372,13 +372,12 @@
 	 (rhs.sig (psi.retvals-signature rhs.psi)))
     ;;All right, we  have expanded the RHS expression.  Now  let's do some validation
     ;;on the type of the expression.
-    (syntax-match (type-signature-tags rhs.sig) ()
+    (syntax-match (type-signature-tags rhs.sig) (<list>)
       ((?tag)
        ;;A single return value.  Good.
        rhs.psi)
 
-      (?tag
-       (list-tag-id? ?tag)
+      (<list>
        ;;Fully  unspecified return  values: we  accept it  here and  delegate further
        ;;checks at run-time.
        rhs.psi)

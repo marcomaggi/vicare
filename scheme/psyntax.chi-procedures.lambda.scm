@@ -127,7 +127,7 @@
 	   (let ((following-validations (recur (cdr arg*) (cdr tag*) (fxadd1 idx))))
 	     (let ((arg (car arg*))
 		   (tag (car tag*)))
-	       (cond ((top-tag-id? tag)
+	       (cond ((top-type-id? tag)
 		      ;;Insert no validation for an argument typed "<top>".
 		      following-validations)
 		     (else
@@ -138,8 +138,8 @@
 			    following-validations))))))
 
 	  ((or (not             rest-tag)
-	       (list-tag-id?    rest-tag)
-	       (top-tag-id?     rest-tag))
+	       (list-type-id?    rest-tag)
+	       (top-type-id?     rest-tag))
 	   ;;There is  no rest argument  or it is tagged  as "<top>" or  or "<list>";
 	   ;;insert no validation.
 	   '())
@@ -732,197 +732,6 @@
 			  body*.stx)))
 	(%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
 						 standard-formals.stx clause-signature body*.stx))))))
-
-
-;; (module (chi-lambda-clause/typed)
-
-;;   (define* (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-;; 				    attributes.sexp who.id formals.stx body-form*.stx)
-;;     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
-;;     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
-;;     ;;formals;  an  instance  of "<clambda-clause-signature>"  representing  the  tag
-;;     ;;signature  for  this  LAMBDA  clause;  a PSI  struct  containing  the  language
-;;     ;;expression representing the body of the clause.
-;;     ;;
-;;     ;;A LAMBDA or CASE-LAMBDA clause defines a lexical contour; so we build a new rib
-;;     ;;for it, initialised with the id/label  associations of the formals; we push new
-;;     ;;lexical bindings on LEXENV.RUN.
-;;     ;;
-;;     ;;NOTE The expander for the internal body will create yet another lexical contour
-;;     ;;to hold the body's internal definitions.
-;;     ;;
-;;     ;;When the formals are tagged, we want to transform:
-;;     ;;
-;;     ;;   (lambda ({_ <symbol>} {a <fixnum>} {b <string>})
-;;     ;;     ?body ... ?last-body)
-;;     ;;
-;;     ;;into:
-;;     ;;
-;;     ;;   (lambda (a b)
-;;     ;;     (validate-typed-procedure-argument <fixnum> a)
-;;     ;;     (validate-typed-procedure-argument <string> b)
-;;     ;;     (internal-body
-;;     ;;       ?body ...
-;;     ;;       (assert-signature-and-return (<symbol>) ?last-body)))
-;;     ;;
-;;     ;;STANDARD-FORMALS.STX is a syntax object representing the formal argument of the
-;;     ;;LAMBDA  clause  as  required  by  R6RS.  CLAUSE-SIGNATURE  is  an  instance  of
-;;     ;;"<clambda-clause-signature>" representing the types of formals and retvals.
-;;     (define-values (standard-formals.stx clause-signature)
-;;       (syntax-object.parse-typed-clambda-clause-formals formals.stx input-form.stx))
-;;     (define argvals-signature.tags
-;;       (clambda-clause-signature.argvals.tags clause-signature))
-;;     (define retvals-signature.tags
-;;       (clambda-clause-signature.retvals.tags clause-signature))
-;;     (cond
-;;      ((list? standard-formals.stx)
-;;       ;;Without  rest argument.   Here  we know  that  both STANDARD-FORMALS.STX  and
-;;       ;;ARGVALS-SIGNATURE.TAGS are proper lists with equal length.
-;;       (let*-values
-;; 	  (((rib lexenv.run formals*.lex)
-;; 	    (%process-typed-syntactic-bindings-lhs* standard-formals.stx argvals-signature.tags lexenv.run))
-;; 	   ;;Proper list of syntax objects representing validation forms.
-;; 	   ((validation*.stx)
-;; 	    (if (attributes.safe-formals? attributes.sexp)
-;; 		(%build-formals-validation-form* __who__ input-form.stx lexenv.run standard-formals.stx argvals-signature.tags #f #f)
-;; 	      '()))
-;; 	   ;;True if there is at least one formals argument validation form.
-;; 	   ((has-arguments-validators?)
-;; 	    (not (null? validation*.stx)))
-;; 	   ;;A proper  list of syntax  objects representing the body  forms; possibly
-;; 	   ;;with arguments validation forms;  possibly with return values validation
-;; 	   ;;forms.
-;; 	   ((body-form*.stx)
-;; 	    (push-lexical-contour
-;; 		rib
-;; 	      ;;Build a list of syntax objects representing the internal body.
-;; 	      (append validation*.stx
-;; 		      (if (attributes.safe-retvals? attributes.sexp)
-;; 			  (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
-;; 			body-form*.stx))))
-;; 	   ((body.psi)
-;; 	    (chi-internal-body #f lexenv.run lexenv.expand body-form*.stx)))
-;; 	(values formals*.lex clause-signature body.psi)))
-
-;;      (else
-;;       ;;With  rest  argument.   Here  we  know  that  both  STANDARD-FORMALS.STX  and
-;;       ;;ARGVALS-SIGNATURE.TAGS are improper lists with equal length.
-;;       (let*-values
-;; 	  (((arg*.id  rest.id)
-;; 	    (improper-list->list-and-rest standard-formals.stx))
-;; 	   ((arg*.tag rest.tag)
-;; 	    (improper-list->list-and-rest argvals-signature.tags))
-;; 	   ((rib lexenv.run formals.lex)
-;; 	    (receive (rib lexenv.run all*.lex)
-;; 		(%process-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) (cons rest.tag arg*.tag) lexenv.run)
-;; 	      ;;Yes, this call to APPEND builds an improper list.
-;; 	      (values rib lexenv.run (append (cdr all*.lex) (car all*.lex)))))
-;; 	   ;;Proper list of syntax objects representing validation forms.
-;; 	   ((validation*.stx)
-;; 	    (if (attributes.safe-formals? attributes.sexp)
-;; 		(%build-formals-validation-form* __who__ input-form.stx lexenv.run
-;; 						 arg*.id arg*.tag rest.id rest.tag)
-;; 	      '()))
-;; 	   ;;True if there is at least one formals argument validation form.
-;; 	   ((has-arguments-validators?)
-;; 	    (not (null? validation*.stx)))
-;; 	   ;;A proper  list of syntax  objects representing the body  forms; possibly
-;; 	   ;;with arguments validation forms;  possibly with return values validation
-;; 	   ;;forms.
-;; 	   ((body-form*.stx)
-;; 	    (push-lexical-contour
-;; 		rib
-;; 	      ;;Build a list of syntax objects representing the internal body.
-;; 	      (append validation*.stx
-;; 		      (if (attributes.safe-retvals? attributes.sexp)
-;; 			  (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
-;; 			body-form*.stx))))
-;; 	   ((body.psi)
-;; 	    (chi-internal-body input-form.stx lexenv.run lexenv.expand body-form*.stx)))
-;; 	(values formals.lex clause-signature body.psi)))))
-
-;; ;;; --------------------------------------------------------------------
-
-;;   (define (%build-formals-validation-form* who input-form.stx lexenv
-;; 					   arg* tag* rest-arg rest-tag)
-;;     ;;Build  and  return a  list  of  syntax  objects representing  expressions  that
-;;     ;;validate the  arguments, excluding  the formals  in which  the tag  is "<top>",
-;;     ;;whose argument are always valid.  When  there is no rest argument: REST-ARG and
-;;     ;;REST-TAG must be #f.
-;;     ;;
-;;     (let recur ((arg* arg*)
-;; 		(tag* tag*)
-;; 		(idx  0))
-;;       (cond ((pair? arg*)
-;; 	     (let ((following-validations (recur (cdr arg*) (cdr tag*) (fxadd1 idx))))
-;; 	       (if (top-tag-id? (car tag*))
-;; 		   ;;Insert no validation for an argument typed "<top>".
-;; 		   following-validations
-;; 		 (cons (bless
-;; 			`(validate-typed-procedure-argument ,(car tag*) ,idx ,(car arg*)))
-;; 		       following-validations))))
-;; 	    ((not rest-tag)
-;; 	     ;;There is no rest argument.
-;; 	     '())
-;; 	    ((list-tag-id? rest-tag)
-;; 	     ;;Nothing to be done because the rest argument is always a list.
-;; 	     '())
-;; 	    ((type-identifier-is-list-sub-type? rest-tag)
-;; 	     ;;Build a validation form for the objects in the rest argument.
-;; 	     (let ((ots (id->object-type-specification who input-form.stx rest-tag lexenv)))
-;; 	       (if (list-type-spec? ots)
-;; 		   ;;The REST-TAG is some sub-type of "<list>" defined as instance of
-;; 		   ;;"<list-type-spec>".   We generate  a validating  expression that
-;; 		   ;;accepts both null and a list of objects of the specified type.
-;; 		   (let ((item-type-id	(list-type-spec.type-id ots))
-;; 			 (obj.sym	(gensym))
-;; 			 (idx.sym	(gensym)))
-;; 		     (bless
-;; 		      `((fold-left (lambda (,idx.sym ,obj.sym)
-;; 				     (validate-typed-procedure-argument ,item-type-id ,idx.sym ,obj.sym)
-;; 				     (fxadd1 ,idx.sym))
-;; 			  ,idx ,rest-arg))))
-;; 		 ;;The REST-TAG is some sub-type  of "<list>" not defined as instance
-;; 		 ;;of "<list-type-spec>".  Just rely on the type's own predicate.
-;; 		 (bless
-;; 		  `(validate-typed-procedure-argument ,rest-tag #f ,rest-arg)))))
-;; 	    (else
-;; 	     (syntax-violation who
-;; 	       "invalid type for  rest argument, it must be  \"<list>\" or its sub-type"
-;; 	       input-form.stx rest-tag)))))
-
-;;   (define* (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
-;;     ;;Add the return values validation to the last form in the body; return a list of
-;;     ;;body forms.
-;;     ;;
-;;     ;;When  there  are  arguments  validators:  the body  forms  are  wrapped  in  an
-;;     ;;INTERNAL-BODY to  create an internal  lexical scope.   This is far  better than
-;;     ;;wrapping into a LET, which would expand into a nested LAMBDA.
-;;     ;;
-;;     ;;The  argument HAS-ARGUMENTS-VALIDATORS?   is  required  to avoid  INTERNAL-BODY
-;;     ;;wrapping when not needed; this gains a bit of speed when expanding the body.
-;;     ;;
-;;     (cond (has-arguments-validators?
-;; 	   (bless
-;; 	    (if (syntax-object.type-signature.fully-untyped? retvals-signature.tags)
-;; 		;;The number and type of return values is unknown.
-;; 		`((internal-body . ,body-form*.stx))
-;; 	      (receive (head*.stx last.stx)
-;; 		  (proper-list->head-and-last body-form*.stx)
-;; 		`((internal-body
-;; 		    ,@head*.stx
-;; 		    (assert-signature-and-return ,retvals-signature.tags ,last.stx)))))))
-;; 	  (else
-;; 	   (if (syntax-object.type-signature.fully-untyped? retvals-signature.tags)
-;; 	       ;;The number and type of return values is unknown.
-;; 	       body-form*.stx
-;; 	     (receive (head*.stx last.stx)
-;; 		 (proper-list->head-and-last body-form*.stx)
-;; 	       (append head*.stx
-;; 		       (bless
-;; 			`((assert-signature-and-return ,retvals-signature.tags ,last.stx)))))))))
-
-;;   #| end of module: CHI-LAMBDA-CLAUSES |# )
 
 
 ;;;; done

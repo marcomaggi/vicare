@@ -1081,7 +1081,7 @@
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (top-tag-id) qdef lexenv.run)))
+	(values lhs.id (top-type-id) qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1286,7 +1286,7 @@
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (top-tag-id) qdef lexenv.run)))
+	(values lhs.id (top-type-id) qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 

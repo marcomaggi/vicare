@@ -1402,7 +1402,7 @@
 	  (let ((lhs.id  (car lhs*.id))
 		(lhs.tag (car lhs*.tag)))
 	    (if (and lhs.tag
-		     (not (top-tag-id? lhs.tag)))
+		     (not (top-type-id? lhs.tag)))
 		;;Add a typed lexical variable.
 		(let ((lhs.lex (generate-lexical-gensym lhs.id)))
 		  (loop (cdr lhs*.id)

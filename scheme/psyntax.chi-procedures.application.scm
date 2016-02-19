@@ -249,9 +249,9 @@
 		  (loop (cdr rand*.sig) (cdr rand*.stx)
 			(cons ?tag rand*.tag)))
 		 (?tag
-		  (list-tag-id? ?tag)
+		  (list-type-id? ?tag)
 		  (loop (cdr rand*.sig) (cdr rand*.stx)
-			(cons (top-tag-id) rand*.tag)))
+			(cons (top-type-id) rand*.tag)))
 		 (_
 		  (let ((expected-retvals-signature (make-type-signature/single-top)))
 		    (expand-time-retvals-signature-violation 'values
@@ -299,7 +299,7 @@
 			      apply.core
 			      (cons rator.core rand*.core))
 			    (psi-application-retvals-signature input-form.stx lexenv.run rator.psi))))
-	       ((top-tag-id? ?rator.tag)
+	       ((top-type-id? ?rator.tag)
 		;;Let's do it and we will see at run-time what happens.  Notice that,
 		;;in this case: we do not know the signature of the return values.
 		(%build-application-no-signature input-form.stx lexenv.run lexenv.expand
@@ -309,7 +309,7 @@
 		(%error-wrong-rator-sig))))
 
 	(?rator.tag
-	 (list-tag-id? ?rator.tag)
+	 (list-type-id? ?rator.tag)
 	 ;;Fully unspecified return values.  Let's do  it and we will see at run-time
 	 ;;what happens.  Notice that, in this case:  we do not know the signature of
 	 ;;the return values.
@@ -357,7 +357,7 @@
     (define rator.sig (psi.retvals-signature rator.psi))
     (syntax-match (type-signature-tags rator.sig) ()
       (?tag
-       (list-tag-id? ?tag)
+       (list-type-id? ?tag)
        ;;The rator type  is unknown: evaluating the rator might  return any number of
        ;;values of any  type.  Return a normal  rator application and we  will see at
        ;;run-time what happens; this is standard Scheme behaviour.
@@ -423,7 +423,7 @@
 	     (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
 						  rator.tag rator.psi rand*.psi)))
 
-	  ((top-tag-id? rator.tag)
+	  ((top-type-id? rator.tag)
 	   ;;The rator  type is  unknown, we  only know  that it  is a  single value.
 	   ;;Return a procedure application and we will see at run-time what happens.
 	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
@@ -467,14 +467,14 @@
 				       rator.psi first-rand.psi other-rand*.stx))
     (syntax-match (type-signature-tags rator.sig) ()
       (?tag
-       (list-tag-id? ?tag)
+       (list-type-id? ?tag)
        ;;The rator type  is unknown: evaluating the rator might  return any number of
        ;;values of any  type.  Return a normal  rator application and we  will see at
        ;;run-time what happens; this is standard Scheme behaviour.
        (%common-rator-application))
 
       ((?tag)
-       (top-tag-id? ?tag)
+       (top-type-id? ?tag)
        ;;The rator type is unknown, we only know  that it is a single value; it might
        ;;be a closure object or not.  Return  a procedure application and we will see
        ;;at run-time what happens.
@@ -678,7 +678,7 @@
 					       rator.tag rator.psi rand*.psi)
     (define (%no-optimisations-possible)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-    (if (predicate-tag-id? rator.tag)
+    (if (predicate-type-id? rator.tag)
 	(%process-predicate-application input-form.stx lexenv.run lexenv.expand
 					rator.psi rand*.psi)
       (let* ((label (id->label/or-error __module_who__ input-form.stx rator.tag))
