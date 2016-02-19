@@ -292,8 +292,8 @@
 			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
 		     ((core-macro
-		       define/standard define/typed
-		       case-define/standard case-define/typed
+		       define/std define/typed
+		       case-define/std case-define/typed
 		       define-syntax define-alias
 		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
@@ -445,7 +445,7 @@
 				out.stx
 			      (syntax-violation '__who__ "invalid fluid syntax use" stx lhs.id)))))
 	 (rhs.psi	(chi-expr (bless
-				   `(lambda/standard (stx)
+				   `(lambda/std (stx)
 				      (if (identifier? stx)
 					  (quote ,who.sym)
 					(syntax-violation '__who__ "invalid fluid syntax use" stx (syntax ,lhs.id)))))
@@ -930,11 +930,11 @@
       ((pattern-variable)
        (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
-      ((define/standard define/typed define-syntax define-fluid-syntax define-alias module import library)
+      ((define/std define/typed define-syntax define-fluid-syntax define-alias module import library)
        (stx-error expr.stx
 		  (string-append
 		   (case type
-		     ((define/standard define/typed)		"a definition")
+		     ((define/std define/typed)			"a definition")
 		     ((define-syntax)				"a define-syntax")
 		     ((define-fluid-syntax)			"a define-fluid-syntax")
 		     ((define-alias)				"a define-alias")

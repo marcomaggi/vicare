@@ -712,7 +712,7 @@
     (let* ((expr.psi     (chi-expr expr.stx lexenv.run lexenv.expand))
 	   (expr.sig     (psi.retvals-signature expr.psi)))
       (let* ((matcher.sexp	(let ((arg.sym (gensym "arg")))
-				  `(lambda/standard (,arg.sym)
+				  `(lambda/std (,arg.sym)
 				     (cond ,@(%build-branches input-form.stx arg.sym case-clause*.stx)))))
 	     (matcher.psi	(chi-expr (bless matcher.sexp) lexenv.run lexenv.expand)))
 	(make-psi input-form.stx
@@ -1025,7 +1025,7 @@
 						  (else
 						   `(values . ,validating-form*.sexp)))
 					  `(begin ,@validating-form*.sexp (void))))
-	       (consumer.stx		(bless `(lambda/standard ,consumer-formals.sexp ,consumer-body.sexp)))
+	       (consumer.stx		(bless `(lambda/std ,consumer-formals.sexp ,consumer-body.sexp)))
 	       ;;We want "__who__"  to be bound in the consumer  expression.  So that
 	       ;;VALIDATE-TYPED-RETURN-VALUE can use it.
 	       (consumer.psi		(let* ((id    (core-prim-id '__who__))
@@ -1058,7 +1058,7 @@
 	     (idx.sym	(gensym "idx"))
 	     (obj.sym	(gensym "obj")))
 	(define validator.sexp
-	  `(fold-left (lambda/standard (,idx.sym ,obj.sym)
+	  `(fold-left (lambda/std (,idx.sym ,obj.sym)
 			(validate-typed-return-value ,item.id ,idx.sym ,obj.sym)
 			(fxadd1 ,idx.sym))
 	     ,idx ,consumer-formal.sym))

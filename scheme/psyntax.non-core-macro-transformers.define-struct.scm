@@ -155,7 +155,7 @@
 	     (let ((stru.sym (gensym "stru")))
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
-		   (lambda/standard (,stru.sym)
+		   (lambda/std (,stru.sym)
 		     ($struct-ref ,stru.sym ,field.idx))))))
 	unsafe-accessor*.id field*.idx field*.tag))
 
@@ -165,7 +165,7 @@
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/standard (,stru.sym ,val.sym)
+		   (lambda/std (,stru.sym ,val.sym)
 		     ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
 

@@ -28,15 +28,15 @@
 ;;For  example, when  CHI-BODY*  expands a  body that  allows  mixed definitions  and
 ;;expressions:
 ;;
-;;   (define/standard (fun x) (list x 1))
-;;   (define/standard name)
+;;   (define/std (fun x) (list x 1))
+;;   (define/std name)
 ;;   (define/typed {red tag} (+ 1 2))
-;;   (define/standard blue (+ 3 4))
+;;   (define/std blue (+ 3 4))
 ;;   (display 5)
 ;;
 ;;all the forms are parsed and the following QDEF objects are created:
 ;;
-;;   #<qdef-standard-defun  #'fun    #'(define/standard ?attributes (fun x) (list x 1))>
+;;   #<qdef-standard-defun  #'fun    #'(define/std ?attributes (fun x) (list x 1))>
 ;;   #<qdef-standard-defvar #'name   #'(void)>
 ;;   #<qdef-typed-defvar    #'red    #'(+ 1 2)>
 ;;   #<qdef-standard-defvar #'blue   #'(+ 3 4)>
@@ -143,7 +143,7 @@
   ;;This type  is used to  represent standard  R6RS function definitions  from syntax
   ;;uses like:
   ;;
-  ;;   (define/standard (fun arg) body)
+  ;;   (define/std (fun arg) body)
   ;;
   (nongenerative vicare:expander:<qdef-standard-defun>)
   (parent <qdef-defun>)
@@ -203,11 +203,11 @@
   ;;This type  is used to represent  non-typed function definitions from  syntax uses
   ;;like:
   ;;
-  ;;   (case-define/standard ?lhs ?clause0 ?clause ...)
+  ;;   (case-define/std ?lhs ?clause0 ?clause ...)
   ;;
   ;;which are meant to be equivalent to:
   ;;
-  ;;   (define ?lhs (case-lambda/standard ?clause0 ?clause ...))
+  ;;   (define ?lhs (case-lambda/std ?clause0 ?clause ...))
   ;;
   (nongenerative vicare:expander:qdef-standard-case-defun)
   (parent <qdef-case-defun>)
@@ -263,7 +263,7 @@
   ;;This type  is used to  represent standard  R6RS variable definitions  from syntax
   ;;uses like:
   ;;
-  ;;   (define/standard var val)
+  ;;   (define/std var val)
   ;;
   (nongenerative vicare:expander:<qdef-standard-defvar>)
   (parent <qdef-defvar>)
@@ -297,9 +297,9 @@
   ;;allowed).  For  example, when in a  top-level program's body the  expander parses
   ;;the forms:
   ;;
-  ;;   (define/standard var1 val1)
+  ;;   (define/std var1 val1)
   ;;   (display 123)
-  ;;   (define/standard var2 val2)
+  ;;   (define/std var2 val2)
   ;;
   ;;the form "(display 123)" is represented by a QDEF of this type.  This QDEF gets a
   ;;dummy left-hand side syntactic identifier (it  exists but it cannot be referenced
@@ -344,14 +344,14 @@
     (while-not-expanding-application-first-subform
      (let ((rtd (record-rtd qdef)))
        (cond
-	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/standard	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/std	qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-typed-defun>))		(chi-defun/typed	qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/standard	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/std	qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-typed-defvar>))		(chi-defvar/typed	qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-top-expr>))		(if interaction?
 									    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
 									  (chi-top-expr qdef lexenv.run lexenv.expand)))
-	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/standard qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/std qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed	 qdef lexenv.run lexenv.expand))
 	(else
 	 (assertion-violation __who__ "invalid QDEF type" qdef))))))
@@ -361,7 +361,7 @@
 
 ;;;; chi procedures: standard and typed variable definition
 
-(define (chi-defvar/standard qdef lexenv.run lexenv.expand)
+(define (chi-defvar/std qdef lexenv.run lexenv.expand)
   ;;Expand the  right-hand side expression  of a standard variable  definition; build
   ;;and return a  PSI object.  The generated core language  expression represents the
   ;;standalone right-hand side expression; the  code representing the handling of the

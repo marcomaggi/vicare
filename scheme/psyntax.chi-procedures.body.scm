@@ -130,8 +130,8 @@
 	    kwd*))
 
 	(define-syntax-rule (%expand-internal-definition ?expander-who)
-	  ;;Used  to  process an  internal  definition  core macro:  DEFINE/STANDARD,
-	  ;;DEFINE/TYPED, CASE-DEFINE/STANDARD, CASE-DEFINE/TYPED.  We parse the body
+	  ;;Used  to  process an  internal  definition  core macro:  DEFINE/STD,
+	  ;;DEFINE/TYPED, CASE-DEFINE/STD, CASE-DEFINE/TYPED.  We parse the body
 	  ;;form and generate a qualified right-hand  side (QDEF) object that will be
 	  ;;expanded later.
 	  ;;
@@ -145,25 +145,25 @@
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	  (case type
 
-	    ((define/standard)
-	     ;;The body form is a DEFINE/STANDARD core macro use, one among:
+	    ((define/std)
+	     ;;The body form is a DEFINE/STD core macro use, one among:
 	     ;;
-	     ;;   (define/standard ?lhs ?rhs)
-	     ;;   (define/standard (?lhs . ?formals) . ?body)
+	     ;;   (define/std ?lhs ?rhs)
+	     ;;   (define/std (?lhs . ?formals) . ?body)
 	     ;;
 	     ;;it is meant to be the implementation of R6RS's DEFINE syntax.
-	     (%expand-internal-definition chi-define/standard))
+	     (%expand-internal-definition chi-define/std))
 
-	    ((case-define/standard)
-	     ;;The body form is a CASE-DEFINE/STANDARD core macro use:
+	    ((case-define/std)
+	     ;;The body form is a CASE-DEFINE/STD core macro use:
 	     ;;
-	     ;;   (case-define/standard ?lhs ?case-lambda-clause ...)
+	     ;;   (case-define/std ?lhs ?case-lambda-clause ...)
 	     ;;
 	     ;;it is meant to be equivalent to:
 	     ;;
-	     ;;   (define/standard ?lhs (case-lambda/standard ?case-lambda-clause ...))
+	     ;;   (define/std ?lhs (case-lambda/std ?case-lambda-clause ...))
 	     ;;
-	     (%expand-internal-definition chi-case-define/standard))
+	     (%expand-internal-definition chi-case-define/std))
 
 	    ((define/typed)
 	     ;;The body form is a DEFINE/TYPED core macro use, one among:
@@ -180,7 +180,7 @@
 	     ;;
 	     ;;   (case-define/typed ?lhs ?case-lambda-clause ...)
 	     ;;
-	     ;;it  is meant  to be  an extension  to the  CASE-DEFINE/STANDARD syntax
+	     ;;it  is meant  to be  an extension  to the  CASE-DEFINE/STD syntax
 	     ;;supporting type specifications.
 	     (%expand-internal-definition chi-case-define/typed))
 
@@ -472,7 +472,7 @@
 	     ;;If  mixed definitions  and  expressions are  allowed,  we handle  this
 	     ;;expression as an implicit definition:
 	     ;;
-	     ;;   (define/standard dummy ?body-form)
+	     ;;   (define/std dummy ?body-form)
 	     ;;
 	     ;;which is not really part of  the lexical environment: we only generate
 	     ;;a lex and a qdef for it, without adding entries to LEXENV.RUN; then we
@@ -930,9 +930,9 @@
 ;;;; parsing DEFINE forms
 
 (module CHI-DEFINE
-  (chi-define/standard
+  (chi-define/std
    chi-define/typed
-   chi-case-define/standard
+   chi-case-define/std
    chi-case-define/typed)
   ;;The facilities of this module are used when the BODY-FORM.STX parsed by CHI-BODY*
   ;;is a  syntax object  representing the  macro use of  a DEFINE  variant; something
@@ -985,24 +985,24 @@
   ;;
 
 
-;;;; core macros: DEFINE/STANDARD
+;;;; core macros: DEFINE/STD
 
-(module (chi-define/standard)
+(module (chi-define/std)
   ;;The  BODY-FORM.STX  parsed  by  CHI-BODY*  is  a  syntax  object  representing  a
-  ;;DEFINE/STANDARD core macro use; for example, one among:
+  ;;DEFINE/STD core macro use; for example, one among:
   ;;
-  ;;   (define/standard ?lhs)
-  ;;   (define/standard ?lhs ?rhs)
-  ;;   (define/standard (?lhs . ?formals) . ?body)
+  ;;   (define/std ?lhs)
+  ;;   (define/std ?lhs ?rhs)
+  ;;   (define/std (?lhs . ?formals) . ?body)
   ;;
   ;;we parse  the form and  generate a qualified  right-hand side (QDEF)  object that
   ;;will be expanded later.  Here we establish a new syntactic binding representing a
   ;;fully R6RS compliant  lexical variable in the lexical context  represented by the
   ;;arguments RIB and LEXENV.RUN.
   ;;
-  (define-module-who define/standard)
+  (define-module-who define/std)
 
-  (define (chi-define/standard input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+  (define (chi-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
     (case-define %synner
       ((message)
        (syntax-violation __module_who__ message input-form.stx))
@@ -1027,7 +1027,7 @@
   (module (%parse-macro-use)
 
     (define* (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
-      ;;Syntax  parser for  Vicare's DEFINE/STANDARD  syntax uses;  this is  like the
+      ;;Syntax  parser for  Vicare's DEFINE/STD  syntax uses;  this is  like the
       ;;standard DEFINE described by R6RS.  Return the following values:
       ;;
       ;;1. The syntactic identifier of the lexical syntactic binding.
@@ -1085,16 +1085,16 @@
 
     #| end of module: %PARSE-MACRO-USE |# )
 
-  #| end of module: CHI-DEFINE/STANDARD |# )
+  #| end of module: CHI-DEFINE/STD |# )
 
 
-;;;; core macros: CASE-DEFINE/STANDARD
+;;;; core macros: CASE-DEFINE/STD
 
-(module (chi-case-define/standard)
+(module (chi-case-define/std)
 
-  (define-constant __module_who__ 'case-define/standard)
+  (define-constant __module_who__ 'case-define/std)
 
-  (define* (chi-case-define/standard input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+  (define* (chi-case-define/std input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
     (case-define %synner
       ((message)
        (syntax-violation __module_who__ message input-form.stx))
@@ -1167,7 +1167,7 @@
 
     #| end of module: %PARSE-MACRO-USE |# )
 
-  #| end of module: CHI-CASE-DEFINE/STANDARD |# )
+  #| end of module: CHI-CASE-DEFINE/STD |# )
 
 
 ;;;; core macros: DEFINE/TYPED

@@ -268,7 +268,7 @@
       (define/typed (brace ,foo-rtd <record-type-descriptor>)
 	,foo-rtd-code)
       ;;Protocol function.
-      (define/standard ,foo-constructor-protocol ,constructor-protocol-code)
+      (define/std ,foo-constructor-protocol ,constructor-protocol-code)
       ;;Record-constructor descriptor.
       (define/typed (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
       ;;Super-type record-constructor descriptor.
@@ -752,7 +752,7 @@
 		       (record.sym (gensym "?record")))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
-		       (lambda/standard (,record.sym)
+		       (lambda/std (,record.sym)
 			 ($struct-ref ,record.sym ,the-index))))))
 	    unsafe-field-accessor* field-name*.sym field-type*.id)
 
@@ -765,7 +765,7 @@
 				(value.sym  (gensym "?new-value")))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
-				(lambda/standard (,record.sym ,value.sym)
+				(lambda/std (,record.sym ,value.sym)
 				  ($struct-set! ,record.sym ,the-index ,value.sym)))))
 			  knil)
 		  knil))
@@ -1004,8 +1004,8 @@
      ;;There is a CUSTOM-PREDICATE clause in this record-type definition.
      (let ((arg.sym			(gensym "obj"))
 	   (internal-predicate.sym	(gensym (string-append "internal-predicate-" (identifier->string foo?)))))
-       `((define/standard ,internal-predicate.sym
-	   (,?custom-predicate-expr (lambda/standard (,arg.sym)
+       `((define/std ,internal-predicate.sym
+	   (,?custom-predicate-expr (lambda/std (,arg.sym)
 				      (unsafe-cast-signature (<boolean>)
 					(and ($struct? ,arg.sym)
 					     ($record-and-rtd? ,arg.sym ,foo-rtd))))))
@@ -1164,7 +1164,7 @@
 	  (pair? field-name*.sym))
       (let ((method-retriever.sym (gensym (string-append foo.str "-methods-retriever"))))
 	`((module ()
-	    (define/standard (,method-retriever.sym rtd name)
+	    (define/std (,method-retriever.sym rtd name)
 	      (case name
 		;;First the methods...
 		,@(map (lambda (name procname)

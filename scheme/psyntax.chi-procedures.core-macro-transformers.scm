@@ -81,7 +81,7 @@
   ;;
   ;;into one of the following output forms:
   ;;
-  ;;   (lambda/standard ?formals ?body . ?body*)
+  ;;   (lambda/std ?formals ?body . ?body*)
   ;;   (lambda/typed    ?formals ?body . ?body*)
   ;;
   ;;When debugging mode  is enabled: we want to include  this internal transformation
@@ -102,7 +102,7 @@
   ;;
   ;;into one of the following output forms:
   ;;
-  ;;   (case-lambda/standard (?formals ?body . ?body*) ...)
+  ;;   (case-lambda/std (?formals ?body . ?body*) ...)
   ;;   (case-lambda/typed    (?formals ?body . ?body*) ...)
   ;;
   ;;When debugging mode  is enabled: we want to include  this internal transformation
@@ -129,16 +129,16 @@
     ((quote)					quote-transformer)
     ;;
     ((lambda)					lambda-transformer)
-    ((lambda/standard)				lambda/standard-transformer)
+    ((lambda/std)				lambda/std-transformer)
     ((lambda/typed)				lambda/typed-transformer)
     ((case-lambda)				case-lambda-transformer)
-    ((case-lambda/standard)			case-lambda/standard-transformer)
+    ((case-lambda/std)			case-lambda/std-transformer)
     ((case-lambda/typed)			case-lambda/typed-transformer)
     ((named-lambda)				named-lambda-transformer)
-    ((named-lambda/standard)			named-lambda/standard-transformer)
+    ((named-lambda/std)			named-lambda/std-transformer)
     ((named-lambda/typed)			named-lambda/typed-transformer)
     ((named-case-lambda)			named-case-lambda-transformer)
-    ((named-case-lambda/standard)		named-case-lambda/standard-transformer)
+    ((named-case-lambda/std)		named-case-lambda/std-transformer)
     ((named-case-lambda/typed)			named-case-lambda/typed-transformer)
     ;;
     ((let)					let-transformer)
@@ -201,17 +201,17 @@
 
 ;;;; module core-macro-transformer: LAMBDA and variants
 
-(define-core-transformer (lambda/standard input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand LAMBDA/STANDARD syntaxes  from the top-level
+(define-core-transformer (lambda/std input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand LAMBDA/STD syntaxes  from the top-level
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI object.
   ;;
-  ;;The syntax  LAMBDA/STANDARD is  strictly compatible with  the R6RS  definition of
+  ;;The syntax  LAMBDA/STD is  strictly compatible with  the R6RS  definition of
   ;;LAMBDA; this syntax must be used in code that rejects typed language extensions.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?formals ?body ?body* ...)
-     (chi-lambda/standard input-form.stx lexenv.run lexenv.expand
+     (chi-lambda/std input-form.stx lexenv.run lexenv.expand
 			  ?formals (cons ?body ?body*)))
     ))
 
@@ -237,7 +237,7 @@
   ;;
   ;;The expansion of the  syntax LAMBDA is influenced by state  of the typed language
   ;;option:  if typed  language  enabled, LAMBDA  is  transformed into  LAMBDA/TYPED;
-  ;;otherwise it is transformed into LAMBDA/STANDARD.
+  ;;otherwise it is transformed into LAMBDA/STD.
   ;;
   ;;NOTE The LAMBDA  syntax as implemented here would be  more cleanly implemented as
   ;;non-core  macro.  But  implementing it  here as  core macro  makes the  expansion
@@ -250,8 +250,8 @@
 			     'lambda/typed ?formals ?body ?body*)
 			   lexenv.run lexenv.expand
 			   ?formals (cons ?body ?body*))
-       (chi-lambda/standard (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
-			      'lambda/standard ?formals ?body ?body*)
+       (chi-lambda/std (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+			      'lambda/std ?formals ?body ?body*)
 			    lexenv.run lexenv.expand
 			    ?formals (cons ?body ?body*))))
     ))
@@ -259,12 +259,12 @@
 
 ;;;; module core-macro-transformer: NAMED-LAMBDA and variants
 
-(define-core-transformer (named-lambda/standard input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to  expand Vicare's NAMED-LAMBDA/STANDARD syntaxes from
+(define-core-transformer (named-lambda/std input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's NAMED-LAMBDA/STD syntaxes from
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
   ;;the context of the given LEXENV; return a PSI object.
   ;;
-  ;;The syntax NAMED-LAMBDA/STANDARD is compatible with the R6RS definition of LAMBDA
+  ;;The syntax NAMED-LAMBDA/STD is compatible with the R6RS definition of LAMBDA
   ;;and in addition accepts a name for the generated closure object; this syntax must
   ;;be used in code that rejects  typed language extensions.  This syntax establishes
   ;;a syntactic binding between the fluid syntax "__who__" and the quoted name of the
@@ -273,7 +273,7 @@
   (syntax-match input-form.stx ()
     ((_ ?who ?formals ?body ?body* ...)
      (identifier? ?who)
-     (chi-named-lambda/standard input-form.stx lexenv.run lexenv.expand
+     (chi-named-lambda/std input-form.stx lexenv.run lexenv.expand
 				?who ?formals (cons ?body ?body*)))
     ))
 
@@ -306,8 +306,8 @@
 				   'named-lambda/typed ?formals ?body ?body*)
 				 lexenv.run lexenv.expand
 				 ?who ?formals (cons ?body ?body*))
-       (chi-named-lambda/standard (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
-				    'named-lambda/standard ?formals ?body ?body*)
+       (chi-named-lambda/std (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+				    'named-lambda/std ?formals ?body ?body*)
 				  lexenv.run lexenv.expand
 				  ?who ?formals (cons ?body ?body*))))
     ))
@@ -315,18 +315,18 @@
 
 ;;;; module core-macro-transformer: CASE-LAMBDA and variants
 
-(define-core-transformer (case-lambda/standard input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used  to  expand CASE-LAMBDA/STANDARD  syntaxes  from  the
+(define-core-transformer (case-lambda/std input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand CASE-LAMBDA/STD  syntaxes  from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return an PSI object.
   ;;
-  ;;The syntax CASE-LAMBDA/STANDARD  is strictly compatible with  the R6RS definition
+  ;;The syntax CASE-LAMBDA/STD  is strictly compatible with  the R6RS definition
   ;;of CASE-LAMBDA;  this syntax  must be  used in code  that rejects  typed language
   ;;extensions.
   ;;
   (syntax-match input-form.stx ()
     ((_ (?formals* ?body* ?body** ...) ...)
-     (chi-case-lambda/standard input-form.stx lexenv.run lexenv.expand
+     (chi-case-lambda/std input-form.stx lexenv.run lexenv.expand
 			       ?formals* (map cons ?body* ?body**)))
     ))
 
@@ -351,7 +351,7 @@
   ;;
   ;;The  expansion of  the syntax  CASE-LAMBDA is  influenced by  state of  the typed
   ;;language  option: if  typed  language enabled,  CASE-LAMBDA  is transformed  into
-  ;;CASE-LAMBDA/TYPED; otherwise it is transformed into CASE-LAMBDA/STANDARD.
+  ;;CASE-LAMBDA/TYPED; otherwise it is transformed into CASE-LAMBDA/STD.
   ;;
   ;;NOTE The CASE-LAMBDA syntax as implemented here would be more cleanly implemented
   ;;as non-core  macro.  But implementing it  here as core macro  makes the expansion
@@ -365,8 +365,8 @@
 				    'case-lambda/typed ?formals* body**.stx)
 				  lexenv.run lexenv.expand
 				  ?formals* body**.stx)
-	 (chi-case-lambda/standard (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
-				     'case-lambda/standard ?formals* body**.stx)
+	 (chi-case-lambda/std (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+				     'case-lambda/std ?formals* body**.stx)
 				   lexenv.run lexenv.expand
 				   ?formals* body**.stx))))
     ))
@@ -374,15 +374,15 @@
 
 ;;;; module core-macro-transformer: NAMED-CASE-LAMBDA and variants
 
-(define-core-transformer (named-case-lambda/standard input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to  expand Vicare's NAMED-CASE-LAMBDA/STANDARD syntaxes
+(define-core-transformer (named-case-lambda/std input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's NAMED-CASE-LAMBDA/STD syntaxes
   ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
   ;;in the context of the given LEXENV; return an PSI object.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?who (?formals* ?body* ?body** ...) ...)
      (identifier? ?who)
-     (chi-named-case-lambda/standard input-form.stx lexenv.run lexenv.expand
+     (chi-named-case-lambda/std input-form.stx lexenv.run lexenv.expand
 				     ?who ?formals* (map cons ?body* ?body**)))
     ))
 
@@ -406,7 +406,7 @@
   ;;The expansion of the syntax NAMED-CASE-LAMBDA is influenced by state of the typed
   ;;language option: if typed language enabled, NAMED-CASE-LAMBDA is transformed into
   ;;NAMED-CASE-LAMBDA/TYPED;      otherwise      it     is      transformed      into
-  ;;NAMED-CASE-LAMBDA/STANDARD.
+  ;;NAMED-CASE-LAMBDA/STD.
   ;;
   ;;NOTE  The NAMED-CASE-LAMBDA  syntax as  implemented  here would  be more  cleanly
   ;;implemented as non-core macro.  But implementing  it here as core macro makes the
@@ -421,8 +421,8 @@
 					  'named-case-lambda/typed ?formals* body**.stx)
 					lexenv.run lexenv.expand
 					?who ?formals* body**.stx)
-	 (chi-named-case-lambda/standard (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
-					   'named-case-lambda/standard ?formals* body**.stx)
+	 (chi-named-case-lambda/std (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+					   'named-case-lambda/std ?formals* body**.stx)
 					 lexenv.run lexenv.expand
 					 ?who ?formals* body**.stx))))
     ))

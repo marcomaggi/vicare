@@ -432,7 +432,7 @@
 	(bless
 	 `(letrec ((,expr.sym ,expr.stx)
 		   ,@branch-binding*
-		   (,else.sym (lambda/standard () . ,else-body*.stx)))
+		   (,else.sym (lambda/std () . ,else-body*.stx)))
 	    (cond ,@cond-clause* (else (,else.sym))))))))
 
   (define (%process-clauses input-form.stx expr.sym else.sym clause*.stx)
@@ -529,7 +529,7 @@
 	     (obj.sym		(gensym)))
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
-	 (values `(lambda/standard (,obj.sym)
+	 (values `(lambda/std (,obj.sym)
 		    ((assert-signature-and-return (<procedure>) ,?closure) ,obj.sym))
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
@@ -543,7 +543,7 @@
 		     )))))
       ((?datum* . ?body)
        (let ((closure.sym (gensym)))
-	 (values `(lambda/standard () . ,?body)
+	 (values `(lambda/std () . ,?body)
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
 				  (entries '()))
@@ -653,7 +653,7 @@
 	(bless
 	 `(letrec ((,expr.sym ,expr.stx)
 		   ,@branch-binding*
-		   (,else.sym (lambda/standard () . ,else-body*.stx)))
+		   (,else.sym (lambda/std () . ,else-body*.stx)))
 	    (if (identifier? ,expr.sym)
 		(cond ,@cond-clause* (else (,else.sym)))
 	      (,else.sym)))))))
@@ -678,14 +678,14 @@
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values (bless
-		  `(,closure.sym (lambda/standard ()
+		  `(,closure.sym (lambda/std ()
 				   ((assert-signature-and-return (<procedure>) ,?closure) ,expr.sym))))
 		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
 		   (,closure.sym)))))
 
       ((?datum* . ?body)
        (let ((closure.sym	(gensym)))
-	 (values `(,closure.sym (lambda/standard () . ,?body))
+	 (values `(,closure.sym (lambda/std () . ,?body))
 		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
 		   (,closure.sym)))))
 
@@ -850,9 +850,9 @@
 	   (swap    (gensym "swap"))
 	   (t       (gensym "t")))
        (bless
-	`((lambda/standard ,(append lhs* rhs*)
+	`((lambda/std ,(append lhs* rhs*)
 	    (let* ((,guard? #t) ;apply the guard function only the first time
-		   (,swap   (lambda/standard ()
+		   (,swap   (lambda/std ()
 			      ,@(map (lambda (lhs rhs)
 				       `(let ((,t (,lhs)))
 					  (,lhs ,rhs ,guard?)
@@ -861,7 +861,7 @@
 			      (set! ,guard? #f))))
 	      (dynamic-wind
 		  ,swap
-		  (lambda/standard () ,?body . ,?body*)
+		  (lambda/std () ,?body . ,?body*)
 		  ,swap)))
 	  ,@(append ?lhs* ?rhs*)))))
     ))
@@ -887,15 +887,15 @@
 	       ;;performing a normal return.
 	       (,normal-exit?  #f))
 	   (dynamic-wind
-	       (lambda/standard ()
+	       (lambda/std ()
 		 (when ,terminated?
 		   (non-reinstatable-violation 'with-unwind-protection
 		     "attempt to reenter thunk with terminated dynamic extent")))
-	       (lambda/standard ()
+	       (lambda/std ()
 		 (begin0
 		     (,?thunk)
 		   (set! ,normal-exit? #t)))
-	       (lambda/standard ()
+	       (lambda/std ()
 		 (unless ,terminated? ;be safe
 		   (cond ((if ,normal-exit?
 			      'return
@@ -911,14 +911,14 @@
 			    ;;because an unwinding escape procedure has been called.
 			    ;;
 			    (run-unwind-protection-cleanup-upon-exit?))
-			  => (lambda/standard (,why)
+			  => (lambda/std (,why)
 			       (set! ,terminated? #t)
 			       ;;We want to discard any exception raised by the cleanup thunk.
 			       (call/cc
-				   (lambda/standard (,escape)
+				   (lambda/std (,escape)
 				     (with-exception-handler
 					 ,escape
-				       (lambda/standard ()
+				       (lambda/std ()
 					 (,?unwind-handler ,why)))))))))))))))
     ))
 
@@ -938,8 +938,8 @@
      (let ((why (gensym)))
        (bless
 	`(with-unwind-protection
-	     (lambda/standard (,why) ,?cleanup0 . ,?cleanup*)
-	   (lambda/standard () ,?body)))))
+	     (lambda/std (,why) ,?cleanup0 . ,?cleanup*)
+	   (lambda/std () ,?body)))))
     ))
 
 
@@ -1039,10 +1039,10 @@
 	  `(let ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
-		   (lambda/standard (,why)
+		   (lambda/std (,why)
 		     (when (eq? ,why 'exception)
 		       (run-compensations-store ,store)))
-		 (lambda/standard ()
+		 (lambda/std ()
 		   ,?body0 . ,?body*)))))))
       ))
 
@@ -1060,9 +1060,9 @@
 	  `(let ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
-		   (lambda/standard (,why)
+		   (lambda/std (,why)
 		     (run-compensations-store ,store))
-		 (lambda/standard ()
+		 (lambda/std ()
 		   ,?body0 . ,?body*)))))))
       ))
 
@@ -1088,7 +1088,7 @@
   (syntax-match expr-stx ()
     ((_ ?release0 ?release* ...)
      (bless
-      `(push-compensation-thunk (lambda/standard () ,?release0 ,@?release*))))
+      `(push-compensation-thunk (lambda/std () ,?release0 ,@?release*))))
     ))
 
 (define (with-compensation-handler-macro expr-stx)
@@ -1159,13 +1159,13 @@
 	`(let ((,counter 0))
 	   (begin
 	     (set! ,counter (add1 ,counter))
-	     (coroutine (lambda/standard () (,?thunk0) (set! ,counter (sub1 ,counter)))))
+	     (coroutine (lambda/std () (,?thunk0) (set! ,counter (sub1 ,counter)))))
 	   ,@(map (lambda (thunk)
 		    `(begin
 		       (set! ,counter (add1 ,counter))
-		       (coroutine (lambda/standard () (,thunk)  (set! ,counter (sub1 ,counter))))))
+		       (coroutine (lambda/std () (,thunk)  (set! ,counter (sub1 ,counter))))))
 	       ?thunk*)
-	   (finish-coroutines (lambda/standard ()
+	   (finish-coroutines (lambda/std ()
 				(zero? ,counter)))))))
     ))
 
@@ -1198,7 +1198,7 @@
      (begin
        (verify-syntax-case-literals 'syntax-rules input-form.stx ?literal*)
        (bless
-	`(lambda/standard (x)
+	`(lambda/std (x)
 	   (syntax-case x ,?literal*
 	     ,@(map (lambda (pattern template)
 		      (syntax-match pattern ()
@@ -1237,7 +1237,7 @@
      (identifier? ?name)
      (bless
       `(define-syntax ,?name
-	 (lambda/standard (stx)
+	 (lambda/std (stx)
 	   (syntax-violation (quote ?name) "invalid syntax use" stx)))))
 
     ((_ ?name ?expr)
@@ -1251,9 +1251,9 @@
      (let ((SYNNER (datum->syntax ?name 'synner)))
        (bless
 	`(define-syntax ,?name
-	   (named-lambda/standard ,?name (,?stx)
+	   (named-lambda/std ,?name (,?stx)
 	     (letrec
-		 ((,SYNNER (named-case-lambda/standard ,?name
+		 ((,SYNNER (named-case-lambda/std ,?name
 			     ((message)
 			      (,SYNNER message #f))
 			     ((message subform)
@@ -1325,7 +1325,7 @@
   (syntax-match input-form.stx (set!)
     ((_ ?expr)
      (bless
-      `(lambda/standard (x)
+      `(lambda/std (x)
 	 (syntax-case x ()
 	   (??id
 	    (identifier? (syntax ??id))
@@ -1344,7 +1344,7 @@
 	  (identifier? ?expr2))
      (bless
       `(make-variable-transformer
-	(lambda/standard (x)
+	(lambda/std (x)
 	  (syntax-case x (set!)
 	    (??id
 	     (identifier? (syntax ??id))
@@ -1477,9 +1477,9 @@
 		 (receive (y* standard-old* tagged-old* new*)
 		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
 		   `(call-with-values
-			(lambda/standard ()
+			(lambda/std ()
 			  (assert-signature-and-return ,(car lhs*.signature) ,(car rhs*)))
-		      (lambda/standard ,y*
+		      (lambda/std ,y*
 			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				(cdr rhs*) standard-old* tagged-old* new*)))))
 
@@ -1492,8 +1492,8 @@
 			((y* standard-old* tagged-old* new*)
 			 (%rename* ?standard-formal*     tagged-formal*     standard-old* tagged-old* new* input-form.stx)))
 		     `(call-with-values
-			  (lambda/standard () ,(car rhs*))
-			(lambda/standard ,(append y* y)
+			  (lambda/std () ,(car rhs*))
+			(lambda/std ,(append y* y)
 			  ,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				  (cdr rhs*) standard-old* tagged-old* new*))))))
 		(?others
@@ -1569,7 +1569,7 @@
     ((_ ?expr)
      (bless
       `(call-with-values
-	   (lambda/standard () ,?expr)
+	   (lambda/std () ,?expr)
 	 list)))))
 
 
@@ -1708,7 +1708,7 @@
     ((_ . ?stuff)
      (cons (if (options::typed-language?)
 	       (core-prim-id 'define/typed)
-	     (core-prim-id 'define/standard))
+	     (core-prim-id 'define/std))
 	   ?stuff))
     ))
 
@@ -1721,7 +1721,7 @@
     ((_ . ?stuff)
      (cons (if (options::typed-language?)
 	       (core-prim-id 'case-define/typed)
-	     (core-prim-id 'case-define/standard))
+	     (core-prim-id 'case-define/std))
 	   ?stuff))
     ))
 
@@ -1783,13 +1783,13 @@
 
 	 ((_ ?who ?expr)
 	  (identifier? ?who)
-	  `(define/standard ,?who
+	  `(define/std ,?who
 	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
 	       ,?expr)))
 
 	 ((_ ?who)
 	  (identifier? ?who)
-	  `(define/standard ,?who))
+	  `(define/std ,?who))
 
 	 )))
 
@@ -1802,7 +1802,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(define/standard (,who.id . ,standard-formals.stx)
+	`(define/std (,who.id . ,standard-formals.stx)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ,who.id))))
 	     ,(if (options::enable-arguments-validation?)
@@ -1822,7 +1822,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(define/standard (,who.id . ,standard-formals.stx)
+	`(define/std (,who.id . ,standard-formals.stx)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ,who.id))))
 	     ,(if (options::enable-arguments-validation?)
@@ -1860,7 +1860,7 @@
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
-	  `(case-define/standard ,?who
+	  `(case-define/std ,?who
 	     ,@(map (lambda (clause.stx)
 		      (%generate-case-define-form ?who clause.stx %synner))
 		 (cons ?clause0 ?clause*)))))
@@ -1987,7 +1987,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-        `(named-lambda/standard ,who.id ,standard-formals.stx
+        `(named-lambda/std ,who.id ,standard-formals.stx
 	   ,(if (options::enable-arguments-validation?)
 		;;With validation.
 		`(begin
@@ -2005,7 +2005,7 @@
       ;;structures, each representing a validation predicate.
       (receive (standard-formals.stx arg-validation-spec*)
 	  (%parse-predicate-formals predicate-formals.stx synner)
-	`(named-lambda/standard ,who.id ,standard-formals.stx
+	`(named-lambda/std ,who.id ,standard-formals.stx
 	   ,(if (options::enable-arguments-validation?)
 		;;With validation.
 		(let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
@@ -2042,7 +2042,7 @@
       (syntax-match expr.stx ()
 	((_ ?clause0 ?clause* ...)
 	 (bless
-	  `(named-case-lambda/standard _
+	  `(named-case-lambda/std _
 	    ,@(map (lambda (clause.stx)
 		     (%generate-case-lambda-form (quote _) clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
@@ -2059,7 +2059,7 @@
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
-	  `(named-case-lambda/standard ,?who
+	  `(named-case-lambda/std ,?who
 	    ,@(map (lambda (clause.stx)
 		     (%generate-case-lambda-form ?who clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
@@ -2357,7 +2357,7 @@
   (define (%parse-list-logic-predicate-syntax pred.stx var.id synner)
     ;;This is used for rest and args arguments.
     ;;
-    `(lambda/standard (,var.id)
+    `(lambda/std (,var.id)
        ,(parse-logic-predicate-syntax pred.stx
 				      (lambda (pred.id)
 					(syntax-match pred.id ()
@@ -2384,7 +2384,7 @@
        (syntax-object.parse-typed-clambda-clause-formals ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
-				(lambda/standard ,?formal*
+				(lambda/std ,?formal*
 				  ,?body . ,?body*)))))
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
@@ -2393,7 +2393,7 @@
        (syntax-object.parse-typed-clambda-clause-formals (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
-				(lambda/standard (,@?formal* . ,?rest-formal)
+				(lambda/std (,@?formal* . ,?rest-formal)
 				  ,?body . ,?body*)))))
     ))
 
@@ -2411,7 +2411,7 @@
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
-				    (lambda/standard ,?formal*
+				    (lambda/std ,?formal*
 				      ,?body . ,?body*))))))
 
       ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
@@ -2421,7 +2421,7 @@
 	 (bless
 	  `(define ,?who
 	     (make-traced-procedure ',?who
-				    (lambda/standard (,@?formal* . ,?rest-formal)
+				    (lambda/std (,@?formal* . ,?rest-formal)
 				      ,?body . ,?body*))))))
 
       ((_ ?who ?expr)
@@ -2729,17 +2729,17 @@
 	     (raised-obj-id                    (gensym "raised-obj")))
 	 (bless
 	  `((call/cc
-		(lambda/standard (,reinstate-guard-continuation-id)
-		  (lambda/standard ()
+		(lambda/std (,reinstate-guard-continuation-id)
+		  (lambda/std ()
 		    (with-exception-handler
-			(lambda/standard (,raised-obj-id)
+			(lambda/std (,raised-obj-id)
 			  ;;If we  raise an exception from  a DYNAMIC-WIND's in-guard
 			  ;;or out-guard while trying to  call the cleanups: we reset
 			  ;;it to avoid leaving it true.
 			  (run-unwind-protection-cleanup-upon-exit? #f)
 			  (let ((,?variable ,raised-obj-id))
 			    ,(gen-clauses raised-obj-id reinstate-guard-continuation-id ?clause*)))
-		      (lambda/standard ()
+		      (lambda/std ()
 			,?body . ,?body*)))))))))
       ))
 
@@ -2751,9 +2751,9 @@
       (receive (code-stx reinstate-exception-handler-continuation-id)
 	  (%process-multi-cond-clauses raised-obj-id clause* run-unwind-protect-cleanups-id)
 	`((call/cc
-	      (lambda/standard (,reinstate-exception-handler-continuation-id)
+	      (lambda/std (,reinstate-exception-handler-continuation-id)
 		(,reinstate-guard-continuation-id
-		 (lambda/standard ()
+		 (lambda/std ()
 		   (define (,run-unwind-protect-cleanups-id)
 		     ;;If we are  here: a test in the clauses  returned non-false and
 		     ;;the execution  flow is at  the beginning of  the corresponding
@@ -2769,9 +2769,9 @@
 		     ;;handlers.
 		     (run-unwind-protection-cleanup-upon-exit? 'exception)
 		     (call/cc
-			 (lambda/standard (,reinstate-clause-expression-continuation-id)
+			 (lambda/std (,reinstate-clause-expression-continuation-id)
 			   (,reinstate-exception-handler-continuation-id
-			    (lambda/standard ()
+			    (lambda/std ()
 			      (,reinstate-clause-expression-continuation-id)))))
 		     (run-unwind-protection-cleanup-upon-exit? #f))
 		   ,code-stx)))))))
@@ -2783,7 +2783,7 @@
 	(()
 	 (let ((reinstate-exception-handler-continuation-id (gensym "reinstate-exception-handler-continuation")))
 	   (values `(,reinstate-exception-handler-continuation-id
-		     (lambda/standard ()
+		     (lambda/std ()
 		       (raise-continuable ,raised-obj-id)))
 		   reinstate-exception-handler-continuation-id)))
 
@@ -2894,13 +2894,13 @@
 	      (raised-obj-id (gensym)))
 	  (bless
 	   `((call/cc
-		 (lambda/standard (,outerk-id)
-		   (lambda/standard ()
+		 (lambda/std (,outerk-id)
+		   (lambda/std ()
 		     (with-exception-handler
-			 (lambda/standard (,raised-obj-id)
+			 (lambda/std (,raised-obj-id)
 			   (let ((,?variable ,raised-obj-id))
 			     ,(gen-clauses raised-obj-id outerk-id ?clause*)))
-		       (lambda/standard ()
+		       (lambda/std ()
 			 ,?body . ,?body*))))))
 	   )))
        ))
@@ -2936,7 +2936,7 @@
 	 (()
 	  (let ((return-to-exception-handler-k (gensym)))
 	    (values `(,return-to-exception-handler-k
-		      (lambda/standard ()
+		      (lambda/std ()
 			(raise-continuable ,raised-obj-id)))
 		    return-to-exception-handler-k)))
 
@@ -2959,9 +2959,9 @@
 	 (%process-multi-cond-clauses clause*)
        (if return-to-exception-handler-k
 	   `((call/cc
-		 (lambda/standard (,return-to-exception-handler-k)
-		   (,outerk-id (lambda/standard () ,code-stx)))))
-	 `(,outerk-id (lambda/standard () ,code-stx)))))
+		 (lambda/std (,return-to-exception-handler-k)
+		   (,outerk-id (lambda/std () ,code-stx)))))
+	 `(,outerk-id (lambda/std () ,code-stx)))))
 
    #| end of module: GUARD-MACRO |# ))
 
@@ -3008,7 +3008,7 @@
 	       ;;the result  of the  expansion is equivalent  to ?ARG.
 	       ;;It is a syntax violation if it is not.
 	       ;;
-	       (lambda/standard (x)
+	       (lambda/std (x)
 		 (define universe-of-symbols ',symbol*)
 		 (define (%synner message subform)
 		   (syntax-violation ',?name message
@@ -3040,7 +3040,7 @@
 	       ;;symbol is in the universe  associated with ?NAME; it is
 	       ;;a syntax violation if one or more is not.
 	       ;;
-	       (lambda/standard (x)
+	       (lambda/std (x)
 		 (define universe-of-symbols ',symbol*)
 		 (define (%synner message subform-stx)
 		   (syntax-violation ',?maker
@@ -3164,10 +3164,10 @@
 	     (loop           (gensym "loop")))
 	 (bless
 	  `(unwinding-call/cc
-	       (lambda/standard (,escape)
+	       (lambda/std (,escape)
 		 (let ,loop ()
 		   (unwinding-call/cc
-		       (lambda/standard (,next-iteration)
+		       (lambda/std (,next-iteration)
 			 ,(with-escape-fluids escape next-iteration (list ?body))))
 		   (when ,?test
 		     (,loop))))))))
@@ -3184,10 +3184,10 @@
 	     (loop           (gensym "loop")))
 	 (bless
 	  `(unwinding-call/cc
-	       (lambda/standard (,escape)
+	       (lambda/std (,escape)
 		 (let ,loop ()
 		   (unwinding-call/cc
-		       (lambda/standard (,next-iteration)
+		       (lambda/std (,next-iteration)
 			 ,(with-escape-fluids escape next-iteration (list ?body))))
 		   (until ,?test
 		     (,loop))))))))
@@ -3206,10 +3206,10 @@
 		(loop           (gensym "loop")))
 	    (bless
 	     `(unwinding-call/cc
-		  (lambda/standard (,escape)
-		    (letrec ((,loop (lambda/standard ,?var*
+		  (lambda/std (,escape)
+		    (letrec ((,loop (lambda/std ,?var*
 				     (if (unwinding-call/cc
-					     (lambda/standard (,next-iteration)
+					     (lambda/std (,next-iteration)
 					       (if ,?test
 						   #f
 						 ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
@@ -3268,11 +3268,11 @@
 	    (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (lambda/standard (,escape)
+	     (lambda/std (,escape)
 	       (let* ,init-binding*
-		 (letrec ((,loop (lambda/standard ()
+		 (letrec ((,loop (lambda/std ()
 				  (if (unwinding-call/cc
-					  (lambda/standard (,next-iteration)
+					  (lambda/std (,next-iteration)
 					    (if ,?test
 						#f
 					      ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
@@ -3352,10 +3352,10 @@
 	   (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (lambda/standard (,escape)
+	     (lambda/std (,escape)
 	       (let ,loop ()
 		 (when (unwinding-call/cc
-			   (lambda/standard (,next-iteration)
+			   (lambda/std (,next-iteration)
 			     (if ,?test
 				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
 			       #f)))
@@ -3377,10 +3377,10 @@
 	   (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (lambda/standard (,escape)
+	     (lambda/std (,escape)
 	       (let ,loop ()
 		 (when (unwinding-call/cc
-			   (lambda/standard (,next-iteration)
+			   (lambda/std (,next-iteration)
 			     (if ,?test
 				 #f
 			       ,(with-escape-fluids escape next-iteration `(,@?body* #t)))))
@@ -3404,11 +3404,11 @@
 	   (loop           (gensym "loop")))
        (bless
 	`(unwinding-call/cc
-	     (lambda/standard (,escape)
+	     (lambda/std (,escape)
 	       ,?init
 	       (let ,loop ()
 		 (when (unwinding-call/cc
-			   (lambda/standard (,next-iteration)
+			   (lambda/std (,next-iteration)
 			     (if ,?test
 				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
 			       #f)))
@@ -3431,7 +3431,7 @@
      (let ((escape (gensym "escape")))
        (bless
 	`(unwinding-call/cc
-	     (lambda/standard (,escape)
+	     (lambda/std (,escape)
 	       (fluid-let-syntax ((return (syntax-rules ()
 					    ((_ . ?args)
 					     (,escape . ?args)))))
@@ -3459,9 +3459,9 @@
 	       (why           (gensym)))
 	   (bless
 	    `(with-unwind-protection
-		 (lambda/standard (,why)
+		 (lambda/std (,why)
 		   ,?finally-body0 . ,?finally-body*)
-	       (lambda/standard ()
+	       (lambda/std ()
 		 (guard (,?var . ,GUARD-CLAUSE*)
 		   ,?body)))))))
 
@@ -3477,9 +3477,9 @@
        (let ((why (gensym)))
 	 (bless
 	  `(with-unwind-protection
-	       (lambda/standard (,why)
+	       (lambda/std (,why)
 		 ,?finally-body0 . ,?finally-body*)
-	     (lambda/standard ()
+	     (lambda/std ()
 	       ,?body)))))
       ))
 
@@ -3536,18 +3536,18 @@
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
-	   (lambda/standard (reinstate-with-blocked-exceptions-continuation)
+	   (lambda/std (reinstate-with-blocked-exceptions-continuation)
 	     (with-exception-handler
-		 (lambda/standard (E)
+		 (lambda/std (E)
 		   (call-with-values
-		       (lambda/standard ()
+		       (lambda/std ()
 			 (,?exception-retvals-maker E))
 		     reinstate-with-blocked-exceptions-continuation))
 	       ,?thunk)))))
     ((_ ?thunk)
      (bless
       `(call/cc
-	   (lambda/standard (reinstate-with-blocked-exceptions-continuation)
+	   (lambda/std (reinstate-with-blocked-exceptions-continuation)
 	     (with-exception-handler
 		 reinstate-with-blocked-exceptions-continuation
 	       ,?thunk)))))
@@ -3562,17 +3562,17 @@
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
-	   (lambda/standard (return-thunk-with-packed-environment)
+	   (lambda/std (return-thunk-with-packed-environment)
 	     ((call/cc
-		  (lambda/standard (reinstate-target-environment-continuation)
+		  (lambda/std (reinstate-target-environment-continuation)
 		    (return-thunk-with-packed-environment
-		     (lambda/standard ()
+		     (lambda/std ()
 		       (call/cc
-			   (lambda/standard (reinstate-thunk-call-continuation)
+			   (lambda/std (reinstate-thunk-call-continuation)
 			     (reinstate-target-environment-continuation
-			      (lambda/standard ()
+			      (lambda/std ()
 				(call-with-values
-				    (lambda/standard ()
+				    (lambda/std ()
 				      (with-blocked-exceptions
 					  ,?exception-retvals-maker
 					,?thunk))
@@ -4295,22 +4295,22 @@
       ((_ ?formals ?body0 ?body* ...)
        (if (options::typed-language?)
 	   (define-values/typed-macro input-form.stx ?formals (cons ?body0 ?body*))
-	 (define-values/standard-macro input-form.stx ?formals (cons ?body0 ?body*))))
+	 (define-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
       ))
 
-  (define (define-values/standard-macro input-form.stx input-formals.stx body*.stx)
+  (define (define-values/std-macro input-form.stx input-formals.stx body*.stx)
     (receive (standard-formals.stx signature.stx)
 	(syntax-object.parse-standard-formals input-formals.stx input-form.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)
 	 ;;We want this expansion:
 	 ;;
-	 ;;  (define/standard ?id)
+	 ;;  (define/std ?id)
 	 ;;  ...
-	 ;;  (define/standard ?id0
+	 ;;  (define/std ?id0
 	 ;;    (call-with-values
-	 ;;        (lambda/standard () ?body0 . ?body*)
-	 ;;      (lambda/standard (TMP ... TMP0)
+	 ;;        (lambda/std () ?body0 . ?body*)
+	 ;;      (lambda/std (TMP ... TMP0)
 	 ;;        (set! ?id TMP)
 	 ;;        ...
 	 ;;        TMP0)))
@@ -4319,12 +4319,12 @@
 	   (bless
 	    `(begin
 	       ,@(map (lambda (var)
-			`(define/standard ,var))
+			`(define/std ,var))
 		   ?id*)
-	       (define/standard ,?id0
+	       (define/std ,?id0
 		 (call-with-values
-		     (lambda/standard () . ,body*.stx)
-		   (lambda/standard (,@TMP* TMP0)
+		     (lambda/std () . ,body*.stx)
+		   (lambda/std (,@TMP* TMP0)
 		     ,@(map (lambda (var TMP)
 			      `(set! ,var ,TMP))
 			 ?id* TMP*)
@@ -4333,12 +4333,12 @@
 	((?id* ... . ?rest-id)
 	 ;;We want this expansion:
 	 ;;
-	 ;;  (define/standard ?id)
+	 ;;  (define/std ?id)
 	 ;;  ...
-	 ;;  (define/standard ?rest-id
+	 ;;  (define/std ?rest-id
 	 ;;    (call-with-values
-	 ;;        (lambda/standard () ?body0 . ?body*)
-	 ;;      (lambda/standard (TMP ... . TMP-REST)
+	 ;;        (lambda/std () ?body0 . ?body*)
+	 ;;      (lambda/std (TMP ... . TMP-REST)
 	 ;;        (set! ?id TMP)
 	 ;;        ...
 	 ;;        TMP-REST)))
@@ -4347,12 +4347,12 @@
 	   (bless
 	    `(begin
 	       ,@(map (lambda (var)
-			`(define/standard ,var))
+			`(define/std ,var))
 		   ?id*)
-	       (define/standard ,?rest-id
+	       (define/std ,?rest-id
 		 (call-with-values
-		     (lambda/standard () . ,body*.stx)
-		   (lambda/standard (,@TMP* . rest)
+		     (lambda/std () . ,body*.stx)
+		   (lambda/std (,@TMP* . rest)
 		     ,@(map (lambda (var TMP)
 			      `(set! ,var ,TMP))
 			 ?id* TMP*)
@@ -4361,10 +4361,10 @@
 	(?args
 	 (identifier? ?args)
 	 (bless
-	  `(define/standard ,?args
+	  `(define/std ,?args
 	     (call-with-values
-		 (lambda/standard () . ,body*.stx)
-	       (lambda/standard args args)))))
+		 (lambda/std () . ,body*.stx)
+	       (lambda/std args args)))))
 	)))
 
   (define (define-values/typed-macro input-form.stx input-formals.stx body*.stx)
@@ -4378,8 +4378,8 @@
 	 ;;  ...
 	 ;;  (define/typed {?id0 ?type0}
 	 ;;    (call-with-values
-	 ;;        (lambda/standard () ?body0 . ?body*)
-	 ;;      (lambda/standard (TMP ... TMP0)
+	 ;;        (lambda/std () ?body0 . ?body*)
+	 ;;      (lambda/std (TMP ... TMP0)
 	 ;;        (set! ?id TMP)
 	 ;;        ...
 	 ;;        (assert-signature-and-return (?type0) TMP0)))))
@@ -4394,8 +4394,8 @@
 		     ?id* tag*)
 		 (define/typed (brace ,?id0 ,tag0)
 		   (call-with-values
-		       (lambda/standard () . ,body*.stx)
-		     (lambda/standard (,@TMP* TMP0)
+		       (lambda/std () . ,body*.stx)
+		     (lambda/std (,@TMP* TMP0)
 		       ;;These set forms do the type validation.
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
@@ -4409,8 +4409,8 @@
 	 ;;  ...
 	 ;;  (define/typed {?rest-id ?rest-type}
 	 ;;    (call-with-values
-	 ;;        (lambda/standard () ?body0 . ?body*)
-	 ;;      (lambda/standard (TMP ... . TMP-REST)
+	 ;;        (lambda/std () ?body0 . ?body*)
+	 ;;      (lambda/std (TMP ... . TMP-REST)
 	 ;;        (set! ?id TMP)
 	 ;;        ...
 	 ;;        (assert-signature-and-return (?rest-type) TMP-REST)))))
@@ -4425,8 +4425,8 @@
 		     ?id* tag*)
 		 (define/typed (brace ,?rest-id ,rest-tag)
 		   (call-with-values
-		       (lambda/standard () . ,body*.stx)
-		     (lambda/standard (,@TMP* . rest)
+		       (lambda/std () . ,body*.stx)
+		     (lambda/std (,@TMP* . rest)
 		       ;;These set forms do the type validation.
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
@@ -4438,8 +4438,8 @@
 	 (bless
 	  `(define/typed (brace ,?args ,signature.stx)
 	     (call-with-values
-		 (lambda/standard () . ,body*.stx)
-	       (lambda/standard args
+		 (lambda/std () . ,body*.stx)
+	       (lambda/std args
 		 (assert-signature-and-return (,signature.stx) args))))))
 	)))
 
@@ -4459,10 +4459,10 @@
       ((_ ?formals ?body0 ?body* ...)
        (if (options::typed-language?)
 	   (define-constant-values/typed-macro input-form.stx ?formals (cons ?body0 ?body*))
-	 (define-constant-values/standard-macro input-form.stx ?formals (cons ?body0 ?body*))))
+	 (define-constant-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
       ))
 
-  (define (define-constant-values/standard-macro input-form.stx formals.stx body*.stx)
+  (define (define-constant-values/std-macro input-form.stx formals.stx body*.stx)
     (receive (standard-formals.stx signature.stx)
 	(syntax-object.parse-standard-formals formals.stx input-form.stx)
       (syntax-match standard-formals.stx ()
@@ -4474,12 +4474,12 @@
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var)
-			  `(define/standard ,var))
+			  `(define/std ,var))
 		     SHADOW*)
-		 (define/standard SHADOW0
+		 (define/std SHADOW0
 		   (call-with-values
-		       (lambda/standard () . ,body*.stx)
-		     (lambda/standard (,@TMP* TMP0)
+		       (lambda/std () . ,body*.stx)
+		     (lambda/std (,@TMP* TMP0)
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
 			   SHADOW* TMP*)
@@ -4498,12 +4498,12 @@
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var)
-			  `(define/standard ,var))
+			  `(define/std ,var))
 		     SHADOW*)
-		 (define/standard rest-shadow
+		 (define/std rest-shadow
 		   (call-with-values
-		       (lambda/standard () . ,body*.stx)
-		     (lambda/standard (,@TMP* . rest)
+		       (lambda/std () . ,body*.stx)
+		     (lambda/std (,@TMP* . rest)
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
 			   SHADOW* TMP*)
@@ -4519,10 +4519,10 @@
 	 (let ((args-tag signature.stx))
 	   (bless
 	    `(begin
-	       (define/standard shadow
+	       (define/std shadow
 		 (call-with-values
-		     (lambda/standard () . ,body*.stx)
-		   (lambda/standard args args)))
+		     (lambda/std () . ,body*.stx)
+		   (lambda/std args args)))
 	       (define-syntax ,?args (identifier-syntax shadow))))))
 	)))
 
@@ -4542,8 +4542,8 @@
 		     SHADOW* tag*)
 		 (define/typed (brace SHADOW0 ,tag0)
 		   (call-with-values
-		       (lambda/standard () . ,body*.stx)
-		     (lambda/standard (,@TMP* TMP0)
+		       (lambda/std () . ,body*.stx)
+		     (lambda/std (,@TMP* TMP0)
 		       ;;These SET! form do the type validation.
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
@@ -4567,8 +4567,8 @@
 		     SHADOW* tag*)
 		 (define/typed (brace rest-shadow ,rest-tag)
 		   (call-with-values
-		       (lambda/standard () . ,body*.stx)
-		     (lambda/standard (,@TMP* . rest)
+		       (lambda/std () . ,body*.stx)
+		     (lambda/std (,@TMP* . rest)
 		       ;;These SET! forms do the type validation.
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
@@ -4587,8 +4587,8 @@
 	    `(begin
 	       (define/typed (brace shadow ,args-tag)
 		 (call-with-values
-		     (lambda/standard () . ,body*.stx)
-		   (lambda/standard args
+		     (lambda/std () . ,body*.stx)
+		   (lambda/std args
 		     (assert-signature-and-return (,args-tag) args))))
 	       (define-syntax ,?args
 		 (identifier-syntax shadow))))))
@@ -4617,7 +4617,7 @@
 	      `((lambda/typed ,?formals ,?body0 ,@?body*) ,?producer-expression))
 	   (bless
 	    `(call-with-values
-		 (lambda/standard () ,?producer-expression)
+		 (lambda/std () ,?producer-expression)
 	       (lambda/typed ,?formals ,?body0 ,@?body*)))))))
     ))
 
@@ -4646,10 +4646,10 @@
 		  (values standard-formals.stx #f)))
 	 (if single-return-value?
 	     (bless
-	      `((lambda/standard ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
+	      `((lambda/std ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
 	   (bless
 	    `(call-with-values
-		 (lambda/standard () ,?producer-expression)
+		 (lambda/std () ,?producer-expression)
 	       (lambda/typed ,?formals ,?body0 ,@?body* ,rv-form)))))))
     ))
 
@@ -4662,8 +4662,8 @@
     ((_ ?form0 ?form* ...)
      (bless
       `(call-with-values
-	   (lambda/standard () ,?form0)
-	 (lambda/standard args
+	   (lambda/std () ,?form0)
+	 (lambda/std args
 	   ,@?form*
 	   (apply values args)))))
     ))
@@ -4737,7 +4737,7 @@
      (bless
       `(define-syntax ,?name
 	 (let ((const ,?expr))
-	   (lambda/standard (stx)
+	   (lambda/std (stx)
 	     (if (identifier? stx)
 		 ;;By  using DATUM->SYNTAX  we avoid  the  "raw symbol  in output  of
 		 ;;macro" error whenever the CONST is a symbol or contains a symbol.
@@ -4775,7 +4775,7 @@
 	   (syntax-rules ()
 	     ((_ ,@TMP* . ,REST)
 	      (fluid-let-syntax
-		  ((,?name (lambda/standard (,STX)
+		  ((,?name (lambda/std (,STX)
 			     (syntax-violation (quote ,?name) "cannot recursively expand inline expression" ,STX)))
 		   (__who__  (identifier-syntax (quote ,?name))))
 		(let ,BINDING* ,?body0 . ,?body*))))))))
@@ -4840,7 +4840,7 @@
      (bless
       `(begin
 	 (define-fluid-syntax ,?name
-	   (lambda/standard (x)
+	   (lambda/std (x)
 	     (syntax-case x ()
 	       (_
 		(identifier? x)
@@ -4849,11 +4849,11 @@
 	       ((_ arg ...)
 		#'((fluid-let-syntax
 		       ((,?name (identifier-syntax xname)))
-		     (lambda/standard ,?formals ,?form0 ,@?form*))
+		     (lambda/std ,?formals ,?form0 ,@?form*))
 		   arg ...)))))
 	 (define xname
 	   (fluid-let-syntax ((,?name (identifier-syntax xname)))
-	     (lambda/standard ,?formals ,?form0 ,@?form*)))
+	     (lambda/std ,?formals ,?form0 ,@?form*)))
 	 )))
     ))
 
@@ -5020,7 +5020,7 @@
 		  (write (syntax->datum ?expr) port)
 		  (getter))))
        (bless
-	`(time-it ,str (lambda/standard () ,?expr)))))))
+	`(time-it ,str (lambda/std () ,?expr)))))))
 
 (define (delay-macro expr-stx)
   ;;Transformer  function used  to  expand R6RS  DELAY  macros from  the
@@ -5030,8 +5030,7 @@
   (syntax-match expr-stx ()
     ((_ ?expr)
      (bless
-      `(make-promise (lambda/standard ()
-		       ,?expr))))))
+      `(make-promise (lambda/std () ,?expr))))))
 
 (define (assert-macro expr-stx)
   ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.

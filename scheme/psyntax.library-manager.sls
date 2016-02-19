@@ -568,7 +568,7 @@
 			     ((core-prim
 			       $core-prim-typed
 			       library import export
-			       define/standard define/typed case-define/standard case-define/typed
+			       define/std define/typed case-define/std case-define/typed
 			       define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
