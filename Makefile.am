@@ -3,7 +3,7 @@
 ACLOCAL_AMFLAGS		= -I meta/autotools
 EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
-			  meta/autotools/config.rpath
+			  meta/autotools/config.rpath INSTALL
 
 slsdir			= $(srcdir)/lib
 fasldir			= $(builddir)/lib
