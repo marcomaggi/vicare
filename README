@@ -57,7 +57,7 @@ Marco Maggi <marco.maggi-ipsu@poste.it>
 2. License
 ----------
 
-Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by the Vicare contributors.
 
@@ -81,8 +81,9 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 3.1 Install Vicare
 ------------------
 
-To install Vicare  Scheme from a proper release tarball,  we must unpack
-the archive then do:
+See the INSTALL file for  installation instructions for generic packages
+using the GNU Autotools.  To install Vicare Scheme from a proper release
+tarball, we must unpack the archive then do:
 
    $ cd vicare-scheme-0.4.0
    $ ./configure
