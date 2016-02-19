@@ -990,12 +990,4 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
-;;fill-column: 85
-;;eval: (put 'raise-compound-condition-object			'scheme-indent-function 1)
-;;eval: (put 'raise-compound-condition-object/continuable	'scheme-indent-function 1)
-;;eval: (put 'assertion-violation/internal-error		'scheme-indent-function 1)
-;;eval: (put 'with-who						'scheme-indent-function 1)
-;;eval: (put '%error-mismatch-between-argvals-signature-and-operands-signature	'scheme-indent-function 1)
-;;eval: (put '%error-number-of-operands-exceeds-maximum-arguments-count		'scheme-indent-function 1)
-;;eval: (put '%error-number-of-operands-deceeds-minimum-arguments-count		'scheme-indent-function 1)
 ;;End:

@@ -209,5 +209,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; fill-column: 85
 ;; End:

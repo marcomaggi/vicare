@@ -1444,12 +1444,3 @@
 #| end of library |# )
 
 ;;; end of file
-;;Local Variables:
-;;fill-column: 85
-;;eval: (put '%drop-splice-first-envelope-maybe		'scheme-indent-function 0)
-;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
-;;eval: (put 'with-who					'scheme-indent-function 1)
-;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
-;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
-;;eval: (put 'build-letrec*				'scheme-indent-function 3)
-;;End:

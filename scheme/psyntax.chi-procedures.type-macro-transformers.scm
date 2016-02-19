@@ -1193,22 +1193,4 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
-;;fill-column: 85
-;;eval: (put 'build-library-letrec*			'scheme-indent-function 1)
-;;eval: (put 'build-application				'scheme-indent-function 1)
-;;eval: (put 'build-conditional				'scheme-indent-function 1)
-;;eval: (put 'build-case-lambda				'scheme-indent-function 2)
-;;eval: (put 'build-lambda				'scheme-indent-function 2)
-;;eval: (put 'build-foreign-call			'scheme-indent-function 1)
-;;eval: (put 'build-sequence				'scheme-indent-function 1)
-;;eval: (put 'build-global-assignment			'scheme-indent-function 1)
-;;eval: (put 'build-lexical-assignment			'scheme-indent-function 1)
-;;eval: (put 'build-letrec*				'scheme-indent-function 1)
-;;eval: (put 'build-data				'scheme-indent-function 1)
-;;eval: (put 'core-lang-builder				'scheme-indent-function 1)
-;;eval: (put 'with-object-type-syntactic-binding	'scheme-indent-function 1)
-;;eval: (put 'push-lexical-contour			'scheme-indent-function 1)
-;;eval: (put 'syntactic-binding-getprop			'scheme-indent-function 1)
-;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
-;;eval: (put '$map-in-order				'scheme-indent-function 1)
 ;;End:

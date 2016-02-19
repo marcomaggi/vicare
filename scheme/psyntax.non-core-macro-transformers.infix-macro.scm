@@ -1345,8 +1345,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
 ;; mode: vicare
-;; fill-column: 85
-;; eval: (put '$fold-left/stx			'scheme-indent-function 1)
+;; coding: utf-8-unix
 ;; End:

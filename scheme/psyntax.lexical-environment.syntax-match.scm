@@ -755,5 +755,4 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8-unix
-;; eval: (put 'syntax-case	'scheme-indent-function 2)
 ;; End:

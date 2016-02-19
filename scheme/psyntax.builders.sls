@@ -369,11 +369,3 @@
 #| end of library |# )
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'build-let			'scheme-indent-function 3)
-;; eval: (put 'build-letrec*			'scheme-indent-function 3)
-;; eval: (put 'if-wants-global-defines		'scheme-indent-function 1)
-;; eval: (put 'if-wants-case-lambda		'scheme-indent-function 1)
-;; eval: (put 'if-wants-letrec*			'scheme-indent-function 1)
-;; eval: (put 'if-wants-library-letrec*		'scheme-indent-function 1)
-;; End:

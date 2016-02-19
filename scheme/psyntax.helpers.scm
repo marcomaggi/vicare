@@ -171,6 +171,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'sys::syntax-case		'scheme-indent-function 2)
-;; eval: (put 'sys::with-syntax		'scheme-indent-function 1)
+;; coding: utf-8-unix
 ;; End:

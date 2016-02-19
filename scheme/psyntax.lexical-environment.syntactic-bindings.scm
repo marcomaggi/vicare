@@ -1353,5 +1353,4 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8-unix
-;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
 ;; End:

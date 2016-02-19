@@ -1382,7 +1382,4 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
-;;fill-column: 85
-;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
-;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;End:

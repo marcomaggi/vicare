@@ -1455,17 +1455,3 @@
 #| end of library |# )
 
 ;;; end of file
-;;Local Variables:
-;;fill-column: 85
-;;eval: (put 'build-with-compilation-options	'scheme-indent-function 1)
-;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
-;;eval: (put 'build-application			'scheme-indent-function 1)
-;;eval: (put 'build-conditional			'scheme-indent-function 1)
-;;eval: (put 'build-sequence			'scheme-indent-function 1)
-;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
-;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
-;;eval: (put 'build-letrec*			'scheme-indent-function 1)
-;;eval: (put 'build-data			'scheme-indent-function 1)
-;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
-;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
-;;End:

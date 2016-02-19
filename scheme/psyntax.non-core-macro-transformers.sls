@@ -5141,12 +5141,3 @@
 #| end of library |# )
 
 ;;; end of file
-;;Local Variables:
-;;fill-column: 85
-;;eval: (put 'sys::syntax-case			'scheme-indent-function 2)
-;;eval: (put 'sys::with-syntax			'scheme-indent-function 1)
-;;eval: (put 'with-who				'scheme-indent-function 1)
-;;eval: (put '$fold-left/stx			'scheme-indent-function 1)
-;;eval: (put 'define-macro-transformer		'scheme-indent-function 1)
-;;eval: (put 'map-for-two-retvals		'scheme-indent-function 1)
-;;End:

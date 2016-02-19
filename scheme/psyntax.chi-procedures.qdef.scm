@@ -444,10 +444,4 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
-;;fill-column: 85
-;;eval: (put 'build-sequence				'scheme-indent-function 1)
-;;eval: (put 'build-global-assignment			'scheme-indent-function 1)
-;;eval: (put 'with-who					'scheme-indent-function 1)
-;;eval: (put 'expand-time-retvals-signature-violation	'scheme-indent-function 1)
-;;eval: (put 'sys::syntax-case				'scheme-indent-function 2)
 ;;End:
