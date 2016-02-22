@@ -1249,8 +1249,8 @@
 		    (else	'else)))
 	(catch E
 	  ((expander::&expand-time-retvals-signature-violation)
-	   (values (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-expected-signature E))
-		   (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-returned-signature E))))
+	   (values (expander::type-signature.tags (expander::expand-time-retvals-signature-violation-expected-signature E))
+		   (expander::type-signature.tags (expander::expand-time-retvals-signature-violation-returned-signature E))))
 	  (else E)))
     (=> syntax=?)
     #'(<procedure>) #'(<positive-fixnum>))
@@ -1343,8 +1343,8 @@
 		    (else		'else)))
 	(catch E
 	  ((expander::&expand-time-retvals-signature-violation)
-	   (values (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-expected-signature E))
-		   (expander::type-signature-tags (expander::expand-time-retvals-signature-violation-returned-signature E))))
+	   (values (expander::type-signature.tags (expander::expand-time-retvals-signature-violation-expected-signature E))
+		   (expander::type-signature.tags (expander::expand-time-retvals-signature-violation-returned-signature E))))
 	  (else E)))
     (=> syntax=?)
     #'(<procedure>) #'(<symbol>))

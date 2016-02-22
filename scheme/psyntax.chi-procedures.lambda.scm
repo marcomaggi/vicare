@@ -149,9 +149,10 @@
 	   (let ((ots (id->object-type-specification caller-who input-form.stx rest-tag lexenv.run)))
 	     (if (list-type-spec? ots)
 		 ;;The REST-TAG is  some sub-type of "<list>" defined  as instance of
-		 ;;"<list-type-spec>".   We  generate  a validating  expression  that
-		 ;;accepts both null and a list of objects of the specified type.
-		 (let ((item-type-id	(list-type-spec.type-id ots))
+		 ;;"<typed-list-type-spec>".   We  generate a  validating  expression
+		 ;;that accepts  both null  and a  list of  objects of  the specified
+		 ;;type.
+		 (let ((item-type-id	(typed-list-type-spec.type-id ots))
 		       (obj.sym	(gensym "obj"))
 		       (idx.sym	(gensym "idx")))
 		   (bless
@@ -161,8 +162,8 @@
 				       ,MESSAGE ,idx.sym '(is-a? _ ,item-type-id) ,obj.sym))
 				   (fxadd1 ,idx.sym))
 			,idx ,rest-arg))))
-	       ;;The REST-TAG is some sub-type  of "<list>" not defined as instance
-	       ;;of "<list-type-spec>".  Just rely on the type's own predicate.
+	       ;;The REST-TAG is some sub-type  of "<list>" *not* defined as instance
+	       ;;of "<typed-list-type-spec>".  Just rely on the type's own predicate.
 	       (bless
 		`(unless (internal-run-time-is-a? ,rest-arg ,rest-tag)
 		   (procedure-signature-argument-violation __who__

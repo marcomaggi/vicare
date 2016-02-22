@@ -70,12 +70,12 @@
       => #t)
 
     (check
-	(xp.type-signature-tags (type-of (new alpha 1 2 3)))
+	(xp.type-signature.tags (type-of (new alpha 1 2 3)))
       (=> syntax=?)
       (list #'alpha))
 
     (check
-	(xp.type-signature-tags (type-of (make-alpha 1 2 3)))
+	(xp.type-signature.tags (type-of (make-alpha 1 2 3)))
       (=> syntax=?)
       (list #'alpha))
 
@@ -149,7 +149,7 @@
       (internal-body
 	(define-record-type duo
 	  (fields one two))
-	(xp.type-signature-tags (type-of (is-a? (read) duo))))
+	(xp.type-signature.tags (type-of (is-a? (read) duo))))
     (=> syntax=?)
     (list #'<boolean>))
 
@@ -157,7 +157,7 @@
       (internal-body
 	(define-record-type duo
 	  (fields one two))
-	(xp.type-signature-tags (type-of (duo? (read)))))
+	(xp.type-signature.tags (type-of (duo? (read)))))
     (=> syntax=?)
     (list #'<boolean>))
 
@@ -1220,8 +1220,8 @@
 	  (fields {one <fixnum>} {two <flonum>}))
 	(define {O duo}
 	  (new duo 1 2.3))
-	(values (xp.type-signature-tags (type-of (.one O)))
-		(xp.type-signature-tags (type-of (.two O)))))
+	(values (xp.type-signature.tags (type-of (.one O)))
+		(xp.type-signature.tags (type-of (.two O)))))
     (=> syntax=?)
     (list #'<fixnum>)
     (list #'<flonum>))
@@ -1232,8 +1232,8 @@
 	  (fields {one <fixnum>} {two <flonum>}))
 	(define {O duo}
 	  (new duo 1 2.3))
-	(values (xp.type-signature-tags (type-of (duo-one O)))
-		(xp.type-signature-tags (type-of (duo-two O)))))
+	(values (xp.type-signature.tags (type-of (duo-one O)))
+		(xp.type-signature.tags (type-of (duo-two O)))))
     (=> syntax=?)
     (list #'<fixnum>)
     (list #'<flonum>))

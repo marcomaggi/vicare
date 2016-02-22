@@ -1005,7 +1005,7 @@
      (let ((arg.sym			(gensym "obj"))
 	   (internal-predicate.sym	(gensym (string-append "internal-predicate-" (identifier->string foo?)))))
        `((define/std ,internal-predicate.sym
-	   (,?custom-predicate-expr (lambda/std (,arg.sym)
+	   (,?custom-predicate-expr (lambda/typed ({_ <boolean>} ,arg.sym)
 				      (unsafe-cast-signature (<boolean>)
 					(and ($struct? ,arg.sym)
 					     ($record-and-rtd? ,arg.sym ,foo-rtd))))))

@@ -74,9 +74,9 @@
       ((_ ?type-id ?rand* ...)
        (identifier? ?type-id)
        (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
-	 (cond ((list-type-spec? ots)
+	 (cond ((typed-list-type-spec? ots)
 		(%build-list-constructor input-form.stx lexenv.run lexenv.expand
-					 ?type-id (list-type-spec.type-id ots) ?rand*))
+					 ?type-id (typed-list-type-spec.type-id ots) ?rand*))
 	       ((object-type-spec.constructor-sexp ots)
 		=> (lambda (constructor.sexp)
 		     (if (boolean? constructor.sexp)
@@ -137,7 +137,7 @@
       (define (%run-time-validation)
 	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
 					 list-type.id item.id rand.stx rand.idx (psi.core-expr rand.psi)))
-      (syntax-match (type-signature-tags rand.sig) (<top> <list>)
+      (syntax-match (type-signature.tags rand.sig) (<top> <list>)
 	((<top>)
 	 ;;Integrate a run-time validator for the single return value.
 	 (%run-time-validation))
@@ -157,7 +157,7 @@
 	(?operand-some-list-type
 	 (identifier? ?operand-some-list-type)
 	 (with-object-type-syntactic-binding (__module_who__ input-form.stx ?operand-some-list-type lexenv.run operand-ots)
-	   (let ((operand-item.id (list-type-spec.type-id operand-ots)))
+	   (let ((operand-item.id (typed-list-type-spec.type-id operand-ots)))
 	     (if (type-identifier-super-and-sub? item.id operand-item.id lexenv.run input-form.stx)
 		 ;;We let the  integrated single-value validation do the  rest of the
 		 ;;job.
@@ -222,7 +222,7 @@
       ((_ ?expr)
        (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig (psi.retvals-signature expr.psi)))
-	 (syntax-match (type-signature-tags expr.sig) (<list>)
+	 (syntax-match (type-signature.tags expr.sig) (<list>)
 	   ((?type-id)
 	    ;;We have determined at expand-time  that the expression returns a single
 	    ;;value.
@@ -290,7 +290,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%run-time-predicate)
 	   (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand ?pred-type-id expr.psi %synner))
-	 (syntax-match (type-signature-tags expr.sig) (<top> <list> <condition> <compound-condition>)
+	 (syntax-match (type-signature.tags expr.sig) (<top> <list> <condition> <compound-condition>)
 	   ((<top>)
 	    (%run-time-predicate))
 
@@ -420,7 +420,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
-	 (syntax-match (type-signature-tags expr.sig) (<top> <list>)
+	 (syntax-match (type-signature.tags expr.sig) (<top> <list>)
 	   ((<top>)
 	    (%error-unknown-type))
 
@@ -518,7 +518,7 @@
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
 	   (%synner "unable to determine type of expression at expand-time" ?expr))
-	 (syntax-match (type-signature-tags expr.sig) (<top> <list>)
+	 (syntax-match (type-signature.tags expr.sig) (<top> <list>)
 	   ((<top>)
 	    (%error-unknown-type))
 
@@ -603,7 +603,7 @@
 	 (define-syntax-rule (%late-binding)
 	   (%expand-to-late-binding-method-call input-form.stx lexenv.run lexenv.expand
 						method-name.sym subject-expr.psi ?arg*))
-	 (syntax-match (type-signature-tags subject-expr.sig) (<top> <list>)
+	 (syntax-match (type-signature.tags subject-expr.sig) (<top> <list>)
 	   ((<top>)
 	    (%late-binding))
 
@@ -831,7 +831,7 @@
     (define asrt.tags  (syntax-unwrap asrt.stx))
     (define expr.psi   (chi-expr expr.stx lexenv.run lexenv.expand))
     (define expr.sig   (psi.retvals-signature expr.psi))
-    (define expr.tags  (type-signature-tags expr.sig))
+    (define expr.tags  (type-signature.tags expr.sig))
     (define (%error-mismatching-signatures)
       (expand-time-retvals-signature-violation who input-form.stx expr.stx (make-type-signature asrt.tags) expr.sig))
     ;;Most of  the times either  the signatures will match  at expand-time or  a full
@@ -1054,7 +1054,7 @@
     (define (%build-rest-validator who input-form.stx lexenv.run lexenv.expand
 				   asrt.id idx consumer-formal.sym return-values?)
       (let* ((asrt.ots	(id->object-type-specification who input-form.stx asrt.id lexenv.run))
-	     (item.id	(list-type-spec.type-id asrt.ots))
+	     (item.id	(typed-list-type-spec.type-id asrt.ots))
 	     (idx.sym	(gensym "idx"))
 	     (obj.sym	(gensym "obj")))
 	(define validator.sexp
@@ -1097,7 +1097,7 @@
 		;;
 		;;which generalises from "<fixnum>" to "<number>".
 		(%do-unsafe-cast-signature))
-	       ((type-signature.super-and-sub? expr.sig target.sig)
+	       ((type-signature.super-and-sub? expr.sig target.sig lexenv.run)
 		;;Good,   non-matching  but   compatible   type   signatures:  we   are
 		;;specialising the type specification.  For example:
 		;;

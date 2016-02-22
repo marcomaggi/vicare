@@ -105,8 +105,8 @@
   (custom-printer
     (lambda (S port sub-printer)
       (sub-printer `(<clambda-clause-signature>
-		     (:retvals ,(type-signature-tags (clambda-clause-signature.retvals S)))
-		     (:argvals ,(type-signature-tags (clambda-clause-signature.argvals S))))))))
+		     (:retvals ,(type-signature.tags (clambda-clause-signature.retvals S)))
+		     (:argvals ,(type-signature.tags (clambda-clause-signature.argvals S))))))))
 
 (define (not-empty-list-of-clambda-clause-signatures? obj)
   (and (pair? obj)
@@ -118,10 +118,10 @@
 		(null? obj))))))
 
 (define* (clambda-clause-signature.argvals.tags {signature clambda-clause-signature?})
-  (type-signature-tags (clambda-clause-signature.argvals signature)))
+  (type-signature.tags (clambda-clause-signature.argvals signature)))
 
 (define* (clambda-clause-signature.retvals.tags {signature clambda-clause-signature?})
-  (type-signature-tags (clambda-clause-signature.retvals signature)))
+  (type-signature.tags (clambda-clause-signature.retvals signature)))
 
 ;;; --------------------------------------------------------------------
 

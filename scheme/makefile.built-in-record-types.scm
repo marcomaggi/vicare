@@ -110,17 +110,17 @@
 
 ;;; --------------------------------------------------------------------
 
-   (define-built-in-record-type <list-type-spec>
+   (define-built-in-record-type <typed-list-type-spec>
        <record>
-     make-list-type-spec list-type-spec?
+     make-typed-list-type-spec typed-list-type-spec?
      (methods
-      (type-id			list-type-spec.type-id)))
+      (type-id			typed-list-type-spec.type-id)))
 
-   (define-built-in-record-type <vector-type-spec>
+   (define-built-in-record-type <typed-vector-type-spec>
        <record>
-     make-vector-type-spec vector-type-spec?
+     make-typed-vector-type-spec typed-vector-type-spec?
      (methods
-      (type-id			vector-type-spec.type-id)))
+      (type-id			typed-vector-type-spec.type-id)))
 
 ;;; --------------------------------------------------------------------
 
@@ -128,7 +128,8 @@
        <record>
      make-type-signature type-signature?
      (methods
-      (tags			type-signature-tags)))
+      (specs			type-signature.specs)
+      (tags			type-signature.tags)))
 
 ;;; --------------------------------------------------------------------
 

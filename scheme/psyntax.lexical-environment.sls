@@ -23,6 +23,7 @@
   (export
 
     ;; core definitions
+    make-empty-lexenv
     make-lexenv-entry
     lexenv-entry.label
     lexenv-entry.binding-descriptor
@@ -112,16 +113,18 @@
     closure-type-spec.signature
 
     ;; object-type specifications: compound types, lists
-    <list-type-spec>
-    <list-type-spec>-rtd				<list-type-spec>-rcd
-    make-list-type-spec					list-type-spec?
-    list-type-spec.type-id
+    <typed-list-type-spec>
+    <typed-list-type-spec>-rtd				<typed-list-type-spec>-rcd
+    make-typed-list-type-spec				typed-list-type-spec?
+    typed-list-type-spec.type-id
+    make-list-of-predicate
 
     ;; object-type specifications: compound types, vectors
-    <vector-type-spec>
-    <vector-type-spec>-rtd				<vector-type-spec>-rcd
-    make-vector-type-spec				vector-type-spec?
-    vector-type-spec.type-id
+    <typed-vector-type-spec>
+    <typed-vector-type-spec>-rtd			<typed-vector-type-spec>-rcd
+    make-typed-vector-type-spec				typed-vector-type-spec?
+    typed-vector-type-spec.type-id
+    make-vector-of-predicate
 
     ;; object-type specifications: structs
     <struct-type-spec>
@@ -247,6 +250,22 @@
     struct-type-id			record-type-id
     simple-condition-type-id		$simple-condition-type-id?	simple-condition-type-id?
     compound-condition-type-id		$compound-condition-type-id?	compound-condition-type-id?
+
+    ;; core type specifications
+    no-return-type-spec			no-return-type-spec?
+    procedure-type-spec			procedure-type-spec?
+    predicate-type-spec			predicate-type-spec?
+    null-type-spec			null-type-spec?
+    nlist-type-spec			nlist-type-spec?
+    list-type-spec			list-type-spec?
+    vector-type-spec			vector-type-spec?
+    stx-type-spec			stx-type-spec?
+    syntactic-identifier-type-spec	syntactic-identifier-type-spec?
+    top-type-spec			top-type-spec?
+    boolean-type-spec			void-type-spec
+    struct-type-spec			record-type-spec
+    simple-condition-type-spec		simple-condition-type-spec?
+    compound-condition-type-spec	compound-condition-type-spec?
 
     ;; utilities for identifiers
     valid-bound-ids?			distinct-bound-ids?
@@ -437,6 +456,9 @@
 
 
 ;;;; syntactic bindings core definitions
+
+(define-syntax-rule (make-empty-lexenv)
+  '())
 
 (define-syntax-rule (make-lexenv-entry ?label ?descr)
   (cons ?label ?descr))
@@ -2610,75 +2632,121 @@
 ;;;; basic object-type identifiers
 
 (let-syntax
-    ((define-tag-retriever (syntax-rules ()
-			     ((_ ?who ?tag)
-			      (define ?who
-				(let ((memoized-id #f))
-				  (lambda ()
-				    (or memoized-id
-					(receive-and-return (id)
-					    (core-prim-id '?tag)
-					  (set! memoized-id id))))))))))
-  (define-tag-retriever no-return-type-id		<no-return>)
-  (define-tag-retriever top-type-id			<top>)
-  (define-tag-retriever void-type-id			<void>)
-  (define-tag-retriever procedure-type-id		<procedure>)
-  (define-tag-retriever predicate-type-id		<predicate>)
-  (define-tag-retriever boolean-type-id			<boolean>)
-  (define-tag-retriever struct-type-id			<struct>)
-  (define-tag-retriever record-type-id			<record>)
-  (define-tag-retriever vector-type-id			<vector>)
-  (define-tag-retriever list-type-id			<list>)
-  (define-tag-retriever null-type-id			<null>)
-  (define-tag-retriever nlist-type-id			<nlist>)
-  (define-tag-retriever stx-type-id			<stx>)
-  (define-tag-retriever syntactic-identifier-type-id	<syntactic-identifier>)
-  (define-tag-retriever simple-condition-type-id		&condition)
-  (define-tag-retriever compound-condition-type-id	<compound-condition>)
+    ((define-type-id-retriever (syntax-rules ()
+				 ((_ ?who ?tag)
+				  (define ?who
+				    (let ((memoized-id #f))
+				      (lambda ()
+					(or memoized-id
+					    (receive-and-return (id)
+						(core-prim-id '?tag)
+					      (set! memoized-id id))))))))))
+  (define-type-id-retriever no-return-type-id			<no-return>)
+  (define-type-id-retriever top-type-id				<top>)
+  (define-type-id-retriever void-type-id			<void>)
+  (define-type-id-retriever procedure-type-id			<procedure>)
+  (define-type-id-retriever predicate-type-id			<predicate>)
+  (define-type-id-retriever boolean-type-id			<boolean>)
+  (define-type-id-retriever struct-type-id			<struct>)
+  (define-type-id-retriever record-type-id			<record>)
+  (define-type-id-retriever vector-type-id			<vector>)
+  (define-type-id-retriever list-type-id			<list>)
+  (define-type-id-retriever null-type-id			<null>)
+  (define-type-id-retriever nlist-type-id			<nlist>)
+  (define-type-id-retriever stx-type-id				<stx>)
+  (define-type-id-retriever syntactic-identifier-type-id	<syntactic-identifier>)
+  (define-type-id-retriever simple-condition-type-id		&condition)
+  (define-type-id-retriever compound-condition-type-id		<compound-condition>)
   #| end of let-syntax |# )
 
+(let-syntax
+    ((define-type-spec-retriever (syntax-rules ()
+				   ((_ ?who ?tag)
+				    (define ?who
+				      (let ((memoized-ots #f))
+					(lambda ()
+					  (or memoized-ots
+					      (receive-and-return (ots)
+						  (id->object-type-specification (quote ?who) #f (core-prim-id '?tag) (make-empty-lexenv))
+						(set! memoized-ots ots))))))))))
+  (define-type-spec-retriever no-return-type-spec		<no-return>)
+  (define-type-spec-retriever top-type-spec			<top>)
+  (define-type-spec-retriever void-type-spec			<void>)
+  (define-type-spec-retriever procedure-type-spec		<procedure>)
+  (define-type-spec-retriever predicate-type-spec		<predicate>)
+  (define-type-spec-retriever boolean-type-spec			<boolean>)
+  (define-type-spec-retriever struct-type-spec			<struct>)
+  (define-type-spec-retriever record-type-spec			<record>)
+  (define-type-spec-retriever vector-type-spec			<vector>)
+  (define-type-spec-retriever null-type-spec			<null>)
+  (define-type-spec-retriever nlist-type-spec			<nlist>)
+  (define-type-spec-retriever list-type-spec			<list>)
+  (define-type-spec-retriever stx-type-spec			<stx>)
+  (define-type-spec-retriever syntactic-identifier-type-spec	<syntactic-identifier>)
+  (define-type-spec-retriever simple-condition-type-spec	&condition)
+  (define-type-spec-retriever compound-condition-type-spec	<compound-condition>)
+  #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------
 
 (let-syntax
-    ((define-unsafe-tag-predicate (syntax-rules ()
-				    ((_ ?who ?tag-retriever)
-				     (define (?who id)
-				       (~free-identifier=? id (?tag-retriever)))))))
-  (define-unsafe-tag-predicate $no-return-type-id?		no-return-type-id)
-  (define-unsafe-tag-predicate $top-type-id?			top-type-id)
-  (define-unsafe-tag-predicate $procedure-type-id?		procedure-type-id)
-  (define-unsafe-tag-predicate $predicate-type-id?		predicate-type-id)
-  (define-unsafe-tag-predicate $vector-type-id?			vector-type-id)
-  (define-unsafe-tag-predicate $list-type-id?			list-type-id)
-  (define-unsafe-tag-predicate $null-type-id?			null-type-id)
-  (define-unsafe-tag-predicate $nlist-type-id?			nlist-type-id)
-  (define-unsafe-tag-predicate $stx-type-id?			stx-type-id)
-  (define-unsafe-tag-predicate $syntactic-identifier-type-id?	syntactic-identifier-type-id)
-  (define-unsafe-tag-predicate $simple-condition-type-id?	simple-condition-type-id)
-  (define-unsafe-tag-predicate $compound-condition-type-id?	compound-condition-type-id)
+    ((define-unsafe-type-id-predicate (syntax-rules ()
+					((_ ?who ?tag-retriever)
+					 (define (?who id)
+					   (~free-identifier=? id (?tag-retriever)))))))
+  (define-unsafe-type-id-predicate $no-return-type-id?			no-return-type-id)
+  (define-unsafe-type-id-predicate $top-type-id?			top-type-id)
+  (define-unsafe-type-id-predicate $procedure-type-id?			procedure-type-id)
+  (define-unsafe-type-id-predicate $predicate-type-id?			predicate-type-id)
+  (define-unsafe-type-id-predicate $vector-type-id?			vector-type-id)
+  (define-unsafe-type-id-predicate $list-type-id?			list-type-id)
+  (define-unsafe-type-id-predicate $null-type-id?			null-type-id)
+  (define-unsafe-type-id-predicate $nlist-type-id?			nlist-type-id)
+  (define-unsafe-type-id-predicate $stx-type-id?			stx-type-id)
+  (define-unsafe-type-id-predicate $syntactic-identifier-type-id?	syntactic-identifier-type-id)
+  (define-unsafe-type-id-predicate $simple-condition-type-id?		simple-condition-type-id)
+  (define-unsafe-type-id-predicate $compound-condition-type-id?		compound-condition-type-id)
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 
 (let-syntax
-    ((define-tag-predicate (syntax-rules ()
-			     ((_ ?who ?unsafe-pred)
-			      (define (?who obj)
-				(and (identifier? obj)
-				     (?unsafe-pred obj)))))))
-  (define-tag-predicate no-return-type-id?		$no-return-type-id?)
-  (define-tag-predicate top-type-id?			$top-type-id?)
-  (define-tag-predicate procedure-type-id?		$procedure-type-id?)
-  (define-tag-predicate predicate-type-id?		$predicate-type-id?)
-  (define-tag-predicate vector-type-id?			$vector-type-id?)
-  (define-tag-predicate list-type-id?			$list-type-id?)
-  (define-tag-predicate null-type-id?			$null-type-id?)
-  (define-tag-predicate nlist-type-id?			$nlist-type-id?)
-  (define-tag-predicate stx-type-id?			$stx-type-id?)
-  (define-tag-predicate syntactic-identifier-type-id?	$syntactic-identifier-type-id?)
-  (define-tag-predicate simple-condition-type-id?	$simple-condition-type-id?)
-  (define-tag-predicate compound-condition-type-id?	$compound-condition-type-id?)
+    ((define-type-id-predicate (syntax-rules ()
+				 ((_ ?who ?unsafe-pred)
+				  (define (?who obj)
+				    (and (identifier? obj)
+					 (?unsafe-pred obj)))))))
+  (define-type-id-predicate no-return-type-id?			$no-return-type-id?)
+  (define-type-id-predicate top-type-id?			$top-type-id?)
+  (define-type-id-predicate procedure-type-id?			$procedure-type-id?)
+  (define-type-id-predicate predicate-type-id?			$predicate-type-id?)
+  (define-type-id-predicate vector-type-id?			$vector-type-id?)
+  (define-type-id-predicate list-type-id?			$list-type-id?)
+  (define-type-id-predicate null-type-id?			$null-type-id?)
+  (define-type-id-predicate nlist-type-id?			$nlist-type-id?)
+  (define-type-id-predicate stx-type-id?			$stx-type-id?)
+  (define-type-id-predicate syntactic-identifier-type-id?	$syntactic-identifier-type-id?)
+  (define-type-id-predicate simple-condition-type-id?		$simple-condition-type-id?)
+  (define-type-id-predicate compound-condition-type-id?		$compound-condition-type-id?)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((define-type-spec-predicate (syntax-rules ()
+				   ((_ ?who ?spec-retriever)
+				    (define (?who obj)
+				      (eq? obj (?spec-retriever)))))))
+  (define-type-spec-predicate no-return-type-spec?		no-return-type-spec)
+  (define-type-spec-predicate top-type-spec?			top-type-spec)
+  (define-type-spec-predicate procedure-type-spec?		procedure-type-spec)
+  (define-type-spec-predicate predicate-type-spec?		predicate-type-spec)
+  (define-type-spec-predicate vector-type-spec?			vector-type-spec)
+  (define-type-spec-predicate null-type-spec?			null-type-spec)
+  (define-type-spec-predicate nlist-type-spec?			nlist-type-spec)
+  (define-type-spec-predicate list-type-spec?			list-type-spec)
+  (define-type-spec-predicate stx-type-spec?			stx-type-spec)
+  (define-type-spec-predicate syntactic-identifier-type-spec?	syntactic-identifier-type-spec)
+  (define-type-spec-predicate simple-condition-type-spec?	simple-condition-type-spec)
+  (define-type-spec-predicate compound-condition-type-spec?	compound-condition-type-spec)
   #| end of LET-SYNTAX |# )
 
 

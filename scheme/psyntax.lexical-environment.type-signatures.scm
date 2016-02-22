@@ -24,7 +24,7 @@
    <type-signature>
    <type-signature>-rtd					<type-signature>-rcd
    make-type-signature					type-signature?
-   type-signature-tags
+   type-signature.specs					type-signature.tags
 
 ;;; special constructors
    make-type-signature/single-top			make-type-signature/single-void
@@ -60,9 +60,12 @@
 (define-record-type (<type-signature> make-type-signature type-signature?)
   (nongenerative vicare:expander:<type-signature>)
   (fields
-    (immutable tags	type-signature-tags)
+    (immutable tags	type-signature.tags)
 		;A  fully  unwrapped  syntax  object representing  a  type  signature
 		;according to SYNTAX-OBJECT.TYPE-SIGNATURE?.
+    (immutable specs	type-signature.specs)
+		;A  proper   or  improper  list  of   "<object-type-spec>"  instances
+		;representing the types of values matching this signature.
     (mutable memoised-fully-untyped?		type-signature.memoised-fully-untyped?		type-signature.memoised-fully-untyped?-set!)
     (mutable memoised-partially-untyped?	type-signature.memoised-partially-untyped?	type-signature.memoised-partially-untyped?-set!)
     (mutable memoised-untyped?			type-signature.memoised-untyped?		type-signature.memoised-untyped?-set!)
@@ -74,11 +77,22 @@
   (protocol
     (lambda (make-record)
       (define* (make-type-signature {tags syntax-object.type-signature?})
-	(make-record (syntax-unwrap tags) (void) (void) (void) #f #f))
+	(let* ((tags  (syntax-unwrap tags))
+	       (specs (let recur ((tags tags))
+			(cond ((null? tags)
+			       '())
+			      ((pair? tags)
+			       (cons (id->object-type-specification __who__ #f (car tags) (current-inferior-lexenv))
+				     (recur (cdr tags))))
+			      ((identifier? tags)
+			       (id->object-type-specification __who__ #f tags (current-inferior-lexenv)))
+			      (else
+			       (assertion-violation __who__ "invalid syntax object, expected type signature" tags))))))
+	  (make-record tags specs (void) (void) (void) #f #f)))
       make-type-signature))
   (custom-printer
     (lambda (S port sub-printer)
-      (sub-printer `(<type-signature> ,(type-signature-tags S))))))
+      (sub-printer `(<type-signature> ,(type-signature.tags S))))))
 
 (define <type-signature>-rtd
   (record-type-descriptor <type-signature>))
@@ -123,38 +137,51 @@
 
 ;;;; type signature: predicates
 
+(define-syntax-rule (%type-signature-memoised-body ?signature ?memoised-getter ?memoised-setter . ?body)
+  (let ((obj (?memoised-getter ?signature)))
+    (if (void-object? obj)
+	(receive-and-return (bool)
+	    (begin . ?body)
+	  (?memoised-setter ?signature bool))
+      obj)))
+
 (define* (type-signature.fully-untyped? {signature type-signature?})
   ;;Return true  if the type  signature specifies  neither object types,  nor objects
   ;;count; otherwise return false.
   ;;
-  (let ((obj (type-signature.memoised-fully-untyped? signature)))
-    (if (void-object? obj)
-	(receive-and-return (bool)
-	    (syntax-object.type-signature.fully-untyped? (type-signature-tags signature))
-	  (type-signature.memoised-fully-untyped?-set! signature bool))
-      obj)))
+  (%type-signature-memoised-body
+   signature type-signature.memoised-fully-untyped? type-signature.memoised-fully-untyped?-set!
+   (list-type-spec? (type-signature.specs signature))))
 
 (define* (type-signature.partially-untyped? {signature type-signature?})
-  ;;Return true if the type signature as at least one untyped item, either "<top>" or
-  ;;"<list>"; otherwise return false.
+  ;;Return true if the  type signature has at least one  untyped item, either "<top>"
+  ;;or "<list>"; otherwise return false.
   ;;
-  (let ((obj (type-signature.memoised-partially-untyped? signature)))
-    (if (void-object? obj)
-	(receive-and-return (bool)
-	    (syntax-object.type-signature.partially-untyped? (type-signature-tags signature))
-	  (type-signature.memoised-partially-untyped?-set! signature bool))
-      obj)))
+  (%type-signature-memoised-body
+   signature type-signature.memoised-partially-untyped? type-signature.memoised-partially-untyped?-set!
+   (let loop ((specs (type-signature.specs signature))
+	      (rv    #f))
+     (cond ((pair? specs)
+	    (loop (cdr specs) (top-type-spec? (car specs))))
+	   ((list-type-spec? specs)
+	    ;;End of IMproper list.
+	    #t)
+	   (else
+	    ;;End of proper list.
+	    rv)))))
 
 (define* (type-signature.untyped? {signature type-signature?})
-  ;;Return  true if  the type  signature  as only  untyped items,  either "<top>"  or
+  ;;Return  true if  the type  signature has  only untyped  items, either  "<top>" or
   ;;"<list>"; otherwise return false.
   ;;
-  (let ((obj (type-signature.memoised-untyped? signature)))
-    (if (void-object? obj)
-	(receive-and-return (bool)
-	    (syntax-object.type-signature.untyped? (type-signature-tags signature))
-	  (type-signature.memoised-untyped?-set! signature bool))
-      obj)))
+  (%type-signature-memoised-body
+   signature type-signature.memoised-untyped? type-signature.memoised-untyped?-set!
+   (let loop ((specs (type-signature.specs signature)))
+     (cond ((pair? specs)
+	    (and (top-type-spec? (car specs))
+		 (loop (cdr specs))))
+	   ((list-type-spec? specs))
+	   (else #t)))))
 
 (case-define* type-signature.super-and-sub?
   ((super-signature sub-signature)
@@ -164,32 +191,109 @@
    ;;identifiers in  the homologous position  are super-type and  sub-type; otherwise
    ;;return false.
    ;;
-   (syntax-object.type-signature.super-and-sub? (type-signature-tags super-signature)
-						(type-signature-tags sub-signature)
-						lexenv)))
+   (let recur ((super-specs	(type-signature.specs super-signature))
+	       (sub-specs	(type-signature.specs sub-signature)))
+     (cond ((pair? super-specs)
+	    (cond ((pair? sub-specs)
+		   ;;If the  super-type is "<top>",  good: it  is an ancestor  of any
+		   ;;sub-type.  If  the super-type  is actually a  super type  of the
+		   ;;sub-type good.
+		   (and (or (top-type-spec? (car super-specs))
+			    (object-type-spec.subtype-and-supertype? (car sub-specs) (car super-specs) lexenv))
+			(recur (cdr super-specs) (cdr sub-specs))))
+		  ((null? sub-specs)
+		   ;;There are more super-types than sub-types.
+		   #f)
+		  (else
+		   ;;The sub-signature accepts any number of arguments of any type.
+		   #f)))
+	   ((null? super-specs)
+	    ;;Return  true if  both the  signatures are  proper lists  with the  same
+	    ;;number of items, and all the items are correct super and sub.
+	    (null? super-specs))
+	   ((list-type-spec? super-specs)
+	    ;;Return  true if  both the  signatures are  proper lists  with the  same
+	    ;;number of items, and all the items are correct super and sub.
+	    #t)
+	   (else
+	    ;;Here we  know that SUPER-SPECS  is an instance  of "<object-type-spec>"
+	    ;;representing a  sub-type of "<list>".  The  super-signature accepts any
+	    ;;number of arguments of a specified type.
+	    #;(assert (typed-list-type-spec? super-specs))
+	    (let* ((super-item-id   (typed-list-type-spec.type-id super-specs))
+		   (super-item-spec (id->object-type-specification __who__ #f super-item-id lexenv)))
+	      (or (top-type-spec? super-item-spec)
+		  (let item-recur ((sub-specs sub-specs))
+		    (cond
+		     ;;The super signature is an improper list with rest item and the
+		     ;;sub signature  is finished.  We want  the following signatures
+		     ;;to match:
+		     ;;
+		     ;;  super-signature == #'(<number>  <fixnum> . <list>)
+		     ;;  sub-signature   == #'(<complex> <fixnum>)
+		     ;;
+		     ;;because "<list>" in rest position  means any number of objects
+		     ;;of any type.
+		     ((null? sub-specs))
+
+		     ;;The super signature  is an improper list shorter  than the sub
+		     ;;signature.  We want the following signatures to match:
+		     ;;
+		     ;;  super-signature == #'(<number>  . <list-of-fixnums>)
+		     ;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
+		     ;;
+		     ((pair? sub-specs)
+		      (and (object-type-spec.subtype-and-supertype? (car sub-specs) super-item-spec lexenv)
+			   (item-recur (cdr sub-specs))))
+
+		     ((list-type-spec? sub-specs)
+		      ;;Both the signatures  are improper lists with  the same number
+		      ;;of items, and  all the items are correct super  and sub.  The
+		      ;;rest types are mismatching.
+		      #f)
+
+		     ;;Both the signatures are improper lists with the same number of
+		     ;;items, and  all the items  are correct  super and sub;  if the
+		     ;;rest types are  proper super and subs:  success!  For example,
+		     ;;we want the following signatures to match:
+		     ;;
+		     ;;  super-signature == #'(<string> <string> . <list-of-numbers>)
+		     ;;  sub-signature   == #'(<string> <string> . <list-of-fixnums>)
+		     ;;
+		     ;;and also the following signatures to match:
+		     ;;
+		     ;;  super-signature == #'(<string> <string> . <list-of-numbers>)
+		     ;;  sub-signature   == #'(<string> <string> <real> . <list-of-fixnums>)
+		     ;;
+		     (else
+		      (let* ((sub-item-id   (typed-list-type-spec.type-id sub-specs))
+			     (sub-item-spec (id->object-type-specification __who__ #f sub-item-id lexenv)))
+			(object-type-spec.subtype-and-supertype? sub-item-spec super-item-spec lexenv))))))))))))
 
 (define* (type-signature.single-type? {signature type-signature?})
-  ;;Return  true if  SIGNATURE represents  a  single return  value; otherwise  return
-  ;;false.
+  ;;Return true if SIGNATURE represents a single value; otherwise return false.
   ;;
-  (syntax-object.type-signature.single-identifier? (type-signature-tags signature)))
+  (let ((specs (type-signature.specs signature)))
+    (and (pair? specs)
+	 (null? (cdr specs)))))
 
 (define* (type-signature.single-top-tag? {signature type-signature?})
   ;;Return  true if  SIGNATURE represents  a single  return value  with tag  "<top>",
   ;;otherwise return false.
   ;;
-  (syntax-match (type-signature-tags signature) (<top>)
-    ((<top>)  #t)
-    (_        #f)))
+  (let ((specs (type-signature.specs signature)))
+    (and (pair? specs)
+	 (null? (cdr specs))
+	 (top-type-spec? (car specs)))))
 
 (define* (type-signature.single-type-or-fully-untyped? {signature type-signature?})
   ;;Return true if SIGNATURE represents a single return value or it is the standalone
   ;;"<list>" identifier, otherwise return false.
   ;;
-  (syntax-match (type-signature-tags signature) (<list>)
-    ((?tag)	#t)
-    (<list>	#t)
-    (_		#f)))
+  (let ((specs (type-signature.specs signature)))
+    (or (and (pair? specs)
+	     (null? (cdr specs)))
+	(list-type-spec? specs))))
 
 
 ;;;; type signature: accessors
@@ -214,7 +318,17 @@
 
 (define (type-signature.min-and-max-counts signature)
   (receive-and-return (min-count max-count)
-      (syntax-object.type-signature.min-and-max-count (type-signature-tags signature))
+      (let recur ((specs	(type-signature.specs signature))
+		  (min		0)
+		  (max		0))
+	(cond ((pair? specs)
+	       (recur (cdr specs) (fxadd1 min) (fxadd1 max)))
+	      ((null? specs)
+	       ;;End of proper list.
+	       (values min max))
+	      (else
+	       ;;End of IMproper list.
+	       (values min +inf.0))))
     (type-signature.memoised-min-count-set! signature min-count)
     (type-signature.memoised-max-count-set! signature max-count)))
 
@@ -224,19 +338,18 @@
 (define* (type-signature=? {signature1 type-signature?} {signature2 type-signature?})
   ;;Return true if the signatures are equal; otherwise return false.
   ;;
-  (define (%syntax=? stx1 stx2)
-    (cond ((and (identifier? stx1)
-		(identifier? stx2))
-	   (type-identifier=? stx1 stx2))
-	  ((and (pair? stx1)
-		(pair? stx2))
-	   (and (type-identifier=? (car stx1) (car stx2))
-		(%syntax=?         (cdr stx1) (cdr stx2))))
-	  (else
-	   (and (null? stx1)
-		(null? stx2)))))
-  (%syntax=? (type-signature-tags signature1)
-	     (type-signature-tags signature2)))
+  (define (%syntax=? specs1 specs2)
+    (cond ((and (pair? specs1)
+		(pair? specs2))
+	   (and (eq? (car specs1)
+		     (car specs2))
+		(%syntax=?         (cdr specs1) (cdr specs2))))
+	  ((and (null? specs1)
+		(null? specs2)))
+	  ((eq? specs1 specs2))
+	  (else #f)))
+  (%syntax=? (type-signature.specs signature1)
+	     (type-signature.specs signature2)))
 
 
 ;;;; type signature: inspection
@@ -250,8 +363,8 @@
 
   (({sig1 type-signature?} {sig2 type-signature?})
    (make-type-signature
-    (syntax-object.type-signature.common-ancestor (type-signature-tags sig1)
-						  (type-signature-tags sig2))))
+    (syntax-object.type-signature.common-ancestor (type-signature.tags sig1)
+						  (type-signature.tags sig2))))
   (({sig1 type-signature?} {sig2 type-signature?} . sig*)
    (fold-left (lambda (sig-a sig-b)
 		(type-signature.common-ancestor sig-a sig-b))

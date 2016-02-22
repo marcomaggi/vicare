@@ -372,7 +372,7 @@
 	 (rhs.sig (psi.retvals-signature rhs.psi)))
     ;;All right, we  have expanded the RHS expression.  Now  let's do some validation
     ;;on the type of the expression.
-    (syntax-match (type-signature-tags rhs.sig) (<list>)
+    (syntax-match (type-signature.tags rhs.sig) (<list>)
       ((?tag)
        ;;A single return value.  Good.
        rhs.psi)

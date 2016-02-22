@@ -124,7 +124,7 @@
   ((stx lexenv)
    (let loop ((stx stx)
 	      (rv  #f))
-     (syntax-match stx (<top>)
+     (syntax-match stx (<top> <list>)
        (() rv)
        ((<top> . ?rest)
 	(loop ?rest #t))
@@ -220,7 +220,7 @@
 
      (?super-rest-type
       (type-identifier-is-list-sub-type? ?super-rest-type lexenv)
-      (let ((item-id (list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
+      (let ((item-id (typed-list-type-spec.type-id (id->object-type-specification __who__ #f ?super-rest-type lexenv))))
 	(or (top-type-id? item-id)
 	    (syntax-match sub-signature (<list>)
 	      ;;The super  signature is an improper  list with rest item  and the sub

@@ -85,9 +85,8 @@
     syntax-dispatch			ellipsis-map
 
     <type-signature>
-    make-type-signature
-    type-signature?
-    type-signature-tags
+    make-type-signature			type-signature?
+    type-signature.specs		type-signature.tags
 
     ;; expand-time type checking exception stuff
     expand-time-type-signature-violation?
@@ -292,8 +291,8 @@
 					(inv-collector rtc)
 					(vis-collector vtc)
 					(imp-collector itc))
-			    (let ((lexenv.run     '())
-				  (lexenv.expand  '()))
+			    (let ((lexenv.run     (make-empty-lexenv))
+				  (lexenv.expand  (make-empty-lexenv)))
 			      (chi-expr expr.stx lexenv.run lexenv.expand))))))
 	       (seal-rib! rib)
 	       (values (psi.core-expr psi) (rtc))))))

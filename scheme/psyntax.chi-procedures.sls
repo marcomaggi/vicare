@@ -206,7 +206,7 @@
     ;;We can return a meaningful value if RATOR.PSI has a type which is a sub-type of
     ;;"<procedure>".
     ;;
-    (syntax-match (type-signature-tags (psi.retvals-signature rator.psi)) (<predicate>)
+    (syntax-match (type-signature.tags (psi.retvals-signature rator.psi)) (<predicate>)
       ((<predicate>)
        (make-type-signature/single-boolean))
       ((?type-id)
@@ -516,9 +516,9 @@
 	   (make-syntactic-binding-descriptor/struct-type-name rv rhs.core))
 	  ((closure-type-spec? rv)
 	   (make-syntactic-binding-descriptor/closure-type-name rv rhs.core))
-	  ((list-type-spec? rv)
+	  ((typed-list-type-spec? rv)
 	   (make-syntactic-binding-descriptor/list-sub-type-name rv rhs.core))
-	  ((vector-type-spec? rv)
+	  ((typed-vector-type-spec? rv)
 	   (make-syntactic-binding-descriptor/vector-sub-type-name rv rhs.core))
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs.core))

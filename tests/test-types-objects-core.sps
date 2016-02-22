@@ -51,7 +51,7 @@
     => 123)
 
   (check
-      (xp.type-signature-tags (type-of (new <top> (read))))
+      (xp.type-signature.tags (type-of (new <top> (read))))
     (=> syntax=?)
     (list #'<top>))
 
@@ -95,7 +95,7 @@
     => '#!void)
 
   (check
-      (xp.type-signature-tags (type-of (new <void>)))
+      (xp.type-signature.tags (type-of (new <void>)))
     (=> syntax=?)
     (list #'<void>))
 
@@ -124,13 +124,13 @@
 
   (check
       (let (({f <procedure>} (lambda (x) x)))
-	(xp.type-signature-tags (type-of (f 1))))
+	(xp.type-signature.tags (type-of (f 1))))
     (=> syntax=?)
     #'<list>)
 
   (check
       (let (({f <procedure>} (unsafe-cast-signature (<procedure>) (lambda (x) x))))
-	(xp.type-signature-tags (type-of f)))
+	(xp.type-signature.tags (type-of f)))
     (=> syntax=?)
     (list #'<procedure>))
 
@@ -141,12 +141,12 @@
   (check-for-false	(type-super-and-sub? <predicate> <procedure>))
 
   (check
-      (xp.type-signature-tags (type-of (unsafe-cast-signature (<predicate>) (read))))
+      (xp.type-signature.tags (type-of (unsafe-cast-signature (<predicate>) (read))))
     (=> syntax=?)
     (list #'<predicate>))
 
   (check
-      (xp.type-signature-tags (type-of ((unsafe-cast-signature (<predicate>) (read)) 123)))
+      (xp.type-signature.tags (type-of ((unsafe-cast-signature (<predicate>) (read)) 123)))
     (=> syntax=?)
     (list #'<boolean>))
 
@@ -155,7 +155,7 @@
   ;;
   ;; (check
   ;;     (let (({f <predicate>} (unsafe-cast-signature (<predicate>) (lambda (x) x))))
-  ;; 	(xp.type-signature-tags (type-of f)))
+  ;; 	(xp.type-signature.tags (type-of f)))
   ;;   (=> syntax=?)
   ;;   (list #'<predicate>))
 

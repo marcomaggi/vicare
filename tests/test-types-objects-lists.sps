@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -70,24 +70,24 @@
     => '(1 2))
 
   (check
-      (xp.type-signature-tags (type-of (new <list> (read) (read))))
+      (xp.type-signature.tags (type-of (new <list> (read) (read))))
     (=> syntax=?)
     (list #'<nlist>))
 
   (check
-      (xp.type-signature-tags (type-of (new <list>)))
+      (xp.type-signature.tags (type-of (new <list>)))
     (=> syntax=?)
     (list #'<null>))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (xp.type-signature-tags (type-of (list)))
+      (xp.type-signature.tags (type-of (list)))
     (=> syntax=?)
     (list #'<null>))
 
   (check
-      (xp.type-signature-tags (type-of (list 1)))
+      (xp.type-signature.tags (type-of (list 1)))
     (=> syntax=?)
     (list #'<nlist>))
 
@@ -140,7 +140,7 @@
     => '(#\a #\b))
 
   (check
-      (xp.type-signature-tags (type-of (new <char*> #\a #\b)))
+      (xp.type-signature.tags (type-of (new <char*> #\a #\b)))
     (=> syntax=?)
     (list #'<char*>))
 
@@ -271,7 +271,7 @@
     => '("a" "b"))
 
   (check
-      (xp.type-signature-tags (type-of (new <string*> "a" "b")))
+      (xp.type-signature.tags (type-of (new <string*> "a" "b")))
     (=> syntax=?)
     (list #'<string*>))
 

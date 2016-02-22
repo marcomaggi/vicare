@@ -3547,9 +3547,6 @@
     (<pointer*>					v $language)
     (<symbol*>					v $language)
 
-    ;; helpers
-    (make-list-of-predicate)
-
 ;;; --------------------------------------------------------------------
 ;;; keywords
 
@@ -4139,22 +4136,29 @@
     (global-typed-variable-spec?)
     (global-typed-variable-spec.variable-loc)
 
-    (<list-type-spec>					$expander)
-    (make-list-type-spec				$expander)
-    (list-type-spec?					$expander)
-    (list-type-spec.type-id				$expander)
+    (<typed-list-type-spec>				$expander)
+    (<typed-list-type-spec>-rtd)
+    (<typed-list-type-spec>-rcd)
+    (make-typed-list-type-spec				$expander)
+    (typed-list-type-spec?				$expander)
+    (type-list-type-spec.type-id			$expander)
+    (make-list-of-predicate)
 
-    (<vector-type-spec>					$expander)
-    (make-vector-type-spec				$expander)
-    (vector-type-spec?					$expander)
-    (vector-type-spec.type-id				$expander)
+    (<typed-vector-type-spec>				$expander)
+    (<typed-vector-type-spec>-rtd)
+    (<typed-vector-type-spec>-rcd)
+    (make-typed-vector-type-spec			$expander)
+    (typed-vector-type-spec?				$expander)
+    (typed-vector-type-spec.type-id			$expander)
+    (make-vector-of-predicate)
 
     (<type-signature>					$expander)
     (<type-signature>-rtd)
     (<type-signature>-rcd)
     (make-type-signature				$expander)
     (type-signature?					$expander)
-    (type-signature-tags				$expander)
+    (type-signature.tags				$expander)
+    (type-signature.specs				$expander)
 
     (&expand-time-type-signature-violation		$expander)
     (&expand-time-type-signature-violation-rtd		$expander)

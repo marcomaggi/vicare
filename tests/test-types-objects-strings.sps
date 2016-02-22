@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -67,7 +67,7 @@
     => "abc")
 
   (check
-      (xp.type-signature-tags (type-of (new <string> (read))))
+      (xp.type-signature.tags (type-of (new <string> (read))))
     (=> syntax=?)
     (list #'<string>))
 

@@ -244,7 +244,7 @@
 	       ;;caller of  VALUES to cast the  arguments, but it would  be too much;
 	       ;;remember that we still do some signature validation even when tagged
 	       ;;language support is off.  (Marco Maggi; Mon Mar 31, 2014)
-	       (syntax-match (type-signature-tags (car rand*.sig)) ()
+	       (syntax-match (type-signature.tags (car rand*.sig)) ()
 		 ((?tag)
 		  (loop (cdr rand*.sig) (cdr rand*.stx)
 			(cons ?tag rand*.tag)))
@@ -286,7 +286,7 @@
 	(expand-time-retvals-signature-violation 'apply input-form.stx rator.stx
 						 (make-type-signature/single-procedure)
 						 rator.sig))
-      (syntax-match (type-signature-tags rator.sig) ()
+      (syntax-match (type-signature.tags rator.sig) ()
 	((?rator.tag)
 	 (cond ((type-identifier-is-procedure-or-procedure-sub-type? ?rator.tag lexenv.run)
 		;;Procedure application: good.
@@ -355,7 +355,7 @@
     ;;We call this function when the operator has already been expanded.
     ;;
     (define rator.sig (psi.retvals-signature rator.psi))
-    (syntax-match (type-signature-tags rator.sig) ()
+    (syntax-match (type-signature.tags rator.sig) ()
       (?tag
        (list-type-id? ?tag)
        ;;The rator type  is unknown: evaluating the rator might  return any number of
@@ -465,7 +465,7 @@
     (define (%common-rator-application)
       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
 				       rator.psi first-rand.psi other-rand*.stx))
-    (syntax-match (type-signature-tags rator.sig) ()
+    (syntax-match (type-signature.tags rator.sig) ()
       (?tag
        (list-type-id? ?tag)
        ;;The rator type  is unknown: evaluating the rator might  return any number of
@@ -790,7 +790,7 @@
   (define* (%validate-operands-for-single-return-value input-form.stx rand*.psi rand*.sig)
     (import CLOSURE-APPLICATION-ERRORS)
     (for-each (lambda (rand.psi rand.sig)
-		(syntax-match (type-signature-tags rand.sig) (<list>)
+		(syntax-match (type-signature.tags rand.sig) (<list>)
 		  ((?type0 ?type1 . ?rest)
 		   ;;Two or more return values.  Wrong.
 		   (%error-operand-with-multiple-return-values input-form.stx (psi.input-form rand.psi) rand.sig))
@@ -883,7 +883,7 @@
     ;;signatures of the operands.
     ;;
     (define argvals.tags
-      (type-signature-tags argvals.sig))
+      (type-signature.tags argvals.sig))
     ;;In  this  loop  the  variable  STATE always  degrades:  from  "exact-match"  to
     ;;"possible-match" or "no-match"; from  "possible-match" to "no-match".  It never
     ;;upgrades.
@@ -907,7 +907,7 @@
 
 	((?argval.tag . ?argvals.tags)
 	 (if (pair? rand*.sig)
-	     (let ((rand.tags (type-signature-tags (car rand*.sig))))
+	     (let ((rand.tags (type-signature.tags (car rand*.sig))))
 	       (syntax-match rand.tags (<top> <list>)
 		 ((<top>)
 		  ;;One argument possibly matches one operand.  Good.
@@ -933,8 +933,8 @@
 		  ;;The  operand  returns  an   unspecified  number  of  values  with
 		  ;;specified type.
 		  (let ((ots (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run)))
-		    (if (and (list-type-spec? ots)
-			     (type-identifier-super-and-sub? ?argval.tag (list-type-spec.type-id ots) lexenv.run))
+		    (if (and (typed-list-type-spec? ots)
+			     (type-identifier-super-and-sub? ?argval.tag (typed-list-type-spec.type-id ots) lexenv.run))
 			(loop 'possible-match ?argvals.tags (cdr rand*.sig))
 		      'no-match)))))
 	   ;;More arguments and no more operands.  Bad.
@@ -949,13 +949,13 @@
 	 ;;Any number of operands of a specified type are accepted.
 	 (if (pair? rand*.sig)
 	     (let* ((argval.ots   (id->object-type-specification __who__ input-form.stx ?arg-list-sub-type lexenv.run))
-		    (argitem.tag  (list-type-spec.type-id argval.ots)))
+		    (argitem.tag  (typed-list-type-spec.type-id argval.ots)))
 	       (let inner-loop ((state		state)
-				(rand.tags	(type-signature-tags (car rand*.sig)))
+				(rand.tags	(type-signature.tags (car rand*.sig)))
 				(rand*.sig	(cdr rand*.sig)))
 		 (define (%recursion state)
 		   (if (pair? rand*.sig)
-		       (inner-loop state (type-signature-tags (car rand*.sig)) (cdr rand*.sig))
+		       (inner-loop state (type-signature.tags (car rand*.sig)) (cdr rand*.sig))
 		     state))
 		 (syntax-match rand.tags (<top> <list>)
 		   ((<top>)
@@ -973,7 +973,7 @@
 		    ;;The  operand  returns  an   unspecified  number  of  values  with
 		    ;;specified type.
 		    (let* ((rand.ots      (id->object-type-specification __who__ input-form.stx ?rand-list-sub-type lexenv.run))
-			   (randitem.tag  (list-type-spec.type-id rand.ots)))
+			   (randitem.tag  (typed-list-type-spec.type-id rand.ots)))
 		      (if (type-identifier-super-and-sub? argitem.tag randitem.tag lexenv.run)
 			  (%recursion 'possible-match)
 			'no-match))))))

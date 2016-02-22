@@ -27,6 +27,7 @@
 	 object-type-spec.safe-accessor-sexp		object-type-spec.safe-mutator-sexp
 	 object-type-spec.applicable-method-sexp
 	 object-type-spec.memoised-list-id		object-type-spec.memoised-list-id-set!
+	 object-type-spec.memoised-vector-id		object-type-spec.memoised-vector-id-set!
 
 	 object-type-spec.subtype-and-supertype?	object-type-spec-override-predicate
 
@@ -37,15 +38,17 @@
 	 make-closure-type-spec				closure-type-spec?
 	 closure-type-spec.signature
 
-	 <list-type-spec>
-	 <list-type-spec>-rtd				<list-type-spec>-rcd
-	 make-list-type-spec				list-type-spec?
-	 list-type-spec.type-id
+	 <typed-list-type-spec>
+	 <typed-list-type-spec>-rtd			<typed-list-type-spec>-rcd
+	 make-typed-list-type-spec			typed-list-type-spec?
+	 typed-list-type-spec.type-id
+	 make-list-of-predicate
 
-	 <vector-type-spec>
-	 <vector-type-spec>-rtd				<vector-type-spec>-rcd
-	 make-vector-type-spec				vector-type-spec?
-	 vector-type-spec.type-id
+	 <typed-vector-type-spec>
+	 <typed-vector-type-spec>-rtd			<typed-vector-type-spec>-rcd
+	 make-typed-vector-type-spec			typed-vector-type-spec?
+	 typed-vector-type-spec.type-id
+	 make-vector-of-predicate
 
 	 <struct-type-spec>
 	 make-struct-type-spec				struct-type-spec?
@@ -71,11 +74,11 @@
 (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
   #;(nongenerative vicare:expander:<object-type-spec>)
   (fields
-   (immutable parent-id			object-type-spec.parent-id)
+    (immutable parent-id		object-type-spec.parent-id)
 		;False  or a  syntactic identifier  representing the  parent of  this
 		;record-type.
 
-   (immutable constructor-sexp		object-type-spec.constructor-sexp)
+    (immutable constructor-sexp		object-type-spec.constructor-sexp)
 		;A  boolean value  or a  symbolic  expression (to  be BLESSed  later)
 		;representing  a Scheme  expression that,  expanded and  evaluated at
 		;run-time, returns the default constructor function.
@@ -104,7 +107,7 @@
 		;"$make-clean-vector" or a closure object  like "vector" or the maker
 		;of R6RS records.
 
-   (immutable destructor-sexp		object-type-spec.destructor-sexp)
+    (immutable destructor-sexp		object-type-spec.destructor-sexp)
 		;False or a symbolic expression  (to be BLESSed later) representing a
 		;Scheme expression that, expanded  and evaluated at run-time, returns
 		;a destructor function.  The destructor is meant to be used as:
@@ -113,9 +116,9 @@
 		;
 		;and called explicitly with the DELETE syntax.
 
-   (mutable type-predicate-sexp
-	    object-type-spec.type-predicate-sexp
-	    object-type-spec.type-predicate-sexp-set!)
+    (mutable type-predicate-sexp
+	     object-type-spec.type-predicate-sexp
+	     object-type-spec.type-predicate-sexp-set!)
 		;False or a symbolic expression  (to be BLESSed later) representing a
 		;Scheme expression that, expanded  and evaluated at run-time, returns
 		;a type predicate.  The predicate is meant to be used as:
@@ -132,7 +135,7 @@
 		;predicate  that  works  with  both simple  conditions  and  compound
 		;conditions.
 
-   (immutable safe-accessors-table		object-type-spec.safe-accessors-table)
+    (immutable safe-accessors-table	object-type-spec.safe-accessors-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
 		;expressions  that, expanded  and evaluated  at run-time,  return the
@@ -143,7 +146,7 @@
 		;
 		;and called explicitly with the SLOT-REF syntax.
 
-   (immutable safe-mutators-table		object-type-spec.safe-mutators-table)
+    (immutable safe-mutators-table	object-type-spec.safe-mutators-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
 		;expressions  that, expanded  and evaluated  at run-time,  return the
@@ -154,7 +157,7 @@
 		;
 		;and called explicitly with the SLOT-SET! syntax.
 
-   (immutable methods-table			object-type-spec.methods-table)
+    (immutable methods-table		object-type-spec.methods-table)
 		;Null or  an alist mapping  symbols representing the method  names to
 		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
 		;expressions  that, expanded  and evaluated  at run-time,  return the
@@ -164,46 +167,65 @@
 		;
 		;and called explicitly with the METHOD-CALL syntax.
 
-   (mutable memoised-list-id
-	    object-type-spec.memoised-list-id
-	    object-type-spec.memoised-list-id-set!)
+    (mutable memoised-list-id
+	     object-type-spec.memoised-list-id
+	     object-type-spec.memoised-list-id-set!)
 		;False or  a type identifier  representing a (possibly  empty) proper
 		;list of objects of this type.
 		;
 		;For example, if we create a list type identifier with:
 		;
-		;   (define-syntax <fixnum*>
-		;      (make-list-type-spec #'<fixnum>))
+		;   (define-syntax <list-of-fixnums>
+		;      (make-typed-list-type-spec #'<fixnum>))
 		;
-		;the  syntactic  identifier  "<fixnum*>"   is  stored  in  the  field
+		;the syntactic identifier "<list-of-fixnums>"  is stored in the field
 		;"memoised-list-id" of  the "<object-type-spec>"  instance associated
 		;to the  type identifier "<fixnum>".  This  way multiple applications
-		;of  MAKE-LIST-TYPE-SPEC  to #'<fixnum>  return  the  same list  type
+		;of MAKE-typed-LIST-TYPE-SPEC to #'<fixnum> return the same list type
 		;specification object.
 
-   #| end of FIELDS |# )
+    (mutable memoised-vector-id
+	     object-type-spec.memoised-vector-id
+	     object-type-spec.memoised-vector-id-set!)
+		;False or  a type identifier  representing a (possibly  empty) proper
+		;vector of objects of this type.
+		;
+		;For example, if we create a vector type identifier with:
+		;
+		;   (define-syntax <vector-of-fixnums>
+		;      (make-typed-vector-type-spec #'<fixnum>))
+		;
+		;the  syntactic identifier  "<vector-of-fixnums>"  is  stored in  the
+		;field  "memoised-vector-id"  of  the  "<object-type-spec>"  instance
+		;associated  to the  type identifier  "<fixnum>".  This  way multiple
+		;applications of MAKE-typed-VECTOR-TYPE-SPEC to #'<fixnum> return the
+		;same vector type specification object.
+
+    #| end of FIELDS |# )
 
   (protocol
     (lambda (make-record)
       (case-lambda
-       (()
-	(make-record #f	   ;parent-id
-		     #f	   ;constructor-sexp
-		     #f	   ;destructor-sexp
-		     #f	   ;type-predicate-sexp
-		     '()   ;safe-accessors-table
-		     '()   ;safe-mutators-table
-		     '()   ;methods-table
-		     #f	   ;memoised-list-id
-		     ))
-       ((parent-id
-	 constructor-sexp destructor-sexp type-predicate-sexp
-	 safe-accessors-table safe-mutators-table methods-table)
-	(make-record parent-id
-		     constructor-sexp destructor-sexp type-predicate-sexp
-		     safe-accessors-table safe-mutators-table methods-table
-		     #f #;memoised-list-id
-		     )))))
+	(()
+	 (make-record #f ;parent-id
+		      #f ;constructor-sexp
+		      #f ;destructor-sexp
+		      #f ;type-predicate-sexp
+		      '() ;safe-accessors-table
+		      '() ;safe-mutators-table
+		      '() ;methods-table
+		      #f  ;memoised-list-id
+		      #f  ;memoised-vector-id
+		      ))
+	((parent-id
+	  constructor-sexp destructor-sexp type-predicate-sexp
+	  safe-accessors-table safe-mutators-table methods-table)
+	 (make-record parent-id
+		      constructor-sexp destructor-sexp type-predicate-sexp
+		      safe-accessors-table safe-mutators-table methods-table
+		      #f #;memoised-list-id
+		      #f #;memoised-vector-id
+		      )))))
 
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -319,43 +341,40 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<nlist>" representing non-empty proper list objects holding items of a known type.
 ;;
-;;There  can be  only one  instance of  type "<list-type-spec>"  representing a  list
+;;There  can be  only one  instance of  type "<typed-list-type-spec>"  representing a  list
 ;;collecting items of a specific type.
 ;;
-(define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
-  #;(nongenerative vicare:expander:<list-type-spec>)
+(define-record-type (<typed-list-type-spec> make-typed-list-type-spec typed-list-type-spec?)
+  #;(nongenerative vicare:expander:<typed-list-type-spec>)
   (parent <scheme-type-spec>)
   (sealed #t)
-  (fields (immutable type-id		list-type-spec.type-id))
+  (fields (immutable type-id		typed-list-type-spec.type-id))
 		;A type identifier representing the type of items.
   (protocol
     (lambda (make-scheme-type-spec)
-      ;;This table maps the label gensym of  item's type identifier to the OTS of the
-      ;;associated list type.
-      ;;
-      ;;FIXME  Entries should  be  removed from  this table  whenever  the list  type
-      ;;identifier is garbage collected.  (Marco Maggi; Sun Nov 1, 2015)
-      (define table
-	(make-eq-hashtable))
-      (define* (make-list-type-spec {type-id type-identifier?})
-	(let ((label (id->label type-id)))
-	  (or (hashtable-ref table label #f)
-	      (receive-and-return (ots)
-		  (let ((parent-id		(nlist-type-id))
-			(constructor.sexp	#f)
-			(predicate.sexp		`(make-list-of-predicate (is-a? _ ,type-id)))
-			(methods-table		'()))
-		    ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-		     type-id))
-		(hashtable-set! table label ots)))))
-      make-list-type-spec))
+      (define* (make-typed-list-type-spec {item-type-id type-identifier?})
+	(let* ((label			(id->label item-type-id))
+	       (parent-id		(nlist-type-id))
+	       (constructor.sexp	#f)
+	       (predicate.sexp		`(make-list-of-predicate (is-a? _ ,item-type-id)))
+	       (methods-table		'()))
+	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table) item-type-id)))
+      make-typed-list-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <list-type-spec>-rtd
-  (record-type-descriptor <list-type-spec>))
+(define <typed-list-type-spec>-rtd
+  (record-type-descriptor <typed-list-type-spec>))
 
-(define <list-type-spec>-rcd
-  (record-constructor-descriptor <list-type-spec>))
+(define <typed-list-type-spec>-rcd
+  (record-constructor-descriptor <typed-list-type-spec>))
+
+(define (make-list-of-predicate item-pred)
+  (letrec ((list-of-pred (lambda (obj)
+			   (if (pair? obj)
+			       (and (item-pred (car obj))
+				    (list-of-pred (cdr obj)))
+			     (null? obj)))))
+    list-of-pred))
 
 
 ;;;; vector object spec
@@ -363,43 +382,37 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
-;;There can be  only one instance of type "<vector-type-spec>"  representing a vector
+;;There can be  only one instance of type "<typed-vector-type-spec>"  representing a vector
 ;;collecting items of a specific type.
 ;;
-(define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
-  #;(nongenerative vicare:expander:<vector-type-spec>)
+(define-record-type (<typed-vector-type-spec> make-typed-vector-type-spec typed-vector-type-spec?)
+  #;(nongenerative vicare:expander:<typed-vector-type-spec>)
   (parent <scheme-type-spec>)
   (sealed #t)
-  (fields (immutable type-id		vector-type-spec.type-id))
+  (fields (immutable type-id		typed-vector-type-spec.type-id))
 		;A type identifier representing the type of items.
   (protocol
     (lambda (make-scheme-type-spec)
-      ;;This table maps the label gensym of  item's type identifier to the OTS of the
-      ;;associated vector type.
-      ;;
-      ;;FIXME Entries  should be  removed from  this table  whenever the  vector type
-      ;;identifier is garbage collected.  (Marco Maggi; Sun Nov 1, 2015)
-      (define table
-	(make-eq-hashtable))
-      (define* (make-vector-type-spec {item-type-id type-identifier?})
-	(let ((label (id->label item-type-id)))
-	  (or (hashtable-ref table label #f)
-	      (receive-and-return (ots)
-		  (let ((parent-id		(vector-type-id))
-			(constructor.sexp	#f)
-			(predicate.sexp		#f)
-			(methods-table		'()))
-		    ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table)
-		     item-type-id))
-		(hashtable-set! table label ots)))))
-      make-vector-type-spec))
+      (define* (make-typed-vector-type-spec {item-type-id type-identifier?})
+	(let* ((label			(id->label item-type-id))
+	       (parent-id		(vector-type-id))
+	       (constructor.sexp	#f)
+	       (predicate.sexp		`(make-vector-of-predicate (is-a? _ ,item-type-id)))
+	       (methods-table		'()))
+	  ((make-scheme-type-spec parent-id constructor.sexp predicate.sexp methods-table) item-type-id)))
+      make-typed-vector-type-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
-(define <vector-type-spec>-rtd
-  (record-type-descriptor <vector-type-spec>))
+(define <typed-vector-type-spec>-rtd
+  (record-type-descriptor <typed-vector-type-spec>))
 
-(define <vector-type-spec>-rcd
-  (record-constructor-descriptor <vector-type-spec>))
+(define <typed-vector-type-spec>-rcd
+  (record-constructor-descriptor <typed-vector-type-spec>))
+
+(define (make-vector-of-predicate item-pred)
+  (lambda (obj)
+    (and (vector? obj)
+	 (vector-for-all item-pred obj))))
 
 
 ;;;; Vicare's struct-type specification
@@ -504,6 +517,23 @@
       make-closure-type-spec))
 
   #| end of DEFINE-RECORD-TYPE |# )
+
+;; (define-record-type (<closure-clause> make-closure-clause closure-clause?)
+;;   (nongenerative)
+;;   (fields
+;;     signature
+;; 		;An instance of "<type-signature>" representing the type signature of
+;; 		;this clause.
+;;     unsafe-variant
+;; 		;False if this clause has  no unsafe variant.  Otherwise, a syntactic
+;; 		;identifier bound to the unsafe
+;;     #| end of fields |# )
+;;   (protocol
+;;     (lambda (make-record)
+;;       (define (make-closure-clause signature unsafe-variant)
+;; 	(make-record signature unsafe-variant))
+;;       make-closure-clause))
+;;   #| end of DEFINE-RECORD-TYPE |# )
 
 
 ;;;; done

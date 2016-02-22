@@ -669,7 +669,7 @@
 
 ;;;; syntactic binding descriptor: list sub-type binding
 
-(define* (make-syntactic-binding-descriptor/list-sub-type-name {ots list-type-spec?} ots-maker.core-expr)
+(define* (make-syntactic-binding-descriptor/list-sub-type-name {ots typed-list-type-spec?} ots-maker.core-expr)
   ;;Build and  return a syntactic  binding's descriptor  representing the name  of an
   ;;object-type which is a sub-type of "<list>".
   ;;
@@ -683,12 +683,12 @@
 ;;object-type specification for a "<list>" sub-type; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/list-sub-type-name?
-  list-type-spec?)
+  typed-list-type-spec?)
 
 
 ;;;; syntactic binding descriptor: vector sub-type binding
 
-(define* (make-syntactic-binding-descriptor/vector-sub-type-name {ots vector-type-spec?} ots-maker.core-expr)
+(define* (make-syntactic-binding-descriptor/vector-sub-type-name {ots typed-vector-type-spec?} ots-maker.core-expr)
   ;;Build and  return a syntactic  binding's descriptor  representing the name  of an
   ;;object-type which is a sub-type of "<vector>".
   ;;
@@ -702,7 +702,7 @@
 ;;object-type specification for a "<vector>" sub-type; otherwise return false.
 ;;
 (define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/vector-sub-type-name?
-  vector-type-spec?)
+  typed-vector-type-spec?)
 
 
 ;;;; syntactic binding descriptor: core primitive
@@ -850,7 +850,7 @@
 		  (else
 		   (let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))
 			  (list-type.lab	(generate-label-gensym list-type.sym))
-			  (list-ots	(make-list-type-spec item-type.id)))
+			  (list-ots		(make-typed-list-type-spec item-type.id)))
 		     (receive-and-return (list-type.id)
 			 (make-top-level-syntactic-identifier-from-source-name-and-label list-type.sym list-type.lab)
 		       (set-symbol-value! list-type.lab (make-syntactic-binding-descriptor/list-sub-type-name list-ots #f))
@@ -967,7 +967,7 @@
 	 (descr.value		(syntactic-binding-descriptor.value descriptor))
 	 (item-id		(core-prim-id (list-ref descr.value 1))))
     (define ots
-      (make-list-type-spec item-id))
+      (make-typed-list-type-spec item-id))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots descr.value))))
 

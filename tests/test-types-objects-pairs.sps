@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -61,24 +61,24 @@
     => '(1 . 2))
 
   (check
-      (xp.type-signature-tags (type-of (new <pair> (read) (read))))
+      (xp.type-signature.tags (type-of (new <pair> (read) (read))))
     (=> syntax=?)
     (list #'<pair>))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (xp.type-signature-tags (type-of (cons 1 2)))
+      (xp.type-signature.tags (type-of (cons 1 2)))
     (=> syntax=?)
     (list #'<pair>))
 
   (check
-      (xp.type-signature-tags (type-of (list 1 '(2 3))))
+      (xp.type-signature.tags (type-of (list 1 '(2 3))))
     (=> syntax=?)
     (list #'<nlist>))
 
   (check
-      (xp.type-signature-tags (type-of (list 1 '())))
+      (xp.type-signature.tags (type-of (list 1 '())))
     (=> syntax=?)
     (list #'<nlist>))
 
