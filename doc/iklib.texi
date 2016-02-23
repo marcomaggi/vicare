@@ -5935,6 +5935,30 @@ an instance of @condition{errno}.
 @subsection Failed expression conditions
 
 
+Let's say we need code like this:
+
+@lisp
+(if (fixnum? obj)
+    obj
+  (raise-exception))
+@end lisp
+
+@noindent
+we might want to raise a condition object holding the failed expression
+@code{(fixnum? obj)}; for this we can use
+@condition{failed-expression-condition} as follows:
+
+@lisp
+(if (fixnum? obj)
+    obj
+  (raise
+    (make-assertion-violation)
+    (make-message-condition "failed object validation")
+    (make-failed-expression-condition '(fixnum? obj))
+    (make-irritants (list obj))))
+@end lisp
+
+
 @deftp {Condition Type} @acondition{failed-expression-condition}
 Condition type used to describe a failed expression, for example in a
 procedure argument validation predicate.  It is derived from
