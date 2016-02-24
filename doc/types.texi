@@ -433,8 +433,8 @@ The following syntactic bindings are exported by the library
 @deffnx Syntax is-a? _ @meta{type}
 @deffnx {Auxiliary Syntax} _
 Expand to an expression which, when evaluated, returns @true{} if
-@meta{expr} evaluates to a struct or record of type @meta{type}.
-@meta{expr} can be any expression returning a single value.
+@meta{expr} evaluates to an value of type @meta{type}.  @meta{expr} can
+be any expression returning a single value.
 
 When @syntax{_} is used as first argument: the syntax evaluates to a
 predicate function.
