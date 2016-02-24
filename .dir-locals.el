@@ -40,6 +40,7 @@
      (eval . (put 'if-wants-library-letrec*						'scheme-indent-function 1))
      (eval . (put 'let-syntax-rules							'scheme-indent-function 1))
      (eval . (put 'map-for-two-retvals							'scheme-indent-function 1))
+     (eval . (put 'make-psi								'scheme-indent-function 1))
      (eval . (put 'push-lexical-contour							'scheme-indent-function 1))
      (eval . (put 'raise-compound-condition-object					'scheme-indent-function 1))
      (eval . (put 'raise-compound-condition-object/continuable				'scheme-indent-function 1))
