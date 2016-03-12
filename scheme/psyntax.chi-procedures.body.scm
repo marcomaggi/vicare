@@ -1008,16 +1008,16 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qdef lexenv.run)
+    (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
-	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
+	;;the lexical variable's syntactic binding's identifier; LHS.OTS, an instance
+	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
@@ -1070,18 +1070,19 @@
 	;;binding so that  we can validate the number of  operands and return values.
 	;;So we fabricate a type identifier and put it on the lexenv to represent the
 	;;type of this function.
-	(let* ((lhs.type	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
-	       (signature	(make-clambda-signature (list clause-signature)))
-	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
+	(let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
+				      (signature	(make-clambda-signature (list clause-signature))))
+				  (make-closure-type-spec lhs.type-id signature)))
+	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
 	       (qdef		(make-qdef-standard-defun input-form.stx lhs.id standard-formals.stx body*.stx
-								   lhs.type signature)))
-	  (values lhs.id lhs.type qdef lexenv.run))))
+							  lhs.ots)))
+	  (values lhs.id lhs.ots qdef lexenv.run))))
 
     (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run lhs.id rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (top-type-id) qdef lexenv.run)))
+	(values lhs.id (<top>-ots) qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1100,16 +1101,16 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qdef lexenv.run)
+    (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
-	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
+	;;the lexical variable's syntactic binding's identifier; LHS.OTS, an instance
+	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
@@ -1131,12 +1132,13 @@
 	     ;;syntactic binding so  that we can validate the number  of operands and
 	     ;;return values.   So we fabricate a  type identifier and put  it on the
 	     ;;lexenv to represent the type of this function.
-	     (let* ((lhs.type	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
-		    (signature	(make-clambda-signature clause-signature*))
-		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-		    (qdef		(make-qdef-standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx
-										lhs.type signature)))
-	       (values ?who lhs.type qdef lexenv.run)))))
+	     (let* ((lhs.ots	(let ((lhs.type-id	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
+				      (signature	(make-clambda-signature clause-signature*)))
+				  (make-closure-type-spec lhs.type-id signature)))
+		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+		    (qdef	(make-qdef-standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx
+							       lhs.ots)))
+	       (values ?who lhs.ots qdef lexenv.run)))))
 	))
 
     (define (%parse-clauses input-form.stx clause*.stx
@@ -1196,16 +1198,16 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qdef lexenv.run)
+    (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
-	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
+	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
+	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
@@ -1265,28 +1267,29 @@
       ;;while parsing.
       (receive (standard-formals.stx clause-signature)
 	  (syntax-object.parse-typed-clambda-clause-formals input-formals.stx input-form.stx)
-	(let* ((lhs.type	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
-	       (signature	(make-clambda-signature (list clause-signature)))
-	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-	       (qdef		(make-qdef-typed-defun input-form.stx lhs.id standard-formals.stx body*.stx
-								lhs.type signature)))
-	  (values lhs.id lhs.type qdef lexenv.run))))
+	(let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
+				      (signature	(make-clambda-signature (list clause-signature))))
+				  (make-closure-type-spec lhs.type-id signature)))
+	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+	       (qdef		(make-qdef-typed-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
+	  (values lhs.id lhs.ots qdef lexenv.run))))
 
     (define (%process-typed-variable-definition-with-init-expr input-form.stx lexenv.run
-							       lhs.id rhs.stx lhs.type synner)
+							       lhs.id rhs.stx lhs.type-id synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (unless (type-identifier? lhs.type)
-	(synner "expected type identifier as type annotation for variable name" lhs.type))
-      (let ((qdef (make-qdef-typed-defvar input-form.stx lhs.id rhs.stx lhs.type)))
-	(values lhs.id lhs.type qdef lexenv.run)))
+      (unless (type-identifier? lhs.type-id)
+	(synner "expected type identifier as type annotation for variable name" lhs.type-id))
+      (let* ((lhs.ots	(id->object-type-specification __module_who__ input-form.stx lhs.type-id lexenv.run))
+	     (qdef	(make-qdef-typed-defvar input-form.stx lhs.id rhs.stx)))
+	(values lhs.id lhs.ots qdef lexenv.run)))
 
     (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run
 								  lhs.id rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
       (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (top-type-id) qdef lexenv.run)))
+	(values lhs.id (<top>-ots) qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1305,16 +1308,16 @@
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.type qdef lexenv.run)
+    (receive (lhs.id lhs.ots qdef lexenv.run)
 	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
-	;;the  lexical   variable's  syntactic  binding's  identifier;   LHS.TYPE,  a
-	;;syntactic  identifier representing  the  type of  this  binding; QDEF,  the
+	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
+	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.type (qdef.lex qdef)))
+	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
@@ -1331,12 +1334,12 @@
 	     (synner "expected identifier as function name" ?who))
 	   (receive (standard-formals*.stx clause-signature* body**.stx)
 	       (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
-	     (let* ((lhs.type	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
-		    (signature	(make-clambda-signature clause-signature*))
-		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.type signature rib lexenv.run shadow/redefine-bindings?))
-		    (qdef	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx
-							    lhs.type signature)))
-	       (values ?who lhs.type qdef lexenv.run)))))
+	     (let* ((lhs.ots	(let ((lhs.type-id	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
+				      (signature	(make-clambda-signature clause-signature*)))
+				  (make-closure-type-spec lhs.type-id signature)))
+		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+		    (qdef	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
+	       (values ?who lhs.ots qdef lexenv.run)))))
 	))
 
     (define (%parse-clauses input-form.stx clause*.stx

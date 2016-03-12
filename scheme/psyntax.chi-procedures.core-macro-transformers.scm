@@ -44,7 +44,15 @@
 		  (SYNNER message #f))
 		 ((message subform)
 		  (syntax-violation (quote ?who) message ?input-form.stx subform))))
-	      ?body0 ?body ...))))))
+	      (with-exception-handler
+		  (lambda (E)
+		    (raise-continuable
+		     (if (syntax-violation? E)
+			 E
+		       (condition E
+				  (make-who-condition (quote ?who))
+				  (make-syntax-violation ?input-form.stx #f)))))
+		(lambda () ?body0 ?body ...))))))))
     ))
 
 (module ($map-in-order
@@ -511,21 +519,25 @@
 	 (if (options::typed-language?)
 	     ;;Prepare extended, possibly typed syntactic bindings.
 	     (let*-values
-		 (((lhs*.id lhs*.tag)
+		 (((lhs*.id lhs*.type)
 		   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
 		  ((rhs*.psi)
-		   (map (lambda (rhs.stx lhs.tag)
-			  ;;We  insert  a signature  validation  even  if LHS.TAG  is
+		   (map (lambda (rhs.stx lhs.type)
+			  ;;We  insert a  signature  validation even  if LHS.TYPE  is
 			  ;;"<top>": this  way we  try to  check at  expand-time that
 			  ;;there is a single return  value.  At run-time, we rely on
 			  ;;the built-in run-time checking of single-value return.
 			  (chi-expr (bless
-				     `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
+				     `(assert-signature-and-return (,lhs.type) ,rhs.stx))
 				    lexenv.run lexenv.expand))
-		     ?rhs* lhs*.tag))
+		     ?rhs* lhs*.type))
 		  ;;Prepare the untyped and typed lexical variables.
+		  ((lhs*.ots)
+		   (map (lambda (lhs.type)
+			  (and lhs.type (type-annotation->object-type-specification lhs.type lexenv.run)))
+		     lhs*.type))
 		  ((rib lexenv.run lhs*.lex)
-		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run)))
+		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)))
 	       (values lhs*.lex rhs*.psi rib lexenv.run))
 	   ;;Prepare standard, untyped syntactic bindings.
 	   (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
@@ -535,7 +547,7 @@
 		  (lhs*.lab	(map generate-label-gensym   lhs*.id))
 		  (lhs*.lex	(map generate-lexical-gensym lhs*.id))
 		  (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
-		  (rib	(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
+		  (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
 	     (values lhs*.lex rhs*.psi rib lexenv.run)))
        ;;Prepare the body.
        (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
@@ -605,22 +617,26 @@
 	   (if (options::typed-language?)
 	       ;;Prepare extended, possibly typed syntactic bindings.
 	       (let*-values
-		   (((lhs*.id lhs*.tag)
+		   (((lhs*.id lhs*.type)
 		     (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
 		    ;;Prepare the typed and untyped lexical variables.
+		    ((lhs*.ots)
+		     (map (lambda (lhs.type)
+			    (and lhs.type (type-annotation->object-type-specification lhs.type lexenv.run)))
+		       lhs*.type))
 		    ((rib lexenv.run lhs*.lex)
-		     (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv.run))
+		     (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run))
 		    ;;NOTE The region of all the LETREC and LETREC* bindings includes
 		    ;;all the right-hand sides.  The new rib is pushed on all the RHS
 		    ;;and the body.
 		    ((rhs*.psi)
 		     ($map-in-order
-			 (lambda (rhs.stx lhs.tag)
+			 (lambda (rhs.stx lhs.type)
 			   (chi-expr (push-lexical-contour rib
 				       (bless
-					`(assert-signature-and-return (,lhs.tag) ,rhs.stx)))
+					`(assert-signature-and-return (,lhs.type) ,rhs.stx)))
 				     lexenv.run lexenv.expand))
-		       ?rhs* lhs*.tag)))
+		       ?rhs* lhs*.type)))
 		 (values lhs*.lex rhs*.psi rib lexenv.run))
 	     ;;Prepare standard, untyped syntactic bindings.
 	     (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))

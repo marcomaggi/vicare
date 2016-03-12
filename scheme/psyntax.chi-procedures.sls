@@ -114,7 +114,6 @@
 (import PSYNTAX-SYNTAX-MATCH
   PSYNTAX-SYNTAX-UTILITIES
   PSYNTAX-TYPE-SYNTAX-OBJECTS
-  PSYNTAX-TYPE-IDENTIFIERS
   PSYNTAX-TYPE-SIGNATURES
   PSYNTAX-TYPE-CALLABLES
   PSYNTAX-SYNTACTIC-BINDINGS)
@@ -206,16 +205,29 @@
     ;;We can return a meaningful value if RATOR.PSI has a type which is a sub-type of
     ;;"<procedure>".
     ;;
-    (syntax-match (type-signature.tags (psi.retvals-signature rator.psi)) (<predicate>)
-      ((<predicate>)
-       (make-type-signature/single-boolean))
-      ((?type-id)
-       (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv)))
-	 (if (closure-type-spec? ots)
-	     (callable-signature.retvals (closure-type-spec.signature ots))
-	   (make-type-signature/fully-untyped))))
-      (_
-       (make-type-signature/fully-untyped))))
+    (case-signature-specs (psi.retvals-signature rator.psi)
+      ((<closure>)
+       => (lambda (rator.ots)
+	    (callable-signature.retvals (closure-type-spec.signature rator.ots))))
+      ((single-value)
+       (if (options::strict-r6rs)
+	   (make-type-signature/fully-untyped)
+	 (syntax-violation __who__
+	   "expression in operator application position is not a closure type"
+	   input-form.stx (psi.input-form rator.psi))))
+      (<no-return>
+       ;;The operator is marked to no-return: it means it raises an exception.
+       (syntax-violation __who__
+	 "operator marked as no-return" input-form.stx (psi.input-form rator.psi)))
+      (<list>
+       ;;The operator expression returns fully unspecified values.
+       (make-type-signature/fully-untyped))
+      (else
+       ;;The operator returns a tuple of values.
+       (if (options::strict-r6rs)
+	   (make-type-signature/fully-untyped)
+	 ;;FIXME We should do better here.  (Marco Maggi; Sat Feb 27, 2016)
+	 (make-type-signature/fully-untyped)))))
 
   #| end of module |# )
 
@@ -510,16 +522,8 @@
 	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs.core))
 	  ((variable-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs.core))
-	  ((record-type-spec? rv)
-	   (make-syntactic-binding-descriptor/record-type-name rv rhs.core))
-	  ((struct-type-spec? rv)
-	   (make-syntactic-binding-descriptor/struct-type-name rv rhs.core))
-	  ((closure-type-spec? rv)
-	   (make-syntactic-binding-descriptor/closure-type-name rv rhs.core))
-	  ((typed-list-type-spec? rv)
-	   (make-syntactic-binding-descriptor/list-sub-type-name rv rhs.core))
-	  ((typed-vector-type-spec? rv)
-	   (make-syntactic-binding-descriptor/vector-sub-type-name rv rhs.core))
+	  ((object-type-spec? rv)
+	   (make-syntactic-binding-descriptor/object-type-name rv rhs.core))
 	  ((expand-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs.core))
 	  ((synonym-transformer? rv)
@@ -687,6 +691,12 @@
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	(receive (type descr kwd)
 	    (syntactic-form-type __module_who__ expr.stx lexenv.run)
+	  ;; (begin
+	  ;;   (debug-print __who__ 'input type (syntax->datum expr.stx))
+	  ;;   (receive-and-return (out)
+	  ;; 	(%do-expansion expr.stx lexenv.run lexenv.expand type descr kwd)
+	  ;;     #;(debug-print __who__ 'output out)
+	  ;;     (debug-print __who__ 'output (syntax->datum expr.stx))))
 	  (%do-expansion expr.stx lexenv.run lexenv.expand type descr kwd)))
       lexenv.run lexenv.expand))
 
@@ -742,16 +752,16 @@
        ;;"<global-typed-variable-spec>".
        (let* ((descr.value	(syntactic-binding-descriptor.value descr))
 	      (lib		(car descr.value))
-	      (loc		(cdr descr.value)))
+	      (globvar.type-loc	(cdr descr.value)))
 	 ((inv-collector) lib)
-	 (if (symbol-bound? loc)
-	     (let ((gts (symbol-value loc)))
+	 (if (symbol-bound? globvar.type-loc)
+	     (let ((gts (symbol-value globvar.type-loc)))
 	       (if (global-typed-variable-spec? gts)
-		   (let ((type-id		(global-typed-variable-spec.type-id      gts))
-			 (variable-loc	(global-typed-variable-spec.variable-loc gts)))
+		   (let ((globvar.value-ots	(typed-variable-spec.ots		 gts))
+			 (globvar.value-loc	(global-typed-variable-spec.variable-loc gts)))
 		     (make-psi expr.stx
-			       (build-global-reference no-source variable-loc)
-			       (make-type-signature/single-value type-id)))
+		       (build-global-reference no-source globvar.value-loc)
+		       (make-type-signature/single-value globvar.value-ots)))
 		 (assertion-violation __module_who__
 		   "invalid object in loc gensym's \"value\" slot of \"global-typed\" syntactic binding's descriptor"
 		   expr.stx descr)))
@@ -777,12 +787,12 @@
        ;;
        ;;   (core-prim-typed . (#<core-prim-type-spec> . ?hard-coded-sexp))
        ;;
-       (let* ((descr.value	(syntactic-binding-descriptor.value descr))
-	      (name		(core-prim-typed-binding-descriptor.value.prim-name descr.value))
-	      (type-id	(core-prim-typed-binding-descriptor.value.type-id   descr.value)))
+       (let* ((cpts		(core-prim-typed-binding-descriptor.core-prim-type-spec descr))
+	      (prim.name	(core-prim-type-spec.name cpts))
+	      (prim.ots		(typed-variable-spec.ots cpts)))
 	 (make-psi expr.stx
-		   (build-primref no-source name)
-		   (make-type-signature/single-value type-id))))
+	   (build-primref no-source prim.name)
+	   (make-type-signature/single-value prim.ots))))
 
       ((call)
        ;;A function call; this means EXPR.STX has one of the formats:
@@ -800,8 +810,8 @@
        ;;
        (let ((lex (lexical-var-binding-descriptor-value.lex-name (syntactic-binding-descriptor.value descr))))
 	 (make-psi expr.stx
-		   (build-lexical-reference no-source lex)
-		   (make-type-signature/single-top))))
+	   (build-lexical-reference no-source lex)
+	   (make-type-signature/single-top))))
 
       ((lexical-typed)
        ;;Reference to typed  lexical variable; this means EXPR.STX  is an identifier.
@@ -809,12 +819,12 @@
        ;;
        ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
        ;;
-       (let* ((descr.value	(syntactic-binding-descriptor.value descr))
-	      (lex		(syntactic-binding-descriptor/lexical-typed-var.value.lex     descr.value))
-	      (type-id	(syntactic-binding-descriptor/lexical-typed-var.value.type-id descr.value)))
+       (let* ((lts		(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
+	      (variable.lex	(lexical-typed-variable-spec.lex lts))
+	      (variable.ots	(typed-variable-spec.ots         lts)))
 	 (make-psi expr.stx
-		   (build-lexical-reference no-source lex)
-		   (make-type-signature/single-value type-id))))
+	   (build-lexical-reference no-source variable.lex)
+	   (make-type-signature/single-value variable.ots))))
 
       ((global-macro global-macro!)
        ;;Macro uses  of macros imported from  other libraries or defined  by previous
@@ -1134,18 +1144,18 @@
        ;;
        ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
        ;;
-       (let* ((descr.value	(syntactic-binding-descriptor.value descr))
-	      (lhs.lex		(syntactic-binding-descriptor/lexical-typed-var.value.lex     descr.value))
-	      (lhs.tag		(syntactic-binding-descriptor/lexical-typed-var.value.type-id descr.value))
+       (let* ((lts		(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
+	      (variable.lex	(lexical-typed-variable-spec.lex lts))
+	      (variable.type-id	(object-type-spec.name (typed-variable-spec.ots lts)))
 	      (rhs.psi		(chi-expr (bless
-					   `(assert-signature-and-return (,lhs.tag) ,rhs.stx))
+					   `(assert-signature-and-return (,variable.type-id) ,rhs.stx))
 					  lexenv.run lexenv.expand)))
-	 (syntactic-binding-descriptor/lexical-typed-var.value.assigned? descr.value #t)
+	 (lexical-typed-variable-spec.assigned?-set! lts #t)
 	 (make-psi input-form.stx
-		   (build-lexical-assignment no-source
-		     lhs.lex
-		     (psi.core-expr rhs.psi))
-		   (make-type-signature/single-void))))
+	   (build-lexical-assignment no-source
+	       variable.lex
+	     (psi.core-expr rhs.psi))
+	   (make-type-signature/single-void))))
 
       ((core-prim core-prim-typed)
        (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
@@ -1331,8 +1341,8 @@
   ;;syntactic bindings.
   ;;
   ;;LHS*.ID must be a proper list  of syntactic identifiers representing the names of
-  ;;the  syntactic bindings.   LHS*.TAG must  be  a proper  list of  #f or  syntactic
-  ;;identifiers representing the types of the bindings.
+  ;;the syntactic  bindings.  LHS*.OTS must  be a proper list  of #f or  instances of
+  ;;"<object-type-spec>" representing the types of the bindings.
   ;;
   ;;Process the  LHS specifications  generating the typed  lexical vars  when needed.
   ;;Create a  new rib mapping  identifiers to labels.   Update the given  LEXENV with
@@ -1352,7 +1362,7 @@
   ;;
   ;;   (%process-typed-syntactic-bindings-lhs*
   ;;      (list #'A #'B)
-  ;;      (list #'<fixnum> #'<string>)
+  ;;      (list <fixnum>-ots <string>-ots)
   ;;      lexenv.run)
   ;;
   ;;Example, for the LAMBDA syntax:
@@ -1364,12 +1374,12 @@
   ;;
   ;;   (%process-typed-syntactic-bindings-lhs*
   ;;      (list #'C #'A #'B)
-  ;;      (list #'<list> #'<fixnum> #'<string>)
+  ;;      (list <list>-ots <fixnum>-ots <string>-ots)
   ;;      lexenv.run)
   ;;
-  (define (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.tag lexenv)
+  (define (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv)
     (receive (typed-var*.id typed-var*.tag typed-var*.lex untyped-var*.id untyped-var*.lex lhs*.lex)
-	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
+	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.ots '() '() '() '() '() '())
       ;;Prepare the UNtyped lexical variables.
       (let* ((untyped-var*.lab	(map generate-label-gensym   untyped-var*.id))
 	     (lexenv		(lexenv-add-lexical-var-bindings untyped-var*.lab untyped-var*.lex lexenv)))
@@ -1386,46 +1396,40 @@
 	  ;;match the order of the identifiers in LHS*.ID.
 	  (values rib lexenv lhs*.lex)))))
 
-  (define (%partition-typed-and-untyped-lhs* lhs*.id lhs*.tag)
+  (define (%partition-typed-and-untyped-lhs* lhs*.id lhs*.ots
+					     typed-var*.id typed-var*.ots
+					     typed-var*.lex untyped-var*.id untyped-var*.lex
+					     lhs*.lex)
     ;;Partition the  syntactic bindings into typed  and untyped.  Those having  #f or
     ;;"<top>" as tag are untyped.
     ;;
-    (let loop ((lhs*.id			lhs*.id)
-	       (lhs*.tag		lhs*.tag)
-	       (typed-var*.id		'())
-	       (typed-var*.tag		'())
-	       (typed-var*.lex		'())
-	       (untyped-var*.id		'())
-	       (untyped-var*.lex	'())
-	       (lhs*.lex		'()))
-      (if (pair? lhs*.id)
-	  (let ((lhs.id  (car lhs*.id))
-		(lhs.tag (car lhs*.tag)))
-	    (if (and lhs.tag
-		     (not (top-type-id? lhs.tag)))
-		;;Add a typed lexical variable.
-		(let ((lhs.lex (generate-lexical-gensym lhs.id)))
-		  (loop (cdr lhs*.id)
-			(cdr lhs*.tag)
-			(cons lhs.id  typed-var*.id)
-			(cons lhs.tag typed-var*.tag)
-			(cons lhs.lex typed-var*.lex)
-			untyped-var*.id
-			untyped-var*.lex
-			(cons lhs.lex lhs*.lex)))
-	      ;;Add an UNtyped lexical variable.
-	      (let ((lhs.lex (generate-lexical-gensym lhs.id)))
-		(loop (cdr lhs*.id)
-		      (cdr lhs*.tag)
-		      typed-var*.id
-		      typed-var*.tag
-		      typed-var*.lex
-		      (cons lhs.id  untyped-var*.id)
-		      (cons lhs.lex untyped-var*.lex)
-		      (cons lhs.lex lhs*.lex)))))
-	(values (reverse typed-var*.id) (reverse typed-var*.tag) (reverse typed-var*.lex)
-		(reverse untyped-var*.id) (reverse untyped-var*.lex)
-		(reverse lhs*.lex)))))
+    (if (pair? lhs*.id)
+	(let* ((lhs.id  (car lhs*.id))
+	       (lhs.ots (car lhs*.ots))
+	       (lhs.lex (generate-lexical-gensym lhs.id)))
+	  (if (and lhs.ots
+		   (not (<top>-ots? lhs.ots)))
+	      ;;Add a typed lexical variable.
+	      (%partition-typed-and-untyped-lhs* (cdr lhs*.id)
+						 (cdr lhs*.ots)
+						 (cons lhs.id  typed-var*.id)
+						 (cons lhs.ots typed-var*.ots)
+						 (cons lhs.lex typed-var*.lex)
+						 untyped-var*.id
+						 untyped-var*.lex
+						 (cons lhs.lex lhs*.lex))
+	    ;;Add an UNtyped lexical variable.
+	    (%partition-typed-and-untyped-lhs* (cdr lhs*.id)
+					       (cdr lhs*.ots)
+					       typed-var*.id
+					       typed-var*.ots
+					       typed-var*.lex
+					       (cons lhs.id  untyped-var*.id)
+					       (cons lhs.lex untyped-var*.lex)
+					       (cons lhs.lex lhs*.lex))))
+      (values (reverse typed-var*.id)   (reverse typed-var*.ots)   (reverse typed-var*.lex)
+	      (reverse untyped-var*.id) (reverse untyped-var*.lex)
+	      (reverse lhs*.lex))))
 
   #| end of module |# )
 

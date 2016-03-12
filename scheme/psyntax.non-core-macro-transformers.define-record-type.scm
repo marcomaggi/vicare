@@ -97,8 +97,9 @@
      field-relative-idx*
 		;A  list  of fixnums  representing  all  the field  relative  indexes
 		;(zero-based).
-     field-type*.id
-		;The list of syntactic identifiers representing the field types.
+     field-type*.ots
+		;The list  of "<object-type-spec>"  instances representing  the field
+		;types.
      safe-field-accessor*
 		;A  list of  syntactic identifiers  that will  be bound  to the  safe
 		;accessors.
@@ -251,7 +252,7 @@
   (define foo-syntactic-binding-form
     (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-protocol foo-destructor
 					    foo-parent foo-rtd foo-rcd
-					    field-name*.sym field-relative-idx* field-type*.id
+					    field-name*.sym field-relative-idx*
 					    safe-field-accessor* safe-field-mutator*
 					    method-name*.sym method-procname*.sym))
 
@@ -298,15 +299,15 @@
 		   (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
 
 	,@(%make-unsafe-accessor+mutator-code foo foo-rtd
-					      field-name*.sym field-relative-idx* field-type*.id
+					      field-name*.sym field-relative-idx* field-type*.ots
 					      unsafe-field-accessor* unsafe-field-mutator*)
 
 	,@(%make-safe-accessor+mutator-code foo
-					    field-name*.sym field-relative-idx* field-type*.id
+					    field-name*.sym field-relative-idx* field-type*.ots
 					    safe-field-accessor* unsafe-field-accessor*
 					    safe-field-mutator*  unsafe-field-mutator*)
 
-	,@(%make-safe-method-code foo field-type*.id
+	,@(%make-safe-method-code foo field-type*.ots
 				  safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
 
 	,@methods-retriever-code.sexp
@@ -463,7 +464,7 @@
   ;;
   ;;2..The list of fixnums representings all the field relative indexes (zero-based).
   ;;
-  ;;3..The list of syntactic identifiers representing the field types.
+  ;;3..The list of "<object-type-spec>" instances representing the field types.
   ;;
   ;;4..A list of syntactic identifiers that will be bound to the safe accessors.
   ;;
@@ -522,7 +523,7 @@
 	     (i					0)
 	     (field-name*.sym			'())
 	     (field-relative-idx*		'())
-	     (field-type*.id			'())
+	     (field-type*.ots			'())
 	     (safe-field-accessor*		'())
 	     (unsafe-field-accessor*		'())
 	     (safe-field-mutator*		'())
@@ -538,7 +539,7 @@
       (()
        (values (reverse field-name*.sym)
 	       (reverse field-relative-idx*)
-	       (reverse field-type*.id)
+	       (reverse field-type*.ots)
 	       (reverse safe-field-accessor*)
 	       (reverse unsafe-field-accessor*)
 	       (reverse safe-field-mutator*)
@@ -549,12 +550,12 @@
       (((mutable   ?name ?accessor ?mutator) . ?rest)
        (and (identifier? ?accessor)
 	    (identifier? ?mutator))
-       (receive (field-name.id field-type.id)
+       (receive (field-name.id field-type.ots)
 	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.id field-type*.id)
+	       (cons field-type.ots field-type*.ots)
 	       (cons ?accessor safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons ?mutator safe-field-mutator*)
@@ -564,12 +565,12 @@
 
       (((immutable ?name ?accessor) . ?rest)
        (identifier? ?accessor)
-       (receive (field-name.id field-type.id)
+       (receive (field-name.id field-type.ots)
 	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.id field-type*.id)
+	       (cons field-type.ots field-type*.ots)
 	       (cons ?accessor safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
@@ -578,12 +579,12 @@
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       (((mutable   ?name) . ?rest)
-       (receive (field-name.id field-type.id)
+       (receive (field-name.id field-type.ots)
 	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.id field-type*.id)
+	       (cons field-type.ots field-type*.ots)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons (%gen-safe-mutator-name    field-name.id) safe-field-mutator*)
@@ -592,12 +593,12 @@
 	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
 
       (((immutable ?name) . ?rest)
-       (receive (field-name.id field-type.id)
+       (receive (field-name.id field-type.ots)
 	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.id field-type*.id)
+	       (cons field-type.ots field-type*.ots)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
@@ -606,12 +607,12 @@
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       ((?name . ?rest)
-       (receive (field-name.id field-type.id)
+       (receive (field-name.id field-type.ots)
 	   (syntax-object.parse-typed-argument ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.id field-type*.id)
+	       (cons field-type.ots field-type*.ots)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
@@ -695,7 +696,7 @@
 
 
 (define (%make-unsafe-accessor+mutator-code foo foo-rtd
-					    field-name*.sym field-relative-idx* field-type*.id
+					    field-name*.sym field-relative-idx* field-type*.ots
 					    unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
   ;;representing  a Scheme  expression  which, expanded  and  evaluated at  run-time,
@@ -712,8 +713,8 @@
   ;;FIELD-RELATIVE-IDX* must be  a list of fixnums representing  the relative indexes
   ;;of all the fields and the mutable fields.
   ;;
-  ;;FIELD-TYPE*.ID must be a list of syntactic identifiers representing all the field
-  ;;types.
+  ;;FIELD-TYPE*.OTS must be a list of "<object-type-spec>" instances representing all
+  ;;the field types.
   ;;
   ;;UNSAFE-FIELD-ACCESSOR*  and   UNSAFE-FIELD-MUTATOR*  must  be  list   of  symbols
   ;;representing the  names of the  syntactic identifiers  bound to the  unsafe field
@@ -747,14 +748,14 @@
 	    field-name*.sym field-relative-idx*)
 
 	;;unsafe record fields accessors
-	,@(map (lambda (unsafe-foo-x x field-type.id)
+	,@(map (lambda (unsafe-foo-x x field-type.ots)
 		 (let ((the-index  (%make-field-index-varname x))
 		       (record.sym (gensym "?record")))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
-		       (lambda/std (,record.sym)
-			 ($struct-ref ,record.sym ,the-index))))))
-	    unsafe-field-accessor* field-name*.sym field-type*.id)
+		       (lambda/typed (,record.sym)
+			 ($struct-ref (unsafe-cast-signature (<struct>) ,record.sym) ,the-index))))))
+	    unsafe-field-accessor* field-name*.sym field-type*.ots)
 
 	;;unsafe record fields mutators
 	,@(fold-right
@@ -766,7 +767,7 @@
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
 				(lambda/std (,record.sym ,value.sym)
-				  ($struct-set! ,record.sym ,the-index ,value.sym)))))
+				  ($struct-set! (unsafe-cast-signature (<struct>) ,record.sym) ,the-index ,value.sym)))))
 			  knil)
 		  knil))
 	    '() unsafe-field-mutator* field-name*.sym)
@@ -775,7 +776,7 @@
 
 
 (define (%make-safe-accessor+mutator-code foo
-					  field-name*.sym field-relative-idx* field-type*.id
+					  field-name*.sym field-relative-idx* field-type*.ots
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
   ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
@@ -791,8 +792,8 @@
   ;;FIELD-RELATIVE-IDX* must be the list of fixnums representing the relative indexes
   ;;of all the fields.
   ;;
-  ;;FIELD-TYPE*.ID must  be the  list of syntactic  identifiers representing  all the
-  ;;field types.
+  ;;FIELD-TYPE*.OTS must  be the list of  "<object-type-spec>" instances representing
+  ;;all the field types.
   ;;
   ;;SAFE-FIELD-ACCESSOR* and SAFE-FIELD-MUTATOR* must be list of symbols representing
   ;;the names  of the  syntactic identifiers  bound to the  safe field  accessors and
@@ -817,23 +818,25 @@
   ;;   (unsafe-foo-x-set! the-record the-new-value)
   ;;
   (define safe-field-accessor-form*
-    (map (lambda (safe-field-accessor unsafe-field-accessor field-type.id)
-	   (let ((record.sym (gensym "record")))
+    (map (lambda (safe-field-accessor unsafe-field-accessor field-type.ots)
+	   (let ((record.sym	(gensym "record"))
+		 (field-type.id	(object-type-spec.name field-type.ots)))
 	     `(define/typed ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
 		(,unsafe-field-accessor ,record.sym))))
-      safe-field-accessor* unsafe-field-accessor* field-type*.id))
+      safe-field-accessor* unsafe-field-accessor* field-type*.ots))
 
   (define safe-field-mutator-form*
     (fold-right
-	(lambda (safe-field-mutator unsafe-field-mutator field-type.id knil)
+	(lambda (safe-field-mutator unsafe-field-mutator field-type.ots knil)
 	  (if safe-field-mutator
-	      (cons (let ((record.sym (gensym "record"))
-			  (val.sym    (gensym "new-value")))
+	      (cons (let ((record.sym		(gensym "record"))
+			  (val.sym		(gensym "new-value"))
+			  (field-type.id	(object-type-spec.name field-type.ots)))
 		      `(define/typed ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
 			 (,unsafe-field-mutator ,record.sym ,val.sym)))
 		    knil)
 	    knil))
-      '() safe-field-mutator* unsafe-field-mutator* field-type*.id))
+      '() safe-field-mutator* unsafe-field-mutator* field-type*.ots))
 
   (if (and (null? safe-field-accessor-form*)
 	   (null? safe-field-mutator-form*))
@@ -842,7 +845,7 @@
 
 
 (define (%make-safe-method-code foo
-				field-type*.id
+				field-type*.ots
 				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return a list  holding a symbolic expressions (to be  BLESSed later) representing
   ;;Scheme  expressions  which,  expanded  and  evaluated  at  run-time,  define  the
@@ -852,8 +855,8 @@
   ;;
   ;;FOO must be the syntactic identifier represening the record-type name.
   ;;
-  ;;FIELD-TYPE*.ID must  be the  list of syntactic  identifiers representing  all the
-  ;;field types.
+  ;;FIELD-TYPE*.OTS must  be the list of  "<object-type-spec>" instances representing
+  ;;all the field types.
   ;;
   ;;SAFE-FIELD-METHOD*  must be  a  list of  symbols representing  the  names of  the
   ;;syntactic identifiers the will be bound to the safe field methods.
@@ -862,9 +865,10 @@
   ;;representing the  names of the  syntactic identifiers  bound to the  unsafe field
   ;;accessors and mutators.
   ;;
-  (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.id)
+  (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.ots)
 	 (let ((record.sym	(gensym "record"))
-	       (new-value.sym	(gensym "new-value")))
+	       (new-value.sym	(gensym "new-value"))
+	       (field-type.id	(object-type-spec.name field-type.ots)))
 	   (if unsafe-field-mutator
 	       `(case-define/typed ,safe-field-method
 		  (((brace _ ,field-type.id) (brace ,record.sym ,foo))
@@ -873,7 +877,7 @@
 		   (,unsafe-field-mutator ,record.sym ,new-value.sym)))
 	     `(define/typed ((brace ,safe-field-method ,field-type.id) (brace ,record.sym ,foo))
 		(,unsafe-field-accessor ,record.sym)))))
-    safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.id))
+    safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ots))
 
 
 (define (%make-parent-rtd+rcd-code clause* foo input-form.stx synner)
@@ -1182,7 +1186,7 @@
 (define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo?.id
 						 foo-super-protocol.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
-						 field-name*.sym field-relative-idx* field-type*.id
+						 field-name*.sym field-relative-idx*
 						 safe-field-accessor* safe-field-mutator*
 						 method-name*.sym method-procname*.sym)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
@@ -1221,8 +1225,6 @@
   ;;
   ;;SAFE-FIELD-MUTATOR* must be a list of syntactic identifiers that will be bound to
   ;;the field mutators.  In the positions of immutable fields: the list contains #f.
-  ;;
-  ;;FIELD-TYPE*.ID a list of syntactic identifiers representing the field types.
   ;;
   ;;METHOD-NAME*.SYM  and  METHOD-PROCNAME*.SYM  must  be null  or  list  of  symbols
   ;;representing: method names, names of procedures implementing the methods.
@@ -1274,19 +1276,19 @@
   (define foo-methods.table
     (%make-alist-from-syms method-name*.sym method-procname*.sym))
 
-  `(make-record-type-spec
-    (syntax ,foo-rtd.sym)
-    (syntax ,foo-rcd.sym)
-    ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
-    ,(if foo-parent.id
-	 `(syntax ,foo-parent.id)
-       `(syntax <record>))
-    (syntax ,make-foo.id)
-    ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
-    (syntax ,foo?.id)
-    ,foo-fields-safe-accessors.table
-    ,foo-fields-safe-mutators.table
-    ,foo-methods.table))
+  `(make-record-type-spec (syntax ,foo.id)
+			  (syntax ,foo-rtd.sym)
+			  (syntax ,foo-rcd.sym)
+			  ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
+			  ,(if foo-parent.id
+			       `(syntax ,foo-parent.id)
+			     `(syntax <record>))
+			  (syntax ,make-foo.id)
+			  ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
+			  (syntax ,foo?.id)
+			  ,foo-fields-safe-accessors.table
+			  ,foo-fields-safe-mutators.table
+			  ,foo-methods.table))
 
 
 ;;;; done

@@ -56,7 +56,7 @@
 (declare-core-primitive bytevector-append
     (safe)
   (signatures
-   (<bytevector>		=> (<bytevector>)))
+   ((list-of <bytevector>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    (_				effect-free result-true)))

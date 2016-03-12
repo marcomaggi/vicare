@@ -37,15 +37,15 @@
 (declare-core-primitive eval
     (safe)
   (signatures
-   ((_ <lexical-environment>)				=> <top>)
-   ((_ <lexical-environment> <enum-set> <enum-set>)	=> <top>)))
+   ((_ <lexical-environment>)				=> <list>)
+   ((_ <lexical-environment> <enum-set> <enum-set>)	=> <list>)))
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive environment
     (safe)
   (signatures
-   (<top>			=> (<non-interaction-lexical-environment>)))
+   (<list>			=> (<non-interaction-lexical-environment>)))
   (attributes
    ((_)				result-true)))
 

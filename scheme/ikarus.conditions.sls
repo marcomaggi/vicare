@@ -100,12 +100,19 @@
     &out-of-memory-error-rtd &out-of-memory-error-rcd
     make-out-of-memory-error out-of-memory-error?
 
-    ;;&failed-expression-condition
-    &failed-expression-condition-rtd
-    &failed-expression-condition-rcd
+    ;;&failed-expression
+    &failed-expression-rtd
+    &failed-expression-rcd
     make-failed-expression-condition
     failed-expression-condition?
     condition-failed-expression
+
+    ;;&one-based-return-value-index
+    &one-based-return-value-index-rtd
+    &one-based-return-value-index-rcd
+    make-one-based-return-value-index-condition
+    one-based-return-value-index-condition?
+    condition-one-based-return-value-index
 
     ;;&procedure-precondition-violation
     &procedure-precondition-violation-rtd
@@ -429,12 +436,19 @@
 		  source-position-byte source-position-character
 		  source-position-line source-position-column
 
-		  &failed-expression-condition
-		  &failed-expression-condition-rtd
-		  &failed-expression-condition-rcd
+		  &failed-expression
+		  &failed-expression-rtd
+		  &failed-expression-rcd
 		  make-failed-expression-condition
 		  failed-expression-condition?
 		  condition-failed-expression
+
+		  &one-based-return-value-index
+		  &one-based-return-value-index-rtd
+		  &one-based-return-value-index-rcd
+		  make-one-based-return-value-index-condition
+		  one-based-return-value-index-condition?
+		  condition-one-based-return-value-index
 
 		  &procedure-precondition-violation
 		  &procedure-precondition-violation-rtd
@@ -1102,11 +1116,19 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &failed-expression-condition
+(define-condition-type &failed-expression
     &condition
   make-failed-expression-condition
   failed-expression-condition?
   (failed-expression	condition-failed-expression))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &one-based-return-value-index
+    &condition
+  make-one-based-return-value-index-condition
+  one-based-return-value-index-condition?
+  (index	condition-one-based-return-value-index))
 
 ;;; --------------------------------------------------------------------
 
@@ -1191,8 +1213,10 @@
     &assertion
   make-expression-return-value-violation expression-return-value-violation?)
 
-(define (expression-return-value-violation who message . irritants)
-  (raise-non-continuable-standard-condition who message irritants (make-expression-return-value-violation)))
+(define (expression-return-value-violation who message idx . irritants)
+  (raise-non-continuable-standard-condition who message irritants
+					    (make-expression-return-value-violation)
+					    (make-one-based-return-value-index-condition idx)))
 
 ;;; --------------------------------------------------------------------
 

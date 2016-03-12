@@ -34,8 +34,12 @@
 	      (let ((port (console-error-port)))
 		(display "*** Vicare: unhandled exception:\n" port)
 		(print-condition x (console-error-port)))
-	      (when (serious-condition? x)
-		(exit -1)))
+	      (cond ((warning? x)
+		     ;;When a warning is raised with RAISE-CONTINUABLE: we want to go
+		     ;;on with the execution.
+		     (void))
+		    ((serious-condition? x)
+		     (exit -1))))
 	    (lambda args
 	      (exit -1)))))
 

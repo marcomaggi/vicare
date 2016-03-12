@@ -21,21 +21,20 @@
 
 (module (<typed-variable-spec>
 	 typed-variable-spec?
-	 typed-variable-spec.type-id
+	 typed-variable-spec.ots
 
 	 <lexical-typed-variable-spec>
 	 make-lexical-typed-variable-spec		lexical-typed-variable-spec?
-	 lexical-typed-variable-spec.lex		lexical-typed-variable-spec.type-id
+	 lexical-typed-variable-spec.lex
 	 lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
 	 <global-typed-variable-spec>
 	 make-global-typed-variable-spec		global-typed-variable-spec?
-	 global-typed-variable-spec.variable-loc	global-typed-variable-spec.type-id
+	 global-typed-variable-spec.variable-loc
 
 	 <core-prim-type-spec>
 	 make-core-prim-type-spec			core-prim-type-spec?
-	 core-prim-type-spec.name
-	 core-prim-type-spec.safety)
+	 core-prim-type-spec.name			core-prim-type-spec.safety)
 
 
 ;;;; lexical variable specification: base type
@@ -43,13 +42,14 @@
 (define-record-type (<typed-variable-spec> dummy typed-variable-spec?)
   (nongenerative vicare:expander:<typed-variable-spec>)
   (fields
-   (immutable type-id		typed-variable-spec.type-id)
-		;A syntactic identifier representing the type of this variable.
-   #| end of FIELDS |# )
+    (immutable ots		typed-variable-spec.ots)
+		;An instance  of "<object-type-spec>"  representing the type  of this
+		;variable.
+    #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define (make-typed-variable-spec type-id)
-	(make-record type-id))
+      (define* (make-typed-variable-spec {ots object-type-spec?})
+	(make-record ots))
       make-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -60,19 +60,16 @@
   (nongenerative vicare:expander:<lexical-typed-variable-spec>)
   (parent <typed-variable-spec>)
   (fields
-   (immutable lex		lexical-typed-variable-spec.lex)
+    (immutable lex		lexical-typed-variable-spec.lex)
 		;The lex gensym of the lexical variable.
-   (mutable   assigned?		lexical-typed-variable-spec.assigned? lexical-typed-variable-spec.assigned?-set!)
-   #| end of fields |# )
+    (mutable   assigned?	lexical-typed-variable-spec.assigned? lexical-typed-variable-spec.assigned?-set!)
+    #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-lexical-typed-variable-spec type-id lex)
-	((make-typed-variable-spec type-id) lex #f))
+      (define* (make-lexical-typed-variable-spec {ots object-type-spec?} {lex gensym?})
+	((make-typed-variable-spec ots) lex #f))
       make-lexical-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define-syntax-rule (lexical-typed-variable-spec.type-id gts)
-  (typed-variable-spec.type-id gts))
 
 
 ;;;; global lexical variable specification
@@ -83,24 +80,21 @@
 ;;invoke code.
 ;;
 ;;*  One for  the type  specification,  which holds  a  reference to  an instance  of
-;;"<global-typed-variable-spec>"; it pertains to the invoke code.
+;;"<global-typed-variable-spec>"; it pertains to the visit code.
 ;;
 (define-record-type (<global-typed-variable-spec> make-global-typed-variable-spec global-typed-variable-spec?)
   (nongenerative vicare:expander:<global-typed-variable-spec>)
   (parent <typed-variable-spec>)
   (fields
-   (immutable variable-loc	global-typed-variable-spec.variable-loc)
+    (immutable variable.loc	global-typed-variable-spec.variable-loc)
 		;The loc gensym of the variable.
-   #| end of fields |# )
+    #| end of fields |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define* (make-global-typed-variable-spec type-id variable-loc)
-	((make-typed-variable-spec type-id) variable-loc))
+      (define* (make-global-typed-variable-spec {ots object-type-spec?} {variable.loc gensym?})
+	((make-typed-variable-spec ots) variable.loc))
       make-global-typed-variable-spec))
   #| end of DEFINE-RECORD-TYPE |# )
-
-(define-syntax-rule (global-typed-variable-spec.type-id gts)
-  (typed-variable-spec.type-id gts))
 
 
 ;;;; typed core primitive
@@ -109,14 +103,14 @@
   (nongenerative vicare:expander:<core-prim-type-spec>)
   (parent <typed-variable-spec>)
   (fields
-   (immutable name			core-prim-type-spec.name)
+    (immutable name			core-prim-type-spec.name)
 		;A symbol representing the public name of this core primitive.
-   (immutable safety			core-prim-type-spec.safety)
+    (immutable safety			core-prim-type-spec.safety)
 		;Boolean.  True if this core primitive is safe.
-   #| end of FIELDS |# )
+    #| end of FIELDS |# )
   (protocol
     (lambda (make-typed-variable-spec)
-      (define (make-core-prim-type-spec core-prim.sym safety type-id)
+      (define* (make-core-prim-type-spec {core-prim.sym symbol?} safety {closure.ots closure-type-spec?})
 	;;CORE-PRIM.SYM  is  a  symbol  representing  the public  name  of  the  core
 	;;primitive.
 	;;
@@ -124,8 +118,9 @@
 	;;
 	;;TYPE-ID is a syntactic identifier representing the type of this function.
 	;;
-	((make-typed-variable-spec type-id) core-prim.sym safety))
-      make-core-prim-type-spec)))
+	((make-typed-variable-spec closure.ots) core-prim.sym safety))
+      make-core-prim-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
 
 
 ;;;; done

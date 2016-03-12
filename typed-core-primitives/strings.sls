@@ -51,7 +51,7 @@
     (safe)
   (signatures
    (()			=> (<string>))
-   (<char>		=> (<string>)))
+   ((list-of <char>)	=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -98,14 +98,14 @@
 (declare-core-primitive string-append
     (safe)
   (signatures
-   (<string>			=> (<string>)))
+   ((list-of <string>)			=> (<string>)))
   (attributes
    (_				effect-free result-true)))
 
 (declare-core-primitive string-reverse-and-concatenate
     (safe)
   (signatures
-   ((<string*>)			=> (<string>)))
+   (((list-of <string>))		=> (<string>)))
   (attributes
    ((_)				effect-free result-true)))
 
@@ -123,7 +123,7 @@
 (declare-core-primitive string-for-each
     (safe)
   (signatures
-   ((<procedure> <string> . <string>)		=> (<void>)))
+   ((<procedure> <string> . (list-of <string>))		=> (<void>)))
   (attributes
    ;;Not foldable and not effect-free because it applies an unknown procedure.
    ((_ _ . _)					result-true)))
@@ -307,7 +307,7 @@
 (declare-core-primitive string->list
     (safe)
   (signatures
-   ((<string>)			=> (<char*>)))
+   ((<string>)			=> ((list-of <char>))))
   (attributes
    ;;Not foldable because it must return a new list at every application.
    ((_)				effect-free result-true)))
@@ -338,7 +338,7 @@
 (declare-core-primitive $string
     (unsafe)
   (signatures
-   (<char>		=> (<string>)))
+   ((list-of <char>)	=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string every time.
    (_			effect-free result-true)))
@@ -346,7 +346,7 @@
 (declare-core-primitive $string-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> <string*>)	=> (<string>)))
+   ((<exact-integer> (list-of <string>))	=> (<string>)))
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
@@ -355,7 +355,7 @@
 (declare-core-primitive $string-reverse-and-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> <string*>)	=> (<string>)))
+   ((<exact-integer> (list-of <string>))	=> (<string>)))
   (attributes
    ((_ ())			foldable effect-free result-true)
    ;;Not foldable because it must return a new string every time.
@@ -374,7 +374,7 @@
 (declare-core-primitive $string-total-length
     (unsafe)
   (signatures
-   ((<exact-integer> <string*>)	=> (<exact-integer>)))
+   ((<exact-integer> (list-of <string>))	=> (<exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -462,7 +462,7 @@
 (declare-core-primitive <string>-for-each
     (safe)
   (signatures
-   ((<string> <procedure> . <string>)	=> (<void>))))
+   ((<string> <procedure> . (list-of <string>))	=> (<void>))))
 
 /section)
 

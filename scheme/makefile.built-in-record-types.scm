@@ -375,12 +375,19 @@
        &error
      make-out-of-memory-error out-of-memory-error?)
 
-   (define-built-in-condition-type &failed-expression-condition
+   (define-built-in-condition-type &failed-expression
        &condition
      make-failed-expression-condition
      failed-expression-condition?
      (methods
       (failed-expression	condition-failed-expression)))
+
+   (define-built-in-condition-type &one-based-return-value-index
+       &condition
+     make-one-based-return-value-index-condition
+     one-based-return-value-index-condition?
+     (methods
+      (index			condition-one-based-return-value-index)))
 
    (define-built-in-condition-type &procedure-precondition-violation
        &assertion

@@ -273,22 +273,22 @@
 (declare-core-primitive =
     (safe)
   (signatures
-   #;((<positive>     <non-positive> . <number>)		=> (<false>))
-   #;((<non-positive> <positive>     . <number>)		=> (<false>))
-   #;((<negative>     <non-negative> . <number>)		=> (<false>))
-   #;((<non-negative> <negative>     . <number>)		=> (<false>))
-   ((<number> . <number>)	=> (<boolean>)))
+   #;((<positive>     <non-positive> . (list-of <number>))		=> (<false>))
+   #;((<non-positive> <positive>     . (list-of <number>))		=> (<false>))
+   #;((<negative>     <non-negative> . (list-of <number>))		=> (<false>))
+   #;((<non-negative> <negative>     . (list-of <number>))		=> (<false>))
+   ((<number> . (list-of <number>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
 (declare-core-primitive !=
     (safe)
   (signatures
-   #;((<positive>     <non-positive> . <number>)		=> (<true>))
-   #;((<non-positive> <positive>     . <number>)		=> (<true>))
-   #;((<negative>     <non-negative> . <number>)		=> (<true>))
-   #;((<non-negative> <negative>     . <number>)		=> (<true>))
-   ((<number> . <number>)	=> (<boolean>)))
+   #;((<positive>     <non-positive> . (list-of <number>))		=> (<true>))
+   #;((<non-positive> <positive>     . (list-of <number>))		=> (<true>))
+   #;((<negative>     <non-negative> . (list-of <number>))		=> (<true>))
+   #;((<non-negative> <negative>     . (list-of <number>))		=> (<true>))
+   ((<number> . (list-of <number>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
@@ -299,7 +299,7 @@
    #;((<non-negative> <negative>)	=> (<false>))
    #;((<non-positive> <positive>)	=> (<true>))
    #;((<negative>     <non-negative>)	=> (<true>))
-   ((<real> <real> . <real>)	=> (<boolean>)))
+   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
@@ -310,7 +310,7 @@
    #;((<non-negative> <negative>)	=> (<true>))
    #;((<non-positive> <positive>)	=> (<false>))
    #;((<negative>     <non-negative>)	=> (<false>))
-   ((<real> <real> . <real>)	=> (<boolean>)))
+   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
@@ -319,7 +319,7 @@
   (signatures
    #;((<positive> <negative>)		=> (<false>))
    #;((<negative> <positive>)		=> (<true>))
-   ((<real> <real> . <real>)	=> (<boolean>)))
+   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
@@ -328,7 +328,7 @@
   (signatures
    #;((<positive> <negative>)		=> (<true>))
    #;((<negative> <positive>)		=> (<false>))
-   ((<real> <real> . <real>)	=> (<boolean>)))
+   ((<real> <real> . (list-of <real>))	=> (<boolean>)))
   (attributes
    ((_ _ . _)			foldable effect-free)))
 
@@ -337,13 +337,13 @@
 (declare-core-primitive max
     (safe)
   (signatures
-   ((<fixnum> . <fixnum>)		=> (<fixnum>))
-   ((<bignum> . <bignum>)		=> (<bignum>))
-   ((<flonum> . <flonum>)		=> (<flonum>))
-   ((<exact-integer> . <exact-integer>)	=> (<exact-integer>))
-   ((<exact-real> . <exact-real>)	=> (<exact-real>))
-   ((<integer> . <integer>)		=> (<integer>))
-   ((<real> . <real>)			=> (<real>)))
+   ((<fixnum> . (list-of <fixnum>))		=> (<fixnum>))
+   ((<bignum> . (list-of <bignum>))		=> (<bignum>))
+   ((<flonum> . (list-of <flonum>))		=> (<flonum>))
+   ((<exact-integer> . (list-of <exact-integer>))	=> (<exact-integer>))
+   ((<exact-real> . (list-of <exact-real>))	=> (<exact-real>))
+   ((<integer> . (list-of <integer>))		=> (<integer>))
+   ((<real> . (list-of <real>))			=> (<real>)))
   (attributes
    ((_ . _)				foldable effect-free result-true))
   #;(replacements
@@ -357,13 +357,13 @@
 (declare-core-primitive min
     (safe)
   (signatures
-   ((<fixnum> . <fixnum>)		=> (<fixnum>))
-   ((<bignum> . <bignum>)		=> (<bignum>))
-   ((<flonum> . <flonum>)		=> (<flonum>))
-   ((<exact-integer> . <exact-integer>)	=> (<exact-integer>))
-   ((<exact-real> . <exact-real>)	=> (<exact-real>))
-   ((<integer> . <integer>)		=> (<integer>))
-   ((<real> . <real>)			=> (<real>)))
+   ((<fixnum> . (list-of <fixnum>))		=> (<fixnum>))
+   ((<bignum> . (list-of <bignum>))		=> (<bignum>))
+   ((<flonum> . (list-of <flonum>))		=> (<flonum>))
+   ((<exact-integer> . (list-of <exact-integer>))	=> (<exact-integer>))
+   ((<exact-real> . (list-of <exact-real>))	=> (<exact-real>))
+   ((<integer> . (list-of <integer>))		=> (<integer>))
+   ((<real> . (list-of <real>))			=> (<real>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   #;(replacements
@@ -380,13 +380,13 @@
 (declare-core-primitive +
     (safe)
   (signatures
-   (<flonum>			=> (<flonum>))
-   (<exact-integer>		=> (<exact-integer>))
-   (<exact-real>		=> (<exact-real>))
-   (<integer>			=> (<integer>))
-   (<real>			=> (<real>))
-   (<cflonum>			=> (<cflonum>))
-   (<number>			=> (<number>)))
+   ((list-of <flonum>)			=> (<flonum>))
+   ((list-of <exact-integer>)		=> (<exact-integer>))
+   ((list-of <exact-real>)		=> (<exact-real>))
+   ((list-of <integer>)			=> (<integer>))
+   ((list-of <real>)			=> (<real>))
+   ((list-of <cflonum>)			=> (<cflonum>))
+   ((list-of <number>)			=> (<number>)))
   (attributes
    (_			foldable effect-free result-true))
   (replacements
@@ -419,13 +419,13 @@
 (declare-core-primitive -
     (safe)
   (signatures
-   (<flonum>			=> (<flonum>))
-   (<exact-integer>		=> (<exact-integer>))
-   (<exact-real>		=> (<exact-real>))
-   (<integer>			=> (<integer>))
-   (<real>			=> (<real>))
-   (<cflonum>			=> (<cflonum>))
-   (<number>			=> (<number>)))
+   ((list-of <flonum>)			=> (<flonum>))
+   ((list-of <exact-integer>)		=> (<exact-integer>))
+   ((list-of <exact-real>)		=> (<exact-real>))
+   ((list-of <integer>)			=> (<integer>))
+   ((list-of <real>)			=> (<real>))
+   ((list-of <cflonum>)			=> (<cflonum>))
+   ((list-of <number>)			=> (<number>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   (replacements
@@ -458,13 +458,13 @@
 (declare-core-primitive *
     (safe)
   (signatures
-   (<flonum>			=> (<flonum>))
-   (<exact-integer>		=> (<exact-integer>))
-   (<exact-real>		=> (<exact-real>))
-   (<integer>			=> (<integer>))
-   (<real>			=> (<real>))
-   (<cflonum>			=> (<cflonum>))
-   (<number>			=> (<number>)))
+   ((list-of <flonum>)			=> (<flonum>))
+   ((list-of <exact-integer>)		=> (<exact-integer>))
+   ((list-of <exact-real>)		=> (<exact-real>))
+   ((list-of <integer>)			=> (<integer>))
+   ((list-of <real>)			=> (<real>))
+   ((list-of <cflonum>)			=> (<cflonum>))
+   ((list-of <number>)			=> (<number>)))
   (attributes
    (_			foldable effect-free result-true))
   (replacements
@@ -497,10 +497,10 @@
 (declare-core-primitive /
     (safe)
   (signatures
-   ((<flonum>  . <flonum>)	=> (<flonum>))
-   ((<real>    . <real>)	=> (<real>))
-   ((<cflonum> . <cflonum>)	=> (<cflonum>))
-   ((<number>  . <number>)	=> (<number>)))
+   ((<flonum>  . (list-of <flonum>))	=> (<flonum>))
+   ((<real>    . (list-of <real>))	=> (<real>))
+   ((<cflonum> . (list-of <cflonum>))	=> (<cflonum>))
+   ((<number>  . (list-of <number>))	=> (<number>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   (replacements
@@ -695,7 +695,7 @@
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>))
 
-   ((<real> <real> <real> . <real>)	=> (<real>)))
+   ((<real> <real> <real> . (list-of <real>))	=> (<real>)))
   (attributes
    (()					foldable effect-free result-true)
    ((_)					foldable effect-free result-true)
@@ -736,7 +736,7 @@
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>))
 
-   ((<real> <real> <real> . <real>)	=> (<real>)))
+   ((<real> <real> <real> . (list-of <real>))	=> (<real>)))
   (attributes
    (()					foldable effect-free result-true)
    ((_)					foldable effect-free result-true)
@@ -1079,7 +1079,7 @@
    ((<bignum> <bignum>)		=> (<bignum>))
    ((<fixnum> <bignum>)		=> (<bignum>))
    ((<bignum> <fixnum>)		=> (<bignum>))
-   (<exact-integer>		=> (<exact-integer>)))
+   ((list-of <exact-integer>)	=> (<exact-integer>)))
   (attributes
    (_				foldable effect-free result-true))
   (replacements
@@ -1097,7 +1097,7 @@
    ((<bignum> <bignum>)		=> (<bignum>))
    ((<fixnum> <bignum>)		=> (<bignum>))
    ((<bignum> <fixnum>)		=> (<bignum>))
-   (<exact-integer>		=> (<exact-integer>)))
+   ((list-of <exact-integer>)	=> (<exact-integer>)))
   (attributes
    (_				foldable effect-free result-true))
   (replacements
@@ -1115,7 +1115,7 @@
    ((<bignum> <bignum>)		=> (<bignum>))
    ((<fixnum> <bignum>)		=> (<bignum>))
    ((<bignum> <fixnum>)		=> (<bignum>))
-   (<exact-integer>		=> (<exact-integer>)))
+   ((list-of <exact-integer>)	=> (<exact-integer>)))
   (attributes
    (_				foldable effect-free result-true))
   (replacements

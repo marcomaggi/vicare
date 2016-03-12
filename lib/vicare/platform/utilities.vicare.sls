@@ -26,6 +26,7 @@
 
 #!vicare
 (library (vicare platform utilities)
+  (options strict-r6rs)
   (export
     errno-code->symbol
     posix-signal->symbol)

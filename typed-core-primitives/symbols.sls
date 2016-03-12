@@ -50,7 +50,7 @@
 		 (declare-core-primitive ?who
 		     (safe)
 		   (signatures
-		    (<symbol>			=> (<boolean>)))
+		    ((list-of <symbol>)		=> (<boolean>)))
 		   (attributes
 		    (_				foldable effect-free result-true)))))))
   (declare symbol=?)
@@ -64,12 +64,12 @@
 (declare-core-primitive symbol-max
     (safe)
   (signatures
-   ((<symbol> . <symbol>)		=> (<symbol>))))
+   ((<symbol> . (list-of <symbol>))		=> (<symbol>))))
 
 (declare-core-primitive symbol-min
     (safe)
   (signatures
-   ((<symbol> . <symbol>)		=> (<symbol>))))
+   ((<symbol> . (list-of <symbol>))		=> (<symbol>))))
 
 ;;; --------------------------------------------------------------------
 ;;; gensyms

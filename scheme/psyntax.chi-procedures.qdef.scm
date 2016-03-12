@@ -56,9 +56,9 @@
 ;;objects already created.
 ;;
 (module (qdef-generate-loc
-	 chi-qdef			chi-qdef*
-	 chi-interaction-qdef
-	 <qdef>				<qdef-defun>			<qdef-defvar>
+	 chi-qdef			chi-qdef*			chi-interaction-qdef
+	 <qdef>				<qdef-closure>
+	 <qdef-defun>			<qdef-defvar>
 	 <qdef-standard-defun>		make-qdef-standard-defun	qdef-standard-defun?
 	 <qdef-standard-defvar>		make-qdef-standard-defvar	qdef-standard-defvar?
 	 <qdef-typed-defun>		make-qdef-typed-defun		qdef-typed-defun?
@@ -68,72 +68,73 @@
 	 <qdef-typed-case-defun>	make-qdef-typed-case-defun	qdef-typed-case-defun?
 	 ;;
 	 qdef.input-form
-	 qdef.lhs
-	 qdef.type-id
-	 qdef.lex
-	 qdef-defun.standard-formals
-	 qdef-defun.body*
-	 qdef-defun.signature
+	 qdef.var-id				qdef.lex
 	 qdef-defvar.rhs
-	 qdef-case-defun.standard-formals*
-	 qdef-case-defun.body**
-	 qdef-case-defun.signature)
+	 qdef-closure.ots			qdef-closure.clause-signature*
+	 qdef-defun.standard-formals		qdef-defun.body*
+	 qdef-case-defun.standard-formals*	qdef-case-defun.body**)
 
 
 ;;;; type definitions: qualified RHS base type
 
 (define-record-type (<qdef> dummy-make-qdef qdef?)
-  (nongenerative vicare:expander:qdef)
+  (nongenerative vicare:expander:<qdef>)
   (fields
     (immutable input-form	qdef.input-form)
 		;A syntax object representing the original input form.
-    (immutable lhs		qdef.lhs)
-		;The syntactic identifier bound by this expression.
-    (mutable   type-id		qdef.type-id qdef.type-id-set!)
-		;False  or  a  syntactic  identifier representing  the  type  of  the
-		;syntactic binding defined by the QDEF.
-		;
-		;* When the QDEF is a  "defun": this field references the sub-type of
-		;"<procedure>" representing the callable signature.
-		;
-		;*  When  the QDEF  is  a  "defvar":  this  field contains  the  type
-		;identifier.
-		;
-		;*  When the  QDEF  is a  "top-expr": this  field  contains the  type
-		;identifier "<top>".
+    (immutable var-id		qdef.var-id)
+		;The syntactic identifier bound by this definition form.
     (immutable lex		qdef.lex)
 		;The lexical gensym to use for this expression.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-record)
-      (define (make-qdef input-form.stx lhs.id lhs.type)
-	(make-record input-form.stx lhs.id lhs.type (generate-lexical-gensym lhs.id)))
+      (define* (make-qdef input-form.stx {lhs.var-id identifier?})
+	(make-record input-form.stx lhs.var-id (generate-lexical-gensym lhs.var-id)))
       make-qdef)))
 
 (define (qdef-generate-loc qdef)
-  (generate-storage-location-gensym (qdef.lhs qdef)))
+  (generate-storage-location-gensym (qdef.var-id qdef)))
+
+
+;;;; type definitions: qualified RHS general closure definition
+
+(define-record-type (<qdef-closure> dummy-make-qdef-closure qdef-closure?)
+  (nongenerative vicare:expander:<qdef-closure>)
+  (parent <qdef>)
+  (fields
+    (immutable ots		qdef-closure.ots)
+		;An instance  of "<closure-type-spec>"  representing the type  of the
+		;syntactic binding defined by the QDEF.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-qdef)
+      (define* (make-qdef-closure input-form.stx {lhs.var-id identifier?} {lhs.ots closure-type-spec?})
+	((make-qdef input-form.stx lhs.var-id) lhs.ots))
+      make-qdef-closure))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define* (qdef-closure.clause-signature* {qdef qdef-closure?})
+  (clambda-signature.clause-signature* (closure-type-spec.signature (qdef-closure.ots qdef))))
 
 
 ;;;; type definitions: qualified RHS single-clause function definition
 
 (define-record-type (<qdef-defun> make-qdef-defun qdef-defun?)
   (nongenerative vicare:expander:<qdef-defun>)
-  (parent <qdef>)
+  (parent <qdef-closure>)
   (fields
     (immutable formals			qdef-defun.standard-formals)
 		;A proper  or improper list  of syntax objects representing  a lambda
 		;clause's standard formals.
     (immutable body*			qdef-defun.body*)
 		;A list of syntax objects representing a lambda clause's body forms.
-    (immutable signature		qdef-defun.signature)
-		;An instance  of "<clambda-signature>" representing the  signature of
-		;the function.
     #| end of FIELDS |# )
   (protocol
-    (lambda (make-qdef)
-      (define* (make-qdef-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
-					 {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qdef input-form.stx lhs.id signature-type.id) standard-formals.stx body*.stx signature))
+    (lambda (make-qdef-closure)
+      (define* (make-qdef-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
+				{lhs.ots closure-type-spec?})
+	((make-qdef-closure input-form.stx lhs.var-id lhs.ots) standard-formals.stx body*.stx))
       make-qdef-defun)))
 
 ;;; --------------------------------------------------------------------
@@ -149,9 +150,9 @@
   (parent <qdef-defun>)
   (protocol
     (lambda (make-qdef-defun)
-      (define* (make-qdef-standard-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
-						  {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qdef-defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
+      (define* (make-qdef-standard-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
+					 {lhs.ots closure-type-spec?})
+	((make-qdef-defun input-form.stx lhs.var-id standard-formals.stx body*.stx lhs.ots)))
       make-qdef-standard-defun)))
 
 ;;; --------------------------------------------------------------------
@@ -167,9 +168,9 @@
   (parent <qdef-defun>)
   (protocol
     (lambda (make-qdef-defun)
-      (define* (make-qdef-typed-defun input-form.stx {lhs.id identifier?} standard-formals.stx {body*.stx list?}
-					       {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qdef-defun input-form.stx lhs.id standard-formals.stx body*.stx signature-type.id signature)))
+      (define* (make-qdef-typed-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
+				      {lhs.ots object-type-spec?})
+	((make-qdef-defun input-form.stx lhs.var-id standard-formals.stx body*.stx lhs.ots)))
       make-qdef-typed-defun)))
 
 
@@ -177,23 +178,20 @@
 
 (define-record-type (<qdef-case-defun> make-qdef-case-defun qdef-case-defun?)
   (nongenerative vicare:expander:<qdef-case-defun>)
-  (parent <qdef>)
+  (parent <qdef-closure>)
   (fields
-    (immutable formals*			qdef-case-defun.standard-formals*)
+    (immutable formals*		qdef-case-defun.standard-formals*)
 		;A  proper  or  improper  list   of  syntax  objects  representing  a
 		;case-lambda clause's standard formals.
-    (immutable body**			qdef-case-defun.body**)
+    (immutable body**		qdef-case-defun.body**)
 		;A  list of  lists  of syntax  objects  representing lambda  clause's
 		;bodies forms.
-    (immutable signature		qdef-case-defun.signature)
-		;An instance  of "<clambda-signature>" representing the  signature of
-		;the function.
     #| end of FIELDS |# )
   (protocol
-    (lambda (make-qdef)
-      (define* (make-qdef-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
-					      {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qdef input-form.stx lhs.id signature-type.id) standard-formals*.stx body**.stx signature))
+    (lambda (make-qdef-closure)
+      (define* (make-qdef-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
+				     {lhs.ots closure-type-spec?})
+	((make-qdef-closure input-form.stx lhs.var-id lhs.ots) standard-formals*.stx body**.stx))
       make-qdef-case-defun)))
 
 ;;; --------------------------------------------------------------------
@@ -213,9 +211,9 @@
   (parent <qdef-case-defun>)
   (protocol
     (lambda (make-qdef-case-defun)
-      (define* (make-qdef-standard-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
-						       {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qdef-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
+      (define* (make-qdef-standard-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
+					      {lhs.ots closure-type-spec?})
+	((make-qdef-case-defun input-form.stx lhs.var-id standard-formals*.stx body**.stx lhs.ots)))
       make-qdef-standard-case-defun)))
 
 ;;; --------------------------------------------------------------------
@@ -234,9 +232,9 @@
   (parent <qdef-case-defun>)
   (protocol
     (lambda (make-qdef-case-defun)
-      (define* (make-qdef-typed-case-defun input-form.stx {lhs.id identifier?} standard-formals*.stx {body**.stx list?}
-						    {signature-type.id identifier?} {signature clambda-signature?})
-	((make-qdef-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx signature-type.id signature)))
+      (define* (make-qdef-typed-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
+					   {lhs.ots closure-type-spec?})
+	((make-qdef-case-defun input-form.stx lhs.var-id standard-formals*.stx body**.stx lhs.ots)))
       make-qdef-typed-case-defun)))
 
 
@@ -252,8 +250,8 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-qdef)
-      (define* (make-qdef-defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
-	((make-qdef input-form.stx lhs.id lhs.type) rhs.stx))
+      (define* (make-qdef-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
+	((make-qdef input-form.stx lhs.var-id) rhs.stx))
       make-qdef-defvar)))
 
 ;;; --------------------------------------------------------------------
@@ -269,8 +267,8 @@
   (parent <qdef-defvar>)
   (protocol
     (lambda (make-qdef-defvar)
-      (define* (make-qdef-standard-defvar input-form.stx {lhs.id identifier?} rhs.stx)
-	((make-qdef-defvar input-form.stx lhs.id rhs.stx (top-type-id))))
+      (define* (make-qdef-standard-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
       make-qdef-standard-defvar)))
 
 ;;; --------------------------------------------------------------------
@@ -285,8 +283,8 @@
   (parent <qdef-defvar>)
   (protocol
     (lambda (make-qdef-defvar)
-      (define* (make-qdef-typed-defvar input-form.stx {lhs.id identifier?} rhs.stx {lhs.type identifier?})
-	((make-qdef-defvar input-form.stx lhs.id rhs.stx lhs.type)))
+      (define* (make-qdef-typed-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
       make-qdef-typed-defvar)))
 
 
@@ -310,7 +308,7 @@
   (protocol
     (lambda (make-qdef)
       (define* (make-qdef-top-expr input-form.stx)
-	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy) (top-type-id))))
+	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy))))
       make-qdef-top-expr)))
 
 
@@ -344,15 +342,15 @@
     (while-not-expanding-application-first-subform
      (let ((rtd (record-rtd qdef)))
        (cond
-	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/std	qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-defun>))		(chi-defun/typed	qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/std	qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-defvar>))		(chi-defvar/typed	qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/std	      qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-defun>))		(chi-defun/typed      qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/std	      qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-defvar>))		(chi-defvar/typed     qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-top-expr>))		(if interaction?
 									    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
 									  (chi-top-expr qdef lexenv.run lexenv.expand)))
-	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/std qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed	 qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/std   qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed qdef lexenv.run lexenv.expand))
 	(else
 	 (assertion-violation __who__ "invalid QDEF type" qdef))))))
 
@@ -372,22 +370,27 @@
 	 (rhs.sig (psi.retvals-signature rhs.psi)))
     ;;All right, we  have expanded the RHS expression.  Now  let's do some validation
     ;;on the type of the expression.
-    (syntax-match (type-signature.tags rhs.sig) (<list>)
-      ((?tag)
+    (case-signature-specs rhs.sig
+      ((single-value)
        ;;A single return value.  Good.
        rhs.psi)
-
-      (<list>
+      ((unspecified-values)
        ;;Fully  unspecified return  values: we  accept it  here and  delegate further
        ;;checks at run-time.
        rhs.psi)
-
-      (_
+      (<no-return>
+       ;;The right-hand side expression will not return.  Weird but good.
+       rhs.psi)
+      (else
        ;;Damn!!!   We have  determined  at expand-time  that  the expression  returns
        ;;multiple return values: syntax violation.
-       (expand-time-retvals-signature-violation __who__
-	 rhs.stx #f (make-type-signature/single-top) rhs.sig))
-      )))
+       (raise
+	(condition
+	 (make-expand-time-type-signature-violation)
+	 (make-who-condition __who__)
+	 (make-message-condition "expression used as right-hand side in standard variable definition returns multiple values")
+	 (make-syntax-violation rhs.stx #f)
+	 (make-application-operand-signature-condition rhs.sig)))))))
 
 (define (chi-defvar/typed qdef lexenv.run lexenv.expand)
   ;;Expand the right-hand  side expression of a typed variable  definition; build and
@@ -416,9 +419,9 @@
 	 (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	 (expr.core (psi.core-expr expr.psi)))
     (make-psi expr.stx
-	      (build-sequence no-source
-		(list expr.core (build-void)))
-	      (make-type-signature/single-void))))
+      (build-sequence no-source
+	(list expr.core (build-void)))
+      (make-type-signature/single-void))))
 
 (define (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
   ;;Expand the top  expression in an interaction environment, build  and return a PSI

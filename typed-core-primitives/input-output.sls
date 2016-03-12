@@ -369,49 +369,49 @@
 (declare-core-primitive call-with-bytevector-output-port
     (safe)
   (signatures
-   ((<procedure>)			=> <top>)
-   ((<procedure> <false>)		=> <top>)
-   ((<procedure> <transcoder>)		=> <top>)))
+   ((<procedure>)			=> <list>)
+   ((<procedure> <false>)		=> <list>)
+   ((<procedure> <transcoder>)		=> <list>)))
 
 (declare-core-primitive call-with-string-output-port
     (safe)
   (signatures
-   ((<procedure>)			=> <top>)))
+   ((<procedure>)			=> <list>)))
 
 (declare-core-primitive call-with-input-file
     (safe)
   (signatures
-   ((<string> <procedure>)		=> <top>)))
+   ((<string> <procedure>)		=> <list>)))
 
 (declare-core-primitive call-with-output-file
     (safe)
   (signatures
-   ((<string> <procedure>)		=> <top>)))
+   ((<string> <procedure>)		=> <list>)))
 
 (declare-core-primitive call-with-port
     (safe)
   (signatures
-   ((<port> <procedure>)		=> <top>)))
+   ((<port> <procedure>)		=> <list>)))
 
 (declare-core-primitive with-input-from-file
     (safe)
   (signatures
-   ((<string> <procedure>)		=> <top>)))
+   ((<string> <procedure>)		=> <list>)))
 
 (declare-core-primitive with-output-to-file
     (safe)
   (signatures
-   ((<string> <procedure>)		=> <top>)))
+   ((<string> <procedure>)		=> <list>)))
 
 (declare-core-primitive with-input-from-string
     (safe)
   (signatures
-   ((<string> <procedure>)		=> <top>)))
+   ((<string> <procedure>)		=> <list>)))
 
 (declare-core-primitive with-output-to-string
     (safe)
   (signatures
-   ((<procedure>)			=> <top>)))
+   ((<procedure>)			=> <list>)))
 
 (declare-core-primitive transcoded-port
     (safe)
@@ -896,21 +896,21 @@
 (declare-core-primitive format
     (safe)
   (signatures
-   ((<string> . <top>)	=> (<string>)))
+   ((<string> . <list>)	=> (<string>)))
   (attributes
    ((_ . _)		result-true)))
 
 (declare-core-primitive printf
     (safe)
   (signatures
-   ((<string> . <top>)	=> (<void>)))
+   ((<string> . <list>)	=> (<void>)))
   (attributes
    ((_ . _)		result-true)))
 
 (declare-core-primitive fprintf
     (safe)
   (signatures
-   ((<textual-output-port> <string> . <top>)	=> (<void>)))
+   ((<textual-output-port> <string> . <list>)	=> (<void>)))
   (attributes
    ((_ _ . _)		result-true)))
 
@@ -961,14 +961,14 @@
 (declare-core-primitive debug-print
     (safe)
   (signatures
-   (<top>		=> (<void>)))
+   (<list>		=> (<void>)))
   (attributes
    (_			result-true)))
 
 (declare-core-primitive debug-print*
     (safe)
   (signatures
-   (<top>		=> (<void>)))
+   (<list>		=> (<void>)))
   (attributes
    (_			result-true)))
 

@@ -5753,6 +5753,7 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
 * iklib conditions failexpr::   Failed expression conditions.
+* iklib conditions exprindex::  One-based return value index conditions.
 * iklib conditions procpre::    Procedure precondition violations.
 * iklib conditions procpost::   Procedure postcondition violations.
 * iklib conditions procarg::    Procedure argument violations.
@@ -5945,8 +5946,8 @@ Let's say we need code like this:
 
 @noindent
 we might want to raise a condition object holding the failed expression
-@code{(fixnum? obj)}; for this we can use
-@condition{failed-expression-condition} as follows:
+@code{(fixnum? obj)}; for this we can use @condition{failed-expression}
+as follows:
 
 @lisp
 (if (fixnum? obj)
@@ -5959,7 +5960,7 @@ we might want to raise a condition object holding the failed expression
 @end lisp
 
 
-@deftp {Condition Type} @acondition{failed-expression-condition}
+@deftp {Condition Object Type} @acondition{failed-expression}
 Condition type used to describe a failed expression, for example in a
 procedure argument validation predicate.  It is derived from
 @condition{condition}.  It has the following fields:
@@ -5974,19 +5975,88 @@ expression.
 
 @defun make-failed-expression-condition @var{sexp}
 Build and return a condition object of type
-@condition{failed-expression-condition}.
+@condition{failed-expression}.
 @end defun
 
 
 @defun failed-expression-condition? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
-@condition{failed-expression-condition}; otherwise return @false{}.
+@condition{failed-expression}; otherwise return @false{}.
 @end defun
 
 
 @defun condition-failed-expression @var{cnd}
-Given a condition object off type
-@condition{failed-expression-condition} return the symbolic expression.
+Given a condition object of type @condition{failed-expression} return
+the symbolic expression.
+@end defun
+
+@c page
+@node iklib conditions exprindex
+@subsection One-based return value index conditions
+
+
+Remembering that every expression may return multiple values, let's say
+we need code like this:
+
+@lisp
+(receive (a b c)
+    (expression)
+  (unless (fixnum? a) (raise-exception))
+  (unless (symbol? b) (raise-exception))
+  (unless (string? c) (raise-exception))
+  @meta{body})
+@end lisp
+
+@noindent
+we might want to raise condition objects holding the index of the
+returned value; for this we can use
+@condition{one-based-return-value-index} as follows:
+
+@lisp
+(receive (a b c)
+    (expression)
+  (internal-body
+    (define (%error sexp idx obj)
+      (raise
+        (make-assertion-violation)
+        (make-message-condition "failed object validation")
+        (make-failed-expression-condition sexp)
+        (make-one-based-return-value-index-condition idx)
+        (make-irritants (list obj))))
+    (unless (fixnum? a) (%error '(fixnum? a) 1 a))
+    (unless (symbol? b) (%error '(symbol? b) 2 b))
+    (unless (string? c) (%error '(string? c) 3 c)))
+  @meta{body})
+@end lisp
+
+
+@deftp {Condition Obect Type} @acondition{one-based-return-value-index}
+Condition type used to specify the one--based index of a return value in
+a tuple of return values from an expression.  It is derived from
+@condition{condition}.  It has the following fields:
+
+@table @code
+@item index
+A positive fixnum representing the one--based index of a return value.
+@end table
+@end deftp
+
+
+@defun make-one-based-return-value-index-condition @var{index}
+Build and return a new instance of
+@condition{one-based-return-value-index}.
+@end defun
+
+
+@defun one-based-return-value-index-condition? @var{obj}
+Return @true{} if @var{obj} is a condition object with component
+@condition{one-based-return-value-index}; otherwise return @false{}.
+@end defun
+
+
+@defun condition-one-based-return-value-index @var{cnd}
+Given a condition object of type
+@condition{one-based-return-value-index} return the index.
 @end defun
 
 @c page
@@ -6216,7 +6286,7 @@ holding components of type: @condition{who}, @condition{message},
 @defun procedure-arguments-consistency-violation/failed-expression @var{who} @var{message} @var{failed-expression} @var{irritant} @dots{}
 Like @func{procedure-arguments-consistency-violation} and in addition
 attach to the raised condition object a component with type
-@condition{failed-expression-condition}, using the symbolic
+@condition{failed-expression}, using the symbolic
 @var{failed-expression} as argument.
 @end defun
 
@@ -6244,10 +6314,11 @@ Return @true{} if @var{obj} is a condition object of type
 @end defun
 
 
-@defun expression-return-value-violation @var{who} @var{message} @var{irritant} @dots{}
+@defun expression-return-value-violation @var{who} @var{message} @var{retval-index} @var{irritant} @dots{}
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
-@condition{irritants}, @condition{expression-return-value-violation}.
+@condition{irritants}, @condition{expression-return-value-violation},
+@condition{one-based-return-value-index}.
 @end defun
 
 @c page
@@ -20102,6 +20173,17 @@ Return @true{} if @var{obj} is the void value; otherwise return
 @defun always-true @var{arg} @dots{}
 @defunx always-false @var{arg} @dots{}
 Always return @true{} or @false{}, ignoring the arguments.
+@end defun
+
+
+@defun expect-single-argument-and-return-it @var{arg}
+@defunx expect-single-argument-and-return-true @var{arg}
+@defunx expect-single-argument-and-return-false @var{arg}
+These function are used by some syntaxes to check at run--time that an
+expression returns a single value.  If zero, two or more values are
+returned: the built--in validation mechanism raises an exception at
+run--time; otherwise the argument is returned or discarded and the
+return value is @true{} or @false{}.
 @end defun
 
 

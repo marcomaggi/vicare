@@ -344,6 +344,10 @@
    (sort!			<vector>-sort!)
    (list			vector->list)))
 
+(define-scheme-type <empty-vector>
+    <vector>
+  <empty-vector>-constructor		<empty-vector>-type-predicate)
+
 (define-scheme-type <bytevector>
     <top>
   make-bytevector bytevector?)

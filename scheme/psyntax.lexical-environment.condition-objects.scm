@@ -78,6 +78,16 @@
      application-operands-condition?
      application-operands-condition.operands
 
+     &application-operator-signature-condition
+     make-application-operator-signature-condition
+     application-operator-signature-condition?
+     application-operator-signature-condition.signature
+
+     &application-operand-signature-condition
+     make-application-operand-signature-condition
+     application-operand-signature-condition?
+     application-operand-signature-condition.signature
+
      &retvals-signature-condition
      make-retvals-signature-condition
      retvals-signature-condition?
@@ -118,7 +128,6 @@
      syntax-violation/internal-error
      assertion-violation/internal-error
      syntax-violation
-     expand-time-retvals-signature-violation
      raise-unbound-error
      raise-compound-condition-object
      raise-compound-condition-object/continuable
@@ -138,14 +147,37 @@
   application-operator-condition?
   (operator application-operator-condition.operator))
 
-;;This used to describe the syntax objects acting as operands in an application form.
-;;The  single  argument  to  the  constructor  must  be  a  list  of  syntax  objects
+;;This is used  to describe the syntax  objects acting as operands  in an application
+;;form.  The  single argument  to the constructor  must be a  list of  syntax objects
 ;;representing the operands.
 (define-condition-type &application-operands
     &condition
   make-application-operands-condition
   application-operands-condition?
   (operands application-operands-condition.operands))
+
+;;This is used to hold a "<type-signature>" instance representing the types of values
+;;returned  by an  expression  used  as operator  in  a  procedure application  form.
+;;Examples: if  the operator  returns zero, two  or more values;  if the  operator is
+;;marked as no-return; if the operator does not return a procedure.
+;;
+(define-condition-type &application-operator-signature-condition
+    &condition
+  make-application-operator-signature-condition
+  application-operator-signature-condition?
+  (signature	application-operator-signature-condition.signature))
+
+;;This is used to hold a "<type-signature>" instance representing the types of values
+;;returned by an expression used as operand in procedure application form.  Examples:
+;;if  the operand  returns zero,  two or  more values;  if the  operand is  marked as
+;;no-return.
+;;
+(define-condition-type &application-operand-signature-condition
+    &condition
+  make-application-operand-signature-condition
+  application-operand-signature-condition?
+  (signature	application-operand-signature-condition.signature))
+
 
 ;;This is used to describe a type involved in an exception, for example when the type
 ;;identifier is  used by  the syntax  IS-A? or  METHOD-CALL.  The  field must  be the
@@ -364,7 +396,6 @@
 
 (module (raise-unbound-error
 	 syntax-violation
-	 expand-time-retvals-signature-violation
 	 raise-compound-condition-object
 	 raise-compound-condition-object/continuable)
 
@@ -405,19 +436,6 @@
      (syntax-violation who msg form #f))
     ((who {msg string?} form subform)
      (raise-compound-condition-object who msg form (make-syntax-violation form subform))))
-
-  (define* (expand-time-retvals-signature-violation source-who form subform
-						    {expected-retvals-signature type-signature?}
-						    {returned-retvals-signature type-signature?})
-    ;;To be used at  expand-time when we were expecting a  signature from an expanded
-    ;;expression  and we  received  an incompatible  one, for  example  in the  macro
-    ;;transformers of TAG-ASSERT and TAG-ASSERT-AND-RETURN.
-    ;;
-    (raise-compound-condition-object source-who "expand-time return values signature mismatch" form
-				     (condition
-				      (%make-expand-time-retvals-signature-violation expected-retvals-signature
-										     returned-retvals-signature)
-				      (make-syntax-violation form subform))))
 
   (define (raise-unbound-error source-who input-form.stx id)
     ;;Raise an  "unbound identifier"  exception.  This  is to  be used  when applying

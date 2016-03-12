@@ -1,4 +1,4 @@
-;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -76,7 +76,7 @@
 			    (>= position 0))
 		 (expression-return-value-violation who
 		   "invalid value returned by get-position"
-		   position))))
+		   1 position))))
 	    ((and (boolean? getpos) getpos)
 	     ;;The  cookie's  POS  field  correctly tracks  the  current
 	     ;;device position.

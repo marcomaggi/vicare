@@ -90,7 +90,6 @@
 ;; module interfaces
 (import PSYNTAX-SYNTAX-MATCH
   PSYNTAX-SYNTAX-UTILITIES
-  PSYNTAX-TYPE-IDENTIFIERS
   PSYNTAX-TYPE-SYNTAX-OBJECTS
   PSYNTAX-TYPE-CALLABLES)
 
@@ -251,7 +250,8 @@
 	  fields mutable immutable parent protocol
 	  sealed opaque nongenerative parent-rtd
 	  super-protocol destructor-protocol custom-predicate custom-printer method case-method define-type-descriptors
-	  catch finally)
+	  catch finally
+	  pair-of list-of vector-of)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
@@ -803,7 +803,7 @@
 
       (?field-name
        (identifier? ?field-name)
-       (values ?field-name (top-type-id)))
+       (values ?field-name (<top>-type-id)))
 
       (_
        (synner (if (options::typed-language?)
@@ -3143,9 +3143,9 @@
     (define (%normalise-binding binding-stx)
       (syntax-match binding-stx ()
 	((?var ?init)
-	 (receive (id tag)
+	 (receive (var.id var.ots)
 	     (syntax-object.parse-typed-argument ?var)
-	   `(,?var ,?init ,id)))
+	   `(,?var ,?init ,var.id)))
 	((?var ?init ?step)
 	 `(,?var ,?init ,?step))
 	(_
@@ -3237,11 +3237,11 @@
   (define (%make-init-binding binding-stx)
     (syntax-match binding-stx ()
       ((?var ?init)
-       (receive (id tag)
+       (receive (var.id var.ots)
 	   (syntax-object.parse-typed-argument ?var)
 	 binding-stx))
       ((?var ?init ?step)
-       (receive (id tag)
+       (receive (var.id var.ots)
 	   (syntax-object.parse-typed-argument ?var)
 	 (list ?var ?init)))
       (_
@@ -3251,9 +3251,9 @@
       ((?var ?init)
        knil)
       ((?var ?init ?step)
-       (receive (id tag)
+       (receive (var.id var.ots)
 	   (syntax-object.parse-typed-argument ?var)
-	 (cons `(set! ,id ,?step)
+	 (cons `(set! ,var.id ,?step)
 	       knil)))
       (_
        (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))

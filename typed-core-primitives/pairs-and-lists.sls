@@ -124,7 +124,7 @@
     (safe)
   (signatures
    (()				=> (<null>))
-   ((<top> . <top>)		=> (<top>)))
+   ((<top> . (list-of <top>))		=> (<top>)))
   (attributes
    ;;This is foldable because it returns null itself.
    (()				foldable effect-free result-true)
@@ -227,8 +227,7 @@
 (declare-core-primitive map
     (safe)
   (signatures
-   ((<procedure> <null> . <null>)	=> (<null>))
-   ((<procedure> <nlist> . <nlist>)	=> (<nlist>))
+   ((<procedure> <null> . (list-of <null>))	=> (<null>))
    ((<procedure> <list> . <list>)	=> (<list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
@@ -239,8 +238,8 @@
 (declare-core-primitive for-each
     (safe)
   (signatures
-   ((<procedure> <null> . <null>)	=> (<void>))
-   ((<procedure> <nlist> . <nlist>)	=> (<void>)))
+   ((<procedure> <null> . (list-of <null>))	=> (<void>))
+   ((<procedure> <list> . <list>)		=> (<void>)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
@@ -262,8 +261,8 @@
 (declare-core-primitive exists
     (safe)
   (signatures
-   ((<procedure> <null> . <null>)					=> (<false>))
-   ((<procedure> <nlist> . <nlist>)	=> (<top>)))
+   ((<procedure> <null>  . (list-of <null>))	=> (<false>))
+   ((<procedure> <nlist> . <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -272,8 +271,8 @@
 (declare-core-primitive for-all
     (safe)
   (signatures
-   ((<procedure> <null> . <null>)					=> (<true>))
-   ((<procedure> <nlist> . <nlist>)	=> (<top>)))
+   ((<procedure> <null>  . (list-of <null>))	=> (<true>))
+   ((<procedure> <nlist> . <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.

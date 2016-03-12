@@ -112,8 +112,8 @@
 (declare-core-primitive load
     (safe)
   (signatures
-   ((<string>)			=> <top>)
-   ((<string> <procedure>)	=> <top>)))
+   ((<string>)			=> <list>)
+   ((<string> <procedure>)	=> <list>)))
 
 (declare-core-primitive make-traced-procedure
     (safe)
@@ -267,7 +267,7 @@
     (safe)
   (signatures
    (()			=> (<string>))
-   (<char>		=> (<string>)))
+   ((list-of <char>)	=> (<string>)))
   (attributes
    (()			foldable effect-free result-true)
    (_			foldable effect-free result-true)))
@@ -292,7 +292,7 @@
     (safe)
   (signatures
    (()				=> (<null>))
-   ((<top> . <top>)		=> (<pair>)))
+   ((<top> . <list>)		=> (<pair>)))
   (attributes
    (()				foldable effect-free result-true)
    ((_ . _)			foldable effect-free result-true)))
@@ -350,12 +350,12 @@
 (declare-core-primitive time-it
     (safe)
   (signatures
-   ((<string> <procedure>)	=> <top>)))
+   ((<string> <procedure>)	=> <list>)))
 
 (declare-core-primitive time-and-gather
     (safe)
   (signatures
-   ((<procedure> <procedure>)	=> <top>)))
+   ((<procedure> <procedure>)	=> <list>)))
 
 (declare-parameter verbose-timer)
 

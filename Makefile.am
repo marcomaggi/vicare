@@ -466,7 +466,6 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.lexical-environment.syntactic-bindings.scm	\
 	scheme/psyntax.lexical-environment.syntax-match.scm		\
 	scheme/psyntax.lexical-environment.syntax-utilities.scm		\
-	scheme/psyntax.lexical-environment.type-identifiers.scm		\
 	scheme/psyntax.lexical-environment.type-signatures.scm		\
 	scheme/psyntax.lexical-environment.type-callables.scm		\
 	scheme/psyntax.lexical-environment.type-syntax-objects.scm	\

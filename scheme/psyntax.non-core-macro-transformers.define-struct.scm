@@ -156,7 +156,7 @@
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
 		   (lambda/std (,stru.sym)
-		     ($struct-ref ,stru.sym ,field.idx))))))
+		     ($struct-ref (unsafe-cast-signature (<struct>) ,stru.sym) ,field.idx))))))
 	unsafe-accessor*.id field*.idx field*.tag))
 
     (define unsafe-mutator-sexp*
@@ -165,8 +165,8 @@
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/std (,stru.sym ,val.sym)
-		     ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
+		   (lambda/typed (,stru.sym ,val.sym)
+		     ($struct-set! (unsafe-cast-signature (<struct>) ,stru.sym) ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
 
 ;;; --------------------------------------------------------------------
@@ -185,7 +185,7 @@
 	(define/typed ((brace ,predicate.id <boolean>) obj)
 	  ($struct/rtd? obj ',std))
 	(define-syntax ,type.id
-	  (make-struct-type-spec ',std
+	  (make-struct-type-spec (syntax ,type.id) ',std
 				 (syntax ,constructor.id) (syntax ,predicate.id)
 				 ,safe-accessors-table.sexp
 				 ,safe-mutators-table.sexp

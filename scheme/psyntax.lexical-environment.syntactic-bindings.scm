@@ -34,9 +34,6 @@
      make-syntactic-binding-descriptor/lexical-typed-var/from-data
      syntactic-binding-descriptor/lexical-typed-var?
      syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec
-     syntactic-binding-descriptor/lexical-typed-var.value.lex
-     syntactic-binding-descriptor/lexical-typed-var.value.type-id
-     syntactic-binding-descriptor/lexical-typed-var.value.assigned?
 
 ;;; global lexical variables, typed variant
      make-global-typed-variable-spec-and-maker-core-expr
@@ -52,6 +49,7 @@
      syntactic-binding-descriptor/local-macro/variable-transformer?
 
 ;;; base object-type descriptors
+     make-syntactic-binding-descriptor/object-type-name
      syntactic-binding-descriptor/object-type-name?
      syntactic-binding-descriptor/local-object-type.object-type-spec
      syntactic-binding-descriptor/local-object-type.expanded-expr
@@ -61,55 +59,42 @@
      syntactic-binding-descriptor/core-object-type.object-type-spec
 
 ;;; closure type binding
-     make-syntactic-binding-descriptor/closure-type-name
-     syntactic-binding-descriptor/closure-type-name?
      make-syntactic-binding/closure-type-name
      make-fabricated-closure-type-name
-     fabricate-closure-type-identifier
+     fabricate-closure-type-spec
 
 ;;; list sub-type binding
-     make-syntactic-binding-descriptor/list-sub-type-name
-     syntactic-binding-descriptor/list-sub-type-name?
+     syntactic-binding-descriptor/list-of-type-name?
 
 ;;; vector sub-type binding
-     make-syntactic-binding-descriptor/vector-sub-type-name
-     syntactic-binding-descriptor/vector-sub-type-name?
+     syntactic-binding-descriptor/vector-of-type-name?
 
 ;;; hard-coded core primitive with type signature binding
-     hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor!
-     syntactic-binding-descriptor/hard-coded-core-prim-typed?
+     hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor!
+     syntactic-binding-descriptor/hard-coded-typed-core-prim?
 
 ;;; core primitive with type signature binding
      syntactic-binding-descriptor/core-prim-typed?
-     core-prim-typed-binding-descriptor.prim-name
-     core-prim-typed-binding-descriptor.type-id
-     core-prim-typed-binding-descriptor.value.prim-name
-     core-prim-typed-binding-descriptor.value.type-id
+     core-prim-typed-binding-descriptor.core-prim-type-spec
 
 ;;; core built-in object-type descriptor binding
-     core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
-     syntactic-binding-descriptor/core-scheme-type-name?
-
-;;; core built-in list object-type descriptor binding
-     core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor!
-     syntactic-binding-descriptor/core-list-type-name?
+     hard-coded-core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor!
+     syntactic-binding-descriptor/hard-coded-core-scheme-type-name?
 
 ;;; Vicare struct-type name bindings
-     make-syntactic-binding-descriptor/struct-type-name
      syntactic-binding-descriptor/struct-type-name?
      struct-type-name-binding-descriptor.type-descriptor
 
 ;;; usable R6RS record-type descriptor binding
-     make-syntactic-binding-descriptor/record-type-name
      syntactic-binding-descriptor/record-type-name?
 
 ;;; hard-coded core R6RS record-type descriptor binding
      hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
-     syntactic-binding-descriptor/core-record-type-name?
+     syntactic-binding-descriptor/hard-coded-core-record-type-name?
 
 ;;; core R6RS condition object record-type descriptor binding
      hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
-     syntactic-binding-descriptor/core-condition-object-type-name?
+     syntactic-binding-descriptor/hard-coded-core-condition-object-type-name?
 
 ;;; fluid syntax bindings
      make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
@@ -137,7 +122,6 @@
 
      #| end of exports |# )
 
-(import PSYNTAX-TYPE-IDENTIFIERS)
 (import PSYNTAX-TYPE-SIGNATURES)
 (import PSYNTAX-TYPE-CALLABLES)
 
@@ -152,14 +136,16 @@
        ;;otherwise return false.
        ;;
        (and (pair? obj)
-	    (eq? (quote ?type) (syntactic-binding-descriptor.type obj)))))
+	    (eq?  (syntactic-binding-descriptor.type obj)
+		  (quote ?type)))))
     ((_ ?who ?type0 ?type1 ?type ...)
      (define (?who obj)
        ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor of  type  ?TYPE;
        ;;otherwise return false.
        ;;
        (and (pair? obj)
-	    (memq (quote (?type0 ?type1 ?type ...)) (syntactic-binding-descriptor.type obj)))))
+	    (memq (syntactic-binding-descriptor.type obj)
+		  (quote (?type0 ?type1 ?type ...))))))
     ))
 
 (define (%alist-ref-or-null ell idx)
@@ -300,15 +286,13 @@
   ;;
   (make-syntactic-binding-descriptor lexical-typed (cons lts lts.core-expr)))
 
-(define (make-syntactic-binding-descriptor/lexical-typed-var/from-data type-id lex)
-  (define lts
-    (make-lexical-typed-variable-spec type-id lex))
-  (define lts-maker.core-expr
-    (build-application no-source
-      (build-primref no-source 'make-lexical-typed-variable-spec)
-      (list (build-data no-source type-id)
-	    (build-data no-source lex))))
-  (make-syntactic-binding-descriptor/lexical-typed-var lts lts-maker.core-expr))
+(define* (make-syntactic-binding-descriptor/lexical-typed-var/from-data {variable.ots object-type-spec?} {lex gensym?})
+  (let* ((lts			(make-lexical-typed-variable-spec variable.ots lex))
+	 (lts-maker.core-expr	(build-application no-source
+				  (build-primref no-source 'make-lexical-typed-variable-spec)
+				  (list (build-data no-source (object-type-spec.name variable.ots))
+					(build-data no-source lex)))))
+    (make-syntactic-binding-descriptor/lexical-typed-var lts lts-maker.core-expr)))
 
 ;;; --------------------------------------------------------------------
 
@@ -323,37 +307,6 @@
   ;;
   (cadr ?descriptor))
 
-;;; --------------------------------------------------------------------
-
-(define-syntax-rule (syntactic-binding-descriptor/lexical-typed-var.value.lex ?descriptor-value)
-  ;;Accessor for the  lexical gensym in a typed lexical  variable's syntactic binding
-  ;;descriptor.
-  ;;
-  ;;A syntactic  binding representing  a typed lexical  variable has  descriptor with
-  ;;format:
-  ;;
-  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
-  ;;
-  (lexical-typed-variable-spec.lex (car ?descriptor-value)))
-
-(define-syntax-rule (syntactic-binding-descriptor/lexical-typed-var.value.type-id ?descriptor-value)
-  ;;Accessor for the type identifier in  a typed lexical variable's syntactic binding
-  ;;descriptor.
-  ;;
-  ;;A syntactic binding representing a lexical variable has descriptor with format:
-  ;;
-  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
-  ;;
-  (lexical-typed-variable-spec.type-id (car ?descriptor-value)))
-
-(define-syntax syntactic-binding-descriptor/lexical-typed-var.value.assigned?
-  (syntax-rules ()
-    ((_ ?descriptor-value)
-     (lexical-typed-variable-spec.assigned? (car ?descriptor-value)))
-    ((_ ?descriptor-value ?bool)
-     (lexical-typed-variable-spec.assigned?-set! (car ?descriptor-value) (and ?bool #t)))
-    ))
-
 
 ;;;; syntactic binding descriptor: global typed lexical variables
 ;;
@@ -366,14 +319,13 @@
 ;;where ?LOC is a loc gensym holding an instance of "<global-typed-variable-spec>".
 ;;
 
-(define* (make-global-typed-variable-spec-and-maker-core-expr {lts lexical-typed-variable-spec?} variable-loc)
-  (let* ((type-id		(typed-variable-spec.type-id             lts))
-	 (gts			(make-global-typed-variable-spec type-id variable-loc))
-	 (core-expr		(build-application no-source
-				  (build-primref no-source 'make-global-typed-variable-spec)
-				  (list (build-data no-source type-id)
-					(build-data no-source variable-loc)))))
-    (values gts core-expr)))
+(define* (make-global-typed-variable-spec-and-maker-core-expr {variable.ots object-type-spec?} variable.loc)
+  (let* ((variable.gts	(make-global-typed-variable-spec variable.ots variable.loc))
+	 (core-expr	(build-application no-source
+			  (build-primref no-source 'make-global-typed-variable-spec)
+			  (list (build-data no-source variable.ots)
+				(build-data no-source variable.loc)))))
+    (values variable.gts core-expr)))
 
 ;;; --------------------------------------------------------------------
 
@@ -477,6 +429,53 @@
 	      (?pred (syntactic-binding-descriptor/core-object-type.object-type-spec obj)))
 	     (else #f))))))
 
+(define* (make-syntactic-binding-descriptor/object-type-name {ots object-type-spec?} rhs.core)
+  ;;Given an instance  of "<object-type-spec>" and the core  language expression used
+  ;;to build it:  build and return a syntactic binding's  descriptor representing the
+  ;;type.  This  function is used to  define syntactic bindings associated  with type
+  ;;identifiers.
+  ;;
+  ;;Examples:
+  ;;
+  ;;* For Vicare's structs, the definition:
+  ;;
+  ;;   (define-struct ?type-name ...)
+  ;;
+  ;;expands into:
+  ;;
+  ;;   (define-syntax ?type-name (make-struct-type-spec ...))
+  ;;
+  ;;and the syntactic identifier ?TYPE-NAME is associated to the descriptor:
+  ;;
+  ;;   (local-object-type-name . (#<struct-type-spec> . ?rhs.core))
+  ;;
+  ;;* For R6RS records, the definition:
+  ;;
+  ;;   (define-record-type ?type-name ...)
+  ;;
+  ;;expands into:
+  ;;
+  ;;   (define-syntax ?type-name (make-record-type-spec ...))
+  ;;
+  ;;and the syntactic identifier ?TYPE-NAME is associated to the descriptor:
+  ;;
+  ;;   (local-object-type-name . (#<record-type-spec> . ?rhs.core))
+  ;;
+  ;;* For homogeneous list types, the definition:
+  ;;
+  ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
+  ;;
+  ;;expands into:
+  ;;
+  ;;   (define-syntax <list-of-fixnums>
+  ;;     (make-list-of-type-spec #'<fixnum> #'<list-of-fixnums>))
+  ;;
+  ;;and the syntactic identifier "<list-of-fixnums>" is associated to the descriptor:
+  ;;
+  ;;   (local-object-type-name . (#<list-of-type-spec> . ?rhs.core))
+  ;;
+  (make-syntactic-binding-descriptor local-object-type-name (cons ots rhs.core)))
+
 ;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
 ;;object-type specification; otherwise return  false.  Syntactic identifiers bound to
 ;;such syntactic  binding descriptors  can be  used with  the generic  syntaxes: NEW,
@@ -559,16 +558,6 @@
 
 ;;;; syntactic binding descriptor: closure type binding
 
-(define* (make-syntactic-binding-descriptor/closure-type-name {ots closure-type-spec?} ots-maker.core-expr)
-  ;;Build and  return a  syntactic binding's  descriptor representing  a closure-type
-  ;;name.  Such type is a sub-type of "<procedure>".
-  ;;
-  ;;The returned syntactic binding's descriptor has the format:
-  ;;
-  ;;   (local-object-type-name . (#<closure-type-spec> . ?ots-maker.core-expr))
-  ;;
-  (make-syntactic-binding-descriptor local-object-type-name (cons ots ots-maker.core-expr)))
-
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;closure object-type specification; otherwise return false.
 ;;
@@ -580,10 +569,10 @@
   ;;of  a closure  object  to be  used  at  expand-time.  This  function  is used  by
   ;;INTERNAL-DEFINE when defining the syntactic binding of a function.
   ;;
-  ;;TYPE-ID must  the syntacitc identifier  that will  be bound to  the closure-type.
-  ;;SIGNATURE must be an instance of  "<callable-signature>".  RIB must be the rib in
-  ;;which the syntactic binding's identifier is associated to its label.  LEXENV must
-  ;;be the LEXENV in which the label is associated to the descriptor.
+  ;;The   argument  CLOSURE.OTS   must  be   an  instance   of  "<closure-type-spec>"
+  ;;representing the type of the closure.  RIB must be the rib in which the syntactic
+  ;;binding's identifier  is associated to its  label.  LEXENV must be  the LEXENV in
+  ;;which the label is associated to the descriptor.
   ;;
   ;;The established syntactic binding can be  included in the export environment of a
   ;;library.
@@ -595,14 +584,17 @@
   ;;   typedef int func_t (double a, char * b);
   ;;   func_t * the_func = func;
   ;;
-  ((type-id signature rib lexenv)
-   (make-syntactic-binding/closure-type-name type-id signature rib lexenv #f))
-  ((type-id signature rib lexenv shadow/redefine-bindings?)
-   (let* ((ots			(make-closure-type-spec signature))
-	  (ots.core-expr	(build-application no-source
+  (({closure.ots closure-type-spec?} {rib rib?} lexenv)
+   (make-syntactic-binding/closure-type-name closure.ots rib lexenv #f))
+  (({closure.ots closure-type-spec?} {rib rib?} lexenv shadow/redefine-bindings?)
+   (let* ((ots.core-expr	(build-application no-source
 				  (build-primref no-source 'make-closure-type-spec)
-				  (list (build-data no-source signature))))
-	  (type-id.descr	(make-syntactic-binding-descriptor/closure-type-name ots ots.core-expr))
+				  (list (build-data no-source
+					  (object-type-spec.name closure.ots))
+					(build-data no-source
+					  (closure-type-spec.signature closure.ots)))))
+	  (type-id.descr	(make-syntactic-binding-descriptor/object-type-name closure.ots ots.core-expr))
+	  (type-id		(object-type-spec.name closure.ots))
 	  (type-id.lab		(generate-label-gensym type-id)))
      (receive-and-return (lexenv^)
 	 (push-entry-on-lexenv type-id.lab type-id.descr lexenv)
@@ -615,94 +607,23 @@
 			   "anonymous")
 			 "/closure-signature>")))
 
-;;; --------------------------------------------------------------------
-;;; fabricated procedure type identifiers
-;;
-;;Let's consider the following code in the C language:
-;;
-;;   int func (double a, char * b) { ... }
-;;   typedef int func_t (double a, char * b);
-;;   func_t * the_func = func;
-;;
-;;we need a pointer to the function "func()",  so we define the type "func_t" as type
-;;of the pointer to function "the_func".  We do something similar in Vicare.
-;;
-;;When the use of a core macro DEFINE/TYPED is expanded from the input form:
-;;
-;;   (define/typed (?who . ?formals) . ?body)
-;;
-;;a QDEF is created, then the syntactic identifier ?WHO is bound, finally the QDEF is
-;;expanded.  When the syntactic  binding for ?WHO is created: what  is its type?  For
-;;sure it must be a sub-type of "<procedure>", but we would like to keep informations
-;;about the signature of the closure object definition.
-;;
-;;Similarly,  when the  use of  a core  macro LAMBDA  or CASE-LAMBDA  is expanded:  a
-;;signature  for  the  resulting closure  object  is  built;  it  is an  instance  of
-;;"<clambda-signature>".  For example, when the following LAMBDA syntax is expanded:
-;;
-;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
-;;     (+ 1 a b))
-;;
-;;the LAMBDA parser builds the following "<clambda-clause-signature>" struct:
-;;
-;;   #[<clambda-clause-signature>
-;;       retvals=#[<type-signature> tags=(#'<exact-integer>)]
-;;       argvals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
-;;
-;;To represent  the type of  the closure object: we  create a fresh  type identifier,
-;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
-;;VALUE field of the label gensym.
-;;
-(define* ({fabricate-closure-type-identifier type-identifier?} {who false-or-symbol?} {signature callable-signature?})
-  ;;WHO must be false or a symbol representing the name of the closure object; it can
-  ;;be a  random gensym  when no  name is given.   SIGNATURE must  be an  instance of
-  ;;"<callable-signature>" or one of its sub-types.
-  ;;
-  (let* ((type-id.sym  (make-fabricated-closure-type-name who))
-	 (type-id.lab  (generate-label-gensym type-id.sym)))
-    (receive-and-return (type-id)
-	(make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)
-      (let ((spec          (make-closure-type-spec signature))
-	    (expanded-expr #f))
-	(set-symbol-value! type-id.lab (make-syntactic-binding-descriptor/closure-type-name spec expanded-expr))))))
-
 
 ;;;; syntactic binding descriptor: list sub-type binding
-
-(define* (make-syntactic-binding-descriptor/list-sub-type-name {ots typed-list-type-spec?} ots-maker.core-expr)
-  ;;Build and  return a syntactic  binding's descriptor  representing the name  of an
-  ;;object-type which is a sub-type of "<list>".
-  ;;
-  ;;The returned syntactic binding's descriptor has the format:
-  ;;
-  ;;   (local-object-type-name . (#<list-type-spec> . ?ots-maker.core-expr))
-  ;;
-  (make-syntactic-binding-descriptor local-object-type-name (cons ots ots-maker.core-expr)))
 
 ;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
 ;;object-type specification for a "<list>" sub-type; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/list-sub-type-name?
-  typed-list-type-spec?)
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/list-of-type-name?
+  list-of-type-spec?)
 
 
 ;;;; syntactic binding descriptor: vector sub-type binding
 
-(define* (make-syntactic-binding-descriptor/vector-sub-type-name {ots typed-vector-type-spec?} ots-maker.core-expr)
-  ;;Build and  return a syntactic  binding's descriptor  representing the name  of an
-  ;;object-type which is a sub-type of "<vector>".
-  ;;
-  ;;The returned syntactic binding's descriptor has the format:
-  ;;
-  ;;   (local-object-type-name . (#<vector-type-spec> . ?ots-maker.core-expr))
-  ;;
-  (make-syntactic-binding-descriptor local-object-type-name (cons ots ots-maker.core-expr)))
-
 ;;Return true  if the argument  is a  syntactic binding's descriptor  representing an
 ;;object-type specification for a "<vector>" sub-type; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/vector-sub-type-name?
-  typed-vector-type-spec?)
+(define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/vector-of-type-name?
+  vector-of-type-spec?)
 
 
 ;;;; syntactic binding descriptor: core primitive
@@ -734,9 +655,9 @@
 
 ;;;; syntactic binding descriptor: hard-coded core primitive with type signature binding
 
-(module (hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor!)
+(module (hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor!)
 
-  (define (hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor! descriptor)
+  (define* (hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor! descriptor)
     ;;Mutate a syntactic  binding's descriptor from the representation  of a built-in
     ;;core primitive (established by the boot image) to the representation of a typed
     ;;core  primitive in  the  format  usable by  the  expander.  Return  unspecified
@@ -780,81 +701,201 @@
       (let ((core-prim.sym		(vector-ref hard-coded-sexp 0))
 	    (safety.boolean		(vector-ref hard-coded-sexp 1))
 	    (signature*.sexp		(vector-ref hard-coded-sexp 2)))
-	(let ((type-id			(fabricate-closure-type-identifier core-prim.sym
-									   (%signature-sexp->callable-signature signature*.sexp))))
+	(let ((closure.ots (fabricate-closure-type-spec core-prim.sym (%signature-sexp->callable-signature core-prim.sym signature*.sexp))))
 	  (set-car! descriptor 'core-prim-typed)
-	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean type-id)
+	  (set-cdr! descriptor (cons (make-core-prim-type-spec core-prim.sym safety.boolean closure.ots)
 				     hard-coded-sexp))))))
 
-  (define (%signature-sexp->callable-signature signature*.sexp)
-    (make-clambda-signature (map %signature-sexp->clause-signature signature*.sexp)))
+  (define* (%signature-sexp->callable-signature core-prim.sym signature*.sexp)
+    (let ((clause-signature* (map (lambda (signature.sexp)
+				    (%signature-sexp->clause-signature core-prim.sym signature.sexp))
+			       signature*.sexp)))
+      (make-clambda-signature clause-signature*)))
 
-  (define (%signature-sexp->clause-signature sexp)
+  (define* (%signature-sexp->clause-signature core-prim.sym sexp)
     (let* ((retvals.sexp (car sexp))
   	   (formals.sexp (cdr sexp))
-  	   (retvals.stx  (%any-list->ids retvals.sexp))
-  	   (formals.stx  (%any-list->ids formals.sexp)))
-      (make-clambda-clause-signature (make-type-signature retvals.stx)
-				     (make-type-signature formals.stx))))
+  	   (retvals.stx  (%any-list->ids core-prim.sym retvals.sexp))
+  	   (formals.stx  (%any-list->ids core-prim.sym formals.sexp)))
+      (let ((retvals.sig (with-exception-handler
+			     (lambda (E)
+			       (raise-continuable
+				(condition E
+					   (make-who-condition core-prim.sym)
+					   (make-message-condition "error initialising core primitive retvals signature"))))
+			   (lambda ()
+			     (make-type-signature retvals.stx))))
+	    (formals.sig (with-exception-handler
+			     (lambda (E)
+			       (raise-continuable
+				(condition E
+					   (make-who-condition core-prim.sym)
+					   (make-message-condition "error initialising core primitive formals signature"))))
+			   (lambda ()
+			     (make-type-signature formals.stx)))))
+	(make-clambda-clause-signature retvals.sig formals.sig))))
 
-  (define (%any-list->ids ell)
-    ;;Convert a proper  or improper list of symbols representing  core type identifiers
-    ;;into the corresponding proper or improper list of type identifiers.
-    ;;
-    ;;NOTE When  ELL is  an improper  list: in  the "improper"  position there  is as
-    ;;symbol representing an  object-type name, not a list-type  name.  (Marco Maggi;
-    ;;Wed Oct 28, 2015)
-    ;;
-    (cond ((symbol? ell)
-	   (if (eq? ell '<no-return>)
-	       (core-prim-id ell)
-	     (fabricate-list-type-identifier (core-prim-id ell))))
-  	  ((pair? ell)
-  	   (cons (core-prim-id   (car ell))
-  		 (%any-list->ids (cdr ell))))
-  	  (else '())))
+  (module (%any-list->ids)
 
-  #| end of module |# )
+    (define (%any-list->ids core-prim.sym ell)
+      ;;Recursive function.  Convert a proper  or improper list of sexps representing
+      ;;core type selections  into the corresponding proper or improper  list of type
+      ;;identifiers.  The initial full ELL should represent a type signature.
+      ;;
+      ;;If  ELL is  a in  improper list,  in the  improper position  only one  of the
+      ;;following is accepted:
+      ;;
+      ;;   <list>
+      ;;   <no-return>
+      ;;   (list-of ?item-type)
+      ;;
+      ;;for example:
+      ;;
+      ;;   (<fixnum> <flonum> . <no-return>)
+      ;;   (<fixnum> <flonum> . <list>)
+      ;;   (<fixnum> <flonum> . (list-of <string>))
+      ;;
+      (cond ((symbol? ell)
+	     ;;The type selection  is a symbol in tail position.   For example the full
+	     ;;signature is one among:
+	     ;;
+	     ;;   (<fixnum> <flonum> . <no-return>)
+	     ;;   (<fixnum> <flonum> . <list>)
+	     ;;
+	     (case ell
+	       ((<no-return>)
+		(<no-return>-type-id))
+	       ((<list>)
+		(<list>-type-id))
+	       (else
+		(assertion-violation core-prim.sym
+		  "invalid type selection in hard-coded core primitive specification"
+		  ell))))
+
+	    ((%list-of-selection? ell)
+	     ;;The type selection is:
+	     ;;
+	     ;;   (list-of ?item-type)
+	     ;;
+	     ;;in tail position.  For example the full signature is:
+	     ;;
+	     ;;   (<fixnum> <flonum> . (list-of <string>))
+	     ;;
+	     (list (list-of-id) (core-prim-id (cadr ell))))
+
+	    ((null? ell)
+	     ;;The type signature is a proper list.  Good.  End of recursion.
+	     '())
+
+	    ((pair? ell)
+	     (let ((thing (car ell)))
+	       (cons (cond ((symbol? thing)
+			    (core-prim-id thing))
+			   ((%list-of-selection? thing)
+			    ;;The type selection is:
+			    ;;
+			    ;;   (list-of ?item-type)
+			    ;;
+			    (list (list-of-id) (core-prim-id (cadr thing))))
+			   ((%vector-of-selection? thing)
+			    ;;The type selection is:
+			    ;;
+			    ;;   (vector-of ?item-type)
+			    ;;
+			    (list (vector-of-id) (core-prim-id (cadr thing))))
+			   (else
+			    (assertion-violation core-prim.sym
+			      "invalid type selection in hard-coded core primitive specification"
+			      thing)))
+		     (%any-list->ids core-prim.sym (cdr ell)))))
+
+	    (else
+	     (assertion-violation core-prim.sym
+	       "invalid type selection in hard-coded core primitive specification"
+	       ell))))
+
+    (define (%list-of-selection? X)
+      ;;Return true if X is the symbolic expression:
+      ;;
+      ;;   (list-of ?item-type)
+      ;;
+      (and (pair? X)
+	   (eq? 'list-of (car X))
+	   (pair?   (cdr  X))
+	   (symbol? (cadr X))
+	   (null?   (cddr X))))
+
+    (define (%vector-of-selection? X)
+      ;;Return true if X is the symbolic expression:
+      ;;
+      ;;   (vector-of ?item-type)
+      ;;
+      (and (pair? X)
+	   (eq? 'vector-of (car X))
+	   (pair?   (cdr  X))
+	   (symbol? (cadr X))
+	   (null?   (cddr X))))
+
+    #| end of module: %ANY-LIST->IDS |# )
+
+  #| end of module: HARD-CODED-TYPED-CORE-PRIM-BINDING-DESCRIPTOR->TYPE-CORE-PRIM-BINDING-DESCRIPTOR! |# )
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;hard-coded typed core primitive; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-prim-typed?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-typed-core-prim?
   $core-prim-typed)
 
 ;;; --------------------------------------------------------------------
-
-(case-define* fabricate-list-type-identifier
-  ;;Given a type identifier return a  type identifier representing a (possibly empty)
-  ;;list of items having that type.
+;;; fabricated procedure type identifiers
+;;
+;;Let's consider the following code in the C language:
+;;
+;;   int func (double a, char * b) { ... }
+;;   typedef int func_t (double a, char * b);
+;;   func_t * the_func = func;
+;;
+;;we need a pointer to the function "func()",  so we define the type "func_t" as type
+;;of the pointer to function "the_func".  We do something similar in Vicare.
+;;
+;;When the use of a core macro DEFINE/TYPED is expanded from the input form:
+;;
+;;   (define/typed (?who . ?formals) . ?body)
+;;
+;;a QDEF is created, then the syntactic identifier ?WHO is bound, finally the QDEF is
+;;expanded.  When the syntactic  binding for ?WHO is created: what  is its type?  For
+;;sure it must be a sub-type of "<procedure>", but we would like to keep informations
+;;about the signature of the closure object definition.
+;;
+;;Similarly,  when the  use of  a core  macro LAMBDA  or CASE-LAMBDA  is expanded:  a
+;;signature  for  the  resulting closure  object  is  built;  it  is an  instance  of
+;;"<clambda-signature>".  For example, when the following LAMBDA syntax is expanded:
+;;
+;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
+;;     (+ 1 a b))
+;;
+;;the LAMBDA parser builds the following "<clambda-clause-signature>" struct:
+;;
+;;   #[<clambda-clause-signature>
+;;       retvals=#[<type-signature> tags=(#'<exact-integer>)]
+;;       argvals=#[<type-signature> tags=(#'<fixnum> #'<fixnum>)]]
+;;
+;;To represent  the type of  the closure object: we  create a fresh  type identifier,
+;;bound in  the top-level rib with  the syntactic binding's descriptor  stored in the
+;;VALUE field of the label gensym.
+;;
+(define* ({fabricate-closure-type-spec closure-type-spec?} {who false-or-symbol?} {signature callable-signature?})
+  ;;WHO must be false or a symbol representing the name of the closure object; it can
+  ;;be a  random gensym  when no  name is given.   SIGNATURE must  be an  instance of
+  ;;"<callable-signature>" or one of its sub-types.
   ;;
-  ((item-type.id)
-   (fabricate-list-type-identifier item-type.id (current-inferior-lexenv) #f))
-  ((item-type.id lexenv)
-   (fabricate-list-type-identifier item-type.id lexenv #f))
-  ((item-type.id lexenv input-form.stx)
-   (define (make-fabricated-list-type-name id)
-     (gensym (string-append (symbol->string (identifier->symbol id)) "*")))
-   (syntax-match item-type.id (<char> <string> <pointer> <symbol>)
-     (<char>		(core-prim-id '<char*>))
-     (<string>		(core-prim-id '<string*>))
-     (<symbol>		(core-prim-id '<symbol*>))
-     (<pointer>		(core-prim-id '<pointer*>))
-     (else
-      (let ((item-ots (id->object-type-specification __who__ input-form.stx item-type.id lexenv)))
-	(or (object-type-spec.memoised-list-id item-ots)
-	    (cond ((top-type-id?     item-type.id)
-		   (receive-and-return (list-type.id)
-		       (list-type-id)
-		     (object-type-spec.memoised-list-id-set! item-ots list-type.id)))
-		  (else
-		   (let* ((list-type.sym	(make-fabricated-list-type-name item-type.id))
-			  (list-type.lab	(generate-label-gensym list-type.sym))
-			  (list-ots		(make-typed-list-type-spec item-type.id)))
-		     (receive-and-return (list-type.id)
-			 (make-top-level-syntactic-identifier-from-source-name-and-label list-type.sym list-type.lab)
-		       (set-symbol-value! list-type.lab (make-syntactic-binding-descriptor/list-sub-type-name list-ots #f))
-		       (object-type-spec.memoised-list-id-set! item-ots list-type.id)))))))))))
+  (let* ((type-id.sym	(make-fabricated-closure-type-name who))
+	 (type-id.lab	(generate-label-gensym type-id.sym))
+	 (type-id	(make-top-level-syntactic-identifier-from-source-name-and-label type-id.sym type-id.lab)))
+    (receive-and-return (closure.ots)
+	(make-closure-type-spec type-id signature)
+      (let ((expanded-expr #f))
+	(set-symbol-value! type-id.lab (make-syntactic-binding-descriptor/object-type-name closure.ots expanded-expr))))))
 
 
 ;;;; syntactic binding descriptor: core primitive with type signature binding
@@ -870,26 +911,13 @@
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-prim-typed?
   core-prim-typed)
 
-;;; --------------------------------------------------------------------
-
-(define-syntax-rule (core-prim-typed-binding-descriptor.prim-name ?descriptor)
-  (core-prim-type-spec.name (cadr ?descriptor)))
-
-(define-syntax-rule (core-prim-typed-binding-descriptor.type-id ?descriptor)
-  (typed-variable-spec.type-id (cadr ?descriptor)))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax-rule (core-prim-typed-binding-descriptor.value.prim-name ?descriptor-value)
-  (core-prim-type-spec.name (car ?descriptor-value)))
-
-(define-syntax-rule (core-prim-typed-binding-descriptor.value.type-id ?descriptor-value)
-  (typed-variable-spec.type-id (car ?descriptor-value)))
+(define-syntax-rule (core-prim-typed-binding-descriptor.core-prim-type-spec ?descriptor)
+  (cadr ?descriptor))
 
 
 ;;;; syntactic binding descriptor: core built-in object-type descriptor binding
 
-(define (core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descriptor)
+(define* (hard-coded-core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descriptor)
   ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
   ;;built-in object-type name (established by the  boot image) to a representation of
   ;;an object-type  name in the  format usable  by the expander.   Return unspecified
@@ -918,92 +946,26 @@
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
 	 (descr.value		(syntactic-binding-descriptor.value descriptor))
-	 (parent-id		(cond ((list-ref descr.value 1)
-				       => core-prim-id)
-				      (else #f)))
+	 (type-name.sym		(car descr.value))
+	 (parent-name.sexp	(list-ref descr.value 1))
 	 (constructor.sexp	(bless (list-ref descr.value 2)))
 	 (type-predicate.sexp	(bless (list-ref descr.value 3)))
 	 (methods-table		(%alist-ref-or-null descr.value 4)))
-    (define spec
-      (make-scheme-type-spec parent-id constructor.sexp type-predicate.sexp methods-table))
-    (set-car! descriptor 'core-object-type-name)
-    (set-cdr! descriptor (cons spec descr.value))))
+    (let ((type-name.id		(core-prim-id type-name.sym))
+	  (parent-name.id	(and parent-name.sexp (core-prim-id parent-name.sexp))))
+      (let* ((parent-name.ots	(and parent-name.id (id->object-type-specification __who__ #f parent-name.id (make-empty-lexenv))))
+	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots constructor.sexp type-predicate.sexp methods-table)))
+	(set-car! descriptor 'core-object-type-name)
+	(set-cdr! descriptor (cons type-name.ots descr.value))))))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;built-in Scheme object-type name; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-scheme-type-name?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-scheme-type-name?
   $core-scheme-object-type-name)
 
 
-;;;; syntactic binding descriptor: core built-in list object-type descriptor binding
-
-(define (core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor! descriptor)
-  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
-  ;;built-in  list   object-type  name   (established  by  the   boot  image)   to  a
-  ;;representation of a  list object-type name in the format  usable by the expander.
-  ;;Return unspecified values.
-  ;;
-  ;;The core descriptor has the format:
-  ;;
-  ;;   ($core-list-object-type-name . ?hard-coded-sexp)
-  ;;
-  ;;and ?HARD-CODED-SEXP has the format:
-  ;;
-  ;;   (?type-name ?item-name)
-  ;;
-  ;;and the usable descriptor has the format:
-  ;;
-  ;;   (core-object-type-name . (#<list-type-spec> . ?hard-coded-sexp))
-  ;;
-  ;;?ITEM-NAME is the symbol name of the type of contained in the list.
-  ;;
-  ;;Syntactic binding  descriptors of  type "$core-list-object-type-name" are  hard-coded in
-  ;;the boot image  and generated directly by the makefile  at boot image build-time.
-  ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
-  ;;descriptor from the label: this function is used to convert the descriptor.
-  ;;
-  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (descr.value		(syntactic-binding-descriptor.value descriptor))
-	 (item-id		(core-prim-id (list-ref descr.value 1))))
-    (define ots
-      (make-typed-list-type-spec item-id))
-    (set-car! descriptor 'core-object-type-name)
-    (set-cdr! descriptor (cons ots descr.value))))
-
-;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
-;;built-in Scheme object-type name; otherwise return false.
-;;
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-list-type-name?
-  $core-list-object-type-name)
-
-
 ;;;; syntactic binding descriptor: Vicare struct-type name bindings
-
-(define* (make-syntactic-binding-descriptor/struct-type-name {sts struct-type-spec?} expanded-expr)
-  ;;Build  and return  a syntactic  binding's descriptor  representing a  struct-type
-  ;;name.
-  ;;
-  ;;The argument STS must be an instance of "<struct-type-spec>".
-  ;;
-  ;;Given the definition:
-  ;;
-  ;;   (define-struct ?type-name (?field-name ...))
-  ;;
-  ;;the syntax use DEFINE-STRUCT expands into multiple forms, one of which is:
-  ;;
-  ;;   (define-syntax ?type-name
-  ;;     (make-struct-type-spec ?std ...))
-  ;;
-  ;;where   ?STD   is   a   struct-type  descriptor   built   at   expand-time   with
-  ;;MAKE-STRUCT-TYPE.  Syntactic bindings of this  type are generated when evaluating
-  ;;the right-hand side of a DEFINE-SYNTAX returns the return value of this function.
-  ;;
-  ;;The returned descriptor has format:
-  ;;
-  ;;   (local-object-type-name . (#<struct-type-spec> . ?expanded-expr))
-  ;;
-  (make-syntactic-binding-descriptor local-object-type-name (cons sts expanded-expr)))
 
 ;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
 ;;struct-type specification; otherwise return false.
@@ -1019,29 +981,6 @@
 
 
 ;;;; syntactic binding descriptor: usable R6RS record-type descriptor binding
-
-(define* (make-syntactic-binding-descriptor/record-type-name {rts record-type-spec?} expanded-expr)
-  ;;Build and return a syntactic binding's descriptor representing a record-type name
-  ;;defined by the syntactic layer.  We handle this entry in a way that is similar to
-  ;;a local macro.
-  ;;
-  ;;Given the syntax use:
-  ;;
-  ;;   (define-record-type ?type-name ?clause ...)
-  ;;
-  ;;the output form of its expansion contains multiple forms, one of which is:
-  ;;
-  ;;   (define-syntax ?type-name
-  ;;     (make-record-type-spec ?arg ...))
-  ;;
-  ;;Syntactic bindings of this type are generated when evaluating the right-hand side
-  ;;of a DEFINE-SYNTAX returns an instance of "<record-type-spec>".
-  ;;
-  ;;The returned descriptor has the format:
-  ;;
-  ;;   (local-object-type-name . (#<record-type-spec> . ?expanded-expr))
-  ;;
-  (make-syntactic-binding-descriptor local-object-type-name (cons rts expanded-expr)))
 
 ;;Return true if the argument is a syntactic binding's descriptor representing a base
 ;;R6RS record-type specification; otherwise return false.
@@ -1085,10 +1024,11 @@
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
-	 (rtd-id		(core-prim-id (list-ref hard-coded-sexp 1)))
-	 (rcd-id		(core-prim-id (list-ref hard-coded-sexp 2)))
-	 (super-protocol-id	#f)
-	 (parent-id		(cond ((list-ref hard-coded-sexp 3)
+	 (type-name.id		(core-prim-id (car hard-coded-sexp)))
+	 (rtd.id		(core-prim-id (list-ref hard-coded-sexp 1)))
+	 (rcd.id		(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (super-protocol.id	#f)
+	 (parent.id		(cond ((list-ref hard-coded-sexp 3)
 				       => core-prim-id)
 				      (else #f)))
 	 (constructor-sexp	(bless (list-ref hard-coded-sexp 4)))
@@ -1097,7 +1037,7 @@
 	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
 	 (mutators-table	'())
 	 (methods-table		accessors-table)
-	 (ots			(make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
+	 (ots			(make-record-type-spec type-name.id rtd.id rcd.id super-protocol.id parent.id
 						       constructor-sexp destructor-sexp type-predicate-sexp
 						       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'core-object-type-name)
@@ -1106,7 +1046,7 @@
 ;;Return true if the argument is a syntactic binding's descriptor representing a R6RS
 ;;record-type descriptor established by the boot image; otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-record-type-name?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-record-type-name?
   $core-record-type-name)
 
 
@@ -1139,20 +1079,22 @@
   ;;
   (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
 	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
-	 (rtd-id		(core-prim-id (list-ref hard-coded-sexp 1)))
-	 (rcd-id		(core-prim-id (list-ref hard-coded-sexp 2)))
-	 (super-protocol-id	#f)
-	 (parent-id		(cond ((list-ref hard-coded-sexp 3)
+	 (type-name.id		(core-prim-id (car hard-coded-sexp)))
+	 (rtd.id		(core-prim-id (list-ref hard-coded-sexp 1)))
+	 (rcd.id		(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (super-protocol.id	#f)
+	 (parent.id		(cond ((list-ref hard-coded-sexp 3)
 				       => core-prim-id)
 				      (else #f)))
-	 (constructor-id	(bless (list-ref hard-coded-sexp 4)))
-	 (destructor-id		#f)
-	 (type-predicate-id	(bless (list-ref hard-coded-sexp 5)))
+	 (constructor.id	(core-prim-id (list-ref hard-coded-sexp 4)))
+	 (destructor.id		#f)
+	 (type-predicate.id	(core-prim-id (list-ref hard-coded-sexp 5)))
 	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
 	 (mutators-table	'())
 	 (methods-table		accessors-table)
-	 (ots			(make-record-type-spec rtd-id rcd-id super-protocol-id parent-id
-						       constructor-id destructor-id type-predicate-id
+	 (ots			(make-record-type-spec type-name.id
+						       rtd.id rcd.id super-protocol.id parent.id
+						       constructor.id destructor.id type-predicate.id
 						       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
@@ -1161,7 +1103,7 @@
 ;;condition object record-type descriptor established  by the boot image (for example
 ;;"&who", "&error", et cetera); otherwise return false.
 ;;
-(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/core-condition-object-type-name?
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-condition-object-type-name?
   $core-condition-object-type-name)
 
 

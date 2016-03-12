@@ -734,6 +734,10 @@
     (define-enumeration				(macro . define-enumeration))
     (define-condition-type			(macro . define-condition-type))
 ;;;
+    (pair-of					(macro . pair-of))
+    (list-of					(macro . list-of))
+    (vector-of					(macro . vector-of))
+;;;
     (define					(macro . define))
     (case-define				(macro . case-define))
 ;;;
@@ -813,16 +817,26 @@
 ;;sourced in the "ikarus.*" files, where another definition for DEFINE-SCHEME-TYPE is
 ;;present.
 ;;
-(define-syntax (define-scheme-type stx)
+(define-syntax* (define-scheme-type stx)
   (syntax-case stx (methods)
     ((?kwd   ?type-name ?parent-name ?maker ?pred)
      #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
     ((_      ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
-     #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-		  (quote (?type-name
-			  ($core-scheme-object-type-name
-			   . (?type-name ?parent-name ?maker ?pred
-					 ((?method-name . ?method-implementation-procedure) ...)))))))
+     (begin
+       (when (let ((prnt #'?parent-name))
+	       (and (identifier? prnt)
+		    (or (free-identifier=? prnt #'<no-return>)
+			(free-identifier=? prnt #'<void>)
+			(free-identifier=? prnt #'<null>)
+			(free-identifier=? prnt #'<empty-vector>))))
+	 (assertion-violation __who__
+	   "attempt to use a sealed object-type as parent of object-type specification"
+	   #'type-name #'?parent-name))
+       #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+		    (quote (?type-name
+			    ($core-scheme-object-type-name
+			     . (?type-name ?parent-name ?maker ?pred
+					   ((?method-name . ?method-implementation-procedure) ...))))))))
     ))
 
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
@@ -831,33 +845,6 @@
 (include "makefile.scheme-object-types.scm"	#t)
 (include "makefile.built-in-record-types.scm"	#t)
 
-
-;;;; core syntactic binding descriptors: built-in list object types
-
-(define-syntax (define-list-type stx)
-  (syntax-case stx ()
-    ((_ ?type-name ?item-name)
-     #'(quote (?type-name
-	       ($core-list-object-type-name
-		. (?type-name ?item-name)))))
-    ))
-
-(define-constant VICARE-CORE-BUILT-IN-LIST-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-  (list
-
-   (define-list-type <char*>
-       <char>)
-
-   (define-list-type <string*>
-       <string>)
-
-   (define-list-type <pointer*>
-       <pointer>)
-
-   (define-list-type <symbol*>
-       <symbol>)
-
-   ))
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
@@ -866,8 +853,7 @@
   (append VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-	  VICARE-CORE-BUILT-IN-LIST-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
+	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure
@@ -1076,6 +1062,9 @@
     (flonum->string				v $language)
     (always-true				v $language)
     (always-false				v $language)
+    (expect-single-argument-and-return-it	v $language)
+    (expect-single-argument-and-return-true	v $language)
+    (expect-single-argument-and-return-false	v $language)
     (add1					v $language)
     (sub1					v $language)
     (bignum?					v $language)
@@ -2653,12 +2642,19 @@
     (&h_errno-rcd)
     (h_errno-condition?				v $language)
 ;;;
-    (&failed-expression-condition		v $language)
-    (&failed-expression-condition-rtd)
-    (&failed-expression-condition-rcd)
+    (&failed-expression				v $language)
+    (&failed-expression-rtd)
+    (&failed-expression-rcd)
     (make-failed-expression-condition		v $language)
     (failed-expression-condition?		v $language)
     (condition-failed-expression		v $language)
+;;;
+    (&one-based-return-value-index		v $language)
+    (&one-based-return-value-index-rtd)
+    (&one-based-return-value-index-rcd)
+    (make-one-based-return-value-index-condition v $language)
+    (one-based-return-value-index-condition?	v $language)
+    (condition-one-based-return-value-index	v $language)
 ;;;
     (&procedure-precondition-violation		v $language)
     (&procedure-precondition-violation-rtd)
@@ -3302,6 +3298,9 @@
     (pre-decr!					v $language)
     (post-incr!					v $language)
     (post-decr!					v $language)
+    (pair-of					v $language)
+    (list-of					v $language)
+    (vector-of					v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
@@ -3477,6 +3476,7 @@
 
     (<string>					v $language)
     (<vector>					v $language)
+    (<empty-vector>				v $language)
     (<pair>					v $language)
     (<standalone-pair>				v $language)
     (<list>					v $language)
@@ -3538,14 +3538,8 @@
     (<vector>-fold-left)
     (<vector>-sort)
     (<vector>-sort!)
-
-;;; --------------------------------------------------------------------
-;;; built-in Scheme list object types
-
-    (<char*>					v $language)
-    (<string*>					v $language)
-    (<pointer*>					v $language)
-    (<symbol*>					v $language)
+    (<empty-vector>-constructor)
+    (<empty-vector>-type-predicate)
 
 ;;; --------------------------------------------------------------------
 ;;; keywords

@@ -809,7 +809,7 @@
 	    (unless (exact-integer? i)
 	      (expression-return-value-violation __who__
 		"invalid hash value from custom hash function"
-		i)))))))
+		1 i)))))))
 
   #| end of module: MAKE-HASHTABLE |# )
 

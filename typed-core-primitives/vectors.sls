@@ -85,7 +85,7 @@
 (declare-core-primitive vector-append
     (safe)
   (signatures
-   (<vector>			=> (<vector>)))
+   ((list-of <vector>)		=> (<vector>)))
   ;;Not foldable because it must return a newly allocated vector.
   (attributes
    (_				effect-free result-true)))
@@ -179,7 +179,7 @@
 (declare-core-primitive vector-map
     (safe)
   (signatures
-   ((<procedure> <vector> . <vector>)		=> (<vector>)))
+   ((<procedure> <vector> . (list-of <vector>))		=> (<vector>)))
   (attributes
    ;;Not foldable  because it  must return  a new vector  at every  application.  Not
    ;;effect-free becuse it invokes an unknown procedure.
@@ -188,7 +188,7 @@
 (declare-core-primitive vector-for-each
     (safe)
   (signatures
-   ((<procedure> <vector> . <vector>)		=> (<void>)))
+   ((<procedure> <vector> . (list-of <vector>))		=> (<void>)))
   (attributes
    ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
    ((_ _ . _)			result-true)))
@@ -197,13 +197,13 @@
     (safe)
   ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
   (signatures
-   ((<procedure> <vector> . <vector>)		=> (<top>))))
+   ((<procedure> <vector> . (list-of <vector>))		=> (<top>))))
 
 (declare-core-primitive vector-exists
     (safe)
   ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
   (signatures
-   ((<procedure> <vector> . <vector>)		=> (<top>))))
+   ((<procedure> <vector> . (list-of <vector>))		=> (<top>))))
 
 (declare-core-primitive vector-find
     (safe)
@@ -308,22 +308,22 @@
 (declare-core-primitive <vector>-map
     (safe)
   (signatures
-   ((<vector> <procedure> . <vector>)	=> (<vector>))))
+   ((<vector> <procedure> . (list-of <vector>))	=> (<vector>))))
 
 (declare-core-primitive <vector>-for-each
     (safe)
   (signatures
-   ((<vector> <procedure> . <vector>)	=> (<void>))))
+   ((<vector> <procedure> . (list-of <vector>))	=> (<void>))))
 
 (declare-core-primitive <vector>-for-all
     (safe)
   (signatures
-   ((<vector> <procedure> . <vector>)	=> (<top>))))
+   ((<vector> <procedure> . (list-of <vector>))	=> (<top>))))
 
 (declare-core-primitive <vector>-exists
     (safe)
   (signatures
-   ((<vector> <procedure> . <vector>)	=> (<top>))))
+   ((<vector> <procedure> . (list-of <vector>))	=> (<top>))))
 
 (declare-core-primitive <vector>-find
     (safe)
@@ -333,12 +333,12 @@
 (declare-core-primitive <vector>-fold-left
     (safe)
   (signatures
-   ((<vector> <procedure> <top> . <vector>)	=> (<top>))))
+   ((<vector> <procedure> <top> . (list-of <vector>))	=> (<top>))))
 
 (declare-core-primitive <vector>-fold-right
     (safe)
   (signatures
-   ((<vector> <procedure> <top> . <vector>)	=> (<top>))))
+   ((<vector> <procedure> <top> . (list-of <vector>))	=> (<top>))))
 
 /section)
 

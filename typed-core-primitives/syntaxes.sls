@@ -139,7 +139,8 @@
     ;; auxiliary keywords
     safe				unsafe
     signatures				attributes
-    replacements)
+    replacements
+    list-of				vector-of)
   (import (vicare))
 
 
@@ -193,7 +194,8 @@
 ;;;; basic definition syntaxes
 
 ;;The syntactic binding UNSAFE is already exported by (vicare).
-(define-auxiliary-syntaxes signatures attributes replacements safe)
+(define-auxiliary-syntaxes signatures attributes replacements safe
+  list-of vector-of)
 
 (define-syntax (declare-core-primitive stx)
   (define (main input-form.stx)
@@ -269,52 +271,79 @@
     ;;   ?type
     ;;
     ;;When successful:  return a proper or  improper list representing the  same type
-    ;;signature, with the identifiers "_" replaced with "<top>".
+    ;;signature, with the identifiers "_" replaced with "<top>" or "<list>".
     ;;
-    (define (%replace id)
-      (cond ((free-identifier=? #'_ id)
-	     #'<top>)
-	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
-	    ;;implemented  we should  remove this  and  use a  proper definition  for
-	    ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
-	    ((free-identifier=? #'<syntax-object> id)
-	     #'<top>)
-	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
-	    ;;implemented,  we should  remove this  and use  a proper  definition for
-	    ;;"<non-negative-exact-integer>" as union  of "<non-negative-fixnum>" and
-	    ;;"<positive-bignum>".
-	    ((free-identifier=? #'<non-negative-exact-integer> id)
-	     #'<exact-integer>)
-	    ;;FIXME What should I do about this?  (Marco Maggi; Fri Jan 1, 2016)
-	    ((free-identifier=? #'<file-descriptor> id)
-	     #'<non-negative-fixnum>)
-	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
-	    ;;implemented,  we should  remove this  and use  a proper  definition for
-	    ;;"<exact-real>" as union of "<exact-integer>" and "<rational>".
-	    ((free-identifier=? #'<exact-real> id)
-	     #'<real>)
-	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
-	    ;;implemented,  we should  remove this  and use  a proper  definition for
-	    ;;"<exact>" as union of "<exact-real>" and "<exact-compnum>".
-	    ((free-identifier=? #'<exact> id)
-	     #'<number>)
-	    ;;FIXME  This  is  a  temporary   substitution.   When  type  unions  are
-	    ;;implemented,  we should  remove this  and use  a proper  definition for
-	    ;;"<inexact>"    as     union    of    "<flonum>",     "<cflonum>"    and
-	    ;;"<inexact-compnum>".
-	    ((free-identifier=? #'<inexact> id)
-	     #'<number>)
-	    (else id)))
+    (case-define %replace
+      ((id)
+       (%replace id #f))
+      ((id in-tail-position?)
+       (cond ((free-identifier=? #'_ id)
+	      (if in-tail-position?
+		  #'<list>
+		#'<top>))
+	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
+	     ;;implemented  we should  remove this  and use  a proper  definition for
+	     ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
+	     ((free-identifier=? #'<syntax-object> id)
+	      #'<top>)
+	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
+	     ;;implemented, we  should remove  this and use  a proper  definition for
+	     ;;"<non-negative-exact-integer>" as union of "<non-negative-fixnum>" and
+	     ;;"<positive-bignum>".
+	     ((free-identifier=? #'<non-negative-exact-integer> id)
+	      #'<exact-integer>)
+	     ;;FIXME What should I do about this?  (Marco Maggi; Fri Jan 1, 2016)
+	     ((free-identifier=? #'<file-descriptor> id)
+	      #'<non-negative-fixnum>)
+	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
+	     ;;implemented, we  should remove  this and use  a proper  definition for
+	     ;;"<exact-real>" as union of "<exact-integer>" and "<rational>".
+	     ((free-identifier=? #'<exact-real> id)
+	      #'<real>)
+	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
+	     ;;implemented, we  should remove  this and use  a proper  definition for
+	     ;;"<exact>" as union of "<exact-real>" and "<exact-compnum>".
+	     ((free-identifier=? #'<exact> id)
+	      #'<number>)
+	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
+	     ;;implemented, we  should remove  this and use  a proper  definition for
+	     ;;"<inexact>"    as    union     of    "<flonum>",    "<cflonum>"    and
+	     ;;"<inexact-compnum>".
+	     ((free-identifier=? #'<inexact> id)
+	      #'<number>)
+	     (else id))))
     (let recur ((sig type-signature.stx))
-      (syntax-case sig ()
+      (syntax-case sig (list-of vector-of <no-return> <list>)
 	(()
 	 '())
+
+	(<no-return>
+	 sig)
+
+	(<list>
+	 sig)
+
+	(?type
+	 (and (identifier? #'?type)
+	      (free-identifier=? #'_ #'?type))
+	 (%replace #'?type #t))
+
+	((list-of ?item-type)
+	 (identifier? #'?item-type)
+	 #`(list-of #,(%replace #'?item-type)))
+
+	(((list-of ?item-type) . ?rest)
+	 (identifier? #'?item-type)
+	 (cons #`(list-of #,(%replace #'?item-type)) (recur #'?rest)))
+
+	(((vector-of ?item-type) . ?rest)
+	 (identifier? #'?item-type)
+	 (cons #`(vector-of #,(%replace #'?type)) (recur #'?rest)))
+
 	((?type . ?rest)
 	 (identifier? #'?type)
 	 (cons (%replace #'?type) (recur #'?rest)))
-	(?type
-	 (identifier? #'?type)
-	 (%replace #'?type))
+
 	(_
 	 (synner "invalid type signature" type-signature.stx)))))
 
@@ -582,9 +611,9 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((?type-tag)				=> (<boolean>))
-	  ((?type-tag ?type-tag)		=> (<boolean>))
-	  ((?type-tag ?type-tag . ?type-tag)	=> (<boolean>)))
+	  ((?type-tag)					=> (<boolean>))
+	  ((?type-tag ?type-tag)			=> (<boolean>))
+	  ((?type-tag ?type-tag . (list-of ?type-tag))	=> (<boolean>)))
 	 (attributes
 	  ((_)				foldable effect-free)
 	  ((_ _)			foldable effect-free)
@@ -631,8 +660,8 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((?type-tag ?type-tag)		=> (<boolean>))
-	  ((?type-tag ?type-tag . ?type-tag)	=> (<boolean>)))
+	  ((?type-tag ?type-tag)			=> (<boolean>))
+	  ((?type-tag ?type-tag . (list-of ?type-tag))	=> (<boolean>)))
 	 (attributes
 	  ((_ _)			foldable effect-free)
 	  ((_ _ . _)			foldable effect-free))))
@@ -817,8 +846,8 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((?type-tag)			=> (?type-tag))
-	  ((?type-tag . ?type-tag)	=> (?type-tag)))
+	  ((?type-tag)				=> (?type-tag))
+	  ((?type-tag . (list-of ?type-tag))	=> (?type-tag)))
 	 (attributes
 	  ((_)				foldable effect-free result-true)
 	  ((_ . _)			foldable effect-free result-true))
@@ -864,7 +893,7 @@
 	   (?safety)
 	 (signatures
 	  (()			=> (?type-tag))
-	  (?type-tag		=> (?type-tag)))
+	  ((list-of ?type-tag)	=> (?type-tag)))
 	 (attributes
 	  (()			foldable effect-free result-true)
 	  ((_ . _)		foldable effect-free result-true))

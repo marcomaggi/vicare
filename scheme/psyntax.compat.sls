@@ -22,6 +22,7 @@
     case-lambda*			lambda*
     define-auxiliary-syntaxes		let*-syntax
     define-inline			define-syntax-rule
+    define-syntax*
     define-fluid-syntax			fluid-let-syntax
     unwind-protect
     receive				receive-and-return
@@ -43,6 +44,7 @@
 
     (rename (lists::nlist?			nlist?))
 
+    for-each-in-order
     define-struct			make-struct-type
     make-parameter			parametrise
     symbol-value			set-symbol-value!
@@ -51,6 +53,7 @@
     gensym				gensym?
     vector-append			vector-exists
     vector-fold-right			vector-for-all
+    vector-empty?
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print

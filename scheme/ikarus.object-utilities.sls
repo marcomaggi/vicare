@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -38,6 +38,9 @@
 
     ;; predicates
     always-true				always-false
+    expect-single-argument-and-return-it
+    expect-single-argument-and-return-true
+    expect-single-argument-and-return-false
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
@@ -48,11 +51,15 @@
     <vector>-find
     <vector>-fold-right			<vector>-fold-left
     <vector>-sort			<vector>-sort!
+    <empty-vector>-constructor		<empty-vector>-type-predicate
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
 		  any->symbol		any->string
 		  always-true		always-false
+		  expect-single-argument-and-return-it
+		  expect-single-argument-and-return-true
+		  expect-single-argument-and-return-false
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
@@ -242,6 +249,30 @@
 (define (always-false . args)
   #f)
 
+(define (expect-single-argument-and-return-true arg)
+  ;;This function is  used by some syntaxes  to check at run-time  that an expression
+  ;;returns a single value.   If zero, two or more values  are returned: the built-in
+  ;;validation mechanism raises  an exception at run-time; otherwise  the argument is
+  ;;discarded and the return value is #t.
+  ;;
+  #t)
+
+(define (expect-single-argument-and-return-false arg)
+  ;;This function is  used by some syntaxes  to check at run-time  that an expression
+  ;;returns a single value.   If zero, two or more values  are returned: the built-in
+  ;;validation mechanism raises  an exception at run-time; otherwise  the argument is
+  ;;discarded and the return value is #f.
+  ;;
+  #f)
+
+(define (expect-single-argument-and-return-it arg)
+  ;;This function is  used by some syntaxes  to check at run-time  that an expression
+  ;;returns a single value.   If zero, two or more values  are returned: the built-in
+  ;;validation  mechanism raises  an exception  at run-time;  otherwise the  argument
+  ;;itself is returned.
+  ;;
+  arg)
+
 
 ;;;; built-in object-types descriptor
 
@@ -349,6 +380,21 @@
 
 (define (<vector>-sort! vec proc)
   (vector-sort! proc vec))
+
+
+;;;; object type helpers: <empty-vector>
+;;
+;;This object-type stands to "<vector>" like "<null>" stands to "<list>".
+;;
+
+(define (<empty-vector>-constructor)
+  ;;Let's return an actually new vector.
+  ;;
+  (vector))
+
+(define (<empty-vector>-type-predicate obj)
+  (and (vector? obj)
+       (vector-empty? obj)))
 
 
 ;;;; built-in object-types descriptors: definitions

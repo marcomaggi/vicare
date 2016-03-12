@@ -36,7 +36,6 @@
     ;; module interfaces
     PSYNTAX-SYNTAX-MATCH
     PSYNTAX-SYNTAX-UTILITIES
-    PSYNTAX-TYPE-IDENTIFIERS
     PSYNTAX-TYPE-SYNTAX-OBJECTS
     PSYNTAX-TYPE-SIGNATURES
     PSYNTAX-TYPE-CALLABLES
@@ -94,15 +93,16 @@
     ;; object types specifications: base types
     <object-type-spec>
     object-type-spec?
-    object-type-spec.parent-id
+    object-type-spec.name
     object-type-spec.constructor-sexp			object-type-spec.destructor-sexp
     object-type-spec.type-predicate-sexp
     object-type-spec.safe-accessor-sexp			object-type-spec.safe-mutator-sexp
     object-type-spec.applicable-method-sexp
-    object-type-spec.memoised-list-id			object-type-spec.memoised-list-id-set!
 
     ;; object-type specifications: utilities
-    object-type-spec.subtype-and-supertype?		object-type-spec-override-predicate
+    object-type-spec.super-and-sub?			object-type-spec.matching-super-and-sub?
+    object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
+    object-type-spec.procedure?
 
     ;; object-type specifications: built-in object types
     <scheme-type-spec>					scheme-type-spec?
@@ -113,18 +113,16 @@
     closure-type-spec.signature
 
     ;; object-type specifications: compound types, lists
-    <typed-list-type-spec>
-    <typed-list-type-spec>-rtd				<typed-list-type-spec>-rcd
-    make-typed-list-type-spec				typed-list-type-spec?
-    typed-list-type-spec.type-id
-    make-list-of-predicate
+    <list-of-type-spec>
+    <list-of-type-spec>-rtd				<list-of-type-spec>-rcd
+    make-list-of-type-spec				list-of-type-spec?
+    list-of-type-spec.item-ots
 
     ;; object-type specifications: compound types, vectors
-    <typed-vector-type-spec>
-    <typed-vector-type-spec>-rtd			<typed-vector-type-spec>-rcd
-    make-typed-vector-type-spec				typed-vector-type-spec?
-    typed-vector-type-spec.type-id
-    make-vector-of-predicate
+    <vector-of-type-spec>
+    <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd
+    make-vector-of-type-spec				vector-of-type-spec?
+    vector-of-type-spec.item-ots
 
     ;; object-type specifications: structs
     <struct-type-spec>
@@ -140,18 +138,23 @@
     ;; typed variable specification: base type
     <typed-variable-spec>
     typed-variable-spec?
-    typed-variable-spec.type-id
+    typed-variable-spec.ots
 
     ;; typed lexical variable specification
     <lexical-typed-variable-spec>
     make-lexical-typed-variable-spec			lexical-typed-variable-spec?
-    lexical-typed-variable-spec.lex			lexical-typed-variable-spec.type-id
+    lexical-typed-variable-spec.lex
     lexical-typed-variable-spec.assigned?		lexical-typed-variable-spec.assigned?-set!
 
     ;; typed global variable specification
     <global-typed-variable-spec>
     make-global-typed-variable-spec			global-typed-variable-spec?
-    global-typed-variable-spec.variable-loc		global-typed-variable-spec.type-id
+    global-typed-variable-spec.variable-loc
+
+    ;; typed core primitive specification
+    <core-prim-type-spec>
+    make-core-prim-type-spec				core-prim-type-spec?
+    core-prim-type-spec.name				core-prim-type-spec.safety
 
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
@@ -197,11 +200,10 @@
     wrap-source-expression
 
     ;; syntax objects: mapping identifiers to labels and similar
-    id->label				id->label/or-error
-    id->object-type-specification
-    id->record-type-specification
-    id->struct-type-specification
-    id->typed-variable-spec
+    id->label					id->label/or-error
+    id->object-type-specification		id->record-type-specification
+    id->struct-type-specification		type-annotation->object-type-specification
+    id->typed-variable-spec			type-identifier?
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
@@ -224,6 +226,7 @@
     method-id				method-id?
     case-method-id			case-method-id?
     procedure-pred-id
+    list-of-id				vector-of-id
 
     ;; public interface: identifiers handling
     identifier?				false-or-identifier-bound?
@@ -235,37 +238,45 @@
     identifier->string			string->identifier
     syntax-parameter-value		retrieve-expand-time-value
 
-    ;; core type identifiers
-    no-return-type-id			$no-return-type-id?		no-return-type-id?
-    procedure-type-id			$procedure-type-id?		procedure-type-id?
-    predicate-type-id			$predicate-type-id?		predicate-type-id?
-    list-type-id			$list-type-id?			list-type-id?
-    null-type-id			$null-type-id?			null-type-id?
-    vector-type-id			$vector-type-id?		vector-type-id?
-    nlist-type-id			$nlist-type-id?			nlist-type-id?
-    stx-type-id				$stx-type-id?			stx-type-id?
-    syntactic-identifier-type-id	$syntactic-identifier-type-id?	syntactic-identifier-type-id?
-    top-type-id				$top-type-id?			top-type-id?
-    boolean-type-id			void-type-id
-    struct-type-id			record-type-id
-    simple-condition-type-id		$simple-condition-type-id?	simple-condition-type-id?
-    compound-condition-type-id		$compound-condition-type-id?	compound-condition-type-id?
+    ;; core object-type identifiers
+    <no-return>-type-id			<no-return>-type-id?
+    <void>-type-id			<void>-type-id?
+    <procedure>-type-id			<procedure>-type-id?
+    <predicate>-type-id			<predicate>-type-id?
+    <list>-type-id			<list>-type-id?
+    <null>-type-id			<null>-type-id?
+    <vector>-type-id			<vector>-type-id?
+    <empty-vector>-type-id		<empty-vector>-type-id?
+    <nlist>-type-id			<nlist>-type-id?
+    <stx>-type-id			<stx>-type-id?
+    <syntactic-identifier>-type-id	<syntactic-identifier>-type-id?
+    <top>-type-id			<top>-type-id?
+    <boolean>-type-id
+    <true>-type-id			<false>-type-id
+    <struct>-type-id
+    <record>-type-id			<record>-type-id?
+    <condition>-type-id			<condition>-type-id?
+    <compound-condition>-type-id	<compound-condition>-type-id?
+    &condition-type-id			&condition-type-id?
 
-    ;; core type specifications
-    no-return-type-spec			no-return-type-spec?
-    procedure-type-spec			procedure-type-spec?
-    predicate-type-spec			predicate-type-spec?
-    null-type-spec			null-type-spec?
-    nlist-type-spec			nlist-type-spec?
-    list-type-spec			list-type-spec?
-    vector-type-spec			vector-type-spec?
-    stx-type-spec			stx-type-spec?
-    syntactic-identifier-type-spec	syntactic-identifier-type-spec?
-    top-type-spec			top-type-spec?
-    boolean-type-spec			void-type-spec
-    struct-type-spec			record-type-spec
-    simple-condition-type-spec		simple-condition-type-spec?
-    compound-condition-type-spec	compound-condition-type-spec?
+    ;; core object-type specifications
+    <no-return>-ots			<no-return>-ots?
+    <void>-ots				<void>-ots?
+    <procedure>-ots			<procedure>-ots?
+    <predicate>-ots			<predicate>-ots?
+    <null>-ots				<null>-ots?
+    <nlist>-ots				<nlist>-ots?
+    <list>-ots				<list>-ots?
+    <vector>-ots			<vector>-ots?
+    <empty-vector>-ots			<empty-vector>-ots?
+    <stx>-ots				<stx>-ots?
+    <syntactic-identifier>-ots		<syntactic-identifier>-ots?
+    <top>-ots				<top>-ots?
+    <boolean>-ots
+    <struct>-ots			<record>-ots
+    <condition>-ots			<condition>-ots?
+    <compound-condition>-ots		<compound-condition>-ots?
+    &condition-ots			&condition-ots?
 
     ;; utilities for identifiers
     valid-bound-ids?			distinct-bound-ids?
@@ -332,6 +343,16 @@
     application-operands-condition?
     application-operands-condition.operands
 
+    &application-operator-signature-condition
+    make-application-operator-signature-condition
+    application-operator-signature-condition?
+    application-operator-signature-condition.signature
+
+    &application-operand-signature-condition
+    make-application-operand-signature-condition
+    application-operand-signature-condition?
+    application-operand-signature-condition.signature
+
     &retvals-signature-condition
     make-retvals-signature-condition
     retvals-signature-condition?
@@ -372,7 +393,6 @@
     syntax-violation/internal-error
     assertion-violation/internal-error
     syntax-violation
-    expand-time-retvals-signature-violation
     raise-unbound-error
     raise-compound-condition-object
     raise-compound-condition-object/continuable
@@ -440,7 +460,6 @@
 (include "psyntax.lexical-environment.syntax-utilities.scm" #t)
 (import PSYNTAX-SYNTAX-UTILITIES)
 
-(include "psyntax.lexical-environment.type-identifiers.scm"	#t)
 (include "psyntax.lexical-environment.object-type-specs.scm"	#t)
 (include "psyntax.lexical-environment.type-syntax-objects.scm"	#t)
 (include "psyntax.lexical-environment.type-signatures.scm"	#t)
@@ -730,15 +749,16 @@
 		;;The  first   time  we  access  a   syntactic  binding's  descriptor
 		;;representing a core definition: we mutate  it to a format usable by
 		;;the code.
-		(cond ((syntactic-binding-descriptor/hard-coded-core-prim-typed? descr)
-		       (hard-coded-core-prim-typed-binding-descriptor->core-prim-typed-binding-descriptor! descr))
-		      ((syntactic-binding-descriptor/core-scheme-type-name? descr)
-		       (core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descr))
-		      ((syntactic-binding-descriptor/core-condition-object-type-name? descr)
+		(cond ((syntactic-binding-descriptor/hard-coded-typed-core-prim? descr)
+		       (hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor! descr))
+
+		      ((syntactic-binding-descriptor/hard-coded-core-scheme-type-name? descr)
+		       (hard-coded-core-scheme-type-name-symbolic-binding-descriptor->core-scheme-type-name-binding-descriptor! descr))
+
+		      ((syntactic-binding-descriptor/hard-coded-core-condition-object-type-name? descr)
 		       (hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr))
-		      ((syntactic-binding-descriptor/core-list-type-name? descr)
-		       (core-list-type-name-symbolic-binding-descriptor->core-list-type-name-binding-descriptor! descr))
-		      ((syntactic-binding-descriptor/core-record-type-name? descr)
+
+		      ((syntactic-binding-descriptor/hard-coded-core-record-type-name? descr)
 		       (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
 		descr))
 
@@ -1974,6 +1994,32 @@
 
 ;;;; syntax objects: mapping identifiers to values
 
+(case-define* type-identifier?
+  ;;Return true if the argument ID is  a type identifier; otherwise return false.  If
+  ;;ID is  not an  identifier or it  is unbound: return  false.  If  ID is an  out of
+  ;;context identifier: raise an exception.
+  ;;
+  ((id)
+   (type-identifier? id (current-inferior-lexenv) #f))
+  ((id lexenv)
+   (type-identifier? id lexenv #f))
+  ((id lexenv input-form.stx)
+   (and (identifier? id)
+	(cond ((id->label id)
+	       => (lambda (label)
+		    (let ((descr (label->syntactic-binding-descriptor label lexenv)))
+		      (case (syntactic-binding-descriptor.type descr)
+			((core-object-type-name local-object-type-name global-object-type-name)
+			 #t)
+			((displaced-lexical)
+			 (raise
+			  (condition (make-who-condition __who__)
+				     (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
+				     (make-syntax-violation input-form.stx id)
+				     (make-syntactic-binding-descriptor-condition descr))))
+			(else #f)))))
+	      (else #f)))))
+
 (define (id->object-type-specification who input-form.stx id lexenv)
   ;;ID is meant to be a  syntactic identifier representing an object-type name, whose
   ;;syntactic  binding's descriptor  contains  an  instance of  "<object-type-spec>";
@@ -2363,6 +2409,8 @@
   (define-core-prim-id-retriever method-id		method)
   (define-core-prim-id-retriever case-method-id		case-method)
   (define-core-prim-id-retriever brace-id		brace)
+  (define-core-prim-id-retriever list-of-id		list-of)
+  (define-core-prim-id-retriever vector-of-id		vector-of)
   #| end of let-syntax |# )
 
 (define (underscore-id? id)
@@ -2631,122 +2679,134 @@
 
 ;;;; basic object-type identifiers
 
-(let-syntax
-    ((define-type-id-retriever (syntax-rules ()
-				 ((_ ?who ?tag)
-				  (define ?who
-				    (let ((memoized-id #f))
-				      (lambda ()
-					(or memoized-id
-					    (receive-and-return (id)
-						(core-prim-id '?tag)
-					      (set! memoized-id id))))))))))
-  (define-type-id-retriever no-return-type-id			<no-return>)
-  (define-type-id-retriever top-type-id				<top>)
-  (define-type-id-retriever void-type-id			<void>)
-  (define-type-id-retriever procedure-type-id			<procedure>)
-  (define-type-id-retriever predicate-type-id			<predicate>)
-  (define-type-id-retriever boolean-type-id			<boolean>)
-  (define-type-id-retriever struct-type-id			<struct>)
-  (define-type-id-retriever record-type-id			<record>)
-  (define-type-id-retriever vector-type-id			<vector>)
-  (define-type-id-retriever list-type-id			<list>)
-  (define-type-id-retriever null-type-id			<null>)
-  (define-type-id-retriever nlist-type-id			<nlist>)
-  (define-type-id-retriever stx-type-id				<stx>)
-  (define-type-id-retriever syntactic-identifier-type-id	<syntactic-identifier>)
-  (define-type-id-retriever simple-condition-type-id		&condition)
-  (define-type-id-retriever compound-condition-type-id		<compound-condition>)
+(let-syntax-rules
+    (((define-type-id-retriever ?who ?tag)
+      (define ?who
+	(let ((memoized-id #f))
+	  (lambda ()
+	    (or memoized-id
+		(receive-and-return (id)
+		    (core-prim-id '?tag)
+		  (set! memoized-id id))))))))
+  (define-type-id-retriever <no-return>-type-id			<no-return>)
+  (define-type-id-retriever <void>-type-id			<void>)
+  (define-type-id-retriever <top>-type-id			<top>)
+  (define-type-id-retriever <procedure>-type-id			<procedure>)
+  (define-type-id-retriever <predicate>-type-id			<predicate>)
+  (define-type-id-retriever <boolean>-type-id			<boolean>)
+  (define-type-id-retriever <true>-type-id			<true>)
+  (define-type-id-retriever <false>-type-id			<false>)
+  (define-type-id-retriever <struct>-type-id			<struct>)
+  (define-type-id-retriever <record>-type-id			<record>)
+  (define-type-id-retriever <vector>-type-id			<vector>)
+  (define-type-id-retriever <empty-vector>-type-id		<empty-vector>)
+  (define-type-id-retriever <list>-type-id			<list>)
+  (define-type-id-retriever <null>-type-id			<null>)
+  (define-type-id-retriever <nlist>-type-id			<nlist>)
+  (define-type-id-retriever <stx>-type-id			<stx>)
+  (define-type-id-retriever <syntactic-identifier>-type-id	<syntactic-identifier>)
+  (define-type-id-retriever <condition>-type-id			<condition>)
+  (define-type-id-retriever <compound-condition>-type-id	<compound-condition>)
+  (define-type-id-retriever &condition-type-id			&condition)
   #| end of let-syntax |# )
 
-(let-syntax
-    ((define-type-spec-retriever (syntax-rules ()
-				   ((_ ?who ?tag)
-				    (define ?who
-				      (let ((memoized-ots #f))
-					(lambda ()
-					  (or memoized-ots
-					      (receive-and-return (ots)
-						  (id->object-type-specification (quote ?who) #f (core-prim-id '?tag) (make-empty-lexenv))
-						(set! memoized-ots ots))))))))))
-  (define-type-spec-retriever no-return-type-spec		<no-return>)
-  (define-type-spec-retriever top-type-spec			<top>)
-  (define-type-spec-retriever void-type-spec			<void>)
-  (define-type-spec-retriever procedure-type-spec		<procedure>)
-  (define-type-spec-retriever predicate-type-spec		<predicate>)
-  (define-type-spec-retriever boolean-type-spec			<boolean>)
-  (define-type-spec-retriever struct-type-spec			<struct>)
-  (define-type-spec-retriever record-type-spec			<record>)
-  (define-type-spec-retriever vector-type-spec			<vector>)
-  (define-type-spec-retriever null-type-spec			<null>)
-  (define-type-spec-retriever nlist-type-spec			<nlist>)
-  (define-type-spec-retriever list-type-spec			<list>)
-  (define-type-spec-retriever stx-type-spec			<stx>)
-  (define-type-spec-retriever syntactic-identifier-type-spec	<syntactic-identifier>)
-  (define-type-spec-retriever simple-condition-type-spec	&condition)
-  (define-type-spec-retriever compound-condition-type-spec	<compound-condition>)
+(let-syntax-rules
+    (((define-type-spec-retriever ?who ?tag)
+      (define ?who
+	(let ((memoized-ots #f))
+	  (lambda ()
+	    (or memoized-ots
+		(receive-and-return (ots)
+		    (id->object-type-specification (quote ?who) #f (core-prim-id '?tag) (make-empty-lexenv))
+		  (set! memoized-ots ots))))))))
+  (define-type-spec-retriever <no-return>-ots			<no-return>)
+  (define-type-spec-retriever <void>-ots			<void>)
+  (define-type-spec-retriever <top>-ots				<top>)
+  (define-type-spec-retriever <procedure>-ots			<procedure>)
+  (define-type-spec-retriever <predicate>-ots			<predicate>)
+  (define-type-spec-retriever <boolean>-ots			<boolean>)
+  (define-type-spec-retriever <struct>-ots			<struct>)
+  (define-type-spec-retriever <record>-ots			<record>)
+  (define-type-spec-retriever <vector>-ots			<vector>)
+  (define-type-spec-retriever <empty-vector>-ots		<empty-vector>)
+  (define-type-spec-retriever <null>-ots			<null>)
+  (define-type-spec-retriever <nlist>-ots			<nlist>)
+  (define-type-spec-retriever <list>-ots			<list>)
+  (define-type-spec-retriever <stx>-ots				<stx>)
+  (define-type-spec-retriever <syntactic-identifier>-ots	<syntactic-identifier>)
+  (define-type-spec-retriever <condition>-ots			<condition>)
+  (define-type-spec-retriever <compound-condition>-ots		<compound-condition>)
+  (define-type-spec-retriever &condition-ots			&condition)
   #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax
-    ((define-unsafe-type-id-predicate (syntax-rules ()
-					((_ ?who ?tag-retriever)
-					 (define (?who id)
-					   (~free-identifier=? id (?tag-retriever)))))))
-  (define-unsafe-type-id-predicate $no-return-type-id?			no-return-type-id)
-  (define-unsafe-type-id-predicate $top-type-id?			top-type-id)
-  (define-unsafe-type-id-predicate $procedure-type-id?			procedure-type-id)
-  (define-unsafe-type-id-predicate $predicate-type-id?			predicate-type-id)
-  (define-unsafe-type-id-predicate $vector-type-id?			vector-type-id)
-  (define-unsafe-type-id-predicate $list-type-id?			list-type-id)
-  (define-unsafe-type-id-predicate $null-type-id?			null-type-id)
-  (define-unsafe-type-id-predicate $nlist-type-id?			nlist-type-id)
-  (define-unsafe-type-id-predicate $stx-type-id?			stx-type-id)
-  (define-unsafe-type-id-predicate $syntactic-identifier-type-id?	syntactic-identifier-type-id)
-  (define-unsafe-type-id-predicate $simple-condition-type-id?		simple-condition-type-id)
-  (define-unsafe-type-id-predicate $compound-condition-type-id?		compound-condition-type-id)
+(let-syntax-rules
+    (((define-type-id-predicate ?who ?tag-retriever)
+      (define (?who obj)
+	(and (identifier? obj)
+	     (~free-identifier=? obj (?tag-retriever))))))
+  (define-type-id-predicate <no-return>-type-id?		<no-return>-type-id)
+  (define-type-id-predicate <void>-type-id?			<void>-type-id)
+  (define-type-id-predicate <top>-type-id?			<top>-type-id)
+  (define-type-id-predicate <procedure>-type-id?		<procedure>-type-id)
+  (define-type-id-predicate <predicate>-type-id?		<predicate>-type-id)
+  (define-type-id-predicate <vector>-type-id?			<vector>-type-id)
+  (define-type-id-predicate <empty-vector>-type-id?		<empty-vector>-type-id)
+  (define-type-id-predicate <list>-type-id?			<list>-type-id)
+  (define-type-id-predicate <null>-type-id?			<null>-type-id)
+  (define-type-id-predicate <nlist>-type-id?			<nlist>-type-id)
+  (define-type-id-predicate <record>-type-id?			<record>-type-id)
+  (define-type-id-predicate <stx>-type-id?			<stx>-type-id)
+  (define-type-id-predicate <syntactic-identifier>-type-id?	<syntactic-identifier>-type-id)
+  (define-type-id-predicate <condition>-type-id?		<condition>-type-id)
+  (define-type-id-predicate <compound-condition>-type-id?	<compound-condition>-type-id)
+  (define-type-id-predicate &condition-type-id?			&condition-type-id)
   #| end of LET-SYNTAX |# )
 
-;;; --------------------------------------------------------------------
-
-(let-syntax
-    ((define-type-id-predicate (syntax-rules ()
-				 ((_ ?who ?unsafe-pred)
-				  (define (?who obj)
-				    (and (identifier? obj)
-					 (?unsafe-pred obj)))))))
-  (define-type-id-predicate no-return-type-id?			$no-return-type-id?)
-  (define-type-id-predicate top-type-id?			$top-type-id?)
-  (define-type-id-predicate procedure-type-id?			$procedure-type-id?)
-  (define-type-id-predicate predicate-type-id?			$predicate-type-id?)
-  (define-type-id-predicate vector-type-id?			$vector-type-id?)
-  (define-type-id-predicate list-type-id?			$list-type-id?)
-  (define-type-id-predicate null-type-id?			$null-type-id?)
-  (define-type-id-predicate nlist-type-id?			$nlist-type-id?)
-  (define-type-id-predicate stx-type-id?			$stx-type-id?)
-  (define-type-id-predicate syntactic-identifier-type-id?	$syntactic-identifier-type-id?)
-  (define-type-id-predicate simple-condition-type-id?		$simple-condition-type-id?)
-  (define-type-id-predicate compound-condition-type-id?		$compound-condition-type-id?)
-  #| end of LET-SYNTAX |# )
-
-(let-syntax
-    ((define-type-spec-predicate (syntax-rules ()
-				   ((_ ?who ?spec-retriever)
-				    (define (?who obj)
-				      (eq? obj (?spec-retriever)))))))
-  (define-type-spec-predicate no-return-type-spec?		no-return-type-spec)
-  (define-type-spec-predicate top-type-spec?			top-type-spec)
-  (define-type-spec-predicate procedure-type-spec?		procedure-type-spec)
-  (define-type-spec-predicate predicate-type-spec?		predicate-type-spec)
-  (define-type-spec-predicate vector-type-spec?			vector-type-spec)
-  (define-type-spec-predicate null-type-spec?			null-type-spec)
-  (define-type-spec-predicate nlist-type-spec?			nlist-type-spec)
-  (define-type-spec-predicate list-type-spec?			list-type-spec)
-  (define-type-spec-predicate stx-type-spec?			stx-type-spec)
-  (define-type-spec-predicate syntactic-identifier-type-spec?	syntactic-identifier-type-spec)
-  (define-type-spec-predicate simple-condition-type-spec?	simple-condition-type-spec)
-  (define-type-spec-predicate compound-condition-type-spec?	compound-condition-type-spec)
+;;We  want to  define fast  predicates like  "<list>-ots?"  which  can be  applied to
+;;instances of "<object-type-spec>" and determine  if they are instances representing
+;;built-in object-types.
+;;
+;;We generate only  one OTS for every built-in  type in a single run  of the "vicare"
+;;process, but multiple runs  may store an OTS in a FASL file;  so at run-time we end
+;;up with multiple  OTSs representing the same  built-in type.  This is  why in these
+;;predicates we use FREE-IDENTIFIER=? to compare the object-type specifications.
+;;
+(let-syntax-rules
+    (((define-type-spec-predicate ?who ?ots-retriever)
+      (define ?who
+	(let ((memoised-ots  #f)
+	      (memoised-name #f))
+	  (lambda (obj)
+	    (let ((src-ots (or memoised-ots
+			       (receive-and-return (src-ots)
+				   (?ots-retriever)
+				 (set! memoised-ots src-ots)))))
+	      (or (eq? obj src-ots)
+		  (and (scheme-type-spec? obj)
+		       ;;We know that if the type of OBJ is "<scheme-type-spec>", its
+		       ;;NAME field holds an identifier.
+		       (let ((src-name (or memoised-name
+					   (receive-and-return (src-name)
+					       (object-type-spec.name src-ots)
+					     (set! memoised-name src-name)))))
+			 (~free-identifier=? (object-type-spec.name obj) src-name))))))))))
+  (define-type-spec-predicate <no-return>-ots?			<no-return>-ots)
+  (define-type-spec-predicate <void>-ots?			<void>-ots)
+  (define-type-spec-predicate <top>-ots?			<top>-ots)
+  (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
+  (define-type-spec-predicate <predicate>-ots?			<predicate>-ots)
+  (define-type-spec-predicate <vector>-ots?			<vector>-ots)
+  (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
+  (define-type-spec-predicate <null>-ots?			<null>-ots)
+  (define-type-spec-predicate <nlist>-ots?			<nlist>-ots)
+  (define-type-spec-predicate <list>-ots?			<list>-ots)
+  (define-type-spec-predicate <stx>-ots?			<stx>-ots)
+  (define-type-spec-predicate <syntactic-identifier>-ots?	<syntactic-identifier>-ots)
+  (define-type-spec-predicate <condition>-ots?			<condition>-ots)
+  (define-type-spec-predicate <compound-condition>-ots?		<compound-condition>-ots)
+  (define-type-spec-predicate &condition-ots?			&condition-ots)
   #| end of LET-SYNTAX |# )
 
 
@@ -2762,6 +2822,10 @@
 
 
 ;;;; done
+
+;; #!vicare
+;; (import (only (vicare) foreign-call))
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.lexical-environment.sls here"))
 
 #| end of library |# )
 

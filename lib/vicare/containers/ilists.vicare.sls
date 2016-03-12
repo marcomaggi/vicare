@@ -318,8 +318,9 @@
 
 
 (define (check-arg pred val caller)
-  (let lp ((val val))
-    (if (pred val) val (lp (error #f "Bad argument" val pred caller)))))
+  (if (pred val)
+      val
+    (error #f "Bad argument" val pred caller)))
 
 ;;;   A few uses of the LET-OPTIONAL and :OPTIONAL macros for parsing
 ;;;     optional arguments.

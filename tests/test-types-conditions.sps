@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -97,7 +97,8 @@
   (doit &interrupted					())
   (doit &source-position				("the-port" 1 1 1 1))
 
-  (doit &failed-expression-condition			(#f))
+  (doit &failed-expression			(#f))
+  (doit &one-based-return-value-index			(1))
   (doit &procedure-precondition-violation		())
   (doit &procedure-postcondition-violation		())
   (doit &procedure-argument-violation			())
@@ -199,7 +200,8 @@
   (doit &interrupted					(make-interrupted-condition))
   (doit &source-position				(make-source-position-condition "the-port" 1 1 1 1))
 
-  (doit &failed-expression-condition			(make-failed-expression-condition #f))
+  (doit &failed-expression			(make-failed-expression-condition #f))
+  (doit &one-based-return-value-index			(make-one-based-return-value-index-condition 1))
   (doit &procedure-precondition-violation		(make-procedure-precondition-violation))
   (doit &procedure-postcondition-violation		(make-procedure-postcondition-violation))
   (doit &procedure-argument-violation			(make-procedure-argument-violation))
@@ -290,9 +292,12 @@
 	 (line		3)
 	 (column	4)))
 
-  (doit &failed-expression-condition
+  (doit &failed-expression
 	(make-failed-expression-condition #f)
 	((failed-expression		#f)))
+  (doit &one-based-return-value-index
+	(make-one-based-return-value-index-condition 1)
+	((index				1)))
   (doit &procedure-signature-argument-violation
 	(make-procedure-signature-argument-violation 1 #f #t)
 	((one-based-argument-index	1)

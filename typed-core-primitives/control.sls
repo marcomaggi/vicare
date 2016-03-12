@@ -37,29 +37,29 @@
 (declare-core-primitive apply
     (safe)
   (signatures
-   ((<procedure> . _)		=> <top>)))
+   ((<procedure> . _)		=> <list>)))
 
 (declare-core-primitive values
     (safe)
   (signatures
-   (<top>		=> <top>))
+   (<list>		=> <list>))
   (attributes
    (_			effect-free)))
 
 (declare-core-primitive call-with-current-continuation
     (safe)
   (signatures
-   ((<procedure>)	=> <top>)))
+   ((<procedure>)	=> <list>)))
 
 (declare-core-primitive call/cc
     (safe)
   (signatures
-   ((<procedure>)	=> <top>)))
+   ((<procedure>)	=> <list>)))
 
 (declare-core-primitive call-with-values
     (safe)
   (signatures
-   ((<procedure> <procedure>)	=> <top>)))
+   ((<procedure> <procedure>)	=> <list>)))
 
 /section)
 
@@ -71,24 +71,24 @@
 (declare-core-primitive with-exception-handler
     (safe)
   (signatures
-   ((<procedure> <procedure>)	=> <top>)))
+   ((<procedure> <procedure>)	=> <list>)))
 
 (declare-core-primitive dynamic-wind
     (safe)
   (signatures
-   ((<procedure> <procedure> <procedure>)	=> <top>)))
+   ((<procedure> <procedure> <procedure>)	=> <list>)))
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive raise
     (safe)
   (signatures
-   ((<top>)		=> <top>)))
+   ((<top>)		=> <list>)))
 
 (declare-core-primitive raise-continuable
     (safe)
   (signatures
-   ((<top>)		=> <top>)))
+   ((<top>)		=> <list>)))
 
 /section)
 
@@ -170,7 +170,7 @@
 (declare-core-primitive force
     (safe)
   (signatures
-   ((<promise>)		=> <top>)))
+   ((<promise>)		=> <list>)))
 
 /section)
 

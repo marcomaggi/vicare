@@ -861,7 +861,7 @@
 	    (string-append "not enough arguments for record constructor, expected "
 			   (number->string record-fields-number)
 			   " got " (number->string given-args-number))
-	    given-field-values)))))
+	    rtd given-field-values)))))
 
   (define (%split all-field-values count)
     ;;Split the list ALL-FIELD-VALUES and return two values: a list holding the first
@@ -1035,7 +1035,7 @@
       (unless (procedure? constructor)
 	(expression-return-value-violation __module_who__
 	  "expected procedure as return value of R6RS record protocol function"
-	  constructor))
+	  1 constructor))
       (let ((builder (let ((name ($<rtd>-name rtd)))
 		       (lambda constructor-args
 			 (%the-builder rtd name constructor constructor-args)))))

@@ -95,12 +95,10 @@
 		  obj
 		(expression-return-value-violation __who__
 		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
-		  obj))))
+		  1 obj))))
 	(else
 	 (compiler-internal-error #f __who__
 	   "while building boot image: primitive missing from makefile.sps" name))))
-
-
 
 
 (define-syntax (define-cached x)

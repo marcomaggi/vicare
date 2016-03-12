@@ -39,7 +39,7 @@
 (declare-core-primitive condition
     (safe)
   (signatures
-   (<condition>		=> (<compound-condition>)))
+   ((list-of <condition>)		=> (<compound-condition>)))
   (attributes
    (_			effect-free result-true)))
 
@@ -321,16 +321,16 @@
 (declare-core-primitive error
     (safe)
   (signatures
-   ((<false>  <string> . <top>)			=> <no-return>)
-   ((<symbol> <string> . <top>)			=> <no-return>)
-   ((<string> <string> . <top>)			=> <no-return>)))
+   ((<false>  <string> . <list>)			=> <no-return>)
+   ((<symbol> <string> . <list>)			=> <no-return>)
+   ((<string> <string> . <list>)			=> <no-return>)))
 
 (declare-core-primitive assertion-violation
     (safe)
   (signatures
-   ((<false>  <string> . <top>)			=> <no-return>)
-   ((<symbol> <string> . <top>)			=> <no-return>)
-   ((<string> <string> . <top>)			=> <no-return>)))
+   ((<false>  <string> . <list>)			=> <no-return>)
+   ((<symbol> <string> . <list>)			=> <no-return>)
+   ((<string> <string> . <list>)			=> <no-return>)))
 
 (declare-core-primitive syntax-violation
     (safe)
@@ -346,31 +346,31 @@
     (safe)
   (signatures
    ;;We do not know the number of returned values.
-   ((<false>  <string> . <top>)			=> <no-return>)
-   ((<symbol> <string> . <top>)			=> <no-return>)
-   ((<string> <string> . <top>)			=> <no-return>)))
+   ((<false>  <string> . <list>)			=> <no-return>)
+   ((<symbol> <string> . <list>)			=> <no-return>)
+   ((<string> <string> . <list>)			=> <no-return>)))
 
 ;;This is deprecated.
 (declare-core-primitive die
     (safe)
   (signatures
-   ((<false>  <string> . <top>)			=> <no-return>)
-   ((<symbol> <string> . <top>)			=> <no-return>)
-   ((<string> <string> . <top>)			=> <no-return>)))
+   ((<false>  <string> . <list>)			=> <no-return>)
+   ((<symbol> <string> . <list>)			=> <no-return>)
+   ((<string> <string> . <list>)			=> <no-return>)))
 
 (declare-core-primitive procedure-argument-violation
     (safe)
   (signatures
-   ((<false>  <string> . <top>)			=> <no-return>)
-   ((<symbol> <string> . <top>)			=> <no-return>)
-   ((<string> <string> . <top>)			=> <no-return>)))
+   ((<false>  <string> . <list>)			=> <no-return>)
+   ((<symbol> <string> . <list>)			=> <no-return>)
+   ((<string> <string> . <list>)			=> <no-return>)))
 
 (declare-core-primitive expression-return-value-violation
     (safe)
   (signatures
-   ((<false>  <string> . <top>)			=> <no-return>)
-   ((<symbol> <string> . <top>)			=> <no-return>)
-   ((<string> <string> . <top>)			=> <no-return>)))
+   ((<false>  <string> <positive-fixnum> . <list>)	=> <no-return>)
+   ((<symbol> <string> <positive-fixnum> . <list>)	=> <no-return>)
+   ((<string> <string> <positive-fixnum> . <list>)	=> <no-return>)))
 
 /section)
 

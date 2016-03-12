@@ -151,19 +151,20 @@
 
 (define* (length ls)
   (define (%race h t ls n)
-    (cond ((pair? h)
-	   (let ((h ($cdr h)))
-	     (if (pair? h)
-		 (if (not (eq? h t))
-		     (%race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		   (%error-circular-list-is-invalid-as-argument ls))
-	       (if (null? h)
-		   ($fxadd1 n)
-		 (%error-improper-list-is-invalid-as-argument ls)))))
-	  ((null? h)
-	   n)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who length
+      (cond ((pair? h)
+	     (let ((h ($cdr h)))
+	       (if (pair? h)
+		   (if (not (eq? h t))
+		       (%race ($cdr h) ($cdr t) ls ($fx+ n 2))
+		     (%error-circular-list-is-invalid-as-argument ls))
+		 (if (null? h)
+		     ($fxadd1 n)
+		   (%error-improper-list-is-invalid-as-argument ls)))))
+	    ((null? h)
+	     n)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls 0))
 
 (define ($length ell)
@@ -180,29 +181,31 @@
   (define (%error-index-out-of-range)
     (procedure-arguments-consistency-violation __who__ "index is out of range" the-index the-list))
   (define (%$list-ref ls i)
-    (cond (($fxzero? i)
-	   (if (pair? ls)
-	       ($car ls)
-	     (%error-index-out-of-range)))
-	  ((pair? ls)
-	   (%$list-ref ($cdr ls) ($fxsub1 i)))
-	  ((null? ls)
-	   (%error-index-out-of-range))
-	  (else
-	   (%error-expected-proper-list-as-argument the-list))))
+    (with-who list-ref
+      (cond (($fxzero? i)
+	     (if (pair? ls)
+		 ($car ls)
+	       (%error-index-out-of-range)))
+	    ((pair? ls)
+	     (%$list-ref ($cdr ls) ($fxsub1 i)))
+	    ((null? ls)
+	     (%error-index-out-of-range))
+	    (else
+	     (%error-expected-proper-list-as-argument the-list)))))
   (%$list-ref the-list the-index))
 
 
 (define* (list-tail list {index list-index?})
   (define (%$list-tail ls i)
-    (cond (($fxzero? i)
-	   ls)
-	  ((pair? ls)
-	   (%$list-tail ($cdr ls) ($fxsub1 i)))
-	  ((null? ls)
-	   (procedure-arguments-consistency-violation __who__ "index is out of range" index list))
-	  (else
-	   (%error-expected-proper-list-as-argument list))))
+    (with-who list-tail
+      (cond (($fxzero? i)
+	     ls)
+	    ((pair? ls)
+	     (%$list-tail ($cdr ls) ($fxsub1 i)))
+	    ((null? ls)
+	     (procedure-arguments-consistency-violation __who__ "index is out of range" index list))
+	    (else
+	     (%error-expected-proper-list-as-argument list)))))
   (%$list-tail list index))
 
 
@@ -211,21 +214,22 @@
   ((ls)		ls)
   ((ls . ls*)
    (define (reverse h t ls ac)
-     (cond ((pair? h)
-	    (let ((h ($cdr h)) (a1 ($car h)))
-	      (cond ((pair? h)
-		     (if (not (eq? h t))
-			 (let ((a2 ($car h)))
-			   (reverse ($cdr h) ($cdr t) ls (cons a2 (cons a1 ac))))
-		       (%error-circular-list-is-invalid-as-argument ls)))
-		    ((null? h)
-		     (cons a1 ac))
-		    (else
-		     (%error-expected-proper-list-as-argument ls)))))
-	   ((null? h)
-	    ac)
-	   (else
-	    (%error-expected-proper-list-as-argument ls))))
+     (with-who append
+       (cond ((pair? h)
+	      (let ((h ($cdr h)) (a1 ($car h)))
+		(cond ((pair? h)
+		       (if (not (eq? h t))
+			   (let ((a2 ($car h)))
+			     (reverse ($cdr h) ($cdr t) ls (cons a2 (cons a1 ac))))
+			 (%error-circular-list-is-invalid-as-argument ls)))
+		      ((null? h)
+		       (cons a1 ac))
+		      (else
+		       (%error-expected-proper-list-as-argument ls)))))
+	     ((null? h)
+	      ac)
+	     (else
+	      (%error-expected-proper-list-as-argument ls)))))
 
    (define (rev! ls ac)
      (if (null? ls)
@@ -246,21 +250,22 @@
 
 (define* (reverse x)
   (define (%race h t ls ac)
-    (cond ((pair? h)
-	   (let ((h  ($cdr h))
-		 (ac (cons ($car h) ac)))
-	     (cond ((pair? h)
-		    (if (not (eq? h t))
-			(%race ($cdr h) ($cdr t) ls (cons ($car h) ac))
-		      (%error-circular-list-is-invalid-as-argument ls)))
-		   ((null? h)
-		    ac)
-		   (else
-		    (%error-expected-proper-list-as-argument ls)))))
-	  ((null? h)
-	   ac)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who reverse
+      (cond ((pair? h)
+	     (let ((h  ($cdr h))
+		   (ac (cons ($car h) ac)))
+	       (cond ((pair? h)
+		      (if (not (eq? h t))
+			  (%race ($cdr h) ($cdr t) ls (cons ($car h) ac))
+			(%error-circular-list-is-invalid-as-argument ls)))
+		     ((null? h)
+		      ac)
+		     (else
+		      (%error-expected-proper-list-as-argument ls)))))
+	    ((null? h)
+	     ac)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race x x x '()))
 
 
@@ -280,235 +285,244 @@
 
 (define* (memq x ls)
   (define (%race h t ls x)
-    (cond ((pair? h)
-	   (if (eq? ($car h) x)
-	       h
-	     (let ((h ($cdr h)))
-	       (cond ((pair? h)
-		      (cond ((eq? ($car h) x)
-			     h)
-			    ((not (eq? h t))
-			     (%race ($cdr h) ($cdr t) ls x))
-			    (else
-			     (%error-circular-list-is-invalid-as-argument ls))))
-		     ((null? h)
-		      #f)
-		     (else
-		      (%error-expected-proper-list-as-argument ls))))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who memq
+      (cond ((pair? h)
+	     (if (eq? ($car h) x)
+		 h
+	       (let ((h ($cdr h)))
+		 (cond ((pair? h)
+			(cond ((eq? ($car h) x)
+			       h)
+			      ((not (eq? h t))
+			       (%race ($cdr h) ($cdr t) ls x))
+			      (else
+			       (%error-circular-list-is-invalid-as-argument ls))))
+		       ((null? h)
+			#f)
+		       (else
+			(%error-expected-proper-list-as-argument ls))))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls x))
 
 
 (define* (memv x ls)
   (define (%race h t ls x)
-    (cond ((pair? h)
-	   (if (eqv? ($car h) x)
-	       h
-	     (let ((h ($cdr h)))
-	       (cond ((pair? h)
-		      (cond ((eqv? ($car h) x)
-			     h)
-			    ((not (eq? h t))
-			     (%race ($cdr h) ($cdr t) ls x))
-			    (else
-			     (%error-circular-list-is-invalid-as-argument ls))))
-		     ((null? h)
-		      #f)
-		     (else
-		      (%error-expected-proper-list-as-argument ls))))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who memv
+      (cond ((pair? h)
+	     (if (eqv? ($car h) x)
+		 h
+	       (let ((h ($cdr h)))
+		 (cond ((pair? h)
+			(cond ((eqv? ($car h) x)
+			       h)
+			      ((not (eq? h t))
+			       (%race ($cdr h) ($cdr t) ls x))
+			      (else
+			       (%error-circular-list-is-invalid-as-argument ls))))
+		       ((null? h)
+			#f)
+		       (else
+			(%error-expected-proper-list-as-argument ls))))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls x))
 
 
 (define* (member x ls)
   (define (%race h t ls x)
-    (cond ((pair? h)
-	   (if (equal? ($car h) x)
-	       h
-	     (let ((h ($cdr h)))
-	       (cond ((pair? h)
-		      (cond ((equal? ($car h) x)
-			     h)
-			    ((not (eq? h t))
-			     (%race ($cdr h) ($cdr t) ls x))
-			    (else
-			     (%error-circular-list-is-invalid-as-argument ls))))
-		     ((null? h)
-		      #f)
-		     (else
-		      (%error-expected-proper-list-as-argument ls))))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who member
+      (cond ((pair? h)
+	     (if (equal? ($car h) x)
+		 h
+	       (let ((h ($cdr h)))
+		 (cond ((pair? h)
+			(cond ((equal? ($car h) x)
+			       h)
+			      ((not (eq? h t))
+			       (%race ($cdr h) ($cdr t) ls x))
+			      (else
+			       (%error-circular-list-is-invalid-as-argument ls))))
+		       ((null? h)
+			#f)
+		       (else
+			(%error-expected-proper-list-as-argument ls))))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls x))
 
 
 (define* (memp {p procedure?} ls)
   (define (%race h t ls p)
-    (cond ((pair? h)
-	   (if (p ($car h))
-	       h
-	     (let ((h ($cdr h)))
-	       (cond ((pair? h)
-		      (cond ((p ($car h))
-			     h)
-			    ((not (eq? h t))
-			     (%race ($cdr h) ($cdr t) ls p))
-			    (else
-			     (%error-circular-list-is-invalid-as-argument ls))))
-		     ((null? h)
-		      #f)
-		     (else
-		      (%error-expected-proper-list-as-argument ls))))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who memp
+      (cond ((pair? h)
+	     (if (p ($car h))
+		 h
+	       (let ((h ($cdr h)))
+		 (cond ((pair? h)
+			(cond ((p ($car h))
+			       h)
+			      ((not (eq? h t))
+			       (%race ($cdr h) ($cdr t) ls p))
+			      (else
+			       (%error-circular-list-is-invalid-as-argument ls))))
+		       ((null? h)
+			#f)
+		       (else
+			(%error-expected-proper-list-as-argument ls))))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls p))
 
 
 (define* (find {p procedure?} ls)
   (define (%race h t ls p)
-    (cond ((pair? h)
-	   (let ((a ($car h)))
-	     (if (p a)
-		 a
-	       (let ((h ($cdr h)))
-		 (cond ((pair? h)
-			(let ((a ($car h)))
-			  (cond ((p a)
-				 a)
-				((not (eq? h t))
-				 (%race ($cdr h) ($cdr t) ls p))
-				(else
-				 (%error-circular-list-is-invalid-as-argument ls)))))
-		       ((null? h)
-			#f)
-		       (else
-			(%error-expected-proper-list-as-argument ls)))))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who find
+      (cond ((pair? h)
+	     (let ((a ($car h)))
+	       (if (p a)
+		   a
+		 (let ((h ($cdr h)))
+		   (cond ((pair? h)
+			  (let ((a ($car h)))
+			    (cond ((p a)
+				   a)
+				  ((not (eq? h t))
+				   (%race ($cdr h) ($cdr t) ls p))
+				  (else
+				   (%error-circular-list-is-invalid-as-argument ls)))))
+			 ((null? h)
+			  #f)
+			 (else
+			  (%error-expected-proper-list-as-argument ls)))))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls p))
 
 
 (define* (assq x ls)
   (define (%race x h t ls)
-    (cond ((pair? h)
-	   (let ((a ($car h)) (h ($cdr h)))
-	     (if (pair? a)
-		 (cond ((eq? ($car a) x)
-			a)
-		       ((pair? h)
-			(if (not (eq? h t))
-			    (let ((a ($car h)))
-			      (if (pair? a)
-				  (if (eq? ($car a) x)
-				      a
-				    (%race x ($cdr h) ($cdr t) ls))
-				(%error-malformed-alist-as-argument 2 ls)))
-			  (%error-circular-list-is-invalid-as-argument ls)))
-		       ((null? h)
-			#f)
-		       (else
-			(%error-expected-proper-list-as-argument ls)))
-	       (%error-malformed-alist-as-argument 2 ls))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who assq
+      (cond ((pair? h)
+	     (let ((a ($car h)) (h ($cdr h)))
+	       (if (pair? a)
+		   (cond ((eq? ($car a) x)
+			  a)
+			 ((pair? h)
+			  (if (not (eq? h t))
+			      (let ((a ($car h)))
+				(if (pair? a)
+				    (if (eq? ($car a) x)
+					a
+				      (%race x ($cdr h) ($cdr t) ls))
+				  (%error-malformed-alist-as-argument 2 ls)))
+			    (%error-circular-list-is-invalid-as-argument ls)))
+			 ((null? h)
+			  #f)
+			 (else
+			  (%error-expected-proper-list-as-argument ls)))
+		 (%error-malformed-alist-as-argument 2 ls))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race x ls ls ls))
 
 
 (define* (assp {p procedure?} ls)
   (define (%race p h t ls)
-    (cond ((pair? h)
-	   (let ((a ($car h)) (h ($cdr h)))
-	     (if (pair? a)
-		 (cond ((p ($car a))
-			a)
-		       ((pair? h)
-			(if (not (eq? h t))
-			    (let ((a ($car h)))
-			      (if (pair? a)
-				  (if (p ($car a))
-				      a
-				    (%race p ($cdr h) ($cdr t) ls))
-				(%error-malformed-alist-as-argument 2 ls)))
-			  (%error-circular-list-is-invalid-as-argument ls)))
-		       ((null? h)
-			#f)
-		       (else
-			(%error-expected-proper-list-as-argument ls)))
-	       (%error-malformed-alist-as-argument 2 ls))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who assp
+      (cond ((pair? h)
+	     (let ((a ($car h)) (h ($cdr h)))
+	       (if (pair? a)
+		   (cond ((p ($car a))
+			  a)
+			 ((pair? h)
+			  (if (not (eq? h t))
+			      (let ((a ($car h)))
+				(if (pair? a)
+				    (if (p ($car a))
+					a
+				      (%race p ($cdr h) ($cdr t) ls))
+				  (%error-malformed-alist-as-argument 2 ls)))
+			    (%error-circular-list-is-invalid-as-argument ls)))
+			 ((null? h)
+			  #f)
+			 (else
+			  (%error-expected-proper-list-as-argument ls)))
+		 (%error-malformed-alist-as-argument 2 ls))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race p ls ls ls))
 
 
 (define* (assv x ls)
   (define (%race x h t ls)
-    (cond ((pair? h)
-	   (let ((a ($car h)) (h ($cdr h)))
-	     (if (pair? a)
-		 (cond ((eqv? ($car a) x)
-			a)
-		       ((pair? h)
-			(if (not (eq? h t))
-			    (let ((a ($car h)))
-			      (if (pair? a)
-				  (if (eqv? ($car a) x)
-				      a
-				    (%race x ($cdr h) ($cdr t) ls))
-				(%error-malformed-alist-as-argument 2 ls)))
-			  (%error-circular-list-is-invalid-as-argument ls)))
-		       ((null? h)
-			#f)
-		       (else
-			(%error-expected-proper-list-as-argument ls)))
-	       (%error-malformed-alist-as-argument 2 ls))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who assv
+      (cond ((pair? h)
+	     (let ((a ($car h)) (h ($cdr h)))
+	       (if (pair? a)
+		   (cond ((eqv? ($car a) x)
+			  a)
+			 ((pair? h)
+			  (if (not (eq? h t))
+			      (let ((a ($car h)))
+				(if (pair? a)
+				    (if (eqv? ($car a) x)
+					a
+				      (%race x ($cdr h) ($cdr t) ls))
+				  (%error-malformed-alist-as-argument 2 ls)))
+			    (%error-circular-list-is-invalid-as-argument ls)))
+			 ((null? h)
+			  #f)
+			 (else
+			  (%error-expected-proper-list-as-argument ls)))
+		 (%error-malformed-alist-as-argument 2 ls))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race x ls ls ls))
 
 
 (define* (assoc x ls)
   (define (%race x h t ls)
-    (cond ((pair? h)
-	   (let ((a ($car h)) (h ($cdr h)))
-	     (if (pair? a)
-		 (cond ((equal? ($car a) x)
-			a)
-		       ((pair? h)
-			(if (not (eq? h t))
-			    (let ((a ($car h)))
-			      (if (pair? a)
-				  (if (equal? ($car a) x)
-				      a
-				    (%race x ($cdr h) ($cdr t) ls))
-				(%error-malformed-alist-as-argument 2 ls)))
-			  (%error-circular-list-is-invalid-as-argument ls)))
-		       ((null? h)
-			#f)
-		       (else
-			(%error-expected-proper-list-as-argument ls)))
-	       (%error-malformed-alist-as-argument 2 ls))))
-	  ((null? h)
-	   #f)
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who assoc
+      (cond ((pair? h)
+	     (let ((a ($car h)) (h ($cdr h)))
+	       (if (pair? a)
+		   (cond ((equal? ($car a) x)
+			  a)
+			 ((pair? h)
+			  (if (not (eq? h t))
+			      (let ((a ($car h)))
+				(if (pair? a)
+				    (if (equal? ($car a) x)
+					a
+				      (%race x ($cdr h) ($cdr t) ls))
+				  (%error-malformed-alist-as-argument 2 ls)))
+			    (%error-circular-list-is-invalid-as-argument ls)))
+			 ((null? h)
+			  #f)
+			 (else
+			  (%error-expected-proper-list-as-argument ls)))
+		 (%error-malformed-alist-as-argument 2 ls))))
+	    ((null? h)
+	     #f)
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race x ls ls ls))
 
 
@@ -517,34 +531,35 @@
     ((_ ?name ?cmp ?check)
      (define* (?name {x ?check} ls)
        (define (%race h t ls x)
-	 (cond ((pair? h)
-		(if (?cmp ($car h) x)
-		    (let ((h ($cdr h)))
+	 (with-who ?name
+	   (cond ((pair? h)
+		  (if (?cmp ($car h) x)
+		      (let ((h ($cdr h)))
+			(cond ((pair? h)
+			       (if (not (eq? h t))
+				   (if (?cmp ($car h) x)
+				       (%race ($cdr h) ($cdr t) ls x)
+				     (cons ($car h) (%race ($cdr h) ($cdr t) ls x)))
+				 (%error-circular-list-is-invalid-as-argument ls)))
+			      ((null? h)
+			       '())
+			      (else
+			       (%error-expected-proper-list-as-argument ls))))
+		    (let ((a0 ($car h)) (h ($cdr h)))
 		      (cond ((pair? h)
 			     (if (not (eq? h t))
 				 (if (?cmp ($car h) x)
-				     (%race ($cdr h) ($cdr t) ls x)
-				   (cons ($car h) (%race ($cdr h) ($cdr t) ls x)))
+				     (cons a0 (%race ($cdr h) ($cdr t) ls x))
+				   (cons* a0 ($car h) (%race ($cdr h) ($cdr t) ls x)))
 			       (%error-circular-list-is-invalid-as-argument ls)))
 			    ((null? h)
-			     '())
+			     (list a0))
 			    (else
-			     (%error-expected-proper-list-as-argument ls))))
-		  (let ((a0 ($car h)) (h ($cdr h)))
-		    (cond ((pair? h)
-			   (if (not (eq? h t))
-			       (if (?cmp ($car h) x)
-				   (cons a0 (%race ($cdr h) ($cdr t) ls x))
-				 (cons* a0 ($car h) (%race ($cdr h) ($cdr t) ls x)))
-			     (%error-circular-list-is-invalid-as-argument ls)))
-			  ((null? h)
-			   (list a0))
-			  (else
-			   (%error-expected-proper-list-as-argument ls))))))
-	       ((null? h)
-		'())
-	       (else
-		(%error-expected-proper-list-as-argument ls))))
+			     (%error-expected-proper-list-as-argument ls))))))
+		 ((null? h)
+		  '())
+		 (else
+		  (%error-expected-proper-list-as-argument ls)))))
        (%race ls ls ls x)))
     ))
 
@@ -927,32 +942,33 @@
 
 (define* (partition {p procedure?} ls)
   (define (%race h t ls p)
-    (cond ((pair? h)
-	   (let ((a0 ($car h))
-		 (h  ($cdr h)))
-	     (cond ((pair? h)
-		    (if (eq? h t)
-			(%error-circular-list-is-invalid-as-argument ls)
-		      (let ((a1 ($car h)))
-			(let-values (((a* b*) (%race ($cdr h) ($cdr t) ls p)))
-			  (cond ((p a0)
-				 (if (p a1)
-				     (values (cons* a0 a1 a*) b*)
-				   (values (cons a0 a*) (cons a1 b*))))
-				((p a1)
-				 (values (cons a1 a*) (cons a0 b*)))
-				(else
-				 (values a* (cons* a0 a1 b*))))))))
-		   ((null? h)
-		    (if (p a0)
-			(values (list a0) '())
-		      (values '() (list a0))))
-		   (else
-		    (%error-expected-proper-list-as-argument ls)))))
-	  ((null? h)
-	   (values '() '()))
-	  (else
-	   (%error-expected-proper-list-as-argument ls))))
+    (with-who partition
+      (cond ((pair? h)
+	     (let ((a0 ($car h))
+		   (h  ($cdr h)))
+	       (cond ((pair? h)
+		      (if (eq? h t)
+			  (%error-circular-list-is-invalid-as-argument ls)
+			(let ((a1 ($car h)))
+			  (let-values (((a* b*) (%race ($cdr h) ($cdr t) ls p)))
+			    (cond ((p a0)
+				   (if (p a1)
+				       (values (cons* a0 a1 a*) b*)
+				     (values (cons a0 a*) (cons a1 b*))))
+				  ((p a1)
+				   (values (cons a1 a*) (cons a0 b*)))
+				  (else
+				   (values a* (cons* a0 a1 b*))))))))
+		     ((null? h)
+		      (if (p a0)
+			  (values (list a0) '())
+			(values '() (list a0))))
+		     (else
+		      (%error-expected-proper-list-as-argument ls)))))
+	    ((null? h)
+	     (values '() '()))
+	    (else
+	     (%error-expected-proper-list-as-argument ls)))))
   (%race ls ls ls p))
 
 

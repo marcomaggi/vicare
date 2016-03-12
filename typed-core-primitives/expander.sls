@@ -245,7 +245,7 @@
     (safe)
   (signatures
    #;((<syntactic-identifier> . [or <string> <symbol> <syntactic-identifier>])	=> (<syntactic-identifier>))
-   ((<syntactic-identifier> . <top>)		=> (<syntactic-identifier>)))
+   ((<syntactic-identifier> . <list>)		=> (<syntactic-identifier>)))
   (attributes
    ((_ . _)		effect-free result-true)))
 
@@ -253,7 +253,7 @@
     (safe)
   (signatures
    #;((<syntactic-identifier> <string> . [or <string> <symbol> <syntactic-identifier>])	=> (<syntactic-identifier>))
-   ((<syntactic-identifier> <string> . <top>)	=> (<syntactic-identifier>)))
+   ((<syntactic-identifier> <string> . <list>)	=> (<syntactic-identifier>)))
   (attributes
    ((_ _ . _)		effect-free result-true)))
 

@@ -124,7 +124,6 @@
 ;; module interfaces
 (import PSYNTAX-SYNTAX-MATCH)
 (import PSYNTAX-SYNTAX-UTILITIES)
-(import PSYNTAX-TYPE-IDENTIFIERS)
 (import PSYNTAX-TYPE-SIGNATURES)
 
 
@@ -874,8 +873,8 @@
 		    (options::strict-r6rs     (or (memq 'strict-r6rs    option*) (options::strict-r6rs))))
 	(verbose-messages-thunk)
 	(let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
-	      (rtc	(make-collector))
-	      (vtc	(make-collector)))
+	      (rtc		(make-collector))
+	      (vtc		(make-collector)))
 	  (parametrise ((inv-collector  rtc)
 			(vis-collector  vtc))
 	    ;;INIT*.STX  is  a  list  of syntax  objects  representing  the  trailing
@@ -1112,7 +1111,7 @@
 	       ;;
 	       ;;   (?label . (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr)))
 	       ;;
-	       ;;Add to the GLOBAL-ENV an entry like:
+	       ;;Add to the GLOBAL-ENV an entry like one of the following:
 	       ;;
 	       ;;   (?label . (global-typed         . ?loc))
 	       ;;   (?label . (global-typed-mutable . ?loc))
@@ -1130,31 +1129,41 @@
 	       ;;type must be in the GLOBAL-ENV, but they cannot be referenced in the
 	       ;;EXPORT-SUBST; this validation will be performed later.
 	       ;;
-	       (let* ((lts		(car descr.value))
-		      (lex		(lexical-typed-variable-spec.lex lts))
-		      (loc		(generate-storage-location-gensym lex))
-		      (variable-loc	(let lookup ((the-lex	lex)
-						     (lex*	lex*)
-						     (loc*	loc*))
-					  ;;Search for THE-LEX in the list LEX*: when
-					  ;;found  return  the  corresponding  gensym
-					  ;;from LOC*.   THE-LEX must  be an  item in
-					  ;;LEX*.
-					  (if (pair? lex*)
-					      (if (eq? the-lex (car lex*))
-						  (car loc*)
-						(lookup the-lex (cdr lex*) (cdr loc*)))
-					    (assertion-violation/internal-error __who__
-					      "missing lexical gensym in lexenv" the-lex))))
-		      (type		(if (lexical-typed-variable-spec.assigned? lts)
-					    'global-typed-mutable
-					  'global-typed)))
-		 (receive (gts gts-maker-core-expr)
-		     (make-global-typed-variable-spec-and-maker-core-expr lts variable-loc)
+	       ;;NOTE  GLOBVAR.LOC  is the  loc  gensym  that  will hold  the  global
+	       ;;variable's value.
+	       ;;
+	       (let* ((lexvar.lts		(car descr.value))
+		      (lexvar.lex		(lexical-typed-variable-spec.lex lexvar.lts))
+		      (lexvar.ots		(typed-variable-spec.ots lexvar.lts))
+		      ;;GLOBVAR.VALUE-LOC  is  the  loc  gensym that  will  hold  the
+		      ;;run-time value  of the variable.   Search for THE-LEX  in the
+		      ;;list LEX*:  when found  return the corresponding  gensym from
+		      ;;LOC*.  THE-LEX must be an item in LEX*.
+		      (globvar.value-loc	(let lookup ((the-lex	lexvar.lex)
+							     (lex*	lex*)
+							     (loc*	loc*))
+						  (if (pair? lex*)
+						      (if (eq? the-lex (car lex*))
+							  (car loc*)
+							(lookup the-lex (cdr lex*) (cdr loc*)))
+						    (assertion-violation/internal-error __who__
+						      "missing lexical gensym in lexenv" the-lex))))
+		      ;;GLOBVAR.TYPE-LOC  is  the  loc  gensym  that  will  hold  the
+		      ;;expand-time type description of the variable.
+		      (globvar.type-loc		(generate-storage-location-gensym lexvar.lex))
+		      (globvar.type		(if (lexical-typed-variable-spec.assigned? lexvar.lts)
+						    'global-typed-mutable
+						  'global-typed)))
+		 ;;GLOBVAR.GTS  is  an   instance  of  "<global-typed-variable-spec>"
+		 ;;describing  the type  of the  variable.  GTS-MAKER-CORE-EXPR  is a
+		 ;;core  language  expression  which, compiled  and  evaluated,  will
+		 ;;return a copy of GLOBVAR.GTS; this code belongs in the visit code.
+		 (receive (globvar.gts gts-maker-core-expr)
+		     (make-global-typed-variable-spec-and-maker-core-expr lexvar.ots globvar.value-loc)
 		   (loop (cdr lexenv.run)
-			 (cons (make-global-env-entry label type loc) global-env)
-			 (cons (make-visit-env-entry loc gts gts-maker-core-expr) visit-env)
-			 (cons (cons label variable-loc) typed-locs)))))
+			 (cons (make-global-env-entry label globvar.type globvar.type-loc) global-env)
+			 (cons (make-visit-env-entry globvar.type-loc globvar.gts gts-maker-core-expr) visit-env)
+			 (cons (cons label globvar.value-loc) typed-locs)))))
 
 	      ((local-macro)
 	       ;;When we  define a syntactic  binding representing a  keyword binding
@@ -1263,7 +1272,6 @@
 		       typed-locs)))
 
 	      (($core-scheme-object-type-name
-		$core-list-object-type-name
 		$core-record-type-name $core-condition-object-type-name
 		$module $fluid $synonym)
 	       ;;We expect LEXENV entries of these types to have the format:
@@ -1447,9 +1455,12 @@
 
 ;;Register the expander with the library manager.
 (libman::current-library-expander expand-library)
+(void)
 
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander after"))
-;; (void)
+;; #!vicare
+;; (internal-body
+;;   (import (only (vicare) foreign-call))
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander after")))
 
 #| end of library |# )
 

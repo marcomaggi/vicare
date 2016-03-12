@@ -28,8 +28,8 @@
      <clambda-clause-signature>
      make-clambda-clause-signature			clambda-clause-signature?
      clambda-clause-signature=?
-     clambda-clause-signature.retvals			clambda-clause-signature.retvals.tags
-     clambda-clause-signature.argvals			clambda-clause-signature.argvals.tags
+     clambda-clause-signature.retvals			clambda-clause-signature.retvals.specs
+     clambda-clause-signature.argvals			clambda-clause-signature.argvals.specs
      clambda-clause-signature.fully-untyped?		clambda-clause-signature.untyped?
      clambda-signature.min-and-max-argvals
 
@@ -45,7 +45,6 @@
 
      #| end of exports |# )
 
-(import PSYNTAX-TYPE-IDENTIFIERS)
 (import PSYNTAX-TYPE-SIGNATURES)
 (import PSYNTAX-TYPE-SYNTAX-OBJECTS)
 
@@ -117,11 +116,11 @@
 		       (loop (cdr obj)))
 		(null? obj))))))
 
-(define* (clambda-clause-signature.argvals.tags {signature clambda-clause-signature?})
-  (type-signature.tags (clambda-clause-signature.argvals signature)))
+(define* (clambda-clause-signature.argvals.specs {signature clambda-clause-signature?})
+  (type-signature.specs (clambda-clause-signature.argvals signature)))
 
-(define* (clambda-clause-signature.retvals.tags {signature clambda-clause-signature?})
-  (type-signature.tags (clambda-clause-signature.retvals signature)))
+(define* (clambda-clause-signature.retvals.specs {signature clambda-clause-signature?})
+  (type-signature.specs (clambda-clause-signature.retvals signature)))
 
 ;;; --------------------------------------------------------------------
 
@@ -167,8 +166,12 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-callable-signature)
+      (define (reduce func identity ell)
+	(if (pair? ell)
+	    (fold-left func (car ell) (cdr ell))
+	  identity))
       (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
-	((make-callable-signature (apply type-signature.common-ancestor (map clambda-clause-signature.retvals signature*)))
+	((make-callable-signature (reduce type-signature.common-ancestor '() (map clambda-clause-signature.retvals signature*)))
 	 signature* #f #f))
       make-clambda-signature))
   (custom-printer
