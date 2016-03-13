@@ -90,50 +90,66 @@
     generate-storage-location-gensym
     generate-label-gensym
 
-    ;; object types specifications: base types
+    ;; object types specifications
     <object-type-spec>
     object-type-spec?
-    object-type-spec.name
-    object-type-spec.constructor-sexp			object-type-spec.destructor-sexp
-    object-type-spec.type-predicate-sexp
-    object-type-spec.safe-accessor-sexp			object-type-spec.safe-mutator-sexp
-    object-type-spec.applicable-method-sexp
+    object-type-spec.name				object-type-spec.parent-ots
+    object-type-spec.constructor-stx			object-type-spec.destructor-stx
+    object-type-spec.type-predicate-stx
+    object-type-spec.safe-accessor-stx			object-type-spec.safe-mutator-stx
+    object-type-spec.applicable-method-stx
 
-    ;; object-type specifications: utilities
     object-type-spec.super-and-sub?			object-type-spec.matching-super-and-sub?
-    object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
+    object-type-spec.common-ancestor
     object-type-spec.procedure?
+    object-type-spec.list-sub-type?
+    object-type-spec.vector-sub-type?
 
-    ;; object-type specifications: built-in object types
-    <scheme-type-spec>					scheme-type-spec?
+    <scheme-type-spec>
+    make-scheme-type-spec				scheme-type-spec?
 
-    ;; object-type specifications: closure object
     <closure-type-spec>
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature
 
-    ;; object-type specifications: compound types, lists
-    <list-of-type-spec>
-    <list-of-type-spec>-rtd				<list-of-type-spec>-rcd
-    make-list-of-type-spec				list-of-type-spec?
-    list-of-type-spec.item-ots
-
-    ;; object-type specifications: compound types, vectors
-    <vector-of-type-spec>
-    <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd
-    make-vector-of-type-spec				vector-of-type-spec?
-    vector-of-type-spec.item-ots
-
-    ;; object-type specifications: structs
     <struct-type-spec>
     make-struct-type-spec				struct-type-spec?
     struct-type-spec.std
 
-    ;; object types specifications: R6RS records
     <record-type-spec>
     make-record-type-spec				record-type-spec?
     record-type-spec.rtd-id				record-type-spec.rcd-id
     record-type-spec.super-protocol-id
+;;;
+    <pair-type-spec>
+    <pair-type-spec>-rtd				<pair-type-spec>-rcd
+    make-pair-type-spec					pair-type-spec?
+    pair-type-spec.car-ots				pair-type-spec.cdr-ots
+
+    <pair-of-type-spec>
+    <pair-of-type-spec>-rtd				<pair-of-type-spec>-rcd
+    make-pair-of-type-spec				pair-of-type-spec?
+    pair-of-type-spec.item-ots
+;;;
+    <list-type-spec>
+    <list-type-spec>-rtd				<list-type-spec>-rcd
+    make-list-type-spec					list-type-spec?
+    list-type-spec.item-ots*
+
+    <list-of-type-spec>
+    <list-of-type-spec>-rtd				<list-of-type-spec>-rcd
+    make-list-of-type-spec				list-of-type-spec?
+    list-of-type-spec.item-ots
+;;;
+    <vector-type-spec>
+    <vector-type-spec>-rtd				<vector-type-spec>-rcd
+    make-vector-type-spec				vector-type-spec?
+    vector-type-spec.item-ots*
+
+    <vector-of-type-spec>
+    <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd
+    make-vector-of-type-spec				vector-of-type-spec?
+    vector-of-type-spec.item-ots
 
     ;; typed variable specification: base type
     <typed-variable-spec>

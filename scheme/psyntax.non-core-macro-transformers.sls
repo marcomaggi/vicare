@@ -119,6 +119,7 @@
   ;;Map symbols representing non-core macros to their macro transformers.
   ;;
   (case x
+    ((define-type)			define-type-macro)
     ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
@@ -292,6 +293,22 @@
 (include "psyntax.non-core-macro-transformers.define-struct.scm"	#t)
 (include "psyntax.non-core-macro-transformers.define-record-type.scm"	#t)
 (include "psyntax.non-core-macro-transformers.infix-macro.scm"		#t)
+
+
+;;;; non-core macro: DEFINE-TYPE
+
+(define (define-type-macro input-form.stx)
+  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-name ?type-annotation)
+     (identifier? ?type-name)
+     (let ((ots (type-annotation->object-type-specification ?type-annotation (current-inferior-lexenv) ?type-name)))
+       (bless
+	`(define-syntax ,?type-name (quote ,ots)))))
+    ))
 
 
 ;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES

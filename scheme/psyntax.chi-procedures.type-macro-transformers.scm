@@ -77,7 +77,7 @@
 	 (cond ((list-of-type-spec? ots)
 		(%build-list-constructor input-form.stx lexenv.run lexenv.expand
 					 ?type-id (list-of-type-spec.item-ots ots) ?rand*))
-	       ((object-type-spec.constructor-sexp ots)
+	       ((object-type-spec.constructor-stx ots)
 		=> (lambda (constructor.sexp)
 		     (if (boolean? constructor.sexp)
 			 (%build-object-with-validator input-form.stx lexenv.run lexenv.expand ?type-id ?rand*)
@@ -173,14 +173,14 @@
 
     (define (%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
 					     list-type.id item.ots rand.stx rand.idx rand.core)
-      (let* ((validator.sexp	(let ((arg.sym   (gensym "arg"))
-				      (pred.sexp (object-type-spec.type-predicate-sexp item.ots)))
+      (let* ((validator.stx	(let ((arg.sym   (gensym "arg"))
+				      (pred.sexp (object-type-spec.type-predicate-stx item.ots)))
 				  `(lambda (,arg.sym)
 				     (if (,pred.sexp ,arg.sym)
 					 ,arg.sym
 				       (procedure-signature-argument-violation (quote ,list-type.id)
 					 "invalid object type" ,rand.idx ',pred.sexp ,arg.sym)))))
-	     (validator.psi	(chi-expr (bless validator.sexp) lexenv.run lexenv.expand))
+	     (validator.psi	(chi-expr validator.stx lexenv.run lexenv.expand))
 	     (validator.core	(psi.core-expr validator.psi)))
 	(build-application no-source
 	  validator.core
@@ -244,11 +244,11 @@
       ))
 
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type.ots expr.psi)
-    (cond ((object-type-spec.destructor-sexp type.ots)
-	   => (lambda (destructor.sexp)
+    (cond ((object-type-spec.destructor-stx type.ots)
+	   => (lambda (destructor.stx)
 		;;This record type has a default destructor.
 		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   (bless destructor.sexp) expr.psi '())))
+						   destructor.stx expr.psi '())))
 	  (else
 	   ;;This  record  type has  *no*  default  destructor; default  to  run-time
 	   ;;destruction.
@@ -280,10 +280,9 @@
       ((_ ?jolly ?type-id)
        (and (identifier? ?type-id)
 	    (underscore-id? ?jolly))
-       (chi-expr (bless
-		  (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
-		    (or (object-type-spec.type-predicate-sexp ots)
-			(%synner "type specification has no predicate for run-time use" ?type-id))))
+       (chi-expr (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
+		   (or (object-type-spec.type-predicate-stx ots)
+		       (%synner "type specification has no predicate for run-time use" ?type-id)))
 		 lexenv.run lexenv.expand))
 
       ((_ ?expr ?type-id)
@@ -485,9 +484,8 @@
     ;;where  ?TYPE-PREDICATE is  a syntax  object representing  an expression  which,
     ;;expanded and evaluated, returns the type predicate for ?PRED-TYPE.
     ;;
-    (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred.ots)
-			   (synner "type specification has no predicate for run-time use" pred.id)))
-	   (pred.stx   (bless pred.sexp)))
+    (let ((pred.stx (or (object-type-spec.type-predicate-stx pred.ots)
+			(synner "type specification has no predicate for run-time use" pred.id))))
       (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
 					 pred.stx expr.psi '())))
 
@@ -531,9 +529,8 @@
 	    (expr.sig  (psi.retvals-signature expr.psi))
 	    (expr.core (psi.core-expr expr.psi)))
        (with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
-	 (let* ((pred.sexp  (or (object-type-spec.type-predicate-sexp pred-ots)
-				(%synner "type specification has no predicate for run-time use" ?pred-type-id)))
-		(pred.stx   (bless pred.sexp)))
+	 (let ((pred.stx  (or (object-type-spec.type-predicate-stx pred-ots)
+			      (%synner "type specification has no predicate for run-time use" ?pred-type-id))))
 	   (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
 					      pred.stx expr.psi '())))))
     ))
@@ -605,11 +602,9 @@
   (define* (%expand-to-object-accessor-application input-form.stx lexenv.run lexenv.expand
 						   {type.ots object-type-spec?} {expr.stx syntax-object?}
 						   field-name.id)
-    (cond ((object-type-spec.safe-accessor-sexp type.ots (identifier->symbol field-name.id))
-	   => (lambda (accessor.sexp)
-		(chi-expr (bless
-			   `(,accessor.sexp ,expr.stx))
-			  lexenv.run lexenv.expand)))
+    (cond ((object-type-spec.safe-accessor-stx type.ots (identifier->symbol field-name.id))
+	   => (lambda (accessor.stx)
+		(chi-expr `(,accessor.stx ,expr.stx) lexenv.run lexenv.expand)))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
@@ -617,9 +612,9 @@
 
   (define* (%expand-to-object-accessor input-form.stx lexenv.run lexenv.expand
 				       {type.ots object-type-spec?} field-name.id)
-    (cond ((object-type-spec.safe-accessor-sexp type.ots (identifier->symbol field-name.id))
-	   => (lambda (accessor.sexp)
-		(chi-expr (bless accessor.sexp) lexenv.run lexenv.expand)))
+    (cond ((object-type-spec.safe-accessor-stx type.ots (identifier->symbol field-name.id))
+	   => (lambda (accessor.stx)
+		(chi-expr accessor.stx lexenv.run lexenv.expand)))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
@@ -627,10 +622,10 @@
 
   (define* (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand
 							{type.ots object-type-spec?} {expr.psi psi?} field-name.id)
-    (cond ((object-type-spec.safe-accessor-sexp type.ots (identifier->symbol field-name.id))
-	   => (lambda (accessor.sexp)
+    (cond ((object-type-spec.safe-accessor-stx type.ots (identifier->symbol field-name.id))
+	   => (lambda (accessor.stx)
 		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   (bless accessor.sexp) expr.psi '())))
+						   accessor.stx expr.psi '())))
 	  (else
 	   (syntax-violation __module_who__ "unknown field name" input-form.stx field-name.id))))
 
@@ -704,38 +699,36 @@
   (define* (%expand-to-object-mutator-application input-form.stx lexenv.run lexenv.expand
 						  {type.ots object-type-spec?} {expr.stx syntax-object?}
 						  field-name.id new-value.stx)
-    (let ((mutator.sexp (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand type.ots field-name.id)))
-      (chi-expr (bless
-		 `(,mutator.sexp ,expr.stx ,new-value.stx))
-		lexenv.run lexenv.expand)))
+    (let ((mutator.stx (%retrieve-mutator-stx input-form.stx lexenv.run lexenv.expand type.ots field-name.id)))
+      (chi-expr `(,mutator.stx ,expr.stx ,new-value.stx) lexenv.run lexenv.expand)))
 
 ;;; --------------------------------------------------------------------
 
   (define (%expand-to-object-mutator input-form.stx lexenv.run lexenv.expand
 				     type.ots field-name.id)
-    (let ((mutator.sexp (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand type.ots field-name.id)))
-      (chi-expr (bless mutator.sexp) lexenv.run lexenv.expand)))
+    (let ((mutator.stx (%retrieve-mutator-stx input-form.stx lexenv.run lexenv.expand type.ots field-name.id)))
+      (chi-expr mutator.stx lexenv.run lexenv.expand)))
 
 ;;; --------------------------------------------------------------------
 
   (define* (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand
 						       {type.ots object-type-spec?} {expr.psi psi?}
 						       field-name.id new-value.stx)
-    (let ((mutator.sexp (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand type.ots field-name.id)))
+    (let ((mutator.stx (%retrieve-mutator-stx input-form.stx lexenv.run lexenv.expand type.ots field-name.id)))
       (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-					 (bless mutator.sexp) expr.psi (list new-value.stx))))
+					 mutator.stx expr.psi (list new-value.stx))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%retrieve-mutator-sexp input-form.stx lexenv.run lexenv.expand
-				  ots field-name.id)
+  (define (%retrieve-mutator-stx input-form.stx lexenv.run lexenv.expand
+				 type.ots field-name.id)
     (define (%error message)
       (syntax-violation __module_who__ message input-form.stx field-name.id))
-    (cond ((object-type-spec.safe-mutator-sexp ots (identifier->symbol field-name.id))
-	   => (lambda (mutator.sexp)
-		(if (boolean? mutator.sexp)
+    (cond ((object-type-spec.safe-mutator-stx type.ots (identifier->symbol field-name.id))
+	   => (lambda (mutator.stx)
+		(if (boolean? mutator.stx)
 		    (%error "attempt to mutate immutable field")
-		  mutator.sexp)))
+		  mutator.stx)))
 	  (else
 	   (%error "unknown field name"))))
 
@@ -771,18 +764,31 @@
 	 (case-signature-specs subject-expr.sig
 	   ((<top>)
 	    (%late-binding))
+
 	   ((single-value)
 	    => (lambda (subject-expr.ots)
 		 (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
 						       ?method-name method-name.sym
 						       ?subject-expr subject-expr.psi subject-expr.ots
 						       ?arg*)))
+
 	   (<no-return>
-	    (%error "subject expression of method call defined to never return"))
+	    (let ((common (condition
+			   (make-who-condition __module_who__)
+			   (make-message-condition "subject expression of method call defined to never return")
+			   (make-syntax-violation input-form.stx ?subject-expr)
+			   (make-irritants-condition (list subject-expr.sig)))))
+	      (if (options::typed-language?)
+		  (raise (condition (make-expand-time-type-signature-violation) common))
+		(begin
+		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+		  (%late-binding)))))
+
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature; we need to insert a run-time dispatch.
 	    (%late-binding))
+
 	   (else
 	    ;;We have determined at expand-time  that the expression returns multiple
 	    ;;values.
@@ -791,31 +797,32 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
-						method-name.id method-name.sym
-						subject-expr.stx subject-expr.psi subject-expr.ots arg*.stx)
-    (cond ((object-type-spec.applicable-method-sexp subject-expr.ots method-name.sym)
+  (define* (%expand-to-early-binding-method-call input-form.stx lexenv.run lexenv.expand
+						 method-name.id method-name.sym
+						 subject-expr.stx subject-expr.psi subject-expr.ots
+						 arg*.stx)
+    (cond ((object-type-spec.applicable-method-stx subject-expr.ots method-name.sym)
 	   ;;A matching method name exists.
-	   => (lambda (method.sexp)
+	   => (lambda (method.stx)
 		;;A matching method name exists.
 		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   (bless method.sexp) subject-expr.psi arg*.stx)))
+						   method.stx subject-expr.psi arg*.stx)))
 
 	  ((and (null? arg*.stx)
-		(object-type-spec.safe-accessor-sexp subject-expr.ots method-name.sym))
+		(object-type-spec.safe-accessor-stx subject-expr.ots method-name.sym))
 	   ;;No additional  arguments: the input form  has the correct syntax  for an
 	   ;;field accessor application.  A matching field name exists.
-	   => (lambda (accessor.sexp)
+	   => (lambda (accessor.stx)
 		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   (bless accessor.sexp) subject-expr.psi arg*.stx)))
+						   accessor.stx subject-expr.psi arg*.stx)))
 
 	  ((and (list-of-single-item? arg*.stx)
-		(object-type-spec.safe-mutator-sexp subject-expr.ots method-name.sym))
+		(object-type-spec.safe-mutator-stx subject-expr.ots method-name.sym))
 	   ;;A single additional argument: the input  form has the correct syntax for
 	   ;;a field mutator application.  A matching mutable field name exists.
-	   => (lambda (mutator.sexp)
+	   => (lambda (mutator.stx)
 		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   (bless mutator.sexp) subject-expr.psi arg*.stx)))
+						   mutator.stx subject-expr.psi arg*.stx)))
 
 	  (else
 	   (raise
@@ -838,12 +845,12 @@
 	   (arg*.psi    (chi-expr* arg*.stx lexenv.run lexenv.expand))
 	   (arg*.core   (map psi.core-expr arg*.psi)))
       (make-psi input-form.stx
-		(build-application input-form.stx
-		  (build-primref no-source 'method-call-late-binding)
-		  (cons* (build-data no-source method-name.sym)
-			 expr.core
-			 arg*.core))
-		(make-type-signature/fully-untyped))))
+	(build-application input-form.stx
+	    (build-primref no-source 'method-call-late-binding)
+	  (cons* (build-data no-source method-name.sym)
+		 expr.core
+		 arg*.core))
+	(make-type-signature/fully-untyped))))
 
   #| end of module |# )
 
@@ -871,10 +878,10 @@
 				     (cond ,@(%build-branches input-form.stx arg.sym case-clause*.stx)))))
 	     (matcher.psi	(chi-expr (bless matcher.sexp) lexenv.run lexenv.expand)))
 	(make-psi input-form.stx
-		  (build-application no-source
-		    (psi.core-expr matcher.psi)
-		    (list (psi.core-expr expr.psi)))
-		  (psi-application-retvals-signature input-form.stx lexenv.run matcher.psi)))))
+	  (build-application no-source
+	      (psi.core-expr matcher.psi)
+	    (list (psi.core-expr expr.psi)))
+	  (psi-application-retvals-signature input-form.stx lexenv.run matcher.psi)))))
 
   (define (%build-branches input-form.stx arg.sym case-clause*.stx)
     ;;This loop is like MAP, but we want  to detect if the ELSE clause (when present)
@@ -1213,7 +1220,7 @@
 				  asrt.ots idx return-values?)
       (let ((consumer-formal.sym	(gensym (string-append "arg" (number->string idx))))
 	    (type-name.stx		(object-type-spec.name                asrt.ots))
-	    (typed-predicate.sexp	(object-type-spec.type-predicate-sexp asrt.ots)))
+	    (typed-predicate.sexp	(object-type-spec.type-predicate-stx asrt.ots)))
 	(define validating-form.sexp
 	  (if return-values?
 	      `(if (,typed-predicate.sexp ,consumer-formal.sym)
@@ -1231,7 +1238,7 @@
 				   asrt.id idx consumer-formal.sym return-values?)
       (let* ((asrt.ots			(id->object-type-specification caller-who input-form.stx asrt.id lexenv.run))
 	     (item.ots			(list-of-type-spec.item-ots asrt.ots))
-	     (typed-predicate.sexp	(object-type-spec.type-predicate-sexp asrt.ots))
+	     (typed-predicate.sexp	(object-type-spec.type-predicate-stx asrt.ots))
 	     (idx.sym			(gensym "idx"))
 	     (obj.sym			(gensym "obj")))
 	(define validator.sexp
@@ -1328,12 +1335,14 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?super-type ?sub-type)
-     (let ((super.ots (id->object-type-specification __who__ input-form.stx ?super-type lexenv.run))
-	   (sub.ots   (id->object-type-specification __who__ input-form.stx ?sub-type   lexenv.run)))
+     (let* ((super.ots	(id->object-type-specification __who__ input-form.stx ?super-type lexenv.run))
+	    (sub.ots	(id->object-type-specification __who__ input-form.stx ?sub-type   lexenv.run))
+	    (bool	(object-type-spec.matching-super-and-sub? super.ots sub.ots)))
        (make-psi input-form.stx
-		 (build-data no-source
-		   (object-type-spec.super-and-sub? super.ots sub.ots))
-		 (make-type-signature/single-boolean))))
+	 (build-data no-source bool)
+	 (if bool
+	     (make-type-signature/single-true)
+	   (make-type-signature/single-false)))))
     ))
 
 (define-core-transformer (signature-super-and-sub? input-form.stx lexenv.run lexenv.expand)
@@ -1345,17 +1354,17 @@
     ((_ ?super-signature ?sub-signature)
      (begin
        (unless (syntax-object.type-signature? ?super-signature lexenv.run)
-	 (syntax-violation __who__
-	   "invalid super signature argument" input-form.stx ?super-signature))
+	 (syntax-violation __who__ "invalid super signature argument" input-form.stx ?super-signature))
        (unless (syntax-object.type-signature? ?sub-signature lexenv.run)
-	 (syntax-violation __who__
-	   "invalid sub signature argument" input-form.stx ?sub-signature))
-       (make-psi input-form.stx
-		 (build-data no-source
-		   (let ((super-signature (make-type-signature ?super-signature lexenv.run))
-			 (sub-signature   (make-type-signature ?sub-signature   lexenv.run)))
-		     (type-signature.super-and-sub? super-signature sub-signature)))
-		 (make-type-signature/single-boolean))))
+	 (syntax-violation __who__ "invalid sub signature argument"   input-form.stx ?sub-signature))
+       (let* ((super.sig	(make-type-signature ?super-signature lexenv.run))
+	      (sub.sig		(make-type-signature ?sub-signature   lexenv.run))
+	      (bool		(type-signature.super-and-sub? super.sig sub.sig)))
+	 (make-psi input-form.stx
+	   (build-data no-source bool)
+	   (if bool
+	       (make-type-signature/single-true)
+	     (make-type-signature/single-false))))))
     ))
 
 

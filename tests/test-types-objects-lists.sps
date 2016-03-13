@@ -122,33 +122,37 @@
 
 (parametrise ((check-test-name	'chars))
 
+  (define-type <list-of-chars>
+    (list-of <char>))
+
+;;; --------------------------------------------------------------------
 ;;; predicate
 
-  (check-for-true	(is-a? '() <char*>))
-  (check-for-true	(is-a? '(#\a #\b) <char*>))
-  (check-for-false	(is-a? '(1 2) <char*>))
+  (check-for-true	(is-a? '() <list-of-chars>))
+  (check-for-true	(is-a? '(#\a #\b) <list-of-chars>))
+  (check-for-false	(is-a? '(1 2) <list-of-chars>))
 
 ;;; --------------------------------------------------------------------
 ;;; constructor
 
   (check
-      (new <char*>)
+      (new <list-of-chars>)
     => '())
 
   (check
-      (new <char*> #\a #\b)
+      (new <list-of-chars> #\a #\b)
     => '(#\a #\b))
 
   (check
-      (xp.type-signature.tags (type-of (new <char*> #\a #\b)))
+      (xp.type-signature.tags (type-of (new <list-of-chars> #\a #\b)))
     (=> syntax=?)
-    (list #'<char*>))
+    (list #'<list-of-chars>))
 
   ;;Expand-time signature violation.  First operand.
   ;;
   (check
       (try
-	  (%eval (new <char*> 1))
+	  (%eval (new <list-of-chars> 1))
 	(catch E
 	  ((xp.&expand-time-type-signature-violation)
 	   (list (xp.condition-argument-type-syntactic-identifier E)
@@ -162,7 +166,7 @@
   ;;
   (check
       (try
-	  (%eval (new <char*> #\a 1))
+	  (%eval (new <list-of-chars> #\a 1))
 	(catch E
 	  ((xp.&expand-time-type-signature-violation)
 	   (list (xp.condition-argument-type-syntactic-identifier E)
@@ -176,7 +180,7 @@
   ;;
   (check
       (let ((port (open-string-input-port "#\\a #\\b")))
-	(new <char*> (read port) (read port)))
+	(new <list-of-chars> (read port) (read port)))
     => '(#\a #\b))
 
   ;;Run-time validation.  Operands with signature "(<top>)".
@@ -185,7 +189,7 @@
       (let ((port (open-string-input-port "#\\a #\\b")))
 	(define ({read-it <top>})
 	  (read port))
-	(new <char*> (read-it) (read-it)))
+	(new <list-of-chars> (read-it) (read-it)))
     => '(#\a #\b))
 
   ;;Run-time validation.  Operands with signature "<list>".
@@ -194,7 +198,7 @@
       (let ((port (open-string-input-port "#\\a #\\b")))
 	(define ({read-it . <list>})
 	  (read port))
-	(new <char*> (read-it) (read-it)))
+	(new <list-of-chars> (read-it) (read-it)))
     => '(#\a #\b))
 
   ;;Run-time validation.  Bad first operand.
@@ -202,7 +206,7 @@
   (check
       (try
 	  (let ((port (open-string-input-port "123 #\\b")))
-	    (new <char*> (read port) (read port)))
+	    (new <list-of-chars> (read port) (read port)))
 	(catch E
 	  ((&procedure-signature-argument-violation)
 	   (list (procedure-signature-argument-violation.one-based-argument-index E)
@@ -216,7 +220,7 @@
   (check
       (try
 	  (let ((port (open-string-input-port "#\\a 123")))
-	    (new <char*> (read port) (read port)))
+	    (new <list-of-chars> (read port) (read port)))
 	(catch E
 	  ((&procedure-signature-argument-violation)
 	   (list (procedure-signature-argument-violation.one-based-argument-index E)
@@ -229,22 +233,22 @@
 ;;; methods
 
   (check
-      (.car (new <char*> #\a #\b))
+      (.car (new <list-of-chars> #\a #\b))
     => #\a)
 
   (check
-      (.cdr (new <char*>  #\a #\b))
+      (.cdr (new <list-of-chars>  #\a #\b))
     => '(#\b))
 
 ;;; --------------------------------------------------------------------
 ;;; late binding
 
   (check
-      (method-call-late-binding 'car (new <char*> #\a #\b))
+      (method-call-late-binding 'car (new <list-of-chars> #\a #\b))
     => #\a)
 
   (check
-      (method-call-late-binding 'cdr (new <char*> #\a #\b))
+      (method-call-late-binding 'cdr (new <list-of-chars> #\a #\b))
     => '(#\b))
 
   #t)
@@ -252,34 +256,38 @@
 
 (parametrise ((check-test-name	'strings))
 
+  (define-type <list-of-strings>
+    (list-of <string>))
+
+;;; --------------------------------------------------------------------
 ;;; predicate
 
-  (check-for-true	(is-a? '() <string*>))
-  (check-for-true	(is-a? '("a") <string*>))
-  (check-for-true	(is-a? '("a" "b") <string*>))
-  (check-for-false	(is-a? '(1 2) <string*>))
+  (check-for-true	(is-a? '() <list-of-strings>))
+  (check-for-true	(is-a? '("a") <list-of-strings>))
+  (check-for-true	(is-a? '("a" "b") <list-of-strings>))
+  (check-for-false	(is-a? '(1 2) <list-of-strings>))
 
 ;;; --------------------------------------------------------------------
 ;;; constructor
 
   (check
-      (new <string*>)
+      (new <list-of-strings>)
     => '())
 
   (check
-      (new <string*> "a" "b")
+      (new <list-of-strings> "a" "b")
     => '("a" "b"))
 
   (check
-      (xp.type-signature.tags (type-of (new <string*> "a" "b")))
+      (xp.type-signature.tags (type-of (new <list-of-strings> "a" "b")))
     (=> syntax=?)
-    (list #'<string*>))
+    (list #'<list-of-strings>))
 
   ;;Expand-time signature violation.  First operand.
   ;;
   (check
       (try
-	  (%eval (new <string*> 1))
+	  (%eval (new <list-of-strings> 1))
 	(catch E
 	  ((xp.&expand-time-type-signature-violation)
 	   (list (xp.condition-argument-type-syntactic-identifier E)
@@ -293,7 +301,7 @@
   ;;
   (check
       (try
-	  (%eval (new <string*> "a" 1))
+	  (%eval (new <list-of-strings> "a" 1))
 	(catch E
 	  ((xp.&expand-time-type-signature-violation)
 	   (list (xp.condition-argument-type-syntactic-identifier E)
@@ -307,7 +315,7 @@
   ;;
   (check
       (let ((port (open-string-input-port "\"a\" \"b\"")))
-	(new <string*> (read port) (read port)))
+	(new <list-of-strings> (read port) (read port)))
     => '("a" "b"))
 
   ;;Run-time validation.  Operands with signature "(<top>)".
@@ -316,7 +324,7 @@
       (let ((port (open-string-input-port "\"a\" \"b\"")))
 	(define ({read-it <top>})
 	  (read port))
-	(new <string*> (read-it) (read-it)))
+	(new <list-of-strings> (read-it) (read-it)))
     => '("a" "b"))
 
   ;;Run-time validation.  Operands with signature "<list>".
@@ -325,7 +333,7 @@
       (let ((port (open-string-input-port "\"a\" \"b\"")))
 	(define ({read-it . <list>})
 	  (read port))
-	(new <string*> (read-it) (read-it)))
+	(new <list-of-strings> (read-it) (read-it)))
     => '("a" "b"))
 
   ;;Run-time validation.  Bad first operand.
@@ -333,7 +341,7 @@
   (check
       (try
 	  (let ((port (open-string-input-port "123 \"b\"")))
-	    (new <string*> (read port) (read port)))
+	    (new <list-of-strings> (read port) (read port)))
 	(catch E
 	  ((&procedure-signature-argument-violation)
 	   (list (procedure-signature-argument-violation.one-based-argument-index E)
@@ -347,7 +355,7 @@
   (check
       (try
 	  (let ((port (open-string-input-port "\"a\" 123")))
-	    (new <string*> (read port) (read port)))
+	    (new <list-of-strings> (read port) (read port)))
 	(catch E
 	  ((&procedure-signature-argument-violation)
 	   (list (procedure-signature-argument-violation.one-based-argument-index E)
@@ -360,22 +368,22 @@
 ;;; methods
 
   (check
-      (.car (new <string*> "a" "b"))
+      (.car (new <list-of-strings> "a" "b"))
     => "a")
 
   (check
-      (.cdr (new <string*>  "a" "b"))
+      (.cdr (new <list-of-strings>  "a" "b"))
     => '("b"))
 
 ;;; --------------------------------------------------------------------
 ;;; late binding
 
   (check
-      (method-call-late-binding 'car (new <string*> "a" "b"))
+      (method-call-late-binding 'car (new <list-of-strings> "a" "b"))
     => "a")
 
   (check
-      (method-call-late-binding 'cdr (new <string*> "a" "b"))
+      (method-call-late-binding 'cdr (new <list-of-strings> "a" "b"))
     => '("b"))
 
   #t)

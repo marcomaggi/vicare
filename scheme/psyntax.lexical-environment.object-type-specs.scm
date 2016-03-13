@@ -22,10 +22,10 @@
 (module (<object-type-spec>
 	 object-type-spec?
 	 object-type-spec.name				object-type-spec.parent-ots
-	 object-type-spec.constructor-sexp		object-type-spec.destructor-sexp
-	 object-type-spec.type-predicate-sexp
-	 object-type-spec.safe-accessor-sexp		object-type-spec.safe-mutator-sexp
-	 object-type-spec.applicable-method-sexp
+	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
+	 object-type-spec.type-predicate-stx
+	 object-type-spec.safe-accessor-stx		object-type-spec.safe-mutator-stx
+	 object-type-spec.applicable-method-stx
 
 	 object-type-spec.super-and-sub?		object-type-spec.matching-super-and-sub?
 	 object-type-spec.common-ancestor
@@ -127,10 +127,10 @@
 		;*  The  subtypes of  pairs,  lists  and  vectors cannot  be  further
 		;subtyped.
 
-    (immutable constructor-sexp		object-type-spec.constructor-sexp)
-		;A  boolean value  or a  symbolic  expression (to  be BLESSed  later)
-		;representing  a Scheme  expression that,  expanded and  evaluated at
-		;run-time, returns the default constructor function.
+    (immutable constructor-stx		object-type-spec.constructor-stx)
+		;A boolean value or a  syntax object representing a Scheme expression
+		;that,  expanded  and  evaluated  at run-time,  returns  the  default
+		;constructor function.
 		;
 		;When  this field  is #f:  this  object-type has  no constructor,  so
 		;trying to use the syntax NEW will cause an expand-time exception.
@@ -156,19 +156,19 @@
 		;"$make-clean-vector" or a closure object  like "vector" or the maker
 		;of R6RS records.
 
-    (immutable destructor-sexp		object-type-spec.destructor-sexp)
-		;False or a symbolic expression  (to be BLESSed later) representing a
-		;Scheme expression that, expanded  and evaluated at run-time, returns
-		;a destructor function.  The destructor is meant to be used as:
+    (immutable destructor-stx		object-type-spec.destructor-stx)
+		;False  or a  syntax object  representing a  Scheme expression  that,
+		;expanded and  evaluated at run-time, returns  a destructor function.
+		;The destructor is meant to be used as:
 		;
 		;   (?destructor ?instance)
 		;
 		;and called explicitly with the DELETE syntax.
 
-    (immutable type-predicate-sexp	object-type-spec.type-predicate-sexp)
-		;False or a symbolic expression  (to be BLESSed later) representing a
-		;Scheme expression that, expanded  and evaluated at run-time, returns
-		;a type predicate.  The predicate is meant to be used as:
+    (immutable type-predicate-stx	object-type-spec.type-predicate-stx)
+		;False  or a  syntax object  representing a  Scheme expression  that,
+		;expanded and evaluated  at run-time, returns a  type predicate.  The
+		;predicate is meant to be used as:
 		;
 		;   (?predicate ?object)
 		;
@@ -179,10 +179,9 @@
 
     (immutable safe-accessors-table	object-type-spec.safe-accessors-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
-		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
-		;expressions  that, expanded  and evaluated  at run-time,  return the
-		;associated safe  field accessor.   A field accessor  is meant  to be
-		;used as:
+		;syntax objects  representing Scheme  expressions that,  expanded and
+		;evaluated at run-time, return the associated safe field accessor.  A
+		;field accessor is meant to be used as:
 		;
 		;   (?accessor ?instance)
 		;
@@ -190,10 +189,9 @@
 
     (immutable safe-mutators-table	object-type-spec.safe-mutators-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
-		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
-		;expressions  that, expanded  and evaluated  at run-time,  return the
-		;associated safe field mutator.  A field  mutator is meant to be used
-		;as:
+		;syntax objects  representing Scheme  expressions that,  expanded and
+		;evaluated at run-time, return the  associated safe field mutator.  A
+		;field mutator is meant to be used as:
 		;
 		;   (?mutator ?instance ?new-field-value)
 		;
@@ -201,9 +199,9 @@
 
     (immutable methods-table		object-type-spec.methods-table)
 		;Null or  an alist mapping  symbols representing the method  names to
-		;symbolic  expressions  (to  be BLESSed  later)  representing  Scheme
-		;expressions  that, expanded  and evaluated  at run-time,  return the
-		;associated method.  A method is meant to be used as:
+		;syntax objects  representing Scheme  expressions that,  expanded and
+		;evaluated at  run-time, return the  associated method.  A  method is
+		;meant to be used as:
 		;
 		;   (?method ?instance ?arg ...)
 		;
@@ -214,17 +212,17 @@
   (protocol
     (lambda (make-record)
       (define* (make-object-type-spec name {parent.ots (or not object-type-spec?)}
-				      constructor-sexp destructor-sexp type-predicate-sexp
+				      constructor-stx destructor-stx type-predicate-stx
 				      safe-accessors-table safe-mutators-table methods-table)
 	(make-record name parent.ots
-		     constructor-sexp destructor-sexp type-predicate-sexp
+		     constructor-stx destructor-stx type-predicate-stx
 		     safe-accessors-table safe-mutators-table methods-table))
       make-object-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[object-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -237,11 +235,11 @@
 	   (list-of-object-type-spec? (cdr obj)))
     (null? obj)))
 
-(module (object-type-spec.safe-accessor-sexp
-	 object-type-spec.safe-mutator-sexp
-	 object-type-spec.applicable-method-sexp)
+(module (object-type-spec.safe-accessor-stx
+	 object-type-spec.safe-mutator-stx
+	 object-type-spec.applicable-method-stx)
 
-  (define* (object-type-spec.safe-accessor-sexp {ots object-type-spec?} field-name.sym)
+  (define* (object-type-spec.safe-accessor-stx {ots object-type-spec?} field-name.sym)
     ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
@@ -252,7 +250,7 @@
     ;;
     (%sexp-retriever ots field-name.sym object-type-spec.safe-accessors-table))
 
-  (define* (object-type-spec.safe-mutator-sexp {ots object-type-spec?} field-name.sym)
+  (define* (object-type-spec.safe-mutator-stx {ots object-type-spec?} field-name.sym)
     ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
@@ -263,7 +261,7 @@
     ;;
     (%sexp-retriever ots field-name.sym object-type-spec.safe-mutators-table))
 
-  (define* (object-type-spec.applicable-method-sexp {ots object-type-spec?} method-name.sym)
+  (define* (object-type-spec.applicable-method-stx {ots object-type-spec?} method-name.sym)
     ;;OTS must an object-type specification record.  METHOD-NAME.SYM must be a symbol
     ;;representing a method name in the object-type specification.
     ;;
@@ -282,12 +280,8 @@
 	   ;;entry and return it.
 	   => cdr)
 	  ((object-type-spec.parent-ots ots)
-	   => (letrec ((loop (lambda (parent-ots)
-			       (cond ((assq name.sym (table-getter parent-ots))
-				      => cdr)
-				     (else
-				      (loop (object-type-spec.parent-ots parent-ots)))))))
-		loop))
+	   => (lambda (parent.ots)
+		(%sexp-retriever parent.ots name.sym table-getter)))
 	  (else #f)))
 
   #| end of module |# )
@@ -434,18 +428,18 @@
     (lambda (make-object-type-spec)
       (define* (make-scheme-type-spec {name identifier?}
 				      {parent.ots (or not scheme-type-spec?)}
-				      constructor.sexp predicate.sexp methods-table)
-	(let ((destructor.sexp	#f)
+				      constructor.stx predicate.stx methods-table)
+	(let ((destructor.stx	#f)
 	      (accessors-table	'())
 	      (mutators-table	'()))
 	  ((make-object-type-spec name parent.ots
-				  constructor.sexp destructor.sexp predicate.sexp
+				  constructor.stx destructor.stx predicate.stx
 				  accessors-table mutators-table methods-table))))
       make-scheme-type-spec))
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[scheme-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
   #| end of DEFINE-RECORD-TYPE |# )
 
@@ -471,9 +465,9 @@
 				      constructor.id predicate.id
 				      safe-accessors-table safe-mutators-table methods-table)
 	(let ((parent.ots	(<struct>-ots))
-	      (destructor.sexp	`(internal-applicable-struct-type-destructor ,std)))
+	      (destructor.stx	(bless `(internal-applicable-struct-type-destructor ,std))))
 	  ((make-object-type-spec name parent.ots
-				  constructor.id destructor.sexp predicate.id
+				  constructor.id destructor.stx predicate.id
 				  safe-accessors-table safe-mutators-table methods-table)
 	   std)))
       make-struct-type-spec))
@@ -481,7 +475,7 @@
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[struct-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-STRUCT-TYPE |# )
@@ -512,7 +506,7 @@
     (lambda (make-object-type-spec)
       (define* (make-record-type-spec {type-name identifier?}
 				      rtd-id rcd-id super-protocol-id parent-name.id
-				      constructor.sexp destructor.sexp predicate.sexp
+				      constructor.stx destructor.stx predicate.stx
 				      safe-accessors-table safe-mutators-table methods-table)
 	(let ((parent-name.ots	(cond ((<record>-type-id? parent-name.id)
 				       (<record>-ots))
@@ -520,14 +514,15 @@
 				       (<condition>-ots))
 				      (else
 				       (id->record-type-specification __who__ #f parent-name.id (current-inferior-lexenv)))))
-	      (constructor.sexp	(or constructor.sexp
-				    `(record-constructor ,rcd-id)))
-	      (predicate.sexp	(or predicate.sexp
+	      (constructor.stx	(or constructor.stx
+				    (bless `(record-constructor ,rcd-id))))
+	      (predicate.stx	(or predicate.stx
 				    (let ((arg.sym (gensym)))
-				      `(lambda/std (,arg.sym)
-					 (record-and-rtd? ,arg.sym ,rtd-id))))))
+				      (bless
+				       `(lambda/std (,arg.sym)
+					  (record-and-rtd? ,arg.sym ,rtd-id)))))))
 	  ((make-object-type-spec type-name parent-name.ots
-				  constructor.sexp destructor.sexp predicate.sexp
+				  constructor.stx destructor.stx predicate.stx
 				  safe-accessors-table safe-mutators-table methods-table)
 	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))
@@ -535,7 +530,7 @@
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[record-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -565,14 +560,14 @@
     (lambda (make-object-type-spec)
       (define* (make-closure-type-spec name {signature callable-signature?})
 	(let ((parent.ots		(<procedure>-ots))
-	      (constructor.sexp		#f)
-	      (destructor.sexp		#f)
-	      (predicate.sexp		#f)
+	      (constructor.stx		#f)
+	      (destructor.stx		#f)
+	      (predicate.stx		#f)
 	      (accessors-table		'())
 	      (mutators-table		'())
 	      (methods-table		'()))
 	  ((make-object-type-spec name parent.ots
-				  constructor.sexp destructor.sexp predicate.sexp
+				  constructor.stx destructor.stx predicate.stx
 				  accessors-table mutators-table methods-table)
 	   signature)))
       make-closure-type-spec))
@@ -580,7 +575,7 @@
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[closure-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -631,15 +626,15 @@
 				    (object-type-spec.name cdr.ots))))
 	(({car.ots object-type-spec?} {cdr.ots object-type-spec?} {name.stx pair-name?})
 	 (let* ((parent.ots		(core-prim-id '<pair>))
-		(constructor.sexp	#f)
-		(destructor.sexp	#f)
-		(predicate.sexp		(make-pair-predicate (object-type-spec.type-predicate-sexp car.ots)
-							     (object-type-spec.type-predicate-sexp cdr.ots)))
+		(constructor.stx	#f)
+		(destructor.stx	#f)
+		(predicate.stx		(make-pair-predicate (object-type-spec.type-predicate-stx car.ots)
+							     (object-type-spec.type-predicate-stx cdr.ots)))
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
-				   constructor.sexp destructor.sexp predicate.sexp
+				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
 	    car.ots cdr.ots))))
 
@@ -656,17 +651,18 @@
 
       (define (make-pair-predicate car-pred.stx cdr-pred.stx)
 	(let ((obj.sym (gensym "obj")))
-	  `(lambda (,obj.sym)
-	     (and (pair? ,obj.sym)
-		  (,car-pred.stx (car ,obj.sym))
-		  (,cdr-pred.stx (cdr ,obj.sym))))))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (pair? ,obj.sym)
+		   (,car-pred.stx (car ,obj.sym))
+		   (,cdr-pred.stx (cdr ,obj.sym)))))))
 
       make-pair-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[pair-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -702,14 +698,14 @@
 				       (object-type-spec.name item.ots))))
 	(({item.ots object-type-spec?} {name.stx pair-of-name?})
 	 (let* ((parent.ots		(core-prim-id '<pair>))
-		(constructor.sexp	#f)
-		(destructor.sexp	#f)
-		(predicate.sexp		(make-pair-of-predicate (object-type-spec.type-predicate-sexp item.ots)))
+		(constructor.stx	#f)
+		(destructor.stx	#f)
+		(predicate.stx		(make-pair-of-predicate (object-type-spec.type-predicate-stx item.ots)))
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
-				   constructor.sexp destructor.sexp predicate.sexp
+				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
 	    item.ots))))
 
@@ -725,17 +721,18 @@
 
       (define (make-pair-of-predicate item-pred.stx)
 	(let ((obj.sym (gensym "obj")))
-	  `(lambda (,obj.sym)
-	     (and (pair? ,obj.sym)
-		  (,item-pred.stx (car ,obj.sym))
-		  (,item-pred.stx (cdr ,obj.sym))))))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (pair? ,obj.sym)
+		   (,item-pred.stx (car ,obj.sym))
+		   (,item-pred.stx (cdr ,obj.sym)))))))
 
       make-pair-of-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[pair-of-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -770,14 +767,14 @@
 						   (map object-type-spec.name item-type*.ots))))
 	(({item-type*.ots list-of-object-type-spec?} {name.stx list-name?})
 	 (let* ((parent.ots		(<list>-ots))
-		(constructor.sexp	#f)
-		(destructor.sexp	#f)
-		(predicate.sexp		(make-list-predicate (map object-type-spec.type-predicate-sexp item-type*.ots)))
+		(constructor.stx	#f)
+		(destructor.stx		#f)
+		(predicate.stx		(make-list-predicate (map object-type-spec.type-predicate-stx item-type*.ots)))
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
-				   constructor.sexp destructor.sexp predicate.sexp
+				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
 	    item-type*.ots))))
 
@@ -795,19 +792,20 @@
 	(let ((obj.sym	(gensym "obj"))
 	      (pred.sym	(gensym "pred"))
 	      (item.sym	(gensym "item")))
-	  `(lambda (,obj.sym)
-	     (and (list? ,obj.sym)
-		  (for-all (lambda (,pred.sym ,item.sym)
-			     (,pred.sym ,item.sym))
-		    (list ,@item-pred*.stx)
-		    ,obj.sym)))))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (list? ,obj.sym)
+		   (for-all (lambda (,pred.sym ,item.sym)
+			      (,pred.sym ,item.sym))
+		     (list ,@item-pred*.stx)
+		     ,obj.sym))))))
 
       make-list-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[list-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -841,14 +839,14 @@
 	 (make-list-of-type-spec item-type.ots (list (list-of-id) (object-type-spec.name item-type.ots))))
 	(({item-type.ots object-type-spec?} {name.stx list-of-name?})
 	 (let* ((parent.ots		(<list>-ots))
-		(constructor.sexp	#f)
-		(destructor.sexp	#f)
-		(predicate.sexp		(make-list-of-predicate (object-type-spec.type-predicate-sexp item-type.ots)))
+		(constructor.stx	#f)
+		(destructor.stx	#f)
+		(predicate.stx		(make-list-of-predicate (object-type-spec.type-predicate-stx item-type.ots)))
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
-				   constructor.sexp destructor.sexp predicate.sexp
+				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
 	    item-type.ots))))
 
@@ -865,19 +863,20 @@
       (define (make-list-of-predicate item-pred.stx)
 	(let ((obj.sym	(gensym "obj"))
 	      (pred.sym	(gensym "pred")))
-	  `(letrec ((,pred.sym (lambda (,obj.sym)
-				 (if (pair? ,obj.sym)
-				     (and (,item-pred.stx (car ,obj.sym))
-					  (,pred.sym      (cdr ,obj.sym)))
-				   (null? ,obj.sym)))))
-	     ,pred.sym)))
+	  (bless
+	   `(letrec ((,pred.sym (lambda (,obj.sym)
+				  (if (pair? ,obj.sym)
+				      (and (,item-pred.stx (car ,obj.sym))
+					   (,pred.sym      (cdr ,obj.sym)))
+				    (null? ,obj.sym)))))
+	      ,pred.sym))))
 
       make-list-of-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[list-of-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -912,14 +911,14 @@
 						     (map object-type-spec.name item-type*.ots))))
 	(({item-type*.ots list-of-object-type-spec?} {name.stx vector-name?})
 	 (let* ((parent.ots		(<vector>-ots))
-		(constructor.sexp	#f)
-		(destructor.sexp	#f)
-		(predicate.sexp		(make-vector-predicate (map object-type-spec.type-predicate-sexp item-type*.ots)))
+		(constructor.stx	#f)
+		(destructor.stx		#f)
+		(predicate.stx		(make-vector-predicate (map object-type-spec.type-predicate-stx item-type*.ots)))
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
-				   constructor.sexp destructor.sexp predicate.sexp
+				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
 	    item-type*.ots))))
 
@@ -937,19 +936,20 @@
 	(let ((obj.sym	(gensym "obj"))
 	      (pred.sym	(gensym "pred"))
 	      (item.sym	(gensym "item")))
-	  `(lambda (,obj.sym)
-	     (and (vector? ,obj.sym)
-		  (vector-for-all (lambda (,pred.sym ,item.sym)
-				    (,pred.sym ,item.sym))
-		    (vector ,@item-pred*.stx)
-		    ,obj.sym)))))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (vector? ,obj.sym)
+		   (vector-for-all (lambda (,pred.sym ,item.sym)
+				     (,pred.sym ,item.sym))
+		     (vector ,@item-pred*.stx)
+		     ,obj.sym))))))
 
       make-vector-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[vector-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -985,14 +985,14 @@
 	 (make-vector-of-type-spec item-type.ots (list (vector-of-id) (object-type-spec.name item-type.ots))))
 	(({item-type.ots object-type-spec?} {name vector-of-name?})
 	 (let* ((parent.ots		(<vector>-ots))
-		(constructor.sexp	#f)
-		(destructor.sexp	#f)
-		(predicate.sexp		(make-vector-of-predicate (object-type-spec.type-predicate-sexp item-type.ots)))
+		(constructor.stx	#f)
+		(destructor.stx		#f)
+		(predicate.stx		(make-vector-of-predicate (object-type-spec.type-predicate-stx item-type.ots)))
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name parent.ots
-				   constructor.sexp destructor.sexp predicate.sexp
+				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
 	    item-type.ots))))
 
@@ -1008,16 +1008,17 @@
 
       (define (make-vector-of-predicate item-pred.stx)
 	(let ((obj.sym	(gensym "obj")))
-	  `(lambda (,obj.sym)
-	     (and (vector? ,obj.sym)
-		  (vector-for-all ,item-pred.stx ,obj.sym)))))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (vector? ,obj.sym)
+		   (vector-for-all ,item-pred.stx ,obj.sym))))))
 
       make-vector-of-type-spec))
 
   (custom-printer
     (lambda (S port sub-printer)
       (display "#[vector-of-type-spec " port)
-      (sub-printer (object-type-spec.name S))
+      (display (object-type-spec.name S) port)
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
@@ -1092,44 +1093,60 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (type-annotation->object-type-specification name.stx lexenv)
-  (syntax-match name.stx (pair list vector pair-of list-of vector-of)
-    ((pair ?car-type ?cdr-type)
-     (make-pair-type-spec (type-annotation->object-type-specification ?car-type lexenv)
-			  (type-annotation->object-type-specification ?cdr-type lexenv)
-			  name.stx))
+(case-define* type-annotation->object-type-specification
+  ((annotation.stx lexenv)
+   (type-annotation->object-type-specification annotation.stx lexenv annotation.stx))
+  ((annotation.stx lexenv name.stx)
+   ;;Let's think of:
+   ;;
+   ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
+   ;;
+   ;;this function is called with:
+   ;;
+   ;;   #'(list-of <fixnum>)
+   ;;
+   ;;as ANNOTATION.STX argument and:
+   ;;
+   ;;   #'<list-of-fixnums>
+   ;;
+   ;;as NAME.STX argument.
+   ;;
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of)
+     ((pair ?car-type ?cdr-type)
+      (make-pair-type-spec (type-annotation->object-type-specification ?car-type lexenv)
+			   (type-annotation->object-type-specification ?cdr-type lexenv)
+			   name.stx))
 
-    ((list ?item-type* ...)
-     (make-list-type-spec (map (lambda (type.stx)
-				 (type-annotation->object-type-specification type.stx lexenv))
-			    ?item-type*)
-			  name.stx))
+     ((list ?item-type* ...)
+      (make-list-type-spec (map (lambda (type.stx)
+				  (type-annotation->object-type-specification type.stx lexenv))
+			     ?item-type*)
+			   name.stx))
 
-    ((vector ?item-type* ...)
-     (make-vector-type-spec (map (lambda (type.stx)
-				   (type-annotation->object-type-specification type.stx lexenv))
-			      ?item-type*)
-			    name.stx))
-
-    ((pair-of ?item-type)
-     (make-pair-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+     ((vector ?item-type* ...)
+      (make-vector-type-spec (map (lambda (type.stx)
+				    (type-annotation->object-type-specification type.stx lexenv))
+			       ?item-type*)
 			     name.stx))
 
-    ((list-of ?item-type)
-     (make-list-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
-			     name.stx))
+     ((pair-of ?item-type)
+      (make-pair-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+			      name.stx))
 
-    ((vector-of ?item-type)
-     (make-vector-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
-			       name.stx))
+     ((list-of ?item-type)
+      (make-list-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+			      name.stx))
 
-    (?type-id
-     (type-identifier? ?type-id)
-     (id->object-type-specification __who__ #f ?type-id lexenv))
+     ((vector-of ?item-type)
+      (make-vector-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+				name.stx))
 
-    (else
-     (syntax-violation __who__
-       "invalid type declaration" name.stx))))
+     (?type-id
+      (type-identifier? ?type-id)
+      (id->object-type-specification __who__ #f ?type-id lexenv))
+
+     (else
+      (syntax-violation __who__ "invalid type annotation" annotation.stx)))))
 
 
 ;;;; done

@@ -670,7 +670,7 @@
 	     ;;Insert no validation for an argument typed "<top>".
 	     following-validations)
 	    (else
-	     (cons (let ((type-pred.sexp	(object-type-spec.type-predicate-sexp arg.ots))
+	     (cons (let ((type-pred.sexp	(object-type-spec.type-predicate-stx arg.ots))
 			 (arg.name		(object-type-spec.name arg.ots)))
 		     (bless
 		      `(unless (,type-pred.sexp ,arg.id)
@@ -684,7 +684,7 @@
 	     ;;Generate a validating expression that accepts  both null and a list of
 	     ;;objects of the specified type.
 	     (let* ((item.ots	(list-of-type-spec.item-ots rest.ots))
-		    (item-pred	(object-type-spec.type-predicate-sexp item.ots))
+		    (item-pred	(object-type-spec.type-predicate-stx item.ots))
 		    (item.name	(object-type-spec.name item.ots))
 		    (obj.sym	(gensym "obj"))
 		    (idx.sym	(gensym "idx")))
@@ -699,7 +699,7 @@
 	    (else
 	     ;;REST.OTS is some other sub-type of  "<list>".  Just rely on the type's
 	     ;;own predicate.
-	     (let ((type-pred	(object-type-spec.type-predicate-sexp rest.ots))
+	     (let ((type-pred	(object-type-spec.type-predicate-stx rest.ots))
 		   (rest.name	(object-type-spec.name rest.ots)))
 	       (bless
 		`(unless (,type-pred ,rest.id)

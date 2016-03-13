@@ -110,17 +110,79 @@
 
 ;;; --------------------------------------------------------------------
 
-   (define-built-in-record-type <typed-list-type-spec>
+   (define-built-in-record-type <object-type-spec>
        <record>
-     make-typed-list-type-spec typed-list-type-spec?
+     #f object-type-spec?
      (methods
-      (type-id			typed-list-type-spec.type-id)))
+      (name				object-type-spec.name)
+      (parent-ots			object-type-spec.parent-ots)
+      (constructor-stx			object-type-spec.constructor-stx)
+      (destructor-stx			object-type-spec.destructor-stx)
+      (type-predicate-stx		object-type-spec.type-predicate-stx)
+      (safe-accessor-stx		object-type-spec.safe-accessor-stx)
+      (safe-mutator-stx			object-type-spec.safe-mutator-stx)
+      (applicable-method-stx		object-type-spec.applicable-method-stx)))
 
-   (define-built-in-record-type <typed-vector-type-spec>
-       <record>
-     make-typed-vector-type-spec typed-vector-type-spec?
+   (define-built-in-record-type <scheme-type-spec>
+       <object-type-spec>
+     make-scheme-type-spec scheme-type-spec?)
+
+   (define-built-in-record-type <closure-type-spec>
+       <object-type-spec>
+     make-closure-type-spec closure-type-spec?
      (methods
-      (type-id			typed-vector-type-spec.type-id)))
+      (signature			closure-type-spec.signature)))
+
+   (define-built-in-record-type <struct-type-spec>
+       <object-type-spec>
+     make-struct-type-spec struct-type-spec?
+     (methods
+      (std				struct-type-spec.std)))
+
+   (define-built-in-record-type <record-type-spec>
+       <object-type-spec>
+     make-record-type-spec record-type-spec?
+     (methods
+      (rtd-id				record-type-spec.rtd-id)
+      (rcd-id				record-type-spec.rcd-id)
+      (super-protocol-id		record-type-spec.super-protocol-id)))
+
+   (define-built-in-record-type <pair-type-spec>
+       <object-type-spec>
+     make-pair-type-spec pair-type-spec?
+     (methods
+      (car-ots			pair-type-spec.car-ots)
+      (cdr-ots			pair-type-spec.cdr-ots)))
+
+   (define-built-in-record-type <pair-of-type-spec>
+       <object-type-spec>
+     make-pair-of-type-spec pair-of-type-spec?
+     (methods
+      (item-ots			pair-of-type-spec.item-ots)))
+
+   (define-built-in-record-type <list-type-spec>
+       <object-type-spec>
+     make-list-type-spec list-type-spec?
+     (methods
+      (item-ots*		list-type-spec.item-ots*)))
+
+   (define-built-in-record-type <list-of-type-spec>
+       <object-type-spec>
+     make-list-of-type-spec list-of-type-spec?
+     (methods
+      (item-ots			list-of-type-spec.item-ots)))
+
+   (define-built-in-record-type <vector-type-spec>
+       <object-type-spec>
+     make-vector-type-spec vector-type-spec?
+     (methods
+      (item-ots*		vector-type-spec.item-ots*)))
+
+   (define-built-in-record-type <vector-of-type-spec>
+       <object-type-spec>
+     make-vector-of-type-spec vector-of-type-spec?
+     (methods
+      (item-ots			vector-of-type-spec.item-ots)))
 
 ;;; --------------------------------------------------------------------
 
