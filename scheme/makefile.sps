@@ -3440,7 +3440,6 @@
     (<pointer>					v $language)
     (<transcoder>				v $language)
     (<procedure>				v $language)
-    (<predicate>				v $language)
 
     (<fixnum>					v $language)
     (<flonum>					v $language)

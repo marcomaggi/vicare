@@ -258,7 +258,6 @@
     <no-return>-type-id			<no-return>-type-id?
     <void>-type-id			<void>-type-id?
     <procedure>-type-id			<procedure>-type-id?
-    <predicate>-type-id			<predicate>-type-id?
     <list>-type-id			<list>-type-id?
     <null>-type-id			<null>-type-id?
     <vector>-type-id			<vector>-type-id?
@@ -279,7 +278,6 @@
     <no-return>-ots			<no-return>-ots?
     <void>-ots				<void>-ots?
     <procedure>-ots			<procedure>-ots?
-    <predicate>-ots			<predicate>-ots?
     <null>-ots				<null>-ots?
     <nlist>-ots				<nlist>-ots?
     <list>-ots				<list>-ots?
@@ -2708,7 +2706,6 @@
   (define-type-id-retriever <void>-type-id			<void>)
   (define-type-id-retriever <top>-type-id			<top>)
   (define-type-id-retriever <procedure>-type-id			<procedure>)
-  (define-type-id-retriever <predicate>-type-id			<predicate>)
   (define-type-id-retriever <boolean>-type-id			<boolean>)
   (define-type-id-retriever <true>-type-id			<true>)
   (define-type-id-retriever <false>-type-id			<false>)
@@ -2739,7 +2736,6 @@
   (define-type-spec-retriever <void>-ots			<void>)
   (define-type-spec-retriever <top>-ots				<top>)
   (define-type-spec-retriever <procedure>-ots			<procedure>)
-  (define-type-spec-retriever <predicate>-ots			<predicate>)
   (define-type-spec-retriever <boolean>-ots			<boolean>)
   (define-type-spec-retriever <struct>-ots			<struct>)
   (define-type-spec-retriever <record>-ots			<record>)
@@ -2766,7 +2762,6 @@
   (define-type-id-predicate <void>-type-id?			<void>-type-id)
   (define-type-id-predicate <top>-type-id?			<top>-type-id)
   (define-type-id-predicate <procedure>-type-id?		<procedure>-type-id)
-  (define-type-id-predicate <predicate>-type-id?		<predicate>-type-id)
   (define-type-id-predicate <vector>-type-id?			<vector>-type-id)
   (define-type-id-predicate <empty-vector>-type-id?		<empty-vector>-type-id)
   (define-type-id-predicate <list>-type-id?			<list>-type-id)
@@ -2812,7 +2807,6 @@
   (define-type-spec-predicate <void>-ots?			<void>-ots)
   (define-type-spec-predicate <top>-ots?			<top>-ots)
   (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
-  (define-type-spec-predicate <predicate>-ots?			<predicate>-ots)
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
   (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
   (define-type-spec-predicate <null>-ots?			<null>-ots)

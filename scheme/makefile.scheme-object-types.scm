@@ -105,10 +105,6 @@
     <top>
   #f procedure?)
 
-(define-scheme-type <predicate>
-    <procedure>
-  #f #f)
-
 
 ;;; numeric types
 

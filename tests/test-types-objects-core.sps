@@ -134,31 +134,6 @@
     (=> syntax=?)
     (list #'<procedure>))
 
-;;; --------------------------------------------------------------------
-;;; <predicate>
-
-  (check-for-true	(type-super-and-sub? <procedure> <predicate>))
-  (check-for-false	(type-super-and-sub? <predicate> <procedure>))
-
-  (check
-      (xp.type-signature.tags (type-of (unsafe-cast-signature (<predicate>) (read))))
-    (=> syntax=?)
-    (list #'<predicate>))
-
-  (check
-      (xp.type-signature.tags (type-of ((unsafe-cast-signature (<predicate>) (read)) 123)))
-    (=> syntax=?)
-    (list #'<boolean>))
-
-  ;;FIXME This test  is commented out because handling of  procedure types must still
-  ;;be developed to make sense.  (Marco Maggi; Sun Feb 14, 2016)
-  ;;
-  ;; (check
-  ;;     (let (({f <predicate>} (unsafe-cast-signature (<predicate>) (lambda (x) x))))
-  ;; 	(xp.type-signature.tags (type-of f)))
-  ;;   (=> syntax=?)
-  ;;   (list #'<predicate>))
-
   #t)
 
 

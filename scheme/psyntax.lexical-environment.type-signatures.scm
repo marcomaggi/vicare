@@ -355,7 +355,6 @@
   (define-single-type-signature-maker make-type-signature/single-true			<true>-type-id)
   (define-single-type-signature-maker make-type-signature/single-false			<false>-type-id)
   (define-single-type-signature-maker make-type-signature/single-procedure		<procedure>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-predicate		<predicate>-type-id)
   (define-single-type-signature-maker make-type-signature/single-stx			<stx>-type-id)
   (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	<syntactic-identifier>-type-id)
   (define-cached-signature-maker make-type-signature/standalone-list			(<list>-type-id))

@@ -1372,14 +1372,6 @@ The type predicate is @func{procedure?}.  Return @true{} if @var{obj} is
 a closure object; otherwise return @false{}.
 @end defop
 
-@c ------------------------------------------------------------------------
-
-@deftp {Built--in Type} @aclass{predicate}
-@deftpx {Parent Type} @aclass{procedure}
-Type of closure object values accepting a single argument and returning
-a single boolean.  There is no constructor.  There is no type predicate.
-@end deftp
-
 @c page
 @node types built-in numerics
 @subsection Type of numeric values
