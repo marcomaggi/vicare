@@ -299,80 +299,79 @@
     identifier-append
 
     ;; condition object types
-    &type-syntactic-identifier
-    &type-syntactic-identifier-rtd
-    &type-syntactic-identifier-rcd
-    make-type-syntactic-identifier-condition
-    type-syntactic-identifier-condition?
-    condition-type-syntactic-identifier
+    &application-argument-type-name
+    &application-argument-type-name-rtd
+    &application-argument-type-name-rcd
+    make-application-argument-type-name-condition
+    application-argument-type-name-condition?
+    condition-application-argument-type-name
 
-    &argument-type-syntactic-identifier
-    &argument-type-syntactic-identifier-rtd
-    &argument-type-syntactic-identifier-rcd
-    make-argument-type-syntactic-identifier-condition
-    argument-type-syntactic-identifier-condition?
-    condition-argument-type-syntactic-identifier
-
-    &operand-type-syntactic-identifier
-    &operand-type-syntactic-identifier-rtd
-    &operand-type-syntactic-identifier-rcd
-    make-operand-type-syntactic-identifier-condition
-    operand-type-syntactic-identifier-condition?
-    condition-operand-type-syntactic-identifier
-
-    &argument-index
-    &argument-index-rtd
-    &argument-index-rcd
-    make-argument-index-condition
-    argument-index-condition?
-    condition-argument-index
+    &application-argument-index
+    &application-argument-index-rtd
+    &application-argument-index-rcd
+    make-application-argument-index-condition
+    application-argument-index-condition?
+    condition-application-argument-index
 
     &type-method-name
+    &type-method-name-rtd
+    &type-method-name-rcd
     make-type-method-name-condition
     condition-type-method-name?
     condition-type-method-name
 
     &syntactic-binding-descriptor
+    &syntactic-binding-descriptor-rtd
+    &syntactic-binding-descriptor-rcd
     make-syntactic-binding-descriptor-condition
     syntactic-binding-descriptor-condition?
     condition-syntactic-binding-descriptor
 
-    &syntax-definition-expanded-rhs-condition
+    &syntax-definition-expanded-rhs
+    &syntax-definition-expanded-rhs-rtd
+    &syntax-definition-expanded-rhs-rcd
     make-syntax-definition-expanded-rhs-condition
     syntax-definition-expanded-rhs-condition?
     condition-syntax-definition-expanded-rhs
 
     &syntax-definition-expression-return-value
+    &syntax-definition-expression-return-value-rtd
+    &syntax-definition-expression-return-value-rcd
     make-syntax-definition-expression-return-value-condition
     syntax-definition-expression-return-value-condition?
     condition-syntax-definition-expression-return-value
 
-    &application-operator
-    make-application-operator-condition
-    application-operator-condition?
-    application-operator-condition.operator
+    &application-operator-expression
+    &application-operator-expression-rtd
+    &application-operator-expression-rcd
+    make-application-operator-expression-condition
+    application-operator-expression-condition?
+    condition-application-operator-expression
 
-    &application-operands
-    make-application-operands-condition
-    application-operands-condition?
-    application-operands-condition.operands
+    &application-operands-expressions
+    &application-operands-expressions-rtd
+    &application-operands-expressions-rcd
+    make-application-operands-expressions-condition
+    application-operands-expressions-condition?
+    condition-application-operands-expressions
 
-    &application-operator-signature-condition
+    &application-operator-signature
+    &application-operator-signature-rtd
+    &application-operator-signature-rcd
     make-application-operator-signature-condition
     application-operator-signature-condition?
-    application-operator-signature-condition.signature
+    condition-application-operator-signature
 
-    &application-operand-signature-condition
+    &application-operand-signature
+    &application-operand-signature-rtd
+    &application-operand-signature-rcd
     make-application-operand-signature-condition
     application-operand-signature-condition?
-    application-operand-signature-condition.signature
-
-    &retvals-signature-condition
-    make-retvals-signature-condition
-    retvals-signature-condition?
-    retvals-signature-condition-signature
+    condition-application-operand-signature
 
     &macro-expansion-trace
+    &macro-expansion-trace-rtd
+    &macro-expansion-trace-rcd
     make-macro-expansion-trace macro-expansion-trace?
     macro-expansion-trace-form
 
@@ -395,13 +394,6 @@
     &expand-time-type-signature-warning-rcd
     make-expand-time-type-signature-warning
     expand-time-type-signature-warning?
-
-    &syntax-warning
-    &syntax-warning-rtd
-    &syntax-warning-rcd
-    make-syntax-warning syntax-warning?
-    syntax-warning-form
-    syntax-warning-subform
 
     assertion-error
     syntax-violation/internal-error

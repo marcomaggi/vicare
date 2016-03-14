@@ -628,6 +628,19 @@
       (index		utf32-string-decoding-orphan-octets.index)
       (octets		utf32-string-decoding-orphan-octets.octets)))
 ;;;
+   (define-built-in-condition-type &syntax-definition-expanded-rhs
+       &condition
+     make-syntax-definition-expanded-rhs-condition syntax-definition-expanded-rhs-condition?
+     (methods
+      (syntax-definition-expanded-rhs	condition-syntax-definition-expanded-rhs)))
+
+   (define-built-in-condition-type &syntax-definition-expression-return-value
+       &condition
+     make-syntax-definition-expression-return-value-condition syntax-definition-expression-return-value-condition?
+     (methods
+      (syntax-definition-expression-return-value	condition-syntax-definition-expression-return-value)))
+
+;;;
    (define-built-in-condition-type &expand-time-type-signature-violation
        &violation
      make-expand-time-type-signature-violation expand-time-type-signature-violation?)
@@ -643,29 +656,48 @@
       (expected-signature	expand-time-retvals-signature-violation-expected-signature)
       (returned-signature	expand-time-retvals-signature-violation-returned-signature)))
 ;;;
-   (define-built-in-condition-type &type-syntactic-identifier
+   (define-built-in-condition-type &application-operator-expression
        &condition
-     make-type-syntactic-identifier-condition type-syntactic-identifier-condition?
+     make-application-operator-expression-condition application-operator-expression-condition?
      (methods
-      (type-identifier		condition-type-syntactic-identifier)))
+      (expression		condition-application-operator-expression)))
 
-   (define-built-in-condition-type &argument-type-syntactic-identifier
+   (define-built-in-condition-type &application-operands-expressions
        &condition
-     make-argument-type-syntactic-identifier-condition argument-type-syntactic-identifier-condition?
+     make-application-operands-expressions-condition application-operands-expressions-condition?
      (methods
-      (argument-type-identifier	condition-operand-type-syntactic-identifier)))
+      (expressions		condition-application-operands-expressions)))
 
-   (define-built-in-condition-type &operand-type-syntactic-identifier
+   (define-built-in-condition-type &application-argument-type-name
        &condition
-     make-operand-type-syntactic-identifier-condition operand-type-syntactic-identifier-condition?
+     make-application-argument-type-name-condition application-argument-type-name-condition?
      (methods
-      (operand-type-identifier	condition-operand-type-syntactic-identifier)))
+      (argument-type-name		condition-application-argument-index)))
 
-   (define-built-in-condition-type &argument-index
+   (define-built-in-condition-type &application-argument-index
        &condition
-     make-argument-index-condition argument-index-condition?
+     make-application-argument-index-condition application-argument-index-condition?
      (methods
-      (argument-index		condition-argument-index)))
+      (application-argument-index	condition-application-argument-index)))
+
+   (define-built-in-condition-type &application-operator-signature
+       &condition
+     make-application-operator-signature-condition application-operator-signature-condition?
+     (methods
+      (signature			condition-application-operator-signature)))
+
+   (define-built-in-condition-type &application-operand-signature
+       &condition
+     make-application-operand-signature-condition application-operand-signature-condition?
+     (methods
+      (signature			condition-application-operand-signature)))
+
+;;;
+   (define-built-in-condition-type &macro-expansion-trace
+       &condition
+     make-macro-expansion-trace macro-expansion-trace?
+     (methods
+      (form				macro-expansion-trace-form)))
 
    ))
 

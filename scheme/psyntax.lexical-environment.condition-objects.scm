@@ -20,82 +20,88 @@
 
 
 (module
-    (&type-syntactic-identifier
-     &type-syntactic-identifier-rtd
-     &type-syntactic-identifier-rcd
-     make-type-syntactic-identifier-condition
-     type-syntactic-identifier-condition?
-     condition-type-syntactic-identifier
-
-     &argument-type-syntactic-identifier
-     &argument-type-syntactic-identifier-rtd
-     &argument-type-syntactic-identifier-rcd
-     make-argument-type-syntactic-identifier-condition
-     argument-type-syntactic-identifier-condition?
-     condition-argument-type-syntactic-identifier
-
-     &operand-type-syntactic-identifier
-     &operand-type-syntactic-identifier-rtd
-     &operand-type-syntactic-identifier-rcd
-     make-operand-type-syntactic-identifier-condition
-     operand-type-syntactic-identifier-condition?
-     condition-operand-type-syntactic-identifier
-
-     &argument-index
-     &argument-index-rtd
-     &argument-index-rcd
-     make-argument-index-condition
-     argument-index-condition?
-     condition-argument-index
-
-     &type-method-name
-     make-type-method-name-condition
-     condition-type-method-name?
-     condition-type-method-name
-
-     &syntactic-binding-descriptor
+    (&syntactic-binding-descriptor
+     &syntactic-binding-descriptor-rtd
+     &syntactic-binding-descriptor-rcd
      make-syntactic-binding-descriptor-condition
      syntactic-binding-descriptor-condition?
      condition-syntactic-binding-descriptor
 
-     &syntax-definition-expanded-rhs-condition
+     &syntax-definition-expanded-rhs
+     &syntax-definition-expanded-rhs-rtd
+     &syntax-definition-expanded-rhs-rcd
      make-syntax-definition-expanded-rhs-condition
      syntax-definition-expanded-rhs-condition?
      condition-syntax-definition-expanded-rhs
 
      &syntax-definition-expression-return-value
+     &syntax-definition-expression-return-value-rtd
+     &syntax-definition-expression-return-value-rcd
      make-syntax-definition-expression-return-value-condition
      syntax-definition-expression-return-value-condition?
      condition-syntax-definition-expression-return-value
 
-     &application-operator
-     make-application-operator-condition
-     application-operator-condition?
-     application-operator-condition.operator
+     &macro-expansion-trace
+     &macro-expansion-trace-rtd
+     &macro-expansion-trace-rcd
+     make-macro-expansion-trace
+     macro-expansion-trace?
+     macro-expansion-trace-form
 
-     &application-operands
-     make-application-operands-condition
-     application-operands-condition?
-     application-operands-condition.operands
+;;; --------------------------------------------------------------------
 
-     &application-operator-signature-condition
+     &application-argument-type-name
+     &application-argument-type-name-rtd
+     &application-argument-type-name-rcd
+     make-application-argument-type-name-condition
+     application-argument-type-name-condition?
+     condition-application-argument-type-name
+
+     &application-argument-index
+     &application-argument-index-rtd
+     &application-argument-index-rcd
+     make-application-argument-index-condition
+     application-argument-index-condition?
+     condition-application-argument-index
+
+     &application-operator-expression
+     &application-operator-expression-rtd
+     &application-operator-expression-rcd
+     make-application-operator-expression-condition
+     application-operator-expression-condition?
+     condition-application-operator-expression
+
+     &application-operands-expressions
+     &application-operands-expressions-rtd
+     &application-operands-expressions-rcd
+     make-application-operands-expressions-condition
+     application-operands-expressions-condition?
+     condition-application-operands-expressions
+
+     &application-operator-signature
+     &application-operator-signature-rtd
+     &application-operator-signature-rcd
      make-application-operator-signature-condition
      application-operator-signature-condition?
-     application-operator-signature-condition.signature
+     condition-application-operator-signature
 
-     &application-operand-signature-condition
+     &application-operand-signature
+     &application-operand-signature-rtd
+     &application-operand-signature-rcd
      make-application-operand-signature-condition
      application-operand-signature-condition?
-     application-operand-signature-condition.signature
+     condition-application-operand-signature
 
-     &retvals-signature-condition
-     make-retvals-signature-condition
-     retvals-signature-condition?
-     retvals-signature-condition-signature
+;;; --------------------------------------------------------------------
 
-     &macro-expansion-trace
-     make-macro-expansion-trace macro-expansion-trace?
-     macro-expansion-trace-form
+     &type-method-name
+     &type-method-name-rtd
+     &type-method-name-rcd
+     make-type-method-name-condition
+     condition-type-method-name?
+     condition-type-method-name
+
+;;; --------------------------------------------------------------------
 
      &expand-time-type-signature-violation
      &expand-time-type-signature-violation-rtd
@@ -117,12 +123,7 @@
      make-expand-time-type-signature-warning
      expand-time-type-signature-warning?
 
-     &syntax-warning
-     &syntax-warning-rtd
-     &syntax-warning-rcd
-     make-syntax-warning syntax-warning?
-     syntax-warning-form
-     syntax-warning-subform
+;;; --------------------------------------------------------------------
 
      assertion-error
      syntax-violation/internal-error
@@ -135,147 +136,7 @@
      #| end of exports |# )
 
 
-;;;; condition object types: descriptive objects
-
-;;This used to describe the syntax object  acting as operator in an application form.
-;;The single  argument to the  constructor must be  a syntax object  representing the
-;;operator.
-;;
-(define-condition-type &application-operator
-    &condition
-  make-application-operator-condition
-  application-operator-condition?
-  (operator application-operator-condition.operator))
-
-;;This is used  to describe the syntax  objects acting as operands  in an application
-;;form.  The  single argument  to the constructor  must be a  list of  syntax objects
-;;representing the operands.
-(define-condition-type &application-operands
-    &condition
-  make-application-operands-condition
-  application-operands-condition?
-  (operands application-operands-condition.operands))
-
-;;This is used to hold a "<type-signature>" instance representing the types of values
-;;returned  by an  expression  used  as operator  in  a  procedure application  form.
-;;Examples: if  the operator  returns zero, two  or more values;  if the  operator is
-;;marked as no-return; if the operator does not return a procedure.
-;;
-(define-condition-type &application-operator-signature-condition
-    &condition
-  make-application-operator-signature-condition
-  application-operator-signature-condition?
-  (signature	application-operator-signature-condition.signature))
-
-;;This is used to hold a "<type-signature>" instance representing the types of values
-;;returned by an expression used as operand in procedure application form.  Examples:
-;;if  the operand  returns zero,  two or  more values;  if the  operand is  marked as
-;;no-return.
-;;
-(define-condition-type &application-operand-signature-condition
-    &condition
-  make-application-operand-signature-condition
-  application-operand-signature-condition?
-  (signature	application-operand-signature-condition.signature))
-
-
-;;This is used to describe a type involved in an exception, for example when the type
-;;identifier is  used by  the syntax  IS-A? or  METHOD-CALL.  The  field must  be the
-;;syntactic identifier  bound to the type  specification (for example the  name of an
-;;R6RS record type).
-;;
-(define-condition-type &type-syntactic-identifier
-    &condition
-  make-type-syntactic-identifier-condition
-  type-syntactic-identifier-condition?
-  (type-identifier	condition-type-syntactic-identifier))
-(define &type-syntactic-identifier-rtd
-  (record-type-descriptor &type-syntactic-identifier))
-(define &type-syntactic-identifier-rcd
-  (record-constructor-descriptor &type-syntactic-identifier))
-
-;;This  is used  to describe  the type  identifier of  an argument  to function,  the
-;;expected type of object used in the function call.
-;;
-(define-condition-type &argument-type-syntactic-identifier
-    &condition
-  make-argument-type-syntactic-identifier-condition
-  argument-type-syntactic-identifier-condition?
-  (argument-type-identifier	condition-argument-type-syntactic-identifier))
-(define &argument-type-syntactic-identifier-rtd
-  (record-type-descriptor &argument-type-syntactic-identifier))
-(define &argument-type-syntactic-identifier-rcd
-  (record-constructor-descriptor &argument-type-syntactic-identifier))
-
-;;This is used to describe the type identifier of an operand to function, the type of
-;;the actual object used as operand in a specific function call.
-;;
-(define-condition-type &operand-type-syntactic-identifier
-    &condition
-  make-operand-type-syntactic-identifier-condition
-  operand-type-syntactic-identifier-condition?
-  (operand-type-identifier	condition-operand-type-syntactic-identifier))
-(define &operand-type-syntactic-identifier-rtd
-  (record-type-descriptor &operand-type-syntactic-identifier))
-(define &operand-type-syntactic-identifier-rcd
-  (record-constructor-descriptor &operand-type-syntactic-identifier))
-
-(define-condition-type &argument-index
-    &condition
-  make-argument-index-condition
-  argument-index-condition?
-  (argument-index	condition-argument-index))
-(define &argument-index-rtd
-  (record-type-descriptor &argument-index))
-(define &argument-index-rcd
-  (record-constructor-descriptor &argument-index))
-
-;;This is used to describe a type's  method name involved in an exception.  The field
-;;must be a symbol representing the method name.
-(define-condition-type &type-method-name
-    &condition
-  make-type-method-name-condition
-  condition-type-method-name?
-  (method-name condition-type-method-name))
-
-(define-condition-type &syntactic-binding-descriptor
-    &condition
-  make-syntactic-binding-descriptor-condition
-  syntactic-binding-descriptor-condition?
-  (descr	condition-syntactic-binding-descriptor))
-
-;;This  is  used  to describe  exceptions  in  which  the  expanded expression  of  a
-;;right-hand side (RHS) syntax  definition (DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,
-;;DEFINE-FLUID-SYNTAX,  FLUID-LET-SYNTAX,  etc.)   has  a role.   The  value  in  the
-;;CORE-EXPR slot must be a symbolic expression representing the a core expression.
-(define-condition-type &syntax-definition-expanded-rhs-condition
-    &condition
-  make-syntax-definition-expanded-rhs-condition
-  syntax-definition-expanded-rhs-condition?
-  (core-expr condition-syntax-definition-expanded-rhs))
-
-;;This is used to describe exceptions in  which the return value of the evaluation of
-;;a   right-hand   side   (RHS)   syntax   definition   (DEFINE-SYNTAX,   LET-SYNTAX,
-;;LETREC-SYNTAX, DEFINE-FLUID-SYNTAX, FLUID-LET-SYNTAX, etc.)  has a role.  The value
-;;in the  RETVAL slot  must be  the value returned  by the  evaluation of  the syntax
-;;definition RHS expression.
-(define-condition-type &syntax-definition-expression-return-value
-    &condition
-  make-syntax-definition-expression-return-value-condition
-  syntax-definition-expression-return-value-condition?
-  (retval condition-syntax-definition-expression-return-value))
-
-;;This  is used  to include  a retvals  signature specification  in generic  compound
-;;objects, for example because we were expecting a signature with some properties and
-;;the one we got does not have them.
-(define-condition-type &retvals-signature-condition
-    &condition
-  %make-retvals-signature-condition
-  retvals-signature-condition?
-  (signature retvals-signature-condition-signature))
-
-(define* (make-retvals-signature-condition {sig type-signature?})
-  (%make-retvals-signature-condition sig))
+;;;; condition object types: descriptive objects, expansion process
 
 ;;This is used to represent the succession  of transformations a macro use input form
 ;;undergoes while  expanded; there is  an instance of  this condition type  for every
@@ -285,6 +146,152 @@
     &condition
   make-macro-expansion-trace macro-expansion-trace?
   (form macro-expansion-trace-form))
+(define &macro-expansion-trace-rtd
+  (record-type-descriptor &macro-expansion-trace))
+(define &macro-expansion-trace-rcd
+  (record-constructor-descriptor &macro-expansion-trace))
+
+(define-condition-type &syntactic-binding-descriptor
+    &condition
+  make-syntactic-binding-descriptor-condition
+  syntactic-binding-descriptor-condition?
+  (descr	condition-syntactic-binding-descriptor))
+(define &syntactic-binding-descriptor-rtd
+  (record-type-descriptor &syntactic-binding-descriptor))
+(define &syntactic-binding-descriptor-rcd
+  (record-constructor-descriptor &syntactic-binding-descriptor))
+
+;;This  is used  to describe  exceptions raised  while expanding  and evaluating  the
+;;right-hand side (RHS) expression of a syntax definition (DEFINE-SYNTAX, LET-SYNTAX,
+;;LETREC-SYNTAX, DEFINE-FLUID-SYNTAX, FLUID-LET-SYNTAX, et cetera).
+;;
+;;The value in the field SYNTAX-DEFINITION-EXPANDED-RHS must be a symbolic expression
+;;representing the a core language expression.
+;;
+(define-condition-type &syntax-definition-expanded-rhs
+    &condition
+  make-syntax-definition-expanded-rhs-condition
+  syntax-definition-expanded-rhs-condition?
+  (syntax-definition-expanded-rhs	condition-syntax-definition-expanded-rhs))
+(define &syntax-definition-expanded-rhs-rtd
+  (record-type-descriptor &syntax-definition-expanded-rhs))
+(define &syntax-definition-expanded-rhs-rcd
+  (record-constructor-descriptor &syntax-definition-expanded-rhs))
+
+;;This  is used  to describe  exceptions raised  while expanding  and evaluating  the
+;;right-hand side (RHS) expression of a syntax definition (DEFINE-SYNTAX, LET-SYNTAX,
+;;LETREC-SYNTAX, DEFINE-FLUID-SYNTAX, FLUID-LET-SYNTAX, etc.).
+;;
+;;The  value in  field  SYNTAX-DEFINITION-EXPRESSION-RETURN-VALUE must  be the  value
+;;returned by the evaluation of the RHS expression.
+;;
+(define-condition-type &syntax-definition-expression-return-value
+    &condition
+  make-syntax-definition-expression-return-value-condition
+  syntax-definition-expression-return-value-condition?
+  (syntax-definition-expression-return-value	condition-syntax-definition-expression-return-value))
+(define &syntax-definition-expression-return-value-rtd
+  (record-type-descriptor &syntax-definition-expression-return-value))
+(define &syntax-definition-expression-return-value-rcd
+  (record-constructor-descriptor &syntax-definition-expression-return-value))
+
+
+;;;; condition object types: descriptive objects, application forms
+
+;;This used to describe the syntax object  acting as operator in an application form.
+;;The single  argument to the  constructor must be  a syntax object  representing the
+;;operator.
+;;
+(define-condition-type &application-operator-expression
+    &condition
+  make-application-operator-expression-condition
+  application-operator-expression-condition?
+  (operator	condition-application-operator-expression))
+(define &application-operator-expression-rtd
+  (record-type-descriptor &application-operator-expression))
+(define &application-operator-expression-rcd
+  (record-constructor-descriptor &application-operator-expression))
+
+;;This is used  to describe the syntax  objects acting as operands  in an application
+;;form.  The  single argument  to the constructor  must be a  list of  syntax objects
+;;representing the operands.
+(define-condition-type &application-operands-expressions
+    &condition
+  make-application-operands-expressions-condition
+  application-operands-expressions-condition?
+  (operands	condition-application-operands-expressions))
+(define &application-operands-expressions-rtd
+  (record-type-descriptor &application-operands-expressions))
+(define &application-operands-expressions-rcd
+  (record-constructor-descriptor &application-operands-expressions))
+
+;;This is used to hold a "<type-signature>" instance representing the types of values
+;;returned  by an  expression  used  as operator  in  a  procedure application  form.
+;;Examples: if  the operator  returns zero, two  or more values;  if the  operator is
+;;marked as no-return; if the operator does not return a procedure.
+;;
+(define-condition-type &application-operator-signature
+    &condition
+  make-application-operator-signature-condition
+  application-operator-signature-condition?
+  (signature	condition-application-operator-signature))
+(define &application-operator-signature-rtd
+  (record-type-descriptor &application-operator-signature))
+(define &application-operator-signature-rcd
+  (record-constructor-descriptor &application-operator-signature))
+
+;;This is used to hold a "<type-signature>" instance representing the types of values
+;;returned by an expression used as operand in procedure application form.  Examples:
+;;if  the operand  returns zero,  two or  more values;  if the  operand is  marked as
+;;no-return.
+;;
+(define-condition-type &application-operand-signature
+    &condition
+  make-application-operand-signature-condition
+  application-operand-signature-condition?
+  (signature	condition-application-operand-signature))
+(define &application-operand-signature-rtd
+  (record-type-descriptor &application-operand-signature))
+(define &application-operand-signature-rcd
+  (record-constructor-descriptor &application-operand-signature))
+
+;;This  is used  to describe  the type  identifier of  an argument  to function,  the
+;;expected type of object used in the function call.
+;;
+(define-condition-type &application-argument-type-name
+    &condition
+  make-application-argument-type-name-condition
+  application-argument-type-name-condition?
+  (argument-type-name		condition-application-argument-type-name))
+(define &application-argument-type-name-rtd
+  (record-type-descriptor &application-argument-type-name))
+(define &application-argument-type-name-rcd
+  (record-constructor-descriptor &application-argument-type-name))
+
+(define-condition-type &application-argument-index
+    &condition
+  make-application-argument-index-condition
+  application-argument-index-condition?
+  (application-argument-index	condition-application-argument-index))
+(define &application-argument-index-rtd
+  (record-type-descriptor &application-argument-index))
+(define &application-argument-index-rcd
+  (record-constructor-descriptor &application-argument-index))
+
+
+;;;; condition object types: descriptive objects
+
+;;This is used to describe a type's  method name involved in an exception.  The field
+;;must be a symbol representing the method name.
+(define-condition-type &type-method-name
+    &condition
+  make-type-method-name-condition
+  condition-type-method-name?
+  (method-name condition-type-method-name))
+(define &type-method-name-rtd
+  (record-type-descriptor &type-method-name))
+(define &type-method-name-rcd
+  (record-constructor-descriptor &type-method-name))
 
 
 ;;;; condition object types: error objects
@@ -296,10 +303,8 @@
     &violation
   make-expand-time-type-signature-violation
   expand-time-type-signature-violation?)
-
 (define &expand-time-type-signature-violation-rtd
   (record-type-descriptor &expand-time-type-signature-violation))
-
 (define &expand-time-type-signature-violation-rcd
   (record-constructor-descriptor &expand-time-type-signature-violation))
 
@@ -307,26 +312,10 @@
     &warning
   make-expand-time-type-signature-warning
   expand-time-type-signature-warning?)
-
 (define &expand-time-type-signature-warning-rtd
   (record-type-descriptor &expand-time-type-signature-warning))
-
 (define &expand-time-type-signature-warning-rcd
   (record-constructor-descriptor &expand-time-type-signature-warning))
-
-;;; --------------------------------------------------------------------
-
-(define-condition-type &syntax-warning
-    &warning
-  make-syntax-warning syntax-warning?
-  (form syntax-warning-form)
-  (subform syntax-warning-subform))
-
-(define &syntax-warning-rtd
-  (record-type-descriptor &syntax-warning))
-
-(define &syntax-warning-rcd
-  (record-constructor-descriptor &syntax-warning))
 
 ;;; --------------------------------------------------------------------
 

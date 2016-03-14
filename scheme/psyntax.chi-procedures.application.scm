@@ -725,8 +725,8 @@
       (condition
        (make-syntax-violation input-form.stx #f)
        (make-wrong-number-of-arguments-error-condition)
-       (make-application-operator-condition rator.stx)
-       (make-application-operands-condition rand*.stx)
+       (make-application-operator-expression-condition rator.stx)
+       (make-application-operands-expressions-condition rand*.stx)
        (make-maximum-arguments-count-condition maximum-arguments-count)
        (make-given-operands-count-condition given-operands-count))))
 
@@ -738,8 +738,8 @@
       (condition
        (make-syntax-violation input-form.stx #f)
        (make-wrong-number-of-arguments-error-condition)
-       (make-application-operator-condition rator.stx)
-       (make-application-operands-condition rand*.stx)
+       (make-application-operator-expression-condition rator.stx)
+       (make-application-operands-expressions-condition rand*.stx)
        (make-minimum-arguments-count-condition minimum-arguments-count)
        (make-given-operands-count-condition given-operands-count))))
 
@@ -762,8 +762,8 @@
 	 (condition
 	  (make-expand-time-type-signature-violation)
 	  (make-syntax-violation input-form.stx ?rator)
-	  (make-application-operator-condition ?rator)
-	  (make-application-operands-condition ?rand*)
+	  (make-application-operator-expression-condition ?rator)
+	  (make-application-operands-expressions-condition ?rand*)
 	  (make-arguments-signatures-condition arguments-signatures)
 	  (make-operands-signature-condition operands-signature))))))
 
@@ -776,9 +776,9 @@
 	 input-form.stx
 	 (condition
 	  (make-expand-time-type-signature-warning)
-	  (make-syntax-warning input-form.stx ?rator)
-	  (make-application-operator-condition ?rator)
-	  (make-application-operands-condition ?rand*)
+	  (make-syntax-violation input-form.stx ?rator)
+	  (make-application-operator-expression-condition ?rator)
+	  (make-application-operands-expressions-condition ?rand*)
 	  (make-arguments-signatures-condition arguments-signatures)
 	  (make-operands-signature-condition operands-signature))))))
 

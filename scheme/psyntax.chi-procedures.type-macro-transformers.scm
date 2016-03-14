@@ -71,27 +71,45 @@
     ;;given LEXENV; return a PSI struct.
     ;;
     (syntax-match input-form.stx ()
-      ((_ ?type-id ?rand* ...)
-       (identifier? ?type-id)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
-	 (cond ((list-of-type-spec? ots)
-		(%build-list-constructor input-form.stx lexenv.run lexenv.expand
-					 ?type-id (list-of-type-spec.item-ots ots) ?rand*))
-	       ((object-type-spec.constructor-stx ots)
-		=> (lambda (constructor.sexp)
-		     (if (boolean? constructor.sexp)
-			 (%build-object-with-validator input-form.stx lexenv.run lexenv.expand ?type-id ?rand*)
-		       (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand ?type-id constructor.sexp ?rand*))))
+      ((_ ?type-name ?rand* ...)
+       (identifier? ?type-name)
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-name lexenv.run type.ots)
+	 (cond ((list-of-type-spec? type.ots)
+		(%build-list-of-construction input-form.stx lexenv.run lexenv.expand type.ots ?rand*))
+
+	       ((list-type-spec? type.ots)
+		(assertion-violation __who__ "constructor of heterogeneous list type is not yet implemented" ?type-name))
+
+	       ((vector-of-type-spec? type.ots)
+		(assertion-violation __who__ "constructor of homogeneous vector type is not yet implemented" ?type-name))
+
+	       ((vector-type-spec? type.ots)
+		(assertion-violation __who__ "constructor of heterogeneous vector type is not yet implemented" ?type-name))
+
+	       ((pair-of-type-spec? type.ots)
+		(assertion-violation __who__ "constructor of homogeneous pair type is not yet implemented" ?type-name))
+
+	       ((pair-type-spec? type.ots)
+		(assertion-violation __who__ "constructor of heterogeneous pair type is not yet implemented" ?type-name))
+
+	       ((closure-type-spec? type.ots)
+		(%synner "cannot build a closure with NEW"))
+
+	       ((object-type-spec.constructor-stx type.ots)
+		=> (lambda (constructor.stx)
+		     (if (boolean? constructor.stx)
+			 (%build-object-with-validator input-form.stx lexenv.run lexenv.expand ?type-name ?rand*)
+		       (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand ?type-name constructor.stx ?rand*))))
+
 	       (else
-		(%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-id)))))
+		(%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-name)))))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-object-with-validator input-form.stx lexenv.run lexenv.expand object-type.id rand*.stx)
-    ;;The  type identifier  OBJECT-TYPE.ID  references  an object-type  specification
-    ;;having  no constructor,  but requesting  validation of  a single  operand.  For
-    ;;example:
+  (define (%build-object-with-validator input-form.stx lexenv.run lexenv.expand type-name.id rand*.stx)
+    ;;The type identifier TYPE-NAME.ID references an object-type specification having
+    ;;no constructor, but requesting validation of a single operand.  For example:
     ;;
     ;;   (new <fixnum> 123)
     ;;
@@ -100,58 +118,85 @@
     ;;   (assert-signature-and-return (<fixnum>) 123)
     ;;
     (chi-expr (bless
-	       `(assert-signature-and-return (,object-type.id) (values . ,rand*.stx)))
+	       `(assert-signature-and-return (,type-name.id) (values . ,rand*.stx)))
 	      lexenv.run lexenv.expand))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand object-type.id constructor.sexp rand*.stx)
+  (define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand type-name.id constructor.stx rand*.stx)
+    ;;The type identifier TYPE-NAME.ID references an object-type specification having
+    ;;a constructor.
+    ;;
     (chi-expr (bless
-	       `(assert-signature-and-return (,object-type.id) (,constructor.sexp . ,rand*.stx)))
+	       `(assert-signature-and-return (,type-name.id) (,constructor.stx . ,rand*.stx)))
 	      lexenv.run lexenv.expand))
 
 ;;; --------------------------------------------------------------------
 
-  (module (%build-list-constructor)
-
-    (define (%build-list-constructor input-form.stx lexenv.run lexenv.expand
-				     list-type.id item.ots rand*.stx)
+  (module (%build-list-of-construction)
+    ;;The type identifier given to NEW requests building a list of type "(list-of ?item-type)".
+    ;;
+    (define (%build-list-of-construction input-form.stx lexenv.run lexenv.expand list-type.ots rand*.stx)
       (if (null? rand*.stx)
+	  ;;No operands, so we build an empty list: we just return null.
 	  (make-psi input-form.stx
 	    (build-data no-source '())
-	    (make-type-signature/single-value list-type.id))
-	(let ((rand*.core (map (lambda (rand.stx rand.idx)
-				 (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
-								    list-type.id item.ots rand.stx rand.idx))
-			    rand*.stx (%fxiota 0 rand*.stx))))
+	    (make-type-signature/single-value (<null>-ots)))
+	;;There is at least one operand.  We built an expression like:
+	;;
+	;;   (list ?rand ...)
+	;;
+	;;where each  ?RAND is: just  the expression itself,  if its type  matches at
+	;;expand-time; a validator expression like:
+	;;
+	;;   ((lambda (arg)
+	;;      (if (?type-pred arg)
+	;; 	    arg
+	;;        (procedure-signature-argument-violation ?type-name
+	;; 	    "invalid object type" ?index (quote ?type-pred) arg)))
+	;;    ?rand)
+	;;
+	;;if the operand's type needs to be validated at run-time.
+	(let* ((item.ots	(list-of-type-spec.item-ots list-type.ots))
+	       (rand*.core	(map (lambda (rand.stx rand.idx)
+				       (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
+									  item.ots rand.stx rand.idx))
+				  rand*.stx (%fxiota 0 rand*.stx))))
 	  (make-psi input-form.stx
 	    (build-application input-form.stx
-	      (build-primref no-source 'list)
+		(build-primref no-source 'list)
 	      (cons* rand*.core))
-	    (make-type-signature/single-value list-type.id)))))
+	    (make-type-signature/single-value list-type.ots)))))
 
     (define (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
-					       list-type.id item.ots rand.stx rand.idx)
+					       item.ots rand.stx rand.idx)
       (define rand.psi (chi-expr rand.stx lexenv.run lexenv.expand))
       (define rand.sig (psi.retvals-signature rand.psi))
       (define (%run-time-validation)
-	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
-					 list-type.id item.ots rand.stx rand.idx (psi.core-expr rand.psi)))
+	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand item.ots rand.psi rand.idx))
       (case-signature-specs rand.sig
 	((<top>)
 	 ;;Integrate a run-time validator for the single return value.
 	 (%run-time-validation))
+
 	((single-value)
 	 => (lambda (operand.ots)
 	      (if (object-type-spec.matching-super-and-sub? item.ots operand.ots)
-		  ;;Success!!!
+		  ;;Success!!!  Just evaluate the operand's expression.
 		  (psi.core-expr rand.psi)
-		(%error-expand-time/argument-and-operand-type-mismatch input-form.stx rand.stx rand.idx item.ots
-								       (object-type-spec.name operand.ots)))))
+		(raise
+		 (condition
+		  (make-expand-time-type-signature-violation)
+		  (%make-signature-mismatch-condition "expand-time mismatch between list's item type and operand signature"
+						      input-form.stx rand.stx rand.idx rand.sig item.ots))))))
+
 	(<no-return>
-	 (syntax-violation __module_who__
-	   "list constructor operand expression defined as no return"
-	   input-form.stx rand.stx))
+	 (let ((common (%make-signature-mismatch-condition "expression used as list constructor operand is typed as not returning"
+							   input-form.stx rand.stx rand.idx rand.sig item.ots)))
+	   (if (options::typed-language?)
+	       (raise (condition (make-expand-time-type-signature-violation) common))
+	     (raise-continuable (condition (make-expand-time-type-signature-warning) common)))))
+
 	(<list-of>
 	 => (lambda (operand.ots)
 	      (let ((operand-item.ots (list-of-type-spec.item-ots operand.ots)))
@@ -159,55 +204,57 @@
 		    ;;We let  the integrated single-value  validation do the  rest of
 		    ;;the job.
 		    (psi.core-expr rand.psi)
-		  (%error-expand-time/argument-and-operand-type-mismatch input-form.stx rand.stx rand.idx item.ots
-									 (object-type-spec.name operand.ots))))))
+		  (raise
+		   (condition
+		    (make-expand-time-type-signature-violation)
+		    (%make-signature-mismatch-condition "expand-time mismatch between list's item type and operand signature"
+							input-form.stx rand.stx rand.idx rand.sig item.ots)))))))
+
 	(<list>
 	 ;;The  retvals signature  is  fully unspecified.   We  integrate a  run-time
 	 ;;validator  expecting a  single  return value.   We  use the  automatically
 	 ;;generated machine code to validate the number of return values.
 	 (%run-time-validation))
+
 	(else
 	 ;;The  horror!!!  We  have established  at expand-time  that the  expression
 	 ;;returns multiple values; type violation.
-	 (%error-expand-time/operand-returns-multiple-values input-form.stx rand.stx rand.sig))))
+	 (raise
+	  (condition
+	   (make-expand-time-type-signature-violation)
+	   (%make-signature-mismatch-condition "the expression used as constructor's operand returns multiple values"
+					       input-form.stx rand.stx rand.idx rand.sig item.ots))))))
 
     (define (%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
-					     list-type.id item.ots rand.stx rand.idx rand.core)
-      (let* ((validator.stx	(let ((arg.sym   (gensym "arg"))
-				      (pred.sexp (object-type-spec.type-predicate-stx item.ots)))
-				  `(lambda (,arg.sym)
-				     (if (,pred.sexp ,arg.sym)
-					 ,arg.sym
-				       (procedure-signature-argument-violation (quote ,list-type.id)
-					 "invalid object type" ,rand.idx ',pred.sexp ,arg.sym)))))
-	     (validator.psi	(chi-expr validator.stx lexenv.run lexenv.expand))
-	     (validator.core	(psi.core-expr validator.psi)))
+					     item.ots rand.psi rand.idx)
+      ;;Build and return  a psi object representing an expression  which: at run-time
+      ;;validates  the operand  RAND.PSI as  a single  value of  type ITEM.OTS;  when
+      ;;successful returns the value itself.
+      ;;
+      (let* ((validator.stx	(let ((arg.sym		(gensym "arg"))
+				      (pred.stx		(object-type-spec.type-predicate-stx item.ots))
+				      (name.stx		(object-type-spec.name item.ots)))
+				  (bless
+				   `(lambda (,arg.sym)
+				      (if (,pred.stx ,arg.sym)
+					  ,arg.sym
+					(procedure-signature-argument-violation (quote ,name.stx)
+					  "invalid object type" ,rand.idx (quote (is-a? _ ,name.stx)) ,arg.sym))))))
+	     (validator.psi	(chi-expr validator.stx lexenv.run lexenv.expand)))
 	(build-application no-source
-	  validator.core
-	  (list rand.core))))
+	    (psi.core-expr validator.psi)
+	  (list (psi.core-expr rand.psi)))))
 
-    #| end of module: %BUILD-LIST-CONSTRUCTOR |# )
+    (define* (%make-signature-mismatch-condition message input-form.stx rand.stx rand.idx
+						 {rand.sig type-signature?} {item.ots object-type-spec?})
+      (condition (make-who-condition __module_who__)
+		 (make-message-condition message)
+		 (make-syntax-violation input-form.stx rand.stx)
+		 (make-application-argument-index-condition rand.idx)
+		 (make-application-argument-type-name-condition (object-type-spec.name item.ots))
+		 (make-application-operand-signature-condition rand.sig)))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-expand-time/argument-and-operand-type-mismatch input-form.stx rand.stx rand.idx item.ots rand.id)
-    (raise-compound-condition-object __module_who__
-      "expand-time mismatch between list's item type and operand signature"
-      input-form.stx
-      (condition
-       (make-expand-time-type-signature-violation)
-       (make-syntax-violation input-form.stx rand.stx)
-       (make-argument-index-condition rand.idx)
-       #;(make-argument-type-syntactic-identifier-condition item.ots)
-       (make-operand-type-syntactic-identifier-condition rand.id))))
-
-  (define (%error-expand-time/operand-returns-multiple-values input-form.stx rand.stx rand.sig)
-    (raise
-     (condition
-      (make-who-condition __module_who__)
-      (make-message-condition "the expression used as constructor's operand returns multiple values")
-      (make-syntax-violation input-form.stx rand.stx)
-      (make-irritants-condition (list rand.sig)))))
+    #| end of module: %BUILD-LIST-OF-CONSTRUCTION |# )
 
   #| end of module |# )
 
@@ -829,7 +876,7 @@
 	    (condition (make-who-condition __module_who__)
 		       (make-message-condition "unknown method name for type of subject expression")
 		       (make-syntax-violation input-form.stx subject-expr.stx)
-		       (make-type-syntactic-identifier-condition (object-type-spec.name subject-expr.ots))
+		       (make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))
 		       (make-type-method-name-condition method-name.sym))))))
 
 ;;; --------------------------------------------------------------------

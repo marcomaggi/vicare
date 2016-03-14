@@ -27,7 +27,7 @@
 (program (test-types-list-objects)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -36,8 +36,20 @@
 
 ;;;; helpers
 
+(library (types-of-lists)
+  (export
+    <list-of-chars>
+    <list-of-strings>)
+  (import (vicare))
+  (define-type <list-of-chars>		(list-of <char>))
+  (define-type <list-of-strings>	(list-of <string>))
+  #| end of LIBRARY |# )
+
+(import (types-of-lists))
+
 (define-constant ENVIRONMENT
-  (environment '(vicare)))
+  (environment '(vicare)
+	       '(types-of-lists)))
 
 (define-syntax-rule (%eval ?sexp)
   (eval (quasiquote ?sexp) ENVIRONMENT))
@@ -70,24 +82,24 @@
     => '(1 2))
 
   (check
-      (xp.type-signature.tags (type-of (new <list> (read) (read))))
+      (expander::type-signature.tags (type-of (new <list> (read) (read))))
     (=> syntax=?)
     (list #'<nlist>))
 
   (check
-      (xp.type-signature.tags (type-of (new <list>)))
+      (expander::type-signature.tags (type-of (new <list>)))
     (=> syntax=?)
     (list #'<null>))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (xp.type-signature.tags (type-of (list)))
+      (expander::type-signature.tags (type-of (list)))
     (=> syntax=?)
     (list #'<null>))
 
   (check
-      (xp.type-signature.tags (type-of (list 1)))
+      (expander::type-signature.tags (type-of (list 1)))
     (=> syntax=?)
     (list #'<nlist>))
 
@@ -144,7 +156,7 @@
     => '(#\a #\b))
 
   (check
-      (xp.type-signature.tags (type-of (new <list-of-chars> #\a #\b)))
+      (expander::type-signature.tags (type-of (new <list-of-chars> #\a #\b)))
     (=> syntax=?)
     (list #'<list-of-chars>))
 
@@ -154,13 +166,13 @@
       (try
 	  (%eval (new <list-of-chars> 1))
 	(catch E
-	  ((xp.&expand-time-type-signature-violation)
-	   (list (xp.condition-argument-type-syntactic-identifier E)
-		 (xp.condition-operand-type-syntactic-identifier  E)
-		 (xp.condition-argument-index                     E)))
+	  ((expander::&expand-time-type-signature-violation)
+	   (list (expander::condition-application-argument-index     E)
+		 (expander::condition-application-argument-type-name E)
+		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
 	  (else E)))
     (=> syntax=?)
-    (list #'<char> #'<positive-fixnum> 0))
+    (list 0 #'<char> (list #'<positive-fixnum>)))
 
   ;;Expand-time signature violation.  Second operand.
   ;;
@@ -168,13 +180,13 @@
       (try
 	  (%eval (new <list-of-chars> #\a 1))
 	(catch E
-	  ((xp.&expand-time-type-signature-violation)
-	   (list (xp.condition-argument-type-syntactic-identifier E)
-		 (xp.condition-operand-type-syntactic-identifier  E)
-		 (xp.condition-argument-index                     E)))
+	  ((expander::&expand-time-type-signature-violation)
+	   (list (expander::condition-application-argument-index     E)
+		 (expander::condition-application-argument-type-name E)
+		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
 	  (else E)))
     (=> syntax=?)
-    (list #'<char> #'<positive-fixnum> 1))
+    (list 1 #'<char> (list #'<positive-fixnum>)))
 
   ;;Run-time validation.
   ;;
@@ -279,7 +291,7 @@
     => '("a" "b"))
 
   (check
-      (xp.type-signature.tags (type-of (new <list-of-strings> "a" "b")))
+      (expander::type-signature.tags (type-of (new <list-of-strings> "a" "b")))
     (=> syntax=?)
     (list #'<list-of-strings>))
 
@@ -289,13 +301,13 @@
       (try
 	  (%eval (new <list-of-strings> 1))
 	(catch E
-	  ((xp.&expand-time-type-signature-violation)
-	   (list (xp.condition-argument-type-syntactic-identifier E)
-		 (xp.condition-operand-type-syntactic-identifier  E)
-		 (xp.condition-argument-index                     E)))
+	  ((expander::&expand-time-type-signature-violation)
+	   (list (expander::condition-application-argument-index     E)
+		 (expander::condition-application-argument-type-name E)
+		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
 	  (else E)))
     (=> syntax=?)
-    (list #'<string> #'<positive-fixnum> 0))
+    (list 0 #'<string> (list #'<positive-fixnum>)))
 
   ;;Expand-time signature violation.  Second operand.
   ;;
@@ -303,13 +315,13 @@
       (try
 	  (%eval (new <list-of-strings> "a" 1))
 	(catch E
-	  ((xp.&expand-time-type-signature-violation)
-	   (list (xp.condition-argument-type-syntactic-identifier E)
-		 (xp.condition-operand-type-syntactic-identifier  E)
-		 (xp.condition-argument-index                     E)))
+	  ((expander::&expand-time-type-signature-violation)
+	   (list (expander::condition-application-argument-index     E)
+		 (expander::condition-application-argument-type-name E)
+		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
 	  (else E)))
     (=> syntax=?)
-    (list #'<string> #'<positive-fixnum> 1))
+    (list 1 #'<string> (list #'<positive-fixnum>)))
 
   ;;Run-time validation.
   ;;
