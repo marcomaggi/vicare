@@ -79,8 +79,9 @@
    (syntax-object.typed-argument? stx (current-inferior-lexenv)))
   ((stx lexenv)
    (guard (E (else #f))
-     (and (syntax-object.parse-typed-argument stx lexenv)
-	  #t))))
+     (receive (id type)
+	 (syntax-object.parse-typed-argument stx lexenv)
+       #t))))
 
 (case-define* syntax-object.parse-typed-argument
   ;;If  STX  is a  typed  or  untyped identifier,  return  2  values: the  identifier
