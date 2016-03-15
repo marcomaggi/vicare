@@ -55,6 +55,63 @@
   (eval (quasiquote ?sexp) ENVIRONMENT))
 
 
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expression ?expected-tags)
+       (check
+	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
+	   ;;instance of "<type-signature>".
+	   (.tags (type-of ?expression))
+	 (=> syntax=?)
+	 ;;When the expression is a CONDITION application: the expected tags value is
+	 ;;a list with a single item.
+	 ?expected-tags))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (list 1)
+	#'((list <positive-fixnum>)))
+
+  (doit (list 1 2 3)
+	#'((list <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
+
+  (doit (list 1 "ciao" 'ciao)
+	#'((list <positive-fixnum> <string> <symbol>)))
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-tags))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?type-annotation ?expected-tags)
+       (check
+	   (.tags (new expander::<type-signature> #'(?type-annotation)))
+	 (=> syntax=?)
+	 ?expected-tags))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <list>
+	#'(<list>))
+
+  (doit (list)
+  	#'(<null>))
+
+  (doit (list <fixnum>)
+  	#'((list <fixnum>)))
+
+  (doit (list <fixnum> <flonum> <string>)
+  	#'((list <fixnum> <flonum> <string>)))
+
+  (void))
+
+
 (parametrise ((check-test-name	'predicate))
 
   (check-for-true	(is-a? '(1 . 2) <list>))
@@ -82,26 +139,26 @@
     => '(1 2))
 
   (check
-      (expander::type-signature.tags (type-of (new <list> (read) (read))))
+      (.tags (type-of (new <list> (read) (read))))
     (=> syntax=?)
-    (list #'<nlist>))
+    #'((list <top> <top>)))
 
   (check
-      (expander::type-signature.tags (type-of (new <list>)))
+      (.tags (type-of (new <list>)))
     (=> syntax=?)
     (list #'<null>))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (expander::type-signature.tags (type-of (list)))
+      (.tags (type-of (list)))
     (=> syntax=?)
     (list #'<null>))
 
   (check
-      (expander::type-signature.tags (type-of (list 1)))
+      (.tags (type-of (list 1)))
     (=> syntax=?)
-    (list #'<nlist>))
+    #'((list <positive-fixnum>)))
 
   #t)
 

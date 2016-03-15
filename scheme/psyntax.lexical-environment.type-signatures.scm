@@ -28,6 +28,7 @@
 
 ;;; special constructors
    make-type-signature/single-top			make-type-signature/single-void
+   make-type-signature/single-null
    make-type-signature/single-boolean
    make-type-signature/single-true			make-type-signature/single-false
    make-type-signature/single-procedure
@@ -351,6 +352,7 @@
 	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
   (define-single-type-signature-maker make-type-signature/single-top			<top>-type-id)
   (define-single-type-signature-maker make-type-signature/single-void			<void>-type-id)
+  (define-single-type-signature-maker make-type-signature/single-null			<null>-type-id)
   (define-single-type-signature-maker make-type-signature/single-boolean		<boolean>-type-id)
   (define-single-type-signature-maker make-type-signature/single-true			<true>-type-id)
   (define-single-type-signature-maker make-type-signature/single-false			<false>-type-id)

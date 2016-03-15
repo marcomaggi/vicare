@@ -100,7 +100,7 @@
     object-type-spec.applicable-method-stx
 
     object-type-spec.super-and-sub?			object-type-spec.matching-super-and-sub?
-    object-type-spec.common-ancestor
+    object-type-spec.common-ancestor			object-type-spec=?
     object-type-spec.procedure?
     object-type-spec.list-sub-type?
     object-type-spec.vector-sub-type?

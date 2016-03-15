@@ -38,7 +38,7 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 condition)
+  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 condition list)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -63,6 +63,9 @@
 
     ((condition . ?rand*)
      (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
+
+    ((list . ?rand*)
+     (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -321,6 +324,97 @@
   #| end of module: CHI-VALUES-APPLICATION |# )
 
 
+(module (chi-list-application)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (list ?rand ...)
+  ;;
+  ;;and RANDS.STX is the syntax object:
+  ;;
+  ;;   #'(?rand ...)
+  ;;
+  ;;which holds  a proper list  of expressions.  The  application of LIST  is special
+  ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
+  ;;"<list-type-spec>" or a "<list-of-type-spec>".
+  ;;
+  (define-module-who chi-list-application)
+
+  (define (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx)
+    (syntax-match rands.stx ()
+      (()
+       ;;No arguments.  Just return null.
+       (make-psi input-form.stx
+	 (build-data no-source '())
+	 (make-type-signature/single-null)))
+
+      ((?rand ?rand* ...)
+       ;;Two or more values.
+       (let* ((rand*.stx  (cons ?rand ?rand*))
+	      (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
+	      (rand*.core (map psi.core-expr rand*.psi))
+	      (rand*.sig  (map psi.retvals-signature rand*.psi)))
+	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
+	   (make-psi input-form.stx
+	     (build-application (syntax-annotation input-form.stx)
+		 (build-primref no-source 'list)
+	       rand*.core)
+	     application.sig))))
+      ))
+
+  (define (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)
+    (make-type-signature/single-value
+     (make-list-type-spec
+      (map (lambda (rand.stx rand.sig)
+	     (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig))
+	rand*.stx rand*.sig))))
+
+  (define (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig)
+    (case-signature-specs rand.sig
+      ((single-value)
+       => (lambda (rand.ots)
+	    rand.ots))
+
+      (<no-return>
+       (let ((common (list
+		      (make-who-condition __module_who__)
+		      (make-message-condition "expression used as application operand is typed as not returning")
+		      (make-syntax-violation input-form.stx rand.stx)
+		      (make-application-operand-signature-condition rand.sig))))
+	 (if (options::typed-language?)
+	     (raise (list (make-expand-time-type-signature-violation) common))
+	   (begin
+	     (raise-continuable (list (make-expand-time-type-signature-warning) common))
+	     (<top>-ots)))))
+
+      (<list-of>
+       ;;The operand expression returns an unspecified number of values of specified,
+       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
+       ;;run-time, if this operand returns a single value.
+       => (lambda (rand.ots)
+	    (list-of-type-spec.item-ots rand.ots)))
+
+      (<list>
+       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
+       ;;unspecified type.   We relay  on the  automatically generated  validation to
+       ;;check at run-time if the expression returns a single value.
+       (<top>-ots))
+
+      (else
+       ;;The operand expression returns zero, two or more values.
+       (let ((common (list
+		      (make-who-condition __module_who__)
+		      (make-message-condition "expression used as application operand returns multiple values")
+		      (make-syntax-violation input-form.stx rand.stx)
+		      (make-application-operand-signature-condition rand.sig))))
+	 (if (options::typed-language?)
+	     (raise (list (make-expand-time-type-signature-violation) common))
+	   (begin
+	     (raise-continuable (list (make-expand-time-type-signature-warning) common))
+	     (<top>-ots)))))))
+
+  #| end of module: CHI-LIST-APPLICATION |# )
+
+
 (module (chi-condition-application)
   ;;The input form has the syntax:
   ;;
@@ -351,7 +445,7 @@
   (define (chi-condition-application input-form.stx lexenv.run lexenv.expand rands.stx)
     (syntax-match rands.stx ()
       (()
-       ;;No arguments, zero returned values.  Just evaluate "(condition)".
+       ;;No arguments.  Just evaluate "(condition)".
        (make-psi input-form.stx
 	 (build-application (syntax-annotation input-form.stx)
 	     (build-primref no-source 'condition)
@@ -418,17 +512,17 @@
 	     (unspecified-kont)))))
 
       (<list-of>
-       ;;The  operand expression  returns an  unspecified number  of
-       ;;values of  specified, homogeneous,  type.  We relay  on the
-       ;;automatically generated validation to  check at run-time if
-       ;;the expression returns a single value.
+       ;;The operand expression returns an unspecified number of values of specified,
+       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
+       ;;run-time, if this operand returns a single value.
        => (lambda (rand.ots)
 	    (let ((item.ots (list-of-type-spec.item-ots rand.ots)))
 	      (%process-single-value-operand input-form.stx rand.stx rand.sig item.ots application.specs unspecified-kont))))
 
       (<list>
-       ;;The  operand expression  returns an  unspecified number  of
-       ;;values of unspecified type.
+       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
+       ;;unspecified type.  We rely on the  compiler to generate code that checks, at
+       ;;run-time, if this operand returns a single value.
        (unspecified-kont))
 
       (else

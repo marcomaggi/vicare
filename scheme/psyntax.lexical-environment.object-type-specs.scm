@@ -28,7 +28,7 @@
 	 object-type-spec.applicable-method-stx
 
 	 object-type-spec.super-and-sub?		object-type-spec.matching-super-and-sub?
-	 object-type-spec.common-ancestor
+	 object-type-spec.common-ancestor		object-type-spec=?
 	 object-type-spec.procedure?
 	 object-type-spec.list-sub-type?
 	 object-type-spec.vector-sub-type?
@@ -97,6 +97,9 @@
 	 type-annotation->object-type-specification
 
 	 #| end of export list |# )
+
+  (import (only (vicare language-extensions syntaxes)
+		define-equality/sorting-predicate))
 
 
 ;;;; basic object-type specification
@@ -292,8 +295,8 @@
 
   #| end of module |# )
 
-;;; --------------------------------------------------------------------
-;;; ancestors predicates and inspection
+
+;;;; basic object-type specification: super and sub types
 
 (module (object-type-spec.super-and-sub?)
 
@@ -347,7 +350,8 @@
 
   #| end of module: OBJECT-TYPE-SPEC.SUPER-AND-SUB? |# )
 
-;;; --------------------------------------------------------------------
+
+;;;; basic object-type specification: matching super and sub types
 
 (define* (object-type-spec.matching-super-and-sub? {super.ots object-type-spec?} {sub.ots object-type-spec?})
   ;;In the context of an operator application:
@@ -505,7 +509,8 @@
 
 	(else #f)))
 
-;;; --------------------------------------------------------------------
+
+;;;; basic object-type specification: common ancestor
 
 (define (object-type-spec.common-ancestor ots1 ots2)
   ;;Search the hierarchies of OTS1 and OTS2 looking for a common ancestor.  Return an
@@ -533,6 +538,78 @@
 			     => scan-parents-of-ots1)
 			    (else
 			     (<top>-ots)))))))))))
+
+
+;;;; basic object-type specification: comparison
+
+(module (object-type-spec=?)
+
+  (define-equality/sorting-predicate object-type-spec=? $object-type-spec= object-type-spec?)
+
+  (define ($object-type-spec= ots1 ots2)
+    (cond ((eq? ots1 ots2))
+
+	  ((list-of-type-spec? ots1)
+	   (and (list-of-type-spec? ots2)
+		($object-type-spec= (list-of-type-spec.item-ots ots1)
+				    (list-of-type-spec.item-ots ots2))))
+
+	  ((vector-of-type-spec? ots1)
+	   (and (vector-of-type-spec? ots2)
+		($object-type-spec= (vector-of-type-spec.item-ots ots1)
+				    (vector-of-type-spec.item-ots ots2))))
+
+	  ((pair-of-type-spec? ots1)
+	   (and (pair-of-type-spec? ots2)
+		($object-type-spec= (pair-of-type-spec.item-ots ots1)
+				    (pair-of-type-spec.item-ots ots2))))
+
+	  ((list-type-spec? ots1)
+	   (and (list-type-spec? ots2)
+		(let ((item1*.ots (list-type-spec.item-ots* ots1))
+		      (item2*.ots (list-type-spec.item-ots* ots2)))
+		  (and (= (length item1*.ots)
+			  (length item2*.ots))
+		       (for-all $object-type-spec= item1*.ots item2*.ots)))))
+
+	  ((vector-type-spec? ots1)
+	   (and (vector-type-spec? ots2)
+		(let ((item1*.ots (vector-type-spec.item-ots* ots1))
+		      (item2*.ots (vector-type-spec.item-ots* ots2)))
+		  (and (= (length item1*.ots)
+			  (length item2*.ots))
+		       (for-all $object-type-spec= item1*.ots item2*.ots)))))
+
+	  ((pair-type-spec? ots1)
+	   (and (pair-type-spec? ots2)
+		($object-type-spec= (pair-type-spec.car-ots ots1)
+				    (pair-type-spec.car-ots ots2))
+		($object-type-spec= (pair-type-spec.cdr-ots ots1)
+				    (pair-type-spec.cdr-ots ots2))))
+
+	  ((compound-condition-type-spec? ots1)
+	   (and (compound-condition-type-spec? ots2)
+		(let ((component1*.ots (compound-condition-type-spec.component-ots* ots1))
+		      (component2*.ots (compound-condition-type-spec.component-ots* ots2)))
+		  (and (= (length component1*.ots)
+			  (length component2*.ots))
+		       (for-all (lambda (component1.ots)
+				  (exists (lambda (component2.ots)
+					    ($object-type-spec= component1.ots component2.ots))
+				    component2*.ots))
+			 component1*.ots)
+		       (for-all (lambda (component2.ots)
+				  (exists (lambda (component1.ots)
+					    ($object-type-spec= component1.ots component2.ots))
+				    component1*.ots))
+			 component2*.ots)))))
+
+	  (else #f)))
+
+  #| end of module: OBJECT-TYPE-SPEC=? |# )
+
+
+;;;; basic object-type specification: special predicates
 
 (define (object-type-spec.procedure? ots)
   (or (closure-type-spec? ots)
@@ -1370,21 +1447,27 @@
    ;;
    (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition)
      ((pair ?car-type ?cdr-type)
-      (make-pair-type-spec (type-annotation->object-type-specification ?car-type lexenv)
-			   (type-annotation->object-type-specification ?cdr-type lexenv)
-			   name.stx))
+      (let ((car.ots (type-annotation->object-type-specification ?car-type lexenv))
+	    (cdr.ots (type-annotation->object-type-specification ?cdr-type lexenv)))
+	(if (object-type-spec=? car.ots cdr.ots)
+	    (make-pair-of-type-spec car.ots name.stx)
+	  (make-pair-type-spec car.ots cdr.ots name.stx))))
 
      ((list ?item-type* ...)
-      (make-list-type-spec (map (lambda (type.stx)
-				  (type-annotation->object-type-specification type.stx lexenv))
-			     ?item-type*)
-			   name.stx))
-
-     ((vector ?item-type* ...)
-      (make-vector-type-spec (map (lambda (type.stx)
+      (if (null? ?item-type*)
+	  (<null>-ots)
+	(make-list-type-spec (map (lambda (type.stx)
 				    (type-annotation->object-type-specification type.stx lexenv))
 			       ?item-type*)
-			     name.stx))
+			     name.stx)))
+
+     ((vector ?item-type* ...)
+      (if (null? ?item-type*)
+	  (<empty-vector>-ots)
+	(make-vector-type-spec (map (lambda (type.stx)
+				      (type-annotation->object-type-specification type.stx lexenv))
+				 ?item-type*)
+			       name.stx)))
 
      ((pair-of ?item-type)
       (make-pair-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
