@@ -547,13 +547,16 @@
 	  ((<compound-condition>-ots? rand.ots)
 	   (unspecified-kont))
 	  (else
-	   (raise
-	    (condition
-	     (make-expand-time-type-signature-violation)
-	     (make-who-condition __module_who__)
-	     (make-message-condition "expected condition object-type specification as component of compound condition object-type")
-	     (make-syntax-violation input-form.stx rand.stx)
-	     (make-application-operand-signature-condition rand.sig))))))
+	   (let ((common (condition
+			  (make-who-condition __module_who__)
+			  (make-message-condition "expected condition object-type specification as component of compound condition object-type")
+			  (make-syntax-violation input-form.stx rand.stx)
+			  (make-application-operand-signature-condition rand.sig))))
+	     (if (options::typed-language?)
+		 (raise (condition (make-expand-time-type-signature-violation) common))
+	       (begin
+		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+		 (unspecified-kont)))))))
 
   #| end of module: CHI-CONDITION-APPLICATION |# )
 
