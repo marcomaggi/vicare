@@ -38,7 +38,7 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1)
+  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 condition)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -60,6 +60,9 @@
      ;;A call to VALUES is special because  VALUES does not have a predefined retvals
      ;;signature, but the retvals signature equals the arguments' signature.
      (chi-values-application input-form.stx lexenv.run lexenv.expand ?rand*))
+
+    ((condition . ?rand*)
+     (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -316,6 +319,149 @@
 	     (<top>-ots)))))))
 
   #| end of module: CHI-VALUES-APPLICATION |# )
+
+
+(module (chi-condition-application)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (condition ?rand ...)
+  ;;
+  ;;and RANDS.STX is the syntax object:
+  ;;
+  ;;   #'(?rand ...)
+  ;;
+  ;;which  holds a  proper  list of  expressions.  The  application  of CONDITION  is
+  ;;special because  we want the expression  to return a type  signature describing a
+  ;;"<compound-condition-object-type>".
+  ;;
+  ;;We need to verify that the operands expressions in RANDS.STX are either sub-types
+  ;;of "&condition", or instances  of type "<compound-condition-object-type>".  Let's
+  ;;remember that the type hierarchy for condition objects is this:
+  ;;
+  ;;   <condition> --> <compound-condition> --> <compound-condition-object-type>
+  ;;        |
+  ;;         --------> &condition --> &who
+  ;;                       |
+  ;;                       |--------> &message
+  ;;                       |
+  ;;                        --------> ... all the condition types ...
+  ;;
+  (define-module-who chi-condition-application)
+
+  (define (chi-condition-application input-form.stx lexenv.run lexenv.expand rands.stx)
+    (syntax-match rands.stx ()
+      (()
+       ;;No arguments, zero returned values.  Just evaluate "(condition)".
+       (make-psi input-form.stx
+	 (build-application (syntax-annotation input-form.stx)
+	     (build-primref no-source 'condition)
+	   '())
+	 (make-type-signature/single-value (make-compound-condition-type-spec '()))))
+
+      ((?rand ?rand* ...)
+       ;;Two or more values.
+       (let* ((rand*.stx  (cons ?rand ?rand*))
+	      (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
+	      (rand*.core (map psi.core-expr rand*.psi))
+	      (rand*.sig  (map psi.retvals-signature rand*.psi)))
+	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
+	   (make-psi input-form.stx
+	     (build-application (syntax-annotation input-form.stx)
+		 (build-primref no-source 'condition)
+	       rand*.core)
+	     application.sig))))
+      ))
+
+  (define (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)
+    (make-type-signature/single-value
+     (call/cc
+	 (lambda (escape)
+	   (define specs
+	     (fold-right (lambda (rand.stx rand.sig application.specs)
+			   (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig application.specs
+									     (lambda ()
+									       (escape (<compound-condition>-ots)))))
+	       '() rand*.stx rand*.sig))
+	   ;;We want:
+	   ;;
+	   ;;   (type-of (make-who-condition 'ciao))
+	   ;;   => #[type-signature (&who)]
+	   ;;
+	   ;;   (type-of (condition (make-who-condition 'ciao)))
+	   ;;   => #[type-signature (&who)]
+	   ;;
+	   (if (list-of-single-item? specs)
+	       (car specs)
+	     (make-compound-condition-type-spec specs))))))
+
+  (define (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig application.specs unspecified-kont)
+    ;;The argument UNSPECIFIED-KONT  is a continuation thunk to be  called when it is
+    ;;not  possible to  determine the  type of  an operand;  in this  case the  whole
+    ;;CONDITION application signature must  represent a single "<compound-condition>"
+    ;;value.
+    ;;
+    (case-signature-specs rand.sig
+      ((single-value)
+       => (lambda (rand.ots)
+	    (%process-single-value-operand input-form.stx rand.stx rand.sig rand.ots application.specs unspecified-kont)))
+
+      (<no-return>
+       (let ((common (condition
+		      (make-who-condition __module_who__)
+		      (make-message-condition "expression used as application operand is typed as not returning")
+		      (make-syntax-violation input-form.stx rand.stx)
+		      (make-application-operand-signature-condition rand.sig))))
+	 (if (options::typed-language?)
+	     (raise (condition (make-expand-time-type-signature-violation) common))
+	   (begin
+	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+	     (unspecified-kont)))))
+
+      (<list-of>
+       ;;The  operand expression  returns an  unspecified number  of
+       ;;values of  specified, homogeneous,  type.  We relay  on the
+       ;;automatically generated validation to  check at run-time if
+       ;;the expression returns a single value.
+       => (lambda (rand.ots)
+	    (let ((item.ots (list-of-type-spec.item-ots rand.ots)))
+	      (%process-single-value-operand input-form.stx rand.stx rand.sig item.ots application.specs unspecified-kont))))
+
+      (<list>
+       ;;The  operand expression  returns an  unspecified number  of
+       ;;values of unspecified type.
+       (unspecified-kont))
+
+      (else
+       ;;The operand expression returns zero, two or more values.
+       (let ((common (condition
+		      (make-who-condition __module_who__)
+		      (make-message-condition "expression used as application operand returns multiple values")
+		      (make-syntax-violation input-form.stx rand.stx)
+		      (make-application-operand-signature-condition rand.sig))))
+	 (if (options::typed-language?)
+	     (raise (condition (make-expand-time-type-signature-violation) common))
+	   (begin
+	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+	     (unspecified-kont)))))))
+
+  (define (%process-single-value-operand input-form.stx rand.stx rand.sig rand.ots application.specs unspecified-kont)
+    (cond ((simple-condition-object-type-spec? rand.ots)
+	   (cons rand.ots application.specs))
+	  ((compound-condition-type-spec? rand.ots)
+	   (append (compound-condition-type-spec.component-ots* rand.ots)
+		   application.specs))
+	  ((<compound-condition>-ots? rand.ots)
+	   (unspecified-kont))
+	  (else
+	   (raise
+	    (condition
+	     (make-expand-time-type-signature-violation)
+	     (make-who-condition __module_who__)
+	     (make-message-condition "expected condition object-type specification as component of compound condition object-type")
+	     (make-syntax-violation input-form.stx rand.stx)
+	     (make-application-operand-signature-condition rand.sig))))))
+
+  #| end of module: CHI-CONDITION-APPLICATION |# )
 
 
 (define (chi-apply-application input-form.stx lexenv.run lexenv.expand

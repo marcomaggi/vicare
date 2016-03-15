@@ -41,15 +41,14 @@
 
 (define-syntax (with-object-type-syntactic-binding stx)
   (sys::syntax-case stx ()
-    ((_ (?who ?input-form.stx ?type-id ?lexenv ?object-type-spec)
+    ((_ (?who ?input-form.stx ?type-annotation ?lexenv ?object-type-spec)
 	. ?body)
      (and (sys::identifier? (sys::syntax ?who))
 	  (sys::identifier? (sys::syntax ?input-form.stx))
-	  (sys::identifier? (sys::syntax ?type-id))
 	  (sys::identifier? (sys::syntax ?lexenv))
 	  (sys::identifier? (sys::syntax ?object-type-spec)))
      (sys::syntax
-      (let ((?object-type-spec (id->object-type-specification ?who ?input-form.stx ?type-id ?lexenv)))
+      (let ((?object-type-spec (type-annotation->object-type-specification ?type-annotation ?lexenv ?type-annotation)))
 	. ?body)))
     ))
 
@@ -195,7 +194,9 @@
 							   input-form.stx rand.stx rand.idx rand.sig item.ots)))
 	   (if (options::typed-language?)
 	       (raise (condition (make-expand-time-type-signature-violation) common))
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common)))))
+	     (begin
+	       (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+	       (%run-time-validation)))))
 
 	(<list-of>
 	 => (lambda (operand.ots)
@@ -323,38 +324,23 @@
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (syntax-match input-form.stx (list list-of vector vector-of pair pair-of)
-      ((_ ?jolly ?type-id)
-       (and (identifier? ?type-id)
-	    (underscore-id? ?jolly))
-       (chi-expr (with-object-type-syntactic-binding (__who__ input-form.stx ?type-id lexenv.run ots)
-		   (or (object-type-spec.type-predicate-stx ots)
-		       (%synner "type specification has no predicate for run-time use" ?type-id)))
+    (syntax-match input-form.stx (pair list vector pair-of list-of vector-of)
+      ((_ ?jolly ?type-annotation)
+       (underscore-id? ?jolly)
+       ;;This is the case:
+       ;;
+       ;;   (is-a? _ <string>)
+       ;;
+       ;;which should expand to the predicate of "<string>".
+       (chi-expr (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type-annotation.ots)
+		   (or (object-type-spec.type-predicate-stx type-annotation.ots)
+		       (%synner "type annotation has no predicate for run-time use" ?type-annotation)))
 		 lexenv.run lexenv.expand))
 
-      ((_ ?expr ?type-id)
-       (identifier? ?type-id)
-       (%expand-to-single-value-predicate input-form.stx lexenv.run lexenv.expand
-					  ?expr ?type-id %synner))
-
-      ((_ ?expr (list ?type-id ...))
-       (%synner "not implemented yet"))
-
-      ((_ ?expr (list-of ?type-id))
-       (%synner "not implemented yet"))
-
-      ((_ ?expr (pair ?type-id ...))
-       (%synner "not implemented yet"))
-
-      ((_ ?expr (pair-of ?type-id))
-       (%synner "not implemented yet"))
-
-      ((_ ?expr (vector ?type-id ...))
-       (%synner "not implemented yet"))
-
-      ((_ ?expr (vector-of ?type-id))
-       (%synner "not implemented yet"))
-
+      ((_ ?expr ?type-annotation)
+       (with-object-type-syntactic-binding (__module_who__ input-form.stx ?type-annotation lexenv.run type-annotation.ots)
+	 (%expand-to-single-value-predicate input-form.stx lexenv.run lexenv.expand
+					    ?expr ?type-annotation type-annotation.ots %synner)))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -362,99 +348,74 @@
   (module (%expand-to-single-value-predicate)
 
     (define (%expand-to-single-value-predicate input-form.stx lexenv.run lexenv.expand
-					       expr.stx pred.id synner)
+					       expr.stx type-annotation.stx type-annotation.ots synner)
       ;;Given the input form:
       ;;
-      ;;   (is-a? ?expr ?pred-type)
+      ;;   (is-a? ?expr ?type-annotation)
       ;;
-      ;;the expression EXPR.STX is expected to return a single value of type PRED.ID.
-      ;;We try to check this at expand-time, and when not possible at run-time.
+      ;;the  expression  EXPR.STX is  expected  to  return  a  single value  of  type
+      ;;TYPE-ANNOTATION.OTS.   We try  to check  this  at expand-time,  and when  not
+      ;;possible at run-time.
       ;;
-      (with-object-type-syntactic-binding (__module_who__ input-form.stx pred.id lexenv.run pred.ots)
-	(let* ((expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))
-	       (expr.sig	(psi.retvals-signature expr.psi))
-	       (expr.specs	(type-signature.specs expr.sig)))
-	  (define (%run-time-predicate)
-	    (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand
-						       expr.psi pred.id pred.ots synner))
-	  ;;EXPR.SPECS  is   a  proper  or  improper   list  of  "<object-type-spec>"
-	  ;;instances.
-	  (cond ((pair? expr.specs)
-		 (cond ((null? (cdr expr.specs))
-			;;The  expression returns  a  single value:  EXPR.SPECS is  a
-			;;proper list holding an  instance of "<object-type-spec>" as
-			;;single item.  Good.
-			(%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
-								    expr.psi (car expr.specs) pred.ots %run-time-predicate))
-		       (else
-			;;We  have  determined  at expand-time  that  the  expression
-			;;returns multiple values.
-			(raise
-			 (condition (make-who-condition __module_who__)
-				    (make-message-condition "subject expression of type predicate returns multiple values")
-				    (make-syntax-violation input-form.stx expr.stx)
-				    (make-irritants-condition (list expr.sig)))))))
+      (let* ((expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))
+	     (expr.sig	(psi.retvals-signature expr.psi)))
+	(define (%run-time-predicate)
+	  (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand
+						     expr.psi type-annotation.ots synner))
+	(case-signature-specs expr.sig
+	  ((single-value)
+	   => (lambda (expr.ots)
+		(%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
+							    expr.psi expr.ots type-annotation.ots %run-time-predicate)))
 
-		((null? expr.specs)
-		 ;;The expression returns no values.  Bad.
-		 (syntax-violation __module_who__
-		   "subject expression of type predicate returns zero values"
-		   input-form.stx expr.stx))
+	  (<no-return>
+	   (let ((common (condition
+			  (make-who-condition __module_who__)
+			  (make-message-condition "subject expression typed as not returning")
+			  (make-syntax-violation input-form.stx expr.stx))))
+	     (if (options::typed-language?)
+		 (raise (condition (make-expand-time-type-signature-violation) common))
+	       (begin
+		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+		 (%run-time-predicate)))))
 
-		(else
-		 ;;EXPR.SPECS    is    an    improper   list:    an    instance    of
-		 ;;"<object-type-spec>"   representing  "<list>"   or   one  of   its
-		 ;;sub-types.   The  expression  returns  an  unspecified  number  of
-		 ;;values.
-		 (%match-pred-type-against-unspecified-values-expr input-form.stx lexenv.run lexenv.expand
-								   expr.psi (car expr.specs) pred.ots %run-time-predicate))))))
+	  (<list>
+	   ;;The expression  returns an unspecified  number of values  of UNspecified
+	   ;;type.
+	   (%run-time-predicate))
+
+	  (<list-of>
+	   => (lambda (expr.ots)
+		(%match-pred-type-against-list-of input-form.stx lexenv.run lexenv.expand
+						  expr.psi expr.ots type-annotation.ots %run-time-predicate)))
+
+	  (else
+	   (let ((common (condition
+			  (make-who-condition __module_who__)
+			  (make-message-condition "subject expression returns multiple values")
+			  (make-syntax-violation input-form.stx expr.stx))))
+	     (if (options::typed-language?)
+		 (raise (condition (make-expand-time-type-signature-violation) common))
+	       (begin
+		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
+		 (%run-time-predicate))))))))
 
     (define (%match-pred-type-against-single-value-expr input-form.stx lexenv.run lexenv.expand
-							expr.psi expr.ots pred.ots %run-time-predicate)
+							expr.psi expr.ots type-annotation.ots %run-time-predicate)
       ;;Given the input form:
       ;;
       ;;   (is-a? ?expr ?pred-type)
       ;;
       ;;we have determined  that the expression ?EXPR returns a  single value of type
-      ;;EXPR.OTS and  such type is expected  to match PRED-TYPE.ID.  We  try to check
-      ;;this at expand-time, and when not possible at run-time.
+      ;;EXPR.OTS and such type  is expected to match TYPE-ANNOTATION.OTS.  We  try to check this
+      ;;at expand-time, and when not possible at run-time.
       ;;
-      (cond ((<top>-ots? expr.ots)
-	     ;;The expression returns a single value  of type "<top>": let's check it
-	     ;;at run-time.
-	     (%run-time-predicate))
-
-	    ((<null>-ots? pred.ots)
-	     ;;This is the case:
-	     ;;
-	     ;;   (is-a? ?expr <null>)
-	     ;;
-	     ;;we have  an expand-time match  if ?EXPR returns "<null>",  "<list>" or
-	     ;;any of "<list>" sub-types.
-	     (if (or (<null>-ots? expr.ots)
-		     (object-type-spec.matching-super-and-sub? (<list>-ots) expr.ots))
-		 (%make-true-psi input-form.stx expr.psi)
-	       (%make-false-psi input-form.stx expr.psi)))
-
-	    ((and (object-type-spec.matching-super-and-sub? (&condition-ots) pred.ots)
-		  (object-type-spec.matching-super-and-sub? (<compound-condition>-ots) expr.ots))
-	     ;;The  expression returns  a  single value  being  a compound  condition
-	     ;;object; the predicate type is a  simple condition object type; this is
-	     ;;a special case we want to match.  Example:
-	     ;;
-	     ;;   (is-a? (compound (make-who-condition 'who)
-	     ;;                    (make-message-condition "message"))
-	     ;;          &who)
-	     ;;
-	     ;;Let's check it at run-time.
-	     (%run-time-predicate))
-
-	    ((object-type-spec.matching-super-and-sub? pred.ots expr.ots)
+      (cond ((object-type-spec.matching-super-and-sub? type-annotation.ots expr.ots)
 	     ;;The expression  returns a  single value  matching the  predicate type.
 	     ;;Expand-time success!
 	     (%make-true-psi input-form.stx expr.psi))
 
-	    ((object-type-spec.matching-super-and-sub? expr.ots pred.ots)
+	    ((object-type-spec.matching-super-and-sub? expr.ots type-annotation.ots)
 	     ;;The expression  returns a single  value compatible with  the predicate
 	     ;;type.  Let's check it at run-time.
 	     (%run-time-predicate))
@@ -464,77 +425,66 @@
 	     ;;type.  Expand-time failure!
 	     (%make-false-psi input-form.stx expr.psi))))
 
-    (define (%match-pred-type-against-unspecified-values-expr input-form.stx lexenv.run lexenv.expand
-							      expr.psi expr-values.ots pred.ots %run-time-predicate)
+    (define* (%match-pred-type-against-list-of input-form.stx lexenv.run lexenv.expand
+					       expr.psi {expr.ots list-of-type-spec?}
+					       type-annotation.ots %run-time-predicate)
       ;;Given the input form:
       ;;
       ;;   (is-a? ?expr ?pred-type)
       ;;
       ;;we have determined that the expression ?EXPR returns an unspecified number of
-      ;;values.  EXPR-VALUES.OTS is an  instance of "<object-type-spec>" representing
-      ;;"<list>" or one of its sub-types.
+      ;;values of a specified type.
       ;;
-      (cond ((<list>-ots? expr-values.ots)
-	     ;;The expression returns an unspecified  number of values of UNspecified
-	     ;;type.
-	     (%run-time-predicate))
+      (let ((item.ots	(list-of-type-spec.item-ots expr.ots))
+	    (expr.core	(psi.core-expr expr.psi)))
+	(cond ((object-type-spec.matching-super-and-sub? type-annotation.ots item.ots)
+	       ;;If the  expression returns  a single value:  such value  matches the
+	       ;;predicate type.   Let's check at  run-time that it returns  a single
+	       ;;value and let the expression return true.
+	       (make-psi input-form.stx
+		 (build-application input-form.stx
+		     (build-primref no-source 'expect-single-argument-and-return-true)
+		   (list expr.core))
+		 (make-type-signature/single-true)))
 
-	    ((list-of-type-spec? expr-values.ots)
-	     ;;The expression returns an unspecified  number of homogeneous values of
-	     ;;specified type.
-	     (let ((item.ots	(list-of-type-spec.item-ots expr-values.ots))
-		   (expr.core	(psi.core-expr expr.psi)))
-	       (cond ((object-type-spec.matching-super-and-sub? pred.ots item.ots)
-		      ;;If the expression returns a  single value: such value matches
-		      ;;the predicate type.  Let's check  at run-time that it returns
-		      ;;a single value and let the expression return true.
-		      (make-psi input-form.stx
-			(build-application input-form.stx
-			  (build-primref no-source 'expect-single-argument-and-return-true)
-			  (list expr.core))
-			(make-type-signature/single-true)))
+	      ((object-type-spec.matching-super-and-sub? item.ots type-annotation.ots)
+	       ;;If the expression  returns a single value: such  value is compatible
+	       ;;with the predicate type.  Let's check it at run-time.
+	       (%run-time-predicate))
 
-		     ((object-type-spec.matching-super-and-sub? item.ots pred.ots)
-		      ;;If  the expression  returns  a single  value:  such value  is
-		      ;;compatible with the predicate type.  Let's check it run-time.
-		      (%run-time-predicate))
-
-		     (else
-		      ;;Even if  the expression  returns a  single value:  such value
-		      ;;does not match  the predicate type.  Let's  check at run-time
-		      ;;that it returns a single  value and let the expression return
-		      ;;false.
-		      (make-psi input-form.stx
-			(build-application input-form.stx
-			  (build-primref no-source 'expect-single-argument-and-return-false)
-			  (list expr.core))
-			(make-type-signature/single-false))))))
-
-	    (else
-	     (assertion-violation __module_who__
-	       "unsupported list type specification" expr-values.ots))))
+	      (else
+	       ;;Even if the  expression returns a single value: such  value does not
+	       ;;match the predicate type.  Let's check at run-time that it returns a
+	       ;;single value and let the expression return false.
+	       (make-psi input-form.stx
+		 (build-application input-form.stx
+		     (build-primref no-source 'expect-single-argument-and-return-false)
+		   (list expr.core))
+		 (make-type-signature/single-false))))))
 
     #| end of module: %EXPAND-TO-SINGLE-VALUE-PREDICATE |# )
 
 ;;; --------------------------------------------------------------------
 
   (define* (%expand-to-run-time-predicate-application input-form.stx lexenv.run lexenv.expand
-						      {expr.psi psi?} pred.id {pred.ots object-type-spec?} synner)
+						      {expr.psi psi?} {type-annotation.ots object-type-spec?} synner)
     ;;Given the input form:
     ;;
-    ;;   (is-a? ?expr ?pred-type)
+    ;;   (is-a? ?expr ?type-annotation)
     ;;
     ;;we build the output form:
     ;;
     ;;   (?type-predicate ?expr)
     ;;
     ;;where  ?TYPE-PREDICATE is  a syntax  object representing  an expression  which,
-    ;;expanded and evaluated, returns the type predicate for ?PRED-TYPE.
+    ;;expanded and evaluated, returns the type predicate for ?TYPE-ANNOTATION.
     ;;
-    (let ((pred.stx (or (object-type-spec.type-predicate-stx pred.ots)
-			(synner "type specification has no predicate for run-time use" pred.id))))
-      (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-					 pred.stx expr.psi '())))
+    (cond ((object-type-spec.type-predicate-stx type-annotation.ots)
+	   => (lambda (operator.stx)
+		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						   operator.stx expr.psi '())))
+	  (else
+	   (synner "type specification has no predicate for run-time use" (object-type-spec.name type-annotation.ots)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -552,10 +502,10 @@
       ;;
       (let ((expr.core (psi.core-expr expr.psi)))
 	(make-psi input-form.stx
-		  (build-sequence no-source (list expr.core (build-data no-source bool)))
-		  (if bool
-		      (make-type-signature/single-true)
-		    (make-type-signature/single-false)))))
+	  (build-sequence no-source (list expr.core (build-data no-source bool)))
+	  (if bool
+	      (make-type-signature/single-true)
+	    (make-type-signature/single-false)))))
 
     #| end of module |# )
 
@@ -1381,15 +1331,15 @@
   ;;the context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
-    ((_ ?super-type ?sub-type)
-     (let* ((super.ots	(id->object-type-specification __who__ input-form.stx ?super-type lexenv.run))
-	    (sub.ots	(id->object-type-specification __who__ input-form.stx ?sub-type   lexenv.run))
-	    (bool	(object-type-spec.matching-super-and-sub? super.ots sub.ots)))
-       (make-psi input-form.stx
-	 (build-data no-source bool)
-	 (if bool
-	     (make-type-signature/single-true)
-	   (make-type-signature/single-false)))))
+    ((_ ?super-type-annotation ?sub-type-annotation)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+	 (let ((bool (object-type-spec.matching-super-and-sub? super.ots sub.ots)))
+	   (make-psi input-form.stx
+	     (build-data no-source bool)
+	     (if bool
+		 (make-type-signature/single-true)
+	       (make-type-signature/single-false)))))))
     ))
 
 (define-core-transformer (signature-super-and-sub? input-form.stx lexenv.run lexenv.expand)

@@ -27,6 +27,7 @@
 (program (test-vicare-conditions-typed)
   (options typed-language)
   (import (vicare)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -46,6 +47,154 @@
     &condition
   make-b-test-condition
   b-test-condition?)
+
+
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expression ?expected-tags)
+       (check
+	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
+	   ;;instance of "<type-signature>".
+	   (.tags (type-of ?expression))
+	 (=> syntax=?)
+	 ;;When the expression is a CONDITION application: the expected tags value is
+	 ;;a list with a single item.
+	 ?expected-tags))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (make-who-condition 'ciao)
+	#'(&who))
+
+  (doit (condition)
+	#'((condition)))
+
+  (doit (condition (make-who-condition 'ciao))
+	#'(&who))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (make-message-condition "ciao"))
+	#'((condition &who &message)))
+
+  (doit (condition (condition)
+		   (make-who-condition 'ciao)
+		   (make-message-condition "ciao"))
+	#'((condition &who &message)))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (condition)
+		   (make-message-condition "ciao"))
+	#'((condition &who &message)))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (make-message-condition "ciao")
+		   (condition))
+	#'((condition &who &message)))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (make-message-condition "ciao")
+		   (condition (make-irritants-condition '(1))
+			      (make-lexical-violation)))
+	#'((condition &who &message &irritants &lexical)))
+
+  (doit (condition (make-who-condition 'ciao)
+		   (condition (make-message-condition "ciao")
+			      (make-irritants-condition '(1)))
+		   (make-lexical-violation))
+	#'((condition &who &message &irritants &lexical)))
+
+  (doit (condition (condition (make-who-condition 'ciao)))
+	#'(&who))
+
+  (doit (condition (condition))
+	#'((condition)))
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-tags))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?type-annotation ?expected-tags)
+       (check
+	   (.tags (new expander::<type-signature> #'(?type-annotation)))
+	 (=> syntax=?)
+	 ?expected-tags))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <compound-condition>
+	#'(<compound-condition>))
+
+  (doit <condition>
+	#'(<condition>))
+
+  (doit &who
+	#'(&who))
+
+  (doit (condition)
+	#'((condition)))
+
+  (doit (condition (condition))
+	#'((condition)))
+
+  (doit (condition &who &message &irritants)
+	#'((condition &who &message &irritants)))
+
+  (void))
+
+
+(parametrise ((check-test-name	'is-a))
+
+  (define-type <common-conditions>
+    (condition &who &message &irritants))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? (make-who-condition 'ciao) &who))
+  (check-for-false	(is-a? (make-message-condition "ciao") &who))
+
+  (check-for-true	(is-a? (make-message-condition "ciao") &message))
+  (check-for-false	(is-a? (make-who-condition 'ciao) &message))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? (make-who-condition 'ciao)		(condition &who)))
+  (check-for-true	(is-a? (condition (make-who-condition 'ciao))	(condition &who)))
+  (check-for-true	(is-a? (condition (make-who-condition 'ciao))	&who))
+
+  (check-for-false	(is-a? (make-who-condition 'ciao)		(condition &message)))
+  (check-for-false	(is-a? (condition (make-who-condition 'ciao))	(condition &message)))
+  (check-for-false	(is-a? (condition (make-who-condition 'ciao))	&message))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? (condition (make-who-condition 'ciao)
+					  (make-message-condition "ciao")
+					  (make-irritants-condition '(ciao)))
+			       (condition &who &message &irritants)))
+
+  (check-for-true	(is-a? (condition (make-who-condition 'ciao)
+					  (make-message-condition "ciao")
+					  (make-irritants-condition '(ciao)))
+			       <common-conditions>))
+
+  (check-for-false	(is-a? (make-who-condition 'ciao) (condition &who &message &irritants)))
+  (check-for-false	(is-a? (make-who-condition 'ciao) <common-conditions>))
+
+  (check-for-false	(is-a? (condition (make-who-condition 'ciao)
+					  (make-message-condition "ciao"))
+			       (condition &who &message &irritants)))
+  (check-for-false	(is-a? (condition (make-who-condition 'ciao)
+					  (make-message-condition "ciao"))
+			       <common-conditions>))
+
+  (void))
 
 
 (parametrise ((check-test-name	'generic-type-maker))

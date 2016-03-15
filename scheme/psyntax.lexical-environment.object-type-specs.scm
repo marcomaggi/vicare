@@ -48,6 +48,12 @@
 	 make-record-type-spec				record-type-spec?
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
 	 record-type-spec.super-protocol-id
+	 simple-condition-object-type-spec?
+
+	 <compound-condition-type-spec>
+	 <compound-condition-type-spec>-rtd		<compound-condition-type-spec>-rcd
+	 make-compound-condition-type-spec		compound-condition-type-spec?
+	 compound-condition-type-spec.component-ots*
 
 	 ;;;
 
@@ -341,6 +347,8 @@
 
   #| end of module: OBJECT-TYPE-SPEC.SUPER-AND-SUB? |# )
 
+;;; --------------------------------------------------------------------
+
 (define* (object-type-spec.matching-super-and-sub? {super.ots object-type-spec?} {sub.ots object-type-spec?})
   ;;In the context of an operator application:
   ;;
@@ -356,26 +364,148 @@
   ;;
   ;;NOTE We need to remember that the following OTSs cannot be subtyped:
   ;;
+  ;;   <pair-type-spec>
+  ;;   <list-type-spec>
+  ;;   <vector-type-spec>
+  ;;   <pair-of-type-spec>
   ;;   <list-of-type-spec>
   ;;   <vector-of-type-spec>
+  ;;   <compound-condition-type-spec>
   ;;
-  (cond ((<top>-ots? super.ots)
-	 ;;Fast track.
+  (define (%scan-parents-of-sub-ots super.ots sub.ots)
+    (or (eq? sub.ots super.ots)
+	(cond ((object-type-spec.parent-ots sub.ots)
+	       => (lambda (sub-parent.ots)
+		    (%scan-parents-of-sub-ots super.ots sub-parent.ots)))
+	      (else #f))))
+
+  (cond ((eq? super.ots sub.ots))
+
+	((<top>-ots? super.ots)
+	 ;;Fast track: "<top>" is the super-type of all the types.
 	 #t)
-	((list-of-type-spec? super.ots)
-	 (cond ((list-of-type-spec? sub.ots)
+
+	((<null>-ots? sub.ots)
+	 ;;Special case: we consider "<null>" as sub-type of "<list>" and sub-type of
+	 ;;all the sub-types  of "<list>".  We need to remember  that "<null>" cannot
+	 ;;be sub-typed.  The diagram of "<list>" sub-types is:
+	 ;;
+	 ;;   <list> ---> <null>
+	 ;;     |
+	 ;;     +-------> (list-of <fixnum>) ---> <null>
+	 ;;     |
+	 ;;     +-------> (list-of <string>) ---> <null>
+	 ;;     |
+	 ;;     ...
+	 ;;
+	 ;;So if SUPER.OTS is "<list>" or one of its subtypes: match.
+	 (%scan-parents-of-sub-ots (<list>-ots) super.ots))
+
+	((<empty-vector>-ots? sub.ots)
+	 ;;Special case: we  consider "<empty-vector>" as sub-type  of "<vector>" and
+	 ;;sub-type of  all the sub-types  of "<vector>".   We need to  remmeber that
+	 ;;"<empty-vector>" cannot be sub-typed.  The diagram of "<vector>" sub-types
+	 ;;is:
+	 ;;
+	 ;;   <vector> ---> <empty-vector>
+	 ;;     |
+	 ;;     +-------> (vector-of <fixnum>) ---> <empty-vector>
+	 ;;     |
+	 ;;     +-------> (vector-of <string>) ---> <empty-vector>
+	 ;;     |
+	 ;;     ...
+	 ;;
+	 ;;So if SUPER.OTS is "<vector>" or one of its subtypes: match.
+	 (%scan-parents-of-sub-ots (<vector>-ots) super.ots))
+
+	((<list>-ots? sub.ots)
+	 (or (<null>-ots?        sub.ots)
+	     (list-of-type-spec? sub.ots)
+	     (list-type-spec?    sub.ots)))
+
+	((list-of-type-spec? sub.ots)
+	 (cond ((list-of-type-spec? super.ots)
 		(object-type-spec.matching-super-and-sub? (list-of-type-spec.item-ots super.ots)
 							  (list-of-type-spec.item-ots sub.ots)))
 	       (else
-		(object-type-spec.super-and-sub? super.ots sub.ots))))
-	((vector-of-type-spec? super.ots)
-	 (cond ((vector-of-type-spec? sub.ots)
+		(%scan-parents-of-sub-ots super.ots sub.ots))))
+
+	((vector-of-type-spec? sub.ots)
+	 (cond ((vector-of-type-spec? super.ots)
 		(object-type-spec.matching-super-and-sub? (vector-of-type-spec.item-ots super.ots)
 							  (vector-of-type-spec.item-ots sub.ots)))
 	       (else
-		(object-type-spec.super-and-sub? super.ots sub.ots))))
-	(else
-	 (object-type-spec.super-and-sub? super.ots sub.ots))))
+		(%scan-parents-of-sub-ots super.ots sub.ots))))
+
+	((compound-condition-type-spec? super.ots)
+	 (cond ((compound-condition-type-spec? sub.ots)
+		;;This is the case:
+		;;
+		;;   (is-a? (condition (make-who-condition 'ciao)
+		;;                     (make-message-condition "ciao"))
+		;;          (condition &who &message))
+		;;
+		;;every condition-object type in the super must be present in the sub.
+		(let ((super-component*.ots (compound-condition-type-spec.component-ots* super.ots))
+		      (sub-component*.ots   (compound-condition-type-spec.component-ots* sub.ots)))
+		  (for-all (lambda (super-component.ots)
+			     (exists (lambda (sub-component.ots)
+				       (object-type-spec.super-and-sub? super-component.ots sub-component.ots))
+			       sub-component*.ots))
+		    super-component*.ots)))
+	       (else #f)))
+
+	((<compound-condition>-ots? super.ots)
+	 ;;This is the case:
+	 ;;
+	 ;;   (is-a? ?expr <compound-condition>)
+	 ;;
+	 ;;we want a match, for example, in the following cases:
+	 ;;
+	 ;;   (is-a? (condition) <compound-condition>)
+	 ;;   => #t
+	 ;;
+	 ;;   (is-a? (condition (make-who-condition 'ciao)
+	 ;;                     (make-message-condition "ciao"))
+	 ;;          <compound-condition>)
+	 ;;   => #t
+	 ;;
+	 (object-type-spec.super-and-sub? (<compound-condition>-ots) super.ots))
+
+	((simple-condition-object-type-spec? super.ots)
+	 (cond ((compound-condition-type-spec? sub.ots)
+		;;This is the case:
+		;;
+		;;   (is-a? (condition (make-who-condition 'ciao)
+		;;                     (make-message-condition "ciao"))
+		;;          &who)
+		;;   => #t
+		;;
+		;;   (is-a? (condition (make-who-condition 'ciao)
+		;;                     (make-message-condition "ciao"))
+		;;          &irritants)
+		;;   => #f
+		;;
+		(let ((sub-component*.ots (compound-condition-type-spec.component-ots* sub.ots)))
+		  (exists (lambda (sub-component.ots)
+			    (object-type-spec.super-and-sub? super.ots sub-component.ots))
+		    sub-component*.ots)))
+	       ((simple-condition-object-type-spec? sub.ots)
+		;;This is the case:
+		;;
+		;;   (is-a? (make-who-condition 'ciao) &who)		=> #t
+		;;   (is-a? (make-who-condition 'ciao) &message)	=> #f
+		;;
+		(object-type-spec.super-and-sub? super.ots sub.ots))
+	       (else #f)))
+
+	((object-type-spec.parent-ots sub.ots)
+	 => (lambda (sub-parent.ots)
+	      (object-type-spec.matching-super-and-sub? super.ots sub-parent.ots)))
+
+	(else #f)))
+
+;;; --------------------------------------------------------------------
 
 (define (object-type-spec.common-ancestor ots1 ots2)
   ;;Search the hierarchies of OTS1 and OTS2 looking for a common ancestor.  Return an
@@ -534,6 +664,129 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define (simple-condition-object-type-spec? ots)
+  ;;Return true  if OTS is  represents a simple condition-object  type specification;
+  ;;otherwise return false.  Examples:
+  ;;
+  ;;   (simple-condition-object-type-spec?
+  ;;      (type-annotation->object-type-specification
+  ;;         (core-type-id '&condition)))
+  ;;   => #t
+  ;;
+  ;;   (simple-condition-object-type-spec?
+  ;;      (type-annotation->object-type-specification
+  ;;         (core-type-id '&message)))
+  ;;   => #t
+  ;;
+  ;;   (simple-condition-object-type-spec?
+  ;;      (type-annotation->object-type-specification
+  ;;         (core-type-id '<compound-condition>)))
+  ;;   => #f
+  ;;
+  ;;   (simple-condition-object-type-spec?
+  ;;      (type-annotation->object-type-specification
+  ;;         (core-type-id '<condition>)))
+  ;;   => #f
+  ;;
+  ;;Let's remember that the type hierarchy for condition objects is this:
+  ;;
+  ;;   <condition> --> <compound-condition> --> <compound-condition-object-type>
+  ;;        |
+  ;;         --------> &condition --> &who
+  ;;                       |
+  ;;                       |--------> &message
+  ;;                       |
+  ;;                        --------> ... all the condition types ...
+  ;;
+  (and (record-type-spec? ots)
+       (object-type-spec.super-and-sub? (&condition-ots) ots)))
+
+
+;;;; compound condition object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<compound-condition>" representing compound condition objects of a known type.
+;;
+(define-record-type (<compound-condition-type-spec> make-compound-condition-type-spec compound-condition-type-spec?)
+  (nongenerative vicare:expander:<compound-condition-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable component-ots*		compound-condition-type-spec.component-ots*)
+		;A list of instances of  "<record-type-spec>" describing the types of
+		;component condition objects.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (case-define* make-compound-condition-type-spec
+	((component-type*.ots)
+	 (make-compound-condition-type-spec component-type*.ots (cons (core-prim-id 'condition)
+								      (map object-type-spec.name component-type*.ots))))
+	((component-type*.ots {name.stx compound-condition-name?})
+	 (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
+	   (let* ((parent.ots		(<compound-condition>-ots))
+		  (constructor.stx	#f)
+		  (destructor.stx	#f)
+		  (predicate.stx	(make-compound-condition-predicate
+					 (map object-type-spec.type-predicate-stx component-type*.ots)))
+		  (accessors-table	'())
+		  (mutators-table	'())
+		  (methods-table	'()))
+	     ((make-object-type-spec name.stx parent.ots
+				     constructor.stx destructor.stx predicate.stx
+				     accessors-table mutators-table methods-table)
+	      component-type*.ots)))))
+
+      (define (compound-condition-name? name.stx)
+	(syntax-match name.stx (condition)
+	  ((condition ?component-type* ...)
+	   (for-all syntax-object.type-annotation? ?component-type*)
+	   #t)
+	  (?type-id
+	   (identifier? ?type-id)
+	   #t)
+	  (else #f)))
+
+      (define (%collapse-component-specs component-type*.ots)
+	(fold-right (lambda (component.ots knil)
+		      (cond ((object-type-spec.super-and-sub? (&condition-ots) component.ots)
+			     (cons component.ots knil))
+			    ((compound-condition-type-spec? component.ots)
+			     (append (compound-condition-type-spec.component-ots* component.ots)
+				     knil))
+			    (else
+			     (assertion-violation 'make-compound-condition-type-spec
+			       "expected condition object-type specification as component of compound condition object-type"
+			       component.ots))))
+	  '() component-type*.ots))
+
+      (define (make-compound-condition-predicate component-pred*.stx)
+	(let ((obj.sym	(gensym "obj"))
+	      (pred.sym	(gensym "pred"))
+	      (item.sym	(gensym "item")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (compound-condition? ,obj.sym)
+		   (for-all (lambda (,pred.sym)
+			      (,pred.sym ,obj.sym))
+		     (list ,@component-pred*.stx)))))))
+
+      make-compound-condition-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[compound-condition-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <compound-condition-type-spec>-rtd
+  (record-type-descriptor <compound-condition-type-spec>))
+
+(define <compound-condition-type-spec>-rcd
+  (record-constructor-descriptor <compound-condition-type-spec>))
 
 
 ;;;; closure object signature spec
@@ -779,7 +1032,7 @@
 	    item-type*.ots))))
 
       (define (list-name? name.stx)
-	(syntax-match name.stx (list-of)
+	(syntax-match name.stx (list)
 	  ((list ?item-type* ...)
 	   (for-all syntax-object.type-annotation? ?item-type*)
 	   #t)
@@ -923,7 +1176,7 @@
 	    item-type*.ots))))
 
       (define (vector-name? name.stx)
-	(syntax-match name.stx (vector-of)
+	(syntax-match name.stx (vector)
 	  ((vector ?item-type* ...)
 	   (for-all syntax-object.type-annotation? ?item-type*)
 	   #t)
@@ -1053,7 +1306,7 @@
   ;;Recursive function.  Parse the syntax object STX as type declaration and return a
   ;;fully unwrapped syntax object representing the same type declaration.
   ;;
-  (syntax-match stx (pair list vector pair-of list-of vector-of)
+  (syntax-match stx (pair list vector pair-of list-of vector-of condition)
     ((pair ?car-type ?cdr-type)
      (list (core-prim-id 'pair)
 	   (syntax-object.parse-type-annotation ?car-type)
@@ -1078,6 +1331,10 @@
     ((vector-of ?item-type)
      (list (core-prim-id 'vector-of)
 	   (syntax-object.parse-type-annotation ?item-type)))
+
+    ((condition ?component-type* ...)
+     (list (core-prim-id 'condition)
+	   (syntax-object.parse-type-annotation ?component-type*)))
 
     (?type-id
      (type-identifier? ?type-id)
@@ -1111,7 +1368,7 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition)
      ((pair ?car-type ?cdr-type)
       (make-pair-type-spec (type-annotation->object-type-specification ?car-type lexenv)
 			   (type-annotation->object-type-specification ?cdr-type lexenv)
@@ -1141,12 +1398,33 @@
       (make-vector-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
 				name.stx))
 
+     ((condition ?component-type* ...)
+      (let ((specs (map (lambda (type.stx)
+			  (type-annotation->object-type-specification type.stx lexenv))
+		     ?component-type*)))
+	;;We want:
+	;;
+	;;   (condition &who) == &who
+	;;   (condition (condition ...)) == (condition ...)
+	;;   (condition <compound-condition>) == <compound-condition>
+	;;
+	(if (list-of-single-item? specs)
+	    (let ((ots (car specs)))
+	      (cond ((or (simple-condition-object-type-spec? ots)
+			 (compound-condition-type-spec?      ots)
+			 (<compound-condition>-ots?          ots))
+		     ots)
+		    (else
+		     (assertion-violation __who__
+		       "expected condition object as component of compound condition object" annotation.stx))))
+	  (make-compound-condition-type-spec specs name.stx))))
+
      (?type-id
       (type-identifier? ?type-id)
       (id->object-type-specification __who__ #f ?type-id lexenv))
 
      (else
-      (syntax-violation __who__ "invalid type annotation" annotation.stx)))))
+      (assertion-violation __who__ "invalid type annotation" annotation.stx)))))
 
 
 ;;;; done

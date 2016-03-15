@@ -87,6 +87,20 @@
     ))
 
 
+(parametrise ((check-test-name	'is-a))
+
+  (check-for-true	(is-a? "string" <string>))
+  (check-for-false	(is-a? 123      <string>))
+
+  (check-for-true	(is-a? '(1 2 3) (list-of <fixnum>)))
+  (check-for-false	(is-a? "ciao"   (list-of <fixnum>)))
+
+  (check-for-true	(is-a? '#(1 2 3) (vector-of <fixnum>)))
+  (check-for-false	(is-a? "ciao"    (vector-of <fixnum>)))
+
+  (void))
+
+
 (parametrise ((check-test-name	'type-super-and-sub))
 
   (check-for-true	(type-super-and-sub? <number> <fixnum>))

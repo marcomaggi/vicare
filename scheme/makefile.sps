@@ -4133,6 +4133,13 @@
 ;;;
     (object-type-spec?					$expander)
 
+    (<compound-condition-type-spec>			$expander)
+    (<compound-condition-type-spec>-rtd)
+    (<compound-condition-type-spec>-rcd)
+    (make-compound-condition-type-spec			$expander)
+    (compound-condition-type-spec?			$expander)
+    (compound-condition-type-spec.component-ots*	$expander)
+
     (<pair-type-spec>					$expander)
     (<pair-type-spec>-rtd)
     (<pair-type-spec>-rcd)

@@ -905,7 +905,12 @@
 	       ((list?    datum)	(cond ((for-all char?   datum)	(list (list-of-id) (core-prim-id '<char>)))
 					      ((for-all string? datum)	(list (list-of-id) (core-prim-id '<string>)))
 					      ((for-all symbol? datum)	(list (list-of-id) (core-prim-id '<symbol>)))
-					      (else			(core-prim-id '<nlist>))))
+					      ((for-all fixnum? datum)	(list (list-of-id) (core-prim-id '<fixnum>)))
+					      ((for-all flonum? datum)	(list (list-of-id) (core-prim-id '<flonum>)))
+					      ((for-all ratnum? datum)	(list (list-of-id) (core-prim-id '<ratnum>)))
+					      ((for-all compnum? datum)	(list (list-of-id) (core-prim-id '<compnum>)))
+					      ((for-all cflonum? datum)	(list (list-of-id) (core-prim-id '<cflonum>)))
+					      (else			(core-prim-id '<list>))))
 	       ((pair?    datum)	(cond ((standalone-pair? datum)
 					       (core-prim-id '<standalone-pair>))
 					      (else

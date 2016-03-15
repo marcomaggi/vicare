@@ -147,6 +147,12 @@
       (rcd-id				record-type-spec.rcd-id)
       (super-protocol-id		record-type-spec.super-protocol-id)))
 
+   (define-built-in-record-type <compound-condition-type-spec>
+       <objct-type-spec>
+     make-compound-condition-type-spec compound-condition-type-spec?
+     (methods
+      (component-ots*	compound-condition-type-spec.component-ots*)))
+
    (define-built-in-record-type <pair-type-spec>
        <object-type-spec>
      make-pair-type-spec pair-type-spec?

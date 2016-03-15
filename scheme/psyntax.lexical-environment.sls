@@ -120,6 +120,12 @@
     make-record-type-spec				record-type-spec?
     record-type-spec.rtd-id				record-type-spec.rcd-id
     record-type-spec.super-protocol-id
+    simple-condition-object-type-spec?
+
+    <compound-condition-type-spec>
+    <compound-condition-type-spec>-rtd			<compound-condition-type-spec>-rcd
+    make-compound-condition-type-spec			compound-condition-type-spec?
+    compound-condition-type-spec.component-ots*
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd
