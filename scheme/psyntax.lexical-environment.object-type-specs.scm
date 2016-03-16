@@ -1740,7 +1740,8 @@
 	    (let ((ots (car specs)))
 	      (cond ((or (simple-condition-object-type-spec? ots)
 			 (compound-condition-type-spec?      ots)
-			 (<compound-condition>-ots?          ots))
+			 (<compound-condition>-ots?          ots)
+			 (<condition>-ots?                   ots))
 		     ots)
 		    (else
 		     (assertion-violation __who__

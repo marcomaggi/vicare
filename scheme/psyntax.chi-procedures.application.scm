@@ -868,7 +868,17 @@
 	  ((compound-condition-type-spec? rand.ots)
 	   (append (compound-condition-type-spec.component-ots* rand.ots)
 		   application.specs))
-	  ((<compound-condition>-ots? rand.ots)
+	  ((or (<compound-condition>-ots? rand.ots)
+	       (<condition>-ots?          rand.ots))
+	   ;;Notice that an expression like:
+	   ;;
+	   ;;   (if ?test
+	   ;;       (make-i/o-eagain)
+	   ;;     (condition ?expr ...))
+	   ;;
+	   ;;has  TYPE-OF equal  to "<condition>",  which is  the parent  of all  the
+	   ;;condition object  types.  So it  can actually happen that  an expression
+	   ;;has type "<condition>".
 	   (unspecified-kont))
 	  (else
 	   (let ((common (condition
