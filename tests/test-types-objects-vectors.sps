@@ -27,7 +27,7 @@
 (program (test-types-objects-vectors)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -41,6 +41,70 @@
 
 (define-syntax-rule (%eval ?sexp)
   (eval (quasiquote ?sexp) ENVIRONMENT))
+
+
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expression ?expected-tags)
+       (check
+	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
+	   ;;instance of "<type-signature>".
+	   (.tags (type-of ?expression))
+	 (=> syntax=?)
+	 ;;When the expression is a CONDITION application: the expected tags value is
+	 ;;a list with a single item.
+	 ?expected-tags))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (vector 1)
+	#'((vector <positive-fixnum>)))
+
+  (doit (vector 1 2 3)
+	#'((vector <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
+
+  (doit (vector 1 "ciao" 'ciao)
+	#'((vector <positive-fixnum> <string> <symbol>)))
+
+  (doit (vector 1 '#(2 3))
+	#'((vector <positive-fixnum> (vector <positive-fixnum> <positive-fixnum>))))
+
+  (doit (vector 1 '())
+	#'((vector <positive-fixnum> <null>)))
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-tags))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?type-annotation ?expected-tags)
+       ;;Here we test only type signature describing a single value.
+       (check
+	   (.tags (new expander::<type-signature> #'(?type-annotation)))
+	 (=> syntax=?)
+	 #'(?expected-tags)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <vector>
+	<vector>)
+
+  (doit (vector)
+  	<empty-vector>)
+
+  (doit (vector <fixnum>)
+  	(vector <fixnum>))
+
+  (doit (vector <fixnum> <flonum> <string>)
+  	(vector <fixnum> <flonum> <string>))
+
+  (void))
 
 
 (parametrise ((check-test-name		'predicate))
@@ -67,9 +131,9 @@
     => '#(1 2 3))
 
   (check
-      (xp.type-signature.tags (type-of (new <vector> (read))))
+      (expander::type-signature.tags (type-of (new <vector> (read))))
     (=> syntax=?)
-    (list #'<vector>))
+    #'((vector <top>)))
 
   (void))
 
