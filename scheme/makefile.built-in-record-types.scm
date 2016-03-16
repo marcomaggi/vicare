@@ -153,6 +153,12 @@
      (methods
       (component-ots*	compound-condition-type-spec.component-ots*)))
 
+   (define-built-in-record-type <union-type-spec>
+       <object-type-spec>
+     make-union-type-spec union-type-spec?
+     (methods
+      (component-ots*	union-type-spec.component-ots*)))
+
    (define-built-in-record-type <pair-type-spec>
        <object-type-spec>
      make-pair-type-spec pair-type-spec?

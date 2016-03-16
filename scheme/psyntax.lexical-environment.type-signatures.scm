@@ -260,7 +260,7 @@
 	       ;;INPUT-SIGNATURE  must  be   a  proper  or  improper   list  of  type
 	       ;;identifiers and/or instances of "<object-type-spec>".
 	       (let recur ((stx input-signature))
-		 (syntax-match stx (<list> pair list vector pair-of list-of vector-of)
+		 (syntax-match stx (<list> list list-of)
 		   (()
 		    ;;STX is a proper list.  Good.
 		    '())

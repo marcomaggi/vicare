@@ -49,20 +49,24 @@
   ((stx)
    (syntax-object.type-signature? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   (syntax-match stx (<no-return> <list>)
+   (syntax-match stx (<no-return> <list> list-of)
      (<no-return>
-      stx)
+      #t)
      (<list>
-      stx)
+      #t)
+     ((list-of ?type-annotation)
+      (syntax-object.type-annotation? ?type-annotation))
      (else
       (let recur ((stx stx))
-	(syntax-match stx (<list>)
+	(syntax-match stx (<list> list-of)
 	  (() #t)
-	  ((?id  . ?rest)
-	   (and (type-identifier? ?id lexenv)
+	  ((?thing . ?rest)
+	   (and (syntax-object.type-annotation? ?thing)
 		(recur ?rest)))
 	  (<list>
 	   #t)
+	  ((list-of ?type-annotation)
+	   (syntax-object.type-annotation? ?type-annotation))
 	  (?rest-id
 	   (identifier? ?rest-id)
 	   (object-type-spec.list-sub-type? (id->object-type-specification __who__ #f ?rest-id lexenv)))

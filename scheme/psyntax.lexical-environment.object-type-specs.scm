@@ -94,6 +94,13 @@
 
 	 ;;;
 
+	 <union-type-spec>
+	 <union-type-spec>-rtd				<union-type-spec>-rcd
+	 make-union-type-spec				union-type-spec?
+	 union-type-spec.component-ots*
+
+	 ;;;
+
 	 syntax-object.parse-type-annotation			syntax-object.type-annotation?
 	 type-annotation->object-type-specification
 
@@ -590,6 +597,16 @@
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
+	((union-type-spec? sub.ots)
+	 (exists (lambda (component-sub.ots)
+		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+	   (union-type-spec.component-ots* sub.ots)))
+
+	((union-type-spec? super.ots)
+	 (exists (lambda (component-super.ots)
+		   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
+	   (union-type-spec.component-ots* super.ots)))
+
 	((object-type-spec.parent-ots sub.ots)
 	 => (lambda (sub-parent.ots)
 	      (object-type-spec.matching-super-and-sub? super.ots sub-parent.ots)))
@@ -895,34 +912,22 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (case-define* make-compound-condition-type-spec
-	((component-type*.ots)
-	 (make-compound-condition-type-spec component-type*.ots (cons (core-prim-id 'condition)
-								      (map object-type-spec.name component-type*.ots))))
-	((component-type*.ots {name.stx compound-condition-name?})
-	 (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
-	   (let* ((parent.ots		(<compound-condition>-ots))
-		  (constructor.stx	#f)
-		  (destructor.stx	#f)
-		  (predicate.stx	(make-compound-condition-predicate
+      (define* (make-compound-condition-type-spec component-type*.ots)
+	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
+	       (name.stx		(cons (core-prim-id 'condition)
+					      (map object-type-spec.name component-type*.ots)))
+	       (parent.ots		(<compound-condition>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		(make-compound-condition-predicate
 					 (map object-type-spec.type-predicate-stx component-type*.ots)))
-		  (accessors-table	'())
-		  (mutators-table	'())
-		  (methods-table	'()))
-	     ((make-object-type-spec name.stx parent.ots
-				     constructor.stx destructor.stx predicate.stx
-				     accessors-table mutators-table methods-table)
-	      component-type*.ots)))))
-
-      (define (compound-condition-name? name.stx)
-	(syntax-match name.stx (condition)
-	  ((condition ?component-type* ...)
-	   (for-all syntax-object.type-annotation? ?component-type*)
-	   #t)
-	  (?type-id
-	   (identifier? ?type-id)
-	   #t)
-	  (else #f)))
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name.stx parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  accessors-table mutators-table methods-table)
+	   component-type*.ots)))
 
       (define (%collapse-component-specs component-type*.ots)
 	(fold-right (lambda (component.ots knil)
@@ -963,6 +968,84 @@
 
 (define <compound-condition-type-spec>-rcd
   (record-constructor-descriptor <compound-condition-type-spec>))
+
+
+;;;; union object spec
+;;
+;;This record-type is used as syntactic binding descriptor's value for union types.
+;;
+(define-record-type (<union-type-spec> make-union-type-spec union-type-spec?)
+  (nongenerative vicare:expander:<union-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable component-ots*		union-type-spec.component-ots*)
+		;A list of instances  of "<object-type-spec>" describing the optional
+		;types.
+    (mutable memoised-length		union-type-spec.memoised-length union-type-spec.memoised-length-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;UNION-TYPE-SPEC.LENGTH.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-union-type-spec {component-type*.ots list-of-object-type-spec?})
+	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
+	       (name.stx		(cons (core-prim-id 'union)
+					      (map object-type-spec.name component-type*.ots)))
+	       (parent.ots		(<top>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		(make-union-predicate (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name.stx parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  accessors-table mutators-table methods-table)
+	   component-type*.ots (void))))
+
+      (define (%collapse-component-specs component-type*.ots)
+	(object-type-specs-delete-duplicates
+	 (fold-right (lambda (component.ots knil)
+		       (cond ((union-type-spec? component.ots)
+			      (append (union-type-spec.component-ots* component.ots)
+				      knil))
+			     (else
+			      (cons component.ots knil))))
+	   '() component-type*.ots)))
+
+      (define (make-union-predicate component-pred*.stx)
+	(let ((obj.sym	(gensym "obj"))
+	      (pred.sym	(gensym "pred")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (exists (lambda (,pred.sym)
+			(,pred.sym ,obj.sym))
+		(list ,@component-pred*.stx))))))
+
+      make-union-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[union-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <union-type-spec>-rtd
+  (record-type-descriptor <union-type-spec>))
+
+(define <union-type-spec>-rcd
+  (record-constructor-descriptor <union-type-spec>))
+
+(define* (union-type-spec.length {union.ots union-type-spec?})
+  (let ((mem (union-type-spec.memoised-length union.ots)))
+    (if (void-object? mem)
+	(receive-and-return (len)
+	    (length (union-type-spec.component-ots* union.ots))
+	  (union-type-spec.memoised-length-set! union.ots len))
+      mem)))
 
 
 ;;;; closure object signature spec
@@ -1539,7 +1622,7 @@
   ;;fully unwrapped syntax object representing the same type annotation.
   ;;
   (let recur ((stx input-form.stx))
-    (syntax-match stx (pair list vector pair-of list-of vector-of condition)
+    (syntax-match stx (pair list vector pair-of list-of vector-of condition union)
       ((pair ?car-type ?cdr-type)
        (list (core-prim-id 'pair)
 	     (recur ?car-type)
@@ -1567,7 +1650,11 @@
 
       ((condition ?component-type* ...)
        (list (core-prim-id 'condition)
-	     (recur ?component-type*)))
+	     (map recur ?component-type*)))
+
+      ((union ?component-type* ...)
+       (list (core-prim-id 'union)
+	     (map recur ?component-type*)))
 
       (?type-id
        (type-identifier? ?type-id)
@@ -1601,7 +1688,7 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition union)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-specification __who__ #f ?type-id lexenv))
@@ -1658,7 +1745,12 @@
 		    (else
 		     (assertion-violation __who__
 		       "expected condition object as component of compound condition object" annotation.stx))))
-	  (make-compound-condition-type-spec specs name.stx))))
+	  (make-compound-condition-type-spec specs))))
+
+     ((union ?component-type* ...)
+      (make-union-type-spec (map (lambda (type.stx)
+				   (type-annotation->object-type-specification type.stx lexenv))
+			      ?component-type*)))
 
      (else
       (assertion-violation __who__ "invalid type annotation" annotation.stx)))))

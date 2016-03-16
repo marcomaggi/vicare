@@ -739,6 +739,7 @@
     (pair-of					(macro . pair-of))
     (list-of					(macro . list-of))
     (vector-of					(macro . vector-of))
+    (union					(macro . union))
 ;;;
     (define					(macro . define))
     (case-define				(macro . case-define))
@@ -3305,6 +3306,7 @@
     (pair-of					v $language)
     (list-of					v $language)
     (vector-of					v $language)
+    (union					v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
@@ -4141,6 +4143,13 @@
     (make-compound-condition-type-spec			$expander)
     (compound-condition-type-spec?			$expander)
     (compound-condition-type-spec.component-ots*	$expander)
+
+    (<union-type-spec>					$expander)
+    (<union-type-spec>-rtd)
+    (<union-type-spec>-rcd)
+    (make-union-type-spec				$expander)
+    (union-type-spec?					$expander)
+    (union-type-spec.component-ots*			$expander)
 
     (<pair-type-spec>					$expander)
     (<pair-type-spec>-rtd)

@@ -916,6 +916,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-records.sps					\
 	tests/test-types-reader-annotations.sps				\
 	tests/test-types-conditions.sps					\
+	tests/test-types-unions.sps					\
 	\
 	tests/test-issue-001-equal-hash.sps				\
 	tests/test-issue-003.sps					\

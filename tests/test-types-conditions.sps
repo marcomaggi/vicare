@@ -147,6 +147,12 @@
   (doit (condition &who &message &irritants)
 	(condition &who &message &irritants))
 
+  (doit (condition &who (condition &message) &irritants)
+	(condition &who &message &irritants))
+
+  (doit (condition &who (condition (condition &message) &irritants))
+	(condition &who &message &irritants))
+
   (void))
 
 

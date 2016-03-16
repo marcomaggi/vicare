@@ -126,6 +126,11 @@
     <compound-condition-type-spec>-rtd			<compound-condition-type-spec>-rcd
     make-compound-condition-type-spec			compound-condition-type-spec?
     compound-condition-type-spec.component-ots*
+
+    <union-type-spec>
+    <union-type-spec>-rtd				<union-type-spec>-rcd
+    make-union-type-spec				union-type-spec?
+    union-type-spec.component-ots*
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd
