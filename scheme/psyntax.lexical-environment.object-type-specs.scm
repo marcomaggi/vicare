@@ -397,6 +397,7 @@
 	 ;;Fast track: "<top>" is the super-type of all the types.
 	 #t)
 
+;;;We really want to do the unions first.
 	((union-type-spec? sub.ots)
 	 (exists (lambda (component-sub.ots)
 		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
@@ -406,7 +407,6 @@
 	 (exists (lambda (component-super.ots)
 		   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
 	   (union-type-spec.component-ots* super.ots)))
-
 
 	((<null>-ots? sub.ots)
 	 ;;Special case: we consider "<null>" as sub-type of "<list>" and sub-type of
