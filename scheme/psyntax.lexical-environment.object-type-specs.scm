@@ -383,6 +383,7 @@
   ;;   <list-of-type-spec>
   ;;   <vector-of-type-spec>
   ;;   <compound-condition-type-spec>
+  ;;   <list-type-spec>
   ;;
   (define (%scan-parents-of-sub-ots super.ots sub.ots)
     (or (eq? sub.ots super.ots)
@@ -390,12 +391,22 @@
 	       => (lambda (sub-parent.ots)
 		    (%scan-parents-of-sub-ots super.ots sub-parent.ots)))
 	      (else #f))))
-
   (cond ((eq? super.ots sub.ots))
 
 	((<top>-ots? super.ots)
 	 ;;Fast track: "<top>" is the super-type of all the types.
 	 #t)
+
+	((union-type-spec? sub.ots)
+	 (exists (lambda (component-sub.ots)
+		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+	   (union-type-spec.component-ots* sub.ots)))
+
+	((union-type-spec? super.ots)
+	 (exists (lambda (component-super.ots)
+		   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
+	   (union-type-spec.component-ots* super.ots)))
+
 
 	((<null>-ots? sub.ots)
 	 ;;Special case: we consider "<null>" as sub-type of "<list>" and sub-type of
@@ -411,11 +422,12 @@
 	 ;;     ...
 	 ;;
 	 ;;So if SUPER.OTS is "<list>" or one of its subtypes: match.
-	 (if (or (<pair>-ots? super.ots)
-		 (pair-type-spec? super.ots)
-		 (pair-of-type-spec? super.ots))
-	     #f
-	   (%scan-parents-of-sub-ots (<list>-ots) super.ots)))
+	 (cond ((or (<pair>-ots? super.ots)
+		    (pair-type-spec? super.ots)
+		    (pair-of-type-spec? super.ots))
+		#f)
+	       (else
+		(%scan-parents-of-sub-ots (<list>-ots) super.ots))))
 
 	((<empty-vector>-ots? sub.ots)
 	 ;;Special case: we  consider "<empty-vector>" as sub-type  of "<vector>" and
@@ -457,6 +469,26 @@
 		  (for-all (lambda (sub-item.ots)
 			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
 		    (list-type-spec.item-ots* sub.ots))))
+	       ((pair-type-spec? super.ots)
+		(let ((sub-item*.ots (list-type-spec.item-ots* sub.ots)))
+		  (and (pair? sub-item*.ots)
+		       (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots)
+								 (car sub-item*.ots))
+		       (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots)
+								 (let ((sub-tail*.ots (cdr sub-item*.ots)))
+								   (if (pair? sub-tail*.ots)
+								       (make-list-type-spec sub-tail*.ots)
+								     (<null>-ots)))))))
+	       ((pair-of-type-spec? super.ots)
+		(let ((super-item.ots	(pair-of-type-spec.item-ots super.ots))
+		      (sub-item*.ots	(list-type-spec.item-ots* sub.ots)))
+		  (and (pair? sub-item*.ots)
+		       (object-type-spec.matching-super-and-sub? super-item.ots (car sub-item*.ots))
+		       (object-type-spec.matching-super-and-sub? super-item.ots
+								 (let ((sub-tail*.ots (cdr sub-item*.ots)))
+								   (if (pair? sub-tail*.ots)
+								       (make-list-type-spec sub-tail*.ots)
+								     (<null>-ots)))))))
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
@@ -469,8 +501,18 @@
 		;;
 		;;   (type-super-and-sub? (list <fixnum> <fixnum>) (list-of <fixnum>))
 		;;
-		;;which must not match because a LIST annotation specifies the number
-		;;of items, while a LIST-OF annotation does not specify it.
+		;;not  to match  because a  LIST annotation  specifies the  number of
+		;;items, while a LIST-OF annotation does not specify it.
+		#f)
+	       ((or (pair-type-spec?    super.ots)
+		    (pair-of-type-spec? super.ots))
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (pair <fixnum> (list-of <fixnum>))
+		;;                        (list-of <fixnum>))
+		;;
+		;;not  to match  because a  LIST-OF annotation  does not  specify the
+		;;number of items, while a PAIR annotation implies at least one item.
 		#f)
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
@@ -520,13 +562,12 @@
 		;;          (condition &who &message))
 		;;
 		;;every condition-object type in the super must be present in the sub.
-		(let ((super-component*.ots (compound-condition-type-spec.component-ots* super.ots))
-		      (sub-component*.ots   (compound-condition-type-spec.component-ots* sub.ots)))
+		(let ((sub-component*.ots   (compound-condition-type-spec.component-ots* sub.ots)))
 		  (for-all (lambda (super-component.ots)
 			     (exists (lambda (sub-component.ots)
 				       (object-type-spec.super-and-sub? super-component.ots sub-component.ots))
 			       sub-component*.ots))
-		    super-component*.ots)))
+		    (compound-condition-type-spec.component-ots* super.ots))))
 	       (else #f)))
 
 	((<compound-condition>-ots? super.ots)
@@ -583,6 +624,26 @@
 		(let ((super-item.ots (pair-of-type-spec.item-ots super.ots)))
 		  (and (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.car-ots sub.ots))
 		       (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.cdr-ots sub.ots)))))
+	       ((list-type-spec? super.ots)
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (list <fixnum>) (pair <fixnum> <null>))
+		;;
+		;;to match.
+		(let ((super-item*.ots	(list-type-spec.item-ots* super.ots)))
+		  (and (pair? super-item*.ots)
+		       (object-type-spec.matching-super-and-sub? (car super-item*.ots)
+								 (pair-type-spec.car-ots sub.ots))
+		       (object-type-spec.matching-super-and-sub? (make-list-type-spec (cdr super-item*.ots))
+								 (pair-type-spec.cdr-ots sub.ots)))))
+	       ((list-of-type-spec? super.ots)
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>))
+		;;
+		;;not to match because the PAIR annotation implies at least one item,
+		;;while the LIST-OF annotation implies nothing.
+		#f)
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
@@ -594,18 +655,32 @@
 	       ((pair-of-type-spec? super.ots)
 		(object-type-spec.matching-super-and-sub? (pair-of-type-spec.item-ots super.ots)
 							  (pair-of-type-spec.item-ots sub.ots)))
+	       ((list-type-spec? super.ots)
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (list <fixnum>) (pair-of (union <fixnum> <null>)))
+		;;
+		;;to match.
+		(let ((super-item*.ots	(list-type-spec.item-ots* super.ots)))
+		  (and (pair? super-item*.ots)
+		       (let ((sub-item.ots (pair-of-type-spec.item-ots sub.ots)))
+			 (and (object-type-spec.matching-super-and-sub? (car super-item*.ots)
+									sub-item.ots)
+			      (object-type-spec.matching-super-and-sub? (let ((super-tail*.ots (cdr super-item*.ots)))
+									  (if (pair? super-tail*.ots)
+									      (make-list-type-spec super-tail*.ots)
+									    (<null>-ots)))
+									sub-item.ots))))))
+	       ((list-of-type-spec? super.ots)
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (list-of <fixnum>) (pair-of (union <fixnum> <null>)))
+		;;
+		;;not to  match because the  PAIR-OF annotation implies at  least one
+		;;item, while the LIST-OF annotation implies nothing.
+		#f)
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
-
-	((union-type-spec? sub.ots)
-	 (exists (lambda (component-sub.ots)
-		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
-	   (union-type-spec.component-ots* sub.ots)))
-
-	((union-type-spec? super.ots)
-	 (exists (lambda (component-super.ots)
-		   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
-	   (union-type-spec.component-ots* super.ots)))
 
 	((object-type-spec.parent-ots sub.ots)
 	 => (lambda (sub-parent.ots)

@@ -215,6 +215,33 @@
 
   (check-for-false	(type-super-and-sub? (pair <number> <number>) (pair-of <string>)))
 
+  (check-for-true	(type-super-and-sub? (list <fixnum>) (pair-of (union <fixnum> <null>))))
+
+  (check-for-true	(type-super-and-sub? (pair <fixnum> <null>)
+					     (list <fixnum>)))
+  (check-for-true	(type-super-and-sub? (pair-of (union <fixnum> <null>))
+					     (list <fixnum>)))
+
+  (check-for-true	(type-super-and-sub? (list-of <fixnum>) (list <fixnum>)))
+  (check-for-true	(type-super-and-sub? (list-of <number>) (list <fixnum> <flonum>)))
+
+  ;;Does not match because  a LIST annotation specifies the number  of items, while a
+  ;;LIST-OF annotation does not specify it.
+  (check-for-false	(type-super-and-sub? (list <fixnum> <fixnum>) (list-of <fixnum>)))
+
+  ;;Does not match because a LIST-OF annotation does not specify the number of items,
+  ;;while a PAIR annotation implies at least one item.
+  (check-for-false	(type-super-and-sub? (pair <fixnum> (list-of <fixnum>))
+					     (list-of <fixnum>)))
+
+  ;;Does not match because  the PAIR annotation implies at least  one item, while the
+  ;;LIST-OF annotation implies nothing.
+  (check-for-false	(type-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>)))
+
+  ;;Does not  match because the PAIR-OF  annotation implies at least  one item, while
+  ;;the LIST-OF annotation implies nothing.
+  (check-for-false	(type-super-and-sub? (list-of <fixnum>) (pair-of (union <fixnum> <null>))))
+
   (void))
 
 
