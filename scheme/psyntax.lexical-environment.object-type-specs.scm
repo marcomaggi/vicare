@@ -424,14 +424,64 @@
 	 (%scan-parents-of-sub-ots (<vector>-ots) super.ots))
 
 	((<list>-ots? sub.ots)
-	 (or (<null>-ots?        sub.ots)
-	     (list-of-type-spec? sub.ots)
-	     (list-type-spec?    sub.ots)))
+	 (or (<null>-ots?        super.ots)
+	     (list-of-type-spec? super.ots)
+	     (list-type-spec?    super.ots)))
+
+	((list-type-spec? sub.ots)
+	 (cond ((list-type-spec? super.ots)
+		(and (= (list-type-spec.length super.ots)
+			(list-type-spec.length sub.ots))
+		     (for-all object-type-spec.matching-super-and-sub?
+		       (list-type-spec.item-ots* super.ots)
+		       (list-type-spec.item-ots* sub.ots))))
+	       ((list-of-type-spec? super.ots)
+		;;This is the case:
+		;;
+		;;   (type-super-and-sub? (list-of <fixnum>) (list <fixnum>))
+		;;   (type-super-and-sub? (list-of <number>) (list <fixnum> <flonum>))
+		;;
+		;;which must match.
+		(let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
+		  (for-all (lambda (sub-item.ots)
+			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+		    (list-type-spec.item-ots* sub.ots))))
+	       (else
+		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
 	((list-of-type-spec? sub.ots)
 	 (cond ((list-of-type-spec? super.ots)
 		(object-type-spec.matching-super-and-sub? (list-of-type-spec.item-ots super.ots)
 							  (list-of-type-spec.item-ots sub.ots)))
+	       ((list-type-spec? super.ots)
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (list <fixnum> <fixnum>) (list-of <fixnum>))
+		;;
+		;;which must not match because a LIST annotation specifies the number
+		;;of items, while a LIST-OF annotation does not specify it.
+		#f)
+	       (else
+		(%scan-parents-of-sub-ots super.ots sub.ots))))
+
+	((vector-type-spec? sub.ots)
+	 (cond ((vector-type-spec? super.ots)
+		(and (= (vector-type-spec.length super.ots)
+			(vector-type-spec.length sub.ots))
+		     (for-all object-type-spec.matching-super-and-sub?
+		       (vector-type-spec.item-ots* super.ots)
+		       (vector-type-spec.item-ots* sub.ots))))
+	       ((vector-of-type-spec? super.ots)
+		;;This is the case:
+		;;
+		;;   (type-super-and-sub? (vector-of <fixnum>) (vector <fixnum>))
+		;;   (type-super-and-sub? (vector-of <number>) (vector <fixnum> <flonum>))
+		;;
+		;;which must match.
+		(let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
+		  (for-all (lambda (sub-item.ots)
+			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
+		    (vector-type-spec.item-ots* sub.ots))))
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
@@ -439,6 +489,14 @@
 	 (cond ((vector-of-type-spec? super.ots)
 		(object-type-spec.matching-super-and-sub? (vector-of-type-spec.item-ots super.ots)
 							  (vector-of-type-spec.item-ots sub.ots)))
+	       ((vector-type-spec? super.ots)
+		;;We want:
+		;;
+		;;   (type-super-and-sub? (vector <fixnum> <fixnum>) (vector-of <fixnum>))
+		;;
+		;;which  must not  match because  a VECTOR  annotation specifies  the
+		;;number of items, while a VECTOR-OF annotation does not specify it.
+		#f)
 	       (else
 		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
@@ -503,6 +561,30 @@
 		;;
 		(object-type-spec.super-and-sub? super.ots sub.ots))
 	       (else #f)))
+
+	((pair-type-spec? sub.ots)
+	 (cond ((pair-type-spec? super.ots)
+		(and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots)
+							       (pair-type-spec.car-ots sub.ots))
+		     (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots)
+							       (pair-type-spec.cdr-ots sub.ots))))
+	       ((pair-of-type-spec? super.ots)
+		(let ((super-item.ots (pair-of-type-spec.item-ots super.ots)))
+		  (and (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.car-ots sub.ots))
+		       (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.cdr-ots sub.ots)))))
+	       (else
+		(%scan-parents-of-sub-ots super.ots sub.ots))))
+
+	((pair-of-type-spec? sub.ots)
+	 (cond ((pair-type-spec? super.ots)
+		(let ((sub-item.ots (pair-of-type-spec.item-ots sub.ots)))
+		  (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super.ots) sub-item.ots)
+		       (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super.ots) sub-item.ots))))
+	       ((pair-of-type-spec? super.ots)
+		(object-type-spec.matching-super-and-sub? (pair-of-type-spec.item-ots super.ots)
+							  (pair-of-type-spec.item-ots sub.ots)))
+	       (else
+		(%scan-parents-of-sub-ots super.ots sub.ots))))
 
 	((object-type-spec.parent-ots sub.ots)
 	 => (lambda (sub-parent.ots)
@@ -957,6 +1039,9 @@
     (immutable cdr-ots		pair-type-spec.cdr-ots)
 		;An  instance of  "<object-type-spec>" representing  the type  of the
 		;cdr.
+    (mutable memoised-homogeneous?	pair-type-spec.memoised-homogeneous? pair-type-spec.memoised-homogeneous?-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;PAIR-TYPE-SPEC.HOMOGENEOUS?.
     #| end of FIELDS |# )
 
   (protocol
@@ -979,7 +1064,7 @@
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
-	    car.ots cdr.ots))))
+	    car.ots cdr.ots (void)))))
 
       (define (pair-name? name.stx)
 	(syntax-match name.stx (pair)
@@ -1015,6 +1100,15 @@
 
 (define <pair-type-spec>-rcd
   (record-constructor-descriptor <pair-type-spec>))
+
+(define* (pair-type-spec.homogeneous? {pair.ots pair-type-spec?})
+  (let ((mem (pair-type-spec.memoised-homogeneous? pair.ots)))
+    (if (boolean? mem)
+	mem
+      (receive-and-return (bool)
+	  (object-type-spec=? (pair-type-spec.car-ots pair.ots)
+			      (pair-type-spec.cdr-ots pair.ots))
+	(pair-type-spec.memoised-homogeneous?-set! pair.ots bool)))))
 
 
 ;;;; homogeneous pair object spec
@@ -1101,6 +1195,12 @@
     (immutable item-ots*		list-type-spec.item-ots*)
 		;A list of instances of  "<object-type-spec>" describing the types of
 		;contained items.
+    (mutable memoised-homogeneous?	list-type-spec.memoised-homogeneous? list-type-spec.memoised-homogeneous?-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;LIST-TYPE-SPEC.HOMOGENEOUS?.
+    (mutable memoised-length		list-type-spec.memoised-length list-type-spec.memoised-length-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;LIST-TYPE-SPEC.LENGTH.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -1119,7 +1219,7 @@
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
-	    item-type*.ots))))
+	    item-type*.ots (void) (void)))))
 
       (define (list-name? name.stx)
 	(syntax-match name.stx (list)
@@ -1158,6 +1258,22 @@
 
 (define <list-type-spec>-rcd
   (record-constructor-descriptor <list-type-spec>))
+
+(define* (list-type-spec.homogeneous? {list.ots list-type-spec?})
+  (let ((mem (list-type-spec.memoised-homogeneous? list.ots)))
+    (if (boolean? mem)
+	mem
+      (receive-and-return (bool)
+	  (apply object-type-spec=? (list-type-spec.item-ots* list.ots))
+	(list-type-spec.memoised-homogeneous?-set! list.ots bool)))))
+
+(define* (list-type-spec.length {list.ots list-type-spec?})
+  (let ((mem (list-type-spec.memoised-length list.ots)))
+    (if (void-object? mem)
+	(receive-and-return (len)
+	    (length (list-type-spec.item-ots* list.ots))
+	  (list-type-spec.memoised-length-set! list.ots len))
+      mem)))
 
 
 ;;;; homogeneous list object spec
@@ -1245,6 +1361,12 @@
     (immutable item-ots*		vector-type-spec.item-ots*)
 		;A vector  of instances of "<object-type-spec>"  describing the types
 		;of contained items.
+    (mutable memoised-homogeneous?	vector-type-spec.memoised-homogeneous? vector-type-spec.memoised-homogeneous?-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;VECTOR-TYPE-SPEC.HOMOGENEOUS?.
+    (mutable memoised-length		vector-type-spec.memoised-length vector-type-spec.memoised-length-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;VECTOR-TYPE-SPEC.LENGTH.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
@@ -1263,7 +1385,7 @@
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
 				   accessors-table mutators-table methods-table)
-	    item-type*.ots))))
+	    item-type*.ots (void) (void)))))
 
       (define (vector-name? name.stx)
 	(syntax-match name.stx (vector)
@@ -1302,6 +1424,22 @@
 
 (define <vector-type-spec>-rcd
   (record-constructor-descriptor <vector-type-spec>))
+
+(define* (vector-type-spec.homogeneous? {vector.ots vector-type-spec?})
+  (let ((mem (vector-type-spec.memoised-homogeneous? vector.ots)))
+    (if (boolean? mem)
+	mem
+      (receive-and-return (bool)
+	  (apply object-type-spec=? (vector-type-spec.item-ots* vector.ots))
+	(vector-type-spec.memoised-homogeneous?-set! vector.ots bool)))))
+
+(define* (vector-type-spec.length {vector.ots vector-type-spec?})
+  (let ((mem (vector-type-spec.memoised-length vector.ots)))
+    (if (void-object? mem)
+	(receive-and-return (len)
+	    (length (vector-type-spec.item-ots* vector.ots))
+	  (vector-type-spec.memoised-length-set! vector.ots len))
+      mem)))
 
 
 ;;;; homogeneous vector object spec

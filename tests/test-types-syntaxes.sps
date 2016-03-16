@@ -39,14 +39,14 @@
 (define-syntax-rule (print-expansion ?stx)
   (debug-print (quote expansion-example:) (quote ?stx) (quote ==>) (expansion-of ?stx)))
 
-(library (types-of-lists)
+(library (some-type-annotations)
   (options strict-r6rs)
   (export
-    <list-of-fixnums>		<vector-of-fixnums>
-    <list-of-flonums>		<vector-of-flonums>
-    <list-of-reals>		<vector-of-reals>
-    <list-of-numbers>		<vector-of-numbers>
-    <list-of-strings>		<vector-of-strings>)
+    <list-of-fixnums>		<vector-of-fixnums>	<pair-of-fixnums>
+    <list-of-flonums>		<vector-of-flonums>	<pair-of-flonums>
+    <list-of-reals>		<vector-of-reals>	<pair-of-reals>
+    <list-of-numbers>		<vector-of-numbers>	<pair-of-numbers>
+    <list-of-strings>		<vector-of-strings>	<pair-of-strings>)
   (import (vicare)
     (prefix (vicare expander) expander::))
   (define-type <list-of-fixnums>	(list-of <fixnum>))
@@ -59,14 +59,19 @@
   (define-type <vector-of-numbers>	(vector-of <number>))
   (define-type <vector-of-reals>	(vector-of <real>))
   (define-type <vector-of-strings>	(vector-of <string>))
+  (define-type <pair-of-fixnums>	(pair-of <fixnum>))
+  (define-type <pair-of-flonums>	(pair-of <flonum>))
+  (define-type <pair-of-numbers>	(pair-of <number>))
+  (define-type <pair-of-reals>		(pair-of <real>))
+  (define-type <pair-of-strings>	(pair-of <string>))
   #| end of LIBRARY |# )
 
-(import (types-of-lists))
+(import (some-type-annotations))
 
 ;;; --------------------------------------------------------------------
 
 (define-constant EVAL-ENVIRONMENT
-  (environment '(vicare) '(types-of-lists)))
+  (environment '(vicare) '(some-type-annotations)))
 
 (define (%type-signature->sexp sig)
   (syntax->datum (expander::type-signature.tags sig)))
@@ -152,13 +157,65 @@
   (check-for-true	(type-super-and-sub? <list-of-numbers> <list-of-reals>))
   (check-for-false	(type-super-and-sub? <list-of-numbers> <list-of-strings>))
 
+  (check-for-true	(type-super-and-sub? (list <number>) (list <fixnum>)))
+  (check-for-false	(type-super-and-sub? (list <symbol>) (list <string>)))
+
+  (check-for-true	(type-super-and-sub? (list-of <number>) (list-of <fixnum>)))
+  (check-for-false	(type-super-and-sub? (list-of <symbol>) (list-of <string>)))
+
+  (check-for-true	(type-super-and-sub? (list-of <number>) (list <fixnum>)))
+  (check-for-true	(type-super-and-sub? (list-of <number>) (list <fixnum> <flonum> <number>)))
+
+  ;;This is false  because a LIST annotation  specifies the number of  items, while a
+  ;;LIST-OF annotation does not specify it.
+  (check-for-false	(type-super-and-sub? (list <number>) (list-of <number>)))
+
+  (check-for-false	(type-super-and-sub? (list <number>) (list-of <string>)))
+
 ;;; --------------------------------------------------------------------
 ;;; vectors
 
   (check-for-true	(type-super-and-sub? <vector-of-numbers> <vector-of-reals>))
   (check-for-false	(type-super-and-sub? <vector-of-numbers> <vector-of-strings>))
 
-  #t)
+  (check-for-true	(type-super-and-sub? (vector <number>) (vector <fixnum>)))
+  (check-for-false	(type-super-and-sub? (vector <symbol>) (vector <string>)))
+
+  (check-for-true	(type-super-and-sub? (vector-of <number>) (vector-of <fixnum>)))
+  (check-for-false	(type-super-and-sub? (vector-of <symbol>) (vector-of <string>)))
+
+  (check-for-true	(type-super-and-sub? (vector-of <number>) (vector <fixnum>)))
+  (check-for-true	(type-super-and-sub? (vector-of <number>) (vector <fixnum> <flonum> <number>)))
+
+  ;;This is false  because a VECTOR annotation  specifies the number of  items, while a
+  ;;VECTOR-OF annotation does not specify it.
+  (check-for-false	(type-super-and-sub? (vector <number>) (vector-of <number>)))
+
+  (check-for-false	(type-super-and-sub? (vector <number>) (vector-of <string>)))
+
+;;; --------------------------------------------------------------------
+;;; pairs
+
+  (check-for-true	(type-super-and-sub? <pair-of-numbers> <pair-of-reals>))
+  (check-for-false	(type-super-and-sub? <pair-of-numbers> <pair-of-strings>))
+
+  (check-for-true	(type-super-and-sub? (pair <number> <integer>) (pair <fixnum> <fixnum>)))
+  (check-for-false	(type-super-and-sub? (pair <symbol> <keyword>) (pair <string> <keyword>)))
+  (check-for-false	(type-super-and-sub? (pair <symbol> <keyword>) (pair <keyword> <string>)))
+  (check-for-false	(type-super-and-sub? (pair <symbol> <keyword>) (pair <string> <string>)))
+
+  (check-for-true	(type-super-and-sub? (pair-of <number>) (pair-of <fixnum>)))
+  (check-for-false	(type-super-and-sub? (pair-of <symbol>) (pair-of <string>)))
+
+  (check-for-true	(type-super-and-sub? (pair-of <number>) (pair <fixnum> <flonum>)))
+
+  ;;This is true  because both a PAIR  annotation and a PAIR-OF  annotation specify a
+  ;;pair, which holds two values.
+  (check-for-true	(type-super-and-sub? (pair <number> <number>) (pair-of <number>)))
+
+  (check-for-false	(type-super-and-sub? (pair <number> <number>) (pair-of <string>)))
+
+  (void))
 
 
 (parametrise ((check-test-name	'signature-super-and-sub))
