@@ -1787,16 +1787,18 @@
 	(ae*	'()))
     (mkstx expr-stx mark* (list rib) ae*)))
 
-(define* (stx-push-annotated-expr {stx stx?} annotated-expr)
+(define* (stx-push-annotated-expr stx annotated-expr)
   ;;Build  and return  a new  syntax object  with the  same wraps  of STX  and having
   ;;ANNOTATED-EXPR pushed on  top of the annotated expressions list.   This is useful
   ;;when expanding the  input form of a macro:  the input form must be  pushed on the
   ;;stack of annotated expressions.
   ;;
   (import WRAPS-UTILITIES)
-  (make-stx-or-syntactic-identifier (stx-expr stx) (stx-mark* stx) (stx-rib* stx)
-				    (%merge-annotated-expr* (list annotated-expr)
-							    (stx-annotated-expr* stx))))
+  (if (stx? stx)
+      (make-stx-or-syntactic-identifier (stx-expr stx) (stx-mark* stx) (stx-rib* stx)
+					(%merge-annotated-expr* (list annotated-expr)
+								(stx-annotated-expr* stx)))
+    (mkstx stx '() '() (list annotated-expr))))
 
 (define (syntax-annotation x)
   (if (stx? x)
