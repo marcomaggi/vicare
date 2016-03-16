@@ -27,11 +27,72 @@
 (program (test-types-pair-objects)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare typed language: <pair> objects\n")
+
+
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expression ?expected-tags)
+       (check
+	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
+	   ;;instance of "<type-signature>".
+	   (.tags (type-of ?expression))
+	 (=> syntax=?)
+	 ;;When the expression is a CONDITION application: the expected tags value is
+	 ;;a list with a single item.
+	 ?expected-tags))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (cons 1 2)
+	#'((pair <positive-fixnum> <positive-fixnum>)))
+
+  (doit (cons 1 "ciao")
+	#'((pair <positive-fixnum> <string>)))
+
+  (doit (cons 1 (read))
+	#'((pair <positive-fixnum> <top>)))
+
+  (doit (cons 1 (cons 2 3))
+	#'((pair <positive-fixnum> (pair <positive-fixnum> <positive-fixnum>))))
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-tags))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?type-annotation ?expected-tags)
+       ;;Here we test only type signature describing a single value.
+       (check
+	   (.tags (new expander::<type-signature> #'(?type-annotation)))
+	 (=> syntax=?)
+	 #'(?expected-tags)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <pair>
+  	<pair>)
+
+  (doit (pair <fixnum> <flonum>)
+  	(pair <fixnum> <flonum>))
+
+  (doit (pair <fixnum> <fixnum>)
+  	(pair <fixnum> <fixnum>))
+
+  (doit (pair-of <fixnum>)
+  	(pair-of <fixnum>))
+
+  (void))
 
 
 (parametrise ((check-test-name	'predicate))
@@ -61,26 +122,9 @@
     => '(1 . 2))
 
   (check
-      (xp.type-signature.tags (type-of (new <pair> (read) (read))))
+      (.tags (type-of (new <pair> (read) (read))))
     (=> syntax=?)
-    (list #'<pair>))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (xp.type-signature.tags (type-of (cons 1 2)))
-    (=> syntax=?)
-    (list #'<pair>))
-
-  (check
-      (xp.type-signature.tags (type-of (list 1 '(2 3))))
-    (=> syntax=?)
-    (list #'<nlist>))
-
-  (check
-      (xp.type-signature.tags (type-of (list 1 '())))
-    (=> syntax=?)
-    (list #'<nlist>))
+    #'((pair <top> <top>)))
 
   #t)
 

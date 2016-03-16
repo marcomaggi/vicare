@@ -32,6 +32,7 @@
 	 object-type-spec.procedure?
 	 object-type-spec.list-sub-type?
 	 object-type-spec.vector-sub-type?
+	 object-type-specs-delete-duplicates
 
 	 <scheme-type-spec>
 	 make-scheme-type-spec				scheme-type-spec?
@@ -608,6 +609,18 @@
 
   #| end of module: OBJECT-TYPE-SPEC=? |# )
 
+(define (object-type-specs-delete-duplicates ell)
+  ;;Recursive function.  Given the list of "<object-type-spec>" instances: remove the
+  ;;duplicate ones and return a proper list of unique instances.
+  ;;
+  (if (pair? ell)
+      (let ((head (car ell)))
+	(cons head (object-type-specs-delete-duplicates
+		    (remp (lambda (ots)
+			    (object-type-spec=? ots head))
+		      (cdr ell)))))
+    '()))
+
 
 ;;;; basic object-type specification: special predicates
 
@@ -955,7 +968,7 @@
 				    (object-type-spec.name car.ots)
 				    (object-type-spec.name cdr.ots))))
 	(({car.ots object-type-spec?} {cdr.ots object-type-spec?} {name.stx pair-name?})
-	 (let* ((parent.ots		(core-prim-id '<pair>))
+	 (let* ((parent.ots		(<pair>-ots))
 		(constructor.stx	#f)
 		(destructor.stx	#f)
 		(predicate.stx		(make-pair-predicate (object-type-spec.type-predicate-stx car.ots)
@@ -1027,7 +1040,7 @@
 				 (list (core-prim-id 'pair-of)
 				       (object-type-spec.name item.ots))))
 	(({item.ots object-type-spec?} {name.stx pair-of-name?})
-	 (let* ((parent.ots		(core-prim-id '<pair>))
+	 (let* ((parent.ots		(<pair>-ots))
 		(constructor.stx	#f)
 		(destructor.stx	#f)
 		(predicate.stx		(make-pair-of-predicate (object-type-spec.type-predicate-stx item.ots)))
@@ -1379,46 +1392,47 @@
 ;;are type annotations.
 ;;
 
-(define* (syntax-object.parse-type-annotation stx)
-  ;;Recursive function.  Parse the syntax object STX as type declaration and return a
-  ;;fully unwrapped syntax object representing the same type declaration.
+(define* (syntax-object.parse-type-annotation input-form.stx)
+  ;;Recursive function.  Parse the syntax object  STX as type annotation and return a
+  ;;fully unwrapped syntax object representing the same type annotation.
   ;;
-  (syntax-match stx (pair list vector pair-of list-of vector-of condition)
-    ((pair ?car-type ?cdr-type)
-     (list (core-prim-id 'pair)
-	   (syntax-object.parse-type-annotation ?car-type)
-	   (syntax-object.parse-type-annotation ?cdr-type)))
+  (let recur ((stx input-form.stx))
+    (syntax-match stx (pair list vector pair-of list-of vector-of condition)
+      ((pair ?car-type ?cdr-type)
+       (list (core-prim-id 'pair)
+	     (recur ?car-type)
+	     (recur ?cdr-type)))
 
-    ((list ?item-type* ...)
-     (cons (core-prim-id 'list)
-	   (map syntax-object.parse-type-annotation ?item-type*)))
+      ((list ?item-type* ...)
+       (cons (core-prim-id 'list)
+	     (map recur ?item-type*)))
 
-    ((vector ?item-type* ...)
-     (cons (core-prim-id 'vector)
-	   (map syntax-object.parse-type-annotation ?item-type*)))
+      ((vector ?item-type* ...)
+       (cons (core-prim-id 'vector)
+	     (map recur ?item-type*)))
 
-    ((pair-of ?item-type)
-     (list (core-prim-id 'pair-of)
-	   (syntax-object.parse-type-annotation ?item-type)))
+      ((pair-of ?item-type)
+       (list (core-prim-id 'pair-of)
+	     (recur ?item-type)))
 
-    ((list-of ?item-type)
-     (list (core-prim-id 'list-of)
-	   (syntax-object.parse-type-annotation ?item-type)))
+      ((list-of ?item-type)
+       (list (core-prim-id 'list-of)
+	     (recur ?item-type)))
 
-    ((vector-of ?item-type)
-     (list (core-prim-id 'vector-of)
-	   (syntax-object.parse-type-annotation ?item-type)))
+      ((vector-of ?item-type)
+       (list (core-prim-id 'vector-of)
+	     (recur ?item-type)))
 
-    ((condition ?component-type* ...)
-     (list (core-prim-id 'condition)
-	   (syntax-object.parse-type-annotation ?component-type*)))
+      ((condition ?component-type* ...)
+       (list (core-prim-id 'condition)
+	     (recur ?component-type*)))
 
-    (?type-id
-     (type-identifier? ?type-id)
-     ?type-id)
+      (?type-id
+       (type-identifier? ?type-id)
+       ?type-id)
 
-    (else
-     (syntax-violation __who__ "invalid type declaration" stx))))
+      (else
+       (syntax-violation __who__ "invalid type annotation" input-form.stx stx)))))
 
 (define* (syntax-object.type-annotation? stx)
   (guard (E (else #f))
@@ -1446,12 +1460,14 @@
    ;;as NAME.STX argument.
    ;;
    (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition)
+     (?type-id
+      (identifier? ?type-id)
+      (id->object-type-specification __who__ #f ?type-id lexenv))
+
      ((pair ?car-type ?cdr-type)
       (let ((car.ots (type-annotation->object-type-specification ?car-type lexenv))
 	    (cdr.ots (type-annotation->object-type-specification ?cdr-type lexenv)))
-	(if (object-type-spec=? car.ots cdr.ots)
-	    (make-pair-of-type-spec car.ots name.stx)
-	  (make-pair-type-spec car.ots cdr.ots name.stx))))
+	(make-pair-type-spec car.ots cdr.ots name.stx)))
 
      ((list ?item-type* ...)
       (if (null? ?item-type*)
@@ -1501,10 +1517,6 @@
 		     (assertion-violation __who__
 		       "expected condition object as component of compound condition object" annotation.stx))))
 	  (make-compound-condition-type-spec specs name.stx))))
-
-     (?type-id
-      (type-identifier? ?type-id)
-      (id->object-type-specification __who__ #f ?type-id lexenv))
 
      (else
       (assertion-violation __who__ "invalid type annotation" annotation.stx)))))

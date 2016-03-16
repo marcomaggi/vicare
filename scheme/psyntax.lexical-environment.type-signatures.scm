@@ -365,8 +365,8 @@
 (define-syntax-rule (make-type-signature/fully-untyped)
   (make-type-signature/standalone-list))
 
-(define* (make-type-signature/single-value {type (or object-type-spec? type-identifier?)})
-  (make-type-signature (list type)))
+(define* (make-type-signature/single-value type-annotation)
+  (make-type-signature (list type-annotation)))
 
 
 ;;;; type signature: predicates
@@ -864,62 +864,64 @@
   ;;the single value returned by the expression  DATUM, which must be a Scheme object
   ;;extracted from a syntax object representing a literal expression.
   ;;
-  (make-type-signature
-   (list (cond ((boolean? datum)	(cond (datum
-					       (<true>-type-id))
-					      (else
-					       (<false>-type-id))))
-	       ((char?    datum)	(core-prim-id '<char>))
-	       ((symbol?  datum)	(core-prim-id '<symbol>))
-	       ((keyword? datum)	(core-prim-id '<keyword>))
+  (make-type-signature/single-value (datum-type-annotation datum)))
 
-	       ((fixnum?  datum)	(cond ((fxpositive? datum)
-					       (core-prim-id '<positive-fixnum>))
-					      ((fxzero? datum)
-					       (core-prim-id '<zero-fixnum>))
-					      (else
-					       (core-prim-id '<fixnum>))))
-	       ((flonum?  datum)	(cond ((flpositive? datum)
-					       (core-prim-id '<positive-flonum>))
-					      ((flzero?/positive datum)
-					       (core-prim-id '<positive-zero-flonum>))
-					      ((flzero?/negative datum)
-					       (core-prim-id '<negative-zero-flonum>))
-					      (else
-					       (core-prim-id '<flonum>))))
-	       ((ratnum?  datum)	(core-prim-id '<ratnum>))
-	       ((bignum?  datum)	(core-prim-id '<bignum>))
-	       ((compnum? datum)	(cond ((exact-compnum? datum)
-					       (core-prim-id '<exact-compnum>))
-					      (else
-					       (core-prim-id '<compnum>))))
-	       ((cflonum? datum)	(core-prim-id '<cflonum>))
+(define (datum-type-annotation datum)
+  ;;Recursive  function.  Build  and return  a  syntax object  representing the  type
+  ;;annotation of DATUM, which must be a Scheme object extracted from a syntax object
+  ;;representing a literal expression.
+  ;;
+  (cond ((boolean? datum)	(cond (datum
+				       (<true>-type-id))
+				      (else
+				       (<false>-type-id))))
+	((char?    datum)	(core-prim-id '<char>))
+	((symbol?  datum)	(core-prim-id '<symbol>))
+	((keyword? datum)	(core-prim-id '<keyword>))
 
-	       ((string?  datum)	(core-prim-id '<string>))
-	       ((vector?  datum)	(cond ((vector-empty? datum)
-					       (<empty-vector>-type-id))
-					      (else
-					       (<vector>-type-id))))
-	       ((bytevector? datum)	(core-prim-id '<bytevector>))
+	((fixnum?  datum)	(cond ((fxpositive? datum)
+				       (core-prim-id '<positive-fixnum>))
+				      ((fxzero? datum)
+				       (core-prim-id '<zero-fixnum>))
+				      (else
+				       (core-prim-id '<fixnum>))))
+	((flonum?  datum)	(cond ((flpositive? datum)
+				       (core-prim-id '<positive-flonum>))
+				      ((flzero?/positive datum)
+				       (core-prim-id '<positive-zero-flonum>))
+				      ((flzero?/negative datum)
+				       (core-prim-id '<negative-zero-flonum>))
+				      (else
+				       (core-prim-id '<flonum>))))
+	((ratnum?  datum)	(core-prim-id '<ratnum>))
+	((bignum?  datum)	(core-prim-id '<bignum>))
+	((compnum? datum)	(cond ((exact-compnum? datum)
+				       (core-prim-id '<exact-compnum>))
+				      (else
+				       (core-prim-id '<compnum>))))
+	((cflonum? datum)	(core-prim-id '<cflonum>))
 
-	       ((null? datum)		(<null>-type-id))
+	((string?  datum)	(core-prim-id '<string>))
 
-	       ((list?    datum)	(cond ((for-all char?   datum)	(list (list-of-id) (core-prim-id '<char>)))
-					      ((for-all string? datum)	(list (list-of-id) (core-prim-id '<string>)))
-					      ((for-all symbol? datum)	(list (list-of-id) (core-prim-id '<symbol>)))
-					      ((for-all fixnum? datum)	(list (list-of-id) (core-prim-id '<fixnum>)))
-					      ((for-all flonum? datum)	(list (list-of-id) (core-prim-id '<flonum>)))
-					      ((for-all ratnum? datum)	(list (list-of-id) (core-prim-id '<ratnum>)))
-					      ((for-all compnum? datum)	(list (list-of-id) (core-prim-id '<compnum>)))
-					      ((for-all cflonum? datum)	(list (list-of-id) (core-prim-id '<cflonum>)))
-					      (else			(core-prim-id '<list>))))
-	       ((pair?    datum)	(cond ((standalone-pair? datum)
-					       (core-prim-id '<standalone-pair>))
-					      (else
-					       (core-prim-id '<pair>))))
+	((null? datum)		(<null>-type-id))
 
-	       ((eq? datum (void))	(<void>-type-id))
-	       (else			(<top>-type-id))))))
+	((list? datum)		(cons (core-prim-id 'list)
+				      (map datum-type-annotation datum)))
+
+	((pair? datum)		(list (core-prim-id 'pair)
+				      (datum-type-annotation (car datum))
+				      (datum-type-annotation (cdr datum))))
+
+	((vector?  datum)	(cond ((vector-empty? datum)
+				       (<empty-vector>-type-id))
+				      (else
+				       (cons (core-prim-id 'vector)
+					     (map datum-type-annotation (vector->list datum))))))
+
+	((bytevector? datum)	(core-prim-id '<bytevector>))
+
+	((eq? datum (void))	(<void>-type-id))
+	(else			(<top>-type-id))))
 
 
 ;;;; done

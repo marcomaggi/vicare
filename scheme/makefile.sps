@@ -735,6 +735,7 @@
     (define-condition-type			(macro . define-condition-type))
     (define-type				(macro . define-type))
 ;;;
+    (pair					(macro . pair))
     (pair-of					(macro . pair-of))
     (list-of					(macro . list-of))
     (vector-of					(macro . vector-of))
@@ -3300,6 +3301,7 @@
     (pre-decr!					v $language)
     (post-incr!					v $language)
     (post-decr!					v $language)
+    (pair					v $language)
     (pair-of					v $language)
     (list-of					v $language)
     (vector-of					v $language)

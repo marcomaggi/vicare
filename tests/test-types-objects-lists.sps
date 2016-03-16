@@ -81,6 +81,12 @@
   (doit (list 1 "ciao" 'ciao)
 	#'((list <positive-fixnum> <string> <symbol>)))
 
+  (doit (list 1 '(2 3))
+	#'((list <positive-fixnum> (list <positive-fixnum> <positive-fixnum>))))
+
+  (doit (list 1 '())
+	#'((list <positive-fixnum> <null>)))
+
   (void))
 
 
@@ -89,25 +95,26 @@
   (define-syntax doit
     (syntax-rules (=>)
       ((_ ?type-annotation ?expected-tags)
+       ;;Here we test only type signature describing a single value.
        (check
 	   (.tags (new expander::<type-signature> #'(?type-annotation)))
 	 (=> syntax=?)
-	 ?expected-tags))
+	 #'(?expected-tags)))
       ))
 
 ;;; --------------------------------------------------------------------
 
   (doit <list>
-	#'(<list>))
+	<list>)
 
   (doit (list)
-  	#'(<null>))
+  	<null>)
 
   (doit (list <fixnum>)
-  	#'((list <fixnum>)))
+  	(list <fixnum>))
 
   (doit (list <fixnum> <flonum> <string>)
-  	#'((list <fixnum> <flonum> <string>)))
+  	(list <fixnum> <flonum> <string>))
 
   (void))
 

@@ -120,31 +120,32 @@
   (define-syntax doit
     (syntax-rules (=>)
       ((_ ?type-annotation ?expected-tags)
+       ;;Here we test only type signature describing a single value.
        (check
 	   (.tags (new expander::<type-signature> #'(?type-annotation)))
 	 (=> syntax=?)
-	 ?expected-tags))
+	 #'(?expected-tags)))
       ))
 
 ;;; --------------------------------------------------------------------
 
   (doit <compound-condition>
-	#'(<compound-condition>))
+	<compound-condition>)
 
   (doit <condition>
-	#'(<condition>))
+	<condition>)
 
   (doit &who
-	#'(&who))
+	&who)
 
   (doit (condition)
-	#'((condition)))
+	(condition))
 
   (doit (condition (condition))
-	#'((condition)))
+	(condition))
 
   (doit (condition &who &message &irritants)
-	#'((condition &who &message &irritants)))
+	(condition &who &message &irritants))
 
   (void))
 

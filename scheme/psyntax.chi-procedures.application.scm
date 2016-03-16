@@ -38,7 +38,7 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 condition list)
+  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 condition cons list)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -63,6 +63,9 @@
 
     ((condition . ?rand*)
      (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
+
+    ((cons . ?rand*)
+     (chi-cons-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((list . ?rand*)
      (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand*))
@@ -163,6 +166,136 @@
     (_
      (syntax-violation/internal-error __module_who__
        "invalid application syntax" input-form.stx))))
+
+
+(module CLOSURE-APPLICATION-ERRORS
+  ( ;;
+   %error-number-of-operands-exceeds-maximum-arguments-count
+   %error-number-of-operands-deceeds-minimum-arguments-count
+   %error-operand-with-multiple-return-values
+   %error-mismatch-between-argvals-signature-and-operands-signature
+   %warning-mismatch-between-argvals-signature-and-operands-signature)
+
+  (define-condition-type &wrong-number-of-arguments-error
+      &error
+    make-wrong-number-of-arguments-error-condition
+    wrong-number-of-arguments-error-condition?)
+
+  (define-condition-type &maximum-arguments-count
+      &condition
+    make-maximum-arguments-count-condition
+    maximum-arguments-count-condition?
+    (count maximum-arguments-count))
+
+  (define-condition-type &minimum-arguments-count
+      &condition
+    make-minimum-arguments-count-condition
+    minimum-arguments-count-condition?
+    (count minimum-arguments-count))
+
+  (define-condition-type &given-operands-count
+      &condition
+    make-given-operands-count-condition
+    given-operands-count-condition?
+    (count given-operands-count))
+
+  ;; (define-condition-type &argument-description
+  ;;     &condition
+  ;;   make-argument-description-condition
+  ;;   argument-description-condition?
+  ;;   (zero-based-argument-index argument-description-index)
+  ;;   (expected-argument-tag     argument-description-expected-tag))
+
+  (define-condition-type &clambda-signature
+      &condition
+    make-clambda-signature-condition
+    clambda-signature-condition?
+    (signature		clambda-signature-condition.signature))
+
+  ;;Contains a list of "<type-signature>" instaces representing the possible types of
+  ;;a closure's arguments.   To be used to represent the  possible tuples of accepted
+  ;;arguments in a closure application.
+  ;;
+  (define-condition-type &arguments-signatures
+      &condition
+    make-arguments-signatures-condition
+    arguments-signatures-condition?
+    (signatures		arguments-signatures-condition.signatures))
+
+  (define-condition-type &operands-signature
+      &condition
+    make-operands-signature-condition
+    operands-signature-condition?
+    (operands-signature	operands-signature-condition.operands-signature))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+	    rator.stx rand*.stx maximum-arguments-count given-operands-count)
+    (raise-compound-condition-object 'chi-application
+      "while expanding, detected wrong number of operands in function application: number of operands exceeds maximum number of arguments"
+      input-form.stx
+      (condition
+       (make-syntax-violation input-form.stx #f)
+       (make-wrong-number-of-arguments-error-condition)
+       (make-application-operator-expression-condition rator.stx)
+       (make-application-operands-expressions-condition rand*.stx)
+       (make-maximum-arguments-count-condition maximum-arguments-count)
+       (make-given-operands-count-condition given-operands-count))))
+
+  (define (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+	    rator.stx rand*.stx minimum-arguments-count given-operands-count)
+    (raise-compound-condition-object 'chi-application
+      "while expanding, detected wrong number of operands in function application: number of operands deceeds minimum number of arguments"
+      input-form.stx
+      (condition
+       (make-syntax-violation input-form.stx #f)
+       (make-wrong-number-of-arguments-error-condition)
+       (make-application-operator-expression-condition rator.stx)
+       (make-application-operands-expressions-condition rand*.stx)
+       (make-minimum-arguments-count-condition minimum-arguments-count)
+       (make-given-operands-count-condition given-operands-count))))
+
+  (define (%error-operand-with-multiple-return-values input-form.stx rand.stx rand.sig)
+    (raise-compound-condition-object 'chi-application
+      "expand-time error: operand with multiple return values"
+      input-form.stx
+      (condition
+       (make-expand-time-type-signature-violation)
+       (make-syntax-violation input-form.stx rand.stx)
+       (make-operands-signature-condition (list rand.sig)))))
+
+  (define (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+	    arguments-signatures operands-signature)
+    (syntax-match input-form.stx ()
+      ((?rator . ?rand*)
+       (raise-compound-condition-object 'chi-application
+	 "expand-time mismatch between closure object's arguments signatures and operands signature"
+	 input-form.stx
+	 (condition
+	  (make-expand-time-type-signature-violation)
+	  (make-syntax-violation input-form.stx ?rator)
+	  (make-application-operator-expression-condition ?rator)
+	  (make-application-operands-expressions-condition ?rand*)
+	  (make-arguments-signatures-condition arguments-signatures)
+	  (make-operands-signature-condition operands-signature))))))
+
+  (define (%warning-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+									      arguments-signatures operands-signature)
+    (syntax-match input-form.stx ()
+      ((?rator . ?rand*)
+       (raise-compound-condition-object/continuable 'chi-application
+	 "expand-time mismatch between closure object's arguments signatures and operands signature"
+	 input-form.stx
+	 (condition
+	  (make-expand-time-type-signature-warning)
+	  (make-syntax-violation input-form.stx ?rator)
+	  (make-application-operator-expression-condition ?rator)
+	  (make-application-operands-expressions-condition ?rand*)
+	  (make-arguments-signatures-condition arguments-signatures)
+	  (make-operands-signature-condition operands-signature))))))
+
+  #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 
 
 (define (chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
@@ -322,6 +455,103 @@
 	     (<top>-ots)))))))
 
   #| end of module: CHI-VALUES-APPLICATION |# )
+
+
+(module (chi-cons-application)
+  ;;The input form has the syntax:
+  ;;
+  ;;   (cons ?rand ...)
+  ;;
+  ;;and RANDS.STX is the syntax object:
+  ;;
+  ;;   #'(?rand ...)
+  ;;
+  ;;which holds  a proper list  of expressions.  The  application of CONS  is special
+  ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
+  ;;"<pair-type-spec>" or a "<pair-of-type-spec>".
+  ;;
+  (import CLOSURE-APPLICATION-ERRORS)
+
+  (define-module-who chi-cons-application)
+
+  (define (chi-cons-application input-form.stx lexenv.run lexenv.expand rands.stx)
+    (syntax-match rands.stx ()
+      ((?car-rand ?cdr-rand)
+       ;;Two or more values.
+       (let* ((car-rand.psi	(chi-expr ?car-rand lexenv.run lexenv.expand))
+	      (cdr-rand.psi	(chi-expr ?cdr-rand lexenv.run lexenv.expand))
+	      (car-rand.core	(psi.core-expr car-rand.psi))
+	      (cdr-rand.core	(psi.core-expr cdr-rand.psi))
+	      (car-rand.sig	(psi.retvals-signature car-rand.psi))
+	      (cdr-rand.sig	(psi.retvals-signature cdr-rand.psi))
+	      (car-rand.ots	(%single-operand-signature->ots input-form.stx ?car-rand car-rand.sig))
+	      (cdr-rand.ots	(%single-operand-signature->ots input-form.stx ?cdr-rand cdr-rand.sig)))
+	 (let ((application.sig (make-type-signature/single-value (make-pair-type-spec car-rand.ots cdr-rand.ots))))
+	   (make-psi input-form.stx
+	     (build-application (syntax-annotation input-form.stx)
+		 (build-primref no-source 'cons)
+	       (list car-rand.core cdr-rand.core))
+	     application.sig))))
+
+      ((?rand1 ?rand2 ?rand3 ?rand* ...)
+       (let* ((rand*.stx		(cons* ?rand1 ?rand2 ?rand3 ?rand*))
+	      (maximum-arguments-count	2)
+	      (given-operands-count	(length rand*.stx)))
+	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
+	   input-form.stx rand*.stx maximum-arguments-count given-operands-count)))
+
+      ((?rand* ...)
+       (let* ((minimum-arguments-count	2)
+	      (given-operands-count	(length ?rand*)))
+         (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+	   input-form.stx ?rand* minimum-arguments-count given-operands-count)))
+      ))
+
+  (define (%single-operand-signature->ots input-form.stx rand.stx rand.sig)
+    (case-signature-specs rand.sig
+      ((single-value)
+       => (lambda (rand.ots)
+	    rand.ots))
+
+      (<no-return>
+       (let ((common (list
+		      (make-who-condition __module_who__)
+		      (make-message-condition "expression used as application operand is typed as not returning")
+		      (make-syntax-violation input-form.stx rand.stx)
+		      (make-application-operand-signature-condition rand.sig))))
+	 (if (options::typed-language?)
+	     (raise (list (make-expand-time-type-signature-violation) common))
+	   (begin
+	     (raise-continuable (list (make-expand-time-type-signature-warning) common))
+	     (<top>-ots)))))
+
+      (<list-of>
+       ;;The operand expression returns an unspecified number of values of specified,
+       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
+       ;;run-time, if this operand returns a single value.
+       => (lambda (rand.ots)
+	    (list-of-type-spec.item-ots rand.ots)))
+
+      (<list>
+       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
+       ;;unspecified type.   We relay  on the  automatically generated  validation to
+       ;;check at run-time if the expression returns a single value.
+       (<top>-ots))
+
+      (else
+       ;;The operand expression returns zero, two or more values.
+       (let ((common (list
+		      (make-who-condition __module_who__)
+		      (make-message-condition "expression used as application operand returns multiple values")
+		      (make-syntax-violation input-form.stx rand.stx)
+		      (make-application-operand-signature-condition rand.sig))))
+	 (if (options::typed-language?)
+	     (raise (list (make-expand-time-type-signature-violation) common))
+	   (begin
+	     (raise-continuable (list (make-expand-time-type-signature-warning) common))
+	     (<top>-ots)))))))
+
+  #| end of module: CHI-CONS-APPLICATION |# )
 
 
 (module (chi-list-application)
@@ -896,136 +1126,6 @@
 	   (begin
 	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
 	     (%build-default-application))))))))
-
-
-(module CLOSURE-APPLICATION-ERRORS
-  ( ;;
-   %error-number-of-operands-exceeds-maximum-arguments-count
-   %error-number-of-operands-deceeds-minimum-arguments-count
-   %error-operand-with-multiple-return-values
-   %error-mismatch-between-argvals-signature-and-operands-signature
-   %warning-mismatch-between-argvals-signature-and-operands-signature)
-
-  (define-condition-type &wrong-number-of-arguments-error
-      &error
-    make-wrong-number-of-arguments-error-condition
-    wrong-number-of-arguments-error-condition?)
-
-  (define-condition-type &maximum-arguments-count
-      &condition
-    make-maximum-arguments-count-condition
-    maximum-arguments-count-condition?
-    (count maximum-arguments-count))
-
-  (define-condition-type &minimum-arguments-count
-      &condition
-    make-minimum-arguments-count-condition
-    minimum-arguments-count-condition?
-    (count minimum-arguments-count))
-
-  (define-condition-type &given-operands-count
-      &condition
-    make-given-operands-count-condition
-    given-operands-count-condition?
-    (count given-operands-count))
-
-  ;; (define-condition-type &argument-description
-  ;;     &condition
-  ;;   make-argument-description-condition
-  ;;   argument-description-condition?
-  ;;   (zero-based-argument-index argument-description-index)
-  ;;   (expected-argument-tag     argument-description-expected-tag))
-
-  (define-condition-type &clambda-signature
-      &condition
-    make-clambda-signature-condition
-    clambda-signature-condition?
-    (signature		clambda-signature-condition.signature))
-
-  ;;Contains a list of "<type-signature>" instaces representing the possible types of
-  ;;a closure's arguments.   To be used to represent the  possible tuples of accepted
-  ;;arguments in a closure application.
-  ;;
-  (define-condition-type &arguments-signatures
-      &condition
-    make-arguments-signatures-condition
-    arguments-signatures-condition?
-    (signatures		arguments-signatures-condition.signatures))
-
-  (define-condition-type &operands-signature
-      &condition
-    make-operands-signature-condition
-    operands-signature-condition?
-    (operands-signature	operands-signature-condition.operands-signature))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	    rator.stx rand*.stx maximum-arguments-count given-operands-count)
-    (raise-compound-condition-object 'chi-application
-      "while expanding, detected wrong number of operands in function application: number of operands exceeds maximum number of arguments"
-      input-form.stx
-      (condition
-       (make-syntax-violation input-form.stx #f)
-       (make-wrong-number-of-arguments-error-condition)
-       (make-application-operator-expression-condition rator.stx)
-       (make-application-operands-expressions-condition rand*.stx)
-       (make-maximum-arguments-count-condition maximum-arguments-count)
-       (make-given-operands-count-condition given-operands-count))))
-
-  (define (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	    rator.stx rand*.stx minimum-arguments-count given-operands-count)
-    (raise-compound-condition-object 'chi-application
-      "while expanding, detected wrong number of operands in function application: number of operands deceeds minimum number of arguments"
-      input-form.stx
-      (condition
-       (make-syntax-violation input-form.stx #f)
-       (make-wrong-number-of-arguments-error-condition)
-       (make-application-operator-expression-condition rator.stx)
-       (make-application-operands-expressions-condition rand*.stx)
-       (make-minimum-arguments-count-condition minimum-arguments-count)
-       (make-given-operands-count-condition given-operands-count))))
-
-  (define (%error-operand-with-multiple-return-values input-form.stx rand.stx rand.sig)
-    (raise-compound-condition-object 'chi-application
-      "expand-time error: operand with multiple return values"
-      input-form.stx
-      (condition
-       (make-expand-time-type-signature-violation)
-       (make-syntax-violation input-form.stx rand.stx)
-       (make-operands-signature-condition (list rand.sig)))))
-
-  (define (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
-	    arguments-signatures operands-signature)
-    (syntax-match input-form.stx ()
-      ((?rator . ?rand*)
-       (raise-compound-condition-object 'chi-application
-	 "expand-time mismatch between closure object's arguments signatures and operands signature"
-	 input-form.stx
-	 (condition
-	  (make-expand-time-type-signature-violation)
-	  (make-syntax-violation input-form.stx ?rator)
-	  (make-application-operator-expression-condition ?rator)
-	  (make-application-operands-expressions-condition ?rand*)
-	  (make-arguments-signatures-condition arguments-signatures)
-	  (make-operands-signature-condition operands-signature))))))
-
-  (define (%warning-mismatch-between-argvals-signature-and-operands-signature input-form.stx
-									      arguments-signatures operands-signature)
-    (syntax-match input-form.stx ()
-      ((?rator . ?rand*)
-       (raise-compound-condition-object/continuable 'chi-application
-	 "expand-time mismatch between closure object's arguments signatures and operands signature"
-	 input-form.stx
-	 (condition
-	  (make-expand-time-type-signature-warning)
-	  (make-syntax-violation input-form.stx ?rator)
-	  (make-application-operator-expression-condition ?rator)
-	  (make-application-operands-expressions-condition ?rand*)
-	  (make-arguments-signatures-condition arguments-signatures)
-	  (make-operands-signature-condition operands-signature))))))
-
-  #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 
 
 ;;;; chi procedures: closure object application processing

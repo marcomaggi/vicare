@@ -264,6 +264,7 @@
     <no-return>-type-id			<no-return>-type-id?
     <void>-type-id			<void>-type-id?
     <procedure>-type-id			<procedure>-type-id?
+    <pair>-type-id			<pair>-type-id?
     <list>-type-id			<list>-type-id?
     <null>-type-id			<null>-type-id?
     <vector>-type-id			<vector>-type-id?
@@ -284,6 +285,7 @@
     <no-return>-ots			<no-return>-ots?
     <void>-ots				<void>-ots?
     <procedure>-ots			<procedure>-ots?
+    <pair>-ots				<pair>-ots?
     <null>-ots				<null>-ots?
     <nlist>-ots				<nlist>-ots?
     <list>-ots				<list>-ots?
@@ -293,6 +295,8 @@
     <syntactic-identifier>-ots		<syntactic-identifier>-ots?
     <top>-ots				<top>-ots?
     <boolean>-ots
+    <true>-ots				<true>-ots?
+    <false>-ots				<false>-ots?
     <struct>-ots			<record>-ots
     <condition>-ots			<condition>-ots?
     <compound-condition>-ots		<compound-condition>-ots?
@@ -2713,6 +2717,7 @@
   (define-type-id-retriever <record>-type-id			<record>)
   (define-type-id-retriever <vector>-type-id			<vector>)
   (define-type-id-retriever <empty-vector>-type-id		<empty-vector>)
+  (define-type-id-retriever <pair>-type-id			<pair>)
   (define-type-id-retriever <list>-type-id			<list>)
   (define-type-id-retriever <null>-type-id			<null>)
   (define-type-id-retriever <nlist>-type-id			<nlist>)
@@ -2737,6 +2742,8 @@
   (define-type-spec-retriever <top>-ots				<top>)
   (define-type-spec-retriever <procedure>-ots			<procedure>)
   (define-type-spec-retriever <boolean>-ots			<boolean>)
+  (define-type-spec-retriever <true>-ots			<true>)
+  (define-type-spec-retriever <false>-ots			<false>)
   (define-type-spec-retriever <struct>-ots			<struct>)
   (define-type-spec-retriever <record>-ots			<record>)
   (define-type-spec-retriever <vector>-ots			<vector>)
@@ -2744,6 +2751,7 @@
   (define-type-spec-retriever <null>-ots			<null>)
   (define-type-spec-retriever <nlist>-ots			<nlist>)
   (define-type-spec-retriever <list>-ots			<list>)
+  (define-type-spec-retriever <pair>-ots			<pair>)
   (define-type-spec-retriever <stx>-ots				<stx>)
   (define-type-spec-retriever <syntactic-identifier>-ots	<syntactic-identifier>)
   (define-type-spec-retriever <condition>-ots			<condition>)
@@ -2761,9 +2769,13 @@
   (define-type-id-predicate <no-return>-type-id?		<no-return>-type-id)
   (define-type-id-predicate <void>-type-id?			<void>-type-id)
   (define-type-id-predicate <top>-type-id?			<top>-type-id)
+  (define-type-id-predicate <boolean>-type-id?			<boolean>-type-id)
+  (define-type-id-predicate <true>-type-id?			<true>-type-id)
+  (define-type-id-predicate <false>-type-id?			<false>-type-id)
   (define-type-id-predicate <procedure>-type-id?		<procedure>-type-id)
   (define-type-id-predicate <vector>-type-id?			<vector>-type-id)
   (define-type-id-predicate <empty-vector>-type-id?		<empty-vector>-type-id)
+  (define-type-id-predicate <pair>-type-id?			<pair>-type-id)
   (define-type-id-predicate <list>-type-id?			<list>-type-id)
   (define-type-id-predicate <null>-type-id?			<null>-type-id)
   (define-type-id-predicate <nlist>-type-id?			<nlist>-type-id)
@@ -2806,12 +2818,16 @@
   (define-type-spec-predicate <no-return>-ots?			<no-return>-ots)
   (define-type-spec-predicate <void>-ots?			<void>-ots)
   (define-type-spec-predicate <top>-ots?			<top>-ots)
+  (define-type-spec-predicate <boolean>-ots?			<boolean>-ots)
+  (define-type-spec-predicate <true>-ots?			<true>-ots)
+  (define-type-spec-predicate <false>-ots?			<false>-ots)
   (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
   (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
   (define-type-spec-predicate <null>-ots?			<null>-ots)
   (define-type-spec-predicate <nlist>-ots?			<nlist>-ots)
   (define-type-spec-predicate <list>-ots?			<list>-ots)
+  (define-type-spec-predicate <pair>-ots?			<pair>-ots)
   (define-type-spec-predicate <stx>-ots?			<stx>-ots)
   (define-type-spec-predicate <syntactic-identifier>-ots?	<syntactic-identifier>-ots)
   (define-type-spec-predicate <condition>-ots?			<condition>-ots)
