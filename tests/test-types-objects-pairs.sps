@@ -100,6 +100,7 @@
   (check-for-true	(is-a? '(1 . 2) <pair>))
   (check-for-false	(is-a? 123 <pair>))
 
+  (check-for-false	(is-a? '() <pair>))
   (check-for-true	(is-a? '(1) <pair>))
   (check-for-true	(is-a? '(1 2 . 3) <pair>))
 

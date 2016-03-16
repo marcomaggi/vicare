@@ -404,7 +404,11 @@
 	 ;;     ...
 	 ;;
 	 ;;So if SUPER.OTS is "<list>" or one of its subtypes: match.
-	 (%scan-parents-of-sub-ots (<list>-ots) super.ots))
+	 (if (or (<pair>-ots? super.ots)
+		 (pair-type-spec? super.ots)
+		 (pair-of-type-spec? super.ots))
+	     #f
+	   (%scan-parents-of-sub-ots (<list>-ots) super.ots)))
 
 	((<empty-vector>-ots? sub.ots)
 	 ;;Special case: we  consider "<empty-vector>" as sub-type  of "<vector>" and
