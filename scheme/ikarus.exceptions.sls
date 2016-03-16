@@ -31,15 +31,18 @@
 (define current-handlers
   (make-parameter
       (list (lambda (x)
-	      (let ((port (console-error-port)))
-		(display "*** Vicare: unhandled exception:\n" port)
-		(print-condition x (console-error-port)))
 	      (cond ((warning? x)
-		     ;;When a warning is raised with RAISE-CONTINUABLE: we want to go
-		     ;;on with the execution.
-		     (void))
-		    ((serious-condition? x)
-		     (exit -1))))
+		     ;;When a "&warning" is raised with RAISE-CONTINUABLE: we want to
+		     ;;go on with the execution.
+		     (let ((port (console-error-port)))
+		       (display "*** Vicare: warning:\n" port)
+		       (print-condition x port)))
+		    (else
+		     (let ((port (console-error-port)))
+		       (display "*** Vicare: unhandled exception:\n" port)
+		       (print-condition x port))
+		     (when (serious-condition? x)
+		       (exit -1)))))
 	    (lambda args
 	      (exit -1)))))
 
