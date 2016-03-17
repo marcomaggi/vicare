@@ -22,14 +22,11 @@
 (module (new-transformer
 	 delete-transformer
 	 is-a?-transformer
-	 internal-run-time-is-a?-transformer
 	 slot-ref-transformer
 	 slot-set!-transformer
 	 method-call-transformer
 	 unsafe-cast-signature-transformer
 	 case-type-transformer
-	 validate-typed-procedure-argument-transformer
-	 validate-typed-return-value-transformer
 	 assert-signature-transformer
 	 assert-signature-and-return-transformer
 	 type-of-transformer
@@ -512,27 +509,6 @@
   #| end of module: IS-A?-TRANSFORMER |# )
 
 
-;;;; module core-macro-transformer: INTERNAL-RUN-TIME-IS-A?
-
-(define-core-transformer (internal-run-time-is-a? input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand Vicare's  INTERNAL-RUN-TIME-IS-A?  syntaxes
-  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?expr ?pred-type-id)
-     (identifier? ?pred-type-id)
-     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.sig  (psi.retvals-signature expr.psi))
-	    (expr.core (psi.core-expr expr.psi)))
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?pred-type-id lexenv.run pred-ots)
-	 (let ((pred.stx  (or (object-type-spec.type-predicate-stx pred-ots)
-			      (%synner "type specification has no predicate for run-time use" ?pred-type-id))))
-	   (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-					      pred.stx expr.psi '())))))
-    ))
-
-
 ;;;; module core-macro-transformer: SLOT-REF
 
 (module (slot-ref-transformer)
@@ -914,47 +890,6 @@
   (main))
 
 
-;;;; module core-macro-transformer: VALIDATE-TYPED-PROCEDURE-ARGUMENT, VALIDATE-TYPED-RETURN-VALUE
-
-(define-core-transformer (validate-typed-procedure-argument input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's VALIDATE-TYPED-PROCEDURE-ARGUMENT
-  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
-  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type ?idx ?arg)
-     (let ((ots (id->object-type-specification __who__ input-form.stx ?type lexenv.run)))
-       (unless (identifier? ?arg)
-	 (%synner "expected identifier" ?arg))
-       ;;This syntax is  used to validate a closure object's  application operands at
-       ;;run-time; so  we must insert  a run-time validation predicate.   Using IS-A?
-       ;;will not do, because IS-A? also performs expand-time type checking.  This is
-       ;;why INTERNAL-RUN-TIME-IS-A? exists.
-       (chi-expr (bless
-		  `(if (internal-run-time-is-a? ,?arg ,?type)
-		       ,?arg
-		     (procedure-signature-argument-violation __who__ "invalid object type" ,?idx '(is-a? _ ,?type) ,?arg)))
-		 lexenv.run lexenv.expand)))
-    ))
-
-(define-core-transformer (validate-typed-return-value input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's VALIDATE-TYPED-RETURN-VALUE syntaxes
-  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type ?idx ?rv)
-     (let ((ots (id->object-type-specification __who__ input-form.stx ?type lexenv.run)))
-       (unless (identifier? ?rv)
-	 (%synner "expected identifier" ?rv))
-       (chi-expr (bless
-		  `(if (is-a? ,?rv ,?type)
-		       ,?rv
-		     (procedure-signature-return-value-violation __who__ "invalid object type" ,?idx '(is-a? _ ,?type) ,?rv)))
-		 lexenv.run lexenv.expand)))
-    ))
-
-
 ;;;; module core-macro-transformer: ASSERT-SIGNATURE, ASSERT-SIGNATURE-AND-RETURN
 
 (module (assert-signature-transformer assert-signature-and-return-transformer)
@@ -1131,23 +1066,6 @@
     ;;                        (fxadd1 idx))
     ;;             3 rest)
     ;; 	         rest))))
-    ;;
-    ;;The input form:
-    ;;
-    ;;   (assert-signature (<fixnum> <flonum> . (list-of <fixnum>)) ?expr)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   (call-with-values
-    ;;       (lambda/std () ?expr)
-    ;;     (lambda/std rest
-    ;;       (begin
-    ;;         (validate-typed-return-value <fixnum> 0 arg0)
-    ;;         (validate-typed-return-value <flonum> 1 arg1)
-    ;; 	       (fold-left (lambda/std (idx obj)
-    ;;                      (validate-typed-return-value <fixnum> idx obj)
-    ;;                      (fxadd1 idx))
-    ;; 	         2 rest))))
     ;;
     (define* (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
 				   asrt.stx {asrt.sig type-signature?} {expr.psi psi?} return-values?)

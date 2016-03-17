@@ -176,11 +176,7 @@
     ((method-call)				method-call-transformer)
     ((case-type)				case-type-transformer)
 
-    ((internal-run-time-is-a?)			internal-run-time-is-a?-transformer)
-
     ((unsafe-cast-signature)			unsafe-cast-signature-transformer)
-    ((validate-typed-procedure-argument)	validate-typed-procedure-argument-transformer)
-    ((validate-typed-return-value)		validate-typed-return-value-transformer)
     ((assert-signature)				assert-signature-transformer)
     ((assert-signature-and-return)		assert-signature-and-return-transformer)
 
