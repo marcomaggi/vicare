@@ -670,6 +670,9 @@
   (import CLOSURE-APPLICATION-ERRORS)
   (define-module-who chi-car-application)
 
+  (define (%core-prim-id)
+    (core-prim-id 'car))
+
   (define (chi-car-application input-form.stx lexenv.run lexenv.expand rands.stx)
     (syntax-match rands.stx ()
       ((?rand)
@@ -686,12 +689,12 @@
 
       (()
        (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	 (core-prim-id 'car) '() 1 0))
+	 (%core-prim-id) '() 1 0))
 
       ((?rand0 ?rand1 ?rand* ...)
        (let ((rand*.stx (cons* ?rand0 ?rand1 ?rand*)))
 	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	   (core-prim-id 'car) rand*.stx 1 (length rand*.stx))))
+	   (%core-prim-id) rand*.stx 1 (length rand*.stx))))
       ))
 
   (define (%operand-signature->application-signature input-form.stx rand.stx rand.sig)
@@ -766,7 +769,7 @@
 			   (make-who-condition __module_who__)
 			   (make-message-condition "expand-time mismatch between closure object's arguments signatures and operands signature")
 			   (make-syntax-violation input-form.stx rand.stx)
-			   (make-application-operator-expression-condition (core-prim-id 'car))
+			   (make-application-operator-expression-condition (%core-prim-id))
 			   (make-application-operands-expressions-condition (list rand.stx))
 			   (make-application-argument-type-name-condition (<pair>-type-id))
 			   (make-application-operand-signature-condition rand.sig))))
@@ -795,6 +798,9 @@
   (import CLOSURE-APPLICATION-ERRORS)
   (define-module-who chi-cdr-application)
 
+  (define (%core-prim-id)
+    (core-prim-id 'cdr))
+
   (define (chi-cdr-application input-form.stx lexenv.run lexenv.expand rands.stx)
     (syntax-match rands.stx ()
       ((?rand)
@@ -811,12 +817,12 @@
 
       (()
        (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
-	 (core-prim-id 'cdr) '() 1 0))
+	 (%core-prim-id) '() 1 0))
 
       ((?rand0 ?rand1 ?rand* ...)
        (let ((rand*.stx (cons* ?rand0 ?rand1 ?rand*)))
 	 (%error-number-of-operands-exceeds-maximum-arguments-count input-form.stx
-	   (core-prim-id 'cdr) rand*.stx 1 (length rand*.stx))))
+	   (%core-prim-id) rand*.stx 1 (length rand*.stx))))
       ))
 
   (define (%operand-signature->application-signature input-form.stx rand.stx rand.sig)
@@ -894,7 +900,7 @@
 			   (make-who-condition __module_who__)
 			   (make-message-condition "expand-time mismatch between closure object's arguments signatures and operands signature")
 			   (make-syntax-violation input-form.stx rand.stx)
-			   (make-application-operator-expression-condition (core-prim-id 'car))
+			   (make-application-operator-expression-condition (%core-prim-id))
 			   (make-application-operands-expressions-condition (list rand.stx))
 			   (make-application-argument-type-name-condition (<pair>-type-id))
 			   (make-application-operand-signature-condition rand.sig))))
@@ -904,7 +910,7 @@
 		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
 		  (<top>-ots))))))))
 
-  #| end of module: CHI-CAR-APPLICATION |# )
+  #| end of module: CHI-CDR-APPLICATION |# )
 
 
 (module (chi-vector-application)
