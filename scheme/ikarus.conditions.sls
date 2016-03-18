@@ -726,6 +726,11 @@
   (and ($struct? ?obj)
        ($record-and-rtd? ?obj ?rtd)))
 
+(define (who-condition-value? obj)
+  (or (not     obj)
+      (symbol? obj)
+      (string? obj)))
+
 
 ;;;; data types and some predicates
 
@@ -1005,8 +1010,11 @@
   (irritants condition-irritants))
 
 (define-condition-type &who &condition
-  make-who-condition who-condition?
+  %make-who-condition who-condition?
   (who condition-who))
+
+(define* (make-who-condition {who who-condition-value?})
+  (%make-who-condition who))
 
 (define-condition-type &non-continuable &violation
   make-non-continuable-violation non-continuable-violation?)
@@ -1213,10 +1221,14 @@
     &assertion
   make-expression-return-value-violation expression-return-value-violation?)
 
-(define (expression-return-value-violation who message idx . irritants)
-  (raise-non-continuable-standard-condition who message irritants
-					    (make-expression-return-value-violation)
-					    (make-one-based-return-value-index-condition idx)))
+(define* (expression-return-value-violation {who who-condition-value?} message idx . irritants)
+  (raise
+   ;;We want "&expression-return-value-violation" to be the first component.
+   (condition (make-expression-return-value-violation)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-one-based-return-value-index-condition idx))))
 
 ;;; --------------------------------------------------------------------
 
