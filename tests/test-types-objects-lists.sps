@@ -102,6 +102,44 @@
   (doit (list 1 '())
 	#'((list <positive-fixnum> <null>)))
 
+;;; --------------------------------------------------------------------
+
+  (doit (car '(1 "2"))
+	#'(<positive-fixnum>))
+
+  (doit (cdr '(1 "2"))
+	#'((list <string>)))
+
+  (doit (car (read))
+	#'(<top>))
+
+  (doit (cdr (read))
+	#'(<top>))
+
+  (doit (car (unsafe-cast-signature (<top>) (read)))
+	#'(<top>))
+
+  (doit (cdr (unsafe-cast-signature (<top>) (read)))
+	#'(<top>))
+
+  (doit (car (unsafe-cast-signature (<pair>) (read)))
+	#'(<top>))
+
+  (doit (cdr (unsafe-cast-signature (<pair>) (read)))
+	#'(<top>))
+
+  (doit (car (unsafe-cast-signature ((list-of <fixnum>)) (read)))
+	#'(<fixnum>))
+
+  (doit (cdr (unsafe-cast-signature ((list-of <fixnum>)) (read)))
+	#'((list-of <fixnum>)))
+
+  (doit (car (unsafe-cast-signature ((list <fixnum> <string>)) (read)))
+	#'(<fixnum>))
+
+  (doit (cdr (unsafe-cast-signature ((list <fixnum> <string>)) (read)))
+	#'((list <string>)))
+
   (void))
 
 

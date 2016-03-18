@@ -63,6 +63,49 @@
   (doit (cons 1 (cons 2 3))
 	#'((pair <positive-fixnum> (pair <positive-fixnum> <positive-fixnum>))))
 
+;;; --------------------------------------------------------------------
+
+  (doit (car '(1 . "2"))
+	#'(<positive-fixnum>))
+
+  (doit (cdr '(1 . "2"))
+	#'(<string>))
+
+  (doit (car (read))
+	#'(<top>))
+
+  (doit (cdr (read))
+	#'(<top>))
+
+  (doit (car (unsafe-cast-signature (<top>) (read)))
+	#'(<top>))
+
+  (doit (cdr (unsafe-cast-signature (<top>) (read)))
+	#'(<top>))
+
+  (doit (car (unsafe-cast-signature (<pair>) (read)))
+	#'(<top>))
+
+  (doit (cdr (unsafe-cast-signature (<pair>) (read)))
+	#'(<top>))
+
+  (doit (car (unsafe-cast-signature ((pair-of <fixnum>)) (read)))
+	#'(<fixnum>))
+
+  (doit (cdr (unsafe-cast-signature ((pair-of <fixnum>)) (read)))
+	#'(<fixnum>))
+
+  (doit (car (unsafe-cast-signature ((pair <fixnum> <string>)) (read)))
+	#'(<fixnum>))
+
+  (doit (cdr (unsafe-cast-signature ((pair <fixnum> <string>)) (read)))
+	#'(<string>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (cdr (unsafe-cast-signature ((pair <fixnum> (pair <symbol> <string>))) (read)))
+	#'((pair <symbol> <string>)))
+
   (void))
 
 
