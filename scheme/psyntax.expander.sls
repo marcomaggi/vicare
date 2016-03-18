@@ -82,17 +82,7 @@
     syntax-violation			assertion-error
 
     ;;SYNTAX-CASE subroutines
-    syntax-dispatch			ellipsis-map
-
-    <type-signature>
-    make-type-signature			type-signature?
-    type-signature.specs		type-signature.tags
-
-    ;; expand-time type checking exception stuff
-    expand-time-type-signature-violation?
-    expand-time-retvals-signature-violation?
-    expand-time-retvals-signature-violation-expected-signature
-    expand-time-retvals-signature-violation-returned-signature)
+    syntax-dispatch			ellipsis-map)
   (import (except (rnrs)
 		  eval
 		  environment		environment?

@@ -43,7 +43,6 @@
   (signatures
    ((<null>)		=> (<false>))
    ((<pair>)		=> (<true>))
-   ((<nlist>)		=> (<true>))
    ((<list>)		=> (<boolean>))
    #;((_)		=> (<boolean>))
    ((_)			=> (<false>)))
@@ -60,7 +59,15 @@
    ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
 
-(declare-type-predicate nlist? <nlist>)
+(declare-core-primitive nlist?
+    (safe)
+  (signatures
+   ((<null>)		=> (<false>))
+   ((<list>)		=> (<boolean>))
+   ((_)			=> (<false>)))
+  (attributes
+   ((())		foldable effect-free result-false)
+   ((_)			foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; constructors
@@ -68,7 +75,7 @@
 (declare-core-primitive cons
     (safe)
   (signatures
-   ((<top> <list>)		=> (<nlist>))
+   ((<top> <list>)		=> (<list>))
    ((_ _)			=> (<pair>)))
   (attributes
    ;;This is not foldable because it must return a newly allocated pair every time.
@@ -89,7 +96,7 @@
     (safe)
   (signatures
    (()			=> (<null>))
-   ((_ . _)		=> (<nlist>)))
+   ((_ . _)		=> (<list>)))
   (attributes
    ;;Foldable because it returns null.
    (()			foldable effect-free result-true)
@@ -113,7 +120,7 @@
     (safe)
   (signatures
    ((<null>)			=> (<null>))
-   ((<nlist>)			=> (<nlist>)))
+   ((<list>)			=> (<list>)))
   (attributes
    ;;This is foldable because it returns null itself.
    ((())		foldable effect-free result-true)
@@ -138,7 +145,7 @@
     (safe)
   (signatures
    ((<null>)			=> (<zero-fixnum>))
-   ((<nlist>)			=> (<non-negative-exact-integer>)))
+   ((<list>)			=> (<non-negative-exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -151,8 +158,8 @@
 (declare-core-primitive memp
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<false>))
-   ((<procedure> <nlist>)	=> (_)))
+   ((<procedure> <null>)		=> (<false>))
+   ((<procedure> <list>)		=> (_)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
@@ -163,8 +170,8 @@
 (declare-core-primitive remp
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<null>))
-   ((<procedure> <nlist>)	=> (<list>)))
+   ((<procedure> <null>)		=> (<null>))
+   ((<procedure> <list>)		=> (<list>)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
@@ -175,7 +182,7 @@
     (safe)
   (signatures
    ((<top> <null>)			=> (<null>))
-   ((<top> <nlist>)	=> (<list>)))
+   ((<top> <list>)			=> (<list>)))
   (attributes
    ((_ ())				foldable effect-free result-true)
    ((_ _)				foldable effect-free result-true)))
@@ -184,7 +191,7 @@
     (safe)
   (signatures
    ((<top> <null>)			=> (<null>))
-   ((<top> <nlist>)	=> (<list>)))
+   ((<top> <list>)			=> (<list>)))
   (attributes
    ((_ ())				foldable effect-free result-true)
    ((_ _)				foldable effect-free result-true)))
@@ -193,7 +200,7 @@
     (safe)
   (signatures
    ((<top> <null>)			=> (<null>))
-   ((<top> <nlist>)	=> (<list>)))
+   ((<top> <list>)			=> (<list>)))
   (attributes
    ((_ ())				foldable effect-free result-true)
    ((_ _)				foldable effect-free result-true)))
@@ -203,7 +210,7 @@
 (declare-core-primitive last-pair
     (safe)
   (signatures
-   ((<nlist>)				=> (<pair>))
+   ((<list>)				=> (<pair>))
    ((<standalone-pair>)			=> (<standalone-pair>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
@@ -211,14 +218,14 @@
 (declare-core-primitive list-tail
     (safe)
   (signatures
-   ((<nlist> <exact-integer>)	=> (<list>)))
+   ((<list> <exact-integer>)		=> (<list>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive list-ref
     (safe)
   (signatures
-   ((<nlist> <exact-integer>)	=> (<top>)))
+   ((<list> <exact-integer>)		=> (<top>)))
   (attributes
    ((_ _)				foldable effect-free)))
 
@@ -251,8 +258,8 @@
 (declare-core-primitive find
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<false>))
-   ((<procedure> <nlist>)	=> (<top>)))
+   ((<procedure> <null>)		=> (<false>))
+   ((<procedure> <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -261,8 +268,8 @@
 (declare-core-primitive exists
     (safe)
   (signatures
-   ((<procedure> <null>  . (list-of <null>))	=> (<false>))
-   ((<procedure> <nlist> . <list>)		=> (<top>)))
+   ((<procedure> <null> . (list-of <null>))	=> (<false>))
+   ((<procedure> <list> . <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -271,8 +278,8 @@
 (declare-core-primitive for-all
     (safe)
   (signatures
-   ((<procedure> <null>  . (list-of <null>))	=> (<true>))
-   ((<procedure> <nlist> . <list>)		=> (<top>)))
+   ((<procedure> <null> . (list-of <null>))	=> (<true>))
+   ((<procedure> <list> . <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -281,8 +288,8 @@
 (declare-core-primitive filter
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<null>))
-   ((<procedure> <nlist>)	=> (<list>)))
+   ((<procedure> <null>)		=> (<null>))
+   ((<procedure> <list>)		=> (<list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -291,8 +298,8 @@
 (declare-core-primitive partition
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<null> <null>))
-   ((<procedure> <nlist>)	=> (<list> <list>)))
+   ((<procedure> <null>)		=> (<null> <null>))
+   ((<procedure> <list>)		=> (<list> <list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -319,10 +326,10 @@
 (declare-core-primitive andmap
     (safe)
   (signatures
-   ((<procedure> <null>)						=> (<true>))
-   ((<procedure> <nlist>)				=> (<top>))
-   ((<procedure> <null> <null>)						=> (<true>))
-   ((<procedure> <nlist> <nlist>)	=> (<top>)))
+   ((<procedure> <null>)		=> (<true>))
+   ((<procedure> <list>)		=> (<top>))
+   ((<procedure> <null> <null>)		=> (<true>))
+   ((<procedure> <list> <list>)		=> (<top>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -332,8 +339,8 @@
 (declare-core-primitive ormap
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<false>))
-   ((<procedure> <nlist>)	=> (<top>)))
+   ((<procedure> <null>)		=> (<false>))
+   ((<procedure> <list>)		=> (<top>)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
@@ -355,22 +362,13 @@
     (safe)
   (signatures
    ((<pair>)		=> (<top>))
-   ((<nlist>)		=> (<top>))
-   ;;FIXME Strictly  speaking this is wrong:  "<list>" can also be  null, so applying
-   ;;CAR is an error.   This is why the replacement is  commented out.  (Marco Maggi;
-   ;;Thu Oct 22, 2015)
    ((<list>)		=> (<top>)))
-  ;;(replacements $car)
   #| end of DECLARE-CORE-PRIMITIVE |# )
 
 (declare-core-primitive cdr
     (safe)
   (signatures
    ((<pair>)		=> (<top>))
-   ((<nlist>)		=> (<top>))
-   ;;FIXME Strictly  speaking this is wrong:  "<list>" can also be  null, so applying
-   ;;CDR is an error.   This is why the replacement is  commented out.  (Marco Maggi;
-   ;;Thu Oct 22, 2015)
    ((<list>)		=> (<top>)))
   ;;(replacements $cdr)
   #| end of DECLARE-CORE-PRIMITIVE |# )
@@ -423,8 +421,8 @@
 (declare-core-primitive assp
     (safe)
   (signatures
-   ((<procedure> <null>)			=> (<false>))
-   ((<procedure> <nlist>)	=> (_)))
+   ((<procedure> <null>)		=> (<false>))
+   ((<procedure> <list>)		=> (_)))
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.

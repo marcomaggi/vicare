@@ -730,7 +730,7 @@
 	     (cond ((object-type-spec.matching-super-and-sub? arg.ots rand.ots)
 		    ;;The argument matches the operand.  Good.
 		    (success-kont state))
-		   ((object-type-spec.matching-super-and-sub? rand.ots arg.ots)
+		   ((object-type-spec.compatible-super-and-sub? arg.ots rand.ots)
 		    ;;The argument is compatible with the operand.  Good.
 		    (success-kont 'possible-match))
 		   (else
@@ -763,7 +763,7 @@
 		    (if (and (list-of-type-spec? rand.ots)
 			     (let ((item.ots (list-of-type-spec.item-ots rand.ots)))
 			       (or (object-type-spec.matching-super-and-sub? arg.ots item.ots)
-				   (object-type-spec.matching-super-and-sub? item.ots arg.ots))))
+				   (object-type-spec.compatible-super-and-sub? arg.ots item.ots))))
 			;;If  the  operand  returns  a  single  value:  its  type  is
 			;;compatible with the expected argument.  Example:
 			;;

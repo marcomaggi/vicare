@@ -94,6 +94,22 @@
 
 ;;; --------------------------------------------------------------------
 
+     &expected-type-signature
+     &expected-type-signature-rtd
+     &expected-type-signature-rcd
+     make-expected-type-signature-condition
+     expected-type-signature-condition?
+     condition-expected-type-signature
+
+     &returned-type-signature
+     &returned-type-signature-rtd
+     &returned-type-signature-rcd
+     make-returned-type-signature-condition
+     returned-type-signature-condition?
+     condition-returned-type-signature
+
+;;; --------------------------------------------------------------------
+
      &type-method-name
      &type-method-name-rtd
      &type-method-name-rcd
@@ -108,14 +124,6 @@
      &expand-time-type-signature-violation-rcd
      make-expand-time-type-signature-violation
      expand-time-type-signature-violation?
-
-     &expand-time-retvals-signature-violation
-     &expand-time-retvals-signature-violation-rtd
-     &expand-time-retvals-signature-violation-rcd
-     make-expand-time-retvals-signature-violation
-     expand-time-retvals-signature-violation?
-     expand-time-retvals-signature-violation-expected-signature
-     expand-time-retvals-signature-violation-returned-signature
 
      &expand-time-type-signature-warning
      &expand-time-type-signature-warning-rtd
@@ -279,6 +287,29 @@
   (record-constructor-descriptor &application-argument-index))
 
 
+;;;; condition object types: descriptive objects, type signatures
+
+(define-condition-type &expected-type-signature
+    &condition
+  make-expected-type-signature-condition
+  expected-type-signature-condition?
+  (expected-type-signature	condition-expected-type-signature))
+(define &expected-type-signature-rtd
+  (record-type-descriptor &expected-type-signature))
+(define &expected-type-signature-rcd
+  (record-constructor-descriptor &expected-type-signature))
+
+(define-condition-type &returned-type-signature
+    &condition
+  make-returned-type-signature-condition
+  returned-type-signature-condition?
+  (returned-type-signature	condition-returned-type-signature))
+(define &returned-type-signature-rtd
+  (record-type-descriptor &returned-type-signature))
+(define &returned-type-signature-rcd
+  (record-constructor-descriptor &returned-type-signature))
+
+
 ;;;; condition object types: descriptive objects
 
 ;;This is used to describe a type's  method name involved in an exception.  The field
@@ -316,30 +347,6 @@
   (record-type-descriptor &expand-time-type-signature-warning))
 (define &expand-time-type-signature-warning-rcd
   (record-constructor-descriptor &expand-time-type-signature-warning))
-
-;;; --------------------------------------------------------------------
-
-;;This is  used to describe  exceptions in which:  after expanding an  expression, we
-;;were expecting it to  have a "retvals-signature" matching a given  one, but the one
-;;we got does not match.
-;;
-;;See the function EXPAND-TIME-RETVALS-SIGNATURE-VIOLATION for details.
-(define-condition-type &expand-time-retvals-signature-violation
-    &expand-time-type-signature-violation
-  %make-expand-time-retvals-signature-violation
-  expand-time-retvals-signature-violation?
-  (expected-signature expand-time-retvals-signature-violation-expected-signature)
-  (returned-signature expand-time-retvals-signature-violation-returned-signature))
-
-(define &expand-time-retvals-signature-violation-rtd
-  (record-type-descriptor &expand-time-retvals-signature-violation))
-
-(define &expand-time-retvals-signature-violation-rcd
-  (record-constructor-descriptor &expand-time-retvals-signature-violation))
-
-(define* (make-expand-time-retvals-signature-violation {expected-signature type-signature?}
-						       {returned-signature type-signature?})
-  (%make-expand-time-retvals-signature-violation expected-signature returned-signature))
 
 ;;; --------------------------------------------------------------------
 

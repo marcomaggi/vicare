@@ -18,8 +18,8 @@
 #!vicare
 (library (ikarus lists)
   (export
-    list? nlist? make-list-of-predicate
-    list nlist cons* make-list append length list-ref reverse
+    list? make-list-of-predicate
+    list cons* make-list append length list-ref reverse
     last-pair memq memp memv member find assq assp assv assoc
     remq remv remove remp filter map for-each
     (rename (for-each for-each-in-order)) andmap ormap list-tail
@@ -31,8 +31,8 @@
     map1		for-each1
     for-all1		exists1)
   (import (except (vicare)
-		  list? nlist? make-list-of-predicate
-		  list nlist cons* make-list append reverse
+		  list? make-list-of-predicate
+		  list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
@@ -89,23 +89,16 @@
 
 (define list (lambda x x))
 
-(define (nlist item . item*)
-  (cons item item*))
-
 (define (cons* fst . rest)
   (let loop ((fst fst) (rest rest))
     (if (null? rest)
 	fst
       (cons fst (loop ($car rest) ($cdr rest))))))
 
-(module (list? nlist?)
+(module (list?)
 
   (define (list? x)
     (%race x x))
-
-  (define (nlist? x)
-    (and (pair? x)
-	 (%race x x)))
 
   (define (%race h t)
     ;;Tortoise and hare algorithm to detect circular lists.

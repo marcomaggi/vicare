@@ -90,6 +90,12 @@
     generate-storage-location-gensym
     generate-label-gensym
 
+    ;;
+    <type-signature>
+    <type-signature>-rtd				<type-signature>-rcd
+    make-type-signature					type-signature?
+    type-signature.tags					type-signature.specs
+
     ;; object types specifications
     <object-type-spec>
     object-type-spec?
@@ -98,12 +104,13 @@
     object-type-spec.type-predicate-stx
     object-type-spec.safe-accessor-stx			object-type-spec.safe-mutator-stx
     object-type-spec.applicable-method-stx
+    object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
 
-    object-type-spec.super-and-sub?			object-type-spec.matching-super-and-sub?
-    object-type-spec.common-ancestor			object-type-spec=?
+    object-type-spec.matching-super-and-sub?		object-type-spec.compatible-super-and-sub?
+    object-type-spec=?
+    object-type-spec.common-ancestor
     object-type-spec.procedure?
-    object-type-spec.list-sub-type?
-    object-type-spec.vector-sub-type?
+    object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
 
     <scheme-type-spec>
     make-scheme-type-spec				scheme-type-spec?
@@ -274,7 +281,6 @@
     <null>-type-id			<null>-type-id?
     <vector>-type-id			<vector>-type-id?
     <empty-vector>-type-id		<empty-vector>-type-id?
-    <nlist>-type-id			<nlist>-type-id?
     <stx>-type-id			<stx>-type-id?
     <syntactic-identifier>-type-id	<syntactic-identifier>-type-id?
     <top>-type-id			<top>-type-id?
@@ -292,7 +298,6 @@
     <procedure>-ots			<procedure>-ots?
     <pair>-ots				<pair>-ots?
     <null>-ots				<null>-ots?
-    <nlist>-ots				<nlist>-ots?
     <list>-ots				<list>-ots?
     <vector>-ots			<vector>-ots?
     <empty-vector>-ots			<empty-vector>-ots?
@@ -384,6 +389,20 @@
     application-operand-signature-condition?
     condition-application-operand-signature
 
+    &expected-type-signature
+    &expected-type-signature-rtd
+    &expected-type-signature-rcd
+    make-expected-type-signature-condition
+    expected-type-signature-condition?
+    condition-expected-type-signature
+
+    &returned-type-signature
+    &returned-type-signature-rtd
+    &returned-type-signature-rcd
+    make-returned-type-signature-condition
+    returned-type-signature-condition?
+    condition-returned-type-signature
+
     &macro-expansion-trace
     &macro-expansion-trace-rtd
     &macro-expansion-trace-rcd
@@ -395,14 +414,6 @@
     &expand-time-type-signature-violation-rcd
     make-expand-time-type-signature-violation
     expand-time-type-signature-violation?
-
-    &expand-time-retvals-signature-violation
-    &expand-time-retvals-signature-violation-rtd
-    &expand-time-retvals-signature-violation-rcd
-    make-expand-time-retvals-signature-violation
-    expand-time-retvals-signature-violation?
-    expand-time-retvals-signature-violation-expected-signature
-    expand-time-retvals-signature-violation-returned-signature
 
     &expand-time-type-signature-warning
     &expand-time-type-signature-warning-rtd
@@ -2725,7 +2736,6 @@
   (define-type-id-retriever <pair>-type-id			<pair>)
   (define-type-id-retriever <list>-type-id			<list>)
   (define-type-id-retriever <null>-type-id			<null>)
-  (define-type-id-retriever <nlist>-type-id			<nlist>)
   (define-type-id-retriever <stx>-type-id			<stx>)
   (define-type-id-retriever <syntactic-identifier>-type-id	<syntactic-identifier>)
   (define-type-id-retriever <condition>-type-id			<condition>)
@@ -2754,7 +2764,6 @@
   (define-type-spec-retriever <vector>-ots			<vector>)
   (define-type-spec-retriever <empty-vector>-ots		<empty-vector>)
   (define-type-spec-retriever <null>-ots			<null>)
-  (define-type-spec-retriever <nlist>-ots			<nlist>)
   (define-type-spec-retriever <list>-ots			<list>)
   (define-type-spec-retriever <pair>-ots			<pair>)
   (define-type-spec-retriever <stx>-ots				<stx>)
@@ -2783,7 +2792,6 @@
   (define-type-id-predicate <pair>-type-id?			<pair>-type-id)
   (define-type-id-predicate <list>-type-id?			<list>-type-id)
   (define-type-id-predicate <null>-type-id?			<null>-type-id)
-  (define-type-id-predicate <nlist>-type-id?			<nlist>-type-id)
   (define-type-id-predicate <record>-type-id?			<record>-type-id)
   (define-type-id-predicate <stx>-type-id?			<stx>-type-id)
   (define-type-id-predicate <syntactic-identifier>-type-id?	<syntactic-identifier>-type-id)
@@ -2830,7 +2838,6 @@
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
   (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
   (define-type-spec-predicate <null>-ots?			<null>-ots)
-  (define-type-spec-predicate <nlist>-ots?			<nlist>-ots)
   (define-type-spec-predicate <list>-ots?			<list>-ots)
   (define-type-spec-predicate <pair>-ots?			<pair>-ots)
   (define-type-spec-predicate <stx>-ots?			<stx>-ots)

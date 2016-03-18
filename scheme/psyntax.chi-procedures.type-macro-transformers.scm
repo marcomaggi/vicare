@@ -68,28 +68,21 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-name ?rand* ...)
-       (identifier? ?type-name)
        (with-object-type-syntactic-binding (__who__ input-form.stx ?type-name lexenv.run type.ots)
-	 (cond ((list-of-type-spec? type.ots)
-		(%build-list-of-construction input-form.stx lexenv.run lexenv.expand type.ots ?rand*))
+	 (cond ((or (list-of-type-spec? type.ots)
+		    (list-type-spec?    type.ots))
+		(%process-compound-constructor input-form.stx lexenv.run lexenv.expand
+					       (cons (core-prim-id 'list) ?rand*) type.ots))
 
-	       ((list-type-spec? type.ots)
-		(assertion-violation __who__ "constructor of heterogeneous list type is not yet implemented" ?type-name))
+	       ((or (vector-of-type-spec? type.ots)
+		    (vector-type-spec?    type.ots))
+		(%process-compound-constructor input-form.stx lexenv.run lexenv.expand
+					       (cons (core-prim-id 'vector) ?rand*) type.ots))
 
-	       ((vector-of-type-spec? type.ots)
-		(assertion-violation __who__ "constructor of homogeneous vector type is not yet implemented" ?type-name))
-
-	       ((vector-type-spec? type.ots)
-		(assertion-violation __who__ "constructor of heterogeneous vector type is not yet implemented" ?type-name))
-
-	       ((pair-of-type-spec? type.ots)
-		(assertion-violation __who__ "constructor of homogeneous pair type is not yet implemented" ?type-name))
-
-	       ((pair-type-spec? type.ots)
-		(assertion-violation __who__ "constructor of heterogeneous pair type is not yet implemented" ?type-name))
-
-	       ((closure-type-spec? type.ots)
-		(%synner "cannot build a closure with NEW"))
+	       ((or (pair-of-type-spec? type.ots)
+		    (pair-type-spec?    type.ots))
+		(%process-compound-constructor input-form.stx lexenv.run lexenv.expand
+					       (cons (core-prim-id 'cons) ?rand*) type.ots))
 
 	       ((object-type-spec.constructor-stx type.ots)
 		=> (lambda (constructor.stx)
@@ -129,130 +122,48 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%build-list-of-construction)
-    ;;The type identifier given to NEW requests building a list of type "(list-of ?item-type)".
-    ;;
-    (define (%build-list-of-construction input-form.stx lexenv.run lexenv.expand list-type.ots rand*.stx)
-      (if (null? rand*.stx)
-	  ;;No operands, so we build an empty list: we just return null.
-	  (make-psi input-form.stx
-	    (build-data no-source '())
-	    (make-type-signature/single-value (<null>-ots)))
-	;;There is at least one operand.  We built an expression like:
-	;;
-	;;   (list ?rand ...)
-	;;
-	;;where each  ?RAND is: just  the expression itself,  if its type  matches at
-	;;expand-time; a validator expression like:
-	;;
-	;;   ((lambda (arg)
-	;;      (if (?type-pred arg)
-	;; 	    arg
-	;;        (procedure-signature-argument-violation ?type-name
-	;; 	    "invalid object type" ?index (quote ?type-pred) arg)))
-	;;    ?rand)
-	;;
-	;;if the operand's type needs to be validated at run-time.
-	(let* ((item.ots	(list-of-type-spec.item-ots list-type.ots))
-	       (rand*.core	(map (lambda (rand.stx rand.idx)
-				       (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
-									  item.ots rand.stx rand.idx))
-				  rand*.stx (%fxiota 0 rand*.stx))))
-	  (make-psi input-form.stx
-	    (build-application input-form.stx
-		(build-primref no-source 'list)
-	      (cons* rand*.core))
-	    (make-type-signature/single-value list-type.ots)))))
-
-    (define (%process-list-constructor-operand input-form.stx lexenv.run lexenv.expand
-					       item.ots rand.stx rand.idx)
-      (define rand.psi (chi-expr rand.stx lexenv.run lexenv.expand))
-      (define rand.sig (psi.retvals-signature rand.psi))
-      (define (%run-time-validation)
-	(%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand item.ots rand.psi rand.idx))
-      (case-signature-specs rand.sig
-	((<top>)
-	 ;;Integrate a run-time validator for the single return value.
-	 (%run-time-validation))
-
+  (define (%process-compound-constructor input-form.stx lexenv.run lexenv.expand
+					 expr.stx type.ots)
+    (let* ((result.psi (chi-expr expr.stx lexenv.run lexenv.expand))
+	   (result.sig (psi.retvals-signature result.psi)))
+      (case-signature-specs result.sig
 	((single-value)
-	 => (lambda (operand.ots)
-	      (if (object-type-spec.matching-super-and-sub? item.ots operand.ots)
-		  ;;Success!!!  Just evaluate the operand's expression.
-		  (psi.core-expr rand.psi)
-		(raise
-		 (condition
-		  (make-expand-time-type-signature-violation)
-		  (%make-signature-mismatch-condition "expand-time mismatch between list's item type and operand signature"
-						      input-form.stx rand.stx rand.idx rand.sig item.ots))))))
-
-	(<no-return>
-	 (let ((common (%make-signature-mismatch-condition "expression used as list constructor operand is typed as not returning"
-							   input-form.stx rand.stx rand.idx rand.sig item.ots)))
-	   (if (options::typed-language?)
-	       (raise (condition (make-expand-time-type-signature-violation) common))
-	     (begin
-	       (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	       (%run-time-validation)))))
-
-	(<list-of>
-	 => (lambda (operand.ots)
-	      (let ((operand-item.ots (list-of-type-spec.item-ots operand.ots)))
-		(if (object-type-spec.matching-super-and-sub? item.ots operand-item.ots)
-		    ;;We let  the integrated single-value  validation do the  rest of
-		    ;;the job.
-		    (psi.core-expr rand.psi)
-		  (raise
-		   (condition
-		    (make-expand-time-type-signature-violation)
-		    (%make-signature-mismatch-condition "expand-time mismatch between list's item type and operand signature"
-							input-form.stx rand.stx rand.idx rand.sig item.ots)))))))
-
-	(<list>
-	 ;;The  retvals signature  is  fully unspecified.   We  integrate a  run-time
-	 ;;validator  expecting a  single  return value.   We  use the  automatically
-	 ;;generated machine code to validate the number of return values.
-	 (%run-time-validation))
-
+	 => (lambda (result.ots)
+	      (cond ((object-type-spec.matching-super-and-sub? type.ots result.ots)
+		     ;;Matching signature.  Good.
+		     result.psi)
+		    ((object-type-spec.compatible-super-and-sub? type.ots result.ots)
+		     ;;Compatible signature.  Insert a run-time validation.
+		     (let* ((validator.stx	(object-type-spec.single-value-validator-lambda-stx type.ots 1))
+			    (appl.psi		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+										   validator.stx result.psi
+										   (list 1 (bless `(quote ,__module_who__))))))
+		       (make-psi (psi.input-form appl.psi)
+			 (psi.core-expr appl.psi)
+			 result.sig)))
+		    (else
+		     ;;Non-compatible signature.
+		     (%error-return-value-of-invalid-type input-form.stx type.ots result.sig)))))
 	(else
-	 ;;The  horror!!!  We  have established  at expand-time  that the  expression
-	 ;;returns multiple values; type violation.
-	 (raise
-	  (condition
-	   (make-expand-time-type-signature-violation)
-	   (%make-signature-mismatch-condition "the expression used as constructor's operand returns multiple values"
-					       input-form.stx rand.stx rand.idx rand.sig item.ots))))))
+	 (%error-multiple-return-values input-form.stx type.ots result.sig)))))
 
-    (define (%build-type-run-time-validation input-form.stx lexenv.run lexenv.expand
-					     item.ots rand.psi rand.idx)
-      ;;Build and return  a psi object representing an expression  which: at run-time
-      ;;validates  the operand  RAND.PSI as  a single  value of  type ITEM.OTS;  when
-      ;;successful returns the value itself.
-      ;;
-      (let* ((validator.stx	(let ((arg.sym		(gensym "arg"))
-				      (pred.stx		(object-type-spec.type-predicate-stx item.ots))
-				      (name.stx		(object-type-spec.name item.ots)))
-				  (bless
-				   `(lambda (,arg.sym)
-				      (if (,pred.stx ,arg.sym)
-					  ,arg.sym
-					(procedure-signature-argument-violation (quote ,name.stx)
-					  "invalid object type" ,rand.idx (quote (is-a? _ ,name.stx)) ,arg.sym))))))
-	     (validator.psi	(chi-expr validator.stx lexenv.run lexenv.expand)))
-	(build-application no-source
-	    (psi.core-expr validator.psi)
-	  (list (psi.core-expr rand.psi)))))
+  (define (%error-return-value-of-invalid-type input-form.stx type.ots result.sig)
+    (raise
+     (condition (make-expand-time-type-signature-violation)
+		(make-who-condition __module_who__)
+		(make-message-condition "object of invalid type returned by type constructor")
+		(make-syntax-violation input-form.stx #f)
+		(make-expected-type-signature-condition (make-type-signature/single-value type.ots))
+		(make-returned-type-signature-condition result.sig))))
 
-    (define* (%make-signature-mismatch-condition message input-form.stx rand.stx rand.idx
-						 {rand.sig type-signature?} {item.ots object-type-spec?})
-      (condition (make-who-condition __module_who__)
-		 (make-message-condition message)
-		 (make-syntax-violation input-form.stx rand.stx)
-		 (make-application-argument-index-condition rand.idx)
-		 (make-application-argument-type-name-condition (object-type-spec.name item.ots))
-		 (make-application-operand-signature-condition rand.sig)))
-
-    #| end of module: %BUILD-LIST-OF-CONSTRUCTION |# )
+  (define (%error-multiple-return-values input-form.stx type.ots result.sig)
+    (raise
+     (condition (make-expand-time-type-signature-violation)
+		(make-who-condition __module_who__)
+		(make-message-condition "object of invalid type returned by type constructor")
+		(make-syntax-violation input-form.stx #f)
+		(make-expected-type-signature-condition (make-type-signature/single-value type.ots))
+		(make-returned-type-signature-condition result.sig))))
 
   #| end of module |# )
 
@@ -928,12 +839,12 @@
 	   (expr.sig	(psi.retvals-signature expr.psi)))
       (define (%error-mismatching-signatures)
 	(raise
-	 (condition
-	  (make-expand-time-type-signature-violation)
-	  (make-who-condition caller-who)
-	  (make-message-condition "expand-time return values signature mismatch")
-	  (make-syntax-violation input-form.stx expr.stx)
-	  (make-expand-time-retvals-signature-violation asrt.sig expr.sig))))
+	 (condition (make-expand-time-type-signature-violation)
+		    (make-who-condition caller-who)
+		    (make-message-condition "expand-time return values signature mismatch")
+		    (make-syntax-violation input-form.stx expr.stx)
+		    (make-expected-type-signature-condition asrt.sig)
+		    (make-returned-type-signature-condition expr.sig))))
       (cond ((and (type-signature.empty? asrt.sig)
 		  (type-signature.empty? expr.sig))
 	     ;;The uncommon  case of empty  signatures.  The expression  returns zero
@@ -1071,102 +982,86 @@
 				   asrt.stx {asrt.sig type-signature?} {expr.psi psi?} return-values?)
       (define asrt.specs
 	(type-signature.specs asrt.sig))
-      (receive (validating-form*.sexp consumer-formals.sexp has-rest?)
-	  (let recur ((asrt.stx		asrt.stx)
-		      (asrt.specs	asrt.specs)
-		      (idx		1))
-	    (cond ((pair? asrt.stx)
-		   (receive (validating-form*.sexp consumer-formals.sexp has-rest?)
-		       (recur (cdr asrt.stx) (cdr asrt.specs) (fxadd1 idx))
-		     (receive (validating-form.sexp consumer-formal.sym)
-			 (%build-arg-validator caller-who input-form.stx lexenv.run lexenv.expand
-					       (car asrt.specs) idx return-values?)
-		       (values (cons validating-form.sexp validating-form*.sexp)
-			       (cons consumer-formal.sym  consumer-formals.sexp)
-			       has-rest?))))
-		  ((null? asrt.stx)
-		   (values '() '() #f))
-		  ((<list>-ots? asrt.specs)
-		   (let ((consumer-formal.sym	(gensym "rest"))
-			 (has-rest?		#t))
-		     (values (list consumer-formal.sym) consumer-formal.sym has-rest?)))
-		  (else
-		   ;;Here ASRT.STX is a standalone identifier, sub-type of "<list>".
-		   (let* ((consumer-formal.sym  (gensym "rest"))
-			  (validating-form.sexp (%build-rest-validator caller-who input-form.stx lexenv.run lexenv.expand
-								       asrt.stx idx consumer-formal.sym return-values?))
-			  (has-rest?		#t))
-		     (values (list validating-form.sexp) consumer-formal.sym has-rest?)))))
-	(let* ((producer.core		(build-lambda no-source '() (psi.core-expr expr.psi)))
-	       (consumer-body.sexp	(if return-values?
-					    (cond (has-rest?
-						   `(apply values . ,validating-form*.sexp))
-						  ((list-of-single-item? validating-form*.sexp)
-						   (car validating-form*.sexp))
-						  (else
-						   `(values . ,validating-form*.sexp)))
-					  `(begin ,@validating-form*.sexp (void))))
-	       (consumer.stx		(bless `(lambda/std ,consumer-formals.sexp ,consumer-body.sexp)))
-	       ;;We want "__who__" to be bound in the consumer expression.
-	       (consumer.psi		(let* ((id    (core-prim-id '__who__))
-					       (label (id->label id))
-					       (descr (label->syntactic-binding-descriptor label lexenv.run)))
-					  (case (syntactic-binding-descriptor.type descr)
-					    ((displaced-lexical)
-					     ;;__who__ is unbound.
-					     (receive (lexenv.run lexenv.expand)
-						 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
-										   __who__ (core-prim-id caller-who))
-					       (chi-expr consumer.stx lexenv.run lexenv.expand)))
-					    (else
-					     ;;__who__ is bound.
-					     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
-	       (consumer.core		(psi.core-expr consumer.psi))
-	       (output-signature	(if return-values?
-					    asrt.sig
-					  (make-type-signature/single-void))))
-	  (make-psi input-form.stx
-	    (build-application no-source
-		(build-primref no-source 'call-with-values)
-	      (list producer.core consumer.core))
-	    output-signature))))
+      (define-values (consumer-formals.sexp has-rest?)
+	(%compose-validator-formals asrt.specs))
+      (define validating-form*.sexp
+	(let recur ((asrt.specs			asrt.specs)
+		    (consumer-formals.sexp	consumer-formals.sexp)
+		    (operand-index		1))
+	  (cond ((pair? asrt.specs)
+		 (let ((validator.stx (object-type-spec.single-value-validator-lambda-stx (car asrt.specs) return-values?)))
+		   (cons `(,validator.stx ,(car consumer-formals.sexp) ,operand-index __who__)
+			 (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index)))))
 
-    (define (%build-arg-validator caller-who input-form.stx lexenv.run lexenv.expand
-				  asrt.ots idx return-values?)
-      (let ((consumer-formal.sym	(gensym (string-append "arg" (number->string idx))))
-	    (type-name.stx		(object-type-spec.name                asrt.ots))
-	    (typed-predicate.sexp	(object-type-spec.type-predicate-stx asrt.ots)))
-	(define validating-form.sexp
-	  (if return-values?
-	      `(if (,typed-predicate.sexp ,consumer-formal.sym)
-		   ,consumer-formal.sym
-		 (expression-return-value-violation __who__
-		   "return value of invalid type"
-		   ,idx '(is-a? _ ,type-name.stx) ,consumer-formal.sym))
-	    `(unless (,typed-predicate.sexp ,consumer-formal.sym)
-	       (expression-return-value-violation __who__
-		 "return value of invalid type"
-		 ,idx '(is-a? _ ,type-name.stx) ,consumer-formal.sym))))
-	(values validating-form.sexp consumer-formal.sym)))
+		((null? asrt.specs)
+		 '())
 
-    (define (%build-rest-validator caller-who input-form.stx lexenv.run lexenv.expand
-				   asrt.id idx consumer-formal.sym return-values?)
-      (let* ((asrt.ots			(id->object-type-specification caller-who input-form.stx asrt.id lexenv.run))
-	     (item.ots			(list-of-type-spec.item-ots asrt.ots))
-	     (typed-predicate.sexp	(object-type-spec.type-predicate-stx asrt.ots))
-	     (idx.sym			(gensym "idx"))
-	     (obj.sym			(gensym "obj")))
-	(define validator.sexp
-	  `(fold-left (lambda/std (,idx.sym ,obj.sym)
-			(unless (,typed-predicate.sexp ,obj.sym)
-			  (expression-return-value-violation __who__
-			    "return value of invalid type"
-			    ,idx.sym ,obj.sym (quote ,(object-type-spec.name item.ots))))
-			(fxadd1 ,idx.sym))
-	     ,idx ,consumer-formal.sym))
+		((<list>-ots? asrt.specs)
+		 ;;There is a  rest argument, but its type is  "<list>".  Any list of
+		 ;;values will match, so we generate no validator.
+		 '())
+
+		(else
+		 ;;Here ASRT.SPECS is a standalone OTS, sub-type of "<list>".
+		 (let ((validator.stx (object-type-spec.list-validator-lambda-stx asrt.specs return-values?)))
+		   `(,validator.stx ,consumer-formals.sexp ,operand-index __who__))))))
+      (define producer.core
+	(build-lambda no-source '() (psi.core-expr expr.psi)))
+      (define consumer-body.sexp
 	(if return-values?
-	    `(begin ,validator.sexp ,consumer-formal.sym)
-	  validator.sexp)))
+	    (cond (has-rest?
+		   `(apply values . ,validating-form*.sexp))
+		  ((list-of-single-item? validating-form*.sexp)
+		   (car validating-form*.sexp))
+		  (else
+		   `(values . ,validating-form*.sexp)))
+	  `(begin ,@validating-form*.sexp (void))))
+      (define consumer.stx
+	(bless `(lambda/std ,consumer-formals.sexp ,consumer-body.sexp)))
+      ;;We want "__who__" to be bound in the consumer expression.
+      (define consumer.psi
+	(let* ((id    (core-prim-id '__who__))
+	       (label (id->label id))
+	       (descr (label->syntactic-binding-descriptor label lexenv.run)))
+	  (case (syntactic-binding-descriptor.type descr)
+	    ((displaced-lexical)
+	     ;;__who__ is unbound.
+	     (receive (lexenv.run lexenv.expand)
+		 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
+						   __who__ (core-prim-id caller-who))
+	       (chi-expr consumer.stx lexenv.run lexenv.expand)))
+	    (else
+	     ;;__who__ is bound.
+	     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
+      (define consumer.core
+	(psi.core-expr consumer.psi))
+      (define output-signature
+	(if return-values?
+	    asrt.sig
+	  (make-type-signature/single-void)))
+      (make-psi input-form.stx
+	(build-application no-source
+	    (build-primref no-source 'call-with-values)
+	  (list producer.core consumer.core))
+	output-signature))
+
+    (define (%compose-validator-formals asrt.specs)
+      ;;Build  and return  a  proper or  improper list  of  gensyms representing  the
+      ;;validator LAMBDA formals.
+      ;;
+      (define has-rest? #f)
+      (define formals
+	(let recur ((operand-index	1)
+		    (asrt.specs		asrt.specs))
+	  (cond ((pair? asrt.specs)
+		 (cons (gensym (string-append "arg" (number->string operand-index)))
+		       (recur (fxadd1 operand-index) (cdr asrt.specs))))
+		((null? asrt.specs)
+		 '())
+		(else
+		 (set! has-rest? #t)
+		 (gensym (string-append "arg" (number->string operand-index)))))))
+      (values formals has-rest?))
 
     #| end of module: %RUN-TIME-VALIDATION |# )
 

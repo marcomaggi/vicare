@@ -141,7 +141,7 @@
 
 (section
 
-(declare-object-retriever command-line	<nlist>)
+(declare-object-retriever command-line	(list-of <string>))
 
 (declare-core-primitive exit
     (safe)

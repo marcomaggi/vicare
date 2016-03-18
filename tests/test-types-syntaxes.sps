@@ -83,10 +83,10 @@
 	 (try
 	     (eval (quote ?input-form) EVAL-ENVIRONMENT)
 	   (catch E
-	     ((expander::&expand-time-retvals-signature-violation)
+	     ((expander::&expand-time-type-signature-violation)
 	      #;(print-condition E)
-	      (values (%type-signature->sexp (expander::expand-time-retvals-signature-violation-expected-signature E))
-		      (%type-signature->sexp (expander::expand-time-retvals-signature-violation-returned-signature E))))
+	      (values (syntax->datum (expander::type-signature.tags (expander::condition-expected-type-signature E)))
+		      (syntax->datum (expander::type-signature.tags (expander::condition-returned-type-signature E)))))
 	     (else E)))
        => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
     ))

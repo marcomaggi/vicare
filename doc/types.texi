@@ -2073,7 +2073,6 @@ Apply @func{vector->list} to the instance.
 * types built-in lists base::           Lists.
 * types built-in lists null::           Empty lists.
 * types built-in lists pairs::          Type of pair objects.
-* types built-in lists not-empty::      Not-empty proper lists.
 * types built-in lists chars::          Proper lists of @class{char}.
 * types built-in lists strings::        Proper lists of @class{string}.
 * types built-in lists pointers::       Proper lists of @class{pointer}.
@@ -2148,38 +2147,6 @@ Apply @func{car} to the type instance.
 
 
 @defmethod @class{pair} cdr
-Apply @func{cdr} to the type instance.
-@end defmethod
-
-@c page
-@node types built-in lists not-empty
-@subsubsection Not--empty proper lists
-
-
-@deftp {Built--in Type} @aclass{nlist}
-@deftpx {Parent Type} @aclass{pair}
-Type of non--empty lists.
-@end deftp
-
-
-@defop Constructor @class{nlist} new @aclass{nlist} @varo{obj} @var{obj} @dots{}
-The constructor is @func{nlist}.  Return a new list having the given
-@var{obj} arguments as items.
-@end defop
-
-
-@defop {Type predicate} @class{nlist} is-a? @var{obj} @aclass{nlist}
-The type predicate is @func{nlist?}.  Return @true{} if @var{obj} is a
-proper non--empty list object; otherwise return @false{}.
-@end defop
-
-
-@defmethod @class{nlist} car
-Apply @func{car} to the type instance.
-@end defmethod
-
-
-@defmethod @class{nlist} cdr
 Apply @func{cdr} to the type instance.
 @end defmethod
 

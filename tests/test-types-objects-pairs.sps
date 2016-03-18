@@ -140,16 +140,6 @@
       (.cdr (new <pair> 1 2))
     => 2)
 
-;;; --------------------------------------------------------------------
-
-  (check
-      (.car (new <nlist> 1 2 3))
-    => 1)
-
-  (check
-      (.cdr (new <nlist> 1 2 3))
-    => '(2 3))
-
   (void))
 
 
@@ -162,16 +152,6 @@
   (check
       (method-call-late-binding 'cdr (new <pair> 1 2))
     => 2)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (method-call-late-binding 'car (new <nlist> 1 2 3))
-    => 1)
-
-  (check
-      (method-call-late-binding 'cdr (new <nlist> 1 2 3))
-    => '(2 3))
 
   #t)
 

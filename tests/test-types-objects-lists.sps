@@ -54,6 +54,21 @@
 (define-syntax-rule (%eval ?sexp)
   (eval (quasiquote ?sexp) ENVIRONMENT))
 
+(define-syntax check-expand-time-signature-violation
+  (syntax-rules (=>)
+    ((_ ?input-form => ?expected-signature-sexp ?returned-signature-sexp)
+     (check
+	 (try
+	     (%eval ?input-form)
+	   (catch E
+	     ((expander::&expand-time-type-signature-violation)
+	      #;(print-condition E)
+	      (values (syntax->datum (expander::type-signature.tags (expander::condition-expected-type-signature E)))
+		      (syntax->datum (expander::type-signature.tags (expander::condition-returned-type-signature E)))))
+	     (else E)))
+       => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
+    ))
+
 
 (parametrise ((check-test-name	'type-of))
 
@@ -121,7 +136,7 @@
 
 (parametrise ((check-test-name	'predicate))
 
-  (check-for-true	(is-a? '(1 . 2) <list>))
+  (check-for-false	(is-a? '(1 . 2) <list>))
   (check-for-true	(is-a? '() <list>))
   (check-for-false	(is-a? 123 <list>))
 
@@ -222,35 +237,19 @@
   (check
       (expander::type-signature.tags (type-of (new <list-of-chars> #\a #\b)))
     (=> syntax=?)
-    (list #'<list-of-chars>))
+    #'((list <char> <char>)))
 
   ;;Expand-time signature violation.  First operand.
   ;;
-  (check
-      (try
-	  (%eval (new <list-of-chars> 1))
-	(catch E
-	  ((expander::&expand-time-type-signature-violation)
-	   (list (expander::condition-application-argument-index     E)
-		 (expander::condition-application-argument-type-name E)
-		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
-	  (else E)))
-    (=> syntax=?)
-    (list 0 #'<char> (list #'<positive-fixnum>)))
+  (check-expand-time-signature-violation
+      (new <list-of-chars> 1)
+    => (<list-of-chars>) ((list <positive-fixnum>)))
 
   ;;Expand-time signature violation.  Second operand.
   ;;
-  (check
-      (try
-	  (%eval (new <list-of-chars> #\a 1))
-	(catch E
-	  ((expander::&expand-time-type-signature-violation)
-	   (list (expander::condition-application-argument-index     E)
-		 (expander::condition-application-argument-type-name E)
-		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
-	  (else E)))
-    (=> syntax=?)
-    (list 1 #'<char> (list #'<positive-fixnum>)))
+  (check-expand-time-signature-violation
+      (new <list-of-chars> #\a 1)
+    => (<list-of-chars>) ((list <char> <positive-fixnum>)))
 
   ;;Run-time validation.
   ;;
@@ -284,12 +283,10 @@
 	  (let ((port (open-string-input-port "123 #\\b")))
 	    (new <list-of-chars> (read port) (read port)))
 	(catch E
-	  ((&procedure-signature-argument-violation)
-	   (list (procedure-signature-argument-violation.one-based-argument-index E)
-		 (procedure-signature-argument-violation.offending-value          E)
-		 (procedure-signature-argument-violation.failed-expression        E)))
+	  ((&expression-return-value-violation)
+	   (condition-irritants E))
 	  (else E)))
-    => '(0 123 (is-a? _ <char>)))
+    => '((is-a? _ <list-of-chars>) (123 #\b)))
 
   ;;Run-time validation.  Bad second operand.
   ;;
@@ -298,12 +295,10 @@
 	  (let ((port (open-string-input-port "#\\a 123")))
 	    (new <list-of-chars> (read port) (read port)))
 	(catch E
-	  ((&procedure-signature-argument-violation)
-	   (list (procedure-signature-argument-violation.one-based-argument-index E)
-		 (procedure-signature-argument-violation.offending-value          E)
-		 (procedure-signature-argument-violation.failed-expression        E)))
+	  ((&expression-return-value-violation)
+	   (condition-irritants E))
 	  (else E)))
-    => '(1 123 (is-a? _ <char>)))
+    => '((is-a? _ <list-of-chars>) (#\a 123)))
 
 ;;; --------------------------------------------------------------------
 ;;; methods
@@ -357,35 +352,19 @@
   (check
       (expander::type-signature.tags (type-of (new <list-of-strings> "a" "b")))
     (=> syntax=?)
-    (list #'<list-of-strings>))
+    #'((list <string> <string>)))
 
   ;;Expand-time signature violation.  First operand.
   ;;
-  (check
-      (try
-	  (%eval (new <list-of-strings> 1))
-	(catch E
-	  ((expander::&expand-time-type-signature-violation)
-	   (list (expander::condition-application-argument-index     E)
-		 (expander::condition-application-argument-type-name E)
-		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
-	  (else E)))
-    (=> syntax=?)
-    (list 0 #'<string> (list #'<positive-fixnum>)))
+  (check-expand-time-signature-violation
+      (new <list-of-strings> 1)
+    => (<list-of-strings>) ((list <positive-fixnum>)))
 
   ;;Expand-time signature violation.  Second operand.
   ;;
-  (check
-      (try
-	  (%eval (new <list-of-strings> "a" 1))
-	(catch E
-	  ((expander::&expand-time-type-signature-violation)
-	   (list (expander::condition-application-argument-index     E)
-		 (expander::condition-application-argument-type-name E)
-		 (expander::type-signature.tags (expander::condition-application-operand-signature E))))
-	  (else E)))
-    (=> syntax=?)
-    (list 1 #'<string> (list #'<positive-fixnum>)))
+  (check-expand-time-signature-violation
+      (new <list-of-strings> "a" 1)
+    => (<list-of-strings>) ((list <string> <positive-fixnum>)))
 
   ;;Run-time validation.
   ;;
@@ -419,12 +398,10 @@
 	  (let ((port (open-string-input-port "123 \"b\"")))
 	    (new <list-of-strings> (read port) (read port)))
 	(catch E
-	  ((&procedure-signature-argument-violation)
-	   (list (procedure-signature-argument-violation.one-based-argument-index E)
-		 (procedure-signature-argument-violation.offending-value          E)
-		 (procedure-signature-argument-violation.failed-expression        E)))
+	  ((&expression-return-value-violation)
+	   (condition-irritants E))
 	  (else E)))
-    => '(0 123 (is-a? _ <string>)))
+    => '((is-a? _ <list-of-strings>) (123 "b")))
 
   ;;Run-time validation.  Bad second operand.
   ;;
@@ -433,12 +410,10 @@
 	  (let ((port (open-string-input-port "\"a\" 123")))
 	    (new <list-of-strings> (read port) (read port)))
 	(catch E
-	  ((&procedure-signature-argument-violation)
-	   (list (procedure-signature-argument-violation.one-based-argument-index E)
-		 (procedure-signature-argument-violation.offending-value          E)
-		 (procedure-signature-argument-violation.failed-expression        E)))
+	  ((&expression-return-value-violation)
+	   (condition-irritants E))
 	  (else E)))
-    => '(1 123 (is-a? _ <string>)))
+    => '((is-a? _ <list-of-strings>) ("a" 123)))
 
 ;;; --------------------------------------------------------------------
 ;;; methods

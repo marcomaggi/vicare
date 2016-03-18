@@ -258,7 +258,7 @@
     (safe)
   (signatures
    (()			=> (<null>))
-   ((_ . _)		=> (<nlist>)))
+   ((_ . _)		=> (<list>)))
   (attributes
    (()			foldable effect-free result-true)
    ((_ . _)		foldable effect-free result-true)))

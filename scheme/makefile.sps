@@ -1964,13 +1964,11 @@
     (lcm					v r ba se)
     (length					v r ba se)
     (list					v r ba se)
-    (nlist					v $language)
     (list->string				v r ba se)
     (list->vector				v r ba se)
     (list-ref					v r ba se)
     (list-tail					v r ba se)
     (list?					v r ba se)
-    (nlist?					v $language)
     (log					v r ba se)
     (magnitude					v r ba se)
     (make-polar					v r ba se)
@@ -3480,7 +3478,6 @@
     (<pair>					v $language)
     (<standalone-pair>				v $language)
     (<list>					v $language)
-    (<nlist>					v $language)
     (<null>					v $language)
     (<bytevector>				v $language)
     (<hashtable>				v $language)
@@ -4222,15 +4219,7 @@
     (&expand-time-type-signature-warning-rcd)
     (make-expand-time-type-signature-warning		$expander)
     (expand-time-type-signature-warning?		$expander)
-
-    (&expand-time-retvals-signature-violation		$expander)
-    (&expand-time-retvals-signature-violation-rtd)
-    (&expand-time-retvals-signature-violation-rcd)
-    (make-expand-time-retvals-signature-violation	$expander)
-    (expand-time-retvals-signature-violation?		$expander)
-    (expand-time-retvals-signature-violation-expected-signature	$expander)
-    (expand-time-retvals-signature-violation-returned-signature	$expander)
-
+;;;
     (&application-operator-expression			$expander)
     (&application-operator-expression-rtd)
     (&application-operator-expression-rcd)
@@ -4272,6 +4261,20 @@
     (make-application-operand-signature-condition	$expander)
     (application-operand-signature-condition?		$expander)
     (condition-application-operand-signature		$expander)
+;;;
+    (&expected-type-signature				$expander)
+    (&expected-type-signature-rtd)
+    (&expected-type-signature-rcd)
+    (make-expected-type-signature-condition		$expander)
+    (expected-type-signature-condition?			$expander)
+    (condition-expected-type-signature			$expander)
+
+    (&returned-type-signature				$expander)
+    (&returned-type-signature-rtd)
+    (&returned-type-signature-rcd)
+    (make-returned-type-signature-condition		$expander)
+    (returned-type-signature-condition?			$expander)
+    (condition-returned-type-signature			$expander)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

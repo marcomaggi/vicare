@@ -557,19 +557,12 @@
    (cdr		cdr)))
 
 (define-scheme-type <null>
-    <list>
+    <top>
   <null>-constructor null?)
 
 (define-scheme-type <pair>
-    <list>
+    <top>
   cons pair?
-  (methods
-   (car		car)
-   (cdr		cdr)))
-
-(define-scheme-type <nlist>
-    <pair>
-  nlist nlist?
   (methods
    (car		car)
    (cdr		cdr)))

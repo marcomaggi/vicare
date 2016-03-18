@@ -77,11 +77,6 @@
 	    structs::)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
-    (prefix (only (ikarus lists)
-		  nlist?)
-	    lists::)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
-    ;;2015)
     (only (ikarus.pointers)
 	  pointer-hash)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
@@ -162,8 +157,7 @@
 
 	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
 	((vector?  subject)	(%built-in-scheme-object-call <vector>-type-descriptor))
-	((lists::nlist? subject)(%built-in-scheme-object-call <nlist>-type-descriptor))
-	((null?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
+	((list?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
 	((pair?    subject)	(%built-in-scheme-object-call <pair>-type-descriptor))
 	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-type-descriptor))
 

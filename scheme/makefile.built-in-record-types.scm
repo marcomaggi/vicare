@@ -660,13 +660,6 @@
    (define-built-in-condition-type &expand-time-type-signature-warning
        &warning
      make-expand-time-type-signature-warning expand-time-type-signature-warning?)
-
-   (define-built-in-condition-type &expand-time-retvals-signature-violation
-       &expand-time-type-signature-violation
-     make-expand-time-retvals-signature-violation expand-time-retvals-signature-violation?
-     (methods
-      (expected-signature	expand-time-retvals-signature-violation-expected-signature)
-      (returned-signature	expand-time-retvals-signature-violation-returned-signature)))
 ;;;
    (define-built-in-condition-type &application-operator-expression
        &condition
@@ -703,7 +696,18 @@
      make-application-operand-signature-condition application-operand-signature-condition?
      (methods
       (signature			condition-application-operand-signature)))
+;;;
+   (define-built-in-condition-type &expected-type-signature
+       &condition
+     make-expected-type-signature-condition expected-type-signature-condition?
+     (methods
+      (expected-type-signature		condition-expected-type-signature)))
 
+   (define-built-in-condition-type &returned-type-signature
+       &condition
+     make-returned-type-signature-condition returned-type-signature-condition?
+     (methods
+      (returned-type-signature		condition-returned-type-signature)))
 ;;;
    (define-built-in-condition-type &macro-expansion-trace
        &condition
