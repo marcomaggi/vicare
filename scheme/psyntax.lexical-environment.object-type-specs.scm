@@ -415,7 +415,12 @@
   ;;NOTE This  function is a single  point of truth:  it is the *only*  function that
   ;;determines if two OTSs are matching super-type and sub-type.
   ;;
-  (cond ((eq? super.ots sub.ots))
+  (cond ((or (eq? super.ots sub.ots)
+	     (and (or (and (scheme-type-spec? super.ots) (scheme-type-spec? sub.ots))
+		      (and (record-type-spec? super.ots) (record-type-spec? sub.ots))
+		      (and (struct-type-spec? super.ots) (struct-type-spec? sub.ots)))
+		  (free-identifier=? (object-type-spec.name super.ots)
+				     (object-type-spec.name sub.ots)))))
 
 	((<top>-ots? super.ots)
 	 ;;Fast track: "<top>" is the super-type of all the types.
@@ -714,12 +719,7 @@
   ;;types.  For  example: there  may be  multiple instances  of "<scheme-obect-type>"
   ;;representing the same type; so we need to compare them by name.
   ;;
-  (cond ((or (eq? super.ots sub.ots)
-	     (and (or (and (scheme-type-spec? super.ots) (scheme-type-spec? sub.ots))
-		      (and (record-type-spec? super.ots) (record-type-spec? sub.ots))
-		      (and (struct-type-spec? super.ots) (struct-type-spec? sub.ots)))
-		  (free-identifier=? (object-type-spec.name super.ots)
-				     (object-type-spec.name sub.ots)))))
+  (cond (($object-type-spec=? super.ots sub.ots))
 	((object-type-spec.parent-ots sub.ots)
 	 => (lambda (sub-parent.ots)
 	      (%compare-super-with-sub-and-its-parents super.ots sub-parent.ots)))
@@ -748,6 +748,14 @@
 		      (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
 	     (list-type-spec.item-ots* sub.ots))))
 
+	((and (%compare-super-with-sub-and-its-parents (<list>-ots) super.ots)
+	      (%compare-super-with-sub-and-its-parents (<pair>-ots) sub.ots))
+	 (cond ((pair-type-spec? sub.ots)
+		(object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	       ((pair-of-type-spec? sub.ots)
+		(object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	       (else #t)))
+
 	((and (vector-of-type-spec? super.ots)
 	      (vector-type-spec? sub.ots))
 	 (let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
@@ -760,24 +768,72 @@
 
 ;;;; basic object-type specification: common ancestor
 
-(define (object-type-spec.common-ancestor ots1 ots2)
+(define* (object-type-spec.common-ancestor {ots1 object-type-spec?} {ots2 object-type-spec?})
   ;;Search the hierarchies of OTS1 and OTS2 looking for a common ancestor.  Return an
   ;;instance of "<object-type-spec>" representing the ancestor's OTS.  If no ancestor
   ;;is found: return the OTS of "<top>".
   ;;
-  (cond ((eq? ots1 ots2)
+  (cond ((object-type-spec=? ots1 ots2)
 	 ots1)
+
 	((or (<top>-ots? ots1)
 	     (<top>-ots? ots2))
 	 ots1)
+
 	((<no-return>-ots? ots1)
 	 ots2)
+
 	((<no-return>-ots? ots2)
 	 ots1)
+
+	((and (pair-of-type-spec? ots1)
+	      (pair-of-type-spec? ots2))
+	 (make-pair-of-type-spec (object-type-spec.common-ancestor (pair-of-type-spec.item-ots ots1)
+								   (pair-of-type-spec.item-ots ots2))))
+
+	((and (list-of-type-spec? ots1)
+	      (list-of-type-spec? ots2))
+	 (make-list-of-type-spec (object-type-spec.common-ancestor (list-of-type-spec.item-ots ots1)
+								   (list-of-type-spec.item-ots ots2))))
+
+	((and (vector-of-type-spec? ots1)
+	      (vector-of-type-spec? ots2))
+	 (make-vector-of-type-spec (object-type-spec.common-ancestor (vector-of-type-spec.item-ots ots1)
+								     (vector-of-type-spec.item-ots ots2))))
+
+	((and (pair-type-spec? ots1)
+	      (pair-type-spec? ots2))
+	 (make-pair-type-spec (object-type-spec.common-ancestor (pair-type-spec.car-ots ots1)
+								(pair-type-spec.car-ots ots2))
+			      (object-type-spec.common-ancestor (pair-type-spec.cdr-ots ots1)
+								(pair-type-spec.cdr-ots ots2))))
+
+	((and (list-type-spec? ots1)
+	      (list-type-spec? ots2))
+	 (if (= (list-type-spec.length ots1)
+		(list-type-spec.length ots2))
+	     (make-list-type-spec (map object-type-spec.common-ancestor
+				    (list-type-spec.item-ots* ots1)
+				    (list-type-spec.item-ots* ots2)))
+	   (<list>-ots)))
+
+	((and (vector-type-spec? ots1)
+	      (vector-type-spec? ots2))
+	 (if (= (vector-type-spec.length ots1)
+		(vector-type-spec.length ots2))
+	     (make-vector-type-spec (map object-type-spec.common-ancestor
+				      (vector-type-spec.item-ots* ots1)
+				      (vector-type-spec.item-ots* ots2)))
+	   (<vector>-ots)))
+
+	((and (compound-condition-type-spec? ots1)
+	      (compound-condition-type-spec? ots2))
+	 (<compound-condition>-ots))
+
 	(else
 	 (let scan-parents-of-ots1 ((ots1 ots1))
 	   (let scan-parents-of-ots2 ((ots2 ots2))
-	     (if (eq? ots1 ots2)
+	     (if ($object-type-spec=? ots1 ots2)
 		 ots1
 	       (cond ((object-type-spec.parent-ots ots2)
 		      => scan-parents-of-ots2)
@@ -788,73 +844,132 @@
 			     (<top>-ots)))))))))))
 
 
-;;;; basic object-type specification: comparison
+;;;; basic object-type specification: comparison and duplicates
 
-(module (object-type-spec=?)
+(define-equality/sorting-predicate object-type-spec=? $object-type-spec=? object-type-spec?)
 
-  (define-equality/sorting-predicate object-type-spec=? $object-type-spec= object-type-spec?)
+(define ($object-type-spec=? ots1 ots2)
+  (cond ((or (eq? ots1 ots2)
+	     (and (or (and (scheme-type-spec? ots1) (scheme-type-spec? ots2))
+		      (and (record-type-spec? ots1) (record-type-spec? ots2))
+		      (and (struct-type-spec? ots1) (struct-type-spec? ots2)))
+		  (free-identifier=? (object-type-spec.name ots1)
+				     (object-type-spec.name ots2)))))
 
-  (define ($object-type-spec= ots1 ots2)
-    (cond ((eq? ots1 ots2))
+	((list-of-type-spec? ots1)
+	 (and (list-of-type-spec? ots2)
+	      ($list-of-type-spec=? ots1 ots2)))
 
-	  ((list-of-type-spec? ots1)
-	   (and (list-of-type-spec? ots2)
-		($object-type-spec= (list-of-type-spec.item-ots ots1)
-				    (list-of-type-spec.item-ots ots2))))
+	((vector-of-type-spec? ots1)
+	 (and (vector-of-type-spec? ots2)
+	      ($vector-of-type-spec=? ots1 ots2)))
 
-	  ((vector-of-type-spec? ots1)
-	   (and (vector-of-type-spec? ots2)
-		($object-type-spec= (vector-of-type-spec.item-ots ots1)
-				    (vector-of-type-spec.item-ots ots2))))
+	((pair-of-type-spec? ots1)
+	 (and (pair-of-type-spec? ots2)
+	      ($pair-of-type-spec=? ots1 ots2)))
 
-	  ((pair-of-type-spec? ots1)
-	   (and (pair-of-type-spec? ots2)
-		($object-type-spec= (pair-of-type-spec.item-ots ots1)
-				    (pair-of-type-spec.item-ots ots2))))
+	((list-type-spec? ots1)
+	 (and (list-type-spec? ots2)
+	      ($list-type-spec=? ots1 ots2)))
 
-	  ((list-type-spec? ots1)
-	   (and (list-type-spec? ots2)
-		(let ((item1*.ots (list-type-spec.item-ots* ots1))
-		      (item2*.ots (list-type-spec.item-ots* ots2)))
-		  (and (= (length item1*.ots)
-			  (length item2*.ots))
-		       (for-all $object-type-spec= item1*.ots item2*.ots)))))
+	((vector-type-spec? ots1)
+	 (and (vector-type-spec? ots2)
+	      ($vector-type-spec=? ots1 ots2)))
 
-	  ((vector-type-spec? ots1)
-	   (and (vector-type-spec? ots2)
-		(let ((item1*.ots (vector-type-spec.item-ots* ots1))
-		      (item2*.ots (vector-type-spec.item-ots* ots2)))
-		  (and (= (length item1*.ots)
-			  (length item2*.ots))
-		       (for-all $object-type-spec= item1*.ots item2*.ots)))))
+	((pair-type-spec? ots1)
+	 (and (pair-type-spec? ots2)
+	      ($pair-type-spec=? ots1 ots2)))
 
-	  ((pair-type-spec? ots1)
-	   (and (pair-type-spec? ots2)
-		($object-type-spec= (pair-type-spec.car-ots ots1)
-				    (pair-type-spec.car-ots ots2))
-		($object-type-spec= (pair-type-spec.cdr-ots ots1)
-				    (pair-type-spec.cdr-ots ots2))))
+	((compound-condition-type-spec? ots1)
+	 (and (compound-condition-type-spec? ots2)
+	      ($compound-condition-type-spec=? ots1 ots2)))
 
-	  ((compound-condition-type-spec? ots1)
-	   (and (compound-condition-type-spec? ots2)
-		(let ((component1*.ots (compound-condition-type-spec.component-ots* ots1))
-		      (component2*.ots (compound-condition-type-spec.component-ots* ots2)))
-		  (and (= (length component1*.ots)
-			  (length component2*.ots))
-		       (for-all (lambda (component1.ots)
-				  (exists (lambda (component2.ots)
-					    ($object-type-spec= component1.ots component2.ots))
-				    component2*.ots))
-			 component1*.ots)
-		       (for-all (lambda (component2.ots)
-				  (exists (lambda (component1.ots)
-					    ($object-type-spec= component1.ots component2.ots))
-				    component1*.ots))
-			 component2*.ots)))))
+	(else #f)))
 
-	  (else #f)))
+;;; --------------------------------------------------------------------
 
-  #| end of module: OBJECT-TYPE-SPEC=? |# )
+(define* (pair-of-type-spec=? {ots1 pair-of-type-spec?} {ots2 pair-of-type-spec?})
+  ($pair-of-type-spec=? ots1 ots2))
+
+(define ($pair-of-type-spec=? ots1 ots2)
+  ($object-type-spec=? (pair-of-type-spec.item-ots ots1)
+		       (pair-of-type-spec.item-ots ots2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (list-of-type-spec=? {ots1 list-of-type-spec?} {ots2 list-of-type-spec?})
+  ($list-of-type-spec=? ots1 ots2))
+
+(define ($list-of-type-spec=? ots1 ots2)
+  ($object-type-spec=? (list-of-type-spec.item-ots ots1)
+		       (list-of-type-spec.item-ots ots2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (vector-of-type-spec=? {ots1 vector-of-type-spec?} {ots2 vector-of-type-spec?})
+  ($vector-of-type-spec=? ots1 ots2))
+
+(define ($vector-of-type-spec=? ots1 ots2)
+  ($object-type-spec=? (vector-of-type-spec.item-ots ots1)
+		       (vector-of-type-spec.item-ots ots2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (pair-type-spec=? {ots1 pair-type-spec?} {ots2 pair-type-spec?})
+  ($pair-type-spec=? ots1 ots2))
+
+(define ($pair-type-spec=? ots1 ots2)
+  (and ($object-type-spec=? (pair-type-spec.car-ots ots1)
+			    (pair-type-spec.car-ots ots2))
+       ($object-type-spec=? (pair-type-spec.cdr-ots ots1)
+			    (pair-type-spec.cdr-ots ots2))))
+
+;;; --------------------------------------------------------------------
+
+(define* (list-type-spec=? {ots1 list-type-spec?} {ots2 list-type-spec?})
+  ($list-type-spec=? ots1 ots2))
+
+(define ($list-type-spec=? ots1 ots2)
+  (let ((item1*.ots (list-type-spec.item-ots* ots1))
+	(item2*.ots (list-type-spec.item-ots* ots2)))
+    (and (= (length item1*.ots)
+	    (length item2*.ots))
+	 (for-all $object-type-spec=? item1*.ots item2*.ots))))
+
+;;; --------------------------------------------------------------------
+
+(define* (vector-type-spec=? {ots1 vector-type-spec?} {ots2 vector-type-spec?})
+  ($vector-type-spec=? ots1 ots2))
+
+(define ($vector-type-spec=? ots1 ots2)
+  (let ((item1*.ots (vector-type-spec.item-ots* ots1))
+	(item2*.ots (vector-type-spec.item-ots* ots2)))
+    (and (= (length item1*.ots)
+	    (length item2*.ots))
+	 (for-all $object-type-spec=? item1*.ots item2*.ots))))
+
+;;; --------------------------------------------------------------------
+
+(define* (compound-condition-type-spec=? {ots1 compound-condition-type-spec?} {ots2 compound-condition-type-spec?})
+  ($compound-condition-type-spec=? ots1 ots2))
+
+(define ($compound-condition-type-spec=? ots1 ots2)
+  (let ((component1*.ots (compound-condition-type-spec.component-ots* ots1))
+	(component2*.ots (compound-condition-type-spec.component-ots* ots2)))
+    (and (= (length component1*.ots)
+	    (length component2*.ots))
+	 (for-all (lambda (component1.ots)
+		    (exists (lambda (component2.ots)
+			      ($object-type-spec=? component1.ots component2.ots))
+		      component2*.ots))
+	   component1*.ots)
+	 (for-all (lambda (component2.ots)
+		    (exists (lambda (component1.ots)
+			      ($object-type-spec=? component1.ots component2.ots))
+		      component1*.ots))
+	   component2*.ots))))
+
+;;; --------------------------------------------------------------------
 
 (define (object-type-specs-delete-duplicates ell)
   ;;Recursive function.  Given the list of "<object-type-spec>" instances: remove the

@@ -307,9 +307,11 @@
       ((brace ?args-id ?args-tag)
        (and (identifier? ?args-id)
 	    (identifier? ?args-tag))
-       (if (object-type-spec.list-sub-type? (id->object-type-specification __who__ #f ?args-tag (current-inferior-lexenv)))
+       (if (let ((ots (id->object-type-specification __who__ #f ?args-tag (current-inferior-lexenv))))
+	     (or (<list>-ots? ots)
+		 (list-of-type-spec? ots)))
 	   (values ?args-id ?args-tag)
-	 (%synner "expected \"<list>\" or its sub-type as type identifier for the args argument" formals.stx)))
+	 (%synner "expected \"<list>\" or \"(list-of ?type)\" as type annotation for the args argument" formals.stx)))
 
       ;;Standard formals, UNtyped args as in: (lambda args ---)
       (?args-id
@@ -323,11 +325,12 @@
 	     (if (pair? ?arg*)
 		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
 	       (begin
-		 (unless (and (identifier? ?rest-id)
-			      (identifier? ?rest-tag))
+		 (unless (identifier? ?rest-id)
 		   (%synner "invalid rest argument specification" (list (brace-id) ?rest-id ?rest-tag)))
-		 (unless (object-type-spec.list-sub-type? (id->object-type-specification __who__ #f ?rest-tag (current-inferior-lexenv)))
-		   (%synner "expected \"<list>\" or its sub-type as type identifier for the rest argument"
+		 (unless (let ((ots (id->object-type-specification __who__ #f ?rest-tag (current-inferior-lexenv))))
+			   (or (<list>-ots? ots)
+			       (list-of-type-spec? ots)))
+		   (%synner "expected \"<list>\" or \"(list-of ?type)\" as type annotation for the args argument"
 			    (list (brace-id) ?rest-id ?rest-tag)))
 		 (values ?rest-id ?rest-tag))))
 	 (%validate-standard-formals standard-formals.stx %synner)))

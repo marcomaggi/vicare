@@ -249,6 +249,7 @@
 	;;   (list-of   ?item-thing)
 	;;   (vector-of ?item-thing)
 	;;
+	#;(debug-print __who__ input-signature)
 	(cond ((<no-return>-type-id? input-signature)
 	       ;;INPUT-SIGNATURE is a standalone "<no-return>" type identifier.
 	       (<no-return>-ots))
@@ -260,18 +261,13 @@
 	       ;;INPUT-SIGNATURE  must  be   a  proper  or  improper   list  of  type
 	       ;;identifiers and/or instances of "<object-type-spec>".
 	       (let recur ((stx input-signature))
-		 (syntax-match stx (<list> list list-of)
+		 (syntax-match stx (<list> list-of)
 		   (()
 		    ;;STX is a proper list.  Good.
 		    '())
 
 		   (<list>
 		    (<list>-ots))
-
-		   ((list ?item-type* ...)
-		    (syntax-violation caller-who
-		      "this type declaration is not implemented yet"
-		      input-signature stx))
 
 		   ((list-of ?item-type)
 		    (make-list-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)))
@@ -350,16 +346,16 @@
        (syntax-rules ()
 	 ((_ ?who ?type-id-maker)
 	  (define-cached-signature-maker ?who (list (?type-id-maker)))))))
-  (define-single-type-signature-maker make-type-signature/single-top			<top>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-void			<void>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-null			<null>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-boolean		<boolean>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-true			<true>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-false			<false>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-procedure		<procedure>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-stx			<stx>-type-id)
-  (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	<syntactic-identifier>-type-id)
-  (define-cached-signature-maker make-type-signature/standalone-list			(<list>-type-id))
+  (define-single-type-signature-maker make-type-signature/single-top			<top>-ots)
+  (define-single-type-signature-maker make-type-signature/single-void			<void>-ots)
+  (define-single-type-signature-maker make-type-signature/single-null			<null>-ots)
+  (define-single-type-signature-maker make-type-signature/single-boolean		<boolean>-ots)
+  (define-single-type-signature-maker make-type-signature/single-true			<true>-ots)
+  (define-single-type-signature-maker make-type-signature/single-false			<false>-ots)
+  (define-single-type-signature-maker make-type-signature/single-procedure		<procedure>-ots)
+  (define-single-type-signature-maker make-type-signature/single-stx			<stx>-ots)
+  (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	<syntactic-identifier>-ots)
+  (define-cached-signature-maker make-type-signature/standalone-list			(<list>-ots))
   #| end of LET-SYNTAX |# )
 
 (define-syntax-rule (make-type-signature/fully-untyped)
@@ -830,7 +826,7 @@
 		;;success!
 		'()
 	      ;;SIG1 is a proper list shorter that SIG2.
-	      (<list>-type-id)))
+	      (<list>-ots)))
 
 	   ((pair? specs1)
 	    (cond ((pair? specs2)
@@ -838,22 +834,26 @@
 			 (recur (cdr specs1) (cdr specs2))))
 		  ((null? specs2)
 		   ;;SIG2 is a proper list shorter that SIG1.
-		   (<list>-type-id))
+		   (<list>-ots))
 		  (else
 		   ;;SIG2 is an improper list shorter that SIG1.
-		   (<list>-type-id))))
+		   (<list>-ots))))
 
 	   (else
 	    ;;SIG1 is an improper list.
 	    (cond ((null? specs2)
 		   ;;SIG2 is an proper list shorter that SIG1.
-		   (<list>-type-id))
+		   (<list>-ots))
 		  ((pair? specs2)
 		   ;;SIG2 is an proper list longer that SIG1.
-		   (<list>-type-id))
+		   (<list>-ots))
 		  (else
 		   ;;Both SIG1  and SIG2 are improper  lists with the same  number of
-		   ;;items.
+		   ;;items.   Since  both  SPECS1  and   SPECS2  come  from  a  valid
+		   ;;"<type-signature>" instance: here we know that SPECS1 and SPECS2
+		   ;;are either "<list>" OTSs  or "<list-of-type-spec>" instances; so
+		   ;;their  common  ancestor   is  either  the  "<list>"   OTS  or  a
+		   ;;"<list-of-type-spec>" instance.
 		   (object-type-spec.common-ancestor specs1 specs2))))))))
 
 

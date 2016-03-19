@@ -604,10 +604,10 @@
     (make-type-signature/single-value
      (make-list-type-spec
       (map (lambda (rand.stx rand.sig)
-	     (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig))
+	     (%single-operand-signature->ots input-form.stx rand.stx rand.sig))
 	rand*.stx rand*.sig))))
 
-  (define (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig)
+  (define (%single-operand-signature->ots input-form.stx rand.stx rand.sig)
     (case-signature-specs rand.sig
       ((single-value)
        => (lambda (rand.ots)
@@ -713,7 +713,7 @@
 	     (raise (condition (make-expand-time-type-signature-violation) common))
 	   (begin
 	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))
+	     (make-type-signature/single-top)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -727,7 +727,7 @@
        ;;The  operand  expression   returns  an  unspecified  number   of  values  of
        ;;unspecified type.   We relay  on the  automatically generated  validation to
        ;;check at run-time if the expression returns a single value.
-       (<top>-ots))
+       (make-type-signature/single-top))
 
       (else
        ;;The operand expression returns zero, two or more values.
@@ -740,7 +740,7 @@
 	     (raise (condition (make-expand-time-type-signature-violation) common))
 	   (begin
 	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))))
+	     (make-type-signature/single-top)))))))
 
   (define (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)
     (make-type-signature/single-value
@@ -825,7 +825,7 @@
 	   (%core-prim-id) rand*.stx 1 (length rand*.stx))))
       ))
 
-  (define (%operand-signature->application-signature input-form.stx rand.stx rand.sig)
+  (define* ({%operand-signature->application-signature type-signature?} input-form.stx rand.stx rand.sig)
     (case-signature-specs rand.sig
       ((single-value)
        => (lambda (rand.ots)
@@ -841,7 +841,7 @@
 	     (raise (condition (make-expand-time-type-signature-violation) common))
 	   (begin
 	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))
+	     (make-type-signature/single-top)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -855,7 +855,7 @@
        ;;The  operand  expression   returns  an  unspecified  number   of  values  of
        ;;unspecified type.   We relay  on the  automatically generated  validation to
        ;;check at run-time if the expression returns a single value.
-       (<top>-ots))
+       (make-type-signature/single-top))
 
       (else
        ;;The operand expression returns zero, two or more values.
@@ -868,9 +868,9 @@
 	     (raise (condition (make-expand-time-type-signature-violation) common))
 	   (begin
 	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))))
+	     (make-type-signature/single-top)))))))
 
-  (define (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)
+  (define* ({%single-value-operand-signature->application-signature type-signature?} input-form.stx rand.stx rand.sig rand.ots)
     (make-type-signature/single-value
      (cond ((list-of-type-spec? rand.ots)
 	    rand.ots)
@@ -954,10 +954,10 @@
     (make-type-signature/single-value
      (make-vector-type-spec
       (map (lambda (rand.stx rand.sig)
-	     (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig))
+	     (%single-operand-signature->ots input-form.stx rand.stx rand.sig))
 	rand*.stx rand*.sig))))
 
-  (define (%single-operand-signature->application-signature input-form.stx rand.stx rand.sig)
+  (define* ({%single-operand-signature->ots object-type-spec?} input-form.stx rand.stx rand.sig)
     (case-signature-specs rand.sig
       ((single-value)
        => (lambda (rand.ots)

@@ -360,7 +360,7 @@
 
 (module (signal with-return-to-signal-on-unhandled-exception)
 
-  (define* (signal {C condition?})
+  (define (signal {C <condition>})
     ;;Signal  a condition  by raising  it  with RAISE-CONTINUABLE.   Perform what  is
     ;;needed to handle the restarts protocol.
     ;;
@@ -552,7 +552,7 @@
 
 ;;;; finding and invoking restarts
 
-(case-define* find-restart
+(case-define find-restart
   ;;Search  the  current  dynamic  environment  for  the  innermost  restart  handler
   ;;associated to NAME.  If a handler  is found: return its restart object; otherwise
   ;;return #f.
@@ -564,13 +564,13 @@
   ;;When the optional argument CND is used and CND is false: behave as if CND was not
   ;;used.
   ;;
-  (({name symbol?})
+  (({name <symbol>})
    (exists (lambda (alist)
 	     (cond ((assq name alist)
 		    => cdr)
 		   (else #f)))
      (restart-handlers)))
-  (({name symbol?} cnd)
+  (({name <symbol>} cnd)
    (cond ((not cnd)
 	  (find-restart name))
 	 ((condition? cnd)
