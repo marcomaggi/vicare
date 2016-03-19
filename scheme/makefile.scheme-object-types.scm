@@ -571,6 +571,10 @@
     <pair>
   #f standalone-pair?)
 
+(define-scheme-type <circular-list>
+    <pair>
+  #f circular-list?)
+
 
 ;;;; miscellaneous compound types
 

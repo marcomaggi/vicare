@@ -18,7 +18,8 @@
 #!vicare
 (library (ikarus lists)
   (export
-    list? make-list-of-predicate
+    make-list-of-predicate
+    list? circular-list?
     list cons* make-list append length list-ref reverse
     last-pair memq memp memv member find assq assp assv assoc
     remq remv remove remp filter map for-each
@@ -31,7 +32,8 @@
     map1		for-each1
     for-all1		exists1)
   (import (except (vicare)
-		  list? make-list-of-predicate
+		  make-list-of-predicate
+		  list?  circular-list?
 		  list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
@@ -111,6 +113,18 @@
       (null? h)))
 
   #| end of module |# )
+
+(define (circular-list? obj)
+  ;;At every iteration ELL is CDR-ed twice, LAG is CDR-ed once.
+  (let loop ((ell obj)
+	     (lag obj))
+    (and (pair? ell)
+	 (let ((ell (cdr ell)))
+	   (and (pair? ell)
+		(let ((ell (cdr ell))
+		      (lag (cdr lag)))
+		  (or (eq? ell lag)
+		      (loop ell lag))))))))
 
 (define (make-list-of-predicate item-pred)
   (define (%race h t)

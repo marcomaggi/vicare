@@ -2073,6 +2073,7 @@ Apply @func{vector->list} to the instance.
 * types built-in lists base::           Lists.
 * types built-in lists null::           Empty lists.
 * types built-in lists pairs::          Type of pair objects.
+* types built-in lists circular::       Type of circular lists.
 * types built-in lists chars::          Proper lists of @class{char}.
 * types built-in lists strings::        Proper lists of @class{string}.
 * types built-in lists pointers::       Proper lists of @class{pointer}.
@@ -2149,6 +2150,22 @@ Apply @func{car} to the type instance.
 @defmethod @class{pair} cdr
 Apply @func{cdr} to the type instance.
 @end defmethod
+
+@c page
+@node types built-in lists circular
+@subsubsection Type of circular lists
+
+
+@deftp {Built--in Type} @aclass{circular-list}
+@deftpx {Parent Type} @aclass{pair}
+Type of lists having a circle in their spine.
+@end deftp
+
+
+@defop {Type predicate} @class{circular-list} is-a? @var{obj} @aclass{circular-list}
+The type predicate is @func{circular-list?}.  Return @true{} if
+@var{obj} is a circular list object; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in lists chars

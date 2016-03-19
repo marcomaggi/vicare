@@ -1,6 +1,6 @@
 ;;;Derived from SRFI-1 list-processing library, reference implementation
 ;;;
-;;;Copyright (c) 2008-2011, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2011, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 1998, 1999 by Olin Shivers <shivers@ai.mit.edu>.
 ;;;Modified by Abdulaziz Ghuloum to port to Ikarus.
 ;;;Modified by Derick Eddington to port to R6RS.
@@ -270,18 +270,6 @@
 ;;
 ;;  (cons 1 (cons 2 (cons 3 (cons 4 (circular-list 5 6 7 8)))))
 ;;
-
-(define (circular-list? obj)
-  ;;At every iteration ELL is CDR-ed twice, LAG is CDR-ed once.
-  (let loop ((ell obj)
-	     (lag obj))
-    (and (pair? ell)
-	 (let ((ell (cdr ell)))
-	   (and (pair? ell)
-		(let ((ell (cdr ell))
-		      (lag (cdr lag)))
-		  (or (eq? ell lag)
-		      (loop ell lag))))))))
 
 (define (circular-list?/or-null obj)
   (or (null? obj) (circular-list? obj)))
