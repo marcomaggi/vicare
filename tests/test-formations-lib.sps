@@ -5,7 +5,7 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -32,14 +32,6 @@
 
 
 (parameterise ((check-test-name 'basic-errors))
-
-  ;;This is signaled by the Scheme implementation.
-  (check
-      (guard (exc (else 'error))
-	(format))
-    => 'error)
-
-;;; --------------------------------------------------------------------
 
   (check
       (guard (exc (else
