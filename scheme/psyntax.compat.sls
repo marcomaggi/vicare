@@ -47,7 +47,7 @@
     make-parameter			parametrise
     symbol-value			set-symbol-value!
     symbol-bound?
-    keyword?
+    keyword?				circular-list?
     gensym				gensym?
     vector-append			vector-exists
     vector-fold-right			vector-for-all
@@ -130,7 +130,8 @@
 		  ;;Maggi; Wed Sep 30, 2015)
 		  with-blocked-exceptions
 		  void-object?
-		  stadalone-pair?)
+		  stadalone-pair?
+		  circular-list?)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk
@@ -165,6 +166,10 @@
     ;;2016)
     (only (ikarus pairs)
 	  standalone-pair?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 19,
+    ;;2016)
+    (only (ikarus lists)
+	  circular-list?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Jan 4,
     ;;2016)
     (only (ikarus numerics complex-numbers)

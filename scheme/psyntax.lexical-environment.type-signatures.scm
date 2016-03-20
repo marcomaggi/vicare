@@ -871,57 +871,78 @@
   ;;annotation of DATUM, which must be a Scheme object extracted from a syntax object
   ;;representing a literal expression.
   ;;
-  (cond ((boolean? datum)	(cond (datum
-				       (<true>-type-id))
-				      (else
-				       (<false>-type-id))))
-	((char?    datum)	(core-prim-id '<char>))
-	((symbol?  datum)	(core-prim-id '<symbol>))
-	((keyword? datum)	(core-prim-id '<keyword>))
+  ;;We use a hashtable  to detect circular structures in DATUM; we  put in here pairs
+  ;;and vectors.
+  (define table (make-eq-hashtable))
+  (let recur ((datum datum))
+    (cond ((boolean? datum)		(cond (datum
+					       (<true>-type-id))
+					      (else
+					       (<false>-type-id))))
+	  ((char?    datum)		(core-prim-id '<char>))
+	  ((symbol?  datum)		(core-prim-id '<symbol>))
+	  ((keyword? datum)		(core-prim-id '<keyword>))
 
-	((fixnum?  datum)	(cond ((fxpositive? datum)
-				       (core-prim-id '<positive-fixnum>))
-				      ((fxzero? datum)
-				       (core-prim-id '<zero-fixnum>))
-				      (else
-				       (core-prim-id '<fixnum>))))
-	((flonum?  datum)	(cond ((flpositive? datum)
-				       (core-prim-id '<positive-flonum>))
-				      ((flzero?/positive datum)
-				       (core-prim-id '<positive-zero-flonum>))
-				      ((flzero?/negative datum)
-				       (core-prim-id '<negative-zero-flonum>))
-				      (else
-				       (core-prim-id '<flonum>))))
-	((ratnum?  datum)	(core-prim-id '<ratnum>))
-	((bignum?  datum)	(core-prim-id '<bignum>))
-	((compnum? datum)	(cond ((exact-compnum? datum)
-				       (core-prim-id '<exact-compnum>))
-				      (else
-				       (core-prim-id '<compnum>))))
-	((cflonum? datum)	(core-prim-id '<cflonum>))
+	  ((fixnum?  datum)		(cond ((fxpositive? datum)
+					       (core-prim-id '<positive-fixnum>))
+					      ((fxzero? datum)
+					       (core-prim-id '<zero-fixnum>))
+					      (else
+					       (core-prim-id '<fixnum>))))
+	  ((flonum?  datum)		(cond ((flpositive? datum)
+					       (core-prim-id '<positive-flonum>))
+					      ((flzero?/positive datum)
+					       (core-prim-id '<positive-zero-flonum>))
+					      ((flzero?/negative datum)
+					       (core-prim-id '<negative-zero-flonum>))
+					      (else
+					       (core-prim-id '<flonum>))))
+	  ((ratnum?  datum)		(core-prim-id '<ratnum>))
+	  ((bignum?  datum)		(core-prim-id '<bignum>))
+	  ((compnum? datum)		(cond ((exact-compnum? datum)
+					       (core-prim-id '<exact-compnum>))
+					      (else
+					       (core-prim-id '<compnum>))))
+	  ((cflonum? datum)		(core-prim-id '<cflonum>))
 
-	((string?  datum)	(core-prim-id '<string>))
+	  ((string?  datum)		(core-prim-id '<string>))
 
-	((null? datum)		(<null>-type-id))
+	  ((null? datum)		(<null>-type-id))
 
-	((list? datum)		(cons (core-prim-id 'list)
-				      (map datum-type-annotation datum)))
+	  ((list? datum)		(if (hashtable-ref table datum #f)
+					    (<list>-type-id)
+					  (begin
+					    (let pair-recur ((P datum))
+					      (when (pair? P)
+						(hashtable-set! table P #t)
+						(pair-recur (cdr P))))
+					    (cons (core-prim-id 'list)
+						  (map recur datum)))))
 
-	((pair? datum)		(list (core-prim-id 'pair)
-				      (datum-type-annotation (car datum))
-				      (datum-type-annotation (cdr datum))))
+	  #;((circular-list? datum)	(core-prim-id '<circular-list>))
 
-	((vector?  datum)	(cond ((vector-empty? datum)
-				       (<empty-vector>-type-id))
-				      (else
-				       (cons (core-prim-id 'vector)
-					     (map datum-type-annotation (vector->list datum))))))
+	  ((pair? datum)		(if (hashtable-ref table datum #f)
+					    (<pair>-type-id)
+					  (begin
+					    (hashtable-set! table datum #t)
+					    (list (core-prim-id 'pair)
+						  (recur (car datum))
+						  (recur (cdr datum))))))
 
-	((bytevector? datum)	(core-prim-id '<bytevector>))
+	  ((vector?  datum)		(if (hashtable-ref table datum #f)
+					    (<vector>-type-id)
+					  (begin
+					    (hashtable-set! table datum #t)
+					    (cond ((vector-empty? datum)
+						   (<empty-vector>-type-id))
+						  (else
+						   (cons (core-prim-id 'vector)
+							 (map recur (vector->list datum))))))))
 
-	((eq? datum (void))	(<void>-type-id))
-	(else			(<top>-type-id))))
+	  ((bytevector? datum)		(core-prim-id '<bytevector>))
+
+	  ((eq? datum (void))		(<void>-type-id))
+	  (else				(<top>-type-id)))))
 
 
 ;;;; done
