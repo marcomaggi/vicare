@@ -2456,56 +2456,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'predicate-procedure-argument-validation))
-
-  (define (assert-list-procedure-argument who obj)
-    (if (list? obj)
-	obj
-      (procedure-argument-violation who
-	"expected list object as argument" obj)))
-
-  (begin-for-syntax
-    (set-predicate-assertion-procedure-argument-validation! #'list?
-      #'assert-list-procedure-argument))
-
-  (check
-      ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
-    => '(1 2 3))
-
-  (check
-      (guard (E ((procedure-argument-violation? E)
-		 (vector (condition-who E)
-			 (condition-irritants E)))
-		(else E))
-	((predicate-procedure-argument-validation list?) 'hey '#(1 2 3)))
-    => '#(hey (#(1 2 3))))
-
-  #t)
-
-
-(parametrise ((check-test-name	'predicate-return-value-validation))
-
-  (define (assert-list-return-value who obj)
-    (if (list? obj)
-	obj
-      (expression-return-value-violation who
-	"expected list object as return value" obj)))
-
-  (begin-for-syntax
-    (set-predicate-assertion-return-value-validation! #'list?
-      #'assert-list-return-value))
-
-  (check
-      ((predicate-return-value-validation list?) 'hey '(1 2 3))
-    => '(1 2 3))
-
-  (check-for-expression-return-value-violation
-      ((predicate-return-value-validation list?) 'hey '#(1 2 3))
-    => '(hey (#(1 2 3))))
-
-  #t)
-
-
 (parametrise ((check-test-name	'non-hygienic-identifier-syntaxes))
 
   (check-for-true

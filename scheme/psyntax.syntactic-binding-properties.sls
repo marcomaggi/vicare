@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -21,16 +21,11 @@
 
 (library (psyntax.syntactic-binding-properties)
   (export
-
     ;; identifiers: syntactic binding properties
     syntactic-binding-putprop			$syntactic-binding-putprop
     syntactic-binding-getprop			$syntactic-binding-getprop
     syntactic-binding-remprop			$syntactic-binding-remprop
-    syntactic-binding-property-list		$syntactic-binding-property-list
-
-    ;; identifiers: predicates axiliary functions API
-    set-predicate-assertion-procedure-argument-validation!	predicate-assertion-procedure-argument-validation
-    set-predicate-assertion-return-value-validation!		predicate-assertion-return-value-validation)
+    syntactic-binding-property-list		$syntactic-binding-property-list)
   (import (rnrs)
     (psyntax.compat)
     (only (psyntax.lexical-environment)
@@ -65,33 +60,6 @@
 
 (define* ($syntactic-binding-property-list id)
   ($property-list (id->label/or-error __who__ id id)))
-
-
-;;;; identifiers: predicates axiliary functions API
-
-(let-syntax
-    ((define-identifier-property (syntax-rules ()
-				   ((_ ?cookie ?setter ?getter ?alread-defined-errmsg)
-				    (begin
-				      (define* (?setter {pred-id identifier?} {validation-stx syntax-object?})
-					(if ($syntactic-binding-getprop pred-id '?cookie)
-					    (syntax-violation __who__ ?alread-defined-errmsg pred-id validation-stx)
-					  ($syntactic-binding-putprop pred-id '?cookie validation-stx)))
-				      (define* (?getter {pred-id identifier?})
-					($syntactic-binding-getprop pred-id '?cookie))))
-				   )))
-
-  (define-identifier-property vicare:expander:predicate-procedure-argument-validation
-    set-predicate-assertion-procedure-argument-validation!
-    predicate-assertion-procedure-argument-validation
-    "predicate procedure argument validation already defined")
-
-  (define-identifier-property vicare:expander:predicate-return-value-validation
-    set-predicate-assertion-return-value-validation!
-    predicate-assertion-return-value-validation
-    "predicate procedure return value validation already defined")
-
-  #| end of LET-SYNTAX |# )
 
 
 ;;;; done

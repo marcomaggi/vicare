@@ -103,9 +103,6 @@
 	  variable-transformer?		variable-transformer-procedure
 	  synonym-transformer?		synonym-transformer-identifier
 	  expand-time-value?		expand-time-value-object)
-    (only (psyntax.syntactic-binding-properties)
-	  predicate-assertion-procedure-argument-validation
-	  predicate-assertion-return-value-validation)
     (psyntax.non-core-macro-transformers)
     (psyntax.library-manager)
     (psyntax.internal))

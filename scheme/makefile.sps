@@ -645,8 +645,6 @@
     (further-optimisation-of*			(core-macro . further-optimisation-of*))
     (assembly-of				(core-macro . assembly-of))
     (splice-first-expand			(core-macro . splice-first-expand))
-    (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
-    (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
 
 ;;;Non-core macros.
     (__file__					(macro! . __file__))
@@ -3263,13 +3261,6 @@
 ;;;
     (with-blocked-exceptions			v $language)
     (with-current-dynamic-environment		v $language)
-;;;
-    (set-predicate-assertion-procedure-argument-validation!	v $language)
-    (predicate-assertion-procedure-argument-validation		v $language)
-    (set-predicate-assertion-return-value-validation!		v $language)
-    (predicate-assertion-return-value-validation		v $language)
-    (predicate-procedure-argument-validation	v $language)
-    (predicate-return-value-validation		v $language)
 ;;;
     (eval-for-expand				v $language)
     (begin-for-syntax				v $language)

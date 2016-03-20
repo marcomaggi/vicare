@@ -159,8 +159,6 @@
     ((fluid-let-syntax)				fluid-let-syntax-transformer)
     ((splice-first-expand)			splice-first-expand-transformer)
     ((internal-body)				internal-body-transformer)
-    ((predicate-procedure-argument-validation)	predicate-procedure-argument-validation-transformer)
-    ((predicate-return-value-validation)	predicate-return-value-validation-transformer)
 
     ((struct-type-descriptor)			struct-type-descriptor-transformer)
 
@@ -1476,40 +1474,6 @@
     ((_ ?body ?body* ...)
      (chi-internal-body input-form.stx lexenv.run lexenv.expand
 			(cons ?body ?body*)))
-    ))
-
-
-;;;; module core-macro-transformer: PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, PREDICATE-RETURN-VALUE-VALIDATION
-
-(define-core-transformer (predicate-procedure-argument-validation input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer        function         used        to         expand        Vicare's
-  ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from   the  top-level  built  in
-  ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
-  ;;LEXENV; return a PSI object.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(predicate-assertion-procedure-argument-validation ?id)))
-		     (else
-		      (%synner "undefined procedure argument validation")))
-	       lexenv.run lexenv.expand))
-    ))
-
-(define-core-transformer (predicate-return-value-validation input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's PREDICATE-RETURN-VALUE-VALIDATION
-  ;;macros  from  the  top-level  built  in  environment.   Expand  the  contents  of
-  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI object.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(predicate-assertion-return-value-validation ?id)))
-		     (else
-		      (%synner "undefined return value validation")))
-	       lexenv.run lexenv.expand))
     ))
 
 
