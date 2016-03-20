@@ -40,7 +40,7 @@
     circular-list-length	circular-list=
 
     ;; predicates
-    circular-list?		circular-list?/or-null
+    circular-list?/or-null
     dotted-list?		dotted-list?/or-null
     not-pair?
     and-null?			or-null?
@@ -305,17 +305,17 @@
 ;;  (cons 1 (cons 2 (cons 3 (cons 4 (circular-list 5 6 7 8)))))
 ;;
 
-(define (circular-list? obj)
-  ;;At every iteration ELL is CDR-ed twice, LAG is CDR-ed once.
-  (let loop ((ell obj)
-	     (lag obj))
-    (and (pair? ell)
-	 (let ((ell (cdr ell)))
-	   (and (pair? ell)
-		(let ((ell (cdr ell))
-		      (lag (cdr lag)))
-		  (or (eq? ell lag)
-		      (loop ell lag))))))))
+;; (define (circular-list? obj)
+;;   ;;At every iteration ELL is CDR-ed twice, LAG is CDR-ed once.
+;;   (let loop ((ell obj)
+;; 	     (lag obj))
+;;     (and (pair? ell)
+;; 	 (let ((ell (cdr ell)))
+;; 	   (and (pair? ell)
+;; 		(let ((ell (cdr ell))
+;; 		      (lag (cdr lag)))
+;; 		  (or (eq? ell lag)
+;; 		      (loop ell lag))))))))
 
 (define (circular-list?/or-null obj)
   (or (null? obj) (circular-list? obj)))
