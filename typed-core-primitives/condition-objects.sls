@@ -335,12 +335,8 @@
 (declare-core-primitive syntax-violation
     (safe)
   (signatures
-   ((<false>  <string> <top>)			=> <no-return>)
-   ((<symbol> <string> <top>)			=> <no-return>)
-   ((<string> <string> <top>)			=> <no-return>)
-   ((<false>  <string> <top> <top>)		=> <no-return>)
-   ((<symbol> <string> <top> <top>)		=> <no-return>)
-   ((<string> <string> <top> <top>)		=> <no-return>)))
+   ((<condition-&who-field> <string> <top>)		=> <no-return>)
+   ((<condition-&who-field> <string> <top> <top>)	=> <no-return>)))
 
 (declare-core-primitive warning
     (safe)

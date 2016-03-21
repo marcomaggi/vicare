@@ -1007,6 +1007,7 @@ et cetera.
 * types built-in records::      Type of record objects.
 * types built-in conditions::   Type of condition objects.
 * types built-in ports::        Types of input/output ports.
+* types built-in misc::         Miscellaneous built-in types.
 @end menu
 
 @c page
@@ -2468,5 +2469,19 @@ Type of binary input/output ports.  There is no constructor.  The type
 predicate is @func{binary-input/output-port?}.
 @end deftp
 
+@c page
+@node types built-in misc
+@subsection Miscellaneous built-in types
+
+
+@deftp {Built--In Type} @class{condition-&who-field}
+The type of the field in the built--in condition object type
+@condition{who}.  Its definition is equivalent to:
+
+@lisp
+(define-type <condition-&who-field>
+  (union <false> <symbol> <string>))
+@end lisp
+@end deftp
 
 @c end of file

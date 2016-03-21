@@ -98,6 +98,10 @@
      hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor!
      syntactic-binding-descriptor/hard-coded-core-condition-object-type-name?
 
+;;; hard-coded type annotation descriptor binding
+     hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor!
+     syntactic-binding-descriptor/hard-coded-type-annotation?
+
 ;;; fluid syntax bindings
      make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
      syntactic-binding-descriptor/fluid-syntax?
@@ -1107,6 +1111,48 @@
 ;;
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-core-condition-object-type-name?
   $core-condition-object-type-name)
+
+
+;;;; syntactic binding descriptor: core built-in object-type descriptor binding
+
+(define* (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descriptor)
+  ;;Mutate  a  syntactic binding's  descriptor  from  the  representation of  a  core
+  ;;built-in type annotation  (established by the boot image) to  a representation of
+  ;;an type  annotation in  the format  usable by  the expander.   Return unspecified
+  ;;values.
+  ;;
+  ;;The core descriptor has the format:
+  ;;
+  ;;   ($core-type-annotation . ?hard-coded-sexp)
+  ;;
+  ;;and ?HARD-CODED-SEXP has the format:
+  ;;
+  ;;   (?type-name ?type-annotation)
+  ;;
+  ;;and the usable descriptor has the format:
+  ;;
+  ;;   (core-object-type-name . (#<object-type-spec> . ?hard-coded-sexp))
+  ;;
+  ;;Syntactic binding  descriptors of type "$core-type-annotation"  are hard-coded in
+  ;;the boot image  and generated directly by the makefile  at boot image build-time.
+  ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
+  ;;descriptor from the label: this function is used to convert the descriptor.
+  ;;
+  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
+	 (descr.value		(syntactic-binding-descriptor.value descriptor))
+	 (type-name.sym		(car descr.value))
+	 (type-annotation.sexp	(list-ref descr.value 1)))
+    (let ((type-name.id		(core-prim-id type-name.sym))
+	  (type-annotation.stx	(bless type-annotation.sexp)))
+      (let* ((type.ots		(type-annotation->object-type-specification type-annotation.stx (current-inferior-lexenv))))
+	(set-car! descriptor 'core-object-type-name)
+	(set-cdr! descriptor (cons type.ots descr.value))))))
+
+;;Return true  if the  argument is  a syntactic  binding's descriptor  representing a
+;;built-in type annotation; otherwise return false.
+;;
+(define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/hard-coded-type-annotation?
+  $core-type-annotation)
 
 
 ;;;; syntactic binding descriptor: fluid syntax bindings

@@ -513,9 +513,10 @@ EXTRA_DIST += \
 
 VICARE_NEW_BOOT		= vicare.boot
 VICARE_BOOT_MAKEFILES	= \
-	scheme/makefile.sps							\
-	scheme/makefile.scheme-object-types.scm					\
-	scheme/makefile.built-in-record-types.scm
+	scheme/makefile.sps					\
+	scheme/makefile.scheme-object-types.scm			\
+	scheme/makefile.built-in-record-types.scm		\
+	scheme/makefile.built-in-type-annotations.scm
 
 VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/build-specs.sps			\

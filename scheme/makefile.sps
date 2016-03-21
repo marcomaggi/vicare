@@ -811,7 +811,7 @@
     ))
 
 
-;;;;
+;;;; built-in object-type hard-coded specifications and annotations
 
 ;;NOTE This  definition must  stay here  because the scheme  objects tables  are also
 ;;sourced in the "ikarus.*" files, where another definition for DEFINE-SCHEME-TYPE is
@@ -839,12 +839,32 @@
 					   ((?method-name . ?method-implementation-procedure) ...))))))))
     ))
 
+(define-syntax* (define-type-annotation stx)
+  ;;Hard-coded built-in type annotations are meant to be equivalent to:
+  ;;
+  ;;   (define-type ?type-name ?type-annotation)
+  ;;
+  (syntax-case stx ()
+    ((?kwd ?type-name ?type-annotation)
+     #'(set-cons! VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
+		  (quote (?type-name
+			  ($core-type-annotation
+			   . (?type-name ?type-annotation))))))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
-(include "makefile.scheme-object-types.scm"	#t)
-(include "makefile.built-in-record-types.scm"	#t)
+(define VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
+  '())
 
+;;; --------------------------------------------------------------------
+
+(include "makefile.scheme-object-types.scm"		#t)
+(include "makefile.built-in-record-types.scm"		#t)
+(include "makefile.built-in-type-annotations.scm"	#t)
 
 
 ;;;; core syntactic binding descriptors: all the bindings established by the boot image
@@ -853,7 +873,8 @@
   (append VICARE-CORE-BUILT-IN-SYNTAXES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
 	  VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS))
+	  VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+	  VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS))
 
 
 ;;;; core syntactic binding descriptors: typed core primitives infrastructure
@@ -3513,6 +3534,9 @@
     (<binary-input-port>			v $language)
     (<binary-output-port>			v $language)
     (<binary-input/output-port>			v $language)
+
+    ;;built-in type annotations
+    (<condition-&who-field>			v $language)
 
     ;; helpers
     (<top>-constructor)

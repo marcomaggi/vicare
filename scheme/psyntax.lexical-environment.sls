@@ -793,7 +793,10 @@
 		       (hard-coded-core-condition-object-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr))
 
 		      ((syntactic-binding-descriptor/hard-coded-core-record-type-name? descr)
-		       (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr)))
+		       (hard-coded-core-record-type-name-binding-descriptor->core-record-type-name-binding-descriptor! descr))
+
+		      ((syntactic-binding-descriptor/hard-coded-type-annotation? descr)
+		       (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descr)))
 		descr))
 
 	  ;;Search the given LEXENV.
