@@ -29,6 +29,7 @@
      (eval . (put 'build-library-letrec*						'scheme-indent-function 1))
      (eval . (put 'build-sequence							'scheme-indent-function 1))
      (eval . (put 'build-with-compilation-options					'scheme-indent-function 1))
+     (eval . (put 'case-expander-language						'scheme-indent-function 0))
      (eval . (put 'case-identifier-syntactic-binding-descriptor				'scheme-indent-function 1))
      (eval . (put 'case-identifier-syntactic-binding-descriptor/no-indirection		'scheme-indent-function 1))
      (eval . (put 'case-object-type-binding						'scheme-indent-function 1))

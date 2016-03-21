@@ -451,17 +451,21 @@
       (else
        ;;We have  determined at expand-time  that this  operand returns zero,  two or
        ;;more values or some other invalid value.  Bad.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-who-condition 'values)
-		      (make-message-condition "expression used as operand in VALUES application returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-who-condition 'values)
+			 (make-message-condition "expression used as operand in VALUES application returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise             (condition (make-expand-time-type-signature-violation) (common))))
+	   ((default)
+	    (raise-continuable (condition (make-expand-time-type-signature-warning)   (common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))))
 
   #| end of module: CHI-VALUES-APPLICATION |# )
 
@@ -523,16 +527,20 @@
 	    rand.ots))
 
       (<no-return>
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand is typed as not returning")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand is typed as not returning")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise             (condition (make-expand-time-type-signature-violation) (common))))
+	   ((default)
+	    (raise-continuable (condition (make-expand-time-type-signature-warning)   (common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -549,16 +557,20 @@
 
       (else
        ;;The operand expression returns zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise             (condition (make-expand-time-type-signature-violation) (common))))
+	   ((default)
+	    (raise-continuable (condition (make-expand-time-type-signature-warning)   (common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))))
 
   #| end of module: CHI-CONS-APPLICATION |# )
 
@@ -614,16 +626,20 @@
 	    rand.ots))
 
       (<no-return>
-       (let ((common (list
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand is typed as not returning")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand is typed as not returning")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -640,16 +656,20 @@
 
       (else
        ;;The operand expression returns zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))))
 
   #| end of module: CHI-LIST-APPLICATION |# )
 
@@ -704,16 +724,20 @@
 	    (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)))
 
       (<no-return>
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand is typed as not returning")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (make-type-signature/single-top)))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand is typed as not returning")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (make-type-signature/single-top))
+	   ((strict-r6rs)
+	    (make-type-signature/single-top)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -731,16 +755,20 @@
 
       (else
        ;;The operand expression returns zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (make-type-signature/single-top)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (make-type-signature/single-top))
+	   ((strict-r6rs)
+	    (make-type-signature/single-top)))))))
 
   (define (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)
     (make-type-signature/single-value
@@ -765,19 +793,24 @@
 	    (<top>-ots))
 
 	   (else
-	    (let ((common (condition
-			   (make-who-condition __module_who__)
-			   (make-message-condition "expand-time mismatch between closure object's arguments signatures and operands signature")
-			   (make-syntax-violation input-form.stx rand.stx)
-			   (make-application-operator-expression-condition (%core-prim-id))
-			   (make-application-operands-expressions-condition (list rand.stx))
-			   (make-application-argument-type-name-condition (<pair>-type-id))
-			   (make-application-operand-signature-condition rand.sig))))
-	      (if (options::typed-language?)
-		  (raise (condition (make-expand-time-type-signature-violation) common))
-		(begin
-		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		  (<top>-ots))))))))
+	    (let ((common (lambda ()
+			    (condition
+			      (make-who-condition __module_who__)
+			      (make-message-condition
+			       "expand-time mismatch between closure object's arguments signatures and operands signature")
+			      (make-syntax-violation input-form.stx rand.stx)
+			      (make-application-operator-expression-condition (%core-prim-id))
+			      (make-application-operands-expressions-condition (list rand.stx))
+			      (make-application-argument-type-name-condition (<pair>-type-id))
+			      (make-application-operand-signature-condition rand.sig)))))
+	      (case-expander-language
+		((typed)
+		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
+		((default)
+		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		 (<top>-ots))
+		((strict-r6rs)
+		 (<top>-ots))))))))
 
   #| end of module: CHI-CAR-APPLICATION |# )
 
@@ -832,16 +865,20 @@
 	    (%single-value-operand-signature->application-signature input-form.stx rand.stx rand.sig rand.ots)))
 
       (<no-return>
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand is typed as not returning")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (make-type-signature/single-top)))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand is typed as not returning")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (make-type-signature/single-top))
+	   ((strict-r6rs)
+	    (make-type-signature/single-top)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -859,16 +896,20 @@
 
       (else
        ;;The operand expression returns zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (make-type-signature/single-top)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (make-type-signature/single-top))
+	   ((strict-r6rs)
+	    (make-type-signature/single-top)))))))
 
   (define* ({%single-value-operand-signature->application-signature type-signature?} input-form.stx rand.stx rand.sig rand.ots)
     (make-type-signature/single-value
@@ -896,19 +937,24 @@
 	    (<top>-ots))
 
 	   (else
-	    (let ((common (condition
-			   (make-who-condition __module_who__)
-			   (make-message-condition "expand-time mismatch between closure object's arguments signatures and operands signature")
-			   (make-syntax-violation input-form.stx rand.stx)
-			   (make-application-operator-expression-condition (%core-prim-id))
-			   (make-application-operands-expressions-condition (list rand.stx))
-			   (make-application-argument-type-name-condition (<pair>-type-id))
-			   (make-application-operand-signature-condition rand.sig))))
-	      (if (options::typed-language?)
-		  (raise (condition (make-expand-time-type-signature-violation) common))
-		(begin
-		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		  (<top>-ots))))))))
+	    (let ((common (lambda ()
+			    (condition
+			      (make-who-condition __module_who__)
+			      (make-message-condition
+			       "expand-time mismatch between closure object's arguments signatures and operands signature")
+			      (make-syntax-violation input-form.stx rand.stx)
+			      (make-application-operator-expression-condition (%core-prim-id))
+			      (make-application-operands-expressions-condition (list rand.stx))
+			      (make-application-argument-type-name-condition (<pair>-type-id))
+			      (make-application-operand-signature-condition rand.sig)))))
+	      (case-expander-language
+		((typed)
+		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
+		((default)
+		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		 (<top>-ots))
+		((strict-r6rs)
+		 (<top>-ots))))))))
 
   #| end of module: CHI-CDR-APPLICATION |# )
 
@@ -964,16 +1010,20 @@
 	    rand.ots))
 
       (<no-return>
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand is typed as not returning")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand is typed as not returning")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -990,16 +1040,20 @@
 
       (else
        ;;The operand expression returns zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (<top>-ots)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (<top>-ots))
+	   ((strict-r6rs)
+	    (<top>-ots)))))))
 
   #| end of module: CHI-VECTOR-APPLICATION |# )
 
@@ -1089,16 +1143,20 @@
 	    (%process-single-value-operand input-form.stx rand.stx rand.sig rand.ots application.specs unspecified-kont)))
 
       (<no-return>
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand is typed as not returning")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (unspecified-kont)))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand is typed as not returning")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (unspecified-kont))
+	   ((strict-r6rs)
+	    (unspecified-kont)))))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
@@ -1116,16 +1174,20 @@
 
       (else
        ;;The operand expression returns zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __module_who__)
-		      (make-message-condition "expression used as application operand returns multiple values")
-		      (make-syntax-violation input-form.stx rand.stx)
-		      (make-application-operand-signature-condition rand.sig))))
-	 (if (options::typed-language?)
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (unspecified-kont)))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __module_who__)
+			 (make-message-condition "expression used as application operand returns multiple values")
+			 (make-syntax-violation input-form.stx rand.stx)
+			 (make-application-operand-signature-condition rand.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (unspecified-kont))
+	   ((strict-r6rs)
+	    (unspecified-kont)))))))
 
   (define (%process-single-value-operand input-form.stx rand.stx rand.sig rand.ots application.specs unspecified-kont)
     (cond ((simple-condition-object-type-spec? rand.ots)
@@ -1146,16 +1208,21 @@
 	   ;;has type "<condition>".
 	   (unspecified-kont))
 	  (else
-	   (let ((common (condition
-			  (make-who-condition __module_who__)
-			  (make-message-condition "expected condition object-type specification as component of compound condition object-type")
-			  (make-syntax-violation input-form.stx rand.stx)
-			  (make-application-operand-signature-condition rand.sig))))
-	     (if (options::typed-language?)
-		 (raise (condition (make-expand-time-type-signature-violation) common))
-	       (begin
-		 (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		 (unspecified-kont)))))))
+	   (let ((common (lambda ()
+			   (condition
+			     (make-who-condition __module_who__)
+			     (make-message-condition
+			      "expected condition object-type specification as component of compound condition object-type")
+			     (make-syntax-violation input-form.stx rand.stx)
+			     (make-application-operand-signature-condition rand.sig)))))
+	     (case-expander-language
+	       ((typed)
+		(raise			(condition (make-expand-time-type-signature-violation) (common))))
+	       ((default)
+		(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		(unspecified-kont))
+	       ((strict-r6rs)
+		(unspecified-kont)))))))
 
   #| end of module: CHI-CONDITION-APPLICATION |# )
 
@@ -1218,19 +1285,22 @@
        ;;The operator expression correctly returns a  single value, but such value is
        ;;not marked as procedure.  Bad.
        => (lambda (rator.ots)
-	    (let ((common (condition
-			   (make-who-condition __who__)
-			   (make-who-condition 'apply)
-			   (make-message-condition "expression used as operator in APPLY application evaluates to a non-procedure value")
-			   (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-			   (make-application-operator-signature-condition rator.ots))))
-	      (if (options::typed-language?)
-		  (raise (condition (make-expand-time-type-signature-violation) common))
+	    (let ((common (lambda ()
+			    (condition
+			      (make-who-condition 'apply)
+			      (make-message-condition "expression used as operator in APPLY application evaluates to a non-procedure value")
+			      (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			      (make-application-operator-signature-condition rator.ots)))))
+	      (case-expander-language
+		((typed)
+		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
 		;;According to the standard we must insert a normal rator application
 		;;and raise an exception at run-time.  Raise a warning, then do it.
-		(begin
-		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		  (%build-default-application))))))
+		((default)
+		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		 (%build-default-application))
+		((strict-r6rs)
+		 (%build-default-application))))))
 
       ((unspecified-values)
        ;;The  operator  expression  returns  an  unspecified  number  of  values,  of
@@ -1244,33 +1314,40 @@
        ;;
        ;;   (apply (error #f "bad value") ?rand ...)
        ;;
-       ;;Raise a warning then do it.
-       (raise-continuable
-	(condition
-	 (make-expand-time-type-signature-warning)
-	 (make-who-condition __who__)
-	 (make-who-condition 'apply)
-	 (make-message-condition "expression used as operator in APPLY application does not return")
-	 (make-syntax-violation input-form.stx rator.stx)
-	 (make-application-operator-signature-condition rator.sig)))
-       (%build-default-application))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition 'apply)
+			 (make-message-condition "expression used as operator in APPLY application does not return")
+			 (make-syntax-violation input-form.stx rator.stx)
+			 (make-application-operator-signature-condition rator.sig)))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (%build-default-application))
+	   ((strict-r6rs)
+	    (%build-default-application)))))
 
       (else
        ;;The rator is declared to evaluate to zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __who__)
-		      (make-who-condition 'apply)
-		      (make-message-condition "expression used as operator in APPLY application returns multiple values")
-		      (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-		      (make-application-operator-signature-condition (psi.retvals-signature rator.psi)))))
-	 (if (options::typed-language?)
-	     ;;Multiple values are invalid in call context: raise an exception.
-	     (raise (condition (make-expand-time-type-signature-violation) common))
-	   ;;According to  the standard we  must insert a normal  rator application
-	   ;;and raise an exception at run-time.  Raise a warning, then do it.
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (%build-default-application))))))))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition 'apply)
+			 (make-message-condition "expression used as operator in APPLY application returns multiple values")
+			 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			 (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	 (case-expander-language
+	   ((typed)
+	    ;;Multiple values are invalid in call context: raise an exception.
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ;;According to the standard we must  insert a normal rator application and
+	   ;;raise an exception at run-time.  Raise a warning, then do it.
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (%build-default-application))
+	   ((strict-r6rs)
+	    (%build-default-application))))))))
 
 
 ;;;; chi procedures: operator application processing, operator already expanded
@@ -1333,18 +1410,22 @@
      ;;The operator  expression correctly returns a  single value, but such  value is
      ;;not marked as procedure.  Bad.
      => (lambda (rator.ots)
-	  (let ((common (condition
-			 (make-who-condition __who__)
-			 (make-message-condition "expression used as operator in application form evaluates to a non-procedure value")
-			 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-			 (make-application-operator-signature-condition rator.ots))))
-	    (if (options::typed-language?)
-		(raise (condition (make-expand-time-type-signature-violation) common))
+	  (let ((common (lambda ()
+			  (condition
+			    (make-who-condition __who__)
+			    (make-message-condition "expression used as operator in application form evaluates to a non-procedure value")
+			    (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			    (make-application-operator-signature-condition rator.ots)))))
+	    (case-expander-language
+	      ((typed)
+	       (raise			(condition (make-expand-time-type-signature-violation) (common))))
 	      ;;According to the  standard we must insert a  normal rator application
 	      ;;and raise an exception at run-time.  Raise a warning, then do it.
-	      (begin
-		(raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		(%build-default-application))))))
+	      ((default)
+	       (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+	       (%build-default-application))
+	      ((strict-r6rs)
+	       (%build-default-application))))))
 
     ((unspecified-values)
      ;;The  operator  expression   returns  an  unspecified  number   of  values,  of
@@ -1358,31 +1439,40 @@
      ;;
      ;;   ((error #f "bad value") ?rand ...)
      ;;
-     ;;Raise a warning then do it.
-     (raise-continuable
-      (condition
-       (make-expand-time-type-signature-warning)
-       (make-who-condition __who__)
-       (make-message-condition "expression used as operator in application form does not return")
-       (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-       (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))
-     (%build-default-application))
+     (let ((common (lambda ()
+		     (condition
+		       (make-who-condition __who__)
+		       (make-message-condition "expression used as operator in application form does not return")
+		       (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+		       (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+       (case-expander-language
+	 ((typed)
+	  (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	 ((default)
+	  (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	  (%build-default-application))
+	 ((strict-r6rs)
+	  (%build-default-application)))))
 
     (else
      ;;The rator is declared to evaluate to zero, two or more values.
-     (let ((common (condition
-		    (make-who-condition __who__)
-		    (make-message-condition "expression used as operator in application form returns multiple values")
-		    (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-		    (make-application-operator-signature-condition (psi.retvals-signature rator.psi)))))
-       (if (options::typed-language?)
-	   ;;Multiple values are invalid in call context: raise an exception.
-	   (raise (condition (make-expand-time-type-signature-violation) common))
+     (let ((common (lambda ()
+		     (condition
+		       (make-who-condition __who__)
+		       (make-message-condition "expression used as operator in application form returns multiple values")
+		       (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+		       (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+       (case-expander-language
+	 ((typed)
+	  ;;Multiple values are invalid in call context: raise an exception.
+	  (raise		(condition (make-expand-time-type-signature-violation)	(common))))
 	 ;;According to  the standard we must  insert a normal rator  application and
 	 ;;raise an exception at run-time.  Raise a warning, then do it.
-	 (begin
-	   (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	   (%build-default-application)))))))
+	 ((default)
+	  (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	  (%build-default-application))
+	 ((strict-r6rs)
+	  (%build-default-application)))))))
 
 
 ;;;; chi procedures: operator application processing, first operand already expanded
@@ -1445,18 +1535,22 @@
        ;;The operator expression correctly returns a  single value, but such value is
        ;;not marked as procedure.  Bad.
        => (lambda (rator.ots)
-	    (let ((common (condition
-			   (make-who-condition __who__)
-			   (make-message-condition "expression used as operator in application form evaluates to a non-procedure value")
-			   (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-			   (make-application-operator-signature-condition rator.ots))))
-	      (if (options::typed-language?)
-		  (raise (condition (make-expand-time-type-signature-violation) common))
+	    (let ((common (lambda ()
+			    (condition
+			      (make-who-condition __who__)
+			      (make-message-condition "expression used as operator in application form evaluates to a non-procedure value")
+			      (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			      (make-application-operator-signature-condition rator.ots)))))
+	      (case-expander-language
+		((typed)
+		 (raise			(condition (make-expand-time-type-signature-violation) (common))))
 		;;According to the standard we must insert a normal rator application
 		;;and raise an exception at run-time.  Raise a warning, then do it.
-		(begin
-		  (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-		  (%build-default-application))))))
+		((default)
+		 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+		 (%build-default-application))
+		((strict-r6rs)
+		 (%build-default-application))))))
 
       ((unspecified-values)
        ;;The  operator  expression   returns  an  unspecified  number   of  values,  of
@@ -1470,31 +1564,40 @@
        ;;
        ;;   ((error #f "bad value") ?rand ...)
        ;;
-       ;;Raise a warning then do it.
-       (raise-continuable
-	(condition
-	 (make-expand-time-type-signature-warning)
-	 (make-who-condition __who__)
-	 (make-message-condition "expression used as operator in application form does not return")
-	 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-	 (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))
-       (%build-default-application))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __who__)
+			 (make-message-condition "expression used as operator in application form does not return")
+			 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			 (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	 (case-expander-language
+	   ((typed)
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (%build-default-application))
+	   ((strict-r6rs)
+	    (%build-default-application)))))
 
       (else
        ;;The rator is declared to evaluate to zero, two or more values.
-       (let ((common (condition
-		      (make-who-condition __who__)
-		      (make-message-condition "expression used as operator in application form returns multiple values")
-		      (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-		      (make-application-operator-signature-condition (psi.retvals-signature rator.psi)))))
-	 (if (options::typed-language?)
-	     ;;Multiple values are invalid in call context: raise an exception.
-	     (raise (condition (make-expand-time-type-signature-violation) common))
+       (let ((common (lambda ()
+		       (condition
+			 (make-who-condition __who__)
+			 (make-message-condition "expression used as operator in application form returns multiple values")
+			 (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			 (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	 (case-expander-language
+	   ((typed)
+	    ;;Multiple values are invalid in call context: raise an exception.
+	    (raise		(condition (make-expand-time-type-signature-violation)	(common))))
 	   ;;According to  the standard we must  insert a normal rator  application and
 	   ;;raise an exception at run-time.  Raise a warning, then do it.
-	   (begin
-	     (raise-continuable (condition (make-expand-time-type-signature-warning) common))
-	     (%build-default-application))))))))
+	   ((default)
+	    (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common)))
+	    (%build-default-application))
+	   ((strict-r6rs)
+	    (%build-default-application))))))))
 
 
 ;;;; chi procedures: closure object application processing
@@ -1516,19 +1619,12 @@
 					   rand*.psi)
     (define (%build-default-application)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi))
-    #;(debug-print __who__ 'input (syntax->datum input-form.stx))
-    (begin0
-	(if (options::strict-r6rs)
-	    ;;We rely on run-time checking.
-	    (%build-default-application)
-	  (let ((signature (closure-type-spec.signature rator.ots)))
-	    (cond ((clambda-signature? signature)
-		   (%process-clambda-application input-form.stx lexenv.run lexenv.expand
-						 signature rator.psi rand*.psi))
-		  (else
-		   (%build-default-application)))))
-      #;(debug-print __who__ 'output (syntax->datum input-form.stx))
-      (void)))
+    (let ((signature (closure-type-spec.signature rator.ots)))
+      (cond ((clambda-signature? signature)
+	     (%process-clambda-application input-form.stx lexenv.run lexenv.expand
+					   signature rator.psi rand*.psi))
+	    (else
+	     (%build-default-application)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1569,38 +1665,50 @@
       ;;representing the  operands of  an operator application.   Here we  check that
       ;;such expressions return a single value.
       ;;
-      (for-each (lambda (rand.psi)
-		  (import CLOSURE-APPLICATION-ERRORS)
-		  (define rand.sig
-		    (psi.retvals-signature rand.psi))
-		  (case-signature-specs rand.sig
-		    ((single-value)
-		     ;;Single return value.  Good.
-		     (void))
-		    ((unspecified-values)
-		     ;;Unspecified number of return values.  Let it go.
-		     (void))
-		    (<no-return>
-		     ;;The operand expression will not return.  Raise a warning, then
-		     ;;let it go.
-		     (raise-continuable
-		      (condition
-		       (make-expand-time-type-signature-warning)
-		       (make-who-condition __module_who__)
-		       (make-message-condition "expression used as operand in procedure application does not return")
-		       (make-syntax-violation input-form.stx (psi.input-form rand.psi))
-		       (make-application-operand-signature-condition rand.sig))))
-		    (else
-		     ;;Zero, two or more return values.  Wrong.
-		     (let ((common (condition
-				    (make-who-condition __module_who__)
-				    (make-message-condition
-				     "expression used as operand in procedure application returns zero, two or more values")
-				    (make-syntax-violation input-form.stx (psi.input-form rand.psi))
-				    (make-application-operand-signature-condition rand.sig))))
-		       (if (options::typed-language?)
-			   (raise (condition (make-expand-time-type-signature-violation) common))
-			 (raise-continuable (condition (make-expand-time-type-signature-warning) common)))))))
+      (for-each
+	  (lambda (rand.psi)
+	    (import CLOSURE-APPLICATION-ERRORS)
+	    (define rand.sig
+	      (psi.retvals-signature rand.psi))
+	    (case-signature-specs rand.sig
+	      ((single-value)
+	       ;;Single return value.  Good.
+	       (void))
+	      ((unspecified-values)
+	       ;;Unspecified number of return values.  Let it go.
+	       (void))
+	      (<no-return>
+	       ;;The operand expression will not return.  Raise a warning, then
+	       ;;let it go.
+	       (let ((common (lambda ()
+			       (condition
+				 (make-who-condition __module_who__)
+				 (make-message-condition "expression used as operand in procedure application is typed as not returning")
+				 (make-syntax-violation input-form.stx (psi.input-form rand.psi))
+				 (make-application-operand-signature-condition rand.sig)))))
+		 (case-expander-language
+		   ((typed)
+		    (raise		(condition (make-expand-time-type-signature-violation) (common))))
+		   ((default)
+		    (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common))))
+		   ((strict-r6rs)
+		    (void)))))
+	      (else
+	       ;;Zero, two or more return values.  Wrong.
+	       (let ((common (lambda ()
+			       (condition
+				 (make-who-condition __module_who__)
+				 (make-message-condition
+				  "expression used as operand in procedure application returns zero, two or more values")
+				 (make-syntax-violation input-form.stx (psi.input-form rand.psi))
+				 (make-application-operand-signature-condition rand.sig)))))
+		 (case-expander-language
+		   ((typed)
+		    (raise		(condition (make-expand-time-type-signature-violation) (common))))
+		   ((default)
+		    (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common))))
+		   ((strict-r6rs)
+		    (void)))))))
 	rand*.psi))
 
     #| end of module: %PROCESS-CLAMBDA-APPLICATION |# )
@@ -1615,7 +1723,6 @@
     ;;
     (define (%build-default-application)
       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi #f))
-    #;(debug-print __who__ 'input (syntax->datum input-form.stx))
     (let loop ((clause-signature*	(clambda-signature.clause-signature* rator.clambda-signature))
 	       (rand*.sig		(map psi.retvals-signature rand*.psi))
 	       ;;In this loop the variable  STATE always upgrades: from "no-match" to
@@ -1650,15 +1757,19 @@
 	  ((no-match)
 	   ;;There are no matching clauses, not even possible matches.  Arguments and
 	   ;;operands do *not* match at expand-time.
-	   (let ((arguments-signature (map clambda-clause-signature.argvals
-					(clambda-signature.clause-signature* rator.clambda-signature))))
-	     (if (options::typed-language?)
-		 (%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
-		   arguments-signature rand*.sig)
-	       (begin
-		 (%warning-mismatch-between-argvals-signature-and-operands-signature input-form.stx
-		   arguments-signature rand*.sig)
-		 (%build-default-application)))))))))
+	   (let ((make-arguments-signature (lambda ()
+					     (map clambda-clause-signature.argvals
+					       (clambda-signature.clause-signature* rator.clambda-signature)))))
+	     (case-expander-language
+	       ((typed)
+		(%error-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+		  (make-arguments-signature) rand*.sig))
+	       ((default)
+		(%warning-mismatch-between-argvals-signature-and-operands-signature input-form.stx
+		  (make-arguments-signature) rand*.sig)
+		(%build-default-application))
+	       ((strict-r6rs)
+		(%build-default-application)))))))))
 
   (define (%match-clause-signature-against-operands clause-signature rand*.sig success-kont failure-kont)
     (let ((argvals.sig (clambda-clause-signature.argvals clause-signature)))
@@ -1705,7 +1816,6 @@
       ;;        (%build-default-application)))
       (%build-default-application))
     (define rator.stx (psi.input-form rator.psi))
-    #;(debug-print __who__ 'input (syntax->datum input-form.stx))
     (cond ((identifier? rator.stx)
 	   ;;Here we do not want to raise an error if the identifier RATOR.STX is not
 	   ;;a typed lexical variable (it might be an identifier expression returning
@@ -1740,7 +1850,6 @@
     ((input-form.stx lexenv.run rator.psi rand*.psi)
      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi #f))
     ((input-form.stx lexenv.run rator.psi rand*.psi clause-application-retvals.sig)
-     #;(debug-print __who__ 'input (syntax->datum input-form.stx))
      (let* ((rator.core		(psi.core-expr rator.psi))
 	    (rand*.core		(map psi.core-expr rand*.psi)))
        (make-psi input-form.stx

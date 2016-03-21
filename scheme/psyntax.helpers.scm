@@ -136,6 +136,49 @@
 	    (identifier-syntax (quote ?module-who))))))
       )))
 
+(define-syntax case-expander-language
+  (lambda (input-form.stx)
+    (define (main stx)
+      (sys::syntax-case stx ()
+	((_ ?clause0 ?clause ...)
+	 (with-syntax
+	     (((CLAUSE0 CLAUSE ...) (%parse-clauses (sys::syntax (?clause0 ?clause ...)))))
+	   (sys::syntax (cond CLAUSE0 CLAUSE ...))))
+	))
+
+    (define (%parse-clauses clause*.stx)
+      (sys::syntax-case clause*.stx (else)
+	(()
+	 (sys::syntax
+	  ((else
+	    (assertion-violation 'case-expander-language
+	      "internal error: invalid language selection"
+	      (options::typed-language?)
+	      (options::strict-r6rs))))))
+	(((else . ?else-body))
+	 (sys::syntax
+	  ((else . ?else-body))))
+	((?clause . ?other-clauses)
+	 (cons (%parse-single-clause (sys::syntax ?clause))
+	       (%parse-clauses (sys::syntax ?other-clauses))))
+	))
+
+    (define (%parse-single-clause clause.stx)
+      (sys::syntax-case clause.stx (typed strict-r6rs default)
+	(((typed) . ?typed-body)
+	 (sys::syntax ((options::typed-language?) . ?typed-body)))
+
+	(((strict-r6rs) . ?strict-r6rs-body)
+	 (sys::syntax ((options::strict-r6rs) . ?strict-r6rs-body)))
+
+	(((default) . ?default-body)
+	 (sys::syntax ((and (not (options::typed-language?))
+			    (not (options::strict-r6rs)))
+		       . ?default-body)))
+	))
+
+    (main input-form.stx)))
+
 ;;; --------------------------------------------------------------------
 
 (define (false-or-procedure? obj)
