@@ -134,7 +134,13 @@
 (define-syntax test/unspec
   (syntax-rules ()
     [(_ expr)
-     (test (begin expr 'unspec) 'unspec)]))
+     (test (begin
+	     (with-exception-handler
+		 (lambda (E)
+		   (unless (warning? E)
+		     (raise E)))
+	       (lambda () expr))
+	     'unspec) 'unspec)]))
 
 (define-syntax test/unspec-or-exn
   (syntax-rules ()
