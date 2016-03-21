@@ -1,3 +1,5 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi.
@@ -2200,7 +2202,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
 ;; eval: (put 'add-instructions		'scheme-indent-function 2)
 ;; eval: (put 'add-single-instruction	'scheme-indent-function 1)
 ;; eval: (put '%with-checked-args	'scheme-indent-function 1)

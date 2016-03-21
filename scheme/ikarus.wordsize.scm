@@ -1,3 +1,5 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
 ;; ikarus.wordsize.scm --
 ;;
 ;;
@@ -51,5 +53,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8-unix
 ;; End:

@@ -1,3 +1,4 @@
+;; -*- coding: utf-8-unix -*-
 ;;
 ;;Part of: Vicare Scheme
 ;;Contents: table of built-in record types and condition object types
@@ -721,7 +722,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8-unix
 ;; eval: (put 'declare-core-primitive		'scheme-indent-function 1)
 ;; eval: (put 'define-built-in-condition-type	'scheme-indent-function 2)
 ;; eval: (put 'define-built-in-record-type 	'scheme-indent-function 2)

@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: utility functions for built-in Scheme objects
@@ -444,6 +445,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
 ;; eval: (put 'define-scheme-type		'scheme-indent-function 2)
 ;; End:

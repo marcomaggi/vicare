@@ -1,3 +1,5 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
 ;;;Copyright (c) 2010-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
@@ -422,5 +424,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8-unix
 ;; End:

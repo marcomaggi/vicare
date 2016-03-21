@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: unwind-protection mechanism
@@ -101,7 +102,3 @@
 #| end of library |#)
 
 ;;; end of file
-;; Local Variables:
-;; mode: vicare
-;; coding: utf-8
-;; End:

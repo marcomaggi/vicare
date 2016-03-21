@@ -1,3 +1,5 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2010-2016  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
@@ -5696,7 +5698,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)

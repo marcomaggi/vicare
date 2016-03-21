@@ -1,3 +1,5 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;
 ;;;Abstract
@@ -1618,7 +1620,6 @@
 
 ;;; end of file
 ;;; Local Variables:
-;;; coding: utf-8-unix
 ;;; eval: (put 'case-errno				'scheme-indent-function 1)
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
