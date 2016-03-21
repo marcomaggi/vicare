@@ -321,6 +321,59 @@
   (declare procedure-signature-return-value-violation.offending-value
 	   &procedure-signature-return-value-violation	<top>)
 
+  (declare utf8-string-decoding-invalid-octet.bytevector	&utf8-string-decoding-invalid-octet   <bytevector>)
+  (declare utf8-string-decoding-invalid-octet.index		&utf8-string-decoding-invalid-octet   <fixnum>)
+  (declare utf8-string-decoding-invalid-octet.octets		&utf8-string-decoding-invalid-octet   (list-of <fixnum>))
+
+  (declare utf8-string-decoding-invalid-2-tuple.bytevector	&utf8-string-decoding-invalid-2-tuple <bytevector>)
+  (declare utf8-string-decoding-invalid-2-tuple.index		&utf8-string-decoding-invalid-2-tuple <fixnum>)
+  (declare utf8-string-decoding-invalid-2-tuple.octets		&utf8-string-decoding-invalid-2-tuple (list-of <fixnum>))
+
+  (declare utf8-string-decoding-invalid-3-tuple.bytevector	&utf8-string-decoding-invalid-3-tuple <bytevector>)
+  (declare utf8-string-decoding-invalid-3-tuple.index		&utf8-string-decoding-invalid-3-tuple <fixnum>)
+  (declare utf8-string-decoding-invalid-3-tuple.octets		&utf8-string-decoding-invalid-3-tuple (list-of <fixnum>))
+
+  (declare utf8-string-decoding-invalid-4-tuple.bytevector	&utf8-string-decoding-invalid-4-tuple <bytevector>)
+  (declare utf8-string-decoding-invalid-4-tuple.index		&utf8-string-decoding-invalid-4-tuple <fixnum>)
+  (declare utf8-string-decoding-invalid-4-tuple.octets		&utf8-string-decoding-invalid-4-tuple (list-of <fixnum>))
+
+  (declare utf8-string-decoding-incomplete-2-tuple.bytevector	&utf8-string-decoding-incomplete-2-tuple      <bytevector>)
+  (declare utf8-string-decoding-incomplete-2-tuple.index	&utf8-string-decoding-incomplete-2-tuple      <fixnum>)
+  (declare utf8-string-decoding-incomplete-2-tuple.octets	&utf8-string-decoding-incomplete-2-tuple      (list-of <fixnum>))
+
+  (declare utf8-string-decoding-incomplete-3-tuple.bytevector	&utf8-string-decoding-incomplete-3-tuple      <bytevector>)
+  (declare utf8-string-decoding-incomplete-3-tuple.index	&utf8-string-decoding-incomplete-3-tuple      <fixnum>)
+  (declare utf8-string-decoding-incomplete-3-tuple.octets	&utf8-string-decoding-incomplete-3-tuple      (list-of <fixnum>))
+
+  (declare utf8-string-decoding-incomplete-4-tuple.bytevector	&utf8-string-decoding-incomplete-4-tuple      <bytevector>)
+  (declare utf8-string-decoding-incomplete-4-tuple.index	&utf8-string-decoding-incomplete-4-tuple      <fixnum>)
+  (declare utf8-string-decoding-incomplete-4-tuple.octets	&utf8-string-decoding-incomplete-4-tuple      (list-of <fixnum>))
+
+  (declare utf16-string-decoding-invalid-first-word.bytevector	&utf16-string-decoding-invalid-first-word     <bytevector>)
+  (declare utf16-string-decoding-invalid-first-word.index	&utf16-string-decoding-invalid-first-word     <fixnum>)
+  (declare utf16-string-decoding-invalid-first-word.word	&utf16-string-decoding-invalid-first-word     <fixnum>)
+
+  (declare utf16-string-decoding-invalid-second-word.bytevector	&utf16-string-decoding-invalid-second-word    <bytevector>)
+  (declare utf16-string-decoding-invalid-second-word.index	&utf16-string-decoding-invalid-second-word    <fixnum>)
+  (declare utf16-string-decoding-invalid-second-word.first-word	&utf16-string-decoding-invalid-second-word    <fixnum>)
+  (declare utf16-string-decoding-invalid-second-word.second-word &utf16-string-decoding-invalid-second-word   <fixnum>)
+
+  (declare utf16-string-decoding-missing-second-word.bytevector	&utf16-string-decoding-missing-second-word    <bytevector>)
+  (declare utf16-string-decoding-missing-second-word.index	&utf16-string-decoding-missing-second-word    <fixnum>)
+  (declare utf16-string-decoding-missing-second-word.word	&utf16-string-decoding-missing-second-word    <fixnum>)
+
+  (declare utf16-string-decoding-standalone-octet.bytevector	&utf16-string-decoding-standalone-octet	      <bytevector>)
+  (declare utf16-string-decoding-standalone-octet.index		&utf16-string-decoding-standalone-octet	      <fixnum>)
+  (declare utf16-string-decoding-standalone-octet.octet		&utf16-string-decoding-standalone-octet	      <fixnum>)
+
+  (declare utf32-string-decoding-invalid-word.bytevector	&utf32-string-decoding-invalid-word	      <bytevector>)
+  (declare utf32-string-decoding-invalid-word.index		&utf32-string-decoding-invalid-word	      <fixnum>)
+  (declare utf32-string-decoding-invalid-word.word		&utf32-string-decoding-invalid-word	      <exact-integer>)
+
+  (declare utf32-string-decoding-orphan-octets.bytevector	&utf32-string-decoding-orphan-octets	      <bytevector>)
+  (declare utf32-string-decoding-orphan-octets.index		&utf32-string-decoding-orphan-octets	      <fixnum>)
+  (declare utf32-string-decoding-orphan-octets.octets		&utf32-string-decoding-orphan-octets	      (list-of <fixnum>))
+
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive &who
