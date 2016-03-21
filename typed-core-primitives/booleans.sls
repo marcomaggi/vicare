@@ -39,7 +39,7 @@
 (declare-core-primitive boolean=?
     (safe)
   (signatures
-   ((<boolean> <boolean>)		=> (<boolean>)))
+   ((list-of <boolean>)			=> (<boolean>)))
   (attributes
    ((_ _)				foldable effect-free)))
 

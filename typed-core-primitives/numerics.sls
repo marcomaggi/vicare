@@ -1274,9 +1274,9 @@
 (declare-core-primitive number->string
     (safe)
   (signatures
-   ((<number>)				=> (<string>))
-   ((<number> <positive-fixnum>)	=> (<string>))
-   ((<number> <positive-fixnum>)	=> (<string>)))
+   ((<number>)						=> (<string>))
+   ((<number> <positive-fixnum>)			=> (<string>))
+   ((<number> <positive-fixnum> <positive-fixnum>)	=> (<string>)))
   (attributes
    ((_)			foldable effect-free result-true)
    ((_ _)		foldable effect-free result-true)
