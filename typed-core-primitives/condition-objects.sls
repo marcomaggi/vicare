@@ -36,6 +36,11 @@
 
 (declare-type-predicate condition? <condition>)
 
+(declare-core-primitive condition-and-rtd?
+    (safe)
+  (signatures
+   ((<top> <record-type-descriptor>)	=> (<boolean>))))
+
 (declare-core-primitive condition
     (safe)
   (signatures
@@ -46,16 +51,16 @@
 (declare-core-primitive simple-conditions
     (safe)
   (signatures
-   ((<condition>)		=> (<list>)))
+   ((<condition>)		=> ((list-of &condition))))
   (attributes
-   ((_)			effect-free result-true)))
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive condition-predicate
     (safe)
   (signatures
    ((<record-type-descriptor>)		=> (<procedure>)))
   (attributes
-   ((_)			effect-free)))
+   ((_)					effect-free)))
 
 (declare-core-primitive condition-accessor
     (safe)
@@ -117,9 +122,7 @@
 (declare-core-primitive make-who-condition
     (safe)
   (signatures
-   ((<false>)				=> (&who))
-   ((<string>)				=> (&who))
-   ((<symbol>)				=> (&who)))
+   ((<condition-&who-field>)		=> (&who)))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -133,7 +136,7 @@
 (declare-core-primitive make-irritants-condition
     (safe)
   (signatures
-   (_			=> (&irritants)))
+   ((list-of <top>)	=> (&irritants)))
   (attributes
    (_			effect-free result-true)))
 
@@ -283,10 +286,12 @@
 		   (attributes
 		    ((_)		effect-free))))
 		)))
+  (declare condition-who		&who				<condition-&who-field>)
+  (declare condition-message		&message			<string>)
+  (declare condition-irritants		&irritants			(list-of <top>))
+
   (declare condition-errno		&errno				<fixnum>)
   (declare condition-h_errno		&h_errno			<fixnum>)
-  (declare condition-irritants		&irritants			<list>)
-  (declare condition-message		&message			<string>)
   (declare i/o-encoding-error-char	&i/o-encoding)
   (declare i/o-error-filename		&i/o-filename)
   (declare i/o-error-port		&i/o-port			<port>)
@@ -299,6 +304,23 @@
   (declare source-position-character	&source-position		<exact-integer>)
   (declare source-position-line		&source-position		<exact-integer>)
   (declare source-position-column	&source-position		<exact-integer>)
+
+  (declare condition-one-based-return-value-index	&one-based-return-value-index	<positive-fixnum>)
+
+  (declare procedure-signature-argument-violation.one-based-argument-index
+	   &procedure-signature-argument-violation	      <positive-fixnum>)
+  (declare procedure-signature-argument-violation.failed-expression
+	   &procedure-signature-argument-violation	      <top>)
+  (declare procedure-signature-argument-violation.offending-value
+	   &procedure-signature-argument-violation	      <top>)
+
+  (declare procedure-signature-return-value-violation.one-based-return-value-index
+	   &procedure-signature-return-value-violation	<positive-fixnum>)
+  (declare procedure-signature-return-value-violation.failed-expression
+	   &procedure-signature-return-value-violation	<top>)
+  (declare procedure-signature-return-value-violation.offending-value
+	   &procedure-signature-return-value-violation	<top>)
+
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive &who
@@ -321,16 +343,12 @@
 (declare-core-primitive error
     (safe)
   (signatures
-   ((<false>  <string> . <list>)			=> <no-return>)
-   ((<symbol> <string> . <list>)			=> <no-return>)
-   ((<string> <string> . <list>)			=> <no-return>)))
+   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive assertion-violation
     (safe)
   (signatures
-   ((<false>  <string> . <list>)			=> <no-return>)
-   ((<symbol> <string> . <list>)			=> <no-return>)
-   ((<string> <string> . <list>)			=> <no-return>)))
+   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive syntax-violation
     (safe)
@@ -342,31 +360,23 @@
     (safe)
   (signatures
    ;;We do not know the number of returned values.
-   ((<false>  <string> . <list>)			=> <no-return>)
-   ((<symbol> <string> . <list>)			=> <no-return>)
-   ((<string> <string> . <list>)			=> <no-return>)))
+   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
 
 ;;This is deprecated.
 (declare-core-primitive die
     (safe)
   (signatures
-   ((<false>  <string> . <list>)			=> <no-return>)
-   ((<symbol> <string> . <list>)			=> <no-return>)
-   ((<string> <string> . <list>)			=> <no-return>)))
+   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive procedure-argument-violation
     (safe)
   (signatures
-   ((<false>  <string> . <list>)			=> <no-return>)
-   ((<symbol> <string> . <list>)			=> <no-return>)
-   ((<string> <string> . <list>)			=> <no-return>)))
+   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive expression-return-value-violation
     (safe)
   (signatures
-   ((<false>  <string> <positive-fixnum> . <list>)	=> <no-return>)
-   ((<symbol> <string> <positive-fixnum> . <list>)	=> <no-return>)
-   ((<string> <string> <positive-fixnum> . <list>)	=> <no-return>)))
+   ((<condition-&who-field> <string> <positive-fixnum> . <list>)	=> <no-return>)))
 
 /section)
 
