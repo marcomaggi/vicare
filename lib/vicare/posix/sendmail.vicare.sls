@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: sending mail with sendmail
@@ -29,37 +30,37 @@
   (options strict-r6rs)
   (export sendmail)
   (import (vicare)
-    (prefix (vicare posix) px.))
+    (prefix (vicare posix) posix::))
 
 
 (define* (sendmail {message.bv bytevector?})
-  (px.fork-with-fds
+  (posix::fork-with-fds
    ;;Here we are in the parent.
    (lambda (child-pid parent->child-stdin child-stdout->parent child-stderr->parent)
      ;;Write message.
      (unwind-protect
-	 (px.write parent->child-stdin message.bv)
-       (px.close parent->child-stdin))
+	 (posix::write parent->child-stdin message.bv)
+       (posix::close parent->child-stdin))
      (unwind-protect
 	 (begin
 	   ;;Wait until the child exits.
-	   (let ((status (px.waitpid child-pid 0)))
-	     (if (and (px.WIFEXITED status)
-		      (zero? (px.WEXITSTATUS status)))
+	   (let ((status (posix::waitpid child-pid 0)))
+	     (if (and (posix::WIFEXITED status)
+		      (zero? (posix::WEXITSTATUS status)))
 		 ;;Read  the  output from  "sendmail"  generated  by the  "-v"  flag.
 		 ;;Sendmail writes to its stdout, rather than to its stderr.
 		 (%read-stdout-from-child child-stdout->parent)
 	       (error __who__
 		 "sendmail process exited abnormally"
 		 status))))
-       (px.close child-stdout->parent)
-       (px.close child-stderr->parent)))
+       (posix::close child-stdout->parent)
+       (posix::close child-stderr->parent)))
    ;;Here we are in the child.
    (lambda ()
      (guard (E (else
 		(print-condition E)
 		(exit 1)))
-       (px.execvp "sendmail" '("sendmail" "-t" "-i" "-v"))))))
+       (posix::execvp "sendmail" '("sendmail" "-t" "-i" "-v"))))))
 
 
 ;;;; file descriptors
@@ -71,7 +72,7 @@
   (define-constant buflen
     ;;Let's keep it small to exercise the loop below.
     16)
-  (px.fd-set-non-blocking-mode! fd)
+  (posix::fd-set-non-blocking-mode! fd)
   (receive (port extract)
       (open-bytevector-output-port)
     (let next-chunk ((buf (make-bytevector buflen 0)))
@@ -82,7 +83,7 @@
 			      0)
 			     (else
 			      (raise E)))
-		     (px.read fd buf))))
+		     (posix::read fd buf))))
 	(if (positive? nread)
 	    (begin
 	      (put-bytevector port buf 0 nread)
@@ -97,6 +98,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8
-;; eval: (put 'px.fork 'scheme-indent-function 0)
+;; eval: (put 'posix::fork 'scheme-indent-function 0)
 ;; End:

@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: implementation of SRFI 114
@@ -1748,7 +1749,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8
 ;; eval: (put 'raise-comparator-type-error		'scheme-indent-function 1)
 ;; eval: (put 'raise-comparator-argument-type-error	'scheme-indent-function 1)
 ;; eval: (put 'raise-comparator-nan-comparison-error	'scheme-indent-function 1)

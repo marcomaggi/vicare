@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: iterators for sequences of values
@@ -401,7 +402,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
+;; mode: vicare
 ;; eval: (put 'iteration-thunk-fold		'scheme-indent-function 1)
 ;; eval: (put '$iteration-thunk-fold		'scheme-indent-function 1)
 ;; eval: (put '$iteration-thunk-fold-multi	'scheme-indent-function 1)

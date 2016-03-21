@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: dynamic vectors
@@ -870,27 +871,26 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8
 ;; eval: (put 'dynamic-array-fold-left		'scheme-indent-function 1)
-;; eval: (put 'dynamic-array-fold-right	'scheme-indent-function 1)
+;; eval: (put 'dynamic-array-fold-right		'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-map-left		'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-map-right		'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-for-each-left	'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-for-each-right	'scheme-indent-function 1)
-;; eval: (put '$dynamic-array-fold-left	'scheme-indent-function 1)
+;; eval: (put '$dynamic-array-fold-left		'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-fold-right	'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-map-left		'scheme-indent-function 1)
-;; eval: (put '$dynamic-array-map-right	'scheme-indent-function 1)
+;; eval: (put '$dynamic-array-map-right		'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-for-each-left	'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-for-each-right	'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-for-all		'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-find-left		'scheme-indent-function 1)
-;; eval: (put 'dynamic-array-find-right	'scheme-indent-function 1)
+;; eval: (put 'dynamic-array-find-right		'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-exists		'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-exists-left	'scheme-indent-function 1)
 ;; eval: (put 'dynamic-array-exists-right	'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-for-all		'scheme-indent-function 1)
-;; eval: (put '$dynamic-array-find-left	'scheme-indent-function 1)
+;; eval: (put '$dynamic-array-find-left		'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-find-right	'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-exists		'scheme-indent-function 1)
 ;; eval: (put '$dynamic-array-exists-left	'scheme-indent-function 1)

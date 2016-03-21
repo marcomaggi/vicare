@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: utility functions related to hosting platform features
@@ -186,7 +187,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
+;; mode: vicare
 ;; eval: (put 'case-fixnum		'scheme-indent-function 1)
 ;; eval: (put 'case-integers/false	'scheme-indent-function 1)
 ;; End:

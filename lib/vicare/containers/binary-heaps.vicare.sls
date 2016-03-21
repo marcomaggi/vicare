@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: binary heap containers
@@ -370,5 +371,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
+;; mode: vicare
 ;; End:

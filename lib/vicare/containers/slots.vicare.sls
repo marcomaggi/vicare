@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: low-level deque of arbitrary objects
@@ -964,7 +965,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8-unix
 ;; eval: (put 'slots-fold-left		'scheme-indent-function 1)
 ;; eval: (put 'slots-fold-right		'scheme-indent-function 1)
 ;; eval: (put 'slots-map-left		'scheme-indent-function 1)

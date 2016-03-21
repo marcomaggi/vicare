@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: download files using wget
@@ -29,17 +30,17 @@
   (options typed-language)
   (export wget)
   (import (vicare)
-    (prefix (vicare posix) px.))
+    (prefix (vicare posix) posix::))
 
 
 (define (wget . opts)
-  (px.fork-with-binary-ports
+  (posix::fork-with-binary-ports
     ;;Here we are in the parent.
     (lambda (child-pid stdin-port stdout-port stderr-port)
       (unwind-protect
-	  (let ((status (px.waitpid child-pid 0)))
-	    (if (and (px.WIFEXITED status)
-		     (zero? (px.WEXITSTATUS status)))
+	  (let ((status (posix::waitpid child-pid 0)))
+	    (if (and (posix::WIFEXITED status)
+		     (zero? (posix::WEXITSTATUS status)))
 		(let ((out (get-bytevector-all stdout-port))
 		      (err (get-bytevector-all stderr-port)))
 		  ;;OUT and ERR can be bytevectors or EOFs.
@@ -54,7 +55,7 @@
       (guard (E (else
 		 (print-condition E)
 		 (exit 1)))
-	(px.execvp "wget" `("wget" . ,opts))))))
+	(posix::execvp "wget" `("wget" . ,opts))))))
 
 
 ;;;; done
@@ -63,6 +64,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8
-;; eval: (put 'px.fork-with-binary-ports 'scheme-indent-function 0)
+;; mode: vicare
+;; eval: (put 'posix::fork-with-binary-ports 'scheme-indent-function 0)
 ;; End:

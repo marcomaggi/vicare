@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: utility syntaxes
@@ -642,7 +643,7 @@
 
 ;;; end of file
 ;;Local Variables:
-;;coding: utf-8-unix
+;;mode: vicare
 ;;eval: (put 'case-one-operand		'scheme-indent-function 1)
 ;;eval: (put 'case-two-operands		'scheme-indent-function 1)
 ;;End:

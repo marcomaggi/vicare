@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: Scheme-flavoured Common Lisp's conditions handling and restarts
@@ -702,5 +703,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8-unix
+;; mode: vicare
 ;; End:

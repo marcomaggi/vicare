@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
 ;;;Contents: GCC wrapper library
@@ -190,9 +191,9 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:
-;; coding: utf-8
+;; mode: vicare
 ;; End:

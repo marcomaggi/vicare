@@ -1,3 +1,4 @@
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
 ;;;Contents: ensure syntax
@@ -87,5 +88,5 @@
 
 ;;; end of file
 ;;Local Variables:
-;;coding: utf-8-unix
+;;mode: vicare
 ;;End:
