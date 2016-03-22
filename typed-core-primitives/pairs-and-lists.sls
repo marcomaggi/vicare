@@ -210,8 +210,7 @@
 (declare-core-primitive last-pair
     (safe)
   (signatures
-   ((<list>)				=> (<pair>))
-   ((<standalone-pair>)			=> (<standalone-pair>)))
+   ((<list>)				=> (<pair>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 

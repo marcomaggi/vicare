@@ -557,7 +557,7 @@
    (cdr		cdr)))
 
 (define-scheme-type <null>
-    <top>
+    <list>
   <null>-constructor null?)
 
 (define-scheme-type <pair>
@@ -566,14 +566,6 @@
   (methods
    (car		car)
    (cdr		cdr)))
-
-(define-scheme-type <standalone-pair>
-    <pair>
-  #f standalone-pair?)
-
-(define-scheme-type <circular-list>
-    <pair>
-  #f circular-list?)
 
 
 ;;;; miscellaneous compound types

@@ -3491,8 +3491,6 @@
     (<vector>					v $language)
     (<empty-vector>				v $language)
     (<pair>					v $language)
-    (<standalone-pair>				v $language)
-    (<circular-list>				v $language)
     (<list>					v $language)
     (<null>					v $language)
     (<bytevector>				v $language)

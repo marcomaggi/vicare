@@ -4,11 +4,12 @@
 
 @value{PRJNAME}'s expander implements an extension to the language
 defined by @rnrs{6} that allows the definition of typed syntactic
-bindings.
+bindings.  The style of the resulting language is that of ``gradual
+typing''.
 
 @menu
 * types intro::                 Introduction to the typed language.
-* types syntaxes::              Convenience syntaxes.
+* types syntaxes::              Type-exploiting syntaxes.
 * types built-in::              Built-in object types.
 @end menu
 
@@ -312,7 +313,7 @@ and will cause an expand--time syntax violation.
 
 @c page
 @node types syntaxes
-@section Type syntaxes
+@section Type--exploiting syntaxes
 
 
 Object types are uniquely associated to a syntactic identifier
@@ -1000,7 +1001,9 @@ et cetera.
 * types built-in numerics::     Type of numeric objects.
 * types built-in strings::      Type of string objects.
 * types built-in vectors::      Type of vector objects.
-* types built-in lists::        Types of pairs and lists.
+* types built-in lists::        Type of list objects.
+* types built-in null::         Type of empty lists.
+* types built-in pairs::        Type of pair objects.
 * types built-in bytevectors::  Type of bytevector objects.
 * types built-in hashtables::   Type of hashtable objects.
 * types built-in structs::      Type of struct objects.
@@ -2067,22 +2070,7 @@ Apply @func{vector->list} to the instance.
 
 @c page
 @node types built-in lists
-@subsection Types of pairs and lists
-
-
-@menu
-* types built-in lists base::           Lists.
-* types built-in lists null::           Empty lists.
-* types built-in lists pairs::          Type of pair objects.
-* types built-in lists circular::       Type of circular lists.
-* types built-in lists chars::          Proper lists of @class{char}.
-* types built-in lists strings::        Proper lists of @class{string}.
-* types built-in lists pointers::       Proper lists of @class{pointer}.
-@end menu
-
-@c page
-@node types built-in lists base
-@subsubsection Lists
+@subsection Type of list objects
 
 
 @deftp {Built--in Type} @aclass{list}
@@ -2104,14 +2092,33 @@ The type predicate is @func{list?}.  Return @true{} if @var{obj} is null
 or a proper list object; otherwise return @false{}.
 @end defop
 
+
+@defmethod @class{list} car
+Apply @func{car} to the type instance.  Raise an exception if the
+instance is null.
+@end defmethod
+
+
+@defmethod @class{list} cdr
+Apply @func{cdr} to the type instance.  Raise an exception if the
+instance is null.
+@end defmethod
+
 @c page
-@node types built-in lists null
-@subsubsection Empty lists
+@node types built-in null
+@subsection Type of empty lists
 
 
 @deftp {Built--in Type} @aclass{null}
 @deftpx {Parent Type} @aclass{list}
 Type of the null object.
+
+The type @class{null} is special in that it is considered sub--type of
+both the type @class{list} and the types defined with the annotations
+@code{(list-of @meta{type})}.  Notice that types defined with the
+annotations @code{(list @metao{type} @meta{type} ...)} are @strong{not}
+super--types of @class{null}, because, by definition, they contain at
+list one item.
 @end deftp
 
 
@@ -2121,8 +2128,8 @@ null; otherwise return @false{}.
 @end defop
 
 @c page
-@node types built-in lists pairs
-@subsubsection Type of pair objects
+@node types built-in pairs
+@subsection Type of pair objects
 
 
 @deftp {Built--in Type} @aclass{pair}
@@ -2153,73 +2160,6 @@ Apply @func{cdr} to the type instance.
 @end defmethod
 
 @c page
-@node types built-in lists circular
-@subsubsection Type of circular lists
-
-
-@deftp {Built--in Type} @aclass{circular-list}
-@deftpx {Parent Type} @aclass{pair}
-Type of lists having a circle in their spine.
-@end deftp
-
-
-@defop {Type predicate} @class{circular-list} is-a? @var{obj} @aclass{circular-list}
-The type predicate is @func{circular-list?}.  Return @true{} if
-@var{obj} is a circular list object; otherwise return @false{}.
-@end defop
-
-@c page
-@node types built-in lists chars
-@subsubsection Proper lists of @class{char}
-
-
-@deftp {Built--in Type} @aclass{char*}
-@deftpx {Parent Type} @aclass{list}
-Type of lists of @class{char} objects.
-@end deftp
-
-
-@defop {Type predicate} @class{char*} is-a? @var{obj} @aclass{char*}
-The type predicate for the list's items is the type predicate of
-@class{char}.  Return @true{} if @var{obj} is a proper non--empty list
-object; otherwise return @false{}.
-@end defop
-
-@c page
-@node types built-in lists strings
-@subsubsection Proper lists of @class{string}
-
-
-@deftp {Built--in Type} @aclass{string*}
-@deftpx {Parent Type} @aclass{list}
-Type of lists of @class{string} objects.
-@end deftp
-
-
-@defop {Type predicate} @class{string*} is-a? @var{obj} @aclass{string*}
-The type predicate for the list's items is the type predicate of
-@class{string}.  Return @true{} if @var{obj} is a proper non--empty list
-object; otherwise return @false{}.
-@end defop
-
-@c page
-@node types built-in lists pointers
-@subsubsection Proper lists of @class{pointer}
-
-
-@deftp {Built--in Type} @aclass{pointer*}
-@deftpx {Parent Type} @aclass{list}
-Type of lists of @class{pointer} objects.
-@end deftp
-
-
-@defop {Type predicate} @class{pointer*} is-a? @var{obj} @aclass{pointer*}
-The type predicate for the list's items is the type predicate of
-@class{pointer}.  Return @true{} if @var{obj} is a proper non--empty
-list object; otherwise return @false{}.
-@end defop
-
-@c page
 @node types built-in bytevectors
 @subsection Type of bytevector objects
 
@@ -2235,29 +2175,29 @@ The type predicate is @func{bytevector?}.
 @subsection Type of hashtable objects
 
 
-@deftp {Built--in Type} <hashtable>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{hashtable}
+@deftpx {Parent Type} @aclass{top}
 Base type for hashtable objects.  There is no constructor.  The type
 predicate is @func{hashtable?}.
 @end deftp
 
 
-@deftp {Built--in Type} <hashtable-eq>
-@deftpx {Parent Type} <hashtable>
+@deftp {Built--in Type} @aclass{hashtable-eq}
+@deftpx {Parent Type} @aclass{hashtable}
 Type of @func{eq?} hashtables.  The constructor is
 @func{make-eq-hashtable}.  There type predicate is @func{hashtable-eq?}.
 @end deftp
 
 
-@deftp {Built--in Type} <hashtable-eqv>
-@deftpx {Parent Type} <hashtable>
+@deftp {Built--in Type} @aclass{hashtable-eqv}
+@deftpx {Parent Type} @aclass{hashtable}
 Type of @func{eqv?} hashtables.  The constructor is
 @func{make-eqv-hashtable}.  There type predicate is @func{hashtable-eqv?}.
 @end deftp
 
 
-@deftp {Built--in Type} <hashtable-equal>
-@deftpx {Parent Type} <hashtable>
+@deftp {Built--in Type} @aclass{hashtable-equal}
+@deftpx {Parent Type} @aclass{hashtable}
 Type of @func{equal?} hashtables.  The constructor is
 @func{make-hashtable}.  There type predicate is @func{hashtable-equiv?}.
 @end deftp
@@ -2267,15 +2207,15 @@ Type of @func{equal?} hashtables.  The constructor is
 @subsection Type of struct objects
 
 
-@deftp {Built--in Type} <struct>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{struct}
+@deftpx {Parent Type} @aclass{top}
 Type of struct objects.  There is no constructor.  The type predicate is
 @func{struct?}.
 @end deftp
 
 
-@deftp {Built--in Type} <struct-type-descriptor>
-@deftpx {Parent Type} <struct>
+@deftp {Built--in Type} @aclass{struct-type-descriptor}
+@deftpx {Parent Type} @aclass{struct}
 Type of struct--type descriptor objects.  The constructor is
 @func{make-struct-type}.  The type descriptor is
 @func{struct-type-descriptor?}.
@@ -2286,23 +2226,23 @@ Type of struct--type descriptor objects.  The constructor is
 @subsection Type of record objects
 
 
-@deftp {Built--in Type} <record>
-@deftpx {Parent Type} <struct>
+@deftp {Built--in Type} @aclass{record}
+@deftpx {Parent Type} @aclass{struct}
 Type of record objects.  There is no constructor.  The type predicate is
 @func{record?}.
 @end deftp
 
 
-@deftp {Built--in Type} <record-type-descriptor>
-@deftpx {Parent Type} <struct>
+@deftp {Built--in Type} @aclass{record-type-descriptor}
+@deftpx {Parent Type} @aclass{struct}
 Type of record--type descriptor objects.  The constructor is
 @func{make-record-type-descriptor}.  The type predicate is
 @func{record-type-descriptor?}.
 @end deftp
 
 
-@deftp {Built--in Type} <record-constructor-descriptor>
-@deftpx {Parent Type} <struct>
+@deftp {Built--in Type} @aclass{record-constructor-descriptor}
+@deftpx {Parent Type} @aclass{struct}
 Type of record--constructor descriptor objects.  The constructor is
 @func{make-record-constructor-descriptor}.  The type predicate is
 @func{record-constructor-descriptor?}.
@@ -2313,15 +2253,15 @@ Type of record--constructor descriptor objects.  The constructor is
 @subsection Type of condition objects
 
 
-@deftp {Built--in Type} <condition>
-@deftpx {Parent Type} <record>
+@deftp {Built--in Type} @aclass{condition}
+@deftpx {Parent Type} @aclass{record}
 Type of condition objects.  There is no constructor.  The type predicate
 is @func{condition?}.
 @end deftp
 
 
-@deftp {Built--in Type} <compound-condition>
-@deftpx {Parent Type} <condition>
+@deftp {Built--in Type} @aclass{compound-condition}
+@deftpx {Parent Type} @aclass{condition}
 Type of compound condition objects.  The constructor is
 @func{condition}.  The type predicate is @func{compound-condition?}.
 @end deftp
@@ -2354,29 +2294,29 @@ Apply @func{print-condition} to the instance.
 @subsubsection Base port types
 
 
-@deftp {Built--in Type} <port>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{port}
+@deftpx {Parent Type} @aclass{top}
 Base type for input, output and input/output ports.  There is no
 constructor.  The type predicate is @func{port?}.
 @end deftp
 
 
-@deftp {Built--in Type} <input-port>
-@deftpx {Parent Type} <port>
+@deftp {Built--in Type} @aclass{input-port}
+@deftpx {Parent Type} @aclass{port}
 Base type for input ports.  There is no constructor.  The type predicate
 is @func{input-port?}.
 @end deftp
 
 
-@deftp {Built--in Type} <output-port>
-@deftpx {Parent Type} <port>
+@deftp {Built--in Type} @aclass{output-port}
+@deftpx {Parent Type} @aclass{port}
 Base type for output ports.  There is no constructor.  The type
 predicate is @func{output-port?}.
 @end deftp
 
 
-@deftp {Built--in Type} <input/output-port>
-@deftpx {Parent Type} <port>
+@deftp {Built--in Type} @aclass{input/output-port}
+@deftpx {Parent Type} @aclass{port}
 Base type for input/output ports.  There is no constructor.  The type
 predicate is @func{input/output-port?}.
 @end deftp
@@ -2386,8 +2326,8 @@ predicate is @func{input/output-port?}.
 @subsubsection Textual port types
 
 
-@deftp {Built--in Type} <textual-port>
-@deftpx {Parent Type} <port>
+@deftp {Built--in Type} @aclass{textual-port}
+@deftpx {Parent Type} @aclass{port}
 Type of textual ports.  There is no constructor.  The type predicate is
 @func{textual-port?}.
 @end deftp
@@ -2397,8 +2337,8 @@ Type of textual ports.  There is no constructor.  The type predicate is
 @subsubsection Binary port types
 
 
-@deftp {Built--in Type} <binary-port>
-@deftpx {Parent Type} <port>
+@deftp {Built--in Type} @aclass{binary-port}
+@deftpx {Parent Type} @aclass{port}
 Type of binary ports.  There is no constructor.  The type predicate is
 @func{binary-port?}.
 @end deftp
@@ -2408,8 +2348,8 @@ Type of binary ports.  There is no constructor.  The type predicate is
 @subsubsection Textual input port types
 
 
-@deftp {Built--in Type} <textual-input-port>
-@deftpx {Parent Type} <input-port>
+@deftp {Built--in Type} @aclass{textual-input-port}
+@deftpx {Parent Type} @aclass{input-port}
 Type of textual input ports.  There is no constructor.  The type
 predicate is @func{textual-input-port?}.
 @end deftp
@@ -2419,8 +2359,8 @@ predicate is @func{textual-input-port?}.
 @subsubsection Textual output port types
 
 
-@deftp {Built--in Type} <textual-output-port>
-@deftpx {Parent Type} <output-port>
+@deftp {Built--in Type} @aclass{textual-output-port}
+@deftpx {Parent Type} @aclass{output-port}
 Type of textual output port.  There is no constructor.  The type
 predicate is @func{textual-output-port?}.
 @end deftp
@@ -2430,8 +2370,8 @@ predicate is @func{textual-output-port?}.
 @subsubsection Textual input/output port types
 
 
-@deftp {Built--in Type} <textual-input/output-port>
-@deftpx {Parent Type} <input/output-port>
+@deftp {Built--in Type} @aclass{textual-input/output-port}
+@deftpx {Parent Type} @aclass{input/output-port}
 Type of textual input/output ports.  There is no constructor.  The type
 predicate is @func{textual-input/output-port?}.
 @end deftp
@@ -2441,8 +2381,8 @@ predicate is @func{textual-input/output-port?}.
 @subsubsection Binary input port types
 
 
-@deftp {Built--in Type} <binary-input-port>
-@deftpx {Parent Type} <input-port>
+@deftp {Built--in Type} @aclass{binary-input-port}
+@deftpx {Parent Type} @aclass{input-port}
 Type of binary input ports.  There is no constructor.  The type
 predicate is @func{binary-input-port?}.
 @end deftp
@@ -2452,8 +2392,8 @@ predicate is @func{binary-input-port?}.
 @subsubsection Binary output port types
 
 
-@deftp {Built--in Type} <binary-output-port>
-@deftpx {Parent Type} <output-port>
+@deftp {Built--in Type} @aclass{binary-output-port}
+@deftpx {Parent Type} @aclass{output-port}
 Type of binary output ports.  There is no constructor.  The type
 predicate is @func{binary-output-port?}.
 @end deftp
@@ -2463,8 +2403,8 @@ predicate is @func{binary-output-port?}.
 @subsubsection Binary input/output port types
 
 
-@deftp {Built--in Type} <binary-input/output-port>
-@deftpx {Parent Type} <input/output-port>
+@deftp {Built--in Type} @aclass{binary-input/output-port}
+@deftpx {Parent Type} @aclass{input/output-port}
 Type of binary input/output ports.  There is no constructor.  The type
 predicate is @func{binary-input/output-port?}.
 @end deftp

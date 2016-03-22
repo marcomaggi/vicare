@@ -921,8 +921,6 @@
 					    (cons (core-prim-id 'list)
 						  (map recur datum)))))
 
-	  #;((circular-list? datum)	(core-prim-id '<circular-list>))
-
 	  ((pair? datum)		(if (hashtable-ref table datum #f)
 					    (<pair>-type-id)
 					  (begin
