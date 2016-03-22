@@ -320,7 +320,7 @@
 	(display ?thing port))
       (define-syntax-rule (%write ?thing)
 	(write ?thing port))
-      (%display "#[type-signature ")
+      (%display "#[signature ")
       (%display (syntax->datum (type-signature.tags S)))
       (%display "]"))))
 
