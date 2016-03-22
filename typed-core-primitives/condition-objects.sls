@@ -122,7 +122,7 @@
 (declare-core-primitive make-who-condition
     (safe)
   (signatures
-   ((<condition-&who-field>)		=> (&who)))
+   ((<&who-value>)		=> (&who)))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -286,7 +286,7 @@
 		   (attributes
 		    ((_)		effect-free))))
 		)))
-  (declare condition-who		&who				<condition-&who-field>)
+  (declare condition-who		&who				<&who-value>)
   (declare condition-message		&message			<string>)
   (declare condition-irritants		&irritants			(list-of <top>))
 
@@ -396,40 +396,40 @@
 (declare-core-primitive error
     (safe)
   (signatures
-   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive assertion-violation
     (safe)
   (signatures
-   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive syntax-violation
     (safe)
   (signatures
-   ((<condition-&who-field> <string> <top>)		=> <no-return>)
-   ((<condition-&who-field> <string> <top> <top>)	=> <no-return>)))
+   ((<&who-value> <string> <top>)		=> <no-return>)
+   ((<&who-value> <string> <top> <top>)	=> <no-return>)))
 
 (declare-core-primitive warning
     (safe)
   (signatures
    ;;We do not know the number of returned values.
-   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <no-return>)))
 
 ;;This is deprecated.
 (declare-core-primitive die
     (safe)
   (signatures
-   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive procedure-argument-violation
     (safe)
   (signatures
-   ((<condition-&who-field> <string> . <list>)		=> <no-return>)))
+   ((<&who-value> <string> . <list>)		=> <no-return>)))
 
 (declare-core-primitive expression-return-value-violation
     (safe)
   (signatures
-   ((<condition-&who-field> <string> <positive-fixnum> . <list>)	=> <no-return>)))
+   ((<&who-value> <string> <positive-fixnum> . <list>)	=> <no-return>)))
 
 /section)
 

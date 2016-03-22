@@ -3536,7 +3536,7 @@
     (<binary-input/output-port>			v $language)
 
     ;;built-in type annotations
-    (<condition-&who-field>			v $language)
+    (<&who-value>				v $language)
 
     ;; helpers
     (<top>-constructor)

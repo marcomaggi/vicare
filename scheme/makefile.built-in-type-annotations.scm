@@ -23,7 +23,7 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
-(define-type-annotation <condition-&who-field>
+(define-type-annotation <&who-value>
   (union <false> <symbol> <string>))
 
 ;;; end of file

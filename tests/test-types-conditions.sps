@@ -560,6 +560,16 @@
   (void))
 
 
+(parametrise ((check-test-name	'misc))
+
+  (check-for-true	(is-a? #f	<&who-value>))
+  (check-for-true	(is-a? 'io	<&who-value>))
+  (check-for-true	(is-a? "io"	<&who-value>))
+  (check-for-false	(is-a? 123	<&who-value>))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

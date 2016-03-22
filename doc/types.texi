@@ -2474,12 +2474,12 @@ predicate is @func{binary-input/output-port?}.
 @subsection Miscellaneous built-in types
 
 
-@deftp {Built--In Type} @class{condition-&who-field}
+@deftp {Built--In Type} @class{&who-value}
 The type of the field in the built--in condition object type
 @condition{who}.  Its definition is equivalent to:
 
 @lisp
-(define-type <condition-&who-field>
+(define-type <&who-value>
   (union <false> <symbol> <string>))
 @end lisp
 @end deftp

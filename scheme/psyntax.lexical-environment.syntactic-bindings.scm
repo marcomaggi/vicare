@@ -1144,7 +1144,7 @@
 	 (type-annotation.sexp	(list-ref descr.value 1)))
     (let ((type-name.id		(core-prim-id type-name.sym))
 	  (type-annotation.stx	(bless type-annotation.sexp)))
-      (let* ((type.ots		(type-annotation->object-type-specification type-annotation.stx (current-inferior-lexenv))))
+      (let* ((type.ots		(type-annotation->object-type-specification type-annotation.stx (make-empty-lexenv))))
 	(set-car! descriptor 'core-object-type-name)
 	(set-cdr! descriptor (cons type.ots descr.value))))))
 
