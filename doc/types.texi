@@ -504,12 +504,12 @@ the types of built--in objects.  Some of them are: @class{fixnum},
 
 Type identifiers are organised in a tree hierarchy, with subtypes
 inheriting properties of supertypes; by convention, @class{top} is the
-parent of all the type identifiers, the root of the tree; @class{top}
+parent of all the type annotations, the root of the tree; @class{top}
 has no parent.
 
 Many predefined type identifiers have names enclosed in ``angular
 parentheses'' @samp{< >}, but this is just a convention.  Any valid
-symbol can be used as name for a type identifier.
+Scheme symbol can be used as name for a type identifier.
 
 @c page
 @node types intro typed vars
@@ -518,11 +518,9 @@ symbol can be used as name for a type identifier.
 
 A @dfn{typed lexical variable}, shortly @dfn{typed variable}, is a bound
 syntactic identifier whose syntactic binding's descriptor contains both
-informations about a lexical variable and its type identifier.  Typed
+informations about a lexical variable and its type annotation.  Typed
 variables are created by the built--in binding syntaxes @func{lambda},
 @func{define}, @func{let}, @func{letrec}, @func{let-values}, et cetera.
-Typed variables are similar to identifier syntaxes created by
-@syntax{identifier-syntax}.
 
 An example of typed binding creation follows:
 
@@ -537,13 +535,12 @@ An example of typed binding creation follows:
 
 @noindent
 the syntactic identifier @code{O} represents a typed variable with type
-identifier @class{fixnum}; the braces are used to type the first
-enclosed identifier with the second enclosed identifier.
+annotation @class{fixnum}.
 
 At the time the typed variable's syntactic binding is established: the
-type identifier must already be a type identifier.  So the following
-program (where @samp{---} represents an unspecified form) is correct
-because @objtype{duo} is bound before @var{O}:
+type annotation must hold only already bound type identifiers.  So the
+following program (where @samp{---} represents an unspecified form) is
+correct because @objtype{duo} is bound before @var{O}:
 
 @lisp
 #!vicare
