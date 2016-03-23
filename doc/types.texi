@@ -20,13 +20,12 @@ typing''.
 
 @value{PRJNAME}'s typed language adds some expand--time syntactic
 binding type--checking and extended @oop{} syntax to the language
-specified by @rnrs{6}.  The result is a Scheme language dialect in which
-the code writer is invited to explicitly write the type identifiers;
-there is, in practice, @strong{no} type inference.
+specified by @rnrs{6}.
 
 @menu
 * types intro philosophy::      Typed language philosophy.
 * types intro enabling::        Enabling typed language extensions.
+* types intro annotations::     Adding type annotations.
 * types intro type ids::        Type identifiers.
 * types intro typed vars::      Typed lexical variables.
 @end menu
@@ -36,13 +35,65 @@ there is, in practice, @strong{no} type inference.
 @subsection Typed language philosophy
 
 
-In the following discussion we refer to @rnrs{6} specifications as
-@dfn{standard Scheme language}, shortly @dfn{standard language}.  We
-refer to a function's operands and return values as its @dfn{signature}.
-When a function is applied to a tuple of arguments and a tuple of return
-values is expected: the number and types of arguments and return values
-must be validated; we refer to such validation as @dfn{application
-signature validation}.
+In this document we refer to the standard Scheme language defined by the
+@rnrs{6} specifications as the @dfn{standard language}; we refer to the
+typed Scheme language defined by @value{PRJNAME} as the @dfn{typed
+language}.
+
+To understand how @value{PRJNAME} represents the types of values, we
+must remember that every Scheme expression might return multiple values;
+so we can think of an expression evaluation as follows:
+
+@lisp
+(call-with-values
+     (lambda () @meta{epxr})
+  (lambda @meta{formals} @meta{body}))
+@end lisp
+
+@noindent
+the return values of @meta{expr} are bound to the @meta{formals} and
+used in the @meta{body}.  For example, in the code:
+
+@lisp
+(call-with-values
+     (lambda () (values 1 2 3))
+  (lambda (a b c) @meta{body}))
+@end lisp
+
+@noindent
+while the expansion of @meta{body} takes place: a typed language would
+annotate the syntactic bindings @code{a}, @code{b} and @code{c} with the
+information that the values are fixnums.
+
+The tuple of type annotations associated to the @meta{formals} is called
+@dfn{type signature}; a type signature represents informations about
+both the number of values and their type.  We need a type signature to
+represent the types of values returned by an expression; more generally,
+we need a type signature to represent the types of values returned by a
+function application.  We need a type signature to represent the types
+of the arguments accepted in a function application.
+
+Given the @syntax{call-with-values} model of thinking to expressions
+evaluations: the whole purpose of a typed language is to verify, at
+expand--time, that the type signature of an expression matches the type
+signature of the arguments of a function.
+
+The standard language already mandates that the operands in a function
+application must be validated at run--time; this means the type
+signature of the operands is matched, at run--time, with the type
+signature of the arguments.  The typed language extends this feature to
+make it possible at expand--time.
+
+Type annotations are not mandatory in the typed language, so some
+operands are validated and others are not; this means we can write code
+that is ``gradually typed''@footnote{For the definition of gradual
+typing see:
+@quotation
+Jeremy G. Siek, Walid Taha.  ``Gradual Typing for Functional
+Languages''.  Proceedings of the 2006 Scheme and Functional Programming
+Workshop, University of Chicago Technical Report TR-2006-06.
+@end quotation
+}.
 
 To understand the role of @value{PRJNAME}'s typed language extensions,
 we have to consider that:
@@ -70,7 +121,7 @@ as:
 @item
 It is possible to build a standard Scheme language implementation that
 performs compile--time type inference; with such implementation:
-occasionally the compiler can determine the type of arguments and return
+occasionally the compiler can determine the type of operands and return
 values and collapse multiple validations into a single one.  For
 example:
 
@@ -116,9 +167,10 @@ so that the unsafe @func{$flsomething} can be used later in place of the
 safe @func{flsomething} if we know that the argument is a flonum.
 
 @item
-The Scheme language is defined to have two steps: expansion; compilation
-or interpretation.  Standard Scheme is a ``high--level language'' which
-is transformed into a ``core language'' by the process of expansion; the
+The evaluation of a Scheme language program or library is defined to
+have two steps: expansion; compilation--and--evaluation or
+interpretation.  Standard Scheme is a ``high--level language'' which is
+transformed into a ``core language'' by the process of expansion; the
 expander allows macros to implement customised high--level
 transformations.  The core language expressions are handed to the
 compiler or the interpreter.
@@ -145,6 +197,10 @@ By explicitly specifying the types of lexical bindings:
 and transformations that would be possible in a language with full type
 inference.
 @end itemize
+
+Since there is no type inference: the code writer is invited to
+explicitly add type annotations to the syntaxes that establish syntactic
+bindings.
 
 @c page
 @node types intro enabling
@@ -187,25 +243,6 @@ For programs:
 we usually want to import the library @library{vicare} to use the
 extended syntaxes that recognise type definitions and declarations.
 
-The declaration of types makes use of the @func{brace} syntax
-(@pxref{iklib syntaxes misc, brace}) as follows:
-
-@example
-(define (brace O <fixnum>)
-  123)
-@end example
-
-@noindent
-to use the extensions in a friendly manner we need to put the reader in
-@samp{#!vicare} mode; this way @func{brace} can be inserted using actual
-brace characters, as follows:
-
-@example
-#!vicare
-(define @{O <fixnum>@}
-  123)
-@end example
-
 
 @defun enable-typed-language
 @defunx disable-typed-language
@@ -213,6 +250,231 @@ Enable or disable typed language support.  These functions are meant to
 be used at the @repl{}; they do @strong{not} modify support for typed
 language for programs and libraries.
 @end defun
+
+@c page
+@node types intro annotations
+@subsection Adding type annotations
+
+
+Type annotations are special syntaxes that make use of the @func{brace}
+syntax (@pxref{iklib syntaxes misc, brace}) as follows:
+
+@lisp
+(define (brace O <fixnum>)
+  123)
+@end lisp
+
+@noindent
+to use the extensions in a friendly manner we need to put the reader in
+@samp{#!vicare} mode, this way @func{brace} can be inserted using actual
+brace characters:
+
+@lisp
+#!vicare
+(define @{O <fixnum>@}
+  123)
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Inserting type annotations
+
+Everywhere the name of a syntactic binding appears in binding position:
+we can add a type annotation by wrapping the syntactic identifier in
+braces and appending a type syntax.  With @syntax{let}--like syntaxes we
+can do:
+
+@lisp
+(let ((@{a <fixnum>@} 1)
+      (@{b <string>@} "ciao")
+      (@{c <symbol>@} 'hello))
+  (list a b c))
+@end lisp
+
+@noindent
+with @syntax{lambda} and @syntax{case-lambda} syntaxes we can do:
+
+@lisp
+(lambda (@{a <fixnum>@} @{b <string>@})
+  (list a b))
+
+(case-lambda
+  ((@{a <fixnum>@} @{b <string>@})
+   (list a b))
+  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
+   (list a b c)))
+@end lisp
+
+@noindent
+with @syntax{define} and @syntax{case-define} syntaxes we can do:
+
+@lisp
+(define (fun1 @{a <fixnum>@} @{b <string>@})
+  (list a b))
+
+(case-define fun2
+  ((@{a <fixnum>@} @{b <string>@})
+   (list a b))
+  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
+   (list a b c)))
+@end lisp
+
+When using the syntaxes @syntax{lambda}, @syntax{case-lambda},
+@syntax{define}, @syntax{case-define}, @syntax{receive},
+@syntax{let-values} and @syntax{let*-values} we can specify a ``rest''
+argument that is bound to a list of the rest of the operands; this
+syntactic binding can be annotated only with the type identifier
+@class{list} or the type annotation @samp{(list-of @meta{type})}.  For
+example:
+
+@lisp
+((lambda (@{a <fixnum>@} @{b <string>@} . @{rest (list-of <symbol>)@})
+   (vector a b rest))
+ 1 "ciao" 'x 'y 'z)
+@result{} #(1 "ciao" (x y z))
+
+((lambda @{args <list>@} args)
+ 1 2 3)
+@result{} (1 2 3)
+
+(receive (@{a <fixnum>@} @{b <string>@} . @{rest <list>@})
+    (values 1 "ciao" 'x 'y 'z)
+  rest)
+@result{} (x y z)
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading What to put in a type annotation
+
+Type annotations are either standalone type identifiers like
+@class{fixnum}, @class{string}, @condition{message} or compound type
+syntaxes like the following:
+
+@lisp
+(pair      <fixnum> <string>)
+(list      <fixnum> <string> <symbol>)
+(vector    <fixnum> <string> <symbol>)
+(pair-of   <fixnum>)
+(list-of   <fixnum>)
+(vector-of <fixnum>)
+(condition &who &message &irritants)
+(union <false> <symbol> <string>)
+@end lisp
+
+@noindent
+compound type annotations can be nested at will:
+
+@lisp
+(union (list-of   <fixnum>)
+       (vector-of <fixnum>))
+@end lisp
+
+The following syntactic bindings are exported by @library{vicare}.
+
+
+@deftp {Compound Type Annotation} pair @meta{car-type} @meta{car-type}
+Describe a pair having car of type @meta{car-type} and cdr of type
+@meta{car-type}.  Both @meta{car-type} and @meta{car-type} are nested
+type annotations.
+
+@lisp
+(is-a? '(1 . 2.3) (pair <fixnum> <flonum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} list @metao{item-type} @meta{item-type} @dots{}
+Describe a proper list holding a fixed number of items of the specified
+types (in the given order).  Every @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '(1 2.3) (list <fixnum> <flonum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} vector @metao{item-type} @meta{item-type} @dots{}
+Describe a vector holding a fixed number of items of the specified types
+(in the given order).  Every @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '#(1 2.3) (vector <fixnum> <flonum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} pair-of @meta{item-type}
+Describe a pair having both the car and cdr of type @meta{item-type}.
+The syntax @meta{item-type} is a nested type annotation.
+
+@lisp
+(is-a? '(1 . 2) (pair-of <fixnum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} list-of @meta{item-type}
+Describe a proper list holding any number of items (including zero) all
+of the specified type.  The syntax @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '(1 2) (list-of <fixnum>))       @result{} #t
+(is-a? '()    (list-of <fixnum>))       @result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} vector-of @meta{item-type}
+Describe a vector holding any number of items (including zero) all of
+the specified type.  The syntax @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '#(1 2) (vector-of <fixnum>))    @result{} #t
+(is-a? '#()    (vector-of <fixnum>))    @result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} condition @metao{item-type} @meta{item-type} @dots{}
+Describe a compound condition object holding at least one instance of
+the specified types (the order does not matter).  Every @meta{item-type}
+is a nested type annotation that must be one among: @class{condition},
+@class{compound-condition}, a sub--type of @condition{condition}.
+
+@lisp
+(is-a? (condition (make-who-condition 'I)
+                  (make-message-condition "hello"))
+       (condition &who &message))
+@result{} #t
+
+(is-a? (condition (make-who-condition 'I)
+                  (make-message-condition "hello"))
+       (condition &message &who))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} union @metao{item-type} @meta{item-type} @dots{}
+Describe the union between the specified types.  Every @meta{item-type}
+is a nested type annotation.  A value matches a union of types if its
+type is one of the item types.
+
+@lisp
+(is-a? 1      (union <fixnum> <string>))  @result{} #t
+(is-a? "ciao" (union <fixnum> <string>))  @result{} #t
+(is-a? 1.23   (union <fixnum> <string>))  @result{} #f
+@end lisp
+@end deftp
 
 @c page
 @node types intro type ids

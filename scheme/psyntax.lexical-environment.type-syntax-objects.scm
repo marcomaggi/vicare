@@ -189,7 +189,13 @@
 	    (values '() '()))
 	   (((brace ?id ?tag) . ?other-id*)
 	    (begin
-	      (id->object-type-specification __who__ input-form.stx ?tag lexenv)
+	      (with-exception-handler
+		  (lambda (E)
+		    (raise (condition (make-who-condition __who__)
+				      (make-message-condition "invalid typed binding")
+				      E)))
+		(lambda ()
+		  (type-annotation->object-type-specification ?tag lexenv ?tag)))
 	      (receive (id* tag*)
 		  (recur ?other-id*)
 		(values (cons ?id id*) (cons ?tag tag*)))))
@@ -307,9 +313,8 @@
 
       ;;Non-standard formals: typed args, as in: (lambda (brace args <list>) ---)
       ((brace ?args-id ?args-tag)
-       (and (identifier? ?args-id)
-	    (identifier? ?args-tag))
-       (if (let ((ots (id->object-type-specification __who__ #f ?args-tag (current-inferior-lexenv))))
+       (identifier? ?args-id)
+       (if (let ((ots (type-annotation->object-type-specification ?args-tag (current-inferior-lexenv) ?args-tag)))
 	     (or (<list>-ots? ots)
 		 (list-of-type-spec? ots)))
 	   (values ?args-id ?args-tag)
@@ -329,7 +334,7 @@
 	       (begin
 		 (unless (identifier? ?rest-id)
 		   (%synner "invalid rest argument specification" (list (brace-id) ?rest-id ?rest-tag)))
-		 (unless (let ((ots (id->object-type-specification __who__ #f ?rest-tag (current-inferior-lexenv))))
+		 (unless (let ((ots (type-annotation->object-type-specification ?rest-tag (current-inferior-lexenv) ?rest-tag)))
 			   (or (<list>-ots? ots)
 			       (list-of-type-spec? ots)))
 		   (%synner "expected \"<list>\" or \"(list-of ?type)\" as type annotation for the args argument"
