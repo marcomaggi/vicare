@@ -600,7 +600,6 @@ Example:
 * iklib syntaxes delimcc::      Delimited continuations.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
-* iklib syntaxes type-of::      Determining the type of expressions.
 * iklib syntaxes expansion-of:: Inspecting expansion results.
 * iklib syntaxes optim-of::     Inspecting optimisation results.
 * iklib syntaxes assembly-of::  Inspecting assembly language results.
@@ -3221,41 +3220,6 @@ and for one bound by @func{let}:
   (doit))
 @result{} 123
 @end example
-
-@c page
-@node iklib syntaxes type-of
-@subsection Determining the type of expressions
-
-
-@deffn Syntax type-of @meta{expr}
-This syntax is for interactive use only.  Fully expand the given
-expression in the current lexical environment and return a structure of
-type @objtype{retvals-signature} representing the types of the tuple of
-returned values.  The expression is @strong{not} evaluated, only
-expanded; this means that the expansion side effects are performed.
-
-Example session at the @repl{}:
-
-@example
-vicare> (type-of (values))
-$1 = #["retvals-signature" ()]
-
-vicare> (type-of (values 1 2))
-$1 = #["retvals-signature" (#'<fixnum> #'<fixnum>)]
-
-vicare> (type-of 123)
-$1 = #["retvals-signature" (#'<fixnum>)]
-
-vicare> (type-of ((lambda (@{_ symbol@}) 'ciao)))
-$1 = #["retvals-signature" (#'<symbol>)]
-@end example
-@end deffn
-
-
-@defun print-identifier-info @var{id}
-Given an identifier object: print on the current error port a report on
-its properties as identifier; return unspecified values.
-@end defun
 
 @c page
 @node iklib syntaxes expansion-of

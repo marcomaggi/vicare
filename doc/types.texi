@@ -575,10 +575,8 @@ and will cause an expand--time syntax violation.
 @section Type--exploiting syntaxes
 
 
-Object types are uniquely associated to a syntactic identifier
-representing their name; @value{PRJNAME} allows us to perform some
-operations on objects through generic syntaxes, provided that we use the
-type's name.
+@value{PRJNAME} allows us to perform some operations on objects through
+generic syntaxes, provided that we use the type annotation.
 
 Unless otherwise specified, the syntactic bindings documented in this
 section are exported by the library @library{vicare}.  When showing code
@@ -587,6 +585,7 @@ examples, we always assume: to have imported the library
 Scheme source code reader in @code{#!vicare} mode.
 
 @menu
+* types syntaxes type-of::      Determining the type of expressions.
 * types syntaxes descriptors::  Retrieving type descriptors.
 * types syntaxes new-and-del::  Constructors and destructors.
 * types syntaxes predicates::   Predicate syntaxes.
@@ -597,6 +596,48 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes case-type::    Branching on type of expression.
 @end menu
+
+@c page
+@node types syntaxes type-of
+@subsection Determining the type of expressions
+
+
+@deffn Syntax type-of @meta{expr}
+Fully expand the given expression in the current lexical environment and
+return a structure of type @class{type-signature} representing the types
+of the tuple of returned values.  The expression is @strong{not}
+evaluated, only expanded; this means that the expansion side effects are
+performed.
+
+Examples:
+
+@example
+(type-of (values))
+@result{} #[signature ()]
+
+(type-of (values 1 2))
+@result{} #[signature (<positive-fixnum> <positive-fixnum>)]
+
+(type-of 123)
+@result{} #[signature (<positive-fixnum>)]
+
+(type-of ((lambda (@{_ symbol@}) 'ciao)))
+@result{} #[signature (<symbol>)]
+
+(type-of (+ 1 2))
+@result{} #[signature (<exact-integer>)]
+
+(type-of (+ 1.2 2.3))
+@result{} #[signature (<flonum>)]
+
+(type-of (list 1 2.3))
+@result{} #[signature ((list <positive-fixnum> <positive-flonum>))]
+
+(type-of (condition (make-who-condition 'io)
+                    (make-message-condition "ciao")))
+@result{} #[signature ((condition &who &message))]
+@end example
+@end deffn
 
 @c page
 @node types syntaxes descriptors
