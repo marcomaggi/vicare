@@ -43,6 +43,12 @@
     expect-single-argument-and-return-true
     expect-single-argument-and-return-false
 
+    ;; Scheme type descriptor
+    <scheme-type-descriptor>-rtd	<scheme-type-descriptor>-rcd
+    make-scheme-type-descriptor		scheme-type-descriptor?
+    scheme-type-descriptor.name		scheme-type-descriptor.parent
+    scheme-type-descriptor.uids-list	scheme-type-descriptor.method-retriever
+
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
     <boolean>-constructor		<null>-constructor
@@ -61,6 +67,12 @@
 		  expect-single-argument-and-return-it
 		  expect-single-argument-and-return-true
 		  expect-single-argument-and-return-false
+
+		  ;; Scheme type descriptor
+		  <scheme-type-descriptor>-rtd		<scheme-type-descriptor>-rcd
+		  make-scheme-type-descriptor		scheme-type-descriptor?
+		  scheme-type-descriptor.name		scheme-type-descriptor.parent
+		  scheme-type-descriptor.uids-list	scheme-type-descriptor.method-retriever
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
@@ -120,11 +132,11 @@
 
   (define (%built-in-scheme-object-call btd)
     (define (%recurse)
-      (%built-in-scheme-object-call (scheme-type-parent btd)))
+      (%built-in-scheme-object-call (scheme-type-descriptor.parent btd)))
     (if btd
-	(cond ((scheme-type-method-retriever btd)
+	(cond ((scheme-type-descriptor.method-retriever btd)
 	       => (lambda (method-retriever)
-		    (cond ((method-retriever btd method-name.sym)
+		    (cond ((method-retriever method-name.sym)
 			   => (lambda (proc)
 				(apply proc subject args)))
 			  (else
@@ -142,7 +154,7 @@
     (if rtd
 	(cond ((system::record-type-method-retriever rtd)
 	       => (lambda (method-retriever)
-		    (cond ((method-retriever rtd method-name.sym)
+		    (cond ((method-retriever method-name.sym)
 			   => (lambda (proc)
 				(apply proc subject args)))
 			  (else
@@ -275,19 +287,29 @@
 ;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
 ;;this type should be called BTD (as in "built-in type descriptor").
 ;;
-(define-struct scheme-type
-  (parent
+(define-record-type (<scheme-type-descriptor> make-scheme-type-descriptor scheme-type-descriptor?)
+  (nongenerative vicare:built-in:<scheme-type-descriptor>)
+  (fields
+    (immutable name		scheme-type-descriptor.name)
+		;A symbol representing the name of this type.  For example: <string>.
+    (immutable parent		scheme-type-descriptor.parent)
 		;False  if  this  type  has  no  parent;  otherwise  an  instance  of
-		;"scheme-type" representing the parent of this type.
-   uids-list
+		;"<scheme-type-descriptor>" representing the parent of this type.
+    (immutable uids-list	scheme-type-descriptor.uids-list)
 		;A list of symbols representing the  hierarchy of UIDs for this type.
 		;The  first item  in the  list  is the  UID  of this  type, then  the
 		;parent's UID, then the grandparent's UID, et cetera.
-   method-retriever
+    (immutable method-retriever	scheme-type-descriptor.method-retriever)
 		;If this  type has methods: a  procedure to be applied  to the method
-		;name  to retriever  the  method  implementation function;  otherwise
-		;false.
-   ))
+		;name  (a symbol)  to  retrieve the  method implementation  function;
+		;otherwise false.
+    #| end of FIELDS |# ))
+
+(define <scheme-type-descriptor>-rtd
+  (record-type-descriptor <scheme-type-descriptor>))
+
+(define <scheme-type-descriptor>-rcd
+  (record-constructor-descriptor <scheme-type-descriptor>))
 
 
 ;;;; object type helpers: <top>
@@ -420,13 +442,15 @@
 	    (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
 	    (RETRIEVER		(if (null? (syntax->datum #'((?method-name ?method-implementation-procedure) ...)))
 				    #f
-				  #'(lambda (btd method-name.sym)
+				  #'(lambda (method-name.sym)
 				      (case method-name.sym
 					((?method-name) ?method-implementation-procedure)
 					...
 					(else #f))))))
-	 #'(define BTD-NAME
-	     (make-scheme-type PARENT-NAME TYPE-UIDS-LIST RETRIEVER)))))
+	 #'(begin
+	     (define BTD-NAME
+	       (make-scheme-type-descriptor (quote ?type-name) PARENT-NAME TYPE-UIDS-LIST RETRIEVER))
+	     (export BTD-NAME)))))
     ))
 
 ;;; --------------------------------------------------------------------

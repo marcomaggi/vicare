@@ -246,6 +246,17 @@
       (mutually-exclusive		syntax-clause-spec-mutually-exclusive)
       (custom-data			syntax-clause-spec-custom-data)))
 
+;;; --------------------------------------------------------------------
+
+   (define-built-in-record-type <scheme-type-descriptor>
+       <record>
+     #f scheme-type-descriptor?
+     (methods
+      (name				scheme-type-descriptor.name)
+      (parent				scheme-type-descriptor.parent)
+      (uids-list			scheme-type-descriptor.uids-list)
+      (method-retriever			scheme-type-descriptor.method-retriever)))
+
    ))
 
 

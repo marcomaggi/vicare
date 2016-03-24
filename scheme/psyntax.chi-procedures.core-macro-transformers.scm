@@ -1516,8 +1516,8 @@
 	      (expr.stx  (record-type-spec.rcd-id rts))
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
-		   (psi.core-expr expr.psi)
-		   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
+	   (psi.core-expr expr.psi)
+	   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
       ))
 
   (define-core-transformer (type-descriptor input-form.stx lexenv.run lexenv.expand)
@@ -1540,6 +1540,8 @@
 		(%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       ((struct-type-spec? ots)
 		(%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
+	       ((scheme-type-spec? ots)
+		(%make-scheme-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       (else
 		(%synner "expected type identifier representing a struct-type name or a record-type name" ?type-id)))))
       ))
@@ -1550,16 +1552,24 @@
 					sts)
     (let* ((std (struct-type-spec.std sts)))
       (make-psi input-form.stx
-		(build-data no-source std)
-		(make-type-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
+	(build-data no-source std)
+	(make-type-signature/single-value (core-prim-id '<struct-type-descriptor>)))))
 
   (define (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand
 					rts)
     (let* ((expr.stx  (record-type-spec.rtd-id rts))
 	   (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
       (make-psi input-form.stx
-		(psi.core-expr expr.psi)
-		(make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
+	(psi.core-expr expr.psi)
+	(make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
+
+  (define (%make-scheme-type-descriptor input-form.stx lexenv.run lexenv.expand
+					ots)
+    (let* ((expr.stx (scheme-type-spec.type-descriptor-id ots))
+	   (expr.psi (chi-expr expr.stx lexenv.run lexenv.expand)))
+      (make-psi input-form.stx
+	(psi.core-expr expr.psi)
+	(make-type-signature/single-value (core-prim-id '<scheme-type-descriptor>)))))
 
   #| end of module |# )
 

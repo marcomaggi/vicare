@@ -116,6 +116,7 @@
 
 	 <scheme-type-spec>
 	 make-scheme-type-spec				scheme-type-spec?
+	 scheme-type-spec.type-descriptor-id
 
 	 <closure-type-spec>
 	 make-closure-type-spec				closure-type-spec?
@@ -1091,17 +1092,24 @@
 (define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
   (nongenerative vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
+  (fields
+    (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
+		;Syntactic     identifier     bound     to     an     instance     of
+		;"<scheme-type-descriptor>".
+    #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-scheme-type-spec {name identifier?}
 				      {parent.ots (or not scheme-type-spec?)}
-				      constructor.stx predicate.stx methods-table)
+				      constructor.stx predicate.stx type-descriptor.id
+				      methods-table)
 	(let ((destructor.stx	#f)
 	      (accessors-table	'())
 	      (mutators-table	'()))
 	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
-				  accessors-table mutators-table methods-table))))
+				  accessors-table mutators-table methods-table)
+	   type-descriptor.id)))
       make-scheme-type-spec))
   (custom-printer
     (lambda (S port sub-printer)

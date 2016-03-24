@@ -659,8 +659,58 @@ is a struct--type name.
 @item
 A record--type descriptor if the given identifier argument @meta{type}
 is a record--type name.
+
+@item
+A Scheme built--in object--type descriptor if the given identifier
+argument @meta{type} is a built--in object--type name.  This descriptor
+is a record of type @class{scheme-type-descriptor}.
 @end itemize
 @end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Scheme built--in object--type descriptors
+
+
+@deftp {Recort-Type} @aclass{scheme-type-descriptor}
+Type name identifier for records describing Scheme built--in
+object--types.  It has the following immutable fields:
+
+@table @code
+@item name
+A symbol representing the name of this type.  For example:
+@samp{<string>}.
+
+@item parent
+If this type has a parent: an instance of @class{scheme-type-descriptor}
+representing the parent of this type; otherwise @false{}.
+
+@item uids-list
+A list of symbols representing the hierarchy of unique identifiers
+(@uid{}s) for this type.  The first item in the list is the @uid{} of
+this type, then the parent's @uid{}, then the grandparent's @uid{}, et
+cetera.
+
+@item method-retriever
+If this type has methods: a procedure to be applied to the method name
+(a symbol) to retrieve the method implementation function; otherwise
+@false{}.
+@end table
+@end deftp
+
+
+@defun scheme-type-descriptor? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@class{scheme-type-descriptor}; otherwise return @false{}.
+@end defun
+
+
+@defun scheme-type-descriptor.name @var{btd}
+@defunx scheme-type-descriptor.parent @var{btd}
+@defunx scheme-type-descriptor.uids-list @var{btd}
+@defunx scheme-type-descriptor.method-retriever @var{btd}
+Accessors for the fields of @class{scheme-type-descriptor}.
+@end defun
 
 @c page
 @node types syntaxes new-and-del

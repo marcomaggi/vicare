@@ -92,6 +92,38 @@
     ))
 
 
+(parametrise ((check-test-name	'type-descriptor))
+
+  (check
+      (scheme-type-descriptor? (type-descriptor <string>))
+    => #t)
+
+  (check
+      (scheme-type-descriptor.name (type-descriptor <string>))
+    => '<string>)
+
+  (let ((btd (type-descriptor <string>)))
+
+    (check
+	(scheme-type-descriptor.name (scheme-type-descriptor.parent btd))
+      => '<top>)
+
+    (check
+	(scheme-type-descriptor.uids-list btd)
+      => '(vicare:scheme-type:<string> vicare:scheme-type:<top>))
+
+    (check-for-true	(procedure? (scheme-type-descriptor.method-retriever btd)))
+    (check-for-true	((scheme-type-descriptor.method-retriever btd) 'length))
+
+    (check
+	(((scheme-type-descriptor.method-retriever btd) 'length) "ciao")
+      => 4)
+
+    (void))
+
+  (void))
+
+
 (parametrise ((check-test-name	'is-a))
 
   (check-for-true	(is-a? "string" <string>))

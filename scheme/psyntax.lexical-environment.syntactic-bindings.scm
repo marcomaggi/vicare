@@ -936,6 +936,7 @@
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
   ;;   (?type-name ?parent-name ?constructor-name ?type-predicate-name
+  ;;     ?type-descriptor-name
   ;;     ((?method-name . ?method-implementation-procedure) ...))
   ;;
   ;;and the usable descriptor has the format:
@@ -954,13 +955,15 @@
 	 (descr.value		(syntactic-binding-descriptor.value descriptor))
 	 (type-name.sym		(car descr.value))
 	 (parent-name.sexp	(list-ref descr.value 1))
-	 (constructor.sexp	(bless (list-ref descr.value 2)))
-	 (type-predicate.sexp	(bless (list-ref descr.value 3)))
-	 (methods-table		(%alist-ref-or-null descr.value 4)))
+	 (constructor.stx	(bless (list-ref descr.value 2)))
+	 (type-predicate.stx	(bless (list-ref descr.value 3)))
+	 (type-descriptor.id	(core-prim-id (list-ref descr.value 4)))
+	 (methods-table		(%alist-ref-or-null descr.value 5)))
     (let ((type-name.id		(core-prim-id type-name.sym))
 	  (parent-name.id	(and parent-name.sexp (core-prim-id parent-name.sexp))))
       (let* ((parent-name.ots	(and parent-name.id (id->object-type-specification __who__ #f parent-name.id (make-empty-lexenv))))
-	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots constructor.sexp type-predicate.sexp methods-table)))
+	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots constructor.stx type-predicate.stx
+						       type-descriptor.id methods-table)))
 	(set-car! descriptor 'core-object-type-name)
 	(set-cdr! descriptor (cons type-name.ots descr.value))))))
 

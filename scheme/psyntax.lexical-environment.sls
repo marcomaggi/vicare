@@ -116,6 +116,7 @@
 
     <scheme-type-spec>
     make-scheme-type-spec				scheme-type-spec?
+    scheme-type-spec.type-descriptor-id
 
     <closure-type-spec>
     make-closure-type-spec				closure-type-spec?

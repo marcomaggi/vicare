@@ -1168,7 +1168,7 @@
 	  (pair? field-name*.sym))
       (let ((method-retriever.sym (gensym (string-append foo.str "-methods-retriever"))))
 	`((module ()
-	    (define/std (,method-retriever.sym rtd name)
+	    (define/std (,method-retriever.sym name)
 	      (case name
 		;;First the methods...
 		,@(map (lambda (name procname)
