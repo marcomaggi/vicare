@@ -712,6 +712,30 @@ Return @true{} if @var{obj} is an instance of
 Accessors for the fields of @class{scheme-type-descriptor}.
 @end defun
 
+
+Some usage examples:
+
+@lisp
+(define string-btd
+  (type-descriptor <string>))
+
+(scheme-type-descriptor.name string-btd)
+@result{} <string>
+
+(scheme-type-descriptor.name
+  (scheme-type-descriptor.parent string-btd))
+@result{} <top>
+
+(scheme-type-descriptor.uids-list string-btd)
+@result{} (vicare:scheme-type:<string> vicare:scheme-type:<top>)
+
+(define string-method-retriever
+  (scheme-type-descriptor.method-retriever string-btd))
+
+((string-method-retriever 'length) "ciao")
+@result{} 4
+@end lisp
+
 @c page
 @node types syntaxes new-and-del
 @subsection Constructors and destructors
