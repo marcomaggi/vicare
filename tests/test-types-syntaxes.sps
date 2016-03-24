@@ -121,6 +121,33 @@
 
     (void))
 
+;;; --------------------------------------------------------------------
+
+  (internal-body
+    (define {string-btd <scheme-type-descriptor>}
+      (type-descriptor <string>))
+
+    (check
+	(.name string-btd)
+      => '<string>)
+
+    (check
+	(.name (.parent string-btd))
+      => '<top>)
+
+    (check
+	(.uids-list string-btd)
+      => '(vicare:scheme-type:<string> vicare:scheme-type:<top>))
+
+    (check-for-true	(procedure? (.method-retriever string-btd)))
+    (check-for-true	((.method-retriever string-btd) 'length))
+
+    (check
+	(((.method-retriever string-btd) 'length) "ciao")
+      => 4)
+
+    (void))
+
   (void))
 
 
