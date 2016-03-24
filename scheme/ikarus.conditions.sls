@@ -964,7 +964,7 @@
 		    (()	#'(void))
 		    ;;At least one field.
 		    (_
-		     #'(records::record-type-method-retriever-set! RTD (lambda (rtd name)
+		     #'(records::record-type-method-retriever-set! RTD (lambda (name)
 									 (case name
 									   ((?field) ?accessor)
 									   ...
