@@ -44,7 +44,7 @@
 ;;; predicates
    type-signature.fully-untyped?			type-signature.partially-untyped?
    type-signature.untyped?				type-signature.empty?
-   type-signature.super-and-sub?
+   type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
    type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?		type-signature.no-return?
 
@@ -639,6 +639,128 @@
 		;;and we want it to match if the item OTSs match.
 		(let ((sub-item.ots (list-of-type-spec.item-ots sub-specs)))
 		  (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots)))
+
+	       (else
+		(assertion-violation __who__ "invalid super-signature" sub-signature)))))))
+
+     (else
+      (assertion-violation __who__ "invalid super-signature" super-signature)))))
+
+(define* (type-signature.compatible-super-and-sub? super-signature sub-signature)
+  ;;Return true if SUPER-SIGNATURE and SUB-SIGNATURE  have the same structure and the
+  ;;identifiers in  the homologous position  are compatible super-type  and sub-type;
+  ;;otherwise return false.
+  ;;
+  (let recur ((super-specs	(type-signature.specs super-signature))
+	      (sub-specs	(type-signature.specs sub-signature)))
+    (cond
+     ((pair? super-specs)
+      (cond ((pair? sub-specs)
+	     ;;If the super-type is actually a super type of the sub-type good.
+	     (and (or (object-type-spec.matching-super-and-sub?   (car super-specs) (car sub-specs))
+		      (object-type-spec.compatible-super-and-sub? (car super-specs) (car sub-specs)))
+		  (recur (cdr super-specs) (cdr sub-specs))))
+	    (else
+	     ;;There are more super-types than sub-types, for example:
+	     ;;
+	     ;;  super-signature == #'(<number>  <fixnum> <string)
+	     ;;  sub-signature   == #'(<complex> <fixnum>)
+	     ;;
+	     ;;or the sub signature is an improper list:
+	     ;;
+	     ;;  super-signature == #'(<number>  <fixnum> <string)
+	     ;;  sub-signature   == #'(<complex> <fixnum> . <list>)
+	     ;;
+	     ;;we want these cases to fail matching.
+	     #f)))
+
+     ((null? super-specs)
+      ;;Return true if both  the signatures are proper lists with  the same number of
+      ;;items, and all the items are correct super and sub.
+      (null? sub-specs))
+
+     ((<list>-ots? super-specs)
+      ;;The super  signature is an improper  list: either a standalone  "<list>" or a
+      ;;list with a "<list>" in tail position.   As example, we want the following to
+      ;;match successfully:
+      ;;
+      ;;  super-signature == #'(<number>  <fixnum> . <list>)
+      ;;  sub-signature   == #'(<complex> <fixnum>)
+      ;;
+      ;;and the following to match successfully:
+      ;;
+      ;;  super-signature == #'<list>
+      ;;  sub-signature   == #'(<complex> <fixnum>)
+      ;;
+      ;;and the following to match successfully:
+      ;;
+      ;;  super-signature == #'(<fixnum> <fixnum> . <list>)
+      ;;  sub-signature   == #'(<fixnum> <fixnum> <string> <vector>)
+      ;;
+      #t)
+
+     ((list-of-type-spec? super-specs)
+      ;;The   super   signature   is   an  improper   list:   either   a   standalone
+      ;;"<list-of-type-spec>"  or  a  list   with  a  "<list-of-type-spec>"  in  tail
+      ;;position.  The super-signature accepts any number of arguments of a specified
+      ;;type.
+      ;;
+      ;;As example, we want the following to match successfully:
+      ;;
+      ;;  super-signature == #'(<number>  <fixnum> . (list-of <string>))
+      ;;  sub-signature   == #'(<complex> <fixnum>)
+      ;;
+      ;;and the following to match successfully:
+      ;;
+      ;;  super-signature == #'(list-of <number>)
+      ;;  sub-signature   == #'(<complex> <fixnum>)
+      ;;
+      ;;and the following to match successfully:
+      ;;
+      ;;  super-signature == #'(<fixnum> <fixnum> . (list-of <number>))
+      ;;  sub-signature   == #'(<fixnum> <fixnum> <integer> <rational>)
+      ;;
+      (let ((super-item.ots (list-of-type-spec.item-ots super-specs)))
+	(or (<top>-ots? super-item.ots)
+	    (let item-recur ((sub-specs sub-specs))
+	      (cond
+	       ;;This is the case:
+	       ;;
+	       ;;  super-signature == #'(<number>  <fixnum> . (list-of <string>))
+	       ;;  sub-signature   == #'(<complex> <fixnum>)
+	       ;;
+	       ;;and we want it to match successfully.
+	       ((null? sub-specs))
+
+	       ((pair? sub-specs)
+		;;We want the following signatures to match:
+		;;
+		;;  super-signature == #'(<number>  . (list-of <fixnum>))
+		;;  sub-signature   == #'(<complex> <fixnum> <fixnum>)
+		;;
+		(and (or (object-type-spec.matching-super-and-sub?   super-item.ots (car sub-specs))
+			 (object-type-spec.compatible-super-and-sub? super-item.ots (car sub-specs)))
+		     (item-recur (cdr sub-specs))))
+
+	       ((<list>-ots? sub-specs)
+		;;This is the case:
+		;;
+		;;  super-signature == #'(<number>  . (list-of <fixnum>))
+		;;  sub-signature   == #'(<complex> . <list>)
+		;;
+		;;and we want it to fail matching.
+		#f)
+
+	       ((list-of-type-spec? sub-specs)
+		;;This is the case:
+		;;
+		;;  super-signature == #'(<string> <string> . (list-of <number>))
+		;;  sub-signature   == #'(<string> <string> . (list-of <fixnum>))
+		;;
+		;;and we want it to match if the item OTSs match.
+		(let ((sub-item.ots (list-of-type-spec.item-ots sub-specs)))
+		  (or (object-type-spec.matching-super-and-sub?   super-item.ots sub-item.ots)
+		      (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))))
 
 	       (else
 		(assertion-violation __who__ "invalid super-signature" sub-signature)))))))

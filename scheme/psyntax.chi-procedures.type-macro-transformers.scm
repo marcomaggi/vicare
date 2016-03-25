@@ -1109,7 +1109,7 @@
 		;;
 		;;which generalises from "<fixnum>" to "<number>".
 		(%do-unsafe-cast-signature))
-	       ((type-signature.super-and-sub? expr.sig target.sig)
+	       ((type-signature.compatible-super-and-sub? expr.sig target.sig)
 		;;Good,   non-matching  but   compatible   type   signatures:  we   are
 		;;specialising the type specification.  For example:
 		;;
