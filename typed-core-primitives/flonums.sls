@@ -291,7 +291,7 @@
  (declare-core-primitive $flonum->exact
    (unsafe)
    (signatures
-    ((<flonum>)			=> (<exact-real>)))
+    ((<flonum>)			=> (<exact-rational>)))
    (attributes
     ((_)			foldable effect-free result-true)))
 

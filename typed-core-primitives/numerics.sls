@@ -337,13 +337,13 @@
 (declare-core-primitive max
     (safe)
   (signatures
-   ((<fixnum> . (list-of <fixnum>))		=> (<fixnum>))
-   ((<bignum> . (list-of <bignum>))		=> (<bignum>))
-   ((<flonum> . (list-of <flonum>))		=> (<flonum>))
-   ((<exact-integer> . (list-of <exact-integer>))	=> (<exact-integer>))
-   ((<exact-real> . (list-of <exact-real>))	=> (<exact-real>))
-   ((<integer> . (list-of <integer>))		=> (<integer>))
-   ((<real> . (list-of <real>))			=> (<real>)))
+   ((<fixnum>		. (list-of <fixnum>))		=> (<fixnum>))
+   ((<bignum>		. (list-of <bignum>))		=> (<bignum>))
+   ((<flonum>		. (list-of <flonum>))		=> (<flonum>))
+   ((<exact-integer>	. (list-of <exact-integer>))	=> (<exact-integer>))
+   ((<exact-rational>	. (list-of <exact-rational>))	=> (<exact-rational>))
+   ((<integer>		. (list-of <integer>))		=> (<integer>))
+   ((<real>		. (list-of <real>))		=> (<real>)))
   (attributes
    ((_ . _)				foldable effect-free result-true))
   #;(replacements
@@ -357,13 +357,13 @@
 (declare-core-primitive min
     (safe)
   (signatures
-   ((<fixnum> . (list-of <fixnum>))		=> (<fixnum>))
-   ((<bignum> . (list-of <bignum>))		=> (<bignum>))
-   ((<flonum> . (list-of <flonum>))		=> (<flonum>))
-   ((<exact-integer> . (list-of <exact-integer>))	=> (<exact-integer>))
-   ((<exact-real> . (list-of <exact-real>))	=> (<exact-real>))
-   ((<integer> . (list-of <integer>))		=> (<integer>))
-   ((<real> . (list-of <real>))			=> (<real>)))
+   ((<fixnum>		. (list-of <fixnum>))		=> (<fixnum>))
+   ((<bignum>		. (list-of <bignum>))		=> (<bignum>))
+   ((<flonum>		. (list-of <flonum>))		=> (<flonum>))
+   ((<exact-integer>	. (list-of <exact-integer>))	=> (<exact-integer>))
+   ((<exact-rational>	. (list-of <exact-rational>))	=> (<exact-rational>))
+   ((<integer>		. (list-of <integer>))		=> (<integer>))
+   ((<real>		. (list-of <real>))		=> (<real>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   #;(replacements
@@ -382,7 +382,7 @@
   (signatures
    ((list-of <flonum>)			=> (<flonum>))
    ((list-of <exact-integer>)		=> (<exact-integer>))
-   ((list-of <exact-real>)		=> (<exact-real>))
+   ((list-of <exact-rational>)		=> (<exact-rational>))
    ((list-of <integer>)			=> (<integer>))
    ((list-of <real>)			=> (<real>))
    ((list-of <cflonum>)			=> (<cflonum>))
@@ -419,13 +419,13 @@
 (declare-core-primitive -
     (safe)
   (signatures
-   ((list-of <flonum>)			=> (<flonum>))
-   ((list-of <exact-integer>)		=> (<exact-integer>))
-   ((list-of <exact-real>)		=> (<exact-real>))
-   ((list-of <integer>)			=> (<integer>))
-   ((list-of <real>)			=> (<real>))
-   ((list-of <cflonum>)			=> (<cflonum>))
-   ((list-of <number>)			=> (<number>)))
+   ((<flonum>		. (list-of <flonum>))		=> (<flonum>))
+   ((<exact-integer>	. (list-of <exact-integer>))	=> (<exact-integer>))
+   ((<exact-rational>	. (list-of <exact-rational>))	=> (<exact-rational>))
+   ((<integer>		. (list-of <integer>))		=> (<integer>))
+   ((<real>		. (list-of <real>))		=> (<real>))
+   ((<cflonum>		. (list-of <cflonum>))		=> (<cflonum>))
+   ((<number>		. (list-of <number>))		=> (<number>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   (replacements
@@ -460,7 +460,7 @@
   (signatures
    ((list-of <flonum>)			=> (<flonum>))
    ((list-of <exact-integer>)		=> (<exact-integer>))
-   ((list-of <exact-real>)		=> (<exact-real>))
+   ((list-of <exact-rational>)		=> (<exact-rational>))
    ((list-of <integer>)			=> (<integer>))
    ((list-of <real>)			=> (<real>))
    ((list-of <cflonum>)			=> (<cflonum>))
@@ -497,10 +497,11 @@
 (declare-core-primitive /
     (safe)
   (signatures
-   ((<flonum>  . (list-of <flonum>))	=> (<flonum>))
-   ((<real>    . (list-of <real>))	=> (<real>))
-   ((<cflonum> . (list-of <cflonum>))	=> (<cflonum>))
-   ((<number>  . (list-of <number>))	=> (<number>)))
+   ((<flonum>		. (list-of <flonum>))		=> (<flonum>))
+   ((<exact-rational>	. (list-of <exact-rational>))	=> (<exact-rational>))
+   ((<real>		. (list-of <real>))		=> (<real>))
+   ((<cflonum>		. (list-of <cflonum>))		=> (<cflonum>))
+   ((<number>		. (list-of <number>))		=> (<number>)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   (replacements
@@ -534,6 +535,7 @@
     (safe)
   (signatures
    ((<exact-integer>)		=> (<exact-integer>))
+   ((<exact-rational>)		=> (<exact-rational>))
    ((<flonum>)			=> (<flonum>))
    ((<integer>)			=> (<integer>))
    ((<real>)			=> (<real>))
@@ -551,6 +553,7 @@
     (safe)
   (signatures
    ((<exact-integer>)		=> (<exact-integer>))
+   ((<exact-rational>)		=> (<exact-rational>))
    ((<flonum>)			=> (<flonum>))
    ((<integer>)			=> (<integer>))
    ((<real>)			=> (<real>))
@@ -571,6 +574,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>)))
   (attributes
@@ -581,6 +585,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>)))
   (attributes
@@ -591,6 +596,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>)))
   (attributes
@@ -601,6 +607,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>)))
   (attributes
@@ -611,6 +618,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
@@ -620,6 +628,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ;;This is needed because integer flonums are valid operands.
    ((<real> <real>)			=> (<real>)))
@@ -642,6 +651,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum> <fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer> <exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational> <exact-rational>))
    ((<integer> <integer>)		=> (<integer> <integer>))
    ;;This is needed because integer flonums are valid operands.
    ((<real> <real>)			=> (<real> <real>)))
@@ -653,6 +663,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum> <fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer> <exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational> <exact-rational>))
    ((<real> <real>)			=> (<real> <real>)))
   (attributes
    ((_ _)				effect-free)))
@@ -662,6 +673,7 @@
   (signatures
    ((<fixnum> <fixnum>)			=> (<fixnum> <fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer> <exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational> <exact-rational>))
    ((<real> <real>)			=> (<real> <real>)))
   (attributes
    ((_ _)				effect-free)))
@@ -692,6 +704,7 @@
    ((<flonum> <flonum>)			=> (<flonum>))
 
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>))
 
@@ -733,6 +746,7 @@
    ((<flonum> <flonum>)			=> (<flonum>))
 
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
+   ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
    ((<integer> <integer>)		=> (<integer>))
    ((<real> <real>)			=> (<real>))
 
@@ -858,7 +872,8 @@
 (declare-core-primitive make-rectangular
     (safe)
   (signatures
-   ((<real> <real>)		=> (<complex>)))
+   ((<exact-rational> <exact-rational>)	=> (<exact-compnum>))
+   ((<real> <real>)			=> (<complex>)))
   (attributes
    ((_ _)			foldable effect-free result-true))
   (replacements $make-cflonum $make-compnum $make-rectangular))
@@ -982,7 +997,7 @@
    ((<fixnum>)			=> (<exact-integer>))
    ((<bignum>)			=> (<exact-integer>))
    ((<flonum>)			=> (<flonum>))
-   ((<ratnum>)			=> (<exact-real>))
+   ((<ratnum>)			=> (<exact-rational>))
    ((<compnum>)			=> (<number>))
    ((<cflonum>)			=> (<cflonum>)))
   (attributes
@@ -995,7 +1010,7 @@
    ((<fixnum>)			=> (<exact-integer>))
    ((<bignum>)			=> (<exact-integer>))
    ((<flonum>)			=> (<flonum>))
-   ((<ratnum>)		=> (<exact-real>))
+   ((<ratnum>)		=> (<exact-rational>))
    ((<compnum>)			=> (<number>))
    ((<cflonum>)			=> (<cflonum>)))
   (attributes
@@ -1362,10 +1377,10 @@
 ;;; --------------------------------------------------------------------
 
 (declare-unsafe-unary-operation $inv-number	<number>	<number>)
-(declare-unsafe-unary-operation $inv-fixnum	<fixnum>	<exact-real>)
+(declare-unsafe-unary-operation $inv-fixnum	<fixnum>	<exact-rational>)
 (declare-unsafe-unary-operation $inv-bignum	<bignum>	<ratnum>)
 (declare-unsafe-unary-operation $inv-flonum	<flonum>	<flonum>)
-(declare-unsafe-unary-operation $inv-ratnum	<ratnum>	<exact-real>)
+(declare-unsafe-unary-operation $inv-ratnum	<ratnum>	<exact-rational>)
 (declare-unsafe-unary-operation $inv-compnum	<compnum>	<complex>)
 (declare-unsafe-unary-operation $inv-cflonum	<cflonum>	<cflonum>)
 
@@ -1430,14 +1445,14 @@
 (declare-unsafe-binary-operation $add-fixnum-fixnum	<fixnum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $add-fixnum-bignum	<fixnum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $add-fixnum-flonum	<fixnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $add-fixnum-ratnum	<fixnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $add-fixnum-ratnum	<fixnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $add-fixnum-compnum	<fixnum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $add-fixnum-cflonum	<fixnum>	<cflonum>	<cflonum>)
 
 (declare-unsafe-binary-operation $add-bignum-fixnum	<bignum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $add-bignum-bignum	<bignum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $add-bignum-flonum	<bignum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $add-bignum-ratnum	<bignum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $add-bignum-ratnum	<bignum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $add-bignum-compnum	<bignum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $add-bignum-cflonum	<bignum>	<cflonum>	<cflonum>)
 
@@ -1448,10 +1463,10 @@
 (declare-unsafe-binary-operation $add-flonum-compnum	<flonum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $add-flonum-cflonum	<flonum>	<cflonum>	<cflonum>)
 
-(declare-unsafe-binary-operation $add-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $add-ratnum-bignum	<ratnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $add-ratnum-fixnum	<ratnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $add-ratnum-bignum	<ratnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $add-ratnum-flonum	<ratnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $add-ratnum-ratnum	<ratnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $add-ratnum-ratnum	<ratnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $add-ratnum-compnum	<ratnum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $add-ratnum-cflonum	<ratnum>	<cflonum>	<cflonum>)
 
@@ -1490,14 +1505,14 @@
 (declare-unsafe-binary-operation $sub-fixnum-fixnum	<fixnum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $sub-fixnum-bignum	<fixnum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $sub-fixnum-flonum	<fixnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $sub-fixnum-ratnum	<fixnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $sub-fixnum-ratnum	<fixnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $sub-fixnum-compnum	<fixnum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $sub-fixnum-cflonum	<fixnum>	<cflonum>	<cflonum>)
 
 (declare-unsafe-binary-operation $sub-bignum-fixnum	<bignum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $sub-bignum-bignum	<bignum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $sub-bignum-flonum	<bignum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $sub-bignum-ratnum	<bignum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $sub-bignum-ratnum	<bignum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $sub-bignum-compnum	<bignum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $sub-bignum-cflonum	<bignum>	<cflonum>	<cflonum>)
 
@@ -1508,10 +1523,10 @@
 (declare-unsafe-binary-operation $sub-flonum-compnum	<flonum>	<compnum>	<complex>)
 (declare-unsafe-binary-operation $sub-flonum-cflonum	<flonum>	<cflonum>	<cflonum>)
 
-(declare-unsafe-binary-operation $sub-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $sub-ratnum-bignum	<ratnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $sub-ratnum-fixnum	<ratnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $sub-ratnum-bignum	<ratnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $sub-ratnum-flonum	<ratnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $sub-ratnum-ratnum	<ratnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $sub-ratnum-ratnum	<ratnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $sub-ratnum-compnum	<ratnum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $sub-ratnum-cflonum	<ratnum>	<cflonum>	<cflonum>)
 
@@ -1550,14 +1565,14 @@
 (declare-unsafe-binary-operation $mul-fixnum-fixnum	<fixnum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $mul-fixnum-bignum	<fixnum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $mul-fixnum-flonum	<fixnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $mul-fixnum-ratnum	<fixnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $mul-fixnum-ratnum	<fixnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $mul-fixnum-compnum	<fixnum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $mul-fixnum-cflonum	<fixnum>	<cflonum>	<cflonum>)
 
 (declare-unsafe-binary-operation $mul-bignum-fixnum	<bignum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $mul-bignum-bignum	<bignum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $mul-bignum-flonum	<bignum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $mul-bignum-ratnum	<bignum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $mul-bignum-ratnum	<bignum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $mul-bignum-compnum	<bignum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $mul-bignum-cflonum	<bignum>	<cflonum>	<cflonum>)
 
@@ -1568,10 +1583,10 @@
 (declare-unsafe-binary-operation $mul-flonum-compnum	<flonum>	<compnum>	<cflonum>)
 (declare-unsafe-binary-operation $mul-flonum-cflonum	<flonum>	<cflonum>	<cflonum>)
 
-(declare-unsafe-binary-operation $mul-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $mul-ratnum-bignum	<ratnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $mul-ratnum-fixnum	<ratnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $mul-ratnum-bignum	<ratnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $mul-ratnum-flonum	<ratnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $mul-ratnum-ratnum	<ratnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $mul-ratnum-ratnum	<ratnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $mul-ratnum-compnum	<ratnum>	<compnum>	<compnum>)
 (declare-unsafe-binary-operation $mul-ratnum-cflonum	<ratnum>	<cflonum>	<cflonum>)
 
@@ -1607,24 +1622,24 @@
 (declare-unsafe-binary-operation $div-number-compnum	<number>	<compnum>	<number>)
 (declare-unsafe-binary-operation $div-number-cflonum	<number>	<cflonum>	<number>)
 
-(declare-unsafe-binary-operation $div-fixnum-fixnum	<fixnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $div-fixnum-bignum	<fixnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $div-fixnum-fixnum	<fixnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $div-fixnum-bignum	<fixnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $div-fixnum-flonum	<fixnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $div-fixnum-ratnum	<fixnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $div-fixnum-ratnum	<fixnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $div-fixnum-compnum	<fixnum>	<compnum>	<number>)
 (declare-unsafe-binary-operation $div-fixnum-cflonum	<fixnum>	<cflonum>	<cflonum>)
 
-(declare-unsafe-binary-operation $div-bignum-fixnum	<bignum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $div-bignum-bignum	<bignum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $div-bignum-fixnum	<bignum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $div-bignum-bignum	<bignum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $div-bignum-flonum	<bignum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $div-bignum-ratnum	<bignum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $div-bignum-ratnum	<bignum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $div-bignum-compnum	<bignum>	<compnum>	<number>)
 (declare-unsafe-binary-operation $div-bignum-cflonum	<bignum>	<cflonum>	<cflonum>)
 
-(declare-unsafe-binary-operation $div-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $div-ratnum-bignum	<ratnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $div-ratnum-fixnum	<ratnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $div-ratnum-bignum	<ratnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $div-ratnum-flonum	<ratnum>	<flonum>	<flonum>)
-(declare-unsafe-binary-operation $div-ratnum-ratnum	<ratnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $div-ratnum-ratnum	<ratnum>	<ratnum>	<exact-rational>)
 (declare-unsafe-binary-operation $div-ratnum-compnum	<ratnum>	<compnum>	<number>)
 (declare-unsafe-binary-operation $div-ratnum-cflonum	<ratnum>	<cflonum>	<cflonum>)
 
@@ -1653,7 +1668,7 @@
 
 (declare-unsafe-unary-operation $square-fixnum		<fixnum>	<exact-integer>)
 (declare-unsafe-unary-operation $square-bignum		<bignum>	<exact-integer>)
-(declare-unsafe-unary-operation $square-ratnum		<ratnum>	<exact-real>)
+(declare-unsafe-unary-operation $square-ratnum		<ratnum>	<exact-rational>)
 (declare-unsafe-unary-operation $square-compnum		<compnum>	<number>)
 (declare-unsafe-unary-operation $square-cflonum		<cflonum>	<cflonum>)
 
@@ -1661,7 +1676,7 @@
 
 (declare-unsafe-unary-operation $cube-fixnum		<fixnum>	<exact-integer>)
 (declare-unsafe-unary-operation $cube-bignum		<bignum>	<exact-integer>)
-(declare-unsafe-unary-operation $cube-ratnum		<ratnum>	<exact-real>)
+(declare-unsafe-unary-operation $cube-ratnum		<ratnum>	<exact-rational>)
 (declare-unsafe-unary-operation $cube-compnum		<compnum>	<number>)
 (declare-unsafe-unary-operation $cube-cflonum		<cflonum>	<cflonum>)
 
@@ -1880,20 +1895,20 @@
 (declare-unsafe-binary-operation $max-fixnum-fixnum	<fixnum>	<fixnum>	<fixnum>)
 (declare-unsafe-binary-operation $max-fixnum-bignum	<fixnum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $max-fixnum-flonum	<fixnum>	<flonum>	<real>)
-(declare-unsafe-binary-operation $max-fixnum-ratnum	<fixnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $max-fixnum-ratnum	<fixnum>	<ratnum>	<exact-rational>)
 
 (declare-unsafe-binary-operation $max-bignum-fixnum	<bignum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $max-bignum-bignum	<bignum>	<bignum>	<bignum>)
 (declare-unsafe-binary-operation $max-bignum-flonum	<bignum>	<flonum>	<real>)
-(declare-unsafe-binary-operation $max-bignum-ratnum	<bignum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $max-bignum-ratnum	<bignum>	<ratnum>	<exact-rational>)
 
 (declare-unsafe-binary-operation $max-flonum-fixnum	<flonum>	<fixnum>	<real>)
 (declare-unsafe-binary-operation $max-flonum-bignum	<flonum>	<bignum>	<real>)
 (declare-unsafe-binary-operation $max-flonum-flonum	<flonum>	<flonum>	<flonum>)
 (declare-unsafe-binary-operation $max-flonum-ratnum	<flonum>	<ratnum>	<real>)
 
-(declare-unsafe-binary-operation $max-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $max-ratnum-bignum	<ratnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $max-ratnum-fixnum	<ratnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $max-ratnum-bignum	<ratnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $max-ratnum-flonum	<ratnum>	<flonum>	<real>)
 (declare-unsafe-binary-operation $max-ratnum-ratnum	<ratnum>	<ratnum>	<ratnum>)
 
@@ -1912,20 +1927,20 @@
 (declare-unsafe-binary-operation $min-fixnum-fixnum	<fixnum>	<fixnum>	<fixnum>)
 (declare-unsafe-binary-operation $min-fixnum-bignum	<fixnum>	<bignum>	<exact-integer>)
 (declare-unsafe-binary-operation $min-fixnum-flonum	<fixnum>	<flonum>	<real>)
-(declare-unsafe-binary-operation $min-fixnum-ratnum	<fixnum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $min-fixnum-ratnum	<fixnum>	<ratnum>	<exact-rational>)
 
 (declare-unsafe-binary-operation $min-bignum-fixnum	<bignum>	<fixnum>	<exact-integer>)
 (declare-unsafe-binary-operation $min-bignum-bignum	<bignum>	<bignum>	<bignum>)
 (declare-unsafe-binary-operation $min-bignum-flonum	<bignum>	<flonum>	<real>)
-(declare-unsafe-binary-operation $min-bignum-ratnum	<bignum>	<ratnum>	<exact-real>)
+(declare-unsafe-binary-operation $min-bignum-ratnum	<bignum>	<ratnum>	<exact-rational>)
 
 (declare-unsafe-binary-operation $min-flonum-fixnum	<flonum>	<fixnum>	<real>)
 (declare-unsafe-binary-operation $min-flonum-bignum	<flonum>	<bignum>	<real>)
 (declare-unsafe-binary-operation $min-flonum-flonum	<flonum>	<flonum>	<flonum>)
 (declare-unsafe-binary-operation $min-flonum-ratnum	<flonum>	<ratnum>	<real>)
 
-(declare-unsafe-binary-operation $min-ratnum-fixnum	<ratnum>	<fixnum>	<exact-real>)
-(declare-unsafe-binary-operation $min-ratnum-bignum	<ratnum>	<bignum>	<exact-real>)
+(declare-unsafe-binary-operation $min-ratnum-fixnum	<ratnum>	<fixnum>	<exact-rational>)
+(declare-unsafe-binary-operation $min-ratnum-bignum	<ratnum>	<bignum>	<exact-rational>)
 (declare-unsafe-binary-operation $min-ratnum-flonum	<ratnum>	<flonum>	<real>)
 (declare-unsafe-binary-operation $min-ratnum-ratnum	<ratnum>	<ratnum>	<ratnum>)
 

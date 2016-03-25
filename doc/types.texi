@@ -1809,8 +1809,8 @@ a closure object; otherwise return @false{}.
 @subsubsection Type of number values
 
 
-@deftp {Built--in Type} <number>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{number}
+@deftpx {Parent Type} @aclass{top}
 Type of numeric values.  There is no constructor.  The type predicate is
 @func{number?}.
 @end deftp
@@ -1820,8 +1820,8 @@ Type of numeric values.  There is no constructor.  The type predicate is
 @subsubsection Type of complex values
 
 
-@deftp {Built--in Type} <complex>
-@deftpx {Parent Type} <number>
+@deftp {Built--in Type} @aclass{complex}
+@deftpx {Parent Type} @aclass{number}
 Type of complex numbers.  The constructor is @func{make-rectangular}.
 The type predicate is @func{complex?}.
 @end deftp
@@ -1831,8 +1831,8 @@ The type predicate is @func{complex?}.
 @subsubsection Type of real--valued values
 
 
-@deftp {Built--in Type} <real-valued>
-@deftpx {Parent Type} <complex>
+@deftp {Built--in Type} @aclass{real-valued}
+@deftpx {Parent Type} @aclass{complex}
 Type of real--valued values.  There is no constructor.  The type
 predicate is @func{real-valued?}.
 @end deftp
@@ -1842,8 +1842,8 @@ predicate is @func{real-valued?}.
 @subsubsection Type of real values
 
 
-@deftp {Built--in Type} <real>
-@deftpx {Parent Type} <real-valued>
+@deftp {Built--in Type} @aclass{real}
+@deftpx {Parent Type} @aclass{real-valued}
 Type of real values.  There is no constructor.  The type predicate is
 @func{real?}.
 @end deftp
@@ -1853,8 +1853,8 @@ Type of real values.  There is no constructor.  The type predicate is
 @subsubsection Type of rational--valued values
 
 
-@deftp {Built--in Type} <rational-valued>
-@deftpx {Parent Type} <real>
+@deftp {Built--in Type} @aclass{rational-valued}
+@deftpx {Parent Type} @aclass{real}
 Type of rational--valued values.  There is no constructor.  The type
 predicate is @func{rational-valued?}.
 @end deftp
@@ -1864,10 +1864,20 @@ predicate is @func{rational-valued?}.
 @subsubsection Type of rational values
 
 
-@deftp {Built--in Type} <rational>
-@deftpx {Parent Type} <rational-valued>
+@deftp {Built--in Type} @aclass{rational}
+@deftpx {Parent Type} @aclass{rational-valued}
 Type of rational values.  There is no constructor.  The type predicate
 is @func{rational?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{exact-rational}
+Type of exact rational values.  Its definition is equivalent to:
+
+@lisp
+(define-type <exact-rational>
+  (union <exact-integer> <ratnum>))
+@end lisp
 @end deftp
 
 @c page
@@ -1875,8 +1885,8 @@ is @func{rational?}.
 @subsubsection Type of integer--valued values
 
 
-@deftp {Built--in Type} <integer-valued>
-@deftpx {Parent Type} <rational-valued>
+@deftp {Built--in Type} @aclass{integer-valued}
+@deftpx {Parent Type} @aclass{rational-valued}
 Type of integer--valued values.  There is no constructor.  The type
 predicate is @func{integer-valued?}.
 @end deftp
@@ -1890,8 +1900,8 @@ Notice that @class{integer} is a @class{rational}, not a
 @class{integer-valued}.
 
 
-@deftp {Built--in Type} <integer>
-@deftpx {Parent Type} <rational>
+@deftp {Built--in Type} @aclass{integer}
+@deftpx {Parent Type} @aclass{rational}
 Type of integer values.  There is no constructor.  The type predicate is
 @func{integer?}.
 @end deftp
@@ -1901,10 +1911,20 @@ Type of integer values.  There is no constructor.  The type predicate is
 @subsubsection Type of exact--integer values
 
 
-@deftp {Built--in Type} <exact-integer>
-@deftpx {Parent Type} <integer>
+@deftp {Built--in Type} @aclass{exact-integer}
+@deftpx {Parent Type} @aclass{integer}
 Type of exact integers.  There is no constructor.  The type predicate is
 @func{exact-integer?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{non-negative-exact-integer}
+Type of non--negative exact integers.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-negative-exact-integer>
+  (union <non-negative-fixnum> <positive-bignum>))
+@end lisp
 @end deftp
 
 @c page
@@ -1954,8 +1974,8 @@ Type of the zero fixnum value.  There is no constructor.
 @subsubsection Type of bignum values
 
 
-@deftp {Built--in Type} <bignum>
-@deftpx {Parent Type} <exact-integer>
+@deftp {Built--in Type} @aclass{bignum}
+@deftpx {Parent Type} @aclass{exact-integer}
 Type of bignum values.  There is no constructor.  The type predicate is
 @func{bignum?}.
 @end deftp
@@ -1965,8 +1985,8 @@ Type of bignum values.  There is no constructor.  The type predicate is
 @subsubsection Type of flonum values
 
 
-@deftp {Built--in Type} <flonum>
-@deftpx {Parent Type} <real-valued>
+@deftp {Built--in Type} @aclass{flonum}
+@deftpx {Parent Type} @aclass{real-valued}
 Type of flonum values.  There is no constructor.  The type predicate is
 @func{flonum?}.
 @end deftp
@@ -1976,8 +1996,8 @@ Type of flonum values.  There is no constructor.  The type predicate is
 @subsubsection Type of ratnum values
 
 
-@deftp {Built--in Type} <ratnum>
-@deftpx {Parent Type} <rational>
+@deftp {Built--in Type} @aclass{ratnum}
+@deftpx {Parent Type} @aclass{rational}
 Type of ratnum values.  There is no constructor.  The type predicate is
 @func{ratnum?}.
 @end deftp
@@ -1987,10 +2007,24 @@ Type of ratnum values.  There is no constructor.  The type predicate is
 @subsubsection Type of compnum values
 
 
-@deftp {Built--in Type} <compnum>
-@deftpx {Parent Type} <complex>
+@deftp {Built--in Type} @aclass{compnum}
+@deftpx {Parent Type} @aclass{complex}
 Type of compnum values.  There is no constructor.  The type predicate is
 @func{compnum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{exact-compnum}
+@deftpx {Parent Type} @aclass{compnum}
+Type of compnum values having exact real and imaginary parts.  There is
+no constructor.  The type predicate is @func{exact-compnum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{inexact-compnum}
+@deftpx {Parent Type} @aclass{compnum}
+Type of compnum values having inexact real and imaginary parts.  There
+is no constructor.  The type predicate is @func{inexact-compnum?}.
 @end deftp
 
 @c page
@@ -1998,8 +2032,8 @@ Type of compnum values.  There is no constructor.  The type predicate is
 @subsubsection Type of cflonum values
 
 
-@deftp {Built--in Type} <cflonum>
-@deftpx {Parent Type} <complex>
+@deftp {Built--in Type} @aclass{cflonum}
+@deftpx {Parent Type} @aclass{complex}
 Type of cflonum values.  There is no constructor.  The type predicate is
 @func{cflonum?}.
 @end deftp
@@ -2567,8 +2601,8 @@ Apply @func{cdr} to the type instance.
 @subsection Type of bytevector objects
 
 
-@deftp {Built--in Type} <bytevector>
-@deftpx {Parent Type} <top>
+@deftp {Built--in Type} @aclass{bytevector}
+@deftpx {Parent Type} @aclass{top}
 Type of bytevector objects.  The constructor is @func{make-bytevector}.
 The type predicate is @func{bytevector?}.
 @end deftp

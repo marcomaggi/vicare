@@ -286,20 +286,9 @@
 	     ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
 	     ((free-identifier=? #'<syntax-object> id)
 	      #'<top>)
-	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
-	     ;;implemented, we  should remove  this and use  a proper  definition for
-	     ;;"<non-negative-exact-integer>" as union of "<non-negative-fixnum>" and
-	     ;;"<positive-bignum>".
-	     ((free-identifier=? #'<non-negative-exact-integer> id)
-	      #'<exact-integer>)
 	     ;;FIXME What should I do about this?  (Marco Maggi; Fri Jan 1, 2016)
 	     ((free-identifier=? #'<file-descriptor> id)
 	      #'<non-negative-fixnum>)
-	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
-	     ;;implemented, we  should remove  this and use  a proper  definition for
-	     ;;"<exact-real>" as union of "<exact-integer>" and "<rational>".
-	     ((free-identifier=? #'<exact-real> id)
-	      #'<real>)
 	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
 	     ;;implemented, we  should remove  this and use  a proper  definition for
 	     ;;"<exact>" as union of "<exact-real>" and "<exact-compnum>".

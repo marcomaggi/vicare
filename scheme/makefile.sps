@@ -1094,6 +1094,7 @@
     (ratnum?					v $language)
     (compnum?					v $language)
     (exact-compnum?				v $language)
+    (inexact-compnum?				v $language)
     (cflonum?					v $language)
     (flonum-parts				v $language)
     (flonum-bytes				v $language)
@@ -3464,6 +3465,7 @@
     (<compnum>					v $language)
     (<cflonum>					v $language)
     (<exact-compnum>				v $language)
+    (<inexact-compnum>				v $language)
     (<exact-integer>				v $language)
     (<integer-valued>				v $language)
     (<integer>					v $language)
@@ -3488,6 +3490,9 @@
     (<zero-flonum>				v $language)
     (<positive-zero-flonum>			v $language)
     (<negative-zero-flonum>			v $language)
+
+    (<non-negative-exact-integer>		v $language)
+    (<exact-rational>				v $language)
 
     #;(<file-descriptor>			v $language)
 
@@ -3570,6 +3575,7 @@
     (<enum-set>-type-descriptor)
     (<eof>-type-descriptor)
     (<exact-compnum>-type-descriptor)
+    (<inexact-compnum>-type-descriptor)
     (<exact-integer>-type-descriptor)
     (<false>-type-descriptor)
     ;; (<file-descriptor>-type-descriptor)

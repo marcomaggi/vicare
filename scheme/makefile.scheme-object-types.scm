@@ -247,6 +247,10 @@
     <compnum>
   #t exact-compnum?)
 
+(define-scheme-type <inexact-compnum>
+    <compnum>
+  #t inexact-compnum?)
+
 
 ;;;; compound types
 

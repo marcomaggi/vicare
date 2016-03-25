@@ -26,6 +26,12 @@
 (define-type-annotation <&who-value>
   (union <false> <symbol> <string>))
 
+(define-type-annotation <non-negative-exact-integer>
+  (union <non-negative-fixnum> <positive-bignum>))
+
+(define-type-annotation <exact-rational>
+  (union <exact-integer> <ratnum>))
+
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare

@@ -22,7 +22,7 @@
     real-part			imag-part
     magnitude			angle
     complex-conjugate
-    exact-compnum?
+    exact-compnum?		inexact-compnum?
 
 ;;; --------------------------------------------------------------------
 
@@ -39,7 +39,8 @@
 		  make-rectangular	make-polar
 		  real-part		imag-part
 		  angle			magnitude
-		  complex-conjugate	exact-compnum?)
+		  complex-conjugate
+		  exact-compnum?	inexact-compnum?)
     (only (vicare system $compnums)
 	  $make-compnum		$make-cflonum
 	  $compnum-real		$compnum-imag
@@ -221,6 +222,11 @@
   (and (compnum? obj)
        (exact? ($compnum-real obj))
        (exact? ($compnum-imag obj))))
+
+(define (inexact-compnum? obj)
+  (and (compnum? obj)
+       (inexact? ($compnum-real obj))
+       (inexact? ($compnum-imag obj))))
 
 
 ;;;; done
