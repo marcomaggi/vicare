@@ -227,7 +227,15 @@
 	((stx)
 	 (make-type-signature stx (current-inferior-lexenv)))
 	((stx lexenv)
-	 (let ((specs (%parse-input-signature __who__ stx lexenv)))
+	 (let ((specs (with-exception-handler
+			  (lambda (E)
+			    (raise
+			     (condition E
+					(make-who-condition __who__)
+					(make-message-condition "invalid type signature")
+					(make-irritants-condition (list stx)))))
+			(lambda ()
+			  (%parse-input-signature __who__ stx lexenv)))))
 	   (make-record specs (void) (void) (void) (void) #f #f))))
 
       (define (%parse-input-signature caller-who input-signature lexenv)

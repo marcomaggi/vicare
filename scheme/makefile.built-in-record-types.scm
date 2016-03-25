@@ -673,6 +673,12 @@
        &warning
      make-expand-time-type-signature-warning expand-time-type-signature-warning?)
 ;;;
+   (define-built-in-condition-type &type-signature
+       &condition
+     make-type-signature-condition type-signature-condition?
+     (methods
+      (type-signature		condition-type-signature)))
+;;;
    (define-built-in-condition-type &application-operator-expression
        &condition
      make-application-operator-expression-condition application-operator-expression-condition?

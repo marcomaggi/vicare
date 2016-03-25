@@ -663,6 +663,8 @@
 
 (module (hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor!)
 
+  (define-module-who hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor!)
+
   (define* (hard-coded-typed-core-prim-binding-descriptor->type-core-prim-binding-descriptor! descriptor)
     ;;Mutate a syntactic  binding's descriptor from the representation  of a built-in
     ;;core primitive (established by the boot image) to the representation of a typed
@@ -721,128 +723,27 @@
   (define* (%signature-sexp->clause-signature core-prim.sym sexp)
     (let* ((retvals.sexp (car sexp))
   	   (formals.sexp (cdr sexp))
-  	   (retvals.stx  (%any-list->ids core-prim.sym retvals.sexp))
-  	   (formals.stx  (%any-list->ids core-prim.sym formals.sexp)))
+  	   (retvals.stx  (bless retvals.sexp))
+  	   (formals.stx  (bless formals.sexp)))
       (let ((retvals.sig (with-exception-handler
 			     (lambda (E)
 			       (raise-continuable
 				(condition E
-					   (make-who-condition core-prim.sym)
-					   (make-message-condition "error initialising core primitive retvals signature"))))
+					   (make-who-condition __module_who__)
+					   (make-message-condition "error initialising core primitive retvals signature")
+					   (make-irritants-condition (list core-prim.sym retvals.stx)))))
 			   (lambda ()
 			     (make-type-signature retvals.stx))))
 	    (formals.sig (with-exception-handler
 			     (lambda (E)
 			       (raise-continuable
 				(condition E
-					   (make-who-condition core-prim.sym)
-					   (make-message-condition "error initialising core primitive formals signature"))))
+					   (make-who-condition __module_who__)
+					   (make-message-condition "error initialising core primitive formals signature")
+					   (make-irritants-condition (list core-prim.sym formals.stx)))))
 			   (lambda ()
 			     (make-type-signature formals.stx)))))
 	(make-clambda-clause-signature retvals.sig formals.sig))))
-
-  (module (%any-list->ids)
-
-    (define (%any-list->ids core-prim.sym ell)
-      ;;Recursive function.  Convert a proper  or improper list of sexps representing
-      ;;core type selections  into the corresponding proper or improper  list of type
-      ;;identifiers.  The initial full ELL should represent a type signature.
-      ;;
-      ;;If  ELL is  a in  improper list,  in the  improper position  only one  of the
-      ;;following is accepted:
-      ;;
-      ;;   <list>
-      ;;   <no-return>
-      ;;   (list-of ?item-type)
-      ;;
-      ;;for example:
-      ;;
-      ;;   (<fixnum> <flonum> . <no-return>)
-      ;;   (<fixnum> <flonum> . <list>)
-      ;;   (<fixnum> <flonum> . (list-of <string>))
-      ;;
-      (cond ((symbol? ell)
-	     ;;The type selection  is a symbol in tail position.   For example the full
-	     ;;signature is one among:
-	     ;;
-	     ;;   (<fixnum> <flonum> . <no-return>)
-	     ;;   (<fixnum> <flonum> . <list>)
-	     ;;
-	     (case ell
-	       ((<no-return>)
-		(<no-return>-type-id))
-	       ((<list>)
-		(<list>-type-id))
-	       (else
-		(assertion-violation core-prim.sym
-		  "invalid type selection in hard-coded core primitive specification"
-		  ell))))
-
-	    ((%list-of-selection? ell)
-	     ;;The type selection is:
-	     ;;
-	     ;;   (list-of ?item-type)
-	     ;;
-	     ;;in tail position.  For example the full signature is:
-	     ;;
-	     ;;   (<fixnum> <flonum> . (list-of <string>))
-	     ;;
-	     (list (list-of-id) (core-prim-id (cadr ell))))
-
-	    ((null? ell)
-	     ;;The type signature is a proper list.  Good.  End of recursion.
-	     '())
-
-	    ((pair? ell)
-	     (let ((thing (car ell)))
-	       (cons (cond ((symbol? thing)
-			    (core-prim-id thing))
-			   ((%list-of-selection? thing)
-			    ;;The type selection is:
-			    ;;
-			    ;;   (list-of ?item-type)
-			    ;;
-			    (list (list-of-id) (core-prim-id (cadr thing))))
-			   ((%vector-of-selection? thing)
-			    ;;The type selection is:
-			    ;;
-			    ;;   (vector-of ?item-type)
-			    ;;
-			    (list (vector-of-id) (core-prim-id (cadr thing))))
-			   (else
-			    (assertion-violation core-prim.sym
-			      "invalid type selection in hard-coded core primitive specification"
-			      thing)))
-		     (%any-list->ids core-prim.sym (cdr ell)))))
-
-	    (else
-	     (assertion-violation core-prim.sym
-	       "invalid type selection in hard-coded core primitive specification"
-	       ell))))
-
-    (define (%list-of-selection? X)
-      ;;Return true if X is the symbolic expression:
-      ;;
-      ;;   (list-of ?item-type)
-      ;;
-      (and (pair? X)
-	   (eq? 'list-of (car X))
-	   (pair?   (cdr  X))
-	   (symbol? (cadr X))
-	   (null?   (cddr X))))
-
-    (define (%vector-of-selection? X)
-      ;;Return true if X is the symbolic expression:
-      ;;
-      ;;   (vector-of ?item-type)
-      ;;
-      (and (pair? X)
-	   (eq? 'vector-of (car X))
-	   (pair?   (cdr  X))
-	   (symbol? (cadr X))
-	   (null?   (cddr X))))
-
-    #| end of module: %ANY-LIST->IDS |# )
 
   #| end of module: HARD-CODED-TYPED-CORE-PRIM-BINDING-DESCRIPTOR->TYPE-CORE-PRIM-BINDING-DESCRIPTOR! |# )
 

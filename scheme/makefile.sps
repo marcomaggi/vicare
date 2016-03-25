@@ -4334,6 +4334,13 @@
     (make-expand-time-type-signature-warning		$expander)
     (expand-time-type-signature-warning?		$expander)
 ;;;
+    (&type-signature					$expander)
+    (&type-signature-rtd)
+    (&type-signature-rcd)
+    (make-type-signature-condition			$expander)
+    (type-signature-condition?				$expander)
+    (condition-type-signature				$expander)
+;;;
     (&application-operator-expression			$expander)
     (&application-operator-expression-rtd)
     (&application-operator-expression-rcd)

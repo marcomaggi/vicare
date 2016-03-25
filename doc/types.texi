@@ -804,7 +804,7 @@ The following syntactic bindings are exported by the library
 @deffnx Syntax is-a? _ @meta{type}
 @deffnx {Auxiliary Syntax} _
 Expand to an expression which, when evaluated, returns @true{} if
-@meta{expr} evaluates to an value of type @meta{type}.  @meta{expr} can
+@meta{expr} evaluates to a value of type @meta{type}.  @meta{expr} can
 be any expression returning a single value.
 
 When @syntax{_} is used as first argument: the syntax evaluates to a
@@ -819,6 +819,9 @@ predicate function.
 ((is-a? _ duo) (new duo 1 2))   @result{} #t
 
 (is-a? 123 duo)                 @result{} #f
+
+(is-a? '(1 2 3) (list <fixnum> <exact-integer> <number>))
+@result{} #t
 @end example
 @end deffn
 
@@ -853,8 +856,8 @@ The following syntactic bindings are exported by the library
 
 
 @deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{type}
-@deffnx Syntax slot-ref _ @meta{field-name} @meta{type}
 @deffnx Syntax slot-ref @meta{expr} @meta{field-name}
+@deffnx Syntax slot-ref _ @meta{field-name} @meta{type}
 @deffnx {Auxiliary Syntax} _
 Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
 @meta{expr} can be any expression evaluating to an instance of
@@ -862,12 +865,16 @@ Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
 or record--type.  @meta{field-name} must be an identifier representing
 the name of a field.  When @syntax{_} is used in place of @meta{expr}:
 the syntax evaluates to a slot accessor function.
+
+When @meta{type} is absent: the type is inferred from @meta{expr}.  If
+it is impossible to infer the type of @meta{expr}: an exception is
+raised at expand--time.
 @end deffn
 
 
 @deffn Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
+@deffnx Syntax slot-set! @meta{expr} @meta{field-name} @meta{new-val}
 @deffnx Syntax slot-set! _ @meta{field-name} @meta{type} _
-@deffnx Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
 @deffnx {Auxiliary Syntax} _
 Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
 and @meta{new-val}.  @meta{expr} can be any expression evaluating to an
@@ -876,6 +883,10 @@ struct--type or record--type.  @meta{field-name} must be an identifier
 representing the name of a field.  When @syntax{_} is used in place of
 both @meta{expr} and @meta{new-val}: the syntax evaluates to a slot
 mutator function.
+
+When @meta{type} is absent: the type is inferred from @meta{expr}.  If
+it is impossible to infer the type of @meta{expr}: an exception is
+raised at expand--time.
 @end deffn
 
 @c page
@@ -916,6 +927,28 @@ the syntax @syntax{method-call} is then used to call a record's methods:
 (method-call mul-them O)        @result{} 15
 @end lisp
 
+When defining a record or struct: @value{PRJNAME} automatically adds a
+method to the methods table, for each field, with the same name of the
+field.  When the field is mutable: if the method is called with one
+argument, it behaves as a field accessor; if the method is called with
+two arguments, it behaves as a field mutator.  When the field is
+immutable: the method can be called with one argument only.  Example:
+
+@lisp
+(define-record-type duo
+  (fields (immutable one)
+          (mutable   two)))
+
+(define @{O duo@}
+  (new duo 1 2))
+
+(method-call one O)     @result{} 1
+(method-call one O 123) @error{} &syntax
+(method-call two O)     @result{} 2
+(method-call two O 9)
+(method-call two O)     @result{} 9
+@end lisp
+
 The following syntactic bindings are exported by the library
 @library{vicare}.
 
@@ -924,7 +957,7 @@ The following syntactic bindings are exported by the library
 Apply an object--type's method to the return value of
 @meta{subject-expr} and the optional arguments @meta{arg}.
 
-@meta{name} must be a symbol representing a method name.
+@meta{name} must be a symbol representing a method or field name.
 @meta{subject-expr} must be a Scheme expression which, expanded and
 evaluated at run--time, returns a single value.  Each @meta{arg} must be
 a Scheme expression which, expanded and evaluated at run--time, returns
@@ -966,9 +999,9 @@ suitable method at run--time.
 Apply an object--type's method to @var{subject} and the optional
 arguments @meta{arg}.  Return the application results.
 
-@var{name} must be a symbol representing a method name.  @var{subject}
-must be a Scheme object implementing a set of methods.  The optional
-@meta{arg} arguments can be any value.
+@var{name} must be a symbol representing a method or field name.
+@var{subject} must be a Scheme object implementing a set of methods.
+The optional @meta{arg} arguments can be any value.
 
 This function attempts to determine the type of @var{subject} at
 run--time and searches the object--type's table of methods, if any, for
@@ -978,7 +1011,7 @@ to @var{subject} and the @var{arg} values.
 
 If the object--type of @var{subject} has no matching method: its
 super--type is inspected, then the super--type of the super--type and so
-on.  If no method is found in the types hierarchy: an exception is
+on.  If no method is found in the type's hierarchy: an exception is
 raised.
 
 Usually we do not need to call this function explicitly; however, it is

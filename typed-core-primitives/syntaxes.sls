@@ -313,7 +313,7 @@
 	      #'<number>)
 	     (else id))))
     (let recur ((sig type-signature.stx))
-      (syntax-case sig (list-of vector-of <no-return> <list>)
+      (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list> union condition)
 	(()
 	 '())
 
@@ -329,16 +329,32 @@
 	 (%replace #'?type #t))
 
 	((list-of ?item-type)
-	 (identifier? #'?item-type)
 	 #`(list-of #,(%replace #'?item-type)))
 
+	(((pair-of ?item-type) . ?rest)
+	 (cons #`(pair-of #,(%replace #'?item-type)) (recur #'?rest)))
+
 	(((list-of ?item-type) . ?rest)
-	 (identifier? #'?item-type)
 	 (cons #`(list-of #,(%replace #'?item-type)) (recur #'?rest)))
 
 	(((vector-of ?item-type) . ?rest)
-	 (identifier? #'?item-type)
 	 (cons #`(vector-of #,(%replace #'?type)) (recur #'?rest)))
+
+	(((list ?item-type0 ?item-type ...) . ?rest)
+	 (cons #`(list . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
+	       (recur #'?rest)))
+
+	(((vector ?item-type0 ?item-type ...) . ?rest)
+	 (cons #`(vector . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
+	       (recur #'?rest)))
+
+	(((condition ?item-type0 ?item-type ...) . ?rest)
+	 (cons #`(condition . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
+	       (recur #'?rest)))
+
+	(((union ?item-type0 ?item-type ...) . ?rest)
+	 (cons #`(union . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
+	       (recur #'?rest)))
 
 	((?type . ?rest)
 	 (identifier? #'?type)

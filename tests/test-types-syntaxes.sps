@@ -132,7 +132,7 @@
       => '<string>)
 
     (check
-	(.name (.parent string-btd))
+	(scheme-type-descriptor.name (.parent string-btd))
       => '<top>)
 
     (check

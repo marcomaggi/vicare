@@ -822,7 +822,7 @@
 	   (let ((record.sym	(gensym "record"))
 		 (field-type.id	(object-type-spec.name field-type.ots)))
 	     `(define/typed ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
-		(,unsafe-field-accessor ,record.sym))))
+		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))))
       safe-field-accessor* unsafe-field-accessor* field-type*.ots))
 
   (define safe-field-mutator-form*
@@ -872,11 +872,11 @@
 	   (if unsafe-field-mutator
 	       `(case-define/typed ,safe-field-method
 		  (((brace _ ,field-type.id) (brace ,record.sym ,foo))
-		   (,unsafe-field-accessor ,record.sym))
+		   (unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))
 		  (((brace _ <void>) (brace ,record.sym ,foo) (brace ,new-value.sym ,field-type.id))
 		   (,unsafe-field-mutator ,record.sym ,new-value.sym)))
 	     `(define/typed ((brace ,safe-field-method ,field-type.id) (brace ,record.sym ,foo))
-		(,unsafe-field-accessor ,record.sym)))))
+		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym))))))
     safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ots))
 
 
@@ -1237,7 +1237,7 @@
     ;;         (cons (quote ?field-sym)  (syntax ?operator))
     ;;         ...)
     ;;
-    ;;which evaluates to  an aslist whose keys  are field names and  whose values are
+    ;;which evaluates  to an alist  whose keys are field  names and whose  values are
     ;;syntactic identifiers bound  to accessors or mutators.  When  an OPERATOR.ID is
     ;;false, an entry with the following format is generated:
     ;;

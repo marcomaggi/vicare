@@ -50,6 +50,13 @@
      macro-expansion-trace?
      macro-expansion-trace-form
 
+     &type-signature
+     &type-signature-rtd
+     &type-signature-rcd
+     make-type-signature-condition
+     type-signature-condition?
+     condition-type-signature
+
 ;;; --------------------------------------------------------------------
 
      &application-argument-type-name
@@ -290,6 +297,16 @@
 
 
 ;;;; condition object types: descriptive objects, type signatures
+
+(define-condition-type &type-signature
+    &condition
+  make-type-signature-condition
+  type-signature-condition?
+  (type-signature		condition-type-signature))
+(define &type-signature-rtd
+  (record-type-descriptor &type-signature))
+(define &type-signature-rcd
+  (record-constructor-descriptor &type-signature))
 
 (define-condition-type &expected-type-signature
     &condition

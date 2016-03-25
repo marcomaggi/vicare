@@ -705,8 +705,14 @@
 	   ;;A single additional argument: the input  form has the correct syntax for
 	   ;;a field mutator application.  A matching mutable field name exists.
 	   => (lambda (mutator.stx)
-		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-						   mutator.stx subject-expr.psi arg*.stx)))
+		(if (boolean? mutator.stx)
+		    (raise
+		     (condition (make-who-condition __module_who__)
+				(make-message-condition "attempt to mutate immutable field")
+				(make-syntax-violation input-form.stx subject-expr.stx)
+				(make-application-operand-signature-condition (psi.retvals-signature subject-expr.psi))))
+		  (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						     mutator.stx subject-expr.psi arg*.stx))))
 
 	  (else
 	   (raise
@@ -989,9 +995,18 @@
 		    (consumer-formals.sexp	consumer-formals.sexp)
 		    (operand-index		1))
 	  (cond ((pair? asrt.specs)
-		 (let ((validator.stx (object-type-spec.single-value-validator-lambda-stx (car asrt.specs) return-values?)))
-		   (cons `(,validator.stx ,(car consumer-formals.sexp) ,operand-index __who__)
-			 (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index)))))
+		 (let ((asrt.ots (car asrt.specs)))
+		   (if (or (<top>-ots?       asrt.ots)
+			   (<void>-ots?      asrt.ots)
+			   (<no-return>-ots? asrt.ots))
+		       ;;No validation.
+		       (let ((validators (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index))))
+			 (if return-values?
+			     (cons (car consumer-formals.sexp) validators)
+			   validators))
+		     (let ((validator.stx (object-type-spec.single-value-validator-lambda-stx asrt.ots return-values?)))
+		       (cons `(,validator.stx ,(car consumer-formals.sexp) ,operand-index __who__)
+			     (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index)))))))
 
 		((null? asrt.specs)
 		 '())

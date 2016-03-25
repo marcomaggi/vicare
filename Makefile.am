@@ -546,6 +546,7 @@ VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/keywords.sls			\
 	typed-core-primitives/library-utils.sls			\
 	typed-core-primitives/numerics.sls			\
+	typed-core-primitives/object-utilities.sls		\
 	typed-core-primitives/pairs-and-lists.sls		\
 	typed-core-primitives/pointers.sls			\
 	typed-core-primitives/posix.sls				\

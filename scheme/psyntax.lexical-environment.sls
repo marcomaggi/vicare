@@ -364,6 +364,13 @@
     syntax-definition-expression-return-value-condition?
     condition-syntax-definition-expression-return-value
 
+    &type-signature
+    &type-signature-rtd
+    &type-signature-rcd
+    make-type-signature-condition
+    type-signature-condition?
+    condition-type-signature
+
     &application-operator-expression
     &application-operator-expression-rtd
     &application-operator-expression-rcd

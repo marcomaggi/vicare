@@ -357,10 +357,15 @@
     ;;OTS must an object-type specification  record.  FIELD-NAME.SYM must be a symbol
     ;;representing a field name in the object-type specification.
     ;;
-    ;;If  FIELD-NAME.SYM  is EQ?   to  an  object's  field  name: return  a  symbolic
-    ;;expression  (to  be BLESSed  later)  representing  a Scheme  expression  which,
-    ;;expanded and evaluated at run-time, returns the field's safe mutator; otherwise
-    ;;return false.
+    ;;If FIELD-NAME.SYM is EQ?   to an object's field name and  the field is mutable:
+    ;;return  a symbolic  expression  (to  be BLESSed  later)  representing a  Scheme
+    ;;expression which, expanded and evaluated  at run-time, returns the field's safe
+    ;;mutator.
+    ;;
+    ;;If FIELD-NAME.SYM is EQ?  to an object's field name and the field is immutable:
+    ;;return the boolean true, so that a descriptive error message can be raised.
+    ;;
+    ;;Otherwise return false.
     ;;
     (%sexp-retriever ots field-name.sym object-type-spec.safe-mutators-table))
 
