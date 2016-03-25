@@ -249,14 +249,14 @@
 (declare-core-primitive $struct-ref
     (unsafe)
   (signatures
-   ((<struct> <fixnum>)		=> (_)))
+   ((<struct> <non-negative-fixnum>)		=> (_)))
   (attributes
    ((_ _)			foldable effect-free)))
 
 (declare-core-primitive $struct-set!
     (unsafe)
   (signatures
-   ((<struct> <fixnum> _)	=> (<void>)))
+   ((<struct> <non-negative-fixnum> _)	=> (<void>)))
   (attributes
    ((_ _)			foldable result-true)))
 
