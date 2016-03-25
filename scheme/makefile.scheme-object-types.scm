@@ -571,6 +571,15 @@
    (car		car)
    (cdr		cdr)))
 
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <ipair>
+    <struct>
+  ipair ipair?
+  (methods
+   (car		icar)
+   (cdr		icdr)))
+
 
 ;;;; miscellaneous compound types
 

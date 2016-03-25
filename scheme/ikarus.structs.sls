@@ -92,10 +92,7 @@
 		  struct-rtd			struct-std
 		  struct-name			struct-length
 		  struct-field-names
-		  struct-printer		struct-destructor
-
-		  ;; immutable pairs stuff
-		  immutable-pair ipair icar icdr ipair?)
+		  struct-printer		struct-destructor)
     (vicare system $fx)
     (vicare system $pairs)
     (except (vicare system $structs)
@@ -110,8 +107,9 @@
     (only (vicare system $symbols)
 	  $set-symbol-value!
 	  $symbol-value)
-    (only (ikarus.immutable-pairs)
-	  immutable-pair ipair icar icdr ipair?)
+    (prefix (only (ikarus.immutable-pairs)
+		  <ipair> icar icdr ipair?)
+	    ipair::)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate))
 
@@ -534,40 +532,38 @@
 
 ;;; --------------------------------------------------------------------
 
-($set-std-printer! (type-descriptor immutable-pair)
-  (lambda (stru port sub-printer)
-    (define-syntax-rule (%display ?obj)
-      (display ?obj port))
-    (let ((A (icar stru))
-	  (D (icdr stru)))
-      (cond ((ipair? D)
-	     (%display "(imlist ")
-	     (%display A)
-	     (let loop ((D D))
-	       (%display #\space)
-	       (%display (icar D))
-	       (let ((DD (icdr D)))
-		 (cond ((ipair? DD)
-			(loop DD))
-		       ((null? DD)
-			(%display ")"))
-		       (else
-			(%display #\space)
-			(%display ". ")
-			(%display DD)
-			(%display ")"))))))
-	    ((null? D)
-	     (%display "(imlist ")
-	     (%display A)
-	     (%display ")"))
-	    (else
-	     (%display "(impair ")
-	     (%display A)
-	     (%display #\space)
-	     (%display D)
-	     (%display ")"))))))
-
-;;; --------------------------------------------------------------------
+($set-std-printer! (type-descriptor ipair::<ipair>)
+		   (lambda (stru port sub-printer)
+		     (define-syntax-rule (%display ?obj)
+		       (display ?obj port))
+		     (let ((A (ipair::icar stru))
+			   (D (ipair::icdr stru)))
+		       (cond ((ipair::ipair? D)
+			      (%display "(imlist ")
+			      (%display A)
+			      (let loop ((D D))
+				(%display #\space)
+				(%display (ipair::icar D))
+				(let ((DD (ipair::icdr D)))
+				  (cond ((ipair::ipair? DD)
+					 (loop DD))
+					((null? DD)
+					 (%display ")"))
+					(else
+					 (%display #\space)
+					 (%display ". ")
+					 (%display DD)
+					 (%display ")"))))))
+			     ((null? D)
+			      (%display "(imlist ")
+			      (%display A)
+			      (%display ")"))
+			     (else
+			      (%display "(impair ")
+			      (%display A)
+			      (%display #\space)
+			      (%display D)
+			      (%display ")"))))))
 
 ;; #!vicare
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.structs after"))

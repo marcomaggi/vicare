@@ -307,13 +307,13 @@
 	 #`(list-of #,(%replace #'?item-type)))
 
 	(((pair-of ?item-type) . ?rest)
-	 (cons #`(pair-of #,(%replace #'?item-type)) (recur #'?rest)))
+	 (cons #`(pair-of   #,(%replace #'?item-type)) (recur #'?rest)))
 
 	(((list-of ?item-type) . ?rest)
-	 (cons #`(list-of #,(%replace #'?item-type)) (recur #'?rest)))
+	 (cons #`(list-of   #,(%replace #'?item-type)) (recur #'?rest)))
 
 	(((vector-of ?item-type) . ?rest)
-	 (cons #`(vector-of #,(%replace #'?type)) (recur #'?rest)))
+	 (cons #`(vector-of #,(%replace #'?item-type)) (recur #'?rest)))
 
 	(((list ?item-type0 ?item-type ...) . ?rest)
 	 (cons #`(list . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))

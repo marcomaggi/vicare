@@ -233,6 +233,19 @@
   (attributes
    ((_ _ _ _ _)			effect-free result-true)))
 
+(declare-core-primitive procedure-signature-argument-violation
+    (safe)
+  (signatures
+   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> (<no-return>))))
+
+(declare-core-primitive assertion-error
+    (safe)
+  (signatures
+   ((<top> <syntax-object>
+	   <non-negative-exact-integer> <non-negative-exact-integer>
+	   <non-negative-exact-integer> <non-negative-exact-integer>)
+    => (<no-return>))))
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
@@ -270,6 +283,10 @@
 (declare-condition-type-predicate violation? &violation)
 (declare-condition-type-predicate warning? &warning)
 (declare-condition-type-predicate who-condition? &who)
+
+(declare-condition-type-predicate procedure-signature-argument-violation?	&procedure-signature-argument-violation)
+(declare-condition-type-predicate procedure-signature-return-value-violation?	&procedure-signature-return-value-violation)
+(declare-condition-type-predicate procedure-arguments-consistency-violation?	&procedure-arguments-consistency-violation)
 
 ;;; --------------------------------------------------------------------
 ;;; accessors

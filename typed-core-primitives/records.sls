@@ -196,6 +196,11 @@
   (attributes
    ((_)				effect-free)))
 
+(declare-core-primitive record-type-all-field-names
+    (safe)
+  (signatures
+   ((<record-type-descriptor>)		=> ((vector-of <symbol>)))))
+
 ;;; --------------------------------------------------------------------
 ;;; destructor
 
@@ -268,6 +273,37 @@
 ;;;; R6RS records, unsafe primitives
 
 (section
+
+(declare-core-primitive $record-constructor
+    (unsafe)
+  (signatures
+   ((<record-constructor-descriptor>)		=> (<procedure>)))
+  (attributes
+   ((_)						effect-free result-true)))
+
+(declare-core-primitive $record-and-rtd?
+    (unsafe)
+  (signatures
+   ((<record> <record-type-descriptor>)		=> (<boolean>)))
+  (attributes
+   ((_)						effect-free)))
+
+(declare-core-primitive $rtd-subtype?
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor> <record-type-descriptor>)		=> (<boolean>)))
+  (attributes
+   ((_)						effect-free)))
+
+(declare-core-primitive $record-ref
+    (unsafe)
+  (signatures
+   ((<record> <non-negative-fixnum>)		=> (<top>))))
+
+(declare-core-primitive $record-type-destructor
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor>)			=> ((union <false> <procedure>)))))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

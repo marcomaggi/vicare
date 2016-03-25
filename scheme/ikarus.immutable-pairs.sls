@@ -26,23 +26,22 @@
 
 #!vicare
 (library (ikarus.immutable-pairs)
-  (export immutable-pair ipair icar icdr ipair?)
+  (export <ipair> ipair icar icdr ipair?)
   (import (except (vicare)
-		  ipair icar icdr ipair?))
+		  <ipair> ipair icar icdr ipair?))
 
-  (define-struct immutable-pair
+  (define-struct (<ipair> ipair ipair?)
     (car cdr))
 
-  (define ipair		make-immutable-pair)
-  (define ipair?	immutable-pair?)
+  ;;NOTE  A   custom  printer  for   the  "<ipair>"  struct-type  is   configured  in
+  ;;"ikarus.structs.sls".   This is  because STD  handling functions  are initialised
+  ;;there and not available here.  (Marco Maggi; Fri Mar 25, 2016)
 
   (define* (icar {P ipair?})
-    ($immutable-pair-car P))
+    ($<ipair>-car P))
 
   (define* (icdr {P ipair?})
-    ($immutable-pair-cdr P))
-
-  ;;NOTE The printer for immutable pairs is defined in "ikarus.structs.sls".
+    ($<ipair>-cdr P))
 
   #| end of library |# )
 

@@ -805,6 +805,9 @@
 
 		      ((syntactic-binding-descriptor/hard-coded-type-annotation? descr)
 		       (hard-coded-core-type-annotation-symbolic-binding-descriptor->core-type-annotation-binding-descriptor! descr)))
+		(when (eq? 'core-prim (car descr))
+		  (fprintf (current-error-port)
+			   "vicare: warning: using untyped core primitive ~s\n" descr))
 		descr))
 
 	  ;;Search the given LEXENV.

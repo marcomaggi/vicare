@@ -30,7 +30,7 @@
 (define (typed-core-primitives.object-utilities)
 
 
-;;;; booleans, safe procedures
+;;;; <scheme-type-descriptor> record, safe procedures
 
 (section
 
@@ -55,6 +55,18 @@
     (safe)
   (signatures
    ((<scheme-type-descriptor>)		=> (<procedure>))))
+
+/section)
+
+
+;;;; stuff, safe procedures
+
+(section
+
+(declare-core-primitive method-call-late-binding
+    (safe)
+  (signatures
+   ((<symbol> <top> . <list>)		=> <list>)))
 
 /section)
 

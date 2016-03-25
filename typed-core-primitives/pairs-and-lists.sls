@@ -563,6 +563,26 @@
 /section)
 
 
+;;;; immutable pairs, safe functions
+
+(declare-type-predicate ipair?	<ipair>)
+
+(declare-core-primitive ipair
+    (safe)
+  (signatures
+   ((<top> <top>)		=> (<ipair>))))
+
+(declare-core-primitive icar
+    (safe)
+  (signatures
+   ((<ipair>)			=> (<top>))))
+
+(declare-core-primitive icdr
+    (safe)
+  (signatures
+   ((<ipair>)			=> (<top>))))
+
+
 ;;;; object utilities
 
 (section

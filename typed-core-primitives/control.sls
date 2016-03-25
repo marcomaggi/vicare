@@ -56,6 +56,11 @@
   (signatures
    ((<procedure>)	=> <list>)))
 
+(declare-core-primitive unwinding-call/cc
+    (safe)
+  (signatures
+   ((<procedure>)	=> <list>)))
+
 (declare-core-primitive call-with-values
     (safe)
   (signatures

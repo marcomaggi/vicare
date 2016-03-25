@@ -1407,6 +1407,7 @@ et cetera.
 * types built-in lists::        Type of list objects.
 * types built-in null::         Type of empty lists.
 * types built-in pairs::        Type of pair objects.
+* types built-in ipairs::       Type of immutable pair objects.
 * types built-in bytevectors::  Type of bytevector objects.
 * types built-in hashtables::   Type of hashtable objects.
 * types built-in structs::      Type of struct objects.
@@ -2619,6 +2620,38 @@ Apply @func{car} to the type instance.
 
 @defmethod @class{pair} cdr
 Apply @func{cdr} to the type instance.
+@end defmethod
+
+@c page
+@node types built-in ipairs
+@subsection Type of immutable pair objects
+
+
+@deftp {Built--in Type} @aclass{ipair}
+@deftpx {Parent Type} @aclass{record}
+Type of immutable pair objects.
+@end deftp
+
+
+@defop Constructor @class{ipair} new @aclass{ipair} @var{A} @var{D}
+The constructor is @func{ipair}.  Return a new immutable pair having
+@var{A} and @var{D} as car and cdr.
+@end defop
+
+
+@defop {Type predicate} @class{ipair} is-a? @var{obj} @aclass{ipair}
+The type predicate is @func{ipair?}.  Return @true{} if @var{obj} is an
+immutable pair object; otherwise return @false{}.
+@end defop
+
+
+@defmethod @class{ipair} car
+Apply @func{icar} to the type instance.
+@end defmethod
+
+
+@defmethod @class{ipair} cdr
+Apply @func{icdr} to the type instance.
 @end defmethod
 
 @c page

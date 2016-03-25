@@ -226,6 +226,20 @@
   (attributes
    ((_)				foldable effect-free)))
 
+(declare-core-primitive exact-compnum?
+    (safe)
+  (signatures
+   ((<exact-compnum>)		=> (<true>))
+   ((<inexact-compnum>)		=> (<false>))
+   ((<compnum>)			=> (<boolean>))))
+
+(declare-core-primitive inexact-compnum?
+    (safe)
+  (signatures
+   ((<inexact-compnum>)		=> (<true>))
+   ((<exact-compnum>)		=> (<false>))
+   ((<compnum>)			=> (<boolean>))))
+
 ;;;
 
 (declare-core-primitive finite?

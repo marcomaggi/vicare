@@ -912,6 +912,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-strings.sps				\
 	tests/test-types-objects-vectors.sps				\
 	tests/test-types-objects-pairs.sps				\
+	tests/test-types-objects-ipairs.sps				\
 	tests/test-types-objects-lists.sps				\
 	tests/test-types-objects-ports.sps				\
 	tests/test-types-structs.sps					\

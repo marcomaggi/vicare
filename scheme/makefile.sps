@@ -3512,6 +3512,7 @@
     (<hashtable-equiv>				v $language)
     (<code>					v $language)
     (<memory-block>				v $language)
+    (<ipair>					v $language)
 
     (<record>					v $language)
     (<record-type-descriptor>			v $language)
@@ -3592,6 +3593,7 @@
     (<input-port>-type-descriptor)
     (<integer>-type-descriptor)
     (<integer-valued>-type-descriptor)
+    (<ipair>-type-descriptor)
     (<keyword>-type-descriptor)
     (<list>-type-descriptor)
     (<memory-block>-type-descriptor)
