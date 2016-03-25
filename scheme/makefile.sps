@@ -5551,12 +5551,17 @@
 
 		  (else
 		   ;;Core  primitive with  no  backing definition  from the  expanded
-		   ;;libraries; we assume it is defined in other strata of the system
+		   ;;libraries;  we assume  it  is  defined in  other  strata of  the
+		   ;;system.
 		   ;;
 		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
 		   (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
 		     (total-export-subst-clt (cons prim-name label))
-		     (total-global-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
+		     (total-global-env-clt   (cons label
+						   (cond ((assq prim-name VICARE-TYPED-CORE-PRIMITIVES)
+							  => cdr)
+							 (else
+							  (cons 'core-prim prim-name)))))))))))
 
       (values (total-export-subst-clt) (total-global-env-clt) (total-export-primlocs-clt))))
 
