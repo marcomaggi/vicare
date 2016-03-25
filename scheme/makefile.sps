@@ -3497,7 +3497,7 @@
     (<exact>					v $language)
     (<inexact>					v $language)
 
-    #;(<file-descriptor>			v $language)
+    (<file-descriptor>				v $language)
 
     (<string>					v $language)
     (<vector>					v $language)

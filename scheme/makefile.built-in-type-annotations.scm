@@ -38,6 +38,9 @@
 (define-type-annotation <inexact>
   (union <flonum> <cflonum> <inexact-compnum>))
 
+(define-type-annotation <file-descriptor>
+  <non-negative-fixnum>)
+
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare

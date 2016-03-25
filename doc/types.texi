@@ -2886,4 +2886,14 @@ The type of the field in the built--in condition object type
 @end lisp
 @end deftp
 
+
+@deftp {Built--In Type} @class{file-descriptor}
+The type of file descriptor values.  Its definition is equivalent to:
+
+@lisp
+(define-type-annotation <file-descriptor>
+  <non-negative-fixnum>)
+@end lisp
+@end deftp
+
 @c end of file
