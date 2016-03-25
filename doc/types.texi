@@ -1802,6 +1802,7 @@ a closure object; otherwise return @false{}.
 * types built-in numerics cflonums::         Type of cflonum values.
 * types built-in numerics bytes::            Type of byte values.
 * types built-in numerics octets::           Type of octet values.
+* types built-in numerics exactness::        Exactness of values.
 @end menu
 
 @c page
@@ -2083,6 +2084,30 @@ it.
 The type predicate is @func{octet-fixnum?}.  Return @true{} if @var{obj}
 is a octet value; otherwise return @false{}.
 @end defop
+
+@c page
+@node types built-in numerics exactness
+@subsubsection Exactness of values
+
+
+@deftp {Built--in Type} @class{exact}
+Type of exact values.  Its definition is equivalent to:
+
+@lisp
+(define-type <exact>
+  (union <exact-rational> <exact-compnum>))
+@end lisp
+@end deftp
+
+
+@deftp {Built--in Type} @class{inexact}
+Type of inexact values.  Its definition is equivalent to:
+
+@lisp
+(define-type <inexact>
+  (union <flonum> <cflonum> <inexact-compnum>))
+@end lisp
+@end deftp
 
 @c page
 @node types built-in strings

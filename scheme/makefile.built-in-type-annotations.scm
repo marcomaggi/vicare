@@ -32,6 +32,12 @@
 (define-type-annotation <exact-rational>
   (union <exact-integer> <ratnum>))
 
+(define-type-annotation <exact>
+  (union <exact-rational> <exact-compnum>))
+
+(define-type-annotation <inexact>
+  (union <flonum> <cflonum> <inexact-compnum>))
+
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare

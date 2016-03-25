@@ -3494,6 +3494,9 @@
     (<non-negative-exact-integer>		v $language)
     (<exact-rational>				v $language)
 
+    (<exact>					v $language)
+    (<inexact>					v $language)
+
     #;(<file-descriptor>			v $language)
 
     (<string>					v $language)
