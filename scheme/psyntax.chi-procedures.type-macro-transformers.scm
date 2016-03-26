@@ -29,6 +29,7 @@
 	 case-type-transformer
 	 assert-signature-transformer
 	 assert-signature-and-return-transformer
+	 cast-signature-transformer
 	 type-of-transformer
 	 type-super-and-sub?-transformer
 	 signature-super-and-sub?-transformer)
@@ -807,9 +808,9 @@
   (main))
 
 
-;;;; module core-macro-transformer: ASSERT-SIGNATURE, ASSERT-SIGNATURE-AND-RETURN
+;;;; module core-macro-transformer: ASSERT-SIGNATURE, ASSERT-SIGNATURE-AND-RETURN, CAST-SIGNATURE
 
-(module (assert-signature-transformer assert-signature-and-return-transformer)
+(module (assert-signature-transformer assert-signature-and-return-transformer cast-signature-transformer)
   ;;Transformer   function    used   to   expand   Vicare's    ASSERT-SIGNATURE   and
   ;;ASSERT-SIGNATURE-AND-RETURN  syntaxes from  the top-level  built in  environment.
   ;;Expand  the syntax  object INPUT-FORM.STX  in the  context of  the given  LEXENV;
@@ -826,6 +827,16 @@
       ))
 
   (define-core-transformer (assert-signature-and-return input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_ ?assert-signature ?expr)
+       (begin
+	 (unless (syntax-object.type-signature? ?assert-signature)
+	   (%synner "invalid return values signature" ?assert-signature))
+	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
+			      ?assert-signature ?expr #t)))
+      ))
+
+  (define-core-transformer (cast-signature input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ?assert-signature ?expr)
        (begin

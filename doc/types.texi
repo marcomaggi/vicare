@@ -591,9 +591,9 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes predicates::   Predicate syntaxes.
 * types syntaxes slots::        Slot getter and setter syntaxes.
 * types syntaxes methods::      Calling object-type methods.
-* types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes super-sub::    Super and sub types.
 * types syntaxes assert::       Validating signatures.
+* types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
 @end menu
 
@@ -1077,82 +1077,6 @@ following program:
 @end lisp
 
 @c page
-@node types syntaxes unsafe-cast
-@subsection Casting the type of expressions
-
-
-It is sometimes useful to explicitly declare the type signature of an
-expression, so that the expander can perform more type checks and,
-maybe, optimisations.  We might want to do it as an unsafe operation,
-without introducing run--time validation of values.  For example, if we
-know that the result of an expression is a vector of @math{3} fixnums,
-we might write:
-
-@lisp
-($vector-ref @meta{expr} 1)
-@end lisp
-
-@noindent
-and everything is all right, but we are not specifying that the return
-value is a fixnum.
-
-In these corner cases, we can use the syntax
-@syntax{unsafe-cast-signature}: at expand--time, it tags an expression
-as returning values of a specified type signature.  So, in the above
-example, we could write:
-
-@lisp
-(unsafe-cast-signature (<fixnum>)
-  ($vector-ref @meta{expr} 1))
-@end lisp
-
-We can easily check how @syntax{unsafe-cast-signature} works at the @repl{}:
-
-@example
-vicare> (unsafe-cast-signature (<fixnum>) 123)
-$1 = 123
-vicare> (expansion-of (unsafe-cast-signature (<fixnum>) 123))
-$1 = '123
-vicare> (type-of (unsafe-cast-signature (<fixnum>) 123))
-$1 = #[signature (<fixnum>)]
-@end example
-
-@noindent
-for a truly untyped expression:
-
-@example
-vicare> (expansion-of (unsafe-cast-signature (<fixnum>) (read)))
-$1 = ((primitive read))
-vicare> (type-of (unsafe-cast-signature (<fixnum>) (read)))
-$1 = #[signature (<fixnum>)]
-@end example
-
-@noindent
-if the type is incompatible, and we know it at expand--time:
-
-@smallexample
-vicare> (unsafe-cast-signature (<fixnum>) "ciao")
-Unhandled exception
- Condition components:
-   1. &who: unsafe-cast-signature
-   2. &message: "expression type is incompatible with the requested tag"
-   3. &syntax:
-       form: #<syntax expr=(unsafe-cast-signature (<fixnum>) "ciao")>
-       subform: #<syntax expr="ciao" mark*=(src)>
-   4. &irritants: (#[signature (<string>)])
-@end smallexample
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
-
-@deffn Syntax unsafe-cast-signature @meta{signature} @meta{expr}
-Expand to the @meta{expr} expression itself, but, in the expander, tag
-the expression as returning a tuple of values with type signature
-@meta{signature}.
-@end deffn
-
-@c page
 @node types syntaxes super-sub
 @subsection Super and sub types
 
@@ -1163,8 +1087,8 @@ The following syntactic bindings are exported by the library
 
 @deffn Syntax type-super-and-sub? @metai{type} @metaii{type}
 Expand to a boolean constant: @true{} if @metai{type} is a super--type
-of @metaii{type}; otherwise @false{}.  @class{top} is conventionally the
-super--type of all the types.
+of @metaii{type}; otherwise @false{}.  The type @class{top} is
+conventionally the super--type of all the types.
 
 @lisp
 (type-super-and-sub? <number> <fixnum>)      @result{} #t
@@ -1200,12 +1124,12 @@ super--type of all the types.
 @end deffn
 
 
-@deffn signature-super-and-sub? @metai{signature} @metaii{signature}
+@deffn Syntax signature-super-and-sub? @metai{signature} @metaii{signature}
 Expand to a boolean constant: @true{} if @metai{signature} is a
-super--signature of @metaii{signature}; otherwise @false{}.  A ``type
-signature'' is a proper or improper list of type identifiers, with
-@class{list} or one of its sub--types in tail position when the list is
-improper.
+super--signature of @metaii{signature}; otherwise @false{}.  The
+arguments @meta{signature} must be proper or improper lists of type
+annotations, with @class{list} or @samp{(list-of @meta{type})} in tail
+position when the list is improper.
 
 @lisp
 (signature-super-and-sub? (<number>) (<fixnum>))        @result{} #t
@@ -1244,12 +1168,16 @@ The following syntactic bindings are exported by the library
 
 @deffn Syntax assert-signature @meta{signature} @meta{expr}
 @deffnx Syntax assert-signature-and-return @meta{signature} @meta{expr}
+@deffnx Syntax cast-signature @meta{signature} @meta{expr}
 Validate the type signature of the values returned by @meta{expr},
 either at expand--time or run--time.  @meta{expr} can be any Scheme
 expression.  @meta{signature} must be a proper or improper list of type
-annotations representing the type signature.  The first syntax returns a
-single unspecified value; the second syntax returns the return values of
-@meta{expr}.
+annotations representing the type signature.
+
+The syntax @syntax{assert-signature} returns a single unspecified value.
+The syntax @syntax{assert-signature-and-return} returns the return
+values of @meta{expr}.  The syntax @syntax{cast-signature} is an alias
+of @syntax{assert-signature-and-return}.
 
 If it is possible to validate the signature at expand--time: when
 successful, the syntax use just expands to the evaluation of
@@ -1622,6 +1550,82 @@ is expanded to:
 @noindent
 there is no need to insert a validation form because any number of
 return values of any type matches the type signature.
+
+@c page
+@node types syntaxes unsafe-cast
+@subsection Casting the type of expressions
+
+
+It is sometimes useful to explicitly declare the type signature of an
+expression, so that the expander can perform more type checks and,
+maybe, optimisations.  We might want to do it as an unsafe operation,
+without introducing run--time validation of values.  For example, if we
+know that the result of an expression is a vector of @math{3} fixnums,
+we might write:
+
+@lisp
+($vector-ref @meta{expr} 1)
+@end lisp
+
+@noindent
+and everything is all right, but we are not specifying that the return
+value is a fixnum.
+
+In these corner cases, we can use the syntax
+@syntax{unsafe-cast-signature}: at expand--time, it tags an expression
+as returning values of a specified type signature.  So, in the above
+example, we could write:
+
+@lisp
+(unsafe-cast-signature (<fixnum>)
+  ($vector-ref @meta{expr} 1))
+@end lisp
+
+We can easily check how @syntax{unsafe-cast-signature} works at the @repl{}:
+
+@example
+vicare> (unsafe-cast-signature (<fixnum>) 123)
+$1 = 123
+vicare> (expansion-of (unsafe-cast-signature (<fixnum>) 123))
+$1 = '123
+vicare> (type-of (unsafe-cast-signature (<fixnum>) 123))
+$1 = #[signature (<fixnum>)]
+@end example
+
+@noindent
+for a truly untyped expression:
+
+@example
+vicare> (expansion-of (unsafe-cast-signature (<fixnum>) (read)))
+$1 = ((primitive read))
+vicare> (type-of (unsafe-cast-signature (<fixnum>) (read)))
+$1 = #[signature (<fixnum>)]
+@end example
+
+@noindent
+if the type is incompatible, and we know it at expand--time:
+
+@smallexample
+vicare> (unsafe-cast-signature (<fixnum>) "ciao")
+Unhandled exception
+ Condition components:
+   1. &who: unsafe-cast-signature
+   2. &message: "expression type is incompatible with the requested tag"
+   3. &syntax:
+       form: #<syntax expr=(unsafe-cast-signature (<fixnum>) "ciao")>
+       subform: #<syntax expr="ciao" mark*=(src)>
+   4. &irritants: (#[signature (<string>)])
+@end smallexample
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax unsafe-cast-signature @meta{signature} @meta{expr}
+Expand to the @meta{expr} expression itself, but, in the expander, tag
+the expression as returning a tuple of values with type signature
+@meta{signature}.
+@end deffn
 
 @c page
 @node types syntaxes case-type

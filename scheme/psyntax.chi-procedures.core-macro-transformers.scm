@@ -174,9 +174,10 @@
     ((method-call)				method-call-transformer)
     ((case-type)				case-type-transformer)
 
-    ((unsafe-cast-signature)			unsafe-cast-signature-transformer)
     ((assert-signature)				assert-signature-transformer)
     ((assert-signature-and-return)		assert-signature-and-return-transformer)
+    ((cast-signature)				cast-signature-transformer)
+    ((unsafe-cast-signature)			unsafe-cast-signature-transformer)
 
     ((type-of)					type-of-transformer)
     ((type-super-and-sub?)			type-super-and-sub?-transformer)

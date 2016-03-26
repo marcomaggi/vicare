@@ -409,6 +409,9 @@
 	 (check
 	     (assert-signature-and-return ?signature ?expr)
 	   => ?expected0 ?expected ...)
+	 (check
+	     (cast-signature ?signature ?expr)
+	   => ?expected0 ?expected ...)
 	 ))
       ))
 
