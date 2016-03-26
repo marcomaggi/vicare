@@ -5845,5 +5845,4 @@
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
 ;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
-;; eval: (put 'declare-core-primitive			'scheme-indent-function 2)
 ;; End:

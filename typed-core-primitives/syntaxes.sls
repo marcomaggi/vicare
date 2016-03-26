@@ -1,3 +1,4 @@
+;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: helper syntaxes for typed core primitives specification
@@ -1204,6 +1205,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8-unix
-;; eval: (put 'declare-core-primitive		'scheme-indent-function 1)
 ;; End:

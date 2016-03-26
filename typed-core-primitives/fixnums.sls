@@ -1,3 +1,4 @@
+;; -*- coding: utf-8-unix -*-
 ;;
 ;;Part of: Vicare Scheme
 ;;Contents: table of expand-time properties for fixnums core primitives
@@ -459,6 +460,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; coding: utf-8-unix
-;; eval: (put 'declare-core-primitive		'scheme-indent-function 2)
 ;; End:

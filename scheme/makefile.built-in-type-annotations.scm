@@ -41,6 +41,17 @@
 (define-type-annotation <file-descriptor>
   <non-negative-fixnum>)
 
+;; (define-type <syntax-object>
+;;   (or <syntactic-identifier>
+;;       <boolean>
+;;       <char>
+;;       <number>
+;;       <string>
+;;       <bytevector>
+;;       <vector-of-syntax-objects>
+;;       <list-of-syntax-objects>
+;;       ))
+
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare

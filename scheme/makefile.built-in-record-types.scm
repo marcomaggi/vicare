@@ -739,7 +739,4 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'declare-core-primitive		'scheme-indent-function 1)
-;; eval: (put 'define-built-in-condition-type	'scheme-indent-function 2)
-;; eval: (put 'define-built-in-record-type 	'scheme-indent-function 2)
 ;; End:
