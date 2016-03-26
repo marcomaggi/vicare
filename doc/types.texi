@@ -1081,12 +1081,12 @@ following program:
 @subsection Casting the type of expressions
 
 
-It is sometimes useful to explicitly declare the type of an expression,
-so that the expander can perform more type checks and, maybe,
-optimisations.  We might want to do it as an unsafe operation, without
-introducing run--time validation of values.  For example, if we know
-that the result of an expression is a vector of @math{3} fixnums, we
-might write:
+It is sometimes useful to explicitly declare the type signature of an
+expression, so that the expander can perform more type checks and,
+maybe, optimisations.  We might want to do it as an unsafe operation,
+without introducing run--time validation of values.  For example, if we
+know that the result of an expression is a vector of @math{3} fixnums,
+we might write:
 
 @lisp
 ($vector-ref @meta{expr} 1)
@@ -1114,7 +1114,7 @@ $1 = 123
 vicare> (expansion-of (unsafe-cast-signature (<fixnum>) 123))
 $1 = '123
 vicare> (type-of (unsafe-cast-signature (<fixnum>) 123))
-$1 = (<type-signature> (#[id <fixnum>]))
+$1 = #[signature (<fixnum>)]
 @end example
 
 @noindent
@@ -1124,7 +1124,7 @@ for a truly untyped expression:
 vicare> (expansion-of (unsafe-cast-signature (<fixnum>) (read)))
 $1 = ((primitive read))
 vicare> (type-of (unsafe-cast-signature (<fixnum>) (read)))
-$1 = (<type-signature> (#[id <fixnum>]))
+$1 = #[signature (<fixnum>)]
 @end example
 
 @noindent
@@ -1139,7 +1139,7 @@ Unhandled exception
    3. &syntax:
        form: #<syntax expr=(unsafe-cast-signature (<fixnum>) "ciao")>
        subform: #<syntax expr="ciao" mark*=(src)>
-   4. &irritants: ((<type-signature> (#[id <string>])))
+   4. &irritants: (#[signature (<string>)])
 @end smallexample
 
 The following syntactic bindings are exported by the library
@@ -1247,7 +1247,7 @@ The following syntactic bindings are exported by the library
 Validate the type signature of the values returned by @meta{expr},
 either at expand--time or run--time.  @meta{expr} can be any Scheme
 expression.  @meta{signature} must be a proper or improper list of type
-identifiers representing the type signature.  The first syntax returns a
+annotations representing the type signature.  The first syntax returns a
 single unspecified value; the second syntax returns the return values of
 @meta{expr}.
 
@@ -1256,6 +1256,20 @@ successful, the syntax use just expands to the evaluation of
 @meta{expr}; when a type mismatch is detected, an expand--time exception
 is raised.  Otherwise the syntax use expands to an expression that
 validates the values at run--time.
+
+As special cases, when @meta{signature} is @samp{()},
+@samp{(<no-return>)} a proper or improper list of @class{top} and
+@class{list} types like:
+
+@lisp
+<list>
+(<top>)
+(<top> <top> <top>)
+(<top> <top> . <list>)
+@end lisp
+
+@noindent
+no validation is performed at run--time, only at expand--time.
 @end deffn
 
 
@@ -1266,7 +1280,7 @@ Here are some validation examples:
 (assert-signature-and-return (<fixnum>) 123)    @result{} 123
 (assert-signature-and-return (<string>) "ciao") @result{} "ciao"
 
-(assert-signature-and-return (<fixnum> <flonum>) 1 2.0)
+(assert-signature-and-return (<fixnum> <flonum>) (values 1 2.0))
 @result{} 1 2.0
 
 (expansion-of
@@ -1279,43 +1293,19 @@ Here are some validation examples:
 
 (expansion-of
   (assert-signature-and-return (<fixnum>)
-    (unsafe-cast <fixnum> (read))))
+    (unsafe-cast-signature <fixnum> (read))))
 @result{} ((primitive read))
 @end lisp
 
-Given that the signature validation happens at expand--time (when
-possible) there are some interesting special cases:
+There are some interesting special cases:
 
 @itemize
 @item
-If we want to assert that an expression returns zero values, we can do:
+If we want to assert (at expand--time) that an expression returns zero
+values, we can do:
 
 @lisp
 (assert-signature () @meta{expr})
-@end lisp
-
-@item
-If we want to assert that an expression returns a single value, of any
-type, we can do:
-
-@lisp
-(assert-signature (<top>) @meta{expr})
-@end lisp
-
-@item
-If we want to assert that an expression returns two values, of any type,
-we can do:
-
-@lisp
-(assert-signature (<top> <top>) @meta{expr})
-@end lisp
-
-@item
-If we want to assert that an expression returns two or more values, of
-any type, we can do:
-
-@lisp
-(assert-signature (<top> <top> . <list>) @meta{expr})
 @end lisp
 
 @item
@@ -1328,7 +1318,310 @@ If we want to assert nothing, we can do:
 @noindent
 which will just expand to the evaluation of @meta{expr}; this might be
 useful when the syntax is used in the output form of another macro use.
+
+@item
+If we want to assert (at expand--time) that an expression returns a
+single value, of any type, we can do:
+
+@lisp
+(assert-signature (<top>) @meta{expr})
+@end lisp
+
+@item
+If we want to assert (at expand--time) that an expression returns two
+values, of any type, we can do:
+
+@lisp
+(assert-signature (<top> <top>) @meta{expr})
+@end lisp
+
+@item
+If we want to assert (at expand--time) that an expression returns two or
+more values, of any type, we can do:
+
+@lisp
+(assert-signature (<top> <top> . <list>) @meta{expr})
+@end lisp
 @end itemize
+
+@c ------------------------------------------------------------------------
+
+@subheading Expansion examples for run--time validation
+
+Let's say we have a function @samp{fun} such that:
+
+@lisp
+(type-of (fun))
+@result{} #[signature <list>]
+@end lisp
+
+@noindent
+there is nothing the expander can do to infer the type signature of the
+function application.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 1: multiple values and return values
+
+The following syntax use:
+
+@lisp
+(assert-signature-and-return
+    (<fixnum> <flonum> <string>)
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@lisp
+(call-with-values
+    (lambda () (fun))
+  (lambda (arg1 arg2 arg3)
+    (values ((lambda (obj value-index caller-who)
+               (if (fixnum? obj)
+                   obj
+                 (expression-return-value-violation
+                     caller-who
+                   '"return value of invalid type"
+                   value-index '(is-a? _ <fixnum>) obj)))
+             arg1 '1 'assert-signature-and-return)
+            ((lambda (obj value-index caller-who)
+               (if (flonum? obj)
+                   obj
+                 (expression-return-value-violation
+                     caller-who
+                   '"return value of invalid type"
+                   value-index '(is-a? _ <flonum>) obj)))
+             arg2 '2 'assert-signature-and-return)
+            ((lambda (obj value-index caller-who)
+               (if (string? obj)
+                   obj
+                 (expression-return-value-violation
+                     caller-who
+                   '"return value of invalid type"
+                   value-index '(is-a? _ <string>) obj)))
+             arg3 '3 'assert-signature-and-return))))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 2: multiple values and no return values
+
+The following syntax use:
+
+@lisp
+(assert-signature
+    (<fixnum> <flonum> <string>)
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@lisp
+(call-with-values
+    (lambda () (fun))
+  (lambda (arg1 arg2 arg3)
+    ((lambda (obj value-index caller-who)
+       (if (not (fixnum? obj))
+           (expression-return-value-violation
+               caller-who '"return value of invalid type"
+               value-index '(is-a? _ <fixnum>) obj)
+         '#!void))
+     arg1 '1 'assert-signature)
+    ((lambda (obj value-index caller-who)
+       (if (not (flonum? obj))
+           (expression-return-value-violation
+               caller-who '"return value of invalid type"
+               value-index '(is-a? _ <flonum>) obj)
+         '#!void))
+     arg2 '2 'assert-signature)
+    ((lambda (obj value-index caller-who)
+       (if (not (string? obj))
+           (expression-return-value-violation
+               caller-who '"return value of invalid type"
+               value-index '(is-a? _ <string>) obj)
+         '#!void))
+     arg3 '3 'assert-signature)
+    (void)))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 3: list of values and return values
+
+The following syntax use:
+
+@lisp
+(assert-signature-and-return
+    (list-of <fixnum>)
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@lisp
+((lambda arg1
+   (lambda (list-value first-value-index caller-who)
+     (fold-left
+         (lambda (item-index item-value)
+           ((lambda (obj value-index caller-who)
+              (if (not ((letrec
+                            ((pred (lambda (obj)
+                                     (if (pair? obj)
+                                         (if (fixnum? (car obj))
+                                             (pred (cdr obj))
+                                           '#f)
+                                       (null? obj)))))
+                          pred)
+                        obj))
+                  (expression-return-value-violation caller-who
+                    '"return value of invalid type"
+                    value-index '(is-a? _ (list-of <fixnum>))
+                    obj)
+                '#!void))
+            item-value item-index caller-who)
+           (fxadd1 item-index))
+       first-value-index list-value)
+     list-value))
+ (fun))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 5: multiple values and return values
+
+The following syntax use:
+
+@lisp
+(assert-signature-and-return
+    (<fixnum> <flonum> . (list-of <fixnum>))
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@smalllisp
+(call-with-values
+    (lambda () (fun))
+  (lambda (arg1 arg2 . arg3)
+    (apply values
+           ((lambda (obj value-index caller-who)
+              (if (fixnum? obj)
+                  obj
+                (expression-return-value-violation
+                    caller-who
+                  '"return value of invalid type"
+                  value-index '(is-a? _ <fixnum>) obj)))
+            arg1 '1 'assert-signature-and-return)
+           ((lambda (obj value-index caller-who)
+              (if (flonum? obj)
+                  obj
+                (expression-return-value-violation
+                    caller-who
+                  '"return value of invalid type"
+                  value-index '(is-a? _ <flonum>) obj)))
+            arg2 '2 'assert-signature-and-return)
+           (lambda (list-value first-value-index caller-who)
+             (fold-left
+                 (lambda (item-index item-value)
+                   ((lambda (obj value-index caller-who)
+                      (if (not ((letrec
+                                    ((pred (lambda (obj)
+                                             (if (pair? obj)
+                                                 (if (fixnum? (car obj))
+                                                     (pred (cdr obj))
+                                                   '#f)
+                                               (null? obj)))))
+                                  pred) obj))
+                          (expression-return-value-violation
+                              caller-who
+                            '"return value of invalid type"
+                            value-index
+                            '(is-a? _ (list-of <fixnum>)) obj)
+                        '#!void))
+                    item-value item-index caller-who)
+                   (fxadd1 item-index))
+               first-value-index list-value)
+             list-value)
+           arg3 '3 'assert-signature-and-return)))
+@end smalllisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 5: single value and return values
+
+The following syntax use:
+
+@lisp
+(assert-signature-and-return
+    (<fixnum>)
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@lisp
+((lambda (arg1)
+   ((lambda (obj value-index caller-who)
+      (if (fixnum? obj)
+          obj
+        (expression-return-value-violation caller-who
+          '"return value of invalid type"
+          value-index '(is-a? _ <fixnum>) obj)))
+    arg1 '1 'assert-signature-and-return))
+ (fun))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 6: no validation and single return value
+
+The following syntax use:
+
+@lisp
+(assert-signature-and-return
+    (<top>)
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@lisp
+(fun)
+@end lisp
+
+@noindent
+there is no need to insert a validation form because a single value of
+any type matches the type signature.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example 7: no validation and return values
+
+The following syntax use:
+
+@lisp
+(assert-signature-and-return
+    <list>
+  (fun))
+@end lisp
+
+@noindent
+is expanded to:
+
+@lisp
+(fun)
+@end lisp
+
+@noindent
+there is no need to insert a validation form because any number of
+return values of any type matches the type signature.
 
 @c page
 @node types syntaxes case-type

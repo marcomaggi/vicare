@@ -62,16 +62,23 @@
       (let recur ((stx stx))
 	(syntax-match stx (<list> list-of)
 	  (() #t)
-	  ((?thing . ?rest)
-	   (and (syntax-object.type-annotation? ?thing)
-		(recur ?rest)))
 	  (<list>
 	   #t)
 	  ((list-of ?type-annotation)
 	   (syntax-object.type-annotation? ?type-annotation))
 	  (?rest-id
 	   (identifier? ?rest-id)
-	   (object-type-spec.list-sub-type? (id->object-type-specification __who__ #f ?rest-id lexenv)))
+	   ;;This is to allow type identifiers defined as:
+	   ;;
+	   ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
+	   ;;   (define-type <some-list> <list>)
+	   ;;
+	   (let ((ots (id->object-type-specification __who__ #f ?rest-id lexenv)))
+	     (or (<list>-ots? ots)
+		 (list-of-type-spec? ots))))
+	  ((?thing . ?rest)
+	   (and (syntax-object.type-annotation? ?thing)
+		(recur ?rest)))
 	  (_ #f)))))))
 
 

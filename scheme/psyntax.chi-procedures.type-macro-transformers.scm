@@ -904,85 +904,7 @@
 ;;; --------------------------------------------------------------------
 
   (module (%run-time-validation)
-    ;;Let's see some examples of run-time validation.  The input form:
-    ;;
-    ;;   (assert-signature-and-return (<fixnum> <flonum> <string>) ?expr)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   (call-with-values
-    ;;       (lambda/std () ?expr)
-    ;;     (lambda/std (arg0 arg1 arg2)
-    ;;       (values (if (fixnum? arg0)
-    ;;                   arg0
-    ;;                 (expression-return-value-violation __who__ "return value of invalid type" 1 '(is-a? _ <fixnum>) arg0))
-    ;;               (if (flonum? arg1)
-    ;;                   arg1
-    ;;                 (expression-return-value-violation __who__ "return value of invalid type" 2 '(is-a? _ <flonum>) arg1))
-    ;;               (if (string? arg2)
-    ;;                   arg2
-    ;;                 (expression-return-value-violation __who__ "return value of invalid type" 3 '(is-a? _ <string>) arg2)))))
-    ;;
-    ;;The input form:
-    ;;
-    ;;   (assert-signature (<fixnum> <flonum> <string>) ?expr)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   (call-with-values
-    ;;       (lambda/std () ?expr)
-    ;;     (lambda/std (arg0 arg1 arg2)
-    ;;       (begin
-    ;;         (if (fixnum? arg0)
-    ;;              arg0
-    ;;           (expression-return-value-violation __who__ "return value of invalid type" 1 '(is-a? _ <fixnum>) arg0))
-    ;;         (if (flonum? arg1)
-    ;;             arg1
-    ;;           (expression-return-value-violation __who__ "return value of invalid type" 2 '(is-a? _ <flonum>) arg1))
-    ;;         (if (string? arg2)
-    ;;             arg2
-    ;;           (expression-return-value-violation __who__ "return value of invalid type" 3 '(is-a? _ <string>) arg2))
-    ;;         (void))))
-    ;;
-    ;;The input form:
-    ;;
-    ;;   (assert-signature-and-return (list-of <fixnum>) ?expr)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   (call-with-values
-    ;;       (lambda/std () ?expr)
-    ;;     (lambda/std/std args
-    ;;       (fold-left (lambda/std (idx obj)
-    ;;                    (unless (fixnum? obj)
-    ;;                      (expression-return-value-violation __who__ "return value of invalid type" idx '(is-a? _ <fixnum>) obj))
-    ;;                    (fxadd1 idx))
-    ;;         1 args)
-    ;;       (apply values args)))
-    ;;
-    ;;The input form:
-    ;;
-    ;;   (assert-signature-and-return (<fixnum> <flonum> . (list-of <fixnum>)) ?expr)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   (call-with-values
-    ;;       (lambda/std () ?expr)
-    ;;     (lambda/std (arg0 arg1 . rest)
-    ;;       (apply values
-    ;;         (if (fixnum? arg0)
-    ;;              arg0
-    ;;           (expression-return-value-violation __who__ "return value of invalid type" 1 '(is-a? _ <fixnum>) arg0))
-    ;;         (if (flonum? arg1)
-    ;;             arg1
-    ;;           (expression-return-value-violation __who__ "return value of invalid type" 2 '(is-a? _ <flonum>) arg1))
-    ;;         (begin
-    ;;           (fold-left (lambda/std (idx obj)
-    ;;                        (unless (fixnum? obj)
-    ;;                          (expression-return-value-violation __who__ "return value of invalid type" idx '(is-a? _ <fixnum>) obj))
-    ;;                        (fxadd1 idx))
-    ;;             3 rest)
-    ;; 	         rest))))
+    ;;Read the documentation for some examples of run-time validation.
     ;;
     (define* (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
 				   asrt.stx {asrt.sig type-signature?} {expr.psi psi?} return-values?)
@@ -990,6 +912,7 @@
 	(type-signature.specs asrt.sig))
       (define-values (consumer-formals.sexp has-rest?)
 	(%compose-validator-formals asrt.specs))
+      (define number-of-validation-forms 0)
       (define validating-form*.sexp
 	(let recur ((asrt.specs			asrt.specs)
 		    (consumer-formals.sexp	consumer-formals.sexp)
@@ -997,16 +920,17 @@
 	  (cond ((pair? asrt.specs)
 		 (let ((asrt.ots (car asrt.specs)))
 		   (if (or (<top>-ots?       asrt.ots)
-			   (<void>-ots?      asrt.ots)
 			   (<no-return>-ots? asrt.ots))
 		       ;;No validation.
 		       (let ((validators (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index))))
 			 (if return-values?
 			     (cons (car consumer-formals.sexp) validators)
 			   validators))
-		     (let ((validator.stx (object-type-spec.single-value-validator-lambda-stx asrt.ots return-values?)))
-		       (cons `(,validator.stx ,(car consumer-formals.sexp) ,operand-index __who__)
-			     (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index)))))))
+		     (begin
+		       (set! number-of-validation-forms (fxadd1 number-of-validation-forms))
+		       (let ((validator.stx (object-type-spec.single-value-validator-lambda-stx asrt.ots return-values?)))
+			 (cons `(,validator.stx ,(car consumer-formals.sexp) ,operand-index __who__)
+			       (recur (cdr asrt.specs) (cdr consumer-formals.sexp) (fxadd1 operand-index))))))))
 
 		((null? asrt.specs)
 		 '())
@@ -1016,49 +940,80 @@
 		 ;;values will match, so we generate no validator.
 		 '())
 
-		(else
-		 ;;Here ASRT.SPECS is a standalone OTS, sub-type of "<list>".
+		((list-of-type-spec? asrt.specs)
+		 (set! number-of-validation-forms (fxadd1 number-of-validation-forms))
 		 (let ((validator.stx (object-type-spec.list-validator-lambda-stx asrt.specs return-values?)))
-		   `(,validator.stx ,consumer-formals.sexp ,operand-index __who__))))))
-      (define producer.core
-	(build-lambda no-source '() (psi.core-expr expr.psi)))
-      (define consumer-body.sexp
-	(if return-values?
-	    (cond (has-rest?
-		   `(apply values . ,validating-form*.sexp))
-		  ((list-of-single-item? validating-form*.sexp)
-		   (car validating-form*.sexp))
-		  (else
-		   `(values . ,validating-form*.sexp)))
-	  `(begin ,@validating-form*.sexp (void))))
-      (define consumer.stx
-	(bless `(lambda/std ,consumer-formals.sexp ,consumer-body.sexp)))
-      ;;We want "__who__" to be bound in the consumer expression.
-      (define consumer.psi
-	(let* ((id    (core-prim-id '__who__))
-	       (label (id->label id))
-	       (descr (label->syntactic-binding-descriptor label lexenv.run)))
-	  (case (syntactic-binding-descriptor.type descr)
-	    ((displaced-lexical)
-	     ;;__who__ is unbound.
-	     (receive (lexenv.run lexenv.expand)
-		 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
-						   __who__ (core-prim-id caller-who))
-	       (chi-expr consumer.stx lexenv.run lexenv.expand)))
-	    (else
-	     ;;__who__ is bound.
-	     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
-      (define consumer.core
-	(psi.core-expr consumer.psi))
-      (define output-signature
-	(if return-values?
-	    asrt.sig
-	  (make-type-signature/single-void)))
-      (make-psi input-form.stx
-	(build-application no-source
-	    (build-primref no-source 'call-with-values)
-	  (list producer.core consumer.core))
-	output-signature))
+		   `(,validator.stx ,consumer-formals.sexp ,operand-index __who__)))
+
+		(else
+		 (assertion-violation caller-who "internal error, invalid assertion signature" asrt.stx)))))
+      (case number-of-validation-forms
+	((0)
+	 ;;No  validation forms,  so  just  evaluate the  expression.   To check  the
+	 ;;correct number of return values: we rely on the compiler-generated code.
+	 expr.psi)
+	((1)
+	 ;;Generate a directly applied LAMBDA form.
+	 (let* ((consumer-body.sexp	(car validating-form*.sexp))
+		(consumer.stx		(bless `(lambda/std ,consumer-formals.sexp ,consumer-body.sexp)))
+		;;We want "__who__" to be bound in the consumer expression.
+		(consumer.psi		(let* ((id    (core-prim-id '__who__))
+					       (label (id->label id))
+					       (descr (label->syntactic-binding-descriptor label lexenv.run)))
+					  (case (syntactic-binding-descriptor.type descr)
+					    ((displaced-lexical)
+					     ;;__who__ is unbound.
+					     (receive (lexenv.run lexenv.expand)
+						 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
+										   __who__ (core-prim-id caller-who))
+					       (chi-expr consumer.stx lexenv.run lexenv.expand)))
+					    (else
+					     ;;__who__ is bound.
+					     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
+		(consumer.core		(psi.core-expr consumer.psi))
+		(output-signature	(if return-values?
+					    asrt.sig
+					  (make-type-signature/single-void))))
+	   (make-psi input-form.stx
+	     (build-application no-source
+		 consumer.core
+	       (list (psi.core-expr expr.psi)))
+	     output-signature)))
+	(else
+	 ;;Generate the full CALL-WITH-VALUES output form.
+	 (let* ((producer.core		(build-lambda no-source '() (psi.core-expr expr.psi)))
+		(consumer-body.sexp	(if return-values?
+					    (cond (has-rest?
+						   `(apply values . ,validating-form*.sexp))
+						  ((list-of-single-item? validating-form*.sexp)
+						   (car validating-form*.sexp))
+						  (else
+						   `(values . ,validating-form*.sexp)))
+					  `(begin ,@validating-form*.sexp (void))))
+		(consumer.stx		(bless `(lambda/std ,consumer-formals.sexp ,consumer-body.sexp)))
+		;;We want "__who__" to be bound in the consumer expression.
+		(consumer.psi		(let* ((id    (core-prim-id '__who__))
+					       (label (id->label id))
+					       (descr (label->syntactic-binding-descriptor label lexenv.run)))
+					  (case (syntactic-binding-descriptor.type descr)
+					    ((displaced-lexical)
+					     ;;__who__ is unbound.
+					     (receive (lexenv.run lexenv.expand)
+						 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
+										   __who__ (core-prim-id caller-who))
+					       (chi-expr consumer.stx lexenv.run lexenv.expand)))
+					    (else
+					     ;;__who__ is bound.
+					     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
+		(consumer.core		(psi.core-expr consumer.psi))
+		(output-signature	(if return-values?
+					    asrt.sig
+					  (make-type-signature/single-void))))
+	   (make-psi input-form.stx
+	     (build-application no-source
+		 (build-primref no-source 'call-with-values)
+	       (list producer.core consumer.core))
+	     output-signature)))))
 
     (define (%compose-validator-formals asrt.specs)
       ;;Build  and return  a  proper or  improper list  of  gensyms representing  the

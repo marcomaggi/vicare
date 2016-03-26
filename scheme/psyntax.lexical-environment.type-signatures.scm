@@ -284,9 +284,8 @@
 
 		   (?rest-ots
 		    (object-type-spec? ?rest-ots)
-		    (cond ((list-of-type-spec? ?rest-ots)
-			   ?rest-ots)
-			  ((<list>-ots? ?rest-ots)
+		    (cond ((or (list-of-type-spec? ?rest-ots)
+			       (<list>-ots? ?rest-ots))
 			   ?rest-ots)
 			  (else
 			   (syntax-violation caller-who
@@ -298,9 +297,11 @@
 		    ;;This is meant to match type identifiers defined as:
 		    ;;
 		    ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
+		    ;;   (define-type <some-list> <list>)
 		    ;;
 		    (let ((rest.ots (id->object-type-specification caller-who #f ?rest-id lexenv)))
-		      (cond ((object-type-spec.list-sub-type? rest.ots)
+		      (cond ((or (list-of-type-spec? rest.ots)
+				 (<list>-ots?        rest.ots))
 			     rest.ots)
 			    (else
 			     (syntax-violation caller-who
