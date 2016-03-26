@@ -875,7 +875,7 @@
 	     ;;Good.  Everything is all right at expand-time.
 	     (%just-evaluate-the-expression expr.psi return-values?))
 
-	    ((type-signature.super-and-sub? expr.sig asrt.sig)
+	    ((type-signature.compatible-super-and-sub? asrt.sig expr.sig)
 	     ;;Compatible signatures, let's check the values at run-time.
 	     (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
 				   asrt.stx asrt.sig expr.psi return-values?))
