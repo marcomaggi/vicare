@@ -61,6 +61,8 @@
   (signatures
    ((<procedure>)	=> <list>)))
 
+(declare-parameter run-unwind-protection-cleanup-upon-exit?	<top>)
+
 (declare-core-primitive call-with-values
     (safe)
   (signatures
