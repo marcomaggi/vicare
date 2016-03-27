@@ -2,30 +2,41 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus ratnums)
   (export
     $ratnum->flonum
-    $ratnum-positive?		$ratnum-negative?
-    $ratnum-non-positive?	$ratnum-non-negative?)
+    ratnum-positive?			$ratnum-positive?
+    ratnum-negative?			$ratnum-negative?
+    ratnum-non-positive?		$ratnum-non-positive?
+    ratnum-non-negative?		$ratnum-non-negative?
+    positive-ratnum?
+    negative-ratnum?
+    non-positive-ratnum?
+    non-negative-ratnum?)
   (import (vicare)
     (except (vicare system $ratnums)
 	    $ratnum->flonum
-	    $ratnum-positive?		$ratnum-negative?
-	    $ratnum-non-positive?	$ratnum-non-negative?)
-    (vicare system $flonums))
+	    ratnum-positive?			$ratnum-positive?
+	    ratnum-negative?			$ratnum-negative?
+	    ratnum-non-positive?		$ratnum-non-positive?
+	    ratnum-non-negative?		$ratnum-non-negative?
+	    positive-ratnum?
+	    negative-ratnum?
+	    non-positive-ratnum?
+	    non-negative-ratnum?))
 
 
 (module ($ratnum->flonum)
@@ -113,6 +124,33 @@
 
 
 ;;;; predicates
+
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?who ?unsafe-who)
+			  (define (?who obj)
+			    (and (ratnum? obj)
+				 (?unsafe-who obj))))
+			 )))
+  (define-predicate positive-ratnum?		$ratnum-positive?)
+  (define-predicate negative-ratnum?		$ratnum-negative?)
+  (define-predicate non-positive-ratnum?	$ratnum-non-positive?)
+  (define-predicate non-negative-ratnum?	$ratnum-non-negative?)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?who ?unsafe-who)
+			  (define* (?who {obj ratnum?})
+			    (?unsafe-who obj)))
+			 )))
+  (define-predicate ratnum-positive?		$ratnum-positive?)
+  (define-predicate ratnum-negative?		$ratnum-negative?)
+  (define-predicate ratnum-non-positive?	$ratnum-non-positive?)
+  (define-predicate ratnum-non-negative?	$ratnum-non-negative?)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
 
 (define ($ratnum-positive? Q)
   ;;The denominator of a properly constructed ratnum is always positive;

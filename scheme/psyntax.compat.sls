@@ -67,6 +67,8 @@
     fxadd1				fxsub1
     fxnonnegative?			non-negative-fixnum?
     flzero?/positive			flzero?/negative
+    ratnum-positive?			ratnum-negative?
+    bignum-positive?			bignum-negative?
     uuid
     standalone-pair?			exact-compnum?
     procedure-arguments-consistency-violation
@@ -129,9 +131,16 @@
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Sep 30, 2015)
 		  with-blocked-exceptions
-		  void-object?
-		  stadalone-pair?
-		  circular-list?)
+		  void-object?			stadalone-pair?
+		  circular-list?
+
+		  reader-annotation?		reader-annotation-expression
+		  reader-annotation-stripped	reader-annotation-source
+		  reader-annotation-textual-position
+
+		  ratnum-positive?		ratnum-negative?
+		  exact-compnum?
+		  )
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr-to-thunk
@@ -170,6 +179,11 @@
     ;;2016)
     (only (ikarus lists)
 	  circular-list?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 27,
+    ;;2016)
+    (only (ikarus ratnums)
+	  ratnum-positive?
+	  ratnum-negative?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Jan 4,
     ;;2016)
     (only (ikarus numerics complex-numbers)

@@ -8,20 +8,19 @@
 ;;;
 ;;;	Test for fixnums and bignums.
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -56,17 +55,39 @@
 
 (parametrise ((check-test-name	'predicates))
 
-  (check ($bignum-positive? least-positive-bn)		=> #t)
-  (check ($bignum-negative? least-positive-bn)		=> #f)
-  (check ($bignum-non-positive? least-positive-bn)	=> #f)
-  (check ($bignum-non-negative? least-positive-bn)	=> #t)
+  (check-for-true	(bignum-positive? least-positive-bn))
+  (check-for-false	(bignum-negative? least-positive-bn))
+  (check-for-false	(bignum-non-positive? least-positive-bn))
+  (check-for-true	(bignum-non-negative? least-positive-bn))
 
-  (check ($bignum-positive? greatest-negative-bn)	=> #f)
-  (check ($bignum-negative? greatest-negative-bn)	=> #t)
-  (check ($bignum-non-positive? greatest-negative-bn)	=> #t)
-  (check ($bignum-non-negative? greatest-negative-bn)	=> #f)
+  (check-for-false	(bignum-positive? greatest-negative-bn))
+  (check-for-true	(bignum-negative? greatest-negative-bn))
+  (check-for-true	(bignum-non-positive? greatest-negative-bn))
+  (check-for-false	(bignum-non-negative? greatest-negative-bn))
 
-  #t)
+  (check-for-true	(positive-bignum? least-positive-bn))
+  (check-for-false	(negative-bignum? least-positive-bn))
+  (check-for-false	(non-positive-bignum? least-positive-bn))
+  (check-for-true	(non-negative-bignum? least-positive-bn))
+
+  (check-for-false	(positive-bignum? greatest-negative-bn))
+  (check-for-true	(negative-bignum? greatest-negative-bn))
+  (check-for-true	(non-positive-bignum? greatest-negative-bn))
+  (check-for-false	(non-negative-bignum? greatest-negative-bn))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	($bignum-positive? least-positive-bn))
+  (check-for-false	($bignum-negative? least-positive-bn))
+  (check-for-false	($bignum-non-positive? least-positive-bn))
+  (check-for-true	($bignum-non-negative? least-positive-bn))
+
+  (check-for-false	($bignum-positive? greatest-negative-bn))
+  (check-for-true	($bignum-negative? greatest-negative-bn))
+  (check-for-true	($bignum-non-positive? greatest-negative-bn))
+  (check-for-false	($bignum-non-negative? greatest-negative-bn))
+
+  (void))
 
 
 (parametrise ((check-test-name	'arithmetics))

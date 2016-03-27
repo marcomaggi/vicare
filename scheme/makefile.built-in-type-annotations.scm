@@ -32,11 +32,25 @@
 (define-type-annotation <exact-rational>
   (union <exact-integer> <ratnum>))
 
+;;; --------------------------------------------------------------------
+
 (define-type-annotation <exact>
   (union <exact-rational> <exact-compnum>))
 
 (define-type-annotation <inexact>
   (union <flonum> <cflonum> <inexact-compnum>))
+
+;;; --------------------------------------------------------------------
+
+(define-type-annotation <positive>
+  (union <positive-fixnum> <positive-bignum> <positive-ratnum>
+	 <positive-flonum> <positive-zero-flonum>))
+
+(define-type-annotation <negative>
+  (union <negative-fixnum> <negative-bignum> <negative-ratnum>
+	 <negative-flonum> <negative-zero-flonum>))
+
+;;; --------------------------------------------------------------------
 
 (define-type-annotation <file-descriptor>
   <non-negative-fixnum>)

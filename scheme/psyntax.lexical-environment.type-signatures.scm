@@ -1018,20 +1018,39 @@
 
 	  ((fixnum?  datum)		(cond ((fxpositive? datum)
 					       (core-prim-id '<positive-fixnum>))
+					      ((fxnegative? datum)
+					       (core-prim-id '<negative-fixnum>))
 					      ((fxzero? datum)
 					       (core-prim-id '<zero-fixnum>))
 					      (else
+					       ;;This should never happen.
 					       (core-prim-id '<fixnum>))))
 	  ((flonum?  datum)		(cond ((flpositive? datum)
 					       (core-prim-id '<positive-flonum>))
+					      ((flnegative? datum)
+					       (core-prim-id '<negative-flonum>))
 					      ((flzero?/positive datum)
 					       (core-prim-id '<positive-zero-flonum>))
 					      ((flzero?/negative datum)
 					       (core-prim-id '<negative-zero-flonum>))
 					      (else
+					       ;;This  happens  when  the  flonum  is
+					       ;;not-a-number.
 					       (core-prim-id '<flonum>))))
-	  ((ratnum?  datum)		(core-prim-id '<ratnum>))
-	  ((bignum?  datum)		(core-prim-id '<bignum>))
+	  ((ratnum?  datum)		(cond ((ratnum-positive? datum)
+					       (core-prim-id '<positive-ratnum>))
+					      ((ratnum-negative? datum)
+					       (core-prim-id '<negative-ratnum>))
+					      (else
+					       ;;This should never happen.
+					       (core-prim-id '<ratnum>))))
+	  ((bignum?  datum)		(cond ((bignum-positive? datum)
+					       (core-prim-id '<positive-bignum>))
+					      ((bignum-negative? datum)
+					       (core-prim-id '<negative-bignum>))
+					      (else
+					       ;;This should never happen.
+					       (core-prim-id '<bignum>))))
 	  ((compnum? datum)		(cond ((exact-compnum? datum)
 					       (core-prim-id '<exact-compnum>))
 					      (else

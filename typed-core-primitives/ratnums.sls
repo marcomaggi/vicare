@@ -37,6 +37,39 @@
 
 (declare-type-predicate ratnum? <ratnum>)
 
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?who ?true-tag ?false-tag)
+			  (declare-core-primitive ?who
+			      (safe)
+			    (signatures
+			     ((?true-tag)	=> (<true>))
+			     ((?false-tag)	=> (<false>))
+			     ((<ratnum>)	=> (<boolean>)))))
+			 )))
+  (define-predicate ratnum-positive?		<positive-ratnum>	<negative-ratnum>)
+  (define-predicate ratnum-negative?		<negative-ratnum>	<positive-ratnum>)
+  (define-predicate ratnum-non-positive?	<negative-ratnum>	<positive-ratnum>)
+  (define-predicate ratnum-non-negative?	<positive-ratnum>	<negative-ratnum>)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?who ?true-tag ?false-tag)
+			  (declare-core-primitive ?who
+			      (safe)
+			    (signatures
+			     ((?true-tag)	=> (<true>))
+			     ((?false-tag)	=> (<false>))
+			     ((<ratnum>)	=> (<boolean>))
+			     ((<top>)		=> (<boolean>)))))
+			 )))
+  (define-predicate positive-ratnum?		<positive-ratnum>	<negative-ratnum>)
+  (define-predicate negative-ratnum?		<negative-ratnum>	<positive-ratnum>)
+  (define-predicate non-positive-ratnum?	<negative-ratnum>	<positive-ratnum>)
+  (define-predicate non-negative-ratnum?	<positive-ratnum>	<negative-ratnum>)
+  #| end of LET-SYNTAX |# )
+
 /section)
 
 

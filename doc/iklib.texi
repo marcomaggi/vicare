@@ -14449,6 +14449,7 @@ representing the mantissa's @math{53} bits.
 * iklib numerics compar::       Additional comparison functions.
 * iklib numerics preds::        Additional numeric predicates.
 * iklib numerics bignums::      Additional bignum functions.
+* iklib numerics ratnums::      Additional ratnum functions.
 * iklib numerics math::         Additional math functions.
 * iklib numerics bitwise::      Additional bitwise functions.
 @end menu
@@ -14639,16 +14640,22 @@ object: return @false{}.
 
 
 @defun bignum-positive? @var{bn}
+@defunx bignum-negative? @var{bn}
 @defunx bignum-non-negative? @var{bn}
-The argument must be a bignum.  Return @true{} if it is positive,
+@defunx bignum-non-positive? @var{bn}
+The argument must be a bignum.  Return @true{} if @var{bn} is,
+respectively: positive, negative, non--positive, non--negative;
 otherwise return @false{}.
 @end defun
 
 
-@defun bignum-negative? @var{bn}
-@defunx bignum-non-positive? @var{bn}
-The argument must be a bignum.  Return @true{} if it is negative,
-otherwise return @false{}.
+@defun positive-bignum? @var{obj}
+@defunx negative-bignum? @var{obj}
+@defunx non-positive-bignum? @var{obj}
+@defunx non-negative-bignum? @var{obj}
+The argument can be any value.  Return @true{} if @var{obj} is a bignum
+and it is, respectively: positive, negative, non--positive,
+non--negative; otherwise return @false{}.
 @end defun
 
 
@@ -14671,6 +14678,30 @@ Return the smallest positive bignum.
 
 @defun greatest-negative-bignum
 Return the greatest negative bignum.
+@end defun
+
+@c page
+@node iklib numerics ratnums
+@subsection Additional ratnum functions
+
+
+@defun ratnum-positive? @var{rn}
+@defunx ratnum-negative? @var{rn}
+@defunx ratnum-non-negative? @var{rn}
+@defunx ratnum-non-positive? @var{rn}
+The argument must be a ratnum.  Return @true{} if @var{rn} is,
+respectively: positive, negative, non--positive, non--negative;
+otherwise return @false{}.
+@end defun
+
+
+@defun positive-ratnum? @var{obj}
+@defunx negative-ratnum? @var{obj}
+@defunx non-positive-ratnum? @var{obj}
+@defunx non-negative-ratnum? @var{obj}
+The argument can be any value.  Return @true{} if @var{obj} is a ratnum
+and it is, respectively: positive, negative, non--positive,
+non--negative; otherwise return @false{}.
 @end defun
 
 @c page

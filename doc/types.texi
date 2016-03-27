@@ -2102,7 +2102,8 @@ a closure object; otherwise return @false{}.
 * types built-in numerics cflonums::         Type of cflonum values.
 * types built-in numerics bytes::            Type of byte values.
 * types built-in numerics octets::           Type of octet values.
-* types built-in numerics exactness::        Exactness of values.
+* types built-in numerics exactness::        Exactness of numeric values.
+* types built-in numerics sign::             Sign of numeric values.
 @end menu
 
 @c page
@@ -2281,6 +2282,20 @@ Type of bignum values.  There is no constructor.  The type predicate is
 @func{bignum?}.
 @end deftp
 
+
+@deftp {Built--in Type} @aclass{positive-bignum}
+@deftpx {Parent Type} @aclass{bignum}
+Type of positive bignum values.  There is no constructor.  The type
+predicate is @func{positive-bignum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{negative-bignum}
+@deftpx {Parent Type} @aclass{bignum}
+Type of negative bignum values.  There is no constructor.  The type
+predicate is @func{negative-bignum?}.
+@end deftp
+
 @c page
 @node types built-in numerics flonums
 @subsubsection Type of flonum values
@@ -2292,6 +2307,48 @@ Type of flonum values.  There is no constructor.  The type predicate is
 @func{flonum?}.
 @end deftp
 
+
+@deftp {Built--in Type} @aclass{non-negative-flonum}
+@deftpx {Parent Type} @aclass{flonum}
+Type of non--negative flonum values.  There is no constructor.  The type
+predicate is @func{non-negative-flonum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{positive-flonum}
+@deftpx {Parent Type} @aclass{non-negative-flonum}
+Type of positive flonum values.  There is no constructor.  The type
+predicate is @func{positive-flonum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{negative-flonum}
+@deftpx {Parent Type} @aclass{flonum}
+Type of negative flonum values.  There is no constructor.  The type
+predicate is @func{negative-flonum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{zero-flonum}
+@deftpx {Parent Type} @aclass{non-negative-flonum}
+Type of zero flonum values.  There is no constructor.  The type
+predicate is @func{zero-flonum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{positive-zero-flonum}
+@deftpx {Parent Type} @aclass{zero-flonum}
+Type of zero flonum values.  There is no constructor.  The type
+predicate is @func{positive-zero-flonum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{negative-zero-flonum}
+@deftpx {Parent Type} @aclass{zero-flonum}
+Type of zero flonum values.  There is no constructor.  The type
+predicate is @func{negative-zero-flonum?}.
+@end deftp
+
 @c page
 @node types built-in numerics ratnums
 @subsubsection Type of ratnum values
@@ -2301,6 +2358,20 @@ Type of flonum values.  There is no constructor.  The type predicate is
 @deftpx {Parent Type} @aclass{rational}
 Type of ratnum values.  There is no constructor.  The type predicate is
 @func{ratnum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{positive-ratnum}
+@deftpx {Parent Type} @aclass{ratnum}
+Type of positive ratnum values.  There is no constructor.  The type
+predicate is @func{positive-ratnum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{negative-ratnum}
+@deftpx {Parent Type} @aclass{ratnum}
+Type of negative ratnum values.  There is no constructor.  The type
+predicate is @func{negative-ratnum?}.
 @end deftp
 
 @c page
@@ -2391,7 +2462,7 @@ is a octet value; otherwise return @false{}.
 
 
 @deftp {Built--in Type} @class{exact}
-Type of exact values.  Its definition is equivalent to:
+Type of exact numeric values.  Its definition is equivalent to:
 
 @lisp
 (define-type <exact>
@@ -2401,11 +2472,37 @@ Type of exact values.  Its definition is equivalent to:
 
 
 @deftp {Built--in Type} @class{inexact}
-Type of inexact values.  Its definition is equivalent to:
+Type of inexact numeric values.  Its definition is equivalent to:
 
 @lisp
 (define-type <inexact>
   (union <flonum> <cflonum> <inexact-compnum>))
+@end lisp
+@end deftp
+
+@c page
+@node types built-in numerics sign
+@subsubsection Sign of numeric values
+
+
+@deftp {Built--in Type} @class{positive}
+Type of positive numeric values.  Its definition is equivalent to:
+
+@lisp
+(define-type-annotation <positive>
+  (or <positive-fixnum> <positive-bignum> <positive-ratnum>
+      <positive-flonum> <positive-zero-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Built--in Type} @class{negative}
+Type of negative numeric values.  Its definition is equivalent to:
+
+@lisp
+(define-type-annotation <negative>
+  (or <negative-fixnum> <negative-bignum> <negative-ratnum>
+      <negative-flonum> <negative-zero-flonum>))
 @end lisp
 @end deftp
 

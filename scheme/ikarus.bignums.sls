@@ -22,6 +22,10 @@
     bignum-negative?
     (rename (bignum-positive?	bignum-non-negative?)
 	    (bignum-negative?	bignum-non-positive?))
+    positive-bignum?
+    negative-bignum?
+    (rename (positive-bignum?	non-negative-bignum?)
+	    (negative-bignum?	non-positive-bignum?))
     bignum-odd?
     bignum-even?
     least-positive-bignum
@@ -33,14 +37,12 @@
     $bignum-even?	$bignum-odd?
     $bignum->flonum)
   (import (except (vicare)
-		  bignum-positive?
-		  bignum-negative?
-		  bignum-non-negative?
-		  bignum-non-positive?
-		  bignum-odd?
-		  bignum-even?
-		  least-positive-bignum
-		  greatest-negative-bignum)
+		  bignum-positive?		bignum-negative?
+		  bignum-non-negative?		bignum-non-positive?
+		  positive-bignum?		negative-bignum?
+		  non-negative-bignum?		non-positive-bignum?
+		  bignum-odd?			bignum-even?
+		  least-positive-bignum		greatest-negative-bignum)
     (except (vicare system $bignums)
 	    $bignum-positive?		$bignum-negative?
 	    $bignum-non-positive?	$bignum-non-negative?
@@ -60,14 +62,36 @@
 
 ;;;; predicates
 
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?safe-who ?unsafe-who)
+			  (define* (?safe-who {x bignum?})
+			    (?unsafe-who x)))
+			 )))
+  (define-predicate bignum-positive?	$bignum-positive?)
+  (define-predicate bignum-negative?	$bignum-negative?)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?safe-who ?unsafe-who)
+			  (define (?safe-who x)
+			    (and (bignum? x)
+				 (?unsafe-who x))))
+			 )))
+  (define-predicate positive-bignum?	$bignum-positive?)
+  (define-predicate negative-bignum?	$bignum-negative?)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
 (define-syntax define-bn-operation/one
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
      (define* (?safe-who {x bignum?})
-       (?unsafe-who x)))))
+       (?unsafe-who x)))
+    ))
 
-(define-bn-operation/one bignum-positive?	$bignum-positive?)
-(define-bn-operation/one bignum-negative?	$bignum-negative?)
 (define-bn-operation/one bignum-odd?		$bignum-odd?)
 (define-bn-operation/one bignum-even?		$bignum-even?)
 

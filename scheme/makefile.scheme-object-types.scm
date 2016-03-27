@@ -194,26 +194,21 @@
 
 (define-scheme-type <positive-bignum>
     <bignum>
-  #t bignum-positive?)
+  #t positive-bignum?)
 
 (define-scheme-type <negative-bignum>
     <bignum>
-  #t bignum-negative?)
-
-;;FIXME When type unions are implemented we should uncomment this.  (Marco Maggi; Sun
-;;Dec 27, 2015)
-;;
-;; (define-union-type <non-negative-exact-integer>
-;;     non-negative-exact-integer?
-;;   (or <non-negative-fixnum>
-;;       <positive-bignum>))
-;;
+  #t negative-bignum?)
 
 ;;; --------------------------------------------------------------------
 
-;; (define-scheme-type <file-descriptor>
-;;     <non-negative-fixnum>
-;;   #f #f)
+(define-scheme-type <positive-ratnum>
+    <ratnum>
+  #t positive-ratnum?)
+
+(define-scheme-type <negative-ratnum>
+    <ratnum>
+  #t negative-ratnum?)
 
 ;;; --------------------------------------------------------------------
 

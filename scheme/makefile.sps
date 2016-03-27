@@ -1095,8 +1095,6 @@
     (bignum?					v $language)
     (ratnum?					v $language)
     (compnum?					v $language)
-    (exact-compnum?				v $language)
-    (inexact-compnum?				v $language)
     (cflonum?					v $language)
     (flonum-parts				v $language)
     (flonum-bytes				v $language)
@@ -2218,10 +2216,26 @@
     (bignum-negative?				v $language)
     (bignum-non-negative?			v $language)
     (bignum-non-positive?			v $language)
+    (positive-bignum?				v $language)
+    (negative-bignum?				v $language)
+    (non-positive-bignum?			v $language)
+    (non-negative-bignum?			v $language)
     (bignum-odd?				v $language)
     (bignum-even?				v $language)
     (least-positive-bignum			v $language)
     (greatest-negative-bignum			v $language)
+;;;
+    (ratnum-positive?				v $language)
+    (ratnum-negative?				v $language)
+    (ratnum-non-positive?			v $language)
+    (ratnum-non-negative?			v $language)
+    (positive-ratnum?				v $language)
+    (negative-ratnum?				v $language)
+    (non-positive-ratnum?			v $language)
+    (non-negative-ratnum?			v $language)
+;;;
+    (exact-compnum?				v $language)
+    (inexact-compnum?				v $language)
 ;;;
     (fl*					v r fl)
     (fl+					v r fl)
@@ -3486,6 +3500,9 @@
     (<positive-bignum>				v $language)
     (<negative-bignum>				v $language)
 
+    (<positive-ratnum>				v $language)
+    (<negative-ratnum>				v $language)
+
     (<non-negative-flonum>			v $language)
     (<positive-flonum>				v $language)
     (<negative-flonum>				v $language)
@@ -3498,6 +3515,9 @@
 
     (<exact>					v $language)
     (<inexact>					v $language)
+
+    (<positive>					v $language)
+    (<negative>					v $language)
 
     (<file-descriptor>				v $language)
 
@@ -3602,6 +3622,7 @@
     (<negative-bignum>-type-descriptor)
     (<negative-fixnum>-type-descriptor)
     (<negative-flonum>-type-descriptor)
+    (<negative-ratnum>-type-descriptor)
     (<negative-zero-flonum>-type-descriptor)
     (<non-negative-fixnum>-type-descriptor)
     (<non-negative-flonum>-type-descriptor)
@@ -3616,6 +3637,7 @@
     (<positive-bignum>-type-descriptor)
     (<positive-fixnum>-type-descriptor)
     (<positive-flonum>-type-descriptor)
+    (<positive-ratnum>-type-descriptor)
     (<positive-zero-flonum>-type-descriptor)
     (<procedure>-type-descriptor)
     (<promise>-type-descriptor)

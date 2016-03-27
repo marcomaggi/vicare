@@ -38,14 +38,14 @@
 (declare-core-primitive least-positive-bignum
     (safe)
   (signatures
-   (()				=> (<bignum>)))
+   (()				=> (<positive-bignum>)))
   (attributes
    (()				foldable effect-free result-true)))
 
 (declare-core-primitive greatest-negative-bignum
     (safe)
   (signatures
-   (()				=> (<bignum>)))
+   (()				=> (<negative-bignum>)))
   (attributes
    (()				foldable effect-free result-true)))
 
@@ -54,13 +54,41 @@
 
 (declare-type-predicate bignum? <bignum>)
 
-(declare-bignum-predicate bignum-positive?	(replacements $bignum-positive?))
-(declare-bignum-predicate bignum-negative?	(replacements $bignum-negative?))
-(declare-bignum-predicate bignum-non-positive?	(replacements $bignum-non-positive?))
-(declare-bignum-predicate bignum-non-negative?	(replacements $bignum-non-negative?))
-
 (declare-bignum-predicate bignum-even?		(replacements $bignum-even?))
 (declare-bignum-predicate bignum-odd?		(replacements $bignum-odd?))
+
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?who ?true-tag ?false-tag)
+			  (declare-core-primitive ?who
+			      (safe)
+			    (signatures
+			     ((?true-tag)	=> (<true>))
+			     ((?false-tag)	=> (<false>))
+			     ((<bignum>)	=> (<boolean>)))))
+			 )))
+  (define-predicate bignum-positive?		<positive-bignum>	<negative-bignum>)
+  (define-predicate bignum-negative?		<negative-bignum>	<positive-bignum>)
+  (define-predicate bignum-non-positive?	<negative-bignum>	<positive-bignum>)
+  (define-predicate bignum-non-negative?	<positive-bignum>	<negative-bignum>)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((define-predicate (syntax-rules ()
+			 ((_ ?who ?true-tag ?false-tag)
+			  (declare-core-primitive ?who
+			      (safe)
+			    (signatures
+			     ((?true-tag)	=> (<true>))
+			     ((?false-tag)	=> (<false>))
+			     ((<bignum>)	=> (<boolean>))
+			     ((<top>)		=> (<boolean>)))))
+			 )))
+  (define-predicate positive-bignum?		<positive-bignum>	<negative-bignum>)
+  (define-predicate negative-bignum?		<negative-bignum>	<positive-bignum>)
+  (define-predicate non-positive-bignum?	<negative-bignum>	<positive-bignum>)
+  (define-predicate non-negative-bignum?	<positive-bignum>	<negative-bignum>)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; bignums, unsafe operations
