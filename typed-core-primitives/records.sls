@@ -304,7 +304,7 @@
 (declare-core-primitive $record-type-destructor
     (unsafe)
   (signatures
-   ((<record-type-descriptor>)			=> ((union <false> <procedure>)))))
+   ((<record-type-descriptor>)			=> ((or <false> <procedure>)))))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

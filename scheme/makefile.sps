@@ -737,7 +737,6 @@
     (pair-of					(macro . pair-of))
     (list-of					(macro . list-of))
     (vector-of					(macro . vector-of))
-    (union					(macro . union))
 ;;;
     (define					(macro . define))
     (case-define				(macro . case-define))

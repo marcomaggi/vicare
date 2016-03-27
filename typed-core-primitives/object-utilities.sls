@@ -45,7 +45,7 @@
 (declare-core-primitive scheme-type-descriptor.parent
     (safe)
   (signatures
-   ((<scheme-type-descriptor>)		=> ((union <false> <scheme-type-descriptor>)))))
+   ((<scheme-type-descriptor>)		=> ((or <false> <scheme-type-descriptor>)))))
 
 (declare-core-primitive scheme-type-descriptor.uids-list
     (safe)

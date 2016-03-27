@@ -2111,8 +2111,7 @@
   ;;fully unwrapped syntax object representing the same type annotation.
   ;;
   (let recur ((stx input-form.stx))
-    (syntax-match stx (pair list vector pair-of list-of vector-of condition
-			    union or and)
+    (syntax-match stx (pair list vector pair-of list-of vector-of condition or and)
       ((pair ?car-type ?cdr-type)
        (list (core-prim-id 'pair)
 	     (recur ?car-type)
@@ -2140,10 +2139,6 @@
 
       ((condition ?component-type* ...)
        (list (core-prim-id 'condition)
-	     (map recur ?component-type*)))
-
-      ((union ?component-type* ...)
-       (list (core-prim-id 'union)
 	     (map recur ?component-type*)))
 
       ((or ?component-type* ...)
@@ -2186,8 +2181,7 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition
-				      union or and)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-specification __who__ #f ?type-id lexenv))
@@ -2246,11 +2240,6 @@
 		     (assertion-violation __who__
 		       "expected condition object as component of compound condition object" annotation.stx))))
 	  (make-compound-condition-type-spec specs))))
-
-     ((union ?component-type* ...)
-      (make-union-type-spec (map (lambda (type.stx)
-				   (type-annotation->object-type-specification type.stx lexenv))
-			      ?component-type*)))
 
      ((or ?component-type* ...)
       (make-union-type-spec (map (lambda (type.stx)

@@ -24,31 +24,31 @@
 ;;;
 
 (define-type-annotation <&who-value>
-  (union <false> <symbol> <string>))
+  (or <false> <symbol> <string>))
 
 (define-type-annotation <non-negative-exact-integer>
-  (union <non-negative-fixnum> <positive-bignum>))
+  (or <non-negative-fixnum> <positive-bignum>))
 
 (define-type-annotation <exact-rational>
-  (union <exact-integer> <ratnum>))
+  (or <exact-integer> <ratnum>))
 
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <exact>
-  (union <exact-rational> <exact-compnum>))
+  (or <exact-rational> <exact-compnum>))
 
 (define-type-annotation <inexact>
-  (union <flonum> <cflonum> <inexact-compnum>))
+  (or <flonum> <cflonum> <inexact-compnum>))
 
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <positive>
-  (union <positive-fixnum> <positive-bignum> <positive-ratnum>
-	 <positive-flonum> <positive-zero-flonum>))
+  (or <positive-fixnum> <positive-bignum> <positive-ratnum>
+      <positive-flonum> <positive-zero-flonum>))
 
 (define-type-annotation <negative>
-  (union <negative-fixnum> <negative-bignum> <negative-ratnum>
-	 <negative-flonum> <negative-zero-flonum>))
+  (or <negative-fixnum> <negative-bignum> <negative-ratnum>
+      <negative-flonum> <negative-zero-flonum>))
 
 ;;; --------------------------------------------------------------------
 

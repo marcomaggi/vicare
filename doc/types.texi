@@ -359,7 +359,6 @@ syntaxes like the following:
 (list-of   <fixnum>)
 (vector-of <fixnum>)
 (condition &who &message &irritants)
-(union <false> <symbol> <string>)
 (or    <false> <symbol> <string>)
 (and   <exact> <positive>)
 @end lisp
@@ -368,8 +367,8 @@ syntaxes like the following:
 compound type annotations can be nested at will:
 
 @lisp
-(union (list-of   <fixnum>)
-       (vector-of <fixnum>))
+(or (list-of   <fixnum>)
+    (vector-of <fixnum>))
 @end lisp
 
 The following syntactic bindings are exported by @library{vicare}.
@@ -466,16 +465,15 @@ is a nested type annotation that must be one among: @class{condition},
 @end deftp
 
 
-@deftp {Compound Type Annotation} union @metao{item-type} @meta{item-type} @dots{}
-@deftpx {Compound Type Annotation} or @metao{item-type} @meta{item-type} @dots{}
+@deftp {Compound Type Annotation} or @metao{item-type} @meta{item-type} @dots{}
 Describe the union between the specified types.  Every @meta{item-type}
 is a nested type annotation.  A value matches a union of types if its
 type matches at least one of the union's types.
 
 @lisp
-(is-a? 1      (union <fixnum> <string>))  @result{} #t
-(is-a? "ciao" (union <fixnum> <string>))  @result{} #t
-(is-a? 1.23   (union <fixnum> <string>))  @result{} #f
+(is-a? 1      (or <fixnum> <string>))   @result{} #t
+(is-a? "ciao" (or <fixnum> <string>))   @result{} #t
+(is-a? 1.23   (or <fixnum> <string>))   @result{} #f
 @end lisp
 @end deftp
 
@@ -2191,7 +2189,7 @@ Type of exact rational values.  Its definition is equivalent to:
 
 @lisp
 (define-type <exact-rational>
-  (union <exact-integer> <ratnum>))
+  (or <exact-integer> <ratnum>))
 @end lisp
 @end deftp
 
@@ -2238,7 +2236,7 @@ Type of non--negative exact integers.  Its definition is equivalent to:
 
 @lisp
 (define-type <non-negative-exact-integer>
-  (union <non-negative-fixnum> <positive-bignum>))
+  (or <non-negative-fixnum> <positive-bignum>))
 @end lisp
 @end deftp
 
@@ -2479,7 +2477,7 @@ Type of exact numeric values.  Its definition is equivalent to:
 
 @lisp
 (define-type <exact>
-  (union <exact-rational> <exact-compnum>))
+  (or <exact-rational> <exact-compnum>))
 @end lisp
 @end deftp
 
@@ -2489,7 +2487,7 @@ Type of inexact numeric values.  Its definition is equivalent to:
 
 @lisp
 (define-type <inexact>
-  (union <flonum> <cflonum> <inexact-compnum>))
+  (or <flonum> <cflonum> <inexact-compnum>))
 @end lisp
 @end deftp
 
@@ -3324,7 +3322,7 @@ The type of the field in the built--in condition object type
 
 @lisp
 (define-type <&who-value>
-  (union <false> <symbol> <string>))
+  (or <false> <symbol> <string>))
 @end lisp
 @end deftp
 

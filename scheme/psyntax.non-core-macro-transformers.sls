@@ -254,7 +254,7 @@
 	  sealed opaque nongenerative parent-rtd
 	  super-protocol destructor-protocol custom-predicate custom-printer method case-method define-type-descriptors
 	  catch finally
-	  pair pair-of list-of vector-of union)
+	  pair pair-of list-of vector-of)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 

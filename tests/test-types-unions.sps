@@ -103,13 +103,13 @@
 (parametrise ((check-test-name	'is-a))
 
   (define-type <stuff>
-    (union <fixnum> <string> <symbol>))
+    (or <fixnum> <string> <symbol>))
 
 ;;; --------------------------------------------------------------------
 
-  (check-for-true	(is-a? 1	(union <fixnum> <flonum>)))
-  (check-for-true	(is-a? 1.2	(union <fixnum> <flonum>)))
-  (check-for-false	(is-a? "ciao"	(union <fixnum> <flonum>)))
+  (check-for-true	(is-a? 1	(or <fixnum> <flonum>)))
+  (check-for-true	(is-a? 1.2	(or <fixnum> <flonum>)))
+  (check-for-false	(is-a? "ciao"	(or <fixnum> <flonum>)))
 
   (check-for-true	(is-a? 1	<stuff>))
   (check-for-true	(is-a? "ciao"	<stuff>))
