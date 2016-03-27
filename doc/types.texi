@@ -489,6 +489,23 @@ intersection of types if its type matches all the intersection's types.
 @end lisp
 @end deftp
 
+
+@deftp {Compound Type Annotation} not @metao{item-type}
+Describe the complement of the type.  The argument @meta{item-type} is a
+nested type annotation.  A value matches the complement of a type if its
+type does @strong{not} match the complement's type.
+
+@lisp
+(is-a? 1   (not <string>))      @result{} #t
+(is-a? 1.0 (not <fixnum>))      @result{} #f
+
+;;If something is not a "<number>", for sure it is
+;;not a "<fixnum>".
+(type-super-and-sub? (not <fixnum>) (not <number>))
+@result{} #t
+@end lisp
+@end deftp
+
 @c page
 @node types intro type ids
 @subsection Type identifiers

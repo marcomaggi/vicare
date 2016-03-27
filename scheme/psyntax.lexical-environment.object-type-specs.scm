@@ -39,6 +39,10 @@
 ;;           |
 ;;           |------------> <union-type-spec>
 ;;           |
+;;           |------------> <intersection-type-spec>
+;;           |
+;;           |------------> <complement-type-spec>
+;;           |
 ;;	     |------------> <pair-type-spec>
 ;;           |
 ;;	     |------------> <pair-of-type-spec>
@@ -185,6 +189,11 @@
 	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
 	 make-intersection-type-spec			intersection-type-spec?
 	 intersection-type-spec.component-ots*
+
+	 <complement-type-spec>
+	 <complement-type-spec>-rtd			<complement-type-spec>-rcd
+	 make-complement-type-spec			complement-type-spec?
+	 complement-type-spec.item-ots
 
 	 ;;;
 
@@ -488,6 +497,30 @@
 	 (for-all (lambda (component-sub.ots)
 		    (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
 	   (intersection-type-spec.component-ots* sub.ots)))
+
+;;; --------------------------------------------------------------------
+;;; We really want to do the complements first.
+
+	((complement-type-spec? super.ots)
+	 (cond ((complement-type-spec? sub.ots)
+		;;If something is not a "<number>", for sure it is not a "<fixnum>":
+		;;
+		;; (type-super-and-sub? (complement <fixnum>)
+		;;                      (complement <number>)) => #t
+		;;
+		;; (type-super-and-sub? (complement <number>)
+		;;                      (complement <string>)) => #f
+		;;
+		(let ((super-item.ots	(complement-type-spec.item-ots super.ots))
+		      (sub-item.ots	(complement-type-spec.item-ots sub.ots)))
+		  (object-type-spec.matching-super-and-sub? sub-item.ots super-item.ots)))
+	       (else
+		;; (type-super-and-sub? (complement <string>) <fixnum>) => #t
+		(not (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots super.ots)
+							       sub.ots)))))
+
+	((complement-type-spec? sub.ots)
+	 #f)
 
 ;;; --------------------------------------------------------------------
 ;;; empty lists
@@ -1378,7 +1411,8 @@
 
 ;;;; union object spec
 ;;
-;;This record-type is used as syntactic binding descriptor's value for union types.
+;;This record-type  is used as  syntactic binding  descriptor's value for  type union
+;;types.
 ;;
 (define-record-type (<union-type-spec> make-union-type-spec union-type-spec?)
   (nongenerative vicare:expander:<union-type-spec>)
@@ -1456,7 +1490,8 @@
 
 ;;;; intersection object spec
 ;;
-;;This record-type is used as syntactic binding descriptor's value for intersection types.
+;;This  record-type  is  used  as  syntactic  binding  descriptor's  value  for  type
+;;intersection types.
 ;;
 (define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
   (nongenerative vicare:expander:<intersection-type-spec>)
@@ -1530,6 +1565,58 @@
 	    (length (intersection-type-spec.component-ots* intersection.ots))
 	  (intersection-type-spec.memoised-length-set! intersection.ots len))
       mem)))
+
+
+;;;; complement object spec
+;;
+;;This  record-type  is  used  as  syntactic  binding  descriptor's  value  for  type
+;;complement types.
+;;
+(define-record-type (<complement-type-spec> make-complement-type-spec complement-type-spec?)
+  (nongenerative vicare:expander:<complement-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable item-ots			complement-type-spec.item-ots)
+		;An instance of "<object-type-spec>" describing the forbidden type.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-complement-type-spec {item-type.ots object-type-spec?})
+	(let* ((name.stx		(cons (core-prim-id 'not) (object-type-spec.name item-type.ots)))
+	       (parent.ots		(<top>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		(make-complement-predicate (object-type-spec.type-predicate-stx item-type.ots)))
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name.stx parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  accessors-table mutators-table methods-table)
+	   item-type.ots)))
+
+      (define (make-complement-predicate item-pred.stx)
+	(let ((obj.sym	(gensym "obj")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (not (,item-pred.stx ,obj.sym))))))
+
+      make-complement-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[complement-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <complement-type-spec>-rtd
+  (record-type-descriptor <complement-type-spec>))
+
+(define <complement-type-spec>-rcd
+  (record-constructor-descriptor <complement-type-spec>))
 
 
 ;;;; closure object signature spec
@@ -2111,7 +2198,7 @@
   ;;fully unwrapped syntax object representing the same type annotation.
   ;;
   (let recur ((stx input-form.stx))
-    (syntax-match stx (pair list vector pair-of list-of vector-of condition or and)
+    (syntax-match stx (pair list vector pair-of list-of vector-of condition or and not)
       ((pair ?car-type ?cdr-type)
        (list (core-prim-id 'pair)
 	     (recur ?car-type)
@@ -2149,6 +2236,10 @@
        (list (core-prim-id 'and)
 	     (map recur ?component-type*)))
 
+      ((not ?item-type)
+       (list (core-prim-id 'not)
+	     (recur ?item-type)))
+
       (?type-id
        (type-identifier? ?type-id)
        ?type-id)
@@ -2181,7 +2272,7 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and not)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-specification __who__ #f ?type-id lexenv))
@@ -2250,6 +2341,9 @@
       (make-intersection-type-spec (map (lambda (type.stx)
 					  (type-annotation->object-type-specification type.stx lexenv))
 				     ?component-type*)))
+
+     ((not ?item-type)
+      (make-complement-type-spec (type-annotation->object-type-specification ?item-type lexenv)))
 
      (else
       (assertion-violation __who__ "invalid type annotation" annotation.stx)))))

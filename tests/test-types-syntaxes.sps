@@ -347,6 +347,22 @@
 					     (and <negative-fixnum> <positive-flonum>)))
 
 ;;; --------------------------------------------------------------------
+;;; complement
+
+  ;;If something is not a "<number>", for sure it is not a "<fixnum>".
+  (check-for-true	(type-super-and-sub? (not <fixnum>) (not <number>)))
+
+  ;;If something is not a "<fixnum>"
+  (check-for-false	(type-super-and-sub? (not <number>) (not <fixnum>)))
+  (check-for-false	(type-super-and-sub? (not <number>) (not <string>)))
+
+  (check-for-true	(type-super-and-sub? (not <string>) <number>))
+  (check-for-false	(type-super-and-sub? (not <number>) <number>))
+  (check-for-false	(type-super-and-sub? (not <number>) <fixnum>))
+
+  (check-for-false	(type-super-and-sub? <number> (not <string>)))
+
+;;; --------------------------------------------------------------------
 ;;; misc
 
   (check-for-true	(type-super-and-sub? (or <exact> <inexact>)	<fixnum>))
