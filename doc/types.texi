@@ -360,6 +360,7 @@ syntaxes like the following:
 (vector-of <fixnum>)
 (condition &who &message &irritants)
 (union <false> <symbol> <string>)
+(or    <false> <symbol> <string>)
 @end lisp
 
 @noindent
@@ -465,6 +466,7 @@ is a nested type annotation that must be one among: @class{condition},
 
 
 @deftp {Compound Type Annotation} union @metao{item-type} @meta{item-type} @dots{}
+@deftpx {Compound Type Annotation} or @metao{item-type} @meta{item-type} @dots{}
 Describe the union between the specified types.  Every @meta{item-type}
 is a nested type annotation.  A value matches a union of types if its
 type is one of the item types.

@@ -274,7 +274,7 @@
 
   (check-for-false	(type-super-and-sub? (pair <number> <number>) (pair-of <string>)))
 
-  (check-for-true	(type-super-and-sub? (list <fixnum>) (pair-of (union <fixnum> <null>))))
+  (check-for-false	(type-super-and-sub? (list <fixnum>) (pair-of (union <fixnum> <null>))))
 
   (check-for-true	(type-super-and-sub? (pair <fixnum> <null>)
 					     (list <fixnum>)))
@@ -300,6 +300,36 @@
   ;;Does not  match because the PAIR-OF  annotation implies at least  one item, while
   ;;the LIST-OF annotation implies nothing.
   (check-for-false	(type-super-and-sub? (list-of <fixnum>) (pair-of (union <fixnum> <null>))))
+
+;;; --------------------------------------------------------------------
+;;; unions
+
+  (check-for-true	(type-super-and-sub? (union <number>) (or <number>)))
+  (check-for-true	(type-super-and-sub? (union <number>) (or <fixnum>)))
+  (check-for-false	(type-super-and-sub? (union <fixnum>) (or <number>)))
+
+  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <number> <string>)))
+  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <fixnum> <string>)))
+  (check-for-true	(type-super-and-sub? (or <number> <vector>) (or <fixnum> (vector-of <symbol>))))
+
+  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <string> <number>)))
+  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <string> <fixnum>)))
+  (check-for-true	(type-super-and-sub? (or <number> <vector>) (or (vector-of <symbol>) <fixnum>)))
+
+  (check-for-true	(type-super-and-sub? (or <number> <string>)	<number>))
+  (check-for-true	(type-super-and-sub? (or <number> <string>)	<fixnum>))
+  (check-for-true	(type-super-and-sub? (or <number> <string>)	<string>))
+
+  ;;True because all the types in the union are sub-types of the super-type.
+  (check-for-true	(type-super-and-sub? <number>	(or <fixnum> <flonum>)))
+
+  (check-for-false	(type-super-and-sub? <number>	(or <number> <string>)))
+  (check-for-false	(type-super-and-sub? <string>	(or <number> <string>)))
+
+;;; --------------------------------------------------------------------
+;;; misc
+
+  (check-for-true	(type-super-and-sub? (or <exact> <inexact>)	<fixnum>))
 
   (void))
 

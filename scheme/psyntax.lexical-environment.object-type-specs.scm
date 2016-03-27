@@ -438,13 +438,25 @@
 ;;; We really want to do the unions first.
 
 	((union-type-spec? super.ots)
-	 (exists (lambda (component-super.ots)
-		   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
-	   (union-type-spec.component-ots* super.ots)))
+	 (cond ((union-type-spec? sub.ots)
+		;; (type-super-and-sub? (union <number> <vector>)
+		;;                      (union <fixnum> (vector-of <string>)))
+		;; => #t
+		(exists (lambda (component-super.ots)
+			  (exists (lambda (component-sub.ots)
+				    (object-type-spec.matching-super-and-sub? component-super.ots component-sub.ots))
+			    (union-type-spec.component-ots* sub.ots)))
+		  (union-type-spec.component-ots* super.ots)))
+	       (else
+		;; (type-super-and-sub? (union <number> <string>) <string>) => #t
+		;; (type-super-and-sub? (union <number> <string>) <fixnum>) => #t
+		(exists (lambda (component-super.ots)
+			  (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
+		  (union-type-spec.component-ots* super.ots)))))
 
 	((union-type-spec? sub.ots)
-	 (exists (lambda (component-sub.ots)
-		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+	 (for-all (lambda (component-sub.ots)
+		    (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
 	   (union-type-spec.component-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
@@ -747,9 +759,7 @@
   ;;As  example: a  "<number>" argument  matches a  "<fixnum>" operand;  a "<fixnum>"
   ;;argument is compatible with a "<number>" operand.
   ;;
-  (cond ((object-type-spec.matching-super-and-sub? sub.ots super.ots))
-
-	((and (list-of-type-spec? super.ots)
+  (cond ((and (list-of-type-spec? super.ots)
 	      (list-type-spec? sub.ots))
 	 (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
 	   (for-all (lambda (sub-item.ots)
@@ -770,6 +780,13 @@
 	   (for-all (lambda (sub-item.ots)
 		      (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
 	     (vector-type-spec.item-ots* sub.ots))))
+
+	((union-type-spec? sub.ots)
+	 (exists (lambda (component-sub.ots)
+		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+	   (union-type-spec.component-ots* sub.ots)))
+
+	((object-type-spec.matching-super-and-sub? sub.ots super.ots))
 
 	(else #f)))
 
@@ -1984,7 +2001,7 @@
   ;;fully unwrapped syntax object representing the same type annotation.
   ;;
   (let recur ((stx input-form.stx))
-    (syntax-match stx (pair list vector pair-of list-of vector-of condition union)
+    (syntax-match stx (pair list vector pair-of list-of vector-of condition union or)
       ((pair ?car-type ?cdr-type)
        (list (core-prim-id 'pair)
 	     (recur ?car-type)
@@ -2016,6 +2033,10 @@
 
       ((union ?component-type* ...)
        (list (core-prim-id 'union)
+	     (map recur ?component-type*)))
+
+      ((or ?component-type* ...)
+       (list (core-prim-id 'or)
 	     (map recur ?component-type*)))
 
       (?type-id
@@ -2050,7 +2071,7 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition union)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition union or)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-specification __who__ #f ?type-id lexenv))
@@ -2111,6 +2132,11 @@
 	  (make-compound-condition-type-spec specs))))
 
      ((union ?component-type* ...)
+      (make-union-type-spec (map (lambda (type.stx)
+				   (type-annotation->object-type-specification type.stx lexenv))
+			      ?component-type*)))
+
+     ((or ?component-type* ...)
       (make-union-type-spec (map (lambda (type.stx)
 				   (type-annotation->object-type-specification type.stx lexenv))
 			      ?component-type*)))
