@@ -2240,6 +2240,26 @@ Type of non--negative exact integers.  Its definition is equivalent to:
 @end lisp
 @end deftp
 
+
+@deftp {Built--in Type} @aclass{positive-exact-integer}
+Type of positive exact integers.  Its definition is equivalent to:
+
+@lisp
+(define-type <positive-exact-integer>
+  (or <positive-fixnum> <positive-bignum>))
+@end lisp
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{negative-exact-integer}
+Type of negative exact integers.  Its definition is equivalent to:
+
+@lisp
+(define-type <negative-exact-integer>
+  (or <negative-fixnum> <negative-bignum>))
+@end lisp
+@end deftp
+
 @c page
 @node types built-in numerics fixnums
 @subsubsection Type of fixnum values
@@ -2341,21 +2361,24 @@ predicate is @func{negative-flonum?}.
 
 
 @deftp {Built--in Type} @aclass{zero-flonum}
-@deftpx {Parent Type} @aclass{non-negative-flonum}
-Type of zero flonum values.  There is no constructor.  The type
-predicate is @func{zero-flonum?}.
+Type of zero flonum values.  Its definition is equivalent to:
+
+@lisp
+(define-type <zero-flonum>
+  (or <positive-zero-flonum> <negative-zero-flonum>))
+@end lisp
 @end deftp
 
 
 @deftp {Built--in Type} @aclass{positive-zero-flonum}
-@deftpx {Parent Type} @aclass{zero-flonum}
+@deftpx {Parent Type} @aclass{positive-flonum}
 Type of zero flonum values.  There is no constructor.  The type
 predicate is @func{positive-zero-flonum?}.
 @end deftp
 
 
 @deftp {Built--in Type} @aclass{negative-zero-flonum}
-@deftpx {Parent Type} @aclass{zero-flonum}
+@deftpx {Parent Type} @aclass{negative-flonum}
 Type of zero flonum values.  There is no constructor.  The type
 predicate is @func{negative-zero-flonum?}.
 @end deftp
@@ -2500,7 +2523,7 @@ Type of inexact numeric values.  Its definition is equivalent to:
 Type of positive numeric values.  Its definition is equivalent to:
 
 @lisp
-(define-type-annotation <positive>
+(define-type <positive>
   (or <positive-fixnum> <positive-bignum> <positive-ratnum>
       <positive-flonum> <positive-zero-flonum>))
 @end lisp
@@ -2511,9 +2534,30 @@ Type of positive numeric values.  Its definition is equivalent to:
 Type of negative numeric values.  Its definition is equivalent to:
 
 @lisp
-(define-type-annotation <negative>
+(define-type <negative>
   (or <negative-fixnum> <negative-bignum> <negative-ratnum>
       <negative-flonum> <negative-zero-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Built--in Type} @class{non-negative}
+Type of non--negative numeric values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-negative>
+  (or <non-negative-fixnum> <non-negative-bignum>
+      <non-negative-ratnum> <non-negative-flonum>))
+@end lisp
+@end deftp
+
+
+@deftp {Built--in Type} @class{zero}
+Type of zero numeric values.  Its definition is equivalent to:
+
+@lisp
+(define-type <zero>
+  (or <zero-fixnum> <zero-flonum>))
 @end lisp
 @end deftp
 
@@ -3331,7 +3375,7 @@ The type of the field in the built--in condition object type
 The type of file descriptor values.  Its definition is equivalent to:
 
 @lisp
-(define-type-annotation <file-descriptor>
+(define-type <file-descriptor>
   <non-negative-fixnum>)
 @end lisp
 @end deftp

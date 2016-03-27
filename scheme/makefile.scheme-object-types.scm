@@ -220,20 +220,16 @@
     <non-negative-flonum>
   #t positive-flonum?)
 
-(define-scheme-type <zero-flonum>
-    <non-negative-flonum>
-  #t zero-flonum?)
-
 (define-scheme-type <negative-flonum>
     <flonum>
   #t negative-flonum?)
 
 (define-scheme-type <positive-zero-flonum>
-    <zero-flonum>
+    <positive-flonum>
   #t positive-zero-flonum?)
 
 (define-scheme-type <negative-zero-flonum>
-    <zero-flonum>
+    <negative-flonum>
   #t negative-zero-flonum?)
 
 ;;; --------------------------------------------------------------------

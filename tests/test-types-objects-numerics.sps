@@ -61,12 +61,14 @@
 
 (parametrise ((check-test-name		'sign))
 
+  (check-for-false	(is-a? 0				<positive>))
   (check-for-true	(is-a? +1				<positive>))
   (check-for-true	(is-a? (least-positive-bignum)		<positive>))
   (check-for-true	(is-a? +1/2				<positive>))
   (check-for-true	(is-a? +1.2				<positive>))
   (check-for-true	(is-a? +0.0				<positive>))
 
+  (check-for-false	(is-a? 0				<negative>))
   (check-for-false	(is-a? +1				<negative>))
   (check-for-false	(is-a? (least-positive-bignum)		<negative>))
   (check-for-false	(is-a? +1/2				<negative>))
@@ -84,6 +86,19 @@
   (check-for-false	(is-a? -1/2				<positive>))
   (check-for-false	(is-a? -1.2				<positive>))
   (check-for-false	(is-a? -0.0				<positive>))
+
+  (check-for-true	(is-a? 0				<non-negative>))
+  (check-for-true	(is-a? +1				<non-negative>))
+  (check-for-true	(is-a? (least-positive-bignum)		<non-negative>))
+  (check-for-true	(is-a? +1/2				<non-negative>))
+  (check-for-true	(is-a? +1.2				<non-negative>))
+  (check-for-true	(is-a? +0.0				<non-negative>))
+
+  (check-for-false	(is-a? -0.0				<non-negative>))
+  (check-for-false	(is-a? -1				<non-negative>))
+  (check-for-false	(is-a? (greatest-negative-bignum)	<non-negative>))
+  (check-for-false	(is-a? -1/2				<non-negative>))
+  (check-for-false	(is-a? -1.2				<non-negative>))
 
 ;;; --------------------------------------------------------------------
 ;;; run-time predicate
@@ -118,6 +133,44 @@
     (check-for-false		(body "+1/2" <negative>))
     (check-for-true		(body "-1/2" <negative>))
     (check-for-false		(body "-1/2" <positive>))
+
+    (check-for-true		(body "+0.0"	<non-negative>))
+    (check-for-true		(body "+1"	<non-negative>))
+    (check-for-true		(body "+1.0"	<non-negative>))
+    (check-for-true		(body "+1/2"	<non-negative>))
+    (check-for-true		(body "0"	<non-negative>))
+    (check-for-false		(body "-0.0"	<non-negative>))
+    (check-for-false		(body "-1"	<non-negative>))
+    (check-for-false		(body "-1.0"	<non-negative>))
+    (check-for-false		(body "-1/2"	<non-negative>))
+
+    #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? 0	<zero>))
+  (check-for-true	(is-a? +0.0	<zero>))
+  (check-for-true	(is-a? -0.0	<zero>))
+  (check-for-false	(is-a? 1	<zero>))
+  (check-for-false	(is-a? 1.1	<zero>))
+  (check-for-false	(is-a? 1/2	<zero>))
+  (check-for-false	(is-a? 1+2i	<zero>))
+  (check-for-false	(is-a? 1.0+2.0i	<zero>))
+
+  (let-syntax ((body (syntax-rules ()
+		       ((_ ?string)
+			(let ((port (open-string-input-port ?string)))
+			  (is-a? (read port) <zero>)))
+		       )))
+
+    (check-for-true	(body "0"))
+    (check-for-true	(body "+0.0"))
+    (check-for-true	(body "-0.0"))
+    (check-for-false	(body "1"))
+    (check-for-false	(body "1.1"))
+    (check-for-false	(body "1/2"))
+    (check-for-false	(body "1+2i"))
+    (check-for-false	(body "1.0+2.0i"))
 
     #| end of LET-SYNTAX |# )
 

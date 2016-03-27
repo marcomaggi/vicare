@@ -23,11 +23,40 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
+
+;;;; syntaxes
+
+(define-syntax* (define-type-annotation stx)
+  ;;Hard-coded built-in type annotations are meant to be equivalent to:
+  ;;
+  ;;   (define-type ?type-name ?type-annotation)
+  ;;
+  (syntax-case stx ()
+    ((?kwd ?type-name ?type-annotation)
+     #'(set-cons! VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
+		  (quote (?type-name
+			  ($core-type-annotation
+			   . (?type-name ?type-annotation))))))
+    ))
+
+
+;;;; definitions
+
 (define-type-annotation <&who-value>
   (or <false> <symbol> <string>))
 
+;;; --------------------------------------------------------------------
+
 (define-type-annotation <non-negative-exact-integer>
   (or <non-negative-fixnum> <positive-bignum>))
+
+(define-type-annotation <positive-exact-integer>
+  (or <positive-fixnum> <positive-bignum>))
+
+(define-type-annotation <negative-exact-integer>
+  (or <negative-fixnum> <negative-bignum>))
+
+;;; --------------------------------------------------------------------
 
 (define-type-annotation <exact-rational>
   (or <exact-integer> <ratnum>))
@@ -46,9 +75,19 @@
   (or <positive-fixnum> <positive-bignum> <positive-ratnum>
       <positive-flonum> <positive-zero-flonum>))
 
+(define-type-annotation <non-negative>
+  (or <non-negative-fixnum> <positive-bignum> <positive-ratnum>
+      <positive-flonum> <positive-zero-flonum>))
+
 (define-type-annotation <negative>
   (or <negative-fixnum> <negative-bignum> <negative-ratnum>
       <negative-flonum> <negative-zero-flonum>))
+
+(define-type-annotation <zero-flonum>
+  (or <positive-zero-flonum> <negative-zero-flonum>))
+
+(define-type-annotation <zero>
+  (or <zero-fixnum> <zero-flonum>))
 
 ;;; --------------------------------------------------------------------
 
@@ -65,6 +104,9 @@
 ;;       <vector-of-syntax-objects>
 ;;       <list-of-syntax-objects>
 ;;       ))
+
+
+;;;; done
 
 ;;; end of file
 ;; Local Variables:

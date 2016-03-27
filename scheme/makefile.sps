@@ -843,19 +843,6 @@
 					     ((?method-name . ?method-implementation-procedure) ...)))))))))
     ))
 
-(define-syntax* (define-type-annotation stx)
-  ;;Hard-coded built-in type annotations are meant to be equivalent to:
-  ;;
-  ;;   (define-type ?type-name ?type-annotation)
-  ;;
-  (syntax-case stx ()
-    ((?kwd ?type-name ?type-annotation)
-     #'(set-cons! VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
-		  (quote (?type-name
-			  ($core-type-annotation
-			   . (?type-name ?type-annotation))))))
-    ))
-
 ;;; --------------------------------------------------------------------
 
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
@@ -3505,11 +3492,16 @@
     (<non-negative-flonum>			v $language)
     (<positive-flonum>				v $language)
     (<negative-flonum>				v $language)
-    (<zero-flonum>				v $language)
     (<positive-zero-flonum>			v $language)
     (<negative-zero-flonum>			v $language)
+    (<zero-flonum>				v $language)
 
     (<non-negative-exact-integer>		v $language)
+    (<positive-exact-integer>			v $language)
+    (<negative-exact-integer>			v $language)
+
+    (<zero>					v $language)
+
     (<exact-rational>				v $language)
 
     (<exact>					v $language)
@@ -3517,6 +3509,7 @@
 
     (<positive>					v $language)
     (<negative>					v $language)
+    (<non-negative>				v $language)
 
     (<file-descriptor>				v $language)
 
@@ -3665,7 +3658,6 @@
     (<void>-type-descriptor)
     (<would-block>-type-descriptor)
     (<zero-fixnum>-type-descriptor)
-    (<zero-flonum>-type-descriptor)
 
     ;; helpers
     (<top>-constructor)
