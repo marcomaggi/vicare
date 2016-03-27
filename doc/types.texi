@@ -2356,15 +2356,8 @@ Type of flonum values.  There is no constructor.  The type predicate is
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-negative-flonum}
-@deftpx {Parent Type} @aclass{flonum}
-Type of non--negative flonum values.  There is no constructor.  The type
-predicate is @func{non-negative-flonum?}.
-@end deftp
-
-
 @deftp {Built--in Type} @aclass{positive-flonum}
-@deftpx {Parent Type} @aclass{non-negative-flonum}
+@deftpx {Parent Type} @aclass{flonum}
 Type of positive flonum values.  There is no constructor.  The type
 predicate is @func{positive-flonum?}.
 @end deftp
@@ -2374,16 +2367,6 @@ predicate is @func{positive-flonum?}.
 @deftpx {Parent Type} @aclass{flonum}
 Type of negative flonum values.  There is no constructor.  The type
 predicate is @func{negative-flonum?}.
-@end deftp
-
-
-@deftp {Built--in Type} @aclass{zero-flonum}
-Type of zero flonum values.  Its definition is equivalent to:
-
-@lisp
-(define-type <zero-flonum>
-  (or <positive-zero-flonum> <negative-zero-flonum>))
-@end lisp
 @end deftp
 
 
@@ -2398,6 +2381,16 @@ predicate is @func{positive-zero-flonum?}.
 @deftpx {Parent Type} @aclass{negative-flonum}
 Type of zero flonum values.  There is no constructor.  The type
 predicate is @func{negative-zero-flonum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{zero-flonum}
+Type of zero flonum values.  Its definition is equivalent to:
+
+@lisp
+(define-type <zero-flonum>
+  (or <positive-zero-flonum> <negative-zero-flonum>))
+@end lisp
 @end deftp
 
 @c page
@@ -2563,8 +2556,8 @@ Type of non--negative numeric values.  Its definition is equivalent to:
 
 @lisp
 (define-type <non-negative>
-  (or <non-negative-fixnum> <non-negative-bignum>
-      <non-negative-ratnum> <non-negative-flonum>))
+  (or <non-negative-fixnum> <positive-bignum> <positive-ratnum>
+      <positive-flonum> <positive-zero-flonum>))
 @end lisp
 @end deftp
 

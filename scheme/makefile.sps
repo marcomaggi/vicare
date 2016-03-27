@@ -3489,7 +3489,6 @@
     (<positive-ratnum>				v $language)
     (<negative-ratnum>				v $language)
 
-    (<non-negative-flonum>			v $language)
     (<positive-flonum>				v $language)
     (<negative-flonum>				v $language)
     (<positive-zero-flonum>			v $language)
@@ -3617,7 +3616,6 @@
     (<negative-ratnum>-type-descriptor)
     (<negative-zero-flonum>-type-descriptor)
     (<non-negative-fixnum>-type-descriptor)
-    (<non-negative-flonum>-type-descriptor)
     (<no-return>-type-descriptor)
     (<null>-type-descriptor)
     (<number>-type-descriptor)

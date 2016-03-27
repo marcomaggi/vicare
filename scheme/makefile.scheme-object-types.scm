@@ -212,12 +212,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-scheme-type <non-negative-flonum>
-    <flonum>
-  #t non-negative-flonum?)
-
 (define-scheme-type <positive-flonum>
-    <non-negative-flonum>
+    <flonum>
   #t positive-flonum?)
 
 (define-scheme-type <negative-flonum>
