@@ -141,6 +141,11 @@
     <union-type-spec>-rtd				<union-type-spec>-rcd
     make-union-type-spec				union-type-spec?
     union-type-spec.component-ots*
+
+    <intersection-type-spec>
+    <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
+    make-intersection-type-spec				intersection-type-spec?
+    intersection-type-spec.component-ots*
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd

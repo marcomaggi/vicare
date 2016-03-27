@@ -51,11 +51,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ({fun-1 (union <flonum> <string>)})
+  (define ({fun-1 (or <flonum> <string>)})
     1.2)
 
   (define-type <fixnum/flonum>
-    (union <fixnum> <flonum>))
+    (or <fixnum> <flonum>))
 
   (define ({fun-2 <fixnum/flonum>})
     1.2)
@@ -63,10 +63,10 @@
 ;;; --------------------------------------------------------------------
 
   (doit (fun-1)
-	#'((union <flonum> <string>)))
+	#'((or <flonum> <string>)))
 
   (doit (fun-2)
-	#'((union <fixnum> <flonum>)))
+	#'((or <fixnum> <flonum>)))
 
   (void))
 
@@ -85,17 +85,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (doit (union <fixnum> <string>)
-	(union <fixnum> <string>))
+  (doit (or <fixnum> <string>)
+	(or <fixnum> <string>))
 
-  (doit (union <fixnum> (union <string>))
-	(union <fixnum> <string>))
+  (doit (or <fixnum> (or <string>))
+	(or <fixnum> <string>))
 
-  (doit (union <fixnum> (union <string> <symbol>))
-	(union <fixnum> <string> <symbol>))
+  (doit (or <fixnum> (or <string> <symbol>))
+	(or <fixnum> <string> <symbol>))
 
-  (doit (union <fixnum> (union (union <string>) <symbol>))
-	(union <fixnum> <string> <symbol>))
+  (doit (or <fixnum> (or (or <string>) <symbol>))
+	(or <fixnum> <string> <symbol>))
 
   (void))
 

@@ -181,6 +181,11 @@
 	 make-union-type-spec				union-type-spec?
 	 union-type-spec.component-ots*
 
+	 <intersection-type-spec>
+	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
+	 make-intersection-type-spec			intersection-type-spec?
+	 intersection-type-spec.component-ots*
+
 	 ;;;
 
 	 syntax-object.parse-type-annotation			syntax-object.type-annotation?
@@ -458,6 +463,31 @@
 	 (for-all (lambda (component-sub.ots)
 		    (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
 	   (union-type-spec.component-ots* sub.ots)))
+
+;;; --------------------------------------------------------------------
+;;; We really want to do the intersections first.
+
+	((intersection-type-spec? super.ots)
+	 (cond ((intersection-type-spec? sub.ots)
+		;; (type-super-and-sub? (intersection <number> <positive>)
+		;;                      (intersection <positive-fixnum>
+		;;                                    <positive-ratnum>))
+		;; => #t
+		(for-all (lambda (component-super.ots)
+			   (for-all (lambda (component-sub.ots)
+				      (object-type-spec.matching-super-and-sub? component-super.ots component-sub.ots))
+			     (intersection-type-spec.component-ots* sub.ots)))
+		  (intersection-type-spec.component-ots* super.ots)))
+	       (else
+		;; (type-super-and-sub? (intersection <exact> <positive>) <positive-fixnum>) => #t
+		(for-all (lambda (component-super.ots)
+			   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
+		  (intersection-type-spec.component-ots* super.ots)))))
+
+	((intersection-type-spec? sub.ots)
+	 (for-all (lambda (component-sub.ots)
+		    (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+	   (intersection-type-spec.component-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
 ;;; empty lists
@@ -750,7 +780,9 @@
 
 (define* (object-type-spec.compatible-super-and-sub? {super.ots object-type-spec?} {sub.ots object-type-spec?})
   ;;This function  is used to check  for non-matching compatibility between  two type
-  ;;specifications.
+  ;;specifications.       It      is      meant      to      be      called      when
+  ;;OBJECT-TYPE-SPEC.MATCHING-SUPER-AND-SUB? has already returned  #f when applied to
+  ;;the same operands.
   ;;
   ;;Usage example: when  applying a typed function  to a tuple of  operands, we check
   ;;the arguments' types  against the operands's types: if they  match, good; if they
@@ -1364,7 +1396,7 @@
     (lambda (make-object-type-spec)
       (define* (make-union-type-spec {component-type*.ots list-of-object-type-spec?})
 	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
-	       (name.stx		(cons (core-prim-id 'union)
+	       (name.stx		(cons (core-prim-id 'or)
 					      (map object-type-spec.name component-type*.ots)))
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
@@ -1419,6 +1451,84 @@
 	(receive-and-return (len)
 	    (length (union-type-spec.component-ots* union.ots))
 	  (union-type-spec.memoised-length-set! union.ots len))
+      mem)))
+
+
+;;;; intersection object spec
+;;
+;;This record-type is used as syntactic binding descriptor's value for intersection types.
+;;
+(define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
+  (nongenerative vicare:expander:<intersection-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable component-ots*		intersection-type-spec.component-ots*)
+		;A list of instances  of "<object-type-spec>" describing the optional
+		;types.
+    (mutable memoised-length		intersection-type-spec.memoised-length intersection-type-spec.memoised-length-set!)
+		;Initialised   to  void.    This   field  memoises   the  result   of
+		;INTERSECTION-TYPE-SPEC.LENGTH.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-intersection-type-spec {component-type*.ots list-of-object-type-spec?})
+	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
+	       (name.stx		(cons (core-prim-id 'and)
+					      (map object-type-spec.name component-type*.ots)))
+	       (parent.ots		(<top>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		(make-intersection-predicate (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name.stx parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  accessors-table mutators-table methods-table)
+	   component-type*.ots (void))))
+
+      (define (%collapse-component-specs component-type*.ots)
+	(object-type-specs-delete-duplicates
+	 (fold-right (lambda (component.ots knil)
+		       (cond ((intersection-type-spec? component.ots)
+			      (append (intersection-type-spec.component-ots* component.ots)
+				      knil))
+			     (else
+			      (cons component.ots knil))))
+	   '() component-type*.ots)))
+
+      (define (make-intersection-predicate component-pred*.stx)
+	(let ((obj.sym	(gensym "obj"))
+	      (pred.sym	(gensym "pred")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (for-all (lambda (,pred.sym)
+			 (,pred.sym ,obj.sym))
+		(list ,@component-pred*.stx))))))
+
+      make-intersection-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[intersection-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <intersection-type-spec>-rtd
+  (record-type-descriptor <intersection-type-spec>))
+
+(define <intersection-type-spec>-rcd
+  (record-constructor-descriptor <intersection-type-spec>))
+
+(define* (intersection-type-spec.length {intersection.ots intersection-type-spec?})
+  (let ((mem (intersection-type-spec.memoised-length intersection.ots)))
+    (if (void-object? mem)
+	(receive-and-return (len)
+	    (length (intersection-type-spec.component-ots* intersection.ots))
+	  (intersection-type-spec.memoised-length-set! intersection.ots len))
       mem)))
 
 
@@ -2001,7 +2111,8 @@
   ;;fully unwrapped syntax object representing the same type annotation.
   ;;
   (let recur ((stx input-form.stx))
-    (syntax-match stx (pair list vector pair-of list-of vector-of condition union or)
+    (syntax-match stx (pair list vector pair-of list-of vector-of condition
+			    union or and)
       ((pair ?car-type ?cdr-type)
        (list (core-prim-id 'pair)
 	     (recur ?car-type)
@@ -2039,6 +2150,10 @@
        (list (core-prim-id 'or)
 	     (map recur ?component-type*)))
 
+      ((and ?component-type* ...)
+       (list (core-prim-id 'and)
+	     (map recur ?component-type*)))
+
       (?type-id
        (type-identifier? ?type-id)
        ?type-id)
@@ -2071,7 +2186,8 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition union or)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition
+				      union or and)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-specification __who__ #f ?type-id lexenv))
@@ -2140,6 +2256,11 @@
       (make-union-type-spec (map (lambda (type.stx)
 				   (type-annotation->object-type-specification type.stx lexenv))
 			      ?component-type*)))
+
+     ((and ?component-type* ...)
+      (make-intersection-type-spec (map (lambda (type.stx)
+					  (type-annotation->object-type-specification type.stx lexenv))
+				     ?component-type*)))
 
      (else
       (assertion-violation __who__ "invalid type annotation" annotation.stx)))))

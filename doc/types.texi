@@ -361,6 +361,7 @@ syntaxes like the following:
 (condition &who &message &irritants)
 (union <false> <symbol> <string>)
 (or    <false> <symbol> <string>)
+(and   <exact> <positive>)
 @end lisp
 
 @noindent
@@ -469,12 +470,24 @@ is a nested type annotation that must be one among: @class{condition},
 @deftpx {Compound Type Annotation} or @metao{item-type} @meta{item-type} @dots{}
 Describe the union between the specified types.  Every @meta{item-type}
 is a nested type annotation.  A value matches a union of types if its
-type is one of the item types.
+type matches at least one of the union's types.
 
 @lisp
 (is-a? 1      (union <fixnum> <string>))  @result{} #t
 (is-a? "ciao" (union <fixnum> <string>))  @result{} #t
 (is-a? 1.23   (union <fixnum> <string>))  @result{} #f
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} and @metao{item-type} @meta{item-type} @dots{}
+Describe the intersection between the specified types.  Every
+@meta{item-type} is a nested type annotation.  A value matches an
+intersection of types if its type matches all the intersection's types.
+
+@lisp
+(is-a? 1   (and <fixnum> <positive>))   @result{} #t
+(is-a? 1.0 (and <exact>  <positive>))   @result{} #f
 @end lisp
 @end deftp
 

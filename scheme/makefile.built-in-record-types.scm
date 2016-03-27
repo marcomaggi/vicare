@@ -160,6 +160,12 @@
      (methods
       (component-ots*	union-type-spec.component-ots*)))
 
+   (define-built-in-record-type <intersection-type-spec>
+       <object-type-spec>
+     make-intersection-type-spec intersection-type-spec?
+     (methods
+      (component-ots*	intersection-type-spec.component-ots*)))
+
    (define-built-in-record-type <pair-type-spec>
        <object-type-spec>
      make-pair-type-spec pair-type-spec?

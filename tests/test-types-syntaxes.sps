@@ -327,6 +327,26 @@
   (check-for-false	(type-super-and-sub? <string>	(or <number> <string>)))
 
 ;;; --------------------------------------------------------------------
+;;; intersections
+
+  (check-for-true	(type-super-and-sub? (and <fixnum> <exact>) <positive-fixnum>))
+  (check-for-true	(type-super-and-sub? (and <fixnum> <exact>) <fixnum>))
+  (check-for-false	(type-super-and-sub? (and <fixnum> <exact>) <exact>))
+  (check-for-false	(type-super-and-sub? (and <fixnum> <exact>) <string>))
+
+  (check-for-true	(type-super-and-sub? (and <positive> <exact>) <positive-fixnum>))
+  (check-for-false	(type-super-and-sub? (and <positive> <exact>) <negative-fixnum>))
+  (check-for-false	(type-super-and-sub? (and <positive> <exact>) <fixnum>))
+  (check-for-false	(type-super-and-sub? (and <positive> <exact>) <string>))
+
+  (check-for-true	(type-super-and-sub? (and <number> <positive>)
+					     (and <positive-fixnum> <positive-flonum>)))
+  (check-for-false	(type-super-and-sub? (and <number> <positive>)
+					     (and <positive-fixnum> <negative-flonum>)))
+  (check-for-false	(type-super-and-sub? (and <number> <positive>)
+					     (and <negative-fixnum> <positive-flonum>)))
+
+;;; --------------------------------------------------------------------
 ;;; misc
 
   (check-for-true	(type-super-and-sub? (or <exact> <inexact>)	<fixnum>))

@@ -289,7 +289,8 @@
 	      #'<top>)
 	     (else id))))
     (let recur ((sig type-signature.stx))
-      (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list> union condition)
+      (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
+			     condition union or and)
 	(()
 	 '())
 
@@ -330,6 +331,14 @@
 
 	(((union ?item-type0 ?item-type ...) . ?rest)
 	 (cons #`(union . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
+	       (recur #'?rest)))
+
+	(((or ?item-type0 ?item-type ...) . ?rest)
+	 (cons #`(or . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
+	       (recur #'?rest)))
+
+	(((and ?item-type0 ?item-type ...) . ?rest)
+	 (cons #`(and . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
 	       (recur #'?rest)))
 
 	((?type . ?rest)

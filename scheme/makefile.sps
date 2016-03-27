@@ -4292,6 +4292,13 @@
     (union-type-spec?					$expander)
     (union-type-spec.component-ots*			$expander)
 
+    (<intersection-type-spec>				$expander)
+    (<intersection-type-spec>-rtd)
+    (<intersection-type-spec>-rcd)
+    (make-intersection-type-spec			$expander)
+    (intersection-type-spec?				$expander)
+    (intersection-type-spec.component-ots*		$expander)
+
     (<pair-type-spec>					$expander)
     (<pair-type-spec>-rtd)
     (<pair-type-spec>-rcd)
