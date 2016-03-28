@@ -103,6 +103,7 @@
 
 
 (module (<object-type-spec>
+	 <object-type-spec>-rtd				<object-type-spec>-rcd
 	 object-type-spec?
 	 object-type-spec.name				object-type-spec.parent-ots
 	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
@@ -119,18 +120,22 @@
 	 object-type-specs-delete-duplicates
 
 	 <scheme-type-spec>
+	 <scheme-type-spec>-rtd				<scheme-type-spec>-rcd
 	 make-scheme-type-spec				scheme-type-spec?
 	 scheme-type-spec.type-descriptor-id
 
 	 <closure-type-spec>
+	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
 	 make-closure-type-spec				closure-type-spec?
 	 closure-type-spec.signature
 
 	 <struct-type-spec>
+	 <struct-type-spec>-rtd				<struct-type-spec>-rcd
 	 make-struct-type-spec				struct-type-spec?
 	 struct-type-spec.std
 
 	 <record-type-spec>
+	 <record-type-spec>-rtd				<record-type-spec>-rcd
 	 make-record-type-spec				record-type-spec?
 	 record-type-spec.rtd-id			record-type-spec.rcd-id
 	 record-type-spec.super-protocol-id
@@ -339,6 +344,12 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define <object-type-spec>-rtd
+  (record-type-descriptor <object-type-spec>))
+
+(define <object-type-spec>-rcd
+  (record-constructor-descriptor <object-type-spec>))
 
 ;;; --------------------------------------------------------------------
 
@@ -640,12 +651,9 @@
 		       (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots))
 								 (pair-type-spec.cdr-ots sub.ots)))))
 	       ((pair-of-type-spec? sub.ots)
-		;;We want:
-		;;
-		;;   (type-super-and-sub? (list <fixnum>) (pair-of (union <fixnum> <null>))) => #t
-		;;
-		(let ((super-item*.ots	(list-type-spec.item-ots* super.ots))
-		      (sub-item.ots    (pair-of-type-spec.item-ots sub.ots)))
+		;; (type-super-and-sub? (list <null>) (pair-of <null>)) => #t
+		(let ((super-item*.ots	(list-type-spec.item-ots*   super.ots))
+		      (sub-item.ots	(pair-of-type-spec.item-ots sub.ots)))
 		  (and (object-type-spec.matching-super-and-sub? (car super-item*.ots) sub-item.ots)
 		       (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots)) sub-item.ots))))
 	       (else #f)))
@@ -664,9 +672,23 @@
 		  (for-all (lambda (sub-item.ots)
 			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
 		    (list-type-spec.item-ots* sub.ots))))
-	       ;;No pair types  here: a LIST-OF type annotation does  not specify the
-	       ;;number of items, while both  PAIR and PAIR-OF annotations specify at
-	       ;;least one item.
+	       ((pair-type-spec? sub.ots)
+		;; (type-super-and-sub? (list-of <fixnum>)
+		;;                      (pair <fixnum> (list-of <fixnum>)))
+		;; => #t
+		(let ((super-item.ots	(list-of-type-spec.item-ots super.ots))
+		      (sub-car.ots	(pair-type-spec.car-ots     sub.ots))
+		      (sub-cdr.ots	(pair-type-spec.cdr-ots     sub.ots)))
+		  (and (object-type-spec.matching-super-and-sub? super-item.ots sub-car.ots)
+		       (object-type-spec.matching-super-and-sub? super.ots      sub-cdr.ots))))
+	       ;;No PAIR-OF  types here: a  LIST-OF type annotation does  not specify
+	       ;;the number of items, while  PAIR-OF annotations specify at least one
+	       ;;item.  Notice that:
+	       ;;
+	       ;;   (type-super-and-sub? (list-of <fixnum>)
+	       ;;                        (pair-of (union <fixnum> <null>)))
+	       ;;   => #f
+	       ;;
 	       (else #f)))
 
 	((or (<list>-ots?        sub.ots)
@@ -1205,6 +1227,12 @@
       (display "]" port)))
   #| end of DEFINE-RECORD-TYPE |# )
 
+(define <scheme-type-spec>-rtd
+  (record-type-descriptor <scheme-type-spec>))
+
+(define <scheme-type-spec>-rcd
+  (record-constructor-descriptor <scheme-type-spec>))
+
 
 ;;;; Vicare's struct-type specification
 ;;
@@ -1241,6 +1269,12 @@
       (display "]" port)))
 
   #| end of DEFINE-STRUCT-TYPE |# )
+
+(define <struct-type-spec>-rtd
+  (record-type-descriptor <struct-type-spec>))
+
+(define <struct-type-spec>-rcd
+  (record-constructor-descriptor <struct-type-spec>))
 
 
 ;;;; R6RS's record-type specification
@@ -1333,6 +1367,12 @@
   ;;
   (and (record-type-spec? ots)
        (%compare-super-with-sub-and-its-parents (&condition-ots) ots)))
+
+(define <record-type-spec>-rtd
+  (record-type-descriptor <record-type-spec>))
+
+(define <record-type-spec>-rcd
+  (record-constructor-descriptor <record-type-spec>))
 
 
 ;;;; compound condition object spec
@@ -1662,6 +1702,12 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define <closure-type-spec>-rtd
+  (record-type-descriptor <closure-type-spec>))
+
+(define <closure-type-spec>-rcd
+  (record-constructor-descriptor <closure-type-spec>))
 
 ;; (define-record-type (<closure-clause> make-closure-clause closure-clause?)
 ;;   (nongenerative)

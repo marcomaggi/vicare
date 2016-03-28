@@ -100,6 +100,7 @@
 
     ;; object types specifications
     <object-type-spec>
+    <object-type-spec>-rtd				<object-type-spec>-rcd
     object-type-spec?
     object-type-spec.name				object-type-spec.parent-ots
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
@@ -115,18 +116,22 @@
     object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
 
     <scheme-type-spec>
+    <scheme-type-spec>-rtd				<scheme-type-spec>-rcd
     make-scheme-type-spec				scheme-type-spec?
     scheme-type-spec.type-descriptor-id
 
     <closure-type-spec>
+    <closure-type-spec>-rtd				<closure-type-spec>-rcd
     make-closure-type-spec				closure-type-spec?
     closure-type-spec.signature
 
     <struct-type-spec>
+    <struct-type-spec>-rtd				<struct-type-spec>-rcd
     make-struct-type-spec				struct-type-spec?
     struct-type-spec.std
 
     <record-type-spec>
+    <record-type-spec>-rtd				<record-type-spec>-rcd
     make-record-type-spec				record-type-spec?
     record-type-spec.rtd-id				record-type-spec.rcd-id
     record-type-spec.super-protocol-id
@@ -146,6 +151,11 @@
     <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
     make-intersection-type-spec				intersection-type-spec?
     intersection-type-spec.component-ots*
+
+    <complement-type-spec>
+    <complement-type-spec>-rtd				<complement-type-spec>-rcd
+    make-complement-type-spec				complement-type-spec?
+    complement-type-spec.item-ots
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd
@@ -176,7 +186,7 @@
     <vector-of-type-spec>-rtd				<vector-of-type-spec>-rcd
     make-vector-of-type-spec				vector-of-type-spec?
     vector-of-type-spec.item-ots
-
+;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
     typed-variable-spec?

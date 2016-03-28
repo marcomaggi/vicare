@@ -205,20 +205,32 @@
 ;;; --------------------------------------------------------------------
 ;;; destructor
 
-(declare-core-primitive record-destructor
+(declare-core-primitive record-type-destructor
     (safe)
   (signatures
-   #;((<record-type-descriptor>)	=> ((or <false> <procedure>)))
-   ((<record-type-descriptor>)		=> (<top>)))
+   ((<record-type-descriptor>)		=> ((or <false> <procedure>))))
   (attributes
-   ((_)			effect-free)))
+   ((_)					effect-free)))
 
-(declare-core-primitive record-destructor-set!
+(declare-core-primitive record-type-destructor-set!
     (safe)
   (signatures
    ((<record-type-descriptor> <procedure>)	=> (<void>)))
   (attributes
-   ((_ _)			result-true)))
+   ((_ _)				result-true)))
+
+;;; --------------------------------------------------------------------
+;;; method retriever
+
+(declare-core-primitive record-type-method-retriever
+    (safe)
+  (signatures
+   ((<record-type-descriptor>)			=> ((or <false> <procedure>)))))
+
+(declare-core-primitive record-type-method-retriever-set!
+    (safe)
+  (signatures
+   ((<record-type-descriptor> <procedure>)	=> (<void>))))
 
 /section)
 
@@ -247,6 +259,20 @@
    ((<record>)		=> (<record-type-descriptor>)))
   (attributes
    ((_)			effect-free result-true)))
+
+(declare-core-primitive record-destructor
+    (safe)
+  (signatures
+   ((<record>)			=> ((or <false> <procedure>))))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive record-printer
+    (safe)
+  (signatures
+   ((<record>)			=> ((or <false> <procedure>))))
+  (attributes
+   ((_)				effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

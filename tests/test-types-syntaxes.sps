@@ -293,9 +293,7 @@
   (check-for-false	(type-super-and-sub? (pair <fixnum> (list-of <fixnum>))
 					     (list-of <fixnum>)))
 
-  ;;Does not match because  the PAIR annotation implies at least  one item, while the
-  ;;LIST-OF annotation implies nothing.
-  (check-for-false	(type-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>)))
+  (check-for-true	(type-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>)))
 
   ;;Does not  match because the PAIR-OF  annotation implies at least  one item, while
   ;;the LIST-OF annotation implies nothing.

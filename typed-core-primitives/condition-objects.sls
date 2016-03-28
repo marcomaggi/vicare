@@ -100,24 +100,25 @@
 		   (attributes
 		    (()			effect-free result-true))))
 		)))
-  (declare make-assertion-violation &assertion)
-  (declare make-error &error)
-  (declare make-expression-return-value-violation &expression-return-value-violation)
-  (declare make-i/o-eagain &i/o-eagain)
-  (declare make-i/o-error &i/o)
-  (declare make-i/o-read-error &i/o-read)
-  (declare make-i/o-write-error &i/o-write)
-  (declare make-implementation-restriction-violation &implementation-restriction)
-  (declare make-interrupted-condition &interrupted)
-  (declare make-lexical-violation &lexical)
-  (declare make-no-infinities-violation &no-infinities)
-  (declare make-no-nans-violation &no-nans)
-  (declare make-non-continuable-violation &non-continuable)
-  (declare make-procedure-argument-violation &procedure-argument-violation)
-  (declare make-serious-condition &serious)
-  (declare make-undefined-violation &undefined)
-  (declare make-violation &violation)
-  (declare make-warning &warning)
+  (declare make-assertion-violation			&assertion)
+  (declare make-error					&error)
+  (declare make-expression-return-value-violation	&expression-return-value-violation)
+  (declare make-i/o-eagain				&i/o-eagain)
+  (declare make-i/o-error				&i/o)
+  (declare make-i/o-read-error				&i/o-read)
+  (declare make-i/o-write-error				&i/o-write)
+  (declare make-implementation-restriction-violation	&implementation-restriction)
+  (declare make-interrupted-condition			&interrupted)
+  (declare make-lexical-violation			&lexical)
+  (declare make-no-infinities-violation			&no-infinities)
+  (declare make-no-nans-violation			&no-nans)
+  (declare make-non-continuable-violation		&non-continuable)
+  (declare make-procedure-argument-violation		&procedure-argument-violation)
+  (declare make-serious-condition			&serious)
+  (declare make-undefined-violation			&undefined)
+  (declare make-violation				&violation)
+  (declare make-warning					&warning)
+  (declare make-non-reinstatable-violation		&non-reinstatable)
   #| end of LET-SYNTAX |# )
 
 (declare-core-primitive make-who-condition
@@ -234,56 +235,44 @@
   (attributes
    ((_ _ _ _ _)			effect-free result-true)))
 
-(declare-core-primitive procedure-signature-argument-violation
-    (safe)
-  (signatures
-   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> (<no-return>))))
-
-(declare-core-primitive assertion-error
-    (safe)
-  (signatures
-   ((<top> <syntax-object>
-	   <non-negative-exact-integer> <non-negative-exact-integer>
-	   <non-negative-exact-integer> <non-negative-exact-integer>)
-    => (<no-return>))))
-
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
-(declare-condition-type-predicate assertion-violation? &assertion)
-(declare-condition-type-predicate errno-condition? &errno)
-(declare-condition-type-predicate error? &error)
-(declare-condition-type-predicate expression-return-value-violation? &expression-return-value-violation)
-(declare-condition-type-predicate h_errno-condition? &h_errno)
-(declare-condition-type-predicate i/o-decoding-error? &i/o-decoding)
-(declare-condition-type-predicate i/o-eagain-error? &i/o-eagain)
-(declare-condition-type-predicate i/o-encoding-error? &i/o-encoding)
-(declare-condition-type-predicate i/o-error? &i/o)
-(declare-condition-type-predicate i/o-file-already-exists-error? &i/o-file-already-exists)
-(declare-condition-type-predicate i/o-file-does-not-exist-error? &i/o-file-does-not-exist)
-(declare-condition-type-predicate i/o-file-is-read-only-error? &i/o-file-is-read-only)
-(declare-condition-type-predicate i/o-file-protection-error? &i/o-file-protection)
-(declare-condition-type-predicate i/o-filename-error? &i/o-filename)
-(declare-condition-type-predicate i/o-invalid-position-error? &i/o-invalid-position)
-(declare-condition-type-predicate i/o-port-error? &i/o-port)
-(declare-condition-type-predicate i/o-read-error? &i/o-read)
-(declare-condition-type-predicate i/o-write-error? &i/o-write)
-(declare-condition-type-predicate implementation-restriction-violation? &implementation-restriction)
-(declare-condition-type-predicate interrupted-condition? &interrupted)
-(declare-condition-type-predicate irritants-condition? &irritants)
-(declare-condition-type-predicate lexical-violation? &lexical)
-(declare-condition-type-predicate message-condition? &message)
-(declare-condition-type-predicate no-infinities-violation? &no-infinities)
-(declare-condition-type-predicate no-nans-violation? &no-nans)
-(declare-condition-type-predicate non-continuable-violation? &non-continuable)
-(declare-condition-type-predicate procedure-argument-violation? &procedure-argument-violation)
-(declare-condition-type-predicate serious-condition? &serious)
-(declare-condition-type-predicate source-position-condition? &source-position)
-(declare-condition-type-predicate syntax-violation? &syntax)
-(declare-condition-type-predicate undefined-violation? &undefined)
-(declare-condition-type-predicate violation? &violation)
-(declare-condition-type-predicate warning? &warning)
-(declare-condition-type-predicate who-condition? &who)
+(declare-condition-type-predicate assertion-violation?			&assertion)
+(declare-condition-type-predicate errno-condition?			&errno)
+(declare-condition-type-predicate error?				&error)
+(declare-condition-type-predicate expression-return-value-violation?	&expression-return-value-violation)
+(declare-condition-type-predicate h_errno-condition?			&h_errno)
+(declare-condition-type-predicate i/o-decoding-error?			&i/o-decoding)
+(declare-condition-type-predicate i/o-eagain-error?			&i/o-eagain)
+(declare-condition-type-predicate i/o-encoding-error?			&i/o-encoding)
+(declare-condition-type-predicate i/o-error?				&i/o)
+(declare-condition-type-predicate i/o-file-already-exists-error?	&i/o-file-already-exists)
+(declare-condition-type-predicate i/o-file-does-not-exist-error?	&i/o-file-does-not-exist)
+(declare-condition-type-predicate i/o-file-is-read-only-error?		&i/o-file-is-read-only)
+(declare-condition-type-predicate i/o-file-protection-error?		&i/o-file-protection)
+(declare-condition-type-predicate i/o-filename-error?			&i/o-filename)
+(declare-condition-type-predicate i/o-invalid-position-error?		&i/o-invalid-position)
+(declare-condition-type-predicate i/o-port-error?			&i/o-port)
+(declare-condition-type-predicate i/o-read-error?			&i/o-read)
+(declare-condition-type-predicate i/o-write-error?			&i/o-write)
+(declare-condition-type-predicate implementation-restriction-violation?	&implementation-restriction)
+(declare-condition-type-predicate interrupted-condition?		&interrupted)
+(declare-condition-type-predicate irritants-condition?			&irritants)
+(declare-condition-type-predicate lexical-violation?			&lexical)
+(declare-condition-type-predicate message-condition?			&message)
+(declare-condition-type-predicate no-infinities-violation?		&no-infinities)
+(declare-condition-type-predicate no-nans-violation?			&no-nans)
+(declare-condition-type-predicate non-continuable-violation?		&non-continuable)
+(declare-condition-type-predicate procedure-argument-violation?		&procedure-argument-violation)
+(declare-condition-type-predicate serious-condition?			&serious)
+(declare-condition-type-predicate source-position-condition?		&source-position)
+(declare-condition-type-predicate syntax-violation?			&syntax)
+(declare-condition-type-predicate undefined-violation?			&undefined)
+(declare-condition-type-predicate violation?				&violation)
+(declare-condition-type-predicate warning?				&warning)
+(declare-condition-type-predicate who-condition?			&who)
+(declare-condition-type-predicate non-reinstatable-violation?		&non-reinstatable)
 
 (declare-condition-type-predicate procedure-signature-argument-violation?	&procedure-signature-argument-violation)
 (declare-condition-type-predicate procedure-signature-return-value-violation?	&procedure-signature-return-value-violation)
@@ -448,6 +437,24 @@
     (safe)
   (signatures
    ((<&who-value> <string> <positive-fixnum> . <list>)	=> <no-return>)))
+
+(declare-core-primitive non-reinstatable-violation
+    (safe)
+  (signatures
+   ((<&who-value> <string> . <list>)			=> <no-return>)))
+
+(declare-core-primitive procedure-signature-argument-violation
+    (safe)
+  (signatures
+   ((<&who-value> <string> <positive-fixnum> <top> <top>)	=> (<no-return>))))
+
+(declare-core-primitive assertion-error
+    (safe)
+  (signatures
+   ((<top> <syntax-object>
+	   <non-negative-exact-integer> <non-negative-exact-integer>
+	   <non-negative-exact-integer> <non-negative-exact-integer>)
+    => (<no-return>))))
 
 /section)
 

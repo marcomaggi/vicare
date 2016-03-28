@@ -105,7 +105,12 @@
   (attributes
    ((_)			effect-free)))
 
-;;; --------------------------------------------------------------------
+/section)
+
+
+;;;; special macro transformers
+
+(section
 
 (declare-core-primitive make-variable-transformer
     (safe)
@@ -166,8 +171,6 @@
   (attributes
    ((_)			effect-free)))
 
-;;;
-
 (declare-core-primitive syntax-parameter-value
     (safe)
   (signatures
@@ -175,7 +178,12 @@
   (attributes
    ((_)			effect-free)))
 
-;;;
+/section)
+
+
+;;;; syntactic bindings, utilities
+
+(section
 
 (declare-core-primitive syntactic-binding-putprop
     (safe)
@@ -205,8 +213,12 @@
   (attributes
    ((_)			effect-free result-true)))
 
-;;; --------------------------------------------------------------------
-;;; syntax utilities
+/section)
+
+
+;;;; syntactic identifiers, utilities
+
+(section
 
 (declare-core-primitive identifier->string
     (safe)
@@ -329,7 +341,12 @@
   (declare identifier-struct-field-mutator)
   #| end of LET-SYNTAX |# )
 
-;;; --------------------------------------------------------------------
+/section)
+
+
+;;;; syntax utilities
+
+(section
 
 (declare-core-primitive syntax-car
     (safe)
@@ -407,7 +424,75 @@
   (attributes
    ((_ _)		effect-free)))
 
-;;; --------------------------------------------------------------------
+/section)
+
+
+;;; syntax clauses specification structs
+
+(section
+
+(declare-core-primitive make-syntax-clause-spec
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <real> <real> <real> <real> <list> <list>)		=> (<syntax-clause-spec>))
+   ((<syntactic-identifier> <real> <real> <real> <real> <list> <list> <top>)	=> (<syntax-clause-spec>)))
+  (attributes
+   ((_ _ _ _ _ _ _)			effect-free result-true)
+   ((_ _ _ _ _ _ _ _)			effect-free result-true)))
+
+(declare-type-predicate syntax-clause-spec?	<syntax-clause-spec>)
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<syntax-clause-spec>)	=> (?return-value-tag)))
+		   (attributes
+		    ((_)			effect-free))))
+		)))
+  (declare syntax-clause-spec-keyword			<syntactic-identifier>)
+  (declare syntax-clause-spec-min-number-of-occurrences	<real>)
+  (declare syntax-clause-spec-max-number-of-occurrences	<real>)
+  (declare syntax-clause-spec-min-number-of-arguments	<real>)
+  (declare syntax-clause-spec-max-number-of-arguments	<real>)
+  (declare syntax-clause-spec-mutually-inclusive	<list>)
+  (declare syntax-clause-spec-mutually-exclusive	<list>)
+  (declare syntax-clause-spec-custom-data		<top>)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive syntax-clauses-single-spec
+    (safe)
+  (signatures
+   ((<syntax-clause-spec> <list>)			=> (<vector>))
+   ((<syntax-clause-spec> <list> <procedure>)		=> (<vector>)))
+  (attributes
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-clauses-fold-specs
+    (safe)
+  (signatures
+   ((<procedure> <top> <list> <list>)			=> (<top>))
+   ((<procedure> <top> <list> <list> <procedure>)	=> (<top>)))
+  (attributes
+   ((_ _ _)		effect-free)
+   ((_ _ _ _)		effect-free)))
+
+(declare-core-primitive syntax-clauses-validate-specs
+    (safe)
+  (signatures
+   ((<list>)	=> (<list>)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+/section)
+
+
+;;; syntax clauses operations
+
+(section
 
 (declare-core-primitive syntax-clauses-unwrap
     (safe)
@@ -503,68 +588,73 @@
    ((_ _)		result-true)
    ((_ _ _)		result-true)))
 
-;;; --------------------------------------------------------------------
-;;; clause specification structs
+/section)
 
-(declare-core-primitive make-syntax-clause-spec
+
+;;;; syntax objects utilities, safe procedures
+
+(section
+
+(declare-core-primitive parse-logic-predicate-syntax
     (safe)
   (signatures
-   ((<syntactic-identifier> <real> <real> <real> <real> <list> <list>)		=> (<syntax-clause-spec>))
-   ((<syntactic-identifier> <real> <real> <real> <real> <list> <list> <top>)	=> (<syntax-clause-spec>)))
-  (attributes
-   ((_ _ _ _ _ _ _)			effect-free result-true)
-   ((_ _ _ _ _ _ _ _)			effect-free result-true)))
-
-(declare-type-predicate syntax-clause-spec?	<syntax-clause-spec>)
-
-(let-syntax
-    ((declare (syntax-rules ()
-		((_ ?who ?return-value-tag)
-		 (declare-core-primitive ?who
-		     (safe)
-		   (signatures
-		    ((<syntax-clause-spec>)	=> (?return-value-tag)))
-		   (attributes
-		    ((_)			effect-free))))
-		)))
-  (declare syntax-clause-spec-keyword			<syntactic-identifier>)
-  (declare syntax-clause-spec-min-number-of-occurrences	<real>)
-  (declare syntax-clause-spec-max-number-of-occurrences	<real>)
-  (declare syntax-clause-spec-min-number-of-arguments	<real>)
-  (declare syntax-clause-spec-max-number-of-arguments	<real>)
-  (declare syntax-clause-spec-mutually-inclusive	<list>)
-  (declare syntax-clause-spec-mutually-exclusive	<list>)
-  (declare syntax-clause-spec-custom-data		<top>)
-  #| end of LET-SYNTAX |# )
-
-(declare-core-primitive syntax-clauses-single-spec
-    (safe)
-  (signatures
-   ((<syntax-clause-spec> <list>)			=> (<vector>))
-   ((<syntax-clause-spec> <list> <procedure>)		=> (<vector>)))
-  (attributes
-   ((_ _)		effect-free result-true)
-   ((_ _ _)		effect-free result-true)))
-
-(declare-core-primitive syntax-clauses-fold-specs
-    (safe)
-  (signatures
-   ((<procedure> <top> <list> <list>)			=> (<top>))
-   ((<procedure> <top> <list> <list> <procedure>)	=> (<top>)))
-  (attributes
-   ((_ _ _)		effect-free)
-   ((_ _ _ _)		effect-free)))
-
-(declare-core-primitive syntax-clauses-validate-specs
-    (safe)
-  (signatures
-   ((<list>)	=> (<list>)))
-  (attributes
-   ((_)			effect-free result-true)))
-
-
+   ((<syntax-object>)			=> (<syntax-object>))
+   ((<syntax-object> <procedure>)	=> (<syntax-object>))))
 
 /section)
+
+
+;;;; object type specifications
+
+(section
+
+(declare-core-primitive make-struct-type-spec
+    (safe)
+  (signatures
+   ((<syntactic-identifier> <struct-type-descriptor> <syntactic-identifier> <syntactic-identifier> <list> <list> <list>)
+    => (<struct-type-spec>))))
+
+(declare-core-primitive make-record-type-spec
+    (safe)
+  (signatures
+   ((<syntactic-identifier>		 ;type-name
+     <syntactic-identifier>		 ;rcd-id
+     <syntactic-identifier>		 ;rtd-id
+     (or <false> <syntactic-identifier>) ;super-protocol-id
+     (or <false> <syntactic-identifier>) ;parent-name.id
+     (or <false> <syntactic-identifier>) ;constructor.stx
+     (or <false> <syntactic-identifier>) ;destructor.stx
+     <syntactic-identifier>		 ;predicate.stx
+     <list>				 ;safe-accessors-table
+     <list>				 ;safe-mutators-table
+     <list>)				 ;methods-table
+    => (<record-type-spec>))))
+
+;;; --------------------------------------------------------------------
+;;; type predicates
+
+(declare-type-predicate object-type-spec?		<object-type-spec>)
+(declare-type-predicate struct-type-spec?		<struct-type-spec>)
+(declare-type-predicate record-type-spec?		<record-type-spec>)
+
+(declare-type-predicate compound-condition-type-spec?	<compound-condition-type-spec>)
+(declare-type-predicate pair-type-spec?			<pair-type-spec>)
+(declare-type-predicate pair-of-type-spec?		<pair-of-type-spec>)
+(declare-type-predicate list-type-spec?			<list-type-spec>)
+(declare-type-predicate list-of-type-spec?		<list-of-type-spec>)
+(declare-type-predicate vector-type-spec?		<vector-type-spec>)
+(declare-type-predicate vector-of-type-spec?		<vector-of-type-spec>)
+
+(declare-type-predicate union-type-spec?		<union-type-spec>)
+(declare-type-predicate intersection-type-spec?		<intersection-type-spec>)
+(declare-type-predicate complement-type-spec?		<complement-type-spec>)
+
+/section)
+
+
+;;;; type signatures
+
+(declare-type-predicate type-signature?			<type-signature>)
 
 
 ;;;; done

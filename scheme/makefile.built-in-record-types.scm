@@ -154,17 +154,27 @@
      (methods
       (component-ots*	compound-condition-type-spec.component-ots*)))
 
+;;; --------------------------------------------------------------------
+
    (define-built-in-record-type <union-type-spec>
        <object-type-spec>
      make-union-type-spec union-type-spec?
      (methods
-      (component-ots*	union-type-spec.component-ots*)))
+      (component-ots*		union-type-spec.component-ots*)))
 
    (define-built-in-record-type <intersection-type-spec>
        <object-type-spec>
      make-intersection-type-spec intersection-type-spec?
      (methods
-      (component-ots*	intersection-type-spec.component-ots*)))
+      (component-ots*		intersection-type-spec.component-ots*)))
+
+   (define-built-in-record-type <complement-type-spec>
+       <object-type-spec>
+     make-complement-type-spec complement-type-spec?
+     (methods
+      (item-ots			complement-type-spec.item-ots)))
+
+;;; --------------------------------------------------------------------
 
    (define-built-in-record-type <pair-type-spec>
        <object-type-spec>

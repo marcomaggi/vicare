@@ -532,6 +532,7 @@ VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/compnums.sls			\
 	typed-core-primitives/condition-objects.sls		\
 	typed-core-primitives/configuration.sls			\
+	typed-core-primitives/collect.sls			\
 	typed-core-primitives/control.sls			\
 	typed-core-primitives/enum-sets.sls			\
 	typed-core-primitives/environment-inquiry.sls		\
