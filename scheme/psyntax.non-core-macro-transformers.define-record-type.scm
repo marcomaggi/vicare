@@ -749,28 +749,30 @@
 
 	;;unsafe record fields accessors
 	,@(map (lambda (unsafe-foo-x x field-type.ots)
-		 (let ((the-index  (%make-field-index-varname x))
-		       (record.sym (gensym "?record")))
+		 (let ((the-index	(%make-field-index-varname x))
+		       (record.sym	(gensym "?record"))
+		       (field-type.ann	(object-type-spec.name field-type.ots)))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
-		       (lambda/checked (,record.sym)
-			 ($struct-ref (unsafe-cast-signature (<struct>) ,record.sym) ,the-index))))))
+		       (lambda/typed ((brace _ ,field-type.ann) (brace ,record.sym ,foo))
+			 ($struct-ref ,record.sym ,the-index))))))
 	    unsafe-field-accessor* field-name*.sym field-type*.ots)
 
 	;;unsafe record fields mutators
 	,@(fold-right
-	      (lambda (unsafe-field-mutator field-name.sym knil)
+	      (lambda (unsafe-field-mutator field-name.sym field-type.ots knil)
 		(if unsafe-field-mutator
-		    (cons (let ((the-index  (%make-field-index-varname field-name.sym))
-				(record.sym (gensym "?record"))
-				(value.sym  (gensym "?new-value")))
+		    (cons (let ((the-index	(%make-field-index-varname field-name.sym))
+				(record.sym	(gensym "?record"))
+				(value.sym	(gensym "?new-value"))
+				(field-type.ann	(object-type-spec.name field-type.ots)))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
-				(lambda/std (,record.sym ,value.sym)
-				  ($struct-set! (unsafe-cast-signature (<struct>) ,record.sym) ,the-index ,value.sym)))))
+				(lambda/typed ((brace _ <void>) (brace ,record.sym ,foo) (brace ,value.sym ,field-type.ann))
+				  ($struct-set! ,record.sym ,the-index ,value.sym)))))
 			  knil)
 		  knil))
-	    '() unsafe-field-mutator* field-name*.sym)
+	    '() unsafe-field-mutator* field-name*.sym field-type*.ots)
 
 	#| end of module: unsafe accessors and mutators |# ))))
 
@@ -1020,10 +1022,9 @@
      ;;No CUSTOM-PREDICATE clause  in this record-type definition.  Return  a list of
      ;;definitions representing the default record-type predicate definition.
      (let ((arg.sym (gensym "obj")))
-       `((define/checked ((brace ,foo? <boolean>) ,arg.sym)
-	   (unsafe-cast-signature (<boolean>)
-	     (and ($struct? ,arg.sym)
-		  ($record-and-rtd? ,arg.sym ,foo-rtd)))))))
+       `((define/typed ((brace ,foo? <boolean>) ,arg.sym)
+	   (and ($struct? ,arg.sym)
+		($record-and-rtd? ,arg.sym ,foo-rtd))))))
 
     (?invalid-clause
      (synner "invalid syntax in CUSTOM-PREDICATE clause" ?invalid-clause))))
