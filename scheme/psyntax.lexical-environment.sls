@@ -207,7 +207,7 @@
     <core-prim-type-spec>
     make-core-prim-type-spec				core-prim-type-spec?
     core-prim-type-spec.name				core-prim-type-spec.safety
-
+;;;
     ;; lexical environment utilities
     label->syntactic-binding-descriptor
     label->syntactic-binding-descriptor/no-indirection
@@ -259,6 +259,7 @@
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
+    syntax-object.parse-type-annotation		syntax-object.type-annotation?
 
     ;; syntax objects: marks
     same-marks?

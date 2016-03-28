@@ -266,12 +266,12 @@
       ;;Parent record-constructor descriptor.
       ,@parent-rcd-definition
       ;;Record-type descriptor.
-      (define/typed (brace ,foo-rtd <record-type-descriptor>)
+      (define/checked (brace ,foo-rtd <record-type-descriptor>)
 	,foo-rtd-code)
       ;;Protocol function.
       (define/std ,foo-constructor-protocol ,constructor-protocol-code)
       ;;Record-constructor descriptor.
-      (define/typed (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
+      (define/checked (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
       ;;Super-type record-constructor descriptor.
       ,@super-rcd-definition
       ;;Record destructor function.
@@ -284,7 +284,7 @@
       ;;Type predicate definitions.
       ,@foo-predicate-definitions
       ;;Default constructor.
-      (define/typed ((brace ,make-foo ,foo) . ,args.sym)
+      (define/checked ((brace ,make-foo ,foo) . ,args.sym)
 	(unsafe-cast-signature (,foo) (apply ($record-constructor ,foo-rcd) ,args.sym)))
       ;;Methods.
       ,@method-form*.sexp
@@ -642,7 +642,7 @@
 	 (recurse ?clause*)
        (let* ((name.sym		(identifier->symbol ?who))
 	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
-	      (form.sexp	`(define/typed (,procname.sym . ,?args) . ,?body)))
+	      (form.sexp	`(define/checked (,procname.sym . ,?args) . ,?body)))
 	 (if (memq name.sym method-name*.sym)
 	     (synner "multiple method definitions with the same name" ?who)
 	   (values (cons name.sym	method-name*.sym)
@@ -657,7 +657,7 @@
 	 (recurse ?clause*)
        (let* ((name.sym		(identifier->symbol ?who))
 	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
-	      (form.sexp	`(define/typed ((brace ,procname.sym ,?rv-tag0 . ,?rv-tag*) . ,?args) . ,?body)))
+	      (form.sexp	`(define/checked ((brace ,procname.sym ,?rv-tag0 . ,?rv-tag*) . ,?args) . ,?body)))
 	 (if (memq name.sym method-name*.sym)
 	     (synner "multiple method definitions with the same name" ?who)
 	   (values (cons name.sym	method-name*.sym)
@@ -734,7 +734,7 @@
       '()
     `((module (,@unsafe-field-accessor*
 	       ,@(%filter-out-falses unsafe-field-mutator*))
-	(define/typed (brace ,foo-first-field-offset <non-negative-fixnum>)
+	(define/checked (brace ,foo-first-field-offset <non-negative-fixnum>)
 	  ;;The field at index  3 in the RTD is: the index of  the first field of this
 	  ;;subtype in the  layout of instances; it  is the total number  of fields of
 	  ;;the parent type.
@@ -743,7 +743,7 @@
 	;;all fields indexes
 	,@(map (lambda (x idx)
 		 (let ((the-index (%make-field-index-varname x)))
-		   `(define/typed (brace ,the-index <non-negative-fixnum>)
+		   `(define/checked (brace ,the-index <non-negative-fixnum>)
 		      (fx+ ,idx ,foo-first-field-offset))))
 	    field-name*.sym field-relative-idx*)
 
@@ -753,7 +753,7 @@
 		       (record.sym (gensym "?record")))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
-		       (lambda/typed (,record.sym)
+		       (lambda/checked (,record.sym)
 			 ($struct-ref (unsafe-cast-signature (<struct>) ,record.sym) ,the-index))))))
 	    unsafe-field-accessor* field-name*.sym field-type*.ots)
 
@@ -821,7 +821,7 @@
     (map (lambda (safe-field-accessor unsafe-field-accessor field-type.ots)
 	   (let ((record.sym	(gensym "record"))
 		 (field-type.id	(object-type-spec.name field-type.ots)))
-	     `(define/typed ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
+	     `(define/checked ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
 		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))))
       safe-field-accessor* unsafe-field-accessor* field-type*.ots))
 
@@ -832,7 +832,7 @@
 	      (cons (let ((record.sym		(gensym "record"))
 			  (val.sym		(gensym "new-value"))
 			  (field-type.id	(object-type-spec.name field-type.ots)))
-		      `(define/typed ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
+		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
 			 (,unsafe-field-mutator ,record.sym ,val.sym)))
 		    knil)
 	    knil))
@@ -870,12 +870,12 @@
 	       (new-value.sym	(gensym "new-value"))
 	       (field-type.id	(object-type-spec.name field-type.ots)))
 	   (if unsafe-field-mutator
-	       `(case-define/typed ,safe-field-method
+	       `(case-define/checked ,safe-field-method
 		  (((brace _ ,field-type.id) (brace ,record.sym ,foo))
 		   (unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))
 		  (((brace _ <void>) (brace ,record.sym ,foo) (brace ,new-value.sym ,field-type.id))
 		   (,unsafe-field-mutator ,record.sym ,new-value.sym)))
-	     `(define/typed ((brace ,safe-field-method ,field-type.id) (brace ,record.sym ,foo))
+	     `(define/checked ((brace ,safe-field-method ,field-type.id) (brace ,record.sym ,foo))
 		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym))))))
     safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ots))
 
@@ -1009,18 +1009,18 @@
      (let ((arg.sym			(gensym "obj"))
 	   (internal-predicate.sym	(gensym (string-append "internal-predicate-" (identifier->string foo?)))))
        `((define/std ,internal-predicate.sym
-	   (,?custom-predicate-expr (lambda/typed ({_ <boolean>} ,arg.sym)
+	   (,?custom-predicate-expr (lambda/checked ({_ <boolean>} ,arg.sym)
 				      (unsafe-cast-signature (<boolean>)
 					(and ($struct? ,arg.sym)
 					     ($record-and-rtd? ,arg.sym ,foo-rtd))))))
-	 (define/typed ((brace ,foo? <boolean>) ,arg.sym)
+	 (define/checked ((brace ,foo? <boolean>) ,arg.sym)
 	   (,internal-predicate.sym ,arg.sym)))))
 
     (#f
      ;;No CUSTOM-PREDICATE clause  in this record-type definition.  Return  a list of
      ;;definitions representing the default record-type predicate definition.
      (let ((arg.sym (gensym "obj")))
-       `((define/typed ((brace ,foo? <boolean>) ,arg.sym)
+       `((define/checked ((brace ,foo? <boolean>) ,arg.sym)
 	   (unsafe-cast-signature (<boolean>)
 	     (and ($struct? ,arg.sym)
 		  ($record-and-rtd? ,arg.sym ,foo-rtd)))))))

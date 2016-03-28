@@ -20,18 +20,24 @@
 
 (module (chi-lambda/std
 	 chi-lambda/typed
+	 chi-lambda/checked
 	 chi-named-lambda/std
 	 chi-named-lambda/typed
+	 chi-named-lambda/checked
 	 ;;
 	 chi-case-lambda/std
 	 chi-case-lambda/typed
+	 chi-case-lambda/checked
 	 chi-named-case-lambda/std
 	 chi-named-case-lambda/typed
+	 chi-named-case-lambda/checked
 	 ;;
 	 chi-defun/std
 	 chi-defun/typed
+	 chi-defun/checked
 	 chi-case-defun/std
-	 chi-case-defun/typed)
+	 chi-case-defun/typed
+	 chi-case-defun/checked)
 
 
 ;;;; helpers
@@ -62,7 +68,7 @@
 
 ;;;; chi procedures: standard and typed single-clause function definition
 
-(module (chi-defun/std chi-defun/typed)
+(module (chi-defun/std chi-defun/typed chi-defun/checked)
 
   (define (chi-defun/std qdef lexenv.run lexenv.expand)
     ;;Expand a qualified RHS (QDEF) representing a DEFINE/STD syntax use for the
@@ -78,7 +84,7 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-defun #t qdef lexenv.run lexenv.expand))
+    (%chi-defun 'standard qdef lexenv.run lexenv.expand))
 
   (define (chi-defun/typed qdef lexenv.run lexenv.expand)
     ;;Expand a  qualified RHS (QDEF) representing  a DEFINE/TYPED syntax use  for the
@@ -95,25 +101,53 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-defun #f qdef lexenv.run lexenv.expand))
+    (%chi-defun 'typed qdef lexenv.run lexenv.expand))
 
-  (define (%chi-defun standard? qdef lexenv.run lexenv.expand)
+  (define (chi-defun/checked qdef lexenv.run lexenv.expand)
+    ;;Expand a qualified RHS (QDEF) representing  a DEFINE/CHECKED syntax use for the
+    ;;case of function definition; the original input form is something like:
+    ;;
+    ;;   (define/checked (?lhs . ?formals) . ?body)
+    ;;   (define/checked ((brace ?lhs ?rv-type ... . ?rv-type-rest) . ?formals) . ?body)
+    ;;
+    ;;Return a  PSI object holding a  lambda core language expression.   The returned
+    ;;expression will be coupled (by the caller) with an already generated lex gensym
+    ;;serving as lexical variable name; for this  reason we return a lambda core form
+    ;;rather than a define core form.
+    ;;
+    ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
+    ;;binding has already been added to LEXENV.
+    ;;
+    (%chi-defun 'checked qdef lexenv.run lexenv.expand))
+
+  (define (%chi-defun type qdef lexenv.run lexenv.expand)
     (define-constant input-form.stx (qdef.input-form qdef))
     (parametrise ((current-run-lexenv (lambda () lexenv.run)))
       (receive (standard-formals.lex body.psi)
-	  (if standard?
-	      (chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
-				     (qdef-defun.standard-formals qdef)
-				     (car (qdef-closure.clause-signature* qdef))
-				     (qdef-defun.body* qdef))
-	    (receive (lexenv.run lexenv.expand)
-		;;We  establish   the  syntactic   binding  for   "__who__"  before
-		;;processing the body.  So the formals may shadow this binding.
-		(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
-	      (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-				       (qdef-defun.standard-formals qdef)
-				       (car (qdef-closure.clause-signature* qdef))
-				       (qdef-defun.body* qdef))))
+	  (case type
+	    ((standard)
+	     (chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
+				    (qdef-defun.standard-formals qdef)
+				    (car (qdef-closure.clause-signature* qdef))
+				    (qdef-defun.body* qdef)))
+	    ((typed)
+	     (receive (lexenv.run lexenv.expand)
+		 ;;We establish the syntactic binding for "__who__" before processing
+		 ;;the body.  So the formals may shadow this binding.
+		 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
+	       (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
+					(qdef-defun.standard-formals qdef)
+					(car (qdef-closure.clause-signature* qdef))
+					(qdef-defun.body* qdef))))
+	    ((checked)
+	     (receive (lexenv.run lexenv.expand)
+		 ;;We establish the syntactic binding for "__who__" before processing
+		 ;;the body.  So the formals may shadow this binding.
+		 (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
+	       (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+					  (qdef-defun.standard-formals qdef)
+					  (car (qdef-closure.clause-signature* qdef))
+					  (qdef-defun.body* qdef)))))
 	(make-psi input-form.stx
 	  (build-lambda (identifier->symbol (qdef.var-id qdef))
 	      standard-formals.lex
@@ -125,7 +159,7 @@
 
 ;;;; chi procedures: standard and typed multi-clause function definition
 
-(module (chi-case-defun/std chi-case-defun/typed)
+(module (chi-case-defun/std chi-case-defun/typed chi-case-defun/checked)
 
   (define (chi-case-defun/std qdef lexenv.run lexenv.expand)
     ;;Expand a  qualified RHS (QDEF)  representing a CASE-DEFINE/STD  syntax use
@@ -141,7 +175,7 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-case-defun #t qdef lexenv.run lexenv.expand))
+    (%chi-case-defun 'standard qdef lexenv.run lexenv.expand))
 
   (define (chi-case-defun/typed qdef lexenv.run lexenv.expand)
     ;;Expand a qualified  RHS (QDEF) representing a CASE-DEFINE/TYPED  syntax use for
@@ -157,9 +191,25 @@
     ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
     ;;binding has already been added to LEXENV.
     ;;
-    (%chi-case-defun #f qdef lexenv.run lexenv.expand))
+    (%chi-case-defun 'typed qdef lexenv.run lexenv.expand))
 
-  (define (%chi-case-defun standard? qdef lexenv.run lexenv.expand)
+  (define (chi-case-defun/checked qdef lexenv.run lexenv.expand)
+    ;;Expand a qualified RHS (QDEF) representing a CASE-DEFINE/CHECKED syntax use for
+    ;;the case of function definition; the original input form is something like:
+    ;;
+    ;;   (case-define/checked ?lhs (?formals0 . ?body0) (?formals . ?body) ...)
+    ;;
+    ;;Return a  PSI object holding a  lambda core language expression.   The returned
+    ;;expression will be coupled (by the caller) with an already generated lex gensym
+    ;;serving as lexical variable name; for this  reason we return a lambda core form
+    ;;rather than a define core form.
+    ;;
+    ;;NOTE This  function assumes that:  the left-hand side (LHS)  variable syntactic
+    ;;binding has already been added to LEXENV.
+    ;;
+    (%chi-case-defun 'checked qdef lexenv.run lexenv.expand))
+
+  (define (%chi-case-defun type qdef lexenv.run lexenv.expand)
     (define-constant input-form.stx		(qdef.input-form qdef))
     (define-constant standard-formals*.stx	(qdef-case-defun.standard-formals* qdef))
     (define-constant body**.stx			(qdef-case-defun.body** qdef))
@@ -170,11 +220,16 @@
 	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ (qdef.var-id qdef))
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	(receive (formals*.lex body*.psi)
-	    (if standard?
-		(chi-case-lambda-clause*/std input-form.stx lexenv.run lexenv.expand
-					     standard-formals*.stx clause-signature* body**.stx)
-	      (chi-case-lambda-clause*/typed input-form.stx lexenv.run lexenv.expand
-					     standard-formals*.stx clause-signature* body**.stx))
+	    (case type
+	      ((standard)
+	       (chi-case-lambda-clause*/std     input-form.stx lexenv.run lexenv.expand
+						standard-formals*.stx clause-signature* body**.stx))
+	      ((typed)
+	       (chi-case-lambda-clause*/typed   input-form.stx lexenv.run lexenv.expand
+						standard-formals*.stx clause-signature* body**.stx))
+	      ((checked)
+	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
+						standard-formals*.stx clause-signature* body**.stx)))
 	  (make-psi input-form.stx
 	    (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
@@ -288,7 +343,9 @@
 ;;;; typed LAMBDA expansion
 
 (module (chi-lambda/typed
-	 chi-named-lambda/typed)
+	 chi-lambda/checked
+	 chi-named-lambda/typed
+	 chi-named-lambda/checked)
 
   (define* (chi-lambda/typed input-form.stx lexenv.run lexenv.expand
 			     input-formals.stx body*.stx)
@@ -299,15 +356,40 @@
     ;;formals  of the  LAMBDA syntax.   The argument  BODY*.STX is  a list  of syntax
     ;;objects representing the body expressions.
     ;;
-    (%chi-lambda input-form.stx lexenv.run lexenv.expand (underscore-id) '_ input-formals.stx body*.stx))
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand
+		 'typed   (underscore-id) '_ input-formals.stx body*.stx))
+
+  (define* (chi-lambda/checked input-form.stx lexenv.run lexenv.expand
+			       input-formals.stx body*.stx)
+    ;;Expand the contents of a LAMBDA/CHECKED syntax use and return a psi object.
+    ;;
+    ;;The argument INPUT-FORM.STX is a syntax object representing the original LAMBDA
+    ;;expression.  The argument INPUT-FORMALS.STX is a syntax object representing the
+    ;;formals  of the  LAMBDA syntax.   The argument  BODY*.STX is  a list  of syntax
+    ;;objects representing the body expressions.
+    ;;
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand
+		 'checked (underscore-id) '_ input-formals.stx body*.stx))
+
+;;; --------------------------------------------------------------------
 
   (define* (chi-named-lambda/typed input-form.stx lexenv.run lexenv.expand
 				   who.id input-formals.stx body*.stx)
     ;;Expand the contents of a NAMED-LAMBDA/TYPED syntax use and return a psi object.
     ;;
-    (%chi-lambda input-form.stx lexenv.run lexenv.expand who.id (identifier->symbol who.id) input-formals.stx body*.stx))
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand
+		 'typed   who.id (identifier->symbol who.id) input-formals.stx body*.stx))
 
-  (define (%chi-lambda input-form.stx lexenv.run lexenv.expand who.id who.sym input-formals.stx body*.stx)
+  (define* (chi-named-lambda/checked input-form.stx lexenv.run lexenv.expand
+				     who.id input-formals.stx body*.stx)
+    ;;Expand the contents of a NAMED-LAMBDA/CHECKED syntax use and return a psi object.
+    ;;
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand
+		 'checked who.id (identifier->symbol who.id) input-formals.stx body*.stx))
+
+;;; --------------------------------------------------------------------
+
+  (define (%chi-lambda input-form.stx lexenv.run lexenv.expand type who.id who.sym input-formals.stx body*.stx)
     (receive (standard-formals.stx clause-signature)
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
@@ -319,8 +401,13 @@
 	  ;;formals and the body.  So the formals may shadow this binding.
 	  (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
 	(receive (standard-formals.lex body.psi)
-	    (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-				     standard-formals.stx clause-signature body*.stx)
+	    (case type
+	      ((typed)
+	       (chi-lambda-clause/typed   input-form.stx lexenv.run lexenv.expand
+					  standard-formals.stx clause-signature body*.stx))
+	      ((checked)
+	       (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+					  standard-formals.stx clause-signature body*.stx)))
 	  (make-psi input-form.stx
 	    (build-lambda (syntax-annotation input-form.stx)
 		standard-formals.lex
@@ -334,7 +421,9 @@
 ;;;; typed CASE-LAMBDA and variants
 
 (module (chi-case-lambda/typed
-	 chi-named-case-lambda/typed)
+	 chi-case-lambda/checked
+	 chi-named-case-lambda/typed
+	 chi-named-case-lambda/checked)
 
   (define* (chi-case-lambda/typed input-form.stx lexenv.run lexenv.expand
 				  input-formals*.stx body**.stx)
@@ -363,8 +452,40 @@
     ;;     (list #'(body1) #'(body2)))
     ;;
     (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		  (underscore-id) '_
+		  'typed (underscore-id) '_
 		  input-formals*.stx body**.stx))
+
+  (define* (chi-case-lambda/checked input-form.stx lexenv.run lexenv.expand
+				    input-formals*.stx body**.stx)
+    ;;Expand the clauses of a CASE-LAMBDA/CHECKED syntax use and return a psi object.
+    ;;
+    ;;The  argument  INPUT-FORM.STX is  a  syntax  object representing  the  original
+    ;;CASE-LAMBDA/CHECKED expression.   The argument INPUT-FORMALS*.STX is  a list of
+    ;;syntax objects whose items are  the formals of the CASE-LAMBDA/CHECKED clauses.
+    ;;The argument BODY**.STX is a list of  syntax objects whose items are the bodies
+    ;;of the CASE-LAMBDA/CHECKED clauses.
+    ;;
+    ;;Example, for the input form:
+    ;;
+    ;;   (case-lambda/checked
+    ;;     ((a b c) body1)
+    ;;     ((d e f) body2))
+    ;;
+    ;;this function is invoked as:
+    ;;
+    ;;   (chi-case-lambda/checked
+    ;;     #'(case-lambda/checked
+    ;;         ((a b c) body1)
+    ;;         ((d e f) body2))
+    ;;     lexenv.run lexenv.expand
+    ;;     (list #'(a b c) #'(d e f))
+    ;;     (list #'(body1) #'(body2)))
+    ;;
+    (%chi-clambda input-form.stx lexenv.run lexenv.expand
+		  'checked (underscore-id) '_
+		  input-formals*.stx body**.stx))
+
+;;; --------------------------------------------------------------------
 
   (define* (chi-named-case-lambda/typed input-form.stx lexenv.run lexenv.expand
 					who.id input-formals*.stx body**.stx)
@@ -372,10 +493,21 @@
     ;;object.
     ;;
     (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		  who.id (identifier->symbol who.id)
+		  'typed who.id (identifier->symbol who.id)
 		  input-formals*.stx body**.stx))
 
-  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand who.id who.sym input-formals*.stx body**.stx)
+  (define* (chi-named-case-lambda/checked input-form.stx lexenv.run lexenv.expand
+					  who.id input-formals*.stx body**.stx)
+    ;;Expand the clauses  of a NAMED-CASE-LAMBDA/checked syntax use and  return a psi
+    ;;object.
+    ;;
+    (%chi-clambda input-form.stx lexenv.run lexenv.expand
+		  'checked who.id (identifier->symbol who.id)
+		  input-formals*.stx body**.stx))
+
+;;; --------------------------------------------------------------------
+
+  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id who.sym input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx input-form.stx)
       (receive (lexenv.run lexenv.expand)
@@ -383,8 +515,13 @@
 	  ;;formals and the body.  So the formals may shadow this binding.
 	  (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
 	(receive (formals*.lex body*.psi)
-	    (chi-case-lambda-clause*/typed input-form.stx lexenv.run lexenv.expand
-					   standard-formals*.stx clause-signature* body**.stx)
+	    (case type
+	      ((typed)
+	       (chi-case-lambda-clause*/typed   input-form.stx lexenv.run lexenv.expand
+					        standard-formals*.stx clause-signature* body**.stx))
+	      ((checked)
+	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
+						standard-formals*.stx clause-signature* body**.stx)))
 	  (make-psi input-form.stx
 	    (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
@@ -454,6 +591,35 @@
 	(receive (standard-formals*.lex body*.psi)
 	    (chi-case-lambda-clause*/typed input-form.stx lexenv.run lexenv.expand
 					   (cdr standard-formals*.stx) (cdr clause-signature*) (cdr body-form**.stx))
+	  (values (cons standard-formals.lex standard-formals*.lex)
+		  (cons body.psi body*.psi))))
+    (values '() '())))
+
+(define* (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
+					  standard-formals*.stx clause-signature* body-form**.stx)
+  ;;Recursive function.  Expand all the clauses of a CASE-LAMBDA/CHECKED syntax.
+  ;;
+  ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
+  ;;The argument  STANDARD-FORMALS*.STX is a list  of syntax objects, each  holding a
+  ;;proper or improper list of formal arguments.  The argument CLAUSE-SIGNATURE* is a
+  ;;list of "<clambda-clause-signature>" objects.  The  argument BODY**.STX is a list
+  ;;of syntax objects each holding the body forms.
+  ;;
+  ;;Return the following values:
+  ;;
+  ;;1.  A  list of subslists,  each sublist  being a proper  or improper list  of lex
+  ;;gensyms representing the formals.
+  ;;
+  ;;2.  A list of PSI objects each containing a core language expression representing
+  ;;the body of a clause.
+  ;;
+  (if (pair? standard-formals*.stx)
+      (receive (standard-formals.lex body.psi)
+	  (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+				     (car standard-formals*.stx) (car clause-signature*) (car body-form**.stx))
+	(receive (standard-formals*.lex body*.psi)
+	    (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
+					     (cdr standard-formals*.stx) (cdr clause-signature*) (cdr body-form**.stx))
 	  (values (cons standard-formals.lex standard-formals*.lex)
 		  (cons body.psi body*.psi))))
     (values '() '())))
@@ -532,12 +698,51 @@
 
 ;;;; lambda clause expander: typed lambda clause
 
-(module (chi-lambda-clause/typed)
+(define* (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
+				  standard-formals.stx clause-signature body*.stx)
+  ;;Expand the clause of a LAMBDA/TYPED or DEFINE/TYPED syntax use or a single clause
+  ;;of a CASE-LAMBDA/TYPED or CASE-DEFINE/TYPED syntax use.
+  ;;
+  ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
+  ;;The argument STANDARD-FORMALS.STX is a syntax object holding a proper or improper
+  ;;list of standard formal arguments.   The argument CLAUSE-SIGNATURE is an instance
+  ;;of  "<clambda-clause-signature>".  The  argument BODY*.STX  is a  list of  syntax
+  ;;objects holding the body forms.
+  ;;
+  ;;Return the following values:
+  ;;
+  ;;1. STANDARD-FORMALS.LEX,  a proper or  improper list of lex  gensyms representing
+  ;;the lambda clause formals.
+  ;;
+  ;;2. BODY.PSI, a PSI object representing the expanded body.
+  ;;
+  ;;NOTE The expander  for the internal body will create  yet another lexical contour
+  ;;to hold the body's internal definitions.
+  ;;
+  (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
+  (define argvals-signature.specs
+    (type-signature.specs (clambda-clause-signature.argvals clause-signature)))
+  (cond
+   ((list? standard-formals.stx)
+    ;;Without  rest  argument.   Here  we know  that  both  STANDARD-FORMALS.STX  and
+    ;;ARGVALS-SIGNATURE.SPECS are proper lists with equal length.
+    (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
+					   standard-formals.stx clause-signature body*.stx))
 
-  (define* (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-				    standard-formals.stx clause-signature body*.stx)
-    ;;Expand the  clause of  a LAMBDA/TYPED  or DEFINE/TYPED syntax  use or  a single
-    ;;clause of a CASE-LAMBDA/TYPED or CASE-DEFINE/TYPED syntax use.
+   (else
+    ;;With  rest  argument.    Here  we  know  that   both  STANDARD-FORMALS.STX  and
+    ;;ARGVALS-SIGNATURE.SPECS are improper lists with equal length.
+    (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
+					     standard-formals.stx clause-signature body*.stx))))
+
+;;; --------------------------------------------------------------------
+
+(module (chi-lambda-clause/checked)
+
+  (define* (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+				      standard-formals.stx clause-signature body*.stx)
+    ;;Expand the clause of a LAMBDA/CHECKED  or DEFINE/CHECKED syntax use or a single
+    ;;clause of a CASE-LAMBDA/CHECKED or CASE-DEFINE/CHECKED syntax use.
     ;;
     ;;The argument  INPUT-FORM.STX is  the syntax object  holding the  original input
     ;;form.  The argument STANDARD-FORMALS.STX is a syntax object holding a proper or
@@ -605,7 +810,7 @@
 					    caller-who arg*.id arg*.ots rest.id rest.ots)
       ;;When expanding a typed LAMBDA form like:
       ;;
-      ;;   (lambda/typed ({a <fixnum>} {b <string>} . {rest <fixnum*>})
+      ;;   (lambda/checked ({a <fixnum>} {b <string>} . {rest <fixnum*>})
       ;;     ?body)
       ;;
       ;;we want to transform it into an equivalent of:
@@ -736,7 +941,7 @@
 	     `(,@head*.stx
 	       (assert-signature-and-return ,retvals-signature.tags ,last.stx))))))))
 
-  #| end of module: CHI-LAMBDA-CLAUSE/TYPED |# )
+  #| end of module |# )
 
 
 ;;;; done

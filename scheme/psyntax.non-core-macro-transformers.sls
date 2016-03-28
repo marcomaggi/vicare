@@ -783,7 +783,7 @@
 			   ;;condition  object  embedded   in  a  compound  condition
 			   ;;object.
 			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym (quote ,accessor.id)))
-			 (define/typed ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
+			 (define/checked ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
 			   (unsafe-cast-signature (,field-type.id) (,internal-accessor.sym ,arg.sym)))))
 		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
 	   (bless
@@ -802,7 +802,7 @@
 	       ;;At present  we cannot  know the  exact number  of arguments  for the
 	       ;;constructor: we should take into account the arguments needed by the
 	       ;;parent constructor.
-	       (define/typed ((brace ,?constructor ,?name) . ,arg.sym)
+	       (define/checked ((brace ,?constructor ,?name) . ,arg.sym)
 	       	 (unsafe-cast-signature (,?name) (apply ,internal-constructor.sym ,arg.sym)))
 	       ,@accessor-definition*.stx
 	       #| end of module |# )
@@ -1726,7 +1726,7 @@
   (syntax-match input-form.stx ()
     ((_ . ?stuff)
      (cons (if (options::typed-language?)
-	       (core-prim-id 'define/typed)
+	       (core-prim-id 'define/checked)
 	     (core-prim-id 'define/std))
 	   ?stuff))
     ))
@@ -1739,7 +1739,7 @@
   (syntax-match input-form.stx ()
     ((_ . ?stuff)
      (cons (if (options::typed-language?)
-	       (core-prim-id 'case-define/typed)
+	       (core-prim-id 'case-define/checked)
 	     (core-prim-id 'case-define/std))
 	   ?stuff))
     ))
@@ -4313,7 +4313,7 @@
     (syntax-match input-form.stx ()
       ((_ ?formals ?body0 ?body* ...)
        (if (options::typed-language?)
-	   (define-values/typed-macro input-form.stx ?formals (cons ?body0 ?body*))
+	   (define-values/checked-macro input-form.stx ?formals (cons ?body0 ?body*))
 	 (define-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
       ))
 
@@ -4386,16 +4386,16 @@
 	       (lambda/std args args)))))
 	)))
 
-  (define (define-values/typed-macro input-form.stx input-formals.stx body*.stx)
+  (define (define-values/checked-macro input-form.stx input-formals.stx body*.stx)
     (receive (standard-formals.stx signature.stx)
 	(syntax-object.parse-typed-formals input-formals.stx input-form.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)
 	 ;;We want this expansion:
 	 ;;
-	 ;;  (define/typed {?id ?type})
+	 ;;  (define/checked {?id ?type})
 	 ;;  ...
-	 ;;  (define/typed {?id0 ?type0}
+	 ;;  (define/checked {?id0 ?type0}
 	 ;;    (call-with-values
 	 ;;        (lambda/std () ?body0 . ?body*)
 	 ;;      (lambda/std (TMP ... TMP0)
@@ -4409,9 +4409,9 @@
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
-			  `(define/typed (brace ,var ,tag)))
+			  `(define/checked (brace ,var ,tag)))
 		     ?id* tag*)
-		 (define/typed (brace ,?id0 ,tag0)
+		 (define/checked (brace ,?id0 ,tag0)
 		   (call-with-values
 		       (lambda/std () . ,body*.stx)
 		     (lambda/std (,@TMP* TMP0)
@@ -4424,9 +4424,9 @@
 	((?id* ... . ?rest-id)
 	 ;;We want this expansion:
 	 ;;
-	 ;;  (define/typed {?id ?type})
+	 ;;  (define/checked {?id ?type})
 	 ;;  ...
-	 ;;  (define/typed {?rest-id ?rest-type}
+	 ;;  (define/checked {?rest-id ?rest-type}
 	 ;;    (call-with-values
 	 ;;        (lambda/std () ?body0 . ?body*)
 	 ;;      (lambda/std (TMP ... . TMP-REST)
@@ -4440,9 +4440,9 @@
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
-			  `(define/typed (brace ,var ,tag)))
+			  `(define/checked (brace ,var ,tag)))
 		     ?id* tag*)
-		 (define/typed (brace ,?rest-id ,rest-tag)
+		 (define/checked (brace ,?rest-id ,rest-tag)
 		   (call-with-values
 		       (lambda/std () . ,body*.stx)
 		     (lambda/std (,@TMP* . rest)
@@ -4455,7 +4455,7 @@
 	(?args
 	 (identifier? ?args)
 	 (bless
-	  `(define/typed (brace ,?args ,signature.stx)
+	  `(define/checked (brace ,?args ,signature.stx)
 	     (call-with-values
 		 (lambda/std () . ,body*.stx)
 	       (lambda/std args
@@ -4477,7 +4477,7 @@
     (syntax-match input-form.stx ()
       ((_ ?formals ?body0 ?body* ...)
        (if (options::typed-language?)
-	   (define-constant-values/typed-macro input-form.stx ?formals (cons ?body0 ?body*))
+	   (define-constant-values/checked-macro input-form.stx ?formals (cons ?body0 ?body*))
 	 (define-constant-values/std-macro input-form.stx ?formals (cons ?body0 ?body*))))
       ))
 
@@ -4545,7 +4545,7 @@
 	       (define-syntax ,?args (identifier-syntax shadow))))))
 	)))
 
-  (define (define-constant-values/typed-macro input-form.stx formals.stx body*.stx)
+  (define (define-constant-values/checked-macro input-form.stx formals.stx body*.stx)
     (receive (standard-formals.stx signature.stx)
 	(syntax-object.parse-typed-formals formals.stx input-form.stx)
       (syntax-match standard-formals.stx ()
@@ -4557,9 +4557,9 @@
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
-			  `(define/typed (brace ,var ,tag)))
+			  `(define/checked (brace ,var ,tag)))
 		     SHADOW* tag*)
-		 (define/typed (brace SHADOW0 ,tag0)
+		 (define/checked (brace SHADOW0 ,tag0)
 		   (call-with-values
 		       (lambda/std () . ,body*.stx)
 		     (lambda/std (,@TMP* TMP0)
@@ -4582,9 +4582,9 @@
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
-			  `(define/typed (brace ,var ,tag)))
+			  `(define/checked (brace ,var ,tag)))
 		     SHADOW* tag*)
-		 (define/typed (brace rest-shadow ,rest-tag)
+		 (define/checked (brace rest-shadow ,rest-tag)
 		   (call-with-values
 		       (lambda/std () . ,body*.stx)
 		     (lambda/std (,@TMP* . rest)
@@ -4604,7 +4604,7 @@
 	 (let ((args-tag signature.stx))
 	   (bless
 	    `(begin
-	       (define/typed (brace shadow ,args-tag)
+	       (define/checked (brace shadow ,args-tag)
 		 (call-with-values
 		     (lambda/std () . ,body*.stx)
 		   (lambda/std args
@@ -4633,11 +4633,11 @@
 					(= 1 (length standard-formals.stx)))))
 	 (if single-return-value?
 	     (bless
-	      `((lambda/typed ,?formals ,?body0 ,@?body*) ,?producer-expression))
+	      `((lambda/checked ,?formals ,?body0 ,@?body*) ,?producer-expression))
 	   (bless
 	    `(call-with-values
 		 (lambda/std () ,?producer-expression)
-	       (lambda/typed ,?formals ,?body0 ,@?body*)))))))
+	       (lambda/checked ,?formals ,?body0 ,@?body*)))))))
     ))
 
 (define (receive-and-return-macro input-form.stx)
@@ -4669,7 +4669,7 @@
 	   (bless
 	    `(call-with-values
 		 (lambda/std () ,?producer-expression)
-	       (lambda/typed ,?formals ,?body0 ,@?body* ,rv-form)))))))
+	       (lambda/checked ,?formals ,?body0 ,@?body* ,rv-form)))))))
     ))
 
 (define (begin0-macro input-form.stx)

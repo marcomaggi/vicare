@@ -31,6 +31,7 @@
 ;;   (define/std (fun x) (list x 1))
 ;;   (define/std name)
 ;;   (define/typed {red tag} (+ 1 2))
+;;   (define/checked {red tag} (+ 1 2))
 ;;   (define/std blue (+ 3 4))
 ;;   (display 5)
 ;;
@@ -63,9 +64,12 @@
 	 <qdef-standard-defvar>		make-qdef-standard-defvar	qdef-standard-defvar?
 	 <qdef-typed-defun>		make-qdef-typed-defun		qdef-typed-defun?
 	 <qdef-typed-defvar>		make-qdef-typed-defvar		qdef-typed-defvar?
-	 <qdef-top-expr>		make-qdef-top-expr		qdef-top-expr?
+	 <qdef-checked-defun>		make-qdef-checked-defun		qdef-checked-defun?
+	 <qdef-checked-defvar>		make-qdef-checked-defvar	qdef-checked-defvar?
 	 <qdef-standard-case-defun>	make-qdef-standard-case-defun	qdef-standard-case-defun?
 	 <qdef-typed-case-defun>	make-qdef-typed-case-defun	qdef-typed-case-defun?
+	 <qdef-checked-case-defun>	make-qdef-checked-case-defun	qdef-checked-case-defun?
+	 <qdef-top-expr>		make-qdef-top-expr		qdef-top-expr?
 	 ;;
 	 qdef.input-form
 	 qdef.var-id				qdef.lex
@@ -173,6 +177,22 @@
 	((make-qdef-defun input-form.stx lhs.var-id standard-formals.stx body*.stx lhs.ots)))
       make-qdef-typed-defun)))
 
+(define-record-type (<qdef-checked-defun> make-qdef-checked-defun qdef-checked-defun?)
+  ;;This type  is used  to represent  checked function  definitions from  syntax uses
+  ;;like:
+  ;;
+  ;;   (define/checked ((brace fun <fixnum>) (brace arg <string>))
+  ;;     body)
+  ;;
+  (nongenerative vicare:expander:<qdef-checked-defun>)
+  (parent <qdef-defun>)
+  (protocol
+    (lambda (make-qdef-defun)
+      (define* (make-qdef-checked-defun input-form.stx {lhs.var-id identifier?} standard-formals.stx {body*.stx list?}
+					{lhs.ots object-type-spec?})
+	((make-qdef-defun input-form.stx lhs.var-id standard-formals.stx body*.stx lhs.ots)))
+      make-qdef-checked-defun)))
+
 
 ;;;; type definitions: qualified RHS multiple-clause function definition
 
@@ -237,6 +257,25 @@
 	((make-qdef-case-defun input-form.stx lhs.var-id standard-formals*.stx body**.stx lhs.ots)))
       make-qdef-typed-case-defun)))
 
+(define-record-type (<qdef-checked-case-defun> make-qdef-checked-case-defun qdef-checked-case-defun?)
+  ;;This type  is used  to represent  checked function  definitions from  syntax uses
+  ;;like:
+  ;;
+  ;;   (case-define/checked ?lhs ?clause0 ?clause ...)
+  ;;
+  ;;which are meant to be equivalent to:
+  ;;
+  ;;   (define ?lhs (case-lambda/checked ?clause0 ?clause ...))
+  ;;
+  (nongenerative vicare:expander:qdef-checked-case-defun)
+  (parent <qdef-case-defun>)
+  (protocol
+    (lambda (make-qdef-case-defun)
+      (define* (make-qdef-checked-case-defun input-form.stx {lhs.var-id identifier?} standard-formals*.stx {body**.stx list?}
+					     {lhs.ots closure-type-spec?})
+	((make-qdef-case-defun input-form.stx lhs.var-id standard-formals*.stx body**.stx lhs.ots)))
+      make-qdef-checked-case-defun)))
+
 
 ;;;; type definitions: qualified RHS variable definition
 
@@ -286,6 +325,20 @@
       (define* (make-qdef-typed-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
 	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
       make-qdef-typed-defvar)))
+
+(define-record-type (<qdef-checked-defvar> make-qdef-checked-defvar qdef-checked-defvar?)
+  ;;This type  is used  to represent  checked variable  definitions from  syntax uses
+  ;;like:
+  ;;
+  ;;   (define/checked (brace var <fixnum>) val)
+  ;;
+  (nongenerative vicare:expander:<qdef-checked-defvar>)
+  (parent <qdef-defvar>)
+  (protocol
+    (lambda (make-qdef-defvar)
+      (define* (make-qdef-checked-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
+	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
+      make-qdef-checked-defvar)))
 
 
 ;;;; type definitions: qualified RHS top-level expression
@@ -344,13 +397,16 @@
        (cond
 	((eq? rtd (record-type-descriptor <qdef-standard-defun>))	(chi-defun/std	      qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-typed-defun>))		(chi-defun/typed      qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-checked-defun>))	(chi-defun/checked    qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-standard-defvar>))	(chi-defvar/std	      qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-typed-defvar>))		(chi-defvar/typed     qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-checked-defvar>))	(chi-defvar/checked   qdef lexenv.run lexenv.expand))
 	((eq? rtd (record-type-descriptor <qdef-top-expr>))		(if interaction?
 									    (chi-interaction-top-expr qdef lexenv.run lexenv.expand)
 									  (chi-top-expr qdef lexenv.run lexenv.expand)))
-	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/std   qdef lexenv.run lexenv.expand))
-	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-standard-case-defun>))	(chi-case-defun/std     qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-typed-case-defun>))	(chi-case-defun/typed   qdef lexenv.run lexenv.expand))
+	((eq? rtd (record-type-descriptor <qdef-checked-case-defun>))	(chi-case-defun/checked qdef lexenv.run lexenv.expand))
 	(else
 	 (assertion-violation __who__ "invalid QDEF type" qdef))))))
 
@@ -394,6 +450,14 @@
 
 (define (chi-defvar/typed qdef lexenv.run lexenv.expand)
   ;;Expand the right-hand  side expression of a typed variable  definition; build and
+  ;;return  a PSI  object.  The  generated  core language  expression represents  the
+  ;;standalone right-hand side expression; the  code representing the handling of the
+  ;;resulting value is generated somewhere else.
+  ;;
+  (chi-expr (qdef-defvar.rhs qdef) lexenv.run lexenv.expand))
+
+(define (chi-defvar/checked qdef lexenv.run lexenv.expand)
+  ;;Expand the right-hand side expression of a checked variable definition; build and
   ;;return  a PSI  object.  The  generated  core language  expression represents  the
   ;;standalone right-hand side expression; the  code representing the handling of the
   ;;resulting value is generated somewhere else.

@@ -125,7 +125,7 @@
     (define accessor-sexp*
       (map (lambda (accessor.id unsafe-accessor.id field.tag)
 	     (let ((stru.sym (gensym "stru")))
-	       `(define/typed ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
+	       `(define/checked ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
 		  (,unsafe-accessor.id ,stru.sym))))
 	accessor*.id unsafe-accessor*.id field*.tag))
 
@@ -133,7 +133,7 @@
       (map (lambda (mutator.id unsafe-mutator.id field.tag)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
-	       `(define/typed ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
 		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
 	mutator*.id unsafe-mutator*.id field*.tag))
 
@@ -141,7 +141,7 @@
       (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.tag)
     	     (let ((stru.sym (gensym "stru"))
     		   (val.sym  (gensym "val")))
-    	       `(case-define/typed ,method.id
+    	       `(case-define/checked ,method.id
     		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
     		   (,unsafe-accessor.id ,stru.sym))
     		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
@@ -165,7 +165,7 @@
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/typed (,stru.sym ,val.sym)
+		   (lambda/checked (,stru.sym ,val.sym)
 		     ($struct-set! (unsafe-cast-signature (<struct>) ,stru.sym) ,field.idx ,val.sym))))))
 	unsafe-mutator*.id field*.idx))
 
@@ -182,7 +182,7 @@
 	       ,constructor.id ,predicate.id
 	       ,@accessor*.id ,@unsafe-accessor*.id
 	       ,@mutator*.id  ,@unsafe-mutator*.id)
-	(define/typed ((brace ,predicate.id <boolean>) obj)
+	(define/checked ((brace ,predicate.id <boolean>) obj)
 	  ($struct/rtd? obj ',std))
 	(define-syntax ,type.id
 	  (make-struct-type-spec (syntax ,type.id) ',std
@@ -190,7 +190,7 @@
 				 ,safe-accessors-table.sexp
 				 ,safe-mutators-table.sexp
 				 (quote ())))
-	(define/typed ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
+	(define/checked ((brace ,constructor.id ,type.id) . ,constructor-arg*.sym)
 	  (receive-and-return (S)
 	      ($struct ',std . ,constructor-arg*.sym)
 	    (when ($std-destructor ',std)

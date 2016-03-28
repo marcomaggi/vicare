@@ -301,8 +301,8 @@
 			(type  (syntactic-binding-descriptor.type descr)))
 		   (case type
 		     ((core-macro
-		       define/std define/typed
-		       case-define/std case-define/typed
+		       define/std define/typed define/checked
+		       case-define/std case-define/typed case-define/checked
 		       define-syntax define-alias
 		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
@@ -937,11 +937,11 @@
       ((pattern-variable)
        (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
-      ((define/std define/typed define-syntax define-fluid-syntax define-alias module import library)
+      ((define/std define/typed define/checked define-syntax define-fluid-syntax define-alias module import library)
        (stx-error expr.stx
 		  (string-append
 		   (case type
-		     ((define/std define/typed)			"a definition")
+		     ((define/std define/typed define/checked)	"a definition")
 		     ((define-syntax)				"a define-syntax")
 		     ((define-fluid-syntax)			"a define-fluid-syntax")
 		     ((define-alias)				"a define-alias")
@@ -1333,9 +1333,8 @@
 
 (module (%process-typed-syntactic-bindings-lhs*)
   ;;This function is meant to be used by syntaxes that create new syntactic bindings:
-  ;;LAMBDA/TYPED,  NAMED-LAMBDA/TYPED,   CASE-LAMBDA/TYPED,  NAMED-CASE-LAMBDA/TYPED,
-  ;;LET,  LETREC, LETREC*.   These syntaxes  need to  create both  typed and  untyped
-  ;;syntactic bindings.
+  ;;LAMBDA, NAMED-LAMBDA,  CASE-LAMBDA, NAMED-CASE-LAMBDA,  LET, LETREC,  LETREC*, et
+  ;;cetera.  These syntaxes need to create both typed and untyped syntactic bindings.
   ;;
   ;;LHS*.ID must be a proper list  of syntactic identifiers representing the names of
   ;;the syntactic  bindings.  LHS*.OTS must  be a proper list  of #f or  instances of

@@ -89,8 +89,8 @@
   ;;
   ;;into one of the following output forms:
   ;;
-  ;;   (lambda/std ?formals ?body . ?body*)
-  ;;   (lambda/typed    ?formals ?body . ?body*)
+  ;;   (lambda/std     ?formals ?body . ?body*)
+  ;;   (lambda/checked ?formals ?body . ?body*)
   ;;
   ;;When debugging mode  is enabled: we want to include  this internal transformation
   ;;in the stack of annotated expressions of INPUT-FORM.STX.
@@ -110,8 +110,8 @@
   ;;
   ;;into one of the following output forms:
   ;;
-  ;;   (case-lambda/std (?formals ?body . ?body*) ...)
-  ;;   (case-lambda/typed    (?formals ?body . ?body*) ...)
+  ;;   (case-lambda/std     (?formals ?body . ?body*) ...)
+  ;;   (case-lambda/checked (?formals ?body . ?body*) ...)
   ;;
   ;;When debugging mode  is enabled: we want to include  this internal transformation
   ;;in the stack of annotated expressions of INPUT-FORM.STX.
@@ -139,15 +139,19 @@
     ((lambda)					lambda-transformer)
     ((lambda/std)				lambda/std-transformer)
     ((lambda/typed)				lambda/typed-transformer)
+    ((lambda/checked)				lambda/checked-transformer)
     ((case-lambda)				case-lambda-transformer)
     ((case-lambda/std)				case-lambda/std-transformer)
     ((case-lambda/typed)			case-lambda/typed-transformer)
+    ((case-lambda/checked)			case-lambda/checked-transformer)
     ((named-lambda)				named-lambda-transformer)
     ((named-lambda/std)				named-lambda/std-transformer)
     ((named-lambda/typed)			named-lambda/typed-transformer)
+    ((named-lambda/checked)			named-lambda/checked-transformer)
     ((named-case-lambda)			named-case-lambda-transformer)
     ((named-case-lambda/std)			named-case-lambda/std-transformer)
     ((named-case-lambda/typed)			named-case-lambda/typed-transformer)
+    ((named-case-lambda/checked)		named-case-lambda/checked-transformer)
     ;;
     ((let)					let-transformer)
     ((letrec)					letrec-transformer)
@@ -233,13 +237,28 @@
 		       ?formals (cons ?body ?body*)))
     ))
 
+(define-core-transformer (lambda/checked input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand  LAMBDA/CHECKED syntaxes from  the top-level
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI object.
+  ;;
+  ;;The syntax  LAMBDA/CHECKED is compatible with  the R6RS definition of  LAMBDA and
+  ;;extends it with  typed language features; this  syntax must be used  in code that
+  ;;accepts typed language extensions.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?body ?body* ...)
+     (chi-lambda/checked input-form.stx lexenv.run lexenv.expand
+			 ?formals (cons ?body ?body*)))
+    ))
+
 (define-core-transformer (lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand LAMBDA syntaxes from the  top-level built in
   ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
   ;;LEXENV; return a PSI object.
   ;;
   ;;The expansion of the  syntax LAMBDA is influenced by state  of the typed language
-  ;;option:  if typed  language  enabled, LAMBDA  is  transformed into  LAMBDA/TYPED;
+  ;;option: if  typed language  enabled, LAMBDA  is transformed  into LAMBDA/CHECKED;
   ;;otherwise it is transformed into LAMBDA/STD.
   ;;
   ;;NOTE The LAMBDA  syntax as implemented here would be  more cleanly implemented as
@@ -249,10 +268,10 @@
   (syntax-match input-form.stx ()
     ((_ ?formals ?body ?body* ...)
      (if (options::typed-language?)
-	 (chi-lambda/typed (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
-			     'lambda/typed ?formals ?body ?body*)
-			   lexenv.run lexenv.expand
-			   ?formals (cons ?body ?body*))
+	 (chi-lambda/checked (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+			       'lambda/checked ?formals ?body ?body*)
+			     lexenv.run lexenv.expand
+			     ?formals (cons ?body ?body*))
        (chi-lambda/std (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
 			      'lambda/std ?formals ?body ?body*)
 			    lexenv.run lexenv.expand
@@ -292,6 +311,18 @@
 			     ?who ?formals (cons ?body ?body*)))
     ))
 
+(define-core-transformer (named-lambda/checked input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  NAMED-LAMBDA/CHECKED syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI object.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who ?formals ?body ?body* ...)
+     (identifier? ?who)
+     (chi-named-lambda/checked input-form.stx lexenv.run lexenv.expand
+			       ?who ?formals (cons ?body ?body*)))
+    ))
+
 (define-core-transformer (named-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  NAMED-LAMBDA  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
@@ -305,10 +336,10 @@
     ((_ ?who ?formals ?body ?body* ...)
      (identifier? ?who)
      (if (options::typed-language?)
-	 (chi-named-lambda/typed (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
-				   'named-lambda/typed ?formals ?body ?body*)
-				 lexenv.run lexenv.expand
-				 ?who ?formals (cons ?body ?body*))
+	 (chi-named-lambda/checked (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
+				     'named-lambda/checked ?formals ?body ?body*)
+				   lexenv.run lexenv.expand
+				   ?who ?formals (cons ?body ?body*))
        (chi-named-lambda/std (%maybe-push-annotated-expr-on-lambda-input-form input-form.stx
 				    'named-lambda/std ?formals ?body ?body*)
 				  lexenv.run lexenv.expand
@@ -347,6 +378,20 @@
 			    ?formals* (map cons ?body* ?body**)))
     ))
 
+(define-core-transformer (case-lambda/checked input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand  CASE-LAMBDA/CHECKED  syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return an PSI object.
+  ;;
+  ;;The  syntax  CASE-LAMBDA/CHECKED  is  compatible  with  the  R6RS  definition  of
+  ;;CASE-LAMBDA and extends it with typed language features.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ (?formals* ?body* ?body** ...) ...)
+     (chi-case-lambda/checked input-form.stx lexenv.run lexenv.expand
+			      ?formals* (map cons ?body* ?body**)))
+    ))
+
 (define-core-transformer (case-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand CASE-LAMBDA syntaxes from the top-level built
   ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
@@ -354,7 +399,7 @@
   ;;
   ;;The  expansion of  the syntax  CASE-LAMBDA is  influenced by  state of  the typed
   ;;language  option: if  typed  language enabled,  CASE-LAMBDA  is transformed  into
-  ;;CASE-LAMBDA/TYPED; otherwise it is transformed into CASE-LAMBDA/STD.
+  ;;CASE-LAMBDA/CHECKED; otherwise it is transformed into CASE-LAMBDA/STD.
   ;;
   ;;NOTE The CASE-LAMBDA syntax as implemented here would be more cleanly implemented
   ;;as non-core  macro.  But implementing it  here as core macro  makes the expansion
@@ -364,10 +409,10 @@
     ((_ (?formals* ?body* ?body** ...) ...)
      (let ((body**.stx (map cons ?body* ?body**)))
        (if (options::typed-language?)
-	   (chi-case-lambda/typed (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
-				    'case-lambda/typed ?formals* body**.stx)
-				  lexenv.run lexenv.expand
-				  ?formals* body**.stx)
+	   (chi-case-lambda/checked (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+				      'case-lambda/checked ?formals* body**.stx)
+				    lexenv.run lexenv.expand
+				    ?formals* body**.stx)
 	 (chi-case-lambda/std (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
 				     'case-lambda/std ?formals* body**.stx)
 				   lexenv.run lexenv.expand
@@ -401,6 +446,18 @@
 				  ?who ?formals* (map cons ?body* ?body**)))
     ))
 
+(define-core-transformer (named-case-lambda/checked input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  NAMED-CASE-LAMBDA/CHECKED syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return an PSI object.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?who (?formals* ?body* ?body** ...) ...)
+     (identifier? ?who)
+     (chi-named-case-lambda/checked input-form.stx lexenv.run lexenv.expand
+				    ?who ?formals* (map cons ?body* ?body**)))
+    ))
+
 (define-core-transformer (named-case-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand  Vicare's NAMED-CASE-LAMBDA syntaxes from the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
@@ -408,7 +465,7 @@
   ;;
   ;;The expansion of the syntax NAMED-CASE-LAMBDA is influenced by state of the typed
   ;;language option: if typed language enabled, NAMED-CASE-LAMBDA is transformed into
-  ;;NAMED-CASE-LAMBDA/TYPED;      otherwise      it     is      transformed      into
+  ;;NAMED-CASE-LAMBDA/CHECKED;     otherwise      it     is      transformed     into
   ;;NAMED-CASE-LAMBDA/STD.
   ;;
   ;;NOTE  The NAMED-CASE-LAMBDA  syntax as  implemented  here would  be more  cleanly
@@ -419,11 +476,11 @@
     ((_ ?who (?formals* ?body* ?body** ...) ...)
      (identifier? ?who)
      (let ((body**.stx (map cons ?body* ?body**)))
-       (if (options::strict-r6rs)
-	   (chi-named-case-lambda/typed (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
-					  'named-case-lambda/typed ?formals* body**.stx)
-					lexenv.run lexenv.expand
-					?who ?formals* body**.stx)
+       (if (options::typed-language?)
+	   (chi-named-case-lambda/checked (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
+					    'named-case-lambda/checked ?formals* body**.stx)
+					  lexenv.run lexenv.expand
+					  ?who ?formals* body**.stx)
 	 (chi-named-case-lambda/std (%maybe-push-annotated-expr-on-case-lambda-input-form input-form.stx
 					   'named-case-lambda/std ?formals* body**.stx)
 					 lexenv.run lexenv.expand
@@ -559,13 +616,13 @@
      (identifier? ?recur)
      (chi-expr (bless
 		`(internal-body
-		   ;;Here we  use DEFINE/TYPE so  that we  can easily define  a typed
+		   ;;Here we use DEFINE/CHECKED so that  we can easily define a typed
 		   ;;function.   Using  LETREC would  be  more  descriptive, but  not
 		   ;;significantly better.
 		   ;;
 		   ;;FIXME We do not want "__who__"  to be bound here.  (Marco Maggi;
 		   ;;Sat Feb 6, 2016)
-		   (define/typed (,?recur . ,?lhs*) ,?body . ,?body*)
+		   (define/checked (,?recur . ,?lhs*) ,?body . ,?body*)
 		   (,?recur . ,?rhs*)))
 	       lexenv.run lexenv.expand))
 
