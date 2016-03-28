@@ -35,6 +35,15 @@
 
 (section
 
+(declare-type-predicate cflonum?	<cflonum>)
+
+/section)
+
+
+;;;; cflonums, unsafe functions
+
+(section
+
 ;;; constructors
 
 (declare-core-primitive $make-cflonum

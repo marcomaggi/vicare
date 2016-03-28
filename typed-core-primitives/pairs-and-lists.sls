@@ -60,12 +60,13 @@
    ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
 
-(declare-core-primitive nlist?
+(declare-core-primitive circular-list?
     (safe)
   (signatures
    ((<null>)		=> (<false>))
-   ((<list>)		=> (<boolean>))
-   ((_)			=> (<false>)))
+   ((<list>)		=> (<false>))
+   ((<pair>)		=> (<boolean>))
+   (((not <pair>))	=> (<false>)))
   (attributes
    ((())		foldable effect-free result-false)
    ((_)			foldable effect-free)))

@@ -142,6 +142,13 @@
   (attributes
    ((_)			result-true)))
 
+(declare-parameter compensations	<procedure>)
+
+(declare-core-primitive run-compensations-store
+    (safe)
+  (signatures
+   ((<procedure>)	=> (<void>))))
+
 /section)
 
 

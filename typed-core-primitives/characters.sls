@@ -39,6 +39,8 @@
 
 (declare-type-predicate char? <char>)
 
+(declare-list-of-type-predicate list-of-char?	<char>)
+
 (declare-char-predicate char-in-ascii-range?)
 (declare-char-predicate char-alphabetic?)
 (declare-char-predicate char-lower-case?)

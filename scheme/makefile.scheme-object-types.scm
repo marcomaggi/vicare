@@ -174,16 +174,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-scheme-type <non-negative-fixnum>
-    <fixnum>
-  #t non-negative-fixnum?)
-
 (define-scheme-type <zero-fixnum>
-    <non-negative-fixnum>
+    <fixnum>
   #t zero-fixnum?)
 
 (define-scheme-type <positive-fixnum>
-    <non-negative-fixnum>
+    <fixnum>
   #t positive-fixnum?)
 
 (define-scheme-type <negative-fixnum>

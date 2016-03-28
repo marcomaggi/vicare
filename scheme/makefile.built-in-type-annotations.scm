@@ -40,10 +40,13 @@
     ))
 
 
-;;;; definitions
+;;;; numerics
 
-(define-type-annotation <&who-value>
-  (or <false> <symbol> <string>))
+(define-type-annotation <non-negative-fixnum>
+  (or <zero-fixnum> <positive-fixnum>))
+
+(define-type-annotation <non-positive-fixnum>
+  (or <zero-fixnum> <negative-fixnum>))
 
 ;;; --------------------------------------------------------------------
 
@@ -89,7 +92,23 @@
 (define-type-annotation <zero>
   (or <zero-fixnum> <zero-flonum>))
 
-;;; --------------------------------------------------------------------
+
+;;;; library handling
+
+(define-type-annotation <library-name>
+  <top>)
+
+(define-type-annotation <library-reference>
+  <top>)
+
+(define-type-annotation <library-descriptor>
+  <top>)
+
+
+;;;; miscellaneous
+
+(define-type-annotation <&who-value>
+  (or <false> <symbol> <string>))
 
 (define-type-annotation <file-descriptor>
   <non-negative-fixnum>)

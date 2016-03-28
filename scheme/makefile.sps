@@ -3478,10 +3478,11 @@
     (<complex>					v $language)
     (<number>					v $language)
 
-    (<non-negative-fixnum>			v $language)
     (<zero-fixnum>				v $language)
     (<positive-fixnum>				v $language)
     (<negative-fixnum>				v $language)
+    (<non-negative-fixnum>			v $language)
+    (<non-positive-fixnum>			v $language)
 
     (<positive-bignum>				v $language)
     (<negative-bignum>				v $language)
@@ -3615,7 +3616,6 @@
     (<negative-flonum>-type-descriptor)
     (<negative-ratnum>-type-descriptor)
     (<negative-zero-flonum>-type-descriptor)
-    (<non-negative-fixnum>-type-descriptor)
     (<no-return>-type-descriptor)
     (<null>-type-descriptor)
     (<number>-type-descriptor)
@@ -4160,6 +4160,10 @@
     (library-descriptor?				$libraries)
     (library-descriptor-uid				$libraries)
     (library-descriptor-name				$libraries)
+
+    (<library-name>)
+    (<library-reference>)
+    (<library-descriptor>)
 
     (find-library-by-name				$libraries)
     (find-library-by-reference				$libraries)

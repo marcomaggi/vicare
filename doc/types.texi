@@ -2289,34 +2289,44 @@ Type of fixnum values.  There is no constructor.  The type predicate is
 @end deftp
 
 
-@deftp {Built--in Type} @aclass{non-negative-fixnum}
-@deftpx {Parent Type} @aclass{fixnum}
-Type of non--negative fixnum values.  There is no constructor.
-@end deftp
-
-
-@c @deftp {Built--in Type} @aclass{non-positive-fixnum}
-@c @deftpx {Parent Type} @aclass{fixnum}
-@c Type of non--positive fixnum values.  There is no constructor.
-@c @end deftp
-
-
 @deftp {Built--in Type} @aclass{positive-fixnum}
-@deftpx {Parent Type} @aclass{non-negative-fixnum}
-Type of positive fixnum values.  There is no constructor.
+@deftpx {Parent Type} @aclass{fixnum}
+Type of positive fixnum values.  There is no constructor.  The type
+predicate is @func{positive-fixnum?}.
 @end deftp
 
 
 @deftp {Built--in Type} @aclass{negative-fixnum}
 @deftpx {Parent Type} @aclass{fixnum}
-@c @deftpx {Parent Type} @aclass{non-positive-fixnum}
-Type of negative fixnum values.  There is no constructor.
+Type of negative fixnum values.  There is no constructor.  The type
+predicate is @func{negative-fixnum?}.
 @end deftp
 
 
 @deftp {Built--in Type} @aclass{zero-fixnum}
-@deftpx {Parent Type} @aclass{non-negative-fixnum}
-Type of the zero fixnum value.  There is no constructor.
+@deftpx {Parent Type} @aclass{fixnum}
+Type of the zero fixnum value.  There is no constructor.  The type
+predicate is @func{zero-fixnum?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{non-negative-fixnum}
+Type of non--negative fixnum values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-negative-fixnum>
+  (or <zero-fixnum> <positive-fixnum>))
+@end lisp
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{non-positive-fixnum}
+Type of non--positive fixnum values.  Its definition is equivalent to:
+
+@lisp
+(define-type <non-positive-fixnum>
+  (or <zero-fixnum> <negative-fixnum>))
+@end lisp
 @end deftp
 
 @c page

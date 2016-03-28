@@ -41,6 +41,7 @@
     declare-type-predicate/false
     declare-type-predicate/list
     declare-condition-type-predicate
+    declare-list-of-type-predicate
 
     define-object-predicate-declarer
     declare-object-predicate
@@ -290,7 +291,7 @@
 	     (else id))))
     (let recur ((sig type-signature.stx))
       (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
-			     condition or and)
+			     condition or and not)
 	(()
 	 '())
 
@@ -336,6 +337,9 @@
 	(((and ?item-type0 ?item-type ...) . ?rest)
 	 (cons #`(and . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
 	       (recur #'?rest)))
+
+	(((not ?item-type) . ?rest)
+	 (cons #`(not #,(%replace #'?item-type)) (recur #'?rest)))
 
 	((?type . ?rest)
 	 (identifier? #'?type)
@@ -456,6 +460,23 @@
 	((<top>)			=> (<false>)))
        (attributes
 	((_)				foldable effect-free))))
+    ))
+
+(define-syntax declare-list-of-type-predicate
+  ;;Usage examples:
+  ;;
+  ;;   (declare-list-of-type-predicate list-of-fixnums? <fixnum>)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?obj-tag ...)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	(((list-of ?obj-tag))	=> (<true>))
+	...
+	((<top>)		=> (<boolean>)))
+       (attributes
+	((_)		foldable effect-free))))
     ))
 
 ;;; --------------------------------------------------------------------

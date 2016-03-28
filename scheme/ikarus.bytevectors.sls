@@ -994,36 +994,33 @@
 	 (let ((src.end ($fx+ src.start count)))
 	   ($bytevector-copy-forwards! src.bv src.start dst.bv dst.start src.end)))))
 
-(define ($bytevector-self-copy-forwards!/count str src.start dst.start count)
-  ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at
+(define ($bytevector-self-copy-forwards!/count bv src.start dst.start count)
+  ;;Copy COUNT  characters of BV  from SRC.START inclusive  to BV itself  starting at
   ;;DST.START inclusive.  The  copy happens forwards, so it is  suitable for the case
   ;;SRC.START > DST.START.
   ;;
-  (let loop ((str	str)
+  (let loop ((bv	bv)
 	     (src.start	src.start)
 	     (dst.start	dst.start)
 	     (src.end	($fx+ src.start count)))
     (unless ($fx= src.start src.end)
-      ($bytevector-set! str dst.start ($bytevector-u8-ref str src.start))
-      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+      ($bytevector-set! bv dst.start ($bytevector-u8-ref bv src.start))
+      (loop bv ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
 
-(define ($bytevector-self-copy-backwards!/count str src.start dst.start count)
-  ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at
+(define ($bytevector-self-copy-backwards!/count bv src.start dst.start count)
+  ;;Copy COUNT  characters of BV  from SRC.START inclusive  to BV itself  starting at
   ;;DST.START inclusive.  The copy happens backwards,  so it is suitable for the case
   ;;SRC.START < DST.START.
   ;;
-  (let loop ((str	str)
+  (let loop ((bv	bv)
 	     (src.start	($fx+ src.start count))
 	     (dst.start	($fx+ dst.start count))
 	     (src.end	src.start))
     (unless ($fx= src.start src.end)
       (let ((src.start ($fxsub1 src.start))
 	    (dst.start ($fxsub1 dst.start)))
-	($bytevector-set! str dst.start ($bytevector-u8-ref str src.start))
-	(loop str src.start dst.start src.end)))))
-
-
-
+	($bytevector-set! bv dst.start ($bytevector-u8-ref bv src.start))
+	(loop bv src.start dst.start src.end)))))
 
 
 ;;;; filling

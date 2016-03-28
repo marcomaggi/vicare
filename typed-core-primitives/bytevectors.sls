@@ -149,7 +149,6 @@
 (declare-core-primitive bytevector-fill!
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum>)	=> (<void>))
    ((<bytevector> <fixnum>)	=> (<void>)))
   (attributes
    ((_ _)			result-true)))
@@ -591,18 +590,99 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-bytevector-binary-comparison $bytevector=	unsafe)
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-bytevector-binary-comparison ?who unsafe)))))
+  (declare $bytevector=)
+  (declare $bytevector!=)
+  (declare $bytevector-u8<)
+  (declare $bytevector-u8>)
+  (declare $bytevector-u8<=)
+  (declare $bytevector-u8>=)
+  (declare $bytevector-s8<)
+  (declare $bytevector-s8>)
+  (declare $bytevector-s8<=)
+  (declare $bytevector-s8>=)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (unsafe)
+		   (signatures
+		    ((<bytevector> <bytevector>)	=> (<bytevector>))))))))
+  (declare $bytevector-u8-min)
+  (declare $bytevector-u8-max)
+  (declare $bytevector-s8-min)
+  (declare $bytevector-s8-max)
+  #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
 
-(declare-unsafe-bytevector-accessor $bytevector-u8-ref				<non-negative-fixnum>)
-(declare-unsafe-bytevector-accessor $bytevector-s8-ref				<fixnum>)
 (declare-core-primitive $bytevector-set!
     (unsafe)
   (signatures
-   ((<bytevector> <fixnum> <non-negative-fixnum>)	=> (<void>))
    ((<bytevector> <fixnum> <fixnum>)	=> (<void>))))
+
+(declare-unsafe-bytevector-accessor $bytevector-u8-ref		<non-negative-fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-u8-set!		<non-negative-fixnum>)
+
+(declare-unsafe-bytevector-accessor $bytevector-s8-ref		<fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-s8-set!		<fixnum>)
+
+(declare-unsafe-bytevector-accessor $bytevector-u16l-ref	<non-negative-fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-u16l-set!	<non-negative-fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-u16b-ref	<non-negative-fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-u16b-set!	<non-negative-fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-u16n-ref	<non-negative-fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-u16n-set!	<non-negative-fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-s16l-ref	<fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-s16l-set!	<fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-s16b-ref	<fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-s16b-set!	<fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-s16n-ref	<fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-s16n-set!	<fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-u16-ref		<non-negative-fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-u16-set!	<non-negative-fixnum>)
+(declare-unsafe-bytevector-accessor $bytevector-s16-ref		<fixnum>)
+(declare-unsafe-bytevector-mutator  $bytevector-s16-set!	<fixnum>)
+
+(declare-unsafe-bytevector-accessor $bytevector-u32b-ref	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u32b-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-u32l-ref	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u32l-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s32b-ref	<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s32b-set!	<exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s32l-ref	<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s32l-set!	<exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-u32n-ref	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u32n-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s32n-ref	<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s32n-set!	<exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-u32-ref		<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u32-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s32-ref		<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s32-set!	<exact-integer>)
+
+(declare-unsafe-bytevector-accessor $bytevector-u64b-ref	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u64b-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-u64l-ref	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u64l-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s64b-ref	<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s64b-set!	<exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s64l-ref	<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s64l-set!	<exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-u64n-ref	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u64n-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s64n-ref	<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s64n-set!	<exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-u64-ref		<non-negative-exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-u64-set!	<non-negative-exact-integer>)
+(declare-unsafe-bytevector-accessor $bytevector-s64-ref		<exact-integer>)
+(declare-unsafe-bytevector-mutator  $bytevector-s64-set!	<exact-integer>)
 
 (declare-unsafe-bytevector-accessor $bytevector-ieee-double-native-ref		<flonum>)
 (declare-unsafe-bytevector-mutator  $bytevector-ieee-double-native-set!		<flonum>)
@@ -631,6 +711,51 @@
 (declare-unsafe-bytevector-conversion $octets->string			<string>)
 (declare-unsafe-bytevector-conversion $latin1->string			<string>)
 (declare-unsafe-bytevector-conversion $bytevector->string-base64	<string>)
+
+;;; --------------------------------------------------------------------
+;;; operations
+
+(declare-core-primitive $bytevector-copy!
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<void>))))
+
+(declare-core-primitive $bytevector-copy-forwards!
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<void>))))
+
+(declare-core-primitive $bytevector-copy-backwards!
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<void>))))
+
+(declare-core-primitive $bytevector-copy!/count
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <bytevector> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<void>))))
+
+(declare-core-primitive $bytevector-self-copy-forwards!/count
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<void>))))
+
+(declare-core-primitive $bytevector-self-copy-backwards!/count
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<void>))))
+
+(declare-core-primitive $bytevector-fill!
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum> <fixnum>)
+    => (<void>))))
 
 /section)
 
