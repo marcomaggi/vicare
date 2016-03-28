@@ -69,7 +69,7 @@
 
 
 (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
-  (define-values (field*.id field*.tag)
+  (define-values (field*.id field*.type-ann)
     (syntax-object.parse-typed-list-of-bindings field*.stx))
   (unless (all-identifiers? field*.id)
     (syntax-violation __module_who__
@@ -123,51 +123,51 @@
 ;;; --------------------------------------------------------------------
 
     (define accessor-sexp*
-      (map (lambda (accessor.id unsafe-accessor.id field.tag)
+      (map (lambda (accessor.id unsafe-accessor.id field.type-ann)
 	     (let ((stru.sym (gensym "stru")))
-	       `(define/checked ((brace ,accessor.id ,field.tag) (brace ,stru.sym ,type.id))
+	       `(define/checked ((brace ,accessor.id ,field.type-ann) (brace ,stru.sym ,type.id))
 		  (,unsafe-accessor.id ,stru.sym))))
-	accessor*.id unsafe-accessor*.id field*.tag))
+	accessor*.id unsafe-accessor*.id field*.type-ann))
 
     (define mutator-sexp*
-      (map (lambda (mutator.id unsafe-mutator.id field.tag)
+      (map (lambda (mutator.id unsafe-mutator.id field.type-ann)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
-	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.type-ann))
 		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
-	mutator*.id unsafe-mutator*.id field*.tag))
+	mutator*.id unsafe-mutator*.id field*.type-ann))
 
     (define method-sexp*
-      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.tag)
+      (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.type-ann)
     	     (let ((stru.sym (gensym "stru"))
     		   (val.sym  (gensym "val")))
     	       `(case-define/checked ,method.id
-    		  (((brace _ ,field.tag) (brace ,stru.sym ,type.id))
+    		  (((brace _ ,field.type-ann) (brace ,stru.sym ,type.id))
     		   (,unsafe-accessor.id ,stru.sym))
-    		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.tag))
+    		  (((brace _ <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.type-ann))
     		   (,unsafe-mutator.id ,stru.sym ,val.sym)))))
-    	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.tag))
+    	method*.id unsafe-accessor*.id unsafe-mutator*.id field*.type-ann))
 
 ;;; --------------------------------------------------------------------
 
     (define unsafe-accessor-sexp*
-      (map (lambda (unsafe-accessor.id field.idx field.tag)
+      (map (lambda (unsafe-accessor.id field.idx field.type-ann)
 	     (let ((stru.sym (gensym "stru")))
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
-		   (lambda/std (,stru.sym)
-		     ($struct-ref (unsafe-cast-signature (<struct>) ,stru.sym) ,field.idx))))))
-	unsafe-accessor*.id field*.idx field*.tag))
+		   (lambda/typed ((brace _ ,field.type-ann) (brace ,stru.sym <struct>))
+		     ($struct-ref ,stru.sym ,field.idx))))))
+	unsafe-accessor*.id field*.idx field*.type-ann))
 
     (define unsafe-mutator-sexp*
-      (map (lambda (unsafe-mutator.id field.idx)
+      (map (lambda (unsafe-mutator.id field.idx field.type-ann)
 	     (let ((stru.sym (gensym "stru"))
 		   (val.sym  (gensym "val")))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax
-		   (lambda/checked (,stru.sym ,val.sym)
-		     ($struct-set! (unsafe-cast-signature (<struct>) ,stru.sym) ,field.idx ,val.sym))))))
-	unsafe-mutator*.id field*.idx))
+		   (lambda/typed ((brace _ <void>) (brace ,stru.sym <struct>) (brace ,val.sym ,field.type-ann))
+		     ($struct-set! ,stru.sym ,field.idx ,val.sym))))))
+	unsafe-mutator*.id field*.idx field*.type-ann))
 
 ;;; --------------------------------------------------------------------
 
