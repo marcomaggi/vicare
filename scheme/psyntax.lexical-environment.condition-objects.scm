@@ -22,7 +22,14 @@
 
 
 (module
-    (&syntactic-binding-descriptor
+    (&syntactic-identifier
+     &syntactic-identifier-rtd
+     &syntactic-identifier-rcd
+     make-syntactic-identifier-condition
+     syntactic-identifier-condition?
+     condition-syntactic-identifier
+
+     &syntactic-binding-descriptor
      &syntactic-binding-descriptor-rtd
      &syntactic-binding-descriptor-rcd
      make-syntactic-binding-descriptor-condition
@@ -146,7 +153,7 @@
      syntax-violation/internal-error
      assertion-violation/internal-error
      syntax-violation
-     raise-unbound-error
+     error-unbound-identifier
      raise-compound-condition-object
      raise-compound-condition-object/continuable
 
@@ -168,11 +175,23 @@
 (define &macro-expansion-trace-rcd
   (record-constructor-descriptor &macro-expansion-trace))
 
+;;; --------------------------------------------------------------------
+
+(define-condition-type &syntactic-identifier
+    &condition
+  make-syntactic-identifier-condition
+  syntactic-identifier-condition?
+  (syntactic-identifier		condition-syntactic-identifier))
+(define &syntactic-identifier-rtd
+  (record-type-descriptor &syntactic-identifier))
+(define &syntactic-identifier-rcd
+  (record-constructor-descriptor &syntactic-identifier))
+
 (define-condition-type &syntactic-binding-descriptor
     &condition
   make-syntactic-binding-descriptor-condition
   syntactic-binding-descriptor-condition?
-  (descr	condition-syntactic-binding-descriptor))
+  (syntactic-binding-descriptor	condition-syntactic-binding-descriptor))
 (define &syntactic-binding-descriptor-rtd
   (record-type-descriptor &syntactic-binding-descriptor))
 (define &syntactic-binding-descriptor-rcd
@@ -409,7 +428,7 @@
 	      (make-message-condition (string-append "Vicare Scheme: internal error: " msg))
 	      (make-irritants-condition irritants))))
 
-(module (raise-unbound-error
+(module (error-unbound-identifier
 	 syntax-violation
 	 raise-compound-condition-object
 	 raise-compound-condition-object/continuable)
@@ -452,17 +471,22 @@
     ((who {msg string?} form subform)
      (raise-compound-condition-object who msg form (make-syntax-violation form subform))))
 
-  (define (raise-unbound-error source-who input-form.stx id)
-    ;;Raise an  "unbound identifier"  exception.  This  is to  be used  when applying
-    ;;ID->LABEL  to the  identifier  ID returns  false, and  such  result is  invalid
-    ;;because we were expecting ID to be bound.
-    ;;
-    ;;Often INPUT-FORM.STX is ID itself, and we can do nothing about it.
-    ;;
-    (raise-compound-condition-object source-who "unbound identifier" input-form.stx
-				     (condition
-				      (make-undefined-violation)
-				      (make-syntax-violation input-form.stx id))))
+  (case-define error-unbound-identifier
+    ((source-who id)
+     (error-unbound-identifier source-who id (condition)))
+    ((source-who id cnd)
+     ;;Raise an  "unbound identifier" exception.   This is  to be used  when applying
+     ;;ID->LABEL  to the  identifier ID  returns false,  and such  result is  invalid
+     ;;because we were expecting ID to be bound.
+     ;;
+     (raise
+      (condition (make-undefined-violation)
+		 (make-who-condition source-who)
+		 (make-message-condition "unbound syntactic identifier")
+		 (make-syntactic-identifier-condition id)
+		 (%extract-macro-expansion-trace id)
+		 (%expression->source-position-condition id)
+		 cnd))))
 
   (module (raise-compound-condition-object raise-compound-condition-object/continuable)
 

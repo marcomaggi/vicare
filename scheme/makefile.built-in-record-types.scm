@@ -667,6 +667,21 @@
       (bytevector	utf32-string-decoding-orphan-octets.bytevector)
       (index		utf32-string-decoding-orphan-octets.index)
       (octets		utf32-string-decoding-orphan-octets.octets)))
+
+;;; --------------------------------------------------------------------
+;;; expander stuff
+
+   (define-built-in-condition-type &syntactic-identifier
+       &conition
+     make-syntactic-identifier-condition syntactic-identifier-condition?
+     (methods
+      (syntactic-identifier		condition-syntactic-identifier)))
+
+   (define-built-in-condition-type &syntactic-binding-descriptor
+       &condition
+     make-syntactic-binding-descriptor-condition syntactic-binding-descriptor-condition?
+     (methods
+      (syntactic-binding-descriptor	condition-syntactic-binding-descriptor)))
 ;;;
    (define-built-in-condition-type &syntax-definition-expanded-rhs
        &condition

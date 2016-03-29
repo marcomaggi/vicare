@@ -31,8 +31,8 @@
   (import (rnrs)
     (psyntax.compat)
     (only (psyntax.lexical-environment)
-	  id->label/or-error
-	  syntax-object?))
+	  id->label
+	  error-unbound-identifier))
 
 
 ;;;; identifiers: syntactic binding properties
@@ -52,16 +52,32 @@
 ;;; --------------------------------------------------------------------
 
 (define* ($syntactic-binding-putprop id key value)
-  ($putprop (id->label/or-error __who__ id id) key value))
+  (cond ((id->label id)
+	 => (lambda (label)
+	      ($putprop label key value)))
+	(else
+	 (error-unbound-identifier __who__ id))))
 
 (define* ($syntactic-binding-getprop id key)
-  ($getprop (id->label/or-error __who__ id id) key))
+  (cond ((id->label id)
+	 => (lambda (label)
+	      ($getprop label key)))
+	(else
+	 (error-unbound-identifier __who__ id))))
 
 (define* ($syntactic-binding-remprop id key)
-  ($remprop (id->label/or-error __who__ id id) key))
+  (cond ((id->label id)
+	 => (lambda (label)
+	      ($remprop label key)))
+	(else
+	 (error-unbound-identifier __who__ id))))
 
 (define* ($syntactic-binding-property-list id)
-  ($property-list (id->label/or-error __who__ id id)))
+  (cond ((id->label id)
+	 => (lambda (label)
+	      ($property-list label)))
+	(else
+	 (error-unbound-identifier __who__ id))))
 
 
 ;;;; done

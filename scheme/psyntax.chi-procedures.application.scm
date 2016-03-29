@@ -1822,25 +1822,29 @@
 	   ;;Here we do not want to raise an error if the identifier RATOR.STX is not
 	   ;;a typed lexical variable (it might be an identifier expression returning
 	   ;;a closure object).
-	   (let* ((rator.label (id->label/or-error __module_who__ input-form.stx rator.stx))
-		  (rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
-	     (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
-		    ;;FIXME  Unsafe  variants  for  core  primitives  is  temporarily
-		    ;;disabled until the table of primitive properties declaration is
-		    ;;rewritten  in a  format that  allows correct  selection of  the
-		    ;;replacement.  (Marco Maggi; Sun Jan 10, 2016)
-		    (cond (#f
-			   => %build-unsafe-variant-application)
-			  (else
-			   (%build-default-application))))
-		   ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
-		    (%build-typed-variable-application
-		     (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec rator.descr)))
-		   ((syntactic-binding-descriptor/global-typed-var? rator.descr)
-		    (%build-typed-variable-application
-		     (syntactic-binding-descriptor/global-typed-var.typed-variable-spec rator.descr)))
-		   (else
-		    (%build-default-application)))))
+	   (cond ((id->label rator.stx)
+		  => (lambda (rator.label)
+		       (let ((rator.descr (label->syntactic-binding-descriptor rator.label lexenv.run)))
+			 (cond ((syntactic-binding-descriptor/core-prim-typed? rator.descr)
+				;;FIXME  Unsafe  variants   for  core  primitives  is
+				;;temporarily disabled  until the table  of primitive
+				;;properties  declaration is  rewritten  in a  format
+				;;that allows  correct selection of  the replacement.
+				;;(Marco Maggi; Sun Jan 10, 2016)
+				(cond (#f
+				       => %build-unsafe-variant-application)
+				      (else
+				       (%build-default-application))))
+			       ((syntactic-binding-descriptor/lexical-typed-var? rator.descr)
+				(%build-typed-variable-application
+				 (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec rator.descr)))
+			       ((syntactic-binding-descriptor/global-typed-var? rator.descr)
+				(%build-typed-variable-application
+				 (syntactic-binding-descriptor/global-typed-var.typed-variable-spec rator.descr)))
+			       (else
+				(%build-default-application))))))
+		 (else
+		  (error-unbound-identifier __module_who__ rator.stx))))
 	  (else
 	   ;;If we  are here  the rator  is a  non-identifier expression  returning a
 	   ;;closure object with known signature.

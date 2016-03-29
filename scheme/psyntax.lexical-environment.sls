@@ -252,7 +252,7 @@
     wrap-source-expression
 
     ;; syntax objects: mapping identifiers to labels and similar
-    id->label					id->label/or-error
+    id->label
     id->object-type-specification		id->record-type-specification
     id->struct-type-specification		type-annotation->object-type-specification
     id->typed-variable-spec			type-identifier?
@@ -359,6 +359,13 @@
     condition-type-method-name?
     condition-type-method-name
 
+    &syntactic-identifier
+    &syntactic-identifier-rtd
+    &syntactic-identifier-rcd
+    make-syntactic-identifier-condition
+    syntactic-identifier-condition?
+    condition-syntactic-identifier
+
     &syntactic-binding-descriptor
     &syntactic-binding-descriptor-rtd
     &syntactic-binding-descriptor-rcd
@@ -451,7 +458,7 @@
     syntax-violation/internal-error
     assertion-violation/internal-error
     syntax-violation
-    raise-unbound-error
+    error-unbound-identifier
     raise-compound-condition-object
     raise-compound-condition-object/continuable
 
@@ -1919,10 +1926,6 @@
 
 ;;;; syntax objects: mapping identifiers to labels
 
-(define (id->label/or-error who input-form.stx id)
-  (or (id->label id)
-      (raise-unbound-error who input-form.stx id)))
-
 (module (id->label)
 
   (define* (id->label {id identifier?})
@@ -2313,15 +2316,20 @@
 	      (sys::identifier? (sys::syntax ?lexenv))
 	      (sys::identifier? (sys::syntax ?id)))
 	 (sys::syntax
-	  (let* ((label (id->label/or-error ?who ?input-form.stx ?id))
-		 (descr (?label->descr label ?lexenv)))
-	    (fluid-let-syntax ((__descr__ (identifier-syntax descr)))
-	      (case (syntactic-binding-descriptor.type descr)
-		((displaced-lexical)
-		 (syntax-violation ?who "identifier out of context (identifier's label not in LEXENV)" ?input-form.stx ?id))
-		((?type0 ?type ...) . ?body)
-		...
-		(else . ?else-body))))))
+	  (cond ((id->label ?id)
+		 => (lambda (label)
+		      (let ((descr (?label->descr label ?lexenv)))
+			(fluid-let-syntax ((__descr__ (identifier-syntax descr)))
+			  (case (syntactic-binding-descriptor.type descr)
+			    ((displaced-lexical)
+			     (syntax-violation ?who
+			       "identifier out of context (identifier's label not in LEXENV)"
+			       ?input-form.stx ?id))
+			    ((?type0 ?type ...) . ?body)
+			    ...
+			    (else . ?else-body))))))
+		(else
+		 (error-unbound-identifier ?who ?id)))))
 	)))
 
   #| end of module |# )
@@ -2642,26 +2650,29 @@
   ;;return false.
   ;;
   (import PSYNTAX-SYNTACTIC-BINDINGS)
-  (let* ((label (id->label/or-error __who__ #f id))
-	 (descr (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
-    (case (syntactic-binding-descriptor.type descr)
-      ((displaced-lexical)
-       (assertion-violation __who__
-	 "identifier out of context (identifier's label not in LEXENV)" id))
-      ;;The given  identifier is  bound to  a local  compile-time value.   The actual
-      ;;object is stored in the descriptor itself.
-      ((local-etv)
-       (local-expand-time-value-binding-descriptor.object descr))
-      ;;The given identifier is bound to a compile-time value imported from a library
-      ;;or the  top-level environment.  The  actual object  is stored in  the "value"
-      ;;field of a loc gensym.
-      ((global-etv)
-       (global-expand-time-value-binding-descriptor.object descr))
-      (else
-       ;; (assertion-violation __who__
-       ;;   "identifier not bound to an object-type specification"
-       ;;   id descr)
-       #f))))
+  (cond ((id->label id)
+	 => (lambda (label)
+	      (let ((descr (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
+		(case (syntactic-binding-descriptor.type descr)
+		  ((displaced-lexical)
+		   (assertion-violation __who__
+		     "identifier out of context (identifier's label not in LEXENV)" id))
+		  ;;The given identifier is bound to a local compile-time value.  The
+		  ;;actual object is stored in the descriptor itself.
+		  ((local-etv)
+		   (local-expand-time-value-binding-descriptor.object descr))
+		  ;;The given  identifier is bound  to a compile-time  value imported
+		  ;;from a library  or the top-level environment.   The actual object
+		  ;;is stored in the "value" field of a loc gensym.
+		  ((global-etv)
+		   (global-expand-time-value-binding-descriptor.object descr))
+		  (else
+		   ;; (assertion-violation __who__
+		   ;;   "identifier not bound to an object-type specification"
+		   ;;   id descr)
+		   #f)))))
+	(else
+	 (error-unbound-identifier __who__ id))))
 
 
 ;;;; utilities for identifiers

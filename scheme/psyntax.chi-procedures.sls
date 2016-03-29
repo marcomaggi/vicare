@@ -318,7 +318,7 @@
 		      ;;GLOBAL-TYPED-MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
-	    (raise-unbound-error caller-who expr.stx ?car))))
+	    (error-unbound-identifier caller-who ?car))))
 
     ((?car . ?cdr)
      ;;Here we know that EXPR.STX has the format:
@@ -959,7 +959,7 @@
        (stx-error expr.stx "attempt to reference a variable that is assigned in an imported library"))
 
       ((standalone-unbound-identifier)
-       (raise-unbound-error __module_who__ expr.stx expr.stx))
+       (error-unbound-identifier __module_who__ expr.stx))
 
       (else
        (stx-error expr.stx "invalid expression"))))
@@ -1214,7 +1214,7 @@
        ;;syntactic form was expanded at  the top-level of an interaction environment.
        ;;I nuked this feature.  (Marco Maggi; Fri Apr 24, 2015)
        ;;
-       (raise-unbound-error __module_who__ input-form.stx lhs.id))
+       (error-unbound-identifier __module_who__ lhs.id))
 
       ((displaced-lexical)
        (syntax-violation __module_who__

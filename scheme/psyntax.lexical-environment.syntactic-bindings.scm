@@ -1097,7 +1097,7 @@
 
 ;;;; syntactic binding descriptor: synonym bindings
 
-(define (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax src-id)
+(define* (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax src-id)
   ;;Build  a  syntactic  binding  descriptor   representing  a  synonym  syntax;  the
   ;;descriptor can be used to represent  both a local and imported syntactic binding.
   ;;When successful return the descriptor; if an error occurs: raise an exception.
@@ -1116,7 +1116,11 @@
   ;;
   ;;where ?LABEL is the label gensym associated to SRC-ID.
   ;;
-  (make-syntactic-binding-descriptor $synonym (id->label/or-error 'expander src-id src-id)))
+  (cond ((id->label src-id)
+	 => (lambda (label)
+	      (make-syntactic-binding-descriptor $synonym label)))
+	(else
+	 (error-unbound-identifier __who__ src-id))))
 
 (define-syntactic-binding-descriptor-predicate syntactic-binding-descriptor/synonym-syntax?
   $synonym)

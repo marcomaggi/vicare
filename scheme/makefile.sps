@@ -4374,6 +4374,20 @@
     (type-signature.tags				$expander)
     (type-signature.specs				$expander)
 ;;;
+    (&syntactic-identifier				$expander)
+    (&syntactic-identifier-rtd)
+    (&syntactic-identifier-rcd)
+    (make-syntactic-identifier-condition		$expander)
+    (syntactic-identifier-condition?			$expander)
+    (condition-syntactic-identifier			$expander)
+
+    (&syntactic-binding-descriptor			$expander)
+    (&syntactic-binding-descriptor-rtd)
+    (&syntactic-binding-descriptor-rcd)
+    (make-syntactic-binding-descriptor-condition	$expander)
+    (syntactic-binding-descriptor-condition?		$expander)
+    (condition-syntactic-binding-descriptor		$expander)
+
     (&syntax-definition-expanded-rhs			$expander)
     (&syntax-definition-expanded-rhs-rtd)
     (&syntax-definition-expanded-rhs-rcd)

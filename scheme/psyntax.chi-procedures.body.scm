@@ -473,7 +473,7 @@
 			rev-qdef* mod** keyword* export-spec* rib mix? shadow/redefine-bindings?))
 
 	    ((standalone-unbound-identifier)
-	     (raise-unbound-error __who__ body-form.stx body-form.stx))
+	     (error-unbound-identifier __who__ body-form.stx))
 
 	    ((displaced-lexical)
 	     (syntax-violation __who__ "identifier out of context" body-form.stx
@@ -602,7 +602,7 @@
 	   (values (module-interface-exp-id*     iface (stx-mark* module-name.id))
 		   (module-interface-exp-lab-vec iface))))
 	((standalone-unbound-identifier)
-	 (raise-unbound-error __module_who__ import-form.stx module-name.id))
+	 (error-unbound-identifier __module_who__ module-name.id))
 	(else
 	 (stx-error import-form.stx "invalid import")))))
 
