@@ -3473,8 +3473,7 @@ not a macro use (see below).  The value of the variable reference is the
 value stored in the location to which the variable is bound.  It is a
 syntax violation to reference an unbound variable.
 
-The following example examples assumes the base library has been
-imported:
+The following example assumes the base library has been imported:
 
 @example
 (define x 28)
