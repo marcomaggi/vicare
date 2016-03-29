@@ -1549,7 +1549,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let ((sts (id->struct-type-specification __who__ input-form.stx ?type-id lexenv.run)))
+       (let ((sts (id->struct-type-spec ?type-id lexenv.run)))
 	 (%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand sts)))))
 
 
@@ -1560,7 +1560,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let ((rts (id->record-type-specification __who__ input-form.stx ?type-id lexenv.run)))
+       (let ((rts (id->record-type-spec ?type-id lexenv.run)))
 	 (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand rts)))))
 
   (define-core-transformer (record-constructor-descriptor input-form.stx lexenv.run lexenv.expand)
@@ -1570,7 +1570,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let* ((rts       (id->record-type-specification __who__ input-form.stx ?type-id lexenv.run))
+       (let* ((rts       (id->record-type-spec ?type-id lexenv.run))
 	      (expr.stx  (record-type-spec.rcd-id rts))
 	      (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand)))
 	 (make-psi input-form.stx
@@ -1593,7 +1593,7 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-id)
-       (let ((ots (id->object-type-specification __who__ input-form.stx ?type-id lexenv.run)))
+       (let ((ots (id->object-type-spec ?type-id lexenv.run)))
 	 (cond ((record-type-spec? ots)
 		(%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       ((struct-type-spec? ots)
@@ -1701,7 +1701,7 @@
   (syntax-match input-form.stx ()
     ((_ ?id)
      (identifier? ?id)
-     (case-identifier-syntactic-binding-descriptor (__who__ input-form.stx ?id lexenv.run)
+     (case-identifier-syntactic-binding-descriptor (__who__ ?id lexenv.run)
        ((local-macro local-macro!)
 	(let* ((descr.value   (syntactic-binding-descriptor.value __descr__))
 	       (expanded-expr (cdr descr.value)))

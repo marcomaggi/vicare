@@ -913,7 +913,7 @@
        (identifier? ?parent-name)
        ;;Validate  ?PARENT-NAME  as  syntactic  identifier  bound  to  a  record-type
        ;;syntactic binding.
-       (let* ((parent-rts   (id->record-type-specification __module_who__ input-form.stx ?parent-name (current-inferior-lexenv)))
+       (let* ((parent-rts   (id->record-type-spec ?parent-name))
 	      (parent-proto (record-type-spec.super-protocol-id parent-rts)))
 	 (values ?parent-name
 		 (%named-gensym/suffix foo "-parent-rtd")
@@ -1053,7 +1053,7 @@
     ((_ ?super-protocol-expr)
      (if foo-parent.id
 	 ;;This record type has a parent selected with the PARENT clause.
-	 (let* ((rts   (id->record-type-specification __module_who__ #f foo-parent.id (current-inferior-lexenv)))
+	 (let* ((rts   (id->record-type-spec foo-parent.id))
 		(proto (record-type-spec.super-protocol-id rts)))
 	   (if proto
 	       ;;The parent record-type specification has a super-protocol.

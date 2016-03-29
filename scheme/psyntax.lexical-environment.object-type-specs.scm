@@ -1309,7 +1309,11 @@
 				      ((<condition>-type-id? parent-name.id)
 				       (<condition>-ots))
 				      (else
-				       (id->record-type-specification __who__ #f parent-name.id (current-inferior-lexenv)))))
+				       (with-exception-handler
+					   (lambda (E)
+					     (raise (condition E (make-who-condition __who__))))
+					 (lambda ()
+					   (id->record-type-spec parent-name.id))))))
 	      (constructor.stx	(or constructor.stx
 				    (bless `(record-constructor ,rcd-id))))
 	      (predicate.stx	(or predicate.stx
@@ -2243,6 +2247,7 @@
   ;;Recursive function.  Parse the syntax object  STX as type annotation and return a
   ;;fully unwrapped syntax object representing the same type annotation.
   ;;
+  (define lexenv (current-inferior-lexenv))
   (let recur ((stx input-form.stx))
     (syntax-match stx (pair list vector pair-of list-of vector-of condition or and not)
       ((pair ?car-type ?cdr-type)
@@ -2287,7 +2292,12 @@
 	     (recur ?item-type)))
 
       (?type-id
-       (type-identifier? ?type-id)
+       (and (identifier? ?type-id)
+	    (try
+		(id->object-type-spec ?type-id lexenv)
+	      (catch E
+		(&syntactic-identifier-resolution
+		 #f))))
        ?type-id)
 
       (else
@@ -2321,7 +2331,7 @@
    (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and not)
      (?type-id
       (identifier? ?type-id)
-      (id->object-type-specification __who__ #f ?type-id lexenv))
+      (id->object-type-spec ?type-id lexenv))
 
      ((pair ?car-type ?cdr-type)
       (let ((car.ots (type-annotation->object-type-specification ?car-type lexenv))

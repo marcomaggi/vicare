@@ -400,26 +400,28 @@
   ;;already bound to  a fluid syntax.  Return two values:  the updated LEXENV.RUN and
   ;;LEXENV.EXPAND.  Raise an exception if something goes wrong.
   ;;
-  (let* ((fluid-label  (fluid-syntax-lookup-fluid-label caller-who input-form.stx lhs.id lexenv.run))
+  (let* ((fluid-label  (fluid-syntax-lookup-fluid-label caller-who lhs.id lexenv.run))
 	 (descriptor   (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand) lexenv.run))
 	 (entry        (cons fluid-label descriptor)))
     (values (cons entry lexenv.run)
 	    (cons entry lexenv.expand))))
 
-(define (fluid-syntax-lookup-fluid-label caller-who input-form.stx lhs.id lexenv)
+(define (fluid-syntax-lookup-fluid-label caller-who lhs.id lexenv)
   ;;Search the lexical environment for the syntactic binding capturing the identifier
   ;;LHS.ID  and retrieve  its label;  if  such label  is present  and the  associated
   ;;syntactic binding  descriptor from LEXENV is  of type "fluid syntax":  return the
   ;;associated  fluid label  that can  be used  to rebind  the identifier.   Raise an
   ;;exception if something goes wrong.
   ;;
-  (case-identifier-syntactic-binding-descriptor/no-indirection (caller-who input-form.stx lhs.id lexenv)
+  (case-identifier-syntactic-binding-descriptor/no-indirection (__who__ lhs.id lexenv)
     (($fluid)
      (fluid-syntax-binding-descriptor.fluid-label __descr__))
     (else
-     (syntax-violation caller-who
-       "expected the keyword identifier of a fluid identifier"
-       input-form.stx lhs.id))))
+     (raise
+      (condition (make-who-condition caller-who)
+		 (make-message-condition "expected the keyword identifier of a fluid identifier")
+		 (make-syntactic-identifier-condition lhs.id)
+		 (make-syntactic-binding-descriptor-condition __descr__))))))
 
 ;; (define (fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand
 ;; 					   caller-who who.id)
@@ -446,7 +448,7 @@
   ;;we just create a transformer function here.
   ;;
   (let* ((lhs.id	(core-prim-id '__who__))
-	 (fluid-label	(fluid-syntax-lookup-fluid-label caller-who input-form.stx lhs.id lexenv.run))
+	 (fluid-label	(fluid-syntax-lookup-fluid-label caller-who lhs.id lexenv.run))
 	 (who.sym	(identifier->symbol who.id))
 	 (rhs.func	(let ((out.stx (bless `(quote ,who.sym))))
 			  (lambda (stx)

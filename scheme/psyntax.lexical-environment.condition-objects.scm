@@ -36,6 +36,37 @@
      syntactic-binding-descriptor-condition?
      condition-syntactic-binding-descriptor
 
+     &object-type-spec
+     &object-type-spec-rtd
+     &object-type-spec-rcd
+     make-object-type-spec-condition
+     object-type-spec-condition?
+     condition-object-type-spec
+;;;
+     &syntactic-identifier-resolution-rtd
+     &syntactic-identifier-resolution-rcd
+     &syntactic-identifier-resolution
+     make-syntactic-identifier-resolution-violation
+     syntactic-identifier-resolution-violation?
+
+     &syntactic-identifier-unbound-rtd
+     &syntactic-identifier-unbound-rcd
+     &syntactic-identifier-unbound
+     make-syntactic-identifier-unbound-condition
+     syntactic-identifier-unbound-condition?
+
+     &syntactic-identifier-out-of-context
+     &syntactic-identifier-out-of-context-rtd
+     &syntactic-identifier-out-of-context-rcd
+     make-syntactic-identifier-out-of-context-condition
+     syntactic-identifier-out-of-context-condition?
+
+     &syntactic-identifier-not-type-identifier
+     &syntactic-identifier-not-type-identifier-rtd
+     &syntactic-identifier-not-type-identifier-rcd
+     make-syntactic-identifier-not-type-identifier-condition
+     syntactic-identifier-not-type-identifier-condition?
+;;;
      &syntax-definition-expanded-rhs
      &syntax-definition-expanded-rhs-rtd
      &syntax-definition-expanded-rhs-rcd
@@ -154,6 +185,7 @@
      assertion-violation/internal-error
      syntax-violation
      error-unbound-identifier
+     error-identifier-out-of-context
      raise-compound-condition-object
      raise-compound-condition-object/continuable
 
@@ -196,6 +228,56 @@
   (record-type-descriptor &syntactic-binding-descriptor))
 (define &syntactic-binding-descriptor-rcd
   (record-constructor-descriptor &syntactic-binding-descriptor))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &syntactic-identifier-resolution
+    &violation
+  make-syntactic-identifier-resolution-violation
+  syntactic-identifier-resolution-violation?)
+(define &syntactic-identifier-resolution-rtd
+  (record-type-descriptor &syntactic-identifier-resolution))
+(define &syntactic-identifier-resolution-rcd
+  (record-constructor-descriptor &syntactic-identifier-resolution))
+
+(define-condition-type &syntactic-identifier-unbound
+    &syntactic-identifier-resolution
+  make-syntactic-identifier-unbound-condition
+  syntactic-identifier-unbound-condition?)
+(define &syntactic-identifier-unbound-rtd
+  (record-type-descriptor &syntactic-identifier-unbound))
+(define &syntactic-identifier-unbound-rcd
+  (record-constructor-descriptor &syntactic-identifier-unbound))
+
+(define-condition-type &syntactic-identifier-out-of-context
+    &syntactic-identifier-resolution
+  make-syntactic-identifier-out-of-context-condition
+  syntactic-identifier-out-of-context-condition?)
+(define &syntactic-identifier-out-of-context-rtd
+  (record-type-descriptor &syntactic-identifier-out-of-context))
+(define &syntactic-identifier-out-of-context-rcd
+  (record-constructor-descriptor &syntactic-identifier-out-of-context))
+
+(define-condition-type &syntactic-identifier-not-type-identifier
+    &syntactic-identifier-resolution
+  make-syntactic-identifier-not-type-identifier-condition
+  syntactic-identifier-not-type-identifier-condition?)
+(define &syntactic-identifier-not-type-identifier-rtd
+  (record-type-descriptor &syntactic-identifier-not-type-identifier))
+(define &syntactic-identifier-not-type-identifier-rcd
+  (record-constructor-descriptor &syntactic-identifier-not-type-identifier))
+
+(define-condition-type &object-type-spec
+    &condition
+  make-object-type-spec-condition
+  object-type-spec-condition?
+  (object-type-spec		condition-object-type-spec))
+(define &object-type-spec-rtd
+  (record-type-descriptor &object-type-spec))
+(define &object-type-spec-rcd
+  (record-constructor-descriptor &object-type-spec))
+
+;;; --------------------------------------------------------------------
 
 ;;This  is used  to describe  exceptions raised  while expanding  and evaluating  the
 ;;right-hand side (RHS) expression of a syntax definition (DEFINE-SYNTAX, LET-SYNTAX,
@@ -429,6 +511,7 @@
 	      (make-irritants-condition irritants))))
 
 (module (error-unbound-identifier
+	 error-identifier-out-of-context
 	 syntax-violation
 	 raise-compound-condition-object
 	 raise-compound-condition-object/continuable)
@@ -481,8 +564,22 @@
      ;;
      (raise
       (condition (make-undefined-violation)
+		 (make-syntactic-identifier-unbound-condition)
 		 (make-who-condition source-who)
 		 (make-message-condition "unbound syntactic identifier")
+		 (make-syntactic-identifier-condition id)
+		 (%extract-macro-expansion-trace id)
+		 (%expression->source-position-condition id)
+		 cnd))))
+
+  (case-define error-identifier-out-of-context
+    ((caller-who id)
+     (error-identifier-out-of-context caller-who id (condition)))
+    ((caller-who id cnd)
+     (raise
+      (condition (make-syntactic-identifier-out-of-context-condition)
+		 (make-who-condition caller-who)
+		 (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
 		 (make-syntactic-identifier-condition id)
 		 (%extract-macro-expansion-trace id)
 		 (%expression->source-position-condition id)

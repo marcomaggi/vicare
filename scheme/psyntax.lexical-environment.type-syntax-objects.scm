@@ -73,9 +73,13 @@
 	   ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
 	   ;;   (define-type <some-list> <list>)
 	   ;;
-	   (let ((ots (id->object-type-specification __who__ #f ?rest-id lexenv)))
-	     (or (<list>-ots? ots)
-		 (list-of-type-spec? ots))))
+	   (try
+	       (let ((ots (id->object-type-spec ?rest-id lexenv)))
+		 (or (<list>-ots? ots)
+		     (list-of-type-spec? ots)))
+	     (catch E
+	       (&syntactic-identifier-resolution
+		#f))))
 	  ((?thing . ?rest)
 	   (and (syntax-object.type-annotation? ?thing)
 		(recur ?rest)))
@@ -403,7 +407,8 @@
 	   (and (identifier? ?id)
 		(identifier? ?tag))
 	   (begin
-	     (id->object-type-specification __module_who__ input-form.stx ?tag (current-inferior-lexenv))
+	     ;;We raise an error if ?TAG is not a type identifier.
+	     (id->object-type-spec ?tag)
 	     (values (cons ?id standard-formals.stx) (cons ?tag type-signature.stx))))
 	  (else
 	   (%synner "invalid argument specification" arg.stx))))))

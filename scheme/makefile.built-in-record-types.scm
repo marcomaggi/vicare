@@ -55,6 +55,34 @@
 		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
     ))
 
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-built-in-condition-type stx)
+  (syntax-case stx (methods)
+    ((?kwd ?type-name ?parent-name ?constructor ?predicate)
+     (and (identifier? #'?type-name)
+	  (or (identifier? #'?parent-name)
+	      (not (syntax->datum #'?parent-name)))
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate))
+     #'(?kwd ?type-name ?parent-name ?constructor ?predicate (methods)))
+    ((_    ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
+     (and (identifier? #'?type-name)
+	  (or (identifier? #'?parent-name)
+	      (not (syntax->datum #'?parent-name)))
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate))
+     (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
+       (define (mkid . str*)
+	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
+       (with-syntax
+	   ((TYPE-RTD (mkid type-name.str "-rtd"))
+	    (TYPE-RCD (mkid type-name.str "-rcd")))
+	 #'(quote (?type-name
+		   ($core-condition-object-type-name
+		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
+    ))
+
 
 ;;;; built-in record types
 
@@ -277,34 +305,6 @@
 
 
 ;;;; core syntactic binding descriptors: built-in condition object types
-
-(define-syntax (define-built-in-condition-type stx)
-  (syntax-case stx (methods)
-    ((?kwd ?type-name ?parent-name ?constructor ?predicate)
-     (and (identifier? #'?type-name)
-	  (or (identifier? #'?parent-name)
-	      (not (syntax->datum #'?parent-name)))
-	  (identifier? #'?constructor)
-	  (identifier? #'?predicate))
-     #'(?kwd ?type-name ?parent-name ?constructor ?predicate (methods)))
-    ((_    ?type-name ?parent-name ?constructor ?predicate (methods (?field-name ?accessor-name) ...))
-     (and (identifier? #'?type-name)
-	  (or (identifier? #'?parent-name)
-	      (not (syntax->datum #'?parent-name)))
-	  (identifier? #'?constructor)
-	  (identifier? #'?predicate))
-     (let ((type-name.str (symbol->string (syntax->datum #'?type-name))))
-       (define (mkid . str*)
-	 (datum->syntax #'?type-name (string->symbol (apply string-append str*))))
-       (with-syntax
-	   ((TYPE-RTD (mkid type-name.str "-rtd"))
-	    (TYPE-RCD (mkid type-name.str "-rcd")))
-	 #'(quote (?type-name
-		   ($core-condition-object-type-name
-		    . (?type-name TYPE-RTD TYPE-RCD ?parent-name ?constructor ?predicate ((?field-name . ?accessor-name) ...))))))))
-    ))
-
-;;; --------------------------------------------------------------------
 
 (define-constant VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
   (list
@@ -682,6 +682,28 @@
      make-syntactic-binding-descriptor-condition syntactic-binding-descriptor-condition?
      (methods
       (syntactic-binding-descriptor	condition-syntactic-binding-descriptor)))
+
+   (define-built-in-condition-type &object-type-spec
+       &condition
+     make-object-type-spec-condition object-type-spec-condition?
+     (methods
+      (object-type-spec			condition-object-type-spec)))
+;;;
+   (define-built-in-condition-type &syntactic-identifier-resolution
+       &violation
+     make-syntactic-identifier-resolution-violation syntactic-identifier-resolution-violation?)
+
+   (define-built-in-condition-type &syntactic-identifier-unbound
+       &syntactic-identifier-resolution
+     make-syntactic-identifier-unbound-condition syntactic-identifier-unbound-condition?)
+
+   (define-built-in-condition-type &syntactic-identifier-out-of-context
+       &syntactic-identifier-resolution
+     make-syntactic-identifier-out-of-context-condition syntactic-identifier-out-of-context-condition?)
+
+   (define-built-in-condition-type &syntactic-identifier-not-type-identifier
+       &syntactic-identifier-resolution
+     make-syntactic-identifier-not-type-identifier-condition syntactic-identifier-not-type-identifier-condition?)
 ;;;
    (define-built-in-condition-type &syntax-definition-expanded-rhs
        &condition

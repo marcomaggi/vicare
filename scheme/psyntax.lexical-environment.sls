@@ -253,9 +253,8 @@
 
     ;; syntax objects: mapping identifiers to labels and similar
     id->label
-    id->object-type-specification		id->record-type-specification
-    id->struct-type-specification		type-annotation->object-type-specification
-    id->typed-variable-spec			type-identifier?
+    id->object-type-spec			id->record-type-spec
+    id->struct-type-spec			type-annotation->object-type-specification
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
@@ -365,6 +364,37 @@
     make-syntactic-identifier-condition
     syntactic-identifier-condition?
     condition-syntactic-identifier
+;;;
+    &syntactic-identifier-resolution-rtd
+    &syntactic-identifier-resolution-rcd
+    &syntactic-identifier-resolution
+    make-syntactic-identifier-resolution-violation
+    syntactic-identifier-resolution-violation?
+
+    &syntactic-identifier-unbound-rtd
+    &syntactic-identifier-unbound-rcd
+    &syntactic-identifier-unbound
+    make-syntactic-identifier-unbound-condition
+    syntactic-identifier-unbound-condition?
+
+    &syntactic-identifier-not-type-identifier
+    &syntactic-identifier-not-type-identifier-rtd
+    &syntactic-identifier-not-type-identifier-rcd
+    make-syntactic-identifier-not-type-identifier-condition
+    syntactic-identifier-not-type-identifier-condition?
+
+    &syntactic-identifier-out-of-context
+    &syntactic-identifier-out-of-context-rtd
+    &syntactic-identifier-out-of-context-rcd
+    make-syntactic-identifier-out-of-context-condition
+    syntactic-identifier-out-of-context-condition?
+;;;
+    &object-type-spec
+    &object-type-spec-rtd
+    &object-type-spec-rcd
+    make-object-type-spec-condition
+    object-type-spec-condition?
+    condition-object-type-spec
 
     &syntactic-binding-descriptor
     &syntactic-binding-descriptor-rtd
@@ -2067,201 +2097,101 @@
 
 ;;;; syntax objects: mapping identifiers to values
 
-(case-define* type-identifier?
-  ;;Return true if the argument ID is  a type identifier; otherwise return false.  If
-  ;;ID is  not an  identifier or it  is unbound: return  false.  If  ID is an  out of
-  ;;context identifier: raise an exception.
-  ;;
+(case-define* id->object-type-spec
   ((id)
-   (type-identifier? id (current-inferior-lexenv) #f))
+   (id->object-type-spec id (current-inferior-lexenv)))
+  (({id identifier?} lexenv)
+   ;;ID is meant to be a syntactic identifier representing an object-type name, whose
+   ;;syntactic  binding's descriptor  contains an  instance of  "<object-type-spec>";
+   ;;retrieve its label, then its descriptor from LEXENV, finally return the instance
+   ;;of "<object-type-spec>".
+   ;;
+   ;;If  ID is  bound to  an  imported syntactic  binding: the  exporting library  is
+   ;;visited.
+   ;;
+   ;;If an error occurs while resolving ID, raise and exception of one of the types:
+   ;;
+   ;;   &syntactic-identifier-unbound
+   ;;   &syntactic-identifier-out-of-context
+   ;;   &syntactic-identifier-not-type-identifier
+   ;;
+   ;;all of which are sub-types of "&syntactic-identifier-resolution".
+   ;;
+   (import PSYNTAX-SYNTACTIC-BINDINGS)
+   (case-identifier-syntactic-binding-descriptor (__who__ id lexenv)
+     ((local-object-type-name)
+      (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__))
+     ((global-object-type-name)
+      (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__))
+     ((core-object-type-name)
+      (syntactic-binding-descriptor/core-object-type.object-type-spec   __descr__))
+     (else
+      (raise
+       (condition (make-syntactic-identifier-not-type-identifier-condition)
+		  (make-who-condition __who__)
+		  (make-message-condition "identifier not bound to an object-type specification")
+		  (make-syntactic-identifier-condition id)
+		  (make-syntactic-binding-descriptor-condition __descr__)))))))
+
+(case-define* id->record-type-spec
+  ((id)
+   (id->record-type-spec id (current-inferior-lexenv)))
+  (({id identifier?} lexenv)
+   ;;ID is meant to be a  syntactic identifier representing a record-type name, whose
+   ;;syntactic  binding's descriptor  contains an  instance of  "<record-type-spec>";
+   ;;retrieve its label, then its binding  descriptor from LEXENV, finally return the
+   ;;instance of "<record-type-spec>".
+   ;;
+   ;;If  ID is  bound to  an  imported syntactic  binding: the  exporting library  is
+   ;;visited.
+   ;;
+   ;;If an error occurs while resolving ID, raise and exception of one of the types:
+   ;;
+   ;;   &syntactic-identifier-unbound
+   ;;   &syntactic-identifier-out-of-context
+   ;;   &syntactic-identifier-not-type-identifier
+   ;;
+   ;;all of which are sub-types of "&syntactic-identifier-resolution".
+   ;;
+   (import PSYNTAX-SYNTACTIC-BINDINGS)
+   (receive-and-return (ots)
+       (id->object-type-spec id lexenv)
+     (unless (record-type-spec? ots)
+       (raise
+	(condition (make-who-condition __who__)
+		   (make-message-condition "type identifier not bound to a record-type specification")
+		   (make-syntactic-identifier-condition id)
+		   (make-object-type-spec-condition ots)))))))
+
+(case-define* id->struct-type-spec
+  ((id)
+   (id->struct-type-spec id (current-inferior-lexenv)))
   ((id lexenv)
-   (type-identifier? id lexenv #f))
-  ((id lexenv input-form.stx)
-   (and (identifier? id)
-	(cond ((id->label id)
-	       => (lambda (label)
-		    (let ((descr (label->syntactic-binding-descriptor label lexenv)))
-		      (case (syntactic-binding-descriptor.type descr)
-			((core-object-type-name local-object-type-name global-object-type-name)
-			 #t)
-			((displaced-lexical)
-			 (raise
-			  (condition (make-who-condition __who__)
-				     (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
-				     (make-syntax-violation input-form.stx id)
-				     (make-syntactic-binding-descriptor-condition descr))))
-			(else #f)))))
-	      (else #f)))))
-
-(define (id->object-type-specification who input-form.stx id lexenv)
-  ;;ID is meant to be a  syntactic identifier representing an object-type name, whose
-  ;;syntactic  binding's descriptor  contains  an  instance of  "<object-type-spec>";
-  ;;retrieve its label, then its descriptor  from LEXENV, finally return the instance
-  ;;of "<object-type-spec>".
-  ;;
-  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
-  ;;visited.
-  ;;
-  ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding's  descriptor does  not represent  an  object-type name:  raise a  syntax
-  ;;violation exception.
-  ;;
-  (import PSYNTAX-SYNTACTIC-BINDINGS)
-  (define (%error-wrong-descriptor message descr)
-    (raise
-     (condition (make-who-condition who)
-		(make-message-condition message)
-		(make-syntax-violation input-form.stx id)
-		(make-syntactic-binding-descriptor-condition descr))))
-  (unless (identifier? id)
-    (syntax-violation who
-      "expected identifier as object-type name" input-form.stx id))
-  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
-    ((local-object-type-name)
-     (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__))
-    ((global-object-type-name)
-     (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__))
-    ((core-object-type-name)
-     (syntactic-binding-descriptor/core-object-type.object-type-spec __descr__))
-    (else
-     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
-
-(define (id->record-type-specification who input-form.stx id lexenv)
-  ;;ID is meant  to be a syntactic identifier representing  a record-type name, whose
-  ;;syntactic  binding's descriptor  contains  an  instance of  "<record-type-spec>";
-  ;;retrieve its label,  then its binding descriptor from LEXENV,  finally return the
-  ;;instance of "<record-type-spec>".
-  ;;
-  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
-  ;;visited.
-  ;;
-  ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding's  descriptor does  not  represent  a record-type  name:  raise a  syntax
-  ;;violation exception.
-  ;;
-  (import PSYNTAX-SYNTACTIC-BINDINGS)
-  (define (%error-wrong-descriptor message descr)
-    (raise
-     (condition (make-who-condition who)
-		(make-message-condition message)
-		(make-syntax-violation input-form.stx id)
-		(make-syntactic-binding-descriptor-condition descr))))
-  (define (%error-wrong-type-identifier descr)
-    (%error-wrong-descriptor "the given type identifier is not bound to a record-type specification" descr))
-  (unless (identifier? id)
-    (syntax-violation who
-      "expected identifier as record-type name" input-form.stx id))
-  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
-    ((local-object-type-name)
-     (receive-and-return (ots)
-	 (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__)
-       (unless (record-type-spec? ots)
-	 (%error-wrong-type-identifier __descr__))))
-    ((global-object-type-name)
-     (receive-and-return (ots)
-	 (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__)
-       (unless (record-type-spec? ots)
-	 (%error-wrong-type-identifier __descr__))))
-    ((core-object-type-name)
-     (receive-and-return (ots)
-	 (syntactic-binding-descriptor/core-object-type.object-type-spec __descr__)
-       (unless (record-type-spec? ots)
-	 (%error-wrong-type-identifier __descr__))))
-    (else
-     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
-
-(define (id->struct-type-specification who input-form.stx id lexenv)
-  ;;ID is meant  to be a syntactic identifier representing  a struct-type name, whose
-  ;;syntactic  binding's descriptor  contains  an  instance of  "<struct-type-spec>";
-  ;;retrieve its label,  then its binding descriptor from LEXENV,  finally return the
-  ;;instance of "<struct-type-name>".
-  ;;
-  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
-  ;;visited.
-  ;;
-  ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding's  descriptor does  not represent  an  struct-type name:  raise a  syntax
-  ;;violation exception.
-  ;;
-  (import PSYNTAX-SYNTACTIC-BINDINGS)
-  (define (%error-wrong-descriptor message descr)
-    (raise
-     (condition (make-who-condition who)
-		(make-message-condition message)
-		(make-syntax-violation input-form.stx id)
-		(make-syntactic-binding-descriptor-condition descr))))
-  (define (%error-wrong-type-identifier descr)
-    (%error-wrong-descriptor "the given type identifier is not bound to a struct-type specification" descr))
-  (unless (identifier? id)
-    (syntax-violation who
-      "expected identifier as struct-type name" input-form.stx id))
-  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
-    ((local-object-type-name)
-     (receive-and-return (ots)
-	 (syntactic-binding-descriptor/local-object-type.object-type-spec  __descr__)
-       (unless (struct-type-spec? ots)
-	 (%error-wrong-type-identifier __descr__))))
-    ((global-object-type-name)
-     (receive-and-return (ots)
-	 (syntactic-binding-descriptor/global-object-type.object-type-spec __descr__)
-       (unless (struct-type-spec? ots)
-	 (%error-wrong-type-identifier __descr__))))
-    ((core-object-type-name)
-     (receive-and-return (ots)
-	 (syntactic-binding-descriptor/core-object-type.object-type-spec __descr__)
-       (unless (struct-type-spec? ots)
-	 (%error-wrong-type-identifier __descr__))))
-    (else
-     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
-
-(define* (id->typed-variable-spec who input-form.stx id lexenv)
-  ;;ID is  meant to be a  syntactic identifier representing a  typed variable, either
-  ;;lexical or global,  whose syntactic binding's descriptor contains  an instance of
-  ;;"<typed-variable-spec>";  retrieve its  label, then  its binding  descriptor from
-  ;;LEXENV, finally return the instance of "<typed-variable-spec>".
-  ;;
-  ;;If  ID is  bound  to an  imported  syntactic binding:  the  exporting library  is
-  ;;visited.
-  ;;
-  ;;If ID  is unbound:  raise an  "unbound identifier"  exception.  If  the syntactic
-  ;;binding's  descriptor  does  not  represent  a typed  variable:  raise  a  syntax
-  ;;violation exception.
-  ;;
-  (import PSYNTAX-SYNTACTIC-BINDINGS)
-  (define (%error-wrong-descriptor message descr)
-    (raise
-     (condition (make-who-condition who)
-		(make-message-condition message)
-		(make-syntax-violation input-form.stx id)
-		(make-syntactic-binding-descriptor-condition descr))))
-  (define (%error-wrong-type-identifier descr)
-    (%error-wrong-descriptor "the identifier is not bound to a typed variable" descr))
-  (unless (identifier? id)
-    (syntax-violation who
-      "expected identifier as typed variable name" input-form.stx id))
-  (case-identifier-syntactic-binding-descriptor (who input-form.stx id lexenv)
-    ((lexical-typed)
-     ;;We expect the descriptor to have the format:
-     ;;
-     ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
-     ;;
-     (car (syntactic-binding-descriptor.value __descr__)))
-    ((global-typed global-typed-mutable)
-     ;;We expect the descriptor to have the format:
-     ;;
-     ;;   (global-typed         . (#<library> . ?loc))
-     ;;   (global-typed-mutable . (#<library> . ?loc))
-     ;;
-     ;;where ?LOC  is a loc gensym  containing in its  VALUE slots a reference  to an
-     ;;instance of "<global-typed-variable-spec>".
-     (let ((tvs (symbol-value (cdr (syntactic-binding-descriptor.value __descr__)))))
-       (if (global-typed-variable-spec? tvs)
-	   tvs
-	 (assertion-violation who
-	   "invalid object in \"value\" slot of loc gensym for global typed variable"
-	   id __descr__ tvs))))
-    (else
-     (%error-wrong-descriptor "identifier not bound to an object-type specification" __descr__))))
+   ;;ID is meant to be a  syntactic identifier representing a struct-type name, whose
+   ;;syntactic  binding's descriptor  contains an  instance of  "<struct-type-spec>";
+   ;;retrieve its label, then its binding  descriptor from LEXENV, finally return the
+   ;;instance of "<struct-type-name>".
+   ;;
+   ;;If  ID is  bound to  an  imported syntactic  binding: the  exporting library  is
+   ;;visited.
+   ;;
+   ;;If an error occurs while resolving ID, raise and exception of one of the types:
+   ;;
+   ;;   &syntactic-identifier-unbound
+   ;;   &syntactic-identifier-out-of-context
+   ;;   &syntactic-identifier-not-type-identifier
+   ;;
+   ;;all of which are sub-types of "&syntactic-identifier-resolution".
+   ;;
+   (import PSYNTAX-SYNTACTIC-BINDINGS)
+   (receive-and-return (ots)
+       (id->object-type-spec id lexenv)
+     (unless (struct-type-spec? ots)
+       (raise
+	(condition (make-who-condition __who__)
+		   (make-message-condition "type identifier not bound to a struct-type specification")
+		   (make-syntactic-identifier-condition id)
+		   (make-object-type-spec-condition ots)))))))
 
 
 ;;;; identifier to syntactic binding's descriptor
@@ -2274,13 +2204,13 @@
 
   (define-syntax case-identifier-syntactic-binding-descriptor
     (syntax-rules ()
-      ((_ (?who ?input-form.stx ?id ?lexenv)
+      ((_ (?who ?id ?lexenv)
 	  ((?type0 ?type ...) . ?body)
 	  ...
 	  (else . ?else-body))
        (%case-identifier-syntactic-binding-descriptor
 	label->syntactic-binding-descriptor
-	(?who ?input-form.stx ?id ?lexenv)
+	(?who ?id ?lexenv)
 	((?type0 ?type ...) . ?body)
 	...
 	(else . ?else-body)))
@@ -2288,13 +2218,13 @@
 
   (define-syntax case-identifier-syntactic-binding-descriptor/no-indirection
     (syntax-rules ()
-      ((_ (?who ?input-form.stx ?id ?lexenv)
+      ((_ (?who ?id ?lexenv)
 	  ((?type0 ?type ...) . ?body)
 	  ...
 	  (else . ?else-body))
        (%case-identifier-syntactic-binding-descriptor
 	label->syntactic-binding-descriptor/no-indirection
-	(?who ?input-form.stx ?id ?lexenv)
+	(?who ?id ?lexenv)
 	((?type0 ?type ...) . ?body)
 	...
 	(else . ?else-body)))
@@ -2306,14 +2236,11 @@
 	(or (sys::identifier? X)
 	    (not (sys::syntax->datum X))))
       (sys::syntax-case stx (else)
-	((_ ?label->descr
-	    (?who ?input-form.stx ?id ?lexenv)
+	((_ ?label->descr (?who ?id ?lexenv)
 	    ((?type0 ?type ...) . ?body)
 	    ...
 	    (else . ?else-body))
-	 (and (%id-or-false (sys::syntax ?who))
-	      (%id-or-false (sys::syntax ?input-form.stx))
-	      (sys::identifier? (sys::syntax ?lexenv))
+	 (and (sys::identifier? (sys::syntax ?lexenv))
 	      (sys::identifier? (sys::syntax ?id)))
 	 (sys::syntax
 	  (cond ((id->label ?id)
@@ -2321,12 +2248,10 @@
 		      (let ((descr (?label->descr label ?lexenv)))
 			(fluid-let-syntax ((__descr__ (identifier-syntax descr)))
 			  (case (syntactic-binding-descriptor.type descr)
-			    ((displaced-lexical)
-			     (syntax-violation ?who
-			       "identifier out of context (identifier's label not in LEXENV)"
-			       ?input-form.stx ?id))
 			    ((?type0 ?type ...) . ?body)
 			    ...
+			    ((displaced-lexical)
+			     (error-identifier-out-of-context ?who ?id))
 			    (else . ?else-body))))))
 		(else
 		 (error-unbound-identifier ?who ?id)))))
@@ -2630,7 +2555,7 @@
   (import PSYNTAX-SYNTACTIC-BINDINGS)
   (define lexenv
     (current-inferior-lexenv))
-  (case-identifier-syntactic-binding-descriptor (__who__ #f id lexenv)
+  (case-identifier-syntactic-binding-descriptor (__who__ id lexenv)
     ((local-etv)
      (local-expand-time-value-binding-descriptor.object __descr__))
 
@@ -2797,7 +2722,7 @@
 	  (lambda ()
 	    (or memoized-ots
 		(receive-and-return (ots)
-		    (id->object-type-specification (quote ?who) #f (core-prim-id '?tag) (make-empty-lexenv))
+		    (id->object-type-spec (core-prim-id '?tag) (make-empty-lexenv))
 		  (set! memoized-ots ots))))))))
   (define-type-spec-retriever <no-return>-ots			<no-return>)
   (define-type-spec-retriever <void>-ots			<void>)

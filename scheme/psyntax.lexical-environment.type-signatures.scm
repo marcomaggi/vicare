@@ -299,14 +299,19 @@
 		    ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
 		    ;;   (define-type <some-list> <list>)
 		    ;;
-		    (let ((rest.ots (id->object-type-specification caller-who #f ?rest-id lexenv)))
+		    (let ((rest.ots (with-exception-handler
+					(lambda (E)
+					  (raise-continuable (condition E (make-who-condition 'make-type-signature))))
+				      (lambda ()
+					(id->object-type-spec ?rest-id lexenv)))))
 		      (cond ((or (list-of-type-spec? rest.ots)
 				 (<list>-ots?        rest.ots))
 			     rest.ots)
 			    (else
-			     (syntax-violation caller-who
-			       "expected list type identifier as signature component in tail position"
-			       input-signature ?rest-id)))))
+			     (raise
+			      (condition (make-who-condition caller-who)
+					 (make-message-condition "expected list type identifier as signature component in tail position")
+					 (make-syntax-violation input-signature ?rest-id)))))))
 
 		   ((?thing . ?rest)
 		    (cons (if (object-type-spec? ?thing)

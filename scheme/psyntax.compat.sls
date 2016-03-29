@@ -37,6 +37,7 @@
     non-compound-sexp?			self-evaluating?
 
     __who__				brace
+    try					catch
 
     (rename (records::record-type-printer-set!	record-type-printer-set!)
 	    (records::$record-type-printer-set!	$record-type-printer-set!)

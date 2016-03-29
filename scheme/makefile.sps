@@ -4388,6 +4388,37 @@
     (syntactic-binding-descriptor-condition?		$expander)
     (condition-syntactic-binding-descriptor		$expander)
 
+    (&object-type-spec					$expander)
+    (&object-type-spec-rtd)
+    (&object-type-spec-rcd)
+    (make-object-type-spec-condition			$expander)
+    (object-type-spec-condition?			$expander)
+    (condition-object-type-spec				$expander)
+;;;
+    (&syntactic-identifier-resolution-rtd)
+    (&syntactic-identifier-resolution-rcd)
+    (&syntactic-identifier-resolution			$expander)
+    (make-syntactic-identifier-resolution-violation	$expander)
+    (syntactic-identifier-resolution-violation?		$expander)
+
+    (&syntactic-identifier-unbound-rtd)
+    (&syntactic-identifier-unbound-rcd)
+    (&syntactic-identifier-unbound			$expander)
+    (make-syntactic-identifier-unbound-condition	$expander)
+    (syntactic-identifier-unbound-condition?		$expander)
+
+    (&syntactic-identifier-out-of-context		$expander)
+    (&syntactic-identifier-out-of-context-rtd)
+    (&syntactic-identifier-out-of-context-rcd)
+    (make-syntactic-identifier-out-of-context-condition	$expander)
+    (syntactic-identifier-out-of-context-condition?	$expander)
+
+    (&syntactic-identifier-not-type-identifier			$expander)
+    (&syntactic-identifier-not-type-identifier-rtd)
+    (&syntactic-identifier-not-type-identifier-rcd)
+    (make-syntactic-identifier-not-type-identifier-condition	$expander)
+    (syntactic-identifier-not-type-identifier-condition?	$expander)
+;;;
     (&syntax-definition-expanded-rhs			$expander)
     (&syntax-definition-expanded-rhs-rtd)
     (&syntax-definition-expanded-rhs-rcd)

@@ -863,7 +863,12 @@
 	 (methods-table		(%alist-ref-or-null descr.value 5)))
     (let ((type-name.id		(core-prim-id type-name.sym))
 	  (parent-name.id	(and parent-name.sexp (core-prim-id parent-name.sexp))))
-      (let* ((parent-name.ots	(and parent-name.id (id->object-type-specification __who__ #f parent-name.id (make-empty-lexenv))))
+      (let* ((parent-name.ots	(and parent-name.id
+				     (with-exception-handler
+					 (lambda (E)
+					   (raise (condition E (make-who-condition __who__))))
+				       (lambda ()
+					 (id->object-type-spec parent-name.id (make-empty-lexenv))))))
 	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots constructor.stx type-predicate.stx
 						       type-descriptor.id methods-table)))
 	(set-car! descriptor 'core-object-type-name)
