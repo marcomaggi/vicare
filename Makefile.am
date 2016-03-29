@@ -516,6 +516,7 @@ VICARE_BOOT_MAKEFILES	= \
 	scheme/makefile.sps					\
 	scheme/makefile.scheme-object-types.scm			\
 	scheme/makefile.built-in-record-types.scm		\
+	scheme/makefile.built-in-condition-object-types.scm	\
 	scheme/makefile.built-in-type-annotations.scm
 
 VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \

@@ -849,6 +849,8 @@
 					     ((?method-name . ?method-implementation-procedure) ...)))))))))
     ))
 
+(define-auxiliary-syntaxes methods)
+
 ;;; --------------------------------------------------------------------
 
 (define VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
@@ -857,10 +859,17 @@
 (define VICARE-CORE-BUILT-IN-TYPE-ANNOTATIONS-SYNTACTIC-BINDING-DESCRIPTORS
   '())
 
+(define VICARE-CORE-BUILT-IN-RECORD-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '())
+
+(define VICARE-CORE-BUILT-IN-CONDITION-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+  '())
+
 ;;; --------------------------------------------------------------------
 
 (include "makefile.scheme-object-types.scm"		#t)
 (include "makefile.built-in-record-types.scm"		#t)
+(include "makefile.built-in-condition-object-types.scm"	#t)
 (include "makefile.built-in-type-annotations.scm"	#t)
 
 
