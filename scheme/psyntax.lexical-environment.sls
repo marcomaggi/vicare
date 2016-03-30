@@ -1437,8 +1437,8 @@
   #| end of module: WRAPS-UTILITIES |# )
 
 (define (same-marks? x y)
-  ;;Two lists  of marks are  considered the same  if they have  the same
-  ;;length and the corresponding marks on each are EQ?.
+  ;;Two lists of marks  are considered the same if they have the  same length and the
+  ;;corresponding marks on each are EQ?.
   ;;
   (or (eq? x y)
       (and (pair? x) (pair? y)
@@ -1446,28 +1446,26 @@
 	   (same-marks? (cdr x) (cdr y)))))
 
 (define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* list-of-ribs-and-shifts?} stx1.ae {stx2 stx?})
-  ;;Join the given wraps with the  ones in STX2 and return the resulting
-  ;;wraps; with "wraps" we mean the marks and ribs, with the addition of
-  ;;the annotated  expressions for debugging purposes.   The scenario is
-  ;;this:
+  ;;Join the given wraps  with the ones in STX2 and return  the resulting wraps; with
+  ;;"wraps"  we  mean  the  marks  and  ribs, with  the  addition  of  the  annotated
+  ;;expressions for debugging purposes.  The scenario is this:
   ;;
-  ;;* A syntax object STX1 (wrapped or partially unwrapped) contains the
-  ;;  syntax object STX2 (an instance of stx) as subexpression.
+  ;;*  A syntax  object STX1  (wrapped or  partially unwrapped)  contains the  syntax
+  ;;object STX2 (an instance of stx) as subexpression.
   ;;
-  ;;* Whenever STX1 is fully unwrapped (for example by SYNTAX-MATCH) its
-  ;;   marks  and  ribs  must   be  propagated  to  all  its  identifier
-  ;;  subexpressions.
+  ;;* Whenever  STX1 is fully unwrapped  (for example by SYNTAX-MATCH)  its marks and
+  ;;ribs must be propagated to all its identifier subexpressions.
   ;;
-  ;;* In practice: the  marks of STX1 must be prepended  to the marks of
-  ;;  STX2, the ribs of STX1 must be prepended to the ribs of STX2.
+  ;;* In practice: the marks of STX1 must be prepended to the marks of STX2, the ribs
+  ;;of STX1 must be prepended to the ribs of STX2.
   ;;
-  ;;this is what this function does.  But: we must also handle anti-mark
-  ;;annihilation and the associated removal of shifts from the ribs.
+  ;;this is what this function does.  But: we must also handle anti-mark annihilation
+  ;;and the associated removal of shifts from the ribs.
   ;;
   (import WRAPS-UTILITIES)
-  (let ((stx2.mark* ($<stx>-mark* stx2))
-	(stx2.rib*  ($<stx>-rib*  stx2))
-	(stx2.ae*   ($<stx>-annotated-expr*   stx2)))
+  (let ((stx2.mark* ($<stx>-mark*		stx2))
+	(stx2.rib*  ($<stx>-rib*		stx2))
+	(stx2.ae*   ($<stx>-annotated-expr*	stx2)))
     ;;If the first item in stx2.mark* is an anti-mark...
     (if (and (not (null? stx1.mark*))
 	     (not (null? stx2.mark*))
@@ -1522,121 +1520,132 @@
     ;;The return  value can be either  a "<stx>" instance or  a (partially) unwrapped
     ;;syntax object.
     ;;
-    (%find-meaningful-stx expr.stx mark rib expr.stx '() (list ae)))
+    (%push-down-marks expr.stx mark rib expr.stx '() (list ae)))
 
-  ;;NOTE The one below was the original (modified, but still original) implementation
-  ;;of this function; it  is kept here for reference.  In my  eternal ignorance, I do
-  ;;not understand  why the syntax object  return value of the  recursive function is
-  ;;enclosed  in another  "<stx>" with  empty wraps;  so I  removed such  an envelope
-  ;;object.  It appears that there is no need for this function to return an instance
-  ;;of "<stx>": the code works fine when  the return value is a (partially) unwrapped
-  ;;syntax object.  (Marco Maggi; Tue Mar 18, 2014)
-  ;;
-  ;; (define* ({add-mark stx?} mark {rib false-or-rib?} expr ae)
-  ;;   (let ((mark* '())
-  ;;         (rib*  '())
-  ;;         (ae*   (list ae)))
-  ;;     (mkstx (%find-meaningful-stx expr mark rib expr '() '())
-  ;;            mark* rib* ae*)))
-
-  (define (%find-meaningful-stx top-expr new-mark rib expr accum-rib* ae*)
-    ;;Recursively visit EXPR while EXPR is: a pair, a vector or an "<stx>" with empty
-    ;;MARK*.  Stop the recursion  when EXPR is: an "<stx>" with  non-empty MARK* or a
-    ;;non-compound datum (boolean, number, string, ..., struct, record, null).  Raise
-    ;;an exception if EXPR is a raw symbol.
+  (define (%push-down-marks top-expr.stx mark rib expr.stx accum-rib* accum-ae*)
+    ;;Recursive function.   Partially unwraps EXPR.STX  pushing down the  marks, ribs
+    ;;and annotated  expressions to nested  "<stx>" instances having  non-empty MARK*
+    ;;list; return the resulting syntax object.
+    ;;
+    ;;The argument TOP-EXPR.STX is the original  syntax object handed to ADD-MARK; it
+    ;;is used only when raising an  exception with compound condition object having a
+    ;;component of type "&syntax".
+    ;;
+    ;;The argument MARK  is either the anti-mark  or a proper new mark  which we must
+    ;;push on top of all the MARK* lists.
+    ;;
+    ;;The  argument EXPR.STX  is a  wrapped,  unwrapped or  partially wrapped  syntax
+    ;;object  representing  the  expression  we  are  visiting.   Upon  entering  the
+    ;;recursion of this function: it is equal  to TOP-EXPR.STX.  It is seen as a tree
+    ;;of wrapped syntax objects, pairs, vectors and datums.
+    ;;
+    ;;ACCUM-RIB* is the list of RIB* (ribs and "shift" symbols), from outer to inner,
+    ;;collected so far  in the recursion while visiting "<stx>"  instances with empty
+    ;;MARK*.
+    ;;
+    ;;ACCUM-AE* is the list of syntax objects representing the annotated expressions,
+    ;;from outer to  inner, collected so far in the  recursion while visiting "<stx>"
+    ;;instances with empty MARK*.  Upon entering the recursion:
+    ;;
+    ;;* If MARK is the anti-mark: AE* is a list holding a single #f.
+    ;;
+    ;;* If MARK is a  proper new mark: AE* is a list holding  the macro input form as
+    ;;single item.
+    ;;
+    ;;This function visits the children of EXPR.STX  if EXPR.STX is: a pair, a vector
+    ;;or an  "<stx>" with empty  MARK*.  Whenever an  instance of "<stx>"  with empty
+    ;;MARK* is found: its RIB* and AE* are appended to ACCUM-RIB* and ACCUM-AE*.
+    ;;
+    ;;The recursion stops when EXPR.STX is:
+    ;;
+    ;;* An  instance of "<stx>"  with non-empty MARK*  having the anti-mark  as first
+    ;;mark; this means EXPR.STX is the input form of a macro transformer call.
+    ;;
+    ;;*  An instance  of "<stx>"  having  a proper  mark  as first  mark; this  means
+    ;;EXPR.STX is a syntax object created by  a macro transformer and inserted in its
+    ;;output form.
+    ;;
+    ;;* A  non-compound datum (boolean,  number, string, ..., struct,  record, null).
+    ;;This function raises an an exception if EXPR.STX is a raw symbol.
     ;;
     ;;When a "<stx>" with non-empty MARK* is found: perform the action; see below for
     ;;details.
     ;;
-    ;;Return a wrapped or (partially) unwrapped syntax object with the mark added.
-    ;;
-    ;;ACCUM-RIB* is the list of RIB* (ribs and "shift" symbols), from outer to inner,
-    ;;collected so far while visiting "<stx>" instances with empty MARK*.
-    ;;
-    (define-syntax-rule (%recurse ?expr ?accum-rib* ?ae*)
-      (%find-meaningful-stx top-expr new-mark rib ?expr ?accum-rib* ?ae*))
-    (cond ((pair? expr)
-	   ;;Visit the  items in the  pair.  If the visited  items equal
-	   ;;the original items: keep EXPR as result.
-	   (let ((A (%recurse (car expr) accum-rib* ae*))
-		 (D (%recurse (cdr expr) accum-rib* ae*)))
-	     (if (eq? A D)
-		 expr
-	       (cons A D))))
-
-	  ((vector? expr)
-	   ;;Visit all  the items in  the vector.  If the  visited items
-	   ;;equal the original items: keep EXPR as result.
-	   (let* ((ls1 (vector->list expr))
-		  (ls2 (map (lambda (item)
-			      (%recurse item accum-rib* ae*))
-			 ls1)))
-	     (if (for-all eq? ls1 ls2)
-		 expr
-	       (list->vector ls2))))
-
-	  ((stx? expr)
-	   (let ((expr.mark* ($<stx>-mark* expr))
-		 (expr.rib*  ($<stx>-rib*  expr)))
-	     (cond ((null? expr.mark*)
-		    ;;EXPR with empty  MARK*: collect its RIB* then  recurse into its
-		    ;;expression.
-		    (%recurse ($<stx>-expr expr)
-			      (append accum-rib* expr.rib*)
-			      (%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr))))
-
-		   ((anti-mark? (car expr.mark*))
-		    ;;EXPR with non-empty  MARK* having the anti-mark  as first mark;
-		    ;;this means EXPR is the input form of a macro transformer call.
-		    ;;
-		    ;;Drop  both NEW-MARK  and  the anti-mark  (they annihilate  each
-		    ;;other) from the resulting MARK*.
-		    ;;
-		    ;;Join  the collected  ACCUM-RIB* with  the EXPR.RIB*;  the first
-		    ;;item in the  resulting RIB* is associated to  the anti-mark (it
-		    ;;is a "shift" symbol) so we drop it.
-		    ;;
-                    ;; (assert (or (and (not (null? accum-rib*))
-                    ;;                  (eq? 'shift (car accum-rib*)))
-                    ;;             (and (not (null? expr.rib*))
-                    ;;                  (eq? 'shift (car expr.rib*)))))
-		    (let* ((result.rib* (append accum-rib* expr.rib*))
-			   (result.rib* (cdr result.rib*)))
-		      (make-stx-or-syntactic-identifier ($<stx>-expr expr) (cdr expr.mark*)
-							result.rib*
-							(%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr)))))
-
-		   (else
-		    ;;EXPR with non-empty  MARK* having a proper mark  as first mark;
-		    ;;this  means  EXPR  is  a  syntax  object  created  by  a  macro
-		    ;;transformer and inserted in its output form.
-		    ;;
-		    ;;Push NEW-MARK on the resulting MARK*.
-		    ;;
-		    ;;Join the collected ACCUM-RIB* with  the EXPR.RIB* of EXPR; push
-		    ;;a  "shift" on  the resulting  RIB*, associated  to NEW-MARK  in
-		    ;;MARK*.
-		    ;;
-		    (let* ((result.rib* (append accum-rib* expr.rib*))
-			   (result.rib* (cons 'shift result.rib*))
-			   (result.rib* (if rib
+    (define-syntax-rule (%recurse ?expr ?accum-rib* ?accum-ae*)
+      (%push-down-marks top-expr.stx mark rib ?expr ?accum-rib* ?accum-ae*))
+    (cond ((stx? expr.stx)
+	   (let ((expr.expr	($<stx>-expr		expr.stx))
+		 (expr.mark*	($<stx>-mark*		expr.stx))
+		 (expr.rib*	($<stx>-rib*		expr.stx))
+		 (expr.ae*	($<stx>-annotated-expr*	expr.stx)))
+	     (define result.ae*
+	       (%merge-annotated-expr* accum-ae* expr.ae*))
+	     (if (pair? expr.mark*)
+		 ;;EXPR.STX had non-empty MARK*.
+		 (if (anti-mark? (car expr.mark*))
+		     ;;EXPR.STX has the anti-mark as  first mark; this means EXPR.STX
+		     ;;is the input form of a non-core macro transformer call.
+		     ;;
+		     ;;Drop both MARK and the  anti-mark (they annihilate each other)
+		     ;;from the resulting MARK*.   Join the collected ACCUM-RIB* with
+		     ;;the  EXPR.RIB*;  the  first  item in  the  resulting  RIB*  is
+		     ;;associated to  the anti-mark  (it is a  "shift" symbol)  so we
+		     ;;drop it.
+		     ;;
+		     ;; (assert (or (and (not (null? accum-rib*))
+		     ;;                  (eq? 'shift (car accum-rib*)))
+		     ;;             (and (not (null? expr.rib*))
+		     ;;                  (eq? 'shift (car expr.rib*)))))
+		     (let ((result.mark* (cdr expr.mark*))
+			   (result.rib*  (cdr (append accum-rib* expr.rib*))))
+		       (make-stx-or-syntactic-identifier expr.expr result.mark* result.rib* result.ae*))
+		   ;;EXPR.STX has a proper mark as first mark; this means EXPR.STX is
+		   ;;a syntax object  created by a macro transformer  and inserted in
+		   ;;its output form.
+		   ;;
+		   ;;Push MARK on the resulting MARK*.  Join the collected ACCUM-RIB*
+		   ;;with  the  EXPR.RIB*; push  a  "shift"  on the  resulting  RIB*,
+		   ;;associated to MARK in MARK*.
+		   (let* ((result.mark* (cons mark expr.mark*))
+			  (result.rib*  (cons 'shift (append accum-rib* expr.rib*)))
+			  (result.rib*  (if rib
 					    (cons rib result.rib*)
 					  result.rib*)))
-		      (make-stx-or-syntactic-identifier ($<stx>-expr expr) (cons new-mark expr.mark*)
-							result.rib*
-							(%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr))))))))
+		     (make-stx-or-syntactic-identifier expr.expr result.mark* result.rib* result.ae*)))
+	       ;;EXPR.STX has empty  MARK*: accumulate its RIB* and  AE* then recurse
+	       ;;into its expression.
+	       (%recurse expr.expr (append accum-rib* expr.rib*) result.ae*))))
 
-	  ((symbol? expr)
+	  ((pair? expr.stx)
+	   ;;Visit the  items in the pair.   If the visited items  equal the original
+	   ;;items: keep EXPR.STX as result.
+	   (let ((A (%recurse (car expr.stx) accum-rib* accum-ae*))
+		 (D (%recurse (cdr expr.stx) accum-rib* accum-ae*)))
+	     (if (eq? A D)
+		 expr.stx
+	       (cons A D))))
+
+	  ((vector? expr.stx)
+	   ;;Visit  all the  items in  the vector.   If the  visited items  equal the
+	   ;;original items: keep EXPR.STX as result.
+	   (let* ((ls1 (vector->list expr.stx))
+		  (ls2 (map (lambda (item)
+			      (%recurse item accum-rib* accum-ae*))
+			 ls1)))
+	     (if (for-all eq? ls1 ls2)
+		 expr.stx
+	       (list->vector ls2))))
+
+
+	  ((symbol? expr.stx)
 	   ;;A raw symbol is invalid.
-	   (syntax-violation #f
-	     "raw symbol encountered in output of macro"
-	     top-expr expr))
+	   (syntax-violation 'add-mark "raw symbol encountered in output of macro" top-expr.stx expr.stx))
 
 	  (else
-	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
-	   ;;numbers, strings, ..., structs, records).
-	   #;(assert (non-compound-sexp? expr))
-	   expr)))
+	   ;;If we are here EXPR.STX is a non-compound datum (booleans, numbers, strings,
+	   ;;..., structs, records).
+	   #;(assert (non-compound-sexp? expr.stx))
+	   expr.stx)))
 
   #| end of module: ADD-MARK |# )
 
