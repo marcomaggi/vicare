@@ -1399,22 +1399,23 @@
    %append-cancel-facing)
 
   (define (%merge-annotated-expr* ls1 ls2)
-    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
-    ;;append LS1 and (cdr LS2).
+    ;;Append LS1 and LS2  and return the result; if the car or  LS2 is #f: append LS1
+    ;;and (cdr LS2).
     ;;
     ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
     ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
     ;;
     (if (and (pair? ls1)
 	     (pair? ls2)
-	     (not ($car ls2)))
+	     (not (car ls2)))
+	;;Here we know the first item in LS2 is #f.
 	(%append-cancel-facing ls1 ls2)
       (append ls1 ls2)))
 
   (define (%append-cancel-facing ls1 ls2)
-    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
-    ;;be a proper list  of one or more elements.  Append  the cdr of LS2
-    ;;to LS1 and return the result:
+    ;;Expect LS1 to be a  proper list of one or more elements and  LS2 to be a proper
+    ;;list of  one or more  elements.  Append the  cdr of LS2  to LS1 and  return the
+    ;;result:
     ;;
     ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
     ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
@@ -1426,11 +1427,12 @@
     ;;
     ;;we just hope to be a bit more efficient.
     ;;
-    (let recur ((A1 ($car ls1))
-		(D1 ($cdr ls1)))
-      (if (null? D1)
-	  ($cdr ls2)
-	(cons A1 (recur ($car D1) ($cdr D1))))))
+    (let recur ((A1 (car ls1))
+		(D1 (cdr ls1)))
+      (if (pair? D1)
+	  (cons A1 (recur (car D1) (cdr D1)))
+	;;The car of LS2 is discarded.
+	(cdr ls2))))
 
   #| end of module: WRAPS-UTILITIES |# )
 
@@ -1440,8 +1442,8 @@
   ;;
   (or (eq? x y)
       (and (pair? x) (pair? y)
-	   (eq? ($car x) ($car y))
-	   (same-marks? ($cdr x) ($cdr y)))))
+	   (eq? (car x) (car y))
+	   (same-marks? (cdr x) (cdr y)))))
 
 (define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* list-of-ribs-and-shifts?} stx1.ae {stx2 stx?})
   ;;Join the given wraps with the  ones in STX2 and return the resulting
@@ -1469,7 +1471,7 @@
     ;;If the first item in stx2.mark* is an anti-mark...
     (if (and (not (null? stx1.mark*))
 	     (not (null? stx2.mark*))
-	     (anti-mark? ($car stx2.mark*)))
+	     (anti-mark? (car stx2.mark*)))
 	;;...cancel mark, anti-mark, and corresponding shifts.
 	(values (%append-cancel-facing stx1.mark* stx2.mark*)
 		(%append-cancel-facing stx1.rib*  stx2.rib*)
@@ -1484,53 +1486,51 @@
    add-anti-mark)
   (import WRAPS-UTILITIES)
 
-  (define (add-anti-mark input-form-stx)
+  (define (add-anti-mark input-form.stx)
     ;;Push an anti-mark on the input form of a macro use.
     ;;
-    (add-mark THE-ANTI-MARK #f input-form-stx #f))
+    (add-mark THE-ANTI-MARK #f input-form.stx #f))
 
-  (define (add-new-mark rib output-form-expr input-form-stx)
+  (define (add-new-mark rib output-form.stx input-form.stx)
     ;;Push a new mark on the output form of a macro use.
     ;;
-    (add-mark (generate-new-mark) rib output-form-expr input-form-stx))
+    (add-mark (generate-new-mark) rib output-form.stx input-form.stx))
 
-  (define* (add-mark mark {rib false-or-rib?} expr ae)
-    ;;Build and return a new syntax object wrapping EXPR and having MARK
-    ;;pushed on its list of marks.  This function used only in 2 places:
+  (define* (add-mark mark {rib false-or-rib?} expr.stx ae)
+    ;;Build and return  a new syntax object wrapping EXPR.STX  and having MARK pushed
+    ;;on its list of marks.  This function used only in 2 places:
     ;;
-    ;;* It  is applied to  the input form  of a macro  transformer, with
-    ;;  MARK being the anti-mark.
+    ;;* It is applied  to the input form of a macro transformer,  with MARK being the
+    ;;  anti-mark.
     ;;
-    ;;* It  is applied to the  output form of a  macro transformer, with
-    ;;  MARK being a proper mark.
+    ;;* It is  applied to the output form  of a macro transformer, with  MARK being a
+    ;;  proper mark.
     ;;
     ;;MARK is either the anti-mark or a new mark.
     ;;
-    ;;RIB can be #f (when MARK is the anti-mark) or an instance of rib
-    ;;(when MARK is a new mark).
+    ;;RIB can be #f (when MARK is the  anti-mark) or an instance of rib (when MARK is
+    ;;a new mark).
     ;;
-    ;;EXPR is either  the input form of a macro  transformer call or the
-    ;;output  form of  a macro  transformer call;  it must  be a  syntax
-    ;;object, either wrapped or unwrapped.
+    ;;EXPR.STX is  either the input  form of a macro  transformer call or  the output
+    ;;form of a macro transformer call; it must be a syntax object, either wrapped or
+    ;;unwrapped.
     ;;
-    ;;AE is either #f (when MARK is  the anti-mark) or the input form of
-    ;;a macro call (when MARK is a  new mark).  This argument is used to
-    ;;keep track of  the transformation a form  undergoes when processed
-    ;;as macro use.
+    ;;AE is either #f (when MARK is the  anti-mark) or the input form of a macro call
+    ;;(when  MARK is  a  new mark).   This  argument is  used to  keep  track of  the
+    ;;transformation a form undergoes when processed as macro use.
     ;;
-    ;;The return value  can be either a stx instance  or a (partially)
-    ;;unwrapped syntax object.
+    ;;The return  value can be either  a "<stx>" instance or  a (partially) unwrapped
+    ;;syntax object.
     ;;
-    (%find-meaningful-stx expr mark rib expr '() (list ae)))
+    (%find-meaningful-stx expr.stx mark rib expr.stx '() (list ae)))
 
-  ;;NOTE The one  below was the original (modified,  but still original)
-  ;;implementation of this function; it  is kept here for reference.  In
-  ;;my  eternal ignorance,  I do  not understand  why the  syntax object
-  ;;return value of the recursive  function is enclosed in another stx
-  ;;with empty wraps; so I removed  such an envelope object.  It appears
-  ;;that there  is no need  for this function  to return an  instance of
-  ;;stx: the  code works fine when  the return value is  a (partially)
-  ;;unwrapped syntax object.  (Marco Maggi; Tue Mar 18, 2014)
+  ;;NOTE The one below was the original (modified, but still original) implementation
+  ;;of this function; it  is kept here for reference.  In my  eternal ignorance, I do
+  ;;not understand  why the syntax object  return value of the  recursive function is
+  ;;enclosed  in another  "<stx>" with  empty wraps;  so I  removed such  an envelope
+  ;;object.  It appears that there is no need for this function to return an instance
+  ;;of "<stx>": the code works fine when  the return value is a (partially) unwrapped
+  ;;syntax object.  (Marco Maggi; Tue Mar 18, 2014)
   ;;
   ;; (define* ({add-mark stx?} mark {rib false-or-rib?} expr ae)
   ;;   (let ((mark* '())
@@ -1540,21 +1540,18 @@
   ;;            mark* rib* ae*)))
 
   (define (%find-meaningful-stx top-expr new-mark rib expr accum-rib* ae*)
-    ;;Recursively visit EXPR while EXPR is: a pair, a vector or an stx
-    ;;with empty MARK*.  Stop the recursion  when EXPR is: an stx with
-    ;;non-empty MARK* or a  non-compound datum (boolean, number, string,
-    ;;..., struct, record,  null).  Raise an exception if EXPR  is a raw
-    ;;symbol.
+    ;;Recursively visit EXPR while EXPR is: a pair, a vector or an "<stx>" with empty
+    ;;MARK*.  Stop the recursion  when EXPR is: an "<stx>" with  non-empty MARK* or a
+    ;;non-compound datum (boolean, number, string, ..., struct, record, null).  Raise
+    ;;an exception if EXPR is a raw symbol.
     ;;
-    ;;When a  stx with non-empty  MARK* is found: perform  the action;
-    ;;see below for details.
+    ;;When a "<stx>" with non-empty MARK* is found: perform the action; see below for
+    ;;details.
     ;;
-    ;;Return a wrapped  or (partially) unwrapped syntax  object with the
-    ;;mark added.
+    ;;Return a wrapped or (partially) unwrapped syntax object with the mark added.
     ;;
-    ;;ACCUM-RIB* is  the list of  RIB* (ribs and "shift"  symbols), from
-    ;;outer to  inner, collected so  far while visiting  stx instances
-    ;;with empty MARK*.
+    ;;ACCUM-RIB* is the list of RIB* (ribs and "shift" symbols), from outer to inner,
+    ;;collected so far while visiting "<stx>" instances with empty MARK*.
     ;;
     (define-syntax-rule (%recurse ?expr ?accum-rib* ?ae*)
       (%find-meaningful-stx top-expr new-mark rib ?expr ?accum-rib* ?ae*))
@@ -1582,29 +1579,27 @@
 	   (let ((expr.mark* ($<stx>-mark* expr))
 		 (expr.rib*  ($<stx>-rib*  expr)))
 	     (cond ((null? expr.mark*)
-		    ;;EXPR  with  empty  MARK*: collect  its  RIB*  then
-		    ;;recurse into its expression.
+		    ;;EXPR with empty  MARK*: collect its RIB* then  recurse into its
+		    ;;expression.
 		    (%recurse ($<stx>-expr expr)
 			      (append accum-rib* expr.rib*)
 			      (%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr))))
 
 		   ((anti-mark? (car expr.mark*))
-		    ;;EXPR with non-empty MARK*  having the anti-mark as
-		    ;;first mark; this means EXPR is the input form of a
-		    ;;macro transformer call.
+		    ;;EXPR with non-empty  MARK* having the anti-mark  as first mark;
+		    ;;this means EXPR is the input form of a macro transformer call.
 		    ;;
-		    ;;Drop  both   NEW-MARK  and  the   anti-mark  (they
-		    ;;annihilate each other) from the resulting MARK*.
+		    ;;Drop  both NEW-MARK  and  the anti-mark  (they annihilate  each
+		    ;;other) from the resulting MARK*.
 		    ;;
-		    ;;Join the collected  ACCUM-RIB* with the EXPR.RIB*;
-		    ;;the first item in the resulting RIB* is associated
-		    ;;to the  anti-mark (it is  a "shift" symbol)  so we
-		    ;;drop it.
+		    ;;Join  the collected  ACCUM-RIB* with  the EXPR.RIB*;  the first
+		    ;;item in the  resulting RIB* is associated to  the anti-mark (it
+		    ;;is a "shift" symbol) so we drop it.
 		    ;;
-		    #;(assert (or (and (not (null? accum-rib*))
-				     (eq? 'shift (car accum-rib*)))
-				(and (not (null? expr.rib*))
-				     (eq? 'shift (car expr.rib*)))))
+                    ;; (assert (or (and (not (null? accum-rib*))
+                    ;;                  (eq? 'shift (car accum-rib*)))
+                    ;;             (and (not (null? expr.rib*))
+                    ;;                  (eq? 'shift (car expr.rib*)))))
 		    (let* ((result.rib* (append accum-rib* expr.rib*))
 			   (result.rib* (cdr result.rib*)))
 		      (make-stx-or-syntactic-identifier ($<stx>-expr expr) (cdr expr.mark*)
@@ -1612,16 +1607,15 @@
 							(%merge-annotated-expr* ae* ($<stx>-annotated-expr* expr)))))
 
 		   (else
-		    ;;EXPR with non-empty MARK*  having a proper mark as
-		    ;;first  mark; this  means EXPR  is a  syntax object
-		    ;;created by a macro transformer and inserted in its
-		    ;;output form.
+		    ;;EXPR with non-empty  MARK* having a proper mark  as first mark;
+		    ;;this  means  EXPR  is  a  syntax  object  created  by  a  macro
+		    ;;transformer and inserted in its output form.
 		    ;;
 		    ;;Push NEW-MARK on the resulting MARK*.
 		    ;;
-		    ;;Join the  collected ACCUM-RIB* with  the EXPR.RIB*
-		    ;;of  EXPR; push  a "shift"  on the  resulting RIB*,
-		    ;;associated to NEW-MARK in MARK*.
+		    ;;Join the collected ACCUM-RIB* with  the EXPR.RIB* of EXPR; push
+		    ;;a  "shift" on  the resulting  RIB*, associated  to NEW-MARK  in
+		    ;;MARK*.
 		    ;;
 		    (let* ((result.rib* (append accum-rib* expr.rib*))
 			   (result.rib* (cons 'shift result.rib*))

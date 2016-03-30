@@ -568,9 +568,9 @@
 		 (make-who-condition source-who)
 		 (make-message-condition "unbound syntactic identifier")
 		 (make-syntactic-identifier-condition id)
-		 (%extract-macro-expansion-trace id)
 		 (%expression->source-position-condition id)
-		 cnd))))
+		 cnd
+		 (%extract-macro-expansion-trace id)))))
 
   (case-define error-identifier-out-of-context
     ((caller-who id)
@@ -581,9 +581,9 @@
 		 (make-who-condition caller-who)
 		 (make-message-condition "identifier out of context (identifier's label not in LEXENV)")
 		 (make-syntactic-identifier-condition id)
-		 (%extract-macro-expansion-trace id)
 		 (%expression->source-position-condition id)
-		 cnd))))
+		 cnd
+		 (%extract-macro-expansion-trace id)))))
 
   (module (raise-compound-condition-object raise-compound-condition-object/continuable)
 
@@ -641,8 +641,9 @@
 
   (define (%extract-macro-expansion-trace stx)
     ;;Extract from the (wrapped or unwrapped) syntax object STX the sequence of macro
-    ;;expansion traces  from the AE* field  of "stx" records and  return a compound
-    ;;condition object representing them, as instances of "&macro-expansion-trace".
+    ;;expansion traces from the AE* field of wrapped syntax-object records and return
+    ;;a   compound   condition   object    representing   them,   as   instances   of
+    ;;"&macro-expansion-trace".
     ;;
     ;;NOTE Unfortunately it  does not always go  as we would like.   For example, the
     ;;program:
@@ -707,17 +708,23 @@
     ;;its components it makes sense to extract  the trace.  (Marco Maggi; Sat Apr 12,
     ;;2014)
     ;;
-    (let loop ((X stx))
-      (cond ((stx? X)
-	     (apply condition
-		    (make-macro-expansion-trace X)
-		    (map loop (stx-annotated-expr* X))))
-	    ((reader-annotation? X)
-	     ;;Here we  only want to wrap  X into an  "stx" object, we do  not care
-	     ;;about the context.  (Marco Maggi; Sat Apr 11, 2015)
-	     (make-macro-expansion-trace (make-stx-or-syntactic-identifier X '() '() '())))
-	    (else
-	     (condition)))))
+    (if (options::debug-mode-enabled?)
+	(let recur ((X stx))
+	  #;(debug-print __who__ X (stx? X))
+	  (cond ((stx? X)
+		 ;;X  is a  wrapped  syntax object:  so  the items  in  its stack  of
+		 ;;annotated expressions are all wrapped syntax objects.
+		 (apply condition (make-macro-expansion-trace X)
+			(map make-macro-expansion-trace (stx-annotated-expr* X)))
+		 #;(condition (make-macro-expansion-trace X)
+			    (apply condition (map recur (stx-annotated-expr* X)))))
+		((reader-annotation? X)
+		 ;;Here we only  want to wrap X into an  syntax object, we
+		 ;;do not care about the context.
+		 (make-macro-expansion-trace (make-stx-or-syntactic-identifier X '() '() '())))
+		(else
+		 (condition))))
+      (condition)))
 
   (define (%expression->source-position-condition x)
     (expression-position x))

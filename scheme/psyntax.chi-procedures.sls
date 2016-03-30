@@ -645,8 +645,16 @@
     ;;detection;   implementation  of   compile-time   values;  expander   inspection
     ;;facilities.
     ;;
+    ;;NOTE ON TRACING WITH ANNOTATED EXPRESSIONS The function ADD-NEW-MARK takes care
+    ;;of  pushing   INPUT-FORM.STX  on   the  stack   of  annotated   expressions  of
+    ;;OUTPUT-FORM.STX, to trace  the tranformations a form  undergoes while expanding
+    ;;it.
+    ;;
     (import ADD-MARK)
-    (let ((output-form.stx (transformer (add-anti-mark input-form.stx))))
+    (let* (#;(input-form.stx	(if (options::debug-mode-enabled?)
+				    (stx-push-annotated-expr input-form.stx input-form.stx)
+				  input-form.stx))
+	   (output-form.stx (transformer (add-anti-mark input-form.stx))))
       (let assert-no-raw-symbols-in-output-form ((x output-form.stx))
 	(unless (stx? x)
 	  (cond ((pair? x)
@@ -661,7 +669,10 @@
       ;;in the input form: this new mark  will be annihilated by the anti-mark we put
       ;;before.  For all the identifiers introduced by the transformer: this new mark
       ;;will stay there.
-      (add-new-mark rib output-form.stx input-form.stx)))
+      (let ((output-form.stx (add-new-mark rib output-form.stx input-form.stx)))
+	(if (options::debug-mode-enabled?)
+	    (stx-push-annotated-expr output-form.stx input-form.stx)
+	  output-form.stx))))
 
   #| end of module |# )
 
@@ -708,24 +719,16 @@
        ;;
        ;;The core macro transformers are integrated in the expander; they perform the
        ;;full expansion of their input forms and return a PSI struct.
-       (let ((transformer (core-macro-transformer (syntactic-binding-descriptor.value descr))))
-	 (transformer (if (options::debug-mode-enabled?)
-			  ;;Here we  push the  input form on  the stack  of annotated
-			  ;;expressions, to improve error  messages in case of syntax
-			  ;;violations.  When expanding  non-core macros the function
-			  ;;%DO-MACRO-CALL  takes  care of  doing  it,  but for  core
-			  ;;macros we have to do it here.
-			  ;;
-			  ;;NOTE  Unfortunately, I  have measured  that wrapping  the
-			  ;;input form into an additional "stx" record slows down the
-			  ;;expansion in a significant  way; when rebuilding the full
-			  ;;Vicare source  code, compiling the libraries  and running
-			  ;;the test  suite the total  time can be 25%  greater.  For
-			  ;;this reason  this step  is performed only  when debugging
-			  ;;mode is enabled.  (Marco Maggi; Wed Apr 2, 2014)
-			  (stx-push-annotated-expr expr.stx expr.stx)
-			expr.stx)
-		      lexenv.run lexenv.expand)))
+       ;;
+       ;;Only when  debugging mode  is on:  we push the  input form  on the  stack of
+       ;;annotated expressions of  the output form, to trace  the transformations the
+       ;;form undergoes.  For  non-core macros: the function  ADD-NEW-MARK pushes the
+       ;;input-form syntax object on the stack of the output-form syntax object.
+       (let* ((transformer	(core-macro-transformer (syntactic-binding-descriptor.value descr)))
+	      (input-form.stx	(if (options::debug-mode-enabled?)
+				    (stx-push-annotated-expr expr.stx expr.stx)
+				  expr.stx)))
+	 (transformer input-form.stx lexenv.run lexenv.expand)))
 
       ((global)
        ;;Reference to  global imported  lexical variable; this  means EXPR.STX  is an
@@ -1231,8 +1234,7 @@
 
 ;;;; chi procedures: internal body
 
-(define* (chi-internal-body input-form.stx lexenv.run lexenv.expand
-			    body-form*.stx)
+(define* (chi-internal-body body-form*.stx lexenv.run lexenv.expand)
   ;;This function is used to expand the internal bodies:
   ;;
   ;;*  The  LET-like  syntaxes  are  converted to  LETREC*  syntaxes:  this  function
@@ -1285,6 +1287,8 @@
   ;;
   ;;is  a syntax  violation because  the use  of DEFINE  cannot redefine  the
   ;;binding for "a".
+  (define input-form.stx
+    (cons (core-prim-id 'internal-body) body-form*.stx))
   (let*-values
       (((rib) (make-rib/empty))
        ((trailing-expr-stx* lexenv.run lexenv.expand rev-qdef* trailing-mod-expr-stx** unused-kwd* unused-export-spec*)
@@ -1304,7 +1308,7 @@
        ;;syntactic bindings associated to the REV-QDEF*.
        ((init*.stx) (reverse-and-append-with-tail trailing-mod-expr-stx** trailing-expr-stx*)))
     (when (null? init*.stx)
-      (syntax-violation __who__ "no expression in body" input-form.stx body-form*.stx))
+      (syntax-violation __who__ "no expressions in body" input-form.stx))
     ;;We want order here!   First we expand the QDEFs, then we  expande the INITs; so
     ;;that the QDEF bindings are typed when the INITs are expanded.
     (let* ((qdef*		(reverse rev-qdef*))
@@ -1314,12 +1318,12 @@
 	   (rhs*.core		(map psi.core-expr rhs*.psi))
 	   (init*.core		(map psi.core-expr init*.psi))
 	   (last-init.psi	(proper-list->last-item init*.psi)))
-      (make-psi (or input-form.stx body-form*.stx)
-		(build-letrec* (syntax-annotation input-form.stx)
-		    lhs*.lex rhs*.core
-		  (build-sequence no-source
-		    init*.core))
-		(psi.retvals-signature last-init.psi)))))
+      (make-psi input-form.stx
+	(build-letrec* (syntax-annotation input-form.stx)
+	    lhs*.lex rhs*.core
+	  (build-sequence no-source
+	    init*.core))
+	(psi.retvals-signature last-init.psi)))))
 
 
 ;;;; chi procedures: stale-when handling

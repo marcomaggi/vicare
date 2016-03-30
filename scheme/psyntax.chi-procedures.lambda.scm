@@ -657,7 +657,7 @@
 
   (define (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)
     (let* ((body*.stx (push-lexical-contour rib body*.stx))
-	   (body.psi  (chi-internal-body input-form.stx lexenv.run lexenv.expand body*.stx)))
+	   (body.psi  (chi-internal-body body*.stx lexenv.run lexenv.expand)))
       (values standard-formals.lex body.psi)))
 
   #| end of module: LAMBDA-CLAUSE-EXPANSION-HELPERS |# )

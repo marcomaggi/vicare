@@ -92,8 +92,9 @@
 		       (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand ?type-name constructor.stx ?rand*))))
 
 	       (else
-		(%synner "attempt to instantiate object-type with no constructor (abstract type?)" ?type-name)))))
-      ))
+		(__synner__ "attempt to instantiate object-type with no constructor (abstract type?)" ?type-name)))))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -187,7 +188,7 @@
 	    => (lambda (type.ots)
 		 (%apply-appropriate-destructor __who__ input-form.stx lexenv.run lexenv.expand type.ots expr.psi)))
 	   (<no-return>
-	    (%synner "subject expression of destructor syntax defined to no return" ?expr))
+	    (__synner__ "subject expression of destructor syntax defined to no return" ?expr))
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature; we need to insert a run-time dispatch.
@@ -198,7 +199,8 @@
 	    (syntax-violation __who__
 	      "the expression used as destructor operand returns multiple values"
 	      input-form.stx ?expr)))))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type.ots expr.psi)
     (cond ((object-type-spec.destructor-stx type.ots)
@@ -243,14 +245,15 @@
        ;;which should expand to the predicate of "<string>".
        (chi-expr (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type-annotation.ots)
 		   (or (object-type-spec.type-predicate-stx type-annotation.ots)
-		       (%synner "type annotation has no predicate for run-time use" ?type-annotation)))
+		       (__synner__ "type annotation has no predicate for run-time use" ?type-annotation)))
 		 lexenv.run lexenv.expand))
 
       ((_ ?expr ?type-annotation)
        (with-object-type-syntactic-binding (__module_who__ input-form.stx ?type-annotation lexenv.run type-annotation.ots)
 	 (%expand-to-single-value-predicate input-form.stx lexenv.run lexenv.expand
-					    ?expr ?type-annotation type-annotation.ots %synner)))
-      ))
+					    ?expr ?type-annotation type-annotation.ots __synner__)))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -458,7 +461,7 @@
        (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
-	   (%synner "unable to determine type of expression at expand-time" ?expr))
+	   (__synner__ "unable to determine type of expression at expand-time" ?expr))
 	 (case-signature-specs expr.sig
 	   ((<top>)
 	    (%error-unknown-type))
@@ -467,7 +470,7 @@
 		 (%expand-to-object-accessor-application-post input-form.stx lexenv.run lexenv.expand
 							      type.ots expr.psi ?field-name)))
 	   (<no-return>
-	    (%synner "subject expression of field accessor syntax defined to no return" ?expr))
+	    (__synner__ "subject expression of field accessor syntax defined to no return" ?expr))
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature.
@@ -480,7 +483,9 @@
 			(make-message-condition "subject expression of slot access returns multiple values")
 			(make-syntax-violation input-form.stx ?expr)
 			(make-irritants-condition (list expr.sig))))))))
-      ))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -555,7 +560,7 @@
        (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig  (psi.retvals-signature expr.psi)))
 	 (define (%error-unknown-type)
-	   (%synner "unable to determine type of expression at expand-time" ?expr))
+	   (__synner__ "unable to determine type of expression at expand-time" ?expr))
 	 (case-signature-specs expr.sig
 	   ((<top>)
 	    (%error-unknown-type))
@@ -564,7 +569,7 @@
 		 (%expand-to-object-mutator-application-post input-form.stx lexenv.run lexenv.expand
 							     type.ots expr.psi ?field-name ?new-value)))
 	   (<no-return>
-	    (%synner "subject expression of field mutator syntax defined to no return" ?expr))
+	    (__synner__ "subject expression of field mutator syntax defined to no return" ?expr))
 	   (<list>
 	    ;;Damn  it!!!   The expression's  return  values  have fully  UNspecified
 	    ;;signature.
@@ -577,7 +582,8 @@
 			(make-message-condition "subject expression of slot access returns multiple values")
 			(make-syntax-violation input-form.stx ?expr)
 			(make-irritants-condition (list expr.sig))))))))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -678,7 +684,9 @@
 	    ;;We have determined at expand-time  that the expression returns multiple
 	    ;;values.
 	    (%error "subject expression of method call returns multiple values")))))
-      ))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -758,7 +766,8 @@
       ((_ ?expr ?case-clause0 ?case-clause* ...)
        (%build-output-form input-form.stx lexenv.run lexenv.expand
 			   ?expr (cons ?case-clause0 ?case-clause*)))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define (%build-output-form input-form.stx lexenv.run lexenv.expand
 			      expr.stx case-clause*.stx)
@@ -821,30 +830,33 @@
       ((_ ?assert-signature ?expr)
        (begin
 	 (unless (syntax-object.type-signature? ?assert-signature)
-	   (%synner "invalid return values signature" ?assert-signature))
+	   (__synner__ "invalid return values signature" ?assert-signature))
 	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
 			      ?assert-signature ?expr #f)))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define-core-transformer (assert-signature-and-return input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ?assert-signature ?expr)
        (begin
 	 (unless (syntax-object.type-signature? ?assert-signature)
-	   (%synner "invalid return values signature" ?assert-signature))
+	   (__synner__ "invalid return values signature" ?assert-signature))
 	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
 			      ?assert-signature ?expr #t)))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define-core-transformer (cast-signature input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ?assert-signature ?expr)
        (begin
 	 (unless (syntax-object.type-signature? ?assert-signature)
-	   (%synner "invalid return values signature" ?assert-signature))
+	   (__synner__ "invalid return values signature" ?assert-signature))
 	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
 			      ?assert-signature ?expr #t)))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1096,7 +1108,8 @@
 			    (make-syntax-violation input-form.stx ?expr)
 			    (make-irritants-condition (list expr.sig))))))
 	 )))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: TYPE-OF
@@ -1114,7 +1127,8 @@
 		 (build-data no-source
 		   expr.sig)
 		 (make-type-signature/single-value (core-prim-id '<type-signature>)))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: TYPE-SUPER-AND-SUB?, SIGNATURE-SUPER-AND-SUB?
@@ -1134,7 +1148,8 @@
 	     (if bool
 		 (make-type-signature/single-true)
 	       (make-type-signature/single-false)))))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (signature-super-and-sub? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  SIGNATURE-SUPER-AND-SUB?  syntaxes
@@ -1156,7 +1171,8 @@
 	   (if bool
 	       (make-type-signature/single-true)
 	     (make-type-signature/single-false))))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; done

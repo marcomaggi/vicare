@@ -26,6 +26,11 @@
 
 ;;;; helpers
 
+(define-fluid-syntax __synner__
+  (identifier-syntax #f)
+  #;(lambda (stx)
+    (syntax-violation '__synner__ "unset fluid syntax" stx)))
+
 (define-syntax (define-core-transformer stx)
   (sys::syntax-case stx ()
     ((_ (?who ?input-form.stx ?lexenv.run ?lexenv.expand) ?body0 ?body ...)
@@ -33,26 +38,18 @@
 	    (who.str (symbol->string who.sym))
 	    (who.out (string->symbol (string-append who.str "-transformer"))))
        (sys::with-syntax
-	   ((WHO    (sys::datum->syntax (sys::syntax ?who) who.out))
-	    (SYNNER (sys::datum->syntax (sys::syntax ?who) '%synner)))
+	   ((WHO (sys::datum->syntax (sys::syntax ?who) who.out)))
 	 (sys::syntax
 	  (define (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
 	    (with-who ?who
-	      (define SYNNER
-		(case-lambda
-		 ((message)
-		  (SYNNER message #f))
-		 ((message subform)
-		  (syntax-violation (quote ?who) message ?input-form.stx subform))))
-	      (with-exception-handler
-		  (lambda (E)
-		    (raise-continuable
-		     (if (syntax-violation? E)
-			 E
-		       (condition E
-				  (make-who-condition (quote ?who))
-				  (make-syntax-violation ?input-form.stx #f)))))
-		(lambda () ?body0 ?body ...))))))))
+	      (case-define synner
+		((message)
+		 (synner message #f))
+		((message subform)
+		 (syntax-violation (quote ?who) message ?input-form.stx subform)))
+	      (fluid-let-syntax
+		  ((__synner__ (identifier-syntax synner)))
+		?body0 ?body ...)))))))
     ))
 
 (module ($map-in-order
@@ -220,7 +217,8 @@
     ((_ ?formals ?body ?body* ...)
      (chi-lambda/std input-form.stx lexenv.run lexenv.expand
 			  ?formals (cons ?body ?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (lambda/typed input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  LAMBDA/TYPED syntaxes  from the  top-level
@@ -235,7 +233,8 @@
     ((_ ?formals ?body ?body* ...)
      (chi-lambda/typed input-form.stx lexenv.run lexenv.expand
 		       ?formals (cons ?body ?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))    ))
 
 (define-core-transformer (lambda/checked input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand  LAMBDA/CHECKED syntaxes from  the top-level
@@ -250,7 +249,8 @@
     ((_ ?formals ?body ?body* ...)
      (chi-lambda/checked input-form.stx lexenv.run lexenv.expand
 			 ?formals (cons ?body ?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))    ))
 
 (define-core-transformer (lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand LAMBDA syntaxes from the  top-level built in
@@ -276,7 +276,8 @@
 			      'lambda/std ?formals ?body ?body*)
 			    lexenv.run lexenv.expand
 			    ?formals (cons ?body ?body*))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))    ))
 
 
 ;;;; module core-macro-transformer: NAMED-LAMBDA and variants
@@ -297,7 +298,8 @@
      (identifier? ?who)
      (chi-named-lambda/std input-form.stx lexenv.run lexenv.expand
 				?who ?formals (cons ?body ?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (named-lambda/typed input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand Vicare's NAMED-LAMBDA/TYPED syntaxes from the
@@ -309,7 +311,8 @@
      (identifier? ?who)
      (chi-named-lambda/typed input-form.stx lexenv.run lexenv.expand
 			     ?who ?formals (cons ?body ?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (named-lambda/checked input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  NAMED-LAMBDA/CHECKED syntaxes from
@@ -321,7 +324,8 @@
      (identifier? ?who)
      (chi-named-lambda/checked input-form.stx lexenv.run lexenv.expand
 			       ?who ?formals (cons ?body ?body*)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (named-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  NAMED-LAMBDA  syntaxes from  the
@@ -344,7 +348,8 @@
 				    'named-lambda/std ?formals ?body ?body*)
 				  lexenv.run lexenv.expand
 				  ?who ?formals (cons ?body ?body*))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: CASE-LAMBDA and variants
@@ -362,7 +367,8 @@
     ((_ (?formals* ?body* ?body** ...) ...)
      (chi-case-lambda/std input-form.stx lexenv.run lexenv.expand
 			       ?formals* (map cons ?body* ?body**)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (case-lambda/typed input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand CASE-LAMBDA/TYPED syntaxes from the top-level
@@ -376,7 +382,8 @@
     ((_ (?formals* ?body* ?body** ...) ...)
      (chi-case-lambda/typed input-form.stx lexenv.run lexenv.expand
 			    ?formals* (map cons ?body* ?body**)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (case-lambda/checked input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  CASE-LAMBDA/CHECKED  syntaxes  from  the
@@ -390,7 +397,8 @@
     ((_ (?formals* ?body* ?body** ...) ...)
      (chi-case-lambda/checked input-form.stx lexenv.run lexenv.expand
 			      ?formals* (map cons ?body* ?body**)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (case-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand CASE-LAMBDA syntaxes from the top-level built
@@ -417,7 +425,8 @@
 				     'case-lambda/std ?formals* body**.stx)
 				   lexenv.run lexenv.expand
 				   ?formals* body**.stx))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: NAMED-CASE-LAMBDA and variants
@@ -432,7 +441,8 @@
      (identifier? ?who)
      (chi-named-case-lambda/std input-form.stx lexenv.run lexenv.expand
 				     ?who ?formals* (map cons ?body* ?body**)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (named-case-lambda/typed input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's NAMED-CASE-LAMBDA/TYPED  syntaxes
@@ -444,7 +454,8 @@
      (identifier? ?who)
      (chi-named-case-lambda/typed input-form.stx lexenv.run lexenv.expand
 				  ?who ?formals* (map cons ?body* ?body**)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (named-case-lambda/checked input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  NAMED-CASE-LAMBDA/CHECKED syntaxes
@@ -456,7 +467,8 @@
      (identifier? ?who)
      (chi-named-case-lambda/checked input-form.stx lexenv.run lexenv.expand
 				    ?who ?formals* (map cons ?body* ?body**)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (named-case-lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand  Vicare's NAMED-CASE-LAMBDA syntaxes from the
@@ -485,7 +497,8 @@
 					   'named-case-lambda/std ?formals* body**.stx)
 					 lexenv.run lexenv.expand
 					 ?who ?formals* body**.stx))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: IF
@@ -531,7 +544,8 @@
 		   (psi.core-expr consequent.psi)
 		   (build-void))
 		 (make-type-signature/fully-untyped))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: QUOTE
@@ -547,12 +561,13 @@
        (make-psi input-form.stx
 		 (build-data no-source datum)
 		 (datum-type-signature datum))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: LET
 
-(define* (let-transformer input-form.stx lexenv.run lexenv.expand)
+(define-core-transformer (let input-form.stx lexenv.run lexenv.expand)
   ;;Transformer functions  used to expand  LET syntaxes  from the top-level  built in
   ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
   ;;LEXENV; return a PSI object.
@@ -603,14 +618,14 @@
 	     (values lhs*.lex rhs*.psi rib lexenv.run)))
        ;;Prepare the body.
        (let* ((body*.stx  (push-lexical-contour rib (cons ?body ?body*)))
-	      (body.psi   (chi-internal-body input-form.stx lexenv.run lexenv.expand body*.stx))
+	      (body.psi   (chi-internal-body body*.stx lexenv.run lexenv.expand))
 	      (body.core  (psi.core-expr body.psi))
 	      (rhs*.core  (map psi.core-expr rhs*.psi)))
 	 (make-psi input-form.stx
-		   (build-let (syntax-annotation input-form.stx)
-			      lhs*.lex rhs*.core
-			      body.core)
-		   (psi.retvals-signature body.psi)))))
+	   (build-let (syntax-annotation input-form.stx)
+	       lhs*.lex rhs*.core
+	     body.core)
+	   (psi.retvals-signature body.psi)))))
 
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
@@ -627,7 +642,7 @@
 	       lexenv.run lexenv.expand))
 
     (_
-     (syntax-violation __who__ "invalid syntax" input-form.stx))))
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: LET, LETREC and LETREC*
@@ -705,8 +720,7 @@
 	       (values lhs*.lex rhs*.psi rib lexenv.run)))
 	 ;;Prepare the body.
 	 (let* ((body*.stx	(cons ?body ?body*))
-		(body.psi	(chi-internal-body input-form.stx lexenv.run lexenv.expand
-						   (push-lexical-contour rib body*.stx)))
+		(body.psi	(chi-internal-body (push-lexical-contour rib body*.stx) lexenv.run lexenv.expand))
 		(body.core	(psi.core-expr body.psi)))
 	   ;;Build the LETREC or LETREC* expression in the core language.
 	   (let ((rhs*.core (map psi.core-expr rhs*.psi)))
@@ -715,7 +729,8 @@
 			 lhs*.lex rhs*.core
 			 body.core)
 		       (psi.retvals-signature body.psi))))))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   #| end of module |# )
 
@@ -759,8 +774,9 @@
 	       (fluid-syntax-push-redefinition-on-lexenvs input-form.stx lexenv.run lexenv.expand
 							  __who__ (car lhs*.id) (car rhs*.stx))
 	     (loop (cdr lhs*.id) (cdr rhs*.stx) lexenv.run lexenv.expand))
-	 (chi-internal-body input-form.stx lexenv.run lexenv.expand (cons ?body ?body*)))))
-    ))
+	 (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: FOREIGN-CALL
@@ -778,7 +794,8 @@
 			   (psi.core-expr name.psi)
 			 (map psi.core-expr arg*.psi))))
        (make-psi input-form.stx expr.core)))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: SYNTAX
@@ -932,7 +949,9 @@
   (quote #<syntax expr=()>)))))
   ?a)
   |#
-  (define (syntax-transformer input-form.stx lexenv.run lexenv.expand)
+  (define-module-who syntax)
+
+  (define-core-transformer (syntax input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ?template)
        (receive (intermediate-sexp maps)
@@ -948,9 +967,8 @@
 		       ;;implement type  signature tracking  to be  able to  return a
 		       ;;meaning ful signature.  (Marco Maggi; Mon Dec 28, 2015)
 		       (make-type-signature/single-top))))))
-      ))
-
-  (define-module-who syntax)
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define (%gen-syntax input-form.stx template-stx lexenv maps ellipsis-id? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
@@ -1228,7 +1246,7 @@
        (syntax-violation __module_who__ ?msg ?stx))
       ))
 
-  (define (syntax-case-transformer input-form.stx lexenv.run lexenv.expand)
+  (define-core-transformer (syntax-case input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ?expr (?literal* ...) ?clauses* ...)
        (verify-syntax-case-literals __module_who__ input-form.stx ?literal*)
@@ -1252,7 +1270,8 @@
 			 (list expr.sym)
 		       body.core)
 		     (list expr.core)))))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define (%gen-syntax-case expr.sym literals clauses lexenv.run lexenv.expand)
     ;;Recursive function.  Generate and return the  full pattern matching code in the
@@ -1517,7 +1536,8 @@
 	       (internal-body
 		 (import SPLICE-FIRST-ENVELOPE)
 		 (make-splice-first-envelope ?form))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: INTERNAL-BODY
@@ -1530,9 +1550,9 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?body ?body* ...)
-     (chi-internal-body input-form.stx lexenv.run lexenv.expand
-			(cons ?body ?body*)))
-    ))
+     (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: STRUCT-TYPE-DESCRIPTOR, RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, TYPE-DESCRIPTOR
@@ -1550,8 +1570,9 @@
     (syntax-match input-form.stx ()
       ((_ ?type-id)
        (let ((sts (id->struct-type-spec ?type-id lexenv.run)))
-	 (%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand sts)))))
-
+	 (%make-struct-type-descriptor input-form.stx lexenv.run lexenv.expand sts)))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define-core-transformer (record-type-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand RECORD-TYPE-DESCRIPTOR syntaxes  from the
@@ -1561,7 +1582,9 @@
     (syntax-match input-form.stx ()
       ((_ ?type-id)
        (let ((rts (id->record-type-spec ?type-id lexenv.run)))
-	 (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand rts)))))
+	 (%make-record-type-descriptor input-form.stx lexenv.run lexenv.expand rts)))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define-core-transformer (record-constructor-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from
@@ -1576,7 +1599,8 @@
 	 (make-psi input-form.stx
 	   (psi.core-expr expr.psi)
 	   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
-      ))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define-core-transformer (type-descriptor input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand TYPE-DESCRIPTOR syntaxes from the top-level
@@ -1601,8 +1625,9 @@
 	       ((scheme-type-spec? ots)
 		(%make-scheme-type-descriptor input-form.stx lexenv.run lexenv.expand ots))
 	       (else
-		(%synner "expected type identifier representing a struct-type name or a record-type name" ?type-id)))))
-      ))
+		(__synner__ "expected type identifier representing a struct-type name or a record-type name" ?type-id)))))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1677,7 +1702,9 @@
 		 (build-data no-source
 		   expr.sexp)
 		 (make-type-signature/single-top))))
-    ))
+
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (expansion-of* input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's EXPANSION-OF*  syntaxes from  the
@@ -1688,7 +1715,8 @@
     ((_ ?expr0 ?expr* ...)
      (chi-expr (bless `(expansion-of (internal-body ,?expr0 ,@?expr* (void))))
 	       lexenv.run lexenv.expand))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: VISIT-CODE-OF
@@ -1710,8 +1738,9 @@
 		      (core-language->sexp expanded-expr))
 		    (make-type-signature/single-top))))
        (else
-	(%synner "expected identifier of local macro" ?id))))
-    ))
+	(__synner__ "expected identifier of local macro" ?id))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: OPTIMISATION-OF, OPTIMISATION-OF*, FURTHER-OPTIMISATION-OF, FURTHER-OPTIMISATION-OF*
@@ -1730,7 +1759,8 @@
 		 (build-data no-source
 		   expr.sexp)
 		 (make-type-signature/single-top))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (optimisation-of* input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand Vicare's OPTIMISATION-OF*  syntaxes from the
@@ -1747,7 +1777,8 @@
 		 (build-data no-source
 		   expr.sexp)
 		 (make-type-signature/single-top))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (further-optimisation-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's FURTHER-OPTIMISATION-OF  syntaxes
@@ -1763,7 +1794,8 @@
 		 (build-data no-source
 		   expr.sexp)
 		 (make-type-signature/single-top))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (further-optimisation-of* input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's  FURTHER-OPTIMISATION-OF* syntaxes
@@ -1780,7 +1812,8 @@
 		 (build-data no-source
 		   expr.sexp)
 		 (make-type-signature/single-top))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: ASSEMBLY-OF
@@ -1799,7 +1832,8 @@
 		 (build-data no-source
 		   expr.sexp)
 		 (make-type-signature/single-top))))
-    ))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; done
