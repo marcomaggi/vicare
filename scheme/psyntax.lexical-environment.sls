@@ -1942,7 +1942,9 @@
       (make-stx-or-syntactic-identifier (stx-expr stx) (stx-mark* stx) (stx-rib* stx)
 					(%merge-annotated-expr* (list annotated-expr)
 								(stx-annotated-expr* stx)))
-    (mkstx stx '() '() (list annotated-expr))))
+    (let ((mark* '())
+	  (rib*  '()))
+      (mkstx stx mark* rib* (list annotated-expr)))))
 
 (define (syntax-annotation x)
   (if (stx? x)

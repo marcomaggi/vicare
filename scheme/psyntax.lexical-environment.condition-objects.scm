@@ -705,8 +705,18 @@
     ;;
     ;;and there is no trace.  This is  because the syntax object used as "form" value
     ;;in "&syntax" is  not wrapped, and SYNTAX-VIOLATION cannot decide  from which of
-    ;;its components it makes sense to extract  the trace.  (Marco Maggi; Sat Apr 12,
-    ;;2014)
+    ;;its components it makes sense to extract  the trace.
+    ;;
+    ;;To solve this problem,  we could try to wrap the output form  of macros into an
+    ;;instance of "<stx>" in DO-MACRO-CALL as follows:
+    ;;
+    ;;   (let ((return-form.stx (add-new-mark rib output-form.stx input-form.stx)))
+    ;;     (if (options::debug-mode-enabled?)
+    ;;         (stx-push-annotated-expr return-form.stx input-form.stx)
+    ;;       return-form.stx))
+    ;;
+    ;;and to  modify %MERGE-ANNOTATED-EXPR* to  use %APPEND-CANCEL-FACING; but  it is
+    ;;not so simple.  (Marco Maggi; Sat Apr 12, 2014)
     ;;
     (if (options::debug-mode-enabled?)
 	(cond ((stx? X)

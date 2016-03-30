@@ -647,7 +647,7 @@
     ;;
     ;;NOTE ON TRACING WITH ANNOTATED EXPRESSIONS The function ADD-NEW-MARK takes care
     ;;of  pushing   INPUT-FORM.STX  on   the  stack   of  annotated   expressions  of
-    ;;OUTPUT-FORM.STX, to trace  the tranformations a form  undergoes while expanding
+    ;;OUTPUT-FORM.STX, to trace the transformations  a form undergoes while expanding
     ;;it.
     ;;
     (import PSYNTAX-ADD-MARK)
