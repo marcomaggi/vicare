@@ -650,7 +650,7 @@
     ;;OUTPUT-FORM.STX, to trace  the tranformations a form  undergoes while expanding
     ;;it.
     ;;
-    (import ADD-MARK)
+    (import PSYNTAX-ADD-MARK)
     (let* (#;(input-form.stx	(if (options::debug-mode-enabled?)
 				    (stx-push-annotated-expr input-form.stx input-form.stx)
 				  input-form.stx))

@@ -42,6 +42,7 @@
     PSYNTAX-TYPE-SIGNATURES
     PSYNTAX-TYPE-CALLABLES
     PSYNTAX-SYNTACTIC-BINDINGS
+    PSYNTAX-ADD-MARK
 
     ;;configuration
     generate-descriptive-gensyms?
@@ -259,11 +260,6 @@
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
     syntax-object.parse-type-annotation		syntax-object.type-annotation?
-
-    ;; syntax objects: marks
-    same-marks?
-    join-wraps
-    ADD-MARK
 
     ;; identifiers from the built-in environment
     system-id-gensym			system-id
@@ -1349,51 +1345,7 @@
 		(%recursion))
 	    '()))))))
 
-;;; --------------------------------------------------------------------
-
-;;So, what's an anti-mark and why is it there?
-;;
-;;The theory goes like  this: when a macro call is encountered, the  input stx to the
-;;macro transformer gets an extra anti-mark, and the output of the transformer gets a
-;;fresh  mark.  When  a mark  collides with  an anti-mark,  they cancel  one another.
-;;Therefore, any part of  the input transformer that gets copied  to the output would
-;;have a  mark followed  immediately by  an anti-mark, resulting  in the  same syntax
-;;object (no extra  marks).  Parts of the  output that were not present  in the input
-;;(e.g. inserted  by the macro transformer)  would have no anti-mark  and, therefore,
-;;the mark would stick to them.
-;;
-;;Every time a mark is pushed to an STX-MARK* list, a corresponding "shift" symbol is
-;;pushed to the STX-RIB*  list.  Every time a mark is cancelled  by an anti-mark, the
-;;corresponding shifts are also cancelled.
-
-;;The procedure  JOIN-WRAPS, here,  is used to  compute the new  MARK* and  RIB* that
-;;would result when the m1* and s1* are added to an stx's MARK* and RIB*.
-;;
-;;The only tricky part  here is that e may have an anti-mark  that should cancel with
-;;the last mark in m1*.  So, if:
-;;
-;;  m1* = (mx* ... mx)
-;;  m2* = (#f my* ...)
-;;
-;;then the resulting marks should be:
-;;
-;;  (mx* ... my* ...)
-;;
-;;since mx  would cancel  with the  anti-mark.  The  ribs would  have to  also cancel
-;;since:
-;;
-;;    s1* = (sx* ... sx)
-;;    s2* = (sy sy* ...)
-;;
-;;then the resulting ribs should be:
-;;
-;;    (sx* ... sy* ...)
-;;
-;;Notice that both SX and SY would be shift marks.
-;;
-;;All this work is performed by the functions ADD-MARK and %DO-MACRO-CALL.
-;;
-
+
 (module WRAPS-UTILITIES
   (%merge-annotated-expr*
    %append-cancel-facing)
@@ -1435,6 +1387,71 @@
 	(cdr ls2))))
 
   #| end of module: WRAPS-UTILITIES |# )
+
+
+;;;; handling marks in wrapped syntax objects
+;;
+;;So, what's  an anti-mark and why  is it there?  The  theory goes like this,  when a
+;;macro call is encountered:
+;;
+;;1. The anti-mark is pushed on the MARK* of the syntax object representing the input
+;;form.
+;;
+;;2. The macro transformer function is applied to the anti-marked input form.
+;;
+;;3. A fresh  mark is pushed on the  MARK* list of the syntax object  returned by the
+;;transformer.
+;;
+;;In the MARK*: when a mark collides  with an anti-mark, they cancel one another when
+;;joining the wraps:
+;;
+;;   (new-mark anty-mark mark1 mark0) => (mark1 mark0)
+;;   (new-mark markA markB)           => (new-mark markA markB)
+;;
+;;therefore:
+;;
+;;* Any  part of the  input form that  is copied  to the output  form has a  new mark
+;;followed immediately by an anti-mark, resulting in the same syntax object (no extra
+;;marks) after joining the marks.
+;;
+;;* Any part of the output form that was  not present in the input form (e.g. that is
+;;inserted  in the  output form  by the  macro transformer)  has *no*  anti-mark and,
+;;therefore, the new mark is present in the output.
+;;
+;;So even if they  have the same name: syntactic identifiers from  the input form and
+;;syntactic identifiers inserted by the macro transformer are not FREE-IDENTIFIER=?.
+;;
+;;Every  time  a  mark  is  pushed  to  the MARK*  of  a  wrapped  syntax  object:  a
+;;corresponding  "shift" symbol  is pushed  to the  RIB* of  the same  wrapped syntax
+;;object.  Every time  a mark is cancelled by an  anti-mark, the corresponding shifts
+;;are also cancelled.
+
+;;The procedure  JOIN-WRAPS is  used to  compute the  new MARK*  and RIB*  that would
+;;result when the M1* and S1* are added  to a wrapped syntax object's MARK* and RIB*.
+;;The only tricky  part is that e may  have an anti-mark that should  cancel with the
+;;last mark in m1*.  So, if:
+;;
+;;  m1* = (mx* ... mx)
+;;  m2* = (#f my* ...)
+;;
+;;then the resulting marks should be:
+;;
+;;  (mx* ... my* ...)
+;;
+;;since MX will cancel with the anti-mark.  The ribs will have to also cancel since:
+;;
+;;    s1* = (sx* ... sx)
+;;    s2* = (sy sy* ...)
+;;
+;;then the resulting ribs should be:
+;;
+;;    (sx* ... sy* ...)
+;;
+;;Notice that both SX and SY would be shift marks.
+;;
+;;All this work  of pushing marks, anti-marks  and joining marks is  performed by the
+;;functions ADD-MARK and DO-MACRO-CALL.
+;;
 
 (define (same-marks? x y)
   ;;Two lists of marks  are considered the same if they have the  same length and the
@@ -1479,7 +1496,10 @@
 	      (append stx1.rib*  stx2.rib*)
 	      (%merge-annotated-expr* stx1.ae stx2.ae*)))))
 
-(module ADD-MARK
+
+;;;; adding marks and the anti-mark
+
+(module PSYNTAX-ADD-MARK
   (add-new-mark
    add-anti-mark)
   (import WRAPS-UTILITIES)
@@ -1647,7 +1667,7 @@
 	   #;(assert (non-compound-sexp? expr.stx))
 	   expr.stx)))
 
-  #| end of module: ADD-MARK |# )
+  #| end of module: PSYNTAX-ADD-MARK |# )
 
 
 ;;;; wrapped syntax object type definition
@@ -1666,9 +1686,9 @@
 		;
 		;NOTE The items in the fields  MARK* and RIB* are not associated: the
 		;two lists  can grow independently  of each other.   But, considering
-		;the whole structure of nested stx  instances: the items in all the
-		;MARK* fields  are associated to the  items in all the  RIB*, see the
-		;functions JOIN-WRAPS and ADD-MARK for details.
+		;the whole  structure of nested  "<stx>" instances: the items  in all
+		;the MARK*  fields are associated to  the items in all  the RIB*, see
+		;the functions JOIN-WRAPS and ADD-MARK for details.
 	  (immutable annotated-expr*	stx-annotated-expr*)
 		;List of annotated expressions: null or a proper list whose items are
 		;#f or input  forms of macro transformer calls.  It  is used to trace
@@ -1865,23 +1885,24 @@
     ;;Here we just wrap a source expression with the given ones.
     (make-stx-or-syntactic-identifier expr-stx mark* rib* annotated-expr*)))
 
-(define* (push-lexical-contour {rib rib?} expr-stx)
+(define* (push-lexical-contour {rib rib?} expr.stx)
   ;;Add  a rib  to a  syntax object  or expression  and return  the resulting  syntax
-  ;;object.  During  the expansion process  we visit  the nested subexpressions  in a
-  ;;syntax  object  repesenting source  code:  this  procedure introduces  a  lexical
-  ;;contour in the context of EXPR-STX, for example when we enter a LET syntax.
+  ;;object.  The role of this function is this: during the expansion process we visit
+  ;;the  nested subexpressions  in  a  syntax object  repesenting  source code;  this
+  ;;procedure introduces  a lexical contour in  the context of EXPR.STX,  for example
+  ;;when we enter a LET syntax.
   ;;
   ;;RIB must be an instance of RIB.
   ;;
-  ;;EXPR-STX can be a raw sexp, an instance of STX or a wrapped syntax object.
+  ;;EXPR.STX can be a raw sexp, an instance of STX or a wrapped syntax object.
   ;;
   ;;This function prepares a computation that will be lazily performed later; the RIB
-  ;;will be pushed  on the stack of  ribs in every identifier in  the fully unwrapped
-  ;;version of the returned syntax object.
+  ;;will  be pushed  down on  the stack  of  ribs in  every identifier  in the  fully
+  ;;unwrapped version of the returned syntax object.
   ;;
   (let ((mark*	'())
 	(ae*	'()))
-    (mkstx expr-stx mark* (list rib) ae*)))
+    (mkstx expr.stx mark* (list rib) ae*)))
 
 (define* (stx-push-annotated-expr stx annotated-expr)
   ;;Build  and return  a new  syntax object  with the  same wraps  of STX  and having
