@@ -717,10 +717,12 @@
 		 (apply condition (if (syntax=? X (car ae*))
 				      trace*
 				    (cons (make-macro-expansion-trace X) trace*)))))
+
 	      ((reader-annotation? X)
 	       ;;Here we only  want to wrap X into an  syntax object, we
 	       ;;do not care about the context.
 	       (make-macro-expansion-trace (make-stx-or-syntactic-identifier X '() '() '())))
+
 	      (else
 	       (condition)))
       (condition)))
