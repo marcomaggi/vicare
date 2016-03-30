@@ -83,7 +83,7 @@
     all-identifiers?
     syntax-vector?			syntax-vector->list
     syntax->vector
-    syntax-unwrap
+    syntax-unwrap			syntax=?
 
     parse-logic-predicate-syntax
     error-invalid-formals-syntax

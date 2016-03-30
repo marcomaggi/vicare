@@ -54,7 +54,6 @@
     syntax-unwrap
 
     ;; comparison
-    syntax=?
     identifier=symbol?
 
     ;; inspection
@@ -238,22 +237,6 @@
 
 
 ;;;; comparison
-
-(define (syntax=? stx1 stx2)
-  (define (%syntax=? stx1 stx2)
-    (cond ((and (identifier? stx1)
-		(identifier? stx2))
-	   (free-identifier=? stx1 stx2))
-	  ((and (pair? stx1)
-		(pair? stx2))
-	   (and (syntax=? (car stx1) (car stx2))
-		(syntax=? (cdr stx1) (cdr stx2))))
-	  ((and (vector? stx1)
-		(vector? stx2))
-	   (vector-for-all syntax=? stx1 stx2))
-	  (else
-	   (equal? stx1 stx2))))
-  (%syntax=? (syntax-unwrap stx1) (syntax-unwrap stx2)))
 
 (define* (identifier=symbol? {id identifier?} {sym symbol?})
   ;;Return true  if the symbol  SYM is equal to  the symbol name  of the
