@@ -1346,47 +1346,54 @@
 	    '()))))))
 
 
-(module WRAPS-UTILITIES
-  (%merge-annotated-expr*
-   %append-cancel-facing)
+;;;; helpers to handle syntax object's wraps
 
-  (define (%merge-annotated-expr* ls1 ls2)
-    ;;Append LS1 and LS2  and return the result; if the car or  LS2 is #f: append LS1
-    ;;and (cdr LS2).
-    ;;
-    ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
-    ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
-    ;;
-    (if (and (pair? ls1)
-	     (pair? ls2)
-	     (not (car ls2)))
-	;;Here we know the first item in LS2 is #f.
-	(%append-cancel-facing ls1 ls2)
-      (append ls1 ls2)))
-
-  (define (%append-cancel-facing ls1 ls2)
-    ;;Expect LS1 to be a  proper list of one or more elements and  LS2 to be a proper
-    ;;list of  one or more  elements.  Append the  cdr of LS2  to LS1 and  return the
-    ;;result:
-    ;;
-    ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
-    ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
-    ;;   (%append-cancel-facing '(1)     '(2))		=> ()
-    ;;
-    ;;This function is like:
-    ;;
-    ;;   (append ls1 (cdr ls2))
-    ;;
-    ;;we just hope to be a bit more efficient.
-    ;;
-    (let recur ((A1 (car ls1))
-		(D1 (cdr ls1)))
-      (if (pair? D1)
-	  (cons A1 (recur (car D1) (cdr D1)))
-	;;The car of LS2 is discarded.
-	(cdr ls2))))
-
-  #| end of module: WRAPS-UTILITIES |# )
+(define (%merge-annotated-expr* ls1 ls2)
+  ;;Append LS1  and LS2 in  a way that is  appropriate for merging  "<stx>" annotated
+  ;;expressions; return the result.
+  ;;
+  ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
+  ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
+  ;;   (%merge-annotated-expr* '(#f)    '(d  e f))   => (#f d e f)
+  ;;   (%merge-annotated-expr* '()      '(d  e f))   => (#f d e f)
+  ;;   (%merge-annotated-expr* '()      '(#f e f))   => (#f d e f)
+  ;;
+  ;;Comments:
+  ;;
+  ;;* The case:
+  ;;
+  ;;     (%merge-annotated-expr* '(#f)    '(d  e f))   => (#f d e f)
+  ;;
+  ;;  happens in  ADD-MARK when an anti-mark is  pushed on the input form  of a macro
+  ;;  transformer.
+  ;;
+  ;;* The case:
+  ;;
+  ;;     (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
+  ;;
+  ;;  happens in ADD-MARK while pushing down the marks.
+  ;;
+  ;;* The cases:
+  ;;
+  ;;     (%merge-annotated-expr* '()      '(d  e f))   => (#f d e f)
+  ;;     (%merge-annotated-expr* '()      '(#f e f))   => (#f d e f)
+  ;;
+  ;;  happen  when a  syntax object is  wrapped into another  syntax object  for some
+  ;;  purpose.  For example when using PUSH-LEXICAL-CONTOUR, which is defined as:
+  ;;
+  ;;     (define (push-lexical-contour rib expr.stx)
+  ;;       (let ((mark* '())
+  ;;             (ae*   '()))
+  ;;         (mkstx expr.stx mark* (list rib) ae*)))
+  ;;
+  ;;  In these cases we really need to *keep* the #f in LS2.
+  ;;
+  (append ls1 (if (and (pair? ls1)
+		       (pair? ls2)
+		       (anti-mark? (car ls2)))
+		  ;;Here we know the first item in LS2 is #f.
+		  (cdr ls2)
+		ls2)))
 
 
 ;;;; handling marks in wrapped syntax objects
@@ -1405,7 +1412,7 @@
 ;;In the MARK*: when a mark collides  with an anti-mark, they cancel one another when
 ;;joining the wraps:
 ;;
-;;   (new-mark anty-mark mark1 mark0) => (mark1 mark0)
+;;   (new-mark anti-mark mark1 mark0) => (mark1 mark0)
 ;;   (new-mark markA markB)           => (new-mark markA markB)
 ;;
 ;;therefore:
@@ -1462,39 +1469,58 @@
 	   (eq? (car x) (car y))
 	   (same-marks? (cdr x) (cdr y)))))
 
-(define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* list-of-ribs-and-shifts?} stx1.ae {stx2 stx?})
-  ;;Join the given wraps  with the ones in STX2 and return  the resulting wraps; with
-  ;;"wraps"  we  mean  the  marks  and  ribs, with  the  addition  of  the  annotated
-  ;;expressions for debugging purposes.  The scenario is this:
-  ;;
-  ;;*  A syntax  object STX1  (wrapped or  partially unwrapped)  contains the  syntax
-  ;;object STX2 (an instance of stx) as subexpression.
-  ;;
-  ;;* Whenever  STX1 is fully unwrapped  (for example by SYNTAX-MATCH)  its marks and
-  ;;ribs must be propagated to all its identifier subexpressions.
-  ;;
-  ;;* In practice: the marks of STX1 must be prepended to the marks of STX2, the ribs
-  ;;of STX1 must be prepended to the ribs of STX2.
-  ;;
-  ;;this is what this function does.  But: we must also handle anti-mark annihilation
-  ;;and the associated removal of shifts from the ribs.
-  ;;
-  (import WRAPS-UTILITIES)
-  (let ((stx2.mark* ($<stx>-mark*		stx2))
-	(stx2.rib*  ($<stx>-rib*		stx2))
-	(stx2.ae*   ($<stx>-annotated-expr*	stx2)))
-    ;;If the first item in stx2.mark* is an anti-mark...
-    (if (and (not (null? stx1.mark*))
-	     (not (null? stx2.mark*))
-	     (anti-mark? (car stx2.mark*)))
-	;;...cancel mark, anti-mark, and corresponding shifts.
-	(values (%append-cancel-facing stx1.mark* stx2.mark*)
-		(%append-cancel-facing stx1.rib*  stx2.rib*)
-		(%merge-annotated-expr* stx1.ae stx2.ae*))
-      ;;..else no cancellation takes place.
-      (values (append stx1.mark* stx2.mark*)
-	      (append stx1.rib*  stx2.rib*)
-	      (%merge-annotated-expr* stx1.ae stx2.ae*)))))
+(module (join-wraps)
+
+  (define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* list-of-ribs-and-shifts?} stx1.ae {stx2 stx?})
+    ;;Join the given wraps with the ones in STX2 and return the resulting wraps; with
+    ;;"wraps"  we  mean the  marks  and  ribs, with  the  addition  of the  annotated
+    ;;expressions for debugging purposes.  The scenario is this:
+    ;;
+    ;;* A  syntax object STX1  (wrapped or  partially unwrapped) contains  the syntax
+    ;;object STX2 (an instance of stx) as subexpression.
+    ;;
+    ;;* Whenever STX1 is fully unwrapped  (for example by SYNTAX-MATCH) its marks and
+    ;;ribs must be propagated to all its identifier subexpressions.
+    ;;
+    ;;* In practice:  the marks of STX1 must  be prepended to the marks  of STX2, the
+    ;;ribs of STX1 must be prepended to the ribs of STX2.
+    ;;
+    ;;this  is  what  this  function  does.   But:  we  must  also  handle  anti-mark
+    ;;annihilation and the associated removal of shifts from the ribs.
+    ;;
+    (let ((stx2.mark* ($<stx>-mark*		stx2))
+	  (stx2.rib*  ($<stx>-rib*		stx2))
+	  (stx2.ae*   ($<stx>-annotated-expr*	stx2)))
+      ;;If the first item in stx2.mark* is an anti-mark...
+      (if (and (not (null? stx1.mark*))
+	       (not (null? stx2.mark*))
+	       (anti-mark? (car stx2.mark*)))
+	  ;;...cancel mark, anti-mark, and corresponding shifts.
+	  (values (%append-cancel-facing stx1.mark* stx2.mark*)
+		  (%append-cancel-facing stx1.rib*  stx2.rib*)
+		  (%merge-annotated-expr* stx1.ae stx2.ae*))
+	;;..else no cancellation takes place.
+	(values (append stx1.mark* stx2.mark*)
+		(append stx1.rib*  stx2.rib*)
+		(%merge-annotated-expr* stx1.ae stx2.ae*)))))
+
+  (define (%append-cancel-facing ls1 ls2)
+    ;;Expect LS1 to be a non-empty proper list and LS2 to be a non-empty proper list.
+    ;;Discard  the last  item in  LS1;  discard the  first  item in  LS2; append  the
+    ;;resulting lists:
+    ;;
+    ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
+    ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
+    ;;   (%append-cancel-facing '(1)     '(2))		=> ()
+    ;;
+    (let recur ((A1 (car ls1))
+		(D1 (cdr ls1)))
+      (if (pair? D1)
+	  (cons A1 (recur (car D1) (cdr D1)))
+	;;Here D1 is null; A1 is discarded; the car of LS2 is discarded.
+	(cdr ls2))))
+
+  #| end of module: JOIN-WRAPS |# )
 
 
 ;;;; adding marks and the anti-mark
@@ -1502,7 +1528,6 @@
 (module PSYNTAX-ADD-MARK
   (add-new-mark
    add-anti-mark)
-  (import WRAPS-UTILITIES)
 
   (define (add-anti-mark input-form.stx)
     ;;Push an anti-mark on the input form of a macro use.
@@ -1514,7 +1539,7 @@
     ;;
     (add-mark (generate-new-mark) rib output-form.stx input-form.stx))
 
-  (define* (add-mark mark {rib false-or-rib?} expr.stx ae)
+  (define* (add-mark mark {rib false-or-rib?} expr.stx annotated-expr.stx)
     ;;Build and return  a new syntax object wrapping EXPR.STX  and having MARK pushed
     ;;on its list of marks.  This function used only in 2 places:
     ;;
@@ -1533,14 +1558,14 @@
     ;;form of a macro transformer call; it must be a syntax object, either wrapped or
     ;;unwrapped.
     ;;
-    ;;AE is either #f (when MARK is the  anti-mark) or the input form of a macro call
-    ;;(when  MARK is  a  new mark).   This  argument is  used to  keep  track of  the
-    ;;transformation a form undergoes when processed as macro use.
+    ;;ANNOTATED-EXPR.STX is either #f (when MARK  is the anti-mark) or the input form
+    ;;of a macro call (when MARK is a new mark).  This argument is used to keep track
+    ;;of the transformation a form undergoes when processed as macro use.
     ;;
     ;;The return  value can be either  a "<stx>" instance or  a (partially) unwrapped
     ;;syntax object.
     ;;
-    (%push-down-marks expr.stx mark rib expr.stx '() (list ae)))
+    (%push-down-marks expr.stx mark rib expr.stx '() (list annotated-expr.stx)))
 
   (define (%push-down-marks top-expr.stx mark rib expr.stx accum-rib* accum-ae*)
     ;;Recursive function.   Partially unwraps EXPR.STX  pushing down the  marks, ribs
@@ -1697,6 +1722,9 @@
 		;
 		;The #f items  are inserted when this instance is  processed as input
 		;form of a macro call, but is later discarded.
+		;
+		;The list in this field is  *not* associated to either MARK* or RIB*:
+		;it grows independently.
 	  #| end of FIELDS |# )
   ;;While it is fine for the super-type  constructor (this one) to accept a symbol as
   ;;expression, it is not fine for the  public constructor MAKE-STX to do so.  If the
@@ -1910,7 +1938,6 @@
   ;;when expanding the  input form of a macro:  the input form must be  pushed on the
   ;;stack of annotated expressions.
   ;;
-  (import WRAPS-UTILITIES)
   (if (stx? stx)
       (make-stx-or-syntactic-identifier (stx-expr stx) (stx-mark* stx) (stx-rib* stx)
 					(%merge-annotated-expr* (list annotated-expr)

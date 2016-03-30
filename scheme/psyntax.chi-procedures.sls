@@ -651,10 +651,7 @@
     ;;it.
     ;;
     (import PSYNTAX-ADD-MARK)
-    (let* (#;(input-form.stx	(if (options::debug-mode-enabled?)
-				    (stx-push-annotated-expr input-form.stx input-form.stx)
-				  input-form.stx))
-	   (output-form.stx (transformer (add-anti-mark input-form.stx))))
+    (let ((output-form.stx (transformer (add-anti-mark input-form.stx))))
       (let assert-no-raw-symbols-in-output-form ((x output-form.stx))
 	(unless (stx? x)
 	  (cond ((pair? x)
@@ -669,10 +666,7 @@
       ;;in the input form: this new mark  will be annihilated by the anti-mark we put
       ;;before.  For all the identifiers introduced by the transformer: this new mark
       ;;will stay there.
-      (let ((output-form.stx (add-new-mark rib output-form.stx input-form.stx)))
-	(if (options::debug-mode-enabled?)
-	    (stx-push-annotated-expr output-form.stx input-form.stx)
-	  output-form.stx))))
+      (add-new-mark rib output-form.stx input-form.stx)))
 
   #| end of module |# )
 
