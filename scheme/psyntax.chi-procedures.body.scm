@@ -136,7 +136,11 @@
 	  ;;right-hand side (QDEF) object that will be expanded later.
 	  ;;
 	  (receive (qdef lexenv.run)
-	      (?expander-who body-form.stx rib lexenv.run keyword* shadow/redefine-bindings?)
+	      #;(?expander-who body-form.stx rib lexenv.run keyword* shadow/redefine-bindings?)
+	      (?expander-who (if (options::debug-mode-enabled?)
+				 (stx-push-annotated-expr body-form.stx body-form.stx)
+			       body-form.stx)
+			     rib lexenv.run keyword* shadow/redefine-bindings?)
 	    (chi-body* (cdr body-form*.stx)
 		       lexenv.run lexenv.expand
 		       (cons qdef rev-qdef*)
