@@ -1332,7 +1332,7 @@
 		       ((strict-r6rs)
 			(make-type-signature/fully-untyped)))))
 
-		  (<list>
+		  ((unspecified-values)
 		   ;;The operator expression returns fully unspecified values.
 		   (make-type-signature/fully-untyped))
 
@@ -1987,7 +1987,7 @@
 	     ((strict-r6rs)
 	      (make-type-signature/fully-untyped)))))
 
-	(<list>
+	((unspecified-values)
 	 ;;The operator expression returns fully unspecified values.
 	 (make-type-signature/fully-untyped))
 

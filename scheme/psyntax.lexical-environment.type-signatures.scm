@@ -952,8 +952,8 @@
 ;;;; matching: common ancestor
 
 (define* (type-signature.common-ancestor {sig1 type-signature?} {sig2 type-signature?})
-  ;;Given  a two  type signatures:  return a  new type  signature representing  their
-  ;;common ancestor.
+  ;;Given two type signatures: return a  new type signature representing their common
+  ;;ancestor.
   ;;
   (make-type-signature
    (let recur ((specs1 (type-signature.specs sig1))

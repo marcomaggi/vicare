@@ -942,6 +942,24 @@
 	      (compound-condition-type-spec? ots2))
 	 (<compound-condition>-ots))
 
+	((union-type-spec? ots1)
+	 (object-type-spec.common-ancestor (union-type-spec.common-ancestor ots1)
+					   (cond ((union-type-spec? ots2)
+						  (union-type-spec.common-ancestor ots2))
+						 (else ots2))))
+
+	((union-type-spec? ots2)
+	 (object-type-spec.common-ancestor ots1 (union-type-spec.common-ancestor ots2)))
+
+	((intersection-type-spec? ots1)
+	 (object-type-spec.common-ancestor (intersection-type-spec.common-ancestor ots1)
+					   (cond ((intersection-type-spec? ots2)
+						  (intersection-type-spec.common-ancestor ots2))
+						 (else ots2))))
+
+	((intersection-type-spec? ots2)
+	 (object-type-spec.common-ancestor ots1 (intersection-type-spec.common-ancestor ots2)))
+
 	(else
 	 (let scan-parents-of-ots1 ((ots1 ots1))
 	   (let scan-parents-of-ots2 ((ots2 ots2))
@@ -1472,7 +1490,7 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-union-type-spec {component-type*.ots list-of-object-type-spec?})
+      (define* (make-union-type-spec {component-type*.ots not-empty-list-of-object-type-spec?})
 	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
 	       (name.stx		(cons (core-prim-id 'or)
 					      (map object-type-spec.name component-type*.ots)))
@@ -1531,6 +1549,12 @@
 	  (union-type-spec.memoised-length-set! union.ots len))
       mem)))
 
+(define (union-type-spec.common-ancestor ots)
+  (let ((component.ots* (union-type-spec.component-ots* ots)))
+    (fold-left object-type-spec.common-ancestor
+      (car component.ots*)
+      (cdr component.ots*))))
+
 
 ;;;; intersection object spec
 ;;
@@ -1551,7 +1575,7 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-intersection-type-spec {component-type*.ots list-of-object-type-spec?})
+      (define* (make-intersection-type-spec {component-type*.ots not-empty-list-of-object-type-spec?})
 	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
 	       (name.stx		(cons (core-prim-id 'and)
 					      (map object-type-spec.name component-type*.ots)))
@@ -1609,6 +1633,12 @@
 	    (length (intersection-type-spec.component-ots* intersection.ots))
 	  (intersection-type-spec.memoised-length-set! intersection.ots len))
       mem)))
+
+(define (intersection-type-spec.common-ancestor ots)
+  (let ((component.ots* (intersection-type-spec.component-ots* ots)))
+    (fold-left object-type-spec.common-ancestor
+      (car component.ots*)
+      (cdr component.ots*))))
 
 
 ;;;; complement object spec
@@ -2279,13 +2309,13 @@
        (list (core-prim-id 'condition)
 	     (map recur ?component-type*)))
 
-      ((or ?component-type* ...)
+      ((or ?component-type ?component-type* ...)
        (list (core-prim-id 'or)
-	     (map recur ?component-type*)))
+	     (map recur (cons ?component-type ?component-type*))))
 
-      ((and ?component-type* ...)
+      ((and ?component-type ?component-type* ...)
        (list (core-prim-id 'and)
-	     (map recur ?component-type*)))
+	     (map recur (cons ?component-type ?component-type*))))
 
       ((not ?item-type)
        (list (core-prim-id 'not)
@@ -2366,43 +2396,52 @@
       (make-vector-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
 				name.stx))
 
-     ((condition ?component-type* ...)
-      (let ((specs (map (lambda (type.stx)
-			  (type-annotation->object-type-specification type.stx lexenv))
-		     ?component-type*)))
-	;;We want:
-	;;
-	;;   (condition &who) == &who
-	;;   (condition (condition ...)) == (condition ...)
-	;;   (condition <compound-condition>) == <compound-condition>
-	;;
-	(if (list-of-single-item? specs)
-	    (let ((ots (car specs)))
-	      (cond ((or (simple-condition-object-type-spec? ots)
-			 (compound-condition-type-spec?      ots)
-			 (<compound-condition>-ots?          ots)
-			 (<condition>-ots?                   ots))
-		     ots)
-		    (else
-		     (assertion-violation __who__
-		       "expected condition object as component of compound condition object" annotation.stx))))
-	  (make-compound-condition-type-spec specs))))
+     ((condition)
+      (make-compound-condition-type-spec '()))
 
-     ((or ?component-type* ...)
+     ((condition ?single-component-type)
+      ;;We want:
+      ;;
+      ;;   (condition &who) == &who
+      ;;   (condition (condition ...)) == (condition ...)
+      ;;   (condition <compound-condition>) == <compound-condition>
+      ;;
+      (receive-and-return (ots)
+	  (type-annotation->object-type-specification ?single-component-type lexenv)
+	(unless (or (simple-condition-object-type-spec? ots)
+		    (compound-condition-type-spec?      ots)
+		    (<compound-condition>-ots?          ots)
+		    (<condition>-ots?                   ots))
+	  (syntax-violation __who__
+	    "expected condition object as component of compound condition object"
+	    annotation.stx ?single-component-type))))
+
+     ((condition ?component-type ?component-type* ...)
+      (make-compound-condition-type-spec (map (lambda (type.stx)
+						(type-annotation->object-type-specification type.stx lexenv))
+					   (cons ?component-type ?component-type*))))
+
+     ((or ?single-component-type)
+      (type-annotation->object-type-specification ?single-component-type lexenv))
+
+     ((or ?component-type ?component-type* ...)
       (make-union-type-spec (map (lambda (type.stx)
 				   (type-annotation->object-type-specification type.stx lexenv))
-			      ?component-type*)))
+			      (cons ?component-type ?component-type*))))
 
-     ((and ?component-type* ...)
+     ((and ?single-component-type)
+      (type-annotation->object-type-specification ?single-component-type lexenv))
+
+     ((and ?component-type ?component-type* ...)
       (make-intersection-type-spec (map (lambda (type.stx)
 					  (type-annotation->object-type-specification type.stx lexenv))
-				     ?component-type*)))
+				     (cons ?component-type ?component-type*))))
 
      ((not ?item-type)
       (make-complement-type-spec (type-annotation->object-type-specification ?item-type lexenv)))
 
      (else
-      (assertion-violation __who__ "invalid type annotation" annotation.stx)))))
+      (syntax-violation __who__ "invalid type annotation" annotation.stx)))))
 
 
 ;;;; done
