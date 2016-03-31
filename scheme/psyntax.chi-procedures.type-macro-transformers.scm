@@ -781,7 +781,7 @@
 	  (build-application no-source
 	      (psi.core-expr matcher.psi)
 	    (list (psi.core-expr expr.psi)))
-	  (psi-application-retvals-signature input-form.stx lexenv.run matcher.psi)))))
+	  (make-type-signature/fully-untyped)))))
 
   (define (%build-branches input-form.stx arg.sym case-clause*.stx)
     ;;This loop is like MAP, but we want  to detect if the ELSE clause (when present)

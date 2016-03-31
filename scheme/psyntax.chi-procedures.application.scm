@@ -1271,8 +1271,9 @@
       ((<closure>)
        ;;The operator expression returns a closure object.  Good.
        ;;
-       ;;FIXME Further  signature validations  are possible, implement  them.  (Marco
-       ;;Maggi; Wed Mar 9, 2016)
+       ;;FIXME Further signature  validations are possible by inspecting  the type of
+       ;;the last operand, which must be  a "<list>" or its sub-type; implement them.
+       ;;(Marco Maggi; Wed Mar 9, 2016)
        => (lambda (rator.ots)
 	    (let* ((rator.core (psi.core-expr rator.psi))
 		   (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
@@ -1281,7 +1282,77 @@
 		(build-application (syntax-annotation input-form.stx)
 		    (build-primref no-source 'apply)
 		  (cons rator.core rand*.core))
-		(psi-application-retvals-signature input-form.stx lexenv.run rator.psi)))))
+		(case-signature-specs (psi.retvals-signature rator.psi)
+		  ((<closure>)
+		   ;;The operator  is a "<closure-type-spec>", good.   We extract the
+		   ;;common retvals signature from the callable value.
+		   => (lambda (rator.ots)
+			(callable-signature.retvals (closure-type-spec.signature rator.ots))))
+
+		  ((<procedure>)
+		   ;;The operator is an untyped procedure, good.
+		   (make-type-signature/fully-untyped))
+
+		  ((single-value)
+		   ;;The operator is a single value, but not a procedure.
+		   (let ((common (lambda ()
+				   (condition
+				     (make-who-condition __module_who__)
+				     (make-message-condition "expression in operator application position is not a closure type")
+				     (make-syntax-violation input-form.stx          (psi.input-form        rator.psi))
+				     (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+		     (case-expander-language
+		       ((typed)
+			(raise			(condition (make-expand-time-type-signature-violation) (common))))
+		       ((default)
+			(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+			(make-type-signature/fully-untyped))
+		       ((strict-r6rs)
+			(make-type-signature/fully-untyped)))))
+
+		  (<no-return>
+		   ;;The  operator is  marked to  no-return:  it means  it raises  an
+		   ;;exception.  For example:
+		   ;;
+		   ;;   (apply (error #f "bad") 1 '(2))
+		   ;;
+		   (let ((common (lambda ()
+				   (condition
+				     (make-who-condition __module_who__)
+				     (make-message-condition
+				      "expression used as operator in procedure application is typed as not returning")
+				     (make-syntax-violation input-form.stx          (psi.input-form        rator.psi))
+				     (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+		     (case-expander-language
+		       ((typed)
+			(raise			(condition (make-expand-time-type-signature-violation) (common))))
+		       ((default)
+			(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+			(make-type-signature/fully-untyped))
+		       ((strict-r6rs)
+			(make-type-signature/fully-untyped)))))
+
+		  (<list>
+		   ;;The operator expression returns fully unspecified values.
+		   (make-type-signature/fully-untyped))
+
+		  (else
+		   ;;The operator returns zero, two or more return values.
+		   (let ((common (lambda ()
+				   (condition
+				     (make-who-condition __module_who__)
+				     (make-message-condition
+				      "expression used as operator in procedure application returns zero, two or more values")
+				     (make-syntax-violation input-form.stx          (psi.input-form        rator.psi))
+				     (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+		     (case-expander-language
+		       ((typed)
+			(raise			(condition (make-expand-time-type-signature-violation) (common))))
+		       ((default)
+			(raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+			(make-type-signature/fully-untyped))
+		       ((strict-r6rs)
+			(make-type-signature/fully-untyped))))))))))
 
       ((single-value)
        ;;The operator expression correctly returns a  single value, but such value is
@@ -1680,8 +1751,7 @@
 	       ;;Unspecified number of return values.  Let it go.
 	       (void))
 	      (<no-return>
-	       ;;The operand expression will not return.  Raise a warning, then
-	       ;;let it go.
+	       ;;The operand expression will not return.
 	       (let ((common (lambda ()
 			       (condition
 				 (make-who-condition __module_who__)
@@ -1852,18 +1922,93 @@
 
 ;;; --------------------------------------------------------------------
 
-  (case-define* %build-core-expression
-    ((input-form.stx lexenv.run rator.psi rand*.psi)
-     (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi #f))
-    ((input-form.stx lexenv.run rator.psi rand*.psi clause-application-retvals.sig)
-     (let* ((rator.core		(psi.core-expr rator.psi))
-	    (rand*.core		(map psi.core-expr rand*.psi)))
-       (make-psi input-form.stx
-	 (build-application (syntax-annotation input-form.stx)
-	     rator.core
-	   rand*.core)
-	 (or clause-application-retvals.sig
-	     (psi-application-retvals-signature input-form.stx lexenv.run rator.psi))))))
+  (module (%build-core-expression)
+
+    (case-define* %build-core-expression
+      ((input-form.stx lexenv.run rator.psi rand*.psi)
+       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi #f))
+      ((input-form.stx lexenv.run rator.psi rand*.psi clause-application-retvals.sig)
+       (let* ((rator.core	(psi.core-expr rator.psi))
+	      (rand*.core	(map psi.core-expr rand*.psi)))
+	 (make-psi input-form.stx
+	   (build-application (syntax-annotation input-form.stx)
+	       rator.core
+	     rand*.core)
+	   (or clause-application-retvals.sig
+	       (%build-application-retvals-signature input-form.stx lexenv.run rator.psi))))))
+
+    (define* ({%build-application-retvals-signature type-signature?} input-form.stx lexenv rator.psi)
+      (case-signature-specs (psi.retvals-signature rator.psi)
+	((<closure>)
+	 ;;The  operator is  a "<closure-type-spec>",  good.  We  extract the  common
+	 ;;retvals signature from the callable value.
+	 => (lambda (rator.ots)
+	      (callable-signature.retvals (closure-type-spec.signature rator.ots))))
+
+	((<procedure>)
+	 ;;The operator is an untyped procedure, good.
+	 (make-type-signature/fully-untyped))
+
+	((single-value)
+	 ;;The operator is a single value, but not a procedure.
+	 (let ((common (lambda ()
+			 (condition
+			   (make-who-condition __module_who__)
+			   (make-message-condition "expression in operator application position is not a closure type")
+			   (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			   (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	   (case-expander-language
+	     ((typed)
+	      (raise			(condition (make-expand-time-type-signature-violation) (common))))
+	     ((default)
+	      (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+	      (make-type-signature/fully-untyped))
+	     ((strict-r6rs)
+	      (make-type-signature/fully-untyped)))))
+
+	(<no-return>
+	 ;;The operator is marked to no-return: it means it raises an exception.  For
+	 ;;example:
+	 ;;
+	 ;;   ((error #f "bad") 1 2)
+	 ;;
+	 (let ((common (lambda ()
+			 (condition
+			   (make-who-condition __module_who__)
+			   (make-message-condition "expression used as operator in procedure application is typed as not returning")
+			   (make-syntax-violation input-form.stx (psi.input-form rator.psi))
+			   (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	   (case-expander-language
+	     ((typed)
+	      (raise			(condition (make-expand-time-type-signature-violation) (common))))
+	     ((default)
+	      (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+	      (make-type-signature/fully-untyped))
+	     ((strict-r6rs)
+	      (make-type-signature/fully-untyped)))))
+
+	(<list>
+	 ;;The operator expression returns fully unspecified values.
+	 (make-type-signature/fully-untyped))
+
+	(else
+	 ;;The operator returns zero, two or more return values.
+	 (let ((common (lambda ()
+			 (condition
+			   (make-who-condition __module_who__)
+			   (make-message-condition "expression used as operator in procedure application returns zero, two or more values")
+			   (make-syntax-violation input-form.stx          (psi.input-form        rator.psi))
+			   (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
+	   (case-expander-language
+	     ((typed)
+	      (raise			(condition (make-expand-time-type-signature-violation) (common))))
+	     ((default)
+	      (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
+	      (make-type-signature/fully-untyped))
+	     ((strict-r6rs)
+	      (make-type-signature/fully-untyped)))))))
+
+    #| end of module: %BUILD-CORE-EXPRESSION |# )
 
   #| end of module: CHI-CLOSURE-OBJECT-APPLICATION |# )
 

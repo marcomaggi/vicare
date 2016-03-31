@@ -143,24 +143,17 @@
 
 ;;;; core expressions struct
 
-(module (<psi>
-	 make-psi psi?
-	 psi.input-form
-	 psi.core-expr
-	 psi.retvals-signature
-	 psi-application-retvals-signature)
-
-  (define-record-type (<psi> make-psi psi?)
-    (nongenerative vicare:expander:<psi>)
-    (fields
-     (immutable input-form		psi.input-form)
+(define-record-type (<psi> make-psi psi?)
+  (nongenerative vicare:expander:<psi>)
+  (fields
+    (immutable input-form		psi.input-form)
 		;The syntax object that originated this struct instance.  In the case
 		;of internal  body: it is a  list of syntax objects,  but this should
 		;not be a problem.  It is kept here for debugging purposes: it can be
 		;used  as  "form"  or  "subform"  argument  for  "&syntax"  condition
 		;objects.
 
-     (immutable core-expr		psi.core-expr)
+    (immutable core-expr		psi.core-expr)
 		;Either:
 		;
 		;* A symbolic expression in the core language representing the result
@@ -170,63 +163,21 @@
 		;this   PSI  struct   is  the   return  value   of  the   core  macro
 		;SPLICE-FIRST-EXPAND.
 
-     (immutable retvals-signature	psi.retvals-signature)
-		;An instance of "<type-signature>".
-		;
-		;When  this  PSI is  a  callable  object:  we  expect this  field  to
-		;represent a signature like:
-		;
-		;   (?tag)
-		;
-		;where ?TAG is "<procedure>" or a sub-type of it.
-     #| end of FIELDS |# )
+    (immutable retvals-signature	psi.retvals-signature)
+		;An  instance  of "<type-signature>"  representing  the  type of  the
+		;values returned by this expression.
+    #| end of FIELDS |# )
 
-    (protocol
-      (lambda (make-record)
-	(case-define* make-psi
-	  ((stx core-expr)
-	   (make-record stx core-expr (make-type-signature/fully-untyped)))
-	  ((stx core-expr {retvals-signature type-signature?})
-	   (make-record stx core-expr retvals-signature)))
-	make-psi))
+  (protocol
+    (lambda (make-record)
+      (case-define* make-psi
+	((stx core-expr)
+	 (make-record stx core-expr (make-type-signature/fully-untyped)))
+	((stx core-expr {retvals-signature type-signature?})
+	 (make-record stx core-expr retvals-signature)))
+      make-psi))
 
-    #| end of DEFINE-RECORD-TYPE |# )
-
-  (define* ({psi-application-retvals-signature type-signature?} input-form.stx lexenv {rator.psi psi?})
-    ;;We  assume  RATOR.PSI is  a  PSI  representing the  first  form  in a  callable
-    ;;application:
-    ;;
-    ;;   (?rator ?rand ...)
-    ;;
-    ;;we need  to establish the retvals  signature of the application  and return it.
-    ;;We can return a meaningful value if RATOR.PSI has a type which is a sub-type of
-    ;;"<procedure>".
-    ;;
-    (case-signature-specs (psi.retvals-signature rator.psi)
-      ((<closure>)
-       => (lambda (rator.ots)
-	    (callable-signature.retvals (closure-type-spec.signature rator.ots))))
-      ((single-value)
-       (if (options::strict-r6rs)
-	   (make-type-signature/fully-untyped)
-	 (syntax-violation __who__
-	   "expression in operator application position is not a closure type"
-	   input-form.stx (psi.input-form rator.psi))))
-      (<no-return>
-       ;;The operator is marked to no-return: it means it raises an exception.
-       (syntax-violation __who__
-	 "operator marked as no-return" input-form.stx (psi.input-form rator.psi)))
-      (<list>
-       ;;The operator expression returns fully unspecified values.
-       (make-type-signature/fully-untyped))
-      (else
-       ;;The operator returns a tuple of values.
-       (if (options::strict-r6rs)
-	   (make-type-signature/fully-untyped)
-	 ;;FIXME We should do better here.  (Marco Maggi; Sat Feb 27, 2016)
-	 (make-type-signature/fully-untyped)))))
-
-  #| end of module |# )
+  #| end of DEFINE-RECORD-TYPE |# )
 
 
 ;;;; chi procedures: syntax object type inspection
