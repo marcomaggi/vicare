@@ -98,22 +98,32 @@
 
 ;;;; helpers
 
+(define-fluid-syntax __synner__
+  (identifier-syntax #f)
+  #;(lambda (stx)
+    (syntax-violation '__synner__ "unset fluid syntax" stx)))
+
 (define-syntax (define-macro-transformer stx)
   (sys::syntax-case stx ()
-    ((?kwd (?who ?input-form.stx) ?body0 ?body ...)
+    ((_ (?who ?input-form.stx) ?body0 ?body ...)
      (and (sys::identifier? (sys::syntax ?who))
 	  (sys::identifier? (sys::syntax ?input-form.stx)))
-     (sys::with-syntax
-	 ((SYNNER (sys::datum->syntax (sys::syntax ?who) 'synner)))
-       (sys::syntax
-	(define (?who ?input-form.stx)
-	  (with-who ?who
-	    (case-define SYNNER
-	      ((message)
-	       (SYNNER message #f))
-	      ((message subform)
-	       (syntax-violation __who__ message ?input-form.stx subform)))
-	    ?body0 ?body ...)))))
+     (let* ((who.sym (sys::syntax->datum (sys::syntax ?who)))
+	    (who.str (symbol->string who.sym))
+	    (who.out (string->symbol (string-append who.str "-macro"))))
+       (sys::with-syntax
+	   ((WHO (sys::datum->syntax (sys::syntax ?who) who.out)))
+	 (sys::syntax
+	  (define (WHO ?input-form.stx)
+	    (with-who ?who
+	      (case-define synner
+		((message)
+		 (synner message #f))
+		((message subform)
+		 (syntax-violation (quote ?who) message ?input-form.stx subform)))
+	      (fluid-let-syntax
+		  ((__synner__ (identifier-syntax synner)))
+		?body0 ?body ...)))))))
     ))
 
 
@@ -746,7 +756,7 @@
 
 ;;;; non-core macro: DEFINE-CONDITION-TYPE
 
-(define-macro-transformer (define-condition-type-macro input-form.stx)
+(define-macro-transformer (define-condition-type input-form.stx)
   ;;Transformer function  used to expand  R6RS RECORD-CONDITION-TYPE macros  from the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -756,16 +766,16 @@
       ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
        (begin
 	 (unless (identifier? ?name)
-	   (synner "expected identifier as condition type name" ?name))
+	   (__synner__ "expected identifier as condition type name" ?name))
 	 (unless (identifier? ?super)
-	   (synner "expected identifier as condition type super-type name" ?super))
+	   (__synner__ "expected identifier as condition type super-type name" ?super))
 	 (unless (identifier? ?constructor)
-	   (synner "expected identifier as condition type constructor name" ?constructor))
+	   (__synner__ "expected identifier as condition type constructor name" ?constructor))
 	 (unless (identifier? ?predicate)
-	   (synner "expected identifier as condition type predicate name" ?predicate))
+	   (__synner__ "expected identifier as condition type predicate name" ?predicate))
 	 (for-each (lambda (accessor.id)
 		     (unless (identifier? accessor.id)
-		       (synner "expected identifier as condition type field accessor name" accessor.id)))
+		       (__synner__ "expected identifier as condition type field accessor name" accessor.id)))
 	   ?accessor*)
 	 (let*-values
 	     (((field-name*.id field-type*.id)	(map-for-two-retvals %parse-field-spec ?field*))
@@ -815,9 +825,9 @@
        (options::typed-language?)
        (begin
 	 (unless (identifier? ?field-name)
-	   (synner "expected identifier as condition type field name" ?field-name))
+	   (__synner__ "expected identifier as condition type field name" ?field-name))
 	 (unless (identifier? ?field-type)
-	   (synner "expected identifier as condition type field type" ?field-type))
+	   (__synner__ "expected identifier as condition type field type" ?field-type))
 	 (values ?field-name ?field-type)))
 
       (?field-name
@@ -825,10 +835,10 @@
        (values ?field-name (<top>-type-id)))
 
       (_
-       (synner (if (options::typed-language?)
-		   "expected identifier or typed identifier as condition type field specification"
-		 "expected identifier as condition type field name")
-	       field-spec.stx))))
+       (__synner__ (if (options::typed-language?)
+		       "expected identifier or typed identifier as condition type field specification"
+		     "expected identifier as condition type field name")
+		   field-spec.stx))))
 
   (main))
 
@@ -1718,20 +1728,76 @@
 
 ;;;; non-core macro: DEFINE, CASE-DEFINE
 
-(define (define-macro input-form.stx)
+(define-macro-transformer (define input-form.stx)
   ;;Transformer function  used to  expand Vicare's DEFINE  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
   ;;
-  (syntax-match input-form.stx ()
-    ((_ . ?stuff)
-     (cons (if (options::typed-language?)
-	       (core-prim-id 'define/checked)
-	     (core-prim-id 'define/std))
-	   ?stuff))
+  (define (%make-unsafe-name ctx.id safe.id)
+    (datum->syntax ctx.id (string->symbol (string-append "~" (symbol->string (syntax->datum safe.id))))))
+  (define (%properise formals.stx)
+    (syntax-match formals.stx ()
+      ((?car . ?cdr)
+       (cons ?car (%properise ?cdr)))
+      (_
+       (list formals.stx))))
+  (syntax-match input-form.stx (brace)
+    ((_ (brace ?who . ?type) ?expr)
+     (list (if (options::typed-language?)
+	       (define/checked-id)
+	     (define/std-id))
+	   `(,(brace-id) ,?who . ,?type) ?expr))
+
+    ((_ ?who ?expr)
+     (identifier? ?who)
+     (list (define/std-id) ?who ?expr))
+
+    ((_ ?who)
+     (list (if (options::typed-language?)
+	       (define/typed-id)
+	     (define/std-id))
+	   ?who))
+
+    ((?kwd (?who . ?formals) . ?body*)
+     (if (options::typed-language?)
+	 ;;Here we want to expand:
+	 ;;
+	 ;;   (define ({fun <fixnum>} {a <fixnum>})
+	 ;;     a)
+	 ;;
+	 ;;into:
+	 ;;
+	 ;;   (begin
+	 ;;     (define/checked ({fun  <fixnum>} {a <fixnum>})
+	 ;;       (~fun a))
+	 ;;     (define/typed   ({~fun <fixnum>} {a <fixnum>})
+	 ;;       a))
+	 ;;
+	 (receive (standard-formals.stx clause-signature)
+	     (syntax-object.parse-typed-clambda-clause-formals ?formals input-form.stx)
+	   (receive (unsafe-name.id ~who.stx)
+	       (syntax-match ?who (brace)
+		 (?name
+		  (identifier? ?name)
+		  (let ((unsafe-name.id (%make-unsafe-name ?kwd ?name)))
+		    (values unsafe-name.id unsafe-name.id)))
+		 ((brace ?name . ?rv-types)
+		  (identifier? ?name)
+		  (let ((unsafe-name.id (%make-unsafe-name ?kwd ?name)))
+		    (values unsafe-name.id `(,(brace-id) ,unsafe-name.id . ,?rv-types))))
+		 (_
+		  (__synner__ "invalid syntax in function definition formals" ?who)))
+	     (let ((unsafe-application.stx (if (list? standard-formals.stx)
+					       (cons unsafe-name.id standard-formals.stx)
+					     (cons* (core-prim-id 'apply) unsafe-name.id (%properise standard-formals.stx)))))
+	       `(,(begin-id)
+		 (,(define/checked-id) (,?who     . ,?formals) ,unsafe-application.stx)
+		 (,(define/typed-id)   (,~who.stx . ,?formals) . ,?body*)))))
+       (cons (core-prim-id 'define/std)
+	     `((,?who . ,?formals) . ,?body*))))
     ))
 
-(define (case-define-macro input-form.stx)
+(define-macro-transformer (case-define input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  CASE-DEFINE  macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.

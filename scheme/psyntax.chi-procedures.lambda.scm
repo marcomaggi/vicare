@@ -743,46 +743,43 @@
 
 ;;;; lambda clause expander: typed lambda clause
 
-(define* (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
-				  standard-formals.stx clause-signature body*.stx)
-  ;;Expand the clause of a LAMBDA/TYPED or DEFINE/TYPED syntax use or a single clause
-  ;;of a CASE-LAMBDA/TYPED or CASE-DEFINE/TYPED syntax use.
-  ;;
-  ;;The argument INPUT-FORM.STX is the syntax object holding the original input form.
-  ;;The argument STANDARD-FORMALS.STX is a syntax object holding a proper or improper
-  ;;list of standard formal arguments.   The argument CLAUSE-SIGNATURE is an instance
-  ;;of  "<clambda-clause-signature>".  The  argument BODY*.STX  is a  list of  syntax
-  ;;objects holding the body forms.
-  ;;
-  ;;Return the following values:
-  ;;
-  ;;1. STANDARD-FORMALS.LEX,  a proper or  improper list of lex  gensyms representing
-  ;;the lambda clause formals.
-  ;;
-  ;;2. BODY.PSI, a PSI object representing the expanded body.
-  ;;
-  ;;NOTE The expander  for the internal body will create  yet another lexical contour
-  ;;to hold the body's internal definitions.
-  ;;
-  (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
-  (define argvals-signature.specs
-    (type-signature.specs (clambda-clause-signature.argvals clause-signature)))
-  (cond
-   ((list? standard-formals.stx)
-    ;;Without  rest  argument.   Here  we know  that  both  STANDARD-FORMALS.STX  and
-    ;;ARGVALS-SIGNATURE.SPECS are proper lists with equal length.
-    (%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
-					   standard-formals.stx clause-signature body*.stx))
+(module (chi-lambda-clause/typed chi-lambda-clause/checked)
 
-   (else
-    ;;With  rest  argument.    Here  we  know  that   both  STANDARD-FORMALS.STX  and
-    ;;ARGVALS-SIGNATURE.SPECS are improper lists with equal length.
-    (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
-					     standard-formals.stx clause-signature body*.stx))))
+  (define* (chi-lambda-clause/typed input-form.stx lexenv.run lexenv.expand
+				    standard-formals.stx clause-signature body*.stx)
+    ;;Expand the  clause of  a LAMBDA/TYPED  or DEFINE/TYPED syntax  use or  a single
+    ;;clause of a CASE-LAMBDA/TYPED or CASE-DEFINE/TYPED syntax use.
+    ;;
+    ;;The argument  INPUT-FORM.STX is  the syntax object  holding the  original input
+    ;;form.  The argument STANDARD-FORMALS.STX is a syntax object holding a proper or
+    ;;improper list of  standard formal arguments.  The  argument CLAUSE-SIGNATURE is
+    ;;an instance of "<clambda-clause-signature>".  The  argument BODY*.STX is a list
+    ;;of syntax objects holding the body forms.
+    ;;
+    ;;Return the following values:
+    ;;
+    ;;1. STANDARD-FORMALS.LEX, a proper or  improper list of lex gensyms representing
+    ;;the lambda clause formals.
+    ;;
+    ;;2. BODY.PSI, a PSI object representing the expanded body.
+    ;;
+    ;;NOTE The expander for the internal body will create yet another lexical contour
+    ;;to hold the body's internal definitions.
+    ;;
+    (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
+    (let ((body*.stx (%insert-retvals-validation-form clause-signature body*.stx)))
+      (cond
+       ((list? standard-formals.stx)
+	;;Without rest  argument.  Here  we know  that both  STANDARD-FORMALS.STX and
+	;;ARGVALS-SIGNATURE.SPECS are proper lists with equal length.
+	(%expand-guts-with-proper-list-formals input-form.stx lexenv.run lexenv.expand
+					       standard-formals.stx clause-signature body*.stx))
 
-;;; --------------------------------------------------------------------
-
-(module (chi-lambda-clause/checked)
+       (else
+	;;With  rest  argument.  Here  we  know  that both  STANDARD-FORMALS.STX  and
+	;;ARGVALS-SIGNATURE.SPECS are improper lists with equal length.
+	(%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
+						 standard-formals.stx clause-signature body*.stx)))))
 
   (define* (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
 				      standard-formals.stx clause-signature body*.stx)

@@ -275,6 +275,10 @@
     case-method-id			case-method-id?
     procedure-pred-id
     list-of-id				vector-of-id
+    define/checked-id			case-define/checked-id
+    define/typed-id			case-define/typed-id
+    define/std-id			case-define/std-id
+    begin-id
 
     ;; public interface: identifiers handling
     identifier?				false-or-identifier-bound?
@@ -2467,6 +2471,14 @@
   (define-core-prim-id-retriever brace-id		brace)
   (define-core-prim-id-retriever list-of-id		list-of)
   (define-core-prim-id-retriever vector-of-id		vector-of)
+  ;;
+  (define-core-prim-id-retriever define/checked-id	define/checked)
+  (define-core-prim-id-retriever define/typed-id	define/typed)
+  (define-core-prim-id-retriever define/std-id		define/std)
+  (define-core-prim-id-retriever case-define/checked-id	case-define/checked)
+  (define-core-prim-id-retriever case-define/typed-id	case-define/typed)
+  (define-core-prim-id-retriever case-define/std-id	case-define/std)
+  (define-core-prim-id-retriever begin-id		begin)
   #| end of let-syntax |# )
 
 (define (underscore-id? id)
