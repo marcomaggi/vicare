@@ -342,10 +342,7 @@
 
 ;;;; typed LAMBDA expansion
 
-(module (chi-lambda/typed
-	 chi-lambda/checked
-	 chi-named-lambda/typed
-	 chi-named-lambda/checked)
+(module (chi-lambda/typed chi-lambda/checked)
 
   (define* (chi-lambda/typed input-form.stx lexenv.run lexenv.expand
 			     input-formals.stx body*.stx)
@@ -356,8 +353,7 @@
     ;;formals  of the  LAMBDA syntax.   The argument  BODY*.STX is  a list  of syntax
     ;;objects representing the body expressions.
     ;;
-    (%chi-lambda input-form.stx lexenv.run lexenv.expand
-		 'typed   (underscore-id) '_ input-formals.stx body*.stx))
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand 'typed   input-formals.stx body*.stx))
 
   (define* (chi-lambda/checked input-form.stx lexenv.run lexenv.expand
 			       input-formals.stx body*.stx)
@@ -368,10 +364,38 @@
     ;;formals  of the  LAMBDA syntax.   The argument  BODY*.STX is  a list  of syntax
     ;;objects representing the body expressions.
     ;;
-    (%chi-lambda input-form.stx lexenv.run lexenv.expand
-		 'checked (underscore-id) '_ input-formals.stx body*.stx))
+    (%chi-lambda input-form.stx lexenv.run lexenv.expand 'checked input-formals.stx body*.stx))
 
 ;;; --------------------------------------------------------------------
+
+  (define (%chi-lambda input-form.stx lexenv.run lexenv.expand type input-formals.stx body*.stx)
+    (receive (standard-formals.stx clause-signature)
+	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
+	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
+	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
+	;;retvals.
+	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx input-form.stx)
+      (receive (standard-formals.lex body.psi)
+	  (case type
+	    ((typed)
+	     (chi-lambda-clause/typed   input-form.stx lexenv.run lexenv.expand
+					standard-formals.stx clause-signature body*.stx))
+	    ((checked)
+	     (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
+					standard-formals.stx clause-signature body*.stx)))
+	(make-psi input-form.stx
+	  (build-lambda (syntax-annotation input-form.stx)
+	      standard-formals.lex
+	    (psi.core-expr body.psi))
+	  (make-type-signature/single-value
+	   (fabricate-closure-type-spec '_ (make-clambda-signature (list clause-signature))))))))
+
+  #| end of module |# )
+
+
+;;;; named and typed LAMBDA expansion
+
+(module (chi-named-lambda/typed chi-named-lambda/checked)
 
   (define* (chi-named-lambda/typed input-form.stx lexenv.run lexenv.expand
 				   who.id input-formals.stx body*.stx)
@@ -418,12 +442,9 @@
   #| end of module |# )
 
 
-;;;; typed CASE-LAMBDA and variants
+;;;; typed CASE-LAMBDA expansion
 
-(module (chi-case-lambda/typed
-	 chi-case-lambda/checked
-	 chi-named-case-lambda/typed
-	 chi-named-case-lambda/checked)
+(module (chi-case-lambda/typed chi-case-lambda/checked)
 
   (define* (chi-case-lambda/typed input-form.stx lexenv.run lexenv.expand
 				  input-formals*.stx body**.stx)
@@ -451,9 +472,7 @@
     ;;     (list #'(a b c) #'(d e f))
     ;;     (list #'(body1) #'(body2)))
     ;;
-    (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		  'typed (underscore-id) '_
-		  input-formals*.stx body**.stx))
+    (%chi-clambda input-form.stx lexenv.run lexenv.expand 'typed input-formals*.stx body**.stx))
 
   (define* (chi-case-lambda/checked input-form.stx lexenv.run lexenv.expand
 				    input-formals*.stx body**.stx)
@@ -481,11 +500,37 @@
     ;;     (list #'(a b c) #'(d e f))
     ;;     (list #'(body1) #'(body2)))
     ;;
-    (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		  'checked (underscore-id) '_
-		  input-formals*.stx body**.stx))
+    (%chi-clambda input-form.stx lexenv.run lexenv.expand 'checked input-formals*.stx body**.stx))
 
 ;;; --------------------------------------------------------------------
+
+  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type input-formals*.stx body**.stx)
+    (receive (standard-formals*.stx clause-signature*)
+	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx input-form.stx)
+      (receive (formals*.lex body*.psi)
+	  (case type
+	    ((typed)
+	     (chi-case-lambda-clause*/typed   input-form.stx lexenv.run lexenv.expand
+					      standard-formals*.stx clause-signature* body**.stx))
+	    ((checked)
+	     (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
+					      standard-formals*.stx clause-signature* body**.stx)))
+	(make-psi input-form.stx
+	  (build-case-lambda (syntax-annotation input-form.stx)
+	      formals*.lex
+	    (map psi.core-expr body*.psi))
+	  ;;If  we fabricate  a type  identifier  for this  closure: it  is
+	  ;;possible to leak  the type identifier out of  the local lexical
+	  ;;context where it is defined.
+	  (make-type-signature/single-value
+	   (fabricate-closure-type-spec '_ (make-clambda-signature clause-signature*)))))))
+
+  #| end of module |# )
+
+
+;;;; named and typed CASE-LAMBDA expansion
+
+(module (chi-named-case-lambda/typed chi-named-case-lambda/checked)
 
   (define* (chi-named-case-lambda/typed input-form.stx lexenv.run lexenv.expand
 					who.id input-formals*.stx body**.stx)

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -112,7 +112,7 @@
     (receive (subport extract)
 	(open-string-output-port)
 
-      (define (write! src.str src.start count)
+      (define* (write! src.str src.start count)
 	(trace "writing ~a chars\n" count)
 	(when (error-on-write)
 	  (error __who__ "error writing characters" count))

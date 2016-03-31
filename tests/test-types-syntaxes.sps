@@ -732,9 +732,11 @@
     => '(123 fixnum))
 
   (check
-      (case-type "123"
-	((<string>)		=> (lambda ({arg <string>}) (list (.length arg) 'string)))
-	(else			'else))
+      (fluid-let-syntax
+	  ((__who__ (identifier-syntax '_)))
+	(case-type "123"
+	  ((<string>)		=> (lambda ({arg <string>}) (list (.length arg) 'string)))
+	  (else			'else)))
     => '(3 string))
 
   (check
