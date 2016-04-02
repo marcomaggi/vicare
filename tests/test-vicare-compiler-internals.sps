@@ -245,13 +245,14 @@
 				      lex.a-constructor-protocol_0))
 		       (lex.a?_0 (lambda (lex.obj_0)
 				   (conditional (funcall (primref $struct?) lex.obj_0)
-				       (funcall (primref $record-and-rtd?) lex.obj_0
-						lex.a-rtd_0)
+				       (funcall (primref $record-and-rtd?) lex.obj_0 lex.a-rtd_0)
 				     (constant #f))))
-		       (lex.make-a_0 (lambda lex.args_0
-				       (funcall (primref apply)
-					 (funcall (primref $record-constructor) lex.a-rcd_0)
-					 lex.args_0))))
+		       (lex.~make-a_0 (lambda lex.args_0
+					(funcall (primref apply)
+					  (funcall (primref $record-constructor) lex.a-rcd_0)
+					  lex.args_0)))
+		       (lex.make-a_0 (lambda lex.args_1
+				       (funcall (primref apply) lex.~make-a_0 lex.args_1))))
 	      (constant #!void)))
 
 ;;; --------------------------------------------------------------------
@@ -1593,11 +1594,14 @@
 				    (funcall (primref $record-and-rtd?) lex.obj_0
 					     lex.a-rtd_0)
 				  (constant #f))))
-		    (lex.make-a_0 (lambda lex.args_0
-				    (funcall (primref apply)
-				      (funcall (primref $record-constructor)
-					lex.a-rcd_0)
-				      lex.args_0))))
+		    (lex.~make-a_0 (lambda lex.args_0
+				     (funcall (primref apply)
+				       (funcall (primref $record-constructor)
+					 lex.a-rcd_0)
+				       lex.args_0)))
+		    (lex.make-a_0 (lambda lex.args_1
+				    (funcall (primref apply) lex.~make-a_0
+					     lex.args_1))))
 		(constant #!void))))))
 
   #t)
@@ -1802,7 +1806,8 @@
 			      (constant #f) (constant #f) (constant #()))))
 	  (bind ((lex.a-constructor-protocol_0 (constant #f)))
 	    (bind ((lex.a-rcd_0 (funcall (primref make-record-constructor-descriptor)
-				  (funcall (primref $symbol-value) (constant loc.a-rtd))
+				  (funcall (primref $symbol-value)
+				    (constant loc.a-rtd))
 				  (constant #f) (constant #f))))
 	      (fix ((lex.a?_0 (lambda (lex.obj_0)
 				(conditional
@@ -1811,11 +1816,17 @@
 					     (funcall (primref $symbol-value)
 					       (constant loc.a-rtd)))
 				  (constant #f))))
-		    (lex.make-a_0 (lambda lex.args_0
+		    (lex.~make-a_0 (lambda lex.args_0
+				     (funcall (primref apply)
+				       (funcall (primref $record-constructor)
+					 (funcall (primref $symbol-value)
+					   (constant loc.a-rcd)))
+				       lex.args_0)))
+		    (lex.make-a_0 (lambda lex.args_1
 				    (funcall (primref apply)
-				      (funcall (primref $record-constructor)
-					(funcall (primref $symbol-value) (constant loc.a-rcd)))
-				      lex.args_0))))
+				      (funcall (primref $symbol-value)
+					(constant loc.~make-a))
+				      lex.args_1))))
 		(constant #!void))))))
 
   #f)

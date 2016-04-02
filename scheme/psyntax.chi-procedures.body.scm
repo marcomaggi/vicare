@@ -1477,24 +1477,32 @@
 	(synner "expected identifier as variable name" lhs.id))
       (when (bound-id-member? lhs.id kwd*)
 	(synner "cannot redefine keyword"))
-      ;;From parsing the typed formals we get  2 values: a proper or improper list of
-      ;;identifiers   representing    the   standard   formals;   an    instance   of
-      ;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
-      ;;while parsing.
-      (let*-values
-	  (((unsafe-name.id ~who.stx)	(%make-unsafe-name-and-who lhs.id safe-who.stx synner))
-	   ((safe-body*.stx)		(list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx)))
-	   ((unsafe-body*.stx)		body*.stx))
-	(let*-values
-	    (((qdef-safe   lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							    make-qdef-checked-defun
-							    lhs.id standard-formals.stx clause-signature
-							    safe-body*.stx synner))
-	     ((qdef-unsafe lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-							    make-qdef-typed-defun
-							    unsafe-name.id standard-formals.stx clause-signature
-							    unsafe-body*.stx synner)))
-	  (values (list qdef-safe qdef-unsafe) lexenv.run))))
+      (if (and (type-signature.untyped? (clambda-clause-signature.retvals clause-signature))
+	       (type-signature.untyped? (clambda-clause-signature.argvals clause-signature)))
+	  ;;Only  untyped arguments  and return  values.  Generate  a single  checked
+	  ;;function.
+	  (receive (qdef lexenv.run)
+	      (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				  make-qdef-checked-defun
+				  lhs.id standard-formals.stx clause-signature
+				  body*.stx synner)
+	    (values (list qdef) lexenv.run))
+	;;From parsing the typed formals we get  2 values: a proper or improper list of
+	;;identifiers   representing    the   standard   formals;   an    instance   of
+	;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
+	;;while parsing.
+	(let* ((unsafe-name.id	(%make-unsafe-name lhs.id safe-who.stx synner))
+	       (safe-body*.stx	(list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx))))
+	  (let*-values
+	      (((qdef-safe   lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+								    make-qdef-checked-defun
+								    lhs.id standard-formals.stx clause-signature
+								    safe-body*.stx synner))
+	       ((qdef-unsafe lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+								    make-qdef-typed-defun
+								    unsafe-name.id standard-formals.stx clause-signature
+								    body*.stx synner)))
+	    (values (list qdef-safe qdef-unsafe) lexenv.run)))))
 
     (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 				qdef-maker
@@ -1513,7 +1521,7 @@
 	(extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
 	(values qdef lexenv.run)))
 
-    (define (%make-unsafe-name-and-who ctx.id safe-who.stx synner)
+    (define (%make-unsafe-name ctx.id safe-who.stx synner)
       ;;The argument CTX.ID is an identifer representing the lexical context in which
       ;;the DEFINE/CHECKED syntax is used.
       ;;
@@ -1535,17 +1543,18 @@
       ;;function.  This is the syntax object SAFE-WHO.STX with the safe name replaced
       ;;by the unsafe name.
       ;;
+      (define (%mkname ctx.id safe.id)
+	(datum->syntax ctx.id (string->symbol
+			       (string-append "~" (symbol->string (syntax->datum safe.id))))))
       (syntax-match safe-who.stx (brace)
 	(?name
 	 (identifier? ?name)
-	 (let ((unsafe-name.id (%make-unsafe-name ctx.id ?name)))
-	   (values unsafe-name.id unsafe-name.id)))
+	 (%mkname ctx.id ?name))
 	((brace ?name . ?rv-types)
 	 (identifier? ?name)
-	 (let ((unsafe-name.id (%make-unsafe-name ctx.id ?name)))
-	   (values unsafe-name.id `(,(brace-id) ,unsafe-name.id . ,?rv-types))))
+	 (%mkname ctx.id ?name))
 	(_
-	 (synner "invalid syntax in function definition formals, wrong return values specification" safe-who.stx))))
+	 (synner "invalid syntax in function definition formals, wrong function name specification" safe-who.stx))))
 
     (define (%make-unsafe-application-stx unsafe-name.id standard-formals.stx)
       ;;Build and return a syntax object representing the unsafe function application
@@ -1569,9 +1578,6 @@
       (if (list? standard-formals.stx)
 	  (cons unsafe-name.id standard-formals.stx)
 	(cons* (core-prim-id 'apply) unsafe-name.id (%properise standard-formals.stx))))
-
-    (define (%make-unsafe-name ctx.id safe.id)
-      (datum->syntax ctx.id (string->symbol (string-append "~" (symbol->string (syntax->datum safe.id))))))
 
     (define (%properise formals.stx)
       ;;Given  a syntax  object representing  an improper  list of  standard formals:
