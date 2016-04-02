@@ -203,7 +203,8 @@
 	 ;;;
 
 	 syntax-object.parse-type-annotation			syntax-object.type-annotation?
-	 type-annotation->object-type-specification
+	 type-annotation->object-type-spec
+	 tail-type-annotation->object-type-spec
 
 	 #| end of export list |# )
 
@@ -1358,22 +1359,22 @@
   ;;otherwise return false.  Examples:
   ;;
   ;;   (simple-condition-object-type-spec?
-  ;;      (type-annotation->object-type-specification
+  ;;      (type-annotation->object-type-spec
   ;;         (core-type-id '&condition)))
   ;;   => #t
   ;;
   ;;   (simple-condition-object-type-spec?
-  ;;      (type-annotation->object-type-specification
+  ;;      (type-annotation->object-type-spec
   ;;         (core-type-id '&message)))
   ;;   => #t
   ;;
   ;;   (simple-condition-object-type-spec?
-  ;;      (type-annotation->object-type-specification
+  ;;      (type-annotation->object-type-spec
   ;;         (core-type-id '<compound-condition>)))
   ;;   => #f
   ;;
   ;;   (simple-condition-object-type-spec?
-  ;;      (type-annotation->object-type-specification
+  ;;      (type-annotation->object-type-spec
   ;;         (core-type-id '<condition>)))
   ;;   => #f
   ;;
@@ -2340,9 +2341,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(case-define* type-annotation->object-type-specification
+(case-define* type-annotation->object-type-spec
   ((annotation.stx lexenv)
-   (type-annotation->object-type-specification annotation.stx lexenv annotation.stx))
+   (type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
   ((annotation.stx lexenv name.stx)
    ;;Let's think of:
    ;;
@@ -2364,15 +2365,15 @@
       (id->object-type-spec ?type-id lexenv))
 
      ((pair ?car-type ?cdr-type)
-      (let ((car.ots (type-annotation->object-type-specification ?car-type lexenv))
-	    (cdr.ots (type-annotation->object-type-specification ?cdr-type lexenv)))
+      (let ((car.ots (type-annotation->object-type-spec ?car-type lexenv))
+	    (cdr.ots (type-annotation->object-type-spec ?cdr-type lexenv)))
 	(make-pair-type-spec car.ots cdr.ots name.stx)))
 
      ((list ?item-type* ...)
       (if (null? ?item-type*)
 	  (<null>-ots)
 	(make-list-type-spec (map (lambda (type.stx)
-				    (type-annotation->object-type-specification type.stx lexenv))
+				    (type-annotation->object-type-spec type.stx lexenv))
 			       ?item-type*)
 			     name.stx)))
 
@@ -2380,20 +2381,20 @@
       (if (null? ?item-type*)
 	  (<empty-vector>-ots)
 	(make-vector-type-spec (map (lambda (type.stx)
-				      (type-annotation->object-type-specification type.stx lexenv))
+				      (type-annotation->object-type-spec type.stx lexenv))
 				 ?item-type*)
 			       name.stx)))
 
      ((pair-of ?item-type)
-      (make-pair-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+      (make-pair-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 			      name.stx))
 
      ((list-of ?item-type)
-      (make-list-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+      (make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 			      name.stx))
 
      ((vector-of ?item-type)
-      (make-vector-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)
+      (make-vector-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 				name.stx))
 
      ((condition)
@@ -2407,7 +2408,7 @@
       ;;   (condition <compound-condition>) == <compound-condition>
       ;;
       (receive-and-return (ots)
-	  (type-annotation->object-type-specification ?single-component-type lexenv)
+	  (type-annotation->object-type-spec ?single-component-type lexenv)
 	(unless (or (simple-condition-object-type-spec? ots)
 		    (compound-condition-type-spec?      ots)
 		    (<compound-condition>-ots?          ots)
@@ -2418,30 +2419,75 @@
 
      ((condition ?component-type ?component-type* ...)
       (make-compound-condition-type-spec (map (lambda (type.stx)
-						(type-annotation->object-type-specification type.stx lexenv))
+						(type-annotation->object-type-spec type.stx lexenv))
 					   (cons ?component-type ?component-type*))))
 
      ((or ?single-component-type)
-      (type-annotation->object-type-specification ?single-component-type lexenv))
+      (type-annotation->object-type-spec ?single-component-type lexenv))
 
      ((or ?component-type ?component-type* ...)
       (make-union-type-spec (map (lambda (type.stx)
-				   (type-annotation->object-type-specification type.stx lexenv))
+				   (type-annotation->object-type-spec type.stx lexenv))
 			      (cons ?component-type ?component-type*))))
 
      ((and ?single-component-type)
-      (type-annotation->object-type-specification ?single-component-type lexenv))
+      (type-annotation->object-type-spec ?single-component-type lexenv))
 
      ((and ?component-type ?component-type* ...)
       (make-intersection-type-spec (map (lambda (type.stx)
-					  (type-annotation->object-type-specification type.stx lexenv))
+					  (type-annotation->object-type-spec type.stx lexenv))
 				     (cons ?component-type ?component-type*))))
 
      ((not ?item-type)
-      (make-complement-type-spec (type-annotation->object-type-specification ?item-type lexenv)))
+      (make-complement-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
 
      (else
       (syntax-violation __who__ "invalid type annotation" annotation.stx)))))
+
+;;; --------------------------------------------------------------------
+
+(case-define* tail-type-annotation->object-type-spec
+  ;;Let's consider the following LAMBDA syntaxes:
+  ;;
+  ;;   (lambda/typed {args <list>}				?body)
+  ;;   (lambda/typed {args (list-of <fixnum>)}			?body)
+  ;;   (lambda/typed ({a <fixnum>} . {rest <list>})		?body)
+  ;;   (lambda/typed ({a <fixnum>} . {rest (list-of <fixnum>)})	?body)
+  ;;
+  ;;the  type annotations  for the  ARGS and  REST arguments  are special:  they must
+  ;;represent  lists.  It  is  established that  such type  annotations  can be  only
+  ;;"<list>" or  "(list-of ?type)".
+  ;;
+  ;;This  function  parses   such  type  annotations  and  returns   an  instance  of
+  ;;"<object-type-spce>"  representing it.   If the  type annotation  is invalid:  an
+  ;;exception is raised.
+  ;;
+  ((annotation.stx lexenv)
+   (tail-type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
+  ((annotation.stx lexenv name.stx)
+   (define (%error)
+     (syntax-violation __who__ "invalid type annotation in tail position" annotation.stx))
+   (syntax-match annotation.stx (<list> list-of)
+     (<list>
+      (<list>-ots))
+     ((list-of ?type-ann)
+      (make-list-of-type-spec (type-annotation->object-type-spec ?type-ann lexenv)
+			      name.stx))
+     ;;This allows:
+     ;;
+     ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
+     ;;   (define-type <some-list> <list>)
+     ;;
+     (?type-ann
+      (identifier? ?type-ann)
+      (receive-and-return (ots)
+	  (id->object-type-spec ?type-ann lexenv)
+	(unless (or (<list>-ots? ots)
+		    (list-of-type-spec? ots))
+	  (%error))))
+
+     (else
+      (%error)))))
 
 
 ;;;; done

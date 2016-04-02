@@ -4380,7 +4380,7 @@
     (<type-signature>-rcd)
     (make-type-signature)
     (type-signature?					$expander)
-    (type-signature.tags				$expander)
+    (type-signature.syntax-object			$expander)
     (type-signature.specs				$expander)
 ;;;
     (&syntactic-identifier				$expander)

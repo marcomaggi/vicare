@@ -234,7 +234,7 @@
      (chi-lambda/typed input-form.stx lexenv.run lexenv.expand
 		       ?formals (cons ?body ?body*)))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))    ))
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (lambda/checked input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand  LAMBDA/CHECKED syntaxes from  the top-level
@@ -250,7 +250,7 @@
      (chi-lambda/checked input-form.stx lexenv.run lexenv.expand
 			 ?formals (cons ?body ?body*)))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))    ))
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 (define-core-transformer (lambda input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand LAMBDA syntaxes from the  top-level built in
@@ -277,7 +277,7 @@
 			    lexenv.run lexenv.expand
 			    ?formals (cons ?body ?body*))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))    ))
+     (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
 ;;;; module core-macro-transformer: NAMED-LAMBDA and variants
@@ -543,7 +543,8 @@
 		     (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (build-void))
-		 (make-type-signature/fully-untyped))))
+		 (type-signature.common-ancestor (psi.retvals-signature consequent.psi)
+						 (make-type-signature/single-void)))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
@@ -586,28 +587,24 @@
 	 (if (options::typed-language?)
 	     ;;Prepare extended, possibly typed syntactic bindings.
 	     (let*-values
-		 (((lhs*.id lhs*.type)
-		   (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
+		 (((lhs*.id lhs*.ots)
+		   (syntax-object.parse-typed-list-of-bindings ?lhs*))
 		  ((rhs*.psi)
-		   (map (lambda (rhs.stx lhs.type)
-			  ;;We  insert a  signature  validation even  if LHS.TYPE  is
+		   (map (lambda (rhs.stx lhs.ots)
+			  ;;We  insert  a signature  validation  even  if LHS.OTS  is
 			  ;;"<top>": this  way we  try to  check at  expand-time that
 			  ;;there is a single return  value.  At run-time, we rely on
 			  ;;the built-in run-time checking of single-value return.
 			  (chi-expr (bless
-				     `(assert-signature-and-return (,lhs.type) ,rhs.stx))
+				     `(assert-signature-and-return (,(object-type-spec.name lhs.ots)) ,rhs.stx))
 				    lexenv.run lexenv.expand))
-		     ?rhs* lhs*.type))
+		     ?rhs* lhs*.ots))
 		  ;;Prepare the untyped and typed lexical variables.
-		  ((lhs*.ots)
-		   (map (lambda (lhs.type)
-			  (and lhs.type (type-annotation->object-type-specification lhs.type lexenv.run)))
-		     lhs*.type))
 		  ((rib lexenv.run lhs*.lex)
 		   (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)))
 	       (values lhs*.lex rhs*.psi rib lexenv.run))
 	   ;;Prepare standard, untyped syntactic bindings.
-	   (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
+	   (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs*))
 		  (rhs*.psi	(map (lambda (rhs.stx)
 				       (chi-expr rhs.stx lexenv.run lexenv.expand))
 				  ?rhs*))
@@ -684,13 +681,9 @@
 	   (if (options::typed-language?)
 	       ;;Prepare extended, possibly typed syntactic bindings.
 	       (let*-values
-		   (((lhs*.id lhs*.type)
-		     (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx))
+		   (((lhs*.id lhs*.ots)
+		     (syntax-object.parse-typed-list-of-bindings ?lhs*))
 		    ;;Prepare the typed and untyped lexical variables.
-		    ((lhs*.ots)
-		     (map (lambda (lhs.type)
-			    (and lhs.type (type-annotation->object-type-specification lhs.type lexenv.run)))
-		       lhs*.type))
 		    ((rib lexenv.run lhs*.lex)
 		     (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run))
 		    ;;NOTE The region of all the LETREC and LETREC* bindings includes
@@ -698,15 +691,15 @@
 		    ;;and the body.
 		    ((rhs*.psi)
 		     ($map-in-order
-			 (lambda (rhs.stx lhs.type)
+			 (lambda (rhs.stx lhs.ots)
 			   (chi-expr (push-lexical-contour rib
 				       (bless
-					`(assert-signature-and-return (,lhs.type) ,rhs.stx)))
+					`(assert-signature-and-return (,(object-type-spec.name lhs.ots)) ,rhs.stx)))
 				     lexenv.run lexenv.expand))
-		       ?rhs* lhs*.type)))
+		       ?rhs* lhs*.ots)))
 		 (values lhs*.lex rhs*.psi rib lexenv.run))
 	     ;;Prepare standard, untyped syntactic bindings.
-	     (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx))
+	     (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
 		    (lhs*.lab		(map generate-label-gensym   lhs*.id))
 		    (lhs*.lex		(map generate-lexical-gensym lhs*.id))
 		    (lexenv.run		(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
@@ -762,10 +755,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;Check that the ?LHS* are all identifiers with no duplicates.
-     (unless (valid-bound-ids? ?lhs*)
-       (error-invalid-formals-syntax input-form.stx ?lhs*))
-     (let loop ((lhs*.id	?lhs*)
+     (let loop ((lhs*.id	(syntax-object.parse-standard-list-of-bindings ?lhs*))
 		(rhs*.stx	?rhs*)
 		(lexenv.run	lexenv.run)
 		(lexenv.expand	lexenv.expand))

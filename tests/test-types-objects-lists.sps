@@ -63,8 +63,8 @@
 	   (catch E
 	     ((expander::&expand-time-type-signature-violation)
 	      #;(print-condition E)
-	      (values (syntax->datum (expander::type-signature.tags (expander::condition-expected-type-signature E)))
-		      (syntax->datum (expander::type-signature.tags (expander::condition-returned-type-signature E)))))
+	      (values (syntax->datum (expander::type-signature.syntax-object (expander::condition-expected-type-signature E)))
+		      (syntax->datum (expander::type-signature.syntax-object (expander::condition-returned-type-signature E)))))
 	     (else E)))
        => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
     ))
@@ -78,7 +78,7 @@
        (check
 	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
 	   ;;instance of "<type-signature>".
-	   (.tags (type-of ?expression))
+	   (.syntax-object (type-of ?expression))
 	 (=> syntax=?)
 	 ;;When the expression is a CONDITION application: the expected tags value is
 	 ;;a list with a single item.
@@ -150,7 +150,7 @@
       ((_ ?type-annotation ?expected-tags)
        ;;Here we test only type signature describing a single value.
        (check
-	   (.tags (new expander::<type-signature> #'(?type-annotation)))
+	   (.syntax-object (new expander::<type-signature> #'(?type-annotation)))
 	 (=> syntax=?)
 	 #'(?expected-tags)))
       ))
@@ -199,24 +199,24 @@
     => '(1 2))
 
   (check
-      (.tags (type-of (new <list> (read) (read))))
+      (.syntax-object (type-of (new <list> (read) (read))))
     (=> syntax=?)
     #'((list <top> <top>)))
 
   (check
-      (.tags (type-of (new <list>)))
+      (.syntax-object (type-of (new <list>)))
     (=> syntax=?)
     (list #'<null>))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (.tags (type-of (list)))
+      (.syntax-object (type-of (list)))
     (=> syntax=?)
     (list #'<null>))
 
   (check
-      (.tags (type-of (list 1)))
+      (.syntax-object (type-of (list 1)))
     (=> syntax=?)
     #'((list <positive-fixnum>)))
 
@@ -273,7 +273,7 @@
     => '(#\a #\b))
 
   (check
-      (expander::type-signature.tags (type-of (new <list-of-chars> #\a #\b)))
+      (expander::type-signature.syntax-object (type-of (new <list-of-chars> #\a #\b)))
     (=> syntax=?)
     #'((list <char> <char>)))
 
@@ -388,7 +388,7 @@
     => '("a" "b"))
 
   (check
-      (expander::type-signature.tags (type-of (new <list-of-strings> "a" "b")))
+      (expander::type-signature.syntax-object (type-of (new <list-of-strings> "a" "b")))
     (=> syntax=?)
     #'((list <string> <string>)))
 

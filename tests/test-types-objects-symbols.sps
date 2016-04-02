@@ -27,7 +27,7 @@
 (program (test-types-symbol-objects)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -59,7 +59,7 @@
     => 'ciao)
 
   (check
-      (xp.type-signature.tags (type-of (new <symbol> (read))))
+      (expander::type-signature.syntax-object (type-of (new <symbol> (read))))
     (=> syntax=?)
     (list #'<symbol>))
 

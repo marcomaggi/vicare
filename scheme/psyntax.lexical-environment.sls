@@ -86,7 +86,6 @@
     syntax-unwrap			syntax=?
 
     parse-logic-predicate-syntax
-    error-invalid-formals-syntax
 
     ;; label gensyms, lexical variable gensyms, storage location gensyms
     generate-lexical-gensym
@@ -97,7 +96,7 @@
     <type-signature>
     <type-signature>-rtd				<type-signature>-rcd
     make-type-signature					type-signature?
-    type-signature.tags					type-signature.specs
+    type-signature.syntax-object			type-signature.specs
 
     ;; object types specifications
     <object-type-spec>
@@ -255,7 +254,7 @@
     ;; syntax objects: mapping identifiers to labels and similar
     id->label
     id->object-type-spec			id->record-type-spec
-    id->struct-type-spec			type-annotation->object-type-specification
+    id->struct-type-spec			type-annotation->object-type-spec
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__

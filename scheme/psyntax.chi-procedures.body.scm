@@ -176,7 +176,15 @@
 	     ;;
 	     ;;it is meant to be an extension to R6RS's DEFINE syntax supporting type
 	     ;;specifications.
-	     (%expand-internal-definition chi-define/checked))
+	     (receive (qdef* lexenv.run)
+		 (chi-define/checked (if (options::debug-mode-enabled?)
+					 (stx-push-annotated-expr body-form.stx body-form.stx)
+				       body-form.stx)
+				     rib lexenv.run keyword* shadow/redefine-bindings?)
+	       (chi-body* (cdr body-form*.stx)
+			  lexenv.run lexenv.expand
+			  (append qdef* rev-qdef*)
+			  mod** keyword* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	    ((case-define/std)
 	     ;;The body form is a CASE-DEFINE/STD core macro use:
@@ -1089,7 +1097,7 @@
       ;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
       ;;while parsing.
       (receive (standard-formals.stx clause-signature)
-	  (syntax-object.parse-standard-clambda-clause-formals input-formals.stx input-form.stx)
+	  (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
 	;;This is a standard variable syntactic  binding, so the arguments and return
 	;;values are untyped.   However, we still want to generate  a typed syntactic
 	;;binding so that  we can validate the number of  operands and return values.
@@ -1188,7 +1196,7 @@
 	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
 	 ;;while parsing.
 	 (receive (standard-formals.stx clause-signature)
-	     (syntax-object.parse-standard-clambda-clause-formals ?formals input-form.stx)
+	     (syntax-object.parse-standard-clambda-clause-formals ?formals)
 	   (values standard-formals.stx clause-signature (cons ?body ?body*))))
 	))
 
@@ -1291,7 +1299,7 @@
       ;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
       ;;while parsing.
       (receive (standard-formals.stx clause-signature)
-	  (syntax-object.parse-typed-clambda-clause-formals input-formals.stx input-form.stx)
+	  (syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
 	(let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
 				      (signature	(make-clambda-signature (list clause-signature))))
 				  (make-closure-type-spec lhs.type-id signature)))
@@ -1305,7 +1313,7 @@
 	(synner "expected identifier as variable name" lhs.id))
       (unless (syntax-object.type-annotation? lhs.type-ann)
 	(synner "invalid type annotation for variable name" lhs.type-ann))
-      (let* ((lhs.ots	(type-annotation->object-type-specification lhs.type-ann lexenv.run))
+      (let* ((lhs.ots	(type-annotation->object-type-spec lhs.type-ann lexenv.run))
 	     (qdef	(make-qdef-typed-defvar input-form.stx lhs.id rhs.stx)))
 	(values lhs.id lhs.ots qdef lexenv.run)))
 
@@ -1339,110 +1347,247 @@
   ;;typed lexical  variable in the lexical  context represented by the  arguments RIB
   ;;and LEXENV.RUN.
   ;;
+  ;;The cases of  typed functions are special  because we want to define  both a safe
+  ;;variant and an unsafe variant.  We want to expand:
+  ;;
+  ;;   (define ({fun <fixnum>} {a <fixnum>})
+  ;;     a)
+  ;;
+  ;;into an equivalent of:
+  ;;
+  ;;   (begin
+  ;;     (define/checked ({fun  <fixnum>} {a <fixnum>})
+  ;;       (~fun a))
+  ;;     (define/typed   ({~fun <fixnum>} {a <fixnum>})
+  ;;       a))
+  ;;
+  ;;and:
+  ;;
+  ;;   (define ({fun <fixnum>} {a <fixnum>} . {rest (list-of <fixnum>)})
+  ;;     a)
+  ;;
+  ;;into an equivalent of:
+  ;;
+  ;;   (begin
+  ;;     (define/checked ({fun  <fixnum>} {a <fixnum>} . {rest (list-of <fixnum>)})
+  ;;       (apply ~fun a rest))
+  ;;     (define/typed   ({~fun <fixnum>} {a <fixnum>} . {rest (list-of <fixnum>)})
+  ;;       a))
+  ;;
+  ;;Functions  defined  with  DEFINE/CHECKED:  will  check  their  operands  both  at
+  ;;expand-time and at  run-time; they will check their return  values at expand-time
+  ;;and, only  when needed, at  run-time.  Functions defined with  DEFINE/TYPED: will
+  ;;check their  operands at expand-time and  not at run-time; they  will check their
+  ;;return values at expand-time and, only when needed, at run-time.
+  ;;
   (define-module-who define/checked)
 
   (define (chi-define/checked input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?)
+    ;;Return the following values:
+    ;;
+    ;;1.  An object representing a  qualified right-hand side expression (QDEF) fully
+    ;;representing the syntactic binding to create.
+    ;;
+    ;;2. A possibly updated LEXENV.RUN.
+    ;;
     (case-define %synner
       ((message)
        (syntax-violation __module_who__ message input-form.stx))
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
-    (receive (lhs.id lhs.ots qdef lexenv.run)
-	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
-	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
-	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
-	;;qualified RHS object to be expanded later.
-	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
-      (if (bound-id-member? lhs.id kwd*)
-	  (%synner "cannot redefine keyword")
-	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
-	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
-	  ;;This rib extension will raise an exception if it represents an attempt to
-	  ;;illegally redefine a binding.
-	  (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
-	  (values qdef lexenv.run)))))
+    (syntax-match input-form.stx (brace)
+      ((_ ((brace ?lhs . ?rv-types) . ?formals) ?body0 ?body* ...)
+       (receive (standard-formals.stx argvals.sig)
+	   (syntax-object.parse-typed-formals ?formals)
+	 (let ((clause-signature (make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig)))
+	   (%process-typed-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					       ?lhs `(,(brace-id) ,?lhs . ,?rv-types) standard-formals.stx clause-signature
+					       `(,?body0 . ,?body*) %synner))))
 
-  (module (%parse-macro-use)
+      ((_ (brace ?lhs ?type) ?rhs)
+       (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							  ?lhs ?rhs ?type %synner))
 
-    (define* (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
-      ;;Syntax  parser for  Vicare's DEFINE/CHECKED  syntax uses;  this is  a like  the
-      ;;standard DEFINE described  by R6RS but extended to  support type annotations.
-      ;;Return the following values:
-      ;;
-      ;;1. The syntactic identifier of the lexical syntactic binding.
-      ;;
-      ;;2.  A syntactic  identifier representing the lexical variable's  type.  It is
-      ;;false when no  type is specified.  It  is a sub-type of  "<procedure>" when a
-      ;;procedure is defined.
-      ;;
-      ;;3.   An object  representing a  qualified right-hand  side expression  (QDEF)
-      ;;fully representing the syntactic binding to create.
-      ;;
-      ;;4. A possibly updated LEXENV.RUN.
-      ;;
-      (syntax-match input-form.stx (brace)
-	((_ ((brace ?lhs ?rv-type* ... . ?rv-rest-type) . ?formals) ?body0 ?body* ...)
-	 (%process-typed-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
-					     ?lhs (bless `((brace _ ,@?rv-type* . ,?rv-rest-type) . ,?formals))
-					     `(,?body0 . ,?body*) synner))
+      ((_ (brace ?lhs ?type))
+       (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							  ?lhs (bless '(void)) ?type %synner))
 
-	((_ (brace ?lhs ?type) ?rhs)
-	 (%process-typed-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs ?rhs ?type synner))
+      ((_ (?lhs . ?formals) ?body0 ?body* ...)
+       (receive (standard-formals.stx argvals.sig)
+	   (syntax-object.parse-typed-formals ?formals)
+	 (let ((clause-signature (make-clambda-clause-signature (make-type-signature/fully-untyped) argvals.sig)))
+	   (%process-typed-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					       ?lhs ?lhs standard-formals.stx clause-signature
+					       `(,?body0 . ,?body*) %synner))))
 
-	((_ (brace ?lhs ?type))
-	 (%process-typed-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs (bless '(void)) ?type synner))
+      ((_ ?lhs ?rhs)
+       (%process-standard-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							     ?lhs ?rhs %synner))
 
-	((_ (?lhs . ?formals) ?body0 ?body* ...)
-	 (%process-typed-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
-					     ?lhs ?formals `(,?body0 . ,?body*) synner))
+      ((_ ?lhs)
+       (%process-standard-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							     ?lhs (bless '(void)) %synner))
 
-	((_ ?lhs ?rhs)
-	 (%process-standard-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs ?rhs synner))
+      (_
+       (%synner "invalid DEFINE/CHECKED syntax use"))))
 
-	((_ ?lhs)
-	 (%process-standard-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs (bless '(void)) synner))
+  (define (%process-typed-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							     lhs.id rhs.stx lhs.type-ann synner)
+    (unless (identifier? lhs.id)
+      (synner "expected identifier as variable name" lhs.id))
+    (unless (syntax-object.type-annotation? lhs.type-ann)
+      (synner "invalid type annotation for variable name" lhs.type-ann))
+    (when (bound-id-member? lhs.id kwd*)
+      (synner "cannot redefine keyword"))
+    ;;LHS.OTS is  an instance of  "<object-type-spec>" representing the type  of this
+    ;;syntactic binding; QDEF is the qualified RHS object to be expanded later.
+    (let* ((lhs.ots	(type-annotation->object-type-spec lhs.type-ann lexenv.run))
+	   (qdef	(make-qdef-checked-defvar input-form.stx lhs.id
+						  (bless
+						   `(assert-signature-and-return (,lhs.type-ann) ,rhs.stx))))
+	   (lhs.lab	(generate-label-gensym lhs.id))
+	   (lhs.descr	(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
+	   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
+      ;;This rib extension  will raise an exception if it  represents an attempt to
+      ;;illegally redefine a binding.
+      (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+      (values (list qdef) lexenv.run)))
 
-	(_
-	 (synner "invalid DEFINE/CHECKED syntax use"))))
+  (define (%process-standard-variable-definition-with-init-expr input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+								lhs.id rhs.stx synner)
+    (unless (identifier? lhs.id)
+      (synner "expected identifier as variable name" lhs.id))
+    (when (bound-id-member? lhs.id kwd*)
+      (synner "cannot redefine keyword"))
+    (let* ((qdef	(make-qdef-standard-defvar input-form.stx lhs.id rhs.stx))
+	   (lhs.lab	(generate-label-gensym lhs.id))
+	   (lhs.descr	(make-syntactic-binding-descriptor/lexical-var (qdef.lex qdef)))
+	   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
+      ;;This rib  extension will raise  an exception if  it represents an  attempt to
+      ;;illegally redefine a binding.
+      (extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+      (values (list qdef) lexenv.run)))
 
-    (define (%process-typed-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
-						lhs.id input-formals.stx body*.stx synner)
+  (module (%process-typed-function-definition)
+
+    (define (%process-typed-function-definition input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+						lhs.id safe-who.stx standard-formals.stx clause-signature
+						body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
+      (when (bound-id-member? lhs.id kwd*)
+	(synner "cannot redefine keyword"))
       ;;From parsing the typed formals we get  2 values: a proper or improper list of
       ;;identifiers   representing    the   standard   formals;   an    instance   of
       ;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
       ;;while parsing.
-      (receive (standard-formals.stx clause-signature)
-	  (syntax-object.parse-typed-clambda-clause-formals input-formals.stx input-form.stx)
-	(let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
+      (let*-values
+	  (((unsafe-name.id ~who.stx)	(%make-unsafe-name-and-who lhs.id safe-who.stx synner))
+	   ((safe-body*.stx)		(list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx)))
+	   ((unsafe-body*.stx)		body*.stx))
+	(let*-values
+	    (((qdef-safe   lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							    make-qdef-checked-defun
+							    lhs.id standard-formals.stx clause-signature
+							    safe-body*.stx synner))
+	     ((qdef-unsafe lexenv.run)	(%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+							    make-qdef-typed-defun
+							    unsafe-name.id standard-formals.stx clause-signature
+							    unsafe-body*.stx synner)))
+	  (values (list qdef-safe qdef-unsafe) lexenv.run))))
+
+    (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+				qdef-maker
+				lhs.id standard-formals.stx clause-signature body*.stx synner)
+      (let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name
+									       (identifier->symbol lhs.id))))
 				      (signature	(make-clambda-signature (list clause-signature))))
 				  (make-closure-type-spec lhs.type-id signature)))
-	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
-	       (qdef		(make-qdef-checked-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
-	  (values lhs.id lhs.ots qdef lexenv.run))))
+	     (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+	     (qdef		(qdef-maker input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots))
+	     (lhs.lab		(generate-label-gensym lhs.id))
+	     (lhs.descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
+	     (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))
+	;;This rib extension  will raise an exception if it  represents an attempt to
+	;;illegally redefine a binding.
+	(extend-rib! rib lhs.id lhs.lab shadow/redefine-bindings?)
+	(values qdef lexenv.run)))
 
-    (define (%process-typed-variable-definition-with-init-expr input-form.stx lexenv.run
-							       lhs.id rhs.stx lhs.type-ann synner)
-      (unless (identifier? lhs.id)
-	(synner "expected identifier as variable name" lhs.id))
-      (unless (syntax-object.type-annotation? lhs.type-ann)
-	(synner "invalid type annotation for variable name" lhs.type-ann))
-      (let* ((lhs.ots	(type-annotation->object-type-specification lhs.type-ann lexenv.run))
-	     (qdef	(make-qdef-checked-defvar input-form.stx lhs.id
-						  (bless
-						   `(assert-signature-and-return (,lhs.type-ann) ,rhs.stx)))))
-	(values lhs.id lhs.ots qdef lexenv.run)))
+    (define (%make-unsafe-name-and-who ctx.id safe-who.stx synner)
+      ;;The argument CTX.ID is an identifer representing the lexical context in which
+      ;;the DEFINE/CHECKED syntax is used.
+      ;;
+      ;;The argument  SAFE-WHO.STX is a  syntax object representing a  possibly typed
+      ;;name for the safe function.  For example, it can be:
+      ;;
+      ;;   ?lhs
+      ;;   (brace ?lhs ?rv-type0 ?rv-type ...)
+      ;;   (brace ?lhs . ?rv-types)
+      ;;
+      ;;where ?LHS is the syntactic identifier representing the name of the function.
+      ;;
+      ;;This function builds and returns the following values:
+      ;;
+      ;;1. The  syntactic identifier  representing the name  of the  unsafe function.
+      ;;This is the name of the safe function with a "~" prepended.
+      ;;
+      ;;2.   A syntax  object  representing  a possibly  typed  name  for the  unsafe
+      ;;function.  This is the syntax object SAFE-WHO.STX with the safe name replaced
+      ;;by the unsafe name.
+      ;;
+      (syntax-match safe-who.stx (brace)
+	(?name
+	 (identifier? ?name)
+	 (let ((unsafe-name.id (%make-unsafe-name ctx.id ?name)))
+	   (values unsafe-name.id unsafe-name.id)))
+	((brace ?name . ?rv-types)
+	 (identifier? ?name)
+	 (let ((unsafe-name.id (%make-unsafe-name ctx.id ?name)))
+	   (values unsafe-name.id `(,(brace-id) ,unsafe-name.id . ,?rv-types))))
+	(_
+	 (synner "invalid syntax in function definition formals, wrong return values specification" safe-who.stx))))
 
-    (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run
-								  lhs.id rhs.stx synner)
-      (unless (identifier? lhs.id)
-	(synner "expected identifier as variable name" lhs.id))
-      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (<top>-ots) qdef lexenv.run)))
+    (define (%make-unsafe-application-stx unsafe-name.id standard-formals.stx)
+      ;;Build and return a syntax object representing the unsafe function application
+      ;;in the body of the safe function.  For example, if the standard formals are a
+      ;;proper list:
+      ;;
+      ;;   #'(a b c)
+      ;;
+      ;;the return value is:
+      ;;
+      ;;   (#'~fun #'a #'b #'c)
+      ;;
+      ;;otherwise, if the standard formals are an improper list:
+      ;;
+      ;;   #'(a b c . rest)
+      ;;
+      ;;the return value is:
+      ;;
+      ;;   (#'apply #'~fun #'a #'b #'c #'rest)
+      ;;
+      (if (list? standard-formals.stx)
+	  (cons unsafe-name.id standard-formals.stx)
+	(cons* (core-prim-id 'apply) unsafe-name.id (%properise standard-formals.stx))))
 
-    #| end of module: %PARSE-MACRO-USE |# )
+    (define (%make-unsafe-name ctx.id safe.id)
+      (datum->syntax ctx.id (string->symbol (string-append "~" (symbol->string (syntax->datum safe.id))))))
+
+    (define (%properise formals.stx)
+      ;;Given  a syntax  object representing  an improper  list of  standard formals:
+      ;;build  and return  a  syntax  object representing  a  proper  list of  formal
+      ;;arguments.  Examples:
+      ;;
+      ;;   (%properise #'(a b . rest))	=> (#'a #'b #'rest)
+      ;;   (%properise #'rest)		=> (#'rest)
+      ;;
+      (syntax-match formals.stx ()
+	((?car . ?cdr)
+	 (cons ?car (%properise ?cdr)))
+	(_
+	 (list formals.stx))))
+
+    #| end of module: %PROCESS-TYPED-FUNCTION-DEFINITION |# )
 
   #| end of module: CHI-DEFINE/CHECKED |# )
 
@@ -1515,7 +1660,7 @@
 	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
 	 ;;while parsing.
 	 (receive (standard-formals.stx clause-signature)
-	     (syntax-object.parse-typed-clambda-clause-formals ?formals input-form.stx)
+	     (syntax-object.parse-typed-clambda-clause-formals ?formals)
 	   (values standard-formals.stx clause-signature (cons ?body ?body*))))
 	))
 
@@ -1592,7 +1737,7 @@
 	 ;;"<clambda-clause-signature>".  An  exception is raised if  an error occurs
 	 ;;while parsing.
 	 (receive (standard-formals.stx clause-signature)
-	     (syntax-object.parse-typed-clambda-clause-formals ?formals input-form.stx)
+	     (syntax-object.parse-typed-clambda-clause-formals ?formals)
 	   (values standard-formals.stx clause-signature (cons ?body ?body*))))
 	))
 

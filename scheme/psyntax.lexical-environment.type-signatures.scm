@@ -26,7 +26,7 @@
    <type-signature>
    <type-signature>-rtd					<type-signature>-rcd
    make-type-signature					type-signature?
-   type-signature.specs					type-signature.tags
+   type-signature.specs					type-signature.syntax-object
 
 ;;; special constructors
    make-type-signature/single-top			make-type-signature/single-void
@@ -280,7 +280,7 @@
 		    (<list>-ots))
 
 		   ((list-of ?item-type)
-		    (make-list-of-type-spec (type-annotation->object-type-specification ?item-type lexenv)))
+		    (make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
 
 		   (?rest-ots
 		    (object-type-spec? ?rest-ots)
@@ -316,7 +316,7 @@
 		   ((?thing . ?rest)
 		    (cons (if (object-type-spec? ?thing)
 			      ?thing
-			    (type-annotation->object-type-specification ?thing lexenv))
+			    (type-annotation->object-type-spec ?thing lexenv))
 			  (recur ?rest)))
 
 		   (_
@@ -327,7 +327,7 @@
       make-type-signature))
   ;; (custom-printer
   ;;   (lambda (S port sub-printer)
-  ;;     (sub-printer `(<type-signature> ,(type-signature.tags S)))))
+  ;;     (sub-printer `(<type-signature> ,(type-signature.syntax-object S)))))
   (custom-printer
     (lambda (S port sub-printer)
       (define-syntax-rule (%display ?thing)
@@ -335,7 +335,7 @@
       (define-syntax-rule (%write ?thing)
 	(write ?thing port))
       (%display "#[signature ")
-      (%display (syntax->datum (type-signature.tags S)))
+      (%display (syntax->datum (type-signature.syntax-object S)))
       (%display "]"))))
 
 (define <type-signature>-rtd
@@ -462,7 +462,7 @@
 
 ;;;; type signature: accessors
 
-(define* (type-signature.tags {signature type-signature?})
+(define* (type-signature.syntax-object {signature type-signature?})
   ;;Return a proper  or improper list of identifiers and  syntax objects representing
   ;;the names of the types in the signature.
   ;;

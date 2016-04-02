@@ -212,6 +212,18 @@
   (signatures
    ((<procedure> <vector>)			=> (<top>))))
 
+(declare-core-primitive vector-fold-left
+    (safe)
+  ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
+  (signatures
+   ((<procedure> <top> <vector> . (list-of <vector>))	=> (<top>))))
+
+(declare-core-primitive vector-fold-right
+    (safe)
+  ;;Not foldable and not effect-free becuse it invokes an unknown procedure.
+  (signatures
+   ((<procedure> <top> <vector> . (list-of <vector>))	=> (<top>))))
+
 ;;; --------------------------------------------------------------------
 ;;; conversion
 
@@ -240,10 +252,31 @@
   (attributes
    ((_)				effect-free result-true)))
 
+(declare-core-primitive $make-clean-vector
+    (unsafe)
+  (signatures
+   ((<non-negative-fixnum>)			=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive $subvector
+    (unsafe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<vector>)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_)				effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
 (declare-vector-predicate $vector-empty? unsafe)
+
+(declare-core-primitive $vectors-of-same-length?
+    (unsafe)
+  (signatures
+   ((<vector> . (list-of <vector>))	=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 ;;; inspection
@@ -298,6 +331,35 @@
     (unsafe)
   (signatures
    ((<procedure> <vector>)	=> (<top>))))
+
+(declare-core-primitive $vector-self-copy-forwards!
+    (unsafe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<vector>))))
+
+(declare-core-primitive $vector-self-copy-backwards!
+    (unsafe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<vector>))))
+
+(declare-core-primitive $vector-copy-source-range!
+    (unsafe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <non-negative-fixnum> <vector> <non-negative-fixnum>)
+    => (<vector>))))
+
+(declare-core-primitive $vector-copy-source-count!
+    (unsafe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <vector> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<vector>))))
+
+(declare-core-primitive $fill-vector-from-list!
+    (unsafe)
+  (signatures
+   ((<vector> <non-negative-fixnum> <list>)	=> (<vector>))))
 
 /section)
 

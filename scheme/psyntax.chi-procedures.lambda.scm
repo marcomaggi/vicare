@@ -251,7 +251,7 @@
   ;;representing the body expressions in the LAMBDA syntax.
   ;;
   (receive (standard-formals.stx clause-signature)
-      (syntax-object.parse-standard-clambda-clause-formals input-formals.stx input-form.stx)
+      (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
     ;;CLAUSE-SIGNATURE is an instance of "<clambda-clause-signature>".
     (receive (standard-formals.lex body.psi)
 	(chi-lambda-clause/std input-form.stx lexenv.run lexenv.expand
@@ -326,7 +326,7 @@
 
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand who.sym input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
-	(syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx input-form.stx)
+	(syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
       (receive (formals*.lex body*.psi)
 	  (chi-case-lambda-clause*/std input-form.stx lexenv.run lexenv.expand
 				       standard-formals*.stx clause-signature* body**.stx)
@@ -374,7 +374,7 @@
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
 	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
 	;;retvals.
-	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx input-form.stx)
+	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
       (receive (standard-formals.lex body.psi)
 	  (case type
 	    ((typed)
@@ -419,7 +419,7 @@
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
 	;;of  "<clambda-clause-signature>"  representing  the types  of  formals  and
 	;;retvals.
-	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx input-form.stx)
+	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
       (receive (lexenv.run lexenv.expand)
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.
@@ -506,7 +506,7 @@
 
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
-	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx input-form.stx)
+	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
       (receive (formals*.lex body*.psi)
 	  (case type
 	    ((typed)
@@ -554,7 +554,7 @@
 
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id who.sym input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
-	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx input-form.stx)
+	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
       (receive (lexenv.run lexenv.expand)
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.
@@ -976,7 +976,7 @@
       (if (type-signature.fully-untyped? retvals-signature.sig)
 	  ;;The number and type of return values is unknown.
 	  body-form*.stx
-	(let ((retvals-signature.tags (type-signature.tags retvals-signature.sig)))
+	(let ((retvals-signature.tags (type-signature.syntax-object retvals-signature.sig)))
 	  (receive (head*.stx last.stx)
 	      (proper-list->head-and-last body-form*.stx)
 	    (bless

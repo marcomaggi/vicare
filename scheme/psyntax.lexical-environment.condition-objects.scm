@@ -516,44 +516,6 @@
 	 raise-compound-condition-object
 	 raise-compound-condition-object/continuable)
 
-  (case-define* syntax-violation
-    ;;Defined by R6RS.  WHO must be false or a string or a symbol.  MESSAGE must be a
-    ;;string.  FORM  must be a  syntax object  or a datum  value.  SUBFORM must  be a
-    ;;syntax object or a datum value.
-    ;;
-    ;;The  SYNTAX-VIOLATION  procedure  raises   an  exception,  reporting  a  syntax
-    ;;violation.   WHO  should  describe  the macro  transformer  that  detected  the
-    ;;exception.  The MESSAGE argument should describe the violation.  FORM should be
-    ;;the erroneous source  syntax object or a datum value  representing a form.  The
-    ;;optional SUBFORM argument should be a syntax object or datum value representing
-    ;;a form that more precisely locates the violation.
-    ;;
-    ;;If WHO  is false, SYNTAX-VIOLATION attempts  to infer an appropriate  value for
-    ;;the condition object (see below) as  follows: when FORM is either an identifier
-    ;;or  a list-structured  syntax  object  containing an  identifier  as its  first
-    ;;element, then  the inferred  value is the  identifier's symbol.   Otherwise, no
-    ;;value for WHO is provided as part of the condition object.
-    ;;
-    ;;The condition  object provided with  the exception has the  following condition
-    ;;types:
-    ;;
-    ;;* If  WHO is not  false or  can be inferred,  the condition has  condition type
-    ;;   "&who", with  WHO as  the value  of  its field.   In that  case, WHO  should
-    ;;   identify the  procedure or  entity that  detected the  exception.  If  it is
-    ;;  false, the condition does not have condition type "&who".
-    ;;
-    ;;* The condition has condition type "&message", with MESSAGE as the value of its
-    ;;  field.
-    ;;
-    ;;* The condition has condition type "&syntax" with FORM and SUBFORM as the value
-    ;;  of its fields.  If SUBFORM is not provided, the value of the subform field is
-    ;;  false.
-    ;;
-    ((who {msg string?} form)
-     (syntax-violation who msg form #f))
-    ((who {msg string?} form subform)
-     (raise-compound-condition-object who msg form (make-syntax-violation form subform))))
-
   (case-define error-unbound-identifier
     ((source-who id)
      (error-unbound-identifier source-who id (condition)))
@@ -585,15 +547,53 @@
 		 cnd
 		 (%extract-macro-expansion-trace id)))))
 
-  (module (raise-compound-condition-object raise-compound-condition-object/continuable)
+  (module (raise-compound-condition-object raise-compound-condition-object/continuable syntax-violation)
+
+    (case-define* syntax-violation
+      ;;Defined by R6RS.  WHO must be false or a string or a symbol.  MESSAGE must be
+      ;;a string.  FORM must be a syntax object  or a datum value.  SUBFORM must be a
+      ;;syntax object or a datum value.
+      ;;
+      ;;The  SYNTAX-VIOLATION  procedure  raises  an exception,  reporting  a  syntax
+      ;;violation.   WHO should  describe  the macro  transformer  that detected  the
+      ;;exception.  The MESSAGE argument should  describe the violation.  FORM should
+      ;;be the erroneous  source syntax object or a datum  value representing a form.
+      ;;The  optional SUBFORM  argument  should be  a syntax  object  or datum  value
+      ;;representing a form that more precisely locates the violation.
+      ;;
+      ;;If WHO is false, SYNTAX-VIOLATION attempts  to infer an appropriate value for
+      ;;the  condition  object  (see  below)  as follows:  when  FORM  is  either  an
+      ;;identifier or a list-structured syntax object containing an identifier as its
+      ;;first  element,  then   the  inferred  value  is   the  identifier's  symbol.
+      ;;Otherwise, no value for WHO is provided as part of the condition object.
+      ;;
+      ;;The condition object provided with  the exception has the following condition
+      ;;types:
+      ;;
+      ;;* If WHO  is not false or  can be inferred, the condition  has condition type
+      ;;  "&who",  with WHO  as the  value of its  field.  In  that case,  WHO should
+      ;;  identify  the procedure or  entity that detected  the exception.  If  it is
+      ;;  false, the condition does not have condition type "&who".
+      ;;
+      ;;* The condition  has condition type "&message", with MESSAGE  as the value of
+      ;;  its field.
+      ;;
+      ;;* The  condition has condition  type "&syntax" with  FORM and SUBFORM  as the
+      ;;  value of its fields.  If SUBFORM  is not provided, the value of the subform
+      ;;  field is false.
+      ;;
+      ((who {msg string?} form)
+       (syntax-violation who msg form #f))
+      ((who {msg string?} form subform)
+       (%raise-compound-condition-object #f who msg form subform (make-syntax-violation form subform))))
 
     (define* (raise-compound-condition-object source-who {msg string?} input-form.stx condition-object)
-      (%raise-compound-condition-object #f source-who msg input-form.stx condition-object))
+      (%raise-compound-condition-object #f source-who msg input-form.stx #f condition-object))
 
     (define* (raise-compound-condition-object/continuable source-who {msg string?} input-form.stx condition-object)
-      (%raise-compound-condition-object #t source-who msg input-form.stx condition-object))
+      (%raise-compound-condition-object #t source-who msg input-form.stx #f condition-object))
 
-    (define (%raise-compound-condition-object continuable? source-who msg input-form.stx condition-object)
+    (define (%raise-compound-condition-object continuable? source-who msg input-form.stx sub-form.stx condition-object)
       ;;Raise a compound condition object.
       ;;
       ;;SOURCE-WHO can be a string, symbol or  false; it is used as value for "&who".
@@ -605,6 +605,10 @@
       ;;INPUT-FORM.STX must  be a (wrapped  or unwrapped) syntax  object representing
       ;;the subject of the  raised exception.  It is used for  both inferring a value
       ;;for "&who" and retrieving source location informations.
+      ;;
+      ;;SUB-FORM.STX  must  be  false  or  a (wrapped  or  unwrapped)  syntax  object
+      ;;representing the  subject of the  raised exception.   It is used  to retrieve
+      ;;source location informations.
       ;;
       ;;CONDITION-OBJECT is  an already built condition  object that is added  to the
       ;;raised compound.
@@ -627,8 +631,8 @@
       (define C1
 	(condition (make-message-condition msg)
 		   condition-object
-		   (%expression->source-position-condition input-form.stx)
-		   (%extract-macro-expansion-trace input-form.stx)))
+		   (%expression->source-position-condition (or sub-form.stx input-form.stx))
+		   (%extract-macro-expansion-trace         (or sub-form.stx input-form.stx))))
       (define C2
 	(if the-who
 	    (condition (make-who-condition the-who) C1)

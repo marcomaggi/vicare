@@ -27,7 +27,7 @@
 (program (test-vicare-records-typed)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -70,12 +70,12 @@
       => #t)
 
     (check
-	(xp.type-signature.tags (type-of (new alpha 1 2 3)))
+	(expander::type-signature.syntax-object (type-of (new alpha 1 2 3)))
       (=> syntax=?)
       (list #'alpha))
 
     (check
-	(xp.type-signature.tags (type-of (make-alpha 1 2 3)))
+	(expander::type-signature.syntax-object (type-of (make-alpha 1 2 3)))
       (=> syntax=?)
       (list #'alpha))
 
@@ -149,7 +149,7 @@
       (internal-body
 	(define-record-type duo
 	  (fields one two))
-	(xp.type-signature.tags (type-of (is-a? (read) duo))))
+	(expander::type-signature.syntax-object (type-of (is-a? (read) duo))))
     (=> syntax=?)
     (list #'<boolean>))
 
@@ -157,7 +157,7 @@
       (internal-body
 	(define-record-type duo
 	  (fields one two))
-	(xp.type-signature.tags (type-of (duo? (read)))))
+	(expander::type-signature.syntax-object (type-of (duo? (read)))))
     (=> syntax=?)
     (list #'<boolean>))
 
@@ -1220,8 +1220,8 @@
 	  (fields {one <fixnum>} {two <flonum>}))
 	(define {O duo}
 	  (new duo 1 2.3))
-	(values (xp.type-signature.tags (type-of (.one O)))
-		(xp.type-signature.tags (type-of (.two O)))))
+	(values (expander::type-signature.syntax-object (type-of (.one O)))
+		(expander::type-signature.syntax-object (type-of (.two O)))))
     (=> syntax=?)
     (list #'<fixnum>)
     (list #'<flonum>))
@@ -1232,8 +1232,8 @@
 	  (fields {one <fixnum>} {two <flonum>}))
 	(define {O duo}
 	  (new duo 1 2.3))
-	(values (xp.type-signature.tags (type-of (duo-one O)))
-		(xp.type-signature.tags (type-of (duo-two O)))))
+	(values (expander::type-signature.syntax-object (type-of (duo-one O)))
+		(expander::type-signature.syntax-object (type-of (duo-two O)))))
     (=> syntax=?)
     (list #'<fixnum>)
     (list #'<flonum>))

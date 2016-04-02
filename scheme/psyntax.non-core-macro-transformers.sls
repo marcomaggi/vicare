@@ -317,7 +317,7 @@
   (syntax-match input-form.stx ()
     ((_ ?type-name ?type-annotation)
      (identifier? ?type-name)
-     (let ((ots (type-annotation->object-type-specification ?type-annotation (current-inferior-lexenv) ?type-name)))
+     (let ((ots (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv) ?type-name)))
        (bless
 	`(define-syntax ,?type-name (quote ,ots)))))
     ))
@@ -1293,7 +1293,7 @@
 
 ;;;; non-core macro: WITH-SYNTAX
 
-(define (with-syntax-macro input-form.stx)
+(define-macro-transformer (with-syntax input-form.stx)
   ;;Transformer function  used to expand  R6RS WITH-SYNTAX macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -1324,9 +1324,9 @@
 		     (receive (pat idn*)
 			 (convert-pattern (car pat*) '())
 		       (append idn* (recur (cdr pat*))))))))
-       (let ((formals (map car idn*)))
-	 (unless (syntax-object.standard-formals? formals)
-	   (error-invalid-formals-syntax input-form.stx formals)))
+       ;;We validate the  patterns as standard LAMBDA formals.   This function raises
+       ;;an exception if a syntax violation is found.
+       (syntax-object.parse-standard-formals (map car idn*))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
 	  `(let ,(map list t* ?expr*)
@@ -1426,18 +1426,18 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (if (options::typed-language?)
-	 (receive (lhs* tag*)
-	     (syntax-object.parse-typed-list-of-bindings ?lhs* input-form.stx)
+	 (receive (lhs*.id lhs*.ots)
+	     (syntax-object.parse-typed-list-of-bindings ?lhs*)
 	   (bless
 	    `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
 					      ,?body . ,?body*)))
 		,?recur)
-	      . ,(map (lambda (rhs tag)
-			`(assert-signature-and-return (,tag) ,rhs))
-		   ?rhs* tag*))))
-       (let ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs* input-form.stx)))
+	      . ,(map (lambda (rhs ots)
+			`(assert-signature-and-return (,(object-type-spec.name ots)) ,rhs))
+		   ?rhs* lhs*.ots))))
+       (let ((lhs*.id (syntax-object.parse-standard-list-of-bindings ?lhs*)))
 	 (bless
-	  `((letrec ((,?recur (trace-lambda ,?recur ,lhs* ,?body . ,?body*)))
+	  `((letrec ((,?recur (trace-lambda ,?recur ,lhs*.id ,?body . ,?body*)))
 	      ,?recur)
 	    . ?rhs*)))))
     ))
@@ -1483,10 +1483,11 @@
 	     (if (null? lhs*)
 		 (values (reverse lhs*.standard)
 			 (reverse lhs*.signature))
+	       ;;LHS.SIGNATURE is an instance of "<type-signature>".
 	       (receive (lhs.standard lhs.signature)
 		   (if (options::typed-language?)
-		       (syntax-object.parse-typed-formals (car lhs*) input-form.stx)
-		     (syntax-object.parse-standard-formals (car lhs*) input-form.stx))
+		       (syntax-object.parse-typed-formals (car lhs*))
+		     (syntax-object.parse-standard-formals (car lhs*)))
 		 (loop (cdr lhs*)
 		       (cons lhs.standard  lhs*.standard)
 		       (cons lhs.signature lhs*.signature)))))
@@ -1507,7 +1508,7 @@
 		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
 		   `(call-with-values
 			(lambda/std ()
-			  (assert-signature-and-return ,(car lhs*.signature) ,(car rhs*)))
+			  (assert-signature-and-return ,(type-signature.syntax-object (car lhs*.signature)) ,(car rhs*)))
 		      (lambda/std ,y*
 			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				(cdr rhs*) standard-old* tagged-old* new*)))))
@@ -1733,68 +1734,12 @@
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
   ;;
-  (define (%make-unsafe-name ctx.id safe.id)
-    (datum->syntax ctx.id (string->symbol (string-append "~" (symbol->string (syntax->datum safe.id))))))
-  (define (%properise formals.stx)
-    (syntax-match formals.stx ()
-      ((?car . ?cdr)
-       (cons ?car (%properise ?cdr)))
-      (_
-       (list formals.stx))))
-  (syntax-match input-form.stx (brace)
-    ((_ (brace ?who . ?type) ?expr)
-     (list (if (options::typed-language?)
-	       (define/checked-id)
-	     (define/std-id))
-	   `(,(brace-id) ,?who . ,?type) ?expr))
-
-    ((_ ?who ?expr)
-     (identifier? ?who)
-     (list (define/std-id) ?who ?expr))
-
-    ((_ ?who)
-     (list (if (options::typed-language?)
-	       (define/typed-id)
-	     (define/std-id))
-	   ?who))
-
-    ((?kwd (?who . ?formals) . ?body*)
-     (if (options::typed-language?)
-	 ;;Here we want to expand:
-	 ;;
-	 ;;   (define ({fun <fixnum>} {a <fixnum>})
-	 ;;     a)
-	 ;;
-	 ;;into:
-	 ;;
-	 ;;   (begin
-	 ;;     (define/checked ({fun  <fixnum>} {a <fixnum>})
-	 ;;       (~fun a))
-	 ;;     (define/typed   ({~fun <fixnum>} {a <fixnum>})
-	 ;;       a))
-	 ;;
-	 (receive (standard-formals.stx clause-signature)
-	     (syntax-object.parse-typed-clambda-clause-formals ?formals input-form.stx)
-	   (receive (unsafe-name.id ~who.stx)
-	       (syntax-match ?who (brace)
-		 (?name
-		  (identifier? ?name)
-		  (let ((unsafe-name.id (%make-unsafe-name ?kwd ?name)))
-		    (values unsafe-name.id unsafe-name.id)))
-		 ((brace ?name . ?rv-types)
-		  (identifier? ?name)
-		  (let ((unsafe-name.id (%make-unsafe-name ?kwd ?name)))
-		    (values unsafe-name.id `(,(brace-id) ,unsafe-name.id . ,?rv-types))))
-		 (_
-		  (__synner__ "invalid syntax in function definition formals" ?who)))
-	     (let ((unsafe-application.stx (if (list? standard-formals.stx)
-					       (cons unsafe-name.id standard-formals.stx)
-					     (cons* (core-prim-id 'apply) unsafe-name.id (%properise standard-formals.stx)))))
-	       `(,(begin-id)
-		 (,(define/checked-id) (,?who     . ,?formals) ,unsafe-application.stx)
-		 (,(define/typed-id)   (,~who.stx . ,?formals) . ,?body*)))))
-       (cons (core-prim-id 'define/std)
-	     `((,?who . ,?formals) . ,?body*))))
+  (syntax-match input-form.stx ()
+    ((_ . ?stuff)
+     (cons (if (options::typed-language?)
+	       (core-prim-id 'define/checked)
+	     (core-prim-id 'define/std))
+	   ?stuff))
     ))
 
 (define-macro-transformer (case-define input-form.stx)
@@ -2457,82 +2402,55 @@
 
 ;;;; non-core macro: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
 
-(define (trace-lambda-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's TRACE-LAMBDA  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (trace-lambda input-form.stx)
+  ;;Transformer  function  used  to  expand Vicare's  TRACE-LAMBDA  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?who (?formal* ...) ?body ?body* ...)
-     (begin
-       ;;We parse the formals for validation purposes.
-       (syntax-object.parse-typed-clambda-clause-formals ?formal* expr-stx)
-       (bless
-	`(make-traced-procedure ',?who
-				(lambda/std ,?formal*
-				  ,?body . ,?body*)))))
+  (syntax-match input-form.stx ()
+    ((_ ?who ?formals ?body ?body* ...)
+     (identifier? ?who)
+     (bless
+      `(make-traced-procedure (quote ,?who) (lambda/std ,?formals ,?body . ,?body*))))
+    (_
+     (__synner__ "invalid syntax"))))
 
-    ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
-     (begin
-       ;;We parse the formals for validation purposes.
-       (syntax-object.parse-typed-clambda-clause-formals (append ?formal* ?rest-formal) expr-stx)
-       (bless
-	`(make-traced-procedure ',?who
-				(lambda/std (,@?formal* . ,?rest-formal)
-				  ,?body . ,?body*)))))
-    ))
-
-(define (trace-define-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's TRACE-DEFINE  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (trace-define input-form.stx)
+  ;;Transformer  function  used  to  expand Vicare's  TRACE-DEFINE  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (with-who trace-define
-    (syntax-match expr-stx ()
-      ((_ (?who ?formal* ...) ?body ?body* ...)
-       (begin
-	 ;;We parse the formals for validation purposes.
-	 (syntax-object.parse-typed-clambda-clause-formals ?formal* expr-stx)
-	 (bless
-	  `(define ,?who
-	     (make-traced-procedure ',?who
-				    (lambda/std ,?formal*
-				      ,?body . ,?body*))))))
+  (syntax-match input-form.stx ()
+    ((_ (?who . ?formals) ?body ?body* ...)
+     (identifier? ?who)
+     (bless
+      `(define ,?who
+	 (make-traced-procedure ',?who (lambda/std ,?formals ,?body . ,?body*)))))
 
-      ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-       (begin
-	 ;;We parse the formals for validation purposes.
-	 (syntax-object.parse-typed-clambda-clause-formals (append ?formal* ?rest-formal) expr-stx)
-	 (bless
-	  `(define ,?who
-	     (make-traced-procedure ',?who
-				    (lambda/std (,@?formal* . ,?rest-formal)
-				      ,?body . ,?body*))))))
+    ((_ ?who ?expr)
+     (bless
+      `(define ,?who
+	 (let ((v ,?expr))
+	   (if (procedure? v)
+	       (make-traced-procedure ',?who v)
+	     v)))))
 
-      ((_ ?who ?expr)
-       (if (identifier? ?who)
-	   (bless `(define ,?who
-		     (let ((v ,?expr))
-		       (if (procedure? v)
-			   (make-traced-procedure ',?who v)
-			 v))))
-	 (syntax-violation __who__ "invalid name" expr-stx)))
-      )))
+    (_
+     (__synner__ "invalid syntax"))))
 
-(define (trace-define-syntax-macro expr-stx)
-  ;;Transformer  function used  to  expand Vicare's  TRACE-DEFINE-SYNTAX
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (trace-define-syntax input-form.stx)
+  ;;Transformer function used to expand  Vicare's TRACE-DEFINE-SYNTAX macros from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (with-who trace-define-syntax
-    (syntax-match expr-stx ()
-      ((_ ?who ?expr)
-       (if (identifier? ?who)
-	   (bless
-	    `(define-syntax ,?who
-	       (make-traced-macro ',?who ,?expr)))
-	 (syntax-violation __who__ "invalid name" expr-stx)))
-      )))
+  (syntax-match input-form.stx ()
+    ((_ ?who ?expr)
+     (identifier? ?who)
+     (bless
+      `(define-syntax ,?who
+	 (make-traced-macro ',?who ,?expr))))
+    (_
+     (__synner__ "invalid syntax"))))
 
 
 ;;;; non-core macro: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
@@ -2540,35 +2458,32 @@
 (module (trace-let-syntax-macro
 	 trace-letrec-syntax-macro)
 
-  (define (%trace-let/rec-syntax who)
-    (lambda (stx)
-      (syntax-match stx ()
-	((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-	 (if (valid-bound-ids? ?lhs*)
-	     (let ((rhs* (map (lambda (lhs rhs)
-				`(make-traced-macro ',lhs ,rhs))
-			   ?lhs* ?rhs*)))
-	       (bless
-		`(,who ,(map list ?lhs* rhs*)
-		       ,?body . ,?body*)))
-	   (error-invalid-formals-syntax stx ?lhs*)))
-	)))
-
-  (define trace-let-syntax-macro
-    ;;Transformer  function  used  to expand  Vicare's  TRACE-LET-SYNTAX
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
+  (define-macro-transformer (trace-let-syntax input-form.stx)
+    ;;Transformer function used  to expand Vicare's TRACE-LET-SYNTAX  macros from the
+    ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
+    ;;a syntax object that must be further expanded.
     ;;
-    (%trace-let/rec-syntax 'let-syntax))
+    (%transformer __who__ input-form.stx __synner__))
 
-  (define trace-letrec-syntax-macro
-    ;;Transformer function  used to expand  Vicare's TRACE-LETREC-SYNTAX
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
+  (define-macro-transformer (trace-letrec-syntax input-form.stx)
+    ;;Transformer function  used to  expand Vicare's TRACE-LETREC-SYNTAX  macros from
+    ;;the top-level  built in  environment.  Expand  the contents  of INPUT-FORM.STX;
+    ;;return a syntax object that must be further expanded.
     ;;
-    (%trace-let/rec-syntax 'letrec-syntax))
+    (%transformer __who__ input-form.stx __synner__))
+
+  (define (%transformer caller-who input-form.stx synner)
+    (syntax-match input-form.stx ()
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (let* ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs*))
+	      (rhs* (map (lambda (lhs rhs)
+			   `(make-traced-macro ',lhs ,rhs))
+		      lhs* ?rhs*)))
+	 (bless
+	  `(,caller-who ,(map list ?lhs* rhs*)
+			,?body . ,?body*))))
+      (_
+       (synner "invalid syntax"))))
 
   #| end of module |# )
 
@@ -4384,8 +4299,8 @@
       ))
 
   (define (define-values/std-macro input-form.stx input-formals.stx body*.stx)
-    (receive (standard-formals.stx signature.stx)
-	(syntax-object.parse-standard-formals input-formals.stx input-form.stx)
+    (receive (standard-formals.stx formals.sig)
+	(syntax-object.parse-standard-formals input-formals.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)
 	 ;;We want this expansion:
@@ -4453,8 +4368,8 @@
 	)))
 
   (define (define-values/checked-macro input-form.stx input-formals.stx body*.stx)
-    (receive (standard-formals.stx signature.stx)
-	(syntax-object.parse-typed-formals input-formals.stx input-form.stx)
+    (receive (standard-formals.stx formals.sig)
+	(syntax-object.parse-typed-formals input-formals.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)
 	 ;;We want this expansion:
@@ -4470,7 +4385,7 @@
 	 ;;        (assert-signature-and-return (?type0) TMP0)))))
 	 ;;
 	 (receive (tag* tag0)
-	     (proper-list->head-and-last signature.stx)
+	     (proper-list->head-and-last (type-signature.syntax-object formals.sig))
 	   (let ((TMP* (generate-temporaries ?id*)))
 	     (bless
 	      `(begin
@@ -4502,7 +4417,7 @@
 	 ;;
 	 (let ((TMP* (generate-temporaries ?id*)))
 	   (receive (tag* rest-tag)
-	       (improper-list->list-and-rest signature.stx)
+	       (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
@@ -4521,11 +4436,11 @@
 	(?args
 	 (identifier? ?args)
 	 (bless
-	  `(define/checked (brace ,?args ,signature.stx)
+	  `(define/checked (brace ,?args ,(type-signature.syntax-object formals.sig))
 	     (call-with-values
 		 (lambda/std () . ,body*.stx)
 	       (lambda/std args
-		 (assert-signature-and-return (,signature.stx) args))))))
+		 (assert-signature-and-return (,(type-signature.syntax-object formals.sig)) args))))))
 	)))
 
   #| end of module: DEFINE-VALUES-MACRO |# )
@@ -4548,78 +4463,73 @@
       ))
 
   (define (define-constant-values/std-macro input-form.stx formals.stx body*.stx)
-    (receive (standard-formals.stx signature.stx)
-	(syntax-object.parse-standard-formals formals.stx input-form.stx)
+    (receive (standard-formals.stx formals.sig)
+	(syntax-object.parse-standard-formals formals.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)
 	 (let ((SHADOW* (generate-temporaries ?id*))
 	       (TMP*    (generate-temporaries ?id*)))
-	   (receive (tag* tag0)
-	       (proper-list->head-and-last signature.stx)
-	     (bless
-	      `(begin
-		 ,@(map (lambda (var)
-			  `(define/std ,var))
-		     SHADOW*)
-		 (define/std SHADOW0
-		   (call-with-values
-		       (lambda/std () . ,body*.stx)
-		     (lambda/std (,@TMP* TMP0)
-		       ,@(map (lambda (var TMP)
-				`(set! ,var ,TMP))
-			   SHADOW* TMP*)
-		       TMP0)))
-		 ,@(map (lambda (var SHADOW)
-			  `(define-syntax ,var (identifier-syntax ,SHADOW)))
-		     ?id* SHADOW*)
-		 (define-syntax ,?id0 (identifier-syntax SHADOW0))
-		 #| end of BEGIN |# )))))
+	   (bless
+	    `(begin
+	       ,@(map (lambda (var)
+			`(define/std ,var))
+		   SHADOW*)
+	       (define/std SHADOW0
+		 (call-with-values
+		     (lambda/std () . ,body*.stx)
+		   (lambda/std (,@TMP* TMP0)
+		     ,@(map (lambda (var TMP)
+			      `(set! ,var ,TMP))
+			 SHADOW* TMP*)
+		     TMP0)))
+	       ,@(map (lambda (var SHADOW)
+			`(define-syntax ,var (identifier-syntax ,SHADOW)))
+		   ?id* SHADOW*)
+	       (define-syntax ,?id0 (identifier-syntax SHADOW0))
+	       #| end of BEGIN |# ))))
 
 	((?id* ... . ?rest-id)
 	 (let ((SHADOW* (generate-temporaries ?id*))
 	       (TMP*    (generate-temporaries ?id*)))
-	   (receive (tag* rest-tag)
-	       (improper-list->list-and-rest signature.stx)
-	     (bless
-	      `(begin
-		 ,@(map (lambda (var)
-			  `(define/std ,var))
-		     SHADOW*)
-		 (define/std rest-shadow
-		   (call-with-values
-		       (lambda/std () . ,body*.stx)
-		     (lambda/std (,@TMP* . rest)
-		       ,@(map (lambda (var TMP)
-				`(set! ,var ,TMP))
-			   SHADOW* TMP*)
-		       rest)))
-		 ,@(map (lambda (var SHADOW)
-			  `(define-syntax ,var (identifier-syntax ,SHADOW)))
-		     ?id* SHADOW*)
-		 (define-syntax ,?rest-id (identifier-syntax rest-shadow))
-		 #| end of BEGIN |# )))))
+	   (bless
+	    `(begin
+	       ,@(map (lambda (var)
+			`(define/std ,var))
+		   SHADOW*)
+	       (define/std rest-shadow
+		 (call-with-values
+		     (lambda/std () . ,body*.stx)
+		   (lambda/std (,@TMP* . rest)
+		     ,@(map (lambda (var TMP)
+			      `(set! ,var ,TMP))
+			 SHADOW* TMP*)
+		     rest)))
+	       ,@(map (lambda (var SHADOW)
+			`(define-syntax ,var (identifier-syntax ,SHADOW)))
+		   ?id* SHADOW*)
+	       (define-syntax ,?rest-id (identifier-syntax rest-shadow))
+	       #| end of BEGIN |# ))))
 
 	(?args
 	 (identifier? ?args)
-	 (let ((args-tag signature.stx))
-	   (bless
-	    `(begin
-	       (define/std shadow
-		 (call-with-values
-		     (lambda/std () . ,body*.stx)
-		   (lambda/std args args)))
-	       (define-syntax ,?args (identifier-syntax shadow))))))
+	 (bless
+	  `(begin
+	     (define/std shadow
+	       (call-with-values
+		   (lambda/std () . ,body*.stx)
+		 (lambda/std args args)))
+	     (define-syntax ,?args (identifier-syntax shadow)))))
 	)))
 
   (define (define-constant-values/checked-macro input-form.stx formals.stx body*.stx)
-    (receive (standard-formals.stx signature.stx)
-	(syntax-object.parse-typed-formals formals.stx input-form.stx)
+    (receive (standard-formals.stx formals.sig)
+	(syntax-object.parse-typed-formals formals.stx)
       (syntax-match standard-formals.stx ()
 	((?id* ... ?id0)
 	 (let ((SHADOW* (generate-temporaries ?id*))
 	       (TMP*    (generate-temporaries ?id*)))
 	   (receive (tag* tag0)
-	       (proper-list->head-and-last signature.stx)
+	       (proper-list->head-and-last (type-signature.syntax-object formals.sig))
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
@@ -4644,7 +4554,7 @@
 	 (let ((SHADOW* (generate-temporaries ?id*))
 	       (TMP*    (generate-temporaries ?id*)))
 	   (receive (tag* rest-tag)
-	       (improper-list->list-and-rest signature.stx)
+	       (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var tag)
@@ -4667,7 +4577,7 @@
 
 	(?args
 	 (identifier? ?args)
-	 (let ((args-tag signature.stx))
+	 (let ((args-tag (type-signature.syntax-object formals.sig)))
 	   (bless
 	    `(begin
 	       (define/checked (brace shadow ,args-tag)
@@ -4691,10 +4601,10 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals.stx formals-signature.stx)
+     (receive (standard-formals.stx formals.sig)
 	 (if (options::typed-language?)
-	     (syntax-object.parse-typed-formals ?formals input-form.stx)
-	   (syntax-object.parse-standard-formals ?formals input-form.stx))
+	     (syntax-object.parse-typed-formals ?formals)
+	   (syntax-object.parse-standard-formals ?formals))
        (let ((single-return-value? (and (list? standard-formals.stx)
 					(= 1 (length standard-formals.stx)))))
 	 (if single-return-value?
@@ -4713,10 +4623,10 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals.stx formals-signature.stx)
+     (receive (standard-formals.stx formals.sig)
 	 (if (options::typed-language?)
-	     (syntax-object.parse-typed-formals ?formals input-form.stx)
-	   (syntax-object.parse-standard-formals ?formals input-form.stx))
+	     (syntax-object.parse-typed-formals ?formals)
+	   (syntax-object.parse-standard-formals ?formals))
        (receive (rv-form single-return-value?)
 	   (cond ((list? standard-formals.stx)
 		  (if (= 1 (length standard-formals.stx))

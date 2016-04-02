@@ -33,8 +33,7 @@
    syntax->vector
    syntax-unwrap		syntax=?
 
-   parse-logic-predicate-syntax
-   error-invalid-formals-syntax)
+   parse-logic-predicate-syntax)
 
 
 ;;;; high-level syntax object utilities
@@ -265,64 +264,6 @@
        `(not ,(recurse ?expr))))
      (else
       (tail-proc stx)))))
-
-
-;;;; formals syntax validation
-
-(define (error-invalid-formals-syntax input-form-stx formals-stx)
-  ;;Raise an error for invalid formals of LAMBDA, CASE-LAMBDA, LET and similar.
-  ;;
-  ;;If no invalid  formals are found: return unspecified values,  else raise a syntax
-  ;;violation.  This function is called when  it has been already determined that the
-  ;;formals have something wrong.
-  ;;
-  ;;For a LAMBDA syntax:
-  ;;
-  ;;   (lambda ?formals . ?body)
-  ;;
-  ;;it is called as:
-  ;;
-  ;;   (error-invalid-formals-syntax
-  ;;      #'(lambda ?formals . ?body)
-  ;;      #'?formals)
-  ;;
-  ;;For a LET syntax:
-  ;;
-  ;;   (let ((?lhs* ?rhs*) ...) . ?body)
-  ;;
-  ;;it is called as:
-  ;;
-  ;;   (error-invalid-formals-syntax
-  ;;      #'(let ((?lhs* ?rhs*) ...) . ?body)
-  ;;      #'?lhs*)
-  ;;
-  ;;NOTE Invalid  LET-VALUES and LET*-VALUES  formals are processed by  this function
-  ;;indirectly;  LET-VALUES  and  LET*-VALUES  syntaxes are  first  transformed  into
-  ;;CALL-WITH-VALUES  syntaxes, then  it  is the  LAMBDA syntax  that  takes care  of
-  ;;formals validation.
-  ;;
-  (define (%synner message subform)
-    (syntax-violation 'error-invalid-formals-syntax message input-form-stx subform))
-  (syntax-match formals-stx ()
-    ((?id* ... . ?last)
-     (let recur ((?id* (cond ((identifier? ?last)
-			      (cons ?last ?id*))
-			     ((syntax-null? ?last)
-			      ?id*)
-			     (else
-			      (%synner "not an identifier" ?last)))))
-       (cond ((null? ?id*)
-	      (void))
-	     ((not (identifier? (car ?id*)))
-	      (%synner "not an identifier" (car ?id*)))
-	     (else
-	      (recur (cdr ?id*))
-	      (when (bound-id-member? (car ?id*)
-				      (cdr ?id*))
-		(%synner "duplicate binding" (car ?id*)))))))
-
-    (_
-     (%synner "malformed binding form" formals-stx))))
 
 
 ;;;; done

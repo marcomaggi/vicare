@@ -27,7 +27,7 @@
 (program (test-vicare-typed-language-scheme-objects)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -51,7 +51,7 @@
     => 123)
 
   (check
-      (xp.type-signature.tags (type-of (new <top> (read))))
+      (expander::type-signature.syntax-object (type-of (new <top> (read))))
     (=> syntax=?)
     (list #'<top>))
 
@@ -95,7 +95,7 @@
     => '#!void)
 
   (check
-      (xp.type-signature.tags (type-of (new <void>)))
+      (expander::type-signature.syntax-object (type-of (new <void>)))
     (=> syntax=?)
     (list #'<void>))
 
@@ -124,13 +124,13 @@
 
   (check
       (let (({f <procedure>} (lambda (x) x)))
-	(xp.type-signature.tags (type-of (f 1))))
+	(expander::type-signature.syntax-object (type-of (f 1))))
     (=> syntax=?)
     #'<list>)
 
   (check
       (let (({f <procedure>} (unsafe-cast-signature (<procedure>) (lambda (x) x))))
-	(xp.type-signature.tags (type-of f)))
+	(expander::type-signature.syntax-object (type-of f)))
     (=> syntax=?)
     (list #'<procedure>))
 

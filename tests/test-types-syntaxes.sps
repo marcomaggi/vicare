@@ -74,7 +74,7 @@
   (environment '(vicare) '(some-type-annotations)))
 
 (define (%type-signature->sexp sig)
-  (syntax->datum (expander::type-signature.tags sig)))
+  (syntax->datum (expander::type-signature.syntax-object sig)))
 
 (define-syntax check-expand-time-signature-violation
   (syntax-rules (=>)
@@ -85,8 +85,8 @@
 	   (catch E
 	     ((expander::&expand-time-type-signature-violation)
 	      #;(print-condition E)
-	      (values (syntax->datum (expander::type-signature.tags (expander::condition-expected-type-signature E)))
-		      (syntax->datum (expander::type-signature.tags (expander::condition-returned-type-signature E)))))
+	      (values (syntax->datum (expander::type-signature.syntax-object (expander::condition-expected-type-signature E)))
+		      (syntax->datum (expander::type-signature.syntax-object (expander::condition-returned-type-signature E)))))
 	     (else E)))
        => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
     ))

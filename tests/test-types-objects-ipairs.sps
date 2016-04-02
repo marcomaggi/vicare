@@ -60,7 +60,7 @@
     => (ipair 1 2))
 
   (check
-      (.tags (type-of (new <ipair> (read) (read))))
+      (.syntax-object (type-of (new <ipair> (read) (read))))
     (=> syntax=?)
     #'(<ipair>))
 

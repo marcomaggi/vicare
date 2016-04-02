@@ -51,7 +51,7 @@
        (check
 	   ;;The  return value  of  a  TYPE-OF use  expansion  and  evaluation is  an
 	   ;;instance of "<type-signature>".
-	   (.tags (type-of ?expression))
+	   (.syntax-object (type-of ?expression))
 	 (=> syntax=?)
 	 ;;When the expression is a CONDITION application: the expected tags value is
 	 ;;a list with a single item.
@@ -85,7 +85,7 @@
       ((_ ?type-annotation ?expected-tags)
        ;;Here we test only type signature describing a single value.
        (check
-	   (.tags (new expander::<type-signature> #'(?type-annotation)))
+	   (.syntax-object (new expander::<type-signature> #'(?type-annotation)))
 	 (=> syntax=?)
 	 #'(?expected-tags)))
       ))
@@ -131,7 +131,7 @@
     => '#(1 2 3))
 
   (check
-      (expander::type-signature.tags (type-of (new <vector> (read))))
+      (expander::type-signature.syntax-object (type-of (new <vector> (read))))
     (=> syntax=?)
     #'((vector <top>)))
 

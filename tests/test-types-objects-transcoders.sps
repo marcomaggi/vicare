@@ -27,7 +27,7 @@
 (program (test-types-objects-transcoder)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -66,7 +66,7 @@
     => #t)
 
   (check
-      (xp.type-signature.tags (type-of (new <transcoder> (read) (read) (read))))
+      (expander::type-signature.syntax-object (type-of (new <transcoder> (read) (read) (read))))
     (=> syntax=?)
     (list #'<transcoder>))
 

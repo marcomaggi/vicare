@@ -27,7 +27,7 @@
 (program (test-types-boolean-objects)
   (options typed-language)
   (import (vicare)
-    (prefix (vicare expander) xp.)
+    (prefix (vicare expander) expander::)
     (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -69,7 +69,7 @@
   (check-for-false	(new <boolean> #f))
 
   (check
-      (xp.type-signature.tags (type-of (new <boolean> (read))))
+      (expander::type-signature.syntax-object (type-of (new <boolean> (read))))
     (=> syntax=?)
     (list #'<boolean>))
 

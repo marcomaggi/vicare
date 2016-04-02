@@ -217,7 +217,7 @@
   make-type-signature type-signature?
   (methods
    (specs			type-signature.specs)
-   (tags			type-signature.tags)))
+   (syntax-object		type-signature.syntax-object)))
 
 ;;; --------------------------------------------------------------------
 

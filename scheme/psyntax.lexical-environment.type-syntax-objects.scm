@@ -26,7 +26,6 @@
    syntax-object.typed-argument?			syntax-object.parse-typed-argument
    syntax-object.parse-standard-formals			syntax-object.parse-typed-formals
    syntax-object.parse-standard-list-of-bindings	syntax-object.parse-typed-list-of-bindings
-   syntax-object.standard-formals?			syntax-object.typed-formals?
    #| end of exports |# )
 
 
@@ -111,7 +110,7 @@
   ((stx lexenv)
    (syntax-match stx (brace)
      ((brace ?id ?type)
-      (values ?id (type-annotation->object-type-specification ?type lexenv)))
+      (values ?id (type-annotation->object-type-spec ?type lexenv)))
      (?id
       (identifier? ?id)
       (values ?id (<top>-ots))))))
@@ -119,7 +118,7 @@
 
 ;;;; standard binding parsing: proper lists of bindings left-hand sides
 
-(case-define* syntax-object.parse-standard-list-of-bindings
+(define* (syntax-object.parse-standard-list-of-bindings lhs*)
   ;;Parser function  for lists of standard  syntactic bindings.  It is  used to parse
   ;;bindings from  LET, DO  and similar  syntaxes.  For  example, when  expanding the
   ;;syntax:
@@ -129,7 +128,7 @@
   ;;         (c #t))
   ;;     . ?body)
   ;;
-  ;;the argument BINDING* is:
+  ;;the argument LHS* is:
   ;;
   ;;   (#'a #'b #'c)
   ;;
@@ -137,33 +136,34 @@
   ;;
   ;;   (#'a #'b #'c)
   ;;
-  ;;Assume BINDING* is a syntax object representing a proper list of standard binding
-  ;;identifiers; parse  the list and a  list of identifiers representing  the binding
-  ;;identifiers.  The identifiers must be distinct.
+  ;;Assume LHS*  is a syntax  object representing a  proper list of  standard binding
+  ;;identifiers;  parse the  list as  list  of identifiers  representing the  binding
+  ;;identifiers.  The  identifiers must be  distinct.  The returned syntax  object is
+  ;;fully unwrapped.
   ;;
-  ((binding*)
-   (syntax-object.parse-standard-list-of-bindings binding* #f))
-  ((binding* input-form.stx)
-   (define (%error message)
-     (syntax-violation __who__ message (or input-form.stx binding*) (if input-form.stx binding* #f)))
-   (define lexenv
-     (current-inferior-lexenv))
-   (receive-and-return (id*)
-       (let recur ((bind* binding*))
-	 (syntax-match bind* (brace)
-	   (() '())
-	   ((?id . ?other-id*)
-	    (identifier? ?id)
-	    (cons ?id (recur ?other-id*)))
-	   (_
-	    (%error "invalid standard syntactic bindings syntax"))))
-     (unless (distinct-bound-ids? id*)
-       (%error "duplicate identifiers in syntactic bindings specification")))))
+  (receive-and-return (unwrapped-lhs*)
+      (let recur ((stx lhs*))
+	(syntax-match stx ()
+	  ((?car . ?cdr)
+	   (if (identifier? ?car)
+	       (cons ?car (recur ?cdr))
+	     (syntax-violation __who__
+	       "expected identifier as syntactic binding name" ?car)))
+	  (()
+	   '())
+	  (?thing
+	   (syntax-violation __who__
+	     "expected identifier as syntactic binding name" ?thing))))
+    (cond ((duplicate-bound-formals? unwrapped-lhs*)
+	   => (lambda (duplicate-id)
+		(syntax-violation __who__
+		  "duplicate identifiers among syntactic binding names"
+		  duplicate-id))))))
 
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
-(case-define* syntax-object.parse-typed-list-of-bindings
+(define* (syntax-object.parse-typed-list-of-bindings lhs*)
   ;;Parser  function for  lists of  typed syntactic  bindings.  It  is used  to parse
   ;;bindings from  LET, DO  and similar  syntaxes.  For  example, when  expanding the
   ;;syntax:
@@ -173,7 +173,7 @@
   ;;         (c            #t))
   ;;     . ?body)
   ;;
-  ;;the argument BINDING* is:
+  ;;the argument LHS* is:
   ;;
   ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
   ;;
@@ -181,49 +181,56 @@
   ;;
   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
   ;;
-  ;;Assume BINDING* is  a syntax object representing a proper  list of possibly typed
-  ;;binding identifiers;  parse the list and  return 2 values: a  list of identifiers
-  ;;representing the binding identifiers, a list of identifiers representing the type
-  ;;tags; "<top>" is used when no tag is present.  The identifiers must be distinct.
+  ;;Assume  LHS* is  a syntax  object representing  a proper  list of  possibly typed
+  ;;binding identifiers.  Parse the list and return the following values:
   ;;
-  ((binding*)
-   (syntax-object.parse-typed-list-of-bindings binding* #f))
-  ((binding* input-form.stx)
-   (define (%error message)
-     (syntax-violation __who__ message (or input-form.stx binding*) (if input-form.stx binding* #f)))
-   (define lexenv
-     (current-inferior-lexenv))
-   (receive-and-return (id* tag*)
-       (let recur ((bind* binding*))
-	 (syntax-match bind* (brace)
-	   (()
-	    (values '() '()))
-	   (((brace ?id ?tag) . ?other-id*)
-	    (begin
-	      (with-exception-handler
-		  (lambda (E)
-		    (raise (condition (make-who-condition __who__)
-				      (make-message-condition "invalid typed binding")
-				      E)))
-		(lambda ()
-		  (type-annotation->object-type-specification ?tag lexenv ?tag)))
-	      (receive (id* tag*)
-		  (recur ?other-id*)
-		(values (cons ?id id*) (cons ?tag tag*)))))
-	   ((?id . ?other-id*)
-	    (identifier? ?id)
-	    (receive (id* tag*)
-		(recur ?other-id*)
-	      (values (cons ?id id*) (cons (<top>-type-id) tag*))))
-	   (_
-	    (%error "invalid tagged bindings syntax"))))
-     (unless (distinct-bound-ids? id*)
-       (%error "duplicate identifiers in bindings specification")))))
+  ;;1. A list of syntactic identifiers representing the syntactic binding names.
+  ;;
+  ;;2. A  list of instances  of type "<object-type-spec>" representing  the syntactic
+  ;;   bindings' types.  "<top>" is used when the binding is untyped.
+  ;;
+  (define lexenv
+    (current-inferior-lexenv))
+  (receive-and-return (lhs*.id lhs*.ots)
+      (let recur ((stx lhs*))
+	(syntax-match stx (brace)
+	  (()
+	   (values '() '()))
+	  (((brace ?id ?type) . ?other-lhs*)
+	   (receive (lhs*.id lhs*.ots)
+	       (recur ?other-lhs*)
+	     (values (cons (if (identifier? ?id)
+			       ?id
+			     (syntax-violation __who__
+			       "expected identifier as syntactic binding name" ?id))
+			    lhs*.id)
+		     (cons (with-exception-handler
+			       (lambda (E)
+				 (raise (condition (make-who-condition __who__)
+						   (make-message-condition "invalid typed binding")
+						   E)))
+			     (lambda ()
+			       (type-annotation->object-type-spec ?type lexenv ?type)))
+			   lhs*.ots))))
+	  ((?id . ?other-lhs*)
+	   (identifier? ?id)
+	   (receive (lhs*.id lhs*.ots)
+	       (recur ?other-lhs*)
+	     (values (cons ?id lhs*.id)
+		     (cons (<top>-ots) lhs*.ots))))
+	  (?thing
+	   (syntax-violation __who__
+	     "expected optionally typed identifier as syntactic binding name" ?thing))))
+    (cond ((duplicate-bound-formals? lhs*.id)
+	   => (lambda (duplicate-id)
+		(syntax-violation __who__
+		  "duplicate identifiers among syntactic binding names"
+		  duplicate-id))))))
 
 
 ;;;; standard binding parsing: standard LAMBDA formals
 
-(define* (syntax-object.parse-standard-formals formals.stx input-form.stx)
+(module (syntax-object.parse-standard-formals)
   ;;Parse the  given syntax  object as standard  (untyped) LET-VALUES  formals (these
   ;;formals are  equal to the ones  of standard lambda clauses).   Test for duplicate
   ;;bindings.  If the syntax is invalid: raise an exception.
@@ -231,80 +238,83 @@
   ;;When successful return the following values:
   ;;
   ;;1. A  proper or improper list  of identifiers representing the  standard formals.
-  ;;It is the argument FORMALS.STX itself, but fully unwrapped.
+  ;;   It is the argument FORMALS.STX itself, but fully unwrapped.
   ;;
-  ;;2.   A  syntax   object   representing   the  type   signature   as  defined   by
-  ;;SYNTAX-OBJECT.TYPE-SIGNATURE?.
+  ;;2. An instance of "<type-signature>" representing the types of the formals.
   ;;
   ;;NOTE We return two values (including FORMALS.STX  itself) to make the API of this
   ;;function equal to  the one of SYNTAX-OBJECT.PARSE-TYPED-FORMALS, so  that the two
   ;;can be used as:
   ;;
-  ;;   (if (options::strict-r6rs)
-  ;;       (syntax-object.parse-standard-formals formals.stx input-form.stx)
-  ;;     (syntax-object.parse-typed-formals formals.stx input-form.stx))
+  ;;   (if (options::typed-language?)
+  ;;       (syntax-object.parse-typed-formals formals.stx)
+  ;;     (syntax-object.parse-standard-formals formals.stx))
   ;;
   ;;it makes the code simpler to read.  (Marco Maggi; Wed Feb  3, 2016)
   ;;
-  (define-syntax __func_who__
-    (identifier-syntax (quote syntax-object.parse-standard-formals)))
-  (define (%synner message subform)
-    (syntax-violation __func_who__ message input-form.stx subform))
-  (define (%one-untyped-for-each item*)
-    (map (lambda (x) (<top>-type-id)) item*))
-  (define (%validate-standard-formals standard-formals.stx %synner)
+  (define-module-who syntax-object.parse-standard-formals)
+
+  (define (syntax-object.parse-standard-formals input-formals.stx)
+    (receive (standard-formals.stx formals.ots)
+	(%parse-standard-formals input-formals.stx)
+      (values standard-formals.stx (make-type-signature formals.ots))))
+
+  (define* (%parse-standard-formals input-formals.stx)
+    (case-define %synner
+      ((message)
+       (%synner message #f))
+      ((message subform)
+       (syntax-violation __module_who__ message input-formals.stx subform)))
+    (syntax-match input-formals.stx (brace)
+      (?args-id
+       (identifier? ?args-id)
+       (values ?args-id (<list>-ots)))
+
+      (()
+       (values '() '()))
+
+      ((?arg0 ?arg* ...)
+       (let ((arg*.stx		(cons ?arg0 ?arg*)))
+	 (%validate-standard-formals arg*.stx %synner)
+	 (values arg*.stx (%one-untyped-for-each arg*.stx))))
+
+      ((?arg0 ?arg* ... . ?rest-id)
+       (let* ((arg*.stx		(cons ?arg0 ?arg*))
+	      (formals.stx	(append arg*.stx ?rest-id)))
+	 (%validate-standard-formals formals.stx %synner)
+	 ;;This APPEND application returns an improper list.
+	 (values formals.stx (append (%one-untyped-for-each arg*.stx) (<list>-ots)))))
+
+      (_
+       (%synner "invalid standard formals syntax"))))
+
+  (define (%validate-standard-formals standard-formals.stx synner)
+    ;;We expect STANDARD-FORMALS.STX to be fully unwrapped.
+    ;;
+    (let loop ((stx standard-formals.stx))
+      (cond ((pair? stx)
+	     (if (identifier? (car stx))
+		 (loop (cdr stx))
+	       (synner "expected identifier as formals component" (car stx))))
+	    ((or (null?       stx)
+		 (identifier? stx)))
+	    (else
+	     (synner "expected identifier as formals component" stx))))
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
-		(%synner "duplicate identifiers in formals specification" duplicate-id)))))
-  (syntax-match formals.stx (brace)
-    (?args-id
-     (identifier? ?args-id)
-     (values ?args-id (<list>-type-id)))
+		(synner "duplicate identifiers in formals syntax" duplicate-id)))))
 
-    ((?arg* ...)
-     (for-all identifier? ?arg*)
-     (begin
-       (%validate-standard-formals ?arg* %synner)
-       (values ?arg* (%one-untyped-for-each ?arg*))))
+  (define (%one-untyped-for-each item*)
+    (map (lambda (x) (<top>-ots)) item*))
 
-    ((?arg* ... . ?rest-id)
-     (and (for-all identifier? ?arg*)
-	  (identifier? ?rest-id))
-     (begin
-       (%validate-standard-formals (append ?arg* ?rest-id) %synner)
-       ;;These APPEND applications return an improper list.
-       (values (append ?arg* ?rest-id)
-	       (append (%one-untyped-for-each ?arg*) (<list>-type-id)))))
-
-    (_
-     (%synner "invalid standard formals specification" formals.stx))))
-
-(define (syntax-object.standard-formals? stx)
-  ;;Return  true if  STX is  a syntax  object representing  R6RS standard  LAMBDA and
-  ;;LET-VALUES formals; otherwise return false.  The return value is true if STX is a
-  ;;proper or  improper list of  identifiers, with  null and a  standalone identifier
-  ;;being acceptable.  Examples:
-  ;;
-  ;;   (standard-formals-syntax #'args)		=> #t
-  ;;   (standard-formals-syntax #'())		=> #t
-  ;;   (standard-formals-syntax #'(a b))	=> #t
-  ;;   (standard-formals-syntax #'(a b . rest))	=> #t
-  ;;
-  (syntax-match stx ()
-    (() #t)
-    ((?id . ?rest)
-     (identifier? ?id)
-     (syntax-object.standard-formals? ?rest))
-    (?rest
-     (identifier? ?rest))
-    ))
+  #| end of module: SYNTAX-OBJECT.PARSE-STANDARD-FORMALS |# )
 
 
 ;;;; tagged binding parsing: typed LAMBDA formals
 
 (module (syntax-object.parse-typed-formals)
   ;;Parse a  syntax object as  possibly typed  LET-VALUES formals (these  formals are
-  ;;different from  the one  of lambda  clauses because they  have no  return values'
+  ;;different from  the one  of LAMBDA  clauses because they  have no  return values'
   ;;types).   Test for  duplicate  bindings.   If the  syntax  is  invalid: raise  an
   ;;exception.
   ;;
@@ -312,126 +322,113 @@
   ;;
   ;;1. A proper or improper list of identifiers representing the standard formals.
   ;;
-  ;;2.   A  syntax   object   representing   the  type   signature   as  defined   by
-  ;;SYNTAX-OBJECT.TYPE-SIGNATURE?.
+  ;;2. An instance of "<type-signature>" representing the types of the formals.
   ;;
   (define-module-who syntax-object.parse-typed-formals)
 
-  (define (syntax-object.parse-typed-formals formals.stx input-form.stx)
-    (define (%synner message subform)
-      (syntax-violation __module_who__ message input-form.stx subform))
+  (define (syntax-object.parse-typed-formals formals.stx)
+    (receive (standard-formals.stx formals.ots)
+	(%parse-typed-formals formals.stx)
+      (values standard-formals.stx (make-type-signature formals.ots))))
+
+  (define (%parse-typed-formals formals.stx)
+    (case-define %synner
+      ((message)
+       (%synner message #f))
+      ((message subform)
+       (syntax-violation __module_who__ message formals.stx subform)))
     (syntax-match formals.stx (brace)
 
       ;;Non-standard formals: typed args, as in: (lambda (brace args <list>) ---)
-      ((brace ?args-id ?args-tag)
+      ((brace ?args-id ?args-type)
        (identifier? ?args-id)
-       (if (let ((ots (type-annotation->object-type-specification ?args-tag (current-inferior-lexenv) ?args-tag)))
-	     (or (<list>-ots? ots)
-		 (list-of-type-spec? ots)))
-	   (values ?args-id ?args-tag)
-	 (%synner "expected \"<list>\" or \"(list-of ?type)\" as type annotation for the args argument" formals.stx)))
+       (values ?args-id (tail-type-annotation->object-type-spec ?args-type (current-inferior-lexenv) ?args-type)))
 
       ;;Standard formals, UNtyped args as in: (lambda args ---)
       (?args-id
        (identifier? ?args-id)
-       (values ?args-id (<list>-type-id)))
+       (values ?args-id (<list>-ots)))
 
       ;;Non-standard formals: possibly typed arguments with typed rest argument.
-      ((?arg* ... . (brace ?rest-id ?rest-tag))
-       (receive-and-return (standard-formals.stx type-signature.stx)
+      ((?arg* ... . (brace ?rest-id ?rest-type))
+       (receive-and-return (standard-formals.stx formals.ots)
 	   (let process-next-arg ((?arg* ?arg*))
-	     (if (pair? ?arg*)
-		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
-	       (begin
-		 (unless (identifier? ?rest-id)
-		   (%synner "invalid rest argument specification" (list (brace-id) ?rest-id ?rest-tag)))
-		 (unless (let ((ots (type-annotation->object-type-specification ?rest-tag (current-inferior-lexenv) ?rest-tag)))
-			   (or (<list>-ots? ots)
-			       (list-of-type-spec? ots)))
-		   (%synner "expected \"<list>\" or \"(list-of ?type)\" as type annotation for the args argument"
-			    (list (brace-id) ?rest-id ?rest-tag)))
-		 (values ?rest-id ?rest-tag))))
+	     (cond ((pair? ?arg*)
+		    (%process-arg* ?arg* process-next-arg %synner))
+		   ((identifier? ?rest-id)
+		    (values ?rest-id (tail-type-annotation->object-type-spec ?rest-type (current-inferior-lexenv) ?rest-type)))
+		   (else
+		    (%synner "invalid rest argument syntax" (list (brace-id) ?rest-id ?rest-type)))))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Standard formals: UNtyped identifiers without rest argument.
       ((?arg* ...)
        (for-all identifier? ?arg*)
-       (begin
-	 (%validate-standard-formals ?arg* %synner)
-	 (values ?arg* (%one-untyped-for-each ?arg*))))
+       (receive-and-return (standard-formals.stx formals.ots)
+	   (values ?arg* (%one-untyped-for-each ?arg*))
+	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Standard formals: UNtyped identifiers with UNtyped rest argument.
       ((?arg* ... . ?rest-id)
        (and (for-all identifier? ?arg*)
 	    (identifier? ?rest-id))
-       (begin
-	 (%validate-standard-formals (append ?arg* ?rest-id) %synner)
-	 (values formals.stx (append (%one-untyped-for-each ?arg*) (<list>-type-id)))))
+       (receive-and-return (standard-formals.stx formals.ots)
+	   (values formals.stx (append (%one-untyped-for-each ?arg*) (<list>-ots)))
+	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Non-standard formals: possibly typed identifiers with UNtyped rest argument.
       ((?arg* ... . ?rest-id)
        (identifier? ?rest-id)
-       (receive-and-return (standard-formals.stx type-signature.stx)
+       (receive-and-return (standard-formals.stx formals.ots)
 	   (let process-next-arg ((?arg* ?arg*))
-	     (if (pair? ?arg*)
-		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
-	       (if (identifier? ?rest-id)
-		   (values ?rest-id (<list>-type-id))
-		 (%synner "invalid rest argument specification" ?rest-id))))
+	     (cond ((pair? ?arg*)
+		    (%process-arg* ?arg* process-next-arg %synner))
+		   ((identifier? ?rest-id)
+		    (values ?rest-id (<list>-ots)))
+		   (else
+		    (%synner "invalid rest argument syntax" ?rest-id))))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       ;;Non-standard formals: possibly typed identifiers without rest argument.
       ;;
       ((?arg* ...)
-       (receive-and-return (standard-formals.stx type-signature.stx)
+       (receive-and-return (standard-formals.stx formals.ots)
 	   (let process-next-arg ((?arg* ?arg*))
 	     (if (pair? ?arg*)
-		 (%process-arg* ?arg* process-next-arg input-form.stx %synner)
+		 (%process-arg* ?arg* process-next-arg %synner)
 	       (values '() '())))
 	 (%validate-standard-formals standard-formals.stx %synner)))
 
       (_
-       (%synner "invalid formals specification" formals.stx))))
+       (%synner "invalid formals syntax"))))
 
-  (define (%process-arg* arg*.stx process-next-arg input-form.stx %synner)
-    (receive (standard-formals.stx type-signature.stx)
+  (define (%process-arg* arg*.stx process-next-arg synner)
+    (receive (standard-formals.stx formals.ots)
 	(process-next-arg (cdr arg*.stx))
       (let ((arg.stx (car arg*.stx)))
 	(syntax-match arg.stx (brace)
 	  ;;Untyped argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals.stx) (cons (<top>-type-id) type-signature.stx)))
+	   (values (cons ?id standard-formals.stx) (cons (<top>-ots) formals.ots)))
 	  ;;Typed argument.
-	  ((brace ?id ?tag)
-	   (and (identifier? ?id)
-		(identifier? ?tag))
-	   (begin
-	     ;;We raise an error if ?TAG is not a type identifier.
-	     (id->object-type-spec ?tag)
-	     (values (cons ?id standard-formals.stx) (cons ?tag type-signature.stx))))
+	  ((brace ?id ?type)
+	   (identifier? ?id)
+	   (values (cons ?id standard-formals.stx)
+		   (cons (type-annotation->object-type-spec ?type (current-inferior-lexenv))
+			 formals.ots)))
 	  (else
-	   (%synner "invalid argument specification" arg.stx))))))
+	   (synner "invalid argument in formals syntax" arg.stx))))))
 
-  (define (%validate-standard-formals standard-formals.stx %synner)
+  (define (%validate-standard-formals standard-formals.stx synner)
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
-		(%synner "duplicate identifiers in formals specification" duplicate-id)))))
+		(synner "duplicate identifiers in formals syntax" duplicate-id)))))
 
   (define (%one-untyped-for-each item*)
-    (map (lambda (x) (<top>-type-id)) item*))
+    (map (lambda (x) (<top>-ots)) item*))
 
-  #| end of module |# )
-
-(define (syntax-object.typed-formals? formals.stx)
-  ;;Return true  if FORMALS.STX is a  syntax object representing valid  typed formals
-  ;;for a LAMBDA or LET-VALUES syntax.
-  ;;
-  (guard (E ((syntax-violation? E)
-	     #f))
-    (receive (standard-formals.stx formals-signature.stx)
-	(syntax-object.parse-typed-formals formals.stx #f)
-      #t)))
+  #| end of module: SYNTAX-OBJECT.PARSE-TYPED-FORMALS |# )
 
 
 ;;;; done

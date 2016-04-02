@@ -406,11 +406,12 @@
 			    (if (identifier? stx)
 				out.stx
 			      (syntax-violation '__who__ "invalid fluid syntax use" stx lhs.id)))))
-	 (rhs.psi	(chi-expr (bless
-				   `(lambda/std (stx)
-				      (if (identifier? stx)
-					  (quote ,who.sym)
-					(syntax-violation '__who__ "invalid fluid syntax use" stx (syntax ,lhs.id)))))
+	 (rhs.psi	(chi-expr (let ((stx.sym (gensym "stx")))
+				    (bless
+				     `(lambda/std (,stx.sym)
+					(if (identifier? ,stx.sym)
+					    (quote ,who.sym)
+					  (syntax-violation '__who__ "invalid fluid syntax use" ,stx.sym (syntax ,lhs.id))))))
 				  lexenv.expand lexenv.expand))
 	 (rhs.core	(psi.core-expr rhs.psi))
 	 (descriptor	(make-syntactic-binding-descriptor/local-macro/non-variable-transformer rhs.func rhs.core))

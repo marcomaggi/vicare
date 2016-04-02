@@ -656,6 +656,21 @@
 
 (declare-type-predicate type-signature?			<type-signature>)
 
+(declare-core-primitive make-type-signature
+    (safe)
+  (signatures
+   (<list>			=> (<type-signature>))))
+
+(declare-core-primitive type-signature.syntax-object
+    (safe)
+  (signatures
+   ((<type-signature>)		=> (<syntax-object>))))
+
+(declare-core-primitive type-signature.specs
+    (safe)
+  (signatures
+   ((<type-signature>)		=> (<top>))))
+
 
 ;;;; done
 

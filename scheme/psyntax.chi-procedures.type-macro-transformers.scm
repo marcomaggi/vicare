@@ -46,7 +46,7 @@
 	  (sys::identifier? (sys::syntax ?lexenv))
 	  (sys::identifier? (sys::syntax ?object-type-spec)))
      (sys::syntax
-      (let ((?object-type-spec (type-annotation->object-type-specification ?type-annotation ?lexenv ?type-annotation)))
+      (let ((?object-type-spec (type-annotation->object-type-spec ?type-annotation ?lexenv ?type-annotation)))
 	. ?body)))
     ))
 
