@@ -1635,30 +1635,29 @@
 	   (unless (identifier? ?who)
 	     (synner "expected identifier as function name" ?who))
 	   (receive (standard-formals*.stx clause-signature* body**.stx)
-	       (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
+	       (%parse-clauses (cons ?cl-clause ?cl-clause*) '() '() '())
 	     (let* ((lhs.ots	(let ((lhs.type-id	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
 				      (signature	(make-clambda-signature clause-signature*)))
 				  (make-closure-type-spec lhs.type-id signature)))
 		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
-		    (qdef	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
-	       (values ?who lhs.ots qdef lexenv.run)))))
+		    (qdef-safe	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
+	       (values ?who lhs.ots qdef-safe lexenv.run)))))
 	))
 
-    (define (%parse-clauses input-form.stx clause*.stx
-			    standard-formals*.stx clause-signature* body**.stx)
+    (define (%parse-clauses clause*.stx standard-formals*.stx clause-signature* body**.stx)
       ;;Recursive function.
       ;;
       (if (pair? clause*.stx)
 	  (receive (standard-formals.stx clause-signature body*.stx)
-	      (%parse-single-clause input-form.stx (car clause*.stx))
+	      (%parse-single-clause (car clause*.stx))
 	    (receive (standard-formals*.stx clause-signature* body**.stx)
-		(%parse-clauses input-form.stx (cdr clause*.stx) standard-formals*.stx clause-signature* body**.stx)
+		(%parse-clauses (cdr clause*.stx) standard-formals*.stx clause-signature* body**.stx)
 	      (values (cons standard-formals.stx	standard-formals*.stx)
 		      (cons clause-signature		clause-signature*)
 		      (cons body*.stx			body**.stx))))
 	(values standard-formals*.stx clause-signature* body**.stx)))
 
-    (define (%parse-single-clause input-form.stx clause.stx)
+    (define (%parse-single-clause clause.stx)
       (syntax-match clause.stx ()
 	((?formals ?body ?body* ...)
 	 ;;From parsing  the standard formals we  get 2 values: a  proper or improper
