@@ -1076,7 +1076,7 @@
       ;;
       (syntax-match input-form.stx ()
 	((_ (?lhs . ?formals) ?body0 ?body* ...)
-	 (%process-standard-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
+	 (%process-standard-function-definition input-form.stx lexenv.run
 						?lhs ?formals `(,?body0 . ,?body*) synner))
 
 	((_ ?lhs ?rhs)
@@ -1088,7 +1088,7 @@
 	(_
 	 (synner "invalid syntax"))))
 
-    (define (%process-standard-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
+    (define (%process-standard-function-definition input-form.stx lexenv.run
 						   lhs.id input-formals.stx body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as function name" lhs.id))
@@ -1133,7 +1133,7 @@
 	;;the lexical variable's syntactic binding's identifier; LHS.OTS, an instance
 	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
-	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
+	(%parse-macro-use input-form.stx lexenv.run %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
@@ -1146,7 +1146,7 @@
 
   (module (%parse-macro-use)
 
-    (define (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
+    (define (%parse-macro-use input-form.stx lexenv.run synner)
       (syntax-match input-form.stx ()
 	((_ ?who ?cl-clause ?cl-clause* ...)
 	 (begin
@@ -1256,7 +1256,7 @@
       ;;
       (syntax-match input-form.stx (brace)
 	((_ ((brace ?lhs ?rv-type* ... . ?rv-rest-type) . ?formals) ?body0 ?body* ...)
-	 (%process-typed-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
+	 (%process-typed-function-definition input-form.stx lexenv.run
 					     ?lhs (bless `((brace _ ,@?rv-type* . ,?rv-rest-type) . ,?formals))
 					     `(,?body0 . ,?body*) synner))
 
@@ -1267,7 +1267,7 @@
 	 (%process-typed-variable-definition-with-init-expr	input-form.stx lexenv.run ?lhs (bless '(void)) ?type synner))
 
 	((_ (?lhs . ?formals) ?body0 ?body* ...)
-	 (%process-typed-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
+	 (%process-typed-function-definition input-form.stx lexenv.run
 					     ?lhs ?formals `(,?body0 . ,?body*) synner))
 
 	((_ ?lhs ?rhs)
@@ -1279,7 +1279,7 @@
 	(_
 	 (synner "invalid DEFINE/TYPED syntax use"))))
 
-    (define (%process-typed-function-definition input-form.stx rib lexenv.run shadow/redefine-bindings?
+    (define (%process-typed-function-definition input-form.stx lexenv.run
 						lhs.id input-formals.stx body*.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
@@ -1593,7 +1593,7 @@
 	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
 	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
-	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
+	(%parse-macro-use input-form.stx lexenv.run %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
@@ -1606,7 +1606,7 @@
 
   (module (%parse-macro-use)
 
-    (define (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
+    (define (%parse-macro-use input-form.stx lexenv.run synner)
       (syntax-match input-form.stx ()
 	((_ ?who ?cl-clause ?cl-clause* ...)
 	 (begin
@@ -1666,7 +1666,7 @@
 	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
 	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
 	;;qualified RHS object to be expanded later.
-	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
+	(%parse-macro-use input-form.stx lexenv.run %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
 	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
@@ -1679,7 +1679,7 @@
 
   (module (%parse-macro-use)
 
-    (define (%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? synner)
+    (define (%parse-macro-use input-form.stx lexenv.run synner)
       (syntax-match input-form.stx ()
 	((_ ?who ?cl-clause ?cl-clause* ...)
 	 (begin
