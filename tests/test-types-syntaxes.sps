@@ -818,6 +818,17 @@
       (expander::type-signature.syntax-object (type-of (case-lambda
 							 (({_ <fixnum>} {a <fixnum>})
 							  a)
+							 (({_ <fixnum> <string>} {a <fixnum>} {b <string>})
+							  (values a b)))))
+    (=> syntax=?)
+    #'((case-lambda
+	 ((<fixnum>)		=> (<fixnum>))
+	 ((<fixnum> <string>)	=> (<fixnum> <string>)))))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (case-lambda
+							 (({_ <fixnum>} {a <fixnum>})
+							  a)
 							 (({_ (list <fixnum> <string>)} {a <fixnum>} {b <string>})
 							  (list a b)))))
     (=> syntax=?)
@@ -887,6 +898,28 @@
     #'((case-lambda
 	 ((<fixnum>)		=> <list>)
 	 ((<fixnum> <string>)	=> <list>))))
+
+  (check
+      (internal-body
+	(case-define fun
+	  (({_ <fixnum>} {a <fixnum>})
+	   a))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum>)		=> (<fixnum>))))
+
+  (check
+      (internal-body
+	(case-define fun
+	  (({_ <fixnum>} {a <fixnum>})
+	   a)
+	  (({_ <fixnum> <string>} {a <fixnum>} {b <string>})
+	   (values a b)))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((case-lambda
+	 ((<fixnum>)		=> (<fixnum>))
+	 ((<fixnum> <string>)	=> (<fixnum> <string>)))))
 
   (check
       (internal-body
