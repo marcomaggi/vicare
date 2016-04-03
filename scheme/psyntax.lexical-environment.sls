@@ -258,7 +258,6 @@
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__
-    syntax-object.parse-type-annotation		syntax-object.type-annotation?
 
     ;; identifiers from the built-in environment
     system-id-gensym			system-id

@@ -1100,15 +1100,9 @@
 	  (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
 	;;This is a standard variable syntactic  binding, so the arguments and return
 	;;values are untyped.   However, we still want to generate  a typed syntactic
-	;;binding so that  we can validate the number of  operands and return values.
-	;;So we fabricate a type identifier and put it on the lexenv to represent the
-	;;type of this function.
-	(let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
-				      (signature	(make-clambda-signature (list clause-signature))))
-				  (make-closure-type-spec lhs.type-id signature)))
-	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
-	       (qdef		(make-qdef-standard-defun input-form.stx lhs.id standard-formals.stx body*.stx
-							  lhs.ots)))
+	;;binding so that we can validate the number of operands and return values.
+	(let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature (list clause-signature))))
+	       (qdef	(make-qdef-standard-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
 	  (values lhs.id lhs.ots qdef lexenv.run))))
 
     (define (%process-standard-variable-definition-with-init-expr input-form.stx lexenv.run lhs.id rhs.stx synner)
@@ -1163,14 +1157,9 @@
 	     ;;This is  a standard variable  syntactic binding, so the  arguments and
 	     ;;return values are untyped.  However, we still want to generate a typed
 	     ;;syntactic binding so  that we can validate the number  of operands and
-	     ;;return values.   So we fabricate a  type identifier and put  it on the
-	     ;;lexenv to represent the type of this function.
-	     (let* ((lhs.ots	(let ((lhs.type-id	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
-				      (signature	(make-clambda-signature clause-signature*)))
-				  (make-closure-type-spec lhs.type-id signature)))
-		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
-		    (qdef	(make-qdef-standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx
-							       lhs.ots)))
+	     ;;return values.
+	     (let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature clause-signature*)))
+		    (qdef	(make-qdef-standard-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
 	       (values ?who lhs.ots qdef lexenv.run)))))
 	))
 
@@ -1300,10 +1289,7 @@
       ;;while parsing.
       (receive (standard-formals.stx clause-signature)
 	  (syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
-	(let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name (identifier->symbol lhs.id))))
-				      (signature	(make-clambda-signature (list clause-signature))))
-				  (make-closure-type-spec lhs.type-id signature)))
-	       (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+	(let* ((lhs.ots		(make-closure-type-spec (make-clambda-signature (list clause-signature))))
 	       (qdef		(make-qdef-typed-defun input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots)))
 	  (values lhs.id lhs.ots qdef lexenv.run))))
 
@@ -1311,8 +1297,6 @@
 							       lhs.id rhs.stx lhs.type-ann synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (unless (syntax-object.type-annotation? lhs.type-ann)
-	(synner "invalid type annotation for variable name" lhs.type-ann))
       (let* ((lhs.ots	(type-annotation->object-type-spec lhs.type-ann lexenv.run))
 	     (qdef	(make-qdef-typed-defvar input-form.stx lhs.id rhs.stx)))
 	(values lhs.id lhs.ots qdef lexenv.run)))
@@ -1435,8 +1419,6 @@
 							     lhs.id rhs.stx lhs.type-ann synner)
     (unless (identifier? lhs.id)
       (synner "expected identifier as variable name" lhs.id))
-    (unless (syntax-object.type-annotation? lhs.type-ann)
-      (synner "invalid type annotation for variable name" lhs.type-ann))
     (when (bound-id-member? lhs.id kwd*)
       (synner "cannot redefine keyword"))
     ;;LHS.OTS is  an instance of  "<object-type-spec>" representing the type  of this
@@ -1507,11 +1489,7 @@
     (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 				qdef-maker
 				lhs.id standard-formals.stx clause-signature body*.stx synner)
-      (let* ((lhs.ots		(let ((lhs.type-id	(datum->syntax lhs.id (make-fabricated-closure-type-name
-									       (identifier->symbol lhs.id))))
-				      (signature	(make-clambda-signature (list clause-signature))))
-				  (make-closure-type-spec lhs.type-id signature)))
-	     (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+      (let* ((lhs.ots		(make-closure-type-spec (make-clambda-signature (list clause-signature))))
 	     (qdef		(qdef-maker input-form.stx lhs.id standard-formals.stx body*.stx lhs.ots))
 	     (lhs.lab		(generate-label-gensym lhs.id))
 	     (lhs.descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
@@ -1636,10 +1614,7 @@
 	     (synner "expected identifier as function name" ?who))
 	   (receive (standard-formals*.stx clause-signature* body**.stx)
 	       (%parse-clauses (cons ?cl-clause ?cl-clause*) '() '() '())
-	     (let* ((lhs.ots	(let ((lhs.type-id	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
-				      (signature	(make-clambda-signature clause-signature*)))
-				  (make-closure-type-spec lhs.type-id signature)))
-		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+	     (let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature clause-signature*)))
 		    (qdef-safe	(make-qdef-typed-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
 	       (values ?who lhs.ots qdef-safe lexenv.run)))))
 	))
@@ -1712,10 +1687,7 @@
 	     (synner "expected identifier as function name" ?who))
 	   (receive (standard-formals*.stx clause-signature* body**.stx)
 	       (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
-	     (let* ((lhs.ots	(let ((lhs.type-id	(datum->syntax ?who (make-fabricated-closure-type-name (identifier->symbol ?who))))
-				      (signature	(make-clambda-signature clause-signature*)))
-				  (make-closure-type-spec lhs.type-id signature)))
-		    (lexenv.run	(make-syntactic-binding/closure-type-name lhs.ots rib lexenv.run shadow/redefine-bindings?))
+	     (let* ((lhs.ots	(make-closure-type-spec (make-clambda-signature clause-signature*)))
 		    (qdef	(make-qdef-checked-case-defun input-form.stx ?who standard-formals*.stx body**.stx lhs.ots)))
 	       (values ?who lhs.ots qdef lexenv.run)))))
 	))

@@ -202,9 +202,8 @@
 
 	 ;;;
 
-	 syntax-object.parse-type-annotation			syntax-object.type-annotation?
-	 type-annotation->object-type-spec
-	 tail-type-annotation->object-type-spec
+	 syntax-object.type-annotation?
+	 type-annotation->object-type-spec		tail-type-annotation->object-type-spec
 
 	 #| end of export list |# )
 
@@ -1716,18 +1715,32 @@
 
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-closure-type-spec name {signature callable-signature?})
-	(let ((parent.ots		(<procedure>-ots))
-	      (constructor.stx		#f)
-	      (destructor.stx		#f)
-	      (predicate.stx		#f)
-	      (accessors-table		'())
-	      (mutators-table		'())
-	      (methods-table		'()))
-	  ((make-object-type-spec name parent.ots
-				  constructor.stx destructor.stx predicate.stx
-				  accessors-table mutators-table methods-table)
-	   signature)))
+      (case-define* make-closure-type-spec
+	(({signature callable-signature?})
+	 (make-closure-type-spec signature (%mkname signature)))
+	(({signature callable-signature?} name.stx)
+	 (let ((parent.ots		(<procedure>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	   ((make-object-type-spec name.stx parent.ots
+				   constructor.stx destructor.stx predicate.stx
+				   accessors-table mutators-table methods-table)
+	    signature))))
+
+      (define (%mkname callable-signature)
+	(let* ((clause* (map (lambda (clause-signature)
+			       (list (type-signature.syntax-object (clambda-clause-signature.argvals clause-signature))
+				     (core-prim-id '=>)
+				     (type-signature.syntax-object (clambda-clause-signature.retvals clause-signature))))
+			  (clambda-signature.clause-signature* callable-signature))))
+	  (if (list-of-single-item? clause*)
+	      (cons (core-prim-id 'lambda) (car clause*))
+	    (cons (core-prim-id 'case-lambda) clause*))))
+
       make-closure-type-spec))
 
   (custom-printer
@@ -2274,74 +2287,97 @@
 ;;are type annotations.
 ;;
 
-(define* (syntax-object.parse-type-annotation input-form.stx)
-  ;;Recursive function.  Parse the syntax object  STX as type annotation and return a
-  ;;fully unwrapped syntax object representing the same type annotation.
+(case-define* syntax-object.type-annotation?
+  ;;Parse the syntax object INPUT-FORM.STX as type annotation and return non-false if
+  ;;it complies.
   ;;
-  (define lexenv (current-inferior-lexenv))
-  (let recur ((stx input-form.stx))
-    (syntax-match stx (pair list vector pair-of list-of vector-of condition or and not)
-      ((pair ?car-type ?cdr-type)
-       (list (core-prim-id 'pair)
-	     (recur ?car-type)
-	     (recur ?cdr-type)))
+  ((input-form.stx)
+   (syntax-object.type-annotation? input-form.stx (current-inferior-lexenv) input-form.stx))
+  ((input-form.stx lexenv)
+   (syntax-object.type-annotation? input-form.stx lexenv input-form.stx))
+  ((input-form.stx lexenv stx)
+   (define-syntax recur
+     (identifier-syntax
+      (lambda (stx)
+	(syntax-object.type-annotation? input-form.stx lexenv stx))))
+   (syntax-match stx (pair list vector pair-of list-of vector-of condition or and not
+			   lambda case-lambda =>)
+     (?type-id
+      (and (identifier? ?type-id)
+	   (try
+	       (id->object-type-spec ?type-id lexenv)
+	     (catch E
+	       (&syntactic-identifier-resolution
+		#f))))
+      ?type-id)
 
-      ((list ?item-type* ...)
-       (cons (core-prim-id 'list)
-	     (map recur ?item-type*)))
+     ((pair ?car-type ?cdr-type)
+      (list (core-prim-id 'pair)
+	    (recur ?car-type)
+	    (recur ?cdr-type)))
 
-      ((vector ?item-type* ...)
-       (cons (core-prim-id 'vector)
-	     (map recur ?item-type*)))
+     ((list ?item-type* ...)
+      (cons (core-prim-id 'list)
+	    (map recur ?item-type*)))
 
-      ((pair-of ?item-type)
-       (list (core-prim-id 'pair-of)
-	     (recur ?item-type)))
+     ((vector ?item-type* ...)
+      (cons (core-prim-id 'vector)
+	    (map recur ?item-type*)))
 
-      ((list-of ?item-type)
-       (list (core-prim-id 'list-of)
-	     (recur ?item-type)))
+     ((pair-of ?item-type)
+      (list (core-prim-id 'pair-of)
+	    (recur ?item-type)))
 
-      ((vector-of ?item-type)
-       (list (core-prim-id 'vector-of)
-	     (recur ?item-type)))
+     ((list-of ?item-type)
+      (list (core-prim-id 'list-of)
+	    (recur ?item-type)))
 
-      ((condition ?component-type* ...)
-       (list (core-prim-id 'condition)
-	     (map recur ?component-type*)))
+     ((vector-of ?item-type)
+      (list (core-prim-id 'vector-of)
+	    (recur ?item-type)))
 
-      ((or ?component-type ?component-type* ...)
-       (list (core-prim-id 'or)
-	     (map recur (cons ?component-type ?component-type*))))
+     ((lambda ?argtypes => ?rettypes)
+      (and (make-type-signature ?argtypes)
+	   (make-type-signature ?rettypes))
+      (list (core-prim-id 'lambda) ?rettypes (core-prim-id '=>) ?argtypes))
 
-      ((and ?component-type ?component-type* ...)
-       (list (core-prim-id 'and)
-	     (map recur (cons ?component-type ?component-type*))))
+     ((case-lambda
+	(?argtypes0 => ?rettypes0)
+	(?argtypes* => ?rettypes*)
+	...)
+      (and (make-type-signature ?argtypes0)
+	   (make-type-signature ?rettypes0)
+	   (map make-type-signature ?argtypes*)
+	   (map make-type-signature ?rettypes*))
+      (cons* (core-prim-id 'case-lambda)
+	     (list ?rettypes0 (core-prim-id '=>) ?argtypes0)
+	     (map (lambda (argtypes.stx rettypes.stx)
+		    (list argtypes.stx (core-prim-id '=>) rettypes.stx))
+	       ?argtypes* ?rettypes*)))
 
-      ((not ?item-type)
-       (list (core-prim-id 'not)
-	     (recur ?item-type)))
+     ((condition ?component-type* ...)
+      (list (core-prim-id 'condition)
+	    (map recur ?component-type*)))
 
-      (?type-id
-       (and (identifier? ?type-id)
-	    (try
-		(id->object-type-spec ?type-id lexenv)
-	      (catch E
-		(&syntactic-identifier-resolution
-		 #f))))
-       ?type-id)
+     ((or ?component-type ?component-type* ...)
+      (list (core-prim-id 'or)
+	    (map recur (cons ?component-type ?component-type*))))
 
-      (else
-       (syntax-violation __who__ "invalid type annotation" input-form.stx stx)))))
+     ((and ?component-type ?component-type* ...)
+      (list (core-prim-id 'and)
+	    (map recur (cons ?component-type ?component-type*))))
 
-(define* (syntax-object.type-annotation? stx)
-  (guard (E (else #f))
-    (and (syntax-object.parse-type-annotation stx)
-	 #t)))
+     ((not ?item-type)
+      (list (core-prim-id 'not)
+	    (recur ?item-type)))
+
+     (else #f))))
 
 ;;; --------------------------------------------------------------------
 
 (case-define* type-annotation->object-type-spec
+  ((annotation.stx)
+   (type-annotation->object-type-spec annotation.stx (current-inferior-lexenv) annotation.stx))
   ((annotation.stx lexenv)
    (type-annotation->object-type-spec annotation.stx lexenv annotation.stx))
   ((annotation.stx lexenv name.stx)
@@ -2359,7 +2395,8 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and not)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and not
+				      lambda case-lambda =>)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-spec ?type-id lexenv))
@@ -2421,6 +2458,25 @@
       (make-compound-condition-type-spec (map (lambda (type.stx)
 						(type-annotation->object-type-spec type.stx lexenv))
 					   (cons ?component-type ?component-type*))))
+
+     ((lambda ?argtypes => ?rettypes)
+      (make-closure-type-spec (make-clambda-signature
+			       (list
+				(make-clambda-clause-signature (make-type-signature ?rettypes)
+							       (make-type-signature ?argtypes))))
+			      name.stx))
+
+     ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)
+      (make-closure-type-spec (make-clambda-signature
+			       (cons (make-clambda-clause-signature
+				      (make-type-signature ?rettypes*)
+				      (make-type-signature ?argtypes*))
+				     (map (lambda (argtypes.stx rettypes.stx)
+					    (make-clambda-clause-signature
+					     (make-type-signature rettypes.stx)
+					     (make-type-signature argtypes.stx)))
+				       ?argtypes* ?rettypes*)))
+			      name.stx))
 
      ((or ?single-component-type)
       (type-annotation->object-type-spec ?single-component-type lexenv))

@@ -765,6 +765,121 @@
   (void))
 
 
+(parametrise ((check-test-name	'closure-type-spec))
+#|
+  (check
+      (expander::type-signature.syntax-object (type-of (lambda ({a <fixnum>}) a)))
+    (=> syntax=?)
+    #'((lambda (<fixnum>) => <list>)))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (lambda ({_ <fixnum>} {a <fixnum>}) a)))
+    (=> syntax=?)
+    #'((lambda (<fixnum>) => (<fixnum>))))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (lambda ({_ <fixnum> <string>} {a <fixnum>} {b <string>})
+  							 (values a b))))
+    (=> syntax=?)
+    #'((lambda (<fixnum> <string>) => (<fixnum> <string>))))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (lambda ({_ (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
+  							 (list a b))))
+    (=> syntax=?)
+    #'((lambda (<fixnum> <fixnum>) => ((list-of <fixnum>)))))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (lambda ({_ . (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
+  							 (values a b))))
+    (=> syntax=?)
+    #'((lambda (<fixnum> <fixnum>) => (list-of <fixnum>))))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (lambda (_ {a <fixnum>} . {rest (list-of <fixnum>)})
+  							 (values a rest))))
+    (=> syntax=?)
+    #'((lambda (<fixnum> . (list-of <fixnum>)) => <list>)))
+|#
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define (fun {a <fixnum>}) a)
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum>) => <list>)))
+
+  (check
+      (internal-body
+	(define ({fun <fixnum>} {a <fixnum>}) a)
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum>) => (<fixnum>))))
+
+  (check
+      (internal-body
+	(define ({fun <fixnum> <string>} {a <fixnum>} {b <string>})
+	  (values a b))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum> <string>) => (<fixnum> <string>))))
+
+  (check
+      (internal-body
+	(define ({fun (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
+	  (list a b))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum> <fixnum>) => ((list-of <fixnum>)))))
+
+  (check
+      (internal-body
+	(define ({fun . (list-of <fixnum>)} {a <fixnum>} {b <fixnum>})
+	  (values a b))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum> <fixnum>) => (list-of <fixnum>))))
+
+  (check
+      (internal-body
+	(define (fun {a <fixnum>} . {rest (list-of <fixnum>)})
+	  (values a rest))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((lambda (<fixnum> . (list-of <fixnum>)) => <list>)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(case-define fun
+	  (({a <fixnum>})
+	   a)
+	  (({a <fixnum>} {b <string>})
+	   (list a b)))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((case-lambda
+	 ((<fixnum>)		=> <list>)
+	 ((<fixnum> <string>)	=> <list>))))
+
+  (check
+      (internal-body
+	(case-define fun
+	  (({_ <fixnum>} {a <fixnum>})
+	   a)
+	  (({_ (list <fixnum> <string>)} {a <fixnum>} {b <string>})
+	   (list a b)))
+	(expander::type-signature.syntax-object (type-of fun)))
+    (=> syntax=?)
+    #'((case-lambda
+	 ((<fixnum>)		=> (<fixnum>))
+	 ((<fixnum> <string>)	=> ((list <fixnum> <string>))))))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

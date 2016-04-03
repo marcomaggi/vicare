@@ -263,7 +263,7 @@
 	    standard-formals.lex
 	  (psi.core-expr body.psi))
 	(make-type-signature/single-value
-	 (fabricate-closure-type-spec '_ (make-clambda-signature (list clause-signature))))))))
+	 (make-closure-type-spec (make-clambda-signature (list clause-signature))))))))
 
 (define* (chi-named-lambda/std input-form.stx lexenv.run lexenv.expand
 			       who.id standard-formals.stx body*.stx)
@@ -310,7 +310,7 @@
     ;;      (list #'(a b c) #'(d e f))
     ;;      (list #'(body1) #'(body2)))
     ;;
-    (%chi-clambda input-form.stx lexenv.run lexenv.expand '_ input-formals*.stx body**.stx))
+    (%chi-clambda input-form.stx lexenv.run lexenv.expand input-formals*.stx body**.stx))
 
   (define* (chi-named-case-lambda/std input-form.stx lexenv.run lexenv.expand
 				      who.id input-formals*.stx body**.stx)
@@ -322,9 +322,9 @@
 	;;formals and the body.  So the formals may shadow this binding.
 	(fluid-syntax-push-who-on-lexenvs input-form.stx lexenv.run lexenv.expand __who__ who.id)
       (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		    (identifier->symbol who.id) input-formals*.stx body**.stx)))
+		    input-formals*.stx body**.stx)))
 
-  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand who.sym input-formals*.stx body**.stx)
+  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
       (receive (formals*.lex body*.psi)
@@ -335,7 +335,7 @@
 	      formals*.lex
 	    (map psi.core-expr body*.psi))
 	  (make-type-signature/single-value
-	   (fabricate-closure-type-spec who.sym (make-clambda-signature clause-signature*)))))))
+	   (make-closure-type-spec (make-clambda-signature clause-signature*)))))))
 
   #| end of module |# )
 
@@ -388,7 +388,7 @@
 	      standard-formals.lex
 	    (psi.core-expr body.psi))
 	  (make-type-signature/single-value
-	   (fabricate-closure-type-spec '_ (make-clambda-signature (list clause-signature))))))))
+	   (make-closure-type-spec (make-clambda-signature (list clause-signature))))))))
 
   #| end of module |# )
 
@@ -402,18 +402,18 @@
     ;;Expand the contents of a NAMED-LAMBDA/TYPED syntax use and return a psi object.
     ;;
     (%chi-lambda input-form.stx lexenv.run lexenv.expand
-		 'typed   who.id (identifier->symbol who.id) input-formals.stx body*.stx))
+		 'typed   who.id input-formals.stx body*.stx))
 
   (define* (chi-named-lambda/checked input-form.stx lexenv.run lexenv.expand
 				     who.id input-formals.stx body*.stx)
     ;;Expand the contents of a NAMED-LAMBDA/CHECKED syntax use and return a psi object.
     ;;
     (%chi-lambda input-form.stx lexenv.run lexenv.expand
-		 'checked who.id (identifier->symbol who.id) input-formals.stx body*.stx))
+		 'checked who.id input-formals.stx body*.stx))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%chi-lambda input-form.stx lexenv.run lexenv.expand type who.id who.sym input-formals.stx body*.stx)
+  (define (%chi-lambda input-form.stx lexenv.run lexenv.expand type who.id input-formals.stx body*.stx)
     (receive (standard-formals.stx clause-signature)
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
@@ -437,7 +437,7 @@
 		standard-formals.lex
 	      (psi.core-expr body.psi))
 	    (make-type-signature/single-value
-	     (fabricate-closure-type-spec who.sym (make-clambda-signature (list clause-signature)))))))))
+	     (make-closure-type-spec (make-clambda-signature (list clause-signature)))))))))
 
   #| end of module |# )
 
@@ -519,11 +519,8 @@
 	  (build-case-lambda (syntax-annotation input-form.stx)
 	      formals*.lex
 	    (map psi.core-expr body*.psi))
-	  ;;If  we fabricate  a type  identifier  for this  closure: it  is
-	  ;;possible to leak  the type identifier out of  the local lexical
-	  ;;context where it is defined.
 	  (make-type-signature/single-value
-	   (fabricate-closure-type-spec '_ (make-clambda-signature clause-signature*)))))))
+	   (make-closure-type-spec (make-clambda-signature clause-signature*)))))))
 
   #| end of module |# )
 
@@ -538,8 +535,7 @@
     ;;object.
     ;;
     (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		  'typed who.id (identifier->symbol who.id)
-		  input-formals*.stx body**.stx))
+		  'typed who.id input-formals*.stx body**.stx))
 
   (define* (chi-named-case-lambda/checked input-form.stx lexenv.run lexenv.expand
 					  who.id input-formals*.stx body**.stx)
@@ -547,12 +543,11 @@
     ;;object.
     ;;
     (%chi-clambda input-form.stx lexenv.run lexenv.expand
-		  'checked who.id (identifier->symbol who.id)
-		  input-formals*.stx body**.stx))
+		  'checked who.id input-formals*.stx body**.stx))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id who.sym input-formals*.stx body**.stx)
+  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
       (receive (lexenv.run lexenv.expand)
@@ -571,11 +566,8 @@
 	    (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
 	      (map psi.core-expr body*.psi))
-	    ;;If  we fabricate  a type  identifier  for this  closure: it  is
-	    ;;possible to leak  the type identifier out of  the local lexical
-	    ;;context where it is defined.
 	    (make-type-signature/single-value
-	     (fabricate-closure-type-spec who.sym (make-clambda-signature clause-signature*))))))))
+	     (make-closure-type-spec (make-clambda-signature clause-signature*))))))))
 
   #| end of module |# )
 
