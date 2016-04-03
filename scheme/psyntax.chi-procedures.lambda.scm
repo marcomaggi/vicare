@@ -797,12 +797,23 @@
     (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
     (define argvals-signature.specs
       (type-signature.specs (clambda-clause-signature.argvals clause-signature)))
+    (define validation-who
+      (let* ((id    (core-prim-id '__who__))
+	     (label (id->label id))
+	     (descr (label->syntactic-binding-descriptor label lexenv.run)))
+	(case (syntactic-binding-descriptor.type descr)
+	  ((displaced-lexical)
+	   ;;__who__ is unbound.
+	   '(quote _))
+	  (else
+	   ;;__who__ is bound.
+	   '__who__))))
     (cond
      ((list? standard-formals.stx)
       ;;Without  rest argument.   Here  we know  that  both STANDARD-FORMALS.STX  and
       ;;ARGVALS-SIGNATURE.SPECS are proper lists with equal length.
-      (let ((formals-validation-form*.stx (build-formals-validation-form* input-form.stx lexenv.run lexenv.expand
-									  __who__ standard-formals.stx argvals-signature.specs #f #f)))
+      (let ((formals-validation-form*.stx (build-formals-validation-form* input-form.stx lexenv.run lexenv.expand validation-who
+									  standard-formals.stx argvals-signature.specs #f #f)))
 	(let* ((body*.stx (%insert-retvals-validation-form clause-signature body*.stx))
 	       (body*.stx (if (pair? formals-validation-form*.stx)
 			      (append formals-validation-form*.stx
@@ -820,8 +831,8 @@
       (let ((formals-validation-form*.stx (let-values
 					      (((arg*.id  rest.id)  (improper-list->list-and-rest standard-formals.stx))
 					       ((arg*.ots rest.ots) (improper-list->list-and-rest argvals-signature.specs)))
-					    (build-formals-validation-form* input-form.stx lexenv.run lexenv.expand
-									    __who__ arg*.id arg*.ots rest.id rest.ots))))
+					    (build-formals-validation-form* input-form.stx lexenv.run lexenv.expand validation-who
+									    arg*.id arg*.ots rest.id rest.ots))))
 	(let* ((body*.stx (%insert-retvals-validation-form clause-signature body*.stx))
 	       (body*.stx (if (pair? formals-validation-form*.stx)
 			      (append formals-validation-form*.stx
@@ -841,7 +852,7 @@
       "mismatch between type of operand and type of argument, failed run-time validation with type predicate")
 
     (define (build-formals-validation-form* input-form.stx lexenv.run lexenv.expand
-					    caller-who arg*.id arg*.ots rest.id rest.ots)
+					    validation-who arg*.id arg*.ots rest.id rest.ots)
       ;;When expanding a typed LAMBDA form like:
       ;;
       ;;   (lambda/checked ({a <fixnum>} {b <string>} . {rest <fixnum*>})
@@ -873,8 +884,9 @@
       ;;having type  "<top>", whose  arguments are  always valid).   If there  are no
       ;;arguments: return null.
       ;;
-      ;;The argument  CALLER-WHO is a  symbol representing  the name of  the function
-      ;;that called this function.
+      ;;The argument  VALIDATION-WHO is a  symbolic expression representing  value of
+      ;;the  "&who"  condition object  to  be  used  in  the output  expression  when
+      ;;validating arguments.
       ;;
       ;;The arguments ARG*.ID and ARG*.OTS are  lists of identifiers and instances of
       ;;"<object-type-spec>":  the formers  representing the  names of  the mandatory
@@ -892,7 +904,7 @@
 		  (idx		1))
 	(cond ((pair? arg*.id)
 	       (%build-single-formal-validation-form input-form.stx lexenv.run lexenv.expand
-						     caller-who (car arg*.id) (car arg*.ots) idx
+						     validation-who (car arg*.id) (car arg*.ots) idx
 						     (recur (cdr arg*.id) (cdr arg*.ots) (fxadd1 idx))))
 	      ((or (not		rest.ots)
 		   (<list>-ots?	rest.ots))
@@ -901,10 +913,10 @@
 	       '())
 	      (else
 	       (%build-rest-formal-validation-form input-form.stx lexenv.run lexenv.expand
-						   caller-who rest.id rest.ots idx)))))
+						   validation-who rest.id rest.ots idx)))))
 
     (define* (%build-single-formal-validation-form input-form.stx lexenv.run lexenv.expand
-						   caller-who arg.id arg.ots idx following-validations)
+						   validation-who arg.id arg.ots idx following-validations)
       (cond ((<top>-ots? arg.ots)
 	     ;;Insert no validation for an argument typed "<top>".
 	     following-validations)
@@ -913,12 +925,12 @@
 			 (arg.name		(object-type-spec.name arg.ots)))
 		     (bless
 		      `(unless (,type-pred.sexp ,arg.id)
-			 (procedure-signature-argument-violation __who__
+			 (procedure-signature-argument-violation ,validation-who
 			   ,MISMATCH-ERROR-MESSAGE ,idx '(is-a? _ ,arg.name) ,arg.id))))
 		   following-validations))))
 
     (define* (%build-rest-formal-validation-form input-form.stx lexenv.run lexenv.expand
-						 caller-who rest.id rest.ots idx)
+						 validation-who rest.id rest.ots idx)
       (cond ((list-of-type-spec? rest.ots)
 	     ;;Generate a validating expression that accepts  both null and a list of
 	     ;;objects of the specified type.
@@ -930,7 +942,7 @@
 	       (bless
 		`((fold-left (lambda (,idx.sym ,obj.sym)
 			       (unless (,item-pred ,obj.sym)
-				 (procedure-signature-argument-violation __who__
+				 (procedure-signature-argument-violation ,validation-who
 				   ,MISMATCH-ERROR-MESSAGE ,idx.sym '(is-a? _ ,item.name) ,obj.sym))
 			       (fxadd1 ,idx.sym))
 		    ,idx ,rest.id)))))

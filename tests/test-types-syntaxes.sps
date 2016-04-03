@@ -766,7 +766,7 @@
 
 
 (parametrise ((check-test-name	'closure-type-spec))
-#|
+
   (check
       (expander::type-signature.syntax-object (type-of (lambda ({a <fixnum>}) a)))
     (=> syntax=?)
@@ -796,11 +796,35 @@
     #'((lambda (<fixnum> <fixnum>) => (list-of <fixnum>))))
 
   (check
-      (expander::type-signature.syntax-object (type-of (lambda (_ {a <fixnum>} . {rest (list-of <fixnum>)})
+      (expander::type-signature.syntax-object (type-of (lambda ({a <fixnum>} . {rest (list-of <fixnum>)})
   							 (values a rest))))
     (=> syntax=?)
     #'((lambda (<fixnum> . (list-of <fixnum>)) => <list>)))
-|#
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (expander::type-signature.syntax-object (type-of (case-lambda
+							 (({a <fixnum>})
+							  a)
+							 (({a <fixnum>} {b <string>})
+							  (list a b)))))
+    (=> syntax=?)
+    #'((case-lambda
+	 ((<fixnum>)		=> <list>)
+	 ((<fixnum> <string>)	=> <list>))))
+
+  (check
+      (expander::type-signature.syntax-object (type-of (case-lambda
+							 (({_ <fixnum>} {a <fixnum>})
+							  a)
+							 (({_ (list <fixnum> <string>)} {a <fixnum>} {b <string>})
+							  (list a b)))))
+    (=> syntax=?)
+    #'((case-lambda
+	 ((<fixnum>)		=> (<fixnum>))
+	 ((<fixnum> <string>)	=> ((list <fixnum> <string>))))))
+
 ;;; --------------------------------------------------------------------
 
   (check
