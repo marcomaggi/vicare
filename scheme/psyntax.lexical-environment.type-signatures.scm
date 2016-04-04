@@ -62,8 +62,6 @@
 
    #| end of exports |# )
 
-  (import PSYNTAX-TYPE-SYNTAX-OBJECTS)
-
 
 ;;;; syntax helpers
 

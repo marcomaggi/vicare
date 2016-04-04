@@ -554,12 +554,11 @@
 (import PSYNTAX-SYNTAX-UTILITIES)
 
 (include "psyntax.lexical-environment.object-type-specs.scm"	#t)
-(include "psyntax.lexical-environment.type-syntax-objects.scm"	#t)
 (include "psyntax.lexical-environment.type-signatures.scm"	#t)
 (import PSYNTAX-TYPE-SIGNATURES)
 (include "psyntax.lexical-environment.type-callables.scm"	#t)
-
 (import PSYNTAX-TYPE-CALLABLES)
+(include "psyntax.lexical-environment.type-syntax-objects.scm"	#t)
 
 (include "psyntax.lexical-environment.syntactic-bindings.scm"	#t)
 (include "psyntax.lexical-environment.typed-variable-specs.scm"	#t)

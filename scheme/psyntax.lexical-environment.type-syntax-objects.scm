@@ -26,6 +26,16 @@
    syntax-object.typed-argument?			syntax-object.parse-typed-argument
    syntax-object.parse-standard-formals			syntax-object.parse-typed-formals
    syntax-object.parse-standard-list-of-bindings	syntax-object.parse-typed-list-of-bindings
+
+   syntax-object.parse-standard-clambda-clause-formals
+   syntax-object.parse-standard-clambda-multi-clauses-formals
+
+   syntax-object.parse-typed-clambda-clause-formals
+   syntax-object.parse-typed-clambda-multi-clauses-formals
+
+   syntax-object.standard-clambda-clause-formals?
+   syntax-object.typed-clambda-clause-formals?
+
    #| end of exports |# )
 
 
@@ -429,6 +439,141 @@
     (map (lambda (x) (<top>-ots)) item*))
 
   #| end of module: SYNTAX-OBJECT.PARSE-TYPED-FORMALS |# )
+
+
+;;;; type syntax objects: standard formals parsing
+
+(define* (syntax-object.parse-standard-clambda-clause-formals input-formals.stx)
+  ;;Given a syntax object parse it as  standard lambda formals; do test for duplicate
+  ;;bindings.  Return the following values:
+  ;;
+  ;;1. The argument INPUT-FORMALS.STX fully unwrapped.
+  ;;
+  ;;2. An instance of "<clambda-clause-signature>".
+  ;;
+  ;;As usage example, when the syntax use:
+  ;;
+  ;;   (lambda/std ?formals . ?body)
+  ;;
+  ;;is parsed, this function is called as:
+  ;;
+  ;;   (syntax-object.parse-standard-clambda-clause-formals #'?formals)
+  ;;
+  (receive (standard-formals.stx argvals.sig)
+      (syntax-object.parse-standard-formals input-formals.stx)
+    (let ((retvals.sig (make-type-signature/fully-untyped)))
+      (values standard-formals.stx (make-clambda-clause-signature retvals.sig argvals.sig)))))
+
+(define (syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
+  ;;Given a list of syntax objects  INPUT-FORMALS*.STX: parse them as clambda clauses
+  ;;standard formals; do test for duplicate bindings.  Return the following values:
+  ;;
+  ;;1. The argument INPUT-FORMALS*.STX fully unwrapped.
+  ;;
+  ;;2. A list of "<clambda-clause-signature>" instances.
+  ;;
+  ;;As usage example, when the syntax use:
+  ;;
+  ;;   (case-lambda/std (?formals . ?body) ...)
+  ;;
+  ;;is parsed, this function is called as:
+  ;;
+  ;;   (syntax-object.parse-standard-clambda-multi-clauses-formals (#'?formals ...))
+  ;;
+  (let recur ((input-formals*.stx input-formals*.stx))
+    (if (pair? input-formals*.stx)
+	(receive (standard-formals.stx clause-signature)
+	    (syntax-object.parse-standard-clambda-clause-formals (car input-formals*.stx))
+	  (receive (standard-formals*.stx clause-signature*)
+	      (recur (cdr input-formals*.stx))
+	    (values (cons standard-formals.stx standard-formals*.stx)
+		    (cons clause-signature     clause-signature*))))
+      (values '() '()))))
+
+(define* (syntax-object.standard-clambda-clause-formals? input-formals.stx)
+  ;;Return true if  INPUT-FORMALS.STX is a syntax object  representing valid standard
+  ;;formals for a LAMBDA or LET-VALUES syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (syntax-object.parse-standard-formals input-formals.stx)
+    #t))
+
+
+;;;; type syntax objects: tagged binding parsing, callable signature
+
+(define (syntax-object.parse-typed-clambda-clause-formals callable-signature.stx)
+  ;;Given a  syntax object  representing a  typed callable  spec: split  the standard
+  ;;formals  from the  type  signature; do  test for  duplicate  bindings.  Return  2
+  ;;values:
+  ;;
+  ;;1. A proper or improper list of identifiers representing the standard formals.
+  ;;
+  ;;2. An instance of "<clambda-clause-signature>".
+  ;;
+  ;;This function *does*  enforce the constraint: the identifiers  in type identifier
+  ;;positions must  actually be type  identifiers (with syntactic  binding descriptor
+  ;;already added to the LEXENV).
+  ;;
+  ;;As usage example, when the syntax use:
+  ;;
+  ;;   (lambda/typed ?formals . ?body)
+  ;;
+  ;;is parsed, this function is called as:
+  ;;
+  ;;   (syntax-object.parse-typed-clambda-clause-formals #'?formals)
+  ;;
+  (syntax-match callable-signature.stx (brace)
+    ;;With return values tagging.
+    (((brace ?who . ?rv-types) . ?formals)
+     (underscore-id? ?who)
+     (receive (standard-formals.stx argvals.sig)
+	 (syntax-object.parse-typed-formals ?formals)
+       (values standard-formals.stx
+	       (make-clambda-clause-signature (make-type-signature ?rv-types) argvals.sig))))
+    ;;Without return values tagging.
+    (?formals
+     (receive (standard-formals.stx argvals.sig)
+	 (syntax-object.parse-typed-formals ?formals)
+       (values standard-formals.stx
+	       (make-clambda-clause-signature (make-type-signature/fully-untyped)
+					      argvals.sig))))))
+
+(define (syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
+  ;;Given a list of syntax objects  INPUT-FORMALS*.STX: parse them as clambda clauses
+  ;;typed formals; do test for duplicate bindings.  Return the following values:
+  ;;
+  ;;1. A list of syntax objects representing the standard formals of each clause.
+  ;;
+  ;;2. A list of "<clambda-clause-signature>" instances.
+  ;;
+  ;;As usage example, when the syntax use:
+  ;;
+  ;;   (case-lambda/typed (?formals . ?body) ...)
+  ;;
+  ;;is parsed, this function is called as:
+  ;;
+  ;;   (syntax-object.parse-typed-clambda-multi-clauses-formals (#'?formals ...))
+  ;;
+  (let recur ((input-formals*.stx input-formals*.stx))
+    (if (pair? input-formals*.stx)
+	(receive (standard-formals.stx clause-signature)
+	    (syntax-object.parse-typed-clambda-clause-formals (car input-formals*.stx))
+	  (receive (standard-formals*.stx clause-signature*)
+	      (recur (cdr input-formals*.stx))
+	    (values (cons standard-formals.stx standard-formals*.stx)
+		    (cons clause-signature     clause-signature*))))
+      (values '() '()))))
+
+(define* (syntax-object.typed-clambda-clause-formals? input-formals.stx)
+  ;;Return true  if INPUT-FORMALS.STX  is a syntax  object representing  valid tagged
+  ;;formals for a LAMBDA syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (standard-formals signature-tags)
+	(syntax-object.parse-typed-clambda-clause-formals input-formals.stx)
+      #t)))
 
 
 ;;;; done
