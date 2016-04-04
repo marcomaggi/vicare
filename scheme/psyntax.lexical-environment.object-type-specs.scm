@@ -53,7 +53,9 @@
 ;;           |
 ;;	     |------------> <vector-type-spec>
 ;;           |
-;;	      ------------> <vector-of-type-spec>
+;;	     |------------> <vector-of-type-spec>
+;;	     |
+;;	      ------------> <hashtable-type-spec>
 ;;
 ;;The type "<object-type-spec>" has a field  PARENT-OTS that is used to represent the
 ;;hierarchy of Scheme-level object-types.
@@ -182,6 +184,18 @@
 	 <vector-of-type-spec>-rtd			<vector-of-type-spec>-rcd
 	 make-vector-of-type-spec			vector-of-type-spec?
 	 vector-of-type-spec.item-ots
+
+	 ;;;
+
+	 <hashtable-type-spec>
+	 <hashtable-type-spec>-rtd			<hashtable-type-spec>-rcd
+	 make-hashtable-type-spec			hashtable-type-spec?
+	 hashtable-type-spec.key-ots			hashtable-type-spec.value-ots
+
+	 <alist-type-spec>
+	 <alist-type-spec>-rtd				<alist-type-spec>-rcd
+	 make-alist-type-spec				alist-type-spec?
+	 alist-type-spec.key-ots			alist-type-spec.value-ots
 
 	 ;;;
 
@@ -542,7 +556,8 @@
 	 ;;cannot be sub-typed.
 	 (or (list-of-type-spec? super.ots)
 	     (<list>-ots?        super.ots)
-	     (<null>-ots?        super.ots)))
+	     (<null>-ots?        super.ots)
+	     (alist-type-spec?   super.ots)))
 
 	((<null>-ots? super.ots)
 	 ;;This matches only if SUB.OTS is itself "<null>".  But such case is handled
@@ -656,6 +671,25 @@
 		      (sub-item.ots	(pair-of-type-spec.item-ots sub.ots)))
 		  (and (object-type-spec.matching-super-and-sub? (car super-item*.ots) sub-item.ots)
 		       (object-type-spec.matching-super-and-sub? (make-null-or-list-type-spec (cdr super-item*.ots)) sub-item.ots))))
+	       ((alist-type-spec? sub.ots)
+		(let ((sub-key.ots   (alist-type-spec.key-ots   sub.ots))
+		      (sub-value.ots (alist-type-spec.value-ots sub.ots)))
+		  (for-all (lambda (super-item.ots)
+			     (cond ((pair-type-spec? super-item.ots)
+				    ;; (type-super-and-sub? (list (pair <symbol> <number>) ...)
+				    ;;                      (alist <symbol> <number>))
+				    (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots super-item.ots)
+										   sub-key.ots)
+					 (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots super-item.ots)
+										   sub-value.ots)))
+				   ((pair-of-type-spec? super-item.ots)
+				    ;; (type-super-and-sub? (alist <symbol> <number>)
+				    ;;                      (list (pair-of (or <symbol> <number>)) ...))
+				    (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
+				      (and (object-type-spec.matching-super-and-sub? sub-key.ots   super-super-item.ots)
+					   (object-type-spec.matching-super-and-sub? sub-value.ots super-super-item.ots))))
+				   (else #f)))
+		    (list-type-spec.item-ots* super.ots))))
 	       (else #f)))
 
 	((list-of-type-spec? super.ots)
@@ -681,6 +715,22 @@
 		      (sub-cdr.ots	(pair-type-spec.cdr-ots     sub.ots)))
 		  (and (object-type-spec.matching-super-and-sub? super-item.ots sub-car.ots)
 		       (object-type-spec.matching-super-and-sub? super.ots      sub-cdr.ots))))
+	       ((alist-type-spec? sub.ots)
+		(let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
+		  (cond ((pair-type-spec? super-item.ots)
+			 ;; (type-super-and-sub? (list-of (pair <symbol> <number>))
+			 ;;                      (alist <symbol> <number>))
+			 (and (object-type-spec.matching-super-and-sub? (pair-type-spec.car-ots  super-item.ots)
+									(alist-type-spec.key-ots sub.ots))
+			      (object-type-spec.matching-super-and-sub? (pair-type-spec.cdr-ots    super-item.ots)
+									(alist-type-spec.value-ots sub.ots))))
+			((pair-of-type-spec? super-item.ots)
+			 ;; (type-super-and-sub? (list-of (pair-of (or <symbol> <number>)))
+			 ;;                      (alist <symbol> <number>))
+			 (let ((super-super-item.ots (pair-of-type-spec.item-ots super-item.ots)))
+			   (and (object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.key-ots   sub.ots))
+				(object-type-spec.matching-super-and-sub? super-super-item.ots (alist-type-spec.value-ots sub.ots)))))
+			(else #f))))
 	       ;;No PAIR-OF  types here: a  LIST-OF type annotation does  not specify
 	       ;;the number of items, while  PAIR-OF annotations specify at least one
 	       ;;item.  Notice that:
@@ -690,12 +740,6 @@
 	       ;;   => #f
 	       ;;
 	       (else #f)))
-
-	((or (<list>-ots?        sub.ots)
-	     (list-type-spec?    sub.ots)
-	     (list-of-type-spec? sub.ots))
-	 ;;All the cases of SUPER.OTS that match have been handled above.
-	 #f)
 
 ;;; --------------------------------------------------------------------
 ;;; vector type specifications
@@ -731,12 +775,6 @@
 			     (object-type-spec.matching-super-and-sub? super-item.ots sub-item.ots))
 		    (vector-type-spec.item-ots* sub.ots))))
 	       (else #f)))
-
-	((or (<vector>-ots?        sub.ots)
-	     (vector-of-type-spec? sub.ots)
-	     (vector-type-spec?    sub.ots))
-	 ;;All the cases of SUPER.OTS that match have been handled above.
-	 #f)
 
 ;;; --------------------------------------------------------------------
 ;;; condition-object type specifications
@@ -822,6 +860,84 @@
 
 	((closure-type-spec? sub.ots)
 	 (<procedure>-ots? super.ots))
+
+;;; --------------------------------------------------------------------
+;;; hashtables
+
+	((hashtable-type-spec? super.ots)
+	 (cond ((hashtable-type-spec? sub.ots)
+		(and (object-type-spec.matching-super-and-sub? (hashtable-type-spec.key-ots super.ots)
+							       (hashtable-type-spec.key-ots sub.ots))
+		     (object-type-spec.matching-super-and-sub? (hashtable-type-spec.value-ots super.ots)
+							       (hashtable-type-spec.value-ots sub.ots))))
+	       (else #f)))
+
+	((hashtable-type-spec? sub.ots)
+	 (<hashtable>-ots? super.ots))
+
+;;; --------------------------------------------------------------------
+;;; alists
+
+	((alist-type-spec? super.ots)
+	 (cond ((alist-type-spec? sub.ots)
+		(and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots super.ots)
+							       (alist-type-spec.key-ots sub.ots))
+		     (object-type-spec.matching-super-and-sub? (alist-type-spec.value-ots super.ots)
+							       (alist-type-spec.value-ots sub.ots))))
+	       ((list-of-type-spec? sub.ots)
+		(let ((sub-item.ots (list-of-type-spec.item-ots sub.ots)))
+		  (cond ((pair-type-spec? sub-item.ots)
+			 ;; (type-super-and-sub? (alist <symbol> <number>)
+			 ;;                      (list-of (pair <symbol> <number>)))
+			 (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots)
+									(pair-type-spec.car-ots    sub-item.ots))
+			      (object-type-spec.matching-super-and-sub? (alist-type-spec.value-ots super.ots)
+									(pair-type-spec.cdr-ots    sub-item.ots))))
+			((pair-of-type-spec? sub-item.ots)
+			 ;; (type-super-and-sub? (alist <symbol> <number>)
+			 ;;                      (list-of (pair-of (or <symbol> <number>))))
+			 (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
+			   (and (object-type-spec.matching-super-and-sub? (alist-type-spec.key-ots   super.ots) sub-sub-item.ots)
+				(object-type-spec.matching-super-and-sub? (alist-type-spec.value-ots super.ots) sub-sub-item.ots))))
+			(else #f))))
+	       ((list-type-spec? sub.ots)
+		(let ((super-key.ots   (alist-type-spec.key-ots   super.ots))
+		      (super-value.ots (alist-type-spec.value-ots super.ots)))
+		  (for-all (lambda (sub-item.ots)
+			     (cond ((pair-type-spec? sub-item.ots)
+				    ;; (type-super-and-sub? (alist <symbol> <number>)
+				    ;;                      (list (pair <symbol> <number>) ...))
+				    (and (object-type-spec.matching-super-and-sub? super-key.ots
+										   (pair-type-spec.car-ots sub-item.ots))
+					 (object-type-spec.matching-super-and-sub? super-value.ots
+										   (pair-type-spec.cdr-ots sub-item.ots))))
+				   ((pair-of-type-spec? sub-item.ots)
+				    ;; (type-super-and-sub? (alist <symbol> <number>)
+				    ;;                      (list (pair-of (or <symbol> <number>)) ...))
+				    (let ((sub-sub-item.ots (pair-of-type-spec.item-ots sub-item.ots)))
+				      (and (object-type-spec.matching-super-and-sub? super-key.ots   sub-sub-item.ots)
+					   (object-type-spec.matching-super-and-sub? super-value.ots sub-sub-item.ots))))
+				   (else #f)))
+		    (list-type-spec.item-ots* sub.ots))))
+	       (else #f)))
+
+;;; --------------------------------------------------------------------
+;;; left-overs for SUB.OTS
+
+	((or (<list>-ots?        sub.ots)
+	     (list-type-spec?    sub.ots)
+	     (list-of-type-spec? sub.ots))
+	 ;;All the cases of SUPER.OTS that match have been handled above.
+	 #f)
+
+	((or (<vector>-ots?        sub.ots)
+	     (vector-of-type-spec? sub.ots)
+	     (vector-type-spec?    sub.ots))
+	 ;;All the cases of SUPER.OTS that match have been handled above.
+	 #f)
+
+	((alist-type-spec? sub.ots)
+	 (<list>-ots? super.ots))
 
 ;;; --------------------------------------------------------------------
 
@@ -2219,9 +2335,6 @@
 ;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
-;;There can  be only  one instance of  type "<vector-of-type-spec>"  representing a
-;;vector collecting items of a specific type.
-;;
 (define-record-type (<vector-of-type-spec> make-vector-of-type-spec vector-of-type-spec?)
   (nongenerative vicare:expander:<vector-of-type-spec>)
   (parent <object-type-spec>)
@@ -2283,6 +2396,150 @@
   (record-constructor-descriptor <vector-of-type-spec>))
 
 
+;;;; hashtable object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<hashtable>" representing  hashtable objects  holding keys and  values of  a known
+;;type.
+;;
+(define-record-type (<hashtable-type-spec> make-hashtable-type-spec hashtable-type-spec?)
+  (nongenerative vicare:expander:<hashtable-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable key-ots			hashtable-type-spec.key-ots)
+		;An instance of "<object-type-spec>" describing the type of keys.
+    (immutable value-ots		hashtable-type-spec.value-ots)
+		;An instance of "<object-type-spec>" describing the type of values.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (case-define* make-hashtable-type-spec
+	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?})
+	 (make-hashtable-type-spec key-type.ots value-type.ots
+				   (list (hashtable-id)
+					 (object-type-spec.name key-type.ots)
+					 (object-type-spec.name value-type.ots))))
+	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?} {name.stx hashtable-name?})
+	 (let* ((parent.ots		(<hashtable>-ots))
+		(constructor.stx	#f)
+		(destructor.stx		#f)
+		(predicate.stx		#f)
+		(accessors-table	'())
+		(mutators-table		'())
+		(methods-table		'()))
+	   ((make-object-type-spec name.stx parent.ots
+				   constructor.stx destructor.stx predicate.stx
+				   accessors-table mutators-table methods-table)
+	    key-type.ots value-type.ots))))
+
+      (define (hashtable-name? name.stx)
+	(syntax-match name.stx (hashtable)
+	  ((hashtable ?key-type ?value-type)
+	   (and (syntax-object.type-annotation? ?key-type)
+		(syntax-object.type-annotation? ?value-type))
+	   #t)
+	  (?type-id
+	   (identifier? ?type-id)
+	   #t)
+	  (else #f)))
+
+      make-hashtable-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[hashtable-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <hashtable-type-spec>-rtd
+  (record-type-descriptor <hashtable-type-spec>))
+
+(define <hashtable-type-spec>-rcd
+  (record-constructor-descriptor <hashtable-type-spec>))
+
+
+;;;; alist object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's value  for sub-types of
+;;"<list>" representing alist objects holding keys and values of a known type.
+;;
+(define-record-type (<alist-type-spec> make-alist-type-spec alist-type-spec?)
+  (nongenerative vicare:expander:<alist-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable key-ots			alist-type-spec.key-ots)
+		;An instance of "<object-type-spec>" describing the type of keys.
+    (immutable value-ots		alist-type-spec.value-ots)
+		;An instance of "<object-type-spec>" describing the type of values.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (case-define* make-alist-type-spec
+	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?})
+	 (make-alist-type-spec key-type.ots value-type.ots
+			       (list (alist-id)
+				     (object-type-spec.name key-type.ots)
+				     (object-type-spec.name value-type.ots))))
+	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?} {name.stx alist-name?})
+	 (let* ((parent.ots		(<list>-ots))
+		(constructor.stx	#f)
+		(destructor.stx		#f)
+		(predicate.stx		(make-alist-predicate (object-type-spec.type-predicate-stx key-type.ots)
+							      (object-type-spec.type-predicate-stx value-type.ots)))
+		(accessors-table	'())
+		(mutators-table		'())
+		(methods-table		'()))
+	   ((make-object-type-spec name.stx parent.ots
+				   constructor.stx destructor.stx predicate.stx
+				   accessors-table mutators-table methods-table)
+	    key-type.ots value-type.ots))))
+
+      (define (alist-name? name.stx)
+	(syntax-match name.stx (alist)
+	  ((alist ?key-type ?value-type)
+	   (and (syntax-object.type-annotation? ?key-type)
+		(syntax-object.type-annotation? ?value-type))
+	   #t)
+	  (?type-id
+	   (identifier? ?type-id)
+	   #t)
+	  (else #f)))
+
+      (define (make-alist-predicate key-pred.stx value-pred.stx)
+	;;FIXME The generated predicate can be  made more efficient by iterating only
+	;;once through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
+	(let ((obj.sym	(gensym "obj"))
+	      (P.sym	(gensym "P")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (list? ,obj.sym)
+		   (for-all (lambda (,P.sym)
+			      (and (pair? ,P.sym)
+				   (,key-pred.stx   (car ,P.sym))
+				   (,value-pred.stx (cdr ,P.sym))))
+		     ,obj.sym))))))
+
+      make-alist-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[alist-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <alist-type-spec>-rtd
+  (record-type-descriptor <alist-type-spec>))
+
+(define <alist-type-spec>-rcd
+  (record-constructor-descriptor <alist-type-spec>))
+
+
 ;;;; type annotations
 ;;
 ;;A type annotation is a syntax object  representing the type of a syntactic binding.
@@ -2315,8 +2572,8 @@
      (identifier-syntax
       (lambda (stx)
 	(syntax-object.type-annotation? input-form.stx lexenv stx))))
-   (syntax-match stx (pair list vector pair-of list-of vector-of condition or and not
-			   lambda case-lambda =>)
+   (syntax-match stx (pair list vector pair-of list-of vector-of hashtable alist condition
+			   or and not lambda case-lambda =>)
      (?type-id
       (and (identifier? ?type-id)
 	   (try
@@ -2350,6 +2607,16 @@
      ((vector-of ?item-type)
       (list (core-prim-id 'vector-of)
 	    (recur ?item-type)))
+
+     ((hashtable ?key-type ?value-type)
+      (list (hashtable-id)
+	    (recur ?key-type)
+	    (recur ?value-type)))
+
+     ((alist ?key-type ?value-type)
+      (list (alist-id)
+	    (recur ?key-type)
+	    (recur ?value-type)))
 
      ((lambda ?argtypes => ?rettypes)
       (and (make-type-signature ?argtypes)
@@ -2410,8 +2677,8 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of condition or and not
-				      lambda case-lambda =>)
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of hashtable alist condition
+				      or and not lambda case-lambda =>)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-spec ?type-id lexenv))
@@ -2448,6 +2715,16 @@
      ((vector-of ?item-type)
       (make-vector-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 				name.stx))
+
+     ((hashtable ?key-type ?value-type)
+      (make-hashtable-type-spec (type-annotation->object-type-spec ?key-type)
+				(type-annotation->object-type-spec ?value-type)
+				name.stx))
+
+     ((alist ?key-type ?value-type)
+      (make-alist-type-spec (type-annotation->object-type-spec ?key-type)
+			    (type-annotation->object-type-spec ?value-type)
+			    name.stx))
 
      ((condition)
       (make-compound-condition-type-spec '()))

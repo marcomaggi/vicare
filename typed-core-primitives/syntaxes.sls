@@ -291,7 +291,7 @@
 	     (else id))))
     (let recur ((sig type-signature.stx))
       (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
-			     condition or and not)
+			     condition or and not alist hashtable lambda case-lambda =>)
 	(()
 	 '())
 
@@ -325,6 +325,25 @@
 	(((vector ?item-type0 ?item-type ...) . ?rest)
 	 (cons #`(vector . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
 	       (recur #'?rest)))
+
+	((hashtable ?key-type ?value-type)
+	 (list #'hashtable
+	       (%replace #'?key-type)
+	       (%replace #'?value-type)))
+
+	((alist ?key-type ?value-type)
+	 (list #'alist
+	       (%replace #'?key-type)
+	       (%replace #'?value-type)))
+
+	((lambda ?argtypes => ?rettypes)
+	 (error #f "not yet implemented" sig))
+
+	((case-lambda
+	   (?argtypes0 => ?rettypes0)
+	   (?argtypes* => ?rettypes*)
+	   ...)
+	 (error #f "not yet implemented" sig))
 
 	(((condition ?item-type0 ?item-type ...) . ?rest)
 	 (cons #`(condition . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))

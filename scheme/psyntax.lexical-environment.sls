@@ -187,6 +187,16 @@
     make-vector-of-type-spec				vector-of-type-spec?
     vector-of-type-spec.item-ots
 ;;;
+    <hashtable-type-spec>
+    <hashtable-type-spec>-rtd				<hashtable-type-spec>-rcd
+    make-hashtable-type-spec				hashtable-type-spec?
+    hashtable-type-spec.key-ots				hashtable-type-spec.value-ots
+
+    <alist-type-spec>
+    <alist-type-spec>-rtd				<alist-type-spec>-rcd
+    make-alist-type-spec				alist-type-spec?
+    alist-type-spec.key-ots				alist-type-spec.value-ots
+;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
     typed-variable-spec?
@@ -273,6 +283,7 @@
     case-method-id			case-method-id?
     procedure-pred-id
     list-of-id				vector-of-id
+    hashtable-id			alist-id
     define/checked-id			case-define/checked-id
     define/typed-id			case-define/typed-id
     define/std-id			case-define/std-id
@@ -316,6 +327,7 @@
     <null>-ots				<null>-ots?
     <list>-ots				<list>-ots?
     <vector>-ots			<vector>-ots?
+    <hashtable>-ots			<hashtable>-ots?
     <empty-vector>-ots			<empty-vector>-ots?
     <stx>-ots				<stx>-ots?
     <syntactic-identifier>-ots		<syntactic-identifier>-ots?
@@ -2468,6 +2480,8 @@
   (define-core-prim-id-retriever brace-id		brace)
   (define-core-prim-id-retriever list-of-id		list-of)
   (define-core-prim-id-retriever vector-of-id		vector-of)
+  (define-core-prim-id-retriever hashtable-id		hashtable)
+  (define-core-prim-id-retriever alist-id		alist)
   ;;
   (define-core-prim-id-retriever define/checked-id	define/checked)
   (define-core-prim-id-retriever define/typed-id	define/typed)
@@ -2796,6 +2810,8 @@
   (define-type-spec-retriever <struct>-ots			<struct>)
   (define-type-spec-retriever <record>-ots			<record>)
   (define-type-spec-retriever <vector>-ots			<vector>)
+  (define-type-spec-retriever <hashtable>-ots			<hashtable>)
+  (define-type-spec-retriever <alist>-ots			<alist>)
   (define-type-spec-retriever <empty-vector>-ots		<empty-vector>)
   (define-type-spec-retriever <null>-ots			<null>)
   (define-type-spec-retriever <list>-ots			<list>)
@@ -2870,6 +2886,8 @@
   (define-type-spec-predicate <false>-ots?			<false>-ots)
   (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
+  (define-type-spec-predicate <hashtable>-ots?			<hashtable>-ots)
+  (define-type-spec-predicate <alist>-ots?			<alist>-ots)
   (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
   (define-type-spec-predicate <null>-ots?			<null>-ots)
   (define-type-spec-predicate <list>-ots?			<list>-ots)

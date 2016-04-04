@@ -275,9 +275,15 @@ brace characters:
   123)
 @end lisp
 
-@c ------------------------------------------------------------------------
+@menu
+* types intro annotations inserting:: Inserting type annotations.
+* types intro annotations putting::   What to put in a type annotation.
+@end menu
 
-@subsubheading Inserting type annotations
+@c page
+@node types intro annotations inserting
+@subsubsection Inserting type annotations
+
 
 Everywhere the name of a syntactic binding appears in binding position:
 we can add a type annotation by wrapping the syntactic identifier in
@@ -343,9 +349,10 @@ example:
 @result{} (x y z)
 @end lisp
 
-@c ------------------------------------------------------------------------
+@c page
+@node types intro annotations putting
+@subsubsection What to put in a type annotation
 
-@subsubheading What to put in a type annotation
 
 Type annotations are either standalone type identifiers like
 @class{fixnum}, @class{string}, @condition{message} or compound type
@@ -358,9 +365,16 @@ syntaxes like the following:
 (pair-of   <fixnum>)
 (list-of   <fixnum>)
 (vector-of <fixnum>)
+(hashtable <symbol> <string>)
+(alist     <symbol> <string>)
 (condition &who &message &irritants)
 (or    <false> <symbol> <string>)
 (and   <exact> <positive>)
+(not   <exact>)
+(lambda (<fixnum>) => (<string>))
+(case-lambda
+  ((<fixnum>) => (<string>))
+  ((<flonum>) => (<string>)))
 @end lisp
 
 @noindent
@@ -445,6 +459,20 @@ annotation.
 @end deftp
 
 
+@deftp {Compound Type Annotation} hashtable @meta{key-type} @meta{value-type}
+Describe a hashtable having keys of type @meta{key-type} and values of
+type @meta{value-type}.  Both @meta{key-type} and @meta{value-type} are
+nested type annotations.
+@end deftp
+
+
+@deftp {Compound Type Annotation} alist @meta{key-type} @meta{value-type}
+Describe an association list having keys of type @meta{key-type} and
+values of type @meta{value-type}.  Both @meta{key-type} and
+@meta{value-type} are nested type annotations.
+@end deftp
+
+
 @deftp {Compound Type Annotation} condition @metao{item-type} @meta{item-type} @dots{}
 Describe a compound condition object holding at least one instance of
 the specified types (the order does not matter).  Every @meta{item-type}
@@ -462,6 +490,37 @@ is a nested type annotation that must be one among: @class{condition},
        (condition &message &who))
 @result{} #t
 @end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} lambda @meta{args-signature} => @meta{rv-signature}
+Describe a sub--type of @class{procedure} having a single clause, like
+procedures defined by @syntax{lambda}.  @syntax{=>} is the syntactic
+binding exported by @rsixlibrary{base}.
+
+The argument @meta{args-signature} must be a syntax object representing
+the type signature of the procedure's arguments.  The argument
+@meta{rv-signature} must be a syntax object representing the type
+signature of the procedure's return values.
+@end deftp
+
+
+@deftp {Compound Type Annotation} case-lambda @metao{clause} @meta{clause} @dots{}
+Describe a sub--type of @class{procedure} having multiple clauses, like
+procedures defined by @syntax{case-lambda}.  @syntax{=>} is the
+syntactic binding exported by @rsixlibrary{base}.
+
+Each @meta{clause} argument must have the format:
+
+@example
+(@meta{args-signature} => @meta{rv-signature})
+@end example
+
+@noindent
+where: @meta{args-signature} must be a syntax object representing the
+type signature of the clause's arguments; @meta{rv-signature} must be a
+syntax object representing the type signature of the clause's return
+values.
 @end deftp
 
 

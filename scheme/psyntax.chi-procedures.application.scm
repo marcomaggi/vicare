@@ -40,7 +40,8 @@
   ;;
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
-  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1 condition cons list car cdr vector)
+  (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1
+				       condition cons list car cdr vector)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;

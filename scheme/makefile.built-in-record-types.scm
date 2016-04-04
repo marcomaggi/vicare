@@ -210,6 +210,20 @@
   (methods
    (item-ots			vector-of-type-spec.item-ots)))
 
+(define-built-in-record-type <hashtable-type-spec>
+    <hashtable>
+  make-hashtable-type-spec hashtable-type-spec?
+  (methods
+   (key-ots			hashtable-type-spec.key-ots)
+   (value-ots			hashtable-type-spec.value-ots)))
+
+(define-built-in-record-type <alist-type-spec>
+    <alist>
+  make-alist-type-spec alist-type-spec?
+  (methods
+   (key-ots			alist-type-spec.key-ots)
+   (value-ots			alist-type-spec.value-ots)))
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-record-type <type-signature>

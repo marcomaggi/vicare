@@ -743,6 +743,8 @@
     (pair-of					(macro . pair-of))
     (list-of					(macro . list-of))
     (vector-of					(macro . vector-of))
+    (hashtable					(macro . hashtable))
+    (alist					(macro . alist))
 ;;;
     (define					(macro . define))
     (case-define				(macro . case-define))
@@ -3341,7 +3343,8 @@
     (pair-of					v $language)
     (list-of					v $language)
     (vector-of					v $language)
-    (union					v $language)
+    (hashtable					v $language)
+    (alist					v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
@@ -4375,6 +4378,22 @@
     (vector-of-type-spec?				$expander)
     (vector-of-type-spec.item-ots			$expander)
 
+    (<hashtable-type-spec>-rtd)
+    (<hashtable-type-spec>-rcd)
+    (<hashtable-type-spec>				$expander)
+    (make-hashtable-type-spec				$expander)
+    (hashtable-type-spec?				$expander)
+    (hashtable-type-spec.key-ots			$expander)
+    (hashtable-type-spec.value-ots			$expander)
+
+    (<alist-type-spec>-rtd)
+    (<alist-type-spec>-rcd)
+    (<alist-type-spec>					$expander)
+    (make-alist-type-spec				$expander)
+    (alist-type-spec?					$expander)
+    (alist-type-spec.key-ots				$expander)
+    (alist-type-spec.value-ots				$expander)
+;;;
     (<type-signature>					$expander)
     (<type-signature>-rtd)
     (<type-signature>-rcd)
