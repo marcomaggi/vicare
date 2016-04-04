@@ -909,7 +909,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-alists.sps				\
 	tests/test-types-objects-booleans.sps				\
 	tests/test-types-objects-chars.sps				\
-	tests/test-types-objects-hashables.sps				\
+	tests/test-types-objects-hashtables.sps				\
 	tests/test-types-objects-ipairs.sps				\
 	tests/test-types-objects-keywords.sps				\
 	tests/test-types-objects-lists.sps				\
