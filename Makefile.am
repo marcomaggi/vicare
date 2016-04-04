@@ -531,6 +531,7 @@ VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/characters.sls			\
 	typed-core-primitives/code-objects.sls			\
 	typed-core-primitives/compnums.sls			\
+	typed-core-primitives/compiler.sls			\
 	typed-core-primitives/condition-objects.sls		\
 	typed-core-primitives/configuration.sls			\
 	typed-core-primitives/collect.sls			\

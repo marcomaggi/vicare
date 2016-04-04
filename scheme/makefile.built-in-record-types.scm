@@ -62,20 +62,20 @@
     <record>
   make-library library?
   (methods
-   (uid			library-uid)
+   (uid				library-uid)
    (name			library-name)
    (imp-lib*			library-imp-lib*)
    (vis-lib*			library-vis-lib*)
    (inv-lib*			library-inv-lib*)
    (export-subst		library-export-subst)
-   (global-env		library-global-env)
-   (typed-locs		library-typed-locs)
-   (visit-state		library-visit-state)
+   (global-env			library-global-env)
+   (typed-locs			library-typed-locs)
+   (visit-state			library-visit-state)
    (invoke-state		library-invoke-state)
-   (visit-code		library-visit-code)
-   (invoke-code		library-invoke-code)
-   (guard-code		library-guard-code)
-   (guard-lib*		library-guard-lib*)
+   (visit-code			library-visit-code)
+   (invoke-code			library-invoke-code)
+   (guard-code			library-guard-code)
+   (guard-lib*			library-guard-lib*)
    (visible?			library-visible?)
    (source-file-name		library-source-file-name)
    (option*			library-option*)
@@ -87,7 +87,7 @@
     <record>
   get-annotated-datum reader-annotation?
   (methods
-   (expression		reader-annotation-expression)
+   (expression			reader-annotation-expression)
    (stripped			reader-annotation-stripped)
    (source			reader-annotation-source)
    (textual-position		reader-annotation-textual-position)))

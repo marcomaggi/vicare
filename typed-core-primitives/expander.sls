@@ -31,6 +31,27 @@
 (define (typed-core-primitives.expander)
 
 
+;;;; configuration
+
+(declare-core-primitive initialise-expander
+    (safe)
+  (signatures
+   (()				=> (<void>))))
+
+(declare-parameter generate-descriptive-gensyms?)
+(declare-parameter generate-descriptive-marks?)
+
+
+;;;; main operations
+
+(declare-core-primitive expand-form-to-core-language
+    (safe)
+  (signatures
+   ((<top> <lexical-environment>)		=> (<top> (list-of <library>)))))
+
+(declare-parameter current-inferior-lexenv)
+
+
 ;;;; syntax-case, safe procedures
 
 (section

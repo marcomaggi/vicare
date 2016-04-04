@@ -160,13 +160,6 @@
   (attributes
    ((_)				effect-free)))
 
-(declare-core-primitive system-value
-    (safe)
-  (signatures
-   ((<symbol>)			=> (<top>)))
-  (attributes
-   ((_)				effect-free)))
-
 (declare-core-primitive system-label
     (safe)
   (signatures

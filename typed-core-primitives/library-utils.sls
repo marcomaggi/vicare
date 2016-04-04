@@ -306,6 +306,23 @@
 /section)
 
 
+;;;; library expansion, safe procedures
+
+(declare-parameter current-library-expander	<procedure>)
+
+(declare-core-primitive expand-library
+    (safe)
+  (signatures
+   ((<top>)				=> (<library>))
+   ((<top> <string>)			=> (<library>))
+   ((<top> <string> <procedure>)	=> (<library>))))
+
+(declare-core-primitive expand-library->sexp
+    (safe)
+  (signatures
+   ((<top>)				=> (<list>))))
+
+
 ;;;; done
 
 #| end of define |# )

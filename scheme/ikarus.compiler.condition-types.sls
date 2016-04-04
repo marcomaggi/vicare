@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -27,11 +27,22 @@
 #!vicare
 (library (ikarus.compiler.condition-types)
   (export
-    make-library-condition library-condition? library-condition-name
-    make-module-condition module-condition? module-condition-name
-    make-compiler-internal-error compiler-internal-error?
+    &library-rtd				&library-rcd
+    &module-rtd					&module-rcd
+
+    make-library-condition			library-condition?
+    library-condition-name
+    make-module-condition			module-condition?
+    module-condition-name
+    make-compiler-internal-error		compiler-internal-error?
 
     ;; these go in (vicare compiler)
+    &compile-time-error-rtd			&compile-time-error-rcd
+    &compile-time-arity-error-rtd		&compile-time-arity-error-rcd
+    &compile-time-core-type-error-rtd		&compile-time-core-type-error-rcd
+    &compile-time-operand-core-type-error-rtd	&compile-time-operand-core-type-error-rcd
+    &compile-time-retval-core-type-error-rtd	&compile-time-retval-core-type-error-rcd
+    &compiler-internal-error-rtd		&compiler-internal-error-rcd
     make-compile-time-error			compile-time-error?
     make-compile-time-arity-error		compile-time-arity-error?
     make-compile-time-core-type-error		compile-time-core-type-error?
@@ -46,37 +57,61 @@
   (import (vicare))
 
 
+;;;; helpers
+
+(define-syntax (declare-rtd/rcd stx)
+  (define (mkname type.id suffix)
+    (datum->syntax type.id (string->symbol (string-append (symbol->string (syntax->datum type.id)) suffix))))
+  (syntax-case stx ()
+    ((_ ?type)
+     (identifier? #'?type)
+     (with-syntax
+	 ((RTD-ID (mkname #'?type "-rtd"))
+	  (RCD-ID (mkname #'?type "-rcd")))
+       #'(begin
+	   (define RTD-ID (record-type-descriptor ?type))
+	   (define RCD-ID (record-constructor-descriptor ?type)))))
+    ))
+
+
 (define-condition-type &library
     &condition
   make-library-condition library-condition?
   (name		library-condition-name))
+(declare-rtd/rcd &library)
 
 (define-condition-type &module
     &condition
   make-module-condition module-condition?
   (name		module-condition-name))
+(declare-rtd/rcd &module)
 
 ;;; --------------------------------------------------------------------
 
 (define-condition-type &compile-time-error
     &assertion
   make-compile-time-error compile-time-error?)
+(declare-rtd/rcd &compile-time-error)
 
 (define-condition-type &compile-time-arity-error
     &compile-time-error
   make-compile-time-arity-error compile-time-arity-error?)
+(declare-rtd/rcd &compile-time-arity-error)
 
 (define-condition-type &compile-time-core-type-error
     &compile-time-error
   make-compile-time-core-type-error compile-time-core-type-error?)
+(declare-rtd/rcd &compile-time-core-type-error)
 
 (define-condition-type &compile-time-operand-core-type-error
     &compile-time-error
   make-compile-time-operand-core-type-error compile-time-operand-core-type-error?)
+(declare-rtd/rcd &compile-time-operand-core-type-error)
 
 (define-condition-type &compile-time-retval-core-type-error
     &compile-time-error
   make-compile-time-retval-core-type-error compile-time-retval-core-type-error?)
+(declare-rtd/rcd &compile-time-retval-core-type-error)
 
 (define (compile-time-error module-who who message . irritants)
   (%raise-error module-who who message (make-compile-time-error) irritants))
@@ -92,8 +127,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &compiler-internal-error &compile-time-error
+(define-condition-type &compiler-internal-error
+    &compile-time-error
   make-compiler-internal-error compiler-internal-error?)
+(declare-rtd/rcd &compiler-internal-error)
 
 (define (compiler-internal-error module-who who message . irritants)
   (%raise-error module-who who message (make-compiler-internal-error) irritants))

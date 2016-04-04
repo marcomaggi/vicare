@@ -548,6 +548,37 @@
   (methods
    (returned-type-signature		condition-returned-type-signature)))
 
+
+;;;; Vicare specific, compiler stuff
+
+(define-built-in-condition-type &compile-time-error
+    &assertion
+  make-compile-time-error compile-time-error?)
+
+;;; --------------------------------------------------------------------
+
+(define-built-in-condition-type &compile-time-arity-error
+    &compile-time-error
+  make-compile-time-arity-error compile-time-arity-error?)
+
+(define-built-in-condition-type &compile-time-core-type-error
+    &compile-time-error
+  make-compile-time-core-type-error compile-time-core-type-error?)
+
+(define-built-in-condition-type &compile-time-operand-core-type-error
+    &compile-time-error
+  make-compile-time-operand-core-type-error compile-time-operand-core-type-error?)
+
+(define-built-in-condition-type &compile-time-retval-core-type-error
+    &compile-time-error
+  make-compile-time-retval-core-type-error compile-time-retval-core-type-error?)
+
+;;; --------------------------------------------------------------------
+
+(define-built-in-condition-type &compiler-internal-error
+    &compile-time-error
+  make-compiler-internal-error compiler-internal-error?)
+
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare

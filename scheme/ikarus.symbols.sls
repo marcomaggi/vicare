@@ -91,7 +91,6 @@
 		  reset-symbol-proc!
 
 		  top-level-value	top-level-bound?	set-top-level-value!
-		  system-value		system-value-gensym
 
 		  ;; internal functions
 		  $unintern-gensym)
