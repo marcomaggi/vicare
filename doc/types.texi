@@ -4,8 +4,8 @@
 
 @value{PRJNAME}'s expander implements an extension to the language
 defined by @rnrs{6} that allows the definition of typed syntactic
-bindings.  The style of the resulting language is that of ``gradual
-typing''.
+bindings.  Type annotations are optional: we are free to specify them or
+leave the type of variables unspecified.
 
 @menu
 * types intro::                 Introduction to the typed language.
@@ -85,15 +85,7 @@ signature of the arguments.  The typed language extends this feature to
 make it possible at expand--time.
 
 Type annotations are not mandatory in the typed language, so some
-operands are validated and others are not; this means we can write code
-that is ``gradually typed''@footnote{For the definition of gradual
-typing see:
-@quotation
-Jeremy G. Siek, Walid Taha.  ``Gradual Typing for Functional
-Languages''.  Proceedings of the 2006 Scheme and Functional Programming
-Workshop, University of Chicago Technical Report TR-2006-06.
-@end quotation
-}.
+operands are validated and others are not.
 
 To understand the role of @value{PRJNAME}'s typed language extensions,
 we have to consider that:
