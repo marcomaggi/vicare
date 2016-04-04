@@ -808,6 +808,21 @@
 ;;; --------------------------------------------------------------------
 ;;; closure type specifications
 
+	((closure-type-spec? super.ots)
+	 (cond ((closure-type-spec? sub.ots)
+		(for-all (lambda (sub.clause-signature)
+			   (exists (lambda (super.clause-signature)
+				     (and (type-signature.super-and-sub? (clambda-clause-signature.argvals super.clause-signature)
+									 (clambda-clause-signature.argvals sub.clause-signature))
+					  (type-signature.super-and-sub? (clambda-clause-signature.retvals super.clause-signature)
+									 (clambda-clause-signature.retvals sub.clause-signature))))
+			     (clambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
+		  (clambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
+	       (else #f)))
+
+	((closure-type-spec? sub.ots)
+	 (<procedure>-ots? super.ots))
+
 ;;; --------------------------------------------------------------------
 
 	((object-type-spec.parent-ots sub.ots)
@@ -2469,8 +2484,8 @@
      ((case-lambda (?argtypes0 => ?rettypes0) (?argtypes* => ?rettypes*) ...)
       (make-closure-type-spec (make-clambda-signature
 			       (cons (make-clambda-clause-signature
-				      (make-type-signature ?rettypes*)
-				      (make-type-signature ?argtypes*))
+				      (make-type-signature ?rettypes0)
+				      (make-type-signature ?argtypes0))
 				     (map (lambda (argtypes.stx rettypes.stx)
 					    (make-clambda-clause-signature
 					     (make-type-signature rettypes.stx)
