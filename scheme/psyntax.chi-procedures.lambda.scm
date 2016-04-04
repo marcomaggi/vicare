@@ -796,7 +796,7 @@
     ;;
     (import LAMBDA-CLAUSE-EXPANSION-HELPERS)
     (define argvals-signature.specs
-      (type-signature.specs (clambda-clause-signature.argvals clause-signature)))
+      (type-signature.object-type-specs (clambda-clause-signature.argvals clause-signature)))
     (define validation-who
       (let* ((id    (core-prim-id '__who__))
 	     (label (id->label id))

@@ -112,10 +112,10 @@
 		(null? obj))))))
 
 (define* (clambda-clause-signature.argvals.specs {signature clambda-clause-signature?})
-  (type-signature.specs (clambda-clause-signature.argvals signature)))
+  (type-signature.object-type-specs (clambda-clause-signature.argvals signature)))
 
 (define* (clambda-clause-signature.retvals.specs {signature clambda-clause-signature?})
-  (type-signature.specs (clambda-clause-signature.retvals signature)))
+  (type-signature.object-type-specs (clambda-clause-signature.retvals signature)))
 
 ;;; --------------------------------------------------------------------
 

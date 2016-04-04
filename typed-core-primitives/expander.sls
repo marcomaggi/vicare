@@ -687,7 +687,7 @@
   (signatures
    ((<type-signature>)		=> (<syntax-object>))))
 
-(declare-core-primitive type-signature.specs
+(declare-core-primitive type-signature.object-type-specs
     (safe)
   (signatures
    ((<type-signature>)		=> (<top>))))

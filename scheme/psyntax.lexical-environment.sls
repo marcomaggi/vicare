@@ -96,7 +96,7 @@
     <type-signature>
     <type-signature>-rtd				<type-signature>-rcd
     make-type-signature					type-signature?
-    type-signature.syntax-object			type-signature.specs
+    type-signature.syntax-object			type-signature.object-type-specs
 
     ;; object types specifications
     <object-type-spec>

@@ -932,7 +932,7 @@
     (define* (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
 				   asrt.stx {asrt.sig type-signature?} {expr.psi psi?} return-values?)
       (define asrt.specs
-	(type-signature.specs asrt.sig))
+	(type-signature.object-type-specs asrt.sig))
       (define-values (consumer-formals.sexp has-rest?)
 	(%compose-validator-formals asrt.specs))
       (define number-of-validation-forms 0)

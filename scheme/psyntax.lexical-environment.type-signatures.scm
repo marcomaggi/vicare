@@ -26,7 +26,7 @@
    <type-signature>
    <type-signature>-rtd					<type-signature>-rcd
    make-type-signature					type-signature?
-   type-signature.specs					type-signature.syntax-object
+   type-signature.object-type-specs			type-signature.syntax-object
 
 ;;; special constructors
    make-type-signature/single-top			make-type-signature/single-void
@@ -121,7 +121,7 @@
 	   (((CLAUSE ...)	(%parse-clauses (sys::syntax ?clause*))))
 	 (sys::syntax
 	  (let* ((signature		?signature)
-		 (signature.specs	(type-signature.specs signature))
+		 (signature.specs	(type-signature.object-type-specs signature))
 		 (single-item?		(list-of-single-item? signature.specs)))
 	    (cond CLAUSE ...)))))
       ))
@@ -207,7 +207,7 @@
 (define-record-type (<type-signature> make-type-signature type-signature?)
   (nongenerative vicare:expander:<type-signature>)
   (fields
-    (immutable specs	type-signature.specs)
+    (immutable specs	type-signature.object-type-specs)
 		;A  proper   or  improper  list  of   "<object-type-spec>"  instances
 		;representing the types of values matching this signature.
     (mutable memoised-tags			type-signature.memoised-tags		      type-signature.memoised-tags-set!)
@@ -390,7 +390,7 @@
       obj)))
 
 (define* (type-signature.empty? {signature type-signature?})
-  (null? (type-signature.specs signature)))
+  (null? (type-signature.object-type-specs signature)))
 
 (define* (type-signature.fully-untyped? {signature type-signature?})
   ;;Return true  if the type  signature specifies  neither object types,  nor objects
@@ -398,7 +398,7 @@
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-fully-untyped? type-signature.memoised-fully-untyped?-set!
-   (<list>-ots? (type-signature.specs signature))))
+   (<list>-ots? (type-signature.object-type-specs signature))))
 
 (define* (type-signature.partially-untyped? {signature type-signature?})
   ;;Return true if the  type signature has at least one  untyped item, either "<top>"
@@ -406,7 +406,7 @@
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-partially-untyped? type-signature.memoised-partially-untyped?-set!
-   (let loop ((specs (type-signature.specs signature))
+   (let loop ((specs (type-signature.object-type-specs signature))
 	      (rv    #f))
      (cond ((pair? specs)
 	    (loop (cdr specs) (<top>-ots? (car specs))))
@@ -423,7 +423,7 @@
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-untyped? type-signature.memoised-untyped?-set!
-   (let loop ((specs (type-signature.specs signature)))
+   (let loop ((specs (type-signature.object-type-specs signature)))
      (cond ((pair? specs)
 	    (and (<top>-ots? (car specs))
 		 (loop (cdr specs))))
@@ -433,13 +433,13 @@
 (define* (type-signature.single-type? {signature type-signature?})
   ;;Return true if SIGNATURE represents a single value; otherwise return false.
   ;;
-  (list-of-single-item? (type-signature.specs signature)))
+  (list-of-single-item? (type-signature.object-type-specs signature)))
 
 (define* (type-signature.single-top-tag? {signature type-signature?})
   ;;Return  true if  SIGNATURE represents  a single  return value  with tag  "<top>",
   ;;otherwise return false.
   ;;
-  (let ((specs (type-signature.specs signature)))
+  (let ((specs (type-signature.object-type-specs signature)))
     (and (list-of-single-item? specs)
 	 (<top>-ots? (car specs)))))
 
@@ -447,12 +447,12 @@
   ;;Return true if SIGNATURE represents a single return value or it is the standalone
   ;;"<list>" identifier, otherwise return false.
   ;;
-  (let ((specs (type-signature.specs signature)))
+  (let ((specs (type-signature.object-type-specs signature)))
     (or (list-of-single-item? specs)
 	(<list>-ots? specs))))
 
 (define* (type-signature.no-return? {signature type-signature?})
-  (let ((specs (type-signature.specs signature)))
+  (let ((specs (type-signature.object-type-specs signature)))
     (and (pair? specs)
 	 (null? (cdr specs))
 	 (<no-return>-ots? specs))))
@@ -466,7 +466,7 @@
   ;;
   (%type-signature-memoised-body
    signature type-signature.memoised-tags type-signature.memoised-tags-set!
-   (let recur ((specs (type-signature.specs signature)))
+   (let recur ((specs (type-signature.object-type-specs signature)))
      (cond ((pair? specs)
 	    (cons (object-type-spec.name (car specs))
 		  (recur (cdr specs))))
@@ -495,7 +495,7 @@
 
 (define (type-signature.min-and-max-counts signature)
   (receive-and-return (min-count max-count)
-      (let recur ((specs	(type-signature.specs signature))
+      (let recur ((specs	(type-signature.object-type-specs signature))
 		  (min		0)
 		  (max		0))
 	(cond ((pair? specs)
@@ -525,8 +525,8 @@
 		(null? specs2)))
 	  ((eq? specs1 specs2))
 	  (else #f)))
-  (%syntax=? (type-signature.specs signature1)
-	     (type-signature.specs signature2)))
+  (%syntax=? (type-signature.object-type-specs signature1)
+	     (type-signature.object-type-specs signature2)))
 
 
 ;;;; matching: signatures super-type and sub-type matching
@@ -536,8 +536,8 @@
   ;;identifiers in  the homologous  position are  super-type and  sub-type; otherwise
   ;;return false.
   ;;
-  (let recur ((super-specs	(type-signature.specs super-signature))
-	      (sub-specs	(type-signature.specs sub-signature)))
+  (let recur ((super-specs	(type-signature.object-type-specs super-signature))
+	      (sub-specs	(type-signature.object-type-specs sub-signature)))
     (cond
      ((pair? super-specs)
       (cond ((pair? sub-specs)
@@ -655,8 +655,8 @@
   ;;identifiers in  the homologous position  are compatible super-type  and sub-type;
   ;;otherwise return false.
   ;;
-  (let recur ((super-specs	(type-signature.specs super-signature))
-	      (sub-specs	(type-signature.specs sub-signature)))
+  (let recur ((super-specs	(type-signature.object-type-specs super-signature))
+	      (sub-specs	(type-signature.object-type-specs sub-signature)))
     (cond
      ((pair? super-specs)
       (cond ((pair? sub-specs)
@@ -792,7 +792,7 @@
     ;;signatures of the operands.
     ;;
     (let loop ((state		'exact-match)
-	       (args.ots	(type-signature.specs args.sig))
+	       (args.ots	(type-signature.object-type-specs args.sig))
 	       (rand*.sig	rand*.sig))
       ;;In  this loop  the  variable  STATE always  degrades:  from "exact-match"  to
       ;;"possible-match"  or "no-match";  from  "possible-match"  to "no-match".   It
@@ -804,7 +804,7 @@
 	(cond ((pair? rand*.sig)
 	       ;;One more argument and one more operand.  Good, let's inspect them.
 	       (%match-one-argument-against-one-operand state (car args.ots)
-							(type-signature.specs (car rand*.sig))
+							(type-signature.object-type-specs (car rand*.sig))
 							;;Success continuation.
 							(lambda (state)
 							  (loop state (cdr args.ots) (cdr rand*.sig)))))
@@ -935,7 +935,7 @@
 	     (if (pair? rand*.sig)
 		 ;;At least one more operand.  Let's match it against the argument.
 		 (%match-one-argument-against-one-operand state item.ots
-							  (type-signature.specs (car rand*.sig))
+							  (type-signature.object-type-specs (car rand*.sig))
 							  ;;Success continuation.
 							  (lambda (state)
 							    (loop item.ots (cdr rand*.sig) state)))
@@ -954,8 +954,8 @@
   ;;ancestor.
   ;;
   (make-type-signature
-   (let recur ((specs1 (type-signature.specs sig1))
-	       (specs2 (type-signature.specs sig2)))
+   (let recur ((specs1 (type-signature.object-type-specs sig1))
+	       (specs2 (type-signature.object-type-specs sig2)))
      (cond ((null? specs1)
 	    (if (null? specs2)
 		;;Both the signatures are proper lists with the same number of items:

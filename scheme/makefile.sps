@@ -4381,7 +4381,7 @@
     (make-type-signature)
     (type-signature?					$expander)
     (type-signature.syntax-object			$expander)
-    (type-signature.specs				$expander)
+    (type-signature.object-type-specs			$expander)
 ;;;
     (&syntactic-identifier				$expander)
     (&syntactic-identifier-rtd)

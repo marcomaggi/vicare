@@ -216,7 +216,7 @@
     <record>
   make-type-signature type-signature?
   (methods
-   (specs			type-signature.specs)
+   (object-type-specs		type-signature.object-type-specs)
    (syntax-object		type-signature.syntax-object)))
 
 ;;; --------------------------------------------------------------------
