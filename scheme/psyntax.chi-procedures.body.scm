@@ -1546,20 +1546,17 @@
 	(synner "expected identifier as variable name" lhs.id))
       (when (bound-id-member? lhs.id kwd*)
 	(synner "cannot redefine keyword"))
-      (if (and (type-signature.untyped? (clambda-clause-signature.retvals clause-signature))
-	       (type-signature.untyped? (clambda-clause-signature.argvals clause-signature)))
-	  ;;Only  untyped arguments  and return  values.  Generate  a single  checked
-	  ;;function.
+      (if (type-signature.untyped? (clambda-clause-signature.argvals clause-signature))
+	  ;;Only untyped arguments.  Generate a single checked function.
 	  (receive (qdef lexenv.run)
 	      (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
 				  make-qdef-checked-defun
 				  lhs.id standard-formals.stx clause-signature
 				  body*.stx synner)
 	    (values (list qdef) lexenv.run))
-	;;From parsing the typed formals we get  2 values: a proper or improper list of
-	;;identifiers   representing    the   standard   formals;   an    instance   of
-	;;"<clambda-clause-signature>".   An exception  is  raised if  an error  occurs
-	;;while parsing.
+	;;Type arguments are present.  Generate two functions: the safe (which checks
+	;;the  arguments  also at  run-time)  and  the  unsafe (which  validates  the
+	;;arguments only at expand-time).
 	(let* ((unsafe-name.id	(%make-unsafe-name lhs.id safe-who.stx synner))
 	       (safe-body*.stx	(list (%make-unsafe-application-stx unsafe-name.id standard-formals.stx))))
 	  (let*-values
@@ -1683,26 +1680,41 @@
 	   (%synner "expected identifier as function name" ?who))
 	 (receive (standard-formals*.stx clause-signature* body**.stx)
 	     (%parse-clauses input-form.stx (cons ?cl-clause ?cl-clause*) '() '() '())
-	   (let* ((lhs.ots		(make-closure-type-spec (make-clambda-signature clause-signature*)))
-		  (unsafe-who		(%make-unsafe-name ?kwd ?who %synner))
-		  (safe-body**.stx	(map (lambda (standard-formals.stx)
+	   (if (for-all (lambda (clause-signature)
+			  (type-signature.untyped? (clambda-clause-signature.argvals clause-signature)))
+		 clause-signature*)
+	       ;;Only untyped arguments.  Generate a single checked function.
+	       (let ((lhs.ots (make-closure-type-spec (make-clambda-signature clause-signature*))))
+		 (receive (qdef lexenv.run)
+		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					 make-qdef-checked-case-defun
+					 ?who lhs.ots standard-formals*.stx body**.stx %synner)
+		   (values (list qdef) lexenv.run)))
+	     ;;Type arguments are  present.  Generate two functions:  the safe (which
+	     ;;checks the arguments also at run-time) and the unsafe (which validates
+	     ;;the arguments only at expand-time).
+	     (let* ((lhs.ots		(make-closure-type-spec (make-clambda-signature clause-signature*)))
+		    (unsafe-who		(%make-unsafe-name ?kwd ?who %synner))
+		    (safe-body**.stx	(map (lambda (standard-formals.stx)
 					       (list (%make-unsafe-application-stx unsafe-who standard-formals.stx)))
 					  standard-formals*.stx)))
-	     (let*-values
-		 (((safe-qdef lexenv.run)
-		   (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-				       ?who       lhs.ots standard-formals*.stx safe-body**.stx %synner))
-		  ((unsafe-qdef lexenv.run)
-		   (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
-				       unsafe-who lhs.ots standard-formals*.stx body**.stx      %synner)))
-	       (values (list safe-qdef unsafe-qdef) lexenv.run))))))
+	       (let*-values
+		   (((safe-qdef lexenv.run)
+		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					 make-qdef-checked-case-defun
+					 ?who       lhs.ots standard-formals*.stx safe-body**.stx %synner))
+		    ((unsafe-qdef lexenv.run)
+		     (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+					 make-qdef-typed-case-defun
+					 unsafe-who lhs.ots standard-formals*.stx body**.stx      %synner)))
+		 (values (list safe-qdef unsafe-qdef) lexenv.run)))))))
       ))
 
-  (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings?
+  (define (%generate-function input-form.stx rib lexenv.run kwd* shadow/redefine-bindings? qdef-maker
 			      lhs.id lhs.ots standard-formals*.stx body**.stx %synner)
     (if (bound-id-member? lhs.id kwd*)
 	(%synner "cannot redefine keyword")
-      (let* ((qdef		(make-qdef-checked-case-defun input-form.stx lhs.id standard-formals*.stx body**.stx lhs.ots))
+      (let* ((qdef		(qdef-maker input-form.stx lhs.id standard-formals*.stx body**.stx lhs.ots))
 	     (lhs.lab		(generate-label-gensym lhs.id))
 	     (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
 	     (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
