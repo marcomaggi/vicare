@@ -1815,8 +1815,10 @@ Always return @true{}.
 @end defop
 
 
-@deftypemethod @class{top} @aclass{fixnum} hash @var{self}
-Apply @func{object-hash} to the instance.
+@deftypemethod @class{top} @aclass{non-negative-fixnum} hash @var{self}
+Compute and return a hash value for @var{self}.  When the object--type
+does not define a specialised hash function: @func{object-hash} is
+applied to @var{self}.
 @end deftypemethod
 
 @c page
