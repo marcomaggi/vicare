@@ -7,44 +7,55 @@
 
 (define-scheme-type <top>
     #f
-  <top>-constructor <top>-type-predicate
+  (constructor <top>-constructor)
+  (predicate <top>-type-predicate)
+  (hash object-hash)
   (methods
    (hash		object-hash)))
 
 (define-scheme-type <no-return>
     #f
-  #f always-false)
+  (predicate always-false)
+  (hash object-hash))
 
 
 ;;;; standalone object types
 
 (define-scheme-type <void>
     <top>
-  void void-object?)
+  (constructor void)
+  (predicate void-object?)
+  (hash void-hash))
 
 (define-scheme-type <eof>
     <top>
-  eof-object eof-object?)
+  (constructor eof-object)
+  (predicate eof-object?)
+  (hash eof-object-hash))
 
 (define-scheme-type <would-block>
     <top>
-  would-block-object would-block-object?)
+  (constructor would-block-object)
+  (predicate would-block-object?)
+  (hash would-block-hash))
 
 (define-scheme-type <boolean>
     <top>
-  <boolean>-constructor boolean?)
+  (constructor <boolean>-constructor)
+  (predicate boolean?)
+  (hash boolean-hash))
 
 (define-scheme-type <true>
-    <boolean>
-  #f #f)
+    <boolean>)
 
 (define-scheme-type <false>
-    <boolean>
-  #f #f)
+    <boolean>)
 
 (define-scheme-type <char>
     <top>
-  integer->char char?
+  (constructor integer->char)
+  (predicate char?)
+  (hash char-hash)
   (methods
    (string		string)
    (hash		char-hash)
@@ -53,7 +64,9 @@
 
 (define-scheme-type <symbol>
     <top>
-  string->symbol symbol?
+  (constructor string->symbol)
+  (predicate symbol?)
+  (hash symbol-hash)
   (methods
    (string		symbol->string)
    (hash		symbol-hash)
@@ -66,7 +79,9 @@
 
 (define-scheme-type <keyword>
     <top>
-  symbol->keyword keyword?
+  (constructor symbol->keyword)
+  (predicate keyword?)
+  (hash keyword-hash)
   (methods
    (symbol		keyword->symbol)
    (string		keyword->string)
@@ -74,7 +89,9 @@
 
 (define-scheme-type <pointer>
     <top>
-  integer->pointer pointer?
+  (constructor integer->pointer)
+  (predicate pointer?)
+  (hash pointer-hash)
   (methods
    (null?		pointer-null?)
    (integer		pointer->integer)
@@ -92,7 +109,9 @@
 
 (define-scheme-type <transcoder>
     <top>
-  make-transcoder transcoder?
+  (constructor make-transcoder)
+  (predicate transcoder?)
+  (hash transcoder-hash)
   (methods
    (codec		transcoder-codec)
    (eol-style		transcoder-eol-style)
@@ -103,143 +122,169 @@
 
 (define-scheme-type <procedure>
     <top>
-  #f procedure?)
+  (predicate procedure?))
 
 
 ;;; numeric types
 
 (define-scheme-type <number>
     <top>
-  #t number?)
+  (predicate number?)
+  (hash object-hash))
 
 (define-scheme-type <complex>
     <number>
-  make-rectangular complex?)
+  (constructor make-rectangular)
+  (predicate complex?))
 
 (define-scheme-type <real-valued>
     <complex>
-  #t real-valued?)
+  (predicate real-valued?))
 
 (define-scheme-type <real>
     <real-valued>
-  #t real?)
+  (predicate real?))
 
 (define-scheme-type <rational-valued>
     <real>
-  #t rational-valued?)
+  (predicate rational-valued?))
 
 (define-scheme-type <rational>
     <rational-valued>
-  #t rational?)
+  (predicate  rational?))
 
 ;;This "<integer-valued>" is a bit orphan: it is excluded from the hierarchy.
 ;;
 (define-scheme-type <integer-valued>
     <rational-valued>
-  #t integer-valued?)
+  (predicate integer-valued?))
 
 ;;Notice that "<integer>" is a "<rational>", not an "<integer-valued>".
 ;;
 (define-scheme-type <integer>
     <rational>
-  #t integer?)
+  (predicate integer?))
 
 (define-scheme-type <exact-integer>
     <integer>
-  #t exact-integer?)
+  (predicate exact-integer?)
+  (hash exact-integer-hash))
 
 (define-scheme-type <fixnum>
     <exact-integer>
-  #t fixnum?)
+  (constructor #t)
+  (predicate fixnum?)
+  (hash fixnum-hash))
 
 (define-scheme-type <flonum>
     <real>
-  #t flonum?)
+  (constructor #t)
+  (predicate flonum?)
+  (hash flonum-hash))
 
 (define-scheme-type <ratnum>
     <rational>
-  #t ratnum?)
+  (constructor #t)
+  (predicate ratnum?))
 
 (define-scheme-type <bignum>
     <exact-integer>
-  #t bignum?)
+  (constructor #t)
+  (predicate bignum?))
 
 (define-scheme-type <compnum>
     <complex>
-  #t compnum?)
+  (constructor #t)
+  (predicate compnum?))
 
 (define-scheme-type <cflonum>
     <complex>
-  #t cflonum?)
+  (constructor #t)
+  (predicate cflonum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <zero-fixnum>
     <fixnum>
-  #t zero-fixnum?)
+  (constructor #t)
+  (predicate zero-fixnum?))
 
 (define-scheme-type <positive-fixnum>
     <fixnum>
-  #t positive-fixnum?)
+  (constructor #t)
+  (predicate positive-fixnum?))
 
 (define-scheme-type <negative-fixnum>
     <fixnum>
-  #t negative-fixnum?)
+  (constructor #t)
+  (predicate negative-fixnum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-bignum>
     <bignum>
-  #t positive-bignum?)
+  (constructor #t)
+  (predicate positive-bignum?))
 
 (define-scheme-type <negative-bignum>
     <bignum>
-  #t negative-bignum?)
+  (constructor #t)
+  (predicate negative-bignum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-ratnum>
     <ratnum>
-  #t positive-ratnum?)
+  (constructor #t)
+  (predicate positive-ratnum?))
 
 (define-scheme-type <negative-ratnum>
     <ratnum>
-  #t negative-ratnum?)
+  (constructor #t)
+  (predicate negative-ratnum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <positive-flonum>
     <flonum>
-  #t positive-flonum?)
+  (constructor #t)
+  (predicate positive-flonum?))
 
 (define-scheme-type <negative-flonum>
     <flonum>
-  #t negative-flonum?)
+  (constructor #t)
+  (predicate negative-flonum?))
 
 (define-scheme-type <positive-zero-flonum>
     <positive-flonum>
-  #t positive-zero-flonum?)
+  (constructor #t)
+  (predicate positive-zero-flonum?))
 
 (define-scheme-type <negative-zero-flonum>
     <negative-flonum>
-  #t negative-zero-flonum?)
+  (constructor #t)
+  (predicate negative-zero-flonum?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <exact-compnum>
     <compnum>
-  #t exact-compnum?)
+  (constructor #t)
+  (predicate exact-compnum?))
 
 (define-scheme-type <inexact-compnum>
     <compnum>
-  #t inexact-compnum?)
+  (constructor #t)
+  (predicate inexact-compnum?))
 
 
 ;;;; compound types
 
 (define-scheme-type <string>
     <top>
-  string string?
+  (constructor string)
+  (predicate string?)
+  (hash string-hash)
   (methods
    (empty?			string-empty?)
 
@@ -306,7 +351,8 @@
 
 (define-scheme-type <vector>
     <top>
-  vector vector?
+  (constructor vector)
+  (predicate vector?)
   (methods
    (empty?			vector-empty?)
    (length			vector-length)
@@ -329,66 +375,78 @@
 
 (define-scheme-type <empty-vector>
     <vector>
-  <empty-vector>-constructor		<empty-vector>-type-predicate)
+  (constructor <empty-vector>-constructor)
+  (predicate <empty-vector>-type-predicate))
 
 (define-scheme-type <bytevector>
     <top>
-  make-bytevector bytevector?)
+  (constructor make-bytevector)
+  (predicate bytevector?)
+  (hash bytevector-hash))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <hashtable>
     <top>
-  #f hashtable?)
+  (predicate hashtable?))
 
 (define-scheme-type <hashtable-eq>
     <hashtable>
-  make-eq-hashtable hashtable-eq?)
+  (constructor make-eq-hashtable)
+  (predicate hashtable-eq?))
 
 (define-scheme-type <hashtable-eqv>
     <hashtable>
-  make-eqv-hashtable hashtable-eqv?)
+  (constructor make-eqv-hashtable)
+  (predicate hashtable-eqv?))
 
 (define-scheme-type <hashtable-equal>
     <hashtable>
-  make-hashtable hashtable-equiv?)
+  (constructor make-hashtable)
+  (predicate hashtable-equiv?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <code>
     <top>
-  #f code?)
+  (predicate code?))
 
 
 ;;;; records and structs
 
 (define-scheme-type <struct>
     <top>
-  #f struct?)
+  (predicate struct?)
+  (hash struct-hash))
 
 (define-scheme-type <struct-type-descriptor>
     <struct>
-  make-struct-type struct-type-descriptor?)
+  (constructor make-struct-type)
+  (predicate struct-type-descriptor?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <record>
     <struct>
-  #f record?)
+  (predicate record?)
+  (hash record-hash))
 
 (define-scheme-type <record-type-descriptor>
     <struct>
-  make-record-type-descriptor record-type-descriptor?)
+  (constructor make-record-type-descriptor)
+  (predicate record-type-descriptor?))
 
 (define-scheme-type <record-constructor-descriptor>
     <struct>
-  make-record-constructor-descriptor record-constructor-descriptor?)
+  (constructor make-record-constructor-descriptor)
+  (predicate record-constructor-descriptor?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <opaque-record>
     <top>
-  #f always-false)
+  (predicate always-false)
+  (hash record-hash))
 
 ;;; --------------------------------------------------------------------
 
@@ -397,25 +455,28 @@
 ;;
 (define-scheme-type <condition>
     <record>
-  #f condition?
+  (predicate condition?)
   (methods
    (print	print-condition)))
 
 (define-scheme-type <compound-condition>
     <condition>
-  condition compound-condition?)
+  (constructor condition)
+  (predicate compound-condition?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <promise>
     <record>
-  make-promise promise?
+  (constructor make-promise)
+  (predicate promise?)
   (methods
    (force	force)))
 
 (define-scheme-type <enum-set>
     <struct>
-  make-enumeration enum-set?
+  (constructor make-enumeration)
+  (predicate enum-set?)
   (methods
    (list		enum-set->list)
    (complement		enum-set-complement)
@@ -434,7 +495,8 @@
 
 (define-scheme-type <utsname>
     <struct>
-  uname utsname?
+  (constructor uname)
+  (predicate utsname?)
   (methods
    (sysname		utsname-sysname)
    (nodename		utsname-nodename)
@@ -446,7 +508,8 @@
 
 (define-scheme-type <memory-block>
     <struct>
-  make-memory-block memory-block?
+  (constructor make-memory-block)
+  (predicate memory-block?)
   (methods
    (pointer		memory-block-pointer)
    (size		memory-block-size)
@@ -456,7 +519,7 @@
 
 (define-scheme-type <stats>
     <opaque-record>
-  #f stats?
+  (predicate stats?)
   (methods
    (user-secs		stats-user-secs)
    (user-usecs		stats-user-usecs)
@@ -479,77 +542,81 @@
 
 (define-scheme-type <port>
     <top>
-  #f port?)
+  (predicate port?)
+  (hash port-hash))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <input-port>
     <port>
-  #f input-port?)
+  (predicate input-port?))
 
 (define-scheme-type <output-port>
     <port>
-  #f output-port?)
+  (predicate output-port?))
 
 (define-scheme-type <input/output-port>
     <port>
-  #f input/output-port?)
+  (predicate input/output-port?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <textual-port>
     <port>
-  #f textual-port?)
+  (predicate textual-port?))
 
 (define-scheme-type <binary-port>
     <port>
-  #f binary-port?)
+  (predicate binary-port?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <textual-input-port>
     <input-port>
-  #f textual-input-port?)
+  (predicate textual-input-port?))
 
 (define-scheme-type <textual-output-port>
     <output-port>
-  #f textual-output-port?)
+  (predicate textual-output-port?))
 
 (define-scheme-type <textual-input/output-port>
     <input/output-port>
-  #f textual-input/output-port?)
+  (predicate textual-input/output-port?))
 
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <binary-input-port>
     <input-port>
-  #f binary-input-port?)
+  (predicate binary-input-port?))
 
 (define-scheme-type <binary-output-port>
     <output-port>
-  #f binary-output-port?)
+  (predicate binary-output-port?))
 
 (define-scheme-type <binary-input/output-port>
     <input/output-port>
-  #f binary-input/output-port?)
+  (predicate binary-input/output-port?))
 
 
 ;;;; list types
 
 (define-scheme-type <list>
     <top>
-  list list?
+  (constructor list)
+  (predicate list?)
   (methods
    (car		car)
    (cdr		cdr)))
 
 (define-scheme-type <null>
     <list>
-  <null>-constructor null?)
+  (constructor <null>-constructor)
+  (predicate null?))
 
 (define-scheme-type <pair>
     <top>
-  cons pair?
+  (constructor cons)
+  (predicate pair?)
   (methods
    (car		car)
    (cdr		cdr)))
@@ -558,7 +625,8 @@
 
 (define-scheme-type <ipair>
     <struct>
-  ipair ipair?
+  (constructor ipair)
+  (predicate ipair?)
   (methods
    (car		icar)
    (cdr		icdr)))

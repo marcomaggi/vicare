@@ -825,33 +825,103 @@
 ;;sourced in the "ikarus.*" files, where another definition for DEFINE-SCHEME-TYPE is
 ;;present.
 ;;
-(define-syntax* (define-scheme-type stx)
-  (syntax-case stx (methods)
-    ((?kwd   ?type-name ?parent-name ?maker ?pred)
-     #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
-    ((_      ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
-     (begin
-       (when (let ((prnt #'?parent-name))
-	       (and (identifier? prnt)
-		    (or (free-identifier=? prnt #'<no-return>)
-			(free-identifier=? prnt #'<void>)
-			(free-identifier=? prnt #'<null>)
-			(free-identifier=? prnt #'<empty-vector>))))
-	 (assertion-violation __who__
-	   "attempt to use a sealed object-type as parent of object-type specification"
-	   #'type-name #'?parent-name))
-       (with-syntax
-	   ((TYPE-DESCRIPTOR	(datum->syntax #'?kwd (string->symbol
+(define-syntax* (define-scheme-type input-form.stx)
+  (define (main stx)
+    (syntax-case stx ()
+      ((?kwd ?type-name ?parent-name . ?clauses)
+       (let* ((clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
+	      (clause*.stx	(syntax-clauses-collapse clause*.stx))
+	      (specs		(%parse-clauses clause*.stx)))
+	 (%validate-parent #'?parent-name)
+	 (with-syntax
+	     ((TYPE-DESCRIPTOR	(datum->syntax #'?kwd (string->symbol
 						       (string-append (symbol->string (syntax->datum #'?type-name))
-								      "-type-descriptor")))))
-	 #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
-		      (quote (?type-name
-			      ($core-scheme-object-type-name
-			       . (?type-name ?parent-name ?maker ?pred TYPE-DESCRIPTOR
-					     ((?method-name . ?method-implementation-procedure) ...)))))))))
-    ))
+								      "-type-descriptor"))))
+	      (CONSTRUCTOR	(parsed-specs-constructor	specs))
+	      (PREDICATE	(parsed-specs-predicate		specs))
+	      (HASH		(parsed-specs-hash-function	specs))
+	      (METHODS		(parsed-specs-methods		specs)))
+	   #'(set-cons! VICARE-CORE-BUILT-IN-SCHEME-OBJECT-TYPES-SYNTACTIC-BINDING-DESCRIPTORS
+			(quote (?type-name
+				($core-scheme-object-type-name
+				 . (?type-name ?parent-name CONSTRUCTOR PREDICATE HASH TYPE-DESCRIPTOR METHODS))))))))
+      ))
 
-(define-auxiliary-syntaxes methods)
+  (define (%validate-parent parent.stx)
+    (when (let ((prnt #'?parent-name))
+	    (and (identifier? prnt)
+		 (or (free-identifier=? prnt #'<no-return>)
+		     (free-identifier=? prnt #'<void>)
+		     (free-identifier=? prnt #'<null>)
+		     (free-identifier=? prnt #'<empty-vector>))))
+      (synner "attempt to use a sealed object-type as parent of object-type specification"
+	      #'?parent-name)))
+
+  (define-constant LIST-OF-CLAUSES
+    (syntax-clauses-validate-specs
+     (list (make-syntax-clause-spec #'constructor 0 1 0 1      '() '())
+	   (make-syntax-clause-spec #'predicate   0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'hash        0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'methods     0 1 1 +inf.0 '() '()))))
+
+  (define-record-type parsed-specs
+    (fields (mutable constructor)
+		;A  boolean or  an  identifier representing  the object  constructor.
+		;When #f: this object type has  no constructor.  When #t: this object
+		;type has  no constructor, but  the syntax  NEW must verify  that its
+		;single argument is already an instance of this type.
+	    (mutable predicate)
+		;False or an identifier representing  the object predicate.  When #f:
+		;this object type has no predicate.
+	    (mutable hash-function)
+		;False or an identifier representing  the object hash function.  When
+		;#f: this object type has no hash function.
+	    (mutable methods)
+		;A possibly empty proper list of method specifications.
+	    )
+    (protocol
+      (lambda (make-record)
+	(lambda ()
+	  (make-record #f #f #f '()))))
+    #| end of DEFINE-RECORD-TYPE |# )
+
+  (define (%parse-clauses clause*.stx)
+    (syntax-clauses-fold-specs
+     (lambda* ({parsed-specs parsed-specs?} {clause-spec syntax-clause-spec?} args)
+       ;;ARGS is  a vector of  vectors holding the  values from the  clauses matching
+       ;;CLAUSE-SPEC.
+       (assert (fx=? 1 (vector-length args)))
+       (let ((arg (vector-ref args 0)))
+	 (case-identifiers (syntax-clause-spec-keyword clause-spec)
+	   ((constructor)
+	    (if (fxzero? (vector-length arg))
+		(parsed-specs-constructor-set! parsed-specs #f)
+	      (let ((id (vector-ref arg 0)))
+		(unless (or (identifier? id) (boolean? id))
+		  (synner "invalid constructor specification" id))
+		(parsed-specs-constructor-set! parsed-specs id))))
+	   ((predicate)
+	    (let ((id (vector-ref arg 0)))
+	      (unless (or (identifier? id) (boolean? id))
+		(synner "invalid predicate specification" id))
+	      (parsed-specs-predicate-set! parsed-specs id)))
+	   ((hash)
+	    (let ((id (vector-ref arg 0)))
+	      (unless (or (identifier? id) (not id))
+		(synner "invalid hash function specification" id))
+	      (parsed-specs-hash-function-set! parsed-specs id)))
+	   ((methods)
+	    (syntax-case arg ()
+	      (#((?method-name ?method-implementation-procedure) ...)
+	       (parsed-specs-methods-set! parsed-specs #'((?method-name . ?method-implementation-procedure) ...)))
+	      (_
+	       (synner "invalid syntax in METHODS clause" arg))))))
+       parsed-specs)
+     (make-parsed-specs) LIST-OF-CLAUSES clause*.stx))
+
+  (main input-form.stx))
+
+(define-auxiliary-syntaxes constructor predicate hash methods)
 
 ;;; --------------------------------------------------------------------
 
@@ -2958,6 +3028,7 @@
     (void-hash					v $language)
     (eof-object-hash				v $language)
     (would-block-hash				v $language)
+    (transcoder-hash				v $language)
     (struct-hash				v $language)
     (record-hash				v $language)
     (object-hash				v $language)

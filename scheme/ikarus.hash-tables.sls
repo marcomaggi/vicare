@@ -44,7 +44,7 @@
     ;; hash functions
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
-    equal-hash
+    equal-hash			transcoder-hash
     fixnum-hash			exact-integer-hash
     flonum-hash			number-hash
     char-hash			char-ci-hash
@@ -108,7 +108,7 @@
 
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
-		  equal-hash
+		  equal-hash			transcoder-hash
 		  fixnum-hash			exact-integer-hash
 		  flonum-hash			number-hash
 		  char-hash			char-ci-hash
@@ -126,6 +126,8 @@
     (vicare system $symbols)
     (vicare system $pairs)
     (vicare system $vectors)
+    (only (vicare system $transcoders)
+	  $transcoder->data)
     (vicare system $tcbuckets)
     (only (vicare system $structs)
 	  $set-std-printer!))
@@ -1053,6 +1055,12 @@
 
 (define (would-block-hash obj)
   2)
+
+(define* (transcoder-hash {obj transcoder?})
+  ($transcoder-hash obj))
+
+(define ($transcoder-hash obj)
+  ($transcoder->data obj))
 
 ;;; --------------------------------------------------------------------
 

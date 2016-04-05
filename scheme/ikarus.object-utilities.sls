@@ -82,6 +82,10 @@
 	  $fxadd1)
     (only (vicare system $structs)
 	  $struct-rtd)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
+    ;;2016)
+    (only (vicare system $transcoders)
+	  $transcoder->data)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus structs)
@@ -416,42 +420,114 @@
 
 ;;;; built-in object-types descriptors: definitions
 
-(define-auxiliary-syntaxes methods)
+(define-auxiliary-syntaxes constructor predicate hash methods)
 
-(define-syntax (define-scheme-type stx)
-  (syntax-case stx (methods)
-    ((?kwd ?type-name ?parent-name ?maker ?pred)
-     #'(?kwd ?type-name ?parent-name ?maker ?pred (methods)))
-    ((_ ?type-name ?parent-name ?maker ?pred (methods (?method-name ?method-implementation-procedure) ...))
-     (let* ((type-name.sym	(syntax->datum #'?type-name))
-	    (parent-name.sexp	(syntax->datum #'?parent-name))
-	    (type-uid.sym	(string->symbol (string-append "vicare:scheme-type:" (symbol->string type-name.sym))))
-	    (type-uids-list	(cons type-uid.sym (if parent-name.sexp
+(define-syntax* (define-scheme-type input-form.stx)
+  (define (main stx)
+    (syntax-case stx (methods)
+      ((?kwd ?type-name ?parent-name . ?clauses)
+       (let* ((clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
+	      (clause*.stx	(syntax-clauses-collapse clause*.stx))
+	      (specs		(%parse-clauses clause*.stx))
+	      ;;
+	      (type-name.sym	(syntax->datum #'?type-name))
+	      (parent-name.sexp	(syntax->datum #'?parent-name))
+	      (type-uid.sym	(string->symbol (string-append "vicare:scheme-type:" (symbol->string type-name.sym))))
+	      (type-uids-list	(cons type-uid.sym (if parent-name.sexp
 						       (getprop parent-name.sexp 'type-uids-list)
 						     '()))))
-       (define (%datum->syntax obj)
-	 (datum->syntax #'?type-name obj))
-       (define (%mk-btd-name type.sym)
-	 (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
-       (putprop type-name.sym 'type-uids-list type-uids-list)
-       ;;BTD stands for "Built-in Type Descriptor".
+	 (define (%datum->syntax obj)
+	   (datum->syntax #'?type-name obj))
+	 (define (%mk-btd-name type.sym)
+	   (%datum->syntax (string->symbol (string-append (symbol->string type.sym) "-type-descriptor"))))
+	 (putprop type-name.sym 'type-uids-list type-uids-list)
+	 ;;BTD stands for "Built-in Type Descriptor".
+	 (with-syntax
+	     ((BTD-NAME		(%mk-btd-name type-name.sym))
+	      (PARENT-BTD-NAME	(and parent-name.sexp (%mk-btd-name parent-name.sexp)))
+	      (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
+	      (RETRIEVER	(%make-methods-retriever-function specs)))
+	   #'(begin
+	       (define BTD-NAME
+		 (make-scheme-type-descriptor (quote ?type-name) PARENT-BTD-NAME TYPE-UIDS-LIST RETRIEVER))
+	       (export BTD-NAME)))))
+      ))
+
+  (define-constant LIST-OF-CLAUSES
+    (syntax-clauses-validate-specs
+     (list (make-syntax-clause-spec #'constructor 0 1 0 1      '() '())
+	   (make-syntax-clause-spec #'predicate   0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'hash        0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'methods     0 1 1 +inf.0 '() '()))))
+
+  (define-record-type parsed-specs
+    (fields (mutable constructor)
+		;A  boolean or  an  identifier representing  the object  constructor.
+		;When #f: this object type has  no constructor.  When #t: this object
+		;type has  no constructor, but  the syntax  NEW must verify  that its
+		;single argument is already an instance of this type.
+	    (mutable predicate)
+		;False or an identifier representing  the object predicate.  When #f:
+		;this object type has no predicate.
+	    (mutable hash-function)
+		;False or an identifier representing  the object hash function.  When
+		;#f: this object type has no hash function.
+	    (mutable methods)
+		;A possibly empty proper list of method specifications.
+	    )
+    (protocol
+      (lambda (make-record)
+	(lambda ()
+	  (make-record #f #f #f '()))))
+    #| end of DEFINE-RECORD-TYPE |# )
+
+  (define (%parse-clauses clause*.stx)
+    (syntax-clauses-fold-specs
+     (lambda* ({parsed-specs parsed-specs?} {clause-spec syntax-clause-spec?} args)
+       ;;ARGS is  a vector of  vectors holding the  values from the  clauses matching
+       ;;CLAUSE-SPEC.
+       (assert (fx=? 1 (vector-length args)))
+       (let ((arg (vector-ref args 0)))
+	 (case-identifiers (syntax-clause-spec-keyword clause-spec)
+	   ((constructor)
+	    (if (fxzero? (vector-length arg))
+		(parsed-specs-constructor-set! parsed-specs #f)
+	      (let ((id (vector-ref arg 0)))
+		(unless (or (identifier? id) (boolean? id))
+		  (synner "invalid constructor specification" id))
+		(parsed-specs-constructor-set! parsed-specs id))))
+	   ((predicate)
+	    (let ((id (vector-ref arg 0)))
+	      (unless (or (identifier? id) (boolean? id))
+		(synner "invalid predicate specification" id))
+	      (parsed-specs-predicate-set! parsed-specs id)))
+	   ((hash)
+	    (let ((id (vector-ref arg 0)))
+	      (unless (or (identifier? id) (not id))
+		(synner "invalid hash function specification" id))
+	      (parsed-specs-hash-function-set! parsed-specs id)))
+	   ((methods)
+	    (syntax-case arg ()
+	      (#((?method-name ?method-implementation-procedure) ...)
+	       (parsed-specs-methods-set! parsed-specs #'((?method-name ?method-implementation-procedure) ...)))
+	      (_
+	       (synner "invalid syntax in METHODS clause" arg))))))
+       parsed-specs)
+     (make-parsed-specs) LIST-OF-CLAUSES clause*.stx))
+
+  (define (%make-methods-retriever-function specs)
+    (syntax-case (parsed-specs-methods specs) ()
+      (() #f)
+      (((?method-name ?method-implementation-procedure) ...)
        (with-syntax
-	   ((BTD-NAME		(%mk-btd-name type-name.sym))
-	    (PARENT-NAME	(and parent-name.sexp
-				     (%mk-btd-name parent-name.sexp)))
-	    (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
-	    (RETRIEVER		(if (null? (syntax->datum #'((?method-name ?method-implementation-procedure) ...)))
-				    #f
-				  #'(lambda (method-name.sym)
-				      (case method-name.sym
-					((?method-name) ?method-implementation-procedure)
-					...
-					(else #f))))))
-	 #'(begin
-	     (define BTD-NAME
-	       (make-scheme-type-descriptor (quote ?type-name) PARENT-NAME TYPE-UIDS-LIST RETRIEVER))
-	     (export BTD-NAME)))))
-    ))
+	   ((METHOD-NAME (datum->syntax #'?kwd 'method-name)))
+	 #'(lambda (METHOD-NAME)
+	     (case METHOD-NAME
+	       ((?method-name) ?method-implementation-procedure)
+	       ...
+	       (else #f)))))))
+
+  (main input-form.stx))
 
 ;;; --------------------------------------------------------------------
 ;;; built-in Scheme objects type descriptors

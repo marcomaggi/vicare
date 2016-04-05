@@ -124,7 +124,7 @@
 	 <scheme-type-spec>
 	 <scheme-type-spec>-rtd				<scheme-type-spec>-rcd
 	 make-scheme-type-spec				scheme-type-spec?
-	 scheme-type-spec.type-descriptor-id
+	 scheme-type-spec.type-descriptor-id		scheme-type-spec.hash-function-id
 
 	 <closure-type-spec>
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
@@ -1351,6 +1351,9 @@
   (nongenerative vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (fields
+    (immutable hash-function-id		scheme-type-spec.hash-function-id)
+		;False or a syntactic identifier bound  to the hash function for this
+		;type.
     (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
 		;Syntactic     identifier     bound     to     an     instance     of
 		;"<scheme-type-descriptor>".
@@ -1359,15 +1362,15 @@
     (lambda (make-object-type-spec)
       (define* (make-scheme-type-spec {name identifier?}
 				      {parent.ots (or not scheme-type-spec?)}
-				      constructor.stx predicate.stx type-descriptor.id
-				      methods-table)
+				      constructor.stx predicate.stx hash-function.id
+				      type-descriptor.id methods-table)
 	(let ((destructor.stx	#f)
 	      (accessors-table	'())
 	      (mutators-table	'()))
 	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  accessors-table mutators-table methods-table)
-	   type-descriptor.id)))
+	   hash-function.id type-descriptor.id)))
       make-scheme-type-spec))
   (custom-printer
     (lambda (S port sub-printer)
