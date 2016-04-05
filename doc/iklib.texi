@@ -10444,6 +10444,8 @@ Reset to void all the fields of a structure.
 * iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
 * iklib records printer::       Custom record printers.
+* iklib records equality::      Equality predicate for records.
+* iklib records comparison::    Comparison procedure for records.
 * iklib records hash::          Custom record hash functions.
 * iklib records rcd::           Record-constructor descriptors.
 * iklib records misc::          Miscellaneous functions.
@@ -10462,6 +10464,9 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} custom-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
+@deffnx {Auxiliary Syntax} equality-predicate @meta{expr}
+@deffnx {Auxiliary Syntax} comparison-procedure @meta{expr}
+@deffnx {Auxiliary Syntax} hash-function @meta{expr}
 @deffnx {Auxiliary Syntax} define-type-descriptors
 @deffnx {Auxiliary Syntax} strip-angular-parentheses
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
@@ -10493,6 +10498,9 @@ concatenated in the order in which they are given.  Example:
 * iklib records defs destructor::  The destructor protocol.
 * iklib records defs predicate::   The custom predicate.
 * iklib records defs printer::     The custom printer.
+* iklib records defs equality::    The custom equality predicate.
+* iklib records defs comparison::  The custom comparison procedure.
+* iklib records defs hash::        The custom hash function.
 * iklib records defs methods::     Record-type methods.
 * iklib records defs descriptors:: Defining type descriptors.
 * iklib records defs angular::     Stripping angular parentheses.
@@ -10761,6 +10769,68 @@ Usage example:
 (display (make-duo 1 2))
 @print{} #@{record duo one=1 two=2@}
 @end lisp
+
+@c page
+@node iklib records defs equality
+@subsubsection The custom equality predicate
+
+
+@cindex @syntax{equality-predicate}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(equality-predicate @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which must
+evaluate to a custom equality predicate for instances of the
+record--type; @ref{iklib records equality}, for details on record's
+equality predicates.
+
+@c page
+@node iklib records defs comparison
+@subsubsection The custom comparison procedure
+
+
+@cindex @syntax{comparison-procedure}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(comparison-procedure @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which must
+evaluate to a custom comparison procedure for instances of the
+record--type; @ref{iklib records comparison}, for details on record's
+comparison procedures.
+
+@c page
+@node iklib records defs hash
+@subsubsection The custom hash function
+
+
+@cindex @syntax{hash-function}, record--type definition clause
+
+
+In a use of the syntax @syntax{define-record-type}, the definition
+clause:
+
+@lisp
+(hash-function @meta{expr})
+@end lisp
+
+@noindent
+allows the specification of an expression @meta{expr} which must
+evaluate to a custom hash function for instances of the record--type;
+@ref{iklib records hash}, for details on record's hash functions.
 
 @c page
 @node iklib records defs methods
@@ -11493,16 +11563,79 @@ record @var{record}.
 @end defun
 
 @c page
+@node iklib records equality
+@subsection Equality predicate for records
+
+
+A record--type's equality predicate is a function accepting as arguments
+two instances of a record--type; the return value is: @true{} if the two
+objects are the same and @false{} otherwise.
+
+
+@defun record-type-equality-predicate-set! @var{rtd} @var{equal-pred}
+Select the procedure @var{equal-pred} as equality predicate for records
+of type @var{rtd}; if @var{equal-pred} is @false{}, instances of type
+@var{rtd} make use of the built--in Scheme objects equality predicate.
+@end defun
+
+
+@defun record-type-equality-predicate @var{rtd}
+Return the function set as custom equality predicate for records of type
+@var{rtd}; return @false{} if @var{rtd} has no custom equality
+predicate.
+@end defun
+
+
+@defun record-equality-predicate @var{record}
+Return @false{} or the function being the custom equality predicate for
+the record @var{record}.
+@end defun
+
+@c page
+@node iklib records comparison
+@subsection Comparison procedure for records
+
+
+A record--type's comparison procedure is a function accepting as
+arguments two instances of a record--type; the return value is:
+@code{-1}, @code{0}, or @code{+1} if the first object precedes the
+second, is equal to the second, or follows the second, respectively.
+
+
+@defun record-type-comparison-procedure-set! @var{rtd} @var{compar-proc}
+Select the procedure @var{compar-proc} as comparison procedure for
+records of type @var{rtd}; if @var{compar-proc} is @false{}, instances
+of type @var{rtd} make use of the built--in Scheme objects comparison
+procedure.
+@end defun
+
+
+@defun record-type-comparison-procedure @var{rtd}
+Return the function set as custom comparison procedure for records of
+type @var{rtd}; return @false{} if @var{rtd} has no custom comparison
+procedure.
+@end defun
+
+
+@defun record-comparison-procedure @var{record}
+Return @false{} or the function being the custom comparison procedure
+for the record @var{record}.
+@end defun
+
+@c page
 @node iklib records hash
 @subsection Custom record hash functions
 
 
+A record--type's hash function is a function accepting as single
+argument an instance of the record--type; the return value is a
+non--negative fixnum representing the hash value of the record.
+
+
 @defun record-type-hash-function-set! @var{rtd} @var{hash-func}
-Select the procedure @var{hash-func} as hash-function for records of
+Select the procedure @var{hash-func} as hash function for records of
 type @var{rtd}; if @var{hash-func} is @false{}, instances of type
 @var{rtd} make use of the built--in Scheme objects hash function.
-Return the old hash function or @false{} if no hash function was set for
-this @var{rtd}.
 @end defun
 
 

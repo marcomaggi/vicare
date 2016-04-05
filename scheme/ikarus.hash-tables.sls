@@ -1038,12 +1038,20 @@
 
 (define ($record-hash rec)
   (let ((rtd (record-rtd rec)))
-    (if (zero? (vector-length (record-type-field-names rtd)))
-	(let ((uid (record-type-uid rtd)))
-	  (if uid
-	      (symbol-hash uid)
-	    0))
-      (object-hash (struct-ref rec 0)))))
+    (cond
+     ;;FIXME To  be uncommented at the  next boot image rotation.   (Marco Maggi; Tue
+     ;;Apr 5, 2016)
+     ;;
+     ;; ((records::record-type-hash-function rtd)
+     ;;  => (lambda (hash-func)
+     ;;      (hash-func rec)))
+     (else
+      (if (zero? (vector-length (record-type-field-names rtd)))
+	  (let ((uid (record-type-uid rtd)))
+	    (if uid
+		(symbol-hash uid)
+	      0))
+	(object-hash (struct-ref rec 0)))))))
 
 ;;; --------------------------------------------------------------------
 

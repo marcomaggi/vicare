@@ -43,10 +43,16 @@
 	    (<rcd>-parent-rcd		rcd-parent-rcd))
     record-reset			record=?
     record-and-rtd?			record-object?
-    record-printer			record-destructor
+    record-destructor			record-printer
+    record-equality-predicate		record-comparison-procedure
+    record-hash-function
     record-type-destructor-set!			record-type-destructor
     (rename (<rtd>-printer			record-type-printer)
 	    (set-<rtd>-printer!			record-type-printer-set!)
+	    (<rtd>-equality-predicate		record-type-equality-predicate)
+	    (set-<rtd>-equality-predicate!	record-type-equality-predicate-set!)
+	    (<rtd>-comparison-procedure		record-type-comparison-procedure)
+	    (set-<rtd>-comparison-procedure!	record-type-comparison-procedure-set!)
 	    (<rtd>-hash-function		record-type-hash-function)
 	    (set-<rtd>-hash-function!		record-type-hash-function-set!)
 	    (<rtd>-method-retriever		record-type-method-retriever)
@@ -82,11 +88,15 @@
 		  rtd-subtype?				record-type-all-field-names
 		  record-reset				record=?
 		  record-printer			record-destructor
+		  record
+		  record-equality-predicate		record-comparison-procedure
 		  record-hash-function
 		  record-and-rtd?			record-object?
 		  record-type-destructor-set!		record-type-destructor
 		  record-type-printer-set!		record-type-printer
-		  record-type-hash-function-set!	record-type-hash-function
+		  record-type-equality-predicate	record-type-equality-predicate-set!
+		  record-type-comparison-procedure	record-type-comparison-procedure-set!
+		  record-type-hash-function		record-type-hash-function-set!
 		  record-type-method-retriever		record-type-method-retriever-set!)
     (vicare system $fx)
     (vicare system $pairs)
@@ -249,6 +259,10 @@
 		;A  function, accepting  two arguments,  to be  invoked whenever  the
 		;record instance is  printed.  The first argument is  the record, the
 		;second argument is a textual output port.
+   equality-predicate
+		;False or an equality predicate for this record-object type.
+   comparison-procedure
+		;False or a comparison procedure for this record-object type.
    hash-function
 		;False or a hash function for this record-object type.
    method-retriever
@@ -949,6 +963,8 @@
 		   #f     ;default-rcd
 		   #f     ;destructor
 		   #f     ;printer
+		   #f     ;equality-predicate
+		   #f     ;comparison-procedure
 		   #f     ;hash-function
 		   #f     ;method-retriever
 		   )
@@ -1352,6 +1368,14 @@
 
 (define* (record-printer {x record-object?})
   ($<rtd>-printer ($struct-rtd x)))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-equality-predicate {x record-object?})
+  ($<rtd>-equality-predicate ($struct-rtd x)))
+
+(define* (record-comparison-procedure {x record-object?})
+  ($<rtd>-comparison-procedure ($struct-rtd x)))
 
 (define* (record-hash-function {x record-object?})
   ($<rtd>-hash-function ($struct-rtd x)))

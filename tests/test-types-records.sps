@@ -1256,6 +1256,40 @@
   (void))
 
 
+(parametrise ((check-test-name	'hash-function))
+
+  ;;Early binding method call
+  ;;
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (hash-function
+	   (lambda ({O duo})
+	     (fx+ (fixnum-hash (.one O))
+		  (fixnum-hash (.two O))))))
+	(.hash (new duo 1 2)))
+    => (fx+ (fixnum-hash 1)
+	    (fixnum-hash 2)))
+
+  ;;Late binding method call.
+  ;;
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (hash-function
+	   (lambda ({O duo})
+	     (fx+ (fixnum-hash (.one O))
+		  (fixnum-hash (.two O))))))
+	(let (({O <top>} (new duo 1 2)))
+	  (.hash O)))
+    => (fx+ (fixnum-hash 1)
+	    (fixnum-hash 2)))
+
+  (void))
+
+
 ;;;; done
 
 (collect 'fullest)

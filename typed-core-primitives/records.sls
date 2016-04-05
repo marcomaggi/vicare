@@ -203,34 +203,42 @@
    ((<record-type-descriptor>)		=> ((vector-of <symbol>)))))
 
 ;;; --------------------------------------------------------------------
-;;; destructor
+;;; record-type procedures
 
-(declare-core-primitive record-type-destructor
-    (safe)
-  (signatures
-   ((<record-type-descriptor>)		=> ((or <false> <procedure>))))
-  (attributes
-   ((_)					effect-free)))
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<record-type-descriptor>)		=> ((or <false> <procedure>))))
+		   (attributes
+		    ((_)				effect-free)))))))
+  (declare record-type-destructor)
+  (declare record-type-printer)
+  (declare record-type-equality-predicate)
+  (declare record-type-comparison-procedure)
+  (declare record-type-hash-function)
+  (declare record-type-method-retriever)
+  #| end of LET-SYNTAX |# )
 
-(declare-core-primitive record-type-destructor-set!
-    (safe)
-  (signatures
-   ((<record-type-descriptor> <procedure>)	=> (<void>)))
-  (attributes
-   ((_ _)				result-true)))
-
-;;; --------------------------------------------------------------------
-;;; method retriever
-
-(declare-core-primitive record-type-method-retriever
-    (safe)
-  (signatures
-   ((<record-type-descriptor>)			=> ((or <false> <procedure>)))))
-
-(declare-core-primitive record-type-method-retriever-set!
-    (safe)
-  (signatures
-   ((<record-type-descriptor> <procedure>)	=> (<void>))))
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<record-type-descriptor> <procedure>)	=> (<void>))
+		    ((<record-type-descriptor> <false>)		=> (<void>)))
+		   (attributes
+		    ((_ _)		result-true)))))))
+  (declare record-type-destructor-set!)
+  (declare record-type-printer-set!)
+  (declare record-type-equality-predicate-set!)
+  (declare record-type-comparison-procedure-set!)
+  (declare record-type-hash-function-set!)
+  (declare record-type-method-retriever-set!)
+  #| end of LET-SYNTAX |# )
 
 /section)
 
@@ -260,19 +268,21 @@
   (attributes
    ((_)			effect-free result-true)))
 
-(declare-core-primitive record-destructor
-    (safe)
-  (signatures
-   ((<record>)			=> ((or <false> <procedure>))))
-  (attributes
-   ((_)				effect-free)))
-
-(declare-core-primitive record-printer
-    (safe)
-  (signatures
-   ((<record>)			=> ((or <false> <procedure>))))
-  (attributes
-   ((_)				effect-free)))
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<record>)		=> ((or <false> <procedure>))))
+		   (attributes
+		    ((_)		effect-free)))))))
+  (declare record-destructor)
+  (declare record-printer)
+  (declare record-equality-predicate)
+  (declare record-comparison-procedure)
+  (declare record-hash-function)
+  #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

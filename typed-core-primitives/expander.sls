@@ -646,6 +646,9 @@
      (or <false> <syntactic-identifier>) ;constructor.stx
      (or <false> <syntactic-identifier>) ;destructor.stx
      <syntactic-identifier>		 ;predicate.stx
+     (or <false> <syntactic-identifier>) ;equality-predicate.id
+     (or <false> <syntactic-identifier>) ;comparison-procedure.id
+     (or <false> <syntactic-identifier>) ;hash-function.id
      <list>				 ;safe-accessors-table
      <list>				 ;safe-mutators-table
      <list>)				 ;methods-table

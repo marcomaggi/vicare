@@ -91,6 +91,9 @@
 					  (%named-gensym/suffix foo "-rcd")))
   (define foo-constructor-protocol	(%named-gensym/suffix foo-for-id-generation "-constructor-protocol"))
   (define foo-custom-printer		(%named-gensym/suffix foo-for-id-generation "-custom-printer"))
+  (define foo-equality-predicate.id	(%named-gensym/suffix foo-for-id-generation "-equality-predicate"))
+  (define foo-comparison-procedure.id	(%named-gensym/suffix foo-for-id-generation "-comparison-procedure"))
+  (define foo-hash-function.id		(%named-gensym/suffix foo-for-id-generation "-hash-function"))
   (define-values
     (field-name*.sym
 		;A list of symbols representing all the field names.
@@ -195,6 +198,20 @@
   (define foo-custom-printer-code
     (%make-custom-printer-code clause* foo foo-rtd synner))
 
+  ;;Code  for  equality predicate.   False  or  a  form  evaluating to  the  equality
+  ;;predicate.
+  (define foo-equality-predicate-code
+    (%make-equality-predicate-code clause* foo foo-rtd synner))
+
+  ;;Code for  comparison procedure.   False or  a form  evaluating to  the comparison
+  ;;procedure.
+  (define foo-comparison-procedure-code
+    (%make-comparison-procedure-code clause* foo foo-rtd synner))
+
+  ;;Code for hash function.  False or a form evaluating to the hash function.
+  (define foo-hash-function-code
+    (%make-hash-function-code clause* foo foo-rtd synner))
+
   ;;Definition forms.
   ;;
   (begin
@@ -233,6 +250,26 @@
       (if foo-custom-printer-code
 	  `((define ,foo-custom-printer ,foo-custom-printer-code))
 	'()))
+    ;;This is null if there is no  equality predicate; otherwise it is a list holding
+    ;;a  DEFINE form  defining the  equality predicate,  the list  is spliced  in the
+    ;;output.
+    (define foo-equality-predicate-definition
+      (if foo-equality-predicate-code
+	  `((define ,foo-equality-predicate.id ,foo-equality-predicate-code))
+	'()))
+    ;;This  is null  if there  is no  comparison procedure;  otherwise it  is a  list
+    ;;holding a DEFINE form defining the comparison procedure, the list is spliced in
+    ;;the output.
+    (define foo-comparison-procedure-definition
+      (if foo-comparison-procedure-code
+	  `((define ,foo-comparison-procedure.id ,foo-comparison-procedure-code))
+	'()))
+    ;;This is  null if there is  no hash function; otherwise  it is a list  holding a
+    ;;DEFINE form defining the hash function, the list is spliced in the output.
+    (define foo-hash-function-definition
+      (if foo-hash-function-code
+	  `((define ,foo-hash-function.id ,foo-hash-function-code))
+	'()))
     #| end of definition forms |# )
 
   ;;Code for methods.
@@ -253,6 +290,9 @@
     (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-protocol foo-destructor
 					    foo-parent foo-rtd foo-rcd
 					    field-name*.sym field-relative-idx*
+					    foo-equality-predicate.id
+					    foo-comparison-procedure.id
+					    foo-hash-function.id
 					    safe-field-accessor* safe-field-mutator*
 					    method-name*.sym method-procname*.sym))
 
@@ -278,6 +318,12 @@
       ,@foo-destructor-definition
       ;;Record printer function.
       ,@foo-printer-definition
+      ;;Record equality predicate.
+      ,@foo-equality-predicate-definition
+      ;;Record comparison procedure.
+      ,@foo-comparison-procedure-definition
+      ;;Record hash function.
+      ,@foo-hash-function-definition
       ;;Syntactic binding for record-type name.
       (define-syntax ,foo
 	,foo-syntactic-binding-form)
@@ -356,6 +402,7 @@
 			   ;;These are the Vicare extensions.
 		    super-protocol destructor-protocol
 		    custom-printer custom-predicate
+		    equality-predicate comparison-procedure hash-function
 		    define-type-descriptors strip-angular-parentheses
 		    method case-method))
 	      (set! cached rv))))))
@@ -1131,7 +1178,7 @@
 
 (define (%make-custom-printer-code clause* foo foo-rtd synner)
   ;;Extract from the  definition clauses CLAUSE* the CUSTOM-PRINTER one  and return a
-  ;;symbolic expression (to be BLESSed) later representing a Scheme expression which,
+  ;;symbolic expression (to be BLESSed later) representing a Scheme expression which,
   ;;expanded and evaluated  at run-time, will return the custom  printer function and
   ;;register it in the RTD.  Return false if there is no CUSTOM-PRINTER clause.
   ;;
@@ -1152,6 +1199,82 @@
 
       (_
        (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
+
+
+(define (%make-equality-predicate-code clause* foo foo-rtd synner)
+  ;;Extract from the definition clauses CLAUSE* the EQUALITY-PREDICATE one and return
+  ;;a  symbolic expression  (to be  BLESSed later)  representing a  Scheme expression
+  ;;which, expanded and evaluated at run-time, will return the equality predicate and
+  ;;register it in the RTD.  Return false if there is no EQUALITY-PREDICATE clause.
+  ;;
+  (let ((clause (%get-clause 'equality-predicate clause*)))
+    (syntax-match clause ()
+      ((_ ?expr)
+       (let ((hash.sym (%named-gensym/suffix foo "-equality-predicate")))
+	 `(receive-and-return (,hash.sym)
+	      ,?expr
+	    (if (procedure? ,hash.sym)
+		(record-type-equality-predicate-set! ,foo-rtd ,hash.sym)
+	      (assertion-violation (quote ,foo)
+		"expected closure object from evaluation of expression in EQUALITY-PREDICATE clause"
+		,hash.sym)))))
+
+      ;;No matching clause found.
+      (#f	#f)
+
+      (_
+       (synner "invalid syntax in EQUALITY-PREDICATE clause" clause)))))
+
+
+(define (%make-comparison-procedure-code clause* foo foo-rtd synner)
+  ;;Extract  from the  definition clauses  CLAUSE* the  COMPARISON-PROCEDURE one  and
+  ;;return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
+  ;;expression which, expanded and evaluated  at run-time, will return the comparison
+  ;;procedure  and   register  it  in  the   RTD.   Return  false  if   there  is  no
+  ;;COMPARISON-PROCEDURE clause.
+  ;;
+  (let ((clause (%get-clause 'comparison-procedure clause*)))
+    (syntax-match clause ()
+      ((_ ?expr)
+       (let ((hash.sym (%named-gensym/suffix foo "-comparison-procedure")))
+	 `(receive-and-return (,hash.sym)
+	      ,?expr
+	    (if (procedure? ,hash.sym)
+		(record-type-comparison-procedure-set! ,foo-rtd ,hash.sym)
+	      (assertion-violation (quote ,foo)
+		"expected closure object from evaluation of expression in COMPARISON-PROCEDURE clause"
+		,hash.sym)))))
+
+      ;;No matching clause found.
+      (#f	#f)
+
+      (_
+       (synner "invalid syntax in COMPARISON-PROCEDURE clause" clause)))))
+
+
+(define (%make-hash-function-code clause* foo foo-rtd synner)
+  ;;Extract from  the definition clauses CLAUSE*  the HASH-FUNCTION one and  return a
+  ;;symbolic expression (to be BLESSed later) representing a Scheme expression which,
+  ;;expanded and evaluated at run-time, will return the hash function and register it
+  ;;in the RTD.  Return false if there is no HASH-FUNCTION clause.
+  ;;
+  (let ((clause (%get-clause 'hash-function clause*)))
+    (syntax-match clause ()
+      ((_ ?expr)
+       (let ((hash.sym (%named-gensym/suffix foo "-hash-function")))
+	 `(receive-and-return (,hash.sym)
+	      ,?expr
+	    (if (procedure? ,hash.sym)
+		(record-type-hash-function-set! ,foo-rtd ,hash.sym)
+	      (assertion-violation (quote ,foo)
+		"expected closure object from evaluation of expression in HASH-FUNCTION clause"
+		,hash.sym)))))
+
+      ;;No matching clause found.
+      (#f	#f)
+
+      (_
+       (synner "invalid syntax in HASH-FUNCTION clause" clause)))))
 
 
 (define (%make-methods-retriever-code foo foo-rtd
@@ -1188,6 +1311,9 @@
 						 foo-super-protocol.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
 						 field-name*.sym field-relative-idx*
+						 foo-equality-predicate.id
+						 foo-comparison-procedure.id
+						 foo-hash-function.id
 						 safe-field-accessor* safe-field-mutator*
 						 method-name*.sym method-procname*.sym)
   ;;Build and return symbolic expression (to  be BLESSed later) representing a Scheme
@@ -1287,6 +1413,9 @@
 			  (syntax ,make-foo.id)
 			  ,(and foo-destructor.sym `(syntax ,foo-destructor.sym))
 			  (syntax ,foo?.id)
+			  (syntax ,foo-equality-predicate.id)
+			  (syntax ,foo-comparison-procedure.id)
+			  (syntax ,foo-hash-function.id)
 			  ,foo-fields-safe-accessors.table
 			  ,foo-fields-safe-mutators.table
 			  ,foo-methods.table))

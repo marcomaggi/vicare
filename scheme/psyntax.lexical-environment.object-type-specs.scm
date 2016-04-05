@@ -1480,6 +1480,7 @@
       (define* (make-record-type-spec {type-name identifier?}
 				      rtd-id rcd-id super-protocol-id parent-name.id
 				      constructor.stx destructor.stx predicate.stx
+				      equality-predicate.id comparison-procedure.id hash-function.id
 				      safe-accessors-table safe-mutators-table methods-table)
 	(let ((parent-name.ots	(cond ((<record>-type-id? parent-name.id)
 				       (<record>-ots))
@@ -1497,10 +1498,7 @@
 				    (let ((arg.sym (gensym)))
 				      (bless
 				       `(lambda/std (,arg.sym)
-					  (record-and-rtd? ,arg.sym ,rtd-id))))))
-	      (equality-predicate.id	#f)
-	      (comparison-procedure.id	#f)
-	      (hash-function.id		#f))
+					  (record-and-rtd? ,arg.sym ,rtd-id)))))))
 	  ((make-object-type-spec type-name parent-name.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id

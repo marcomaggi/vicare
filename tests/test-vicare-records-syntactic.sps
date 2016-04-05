@@ -1789,6 +1789,28 @@
   (void))
 
 
+(parametrise ((check-test-name	'hash-function))
+
+;;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Tue Apr 5,
+;;;2016)
+
+
+#|
+  (check
+      (internal-body
+	(define-record-type duo
+	  (fields one two)
+	  (hash-function
+	   (lambda (O)
+	     (fx+ (fixnum-hash (duo-one O))
+		  (fixnum-hash (duo-two O))))))
+	(record-hash (make-duo 1 2)))
+    => (fx+ (fixnum-hash 1)
+	    (fixnum-hash 2)))
+|#
+  (void))
+
+
 (parametrise ((check-test-name	'misc))
 
   (let ()

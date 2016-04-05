@@ -850,24 +850,28 @@
   ;;Whenever the function LABEL->SYNTACTIC-BINDING-DESCRIPTOR is used to retrieve the
   ;;descriptor from the label: this function is used to convert the descriptor.
   ;;
-  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
-	 (type-name.id		(core-prim-id (car hard-coded-sexp)))
-	 (rtd.id		(core-prim-id (list-ref hard-coded-sexp 1)))
-	 (rcd.id		(core-prim-id (list-ref hard-coded-sexp 2)))
-	 (super-protocol.id	#f)
-	 (parent.id		(cond ((list-ref hard-coded-sexp 3)
-				       => core-prim-id)
-				      (else #f)))
-	 (constructor-sexp	(bless (list-ref hard-coded-sexp 4)))
-	 (destructor-sexp	#f)
-	 (type-predicate-sexp	(bless (list-ref hard-coded-sexp 5)))
-	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
-	 (mutators-table	'())
-	 (methods-table		accessors-table)
-	 (ots			(make-record-type-spec type-name.id rtd.id rcd.id super-protocol.id parent.id
-						       constructor-sexp destructor-sexp type-predicate-sexp
-						       accessors-table mutators-table methods-table)))
+  (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
+	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor))
+	 (type-name.id			(core-prim-id (car hard-coded-sexp)))
+	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 1)))
+	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (super-protocol.id		#f)
+	 (parent.id			(cond ((list-ref hard-coded-sexp 3)
+					       => core-prim-id)
+					      (else #f)))
+	 (constructor-sexp		(bless (list-ref hard-coded-sexp 4)))
+	 (destructor-sexp		#f)
+	 (type-predicate-sexp		(bless (list-ref hard-coded-sexp 5)))
+	 (equality-predicate.id		#f)
+	 (comparison-procedure.id	#f)
+	 (hash-function.id		#f)
+	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 6))
+	 (mutators-table		'())
+	 (methods-table			accessors-table)
+	 (ots				(make-record-type-spec type-name.id rtd.id rcd.id super-protocol.id parent.id
+							       constructor-sexp destructor-sexp type-predicate-sexp
+							       equality-predicate.id comparison-procedure.id hash-function.id
+							       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
@@ -905,25 +909,29 @@
   ;;retrieve the  descriptor from  the label:  this function is  used to  convert the
   ;;descriptor.
   ;;
-  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (hard-coded-sexp	(syntactic-binding-descriptor.value descriptor))
-	 (type-name.id		(core-prim-id (car hard-coded-sexp)))
-	 (rtd.id		(core-prim-id (list-ref hard-coded-sexp 1)))
-	 (rcd.id		(core-prim-id (list-ref hard-coded-sexp 2)))
-	 (super-protocol.id	#f)
-	 (parent.id		(cond ((list-ref hard-coded-sexp 3)
-				       => core-prim-id)
-				      (else #f)))
-	 (constructor.id	(core-prim-id (list-ref hard-coded-sexp 4)))
-	 (destructor.id		#f)
-	 (type-predicate.id	(core-prim-id (list-ref hard-coded-sexp 5)))
-	 (accessors-table	(%alist-ref-or-null hard-coded-sexp 6))
-	 (mutators-table	'())
-	 (methods-table		accessors-table)
-	 (ots			(make-record-type-spec type-name.id
-						       rtd.id rcd.id super-protocol.id parent.id
-						       constructor.id destructor.id type-predicate.id
-						       accessors-table mutators-table methods-table)))
+  (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
+	 (hard-coded-sexp		(syntactic-binding-descriptor.value descriptor))
+	 (type-name.id			(core-prim-id (car hard-coded-sexp)))
+	 (rtd.id			(core-prim-id (list-ref hard-coded-sexp 1)))
+	 (rcd.id			(core-prim-id (list-ref hard-coded-sexp 2)))
+	 (super-protocol.id		#f)
+	 (parent.id			(cond ((list-ref hard-coded-sexp 3)
+					       => core-prim-id)
+					      (else #f)))
+	 (constructor.id		(core-prim-id (list-ref hard-coded-sexp 4)))
+	 (destructor.id			#f)
+	 (type-predicate.id		(core-prim-id (list-ref hard-coded-sexp 5)))
+	 (equality-predicate.id		#f)
+	 (comparison-procedure.id	#f)
+	 (hash-function.id		#f)
+	 (accessors-table		(%alist-ref-or-null hard-coded-sexp 6))
+	 (mutators-table		'())
+	 (methods-table			accessors-table)
+	 (ots				(make-record-type-spec type-name.id
+							       rtd.id rcd.id super-protocol.id parent.id
+							       constructor.id destructor.id type-predicate.id
+							       equality-predicate.id comparison-procedure.id hash-function.id
+							       accessors-table mutators-table methods-table)))
     (set-car! descriptor 'core-object-type-name)
     (set-cdr! descriptor (cons ots hard-coded-sexp))))
 
