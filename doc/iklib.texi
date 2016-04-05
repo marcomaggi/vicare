@@ -10444,6 +10444,7 @@ Reset to void all the fields of a structure.
 * iklib records fields::        Accessing and mutating fields.
 * iklib records final::         Automatic finalisation of records.
 * iklib records printer::       Custom record printers.
+* iklib records hash::          Custom record hash functions.
 * iklib records rcd::           Record-constructor descriptors.
 * iklib records misc::          Miscellaneous functions.
 @end menu
@@ -11472,7 +11473,7 @@ the parameter @func{printer-printing-style} to differentiate the style:
 
 
 @defun record-type-printer-set! @var{rtd} @var{printer}
-Select the procedure @var{printer} as printer for reocrds of type
+Select the procedure @var{printer} as printer for records of type
 @var{rtd}; if @var{printer} is @false{}, instances of type @var{rtd}
 make use of the built--in Scheme objects printer.  Return the old
 printer function or @false{} if no printer function was set for this
@@ -11489,6 +11490,31 @@ return @false{} if @var{rtd} has no custom printer.
 @defun record-printer @var{record}
 Return @false{} or the function being the custom record printer for the
 record @var{record}.
+@end defun
+
+@c page
+@node iklib records hash
+@subsection Custom record hash functions
+
+
+@defun record-type-hash-function-set! @var{rtd} @var{hash-func}
+Select the procedure @var{hash-func} as hash-function for records of
+type @var{rtd}; if @var{hash-func} is @false{}, instances of type
+@var{rtd} make use of the built--in Scheme objects hash function.
+Return the old hash function or @false{} if no hash function was set for
+this @var{rtd}.
+@end defun
+
+
+@defun record-type-hash-function @var{rtd}
+Return the function set as custom hash function for records of type
+@var{rtd}; return @false{} if @var{rtd} has no custom hash function.
+@end defun
+
+
+@defun record-hash-function @var{record}
+Return @false{} or the function being the custom record hash function
+for the record @var{record}.
 @end defun
 
 @c page
@@ -17461,6 +17487,11 @@ with-input-from-file    with-output-to-file
 call-with-input-file    call-with-output-file
 @end example
 @end deffn
+
+
+@defun transcoder-hash @var{tran}
+Hash function for transcoder objects.
+@end defun
 
 
 The codec returned by @func{utf-16-codec}, defined by @rnrs{6}, has

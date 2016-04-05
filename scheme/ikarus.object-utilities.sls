@@ -10,18 +10,17 @@
 ;;;
 ;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -44,10 +43,12 @@
     expect-single-argument-and-return-false
 
     ;; Scheme type descriptor
-    <scheme-type-descriptor>-rtd	<scheme-type-descriptor>-rcd
-    make-scheme-type-descriptor		scheme-type-descriptor?
-    scheme-type-descriptor.name		scheme-type-descriptor.parent
-    scheme-type-descriptor.uids-list	scheme-type-descriptor.method-retriever
+    <scheme-type-descriptor>-rtd		<scheme-type-descriptor>-rcd
+    make-scheme-type-descriptor			scheme-type-descriptor?
+    scheme-type-descriptor.name			scheme-type-descriptor.parent
+    scheme-type-descriptor.type-predicate	scheme-type-descriptor.equality-predicate
+    scheme-type-descriptor.comparison-procedure	scheme-type-descriptor.hash-function
+    scheme-type-descriptor.uids-list		scheme-type-descriptor.method-retriever
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
@@ -69,23 +70,66 @@
 		  expect-single-argument-and-return-false
 
 		  ;; Scheme type descriptor
-		  <scheme-type-descriptor>-rtd		<scheme-type-descriptor>-rcd
-		  make-scheme-type-descriptor		scheme-type-descriptor?
-		  scheme-type-descriptor.name		scheme-type-descriptor.parent
-		  scheme-type-descriptor.uids-list	scheme-type-descriptor.method-retriever
+		  <scheme-type-descriptor>-rtd			<scheme-type-descriptor>-rcd
+		  make-scheme-type-descriptor			scheme-type-descriptor?
+		  scheme-type-descriptor.name			scheme-type-descriptor.parent
+		  scheme-type-descriptor.type-predicate		scheme-type-descriptor.equality-predicate
+		  scheme-type-descriptor.comparison-procedure	scheme-type-descriptor.hash-function
+		  scheme-type-descriptor.uids-list		scheme-type-descriptor.method-retriever
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
-		  keyword-hash		pointer-hash
-		  string->keyword)
+		  zero-fixnum?
+		  positive-bignum?			negative-bignum?
+		  non-negative-bignum?			non-positive-bignum?
+		  ratnum-positive?			ratnum-negative?
+		  ratnum-non-positive?			ratnum-non-negative?
+		  positive-ratnum?			negative-ratnum?
+		  non-positive-ratnum?			non-negative-ratnum?
+		  zero-flonum?
+		  positive-zero-flonum?			negative-zero-flonum?
+		  exact-compnum?			inexact-compnum?
+		  hashtable-eq?				hashtable-eqv?
+		  hashtable-equiv?
+		  keyword-hash				pointer-hash
+		  transcoder-hash			string->keyword)
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
 	  $struct-rtd)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
     ;;2016)
-    (only (vicare system $transcoders)
-	  $transcoder->data)
+    (only (ikarus fixnums)
+	  zero-fixnum?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
+    ;;2016)
+    (only (ikarus bignums)
+	  positive-bignum?
+	  negative-bignum?
+	  non-negative-bignum?
+	  non-positive-bignum?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
+    ;;2016)
+    (only (ikarus ratnums)
+	  ratnum-positive?
+	  ratnum-negative?
+	  ratnum-non-positive?
+	  ratnum-non-negative?
+	  positive-ratnum?
+	  negative-ratnum?
+	  non-positive-ratnum?
+	  non-negative-ratnum?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
+    ;;2016)
+    (only (ikarus numerics flonums)
+	  zero-flonum?
+	  positive-zero-flonum?
+	  negative-zero-flonum?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
+    ;;2016)
+    (only (ikarus numerics complex-numbers)
+	  exact-compnum?
+	  inexact-compnum?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus structs)
@@ -96,6 +140,13 @@
     ;;2015)
     (only (ikarus.pointers)
 	  pointer-hash)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
+    ;;2016)
+    (only (ikarus hash-tables)
+	  hashtable-eq?
+	  hashtable-eqv?
+	  hashtable-equiv?
+	  transcoder-hash)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Sep 18,
     ;;2015)
     (only (ikarus.keywords)
@@ -104,7 +155,8 @@
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus records procedural)
-		  record-type-method-retriever)
+		  record-type-method-retriever
+		  record-type-hash-function)
 	    system::)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
@@ -134,38 +186,66 @@
   (define (%error-scheme-type-has-no-matching-method)
     (%error "scheme type has no matching method"))
 
+  (define (%apply-hash-function hash-func)
+    (if (null? args)
+	(hash-func subject)
+      (procedure-argument-violation 'method-call-late-binding
+	"hash function requires a single operand" (cons subject args))))
+
   (define (%built-in-scheme-object-call btd)
-    (define (%recurse)
-      (%built-in-scheme-object-call (scheme-type-descriptor.parent btd)))
-    (if btd
-	(cond ((scheme-type-descriptor.method-retriever btd)
-	       => (lambda (method-retriever)
-		    (cond ((method-retriever method-name.sym)
-			   => (lambda (proc)
-				(apply proc subject args)))
-			  (else
-			   (%recurse)))))
-	      (else
-	       (%recurse)))
-      (%error-scheme-type-has-no-matching-method)))
+    (cond ((eq? 'hash method-name.sym)
+	   (let loop ((btd btd))
+	     (cond ((scheme-type-descriptor.hash-function btd)
+		    => %apply-hash-function)
+		   ((scheme-type-descriptor.parent btd)
+		    => loop)
+		   (else
+		    (%apply-hash-function object-hash)))))
+	  (else
+	   (let loop ((btd btd))
+	     (cond ((scheme-type-descriptor.method-retriever btd)
+		    => (lambda (method-retriever)
+			 (cond ((method-retriever method-name.sym)
+				=> (lambda (proc)
+				     (apply proc subject args)))
+			       ((scheme-type-descriptor.parent btd)
+				=> loop)
+			       (else
+				(%error-scheme-type-has-no-matching-method)))))
+		   ((scheme-type-descriptor.parent btd)
+		    => loop)
+		   (else
+		    (%error-scheme-type-has-no-matching-method)))))))
 
   (define (%struct-object-call std)
-    (apply (structs::struct-field-method std method-name.sym) subject args))
+    (if (eq? 'hash method-name.sym)
+	(%apply-hash-function struct-hash)
+      (apply (structs::struct-field-method std method-name.sym) subject args)))
 
   (define (%record-object-call rtd)
-    (define (%recurse)
-      (%record-object-call (record-type-parent rtd)))
-    (if rtd
-	(cond ((system::record-type-method-retriever rtd)
-	       => (lambda (method-retriever)
-		    (cond ((method-retriever method-name.sym)
-			   => (lambda (proc)
-				(apply proc subject args)))
-			  (else
-			   (%recurse)))))
-	      (else
-	       (%recurse)))
-      (%error-record-type-has-no-matching-method)))
+    (cond ((eq? 'hash method-name.sym)
+	   (let loop ((rtd rtd))
+	     (cond ((system::record-type-hash-function rtd)
+		    => %apply-hash-function)
+		   ((record-type-parent rtd)
+		    => loop)
+		   (else
+		    (%apply-hash-function record-hash)))))
+	  (else
+	   (let loop ((rtd rtd))
+	     (cond ((system::record-type-method-retriever rtd)
+		    => (lambda (method-retriever)
+			 (cond ((method-retriever method-name.sym)
+				=> (lambda (proc)
+				     (apply proc subject args)))
+			       ((record-type-parent rtd)
+				=> loop)
+			       (else
+				(%error-record-type-has-no-matching-method)))))
+		   ((record-type-parent rtd)
+		    => loop)
+		   (else
+		    (%error-record-type-has-no-matching-method)))))))
 
   (cond ((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
@@ -204,7 +284,12 @@
 
 	((struct? subject)	(%struct-object-call (structs::struct-std subject)))
 
-	((eq? subject (void))	(%built-in-scheme-object-call <void>-type-descriptor))
+	((eq? subject (void))
+	 (%built-in-scheme-object-call <void>-type-descriptor))
+	((eq? subject (would-block-object))
+	 (%built-in-scheme-object-call <would-block>-type-descriptor))
+	((eq? subject (eof-object))
+	 (%built-in-scheme-object-call <eof>-type-descriptor))
 
 	(else
 	 (%error-object-type-has-no-methods-table))))
@@ -294,16 +379,24 @@
 (define-record-type (<scheme-type-descriptor> make-scheme-type-descriptor scheme-type-descriptor?)
   (nongenerative vicare:built-in:<scheme-type-descriptor>)
   (fields
-    (immutable name		scheme-type-descriptor.name)
+    (immutable name			scheme-type-descriptor.name)
 		;A symbol representing the name of this type.  For example: <string>.
-    (immutable parent		scheme-type-descriptor.parent)
+    (immutable parent			scheme-type-descriptor.parent)
 		;False  if  this  type  has  no  parent;  otherwise  an  instance  of
 		;"<scheme-type-descriptor>" representing the parent of this type.
-    (immutable uids-list	scheme-type-descriptor.uids-list)
+    (immutable type-predicate		scheme-type-descriptor.type-predicate)
+		;False or a function implementing the type predicate.
+    (immutable equality-predicate	scheme-type-descriptor.equality-predicate)
+		;False or a function implementing the equality predicate.
+    (immutable comparison-procedure	scheme-type-descriptor.comparison-procedure)
+		;False or a function implementing the comparison procedure.
+    (immutable hash-function		scheme-type-descriptor.hash-function)
+		;False or a function implementing the hash function.
+    (immutable uids-list		scheme-type-descriptor.uids-list)
 		;A list of symbols representing the  hierarchy of UIDs for this type.
 		;The  first item  in the  list  is the  UID  of this  type, then  the
 		;parent's UID, then the grandparent's UID, et cetera.
-    (immutable method-retriever	scheme-type-descriptor.method-retriever)
+    (immutable method-retriever		scheme-type-descriptor.method-retriever)
 		;If this  type has methods: a  procedure to be applied  to the method
 		;name  (a symbol)  to  retrieve the  method implementation  function;
 		;otherwise false.
@@ -420,15 +513,13 @@
 
 ;;;; built-in object-types descriptors: definitions
 
-(define-auxiliary-syntaxes constructor predicate hash methods)
-
 (define-syntax* (define-scheme-type input-form.stx)
   (define (main stx)
     (syntax-case stx (methods)
       ((?kwd ?type-name ?parent-name . ?clauses)
        (let* ((clause*.stx	(syntax-clauses-unwrap #'?clauses synner))
 	      (clause*.stx	(syntax-clauses-collapse clause*.stx))
-	      (specs		(%parse-clauses clause*.stx))
+	      (parsed-specs		(%parse-clauses clause*.stx))
 	      ;;
 	      (type-name.sym	(syntax->datum #'?type-name))
 	      (parent-name.sexp	(syntax->datum #'?parent-name))
@@ -443,42 +534,57 @@
 	 (putprop type-name.sym 'type-uids-list type-uids-list)
 	 ;;BTD stands for "Built-in Type Descriptor".
 	 (with-syntax
-	     ((BTD-NAME		(%mk-btd-name type-name.sym))
-	      (PARENT-BTD-NAME	(and parent-name.sexp (%mk-btd-name parent-name.sexp)))
-	      (TYPE-UIDS-LIST	#`(quote #,(%datum->syntax type-uids-list)))
-	      (RETRIEVER	(%make-methods-retriever-function specs)))
+	     ((BTD-NAME			(%mk-btd-name type-name.sym))
+	      (PARENT-BTD-NAME		(and parent-name.sexp (%mk-btd-name parent-name.sexp)))
+	      (TYPE-PREDICATE		(parsed-specs-type-predicate		parsed-specs))
+	      (EQUALITY-PREDICATE	(parsed-specs-equality-predicate	parsed-specs))
+	      (COMPARISON-PROCEDURE	(parsed-specs-comparison-procedure	parsed-specs))
+	      (HASH-FUNCTION		(parsed-specs-hash-function		parsed-specs))
+	      (TYPE-UIDS-LIST		#`(quote #,(%datum->syntax type-uids-list)))
+	      (RETRIEVER		(%make-methods-retriever-function parsed-specs)))
 	   #'(begin
 	       (define BTD-NAME
-		 (make-scheme-type-descriptor (quote ?type-name) PARENT-BTD-NAME TYPE-UIDS-LIST RETRIEVER))
+		 (make-scheme-type-descriptor (quote ?type-name) PARENT-BTD-NAME
+					      TYPE-PREDICATE EQUALITY-PREDICATE COMPARISON-PROCEDURE HASH-FUNCTION
+					      TYPE-UIDS-LIST RETRIEVER))
 	       (export BTD-NAME)))))
       ))
 
   (define-constant LIST-OF-CLAUSES
     (syntax-clauses-validate-specs
-     (list (make-syntax-clause-spec #'constructor 0 1 0 1      '() '())
-	   (make-syntax-clause-spec #'predicate   0 1 1 1      '() '())
-	   (make-syntax-clause-spec #'hash        0 1 1 1      '() '())
-	   (make-syntax-clause-spec #'methods     0 1 1 +inf.0 '() '()))))
+     (list (make-syntax-clause-spec #'constructor		0 1 0 1      '() '())
+	   (make-syntax-clause-spec #'predicate			0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'equality-predicate	0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'comparison-procedure	0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'hash-function		0 1 1 1      '() '())
+	   (make-syntax-clause-spec #'methods			0 1 1 +inf.0 '() '()))))
 
   (define-record-type parsed-specs
-    (fields (mutable constructor)
+    (fields
+      (mutable constructor)
 		;A  boolean or  an  identifier representing  the object  constructor.
 		;When #f: this object type has  no constructor.  When #t: this object
 		;type has  no constructor, but  the syntax  NEW must verify  that its
 		;single argument is already an instance of this type.
-	    (mutable predicate)
-		;False or an identifier representing  the object predicate.  When #f:
-		;this object type has no predicate.
-	    (mutable hash-function)
+      (mutable type-predicate)
+		;False or an identifier representing  the type predicate.  When #f:
+		;this object type has no type predicate.
+      (mutable equality-predicate)
+		;False or an identifier representing the equality predicate function.
+		;When #f: this object type has no equality predicate.
+      (mutable comparison-procedure)
+		;False or an identifier  representing the comparison procedure.  When
+		;#f: this object type has no comparison procedure.
+      (mutable hash-function)
 		;False or an identifier representing  the object hash function.  When
 		;#f: this object type has no hash function.
-	    (mutable methods)
+      (mutable methods)
 		;A possibly empty proper list of method specifications.
-	    )
+      #| end of FIELDS |# )
     (protocol
       (lambda (make-record)
 	(lambda ()
-	  (make-record #f #f #f '()))))
+	  (make-record #f #f #f #f #f '()))))
     #| end of DEFINE-RECORD-TYPE |# )
 
   (define (%parse-clauses clause*.stx)
@@ -500,8 +606,18 @@
 	    (let ((id (vector-ref arg 0)))
 	      (unless (or (identifier? id) (boolean? id))
 		(synner "invalid predicate specification" id))
-	      (parsed-specs-predicate-set! parsed-specs id)))
-	   ((hash)
+	      (parsed-specs-type-predicate-set! parsed-specs id)))
+	   ((equality-predicate)
+	    (let ((id (vector-ref arg 0)))
+	      (unless (or (identifier? id) (not id))
+		(synner "invalid equality predicate specification" id))
+	      (parsed-specs-equality-predicate-set! parsed-specs id)))
+	   ((comparison-procedure)
+	    (let ((id (vector-ref arg 0)))
+	      (unless (or (identifier? id) (not id))
+		(synner "invalid comparison procedure specification" id))
+	      (parsed-specs-comparison-procedure-set! parsed-specs id)))
+	   ((hash-function)
 	    (let ((id (vector-ref arg 0)))
 	      (unless (or (identifier? id) (not id))
 		(synner "invalid hash function specification" id))

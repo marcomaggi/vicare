@@ -9,14 +9,12 @@
     #f
   (constructor <top>-constructor)
   (predicate <top>-type-predicate)
-  (hash object-hash)
-  (methods
-   (hash		object-hash)))
+  (hash-function object-hash))
 
 (define-scheme-type <no-return>
     #f
   (predicate always-false)
-  (hash object-hash))
+  (hash-function object-hash))
 
 
 ;;;; standalone object types
@@ -25,25 +23,25 @@
     <top>
   (constructor void)
   (predicate void-object?)
-  (hash void-hash))
+  (hash-function void-hash))
 
 (define-scheme-type <eof>
     <top>
   (constructor eof-object)
   (predicate eof-object?)
-  (hash eof-object-hash))
+  (hash-function eof-object-hash))
 
 (define-scheme-type <would-block>
     <top>
   (constructor would-block-object)
   (predicate would-block-object?)
-  (hash would-block-hash))
+  (hash-function would-block-hash))
 
 (define-scheme-type <boolean>
     <top>
   (constructor <boolean>-constructor)
   (predicate boolean?)
-  (hash boolean-hash))
+  (hash-function boolean-hash))
 
 (define-scheme-type <true>
     <boolean>)
@@ -55,10 +53,9 @@
     <top>
   (constructor integer->char)
   (predicate char?)
-  (hash char-hash)
+  (hash-function char-hash)
   (methods
    (string		string)
-   (hash		char-hash)
    (integer		char->integer)
    (fixnum		char->fixnum)))
 
@@ -66,10 +63,9 @@
     <top>
   (constructor string->symbol)
   (predicate symbol?)
-  (hash symbol-hash)
+  (hash-function symbol-hash)
   (methods
    (string		symbol->string)
-   (hash		symbol-hash)
    (bound?		symbol-bound?)
    (value		<symbol>-value)
    (putprop		putprop)
@@ -81,17 +77,16 @@
     <top>
   (constructor symbol->keyword)
   (predicate keyword?)
-  (hash keyword-hash)
+  (hash-function keyword-hash)
   (methods
    (symbol		keyword->symbol)
-   (string		keyword->string)
-   (hash		keyword-hash)))
+   (string		keyword->string)))
 
 (define-scheme-type <pointer>
     <top>
   (constructor integer->pointer)
   (predicate pointer?)
-  (hash pointer-hash)
+  (hash-function pointer-hash)
   (methods
    (null?		pointer-null?)
    (integer		pointer->integer)
@@ -104,14 +99,13 @@
    (add			pointer-add)
    (diff		pointer-diff)
    (clone		pointer-clone)
-   (set-null!		set-pointer-null!)
-   (hash		pointer-hash)))
+   (set-null!		set-pointer-null!)))
 
 (define-scheme-type <transcoder>
     <top>
   (constructor make-transcoder)
   (predicate transcoder?)
-  (hash transcoder-hash)
+  (hash-function transcoder-hash)
   (methods
    (codec		transcoder-codec)
    (eol-style		transcoder-eol-style)
@@ -130,7 +124,7 @@
 (define-scheme-type <number>
     <top>
   (predicate number?)
-  (hash object-hash))
+  (hash-function object-hash))
 
 (define-scheme-type <complex>
     <number>
@@ -168,19 +162,19 @@
 (define-scheme-type <exact-integer>
     <integer>
   (predicate exact-integer?)
-  (hash exact-integer-hash))
+  (hash-function exact-integer-hash))
 
 (define-scheme-type <fixnum>
     <exact-integer>
   (constructor #t)
   (predicate fixnum?)
-  (hash fixnum-hash))
+  (hash-function fixnum-hash))
 
 (define-scheme-type <flonum>
     <real>
   (constructor #t)
   (predicate flonum?)
-  (hash flonum-hash))
+  (hash-function flonum-hash))
 
 (define-scheme-type <ratnum>
     <rational>
@@ -284,7 +278,7 @@
     <top>
   (constructor string)
   (predicate string?)
-  (hash string-hash)
+  (hash-function string-hash)
   (methods
    (empty?			string-empty?)
 
@@ -343,7 +337,6 @@
    (base64->bytevector		string-base64->bytevector)
    (hex->bytevector		string-hex->bytevector)
 
-   (hash			string-hash)
    (symbol			string->symbol)
    (keyword			string->keyword)
    (list			string->list)
@@ -382,7 +375,7 @@
     <top>
   (constructor make-bytevector)
   (predicate bytevector?)
-  (hash bytevector-hash))
+  (hash-function bytevector-hash))
 
 ;;; --------------------------------------------------------------------
 
@@ -417,7 +410,7 @@
 (define-scheme-type <struct>
     <top>
   (predicate struct?)
-  (hash struct-hash))
+  (hash-function struct-hash))
 
 (define-scheme-type <struct-type-descriptor>
     <struct>
@@ -429,7 +422,7 @@
 (define-scheme-type <record>
     <struct>
   (predicate record?)
-  (hash record-hash))
+  (hash-function record-hash))
 
 (define-scheme-type <record-type-descriptor>
     <struct>
@@ -446,7 +439,7 @@
 (define-scheme-type <opaque-record>
     <top>
   (predicate always-false)
-  (hash record-hash))
+  (hash-function record-hash))
 
 ;;; --------------------------------------------------------------------
 
@@ -543,7 +536,7 @@
 (define-scheme-type <port>
     <top>
   (predicate port?)
-  (hash port-hash))
+  (hash-function port-hash))
 
 ;;; --------------------------------------------------------------------
 

@@ -44,9 +44,11 @@
     record-reset			record=?
     record-and-rtd?			record-object?
     record-printer			record-destructor
-    record-type-destructor-set!		record-type-destructor
+    record-type-destructor-set!			record-type-destructor
     (rename (<rtd>-printer			record-type-printer)
 	    (set-<rtd>-printer!			record-type-printer-set!)
+	    (<rtd>-hash-function		record-type-hash-function)
+	    (set-<rtd>-hash-function!		record-type-hash-function-set!)
 	    (<rtd>-method-retriever		record-type-method-retriever)
 	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
 
@@ -55,7 +57,8 @@
     $record-constructor			$record-type-destructor
     $rtd-subtype?			$record-and-rtd?
     $record-ref
-    (rename ($set-<rtd>-printer!	$record-type-printer-set!))
+    (rename ($set-<rtd>-printer!	$record-type-printer-set!)
+	    ($set-<rtd>-hash-function!	$record-type-hash-function-set!))
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
@@ -79,9 +82,11 @@
 		  rtd-subtype?				record-type-all-field-names
 		  record-reset				record=?
 		  record-printer			record-destructor
+		  record-hash-function
 		  record-and-rtd?			record-object?
 		  record-type-destructor-set!		record-type-destructor
 		  record-type-printer-set!		record-type-printer
+		  record-type-hash-function-set!	record-type-hash-function
 		  record-type-method-retriever		record-type-method-retriever-set!)
     (vicare system $fx)
     (vicare system $pairs)
@@ -244,6 +249,8 @@
 		;A  function, accepting  two arguments,  to be  invoked whenever  the
 		;record instance is  printed.  The first argument is  the record, the
 		;second argument is a textual output port.
+   hash-function
+		;False or a hash function for this record-object type.
    method-retriever
 		;False or  a function,  accepting a method  name as  single argument,
 		;returning a method's implementation function as single return value.
@@ -942,6 +949,7 @@
 		   #f     ;default-rcd
 		   #f     ;destructor
 		   #f     ;printer
+		   #f     ;hash-function
 		   #f     ;method-retriever
 		   )
 	(%intern-nongenerative-rtd! uid rtd))))
@@ -1344,6 +1352,9 @@
 
 (define* (record-printer {x record-object?})
   ($<rtd>-printer ($struct-rtd x)))
+
+(define* (record-hash-function {x record-object?})
+  ($<rtd>-hash-function ($struct-rtd x)))
 
 
 ;;;; non-R6RS extensions: record destructor

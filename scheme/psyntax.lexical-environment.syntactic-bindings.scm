@@ -740,7 +740,8 @@
   ;;and ?HARD-CODED-SEXP has the format:
   ;;
   ;;   (?type-name ?parent-name
-  ;;     ?constructor-name ?type-predicate-name ?hash-function-name
+  ;;     ?constructor-name ?type-predicate-name
+  ;;     ?equality-predicate-name ?comparison-procedure-name ?hash-function-name
   ;;     ?type-descriptor-name
   ;;     ((?method-name . ?method-implementation-procedure) ...))
   ;;
@@ -756,18 +757,22 @@
   ;;These core  descriptors are the ones  bound to the identifiers:  <top>, <fixnum>,
   ;;<string>, et cetera.
   ;;
-  (let* ((descr.type		(syntactic-binding-descriptor.type  descriptor))
-	 (descr.value		(syntactic-binding-descriptor.value descriptor))
-	 (type-name.sym		(car descr.value))
-	 (parent-name.sexp	(list-ref descr.value 1))
-	 (constructor.stx	(bless (list-ref descr.value 2)))
-	 (type-predicate.stx	(bless (list-ref descr.value 3)))
-	 (hash-function.sexp	(list-ref descr.value 4))
-	 (type-descriptor.id	(core-prim-id (list-ref descr.value 5)))
-	 (methods-table		(%alist-ref-or-null descr.value 6)))
-    (let ((type-name.id		(core-prim-id type-name.sym))
-	  (parent-name.id	(and parent-name.sexp   (core-prim-id parent-name.sexp)))
-	  (hash-function.stx	(and hash-function.sexp (core-prim-id hash-function.sexp))))
+  (let* ((descr.type			(syntactic-binding-descriptor.type  descriptor))
+	 (descr.value			(syntactic-binding-descriptor.value descriptor))
+	 (type-name.sym			(car descr.value))
+	 (parent-name.sexp		(list-ref descr.value 1))
+	 (constructor.stx		(bless (list-ref descr.value 2)))
+	 (type-predicate.stx		(bless (list-ref descr.value 3)))
+	 (equality-predicate.sexp	(list-ref descr.value 4))
+	 (comparison-procedure.sexp	(list-ref descr.value 5))
+	 (hash-function.sexp		(list-ref descr.value 6))
+	 (type-descriptor.id		(core-prim-id (list-ref descr.value 7)))
+	 (methods-table			(%alist-ref-or-null descr.value 8)))
+    (let ((type-name.id			(core-prim-id type-name.sym))
+	  (parent-name.id		(and parent-name.sexp		(core-prim-id parent-name.sexp)))
+	  (equality-predicate.stx	(and equality-predicate.sexp	(core-prim-id equality-predicate.sexp)))
+	  (comparison-procedure.stx	(and comparison-procedure.sexp	(core-prim-id comparison-procedure.sexp)))
+	  (hash-function.stx		(and hash-function.sexp		(core-prim-id hash-function.sexp))))
       (let* ((parent-name.ots	(and parent-name.id
 				     (with-exception-handler
 					 (lambda (E)
@@ -775,7 +780,8 @@
 				       (lambda ()
 					 (id->object-type-spec parent-name.id (make-empty-lexenv))))))
 	     (type-name.ots	(make-scheme-type-spec type-name.id parent-name.ots
-						       constructor.stx type-predicate.stx hash-function.stx
+						       constructor.stx type-predicate.stx
+						       equality-predicate.stx comparison-procedure.stx hash-function.stx
 						       type-descriptor.id methods-table)))
 	(set-car! descriptor 'core-object-type-name)
 	(set-cdr! descriptor (cons type-name.ots descr.value))))))

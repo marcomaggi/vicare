@@ -1101,6 +1101,8 @@
 	 (eof-object-hash obj))
 	((would-block-object? obj)
 	 (would-block-hash obj))
+	((transcoder? obj)
+	 ($transcoder-hash obj))
 	(else
 	 (equal-hash obj))))
 

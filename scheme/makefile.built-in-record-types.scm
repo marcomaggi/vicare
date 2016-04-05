@@ -113,17 +113,28 @@
   #f object-type-spec?
   (methods
    (name				object-type-spec.name)
-   (parent-ots			object-type-spec.parent-ots)
+   (parent-ots				object-type-spec.parent-ots)
    (constructor-stx			object-type-spec.constructor-stx)
    (destructor-stx			object-type-spec.destructor-stx)
-   (type-predicate-stx		object-type-spec.type-predicate-stx)
-   (safe-accessor-stx		object-type-spec.safe-accessor-stx)
+   (type-predicate-stx			object-type-spec.type-predicate-stx)
+   (equality-predicate-id		object-type-spec.equality-predicate-id)
+   (comparison-procedure-id		object-type-spec.comparison-procedure-id)
+   (hash-function-id			object-type-spec.hash-function-id)
+   (applicable-hash-function-id		object-type-spec.applicable-hash-function-id)
+   (safe-accessor-stx			object-type-spec.safe-accessor-stx)
    (safe-mutator-stx			object-type-spec.safe-mutator-stx)
-   (applicable-method-stx		object-type-spec.applicable-method-stx)))
+   (applicable-method-stx		object-type-spec.applicable-method-stx)
+   (single-value-validator-lambda-stx	object-type-spec.single-value-validator-lambda-stx)
+   (list-validator-lambda-stx		object-type-spec.list-validator-lambda-stx)
+   (procedure?				object-type-spec.procedure?)
+   (list-sub-type?			object-type-spec.list-sub-type?)
+   (vector-sub-type?			object-type-spec.vector-sub-type?)))
 
 (define-built-in-record-type <scheme-type-spec>
     <object-type-spec>
-  make-scheme-type-spec scheme-type-spec?)
+  make-scheme-type-spec scheme-type-spec?
+  (methods
+   (type-descriptor-id		scheme-type-spec.type-descriptor-id)))
 
 (define-built-in-record-type <closure-type-spec>
     <object-type-spec>
@@ -281,7 +292,11 @@
   (methods
    (name				scheme-type-descriptor.name)
    (parent				scheme-type-descriptor.parent)
-   (uids-list			scheme-type-descriptor.uids-list)
+   (type-predicate			scheme-type-descriptor.type-predicate)
+   (equality-predicate			scheme-type-descriptor.equality-predicate)
+   (comparison-procedure		scheme-type-descriptor.comparison-procedure)
+   (hash-function			scheme-type-descriptor.hash-function)
+   (uids-list				scheme-type-descriptor.uids-list)
    (method-retriever			scheme-type-descriptor.method-retriever)))
 
 ;;; end of file

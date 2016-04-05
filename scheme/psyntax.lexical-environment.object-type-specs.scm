@@ -111,6 +111,8 @@
 	 object-type-spec.constructor-stx		object-type-spec.destructor-stx
 	 object-type-spec.type-predicate-stx
 	 object-type-spec.safe-accessor-stx		object-type-spec.safe-mutator-stx
+	 object-type-spec.equality-predicate-id		object-type-spec.comparison-procedure-id
+	 object-type-spec.hash-function-id		object-type-spec.applicable-hash-function-id
 	 object-type-spec.applicable-method-stx
 	 object-type-spec.single-value-validator-lambda-stx
 	 object-type-spec.list-validator-lambda-stx
@@ -124,7 +126,7 @@
 	 <scheme-type-spec>
 	 <scheme-type-spec>-rtd				<scheme-type-spec>-rcd
 	 make-scheme-type-spec				scheme-type-spec?
-	 scheme-type-spec.type-descriptor-id		scheme-type-spec.hash-function-id
+	 scheme-type-spec.type-descriptor-id
 
 	 <closure-type-spec>
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
@@ -309,6 +311,18 @@
 		;The type  predicate can be a  syntax or core operation  or a closure
 		;object like "vector?" or the predicate of R6RS records.
 
+    (immutable equality-predicate-id	object-type-spec.equality-predicate-id)
+		;False or a syntactic identifier  bound to the equality predicate for
+		;this type.
+
+    (immutable comparison-procedure-id	object-type-spec.comparison-procedure-id)
+		;False or  a syntactic identifier  bound to the  comparison procedure
+		;for this type.
+
+    (immutable hash-function-id		object-type-spec.hash-function-id)
+		;False or a syntactic identifier bound  to the hash function for this
+		;type.
+
     (immutable safe-accessors-table	object-type-spec.safe-accessors-table)
 		;Null or  an alist  mapping symbols representing  the field  names to
 		;syntax objects  representing Scheme  expressions that,  expanded and
@@ -345,9 +359,11 @@
     (lambda (make-record)
       (define* (make-object-type-spec name {parent.ots (or not object-type-spec?)}
 				      constructor-stx destructor-stx type-predicate-stx
+				      equality-predicate.id comparison-procedure.id hash-function.id
 				      safe-accessors-table safe-mutators-table methods-table)
 	(make-record name parent.ots
 		     constructor-stx destructor-stx type-predicate-stx
+		     equality-predicate.id comparison-procedure.id hash-function.id
 		     safe-accessors-table safe-mutators-table methods-table))
       make-object-type-spec))
 
@@ -376,6 +392,12 @@
 (define (not-empty-list-of-object-type-spec? obj)
   (and (pair? obj)
        (list-of-object-type-spec? obj)))
+
+(define* (object-type-spec.applicable-hash-function-id {ots object-type-spec?})
+  (cond ((object-type-spec.hash-function-id ots))
+	((object-type-spec.parent-ots ots)
+	 => object-type-spec.applicable-hash-function-id)
+	(else #f)))
 
 (module (object-type-spec.safe-accessor-stx
 	 object-type-spec.safe-mutator-stx
@@ -1351,9 +1373,6 @@
   (nongenerative vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (fields
-    (immutable hash-function-id		scheme-type-spec.hash-function-id)
-		;False or a syntactic identifier bound  to the hash function for this
-		;type.
     (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
 		;Syntactic     identifier     bound     to     an     instance     of
 		;"<scheme-type-descriptor>".
@@ -1362,15 +1381,17 @@
     (lambda (make-object-type-spec)
       (define* (make-scheme-type-spec {name identifier?}
 				      {parent.ots (or not scheme-type-spec?)}
-				      constructor.stx predicate.stx hash-function.id
+				      constructor.stx type-predicate.stx
+				      equality-predicate.id comparison-procedure.id hash-function.id
 				      type-descriptor.id methods-table)
 	(let ((destructor.stx	#f)
 	      (accessors-table	'())
 	      (mutators-table	'()))
 	  ((make-object-type-spec name parent.ots
-				  constructor.stx destructor.stx predicate.stx
+				  constructor.stx destructor.stx type-predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
-	   hash-function.id type-descriptor.id)))
+	   type-descriptor.id)))
       make-scheme-type-spec))
   (custom-printer
     (lambda (S port sub-printer)
@@ -1406,10 +1427,14 @@
       (define* (make-struct-type-spec name std
 				      constructor.id predicate.id
 				      safe-accessors-table safe-mutators-table methods-table)
-	(let ((parent.ots	(<struct>-ots))
-	      (destructor.stx	(bless `(internal-applicable-struct-type-destructor ,std))))
+	(let ((parent.ots		(<struct>-ots))
+	      (destructor.stx		(bless `(internal-applicable-struct-type-destructor ,std)))
+	      (equality-predicate.id	#f)
+	      (comparison-procedure.id	#f)
+	      (hash-function.id		#f))
 	  ((make-object-type-spec name parent.ots
 				  constructor.id destructor.stx predicate.id
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  safe-accessors-table safe-mutators-table methods-table)
 	   std)))
       make-struct-type-spec))
@@ -1472,9 +1497,13 @@
 				    (let ((arg.sym (gensym)))
 				      (bless
 				       `(lambda/std (,arg.sym)
-					  (record-and-rtd? ,arg.sym ,rtd-id)))))))
+					  (record-and-rtd? ,arg.sym ,rtd-id))))))
+	      (equality-predicate.id	#f)
+	      (comparison-procedure.id	#f)
+	      (hash-function.id		#f))
 	  ((make-object-type-spec type-name parent-name.ots
 				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  safe-accessors-table safe-mutators-table methods-table)
 	   rtd-id rcd-id super-protocol-id)))
       make-record-type-spec))
@@ -1556,11 +1585,15 @@
 	       (destructor.stx		#f)
 	       (predicate.stx		(make-compound-condition-predicate
 					 (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id	#f)
+	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
 	  ((make-object-type-spec name.stx parent.ots
 				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots)))
 
@@ -1632,11 +1665,15 @@
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		(make-union-predicate (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id	#f)
+	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
 	  ((make-object-type-spec name.stx parent.ots
 				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots (void))))
 
@@ -1717,11 +1754,15 @@
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		(make-intersection-predicate (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id	#f)
+	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
 	  ((make-object-type-spec name.stx parent.ots
 				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots (void))))
 
@@ -1796,11 +1837,15 @@
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		(make-complement-predicate (object-type-spec.type-predicate-stx item-type.ots)))
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id	#f)
+	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
 	  ((make-object-type-spec name.stx parent.ots
 				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   item-type.ots)))
 
@@ -1857,11 +1902,15 @@
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		#f)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id	#f)
+	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    signature))))
 
@@ -1941,14 +1990,18 @@
 	(({car.ots object-type-spec?} {cdr.ots object-type-spec?} {name.stx pair-name?})
 	 (let* ((parent.ots		(<pair>-ots))
 		(constructor.stx	#f)
-		(destructor.stx	#f)
+		(destructor.stx		#f)
 		(predicate.stx		(make-pair-predicate (object-type-spec.type-predicate-stx car.ots)
 							     (object-type-spec.type-predicate-stx cdr.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    car.ots cdr.ots (void)))))
 
@@ -2022,13 +2075,17 @@
 	(({item.ots object-type-spec?} {name.stx pair-of-name?})
 	 (let* ((parent.ots		(<pair>-ots))
 		(constructor.stx	#f)
-		(destructor.stx	#f)
+		(destructor.stx		#f)
 		(predicate.stx		(make-pair-of-predicate (object-type-spec.type-predicate-stx item.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    item.ots))))
 
@@ -2099,11 +2156,15 @@
 		(constructor.stx	#f)
 		(destructor.stx		#f)
 		(predicate.stx		(make-list-predicate (map object-type-spec.type-predicate-stx item-type*.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    item-type*.ots (void) (void)))))
 
@@ -2190,13 +2251,17 @@
 	(({item-type.ots object-type-spec?} {name.stx list-of-name?})
 	 (let* ((parent.ots		(<list>-ots))
 		(constructor.stx	#f)
-		(destructor.stx	#f)
+		(destructor.stx		#f)
 		(predicate.stx		(make-list-of-predicate (object-type-spec.type-predicate-stx item-type.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    item-type.ots))))
 
@@ -2270,11 +2335,15 @@
 		(constructor.stx	#f)
 		(destructor.stx		#f)
 		(predicate.stx		(make-vector-predicate (map object-type-spec.type-predicate-stx item-type*.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    item-type*.ots (void) (void)))))
 
@@ -2357,11 +2426,15 @@
 		(constructor.stx	#f)
 		(destructor.stx		#f)
 		(predicate.stx		(make-vector-of-predicate (object-type-spec.type-predicate-stx item-type.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    item-type.ots))))
 
@@ -2428,11 +2501,15 @@
 		(constructor.stx	#f)
 		(destructor.stx		#f)
 		(predicate.stx		#f)
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    key-type.ots value-type.ots))))
 
@@ -2493,11 +2570,15 @@
 		(destructor.stx		#f)
 		(predicate.stx		(make-alist-predicate (object-type-spec.type-predicate-stx key-type.ots)
 							      (object-type-spec.type-predicate-stx value-type.ots)))
+		(equality-predicate.id	#f)
+		(comparison-procedure.id #f)
+		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
 	   ((make-object-type-spec name.stx parent.ots
 				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
 	    key-type.ots value-type.ots))))
 
