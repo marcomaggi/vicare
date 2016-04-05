@@ -765,7 +765,7 @@
 
 (begin
   (define compound-condition-rtd
-    ($make-record-type-descriptor 'compound-condition #f 'vicare:conditions:compound-condition #t #t '#((immutable components))))
+    ($make-record-type-descriptor 'compound-condition #f 'vicare:conditions:compound-condition #t #f '#((immutable components))))
   (define compound-condition-rcd
     ($make-record-constructor-descriptor compound-condition-rtd #f #f))
   (define make-compound-condition
