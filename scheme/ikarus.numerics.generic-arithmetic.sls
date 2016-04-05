@@ -481,10 +481,10 @@
   (vicare system $pairs)
   (vicare system $fx)
   (vicare system $flonums)
-  ;;FIXME For  no reason I  can figure out now:  here we really  need to
-  ;;import  from "(ikarus  flonums)", rather  than from  "(vicare system
-  ;;$flonums)".  (Marco Maggi; Thu Sep 19, 2013)
-  (rename (only (ikarus flonums) #;(vicare system $flonums)
+  ;;FIXME For  no reason I  can figure out  now: here we  really need to  import from
+  ;;"(ikarus numerics flonums)", rather than from "(vicare system $flonums)".  (Marco
+  ;;Maggi; Thu Sep 19, 2013)
+  (rename (only (ikarus numerics flonums) #;(vicare system $flonums)
 		$flexp
 		$flsin
 		$flcos
