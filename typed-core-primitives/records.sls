@@ -240,6 +240,18 @@
   (declare record-type-method-retriever-set!)
   #| end of LET-SYNTAX |# )
 
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<record-type-descriptor> (or <false> <procedure>))	=> (<procedure>))))))))
+  (declare record-type-compose-equality-predicate)
+  (declare record-type-compose-comparison-procedure)
+  (declare record-type-compose-hash-function)
+  #| end of LET-SYNTAX |# )
+
 /section)
 
 

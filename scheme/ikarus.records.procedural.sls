@@ -4,17 +4,16 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #!vicare
@@ -27,7 +26,6 @@
     record-constructor			record-predicate
     record-accessor			record-mutator
     unsafe-record-accessor		unsafe-record-mutator
-    record-ref
 
     ;; bindings for (rnrs records inspection (6))
     record?				record-rtd
@@ -37,34 +35,45 @@
     record-field-mutable?
     record-type-field-names
 
+    ;; bindings for (vicare system $records)
+
     ;; extension utility functions, non-R6RS
-    rtd-subtype?			record-type-all-field-names
-    (rename (<rcd>-rtd			rcd-rtd)
-	    (<rcd>-parent-rcd		rcd-parent-rcd))
-    record-reset			record=?
-    record-and-rtd?			record-object?
-    record-destructor			record-printer
-    record-equality-predicate		record-comparison-procedure
-    record-hash-function
-    record-type-destructor-set!			record-type-destructor
-    (rename (<rtd>-printer			record-type-printer)
-	    (set-<rtd>-printer!			record-type-printer-set!)
-	    (<rtd>-equality-predicate		record-type-equality-predicate)
-	    (set-<rtd>-equality-predicate!	record-type-equality-predicate-set!)
-	    (<rtd>-comparison-procedure		record-type-comparison-procedure)
-	    (set-<rtd>-comparison-procedure!	record-type-comparison-procedure-set!)
-	    (<rtd>-hash-function		record-type-hash-function)
-	    (set-<rtd>-hash-function!		record-type-hash-function-set!)
-	    (<rtd>-method-retriever		record-type-method-retriever)
-	    (set-<rtd>-method-retriever!	record-type-method-retriever-set!))
+    rtd-subtype?				record-type-all-field-names
+    (rename (<rcd>-rtd				rcd-rtd)
+	    (<rcd>-parent-rcd			rcd-parent-rcd))
+    record=?
+    record-and-rtd?				$record-and-rtd?
+    record-object?
+    record-reset
+    record-ref					$record-ref
+    ;;
+    record-destructor				$record-destructor
+    record-printer				$record-printer
+    record-equality-predicate			$record-equality-predicate
+    record-comparison-procedure			$record-comparison-procedure
+    record-hash-function			$record-hash-function
+    record-method-retriever			$record-method-retriever
+    ;;
+    record-type-destructor-set!			$record-type-destructor-set!
+    record-type-destructor			$record-type-destructor
+    record-type-printer				$record-type-printer
+    record-type-printer-set!			$record-type-printer-set!
+    record-type-equality-predicate		$record-type-equality-predicate
+    record-type-equality-predicate-set!		$record-type-equality-predicate-set!
+    record-type-comparison-procedure		$record-type-comparison-procedure
+    record-type-comparison-procedure-set!	$record-type-comparison-procedure-set!
+    record-type-hash-function			$record-type-hash-function
+    record-type-hash-function-set!		$record-type-hash-function-set!
+    record-type-method-retriever		$record-type-method-retriever
+    record-type-method-retriever-set!		$record-type-method-retriever-set!
+
+    record-type-compose-equality-predicate
+    record-type-compose-comparison-procedure
+    record-type-compose-hash-function
 
     ;; syntactic bindings for internal use only
-    $make-record-type-descriptor	$make-record-constructor-descriptor
-    $record-constructor			$record-type-destructor
-    $rtd-subtype?			$record-and-rtd?
-    $record-ref
-    (rename ($set-<rtd>-printer!	$record-type-printer-set!)
-	    ($set-<rtd>-hash-function!	$record-type-hash-function-set!))
+    $make-record-type-descriptor		$make-record-constructor-descriptor
+    $record-constructor				$rtd-subtype?
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
@@ -97,7 +106,11 @@
 		  record-type-equality-predicate	record-type-equality-predicate-set!
 		  record-type-comparison-procedure	record-type-comparison-procedure-set!
 		  record-type-hash-function		record-type-hash-function-set!
-		  record-type-method-retriever		record-type-method-retriever-set!)
+		  record-type-method-retriever		record-type-method-retriever-set!
+
+		  record-type-compose-equality-predicate
+		  record-type-compose-comparison-procedure
+		  record-type-compose-hash-function)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $structs)
@@ -1117,6 +1130,8 @@
   #| end of module |# )
 
 
+;;;; record-type descriptor: procedure generation
+
 (define* (record-constructor {rcd record-constructor-descriptor?})
   ($<rcd>-builder rcd))
 
@@ -1291,7 +1306,7 @@
   #| end of module |# )
 
 
-;;;; non-R6RS extensions
+;;;; non-R6RS extensions: miscellaneous functions
 
 (define (record-and-rtd? record rtd)
   ;;Vicare extension.  Return  #t if RECORD is  a record instance of RTD  or a record
@@ -1366,28 +1381,30 @@
 	(($fx= i len))
       ($struct-set! x i (void)))))
 
+;;;
+
 (define* (record-printer {x record-object?})
   ($<rtd>-printer ($struct-rtd x)))
 
-;;; --------------------------------------------------------------------
-
-(define* (record-equality-predicate {x record-object?})
-  ($<rtd>-equality-predicate ($struct-rtd x)))
-
-(define* (record-comparison-procedure {x record-object?})
-  ($<rtd>-comparison-procedure ($struct-rtd x)))
-
-(define* (record-hash-function {x record-object?})
-  ($<rtd>-hash-function ($struct-rtd x)))
+(define ($record-printer x)
+  ($<rtd>-printer ($struct-rtd x)))
 
 
 ;;;; non-R6RS extensions: record destructor
 
 (define* (record-type-destructor-set! {rtd record-type-descriptor?} {func procedure?})
-  ;;Store  a  function  as  destructor  in a  R6RS  record-type  descriptor.   Return
-  ;;unspecified values.
+  ;;Store a function as destructor in a R6RS record-type descriptor.  Return the void
+  ;;object.
   ;;
   ($set-<rtd>-destructor! rtd func))
+
+(define ($record-type-destructor-set! rtd func)
+  ;;Store a function as destructor in a R6RS record-type descriptor.  Return the void
+  ;;object.
+  ;;
+  ($set-<rtd>-destructor! rtd func))
+
+;;;
 
 (define* (record-type-destructor {rtd record-type-descriptor?})
   ;;Return the value of the destructor field in RTD: #f or a function.
@@ -1400,7 +1417,12 @@
   ;;
   ($<rtd>-destructor rtd))
 
+;;; --------------------------------------------------------------------
+
 (define* (record-destructor {rtd record-object?})
+  ($<rtd>-destructor ($struct-rtd rtd)))
+
+(define ($record-destructor rtd)
   ($<rtd>-destructor ($struct-rtd rtd)))
 
 ;;; --------------------------------------------------------------------
@@ -1424,6 +1446,253 @@
   ;;
   (or ($<rtd>-destructor ($struct-rtd record))
       (lambda (x) (void))))
+
+
+;;;; non-R6RS extensions: record printer
+
+(define* (record-type-printer-set! {rtd record-type-descriptor?} {func (or not procedure?)})
+  ;;Store false  or a function as  printer in a R6RS  record-type descriptor.  Return
+  ;;the void object.
+  ;;
+  ($set-<rtd>-printer! rtd func))
+
+(define ($record-type-printer-set! rtd func)
+  ;;Store false  or a function as  printer in a R6RS  record-type descriptor.  Return
+  ;;the void object.
+  ;;
+  ($set-<rtd>-printer! rtd func))
+
+(define* (record-type-printer {rtd record-type-descriptor?})
+  ;;Return false or the printer function from RTD.
+  ;;
+  ($<rtd>-printer rtd))
+
+(define ($record-type-printer rtd)
+  ;;Return false or the printer function from RTD.
+  ;;
+  ($<rtd>-printer rtd))
+
+
+;;;; non-R6RS extensions: equality predicate
+
+(define* (record-type-equality-predicate-set! {rtd record-type-descriptor?} {func (or not procedure?)})
+  ;;Store false or a function as equality predicate in a R6RS record-type descriptor.
+  ;;Return the void object.
+  ;;
+  ($set-<rtd>-equality-predicate! rtd func))
+
+(define ($record-type-equality-predicate-set! rtd func)
+  ;;Store false or a function as equality predicate in a R6RS record-type descriptor.
+  ;;Return the void object.
+  ;;
+  ($set-<rtd>-equality-predicate! rtd func))
+
+(define* (record-type-equality-predicate {rtd record-type-descriptor?})
+  ;;Return false or the equality predicate function from RTD.
+  ;;
+  ($<rtd>-equality-predicate rtd))
+
+(define ($record-type-equality-predicate rtd)
+  ;;Return false or the equality predicate function from RTD.
+  ;;
+  ($<rtd>-equality-predicate rtd))
+
+;;;
+
+(define* (record-type-compose-equality-predicate {rtd record-type-descriptor?} {equal-proto procedure?})
+  ;;If  the record-type  RTD  has  a parent:  apply  the equality-predicate  protocol
+  ;;function EQUAL-PROTO  to the equality  predicate of the  parent (or false  if the
+  ;;parent has no equality predicate) and store the resulting procedure in RTD.
+  ;;
+  ;;If  the record-type  RTD  has  no parent:  call  the equality-predicate  protocol
+  ;;function EQUAL-PROTO as a thunk and store the resulting procedure in RTD.
+  ;;
+  ;;Return the equality predicate itself.
+  ;;
+  (receive-and-return (equal-pred)
+      (cond ((record-type-parent rtd)
+	     => (lambda (prtd)
+		  (equal-proto (record-type-equality-predicate prtd))))
+	    (else
+	     (equal-proto)))
+    (if (procedure? equal-pred)
+	(record-type-equality-predicate-set! rtd equal-pred)
+      (assertion-violation __who__
+	"expected closure object from evaluation of equality-predicate protocol function"
+	rtd equal-pred))))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-equality-predicate {reco record-object?})
+  ;;Return false or the equality predicate from the record-type descriptor of RECO.
+  ;;
+  ($<rtd>-equality-predicate ($struct-rtd reco)))
+
+(define ($record-equality-predicate reco)
+  ;;Return false or the equality predicate from the record-type descriptor of RECO.
+  ;;
+  ($<rtd>-equality-predicate ($struct-rtd reco)))
+
+
+;;;; non-R6RS extensions: comparison procedure
+
+(define* (record-type-comparison-procedure-set! {rtd record-type-descriptor?} {func (or not procedure?)})
+  ;;Store  false  or  a  function  as comparison  procedure  in  a  R6RS  record-type
+  ;;descriptor.  Return the void object.
+  ;;
+  ($set-<rtd>-comparison-procedure! rtd func))
+
+(define ($record-type-comparison-procedure-set! rtd func)
+  ;;Store  false  or  a  function  as comparison  procedure  in  a  R6RS  record-type
+  ;;descriptor.  Return the void object.
+  ;;
+  ($set-<rtd>-comparison-procedure! rtd func))
+
+(define* (record-type-comparison-procedure {rtd record-type-descriptor?})
+  ;;Return false or the comparison procedure function from RTD.
+  ;;
+  ($<rtd>-comparison-procedure rtd))
+
+(define ($record-type-comparison-procedure rtd)
+  ;;Return false or the comparison procedure function from RTD.
+  ;;
+  ($<rtd>-comparison-procedure rtd))
+
+;;;
+
+(define* (record-type-compose-comparison-procedure {rtd record-type-descriptor?} {compar-proto procedure?})
+  ;;If  the record-type  RTD has  a parent:  apply the  comparison-procedure protocol
+  ;;function COMPAR-PROTO to the comparison procedure  of the parent (or false if the
+  ;;parent has no comparison procedure) and store the resulting procedure in RTD.
+  ;;
+  ;;If  the record-type  RTD has  no parent:  call the  comparison-procedure protocol
+  ;;function COMPAR-PROTO as a thunk and store the resulting procedure in RTD.
+  ;;
+  ;;Return the comparison procedure itself.
+  ;;
+  (receive-and-return (compar-proc)
+      (cond ((record-type-parent rtd)
+	     => (lambda (prtd)
+		  (compar-proto (record-type-comparison-procedure prtd))))
+	    (else
+	     (compar-proto)))
+    (if (procedure? compar-proc)
+	(record-type-comparison-procedure-set! rtd compar-proc)
+      (assertion-violation __who__
+	"expected closure object from evaluation of comparison-procedure protocol function"
+	rtd compar-proc))))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-comparison-procedure {reco record-object?})
+  ;;Return false or the comparison procedure from the record-type descriptor of RECO.
+  ;;
+  ($<rtd>-comparison-procedure ($struct-rtd reco)))
+
+(define ($record-comparison-procedure reco)
+  ;;Return false or the comparison procedure from the record-type descriptor of RECO.
+  ;;
+  ($<rtd>-comparison-procedure ($struct-rtd reco)))
+
+
+;;;; non-R6RS extensions: hash function
+
+(define* (record-type-hash-function-set! {rtd record-type-descriptor?} {func (or not procedure?)})
+  ;;Store false  or a  function as  hash function in  a R6RS  record-type descriptor.
+  ;;Return the void value.
+  ;;
+  ($set-<rtd>-hash-function! rtd func))
+
+(define ($record-type-hash-function-set! rtd func)
+  ;;Store false  or a  function as  hash function in  a R6RS  record-type descriptor.
+  ;;Return the void object.
+  ;;
+  ($set-<rtd>-hash-function! rtd func))
+
+(define* (record-type-hash-function {rtd record-type-descriptor?})
+  ;;Return false or the hash function function from RTD.
+  ;;
+  ($<rtd>-hash-function rtd))
+
+(define ($record-type-hash-function rtd)
+  ;;Return false or the hash function function from RTD.
+  ;;
+  ($<rtd>-hash-function rtd))
+
+;;;
+
+(define* (record-type-compose-hash-function {rtd record-type-descriptor?} {hash-proto procedure?})
+  ;;If the  record-type RTD has a  parent: apply the hash-function  protocol function
+  ;;HASH-PROTO to the hash function of the parent (or false if the parent has no hash
+  ;;function) and store the resulting procedure in RTD.
+  ;;
+  ;;If the  record-type RTD has no  parent: call the hash-function  protocol function
+  ;;HASH-PROTO as a thunk and store the resulting procedure in RTD.
+  ;;
+  ;;Return the hash function itself.
+  ;;
+  (receive-and-return (hash-func)
+      (cond ((record-type-parent rtd)
+	     => (lambda (prtd)
+		  (hash-proto (record-type-hash-function prtd))))
+	    (else
+	     (hash-proto)))
+    (if (procedure? hash-func)
+	(record-type-hash-function-set! rtd hash-func)
+      (assertion-violation __who__
+	"expected closure object from evaluation of hash-function protocol function"
+	rtd hash-func))))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-hash-function {reco record-object?})
+  ;;Return false or the hash function from the record-type descriptor of RECO.
+  ;;
+  ($<rtd>-hash-function ($struct-rtd reco)))
+
+(define ($record-hash-function reco)
+  ;;Return false or the hash function from the record-type descriptor of RECO.
+  ;;
+  ($<rtd>-hash-function ($struct-rtd reco)))
+
+
+;;;; non-R6RS extensions: method retriever
+
+(define* (record-type-method-retriever-set! {rtd record-type-descriptor?} {func (or not procedure?)})
+  ;;Store false  or a function  as method retriever  procedure in a  R6RS record-type
+  ;;descriptor.  Return the void object.
+  ;;
+  ($set-<rtd>-method-retriever! rtd func))
+
+(define ($record-type-method-retriever-set! rtd func)
+  ;;Store false  or a function  as method retriever  procedure in a  R6RS record-type
+  ;;descriptor.  Return the void object.
+  ;;
+  ($set-<rtd>-method-retriever! rtd func))
+
+(define* (record-type-method-retriever {rtd record-type-descriptor?})
+  ;;Return false or the method retriever procedure from RTD.
+  ;;
+  ($<rtd>-method-retriever rtd))
+
+(define ($record-type-method-retriever rtd)
+  ;;Return false or the method retriever procedure from RTD.
+  ;;
+  ($<rtd>-method-retriever rtd))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-method-retriever {reco record-object?})
+  ;;Return false or the method retriever procedure from the record-type descriptor of
+  ;;RECO.
+  ;;
+  ($<rtd>-method-retriever ($struct-rtd reco)))
+
+(define ($record-method-retriever reco)
+  ;;Return false or the method retriever procedure from the record-type descriptor of
+  ;;RECO.
+  ;;
+  ($<rtd>-method-retriever ($struct-rtd reco)))
 
 
 ;;;; done

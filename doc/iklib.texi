@@ -10787,9 +10787,18 @@ clause:
 
 @noindent
 allows the specification of an expression @meta{expr} which must
-evaluate to a custom equality predicate for instances of the
-record--type; @ref{iklib records equality}, for details on record's
-equality predicates.
+evaluate to a custom equality predicate protocol function for instances
+of the record--type; @ref{iklib records equality}, for details on
+record's equality predicates.
+
+If the record--type has a parent: the protocol function is applied to
+the equality predicate of the parent (or @false{} if the parent has no
+equality predicate) and the resulting value must be a function, which
+becomes the equality predicate of the record--type.
+
+If the record--type has no parent: the protocol function is called as a
+thunk and the resulting value must be a function, which becomes the
+equality predicate of the record--type.
 
 @c page
 @node iklib records defs comparison
@@ -10808,9 +10817,18 @@ clause:
 
 @noindent
 allows the specification of an expression @meta{expr} which must
-evaluate to a custom comparison procedure for instances of the
+evaluate to a custom comparison procedure protocol for instances of the
 record--type; @ref{iklib records comparison}, for details on record's
 comparison procedures.
+
+If the record--type has a parent: the protocol function is applied to
+the comparison procedure of the parent (or @false{} if the parent has no
+equality predicate) and the resulting value must be a function, which
+becomes the comparison procedure of the record--type.
+
+If the record--type has no parent: the protocol function is called as a
+thunk and the resulting value must be a function, which becomes the
+comparison procedure of the record--type.
 
 @c page
 @node iklib records defs hash
@@ -10829,8 +10847,54 @@ clause:
 
 @noindent
 allows the specification of an expression @meta{expr} which must
-evaluate to a custom hash function for instances of the record--type;
-@ref{iklib records hash}, for details on record's hash functions.
+evaluate to a custom hash function protocol for instances of the
+record--type; @ref{iklib records hash}, for details on record's hash
+functions.
+
+If the record--type has a parent: the protocol function is applied to
+the hash function of the parent (or @false{} if the parent has no hash
+function) and the resulting value must be a function, which becomes the
+hash function of the record--type.
+
+If the record--type has no parent: the protocol function is called as a
+thunk and the resulting value must be a function, which becomes the hash
+function of the record--type.
+
+As example using the typed language, the following record--type has no
+parent:
+
+@lisp
+(define-record-type duo
+  (fields one two)
+  (hash-function
+    (lambda ()
+      (lambda (@{O duo@})
+        (fx+ (fixnum-hash (.one O))
+             (fixnum-hash (.two O)))))))
+
+(.hash (new duo 1 2))   @result{} 3
+@end lisp
+
+@noindent
+the following record--type has a parent defining a hash function:
+
+@lisp
+(define-record-type alpha
+  (fields a)
+  (hash-function
+    (lambda ()
+      (lambda (@{O alpha@})
+        (.a O)))))
+
+(define-record-type beta
+  (fields b)
+  (hash-function
+    (lambda (alpha-hash)
+      (lambda (@{O beta@})
+        (fx+ (alpha-hash O) (.b O))))))
+
+(.hash (new beta 1 2))) @result{} 3
+@end lisp
 
 @c page
 @node iklib records defs methods

@@ -1258,34 +1258,96 @@
 
 (parametrise ((check-test-name	'hash-function))
 
-  ;;Early binding method call
+  ;;No parent.  Early binding method call
   ;;
   (check
       (internal-body
 	(define-record-type duo
 	  (fields one two)
 	  (hash-function
-	   (lambda ({O duo})
-	     (fx+ (fixnum-hash (.one O))
-		  (fixnum-hash (.two O))))))
+	    (lambda ()
+	      (lambda ({O duo})
+		(fx+ (fixnum-hash (.one O))
+		     (fixnum-hash (.two O)))))))
 	(.hash (new duo 1 2)))
     => (fx+ (fixnum-hash 1)
 	    (fixnum-hash 2)))
 
-  ;;Late binding method call.
+  ;;No parent.  Late binding method call.
   ;;
   (check
       (internal-body
 	(define-record-type duo
 	  (fields one two)
 	  (hash-function
-	   (lambda ({O duo})
-	     (fx+ (fixnum-hash (.one O))
-		  (fixnum-hash (.two O))))))
+	    (lambda ()
+	      (lambda ({O duo})
+		(fx+ (fixnum-hash (.one O))
+		     (fixnum-hash (.two O)))))))
 	(let (({O <top>} (new duo 1 2)))
 	  (.hash O)))
     => (fx+ (fixnum-hash 1)
 	    (fixnum-hash 2)))
+
+;;; --------------------------------------------------------------------
+
+  ;;Parent without hash function.  Early binding method call.
+  ;;
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>}))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields {b <fixnum>})
+	  (hash-function
+	    (lambda (alpha-hash)
+	      (assert (not alpha-hash))
+	      (lambda ({O beta})
+		(fx+ (.a O) (.b O))))))
+	(.hash (new beta 1 2)))
+    => 3)
+
+  ;;Parent with hash function.  Early binding method call.
+  ;;
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>})
+	  (hash-function
+	    (lambda ()
+	      (lambda ({O alpha})
+		(.a O)))))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields {b <fixnum>})
+	  (hash-function
+	    (lambda (alpha-hash)
+	      (lambda ({O beta})
+		(fx+ (alpha-hash O) (.b O))))))
+	(.hash (new beta 1 2)))
+    => 3)
+
+  ;;Parent with hash function.  Early binding method call.  Call through methods.
+  ;;
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>})
+	  (hash-function
+	    (lambda ()
+	      (lambda ({O alpha})
+		(.a O)))))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields {b <fixnum>})
+	  (hash-function
+	    (lambda (alpha-hash)
+	      (lambda ({O beta})
+		(let (({A alpha} O))
+		  (fx+ (.hash A) (.b O)))))))
+	(.hash (new beta 1 2)))
+    => 3)
 
   (void))
 

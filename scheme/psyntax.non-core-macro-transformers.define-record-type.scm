@@ -1210,14 +1210,7 @@
   (let ((clause (%get-clause 'equality-predicate clause*)))
     (syntax-match clause ()
       ((_ ?expr)
-       (let ((hash.sym (%named-gensym/suffix foo "-equality-predicate")))
-	 `(receive-and-return (,hash.sym)
-	      ,?expr
-	    (if (procedure? ,hash.sym)
-		(record-type-equality-predicate-set! ,foo-rtd ,hash.sym)
-	      (assertion-violation (quote ,foo)
-		"expected closure object from evaluation of expression in EQUALITY-PREDICATE clause"
-		,hash.sym)))))
+       `(record-type-compose-equality-predicate ,foo-rtd ,?expr))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1236,14 +1229,7 @@
   (let ((clause (%get-clause 'comparison-procedure clause*)))
     (syntax-match clause ()
       ((_ ?expr)
-       (let ((hash.sym (%named-gensym/suffix foo "-comparison-procedure")))
-	 `(receive-and-return (,hash.sym)
-	      ,?expr
-	    (if (procedure? ,hash.sym)
-		(record-type-comparison-procedure-set! ,foo-rtd ,hash.sym)
-	      (assertion-violation (quote ,foo)
-		"expected closure object from evaluation of expression in COMPARISON-PROCEDURE clause"
-		,hash.sym)))))
+       `(record-type-compose-comparison-procedure ,foo-rtd ,?expr))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1261,14 +1247,7 @@
   (let ((clause (%get-clause 'hash-function clause*)))
     (syntax-match clause ()
       ((_ ?expr)
-       (let ((hash.sym (%named-gensym/suffix foo "-hash-function")))
-	 `(receive-and-return (,hash.sym)
-	      ,?expr
-	    (if (procedure? ,hash.sym)
-		(record-type-hash-function-set! ,foo-rtd ,hash.sym)
-	      (assertion-violation (quote ,foo)
-		"expected closure object from evaluation of expression in HASH-FUNCTION clause"
-		,hash.sym)))))
+       `(record-type-compose-hash-function ,foo-rtd ,?expr))
 
       ;;No matching clause found.
       (#f	#f)
