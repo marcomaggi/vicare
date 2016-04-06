@@ -207,7 +207,7 @@
 				   (attributes
 				    ((_)		effect-free))))
 				)))
-  (declare-symbol-accessor $symbol-plist		<proper-list>)
+  (declare-symbol-accessor $symbol-plist		<list>)
   (declare-symbol-accessor $symbol-proc			<top>)
   (declare-symbol-accessor $symbol-string		<string>)
   (declare-symbol-accessor $symbol-unique-string	<string>)
@@ -225,7 +225,7 @@
   (declare-symbol-mutator $set-symbol-value!		<top>)
   (declare-symbol-mutator $set-symbol-proc!		<top>)
   (declare-symbol-mutator $set-symbol-string!		<string>)
-  (declare-symbol-mutator $set-symbol-plist!		<proper-list>)
+  (declare-symbol-mutator $set-symbol-plist!		<list>)
   #;(declare-symbol-mutator $set-symbol-unique-string!	<string/false>)
   #| end of LET-SYNTAX |# )
 
