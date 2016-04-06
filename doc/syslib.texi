@@ -25,6 +25,7 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib pairs::                Low level pair operations.
 * syslib lists::                Low level list operations.
 * syslib structs::              Low level structure operations.
+* syslib records::              Low level records operations.
 * syslib vectors::              Low level vector operations.
 * syslib bytevectors::          Low level bytevector operations.
 * syslib strings::              Low level string operations.
@@ -5501,7 +5502,7 @@ length of @var{ell}.
 
 
 The arguments @var{stru} to these operations must be references to data
-structures, the arguments @var{rtd} must be references to structure type
+structures, the arguments @var{std} must be references to structure type
 descriptors, the arguments @var{fx} must be fixnums of appropriate
 value.  The following bindings are exported by the library
 @library{vicare system $structs}.
@@ -5518,13 +5519,13 @@ Evaluate to true if @var{obj} is the reference to a structure.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct/rtd? @var{stru} @var{rtd}
-Evaluate to true if @var{stru} is a structure of type @var{rtd}.
+@deffn {Unsafe Operation} $struct/rtd? @var{stru} @var{std}
+Evaluate to true if @var{stru} is a structure of type @var{std}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $make-struct @var{rtd} @var{fx}
-Allocate a new data structure of type @var{rtd} capable of holding
+@deffn {Unsafe Operation} $make-struct @var{std} @var{fx}
+Allocate a new data structure of type @var{std} capable of holding
 @var{fx} words and return a reference to it.
 
 @quotation
@@ -5558,8 +5559,8 @@ Store @var{value} in the field at index @var{fx} of @var{stru}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct @var{rtd} @var{value} ...
-Allocate a new data structure of type @var{rtd} capable of holding as
+@deffn {Unsafe Operation} $struct @var{std} @var{value} ...
+Allocate a new data structure of type @var{std} capable of holding as
 many words as given @var{value} arguments and initialise the fields with
 such values.  Return a reference to the structure.
 @end deffn
@@ -5616,6 +5617,27 @@ struct type descriptor in the @code{value} slot of the @uid{}.
 @deffnx {Unsafe Operation} $set-std-destructor! @var{std} @var{new-destr}
 Given a struct type descriptor return @false{} or its destructor
 function or set a new destructor function.
+@end deffn
+
+@c page
+@node syslib records
+@section Low level recordure operations
+
+
+@cindex @library{vicare system $records}, library
+@cindex Library @library{vicare system $records}
+
+
+The arguments @var{reco} to these operations must be references to
+records, the arguments @var{rtd} must be references to record--type
+descriptors, the arguments @var{fx} must be fixnums of appropriate
+value.  The following bindings are exported by the library
+@library{vicare system $records}.
+
+
+@deffn {Unsafe Operation} $record-ref @var{reco} @var{fx}
+Return the value of the field at absolute index @var{fx} for the record
+@var{reco}.
 @end deffn
 
 @c page
