@@ -2,35 +2,32 @@
 ;;;
 ;;;The code has been copied from:
 ;;;
-;;;   Michael D.   Adams and R.  Kent  Dybvig.  Efficient nondestructive
-;;;   equality checking  for trees and graphs.  In  ICFP '08: Proceeding
-;;;   of  the 13th  ACM SIGPLAN  international conference  on Functional
-;;;   programming, pages  179-188.  ACM, New York, NY,  USA, 2008.  ISBN
-;;;   978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+;;;   Michael  D.  Adams  and  R.  Kent  Dybvig.   Efficient nondestructive  equality
+;;;   checking for trees and graphs.  In ICFP '08: Proceeding of the 13th ACM SIGPLAN
+;;;   international conference  on Functional  programming, pages 179-188.   ACM, New
+;;;   York, NY, USA, 2008.  ISBN 978-1-59593-919-7. doi: 10.1145/1411204.1411230.
 ;;;
 ;;;such code is also distributed on the Net under the following license.
 ;;;
 ;;;Copyright (c) 2008 Michael D. Adams and R. Kent Dybvig
+;;;Modified in 2016 by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ;;;
 
 
@@ -39,7 +36,15 @@
   (import (except (vicare)
 		  equal?
 		  ipair? icar icdr)
-    (vicare system $pointers)
+    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed Apr
+    ;;6, 2016)
+    ;;
+    ;; (only (vicare system $records)
+    ;; 	  $record-type-equality-predicate)
+    (only (vicare system $pointers)
+	  $pointer=)
+    (only (vicare system $structs)
+	  $struct-rtd)
     (only (vicare system $keywords)
 	  $keyword=?)
     (only (ikarus.immutable-pairs)
@@ -139,6 +144,20 @@
 		  k
 		(let ((k (pre? (icar x) (icar y) (- k 1))))
 		  (and k (pre? (icdr x) (icdr y) k))))))
+	;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed
+	;;Apr 6, 2016)
+	;;
+        ;; ((record-object? x)
+        ;;  (and (record-object? y)
+        ;;       (let ((rtdx ($struct-rtd x))
+        ;;             (rtdy ($struct-rtd y)))
+        ;;         (and (eq? rtdx rtdy)
+        ;;              (cond (($record-type-equality-predicate rtdx)
+        ;;                     => (lambda (equal-pred)
+        ;;                          (equal-pred x y)))
+        ;;                    (else
+        ;;                     (record=? x y)))))
+        ;;       k))
 	((struct? x)
 	 (and (struct? y)
 	      (struct=? x y)
@@ -203,6 +222,20 @@
 		 0
 	       (let ((k (e? (icar x) (icar y) (- k 1))))
 		 (and k (e? (icdr x) (icdr y) k))))))
+       ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed
+       ;;Apr 6, 2016)
+       ;;
+       ;; ((record-object? x)
+       ;;  (and (record-object? y)
+       ;;       (let ((rtdx ($struct-rtd x))
+       ;;             (rtdy ($struct-rtd y)))
+       ;;         (and (eq? rtdx rtdy)
+       ;;              (cond (($record-type-equality-predicate rtdx)
+       ;;                     => (lambda (equal-pred)
+       ;;                          (equal-pred x y)))
+       ;;                    (else
+       ;;                     (record=? x y)))))
+       ;;       k))
        ((struct? x)
 	(and (struct? y)
 	     (struct=? x y)
@@ -250,6 +283,20 @@
 	  (and (ipair? y)
 	       (let ((k (e? (icar x) (icar y) k)))
 		 (and k (e? (icdr x) (icdr y) k)))))
+	 ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Wed
+	 ;;Apr 6, 2016)
+	 ;;
+	 ;; ((record-object? x)
+	 ;;  (and (record-object? y)
+	 ;;       (let ((rtdx ($struct-rtd x))
+	 ;;             (rtdy ($struct-rtd y)))
+	 ;;         (and (eq? rtdx rtdy)
+	 ;;              (cond (($record-type-equality-predicate rtdx)
+	 ;;                     => (lambda (equal-pred)
+	 ;;                          (equal-pred x y)))
+	 ;;                    (else
+	 ;;                     (record=? x y)))))
+	 ;;       k))
 	 ((struct? x)
 	  (and (struct? y)
 	       (struct=? x y)
@@ -307,6 +354,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
