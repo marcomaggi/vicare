@@ -310,7 +310,7 @@
 
 ;;;; non-core macro: DEFINE-TYPE
 
-(define (define-type-macro input-form.stx)
+(define-macro-transformer (define-type input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  DEFINE-TYPE  macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -326,16 +326,15 @@
 
 ;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
 
-(define (define-auxiliary-syntaxes-macro expr-stx)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;DEFINE-AUXILIARY-SYNTAXES  macros   from  the  top-level   built  in
-  ;;environment.   Expand  the contents  of  EXPR-STX;  return a  syntax
-  ;;object that must be further expanded.
+(define-macro-transformer (define-auxiliary-syntaxes input-form.stx)
+  ;;Transformer  function used  to expand  Vicare's DEFINE-AUXILIARY-SYNTAXES  macros
+  ;;from the top-level built in  environment.  Expand the contents of INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  ;;Using an empty SYNTAX-RULES as  transformer function makes sure that
-  ;;whenever an auxiliary syntax is referenced an error is raised.
+  ;;Using an empty  SYNTAX-RULES as transformer function makes sure  that whenever an
+  ;;auxiliary syntax is referenced an error is raised.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?id* ...)
      (for-all identifier? ?id*)
      (bless
@@ -347,13 +346,13 @@
 
 ;;;; non-core macro: control structures macros
 
-(define (when-macro expr-stx)
-  (syntax-match expr-stx ()
+(define-macro-transformer (when input-form.stx)
+  (syntax-match input-form.stx ()
     ((_ ?test ?expr ?expr* ...)
      (bless `(if ,?test (begin ,?expr . ,?expr*))))))
 
-(define (unless-macro expr-stx)
-  (syntax-match expr-stx ()
+(define-macro-transformer (unless input-form.stx)
+  (syntax-match input-form.stx ()
     ((_ ?test ?expr ?expr* ...)
      (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
@@ -433,7 +432,7 @@
   ;;
   (define-module-who case)
 
-  (define (case-macro input-form.stx)
+  (define-macro-transformer (case input-form.stx)
     (syntax-match input-form.stx (else)
       ;;Without ELSE clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
@@ -644,7 +643,7 @@
 (module (case-identifiers-macro)
   (define-module-who case)
 
-  (define (case-identifiers-macro input-form.stx)
+  (define-macro-transformer (case-identifiers input-form.stx)
     ;;Transformer function used  to expand Vicare's CASE-IDENTIFIERS  macros from the
     ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
     ;;a syntax object that must be further expanded.
@@ -740,7 +739,7 @@
 
 ;;;; non-core macro: RECORD-TYPE-AND-RECORD?
 
-(define (record-type-and-record?-macro input-form.stx)
+(define-macro-transformer (record-type-and-record? input-form.stx)
   ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?  syntax uses
   ;;from the top-level built in  environment.  Expand the contents of INPUT-FORM.STX;
   ;;return a syntax object that must be further expanded.
@@ -846,7 +845,7 @@
 
 ;;;; non-core macro: PARAMETERIZE and PARAMETRISE
 
-(define* (parameterize-macro expr-stx)
+(define-macro-transformer (parameterize expr-stx)
   ;;Transformer  function  used  to  expand Vicare's  PARAMETERIZE  macros  from  the
   ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
   ;;object that must be further expanded.
@@ -899,12 +898,12 @@
 
 ;;;; non-core macro: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
 
-(define (with-unwind-protection-macro expr-stx)
+(define-macro-transformer (with-unwind-protection input-form.stx)
   ;;Transformer function  used to expand Vicare's  WITH-UNWIND-PROTECTION macros from
-  ;;the top-level  built in environment.  Expand  the contents of EXPR-STX;  return a
-  ;;syntax object that must be further expanded.
+  ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?unwind-handler ?thunk)
      (let ((terminated?  (gensym))
 	   (normal-exit? (gensym))
@@ -952,10 +951,10 @@
 					 (,?unwind-handler ,why)))))))))))))))
     ))
 
-(define (unwind-protect-macro expr-stx)
+(define-macro-transformer (unwind-protect input-form.stx)
   ;;Transformer  function used  to  expand Vicare's  UNWIND-PROTECT  macros from  the
-  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
-  ;;object that must be further expanded.
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
   ;;Not a  general UNWIND-PROTECT  mechanism for  Scheme, but fine  when we  do *not*
   ;;create  continuations that  reenter the  ?BODY  again after  having executed  the
@@ -963,7 +962,7 @@
   ;;
   ;;NOTE This implementation works fine with coroutines.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?body ?cleanup0 ?cleanup* ...)
      (let ((why (gensym)))
        (bless
@@ -975,15 +974,15 @@
 
 ;;;; non-core macro: WITH-IMPLICITS
 
-(define (with-implicits-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (with-implicits input-form.stx)
+  ;;Transformer  function used  to  expand Vicare's  WITH-IMPLICITS  macros from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  ;;This  macro  is   a  wrapper  for  WITH-SYNTAX   which  defines  the
-  ;;identifiers ?SYMBOL with the same context  of ?CTX.  ?CTX must be an
-  ;;expression evaluating to  an identifier; it is  evaluated only once.
-  ;;?SYMBOL must be Scheme symbols.  For example:
+  ;;This macro  is a wrapper  for WITH-SYNTAX  which defines the  identifiers ?SYMBOL
+  ;;with the  same context  of ?CTX.   ?CTX must  be an  expression evaluating  to an
+  ;;identifier; it  is evaluated  only once.   ?SYMBOL must  be Scheme  symbols.  For
+  ;;example:
   ;;
   ;;   (syntax-case stx ()
   ;;     ((id)
@@ -1000,9 +999,9 @@
   ;;                    (y (datum->syntax #'id 'y)))
   ;;        #'(list x y))))
   ;;
-  ;;NOTE This  macro is  derived from  WITH-IMPLICIT, documented  in the
-  ;;Chez Scheme User's Guide.  The  two macros have different API; where
-  ;;we would use Vicare's variant as:
+  ;;NOTE This  macro is  derived from  WITH-IMPLICIT, documented  in the  Chez Scheme
+  ;;User's Guide.   The two macros  have different API;  where we would  use Vicare's
+  ;;variant as:
   ;;
   ;;   (with-implicits ((#'id x y))
   ;;     #'(list x y))
@@ -1016,7 +1015,7 @@
     (map (lambda (id)
 	   `(,id (datum->syntax ,ctx (quote ,id))))
       ids))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
 
     ((_ () ?body0 ?body* ...)
      (bless
@@ -1038,12 +1037,12 @@
 
 ;;;; non-core macro: SET-CONS!
 
-(define (set-cons!-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (set-cons! input-form.stx)
+  ;;Transformer function used to expand  Vicare's SET-CONS! macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?id ?obj)
      (identifier? ?id)
      (bless `(set! ,?id (cons ,?obj ,?id))))
@@ -1055,13 +1054,12 @@
 (module (with-compensations/on-error-macro
 	 with-compensations-macro)
 
-  (define (with-compensations/on-error-macro expr-stx)
-    ;;Transformer     function      used     to      expand     Vicare's
-    ;;WITH-COMPENSATIONS/ON-ERROR  macros from  the  top-level built  in
-    ;;environment.   Expand the  contents of  EXPR-STX; return  a syntax
-    ;;object that must be further expanded.
+  (define-macro-transformer (with-compensations/on-error input-form.stx)
+    ;;Transformer function used to expand Vicare's WITH-COMPENSATIONS/ON-ERROR macros
+    ;;from   the  top-level   built   in  environment.    Expand   the  contents   of
+    ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
     ;;
-    (syntax-match expr-stx ()
+    (syntax-match input-form.stx ()
       ((_ ?body0 ?body* ...)
        (let ((store (gensym))
 	     (why   (gensym)))
@@ -1076,13 +1074,12 @@
 		   ,?body0 . ,?body*)))))))
       ))
 
-  (define (with-compensations-macro expr-stx)
-    ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATIONS
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
+  (define-macro-transformer (with-compensations input-form.stx)
+    ;;Transformer function used to expand Vicare's WITH-COMPENSATIONS macros from the
+    ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
+    ;;a syntax object that must be further expanded.
     ;;
-    (syntax-match expr-stx ()
+    (syntax-match input-form.stx ()
       ((_ ?body0 ?body* ...)
        (let ((store (gensym))
 	     (why   (gensym)))
@@ -1110,23 +1107,23 @@
 
   #| end of module |# )
 
-(define (push-compensation-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  PUSH-COMPENSATION
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (push-compensation input-form.stx)
+  ;;Transformer function  used to expand  Vicare's PUSH-COMPENSATION macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?release0 ?release* ...)
      (bless
       `(push-compensation-thunk (lambda/std () ,?release0 ,@?release*))))
     ))
 
-(define (with-compensation-handler-macro expr-stx)
+(define-macro-transformer (with-compensation-handler input-form.stx)
   ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATION-HANDLER  macros
-  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
-  ;;a syntax object that must be further expanded.
+  ;;from the top-level built in  environment.  Expand the contents of INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?release-thunk ?alloc-thunk)
      (bless
       `(begin
@@ -1134,14 +1131,12 @@
 	 (,?alloc-thunk))))
     ))
 
-(define (compensate-macro expr-stx)
-  ;;Transformer function used to  expand Vicare's COMPENSATE macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (compensate input-form.stx)
+  ;;Transformer function used to expand Vicare's COMPENSATE macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (define (%synner message subform)
-    (syntax-violation 'compensate message expr-stx subform))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?alloc0 ?form* ...)
      (let ((free #f))
        (define alloc*
@@ -1153,12 +1148,10 @@
 		'()))
 
 	     (()
-	      (%synner "invalid compensation syntax: missing WITH keyword"
-		       form-stx))
+	      (__synner__ "invalid compensation syntax: missing WITH keyword" form-stx))
 
 	     (((with))
-	      (%synner "invalid compensation syntax: empty WITH keyword"
-		       (bless '(with))))
+	      (__synner__ "invalid compensation syntax: empty WITH keyword" (bless '(with))))
 
 	     ((?alloc ?form* ...)
 	      (cons ?alloc (recur ?form*)))
@@ -1177,12 +1170,12 @@
 
 ;;;; non-core macro: CONCURRENTLY, MONITOR
 
-(define (concurrently-macro expr-stx)
+(define-macro-transformer (concurrently input-form.stx)
   ;;Transformer  function  used  to  expand Vicare's  CONCURRENTLY  macros  from  the
-  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
-  ;;object that must be further expanded.
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?thunk0 ?thunk* ...)
      (let ((counter (gensym "counter")))
        (bless
@@ -1199,14 +1192,14 @@
 				(zero? ,counter)))))))
     ))
 
-(define (monitor-macro expr-stx)
+(define-macro-transformer (monitor input-form.stx)
   ;;Transformer function  used to expand  Vicare's MONITOR macros from  the top-level
-  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
-  ;;that must be further expanded.
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
   ;;Allow only ?CONCURRENT-COROUTINES-MAXIMUM to concurrently enter the monitor.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?concurrent-coroutines-maximum ?thunk)
      (let ((KEY (gensym)))
        (bless
@@ -1216,7 +1209,7 @@
 
 ;;;; non-core macro: SYNTAX-RULES, DEFINE-SYNTAX-RULE
 
-(define (syntax-rules-macro input-form.stx)
+(define-macro-transformer (syntax-rules input-form.stx)
   ;;Transformer function used  to expand R6RS SYNTAX-RULES macros  from the top-level
   ;;built in  environment.  Process the  contents of INPUT-FORM.STX; return  a syntax
   ;;object that needs to be further expanded.
@@ -1239,7 +1232,7 @@
 			 (syntax-violation #f "invalid syntax-rules pattern" input-form.stx pattern))))
 		 ?pattern* ?template*))))))))
 
-(define (define-syntax-rule-macro input-form.stx)
+(define-macro-transformer (define-syntax-rule input-form.stx)
   ;;Transformer function used  to expand Vicare's DEFINE-SYNTAX-RULE  macros from the
   ;;top-level built in environment.  Process the contents of INPUT-FORM.STX; return a
   ;;syntax object that needs to be further expanded.
@@ -1257,7 +1250,7 @@
 
 ;;;; non-core macro: DEFINE-SYNTAX*
 
-(define (define-syntax*-macro input-form.stx)
+(define-macro-transformer (define-syntax* input-form.stx)
   ;;Transformer  function used  to  expand Vicare's  DEFINE-SYNTAX*  macros from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -1347,7 +1340,7 @@
 
 ;;;; non-core macro: IDENTIFIER-SYNTAX
 
-(define (identifier-syntax-macro input-form.stx)
+(define-macro-transformer (identifier-syntax input-form.stx)
   ;;Transformer  function  used to  expand  R6RS  IDENTIFIER-SYNTAX macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -1389,7 +1382,7 @@
 
 ;;;; non-core macro: LET*, TRACE-LET
 
-(define (let*-macro input-form.stx)
+(define-macro-transformer (let* input-form.stx)
   ;;Transformer function used to expand R6RS  LET* macros from the top-level built in
   ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
   ;;must be further expanded.
@@ -1418,7 +1411,7 @@
        (%build-output-form ?lhs* ?rhs* (cons ?body ?body*))))
     ))
 
-(define (trace-let-macro input-form.stx)
+(define-macro-transformer (trace-let input-form.stx)
   ;;Transformer function used to expand  Vicare's TRACE-LET macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -1471,7 +1464,7 @@
   ;;
   (define-module-who let-values)
 
-  (define (let-values-macro input-form.stx)
+  (define-macro-transformer (let-values input-form.stx)
     (syntax-match input-form.stx ()
       ((_ () ?body ?body* ...)
        (cons* (bless 'let) '() ?body ?body*))
@@ -1552,10 +1545,10 @@
 
 ;;;; non-core macro: LET*-VALUES
 
-(define (let*-values-macro expr-stx)
-  ;;Transformer function used to expand R6RS LET*-VALUES macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define-macro-transformer (let*-values input-form.stx)
+  ;;Transformer function  used to expand  R6RS LET*-VALUES macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
   ;;A LET*-VALUES syntax like:
   ;;
@@ -1573,7 +1566,7 @@
   ;;         (lambda (d e f)
   ;;           (begin ?body0 ?body)))))
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ () ?body ?body* ...)
      (cons* (bless 'let) '() ?body ?body*))
 
@@ -1591,12 +1584,12 @@
 
 ;;;; non-core macro: VALUES->LIST-MACRO
 
-(define (values->list-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's VALUES->LIST  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (values->list input-form.stx)
+  ;;Transformer  function  used  to  expand Vicare's  VALUES->LIST  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?expr)
      (bless
       `(call-with-values
@@ -1606,12 +1599,12 @@
 
 ;;;; non-core macro: LET*-SYNTAX
 
-(define (let*-syntax-macro expr-stx)
-  ;;Transformer function used to expand Vicare's LET*-SYNTAX macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (let*-syntax input-form.stx)
+  ;;Transformer  function  used  to  expand  Vicare's  LET*-SYNTAX  macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
@@ -1632,12 +1625,12 @@
 
 ;;;; non-core macro: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
 
-(define (let-constants-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  LET-CONSTANTS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (let-constants input-form.stx)
+  ;;Transformer  function  used to  expand  Vicare's  LET-CONSTANTS macros  from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
@@ -1653,12 +1646,12 @@
 	     ,?body . ,?body*)))))
     ))
 
-(define (let*-constants-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  LET*-CONSTANTS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (let*-constants input-form.stx)
+  ;;Transformer  function used  to  expand Vicare's  LET*-CONSTANTS  macros from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
@@ -1671,12 +1664,12 @@
 	   ,?body . ,?body*))))
     ))
 
-(define (letrec-constants-macro expr-stx)
-  ;;Transformer function used to expand Vicare's LETREC-CONSTANTS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (letrec-constants input-form.stx)
+  ;;Transformer function  used to  expand Vicare's  LETREC-CONSTANTS macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ () ?body0 ?body* ...)
      (bless
       `(internal-body ,?body0 . ,?body*)))
@@ -1699,12 +1692,12 @@
 	       (internal-body ,?body0 . ,?body*)))))))
     ))
 
-(define (letrec*-constants-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  LETREC*-CONSTANTS
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (letrec*-constants input-form.stx)
+  ;;Transformer function  used to expand  Vicare's LETREC*-CONSTANTS macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ () ?body0 ?body* ...)
      (bless
       `(internal-body ,?body0 . ,?body*)))
@@ -1797,20 +1790,18 @@
     ;;built in environment.  Expand the contents of EXPR.STX.  Return a syntax object
     ;;that must be further expanded.
     ;;
-    (define (define*-macro expr.stx)
-      (define (%synner message subform)
-	(syntax-violation 'define* message expr.stx subform))
+    (define-macro-transformer (define* expr.stx)
       (bless
        (syntax-match expr.stx (brace)
 	 ;;No ret-pred.
 	 ((_ (?who . ?formals) ?body0 ?body* ...)
 	  (identifier? ?who)
-	  (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) __synner__))
 
 	 ;;Return value predicates.
 	 ((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	  (identifier? ?who)
-	  (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) __synner__))
 
 	 ((_ ?who ?expr)
 	  (identifier? ?who)
@@ -1880,20 +1871,18 @@
 
   (module (case-define*-macro)
 
-    (define (case-define*-macro expr.stx)
+    (define-macro-transformer (case-define* expr.stx)
       ;;Transformer function  used to  expand Vicare's  CASE-DEFINE* macros  from the
       ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
-      (define (%synner message subform)
-	(syntax-violation 'case-define* message expr.stx subform))
       (syntax-match expr.stx ()
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
 	  `(case-define/std ,?who
 	     ,@(map (lambda (clause.stx)
-		      (%generate-case-define-form ?who clause.stx %synner))
+		      (%generate-case-define-form ?who clause.stx __synner__))
 		 (cons ?clause0 ?clause*)))))
 	))
 
@@ -1965,13 +1954,11 @@
 
   (module (lambda*-macro named-lambda*-macro)
 
-    (define (lambda*-macro expr.stx)
+    (define-macro-transformer (lambda* expr.stx)
       ;;Transformer  function  used  to  expand  Vicare's  LAMBDA*  macros  from  the
       ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
-      (define (%synner message subform)
-	(syntax-violation 'lambda* message expr.stx subform))
       (define who.id
 	(underscore-id))
       (bless
@@ -1979,33 +1966,31 @@
 	 ;;Ret-pred with list spec.
 	 ((_ ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	  (underscore-id? ?underscore)
-	  (%generate-lambda-output-form/with-ret-pred who.id (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-lambda-output-form/with-ret-pred who.id (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) __synner__))
 
 	 ;;No ret-pred.
 	 ((_ ?formals ?body0 ?body* ...)
-	  (%generate-lambda-output-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-lambda-output-form/without-ret-pred who.id ?formals (cons ?body0 ?body*) __synner__))
 
 	 )))
 
-    (define (named-lambda*-macro expr.stx)
+    (define-macro-transformer (named-lambda* expr.stx)
       ;;Transformer function  used to expand  Vicare's NAMED-LAMBDA* macros  from the
       ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
-      (define (%synner message subform)
-	(syntax-violation 'named-lambda* message expr.stx subform))
       (bless
        (syntax-match expr.stx (brace)
 	 ;;Ret-pred with list spec.
 	 ((_ ?who ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	  (and (underscore-id? ?underscore)
 	       (identifier? ?who))
-	  (%generate-lambda-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-lambda-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) __synner__))
 
 	 ;;No ret-pred.
 	 ((_ ?who ?formals ?body0 ?body* ...)
 	  (identifier? ?who)
-	  (%generate-lambda-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
+	  (%generate-lambda-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) __synner__))
 
 	 )))
 
@@ -2061,13 +2046,11 @@
 
   (module (case-lambda*-macro named-case-lambda*-macro)
 
-    (define (case-lambda*-macro expr.stx)
+    (define-macro-transformer (case-lambda* expr.stx)
       ;;Transformer function  used to  expand Vicare's  CASE-LAMBDA* macros  from the
       ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
-      (define (%synner message subform)
-	(syntax-violation 'case-lambda* message expr.stx subform))
       (define who.id
 	(underscore-id))
       (syntax-match expr.stx ()
@@ -2075,24 +2058,22 @@
 	 (bless
 	  `(named-case-lambda/std _
 	    ,@(map (lambda (clause.stx)
-		     (%generate-case-lambda-form (quote _) clause.stx %synner))
+		     (%generate-case-lambda-form (quote _) clause.stx __synner__))
 		(cons ?clause0 ?clause*)))))
 	))
 
-    (define (named-case-lambda*-macro expr.stx)
+    (define-macro-transformer (named-case-lambda* expr.stx)
       ;;Transformer function  used to expand Vicare's  NAMED-CASE-LAMBDA* macros from
       ;;the top-level built in environment.  Expand the contents of EXPR.STX.  Return
       ;;a syntax object that must be further expanded.
       ;;
-      (define (%synner message subform)
-	(syntax-violation 'case-lambda* message expr.stx subform))
       (syntax-match expr.stx ()
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
 	  `(named-case-lambda/std ,?who
 	    ,@(map (lambda (clause.stx)
-		     (%generate-case-lambda-form ?who clause.stx %synner))
+		     (%generate-case-lambda-form ?who clause.stx __synner__))
 		(cons ?clause0 ?clause*)))))
 	))
 
@@ -2718,12 +2699,12 @@
 
   (define-module-who guard)
 
-  (define (guard-macro x)
+  (define-macro-transformer (guard input-form.stx)
     ;;Transformer function used to expand R6RS  GUARD macros from the top-level built
-    ;;in environment.  Expand  the contents of EXPR-STX; return a  syntax object that
+    ;;in environment.  Expand  the contents of INPUT-FORM.STX; return a  syntax object that
     ;;must be further expanded.
     ;;
-    (syntax-match x ()
+    (syntax-match input-form.stx ()
       ((_ (?variable ?clause* ...) ?body ?body* ...)
        (identifier? ?variable)
        (let ((reinstate-guard-continuation-id  (gensym "reinstate-guard-continuation-id"))
@@ -2849,10 +2830,10 @@
 (commented-out
  (module (guard-macro)
 
-   (define (guard-macro x)
+   (define-macro-transformer (guard x)
      ;;Transformer function used to expand R6RS GUARD macros from the top-level built
-     ;;in environment.  Expand the contents of  EXPR-STX; return a syntax object that
-     ;;must be further expanded.
+     ;;in environment.  Expand the contents of INPUT-FORM.STX; return a syntax object
+     ;;that must be further expanded.
      ;;
      ;;NOTE If we need to reraise the continuation because no GUARD clause handles it
      ;;(and  there is  no  ELSE clause):  we  must  reraise it  in  the same  dynamic
@@ -2969,12 +2950,11 @@
 
 ;;;; non-core macro: DEFINE-ENUMERATION
 
-(define (define-enumeration-macro stx)
-  ;;Transformer function  used to expand R6RS  DEFINE-ENUMERATION macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (define-enumeration input-form.stx)
+  ;;Transformer  function used  to  expand R6RS  DEFINE-ENUMERATION  macros from  the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (define-constant __who__ 'define-enumeration)
   (define (set? x)
     (or (null? x)
 	(and (not (memq (car x) (cdr x)))
@@ -2984,18 +2964,15 @@
 	'()
       (cons (car ls)
 	    (remove-dups (remq (car ls) (cdr ls))))))
-  (syntax-match stx ()
+  (syntax-match input-form.stx ()
     ((_ ?name (?id* ...) ?maker)
      (begin
        (unless (identifier? ?name)
-	 (syntax-violation __who__
-	   "expected identifier as enumeration type name" stx ?name))
+	 (__synner__ "expected identifier as enumeration type name" ?name))
        (unless (for-all identifier? ?id*)
-	 (syntax-violation __who__
-	   "expected list of symbols as enumeration elements" stx ?id*))
+	 (__synner__ "expected list of symbols as enumeration elements" ?id*))
        (unless (identifier? ?maker)
-	 (syntax-violation __who__
-	   "expected identifier as enumeration constructor syntax name" stx ?maker))
+	 (__synner__ "expected identifier as enumeration constructor syntax name" ?maker))
        (let ((symbol*		(remove-dups (syntax->datum ?id*)))
 	     (the-constructor	(gensym)))
 	 (bless
@@ -3135,106 +3112,103 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (do-macro expr-stx)
+(define-macro-transformer (do input-form.stx)
   ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
   ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (with-who do
-    (define (%normalise-binding binding-stx)
-      (syntax-match binding-stx ()
-	((?var ?init)
-	 (receive (var.id var.ots)
-	     (syntax-object.parse-typed-argument ?var)
-	   `(,?var ,?init ,var.id)))
-	((?var ?init ?step)
-	 `(,?var ,?init ,?step))
-	(_
-	 (syntax-violation __who__ "invalid binding" expr-stx))))
-    (syntax-match expr-stx (while until)
+  (define (%normalise-binding binding-stx)
+    (syntax-match binding-stx ()
+      ((?var ?init)
+       (receive (var.id var.ots)
+	   (syntax-object.parse-typed-argument ?var)
+	 `(,?var ,?init ,var.id)))
+      ((?var ?init ?step)
+       `(,?var ,?init ,?step))
+      (_
+       (__synner__ "invalid binding" input-form.stx))))
+  (syntax-match input-form.stx (while until)
+    ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ;;
+    ;;NOTE Using CONTINUE in the body causes a jump to the test.
+    ((_ ?body (while ?test))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration"))
+	   (loop           (gensym "loop")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda/std (,escape)
+	       (let ,loop ()
+		    (unwinding-call/cc
+			(lambda/std (,next-iteration)
+			  ,(with-escape-fluids escape next-iteration (list ?body))))
+		    (when ,?test
+		      (,loop))))))))
 
-      ;;This is an extended Vicare syntax.
-      ;;
-      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-      ;;
-      ;;NOTE Using CONTINUE in the body causes a jump to the test.
-      ((_ ?body (while ?test))
-       (let ((escape         (gensym "escape"))
-	     (next-iteration (gensym "next-iteration"))
-	     (loop           (gensym "loop")))
-	 (bless
-	  `(unwinding-call/cc
-	       (lambda/std (,escape)
-		 (let ,loop ()
-		   (unwinding-call/cc
-		       (lambda/std (,next-iteration)
-			 ,(with-escape-fluids escape next-iteration (list ?body))))
-		   (when ,?test
-		     (,loop))))))))
+    ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ;;
+    ;;NOTE Using CONTINUE in the body causes a jump to the test.
+    ((_ ?body (until ?test))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration"))
+	   (loop           (gensym "loop")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda/std (,escape)
+	       (let ,loop ()
+		    (unwinding-call/cc
+			(lambda/std (,next-iteration)
+			  ,(with-escape-fluids escape next-iteration (list ?body))))
+		    (until ,?test
+		      (,loop))))))))
 
-      ;;This is an extended Vicare syntax.
-      ;;
-      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-      ;;
-      ;;NOTE Using CONTINUE in the body causes a jump to the test.
-      ((_ ?body (until ?test))
-       (let ((escape         (gensym "escape"))
-	     (next-iteration (gensym "next-iteration"))
-	     (loop           (gensym "loop")))
-	 (bless
-	  `(unwinding-call/cc
-	       (lambda/std (,escape)
-		 (let ,loop ()
-		   (unwinding-call/cc
-		       (lambda/std (,next-iteration)
-			 ,(with-escape-fluids escape next-iteration (list ?body))))
-		   (until ,?test
-		     (,loop))))))))
-
-      ;;This is the R6RS syntax.
-      ;;
-      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-      ((_ (?binding* ...)
-	  (?test ?expr* ...)
-	  ?command* ...)
-       (syntax-match (map %normalise-binding ?binding*) ()
-	 (((?var* ?init* ?step*) ...)
-	  (let ((escape         (gensym "escape"))
-		(next-iteration (gensym "next-iteration"))
-		(loop           (gensym "loop")))
-	    (bless
-	     `(unwinding-call/cc
-		  (lambda/std (,escape)
-		    (letrec ((,loop (lambda/std ,?var*
-				     (if (unwinding-call/cc
-					     (lambda/std (,next-iteration)
-					       (if ,?test
-						   #f
-						 ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
-					 (,loop . ,?step*)
-				       ,(if (null? ?expr*)
-					    '(void)
-					  `(begin . ,?expr*))))))
-		      (,loop . ,?init*)))))))
-	 ))
-      )))
+    ;;This is the R6RS syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ((_ (?binding* ...)
+	(?test ?expr* ...)
+	?command* ...)
+     (syntax-match (map %normalise-binding ?binding*) ()
+       (((?var* ?init* ?step*) ...)
+	(let ((escape         (gensym "escape"))
+	      (next-iteration (gensym "next-iteration"))
+	      (loop           (gensym "loop")))
+	  (bless
+	   `(unwinding-call/cc
+		(lambda/std (,escape)
+		  (letrec ((,loop (lambda/std ,?var*
+				    (if (unwinding-call/cc
+					    (lambda/std (,next-iteration)
+					      (if ,?test
+						  #f
+						,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+					(,loop . ,?step*)
+				      ,(if (null? ?expr*)
+					   '(void)
+					 `(begin . ,?expr*))))))
+		    (,loop . ,?init*)))))))
+       ))
+    ))
 
 ;;; --------------------------------------------------------------------
 
-(define (do*-macro expr-stx)
+(define-macro-transformer (do* input-form.stx)
   ;;Transformer function used to expand Vicare DO* macros from the top-level built in
   ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
   ;;This is meant to be similar to the Common Lisp syntax of the same name.
   ;;
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
-  (with-who do*
   (define (%make-init-binding binding-stx)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -3246,7 +3220,7 @@
 	   (syntax-object.parse-typed-argument ?var)
 	 (list ?var ?init)))
       (_
-       (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
+       (__synner__ "invalid binding" binding-stx))))
   (define (%make-step-update binding-stx knil)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -3257,8 +3231,8 @@
 	 (cons `(set! ,var.id ,?step)
 	       knil)))
       (_
-       (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
-  (syntax-match expr-stx ()
+       (__synner__ "invalid binding" binding-stx))))
+  (syntax-match input-form.stx ()
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
@@ -3284,16 +3258,16 @@
 					 '(void)
 				       `(begin . ,?expr*))))))
 		   (,loop))))))))
-    )))
+    ))
 
 ;;; --------------------------------------------------------------------
 
-(define (dolist-macro expr-stx)
+(define-macro-transformer (dolist input-form.stx)
   ;;Transformer function used to expand Vicare DOLIST macros from the top-level built
   ;;in environment; we  also support extended Vicare syntax.  Expand  the contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ (?var ?list-form)              ?body0 ?body* ...)
      (bless
       `(dolist (,?var ,?list-form (void))
@@ -3313,12 +3287,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (dotimes-macro expr-stx)
+(define-macro-transformer (dotimes input-form.stx)
   ;;Transformer  function used  to expand  Vicare DOTIMES  macros from  the top-level
   ;;built  in  environment; we  also  support  extended  Vicare syntax.   Expand  the
-  ;;contents of EXPR-STX; return a syntax object that must be further expanded.
+  ;;contents of INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ (?var ?count-form)              ?body0 ?body* ...)
      (let ((max-var (gensym)))
        (bless
@@ -3338,15 +3312,15 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (while-macro expr-stx)
+(define-macro-transformer (while input-form.stx)
   ;;Transformer  function used  to expand  Vicare's WHILE  macros from  the top-level
-  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
-  ;;that must be further expanded.
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?test ?body* ...)
      (let ((escape         (gensym "escape"))
 	   (next-iteration (gensym "next-iteration"))
@@ -3363,15 +3337,15 @@
 		   (,loop))))))))
     ))
 
-(define (until-macro expr-stx)
+(define-macro-transformer (until input-form.stx)
   ;;Transformer  function used  to expand  Vicare's UNTIL  macros from  the top-level
-  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
-  ;;that must be further expanded.
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?test ?body* ...)
      (let ((escape         (gensym "escape"))
 	   (next-iteration (gensym "next-iteration"))
@@ -3388,17 +3362,17 @@
 		   (,loop))))))))
     ))
 
-(define (for-macro expr-stx)
+(define-macro-transformer (for input-form.stx)
   ;;Transformer function used to expand Vicare's  FOR macros from the top-level built
-  ;;in environment.   Expand the contents  of EXPR-STX;  return a syntax  object that
-  ;;must be further expanded.
+  ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   ;;NOTE The CONTINUE must skip the rest of the body and jump to the increment.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ (?init ?test ?incr) ?body* ...)
      (let ((escape         (gensym "escape"))
 	   (next-iteration (gensym "next-iteration"))
@@ -3422,12 +3396,12 @@
 
 ;;;; non-core macro: RETURNABLE
 
-(define (returnable-macro expr-stx)
+(define-macro-transformer (returnable input-form.stx)
   ;;Transformer function used to expand Vicare's RETURNABLE macros from the top-level
-  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
-  ;;that must be further expanded.
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?body0 ?body* ...)
      (let ((escape (gensym "escape")))
        (bless
@@ -3443,20 +3417,19 @@
 ;;;; non-core macro: TRY
 
 (module (try-macro)
-  (define-constant __who__ 'try)
+  (define-module-who try)
 
-  (define (try-macro expr-stx)
-    ;;Transformer  function  used  to  expand Vicare's  TRY  ...   CATCH
-    ;;...  FINALLY  macros  from  the top-level  built  in  environment.
-    ;;Expand the contents of EXPR-STX;  return a syntax object that must
-    ;;be further expanded.
+  (define-macro-transformer (try input-form.stx)
+    ;;Transformer function used to expand Vicare's TRY ...  CATCH ...  FINALLY macros
+    ;;from   the  top-level   built   in  environment.    Expand   the  contents   of
+    ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
     ;;
-    (syntax-match expr-stx (catch finally)
+    (syntax-match input-form.stx (catch finally)
       ;;Full syntax.
       ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...) (finally ?finally-body0 ?finally-body* ...))
        (begin
-	 (validate-variable expr-stx ?var)
-	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*)))
+	 (validate-variable ?var __synner__)
+	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses ?var (cons ?catch-clause0 ?catch-clause*) __synner__))
 	       (why           (gensym)))
 	   (bless
 	    `(with-unwind-protection
@@ -3469,8 +3442,8 @@
       ;;Only catch, no finally.
       ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...))
        (begin
-	 (validate-variable expr-stx ?var)
-	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
+	 (validate-variable ?var __synner__)
+	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses ?var (cons ?catch-clause0 ?catch-clause*) __synner__)))
 	   (bless
 	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))
 
@@ -3484,7 +3457,7 @@
 	       ,?body)))))
       ))
 
-  (define (parse-multiple-catch-clauses expr-stx var-id clauses-stx)
+  (define (parse-multiple-catch-clauses var-id clauses-stx synner)
     (syntax-match clauses-stx (else)
       ;;Match when  there is no  ELSE clause.  Remember that  GUARD will
       ;;reraise the exception when there is no ELSE clause.
@@ -3509,31 +3482,28 @@
 							  (identifier? ?tag)
 							  `(is-a? ,var-id ,?tag))
 							 (else
-							  (syntax-violation __who__
-							    "expected identifier as condition type" tag-id)))))))
+							  (synner "expected identifier as condition type" tag-id)))))))
 		    ?tag-body0 ?tag-body*)
-	     (parse-multiple-catch-clauses expr-stx var-id ?other-clauses)))
+	     (parse-multiple-catch-clauses var-id ?other-clauses synner)))
 
       ((?clause . ?other-clauses)
-       (syntax-violation __who__
-	 "invalid catch clause in try syntax" expr-stx ?clause))))
+       (synner "invalid catch clause in try syntax" ?clause))))
 
-  (define (validate-variable expr-stx var-id)
+  (define (validate-variable var-id synner)
     (unless (identifier? var-id)
-      (syntax-violation __who__
-	"expected identifier as variable" expr-stx var-id)))
+      (synner "expected identifier as variable" var-id)))
 
   #| end of module |# )
 
 
 ;;;; non-core macro: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
 
-(define (with-blocked-exceptions-macro expr-stx)
+(define-macro-transformer (with-blocked-exceptions input-form.stx)
   ;;Transformer function used to  expand Vicare's WITH-BLOCKED-EXCEPTIONS macros from
-  ;;the top-level  built in environment.  Expand  the contents of EXPR-STX;  return a
-  ;;syntax object that must be further expanded.
+  ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
+  ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
@@ -3554,12 +3524,12 @@
 	       ,?thunk)))))
     ))
 
-(define (with-current-dynamic-environment-macro expr-stx)
+(define-macro-transformer (with-current-dynamic-environment input-form.stx)
   ;;Transformer  function used  to  expand Vicare's  WITH-CURRENT-DYNAMIC-ENVIRONMENT
-  ;;macros from the top-level built in environment.  Expand the contents of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;macros  from  the  top-level  built  in  environment.   Expand  the  contents  of
+  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?exception-retvals-maker ?thunk)
      (bless
       `(call/cc
@@ -3583,7 +3553,7 @@
 
 ;;;; non-core macro: SHIFT, RESET
 
-(define (reset-macro input-form.stx)
+(define-macro-transformer (reset input-form.stx)
   ;;Transformer  function used  to expand  Vicare's RESET  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -3605,7 +3575,7 @@
 		     ((private-shift-meta-continuation) ,result.sym)))))))))
     ))
 
-(define (shift-macro input-form.stx)
+(define-macro-transformer (shift input-form.stx)
   ;;Transformer  function used  to expand  Vicare's SHIFT  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -3625,7 +3595,7 @@
 		 ((private-shift-meta-continuation) ,result.sym)))))))
     ))
 
-(define (inner-reset-macro input-form.stx)
+(define-macro-transformer (inner-reset input-form.stx)
   ;;Transformer  function  used  to  expand  Vicare's  INNER-RESET  macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -3653,12 +3623,12 @@
 
 ;;;; non-core macro: OR, AND
 
-(define (or-macro expr-stx)
+(define-macro-transformer (or input-form.stx)
   ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in
-  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
-  ;;be further expanded.
+  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+  ;;must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_) #f)
 
     ((_ ?expr ?expr* ...)
@@ -3672,12 +3642,12 @@
 	       ,(recur (car e*) (cdr e*))))))))
     ))
 
-(define (and-macro expr-stx)
+(define-macro-transformer (and input-form.stx)
   ;;Transformer function used  to expand R6RS AND macros from  the top-level built in
-  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
-  ;;be further expanded.
+  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+  ;;must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_) #t)
 
     ((_ ?expr ?expr* ...)
@@ -3693,65 +3663,64 @@
 
 ;;;; non-core macro: COND
 
-(define (cond-macro expr-stx)
+(define-macro-transformer (cond input-form.stx)
   ;;Transformer function used to expand R6RS  COND macros from the top-level built in
-  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
-  ;;be further expanded.
+  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+  ;;must be further expanded.
   ;;
-  (with-who cond
-    (syntax-match expr-stx ()
-      ((_ ?cls ?cls* ...)
-       (bless
-	(let recur ((cls ?cls) (cls* ?cls*))
-	  (if (null? cls*)
-	      (syntax-match cls (else =>)
-		((else ?expr ?expr* ...)
-		 `(internal-body ,?expr . ,?expr*))
-
-		((?test => ?proc)
-		 `(let ((t ,?test))
-		    (if t
-			(,?proc t)
-		      (void))))
-
-		((?expr)
-		 `(or ,?expr (void)))
-
-		((?test ?expr* ...)
-		 `(if ,?test
-		      (internal-body . ,?expr*)
-		    (void)))
-
-		(_
-		 (syntax-violation __who__ "invalid last clause" expr-stx cls)))
-
+  (syntax-match input-form.stx ()
+    ((_ ?cls ?cls* ...)
+     (bless
+      (let recur ((cls ?cls) (cls* ?cls*))
+	(if (null? cls*)
 	    (syntax-match cls (else =>)
 	      ((else ?expr ?expr* ...)
-	       (syntax-violation __who__ "incorrect position of keyword ELSE" expr-stx cls))
+	       `(internal-body ,?expr . ,?expr*))
 
 	      ((?test => ?proc)
 	       `(let ((t ,?test))
 		  (if t
 		      (,?proc t)
-		    ,(recur (car cls*) (cdr cls*)))))
+		    (void))))
 
 	      ((?expr)
-	       `(or ,?expr
-		    ,(recur (car cls*) (cdr cls*))))
+	       `(or ,?expr (void)))
 
 	      ((?test ?expr* ...)
 	       `(if ,?test
 		    (internal-body . ,?expr*)
-		  ,(recur (car cls*) (cdr cls*))))
+		  (void)))
 
 	      (_
-	       (syntax-violation __who__ "invalid last clause" expr-stx cls)))))))
-      )))
+	       (__synner__ "invalid last clause" cls)))
+
+	  (syntax-match cls (else =>)
+	    ((else ?expr ?expr* ...)
+	     (__synner__ "incorrect position of keyword ELSE" cls))
+
+	    ((?test => ?proc)
+	     `(let ((t ,?test))
+		(if t
+		    (,?proc t)
+		  ,(recur (car cls*) (cdr cls*)))))
+
+	    ((?expr)
+	     `(or ,?expr
+		  ,(recur (car cls*) (cdr cls*))))
+
+	    ((?test ?expr* ...)
+	     `(if ,?test
+		  (internal-body . ,?expr*)
+		,(recur (car cls*) (cdr cls*))))
+
+	    (_
+	     (__synner__ "invalid last clause" cls)))))))
+    ))
 
 
 ;;;; non-core macro: QUASIQUOTE
 
-(define (quasiquote-macro input-form.stx)
+(define-macro-transformer (quasiquote input-form.stx)
   ;;Transformer function  used to  expand R6RS QUASIQUOTE  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -3773,14 +3742,14 @@
        ?expr)
 
       ((_ (unquote ?expr0 ?expr* ...))
-       (synner "invalid multi-operand UNQUOTE form outside list and vector templates"
-	       (bless
-		(cons* 'unquote ?expr0 ?expr*))))
+       (__synner__ "invalid multi-operand UNQUOTE form outside list and vector templates"
+		   (bless
+		    (cons* 'unquote ?expr0 ?expr*))))
 
       ((_ (unquote-splicing ?expr* ...))
-       (synner "invalid UNQUOTE-SPLICING form outside list and vector templates"
-	       (bless
-		(cons 'unquote-splicing ?expr*))))
+       (__synner__ "invalid UNQUOTE-SPLICING form outside list and vector templates"
+		   (bless
+		    (cons 'unquote-splicing ?expr*))))
 
       ((_ (?car . ?cdr))
        (%quasi (cons ?car ?cdr) 0))
@@ -3814,7 +3783,7 @@
       ;;   (quasiquote (1 . (unquote)))
       ;;
       ((unquote)
-       (synner "invalid UNQUOTE form in improper tail position" stx))
+       (__synner__ "invalid UNQUOTE form in improper tail position" stx))
 
       (((unquote ?input-car-subexpr* ...) . ?input-cdr)
        ;;For  coherence  with what  R6RS  specifies  about UNQUOTE:  a  multi-operand
@@ -3841,16 +3810,16 @@
 		       output-tail.stx))))
 
       (((unquote ?input-car-subexpr* ... . ?input-car-tail) . ?input-cdr)
-       (synner "invalid improper list as UNQUOTE form"
-	       (bless
-		(append '(unquote) ?input-car-subexpr* ?input-car-tail))))
+       (__synner__ "invalid improper list as UNQUOTE form"
+		   (bless
+		    (append '(unquote) ?input-car-subexpr* ?input-car-tail))))
 
       ;;This happens when the input form is:
       ;;
       ;;   (quasiquote (1 . (unquote-splicing)))
       ;;
       ((unquote-splicing)
-       (synner "invalid UNQUOTE-SPLICING form in improper tail position" stx))
+       (__synner__ "invalid UNQUOTE-SPLICING form in improper tail position" stx))
 
       ;;This happens when STX appears in improper tail position:
       ;;
@@ -3863,7 +3832,7 @@
 		     (%quasi (list ?expr) (sub1 nesting-level)))))
 
       ((unquote-splicing ?input-car-subexpr0 ?input-car-subexpr* ...)
-       (synner "invalid multi-operand UNQUOTE-SPLICING form in improper tail position" stx))
+       (__synner__ "invalid multi-operand UNQUOTE-SPLICING form in improper tail position" stx))
 
       (((unquote-splicing ?input-car-subexpr* ...) . ?input-cdr)
        ;;For  coherence   with  what   R6RS  specifies  about   UNQUOTE-SPLICING:  an
@@ -3893,9 +3862,9 @@
 		       output-tail.stx))))
 
       (((unquote-splicing ?input-car-subexpr* ... . ?input-car-tail) . ?input-cdr)
-       (synner "invalid improper list as UNQUOTE-SPLICING form"
-	       (bless
-		(append '(unquote-splicing) ?input-car-subexpr* ?input-car-tail))))
+       (__synner__ "invalid improper list as UNQUOTE-SPLICING form"
+		   (bless
+		    (append '(unquote-splicing) ?input-car-subexpr* ?input-car-tail))))
 
       ((quasiquote ?nested-expr* ...)
        (%quasicons (make-top-level-syntax-object/quoted-quoting 'quasiquote)
@@ -4101,9 +4070,9 @@
 			    output-tail.stx))))
 
 	   ((unquote ?input-car-subexpr* ... . ?input-car-tail)
-	    (synner "invalid improper list as UNQUOTE form"
-		    (bless
-		     (append '(unquote) ?input-car-subexpr* ?input-car-tail))))
+	    (__synner__ "invalid improper list as UNQUOTE form"
+			(bless
+			 (append '(unquote) ?input-car-subexpr* ?input-car-tail))))
 
 	   ((unquote-splicing ?input-car-subexpr* ...)
 	    ;;When the nesting level requires processing of unquoted expressions:
@@ -4133,9 +4102,9 @@
 			    output-tail.stx))))
 
 	   ((unquote-splicing ?input-car-subexpr* ... . ?input-car-tail)
-	    (synner "invalid improper list as UNQUOTE-SPLICING form"
-		    (bless
-		     (append '(unquote-splicing) ?input-car-subexpr* ?input-car-tail))))
+	    (__synner__ "invalid improper list as UNQUOTE-SPLICING form"
+			(bless
+			 (append '(unquote-splicing) ?input-car-subexpr* ?input-car-tail))))
 
 	   ((quasiquote ?nested-expr* ...)
 	    (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'quasiquote)
@@ -4176,14 +4145,6 @@
        (bless
 	`(foldable-list->vector ,output-list.stx)))))
 
-;;; --------------------------------------------------------------------
-
-  (case-define synner
-    ((message)
-     (syntax-violation 'quasiquote message input-form.stx))
-    ((message subform)
-     (syntax-violation 'quasiquote message input-form.stx subform)))
-
   (main input-form.stx))
 
 
@@ -4196,8 +4157,8 @@
   ;;
   ;;FIXME: not really correct (Abdulaziz Ghuloum).
   ;;
-  (define (quasisyntax-macro expr-stx)
-    (syntax-match expr-stx ()
+  (define-macro-transformer (quasisyntax input-form.stx)
+    (syntax-match input-form.stx ()
       ((_ e)
        (receive (lhs* rhs* v)
 	   (quasi e 0)
@@ -4287,7 +4248,7 @@
 
 (module (define-values-macro)
 
-  (define (define-values-macro input-form.stx)
+  (define-macro-transformer (define-values input-form.stx)
     ;;Transformer  function used  to expand  Vicare's DEFINE-VALUES  macros from  the
     ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
     ;;a syntax object that must be further expanded.
@@ -4451,7 +4412,7 @@
 
 (module (define-constant-values-macro)
 
-  (define (define-constant-values-macro input-form.stx)
+  (define-macro-transformer (define-constant-values input-form.stx)
     ;;Transformer function used to expand Vicare's DEFINE-CONSTANT-VALUES macros from
     ;;the top-level  built in  environment.  Expand  the contents  of INPUT-FORM.STX;
     ;;return a syntax object that must be further expanded.
@@ -4595,7 +4556,7 @@
 
 ;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
 
-(define (receive-macro input-form.stx)
+(define-macro-transformer (receive input-form.stx)
   ;;Transformer function  used to expand  Vicare's RECEIVE macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4617,7 +4578,7 @@
 	       (lambda/checked ,?formals ,?body0 ,@?body*)))))))
     ))
 
-(define (receive-and-return-macro input-form.stx)
+(define-macro-transformer (receive-and-return input-form.stx)
   ;;Transformer function used  to expand Vicare's RECEIVE-AND-RETURN  macros from the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -4649,7 +4610,7 @@
 	       (lambda/checked ,?formals ,?body0 ,@?body* ,rv-form)))))))
     ))
 
-(define (begin0-macro input-form.stx)
+(define-macro-transformer (begin0 input-form.stx)
   ;;Transformer function  used to  expand Vicare's BEGIN0  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4669,7 +4630,7 @@
   ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
   ;;that must be further expanded.
   ;;
-  (define (xor-macro input-form.stx)
+  (define-macro-transformer (xor input-form.stx)
     (syntax-match input-form.stx ()
       ((_ ?expr* ...)
        (bless (%xor-aux #f ?expr*)))
@@ -4695,7 +4656,7 @@
 
 ;;;; non-core macro: DEFINE-INLINE, DEFINE-CONSTANT
 
-(define (define-constant-macro input-form.stx)
+(define-macro-transformer (define-constant input-form.stx)
   ;;Transformer  function used  to expand  Vicare's DEFINE-CONSTANT  macros from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -4720,7 +4681,7 @@
 	     (identifier-syntax ,ghost))))))
     ))
 
-(define (define-inline-constant-macro input-form.stx)
+(define-macro-transformer (define-inline-constant input-form.stx)
   ;;Transformer function  used to expand Vicare's  DEFINE-INLINE-CONSTANT macros from
   ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
   ;;return a syntax object that must be further expanded.
@@ -4742,7 +4703,7 @@
 		 "invalid use of identifier syntax" stx (syntax ?name))))))))
     ))
 
-(define (define-inline-macro input-form.stx)
+(define-macro-transformer (define-inline input-form.stx)
   ;;Transformer  function  used to  expand  Vicare's  DEFINE-INLINE macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
@@ -4780,57 +4741,52 @@
 
 ;;;; non-core macro: INCLUDE
 
-(define (include-macro expr-stx)
+(define-macro-transformer (include input-form.stx)
   ;;Transformer function  used to expand  Vicare's INCLUDE macros from  the top-level
-  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
-  ;;that must be further expanded.
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (with-who include
-    (define (main expr-stx)
-      (syntax-match expr-stx ()
-	((?context ?filename)
-	 (%include-file ?filename ?context #f %synner))
-	((?context ?filename #t)
-	 (%include-file ?filename ?context #t %synner))
-	))
+  (define (main input-form.stx)
+    (syntax-match input-form.stx ()
+      ((?context ?filename)
+       (%include-file ?filename ?context #f))
+      ((?context ?filename #t)
+       (%include-file ?filename ?context #t))
+      ))
 
-    (define (%include-file filename-stx context-id verbose? synner)
-      (define filename.str
-	(syntax->datum filename-stx))
-      (unless (string? filename.str)
-	(%synner "expected string as include file pathname" filename-stx))
-      (receive (pathname contents)
-	  ((current-include-loader) filename.str verbose? synner)
-	;;We expect CONTENTS to be null or a list of annotated datums.
-	(bless
-	 `(stale-when (internal-body
-			(import (only (vicare language-extensions posix)
-				      file-modification-time))
-			(or (not (file-exists? ,pathname))
-			    (> (file-modification-time ,pathname)
-			       ,(file-modification-time pathname))))
-	    . ,(map (lambda (item)
-		      (datum->syntax context-id item))
-		 contents)))))
+  (define (%include-file filename-stx context-id verbose?)
+    (define filename.str
+      (syntax->datum filename-stx))
+    (unless (string? filename.str)
+      (__synner__ "expected string as include file pathname" filename-stx))
+    (receive (pathname contents)
+	((current-include-loader) filename.str verbose? __synner__)
+      ;;We expect CONTENTS to be null or a list of annotated datums.
+      (bless
+       `(stale-when (internal-body
+		      (import (only (vicare language-extensions posix)
+				    file-modification-time))
+		      (or (not (file-exists? ,pathname))
+			  (> (file-modification-time ,pathname)
+			     ,(file-modification-time pathname))))
+	  . ,(map (lambda (item)
+		    (datum->syntax context-id item))
+	       contents)))))
 
-    (define (%synner message subform)
-      (syntax-violation 'include message expr-stx subform))
-
-    (main expr-stx)))
+  (main input-form.stx))
 
 
 ;;;; non-core macro: DEFINE-INTEGRABLE
 
-(define (define-integrable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-INTEGRABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
+(define-macro-transformer (define-integrable input-form.stx)
+  ;;Transformer function  used to expand  Vicare's DEFINE-INTEGRABLE macros  from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  ;;The original  syntax was  posted by "leppie"  on the  Ikarus mailing
-  ;;list; subject "Macro Challenge of Last Year [Difficulty: *****]", 20
-  ;;Oct 2009.
+  ;;The original  syntax was posted by  "leppie" on the Ikarus  mailing list; subject
+  ;;"Macro Challenge of Last Year [Difficulty: *****]", 20 Oct 2009.
   ;;
-  (syntax-match expr-stx (lambda)
+  (syntax-match input-form.stx (lambda)
     ((_ (?name . ?formals) ?form0 ?form* ...)
      (identifier? ?name)
      (bless
@@ -4856,7 +4812,7 @@
 
 ;;;; non-core macro: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
 
-(define (define-syntax-parameter-macro input-form.stx)
+(define-macro-transformer (define-syntax-parameter input-form.stx)
   ;;Transformer function used to  expand Vicare's DEFINE-SYNTAX-PARAMETER macros from
   ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
   ;;return a syntax object that must be further expanded.
@@ -4869,7 +4825,7 @@
 	 (make-expand-time-value ,?param-expr))))
     ))
 
-(define (syntax-parametrise-macro input-form.stx)
+(define-macro-transformer (syntax-parametrise input-form.stx)
   ;;Transformer function used to expand Vicare's SYNTAX-PARAMETRISE-MACRO macros from
   ;;the  top-level built  in  environment.  Expand  the  contents of  INPUT-FORM.STX;
   ;;return a syntax object that must be further expanded.
@@ -4887,7 +4843,7 @@
 
 ;;;; non-core macro: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
 
-(define (pre-incr-macro input-form.stx)
+(define-macro-transformer (pre-incr input-form.stx)
   ;;Transformer function used to expand  Vicare's PRE-INCR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4912,10 +4868,9 @@
      (bless
       `(+ ,?expr ,?step)))
     (_
-     (syntax-violation 'pre-incr! "invalid pre-increment operation" input-form.stx))
-    ))
+     (__synner__ "invalid pre-increment operation"))))
 
-(define (pre-decr-macro input-form.stx)
+(define-macro-transformer (pre-decr input-form.stx)
   ;;Transformer function used to expand  Vicare's PRE-DECR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4940,12 +4895,11 @@
      (bless
       `(- ,?expr ,?step)))
     (_
-     (syntax-violation 'pre-decr! "invalid pre-decrement operation" input-form.stx))
-    ))
+     (__synner__ "invalid pre-decrement operation"))))
 
 ;;; --------------------------------------------------------------------
 
-(define (post-incr-macro input-form.stx)
+(define-macro-transformer (post-incr input-form.stx)
   ;;Transformer function used to expand Vicare's POST-INCR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4970,10 +4924,9 @@
      (bless
       `(+ ,?expr ,?step)))
     (_
-     (syntax-violation 'post-incr! "invalid post-increment operation" input-form.stx))
-    ))
+     (__synner__ "invalid post-increment operation"))))
 
-(define (post-decr-macro input-form.stx)
+(define-macro-transformer (post-decr input-form.stx)
   ;;Transformer function used to expand Vicare's POST-DECR! macros from the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
@@ -4998,18 +4951,17 @@
      (bless
       `(- ,?expr ,?step)))
     (_
-     (syntax-violation 'post-decr! "invalid post-decrement operation" input-form.stx))
-    ))
+     (__synner__ "invalid post-decrement operation"))))
 
 
 ;;;; non-core macro: miscellanea
 
-(define (time-macro expr-stx)
-  ;;Transformer function  used to expand  Vicare's TIME macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define-macro-transformer (time input-form.stx)
+  ;;Transformer function used to expand Vicare's TIME macros from the top-level built
+  ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?expr)
      (let ((str (receive (port getter)
 		    (open-string-output-port)
@@ -5018,33 +4970,31 @@
        (bless
 	`(time-it ,str (lambda/std () ,?expr)))))))
 
-(define (delay-macro expr-stx)
-  ;;Transformer  function used  to  expand R6RS  DELAY  macros from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define-macro-transformer (delay input-form.stx)
+  ;;Transformer function used to expand R6RS DELAY macros from the top-level built in
+  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+  ;;must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?expr)
      (bless
       `(make-promise (lambda/std () ,?expr))))))
 
-(define (assert-macro expr-stx)
-  ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
-  ;;If  EXPR returns a  true value,  that value  is returned  from the
-  ;;ASSERT  expression.   If EXPR  returns  false,  an exception  with
-  ;;condition  types  "&assertion"  and  "&message"  is  raised.   The
-  ;;message  provided  in   the  condition  object  is  implementation
+(define-macro-transformer (assert input-form.stx)
+  ;;Defined  by R6RS.   An ASSERT  form  is evaluated  by evaluating  EXPR.  If  EXPR
+  ;;returns a true value, that value is returned from the ASSERT expression.  If EXPR
+  ;;returns false, an  exception with condition types "&assertion"  and "&message" is
+  ;;raised.   The  message  provided  in   the  condition  object  is  implementation
   ;;dependent.
   ;;
-  ;;NOTE  Implementations should  exploit the  fact that  ASSERT  is a
-  ;;syntax  to  provide as  much  information  as  possible about  the
-  ;;location of the assertion failure.
+  ;;NOTE Implementations should  exploit the fact that ASSERT is  a syntax to provide
+  ;;as much information as possible about the location of the assertion failure.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?expr)
      (if (options::drop-assertions?)
 	 ?expr
-       (let ((pos (or (expression-position expr-stx)
+       (let ((pos (or (expression-position input-form.stx)
 		      (expression-position ?expr))))
 	 (bless
 	  (if (source-position-condition? pos)
@@ -5057,21 +5007,21 @@
 		 (assertion-error ',?expr "unknown source" #f #f #f #f)))))))
     ))
 
-(define (file-options-macro expr-stx)
-  ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
-  ;;implemented   as   an   enumeration  type   whose   constructor   is
-  ;;MAKE-FILE-OPTIONS from the boot environment.
+(define-macro-transformer (file-options input-form.stx)
+  ;;Transformer for the FILE-OPTIONS macro.  File options selection is implemented as
+  ;;an  enumeration  type  whose  constructor  is  MAKE-FILE-OPTIONS  from  the  boot
+  ;;environment.
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
 	 (memq (identifier->symbol opt-stx) '(no-fail no-create no-truncate executable))))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
      (bless
       `(make-file-options ',?opt*)))))
 
-(define (expander-options-macro expr-stx)
+(define-macro-transformer (expander-options input-form.stx)
   ;;Transformer  for   the  EXPANDER-OPTIONS   macro.   File  options   selection  is
   ;;implemented  as an  enumeration type  whose constructor  is MAKE-EXPANDER-OPTIONS
   ;;from the boot environment.
@@ -5082,13 +5032,13 @@
 	   ((strict-r6rs typed-language)
 	    #t)
 	   (else #f))))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
      (bless
       `(make-expander-options ',?opt*)))))
 
-(define (compiler-options-macro expr-stx)
+(define-macro-transformer (compiler-options input-form.stx)
   ;;Transformer  for   the  COMPILER-OPTIONS   macro.   File  options   selection  is
   ;;implemented  as an  enumeration type  whose constructor  is MAKE-COMPILER-OPTIONS
   ;;from the boot environment.
@@ -5096,17 +5046,17 @@
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
 	 (memq (identifier->symbol opt-stx) '(strict-r6rs))))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
      (bless
       `(make-compiler-options ',?opt*)))))
 
-(define (endianness-macro expr-stx)
-  ;;Transformer of  ENDIANNESS.  Support  the symbols:  "big", "little",
-  ;;"network", "native"; convert "network" to "big".
+(define-macro-transformer (endianness input-form.stx)
+  ;;Transformer  of ENDIANNESS.   Support  the symbols:  "big", "little",  "network",
+  ;;"native"; convert "network" to "big".
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?name)
      (and (identifier? ?name)
 	  (memq (identifier->symbol ?name) '(big little network native)))
@@ -5118,12 +5068,12 @@
        ((big little)
 	(bless `(quote ,?name)))))))
 
-(define (%allowed-symbol-macro expr-stx allowed-symbol-set)
-  ;;Helper  function used  to  implement the  transformer of:  EOL-STYLE
-  ;;ERROR-HANDLING-MODE, BUFFER-MODE,  ENDIANNESS.  All of  these macros
-  ;;should expand to a quoted symbol among a list of allowed ones.
+(define (%allowed-symbol-macro input-form.stx allowed-symbol-set)
+  ;;Helper   function    used   to   implement   the    transformer   of:   EOL-STYLE
+  ;;ERROR-HANDLING-MODE, BUFFER-MODE, ENDIANNESS.  All  of these macros should expand
+  ;;to a quoted symbol among a list of allowed ones.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?name)
      (and (identifier? ?name)
 	  (memq (identifier->symbol ?name) allowed-symbol-set))

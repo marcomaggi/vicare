@@ -776,6 +776,7 @@
 ;;;; matching: arguments and operands
 
 (module (type-signature.match-arguments-against-fixed-operands)
+  (define-module-who type-signature.match-arguments-against-fixed-operands)
 
   (define* (type-signature.match-arguments-against-fixed-operands args.sig rand*.sig)
     ;;In the context of a closure object application to fixed operands:
@@ -942,7 +943,7 @@
 	       ;;No more operands.  Good.
 	       state)))
 	  (else
-	   (assertion-violation __who__ "invalid object-type specification for rest argument" rest.ots))))
+	   (assertion-violation __module_who__ "invalid object-type specification for rest argument" rest.ots))))
 
   #| end of module: type-signature.match-arguments-against-fixed-operands |# )
 

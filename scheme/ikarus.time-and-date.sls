@@ -31,6 +31,8 @@
     ;;reserved
     <time>-rtd		<time>-rcd)
   (import (except (vicare)
+		  <time>
+
 		  ;;This is the function TIME!!!
 		  time
 

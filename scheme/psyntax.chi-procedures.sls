@@ -357,7 +357,7 @@
     (values (cons entry lexenv.run)
 	    (cons entry lexenv.expand))))
 
-(define (fluid-syntax-lookup-fluid-label caller-who lhs.id lexenv)
+(define* (fluid-syntax-lookup-fluid-label caller-who lhs.id lexenv)
   ;;Search the lexical environment for the syntactic binding capturing the identifier
   ;;LHS.ID  and retrieve  its label;  if  such label  is present  and the  associated
   ;;syntactic binding  descriptor from LEXENV is  of type "fluid syntax":  return the

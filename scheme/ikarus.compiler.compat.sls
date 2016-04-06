@@ -13,6 +13,7 @@
 ;;;You should have received a copy of  the GNU General Public License along with this
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 #!r6rs
 (library (ikarus.compiler.compat)
   (export
@@ -72,7 +73,10 @@
     building-normal-boot-image
     building-rotation-boot-image
     inclusion-in-boot-image)
-  (import (vicare)
+  (import (except (vicare)
+		  reader-annotation?
+		  reader-annotation-source
+		  reader-annotation-stripped)
     (only (ikarus.printing-messages)
 	  print-stderr-message))
 
@@ -160,6 +164,10 @@
   ((building-rotation-boot-image)
    ;;This is  used when the compiler's  source code is imported  in "makefile.sps" to
    ;;build a rotation boot image.
+   (import (only (vicare)
+		 reader-annotation?
+		 reader-annotation-source
+		 reader-annotation-stripped))
    (void)))
 
 

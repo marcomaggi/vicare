@@ -96,7 +96,7 @@
 		  fxnonnegative?		fxnonpositive?
 		  fxeven?			fxodd?
 
-		  non-zero-fixnum?
+		  zero-fixnum?			non-zero-fixnum?
 		  positive-fixnum?		negative-fixnum?
 		  non-negative-fixnum?		non-positive-fixnum?
 		  byte-fixnum?			octet-fixnum?

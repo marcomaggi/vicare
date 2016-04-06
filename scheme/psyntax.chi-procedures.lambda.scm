@@ -40,32 +40,6 @@
 	 chi-case-defun/checked)
 
 
-;;;; helpers
-
-(define-syntax (define-synner stx)
-  ;;Expand to the definition of a synner function bound to "__synner__".  It is to be
-  ;;used as follows:
-  ;;
-  ;;   (define (fun arg)
-  ;;     (define-synner)
-  ;;     (do-something __synner__))
-  ;;
-  (sys::syntax-case stx ()
-    ((?kwd)
-     (sys::with-syntax
-	 ((SYNNER		(sys::datum->syntax (sys::syntax ?kwd) '__synner__))
-	  (INPUT-FORM.STX	(sys::datum->syntax (sys::syntax ?kwd) 'input-form.stx)))
-       (sys::syntax
-	(begin
-	  (define func-who __who__)
-	  (case-define SYNNER
-	    ((message)
-	     (SYNNER message #f))
-	    ((message subform)
-	     (syntax-violation func-who message INPUT-FORM.STX subform)))))))
-    ))
-
-
 ;;;; chi procedures: standard and typed single-clause function definition
 
 (module (chi-defun/std chi-defun/typed chi-defun/checked)
@@ -120,7 +94,7 @@
     ;;
     (%chi-defun 'checked qdef lexenv.run lexenv.expand))
 
-  (define (%chi-defun type qdef lexenv.run lexenv.expand)
+  (define* (%chi-defun type qdef lexenv.run lexenv.expand)
     (define-constant input-form.stx (qdef.input-form qdef))
     (parametrise ((current-run-lexenv (lambda () lexenv.run)))
       (receive (standard-formals.lex body.psi)
@@ -209,7 +183,7 @@
     ;;
     (%chi-case-defun 'checked qdef lexenv.run lexenv.expand))
 
-  (define (%chi-case-defun type qdef lexenv.run lexenv.expand)
+  (define* (%chi-case-defun type qdef lexenv.run lexenv.expand)
     (define-constant input-form.stx		(qdef.input-form qdef))
     (define-constant standard-formals*.stx	(qdef-case-defun.standard-formals* qdef))
     (define-constant body**.stx			(qdef-case-defun.body** qdef))
@@ -413,7 +387,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%chi-lambda input-form.stx lexenv.run lexenv.expand type who.id input-formals.stx body*.stx)
+  (define* (%chi-lambda input-form.stx lexenv.run lexenv.expand type who.id input-formals.stx body*.stx)
     (receive (standard-formals.stx clause-signature)
 	;;STANDARD-FORMALS.STX is  a syntax object representing  the formal arguments
 	;;of the lambda clause as required  by R6RS.  CLAUSE-SIGNATURE is an instance
@@ -547,7 +521,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id input-formals*.stx body**.stx)
+  (define* (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
       (receive (lexenv.run lexenv.expand)

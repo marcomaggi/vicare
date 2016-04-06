@@ -585,15 +585,15 @@
       ((who {msg string?} form)
        (syntax-violation who msg form #f))
       ((who {msg string?} form subform)
-       (%raise-compound-condition-object #f who msg form subform (make-syntax-violation form subform))))
+       (%raise-compound-condition-object __who__ #f who msg form subform (make-syntax-violation form subform))))
 
     (define* (raise-compound-condition-object source-who {msg string?} input-form.stx condition-object)
-      (%raise-compound-condition-object #f source-who msg input-form.stx #f condition-object))
+      (%raise-compound-condition-object __who__ #f source-who msg input-form.stx #f condition-object))
 
     (define* (raise-compound-condition-object/continuable source-who {msg string?} input-form.stx condition-object)
-      (%raise-compound-condition-object #t source-who msg input-form.stx #f condition-object))
+      (%raise-compound-condition-object __who__ #t source-who msg input-form.stx #f condition-object))
 
-    (define (%raise-compound-condition-object continuable? source-who msg input-form.stx sub-form.stx condition-object)
+    (define* (%raise-compound-condition-object caller-who continuable? source-who msg input-form.stx sub-form.stx condition-object)
       ;;Raise a compound condition object.
       ;;
       ;;SOURCE-WHO can be a string, symbol or  false; it is used as value for "&who".
@@ -627,7 +627,7 @@
 		  (syntax->datum #'?id))
 		 (_  #f)))
 	      (else
-	       (assertion-violation __who__ "invalid who argument" source-who))))
+	       (assertion-violation caller-who "invalid who argument" source-who))))
       (define C1
 	(condition (make-message-condition msg)
 		   condition-object

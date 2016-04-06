@@ -415,7 +415,7 @@
 
 ;;;; chi procedures: standard and typed variable definition
 
-(define (chi-defvar/std qdef lexenv.run lexenv.expand)
+(define* (chi-defvar/std qdef lexenv.run lexenv.expand)
   ;;Expand the  right-hand side expression  of a standard variable  definition; build
   ;;and return a  PSI object.  The generated core language  expression represents the
   ;;standalone right-hand side expression; the  code representing the handling of the

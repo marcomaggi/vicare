@@ -70,6 +70,7 @@
 		  expect-single-argument-and-return-false
 
 		  ;; Scheme type descriptor
+		  <scheme-type-descriptor>
 		  <scheme-type-descriptor>-rtd			<scheme-type-descriptor>-rcd
 		  make-scheme-type-descriptor			scheme-type-descriptor?
 		  scheme-type-descriptor.name			scheme-type-descriptor.parent

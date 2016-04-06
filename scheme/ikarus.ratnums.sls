@@ -26,17 +26,21 @@
     negative-ratnum?
     non-positive-ratnum?
     non-negative-ratnum?)
-  (import (vicare)
+  (import (except (vicare)
+		  ratnum-positive?
+		  ratnum-negative?
+		  ratnum-non-positive?
+		  ratnum-non-negative?
+		  positive-ratnum?
+		  negative-ratnum?
+		  non-positive-ratnum?
+		  non-negative-ratnum?)
     (except (vicare system $ratnums)
 	    $ratnum->flonum
-	    ratnum-positive?			$ratnum-positive?
-	    ratnum-negative?			$ratnum-negative?
-	    ratnum-non-positive?		$ratnum-non-positive?
-	    ratnum-non-negative?		$ratnum-non-negative?
-	    positive-ratnum?
-	    negative-ratnum?
-	    non-positive-ratnum?
-	    non-negative-ratnum?))
+	    $ratnum-positive?
+	    $ratnum-negative?
+	    $ratnum-non-positive?
+	    $ratnum-non-negative?))
 
 
 (module ($ratnum->flonum)

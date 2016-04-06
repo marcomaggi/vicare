@@ -133,6 +133,8 @@
     declare-safe-bytevector-conversion
     declare-unsafe-bytevector-accessor
     declare-unsafe-bytevector-mutator
+    declare-unsafe-bytevector-accessor/endianness
+    declare-unsafe-bytevector-mutator/endianness
     declare-unsafe-bytevector-conversion
 
     declare-parameter
@@ -1156,6 +1158,22 @@
 	((_ _)			foldable effect-free result-true))))
     ))
 
+(define-syntax declare-unsafe-bytevector-accessor/endianness
+  ;;Usage examples:
+  ;;
+  ;;   (declare-unsafe-bytevector-accessor/endianness $bytevector-u16-ref <non-negative-fixnum>)
+  ;;   (declare-unsafe-bytevector-accessor/endianness $bytevector-s16-ref <fixnum>)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?return-value-tag)
+     (declare-core-primitive ?who
+	 (unsafe)
+       (signatures
+	((<bytevector> <fixnum> <symbol>)	=> (?return-value-tag)))
+       (attributes
+	((_ _)			foldable effect-free result-true))))
+    ))
+
 (define-syntax declare-unsafe-bytevector-mutator
   ;;Usage examples:
   ;;
@@ -1167,6 +1185,19 @@
 	 (unsafe)
        (signatures
 	((<bytevector> <fixnum> ?new-value-tag)	=> (<void>)))))
+    ))
+
+(define-syntax declare-unsafe-bytevector-mutator/endianness
+  ;;Usage examples:
+  ;;
+  ;;   (declare-unsafe-bytevector-mutator/endianness $bytevector-u16-set! <fixnum>)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?new-value-tag)
+     (declare-core-primitive ?who
+	 (unsafe)
+       (signatures
+	((<bytevector> <fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
     ))
 
 (define-syntax declare-unsafe-bytevector-conversion

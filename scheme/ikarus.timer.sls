@@ -28,6 +28,7 @@
     stats-gc-real-secs		stats-gc-real-usecs
     stats-bytes-minor		stats-bytes-major)
   (import (except (vicare)
+		  <stats>
 		  time-it verbose-timer		time-and-gather
 
 		  stats?

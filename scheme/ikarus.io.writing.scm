@@ -1,4 +1,4 @@
-;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -18,7 +18,7 @@
 
 (case-define* flush-output-port
   (()
-   ($flush-output-port (current-output-port) __who__))
+   (%flush-output-port (current-output-port) __who__))
   (({port open-output-port?})
    ;;Defined by R6RS.  PORT must be an  output port, either binary or textual.  Flush
    ;;any buffered output from  the buffer of PORT to the  underlying file, device, or

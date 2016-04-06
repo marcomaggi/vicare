@@ -35,6 +35,8 @@
     read-libraries-from-file		read-script-from-file
     read-library-from-file		read-library-from-port)
   (import (except (vicare)
+		  <reader-annotation>
+
 		  ;; public functions
 		  read				get-datum
 		  get-annotated-datum

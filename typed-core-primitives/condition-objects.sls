@@ -456,6 +456,16 @@
 	   <non-negative-exact-integer> <non-negative-exact-integer>)
     => (<no-return>))))
 
+(declare-core-primitive procedure-arguments-consistency-violation
+    (safe)
+  (signatures
+   ((<&who-value> <string> . <list>)		=> (<no-return>))))
+
+(declare-core-primitive procedure-arguments-consistency-violation/failed-expression
+    (safe)
+  (signatures
+   ((<&who-value> <string> <top> . <list>)	=> (<no-return>))))
+
 /section)
 
 

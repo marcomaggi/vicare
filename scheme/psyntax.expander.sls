@@ -418,14 +418,15 @@
 	    (if (null? option*)
 		(loop ?stuff* ?progopt* foreign-library*)
 	      (syntax-violation __module_who__
-		"OPTIONS clause can appear only once in top-level PROGRAM forms")))
+		"OPTIONS clause can appear only once in top-level PROGRAM forms"
+		`(,?options . ,?progopt*))))
 
 	   (((?foreign-library ?libid) . ?stuff*)
 	    (eq? (syntax->datum ?foreign-library) 'foreign-library)
 	    (loop ?stuff* option* (cons ?libid foreign-library*)))
 
 	   (_
-	    (syntax-violation __module_who__ "malformed top-level program")))))
+	    (syntax-violation __module_who__ "malformed top-level program" stuff*)))))
 
       (_
        (assertion-violation __module_who__ "invalid syntax of top-level program"))))
@@ -648,7 +649,8 @@
 	    (if (null? option*)
 		(loop ?stuff* ?libopt* foreign-library*)
 	      (syntax-violation __module_who__
-		"OPTIONS clause can appear only once in LIBRARY forms")))
+		"OPTIONS clause can appear only once in LIBRARY forms"
+		`(,?options . ,?libopt*))))
 
 	   (((?foreign-library ?libid) . ?stuff*)
 	    (eq? (syntax->datum ?foreign-library) 'foreign-library)
@@ -702,8 +704,7 @@
 	   ((strict-r6rs)
 	    (cons sym (%parse-library-options ?other*)))
 	   (else
-	    (syntax-violation __module_who__
-	      "invalid library option" ?opt)))))
+	    (syntax-violation __module_who__ "invalid library option" ?opt)))))
       ))
 
   (define (%parse-foreign-library* foreign-library*)

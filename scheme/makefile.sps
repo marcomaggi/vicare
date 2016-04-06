@@ -1805,7 +1805,11 @@
     ($set-std-symbol!				$structs)
     ($set-std-destructor!			$structs)
 
-    ($record-guardian				$records)
+    ;;FIXME To be switched at the next boot image rotation.  (Marco Maggi; Wed Apr 6,
+    ;;2016)
+    ($record-guardian				$structs)
+    #;($record-guardian				$records)
+
     ($record-ref				$records)
     ($record-and-rtd?				$records)
     ($record-constructor			$records)

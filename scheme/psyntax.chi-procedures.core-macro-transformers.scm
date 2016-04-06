@@ -40,7 +40,7 @@
        (sys::with-syntax
 	   ((WHO (sys::datum->syntax (sys::syntax ?who) who.out)))
 	 (sys::syntax
-	  (define (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
+	  (define* (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
 	    (with-who ?who
 	      (case-define synner
 		((message)
