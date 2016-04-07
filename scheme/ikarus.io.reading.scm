@@ -1770,8 +1770,8 @@
     (let ((buffer.offset-byte0 port.buffer.index))
       (if ($fx< buffer.offset-byte0 port.buffer.used-size)
 	  (let ((byte0 ($bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	    (if (unicode.utf-8-single-octet? byte0)
-		(let ((N (unicode.utf-8-decode-single-octet byte0)))
+	    (if (unicode::utf-8-single-octet? byte0)
+		(let ((N (unicode::utf-8-decode-single-octet byte0)))
 		  ;;Update the port position  to point past the consumed
 		  ;;character.
 		  (set! port.buffer.index ($fxadd1 buffer.offset-byte0))
@@ -1791,8 +1791,8 @@
     (let ((buffer.offset-byte0 port.buffer.index))
       (if ($fx< buffer.offset-byte0 port.buffer.used-size)
 	  (let ((byte0 ($bytevector-u8-ref port.buffer buffer.offset-byte0)))
-	    (if (unicode.utf-8-single-octet? byte0)
-		($fixnum->char (unicode.utf-8-decode-single-octet byte0))
+	    (if (unicode::utf-8-single-octet? byte0)
+		($fixnum->char (unicode::utf-8-decode-single-octet byte0))
 	      (%peek-char-from-port-with-utf8-codec port who 0)))
 	(%peek-char-from-port-with-utf8-codec port who 0)))))
 
@@ -1822,16 +1822,16 @@
 	       (define (%error-invalid-byte)
 		 (%error-handler "invalid byte while expecting first byte of UTF-8 character"
 				 byte0))
-	       (cond ((unicode.utf-8-invalid-octet? byte0)
+	       (cond ((unicode::utf-8-invalid-octet? byte0)
 		      (set! port.buffer.index ($fxadd1 buffer.offset-byte0))
 		      (%error-invalid-byte))
-		     ((unicode.utf-8-single-octet? byte0)
+		     ((unicode::utf-8-single-octet? byte0)
 		      (get-single-byte-character byte0 buffer.offset-byte0))
-		     ((unicode.utf-8-first-of-two-octets? byte0)
+		     ((unicode::utf-8-first-of-two-octets? byte0)
 		      (get-2-bytes-character byte0 buffer.offset-byte0))
-		     ((unicode.utf-8-first-of-three-octets? byte0)
+		     ((unicode::utf-8-first-of-three-octets? byte0)
 		      (get-3-bytes-character byte0 buffer.offset-byte0))
-		     ((unicode.utf-8-first-of-four-octets? byte0)
+		     ((unicode::utf-8-first-of-four-octets? byte0)
 		      (get-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (set! port.buffer.index ($fxadd1 buffer.offset-byte0))
@@ -1839,7 +1839,7 @@
 	    ))))
 
     (define-inline (get-single-byte-character byte0 buffer.offset-byte0)
-      (let ((N (unicode.utf-8-decode-single-octet byte0)))
+      (let ((N (unicode::utf-8-decode-single-octet byte0)))
 	(set! port.buffer.index ($fxadd1 buffer.offset-byte0))
 	($fixnum->char N)))
 
@@ -1863,11 +1863,11 @@
 		 (%error-handler "invalid second byte in 2-byte UTF-8 character"
 				 byte0 byte1))
 	       (set! port.buffer.index buffer.offset-past)
-	       (cond ((unicode.utf-8-invalid-octet? byte1)
+	       (cond ((unicode::utf-8-invalid-octet? byte1)
 		      (%error-invalid-second))
-		     ((unicode.utf-8-second-of-two-octets? byte1)
-		      (let ((N (unicode.utf-8-decode-two-octets byte0 byte1)))
-			(if (unicode.utf-8-valid-code-point-from-2-octets? N)
+		     ((unicode::utf-8-second-of-two-octets? byte1)
+		      (let ((N (unicode::utf-8-decode-two-octets byte0 byte1)))
+			(if (unicode::utf-8-valid-code-point-from-2-octets? N)
 			    ($fixnum->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 2-byte UTF-8 character"
@@ -1901,12 +1901,12 @@
                                   and expecting 3-byte character"
 				 byte0 byte1 byte2))
 	       (set! port.buffer.index buffer.offset-past)
-	       (cond ((or (unicode.utf-8-invalid-octet? byte1)
-			  (unicode.utf-8-invalid-octet? byte2))
+	       (cond ((or (unicode::utf-8-invalid-octet? byte1)
+			  (unicode::utf-8-invalid-octet? byte2))
 		      (%error-invalid-second-or-third))
-		     ((unicode.utf-8-second-and-third-of-three-octets? byte1 byte2)
-		      (let ((N (unicode.utf-8-decode-three-octets byte0 byte1 byte2)))
-			(if (unicode.utf-8-valid-code-point-from-3-octets? N)
+		     ((unicode::utf-8-second-and-third-of-three-octets? byte1 byte2)
+		      (let ((N (unicode::utf-8-decode-three-octets byte0 byte1 byte2)))
+			(if (unicode::utf-8-valid-code-point-from-3-octets? N)
 			    ($fixnum->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 3-byte UTF-8 character"
@@ -1945,13 +1945,13 @@
                                   and expecting 4-byte character"
 				 byte0 byte1 byte2 byte3))
 	       (set! port.buffer.index buffer.offset-past)
-	       (cond ((or (unicode.utf-8-invalid-octet? byte1)
-			  (unicode.utf-8-invalid-octet? byte2)
-			  (unicode.utf-8-invalid-octet? byte3))
+	       (cond ((or (unicode::utf-8-invalid-octet? byte1)
+			  (unicode::utf-8-invalid-octet? byte2)
+			  (unicode::utf-8-invalid-octet? byte3))
 		      (%error-invalid-second-third-or-fourth))
-		     ((unicode.utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
-		      (let ((N (unicode.utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
-			(if (unicode.utf-8-valid-code-point-from-4-octets? N)
+		     ((unicode::utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
+		      (let ((N (unicode::utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
+			(if (unicode::utf-8-valid-code-point-from-4-octets? N)
 			    ($fixnum->char N)
 			  (%error-handler "invalid code point as result \
                                            of decoding 4-byte UTF-8 character"
@@ -2034,15 +2034,15 @@
 		 (%error-handler ($fxadd1 buffer-offset)
 				 "invalid byte while expecting first byte of UTF-8 character"
 				 byte0))
-	       (cond ((unicode.utf-8-invalid-octet? byte0)
+	       (cond ((unicode::utf-8-invalid-octet? byte0)
 		      (%error-invalid-byte))
-		     ((unicode.utf-8-single-octet? byte0)
-		      ($fixnum->char (unicode.utf-8-decode-single-octet byte0)))
-		     ((unicode.utf-8-first-of-two-octets? byte0)
+		     ((unicode::utf-8-single-octet? byte0)
+		      ($fixnum->char (unicode::utf-8-decode-single-octet byte0)))
+		     ((unicode::utf-8-first-of-two-octets? byte0)
 		      (peek-2-bytes-character byte0 buffer.offset-byte0))
-		     ((unicode.utf-8-first-of-three-octets? byte0)
+		     ((unicode::utf-8-first-of-three-octets? byte0)
 		      (peek-3-bytes-character byte0 buffer.offset-byte0))
-		     ((unicode.utf-8-first-of-four-octets? byte0)
+		     ((unicode::utf-8-first-of-four-octets? byte0)
 		      (peek-4-bytes-character byte0 buffer.offset-byte0))
 		     (else
 		      (%error-invalid-byte)))))
@@ -2067,11 +2067,11 @@
 	       (define (%error-invalid-second)
 		 (%error-handler buffer-offset "invalid second byte in 2-byte UTF-8 character"
 				 byte0 byte1))
-	       (cond ((unicode.utf-8-invalid-octet? byte1)
+	       (cond ((unicode::utf-8-invalid-octet? byte1)
 		      (%error-invalid-second))
-		     ((unicode.utf-8-second-of-two-octets? byte1)
-		      (let ((N (unicode.utf-8-decode-two-octets byte0 byte1)))
-			(if (unicode.utf-8-valid-code-point-from-2-octets? N)
+		     ((unicode::utf-8-second-of-two-octets? byte1)
+		      (let ((N (unicode::utf-8-decode-two-octets byte0 byte1)))
+			(if (unicode::utf-8-valid-code-point-from-2-octets? N)
 			    ($fixnum->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result \
@@ -2105,12 +2105,12 @@
 		 (%error-handler buffer-offset
 				 "invalid second or third byte in 3-byte UTF-8 character"
 				 byte0 byte1 byte2))
-	       (cond ((or (unicode.utf-8-invalid-octet? byte1)
-			  (unicode.utf-8-invalid-octet? byte2))
+	       (cond ((or (unicode::utf-8-invalid-octet? byte1)
+			  (unicode::utf-8-invalid-octet? byte2))
 		      (%error-invalid-second-or-third))
-		     ((unicode.utf-8-second-and-third-of-three-octets? byte1 byte2)
-		      (let ((N (unicode.utf-8-decode-three-octets byte0 byte1 byte2)))
-			(if (unicode.utf-8-valid-code-point-from-3-octets? N)
+		     ((unicode::utf-8-second-and-third-of-three-octets? byte1 byte2)
+		      (let ((N (unicode::utf-8-decode-three-octets byte0 byte1 byte2)))
+			(if (unicode::utf-8-valid-code-point-from-3-octets? N)
 			    ($fixnum->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result of \
@@ -2151,13 +2151,13 @@
 				 "invalid second, third or fourth byte \
                                   in 4-bytes UTF-8 character"
 				 byte0 byte1 byte2 byte3))
-	       (cond ((or (unicode.utf-8-invalid-octet? byte1)
-			  (unicode.utf-8-invalid-octet? byte2)
-			  (unicode.utf-8-invalid-octet? byte3))
+	       (cond ((or (unicode::utf-8-invalid-octet? byte1)
+			  (unicode::utf-8-invalid-octet? byte2)
+			  (unicode::utf-8-invalid-octet? byte3))
 		      (%error-invalid-second-third-or-fourth))
-		     ((unicode.utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
-		      (let ((N (unicode.utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
-			(if (unicode.utf-8-valid-code-point-from-4-octets? N)
+		     ((unicode::utf-8-second-third-and-fourth-of-four-octets? byte1 byte2 byte3)
+		      (let ((N (unicode::utf-8-decode-four-octets byte0 byte1 byte2 byte3)))
+			(if (unicode::utf-8-valid-code-point-from-4-octets? N)
 			    ($fixnum->char N)
 			  (%error-handler buffer-offset
 					  "invalid code point as result \
@@ -2299,12 +2299,12 @@
 	     ;;for  a full UTF-16  character encoded  as single  16 bits
 	     ;;word.
 	     (let ((word0 (%word-ref buffer.offset-word0)))
-	       (cond ((unicode.utf-16-single-word? word0)
+	       (cond ((unicode::utf-16-single-word? word0)
 		      ;;WORD0  is  in the  allowed  range  for a  UTF-16
 		      ;;encoded character of 16 bits.
 		      (set! port.buffer.index buffer.offset-word1)
-		      (integer->char/invalid (unicode.utf-16-decode-single-word word0)))
-		     ((not (unicode.utf-16-first-of-two-words? word0))
+		      (integer->char/invalid (unicode::utf-16-decode-single-word word0)))
+		     ((not (unicode::utf-16-first-of-two-words? word0))
 		      (set! port.buffer.index buffer.offset-word1)
 		      (%error-handler "invalid 16-bit word while decoding UTF-16 characters \
                                        and expecting single word character or first word of \
@@ -2315,8 +2315,8 @@
 		      ;;word.
 		      (let ((word1 (%word-ref buffer.offset-word1)))
 			(set! port.buffer.index buffer.offset-past)
-			(if (unicode.utf-16-second-of-two-words? word1)
-			    (integer->char/invalid (unicode.utf-16-decode-surrogate-pair word0 word1))
+			(if (unicode::utf-16-second-of-two-words? word1)
+			    (integer->char/invalid (unicode::utf-16-decode-surrogate-pair word0 word1))
 			  (%error-handler "invalid 16-bit word while decoding UTF-16 characters \
                                            and expecting second word in surrogate pair"
 					  word0 word1))))
@@ -2470,9 +2470,9 @@
 	     ;;for  a full UTF-16  character encoded  as single  16 bits
 	     ;;word.
 	     (let ((word0 (%word-ref buffer.offset-word0)))
-	       (cond ((unicode.utf-16-single-word? word0)
-		      (integer->char/invalid (unicode.utf-16-decode-single-word word0) buffer.offset-word1))
-		     ((not (unicode.utf-16-first-of-two-words? word0))
+	       (cond ((unicode::utf-16-single-word? word0)
+		      (integer->char/invalid (unicode::utf-16-decode-single-word word0) buffer.offset-word1))
+		     ((not (unicode::utf-16-first-of-two-words? word0))
 		      (%error-handler ($fx+ 2 buffer-offset)
 				      "invalid 16-bit word while decoding UTF-16 characters \
                                        and expecting single word character or first word in \
@@ -2484,8 +2484,8 @@
 		      ;;word.
 		      (let ((word1		(%word-ref buffer.offset-word1))
 			    (buffer-offset	($fx+ 4 buffer-offset)))
-			(if (unicode.utf-16-second-of-two-words? word1)
-			    (integer->char/invalid (unicode.utf-16-decode-surrogate-pair word0 word1)
+			(if (unicode::utf-16-second-of-two-words? word1)
+			    (integer->char/invalid (unicode::utf-16-decode-surrogate-pair word0 word1)
 						   buffer-offset)
 			  (%error-handler buffer-offset
 					  "invalid 16-bit word while decoding UTF-16 characters \
@@ -2558,7 +2558,7 @@
 	    (begin
 	      (set! port.buffer.index ($fxadd1 buffer.offset))
 	      (let ((octet ($bytevector-u8-ref port.buffer buffer.offset)))
-		(if (unicode.latin-1-code-point? octet)
+		(if (unicode::latin-1-code-point? octet)
 		    ($fixnum->char octet)
 		  (let ((mode (transcoder-error-handling-mode port.transcoder)))
 		    (case mode
@@ -2588,7 +2588,7 @@
       (let ((buffer.offset-byte port.buffer.index))
 	(if ($fx< buffer.offset-byte port.buffer.used-size)
 	    (let ((octet ($bytevector-u8-ref port.buffer buffer.offset-byte)))
-	      (if (unicode.latin-1-code-point? octet)
+	      (if (unicode::latin-1-code-point? octet)
 		  ($fixnum->char octet)
 		(let ((mode (transcoder-error-handling-mode port.transcoder)))
 		  (case mode
@@ -2636,7 +2636,7 @@
 	(unless ($fxzero? buffer-index-increment)
 	  (port.buffer.index.incr! buffer-index-increment))
 	(let ((octet ($bytevector-u8-ref port.buffer buffer.offset)))
-	  (if (unicode.latin-1-code-point? octet)
+	  (if (unicode::latin-1-code-point? octet)
 	      ($fixnum->char octet)
 	    (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	      (case mode

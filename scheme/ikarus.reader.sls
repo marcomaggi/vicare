@@ -218,6 +218,9 @@
 	 reader-annotation-source
 	 reader-annotation-textual-position)
 
+  ;; (define dummy-before-rtd
+  ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader before rtd")))
+
   (define-record-type (<reader-annotation> make-reader-annotation reader-annotation?)
     (nongenerative)
     (fields (immutable expression		reader-annotation-expression)
@@ -243,6 +246,9 @@
     (record-type-descriptor <reader-annotation>))
   (define <reader-annotation>-rcd
     (record-constructor-descriptor <reader-annotation>))
+
+  ;; (define dummy-after-rtd
+  ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader after rtd")))
 
   (define-inline (annotate-simple datum textual-pos)
     (make-reader-annotation datum datum
@@ -559,7 +565,7 @@
 ;;READ-EXPR can call itself recursively.
 ;;
 
-(define read
+(case-define read
   ;;Defined by  R6RS.  Read an external representation  from the textual
   ;;input PORT and return the datum it represents.
   ;;
@@ -568,12 +574,11 @@
   ;;If  PORT  is   omitted,  it  defaults  to  the   value  returned  by
   ;;CURRENT-INPUT-PORT.
   ;;
-  (case-lambda
-   (()
-    (get-datum (current-input-port)))
-   ((port)
-    (%assert-argument-is-source-code-port 'read port)
-    (get-datum port))))
+  (()
+   (get-datum (current-input-port)))
+  ((port)
+   (%assert-argument-is-source-code-port 'read port)
+   (get-datum port)))
 
 (define* (get-datum port)
   ;;Defined by  R6RS.  Read an external representation  from the textual
@@ -2284,6 +2289,9 @@
 	     (%error "Vicare internal error: unknown token from reader functions" token)))))
 
   (main))
+
+;; (define dummy-middle
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader middle")))
 
 
 (define (%accumulate-string-chars ls port)

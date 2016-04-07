@@ -554,7 +554,7 @@
   ;;Defined by  Vicare.  Set non-blocking  mode for PORT; return  unspecified values.
   ;;PORT must have a file descriptor as underlying device.
   ;;
-  (let ((rv (capi.platform-fd-set-non-blocking-mode (with-port (port)
+  (let ((rv (capi::platform-fd-set-non-blocking-mode (with-port (port)
 						      port.device))))
     (when ($fxnegative? rv)
       (%raise-io-error __who__ rv port))))
@@ -563,7 +563,7 @@
   ;;Defined by Vicare.  Unset non-blocking  mode for PORT; return unspecified values.
   ;;PORT must have a file descriptor as underlying device.
   ;;
-  (let ((rv (capi.platform-fd-unset-non-blocking-mode (with-port (port)
+  (let ((rv (capi::platform-fd-unset-non-blocking-mode (with-port (port)
 							port.device))))
     (when ($fxnegative? rv)
       (%raise-io-error __who__ rv port))))
@@ -575,7 +575,7 @@
   ;;
   (with-port (port)
     (and port.fd-device?
-	 (let ((rv (capi.platform-fd-ref-non-blocking-mode port.device)))
+	 (let ((rv (capi::platform-fd-ref-non-blocking-mode port.device)))
 	   (if (boolean? rv)
 	       rv
 	     (%raise-io-error __who__ rv port))))))

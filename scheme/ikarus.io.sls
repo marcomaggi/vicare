@@ -364,8 +364,7 @@
 #!vicare
 (library (ikarus.io)
   (export
-
-    ;; would block object
+   ;; would block object
     would-block-object			would-block-object?
 
     ;; port parameters
@@ -510,7 +509,7 @@
     make-textual-socket-input/output-port*
 
     ;; for internal use only
-    initialise-io-ports)
+    initialise-input/output-facilities)
   (import (except (vicare)
 		  ;; would block object
 		  would-block-object			would-block-object?
@@ -665,9 +664,9 @@
     ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
     ;;bindings.
     (vicare system $io)
-    (prefix (only (vicare) port?) primop.)
-    (prefix (vicare unsafe capi) capi.)
-    (prefix (vicare unsafe unicode) unicode.)
+    (prefix (only (vicare) port?) primop::)
+    (prefix (vicare unsafe capi) capi::)
+    (prefix (vicare unsafe unicode) unicode::)
     (vicare platform constants))
 
 
@@ -1463,13 +1462,41 @@
        (fx>=? obj BUFFER-SIZE-LOWER-LIMIT)
        (fx<?  obj BUFFER-SIZE-UPPER-LIMIT)))
 
-(module (bytevector-port-buffer-size
-	 string-port-buffer-size
-	 input-file-buffer-size
-	 output-file-buffer-size
-	 input/output-file-buffer-size
-	 input/output-socket-buffer-size)
+;;; --------------------------------------------------------------------
 
+(let-syntax
+    ((declare (lambda (stx)
+		(syntax-case stx ()
+		  ((_ ?who)
+		   (with-syntax
+		       ((IMPLEMENTATION (datum->syntax #'?who (string->symbol
+							       (string-append "%" (symbol->string (syntax->datum #'?who)))))))
+		     #'(case-define ?who
+			 (()
+			  (IMPLEMENTATION))
+			 ((arg)
+			  (IMPLEMENTATION arg))
+			 ((arg1 arg2)
+			  (IMPLEMENTATION arg1 arg2)))))))))
+  (declare bytevector-port-buffer-size)
+  (declare string-port-buffer-size)
+  (declare input-file-buffer-size)
+  (declare output-file-buffer-size)
+  (declare input/output-file-buffer-size)
+  (declare input/output-socket-buffer-size)
+  #| end of LET-SYNTAX|# )
+
+;;All this mess is  because we cannot export mutated syntactic  bindings, but we want
+;;assignment to ease the generation of boot images by delaying initialisation.
+;;
+(define %bytevector-port-buffer-size)
+(define %string-port-buffer-size)
+(define %input-file-buffer-size)
+(define %output-file-buffer-size)
+(define %input/output-file-buffer-size)
+(define %input/output-socket-buffer-size)
+
+(define (initialise-buffer-size-parameters)
   (define %make-buffer-size-parameter
     (let ((error-message/invalid-buffer-size
 	   (string-append "expected fixnum in range "
@@ -1483,12 +1510,10 @@
 	    (if (%valid-buffer-size? obj)
 		obj
 	      (error who error-message/invalid-buffer-size obj)))))))
-
   (let-syntax
-      ((define-buffer-size-parameter (syntax-rules ()
-				       ((_ ?who ?init)
-					(define ?who
-					  (%make-buffer-size-parameter ?init '?who))))))
+      ((set-buffer-size-parameter (syntax-rules ()
+				    ((_ ?who ?init)
+				     (set! ?who (%make-buffer-size-parameter ?init '?who))))))
 
     ;;Customisable buffer size for bytevector ports.  To be used by:
     ;;
@@ -1496,7 +1521,7 @@
     ;;
     ;;and similar.
     ;;
-    (define-buffer-size-parameter bytevector-port-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+    (set-buffer-size-parameter %bytevector-port-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
     ;;Customisable buffer size for string ports.  To be used by:
     ;;
@@ -1504,7 +1529,7 @@
     ;;
     ;;and similar.
     ;;
-    (define-buffer-size-parameter string-port-buffer-size		DEFAULT-STRING-BLOCK-SIZE)
+    (set-buffer-size-parameter %string-port-buffer-size		DEFAULT-STRING-BLOCK-SIZE)
 
     ;;Customisable buffer size for file ports.  To be used by:
     ;;
@@ -1513,17 +1538,15 @@
     ;;
     ;;and similar.
     ;;
-    (define-buffer-size-parameter input-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
-    (define-buffer-size-parameter output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
-    (define-buffer-size-parameter input/output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+    (set-buffer-size-parameter %input-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+    (set-buffer-size-parameter %output-file-buffer-size		DEFAULT-BINARY-BLOCK-SIZE)
+    (set-buffer-size-parameter %input/output-file-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
     ;;Customisable buffer size for socket ports.
     ;;
-    (define-buffer-size-parameter input/output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
+    (set-buffer-size-parameter %input/output-socket-buffer-size	DEFAULT-BINARY-BLOCK-SIZE)
 
-    #| end of LET-SYNTAX |# )
-
-  #| end of module |# )
+    #| end of LET-SYNTAX |# ))
 
 
 ;;;; buffer mode
@@ -1567,38 +1590,33 @@
 ;;It is also a good idea to close custom ports.  We do it using the same technique.
 ;;
 
-(module (%port->maybe-guarded-port)
+(define* (%port->maybe-guarded-port {port port?})
+  ;;Accept  a port  as argument  and return  the port  itself.  If  the port  wraps a
+  ;;platform descriptor: register it in the guardian.
+  ;;
+  (when ($guarded-port? port)
+    (port-guardian port))
+  port)
 
-  (define* (%port->maybe-guarded-port {port port?})
-    ;;Accept a  port as argument  and return  the port itself.   If the port  wraps a
-    ;;platform descriptor: register it in the guardian.
-    ;;
-    (when ($guarded-port? port)
-      (port-guardian port))
-    port)
+(define port-guardian)
 
-  (define port-guardian
-    (make-guardian))
+(define (%close-garbage-collected-ports)
+  (let ((port (port-guardian)))
+    (when port
+      ;;Notice that, as defined by R6RS,  CLOSE-PORT does nothing if PORT has already
+      ;;been closed.
+      (close-port port)
 
-  (define (%close-garbage-collected-ports)
-    (let ((port (port-guardian)))
-      (when port
-	;;Notice  that, as  defined  by R6RS,  CLOSE-PORT does  nothing  if PORT  has
-	;;already been closed.
-	(close-port port)
+      ;;The code below  differs from a call  to CLOSE-PORT because it  does not flush
+      ;;the buffer.
+      ;;
+      ;; (with-port (port)
+      ;;   (unless port.closed?
+      ;;     (port.mark-as-closed!)
+      ;;     (when (procedure? port.close)
+      ;;       (port.close))))
 
-	;;The code below differs from a call  to CLOSE-PORT because it does not flush
-	;;the buffer.
-	;;
-        ;; (with-port (port)
-        ;;   (unless port.closed?
-        ;;     (port.mark-as-closed!)
-        ;;     (when (procedure? port.close)
-        ;;       (port.close))))
-
-	(%close-garbage-collected-ports))))
-
-  (post-gc-hooks (cons %close-garbage-collected-ports (post-gc-hooks))))
+      (%close-garbage-collected-ports))))
 
 
 ;;;; external modules
@@ -1613,6 +1631,12 @@
 
 
 ;;;; done
+
+(define (initialise-input/output-facilities)
+  (set! port-guardian (make-guardian))
+  (post-gc-hooks (cons %close-garbage-collected-ports (post-gc-hooks)))
+  (initialise-buffer-size-parameters)
+  (initialise-io-ports))
 
 ;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.io end"))
 

@@ -275,7 +275,7 @@
     ;;characters.
     ;;
     (let ((port ?port))
-      (if (unicode.utf-8-single-octet-code-point? code-point)
+      (if (unicode::utf-8-single-octet-code-point? code-point)
 	  (with-port-having-bytevector-buffer (port)
 	    (let retry-after-flushing-buffer ()
 	      (let* ((buffer.offset	port.buffer.index)
@@ -295,8 +295,8 @@
     ;;Write to  PORT the possibly multioctet  CODE-POINT encoded by UTF-8.   No error
     ;;handling is performed because UTF-8 can encode all the Unicode characters.
     ;;
-    (cond ((unicode.utf-8-single-octet-code-point? code-point)
-	   (let ((octet0 (unicode.utf-8-encode-single-octet code-point)))
+    (cond ((unicode::utf-8-single-octet-code-point? code-point)
+	   (let ((octet0 (unicode::utf-8-encode-single-octet code-point)))
 	     (with-port-having-bytevector-buffer (port)
 	       (let retry-after-flushing-buffer ()
 		 (let* ((buffer.offset-octet0	port.buffer.index)
@@ -313,9 +313,9 @@
 		       (%flush-output-port port who)
 		       (retry-after-flushing-buffer))))))))
 
-	  ((unicode.utf-8-two-octets-code-point? code-point)
-	   (let ((octet0 (unicode.utf-8-encode-first-of-two-octets  code-point))
-		 (octet1 (unicode.utf-8-encode-second-of-two-octets code-point)))
+	  ((unicode::utf-8-two-octets-code-point? code-point)
+	   (let ((octet0 (unicode::utf-8-encode-first-of-two-octets  code-point))
+		 (octet1 (unicode::utf-8-encode-second-of-two-octets code-point)))
 	     (with-port-having-bytevector-buffer (port)
 	       (let retry-after-flushing-buffer ()
 		 (let* ((buffer.offset-octet0	port.buffer.index)
@@ -334,10 +334,10 @@
 		       (%flush-output-port port who)
 		       (retry-after-flushing-buffer))))))))
 
-	  ((unicode.utf-8-three-octets-code-point? code-point)
-	   (let ((octet0 (unicode.utf-8-encode-first-of-three-octets  code-point))
-		 (octet1 (unicode.utf-8-encode-second-of-three-octets code-point))
-		 (octet2 (unicode.utf-8-encode-third-of-three-octets  code-point)))
+	  ((unicode::utf-8-three-octets-code-point? code-point)
+	   (let ((octet0 (unicode::utf-8-encode-first-of-three-octets  code-point))
+		 (octet1 (unicode::utf-8-encode-second-of-three-octets code-point))
+		 (octet2 (unicode::utf-8-encode-third-of-three-octets  code-point)))
 	     (with-port-having-bytevector-buffer (port)
 	       (let retry-after-flushing-buffer ()
 		 (let* ((buffer.offset-octet0	port.buffer.index)
@@ -359,11 +359,11 @@
 		       (retry-after-flushing-buffer))))))))
 
 	  (else
-	   (debug-assert (unicode.utf-8-four-octets-code-point? code-point))
-	   (let ((octet0 (unicode.utf-8-encode-first-of-four-octets  code-point))
-		 (octet1 (unicode.utf-8-encode-second-of-four-octets code-point))
-		 (octet2 (unicode.utf-8-encode-third-of-four-octets  code-point))
-		 (octet3 (unicode.utf-8-encode-fourth-of-four-octets code-point)))
+	   (debug-assert (unicode::utf-8-four-octets-code-point? code-point))
+	   (let ((octet0 (unicode::utf-8-encode-first-of-four-octets  code-point))
+		 (octet1 (unicode::utf-8-encode-second-of-four-octets code-point))
+		 (octet2 (unicode::utf-8-encode-third-of-four-octets  code-point))
+		 (octet3 (unicode::utf-8-encode-fourth-of-four-octets code-point)))
 	     (with-port-having-bytevector-buffer (port)
 	       (let retry-after-flushing-buffer ()
 		 (let* ((buffer.offset-octet0	port.buffer.index)
@@ -390,8 +390,8 @@
 ;;; PUT-CHAR for port with bytevector buffer and UTF-16 transcoder
 
   (define (%put-char-to-port-with-fast-utf16xe-tag port ch code-point who endianness)
-    (cond ((unicode.utf-16-single-word-code-point? code-point)
-	   (let ((word0 (unicode.utf-16-encode-single-word code-point)))
+    (cond ((unicode::utf-16-single-word-code-point? code-point)
+	   (let ((word0 (unicode::utf-16-encode-single-word code-point)))
 	     (with-port-having-bytevector-buffer (port)
 	       (let retry-after-flushing-buffer ()
 		 (let* ((buffer.offset-word0	port.buffer.index)
@@ -408,8 +408,8 @@
 		       (%flush-output-port port who)
 		       (retry-after-flushing-buffer))))))))
 	  (else
-	   (let ((word0 (unicode.utf-16-encode-first-of-two-words  code-point))
-		 (word1 (unicode.utf-16-encode-second-of-two-words code-point)))
+	   (let ((word0 (unicode::utf-16-encode-first-of-two-words  code-point))
+		 (word1 (unicode::utf-16-encode-second-of-two-words code-point)))
 	     (with-port-having-bytevector-buffer (port)
 	       (let retry-after-flushing-buffer ()
 		 (let* ((buffer.offset-word0	port.buffer.index)
@@ -449,7 +449,7 @@
 	      (begin
 		(%flush-output-port port who)
 		(retry-after-flushing-buffer)))))))
-    (if (unicode.unicode-code-point-representable-as-latin-1-code-point? code-point)
+    (if (unicode::unicode-code-point-representable-as-latin-1-code-point? code-point)
 	(%doit port ch code-point who)
       (case (transcoder-error-handling-mode (port-transcoder port))
 	((ignore)

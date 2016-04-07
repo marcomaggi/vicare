@@ -267,7 +267,7 @@
     ;;
     ;;Notice  that an  output port  is never  tagged as  UTF-16 without  selection of
     ;;endianness;  by default  big  endianness is  selected because  it  seems to  be
-    ;;mandated by  the Unicode Consortium,  see <http://unicode.org/faq/utf_bom.html>
+    ;;mandated by  the Unicode Consortium,  see <http://unicode::org/faq/utf_bom.html>
     ;;question: "Why  do some of  the UTFs have  a BE or LE  in their label,  such as
     ;;UTF-16LE?"
     ;;

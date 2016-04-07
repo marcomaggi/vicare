@@ -59,6 +59,9 @@
   (define ($interned-strings)
     (hashtable-keys STRING-TABLE))
 
+  ;; (define end-of-file-dummy
+  ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.strings-table end")))
+
   #| end of library |# )
 
 ;;; end of file

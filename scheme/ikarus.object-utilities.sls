@@ -33,15 +33,6 @@
     ;; delete fallback
     internal-delete
 
-    ;; conversion
-    any->symbol				any->string
-
-    ;; predicates
-    always-true				always-false
-    expect-single-argument-and-return-it
-    expect-single-argument-and-return-true
-    expect-single-argument-and-return-false
-
     ;; Scheme type descriptor
     <scheme-type-descriptor>-rtd		<scheme-type-descriptor>-rcd
     make-scheme-type-descriptor			scheme-type-descriptor?
@@ -63,11 +54,6 @@
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
-		  any->symbol		any->string
-		  always-true		always-false
-		  expect-single-argument-and-return-it
-		  expect-single-argument-and-return-true
-		  expect-single-argument-and-return-false
 
 		  ;; Scheme type descriptor
 		  <scheme-type-descriptor>
@@ -315,60 +301,6 @@
 	(else
 	 (assertion-violation 'delete
 	   "unknown method to destroy object" obj))))
-
-
-;;;; conversion
-
-(define* (any->symbol obj)
-  (cond ((string? obj)
-	 (string->symbol obj))
-	((symbol? obj)
-	 obj)
-	(else
-	 (procedure-argument-violation __who__
-	   "invalid source object type for conversion" obj))))
-
-(define* (any->string obj)
-  (cond ((symbol? obj)
-	 (symbol->string obj))
-	((number? obj)
-	 (number->string obj))
-	(else
-	 (procedure-argument-violation __who__
-	   "invalid source object type for conversion" obj))))
-
-
-;;;; predicates
-
-(define (always-true . args)
-  #t)
-
-(define (always-false . args)
-  #f)
-
-(define (expect-single-argument-and-return-true arg)
-  ;;This function is  used by some syntaxes  to check at run-time  that an expression
-  ;;returns a single value.   If zero, two or more values  are returned: the built-in
-  ;;validation mechanism raises  an exception at run-time; otherwise  the argument is
-  ;;discarded and the return value is #t.
-  ;;
-  #t)
-
-(define (expect-single-argument-and-return-false arg)
-  ;;This function is  used by some syntaxes  to check at run-time  that an expression
-  ;;returns a single value.   If zero, two or more values  are returned: the built-in
-  ;;validation mechanism raises  an exception at run-time; otherwise  the argument is
-  ;;discarded and the return value is #f.
-  ;;
-  #f)
-
-(define (expect-single-argument-and-return-it arg)
-  ;;This function is  used by some syntaxes  to check at run-time  that an expression
-  ;;returns a single value.   If zero, two or more values  are returned: the built-in
-  ;;validation  mechanism raises  an exception  at run-time;  otherwise the  argument
-  ;;itself is returned.
-  ;;
-  arg)
 
 
 ;;;; built-in object-types descriptor

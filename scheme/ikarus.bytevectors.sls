@@ -2648,6 +2648,9 @@
   (%make-xint-list->bytevector 'sint-list->bytevector bytevector-sint-set!/who))
 
 
+;;;; done
+
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.bytevectors end"))
 
 #| end of library |#  )
 

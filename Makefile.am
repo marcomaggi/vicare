@@ -398,6 +398,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.guardians.sls					\
 	scheme/ikarus.handlers.sls					\
 	scheme/ikarus.hash-tables.sls					\
+	scheme/ikarus.helpers.sls					\
 	scheme/ikarus.keywords.sls					\
 	scheme/ikarus.io.sls						\
 	scheme/ikarus.io.port-attributes.scm				\

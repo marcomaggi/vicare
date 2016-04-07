@@ -88,7 +88,7 @@
 		  initialise-pointers-stuff)
 	    pointers::)
     (prefix (only (ikarus.io)
-		  initialise-io-ports)
+		  initialise-input/output-facilities)
 	    io::)
     (prefix (only (ikarus.pretty-formats)
 		  initialise-pretty-formats)
@@ -1163,7 +1163,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   (conditions::initialise-condition-objects-late-binding)
   (pointers::initialise-pointers-stuff)
-  (io::initialise-io-ports)
+  (io::initialise-input/output-facilities)
   (cafe-input-port (console-input-port))
   (pretty-formats::initialise-pretty-formats)
 

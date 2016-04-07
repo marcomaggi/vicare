@@ -364,6 +364,7 @@
   ;;
   '("ikarus.emergency.sls"
     "ikarus.options.sls"
+    "ikarus.helpers.sls"
     "ikarus.printing-messages.sls"
     "ikarus.singular-objects.sls"
     "ikarus.handlers.sls"

@@ -90,7 +90,7 @@
   ;;no flags are supported.
   ;;
   (let* ((opts 0)
-	 (fd   (capi.platform-open-input-fd ((string->filename-func) filename) opts)))
+	 (fd   (capi::platform-open-input-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -106,7 +106,7 @@
 			   (if (enum-set-member? 'no-truncate file-options) #b0100 0)
 			   (if (enum-set-member? 'executable  file-options) #b1000 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
-	 (fd (capi.platform-open-output-fd ((string->filename-func) filename) opts)))
+	 (fd (capi::platform-open-output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -123,7 +123,7 @@
 				  (if (enum-set-member? 'no-fail     file-options) 2 0)
 				  (if (enum-set-member? 'no-truncate file-options) 4 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
-	 (fd (capi.platform-open-input/output-fd ((string->filename-func) filename) opts)))
+	 (fd (capi::platform-open-input/output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
 	(%raise-io-error who filename fd)
       fd)))
@@ -150,7 +150,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-    (let ((count (capi.platform-read-fd fd dst.bv dst.start requested-count)))
+    (let ((count (capi::platform-read-fd fd dst.bv dst.start requested-count)))
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
@@ -196,7 +196,7 @@
 	  (else #f)))
 
   (define (write! src.bv src.start requested-count)
-    (let ((count (capi.platform-write-fd fd src.bv src.start requested-count)))
+    (let ((count (capi::platform-write-fd fd src.bv src.start requested-count)))
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
@@ -242,7 +242,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-    (let ((count (capi.platform-read-fd fd dst.bv dst.start requested-count)))
+    (let ((count (capi::platform-read-fd fd dst.bv dst.start requested-count)))
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
@@ -251,7 +251,7 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (define (write! src.bv src.start requested-count)
-    (let ((count (capi.platform-write-fd fd src.bv src.start requested-count)))
+    (let ((count (capi::platform-write-fd fd src.bv src.start requested-count)))
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
@@ -296,7 +296,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-    (let ((count (capi.platform-read-fd sock dst.bv dst.start requested-count)))
+    (let ((count (capi::platform-read-fd sock dst.bv dst.start requested-count)))
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
@@ -340,7 +340,7 @@
 	  (else #f)))
 
   (define (write! src.bv src.start requested-count)
-    (let ((rv (capi.platform-write-fd sock src.bv src.start requested-count)))
+    (let ((rv (capi::platform-write-fd sock src.bv src.start requested-count)))
       (cond (($fx>= rv 0)
 	     rv)
 	    (($fx= rv EAGAIN)
@@ -384,7 +384,7 @@
 	  (else #f)))
 
   (define (read! dst.bv dst.start requested-count)
-    (let ((count (capi.platform-read-fd sock dst.bv dst.start requested-count)))
+    (let ((count (capi::platform-read-fd sock dst.bv dst.start requested-count)))
       (cond (($fx>= count 0)
 	     count)
 	    (($fx= count EAGAIN)
@@ -393,7 +393,7 @@
 	     (%raise-io-error 'read! port-identifier count (make-i/o-read-error))))))
 
   (define (write! src.bv src.start requested-count)
-    (let ((rv (capi.platform-write-fd sock src.bv src.start requested-count)))
+    (let ((rv (capi::platform-write-fd sock src.bv src.start requested-count)))
       (cond (($fx>= rv 0)
 	     rv)
 	    (($fx= rv EAGAIN)
@@ -422,7 +422,7 @@
   ;;wrapping the platform's file descriptor FD.
   ;;
   (lambda (position)
-    (let ((errno (capi.platform-set-position fd position)))
+    (let ((errno (capi::platform-set-position fd position)))
       (when errno
 	(%raise-io-error 'set-position! port-identifier errno
 			 (make-i/o-invalid-position-error position))))))
@@ -433,7 +433,7 @@
   ;;can be used for any platform descriptor.
   ;;
   (lambda ()
-    (let ((errno (capi.platform-close-fd fd)))
+    (let ((errno (capi::platform-close-fd fd)))
       (when errno
 	(%raise-io-error 'close port-identifier errno)))))
 

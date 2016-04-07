@@ -18,7 +18,7 @@
 
 ;;Defined by R6RS.  Return #t if X is a port.
 (define (port? x)
-  (primop.port? x))
+  (primop::port? x))
 
 
 ;;;; input/output, binary/textual, unsafe predicates

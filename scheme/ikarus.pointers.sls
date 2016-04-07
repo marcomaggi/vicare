@@ -333,7 +333,8 @@
   (or (pointer? obj)
       (memory-block? obj)))
 
-(define pointer-offset?		non-negative-fixnum?)
+(define-syntax-rule (pointer-offset? ?obj)
+  (non-negative-fixnum? ?obj))
 
 (define-syntax-rule (number-of-bytes? ?N)
   (words.size_t? ?N))
@@ -863,8 +864,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define %memory-guardian
-  (make-guardian))
+(define %memory-guardian)
 
 (define (%free-allocated-memory)
   (do ((pointer (%memory-guardian) (%memory-guardian)))
@@ -1426,9 +1426,12 @@
 ;;;; done
 
 (define (initialise-pointers-stuff)
+  (set! %memory-guardian (make-guardian))
   (set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
   (set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
   (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks))))
+
+
 
 ;; (define end-of-file-dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.pointers end")))
