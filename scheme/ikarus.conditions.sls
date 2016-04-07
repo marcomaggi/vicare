@@ -684,7 +684,8 @@
 	  $make-record-constructor-descriptor
 	  $record-and-rtd?
 	  $record-constructor
-	  $rtd-subtype?)
+	  $rtd-subtype?
+	  $record-accessor/index)
     (vicare system $structs)
     (prefix (only (ikarus records procedural)
 		  record-type-method-retriever-set!)
@@ -754,7 +755,7 @@
 
 (begin
   (define &condition-rtd
-    ($make-record-type-descriptor '&condition #f 'vicare:conditions:&condition #f #f '#()))
+    ($make-record-type-descriptor '&condition #f 'vicare:conditions:&condition #f #f '#() '#()))
   (define &condition-rcd
     ($make-record-constructor-descriptor &condition-rtd #f #f))
   (define make-simple-condition
@@ -765,15 +766,16 @@
 
 (begin
   (define compound-condition-rtd
-    ($make-record-type-descriptor 'compound-condition #f 'vicare:conditions:compound-condition #t #f '#((immutable components))))
+    ($make-record-type-descriptor 'compound-condition #f 'vicare:conditions:compound-condition #t #f
+				  '#((immutable . components)) '#((#f . components))))
   (define compound-condition-rcd
     ($make-record-constructor-descriptor compound-condition-rtd #f #f))
   (define make-compound-condition
     ($record-constructor compound-condition-rcd))
   (define (compound-condition? X)
     ($record-of-type X compound-condition-rtd))
-  (define compound-condition-components
-    (record-accessor compound-condition-rtd 0))
+  ;; (define compound-condition-components
+  ;;   (record-accessor compound-condition-rtd 0))
   (define ($compound-condition-components cnd)
     ($struct-ref cnd 0))
   #| end of BEGIN |# )
@@ -789,7 +791,7 @@
 
 (define* (condition-and-rtd? obj {rtd simple-condition-rtd-subtype?})
   (cond ((compound-condition? obj)
-	 (let loop ((ls (compound-condition-components obj)))
+	 (let loop ((ls ($compound-condition-components obj)))
 	   (and (pair? ls)
 		(or ($record-of-type (car ls) rtd)
 		    (loop (cdr ls))))))
@@ -836,7 +838,7 @@
   ;;SIMPLE-CONDITIONS always returns a ``flattened'' list of simple conditions.
   ;;
   (cond ((compound-condition? x)
-	 (compound-condition-components x))
+	 ($compound-condition-components x))
 	((simple-condition? x)
 	 (list x))
 	(else
@@ -853,6 +855,9 @@
   ;;that record type (or  one of its subtypes) or a compound  conditition with such a
   ;;simple condition as one of its components, and #f otherwise.
   ;;
+  ($condition-predicate rtd))
+
+(define ($condition-predicate rtd)
   (lambda (X)
     (or (and (compound-condition? X)
 	     (let loop ((ls ($compound-condition-components X)))
@@ -871,24 +876,27 @@
   ;;procedure extracts the  first component of the condition of  the type represented
   ;;by RTD, and returns the result of applying PROC to that component.
   ;;
-  ((rtd proc)
-   (condition-accessor rtd proc 'anonymous-condition-accessor))
+  (({rtd simple-condition-rtd-subtype?} {proc procedure?})
+   ($condition-accessor rtd proc 'anonymous-condition-accessor))
   (({rtd simple-condition-rtd-subtype?} {proc procedure?} {accessor-who (or not symbol?)})
-   (lambda (X)
-     (define (%error)
-       (procedure-arguments-consistency-violation accessor-who "not a condition of correct type" X rtd))
-     (cond ((compound-condition? X)
-	    (let loop ((ls ($compound-condition-components X)))
-	      (cond ((pair? ls)
-		     (if ($record-of-type (car ls) rtd)
-			 (proc (car ls))
-		       (loop (cdr ls))))
-		    (else
-		     (%error)))))
-	   (($record-of-type X rtd)
-	    (proc X))
-	   (else
-	    (%error))))))
+   ($condition-accessor rtd proc accessor-who)))
+
+(define ($condition-accessor rtd proc accessor-who)
+  (lambda (X)
+    (define (%error)
+      (procedure-arguments-consistency-violation accessor-who "not a condition of correct type" X rtd))
+    (cond ((compound-condition? X)
+	   (let loop ((ls ($compound-condition-components X)))
+	     (cond ((pair? ls)
+		    (if ($record-of-type (car ls) rtd)
+			(proc (car ls))
+		      (loop (cdr ls))))
+		   (else
+		    (%error)))))
+	  (($record-of-type X rtd)
+	   (proc X))
+	  (else
+	   (%error)))))
 
 
 ;;;; raising exceptions
@@ -953,7 +961,8 @@
 	  (PARENT-RCD		(mkname "" #'?parent-name "-rcd"))
 	  ((ACCESSOR-IDX ...)	(iota 0 #'(?accessor ...)))
 	  (SEALED?		#f)
-	  (OPAQUE?		#f))
+	  (OPAQUE?		#f)
+	  (BV-NAME		(string->utf8 (symbol->string (syntax->datum #'?name)))))
        ;;Register  a syntax  object representing  an expression  which, expanded  and
        ;;evalualated, will initialise  the record's methods late  binding table.  The
        ;;expression  will be  included  in a  global  initialisation function.   This
@@ -974,12 +983,16 @@
        ;;easier to rotate the boot images.
        #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
 	   (define RTD
-	     ($make-record-type-descriptor (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE? '#((immutable ?field) ...)))
+	     ($make-record-type-descriptor (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE?
+					   '#((immutable . ?field) ...) '#((#f . ?field) ...)))
 	   (define RCD
 	     ($make-record-constructor-descriptor RTD PARENT-RCD #f))
-	   (define ?constructor		($record-constructor RCD))
-	   (define ?predicate		(condition-predicate RTD))
-	   (define ?accessor		(condition-accessor  RTD (record-accessor RTD ACCESSOR-IDX (quote ?accessor)) (quote ?accessor)))
+	   (define ?constructor
+	     ($record-constructor RCD))
+	   (define ?predicate
+	     ($condition-predicate RTD))
+	   (define ?accessor
+	     ($condition-accessor RTD ($record-accessor/index RTD ACCESSOR-IDX (quote ?accessor)) (quote ?accessor)))
 	   ...)))
     ))
 

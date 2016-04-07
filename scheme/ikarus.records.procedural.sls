@@ -74,6 +74,7 @@
     ;; syntactic bindings for internal use only
     $make-record-type-descriptor		$make-record-constructor-descriptor
     $record-constructor				$rtd-subtype?
+    $record-accessor/index
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
@@ -751,27 +752,29 @@
     ;;Return  the initialiser  function for  an R6RS  record.  The  initialiser is  a
     ;;function that stores field values in a newly allocated record object.
     ;;
-    (let ((fields-number  ($<rtd>-fields-number rtd))
-	  (prnt-rtd       ($<rtd>-parent rtd)))
-      (if prnt-rtd
-	  (let ((start-index ($<rtd>-total-fields-number prnt-rtd)))
-	    (lambda field-values
-	      (%fill-record-fields (%record-being-built 'initialiser-with-parent)
-				   rtd start-index fields-number
-				   field-values field-values)))
-	(case ($<rtd>-fields-number rtd)
-	  ((0)  %initialiser-without-parent-0)
-	  ((1)  %initialiser-without-parent-1)
-	  ((2)  %initialiser-without-parent-2)
-	  ((3)  %initialiser-without-parent-3)
-	  ((4)  %initialiser-without-parent-4)
-	  ((5)  %initialiser-without-parent-5)
-	  ((6)  %initialiser-without-parent-6)
-	  ((7)  %initialiser-without-parent-7)
-	  ((8)  %initialiser-without-parent-8)
-	  ((9)  %initialiser-without-parent-9)
-	  (else (lambda field-values
-		  (%initialiser-without-parent+ rtd field-values)))))))
+    (define fields-number ($<rtd>-fields-number rtd))
+    (cond (($<rtd>-parent rtd)
+	   => (lambda (prnt-rtd)
+		(let ((start-index ($<rtd>-total-fields-number prnt-rtd)))
+		  (lambda field-values
+		    (%fill-record-fields (%record-being-built 'initialiser-with-parent)
+					 rtd start-index fields-number
+					 field-values field-values)))))
+	  (else
+	   (case fields-number
+	     ((0)  %initialiser-without-parent-0)
+	     ((1)  %initialiser-without-parent-1)
+	     ((2)  %initialiser-without-parent-2)
+	     ((3)  %initialiser-without-parent-3)
+	     ((4)  %initialiser-without-parent-4)
+	     ((5)  %initialiser-without-parent-5)
+	     ((6)  %initialiser-without-parent-6)
+	     ((7)  %initialiser-without-parent-7)
+	     ((8)  %initialiser-without-parent-8)
+	     ((9)  %initialiser-without-parent-9)
+	     (else
+	      (lambda field-values
+		(%initialiser-without-parent+ rtd fields-number field-values)))))))
 
   (define (%record-being-built who)
     (module (record-being-built)
@@ -823,11 +826,11 @@
 		(with-syntax (((INDEX ...) indices)
 			      ((ARG   ...) (generate-temporaries indices)))
 		  #'(define (?who ARG ...)
-		      (let ((the-record (%record-being-built '?who)))
+		      (receive-and-return (the-record)
+			  (%record-being-built '?who)
 			(assert the-record)
 			($struct-set! the-record INDEX ARG)
-			...
-			the-record)))))))))
+			...)))))))))
     (define-initialiser-without-parent %initialiser-without-parent-1 1)
     (define-initialiser-without-parent %initialiser-without-parent-2 2)
     (define-initialiser-without-parent %initialiser-without-parent-3 3)
@@ -836,34 +839,35 @@
     (define-initialiser-without-parent %initialiser-without-parent-6 6)
     (define-initialiser-without-parent %initialiser-without-parent-7 7)
     (define-initialiser-without-parent %initialiser-without-parent-8 8)
-    (define-initialiser-without-parent %initialiser-without-parent-9 9))
+    (define-initialiser-without-parent %initialiser-without-parent-9 9)
+    #| end of LET-SYNTAX |# )
 
-  (define (%initialiser-without-parent+ rtd field-values)
+  (define (%initialiser-without-parent+ rtd fields-number field-values)
     (let ((the-record (%record-being-built '%initialiser-without-parent+)))
       (assert the-record)
-      (%fill-record-fields the-record rtd 0 ($<rtd>-fields-number rtd)
-			   field-values field-values)))
+      (%fill-record-fields the-record rtd 0 fields-number field-values field-values)))
 
   (define (%fill-record-fields the-record rtd field-index fields-number
 			       all-field-values field-values)
+    ;;Recursive function.  When successful return THE-RECORD itself.
+    ;;
     (define (%wrong-num-args)
       (assertion-violation ($<rtd>-name rtd)
 	(string-append "wrong number of arguments to record initialiser, expected "
-		       (number->string ($<rtd>-fields-number rtd))
-		       " given " (number->string (length all-field-values)))
+		       (number->string fields-number) " given " (number->string (length all-field-values)))
 	rtd all-field-values))
     (if (null? field-values)
-	(if (fx=? 0 fields-number)
+	(if (fxzero? fields-number)
 	    the-record
 	  (%wrong-num-args))
-      (if (fx=? 0 fields-number)
+      (if (fxzero? fields-number)
 	  (%wrong-num-args)
 	(begin
 	  ($struct-set! the-record field-index (car field-values))
-	  (%fill-record-fields the-record rtd (fx+ 1 field-index) (fx- fields-number 1)
+	  (%fill-record-fields the-record rtd (fxadd1 field-index) (fxsub1 fields-number)
 			       all-field-values (cdr field-values))))))
 
-  #| end of module |# )
+  #| end of module: RECORD-INITIALISERS |# )
 
 
 (module RECORD-DEFAULT-PROTOCOL
@@ -937,9 +941,10 @@
   					{sealed? sealed-specification?}
   					{opaque? opaque-specification?}
   					{fields  record-fields-specification-vector?})
-    ($make-record-type-descriptor name parent uid sealed? opaque? fields))
+    (let ((normalised-fields (%normalise-fields-vector fields)))
+      ($make-record-type-descriptor name parent uid sealed? opaque? fields normalised-fields)))
 
-  (define ($make-record-type-descriptor name parent uid sealed? opaque? fields)
+  (define ($make-record-type-descriptor name parent uid sealed? opaque? fields normalised-fields)
     ;;Return a  record-type descriptor representing  a record type distinct  from all
     ;;the built-in types and other record types.
     ;;
@@ -948,15 +953,15 @@
     ;;NOTE  This function  is called  while initialising  the boot  image.  For  this
     ;;reason it may be  necessary to use peculiar function calls  rather than what is
     ;;normally used when dealing  with record types; this is to  avoid crashes due to
-    ;;some core primitive's loc gensyms not being initialised.  (Marco Maggi; Fri Dec
-    ;;4, 2015)
+    ;;some  core primitive's  loc gensyms  not  being initialised.   For example:  we
+    ;;require  this  function to  have  the  NORMALISED-FIELDS argument  rather  than
+    ;;building a normalised fields vector here.  (Marco Maggi; Fri Dec 4, 2015)
     ;;
-    (let ((normalised-fields-description (%normalise-fields-vector fields)))
-      (receive-and-return (rtd)
-	  (if (symbol? uid)
-	      (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields-description fields)
-	    (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields-description))
-	($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd)))))
+    (receive-and-return (rtd)
+	(if (symbol? uid)
+	    (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields)
+	  (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields))
+      ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))
 
   (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
@@ -988,7 +993,7 @@
 		   )
 	(%intern-nongenerative-rtd! uid rtd))))
 
-  (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)
+  (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and
     ;;interned) RTD.  If the  specified UID holds an RTD in  its "value" field: check
     ;;that the arguments are compatible and return the interned RTD.
@@ -1309,6 +1314,21 @@
 		 rtd index/name))))))
 
   #| end of module |# )
+
+(define ($record-accessor/index rtd relative-field-index accessor-who)
+  (let ((absolute-field-index (fx+ relative-field-index ($<rtd>-first-field-index rtd))))
+    (lambda (obj)
+      ;;We must verify that OBJ is actually an  R6RS record instance of RTD or one of
+      ;;its subtypes.
+      ;;
+      (unless (record-object? obj)
+	(procedure-argument-violation accessor-who
+	  "expected R6RS record as argument to field accessor" obj))
+      (unless (record-and-rtd? obj rtd)
+	(procedure-arguments-consistency-violation accessor-who
+	  "R6RS record is not an instance of the expected record-type descriptor"
+	  obj rtd))
+      ($struct-ref obj absolute-field-index))))
 
 
 ;;;; non-R6RS extensions: miscellaneous functions
