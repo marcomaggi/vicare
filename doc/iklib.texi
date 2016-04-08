@@ -16820,7 +16820,7 @@ running stats:
 @defun time-and-gather @var{gather} @var{thunk}
 Like @func{time-it} evaluate the procedure @var{thunk} timing its
 execution; return the return values of @var{thunk}.  Build two objects
-of type @code{stats} and apply the procedure @var{gather} to them: the
+of type @class{stats} and apply the procedure @var{gather} to them: the
 first represents the statistics before @var{thunk} evaluation, the
 second represents the statistics after @var{thunk} evaluation.
 @end defun
@@ -16833,12 +16833,62 @@ When set to non--false: print more informations as result of
 @end deffn
 
 
+@deftp {Object Type} @class{stats}
+Type name identifier for disjoint objects representing evaluation
+statistics.  It has the following fields:
+
+@table @code
+@item user-secs
+The user seconds.
+
+@item user-usecs
+The user microseconds.
+
+@item sys-secs
+The system seconds.
+
+@item sys-usecs
+The system microseconds.
+
+@item real-secs
+The real seconds.
+
+@item real-usecs
+The real microseconds.
+
+@item collection-id
+The garbage collection identifier.
+
+@item gc-user-secs
+The garbage collection user seconds.
+
+@item gc-user-usecs
+The garbage collection user microseconds.
+
+@item gc-sys-secs
+The garbage collection system seconds.
+
+@item gc-sys-usecs
+The garbage collection system microseconds.
+
+@item gc-real-secs
+The garbage collection real seconds.
+
+@item gc-real-usecs
+The garbage collection real microseconds.
+
+@item bytes-minor
+The garbage collection bytes minor.
+
+@item bytes-major
+The garbage collection bytes major.
+@end table
+@end deftp
+
+
 @defun stats? @var{obj}
-Return true if @var{obj} is an object of type @code{stats}.
+Return true if @var{obj} is an object of type @class{stats}.
 @end defun
-
-
-All the fields of a @code{stats} object hold fixnums.
 
 
 @defun stats-user-secs @var{stats}
@@ -20083,8 +20133,13 @@ excess added to @var{seconds}.
 @end defun
 
 
+@deftp {Object Time} @class{time}
+Type name identifier of disjoint time objects.
+@end deftp
+
+
 @defun time? @var{obj}
-Return @true{} if @var{obj} is a time object returned by
+Return @true{} if @var{obj} is a @class{time} object returned by
 @func{current-time}.
 @end defun
 

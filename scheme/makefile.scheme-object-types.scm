@@ -511,7 +511,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-scheme-type <stats>
-    <opaque-record>
+    <struct>
   (predicate stats?)
   (methods
    (user-secs		stats-user-secs)
@@ -529,6 +529,37 @@
    (gc-real-usecs	stats-gc-real-usecs)
    (bytes-minor		stats-bytes-minor)
    (bytes-major		stats-bytes-major)))
+
+(define-scheme-type <reader-annotation>
+    <struct>
+  (constructor get-annotated-datum)
+  (predicate reader-annotation?)
+  (methods
+   (expression			reader-annotation-expression)
+   (stripped			reader-annotation-stripped)
+   (source			reader-annotation-source)
+   (textual-position		reader-annotation-textual-position)))
+
+(define-scheme-type <time>
+    <struct>
+  (constructor current-time)
+  (predicate time?)
+  (methods
+   (second		time-second)
+   (nanosecond		time-nanosecond)))
+
+(define-scheme-type <scheme-type-descriptor>
+    <struct>
+  (predicate scheme-type-descriptor?)
+  (methods
+   (name				scheme-type-descriptor-name)
+   (parent				scheme-type-descriptor-parent)
+   (type-predicate			scheme-type-descriptor-type-predicate)
+   (equality-predicate			scheme-type-descriptor-equality-predicate)
+   (comparison-procedure		scheme-type-descriptor-comparison-procedure)
+   (hash-function			scheme-type-descriptor-hash-function)
+   (uids-list				scheme-type-descriptor-uids-list)
+   (method-retriever			scheme-type-descriptor-method-retriever)))
 
 
 ;;;; input/output ports

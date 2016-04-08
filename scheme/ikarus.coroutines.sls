@@ -8,20 +8,19 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -137,23 +136,24 @@
 (define (coroutine-uid? obj)
   (and (symbol? obj)
        (symbol-bound? obj)
-       (<coroutine-state>? (symbol-value obj))))
+       (coroutine-state? (symbol-value obj))))
 
 
 ;;;; coroutine state
 
-(define-record-type <coroutine-state>
-  (nongenerative vicare:coroutine:<coroutine-state>)
-  (fields (mutable reinstate-procedure)
+(define-struct (<coroutine-state> %make-coroutine-state coroutine-state?)
+  (reinstate-procedure))
 		;False or a procedure that reinstates the coroutine continuation.  It
 		;is used when suspending a coroutine.
-	  #| end of FIELDS |# )
-  (protocol
-   (lambda (make-record)
-     (lambda ()
-       (let ((reinstate-procedure #f))
-	 (make-record reinstate-procedure)))))
-  #| end of DEFINE-RECORD-TYPE |# )
+
+(define-syntax-rule (coroutine-state-reinstate-procedure ?obj)
+  (<coroutine-state>-reinstate-procedure ?obj))
+
+(define-syntax-rule (set-coroutine-state-reinstate-procedure! ?obj ?val)
+  (set-<coroutine-state>-reinstate-procedure! ?obj ?val))
+
+(define (make-coroutine-state)
+  (%make-coroutine-state #f))
 
 (define* (coroutine-state {uid symbol?})
   ;;Given a coroutine UID: return the associated state procedure.
@@ -168,7 +168,7 @@
   ;;
   (and (symbol-bound? uid)
        (let ((val (symbol-value uid)))
-	 (and (<coroutine-state>? val)
+	 (and (coroutine-state? val)
 	      val))))
 
 
@@ -187,7 +187,7 @@
   ;;values.
   ;;
   (define uid (gensym "coroutine-uid"))
-  (set-symbol-value! uid (make-<coroutine-state>))
+  (set-symbol-value! uid (make-coroutine-state))
   (parametrise
       ((run-unwind-protection-cleanup-upon-exit?	#f)
        (%current-coroutine-uid				uid)
@@ -227,7 +227,7 @@
   ;;Return true if UID is the unique identifier of a suspended coroutine.
   ;;
   (let ((state (%coroutine-state uid)))
-    (and (<coroutine-state>-reinstate-procedure state)
+    (and (coroutine-state-reinstate-procedure state)
 	 #t)))
 
 (define* (suspend-coroutine)
@@ -236,7 +236,7 @@
   ;;
   (import COROUTINE-CONTINUATIONS-QUEUE)
   (let ((state (%coroutine-state (current-coroutine-uid))))
-    (cond ((<coroutine-state>-reinstate-procedure state)
+    (cond ((coroutine-state-reinstate-procedure state)
 	   => (lambda (reinstate)
 		(assertion-violation __who__
 		  "attempt to suspend an already suspended coroutine"
@@ -244,16 +244,16 @@
 	  (else
 	   (call/cc
 	       (lambda (escape)
-		 (<coroutine-state>-reinstate-procedure-set! state escape)
+		 (set-coroutine-state-reinstate-procedure! state escape)
 		 ((dequeue!))))))))
 
 (define* (resume-coroutine {uid coroutine-uid?})
   ;;Resume a previously suspended coroutine.
   ;;
   (let ((state (%coroutine-state uid)))
-    (cond ((<coroutine-state>-reinstate-procedure state)
+    (cond ((coroutine-state-reinstate-procedure state)
 	   => (lambda (reinstate)
-		(<coroutine-state>-reinstate-procedure-set! state #f)
+		(set-coroutine-state-reinstate-procedure! state #f)
 		(%enqueue-coroutine reinstate)))
 	  (else
 	   (assertion-violation __who__
@@ -264,39 +264,38 @@
 
 (module (do-monitor)
 
-  (define-record-type sem
-    (fields (mutable concurrent-coroutines-counter)
+  (define-struct (sem %make-sem sem?)
+    (concurrent-coroutines-counter
 		;A non-negative  exact integer representing the  number of coroutines
 		;currently inside the critical section.
-	    (mutable pending-continuations)
+     pending-continuations
 		;Null or a proper list,  representing a FIFO queue, holding coroutine
 		;continuation procedures.  Every time a coroutine is denied access to
 		;the critial section: its continuation procedure is appended here.
-	    (immutable key)
+     key
 		;A gensym uniquely identifying this monitor.
-	    (immutable concurrent-coroutines-maximum))
+     concurrent-coroutines-maximum))
 		;A  positive  exact  integer   representing  the  maximum  number  of
 		;coroutines  that  are allowed  to  concurrently  enter the  critical
 		;section.
-    (protocol
-     (lambda (make-record)
-       (lambda (key concurrent-coroutines-maximum)
-	 (if (symbol-bound? key)
-	     (symbol-value key)
-	   (receive-and-return (sem)
-	       (make-record 0 '() key concurrent-coroutines-maximum)
-	     (set-symbol-value! key sem)))))))
+
+  (define (make-sem key concurrent-coroutines-maximum)
+    (if (symbol-bound? key)
+	(symbol-value key)
+      (receive-and-return (sem)
+	  (%make-sem 0 '() key concurrent-coroutines-maximum)
+	(set-symbol-value! key sem))))
 
   (define-syntax-rule (sem-counter-incr! sem)
-    (sem-concurrent-coroutines-counter-set! sem (+ +1 (sem-concurrent-coroutines-counter sem))))
+    (set-sem-concurrent-coroutines-counter! sem (+ +1 (sem-concurrent-coroutines-counter sem))))
 
   (define-syntax-rule (sem-counter-decr! sem)
-    (sem-concurrent-coroutines-counter-set! sem (+ -1 (sem-concurrent-coroutines-counter sem))))
+    (set-sem-concurrent-coroutines-counter! sem (+ -1 (sem-concurrent-coroutines-counter sem))))
 
   (define (sem-enqueue-pending-continuation! sem reenter)
     ;;FIXME  Should this  list be  replaced by  a proper  FIFO queue  object?  (Marco
     ;;Maggi; Mon Jan 19, 2015)
-    (sem-pending-continuations-set! sem (append (sem-pending-continuations sem)
+    (set-sem-pending-continuations! sem (append (sem-pending-continuations sem)
 						(list reenter))))
 
   (define (sem-dequeue-pending-continuation! sem)
@@ -304,7 +303,7 @@
       (and (pair? Q)
 	   (receive-and-return (reenter)
 	       (car Q)
-	     (sem-pending-continuations-set! sem (cdr Q))))))
+	     (set-sem-pending-continuations! sem (cdr Q))))))
 
   (define (sem-acquire sem)
     (cond ((< (sem-concurrent-coroutines-counter sem)
@@ -344,7 +343,6 @@
 	 (fxpositive? obj)))
 
   #| end of module: MONITOR |# )
-
 
 
 ;;;; done

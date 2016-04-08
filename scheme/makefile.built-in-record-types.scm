@@ -83,17 +83,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-built-in-record-type <reader-annotation>
-    <record>
-  get-annotated-datum reader-annotation?
-  (methods
-   (expression			reader-annotation-expression)
-   (stripped			reader-annotation-stripped)
-   (source			reader-annotation-source)
-   (textual-position		reader-annotation-textual-position)))
-
-;;; --------------------------------------------------------------------
-
 (define-built-in-record-type <lexical-environment>
     <record>
   #f environment?)
@@ -246,15 +235,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-built-in-record-type <time>
-    <record>
-  current-time time?
-  (methods
-   (second			time-second)
-   (nanosecond		time-nanosecond)))
-
-;;; --------------------------------------------------------------------
-
 (define-built-in-record-type <stx>
     <record>
   #f stx?
@@ -283,21 +263,6 @@
    (mutually-inclusive		syntax-clause-spec-mutually-inclusive)
    (mutually-exclusive		syntax-clause-spec-mutually-exclusive)
    (custom-data			syntax-clause-spec-custom-data)))
-
-;;; --------------------------------------------------------------------
-
-(define-built-in-record-type <scheme-type-descriptor>
-    <record>
-  #f scheme-type-descriptor?
-  (methods
-   (name				scheme-type-descriptor.name)
-   (parent				scheme-type-descriptor.parent)
-   (type-predicate			scheme-type-descriptor.type-predicate)
-   (equality-predicate			scheme-type-descriptor.equality-predicate)
-   (comparison-procedure		scheme-type-descriptor.comparison-procedure)
-   (hash-function			scheme-type-descriptor.hash-function)
-   (uids-list				scheme-type-descriptor.uids-list)
-   (method-retriever			scheme-type-descriptor.method-retriever)))
 
 ;;; end of file
 ;; Local Variables:

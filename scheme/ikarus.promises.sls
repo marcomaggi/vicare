@@ -26,15 +26,11 @@
 		  promise?))
 
 
-(define-record-type promise
-  (nongenerative)
-  (fields (immutable proc)
-	  (mutable results))
-  (protocol
-    (lambda (make-record)
-      (define* (make-promise {proc procedure?})
-	(make-record proc #f))
-      make-promise)))
+(define-struct (promise %make-promise promise?)
+  (proc results))
+
+(define* (make-promise {proc procedure?})
+  (%make-promise proc #f))
 
 (define* (force {P promise?})
   (if ($promise-results P)
@@ -45,7 +41,7 @@
 	(if ($promise-results P)
 	    (apply values ($promise-results P))
 	  (begin
-	    ($promise-results-set! P args)
+	    ($set-promise-results! P args)
 	    (apply values args)))))))
 
 

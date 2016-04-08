@@ -1280,8 +1280,6 @@
     (time-it					v $language)
     (verbose-timer				v $language)
 ;;;
-    (<time>-rtd)
-    (<time>-rcd)
     (current-time				v $language)
     (time-from-now				v $language)
     (time?					v $language)
@@ -3531,8 +3529,7 @@
     ($port-attrs				$io)
     ($set-port-attrs!				$io)
 ;;;
-    (<reader-annotation>-rtd)
-    (<reader-annotation>-rcd)
+    (<reader-annotation>			v $language)
     (reader-annotation?				v $language)
     (reader-annotation-expression		v $language)
     (reader-annotation-source			v $language)
@@ -3725,19 +3722,17 @@
     (<&who-value>				v $language)
 
     ;;Scheme-type descriptor record-type
-    (<scheme-type-descriptor>-rtd)
-    (<scheme-type-descriptor>-rcd)
     (<scheme-type-descriptor>			v $language)
     #;(make-scheme-type-descriptor)
     (scheme-type-descriptor?			v $language)
-    (scheme-type-descriptor.name		v $language)
-    (scheme-type-descriptor.parent		v $language)
-    (scheme-type-descriptor.type-predicate	v $language)
-    (scheme-type-descriptor.equality-predicate	v $language)
-    (scheme-type-descriptor.comparison-procedure v $language)
-    (scheme-type-descriptor.hash-function	v $language)
-    (scheme-type-descriptor.uids-list		v $language)
-    (scheme-type-descriptor.method-retriever	v $language)
+    (scheme-type-descriptor-name		v $language)
+    (scheme-type-descriptor-parent		v $language)
+    (scheme-type-descriptor-type-predicate	v $language)
+    (scheme-type-descriptor-equality-predicate	v $language)
+    (scheme-type-descriptor-comparison-procedure v $language)
+    (scheme-type-descriptor-hash-function	v $language)
+    (scheme-type-descriptor-uids-list		v $language)
+    (scheme-type-descriptor-method-retriever	v $language)
 
     ;;scheme-type descriptors
     (<bignum>-type-descriptor)
@@ -3775,7 +3770,7 @@
     (<ipair>-type-descriptor)
     (<keyword>-type-descriptor)
     (<list>-type-descriptor)
-    (<memory-block>-type-descriptor)
+    ;;
     (<negative-bignum>-type-descriptor)
     (<negative-fixnum>-type-descriptor)
     (<negative-flonum>-type-descriptor)
@@ -3804,7 +3799,6 @@
     (<record-constructor-descriptor>-type-descriptor)
     (<record>-type-descriptor)
     (<record-type-descriptor>-type-descriptor)
-    (<stats>-type-descriptor)
     (<string>-type-descriptor)
     (<struct>-type-descriptor)
     (<struct-type-descriptor>-type-descriptor)
@@ -3821,6 +3815,12 @@
     (<void>-type-descriptor)
     (<would-block>-type-descriptor)
     (<zero-fixnum>-type-descriptor)
+    ;;
+    (<memory-block>-type-descriptor)
+    (<time>-type-descriptor)
+    (<reader-annotation>-type-descriptor)
+    (<scheme-type-descriptor>-type-descriptor)
+    (<stats>-type-descriptor)
 
     ;; helpers
     (<top>-constructor)

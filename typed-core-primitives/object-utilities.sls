@@ -37,22 +37,22 @@
 
 (declare-type-predicate scheme-type-descriptor?		<scheme-type-descriptor>)
 
-(declare-core-primitive scheme-type-descriptor.name
+(declare-core-primitive scheme-type-descriptor-name
     (safe)
   (signatures
    ((<scheme-type-descriptor>)		=> (<symbol>))))
 
-(declare-core-primitive scheme-type-descriptor.parent
+(declare-core-primitive scheme-type-descriptor-parent
     (safe)
   (signatures
    ((<scheme-type-descriptor>)		=> ((or <false> <scheme-type-descriptor>)))))
 
-(declare-core-primitive scheme-type-descriptor.uids-list
+(declare-core-primitive scheme-type-descriptor-uids-list
     (safe)
   (signatures
    ((<scheme-type-descriptor>)		=> ((list-of <symbol>)))))
 
-(declare-core-primitive scheme-type-descriptor.method-retriever
+(declare-core-primitive scheme-type-descriptor-method-retriever
     (safe)
   (signatures
    ((<scheme-type-descriptor>)		=> (<procedure>))))

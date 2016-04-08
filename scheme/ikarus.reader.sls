@@ -31,7 +31,6 @@
     (rename (reader-annotation?		annotation?))
 
     ;; internal bindings only for Vicare
-    <reader-annotation>-rtd		<reader-annotation>-rcd
     read-libraries-from-file		read-script-from-file
     read-library-from-file		read-library-from-port)
   (import (except (vicare)
@@ -47,7 +46,6 @@
 		  reader-annotation-source	reader-annotation-textual-position
 
 		  ;; internal bindings only for Vicare
-		  <reader-annotation>-rtd	<reader-annotation>-rcd
 		  read-libraries-from-file	read-script-from-file
 		  read-library-from-file	read-library-from-port)
     (vicare system $fx)
@@ -208,9 +206,7 @@
 
 ;;;; annotated datums
 
-(module (<reader-annotation>-rtd
-	 <reader-annotation>-rcd
-	 annotate
+(module (annotate
 	 annotate-simple
 	 reader-annotation?
 	 reader-annotation-expression
@@ -218,37 +214,8 @@
 	 reader-annotation-source
 	 reader-annotation-textual-position)
 
-  ;; (define dummy-before-rtd
-  ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader before rtd")))
-
-  (define-record-type (<reader-annotation> make-reader-annotation reader-annotation?)
-    (nongenerative)
-    (fields (immutable expression		reader-annotation-expression)
-		;A  list,  vector, identifier,  what-have-you  that  may contain  further
-		;annotations.
-	    (immutable stripped			reader-annotation-stripped)
-		;The same S-expression of the EXPRESSION field with no annotations.
-	    (immutable source			reader-annotation-source)
-		;A pair whose car is the port  identifier and whose cdr is the offset
-		;of the character.
-	    (immutable textual-position		reader-annotation-textual-position)
-		;A  condition  object  of type  "&source-position"  representing  the
-		;position of  the expression in the  source code.  It is  used by the
-		;expander.
-	    #| end of FIELDS |# )
-    (protocol
-      (lambda (make-record)
-	(define (make-reader-annotation expression stripped source textual-position)
-	  (make-record expression stripped source textual-position))
-	make-reader-annotation)))
-
-  (define <reader-annotation>-rtd
-    (record-type-descriptor <reader-annotation>))
-  (define <reader-annotation>-rcd
-    (record-constructor-descriptor <reader-annotation>))
-
-  ;; (define dummy-after-rtd
-  ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.reader after rtd")))
+  (define-struct (reader-annotation make-reader-annotation reader-annotation?)
+    (expression stripped source textual-position))
 
   (define-inline (annotate-simple datum textual-pos)
     (make-reader-annotation datum datum
@@ -262,26 +229,24 @@
 				  (source-position-character textual-pos))
 			    textual-pos))
 
-  (module ()
-    (define (%annotation-printer S port sub-printer)
-      (define-inline (%display thing)
-	(display thing port))
-      (define-inline (%write thing)
-	(write thing port))
-      (define-inline (%pretty-print thing)
-	(pretty-print* thing port 0 #f))
-      (%display "#[reader-annotation")
-      ;;Writing   the  annotation   expression  makes   the  output   really
-      ;;unreadable.
-      (%display " expression=#<omitted>")
-      (%display " stripped=")		(%pretty-print (reader-annotation-stripped S))
-      ;;Avoid printing  the SOURCE field  because it  may be removed  in the
-      ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
-      ;;field.
-      (%display " textual-position=")	(%write (reader-annotation-textual-position S))
-      (%display "]"))
-
-    ($record-type-printer-set! (record-type-descriptor <reader-annotation>) %annotation-printer))
+  ($set-std-printer! (type-descriptor reader-annotation)
+		     (lambda (S port sub-printer)
+		       (define-inline (%display thing)
+			 (display thing port))
+		       (define-inline (%write thing)
+			 (write thing port))
+		       (define-inline (%pretty-print thing)
+			 (pretty-print* thing port 0 #f))
+		       (%display "#[reader-annotation")
+		       ;;Writing   the  annotation   expression  makes   the  output   really
+		       ;;unreadable.
+		       (%display " expression=#<omitted>")
+		       (%display " stripped=")		(%pretty-print (reader-annotation-stripped S))
+		       ;;Avoid printing  the SOURCE field  because it  may be removed  in the
+		       ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
+		       ;;field.
+		       (%display " textual-position=")	(%write (reader-annotation-textual-position S))
+		       (%display "]")))
 
   #| end of module |# )
 

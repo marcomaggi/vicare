@@ -28,7 +28,6 @@
     stats-gc-real-secs		stats-gc-real-usecs
     stats-bytes-minor		stats-bytes-major)
   (import (except (vicare)
-		  <stats>
 		  time-it verbose-timer		time-and-gather
 
 		  stats?
@@ -42,33 +41,28 @@
 		  stats-bytes-minor		stats-bytes-major))
 
 
-(define-record-type (<stats> make-stats stats?)
+(define-struct (stats %make-stats stats?)
   ;;Do not  change the order  of the fields!!!  It  must match the  implementation of
   ;;"ikrt_stats_now()" in "src/ikarus-runtime.c".
   ;;
-  (nongenerative vicare:timer:<stats>)
-  (fields
-    (immutable user-secs		stats-user-secs)
-    (immutable user-usecs		stats-user-usecs)
-    (immutable sys-secs			stats-sys-secs)
-    (immutable sys-usecs		stats-sys-usecs)
-    (immutable real-secs		stats-real-secs)
-    (immutable real-usecs		stats-real-usecs)
-    (immutable collection-id		stats-collection-id)
-    (immutable gc-user-secs		stats-gc-user-secs)
-    (immutable gc-user-usecs		stats-gc-user-usecs)
-    (immutable gc-sys-secs		stats-gc-sys-secs)
-    (immutable gc-sys-usecs		stats-gc-sys-usecs)
-    (immutable gc-real-secs		stats-gc-real-secs)
-    (immutable gc-real-usecs		stats-gc-real-usecs)
-    (immutable bytes-minor		stats-bytes-minor)
-    (immutable bytes-major		stats-bytes-major))
-  (protocol
-    (lambda (make-record)
-      (lambda ()
-	(make-record #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f))))
-  (opaque #t)
-  (sealed #t))
+  (user-secs
+   user-usecs
+   sys-secs
+   sys-usecs
+   real-secs
+   real-usecs
+   collection-id
+   gc-user-secs
+   gc-user-usecs
+   gc-sys-secs
+   gc-sys-usecs
+   gc-real-secs
+   gc-real-usecs
+   bytes-minor
+   bytes-major))
+
+(define (make-stats)
+  (%make-stats #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f))
 
 (define ($set-stats! t)
   (foreign-call "ikrt_stats_now" t))

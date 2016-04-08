@@ -34,12 +34,11 @@
     internal-delete
 
     ;; Scheme type descriptor
-    <scheme-type-descriptor>-rtd		<scheme-type-descriptor>-rcd
     make-scheme-type-descriptor			scheme-type-descriptor?
-    scheme-type-descriptor.name			scheme-type-descriptor.parent
-    scheme-type-descriptor.type-predicate	scheme-type-descriptor.equality-predicate
-    scheme-type-descriptor.comparison-procedure	scheme-type-descriptor.hash-function
-    scheme-type-descriptor.uids-list		scheme-type-descriptor.method-retriever
+    scheme-type-descriptor-name			scheme-type-descriptor-parent
+    scheme-type-descriptor-type-predicate	scheme-type-descriptor-equality-predicate
+    scheme-type-descriptor-comparison-procedure	scheme-type-descriptor-hash-function
+    scheme-type-descriptor-uids-list		scheme-type-descriptor-method-retriever
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
@@ -57,12 +56,11 @@
 
 		  ;; Scheme type descriptor
 		  <scheme-type-descriptor>
-		  <scheme-type-descriptor>-rtd			<scheme-type-descriptor>-rcd
 		  make-scheme-type-descriptor			scheme-type-descriptor?
-		  scheme-type-descriptor.name			scheme-type-descriptor.parent
-		  scheme-type-descriptor.type-predicate		scheme-type-descriptor.equality-predicate
-		  scheme-type-descriptor.comparison-procedure	scheme-type-descriptor.hash-function
-		  scheme-type-descriptor.uids-list		scheme-type-descriptor.method-retriever
+		  scheme-type-descriptor-name			scheme-type-descriptor-parent
+		  scheme-type-descriptor-type-predicate		scheme-type-descriptor-equality-predicate
+		  scheme-type-descriptor-comparison-procedure	scheme-type-descriptor-hash-function
+		  scheme-type-descriptor-uids-list		scheme-type-descriptor-method-retriever
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
@@ -79,7 +77,12 @@
 		  hashtable-eq?				hashtable-eqv?
 		  hashtable-equiv?
 		  keyword-hash				pointer-hash
-		  transcoder-hash			string->keyword)
+		  transcoder-hash			string->keyword
+		  reader-annotation?
+		  reader-annotation-expression
+		  reader-annotation-stripped
+		  reader-annotation-source
+		  reader-annotation-textual-position)
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
@@ -145,6 +148,14 @@
 		  record-type-method-retriever
 		  record-type-hash-function)
 	    system::)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Apr 8,
+    ;;2016)
+    (only (ikarus.reader)
+	  reader-annotation?
+	  reader-annotation-expression
+	  reader-annotation-stripped
+	  reader-annotation-source
+	  reader-annotation-textual-position)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
 		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco
@@ -182,24 +193,24 @@
   (define (%built-in-scheme-object-call btd)
     (cond ((eq? 'hash method-name.sym)
 	   (let loop ((btd btd))
-	     (cond ((scheme-type-descriptor.hash-function btd)
+	     (cond ((scheme-type-descriptor-hash-function btd)
 		    => %apply-hash-function)
-		   ((scheme-type-descriptor.parent btd)
+		   ((scheme-type-descriptor-parent btd)
 		    => loop)
 		   (else
 		    (%apply-hash-function object-hash)))))
 	  (else
 	   (let loop ((btd btd))
-	     (cond ((scheme-type-descriptor.method-retriever btd)
+	     (cond ((scheme-type-descriptor-method-retriever btd)
 		    => (lambda (method-retriever)
 			 (cond ((method-retriever method-name.sym)
 				=> (lambda (proc)
 				     (apply proc subject args)))
-			       ((scheme-type-descriptor.parent btd)
+			       ((scheme-type-descriptor-parent btd)
 				=> loop)
 			       (else
 				(%error-scheme-type-has-no-matching-method)))))
-		   ((scheme-type-descriptor.parent btd)
+		   ((scheme-type-descriptor-parent btd)
 		    => loop)
 		   (else
 		    (%error-scheme-type-has-no-matching-method)))))))
@@ -309,37 +320,28 @@
 ;;types: pairs, fixnums, strings, et cetera.  Lexical variables bound to instances of
 ;;this type should be called BTD (as in "built-in type descriptor").
 ;;
-(define-record-type (<scheme-type-descriptor> make-scheme-type-descriptor scheme-type-descriptor?)
-  (nongenerative vicare:built-in:<scheme-type-descriptor>)
-  (fields
-    (immutable name			scheme-type-descriptor.name)
+(define-struct (scheme-type-descriptor make-scheme-type-descriptor scheme-type-descriptor?)
+  (name
 		;A symbol representing the name of this type.  For example: <string>.
-    (immutable parent			scheme-type-descriptor.parent)
+   parent
 		;False  if  this  type  has  no  parent;  otherwise  an  instance  of
-		;"<scheme-type-descriptor>" representing the parent of this type.
-    (immutable type-predicate		scheme-type-descriptor.type-predicate)
+		;"scheme-type-descriptor" representing the parent of this type.
+   type-predicate
 		;False or a function implementing the type predicate.
-    (immutable equality-predicate	scheme-type-descriptor.equality-predicate)
+   equality-predicate
 		;False or a function implementing the equality predicate.
-    (immutable comparison-procedure	scheme-type-descriptor.comparison-procedure)
+   comparison-procedure
 		;False or a function implementing the comparison procedure.
-    (immutable hash-function		scheme-type-descriptor.hash-function)
+   hash-function
 		;False or a function implementing the hash function.
-    (immutable uids-list		scheme-type-descriptor.uids-list)
+   uids-list
 		;A list of symbols representing the  hierarchy of UIDs for this type.
 		;The  first item  in the  list  is the  UID  of this  type, then  the
 		;parent's UID, then the grandparent's UID, et cetera.
-    (immutable method-retriever		scheme-type-descriptor.method-retriever)
+   method-retriever))
 		;If this  type has methods: a  procedure to be applied  to the method
 		;name  (a symbol)  to  retrieve the  method implementation  function;
 		;otherwise false.
-    #| end of FIELDS |# ))
-
-(define <scheme-type-descriptor>-rtd
-  (record-type-descriptor <scheme-type-descriptor>))
-
-(define <scheme-type-descriptor>-rcd
-  (record-constructor-descriptor <scheme-type-descriptor>))
 
 
 ;;;; object type helpers: <top>
