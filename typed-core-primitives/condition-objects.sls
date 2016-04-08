@@ -35,7 +35,8 @@
 
 (section
 
-(declare-type-predicate condition? <condition>)
+(declare-type-predicate condition?		<condition>)
+(declare-type-predicate compound-condition?	<compound-condition>)
 
 (declare-core-primitive condition-and-rtd?
     (safe)
@@ -234,6 +235,21 @@
     => (&source-position)))
   (attributes
    ((_ _ _ _ _)			effect-free result-true)))
+
+(declare-core-primitive make-procedure-signature-argument-violation
+    (safe)
+  (signatures
+   ((<positive-fixnum> <top> <top>)		=> (&procedure-signature-argument-violation))))
+
+(declare-core-primitive make-procedure-signature-return-value-violation
+    (safe)
+  (signatures
+   ((<positive-fixnum> <top> <top>)		=> (&procedure-signature-return-value-violation))))
+
+(declare-core-primitive make-procedure-arguments-consistency-violation
+    (safe)
+  (signatures
+   (()						=> (&procedure-arguments-consistency-violation))))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
@@ -465,6 +481,11 @@
     (safe)
   (signatures
    ((<&who-value> <string> <top> . <list>)	=> (<no-return>))))
+
+(declare-core-primitive procedure-signature-return-value-violation
+    (safe)
+  (signatures
+   ((<&who-value> <string> <non-negative-fixnum> <top> <top>)	=> (<no-return>))))
 
 /section)
 

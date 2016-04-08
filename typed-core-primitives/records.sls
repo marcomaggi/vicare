@@ -347,9 +347,39 @@
 /section)
 
 
-;;;; R6RS records, unsafe primitives
+;;;; R6RS record-type descriptors, unsafe primitives
 
 (section
+
+(declare-core-primitive $make-record-type-descriptor
+    (unsafe)
+  (signatures
+   ;;name
+   ;;parent uid sealed? opaque?
+   ;;fields normalised-fields
+   ((<symbol>
+     (or <false> <record-type-descriptor>) (or <false> <symbol>) <boolean> <boolean>
+     (vector-of (pair <symbol> <symbol>)) (vector-of (pair <boolean> <symbol>)))
+    => (<record-type-descriptor>))))
+
+(declare-core-primitive $make-record-type-descriptor-ex
+    (unsafe)
+  (signatures
+   ;;name
+   ;;parent uid sealed? opaque?
+   ;;fields normalised-fields
+   ;;destructor printer
+   ;;equality-predicate comparison-procedure hash-function
+   ;;method-retriever
+   ((<symbol>
+     (or <false> <record-type-descriptor>) (or <false> <symbol>) <boolean> <boolean>
+     (vector-of (pair <symbol> <symbol>)) (vector-of (pair <boolean> <symbol>))
+     (or <false> <procedure>) (or <false> <procedure>)
+     (or <false> <procedure>) (or <false> <procedure>) (or <false> <procedure>)
+     (or <false> <procedure>))
+    => (<record-type-descriptor>))))
+
+;;; --------------------------------------------------------------------
 
 (declare-core-primitive $record-constructor
     (unsafe)
@@ -358,6 +388,39 @@
   (attributes
    ((_)						effect-free result-true)))
 
+(declare-core-primitive $record-type-destructor
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor>)			=> ((or <false> <procedure>)))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $rtd-subtype?
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor> <record-type-descriptor>)		=> (<boolean>))))
+
+/section)
+
+
+;;;; R6RS record-constructor descriptors, unsafe primitives
+
+(section
+
+(declare-core-primitive $make-record-constructor-descriptor
+    (unsafe)
+  (signatures
+   ;;rtd parent-rcd protocol
+   ((<record-type-descriptor> (or <false> <record-constructor-descriptor>) (or <false> <procedure>))
+    => (<record-constructor-descriptor>))))
+
+/section)
+
+
+;;;; R6RS records, unsafe primitives
+
+(section
+
 (declare-core-primitive $record-and-rtd?
     (unsafe)
   (signatures
@@ -365,22 +428,10 @@
   (attributes
    ((_)						effect-free)))
 
-(declare-core-primitive $rtd-subtype?
-    (unsafe)
-  (signatures
-   ((<record-type-descriptor> <record-type-descriptor>)		=> (<boolean>)))
-  (attributes
-   ((_)						effect-free)))
-
 (declare-core-primitive $record-ref
     (unsafe)
   (signatures
    ((<record> <non-negative-fixnum>)		=> (<top>))))
-
-(declare-core-primitive $record-type-destructor
-    (unsafe)
-  (signatures
-   ((<record-type-descriptor>)			=> ((or <false> <procedure>)))))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

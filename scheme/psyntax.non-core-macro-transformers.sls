@@ -763,61 +763,123 @@
   ;;
   (define (main)
     (syntax-match input-form.stx ()
-      ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
+      ((_ ?name ?parent-name ?constructor ?predicate (?field* ?accessor*) ...)
        (begin
-	 (unless (identifier? ?name)
-	   (__synner__ "expected identifier as condition type name" ?name))
-	 (unless (identifier? ?super)
-	   (__synner__ "expected identifier as condition type super-type name" ?super))
-	 (unless (identifier? ?constructor)
-	   (__synner__ "expected identifier as condition type constructor name" ?constructor))
-	 (unless (identifier? ?predicate)
-	   (__synner__ "expected identifier as condition type predicate name" ?predicate))
-	 (for-each (lambda (accessor.id)
-		     (unless (identifier? accessor.id)
-		       (__synner__ "expected identifier as condition type field accessor name" accessor.id)))
-	   ?accessor*)
-	 (let*-values
-	     (((field-name*.id field-type*.id)	(map-for-two-retvals %parse-field-spec ?field*))
-	      ((internal-constructor.sym)	(gensym (identifier->symbol ?constructor)))
-	      ((internal-predicate.sym)		(gensym (identifier->symbol ?predicate)))
-	      ((record-accessor*.sym)		(map (lambda (x) (gensym)) ?accessor*))
-	      ((internal-accessor*.sym)		(map (lambda (x) (gensym)) ?accessor*))
-	      ((arg.sym)			(gensym))
-	      ((field-arg*.sym)			(map (lambda (x) (gensym)) ?field*))
-	      ((accessor-definition*.stx)
-	       (map (lambda (field-name.id field-type.id accessor.id record-accessor.sym internal-accessor.sym)
-		      `(begin
-			 (define ,internal-accessor.sym
-			   ;;Remember  that  the  accessor  has to  access  a  simple
-			   ;;condition  object  embedded   in  a  compound  condition
-			   ;;object.
-			   (condition-accessor (record-type-descriptor ,?name) ,record-accessor.sym (quote ,accessor.id)))
-			 (define/checked ((brace ,accessor.id ,field-type.id) (brace ,arg.sym ,?name))
-			   (unsafe-cast-signature (,field-type.id) (,internal-accessor.sym ,arg.sym)))))
-		 field-name*.id field-type*.id ?accessor* record-accessor*.sym internal-accessor*.sym)))
-	   (bless
-	    `(module (,?name ,?constructor ,?predicate . ,?accessor*)
-	       (define-record-type (,?name ,internal-constructor.sym ,?predicate)
-		 (parent ,?super)
-		 (fields ,@(map (lambda (field.stx record-accessor.sym)
-				  `(immutable ,field.stx ,record-accessor.sym))
-			     ?field* record-accessor*.sym))
-		 (custom-predicate
-		   (lambda (,arg.sym)
-		     (condition-predicate (record-type-descriptor ,?name))))
-		 (nongenerative)
-		 (sealed #f)
-		 (opaque #f))
-	       ;;At present  we cannot  know the  exact number  of arguments  for the
-	       ;;constructor: we should take into account the arguments needed by the
-	       ;;parent constructor.
-	       (define/checked ((brace ,?constructor ,?name) . ,arg.sym)
-	       	 (unsafe-cast-signature (,?name) (apply ,internal-constructor.sym ,arg.sym)))
-	       ,@accessor-definition*.stx
-	       #| end of module |# )
-	    ))))
-      ))
+	 (%validate-arguments ?name ?parent-name ?constructor ?predicate ?accessor*)
+	 (receive (field-name*.id field-type*.id)
+	     (map-for-two-retvals %parse-field-spec ?field*)
+	   (let* ((UID				(gensym (syntax->datum ?name)))
+		  (RTD				(mkname ?name "-rtd"))
+		  (RCD				(mkname ?name "-rcd"))
+		  (ACCESSOR-IDX*		(iota 0 ?accessor*))
+		  (internal-constructor.sym	(gensym (syntax->datum ?constructor)))
+		  (internal-predicate.sym	(gensym (syntax->datum ?predicate)))
+		  (internal-accessor*.sym	(map (lambda (?accessor)
+						       (gensym (syntax->datum ?accessor)))
+						  ?accessor*))
+		  (SEALED?			#f)
+		  (OPAQUE?			#f)
+		  (ARG				(gensym "arg"))
+		  ;;The fields vector has the format:
+		  ;;
+		  ;;   #((immutable . ?field-name) ...)
+		  ;;
+		  (FIELDS-VECTOR		(list->vector (map (lambda (field-name.id)
+								     (cons 'immutable field-name.id))
+								field-name*.id)))
+		  ;;The normalised fields vector has the format:
+		  ;;
+		  ;;   #((#f . ?field-name) ...)
+		  ;;
+		  (NORMAL-FIELDS-VECTOR		(list->vector (map (lambda (field-name.id)
+								     (cons #f field-name.id))
+								field-name*.id)))
+		  ;;This is  an alist  having: field name  symbols as  keys; syntactic
+		  ;;identifiers representing accessor names as values.
+		  (ACCESSOR-TABLE		`(list ,@(map (lambda (field-name.id ?accessor)
+								`(cons (quote ,field-name.id) (syntax ,?accessor)))
+							   field-name*.id ?accessor*)))
+		  (METHOD-TABLE			ACCESSOR-TABLE)
+		  ;;This  is  a   closure  accepting  as  single   argument  a  symbol
+		  ;;representing a field  name; the single return value is  false or a
+		  ;;field accessor closure object.
+		  (METHOD-RETRIEVER `(lambda (,ARG)
+				       (case ,ARG
+					 ,@(map (lambda (field-name.id accessor.id)
+						  `((,field-name.id) ,accessor.id))
+					     field-name*.id ?accessor*)
+					 (else #f))))
+		  ;;A, possibly  empty, list of symbolic  expressions representing the
+		  ;;definitions of field accessor.  To be spliced in the output.
+		  (ACCESSORS (map (lambda (?accessor field-type.id internal-accessor.sym accessor-idx)
+				    `(begin
+				       (define/checked ((brace ,?accessor ,field-type.id) (brace ,ARG ,?name))
+					 (,internal-accessor.sym ,ARG))
+				       (define ,internal-accessor.sym
+					 ($condition-accessor ,RTD
+							      ($record-accessor/index ,RTD ,accessor-idx (quote ,?accessor))
+							      (quote ,?accessor)))))
+			       ?accessor* field-type*.id internal-accessor*.sym ACCESSOR-IDX*)))
+	     ;;We use the  records procedural layer and the unsafe  functions to make
+	     ;;it easier to rotate the boot images.
+	     (bless
+	      `(module (,?name ,?constructor ,?predicate . ,?accessor*)
+		 (define-syntax ,?name
+		   (make-record-type-spec (syntax ,?name)
+					  (syntax ,RTD)
+					  (syntax ,RCD)
+					  #f #;super-protocol.id
+					  (syntax ,?parent-name)
+					  (syntax ,?constructor)
+					  #f
+					  (syntax ,?predicate)
+					  #f #;equality-predicate
+					  #f #;comparison-procedure
+					  #f #;hash-function
+					  ,ACCESSOR-TABLE
+					  '() #;safe-mutators.table
+					  ,METHOD-TABLE))
+		 (define/std ,RTD
+		   ($make-record-type-descriptor-ex (quote ,?name) (record-type-descriptor ,?parent-name)
+						    (quote ,UID) ,SEALED? ,OPAQUE?
+						    (quote ,FIELDS-VECTOR) (quote ,NORMAL-FIELDS-VECTOR)
+						    #f ;destructor
+						    #f ;printer
+						    #f ;equality-predicate
+						    #f ;comparison-procedure
+						    #f ;hash-function
+						    ,METHOD-RETRIEVER))
+		 (define/std ,RCD
+		   ($make-record-constructor-descriptor ,RTD (record-constructor-descriptor ,?parent-name) #f))
+		 ;;At present  we cannot know the  exact number of arguments  for the
+		 ;;constructor: we should  take into account the  arguments needed by
+		 ;;the parent constructor.
+		 (define/checked ((brace ,?constructor ,?name) . ,ARG)
+		   (unsafe-cast-signature (,?name) (apply ,internal-constructor.sym ,ARG)))
+		 (define/std ,internal-constructor.sym
+		   ($record-constructor ,RCD))
+		 (define/checked ({,?predicate <boolean>} ,ARG)
+		   (unsafe-cast-signature (<boolean>) (,internal-predicate.sym ,ARG)))
+		 (define/std ,internal-predicate.sym
+		   ($condition-predicate ,RTD))
+		 ,@ACCESSORS
+		 #| end of module |# ))))))
+      (_
+       (__synner__ "invalid syntax in DEFINE-CONDITION-TYPE macro use"))))
+
+  (define (%validate-arguments ?name ?parent-name ?constructor ?predicate ?accessor*)
+    (unless (identifier? ?name)
+      (__synner__ "expected identifier as condition type name" ?name))
+    (unless (identifier? ?parent-name)
+      (__synner__ "expected identifier as condition type super-type name" ?parent-name))
+    (unless (identifier? ?constructor)
+      (__synner__ "expected identifier as condition type constructor name" ?constructor))
+    (unless (identifier? ?predicate)
+      (__synner__ "expected identifier as condition type predicate name" ?predicate))
+    (for-each (lambda (accessor.id)
+		(unless (identifier? accessor.id)
+		  (__synner__ "expected identifier as condition type field accessor name" accessor.id)))
+      ?accessor*))
 
   (define (%parse-field-spec field-spec.stx)
     (syntax-match field-spec.stx (brace)
@@ -839,6 +901,14 @@
 		       "expected identifier or typed identifier as condition type field specification"
 		     "expected identifier as condition type field name")
 		   field-spec.stx))))
+
+  (define (mkname name suffix)
+    (datum->syntax name (string->symbol (string-append (symbol->string (syntax->datum name)) suffix))))
+
+  (define (iota idx item*)
+    (if (pair? item*)
+	(cons idx (iota (fxadd1 idx) (cdr item*)))
+      '()))
 
   (main))
 

@@ -1838,6 +1838,10 @@
     ($record-type-method-retriever		$records)
     ($record-type-method-retriever-set!		$records)
 
+    ;;These are for internal use in the expansion of DEFINE-CONDITION-TYPE.
+    ($condition-predicate)
+    ($condition-accessor)
+
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
     ($pointer=					$pointers)

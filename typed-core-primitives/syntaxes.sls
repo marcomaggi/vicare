@@ -277,20 +277,6 @@
     ;;When successful:  return a proper or  improper list representing the  same type
     ;;signature, with the identifiers "_" replaced with "<top>" or "<list>".
     ;;
-    (case-define %replace
-      ((id)
-       (%replace id #f))
-      ((id in-tail-position?)
-       (cond ((free-identifier=? #'_ id)
-	      (if in-tail-position?
-		  #'<list>
-		#'<top>))
-	     ;;FIXME  This  is  a  temporary  substitution.   When  type  unions  are
-	     ;;implemented  we should  remove this  and use  a proper  definition for
-	     ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
-	     ((free-identifier=? #'<syntax-object> id)
-	      #'<top>)
-	     (else id))))
     (let recur ((sig type-signature.stx))
       (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
 			     condition or and not alist hashtable lambda case-lambda =>)
@@ -306,68 +292,94 @@
 	(?type
 	 (and (identifier? #'?type)
 	      (free-identifier=? #'_ #'?type))
-	 (%replace #'?type #t))
+	 (%replace-type-alias #'?type #t))
 
 	((list-of ?item-type)
-	 #`(list-of #,(%replace #'?item-type)))
+	 #`(list-of #,(%validate-type-annotation #'?item-type)))
 
-	(((pair-of ?item-type) . ?rest)
-	 (cons #`(pair-of   #,(%replace #'?item-type)) (recur #'?rest)))
-
-	(((list-of ?item-type) . ?rest)
-	 (cons #`(list-of   #,(%replace #'?item-type)) (recur #'?rest)))
-
-	(((vector-of ?item-type) . ?rest)
-	 (cons #`(vector-of #,(%replace #'?item-type)) (recur #'?rest)))
-
-	(((list ?item-type0 ?item-type ...) . ?rest)
-	 (cons #`(list . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
-	       (recur #'?rest)))
-
-	(((vector ?item-type0 ?item-type ...) . ?rest)
-	 (cons #`(vector . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
-	       (recur #'?rest)))
-
-	((hashtable ?key-type ?value-type)
-	 (list #'hashtable
-	       (%replace #'?key-type)
-	       (%replace #'?value-type)))
-
-	((alist ?key-type ?value-type)
-	 (list #'alist
-	       (%replace #'?key-type)
-	       (%replace #'?value-type)))
-
-	((lambda ?argtypes => ?rettypes)
-	 (error #f "not yet implemented" sig))
-
-	((case-lambda
-	   (?argtypes0 => ?rettypes0)
-	   (?argtypes* => ?rettypes*)
-	   ...)
-	 (error #f "not yet implemented" sig))
-
-	(((condition ?item-type0 ?item-type ...) . ?rest)
-	 (cons #`(condition . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
-	       (recur #'?rest)))
-
-	(((or ?item-type0 ?item-type ...) . ?rest)
-	 (cons #`(or . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
-	       (recur #'?rest)))
-
-	(((and ?item-type0 ?item-type ...) . ?rest)
-	 (cons #`(and . #,(map %replace (syntax->list #'(?item-type0 ?item-type ...))))
-	       (recur #'?rest)))
-
-	(((not ?item-type) . ?rest)
-	 (cons #`(not #,(%replace #'?item-type)) (recur #'?rest)))
-
-	((?type . ?rest)
-	 (identifier? #'?type)
-	 (cons (%replace #'?type) (recur #'?rest)))
+	((?car . ?cdr)
+	 (cons (%validate-type-annotation #'?car)
+	       (recur #'?cdr)))
 
 	(_
 	 (synner "invalid type signature" type-signature.stx)))))
+
+  (define (%validate-type-annotation type-annotation.stx)
+    (syntax-case type-annotation.stx
+	(pair list vector pair-of list-of vector-of <no-return> <list>
+	      condition or and not alist hashtable lambda case-lambda =>)
+
+      (?type
+       (identifier? #'?type)
+       (%replace-type-alias #'?type))
+
+      ((pair-of ?item-type)
+       #`(pair-of #,(%validate-type-annotation #'?item-type)))
+
+      ((list-of ?item-type)
+       #`(list-of #,(%validate-type-annotation #'?item-type)))
+
+      ((vector-of ?item-type)
+       #`(vector-of #,(%validate-type-annotation #'?item-type)))
+
+      ((pair ?car-type ?cdr-type)
+       #`(pair #,(%validate-type-annotation #'?car-type)
+	       #,(%validate-type-annotation #'?cdr-type)))
+
+      ((list ?item-type0 ?item-type ...)
+       #`(list . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))
+
+      ((vector ?item-type0 ?item-type ...)
+       #`(vector . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))
+
+      ((hashtable ?key-type ?value-type)
+       (list #'hashtable
+	     (%validate-type-annotation #'?key-type)
+	     (%validate-type-annotation #'?value-type)))
+
+      ((alist ?key-type ?value-type)
+       (list #'alist
+	     (%validate-type-annotation #'?key-type)
+	     (%validate-type-annotation #'?value-type)))
+
+      ((lambda ?argtypes => ?rettypes)
+       (error #f "not yet implemented" type-annotation.stx))
+
+      ((case-lambda
+	 (?argtypes0 => ?rettypes0)
+	 (?argtypes* => ?rettypes*)
+	 ...)
+       (error #f "not yet implemented" type-annotation.stx))
+
+      ((condition ?item-type0 ?item-type ...)
+       #`(condition . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))
+
+      ((or ?item-type0 ?item-type ...)
+       #`(or . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))
+
+      ((and ?item-type0 ?item-type ...)
+       #`(and . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))
+
+      ((not ?item-type)
+       #`(not #,(%validate-type-annotation #'?item-type)))
+
+      (_
+       (synner "invalid type annotation" type-annotation.stx))))
+
+  (case-define %replace-type-alias
+    ((id)
+     (%replace-type-alias id #f))
+    ((id in-tail-position?)
+     (cond ((free-identifier=? #'_ id)
+	    (if in-tail-position?
+		#'<list>
+	      #'<top>))
+	   ;;FIXME  This  is   a  temporary  substitution.   When   type  unions  are
+	   ;;implemented  we should  remove  this  and use  a  proper definition  for
+	   ;;"<syntax-object>".  (Marco Maggi; Sun Dec 27, 2015)
+	   ((free-identifier=? #'<syntax-object> id)
+	    #'<top>)
+	   (else id))))
 
   (define (%validate-replacements replacements.stx)
     ;;Validate REPLACEMENTS.STX as syntax object  representing a list of identifiers.

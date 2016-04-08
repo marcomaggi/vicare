@@ -354,8 +354,8 @@
     preconditions
 
     ;; for internal use only
-    make-simple-condition
-    %raise-out-of-memory)
+    $condition-predicate			$condition-accessor
+    make-simple-condition			%raise-out-of-memory)
   (import (except (vicare)
 		  ;;We use an internal macro  definition to define condition types in
 		  ;;this library.
