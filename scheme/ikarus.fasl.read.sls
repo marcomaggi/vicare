@@ -46,6 +46,9 @@
 
   (include "ikarus.wordsize.scm" #t)
 
+;; (define begin-end-of-file
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.fasl.read.sls begin")))
+
 
 ;;;; main functions
 
@@ -584,6 +587,10 @@
 
 
 ;;;;done
+
+;; #!vicare
+;; (define dummy-end-of-file
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.fasl.read.sls end")))
 
 #| end of library |# )
 

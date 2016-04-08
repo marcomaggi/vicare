@@ -72,7 +72,8 @@
     record-type-compose-hash-function
 
     ;; syntactic bindings for internal use only
-    $make-record-type-descriptor		$make-record-constructor-descriptor
+    $make-record-type-descriptor		$make-record-type-descriptor-ex
+    $make-record-constructor-descriptor
     $record-constructor				$rtd-subtype?
     $record-accessor/index
     internal-applicable-record-type-destructor
@@ -927,7 +928,9 @@
   #| end of module |# )
 
 
-(module (make-record-type-descriptor $make-record-type-descriptor)
+(module (make-record-type-descriptor
+	 $make-record-type-descriptor
+	 $make-record-type-descriptor-ex)
   ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
   ;;image  to  be initialised  correctly.   These  accessors have  no  infrastructure
   ;;checking  the  type of  values,  so  they can  be  used  when the  infrastructure
@@ -945,6 +948,19 @@
       ($make-record-type-descriptor name parent uid sealed? opaque? fields normalised-fields)))
 
   (define ($make-record-type-descriptor name parent uid sealed? opaque? fields normalised-fields)
+    ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
+				     #f	;destructor
+				     #f	;printer
+				     #f	;equality-predicate
+				     #f	;comparison-procedure
+				     #f	;hash-function
+				     #f	;method-retriever
+				     ))
+
+  (define ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
+					   destructor printer
+					   equality-predicate comparison-procedure hash-function
+					   method-retriever)
     ;;Return a  record-type descriptor representing  a record type distinct  from all
     ;;the built-in types and other record types.
     ;;
@@ -959,11 +975,20 @@
     ;;
     (receive-and-return (rtd)
 	(if (symbol? uid)
-	    (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields)
-	  (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields))
+	    (%make-nongenerative-rtd name parent uid sealed? opaque? fields normalised-fields
+				     destructor printer
+				     equality-predicate comparison-procedure hash-function
+				     method-retriever)
+	  (%generate-rtd name parent (gensym name) #t sealed? opaque? normalised-fields
+			 destructor printer
+			 equality-predicate comparison-procedure hash-function
+			 method-retriever))
       ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))
 
-  (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields)
+  (define (%generate-rtd name parent-rtd uid generative? sealed? opaque? normalised-fields
+			 destructor printer
+			 equality-predicate comparison-procedure hash-function
+			 method-retriever)
     ;;Build and return a new instance of RTD struct.
     ;;
     (let* ((fields-number	($vector-length normalised-fields))
@@ -984,16 +1009,15 @@
 		   (void) ;initialiser
 		   #f     ;default-protocol
 		   #f     ;default-rcd
-		   #f     ;destructor
-		   #f     ;printer
-		   #f     ;equality-predicate
-		   #f     ;comparison-procedure
-		   #f     ;hash-function
-		   #f     ;method-retriever
-		   )
+		   destructor printer
+		   equality-predicate comparison-procedure hash-function
+		   method-retriever)
 	(%intern-nongenerative-rtd! uid rtd))))
 
-  (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields)
+  (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? fields normalised-fields
+				   destructor printer
+				   equality-predicate comparison-procedure hash-function
+				   method-retriever)
     ;;Build and  return a  new instance of  RTD or return  an already  generated (and
     ;;interned) RTD.  If the  specified UID holds an RTD in  its "value" field: check
     ;;that the arguments are compatible and return the interned RTD.
@@ -1023,7 +1047,10 @@
 		  (%error "parent"))))
 	  (else
 	   ;;Build a new RTD and intern it.
-	   (%generate-rtd name parent-rtd uid #f sealed? opaque? normalised-fields))))
+	   (%generate-rtd name parent-rtd uid #f sealed? opaque? normalised-fields
+			  destructor printer
+			  equality-predicate comparison-procedure hash-function
+			  method-retriever))))
 
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
     ($set-symbol-value! ?uid ?rtd))

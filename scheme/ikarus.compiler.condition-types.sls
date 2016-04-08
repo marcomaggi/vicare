@@ -56,6 +56,9 @@
     compiler-internal-error)
   (import (vicare))
 
+;; (define begin-end-of-file
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.compiler.condition-types.sls begin")))
+
 
 ;;;; helpers
 

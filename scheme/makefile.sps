@@ -418,6 +418,7 @@
     "ikarus.code-objects.sls"
     "ikarus.foldable.sls"
 ;;;
+    "ikarus.compiler.compat.sls"
     "ikarus.compiler.condition-types.sls"
     "ikarus.intel-assembler.sls"
     "ikarus.fasl.write.sls"
@@ -469,7 +470,6 @@
     ;;
     "ikarus.compiler.core-primitive-properties.sls"
 ;;;
-    "ikarus.compiler.compat.sls"
     "ikarus.compiler.config.sls"
     "ikarus.compiler.helpers.sls"
     "ikarus.compiler.system-value.sls"

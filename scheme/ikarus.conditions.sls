@@ -355,7 +355,6 @@
 
     ;; for internal use only
     make-simple-condition
-    initialise-condition-objects-late-binding
     %raise-out-of-memory)
   (import (except (vicare)
 		  ;;We use an internal macro  definition to define condition types in
@@ -681,6 +680,7 @@
 		  )
     (only (ikarus records procedural)
 	  $make-record-type-descriptor
+	  $make-record-type-descriptor-ex
 	  $make-record-constructor-descriptor
 	  $record-and-rtd?
 	  $record-constructor
@@ -694,23 +694,83 @@
 	  define-list-of-type-predicate))
 
 
-;;;; helpers
-
-(begin-for-syntax
-  ;;List of syntax objects to be put in the body of the records' methods late binding
-  ;;initialisation function.
-  (define late-binding-form* '()))
-
-(define-syntax (define-late-binding-init-func stx)
-  ;;Define the  records' methods late  binding initialisation function.   When called
-  ;;the function  initialises the tables used  for late binding of  records' methods.
-  ;;The  use  of  an  initialisation  function   to  be  called  later  (rather  than
-  ;;initialisation expressions  at the  end of  in this library)  makes it  easier to
-  ;;rotate the boot images.
+(define-syntax (define-condition-type stx)
+  ;;This macro is used in this library to define condition object types.
   ;;
+  ;;NOTE Remember that this  macro is *not* the one exported by  the boot image.  The
+  ;;transformer of  the keyword  binding DEFINE-CONDITION-TYPE  exported by  the boot
+  ;;image is integrated in the expander.
+  ;;
+  (define (mkname prefix name suffix)
+    (datum->syntax name (string->symbol (string-append prefix
+						       (symbol->string (syntax->datum name))
+						       suffix))))
+  (define (iota idx stx)
+    (syntax-case stx ()
+      (()	'())
+      ((?x . ?x*)
+       (cons idx (iota (fxadd1 idx) #'?x*)))))
   (syntax-case stx ()
-    ((_ ?who)
-     #`(define (?who) #,@(reverse late-binding-form*)))
+    ((_ ?name ?parent-name ?constructor ?predicate (?field ?accessor) ...)
+     (and (identifier? #'?name)
+	  (identifier? #'?parent-name)
+	  (identifier? #'?constructor)
+	  (identifier? #'?predicate)
+	  (andmap identifier? #'(?field ...))
+	  (andmap identifier? #'(?accessor ...)))
+     (with-syntax
+	 ((UID			(mkname "vicare:condition:" #'?name ""))
+	  (RTD			(mkname "" #'?name "-rtd"))
+	  (RCD			(mkname "" #'?name "-rcd"))
+	  (PARENT-RTD		(mkname "" #'?parent-name "-rtd"))
+	  (PARENT-RCD		(mkname "" #'?parent-name "-rcd"))
+	  ((ACCESSOR-IDX ...)	(iota 0 #'(?accessor ...)))
+	  (SEALED?		#f)
+	  (OPAQUE?		#f)
+	  (BV-NAME		(string->utf8 (symbol->string (syntax->datum #'?name)))))
+       ;;Register  a syntax  object representing  an expression  which, expanded  and
+       ;;evalualated, will initialise  the record's methods late  binding table.  The
+       ;;expression  will be  included  in a  global  initialisation function.   This
+       ;;allows for easier rotation of boot images.
+       ;; (set-cons! late-binding-form*
+       ;; 		  (syntax-case #'(?field ...) ()
+       ;; 		    ;;No fields.
+       ;; 		    (()	#'(void))
+       ;; 		    ;;At least one field.
+       ;; 		    (_
+       ;; 		     #'(records::record-type-method-retriever-set! RTD (lambda (name)
+       ;; 									 (case name
+       ;; 									   ((?field) ?accessor)
+       ;; 									   ...
+       ;; 									   (else #f)))))
+       ;; 		    ))
+       ;;We use  the records procedural layer  and the unsafe functions  to make it
+       ;;easier to rotate the boot images.
+       #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
+	   (define RTD
+	     ($make-record-type-descriptor-ex (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE?
+					      '#((immutable . ?field) ...) '#((#f . ?field) ...)
+					      #f	;destructor
+					      #f	;printer
+					      #f	;equality-predicate
+					      #f	;comparison-procedure
+					      #f	;hash-function
+					      ;;method-retriever
+					      (lambda (name)
+						(case name
+						  ((?field) ?accessor)
+						  ...
+						  (else #f)))
+					      ))
+	   (define RCD
+	     ($make-record-constructor-descriptor RTD PARENT-RCD #f))
+	   (define ?constructor
+	     ($record-constructor RCD))
+	   (define ?predicate
+	     ($condition-predicate RTD))
+	   (define ?accessor
+	     ($condition-accessor RTD ($record-accessor/index RTD ACCESSOR-IDX (quote ?accessor)) (quote ?accessor)))
+	   ...)))
     ))
 
 
@@ -927,74 +987,6 @@
 		  (procedure-signature-argument-violation __who__
 		    "invalid value for &who" 1 '(or (symbol? who) (string? who)) who))
 	      C)))))
-
-
-(define-syntax (define-condition-type stx)
-  ;;This macro is used in this library to define condition object types.
-  ;;
-  ;;NOTE Remember that this  macro is *not* the one exported by  the boot image.  The
-  ;;transformer of  the keyword  binding DEFINE-CONDITION-TYPE  exported by  the boot
-  ;;image is integrated in the expander.
-  ;;
-  (define (mkname prefix name suffix)
-    (datum->syntax name (string->symbol (string-append prefix
-						       (symbol->string (syntax->datum name))
-						       suffix))))
-  (define (iota idx stx)
-    (syntax-case stx ()
-      (()	'())
-      ((?x . ?x*)
-       (cons idx (iota (fxadd1 idx) #'?x*)))))
-  (syntax-case stx ()
-    ((_ ?name ?parent-name ?constructor ?predicate (?field ?accessor) ...)
-     (and (identifier? #'?name)
-	  (identifier? #'?parent-name)
-	  (identifier? #'?constructor)
-	  (identifier? #'?predicate)
-	  (andmap identifier? #'(?field ...))
-	  (andmap identifier? #'(?accessor ...)))
-     (with-syntax
-	 ((UID			(mkname "vicare:condition:" #'?name ""))
-	  (RTD			(mkname "" #'?name "-rtd"))
-	  (RCD			(mkname "" #'?name "-rcd"))
-	  (PARENT-RTD		(mkname "" #'?parent-name "-rtd"))
-	  (PARENT-RCD		(mkname "" #'?parent-name "-rcd"))
-	  ((ACCESSOR-IDX ...)	(iota 0 #'(?accessor ...)))
-	  (SEALED?		#f)
-	  (OPAQUE?		#f)
-	  (BV-NAME		(string->utf8 (symbol->string (syntax->datum #'?name)))))
-       ;;Register  a syntax  object representing  an expression  which, expanded  and
-       ;;evalualated, will initialise  the record's methods late  binding table.  The
-       ;;expression  will be  included  in a  global  initialisation function.   This
-       ;;allows for easier rotation of boot images.
-       (set-cons! late-binding-form*
-		  (syntax-case #'(?field ...) ()
-		    ;;No fields.
-		    (()	#'(void))
-		    ;;At least one field.
-		    (_
-		     #'(records::record-type-method-retriever-set! RTD (lambda (name)
-									 (case name
-									   ((?field) ?accessor)
-									   ...
-									   (else #f)))))
-		    ))
-       ;;We use  the records procedural layer  and the unsafe functions  to make it
-       ;;easier to rotate the boot images.
-       #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
-	   (define RTD
-	     ($make-record-type-descriptor (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE?
-					   '#((immutable . ?field) ...) '#((#f . ?field) ...)))
-	   (define RCD
-	     ($make-record-constructor-descriptor RTD PARENT-RCD #f))
-	   (define ?constructor
-	     ($record-constructor RCD))
-	   (define ?predicate
-	     ($condition-predicate RTD))
-	   (define ?accessor
-	     ($condition-accessor RTD ($record-accessor/index RTD ACCESSOR-IDX (quote ?accessor)) (quote ?accessor)))
-	   ...)))
-    ))
 
 
 ;;;; R6RS condition types
@@ -1559,8 +1551,6 @@
 
 
 ;;;; done
-
-(define-late-binding-init-func initialise-condition-objects-late-binding)
 
 ;; (define end-of-file-dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions end")))
