@@ -1809,6 +1809,13 @@
     ($record-guardian				$structs)
     #;($record-guardian				$records)
 
+    ($make-record-type-descriptor)
+    ($make-record-type-descriptor-ex)
+    ($make-record-constructor-descriptor)
+    ($rtd-subtype?)
+    ($record-accessor/index)
+
+    ($record=					$records)
     ($record-ref				$records)
     ($record-and-rtd?				$records)
     ($record-constructor			$records)
@@ -3127,6 +3134,7 @@
     (record-object?				v $language)
     (make-record-constructor-descriptor		v r rp)
     (make-record-type-descriptor		v r rp)
+    (make-record-type-descriptor-ex)
     (record-constructor				v r rp)
     (record-predicate				v r rp)
     (record-type-descriptor?			v r rp)

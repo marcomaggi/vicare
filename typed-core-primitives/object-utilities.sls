@@ -69,6 +69,11 @@
   (signatures
    ((<symbol> <top> . <list>)		=> <list>)))
 
+(declare-core-primitive internal-delete
+    (safe)
+  (signatures
+   ((<top>)				=> (<void>))))
+
 /section)
 
 

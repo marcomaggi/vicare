@@ -702,9 +702,7 @@
   ;;image is integrated in the expander.
   ;;
   (define (mkname prefix name suffix)
-    (datum->syntax name (string->symbol (string-append prefix
-						       (symbol->string (syntax->datum name))
-						       suffix))))
+    (datum->syntax name (string->symbol (string-append prefix (symbol->string (syntax->datum name)) suffix))))
   (define (iota idx stx)
     (syntax-case stx ()
       (()	'())
@@ -726,27 +724,10 @@
 	  (PARENT-RCD		(mkname "" #'?parent-name "-rcd"))
 	  ((ACCESSOR-IDX ...)	(iota 0 #'(?accessor ...)))
 	  (SEALED?		#f)
-	  (OPAQUE?		#f)
-	  (BV-NAME		(string->utf8 (symbol->string (syntax->datum #'?name)))))
-       ;;Register  a syntax  object representing  an expression  which, expanded  and
-       ;;evalualated, will initialise  the record's methods late  binding table.  The
-       ;;expression  will be  included  in a  global  initialisation function.   This
-       ;;allows for easier rotation of boot images.
-       ;; (set-cons! late-binding-form*
-       ;; 		  (syntax-case #'(?field ...) ()
-       ;; 		    ;;No fields.
-       ;; 		    (()	#'(void))
-       ;; 		    ;;At least one field.
-       ;; 		    (_
-       ;; 		     #'(records::record-type-method-retriever-set! RTD (lambda (name)
-       ;; 									 (case name
-       ;; 									   ((?field) ?accessor)
-       ;; 									   ...
-       ;; 									   (else #f)))))
-       ;; 		    ))
-       ;;We use  the records procedural layer  and the unsafe functions  to make it
+	  (OPAQUE?		#f))
+       ;;We use  the records  procedural layer  and the unsafe  functions to  make it
        ;;easier to rotate the boot images.
-       #'(module (RTD RCD ?constructor ?predicate ?accessor ...)
+       #'(begin ;;module (RTD RCD ?constructor ?predicate ?accessor ...)
 	   (define RTD
 	     ($make-record-type-descriptor-ex (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE?
 					      '#((immutable . ?field) ...) '#((#f . ?field) ...)

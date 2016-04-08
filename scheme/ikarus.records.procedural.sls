@@ -38,6 +38,7 @@
     ;; bindings for (vicare system $records)
 
     ;; extension utility functions, non-R6RS
+    make-record-type-descriptor-ex
     rtd-subtype?				record-type-all-field-names
     (rename (<rcd>-rtd				rcd-rtd)
 	    (<rcd>-parent-rcd			rcd-parent-rcd))
@@ -75,7 +76,7 @@
     $make-record-type-descriptor		$make-record-type-descriptor-ex
     $make-record-constructor-descriptor
     $record-constructor				$rtd-subtype?
-    $record-accessor/index
+    $record-accessor/index			$record=
     internal-applicable-record-type-destructor
     internal-applicable-record-destructor)
   (import (except (vicare)
@@ -122,7 +123,9 @@
     (vicare system $pairs)
     (vicare system $structs)
     (vicare system $symbols)
-    (vicare system $vectors))
+    (vicare system $vectors)
+    (only (vicare language-extensions syntaxes)
+	  define-equality/sorting-predicate))
 
 
 ;;;; type definitions
@@ -929,6 +932,7 @@
 
 
 (module (make-record-type-descriptor
+	 make-record-type-descriptor-ex
 	 $make-record-type-descriptor
 	 $make-record-type-descriptor-ex)
   ;;NOTE When accessing  the RTD we use  the unsafe ones "$<rtd>-" to  allow the boot
@@ -956,6 +960,24 @@
 				     #f	;hash-function
 				     #f	;method-retriever
 				     ))
+
+  (define* (make-record-type-descriptor-ex {name    record-type-name?}
+					   {parent  false/non-sealed-record-type-descriptor?}
+					   {uid     uid-specification?}
+					   {sealed? sealed-specification?}
+					   {opaque? opaque-specification?}
+					   {fields  record-fields-specification-vector?}
+					   {destructor (or not procedure?)}
+					   {printer (or not procedure?)}
+					   {equality-predicate (or not procedure?)}
+					   {comparison-procedure (or not procedure?)}
+					   {hash-function (or not procedure?)}
+					   {method-retriever (or not procedure?)})
+    (let ((normalised-fields (%normalise-fields-vector fields)))
+      ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
+				       destructor printer
+				       equality-predicate comparison-procedure hash-function
+				       method-retriever)))
 
   (define ($make-record-type-descriptor-ex name parent uid sealed? opaque? fields normalised-fields
 					   destructor printer
@@ -1409,7 +1431,9 @@
 			  (else
 			   (list (record-type-field-names rtd))))))))
 
-(define* (record=? {obj1 non-opaque-record?} {obj2 non-opaque-record?})
+(define-equality/sorting-predicate record=?	$record=	non-opaque-record?)
+
+(define ($record= obj1 obj2)
   ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal
   ;;field values according to EQV?.
   ;;

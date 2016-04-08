@@ -31,7 +31,7 @@
 (define (typed-core-primitives.records)
 
 
-;;;; R6RS record type descriptors, safe primitives
+;;;; R6RS record-type descriptors, safe primitives
 
 (section
 
@@ -252,6 +252,14 @@
   (declare record-type-compose-hash-function)
   #| end of LET-SYNTAX |# )
 
+;;; --------------------------------------------------------------------
+;;; misc
+
+(declare-core-primitive internal-applicable-record-type-destructor
+    (safe)
+  (signatures
+   ((<record-type-descriptor>)		=> (<procedure>))))
+
 /section)
 
 
@@ -296,6 +304,21 @@
   (declare record-hash-function)
   #| end of LET-SYNTAX |# )
 
+(declare-core-primitive record-ref
+    (safe)
+  (signatures
+   ((<record> <non-negative-fixnum>)	=> (<top>)))
+  (attributes
+   ((_ _)				effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-core-primitive record=?
+    (safe)
+  (signatures
+   ((list-of <record>)			=> (<boolean>))))
+
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
 
@@ -315,6 +338,11 @@
 
 #;(declare-parameter record-guardian-logger	(or <boolean> <procedure>))
 (declare-parameter record-guardian-logger	<top>)
+
+(declare-core-primitive internal-applicable-record-destructor
+    (safe)
+  (signatures
+   ((<record>)				=> (<procedure>))))
 
 /section)
 
