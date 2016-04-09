@@ -50,6 +50,11 @@
   (attributes
    (_			effect-free result-true)))
 
+(declare-core-primitive make-simple-condition
+    (safe)
+  (signatures
+   (()					=> (&condition))))
+
 (declare-core-primitive simple-conditions
     (safe)
   (signatures
@@ -486,6 +491,23 @@
     (safe)
   (signatures
    ((<&who-value> <string> <non-negative-fixnum> <top> <top>)	=> (<no-return>))))
+
+/section)
+
+
+;;;; condition objects, unsafe procedures
+
+(section
+
+(declare-core-primitive $condition-predicate
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor>)				=> (<procedure>))))
+
+(declare-core-primitive $condition-accessor
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor> <procedure> <symbol>)	=> (<procedure>))))
 
 /section)
 

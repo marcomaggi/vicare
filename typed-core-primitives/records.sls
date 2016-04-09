@@ -393,6 +393,11 @@
   (signatures
    ((<record-type-descriptor>)			=> ((or <false> <procedure>)))))
 
+(declare-core-primitive $record-accessor/index
+    (unsafe)
+  (signatures
+   ((<record-type-descriptor> <non-negative-fixnum> <symbol>)	=> (<procedure>))))
+
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive $rtd-subtype?
