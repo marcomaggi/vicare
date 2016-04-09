@@ -256,6 +256,133 @@
   (signatures
    (()						=> (&procedure-arguments-consistency-violation))))
 
+(declare-core-primitive make-failed-expression-condition
+    (safe)
+  (signatures
+   ((<top>)					=> (&failed-expression))))
+
+;;;
+
+(declare-core-primitive make-one-based-return-value-index-condition
+    (safe)
+  (signatures
+   ((<non-negative-fixnum>)			=> (&one-based-return-value-index))))
+
+(declare-core-primitive make-procedure-postcondition-violation
+    (safe)
+  (signatures
+   (()						=> (&procedure-postcondition-violation))))
+
+(declare-core-primitive make-procedure-precondition-violation
+    (safe)
+  (signatures
+   (()						=> (&procedure-precondition-violation))))
+
+(declare-core-primitive make-string-decoding-error
+    (safe)
+  (signatures
+   (()						=> (&string-decoding))))
+
+(declare-core-primitive make-string-encoding-error
+    (safe)
+  (signatures
+   (()						=> (&string-encoding))))
+
+(declare-core-primitive make-utf16-string-decoding-error
+    (safe)
+  (signatures
+   (()						=> (&utf16-string-decoding))))
+
+(declare-core-primitive make-utf16-string-decoding-invalid-first-word
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <fixnum>)	=> (&utf16-string-decoding-invalid-first-word))))
+
+(declare-core-primitive make-utf16-string-decoding-invalid-second-word
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <fixnum> <fixnum>)	=> (&utf16-string-decoding-invalid-second-word))))
+
+(declare-core-primitive make-utf16-string-decoding-missing-second-word
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <fixnum>)	=> (&utf16-string-decoding-missing-second-word))))
+
+(declare-core-primitive make-utf16-string-decoding-standalone-octet
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (&utf16-string-decoding-standalone-octet))))
+
+(declare-core-primitive make-utf16-string-encoding-error
+    (safe)
+  (signatures
+   (()						=> (&utf16-string-encoding))))
+
+(declare-core-primitive make-utf32-string-decoding-error
+    (safe)
+  (signatures
+   (()						=> (&utf32-string-decoding))))
+
+(declare-core-primitive make-utf32-string-decoding-invalid-word
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <exact-integer>)	=> (&utf32-string-decoding-invalid-word))))
+
+(declare-core-primitive make-utf32-string-decoding-orphan-octets
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <list>)			=> (&utf32-string-decoding-orphan-octets))))
+
+(declare-core-primitive make-utf32-string-encoding-error
+    (safe)
+  (signatures
+   (()							=> (&utf32-string-encoding))))
+
+(declare-core-primitive make-utf8-string-decoding-error
+    (safe)
+  (signatures
+   (()						=> (&utf8-string-decoding))))
+
+(declare-core-primitive make-utf8-string-decoding-incomplete-2-tuple
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-incomplete-2-tuple))))
+
+(declare-core-primitive make-utf8-string-decoding-incomplete-3-tuple
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-incomplete-3-tuple))))
+
+(declare-core-primitive make-utf8-string-decoding-incomplete-4-tuple
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-incomplete-4-tuple))))
+
+(declare-core-primitive make-utf8-string-decoding-invalid-2-tuple
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-invalid-2-tuple))))
+
+(declare-core-primitive make-utf8-string-decoding-invalid-3-tuple
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-invalid-3-tuple))))
+
+(declare-core-primitive make-utf8-string-decoding-invalid-4-tuple
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-invalid-4-tuple))))
+
+(declare-core-primitive make-utf8-string-decoding-invalid-octet
+    (safe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> (list-of <non-negative-fixnum>))	=> (&utf8-string-decoding-invalid-octet))))
+
+(declare-core-primitive make-utf8-string-encoding-error
+    (safe)
+  (signatures
+   (()						=> (&utf8-string-encoding))))
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
@@ -294,10 +421,36 @@
 (declare-condition-type-predicate warning?				&warning)
 (declare-condition-type-predicate who-condition?			&who)
 (declare-condition-type-predicate non-reinstatable-violation?		&non-reinstatable)
+(declare-condition-type-predicate failed-expression-condition?		&failed-expression)
 
 (declare-condition-type-predicate procedure-signature-argument-violation?	&procedure-signature-argument-violation)
 (declare-condition-type-predicate procedure-signature-return-value-violation?	&procedure-signature-return-value-violation)
 (declare-condition-type-predicate procedure-arguments-consistency-violation?	&procedure-arguments-consistency-violation)
+
+(declare-condition-type-predicate one-based-return-value-index-condition?	&one-based-return-value-index)
+(declare-condition-type-predicate procedure-postcondition-violation?		&procedure-postcondition-violation)
+(declare-condition-type-predicate procedure-precondition-violation?		&procedure-precondition-violation)
+(declare-condition-type-predicate string-decoding-error?			&string-decoding)
+(declare-condition-type-predicate string-encoding-error?			&string-encoding)
+(declare-condition-type-predicate utf16-string-decoding-error?			&utf16-string-decoding)
+(declare-condition-type-predicate utf16-string-decoding-invalid-first-word?	&utf16-string-decoding-invalid-first-word)
+(declare-condition-type-predicate utf16-string-decoding-invalid-second-word?	&utf16-string-decoding-invalid-second-word)
+(declare-condition-type-predicate utf16-string-decoding-missing-second-word?	&utf16-string-decoding-missing-second-word)
+(declare-condition-type-predicate utf16-string-decoding-standalone-octet?	&utf16-string-decoding-standalone-octet)
+(declare-condition-type-predicate utf16-string-encoding-error?			&utf16-string-encoding)
+(declare-condition-type-predicate utf32-string-decoding-error?			&utf32-string-decoding)
+(declare-condition-type-predicate utf32-string-decoding-invalid-word?		&utf32-string-decoding-invalid-word)
+(declare-condition-type-predicate utf32-string-decoding-orphan-octets?		&utf32-string-decoding-orphan-octets)
+(declare-condition-type-predicate utf32-string-encoding-error?			&utf32-string-encoding)
+(declare-condition-type-predicate utf8-string-decoding-error?			&utf8-string-decoding)
+(declare-condition-type-predicate utf8-string-decoding-incomplete-2-tuple?	&utf8-string-decoding-incomplete-2-tuple)
+(declare-condition-type-predicate utf8-string-decoding-incomplete-3-tuple?	&utf8-string-decoding-incomplete-3-tuple)
+(declare-condition-type-predicate utf8-string-decoding-incomplete-4-tuple?	&utf8-string-decoding-incomplete-4-tuple)
+(declare-condition-type-predicate utf8-string-decoding-invalid-2-tuple?		&utf8-string-decoding-invalid-2-tuple)
+(declare-condition-type-predicate utf8-string-decoding-invalid-3-tuple?		&utf8-string-decoding-invalid-3-tuple)
+(declare-condition-type-predicate utf8-string-decoding-invalid-4-tuple?		&utf8-string-decoding-invalid-4-tuple)
+(declare-condition-type-predicate utf8-string-decoding-invalid-octet?		&utf8-string-decoding-invalid-octet)
+(declare-condition-type-predicate utf8-string-encoding-error?			&utf8-string-encoding)
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
@@ -348,6 +501,8 @@
 	   &procedure-signature-return-value-violation	<top>)
   (declare procedure-signature-return-value-violation.offending-value
 	   &procedure-signature-return-value-violation	<top>)
+
+  (declare condition-failed-expression				&failed-expression	<top>)
 
   (declare utf8-string-decoding-invalid-octet.bytevector	&utf8-string-decoding-invalid-octet   <bytevector>)
   (declare utf8-string-decoding-invalid-octet.index		&utf8-string-decoding-invalid-octet   <fixnum>)
