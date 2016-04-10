@@ -86,10 +86,8 @@
     (%parse-full-name-spec namespec strip-angular-parentheses?))
   (define define-type-descriptors?
     (%get-define-type-descriptors clause* synner))
-  (define foo-rtd			(identifier-append foo foo-for-id-generation "-rtd"))
-  (define foo-rcd			(identifier-append foo foo-for-id-generation "-rcd"))
-  (define foo-constructor-protocol	(%named-gensym/suffix foo-for-id-generation "-constructor-protocol"))
-  (define foo-custom-printer		(%named-gensym/suffix foo-for-id-generation "-custom-printer"))
+  (define foo-rtd (identifier-append foo foo-for-id-generation "-rtd"))
+  (define foo-rcd (identifier-append foo foo-for-id-generation "-rcd"))
   (define-values
     (field-name*.sym
 		;A list of symbols representing all the field names.
@@ -150,13 +148,9 @@
   (define foo-uid
     (%get-uid foo clause* synner))
 
-  ;;Code for protocol.
-  (define constructor-protocol-code
-    (%get-constructor-protocol-code clause* synner))
-
-  ;;False or code to build at run-time the record-constructor descriptor.
-  (define foo-rcd-code
-    (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd.id))
+  ;;Code for default record-constructor descriptor.
+  (define foo-rcd-definitions
+    (%make-rcd-definitions clause* foo foo-rtd foo-rcd parent-rcd.id synner))
 
   ;;Code for record maker function.
   (define foo-maker-definitions
@@ -189,11 +183,6 @@
 		  (values foo-destructor.id `((define ,foo-destructor.id ,foo-destructor-code))))))
 	  (else
 	   (values #f '()))))
-
-  ;;Code  for custom  printer.  False  or  a form  evaluating to  the custom  printer
-  ;;function.
-  (define foo-custom-printer-code
-    (%make-custom-printer-code clause* foo synner))
 
   ;;This definition is null if there is no equality predicate; otherwise it is a list
   ;;holding a DEFINE form defining the equality predicate, the list is spliced in the
@@ -239,12 +228,12 @@
 				  field-name*.sym safe-field-method*
 				  method-name*.sym method-procname*.sym))
 
-  ;;False or code to build at run-time the record-type descriptor.
-  (define foo-rtd-code
-    (%make-rtd-code foo foo-uid clause* parent-rtd.id fields-vector-spec
-		    foo-destructor.id foo-custom-printer-code
-		    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
-		    methods-retriever-code.sexp synner))
+  ;;Null or a list of definitions to build at run-time the record-type descriptor.
+  (define foo-rtd-definitions
+    (%make-rtd-definitions foo foo-rtd foo-uid clause* parent-rtd.id fields-vector-spec
+			   foo-destructor.id (%make-custom-printer-code clause* foo synner)
+			   foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
+			   methods-retriever-code.sexp synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
@@ -259,9 +248,6 @@
 					    safe-field-accessor* safe-field-mutator*
 					    method-name*.sym method-procname*.sym))
 
-  (define args.sym
-    (gensym "args"))
-
   (bless
    `(module (,foo
 	     ,make-foo ,foo?
@@ -275,65 +261,28 @@
 	     ,@(if (options::strict-r6rs)
 		   '()
 		 (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
-
-      ;;Parent record-type descriptor.
       ,@parent-rtd-definition
-
-      ;;Parent record-constructor descriptor.
       ,@parent-rcd-definition
-
-      ;;Record destructor function.
       ,@foo-destructor-definition
-
-      ;;Record equality predicate.
       ,@foo-equality-predicate-definition
-
-      ;;Record comparison procedure.
       ,@foo-comparison-procedure-definition
-
-      ;;Record hash function.
       ,@foo-hash-function-definition
-
-      ;;Syntactic binding for record-type name.
       (define-syntax ,foo ,foo-syntactic-binding-form)
-
-      ;;Methods.
       ,@method-form*.sexp
-
-      ;;Record-type descriptor.
-      (define/typed (brace ,foo-rtd <record-type-descriptor>)
-	,foo-rtd-code)
-
-      ;;Protocol function.
-      (define/std ,foo-constructor-protocol ,constructor-protocol-code)
-
-      ;;Record-constructor descriptor.
-      (define/typed (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
-
-      ;;Default record maker.
+      ,@foo-rtd-definitions
+      ,@foo-rcd-definitions
       ,@foo-maker-definitions
-
-      ;;Type predicate definitions.
       ,@foo-predicate-definitions
-
-      ;;Super-type record-constructor descriptor.
       ,@super-rcd-definition
-
-      ;;Splice the definitions of unsafe field accessors and mutators.
       ,@(%make-unsafe-accessor+mutator-code foo foo-rtd
 					    field-name*.sym field-relative-idx* field-type*.ots
 					    unsafe-field-accessor* unsafe-field-mutator*)
-
-      ;;Splice the definitions of safe field accessors and mutators.
       ,@(%make-safe-accessor+mutator-code foo
 					  field-name*.sym field-relative-idx* field-type*.ots
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
-
-      ;;Splice the definitions of field methods.
       ,@(%make-safe-method-code foo field-type*.ots
 				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
-
       #| end of module |# )))
 
 
@@ -444,20 +393,6 @@
        #f)
       (_
        (synner "expected symbol or no argument in nongenerative clause" clause)))))
-
-(define (%get-constructor-protocol-code clause* synner)
-  ;;Return a sexp which, when evaluated, returns the protocol function.
-  ;;
-  (let ((clause (%get-clause 'protocol clause*)))
-    (syntax-match clause ()
-      ((_ ?expr)
-       ?expr)
-
-      ;;No matching clause found.
-      (#f	#f)
-
-      (_
-       (synner "invalid syntax in PROTOCOL clause" clause)))))
 
 (define (%get-define-type-descriptors clause* synner)
   (let ((clause (%get-clause 'define-type-descriptors clause*)))
@@ -988,64 +923,65 @@
        (synner "invalid syntax in PARENT clause" parent-clause)))))
 
 
-(define (%make-rtd-code name foo-uid clause* parent-rtd fields-vector-spec
-			destructor printer
-			equality-predicate comparison-procedure hash-function
-			method-retriever synner)
-  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
-  ;;expression  which, expanded  and  evaluated at  run-time,  returns a  record-type
+(define (%make-rtd-definitions foo foo-rtd foo-uid clause* parent-rtd fields-vector-spec
+			       destructor printer
+			       equality-predicate comparison-procedure hash-function
+			       method-retriever synner)
+  ;;Return a list of symbolic expressions (to be BLESSed later) representing a Scheme
+  ;;definitions which,  expanded and  evaluated at  run-time, define  the record-type
   ;;descriptor.
   ;;
   ;;PARENT-RTD must be false if this record-type  has no parent; otherwise it must be
-  ;;a symbol  representing the name of  the syntactic identifier bound  to the parent
-  ;;RTD.
+  ;;an identifier representing the syntactic binding of the parent RTD.
   ;;
-  (define sealed?
-    (let ((clause (%get-clause 'sealed clause*)))
-      (syntax-match clause ()
-	((_ #t)	#t)
-	((_ #f)	#f)
-	;;No matching clause found.
-	(#f		#f)
-	(_
-	 (synner "invalid argument in SEALED clause" clause)))))
-
-  (define opaque?
-    (let ((clause (%get-clause 'opaque clause*)))
-      (syntax-match clause ()
-	((_ #t)	#t)
-	((_ #f)	#f)
-	;;No matching clause found.
-	(#f		#f)
-	(_
-	 (synner "invalid argument in OPAQUE clause" clause)))))
-
-  (define fields
-    `(quote ,fields-vector-spec))
-
-  (define normalised-fields
-    `(quote ,(vector-map (lambda (item)
-			   (cons (eq? 'mutable (car item)) (cadr item)))
-	       fields-vector-spec)))
-
-  ;;;`(make-record-type-descriptor (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque? ,fields)
-  `($make-record-type-descriptor-ex (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque?
-				    ,fields ,normalised-fields
-				    ,destructor ,printer
-				    ,equality-predicate ,comparison-procedure ,hash-function
-				    ,method-retriever))
+  (let ((sealed?		(let ((clause (%get-clause 'sealed clause*)))
+				  (syntax-match clause ()
+				    ((_ #t)	#t)
+				    ((_ #f)	#f)
+				    ;;No matching clause found.
+				    (#f		#f)
+				    (_
+				     (synner "invalid argument in SEALED clause" clause)))))
+	(opaque?		(let ((clause (%get-clause 'opaque clause*)))
+				  (syntax-match clause ()
+				    ((_ #t)	#t)
+				    ((_ #f)	#f)
+				    ;;No matching clause found.
+				    (#f		#f)
+				    (_
+				     (synner "invalid argument in OPAQUE clause" clause)))))
+	(fields-vec		`(quote ,fields-vector-spec))
+	(normalised-fields-vec	`(quote ,(vector-map (lambda (item)
+						       (cons (eq? 'mutable (car item)) (cadr item)))
+					   fields-vector-spec))))
+    `((define/typed (brace ,foo-rtd <record-type-descriptor>)
+	($make-record-type-descriptor-ex (quote ,foo) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque?
+					 ,fields-vec ,normalised-fields-vec
+					 ,destructor ,printer
+					 ,equality-predicate ,comparison-procedure ,hash-function
+					 ,method-retriever)))))
 
 
-(define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd.sym)
-  ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
-  ;;expression  which,  expanded  and  evaluated at  run-time,  returns  the  default
-  ;;record-constructor descriptor.
+(define (%make-rcd-definitions clause* foo foo-rtd foo-rcd parent-rcd.id synner)
+  ;;Return a list  of symbolic expressions (to be BLESSed  later) representing Scheme
+  ;;definitions defining the default record-constructor descriptor.
   ;;
-  ;;If this  record-type has no  parent: PARENT-RCD.SYM is  false; otherwise it  is a
-  ;;symbol representing  the name of the  syntactic identifier bound to  the parent's
-  ;;record-constructor descriptor.
+  ;;If this  record-type has no  parent: PARENT-RCD.ID is  false; otherwise it  is an
+  ;;identifier  representing  the name  of  the  syntactic  identifier bound  to  the
+  ;;parent's record-constructor descriptor.
   ;;
-  `($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,foo-constructor-protocol))
+  (let ((protocol-expr (let ((clause (%get-clause 'protocol clause*)))
+			 (syntax-match clause ()
+			   ((_ ?expr)
+			    ?expr)
+
+			   ;;No matching clause found.
+			   (#f	#f)
+
+			   (_
+			    (synner "invalid syntax in PROTOCOL clause" clause))))))
+    `((define/typed (brace ,foo-rcd <record-constructor-descriptor>)
+	($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.id ,protocol-expr)))))
 
 
 (define (%make-maker-definitions foo foo-rcd make-foo synner)
