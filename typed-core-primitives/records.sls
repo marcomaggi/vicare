@@ -373,7 +373,7 @@
    ;;method-retriever
    ((<symbol>
      (or <false> <record-type-descriptor>) (or <false> <symbol>) <boolean> <boolean>
-     (vector-of (pair <symbol> <symbol>)) (vector-of (pair <boolean> <symbol>))
+     (vector-of (list <symbol> <symbol>)) (vector-of (pair <boolean> <symbol>))
      (or <false> <procedure>) (or <false> <procedure>)
      (or <false> <procedure>) (or <false> <procedure>) (or <false> <procedure>)
      (or <false> <procedure>))

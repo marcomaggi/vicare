@@ -785,7 +785,7 @@
 		  ;;   #((immutable . ?field-name) ...)
 		  ;;
 		  (FIELDS-VECTOR		(list->vector (map (lambda (field-name.id)
-								     (cons 'immutable field-name.id))
+								     (list 'immutable field-name.id))
 								field-name*.id)))
 		  ;;The normalised fields vector has the format:
 		  ;;
@@ -828,10 +828,10 @@
 		   (make-record-type-spec (syntax ,?name)
 					  (syntax ,RTD)
 					  (syntax ,RCD)
-					  #f #;super-protocol.id
+					  #f #;super-rcd
 					  (syntax ,?parent-name)
 					  (syntax ,?constructor)
-					  #f
+					  #f #;destructor
 					  (syntax ,?predicate)
 					  #f #;equality-predicate
 					  #f #;comparison-procedure

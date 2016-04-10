@@ -730,7 +730,7 @@
        #'(begin ;;module (RTD RCD ?constructor ?predicate ?accessor ...)
 	   (define RTD
 	     ($make-record-type-descriptor-ex (quote ?name) PARENT-RTD (quote UID) SEALED? OPAQUE?
-					      '#((immutable . ?field) ...) '#((#f . ?field) ...)
+					      '#((immutable ?field) ...) '#((#f . ?field) ...)
 					      #f	;destructor
 					      #f	;printer
 					      #f	;equality-predicate

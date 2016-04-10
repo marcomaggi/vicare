@@ -36,6 +36,9 @@
       ((_ ?namespec ?clause* ...)
        (begin
 	 (%validate-definition-clauses ?clause* synner)
+	 ;; (receive-and-return (out)
+	 ;;     (%do-define-record input-form.stx ?namespec ?clause* synner)
+	 ;;   (debug-print out))
 	 (%do-define-record input-form.stx ?namespec ?clause* synner)))
       ))
 
@@ -83,17 +86,10 @@
     (%parse-full-name-spec namespec strip-angular-parentheses?))
   (define define-type-descriptors?
     (%get-define-type-descriptors clause* synner))
-  (define foo-rtd			(if define-type-descriptors?
-					    (identifier-append foo foo-for-id-generation "-rtd")
-					  (%named-gensym/suffix foo-for-id-generation "-rtd")))
-  (define foo-rcd			(if define-type-descriptors?
-					    (identifier-append foo foo-for-id-generation "-rcd")
-					  (%named-gensym/suffix foo "-rcd")))
+  (define foo-rtd			(identifier-append foo foo-for-id-generation "-rtd"))
+  (define foo-rcd			(identifier-append foo foo-for-id-generation "-rcd"))
   (define foo-constructor-protocol	(%named-gensym/suffix foo-for-id-generation "-constructor-protocol"))
   (define foo-custom-printer		(%named-gensym/suffix foo-for-id-generation "-custom-printer"))
-  (define foo-equality-predicate.id	(%named-gensym/suffix foo-for-id-generation "-equality-predicate"))
-  (define foo-comparison-procedure.id	(%named-gensym/suffix foo-for-id-generation "-comparison-procedure"))
-  (define foo-hash-function.id		(%named-gensym/suffix foo-for-id-generation "-hash-function"))
   (define-values
     (field-name*.sym
 		;A list of symbols representing all the field names.
@@ -111,10 +107,12 @@
 		;accessors.
      safe-field-mutator*
 		;A  list of  syntactic identifiers  that will  be bound  to the  safe
-		;mutators.  This list holds #f in the position of immutable fields.
+		;mutators.  This list  holds #f in the position  of immutable fields.
+		;This list has one item for each item in SAFE-FIELD-ACCESSOR*.
      unsafe-field-mutator*
 		;A list  of syntactic identifiers  that will  be bound to  the unsafe
-		;mutators.  This list holds #f in the position of immutable fields.
+		;mutators.  This list  holds #f in the position  of immutable fields.
+		;This list has one item for each item in UNSAFE-FIELD-ACCESSOR*.
      safe-field-method*
 		;A list of syntactic identifiers that will be bound to the safe field
 		;accessor/mutator methods.
@@ -127,168 +125,133 @@
   ;;Code  for  parent  record-type  descriptor  and  parent  record-type  constructor
   ;;descriptor retrieval.
   ;;
-  ;;FOO-PARENT: an identifier  representing the parent type, or false  if there is no
-  ;;parent or the parent is specified through the procedural layer.
+  ;;FOO-PARENT.ID: an identifier  representing the parent type, or false  if there is
+  ;;no parent or the parent is specified through the procedural layer.
   ;;
-  ;;PARENT-RTD: false  if this record-type  has no parent;  otherwise it is  a symbol
+  ;;PARENT-RTD.ID: false if this record-type has  no parent; otherwise it is a symbol
   ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
   ;;record-type descriptor.
   ;;
-  ;;PARENT-RCD: false  if this record-type  has no parent;  otherwise it is  a symbol
+  ;;PARENT-RCD.ID: false if this record-type has  no parent; otherwise it is a symbol
   ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
   ;;record-constructor descriptor.
   ;;
-  ;;PARENT-RTD-CODE: false or a symbolic expression representing an expression which,
-  ;;expanded  and  evaluated   at  run-time,  will  return   the  parent  record-type
-  ;;descriptor.
+  ;;PARENT-RTD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
+  ;;RTD syntactic binding, the list is spliced in the output.
   ;;
-  ;;PARENT-RCD-CODE: false or a symbolic  expression representing a Scheme expression
-  ;;which, expanded  and evaluated  at run-time, will  return the  parent record-type
-  ;;default constructor descriptor.
-  (define-values (foo-parent parent-rtd parent-rcd parent-rtd-code parent-rcd-code)
+  ;;PARENT-RCD-DEFINITION: null or  a list holding a DEFINE form  defining the parent
+  ;;RCD syntactic binding, the list is spliced in the output.
+  (define-values (foo-parent.id parent-rtd.id parent-rcd.id parent-rtd-definition parent-rcd-definition)
     (%make-parent-rtd+rcd-code clause* foo input-form.stx synner))
 
-  ;;This can be  a symbol or false.  When  a symbol: the symbol is  the record type
-  ;;UID, which will make this record  type non-generative.  When false: this record
-  ;;type is generative.
+  ;;This can be a symbol or false.  When a symbol: the symbol is the record type UID,
+  ;;which will make this record type non-generative.  When false: this record type is
+  ;;generative.
   (define foo-uid
     (%get-uid foo clause* synner))
-
-  ;;False or code to build at run-time the record-type descriptor.
-  (define foo-rtd-code
-    (%make-rtd-code foo foo-uid clause* parent-rtd fields-vector-spec synner))
-
-  ;;False or code to build at run-time the record-constructor descriptor.
-  (define foo-rcd-code
-    (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd))
-
-  ;;False or code to build at run-time the super-type record-constructor descriptor.
-  (define foo-super-rcd-code
-    (%make-super-rcd-code clause* foo foo-rtd foo-parent parent-rcd synner))
-
-  ;;If this  record-type has no  parent or no  SUPER-PROTOCOL clause: this  is false;
-  ;;otherwise it is a symbol representing  the name of the syntactic identifier bound
-  ;;to the super-type record-constructor descriptor.
-  (define foo-super-protocol
-    (and foo-super-rcd-code
-	 (%named-gensym/suffix foo "-super-protocol")))
-
-  ;;False or code to build at run-time the record destructor function.
-  (define foo-destructor-code
-    (%make-destructor-code clause* foo foo-rtd foo-parent parent-rtd synner))
-
-  ;;If this record-type  has no destructor: this  is false; otherwise it  is a symbol
-  ;;representing  the  name of  the  syntactic  identifier  bound to  the  destructor
-  ;;function.
-  (define foo-destructor
-    (and foo-destructor-code
-	 (%named-gensym/suffix foo "-destructor")))
 
   ;;Code for protocol.
   (define constructor-protocol-code
     (%get-constructor-protocol-code clause* synner))
+
+  ;;False or code to build at run-time the record-constructor descriptor.
+  (define foo-rcd-code
+    (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd.id))
+
+  ;;Code for record maker function.
+  (define foo-maker-definitions
+    (%make-maker-definitions foo foo-rcd make-foo synner))
 
   ;;Code for predicate and optional custom  predicate.  False or a form evaluating to
   ;;the predicate definitions.
   (define foo-predicate-definitions
     (%make-predicate-definitions clause* foo? foo-rtd synner))
 
+  ;;This definition is null if there is  no constructor protocol to be used when this
+  ;;type is the super-type  of another; otherwise it is a list  holding a DEFINE form
+  ;;defining the supertype record-constructor  descriptor syntactic binding, the list
+  ;;is spliced in the output.
+  (define-values (foo-super-rcd.id super-rcd-definition)
+    (cond ((%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.id synner)
+	   => (lambda (foo-super-rcd-code)
+		(let ((foo-super-rcd.id (%named-gensym/suffix foo "-super-protocol")))
+		  (values foo-super-rcd.id `((define/std ,foo-super-rcd.id ,foo-super-rcd-code))))))
+	  (else
+	   (values #f '()))))
+
+  ;;This definition is null if there is no destructor; otherwise it is a list holding
+  ;;a DEFINE  form defining the default  destructor function, the list  is spliced in
+  ;;the output.
+  (define-values (foo-destructor.id foo-destructor-definition)
+    (cond ((%make-destructor-code clause* foo foo-parent.id parent-rtd.id synner)
+	   => (lambda (foo-destructor-code)
+		(let ((foo-destructor.id (%named-gensym/suffix foo "-destructor")))
+		  (values foo-destructor.id `((define ,foo-destructor.id ,foo-destructor-code))))))
+	  (else
+	   (values #f '()))))
+
   ;;Code  for custom  printer.  False  or  a form  evaluating to  the custom  printer
   ;;function.
   (define foo-custom-printer-code
-    (%make-custom-printer-code clause* foo foo-rtd synner))
+    (%make-custom-printer-code clause* foo synner))
 
-  ;;Code  for  equality predicate.   False  or  a  form  evaluating to  the  equality
-  ;;predicate.
-  (define foo-equality-predicate-code
-    (%make-equality-predicate-code clause* foo foo-rtd synner))
+  ;;This definition is null if there is no equality predicate; otherwise it is a list
+  ;;holding a DEFINE form defining the equality predicate, the list is spliced in the
+  ;;output.
+  (define-values (foo-equality-predicate.id foo-equality-predicate-definition)
+    (cond ((%make-equality-predicate-code clause* foo parent-rtd.id synner)
+	   => (lambda (foo-equality-predicate-code)
+		(let ((foo-equality-predicate.id (%named-gensym/suffix foo-for-id-generation "-equality-predicate")))
+		  (values foo-equality-predicate.id `((define ,foo-equality-predicate.id ,foo-equality-predicate-code))))))
+	  (else
+	   (values #f '()))))
 
-  ;;Code for  comparison procedure.   False or  a form  evaluating to  the comparison
-  ;;procedure.
-  (define foo-comparison-procedure-code
-    (%make-comparison-procedure-code clause* foo foo-rtd synner))
+  ;;This definition is  null if there is  no comparison procedure; otherwise  it is a
+  ;;list holding a DEFINE form defining the comparison procedure, the list is spliced
+  ;;in the output.
+  (define-values (foo-comparison-procedure.id foo-comparison-procedure-definition)
+    (cond ((%make-comparison-procedure-code clause* foo parent-rtd.id synner)
+	   => (lambda (foo-comparison-procedure-code)
+		(let ((foo-comparison-procedure.id (%named-gensym/suffix foo-for-id-generation "-comparison-procedure")))
+		  (values foo-comparison-procedure.id `((define/std ,foo-comparison-procedure.id ,foo-comparison-procedure-code))))))
+	  (else
+	   (values #f '()))))
 
-  ;;Code for hash function.  False or a form evaluating to the hash function.
-  (define foo-hash-function-code
-    (%make-hash-function-code clause* foo foo-rtd synner))
-
-  ;;Definition forms.
-  ;;
-  (begin
-    ;;This is  null if there is  no parent; otherwise it  is a list holding  a DEFINE
-    ;;form defining  the parent  RTD syntactic  binding, the list  is spliced  in the
-    ;;output.
-    (define parent-rtd-definition
-      (if parent-rtd
-	  `((define ,parent-rtd ,parent-rtd-code))
-	'()))
-    ;;This is  null if there is  no parent; otherwise it  is a list holding  a DEFINE
-    ;;form defining  the parent  RCD syntactic  binding, the list  is spliced  in the
-    ;;output.
-    (define parent-rcd-definition
-      (if parent-rcd
-	  `((define ,parent-rcd ,parent-rcd-code))
-	'()))
-    ;;This is null if  there is no supertype constructor protocol;  otherwise it is a
-    ;;list holding a DEFINE form defining the supertype record-constructor descriptor
-    ;;syntactic binding, the list is spliced in the output.
-    (define super-rcd-definition
-      (if foo-super-protocol
-	  `((define ,foo-super-protocol ,foo-super-rcd-code))
-	'()))
-    ;;This is null if there is no destructor; otherwise it is a list holding a DEFINE
-    ;;form  defining the  default destructor  function, the  list is  spliced in  the
-    ;;output.
-    (define foo-destructor-definition
-      (if foo-destructor
-	  `((define ,foo-destructor ,foo-destructor-code))
-	'()))
-    ;;This is null  if there is no custom  printer; otherwise it is a  list holding a
-    ;;DEFINE form  defining the custom printer  function, the list is  spliced in the
-    ;;output.
-    (define foo-printer-definition
-      (if foo-custom-printer-code
-	  `((define ,foo-custom-printer ,foo-custom-printer-code))
-	'()))
-    ;;This is null if there is no  equality predicate; otherwise it is a list holding
-    ;;a  DEFINE form  defining the  equality predicate,  the list  is spliced  in the
-    ;;output.
-    (define foo-equality-predicate-definition
-      (if foo-equality-predicate-code
-	  `((define ,foo-equality-predicate.id ,foo-equality-predicate-code))
-	'()))
-    ;;This  is null  if there  is no  comparison procedure;  otherwise it  is a  list
-    ;;holding a DEFINE form defining the comparison procedure, the list is spliced in
-    ;;the output.
-    (define foo-comparison-procedure-definition
-      (if foo-comparison-procedure-code
-	  `((define ,foo-comparison-procedure.id ,foo-comparison-procedure-code))
-	'()))
-    ;;This is  null if there is  no hash function; otherwise  it is a list  holding a
-    ;;DEFINE form defining the hash function, the list is spliced in the output.
-    (define foo-hash-function-definition
-      (if foo-hash-function-code
-	  `((define ,foo-hash-function.id ,foo-hash-function-code))
-	'()))
-    #| end of definition forms |# )
+  ;;This definition  is null if  there is  no hash function;  otherwise it is  a list
+  ;;holding a  DEFINE form  defining the hash  function, the list  is spliced  in the
+  ;;output.
+  (define-values (foo-hash-function.id foo-hash-function-definition)
+    (cond ((%make-hash-function-code clause* foo parent-rtd.id synner)
+	   => (lambda (foo-hash-function-code)
+		(let ((foo-hash-function.id (%named-gensym/suffix foo-for-id-generation "-hash-function")))
+		  (values foo-hash-function.id `((define/std ,foo-hash-function.id ,foo-hash-function-code))))))
+	  (else
+	   (values #f '()))))
 
   ;;Code for methods.
   (define-values (method-name*.sym method-procname*.sym method-form*.sexp)
     (%parse-method-clauses clause* foo foo-for-id-generation synner))
 
-  ;;Null or  a symbolic  expression (to be  BLESSed later and  spliced in  the output
-  ;;form) representing the Scheme definition of the methods retriever function.
+  ;;False  or a  symbolic  expression (to  be BLESSed  later)  representing a  Scheme
+  ;;expression returning a closure object: the methods-retriever function.
   (define methods-retriever-code.sexp
-    (%make-methods-retriever-code foo foo-rtd
+    (%make-methods-retriever-code foo
 				  field-name*.sym safe-field-method*
 				  method-name*.sym method-procname*.sym))
+
+  ;;False or code to build at run-time the record-type descriptor.
+  (define foo-rtd-code
+    (%make-rtd-code foo foo-uid clause* parent-rtd.id fields-vector-spec
+		    foo-destructor.id foo-custom-printer-code
+		    foo-equality-predicate.id foo-comparison-procedure.id foo-hash-function.id
+		    methods-retriever-code.sexp synner))
 
   ;;A  symbolic expression  representing  a  form which,  expanded  and evaluated  at
   ;;expand-time, returns the right-hand side of the record-type name's DEFINE-SYNTAX.
   ;;The value of the right-hand side is the syntactic binding's descriptor.
   (define foo-syntactic-binding-form
-    (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-protocol foo-destructor
-					    foo-parent foo-rtd foo-rcd
+    (%make-type-name-syntactic-binding-form foo make-foo foo? foo-super-rcd.id foo-destructor.id
+					    foo-parent.id foo-rtd foo-rcd
 					    field-name*.sym field-relative-idx*
 					    foo-equality-predicate.id
 					    foo-comparison-procedure.id
@@ -300,66 +263,78 @@
     (gensym "args"))
 
   (bless
-   `(begin
+   `(module (,foo
+	     ,make-foo ,foo?
+	     ,@safe-field-accessor*
+	     ,@(%filter-out-falses safe-field-mutator*)
+	     ,@(if define-type-descriptors?
+		   (list foo-rtd foo-rcd)
+		 '())
+	     ;;We  want to  create the  syntactic  bindings of  unsafe accessors  and
+	     ;;mutators only when STRICT-R6RS mode is DISabled.
+	     ,@(if (options::strict-r6rs)
+		   '()
+		 (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
+
       ;;Parent record-type descriptor.
       ,@parent-rtd-definition
+
       ;;Parent record-constructor descriptor.
       ,@parent-rcd-definition
-      ;;Record-type descriptor.
-      (define/checked (brace ,foo-rtd <record-type-descriptor>)
-	,foo-rtd-code)
-      ;;Protocol function.
-      (define/std ,foo-constructor-protocol ,constructor-protocol-code)
-      ;;Record-constructor descriptor.
-      (define/checked (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
-      ;;Super-type record-constructor descriptor.
-      ,@super-rcd-definition
+
       ;;Record destructor function.
       ,@foo-destructor-definition
-      ;;Record printer function.
-      ,@foo-printer-definition
+
       ;;Record equality predicate.
       ,@foo-equality-predicate-definition
+
       ;;Record comparison procedure.
       ,@foo-comparison-procedure-definition
+
       ;;Record hash function.
       ,@foo-hash-function-definition
+
       ;;Syntactic binding for record-type name.
-      (define-syntax ,foo
-	,foo-syntactic-binding-form)
-      ;;Type predicate definitions.
-      ,@foo-predicate-definitions
-      ;;Default constructor.
-      (define/checked ((brace ,make-foo ,foo) . ,args.sym)
-	(unsafe-cast-signature (,foo) (apply ($record-constructor ,foo-rcd) ,args.sym)))
+      (define-syntax ,foo ,foo-syntactic-binding-form)
+
       ;;Methods.
       ,@method-form*.sexp
-      ;;When there are  no fields: this form  expands to "(module ())"  which is just
-      ;;wiped away with a further expansion.
-      (module (,@safe-field-accessor*
-	       ,@(%filter-out-falses safe-field-mutator*)
-	       ;;We want  to create  the syntactic bindings  of unsafe  accessors and
-	       ;;mutators only when STRICT-R6RS mode is DISabled.
-	       ,@(if (options::strict-r6rs)
-		     '()
-		   (append unsafe-field-accessor* (%filter-out-falses unsafe-field-mutator*))))
 
-	,@(%make-unsafe-accessor+mutator-code foo foo-rtd
-					      field-name*.sym field-relative-idx* field-type*.ots
-					      unsafe-field-accessor* unsafe-field-mutator*)
+      ;;Record-type descriptor.
+      (define/typed (brace ,foo-rtd <record-type-descriptor>)
+	,foo-rtd-code)
 
-	,@(%make-safe-accessor+mutator-code foo
+      ;;Protocol function.
+      (define/std ,foo-constructor-protocol ,constructor-protocol-code)
+
+      ;;Record-constructor descriptor.
+      (define/typed (brace ,foo-rcd <record-constructor-descriptor>) ,foo-rcd-code)
+
+      ;;Default record maker.
+      ,@foo-maker-definitions
+
+      ;;Type predicate definitions.
+      ,@foo-predicate-definitions
+
+      ;;Super-type record-constructor descriptor.
+      ,@super-rcd-definition
+
+      ;;Splice the definitions of unsafe field accessors and mutators.
+      ,@(%make-unsafe-accessor+mutator-code foo foo-rtd
 					    field-name*.sym field-relative-idx* field-type*.ots
-					    safe-field-accessor* unsafe-field-accessor*
-					    safe-field-mutator*  unsafe-field-mutator*)
+					    unsafe-field-accessor* unsafe-field-mutator*)
 
-	,@(%make-safe-method-code foo field-type*.ots
-				  safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
+      ;;Splice the definitions of safe field accessors and mutators.
+      ,@(%make-safe-accessor+mutator-code foo
+					  field-name*.sym field-relative-idx* field-type*.ots
+					  safe-field-accessor* unsafe-field-accessor*
+					  safe-field-mutator*  unsafe-field-mutator*)
 
-	,@methods-retriever-code.sexp
+      ;;Splice the definitions of field methods.
+      ,@(%make-safe-method-code foo field-type*.ots
+				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
 
-	#| end of module: safe and unsafe accessors and mutators |# )
-      )))
+      #| end of module |# )))
 
 
 (module (%validate-definition-clauses)
@@ -671,75 +646,92 @@
        (synner "invalid field specification in DEFINE-RECORD-TYPE syntax" ?spec)))))
 
 
-(define (%parse-method-clauses clause* foo foo-for-id-generation synner)
-  ;;Return two  values: a list  of symbols representing the  method names; a  list of
-  ;;symbolic  expressions  (to  be  BLESSed later)  representing  expressions  which,
-  ;;expanded and evaluated at run-time, define the method procedures.
-  ;;
-  (define-syntax-rule (recurse ?clause*)
-    (%parse-method-clauses ?clause* foo foo-for-id-generation synner))
-  (syntax-match clause* ()
-    (()
-     (values '() '() '()))
+(module (%parse-method-clauses)
 
-    (((?method (?who . ?args) . ?body) . ?clause*)
-     (and (method-id? ?method)
-	  (identifier? ?who))
-     (receive (method-name*.sym method-procname*.sym method-form*.sexp)
-	 (recurse ?clause*)
-       (let* ((name.sym		(identifier->symbol ?who))
-	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
-	      (form.sexp	`(define/checked (,procname.sym . ,?args) . ,?body)))
-	 (if (memq name.sym method-name*.sym)
-	     (synner "multiple method definitions with the same name" ?who)
-	   (values (cons name.sym	method-name*.sym)
-		   (cons procname.sym	method-procname*.sym)
-		   (cons form.sexp	method-form*.sexp))))))
+  (define (%parse-method-clauses clause* foo foo-for-id-generation synner)
+    ;;Parse the METHOD and CASE-METHOD clauses in CLAUSE*.
+    ;;
+    ;;Return the following values values:
+    ;;
+    ;;1. A list of symbols representing the method names.
+    ;;
+    ;;2.  A  list  of  syntactic  identifiers  bound  to  the  method  implementation
+    ;;   procedures.
+    ;;
+    ;;3.  A  list  of  symbolic   expressions  (to  be  BLESSed  later)  representing
+    ;;   definitions  which, expanded  and evaluated at  run-time, define  the method
+    ;;   implementation procedures.
+    ;;
+    (define-syntax-rule (recurse ?clause*)
+      (%parse-method-clauses ?clause* foo foo-for-id-generation synner))
+    (syntax-match clause* (method case-method)
+      (()
+       (values '() '() '()))
 
-    (((?method ((?brace ?who ?rv-tag0 . ?rv-tag*) . ?args) . ?body) . ?clause*)
-     (and (method-id? ?method)
-	  (brace-id?  ?brace)
-	  (identifier? ?who))
-     (receive (method-name*.sym method-procname*.sym method-form*.sexp)
-	 (recurse ?clause*)
-       (let* ((name.sym		(identifier->symbol ?who))
-	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
-	      (form.sexp	`(define/checked ((brace ,procname.sym ,?rv-tag0 . ,?rv-tag*) . ,?args) . ,?body)))
-	 (if (memq name.sym method-name*.sym)
-	     (synner "multiple method definitions with the same name" ?who)
-	   (values (cons name.sym	method-name*.sym)
-		   (cons procname.sym	method-procname*.sym)
-		   (cons form.sexp	method-form*.sexp))))))
+      (((?key . ?stuff) . ?clause*)
+       (or (method-id?      ?key)
+	   (case-method-id? ?key))
+       (receive (method-name*.sym method-procname*.sym method-form*.sexp)
+	   (recurse ?clause*)
+	 (receive (method-name.sym method-procname.sym method-form.sexp)
+	     (if (method-id? ?key)
+		 (%parse-method ?stuff foo foo-for-id-generation method-name*.sym synner)
+	       (%parse-case-method ?stuff foo foo-for-id-generation method-name*.sym synner))
+	   (values (cons method-name.sym	method-name*.sym)
+		   (cons method-procname.sym	method-procname*.sym)
+		   (cons method-form.sexp	method-form*.sexp)))))
 
-    (((?method . ?wrong-stuff) . ?clause*)
-     (method-id? ?method)
-     (synner "invalid syntax in METHOD clause" (cons ?method ?wrong-stuff)))
+      ((_ . ?clause*)
+       (recurse ?clause*))))
 
-    ;; ------------------------------------------------------------
+;;; --------------------------------------------------------------------
 
-    (((?case-method ?who . ?stuff) . ?clause*)
-     (and (case-method-id? ?case-method)
-	  (identifier? ?who))
-     (receive (method-name*.sym method-procname*.sym method-form*.sexp)
-	 (recurse ?clause*)
-       (let* ((name.sym		(identifier->symbol ?who))
-	      (procname.sym	(%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string name.sym))))
-	      (form.sexp	`(case-define ,procname.sym . ,?stuff)))
-	 (if (memq name.sym method-name*.sym)
-	     (synner "multiple method definitions with the same name" ?who)
-	   (values (cons name.sym	method-name*.sym)
-		   (cons procname.sym	method-procname*.sym)
-		   (cons form.sexp	method-form*.sexp))))))
+  (define (%parse-method clause.stx foo foo-for-id-generation method-name*.sym synner)
+    (syntax-match clause.stx (brace)
+      (((?who . ?args) ?body0 ?body* ...)
+       (identifier? ?who)
+       (let* ((method-name.sym		(identifier->symbol ?who))
+	      (method-procname.sym	(%mk-method-procname-id foo-for-id-generation method-name.sym))
+	      (method-form.sexp		`(define/checked (,method-procname.sym . ,?args)
+					   ,?body0 . ,?body*)))
+	 (%validate-method-name ?who method-name.sym method-name*.sym synner)
+	 (values method-name.sym method-procname.sym method-form.sexp)))
 
-    (((?case-method . ?wrong-stuff) . ?clause*)
-     (case-method-id? ?case-method)
-     (synner "invalid syntax in METHOD clause" (cons ?case-method ?wrong-stuff)))
+      ((((brace ?who ?rv-tag0 . ?rv-tag*) . ?formals) ?body0 . ?body*)
+       (identifier? ?who)
+       (let* ((method-name.sym		(identifier->symbol ?who))
+	      (method-procname.sym	(%mk-method-procname-id foo-for-id-generation method-name.sym))
+	      (method-form.sexp		`(define/checked ((brace ,method-procname.sym ,?rv-tag0 . ,?rv-tag*) . ,?formals)
+					   ,?body0 . ,?body*)))
+	 (%validate-method-name ?who method-name.sym method-name*.sym synner)
+	 (values method-name.sym method-procname.sym method-form.sexp)))
 
-    ;; ------------------------------------------------------------
+      (_
+       (synner "invalid syntax in METHOD clause" (cons (method-id) clause.stx)))))
 
-    ((_ . ?clause*)
-     (recurse ?clause*))
-    ))
+  (define (%parse-case-method clause.stx foo foo-for-id-generation method-name*.sym synner)
+    (syntax-match clause.stx (brace)
+      ((?who ?method-clause0 ?method-clause* ...)
+       (identifier? ?who)
+       (let* ((method-name.sym		(identifier->symbol ?who))
+	      (method-procname.sym	(%mk-method-procname-id foo-for-id-generation method-name.sym))
+	      (method-form.sexp		`(case-define ,method-procname.sym ,?method-clause0 . ,?method-clause*)))
+	 (%validate-method-name ?who method-name.sym method-name*.sym synner)
+	 (values method-name.sym method-procname.sym method-form.sexp)))
+
+      (_
+       (synner "invalid syntax in CASE-METHOD clause" (cons (case-method-id) clause.stx)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%validate-method-name who.id method-name.sym method-name*.sym synner)
+    (when (memq method-name.sym method-name*.sym)
+      (synner "multiple method definitions with the same name" who.id)))
+
+  (define (%mk-method-procname-id foo-for-id-generation method-name.sym)
+    (%named-gensym/suffix foo-for-id-generation (string-append "-" (symbol->string method-name.sym))))
+
+  #| end of module: %PARSE-METHOD-CLAUSES |# )
 
 
 (define (%make-unsafe-accessor+mutator-code foo foo-rtd
@@ -944,13 +936,11 @@
   ;;representing  the  name  of  the  syntactic  identifier  bound  to  the  parent's
   ;;record-constructor descriptor.
   ;;
-  ;;4.   PARENT-RTD-CODE:  false of  a  symbolic  expression  (to be  BLESSed  later)
-  ;;representing a Scheme expression which,  expanded and evaluated at run-time, will
-  ;;return the parent's record-type descriptor.
+  ;;4.  PARENT-RTD-DEFINITION: null  or a  list holding  a DEFINE  form defining  the
+  ;;parent RTD syntactic binding, the list is spliced in the output.
   ;;
-  ;;5.   PARENT-RCD-CODE:  false or  a  symbolic  expression  (to be  BLESSed  later)
-  ;;representing a Scheme expression which,  expanded and evaluated at run-time, will
-  ;;return the parent record-type default constructor descriptor.
+  ;;5.  PARENT-RCD-DEFINITION: null  or a  list holding  a DEFINE  form defining  the
+  ;;parent RCD syntactic binding, the list is spliced in the output.
   ;;
   (let ((parent-clause (%get-clause 'parent clause*)))
     (syntax-match parent-clause ()
@@ -960,16 +950,17 @@
        (identifier? ?parent-name)
        ;;Validate  ?PARENT-NAME  as  syntactic  identifier  bound  to  a  record-type
        ;;syntactic binding.
-       (let* ((parent-rts   (id->record-type-spec ?parent-name))
-	      (parent-proto (record-type-spec.super-protocol-id parent-rts)))
-	 (values ?parent-name
-		 (%named-gensym/suffix foo "-parent-rtd")
-		 (%named-gensym/suffix foo "-parent-rcd")
-		 `(record-type-descriptor ,?parent-name)
-		 ;;If the parent  has a super-type constructor  descriptor: use it;
+       (let* ((parent-rts	(id->record-type-spec ?parent-name))
+	      (parent-proto	(record-type-spec.super-protocol-id parent-rts))
+	      (parent-rtd.id	(%named-gensym/suffix foo "-parent-rtd"))
+	      (parent-rcd.id	(%named-gensym/suffix foo "-parent-rcd")))
+	 (values ?parent-name parent-rtd.id parent-rcd.id
+		 `((define/typed {,parent-rtd.id <record-type-descriptor>}
+		     (record-type-descriptor ,?parent-name)))
+		 ;;If the  parent has  a super-type  constructor descriptor:  use it;
 		 ;;otherwise use the default constructor descriptor.
-		 (or parent-proto
-		     `(record-constructor-descriptor ,?parent-name)))))
+		 `((define/typed {,parent-rcd.id <record-constructor-descriptor>}
+		     ,(or parent-proto `(record-constructor-descriptor ,?parent-name)))))))
 
       ;;If there is no PARENT clause try to retrieve the expression evaluating to the
       ;;RTD.
@@ -977,15 +968,18 @@
        (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
 	 (syntax-match parent-rtd-clause ()
 	   ((_ ?parent-rtd ?parent-rcd)
-	    (values #f
-		    (%named-gensym/suffix foo "-parent-rtd")
-		    (%named-gensym/suffix foo "-parent-rcd")
-		    ?parent-rtd ?parent-rcd))
+	    (let ((parent-rtd.id	(%named-gensym/suffix foo "-parent-rtd"))
+		  (parent-rcd.id	(%named-gensym/suffix foo "-parent-rcd")))
+	      (values #f parent-rtd.id parent-rcd.id
+		      `((define/typed {,parent-rtd.id <record-type-descriptor>}
+			  ,?parent-rtd))
+		      `((define/typed {,parent-rcd.id <record-constructor-descriptor>}
+			  ,?parent-rcd)))))
 
 	   ;;If  neither the  PARENT nor  the  PARENT-RTD clauses  are present:  just
 	   ;;return false.
 	   (#f
-	    (values #f #f #f #f #f))
+	    (values #f #f #f '() '()))
 
 	   (_
 	    (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
@@ -994,7 +988,10 @@
        (synner "invalid syntax in PARENT clause" parent-clause)))))
 
 
-(define (%make-rtd-code name foo-uid clause* parent-rtd fields-vector-spec synner)
+(define (%make-rtd-code name foo-uid clause* parent-rtd fields-vector-spec
+			destructor printer
+			equality-predicate comparison-procedure hash-function
+			method-retriever synner)
   ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
   ;;expression  which, expanded  and  evaluated at  run-time,  returns a  record-type
   ;;descriptor.
@@ -1026,7 +1023,17 @@
   (define fields
     `(quote ,fields-vector-spec))
 
-  `(make-record-type-descriptor (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque? ,fields))
+  (define normalised-fields
+    `(quote ,(vector-map (lambda (item)
+			   (cons (eq? 'mutable (car item)) (cadr item)))
+	       fields-vector-spec)))
+
+  ;;;`(make-record-type-descriptor (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque? ,fields)
+  `($make-record-type-descriptor-ex (quote ,name) ,parent-rtd (quote ,foo-uid) ,sealed? ,opaque?
+				    ,fields ,normalised-fields
+				    ,destructor ,printer
+				    ,equality-predicate ,comparison-procedure ,hash-function
+				    ,method-retriever))
 
 
 (define (%make-rcd-code clause* foo-rtd foo-constructor-protocol parent-rcd.sym)
@@ -1038,7 +1045,24 @@
   ;;symbol representing  the name of the  syntactic identifier bound to  the parent's
   ;;record-constructor descriptor.
   ;;
-  `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,foo-constructor-protocol))
+  `($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,foo-constructor-protocol))
+
+
+(define (%make-maker-definitions foo foo-rcd make-foo synner)
+  ;;Return a list  of symbolic expressions (to be BLESSed  later) representing Scheme
+  ;;definitions defining the record maker procedure.
+  ;;
+  ;;FIXME Here we should really implement some  way to specify typed arguments to the
+  ;;maker.  Right now it  is not possible with the single  PROTOCOL clause defined by
+  ;;the standard, so we  just use an ARGS catch-all argument.   (Marco Maggi; Sun Apr
+  ;;10, 2016)
+  ;;
+  (let ((internal-maker.sym	(gensym (identifier->symbol make-foo)))
+	(args.sym		(gensym "args")))
+    `((define/std ,internal-maker.sym
+	($record-constructor ,foo-rcd))
+      (define/checked ((brace ,make-foo ,foo) . ,args.sym)
+	(unsafe-cast-signature (,foo) (apply ,internal-maker.sym ,args.sym))))))
 
 
 (define (%make-predicate-definitions clause* foo? foo-rtd synner)
@@ -1079,9 +1103,9 @@
 
 (define (%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.sym synner)
   ;;Return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
-  ;;expression  which, expanded  and evaluated  at run-time,  returns the  super-type
-  ;;record-constructor descriptor.  If there is  no SUPER-PROTOCOL clause in CLAUSE*:
-  ;;return false.
+  ;;expression   which,   expanded   and   evaluated   at   run-time,   returns   the
+  ;;record-constructor descriptor  to be  used when  this type  is the  super-type of
+  ;;another one.  If there is no SUPER-PROTOCOL clause in CLAUSE*: return false.
   ;;
   ;;FOO must be the identifier representing this record type.
   ;;
@@ -1104,12 +1128,12 @@
 		(proto (record-type-spec.super-protocol-id rts)))
 	   (if proto
 	       ;;The parent record-type specification has a super-protocol.
-	       `(make-record-constructor-descriptor ,foo-rtd ,proto ,?super-protocol-expr)
+	       `($make-record-constructor-descriptor ,foo-rtd ,proto ,?super-protocol-expr)
 	     ;;The parent record-type specification has no super-protocol: let's use
 	     ;;the parent's default RCD.
-	     `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,?super-protocol-expr)))
+	     `($make-record-constructor-descriptor ,foo-rtd ,parent-rcd.sym ,?super-protocol-expr)))
        ;;This record type has no parent.
-       `(make-record-constructor-descriptor ,foo-rtd #f ,?super-protocol-expr)))
+       `($make-record-constructor-descriptor ,foo-rtd #f ,?super-protocol-expr)))
 
     (#f
      ;;No SUPER-PROTOCOL clause in this record-type definition.
@@ -1119,7 +1143,7 @@
      (synner "invalid syntax in SUPER-PROTOCOL clause" ?invalid-clause))))
 
 
-(define (%make-destructor-code clause* foo foo-rtd foo-parent parent-rtd.sym synner)
+(define (%make-destructor-code clause* foo foo-parent parent-rtd.sym synner)
   ;;Extract from  the CLAUSE*  the DESTRUCTOR-PROTOCOL one  and return  an expression
   ;;which, expanded and  evaluated at run-time, will return  the destructor function;
   ;;the expression will return false if there is no destructor.
@@ -1147,8 +1171,7 @@
 	      ,(if (or foo-parent parent-rtd.sym)
 		   `(,foo-destructor-protocol (internal-applicable-record-type-destructor ,parent-rtd.sym))
 		 `(,foo-destructor-protocol))
-	    (if (procedure? ,destructor-tmp)
-		(record-type-destructor-set! ,foo-rtd ,destructor-tmp)
+	    (unless (procedure? ,destructor-tmp)
 	      (assertion-violation (quote ,foo)
 		"expected closure object as result of applying the destructor protocol function"
 		,destructor-tmp)))))
@@ -1164,11 +1187,7 @@
       ;;
       (#f
        (if (or foo-parent parent-rtd.sym)
-	   (let ((foo-parent-destructor (%named-gensym/suffix foo "-parent-destructor")))
-	     `(cond ((record-type-destructor ,parent-rtd.sym)
-		     => (lambda (,foo-parent-destructor)
-			  (record-type-destructor-set! ,foo-rtd ,foo-parent-destructor)
-			  ,foo-parent-destructor))))
+	   `(record-type-destructor ,parent-rtd.sym)
 	 ;;Set to false this record-type record destructor variable.
 	 #f))
 
@@ -1176,7 +1195,7 @@
        (synner "invalid syntax in DESTRUCTOR-PROTOCOL clause" clause)))))
 
 
-(define (%make-custom-printer-code clause* foo foo-rtd synner)
+(define (%make-custom-printer-code clause* foo synner)
   ;;Extract from the  definition clauses CLAUSE* the CUSTOM-PRINTER one  and return a
   ;;symbolic expression (to be BLESSed later) representing a Scheme expression which,
   ;;expanded and evaluated  at run-time, will return the custom  printer function and
@@ -1188,8 +1207,7 @@
        (let ((printer (%named-gensym/suffix foo "-custom-printer")))
 	 `(receive-and-return (,printer)
 	      ,?expr
-	    (if (procedure? ,printer)
-		(record-type-printer-set! ,foo-rtd ,printer)
+	    (unless (procedure? ,printer)
 	      (assertion-violation (quote ,foo)
 		"expected closure object from evaluation of expression in CUSTOM-PRINTER clause"
 		,printer)))))
@@ -1201,7 +1219,7 @@
        (synner "invalid syntax in CUSTOM-PRINTER clause" clause)))))
 
 
-(define (%make-equality-predicate-code clause* foo foo-rtd synner)
+(define (%make-equality-predicate-code clause* foo parent-rtd synner)
   ;;Extract from the definition clauses CLAUSE* the EQUALITY-PREDICATE one and return
   ;;a  symbolic expression  (to be  BLESSed later)  representing a  Scheme expression
   ;;which, expanded and evaluated at run-time, will return the equality predicate and
@@ -1209,8 +1227,28 @@
   ;;
   (let ((clause (%get-clause 'equality-predicate clause*)))
     (syntax-match clause ()
-      ((_ ?expr)
-       `(record-type-compose-equality-predicate ,foo-rtd ,?expr))
+      ((_ ?proto-expr)
+       (let ((proto-func.sym	(gensym "proto-func"))
+	     (pred-func.sym	(gensym "pred-func")))
+	 (if parent-rtd
+	     ;;The new  record-type has a parent:  we apply the protocol  function to
+	     ;;the parent's equality predicate function.
+	     `(let ((,proto-func.sym ,?proto-expr))
+		(receive-and-return (,pred-func.sym)
+		    (,proto-func.sym ($record-type-equality-predicate ,parent-rtd))
+		  (unless (procedure? ,pred-func.sym)
+		    (assertion-violation (quote ,foo)
+		      "expected closure object from evaluation of equality predicate's protocol function"
+		      ,pred-func.sym))))
+	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
+	   ;;function with no arguments.
+	   `(let ((,proto-func.sym ,?proto-expr))
+	      (receive-and-return (,pred-func.sym)
+		  (,proto-func.sym)
+		(unless (procedure? ,pred-func.sym)
+		  (assertion-violation (quote ,foo)
+		    "expected closure object from evaluation of equality predicate's protocol function"
+		    ,pred-func.sym)))))))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1219,7 +1257,7 @@
        (synner "invalid syntax in EQUALITY-PREDICATE clause" clause)))))
 
 
-(define (%make-comparison-procedure-code clause* foo foo-rtd synner)
+(define (%make-comparison-procedure-code clause* foo parent-rtd synner)
   ;;Extract  from the  definition clauses  CLAUSE* the  COMPARISON-PROCEDURE one  and
   ;;return  a  symbolic  expression  (to  be BLESSed  later)  representing  a  Scheme
   ;;expression which, expanded and evaluated  at run-time, will return the comparison
@@ -1228,8 +1266,28 @@
   ;;
   (let ((clause (%get-clause 'comparison-procedure clause*)))
     (syntax-match clause ()
-      ((_ ?expr)
-       `(record-type-compose-comparison-procedure ,foo-rtd ,?expr))
+      ((_ ?proto-expr)
+       (let ((proto-func.sym	(gensym "proto-func"))
+	     (compar-func.sym	(gensym "compar-func")))
+	 (if parent-rtd
+	     ;;The new  record-type has a parent:  we apply the protocol  function to
+	     ;;the parent's comparison procedure.
+	     `(let ((,proto-func.sym ,?proto-expr))
+		(receive-and-return (,compar-func.sym)
+		    (,proto-func.sym ($record-type-comparison-procedure ,parent-rtd))
+		  (unless (procedure? ,compar-func.sym)
+		    (assertion-violation (quote ,foo)
+		      "expected closure object from evaluation of comparison procedure's protocol function"
+		      ,compar-func.sym))))
+	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
+	   ;;function with no arguments.
+	   `(let ((,proto-func.sym ,?proto-expr))
+	      (receive-and-return (,compar-func.sym)
+		  (,proto-func.sym)
+		(unless (procedure? ,compar-func.sym)
+		  (assertion-violation (quote ,foo)
+		    "expected closure object from evaluation of comparison procedure's protocol function"
+		    ,compar-func.sym)))))))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1238,7 +1296,7 @@
        (synner "invalid syntax in COMPARISON-PROCEDURE clause" clause)))))
 
 
-(define (%make-hash-function-code clause* foo foo-rtd synner)
+(define (%make-hash-function-code clause* foo parent-rtd synner)
   ;;Extract from  the definition clauses CLAUSE*  the HASH-FUNCTION one and  return a
   ;;symbolic expression (to be BLESSed later) representing a Scheme expression which,
   ;;expanded and evaluated at run-time, will return the hash function and register it
@@ -1246,8 +1304,28 @@
   ;;
   (let ((clause (%get-clause 'hash-function clause*)))
     (syntax-match clause ()
-      ((_ ?expr)
-       `(record-type-compose-hash-function ,foo-rtd ,?expr))
+      ((_ ?proto-expr)
+       (let ((proto-func.sym	(gensym "proto-func"))
+	     (hash-func.sym	(gensym "hash-func")))
+	 (if parent-rtd
+	     ;;The new  record-type has a parent:  we apply the protocol  function to
+	     ;;the parent's comparison procedure.
+	     `(let ((,proto-func.sym ,?proto-expr))
+		(receive-and-return (,hash-func.sym)
+		    (,proto-func.sym ($record-type-hash-function ,parent-rtd))
+		  (unless (procedure? ,hash-func.sym)
+		    (assertion-violation (quote ,foo)
+		      "expected closure object from evaluation of hash function's protocol function"
+		      ,hash-func.sym))))
+	   ;;The  new  record-type has  no  parent:  we  just evaluate  the  protocol
+	   ;;function with no arguments.
+	   `(let ((,proto-func.sym ,?proto-expr))
+	      (receive-and-return (,hash-func.sym)
+		  (,proto-func.sym)
+		(unless (procedure? ,hash-func.sym)
+		  (assertion-violation (quote ,foo)
+		    "expected closure object from evaluation of hash function's protocol function"
+		    ,hash-func.sym)))))))
 
       ;;No matching clause found.
       (#f	#f)
@@ -1256,38 +1334,31 @@
        (synner "invalid syntax in HASH-FUNCTION clause" clause)))))
 
 
-(define (%make-methods-retriever-code foo foo-rtd
-				      field-name*.sym safe-field-method*
-				      method-name*.sym method-procname*.sym)
-  ;;Return null  or a  symbolic expression (to  be BLESSed later  and spliced  in the
-  ;;output  form)  representing  the  Scheme  definition  of  the  methods  retriever
-  ;;function.
+(define (%make-methods-retriever-code foo field-name*.sym safe-field-method* method-name*.sym method-procname*.sym)
+  ;;Return false  or a  symbolic expression  (to be  BLESSed later)  representing the
+  ;;Scheme definition of the methods-retriever function: a LAMBDA syntax use.
   ;;
   ;;The methods retriever function is used when performing late binding of methods.
   ;;
-  (define foo.str
-    (symbol->string (identifier->symbol foo)))
   (if (or (pair? method-name*.sym)
 	  (pair? field-name*.sym))
-      (let ((method-retriever.sym (gensym (string-append foo.str "-methods-retriever"))))
-	`((module ()
-	    (define/std (,method-retriever.sym name)
-	      (case name
-		;;First the methods...
-		,@(map (lambda (name procname)
-			 `((,name) ,procname))
-		    method-name*.sym method-procname*.sym)
-		;;Then the fields, so that the methods will be selected first.
-		,@(map (lambda (name procname)
-			 `((,name) ,procname))
-		    field-name*.sym safe-field-method*)
-		(else #f)))
-	    (record-type-method-retriever-set! ,foo-rtd ,method-retriever.sym))))
-    '()))
+      (let ((field-name.sym (gensym "field-name")))
+	`(lambda/std (,field-name.sym)
+	   (case ,field-name.sym
+	     ;;First the methods...
+	     ,@(map (lambda (name procname)
+		      `((,name) ,procname))
+		 method-name*.sym method-procname*.sym)
+	     ;;Then the fields, so that the methods will be selected first.
+	     ,@(map (lambda (name procname)
+		      `((,name) ,procname))
+		 field-name*.sym safe-field-method*)
+	     (else #f))))
+    #f))
 
 
 (define* (%make-type-name-syntactic-binding-form foo.id make-foo.id foo?.id
-						 foo-super-protocol.sym foo-destructor.sym
+						 foo-super-rcd.sym foo-destructor.sym
 						 foo-parent.id foo-rtd.sym foo-rcd.sym
 						 field-name*.sym field-relative-idx*
 						 foo-equality-predicate.id
@@ -1303,9 +1374,9 @@
   ;;
   ;;MAKE-FOO.ID must be the identifier bound to the default constructor function.
   ;;
-  ;;FOO-SUPER-PROTOCOL.SYM  must  be false  if  this  record-type has  no  super-type
-  ;;constructor descriptor;  otherwise it must be  a symbol representing the  name of
-  ;;the syntactic identifier to which the super-RCD is bound.
+  ;;FOO-SUPER-RCD.SYM must be false if this record-type has no super-type constructor
+  ;;descriptor; otherwise it must be a  symbol representing the name of the syntactic
+  ;;identifier to which the super-RCD is bound.
   ;;
   ;;FOO-DESTRUCTOR.SYM must be  false if this record-type has  no default destructor;
   ;;otherwise it must  be a symbol representing the name  of the syntactic identifier
@@ -1385,7 +1456,7 @@
   `(make-record-type-spec (syntax ,foo.id)
 			  (syntax ,foo-rtd.sym)
 			  (syntax ,foo-rcd.sym)
-			  ,(and foo-super-protocol.sym `(syntax ,foo-super-protocol.sym))
+			  ,(and foo-super-rcd.sym `(syntax ,foo-super-rcd.sym))
 			  ,(if foo-parent.id
 			       `(syntax ,foo-parent.id)
 			     `(syntax <record>))
