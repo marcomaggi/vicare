@@ -1505,19 +1505,27 @@ Condition object type @condition{condition}, which is implemented as
 (define-values (label descriptor)
   (environment-binding '&condition env))
 descriptor
-@result{} ($core-rtd . (&condition-rtd &condition-rcd))
+@result{} (core-object-type-name . (#<record-type-spec> .
+  (&condition &condition-rtd &condition-rcd <condition>
+     make-simple-condition condition? ())))
+
 (symbol-value label)
-@result{} ($core-rtd . (&condition-rtd &condition-rcd))
+@result{} (core-object-type-name . (#<record-type-spec> .
+  (&condition &condition-rtd &condition-rcd <condition>
+     make-simple-condition condition? ())))
+
 (eq? descriptor (symbol-value label))
 @result{} #t
 @end lisp
 
 @noindent
-in the descriptor: @meta{binding-type} is the symbol @samp{$core-rtd}
-and @meta{binding-value} is the list:
+in the descriptor: @meta{binding-type} is the symbol
+@samp{core-object-type-name} and @meta{binding-value} is the list:
 
 @example
-(&condition-rtd &condition-rcd)
+(#<record-type-spec> .
+  (&condition &condition-rtd &condition-rcd <condition>
+     make-simple-condition condition? ()))
 @end example
 
 @noindent
@@ -1527,12 +1535,12 @@ we can further inspect @code{&condition-rtd} and @code{&condition-rcd}:
 (receive (label descriptor)
     (environment-binding '&condition-rtd env)
   descriptor)
-@result{} (core-prim . &condition-rtd)
+@result{} ($core-rtd . &condition-rtd)
 
 (receive (label descriptor)
     (environment-binding '&condition-rcd env)
   descriptor)
-@result{} (core-prim . &condition-rcd)
+@result{} ($core-rcd . &condition-rcd)
 @end lisp
 @end itemize
 
@@ -1558,7 +1566,7 @@ value}).  Examples:
 @result{} (core-macro . let)
 
 (symbol-value (system-label '&condition))
-@result{} ($core-rtd &condition-rtd &condition-rcd)
+@result{} (core-object-type-name . ---)
 
 (symbol-value (system-label '__who__))
 @result{} ($fluid . fluid-label.__who__)
@@ -1806,6 +1814,36 @@ the following descriptor is generated:
      make-who-condition who-condition?
      ((who condition-who))))
 @end example
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Primitive binding: core record--type descriptor
+
+A syntactic binding representing a core record--type descriptor name has
+syntactic binding's descriptor with format:
+
+@example
+($core-rtd . @meta{name})
+@end example
+
+@noindent
+where @meta{name} is a symbol representing the public name of the
+record--type descriptor.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Primitive binding: core record--constructor descriptor
+
+A syntactic binding representing a core record--constructor descriptor
+name has syntactic binding's descriptor with format:
+
+@example
+($core-rcd . @meta{name})
+@end example
+
+@noindent
+where @meta{name} is a symbol representing the public name of the
+record--constructor descriptor.
 
 @c ------------------------------------------------------------------------
 

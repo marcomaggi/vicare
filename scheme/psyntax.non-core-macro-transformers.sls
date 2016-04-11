@@ -4347,8 +4347,8 @@
 	 ;;        ...
 	 ;;        TMP0)))
 	 ;;
-	 (let ((TMP* (generate-temporaries ?id*)))
-	   (bless
+	 (bless
+	  (let ((TMP* (generate-temporaries ?id*)))
 	    `(begin
 	       ,@(map (lambda (var)
 			`(define/std ,var))
@@ -4375,8 +4375,9 @@
 	 ;;        ...
 	 ;;        TMP-REST)))
 	 ;;
-	 (let ((TMP* (generate-temporaries ?id*)))
-	   (bless
+	 (bless
+	  (let ((TMP*		(generate-temporaries ?id*))
+		(rest.sym	(gensym "rest")))
 	    `(begin
 	       ,@(map (lambda (var)
 			`(define/std ,var))
@@ -4384,19 +4385,20 @@
 	       (define/std ,?rest-id
 		 (call-with-values
 		     (lambda/std () . ,body*.stx)
-		   (lambda/std (,@TMP* . rest)
+		   (lambda/std (,@TMP* . ,rest.sym)
 		     ,@(map (lambda (var TMP)
 			      `(set! ,var ,TMP))
 			 ?id* TMP*)
-		     rest)))))))
+		     ,rest.sym)))))))
 
 	(?args
 	 (identifier? ?args)
 	 (bless
-	  `(define/std ,?args
-	     (call-with-values
-		 (lambda/std () . ,body*.stx)
-	       (lambda/std args args)))))
+	  (let ((args.sym (gensym "args")))
+	    `(define/std ,?args
+	       (call-with-values
+		   (lambda/std () . ,body*.stx)
+		 (lambda/std ,args.sym ,args.sym))))))
 	)))
 
   (define (define-values/checked-macro input-form.stx input-formals.stx body*.stx)
@@ -4411,28 +4413,28 @@
 	 ;;  (define/checked {?id0 ?type0}
 	 ;;    (call-with-values
 	 ;;        (lambda/std () ?body0 . ?body*)
-	 ;;      (lambda/std (TMP ... TMP0)
+	 ;;      (lambda/typed ({_ ?type0} TMP ... TMP0)
 	 ;;        (set! ?id TMP)
 	 ;;        ...
-	 ;;        (assert-signature-and-return (?type0) TMP0)))))
+	 ;;        TMP0))))
 	 ;;
-	 (receive (tag* tag0)
+	 (receive (type* type0)
 	     (proper-list->head-and-last (type-signature.syntax-object formals.sig))
 	   (let ((TMP* (generate-temporaries ?id*)))
 	     (bless
 	      `(begin
-		 ,@(map (lambda (var tag)
-			  `(define/checked (brace ,var ,tag)))
-		     ?id* tag*)
-		 (define/checked (brace ,?id0 ,tag0)
+		 ,@(map (lambda (var type)
+			  `(define/checked {,var ,type}))
+		     ?id* type*)
+		 (define/checked {,?id0 ,type0}
 		   (call-with-values
 		       (lambda/std () . ,body*.stx)
-		     (lambda/std (,@TMP* TMP0)
+		     (lambda/typed ({_ ,type0} ,@TMP* TMP0)
 		       ;;These set forms do the type validation.
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
-			   ?id* TMP* tag*)
-		       (assert-signature-and-return (,tag0) TMP0)))))))))
+			   ?id* TMP*)
+		       TMP0))))))))
 
 	((?id* ... . ?rest-id)
 	 ;;We want this expansion:
@@ -4442,37 +4444,40 @@
 	 ;;  (define/checked {?rest-id ?rest-type}
 	 ;;    (call-with-values
 	 ;;        (lambda/std () ?body0 . ?body*)
-	 ;;      (lambda/std (TMP ... . TMP-REST)
+	 ;;      (lambda/typed ({_ ?rest-type} TMP ... . TMP-REST)
 	 ;;        (set! ?id TMP)
 	 ;;        ...
-	 ;;        (assert-signature-and-return (?rest-type) TMP-REST)))))
+	 ;;        TMP-REST))))
 	 ;;
-	 (let ((TMP* (generate-temporaries ?id*)))
-	   (receive (tag* rest-tag)
-	       (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
+	 (receive (type* rest-type)
+	     (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
+	   (let ((TMP*		(generate-temporaries ?id*))
+		 (rest.sym	(gensym "rest")))
 	     (bless
 	      `(begin
-		 ,@(map (lambda (var tag)
-			  `(define/checked (brace ,var ,tag)))
-		     ?id* tag*)
-		 (define/checked (brace ,?rest-id ,rest-tag)
+		 ,@(map (lambda (var type)
+			  `(define/checked {,var ,type}))
+		     ?id* type*)
+		 (define/checked {,?rest-id ,rest-type}
 		   (call-with-values
 		       (lambda/std () . ,body*.stx)
-		     (lambda/std (,@TMP* . rest)
+		     (lambda/typed ({_ ,rest-type} ,@TMP* . ,rest.sym)
 		       ;;These set forms do the type validation.
 		       ,@(map (lambda (var TMP)
 				`(set! ,var ,TMP))
 			   ?id* TMP*)
-		       (assert-signature-and-return (,rest-tag) rest)))))))))
+		       ,rest.sym))))))))
 
 	(?args
 	 (identifier? ?args)
-	 (bless
-	  `(define/checked (brace ,?args ,(type-signature.syntax-object formals.sig))
-	     (call-with-values
-		 (lambda/std () . ,body*.stx)
-	       (lambda/std args
-		 (assert-signature-and-return (,(type-signature.syntax-object formals.sig)) args))))))
+	 (let ((args.sym	(gensym "args"))
+	       (args.type	(type-signature.syntax-object formals.sig)))
+	   (bless
+	    `(define/checked {,?args ,args.type}
+	       (call-with-values
+		   (lambda/std () . ,body*.stx)
+		 (lambda/typed {,args.sym ,args.type}
+		   ,args.sym))))))
 	)))
 
   #| end of module: DEFINE-VALUES-MACRO |# )

@@ -231,6 +231,7 @@
 				 global global-mutable global-typed global-typed-mutable
 				 macro macro! global-macro global-macro! local-macro local-macro!
 				 import export library $module pattern-variable
+				 $core-rtd $core-rcd
 				 local-etv global-etv
 				 displaced-lexical)
 		      (values type descr ?id))
@@ -264,9 +265,9 @@
 		       displaced-lexical)
 		      (values type descr ?car))
 		     (else
-		      ;;This  case includes  TYPE being:  CORE-PRIM, CORE-PRIM-TYPED,
-		      ;;LEXICAL, LEXICAL-TYPED, GLOBAL, GLOBAL-MUTABLE, GLOBAL-TYPED,
-		      ;;GLOBAL-TYPED-MUTABLE.
+		      ;;This  case includes  TYPE being:  core-prim, core-prim-typed,
+		      ;;lexical, lexical-typed, global, global-mutable, global-typed,
+		      ;;global-typed-mutable, $core-rtd, $core-rcd.
 		      (values 'call #f #f))))))
 	   (else
 	    (error-unbound-identifier caller-who ?car))))
@@ -687,8 +688,8 @@
 	      (loc		(cdr descr.value)))
 	 ((inv-collector) lib)
 	 (make-psi expr.stx
-		   (build-global-reference no-source loc)
-		   (make-type-signature/single-top))))
+	   (build-global-reference no-source loc)
+	   (make-type-signature/single-top))))
 
       ((global-typed)
        ;;Reference to global imported typed  lexical variable; this means EXPR.STX is
@@ -717,18 +718,6 @@
 	     "unbound loc gensym of \"global-typed\" syntactic binding's descriptor"
 	     expr.stx descr))))
 
-      ((core-prim)
-       ;;Core  primitive; it  is  either a  built-in procedure  (like  DISPLAY) or  a
-       ;;constant  (like  then R6RS  record-type  descriptor  for "&condition").   We
-       ;;expect the syntactic binding's descriptor DESCR to be:
-       ;;
-       ;;   (core-prim . ?prim-name)
-       ;;
-       (let ((name (syntactic-binding-descriptor.value descr)))
-	 (make-psi expr.stx
-		   (build-primref no-source name)
-		   (make-type-signature/single-top))))
-
       ((core-prim-typed)
        ;;Core  primitive  with  type  signatures  specification;  it  is  a  built-in
        ;;procedure.  We expect the syntactic binding's descriptor DESCR to be:
@@ -741,6 +730,42 @@
 	 (make-psi expr.stx
 	   (build-primref no-source prim.name)
 	   (make-type-signature/single-value prim.ots))))
+
+      ((core-prim)
+       ;;Core  primitive; it  is  either a  built-in procedure  (like  DISPLAY) or  a
+       ;;constant (like the R6RS record-type descriptor for "&condition").  We expect
+       ;;the syntactic binding's descriptor DESCR to be:
+       ;;
+       ;;   (core-prim . ?prim-name)
+       ;;
+       (let ((name (syntactic-binding-descriptor.value descr)))
+	 (make-psi expr.stx
+	   (build-primref no-source name)
+	   (make-type-signature/single-top))))
+
+      (($core-rtd)
+       ;;Core  record-type  descriptor reference;  it  is  a built-in  constant  like
+       ;;"&condition-rtd",  the R6RS  record-type  descriptor  for "&condition".   We
+       ;;expect the syntactic binding's descriptor DESCR to be:
+       ;;
+       ;;   ($core-rtd . ?prim-name)
+       ;;
+       (let ((name (syntactic-binding-descriptor.value descr)))
+	 (make-psi expr.stx
+	   (build-primref no-source name)
+	   (make-type-signature/single-value (core-prim-id '<record-type-descriptor>)))))
+
+      (($core-rcd)
+       ;;Core record-constructor descriptor reference; it is a built-in constant like
+       ;;"&condition-rcd", the  R6RS record-constructor descriptor  for "&condition".
+       ;;We expect the syntactic binding's descriptor DESCR to be:
+       ;;
+       ;;   ($core-rcd . ?prim-name)
+       ;;
+       (let ((name (syntactic-binding-descriptor.value descr)))
+	 (make-psi expr.stx
+	   (build-primref no-source name)
+	   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
 
       ((call)
        ;;A function call; this means EXPR.STX has one of the formats:
@@ -815,8 +840,8 @@
        ;;Constant; it means EXPR.STX is a self-evaluating datum.
        (let ((datum descr))
 	 (make-psi expr.stx
-		   (build-data no-source datum)
-		   (datum-type-signature datum))))
+	   (build-data no-source datum)
+	   (datum-type-signature datum))))
 
       ((set!)
        ;;Macro use of SET!; it means EXPR.STX has the format:
@@ -835,9 +860,9 @@
 	 ((_ ?body ?body* ...)
 	  (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
 	    (make-psi expr.stx
-		      (build-sequence no-source
-			(map psi.core-expr body*.psi))
-		      (psi.retvals-signature (proper-list->last-item body*.psi)))))
+	      (build-sequence no-source
+		(map psi.core-expr body*.psi))
+	      (psi.retvals-signature (proper-list->last-item body*.psi)))))
 	 ))
 
       ((stale-when)
@@ -851,9 +876,9 @@
 	    (handle-stale-when ?guard lexenv.expand)
 	    (let ((body*.psi (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand)))
 	      (make-psi expr.stx
-			(build-sequence no-source
-			  (map psi.core-expr body*.psi))
-			(psi.retvals-signature (proper-list->last-item body*.psi))))))
+		(build-sequence no-source
+		  (map psi.core-expr body*.psi))
+		(psi.retvals-signature (proper-list->last-item body*.psi))))))
 	 ))
 
       ((let-syntax letrec-syntax)
@@ -877,9 +902,9 @@
 					(append (map cons xlab* xb*) lexenv.run)
 					(append (map cons xlab* xb*) lexenv.expand))))
 	      (make-psi expr.stx
-			(build-sequence no-source
-			  (map psi.core-expr body*.psi))
-			(psi.retvals-signature (proper-list->last-item body*.psi))))))
+		(build-sequence no-source
+		  (map psi.core-expr body*.psi))
+		(psi.retvals-signature (proper-list->last-item body*.psi))))))
 	 ))
 
       ((displaced-lexical)
