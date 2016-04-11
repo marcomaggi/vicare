@@ -35,14 +35,50 @@
 
 (section
 
+(define-object-unary/multi-comparison-declarer declare-boolean-unary/multi-comparison <boolean>)
+
 (declare-type-predicate boolean?	<boolean>)
 
-(declare-core-primitive boolean=?
+(declare-boolean-unary/multi-comparison boolean=?)
+(declare-boolean-unary/multi-comparison boolean!=?)
+(declare-boolean-unary/multi-comparison boolean<=?)
+(declare-boolean-unary/multi-comparison boolean<?)
+(declare-boolean-unary/multi-comparison boolean>=?)
+(declare-boolean-unary/multi-comparison boolean>?)
+
+(declare-core-primitive boolean-max
     (safe)
   (signatures
-   ((list-of <boolean>)			=> (<boolean>)))
-  (attributes
-   ((_ _)				foldable effect-free)))
+   ((<boolean> . (list-of <boolean>))	=> (<boolean>))))
+
+(declare-core-primitive boolean-min
+    (safe)
+  (signatures
+   ((<boolean> . (list-of <boolean>))	=> (<boolean>))))
+
+/section)
+
+
+;;;; booleans, unsafe procedures
+
+(section
+
+(declare-boolean-unary/multi-comparison $boolean=?	unsafe)
+(declare-boolean-unary/multi-comparison $boolean!=?	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<=?	unsafe)
+(declare-boolean-unary/multi-comparison $boolean<?	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>=?	unsafe)
+(declare-boolean-unary/multi-comparison $boolean>?	unsafe)
+
+(declare-core-primitive $boolean-max
+    (unsafe)
+  (signatures
+   ((<boolean> <boolean>)		=> (<boolean>))))
+
+(declare-core-primitive $boolean-min
+    (unsafe)
+  (signatures
+   ((<boolean> <boolean>)		=> (<boolean>))))
 
 /section)
 
