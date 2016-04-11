@@ -30,6 +30,9 @@
 
 (define (typed-core-primitives.bytevectors)
 
+(define-object-binary/multi-comparison-declarer declare-bytevector-u8-binary/multi-comparison <bytevector>)
+(define-object-binary/multi-comparison-declarer declare-bytevector-s8-binary/multi-comparison <bytevector>)
+
 
 ;;;; bytevectors, safe functions
 
@@ -61,6 +64,11 @@
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    (_				effect-free result-true)))
+
+(declare-core-primitive bytevector-concatenate
+    (safe)
+  (signatures
+   (((list-of <bytevector>))		=> (<bytevector>))))
 
 (declare-core-primitive bytevector-reverse-and-concatenate
     (safe)
@@ -141,7 +149,38 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-bytevector-binary-comparison bytevector=?	(replacements $bytevector=))
+(declare-bytevector-u8-binary/multi-comparison bytevector=?	(replacements $bytevector=))
+(declare-bytevector-u8-binary/multi-comparison bytevector!=?)
+
+(declare-bytevector-u8-binary/multi-comparison bytevector-u8<=?)
+(declare-bytevector-u8-binary/multi-comparison bytevector-u8<?)
+(declare-bytevector-u8-binary/multi-comparison bytevector-u8>=?)
+(declare-bytevector-u8-binary/multi-comparison bytevector-u8>?)
+
+(declare-bytevector-s8-binary/multi-comparison bytevector-s8<=?)
+(declare-bytevector-s8-binary/multi-comparison bytevector-s8<?)
+(declare-bytevector-s8-binary/multi-comparison bytevector-s8>=?)
+(declare-bytevector-s8-binary/multi-comparison bytevector-s8>?)
+
+(declare-core-primitive bytevector-u8-max
+    (safe)
+  (signatures
+   ((list-of <bytevector>)		=> (<bytevector>))))
+
+(declare-core-primitive bytevector-u8-min
+    (safe)
+  (signatures
+   ((list-of <bytevector>)		=> (<bytevector>))))
+
+(declare-core-primitive bytevector-s8-max
+    (safe)
+  (signatures
+   ((list-of <bytevector>)		=> (<bytevector>))))
+
+(declare-core-primitive bytevector-s8-min
+    (safe)
+  (signatures
+   ((list-of <bytevector>)		=> (<bytevector>))))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
@@ -597,6 +636,26 @@
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_ _)			effect-free result-true)))
+
+(declare-core-primitive $subbytevector-u8
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<bytevector>))))
+
+(declare-core-primitive $subbytevector-s8
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<bytevector>))))
+
+(declare-core-primitive $subbytevector-u8/count
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<bytevector>))))
+
+(declare-core-primitive $subbytevector-s8/count
+    (unsafe)
+  (signatures
+   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<bytevector>))))
 
 ;;; --------------------------------------------------------------------
 ;;; inspection
