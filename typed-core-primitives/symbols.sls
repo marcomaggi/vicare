@@ -42,6 +42,15 @@
   (signatures
    ((<symbol>) => (<string>))))
 
+;;Commented out because it is not an exported primitive.
+;;
+;; (declare-core-primitive string-or-symbol?
+;;     (safe)
+;;   (signatures
+;;    ((<string>)			=> (<true>))
+;;    ((<symbol>)			=> (<true>))
+;;    ((<top>)			=> (<boolean>))))
+
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
@@ -96,6 +105,10 @@
    ;;Once a  gensym has been  created, its unique  string is determined  forever.  So
    ;;this is foldable.
    ((_)				foldable effect-free result-true)))
+
+(declare-parameter print-gensym)
+(declare-parameter gensym-prefix)
+(declare-parameter gensym-count)
 
 ;;; --------------------------------------------------------------------
 ;;; properties

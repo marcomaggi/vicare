@@ -180,6 +180,9 @@
 
 (declare-type-predicate library?	<library>)
 
+(declare-core-rtd <library>-rtd)
+(declare-core-rcd <library>-rtd)
+
 ;;Accessors for "<library>" objects.
 (let-syntax
     ((declare (syntax-rules ()

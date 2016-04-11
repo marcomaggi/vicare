@@ -28,6 +28,7 @@
 (library (typed-core-primitives syntaxes)
   (export
     declare-primitive
+    declare-core-rtd			declare-core-rcd
 
     ;; helpers
     comment				/comment
@@ -150,20 +151,49 @@
 
 ;;;; helpers
 
-(define (declare-primitive prim-name spec)
+(define* (declare-primitive prim-name spec)
   ;;Print to  stdout the  symbolic expression representing  the typed  core primitive
   ;;specification.  Use symbol properties to detect duplicated definitions.
   ;;
-  (cond ((getprop prim-name 'typed-core-prim)
+  (define-constant KEY '$core-prim-typed)
+  (cond ((getprop prim-name KEY)
 	 => (lambda (sexp)
-	      (error __who__
-		"typed core primitive already defined"
-		prim-name spec sexp)))
+	      (error __who__ "typed core primitive already defined" prim-name spec sexp)))
 	(else
-	 (let ((sexp (cons* prim-name '$core-prim-typed spec)))
+	 (let ((sexp (cons* prim-name KEY spec)))
 	   (display sexp)
 	   (newline)
-	   (putprop prim-name 'typed-core-prim sexp)))))
+	   (putprop prim-name KEY sexp)))))
+
+(define* (declare-primitive-rtd prim-name)
+  ;;Print  to  stdout  the  symbolic expression  representing  the  core  record-type
+  ;;descriptor  name  specification.   Use  symbol properties  to  detect  duplicated
+  ;;definitions.
+  ;;
+  (define-constant KEY '$core-rtd)
+  (cond ((getprop prim-name KEY)
+	 => (lambda (sexp)
+	      (error __who__ "primitive core RTD already defined" sexp prim-name)))
+	(else
+	 (let ((sexp (cons* prim-name KEY prim-name)))
+	   (display sexp)
+	   (newline)
+	   (putprop prim-name KEY sexp)))))
+
+(define* (declare-primitive-rcd prim-name)
+  ;;Print to stdout the symbolic  expression representing the core record-constructor
+  ;;descriptor  name  specification.   Use  symbol properties  to  detect  duplicated
+  ;;definitions.
+  ;;
+  (define-constant KEY '$core-rcd)
+  (cond ((getprop prim-name KEY)
+	 => (lambda (sexp)
+	      (error __who__ "primitive core RCD already defined" sexp prim-name)))
+	(else
+	 (let ((sexp (cons* prim-name KEY prim-name)))
+	   (display sexp)
+	   (newline)
+	   (putprop prim-name KEY sexp)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -193,6 +223,21 @@
   (syntax-rules (/section)
     ((section ?body ... /section)
      (begin ?body ...))))
+
+
+;;;; built-in record-type descriptors and record-constructor descriptors
+
+(define-syntax (declare-core-rtd stx)
+  (syntax-case stx ()
+    ((_ ?prim-name)
+     (identifier? #'?prim-name)
+     #'(declare-primitive-rtd (quote ?prim-name)))))
+
+(define-syntax (declare-core-rcd stx)
+  (syntax-case stx ()
+    ((_ ?prim-name)
+     (identifier? #'?prim-name)
+     #'(declare-primitive-rcd (quote ?prim-name)))))
 
 
 ;;;; basic definition syntaxes

@@ -52,6 +52,80 @@
 (declare-parameter current-inferior-lexenv)
 
 
+;;;; record types
+
+(declare-core-rtd <lexical-environment>-rtd)
+(declare-core-rcd <lexical-environment>-rcd)
+
+(declare-core-rtd <non-interaction-lexical-environment>-rtd)
+(declare-core-rcd <non-interaction-lexical-environment>-rcd)
+
+(declare-core-rtd <stx>-rtd)
+(declare-core-rcd <stx>-rcd)
+
+(declare-core-rtd <syntactic-identifier>-rtd)
+(declare-core-rcd <syntactic-identifier>-rcd)
+
+(declare-core-rtd <syntax-clause-spec>-rtd)
+(declare-core-rcd <syntax-clause-spec>-rcd)
+
+(declare-core-rtd <type-signature>-rtd)
+(declare-core-rcd <type-signature>-rcd)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-rtd <alist-type-spec>-rtd)
+(declare-core-rcd <alist-type-spec>-rcd)
+
+(declare-core-rtd <complement-type-spec>-rtd)
+(declare-core-rcd <complement-type-spec>-rcd)
+
+(declare-core-rtd <compound-condition-type-spec>-rtd)
+(declare-core-rcd <compound-condition-type-spec>-rcd)
+
+(declare-core-rtd <hashtable-type-spec>-rtd)
+(declare-core-rcd <hashtable-type-spec>-rcd)
+
+(declare-core-rtd <interaction-lexical-environment>-rtd)
+(declare-core-rcd <interaction-lexical-environment>-rcd)
+
+(declare-core-rtd <intersection-type-spec>-rtd)
+(declare-core-rcd <intersection-type-spec>-rcd)
+
+(declare-core-rtd <list-of-type-spec>-rtd)
+(declare-core-rcd <list-of-type-spec>-rcd)
+
+(declare-core-rtd <list-type-spec>-rtd)
+(declare-core-rcd <list-type-spec>-rcd)
+
+(declare-core-rtd <object-type-spec>-rtd)
+(declare-core-rcd <object-type-spec>-rcd)
+
+(declare-core-rtd <pair-of-type-spec>-rtd)
+(declare-core-rcd <pair-of-type-spec>-rcd)
+
+(declare-core-rtd <pair-type-spec>-rtd)
+(declare-core-rcd <pair-type-spec>-rcd)
+
+(declare-core-rtd <record-type-spec>-rtd)
+(declare-core-rcd <record-type-spec>-rcd)
+
+(declare-core-rtd <scheme-type-spec>-rtd)
+(declare-core-rcd <scheme-type-spec>-rcd)
+
+(declare-core-rtd <struct-type-spec>-rtd)
+(declare-core-rcd <struct-type-spec>-rcd)
+
+(declare-core-rtd <union-type-spec>-rtd)
+(declare-core-rcd <union-type-spec>-rcd)
+
+(declare-core-rtd <vector-of-type-spec>-rtd)
+(declare-core-rcd <vector-of-type-spec>-rcd)
+
+(declare-core-rtd <vector-type-spec>-rtd)
+(declare-core-rcd <vector-type-spec>-rcd)
+
+
 ;;;; syntax-case, safe procedures
 
 (section

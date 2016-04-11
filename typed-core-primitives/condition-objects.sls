@@ -90,11 +90,207 @@
 /section)
 
 
-;;;; condition objects, safe procedures, specific condition object procedures
+;;;; built-in condition objects record-type descriptors
 
 (section
 
-;;; constructors
+(declare-core-rtd &application-argument-index-rtd)
+(declare-core-rtd &application-argument-type-name-rtd)
+(declare-core-rtd &application-operand-signature-rtd)
+(declare-core-rtd &application-operands-expressions-rtd)
+(declare-core-rtd &application-operator-expression-rtd)
+(declare-core-rtd &application-operator-signature-rtd)
+(declare-core-rtd &assertion-rtd)
+(declare-core-rtd &compile-time-arity-error-rtd)
+(declare-core-rtd &compile-time-core-type-error-rtd)
+(declare-core-rtd &compile-time-error-rtd)
+(declare-core-rtd &compile-time-operand-core-type-error-rtd)
+(declare-core-rtd &compile-time-retval-core-type-error-rtd)
+(declare-core-rtd &compiler-internal-error-rtd)
+(declare-core-rtd &condition-rtd)
+(declare-core-rtd &errno-rtd)
+(declare-core-rtd &error-rtd)
+(declare-core-rtd &expand-time-type-signature-violation-rtd)
+(declare-core-rtd &expand-time-type-signature-warning-rtd)
+(declare-core-rtd &expected-type-signature-rtd)
+(declare-core-rtd &expression-return-value-violation-rtd)
+(declare-core-rtd &failed-expression-rtd)
+(declare-core-rtd &h_errno-rtd)
+(declare-core-rtd &i/o-decoding-rtd)
+(declare-core-rtd &i/o-eagain-rtd)
+(declare-core-rtd &i/o-encoding-rtd)
+(declare-core-rtd &i/o-file-already-exists-rtd)
+(declare-core-rtd &i/o-file-does-not-exist-rtd)
+(declare-core-rtd &i/o-file-is-read-only-rtd)
+(declare-core-rtd &i/o-file-protection-rtd)
+(declare-core-rtd &i/o-filename-rtd)
+(declare-core-rtd &i/o-invalid-position-rtd)
+(declare-core-rtd &i/o-port-rtd)
+(declare-core-rtd &i/o-read-rtd)
+(declare-core-rtd &i/o-rtd)
+(declare-core-rtd &i/o-write-rtd)
+(declare-core-rtd &implementation-restriction-rtd)
+(declare-core-rtd &interrupted-rtd)
+(declare-core-rtd &irritants-rtd)
+(declare-core-rtd &lexical-rtd)
+(declare-core-rtd &message-rtd)
+(declare-core-rtd &no-infinities-rtd)
+(declare-core-rtd &no-nans-rtd)
+(declare-core-rtd &non-continuable-rtd)
+(declare-core-rtd &non-reinstatable-rtd)
+(declare-core-rtd &object-type-spec-rtd)
+(declare-core-rtd &one-based-return-value-index-rtd)
+(declare-core-rtd &out-of-memory-error-rtd)
+(declare-core-rtd &procedure-argument-violation-rtd)
+(declare-core-rtd &procedure-arguments-consistency-violation-rtd)
+(declare-core-rtd &procedure-postcondition-violation-rtd)
+(declare-core-rtd &procedure-precondition-violation-rtd)
+(declare-core-rtd &procedure-signature-argument-violation-rtd)
+(declare-core-rtd &procedure-signature-return-value-violation-rtd)
+(declare-core-rtd &returned-type-signature-rtd)
+(declare-core-rtd &serious-rtd)
+(declare-core-rtd &source-position-rtd)
+(declare-core-rtd &string-decoding-rtd)
+(declare-core-rtd &string-encoding-rtd)
+(declare-core-rtd &syntactic-binding-descriptor-rtd)
+(declare-core-rtd &syntactic-identifier-not-type-identifier-rtd)
+(declare-core-rtd &syntactic-identifier-out-of-context-rtd)
+(declare-core-rtd &syntactic-identifier-resolution-rtd)
+(declare-core-rtd &syntactic-identifier-rtd)
+(declare-core-rtd &syntactic-identifier-unbound-rtd)
+(declare-core-rtd &syntax-definition-expanded-rhs-rtd)
+(declare-core-rtd &syntax-definition-expression-return-value-rtd)
+(declare-core-rtd &syntax-rtd)
+(declare-core-rtd &type-signature-rtd)
+(declare-core-rtd &undefined-rtd)
+(declare-core-rtd &utf16-string-decoding-invalid-first-word-rtd)
+(declare-core-rtd &utf16-string-decoding-invalid-second-word-rtd)
+(declare-core-rtd &utf16-string-decoding-missing-second-word-rtd)
+(declare-core-rtd &utf16-string-decoding-rtd)
+(declare-core-rtd &utf16-string-decoding-standalone-octet-rtd)
+(declare-core-rtd &utf16-string-encoding-rtd)
+(declare-core-rtd &utf32-string-decoding-invalid-word-rtd)
+(declare-core-rtd &utf32-string-decoding-orphan-octets-rtd)
+(declare-core-rtd &utf32-string-decoding-rtd)
+(declare-core-rtd &utf32-string-encoding-rtd)
+(declare-core-rtd &utf8-string-decoding-incomplete-2-tuple-rtd)
+(declare-core-rtd &utf8-string-decoding-incomplete-3-tuple-rtd)
+(declare-core-rtd &utf8-string-decoding-incomplete-4-tuple-rtd)
+(declare-core-rtd &utf8-string-decoding-invalid-2-tuple-rtd)
+(declare-core-rtd &utf8-string-decoding-invalid-3-tuple-rtd)
+(declare-core-rtd &utf8-string-decoding-invalid-4-tuple-rtd)
+(declare-core-rtd &utf8-string-decoding-invalid-octet-rtd)
+(declare-core-rtd &utf8-string-decoding-rtd)
+(declare-core-rtd &utf8-string-encoding-rtd)
+(declare-core-rtd &violation-rtd)
+(declare-core-rtd &warning-rtd)
+(declare-core-rtd &who-rtd)
+
+/section)
+
+
+;;;; built-in condition objects record-constructor descriptors
+
+(section
+
+(declare-core-rcd &application-argument-index-rcd)
+(declare-core-rcd &application-argument-type-name-rcd)
+(declare-core-rcd &application-operand-signature-rcd)
+(declare-core-rcd &application-operands-expressions-rcd)
+(declare-core-rcd &application-operator-expression-rcd)
+(declare-core-rcd &application-operator-signature-rcd)
+(declare-core-rcd &assertion-rcd)
+(declare-core-rcd &compile-time-arity-error-rcd)
+(declare-core-rcd &compile-time-core-type-error-rcd)
+(declare-core-rcd &compile-time-error-rcd)
+(declare-core-rcd &compile-time-operand-core-type-error-rcd)
+(declare-core-rcd &compile-time-retval-core-type-error-rcd)
+(declare-core-rcd &compiler-internal-error-rcd)
+(declare-core-rcd &condition-rcd)
+(declare-core-rcd &errno-rcd)
+(declare-core-rcd &error-rcd)
+(declare-core-rcd &expand-time-type-signature-violation-rcd)
+(declare-core-rcd &expand-time-type-signature-warning-rcd)
+(declare-core-rcd &expected-type-signature-rcd)
+(declare-core-rcd &expression-return-value-violation-rcd)
+(declare-core-rcd &failed-expression-rcd)
+(declare-core-rcd &h_errno-rcd)
+(declare-core-rcd &i/o-decoding-rcd)
+(declare-core-rcd &i/o-eagain-rcd)
+(declare-core-rcd &i/o-encoding-rcd)
+(declare-core-rcd &i/o-file-already-exists-rcd)
+(declare-core-rcd &i/o-file-does-not-exist-rcd)
+(declare-core-rcd &i/o-file-is-read-only-rcd)
+(declare-core-rcd &i/o-file-protection-rcd)
+(declare-core-rcd &i/o-filename-rcd)
+(declare-core-rcd &i/o-invalid-position-rcd)
+(declare-core-rcd &i/o-port-rcd)
+(declare-core-rcd &i/o-read-rcd)
+(declare-core-rcd &i/o-rcd)
+(declare-core-rcd &i/o-write-rcd)
+(declare-core-rcd &implementation-restriction-rcd)
+(declare-core-rcd &interrupted-rcd)
+(declare-core-rcd &irritants-rcd)
+(declare-core-rcd &lexical-rcd)
+(declare-core-rcd &message-rcd)
+(declare-core-rcd &no-infinities-rcd)
+(declare-core-rcd &no-nans-rcd)
+(declare-core-rcd &non-continuable-rcd)
+(declare-core-rcd &non-reinstatable-rcd)
+(declare-core-rcd &object-type-spec-rcd)
+(declare-core-rcd &one-based-return-value-index-rcd)
+(declare-core-rcd &out-of-memory-error-rcd)
+(declare-core-rcd &procedure-argument-violation-rcd)
+(declare-core-rcd &procedure-arguments-consistency-violation-rcd)
+(declare-core-rcd &procedure-postcondition-violation-rcd)
+(declare-core-rcd &procedure-precondition-violation-rcd)
+(declare-core-rcd &procedure-signature-argument-violation-rcd)
+(declare-core-rcd &procedure-signature-return-value-violation-rcd)
+(declare-core-rcd &returned-type-signature-rcd)
+(declare-core-rcd &serious-rcd)
+(declare-core-rcd &source-position-rcd)
+(declare-core-rcd &string-decoding-rcd)
+(declare-core-rcd &string-encoding-rcd)
+(declare-core-rcd &syntactic-binding-descriptor-rcd)
+(declare-core-rcd &syntactic-identifier-not-type-identifier-rcd)
+(declare-core-rcd &syntactic-identifier-out-of-context-rcd)
+(declare-core-rcd &syntactic-identifier-resolution-rcd)
+(declare-core-rcd &syntactic-identifier-rcd)
+(declare-core-rcd &syntactic-identifier-unbound-rcd)
+(declare-core-rcd &syntax-definition-expanded-rhs-rcd)
+(declare-core-rcd &syntax-definition-expression-return-value-rcd)
+(declare-core-rcd &syntax-rcd)
+(declare-core-rcd &type-signature-rcd)
+(declare-core-rcd &undefined-rcd)
+(declare-core-rcd &utf16-string-decoding-invalid-first-word-rcd)
+(declare-core-rcd &utf16-string-decoding-invalid-second-word-rcd)
+(declare-core-rcd &utf16-string-decoding-missing-second-word-rcd)
+(declare-core-rcd &utf16-string-decoding-rcd)
+(declare-core-rcd &utf16-string-decoding-standalone-octet-rcd)
+(declare-core-rcd &utf16-string-encoding-rcd)
+(declare-core-rcd &utf32-string-decoding-invalid-word-rcd)
+(declare-core-rcd &utf32-string-decoding-orphan-octets-rcd)
+(declare-core-rcd &utf32-string-decoding-rcd)
+(declare-core-rcd &utf32-string-encoding-rcd)
+(declare-core-rcd &utf8-string-decoding-incomplete-2-tuple-rcd)
+(declare-core-rcd &utf8-string-decoding-incomplete-3-tuple-rcd)
+(declare-core-rcd &utf8-string-decoding-incomplete-4-tuple-rcd)
+(declare-core-rcd &utf8-string-decoding-invalid-2-tuple-rcd)
+(declare-core-rcd &utf8-string-decoding-invalid-3-tuple-rcd)
+(declare-core-rcd &utf8-string-decoding-invalid-4-tuple-rcd)
+(declare-core-rcd &utf8-string-decoding-invalid-octet-rcd)
+(declare-core-rcd &utf8-string-decoding-rcd)
+(declare-core-rcd &utf8-string-encoding-rcd)
+(declare-core-rcd &violation-rcd)
+(declare-core-rcd &warning-rcd)
+(declare-core-rcd &who-rcd)
+
+/section)
+
+
+;;;; built-in condition objects makers
+
+(section
 
 (let-syntax
     ((declare (syntax-rules ()
@@ -383,8 +579,12 @@
   (signatures
    (()						=> (&utf8-string-encoding))))
 
-;;; --------------------------------------------------------------------
-;;; predicates
+/section)
+
+
+;;;; built-in condition objects predicates
+
+(section
 
 (declare-condition-type-predicate assertion-violation?			&assertion)
 (declare-condition-type-predicate errno-condition?			&errno)
@@ -452,8 +652,12 @@
 (declare-condition-type-predicate utf8-string-decoding-invalid-octet?		&utf8-string-decoding-invalid-octet)
 (declare-condition-type-predicate utf8-string-encoding-error?			&utf8-string-encoding)
 
-;;; --------------------------------------------------------------------
-;;; accessors
+/section)
+
+
+;;;; built-in condition objects accessors
+
+(section
 
 (letrec-syntax
     ((declare (syntax-rules ()
@@ -558,14 +762,6 @@
   (declare utf32-string-decoding-orphan-octets.octets		&utf32-string-decoding-orphan-octets	      (list-of <fixnum>))
 
   #| end of LET-SYNTAX |# )
-
-(declare-core-primitive &who
-    (safe)
-  (signatures
-   #;((&who)		=> ([or <false> <string> <symbol>]))
-   ((&who)		=> (<top>)))
-  (attributes
-   ((_)			effect-free)))
 
 /section)
 
