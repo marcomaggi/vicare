@@ -60,6 +60,7 @@
 ;;; predicates
 
 (declare-type-predicate fixnum? <fixnum>)
+(declare-list-of-type-predicate list-of-fixnums?	<fixnum>)
 
 (declare-fixnum-predicate fxzero?		(replacements $fxzero?))
 (declare-fixnum-predicate fxpositive?		(replacements $fxpositive?))

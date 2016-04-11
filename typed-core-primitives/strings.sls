@@ -45,6 +45,8 @@
 (declare-string-predicate uri-encoded-string?		(replacements $uri-encoded-string?))
 (declare-string-predicate percent-encoded-string?	(replacements $percent-encoded-string?))
 
+(declare-list-of-type-predicate list-of-strings?	<string>)
+
 ;;; --------------------------------------------------------------------
 ;;; constructors
 
@@ -102,6 +104,14 @@
    ((list-of <string>)			=> (<string>)))
   (attributes
    (_				effect-free result-true)))
+
+(declare-core-primitive string-concatenate
+    (safe)
+  (signatures
+   ((list-of <string>)		=> (<string>)))
+  (attributes
+   ;;Not foldable because it must return a new string every time.
+   ((_ _)			effect-free result-true)))
 
 (declare-core-primitive string-reverse-and-concatenate
     (safe)
@@ -176,6 +186,16 @@
 (declare-string-binary/multi-comparison string-ci=?)
 (declare-string-binary/multi-comparison string-ci>=?)
 (declare-string-binary/multi-comparison string-ci>?)
+
+(declare-core-primitive string-max
+    (safe)
+  (signatures
+   ((<string> . (list-of <string>))		=> (<string>))))
+
+(declare-core-primitive string-min
+    (safe)
+  (signatures
+   ((<string> . (list-of <string>))		=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; transformation
@@ -400,6 +420,16 @@
 ;;; comparison
 
 (declare-string-binary-comparison $string=)
+
+(declare-core-primitive $string-max
+    (unsafe)
+  (signatures
+   ((<string> <string>)			=> (<string>))))
+
+(declare-core-primitive $string-min
+    (unsafe)
+  (signatures
+   ((<string> <string>)			=> (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion

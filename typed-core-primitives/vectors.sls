@@ -40,6 +40,22 @@
 (declare-type-predicate vector? <vector>)
 
 (declare-vector-predicate vector-empty?)
+(declare-vector-predicate non-empty-vector?)
+
+(declare-core-primitive vectors-of-same-length?
+    (safe)
+  (signatures
+   ((<vector> . (list-of <vector>))	=> (<boolean>))))
+
+(declare-core-primitive list-of-vectors-of-same-length?
+    (safe)
+  (signatures
+   (((list-of <vector>))		=> (<boolean>))))
+
+(declare-core-primitive list-of-vectors?
+    (safe)
+  (signatures
+   (((list-of <vector>))		=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 ;;; constructors

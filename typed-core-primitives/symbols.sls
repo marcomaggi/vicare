@@ -42,6 +42,8 @@
   (signatures
    ((<symbol>) => (<string>))))
 
+(declare-list-of-type-predicate list-of-symbols?	<symbol>)
+
 ;;Commented out because it is not an exported primitive.
 ;;
 ;; (declare-core-primitive string-or-symbol?

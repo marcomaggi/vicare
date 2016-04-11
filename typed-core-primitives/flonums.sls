@@ -38,6 +38,7 @@
 ;;; predicates
 
  (declare-type-predicate flonum? <flonum>)
+ (declare-list-of-type-predicate list-of-flonums?	<flonum>)
 
  (declare-flonum-predicate flzero?		(replacements $flzero?))
  (declare-flonum-predicate flzero?/negative	(replacements $flzero?/negative))
