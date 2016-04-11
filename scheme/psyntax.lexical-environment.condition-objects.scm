@@ -749,6 +749,10 @@
 
 ;;;; done
 
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.lexical-environment.condition-objects end")))
+
 #| end of module |# )
 
 ;;; end of file
