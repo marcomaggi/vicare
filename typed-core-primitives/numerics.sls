@@ -2268,6 +2268,18 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-unsafe-unary-operation $complex-conjugate-cflonum	<cflonum>	<cflonum>)
+(declare-unsafe-unary-operation $complex-conjugate-compnum	<compnum>	<compnum>)
+
+(declare-unsafe-unary-operation $magnitude-fixnum		<fixnum>	<non-negative-fixnum>)
+(declare-unsafe-unary-operation $magnitude-bignum		<bignum>	<non-negative-exact-integer>)
+(declare-unsafe-unary-operation $magnitude-flonum		<flonum>	<positive-flonum>)
+(declare-unsafe-unary-operation $magnitude-ratnum		<ratnum>	<positive-ratnum>)
+(declare-unsafe-unary-operation $magnitude-compnum		<compnum>	<non-negative>)
+(declare-unsafe-unary-operation $magnitude-cflonum		<cflonum>	<positive-flonum>)
+
+;;; --------------------------------------------------------------------
+
 (declare-unsafe-unary-operation $bitwise-not-fixnum		<fixnum>	<fixnum>)
 (declare-unsafe-unary-operation $bitwise-not-bignum		<bignum>	<bignum>)
 

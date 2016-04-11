@@ -67,6 +67,16 @@
 (declare-char-binary/multi-comparison char-ci<=?)
 (declare-char-binary/multi-comparison char-ci>=?)
 
+(declare-core-primitive chmax
+    (safe)
+  (signatures
+   ((<char> . (list-of <char>))			=> (<char>))))
+
+(declare-core-primitive chmin
+    (safe)
+  (signatures
+   ((<char> . (list-of <char>))			=> (<char>))))
+
 ;;; --------------------------------------------------------------------
 ;;; transformations
 

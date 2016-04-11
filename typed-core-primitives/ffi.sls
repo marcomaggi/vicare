@@ -582,6 +582,7 @@
 
   (declare array-ref-c-float			<flonum>)
   (declare array-ref-c-double			<flonum>)
+  (declare array-ref-c-double-complex		<cflonum>)
   (declare array-ref-c-pointer			<pointer>)
 
   (declare array-ref-c-size_t			<non-negative-exact-integer>)
@@ -627,6 +628,7 @@
 
   (declare array-set-c-float!			<flonum>)
   (declare array-set-c-double!			<flonum>)
+  (declare array-set-c-double-complex!		<cflonum>)
   (declare array-set-c-pointer!			<pointer>)
 
   (declare array-set-c-size_t!			<non-negative-exact-integer>)
