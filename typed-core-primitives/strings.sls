@@ -174,10 +174,11 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-string-binary/multi-comparison string<=?)
-
-(declare-string-binary/multi-comparison string<?)
 (declare-string-binary/multi-comparison string=?)
+(declare-string-binary/multi-comparison string!=?)
+
+(declare-string-binary/multi-comparison string<=?)
+(declare-string-binary/multi-comparison string<?)
 (declare-string-binary/multi-comparison string>=?)
 (declare-string-binary/multi-comparison string>?)
 
@@ -333,8 +334,12 @@
    ;;Not foldable because it must return a new list at every application.
    ((_)				effect-free result-true)))
 
+/section)
+
 
 ;;;; core syntactic binding descriptors, typed unsafe core primitives: strings
+
+(section
 
 ;;; predicates
 
@@ -363,6 +368,11 @@
   (attributes
    ;;Not foldable because it must return a new string every time.
    (_			effect-free result-true)))
+
+(declare-core-primitive $substring
+    (unsafe)
+  (signatures
+   ((<string> <non-negative-fixnum> <non-negative-fixnum>)	=> (<string>))))
 
 (declare-core-primitive $string-concatenate
     (unsafe)
@@ -472,6 +482,51 @@
    ((<string>)		=> (<symbol>)))
   (attributes
    ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; copying
+
+(declare-core-primitive $string-copy
+    (unsafe)
+  (signatures
+   ((<string>)			=> (<string>))))
+
+(declare-core-primitive $string-copy-forwards!
+    (unsafe)
+  (signatures
+   ;;src.str src.start dst.str dst.start src.end
+   ((<string> <non-negative-fixnum> <string> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<string>))))
+
+(declare-core-primitive $string-copy-backwards!
+    (unsafe)
+  (signatures
+   ;;src.str src.start dst.str dst.start src.end
+   ((<string> <non-negative-fixnum> <string> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<string>))))
+
+;;;
+
+(declare-core-primitive $string-copy!/count
+    (unsafe)
+  (signatures
+   ;;src.str src.start dst.str dst.start count
+   ((<string> <non-negative-fixnum> <string> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<string>))))
+
+(declare-core-primitive $string-self-copy-forwards!/count
+    (unsafe)
+  (signatures
+   ;;str src.start dst.start count
+   ((<string> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<string>))))
+
+(declare-core-primitive $string-self-copy-backwards!/count
+    (unsafe)
+  (signatures
+   ;;str src.start dst.start count
+   ((<string> <non-negative-fixnum> <non-negative-fixnum> <non-negative-fixnum>)
+    => (<string>))))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous

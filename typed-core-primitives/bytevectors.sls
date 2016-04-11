@@ -334,16 +334,6 @@
    ((_) 		effect-free result-true)
    ((_ _) 		effect-free result-true)))
 
-(declare-core-primitive utf8->string-length
-    (safe)
-  (signatures
-   ((<bytevector>)		=> (<fixnum>))
-   ((<bytevector> <symbol>)	=> (<fixnum>)))
-  (attributes
-   ;;Not foldable because it must return a new string at every application.
-   ((_) 		effect-free result-true)
-   ((_ _) 		effect-free result-true)))
-
 (declare-core-primitive utf16->string
     (safe)
   (signatures
@@ -518,6 +508,51 @@
   (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word32?)
   (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word64?)
   #| end of LET-SYNTAX |# )
+
+/section)
+
+
+;;;; string/bytevector conversion
+
+(section
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<string>)		=> (<non-negative-fixnum>))))))))
+  (declare string->utf16-length)
+  (declare string->utf32-length)
+  (declare string->utf8-length)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive utf8->string-length
+    (safe)
+  (signatures
+   ((<bytevector>)			=> (<non-negative-fixnum>))
+   ((<bytevector> <symbol>)		=> (<non-negative-fixnum>)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_) 		effect-free result-true)
+   ((_ _) 		effect-free result-true)))
+
+(declare-core-primitive utf16->string-length
+    (safe)
+  (signatures
+   ((<bytevector> <symbol>)			=> (<non-negative-fixnum>))
+   ((<bytevector> <symbol> <top>)		=> (<non-negative-fixnum>))
+   ((<bytevector> <symbol> <top> <symbol>)	=> (<non-negative-fixnum>))))
+
+(declare-core-primitive utf32->string-length
+    (safe)
+  (signatures
+   ((<bytevector> <symbol>)			=> (<non-negative-fixnum>))
+   ((<bytevector> <symbol> <top>)		=> (<non-negative-fixnum>))
+   ((<bytevector> <symbol> <top> <symbol>)	=> (<non-negative-fixnum>))))
 
 /section)
 
