@@ -859,6 +859,20 @@
 	      (else	#f))
 	=> ((or <positive-fixnum> <positive-flonum> <false>)))
 
+;;; --------------------------------------------------------------------
+
+  #;(doit (case (read)
+	  ((1)		1)
+	  ((ciao)	2)
+	  (else		3))
+	=> (<positive-fixnum>))
+
+  #;(doit (case (read)
+	  ((1)		1)
+	  ((ciao)	'ciao)
+	  (else		#f))
+	=> ((or <positive-fixnum> <symbol> <false>)))
+
   (void))
 
 
