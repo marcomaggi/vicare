@@ -73,6 +73,11 @@
    (remprop		remprop)
    (property-list	property-list)))
 
+(define-scheme-type <gensym>
+    <symbol>
+  (constructor gensym)
+  (predicate gensym?))
+
 (define-scheme-type <keyword>
     <top>
   (constructor symbol->keyword)

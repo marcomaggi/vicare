@@ -1775,6 +1775,7 @@ et cetera.
 * types built-in booleans::     Type of boolean objects.
 * types built-in chars::        Type of character objects.
 * types built-in symbols::      Type of symbol objects.
+* types built-in gensyms::      Type of gensym values.
 * types built-in keywords::     Type of keyword objects.
 * types built-in pointers::     Type of pointer objects.
 * types built-in transcoders::  Type of transcoder objects.
@@ -1983,6 +1984,29 @@ Apply @func{remprop} to the instance.
 @deftypemethod @class{symbol} @aclass{list} property-list @var{self}
 Apply @func{property-list} to the instance.
 @end deftypemethod
+
+@c page
+@node types built-in gensyms
+@subsection Type of gensym values
+
+
+@deftp {Built--in Type} @aclass{gensym}
+@deftpx {Parent Type} @aclass{symbol}
+Type of gensym values.
+@end deftp
+
+
+@defop Constructor @class{gensym} new @aclass{gensym}
+@defopx Constructor @class{gensym} new @aclass{gensym} @var{string}
+@defopx Constructor @class{gensym} new @aclass{gensym} @var{symbol}
+The constructor is @func{gensym}.
+@end defop
+
+
+@defop {Type predicate} @class{gensym} is-a? @var{obj} @aclass{gensym}
+The type predicate is @func{gensym?}.  Return @true{} if @var{obj} is a
+gensym object; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in keywords

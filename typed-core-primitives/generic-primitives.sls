@@ -396,6 +396,54 @@
 /section)
 
 
+;;;; coroutines
+
+(declare-core-primitive coroutine
+    (safe)
+  (signatures
+   ((<procedure>)		=> <list>)))
+
+(declare-core-primitive yield
+    (safe)
+  (signatures
+   (()				=> <list>)))
+
+(declare-core-primitive finish-coroutines
+    (safe)
+  (signatures
+   (()				=> <list>)
+   ((<procedure>)		=> <list>)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive current-coroutine-uid
+    (safe)
+  (signatures
+   (()				=> (<gensym>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive reset-coroutines!
+    (safe)
+  (signatures
+   (()				=> <list>)))
+
+(declare-core-primitive resume-coroutine
+    (safe)
+  (signatures
+   ((<gensym>)			=> <list>)))
+
+(declare-core-primitive suspend-coroutine
+    (safe)
+  (signatures
+   (()				=> <list>)))
+
+(declare-core-primitive suspended-coroutine?
+    (safe)
+  (signatures
+   ((<gensym>)			=> (<boolean>))))
+
+
 ;;;; core syntactic binding descriptors, typed safe OOP core primitives: generic objects
 
 (section
