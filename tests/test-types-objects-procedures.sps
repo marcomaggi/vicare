@@ -227,121 +227,121 @@
 
 (parametrise ((check-test-name	'super-and-sub))
 
-  (check-for-true	(type-super-and-sub? <procedure>
-					     <procedure>))
+  (check-for-true	(type-annotation-super-and-sub? <procedure>
+							<procedure>))
 
-  (check-for-true	(type-super-and-sub? <procedure>
-					     (lambda <list> => (<fixnum>))))
+  (check-for-true	(type-annotation-super-and-sub? <procedure>
+							(lambda <list> => (<fixnum>))))
 
-  (check-for-false	(type-super-and-sub? (lambda <list> => (<fixnum>))
-					     <procedure>))
+  (check-for-false	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
+							<procedure>))
 
-  (check-for-false	(type-super-and-sub? (lambda <list> => (<fixnum>))
-					     <fixnum>))
-
-;;; --------------------------------------------------------------------
-
-  (check-for-true	(type-super-and-sub? (lambda <list> => (<fixnum>))
-					     (lambda <list> => (<fixnum>))))
-
-  (check-for-true	(type-super-and-sub? (lambda <list> => (<number>))
-					     (lambda <list> => (<fixnum>))))
-
-  (check-for-false	(type-super-and-sub? (lambda <list> => (<fixnum>))
-					     (lambda <list> => (<number>))))
-
-;;;
-
-  (check-for-true	(type-super-and-sub? (lambda (<fixnum>) => <list>)
-					     (lambda (<fixnum>) => <list>)))
-
-  (check-for-true	(type-super-and-sub? (lambda (<number>) => <list>)
-					     (lambda (<fixnum>) => <list>)))
-
-  (check-for-false	(type-super-and-sub? (lambda (<fixnum>) => <list>)
-					     (lambda (<number>) => <list>)))
-
-;;;
-
-  (check-for-true	(type-super-and-sub? (lambda (<fixnum>) => (<fixnum>))
-					     (lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-true	(type-super-and-sub? (lambda (<number>) => (<number>))
-					     (lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-false	(type-super-and-sub? (lambda (<fixnum>) => (<fixnum>))
-					     (lambda (<number>) => (<number>))))
-
-  (check-for-false	(type-super-and-sub? (lambda (<fixnum>) => (<number>))
-					     (lambda (<number>) => (<number>))))
-
-  (check-for-false	(type-super-and-sub? (lambda (<number>) => (<fixnum>))
-					     (lambda (<number>) => (<number>))))
-
-;;;
-
-  (check-for-false	(type-super-and-sub? (lambda (<fixnum>) => (<string>))
-					     (lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-false	(type-super-and-sub? (lambda (<string>) => (<fixnum>))
-					     (lambda (<fixnum>) => (<fixnum>))))
-
-  (check-for-true	(type-super-and-sub? (lambda (<top>) => (<top>))
-					     (lambda (<fixnum>) => (<pair>))))
+  (check-for-false	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
+							<fixnum>))
 
 ;;; --------------------------------------------------------------------
 
-  (check-for-true	(type-super-and-sub? <procedure>
-					     (case-lambda
-					       ((<fixnum>) => (<fixnum>)))))
+  (check-for-true	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
+							(lambda <list> => (<fixnum>))))
 
-  (check-for-false	(type-super-and-sub? (case-lambda
-					       ((<fixnum>) => (<fixnum>)))
-					     <procedure>))
+  (check-for-true	(type-annotation-super-and-sub? (lambda <list> => (<number>))
+							(lambda <list> => (<fixnum>))))
+
+  (check-for-false	(type-annotation-super-and-sub? (lambda <list> => (<fixnum>))
+							(lambda <list> => (<number>))))
 
 ;;;
 
-  (check-for-true	(type-super-and-sub? (case-lambda
-					       ((<fixnum>) => (<string>))
-					       ((<flonum>) => (<string>)))
-					     (lambda (<fixnum>) => (<string>))))
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<fixnum>) => <list>)
+							(lambda (<fixnum>) => <list>)))
 
-  (check-for-true	(type-super-and-sub? (case-lambda
-					       ((<fixnum>) => (<string>))
-					       ((<flonum>) => (<string>)))
-					     (lambda (<flonum>) => (<string>))))
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<number>) => <list>)
+							(lambda (<fixnum>) => <list>)))
 
-  (check-for-false	(type-super-and-sub? (case-lambda
-					       ((<fixnum>) => (<string>))
-					       ((<flonum>) => (<string>)))
-					     (lambda (<string>) => (<fixnum>))))
+  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => <list>)
+							(lambda (<number>) => <list>)))
 
-  (check-for-true	(type-super-and-sub? (case-lambda
-					       ((<real>)	=> (<boolean>))
-					       ((<vector>)	=> (<boolean>)))
-					     (case-lambda
-					       ((<fixnum>)	=> (<boolean>))
-					       ((<flonum>)	=> (<boolean>))
-					       ((<vector>)	=> (<boolean>)))))
+;;;
 
-  (check-for-true	(type-super-and-sub? (case-lambda
-					       ((<top>)		=> (<pair>))
-					       ((<top>)		=> (<real>))
-					       ((<top>)		=> (<vector>)))
-					     (case-lambda
-					       ((<top>)		=> (<fixnum>))
-					       ((<top>)		=> (<flonum>))
-					       ((<top>)		=> ((vector-of <true>))))))
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<fixnum>))
+							(lambda (<fixnum>) => (<fixnum>))))
 
-  (check-for-false	(type-super-and-sub? (case-lambda
-					       ((<top>)		=> (<pair>))
-					       ((<top>)		=> (<real>))
-					       ((<top>)		=> (<vector>)))
-					     (case-lambda
-					       ((<top>)		=> (<fixnum>))
-					       ((<top>)		=> (<flonum>))
-					       ((<top>)		=> (<transcoder>)) ;;this does not match
-					       ((<top>)		=> ((vector-of <true>))))))
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<number>) => (<number>))
+							(lambda (<fixnum>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<fixnum>))
+							(lambda (<number>) => (<number>))))
+
+  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<number>))
+							(lambda (<number>) => (<number>))))
+
+  (check-for-false	(type-annotation-super-and-sub? (lambda (<number>) => (<fixnum>))
+							(lambda (<number>) => (<number>))))
+
+;;;
+
+  (check-for-false	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<string>))
+							(lambda (<fixnum>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation-super-and-sub? (lambda (<string>) => (<fixnum>))
+							(lambda (<fixnum>) => (<fixnum>))))
+
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<top>) => (<top>))
+							(lambda (<fixnum>) => (<pair>))))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(type-annotation-super-and-sub? <procedure>
+							(case-lambda
+							  ((<fixnum>) => (<fixnum>)))))
+
+  (check-for-false	(type-annotation-super-and-sub? (case-lambda
+							  ((<fixnum>) => (<fixnum>)))
+							<procedure>))
+
+;;;
+
+  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+							  ((<fixnum>) => (<string>))
+							  ((<flonum>) => (<string>)))
+							(lambda (<fixnum>) => (<string>))))
+
+  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+							  ((<fixnum>) => (<string>))
+							  ((<flonum>) => (<string>)))
+							(lambda (<flonum>) => (<string>))))
+
+  (check-for-false	(type-annotation-super-and-sub? (case-lambda
+							  ((<fixnum>) => (<string>))
+							  ((<flonum>) => (<string>)))
+							(lambda (<string>) => (<fixnum>))))
+
+  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+							  ((<real>)	=> (<boolean>))
+							  ((<vector>)	=> (<boolean>)))
+							(case-lambda
+							  ((<fixnum>)	=> (<boolean>))
+							  ((<flonum>)	=> (<boolean>))
+							  ((<vector>)	=> (<boolean>)))))
+
+  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+							  ((<top>)		=> (<pair>))
+							  ((<top>)		=> (<real>))
+							  ((<top>)		=> (<vector>)))
+							(case-lambda
+							  ((<top>)		=> (<fixnum>))
+							  ((<top>)		=> (<flonum>))
+							  ((<top>)		=> ((vector-of <true>))))))
+
+  (check-for-false	(type-annotation-super-and-sub? (case-lambda
+							  ((<top>)		=> (<pair>))
+							  ((<top>)		=> (<real>))
+							  ((<top>)		=> (<vector>)))
+							(case-lambda
+							  ((<top>)		=> (<fixnum>))
+							  ((<top>)		=> (<flonum>))
+							  ((<top>)		=> (<transcoder>)) ;;this does not match
+							  ((<top>)		=> ((vector-of <true>))))))
 
   (void))
 

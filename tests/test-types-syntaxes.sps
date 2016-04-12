@@ -47,8 +47,7 @@
     <list-of-reals>		<vector-of-reals>	<pair-of-reals>
     <list-of-numbers>		<vector-of-numbers>	<pair-of-numbers>
     <list-of-strings>		<vector-of-strings>	<pair-of-strings>)
-  (import (vicare)
-    (prefix (vicare expander) expander::))
+  (import (vicare))
   (define-type <list-of-fixnums>	(list-of <fixnum>))
   (define-type <list-of-flonums>	(list-of <flonum>))
   (define-type <list-of-numbers>	(list-of <number>))
@@ -165,21 +164,21 @@
   (void))
 
 
-(parametrise ((check-test-name	'type-super-and-sub))
+(parametrise ((check-test-name	'type-annotation-super-and-sub))
 
-  (check-for-true	(type-super-and-sub? <number> <fixnum>))
-  (check-for-false	(type-super-and-sub? <number> <string>))
+  (check-for-true	(type-annotation-super-and-sub? <number> <fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? <number> <string>))
 
   (check
-      (expansion-of (type-super-and-sub? <number> <fixnum>))
+      (expansion-of (type-annotation-super-and-sub? <number> <fixnum>))
     => '(quote #t))
 
   (check
-      (expansion-of (type-super-and-sub? <number> <string>))
+      (expansion-of (type-annotation-super-and-sub? <number> <string>))
     => '(quote #f))
 
-  (check-for-true	(type-super-and-sub? <top> <number>))
-  (check-for-false	(type-super-and-sub? <number> <top>))
+  (check-for-true	(type-annotation-super-and-sub? <top> <number>))
+  (check-for-false	(type-annotation-super-and-sub? <number> <top>))
 
   (internal-body
     (define-record-type alpha)
@@ -190,199 +189,199 @@
     (define-record-type gamma
       (parent beta))
 
-    (check-for-true	(type-super-and-sub? alpha beta))
-    (check-for-false	(type-super-and-sub? beta alpha))
+    (check-for-true	(type-annotation-super-and-sub? alpha beta))
+    (check-for-false	(type-annotation-super-and-sub? beta alpha))
 
-    (check-for-true	(type-super-and-sub? alpha gamma))
-    (check-for-false	(type-super-and-sub? gamma alpha))
+    (check-for-true	(type-annotation-super-and-sub? alpha gamma))
+    (check-for-false	(type-annotation-super-and-sub? gamma alpha))
 
-    (check-for-true	(type-super-and-sub? beta gamma))
-    (check-for-false	(type-super-and-sub? gamma beta))
+    (check-for-true	(type-annotation-super-and-sub? beta gamma))
+    (check-for-false	(type-annotation-super-and-sub? gamma beta))
 
-    (check-for-true	(type-super-and-sub? <top> alpha))
-    (check-for-false	(type-super-and-sub? alpha <top>))
+    (check-for-true	(type-annotation-super-and-sub? <top> alpha))
+    (check-for-false	(type-annotation-super-and-sub? alpha <top>))
 
-    (check-for-true	(type-super-and-sub? <top> beta))
-    (check-for-false	(type-super-and-sub? beta <top>))
+    (check-for-true	(type-annotation-super-and-sub? <top> beta))
+    (check-for-false	(type-annotation-super-and-sub? beta <top>))
 
-    (check-for-true	(type-super-and-sub? <top> gamma))
-    (check-for-false	(type-super-and-sub? gamma <top>))
+    (check-for-true	(type-annotation-super-and-sub? <top> gamma))
+    (check-for-false	(type-annotation-super-and-sub? gamma <top>))
 
     (void))
 
 ;;; --------------------------------------------------------------------
 ;;; lists
 
-  (check-for-true	(type-super-and-sub? <list-of-numbers> <list-of-reals>))
-  (check-for-false	(type-super-and-sub? <list-of-numbers> <list-of-strings>))
+  (check-for-true	(type-annotation-super-and-sub? <list-of-numbers> <list-of-reals>))
+  (check-for-false	(type-annotation-super-and-sub? <list-of-numbers> <list-of-strings>))
 
-  (check-for-true	(type-super-and-sub? (list <number>) (list <fixnum>)))
-  (check-for-false	(type-super-and-sub? (list <symbol>) (list <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (list <number>) (list <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (list <symbol>) (list <string>)))
 
-  (check-for-true	(type-super-and-sub? (list-of <number>) (list-of <fixnum>)))
-  (check-for-false	(type-super-and-sub? (list-of <symbol>) (list-of <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of <number>) (list-of <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (list-of <symbol>) (list-of <string>)))
 
-  (check-for-true	(type-super-and-sub? (list-of <number>) (list <fixnum>)))
-  (check-for-true	(type-super-and-sub? (list-of <number>) (list <fixnum> <flonum> <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of <number>) (list <fixnum>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of <number>) (list <fixnum> <flonum> <number>)))
 
   ;;This is false  because a LIST annotation  specifies the number of  items, while a
   ;;LIST-OF annotation does not specify it.
-  (check-for-false	(type-super-and-sub? (list <number>) (list-of <number>)))
+  (check-for-false	(type-annotation-super-and-sub? (list <number>) (list-of <number>)))
 
-  (check-for-false	(type-super-and-sub? (list <number>) (list-of <string>)))
+  (check-for-false	(type-annotation-super-and-sub? (list <number>) (list-of <string>)))
 
 ;;; --------------------------------------------------------------------
 ;;; vectors
 
-  (check-for-true	(type-super-and-sub? <vector-of-numbers> <vector-of-reals>))
-  (check-for-false	(type-super-and-sub? <vector-of-numbers> <vector-of-strings>))
+  (check-for-true	(type-annotation-super-and-sub? <vector-of-numbers> <vector-of-reals>))
+  (check-for-false	(type-annotation-super-and-sub? <vector-of-numbers> <vector-of-strings>))
 
-  (check-for-true	(type-super-and-sub? (vector <number>) (vector <fixnum>)))
-  (check-for-false	(type-super-and-sub? (vector <symbol>) (vector <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (vector <number>) (vector <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (vector <symbol>) (vector <string>)))
 
-  (check-for-true	(type-super-and-sub? (vector-of <number>) (vector-of <fixnum>)))
-  (check-for-false	(type-super-and-sub? (vector-of <symbol>) (vector-of <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (vector-of <number>) (vector-of <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (vector-of <symbol>) (vector-of <string>)))
 
-  (check-for-true	(type-super-and-sub? (vector-of <number>) (vector <fixnum>)))
-  (check-for-true	(type-super-and-sub? (vector-of <number>) (vector <fixnum> <flonum> <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (vector-of <number>) (vector <fixnum>)))
+  (check-for-true	(type-annotation-super-and-sub? (vector-of <number>) (vector <fixnum> <flonum> <number>)))
 
   ;;This is false  because a VECTOR annotation  specifies the number of  items, while a
   ;;VECTOR-OF annotation does not specify it.
-  (check-for-false	(type-super-and-sub? (vector <number>) (vector-of <number>)))
+  (check-for-false	(type-annotation-super-and-sub? (vector <number>) (vector-of <number>)))
 
-  (check-for-false	(type-super-and-sub? (vector <number>) (vector-of <string>)))
+  (check-for-false	(type-annotation-super-and-sub? (vector <number>) (vector-of <string>)))
 
 ;;; --------------------------------------------------------------------
 ;;; pairs
 
-  (check-for-true	(type-super-and-sub? <pair-of-numbers> <pair-of-reals>))
-  (check-for-false	(type-super-and-sub? <pair-of-numbers> <pair-of-strings>))
+  (check-for-true	(type-annotation-super-and-sub? <pair-of-numbers> <pair-of-reals>))
+  (check-for-false	(type-annotation-super-and-sub? <pair-of-numbers> <pair-of-strings>))
 
-  (check-for-true	(type-super-and-sub? (pair <number> <integer>) (pair <fixnum> <fixnum>)))
-  (check-for-false	(type-super-and-sub? (pair <symbol> <keyword>) (pair <string> <keyword>)))
-  (check-for-false	(type-super-and-sub? (pair <symbol> <keyword>) (pair <keyword> <string>)))
-  (check-for-false	(type-super-and-sub? (pair <symbol> <keyword>) (pair <string> <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (pair <number> <integer>) (pair <fixnum> <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (pair <symbol> <keyword>) (pair <string> <keyword>)))
+  (check-for-false	(type-annotation-super-and-sub? (pair <symbol> <keyword>) (pair <keyword> <string>)))
+  (check-for-false	(type-annotation-super-and-sub? (pair <symbol> <keyword>) (pair <string> <string>)))
 
-  (check-for-true	(type-super-and-sub? (pair-of <number>) (pair-of <fixnum>)))
-  (check-for-false	(type-super-and-sub? (pair-of <symbol>) (pair-of <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (pair-of <number>) (pair-of <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (pair-of <symbol>) (pair-of <string>)))
 
-  (check-for-true	(type-super-and-sub? (pair-of <number>) (pair <fixnum> <flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? (pair-of <number>) (pair <fixnum> <flonum>)))
 
   ;;This is true  because both a PAIR  annotation and a PAIR-OF  annotation specify a
   ;;pair, which holds two values.
-  (check-for-true	(type-super-and-sub? (pair <number> <number>) (pair-of <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (pair <number> <number>) (pair-of <number>)))
 
-  (check-for-false	(type-super-and-sub? (pair <number> <number>) (pair-of <string>)))
+  (check-for-false	(type-annotation-super-and-sub? (pair <number> <number>) (pair-of <string>)))
 
-  (check-for-false	(type-super-and-sub? (list <fixnum>) (pair-of (or <fixnum> <null>))))
+  (check-for-false	(type-annotation-super-and-sub? (list <fixnum>) (pair-of (or <fixnum> <null>))))
 
-  (check-for-true	(type-super-and-sub? (pair <fixnum> <null>)
+  (check-for-true	(type-annotation-super-and-sub? (pair <fixnum> <null>)
 					     (list <fixnum>)))
-  (check-for-true	(type-super-and-sub? (pair-of (or <fixnum> <null>))
+  (check-for-true	(type-annotation-super-and-sub? (pair-of (or <fixnum> <null>))
 					     (list <fixnum>)))
 
-  (check-for-true	(type-super-and-sub? (list-of <fixnum>) (list <fixnum>)))
-  (check-for-true	(type-super-and-sub? (list-of <number>) (list <fixnum> <flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of <fixnum>) (list <fixnum>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of <number>) (list <fixnum> <flonum>)))
 
   ;;Does not match because  a LIST annotation specifies the number  of items, while a
   ;;LIST-OF annotation does not specify it.
-  (check-for-false	(type-super-and-sub? (list <fixnum> <fixnum>) (list-of <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (list <fixnum> <fixnum>) (list-of <fixnum>)))
 
   ;;Does not match because a LIST-OF annotation does not specify the number of items,
   ;;while a PAIR annotation implies at least one item.
-  (check-for-false	(type-super-and-sub? (pair <fixnum> (list-of <fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (pair <fixnum> (list-of <fixnum>))
 					     (list-of <fixnum>)))
 
-  (check-for-true	(type-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>)))
 
   ;;Does not  match because the PAIR-OF  annotation implies at least  one item, while
   ;;the LIST-OF annotation implies nothing.
-  (check-for-false	(type-super-and-sub? (list-of <fixnum>) (pair-of (or <fixnum> <null>))))
+  (check-for-false	(type-annotation-super-and-sub? (list-of <fixnum>) (pair-of (or <fixnum> <null>))))
 
 ;;; --------------------------------------------------------------------
 ;;; unions
 
-  (check-for-true	(type-super-and-sub? (or <number>) (or <number>)))
-  (check-for-true	(type-super-and-sub? (or <number>) (or <fixnum>)))
-  (check-for-false	(type-super-and-sub? (or <fixnum>) (or <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number>) (or <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number>) (or <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (or <fixnum>) (or <number>)))
 
-  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <number> <string>)))
-  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <fixnum> <string>)))
-  (check-for-true	(type-super-and-sub? (or <number> <vector>) (or <fixnum> (vector-of <symbol>))))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>) (or <number> <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>) (or <fixnum> <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <vector>) (or <fixnum> (vector-of <symbol>))))
 
-  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <string> <number>)))
-  (check-for-true	(type-super-and-sub? (or <number> <string>) (or <string> <fixnum>)))
-  (check-for-true	(type-super-and-sub? (or <number> <vector>) (or (vector-of <symbol>) <fixnum>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>) (or <string> <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>) (or <string> <fixnum>)))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <vector>) (or (vector-of <symbol>) <fixnum>)))
 
-  (check-for-true	(type-super-and-sub? (or <number> <string>)	<number>))
-  (check-for-true	(type-super-and-sub? (or <number> <string>)	<fixnum>))
-  (check-for-true	(type-super-and-sub? (or <number> <string>)	<string>))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>)	<number>))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>)	<fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? (or <number> <string>)	<string>))
 
   ;;True because all the types in the union are sub-types of the super-type.
-  (check-for-true	(type-super-and-sub? <number>	(or <fixnum> <flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? <number>	(or <fixnum> <flonum>)))
 
-  (check-for-false	(type-super-and-sub? <number>	(or <number> <string>)))
-  (check-for-false	(type-super-and-sub? <string>	(or <number> <string>)))
+  (check-for-false	(type-annotation-super-and-sub? <number>	(or <number> <string>)))
+  (check-for-false	(type-annotation-super-and-sub? <string>	(or <number> <string>)))
 
 ;;; --------------------------------------------------------------------
 ;;; intersections
 
-  (check-for-true	(type-super-and-sub? (and <fixnum> <exact>) <positive-fixnum>))
-  (check-for-true	(type-super-and-sub? (and <fixnum> <exact>) <fixnum>))
-  (check-for-false	(type-super-and-sub? (and <fixnum> <exact>) <exact>))
-  (check-for-false	(type-super-and-sub? (and <fixnum> <exact>) <string>))
+  (check-for-true	(type-annotation-super-and-sub? (and <fixnum> <exact>) <positive-fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? (and <fixnum> <exact>) <fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (and <fixnum> <exact>) <exact>))
+  (check-for-false	(type-annotation-super-and-sub? (and <fixnum> <exact>) <string>))
 
-  (check-for-true	(type-super-and-sub? (and <positive> <exact>) <positive-fixnum>))
-  (check-for-false	(type-super-and-sub? (and <positive> <exact>) <negative-fixnum>))
-  (check-for-false	(type-super-and-sub? (and <positive> <exact>) <fixnum>))
-  (check-for-false	(type-super-and-sub? (and <positive> <exact>) <string>))
+  (check-for-true	(type-annotation-super-and-sub? (and <positive> <exact>) <positive-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (and <positive> <exact>) <negative-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (and <positive> <exact>) <fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (and <positive> <exact>) <string>))
 
-  (check-for-true	(type-super-and-sub? (and <number> <positive>)
+  (check-for-true	(type-annotation-super-and-sub? (and <number> <positive>)
 					     (and <positive-fixnum> <positive-flonum>)))
-  (check-for-false	(type-super-and-sub? (and <number> <positive>)
+  (check-for-false	(type-annotation-super-and-sub? (and <number> <positive>)
 					     (and <positive-fixnum> <negative-flonum>)))
-  (check-for-false	(type-super-and-sub? (and <number> <positive>)
+  (check-for-false	(type-annotation-super-and-sub? (and <number> <positive>)
 					     (and <negative-fixnum> <positive-flonum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; complement
 
   ;;If something is not a "<number>", for sure it is not a "<fixnum>".
-  (check-for-true	(type-super-and-sub? (not <fixnum>) (not <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (not <fixnum>) (not <number>)))
 
   ;;If something is not a "<fixnum>"
-  (check-for-false	(type-super-and-sub? (not <number>) (not <fixnum>)))
-  (check-for-false	(type-super-and-sub? (not <number>) (not <string>)))
+  (check-for-false	(type-annotation-super-and-sub? (not <number>) (not <fixnum>)))
+  (check-for-false	(type-annotation-super-and-sub? (not <number>) (not <string>)))
 
-  (check-for-true	(type-super-and-sub? (not <string>) <number>))
-  (check-for-false	(type-super-and-sub? (not <number>) <number>))
-  (check-for-false	(type-super-and-sub? (not <number>) <fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? (not <string>) <number>))
+  (check-for-false	(type-annotation-super-and-sub? (not <number>) <number>))
+  (check-for-false	(type-annotation-super-and-sub? (not <number>) <fixnum>))
 
-  (check-for-false	(type-super-and-sub? <number> (not <string>)))
+  (check-for-false	(type-annotation-super-and-sub? <number> (not <string>)))
 
 ;;; --------------------------------------------------------------------
 ;;; misc
 
-  (check-for-true	(type-super-and-sub? (or <exact> <inexact>)	<fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? (or <exact> <inexact>)	<fixnum>))
 
   (void))
 
 
-(parametrise ((check-test-name	'signature-super-and-sub))
+(parametrise ((check-test-name	'type-signature-super-and-sub))
 
-  (check-for-true	(signature-super-and-sub? (<number>) (<fixnum>)))
-  (check-for-false	(signature-super-and-sub? (<number>) (<string>)))
+  (check-for-true	(type-signature-super-and-sub? (<number>) (<fixnum>)))
+  (check-for-false	(type-signature-super-and-sub? (<number>) (<string>)))
 
   (check
-      (expansion-of (signature-super-and-sub? (<number>) (<fixnum>)))
+      (expansion-of (type-signature-super-and-sub? (<number>) (<fixnum>)))
     => '(quote #t))
 
   (check
-      (expansion-of (signature-super-and-sub? (<number>) (<string>)))
+      (expansion-of (type-signature-super-and-sub? (<number>) (<string>)))
     => '(quote #f))
 
-  (check-for-true	(signature-super-and-sub? (<top>) (<number>)))
-  (check-for-false	(signature-super-and-sub? (<number>) (<top>)))
+  (check-for-true	(type-signature-super-and-sub? (<top>) (<number>)))
+  (check-for-false	(type-signature-super-and-sub? (<number>) (<top>)))
 
   (internal-body
     (define-record-type alpha)
@@ -393,72 +392,140 @@
     (define-record-type gamma
       (parent beta))
 
-    (check-for-true	(signature-super-and-sub? (alpha) (beta)))
-    (check-for-false	(signature-super-and-sub? (beta) (alpha)))
+    (check-for-true	(type-signature-super-and-sub? (alpha) (beta)))
+    (check-for-false	(type-signature-super-and-sub? (beta) (alpha)))
 
-    (check-for-true	(signature-super-and-sub? (alpha) (gamma)))
-    (check-for-false	(signature-super-and-sub? (gamma) (alpha)))
+    (check-for-true	(type-signature-super-and-sub? (alpha) (gamma)))
+    (check-for-false	(type-signature-super-and-sub? (gamma) (alpha)))
 
-    (check-for-true	(signature-super-and-sub? (beta) (gamma)))
-    (check-for-false	(signature-super-and-sub? (gamma) (beta)))
+    (check-for-true	(type-signature-super-and-sub? (beta) (gamma)))
+    (check-for-false	(type-signature-super-and-sub? (gamma) (beta)))
 
-    (check-for-true	(signature-super-and-sub? (<top>) (alpha)))
-    (check-for-false	(signature-super-and-sub? (alpha) (<top>)))
+    (check-for-true	(type-signature-super-and-sub? (<top>) (alpha)))
+    (check-for-false	(type-signature-super-and-sub? (alpha) (<top>)))
 
-    (check-for-true	(signature-super-and-sub? (<top>) (beta)))
-    (check-for-false	(signature-super-and-sub? (beta) (<top>)))
+    (check-for-true	(type-signature-super-and-sub? (<top>) (beta)))
+    (check-for-false	(type-signature-super-and-sub? (beta) (<top>)))
 
-    (check-for-true	(signature-super-and-sub? (<top>) (gamma)))
-    (check-for-false	(signature-super-and-sub? (gamma) (<top>)))
+    (check-for-true	(type-signature-super-and-sub? (<top>) (gamma)))
+    (check-for-false	(type-signature-super-and-sub? (gamma) (<top>)))
 
     (void))
 
 ;;; --------------------------------------------------------------------
 ;;; proper lists
 
-  (check-for-true	(signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>)))
-  (check-for-false	(signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>)))
-  (check-for-false	(signature-super-and-sub? (<number> <number>) (<string> <string>)))
-  (check-for-false	(signature-super-and-sub? (<number> <fixnum>) (<fixnum> <number>)))
-  (check-for-false	(signature-super-and-sub? (<fixnum> <number>) (<number> <fixnum>)))
+  (check-for-true	(type-signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>)))
+  (check-for-false	(type-signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> <number>) (<string> <string>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> <fixnum>) (<fixnum> <number>)))
+  (check-for-false	(type-signature-super-and-sub? (<fixnum> <number>) (<number> <fixnum>)))
 
-  (check-for-true	(signature-super-and-sub? (<top> <top>) (<number> <number>)))
-  (check-for-false	(signature-super-and-sub? (<top> <number>) (<number> <top>)))
-  (check-for-false	(signature-super-and-sub? (<number> <top>) (<top> <number>)))
-  (check-for-false	(signature-super-and-sub? (<number> <number>) (<top> <top>)))
+  (check-for-true	(type-signature-super-and-sub? (<top> <top>) (<number> <number>)))
+  (check-for-false	(type-signature-super-and-sub? (<top> <number>) (<number> <top>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> <top>) (<top> <number>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> <number>) (<top> <top>)))
 
-  (check-for-false	(signature-super-and-sub? () (<top>)))
-  (check-for-false	(signature-super-and-sub? (<top>) ()))
-  (check-for-false	(signature-super-and-sub? () (<top> <top>)))
-  (check-for-false	(signature-super-and-sub? (<top> <top>) ()))
+  (check-for-false	(type-signature-super-and-sub? () (<top>)))
+  (check-for-false	(type-signature-super-and-sub? (<top>) ()))
+  (check-for-false	(type-signature-super-and-sub? () (<top> <top>)))
+  (check-for-false	(type-signature-super-and-sub? (<top> <top>) ()))
 
-  (check-for-false	(signature-super-and-sub? (<number> <number>) (<fixnum>)))
-  (check-for-false	(signature-super-and-sub? (<number>) (<fixnum> <fixnum>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> <number>) (<fixnum>)))
+  (check-for-false	(type-signature-super-and-sub? (<number>) (<fixnum> <fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; standalone list identifiers
 
-  (check-for-true	(signature-super-and-sub? <list-of-numbers> <list-of-reals>))
-  (check-for-false	(signature-super-and-sub? <list-of-numbers> <list-of-strings>))
+  (check-for-true	(type-signature-super-and-sub? <list-of-numbers> <list-of-reals>))
+  (check-for-false	(type-signature-super-and-sub? <list-of-numbers> <list-of-strings>))
 
-  (check-for-true	(signature-super-and-sub? <list> ()))
-  (check-for-true	(signature-super-and-sub? <list> (<top> <top>)))
-  (check-for-true	(signature-super-and-sub? <list> (<top> <top> . <list>)))
+  (check-for-true	(type-signature-super-and-sub? <list> ()))
+  (check-for-true	(type-signature-super-and-sub? <list> (<top> <top>)))
+  (check-for-true	(type-signature-super-and-sub? <list> (<top> <top> . <list>)))
 
 ;;; --------------------------------------------------------------------
 ;;; improper lists
 
-  (check-for-true	(signature-super-and-sub? (<number> . <list-of-numbers>) (<real> . <list-of-reals>)))
-  (check-for-false	(signature-super-and-sub? (<number> . <list-of-numbers>) (<number> . <list-of-strings>)))
-  (check-for-false	(signature-super-and-sub? (<number> . <list-of-numbers>) (<string> . <list-of-numbers>)))
-  (check-for-false	(signature-super-and-sub? (<fixnum> . <list-of-numbers>) (<number> . <list-of-numbers>)))
+  (check-for-true	(type-signature-super-and-sub? (<number> . <list-of-numbers>) (<real> . <list-of-reals>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> . <list-of-numbers>) (<number> . <list-of-strings>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> . <list-of-numbers>) (<string> . <list-of-numbers>)))
+  (check-for-false	(type-signature-super-and-sub? (<fixnum> . <list-of-numbers>) (<number> . <list-of-numbers>)))
 
-  (check-for-true	(signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <real> . <list>)))
+  (check-for-true	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <real> . <list>)))
 
-  (check-for-false	(signature-super-and-sub? (<number> <number> . <list>) (<fixnum>)))
-  (check-for-true	(signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <fixnum>)))
+  (check-for-false	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum>)))
+  (check-for-true	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <fixnum>)))
 
   #t)
+
+
+(parametrise ((check-test-name	'type-annotation-common-ancestor))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?one ?two => ?expected)
+       (check
+	   (type-annotation-common-ancestor ?one ?two)
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <top> <top>		=> <top>)
+
+  (doit <fixnum> <fixnum>	=> <fixnum>)
+  (doit <fixnum> <top>		=> <top>)
+  (doit <top> <fixnum>		=> <top>)
+
+  (doit <fixnum> <flonum>	=> <real>)
+  (doit <flonum> <fixnum>	=> <real>)
+
+  (doit <positive-fixnum> <fixnum>	=> <fixnum>)
+  (doit <fixnum> <positive-fixnum>	=> <fixnum>)
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-signature-common-ancestor))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?one ?two => ?expected)
+       (check
+	   (type-signature-common-ancestor ?one ?two)
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (<top>) (<top>)		=> (<top>))
+
+  (doit (<fixnum>) (<fixnum>)	=> (<fixnum>))
+  (doit (<fixnum>) (<top>)		=> (<top>))
+  (doit (<top>) (<fixnum>)		=> (<top>))
+
+  (doit (<fixnum>) (<flonum>)	=> (<real>))
+  (doit (<flonum>) (<fixnum>)	=> (<real>))
+
+  (doit (<positive-fixnum>) (<fixnum>)	=> (<fixnum>))
+  (doit (<fixnum>) (<positive-fixnum>)	=> (<fixnum>))
+
+  (doit (<fixnum> <fixnum>)
+	(<flonum> <bignum>)
+	=> (<real> <exact-integer>))
+
+  (doit (<fixnum> <fixnum> <string>)
+	(<flonum> <bignum>)
+	=> (<real> <exact-integer> . <list>))
+
+  (doit (<fixnum> <fixnum>)
+	(<flonum> <bignum> <string>)
+	=> (<real> <exact-integer> . <list>))
+
+  (void))
 
 
 (parametrise ((check-test-name	'assert-signature))

@@ -36,20 +36,20 @@
 
 (parametrise ((check-test-name	'super-and-sub))
 
-  (check-for-true	(type-super-and-sub? (hashtable <symbol> <number>)
-					     (hashtable <symbol> <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (hashtable <symbol> <number>)
+							(hashtable <symbol> <number>)))
 
-  (check-for-true	(type-super-and-sub? (hashtable <real>   <string>)
-					     (hashtable <fixnum> <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (hashtable <real>   <string>)
+							(hashtable <fixnum> <string>)))
 
-  (check-for-true	(type-super-and-sub? (hashtable <string>   <real>)
-					     (hashtable <string> <fixnum>)))
+  (check-for-true	(type-annotation-super-and-sub? (hashtable <string>   <real>)
+							(hashtable <string> <fixnum>)))
 
-  (check-for-false	(type-super-and-sub? (hashtable <real>    <string>)
-					     (hashtable <boolean> <string>)))
+  (check-for-false	(type-annotation-super-and-sub? (hashtable <real>    <string>)
+							(hashtable <boolean> <string>)))
 
-  (check-for-false	(type-super-and-sub? (hashtable <string>    <real>)
-					     (hashtable <string> <boolean>)))
+  (check-for-false	(type-annotation-super-and-sub? (hashtable <string>    <real>)
+							(hashtable <string> <boolean>)))
 
   (void))
 

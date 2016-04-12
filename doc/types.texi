@@ -552,7 +552,7 @@ type does @strong{not} match the complement's type.
 
 ;;If something is not a "<number>", for sure it is
 ;;not a "<fixnum>".
-(type-super-and-sub? (not <fixnum>) (not <number>))
+(type-annotation-super-and-sub? (not <fixnum>) (not <number>))
 @result{} #t
 @end lisp
 @end deftp
@@ -673,6 +673,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes slots::        Slot getter and setter syntaxes.
 * types syntaxes methods::      Calling object-type methods.
 * types syntaxes super-sub::    Super and sub types.
+* types syntaxes ancestor::     Common ancestor of types and signatures.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
@@ -1191,23 +1192,23 @@ The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
-@deffn Syntax type-super-and-sub? @metai{type} @metaii{type}
+@deffn Syntax type-annotation-super-and-sub? @metai{type} @metaii{type}
 Expand to a boolean constant: @true{} if @metai{type} is a super--type
 of @metaii{type}; otherwise @false{}.  The type @class{top} is
 conventionally the super--type of all the types.
 
 @lisp
-(type-super-and-sub? <number> <fixnum>)      @result{} #t
-(type-super-and-sub? <number> <string>)      @result{} #f
-(type-super-and-sub? <top> <number>)         @result{} #t
-(type-super-and-sub? <number> <top>)         @result{} #f
+(type-annotation-super-and-sub? <number> <fixnum>)  @result{} #t
+(type-annotation-super-and-sub? <number> <string>)  @result{} #f
+(type-annotation-super-and-sub? <top> <number>)     @result{} #t
+(type-annotation-super-and-sub? <number> <top>)     @result{} #f
 
 (expansion-of
-  (type-super-and-sub? <number> <fixnum>))
+  (type-annotation-super-and-sub? <number> <fixnum>))
 @result{} (quote #t)
 
 (expansion-of
-  (type-super-and-sub? <number> <string>))
+  (type-annotation-super-and-sub? <number> <string>))
 @result{} (quote #f)
 
 (define-record-type alpha)
@@ -1218,19 +1219,19 @@ conventionally the super--type of all the types.
 (define-record-type gamma
   (parent beta))
 
-(type-super-and-sub? alpha beta)        @result{} #t
-(type-super-and-sub? beta alpha)        @result{} #f
+(type-annotation-super-and-sub? alpha beta)        @result{} #t
+(type-annotation-super-and-sub? beta alpha)        @result{} #f
 
-(type-super-and-sub? alpha gamma)       @result{} #t
-(type-super-and-sub? gamma alpha)       @result{} #f
+(type-annotation-super-and-sub? alpha gamma)       @result{} #t
+(type-annotation-super-and-sub? gamma alpha)       @result{} #f
 
-(type-super-and-sub? beta gamma)        @result{} #t
-(type-super-and-sub? gamma beta)        @result{} #f
+(type-annotation-super-and-sub? beta gamma)        @result{} #t
+(type-annotation-super-and-sub? gamma beta)        @result{} #f
 @end lisp
 @end deffn
 
 
-@deffn Syntax signature-super-and-sub? @metai{signature} @metaii{signature}
+@deffn Syntax type-signature-super-and-sub? @metai{signature} @metaii{signature}
 Expand to a boolean constant: @true{} if @metai{signature} is a
 super--signature of @metaii{signature}; otherwise @false{}.  The
 arguments @meta{signature} must be proper or improper lists of type
@@ -1238,28 +1239,76 @@ annotations, with @class{list} or @samp{(list-of @meta{type})} in tail
 position when the list is improper.
 
 @lisp
-(signature-super-and-sub? (<number>) (<fixnum>))        @result{} #t
-(signature-super-and-sub? (<number>) (<string>))        @result{} #f
+(type-signature-super-and-sub? (<number>) (<fixnum>))        @result{} #t
+(type-signature-super-and-sub? (<number>) (<string>))        @result{} #f
 
 (expansion-of
-  (signature-super-and-sub? (<number>) (<fixnum>))
+  (type-signature-super-and-sub? (<number>) (<fixnum>))
 @result{} (quote #t)
 
 (expansion-of
-  (signature-super-and-sub? (<number>) (<string>))
+  (type-signature-super-and-sub? (<number>) (<string>))
 @result{} (quote #f)
 
-(signature-super-and-sub? (<top>) (<number>))   @result{} #t
-(signature-super-and-sub? (<number>) (<top>))   @result{} #f
+(type-signature-super-and-sub? (<top>) (<number>))   @result{} #t
+(type-signature-super-and-sub? (<number>) (<top>))   @result{} #f
 
-(signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>))
+(type-signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>))
 @result{} #t
-(signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>))
+(type-signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>))
 @result{} #f
 
-(signature-super-and-sub? (<number> <number> . <list>)
-                          (<fixnum> <real>   . <list>))
+(type-signature-super-and-sub? (<number> <number> . <list>)
+                               (<fixnum> <real>   . <list>))
 @result{} #t
+@end lisp
+@end deffn
+
+@c page
+@node types syntaxes ancestor
+@subsection Common ancestor of types and signatures
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax type-annotation-common-ancestor @metai{type} @metaii{type}
+Expand to a syntax object representing the type annotation that is the
+common ancestor of @metai{type} and @metaii{type}.
+
+@lisp
+(type-annotation-common-ancestor <top> <top>)
+@result{} #'<top>
+
+(type-annotation-common-ancestor <top> <fixnum>)
+@result{} #'<top>
+
+(type-annotation-common-ancestor <fixnum> <top>)
+@result{} #'<top>
+
+(type-annotation-common-ancestor <fixnum> <flonum>)
+@result{} #'<real>
+@end lisp
+@end deffn
+
+
+@deffn Syntax type-signature-common-ancestor @metai{signature} @metaii{signature}
+Expand to a syntax object representing the type signature that is the
+common ancestor of @metai{signature} and @metaii{signature}.
+
+@lisp
+(type-signature-common-ancestor (<fixnum> <fixnum>)
+                                (<flonum> <bignum>))
+@result{} #'(<real> <exact-integer>)
+
+(type-signature-common-ancestor (<fixnum> <fixnum> <string>)
+                                (<flonum> <bignum>)
+@result{} #'(<real> <exact-integer> . <list>)
+
+(type-signature-common-ancestor (<fixnum> <fixnum>)
+                                (<flonum> <bignum> <string>)
+@result{} #'(<real> <exact-integer> . <list>)
 @end lisp
 @end deffn
 

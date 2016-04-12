@@ -54,7 +54,8 @@
    type-signature.min-count				type-signature.max-count
    type-signature.min-and-max-counts
 
-   type-signature.common-ancestor			datum-type-signature
+   type-signature.common-ancestor			type-signature.union
+   datum-type-signature
 
 ;;; helpers
    case-signature-specs
@@ -968,6 +969,52 @@
 	   ((pair? specs1)
 	    (cond ((pair? specs2)
 		   (cons (object-type-spec.common-ancestor (car specs1) (car specs2))
+			 (recur (cdr specs1) (cdr specs2))))
+		  ((null? specs2)
+		   ;;SIG2 is a proper list shorter that SIG1.
+		   (<list>-ots))
+		  (else
+		   ;;SIG2 is an improper list shorter that SIG1.
+		   (<list>-ots))))
+
+	   (else
+	    ;;SIG1 is an improper list.
+	    (cond ((null? specs2)
+		   ;;SIG2 is an proper list shorter that SIG1.
+		   (<list>-ots))
+		  ((pair? specs2)
+		   ;;SIG2 is an proper list longer that SIG1.
+		   (<list>-ots))
+		  (else
+		   ;;Both SIG1  and SIG2 are improper  lists with the same  number of
+		   ;;items.   Since  both  SPECS1  and   SPECS2  come  from  a  valid
+		   ;;"<type-signature>" instance: here we know that SPECS1 and SPECS2
+		   ;;are either "<list>" OTSs  or "<list-of-type-spec>" instances; so
+		   ;;their  common  ancestor   is  either  the  "<list>"   OTS  or  a
+		   ;;"<list-of-type-spec>" instance.
+		   (object-type-spec.common-ancestor specs1 specs2))))))))
+
+
+;;;; matching: union
+
+(define* (type-signature.union {sig1 type-signature?} {sig2 type-signature?})
+  ;;Given two  type signatures: return  a new  type signature representing  the union
+   ;;between the two.
+  ;;
+  (make-type-signature
+   (let recur ((specs1 (type-signature.object-type-specs sig1))
+	       (specs2 (type-signature.object-type-specs sig2)))
+     (cond ((null? specs1)
+	    (if (null? specs2)
+		;;Both the signatures are proper lists with the same number of items:
+		;;success!
+		'()
+	      ;;SIG1 is a proper list shorter that SIG2.
+	      (<list>-ots)))
+
+	   ((pair? specs1)
+	    (cond ((pair? specs2)
+		   (cons (make-union-type-spec/maybe (list (car specs1) (car specs2)))
 			 (recur (cdr specs1) (cdr specs2))))
 		  ((null? specs2)
 		   ;;SIG2 is a proper list shorter that SIG1.

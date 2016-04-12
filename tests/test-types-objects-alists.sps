@@ -69,80 +69,80 @@
 
 ;;; alist is super
 
-  (check-for-true	(type-super-and-sub? (alist <symbol> <number>)
-					     (list-of (pair <symbol> <number>))))
+  (check-for-true	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list-of (pair <symbol> <number>))))
 
-  (check-for-true	(type-super-and-sub? (alist <real> <number>)
-					     (list-of (pair-of (or <fixnum> <flonum>)))))
+  (check-for-true	(type-annotation-super-and-sub? (alist <real> <number>)
+							(list-of (pair-of (or <fixnum> <flonum>)))))
 
-  (check-for-true	(type-super-and-sub? (alist <symbol> <number>)
-					     (list (pair <symbol> <number>)
-						   (pair <symbol> <number>))))
+  (check-for-true	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list (pair <symbol> <number>)
+							      (pair <symbol> <number>))))
 
-  (check-for-true	(type-super-and-sub? (alist <real> <number>)
-					     (list (pair-of (or <fixnum> <flonum>))
-						   (pair-of (or <fixnum> <flonum>)))))
+  (check-for-true	(type-annotation-super-and-sub? (alist <real> <number>)
+							(list (pair-of (or <fixnum> <flonum>))
+							      (pair-of (or <fixnum> <flonum>)))))
 
 ;;; no match
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     <list>))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							<list>))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list-of (or <symbol> <number>))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list-of (or <symbol> <number>))))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list-of (pair <symbol> <boolean>))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list-of (pair <symbol> <boolean>))))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list-of (pair <boolean> <number>))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list-of (pair <boolean> <number>))))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list (pair <boolean> <number>)
-						   (pair <symbol> <number>))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list (pair <boolean> <number>)
+							      (pair <symbol> <number>))))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list (pair-of (or <symbol> <number>))
-						   (pair-of (or <symbol> <boolean>)))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list (pair-of (or <symbol> <number>))
+							      (pair-of (or <symbol> <boolean>)))))
 
 ;;; --------------------------------------------------------------------
 ;;; alist is sub
 
-  (check-for-true	(type-super-and-sub? (list-of (pair <symbol> <number>))
-					     (alist <symbol> <number>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of (pair <symbol> <number>))
+							(alist <symbol> <number>)))
 
-  (check-for-true	(type-super-and-sub? (list-of (pair-of <real>))
-					     (alist <fixnum> <flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? (list-of (pair-of <real>))
+							(alist <fixnum> <flonum>)))
 
-  (check-for-true	(type-super-and-sub? (list (pair <symbol> <number>)
-						   (pair <symbol> <number>))
-					     (alist <symbol> <flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? (list (pair <symbol> <number>)
+							      (pair <symbol> <number>))
+							(alist <symbol> <flonum>)))
 
-  (check-for-true	(type-super-and-sub? (alist <real> <number>)
-					     (list (pair-of (or <fixnum> <flonum>))
-						   (pair-of (or <fixnum> <flonum>)))))
+  (check-for-true	(type-annotation-super-and-sub? (alist <real> <number>)
+							(list (pair-of (or <fixnum> <flonum>))
+							      (pair-of (or <fixnum> <flonum>)))))
 
 ;;; no match
 
-  (check-for-false	(type-super-and-sub? <list>
-					     (alist <symbol> <number>)))
+  (check-for-false	(type-annotation-super-and-sub? <list>
+							(alist <symbol> <number>)))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list-of (or <symbol> <number>))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list-of (or <symbol> <number>))))
 
-  (check-for-false	(type-super-and-sub? (list-of (pair <symbol> <number>))
-					     (alist <keyword> <number>)))
+  (check-for-false	(type-annotation-super-and-sub? (list-of (pair <symbol> <number>))
+							(alist <keyword> <number>)))
 
-  (check-for-false	(type-super-and-sub? (list-of (pair-of (or <symbol> <number>)))
-					     (alist <symbol> <keyword>)))
+  (check-for-false	(type-annotation-super-and-sub? (list-of (pair-of (or <symbol> <number>)))
+							(alist <symbol> <keyword>)))
 
-  (check-for-false	(type-super-and-sub? (list (pair <symbol> <number>)
-						   (pair <symbol> <number>))
-					     (alist <keyword> <number>)))
+  (check-for-false	(type-annotation-super-and-sub? (list (pair <symbol> <number>)
+							      (pair <symbol> <number>))
+							(alist <keyword> <number>)))
 
-  (check-for-false	(type-super-and-sub? (alist <symbol> <number>)
-					     (list (pair-of (or <symbol> <keyword>))
-						   (pair-of (or <symbol> <keyword>)))))
+  (check-for-false	(type-annotation-super-and-sub? (alist <symbol> <number>)
+							(list (pair-of (or <symbol> <keyword>))
+							      (pair-of (or <symbol> <keyword>)))))
 
   (void))
 

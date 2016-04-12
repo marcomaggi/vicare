@@ -145,13 +145,13 @@
 
     <union-type-spec>
     <union-type-spec>-rtd				<union-type-spec>-rcd
-    make-union-type-spec				union-type-spec?
-    union-type-spec.component-ots*
+    make-union-type-spec				make-union-type-spec/maybe
+    union-type-spec?					union-type-spec.component-ots*
 
     <intersection-type-spec>
     <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
-    make-intersection-type-spec				intersection-type-spec?
-    intersection-type-spec.component-ots*
+    make-intersection-type-spec				make-intersection-type-spec/maybe
+    intersection-type-spec?				intersection-type-spec.component-ots*
 
     <complement-type-spec>
     <complement-type-spec>-rtd				<complement-type-spec>-rcd

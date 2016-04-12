@@ -203,13 +203,13 @@
 
 	 <union-type-spec>
 	 <union-type-spec>-rtd				<union-type-spec>-rcd
-	 make-union-type-spec				union-type-spec?
-	 union-type-spec.component-ots*
+	 make-union-type-spec				make-union-type-spec/maybe
+	 union-type-spec?				union-type-spec.component-ots*
 
 	 <intersection-type-spec>
 	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
-	 make-intersection-type-spec			intersection-type-spec?
-	 intersection-type-spec.component-ots*
+	 make-intersection-type-spec			make-intersection-type-spec/maybe
+	 intersection-type-spec?			intersection-type-spec.component-ots*
 
 	 <complement-type-spec>
 	 <complement-type-spec>-rtd			<complement-type-spec>-rcd
@@ -1041,9 +1041,11 @@
   (cond ((object-type-spec=? ots1 ots2)
 	 ots1)
 
-	((or (<top>-ots? ots1)
-	     (<top>-ots? ots2))
+	((<top>-ots? ots1)
 	 ots1)
+
+	((<top>-ots? ots2)
+	 ots2)
 
 	((<no-return>-ots? ots1)
 	 ots2)
@@ -1656,8 +1658,7 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-union-type-spec {component-type*.ots not-empty-list-of-object-type-spec?})
-	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
-	       (name.stx		(cons (core-prim-id 'or)
+	(let* ((name.stx		(cons (core-prim-id 'or)
 					      (map object-type-spec.name component-type*.ots)))
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
@@ -1675,16 +1676,6 @@
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots (void))))
-
-      (define (%collapse-component-specs component-type*.ots)
-	(object-type-specs-delete-duplicates
-	 (fold-right (lambda (component.ots knil)
-		       (cond ((union-type-spec? component.ots)
-			      (append (union-type-spec.component-ots* component.ots)
-				      knil))
-			     (else
-			      (cons component.ots knil))))
-	   '() component-type*.ots)))
 
       (define (make-union-predicate component-type*.ots component-pred*.stx)
 	(for-each (lambda (type.ots pred.stx)
@@ -1716,6 +1707,21 @@
 
 (define <union-type-spec>-rcd
   (record-constructor-descriptor <union-type-spec>))
+
+(define* (make-union-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+  (define (%collapse-component-specs component-type*.ots)
+    (object-type-specs-delete-duplicates
+     (fold-right (lambda (component.ots knil)
+		   (cond ((union-type-spec? component.ots)
+			  (append (union-type-spec.component-ots* component.ots)
+				  knil))
+			 (else
+			  (cons component.ots knil))))
+       '() component-type*.ots)))
+  (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
+    (if (list-of-single-item? component-type*.ots)
+	(car component-type*.ots)
+      (make-union-type-spec component-type*.ots))))
 
 (define* (union-type-spec.length {union.ots union-type-spec?})
   (let ((mem (union-type-spec.memoised-length union.ots)))
@@ -1752,8 +1758,7 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-intersection-type-spec {component-type*.ots not-empty-list-of-object-type-spec?})
-	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
-	       (name.stx		(cons (core-prim-id 'and)
+	(let* ((name.stx		(cons (core-prim-id 'and)
 					      (map object-type-spec.name component-type*.ots)))
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
@@ -1771,16 +1776,6 @@
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots (void))))
-
-      (define (%collapse-component-specs component-type*.ots)
-	(object-type-specs-delete-duplicates
-	 (fold-right (lambda (component.ots knil)
-		       (cond ((intersection-type-spec? component.ots)
-			      (append (intersection-type-spec.component-ots* component.ots)
-				      knil))
-			     (else
-			      (cons component.ots knil))))
-	   '() component-type*.ots)))
 
       (define (make-intersection-predicate component-type*.ots component-pred*.stx)
 	(for-each (lambda (type.ots pred.stx)
@@ -1812,6 +1807,21 @@
 
 (define <intersection-type-spec>-rcd
   (record-constructor-descriptor <intersection-type-spec>))
+
+(define* (make-intersection-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+  (define (%collapse-component-specs component-type*.ots)
+    (object-type-specs-delete-duplicates
+     (fold-right (lambda (component.ots knil)
+		   (cond ((intersection-type-spec? component.ots)
+			  (append (intersection-type-spec.component-ots* component.ots)
+				  knil))
+			 (else
+			  (cons component.ots knil))))
+       '() component-type*.ots)))
+  (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
+    (if (list-of-single-item? component-type*.ots)
+	(car component-type*.ots)
+      (make-intersection-type-spec component-type*.ots))))
 
 (define* (intersection-type-spec.length {intersection.ots intersection-type-spec?})
   (let ((mem (intersection-type-spec.memoised-length intersection.ots)))
@@ -2875,17 +2885,17 @@
       (type-annotation->object-type-spec ?single-component-type lexenv))
 
      ((or ?component-type ?component-type* ...)
-      (make-union-type-spec (map (lambda (type.stx)
-				   (type-annotation->object-type-spec type.stx lexenv))
-			      (cons ?component-type ?component-type*))))
+      (make-union-type-spec/maybe (map (lambda (type.stx)
+					 (type-annotation->object-type-spec type.stx lexenv))
+				    (cons ?component-type ?component-type*))))
 
      ((and ?single-component-type)
       (type-annotation->object-type-spec ?single-component-type lexenv))
 
      ((and ?component-type ?component-type* ...)
-      (make-intersection-type-spec (map (lambda (type.stx)
-					  (type-annotation->object-type-spec type.stx lexenv))
-				     (cons ?component-type ?component-type*))))
+      (make-intersection-type-spec/maybe (map (lambda (type.stx)
+						(type-annotation->object-type-spec type.stx lexenv))
+					   (cons ?component-type ?component-type*))))
 
      ((not ?item-type)
       (make-complement-type-spec (type-annotation->object-type-spec ?item-type lexenv)))

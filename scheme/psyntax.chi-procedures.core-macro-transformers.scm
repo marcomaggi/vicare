@@ -181,8 +181,10 @@
     ((unsafe-cast-signature)			unsafe-cast-signature-transformer)
 
     ((type-of)					type-of-transformer)
-    ((type-super-and-sub?)			type-super-and-sub?-transformer)
-    ((signature-super-and-sub?)			signature-super-and-sub?-transformer)
+    ((type-annotation-super-and-sub?)		type-annotation-super-and-sub?-transformer)
+    ((type-signature-super-and-sub?)		type-signature-super-and-sub?-transformer)
+    ((type-annotation-common-ancestor)		type-annotation-common-ancestor-transformer)
+    ((type-signature-common-ancestor)		type-signature-common-ancestor-transformer)
 
     ((expansion-of)				expansion-of-transformer)
     ((expansion-of*)				expansion-of*-transformer)
@@ -518,8 +520,8 @@
 		     (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (psi.core-expr alternate.psi))
-		 (type-signature.common-ancestor (psi.retvals-signature consequent.psi)
-						 (psi.retvals-signature alternate.psi)))))
+		 (type-signature.union (psi.retvals-signature consequent.psi)
+				       (psi.retvals-signature alternate.psi)))))
     ((_ ?test ?consequent)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
@@ -543,8 +545,8 @@
 		     (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (build-void))
-		 (type-signature.common-ancestor (psi.retvals-signature consequent.psi)
-						 (make-type-signature/single-void)))))
+		 (type-signature.union (psi.retvals-signature consequent.psi)
+				       (make-type-signature/single-void)))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
