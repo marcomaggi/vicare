@@ -59,7 +59,7 @@
 ;;;; public API: configuration parameters
 
 (define print-graph
-  (make-parameter #t))
+  (make-parameter #f))
 
 (define print-unicode
   (make-parameter #f))
