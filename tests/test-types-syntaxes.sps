@@ -832,6 +832,36 @@
   (void))
 
 
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   (%type-signature->sexp (type-of ?expr))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (cond ((read)	1)
+	      ((read)	2)
+	      (else	3))
+	=> (<positive-fixnum>))
+
+  (doit (cond ((read)	1)
+	      ((read)	2)
+	      (else	#f))
+	=> ((or <positive-fixnum> <false>)))
+
+  (doit (cond ((read)	1)
+	      ((read)	2.0)
+	      (else	#f))
+	=> ((or <positive-fixnum> <positive-flonum> <false>)))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)
