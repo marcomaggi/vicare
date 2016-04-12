@@ -50,6 +50,7 @@
 (declare-parameter print-graph			<boolean>)
 (declare-parameter print-unicode		<boolean>)
 (declare-parameter printer-integer-radix	<non-negative-fixnum>)
+(declare-parameter printer-printing-style	<symbol>)
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
