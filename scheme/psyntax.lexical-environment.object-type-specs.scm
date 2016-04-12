@@ -1662,7 +1662,8 @@
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-union-predicate (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (predicate.stx		(make-union-predicate component-type*.ots
+							      (map object-type-spec.type-predicate-stx component-type*.ots)))
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
@@ -1685,7 +1686,13 @@
 			      (cons component.ots knil))))
 	   '() component-type*.ots)))
 
-      (define (make-union-predicate component-pred*.stx)
+      (define (make-union-predicate component-type*.ots component-pred*.stx)
+	(for-each (lambda (type.ots pred.stx)
+		    (unless pred.stx
+		      (assertion-violation '<union-type-spec>
+			"impossible to generate union type predicate, component type has no predicate"
+			type.ots)))
+	  component-type*.ots component-pred*.stx)
 	(let ((obj.sym	(gensym "obj"))
 	      (pred.sym	(gensym "pred")))
 	  (bless
@@ -1751,7 +1758,8 @@
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-intersection-predicate (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (predicate.stx		(make-intersection-predicate component-type*.ots
+								     (map object-type-spec.type-predicate-stx component-type*.ots)))
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
@@ -1774,7 +1782,13 @@
 			      (cons component.ots knil))))
 	   '() component-type*.ots)))
 
-      (define (make-intersection-predicate component-pred*.stx)
+      (define (make-intersection-predicate component-type*.ots component-pred*.stx)
+	(for-each (lambda (type.ots pred.stx)
+		    (unless pred.stx
+		      (assertion-violation '<intersection-type-spec>
+			"impossible to generate intersection type predicate, component type has no predicate"
+			type.ots)))
+	  component-type*.ots component-pred*.stx)
 	(let ((obj.sym	(gensym "obj"))
 	      (pred.sym	(gensym "pred")))
 	  (bless
@@ -1834,7 +1848,8 @@
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-complement-predicate (object-type-spec.type-predicate-stx item-type.ots)))
+	       (predicate.stx		(make-complement-predicate item-type.ots
+								   (object-type-spec.type-predicate-stx item-type.ots)))
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
@@ -1847,7 +1862,11 @@
 				  accessors-table mutators-table methods-table)
 	   item-type.ots)))
 
-      (define (make-complement-predicate item-pred.stx)
+      (define (make-complement-predicate item-type.ots item-pred.stx)
+	(unless item-pred.stx
+	  (assertion-violation '<complement-type-spec>
+	    "impossible to generate complement type predicate, component type has no predicate"
+	    item-type.ots))
 	(let ((obj.sym	(gensym "obj")))
 	  (bless
 	   `(lambda (,obj.sym)
@@ -1899,7 +1918,7 @@
 	 (let ((parent.ots		(<procedure>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		#f)
+	       (predicate.stx		(core-prim-id 'procedure?))
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)

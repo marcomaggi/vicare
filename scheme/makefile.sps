@@ -2034,6 +2034,8 @@
     (boolean-max				v $language)
     (list-of-booleans?				v $language)
     (boolean?					v r ba se)
+    (true?					v $language)
+    (false?					v $language)
     (car					v r ba se)
     (cdr					v r ba se)
     (caar					v r ba se)
@@ -3683,6 +3685,14 @@
     (<non-negative>				v $language)
 
     (<file-descriptor>				v $language)
+    (<thunk>					v $language)
+    (<type-predicate>				v $language)
+    (<type-destructor>				v $language)
+    (<type-printer>				v $language)
+    (<equality-predicate>			v $language)
+    (<comparison-procedure>			v $language)
+    (<hash-function>				v $language)
+    (<type-method-retriever>			v $language)
 
     (<string>					v $language)
     (<vector>					v $language)

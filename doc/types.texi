@@ -970,6 +970,31 @@ it is impossible to infer the type of @meta{expr}: an exception is
 raised at expand--time.
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Dot notation
+
+As special case it is possible to mutate a record's mutable field using
+the @syntax{set!} syntax and the dot notation.  Here is an example:
+
+@lisp
+(define-record-type alpha
+  (fields (mutable a)
+          (mutable b)))
+
+(define @{O alpha@}
+  (new alpha 1 2))
+
+(set! (.a O) 10)
+(set! (.b O) 20)
+
+(.a O)  @result{} 10
+(.b O)  @result{} 20
+@end lisp
+
+For details on the dot notation @ref{types syntaxes methods, Dot
+notation}.
+
 @c page
 @node types syntaxes methods
 @subsection Calling object--type methods
@@ -2179,10 +2204,101 @@ Type of closure object values.  There is no constructor.
 @end deftp
 
 
-@defop {Type predicate} @class{procedure} is-a? @var{obj} @aclass{procedure}
+@defop {Type predicate} @aclass{procedure} is-a? @var{obj} @aclass{procedure}
 The type predicate is @func{procedure?}.  Return @true{} if @var{obj} is
 a closure object; otherwise return @false{}.
 @end defop
+
+
+@defop {Type Annotation} @aclass{thunk}
+Type of procedures accepting no arguments.  The definition of this type
+is equivalent to:
+
+@lisp
+(define-type <thunk>
+  (lambda () => <list>))
+@end lisp
+@end defop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Type procedures
+
+@deftp {Type Annotation} @aclass{type-predicate}
+Type of procedures acting as type predicates.  The definition of this
+type is equivalent to:
+
+@lisp
+(define-type <type-predicate>
+  (lambda (<top>) => (<boolean>)))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} @aclass{type-destructor}
+Type of procedures acting as destructors for object of a specified type.
+The definition of this type is equivalent to:
+
+@lisp
+(define-type <type-destructor>
+  (lambda (<top>) => <list>))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} @aclass{type-printer}
+Type of procedures acting as custom printers for object of a specified
+type.  The definition of this type is equivalent to:
+
+@lisp
+(define-type-annotation <type-printer>
+  (lambda (<top> <textual-output-port> <procedure>) => <list>))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} @aclass{equality-predicate}
+Type of procedures acting as equality predicates.  The definition of
+this type is equivalent to:
+
+@lisp
+(define-type <equality-predicate>
+  (lambda (<top> <top>) => (<boolean>)))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} @aclass{comparison-procedure}
+Type of procedures acting as equality predicates.  The definition of
+this type is equivalent to:
+
+@lisp
+(define-type <comparison-procedure>
+  (lambda (<top> <top>) => (<fixnum>)))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} @aclass{hash-function}
+Type of procedures acting as equality predicates.  The definition of
+this type is equivalent to:
+
+@lisp
+(define-type <hash-function>
+  (lambda (<top>) => (<non-negative-fixnum>)))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} @aclass{type-method-retriever}
+Type of procedures acting as run--time method retriever for object of a
+specified type.  The definition of this type is equivalent to:
+
+@lisp
+(define-type <type-method-retriever>
+  (lambda (<symbol>) => ((or <false> <procedure>))))
+@end lisp
+@end deftp
 
 @c page
 @node types built-in numerics

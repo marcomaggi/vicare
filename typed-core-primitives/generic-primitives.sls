@@ -443,6 +443,13 @@
   (signatures
    ((<gensym>)			=> (<boolean>))))
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive do-monitor
+    (safe)
+  (signatures
+   ((<gensym> <positive-fixnum> <procedure>)	=> <list>)))
+
 
 ;;;; core syntactic binding descriptors, typed safe OOP core primitives: generic objects
 

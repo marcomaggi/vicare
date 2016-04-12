@@ -105,6 +105,37 @@
   <top>)
 
 
+;;;; procedures
+
+(define-type-annotation <thunk>
+  (lambda () => <list>))
+
+;;; --------------------------------------------------------------------
+
+(define-type-annotation <type-predicate>
+  (lambda (<top>) => (<boolean>)))
+
+(define-type-annotation <type-destructor>
+  (lambda (<top>) => <list>))
+
+(define-type-annotation <type-printer>
+  (lambda (<top> <textual-output-port> <procedure>) => <list>))
+
+(define-type-annotation <type-method-retriever>
+  (lambda (<symbol>) => ((or <false> <procedure>))))
+
+;;; --------------------------------------------------------------------
+
+(define-type-annotation <equality-predicate>
+  (lambda (<top> <top>) => (<boolean>)))
+
+(define-type-annotation <comparison-procedure>
+  (lambda (<top> <top>) => (<fixnum>)))
+
+(define-type-annotation <hash-function>
+  (lambda (<top>) => (<non-negative-fixnum>)))
+
+
 ;;;; miscellaneous
 
 (define-type-annotation <&who-value>

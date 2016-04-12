@@ -169,7 +169,8 @@
     (cond ((%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.id synner)
 	   => (lambda (foo-super-rcd-code)
 		(let ((foo-super-rcd.id (%named-gensym/suffix foo "-super-protocol")))
-		  (values foo-super-rcd.id `((define/std ,foo-super-rcd.id ,foo-super-rcd-code))))))
+		  (values foo-super-rcd.id `((define/typed {,foo-super-rcd.id <record-constructor-descriptor>}
+					       ,foo-super-rcd-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -191,7 +192,8 @@
     (cond ((%make-equality-predicate-code clause* foo parent-rtd.id synner)
 	   => (lambda (foo-equality-predicate-code)
 		(let ((foo-equality-predicate.id (%named-gensym/suffix foo-for-id-generation "-equality-predicate")))
-		  (values foo-equality-predicate.id `((define ,foo-equality-predicate.id ,foo-equality-predicate-code))))))
+		  (values foo-equality-predicate.id `((define/typed {,foo-equality-predicate.id <equality-predicate>}
+							,foo-equality-predicate-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -202,7 +204,8 @@
     (cond ((%make-comparison-procedure-code clause* foo parent-rtd.id synner)
 	   => (lambda (foo-comparison-procedure-code)
 		(let ((foo-comparison-procedure.id (%named-gensym/suffix foo-for-id-generation "-comparison-procedure")))
-		  (values foo-comparison-procedure.id `((define/std ,foo-comparison-procedure.id ,foo-comparison-procedure-code))))))
+		  (values foo-comparison-procedure.id `((define/typed {,foo-comparison-procedure.id <comparison-procedure>}
+							  ,foo-comparison-procedure-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -213,7 +216,8 @@
     (cond ((%make-hash-function-code clause* foo parent-rtd.id synner)
 	   => (lambda (foo-hash-function-code)
 		(let ((foo-hash-function.id (%named-gensym/suffix foo-for-id-generation "-hash-function")))
-		  (values foo-hash-function.id `((define/std ,foo-hash-function.id ,foo-hash-function-code))))))
+		  (values foo-hash-function.id `((define/typed {,foo-hash-function.id <hash-function>}
+						   ,foo-hash-function-code))))))
 	  (else
 	   (values #f '()))))
 
@@ -1279,13 +1283,13 @@
   (if (or (pair? method-name*.sym)
 	  (pair? field-name*.sym))
       (let ((field-name.sym (gensym "field-name")))
-	`(lambda/std (,field-name.sym)
+	`(lambda/typed ({_ (or <false> <procedure>)} {,field-name.sym <symbol>})
 	   (case ,field-name.sym
 	     ;;First the methods...
 	     ,@(map (lambda (name procname)
 		      `((,name) ,procname))
 		 method-name*.sym method-procname*.sym)
-	     ;;Then the fields, so that the methods will be selected first.
+	     ;;... then the fields, so that the methods will be selected first.
 	     ,@(map (lambda (name procname)
 		      `((,name) ,procname))
 		 field-name*.sym safe-field-method*)

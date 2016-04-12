@@ -38,6 +38,8 @@
 (define-object-unary/multi-comparison-declarer declare-boolean-unary/multi-comparison <boolean>)
 
 (declare-type-predicate boolean?	<boolean>)
+(declare-type-predicate true?		<true>)
+(declare-type-predicate false?		<false>)
 
 (declare-boolean-unary/multi-comparison boolean=?)
 (declare-boolean-unary/multi-comparison boolean!=?)

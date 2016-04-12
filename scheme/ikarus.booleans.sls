@@ -20,6 +20,7 @@
 #!vicare
 (library (ikarus booleans)
   (export
+    true?			false?
     list-of-booleans?
 
     boolean=?			boolean!=?
@@ -34,6 +35,7 @@
     $boolean<=			$boolean>=
     $boolean-min		$boolean-max)
   (import (except (vicare)
+		  true?				false?
 		  list-of-booleans?
 
 		  boolean=?			boolean!=?
@@ -49,6 +51,14 @@
 
 
 ;;;; predicates
+
+(define (true? x)
+  (and (boolean? x)
+       x))
+
+(define (false? x)
+  (and (boolean? x)
+       (not x)))
 
 (define-list-of-type-predicate list-of-booleans? boolean?)
 

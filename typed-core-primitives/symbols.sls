@@ -86,14 +86,14 @@
 ;;; --------------------------------------------------------------------
 ;;; gensyms
 
-(declare-type-predicate gensym?)
+(declare-type-predicate gensym?			<gensym>)
 
 (declare-core-primitive gensym
     (safe)
   (signatures
-   (()				=> (<symbol>))
-   ((<symbol>)			=> (<symbol>))
-   ((<string>)			=> (<symbol>)))
+   (()				=> (<gensym>))
+   ((<symbol>)			=> (<gensym>))
+   ((<string>)			=> (<gensym>)))
   (attributes
    ;;It must return a new gensym every time.
    (()				effect-free result-true)
@@ -102,7 +102,7 @@
 (declare-core-primitive gensym->unique-string
     (safe)
   (signatures
-   ((<symbol>)			=> (<string>)))
+   ((<gensym>)			=> (<string>)))
   (attributes
    ;;Once a  gensym has been  created, its unique  string is determined  forever.  So
    ;;this is foldable.

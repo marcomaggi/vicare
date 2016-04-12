@@ -5635,9 +5635,101 @@ value.  The following bindings are exported by the library
 @library{vicare system $records}.
 
 
+@deffn {Unsafe Operation} $record= @vari{reco} @varii{reco}
+Return @true{} if the arguments are equal field by field according to
+@func{eqv?}; otherwise return @false{}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $record-ref @var{reco} @var{fx}
 Return the value of the field at absolute index @var{fx} for the record
 @var{reco}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-and-rtd? @var{reco} @var{rtd}
+Return @true{} if the record @var{reco} is of type @var{rtd}; otherwise
+return @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-constructor @var{rtd}
+Return the constructor function for records of type @var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-destructor @var{rtd}
+Return @false{} or the destructor function for records of type
+@var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-printer @var{reco}
+Return @false{} or the printer function for records of the same type of
+@var{reco}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-equality-predicate @var{reco}
+Return @false{} or the equality predicate of records of the same type as
+@var{reco}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-comparison-procedure @var{reco}
+Return @false{} or the comparison procedure of records of the same type
+as @var{reco}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-hash-function @var{reco}
+Return @false{} or the hash function of records of the same type as
+@var{reco}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-method-retriever @var{reco}
+Return @false{} or the method retriever procedure of records of the same
+type as @var{reco}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-type-destructor-set! @var{rtd} @var{proc}
+@deffnx {Unsafe Operation} $record-type-destructor @var{rtd}
+Setter and getter for destructor functions for records of type
+@var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-type-printer-set! @var{rtd} @var{proc}
+@deffnx {Unsafe Operation} $record-type-printer @var{rtd}
+Setter and getter for printer functions for records of type @var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-type-equality-predicate-set! @var{rtd} @var{proc}
+@deffnx {Unsafe Operation} $record-type-equality-predicate @var{rtd}
+Setter and getter for equality predicates for records of type @var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-type-comparison-procedure-set! @var{rtd} @var{proc}
+@deffnx {Unsafe Operation} $record-type-comparison-procedure @var{rtda}
+Setter and getter for comparison procedures for records of type
+@var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-type-hash-function-set! @var{rtd} @var{proc}
+@deffnx {Unsafe Operation} $record-type-hash-function @var{rtd}
+Setter and getter for hash functions for records of type @var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $record-type-method-retriever-set! @var{rtd} @var{proc}
+@deffnx {Unsafe Operation} $record-type-method-retriever @var{rtd}
+Setter and getter for method retriever procedures for records of type
+@var{rtd}.
 @end deffn
 
 @c page

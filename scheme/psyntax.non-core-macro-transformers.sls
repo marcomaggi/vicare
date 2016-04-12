@@ -803,7 +803,7 @@
 		  ;;This  is  a   closure  accepting  as  single   argument  a  symbol
 		  ;;representing a field  name; the single return value is  false or a
 		  ;;field accessor closure object.
-		  (METHOD-RETRIEVER `(lambda (,ARG)
+		  (METHOD-RETRIEVER `(lambda/typed ({_ (or <false> <procedure>)} {,ARG <symbol>})
 				       (case ,ARG
 					 ,@(map (lambda (field-name.id accessor.id)
 						  `((,field-name.id) ,accessor.id))

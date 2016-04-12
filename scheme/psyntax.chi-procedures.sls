@@ -1067,13 +1067,11 @@
 
   (define (chi-set! input-form.stx lexenv.run lexenv.expand)
     (while-not-expanding-application-first-subform
-     (syntax-match input-form.stx ()
-       ((_ (?method-call ?field-name ?expr) ?new-value)
-	(and (identifier? ?method-call)
-	     (~free-identifier=? ?method-call (core-prim-id 'method-call))
-	     (identifier? ?field-name))
+     (syntax-match input-form.stx (method-call)
+       ((_ (method-call ?field-name ?expr) ?new-value)
+	(identifier? ?field-name)
 	(chi-expr (bless
-		   `(slot-set! ,?expr ,?field-name ?new-value))
+		   `(slot-set! ,?expr ,?field-name ,?new-value))
 		  lexenv.run lexenv.expand))
 
        ((_ ?lhs ?rhs)

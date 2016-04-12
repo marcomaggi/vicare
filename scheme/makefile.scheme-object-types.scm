@@ -44,10 +44,14 @@
   (hash-function boolean-hash))
 
 (define-scheme-type <true>
-    <boolean>)
+    <boolean>
+  (constructor #t)
+  (predicate true?))
 
 (define-scheme-type <false>
-    <boolean>)
+    <boolean>
+  (constructor #t)
+  (predicate false?))
 
 (define-scheme-type <char>
     <top>

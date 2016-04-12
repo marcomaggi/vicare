@@ -11826,6 +11826,14 @@ The following bindings are exported by the library @library{vicare}.
 
 @subsubheading Predicates
 
+@defun true? @var{obj}
+@defunx false? @var{obj}
+Return @true{} if @var{obj} is, respectively, @true{} or @false{};
+otherwise return @false{}.  It is not an error if @var{obj} is not a
+boolean value.
+@end defun
+
+
 @defun list-of-booleans? @var{obj}
 Return @true{} if @var{obj} is null or a proper list of booleans;
 otherwise return @false{}.

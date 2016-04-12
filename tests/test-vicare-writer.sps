@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -208,7 +208,8 @@
   #t)
 
 
-(parametrise ((check-test-name	'vectors-writer))
+(parametrise ((check-test-name	'vectors-writer)
+	      (print-graph	#t))
 
   (check
       (write-it '#())
@@ -263,7 +264,8 @@
   #t)
 
 
-(parametrise ((check-test-name	'vectors-pretty))
+(parametrise ((check-test-name	'vectors-pretty)
+	      (print-graph	#t))
 
   (check
       (pretty-it '#())
@@ -389,7 +391,8 @@
 
 
 (parametrise ((check-test-name	'structs-writer)
-	      (print-gensym	#f))
+	      (print-gensym	#f)
+	      (print-graph	#t))
 
 ;;; struct instances, built-in printer
 
@@ -950,7 +953,8 @@
 
 
 (parametrise ((check-test-name	'records-writer)
-	      (print-gensym	#f))
+	      (print-gensym	#f)
+	      (print-graph	#t))
 
   (check
       (internal-body

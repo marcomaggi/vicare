@@ -64,6 +64,7 @@
 
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Dec 15, 2015)
+		  true?					false?
 		  zero-fixnum?
 		  positive-bignum?			negative-bignum?
 		  non-negative-bignum?			non-positive-bignum?
@@ -87,6 +88,11 @@
 	  $fxadd1)
     (only (vicare system $structs)
 	  $struct-rtd)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 12,
+    ;;2016)
+    (only (ikarus booleans)
+	  true?
+	  false?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
     ;;2016)
     (only (ikarus fixnums)
@@ -191,59 +197,63 @@
 	"hash function requires a single operand" (cons subject args))))
 
   (define (%built-in-scheme-object-call btd)
-    (cond ((eq? 'hash method-name.sym)
-	   (let loop ((btd btd))
-	     (cond ((scheme-type-descriptor-hash-function btd)
-		    => %apply-hash-function)
-		   ((scheme-type-descriptor-parent btd)
-		    => loop)
-		   (else
-		    (%apply-hash-function object-hash)))))
-	  (else
-	   (let loop ((btd btd))
-	     (cond ((scheme-type-descriptor-method-retriever btd)
-		    => (lambda (method-retriever)
-			 (cond ((method-retriever method-name.sym)
-				=> (lambda (proc)
-				     (apply proc subject args)))
-			       ((scheme-type-descriptor-parent btd)
-				=> loop)
-			       (else
-				(%error-scheme-type-has-no-matching-method)))))
-		   ((scheme-type-descriptor-parent btd)
-		    => loop)
-		   (else
-		    (%error-scheme-type-has-no-matching-method)))))))
+    (case method-name.sym
+      ((hash)
+       (let loop ((btd btd))
+	 (cond ((scheme-type-descriptor-hash-function btd)
+		=> %apply-hash-function)
+	       ((scheme-type-descriptor-parent btd)
+		=> loop)
+	       (else
+		(%apply-hash-function object-hash)))))
+      (else
+       (let loop ((btd btd))
+	 (cond ((scheme-type-descriptor-method-retriever btd)
+		=> (lambda (method-retriever)
+		     (cond ((method-retriever method-name.sym)
+			    => (lambda (proc)
+				 (apply proc subject args)))
+			   ((scheme-type-descriptor-parent btd)
+			    => loop)
+			   (else
+			    (%error-scheme-type-has-no-matching-method)))))
+	       ((scheme-type-descriptor-parent btd)
+		=> loop)
+	       (else
+		(%error-scheme-type-has-no-matching-method)))))))
 
   (define (%struct-object-call std)
-    (if (eq? 'hash method-name.sym)
-	(%apply-hash-function struct-hash)
-      (apply (structs::struct-field-method std method-name.sym) subject args)))
+    (case method-name.sym
+      ((hash)
+       (%apply-hash-function struct-hash))
+      (else
+       (apply (structs::struct-field-method std method-name.sym) subject args))))
 
   (define (%record-object-call rtd)
-    (cond ((eq? 'hash method-name.sym)
-	   (let loop ((rtd rtd))
-	     (cond ((system::record-type-hash-function rtd)
-		    => %apply-hash-function)
-		   ((record-type-parent rtd)
-		    => loop)
-		   (else
-		    (%apply-hash-function record-hash)))))
-	  (else
-	   (let loop ((rtd rtd))
-	     (cond ((system::record-type-method-retriever rtd)
-		    => (lambda (method-retriever)
-			 (cond ((method-retriever method-name.sym)
-				=> (lambda (proc)
-				     (apply proc subject args)))
-			       ((record-type-parent rtd)
-				=> loop)
-			       (else
-				(%error-record-type-has-no-matching-method)))))
-		   ((record-type-parent rtd)
-		    => loop)
-		   (else
-		    (%error-record-type-has-no-matching-method)))))))
+    (case method-name.sym
+      ((hash)
+       (let loop ((rtd rtd))
+	 (cond ((system::record-type-hash-function rtd)
+		=> %apply-hash-function)
+	       ((record-type-parent rtd)
+		=> loop)
+	       (else
+		(%apply-hash-function record-hash)))))
+      (else
+       (let loop ((rtd rtd))
+	 (cond ((system::record-type-method-retriever rtd)
+		=> (lambda (method-retriever)
+		     (cond ((method-retriever method-name.sym)
+			    => (lambda (proc)
+				 (apply proc subject args)))
+			   ((record-type-parent rtd)
+			    => loop)
+			   (else
+			    (%error-record-type-has-no-matching-method)))))
+	       ((record-type-parent rtd)
+		=> loop)
+	       (else
+		(%error-record-type-has-no-matching-method)))))))
 
   (cond ((record-object? subject)
 	 ;;We use  $STRUCT-RTD because it does  not care about the  opaqueness of the
