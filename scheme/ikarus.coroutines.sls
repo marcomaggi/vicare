@@ -84,35 +84,37 @@
     (not (queue)))
 
   (define (enqueue! escape-func)
-    (if (queue)
-	(let ((old-last-pair ($cdr (queue)))
-	      (new-last-pair (list escape-func)))
-	  ($set-cdr! old-last-pair new-last-pair)
-	  ($set-cdr! (queue) new-last-pair))
-      (let ((Q (list escape-func)))
-	(queue (cons Q Q)))))
+    (cond ((queue)
+	   => (lambda (Q)
+		(let ((old-last-pair ($cdr Q))
+		      (new-last-pair (list escape-func)))
+		  ($set-cdr! old-last-pair new-last-pair)
+		  ($set-cdr! Q             new-last-pair))))
+	  (else
+	   (let ((Q (list escape-func)))
+	     (queue (cons Q Q))))))
 
   (define* (dequeue!)
-    (let ((Q (queue)))
-      (if Q
-	  (let ((head ($car Q)))
-	    (begin0
-		($car head)
-	      (let ((head ($cdr head)))
-		(if (null? head)
-		    (reset-coroutines!)
-		  ($set-car! Q head)))))
-	(error __who__ "no more coroutines"))))
+    (cond ((queue)
+	   => (lambda (Q)
+		(let ((head ($car Q)))
+		  (begin0
+		      ($car head)
+		    (let ((head ($cdr head)))
+		      (if (null? head)
+			  (reset-coroutines!)
+			($set-car! Q head)))))))
+	  (else
+	   (error __who__ "no more coroutines"))))
 
   (define (reset-coroutines!)
     (queue #f))
 
   (define (dump-coroutines)
     (debug-print 'enqueued-coroutines
-		 (let ((Q (queue)))
-		   (if Q
-		       (car Q)
-		     Q))))
+		 (cond ((queue)
+			=> car)
+		       (else #f))))
 
   #| end of module |# )
 
