@@ -31,6 +31,7 @@
 	 assert-signature-and-return-transformer
 	 cast-signature-transformer
 	 type-of-transformer
+	 type-annotation=?-transformer
 	 type-annotation-super-and-sub?-transformer
 	 type-signature-super-and-sub?-transformer
 	 type-annotation-common-ancestor-transformer
@@ -1142,6 +1143,27 @@
 		 (build-data no-source
 		   expr.sig)
 		 (make-type-signature/single-value (core-prim-id '<type-signature>)))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+
+;;;; module core-macro-transformer: TYPE-ANNOTATION=?
+
+(define-core-transformer (type-annotation=? input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's TYPE-ANNOTATION=?  syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation1 ?type-annotation2)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation1 lexenv.run one.ots)
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation2 lexenv.run two.ots)
+	 (let ((bool (object-type-spec=? one.ots two.ots)))
+	   (make-psi input-form.stx
+	     (build-data no-source bool)
+	     (if bool
+		 (make-type-signature/single-true)
+	       (make-type-signature/single-false)))))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

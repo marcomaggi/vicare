@@ -672,6 +672,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes predicates::   Predicate syntaxes.
 * types syntaxes slots::        Slot getter and setter syntaxes.
 * types syntaxes methods::      Calling object-type methods.
+* types syntaxes equality::     Equality between type annotations.
 * types syntaxes super-sub::    Super and sub types.
 * types syntaxes ancestor::     Common ancestor of types and signatures.
 * types syntaxes assert::       Validating signatures.
@@ -995,6 +996,34 @@ the @syntax{set!} syntax and the dot notation.  Here is an example:
 
 For details on the dot notation @ref{types syntaxes methods, Dot
 notation}.
+
+@c page
+@node types syntaxes equality
+@subsection Equality between type annotations
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax type-annotation=? @metai{type} @metaii{type}
+Expand to a boolean constant: @true{} if @metai{type} is equal to
+@metaii{type}; otherwise @false{}.
+
+@lisp
+(type-annotation=? <top>    <top>)              @result{} #t
+(type-annotation=? <fixnum> <fixnum>)           @result{} #t
+(type-annotation=? <fixnum> <positive-fixnum>)  @result{} #f
+
+(internal-body
+  (define-type <my-fixnum> <fixnum>)
+  (type-annotation=? <fixnum> <my-fixnum>))     @result{} #t
+
+(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
+                   (lambda (<fixnum>) => (<fixnum>)))
+@result{} #t
+@end lisp
+@end deffn
 
 @c page
 @node types syntaxes methods

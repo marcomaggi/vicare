@@ -37,6 +37,7 @@
 
      <clambda-signature>
      make-clambda-signature				clambda-signature?
+     clambda-signature=?
      clambda-signature.retvals				clambda-signature.clause-signature*
 
      #| end of exports |# )
@@ -153,7 +154,7 @@
   (nongenerative vicare:expander:<clambda-signature>)
   (parent <callable-signature>)
   (fields
-    (immutable clause-signature* clambda-signature.clause-signature*)
+    (immutable clause-signature*	clambda-signature.clause-signature*)
 		;A proper list of "<clambda-clause-signature>" instances representing
 		;the signatures of the CASE-LAMBDA clauses.
     (mutable memoised-min-count	clambda-signature.memoised-min-count	clambda-signature.memoised-min-count-set!)
@@ -176,6 +177,20 @@
       (sub-printer `(<clambda-signature>
 		     (:common-retvals ,(callable-signature.retvals S))
 		     (:clause-signatures . ,(clambda-signature.clause-signature* S)))))))
+
+(define* (clambda-signature=? {sig1 clambda-signature?} {sig2 clambda-signature?})
+  (let ((csig1* (clambda-signature.clause-signature* sig1))
+	(csig2* (clambda-signature.clause-signature* sig2)))
+    (and (for-all (lambda (csig1)
+		    (exists (lambda (csig2)
+			      (clambda-clause-signature=? csig1 csig2))
+		      csig2*))
+	   csig1*)
+	 (for-all (lambda (csig2)
+		    (exists (lambda (csig1)
+			      (clambda-clause-signature=? csig1 csig2))
+		      csig1*))
+	   csig2*))))
 
 (define* (clambda-signature.retvals {sig clambda-signature?})
   (callable-signature.retvals sig))

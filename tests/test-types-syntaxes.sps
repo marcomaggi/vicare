@@ -164,6 +164,80 @@
   (void))
 
 
+(parametrise ((check-test-name	'type-annotation=?))
+
+  (check-for-true	(type-annotation=? <top> <top>))
+  (check-for-true	(type-annotation=? <fixnum> <fixnum>))
+
+  (check-for-false	(type-annotation=? <fixnum> <flonum>))
+  (check-for-false	(type-annotation=? <fixnum> <positive-fixnum>))
+  (check-for-false	(type-annotation=? <positive-fixnum> <fixnum>))
+
+;;; --------------------------------------------------------------------
+
+  (internal-body
+    (define-type <my-fixnum>	<fixnum>)
+    (define-type <my-fixnum1>	<fixnum>)
+
+    (check-for-true	(type-annotation=? <fixnum> <my-fixnum>))
+    (check-for-true	(type-annotation=? <my-fixnum> <fixnum>))
+    (check-for-true	(type-annotation=? <my-fixnum1> <my-fixnum>))
+    (check-for-true	(type-annotation=? <my-fixnum> <my-fixnum1>))
+
+    (void))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
+					   (lambda (<fixnum>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation=? (lambda (<flonum>) => (<fixnum>))
+					   (lambda (<fixnum>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation=? (lambda (<fixnum>) => (<flonum>))
+					   (lambda (<fixnum>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
+					   (lambda (<flonum>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
+					   (lambda (<fixnum>) => (<flonum>))))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(type-annotation=? (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<string>) => (<symbol>)))
+					   (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<string>) => (<symbol>)))))
+
+  (check-for-true	(type-annotation=? (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<string>) => (<symbol>)))
+					   (case-lambda
+					     ((<string>) => (<symbol>))
+					     ((<fixnum>) => (<fixnum>)))))
+
+  (check-for-false	(type-annotation=? (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<boolean>) => (<number>))
+					     ((<string>) => (<symbol>)))
+					   (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<string>) => (<symbol>)))))
+
+  (check-for-false	(type-annotation=? (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<string>) => (<symbol>)))
+					   (case-lambda
+					     ((<fixnum>) => (<fixnum>))
+					     ((<boolean>) => (<number>))
+					     ((<string>) => (<symbol>)))))
+
+  (void))
+
+
 (parametrise ((check-test-name	'type-annotation-super-and-sub))
 
   (check-for-true	(type-annotation-super-and-sub? <number> <fixnum>))

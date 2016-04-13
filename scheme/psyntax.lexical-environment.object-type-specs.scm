@@ -1140,35 +1140,55 @@
 		      (and (struct-type-spec? ots1) (struct-type-spec? ots2)))
 		  (free-identifier=? (object-type-spec.name ots1)
 				     (object-type-spec.name ots2)))))
-
+;;;
+	((closure-type-spec? ots1)
+	 (and (closure-type-spec? ots2)
+	      ($closure-type-spec=? ots1 ots2)))
+;;;
 	((list-of-type-spec? ots1)
 	 (and (list-of-type-spec? ots2)
 	      ($list-of-type-spec=? ots1 ots2)))
 
+	((list-type-spec? ots1)
+	 (and (list-type-spec? ots2)
+	      ($list-type-spec=? ots1 ots2)))
+;;;
 	((vector-of-type-spec? ots1)
 	 (and (vector-of-type-spec? ots2)
 	      ($vector-of-type-spec=? ots1 ots2)))
 
+	((vector-type-spec? ots1)
+	 (and (vector-type-spec? ots2)
+	      ($vector-type-spec=? ots1 ots2)))
+;;;
 	((pair-of-type-spec? ots1)
 	 (and (pair-of-type-spec? ots2)
 	      ($pair-of-type-spec=? ots1 ots2)))
 
-	((list-type-spec? ots1)
-	 (and (list-type-spec? ots2)
-	      ($list-type-spec=? ots1 ots2)))
-
-	((vector-type-spec? ots1)
-	 (and (vector-type-spec? ots2)
-	      ($vector-type-spec=? ots1 ots2)))
-
 	((pair-type-spec? ots1)
 	 (and (pair-type-spec? ots2)
 	      ($pair-type-spec=? ots1 ots2)))
-
+;;;
 	((compound-condition-type-spec? ots1)
 	 (and (compound-condition-type-spec? ots2)
 	      ($compound-condition-type-spec=? ots1 ots2)))
 
+	((alist-type-spec? ots1)
+	 (and (alist-type-spec? ots2)
+	      ($alist-type-spec=? ots1 ots2)))
+;;;
+	((union-type-spec? ots1)
+	 (and (union-type-spec? ots2)
+	      ($union-type-spec=? ots1 ots2)))
+
+	((intersection-type-spec? ots1)
+	 (and (intersection-type-spec? ots2)
+	      ($intersection-type-spec=? ots1 ots2)))
+
+	((complement-type-spec? ots1)
+	 (and (complement-type-spec? ots2)
+	      ($complement-type-spec=? ots1 ots2)))
+;;;
 	(else #f)))
 
 ;;; --------------------------------------------------------------------
@@ -1253,6 +1273,73 @@
 			      ($object-type-spec=? component1.ots component2.ots))
 		      component1*.ots))
 	   component2*.ots))))
+
+;;; --------------------------------------------------------------------
+
+(define* (alist-type-spec=? {ots1 alist-type-spec?} {ots2 alist-type-spec?})
+  ($alist-type-spec=? ots1 ots2))
+
+(define ($alist-type-spec=? ots1 ots2)
+  (and ($object-type-spec=? (alist-type-spec.key-ots ots1)
+			    (alist-type-spec.key-ots ots2))
+       ($object-type-spec=? (alist-type-spec.value-ots ots1)
+			    (alist-type-spec.value-ots ots2))))
+
+;;; --------------------------------------------------------------------
+
+(define* (closure-type-spec=? {ots1 closure-type-spec?} {ots2 closure-type-spec?})
+  ($closure-type-spec=? ots1 ots2))
+
+(define ($closure-type-spec=? ots1 ots2)
+  (clambda-signature=? (closure-type-spec.signature ots1)
+		       (closure-type-spec.signature ots2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (union-type-spec=? {ots1 union-type-spec?} {ots2 union-type-spec?})
+  ($union-type-spec=? ots1 ots2))
+
+(define ($union-type-spec=? ots1 ots2)
+  (let ((component-ots1* (union-type-spec.component-ots* ots1))
+	(component-ots2* (union-type-spec.component-ots* ots2)))
+    (and (for-all (lambda (component-ots1)
+		    (exists (lambda (component-ots2)
+			      ($object-type-spec=? component-ots1 component-ots2))
+		      component-ots2*))
+	   component-ots1*)
+	 (for-all (lambda (component-ots2)
+		    (exists (lambda (component-ots1)
+			      ($object-type-spec=? component-ots1 component-ots2))
+		      component-ots1*))
+	   component-ots2*))))
+
+;;; --------------------------------------------------------------------
+
+(define* (intersection-type-spec=? {ots1 intersection-type-spec?} {ots2 intersection-type-spec?})
+  ($intersection-type-spec=? ots1 ots2))
+
+(define ($intersection-type-spec=? ots1 ots2)
+  (let ((component-ots1* (intersection-type-spec.component-ots* ots1))
+	(component-ots2* (intersection-type-spec.component-ots* ots2)))
+    (and (for-all (lambda (component-ots1)
+		    (exists (lambda (component-ots2)
+			      ($object-type-spec=? component-ots1 component-ots2))
+		      component-ots2*))
+	   component-ots1*)
+	 (for-all (lambda (component-ots2)
+		    (exists (lambda (component-ots1)
+			      ($object-type-spec=? component-ots1 component-ots2))
+		      component-ots1*))
+	   component-ots2*))))
+
+;;; --------------------------------------------------------------------
+
+(define* (complement-type-spec=? {ots1 complement-type-spec?} {ots2 complement-type-spec?})
+  ($complement-type-spec=? ots1 ots2))
+
+(define ($complement-type-spec=? ots1 ots2)
+  ($object-type-spec=? (complement-type-spec.item-ots ots1)
+		       (complement-type-spec.item-ots ots2)))
 
 ;;; --------------------------------------------------------------------
 

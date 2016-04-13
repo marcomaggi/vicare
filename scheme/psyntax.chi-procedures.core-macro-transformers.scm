@@ -181,6 +181,7 @@
     ((unsafe-cast-signature)			unsafe-cast-signature-transformer)
 
     ((type-of)					type-of-transformer)
+    ((type-annotation=?)			type-annotation=?-transformer)
     ((type-annotation-super-and-sub?)		type-annotation-super-and-sub?-transformer)
     ((type-signature-super-and-sub?)		type-signature-super-and-sub?-transformer)
     ((type-annotation-common-ancestor)		type-annotation-common-ancestor-transformer)
