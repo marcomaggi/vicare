@@ -124,7 +124,7 @@
     <closure-type-spec>
     <closure-type-spec>-rtd				<closure-type-spec>-rcd
     make-closure-type-spec				closure-type-spec?
-    closure-type-spec.signature
+    closure-type-spec.signature				closure-type-spec.thunk?
 
     <struct-type-spec>
     <struct-type-spec>-rtd				<struct-type-spec>-rcd

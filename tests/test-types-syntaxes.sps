@@ -962,6 +962,44 @@
 
 ;;; --------------------------------------------------------------------
 
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda ({_ <fixnum>} {a <fixnum>})
+	    (add1 a)))
+	=> (<fixnum>))
+
+  (doit (call-with-values
+	    (lambda () 1)
+	  (lambda (a)
+	    (add1 a)))
+	=> <list>)
+
+;;; --------------------------------------------------------------------
+
+  #;(doit (receive ({a <fixnum>})
+	    1
+	  a)
+	=> (<fixnum>))
+
+  #;(doit (receive (a)
+	    1
+	  a)
+	=> (<top>))
+
+;;; --------------------------------------------------------------------
+
+  #;(doit (receive-and-return ({a <fixnum>})
+	    1
+	  (void))
+	=> (<fixnum>))
+
+  #;(doit (receive-and-return (a)
+	    1
+	  a)
+	=> (<top>))
+
+;;; --------------------------------------------------------------------
+
   (doit (cond ((read)	1)
 	      ((read)	2)
 	      (else	3))

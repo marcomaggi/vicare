@@ -131,7 +131,7 @@
 	 <closure-type-spec>
 	 <closure-type-spec>-rtd			<closure-type-spec>-rcd
 	 make-closure-type-spec				closure-type-spec?
-	 closure-type-spec.signature
+	 closure-type-spec.signature			closure-type-spec.thunk?
 
 	 <struct-type-spec>
 	 <struct-type-spec>-rtd				<struct-type-spec>-rcd
@@ -2054,22 +2054,16 @@
 (define <closure-type-spec>-rcd
   (record-constructor-descriptor <closure-type-spec>))
 
-;; (define-record-type (<closure-clause> make-closure-clause closure-clause?)
-;;   (nongenerative)
-;;   (fields
-;;     signature
-;; 		;An instance of "<type-signature>" representing the type signature of
-;; 		;this clause.
-;;     unsafe-variant
-;; 		;False if this clause has  no unsafe variant.  Otherwise, a syntactic
-;; 		;identifier bound to the unsafe
-;;     #| end of fields |# )
-;;   (protocol
-;;     (lambda (make-record)
-;;       (define (make-closure-clause signature unsafe-variant)
-;; 	(make-record signature unsafe-variant))
-;;       make-closure-clause))
-;;   #| end of DEFINE-RECORD-TYPE |# )
+(define* (closure-type-spec.thunk? {ots closure-type-spec?})
+  ;;Return true if at least one of the clause signatures in OTS accepts no arguments;
+  ;;otherwise return false.
+  ;;
+  (exists (lambda (csig)
+	    (let ((specs (clambda-clause-signature.argvals.specs csig)))
+	      (or (null? specs)
+		  (<list>-ots? specs)
+		  (list-of-type-spec? specs))))
+    (clambda-signature.clause-signature* (closure-type-spec.signature ots))))
 
 
 ;;;; heterogeneous pair object spec
