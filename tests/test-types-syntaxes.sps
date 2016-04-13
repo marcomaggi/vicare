@@ -204,6 +204,7 @@
 					   (lambda (<fixnum>) => (<flonum>))))
 
 ;;; --------------------------------------------------------------------
+;;; case-lambda
 
   (check-for-true	(type-annotation=? (case-lambda
 					     ((<fixnum>) => (<fixnum>))
@@ -234,6 +235,49 @@
 					     ((<fixnum>) => (<fixnum>))
 					     ((<boolean>) => (<number>))
 					     ((<string>) => (<symbol>)))))
+
+;;; --------------------------------------------------------------------
+;;; union
+
+  (check-for-true	(type-annotation=? (or <fixnum> <string>)
+					   (or <fixnum> <string>)))
+  (check-for-true	(type-annotation=? (or <fixnum> <string>)
+					   (or <string> <fixnum>)))
+
+  (check-for-false	(type-annotation=? (or <fixnum> <string>)
+					   (or <fixnum> <symbol>)))
+  (check-for-false	(type-annotation=? (or <fixnum> <string>)
+					   (or <symbol> <fixnum>)))
+  (check-for-false	(type-annotation=? (or <fixnum> <string>)
+					   (or <fixnum> <string> <boolean>)))
+  (check-for-false	(type-annotation=? (or <fixnum> <string> <boolean>)
+					   (or <fixnum> <string>)))
+
+;;; --------------------------------------------------------------------
+;;; intersection
+
+  (check-for-true	(type-annotation=? (and <fixnum> <string>)
+					   (and <fixnum> <string>)))
+  (check-for-true	(type-annotation=? (and <fixnum> <string>)
+					   (and <string> <fixnum>)))
+
+  (check-for-false	(type-annotation=? (and <fixnum> <string>)
+					   (and <fixnum> <symbol>)))
+  (check-for-false	(type-annotation=? (and <fixnum> <string>)
+					   (and <symbol> <fixnum>)))
+  (check-for-false	(type-annotation=? (and <fixnum> <string>)
+					   (and <fixnum> <string> <boolean>)))
+  (check-for-false	(type-annotation=? (and <fixnum> <string> <boolean>)
+					   (and <fixnum> <string>)))
+
+;;; --------------------------------------------------------------------
+;;; complement
+
+  (check-for-true	(type-annotation=? (not <fixnum>)
+					   (not <fixnum>)))
+
+  (check-for-false	(type-annotation=? (not <fixnum>)
+					   (not <flonum>)))
 
   (void))
 
