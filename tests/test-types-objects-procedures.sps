@@ -299,14 +299,24 @@
 							  ((<fixnum>) => (<fixnum>)))
 							<procedure>))
 
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<fixnum>) => (<string>))
+							(case-lambda
+							  ((<fixnum>) => (<string>))
+							  ((<flonum>) => (<string>)))))
+
+  (check-for-true	(type-annotation-super-and-sub? (lambda (<flonum>) => (<string>))
+							(case-lambda
+							  ((<fixnum>) => (<string>))
+							  ((<flonum>) => (<string>)))))
+
 ;;;
 
-  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+  (check-for-false	(type-annotation-super-and-sub? (case-lambda
 							  ((<fixnum>) => (<string>))
 							  ((<flonum>) => (<string>)))
 							(lambda (<fixnum>) => (<string>))))
 
-  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+  (check-for-false	(type-annotation-super-and-sub? (case-lambda
 							  ((<fixnum>) => (<string>))
 							  ((<flonum>) => (<string>)))
 							(lambda (<flonum>) => (<string>))))
@@ -324,7 +334,7 @@
 							  ((<flonum>)	=> (<boolean>))
 							  ((<vector>)	=> (<boolean>)))))
 
-  (check-for-true	(type-annotation-super-and-sub? (case-lambda
+  (check-for-false	(type-annotation-super-and-sub? (case-lambda
 							  ((<top>)		=> (<pair>))
 							  ((<top>)		=> (<real>))
 							  ((<top>)		=> (<vector>)))
@@ -342,6 +352,37 @@
 							  ((<top>)		=> (<flonum>))
 							  ((<top>)		=> (<transcoder>)) ;;this does not match
 							  ((<top>)		=> ((vector-of <true>))))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <thunk>
+
+  (check-for-true	(type-annotation-super-and-sub? <thunk>
+							(lambda () => <list>)))
+
+  (check-for-true	(type-annotation-super-and-sub? <thunk>
+							(case-lambda
+							  (() => <list>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <thunk>
+							(case-lambda
+							  (()		=> (<string>))
+							  ((<fixnum>)	=> (<string>)))))
+
+  (check-for-true	(type-annotation-super-and-sub? <thunk>
+							(case-lambda
+							  ((<fixnum>)	=> (<string>))
+							  (()		=> (<string>)))))
+
+#|
+    (<thunk>					v $language)
+    (<type-predicate>				v $language)
+    (<type-destructor>				v $language)
+    (<type-printer>				v $language)
+    (<equality-predicate>			v $language)
+    (<comparison-procedure>			v $language)
+    (<hash-function>				v $language)
+    (<type-method-retriever>			v $language)
+|#
 
   (void))
 

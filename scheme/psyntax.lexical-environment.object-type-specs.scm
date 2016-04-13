@@ -870,14 +870,18 @@
 
 	((closure-type-spec? super.ots)
 	 (cond ((closure-type-spec? sub.ots)
-		(for-all (lambda (sub.clause-signature)
-			   (exists (lambda (super.clause-signature)
+		;;For every  super-type signature there  must be a  matching sub-type
+		;;signature; so that the sub can  be used everywhere the super can be
+		;;used.  It does not matter if  the sub has clauses with non-matching
+		;;signatures.
+		(for-all (lambda (super.clause-signature)
+			   (exists (lambda (sub.clause-signature)
 				     (and (type-signature.super-and-sub? (clambda-clause-signature.argvals super.clause-signature)
 									 (clambda-clause-signature.argvals sub.clause-signature))
 					  (type-signature.super-and-sub? (clambda-clause-signature.retvals super.clause-signature)
 									 (clambda-clause-signature.retvals sub.clause-signature))))
-			     (clambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
-		  (clambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
+			     (clambda-signature.clause-signature* (closure-type-spec.signature sub.ots))))
+		  (clambda-signature.clause-signature* (closure-type-spec.signature super.ots))))
 	       (else #f)))
 
 	((closure-type-spec? sub.ots)
