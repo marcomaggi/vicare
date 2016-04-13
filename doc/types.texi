@@ -2288,7 +2288,7 @@ a closure object; otherwise return @false{}.
 @end defop
 
 
-@defop {Type Annotation} @aclass{thunk}
+@deftp {Type Annotation} @aclass{thunk}
 Type of procedures accepting no arguments.  The definition of this type
 is equivalent to:
 
@@ -2296,7 +2296,7 @@ is equivalent to:
 (define-type <thunk>
   (lambda () => <list>))
 @end lisp
-@end defop
+@end deftp
 
 @c ------------------------------------------------------------------------
 
