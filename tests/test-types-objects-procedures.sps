@@ -373,16 +373,113 @@
 							  ((<fixnum>)	=> (<string>))
 							  (()		=> (<string>)))))
 
-#|
-    (<thunk>					v $language)
-    (<type-predicate>				v $language)
-    (<type-destructor>				v $language)
-    (<type-printer>				v $language)
-    (<equality-predicate>			v $language)
-    (<comparison-procedure>			v $language)
-    (<hash-function>				v $language)
-    (<type-method-retriever>			v $language)
-|#
+;;; --------------------------------------------------------------------
+;;; special procedures types: <type-predicate>
+
+  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
+							(lambda (<top>) => (<boolean>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
+							(lambda (<string>) => (<boolean>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <type-predicate>
+							(lambda (<top>) => (<string>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <type-predicate>
+							(lambda (<top>) => (<top>))))
+
+  ;;Ugly but what can I do?
+  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
+							(lambda (<top>) => (<true>))))
+  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
+							(lambda (<top>) => (<false>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
+							(case-lambda
+							  ((<top>)	=> (<boolean>))
+							  ((<string>)	=> (<string>)))))
+
+  (check-for-true	(type-annotation-super-and-sub? <type-predicate>
+							(case-lambda
+							  ((<string> <number>)	=> (<string>))
+							  ((<top>)		=> (<boolean>)))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <type-destructor>
+
+  (check-for-true	(type-annotation-super-and-sub? <type-destructor>
+							(lambda (<top>) => (<boolean>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <type-destructor>
+							(lambda (<top>) => <list>)))
+
+  (check-for-true	(type-annotation-super-and-sub? <type-destructor>
+							(case-lambda
+							  ((<top> <top>) => (<top>))
+							  ((<top>)	=> <list>))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <type-printer>
+
+  (check-for-true	(type-annotation-super-and-sub? <type-printer>
+							(lambda (<top> <textual-output-port> <procedure>) => <list>)))
+
+  (check-for-true	(type-annotation-super-and-sub? <type-printer>
+							(lambda (<fixnum> <textual-output-port> <procedure>) => (<void>))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <equality-predicate>
+
+  (check-for-true	(type-annotation-super-and-sub? <equality-predicate>
+							(lambda (<top> <top>) => (<boolean>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <equality-predicate>
+							(lambda (<string> <string>) => (<boolean>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <equality-predicate>
+							(lambda (<top> <top>) => (<top>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <equality-predicate>
+							(lambda (<top> <top> <top>) => (<boolean>))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <comparison-procedure>
+
+  (check-for-true	(type-annotation-super-and-sub? <comparison-procedure>
+							(lambda (<top> <top>) => (<fixnum>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <comparison-procedure>
+							(lambda (<string> <string>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <comparison-procedure>
+							(lambda (<top> <top>) => (<top>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <comparison-procedure>
+							(lambda (<top> <top> <top>) => (<fixnum>))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <hash-function>
+
+  (check-for-true	(type-annotation-super-and-sub? <hash-function>
+							(lambda (<top>) => (<non-negative-fixnum>))))
+
+  (check-for-true	(type-annotation-super-and-sub? <hash-function>
+							(lambda (<string>) => (<non-negative-fixnum>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <hash-function>
+							(lambda (<top>) => (<fixnum>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <hash-function>
+							(lambda (<top> <top>) => (<non-negative-fixnum>))))
+
+;;; --------------------------------------------------------------------
+;;; special procedures types: <type-method-retriever>
+
+  (check-for-true	(type-annotation-super-and-sub? <type-method-retriever>
+							(lambda (<symbol>) => (<procedure>))))
+
+  (check-for-false	(type-annotation-super-and-sub? <type-method-retriever>
+							(lambda (<top>) => (<procedure>))))
 
   (void))
 
