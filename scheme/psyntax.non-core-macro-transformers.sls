@@ -4642,15 +4642,15 @@
 	 (if (options::typed-language?)
 	     (syntax-object.parse-typed-formals ?formals)
 	   (syntax-object.parse-standard-formals ?formals))
-       (let ((single-return-value? (and (list? standard-formals.stx)
-					(= 1 (length standard-formals.stx)))))
-	 (if single-return-value?
-	     (bless
-	      `((lambda/checked ,?formals ,?body0 ,@?body*) ,?producer-expression))
-	   (bless
-	    `(call-with-values
-		 (lambda/std () ,?producer-expression)
-	       (lambda/checked ,?formals ,?body0 ,@?body*)))))))
+       (cond ((list-of-single-item? standard-formals.stx)
+	      ;;We expect a single return value from the producer.
+	      (bless
+	       `((lambda/checked ,?formals ,?body0 ,@?body*) ,?producer-expression)))
+	     (else
+	      (bless
+	       `(call-with-values
+		    (lambda/std () ,?producer-expression)
+		  (lambda/checked ,?formals ,?body0 ,@?body*)))))))
     ))
 
 (define-macro-transformer (receive-and-return input-form.stx)
@@ -4678,7 +4678,7 @@
 		  (values standard-formals.stx #f)))
 	 (if single-return-value?
 	     (bless
-	      `((lambda/std ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
+	      `((lambda/checked ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
 	   (bless
 	    `(call-with-values
 		 (lambda/std () ,?producer-expression)
