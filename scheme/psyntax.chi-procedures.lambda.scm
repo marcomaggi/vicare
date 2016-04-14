@@ -18,6 +18,7 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 (module (chi-lambda/std
 	 chi-lambda/typed
 	 chi-lambda/checked
@@ -38,6 +39,65 @@
 	 chi-case-defun/std
 	 chi-case-defun/typed
 	 chi-case-defun/checked)
+
+
+;;;; helpers
+
+(define (%sublists-of-same-length ell*)
+  ;;Recursive function.  ELL*  must be a list  of items; each item being  a proper or
+  ;;improper list.  This function searches for  items having the same length; if some
+  ;;are found  they are returned  in a list;  if none are  found the return  value is
+  ;;false.
+  ;;
+  (and (pair? ell*)
+       (let ((item (car ell*)))
+	 (let ((result (cond ((list? item)
+			      ;;Proper list item.  Search  for proper list items with
+			      ;;the same length in the rest of ELL*.
+			      (let ((item.len (length item)))
+				(filter (lambda (thing)
+					  (and (list? thing)
+					       (= item.len (length thing))))
+				  (cdr ell*))))
+			     ((pair? item)
+			      ;;Improper list  item.  Search for improper  list items
+			      ;;with the same length in the rest of ELL*.
+			      (let ((item.len (length+ item)))
+				(filter (lambda (thing)
+					  (and (list? thing)
+					       (= item.len (length+ thing))))
+				  (cdr ell*))))
+			     ((null? item)
+			      ;;Null  item.  Search  for null  items in  the rest  of
+			      ;;ELL*.
+			      (filter null? (cdr ell*)))
+			     (else
+			      ;;Standalone item.  Search for  standalone items in the
+			      ;;rest of ELL*.
+			      (filter (lambda (thing)
+					(not (or (pair? thing)
+						 (null? thing))))
+				(cdr ell*))))))
+	   (if (null? result)
+	       (%sublists-of-same-length (cdr ell*))
+	     result)))))
+
+(define (length+ x)
+  ;;Return the length of an improper list.  This is from SRFI 1.
+  ;;
+  ;;Return #f if X is circular.
+  ;;
+  (let lp ((x x) (lag x) (len 0))
+    (if (pair? x)
+	(let ((x   (cdr x))
+	      (len (+ len 1)))
+	  (if (pair? x)
+	      (let ((x   (cdr x))
+		    (lag (cdr lag))
+		    (len (+ len 1)))
+		(and (not (eq? x lag)) (lp x lag len)))
+	    len))
+      len)))
 
 
 ;;;; chi procedures: standard and typed single-clause function definition
@@ -188,6 +248,13 @@
     (define-constant standard-formals*.stx	(qdef-case-defun.standard-formals* qdef))
     (define-constant body**.stx			(qdef-case-defun.body** qdef))
     (define-constant clause-signature*		(qdef-closure.clause-signature* qdef))
+    ;;We  do the  validation on  the standard  formals, so  that the  "_" element  is
+    ;;excluded.
+    (cond ((%sublists-of-same-length standard-formals*.stx)
+	   => (lambda (same-length-formals*.stx)
+		(syntax-violation #f
+		  "invalid CASE-LAMBDA clause formals with the same length"
+		  input-form.stx same-length-formals*.stx))))
     (receive (lexenv.run lexenv.expand)
 	;;We  establish the  syntactic binding  for "__who__"  before processing  the
 	;;body.  So the formals may shadow this binding.
@@ -301,6 +368,13 @@
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-standard-clambda-multi-clauses-formals input-formals*.stx)
+      ;;We do  the validation  on the standard  formals, so that  the "_"  element is
+      ;;excluded.
+      (cond ((%sublists-of-same-length standard-formals*.stx)
+	     => (lambda (same-length-formals*.stx)
+		  (syntax-violation #f
+		    "invalid CASE-LAMBDA clause formals with the same length"
+		    input-form.stx same-length-formals*.stx))))
       (receive (formals*.lex body*.psi)
 	  (chi-case-lambda-clause*/std input-form.stx lexenv.run lexenv.expand
 				       standard-formals*.stx clause-signature* body**.stx)
@@ -481,6 +555,13 @@
   (define (%chi-clambda input-form.stx lexenv.run lexenv.expand type input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
+      ;;We do  the validation  on the standard  formals, so that  the "_"  element is
+      ;;excluded.
+      (cond ((%sublists-of-same-length standard-formals*.stx)
+	     => (lambda (same-length-formals*.stx)
+		  (syntax-violation #f
+		    "invalid CASE-LAMBDA clause formals with the same length"
+		    input-form.stx same-length-formals*.stx))))
       (receive (formals*.lex body*.psi)
 	  (case type
 	    ((typed)
@@ -524,6 +605,13 @@
   (define* (%chi-clambda input-form.stx lexenv.run lexenv.expand type who.id input-formals*.stx body**.stx)
     (receive (standard-formals*.stx clause-signature*)
 	(syntax-object.parse-typed-clambda-multi-clauses-formals input-formals*.stx)
+      ;;We do  the validation  on the standard  formals, so that  the "_"  element is
+      ;;excluded.
+      (cond ((%sublists-of-same-length standard-formals*.stx)
+	     => (lambda (same-length-formals*.stx)
+		  (syntax-violation #f
+		    "invalid CASE-LAMBDA clause formals with the same length"
+		    input-form.stx same-length-formals*.stx))))
       (receive (lexenv.run lexenv.expand)
 	  ;;We establish  the syntactic binding  for "__who__" before  processing the
 	  ;;formals and the body.  So the formals may shadow this binding.

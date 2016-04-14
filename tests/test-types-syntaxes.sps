@@ -961,6 +961,99 @@
       ))
 
 ;;; --------------------------------------------------------------------
+;;; LET type propagation
+
+  (doit (let (({a <fixnum>} 1)
+	      ({b <fixnum>} 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (let (({a <positive-fixnum>} 1)
+	      ({b <positive-fixnum>} 2))
+	  (fx+ a b))
+	=> (<positive-fixnum>))
+
+  (doit (let (({a <positive-fixnum>} 1)
+	      ({b <negative-fixnum>} -2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (let ((a 1)
+	      (b 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; LET* type propagation
+
+  (doit (let* (({a <fixnum>} 1)
+	       ({b <fixnum>} 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (let* (({a <positive-fixnum>} 1)
+	       ({b <positive-fixnum>} 2))
+	  (fx+ a b))
+	=> (<positive-fixnum>))
+
+  (doit (let* (({a <positive-fixnum>} 1)
+	       ({b <negative-fixnum>} -2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (let* ((a 1)
+	       (b 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; LETREC type propagation
+
+  (doit (letrec (({a <fixnum>} 1)
+		 ({b <fixnum>} 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (letrec (({a <positive-fixnum>} 1)
+		 ({b <positive-fixnum>} 2))
+	  (fx+ a b))
+	=> (<positive-fixnum>))
+
+  (doit (letrec (({a <positive-fixnum>} 1)
+		 ({b <negative-fixnum>} -2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (letrec ((a 1)
+		 (b 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; LETREC* type propagation
+
+  (doit (letrec* (({a <fixnum>} 1)
+		  ({b <fixnum>} 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (letrec* (({a <positive-fixnum>} 1)
+		  ({b <positive-fixnum>} 2))
+	  (fx+ a b))
+	=> (<positive-fixnum>))
+
+  (doit (letrec* (({a <positive-fixnum>} 1)
+		  ({b <negative-fixnum>} -2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+  (doit (letrec* ((a 1)
+		  (b 2))
+	  (fx+ a b))
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; CALL-WITH-VALUES type propagation
 
   (doit (call-with-values
 	    (lambda () 1)
@@ -975,6 +1068,94 @@
 	=> <list>)
 
 ;;; --------------------------------------------------------------------
+;;; LAMBDA application type propagation
+
+  (doit ((lambda ({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+	   (fx+ a b))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((lambda ({_ <fixnum>} {a <positive-fixnum>} {b <negative-fixnum>})
+	   (fx+ a b))
+	 1 -2)
+	=> (<fixnum>))
+
+  (doit ((lambda ({_ <fixnum>} a b)
+	   (fx+ a b))
+	 1 2)
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; CASE-LAMBDA application type propagation
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} {a <positive-fixnum>} {b <negative-fixnum>})
+	    (fx+ a b)))
+	 1 -2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} a b)
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} a b c)
+	    (fl+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({_ <flonum>} a b c)
+	    (fl+ a b))
+	   (({_ <fixnum>} a b)
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} a b c)
+	    (fl+ a b)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} {a <flonum>} {b <flonum>} {c <flonum>})
+	    (fl+ a b)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} {a <flonum>} . {b* (list-of <flonum>)})
+	    (apply fl+ a b*)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+  (doit ((case-lambda
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} . {fl* (list-of <flonum>)})
+	    (apply fl+ fl*)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+;;; --------------------------------------------------------------------
+;;; RECEIVE type propagation
 
   #;(doit (receive ({a <fixnum>})
 	    1
@@ -987,6 +1168,7 @@
 	=> (<top>))
 
 ;;; --------------------------------------------------------------------
+;;; RECEIVE-AND-RETURN type propagation
 
   #;(doit (receive-and-return ({a <fixnum>})
 	    1
@@ -999,6 +1181,7 @@
 	=> (<top>))
 
 ;;; --------------------------------------------------------------------
+;;; COND type propagation
 
   (doit (cond ((read)	1)
 	      ((read)	2)
@@ -1016,6 +1199,7 @@
 	=> ((or <positive-fixnum> <positive-flonum> <false>)))
 
 ;;; --------------------------------------------------------------------
+;;; CASE type propagation
 
   #;(doit (case (read)
 	  ((1)		1)
@@ -1029,6 +1213,57 @@
 	  (else		#f))
 	=> ((or <positive-fixnum> <symbol> <false>)))
 
+;;; --------------------------------------------------------------------
+;;; AND type propagation
+
+  (doit (and 1 2 3)
+	=> ((or <positive-fixnum> <false>)))
+#|
+  (doit (and 1 "2" 3)
+	=> ((or <positive-fixnum> <false>)))
+
+  (doit (and 1 2 "3")
+	=> ((or <string> <false>)))
+
+  (doit (and #f 2 3)
+	=> (<false>))
+
+  (doit (and 1 #f 3)
+	=> (<false>))
+
+  (doit (and 1 2 #f)
+	=> (<false>))
+
+  (doit (and 1 (and 2.1 2.2) 3)
+	=> (<positive-fixnum>))
+
+  (doit (and 1 2 (and 3.1 3.2))
+	=> (<positive-flonum>))
+|#
+;;; --------------------------------------------------------------------
+;;; OR type propagation
+#|
+  (doit (or 1 2 "3")
+	=> (<positive-fixnum>))
+
+  (doit (or #f 2 "3")
+	=> (<positive-fixnum>))
+
+  (doit (or #f #f "3")
+	=> (<string>))
+
+  (doit (or #f (and #t "ciao") 3.4)
+	=> (<string>))
+|#
+;;; --------------------------------------------------------------------
+;;; XOR type propagation
+#|
+  (doit (xor 1 2 "3")
+	=> ((or <positive-fixnum> <string>)))
+
+  (doit (xor 1 2.2 "3")
+	=> ((or <positive-fixnum> <positive-flonum> <string>)))
+|#
   (void))
 
 
