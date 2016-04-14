@@ -608,6 +608,7 @@
     (letrec					(core-macro . letrec))
     (letrec*					(core-macro . letrec*))
     (if						(core-macro . if))
+    (and					(core-macro . and))
     ;;
     (lambda						(core-macro . lambda))
     (lambda/std					(core-macro . lambda/std))
@@ -688,7 +689,6 @@
     (do*					(macro . do*))
     (dolist					(macro . dolist))
     (dotimes					(macro . dotimes))
-    (and					(macro . and))
     (or						(macro . or))
     (time					(macro . time))
     (delay					(macro . delay))

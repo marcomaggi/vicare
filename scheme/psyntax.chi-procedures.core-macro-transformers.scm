@@ -131,8 +131,6 @@
 ;;
 (define* (core-macro-transformer name)
   (case name
-    ((quote)					quote-transformer)
-    ;;
     ((lambda)					lambda-transformer)
     ((lambda/std)				lambda/std-transformer)
     ((lambda/typed)				lambda/typed-transformer)
@@ -150,10 +148,13 @@
     ((named-case-lambda/typed)			named-case-lambda/typed-transformer)
     ((named-case-lambda/checked)		named-case-lambda/checked-transformer)
     ;;
+    ((quote)					quote-transformer)
+    ((if)					if-transformer)
     ((let)					let-transformer)
     ((letrec)					letrec-transformer)
     ((letrec*)					letrec*-transformer)
-    ((if)					if-transformer)
+    ((and)					and-transformer)
+    ;;
     ((foreign-call)				foreign-call-transformer)
     ((syntax-case)				syntax-case-transformer)
     ((syntax)					syntax-transformer)
@@ -768,6 +769,69 @@
 							  __who__ (car lhs*.id) (car rhs*.stx))
 	     (loop (cdr lhs*.id) (cdr rhs*.stx) lexenv.run lexenv.expand))
 	 (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+
+;;;; module core-macro-transformer: AND
+
+(define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand R6RS AND macros from  the top-level built in
+  ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
+  ;;LEXENV; return a PSI object.
+  ;;
+  ;;The syntax use:
+  ;;
+  ;;   (and ?expr1 ?expr2 ?expr3)
+  ;;
+  ;;could be expanded as a non-core macro into:
+  ;;
+  ;;   (if ?expr1
+  ;;       (if ?expr2
+  ;;           ?expr3
+  ;;         #f)
+  ;;     #f)
+  ;;
+  ;;and the type annotation of the returned value is:
+  ;;
+  ;;   (or (type-of ?expr3) <false>)
+  ;;
+  ;;But, if we determine  at expand-time that all the expressions  return a type that
+  ;;is different from: <top>, <boolean>, <false>, we can expand into:
+  ;;
+  ;;   (begin
+  ;;     ?expr1
+  ;;     ?expr2
+  ;;     ?expr3)
+  ;;
+  ;;in this case  using an AND syntax  is useless, so we should  raise an expand-time
+  ;;warning.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_)
+     (make-psi input-form.stx
+       (build-data no-source #t)
+       (make-type-signature/single-true)))
+
+    ((_ ?expr)
+     (chi-expr ?expr lexenv.run lexenv.expand))
+
+    ((_ ?expr0 ?expr1 ?expr* ...)
+     (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
+	    (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
+	    (expr*.sig	(map psi.retvals-signature expr*.psi)))
+       (make-psi input-form.stx
+	 (let recur ((expr*.psi expr*.psi))
+	   (let ((expr.core (psi.core-expr (car expr*.psi))))
+	     (if (pair? (cdr expr*.psi))
+		 (build-conditional no-source
+		     expr.core
+		   (recur (cdr expr*.psi))
+		   (build-data no-source #f))
+	       expr.core)))
+	 (type-signature.union (car (last-pair expr*.sig))
+			       (make-type-signature/single-false)))))
+
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

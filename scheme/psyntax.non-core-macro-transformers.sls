@@ -142,7 +142,6 @@
     ((dolist)				dolist-macro)
     ((dotimes)				dotimes-macro)
     ((or)				or-macro)
-    ((and)				and-macro)
     ((let*)				let*-macro)
     ((let-values)			let-values-macro)
     ((let*-values)			let*-values-macro)
@@ -3691,7 +3690,7 @@
     ))
 
 
-;;;; non-core macro: OR, AND
+;;;; non-core macro: OR
 
 (define-macro-transformer (or input-form.stx)
   ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in
@@ -3710,24 +3709,6 @@
 	     (if t
 		 t
 	       ,(recur (car e*) (cdr e*))))))))
-    ))
-
-(define-macro-transformer (and input-form.stx)
-  ;;Transformer function used  to expand R6RS AND macros from  the top-level built in
-  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
-  ;;must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_) #t)
-
-    ((_ ?expr ?expr* ...)
-     (bless
-      (let recur ((e ?expr) (e* ?expr*))
-	(if (null? e*)
-	    e
-	  `(if ,e
-	       ,(recur (car e*) (cdr e*))
-	     #f)))))
     ))
 
 
