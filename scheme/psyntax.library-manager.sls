@@ -575,7 +575,7 @@
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
 			       core-macro macro macro!
-			       $core-rtd $core-rcd
+			       $core-rtd $core-rcd $core-scheme-type-descriptor
 			       $core-record-type-name $core-condition-object-type-name
 			       $core-scheme-object-type-name $core-type-annotation)
 			      (if system-library?

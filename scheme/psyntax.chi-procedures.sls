@@ -231,7 +231,7 @@
 				 global global-mutable global-typed global-typed-mutable
 				 macro macro! global-macro global-macro! local-macro local-macro!
 				 import export library $module pattern-variable
-				 $core-rtd $core-rcd
+				 $core-rtd $core-rcd $core-scheme-type-descriptor
 				 local-etv global-etv
 				 displaced-lexical)
 		      (values type descr ?id))
@@ -267,7 +267,8 @@
 		     (else
 		      ;;This  case includes  TYPE being:  core-prim, core-prim-typed,
 		      ;;lexical, lexical-typed, global, global-mutable, global-typed,
-		      ;;global-typed-mutable, $core-rtd, $core-rcd.
+		      ;;global-typed-mutable,          $core-rtd,          $core-rcd,
+		      ;;$core-scheme-type-descriptor.
 		      (values 'call #f #f))))))
 	   (else
 	    (error-unbound-identifier caller-who ?car))))
@@ -766,6 +767,18 @@
 	 (make-psi expr.stx
 	   (build-primref no-source name)
 	   (make-type-signature/single-value (core-prim-id '<record-constructor-descriptor>)))))
+
+      (($core-scheme-type-descriptor)
+       ;;Core Scheme object-type descriptor reference; it is a built-in constant like
+       ;;"<fixnum>-type-descriptor",  the  run-time  descriptor for  "<fixnum>".   We
+       ;;expect the syntactic binding's descriptor DESCR to be:
+       ;;
+       ;;   ($core-scheme-type-descriptor . ?prim-name)
+       ;;
+       (let ((name (syntactic-binding-descriptor.value descr)))
+	 (make-psi expr.stx
+	   (build-primref no-source name)
+	   (make-type-signature/single-value (core-prim-id '<scheme-type-descriptor>)))))
 
       ((call)
        ;;A function call; this means EXPR.STX has one of the formats:

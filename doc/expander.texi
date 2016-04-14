@@ -1817,6 +1817,26 @@ the following descriptor is generated:
 
 @c ------------------------------------------------------------------------
 
+@subsubheading Primitive binding: core Scheme object--type descriptor
+
+A syntactic binding representing a core Scheme object--type descriptor
+name has syntactic binding's descriptor with format:
+
+@example
+($core-scheme-type-descriptor . @meta{name})
+@end example
+
+@noindent
+where @meta{name} is a symbol representing the public name of the
+object--type descriptor.
+
+These objects are run--time descriptors for the built--in Scheme object
+types; the type @class{fixnum} has a run--time descriptor named
+@samp{<fixnum>-type-descriptor}, which is used (for example) for late
+bindings of method calls.
+
+@c ------------------------------------------------------------------------
+
 @subsubheading Primitive binding: core record--type descriptor
 
 A syntactic binding representing a core record--type descriptor name has

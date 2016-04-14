@@ -29,6 +29,7 @@
   (export
     declare-primitive
     declare-core-rtd			declare-core-rcd
+    declare-core-scheme-type-descriptor
 
     ;; helpers
     comment				/comment
@@ -195,6 +196,23 @@
 	   (newline)
 	   (putprop prim-name KEY sexp)))))
 
+(define* (declare-primitive-scheme-type-descriptor prim-name)
+  ;;Print to stdout the symbolic  expression representing the core Scheme object-type
+  ;;descriptor  name  specification.   Use  symbol properties  to  detect  duplicated
+  ;;definitions.
+  ;;
+  (define-constant KEY '$core-scheme-type-descriptor)
+  (cond ((getprop prim-name KEY)
+	 => (lambda (sexp)
+	      (error __who__
+		"primitive core Scheme object-type descriptor already defined"
+		sexp prim-name)))
+	(else
+	 (let ((sexp (cons* prim-name KEY prim-name)))
+	   (display sexp)
+	   (newline)
+	   (putprop prim-name KEY sexp)))))
+
 ;;; --------------------------------------------------------------------
 
 (define-auxiliary-syntaxes /comment)
@@ -225,7 +243,13 @@
      (begin ?body ...))))
 
 
-;;;; built-in record-type descriptors and record-constructor descriptors
+;;;; built-in object-type descriptors and record-constructor descriptors
+
+(define-syntax (declare-core-scheme-type-descriptor stx)
+  (syntax-case stx ()
+    ((_ ?prim-name)
+     (identifier? #'?prim-name)
+     #'(declare-primitive-scheme-type-descriptor (quote ?prim-name)))))
 
 (define-syntax (declare-core-rtd stx)
   (syntax-case stx ()

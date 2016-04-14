@@ -3785,7 +3785,6 @@
     (<inexact-compnum>-type-descriptor)
     (<exact-integer>-type-descriptor)
     (<false>-type-descriptor)
-    ;; (<file-descriptor>-type-descriptor)
     (<fixnum>-type-descriptor)
     (<flonum>-type-descriptor)
     (<hashtable-eq>-type-descriptor)
