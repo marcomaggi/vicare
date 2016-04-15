@@ -360,9 +360,9 @@
 ;;;; object type helpers: <top>
 
 (define (<top>-type-predicate obj)
-  #t)
+  (not (void-object? obj)))
 
-(define (<top>-constructor obj)
+(define* (<top>-constructor {obj (not void-object?)})
   obj)
 
 
