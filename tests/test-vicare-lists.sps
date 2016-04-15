@@ -4999,13 +4999,13 @@ called with at least two arguments.
 
   (check
       (with-result
-       (for-each1 add-result '()))
-    => `(,(void) ()))
+	(void-object? (for-each1 add-result '())))
+    => '(#t ()))
 
   (check
       (with-result
-       (for-each1 add-result '(2 4 6)))
-    => `(,(void) (2 4 6)))
+	(void-object? (for-each1 add-result '(2 4 6))))
+    => '(#t (2 4 6)))
 
 ;;; --------------------------------------------------------------------
 
