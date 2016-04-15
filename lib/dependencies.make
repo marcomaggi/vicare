@@ -333,20 +333,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/keywords.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/keywords.fasl
 
-lib/vicare/language-extensions/sentinels.fasl: \
-		lib/vicare/language-extensions/sentinels.vicare.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_sentinels_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_sentinels_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_sentinels_fasl_DATA = lib/vicare/language-extensions/sentinels.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_sentinels_vicare_sls_DATA = lib/vicare/language-extensions/sentinels.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/sentinels.vicare.sls
-CLEANFILES += lib/vicare/language-extensions/sentinels.fasl
-
 lib/vicare/language-extensions/custom-ports.fasl: \
 		lib/vicare/language-extensions/custom-ports.vicare.sls \
 		$(FASL_PREREQUISITES)
@@ -1002,7 +988,6 @@ CLEANFILES += lib/vicare/containers/bytevectors.fasl
 lib/vicare/containers/object-properties.fasl: \
 		lib/vicare/containers/object-properties.vicare.sls \
 		lib/vicare/containers/weak-hashtables.fasl \
-		lib/vicare/language-extensions/sentinels.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
