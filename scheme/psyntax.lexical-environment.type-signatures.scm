@@ -72,10 +72,6 @@
   ;;A typical use for an expression used as operand or similar:
   ;;
   ;;  (case-signature-specs expr.sig
-  ;;    ((single-value)
-  ;;     ;;The expression returns a single value.
-  ;;     => (lambda (obj.ots) ?body0 ?body ...))
-  ;;
   ;;    ((unspecified-values)
   ;;     ;;The expression returns an unspecified number of values.
   ;;     ?body0 ?body ...))
@@ -83,6 +79,14 @@
   ;;    ((<no-return>)
   ;;     ;;The expression is marked as not-returning.
   ;;     ?body0 ?body ...)
+  ;;
+  ;;    ((<void>)
+  ;;     ;;The expression is marked as returning void.
+  ;;     ?body0 ?body ...)
+  ;;
+  ;;    ((single-value)
+  ;;     ;;The expression returns a single value.
+  ;;     => (lambda (obj.ots) ?body0 ?body ...))
   ;;
   ;;    (else
   ;;     ;;The expression returns zero, two or more values.
@@ -99,6 +103,14 @@
   ;;     ;;The expression returns a single value, marked as "<procedure>".
   ;;     => (lambda (obj.ots) ?body0 ?body ...))
   ;;
+  ;;    ((<no-return>)
+  ;;     ;;The expression is marked as not-returning.
+  ;;     ?body0 ?body ...)
+  ;;
+  ;;    ((<void>)
+  ;;     ;;The expression is marked as returning void.
+  ;;     ?body0 ?body ...)
+  ;;
   ;;    ((single-value)
   ;;     ;;The expression returns a single value, but not a procedure.
   ;;     => (lambda (obj.ots) ?body0 ?body ...))
@@ -106,10 +118,6 @@
   ;;    ((unspecified-values)
   ;;     ;;The expression returns an unspecified number of values.
   ;;     ?body0 ?body ...))
-  ;;
-  ;;    ((<no-return>)
-  ;;     ;;The expression is marked as not-returning.
-  ;;     ?body0 ?body ...)
   ;;
   ;;    (else
   ;;     ;;The expression returns zero, two or more values.
@@ -141,7 +149,8 @@
        (synner "invalid input clauses" clause*.stx))))
 
   (define (%parse-single-clause clause.stx)
-    (sys::syntax-case clause.stx (=> single-value unspecified-values <top> <closure> <procedure> <no-return> <list> <list-of>)
+    (sys::syntax-case clause.stx (=> single-value unspecified-values
+				     <top> <closure> <procedure> <no-return> <void> <list> <list-of>)
       (((<top>) ?body0 ?body ...)
        (sys::syntax
 	((and single-item? (<top>-ots? (car signature.specs))) ?body0 ?body ...)))
@@ -175,6 +184,7 @@
        (sys::syntax
 	((and (not single-item?)
 	      (not (<no-return>-ots? signature.specs))
+	      (not (<void>-ots? signature.specs))
 	      (or (list-of-type-spec? signature.specs)
 		  (<list>-ots? signature.specs)))
 	 ?body0 ?body ...)))
@@ -182,6 +192,10 @@
       ((<no-return> ?body0 ?body ...)
        (sys::syntax
 	((<no-return>-ots? signature.specs) ?body0 ?body ...)))
+
+      (((<void>) ?body0 ?body ...)
+       (sys::syntax
+	((and single-item? (<void>-ots? (car signature.specs))) ?body0 ?body ...)))
 
       ((<list-of> => ?body)
        (sys::syntax

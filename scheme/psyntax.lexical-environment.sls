@@ -333,7 +333,7 @@
     <stx>-ots				<stx>-ots?
     <syntactic-identifier>-ots		<syntactic-identifier>-ots?
     <top>-ots				<top>-ots?
-    <boolean>-ots
+    <boolean>-ots			<boolean>-ots?
     <true>-ots				<true>-ots?
     <false>-ots				<false>-ots?
     <struct>-ots			<record>-ots
