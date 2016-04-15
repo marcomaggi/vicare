@@ -91,7 +91,7 @@
 (declare-core-primitive raise
     (safe)
   (signatures
-   ((<top>)		=> <list>)))
+   ((<top>)		=> <no-return>)))
 
 (declare-core-primitive raise-continuable
     (safe)
