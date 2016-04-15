@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,7 +36,7 @@
 (parametrise ((check-test-name	'sentinel))
 
   (check
-      (sentinel? sentinel)
+      (sentinel? (sentinel))
     => #t)
 
   (check
@@ -44,7 +44,7 @@
     => #f)
 
   (check
-      (let ((ell (list 1 2 3 4 5 sentinel)))
+      (let ((ell (list 1 2 3 4 5 (sentinel))))
 	(let loop ((ell ell)
 		   (res '()))
 	  (if (sentinel? (car ell))
@@ -57,7 +57,7 @@
 	     (iter (let ((ell ell))
 		     (lambda ()
 		       (if (null? ell)
-			   sentinel
+			   (sentinel)
 			 (begin0
 			   (car ell)
 			   (set! ell (cdr ell))))))))
@@ -68,7 +68,7 @@
 	      (loop (cons v res))))))
     => '(5 4 3 2 1))
 
-  (let ((s (make-sentinel)))
+  (let ((s (sentinel)))
     (check
 	(sentinel? s)
       => #t)
@@ -78,7 +78,7 @@
       => #t)
 
     (check
-	(eq? s sentinel)
+	(eq? s (sentinel))
       => #f))
 
   #t)

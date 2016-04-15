@@ -143,7 +143,7 @@
     vector-fold-left	vector-fold-right
     vector-fill!	vector-append
     vector-copy		vector-copy!
-    vector-resize
+    vector-resize	vector-reset!
 
     ;; unsafe operations
     $make-clean-vector
@@ -174,7 +174,7 @@
 		  vector-fold-left	vector-fold-right
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!
-		  vector-resize)
+		  vector-resize		vector-reset!)
     (vicare system $fx)
     (vicare system $pairs)
     (except (vicare system $vectors)
@@ -442,7 +442,7 @@
   ;;initial contents of each element is unspecified.
   ;;
   ((len)
-   (make-vector len (void)))
+   ($vector-fill-range! ($make-clean-vector len) 0 len (void)))
   (({len non-negative-fixnum?} fill)
    ($vector-fill-range! ($make-clean-vector len) 0 len fill))
   #| end of CASE-DEFINE* |# )
@@ -1044,6 +1044,30 @@
       ($vector-copy-source-range! src.vec 0 src.len dst.vec 0)
       (when ($fx< src.len dst.len)
 	($vector-fill-range! dst.vec src.len dst.len fill)))))
+
+(case-define* vector-reset!
+  (({vec vector?})
+   (do ((i 0 (fxadd1 i)))
+       ((fx=? i (vector-length vec))
+	(void))
+     ($vector-set! vec i (void))))
+  (({vec vector?} {start non-negative-fixnum?} {end non-negative-fixnum?})
+   ;;Defined  by Vicare.   VEC must  be a  vector, and  START and  END must  be exact
+   ;;integer objects satisfying:
+   ;;
+   ;;   0 <= START <= END < (vector-length VEC)
+   ;;
+   ;;Reset to void the selected range of slots beginning with index START (inclusive)
+   ;;and ending with index END (exclusive).
+   ;;
+   (preconditions
+    (valid-start-index-for-vector-slot vec start)
+    (valid-end-index-for-vector-slot   vec end)
+    (start-and-end-indexes-in-correct-order start end))
+   (do ((i start (fxadd1 i)))
+       ((fx=? i end)
+	(void))
+     ($vector-set! vec i (void)))))
 
 (define* (vector-copy! {src.vec vector?} {src.start non-negative-fixnum?}
 		       {dst.vec vector?} {dst.start non-negative-fixnum?}

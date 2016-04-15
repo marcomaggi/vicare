@@ -501,7 +501,6 @@
      (declare-core-primitive ?who
 	 (safe)
        (signatures
-	((<void>)	=> (<true>))
 	((?obj-tag)	=> (<true>))
 	...
 	((<top>)	=> (<boolean>)))

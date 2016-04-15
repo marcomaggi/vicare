@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -702,69 +702,69 @@
 
   (check
       (with-result
-	(deque-for-each-left add-result (deque)))
-    => '(#!void ()))
+	(void-object? (deque-for-each-left add-result (deque))))
+    => '(#t ()))
 
   (check
       (with-result
-	(deque-for-each-left add-result (list->deque LIST-5)))
-    => `(#!void ,LIST-5))
+	(void-object? (deque-for-each-left add-result (list->deque LIST-5))))
+    => `(#t ,LIST-5))
 
   (check
       (with-result
-	(deque-for-each-left add-result (list->deque LIST-20)))
-    => `(#!void ,LIST-20))
+	(void-object? (deque-for-each-left add-result (list->deque LIST-20))))
+    => `(#t ,LIST-20))
 
   (check
       (with-result
-	(deque-for-each-left add-result (list->deque LIST-100)))
-    => `(#!void ,LIST-100))
+	(void-object? (deque-for-each-left add-result (list->deque LIST-100))))
+    => `(#t ,LIST-100))
 
 ;;; --------------------------------------------------------------------
 ;;; for-each-right
 
   (check
       (with-result
-	(deque-for-each-right add-result (deque)))
-    => '(#!void ()))
+	(void-object? (deque-for-each-right add-result (deque))))
+    => '(#t ()))
 
   (check
       (with-result
-	(deque-for-each-right add-result (list->deque LIST-5)))
-    => `(#!void ,LIST-5-REVERSED))
+	(void-object? (deque-for-each-right add-result (list->deque LIST-5))))
+    => `(#t ,LIST-5-REVERSED))
 
   (check
       (with-result
-	(deque-for-each-right add-result (list->deque LIST-20)))
-    => `(#!void ,LIST-20-REVERSED))
+	(void-object? (deque-for-each-right add-result (list->deque LIST-20))))
+    => `(#t ,LIST-20-REVERSED))
 
   (check
       (with-result
-	(deque-for-each-right add-result (list->deque LIST-100)))
-    => `(#!void ,LIST-100-REVERSED))
+	(void-object? (deque-for-each-right add-result (list->deque LIST-100))))
+    => `(#t ,LIST-100-REVERSED))
 
 ;;; --------------------------------------------------------------------
 ;;; for-each-left aliases
 
   (check
       (with-result
-	(deque-for-each add-result (deque)))
-    => '(#!void ()))
+	(void-object? (deque-for-each add-result (deque))))
+    => '(#t ()))
 
   (check
       (with-result
-	(deque-for-each add-result (list->deque LIST-5)))
-    => `(#!void ,LIST-5))
+	(void-object? (deque-for-each add-result (list->deque LIST-5))))
+    => `(#t ,LIST-5))
 
   (check
       (with-result
-	(deque-for-each add-result (list->deque LIST-20)))
-    => `(#!void ,LIST-20))
+	(void-object? (deque-for-each add-result (list->deque LIST-20))))
+    => `(#t ,LIST-20))
 
   (check
       (with-result
-	(deque-for-each add-result (list->deque LIST-100)))
-    => `(#!void ,LIST-100))
+	(void-object? (deque-for-each add-result (list->deque LIST-100))))
+    => `(#t ,LIST-100))
 
   #t)
 

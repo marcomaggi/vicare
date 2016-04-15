@@ -167,7 +167,7 @@
 	    (fold-left func (car ell) (cdr ell))
 	  identity))
       (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
-	((make-callable-signature (reduce type-signature.common-ancestor
+	((make-callable-signature (reduce type-signature.union
 					  (make-type-signature/fully-untyped)
 					  (map clambda-clause-signature.retvals signature*)))
 	 signature* #f #f))

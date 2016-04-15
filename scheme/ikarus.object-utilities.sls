@@ -80,10 +80,9 @@
 		  keyword-hash				pointer-hash
 		  transcoder-hash			string->keyword
 		  reader-annotation?
-		  reader-annotation-expression
-		  reader-annotation-stripped
-		  reader-annotation-source
-		  reader-annotation-textual-position)
+		  reader-annotation-expression		reader-annotation-stripped
+		  reader-annotation-source		reader-annotation-textual-position
+		  sentinel				sentinel?)
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
@@ -162,6 +161,10 @@
 	  reader-annotation-stripped
 	  reader-annotation-source
 	  reader-annotation-textual-position)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Apr 15,
+    ;;2016)
+    (only (ikarus unique-objects)
+	  sentinel sentinel?)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
 		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco

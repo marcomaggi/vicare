@@ -24,6 +24,11 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Fri Apr 15, 2016)
+		  sentinel?
+		  ;;;
+
 		  pretty-print			pretty-print*
 		  pretty-width
 
@@ -42,7 +47,11 @@
 		  record-ref)
 	    records::)
     (only (ikarus.pretty-formats)
-	  get-fmt))
+	  get-fmt)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Apr 15,
+    ;;2016)
+    (only (ikarus unique-objects)
+	  sentinel?))
 
 
 ;;;; helpers
@@ -203,6 +212,7 @@
      ((would-block-object? x)	"#!would-block-object")
      ((bwp-object? x)		"#!bwp-object")
      ((unbound-object? x)	"#!unbound-object")
+     ((sentinel? x)		"#!sentinel")
      ;;At present  keywords are  structs, so  we must process  them before  the other
      ;;structs.  We do not want them to be printed as shared objects.
      ((keyword? x)		(%boxify-object-keyword x))

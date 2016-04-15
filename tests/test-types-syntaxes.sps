@@ -487,6 +487,11 @@
 
 (parametrise ((check-test-name	'type-signature-super-and-sub))
 
+  (check-for-false	(type-signature-super-and-sub? (<top>) (<void>)))
+  (check-for-false	(type-signature-super-and-sub? (<void>) (<top>)))
+
+;;; --------------------------------------------------------------------
+
   (check-for-true	(type-signature-super-and-sub? (<number>) (<fixnum>)))
   (check-for-false	(type-signature-super-and-sub? (<number>) (<string>)))
 
@@ -652,9 +657,8 @@
     (syntax-rules (=>)
       ((_ ?signature ?expr => ?expected0 ?expected ...)
        (begin
-	 (check
-	     (assert-signature ?signature ?expr)
-	   => (void))
+	 (check-for-true
+	  (void-object? (assert-signature ?signature ?expr)))
 	 (check
 	     (assert-signature-and-return ?signature ?expr)
 	   => ?expected0 ?expected ...)
@@ -869,11 +873,11 @@
     => 'fixnum)
 
   (check
-      (case-type #t
-	((<vector>)		'vector)
-	((<fixnum>)		'fixnum)
-	((<string>)		'string))
-    => (void))
+      (void-object? (case-type #t
+		      ((<vector>)		'vector)
+		      ((<fixnum>)		'fixnum)
+		      ((<string>)		'string)))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; with ELSE clause
@@ -981,7 +985,7 @@
   (doit (let ((a 1)
 	      (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; LET* type propagation
@@ -1004,7 +1008,7 @@
   (doit (let* ((a 1)
 	       (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; LETREC type propagation
@@ -1027,7 +1031,7 @@
   (doit (letrec ((a 1)
 		 (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; LETREC* type propagation
@@ -1050,7 +1054,7 @@
   (doit (letrec* ((a 1)
 		  (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; CALL-WITH-VALUES type propagation

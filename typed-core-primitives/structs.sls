@@ -257,7 +257,8 @@
 (declare-core-primitive $struct-set!
     (unsafe)
   (signatures
-   ((<struct> <non-negative-fixnum> _)	=> (<void>)))
+   ((<struct> <non-negative-fixnum> <void>)	=> (<void>))
+   ((<struct> <non-negative-fixnum> _)		=> (<void>)))
   (attributes
    ((_ _)			foldable result-true)))
 

@@ -92,6 +92,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib time::                  Basic time and date functions.
 * iklib readline::              Readline interface.
 * iklib debug::                 Debugging utilities.
+* iklib sentinel::              The sentinel object.
 * iklib misc::                  Miscellaneous functions.
 @end menu
 
@@ -13775,6 +13776,7 @@ occurs because of impossible generation: raise an error.
 * iklib vectors predicates::    Vector predicates.
 * iklib vectors copying::       Copying vectors.
 * iklib vectors iteration::     Iterating vectors.
+* iklib vectors misc::          Miscellaneous vector operations.
 @end menu
 
 @c page
@@ -13994,6 +13996,26 @@ as:
 @noindent
 in which @var{state} is the @strong{last} argument.
 @end deffn
+
+@c page
+@node iklib vectors misc
+@subsection Miscellaneous vector operations
+
+
+@defun vector-reset! @var{vec}
+@defunx vector-reset! @var{vec} @var{start} @var{end}
+@var{vec} must be a vector, and @var{start} and @var{end} must be exact
+integer objects satisfying:
+
+@example
+0 <= @var{start} <= @var{end} < (vector-length @var{vec})
+@end example
+
+@noindent
+Reset to void the selected range of slots beginning with index
+@var{start} (inclusive) and ending with index @var{end} (exclusive).
+Return unspecified values.
+@end defun
 
 @c page
 @node iklib symbols
@@ -20306,6 +20328,32 @@ vice versa.
 @end defun
 
 @c page
+@node iklib sentinel
+@section The sentinel object
+
+
+The sentinel object is a unique object.  It is meant to be used with
+@func{hashtable-ref} as follows:
+
+@lisp
+(hashtable-ref @meta{table} @meta{key} (sentinel))
+@end lisp
+
+@noindent
+and for other similar uses.
+
+
+@defun sentinel
+Return the sentinel object.
+@end defun
+
+
+@defun sentinel? @var{obj}
+Return @true{} if @var{obj} is the sentinel object, otherwise return
+@false{}.
+@end defun
+
+@c page
 @node iklib misc
 @section Miscellaneous functions
 
@@ -20328,8 +20376,12 @@ a single machine word.  Compound objects (like lists and vectors) are
 
 
 @defun void
-Return the void value.  It is the value returned by forms that do not
-return a meaningful value.
+Return the void value.  We should never use the void object as argument
+for a function application, because the only legitimate use of the void
+object is as single return value of functions returning ``unspecified
+values'' (under @value{PRJNAME} returning a single value is faster than
+returning zero values).  If we need a unique value: we should use the
+sentinel value (@pxref{iklib sentinel, The sentinel object}).
 @end defun
 
 

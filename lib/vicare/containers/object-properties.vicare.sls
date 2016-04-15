@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2008, 2009, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008, 2009, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -32,16 +32,14 @@
     object-property-default-value
     make-object-property)
   (import (vicare)
-    (vicare containers weak-hashtables)
-    (only (vicare language-extensions sentinels)
-	  sentinel))
+    (vicare containers weak-hashtables))
   (define object-property-initial-capacity
     (make-parameter 16
       (lambda (initial-capacity)
 	(assert (integer? initial-capacity))
 	initial-capacity)))
   (define object-property-default-value
-    (make-parameter sentinel))
+    (make-parameter (sentinel)))
   (define (make-object-property hash-func equiv-func)
     (let ((table    (make-weak-hashtable hash-func equiv-func (object-property-initial-capacity)))
 	  (default  (object-property-default-value)))

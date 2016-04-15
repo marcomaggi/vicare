@@ -1896,6 +1896,7 @@ et cetera.
 * types built-in records::      Type of record objects.
 * types built-in conditions::   Type of condition objects.
 * types built-in ports::        Types of input/output ports.
+* types built-in sentinel::     Type of sentinel object.
 * types built-in misc::         Miscellaneous built-in types.
 @end menu
 
@@ -1930,9 +1931,19 @@ applied to @var{self}.
 @subsection The type of the void value
 
 
+The type @class{void} is the type of the void object.  We should never
+use @class{void} in a type annotation, because the only legitimate use
+of the void object is as single return value of functions returning
+``unspecified values'' (under @value{PRJNAME} returning a single value
+is faster than returning zero values).  If we need a unique value: we
+should use the sentinel value (@pxref{iklib sentinel, The sentinel
+object}).
+
+
 @deftp {Built--in Type} @aclass{void}
-@deftpx {Parent Type} @aclass{top}
-The type of the void object.
+The type of the void object.  @class{void} has no parent type.  The
+union and intersection between @class{void} and any other type is
+@class{void} itself.
 @end deftp
 
 
@@ -3645,6 +3656,28 @@ predicate is @func{binary-output-port?}.
 Type of binary input/output ports.  There is no constructor.  The type
 predicate is @func{binary-input/output-port?}.
 @end deftp
+
+@c page
+@node types built-in sentinel
+@subsection Type of sentinel object
+
+
+@deftp {Built-in Type} @aclass{sentinel}
+@deftpx {Parent Type} @aclass{struct}
+Type of the sentinel object (@pxref{iklib sentinel, The sentinel
+object}).
+@end deftp
+
+
+@defop Constructor @class{sentinel} new @aclass{sentinel}
+The constructor is @func{sentinel}.  Return the sentinel object.
+@end defop
+
+
+@defop {Type predicate} @class{sentinel} is-a? @var{obj} @aclass{sentinel}
+The type predicate is @func{sentinel?}.  Return @true{} if @var{obj} is
+the sentinel object; otherwise return @false{}.
+@end defop
 
 @c page
 @node types built-in misc

@@ -16,14 +16,14 @@
   (predicate always-false)
   (hash-function object-hash))
 
-
-;;;; standalone object types
-
 (define-scheme-type <void>
-    <top>
+    #f
   (constructor void)
   (predicate void-object?)
   (hash-function void-hash))
+
+
+;;;; standalone object types
 
 (define-scheme-type <eof>
     <top>
@@ -569,6 +569,14 @@
    (hash-function			scheme-type-descriptor-hash-function)
    (uids-list				scheme-type-descriptor-uids-list)
    (method-retriever			scheme-type-descriptor-method-retriever)))
+
+;;; --------------------------------------------------------------------
+;;; unique objects
+
+(define-scheme-type <sentinel>
+    <struct>
+  (constructor sentinel)
+  (predicate sentinel?))
 
 
 ;;;; input/output ports

@@ -69,39 +69,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'void))
-
-;;; type predicate
-
-  (check-for-true
-   (is-a? (void) <void>))
-
-  (check-for-true
-   (let ((O '#!void))
-     (is-a? O <void>)))
-
-  (check-for-true
-   (let (({O <void>} '#!void))
-     (is-a? O <void>)))
-
-  (check-for-false
-   (is-a? 123 <void>))
-
-;;; --------------------------------------------------------------------
-;;; constructor
-
-  (check
-      (new <void>)
-    => '#!void)
-
-  (check
-      (expander::type-signature.syntax-object (type-of (new <void>)))
-    (=> syntax=?)
-    (list #'<void>))
-
-  #t)
-
-
 (parametrise ((check-test-name	'procedure))
 
 ;;; type predicate

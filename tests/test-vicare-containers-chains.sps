@@ -7,7 +7,7 @@
 ;;;
 ;;;	Chain containers a doubly-linked lists.
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -1013,10 +1013,10 @@
 
   (check
       (with-result
-	(chain-for-each-forwards
-	    add-result
-	  (chain)))
-    => '(#!void ()))
+	(void-object?(chain-for-each-forwards
+			 add-result
+		       (chain))))
+    => '(#t ()))
 
 
   (check
@@ -1038,11 +1038,11 @@
 
   (check
       (with-result
-	(chain-for-each-forwards
-	    fun
-	  (chain)
-	  (chain)))
-    => '(#!void ()))
+	(void-object? (chain-for-each-forwards
+			  fun
+			(chain)
+			(chain))))
+    => '(#t ()))
 
   (check
       (with-result
@@ -1064,12 +1064,12 @@
 
   (check
       (with-result
-	(chain-for-each-forwards
-	    fun
-	  (chain)
-	  (chain)
-	  (chain)))
-    => '(#!void ()))
+	(void-object? (chain-for-each-forwards
+			  fun
+			(chain)
+			(chain)
+			(chain))))
+    => '(#t ()))
 
   (check
       (with-result

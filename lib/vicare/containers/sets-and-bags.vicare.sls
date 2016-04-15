@@ -114,8 +114,8 @@
   ;;new entry  associated to  NEW-KEY having the  same value of  the old  one; return
   ;;OLD-KEY.  If OLD-KEY is not a key in TABLE: do nothing and return false.
   ;;
-  (let ((val (hashtable-ref table old-key (void))))
-    (if (eq? val (void))
+  (let ((val (hashtable-ref table old-key (sentinel))))
+    (if (sentinel? val)
 	#f
       (begin
 	(hashtable-delete! table old-key)

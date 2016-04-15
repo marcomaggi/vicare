@@ -97,6 +97,15 @@
   (doit (or <fixnum> (or (or <string>) <symbol>))
 	(or <fixnum> <string> <symbol>))
 
+  (doit (or <void> <top>)
+	<void>)
+
+  (doit (or <top> <void>)
+	<void>)
+
+  (doit (or <top> <fixnum> <void>)
+	<void>)
+
   (void))
 
 

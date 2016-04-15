@@ -99,6 +99,12 @@
    ((_ _)			effect-free result-true)
    ((_ _ _)			effect-free result-true)))
 
+(declare-core-primitive vector-reset!
+    (safe)
+  (signatures
+   ((<vector>)							=> (<void>))
+   ((<vector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>))))
+
 (declare-core-primitive vector-append
     (safe)
   (signatures
@@ -317,7 +323,8 @@
 (declare-core-primitive $vector-set!
     (unsafe)
   (signatures
-   ((<vector> <non-negative-fixnum> _)	=> (<void>)))
+   ((<vector> <non-negative-fixnum> <void>)	=> (<void>))
+   ((<vector> <non-negative-fixnum> _)		=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 

@@ -8753,9 +8753,12 @@ Return the value in @var{hashtable} associated with @var{key}.  If
 @var{hashtable} does not contain an association for @var{key},
 @var{default} is returned.
 
+@quotation
 As @value{PRJNAME} extension: when @var{default} is not used, it
-defaults to @code{(void)}; the void value is to be used as sentinel
-value for hash tables.
+defaults to the sentinel object.  When in doubt: we should always use
+the sentinel object as @var{default} argument.  @xref{iklib sentinel,
+The sentinel object}.
+@end quotation
 @end deffn
 
 

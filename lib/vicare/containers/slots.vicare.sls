@@ -189,6 +189,11 @@
 
 ;;;; helpers
 
+(define-type <kons>
+  (lambda (<top> <top>) => (<top>)))
+
+;;; --------------------------------------------------------------------
+
 ;;Default length of vectors used as buffers.  By using 15 we make the total number of
 ;;machine words allocated for each buffer equal to 16; which is nice.
 ;;
@@ -276,7 +281,7 @@
 	;;BUFFER-LENGTH is the number of slots of each vector (at least 1).
 	;;
 	(define (mk-link)
-	  (make-chain-link (make-vector buffer-length (void))))
+	  (make-chain-link (make-vector buffer-length)))
 	(let* ((first-link (mk-link))
 	       (last-link  first-link)
 	       (middle-idx (div buffer-length 2)))
@@ -377,7 +382,7 @@
 			       (begin
 				 ($<slots>-front-cache-set! slots #f)
 				 cached)
-			     (make-chain-link (make-vector buffer-length (void)))))))
+			     (make-chain-link (make-vector buffer-length))))))
     ($chain-link-next-set! new-first-link old-first-link)
     ($<slots>-fir-link-set!          slots new-first-link)
     ($<slots>-fir-link-next-idx-set! slots (fxsub1 buffer-length))))
@@ -403,7 +408,7 @@
 			      (begin
 				($<slots>-rear-cache-set! slots #f)
 				cached)
-			  (make-chain-link (make-vector buffer-length (void)))))))
+			  (make-chain-link (make-vector buffer-length))))))
     ($chain-link-prev-set! new-last-link old-last-link)
     ($<slots>-las-link-set!          slots new-last-link)
     ($<slots>-las-link-next-idx-set! slots 0)))
@@ -659,12 +664,12 @@
 
 ;;;; folding from front
 
-(define* (slots-fold-left {kons procedure?} knil {slots slots?})
+(define (slots-fold-left {kons <kons>} knil {slots <slots>})
   ($slots-fold-left kons knil slots))
 
 (module ($slots-fold-left)
 
-  (define ($slots-fold-left kons knil slots)
+  (define/typed ($slots-fold-left {kons <kons>} knil {slots <slots>})
     (let ((fir-lnk ($<slots>-fir-link slots))
 	  (las-lnk ($<slots>-las-link slots))
 	  (fir-idx ($<slots>-fir-link-next-idx slots))
@@ -701,12 +706,12 @@
 
 ;;;; folding from rear
 
-(define* (slots-fold-right {kons procedure?} knil {slots slots?})
+(define (slots-fold-right {kons <kons>} knil {slots <slots>})
   ($slots-fold-right kons knil slots))
 
 (module ($slots-fold-right)
 
-  (define ($slots-fold-right kons knil slots)
+  (define/typed ($slots-fold-right {kons <kons>} knil {slots <slots>})
     (let ((fir-lnk ($<slots>-fir-link slots))
 	  (las-lnk ($<slots>-las-link slots))
 	  (fir-idx ($<slots>-fir-link-next-idx slots))
@@ -793,9 +798,10 @@
 
 (define ($slots-for-each-left fun slots)
   ($slots-fold-left (lambda (knil obj)
-		       (fun obj)
-		       knil)
-    (void) slots))
+		      (fun obj)
+		      knil)
+    #f slots)
+  (void))
 
 ;;; --------------------------------------------------------------------
 
@@ -804,9 +810,10 @@
 
 (define ($slots-for-each-right fun slots)
   ($slots-fold-right (lambda (obj knil)
-		      (fun obj)
-		      knil)
-    (void) slots))
+		       (fun obj)
+		       knil)
+    #f slots)
+  (void))
 
 
 ;;;; searching

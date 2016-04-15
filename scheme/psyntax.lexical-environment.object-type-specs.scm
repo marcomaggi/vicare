@@ -493,7 +493,8 @@
 
 	((<top>-ots? super.ots)
 	 ;;Fast track: "<top>" is the super-type of all the types.
-	 #t)
+	 (and (not (<void>-ots? sub.ots))
+	      (not (<no-return>-ots? sub.ots))))
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the unions first.
@@ -1056,6 +1057,12 @@
 
 	((<no-return>-ots? ots2)
 	 ots1)
+
+	((<void>-ots? ots1)
+	 (<void>-ots))
+
+	((<void>-ots? ots2)
+	 (<void>-ots))
 
 	((and (pair-of-type-spec? ots1)
 	      (pair-of-type-spec? ots2))
@@ -1810,9 +1817,12 @@
 			  (cons component.ots knil))))
        '() component-type*.ots)))
   (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
-    (if (list-of-single-item? component-type*.ots)
-	(car component-type*.ots)
-      (make-union-type-spec component-type*.ots))))
+    (cond ((list-of-single-item? component-type*.ots)
+	   (car component-type*.ots))
+	  ((find <void>-ots? component-type*.ots)
+	   (<void>-ots))
+	  (else
+	   (make-union-type-spec component-type*.ots)))))
 
 (define* (union-type-spec.length {union.ots union-type-spec?})
   (let ((mem (union-type-spec.memoised-length union.ots)))
@@ -1910,9 +1920,12 @@
 			  (cons component.ots knil))))
        '() component-type*.ots)))
   (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
-    (if (list-of-single-item? component-type*.ots)
-	(car component-type*.ots)
-      (make-intersection-type-spec component-type*.ots))))
+    (cond ((list-of-single-item? component-type*.ots)
+	   (car component-type*.ots))
+	  ((find <void>-ots? component-type*.ots)
+	   (<void>-ots))
+	  (else
+	   (make-intersection-type-spec component-type*.ots)))))
 
 (define* (intersection-type-spec.length {intersection.ots intersection-type-spec?})
   (let ((mem (intersection-type-spec.memoised-length intersection.ots)))

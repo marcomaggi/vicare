@@ -3223,6 +3223,11 @@ Return @true{} if @var{obj} is a vector, @false{} otherwise.
 Return a newly allocated vector of @var{k} elements.  If a second
 argument is given, then each element is initialized to @var{fill}.
 Otherwise the initial contents of each element is unspecified.
+
+@quotation
+As @value{PRJNAME} extension: when @var{fill} is unused, it defaults to
+the void object.
+@end quotation
 @end deffn
 
 

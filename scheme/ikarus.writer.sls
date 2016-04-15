@@ -31,6 +31,11 @@
     ;;These are needed by PRETTY-PRINT.
     traverse			TRAVERSAL-HELPERS)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Fri Apr 15, 2016)
+		  sentinel?
+		  ;;;
+
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
@@ -51,7 +56,11 @@
 		  rcd-rtd
 		  rcd-parent-rcd
 		  record-ref)
-	    records::))
+	    records::)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Apr 15,
+    ;;2016)
+    (only (ikarus unique-objects)
+	  sentinel?))
 
   (include "ikarus.wordsize.scm" #t)
 
@@ -732,6 +741,10 @@
 
 	  ((would-block-object? x)
 	   (write-char* "#!would-block" p)
+	   next-mark-idx)
+
+	  ((sentinel? x)
+	   (write-char* "#!sentinel" p)
 	   next-mark-idx)
 
 	  ((transcoder? x)

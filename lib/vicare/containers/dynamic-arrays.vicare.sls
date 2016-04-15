@@ -131,11 +131,6 @@
 	(else
 	 (greatest-fixnum))))
 
-(define ($vector-reset-range! vec start past)
-  (when ($fx< start past)
-    ($vector-set! vec start '#!void)
-    ($vector-reset-range! vec ($fxadd1 start) past)))
-
 
 ;;;; type definition
 
@@ -164,12 +159,12 @@
 
        (({full-length non-negative-fixnum?})
 	(let ((left-span (div full-length 2)))
-	  (make-record (make-vector full-length (void))
+	  (make-record (make-vector full-length)
 		       left-span left-span #f)))
 
        (({full-length non-negative-fixnum?} {left-span non-negative-fixnum?})
 	(if (fx<=? left-span full-length)
-	    (make-record (make-vector full-length (void))
+	    (make-record (make-vector full-length)
 			 left-span left-span #f)
 	  (assertion-violation 'make-<dynamic-array>
 	    "left span must be less than or equal to the full length"
@@ -478,7 +473,7 @@
 		  (fir-idx.new  ($fxsub1 ($fx- pas-idx.new size))))
 
 	     ($vector-self-copy-backwards! data pas-idx pas-idx.new size)
-	     ($vector-reset-range! data fir-idx fir-idx.new)
+	     (vector-reset! data fir-idx fir-idx.new)
 	     ($<dynamic-array>-fir-idx-set! arry fir-idx.new)
 	     ($<dynamic-array>-pas-idx-set! arry pas-idx.new)
 	     ($vector-set! data fir-idx.new obj)))
@@ -520,7 +515,7 @@
 		  (las-idx.new  ($fx+ fir-idx.new size))
 		  (pas-idx.new  ($fxadd1 las-idx.new)))
 	     ($vector-self-copy-forwards! data fir-idx fir-idx.new size)
-	     ($vector-reset-range! data pas-idx.new pas-idx)
+	     (vector-reset! data pas-idx.new pas-idx)
 	     ($<dynamic-array>-fir-idx-set! arry fir-idx.new)
 	     ($<dynamic-array>-pas-idx-set! arry pas-idx.new)
 	     ($vector-set! data las-idx.new obj)))
@@ -575,7 +570,7 @@
   (let ((fir-idx ($<dynamic-array>-fir-idx arry))
 	(pas-idx ($<dynamic-array>-pas-idx arry))
 	(data    ($<dynamic-array>-data    arry)))
-    ($vector-reset-range! data fir-idx pas-idx)
+    (vector-reset! data fir-idx pas-idx)
     (let* ((mid ($fxdiv ($vector-length data) 2))
 	   (fir mid)
 	   (pas mid))

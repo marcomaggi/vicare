@@ -49,9 +49,8 @@ hashtable.  The default value is @math{16}.
 @deffn Parameter object-property-default-value
 @cindex Parameter @func{object-property-default-value}
 The value to return if the property is queried for an object that was
-not registered before.  The default value is the one bound to
-@code{sentinel} exported by @library{vicare language-extensions
-sentinels}.
+not registered before.  The default value is the one bound to the
+sentinel (@vicareref{iklib sentinel, The sentinel object}).
 @end deffn
 
 @c end of file

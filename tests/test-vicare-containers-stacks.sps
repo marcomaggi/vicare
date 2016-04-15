@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -515,69 +515,69 @@
 
   (check
       (with-result
-	(stack-for-each-left add-result (stack)))
-    => '(#!void ()))
+	(void-object? (stack-for-each-left add-result (stack))))
+    => '(#t ()))
 
   (check
       (with-result
-	(stack-for-each-left add-result (list->stack LIST-5)))
-    => `(#!void ,LIST-5))
+	(void-object? (stack-for-each-left add-result (list->stack LIST-5))))
+    => `(#t ,LIST-5))
 
   (check
       (with-result
-	(stack-for-each-left add-result (list->stack LIST-20)))
-    => `(#!void ,LIST-20))
+	(void-object? (stack-for-each-left add-result (list->stack LIST-20))))
+    => `(#t ,LIST-20))
 
   (check
       (with-result
-	(stack-for-each-left add-result (list->stack LIST-100)))
-    => `(#!void ,LIST-100))
+	(void-object? (stack-for-each-left add-result (list->stack LIST-100))))
+    => `(#t ,LIST-100))
 
 ;;; --------------------------------------------------------------------
 ;;; for-each-right
 
   (check
       (with-result
-	(stack-for-each-right add-result (stack)))
-    => '(#!void ()))
+	(void-object? (stack-for-each-right add-result (stack))))
+    => '(#t ()))
 
   (check
       (with-result
-	(stack-for-each-right add-result (list->stack LIST-5)))
-    => `(#!void ,LIST-5-REVERSED))
+	(void-object? (stack-for-each-right add-result (list->stack LIST-5))))
+    => `(#t ,LIST-5-REVERSED))
 
   (check
       (with-result
-	(stack-for-each-right add-result (list->stack LIST-20)))
-    => `(#!void ,LIST-20-REVERSED))
+	(void-object? (stack-for-each-right add-result (list->stack LIST-20))))
+    => `(#t ,LIST-20-REVERSED))
 
   (check
       (with-result
-	(stack-for-each-right add-result (list->stack LIST-100)))
-    => `(#!void ,LIST-100-REVERSED))
+	(void-object? (stack-for-each-right add-result (list->stack LIST-100))))
+    => `(#t ,LIST-100-REVERSED))
 
 ;;; --------------------------------------------------------------------
 ;;; for-each-left aliases
 
   (check
       (with-result
-	(stack-for-each add-result (stack)))
-    => '(#!void ()))
+	(void-object? (stack-for-each add-result (stack))))
+    => '(#t ()))
 
   (check
       (with-result
-	(stack-for-each add-result (list->stack LIST-5)))
-    => `(#!void ,LIST-5))
+	(void-object? (stack-for-each add-result (list->stack LIST-5))))
+    => `(#t ,LIST-5))
 
   (check
       (with-result
-	(stack-for-each add-result (list->stack LIST-20)))
-    => `(#!void ,LIST-20))
+	(void-object? (stack-for-each add-result (list->stack LIST-20))))
+    => `(#t ,LIST-20))
 
   (check
       (with-result
-	(stack-for-each add-result (list->stack LIST-100)))
-    => `(#!void ,LIST-100))
+	(void-object? (stack-for-each add-result (list->stack LIST-100))))
+    => `(#t ,LIST-100))
 
   #t)
 

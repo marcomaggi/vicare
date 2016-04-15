@@ -528,8 +528,6 @@
     ;;
     ;;People who call COMPARATOR-REGISTER-DEFAULT! effectively do extend it.
     ;;
-    (define-syntax-rule (void? ?x)
-      (eq? ?x (void)))
     (cond ((null?		obj)	0)
 	  ((pair?		obj)	1)
 	  ((boolean?		obj)	2)
@@ -539,7 +537,7 @@
 	  ((number?		obj)	6)
 	  ((vector?		obj)	7)
 	  ((bytevector?		obj)	8)
-	  ((void?		obj)	9)
+	  ((void-object?	obj)	9)
 	  ((eof-object?		obj)	10)
 	  ((would-block-object? obj)	11)
 	  ;;Add more here if you want: be sure to update comparator-index variables.

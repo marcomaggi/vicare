@@ -130,7 +130,9 @@
 	  $transcoder->data)
     (vicare system $tcbuckets)
     (only (vicare system $structs)
-	  $set-std-printer!))
+	  $set-std-printer!)
+    (only (ikarus unique-objects)
+	  SENTINEL))
 
 
 ;;;; helpers
@@ -146,7 +148,7 @@
 	   (fxnonnegative? obj))))
 
 (define (%not-void? obj)
-  (not (eq? obj (void))))
+  (not (void-object? obj)))
 
 
 ;;;; data structure
@@ -833,7 +835,7 @@
 
 (case-define* hashtable-ref
   (({table hashtable?} key)
-   (get-hash table key (void)))
+   (get-hash table key SENTINEL))
   (({table hashtable?} key default)
    (get-hash table key default)))
 
@@ -1103,7 +1105,7 @@
 	 ($record-hash obj))
 	((struct? obj)
 	 ($struct-hash obj))
-	((eq? obj (void))
+	((void-object? obj)
 	 (void-hash obj))
 	((eof-object? obj)
 	 (eof-object-hash obj))

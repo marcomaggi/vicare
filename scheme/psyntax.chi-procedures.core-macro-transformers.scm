@@ -775,7 +775,7 @@
 
 ;;;; module core-macro-transformer: AND
 
-(define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
+(module (and-transformer)
   ;;Transformer function used  to expand R6RS AND macros from  the top-level built in
   ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
   ;;LEXENV; return a PSI object.
@@ -807,33 +807,36 @@
   ;;in this case  using an AND syntax  is useless, so we should  raise an expand-time
   ;;warning.
   ;;
-  (syntax-match input-form.stx ()
-    ((_)
-     (make-psi input-form.stx
-       (build-data no-source #t)
-       (make-type-signature/single-true)))
-
-    ((_ ?expr)
-     (chi-expr ?expr lexenv.run lexenv.expand))
-
-    ((_ ?expr0 ?expr1 ?expr* ...)
-     (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
-	    (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
-	    (expr*.sig	(map psi.retvals-signature expr*.psi)))
+  (define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_)
        (make-psi input-form.stx
-	 (let recur ((expr*.psi expr*.psi))
-	   (let ((expr.core (psi.core-expr (car expr*.psi))))
-	     (if (pair? (cdr expr*.psi))
-		 (build-conditional no-source
-		     expr.core
-		   (recur (cdr expr*.psi))
-		   (build-data no-source #f))
-	       expr.core)))
-	 (type-signature.union (car (last-pair expr*.sig))
-			       (make-type-signature/single-false)))))
+	 (build-data no-source #t)
+	 (make-type-signature/single-true)))
 
-    (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+      ((_ ?expr)
+       (chi-expr ?expr lexenv.run lexenv.expand))
+
+      ((_ ?expr0 ?expr1 ?expr* ...)
+       (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
+	      (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
+	      (expr*.sig	(map psi.retvals-signature expr*.psi)))
+	 (make-psi input-form.stx
+	   (let recur ((expr*.psi expr*.psi))
+	     (let ((expr.core (psi.core-expr (car expr*.psi))))
+	       (if (pair? (cdr expr*.psi))
+		   (build-conditional no-source
+		       expr.core
+		     (recur (cdr expr*.psi))
+		     (build-data no-source #f))
+		 expr.core)))
+	   (type-signature.union (car (last-pair expr*.sig))
+				 (make-type-signature/single-false)))))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
+
+  #| end of module |# )
 
 
 ;;;; module core-macro-transformer: FOREIGN-CALL

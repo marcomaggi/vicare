@@ -87,7 +87,7 @@
 (declare-core-primitive string-copy
     (safe)
   (signatures
-   ((<string>)		=> (<void>)))
+   ((<string>)		=> (<string>)))
   (attributes
    ((_)			effect-free result-true)))
 

@@ -11,7 +11,7 @@
 ;;;	This file tries to stick to this  convention: "byte" is a fixnum in the range
 ;;;	[-128, 127], "octet" is a fixnum in the range [0, 255].
 ;;;
-;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -364,9 +364,6 @@
 #!vicare
 (library (ikarus.io)
   (export
-   ;; would block object
-    would-block-object			would-block-object?
-
     ;; port parameters
     standard-input-port standard-output-port standard-error-port
     current-input-port  current-output-port  current-error-port
@@ -511,8 +508,10 @@
     ;; for internal use only
     initialise-input/output-facilities)
   (import (except (vicare)
-		  ;; would block object
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Thu Apr 14, 2016)
 		  would-block-object			would-block-object?
+		  ;;;
 
 		  ;; port parameters
 		  standard-input-port standard-output-port standard-error-port
@@ -667,7 +666,14 @@
     (prefix (only (vicare) port?) primop::)
     (prefix (vicare unsafe capi) capi::)
     (prefix (vicare unsafe unicode) unicode::)
-    (vicare platform constants))
+    (vicare platform constants)
+    (only (ikarus unique-objects)
+	  WOULD-BLOCK-OBJECT)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Apr 14,
+    ;;2016)
+    (only (ikarus unique-objects)
+	  would-block-object
+	  would-block-object?))
 
 
 ;;;; helpers
@@ -1410,18 +1416,6 @@
 
 
 ;;;; would block object
-
-(define-struct unique-object
-  ())
-
-(define-constant WOULD-BLOCK-OBJECT
-  ($struct (type-descriptor unique-object)))
-
-(define (would-block-object)
-  WOULD-BLOCK-OBJECT)
-
-(define (would-block-object? obj)
-  (eq? obj WOULD-BLOCK-OBJECT))
 
 (define-inline (eof-or-would-block-object? ch)
   (or (eof-object?         ch)

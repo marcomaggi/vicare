@@ -334,7 +334,8 @@
   (declare-hash-function number-hash		<number>)
   (declare-hash-function struct-hash		<struct>)
   (declare-hash-function record-hash		<record>)
-  (declare-hash-function void-hash		<void>)
+  ;;Notice that "<void>" is forbidden as type in arguments signatures.
+  (declare-hash-function void-hash		<top>)
   (declare-hash-function eof-object-hash	<eof>)
   (declare-hash-function would-block-hash	<would-block>)
   (declare-hash-function object-hash		<top>)

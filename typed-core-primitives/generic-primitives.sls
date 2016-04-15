@@ -43,7 +43,8 @@
    ((<null>)		=> (<true>))
    ((<boolean>)		=> (<true>))
    ((<eof>)		=> (<true>))
-   ((<void>)		=> (<true>))
+   ;;Notice that void is forbidden as types in arguments signatures.
+   ;;((<void>)		=> (<true>))
    ((<transcoder>)	=> (<true>))
 
    ((<bignum>)		=> (<false>))
@@ -240,6 +241,15 @@
     (safe)
   (signatures
    ((<binary-input-port>)	=> (<top>))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive sentinel
+    (safe)
+  (signatures
+   (()				=> (<sentinel>))))
+
+(declare-type-predicate sentinel?	<sentinel>)
 
 /section)
 

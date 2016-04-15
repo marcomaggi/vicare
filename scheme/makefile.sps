@@ -382,6 +382,7 @@
     "ikarus.lists.sls"
     "ikarus.fixnums.sls"
     "ikarus.chars.sls"
+    "ikarus.unique-objects.sls"
     "ikarus.structs.sls"
     "ikarus.vectors.sls"
     "ikarus.hash-tables.sls"
@@ -2275,6 +2276,7 @@
     (vector-copy				v $language)
     (vector-copy!				v $language)
     (vector-resize				v $language)
+    (vector-reset!				v $language)
     (vector?					v r ba se)
     (list-of-vectors?				v $language)
     (zero?					v r ba se)
@@ -3260,6 +3262,8 @@
     (make-file-options				v $language)
     (make-expander-options			v $language)
     (make-compiler-options			v $language)
+    (sentinel					v $language)
+    (sentinel?					v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; string encoding and decoding condition types
@@ -3730,6 +3734,7 @@
     (<interaction-lexical-environment>		v $language)
     (<non-interaction-lexical-environment>	v $language)
     (<time>					v $language)
+    (<sentinel>					v $language)
 
     (<opaque-record>)
     (<stats>					v $language)
@@ -3850,6 +3855,7 @@
     (<reader-annotation>-type-descriptor)
     (<scheme-type-descriptor>-type-descriptor)
     (<stats>-type-descriptor)
+    (<sentinel>-type-descriptor)
 
     ;; helpers
     (<top>-constructor)

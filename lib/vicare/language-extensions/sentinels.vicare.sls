@@ -7,7 +7,7 @@
 ;;;
 ;;;	This library was originally part of Nausicaa.
 ;;;
-;;;Copyright (c) 2009, 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +28,9 @@
   (export sentinel sentinel? make-sentinel
 	  undefined undefined? defined?
 	  unspecified unspecified? specified?)
-  (import (vicare))
+  (import (except (vicare)
+		  sentinel
+		  sentinel?))
   (define-record-type (:sentinel make-sentinel sentinel?)
     (opaque #t)
     (sealed #t)

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -29,7 +29,6 @@
 (import (vicare)
   (prefix (vicare language-extensions makers) mk.)
   (prefix (libtest makers-lib) lib.)
-  (vicare language-extensions sentinels)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -327,9 +326,11 @@
   (let ()	;detecting ungiven argument
 
     (mk.define-maker doit
-	subdoit ((:alpha	1)
-		 (:beta	2)
-		 (:gamma	sentinel)))
+	subdoit
+      ((:alpha	1)
+       (:beta	2)
+       ;;Here we use SENTINEL only as bound syntactic identifier.
+       (:gamma	sentinel)))
 
     (define-syntax subdoit
       (lambda (stx)

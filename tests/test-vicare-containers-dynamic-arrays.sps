@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -1009,69 +1009,69 @@
 
   (check
       (with-result
-	(dynamic-array-for-each-left add-result (dynamic-array)))
-    => '(#!void ()))
+	(void-object? (dynamic-array-for-each-left add-result (dynamic-array))))
+    => '(#t ()))
 
   (check
       (with-result
-	(dynamic-array-for-each-left add-result (list->dynamic-array LIST-5)))
-    => `(#!void ,LIST-5))
+	(void-object? (dynamic-array-for-each-left add-result (list->dynamic-array LIST-5))))
+    => `(#t ,LIST-5))
 
   (check
       (with-result
-	(dynamic-array-for-each-left add-result (list->dynamic-array LIST-20)))
-    => `(#!void ,LIST-20))
+	(void-object? (dynamic-array-for-each-left add-result (list->dynamic-array LIST-20))))
+    => `(#t ,LIST-20))
 
   (check
       (with-result
-	(dynamic-array-for-each-left add-result (list->dynamic-array LIST-100)))
-    => `(#!void ,LIST-100))
+	(void-object? (dynamic-array-for-each-left add-result (list->dynamic-array LIST-100))))
+    => `(#t ,LIST-100))
 
 ;;; --------------------------------------------------------------------
 ;;; for-each-right
 
   (check
       (with-result
-	(dynamic-array-for-each-right add-result (dynamic-array)))
-    => '(#!void ()))
+	(void-object? (dynamic-array-for-each-right add-result (dynamic-array))))
+    => '(#t ()))
 
   (check
       (with-result
-	(dynamic-array-for-each-right add-result (list->dynamic-array LIST-5)))
-    => `(#!void ,LIST-5-REVERSED))
+	(void-object? (dynamic-array-for-each-right add-result (list->dynamic-array LIST-5))))
+    => `(#t ,LIST-5-REVERSED))
 
   (check
       (with-result
-	(dynamic-array-for-each-right add-result (list->dynamic-array LIST-20)))
-    => `(#!void ,LIST-20-REVERSED))
+	(void-object? (dynamic-array-for-each-right add-result (list->dynamic-array LIST-20))))
+    => `(#t ,LIST-20-REVERSED))
 
   (check
       (with-result
-	(dynamic-array-for-each-right add-result (list->dynamic-array LIST-100)))
-    => `(#!void ,LIST-100-REVERSED))
+	(void-object? (dynamic-array-for-each-right add-result (list->dynamic-array LIST-100))))
+    => `(#t ,LIST-100-REVERSED))
 
 ;;; --------------------------------------------------------------------
 ;;; for-each-left aliases
 
   (check
       (with-result
-	(dynamic-array-for-each add-result (dynamic-array)))
-    => '(#!void ()))
+	(void-object? (dynamic-array-for-each add-result (dynamic-array))))
+    => '(#t ()))
 
   (check
       (with-result
-	(dynamic-array-for-each add-result (list->dynamic-array LIST-5)))
-    => `(#!void ,LIST-5))
+	(void-object? (dynamic-array-for-each add-result (list->dynamic-array LIST-5))))
+    => `(#t ,LIST-5))
 
   (check
       (with-result
-	(dynamic-array-for-each add-result (list->dynamic-array LIST-20)))
-    => `(#!void ,LIST-20))
+	(void-object? (dynamic-array-for-each add-result (list->dynamic-array LIST-20))))
+    => `(#t ,LIST-20))
 
   (check
       (with-result
-	(dynamic-array-for-each add-result (list->dynamic-array LIST-100)))
-    => `(#!void ,LIST-100))
+	(void-object? (dynamic-array-for-each add-result (list->dynamic-array LIST-100))))
+    => `(#t ,LIST-100))
 
   #t)
 
