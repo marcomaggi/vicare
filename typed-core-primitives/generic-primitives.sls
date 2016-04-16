@@ -82,7 +82,14 @@
 (declare-object-binary-comparison eqv?)
 (declare-object-binary-comparison equal?)
 
-(declare-object-predicate not)
+(declare-core-primitive not
+    (safe)
+  (signatures
+   ((<false>)				=> (<true>))
+   #;(((not (ancestors-of <false>)))	=> (<false>))
+   (((and (not <top>)
+	  (not <boolean>)))		=> (<false>))
+   ((<top>)				=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 

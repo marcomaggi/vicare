@@ -270,6 +270,12 @@
   (check-for-false	(type-annotation=? (and <fixnum> <string> <boolean>)
 					   (and <fixnum> <string>)))
 
+  (check-for-true	(type-annotation=? (and <fixnum> <exact-integer>)
+					   <fixnum>))
+  (check-for-true	(type-annotation=? (and <number> <positive>)
+					   (or <positive-fixnum> <positive-bignum> <positive-ratnum>
+					       <positive-flonum> <positive-zero-flonum>)))
+
 ;;; --------------------------------------------------------------------
 ;;; complement
 
@@ -394,9 +400,9 @@
   (check-for-false	(type-annotation-super-and-sub? (list <fixnum>) (pair-of (or <fixnum> <null>))))
 
   (check-for-true	(type-annotation-super-and-sub? (pair <fixnum> <null>)
-					     (list <fixnum>)))
+							(list <fixnum>)))
   (check-for-true	(type-annotation-super-and-sub? (pair-of (or <fixnum> <null>))
-					     (list <fixnum>)))
+							(list <fixnum>)))
 
   (check-for-true	(type-annotation-super-and-sub? (list-of <fixnum>) (list <fixnum>)))
   (check-for-true	(type-annotation-super-and-sub? (list-of <number>) (list <fixnum> <flonum>)))
@@ -408,7 +414,7 @@
   ;;Does not match because a LIST-OF annotation does not specify the number of items,
   ;;while a PAIR annotation implies at least one item.
   (check-for-false	(type-annotation-super-and-sub? (pair <fixnum> (list-of <fixnum>))
-					     (list-of <fixnum>)))
+							(list-of <fixnum>)))
 
   (check-for-true	(type-annotation-super-and-sub? (list-of <fixnum>) (pair <fixnum> <null>)))
 
@@ -454,12 +460,12 @@
   (check-for-false	(type-annotation-super-and-sub? (and <positive> <exact>) <fixnum>))
   (check-for-false	(type-annotation-super-and-sub? (and <positive> <exact>) <string>))
 
-  (check-for-true	(type-annotation-super-and-sub? (and <number> <positive>)
-					     (and <positive-fixnum> <positive-flonum>)))
+  (check-for-true	(type-annotation-super-and-sub? (and <exact-integer> <positive>)
+							(and <positive-fixnum> <positive-bignum>)))
   (check-for-false	(type-annotation-super-and-sub? (and <number> <positive>)
-					     (and <positive-fixnum> <negative-flonum>)))
+							(and <positive-fixnum> <negative-flonum>)))
   (check-for-false	(type-annotation-super-and-sub? (and <number> <positive>)
-					     (and <negative-fixnum> <positive-flonum>)))
+							(and <negative-fixnum> <positive-flonum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; complement

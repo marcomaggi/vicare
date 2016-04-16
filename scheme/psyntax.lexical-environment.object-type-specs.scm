@@ -1912,7 +1912,27 @@
 (define <intersection-type-spec>-rcd
   (record-constructor-descriptor <intersection-type-spec>))
 
-(define* (make-intersection-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+(module (make-intersection-type-spec/maybe)
+
+  (define* (make-intersection-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+    (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
+      (cond ((list-of-single-item? component-type*.ots)
+	     (car component-type*.ots))
+	    ;;If there is a "<void>": the whole union collapses to "<void>".  This is
+	    ;;akin to: if one operand of multiplication is NaN, the result is NaN.
+	    ((find <void>-ots? component-type*.ots))
+	    (else
+	     ;;If there are "<no-return>" components: we filter them out.
+	     (let* ((component-type*.ots	(remp <no-return>-ots? component-type*.ots))
+		    ;;If  a  component  is   super-type  of  another  component:  the
+		    ;;super-type must  be filtered out.   We do the  filtering twice:
+		    ;;left-to-right and right-to-left.
+		    (rev-component-type*.ots	(%remove-super-types component-type*.ots     '()))
+		    (component-type*.ots	(%remove-super-types rev-component-type*.ots '())))
+	       (if (list-of-single-item? component-type*.ots)
+		   (car component-type*.ots)
+		 (make-intersection-type-spec component-type*.ots)))))))
+
   (define (%collapse-component-specs component-type*.ots)
     (object-type-specs-delete-duplicates
      (fold-right (lambda (component.ots knil)
@@ -1922,13 +1942,30 @@
 			 (else
 			  (cons component.ots knil))))
        '() component-type*.ots)))
-  (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
-    (cond ((list-of-single-item? component-type*.ots)
-	   (car component-type*.ots))
-	  ((find <void>-ots? component-type*.ots)
-	   (<void>-ots))
-	  (else
-	   (make-intersection-type-spec component-type*.ots)))))
+
+  (define (%remove-super-types in* out*)
+    ;;Recursive function.  Remove from IN* the items that are sub-types of items that
+    ;;follow them.  Build and return a list of the remaining items.  Examples:
+    ;;
+    ;;   (%remove-super-types (list (<fixnum>-ots) (<flonum>-ots))
+    ;;                        '())
+    ;;   => (list (<fixnum>-ots) (<flonum>-ots))
+    ;;
+    ;;   (%remove-super-types (list (<exact-integer>-ots) (<fixnum>-ots))
+    ;;                        '())
+    ;;   => (list (<fixnum>-ots))
+    ;;
+    (if (pair? in*)
+	(%remove-super-types (cdr in*)
+			   (let ((ots1 (car in*)))
+			     (if (exists (lambda (ots2)
+					   (object-type-spec.matching-super-and-sub? ots1 ots2))
+				   (cdr in*))
+				 out*
+			       (cons ots1 out*))))
+      out*))
+
+  #| end of module: MAKE-INTERSECTION-TYPE-SPEC/MAYBE |# )
 
 (define* (intersection-type-spec.length {intersection.ots intersection-type-spec?})
   (let ((mem (intersection-type-spec.memoised-length intersection.ots)))
