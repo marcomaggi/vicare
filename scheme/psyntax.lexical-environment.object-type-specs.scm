@@ -1958,7 +1958,7 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-complement-type-spec {item-type.ots object-type-spec?})
-	(let* ((name.stx		(cons (core-prim-id 'not) (object-type-spec.name item-type.ots)))
+	(let* ((name.stx		(list (core-prim-id 'not) (object-type-spec.name item-type.ots)))
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)

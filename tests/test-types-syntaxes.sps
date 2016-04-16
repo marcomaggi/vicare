@@ -1221,13 +1221,13 @@
 ;;; AND type propagation
 
   (doit (and 1 2 3)
-	=> ((or <positive-fixnum> <false>)))
-#|
+	=> (<positive-fixnum>))
+
   (doit (and 1 "2" 3)
-	=> ((or <positive-fixnum> <false>)))
+	=> (<positive-fixnum>))
 
   (doit (and 1 2 "3")
-	=> ((or <string> <false>)))
+	=> (<string>))
 
   (doit (and #f 2 3)
 	=> (<false>))
@@ -1243,7 +1243,7 @@
 
   (doit (and 1 2 (and 3.1 3.2))
 	=> (<positive-flonum>))
-|#
+
 ;;; --------------------------------------------------------------------
 ;;; OR type propagation
 #|

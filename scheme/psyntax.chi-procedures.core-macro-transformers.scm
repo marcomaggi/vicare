@@ -807,6 +807,11 @@
   ;;in this case  using an AND syntax  is useless, so we should  raise an expand-time
   ;;warning.
   ;;
+  ;;Here  we do  a  mixture: if  an  expression  might return  false,  we generate  a
+  ;;conditional; if an expression always returns non-false, we generate a sequence.
+  ;;
+  (define-module-who and)
+
   (define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_)
@@ -817,24 +822,148 @@
       ((_ ?expr)
        (chi-expr ?expr lexenv.run lexenv.expand))
 
+      ;;This is the plain version that expands into nested conditionals, one for each
+      ;;expression but the last.  It is kept here as reference.
+      ;;
+      ;; ((_ ?expr0 ?expr1 ?expr* ...)
+      ;;  (let* ((expr*.stx        (cons* ?expr0 ?expr1 ?expr*))
+      ;;         (expr*.psi        (chi-expr* expr*.stx lexenv.run lexenv.expand))
+      ;;         (expr*.sig        (map psi.retvals-signature expr*.psi)))
+      ;;    (make-psi input-form.stx
+      ;;      (let recur ((expr*.psi expr*.psi))
+      ;;        (if (pair? (cdr expr*.psi))
+      ;;            (build-conditional no-source
+      ;;                (psi.core-expr (car expr*.psi))
+      ;;              (recur (cdr expr*.psi))
+      ;;              (build-data no-source #f))
+      ;;          (psi.core-expr (car expr*.psi))))
+      ;;      (car (last-pair expr*.sig)))))
+
       ((_ ?expr0 ?expr1 ?expr* ...)
        (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
 	      (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
-	      (expr*.sig	(map psi.retvals-signature expr*.psi)))
-	 (make-psi input-form.stx
+	      (expr*.sig	(map psi.retvals-signature expr*.psi))
+	      ;;This is set  to the type signature of the  last evaluated expression,
+	      ;;when all the previous expressions return true.
+	      (last-expr.sig	#f)
+	      ;;This is set to true if at least one expression may return false.
+	      (false-flag	#f))
+	 (define code.core
 	   (let recur ((expr*.psi expr*.psi))
-	     (let ((expr.core (psi.core-expr (car expr*.psi))))
+	     (define-syntax-rule (recursion)
+	       (recur (cdr expr*.psi)))
+	     (let* ((expr.psi	(car expr*.psi))
+		    (expr.core	(psi.core-expr         expr.psi))
+		    (expr.sig	(psi.retvals-signature expr.psi)))
 	       (if (pair? (cdr expr*.psi))
-		   (build-conditional no-source
-		       expr.core
-		     (recur (cdr expr*.psi))
-		     (build-data no-source #f))
-		 expr.core)))
-	   (type-signature.union (car (last-pair expr*.sig))
-				 (make-type-signature/single-false)))))
+		   (let ((sym (%validate-and-qualify-single-signature input-form.stx expr.psi)))
+		     (case sym
+		       ((maybe-false)
+			;;The expression might return false.
+			(set! false-flag #t)
+			(build-conditional no-source
+			    expr.core
+			  (recursion)
+			  (build-data no-source #f)))
+		       ((always-false)
+			;;The expression always  returns false.  There is  no need to
+			;;include the trailing expressions.
+			(set! last-expr.sig expr.sig)
+			expr.core)
+		       ((always-true)
+			;;The expression always returns non-false.
+			(build-sequence no-source
+			  (list expr.core (recursion))))
+		       ((no-return)
+			;;The expression  raises an  exception or exits  the process.
+			;;There is no need to include the trailing expressions.
+			(set! last-expr.sig expr.sig)
+			expr.core)
+		       (else
+			(assertion-violation __module_who__ "internal error" input-form.stx sym))))
+		 (begin
+		   (set! last-expr.sig expr.sig)
+		   expr.core)))))
+	 (define output-form.sig
+	   (if false-flag
+	       (type-signature.union last-expr.sig (make-type-signature/single-false))
+	     last-expr.sig))
+	 #;(assert last-expr.sig)
+	 (make-psi input-form.stx code.core output-form.sig)))
 
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
+
+  (define (%validate-and-qualify-single-signature input-form.stx expr.psi)
+    ;;Return a symbol among: always-true, always-false, maybe-false, no-return.
+    ;;
+    (define expr.sig (psi.retvals-signature expr.psi))
+    (define (%handle-error message rv)
+      (%error (lambda ()
+		(condition
+		  (make-who-condition __module_who__)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx (psi.input-form expr.psi))
+		  (make-application-operand-signature-condition expr.sig))))
+      rv)
+    (case-signature-specs expr.sig
+      ((<void>)
+       (%handle-error "expression used as operand in logic predicate is typed as returning void" 'always-true))
+
+      (<no-return>
+       (%handle-error "expression used as operand in logic predicate is typed as not returning" 'no-return))
+
+      ((single-value)
+       => %expression-with-possibly-false-type-signature?)
+
+      (<list-of>
+       ;;The operand expression returns an unspecified number of values of specified,
+       ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
+       ;;run-time, if this operand returns a single value.
+       => (lambda (expr.ots)
+	    (%expression-with-possibly-false-type-signature? (list-of-type-spec.item-ots expr.ots))))
+
+      (<list>
+       ;;The  operand  expression   returns  an  unspecified  number   of  values  of
+       ;;unspecified type.  We rely on the  compiler to generate code that checks, at
+       ;;run-time, if this operand returns a single value.
+       'maybe-false)
+
+      (else
+       ;;The operand expression returns zero, two or more values.
+       (%handle-error "expression used as operand in logic predicate returns multiple values" 'maybe-false))))
+
+  (define (%expression-with-possibly-false-type-signature? expr.ots)
+    (cond ((<false>-ots? expr.ots)
+	   'always-false)
+	  ((or (<top>-ots?     expr.ots)
+	       (<boolean>-ots? expr.ots)
+	       (and (union-type-spec? expr.ots)
+		    (find (lambda (item.ots)
+			    (or (<top>-ots?     item.ots)
+				(<boolean>-ots? item.ots)
+				(<false>-ots?   item.ots)))
+		      (union-type-spec.component-ots* expr.ots)))
+	       (and (intersection-type-spec? expr.ots)
+		    (find (lambda (item.ots)
+			    (or (<top>-ots?     item.ots)
+				(<boolean>-ots? item.ots)
+				(<false>-ots?   item.ots)))
+		      (intersection-type-spec.component-ots* expr.ots))))
+	   'maybe-false)
+	  (else
+	   'always-true)))
+
+  (define (%error common)
+    (case-expander-language
+      ((typed)
+       (raise
+	(condition (make-expand-time-type-signature-violation)	(common))))
+      ((default)
+       (raise-continuable
+	(condition (make-expand-time-type-signature-warning)	(common))))
+      ((strict-r6rs)
+       (void))))
 
   #| end of module |# )
 

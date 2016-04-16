@@ -1089,6 +1089,77 @@
   #t)
 
 
+(parametrise ((check-test-name	'and))
+
+  (define-syntax expand
+    (syntax-rules (=>)
+      ((_ ?form => ?expected)
+       (check
+	   (expansion-of ?form)
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (expand (and (real? (read))
+	       (nan?  (read)))
+	  => (if ((primitive real?) ((primitive read)))
+		 ((primitive nan?) ((primitive read)))
+	       (quote #f)))
+
+;;; --------------------------------------------------------------------
+;;; expressions typed as always non-false
+
+  (expand (and 1 2 3)
+	  => (begin
+	       (quote 1)
+	       (begin
+		 (quote 2)
+		 (quote 3))))
+
+;;; --------------------------------------------------------------------
+;;; expressions typed as "<false>"
+
+  (expand (and #f 2 3)
+	  => (quote #f))
+
+  (expand (and 1 #f 3)
+	  => (begin
+	       (quote 1)
+	       (quote #f)))
+
+  (expand (and 1 2 #f)
+	  => (begin
+	       (quote 1)
+	       (begin
+		 (quote 2)
+		 (quote #f))))
+
+;;; --------------------------------------------------------------------
+;;; expressions typed as "<no-return>"
+
+;;This file does not use the typed language.
+
+  (expand (and 1 (raise 2) 3)
+	  => (begin
+	       (quote 1)
+	       ((primitive raise) (quote 2))))
+
+  (expand (and 1 (error #f "ciao") 3)
+	  => (begin
+	       (quote 1)
+	       ((primitive error) (quote #f) (quote "ciao"))))
+
+  (expand (and 1 (raise-continuable 2) 3)
+	  => (begin
+	       (quote 1)
+	       (if ((primitive raise-continuable) (quote 2))
+		   (quote 3)
+		 (quote #f))))
+
+  (void))
+
+
 (parametrise ((check-test-name	'xor))
 
   (check (xor) => #f)
