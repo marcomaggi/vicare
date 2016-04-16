@@ -486,6 +486,8 @@
        (signatures
 	((?obj-tag)	=> (<true>))
 	...
+	;; (([not (ancestors-of ?obj-tag)])	=> (<false>))
+	;; ...
 	((<top>)	=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))
@@ -558,7 +560,13 @@
        (signatures
 	((?tag)				=> (<true>))
 	((<condition>)			=> (<boolean>))
-	((<top>)			=> (<false>)))
+	(((and (not <top>)
+	       (not <struct>)
+	       (not <record>)
+	       (not <condition>)
+	       (not <compound-condition>)
+	       (not ?tag)))		=> (<false>))
+	((<top>)			=> (<boolean>)))
        (attributes
 	((_)				foldable effect-free))))
     ))
@@ -575,6 +583,8 @@
        (signatures
 	(((list-of ?obj-tag))	=> (<true>))
 	...
+	(((and (not <list>)
+	       (not <pair>)))	=> (<false>))
 	((<top>)		=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))

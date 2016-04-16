@@ -97,7 +97,21 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-type-predicate identifier?	<syntactic-identifier>)
+(declare-type-predicate syntactic-identifier?		<syntactic-identifier>)
+
+(declare-core-primitive identifier?
+    (safe)
+  (signatures
+   ((<syntactic-identifier>)				=> (<boolean>))
+   #;(((ancestors-of <syntactic-identifier>))		=> (<boolean>))
+   (((or <stx> <record>	<struct> <top>))		=> (<boolean>))
+   ;; (((and (not (ancestors-of <syntactic-identifier>))
+   ;;        (not <syntactic-identifier>)))                => (<boolean>))
+   (((and (not <top>)
+	  (not <record>)
+	  (not <struct>)
+	  (not <stx>)
+	  (not <syntactic-identifier>)))		=> (<false>))))
 
 (declare-core-primitive identifier-bound?
     (safe)
@@ -307,8 +321,8 @@
 (declare-core-primitive identifier-format
     (safe)
   (signatures
-   #;((<syntactic-identifier> <string> . [or <string> <symbol> <syntactic-identifier>])	=> (<syntactic-identifier>))
-   ((<syntactic-identifier> <string> . <list>)	=> (<syntactic-identifier>)))
+   ((<syntactic-identifier> <string> . (list-of (or <string> <symbol> <syntactic-identifier>)))
+    => (<syntactic-identifier>)))
   (attributes
    ((_ _ . _)		effect-free result-true)))
 
@@ -317,10 +331,8 @@
 (declare-core-primitive duplicate-identifiers?
     (safe)
   (signatures
-   ;; ((<list>)			=> ([or <false> <syntactic-identifier>]))
-   ;; ((<list> <procedure>)	=> ([or <false> <syntactic-identifier>]))
-   ((<list>)			=> (<top>))
-   ((<list> <procedure>)	=> (<top>)))
+   ((<list>)			=> ([or <false> <syntactic-identifier>]))
+   ((<list> <procedure>)	=> ([or <false> <syntactic-identifier>])))
   (attributes
    ((_)			effect-free result-true)
    ((_ _)		effect-free result-true)))
@@ -339,10 +351,8 @@
 (declare-core-primitive identifier-memq
     (safe)
   (signatures
-   ;; ((<syntactic-identifier> <list>)		=> ([or <false> <list>]))
-   ;; ((<syntactic-identifier> <list> <procedure>)	=> ([or <false> <list>]))
-   ((<syntactic-identifier> <list>)		=> (<top>))
-   ((<syntactic-identifier> <list> <procedure>)	=> (<top>)))
+   ((<syntactic-identifier> <list>)		=> ([or <false> <list>]))
+   ((<syntactic-identifier> <list> <procedure>)	=> ([or <false> <list>])))
   (attributes
    ((_ _)		effect-free result-true)
    ((_ _ _)		effect-free result-true)))

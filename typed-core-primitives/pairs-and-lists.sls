@@ -42,20 +42,25 @@
 (declare-core-primitive pair?
     (safe)
   (signatures
-   ((<null>)		=> (<false>))
-   ((<pair>)		=> (<true>))
-   ((<list>)		=> (<boolean>))
-   #;((_)		=> (<boolean>))
-   ((_)			=> (<false>)))
+   ((<null>)			=> (<false>))
+   ((<pair>)			=> (<true>))
+   ((<list>)			=> (<boolean>))
+   (((and (not <top>)
+	  (not <pair>)
+	  (not <list>)))	=> (<false>))
+   ((<top>)			=> (<boolean>)))
   (attributes
    ((_)			foldable effect-free)))
 
 (declare-core-primitive list?
     (safe)
   (signatures
-   ((<list>)		=> (<true>))
-   ((<pair>)		=> (<boolean>))
-   ((_)			=> (<false>)))
+   ((<list>)			=> (<true>))
+   ((<pair>)			=> (<boolean>))
+   (((and (not <top>)
+	  (not <list>)
+	  (not <pair>)))	=> (<false>))
+   ((<top>)			=> (<boolean>)))
   (attributes
    ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
@@ -63,10 +68,12 @@
 (declare-core-primitive circular-list?
     (safe)
   (signatures
-   ((<null>)		=> (<false>))
-   ((<list>)		=> (<false>))
-   ((<pair>)		=> (<boolean>))
-   (((not <pair>))	=> (<false>)))
+   ((<null>)			=> (<false>))
+   ((<list>)			=> (<false>))
+   ((<pair>)			=> (<boolean>))
+   (((and (not <top>)
+	  (not <pair>)))	=> (<false>))
+   ((<top>)			=> (<boolean>)))
   (attributes
    ((())		foldable effect-free result-false)
    ((_)			foldable effect-free)))
