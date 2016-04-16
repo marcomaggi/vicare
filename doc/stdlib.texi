@@ -1348,7 +1348,7 @@ that do not satisfy a given condition.
 
 The @func{remp} procedure applies @var{proc} to each element of
 @var{list} and returns a list of the elements of @var{list} for which
-@var{proc} returned @false{}.  @var{proc} is always called in the same
+@var{proc} returned @true{}.  @var{proc} is always called in the same
 dynamic environment as @func{remp} itself.
 
 The @func{remove}, @func{remv}, and @func{remq} procedures return a list
