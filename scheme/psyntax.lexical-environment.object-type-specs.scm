@@ -1819,10 +1819,13 @@
   (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
     (cond ((list-of-single-item? component-type*.ots)
 	   (car component-type*.ots))
-	  ((find <void>-ots? component-type*.ots)
-	   (<void>-ots))
+	  ;;If there is  a "<void>": the whole union collapses  to "<void>".  This is
+	  ;;akin to: if one operand of multiplication is NaN, the result is NaN.
+	  ((find <void>-ots? component-type*.ots))
 	  (else
-	   (make-union-type-spec component-type*.ots)))))
+	   ;;If there are "<no-return>" components: we filter them out.
+	   (let ((component-type*.ots (remp <no-return>-ots? component-type*.ots)))
+	     (make-union-type-spec component-type*.ots))))))
 
 (define* (union-type-spec.length {union.ots union-type-spec?})
   (let ((mem (union-type-spec.memoised-length union.ots)))
