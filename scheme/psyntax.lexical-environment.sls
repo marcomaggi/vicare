@@ -112,7 +112,7 @@
 
     object-type-spec.matching-super-and-sub?		object-type-spec.compatible-super-and-sub?
     object-type-spec=?
-    object-type-spec.common-ancestor
+    object-type-spec.common-ancestor			object-type-spec.ancestors-ots*
     object-type-spec.procedure?
     object-type-spec.list-sub-type?			object-type-spec.vector-sub-type?
 
@@ -157,6 +157,11 @@
     <complement-type-spec>-rtd				<complement-type-spec>-rcd
     make-complement-type-spec				complement-type-spec?
     complement-type-spec.item-ots
+
+    <ancestors-of-type-spec>
+    <ancestors-of-type-spec>-rtd			<ancestors-of-type-spec>-rcd
+    make-ancestors-of-type-spec				ancestors-of-type-spec?
+    ancestors-of-type-spec.item-ots			ancestors-of-type-spec.component-ots*
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd

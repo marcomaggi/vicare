@@ -30,7 +30,7 @@
 
 ;;; special constructors
    make-type-signature/single-top			make-type-signature/single-void
-   make-type-signature/single-null
+   make-type-signature/single-null			make-type-signature/single-list
    make-type-signature/single-boolean
    make-type-signature/single-true			make-type-signature/single-false
    make-type-signature/single-procedure
@@ -48,7 +48,7 @@
    type-signature.single-type?				type-signature.single-top-tag?
    type-signature.single-type-or-fully-untyped?		type-signature.no-return?
 
-   type-signature.match-arguments-against-fixed-operands
+   type-signature.match-arguments-against-operands
 
 ;;; accessors
    type-signature.min-count				type-signature.max-count
@@ -378,6 +378,7 @@
   (define-single-type-signature-maker make-type-signature/single-top			<top>-ots)
   (define-single-type-signature-maker make-type-signature/single-void			<void>-ots)
   (define-single-type-signature-maker make-type-signature/single-null			<null>-ots)
+  (define-single-type-signature-maker make-type-signature/single-list			<list>-ots)
   (define-single-type-signature-maker make-type-signature/single-boolean		<boolean>-ots)
   (define-single-type-signature-maker make-type-signature/single-true			<true>-ots)
   (define-single-type-signature-maker make-type-signature/single-false			<false>-ots)
@@ -790,26 +791,27 @@
 
 ;;;; matching: arguments and operands
 
-(module (type-signature.match-arguments-against-fixed-operands)
-  (define-module-who type-signature.match-arguments-against-fixed-operands)
+(module (type-signature.match-arguments-against-operands)
+  (define-module-who type-signature.match-arguments-against-operands)
 
-  (define* (type-signature.match-arguments-against-fixed-operands args.sig rand*.sig)
+  (define* (type-signature.match-arguments-against-operands args.sig rands.sig)
     ;;In the context of a closure object application to fixed operands:
     ;;
     ;;   (?operator ?operand ...)
     ;;
-    ;;compare the type  signature of the operator's arguments to  the type signatures
-    ;;of the operands.  Return a symbol among: exact-match, possible-match, no-match.
+    ;;compare the type signature of the operator's arguments to the type signature of
+    ;;the  given  operands.   Return  a symbol  among:  exact-match,  possible-match,
+    ;;no-match.
     ;;
     ;;ARGS.SIG is a "<type-signature>" instance  representing the type signature of a
     ;;closure object's clause arguments.
     ;;
-    ;;RAND*.SIG must be a list  of "<type-signature>" instances representing the type
-    ;;signatures of the operands.
+    ;;RANDS.SIG is a  "<type-signature>" instance representing the  type signature of
+    ;;the given operands.
     ;;
     (let loop ((state		'exact-match)
 	       (args.ots	(type-signature.object-type-specs args.sig))
-	       (rand*.sig	rand*.sig))
+	       (rands.ots	(type-signature.object-type-specs rands.sig)))
       ;;In  this loop  the  variable  STATE always  degrades:  from "exact-match"  to
       ;;"possible-match"  or "no-match";  from  "possible-match"  to "no-match".   It
       ;;never upgrades.
@@ -817,26 +819,42 @@
 
        ((pair? args.ots)
 	;;The operator accepts one more mandatory operand.
-	(cond ((pair? rand*.sig)
+	(cond ((pair? rands.ots)
 	       ;;One more argument and one more operand.  Good, let's inspect them.
-	       (%match-one-argument-against-one-operand state (car args.ots)
-							(type-signature.object-type-specs (car rand*.sig))
-							;;Success continuation.
-							(lambda (state)
-							  (loop state (cdr args.ots) (cdr rand*.sig)))))
-	      ((null? rand*.sig)
-	       ;;One more argument and no more operand.  Bad.
-	       'no-match)))
+	       (let ((arg.ots	(car args.ots))
+		     (rand.ots	(car rands.ots)))
+		 (cond ((object-type-spec.matching-super-and-sub? arg.ots rand.ots)
+			;;The argument matches the operand.  Good.
+			(loop state (cdr args.ots) (cdr rands.ots)))
+		       ((object-type-spec.compatible-super-and-sub? arg.ots rand.ots)
+			;;The argument is compatible with the operand.  Good.
+			(loop 'possible-match (cdr args.ots) (cdr rands.ots)))
+		       (else
+			;;The argument is INcompatible with the operand.  Bad.
+			'no-match))))
+	      ((null? rands.ots)
+	       ;;One more argument and no more operands.  Bad.
+	       'no-match)
+	      ((<list>-ots? rands.ots)
+	       ;;There is an unspecified number of rest operands, of unknown type.
+	       'possible-match)
+	      (else
+	       ;;There is an unspecified number of rest operands, of known type.
+	       (%match-arguments-against-rest-operands args.ots (list-of-type-spec.item-ots rands.ots)))))
 
        ((null? args.ots)
 	;;The operator accepts no more operands.
-	(cond ((null? rand*.sig)
+	(cond ((pair? rands.ots)
+	       ;;No more arguments and leftover operands.  Bad.
+	       'no-match)
+	      ((null? rands.ots)
 	       ;;No more  arguments and  no more  operands.  Good.   And we  are done
 	       ;;here, let's return the final state.
 	       state)
 	      (else
-	       ;;No more arguments and leftover operands.  Bad.
-	       'no-match)))
+	       ;;There is an unspecified number of rest operands, of unknown type.
+	       (assert (or (<list>-ots? rands.ots) (list-of-type-spec? rands.ots)))
+	       'possible-match)))
 
        ((<list>-ots? args.ots)
 	;;The operator accepts zero or more operands of any type.  Example:
@@ -849,6 +867,7 @@
 	;;   ((lambda {args <list>} ?rator-body)
 	;;    ?rand ...)
 	;;
+	;;Good.  And we are done here, let's return the final state.
 	state)
 
        (else
@@ -862,72 +881,9 @@
 	;;   ((lambda {args (list-of <fixnum>)} ?rator-body)
 	;;    ?rand ...)
 	;;
-	(%match-rest-argument-against-operands state args.ots rand*.sig)))))
+	(%match-rest-argument-against-operands state (list-of-type-spec.item-ots args.ots) rands.ots)))))
 
-  (define (%match-one-argument-against-one-operand state arg.ots rand.specs success-kont)
-    ;;The argument  ARG.OTS is an  instance of "<object-type-spec>"  representing the
-    ;;expected type of the operand.
-    ;;
-    ;;The argument  RAND.SPECS is a  proper or improper list  of "<object-type-spec>"
-    ;;instances representing the types of the operand's expression return values.
-    ;;
-    (cond ((list-of-single-item? rand.specs)
-	   ;;The operand's expression  returns a single value.  Good,  let's match it
-	   ;;against the argument.
-	   (let ((rand.ots (car rand.specs)))
-	     (cond ((object-type-spec.matching-super-and-sub? arg.ots rand.ots)
-		    ;;The argument matches the operand.  Good.
-		    (success-kont state))
-		   ((object-type-spec.compatible-super-and-sub? arg.ots rand.ots)
-		    ;;The argument is compatible with the operand.  Good.
-		    (success-kont 'possible-match))
-		   (else
-		    ;;The argument is INcompatible with the operand.  Bad.
-		    'no-match))))
-
-	  ((null? rand.specs)
-	   ;;The operand's expression returns zero values.  Bad.
-	   'no-match)
-
-	  (else
-	   ;;The operand's expression  returns an unspecified number  of values.  For
-	   ;;example:
-	   ;;
-	   ;;   (?operator (values ?sub-rand ...))
-	   ;;
-	   (let ((rand.ots rand.specs))
-	     (cond ((<list>-ots? rand.ots)
-		    ;;Operand with unspecified return values.  Example:
-		    ;;
-		    ;;   (?operator (lambda ({_ . <list>}) ?rand-body))
-		    ;;
-		    (success-kont 'possible-match))
-		   (else
-		    ;;The  operand  returns  an  unspecified number  of  values  with
-		    ;;specified type.  Example:
-		    ;;
-		    ;;   (?operator (lambda ({_ . <list-of-fixnums>}) ?rand-body))
-		    ;;
-		    (if (and (list-of-type-spec? rand.ots)
-			     (let ((item.ots (list-of-type-spec.item-ots rand.ots)))
-			       (or (object-type-spec.matching-super-and-sub? arg.ots item.ots)
-				   (object-type-spec.compatible-super-and-sub? arg.ots item.ots))))
-			;;If  the  operand  returns  a  single  value:  its  type  is
-			;;compatible with the expected argument.  Example:
-			;;
-			;;   ((lambda ({arg <fixnum>}) ?rator-body)
-			;;    (lambda ({_ . (list-of <fixnums>)}) ?rand-body))
-			;;
-			(success-kont 'possible-match)
-		      ;;Even  if the  operand returns  a  single value:  its type  is
-		      ;;INcompatible with the expected argument.  Example:
-		      ;;
-		      ;;   ((lambda ({arg <string>}) ?rator-body)
-		      ;;    (lambda ({_ . (list-of <fixnums>)}) ?rand-body))
-		      ;;
-		      'no-match)))))))
-
-  (define (%match-rest-argument-against-operands state rest.ots rand*.sig)
+  (define (%match-rest-argument-against-operands state item.ots rands.ots)
     ;;Recursive function.   We use this  function when  the operator accepts  zero or
     ;;more operands of a specified type.  Example:
     ;;
@@ -939,28 +895,85 @@
     ;;   ((lambda {args (list-of <fixnum>)} ?rator-body)
     ;;    ?rand ...)
     ;;
-    ;;The argument REST.OTS  is an instance of  "<object-type-spec>" representing the
-    ;;requested type  for all  the leftover  operands.  The  argument RAND*.SIG  is a
-    ;;proper  list of  "<type-signature>"  instances representing  the  types of  the
-    ;;leftover operand's expressions.
+    ;;The argument ITEM.OTS  is an instance of  "<object-type-spec>" representing the
+    ;;requested type  for all  rest operands.   The argument RANDS.OTS  is a  list of
+    ;;"<object-type-spec>"  instances  representing  the  types  of  the  given  rest
+    ;;operands.
     ;;
-    (cond ((list-of-type-spec? rest.ots)
-	   (let loop ((item.ots		(list-of-type-spec.item-ots rest.ots))
-		      (rand*.sig	rand*.sig)
-		      (state		state))
-	     (if (pair? rand*.sig)
-		 ;;At least one more operand.  Let's match it against the argument.
-		 (%match-one-argument-against-one-operand state item.ots
-							  (type-signature.object-type-specs (car rand*.sig))
-							  ;;Success continuation.
-							  (lambda (state)
-							    (loop item.ots (cdr rand*.sig) state)))
-	       ;;No more operands.  Good.
-	       state)))
+    (cond ((pair? rands.ots)
+	   ;;At least one more operand.  Let's match it against the argument.
+	   (cond ((object-type-spec.matching-super-and-sub?   item.ots (car rands.ots))
+		  ;;The argument matches the operand.  Good.
+		  (%match-rest-argument-against-operands state item.ots (cdr rands.ots)))
+		 ((object-type-spec.compatible-super-and-sub? item.ots (car rands.ots))
+		  ;;The argument is compatible with the operand.  Good.
+		  (%match-rest-argument-against-operands 'possible-match item.ots (cdr rands.ots)))
+		 (else
+		  ;;The argument is INcompatible with the operand.  Bad.
+		  'no-match)))
+	  ((null? rands.ots)
+	   ;;No more operands.  Good.
+	   state)
+	  ((<list>-ots? rands.ots)
+	   ;;There is an unspecified number of rest operands, with an unknown type.
+	   'possible-match)
 	  (else
-	   (assertion-violation __module_who__ "invalid object-type specification for rest argument" rest.ots))))
+	   ;;There is an unspecified number of rest operands, with a known type.
+	   (let ((rand.ots (list-of-type-spec.item-ots rands.ots)))
+	     (cond ((object-type-spec.matching-super-and-sub? item.ots rand.ots)
+		    ;;The rest argument matches the rest operands.  Good.
+		    state)
+		   ((object-type-spec.compatible-super-and-sub? item.ots rand.ots)
+		    ;;The rest argument is compatible with the rest operands.  Good.
+		    'possible-match)
+		   (else
+		    ;;The rest argument is INcompatible with the rest operand.  Bad.
+		    'no-match))))))
 
-  #| end of module: type-signature.match-arguments-against-fixed-operands |# )
+  (define (%match-arguments-against-rest-operands args.ots rand.ots)
+    ;;Recursive  function.  We  use  this  function when  the  operator accepts  more
+    ;;arguments  of a  specified type  and  there is  an unspecified  number of  rest
+    ;;operands of known type.
+    ;;
+    ;;This function returns a symbol among: possible-match, no-match.  Exact match is
+    ;;already excluded.
+    ;;
+    ;;The  argument ARGS.OTS  is a  proper or  improper list  of "<object-type-spec>"
+    ;;representing the requested  type for all rest operands.   The argument RAND.OTS
+    ;;is an "<object-type-spec>" instance representing the type of all the given rest
+    ;;operands.
+    ;;
+    (cond ((pair? args.ots)
+	   ;;At least one more argument.  Let's match it against the argument.
+	   (cond ((object-type-spec.matching-super-and-sub? (car args.ots) rand.ots)
+		  ;;The argument matches the operand.  Good.
+		  (%match-arguments-against-rest-operands (cdr args.ots) rand.ots))
+		 ((object-type-spec.compatible-super-and-sub? (car args.ots) rand.ots)
+		  ;;The argument is compatible with the operand.  Good.
+		  (%match-arguments-against-rest-operands (cdr args.ots) rand.ots))
+		 (else
+		  ;;The argument is INcompatible with the operand.  Bad.
+		  'no-match)))
+	  ((null? args.ots)
+	   ;;No more arguments.  Good.
+	   'possible-match)
+	  ((<list>-ots? args.ots)
+	   ;;There is an unspecified number of rest arguments, with an unknown type.
+	   'possible-match)
+	  (else
+	   ;;There is an unspecified number of rest arguments, with a known type.
+	   (let ((arg.ots (list-of-type-spec.item-ots args.ots)))
+	     (cond ((object-type-spec.matching-super-and-sub? arg.ots rand.ots)
+		    ;;The rest argument matches the rest operand.  Good.
+		    'possible-match)
+		   ((object-type-spec.compatible-super-and-sub? arg.ots rand.ots)
+		    ;;The rest argument is compatible with the rest operand.  Good.
+		    'possible-match)
+		   (else
+		    ;;The rest argument is INcompatible with the rest operand.  Bad.
+		    'no-match))))))
+
+  #| end of module: TYPE-SIGNATURE.MATCH-ARGUMENTS-AGAINST-OPERANDS |# )
 
 
 ;;;; matching: common ancestor

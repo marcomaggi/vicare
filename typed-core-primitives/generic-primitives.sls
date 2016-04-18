@@ -86,9 +86,9 @@
     (safe)
   (signatures
    ((<false>)				=> (<true>))
+   ((<true>)				=> (<false>))
+   ((<boolean>)				=> (<boolean>))
    #;(((not (ancestors-of <false>)))	=> (<false>))
-   (((and (not <top>)
-	  (not <boolean>)))		=> (<false>))
    ((<top>)				=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
@@ -116,7 +116,12 @@
   (attributes
    (()				foldable effect-free result-true)))
 
-(declare-type-predicate void-object? <void>)
+(declare-core-primitive void-object?
+    (safe)
+  (signatures
+   ((<void>)			=> (<true>))
+   (((not <void>))		=> (<false>))
+   ((<top>)			=> (<boolean>))))
 
 (declare-core-primitive load
     (safe)

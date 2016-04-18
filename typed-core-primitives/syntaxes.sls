@@ -39,9 +39,7 @@
     declare-core-primitive
 
     declare-type-predicate
-    declare-type-predicate/maybe
     declare-type-predicate/false
-    declare-type-predicate/list
     declare-condition-type-predicate
     declare-list-of-type-predicate
 
@@ -348,7 +346,8 @@
     ;;
     (let recur ((sig type-signature.stx))
       (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
-			     condition or and not alist hashtable lambda case-lambda =>)
+			     condition or and not alist hashtable lambda case-lambda =>
+			     parent-of ancestors-of)
 	(()
 	 '())
 
@@ -432,6 +431,12 @@
       ((not ?item-type)
        #`(not #,(%validate-type-annotation #'?item-type)))
 
+      ((parent-of ?item-type)
+       #`(parent-of #,(%validate-type-annotation #'?item-type)))
+
+      ((ancestors-of ?item-type)
+       #`(ancestors-of #,(%validate-type-annotation #'?item-type)))
+
       (_
        (synner "invalid type annotation" type-annotation.stx))))
 
@@ -480,32 +485,18 @@
   ;;   (declare-type-predicate exact-integer? <fixnum> <bignum> <exact-integer>)
   ;;
   (syntax-rules ()
-    ((_ ?who ?obj-tag ...)
+    ((_ ?who)
      (declare-core-primitive ?who
 	 (safe)
        (signatures
-	((?obj-tag)	=> (<true>))
-	...
-	;; (([not (ancestors-of ?obj-tag)])	=> (<false>))
-	;; ...
-	((<top>)	=> (<boolean>)))
-       (attributes
-	((_)		foldable effect-free))))
-    ))
-
-(define-syntax declare-type-predicate/maybe
-  ;;Usage examples:
-  ;;
-  ;;   (declare-type-predicate/maybe maybe-pointer? <pointer>)
-  ;;
-  (syntax-rules ()
-    ((_ ?who ?obj-tag ...)
+	((<top>)				=> (<boolean>)))))
+    ((_ ?who ?obj-tag)
      (declare-core-primitive ?who
 	 (safe)
        (signatures
-	((?obj-tag)	=> (<true>))
-	...
-	((<top>)	=> (<boolean>)))
+	((?obj-tag)				=> (<true>))
+	#;(((not (ancestors-of ?obj-tag)))	=> (<false>))
+	((<top>)				=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))
     ))
@@ -516,32 +507,15 @@
   ;;   (declare-type-predicate/false false-or-pointer? <pointer>)
   ;;
   (syntax-rules ()
-    ((_ ?who ?obj-tag ...)
+    ((_ ?who ?obj-tag)
      (declare-core-primitive ?who
 	 (safe)
        (signatures
-	((<false>)	=> (<true>))
-	((?obj-tag)	=> (<true>))
-	...
-	((<top>)	=> (<boolean>)))
-       (attributes
-	((_)		foldable effect-free))))
-    ))
-
-(define-syntax declare-type-predicate/list
-  ;;Usage examples:
-  ;;
-  ;;   (declare-type-predicate/list list-of-pointers? <pointer>)
-  ;;
-  (syntax-rules ()
-    ((_ ?who ?obj-tag ...)
-     (declare-core-primitive ?who
-	 (safe)
-       (signatures
-	((<null>)	=> (<true>))
-	((?obj-tag)	=> (<true>))
-	...
-	((<top>)	=> (<boolean>)))
+	((<false>)				=> (<true>))
+	((?obj-tag)				=> (<true>))
+	;; (((and (not (ancestors-of ?obj-tag))
+	;;        (not (ancestors-of <false>))))	=> (<false>))
+	((<top>)				=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))
     ))
@@ -559,13 +533,8 @@
 	 (safe)
        (signatures
 	((?tag)				=> (<true>))
-	((<condition>)			=> (<boolean>))
-	(((and (not <top>)
-	       (not <struct>)
-	       (not <record>)
-	       (not <condition>)
-	       (not <compound-condition>)
-	       (not ?tag)))		=> (<false>))
+	((<compound-condition>)		=> (<boolean>))
+	#;(((not (ancestors-of ?tag)))	=> (<false>))
 	((<top>)			=> (<boolean>)))
        (attributes
 	((_)				foldable effect-free))))

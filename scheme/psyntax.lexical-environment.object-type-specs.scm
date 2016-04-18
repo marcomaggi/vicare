@@ -43,6 +43,8 @@
 ;;           |
 ;;           |------------> <complement-type-spec>
 ;;           |
+;;           |------------> <ancestors-of-type-spec>
+;;           |
 ;;	     |------------> <pair-type-spec>
 ;;           |
 ;;	     |------------> <pair-of-type-spec>
@@ -113,7 +115,7 @@
 	 object-type-spec.safe-accessor-stx		object-type-spec.safe-mutator-stx
 	 object-type-spec.equality-predicate-id		object-type-spec.comparison-procedure-id
 	 object-type-spec.hash-function-id		object-type-spec.applicable-hash-function-id
-	 object-type-spec.applicable-method-stx
+	 object-type-spec.applicable-method-stx		object-type-spec.ancestors-ots*
 	 object-type-spec.single-value-validator-lambda-stx
 	 object-type-spec.list-validator-lambda-stx
 
@@ -215,6 +217,13 @@
 	 <complement-type-spec>-rtd			<complement-type-spec>-rcd
 	 make-complement-type-spec			complement-type-spec?
 	 complement-type-spec.item-ots
+
+	 ;;;
+
+	 <ancestors-of-type-spec>
+	 <ancestors-of-type-spec>-rtd			<ancestors-of-type-spec>-rcd
+	 make-ancestors-of-type-spec			ancestors-of-type-spec?
+	 ancestors-of-type-spec.item-ots		ancestors-of-type-spec.component-ots*
 
 	 ;;;
 
@@ -399,6 +408,20 @@
 	 => object-type-spec.applicable-hash-function-id)
 	(else #f)))
 
+(define* (object-type-spec.ancestors-ots* {ots object-type-spec?})
+  ;;Return the,  possibly empty, list of  "<object-type-spec>" instances representing
+  ;;the ancestors list of OTS.  OTS itself is *not* included in the list.
+  ;;
+  ;;When applied to  the OTS of "<condition>",  the return value is the  list of OTSs
+  ;;for:
+  ;;
+  ;;  (<record> <struct> <top>)
+  ;;
+  (cond ((object-type-spec.parent-ots ots)
+	 => (lambda (parent.ots)
+	      (cons parent.ots (object-type-spec.ancestors-ots* parent.ots))))
+	(else '())))
+
 (module (object-type-spec.safe-accessor-stx
 	 object-type-spec.safe-mutator-stx
 	 object-type-spec.applicable-method-stx)
@@ -484,6 +507,9 @@
   ;;NOTE This  function is a single  point of truth:  it is the *only*  function that
   ;;determines if two OTSs are matching super-type and sub-type.
   ;;
+  ;; (debug-print __who__
+  ;; 	       (object-type-spec.name super.ots)
+  ;; 	       (object-type-spec.name sub.ots))
   (cond ((or (eq? super.ots sub.ots)
 	     (and (or (and (scheme-type-spec? super.ots) (scheme-type-spec? sub.ots))
 		      (and (record-type-spec? super.ots) (record-type-spec? sub.ots))
@@ -501,8 +527,8 @@
 
 	((union-type-spec? super.ots)
 	 (cond ((union-type-spec? sub.ots)
-		;; (type-super-and-sub? (union <number> <vector>)
-		;;                      (union <fixnum> (vector-of <string>)))
+		;; (type-super-and-sub? (or <number> <vector>)
+		;;                      (or <fixnum> (vector-of <string>)))
 		;; => #t
 		(exists (lambda (component-super.ots)
 			  (exists (lambda (component-sub.ots)
@@ -510,25 +536,33 @@
 			    (union-type-spec.component-ots* sub.ots)))
 		  (union-type-spec.component-ots* super.ots)))
 	       (else
-		;; (type-super-and-sub? (union <number> <string>) <string>) => #t
-		;; (type-super-and-sub? (union <number> <string>) <fixnum>) => #t
+		;; (type-super-and-sub? (or <number> <string>) <string>) => #t
+		;; (type-super-and-sub? (or <number> <string>) <fixnum>) => #t
 		(exists (lambda (component-super.ots)
 			  (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
 		  (union-type-spec.component-ots* super.ots)))))
 
 	((union-type-spec? sub.ots)
-	 (for-all (lambda (component-sub.ots)
-		    (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
-	   (union-type-spec.component-ots* sub.ots)))
+	 (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
+	   (cond ((ancestors-of-type-spec? super.ots)
+		  (exists (lambda (super-component.ots)
+			    (exists (lambda (sub-component.ots)
+				      ($object-type-spec=? super-component.ots sub-component.ots))
+			      sub-component-ots*))
+		    (ancestors-of-type-spec.component-ots* super.ots)))
+		 (else
+		  (for-all (lambda (component-sub.ots)
+			     (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+		    sub-component-ots*)))))
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the intersections first.
 
 	((intersection-type-spec? super.ots)
 	 (cond ((intersection-type-spec? sub.ots)
-		;; (type-super-and-sub? (intersection <number> <positive>)
-		;;                      (intersection <positive-fixnum>
-		;;                                    <positive-ratnum>))
+		;; (type-super-and-sub? (and <number> <positive>)
+		;;                      (and <positive-fixnum>
+		;;                           <positive-ratnum>))
 		;; => #t
 		(for-all (lambda (component-super.ots)
 			   (for-all (lambda (component-sub.ots)
@@ -536,39 +570,78 @@
 			     (intersection-type-spec.component-ots* sub.ots)))
 		  (intersection-type-spec.component-ots* super.ots)))
 	       (else
-		;; (type-super-and-sub? (intersection <exact> <positive>) <positive-fixnum>) => #t
+		;; (type-super-and-sub? (and <exact> <positive>) <positive-fixnum>) => #t
 		(for-all (lambda (component-super.ots)
 			   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
 		  (intersection-type-spec.component-ots* super.ots)))))
 
 	((intersection-type-spec? sub.ots)
-	 (for-all (lambda (component-sub.ots)
-		    (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
-	   (intersection-type-spec.component-ots* sub.ots)))
+	 (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
+	   (cond ((ancestors-of-type-spec? super.ots)
+		  (exists (lambda (super-component.ots)
+			    (exists (lambda (sub-component.ots)
+				      ($object-type-spec=? super-component.ots sub-component.ots))
+			      sub-component-ots*))
+		    (ancestors-of-type-spec.component-ots* super.ots)))
+		 (else
+		  (for-all (lambda (component-sub.ots)
+			     (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+		    sub-component-ots*)))))
 
 ;;; --------------------------------------------------------------------
 ;;; We really want to do the complements first.
 
 	((complement-type-spec? super.ots)
-	 (cond ((complement-type-spec? sub.ots)
-		;;If something is not a "<number>", for sure it is not a "<fixnum>":
-		;;
-		;; (type-super-and-sub? (complement <fixnum>)
-		;;                      (complement <number>)) => #t
-		;;
-		;; (type-super-and-sub? (complement <number>)
-		;;                      (complement <string>)) => #f
-		;;
-		(let ((super-item.ots	(complement-type-spec.item-ots super.ots))
-		      (sub-item.ots	(complement-type-spec.item-ots sub.ots)))
-		  (object-type-spec.matching-super-and-sub? sub-item.ots super-item.ots)))
-	       (else
-		;; (type-super-and-sub? (complement <string>) <fixnum>) => #t
-		(not (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots super.ots)
-							       sub.ots)))))
+	 (let ((super-item.ots (complement-type-spec.item-ots super.ots)))
+	   (cond ((complement-type-spec? sub.ots)
+		  ;;If something is not a "<number>", for sure it is not a "<fixnum>":
+		  ;;
+		  ;; (type-super-and-sub? (not <fixnum>)
+		  ;;                      (not <number>)) => #t
+		  ;;
+		  ;; (type-super-and-sub? (not <number>)
+		  ;;                      (not <string>)) => #f
+		  ;;
+		  (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots sub.ots)
+							    super-item.ots))
+		 (else
+		  ;; (type-super-and-sub? (not <string>) <fixnum>) => #t
+		  (not (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots super.ots)
+								 sub.ots))))))
 
 	((complement-type-spec? sub.ots)
 	 #f)
+
+;;; --------------------------------------------------------------------
+;;; We really want to do the ancestors first.
+
+	((ancestors-of-type-spec? super.ots)
+	 (let ((super-component-ots* (ancestors-of-type-spec.component-ots* super.ots)))
+	   (cond ((union-type-spec? sub.ots)
+		  ;;This case is already done above, in the union stuff.
+		  (let ((sub-component-ots* (union-type-spec.component-ots* sub.ots)))
+		    (exists (lambda (super-component.ots)
+			      (exists (lambda (sub-component.ots)
+					($object-type-spec=? super-component.ots sub-component.ots))
+				sub-component-ots*))
+		      super-component-ots*)))
+		 ((intersection-type-spec? sub.ots)
+		  ;;This case is already done above, in the intersection stuff.
+		  (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
+		    (exists (lambda (super-component.ots)
+			      (exists (lambda (sub-component.ots)
+					($object-type-spec=? super-component.ots sub-component.ots))
+				sub-component-ots*))
+		      super-component-ots*)))
+		 (else
+		  (exists (lambda (super-component.ots)
+			    ($object-type-spec=? super-component.ots sub.ots))
+		    super-component-ots*)))))
+
+	((ancestors-of-type-spec? sub.ots)
+	 (exists (lambda (sub-component.ots)
+		   ($object-type-spec=? super.ots sub-component.ots))
+	   (ancestors-of-type-spec.component-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
 ;;; empty lists
@@ -647,7 +720,7 @@
 		  (and (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.car-ots sub.ots))
 		       (object-type-spec.matching-super-and-sub? super-item.ots (pair-type-spec.cdr-ots sub.ots)))))
 	       ((list-type-spec? sub.ots)
-		;; (type-super-and-sub? (pair-of (union <number> <null>)) (list <fixnum>))
+		;; (type-super-and-sub? (pair-of (or <number> <null>)) (list <fixnum>))
 		(let ((super-item.ots	(pair-of-type-spec.item-ots super.ots))
 		      (sub-item*.ots	(list-type-spec.item-ots* sub.ots)))
 		  (and (object-type-spec.matching-super-and-sub? super-item.ots (car sub-item*.ots))
@@ -759,7 +832,7 @@
 	       ;;item.  Notice that:
 	       ;;
 	       ;;   (type-super-and-sub? (list-of <fixnum>)
-	       ;;                        (pair-of (union <fixnum> <null>)))
+	       ;;                        (pair-of (or <fixnum> <null>)))
 	       ;;   => #f
 	       ;;
 	       (else #f)))
@@ -1004,6 +1077,9 @@
   ;;As  example: a  "<number>" argument  matches a  "<fixnum>" operand;  a "<fixnum>"
   ;;argument is compatible with a "<number>" operand.
   ;;
+  ;; (debug-print __who__
+  ;; 	       (object-type-spec.name super.ots)
+  ;; 	       (object-type-spec.name sub.ots))
   (cond ((and (list-of-type-spec? super.ots)
 	      (list-type-spec? sub.ots))
 	 (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
@@ -1199,6 +1275,10 @@
 	((complement-type-spec? ots1)
 	 (and (complement-type-spec? ots2)
 	      ($complement-type-spec=? ots1 ots2)))
+
+	((ancestors-of-type-spec? ots1)
+	 (and (ancestors-of-type-spec? ots2)
+	      ($ancestors-of-type-spec=? ots1 ots2)))
 ;;;
 	(else #f)))
 
@@ -1351,6 +1431,15 @@
 (define ($complement-type-spec=? ots1 ots2)
   ($object-type-spec=? (complement-type-spec.item-ots ots1)
 		       (complement-type-spec.item-ots ots2)))
+
+;;; --------------------------------------------------------------------
+
+(define* (ancestors-of-type-spec=? {ots1 ancestors-of-type-spec?} {ots2 ancestors-of-type-spec?})
+  ($ancestors-of-type-spec=? ots1 ots2))
+
+(define ($ancestors-of-type-spec=? ots1 ots2)
+  ($object-type-spec=? (ancestors-of-type-spec.item-ots ots1)
+		       (ancestors-of-type-spec.item-ots ots2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1844,8 +1933,8 @@
 
 ;;;; intersection object spec
 ;;
-;;This  record-type  is  used  as  syntactic  binding  descriptor's  value  for  type
-;;intersection types.
+;;This record-type is  used as syntactic binding descriptor's  value for intersection
+;;types.
 ;;
 (define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
   (nongenerative vicare:expander:<intersection-type-spec>)
@@ -1984,8 +2073,8 @@
 
 ;;;; complement object spec
 ;;
-;;This  record-type  is  used  as  syntactic  binding  descriptor's  value  for  type
-;;complement types.
+;;This record-type  is used  as syntactic binding  descriptor's value  for complement
+;;types.
 ;;
 (define-record-type (<complement-type-spec> make-complement-type-spec complement-type-spec?)
   (nongenerative vicare:expander:<complement-type-spec>)
@@ -2041,6 +2130,75 @@
 
 (define <complement-type-spec>-rcd
   (record-constructor-descriptor <complement-type-spec>))
+
+
+;;;; ancestors-of object spec
+;;
+;;This record-type is  used as syntactic binding descriptor's  value for ANCESTORS-OF
+;;types.
+;;
+(define-record-type (<ancestors-of-type-spec> make-ancestors-of-type-spec ancestors-of-type-spec?)
+  (nongenerative vicare:expander:<ancestors-of-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable item-ots			ancestors-of-type-spec.item-ots)
+    (immutable component-ots*		ancestors-of-type-spec.component-ots*)
+		;A list of instances  of "<object-type-spec>" describing the optional
+		;types.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-ancestors-of-type-spec {type.ots object-type-spec?})
+	(let* ((name.stx		(cons (core-prim-id 'ancestors-of)
+					      (object-type-spec.name type.ots)))
+	       (ancestor*.ots		(object-type-spec.ancestors-ots* type.ots))
+	       (parent.ots		(<top>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		(make-ancestors-of-predicate ancestor*.ots (map object-type-spec.type-predicate-stx ancestor*.ots)))
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id	#f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name.stx parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   type.ots ancestor*.ots)))
+
+      (define (make-ancestors-of-predicate ancestor*.ots pred*.stx)
+	(for-each (lambda (ancestor.ots pred.stx)
+		    (unless pred.stx
+		      (assertion-violation '<ancestors-of-type-spec>
+			"impossible to generate ancestors-of type predicate, component type has no predicate"
+			ancestor.ots)))
+	  ancestor*.ots pred*.stx)
+	(let ((obj.sym	(gensym "obj"))
+	      (pred.sym	(gensym "pred")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (exists (lambda (,pred.sym)
+			(,pred.sym ,obj.sym))
+		(list ,@pred*.stx))))))
+
+      make-ancestors-of-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[ancestors-of-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <ancestors-of-type-spec>-rtd
+  (record-type-descriptor <ancestors-of-type-spec>))
+
+(define <ancestors-of-type-spec>-rcd
+  (record-constructor-descriptor <ancestors-of-type-spec>))
 
 
 ;;;; closure object signature spec
@@ -2822,7 +2980,7 @@
       (lambda (stx)
 	(syntax-object.type-annotation? input-form.stx lexenv stx))))
    (syntax-match stx (pair list vector pair-of list-of vector-of hashtable alist condition
-			   or and not lambda case-lambda =>)
+			   or and not lambda case-lambda => parent-of ancestors-of)
      (?type-id
       (and (identifier? ?type-id)
 	   (try
@@ -2902,6 +3060,14 @@
       (list (core-prim-id 'not)
 	    (recur ?item-type)))
 
+     ((parent-of ?type)
+      (list (core-prim-id 'parent-of)
+	    (recur ?type)))
+
+     ((ancestors-of ?type)
+      (list (core-prim-id 'ancestors-of)
+	    (recur ?type)))
+
      (else #f))))
 
 ;;; --------------------------------------------------------------------
@@ -2927,7 +3093,7 @@
    ;;as NAME.STX argument.
    ;;
    (syntax-match annotation.stx (pair list vector pair-of list-of vector-of hashtable alist condition
-				      or and not lambda case-lambda =>)
+				      or and not lambda case-lambda => parent-of ancestors-of)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-spec ?type-id lexenv))
@@ -3037,6 +3203,14 @@
 
      ((not ?item-type)
       (make-complement-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
+
+     ((parent-of ?type)
+      (or (object-type-spec.parent-ots (type-annotation->object-type-spec ?type lexenv))
+	  (syntax-violation __who__ "type annotation has no parent" annotation.stx ?type)))
+
+     ((ancestors-of ?type)
+      ;;If ?TYPE has no ancestors: its ancestors list is null.
+      (make-ancestors-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
 
      (else
       (syntax-violation __who__ "invalid type annotation" annotation.stx)))))

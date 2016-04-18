@@ -35,10 +35,17 @@
 
 (section
 
-(declare-type-predicate       pointer?		<pointer>)
-(declare-type-predicate/false false-or-pointer?	<pointer>)
-(declare-type-predicate/maybe maybe-pointer?	<pointer>)
-(declare-type-predicate/list  list-of-pointers?	<pointer>)
+(declare-type-predicate		pointer?		<pointer>)
+(declare-type-predicate/false	false-or-pointer?	<pointer>)
+(declare-list-of-type-predicate	list-of-pointers?	<pointer>)
+
+(declare-core-primitive maybe-pointer?
+    (safe)
+  (signatures
+   (((or <pointer> <void>))			=> (<true>))
+   (((and (not <void>)
+	  (not (ancestors-of <pointer>))))	=> (<false>))
+   ((<top>)					=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 

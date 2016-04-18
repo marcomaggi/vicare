@@ -33,6 +33,7 @@
     expand-time-gensym			expand-library
     with-blocked-exceptions
     custom-printer			super-protocol
+    returnable				return
 
     non-compound-sexp?			self-evaluating?
 

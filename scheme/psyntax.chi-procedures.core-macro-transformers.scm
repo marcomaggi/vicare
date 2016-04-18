@@ -187,6 +187,8 @@
     ((type-signature-super-and-sub?)		type-signature-super-and-sub?-transformer)
     ((type-annotation-common-ancestor)		type-annotation-common-ancestor-transformer)
     ((type-signature-common-ancestor)		type-signature-common-ancestor-transformer)
+    ((type-annotation-ancestors)		type-annotation-ancestors-transformer)
+    ((type-signature-matching)			type-signature-matching-transformer)
 
     ((expansion-of)				expansion-of-transformer)
     ((expansion-of*)				expansion-of*-transformer)

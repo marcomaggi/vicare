@@ -285,6 +285,14 @@
   (check-for-false	(type-annotation=? (not <fixnum>)
 					   (not <flonum>)))
 
+;;; --------------------------------------------------------------------
+;;; parent-of
+
+  (check-for-true	(type-annotation=? <struct> (parent-of <record>)))
+  (check-for-true	(type-annotation=? <fixnum> (parent-of <positive-fixnum>)))
+
+  (check-for-false	(type-annotation=? <positive-fixnum> (parent-of <fixnum>)))
+
   (void))
 
 
@@ -484,6 +492,35 @@
   (check-for-false	(type-annotation-super-and-sub? <number> (not <string>)))
 
 ;;; --------------------------------------------------------------------
+;;; ancestors-of
+
+  (check-for-true	(type-annotation-super-and-sub? (ancestors-of <fixnum>) <exact-integer>))
+  (check-for-false	(type-annotation-super-and-sub? (ancestors-of <fixnum>) <positive-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (ancestors-of <fixnum>) <fixnum>))
+
+  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+							<condition>))
+  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+							<record>))
+  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+							<struct>))
+  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+							<top>))
+  (check-for-false	(type-annotation-super-and-sub? (ancestors-of &condition)
+							<string>))
+
+  (check-for-true	(type-annotation-super-and-sub? (not (ancestors-of &condition))
+							<string>))
+
+  (check-for-true	(type-annotation-super-and-sub? (not (ancestors-of <false>))
+							<fixnum>))
+
+  (check-for-false	(type-annotation-super-and-sub? (ancestors-of <false>)
+							(or <false> <string>)))
+  (check-for-true	(type-annotation-super-and-sub? (not (ancestors-of <false>))
+							(or <false> <string>)))
+
+;;; --------------------------------------------------------------------
 ;;; misc
 
   (check-for-true	(type-annotation-super-and-sub? (or <exact> <inexact>)	<fixnum>))
@@ -586,7 +623,94 @@
   (check-for-false	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum>)))
   (check-for-true	(type-signature-super-and-sub? (<number> <number> . <list>) (<fixnum> <fixnum>)))
 
-  #t)
+  (void))
+
+
+(parametrise ((check-test-name	'type-signature-super-and-sub))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?one ?two => ?expected)
+       (check
+	   (type-signature-matching ?one ?two)
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (<top>) (<void>)	=> no-match)
+  (doit (<void>) (<top>)	=> no-match)
+
+  (doit (<top>) (<fixnum>)	=> exact-match)
+  (doit (<fixnum>) (<top>)	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; type unions
+
+  (doit ((or <fixnum> <string>))
+	(<fixnum>)
+	=> exact-match)
+
+  (doit ((or <fixnum> <string>))
+	(<string>)
+	=> exact-match)
+
+  (doit (<fixnum>)
+	((or <fixnum> <string>))
+	=> possible-match)
+
+  (doit (<string>)
+	((or <fixnum> <string>))
+	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; type complement
+
+  (doit ((not <string>))
+	(<top>)
+	=> exact-match)
+
+  (doit ((not <string>))
+	(<string>)
+	=> no-match)
+
+;;;
+
+  (doit ((not <fixnum>))
+	(<positive-fixnum>)
+	=> no-match)
+
+  (doit ((not <fixnum>))
+	(<fixnum>)
+	=> no-match)
+
+  (doit ((not <fixnum>))
+	(<exact-integer>)
+	=> possible-match)
+
+  (doit ((not <fixnum>))
+	(<bignum>)
+	=> exact-match)
+
+;;; --------------------------------------------------------------------
+;;; type intersection
+
+  (doit ((and (not <fixnum>)
+	      (not <string>)))
+	(<fixnum>)
+	=> no-match)
+
+  (doit ((and (not <fixnum>)
+	      (not <string>)))
+	(<string>)
+	=> no-match)
+
+  (doit ((and (not <fixnum>)
+	      (not <string>)))
+	(<vector>)
+	=> exact-match)
+
+  (void))
 
 
 (parametrise ((check-test-name	'type-annotation-common-ancestor))
@@ -653,6 +777,57 @@
   (doit (<fixnum> <fixnum>)
 	(<flonum> <bignum> <string>)
 	=> (<real> <exact-integer> . <list>))
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-annotation-ancestors))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?one => ?expected)
+       (check
+	   (type-annotation-ancestors ?one)
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <top>			=> ())
+  (doit <void>			=> ())
+  (doit <no-return>		=> ())
+
+  (doit <condition>		=> (<record> <struct> <top>))
+
+  (doit <positive-fixnum>	=> (<fixnum>
+				    <exact-integer> <integer> <rational> <rational-valued>
+				    <real> <real-valued> <complex> <number> <top>))
+
+  (doit (list-of <fixnum>)		=> (<list> <top>))
+  (doit (list <fixnum> <string>)	=> (<list> <top>))
+
+  (doit (pair-of <fixnum>)		=> (<pair> <top>))
+  (doit (pair <fixnum> <string>)	=> (<pair> <top>))
+
+  (doit (vector-of <fixnum>)		=> (<vector> <top>))
+  (doit (vector <fixnum> <string>)	=> (<vector> <top>))
+
+  (doit (alist <fixnum> <string>)	=> (<list> <top>))
+
+  (doit &who				=> (&condition <condition> <record> <struct> <top>))
+  (doit (condition &who &message)	=> (<compound-condition> <condition> <record> <struct> <top>))
+
+;;; --------------------------------------------------------------------
+
+  (internal-body
+    (define-type <my-condition>
+      <condition>)
+    (doit <my-condition>	=> (<record> <struct> <top>)))
+
+;;; --------------------------------------------------------------------
+
+  (doit <zero>			=> (<top>))
 
   (void))
 
@@ -960,7 +1135,7 @@
   (void))
 
 
-(parametrise ((check-test-name	'type-of))
+(parametrise ((check-test-name	'type-of-common-syntaxes))
 
   (define-syntax doit
     (syntax-rules (=>)
@@ -1274,6 +1449,123 @@
   (doit (xor 1 2.2 "3")
 	=> ((or <positive-fixnum> <positive-flonum> <string>)))
 |#
+  (void))
+
+
+(parametrise ((check-test-name	'type-of-predicates))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   (%type-signature->sexp (type-of ?expr))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; fixnum?
+
+  (doit (fixnum? (unsafe-cast-signature (<fixnum>) (read)))
+	=> (<true>))
+
+  (doit (fixnum? (unsafe-cast-signature (<exact-integer>) (read)))
+	=> (<boolean>))
+
+  (doit (fixnum? (unsafe-cast-signature (<number>) (read)))
+	=> (<boolean>))
+
+  (doit (fixnum? (unsafe-cast-signature (<top>) (read)))
+	=> (<boolean>))
+
+  (doit (fixnum? (unsafe-cast-signature (<string>) (read)))
+	=> (<false>))
+
+;;;
+
+  (doit (fixnum? (unsafe-cast-signature (<positive-fixnum>) (read)))
+	=> (<true>))
+
+  (doit (fixnum? (unsafe-cast-signature (<negative-fixnum>) (read)))
+	=> (<true>))
+
+  (doit (fixnum? (unsafe-cast-signature (<zero-fixnum>) (read)))
+	=> (<true>))
+
+  (doit (fixnum? (unsafe-cast-signature (<zero>) (read)))
+	=> (<boolean>))
+
+  (doit (fixnum? (unsafe-cast-signature (<exact-integer>) (read)))
+	=> (<boolean>))
+
+  (doit (fixnum? (unsafe-cast-signature (<number>) (read)))
+	=> (<boolean>))
+
+  (doit (fixnum? (unsafe-cast-signature (<bignum>) (read)))
+	=> (<false>))
+
+;;; --------------------------------------------------------------------
+;;; pair?
+
+  (doit (pair? (unsafe-cast-signature (<pair>) (read)))
+	=> (<true>))
+
+  (doit (pair? (unsafe-cast-signature (<list>) (read)))
+	=> (<boolean>))
+
+  (doit (pair? (unsafe-cast-signature (<top>) (read)))
+	=> (<boolean>))
+
+  (doit (pair? (unsafe-cast-signature (<fixnum>) (read)))
+	=> (<false>))
+
+;;; --------------------------------------------------------------------
+;;; list?
+
+  (doit (list? (unsafe-cast-signature (<pair>) (read)))
+	=> (<boolean>))
+
+  (doit (list? (unsafe-cast-signature (<list>) (read)))
+	=> (<true>))
+
+  (doit (list? (unsafe-cast-signature (<top>) (read)))
+	=> (<boolean>))
+
+  (doit (list? (unsafe-cast-signature (<fixnum>) (read)))
+	=> (<false>))
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-of-special-functions))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   (%type-signature->sexp (type-of ?expr))
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; not
+
+  (doit (not #t)		=> (<false>))
+  (doit (not #f)		=> (<true>))
+  (doit (not 1)			=> (<false>))
+  (doit (not (read))		=> (<boolean>))
+
+  (doit (not (unsafe-cast-signature (<boolean>) (read)))
+	=> (<boolean>))
+
+  (doit (not (unsafe-cast-signature ((or <true> <string>)) (read)))
+	=> (<true>))
+
+  (doit (not (unsafe-cast-signature ((or <false> <string>)) (read)))
+	=> (<boolean>))
+
+  (doit (not (unsafe-cast-signature ((or <false> <true>)) (read)))
+	=> (<boolean>))
+
   (void))
 
 

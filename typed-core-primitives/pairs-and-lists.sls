@@ -42,13 +42,12 @@
 (declare-core-primitive pair?
     (safe)
   (signatures
-   ((<null>)			=> (<false>))
-   ((<pair>)			=> (<true>))
-   ((<list>)			=> (<boolean>))
-   (((and (not <top>)
-	  (not <pair>)
-	  (not <list>)))	=> (<false>))
-   ((<top>)			=> (<boolean>)))
+   ((<null>)				=> (<false>))
+   ((<pair>)				=> (<true>))
+   ((<list>)				=> (<boolean>))
+   (((not (or (ancestors-of <pair>)
+	      (ancestors-of <list>))))	=> (<false>))
+   ((<top>)				=> (<boolean>)))
   (attributes
    ((_)			foldable effect-free)))
 

@@ -541,7 +541,7 @@ intersection of types if its type matches all the intersection's types.
 @end deftp
 
 
-@deftp {Compound Type Annotation} not @metao{item-type}
+@deftp {Compound Type Annotation} not @meta{item-type}
 Describe the complement of the type.  The argument @meta{item-type} is a
 nested type annotation.  A value matches the complement of a type if its
 type does @strong{not} match the complement's type.
@@ -555,6 +555,31 @@ type does @strong{not} match the complement's type.
 (type-annotation-super-and-sub? (not <fixnum>) (not <number>))
 @result{} #t
 @end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} parent-of @meta{item-type}
+Describe the parent of the type; an exception is raised if the type has
+no parent.  The argument @meta{item-type} is a nested type annotation.
+
+@lisp
+(type-annotation=? <struct> (parent-of <record>))
+@result{} #t
+
+(type-annotation=? <fixnum> (parent-of <positive-fixnum>))
+@result{} #t
+
+(type-annotation=? <positive-fixnum> (parent-of <fixnum>))
+@result{} #f
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} ancestors-of @meta{item-type}
+Describe the ancestors of the type; if the type has no parent: the list
+of ancestors is empty.  The argument @meta{item-type} is a nested type
+annotation.  This type annotation can be used to match @strong{exactly}
+a type annotation with one of the ancestors of @meta{item-type}
 @end deftp
 
 @c page
@@ -674,7 +699,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes methods::      Calling object-type methods.
 * types syntaxes equality::     Equality between type annotations.
 * types syntaxes super-sub::    Super and sub types.
-* types syntaxes ancestor::     Common ancestor of types and signatures.
+* types syntaxes ancestors::    Ancestors of types and signatures.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
@@ -1268,8 +1293,8 @@ annotations, with @class{list} or @samp{(list-of @meta{type})} in tail
 position when the list is improper.
 
 @lisp
-(type-signature-super-and-sub? (<number>) (<fixnum>))        @result{} #t
-(type-signature-super-and-sub? (<number>) (<string>))        @result{} #f
+(type-signature-super-and-sub? (<number>) (<fixnum>))  @result{} #t
+(type-signature-super-and-sub? (<number>) (<string>))  @result{} #f
 
 (expansion-of
   (type-signature-super-and-sub? (<number>) (<fixnum>))
@@ -1282,9 +1307,11 @@ position when the list is improper.
 (type-signature-super-and-sub? (<top>) (<number>))   @result{} #t
 (type-signature-super-and-sub? (<number>) (<top>))   @result{} #f
 
-(type-signature-super-and-sub? (<number> <number>) (<fixnum> <fixnum>))
+(type-signature-super-and-sub? (<number> <number>)
+                               (<fixnum> <fixnum>))
 @result{} #t
-(type-signature-super-and-sub? (<fixnum> <fixnum>) (<number> <number>))
+(type-signature-super-and-sub? (<fixnum> <fixnum>)
+                               (<number> <number>))
 @result{} #f
 
 (type-signature-super-and-sub? (<number> <number> . <list>)
@@ -1293,9 +1320,49 @@ position when the list is improper.
 @end lisp
 @end deffn
 
+
+@deffn Syntax type-signature-matching @var{args-signature} @var{rands-signature}
+Match the two signatures as if: @var{args-signature} is the type
+signature of the arguments requested by a closure object;
+@var{rands-signature} is the type signature of the operands given to a
+closure object application.
+
+Expand to a quoted symbol:
+
+@table @code
+@item exact-match
+If there is an exact match between the arguments' and operands'
+signatures.
+
+@item possible-match
+If there is a possible match between the arguments' and operands'
+signatures; the operands must be further validated at run--time.
+
+@item no-match
+If there is no match between the arguments' and operands' signatures.
+@end table
+
+@lisp
+(type-signature-matching (<top>) (<void>))
+@result{} no-match
+
+(type-signature-matching (<void>) (<top>))
+@result{} no-match
+
+(type-signature-matching (<top>) (<fixnum>))
+@result{} exact-match
+
+(type-signature-matching (<fixnum>) (<positive-fixnum>))
+@result{} exact-match
+
+(type-signature-matching (<fixnum>) (<top>))
+@result{} possible-match
+@end lisp
+@end deffn
+
 @c page
-@node types syntaxes ancestor
-@subsection Common ancestor of types and signatures
+@node types syntaxes ancestors
+@subsection Ancestors of types and signatures
 
 
 The following syntactic bindings are exported by the library
@@ -1338,6 +1405,26 @@ common ancestor of @metai{signature} and @metaii{signature}.
 (type-signature-common-ancestor (<fixnum> <fixnum>)
                                 (<flonum> <bignum> <string>)
 @result{} #'(<real> <exact-integer> . <list>)
+@end lisp
+@end deffn
+
+
+@deffn Syntax type-annotation-ancestors @meta{type}
+Expand to a (possibly empty) list of type annotations representing the
+ancestors of @meta{type}.  @meta{type} is @strong{not} included.
+
+@lisp
+(type-annotation-ancestors <top>)       @result{} ()
+(type-annotation-ancestors <void>)      @result{} ()
+(type-annotation-ancestors <no-return>) @result{} ()
+
+(type-annotation-ancestors <condition>)
+@result{} (<record> <struct> <top>)
+
+(type-annotation-ancestors <positive-fixnum>)
+@result{} (<fixnum>
+    <exact-integer> <integer> <rational> <rational-valued>
+    <real> <real-valued> <complex> <number> <top>)
 @end lisp
 @end deffn
 
