@@ -593,7 +593,9 @@
 
 	((complement-type-spec? super.ots)
 	 (let ((super-item.ots (complement-type-spec.item-ots super.ots)))
-	   (cond ((complement-type-spec? sub.ots)
+	   (cond ((ancestors-of-type-spec? super-item.ots)
+		  (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots)))
+		 ((complement-type-spec? sub.ots)
 		  ;;If something is not a "<number>", for sure it is not a "<fixnum>":
 		  ;;
 		  ;; (type-super-and-sub? (not <fixnum>)
@@ -602,12 +604,12 @@
 		  ;; (type-super-and-sub? (not <number>)
 		  ;;                      (not <string>)) => #f
 		  ;;
-		  (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots sub.ots)
-							    super-item.ots))
+		  (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots sub.ots) super-item.ots))
 		 (else
 		  ;; (type-super-and-sub? (not <string>) <fixnum>) => #t
-		  (not (object-type-spec.matching-super-and-sub? (complement-type-spec.item-ots super.ots)
-								 sub.ots))))))
+		  ;; (type-super-and-sub? (not <fixnum>) <exact-integer>) => #t
+		  (and (not (object-type-spec.matching-super-and-sub? super-item.ots sub.ots))
+		       (not (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
 
 	((complement-type-spec? sub.ots)
 	 #f)
@@ -1102,10 +1104,53 @@
 		      (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
 	     (vector-type-spec.item-ots* sub.ots))))
 
+;;; --------------------------------------------------------------------
+
 	((union-type-spec? sub.ots)
 	 (exists (lambda (component-sub.ots)
 		   (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
 	   (union-type-spec.component-ots* sub.ots)))
+
+;;; --------------------------------------------------------------------
+
+	((intersection-type-spec? super.ots)
+	 ;;"<exact-integer>" is not a "<string>" and it is an ancestor of "<fixnum>",
+	 ;;so:
+	 ;;
+	 ;;   (type-signature-matching ((and (not <fixnum>) (not <string>)))
+	 ;;                            (<exact-integer>)
+	 ;;   => possible-match
+	 ;;
+	 (for-all (lambda (super-component.ots)
+		    (or (object-type-spec.matching-super-and-sub?   super-component.ots sub.ots)
+			(object-type-spec.compatible-super-and-sub? super-component.ots sub.ots)))
+	   (intersection-type-spec.component-ots* super.ots)))
+
+;;; --------------------------------------------------------------------
+
+	((complement-type-spec? super.ots)
+	 (cond ((complement-type-spec? sub.ots)
+		#f)
+	       (else
+		(let ((super-item.ots (complement-type-spec.item-ots super.ots)))
+		  (cond
+		   ;; (type-signature-matching ((not (ancestors-of &condition)))
+		   ;;                          (<condition>))
+		   ;; => no-match
+		   ((ancestors-of-type-spec? super-item.ots)
+		    #f)
+		   (($object-type-spec=? super-item.ots sub.ots)
+		    #f)
+		   (else
+		    ;; (type-signature-matching ((not <fixnum>))
+		    ;;                          (<exact-integer>))
+		    ;; => possible-match
+		    (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
+
+	((complement-type-spec? sub.ots)
+	 #f)
+
+;;; --------------------------------------------------------------------
 
 	((object-type-spec.matching-super-and-sub? sub.ots super.ots))
 
@@ -2150,7 +2195,7 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-ancestors-of-type-spec {type.ots object-type-spec?})
-	(let* ((name.stx		(cons (core-prim-id 'ancestors-of)
+	(let* ((name.stx		(list (core-prim-id 'ancestors-of)
 					      (object-type-spec.name type.ots)))
 	       (ancestor*.ots		(object-type-spec.ancestors-ots* type.ots))
 	       (parent.ots		(<top>-ots))

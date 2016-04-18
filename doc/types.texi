@@ -465,9 +465,9 @@ values of type @meta{value-type}.  Both @meta{key-type} and
 @end deftp
 
 
-@deftp {Compound Type Annotation} condition @metao{item-type} @meta{item-type} @dots{}
+@deftp {Compound Type Annotation} condition @metao{cond-type} @meta{cond-type} @dots{}
 Describe a compound condition object holding at least one instance of
-the specified types (the order does not matter).  Every @meta{item-type}
+the specified types (the order does not matter).  Every @meta{cond-type}
 is a nested type annotation that must be one among: @class{condition},
 @class{compound-condition}, a sub--type of @condition{condition}.
 
@@ -516,10 +516,10 @@ values.
 @end deftp
 
 
-@deftp {Compound Type Annotation} or @metao{item-type} @meta{item-type} @dots{}
-Describe the union between the specified types.  Every @meta{item-type}
-is a nested type annotation.  A value matches a union of types if its
-type matches at least one of the union's types.
+@deftp {Compound Type Annotation} or @metao{type} @meta{type} @dots{}
+Describe the union between the specified types.  Every @meta{type} is a
+nested type annotation.  A value matches a union of types if its type
+matches at least one of the union's types.
 
 @lisp
 (is-a? 1      (or <fixnum> <string>))   @result{} #t
@@ -529,9 +529,9 @@ type matches at least one of the union's types.
 @end deftp
 
 
-@deftp {Compound Type Annotation} and @metao{item-type} @meta{item-type} @dots{}
+@deftp {Compound Type Annotation} and @metao{type} @meta{type} @dots{}
 Describe the intersection between the specified types.  Every
-@meta{item-type} is a nested type annotation.  A value matches an
+@meta{type} is a nested type annotation.  A value matches an
 intersection of types if its type matches all the intersection's types.
 
 @lisp
@@ -541,10 +541,11 @@ intersection of types if its type matches all the intersection's types.
 @end deftp
 
 
-@deftp {Compound Type Annotation} not @meta{item-type}
-Describe the complement of the type.  The argument @meta{item-type} is a
-nested type annotation.  A value matches the complement of a type if its
-type does @strong{not} match the complement's type.
+@deftp {Compound Type Annotation} not @meta{type}
+Describe the complement of the type.  The argument @meta{type} is a
+nested type annotation.  A value of type @meta{val-type} matches the
+complement of @meta{type} if @meta{val-type} is neither @meta{type} nor
+a sub--type of @meta{type}.
 
 @lisp
 (is-a? 1   (not <string>))      @result{} #t
@@ -558,9 +559,9 @@ type does @strong{not} match the complement's type.
 @end deftp
 
 
-@deftp {Compound Type Annotation} parent-of @meta{item-type}
+@deftp {Compound Type Annotation} parent-of @meta{type}
 Describe the parent of the type; an exception is raised if the type has
-no parent.  The argument @meta{item-type} is a nested type annotation.
+no parent.  The argument @meta{type} is a nested type annotation.
 
 @lisp
 (type-annotation=? <struct> (parent-of <record>))
@@ -575,11 +576,44 @@ no parent.  The argument @meta{item-type} is a nested type annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} ancestors-of @meta{item-type}
+@deftp {Compound Type Annotation} ancestors-of @meta{type}
 Describe the ancestors of the type; if the type has no parent: the list
-of ancestors is empty.  The argument @meta{item-type} is a nested type
-annotation.  This type annotation can be used to match @strong{exactly}
-a type annotation with one of the ancestors of @meta{item-type}
+of ancestors is empty.  The argument @meta{type} is a nested type
+annotation and it is not included in its list of ancestors.
+
+This type annotation can be used to match @strong{exactly} a type
+annotation with one of the ancestors of @meta{type}:
+
+@lisp
+(type-signature-matching ((ancestors-of &condition))
+                         (&condition))
+@result{} no-match
+
+(type-signature-matching ((ancestors-of &condition))
+                         (<condition>))
+@result{} exact-match
+
+(type-signature-matching ((ancestors-of &condition))
+                         (<record>))
+@result{} exact-match
+
+(type-signature-matching ((ancestors-of &condition))
+                         (<struct>))
+@result{} exact-match
+
+(type-signature-matching ((ancestors-of &condition))
+                         (<top>))
+@result{} exact-match
+@end lisp
+
+When used along with @syntax{not}, it can is used to avoid matching
+exactly a type annotation with one of the ancestors of @meta{type}:
+
+@lisp
+(type-signature-matching ((not (ancestors-of &condition)))
+                         (<condition>))
+@result{} no-match
+@end lisp
 @end deftp
 
 @c page

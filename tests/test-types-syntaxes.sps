@@ -666,9 +666,11 @@
 ;;; --------------------------------------------------------------------
 ;;; type complement
 
+  ;;"<top>" is an ancestor of "<string>".
+  ;;
   (doit ((not <string>))
 	(<top>)
-	=> exact-match)
+	=> possible-match)
 
   (doit ((not <string>))
 	(<string>)
@@ -684,6 +686,8 @@
 	(<fixnum>)
 	=> no-match)
 
+  ;;"<exact-integer>" is an ancestor of "<fixnum>".
+  ;;
   (doit ((not <fixnum>))
 	(<exact-integer>)
 	=> possible-match)
@@ -695,20 +699,139 @@
 ;;; --------------------------------------------------------------------
 ;;; type intersection
 
-  (doit ((and (not <fixnum>)
-	      (not <string>)))
+  (doit ((not <fixnum>))
+	(<vector>)
+	=> exact-match)
+
+  (doit ((not <fixnum>))
+	(<exact-integer>)
+	=> possible-match)
+
+  (doit ((not <string>))
+	(<vector>)
+	=> exact-match)
+
+  (doit ((not <string>))
+	(<exact-integer>)
+	=> exact-match)
+
+  (begin
+    (doit ((and (not <fixnum>)
+		(not <string>)))
+	  (<vector>)
+	  => exact-match)
+
+    (doit ((and (not <fixnum>)
+		(not <string>)))
+	  (<fixnum>)
+	  => no-match)
+
+    (doit ((and (not <fixnum>)
+		(not <string>)))
+	  (<string>)
+	  => no-match)
+
+    (doit ((and (not <fixnum>)
+		(not <string>)))
+	  (<positive-fixnum>)
+	  => no-match)
+
+    ;;"<exact-integer>" is an ancestor of "<fixnum>".
+    ;;
+    (doit ((and (not <fixnum>)
+		(not <string>)))
+	  (<exact-integer>)
+	  => possible-match)
+    #| end of BEGIN |# )
+
+  (internal-body
+    (define-type <it>
+      (and (not <fixnum>)
+	   (not <string>)))
+
+    (doit (<it>)
+	  (<vector>)
+	  => exact-match)
+
+    (doit (<it>)
+	  (<fixnum>)
+	  => no-match)
+
+    (doit (<it>)
+	  (<string>)
+	  => no-match)
+
+    (doit (<it>)
+	  (<positive-fixnum>)
+	  => no-match)
+
+    ;;"<exact-integer>" is an ancestor of "<fixnum>".
+    ;;
+    (doit (<it>)
+	  (<exact-integer>)
+	  => possible-match)
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; ancestors-of
+
+  (doit ((ancestors-of &condition))
+	(<condition>)
+	=> exact-match)
+
+  (doit ((ancestors-of &condition))
+	(<record>)
+	=> exact-match)
+
+  (doit ((ancestors-of &condition))
+	(<struct>)
+	=> exact-match)
+
+  (doit ((ancestors-of &condition))
+	(<top>)
+	=> exact-match)
+
+  (doit ((ancestors-of &condition))
 	(<fixnum>)
 	=> no-match)
 
-  (doit ((and (not <fixnum>)
-	      (not <string>)))
-	(<string>)
+  (doit ((ancestors-of &condition))
+	(&condition)
 	=> no-match)
 
-  (doit ((and (not <fixnum>)
-	      (not <string>)))
-	(<vector>)
+  (doit ((ancestors-of &condition))
+	(&who)
+	=> no-match)
+
+  (doit ((ancestors-of &condition))
+	((condition &who &message))
+	=> no-match)
+
+  (doit ((ancestors-of &who))
+	((condition &who &message))
+	=> no-match)
+
+;;; complement
+
+  (doit ((not (ancestors-of &condition)))
+	(&condition)
 	=> exact-match)
+
+  (doit ((not (ancestors-of &condition)))
+	(<condition>)
+	=> no-match)
+
+  (doit ((not (ancestors-of &condition)))
+	(<record>)
+	=> no-match)
+
+  (doit ((not (ancestors-of &condition)))
+	(<struct>)
+	=> no-match)
+
+  (doit ((not (ancestors-of &condition)))
+	(<top>)
+	=> no-match)
 
   (void))
 
