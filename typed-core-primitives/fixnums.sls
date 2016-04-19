@@ -141,7 +141,9 @@
   (signatures
    ((<positive-fixnum> <positive-fixnum>)		=> (<positive-fixnum>))
    ((<negative-fixnum> <negative-fixnum>)		=> (<negative-fixnum>))
+   ((<zero-fixnum> <zero-fixnum>)			=> (<zero-fixnum>))
    ((<non-negative-fixnum> <non-negative-fixnum>)	=> (<non-negative-fixnum>))
+   ((<non-positive-fixnum> <non-positive-fixnum>)	=> (<non-positive-fixnum>))
    ((<fixnum> <fixnum>)					=> (<fixnum>)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
