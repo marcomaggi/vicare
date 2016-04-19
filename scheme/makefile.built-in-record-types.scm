@@ -171,12 +171,12 @@
   (methods
    (item-ots			complement-type-spec.item-ots)))
 
-(define-built-in-record-type <ancestors-of-type-spec>
+(define-built-in-record-type <ancestor-of-type-spec>
     <object-type-spec>
-  make-ancestors-of-type-spec ancestors-of-type-spec?
+  make-ancestor-of-type-spec ancestor-of-type-spec?
   (methods
-   (item-ots			ancestors-of-type-spec.item-ots)
-   (component-ots*		ancestors-of-type-spec.component-ots*)))
+   (item-ots			ancestor-of-type-spec.item-ots)
+   (component-ots*		ancestor-of-type-spec.component-ots*)))
 
 ;;; --------------------------------------------------------------------
 

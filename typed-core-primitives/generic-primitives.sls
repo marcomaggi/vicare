@@ -88,7 +88,7 @@
    ((<false>)				=> (<true>))
    ((<true>)				=> (<false>))
    (((or <boolean>
-	 (ancestors-of <boolean>)))	=> (<boolean>))
+	 (ancestor-of <boolean>)))	=> (<boolean>))
    ;;"<true>" is repeated here on purpose.
    (((or <true> (not <boolean>)))	=> (<false>))))
 

@@ -576,7 +576,7 @@ no parent.  The argument @meta{type} is a nested type annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} ancestors-of @meta{type}
+@deftp {Compound Type Annotation} ancestor-of @meta{type}
 Describe the ancestors of the type; if the type has no parent: the list
 of ancestors is empty.  The argument @meta{type} is a nested type
 annotation and it is not included in its list of ancestors.
@@ -585,23 +585,23 @@ This type annotation can be used to match @strong{exactly} a type
 annotation with one of the ancestors of @meta{type}:
 
 @lisp
-(type-signature-matching ((ancestors-of &condition))
+(type-signature-matching ((ancestor-of &condition))
                          (&condition))
 @result{} no-match
 
-(type-signature-matching ((ancestors-of &condition))
+(type-signature-matching ((ancestor-of &condition))
                          (<condition>))
 @result{} exact-match
 
-(type-signature-matching ((ancestors-of &condition))
+(type-signature-matching ((ancestor-of &condition))
                          (<record>))
 @result{} exact-match
 
-(type-signature-matching ((ancestors-of &condition))
+(type-signature-matching ((ancestor-of &condition))
                          (<struct>))
 @result{} exact-match
 
-(type-signature-matching ((ancestors-of &condition))
+(type-signature-matching ((ancestor-of &condition))
                          (<top>))
 @result{} exact-match
 @end lisp
@@ -610,7 +610,7 @@ When used along with @syntax{not}, it can is used to avoid matching
 exactly a type annotation with one of the ancestors of @meta{type}:
 
 @lisp
-(type-signature-matching ((not (ancestors-of &condition)))
+(type-signature-matching ((not (ancestor-of &condition)))
                          (<condition>))
 @result{} no-match
 @end lisp

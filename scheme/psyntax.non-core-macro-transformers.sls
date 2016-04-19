@@ -264,7 +264,7 @@
 	  super-protocol destructor-protocol custom-predicate custom-printer method case-method define-type-descriptors
 	  hash-function equality-predicate comparison-procedure
 	  catch finally
-	  pair pair-of list-of vector-of hashtable alist parent-of ancestors-of)
+	  pair pair-of list-of vector-of hashtable alist parent-of ancestor-of)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 

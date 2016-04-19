@@ -45,8 +45,8 @@
    ((<pair>)				=> (<true>))
    ((<null>)				=> (<false>))
    (((or <list>
-	 (ancestors-of <list>)
-	 (ancestors-of <pair>)))	=> (<boolean>))
+	 (ancestor-of <list>)
+	 (ancestor-of <pair>)))	=> (<boolean>))
    (((and (not <pair>)
 	  (not <list>)))		=> (<false>)))
   (attributes
@@ -57,8 +57,8 @@
   (signatures
    ((<list>)				=> (<true>))
    (((or <pair>
-	 (ancestors-of <list>)
-	 (ancestors-of <pair>)))	=> (<boolean>))
+	 (ancestor-of <list>)
+	 (ancestor-of <pair>)))	=> (<boolean>))
    (((and (not <list>)
 	  (not <pair>)))		=> (<false>)))
   (attributes
@@ -70,7 +70,7 @@
   (signatures
    ((<list>)				=> (<false>))
    (((or <pair>
-	 (ancestors-of <pair>)))	=> (<boolean>))
+	 (ancestor-of <pair>)))	=> (<boolean>))
    (((not <pair>))			=> (<false>)))
   (attributes
    ((())		foldable effect-free result-false)

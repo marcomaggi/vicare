@@ -756,7 +756,7 @@
     (hashtable					(macro . hashtable))
     (alist					(macro . alist))
     (parent-of					(macro . parent-of))
-    (ancestors-of				(macro . ancestors-of))
+    (ancestor-of				(macro . ancestor-of))
 ;;;
     (define					(macro . define))
     (case-define				(macro . case-define))
@@ -3517,7 +3517,7 @@
     (hashtable					v $language)
     (alist					v $language)
     (parent-of					v $language)
-    (ancestors-of				v $language)
+    (ancestor-of				v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
@@ -4568,13 +4568,13 @@
     (complement-type-spec?				$expander)
     (complement-type-spec.item-ots			$expander)
 
-    (<ancestors-of-type-spec>-rtd)
-    (<ancestors-of-type-spec>-rcd)
-    (<ancestors-of-type-spec>				$expander)
-    (make-ancestors-of-type-spec)
-    (ancestors-of-type-spec?				$expander)
-    (ancestors-of-type-spec.item-ots			$expander)
-    (ancestors-of-type-spec.component-ots*		$expander)
+    (<ancestor-of-type-spec>-rtd)
+    (<ancestor-of-type-spec>-rcd)
+    (<ancestor-of-type-spec>				$expander)
+    (make-ancestor-of-type-spec)
+    (ancestor-of-type-spec?				$expander)
+    (ancestor-of-type-spec.item-ots			$expander)
+    (ancestor-of-type-spec.component-ots*		$expander)
 
     (<pair-type-spec>-rtd)
     (<pair-type-spec>-rcd)

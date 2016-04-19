@@ -103,9 +103,9 @@
     (safe)
   (signatures
    ((<syntactic-identifier>)				=> (<boolean>))
-   #;(((ancestors-of <syntactic-identifier>))		=> (<boolean>))
+   #;(((ancestor-of <syntactic-identifier>))		=> (<boolean>))
    (((or <stx> <record>	<struct> <top>))		=> (<boolean>))
-   ;; (((and (not (ancestors-of <syntactic-identifier>))
+   ;; (((and (not (ancestor-of <syntactic-identifier>))
    ;;        (not <syntactic-identifier>)))                => (<boolean>))
    (((and (not <top>)
 	  (not <record>)

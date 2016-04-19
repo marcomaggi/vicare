@@ -347,7 +347,7 @@
     (let recur ((sig type-signature.stx))
       (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
 			     condition or and not alist hashtable lambda case-lambda =>
-			     parent-of ancestors-of)
+			     parent-of ancestor-of)
 	(()
 	 '())
 
@@ -434,8 +434,8 @@
       ((parent-of ?item-type)
        #`(parent-of #,(%validate-type-annotation #'?item-type)))
 
-      ((ancestors-of ?item-type)
-       #`(ancestors-of #,(%validate-type-annotation #'?item-type)))
+      ((ancestor-of ?item-type)
+       #`(ancestor-of #,(%validate-type-annotation #'?item-type)))
 
       (_
        (synner "invalid type annotation" type-annotation.stx))))
@@ -495,7 +495,7 @@
 	 (safe)
        (signatures
 	((?obj-tag)				=> (<true>))
-	(((ancestors-of ?obj-tag))		=> (<boolean>))
+	(((ancestor-of ?obj-tag))		=> (<boolean>))
 	(((not ?obj-tag))			=> (<false>)))
        (attributes
 	((_)		foldable effect-free))))
@@ -512,8 +512,8 @@
 	 (safe)
        (signatures
 	(((or ?obj-tag <false>))		=> (<true>))
-	(((or (ancestors-of ?obj-tag)
-	      (ancestors-of <false>)))		=> (<boolean>))
+	(((or (ancestor-of ?obj-tag)
+	      (ancestor-of <false>)))		=> (<boolean>))
 	(((and (not ?obj-tag)
 	       (not <false>)))			=> (<boolean>)))
        (attributes
@@ -531,7 +531,7 @@
 	 (safe)
        (signatures
 	((?tag)				=> (<true>))
-	(((or (ancestors-of ?tag)
+	(((or (ancestor-of ?tag)
 	      <compound-condition>))	=> (<boolean>))
 	(((not ?tag))			=> (<false>)))
        (attributes
@@ -549,7 +549,7 @@
 	 (safe)
        (signatures
 	(((list-of ?obj-tag))			=> (<true>))
-	(((list-of (ancestors-of ?obj-tag)))	=> (<boolean>))
+	(((list-of (ancestor-of ?obj-tag)))	=> (<boolean>))
 	(((list-of (not ?obj-tag)))		=> (<false>))
 	(((and (not <list>)
 	       (not <pair>)))			=> (<false>))

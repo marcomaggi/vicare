@@ -44,7 +44,7 @@
   (signatures
    (((or <pointer> <void>))			=> (<true>))
    (((and (not <void>)
-	  (not (ancestors-of <pointer>))))	=> (<false>))
+	  (not (ancestor-of <pointer>))))	=> (<false>))
    ((<top>)					=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------

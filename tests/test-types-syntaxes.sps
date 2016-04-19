@@ -493,32 +493,32 @@
   (check-for-false	(type-annotation-super-and-sub? <number> (not <string>)))
 
 ;;; --------------------------------------------------------------------
-;;; ancestors-of
+;;; ancestor-of
 
-  (check-for-true	(type-annotation-super-and-sub? (ancestors-of <fixnum>) <exact-integer>))
-  (check-for-false	(type-annotation-super-and-sub? (ancestors-of <fixnum>) <positive-fixnum>))
-  (check-for-false	(type-annotation-super-and-sub? (ancestors-of <fixnum>) <fixnum>))
+  (check-for-true	(type-annotation-super-and-sub? (ancestor-of <fixnum>) <exact-integer>))
+  (check-for-false	(type-annotation-super-and-sub? (ancestor-of <fixnum>) <positive-fixnum>))
+  (check-for-false	(type-annotation-super-and-sub? (ancestor-of <fixnum>) <fixnum>))
 
-  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+  (check-for-true	(type-annotation-super-and-sub? (ancestor-of &condition)
 							<condition>))
-  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+  (check-for-true	(type-annotation-super-and-sub? (ancestor-of &condition)
 							<record>))
-  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+  (check-for-true	(type-annotation-super-and-sub? (ancestor-of &condition)
 							<struct>))
-  (check-for-true	(type-annotation-super-and-sub? (ancestors-of &condition)
+  (check-for-true	(type-annotation-super-and-sub? (ancestor-of &condition)
 							<top>))
-  (check-for-false	(type-annotation-super-and-sub? (ancestors-of &condition)
+  (check-for-false	(type-annotation-super-and-sub? (ancestor-of &condition)
 							<string>))
 
-  (check-for-true	(type-annotation-super-and-sub? (not (ancestors-of &condition))
+  (check-for-true	(type-annotation-super-and-sub? (not (ancestor-of &condition))
 							<string>))
 
-  (check-for-true	(type-annotation-super-and-sub? (not (ancestors-of <false>))
+  (check-for-true	(type-annotation-super-and-sub? (not (ancestor-of <false>))
 							<fixnum>))
 
-  (check-for-false	(type-annotation-super-and-sub? (ancestors-of <false>)
+  (check-for-false	(type-annotation-super-and-sub? (ancestor-of <false>)
 							(or <false> <string>)))
-  (check-for-true	(type-annotation-super-and-sub? (not (ancestors-of <false>))
+  (check-for-true	(type-annotation-super-and-sub? (not (ancestor-of <false>))
 							(or <false> <string>)))
 
 ;;; --------------------------------------------------------------------
@@ -774,63 +774,63 @@
     #| end of INTERNAL-BODY |# )
 
 ;;; --------------------------------------------------------------------
-;;; ancestors-of
+;;; ancestor-of
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(<condition>)
 	=> exact-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(<record>)
 	=> exact-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(<struct>)
 	=> exact-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(<top>)
 	=> exact-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(<fixnum>)
 	=> no-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(&condition)
 	=> no-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	(&who)
 	=> no-match)
 
-  (doit ((ancestors-of &condition))
+  (doit ((ancestor-of &condition))
 	((condition &who &message))
 	=> no-match)
 
-  (doit ((ancestors-of &who))
+  (doit ((ancestor-of &who))
 	((condition &who &message))
 	=> no-match)
 
 ;;; complement
 
-  (doit ((not (ancestors-of &condition)))
+  (doit ((not (ancestor-of &condition)))
 	(&condition)
 	=> exact-match)
 
-  (doit ((not (ancestors-of &condition)))
+  (doit ((not (ancestor-of &condition)))
 	(<condition>)
 	=> no-match)
 
-  (doit ((not (ancestors-of &condition)))
+  (doit ((not (ancestor-of &condition)))
 	(<record>)
 	=> no-match)
 
-  (doit ((not (ancestors-of &condition)))
+  (doit ((not (ancestor-of &condition)))
 	(<struct>)
 	=> no-match)
 
-  (doit ((not (ancestors-of &condition)))
+  (doit ((not (ancestor-of &condition)))
 	(<top>)
 	=> no-match)
 
@@ -839,11 +839,11 @@
   (doit (<fixnum>)
 	(<zero>)
 	=> possible-match)
-  (doit ((ancestors-of <fixnum>))
+  (doit ((ancestor-of <fixnum>))
 	(<zero>)
 	=> no-match)
 
-  (doit ((not (ancestors-of <fixnum>)))
+  (doit ((not (ancestor-of <fixnum>)))
 	(<zero>)
 	=> exact-match)
 

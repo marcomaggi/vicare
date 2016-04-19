@@ -158,10 +158,10 @@
     make-complement-type-spec				complement-type-spec?
     complement-type-spec.item-ots
 
-    <ancestors-of-type-spec>
-    <ancestors-of-type-spec>-rtd			<ancestors-of-type-spec>-rcd
-    make-ancestors-of-type-spec				ancestors-of-type-spec?
-    ancestors-of-type-spec.item-ots			ancestors-of-type-spec.component-ots*
+    <ancestor-of-type-spec>
+    <ancestor-of-type-spec>-rtd			<ancestor-of-type-spec>-rcd
+    make-ancestor-of-type-spec				ancestor-of-type-spec?
+    ancestor-of-type-spec.item-ots			ancestor-of-type-spec.component-ots*
 ;;;
     <pair-type-spec>
     <pair-type-spec>-rtd				<pair-type-spec>-rcd
