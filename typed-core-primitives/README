@@ -1,0 +1,127 @@
+-*- utf-8-unix -*-
+
+	     Guide to typed core primitives specifications
+	     =============================================
+
+Topics
+------
+
+1. Introduction
+2. Some files
+3. How to specify the signatures of a typed core primitive
+
+
+1. Introduction
+---------------
+
+This directory  under the source  tree of Vicare Scheme  contains tables
+that  specify  the  arguments  and return  values  type  signatures  for
+Vicare's typed core primitives.
+
+
+2. Some files
+-------------
+
+build-specs.sps -
+   A  Scheme script  that  reads the  tables and  converts  them into  a
+   specifications file usable by Vicare's build infrastructure.
+
+syntax.sls -
+   A  Scheme library  that  defines  the syntaxes  used  to declare  the
+   signature  specifications.   We  need  to  understand  this  file  to
+   understand everything ELSE.
+
+
+3. How to specify the signatures of a typed core primitive
+----------------------------------------------------------
+
+We must  use the syntax  DECLARE-CORE-PRIMITIVE which has  the following
+template:
+
+   (declare-core-primitive ?name
+       (?safety)
+     (signatures ?signature ...)
+     (attributes ?attributes ...))
+
+where:
+
+* ?NAME is the name of the core primitive (for example: display).
+
+* ?SAFETY is a symbol among: safe, unsafe.
+
+  - "safe"  is  used  for  safe  core  primitives  that  validate  their
+    arguments at run-time (for example: fx+).
+
+  - "unsafe" is used  for unsafe core primitives that  do *not* validate
+    their arguments at run-time (for example: $fx+).
+
+* Each ?SIGNATURE is a signature specification, with the format:
+
+    (?args-signature => ?retvals-signature)
+
+  where ?ARGS-SIGNATURE is the type signature of the expected arguments,
+  ?RETVALS-SIGNATURE is the type signature of the returned values.
+
+* At  present (Apr  19,  2016)  we can  ignore  the optional  ATTRIBUTES
+  clause.
+
+  Here is an example for "fx+":
+
+   (declare-core-primitive fx+
+       (safe)
+     (signatures
+      ((<positive-fixnum> <positive-fixnum>) => (<positive-fixnum>))
+      ((<negative-fixnum> <negative-fixnum>) => (<negative-fixnum>))
+      ((<zero-fixnum> <zero-fixnum>) => (<zero-fixnum>))
+      ((<non-negative-fixnum> <non-negative-fixnum>)
+       => (<non-negative-fixnum>))
+      ((<non-positive-fixnum> <non-positive-fixnum>)
+       => (<non-positive-fixnum>))
+      ((<fixnum> <fixnum>) => (<fixnum>))))
+
+
+The  core primitive  "fx+" accepts  two arguments  and returns  a single
+value.    If  both   the   arguments  are   positive,  negative,   zero,
+non-positive, non-negative fixnums: the  result is a positive, negative,
+zero, non-positive, non-negative fixnum.
+
+  Whenever  the  typed  language  is  used and  the  expander  finds  an
+application of "fx+":
+
+   (fx+ ?operand1 ?operand2)
+
+this is what happens:
+
+1. It checks if the number of operands equals the number of arguments in
+   at least one of the signatures.
+
+2. It checks  that the operands' types match the  arguments' types in at
+   least one of the signatures.  Such signature is selected.
+
+3. It  checks that the  continuation accepts  a number of  return values
+   compatible with the number returned by the selected signature.
+
+4.  Finally  it checks  that the continuation  accepts return  values of
+   types matching  the types  of the returned  values, according  to the
+   selected signature.
+
+  When matching the types, the signatures are compared in the same order
+in  which  they are  specified  in  the use  of  DECLARE-CORE-PRIMITIVE,
+left-to-right.
+
+* If a signature matches: that signature is selected.
+
+* If at least one signature is compatible: no signature is selected; the
+  operands will  be validated at  run-time; the  number and type  of the
+  returned values is determined by union of all the ?RETVALS-SIGNATURE.
+
+* If no  signature matches and no  signature is compatible: an  error is
+  raised.
+
+
+### end of file
+# Local Variables:
+# mode: text
+# fill-column: 72
+# paragraph-start: "*"
+# End:

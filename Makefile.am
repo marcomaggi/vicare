@@ -30,7 +30,8 @@ EXTRA_DIST += \
 	doc/RFC/rfc3986.uri.txt
 
 dist_doc_DATA	= README COPYING GPL-3		\
-		  LICENSE.irregex LICENSE.pregexp LICENSE.srfi
+		  LICENSE.irregex LICENSE.pregexp LICENSE.srfi	\
+		  typed-core-primitives/README
 
 dist_man_MANS = doc/vicare.1
 
