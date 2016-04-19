@@ -2391,6 +2391,11 @@
 ;;;
     (exact-compnum?				v $language)
     (inexact-compnum?				v $language)
+    (zero-compnum?				v $language)
+    (zero-cflonum?				v $language)
+    (non-zero-compnum?				v $language)
+    (non-zero-inexact-compnum?			v $language)
+    (non-zero-cflonum?				v $language)
 ;;;
     (fl*					v r fl)
     (fl+					v r fl)
@@ -3657,8 +3662,6 @@
     (<bignum>					v $language)
     (<compnum>					v $language)
     (<cflonum>					v $language)
-    (<exact-compnum>				v $language)
-    (<inexact-compnum>				v $language)
     (<exact-integer>				v $language)
     (<integer-valued>				v $language)
     (<integer>					v $language)
@@ -3681,26 +3684,37 @@
     (<positive-ratnum>				v $language)
     (<negative-ratnum>				v $language)
 
-    (<positive-flonum>				v $language)
-    (<negative-flonum>				v $language)
     (<positive-zero-flonum>			v $language)
     (<negative-zero-flonum>			v $language)
+    (<positive-flonum>				v $language)
+    (<negative-flonum>				v $language)
+    (<non-positive-flonum>			v $language)
+    (<non-negative-flonum>			v $language)
     (<zero-flonum>				v $language)
 
     (<non-negative-exact-integer>		v $language)
     (<positive-exact-integer>			v $language)
     (<negative-exact-integer>			v $language)
 
+    (<exact-compnum>				v $language)
+    (<inexact-compnum>				v $language)
+    (<zero-compnum>				v $language)
+    (<non-zero-inexact-compnum>			v $language)
+    (<non-zero-compnum>				v $language)
+
+    (<zero-cflonum>				v $language)
+    (<non-zero-cflonum>				v $language)
+
     (<zero>					v $language)
 
     (<exact-rational>				v $language)
-
     (<exact>					v $language)
     (<inexact>					v $language)
 
     (<positive>					v $language)
     (<negative>					v $language)
     (<non-negative>				v $language)
+    (<non-positive>				v $language)
 
     (<file-descriptor>				v $language)
     (<thunk>					v $language)
@@ -3781,7 +3795,6 @@
     (<binary-input/output-port>-type-descriptor)
     (<binary-input-port>-type-descriptor)
     (<binary-output-port>-type-descriptor)
-    (<binary-port>-type-descriptor)
     (<boolean>-type-descriptor)
     (<bytevector>-type-descriptor)
     (<cflonum>-type-descriptor)
@@ -3796,6 +3809,10 @@
     (<eof>-type-descriptor)
     (<exact-compnum>-type-descriptor)
     (<inexact-compnum>-type-descriptor)
+    (<zero-compnum>-type-descriptor)
+    (<non-zero-inexact-compnum>-type-descriptor)
+    (<zero-cflonum>-type-descriptor)
+    (<non-zero-cflonum>-type-descriptor)
     (<exact-integer>-type-descriptor)
     (<false>-type-descriptor)
     (<fixnum>-type-descriptor)
@@ -3848,7 +3865,6 @@
     (<textual-input/output-port>-type-descriptor)
     (<textual-input-port>-type-descriptor)
     (<textual-output-port>-type-descriptor)
-    (<textual-port>-type-descriptor)
     (<top>-type-descriptor)
     (<transcoder>-type-descriptor)
     (<true>-type-descriptor)
@@ -3857,6 +3873,7 @@
     (<void>-type-descriptor)
     (<would-block>-type-descriptor)
     (<zero-fixnum>-type-descriptor)
+    (<zero-flonum>-type-descriptor)
     ;;
     (<memory-block>-type-descriptor)
     (<time>-type-descriptor)

@@ -1131,10 +1131,14 @@
 					       (core-prim-id '<bignum>))))
 	  ((compnum? datum)		(cond ((exact-compnum? datum)
 					       (core-prim-id '<exact-compnum>))
+					      ((zero-compnum? datum)
+					       (core-prim-id '<zero-compnum>))
 					      (else
-					       (core-prim-id '<inexact-compnum>))))
-	  ((cflonum? datum)		(core-prim-id '<cflonum>))
-
+					       (core-prim-id '<non-zero-inexact-compnum>))))
+	  ((cflonum? datum)		(cond ((zero-cflonum? datum)
+					       (core-prim-id '<zero-cflonum>))
+					      (else
+					       (core-prim-id '<non-zero-cflonum>))))
 	  ((string?  datum)		(core-prim-id '<string>))
 
 	  ((null? datum)		(<null>-type-id))

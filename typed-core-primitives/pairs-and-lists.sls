@@ -42,24 +42,25 @@
 (declare-core-primitive pair?
     (safe)
   (signatures
-   ((<null>)				=> (<false>))
    ((<pair>)				=> (<true>))
-   ((<list>)				=> (<boolean>))
-   (((not (or (ancestors-of <pair>)
-	      (ancestors-of <list>))))	=> (<false>))
-   ((<top>)				=> (<boolean>)))
+   ((<null>)				=> (<false>))
+   (((or <list>
+	 (ancestors-of <list>)
+	 (ancestors-of <pair>)))	=> (<boolean>))
+   (((and (not <pair>)
+	  (not <list>)))		=> (<false>)))
   (attributes
    ((_)			foldable effect-free)))
 
 (declare-core-primitive list?
     (safe)
   (signatures
-   ((<list>)			=> (<true>))
-   ((<pair>)			=> (<boolean>))
-   (((and (not <top>)
-	  (not <list>)
-	  (not <pair>)))	=> (<false>))
-   ((<top>)			=> (<boolean>)))
+   ((<list>)				=> (<true>))
+   (((or <pair>
+	 (ancestors-of <list>)
+	 (ancestors-of <pair>)))	=> (<boolean>))
+   (((and (not <list>)
+	  (not <pair>)))		=> (<false>)))
   (attributes
    ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
@@ -67,12 +68,10 @@
 (declare-core-primitive circular-list?
     (safe)
   (signatures
-   ((<null>)			=> (<false>))
-   ((<list>)			=> (<false>))
-   ((<pair>)			=> (<boolean>))
-   (((and (not <top>)
-	  (not <pair>)))	=> (<false>))
-   ((<top>)			=> (<boolean>)))
+   ((<list>)				=> (<false>))
+   (((or <pair>
+	 (ancestors-of <pair>)))	=> (<boolean>))
+   (((not <pair>))			=> (<false>)))
   (attributes
    ((())		foldable effect-free result-false)
    ((_)			foldable effect-free)))

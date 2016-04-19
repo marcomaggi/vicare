@@ -482,7 +482,7 @@
   ;;
   ;;   (declare-type-predicate fixnum? <fixnum>)
   ;;   (declare-type-predicate vector? <vector>)
-  ;;   (declare-type-predicate exact-integer? <fixnum> <bignum> <exact-integer>)
+  ;;   (declare-type-predicate exact-integer? <exact-integer>)
   ;;
   (syntax-rules ()
     ((_ ?who)
@@ -495,8 +495,8 @@
 	 (safe)
        (signatures
 	((?obj-tag)				=> (<true>))
-	#;(((not (ancestors-of ?obj-tag)))	=> (<false>))
-	((<top>)				=> (<boolean>)))
+	(((ancestors-of ?obj-tag))		=> (<boolean>))
+	(((not ?obj-tag))			=> (<false>)))
        (attributes
 	((_)		foldable effect-free))))
     ))
@@ -511,11 +511,11 @@
      (declare-core-primitive ?who
 	 (safe)
        (signatures
-	((<false>)				=> (<true>))
-	((?obj-tag)				=> (<true>))
-	;; (((and (not (ancestors-of ?obj-tag))
-	;;        (not (ancestors-of <false>))))	=> (<false>))
-	((<top>)				=> (<boolean>)))
+	(((or ?obj-tag <false>))		=> (<true>))
+	(((or (ancestors-of ?obj-tag)
+	      (ancestors-of <false>)))		=> (<boolean>))
+	(((and (not ?obj-tag)
+	       (not <false>)))			=> (<boolean>)))
        (attributes
 	((_)		foldable effect-free))))
     ))
@@ -523,9 +523,7 @@
 (define-syntax declare-condition-type-predicate
   ;;Usage examples:
   ;;
-  ;;   (declare-type-predicate fixnum? <fixnum>)
-  ;;   (declare-type-predicate vector? <vector>)
-  ;;   (declare-type-predicate exact-integer? <fixnum> <bignum> <exact-integer>)
+  ;;   (declare-condition-type-predicate error? &error)
   ;;
   (syntax-rules ()
     ((_ ?who ?tag)
@@ -533,9 +531,9 @@
 	 (safe)
        (signatures
 	((?tag)				=> (<true>))
-	((<compound-condition>)		=> (<boolean>))
-	#;(((not (ancestors-of ?tag)))	=> (<false>))
-	((<top>)			=> (<boolean>)))
+	(((or (ancestors-of ?tag)
+	      <compound-condition>))	=> (<boolean>))
+	(((not ?tag))			=> (<false>)))
        (attributes
 	((_)				foldable effect-free))))
     ))
@@ -546,15 +544,16 @@
   ;;   (declare-list-of-type-predicate list-of-fixnums? <fixnum>)
   ;;
   (syntax-rules ()
-    ((_ ?who ?obj-tag ...)
+    ((_ ?who ?obj-tag)
      (declare-core-primitive ?who
 	 (safe)
        (signatures
-	(((list-of ?obj-tag))	=> (<true>))
-	...
-	(((and (not <list>)
-	       (not <pair>)))	=> (<false>))
-	((<top>)		=> (<boolean>)))
+	(((list-of ?obj-tag))			=> (<true>))
+	(((list-of (ancestors-of ?obj-tag)))	=> (<boolean>))
+	(((list-of (not ?obj-tag)))		=> (<false>))
+	(((or (ancestors-of (list-of ?obj-tag))
+	      <pair>))				=> (<boolean>))
+	(((not (list-of ?obj-tag)))		=> (<false>)))
        (attributes
 	((_)		foldable effect-free))))
     ))

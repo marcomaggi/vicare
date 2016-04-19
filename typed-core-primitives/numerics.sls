@@ -84,10 +84,12 @@
 (declare-core-primitive zero?
     (safe)
   (signatures
-   ((<positive-fixnum>)		=> (<false>))
-   ((<negative-fixnum>)		=> (<false>))
-   ((<ratnum>)			=> (<false>))
-   ((<bignum>)			=> (<false>))
+   ((<zero>)			=> (<true>))
+   ((<positive>)		=> (<false>))
+   ((<negative>)		=> (<false>))
+   ((<non-zero-compnum>)	=> (<false>))
+   ((<non-positive>)		=> (<boolean>))
+   ((<non-negative>)		=> (<boolean>))
    ((<number>)			=> (<boolean>)))
   (attributes
    ((0)				foldable effect-free result-true)
@@ -96,10 +98,11 @@
 (declare-core-primitive positive?
     (safe)
   (signatures
-   ((<positive-fixnum>)		=> (<true>))
-   ((<negative-fixnum>)		=> (<false>))
-   ((<positive-bignum>)		=> (<true>))
-   ((<negative-bignum>)		=> (<false>))
+   ((<positive>)		=> (<true>))
+   ((<negative>)		=> (<false>))
+   ((<zero>)			=> (<false>))
+   ((<non-positive>)		=> (<boolean>))
+   ((<non-negative>)		=> (<boolean>))
    ((<real>)			=> (<boolean>)))
   (attributes
    ((0)				foldable effect-free result-false)
@@ -108,10 +111,11 @@
 (declare-core-primitive negative?
     (safe)
   (signatures
-   ((<positive-fixnum>)		=> (<false>))
-   ((<negative-fixnum>)		=> (<true>))
-   ((<positive-bignum>)		=> (<false>))
-   ((<negative-bignum>)		=> (<true>))
+   ((<negative>)		=> (<true>))
+   ((<positive>)		=> (<false>))
+   ((<zero>)			=> (<false>))
+   ((<non-positive>)		=> (<boolean>))
+   ((<non-negative>)		=> (<boolean>))
    ((<real>)			=> (<boolean>)))
   (attributes
    ((0)				foldable effect-free result-false)
@@ -120,10 +124,8 @@
 (declare-core-primitive non-negative?
     (safe)
   (signatures
-   ((<negative-fixnum>)		=> (<false>))
-   ((<non-negative-fixnum>)	=> (<true>))
-   ((<positive-bignum>)		=> (<true>))
-   ((<negative-bignum>)		=> (<false>))
+   ((<non-negative>)		=> (<true>))
+   ((<positive>)		=> (<false>))
    ((<real>)			=> (<boolean>)))
   (attributes
    ((0)				foldable effect-free result-true)
@@ -132,11 +134,8 @@
 (declare-core-primitive non-positive?
     (safe)
   (signatures
-   ((<positive-fixnum>)		=> (<false>))
-   ((<negative-fixnum>)		=> (<true>))
-   ((<zero-fixnum>)		=> (<true>))
-   ((<positive-bignum>)		=> (<false>))
-   ((<negative-bignum>)		=> (<true>))
+   ((<non-positive>)		=> (<true>))
+   ((<negative>)		=> (<false>))
    ((<real>)			=> (<boolean>)))
   (attributes
    ((0)				foldable effect-free result-true)
@@ -147,6 +146,12 @@
 (declare-core-primitive zero-exact-integer?
     (safe)
   (signatures
+   ((<zero-fixnum>)	=> (<true>))
+   ((<positive-fixnum>)	=> (<false>))
+   ((<negative-fixnum>)	=> (<false>))
+   ((<fixnum>)		=> (<boolean>))
+   ((not <fixnum>)	=> (<false>))
+   ((<number>)		=> (<boolean>))
    ((<top>)		=> (<boolean>)))
   (attributes
    ((0)			foldable effect-free result-true)
@@ -240,6 +245,48 @@
    ((<inexact-compnum>)		=> (<true>))
    ((<exact-compnum>)		=> (<false>))
    ((<compnum>)			=> (<boolean>))))
+
+(declare-core-primitive zero-compnum?
+    (safe)
+  (signatures
+   ((<zero-compnum>)		=> (<true>))
+   ((<inexact-compnum>)		=> (<boolean>))
+   ((<exact-compnum>)		=> (<false>))
+   ((<compnum>)			=> (<boolean>))))
+
+(declare-core-primitive non-zero-compnum?
+    (safe)
+  (signatures
+   ((<non-zero-compnum>)	=> (<true>))
+   ((<zero-compnum>)		=> (<false>))
+   ((<compnum>)			=> (<boolean>))
+   ((<number>)			=> (<boolean>))))
+
+(declare-core-primitive non-zero-inexact-compnum?
+    (safe)
+  (signatures
+   ((<non-zero-compnum>)	=> (<true>))
+   ((<zero-compnum>)		=> (<false>))
+   ((<exact-compnum>)		=> (<false>))
+   ((<inexact-compnum>)		=> (<boolean>))
+   ((<compnum>)			=> (<boolean>))
+   ((<number>)			=> (<boolean>))))
+
+;;;
+
+(declare-core-primitive zero-cflonum?
+    (safe)
+  (signatures
+   ((<zero-cflonum>)		=> (<true>))
+   ((<cflonum>)			=> (<boolean>))))
+
+(declare-core-primitive non-zero-cflonum?
+    (safe)
+  (signatures
+   ((<non-zero-cflonum>)	=> (<true>))
+   ((<zero-cflonum>)		=> (<false>))
+   ((<cflonum>)			=> (<boolean>))
+   ((<number>)			=> (<boolean>))))
 
 ;;;
 

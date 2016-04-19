@@ -73,6 +73,7 @@
     bignum-positive?			bignum-negative?
     uuid
     standalone-pair?			exact-compnum?
+    zero-compnum?			zero-cflonum?
     procedure-arguments-consistency-violation
     last-pair
 
@@ -190,7 +191,9 @@
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon Jan 4,
     ;;2016)
     (only (ikarus numerics complex-numbers)
-	  exact-compnum?)
+	  exact-compnum?
+	  zero-compnum?
+	  zero-cflonum?)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri Oct 2,
     ;;2015)
     (prefix (only (ikarus records procedural)

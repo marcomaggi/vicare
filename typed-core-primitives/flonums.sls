@@ -94,6 +94,30 @@
   (attributes
    ((_)				foldable effect-free)))
 
+(declare-core-primitive positive-zero-flonum?
+    (safe)
+  (signatures
+   ((<positive-zero-flonum>)	=> (<true>))
+   ((<negative-zero-flonum>)	=> (<false>))
+   ((<zero-flonum>)		=> (<boolean>))
+   ((<positive-flonum>)		=> (<false>))
+   ((<negative-flonum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive negative-zero-flonum?
+    (safe)
+  (signatures
+   ((<negative-zero-flonum>)	=> (<true>))
+   ((<positive-zero-flonum>)	=> (<false>))
+   ((<zero-flonum>)		=> (<boolean>))
+   ((<positive-flonum>)		=> (<false>))
+   ((<negative-flonum>)		=> (<false>))
+   ((<top>)			=> (<boolean>)))
+  (attributes
+   ((_)				foldable effect-free)))
+
 (declare-core-primitive positive-flonum?
     (safe)
   (signatures

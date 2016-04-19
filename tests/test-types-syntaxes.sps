@@ -273,8 +273,9 @@
   (check-for-true	(type-annotation=? (and <fixnum> <exact-integer>)
 					   <fixnum>))
   (check-for-true	(type-annotation=? (and <number> <positive>)
-					   (or <positive-fixnum> <positive-bignum> <positive-ratnum>
-					       <positive-flonum> <positive-zero-flonum>)))
+					   (or <positive-fixnum> <positive-bignum> <positive-ratnum> <positive-flonum>)))
+  (check-for-true	(type-annotation=? (and <number> <negative>)
+					   (or <negative-fixnum> <negative-bignum> <negative-ratnum> <negative-flonum>)))
 
 ;;; --------------------------------------------------------------------
 ;;; complement
@@ -833,6 +834,19 @@
 	(<top>)
 	=> no-match)
 
+;;;
+
+  (doit (<fixnum>)
+	(<zero>)
+	=> possible-match)
+  (doit ((ancestors-of <fixnum>))
+	(<zero>)
+	=> no-match)
+
+  (doit ((not (ancestors-of <fixnum>)))
+	(<zero>)
+	=> exact-match)
+
   (void))
 
 
@@ -1289,7 +1303,7 @@
   (doit (let ((a 1)
 	      (b 2))
 	  (fx+ a b))
-	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
+	=> (<fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; LET* type propagation
@@ -1312,7 +1326,7 @@
   (doit (let* ((a 1)
 	       (b 2))
 	  (fx+ a b))
-	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
+	=> (<fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; LETREC type propagation
@@ -1335,7 +1349,7 @@
   (doit (letrec ((a 1)
 		 (b 2))
 	  (fx+ a b))
-	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
+	=> (<fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; LETREC* type propagation
@@ -1358,7 +1372,7 @@
   (doit (letrec* ((a 1)
 		  (b 2))
 	  (fx+ a b))
-	=> ((or <positive-fixnum> <negative-fixnum> <zero-fixnum> <fixnum>)))
+	=> (<fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; CALL-WITH-VALUES type propagation
@@ -1585,76 +1599,108 @@
 	 => (quote ?expected)))
       ))
 
+  (define-syntax doit*
+    (syntax-rules (=>)
+      ((_ (?pred ?type) => ?expected-type)
+       (doit (?pred (unsafe-cast-signature (?type) (read)))
+	     => (?expected-type)))
+      ))
+
 ;;; --------------------------------------------------------------------
 ;;; fixnum?
 
-  (doit (fixnum? (unsafe-cast-signature (<fixnum>) (read)))
-	=> (<true>))
-
-  (doit (fixnum? (unsafe-cast-signature (<exact-integer>) (read)))
-	=> (<boolean>))
-
-  (doit (fixnum? (unsafe-cast-signature (<number>) (read)))
-	=> (<boolean>))
-
-  (doit (fixnum? (unsafe-cast-signature (<top>) (read)))
-	=> (<boolean>))
-
-  (doit (fixnum? (unsafe-cast-signature (<string>) (read)))
-	=> (<false>))
+  (doit* (fixnum? <fixnum>)		=> <true>)
+  (doit* (fixnum? <exact-integer>)	=> <boolean>)
+  (doit* (fixnum? <number>)		=> <boolean>)
+  (doit* (fixnum? <top>)		=> <boolean>)
+  (doit* (fixnum? <string>)		=> <false>)
 
 ;;;
 
-  (doit (fixnum? (unsafe-cast-signature (<positive-fixnum>) (read)))
-	=> (<true>))
-
-  (doit (fixnum? (unsafe-cast-signature (<negative-fixnum>) (read)))
-	=> (<true>))
-
-  (doit (fixnum? (unsafe-cast-signature (<zero-fixnum>) (read)))
-	=> (<true>))
-
-  (doit (fixnum? (unsafe-cast-signature (<zero>) (read)))
-	=> (<boolean>))
-
-  (doit (fixnum? (unsafe-cast-signature (<exact-integer>) (read)))
-	=> (<boolean>))
-
-  (doit (fixnum? (unsafe-cast-signature (<number>) (read)))
-	=> (<boolean>))
-
-  (doit (fixnum? (unsafe-cast-signature (<bignum>) (read)))
-	=> (<false>))
+  (doit* (fixnum? <positive-fixnum>)	=> <true>)
+  (doit* (fixnum? <negative-fixnum>)	=> <true>)
+  (doit* (fixnum? <zero-fixnum>)	=> <true>)
+  (doit* (fixnum? <zero>)		=> <boolean>)
+  (doit* (fixnum? <exact-integer>)	=> <boolean>)
+  (doit* (fixnum? <number>)		=> <boolean>)
+  (doit* (fixnum? <bignum>)		=> <false>)
 
 ;;; --------------------------------------------------------------------
 ;;; pair?
 
-  (doit (pair? (unsafe-cast-signature (<pair>) (read)))
-	=> (<true>))
-
-  (doit (pair? (unsafe-cast-signature (<list>) (read)))
-	=> (<boolean>))
-
-  (doit (pair? (unsafe-cast-signature (<top>) (read)))
-	=> (<boolean>))
-
-  (doit (pair? (unsafe-cast-signature (<fixnum>) (read)))
-	=> (<false>))
+  (doit* (pair? <pair>)		=> <true>)
+  (doit* (pair? <list>)		=> <boolean>)
+  (doit* (pair? <top>)		=> <boolean>)
+  (doit* (pair? <fixnum>)	=> <false>)
 
 ;;; --------------------------------------------------------------------
 ;;; list?
 
-  (doit (list? (unsafe-cast-signature (<pair>) (read)))
-	=> (<boolean>))
+  (doit* (list? <null>)				=> <true>)
+  (doit* (list? <list>)				=> <true>)
+  (doit* (list? <pair>)				=> <boolean>)
+  (doit* (list? <top>)				=> <boolean>)
+  (doit* (list? <fixnum>)			=> <false>)
 
-  (doit (list? (unsafe-cast-signature (<list>) (read)))
-	=> (<true>))
+  (doit* (list? (list-of <fixnum>))		=> <true>)
+  (doit* (list? (list <fixnum> <string>))	=> <true>)
+  (doit* (list? (pair <fixnum> <string>))	=> <boolean>)
+  (doit* (list? (pair <fixnum> <null>))		=> <boolean>)
 
-  (doit (list? (unsafe-cast-signature (<top>) (read)))
-	=> (<boolean>))
+;;; --------------------------------------------------------------------
+;;; circular-list?
 
-  (doit (list? (unsafe-cast-signature (<fixnum>) (read)))
-	=> (<false>))
+  (doit* (circular-list? <pair>)			=> <boolean>)
+  (doit* (circular-list? <top>)				=> <boolean>)
+  (doit* (circular-list? <null>)			=> <false>)
+  (doit* (circular-list? <list>)			=> <false>)
+  (doit* (circular-list? (list-of <fixnum>))		=> <false>)
+  (doit* (circular-list? (list <fixnum> <string>))	=> <false>)
+  (doit* (circular-list? <string>)			=> <false>)
+
+;;; --------------------------------------------------------------------
+;;; list-of-fixnums?
+
+  (doit* (list-of-fixnums? (list-of <fixnum>))			=> <true>)
+  (doit* (list-of-fixnums? (list <fixnum> <fixnum>))		=> <true>)
+
+  (doit* (list-of-fixnums? (list-of <exact-integer>))		=> <boolean>)
+  (doit* (list-of-fixnums? (list <fixnum> <exact-integer>))	=> <boolean>)
+  (doit* (list-of-fixnums? <list>)				=> <boolean>)
+  (doit* (list-of-fixnums? (pair <fixnum> <string>))		=> <boolean>)
+  (doit* (list-of-fixnums? (pair <fixnum> <null>))		=> <true>)
+  (doit* (list-of-fixnums? <pair>)				=> <boolean>)
+  (doit* (list-of-fixnums? <top>)				=> <boolean>)
+
+  (doit* (list-of-fixnums? (list <fixnum> <string>))		=> <false>)
+  (doit* (list-of-fixnums? (list <fixnum> <bignum>))		=> <false>)
+  (doit* (list-of-fixnums? (list-of <string>))			=> <false>)
+  (doit* (list-of-fixnums? <string>)				=> <false>)
+
+;;; --------------------------------------------------------------------
+;;; zero?
+
+  (doit* (zero? <zero>)			=> <true>)
+  (doit* (zero? <positive>)		=> <false>)
+  (doit* (zero? <negative>)		=> <false>)
+  (doit* (zero? <non-positive>)		=> <boolean>)
+  (doit* (zero? <non-negative>)		=> <boolean>)
+  (doit* (zero? <real>)			=> <boolean>)
+  (doit* (zero? <complex>)		=> <boolean>)
+  (doit* (zero? <number>)		=> <boolean>)
+
+;;; compnums
+
+  (doit* (zero? <zero-compnum>)			=> <true>)
+  (doit* (zero? <non-zero-inexact-compnum>)	=> <false>)
+  (doit* (zero? <non-zero-compnum>)		=> <false>)
+  (doit* (zero? <exact-compnum>)		=> <false>)
+  (doit* (zero? <inexact-compnum>)		=> <boolean>)
+
+;;; cflonums
+
+  (doit* (zero? <zero-cflonum>)		=> <true>)
+  (doit* (zero? <non-zero-cflonum>)	=> <boolean>)
 
   (void))
 
@@ -1680,14 +1726,20 @@
   (doit (not (unsafe-cast-signature (<boolean>) (read)))
 	=> (<boolean>))
 
+  (doit (not (unsafe-cast-signature (<string>) (read)))
+	=> (<false>))
+
   (doit (not (unsafe-cast-signature ((or <true> <string>)) (read)))
-	=> (<true>))
+	=> (<false>))
 
   (doit (not (unsafe-cast-signature ((or <false> <string>)) (read)))
 	=> (<boolean>))
 
   (doit (not (unsafe-cast-signature ((or <false> <true>)) (read)))
 	=> (<boolean>))
+
+  (doit (not (unsafe-cast-signature ((or <fixnum> <string>)) (read)))
+	=> (<false>))
 
   (void))
 

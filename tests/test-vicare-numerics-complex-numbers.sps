@@ -8,20 +8,19 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2013, 2015-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -493,6 +492,45 @@
    #f)
 
   #t)
+
+
+(parametrise ((check-test-name	'zero))
+
+  (check-for-true	(zero? 0+0.0i))
+  (check-for-true	(zero? 0-0.0i))
+  (check-for-false	(zero? 1+0.0i))
+  (check-for-false	(zero? 0+1.0i))
+  (check-for-false	(zero? 0+1i))
+
+  (check-for-true	(non-zero-compnum? 1+0.0i))
+  (check-for-true	(non-zero-compnum? 0+1.0i))
+  (check-for-false	(non-zero-compnum? 0+0.0i))
+  (check-for-false	(non-zero-compnum? 0-0.0i))
+
+  (check-for-true	(non-zero-inexact-compnum? 1+0.0i))
+  (check-for-true	(non-zero-inexact-compnum? 0+1.0i))
+  (check-for-true	(non-zero-inexact-compnum? 0.0+1i))
+  (check-for-false	(non-zero-inexact-compnum? 0+0.0i))
+  (check-for-false	(non-zero-inexact-compnum? 0-0.0i))
+  (check-for-false	(non-zero-inexact-compnum? 1+2i))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(zero? +0.0+0.0i))
+  (check-for-true	(zero? +0.0-0.0i))
+  (check-for-true	(zero? -0.0+0.0i))
+  (check-for-true	(zero? -0.0-0.0i))
+  (check-for-false	(zero? +1.0+0.0i))
+  (check-for-false	(zero? +0.0-1.0i))
+
+  (check-for-true	(non-zero-cflonum? +1.0+0.0i))
+  (check-for-true	(non-zero-cflonum? +0.0+1.0i))
+  (check-for-false	(non-zero-cflonum? +0.0+0.0i))
+  (check-for-false	(non-zero-cflonum? +0.0-0.0i))
+  (check-for-false	(non-zero-cflonum? -0.0+0.0i))
+  (check-for-false	(non-zero-cflonum? -0.0-0.0i))
+
+  (void))
 
 
 ;;;; done

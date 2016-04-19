@@ -14857,6 +14857,57 @@ Return @true{} if @var{obj} is a compnum having exact or inexact real
 and imaginary parts; otherwise return @false{}.
 @end defun
 
+
+@defun zero-compnum? @var{obj}
+Return @true{} if @var{obj} is a compnum having both real and imaginary
+parts equal to zero; otherwise return @false{}.
+
+Remembering that a compnum with exact zero as imaginary part is
+converted to a real number by @func{make-rectangular}:
+
+@lisp
+1+0i                    @result{} 1
+(make-rectangular 1 0)  @result{} 1
+@end lisp
+
+@noindent
+the compnums of type @class{zero-compnum} are the following:
+
+@example
+   0+0.0i    0-0.0i
++0.0+0.0i -0.0+0.0i
++0.0-0.0i -0.0-0.0i
+@end example
+
+@noindent
+with the imaginary part always inexact.
+@end defun
+
+
+@defun non-zero-compnum? @var{obj}
+Return @true{} if @var{obj} is a compnum having either the real part or
+imaginary part different from zero; otherwise return @false{}.
+@end defun
+
+
+@defun non-zero-inexact-compnum? @var{obj}
+Return @true{} if @var{obj} is a compnum having: either the real part or
+imaginary part inexact; either the real part or imaginary part different
+from zero.  Otherwise return @false{}.
+@end defun
+
+
+@defun zero-cflonum? @var{obj}
+Return @true{} if @var{obj} is a cflonum having both real and imaginary
+parts equal to zero; otherwise return @false{}.
+@end defun
+
+
+@defun non-zero-cflonum? @var{obj}
+Return @true{} if @var{obj} is a cflonum having either the real part or
+imaginary part different from zero; otherwise return @false{}.
+@end defun
+
 @c ------------------------------------------------------------
 
 @defun non-positive? @var{X}

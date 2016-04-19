@@ -75,6 +75,8 @@
 		  zero-flonum?
 		  positive-zero-flonum?			negative-zero-flonum?
 		  exact-compnum?			inexact-compnum?
+		  zero-compnum?				non-zero-compnum?
+		  zero-cflonum?				non-zero-cflonum?
 		  hashtable-eq?				hashtable-eqv?
 		  hashtable-equiv?
 		  keyword-hash				pointer-hash
@@ -123,8 +125,9 @@
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Tue Apr 5,
     ;;2016)
     (only (ikarus numerics complex-numbers)
-	  exact-compnum?
-	  inexact-compnum?)
+	  exact-compnum?	inexact-compnum?
+	  zero-compnum?		non-zero-compnum?	non-zero-inexact-compnum?
+	  zero-cflonum?		non-zero-cflonum?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Dec 15,
     ;;2015)
     (prefix (only (ikarus structs)

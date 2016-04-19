@@ -527,19 +527,22 @@
 
 	((union-type-spec? super.ots)
 	 (cond ((union-type-spec? sub.ots)
+		;;Every sub-component must match a super-component.
+		;;
 		;; (type-super-and-sub? (or <number> <vector>)
 		;;                      (or <fixnum> (vector-of <string>)))
 		;; => #t
-		(exists (lambda (component-super.ots)
-			  (exists (lambda (component-sub.ots)
-				    (object-type-spec.matching-super-and-sub? component-super.ots component-sub.ots))
-			    (union-type-spec.component-ots* sub.ots)))
-		  (union-type-spec.component-ots* super.ots)))
+		;;
+		(for-all (lambda (sub-component.ots)
+			   (exists (lambda (super-component.ots)
+				     (object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
+			     (union-type-spec.component-ots* super.ots)))
+		  (union-type-spec.component-ots* sub.ots)))
 	       (else
 		;; (type-super-and-sub? (or <number> <string>) <string>) => #t
 		;; (type-super-and-sub? (or <number> <string>) <fixnum>) => #t
-		(exists (lambda (component-super.ots)
-			  (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
+		(exists (lambda (super-component.ots)
+			  (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
 		  (union-type-spec.component-ots* super.ots)))))
 
 	((union-type-spec? sub.ots)
@@ -551,8 +554,8 @@
 			      sub-component-ots*))
 		    (ancestors-of-type-spec.component-ots* super.ots)))
 		 (else
-		  (for-all (lambda (component-sub.ots)
-			     (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+		  (for-all (lambda (sub-component.ots)
+			     (object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
 		    sub-component-ots*)))))
 
 ;;; --------------------------------------------------------------------
@@ -560,19 +563,21 @@
 
 	((intersection-type-spec? super.ots)
 	 (cond ((intersection-type-spec? sub.ots)
+		;;Every sub-component must match every super-component.
+		;;
 		;; (type-super-and-sub? (and <number> <positive>)
 		;;                      (and <positive-fixnum>
 		;;                           <positive-ratnum>))
 		;; => #t
-		(for-all (lambda (component-super.ots)
-			   (for-all (lambda (component-sub.ots)
-				      (object-type-spec.matching-super-and-sub? component-super.ots component-sub.ots))
+		(for-all (lambda (super-component.ots)
+			   (for-all (lambda (sub-component.ots)
+				      (object-type-spec.matching-super-and-sub? super-component.ots sub-component.ots))
 			     (intersection-type-spec.component-ots* sub.ots)))
 		  (intersection-type-spec.component-ots* super.ots)))
 	       (else
 		;; (type-super-and-sub? (and <exact> <positive>) <positive-fixnum>) => #t
-		(for-all (lambda (component-super.ots)
-			   (object-type-spec.matching-super-and-sub? component-super.ots sub.ots))
+		(for-all (lambda (super-component.ots)
+			   (object-type-spec.matching-super-and-sub? super-component.ots sub.ots))
 		  (intersection-type-spec.component-ots* super.ots)))))
 
 	((intersection-type-spec? sub.ots)
@@ -584,8 +589,8 @@
 			      sub-component-ots*))
 		    (ancestors-of-type-spec.component-ots* super.ots)))
 		 (else
-		  (for-all (lambda (component-sub.ots)
-			     (object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+		  (for-all (lambda (sub-component.ots)
+			     (object-type-spec.matching-super-and-sub? super.ots sub-component.ots))
 		    sub-component-ots*)))))
 
 ;;; --------------------------------------------------------------------
@@ -1809,7 +1814,7 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-compound-condition-type-spec component-type*.ots)
-	(let* ((component-type*.ots	(%collapse-component-specs component-type*.ots))
+	(let* ((component-type*.ots	(%splice-component-specs component-type*.ots))
 	       (name.stx		(cons (core-prim-id 'condition)
 					      (map object-type-spec.name component-type*.ots)))
 	       (parent.ots		(<compound-condition>-ots))
@@ -1829,7 +1834,7 @@
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots)))
 
-      (define (%collapse-component-specs component-type*.ots)
+      (define (%splice-component-specs component-type*.ots)
 	(fold-right (lambda (component.ots knil)
 		      (cond ((simple-condition-object-type-spec? component.ots)
 			     (cons component.ots knil))
@@ -1940,26 +1945,60 @@
 (define <union-type-spec>-rcd
   (record-constructor-descriptor <union-type-spec>))
 
-(define* (make-union-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
-  (define (%collapse-component-specs component-type*.ots)
-    (object-type-specs-delete-duplicates
-     (fold-right (lambda (component.ots knil)
-		   (cond ((union-type-spec? component.ots)
-			  (append (union-type-spec.component-ots* component.ots)
-				  knil))
-			 (else
-			  (cons component.ots knil))))
-       '() component-type*.ots)))
-  (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
-    (cond ((list-of-single-item? component-type*.ots)
-	   (car component-type*.ots))
-	  ;;If there is  a "<void>": the whole union collapses  to "<void>".  This is
-	  ;;akin to: if one operand of multiplication is NaN, the result is NaN.
-	  ((find <void>-ots? component-type*.ots))
-	  (else
-	   ;;If there are "<no-return>" components: we filter them out.
-	   (let ((component-type*.ots (remp <no-return>-ots? component-type*.ots)))
-	     (make-union-type-spec component-type*.ots))))))
+(module (make-union-type-spec/maybe)
+
+  (define* (make-union-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+    (let* ((component-type*.ots (%splice-component-specs component-type*.ots))
+	   (component-type*.ots (object-type-specs-delete-duplicates component-type*.ots)))
+      (cond ((list-of-single-item? component-type*.ots)
+	     (car component-type*.ots))
+	    ;;If there is a "<void>": the whole union collapses to "<void>".  This is
+	    ;;akin to: if one operand of multiplication is NaN, the result is NaN.
+	    ((find <void>-ots? component-type*.ots))
+	    (else
+	     ;;If there are "<no-return>" components: we filter them out.
+	     (let* ((component-type*.ots (remp <no-return>-ots? component-type*.ots))
+		    ;;If a component  is sub-type of another  component: the sub-type
+		    ;;must be filtered out.  We do the filtering twice: left-to-right
+		    ;;and right-to-left.
+		    (rev-component-type*.ots	(%remove-sub-types component-type*.ots     '()))
+		    (component-type*.ots	(%remove-sub-types rev-component-type*.ots '())))
+	       (if (list-of-single-item? component-type*.ots)
+		   (car component-type*.ots)
+		 (make-union-type-spec component-type*.ots)))))))
+
+  (define (%splice-component-specs component-type*.ots)
+    (fold-right (lambda (component.ots knil)
+		  (cond ((union-type-spec? component.ots)
+			 (append (union-type-spec.component-ots* component.ots)
+				 knil))
+			(else
+			 (cons component.ots knil))))
+      '() component-type*.ots))
+
+  (define (%remove-sub-types in* out*)
+    ;;Recursive function.  Remove from IN* the items that are sub-types of items that
+    ;;follow them.  Build and return a list of the remaining items.  Examples:
+    ;;
+    ;;   (%remove-super-types (list (<fixnum>-ots) (<flonum>-ots))
+    ;;                        '())
+    ;;   => (list (<fixnum>-ots) (<flonum>-ots))
+    ;;
+    ;;   (%remove-super-types (list (<fixnum>-ots) (<exact-integer>-ots))
+    ;;                        '())
+    ;;   => (list (<exact-integer>-ots))
+    ;;
+    (if (pair? in*)
+	(%remove-sub-types (cdr in*)
+			   (let ((ots1 (car in*)))
+			     (if (exists (lambda (ots2)
+					   (object-type-spec.matching-super-and-sub? ots2 ots1))
+				   (cdr in*))
+				 out*
+			       (cons ots1 out*))))
+      out*))
+
+  #| end of module: MAKE-UNION-TYPE-SPEC/MAYBE |# )
 
 (define* (union-type-spec.length {union.ots union-type-spec?})
   (let ((mem (union-type-spec.memoised-length union.ots)))
@@ -2049,7 +2088,8 @@
 (module (make-intersection-type-spec/maybe)
 
   (define* (make-intersection-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
-    (let ((component-type*.ots (%collapse-component-specs component-type*.ots)))
+    (let* ((component-type*.ots (%splice-component-specs component-type*.ots))
+	   (component-type*.ots (object-type-specs-delete-duplicates component-type*.ots)))
       (cond ((list-of-single-item? component-type*.ots)
 	     (car component-type*.ots))
 	    ;;If there is a "<void>": the whole union collapses to "<void>".  This is
@@ -2067,19 +2107,18 @@
 		   (car component-type*.ots)
 		 (make-intersection-type-spec component-type*.ots)))))))
 
-  (define (%collapse-component-specs component-type*.ots)
-    (object-type-specs-delete-duplicates
-     (fold-right (lambda (component.ots knil)
-		   (cond ((intersection-type-spec? component.ots)
-			  (append (intersection-type-spec.component-ots* component.ots)
-				  knil))
-			 (else
-			  (cons component.ots knil))))
-       '() component-type*.ots)))
+  (define (%splice-component-specs component-type*.ots)
+    (fold-right (lambda (component.ots knil)
+		  (cond ((intersection-type-spec? component.ots)
+			 (append (intersection-type-spec.component-ots* component.ots)
+				 knil))
+			(else
+			 (cons component.ots knil))))
+      '() component-type*.ots))
 
   (define (%remove-super-types in* out*)
-    ;;Recursive function.  Remove from IN* the items that are sub-types of items that
-    ;;follow them.  Build and return a list of the remaining items.  Examples:
+    ;;Recursive function.   Remove from IN* the  items that are super-types  of items
+    ;;that follow them.  Build and return a list of the remaining items.  Examples:
     ;;
     ;;   (%remove-super-types (list (<fixnum>-ots) (<flonum>-ots))
     ;;                        '())

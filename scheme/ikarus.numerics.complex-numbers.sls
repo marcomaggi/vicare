@@ -23,6 +23,8 @@
     magnitude			angle
     complex-conjugate
     exact-compnum?		inexact-compnum?
+    zero-compnum?		non-zero-compnum?	non-zero-inexact-compnum?
+    zero-cflonum?		non-zero-cflonum?
 
 ;;; --------------------------------------------------------------------
 
@@ -40,7 +42,9 @@
 		  real-part		imag-part
 		  angle			magnitude
 		  complex-conjugate
-		  exact-compnum?	inexact-compnum?)
+		  exact-compnum?	inexact-compnum?
+		  zero-compnum?		non-zero-compnum?	non-zero-inexact-compnum?
+		  zero-cflonum?		non-zero-cflonum?)
     (only (vicare system $compnums)
 	  $make-compnum		$make-cflonum
 	  $compnum-real		$compnum-imag
@@ -218,15 +222,61 @@
 
   #| end of module: complex-conjugate |# )
 
-(define (exact-compnum? obj)
-  (and (compnum? obj)
-       (exact? ($compnum-real obj))
-       (exact? ($compnum-imag obj))))
+
+;;;; more predicates
 
-(define (inexact-compnum? obj)
+(define-syntax-rule (non-zero? ?obj)
+  (not (zero? ?obj)))
+
+(define-syntax-rule (inexact-non-zero? ?expr)
+  (let ((X ?expr))
+    (and (inexact? X)
+	 (not (zero? X)))))
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?pred)
+		 (define (?who obj)
+		   (and (compnum? obj)
+			(?pred ($compnum-real obj))
+			(?pred ($compnum-imag obj)))))
+		)))
+  (declare exact-compnum?		exact?)
+  (declare inexact-compnum?		inexact?)
+  (declare zero-compnum?		zero?)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?pred)
+		 (define (?who obj)
+		   (and (cflonum? obj)
+			(?pred ($cflonum-real obj))
+			(?pred ($cflonum-imag obj)))))
+		)))
+  (declare zero-cflonum?	flzero?)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(define (non-zero-compnum? obj)
   (and (compnum? obj)
-       (inexact? ($compnum-real obj))
-       (inexact? ($compnum-imag obj))))
+       (or (non-zero? ($compnum-real obj))
+	   (non-zero? ($compnum-imag obj)))))
+
+(define (non-zero-inexact-compnum? obj)
+  (and (compnum? obj)
+       (let ((X ($compnum-real obj))
+	     (Y ($compnum-imag obj)))
+	 (and (or (inexact? X)
+		  (inexact? Y))
+	      (or (non-zero? X)
+		  (non-zero? Y))))))
+
+(define (non-zero-cflonum? obj)
+  (and (cflonum? obj)
+       (or (non-zero? ($cflonum-real obj))
+	   (non-zero? ($cflonum-imag obj)))))
 
 
 ;;;; done

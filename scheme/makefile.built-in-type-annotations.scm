@@ -66,6 +66,19 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-type-annotation <non-negative-flonum>
+  (or <positive-flonum> <zero-flonum>))
+
+(define-type-annotation <non-positive-flonum>
+  (or <negative-flonum> <zero-flonum>))
+
+;;; --------------------------------------------------------------------
+
+(define-type-annotation <non-zero-compnum>
+  (or <exact-compnum> <non-zero-inexact-compnum>))
+
+;;; --------------------------------------------------------------------
+
 (define-type-annotation <exact>
   (or <exact-rational> <exact-compnum>))
 
@@ -75,22 +88,19 @@
 ;;; --------------------------------------------------------------------
 
 (define-type-annotation <positive>
-  (or <positive-fixnum> <positive-bignum> <positive-ratnum>
-      <positive-flonum> <positive-zero-flonum>))
-
-(define-type-annotation <non-negative>
-  (or <non-negative-fixnum> <positive-bignum> <positive-ratnum>
-      <positive-flonum> <positive-zero-flonum>))
+  (or <positive-fixnum> <positive-bignum> <positive-ratnum> <positive-flonum>))
 
 (define-type-annotation <negative>
-  (or <negative-fixnum> <negative-bignum> <negative-ratnum>
-      <negative-flonum> <negative-zero-flonum>))
+  (or <negative-fixnum> <negative-bignum> <negative-ratnum> <negative-flonum>))
 
-(define-type-annotation <zero-flonum>
-  (or <positive-zero-flonum> <negative-zero-flonum>))
+(define-type-annotation <non-negative>
+  (or <non-negative-fixnum> <positive-bignum> <positive-ratnum> <non-negative-flonum>))
+
+(define-type-annotation <non-positive>
+  (or <non-positive-fixnum> <negative-bignum> <negative-ratnum> <non-positive-flonum>))
 
 (define-type-annotation <zero>
-  (or <zero-fixnum> <zero-flonum>))
+  (or <zero-fixnum> <zero-flonum> <zero-compnum> <zero-cflonum>))
 
 
 ;;;; library handling
@@ -134,6 +144,15 @@
 
 (define-type-annotation <hash-function>
   (lambda (<top>) => (<non-negative-fixnum>)))
+
+
+;;;; input/output ports
+
+(define-type-annotation <textual-port>
+  (or <textual-input-port> <textual-output-port> <textual-input/output-port>))
+
+(define-type-annotation <binary-port>
+  (or <textual-input-port> <textual-output-port> <textual-input/output-port>))
 
 
 ;;;; miscellaneous

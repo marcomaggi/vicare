@@ -87,9 +87,11 @@
   (signatures
    ((<false>)				=> (<true>))
    ((<true>)				=> (<false>))
-   ((<boolean>)				=> (<boolean>))
-   #;(((not (ancestors-of <false>)))	=> (<false>))
-   ((<top>)				=> (<boolean>))))
+   (((or <boolean>
+	 (ancestors-of <boolean>)))	=> (<boolean>))
+   (((and (not <false>)
+	  (not <true>)
+	  (not <boolean>)))		=> (<false>))))
 
 ;;; --------------------------------------------------------------------
 

@@ -248,6 +248,23 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-scheme-type <zero-flonum>
+    <flonum>
+  (constructor #t)
+  (predicate zero-flonum?))
+
+(define-scheme-type <positive-zero-flonum>
+    <zero-flonum>
+  (constructor #t)
+  (predicate positive-zero-flonum?))
+
+(define-scheme-type <negative-zero-flonum>
+    <zero-flonum>
+  (constructor #t)
+  (predicate negative-zero-flonum?))
+
+;;;
+
 (define-scheme-type <positive-flonum>
     <flonum>
   (constructor #t)
@@ -257,16 +274,6 @@
     <flonum>
   (constructor #t)
   (predicate negative-flonum?))
-
-(define-scheme-type <positive-zero-flonum>
-    <positive-flonum>
-  (constructor #t)
-  (predicate positive-zero-flonum?))
-
-(define-scheme-type <negative-zero-flonum>
-    <negative-flonum>
-  (constructor #t)
-  (predicate negative-zero-flonum?))
 
 ;;; --------------------------------------------------------------------
 
@@ -279,6 +286,28 @@
     <compnum>
   (constructor #t)
   (predicate inexact-compnum?))
+
+(define-scheme-type <zero-compnum>
+    <inexact-compnum>
+  (constructor #t)
+  (predicate zero-compnum?))
+
+(define-scheme-type <non-zero-inexact-compnum>
+    <inexact-compnum>
+  (constructor #t)
+  (predicate non-zero-inexact-compnum?))
+
+;;; --------------------------------------------------------------------
+
+(define-scheme-type <zero-cflonum>
+    <cflonum>
+  (constructor #t)
+  (predicate zero-cflonum?))
+
+(define-scheme-type <non-zero-cflonum>
+    <cflonum>
+  (constructor #t)
+  (predicate non-zero-cflonum?))
 
 
 ;;;; compound types
@@ -599,16 +628,6 @@
 (define-scheme-type <input/output-port>
     <port>
   (predicate input/output-port?))
-
-;;; --------------------------------------------------------------------
-
-(define-scheme-type <textual-port>
-    <port>
-  (predicate textual-port?))
-
-(define-scheme-type <binary-port>
-    <port>
-  (predicate binary-port?))
 
 ;;; --------------------------------------------------------------------
 
