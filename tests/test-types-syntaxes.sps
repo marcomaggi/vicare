@@ -1672,8 +1672,8 @@
   (doit* (list-of-fixnums? <pair>)				=> <boolean>)
   (doit* (list-of-fixnums? <top>)				=> <boolean>)
 
-  (doit* (list-of-fixnums? (list <fixnum> <string>))		=> <false>)
-  (doit* (list-of-fixnums? (list <fixnum> <bignum>))		=> <false>)
+  (doit* (list-of-fixnums? (list <fixnum> <string>))		=> <boolean>)
+  (doit* (list-of-fixnums? (list <fixnum> <bignum>))		=> <boolean>)
   (doit* (list-of-fixnums? (list-of <string>))			=> <false>)
   (doit* (list-of-fixnums? <string>)				=> <false>)
 

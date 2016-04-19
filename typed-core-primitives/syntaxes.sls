@@ -551,9 +551,10 @@
 	(((list-of ?obj-tag))			=> (<true>))
 	(((list-of (ancestors-of ?obj-tag)))	=> (<boolean>))
 	(((list-of (not ?obj-tag)))		=> (<false>))
-	(((or (ancestors-of (list-of ?obj-tag))
-	      <pair>))				=> (<boolean>))
-	(((not (list-of ?obj-tag)))		=> (<false>)))
+	(((and (not <list>)
+	       (not <pair>)))			=> (<false>))
+	((<top>)				=> (<boolean>))
+	#| end of SIGNATURES |# )
        (attributes
 	((_)		foldable effect-free))))
     ))
