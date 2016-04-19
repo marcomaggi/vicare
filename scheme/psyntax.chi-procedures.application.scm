@@ -1985,6 +1985,9 @@
 	(returnable
 	  (values (fold-left (lambda (state clause-signature)
 			       (let ((args.sig (clambda-clause-signature.argvals clause-signature)))
+				 ;; (debug-print (syntax->datum input-form.stx)
+				 ;; 	      args.sig rands.sig
+				 ;; 	      (type-signature.match-arguments-against-operands args.sig rands.sig))
 				 (case (type-signature.match-arguments-against-operands args.sig rands.sig)
 				   ((exact-match)
 				    (return 'exact-match clause-signature))
