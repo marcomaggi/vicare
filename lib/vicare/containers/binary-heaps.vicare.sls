@@ -13,7 +13,7 @@
 ;;;	by S. Carton.  The site claims that  the code is available under the Creative
 ;;;	Commons CC0 1.0 Universal Public Domain Dedication.
 ;;;
-;;;Copyright (c) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -361,7 +361,7 @@
 (define* (make-binary-heap-iteration-thunk {H binary-heap?})
   (lambda ()
     (if ($binary-heap-empty? H)
-	(void)
+	(sentinel)
       ($binary-heap-pop! H))))
 
 

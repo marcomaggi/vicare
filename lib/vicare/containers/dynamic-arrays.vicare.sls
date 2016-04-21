@@ -847,7 +847,7 @@
 	  (receive-and-return (ch)
 	      ($dynamic-array-ref arry arry.idx)
 	    (set! arry.idx ($fxadd1 arry.idx)))
-	(void)))))
+	(sentinel)))))
 
 (define* (make-dynamic-array-rear-iteration-thunk {arry dynamic-array?})
   (let ((arry.idx ($fxsub1 ($dynamic-array-length arry))))
@@ -856,7 +856,7 @@
 	  (receive-and-return (ch)
 	      ($dynamic-array-ref arry arry.idx)
 	    (set! arry.idx ($fxsub1 arry.idx)))
-	(void)))))
+	(sentinel)))))
 
 
 ;;;; done

@@ -8,8 +8,9 @@
 
 The library @library{vicare containers iteration-thunks} implements some
 iteration methods over collections of objects.  An @dfn{iteration thunk}
-is a thunk the returns the next object from an iteration over a compound
-object; when no more objects are available, it returns the void object.
+is a thunk that returns the next object from an iteration over a
+compound object; when no more objects are available, it returns the
+sentinel object (@vicareref{iklib sentinel, The sentinel object}).
 
 @menu
 * iteration thunks common::     Iterators for common objects.
@@ -132,7 +133,7 @@ validate their arguments.
 @defunx $iteration-thunk-fold @var{kons} @var{knil} @varo{iter} @var{iter} @dots{}
 Fold operation over the objects from the iteration thunks @var{iter}.
 When multiple iteration thunks are given: the iteration stops when one
-of the thunks returns void.
+of the thunks returns the sentinel.
 
 @lisp
 (define (xcons a b)
@@ -170,10 +171,11 @@ validate their arguments.
 @defunx $iteration-thunk-map @var{acceptor} @var{fun} @varo{iter} @var{iter} @dots{}
 Apply @func{fun} to the items from the iteration thunks @var{iter}.
 When multiple iteration thunks are given: the iteration stops when one
-of the thunks returns void.  The function @var{acceptor} is applied to
-the the results of the applications.  The return value of the mapping
-form is the return value of the last application of @var{acceptor}; if
-the iteration thunk is empty: the return value is void.
+of the thunks returns the sentinel.  The function @var{acceptor} is
+applied to the the results of the applications.  The return value of the
+mapping form is the return value of the last application of
+@var{acceptor}; if the iteration thunk is empty: the return value is the
+sentinel.
 
 @lisp
 (let ((ell '()))
@@ -200,7 +202,7 @@ the iteration thunk is empty: the return value is void.
 @defunx $iteration-thunk-for-each @var{fun} @varo{iter} @var{iter} @dots{}
 Apply @func{fun} to the items from the iteration thunks @var{iter} and
 discard the return values.  When multiple iteration thunks are given:
-the iteration stops when one of the thunks returns void.
+the iteration stops when one of the thunks returns the sentinel.
 
 @lisp
 (receive-and-return (ell)
@@ -237,7 +239,7 @@ validate their arguments.
 @defunx $iteration-thunk-for-all @var{fun} @varo{iter} @var{iter} @dots{}
 Apply @func{fun} to the items from the iteration thunks @var{iter}.
 When multiple iteration thunks are given: the iteration stops when one
-of the thunks returns void.
+of the thunks returns the sentinel.
 
 If all the applications of @var{fun} return true: the return value is
 @true{}.  If an application of @var{fun} returns @false{}: the iteration
@@ -268,7 +270,7 @@ stops immediately and the return value is @false{}.
 @defunx $iteration-thunk-exists @var{fun} @varo{iter} @var{iter} @dots{}
 Apply @func{fun} to the items from the iteration thunks @var{iter}.
 When multiple iteration thunks are given: the iteration stops when one
-of the thunks returns void.
+of the thunks returns the sentinel.
 
 If all the applications of @var{fun} return @false{}: the return value
 is @false{}.  If an application of @var{fun} returns a non--@false{}

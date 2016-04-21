@@ -962,7 +962,7 @@
 	     (current-node root))
 	 (lambda ()
 	   (cond ((not current-node)
-		  (void))
+		  (sentinel))
 		 (started?
 		  (cond ((?step current-node)
 			 => (lambda (next-node)
@@ -970,7 +970,7 @@
 			      next-node))
 			(else
 			 (set! current-node #f)
-			 (void))))
+			 (sentinel))))
 		 ((?begin current-node)
 		  => (lambda (next-node)
 		       (set! started? #t)
@@ -978,7 +978,7 @@
 		       next-node))
 		 (else
 		  (set! current-node #f)
-		  (void)))))))
+		  (sentinel)))))))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -1027,7 +1027,7 @@
        (let ((queue #f))
 	 (lambda ()
 	   (cond ((not root)
-		  (void))
+		  (sentinel))
 		 (queue
 		  (receive (Q next-node)
 		      (?step queue)
@@ -1035,7 +1035,7 @@
 			(begin
 			  (set! queue Q)
 			  next-node)
-		      (void))))
+		      (sentinel))))
 		 (else
 		  (receive (Q first-node)
 		      (?begin root)
@@ -1043,7 +1043,7 @@
 			(begin
 			  (set! queue Q)
 			  first-node)
-		      (void)))))))))
+		      (sentinel)))))))))
     ))
 
 (define-breadth-first-iteration-thunk make-binary-tree-forwards-breadth-first-iteration-thunk

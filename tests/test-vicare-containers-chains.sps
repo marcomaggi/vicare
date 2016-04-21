@@ -1013,9 +1013,9 @@
 
   (check
       (with-result
-	(void-object?(chain-for-each-forwards
-			 add-result
-		       (chain))))
+	(void-object? (chain-for-each-forwards
+			  add-result
+			(chain))))
     => '(#t ()))
 
 

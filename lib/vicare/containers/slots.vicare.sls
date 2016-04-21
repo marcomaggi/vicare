@@ -230,8 +230,8 @@
   ;;garbage collection.
   ;;
   ($chain-link-remove! lnk)
-  (or ($<slots>-front-cache slots)
-      ($<slots>-front-cache-set! slots lnk)))
+  (unless ($<slots>-front-cache slots)
+    ($<slots>-front-cache-set! slots lnk)))
 
 (define ($slots-detach-and-cache-rear-link! slots lnk)
   ;;If SLOTS  does not  already has a  cached rear link:  cache LNK.   Otherwise just
@@ -239,8 +239,8 @@
   ;;garbage collection.
   ;;
   ($chain-link-remove! lnk)
-  (or ($<slots>-rear-cache slots)
-      ($<slots>-rear-cache-set! slots lnk)))
+  (unless ($<slots>-rear-cache slots)
+    ($<slots>-rear-cache-set! slots lnk)))
 
 
 (define-record-type (<slots> make-slots slots?)

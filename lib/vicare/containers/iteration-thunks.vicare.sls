@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2013-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -58,7 +58,7 @@
 	       (car ell)
 	     (set! ell (cdr ell))))
 	  ((null? ell)
-	   (void))
+	   (sentinel))
 	  (else
 	   (assertion-violation 'list-iteration-thunk
 	     "expected pair as list object" ell)))))
@@ -70,7 +70,7 @@
 	       ell
 	     (set! ell (cdr ell))))
 	  ((null? ell)
-	   (void))
+	   (sentinel))
 	  (else
 	   (assertion-violation 'spine-iteration-thunk
 	     "expected pair as list object" ell)))))
@@ -83,7 +83,7 @@
 	  (receive-and-return (ch)
 	      ($string-ref str str.idx)
 	    (++ str.idx))
-	(void)))))
+	(sentinel)))))
 
 (define* (make-vector-iteration-thunk {vec vector?})
   (let ((vec.idx 0)
@@ -93,7 +93,7 @@
 	  (receive-and-return (ch)
 	      ($vector-ref vec vec.idx)
 	    (++ vec.idx))
-	(void)))))
+	(sentinel)))))
 
 (define* (make-bytevector-u8-iteration-thunk {bv bytevector?})
   (let ((bv.idx 0)
@@ -103,7 +103,7 @@
 	  (receive-and-return (ch)
 	      ($bytevector-u8-ref bv bv.idx)
 	    (++ bv.idx))
-	(void)))))
+	(sentinel)))))
 
 (define* (make-bytevector-s8-iteration-thunk {bv bytevector?})
   (let ((bv.idx 0)
@@ -113,7 +113,7 @@
 	  (receive-and-return (ch)
 	      ($bytevector-s8-ref bv bv.idx)
 	    (++ bv.idx))
-	(void)))))
+	(sentinel)))))
 
 
 ;;;; folding
@@ -135,15 +135,15 @@
 
   ((kons knil fun)
    (let ((item (fun)))
-     (if (void-object? item)
+     (if (sentinel? item)
 	 knil
        ($iteration-thunk-fold kons (kons knil item) fun))))
 
   ((kons knil iter1 iter2)
    (let ((item1 (iter1))
 	 (item2 (iter2)))
-     (if (or (void-object? item1)
-	     (void-object? item2))
+     (if (or (sentinel? item1)
+	     (sentinel? item2))
 	 knil
        ($iteration-thunk-fold kons (kons knil item1 item2) iter1 iter2))))
 
@@ -158,9 +158,9 @@
 	(item* (map (lambda (it)
 		      (apply it '()))
 		 iter*)))
-    (if (or (void-object? item1)
-	    (void-object? item2)
-	    (exists void-object? item*))
+    (if (or (sentinel? item1)
+	    (sentinel? item2)
+	    (exists sentinel? item*))
 	knil
       ($iteration-thunk-fold-multi kons (apply kons knil item1 item2 item*) iter1 iter2 iter*))))
 
@@ -185,13 +185,13 @@
    ($iteration-thunk-fold
        (lambda (knil item)
 	 (acceptor (fun item)))
-     (void) iter))
+     (sentinel) iter))
 
   ((acceptor fun iter1 iter2)
    ($iteration-thunk-fold
        (lambda (knil item1 item2)
 	 (acceptor (fun item1 item2)))
-     (void) iter1 iter2))
+     (sentinel) iter1 iter2))
 
   ((acceptor fun iter1 iter2 . iter*)
    ($iteration-thunk-map-multi acceptor fun iter1 iter2 iter*))
@@ -202,7 +202,7 @@
   ($iteration-thunk-fold-multi
       (lambda (knil item1 item2 . item*)
 	(acceptor (apply fun item1 item2 item*)))
-    (void) iter1 iter2 iter*))
+    (sentinel) iter1 iter2 iter*))
 
 
 ;;;; operations: for-each
@@ -226,14 +226,14 @@
        (lambda (knil item)
 	 (fun item)
 	 knil)
-     (void) iter))
+     (sentinel) iter))
 
   ((fun iter1 iter2)
    ($iteration-thunk-fold
        (lambda (knil item1 item2)
 	 (fun item1 item2)
 	 knil)
-     (void) iter1 iter2))
+     (sentinel) iter1 iter2))
 
   ((fun iter1 iter2 . iter*)
    ($iteration-thunk-for-each-multi fun iter1 iter2 iter*))
@@ -245,7 +245,7 @@
       (lambda (knil item1 item2 . item*)
 	(apply fun item1 item2 item*)
 	knil)
-    (void) iter1 iter2 iter*))
+    (sentinel) iter1 iter2 iter*))
 
 
 ;;;; operations: for-all
@@ -361,7 +361,7 @@
 	  (if (fun obj)
 	      (return obj)
 	    knil))
-      (void) iter)
+      (sentinel) iter)
     ;;If we are here no object was found.
     (if (procedure? not-found-handler)
 	(not-found-handler)
@@ -379,7 +379,7 @@
 	(when (pred obj)
 	  (acceptor obj))
 	knil)
-    (void) iter))
+    (sentinel) iter))
 
 ;;; --------------------------------------------------------------------
 
@@ -393,7 +393,7 @@
 	    (matching-acceptor obj)
 	  (not-matching-acceptor obj))
 	knil)
-    (void) iter))
+    (sentinel) iter))
 
 
 ;;;; done

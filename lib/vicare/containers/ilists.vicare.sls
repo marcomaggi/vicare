@@ -1229,7 +1229,7 @@
 	       (icar ell)
 	     (set! ell (icdr ell))))
 	  ((null? ell)
-	   (void))
+	   (sentinel))
 	  (else
 	   (assertion-violation 'ilist-iteration-thunk
 	     "expected ipair as ilist object" ell)))))
