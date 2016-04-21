@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2008, 2009, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008, 2009, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -43,7 +43,7 @@
 (define numbers '(0 1 2 3 4 5 6 7 8 9))
 
 
-(parameterise ((check-test-name 'constructors))
+(parametrise ((check-test-name 'constructors))
 
   (check
       (make-list/stx 4 'c)
@@ -183,7 +183,7 @@
   )
 
 
-(parameterise ((check-test-name 'circular-list))
+(parametrise ((check-test-name 'circular-list))
 
   (check
       (let ((ell (circular-list/stx 1 2)))
@@ -296,7 +296,7 @@
   )
 
 
-(parameterise ((check-test-name 'predicates))
+(parametrise ((check-test-name 'predicates))
 
   (check (and-null?/stx)		=> #t)
   (check (and-null?/stx '())		=> #t)
@@ -308,6 +308,7 @@
   (check (and-null?/stx '()  '()  '(1))	=> #f)
 
   (check (or-null?/stx)			=> #f)
+
   (check (or-null?/stx '())		=> #t)
   (check (or-null?/stx '() '())		=> #t)
   (check (or-null?/stx '() '() '())	=> #t)
@@ -328,10 +329,10 @@
     (check-values (and/or-null?/stx '(1) '(1) '(1))	 '(#f #f))
     (check-values (and/or-null?/stx '()  '()  '(1))	 '(#f #t)))
 
-  )
+  (void))
 
 
-(parameterise ((check-test-name 'selectors))
+(parametrise ((check-test-name 'selectors))
 
   (check (fifth/stx numbers)	=> 4)
   (check (sixth/stx numbers)	=> 5)
@@ -476,7 +477,7 @@
   )
 
 
-(parameterise ((check-test-name 'miscellaneous))
+(parametrise ((check-test-name 'miscellaneous))
 
   (check
       (concatenate/stx '())
@@ -821,7 +822,7 @@
   )
 
 
-(parameterise ((check-test-name 'left-folding-syntax))
+(parametrise ((check-test-name 'left-folding-syntax))
 
   (check
       (fold/stx + 0 numbers)
@@ -1007,7 +1008,7 @@
   )
 
 
-(parameterise ((check-test-name 'right-folding-syntax))
+(parametrise ((check-test-name 'right-folding-syntax))
 
   (check
       (fold*/stx cons '() '(1 2 3))
@@ -1260,7 +1261,7 @@
   )
 
 
-(parameterise ((check-test-name 'reducing))
+(parametrise ((check-test-name 'reducing))
 
   (check
       (reduce/stx + 0 numbers)
@@ -1300,7 +1301,7 @@
   )
 
 
-(parameterise ((check-test-name 'unfolding))
+(parametrise ((check-test-name 'unfolding))
 
   (check
       (unfold/stx (lambda (x) (< 5 x))
@@ -1357,7 +1358,7 @@
   )
 
 
-(parameterise ((check-test-name 'mapping))
+(parametrise ((check-test-name 'mapping))
 
   (check
       (map*/stx - '())
@@ -2373,7 +2374,7 @@
   )
 
 
-#;(parameterise ((check-test-name 'filtering))
+(parametrise ((check-test-name 'filtering))
 
   (check
       (filter even? '())
@@ -2392,7 +2393,7 @@
     => '(0 2 4 6 8))
 
 ;;; --------------------------------------------------------------------
-
+#|
   (check
       (filter! even? '())
     => '())
@@ -2408,7 +2409,7 @@
   (check
       (filter! even? (list-copy numbers))
     => '(0 2 4 6 8))
-
+|#
 ;;; --------------------------------------------------------------------
 
   (check
@@ -2455,7 +2456,7 @@
 	 (1 3 5 7 9)))
 
 ;;; --------------------------------------------------------------------
-
+#|
   (check
       (call-with-values
 	  (lambda ()
@@ -2499,7 +2500,7 @@
 	list)
     => '((0 2 4 6 8)
 	 (1 3 5 7 9)))
-
+|#
 ;;; --------------------------------------------------------------------
 
   (check
@@ -2519,7 +2520,7 @@
     => '())
 
 ;;; --------------------------------------------------------------------
-
+#|
   (check
       (remove* even? '())
     => '())
@@ -2535,9 +2536,9 @@
   (check
       (remove* even? numbers)
     => '(1 3 5 7 9))
-
+|#
 ;;; --------------------------------------------------------------------
-
+#|
   (check
       (remove*! even? '())
     => '())
@@ -2553,8 +2554,8 @@
   (check
       (remove*! even? (list-copy numbers))
     => '(1 3 5 7 9))
-
-  )
+|#
+  (void))
 
 
 ;;;; done
