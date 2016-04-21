@@ -932,7 +932,10 @@
     ;;
     (define caller-who __who__)
     (syntax-match input-form.stx ()
-      ((_) #f)
+      ((_)
+       (make-psi input-form.stx
+	 (build-data no-source #f)
+	 (make-type-signature/single-false)))
 
       ((_ ?expr ?expr* ...)
        (let* ((expr*.stx	(cons ?expr ?expr*))
