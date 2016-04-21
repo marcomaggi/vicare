@@ -141,7 +141,6 @@
     ((do*)				do*-macro)
     ((dolist)				dolist-macro)
     ((dotimes)				dotimes-macro)
-    ((or)				or-macro)
     ((let*)				let*-macro)
     ((let-values)			let-values-macro)
     ((let*-values)			let*-values-macro)
@@ -3690,28 +3689,6 @@
     ))
 
 
-;;;; non-core macro: OR
-
-(define-macro-transformer (or input-form.stx)
-  ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in
-  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
-  ;;must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_) #f)
-
-    ((_ ?expr ?expr* ...)
-     (bless
-      (let recur ((e  ?expr) (e* ?expr*))
-	(if (null? e*)
-	    e
-	  `(let ((t ,e))
-	     (if t
-		 t
-	       ,(recur (car e*) (cdr e*))))))))
-    ))
-
-
 ;;;; non-core macro: COND
 
 (define-macro-transformer (cond input-form.stx)
@@ -3729,18 +3706,19 @@
 	       `(internal-body ,?expr . ,?expr*))
 
 	      ((?test => ?proc)
-	       `(let ((t ,?test))
-		  (if t
-		      (,?proc t)
-		    (void))))
+	       (let ((tmp (gensym "tmp")))
+		 `(let ((,tmp ,?test))
+		    (when ,tmp
+		      (,?proc ,tmp)))))
 
 	      ((?expr)
-	       `(or ,?expr (void)))
+	       (let ((tmp (gensym "tmp")))
+		 `(let ((,tmp ,?expr))
+		    (when ,tmp ,tmp))))
 
 	      ((?test ?expr* ...)
-	       `(if ,?test
-		    (internal-body . ,?expr*)
-		  (void)))
+	       `(when ,?test
+		  (internal-body . ,?expr*)))
 
 	      (_
 	       (__synner__ "invalid last clause" cls)))
@@ -3750,14 +3728,16 @@
 	     (__synner__ "incorrect position of keyword ELSE" cls))
 
 	    ((?test => ?proc)
-	     `(let ((t ,?test))
-		(if t
-		    (,?proc t)
-		  ,(recur (car cls*) (cdr cls*)))))
+	     (let ((tmp (gensym "tmp")))
+	       `(let ((,tmp ,?test))
+		  (if ,tmp
+		      (,?proc ,tmp)
+		    ,(recur (car cls*) (cdr cls*))))))
 
 	    ((?expr)
-	     `(or ,?expr
-		  ,(recur (car cls*) (cdr cls*))))
+	     (let ((tmp (gensym "tmp")))
+	       `(let ((,tmp ,?expr))
+		  (if ,tmp ,tmp ,(recur (car cls*) (cdr cls*))))))
 
 	    ((?test ?expr* ...)
 	     `(if ,?test

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -135,7 +135,7 @@
 	   (conditional (funcall (primref fixnum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
-	     (funcall (primref void)))))
+	     (constant #!void))))
 
   ;;bignum predicate
   (doit* (let ((x (read)))
@@ -145,7 +145,7 @@
 	   (conditional (funcall (primref bignum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:bignum T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))
-	     (funcall (primref void)))))
+	     (constant #!void))))
 
   ;;ratnum predicate
   (doit* (let ((x (read)))
@@ -155,7 +155,7 @@
 	   (conditional (funcall (primref ratnum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:ratnum T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))
-	     (funcall (primref void)))))
+	     (constant #!void))))
 
   ;;flonum predicate
   (doit* (let ((x (read)))
@@ -165,7 +165,7 @@
 	   (conditional (funcall (primref flonum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
-	     (funcall (primref void)))))
+	     (constant #!void))))
 
   ;;cflonum predicate
   (doit* (let ((x (read)))
@@ -175,7 +175,7 @@
 	   (conditional (funcall (primref cflonum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))
-	     (funcall (primref void)))))
+	     (constant #!void))))
 
   ;;compnum predicate
   (doit* (let ((x (read)))
@@ -185,7 +185,7 @@
 	   (conditional (funcall (primref compnum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:compnum T:non-false T:nonimmediate T:non-real T:number T:object)))
-	     (funcall (primref void)))))
+	     (constant #!void))))
 
 ;;; --------------------------------------------------------------------
 
@@ -535,13 +535,13 @@
 
   ;;FLONUM?
   (doit* (let ((x (read)))
-	   (and (flonum? x)
-		(display x)))
+	   (when (flonum? x)
+	     (display x)))
 	 (bind ((lex.x_0 (funcall (primref read))))
 	   (conditional (funcall (primref flonum?) lex.x_0)
 	       (funcall (primref display)
 		 (known lex.x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
-	     (constant #f))))
+	     (constant #!void))))
 
   ;;FLINFINITE?
   (doit (let ((x ((primitive read))))

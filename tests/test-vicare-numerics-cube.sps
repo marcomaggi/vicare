@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -206,8 +206,8 @@
     (test 0-0.0i	(%cube 0-0.0i))
 
     (test 10+20i	(%cube 10+20i))
-    (test 1.0+20.0i	(%cube 1.0+20.0i))
-    (test 10.0+2.0i	(%cube 10.0+2.0i))
+    (test 1+20.0i	(%cube 1.0+20.0i))
+    (test 10+2.0i	(%cube 10.0+2.0i))
     (test 1/2+20i	(%cube 1/2+20i))
     (test 10+2/3i	(%cube 10+2/3i))
     (test (C VBN1 20)	(%cube (C VBN1 20)))

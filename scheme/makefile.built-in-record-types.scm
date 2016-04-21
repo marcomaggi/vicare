@@ -237,8 +237,25 @@
     <record>
   make-type-signature type-signature?
   (methods
-   (object-type-specs		type-signature.object-type-specs)
-   (syntax-object		type-signature.syntax-object)))
+   (object-type-specs			type-signature.object-type-specs)
+   (syntax-object			type-signature.syntax-object)
+   (=					type-signature=?)
+   (fully-untyped?			type-signature.fully-untyped?)
+   (partially-untyped?			type-signature.partially-untyped?)
+   (untyped?				type-signature.untyped?)
+   (empty?				type-signature.empty?)
+   (super-and-sub?			type-signature.super-and-sub?)
+   (compatible-super-and-sub?		type-signature.compatible-super-and-sub?)
+   (single-type?			type-signature.single-type?)
+   (single-top-tag?			type-signature.single-top-tag?)
+   (single-type-or-fully-untyped?	type-signature.single-type-or-fully-untyped?)
+   (no-return?				type-signature.no-return?)
+   (match-arguments-against-operands	type-signature.match-arguments-against-operands)
+   (min-count				type-signature.min-count)
+   (max-count				type-signature.max-count)
+   (min-and-max-counts			type-signature.min-and-max-counts)
+   (common-ancestor			type-signature.common-ancestor)
+   (union				type-signature.union)))
 
 ;;; --------------------------------------------------------------------
 

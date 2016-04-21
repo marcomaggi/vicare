@@ -162,14 +162,8 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-callable-signature)
-      (define (reduce func identity ell)
-	(if (pair? ell)
-	    (fold-left func (car ell) (cdr ell))
-	  identity))
       (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
-	((make-callable-signature (reduce type-signature.union
-					  (make-type-signature/fully-untyped)
-					  (map clambda-clause-signature.retvals signature*)))
+	((make-callable-signature (apply type-signature.union (map clambda-clause-signature.retvals signature*)))
 	 signature* #f #f))
       make-clambda-signature))
   (custom-printer

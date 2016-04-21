@@ -681,7 +681,9 @@
    ((<fixnum> <fixnum>)			=> (<fixnum>))
    ((<exact-integer> <exact-integer>)	=> (<exact-integer>))
    ((<exact-rational> <exact-rational>)	=> (<exact-rational>))
-   ((<integer> <integer>)		=> (<integer>)))
+   ((<integer> <integer>)		=> (<integer>))
+   ;;It accepts also <fixnum> that are integers.
+   ((<real> <real>)			=> (<real>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 

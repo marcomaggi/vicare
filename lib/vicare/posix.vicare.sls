@@ -2481,41 +2481,32 @@
   (define-constant TABLE
     (make-weak-hashtable port-hash eq?))
 
-  (define (port-set-close-on-exec-mode! port)
+  (define* (port-set-close-on-exec-mode! {port port?})
     ;;Set close-on-exec mode for PORT; return unspecified values.
     ;;
-    (define who 'port-set-close-on-exec-mode!)
-    (with-arguments-validation (who)
-	((port	port))
-      (let ((fd (port-fd port)))
-	(and fd
-	     (let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
-	       (when ($fx< rv 0)
-		 (%raise-errno-error who rv port)))))
-      (weak-hashtable-set! TABLE port #f)))
+    (cond ((port-fd port)
+	   => (lambda (fd)
+		(let ((rv (capi.posix-fd-set-close-on-exec-mode fd)))
+		  (when ($fx< rv 0)
+		    (%raise-errno-error __who__ rv port))))))
+    (weak-hashtable-set! TABLE port #f))
 
-  (define (port-unset-close-on-exec-mode! port)
+  (define* (port-unset-close-on-exec-mode! {port port?})
     ;;Unset close-on-exec mode for PORT; return unspecified values.
     ;;
-    (define who 'port-unset-close-on-exec-mode!)
-    (with-arguments-validation (who)
-	((port	port))
-      (let ((fd (port-fd port)))
-	(and fd
-	     (let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
-	       (when ($fx< rv 0)
-		 (%raise-errno-error who rv port)))))
-      (weak-hashtable-delete! TABLE port)))
+    (cond ((port-fd port)
+	   => (lambda (fd)
+		(let ((rv (capi.posix-fd-unset-close-on-exec-mode fd)))
+		  (when ($fx< rv 0)
+		    (%raise-errno-error __who__ rv port))))))
+    (weak-hashtable-delete! TABLE port))
 
-  (define (port-in-close-on-exec-mode? port)
+  (define* (port-in-close-on-exec-mode? {port port?})
     ;;Query PORT for its close-on-exec mode; if successful: return true if
     ;;the port  is in  close-on-exec mode, false  otherwise.  If  an error
     ;;occurs: raise an exception.
     ;;
-    (define who 'port-in-close-on-exec-mode?)
-    (with-arguments-validation (who)
-	((port	port))
-      (weak-hashtable-contains? TABLE port)))
+    (weak-hashtable-contains? TABLE port))
 
   (case-define close-ports-in-close-on-exec-mode
     (()
@@ -3253,8 +3244,9 @@
   (define who 'sockaddr_in.in_addr.number)
   (with-arguments-validation (who)
       ((bytevector	sockaddr))
-    (let ((rv (capi.posix-sockaddr_in.in_addr.number sockaddr)))
-      (or rv (error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
+    (cond ((capi.posix-sockaddr_in.in_addr.number sockaddr))
+	  (else
+	   (error who "expected bytevector holding \"struct sockaddr_in\" as argument" sockaddr)))))
 
 (define (sockaddr_in.in_port sockaddr)
   (define who 'sockaddr_in.in_port)

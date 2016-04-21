@@ -30,6 +30,8 @@
 
 (define (typed-core-primitives.expander)
 
+  (define-object-binary/multi-comparison-declarer declare-type-signature-binary/multi-comparison <type-signature>)
+
 
 ;;;; configuration
 
@@ -778,17 +780,29 @@
   (signatures
    ((<alist-type-spec>)		=> (<alist-type-spec>))))
 
+;;; --------------------------------------------------------------------
+;;; operations on type specs
+
+(declare-core-primitive union-of-type-specs
+    (safe)
+  (signatures
+   ((list-of <object-type-spec>)	=> (<object-type-spec>))))
+
 /section)
 
 
 ;;;; type signatures
 
-(declare-type-predicate type-signature?			<type-signature>)
+(declare-type-predicate		type-signature?			<type-signature>)
+(declare-list-of-type-predicate	list-of-type-signatures?	<type-signature>)
 
 (declare-core-primitive make-type-signature
     (safe)
   (signatures
    (<list>			=> (<type-signature>))))
+
+;;; --------------------------------------------------------------------
+;;; accessors
 
 (declare-core-primitive type-signature.syntax-object
     (safe)
@@ -799,6 +813,75 @@
     (safe)
   (signatures
    ((<type-signature>)		=> (<top>))))
+
+(declare-core-primitive type-signature.min-count
+    (safe)
+  (signatures
+   ((<type-signature>)		=> (<non-negative-fixnum>))))
+
+(declare-core-primitive type-signature.max-count
+    (safe)
+  (signatures
+   ((<type-signature>)		=> (<non-negative-fixnum>))))
+
+(declare-core-primitive type-signature.min-and-max-counts
+    (safe)
+  (signatures
+   ((<type-signature>)		=> (<non-negative-fixnum> <non-negative-fixnum>))))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((<type-signature>)	=> (<boolean>)))))
+		)))
+  (declare type-signature.fully-untyped?)
+  (declare type-signature.partially-untyped?)
+  (declare type-signature.untyped?)
+  (declare type-signature.empty?)
+  (declare type-signature.single-type?)
+  (declare type-signature.single-top-tag?)
+  (declare type-signature.single-type-or-fully-untyped?)
+  (declare type-signature.no-return?)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-type-signature-binary/multi-comparison type-signature=?)
+
+(declare-core-primitive type-signature.super-and-sub?
+    (safe)
+  (signatures
+   ((<type-signature> <type-signature>)		=> (<boolean>))))
+
+(declare-core-primitive type-signature.compatible-super-and-sub?
+    (safe)
+  (signatures
+   ((<type-signature> <type-signature>)		=> (<boolean>))))
+
+;;; --------------------------------------------------------------------
+;;; operations
+
+(declare-core-primitive type-signature.match-arguments-against-operands
+    (safe)
+  (signatures
+   ((<type-signature> <type-signature>)		=> (<symbol>))))
+
+(declare-core-primitive type-signature.common-ancestor
+    (safe)
+  (signatures
+   ((list-of <type-signature>)		=> (<type-signature>))))
+
+(declare-core-primitive type-signature.union
+    (safe)
+  (signatures
+   ((list-of <type-signature>)		=> (<type-signature>))))
 
 
 ;;;; condition object types

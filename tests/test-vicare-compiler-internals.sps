@@ -494,9 +494,9 @@
 		     (write Y)))
 	       (else
 		(read)))
-	 (bind ((lex.t_0 (funcall (primref read))))
-	   (conditional lex.t_0
-	       (bind ((lex.Y_0 lex.t_0))
+	 (bind ((lex.tmp_0 (funcall (primref read))))
+	   (conditional lex.tmp_0
+	       (bind ((lex.Y_0 lex.tmp_0))
 		 (funcall (primref write) lex.Y_0))
 	     (funcall (primref read)))))
 

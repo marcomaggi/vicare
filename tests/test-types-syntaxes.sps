@@ -918,6 +918,74 @@
   (void))
 
 
+(parametrise ((check-test-name	'type-signature-union))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   ?expr
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; some special cases
+
+  (doit (type-signature-union)
+	=> <list>)
+
+  (doit (type-signature-union (<fixnum>) (<void>))
+	=> (<void>))
+
+  (doit (type-signature-union (<fixnum>) <no-return>)
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; special booleans handling
+
+  (doit (type-signature-union (<true>) (<false>))
+	=> (<boolean>))
+
+  (doit (type-signature-union (<true>) (<false>) (<boolean>))
+	=> (<boolean>))
+
+  (doit (type-signature-union (<true>) (<boolean>))
+	=> (<boolean>))
+
+  (doit (type-signature-union (<false>) (<boolean>))
+	=> (<boolean>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (type-signature-union (<fixnum>) (<string>))
+	=> ((or <fixnum> <string>)))
+
+  (doit (type-signature-union (<fixnum> <string> <vector>)
+			      (<fixnum> <string> <vector>))
+	=> (<fixnum> <string> <vector>))
+
+  (doit (type-signature-union (<fixnum> <string> <vector>)
+			      (<positive-fixnum> <string> <vector>))
+	=> (<fixnum> <string> <vector>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (type-signature-union <list> <list>)
+	=> <list>)
+
+  (doit (type-signature-union <list> (list-of <fixnum>))
+	=> <list>)
+
+  (doit (type-signature-union (<list>) ((list <string> <fixnum>)))
+	=> (<list>))
+
+  (doit (type-signature-union (list-of <string>) (list-of <fixnum>))
+	=> (list-of (or <string> <fixnum>)))
+
+  (void))
+
+
 (parametrise ((check-test-name	'type-annotation-ancestors))
 
   (define-syntax doit
@@ -1564,19 +1632,86 @@
 
 ;;; --------------------------------------------------------------------
 ;;; OR type propagation
-#|
+
+  ;;This is expanded to:
+  ;;
+  ;;   (quote 1)
+  ;;
   (doit (or 1 2 "3")
 	=> (<positive-fixnum>))
 
+  ;;This is expanded to:
+  ;;
+  ;;   (begin
+  ;;     #f
+  ;;     (quote 2))
+  ;;
   (doit (or #f 2 "3")
 	=> (<positive-fixnum>))
 
   (doit (or #f #f "3")
 	=> (<string>))
 
+  ;;This is expanded to:
+  ;;
+  ;;   (begin
+  ;;     #f
+  ;;     (quote #t)
+  ;;     (quote "ciao"))
+  ;;
   (doit (or #f (and #t "ciao") 3.4)
 	=> (<string>))
-|#
+
+  (doit (or (unsafe-cast-signature (<top>) (read))
+	    (unsafe-cast-signature (<top>) (read))
+	    (unsafe-cast-signature (<top>) (read)))
+	=> (<top>))
+
+  (doit (or (unsafe-cast-signature (<boolean>) (read))
+	    (unsafe-cast-signature (<boolean>) (read))
+	    (unsafe-cast-signature (<boolean>) (read)))
+	=> (<boolean>))
+
+  (doit (or (unsafe-cast-signature (<top>) (read))
+	    (unsafe-cast-signature (<fixnum>) (read))
+	    (unsafe-cast-signature (<top>) (read)))
+	=> (<top>))
+
+  (doit (or (unsafe-cast-signature (<fixnum>) (read))
+	    (unsafe-cast-signature (<top>) (read))
+	    (unsafe-cast-signature (<top>) (read)))
+	=> (<fixnum>))
+
+  (doit (or (unsafe-cast-signature ((or <false> <string>)) (read))
+	    (unsafe-cast-signature (<fixnum>) (read))
+	    (unsafe-cast-signature (<top>) (read)))
+	=> ((or <string> <fixnum>)))
+
+  (doit (or (unsafe-cast-signature ((or <false> <string>)) (read))
+	    (unsafe-cast-signature ((or <false> <vector>)) (read))
+	    (unsafe-cast-signature (<fixnum>) (read)))
+	=> ((or <string> <vector> <fixnum>)))
+
+  (doit (or (unsafe-cast-signature ((or <false> <fixnum>)) (read))
+	    (unsafe-cast-signature ((or <false> <string>)) (read))
+	    (unsafe-cast-signature ((or <false> <vector>)) (read)))
+	=> ((or <fixnum> <string> <false> <vector>)))
+
+  (doit (or (unsafe-cast-signature ((or <boolean> <fixnum>)) (read))
+	    (unsafe-cast-signature ((or <boolean> <string>)) (read))
+	    (unsafe-cast-signature ((or <boolean> <vector>)) (read)))
+	=> ((or <fixnum> <string> <boolean> <vector>)))
+
+  (doit (or (unsafe-cast-signature (<top>) (read))
+	    (unsafe-cast-signature (<top>) (read))
+	    (error #f "ciao"))
+	=> (<top>))
+
+  ;; (doit (or (unsafe-cast-signature (<top>) (read))
+  ;; 	    (void)
+  ;; 	    (unsafe-cast-signature (<top>) (read)))
+  ;; 	=> (<void>))
+
 ;;; --------------------------------------------------------------------
 ;;; XOR type propagation
 #|

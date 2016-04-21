@@ -29,16 +29,15 @@
     module				import
     begin0				define-values
     include				internal-body
-    define-list-of-type-predicate
     expand-time-gensym			expand-library
     with-blocked-exceptions
     custom-printer			super-protocol
     returnable				return
-
-    non-compound-sexp?			self-evaluating?
-
+    set-cons!
     __who__				brace
     try					catch
+
+    non-compound-sexp?			self-evaluating?
 
     (rename (records::record-type-printer-set!	record-type-printer-set!)
 	    (records::$record-type-printer-set!	$record-type-printer-set!)
@@ -124,6 +123,12 @@
 
     ;; system stuff
     file-modification-time
+
+    ;; special definitions
+    define-list-of-type-predicate
+    define-min/max-comparison
+    define-equality/sorting-predicate
+    define-inequality-predicate
 
     ;; unsafe bindings
     $car $cdr
@@ -222,7 +227,12 @@
 	  $car $cdr)
     (only (vicare system $vectors)
 	  $vector-empty? $vector-length
-	  $vector-ref $vector-set!))
+	  $vector-ref $vector-set!)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; printing debug and verbose messages
@@ -300,16 +310,6 @@
 
 
 ;;;; syntax helpers
-
-(define-syntax define-list-of-type-predicate
-  (syntax-rules ()
-    ((_ ?who ?type-pred)
-     (define (?who obj)
-       (if (pair? obj)
-	   (and (?type-pred (car obj))
-		(?who (cdr obj)))
-	 (null? obj))))
-    ))
 
 (define-syntax (expand-time-gensym stx)
   (syntax-case stx ()

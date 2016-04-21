@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,10 +25,11 @@
 ;;;
 
 
-#!r6rs
-(import (vicare)
-  (vicare system $numerics)
-  (vicare checks))
+#!vicare
+(program (test-vicare-numerics-abs)
+  (import (vicare)
+    (vicare system $numerics)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare numerics functions: abs\n")
@@ -137,14 +138,14 @@
       (guard (E ((assertion-violation? E)
 		 (condition-message E))
 		(else E))
-	(abs 1+2i))
+	(abs (unsafe-cast-signature (<top>) 1+2i)))
     => "expected real number as argument")
 
   (check
       (guard (E ((assertion-violation? E)
 		 (condition-message E))
 		(else E))
-	(abs 1.0+2.0i))
+	(abs (unsafe-cast-signature (<top>) 1.0+2.0i)))
     => "expected real number as argument")
 
   #t)
@@ -153,5 +154,7 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file

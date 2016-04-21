@@ -154,6 +154,7 @@
     ((letrec)					letrec-transformer)
     ((letrec*)					letrec*-transformer)
     ((and)					and-transformer)
+    ((or)					or-transformer)
     ;;
     ((foreign-call)				foreign-call-transformer)
     ((syntax-case)				syntax-case-transformer)
@@ -189,6 +190,7 @@
     ((type-signature-common-ancestor)		type-signature-common-ancestor-transformer)
     ((type-annotation-ancestors)		type-annotation-ancestors-transformer)
     ((type-signature-matching)			type-signature-matching-transformer)
+    ((type-signature-union)			type-signature-union-transformer)
 
     ((expansion-of)				expansion-of-transformer)
     ((expansion-of*)				expansion-of*-transformer)
@@ -549,8 +551,7 @@
 		     (psi.core-expr test.psi)
 		   (psi.core-expr consequent.psi)
 		   (build-void))
-		 (type-signature.union (psi.retvals-signature consequent.psi)
-				       (make-type-signature/single-void)))))
+		 (make-type-signature/single-void))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
@@ -777,44 +778,44 @@
 
 ;;;; module core-macro-transformer: AND
 
-(module (and-transformer)
-  ;;Transformer function used  to expand R6RS AND macros from  the top-level built in
-  ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
-  ;;LEXENV; return a PSI object.
-  ;;
-  ;;The syntax use:
-  ;;
-  ;;   (and ?expr1 ?expr2 ?expr3)
-  ;;
-  ;;could be expanded as a non-core macro into:
-  ;;
-  ;;   (if ?expr1
-  ;;       (if ?expr2
-  ;;           ?expr3
-  ;;         #f)
-  ;;     #f)
-  ;;
-  ;;and the type annotation of the returned value is:
-  ;;
-  ;;   (or (type-of ?expr3) <false>)
-  ;;
-  ;;But, if we determine  at expand-time that all the expressions  return a type that
-  ;;is different from: <top>, <boolean>, <false>, we can expand into:
-  ;;
-  ;;   (begin
-  ;;     ?expr1
-  ;;     ?expr2
-  ;;     ?expr3)
-  ;;
-  ;;in this case  using an AND syntax  is useless, so we should  raise an expand-time
-  ;;warning.
-  ;;
-  ;;Here  we do  a  mixture: if  an  expression  might return  false,  we generate  a
-  ;;conditional; if an expression always returns non-false, we generate a sequence.
-  ;;
-  (define-module-who and)
+(module (and-transformer or-transformer)
 
   (define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand R6RS AND macros from the top-level built in
+    ;;environment.  Expand the contents of INPUT-FORM.STX in the context of the given
+    ;;LEXENV; return a PSI object.
+    ;;
+    ;;The syntax use:
+    ;;
+    ;;   (and ?expr1 ?expr2 ?expr3)
+    ;;
+    ;;could be expanded as a non-core macro into:
+    ;;
+    ;;   (if ?expr1
+    ;;       (if ?expr2
+    ;;           ?expr3
+    ;;         #f)
+    ;;     #f)
+    ;;
+    ;;and the type annotation of the returned value is:
+    ;;
+    ;;   (or (type-of ?expr3) <false>)
+    ;;
+    ;;But, if we determine at expand-time that all the expressions return a type that
+    ;;is different from: <top>, <boolean>, <false>, we can expand into:
+    ;;
+    ;;   (begin
+    ;;     ?expr1
+    ;;     ?expr2
+    ;;     ?expr3)
+    ;;
+    ;;in this case using an AND syntax  is useless, so we should raise an expand-time
+    ;;warning.
+    ;;
+    ;;Here  we do  a mixture:  if an  expression might  return false,  we generate  a
+    ;;conditional; if an expression always returns non-false, we generate a sequence.
+    ;;
+    (define caller-who __who__)
     (syntax-match input-form.stx ()
       ((_)
        (make-psi input-form.stx
@@ -844,7 +845,6 @@
       ((_ ?expr0 ?expr1 ?expr* ...)
        (let* ((expr*.stx	(cons* ?expr0 ?expr1 ?expr*))
 	      (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
-	      (expr*.sig	(map psi.retvals-signature expr*.psi))
 	      ;;This is set  to the type signature of the  last evaluated expression,
 	      ;;when all the previous expressions return true.
 	      (last-expr.sig	#f)
@@ -858,7 +858,7 @@
 		    (expr.core	(psi.core-expr         expr.psi))
 		    (expr.sig	(psi.retvals-signature expr.psi)))
 	       (if (pair? (cdr expr*.psi))
-		   (let ((sym (%validate-and-qualify-single-signature input-form.stx expr.psi)))
+		   (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)))
 		     (case sym
 		       ((maybe-false)
 			;;The expression might return false.
@@ -882,8 +882,10 @@
 			(set! last-expr.sig expr.sig)
 			expr.core)
 		       (else
-			(assertion-violation __module_who__ "internal error" input-form.stx sym))))
+			(assertion-violation caller-who "internal error" input-form.stx sym))))
 		 (begin
+		   ;;We must validate the last expression, too.
+		   (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
 		   (set! last-expr.sig expr.sig)
 		   expr.core)))))
 	 (define output-form.sig
@@ -896,24 +898,132 @@
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
-  (define (%validate-and-qualify-single-signature input-form.stx expr.psi)
+;;; --------------------------------------------------------------------
+
+  (define-core-transformer (or input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand R6RS  OR macros from the top-level built in
+    ;;environment.  Expand the contents of INPUT-FORM.STX in the context of the given
+    ;;LEXENV; return a PSI object.
+    ;;
+    ;;The syntax use:
+    ;;
+    ;;   (or ?expr1 ?expr2 ?expr3)
+    ;;
+    ;;can be expanded into:
+    ;;
+    ;;   (let ((tmp1 ?expr1))
+    ;;     (if tmp1
+    ;;         tmp1
+    ;;       (let ((tmp2 ?expr2))
+    ;;         (if tmp2
+    ;;             tmp2
+    ;;           ?expr3))))
+    ;;
+    ;;But, if we determine at expand-time that all the expressions return a type that
+    ;;is different from: <top>, <boolean>, <true>, we can expand into:
+    ;;
+    ;;   (begin
+    ;;     ?expr1
+    ;;     ?expr2
+    ;;     ?expr3)
+    ;;
+    ;;in this case using  an OR syntax is useless, so we  should raise an expand-time
+    ;;warning.
+    ;;
+    (define caller-who __who__)
+    (syntax-match input-form.stx ()
+      ((_) #f)
+
+      ((_ ?expr ?expr* ...)
+       (let* ((expr*.stx	(cons ?expr ?expr*))
+	      (expr*.psi	(chi-expr* expr*.stx lexenv.run lexenv.expand))
+	      ;;This  is  set to  the  list  of  type  signatures associated  to  the
+	      ;;expression which might return false or non-false.
+	      (middle-expr*.sig	'())
+	      ;;This is set  to the type signature of the  last evaluated expression,
+	      ;;when all the previous expressions return false.
+	      (last-expr.sig	#f))
+	 (define out.core
+	   (let recur ((expr.psi	(car expr*.psi))
+		       (expr*.psi	(cdr expr*.psi)))
+	     (define-syntax-rule (recursion)
+	       (recur (car expr*.psi) (cdr expr*.psi)))
+	     (let ((expr.core	(psi.core-expr expr.psi))
+		   (expr.sig	(psi.retvals-signature expr.psi)))
+	       (if (pair? expr*.psi)
+		   (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)))
+		     (case sym
+		       ((maybe-false)
+			;;The  expression might  return  false or  non-false.  If  it
+			;;returns false:  this false value is  discarded and trailing
+			;;expressions are  evaluated.  If  it returns  non-false: the
+			;;non-false value  is returned.  So to  compute the signature
+			;;that contributes to  the possible final result:  we have to
+			;;filter-out the "<false>" from EXPR.SIG.
+			(set-cons! middle-expr*.sig (%cleanup-possibly-false-signature expr.sig))
+			(let ((tmp.lex (gensym "tmp")))
+			  (build-let no-source
+			      (list tmp.lex) (list expr.core)
+			    (build-conditional no-source tmp.lex tmp.lex (recursion)))))
+		       ((always-false)
+			;;The expression always returns false.
+			(build-sequence no-source
+			  (list expr.core (recursion))))
+		       ((always-true)
+			;;The expression always returns  non-false.  There is no need
+			;;to include the trailing expressions.
+			(set! last-expr.sig expr.sig)
+			expr.core)
+		       ((no-return)
+			;;The expression  raises an  exception or exits  the process.
+			;;There is no need to include the trailing expressions.
+			(set! last-expr.sig expr.sig)
+			expr.core)
+		       (else
+			(assertion-violation caller-who "internal error" input-form.stx sym))))
+		 (begin
+		   ;;We must validate the last expression, too.
+		   (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
+		   (set! last-expr.sig expr.sig)
+		   expr.core)))))
+	 (define out.sig
+	   ;;Strictly  thinking: reversing  the  list  is not  needed,  the order  of
+	   ;;signatures is  irrelevant.  But when testing  the code: it is  useful to
+	   ;;have predictable results, it makes it simple to write tests.
+	   (apply type-signature.union (reverse (cons last-expr.sig middle-expr*.sig))))
+	 (make-psi input-form.stx out.core out.sig)))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%validate-and-qualify-single-signature caller-who input-form.stx expr.psi)
     ;;Return a symbol among: always-true, always-false, maybe-false, no-return.
     ;;
     (define expr.sig (psi.retvals-signature expr.psi))
+    (define (common message)
+      (condition
+	(make-who-condition caller-who)
+	(make-message-condition message)
+	(make-syntax-violation input-form.stx (psi.input-form expr.psi))
+	(make-application-operand-signature-condition expr.sig)))
     (define (%handle-error message rv)
-      (%error (lambda ()
-		(condition
-		  (make-who-condition __module_who__)
-		  (make-message-condition message)
-		  (make-syntax-violation input-form.stx (psi.input-form expr.psi))
-		  (make-application-operand-signature-condition expr.sig))))
-      rv)
+      (%error (lambda () (common message)) rv))
     (case-signature-specs expr.sig
       ((<void>)
        (%handle-error "expression used as operand in logic predicate is typed as returning void" 'always-true))
 
       (<no-return>
-       (%handle-error "expression used as operand in logic predicate is typed as not returning" 'no-return))
+       ;;This is special.  We want to accept expressions like:
+       ;;
+       ;;   (or (do-stuff)
+       ;;       (error #f "error doing stuff"))
+       ;;
+       (raise-continuable
+	(condition (make-expand-time-type-signature-warning)
+		   (common "expression used as operand in logic predicate is typed as not returning")))
+       'no-return)
 
       ((single-value)
        => %expression-with-possibly-false-type-signature?)
@@ -956,16 +1066,46 @@
 	  (else
 	   'always-true)))
 
-  (define (%error common)
+  (define (%cleanup-possibly-false-signature expr.sig)
+    ;;Here we  assume that  EXPR.SIG is  an instance  of "<type-signature>".   If the
+    ;;signature specifies a single value and  such value is a union:
+    ;;
+    ;;1. If there is a "<false>" component: remove it from the union.
+    ;;
+    ;;2. If there is a "<boolean>" component: replace it with "<true>".
+    ;;
+    ;;3. Return the resulting type signature.
+    ;;
+    ;;otherwise return EXPR.SIG itself.
+    ;;
+    (let ((expr.specs (type-signature.object-type-specs expr.sig)))
+      (if (and (list-of-single-item? expr.specs)
+	       (union-type-spec? (car expr.specs)))
+	  (let* ((component*.ots (union-type-spec.component-ots* (car expr.specs)))
+		 (component*.ots (remp (let ((X (<false>-ots)))
+					 (lambda (component.ots)
+					   (object-type-spec=? X component.ots)))
+				   component*.ots))
+		 (component*.ots (map (let ((X (<boolean>-ots)))
+					(lambda (component.ots)
+					  (if (object-type-spec=? X component.ots)
+					      (<true>-ots)
+					    component.ots)))
+				   component*.ots)))
+	    (make-type-signature (list (apply union-of-type-specs component*.ots))))
+	expr.sig)))
+
+  (define (%error common rv)
     (case-expander-language
       ((typed)
        (raise
 	(condition (make-expand-time-type-signature-violation)	(common))))
       ((default)
        (raise-continuable
-	(condition (make-expand-time-type-signature-warning)	(common))))
+	(condition (make-expand-time-type-signature-warning)	(common)))
+       rv)
       ((strict-r6rs)
-       (void))))
+       rv)))
 
   #| end of module |# )
 

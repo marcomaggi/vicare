@@ -37,7 +37,8 @@
 	 type-annotation-ancestors-transformer
 	 type-signature-super-and-sub?-transformer
 	 type-signature-common-ancestor-transformer
-	 type-signature-matching-transformer)
+	 type-signature-matching-transformer
+	 type-signature-union-transformer)
 
 
 ;;;; helpers
@@ -1149,7 +1150,13 @@
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
-;;;; module core-macro-transformer: TYPE-ANNOTATION=?
+;;;; module core-macro-transformer:
+;;
+;; TYPE-ANNOTATION=?
+;; TYPE-ANNOTATION-SUPER-AND-SUB?
+;; TYPE-ANNOTATION-COMMON-ANCESTOR
+;; TYPE-ANNOTATION-ANCESTORS
+;;
 
 (define-core-transformer (type-annotation=? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand Vicare's TYPE-ANNOTATION=?  syntaxes from the
@@ -1169,9 +1176,6 @@
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
-
-;;;; module core-macro-transformer: TYPE-ANNOTATION-SUPER-AND-SUB?, TYPE-SIGNATURE-SUPER-AND-SUB?, TYPE-SIGNATURE-MACHING
-
 (define-core-transformer (type-annotation-super-and-sub? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  Vicare's  TYPE-ANNOTATION-SUPER-AND-SUB?
   ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
@@ -1189,6 +1193,47 @@
 	       (make-type-signature/single-false)))))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
+
+(define-core-transformer (type-annotation-common-ancestor input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to expand  Vicare's  TYPE-ANNOTATION-COMMON-ANCESTOR
+  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?super-type-annotation ?sub-type-annotation)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?super-type-annotation lexenv.run super.ots)
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?sub-type-annotation lexenv.run sub.ots)
+	 (let ((ots (object-type-spec.common-ancestor super.ots sub.ots)))
+	   (make-psi input-form.stx
+	     (build-data no-source
+	       (object-type-spec.name ots))
+	     (make-type-signature/single-top))))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+(define-core-transformer (type-annotation-ancestors input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  TYPE-ANNOTATION-ANCESTORS syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type.ots)
+       (let ((name* (map object-type-spec.name (object-type-spec.ancestors-ots* type.ots))))
+	 (make-psi input-form.stx
+	   (build-data no-source name*)
+	   (make-type-signature/single-list)))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+
+;;;; module core-macro-transformer:
+;;
+;; TYPE-SIGNATURE-SUPER-AND-SUB?
+;; TYPE-SIGNATURE-MACHING
+;; TYPE-SIGNATURE-UNION
+;; TYPE-SIGNATURE-COMMON-ANCESTOR
+;;
 
 (define-core-transformer (type-signature-super-and-sub? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used   to  expand  Vicare's  TYPE-SIGNATURE-SUPER-AND-SUB?
@@ -1234,23 +1279,24 @@
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
-
-;;;; module core-macro-transformer: TYPE-ANNOTATION-COMMON-ANCESTOR, TYPE-SIGNATURE-COMMON-ANCESTOR
-
-(define-core-transformer (type-annotation-common-ancestor input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used  to expand  Vicare's  TYPE-ANNOTATION-COMMON-ANCESTOR
-  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
-  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
+(define-core-transformer (type-signature-union input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand Vicare's  TYPE-SIGNATURE-UNION syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
-    ((_ ?super-type-annotation ?sub-type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?super-type-annotation lexenv.run super.ots)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?sub-type-annotation lexenv.run sub.ots)
-	 (let ((ots (object-type-spec.common-ancestor super.ots sub.ots)))
-	   (make-psi input-form.stx
-	     (build-data no-source
-	       (object-type-spec.name ots))
-	     (make-type-signature/single-top))))))
+    ((_ ?signature* ...)
+     (make-psi input-form.stx
+       (build-data no-source
+	 (type-signature.syntax-object
+	  (apply type-signature.union (map (lambda (signature.stx)
+					     (if (syntax-object.type-signature? signature.stx lexenv.run)
+						 (make-type-signature signature.stx)
+					       (syntax-violation __who__
+						 "invalid type signature argument"
+						 input-form.stx signature.stx)))
+					?signature*))))
+       (make-type-signature/single-value (core-prim-id '<top>))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
@@ -1273,24 +1319,6 @@
 	   (build-data no-source
 	     (type-signature.syntax-object sig))
 	   (make-type-signature/single-top)))))
-    (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
-
-
-;;;; module core-macro-transformer: TYPE-ANNOTATION-ANCESTORS
-
-(define-core-transformer (type-annotation-ancestors input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand Vicare's  TYPE-ANNOTATION-ANCESTORS syntaxes
-  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
-  ;;in the context of the given LEXENV; return a PSI struct.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?type-annotation)
-     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run type.ots)
-       (let ((name* (map object-type-spec.name (object-type-spec.ancestors-ots* type.ots))))
-	 (make-psi input-form.stx
-	   (build-data no-source name*)
-	   (make-type-signature/single-list)))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

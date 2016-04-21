@@ -734,6 +734,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes equality::     Equality between type annotations.
 * types syntaxes super-sub::    Super and sub types.
 * types syntaxes ancestors::    Ancestors of types and signatures.
+* types syntaxes signatures::   Operating on type signatures.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
@@ -1459,6 +1460,52 @@ ancestors of @meta{type}.  @meta{type} is @strong{not} included.
 @result{} (<fixnum>
     <exact-integer> <integer> <rational> <rational-valued>
     <real> <real-valued> <complex> <number> <top>)
+@end lisp
+@end deffn
+
+@c page
+@node types syntaxes signatures
+@subsection Operating on type signatures
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax type-signature-union @meta{type-signature} @dots{}
+Compute the union between the given type signatures and expand to a
+quoted symbolic expression representing the result.  Each
+@meta{type-signature} argument must be a symbolic expression
+representing a type signature.
+
+@lisp
+(type-signature-union)
+@result{} <list>
+
+(type-signature-union (<fixnum>) (<exact-integer>))
+@result{} (<exact-integer>)
+
+;;If a component is "<void>" the whole union between type
+;;annotations becomes "<void>".
+(type-signature-union (<fixnum>) (<void>))
+@result{} (<void>)
+
+;;If there are both "<true>" and "<false>": they are replaced with a
+;;single "<boolean>".
+(type-signature-union (<true>) (<false>))
+@result{} (<boolean>)
+
+;;Components of type "<no-return>" are discarded from the union.
+(type-signature-union (<fixnum>) <no-return>)
+@result{} (<fixnum>)
+
+(type-signature-union (<fixnum> <string> <vector>)
+                      (<fixnum> <string> <vector>))
+@result{} (<fixnum> <string> <vector>)
+
+(type-signature-union (<fixnum> <string> <vector>)
+                      (<positive-fixnum> <string> <vector>))
+@result{} (<fixnum> <string> <vector>)
 @end lisp
 @end deffn
 

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -192,8 +192,8 @@
 
   (let-syntax ((test (make-test-1 square $square-compnum)))
     (test 10+20i -300+400i)
-    (test 1.0+20.0i -399.0+40.0i)
-    (test 10.0+2.0i 96.0+40.0i)
+    (test 1+20.0i -399.0+40.0i)
+    (test 10+2.0i 96.0+40.0i)
     (test 1/2+20i -1599/4+20i)
     (test 10+2/3i 896/9+40/3i)
     (test (C VBN1 20) 1329227995784915872903807060280344176+46116860184273879040i)

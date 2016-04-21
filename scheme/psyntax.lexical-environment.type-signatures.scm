@@ -42,6 +42,7 @@
    type-signature=?
 
 ;;; predicates
+   list-of-type-signatures?
    type-signature.fully-untyped?			type-signature.partially-untyped?
    type-signature.untyped?				type-signature.empty?
    type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
@@ -263,79 +264,93 @@
 	;;specifications,  instances  of  "<object-type-spec>";  in  standalone  tail
 	;;position there must be a list type.
 	;;
-	;;The compound type specifications accepted are:
-	;;
-	;;   (pair ?car-thing ?cdr-thing)
-	;;   (list   ?item-thing ...)
-	;;   (vector ?item-thing ...)
-	;;   (pair-of   ?item-thing)
-	;;   (list-of   ?item-thing)
-	;;   (vector-of ?item-thing)
-	;;
 	#;(debug-print __who__ input-signature)
-	(cond ((<no-return>-type-id? input-signature)
-	       ;;INPUT-SIGNATURE is a standalone "<no-return>" type identifier.
-	       (<no-return>-ots))
-	      ((<no-return>-ots? input-signature)
-	       ;;INPUT-SIGNATURE  is   a  standalone   "<object-type-spec>"  instance
-	       ;;representing the type "<no-return>".
-	       input-signature)
-	      (else
-	       ;;INPUT-SIGNATURE  must  be   a  proper  or  improper   list  of  type
-	       ;;identifiers and/or instances of "<object-type-spec>".
-	       (let recur ((stx input-signature))
-		 (syntax-match stx (<list> list-of)
-		   (()
-		    ;;STX is a proper list.  Good.
-		    '())
+	(syntax-match input-signature (<no-return> <void>)
+	  (<no-return>
+	   ;;INPUT-SIGNATURE is a standalone "<no-return>" type identifier.
+	   (<no-return>-ots))
+	  (?item
+	   (<no-return>-ots? ?item)
+	   ;;INPUT-SIGNATURE   is   a    standalone   "<object-type-spec>"   instance
+	   ;;representing the type "<no-return>".
+	   input-signature)
+          ;; ((<void>)
+          ;;  ;;"<void>" is fine if it is the single component of a proper list.
+          ;;  (list (<void>-ots)))
+          ;; ((?item)
+          ;;  (<void>-ots? ?item)
+          ;;  (list (<void>-ots)))
+	  (_
+	   ;;INPUT-SIGNATURE must  be a proper  or improper list of  type identifiers
+	   ;;and/or instances of "<object-type-spec>".
+	   (let recur ((stx input-signature))
+	     (syntax-match stx (<list> <no-return> list-of)
+	       (()
+		;;STX is a proper list.  Good.
+		'())
 
-		   (<list>
-		    (<list>-ots))
+	       (<list>
+		(<list>-ots))
 
-		   ((list-of ?item-type)
-		    (make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
+	       ((list-of ?item-type)
+		(make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
 
-		   (?rest-ots
-		    (object-type-spec? ?rest-ots)
-		    (cond ((or (list-of-type-spec? ?rest-ots)
-			       (<list>-ots? ?rest-ots))
-			   ?rest-ots)
-			  (else
-			   (syntax-violation caller-who
-			     "expected list sub-type object-type specification as signature component in tail position"
-			     input-signature ?rest-ots))))
+	       (<no-return>
+		(syntax-violation caller-who
+		  "type signature component \"<no-return>\" in invalid position"
+		  input-signature stx))
 
-		   (?rest-id
-		    (identifier? ?rest-id)
-		    ;;This is meant to match type identifiers defined as:
-		    ;;
-		    ;;   (define-type <list-of-fixnums> (list-of <fixnum>))
-		    ;;   (define-type <some-list> <list>)
-		    ;;
-		    (let ((rest.ots (with-exception-handler
-					(lambda (E)
-					  (raise-continuable (condition E (make-who-condition 'make-type-signature))))
-				      (lambda ()
-					(id->object-type-spec ?rest-id lexenv)))))
-		      (cond ((or (list-of-type-spec? rest.ots)
-				 (<list>-ots?        rest.ots))
-			     rest.ots)
-			    (else
-			     (raise
-			      (condition (make-who-condition caller-who)
-					 (make-message-condition "expected list type identifier as signature component in tail position")
-					 (make-syntax-violation input-signature ?rest-id)))))))
+	       (?rest-ots
+		(object-type-spec? ?rest-ots)
+		(cond ((or (list-of-type-spec? ?rest-ots)
+			   (<list>-ots? ?rest-ots))
+		       ?rest-ots)
+		      (else
+		       (syntax-violation caller-who
+			 "expected list sub-type object-type specification as signature component in tail position"
+			 input-signature ?rest-ots))))
 
-		   ((?thing . ?rest)
-		    (cons (if (object-type-spec? ?thing)
-			      ?thing
-			    (type-annotation->object-type-spec ?thing lexenv))
-			  (recur ?rest)))
+	       (?rest-id
+		(identifier? ?rest-id)
+		;;This is meant to match type identifiers defined as:
+		;;
+		;;   (define-type <list-of-fixnums> (list-of <fixnum>))
+		;;   (define-type <some-list> <list>)
+		;;
+		(let ((rest.ots (with-exception-handler
+				    (lambda (E)
+				      (raise-continuable (condition E (make-who-condition 'make-type-signature))))
+				  (lambda ()
+				    (id->object-type-spec ?rest-id lexenv)))))
+		  (cond ((or (list-of-type-spec? rest.ots)
+			     (<list>-ots?        rest.ots))
+			 rest.ots)
+			(else
+			 (raise
+			  (condition (make-who-condition caller-who)
+				     (make-message-condition "expected list type identifier as signature component in tail position")
+				     (make-syntax-violation input-signature ?rest-id)))))))
 
-		   (_
-		    (syntax-violation caller-who
-		      "expected type identifier or object-type specification as signature component"
-		      input-signature stx)))))))
+	       ((?thing . ?rest)
+		(cons (let ((ots (if (object-type-spec? ?thing)
+				     ?thing
+				   (type-annotation->object-type-spec ?thing lexenv))))
+			(cond
+			 ;; ((<no-return>-ots? ots)
+			 ;;  (syntax-violation caller-who
+			 ;;    "type signature component \"<no-return>\" in invalid position"
+			 ;;    input-signature ?thing))
+			 ;; ((<void>-ots? ots)
+			 ;;  (syntax-violation caller-who
+			 ;; 	 "type signature component \"<void>\" in invalid position"
+			 ;; 	 input-signature ?thing))
+			 (else ots)))
+		      (recur ?rest)))
+
+	       (_
+		(syntax-violation caller-who
+		  "expected type identifier or object-type specification as signature component"
+		  input-signature stx)))))))
 
       make-type-signature))
   ;; (custom-printer
@@ -356,6 +371,8 @@
 
 (define <type-signature>-rcd
   (record-constructor-descriptor <type-signature>))
+
+(define-list-of-type-predicate list-of-type-signatures? type-signature?)
 
 
 ;;;; type signature: special constructors
@@ -528,21 +545,25 @@
 
 ;;;; matching: signatures exact matching
 
-(define* (type-signature=? {signature1 type-signature?} {signature2 type-signature?})
+(define-equality/sorting-predicate type-signature=?	$type-signature=?	type-signature?)
+
+(define ($type-signature=? signature1 signature2)
   ;;Return true if the signatures are equal; otherwise return false.
   ;;
-  (define (%syntax=? specs1 specs2)
-    (cond ((and (pair? specs1)
-		(pair? specs2))
-	   (and (eq? (car specs1)
-		     (car specs2))
-		(%syntax=?         (cdr specs1) (cdr specs2))))
-	  ((and (null? specs1)
-		(null? specs2)))
-	  ((eq? specs1 specs2))
-	  (else #f)))
-  (%syntax=? (type-signature.object-type-specs signature1)
-	     (type-signature.object-type-specs signature2)))
+  (let loop ((specs1 (type-signature.object-type-specs signature1))
+	     (specs2 (type-signature.object-type-specs signature2)))
+    (cond ((pair? specs1)
+	   (and (pair? specs2)
+		(object-type-spec=? (car specs1) (car specs2))
+		(loop               (cdr specs1) (cdr specs2))))
+	  ((pair? specs2)
+	   #f)
+	  ((null? specs1)
+	   (null? specs2))
+	  ((null? specs2)
+	   #f)
+	  (else
+	   (object-type-spec=? specs1 specs2)))))
 
 
 ;;;; matching: signatures super-type and sub-type matching
@@ -978,7 +999,22 @@
 
 ;;;; matching: common ancestor
 
-(define* (type-signature.common-ancestor {sig1 type-signature?} {sig2 type-signature?})
+(case-define* type-signature.common-ancestor
+  ;;Given a  type signature arguments: return  a new type signature  representing the
+  ;;common ancestor.
+  ;;
+  (()
+   (make-type-signature/fully-untyped))
+  (({sig type-signature?})
+   sig)
+  (({sig1 type-signature?} {sig2 type-signature?})
+   ($type-signature.common-ancestor2 sig1 sig2))
+  (({sig1 type-signature?} {sig2 type-signature?} {sig3 type-signature?} . {sig* type-signature?})
+   (fold-left $type-signature.common-ancestor2
+     ($type-signature.common-ancestor2 ($type-signature.common-ancestor2 sig1 sig2) sig3)
+     sig*)))
+
+(define ($type-signature.common-ancestor2 sig1 sig2)
   ;;Given two type signatures: return a  new type signature representing their common
   ;;ancestor.
   ;;
@@ -1016,56 +1052,80 @@
 		   ;;Both SIG1  and SIG2 are improper  lists with the same  number of
 		   ;;items.   Since  both  SPECS1  and   SPECS2  come  from  a  valid
 		   ;;"<type-signature>" instance: here we know that SPECS1 and SPECS2
-		   ;;are either "<list>" OTSs  or "<list-of-type-spec>" instances; so
-		   ;;their  common  ancestor   is  either  the  "<list>"   OTS  or  a
-		   ;;"<list-of-type-spec>" instance.
+		   ;;are    either    "<no-return>"    OTSs,   "<list>"    OTSs    or
+		   ;;"<list-of-type-spec>"  instances; so  their  common ancestor  is
+		   ;;either the "<list>" OTS or a "<list-of-type-spec>" instance.
 		   (object-type-spec.common-ancestor specs1 specs2))))))))
 
 
 ;;;; matching: union
 
-(define* (type-signature.union {sig1 type-signature?} {sig2 type-signature?})
+(case-define* type-signature.union
+  ;;Given a  type signature arguments: return  a new type signature  representing the
+  ;;union.
+  ;;
+  (()
+   (make-type-signature/fully-untyped))
+  (({sig type-signature?})
+   sig)
+  (({sig1 type-signature?} {sig2 type-signature?})
+   ($type-signature.union2 sig1 sig2))
+  (({sig1 type-signature?} {sig2 type-signature?} {sig3 type-signature?} . {sig* type-signature?})
+   (fold-left $type-signature.union2
+     ($type-signature.union2 ($type-signature.union2 sig1 sig2) sig3)
+     sig*)))
+
+(define ($type-signature.union2 sig1 sig2)
   ;;Given two  type signatures: return  a new  type signature representing  the union
-   ;;between the two.
+  ;;between the two.
   ;;
   (make-type-signature
-   (let recur ((specs1 (type-signature.object-type-specs sig1))
-	       (specs2 (type-signature.object-type-specs sig2)))
-     (cond ((null? specs1)
-	    (if (null? specs2)
-		;;Both the signatures are proper lists with the same number of items:
-		;;success!
-		'()
-	      ;;SIG1 is a proper list shorter that SIG2.
-	      (<list>-ots)))
+   (let ((specs1 (type-signature.object-type-specs sig1))
+	 (specs2 (type-signature.object-type-specs sig2)))
+     (cond
+      ;;Here we imagine this situation:
+      ;;
+      ;;   (or (do-something)
+      ;;       (error #f "error doing something"))
+      ;;
+      ;;the type signature of  the returned values is the one  of the expression that
+      ;;returns.
+      ((<no-return>-ots? specs1)	specs2)
+      ((<no-return>-ots? specs2)	specs1)
 
-	   ((pair? specs1)
-	    (cond ((pair? specs2)
-		   (cons (make-union-type-spec/maybe (list (car specs1) (car specs2)))
-			 (recur (cdr specs1) (cdr specs2))))
-		  ((null? specs2)
-		   ;;SIG2 is a proper list shorter that SIG1.
-		   (<list>-ots))
-		  (else
-		   ;;SIG2 is an improper list shorter that SIG1.
-		   (<list>-ots))))
+      (else
+       (let recur ((specs1 specs1) (specs2 specs2))
+	 (cond ((pair? specs1)
+		(cond ((pair? specs2)
+		       (cons (union-of-type-specs (car specs1) (car specs2))
+			     (recur (cdr specs1) (cdr specs2))))
+		      ((null? specs2)
+		       ;;SIG2 is a proper list shorter that SIG1.
+		       (<list>-ots))
+		      (else
+		       ;;SIG2 is an improper list shorter that SIG1.
+		       (<list>-ots))))
 
-	   (else
-	    ;;SIG1 is an improper list.
-	    (cond ((null? specs2)
-		   ;;SIG2 is an proper list shorter that SIG1.
-		   (<list>-ots))
-		  ((pair? specs2)
-		   ;;SIG2 is an proper list longer that SIG1.
-		   (<list>-ots))
-		  (else
-		   ;;Both SIG1  and SIG2 are improper  lists with the same  number of
-		   ;;items.   Since  both  SPECS1  and   SPECS2  come  from  a  valid
-		   ;;"<type-signature>" instance: here we know that SPECS1 and SPECS2
-		   ;;are either "<list>" OTSs  or "<list-of-type-spec>" instances; so
-		   ;;their  common  ancestor   is  either  the  "<list>"   OTS  or  a
-		   ;;"<list-of-type-spec>" instance.
-		   (object-type-spec.common-ancestor specs1 specs2))))))))
+	       ((null? specs1)
+		(if (null? specs2)
+		    ;;Both the  signatures are proper  lists with the same  number of
+		    ;;items: success!
+		    '()
+		  ;;SIG1 is a proper list shorter that SIG2.
+		  (<list>-ots)))
+
+	       (else
+		;;SIG1 is an improper list.
+		(cond ((null? specs2)
+		       ;;SIG2 is an proper list shorter that SIG1.
+		       (<list>-ots))
+		      ((pair? specs2)
+		       ;;SIG2 is an proper list longer that SIG1.
+		       (<list>-ots))
+		      (else
+		       ;;Both SIG1 and  SIG2 are improper lists with  the same number
+		       ;;of items.
+		       (union-of-type-specs specs1 specs2)))))))))))
 
 
 ;;;; helpers and utilities

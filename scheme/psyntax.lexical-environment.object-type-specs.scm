@@ -205,7 +205,7 @@
 
 	 <union-type-spec>
 	 <union-type-spec>-rtd				<union-type-spec>-rcd
-	 make-union-type-spec				make-union-type-spec/maybe
+	 make-union-type-spec				union-of-type-specs
 	 union-type-spec?				union-type-spec.component-ots*
 
 	 <intersection-type-spec>
@@ -1945,9 +1945,19 @@
 (define <union-type-spec>-rcd
   (record-constructor-descriptor <union-type-spec>))
 
-(module (make-union-type-spec/maybe)
+(module (union-of-type-specs $union-of-type-specs)
 
-  (define* (make-union-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+  (case-define* union-of-type-specs
+    (()
+     (make-type-signature/fully-untyped))
+    (({sig object-type-spec?})
+     sig)
+    (({sig1 object-type-spec?} {sig2 object-type-spec?})
+     ($union-of-type-specs (list sig1 sig2)))
+    (({sig1 object-type-spec?} {sig2 object-type-spec?} {sig3 object-type-spec?} . {sig* object-type-spec?})
+     ($union-of-type-specs (cons* sig1 sig2 sig3 sig*))))
+
+  (define* ($union-of-type-specs component-type*.ots)
     (let* ((component-type*.ots (%splice-component-specs component-type*.ots))
 	   (component-type*.ots (object-type-specs-delete-duplicates component-type*.ots)))
       (cond ((list-of-single-item? component-type*.ots)
@@ -1962,7 +1972,11 @@
 		    ;;must be filtered out.  We do the filtering twice: left-to-right
 		    ;;and right-to-left.
 		    (rev-component-type*.ots	(%remove-sub-types component-type*.ots     '()))
-		    (component-type*.ots	(%remove-sub-types rev-component-type*.ots '())))
+		    (component-type*.ots	(%remove-sub-types rev-component-type*.ots '()))
+		    ;;If there are both "<true>"  and "<false>": we replace them with
+		    ;;a single "<boolean>".
+		    (component-type*.ots	(%collapse-booleans component-type*.ots))
+		    (component-type*.ots	(%collapse-list-of  component-type*.ots)))
 	       (if (list-of-single-item? component-type*.ots)
 		   (car component-type*.ots)
 		 (make-union-type-spec component-type*.ots)))))))
@@ -1998,7 +2012,38 @@
 			       (cons ots1 out*))))
       out*))
 
-  #| end of module: MAKE-UNION-TYPE-SPEC/MAYBE |# )
+  (define (%collapse-booleans component-type*.ots)
+    ;;If  there are  both  "<true>" and  "<false>":  we replace  them  with a  single
+    ;;"<boolean>".
+    ;;
+    (let ((has-true?	(exists <true>-ots?    component-type*.ots))
+	  (has-false?	(exists <false>-ots?   component-type*.ots))
+	  (has-boolean?	(exists <boolean>-ots? component-type*.ots)))
+      (if (and has-true? has-false?)
+	  (let ((component-type*.ots (remp (lambda (component-type.ots)
+					     (or (<true>-ots?  component-type.ots)
+						 (<false>-ots? component-type.ots)))
+				       component-type*.ots)))
+	    (if has-boolean?
+		component-type*.ots
+	      (cons (<boolean>-ots) component-type*.ots)))
+	component-type*.ots)))
+
+  (define (%collapse-list-of component-type*.ots)
+    ;;The LIST-OF components are collapsed into a single one:
+    ;;
+    ;;   (or (list-of <fixnum>) (list-of <string>))
+    ;;   ==> (list-of (or <fixnum> <string>))
+    ;;
+    (receive (list-of*.ots other*.ots)
+	(partition list-of-type-spec? component-type*.ots)
+      (if (null? list-of*.ots)
+	  other*.ots
+	(let ((item*.ots (map list-of-type-spec.item-ots list-of*.ots)))
+	  (cons (make-list-of-type-spec ($union-of-type-specs item*.ots))
+		other*.ots)))))
+
+  #| end of module: UNION-OF-TYPE-SPECS |# )
 
 (define* (union-type-spec.length {union.ots union-type-spec?})
   (let ((mem (union-type-spec.memoised-length union.ots)))
@@ -3273,9 +3318,9 @@
       (type-annotation->object-type-spec ?single-component-type lexenv))
 
      ((or ?component-type ?component-type* ...)
-      (make-union-type-spec/maybe (map (lambda (type.stx)
-					 (type-annotation->object-type-spec type.stx lexenv))
-				    (cons ?component-type ?component-type*))))
+      ($union-of-type-specs (map (lambda (type.stx)
+				   (type-annotation->object-type-spec type.stx lexenv))
+			      (cons ?component-type ?component-type*))))
 
      ((and ?single-component-type)
       (type-annotation->object-type-spec ?single-component-type lexenv))

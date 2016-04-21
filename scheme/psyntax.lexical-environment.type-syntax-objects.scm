@@ -60,13 +60,15 @@
   ((stx)
    (syntax-object.type-signature? stx (current-inferior-lexenv)))
   ((stx lexenv)
-   (syntax-match stx (<no-return> <list> list-of)
+   (syntax-match stx (<no-return> <list> list-of <void>)
      (<no-return>
       #t)
      (<list>
       #t)
      ((list-of ?type-annotation)
       (syntax-object.type-annotation? ?type-annotation))
+     ((<void>)
+      #t)
      (else
       (let recur ((stx stx))
 	(syntax-match stx (<list> list-of)

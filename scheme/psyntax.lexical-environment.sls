@@ -97,6 +97,16 @@
     <type-signature>-rtd				<type-signature>-rcd
     make-type-signature					type-signature?
     type-signature.syntax-object			type-signature.object-type-specs
+    type-signature=?
+    type-signature.fully-untyped?			type-signature.partially-untyped?
+    type-signature.untyped?				type-signature.empty?
+    type-signature.super-and-sub?			type-signature.compatible-super-and-sub?
+    type-signature.single-type?				type-signature.single-top-tag?
+    type-signature.single-type-or-fully-untyped?	type-signature.no-return?
+    type-signature.match-arguments-against-operands
+    type-signature.min-count				type-signature.max-count
+    type-signature.min-and-max-counts
+    type-signature.common-ancestor			type-signature.union
 
     ;; object types specifications
     <object-type-spec>
@@ -145,7 +155,7 @@
 
     <union-type-spec>
     <union-type-spec>-rtd				<union-type-spec>-rcd
-    make-union-type-spec				make-union-type-spec/maybe
+    make-union-type-spec				union-of-type-specs
     union-type-spec?					union-type-spec.component-ots*
 
     <intersection-type-spec>

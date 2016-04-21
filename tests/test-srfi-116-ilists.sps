@@ -456,7 +456,7 @@
 ) ; end ilists
 
 
-(parameterise ((check-test-name 'constructors))
+(parametrise ((check-test-name 'constructors))
 
   (check
       (ipair* 1 2 3 4 (iq 5 6 7 8))
@@ -546,7 +546,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'kind-predicates))
+(parametrise ((check-test-name 'kind-predicates))
 
   (check
       (ilist? (iq ))
@@ -631,7 +631,7 @@
   #t)
 
 
-(parameterise ((check-test-name 'comparison))
+(parametrise ((check-test-name 'comparison))
 
   (check
       (ilist= =)
@@ -774,7 +774,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'selectors))
+(parametrise ((check-test-name 'selectors))
 
   (check (ifirst numbers)	(=> iequal?) 0)
   (check (isecond numbers)	(=> iequal?) 1)
@@ -932,7 +932,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'miscellaneous))
+(parametrise ((check-test-name 'miscellaneous))
 
   (check
       (ilength (iq 1 2 3 4 5 6))
@@ -1226,7 +1226,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'left-folding))
+(parametrise ((check-test-name 'left-folding))
 
   (check
       (ifold + 0 numbers)
@@ -1311,7 +1311,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'right-folding))
+(parametrise ((check-test-name 'right-folding))
 
   (check
       (ifold-right ipair (iq ) (iq 1 2 3))
@@ -1478,7 +1478,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'pair-folding))
+(parametrise ((check-test-name 'pair-folding))
 
   (check
       (ipair-fold (lambda (elm knil)
@@ -1594,7 +1594,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'reducing))
+(parametrise ((check-test-name 'reducing))
 
   (check
       (ireduce + 0 numbers)
@@ -1643,7 +1643,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'unfolding))
+(parametrise ((check-test-name 'unfolding))
 
   (check
       (iunfold (lambda (x) (< 5 x))
@@ -1702,7 +1702,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'mapping))
+(parametrise ((check-test-name 'mapping))
 
   (check
       (imap - (iq ))
@@ -2418,7 +2418,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'filtering))
+(parametrise ((check-test-name 'filtering))
 
   (check
       (ifilter even? (iq ))
@@ -2520,7 +2520,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'finding))
+(parametrise ((check-test-name 'finding))
 
   (check
       (ifind even? (iq ))
@@ -3214,7 +3214,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'deletion))
+(parametrise ((check-test-name 'deletion))
 
   (check
       (idelete 8 (iq ))
@@ -3311,7 +3311,7 @@
   #f)
 
 
-(parameterise ((check-test-name 'alists))
+(parametrise ((check-test-name 'alists))
 
   (check
       (iassoc 'a
@@ -3616,7 +3616,7 @@
   #f)
 
 
-(parameterise ((check-test-name		'conversion))
+(parametrise ((check-test-name		'conversion))
 
   (check (vector->ilist '#())			=> '())
   (check (vector->ilist '#(1))			=> (iq 1))
