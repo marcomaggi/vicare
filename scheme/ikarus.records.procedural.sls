@@ -762,7 +762,7 @@
 		(let ((start-index ($<rtd>-total-fields-number prnt-rtd)))
 		  (lambda field-values
 		    (%fill-record-fields (%record-being-built 'initialiser-with-parent)
-					 rtd start-index fields-number
+					 rtd start-index fields-number fields-number
 					 field-values field-values)))))
 	  (else
 	   (case fields-number
@@ -849,9 +849,9 @@
   (define (%initialiser-without-parent+ rtd fields-number field-values)
     (let ((the-record (%record-being-built '%initialiser-without-parent+)))
       (assert the-record)
-      (%fill-record-fields the-record rtd 0 fields-number field-values field-values)))
+      (%fill-record-fields the-record rtd 0 fields-number fields-number field-values field-values)))
 
-  (define (%fill-record-fields the-record rtd field-index fields-number
+  (define (%fill-record-fields the-record rtd field-index back-fields-counter fields-number
 			       all-field-values field-values)
     ;;Recursive function.  When successful return THE-RECORD itself.
     ;;
@@ -861,14 +861,15 @@
 		       (number->string fields-number) " given " (number->string (length all-field-values)))
 	rtd all-field-values))
     (if (null? field-values)
-	(if (fxzero? fields-number)
+	(if (fxzero? back-fields-counter)
 	    the-record
 	  (%wrong-num-args))
-      (if (fxzero? fields-number)
+      (if (fxzero? back-fields-counter)
 	  (%wrong-num-args)
 	(begin
 	  ($struct-set! the-record field-index (car field-values))
-	  (%fill-record-fields the-record rtd (fxadd1 field-index) (fxsub1 fields-number)
+	  (%fill-record-fields the-record rtd
+			       (fxadd1 field-index) (fxsub1 back-fields-counter) fields-number
 			       all-field-values (cdr field-values))))))
 
   #| end of module: RECORD-INITIALISERS |# )
