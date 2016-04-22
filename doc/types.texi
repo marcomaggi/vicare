@@ -554,7 +554,8 @@ nested type annotations.
 
 @deftp {Type Annotation} enumeration @metao{symbol} @meta{symbol} @dots{}
 Describe an enumeration of symbols; it is used to match a symbol in a
-specified enumeration set.
+specified enumeration set.  An @syntax{enumeration} annotation is a
+sub--type of @class{symbol}.
 
 @lisp
 (is-a? 'ciao (enumeration hello ciao salut ohayo))

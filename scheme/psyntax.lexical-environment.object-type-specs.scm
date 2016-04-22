@@ -1042,9 +1042,6 @@
 	 (cond ((enumeration-type-spec? sub.ots)
 		(enum-set-subset? (enumeration-type-spec.enum-set sub.ots)
 				  (enumeration-type-spec.enum-set super.ots)))
-	       ;; ((the-symbol-type-spec? sub.ots)
-	       ;; 	(enum-set-member? (a-symbol-spec.symbol sub.ots)
-	       ;; 			  (enumeration-type-spec.enum-set super.ots)))
 	       (else #f)))
 
 ;;; --------------------------------------------------------------------
@@ -1173,11 +1170,6 @@
 
 	((complement-type-spec? sub.ots)
 	 #f)
-
-;;; --------------------------------------------------------------------
-
-	((enumeration-type-spec? super.ots)
-	 (<symbol>-ots? sub.ots))
 
 ;;; --------------------------------------------------------------------
 
@@ -3141,7 +3133,7 @@
       (define* (make-enumeration-type-spec {S enum-set?})
 	(let* ((name.stx		(let ((id (enumeration-id)))
 					  (cons id (datum->syntax id (enum-set->list S)))))
-	       (parent.ots		(<top>-ots))
+	       (parent.ots		(<symbol>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		(make-enumeration-predicate S))

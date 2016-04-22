@@ -107,6 +107,10 @@
 	(enumeration salut ciao)
 	=> (enumeration hello ciao salut))
 
+  (doit <symbol>
+	(enumeration salut ciao)
+	=> <symbol>)
+
   (void))
 
 
