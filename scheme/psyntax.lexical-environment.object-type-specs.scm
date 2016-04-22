@@ -1999,8 +1999,9 @@
 		    (component-type*.ots	(%remove-sub-types rev-component-type*.ots '()))
 		    ;;If there are both "<true>"  and "<false>": we replace them with
 		    ;;a single "<boolean>".
-		    (component-type*.ots	(%collapse-booleans component-type*.ots))
-		    (component-type*.ots	(%collapse-list-of  component-type*.ots)))
+		    (component-type*.ots	(%collapse-booleans	 component-type*.ots))
+		    (component-type*.ots	(%collapse-list-of	 component-type*.ots))
+		    (component-type*.ots	(%collapse-enumerations  component-type*.ots)))
 	       (if (list-of-single-item? component-type*.ots)
 		   (car component-type*.ots)
 		 (make-union-type-spec component-type*.ots)))))))
@@ -2061,11 +2062,32 @@
     ;;
     (receive (list-of*.ots other*.ots)
 	(partition list-of-type-spec? component-type*.ots)
-      (if (null? list-of*.ots)
-	  other*.ots
-	(let ((item*.ots (map list-of-type-spec.item-ots list-of*.ots)))
-	  (cons (make-list-of-type-spec ($union-of-type-specs item*.ots))
-		other*.ots)))))
+      (cond ((null? list-of*.ots)
+	     component-type*.ots)
+	    ((list-of-single-item? list-of*.ots)
+	     component-type*.ots)
+	    (else
+	     (let ((item*.ots (map list-of-type-spec.item-ots list-of*.ots)))
+	       (cons (make-list-of-type-spec ($union-of-type-specs item*.ots))
+		     other*.ots))))))
+
+  (define (%collapse-enumerations component-type*.ots)
+    ;;If there are multiple "<enumeration-type-spec>" among the components: join them
+    ;;into a  single instance.
+    ;;
+    (receive (enum*.ots other*.ots)
+	(partition enumeration-type-spec? component-type*.ots)
+      (cond ((null? enum*.ots)
+	     component-type*.ots)
+	    ((list-of-single-item? enum*.ots)
+	     component-type*.ots)
+	    (else
+	     (cons (make-enumeration-type-spec
+		    (make-enumeration
+		     (apply append (map (lambda (enum.ots)
+					  (enum-set->list (enumeration-type-spec.enum-set enum.ots)))
+				     enum*.ots))))
+		   other*.ots)))))
 
   #| end of module: UNION-OF-TYPE-SPECS |# )
 
@@ -3116,37 +3138,24 @@
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (case-define* make-enumeration-type-spec
-	(({S enum-set?})
-	 (make-enumeration-type-spec S (cons (enumeration-id) (enum-set->list S))))
-	(({S enum-set?} {name.stx enumeration-name?})
-	 (let* ((parent.ots		(<top>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		(make-enumeration-predicate S))
-		(equality-predicate.id	(core-prim-id 'eq?))
-		(comparison-procedure.id #f)
-		(hash-function.id	(core-prim-id 'symbol-hash))
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    S))))
-
-      (define (enumeration-name? name.stx)
-	(syntax-match name.stx (enumeration)
-	  ((enumeration ?symbol ?symbol* ...)
-	   (for-all (lambda (sym.stx)
-		      (symbol? (syntax->datum sym.stx)))
-	     (cons ?symbol ?symbol*))
-	   #t)
-	  (?type-id
-	   (identifier? ?type-id)
-	   #t)
-	  (else #f)))
+      (define* (make-enumeration-type-spec {S enum-set?})
+	(let* ((name.stx		(let ((id (enumeration-id)))
+					  (cons id (datum->syntax id (enum-set->list S)))))
+	       (parent.ots		(<top>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		(make-enumeration-predicate S))
+	       (equality-predicate.id	(core-prim-id 'eq?))
+	       (comparison-procedure.id #f)
+	       (hash-function.id	(core-prim-id 'symbol-hash))
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name.stx parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   S)))
 
       (define (make-enumeration-predicate S)
 	(let ((symbol*	(enum-set->list S))
@@ -3386,7 +3395,7 @@
 		       "expected symbol object as component of enumeration"
 		       annotation.stx sym.stx)))
 	  sym* sym*.stx)
-	(make-enumeration-type-spec (make-enumeration sym*) name.stx)))
+	(make-enumeration-type-spec (make-enumeration sym*))))
 
      ((condition)
       (make-compound-condition-type-spec '()))

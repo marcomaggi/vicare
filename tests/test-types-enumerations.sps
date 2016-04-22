@@ -34,6 +34,12 @@
 (check-display "*** testing Vicare typed language: enumeration type annotations\n")
 
 
+;;;; helpers
+
+(define (%type-signature->sexp sig)
+  (syntax->datum (expander::type-signature.syntax-object sig)))
+
+
 (parametrise ((check-test-name	'predicate))
 
   (define-type <greetings>
@@ -49,6 +55,57 @@
   (check-for-true	(is-a? 'salut <greetings>))
   (check-for-true	(is-a? 'ohayo <greetings>))
   (check-for-false	(is-a? 'hell  <greetings>))
+
+  (void))
+
+
+(parametrise ((check-test-name	'super-and-sub))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?super ?sub => ?expected)
+       (check
+	   (type-annotation-super-and-sub? ?super ?sub)
+	 => ?expected))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (enumeration hello ciao salut ohayo)
+	(enumeration hello ohayo)
+	=> #t)
+
+  (doit (enumeration hello ohayo)
+	(enumeration hello ciao salut ohayo)
+	=> #f)
+
+  (void))
+
+
+(parametrise ((check-test-name	'union))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?super ?sub => ?expected)
+       (check
+	   (type-signature-union (?super) (?sub))
+	 (=> syntax=?)
+	 (syntax (?expected))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (enumeration hello ciao salut ohayo)
+	(enumeration hello ohayo)
+	=> (enumeration hello ciao salut ohayo))
+
+  (doit (enumeration hello ohayo)
+	(enumeration salut ciao)
+	=> (enumeration hello ohayo salut ciao))
+
+  (doit (enumeration hello ciao)
+	(enumeration salut ciao)
+	=> (enumeration hello ciao salut))
 
   (void))
 

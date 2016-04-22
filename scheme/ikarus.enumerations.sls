@@ -170,13 +170,22 @@
   ;;universe as  an enumeration set  whose universe  is itself and  whose enumeration
   ;;type is the newly created enumeration type.
   ;;
-  (let* ((symbol-to-index	(make-symbol-to-index-map ell))
-	 (index-to-symbol	(make-index-to-symbol-map ell))
+  (let* ((symbol*		(delete-duplicates ell))
+	 (symbol-to-index	(make-symbol-to-index-map symbol*))
+	 (index-to-symbol	(make-index-to-symbol-map symbol*))
 	 (universe-bitvector	(%full-bitmask (index-to-symbol-size index-to-symbol)))
 	 (type			(make-enum-type symbol-to-index index-to-symbol universe-bitvector #f)))
     (receive-and-return (universe)
 	(make-enum-set type universe-bitvector)
       (set-enum-type-universe! type universe))))
+
+(define (delete-duplicates ell)
+  (if (pair? ell)
+      (let ((head (car ell)))
+	(cons head (delete-duplicates (remp (lambda (sym)
+					      (eq? sym head))
+					(cdr ell)))))
+    '()))
 
 
 ;;;; inspection and conversion
