@@ -365,7 +365,7 @@
 		   (list expr.core))
 		 (make-type-signature/single-true)))
 
-	      ((object-type-spec.matching-super-and-sub? item.ots type-annotation.ots)
+	      ((object-type-spec.compatible-super-and-sub? type-annotation.ots item.ots)
 	       ;;If the expression  returns a single value: such  value is compatible
 	       ;;with the predicate type.  Let's check it at run-time.
 	       (%run-time-predicate))

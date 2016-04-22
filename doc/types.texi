@@ -362,7 +362,7 @@ brace characters:
 
 @menu
 * types annotations inserting:: Inserting type annotations.
-* types annotations putting::   What to put in a type annotation.
+* types annotations syntaxes::  The syntax of type annotations.
 @end menu
 
 @c page
@@ -435,8 +435,8 @@ example:
 @end lisp
 
 @c page
-@node types annotations putting
-@subsection What to put in a type annotation
+@node types annotations syntaxes
+@subsection The syntax of type annotations
 
 
 Type annotations are either standalone type identifiers like
