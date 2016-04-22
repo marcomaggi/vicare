@@ -33,7 +33,7 @@
    make-type-signature/single-null			make-type-signature/single-list
    make-type-signature/single-boolean
    make-type-signature/single-true			make-type-signature/single-false
-   make-type-signature/single-procedure
+   make-type-signature/single-procedure			make-type-signature/single-symbol
    make-type-signature/single-stx			make-type-signature/single-syntactic-identifier
    make-type-signature/standalone-list			make-type-signature/fully-untyped
    make-type-signature/single-value
@@ -399,6 +399,7 @@
   (define-single-type-signature-maker make-type-signature/single-boolean		<boolean>-ots)
   (define-single-type-signature-maker make-type-signature/single-true			<true>-ots)
   (define-single-type-signature-maker make-type-signature/single-false			<false>-ots)
+  (define-single-type-signature-maker make-type-signature/single-symbol			<symbol>-ots)
   (define-single-type-signature-maker make-type-signature/single-procedure		<procedure>-ots)
   (define-single-type-signature-maker make-type-signature/single-stx			<stx>-ots)
   (define-single-type-signature-maker make-type-signature/single-syntactic-identifier	<syntactic-identifier>-ots)

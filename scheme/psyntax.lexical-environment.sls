@@ -212,6 +212,11 @@
     <alist-type-spec>-rtd				<alist-type-spec>-rcd
     make-alist-type-spec				alist-type-spec?
     alist-type-spec.key-ots				alist-type-spec.value-ots
+
+    <enumeration-type-spec>
+    <enumeration-type-spec>-rtd				<enumeration-type-spec>-rcd
+    make-enumeration-type-spec				enumeration-type-spec?
+    enumeration-type-spec.enum-set
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>
@@ -300,6 +305,7 @@
     procedure-pred-id
     list-of-id				vector-of-id
     hashtable-id			alist-id
+    enumeration-id
     define/checked-id			case-define/checked-id
     define/typed-id			case-define/typed-id
     define/std-id			case-define/std-id
@@ -351,6 +357,7 @@
     <boolean>-ots			<boolean>-ots?
     <true>-ots				<true>-ots?
     <false>-ots				<false>-ots?
+    <symbol>-ots			<symbol>-ots?
     <struct>-ots			<record>-ots
     <condition>-ots			<condition>-ots?
     <compound-condition>-ots		<compound-condition>-ots?
@@ -2498,6 +2505,7 @@
   (define-core-prim-id-retriever vector-of-id		vector-of)
   (define-core-prim-id-retriever hashtable-id		hashtable)
   (define-core-prim-id-retriever alist-id		alist)
+  (define-core-prim-id-retriever enumeration-id		enumeration)
   ;;
   (define-core-prim-id-retriever define/checked-id	define/checked)
   (define-core-prim-id-retriever define/typed-id	define/typed)
@@ -2793,6 +2801,7 @@
   (define-type-id-retriever <boolean>-type-id			<boolean>)
   (define-type-id-retriever <true>-type-id			<true>)
   (define-type-id-retriever <false>-type-id			<false>)
+  (define-type-id-retriever <symbol>-type-id			<symbol>)
   (define-type-id-retriever <struct>-type-id			<struct>)
   (define-type-id-retriever <record>-type-id			<record>)
   (define-type-id-retriever <vector>-type-id			<vector>)
@@ -2823,11 +2832,11 @@
   (define-type-spec-retriever <boolean>-ots			<boolean>)
   (define-type-spec-retriever <true>-ots			<true>)
   (define-type-spec-retriever <false>-ots			<false>)
+  (define-type-spec-retriever <symbol>-ots			<symbol>)
   (define-type-spec-retriever <struct>-ots			<struct>)
   (define-type-spec-retriever <record>-ots			<record>)
   (define-type-spec-retriever <vector>-ots			<vector>)
   (define-type-spec-retriever <hashtable>-ots			<hashtable>)
-  (define-type-spec-retriever <alist>-ots			<alist>)
   (define-type-spec-retriever <empty-vector>-ots		<empty-vector>)
   (define-type-spec-retriever <null>-ots			<null>)
   (define-type-spec-retriever <list>-ots			<list>)
@@ -2852,6 +2861,7 @@
   (define-type-id-predicate <boolean>-type-id?			<boolean>-type-id)
   (define-type-id-predicate <true>-type-id?			<true>-type-id)
   (define-type-id-predicate <false>-type-id?			<false>-type-id)
+  (define-type-id-predicate <symbol>-type-id?			<symbol>-type-id)
   (define-type-id-predicate <procedure>-type-id?		<procedure>-type-id)
   (define-type-id-predicate <vector>-type-id?			<vector>-type-id)
   (define-type-id-predicate <empty-vector>-type-id?		<empty-vector>-type-id)
@@ -2900,10 +2910,10 @@
   (define-type-spec-predicate <boolean>-ots?			<boolean>-ots)
   (define-type-spec-predicate <true>-ots?			<true>-ots)
   (define-type-spec-predicate <false>-ots?			<false>-ots)
+  (define-type-spec-predicate <symbol>-ots?			<symbol>-ots)
   (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
   (define-type-spec-predicate <hashtable>-ots?			<hashtable>-ots)
-  (define-type-spec-predicate <alist>-ots?			<alist>-ots)
   (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
   (define-type-spec-predicate <null>-ots?			<null>-ots)
   (define-type-spec-predicate <list>-ots?			<list>-ots)

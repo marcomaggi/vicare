@@ -781,6 +781,25 @@
    ((<alist-type-spec>)		=> (<alist-type-spec>))))
 
 ;;; --------------------------------------------------------------------
+;;; <enumeration-type-spec>
+
+(declare-core-rtd <enumeration-type-spec>-rtd)
+(declare-core-rcd <enumeration-type-spec>-rcd)
+
+(declare-core-primitive make-enumeration-type-spec
+    (safe)
+  (signatures
+   ((<enum-set>)			=> (<enumeration-type-spec>))
+   ((<enum-set> <syntax-object>)	=> (<enumeration-type-spec>))))
+
+(declare-type-predicate  enumeration-type-spec?	<enumeration-type-spec>)
+
+(declare-core-primitive enumeration-type-spec.enum-set
+    (safe)
+  (signatures
+   ((<enumeration-type-spec>)	=> (<enum-set>))))
+
+;;; --------------------------------------------------------------------
 ;;; operations on type specs
 
 (declare-core-primitive union-of-type-specs

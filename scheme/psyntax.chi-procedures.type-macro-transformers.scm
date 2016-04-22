@@ -333,7 +333,7 @@
 	     ;;Expand-time success!
 	     (%make-true-psi input-form.stx expr.psi))
 
-	    ((object-type-spec.matching-super-and-sub? expr.ots type-annotation.ots)
+	    ((object-type-spec.compatible-super-and-sub? type-annotation.ots expr.ots)
 	     ;;The expression  returns a single  value compatible with  the predicate
 	     ;;type.  Let's check it at run-time.
 	     (%run-time-predicate))

@@ -225,11 +225,17 @@
    (value-ots			hashtable-type-spec.value-ots)))
 
 (define-built-in-record-type <alist-type-spec>
-    <alist>
+    <list>
   make-alist-type-spec alist-type-spec?
   (methods
    (key-ots			alist-type-spec.key-ots)
    (value-ots			alist-type-spec.value-ots)))
+
+(define-built-in-record-type <enumeration-type-spec>
+    <object-type-spec>
+  make-enumeration-type-spec enumeration-type-spec?
+  (methods
+   (enum-set			enumeration-type-spec.enum-set)))
 
 ;;; --------------------------------------------------------------------
 

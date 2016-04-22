@@ -59,6 +59,7 @@
      syntactic-binding-descriptor/global-object-type.loc
      syntactic-binding-descriptor/global-object-type.object-type-spec
      syntactic-binding-descriptor/core-object-type.object-type-spec
+     syntactic-binding-descriptor/object-type-spec.ots
 
 ;;; list sub-type binding
      syntactic-binding-descriptor/list-of-type-name?
@@ -485,6 +486,19 @@
 ;;
 (define-syntactic-binding-descriptor-predicate/object-type-spec syntactic-binding-descriptor/object-type-name?
   object-type-spec?)
+
+(define* (syntactic-binding-descriptor/object-type-spec.ots descr)
+  (case (syntactic-binding-descriptor.type descr)
+    ((core-object-type-name)
+     (syntactic-binding-descriptor/core-object-type.object-type-spec descr))
+    ((local-object-type-name)
+     (syntactic-binding-descriptor/local-object-type.object-type-spec descr))
+    ((global-object-type-name)
+     (syntactic-binding-descriptor/global-object-type.object-type-spec descr))
+    (else
+     (assertion-violation __who__
+       "internal error in object-type syntactic binding's format"
+       descr))))
 
 ;;; --------------------------------------------------------------------
 

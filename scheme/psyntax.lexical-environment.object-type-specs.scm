@@ -57,7 +57,9 @@
 ;;           |
 ;;	     |------------> <vector-of-type-spec>
 ;;	     |
-;;	      ------------> <hashtable-type-spec>
+;;	     |------------> <hashtable-type-spec>
+;;	     |
+;;	      ------------> <enumeration-type-spec>
 ;;
 ;;The type "<object-type-spec>" has a field  PARENT-OTS that is used to represent the
 ;;hierarchy of Scheme-level object-types.
@@ -200,6 +202,11 @@
 	 <alist-type-spec>-rtd				<alist-type-spec>-rcd
 	 make-alist-type-spec				alist-type-spec?
 	 alist-type-spec.key-ots			alist-type-spec.value-ots
+
+	 <enumeration-type-spec>
+	 <enumeration-type-spec>-rtd			<enumeration-type-spec>-rcd
+	 make-enumeration-type-spec			enumeration-type-spec?
+	 enumeration-type-spec.enum-set
 
 	 ;;;
 
@@ -1029,6 +1036,18 @@
 	       (else #f)))
 
 ;;; --------------------------------------------------------------------
+;;; enumerations
+
+	((enumeration-type-spec? super.ots)
+	 (cond ((enumeration-type-spec? sub.ots)
+		(enum-set-subset? (enumeration-type-spec.enum-set sub.ots)
+				  (enumeration-type-spec.enum-set super.ots)))
+	       ;; ((the-symbol-type-spec? sub.ots)
+	       ;; 	(enum-set-member? (a-symbol-spec.symbol sub.ots)
+	       ;; 			  (enumeration-type-spec.enum-set super.ots)))
+	       (else #f)))
+
+;;; --------------------------------------------------------------------
 ;;; left-overs for SUB.OTS
 
 	((or (<list>-ots?        sub.ots)
@@ -1154,6 +1173,11 @@
 
 	((complement-type-spec? sub.ots)
 	 #f)
+
+;;; --------------------------------------------------------------------
+
+	((enumeration-type-spec? super.ots)
+	 (<symbol>-ots? sub.ots))
 
 ;;; --------------------------------------------------------------------
 
@@ -3076,6 +3100,80 @@
   (record-constructor-descriptor <alist-type-spec>))
 
 
+;;;; enumeration object spec
+;;
+;;This record-type  is used as  syntactic binding descriptor's value  for enumeration
+;;types  defined  either  with  DEFINE-ENUMERATION   or  with  the  ENUMERATION  type
+;;annotation.
+;;
+(define-record-type (<enumeration-type-spec> make-enumeration-type-spec enumeration-type-spec?)
+  (nongenerative vicare:expander:<enumeration-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable enum-set			enumeration-type-spec.enum-set)
+		;An instance of "<enum-set>".
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (case-define* make-enumeration-type-spec
+	(({S enum-set?})
+	 (make-enumeration-type-spec S (cons (enumeration-id) (enum-set->list S))))
+	(({S enum-set?} {name.stx enumeration-name?})
+	 (let* ((parent.ots		(<top>-ots))
+		(constructor.stx	#f)
+		(destructor.stx		#f)
+		(predicate.stx		(make-enumeration-predicate S))
+		(equality-predicate.id	(core-prim-id 'eq?))
+		(comparison-procedure.id #f)
+		(hash-function.id	(core-prim-id 'symbol-hash))
+		(accessors-table	'())
+		(mutators-table		'())
+		(methods-table		'()))
+	   ((make-object-type-spec name.stx parent.ots
+				   constructor.stx destructor.stx predicate.stx
+				   equality-predicate.id comparison-procedure.id hash-function.id
+				   accessors-table mutators-table methods-table)
+	    S))))
+
+      (define (enumeration-name? name.stx)
+	(syntax-match name.stx (enumeration)
+	  ((enumeration ?symbol ?symbol* ...)
+	   (for-all (lambda (sym.stx)
+		      (symbol? (syntax->datum sym.stx)))
+	     (cons ?symbol ?symbol*))
+	   #t)
+	  (?type-id
+	   (identifier? ?type-id)
+	   #t)
+	  (else #f)))
+
+      (define (make-enumeration-predicate S)
+	(let ((symbol*	(enum-set->list S))
+	      (obj.sym	(gensym "obj")))
+	  (bless
+	   `(lambda (,obj.sym)
+	      (and (symbol? ,obj.sym)
+		   (memq ,obj.sym (quote ,symbol*))
+		   #t)))))
+
+      make-enumeration-type-spec))
+
+  (custom-printer
+    (lambda (S port sub-printer)
+      (display "#[enumeration-type-spec " port)
+      (display (object-type-spec.name S) port)
+      (display "]" port)))
+
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <enumeration-type-spec>-rtd
+  (record-type-descriptor <enumeration-type-spec>))
+
+(define <enumeration-type-spec>-rcd
+  (record-constructor-descriptor <enumeration-type-spec>))
+
+
 ;;;; type annotations
 ;;
 ;;A type annotation is a syntax object  representing the type of a syntactic binding.
@@ -3108,7 +3206,8 @@
      (identifier-syntax
       (lambda (stx)
 	(syntax-object.type-annotation? input-form.stx lexenv stx))))
-   (syntax-match stx (pair list vector pair-of list-of vector-of hashtable alist condition
+   (syntax-match stx (pair list vector pair-of list-of vector-of
+			   hashtable alist condition enumeration
 			   or and not lambda case-lambda => parent-of ancestor-of)
      (?type-id
       (and (identifier? ?type-id)
@@ -3153,6 +3252,13 @@
       (list (alist-id)
 	    (recur ?key-type)
 	    (recur ?value-type)))
+
+     ((enumeration ?symbol ?symbol* ...)
+      (let ((sym*.stx (cons ?symbol ?symbol*)))
+	(and (for-all (lambda (sym.stx)
+			(symbol? (syntax->datum sym.stx)))
+	       sym*.stx)
+	     (cons (enumeration-id) sym*.stx))))
 
      ((lambda ?argtypes => ?rettypes)
       (and (make-type-signature ?argtypes)
@@ -3221,7 +3327,8 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of hashtable alist condition
+   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of
+				      hashtable alist condition enumeration
 				      or and not lambda case-lambda => parent-of ancestor-of)
      (?type-id
       (identifier? ?type-id)
@@ -3269,6 +3376,17 @@
       (make-alist-type-spec (type-annotation->object-type-spec ?key-type)
 			    (type-annotation->object-type-spec ?value-type)
 			    name.stx))
+
+     ((enumeration ?symbol ?symbol* ...)
+      (let* ((sym*.stx	(cons ?symbol ?symbol*))
+	     (sym*	(map syntax->datum sym*.stx)))
+	(for-all (lambda (sym sym.stx)
+		   (unless (symbol? sym)
+		     (syntax-violation __who__
+		       "expected symbol object as component of enumeration"
+		       annotation.stx sym.stx)))
+	  sym* sym*.stx)
+	(make-enumeration-type-spec (make-enumeration sym*) name.stx)))
 
      ((condition)
       (make-compound-condition-type-spec '()))

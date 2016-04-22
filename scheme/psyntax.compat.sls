@@ -74,7 +74,7 @@
     standalone-pair?			exact-compnum?
     zero-compnum?			zero-cflonum?
     procedure-arguments-consistency-violation
-    last-pair
+    last-pair				enum-set?
 
     ;; compiler related operations
     compiler::eval-core			compiler::core-expr->optimized-code

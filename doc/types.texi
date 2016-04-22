@@ -9,6 +9,7 @@ leave the type of variables unspecified.
 
 @menu
 * types intro::                 Introduction to the typed language.
+* types annotations::           Type annotations.
 * types syntaxes::              Type-exploiting syntaxes.
 * types built-in::              Built-in object types.
 @end menu
@@ -25,7 +26,6 @@ specified by @rnrs{6}.
 @menu
 * types intro philosophy::      Typed language philosophy.
 * types intro enabling::        Enabling typed language extensions.
-* types intro annotations::     Adding type annotations.
 * types intro type ids::        Type identifiers.
 * types intro typed vars::      Typed lexical variables.
 @end menu
@@ -244,379 +244,6 @@ language for programs and libraries.
 @end defun
 
 @c page
-@node types intro annotations
-@subsection Adding type annotations
-
-
-Type annotations are special syntaxes that make use of the @func{brace}
-syntax (@pxref{iklib syntaxes misc, brace}) as follows:
-
-@lisp
-(define (brace O <fixnum>)
-  123)
-@end lisp
-
-@noindent
-to use the extensions in a friendly manner we need to put the reader in
-@samp{#!vicare} mode, this way @func{brace} can be inserted using actual
-brace characters:
-
-@lisp
-#!vicare
-(define @{O <fixnum>@}
-  123)
-@end lisp
-
-@menu
-* types intro annotations inserting:: Inserting type annotations.
-* types intro annotations putting::   What to put in a type annotation.
-@end menu
-
-@c page
-@node types intro annotations inserting
-@subsubsection Inserting type annotations
-
-
-Everywhere the name of a syntactic binding appears in binding position:
-we can add a type annotation by wrapping the syntactic identifier in
-braces and appending a type syntax.  With @syntax{let}--like syntaxes we
-can do:
-
-@lisp
-(let ((@{a <fixnum>@} 1)
-      (@{b <string>@} "ciao")
-      (@{c <symbol>@} 'hello))
-  (list a b c))
-@end lisp
-
-@noindent
-with @syntax{lambda} and @syntax{case-lambda} syntaxes we can do:
-
-@lisp
-(lambda (@{a <fixnum>@} @{b <string>@})
-  (list a b))
-
-(case-lambda
-  ((@{a <fixnum>@} @{b <string>@})
-   (list a b))
-  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
-   (list a b c)))
-@end lisp
-
-@noindent
-with @syntax{define} and @syntax{case-define} syntaxes we can do:
-
-@lisp
-(define (fun1 @{a <fixnum>@} @{b <string>@})
-  (list a b))
-
-(case-define fun2
-  ((@{a <fixnum>@} @{b <string>@})
-   (list a b))
-  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
-   (list a b c)))
-@end lisp
-
-When using the syntaxes @syntax{lambda}, @syntax{case-lambda},
-@syntax{define}, @syntax{case-define}, @syntax{receive},
-@syntax{let-values} and @syntax{let*-values} we can specify a ``rest''
-argument that is bound to a list of the rest of the operands; this
-syntactic binding can be annotated only with the type identifier
-@class{list} or the type annotation @samp{(list-of @meta{type})}.  For
-example:
-
-@lisp
-((lambda (@{a <fixnum>@} @{b <string>@} . @{rest (list-of <symbol>)@})
-   (vector a b rest))
- 1 "ciao" 'x 'y 'z)
-@result{} #(1 "ciao" (x y z))
-
-((lambda @{args <list>@} args)
- 1 2 3)
-@result{} (1 2 3)
-
-(receive (@{a <fixnum>@} @{b <string>@} . @{rest <list>@})
-    (values 1 "ciao" 'x 'y 'z)
-  rest)
-@result{} (x y z)
-@end lisp
-
-@c page
-@node types intro annotations putting
-@subsubsection What to put in a type annotation
-
-
-Type annotations are either standalone type identifiers like
-@class{fixnum}, @class{string}, @condition{message} or compound type
-syntaxes like the following:
-
-@lisp
-(pair      <fixnum> <string>)
-(list      <fixnum> <string> <symbol>)
-(vector    <fixnum> <string> <symbol>)
-(pair-of   <fixnum>)
-(list-of   <fixnum>)
-(vector-of <fixnum>)
-(hashtable <symbol> <string>)
-(alist     <symbol> <string>)
-(condition &who &message &irritants)
-(or    <false> <symbol> <string>)
-(and   <exact> <positive>)
-(not   <exact>)
-(lambda (<fixnum>) => (<string>))
-(case-lambda
-  ((<fixnum>) => (<string>))
-  ((<flonum>) => (<string>)))
-@end lisp
-
-@noindent
-compound type annotations can be nested at will:
-
-@lisp
-(or (list-of   <fixnum>)
-    (vector-of <fixnum>))
-@end lisp
-
-The following syntactic bindings are exported by @library{vicare}.
-
-
-@deftp {Compound Type Annotation} pair @meta{car-type} @meta{car-type}
-Describe a pair having car of type @meta{car-type} and cdr of type
-@meta{car-type}.  Both @meta{car-type} and @meta{car-type} are nested
-type annotations.
-
-@lisp
-(is-a? '(1 . 2.3) (pair <fixnum> <flonum>))
-@result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} list @metao{item-type} @meta{item-type} @dots{}
-Describe a proper list holding a fixed number of items of the specified
-types (in the given order).  Every @meta{item-type} is a nested type
-annotation.
-
-@lisp
-(is-a? '(1 2.3) (list <fixnum> <flonum>))
-@result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} vector @metao{item-type} @meta{item-type} @dots{}
-Describe a vector holding a fixed number of items of the specified types
-(in the given order).  Every @meta{item-type} is a nested type
-annotation.
-
-@lisp
-(is-a? '#(1 2.3) (vector <fixnum> <flonum>))
-@result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} pair-of @meta{item-type}
-Describe a pair having both the car and cdr of type @meta{item-type}.
-The syntax @meta{item-type} is a nested type annotation.
-
-@lisp
-(is-a? '(1 . 2) (pair-of <fixnum>))
-@result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} list-of @meta{item-type}
-Describe a proper list holding any number of items (including zero) all
-of the specified type.  The syntax @meta{item-type} is a nested type
-annotation.
-
-@lisp
-(is-a? '(1 2) (list-of <fixnum>))       @result{} #t
-(is-a? '()    (list-of <fixnum>))       @result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} vector-of @meta{item-type}
-Describe a vector holding any number of items (including zero) all of
-the specified type.  The syntax @meta{item-type} is a nested type
-annotation.
-
-@lisp
-(is-a? '#(1 2) (vector-of <fixnum>))    @result{} #t
-(is-a? '#()    (vector-of <fixnum>))    @result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} hashtable @meta{key-type} @meta{value-type}
-Describe a hashtable having keys of type @meta{key-type} and values of
-type @meta{value-type}.  Both @meta{key-type} and @meta{value-type} are
-nested type annotations.
-@end deftp
-
-
-@deftp {Compound Type Annotation} alist @meta{key-type} @meta{value-type}
-Describe an association list having keys of type @meta{key-type} and
-values of type @meta{value-type}.  Both @meta{key-type} and
-@meta{value-type} are nested type annotations.
-@end deftp
-
-
-@deftp {Compound Type Annotation} condition @metao{cond-type} @meta{cond-type} @dots{}
-Describe a compound condition object holding at least one instance of
-the specified types (the order does not matter).  Every @meta{cond-type}
-is a nested type annotation that must be one among: @class{condition},
-@class{compound-condition}, a sub--type of @condition{condition}.
-
-@lisp
-(is-a? (condition (make-who-condition 'I)
-                  (make-message-condition "hello"))
-       (condition &who &message))
-@result{} #t
-
-(is-a? (condition (make-who-condition 'I)
-                  (make-message-condition "hello"))
-       (condition &message &who))
-@result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} lambda @meta{args-signature} => @meta{rv-signature}
-Describe a sub--type of @class{procedure} having a single clause, like
-procedures defined by @syntax{lambda}.  @syntax{=>} is the syntactic
-binding exported by @rsixlibrary{base}.
-
-The argument @meta{args-signature} must be a syntax object representing
-the type signature of the procedure's arguments.  The argument
-@meta{rv-signature} must be a syntax object representing the type
-signature of the procedure's return values.
-@end deftp
-
-
-@deftp {Compound Type Annotation} case-lambda @metao{clause} @meta{clause} @dots{}
-Describe a sub--type of @class{procedure} having multiple clauses, like
-procedures defined by @syntax{case-lambda}.  @syntax{=>} is the
-syntactic binding exported by @rsixlibrary{base}.
-
-Each @meta{clause} argument must have the format:
-
-@example
-(@meta{args-signature} => @meta{rv-signature})
-@end example
-
-@noindent
-where: @meta{args-signature} must be a syntax object representing the
-type signature of the clause's arguments; @meta{rv-signature} must be a
-syntax object representing the type signature of the clause's return
-values.
-@end deftp
-
-
-@deftp {Compound Type Annotation} or @metao{type} @meta{type} @dots{}
-Describe the union between the specified types.  Every @meta{type} is a
-nested type annotation.  A value matches a union of types if its type
-matches at least one of the union's types.
-
-@lisp
-(is-a? 1      (or <fixnum> <string>))   @result{} #t
-(is-a? "ciao" (or <fixnum> <string>))   @result{} #t
-(is-a? 1.23   (or <fixnum> <string>))   @result{} #f
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} and @metao{type} @meta{type} @dots{}
-Describe the intersection between the specified types.  Every
-@meta{type} is a nested type annotation.  A value matches an
-intersection of types if its type matches all the intersection's types.
-
-@lisp
-(is-a? 1   (and <fixnum> <positive>))   @result{} #t
-(is-a? 1.0 (and <exact>  <positive>))   @result{} #f
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} not @meta{type}
-Describe the complement of the type.  The argument @meta{type} is a
-nested type annotation.  A value of type @meta{val-type} matches the
-complement of @meta{type} if @meta{val-type} is neither @meta{type} nor
-a sub--type of @meta{type}.
-
-@lisp
-(is-a? 1   (not <string>))      @result{} #t
-(is-a? 1.0 (not <fixnum>))      @result{} #f
-
-;;If something is not a "<number>", for sure it is
-;;not a "<fixnum>".
-(type-annotation-super-and-sub? (not <fixnum>) (not <number>))
-@result{} #t
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} parent-of @meta{type}
-Describe the parent of the type; an exception is raised if the type has
-no parent.  The argument @meta{type} is a nested type annotation.
-
-@lisp
-(type-annotation=? <struct> (parent-of <record>))
-@result{} #t
-
-(type-annotation=? <fixnum> (parent-of <positive-fixnum>))
-@result{} #t
-
-(type-annotation=? <positive-fixnum> (parent-of <fixnum>))
-@result{} #f
-@end lisp
-@end deftp
-
-
-@deftp {Compound Type Annotation} ancestor-of @meta{type}
-Describe the ancestors of the type; if the type has no parent: the list
-of ancestors is empty.  The argument @meta{type} is a nested type
-annotation and it is not included in its list of ancestors.
-
-This type annotation can be used to match @strong{exactly} a type
-annotation with one of the ancestors of @meta{type}:
-
-@lisp
-(type-signature-matching ((ancestor-of &condition))
-                         (&condition))
-@result{} no-match
-
-(type-signature-matching ((ancestor-of &condition))
-                         (<condition>))
-@result{} exact-match
-
-(type-signature-matching ((ancestor-of &condition))
-                         (<record>))
-@result{} exact-match
-
-(type-signature-matching ((ancestor-of &condition))
-                         (<struct>))
-@result{} exact-match
-
-(type-signature-matching ((ancestor-of &condition))
-                         (<top>))
-@result{} exact-match
-@end lisp
-
-When used along with @syntax{not}, it can is used to avoid matching
-exactly a type annotation with one of the ancestors of @meta{type}:
-
-@lisp
-(type-signature-matching ((not (ancestor-of &condition)))
-                         (<condition>))
-@result{} no-match
-@end lisp
-@end deftp
-
-@c page
 @node types intro type ids
 @subsection Type identifiers
 
@@ -709,6 +336,409 @@ the follow program is @strong{not} correct:
 
 @noindent
 and will cause an expand--time syntax violation.
+
+@c page
+@node types annotations
+@section Type annotations
+
+Type annotations are special syntaxes that make use of the @func{brace}
+syntax (@pxref{iklib syntaxes misc, brace}) as follows:
+
+@lisp
+(define (brace O <fixnum>)
+  123)
+@end lisp
+
+@noindent
+to use the extensions in a friendly manner we need to put the reader in
+@samp{#!vicare} mode, this way @func{brace} can be inserted using actual
+brace characters:
+
+@lisp
+#!vicare
+(define @{O <fixnum>@}
+  123)
+@end lisp
+
+@menu
+* types annotations inserting:: Inserting type annotations.
+* types annotations putting::   What to put in a type annotation.
+@end menu
+
+@c page
+@node types annotations inserting
+@subsection Inserting type annotations
+
+
+Everywhere the name of a syntactic binding appears in binding position:
+we can add a type annotation by wrapping the syntactic identifier in
+braces and appending a type syntax.  With @syntax{let}--like syntaxes we
+can do:
+
+@lisp
+(let ((@{a <fixnum>@} 1)
+      (@{b <string>@} "ciao")
+      (@{c <symbol>@} 'hello))
+  (list a b c))
+@end lisp
+
+@noindent
+with @syntax{lambda} and @syntax{case-lambda} syntaxes we can do:
+
+@lisp
+(lambda (@{a <fixnum>@} @{b <string>@})
+  (list a b))
+
+(case-lambda
+  ((@{a <fixnum>@} @{b <string>@})
+   (list a b))
+  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
+   (list a b c)))
+@end lisp
+
+@noindent
+with @syntax{define} and @syntax{case-define} syntaxes we can do:
+
+@lisp
+(define (fun1 @{a <fixnum>@} @{b <string>@})
+  (list a b))
+
+(case-define fun2
+  ((@{a <fixnum>@} @{b <string>@})
+   (list a b))
+  ((@{a <fixnum>@} @{b <string>@} @{c <symbol>@})
+   (list a b c)))
+@end lisp
+
+When using the syntaxes @syntax{lambda}, @syntax{case-lambda},
+@syntax{define}, @syntax{case-define}, @syntax{receive},
+@syntax{let-values} and @syntax{let*-values} we can specify a ``rest''
+argument that is bound to a list of the rest of the operands; this
+syntactic binding can be annotated only with the type identifier
+@class{list} or the type annotation @samp{(list-of @meta{type})}.  For
+example:
+
+@lisp
+((lambda (@{a <fixnum>@} @{b <string>@} . @{rest (list-of <symbol>)@})
+   (vector a b rest))
+ 1 "ciao" 'x 'y 'z)
+@result{} #(1 "ciao" (x y z))
+
+((lambda @{args <list>@} args)
+ 1 2 3)
+@result{} (1 2 3)
+
+(receive (@{a <fixnum>@} @{b <string>@} . @{rest <list>@})
+    (values 1 "ciao" 'x 'y 'z)
+  rest)
+@result{} (x y z)
+@end lisp
+
+@c page
+@node types annotations putting
+@subsection What to put in a type annotation
+
+
+Type annotations are either standalone type identifiers like
+@class{fixnum}, @class{string}, @condition{message} or compound type
+syntaxes like the following:
+
+@lisp
+(pair      <fixnum> <string>)
+(list      <fixnum> <string> <symbol>)
+(vector    <fixnum> <string> <symbol>)
+(pair-of   <fixnum>)
+(list-of   <fixnum>)
+(vector-of <fixnum>)
+(hashtable <symbol> <string>)
+(alist     <symbol> <string>)
+(enumeration @metao{symbol} @meta{symbol} ...)
+(condition &who &message &irritants)
+(or    <false> <symbol> <string>)
+(and   <exact> <positive>)
+(not   <exact>)
+(lambda (<fixnum>) => (<string>))
+(case-lambda
+  ((<fixnum>) => (<string>))
+  ((<flonum>) => (<string>)))
+@end lisp
+
+@noindent
+compound type annotations can be nested at will:
+
+@lisp
+(or (list-of   <fixnum>)
+    (vector-of <fixnum>))
+@end lisp
+
+The following syntactic bindings are exported by @library{vicare}.
+
+
+@deftp {Compound Type Annotation} pair @meta{car-type} @meta{car-type}
+Describe a pair having car of type @meta{car-type} and cdr of type
+@meta{car-type}.  Both @meta{car-type} and @meta{car-type} are nested
+type annotations.
+
+@lisp
+(is-a? '(1 . 2.3) (pair <fixnum> <flonum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} list @metao{item-type} @meta{item-type} @dots{}
+Describe a proper list holding a fixed number of items of the specified
+types (in the given order).  Every @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '(1 2.3) (list <fixnum> <flonum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} vector @metao{item-type} @meta{item-type} @dots{}
+Describe a vector holding a fixed number of items of the specified types
+(in the given order).  Every @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '#(1 2.3) (vector <fixnum> <flonum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} pair-of @meta{item-type}
+Describe a pair having both the car and cdr of type @meta{item-type}.
+The syntax @meta{item-type} is a nested type annotation.
+
+@lisp
+(is-a? '(1 . 2) (pair-of <fixnum>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} list-of @meta{item-type}
+Describe a proper list holding any number of items (including zero) all
+of the specified type.  The syntax @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '(1 2) (list-of <fixnum>))       @result{} #t
+(is-a? '()    (list-of <fixnum>))       @result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} vector-of @meta{item-type}
+Describe a vector holding any number of items (including zero) all of
+the specified type.  The syntax @meta{item-type} is a nested type
+annotation.
+
+@lisp
+(is-a? '#(1 2) (vector-of <fixnum>))    @result{} #t
+(is-a? '#()    (vector-of <fixnum>))    @result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} hashtable @meta{key-type} @meta{value-type}
+Describe a hashtable having keys of type @meta{key-type} and values of
+type @meta{value-type}.  Both @meta{key-type} and @meta{value-type} are
+nested type annotations.
+@end deftp
+
+
+@deftp {Type Annotation} enumeration @metao{symbol} @meta{symbol} @dots{}
+Describe an enumeration of symbols; it is used to match a symbol in a
+specified enumeration set.
+
+@lisp
+(is-a? 'ciao (enumeration hello ciao salut ohayo))
+@result{} #t
+
+(is-a? 'blue (enumeration hello ciao salut ohayo))
+@result{} #f
+@end lisp
+
+As special case, if we define an alias for an @syntax{enumeration} type
+annotation: we can use such identifier to validate symbols.  Example:
+
+@lisp
+(define-type greetings
+  (enumeration hello ciao salut ohayo))
+
+(is-a? 'ciao greetings) @result{} #t
+(greetings ciao)        @result{} ciao
+(greetings blue)        @error{} symbol not in enumeration
+@end lisp
+
+The enumeration identifier is indeed used in the implementation of the
+@syntax{define-enumeration} built--in syntax; @ref{stdlib enum,
+define-enumeration}.
+@end deftp
+
+
+@deftp {Compound Type Annotation} alist @meta{key-type} @meta{value-type}
+Describe an association list having keys of type @meta{key-type} and
+values of type @meta{value-type}.  Both @meta{key-type} and
+@meta{value-type} are nested type annotations.
+@end deftp
+
+
+@deftp {Compound Type Annotation} condition @metao{cond-type} @meta{cond-type} @dots{}
+Describe a compound condition object holding at least one instance of
+the specified types (the order does not matter).  Every @meta{cond-type}
+is a nested type annotation that must be one among: @class{condition},
+@class{compound-condition}, a sub--type of @condition{condition}.
+
+@lisp
+(is-a? (condition (make-who-condition 'I)
+                  (make-message-condition "hello"))
+       (condition &who &message))
+@result{} #t
+
+(is-a? (condition (make-who-condition 'I)
+                  (make-message-condition "hello"))
+       (condition &message &who))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} lambda @meta{args-signature} => @meta{rv-signature}
+Describe a sub--type of @class{procedure} having a single clause, like
+procedures defined by @syntax{lambda}.  @syntax{=>} is the syntactic
+binding exported by @rsixlibrary{base}.
+
+The argument @meta{args-signature} must be a syntax object representing
+the type signature of the procedure's arguments.  The argument
+@meta{rv-signature} must be a syntax object representing the type
+signature of the procedure's return values.
+@end deftp
+
+
+@deftp {Type Annotation} case-lambda @metao{clause} @meta{clause} @dots{}
+Describe a sub--type of @class{procedure} having multiple clauses, like
+procedures defined by @syntax{case-lambda}.  @syntax{=>} is the
+syntactic binding exported by @rsixlibrary{base}.
+
+Each @meta{clause} argument must have the format:
+
+@example
+(@meta{args-signature} => @meta{rv-signature})
+@end example
+
+@noindent
+where: @meta{args-signature} must be a syntax object representing the
+type signature of the clause's arguments; @meta{rv-signature} must be a
+syntax object representing the type signature of the clause's return
+values.
+@end deftp
+
+
+@deftp {Compound Type Annotation} or @metao{type} @meta{type} @dots{}
+Describe the union between the specified types.  Every @meta{type} is a
+nested type annotation.  A value matches a union of types if its type
+matches at least one of the union's types.
+
+@lisp
+(is-a? 1      (or <fixnum> <string>))   @result{} #t
+(is-a? "ciao" (or <fixnum> <string>))   @result{} #t
+(is-a? 1.23   (or <fixnum> <string>))   @result{} #f
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} and @metao{type} @meta{type} @dots{}
+Describe the intersection between the specified types.  Every
+@meta{type} is a nested type annotation.  A value matches an
+intersection of types if its type matches all the intersection's types.
+
+@lisp
+(is-a? 1   (and <fixnum> <positive>))   @result{} #t
+(is-a? 1.0 (and <exact>  <positive>))   @result{} #f
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} not @meta{type}
+Describe the complement of the type.  The argument @meta{type} is a
+nested type annotation.  A value of type @meta{val-type} matches the
+complement of @meta{type} if @meta{val-type} is neither @meta{type} nor
+a sub--type of @meta{type}.
+
+@lisp
+(is-a? 1   (not <string>))      @result{} #t
+(is-a? 1.0 (not <fixnum>))      @result{} #f
+
+;;If something is not a "<number>", for sure it is
+;;not a "<fixnum>".
+(type-annotation-super-and-sub? (not <fixnum>) (not <number>))
+@result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} parent-of @meta{type}
+Describe the parent of the type; an exception is raised if the type has
+no parent.  The argument @meta{type} is a nested type annotation.
+
+@lisp
+(type-annotation=? <struct> (parent-of <record>))
+@result{} #t
+
+(type-annotation=? <fixnum> (parent-of <positive-fixnum>))
+@result{} #t
+
+(type-annotation=? <positive-fixnum> (parent-of <fixnum>))
+@result{} #f
+@end lisp
+@end deftp
+
+
+@deftp {Compound Type Annotation} ancestor-of @meta{type}
+Describe the ancestors of the type; if the type has no parent: the list
+of ancestors is empty.  The argument @meta{type} is a nested type
+annotation and it is not included in its list of ancestors.
+
+This type annotation can be used to match @strong{exactly} a type
+annotation with one of the ancestors of @meta{type}:
+
+@lisp
+(type-signature-matching ((ancestor-of &condition))
+                         (&condition))
+@result{} no-match
+
+(type-signature-matching ((ancestor-of &condition))
+                         (<condition>))
+@result{} exact-match
+
+(type-signature-matching ((ancestor-of &condition))
+                         (<record>))
+@result{} exact-match
+
+(type-signature-matching ((ancestor-of &condition))
+                         (<struct>))
+@result{} exact-match
+
+(type-signature-matching ((ancestor-of &condition))
+                         (<top>))
+@result{} exact-match
+@end lisp
+
+When used along with @syntax{not}, it can is used to avoid matching
+exactly a type annotation with one of the ancestors of @meta{type}:
+
+@lisp
+(type-signature-matching ((not (ancestor-of &condition)))
+                         (<condition>))
+@result{} no-match
+@end lisp
+@end deftp
 
 @c page
 @node types syntaxes

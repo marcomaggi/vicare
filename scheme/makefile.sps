@@ -758,6 +758,7 @@
     (alist					(macro . alist))
     (parent-of					(macro . parent-of))
     (ancestor-of				(macro . ancestor-of))
+    (enumeration				(macro . enumeration))
 ;;;
     (define					(macro . define))
     (case-define				(macro . case-define))
@@ -3520,6 +3521,7 @@
     (alist					v $language)
     (parent-of					v $language)
     (ancestor-of				v $language)
+    (enumeration				v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
@@ -4636,6 +4638,13 @@
     (alist-type-spec?					$expander)
     (alist-type-spec.key-ots				$expander)
     (alist-type-spec.value-ots				$expander)
+
+    (<enumeration-type-spec>-rtd)
+    (<enumeration-type-spec>-rcd)
+    (<enumeration-type-spec>				$expander)
+    (make-enumeration-type-spec				$expander)
+    (enumeration-type-spec?				$expander)
+    (enumeration-type-spec.enum-set			$expander)
 ;;;
     (<type-signature>-rtd)
     (<type-signature>-rcd)

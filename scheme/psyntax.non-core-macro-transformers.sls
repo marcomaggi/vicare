@@ -263,7 +263,7 @@
 	  super-protocol destructor-protocol custom-predicate custom-printer method case-method define-type-descriptors
 	  hash-function equality-predicate comparison-procedure
 	  catch finally
-	  pair pair-of list-of vector-of hashtable alist parent-of ancestor-of)
+	  pair pair-of list-of vector-of hashtable alist parent-of ancestor-of enumeration)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
@@ -3047,35 +3047,8 @@
 	  `(begin
 	     (define ,the-constructor
 	       (enum-set-constructor (make-enumeration ',symbol*)))
-
-	     (define-syntax ,?name
-	       ;;Check at macro-expansion time whether the symbol ?ARG
-	       ;;is in  the universe associated with ?NAME.   If it is,
-	       ;;the result  of the  expansion is equivalent  to ?ARG.
-	       ;;It is a syntax violation if it is not.
-	       ;;
-	       (lambda/std (x)
-		 (define universe-of-symbols ',symbol*)
-		 (define (%synner message subform)
-		   (syntax-violation ',?name message
-				     (syntax->datum x) (syntax->datum subform)))
-		 (syntax-case x ()
-		   ((_ ?arg)
-		    (not (identifier? (syntax ?arg)))
-		    (%synner "expected symbol as argument to enumeration validator"
-			     (syntax ?arg)))
-
-		   ((_ ?arg)
-		    (not (memq (syntax->datum (syntax ?arg)) universe-of-symbols))
-		    (%synner "expected symbol in enumeration as argument to enumeration validator"
-			     (syntax ?arg)))
-
-		   ((_ ?arg)
-		    (syntax (quote ?arg)))
-
-		   (_
-		    (%synner "invalid enumeration validator form" #f)))))
-
+	     (define-type ,?name
+	       (enumeration . ,symbol*))
 	     (define-syntax ,?maker
 	       ;;Given  any  finite sequence  of  the  symbols in  the
 	       ;;universe, possibly  with duplicates, expands  into an

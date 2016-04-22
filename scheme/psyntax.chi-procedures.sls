@@ -264,6 +264,12 @@
 		       import export library module
 		       displaced-lexical)
 		      (values type descr ?car))
+		     ((core-object-type-name local-object-type-name global-object-type-name)
+		      (let ((ots (syntactic-binding-descriptor/object-type-spec.ots descr)))
+			(cond ((enumeration-type-spec? ots)
+			       (values 'enumeration descr ?car))
+			      (else
+			       (values 'other #f #f)))))
 		     (else
 		      ;;This  case includes  TYPE being:  core-prim, core-prim-typed,
 		      ;;lexical, lexical-typed, global, global-mutable, global-typed,
@@ -919,6 +925,30 @@
 		  (map psi.core-expr body*.psi))
 		(psi.retvals-signature (proper-list->last-item body*.psi))))))
 	 ))
+
+      ((enumeration)
+       ;;Syntax  use  of  a  previously  defined  enumeration  type.   The  syntactic
+       ;;binding's descriptor has one of the formats:
+       ;;
+       ;;   (core-object-type-name   . (#<enumeration-type-spec> . ?symbolic-expr))
+       ;;   (local-object-type-name  . (#<enumeration-type-spec> . ?expanded-expr))
+       ;;   (global-object-type-name . (#<library> . ?loc))
+       ;;
+       ;;where ?LOC is  a loc gensym containing  in its VALUE slot a  reference to an
+       ;;instance of "<enumeration-type-spec>".
+       (syntax-match expr.stx ()
+	 ((_ ?symbol)
+	  (let ((sym (syntax->datum ?symbol)))
+	    (if (symbol? sym)
+		(let ((ots (syntactic-binding-descriptor/object-type-spec.ots descr)))
+		  (if (enum-set-member? sym (enumeration-type-spec.enum-set ots))
+		      (make-psi expr.stx
+			(build-data no-source sym)
+			(make-type-signature/single-symbol))
+		    (stx-error expr.stx "expected symbol in enumeration as argument to enumeration validator" sym)))
+	      (stx-error expr.stx "expected symbol as argument to enumeration validator" sym))))
+	 (_
+	  (stx-error expr.stx "invalid enumeration validator form"))))
 
       ((displaced-lexical)
        (stx-error expr.stx "identifier out of context"))
