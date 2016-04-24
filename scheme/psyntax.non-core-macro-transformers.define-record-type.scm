@@ -46,10 +46,10 @@
 ;;;; helpers
 
 (define (%named-gensym/suffix foo suffix)
-  (gensym (string-append (symbol->string (syntax->datum foo)) suffix)))
+  (make-syntactic-identifier-for-temporary-variable (string-append (symbol->string (syntax->datum foo)) suffix)))
 
 (define (%named-gensym/prefix foo prefix)
-  (gensym (string-append prefix (symbol->string (syntax->datum foo)))))
+  (make-syntactic-identifier-for-temporary-variable (string-append prefix (symbol->string (syntax->datum foo)))))
 
 (define (%filter-out-falses ls)
   (if (pair? ls)
@@ -728,7 +728,7 @@
 	;;unsafe record fields accessors
 	,@(map (lambda (unsafe-foo-x x field-type.ots)
 		 (let ((the-index	(%make-field-index-varname x))
-		       (record.sym	(gensym "?record"))
+		       (record.sym	(make-syntactic-identifier-for-temporary-variable "?record"))
 		       (field-type.ann	(object-type-spec.name field-type.ots)))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
@@ -741,8 +741,8 @@
 	      (lambda (unsafe-field-mutator field-name.sym field-type.ots knil)
 		(if unsafe-field-mutator
 		    (cons (let ((the-index	(%make-field-index-varname field-name.sym))
-				(record.sym	(gensym "?record"))
-				(value.sym	(gensym "?new-value"))
+				(record.sym	(make-syntactic-identifier-for-temporary-variable "?record"))
+				(value.sym	(make-syntactic-identifier-for-temporary-variable "?new-value"))
 				(field-type.ann	(object-type-spec.name field-type.ots)))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
@@ -799,7 +799,7 @@
   ;;
   (define safe-field-accessor-form*
     (map (lambda (safe-field-accessor unsafe-field-accessor field-type.ots)
-	   (let ((record.sym	(gensym "record"))
+	   (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
 		 (field-type.id	(object-type-spec.name field-type.ots)))
 	     `(define/checked ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
 		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))))
@@ -809,8 +809,8 @@
     (fold-right
 	(lambda (safe-field-mutator unsafe-field-mutator field-type.ots knil)
 	  (if safe-field-mutator
-	      (cons (let ((record.sym		(gensym "record"))
-			  (val.sym		(gensym "new-value"))
+	      (cons (let ((record.sym		(make-syntactic-identifier-for-temporary-variable "record"))
+			  (val.sym		(make-syntactic-identifier-for-temporary-variable "new-value"))
 			  (field-type.id	(object-type-spec.name field-type.ots)))
 		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
 			 (,unsafe-field-mutator ,record.sym ,val.sym)))
@@ -846,8 +846,8 @@
   ;;accessors and mutators.
   ;;
   (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.ots)
-	 (let ((record.sym	(gensym "record"))
-	       (new-value.sym	(gensym "new-value"))
+	 (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
+	       (new-value.sym	(make-syntactic-identifier-for-temporary-variable "new-value"))
 	       (field-type.id	(object-type-spec.name field-type.ots)))
 	   (if unsafe-field-mutator
 	       `(case-define/checked ,safe-field-method
@@ -997,8 +997,8 @@
   ;;the standard, so we  just use an ARGS catch-all argument.   (Marco Maggi; Sun Apr
   ;;10, 2016)
   ;;
-  (let ((internal-maker.sym	(gensym (identifier->symbol make-foo)))
-	(args.sym		(gensym "args")))
+  (let ((internal-maker.sym	(make-syntactic-identifier-for-temporary-variable (identifier->symbol make-foo)))
+	(args.sym		(make-syntactic-identifier-for-temporary-variable "args")))
     `((define/std ,internal-maker.sym
 	($record-constructor ,foo-rcd))
       (define/checked ((brace ,make-foo ,foo) . ,args.sym)
@@ -1019,8 +1019,8 @@
   (syntax-match (%get-clause 'custom-predicate clause*) ()
     ((_ ?custom-predicate-expr)
      ;;There is a CUSTOM-PREDICATE clause in this record-type definition.
-     (let ((arg.sym			(gensym "obj"))
-	   (internal-predicate.sym	(gensym (string-append "internal-predicate-" (identifier->string foo?)))))
+     (let ((arg.sym			(make-syntactic-identifier-for-temporary-variable "obj"))
+	   (internal-predicate.sym	(make-syntactic-identifier-for-temporary-variable (string-append "internal-predicate-" (identifier->string foo?)))))
        `((define/std ,internal-predicate.sym
 	   (,?custom-predicate-expr (lambda/checked ({_ <boolean>} ,arg.sym)
 				      (unsafe-cast-signature (<boolean>)
@@ -1032,7 +1032,7 @@
     (#f
      ;;No CUSTOM-PREDICATE clause  in this record-type definition.  Return  a list of
      ;;definitions representing the default record-type predicate definition.
-     (let ((arg.sym (gensym "obj")))
+     (let ((arg.sym (make-syntactic-identifier-for-temporary-variable "obj")))
        `((define/typed ((brace ,foo? <boolean>) ,arg.sym)
 	   (and ($struct? ,arg.sym)
 		($record-and-rtd? ,arg.sym ,foo-rtd))))))
@@ -1168,8 +1168,8 @@
   (let ((clause (%get-clause 'equality-predicate clause*)))
     (syntax-match clause ()
       ((_ ?proto-expr)
-       (let ((proto-func.sym	(gensym "proto-func"))
-	     (pred-func.sym	(gensym "pred-func")))
+       (let ((proto-func.sym	(make-syntactic-identifier-for-temporary-variable "proto-func"))
+	     (pred-func.sym	(make-syntactic-identifier-for-temporary-variable "pred-func")))
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's equality predicate function.
@@ -1207,8 +1207,8 @@
   (let ((clause (%get-clause 'comparison-procedure clause*)))
     (syntax-match clause ()
       ((_ ?proto-expr)
-       (let ((proto-func.sym	(gensym "proto-func"))
-	     (compar-func.sym	(gensym "compar-func")))
+       (let ((proto-func.sym	(make-syntactic-identifier-for-temporary-variable "proto-func"))
+	     (compar-func.sym	(make-syntactic-identifier-for-temporary-variable "compar-func")))
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's comparison procedure.
@@ -1245,8 +1245,8 @@
   (let ((clause (%get-clause 'hash-function clause*)))
     (syntax-match clause ()
       ((_ ?proto-expr)
-       (let ((proto-func.sym	(gensym "proto-func"))
-	     (hash-func.sym	(gensym "hash-func")))
+       (let ((proto-func.sym	(make-syntactic-identifier-for-temporary-variable "proto-func"))
+	     (hash-func.sym	(make-syntactic-identifier-for-temporary-variable "hash-func")))
 	 (if parent-rtd
 	     ;;The new  record-type has a parent:  we apply the protocol  function to
 	     ;;the parent's comparison procedure.
@@ -1282,7 +1282,7 @@
   ;;
   (if (or (pair? method-name*.sym)
 	  (pair? field-name*.sym))
-      (let ((field-name.sym (gensym "field-name")))
+      (let ((field-name.sym (make-syntactic-identifier-for-temporary-variable "field-name")))
 	`(lambda/typed ({_ (or <false> <procedure>)} {,field-name.sym <symbol>})
 	   (case ,field-name.sym
 	     ;;First the methods...

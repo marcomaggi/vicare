@@ -315,11 +315,16 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?type-name ?type-annotation)
-     (identifier? ?type-name)
-     (let ((ots (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv) ?type-name)))
-       (bless
-	`(define-syntax ,?type-name (quote ,ots)))))
-    ))
+     (begin
+       (unless (identifier? ?type-name)
+	 (syntax-violation __who__
+	   "expected identifier as type annotation name"
+	   input-form.stx ?type-name))
+       (let ((ots (type-annotation->object-type-spec ?type-annotation (current-inferior-lexenv) ?type-name)))
+	 (bless
+	  `(define-syntax ,?type-name (quote ,ots))))))
+    (_
+     (__synner__ "invalid syntax"))))
 
 
 ;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
@@ -452,8 +457,8 @@
        (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
-    (let ((expr.sym (gensym "expr.sym"))
-	  (else.sym (gensym "else.sym")))
+    (let ((expr.sym (make-syntactic-identifier-for-temporary-variable "expr.sym"))
+	  (else.sym (make-syntactic-identifier-for-temporary-variable "else.sym")))
       (receive (branch-binding* cond-clause*)
 	  (%process-clauses input-form.stx expr.sym else.sym datum-clause*.stx)
 	(bless
@@ -552,8 +557,8 @@
   (define (%process-single-clause input-form.stx clause.stx)
     (syntax-match clause.stx (=>)
       ((?datum* => ?closure)
-       (let ((closure.sym	(gensym))
-	     (obj.sym		(gensym)))
+       (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable))
+	     (obj.sym		(make-syntactic-identifier-for-temporary-variable)))
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values `(lambda/std (,obj.sym)
@@ -569,7 +574,7 @@
 				  (cons (cons* ?datum closure.sym #t) entries)))
 		     )))))
       ((?datum* . ?body)
-       (let ((closure.sym (gensym)))
+       (let ((closure.sym (make-syntactic-identifier-for-temporary-variable)))
 	 (values `(lambda/std () . ,?body)
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
@@ -673,8 +678,8 @@
        (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
-    (let ((expr.sym (gensym "expr.sym"))
-	  (else.sym (gensym "else.sym")))
+    (let ((expr.sym (make-syntactic-identifier-for-temporary-variable "expr.sym"))
+	  (else.sym (make-syntactic-identifier-for-temporary-variable "else.sym")))
       (receive (branch-binding* cond-clause*)
 	  (%process-clauses input-form.stx expr.sym datum-clause*.stx)
 	(bless
@@ -701,7 +706,7 @@
   (define (%process-single-clause input-form.stx expr.sym clause.stx)
     (syntax-match clause.stx (=>)
       ((?datum* => ?closure)
-       (let ((closure.sym	(gensym)))
+       (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable)))
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values (bless
@@ -711,7 +716,7 @@
 		   (,closure.sym)))))
 
       ((?datum* . ?body)
-       (let ((closure.sym	(gensym)))
+       (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable)))
 	 (values `(,closure.sym (lambda/std () . ,?body))
 		 `(,(%build-branch-test input-form.stx expr.sym ?datum*)
 		   (,closure.sym)))))
@@ -766,18 +771,18 @@
 	 (%validate-arguments ?name ?parent-name ?constructor ?predicate ?accessor*)
 	 (receive (field-name*.id field-type*.id)
 	     (map-for-two-retvals %parse-field-spec ?field*)
-	   (let* ((UID				(gensym (syntax->datum ?name)))
+	   (let* ((UID				(make-syntactic-identifier-for-temporary-variable (syntax->datum ?name)))
 		  (RTD				(mkname ?name "-rtd"))
 		  (RCD				(mkname ?name "-rcd"))
 		  (ACCESSOR-IDX*		(iota 0 ?accessor*))
-		  (internal-constructor.sym	(gensym (syntax->datum ?constructor)))
-		  (internal-predicate.sym	(gensym (syntax->datum ?predicate)))
+		  (internal-constructor.sym	(make-syntactic-identifier-for-temporary-variable (syntax->datum ?constructor)))
+		  (internal-predicate.sym	(make-syntactic-identifier-for-temporary-variable (syntax->datum ?predicate)))
 		  (internal-accessor*.sym	(map (lambda (?accessor)
-						       (gensym (syntax->datum ?accessor)))
+						       (make-syntactic-identifier-for-temporary-variable (syntax->datum ?accessor)))
 						  ?accessor*))
 		  (SEALED?			#f)
 		  (OPAQUE?			#f)
-		  (ARG				(gensym "arg"))
+		  (ARG				(make-syntactic-identifier-for-temporary-variable "arg"))
 		  ;;The fields vector has the format:
 		  ;;
 		  ;;   #((immutable . ?field-name) ...)
@@ -943,9 +948,9 @@
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (let ((lhs*    (generate-temporaries ?lhs*))
 	   (rhs*    (generate-temporaries ?rhs*))
-	   (guard?  (gensym "guard?"))
-	   (swap    (gensym "swap"))
-	   (t       (gensym "t")))
+	   (guard?  (make-syntactic-identifier-for-temporary-variable "guard?"))
+	   (swap    (make-syntactic-identifier-for-temporary-variable "swap"))
+	   (t       (make-syntactic-identifier-for-temporary-variable "t")))
        (bless
 	`((lambda/std ,(append lhs* rhs*)
 	    (let* ((,guard? #t) ;apply the guard function only the first time
@@ -973,10 +978,10 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?unwind-handler ?thunk)
-     (let ((terminated?  (gensym))
-	   (normal-exit? (gensym))
-	   (why          (gensym))
-	   (escape       (gensym)))
+     (let ((terminated?  (make-syntactic-identifier-for-temporary-variable))
+	   (normal-exit? (make-syntactic-identifier-for-temporary-variable))
+	   (why          (make-syntactic-identifier-for-temporary-variable))
+	   (escape       (make-syntactic-identifier-for-temporary-variable)))
        (bless
 	`(let (	;;True if the dynamic extent of the call to THUNK is terminated.
 	       (,terminated?   #f)
@@ -1032,7 +1037,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?body ?cleanup0 ?cleanup* ...)
-     (let ((why (gensym)))
+     (let ((why (make-syntactic-identifier-for-temporary-variable)))
        (bless
 	`(with-unwind-protection
 	     (lambda/std (,why) ,?cleanup0 . ,?cleanup*)
@@ -1129,8 +1134,8 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?body0 ?body* ...)
-       (let ((store (gensym))
-	     (why   (gensym)))
+       (let ((store (make-syntactic-identifier-for-temporary-variable))
+	     (why   (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
 	  `(let ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
@@ -1149,8 +1154,8 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?body0 ?body* ...)
-       (let ((store (gensym))
-	     (why   (gensym)))
+       (let ((store (make-syntactic-identifier-for-temporary-variable))
+	     (why   (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
 	  `(let ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
@@ -1162,8 +1167,8 @@
       ))
 
   (define (%make-store-binding store)
-    (let ((stack        (gensym))
-	  (false/thunk  (gensym)))
+    (let ((stack        (make-syntactic-identifier-for-temporary-variable))
+	  (false/thunk  (make-syntactic-identifier-for-temporary-variable)))
       `((,store (let ((,stack '()))
 		  (case-lambda
 		   (()
@@ -1225,7 +1230,7 @@
 	      (cons ?alloc (recur ?form*)))
 	     )))
        (bless
-	(let ((the-obj (gensym)))
+	(let ((the-obj (make-syntactic-identifier-for-temporary-variable)))
 	  `(receive-and-return (,the-obj)
 	       (begin ,?alloc0 . ,alloc*)
 	     (fluid-let-syntax ((<> (identifier-syntax ,the-obj)))
@@ -1245,7 +1250,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?thunk0 ?thunk* ...)
-     (let ((counter (gensym "counter")))
+     (let ((counter (make-syntactic-identifier-for-temporary-variable "counter")))
        (bless
 	`(let ((,counter 0))
 	   (begin
@@ -1269,7 +1274,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?concurrent-coroutines-maximum ?thunk)
-     (let ((KEY (gensym)))
+     (let ((KEY (make-syntactic-identifier-for-temporary-variable)))
        (bless
 	`(do-monitor (quote ,KEY) ,?concurrent-coroutines-maximum ,?thunk))))
     ))
@@ -1595,7 +1600,7 @@
   (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* input-form.stx)
     (when (bound-id-member? standard-formal standard-old*)
       (syntax-violation __module_who__ "duplicate binding" input-form.stx standard-formal))
-    (let ((y (gensym (syntax->datum standard-formal))))
+    (let ((y (make-syntactic-identifier-for-temporary-variable (syntax->datum standard-formal))))
       (values y (cons standard-formal standard-old*) (cons tagged-formal tagged-old*) (cons y new*))))
 
   (define (%rename* standard-formal* tagged-formal* standard-old* tagged-old* new* input-form.stx)
@@ -2377,10 +2382,10 @@
 			    (?arg-id (argument-validation-spec-arg-id spec)))
 			(cons* (fxadd1 arg-counter)
 			       (if (argument-validation-spec-list-arg? spec)
-				   (let ((loop.sym		(gensym))
-					 (pred.sym		(gensym))
-					 (arg-counter.sym	(gensym))
-					 (arg*.sym		(gensym)))
+				   (let ((loop.sym		(make-syntactic-identifier-for-temporary-variable))
+					 (pred.sym		(make-syntactic-identifier-for-temporary-variable))
+					 (arg-counter.sym	(make-syntactic-identifier-for-temporary-variable))
+					 (arg*.sym		(make-syntactic-identifier-for-temporary-variable)))
 				     `(let ,loop.sym ((,pred.sym		,?expr)
 						      (,arg-counter.sym		,arg-counter)
 						      (,arg*.sym		,?arg-id))
@@ -2775,8 +2780,8 @@
     (syntax-match input-form.stx ()
       ((_ (?variable ?clause* ...) ?body ?body* ...)
        (identifier? ?variable)
-       (let ((reinstate-guard-continuation-id  (gensym "reinstate-guard-continuation-id"))
-	     (raised-obj-id                    (gensym "raised-obj")))
+       (let ((reinstate-guard-continuation-id  (make-syntactic-identifier-for-temporary-variable "reinstate-guard-continuation-id"))
+	     (raised-obj-id                    (make-syntactic-identifier-for-temporary-variable "raised-obj")))
 	 (bless
 	  `((call/cc
 		(lambda/std (,reinstate-guard-continuation-id)
@@ -2796,8 +2801,8 @@
   (module (gen-clauses)
 
     (define (gen-clauses raised-obj-id reinstate-guard-continuation-id clause*)
-      (define run-unwind-protect-cleanups-id               (gensym "run-unwind-protect-cleanups"))
-      (define reinstate-clause-expression-continuation-id  (gensym "reinstate-clause-expression-continuation"))
+      (define run-unwind-protect-cleanups-id               (make-syntactic-identifier-for-temporary-variable "run-unwind-protect-cleanups"))
+      (define reinstate-clause-expression-continuation-id  (make-syntactic-identifier-for-temporary-variable "reinstate-clause-expression-continuation"))
       (receive (code-stx reinstate-exception-handler-continuation-id)
 	  (%process-multi-cond-clauses raised-obj-id clause* run-unwind-protect-cleanups-id)
 	`((call/cc
@@ -2831,7 +2836,7 @@
 	;;There is  no ELSE clause: insert  code that reinstates the  continuation of
 	;;the exception handler introduced by GUARD and re-raises the exception.
 	(()
-	 (let ((reinstate-exception-handler-continuation-id (gensym "reinstate-exception-handler-continuation")))
+	 (let ((reinstate-exception-handler-continuation-id (make-syntactic-identifier-for-temporary-variable "reinstate-exception-handler-continuation")))
 	   (values `(,reinstate-exception-handler-continuation-id
 		     (lambda/std ()
 		       (raise-continuable ,raised-obj-id)))
@@ -2840,7 +2845,7 @@
 	;;There is  an ELSE  clause: no need  to jump back  to the  exception handler
 	;;introduced by GUARD.
 	(((else ?else-body ?else-body* ...))
-	 (let ((reinstate-exception-handler-continuation-id (gensym "reinstate-exception-handler-continuation")))
+	 (let ((reinstate-exception-handler-continuation-id (make-syntactic-identifier-for-temporary-variable "reinstate-exception-handler-continuation")))
 	   (values `(begin
 		      (,run-unwind-protect-cleanups-id)
 		      ,?else-body . ,?else-body*)
@@ -2858,7 +2863,7 @@
     (define (%process-single-cond-clause clause kont-code-stx run-unwind-protect-cleanups-id)
       (syntax-match clause (=>)
 	((?test => ?proc)
-	 (let ((t (gensym)))
+	 (let ((t (make-syntactic-identifier-for-temporary-variable)))
 	   `(let ((,t ,?test))
 	      (if ,t
 		  (begin
@@ -2867,7 +2872,7 @@
 		,kont-code-stx))))
 
 	((?test)
-	 (let ((t (gensym)))
+	 (let ((t (make-syntactic-identifier-for-temporary-variable)))
 	   `(let ((,t ,?test))
 	      (if ,t
 		  (begin
@@ -2940,8 +2945,8 @@
      (syntax-match x ()
        ((_ (?variable ?clause* ...) ?body ?body* ...)
 	(identifier? ?variable)
-	(let ((outerk-id     (gensym))
-	      (raised-obj-id (gensym)))
+	(let ((outerk-id     (make-syntactic-identifier-for-temporary-variable))
+	      (raised-obj-id (make-syntactic-identifier-for-temporary-variable)))
 	  (bless
 	   `((call/cc
 		 (lambda/std (,outerk-id)
@@ -2960,14 +2965,14 @@
      (define (%process-single-cond-clause clause kont-code-stx)
        (syntax-match clause (=>)
 	 ((?test => ?proc)
-	  (let ((t (gensym)))
+	  (let ((t (make-syntactic-identifier-for-temporary-variable)))
 	    `(let ((,t ,?test))
 	       (if ,t
 		   (,?proc ,t)
 		 ,kont-code-stx))))
 
 	 ((?test)
-	  (let ((t (gensym)))
+	  (let ((t (make-syntactic-identifier-for-temporary-variable)))
 	    `(let ((,t ,?test))
 	       (if ,t ,t ,kont-code-stx))))
 
@@ -2984,7 +2989,7 @@
 	 ;;There is no ELSE clause: introduce the raise continuation that
 	 ;;rethrows the exception.
 	 (()
-	  (let ((return-to-exception-handler-k (gensym)))
+	  (let ((return-to-exception-handler-k (make-syntactic-identifier-for-temporary-variable)))
 	    (values `(,return-to-exception-handler-k
 		      (lambda/std ()
 			(raise-continuable ,raised-obj-id)))
@@ -3023,15 +3028,6 @@
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (define (set? x)
-    (or (null? x)
-	(and (not (memq (car x) (cdr x)))
-	     (set? (cdr x)))))
-  (define (remove-dups ls)
-    (if (null? ls)
-	'()
-      (cons (car ls)
-	    (remove-dups (remq (car ls) (cdr ls))))))
   (syntax-match input-form.stx ()
     ((_ ?name (?id* ...) ?maker)
      (begin
@@ -3041,82 +3037,78 @@
 	 (__synner__ "expected list of symbols as enumeration elements" ?id*))
        (unless (identifier? ?maker)
 	 (__synner__ "expected identifier as enumeration constructor syntax name" ?maker))
-       (let ((symbol*		(remove-dups (syntax->datum ?id*)))
-	     (the-constructor	(gensym)))
+       (let ((symbol*		(list-of-symbols.delete-duplicates (syntax->datum ?id*)))
+	     (the-constructor	(make-syntactic-identifier-for-temporary-variable (string->symbol (string-append "make-" (symbol->string (syntax->datum ?name)))))))
 	 (bless
 	  `(begin
-	     (define ,the-constructor
-	       (enum-set-constructor (make-enumeration ',symbol*)))
+	     (define/typed {,the-constructor (lambda ((list-of <symbol>)) => (<enum-set>))}
+	       (enum-set-constructor (make-enumeration (quote ,symbol*))))
 	     (define-type ,?name
 	       (enumeration . ,symbol*))
 	     (define-syntax ,?maker
-	       ;;Given  any  finite sequence  of  the  symbols in  the
-	       ;;universe, possibly  with duplicates, expands  into an
-	       ;;expression that  evaluates to the  enumeration set of
-	       ;;those symbols.
+	       ;;Given any finite  sequence of the symbols in  the universe, possibly
+	       ;;with duplicates,  expands into an  expression that evaluates  to the
+	       ;;enumeration set of those symbols.
 	       ;;
-	       ;;Check  at  macro-expansion  time  whether  every  input
-	       ;;symbol is in the universe  associated with ?NAME; it is
-	       ;;a syntax violation if one or more is not.
+	       ;;Check at macro-expansion  time whether every input symbol  is in the
+	       ;;universe associated with  ?NAME; it is a syntax violation  if one or
+	       ;;more is not.
 	       ;;
 	       (lambda/std (x)
-		 (define universe-of-symbols ',symbol*)
+		 (define universe-of-symbols (quote ,symbol*))
 		 (define (%synner message subform-stx)
 		   (syntax-violation ',?maker
 		     message
 		     (syntax->datum x) (syntax->datum subform-stx)))
 		 (syntax-case x ()
-		   ((_ . ?list-of-symbols)
-		    ;;Check the input  symbols one by one partitioning
-		    ;;the ones in the universe from the one not in the
-		    ;;universe.
+		   ((_ . ??list-of-symbols)
+		    ;;Check the input symbols one by one partitioning the ones in the
+		    ;;universe from the one not in the universe.
 		    ;;
-		    ;;If  an input element  is not  a symbol:  raise a
-		    ;;syntax violation.
+		    ;;If an input element is not a symbol: raise a syntax violation.
 		    ;;
-		    ;;After   all   the   input  symbols   have   been
-		    ;;partitioned,  if the  list of  collected INvalid
-		    ;;ones is not null:  raise a syntax violation with
-		    ;;that list as  subform, else return syntax object
-		    ;;expression   building  a  new   enumeration  set
-		    ;;holding the list of valid symbols.
+		    ;;After all the input symbols  have been partitioned, if the list
+		    ;;of collected INvalid ones is not null: raise a syntax violation
+		    ;;with that list as subform, else return syntax object expression
+		    ;;building  a  new enumeration  set  holding  the list  of  valid
+		    ;;symbols.
 		    ;;
 		    (let loop ((valid-symbols-stx	'())
 			       (invalid-symbols-stx	'())
-			       (input-symbols-stx	(syntax ?list-of-symbols)))
+			       (input-symbols-stx	(syntax ??list-of-symbols)))
 		      (syntax-case input-symbols-stx ()
 
-			;;No more symbols to collect and non-null list
-			;;of collected INvalid symbols.
+			;;No more symbols  to collect and non-null  list of collected
+			;;INvalid symbols.
 			(()
 			 (not (null? invalid-symbols-stx))
 			 (%synner "expected symbols in enumeration as arguments \
                                      to enumeration constructor syntax"
 				  (reverse invalid-symbols-stx)))
 
-			;;No more symbols to  collect and null list of
-			;;collected INvalid symbols.
+			;;No  more symbols  to  collect and  null  list of  collected
+			;;INvalid symbols.
 			(()
 			 (quasisyntax
-			  (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
+			  (,the-constructor (quote (unsyntax (reverse valid-symbols-stx))))))
 
 			;;Error if element is not a symbol.
-			((?symbol0 . ?rest)
-			 (not (identifier? (syntax ?symbol0)))
+			((??symbol0 . ??rest)
+			 (not (identifier? (syntax ??symbol0)))
 			 (%synner "expected symbols as arguments to enumeration constructor syntax"
-				  (syntax ?symbol0)))
+				  (syntax ??symbol0)))
 
 			;;Collect a symbol in the set.
-			((?symbol0 . ?rest)
-			 (memq (syntax->datum (syntax ?symbol0)) universe-of-symbols)
-			 (loop (cons (syntax ?symbol0) valid-symbols-stx)
-			       invalid-symbols-stx (syntax ?rest)))
+			((??symbol0 . ??rest)
+			 (memq (syntax->datum (syntax ??symbol0)) universe-of-symbols)
+			 (loop (cons (syntax ??symbol0) valid-symbols-stx)
+			       invalid-symbols-stx (syntax ??rest)))
 
 			;;Collect a symbol not in the set.
-			((?symbol0 . ?rest)
+			((??symbol0 . ??rest)
 			 (loop valid-symbols-stx
-			       (cons (syntax ?symbol0) invalid-symbols-stx)
-			       (syntax ?rest)))
+			       (cons (syntax ??symbol0) invalid-symbols-stx)
+			       (syntax ??rest)))
 
 			))))))
 	     )))))
@@ -3176,9 +3168,9 @@
     ;;
     ;;NOTE Using CONTINUE in the body causes a jump to the test.
     ((_ ?body (while ?test))
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration"))
-	   (loop           (gensym "loop")))
+     (let ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
+	   (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3196,9 +3188,9 @@
     ;;
     ;;NOTE Using CONTINUE in the body causes a jump to the test.
     ((_ ?body (until ?test))
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration"))
-	   (loop           (gensym "loop")))
+     (let ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
+	   (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3218,9 +3210,9 @@
 	?command* ...)
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
-	(let ((escape         (gensym "escape"))
-	      (next-iteration (gensym "next-iteration"))
-	      (loop           (gensym "loop")))
+	(let ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	      (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
+	      (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
 	  (bless
 	   `(unwinding-call/cc
 		(lambda/std (,escape)
@@ -3277,11 +3269,11 @@
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
-     (let* ((escape         (gensym "escape"))
-	    (next-iteration (gensym "next-iteration"))
+     (let* ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	    (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
 	    (init-binding*  (map %make-init-binding ?binding*))
 	    (step-update*   (fold-right %make-step-update '() ?binding*))
-	    (loop           (gensym "loop")))
+	    (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3314,8 +3306,8 @@
       `(dolist (,?var ,?list-form (void))
 	 ,?body0 . ,?body*)))
     ((_ (?var ?list-form ?result-form) ?body0 ?body* ...)
-     (let ((ell  (gensym "ell"))
-	   (loop (gensym "loop")))
+     (let ((ell  (make-syntactic-identifier-for-temporary-variable "ell"))
+	   (loop (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(let ,loop ((,ell ,?list-form))
 	      (if (pair? ,ell)
@@ -3335,14 +3327,14 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ (?var ?count-form)              ?body0 ?body* ...)
-     (let ((max-var (gensym)))
+     (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
        (bless
 	`(let ((,max-var ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
 	       ((>= ,?var ,max-var))
 	     ,?body0 . ,?body*)))))
     ((_ (?var ?count-form ?result-form) ?body0 ?body* ...)
-     (let ((max-var (gensym)))
+     (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
        (bless
 	`(let ((,max-var ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
@@ -3363,9 +3355,9 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?test ?body* ...)
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration"))
-	   (loop           (gensym "loop")))
+     (let ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
+	   (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3388,9 +3380,9 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?test ?body* ...)
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration"))
-	   (loop           (gensym "loop")))
+     (let ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
+	   (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3415,9 +3407,9 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ (?init ?test ?incr) ?body* ...)
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration"))
-	   (loop           (gensym "loop")))
+     (let ((escape         (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (next-iteration (make-syntactic-identifier-for-temporary-variable "next-iteration"))
+	   (loop           (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3444,7 +3436,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?body0 ?body* ...)
-     (let ((escape (gensym "escape")))
+     (let ((escape (make-syntactic-identifier-for-temporary-variable "escape")))
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
@@ -3471,7 +3463,7 @@
        (begin
 	 (validate-variable ?var __synner__)
 	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses ?var (cons ?catch-clause0 ?catch-clause*) __synner__))
-	       (why           (gensym)))
+	       (why           (make-syntactic-identifier-for-temporary-variable)))
 	   (bless
 	    `(with-unwind-protection
 		 (lambda/std (,why)
@@ -3489,7 +3481,7 @@
 	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))
 
       ((_ ?body (finally ?finally-body0 ?finally-body* ...))
-       (let ((why (gensym)))
+       (let ((why (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
 	  `(with-unwind-protection
 	       (lambda/std (,why)
@@ -3601,10 +3593,10 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?body)
-     (let ((mc.sym      (gensym "meta-continuation"))
-	   (escape.sym  (gensym "escape"))
-	   (value.sym   (gensym "value"))
-	   (result.sym  (gensym "result")))
+     (let ((mc.sym      (make-syntactic-identifier-for-temporary-variable "meta-continuation"))
+	   (escape.sym  (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (value.sym   (make-syntactic-identifier-for-temporary-variable "value"))
+	   (result.sym  (make-syntactic-identifier-for-temporary-variable "result")))
        (bless
 	`(let ((,mc.sym (private-shift-meta-continuation)))
 	   (call-with-current-continuation
@@ -3624,9 +3616,9 @@
   (syntax-match input-form.stx ()
     ((_ ?var ?body)
      (identifier? ?var)
-     (let ((escape.sym  (gensym "escape"))
-	   (value.sym   (gensym "value"))
-	   (result.sym  (gensym "result")))
+     (let ((escape.sym  (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (value.sym   (make-syntactic-identifier-for-temporary-variable "value"))
+	   (result.sym  (make-syntactic-identifier-for-temporary-variable "result")))
        (bless
 	`(call-with-current-continuation
 	     (lambda (,escape.sym)
@@ -3646,10 +3638,10 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?body)
-     (let ((mc.sym      (gensym "meta-continuation"))
-	   (escape.sym  (gensym "escape"))
-	   (value.sym   (gensym "value"))
-	   (result.sym  (gensym "result")))
+     (let ((mc.sym      (make-syntactic-identifier-for-temporary-variable "meta-continuation"))
+	   (escape.sym  (make-syntactic-identifier-for-temporary-variable "escape"))
+	   (value.sym   (make-syntactic-identifier-for-temporary-variable "value"))
+	   (result.sym  (make-syntactic-identifier-for-temporary-variable "result")))
        (bless
 	`(let ((,mc.sym (private-shift-meta-continuation)))
 	   (call-with-current-continuation
@@ -3679,13 +3671,13 @@
 	       `(internal-body ,?expr . ,?expr*))
 
 	      ((?test => ?proc)
-	       (let ((tmp (gensym "tmp")))
+	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 		 `(let ((,tmp ,?test))
 		    (when ,tmp
 		      (,?proc ,tmp)))))
 
 	      ((?expr)
-	       (let ((tmp (gensym "tmp")))
+	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 		 `(let ((,tmp ,?expr))
 		    (when ,tmp ,tmp))))
 
@@ -3701,14 +3693,14 @@
 	     (__synner__ "incorrect position of keyword ELSE" cls))
 
 	    ((?test => ?proc)
-	     (let ((tmp (gensym "tmp")))
+	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 	       `(let ((,tmp ,?test))
 		  (if ,tmp
 		      (,?proc ,tmp)
 		    ,(recur (car cls*) (cdr cls*))))))
 
 	    ((?expr)
-	     (let ((tmp (gensym "tmp")))
+	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
 	       `(let ((,tmp ,?expr))
 		  (if ,tmp ,tmp ,(recur (car cls*) (cdr cls*))))))
 
@@ -4178,7 +4170,7 @@
     (syntax-match p (unsyntax unsyntax-splicing quasisyntax)
       ((unsyntax p)
        (if (zero? nesting-level)
-	   (let ((g (gensym)))
+	   (let ((g (make-syntactic-identifier-for-temporary-variable)))
 	     (values (list g) (list p) g))
 	 (receive (lhs* rhs* p)
 	     (quasi p (sub1 nesting-level))
@@ -4192,7 +4184,7 @@
        (receive (lhs* rhs* q)
 	   (quasi q nesting-level)
 	 (if (zero? nesting-level)
-	     (let ((g* (map (lambda (x) (gensym)) p*)))
+	     (let ((g* (map (lambda (x) (make-syntactic-identifier-for-temporary-variable)) p*)))
 	       (values (append g* lhs*)
 		       (append p* rhs*)
 		       (append g* q)))
@@ -4206,7 +4198,7 @@
        (receive (lhs* rhs* q)
 	   (quasi q nesting-level)
 	 (if (zero? nesting-level)
-	     (let ((g* (map (lambda (x) (gensym)) p*)))
+	     (let ((g* (map (lambda (x) (make-syntactic-identifier-for-temporary-variable)) p*)))
 	       (values (append (map (lambda (g) `(,g ...)) g*)
 			       lhs*)
 		       (append p* rhs*)
@@ -4311,7 +4303,7 @@
 	 ;;
 	 (bless
 	  (let ((TMP*		(generate-temporaries ?id*))
-		(rest.sym	(gensym "rest")))
+		(rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
 	    `(begin
 	       ,@(map (lambda (var)
 			`(define/std ,var))
@@ -4328,7 +4320,7 @@
 	(?args
 	 (identifier? ?args)
 	 (bless
-	  (let ((args.sym (gensym "args")))
+	  (let ((args.sym (make-syntactic-identifier-for-temporary-variable "args")))
 	    `(define/std ,?args
 	       (call-with-values
 		   (lambda/std () . ,body*.stx)
@@ -4386,7 +4378,7 @@
 	 (receive (type* rest-type)
 	     (improper-list->list-and-rest (type-signature.syntax-object formals.sig))
 	   (let ((TMP*		(generate-temporaries ?id*))
-		 (rest.sym	(gensym "rest")))
+		 (rest.sym	(make-syntactic-identifier-for-temporary-variable "rest")))
 	     (bless
 	      `(begin
 		 ,@(map (lambda (var type)
@@ -4404,7 +4396,7 @@
 
 	(?args
 	 (identifier? ?args)
-	 (let ((args.sym	(gensym "args"))
+	 (let ((args.sym	(make-syntactic-identifier-for-temporary-variable "args"))
 	       (args.type	(type-signature.syntax-object formals.sig)))
 	   (bless
 	    `(define/checked {,?args ,args.type}
@@ -4674,7 +4666,7 @@
     ((_ (brace ?name ?tag) ?expr)
      (and (identifier? ?name)
 	  (identifier? ?tag))
-     (let ((ghost (gensym (syntax->datum ?name))))
+     (let ((ghost (make-syntactic-identifier-for-temporary-variable (syntax->datum ?name))))
        (bless
 	`(begin
 	   (define (brace ,ghost ?tag) ,?expr)
@@ -4682,7 +4674,7 @@
 	     (identifier-syntax ,ghost))))))
     ((_ ?name ?expr)
      (identifier? ?name)
-     (let ((ghost (gensym (syntax->datum ?name))))
+     (let ((ghost (make-syntactic-identifier-for-temporary-variable (syntax->datum ?name))))
        (bless
 	`(begin
 	   (define ,ghost ,?expr)
@@ -4723,8 +4715,8 @@
 	  (syntax-object.typed-clambda-clause-formals? (append ?arg* ?rest)))
      (let* ((TMP*	(generate-temporaries ?arg*))
 	    (rest.datum	(syntax->datum ?rest))
-	    (REST	(if (null? rest.datum) '() (gensym)))
-	    (STX	(gensym))
+	    (REST	(if (null? rest.datum) '() (make-syntactic-identifier-for-temporary-variable)))
+	    (STX	(make-syntactic-identifier-for-temporary-variable))
 	    (BINDING*	(append (map list ?arg* TMP*)
 				(cond ((null? rest.datum)
 				       '())

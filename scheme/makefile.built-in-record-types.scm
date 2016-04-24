@@ -235,7 +235,8 @@
     <object-type-spec>
   make-enumeration-type-spec enumeration-type-spec?
   (methods
-   (enum-set			enumeration-type-spec.enum-set)))
+   (symbol*			enumeration-type-spec.symbol*)
+   (member?			enumeration-type-spec.member?)))
 
 ;;; --------------------------------------------------------------------
 

@@ -1418,7 +1418,7 @@
 		   (expander::type-signature.syntax-object (expander::condition-returned-type-signature E))))
 	  (else E)))
     (=> syntax=?)
-    #'(<procedure>) #'(<symbol>))
+    #'(<procedure>) #'((enumeration one-two-three)))
 
   (check	;datum is not an identifier
       (guard (E ((syntax-violation? E)

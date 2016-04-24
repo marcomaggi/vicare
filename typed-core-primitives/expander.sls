@@ -794,10 +794,15 @@
 
 (declare-type-predicate  enumeration-type-spec?	<enumeration-type-spec>)
 
-(declare-core-primitive enumeration-type-spec.enum-set
+(declare-core-primitive enumeration-type-spec.symbol*
     (safe)
   (signatures
-   ((<enumeration-type-spec>)	=> (<enum-set>))))
+   ((<enumeration-type-spec>)	=> ((list-of <symbol>)))))
+
+(declare-core-primitive enumeration-type-spec.member?
+    (safe)
+  (signatures
+   ((<enumeration-type-spec> <symbol>)	=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 ;;; operations on type specs

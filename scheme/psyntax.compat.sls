@@ -76,6 +76,10 @@
     procedure-arguments-consistency-violation
     last-pair				enum-set?
 
+    list-of-symbols?			list-of-symbols.delete-duplicates
+    list-of-symbols.union		list-of-symbols.intersection
+    list-of-symbols.subset?
+
     ;; compiler related operations
     compiler::eval-core			compiler::core-expr->optimized-code
     compiler::core-expr->optimisation-and-core-type-inference-code
@@ -307,6 +311,31 @@
       (would-block-object?	x)
       (unbound-object?		x)
       (bwp-object?		x)))
+
+
+;;;; lists of symbols
+
+(define (list-of-symbols.delete-duplicates sym*)
+  (if (pair? sym*)
+      (let ((head (car sym*)))
+	(cons head (list-of-symbols.delete-duplicates (remq head (cdr sym*)))))
+    '()))
+
+(define (list-of-symbols.union sym1* sym2*)
+  (list-of-symbols.delete-duplicates (append sym1* sym2*)))
+
+(define (list-of-symbols.intersection sym1* sym2*)
+  (if (pair? sym1*)
+      (if (memq (car sym1*) sym2*)
+	  (cons (car sym1*) (list-of-symbols.intersection (cdr sym1*) sym2*))
+	(list-of-symbols.intersection (cdr sym1*) sym2*))
+    '()))
+
+(define (list-of-symbols.subset? sub* super*)
+  (and (for-all (lambda (sub)
+		  (memq sub super*))
+	 sub*)
+       #t))
 
 
 ;;;; syntax helpers

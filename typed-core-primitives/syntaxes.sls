@@ -345,9 +345,7 @@
     ;;signature, with the identifiers "_" replaced with "<top>" or "<list>".
     ;;
     (let recur ((sig type-signature.stx))
-      (syntax-case sig (pair list vector pair-of list-of vector-of <no-return> <list>
-			     condition or and not alist hashtable lambda case-lambda =>
-			     parent-of ancestor-of)
+      (syntax-case sig (<no-return> <list> list-of)
 	(()
 	 '())
 
@@ -375,7 +373,8 @@
   (define (%validate-type-annotation type-annotation.stx)
     (syntax-case type-annotation.stx
 	(pair list vector pair-of list-of vector-of <no-return> <list>
-	      condition or and not alist hashtable lambda case-lambda =>)
+	      condition or and not alist hashtable lambda case-lambda =>
+	      enumeration)
 
       (?type
        (identifier? #'?type)
@@ -410,14 +409,23 @@
 	     (%validate-type-annotation #'?key-type)
 	     (%validate-type-annotation #'?value-type)))
 
+      ((enumeration ?symbol0 ?symbol ...)
+       (all-identifiers? #'(?symbol0 ?symbol ...))
+       (cons #'enumeration #'(?symbol0 ?symbol ...)))
+
       ((lambda ?argtypes => ?rettypes)
-       (error #f "not yet implemented" type-annotation.stx))
+       (list #'lambda (%validate-type-signature #'?argtypes) #'=> (%validate-type-signature #'?rettypes)))
 
       ((case-lambda
 	 (?argtypes0 => ?rettypes0)
-	 (?argtypes* => ?rettypes*)
+	 (?argtypes  => ?rettypes)
 	 ...)
-       (error #f "not yet implemented" type-annotation.stx))
+       (let ((argtypes*.stx (map %validate-type-signature (syntax->list #'(?argtypes0 ?argtypes ...))))
+	     (rettypes*.stx (map %validate-type-signature (syntax->list #'(?rettypes0 ?rettypes ...)))))
+	 (cons #'case-lambda
+	       (map (lambda (argtypes.stx rettypes.stx)
+		      (list argtypes.stx #'=> rettypes.stx))
+		 argtypes*.stx rettypes*.stx))))
 
       ((condition ?item-type0 ?item-type ...)
        #`(condition . #,(map %validate-type-annotation (syntax->list #'(?item-type0 ?item-type ...)))))

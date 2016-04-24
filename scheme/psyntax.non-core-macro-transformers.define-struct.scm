@@ -118,13 +118,13 @@
 	field*.str))
 
     (define constructor-arg*.sym
-      (map gensym field*.str))
+      (map make-syntactic-identifier-for-temporary-variable field*.str))
 
 ;;; --------------------------------------------------------------------
 
     (define accessor-sexp*
       (map (lambda (accessor.id unsafe-accessor.id field.ots)
-	     (let ((stru.sym	(gensym "stru"))
+	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
 		   (field.type	(object-type-spec.name field.ots)))
 	       `(define/checked ((brace ,accessor.id ,field.type) (brace ,stru.sym ,type.id))
 		  (,unsafe-accessor.id ,stru.sym))))
@@ -132,8 +132,8 @@
 
     (define mutator-sexp*
       (map (lambda (mutator.id unsafe-mutator.id field.ots)
-	     (let ((stru.sym	(gensym "stru"))
-		   (val.sym	(gensym "val"))
+	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
+		   (val.sym	(make-syntactic-identifier-for-temporary-variable "val"))
 		   (field.type	(object-type-spec.name field.ots)))
 	       `(define/checked ((brace ,mutator.id <void>) (brace ,stru.sym ,type.id) (brace ,val.sym ,field.type))
 		  (,unsafe-mutator.id ,stru.sym ,val.sym))))
@@ -141,8 +141,8 @@
 
     (define method-sexp*
       (map (lambda (method.id unsafe-accessor.id unsafe-mutator.id field.ots)
-    	     (let ((stru.sym	(gensym "stru"))
-    		   (val.sym	(gensym "val"))
+    	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
+    		   (val.sym	(make-syntactic-identifier-for-temporary-variable "val"))
 		   (field.type	(object-type-spec.name field.ots)))
     	       `(case-define/checked ,method.id
     		  (((brace _ ,field.type) (brace ,stru.sym ,type.id))
@@ -155,7 +155,7 @@
 
     (define unsafe-accessor-sexp*
       (map (lambda (unsafe-accessor.id field.idx field.ots)
-	     (let ((stru.sym	(gensym "stru"))
+	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
 		   (field.type	(object-type-spec.name field.ots)))
 	       `(define-syntax ,unsafe-accessor.id
 		  (identifier-syntax
@@ -165,8 +165,8 @@
 
     (define unsafe-mutator-sexp*
       (map (lambda (unsafe-mutator.id field.idx field.ots)
-	     (let ((stru.sym	(gensym "stru"))
-		   (val.sym	(gensym "val"))
+	     (let ((stru.sym	(make-syntactic-identifier-for-temporary-variable "stru"))
+		   (val.sym	(make-syntactic-identifier-for-temporary-variable "val"))
 		   (field.type	(object-type-spec.name field.ots)))
 	       `(define-syntax ,unsafe-mutator.id
 		  (identifier-syntax

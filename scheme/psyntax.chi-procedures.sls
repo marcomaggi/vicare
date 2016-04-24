@@ -941,10 +941,10 @@
 	  (let ((sym (syntax->datum ?symbol)))
 	    (if (symbol? sym)
 		(let ((ots (syntactic-binding-descriptor/object-type-spec.ots descr)))
-		  (if (enum-set-member? sym (enumeration-type-spec.enum-set ots))
+		  (if (enumeration-type-spec.member? ots sym)
 		      (make-psi expr.stx
 			(build-data no-source sym)
-			(make-type-signature/single-symbol))
+			(make-type-signature/single-value (make-enumeration-type-spec (list sym) (list (enumeration-id) ?symbol))))
 		    (stx-error expr.stx "expected symbol in enumeration as argument to enumeration validator" sym)))
 	      (stx-error expr.stx "expected symbol as argument to enumeration validator" sym))))
 	 (_

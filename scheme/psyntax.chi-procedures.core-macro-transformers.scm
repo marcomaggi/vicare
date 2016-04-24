@@ -185,10 +185,12 @@
     ((type-of)					type-of-transformer)
     ((type-annotation=?)			type-annotation=?-transformer)
     ((type-annotation-super-and-sub?)		type-annotation-super-and-sub?-transformer)
-    ((type-signature-super-and-sub?)		type-signature-super-and-sub?-transformer)
     ((type-annotation-common-ancestor)		type-annotation-common-ancestor-transformer)
-    ((type-signature-common-ancestor)		type-signature-common-ancestor-transformer)
     ((type-annotation-ancestors)		type-annotation-ancestors-transformer)
+    ((type-annotation-union)			type-annotation-union-transformer)
+
+    ((type-signature-super-and-sub?)		type-signature-super-and-sub?-transformer)
+    ((type-signature-common-ancestor)		type-signature-common-ancestor-transformer)
     ((type-signature-matching)			type-signature-matching-transformer)
     ((type-signature-union)			type-signature-union-transformer)
 
@@ -567,8 +569,8 @@
     ((_ ?datum)
      (let ((datum (syntax->datum ?datum)))
        (make-psi input-form.stx
-		 (build-data no-source datum)
-		 (datum-type-signature datum))))
+	 (build-data no-source datum)
+	 (datum-type-signature datum))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

@@ -47,7 +47,7 @@
 (declare-core-primitive enum-set-constructor
     (safe)
   (signatures
-   ((<enum-set>)		=> (<procedure>)))
+   ((<enum-set>)		=> ((lambda ((list-of <symbol>)) => (<enum-set>)))))
   (attributes
    ((_)			effect-free result-true)))
 
@@ -131,7 +131,7 @@
 (declare-core-primitive enum-set-indexer
     (safe)
   (signatures
-   ((<enum-set>)	=> (<procedure>)))
+   ((<enum-set>)		=> ((lambda (<symbol>) => ((or <false> <non-negative-fixnum>))))))
   (attributes
    ((_)			effect-free result-true)))
 

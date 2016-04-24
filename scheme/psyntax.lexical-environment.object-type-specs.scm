@@ -206,7 +206,7 @@
 	 <enumeration-type-spec>
 	 <enumeration-type-spec>-rtd			<enumeration-type-spec>-rcd
 	 make-enumeration-type-spec			enumeration-type-spec?
-	 enumeration-type-spec.enum-set
+	 enumeration-type-spec.symbol*			enumeration-type-spec.member?
 
 	 ;;;
 
@@ -217,7 +217,7 @@
 
 	 <intersection-type-spec>
 	 <intersection-type-spec>-rtd			<intersection-type-spec>-rcd
-	 make-intersection-type-spec			make-intersection-type-spec/maybe
+	 make-intersection-type-spec			intersection-of-type-specs
 	 intersection-type-spec?			intersection-type-spec.component-ots*
 
 	 <complement-type-spec>
@@ -1040,8 +1040,8 @@
 
 	((enumeration-type-spec? super.ots)
 	 (cond ((enumeration-type-spec? sub.ots)
-		(enum-set-subset? (enumeration-type-spec.enum-set sub.ots)
-				  (enumeration-type-spec.enum-set super.ots)))
+		(list-of-symbols.subset? (enumeration-type-spec.symbol* sub.ots)
+					 (enumeration-type-spec.symbol* super.ots)))
 	       (else #f)))
 
 ;;; --------------------------------------------------------------------
@@ -2074,11 +2074,10 @@
 	    ((list-of-single-item? enum*.ots)
 	     component-type*.ots)
 	    (else
-	     (cons (make-enumeration-type-spec
-		    (make-enumeration
-		     (apply append (map (lambda (enum.ots)
-					  (enum-set->list (enumeration-type-spec.enum-set enum.ots)))
-				     enum*.ots))))
+	     (cons (make-enumeration-type-spec (fold-left (lambda (symbol* enum.ots)
+							    (list-of-symbols.union symbol* (enumeration-type-spec.symbol* enum.ots)))
+						 (enumeration-type-spec.symbol* (car enum*.ots))
+						 (cdr enum*.ots)))
 		   other*.ots)))))
 
   #| end of module: UNION-OF-TYPE-SPECS |# )
@@ -2168,9 +2167,9 @@
 (define <intersection-type-spec>-rcd
   (record-constructor-descriptor <intersection-type-spec>))
 
-(module (make-intersection-type-spec/maybe)
+(module (intersection-of-type-specs)
 
-  (define* (make-intersection-type-spec/maybe {component-type*.ots not-empty-list-of-object-type-spec?})
+  (define* (intersection-of-type-specs {component-type*.ots not-empty-list-of-object-type-spec?})
     (let* ((component-type*.ots (%splice-component-specs component-type*.ots))
 	   (component-type*.ots (object-type-specs-delete-duplicates component-type*.ots)))
       (cond ((list-of-single-item? component-type*.ots)
@@ -2185,7 +2184,8 @@
 		    ;;super-type must  be filtered out.   We do the  filtering twice:
 		    ;;left-to-right and right-to-left.
 		    (rev-component-type*.ots	(%remove-super-types component-type*.ots     '()))
-		    (component-type*.ots	(%remove-super-types rev-component-type*.ots '())))
+		    (component-type*.ots	(%remove-super-types rev-component-type*.ots '()))
+		    (component-type*.ots	(%collapse-enumerations component-type*.ots)))
 	       (if (list-of-single-item? component-type*.ots)
 		   (car component-type*.ots)
 		 (make-intersection-type-spec component-type*.ots)))))))
@@ -2221,7 +2221,23 @@
 			       (cons ots1 out*))))
       out*))
 
-  #| end of module: MAKE-INTERSECTION-TYPE-SPEC/MAYBE |# )
+  (define (%collapse-enumerations component-type*.ots)
+    ;;If there are multiple "<enumeration-type-spec>" among the components: join them
+    ;;into a  single instance.
+    ;;
+    (receive (enum*.ots other*.ots)
+	(partition enumeration-type-spec? component-type*.ots)
+      (cond ((null? enum*.ots)
+	     component-type*.ots)
+	    ((list-of-single-item? enum*.ots)
+	     component-type*.ots)
+	    (else
+	     (let* ((symbol** (map enumeration-type-spec.symbol* enum*.ots))
+		    (symbol*  (fold-left list-of-symbols.intersection (car symbol**) (cdr symbol**))))
+	       (cons (make-enumeration-type-spec symbol*)
+		     other*.ots))))))
+
+  #| end of module: INTERSECTION-OF-TYPE-SPECS |# )
 
 (define* (intersection-type-spec.length {intersection.ots intersection-type-spec?})
   (let ((mem (intersection-type-spec.memoised-length intersection.ots)))
@@ -3125,18 +3141,25 @@
   (parent <object-type-spec>)
   (sealed #t)
   (fields
-    (immutable enum-set			enumeration-type-spec.enum-set)
-		;An instance of "<enum-set>".
+    (immutable symbol*			enumeration-type-spec.symbol*)
+		;An proper list of symbols representing the enumeration universe.
     #| end of FIELDS |# )
   (protocol
     (lambda (make-object-type-spec)
-      (define* (make-enumeration-type-spec {S enum-set?})
-	(let* ((name.stx		(let ((id (enumeration-id)))
-					  (cons id (datum->syntax id (enum-set->list S)))))
-	       (parent.ots		(<symbol>-ots))
+      (case-define* make-enumeration-type-spec
+	(({symbol* list-of-symbols?})
+	 (let ((symbol* (list-of-symbols.delete-duplicates symbol*)))
+	   ($make-enumeration-type-spec symbol*
+					(cons (enumeration-id) (map make-syntactic-identifier-for-quoted-symbol symbol*)))))
+	(({symbol* list-of-symbols?} name.stx)
+	 ($make-enumeration-type-spec (list-of-symbols.delete-duplicates symbol*)
+				      name.stx)))
+
+      (define ($make-enumeration-type-spec symbol* name.stx)
+	(let* ((parent.ots		(<symbol>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-enumeration-predicate S))
+	       (predicate.stx		(make-enumeration-predicate symbol*))
 	       (equality-predicate.id	(core-prim-id 'eq?))
 	       (comparison-procedure.id #f)
 	       (hash-function.id	(core-prim-id 'symbol-hash))
@@ -3147,11 +3170,10 @@
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
-	   S)))
+	   symbol*)))
 
-      (define (make-enumeration-predicate S)
-	(let ((symbol*	(enum-set->list S))
-	      (obj.sym	(gensym "obj")))
+      (define (make-enumeration-predicate symbol*)
+	(let ((obj.sym	(gensym "obj")))
 	  (bless
 	   `(lambda (,obj.sym)
 	      (and (symbol? ,obj.sym)
@@ -3173,6 +3195,9 @@
 
 (define <enumeration-type-spec>-rcd
   (record-constructor-descriptor <enumeration-type-spec>))
+
+(define* (enumeration-type-spec.member? {ots enumeration-type-spec?} {sym symbol?})
+  (memq sym (enumeration-type-spec.symbol* ots)))
 
 
 ;;;; type annotations
@@ -3256,10 +3281,8 @@
 
      ((enumeration ?symbol ?symbol* ...)
       (let ((sym*.stx (cons ?symbol ?symbol*)))
-	(and (for-all (lambda (sym.stx)
-			(symbol? (syntax->datum sym.stx)))
-	       sym*.stx)
-	     (cons (enumeration-id) sym*.stx))))
+	(and (for-all identifier? sym*.stx)
+	     (cons (enumeration-id) (delete-duplicate-identifiers sym*.stx)))))
 
      ((lambda ?argtypes => ?rettypes)
       (and (make-type-signature ?argtypes)
@@ -3379,15 +3402,16 @@
 			    name.stx))
 
      ((enumeration ?symbol ?symbol* ...)
-      (let* ((sym*.stx	(cons ?symbol ?symbol*))
-	     (sym*	(map syntax->datum sym*.stx)))
-	(for-all (lambda (sym sym.stx)
-		   (unless (symbol? sym)
+      (let ((sym*.stx (cons ?symbol ?symbol*)))
+	(for-all (lambda (sym.stx)
+		   (unless (identifier? sym.stx)
 		     (syntax-violation __who__
 		       "expected symbol object as component of enumeration"
 		       annotation.stx sym.stx)))
-	  sym* sym*.stx)
-	(make-enumeration-type-spec (make-enumeration sym*))))
+	  sym*.stx)
+	(let ((sym*.stx (delete-duplicate-identifiers sym*.stx)))
+	  (make-enumeration-type-spec (syntax->datum sym*.stx)
+				      (cons (enumeration-id) sym*.stx)))))
 
      ((condition)
       (make-compound-condition-type-spec '()))
@@ -3445,9 +3469,9 @@
       (type-annotation->object-type-spec ?single-component-type lexenv))
 
      ((and ?component-type ?component-type* ...)
-      (make-intersection-type-spec/maybe (map (lambda (type.stx)
-						(type-annotation->object-type-spec type.stx lexenv))
-					   (cons ?component-type ?component-type*))))
+      (intersection-of-type-specs (map (lambda (type.stx)
+					 (type-annotation->object-type-spec type.stx lexenv))
+				    (cons ?component-type ?component-type*))))
 
      ((not ?item-type)
       (make-complement-type-spec (type-annotation->object-type-spec ?item-type lexenv)))

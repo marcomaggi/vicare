@@ -1152,7 +1152,7 @@
 					      (else
 					       (<false>-type-id))))
 	  ((char?    datum)		(core-prim-id '<char>))
-	  ((symbol?  datum)		(core-prim-id '<symbol>))
+	  ((symbol?  datum)		(list (enumeration-id) (make-syntactic-identifier-for-quoted-symbol datum)))
 	  ((keyword? datum)		(core-prim-id '<keyword>))
 
 	  ((fixnum?  datum)		(cond ((fxpositive? datum)

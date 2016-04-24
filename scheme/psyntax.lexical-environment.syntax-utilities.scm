@@ -24,11 +24,11 @@
 (module PSYNTAX-SYNTAX-UTILITIES
   ;; high-level syntax objects utilities
   (generate-temporaries
-   syntax-null?
-   syntax-pair?			syntax-list?
+   syntax-null?			syntax-pair?
+   syntax-list?			list-of-identifiers?
    syntax-car			syntax-cdr
    syntax->list			identifiers->list
-   all-identifiers?
+   all-identifiers?		delete-duplicate-identifiers
    syntax-vector?		syntax-vector->list
    syntax->vector
    syntax-unwrap		syntax=?
@@ -47,16 +47,18 @@
 		 ;;If  it is  an identifier  we  do *not*  want  to use  its name  as
 		 ;;temporary name, because  it looks ugly and  confusing when looking
 		 ;;at the result of the expansion with PRINT-GENSYM set to #f.
-		 (gensym "tmp")
+		 "tmp"
 	       (let ((x (syntax->datum x)))
 		 (if (or (symbol? x)
 			 (string? x))
-		     (gensym x)
-		   (gensym "tmp"))))))
+		     x
+		   "tmp")))))
        ?item*))
     (_
      (assertion-violation __who__
        "expected list or syntax object holding a list as argument" list-stx))))
+
+(define-list-of-type-predicate list-of-identifiers? identifier?)
 
 (module (syntax-pair?
 	 syntax-vector?
@@ -157,6 +159,21 @@
      (identifier? ?car)
      (all-identifiers? ?cdr))
     (_ #f)))
+
+(case-define* delete-duplicate-identifiers
+  ((ids)
+   (delete-duplicate-identifiers ids free-identifier=?))
+  (({ids list-of-identifiers?} {identifier= procedure?})
+   ;;Given the list  of identifiers IDS remove  the duplicate identifiers
+   ;;and return a proper list of unique identifiers.
+   ;;
+   (let clean-tail ((ids ids))
+     (if (pair? ids)
+	 (let ((head (car ids)))
+	   (cons head (clean-tail (remp (lambda (id)
+					  (identifier= id head))
+				    (cdr ids)))))
+       '()))))
 
 ;;; --------------------------------------------------------------------
 

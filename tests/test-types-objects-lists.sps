@@ -94,7 +94,7 @@
 	#'((list <positive-fixnum> <positive-fixnum> <positive-fixnum>)))
 
   (doit (list 1 "ciao" 'ciao)
-	#'((list <positive-fixnum> <string> <symbol>)))
+	#'((list <positive-fixnum> <string> (enumeration ciao))))
 
   (doit (list 1 '(2 3))
 	#'((list <positive-fixnum> (list <positive-fixnum> <positive-fixnum>))))

@@ -35,6 +35,7 @@
 	 type-annotation-super-and-sub?-transformer
 	 type-annotation-common-ancestor-transformer
 	 type-annotation-ancestors-transformer
+	 type-annotation-union-transformer
 	 type-signature-super-and-sub?-transformer
 	 type-signature-common-ancestor-transformer
 	 type-signature-matching-transformer
@@ -1223,6 +1224,23 @@
 	 (make-psi input-form.stx
 	   (build-data no-source name*)
 	   (make-type-signature/single-list)))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+(define-core-transformer (type-annotation-union input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's TYPE-ANNOTATION-UNION syntaxes from
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation ?type-annotation* ...)
+     (let* ((annotation*.ots	(map (lambda (annotation.stx)
+				       (type-annotation->object-type-spec annotation.stx lexenv.run annotation.stx))
+				  (cons ?type-annotation ?type-annotation*)))
+	    (union.ots		(fold-left union-of-type-specs (car annotation*.ots) (cdr annotation*.ots))))
+       (make-psi input-form.stx
+	 (build-data no-source (object-type-spec.name union.ots))
+	 (make-type-signature/single-top))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

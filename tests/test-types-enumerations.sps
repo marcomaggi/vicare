@@ -56,6 +56,20 @@
   (check-for-true	(is-a? 'ohayo <greetings>))
   (check-for-false	(is-a? 'hell  <greetings>))
 
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? 'b (and (enumeration a b c)
+				       (enumeration D E b c F))))
+
+  (check-for-true	(is-a? 'c (and (enumeration a b c)
+				       (enumeration D E b c F))))
+
+  (check-for-false	(is-a? 'a (and (enumeration a b c)
+				       (enumeration D E b c F))))
+
+  (check-for-false	(is-a? 'D (and (enumeration a b c)
+				       (enumeration D E b c F))))
+
   (void))
 
 
@@ -82,7 +96,39 @@
   (void))
 
 
-(parametrise ((check-test-name	'union))
+(parametrise ((check-test-name	'annotation-union))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?super ?sub => ?expected)
+       (check
+	   (type-annotation-union ?super ?sub)
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (enumeration hello ciao salut ohayo)
+	(enumeration hello ohayo)
+	=> (enumeration hello ciao salut ohayo))
+
+  (doit (enumeration hello ohayo)
+	(enumeration salut ciao)
+	=> (enumeration hello ohayo salut ciao))
+
+  (doit (enumeration hello ciao)
+	(enumeration salut ciao)
+	=> (enumeration hello ciao salut))
+
+  (doit <symbol>
+	(enumeration salut ciao)
+	=> <symbol>)
+
+  (void))
+
+
+(parametrise ((check-test-name	'signature-union))
 
   (define-syntax doit
     (syntax-rules (=>)

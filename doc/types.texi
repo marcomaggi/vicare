@@ -464,17 +464,34 @@ syntaxes like the following:
 @end lisp
 
 @noindent
-compound type annotations can be nested at will:
+and others; compound type annotations can be nested at will:
 
 @lisp
 (or (list-of   <fixnum>)
     (vector-of <fixnum>))
 @end lisp
 
+For every type annotation: a parent type is documented, but the
+super--type/sub--type relation is ``flexible''.  For example,
+@syntax{list-of} and @syntax{list} annotations are both sub--types of
+@class{list}; but it also stands that:
+
+@lisp
+(type-annotation-super-and-sub? (list-of <fixnum>)
+                                (list <fixnum> <fixnum>))
+@result{} #t
+
+(type-annotation-super-and-sub? (list-of <fixnum>)
+                                (list <fixnum> <string>))
+@result{} #f
+@end lisp
+
+
 The following syntactic bindings are exported by @library{vicare}.
 
 
-@deftp {Compound Type Annotation} pair @meta{car-type} @meta{car-type}
+@deftp {Type Annotation} pair @meta{car-type} @meta{car-type}
+@deftpx {Parent Type} @aclass{pair}
 Describe a pair having car of type @meta{car-type} and cdr of type
 @meta{car-type}.  Both @meta{car-type} and @meta{car-type} are nested
 type annotations.
@@ -486,7 +503,8 @@ type annotations.
 @end deftp
 
 
-@deftp {Compound Type Annotation} list @metao{item-type} @meta{item-type} @dots{}
+@deftp {Type Annotation} list @metao{item-type} @meta{item-type} @dots{}
+@deftpx {Parent Type} @aclass{list}
 Describe a proper list holding a fixed number of items of the specified
 types (in the given order).  Every @meta{item-type} is a nested type
 annotation.
@@ -498,7 +516,8 @@ annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} vector @metao{item-type} @meta{item-type} @dots{}
+@deftp {Type Annotation} vector @metao{item-type} @meta{item-type} @dots{}
+@deftpx {Parent Type} @aclass{vector}
 Describe a vector holding a fixed number of items of the specified types
 (in the given order).  Every @meta{item-type} is a nested type
 annotation.
@@ -510,7 +529,8 @@ annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} pair-of @meta{item-type}
+@deftp {Type Annotation} pair-of @meta{item-type}
+@deftpx {Parent Type} @aclass{pair}
 Describe a pair having both the car and cdr of type @meta{item-type}.
 The syntax @meta{item-type} is a nested type annotation.
 
@@ -521,7 +541,8 @@ The syntax @meta{item-type} is a nested type annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} list-of @meta{item-type}
+@deftp {Type Annotation} list-of @meta{item-type}
+@deftpx {Parent Type} @aclass{list}
 Describe a proper list holding any number of items (including zero) all
 of the specified type.  The syntax @meta{item-type} is a nested type
 annotation.
@@ -533,7 +554,8 @@ annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} vector-of @meta{item-type}
+@deftp {Type Annotation} vector-of @meta{item-type}
+@deftpx {Parent Type} @aclass{vector}
 Describe a vector holding any number of items (including zero) all of
 the specified type.  The syntax @meta{item-type} is a nested type
 annotation.
@@ -546,6 +568,7 @@ annotation.
 
 
 @deftp {Type Annotation} hashtable @meta{key-type} @meta{value-type}
+@deftpx {Parent Type} @aclass{hashtable}
 Describe a hashtable having keys of type @meta{key-type} and values of
 type @meta{value-type}.  Both @meta{key-type} and @meta{value-type} are
 nested type annotations.
@@ -553,9 +576,9 @@ nested type annotations.
 
 
 @deftp {Type Annotation} enumeration @metao{symbol} @meta{symbol} @dots{}
+@deftpx {Parent Type} @aclass{symbol}
 Describe an enumeration of symbols; it is used to match a symbol in a
-specified enumeration set.  An @syntax{enumeration} annotation is a
-sub--type of @class{symbol}.
+specified enumeration set.
 
 @lisp
 (is-a? 'ciao (enumeration hello ciao salut ohayo))
@@ -580,17 +603,29 @@ annotation: we can use such identifier to validate symbols.  Example:
 The enumeration identifier is indeed used in the implementation of the
 @syntax{define-enumeration} built--in syntax; @ref{stdlib enum,
 define-enumeration}.
+
+@lisp
+(define-enumeration greetings
+  (hello ciao salut ohayo)
+  make-greetings)
+
+(is-a? 'ciao greetings) @result{} #t
+(greetings ciao)        @result{} ciao
+(greetings blue)        @error{} symbol not in enumeration
+@end lisp
 @end deftp
 
 
-@deftp {Compound Type Annotation} alist @meta{key-type} @meta{value-type}
+@deftp {Type Annotation} alist @meta{key-type} @meta{value-type}
+@deftpx {Parent Type} @aclass{list}
 Describe an association list having keys of type @meta{key-type} and
 values of type @meta{value-type}.  Both @meta{key-type} and
 @meta{value-type} are nested type annotations.
 @end deftp
 
 
-@deftp {Compound Type Annotation} condition @metao{cond-type} @meta{cond-type} @dots{}
+@deftp {Type Annotation} condition @metao{cond-type} @meta{cond-type} @dots{}
+@deftpx {Parent Type} @aclass{compound-condition}
 Describe a compound condition object holding at least one instance of
 the specified types (the order does not matter).  Every @meta{cond-type}
 is a nested type annotation that must be one among: @class{condition},
@@ -611,6 +646,7 @@ is a nested type annotation that must be one among: @class{condition},
 
 
 @deftp {Type Annotation} lambda @meta{args-signature} => @meta{rv-signature}
+@deftpx {Parent Type} @aclass{procedure}
 Describe a sub--type of @class{procedure} having a single clause, like
 procedures defined by @syntax{lambda}.  @syntax{=>} is the syntactic
 binding exported by @rsixlibrary{base}.
@@ -623,6 +659,7 @@ signature of the procedure's return values.
 
 
 @deftp {Type Annotation} case-lambda @metao{clause} @meta{clause} @dots{}
+@deftpx {Parent Type} @aclass{procedure}
 Describe a sub--type of @class{procedure} having multiple clauses, like
 procedures defined by @syntax{case-lambda}.  @syntax{=>} is the
 syntactic binding exported by @rsixlibrary{base}.
@@ -641,7 +678,8 @@ values.
 @end deftp
 
 
-@deftp {Compound Type Annotation} or @metao{type} @meta{type} @dots{}
+@deftp {Type Annotation} or @metao{type} @meta{type} @dots{}
+@deftpx {Parent Type} @aclass{top}
 Describe the union between the specified types.  Every @meta{type} is a
 nested type annotation.  A value matches a union of types if its type
 matches at least one of the union's types.
@@ -654,7 +692,8 @@ matches at least one of the union's types.
 @end deftp
 
 
-@deftp {Compound Type Annotation} and @metao{type} @meta{type} @dots{}
+@deftp {Type Annotation} and @metao{type} @meta{type} @dots{}
+@deftpx {Parent Type} @aclass{top}
 Describe the intersection between the specified types.  Every
 @meta{type} is a nested type annotation.  A value matches an
 intersection of types if its type matches all the intersection's types.
@@ -667,6 +706,7 @@ intersection of types if its type matches all the intersection's types.
 
 
 @deftp {Type Annotation} not @meta{type}
+@deftpx {Parent Type} @aclass{top}
 Describe the complement of the type.  The argument @meta{type} is a
 nested type annotation.  A value of type @meta{val-type} matches the
 complement of @meta{type} if @meta{val-type} is neither @meta{type} nor
@@ -685,6 +725,7 @@ a sub--type of @meta{type}.
 
 
 @deftp {Type Annotation} parent-of @meta{type}
+@deftpx {Parent Type} @aclass{top}
 Describe the parent of the type; an exception is raised if the type has
 no parent.  The argument @meta{type} is a nested type annotation.
 
@@ -701,7 +742,8 @@ no parent.  The argument @meta{type} is a nested type annotation.
 @end deftp
 
 
-@deftp {Compound Type Annotation} ancestor-of @meta{type}
+@deftp {Type Annotation} ancestor-of @meta{type}
+@deftpx {Parent Type} @aclass{top}
 Describe the ancestors of the type; if the type has no parent: the list
 of ancestors is empty.  The argument @meta{type} is a nested type
 annotation and it is not included in its list of ancestors.
@@ -762,9 +804,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes predicates::   Predicate syntaxes.
 * types syntaxes slots::        Slot getter and setter syntaxes.
 * types syntaxes methods::      Calling object-type methods.
-* types syntaxes equality::     Equality between type annotations.
-* types syntaxes super-sub::    Super and sub types.
-* types syntaxes ancestors::    Ancestors of types and signatures.
+* types syntaxes annotations::  Operating on type annotations.
 * types syntaxes signatures::   Operating on type signatures.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
@@ -1089,34 +1129,6 @@ For details on the dot notation @ref{types syntaxes methods, Dot
 notation}.
 
 @c page
-@node types syntaxes equality
-@subsection Equality between type annotations
-
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
-
-@deffn Syntax type-annotation=? @metai{type} @metaii{type}
-Expand to a boolean constant: @true{} if @metai{type} is equal to
-@metaii{type}; otherwise @false{}.
-
-@lisp
-(type-annotation=? <top>    <top>)              @result{} #t
-(type-annotation=? <fixnum> <fixnum>)           @result{} #t
-(type-annotation=? <fixnum> <positive-fixnum>)  @result{} #f
-
-(internal-body
-  (define-type <my-fixnum> <fixnum>)
-  (type-annotation=? <fixnum> <my-fixnum>))     @result{} #t
-
-(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
-                   (lambda (<fixnum>) => (<fixnum>)))
-@result{} #t
-@end lisp
-@end deffn
-
-@c page
 @node types syntaxes methods
 @subsection Calling object--type methods
 
@@ -1304,13 +1316,34 @@ following program:
 @end lisp
 
 @c page
-@node types syntaxes super-sub
-@subsection Super and sub types
+@node types syntaxes annotations
+@subsection Operating on type annotations
 
 
 The following syntactic bindings are exported by the library
 @library{vicare}.
 
+
+@deffn Syntax type-annotation=? @metai{type} @metaii{type}
+Expand to a boolean constant: @true{} if @metai{type} is equal to
+@metaii{type}; otherwise @false{}.
+
+@lisp
+(type-annotation=? <top>    <top>)              @result{} #t
+(type-annotation=? <fixnum> <fixnum>)           @result{} #t
+(type-annotation=? <fixnum> <positive-fixnum>)  @result{} #f
+
+(internal-body
+  (define-type <my-fixnum> <fixnum>)
+  (type-annotation=? <fixnum> <my-fixnum>))     @result{} #t
+
+(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
+                   (lambda (<fixnum>) => (<fixnum>)))
+@result{} #t
+@end lisp
+@end deffn
+
+@c ------------------------------------------------------------------------
 
 @deffn Syntax type-annotation-super-and-sub? @metai{type} @metaii{type}
 Expand to a boolean constant: @true{} if @metai{type} is a super--type
@@ -1350,6 +1383,73 @@ conventionally the super--type of all the types.
 @end lisp
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@deffn Syntax type-annotation-union @metao{type} @meta{type} @dots{}
+Expand to a syntax object representing the type annotation resulting
+from the union of the given @meta{type} annotations.
+
+@lisp
+(type-annotation-union <fixnum> <bignum>)
+@result{} (or <fixnum> <bignum>)
+
+(type-annotation-union (enumeration hello salut)
+                       (enumeration ciao)
+                       (enumeration ohayo ciao))
+@result{} (enumeration hello salut ciao ohayo)
+@end lisp
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@deffn Syntax type-annotation-common-ancestor @metai{type} @metaii{type}
+Expand to a syntax object representing the type annotation that is the
+common ancestor of @metai{type} and @metaii{type}.
+
+@lisp
+(type-annotation-common-ancestor <top> <top>)
+@result{} #'<top>
+
+(type-annotation-common-ancestor <top> <fixnum>)
+@result{} #'<top>
+
+(type-annotation-common-ancestor <fixnum> <top>)
+@result{} #'<top>
+
+(type-annotation-common-ancestor <fixnum> <flonum>)
+@result{} #'<real>
+@end lisp
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@deffn Syntax type-annotation-ancestors @meta{type}
+Expand to a (possibly empty) list of type annotations representing the
+ancestors of @meta{type}.  @meta{type} is @strong{not} included.
+
+@lisp
+(type-annotation-ancestors <top>)       @result{} ()
+(type-annotation-ancestors <void>)      @result{} ()
+(type-annotation-ancestors <no-return>) @result{} ()
+
+(type-annotation-ancestors <condition>)
+@result{} (<record> <struct> <top>)
+
+(type-annotation-ancestors <positive-fixnum>)
+@result{} (<fixnum>
+    <exact-integer> <integer> <rational> <rational-valued>
+    <real> <real-valued> <complex> <number> <top>)
+@end lisp
+@end deffn
+
+@c page
+@node types syntaxes signatures
+@subsection Operating on type signatures
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
 
 @deffn Syntax type-signature-super-and-sub? @metai{signature} @metaii{signature}
 Expand to a boolean constant: @true{} if @metai{signature} is a
@@ -1386,6 +1486,7 @@ position when the list is improper.
 @end lisp
 @end deffn
 
+@c ------------------------------------------------------------------------
 
 @deffn Syntax type-signature-matching @var{args-signature} @var{rands-signature}
 Match the two signatures as if: @var{args-signature} is the type
@@ -1426,34 +1527,7 @@ If there is no match between the arguments' and operands' signatures.
 @end lisp
 @end deffn
 
-@c page
-@node types syntaxes ancestors
-@subsection Ancestors of types and signatures
-
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
-
-@deffn Syntax type-annotation-common-ancestor @metai{type} @metaii{type}
-Expand to a syntax object representing the type annotation that is the
-common ancestor of @metai{type} and @metaii{type}.
-
-@lisp
-(type-annotation-common-ancestor <top> <top>)
-@result{} #'<top>
-
-(type-annotation-common-ancestor <top> <fixnum>)
-@result{} #'<top>
-
-(type-annotation-common-ancestor <fixnum> <top>)
-@result{} #'<top>
-
-(type-annotation-common-ancestor <fixnum> <flonum>)
-@result{} #'<real>
-@end lisp
-@end deffn
-
+@c ------------------------------------------------------------------------
 
 @deffn Syntax type-signature-common-ancestor @metai{signature} @metaii{signature}
 Expand to a syntax object representing the type signature that is the
@@ -1474,34 +1548,7 @@ common ancestor of @metai{signature} and @metaii{signature}.
 @end lisp
 @end deffn
 
-
-@deffn Syntax type-annotation-ancestors @meta{type}
-Expand to a (possibly empty) list of type annotations representing the
-ancestors of @meta{type}.  @meta{type} is @strong{not} included.
-
-@lisp
-(type-annotation-ancestors <top>)       @result{} ()
-(type-annotation-ancestors <void>)      @result{} ()
-(type-annotation-ancestors <no-return>) @result{} ()
-
-(type-annotation-ancestors <condition>)
-@result{} (<record> <struct> <top>)
-
-(type-annotation-ancestors <positive-fixnum>)
-@result{} (<fixnum>
-    <exact-integer> <integer> <rational> <rational-valued>
-    <real> <real-valued> <complex> <number> <top>)
-@end lisp
-@end deffn
-
-@c page
-@node types syntaxes signatures
-@subsection Operating on type signatures
-
-
-The following syntactic bindings are exported by the library
-@library{vicare}.
-
+@c ------------------------------------------------------------------------
 
 @deffn Syntax type-signature-union @meta{type-signature} @dots{}
 Compute the union between the given type signatures and expand to a

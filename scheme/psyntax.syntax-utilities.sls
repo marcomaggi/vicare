@@ -32,7 +32,7 @@
     identifier-prefix		identifier-suffix
     identifier-format
 
-    duplicate-identifiers?	delete-duplicate-identifiers
+    duplicate-identifiers?
     identifier-memq
 
     ;; identifier processing: records API
@@ -103,7 +103,6 @@
   (lambda (message subform)
     (syntax-violation who message subform #f)))
 
-(define-list-of-type-predicate list-of-identifiers? identifier?)
 (define-list-of-type-predicate list-of-syntax-clause-specs? syntax-clause-spec?)
 
 
@@ -174,21 +173,6 @@
 	   (if (identifier= first #'?car)
 	       first
 	     (loop first #'?cdr)))))))))
-
-(case-define* delete-duplicate-identifiers
-  ((ids)
-   (delete-duplicate-identifiers ids free-identifier=?))
-  (({ids list-of-identifiers?} {identifier= procedure?})
-   ;;Given the list  of identifiers IDS remove  the duplicate identifiers
-   ;;and return a proper list of unique identifiers.
-   ;;
-   (let clean-tail ((ids ids))
-     (if (pair? ids)
-	 (let ((head (car ids)))
-	   (cons head (clean-tail (remp (lambda (id)
-					  (identifier= id head))
-				    (cdr ids)))))
-       '()))))
 
 (case-define* identifier-memq
   ((id ids)

@@ -361,7 +361,7 @@
   (protocol
     (lambda (make-qdef)
       (define* (make-qdef-top-expr input-form.stx)
-	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable 'dummy))))
+	((make-qdef input-form.stx (make-syntactic-identifier-for-temporary-variable))))
       make-qdef-top-expr)))
 
 
