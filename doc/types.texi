@@ -783,6 +783,33 @@ exactly a type annotation with one of the ancestors of @meta{type}:
 @end lisp
 @end deftp
 
+
+@deftp {Type Annotation} equality-predicate @meta{type}
+A short--cut to specify:
+
+@lisp
+(lambda (@meta{type} @meta{?type}) => (<boolean>))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} comparison-procedure @meta{type}
+A short--cut to specify:
+
+@lisp
+(lambda (@meta{type} @meta{?type}) => (<fixnum>))
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} hash-function @meta{type}
+A short--cut to specify:
+
+@lisp
+(lambda (@meta{type}) => (<non-negative-fixnum>))
+@end lisp
+@end deftp
+
 @c page
 @node types syntaxes
 @section Type--exploiting syntaxes

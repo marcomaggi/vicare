@@ -187,6 +187,7 @@
     (void))
 
 ;;; --------------------------------------------------------------------
+;;; LAMBDA
 
   (check-for-true	(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
 					   (lambda (<fixnum>) => (<fixnum>))))
@@ -202,6 +203,23 @@
 
   (check-for-false	(type-annotation=? (lambda (<fixnum>) => (<fixnum>))
 					   (lambda (<fixnum>) => (<flonum>))))
+
+;;;
+
+  (check-for-true	(type-annotation=? (equality-predicate <fixnum>)
+					   (lambda (<fixnum> <fixnum>) => (<boolean>))))
+  (check-for-true	(type-annotation=? (equality-predicate <string>)
+					   (lambda (<string> <string>) => (<boolean>))))
+
+  (check-for-true	(type-annotation=? (comparison-procedure <fixnum>)
+					   (lambda (<fixnum> <fixnum>) => (<fixnum>))))
+  (check-for-true	(type-annotation=? (comparison-procedure <string>)
+					   (lambda (<string> <string>) => (<fixnum>))))
+
+  (check-for-true	(type-annotation=? (hash-function <fixnum>)
+					   (lambda (<fixnum>) => (<non-negative-fixnum>))))
+  (check-for-true	(type-annotation=? (hash-function <string>)
+					   (lambda (<string>) => (<non-negative-fixnum>))))
 
 ;;; --------------------------------------------------------------------
 ;;; case-lambda

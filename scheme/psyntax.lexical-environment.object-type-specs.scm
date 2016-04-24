@@ -3234,7 +3234,8 @@
 	(syntax-object.type-annotation? input-form.stx lexenv stx))))
    (syntax-match stx (pair list vector pair-of list-of vector-of
 			   hashtable alist condition enumeration
-			   or and not lambda case-lambda => parent-of ancestor-of)
+			   or and not lambda case-lambda => parent-of ancestor-of
+			   equality-predicate comparison-procedure hash-function)
      (?type-id
       (and (identifier? ?type-id)
 	   (try
@@ -3242,52 +3243,42 @@
 	     (catch E
 	       (&syntactic-identifier-resolution
 		#f))))
-      ?type-id)
+      #t)
 
      ((pair ?car-type ?cdr-type)
-      (list (core-prim-id 'pair)
-	    (recur ?car-type)
-	    (recur ?cdr-type)))
+      (and (recur ?car-type)
+	   (recur ?cdr-type)))
 
      ((list ?item-type* ...)
-      (cons (core-prim-id 'list)
-	    (map recur ?item-type*)))
+      (for-all recur ?item-type*))
 
      ((vector ?item-type* ...)
-      (cons (core-prim-id 'vector)
-	    (map recur ?item-type*)))
+      (for-all recur ?item-type*))
 
      ((pair-of ?item-type)
-      (list (core-prim-id 'pair-of)
-	    (recur ?item-type)))
+      (recur ?item-type))
 
      ((list-of ?item-type)
-      (list (core-prim-id 'list-of)
-	    (recur ?item-type)))
+      (recur ?item-type))
 
      ((vector-of ?item-type)
-      (list (core-prim-id 'vector-of)
-	    (recur ?item-type)))
+      (recur ?item-type))
 
      ((hashtable ?key-type ?value-type)
-      (list (hashtable-id)
-	    (recur ?key-type)
-	    (recur ?value-type)))
+      (and (recur ?key-type)
+	   (recur ?value-type)))
 
      ((alist ?key-type ?value-type)
-      (list (alist-id)
-	    (recur ?key-type)
-	    (recur ?value-type)))
+      (and (recur ?key-type)
+	   (recur ?value-type)))
 
      ((enumeration ?symbol ?symbol* ...)
-      (let ((sym*.stx (cons ?symbol ?symbol*)))
-	(and (for-all identifier? sym*.stx)
-	     (cons (enumeration-id) (delete-duplicate-identifiers sym*.stx)))))
+      (for-all identifier? (cons ?symbol ?symbol*)))
 
      ((lambda ?argtypes => ?rettypes)
       (and (make-type-signature ?argtypes)
-	   (make-type-signature ?rettypes))
-      (list (core-prim-id 'lambda) ?rettypes (core-prim-id '=>) ?argtypes))
+	   (make-type-signature ?rettypes)
+	   #t))
 
      ((case-lambda
 	(?argtypes0 => ?rettypes0)
@@ -3295,37 +3286,36 @@
 	...)
       (and (make-type-signature ?argtypes0)
 	   (make-type-signature ?rettypes0)
-	   (map make-type-signature ?argtypes*)
-	   (map make-type-signature ?rettypes*))
-      (cons* (core-prim-id 'case-lambda)
-	     (list ?rettypes0 (core-prim-id '=>) ?argtypes0)
-	     (map (lambda (argtypes.stx rettypes.stx)
-		    (list argtypes.stx (core-prim-id '=>) rettypes.stx))
-	       ?argtypes* ?rettypes*)))
+	   (for-all make-type-signature ?argtypes*)
+	   (for-all make-type-signature ?rettypes*)
+	   #t))
 
      ((condition ?component-type* ...)
-      (list (core-prim-id 'condition)
-	    (map recur ?component-type*)))
+      (for-all recur ?component-type*))
 
      ((or ?component-type ?component-type* ...)
-      (list (core-prim-id 'or)
-	    (map recur (cons ?component-type ?component-type*))))
+      (for-all recur (cons ?component-type ?component-type*)))
 
      ((and ?component-type ?component-type* ...)
-      (list (core-prim-id 'and)
-	    (map recur (cons ?component-type ?component-type*))))
+      (for-all recur (cons ?component-type ?component-type*)))
 
      ((not ?item-type)
-      (list (core-prim-id 'not)
-	    (recur ?item-type)))
+      (recur ?item-type))
 
      ((parent-of ?type)
-      (list (core-prim-id 'parent-of)
-	    (recur ?type)))
+      (recur ?type))
 
      ((ancestor-of ?type)
-      (list (core-prim-id 'ancestor-of)
-	    (recur ?type)))
+      (recur ?type))
+
+     ((equality-predicate ?type)
+      (recur ?type))
+
+     ((comparison-procedure ?type)
+      (recur ?type))
+
+     ((hash-function ?type)
+      (recur ?type))
 
      (else #f))))
 
@@ -3353,7 +3343,8 @@
    ;;
    (syntax-match annotation.stx (pair list vector pair-of list-of vector-of
 				      hashtable alist condition enumeration
-				      or and not lambda case-lambda => parent-of ancestor-of)
+				      or and not lambda case-lambda => parent-of ancestor-of
+				      equality-predicate comparison-procedure hash-function)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-spec ?type-id lexenv))
@@ -3483,6 +3474,15 @@
      ((ancestor-of ?type)
       ;;If ?TYPE has no ancestors: its ancestors list is null.
       (make-ancestor-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
+
+     ((equality-predicate ?type)
+      (type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<boolean>))) lexenv))
+
+     ((comparison-procedure ?type)
+      (type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<fixnum>)))  lexenv))
+
+     ((hash-function ?type)
+      (type-annotation->object-type-spec (bless `(lambda (,?type) => (<non-negative-fixnum>)))))
 
      (else
       (syntax-violation __who__ "invalid type annotation" annotation.stx)))))

@@ -374,7 +374,7 @@
     (syntax-case type-annotation.stx
 	(pair list vector pair-of list-of vector-of <no-return> <list>
 	      condition or and not alist hashtable lambda case-lambda =>
-	      enumeration)
+	      enumeration equality-predicate comparison-procedure hash-function)
 
       (?type
        (identifier? #'?type)
@@ -444,6 +444,15 @@
 
       ((ancestor-of ?item-type)
        #`(ancestor-of #,(%validate-type-annotation #'?item-type)))
+
+      ((equality-predicate ?type)
+       #`(equality-predicate #,(%validate-type-annotation #'?type)))
+
+      ((comparison-procedure ?type)
+       #`(comparison-procedure #,(%validate-type-annotation #'?type)))
+
+      ((hash-function ?type)
+       #`(hash-function #,(%validate-type-annotation #'?type)))
 
       (_
        (synner "invalid type annotation" type-annotation.stx))))
