@@ -253,13 +253,20 @@
 ;;maker of "<object-type-spec>" is not exported by the module.
 ;;
 (define-record-type (<object-type-spec> make-object-type-spec object-type-spec?)
-  (nongenerative vicare:expander:<object-type-spec>)
+  (nongenerative *vicare:expander:<object-type-spec>)
   (fields
-    (immutable name			object-type-spec.name)
-		;A syntax  object representing the  "name" of this  object-type.  For
-		;some types it is the actual type identifier, for example: "<fixnum>,
-		;"<string>".  For  other types it  is a syntax object  like "(list-of
-		;<fixnum>)".
+    (mutable name)
+		;Either:
+		;
+		;* A syntax object representing  the "name" of this object-type.
+		;
+		;* A  procedure that, applied  to this  OTS, returns a  syntax object
+		;representing the name of this type.  The return value is memoised in
+		;this field.
+		;
+		;For  some types  it  is  the actual  type  identifier, for  example:
+		;"<fixnum>, "<string>".  For  other types it is a  syntax object like
+		;"(list-of <fixnum>)".
 
     (immutable parent-ots		object-type-spec.parent-ots)
 		;False or an instance of "<object-type-spec>" representing the parent
@@ -315,10 +322,17 @@
 		;
 		;and called explicitly with the DELETE syntax.
 
-    (immutable type-predicate-stx	object-type-spec.type-predicate-stx)
-		;False  or a  syntax object  representing a  Scheme expression  that,
-		;expanded and evaluated  at run-time, returns a  type predicate.  The
-		;predicate is meant to be used as:
+    (mutable type-predicate)
+		;Either false  or:
+		;
+		;* A  syntax object representing  a Scheme expression  that, expanded
+		;and evaluated at run-time, returns a type predicate.
+		;
+		;* A  procedure that, applied  to this  OTS, returns a  syntax object
+		;representing the  predicate.  The return  value is memoised  in this
+		;field.
+		;
+		;The predicate is meant to be used as:
 		;
 		;   (?predicate ?object)
 		;
@@ -398,6 +412,23 @@
   (record-constructor-descriptor <object-type-spec>))
 
 ;;; --------------------------------------------------------------------
+
+(define* (object-type-spec.name {ots object-type-spec?})
+  (let ((thing (<object-type-spec>-name ots)))
+    (if (procedure? thing)
+	(receive-and-return (name.stx)
+	    (thing ots)
+	  (<object-type-spec>-name-set! ots name.stx))
+      thing)))
+
+(define* (object-type-spec.type-predicate-stx {ots object-type-spec?})
+  (let ((thing (<object-type-spec>-type-predicate ots)))
+    (if (procedure? thing)
+	(receive-and-return (pred.stx)
+	    (thing ots)
+	  (<object-type-spec>-type-predicate-set! ots pred.stx))
+      ;;Here THING is either false or a syntax object.
+      thing)))
 
 (define (list-of-object-type-spec? obj)
   (if (pair? obj)
@@ -1625,7 +1656,7 @@
 ;;object-type specifications for: <fixnum>, <flonum>, <string>, <list>, ...
 ;;
 (define-record-type (<scheme-type-spec> make-scheme-type-spec scheme-type-spec?)
-  (nongenerative vicare:expander:<scheme-type-spec>)
+  (nongenerative *vicare:expander:<scheme-type-spec>)
   (parent <object-type-spec>)
   (fields
     (immutable type-descriptor-id	scheme-type-spec.type-descriptor-id)
@@ -1671,7 +1702,7 @@
 ;;"Struct-Type Spec") or STRUCT-OTS.
 ;;
 (define-record-type (<struct-type-spec> make-struct-type-spec struct-type-spec?)
-  (nongenerative vicare:expander:<struct-type-spec>)
+  (nongenerative *vicare:expander:<struct-type-spec>)
   (parent <object-type-spec>)
   (fields
     (immutable std			struct-type-spec.std)
@@ -1718,7 +1749,7 @@
 ;;called RTS (as in "Record-Type Spec") or RECORD-OTS.
 ;;
 (define-record-type (<record-type-spec> make-record-type-spec record-type-spec?)
-  (nongenerative vicare:expander:<record-type-spec>)
+  (nongenerative *vicare:expander:<record-type-spec>)
   (parent <object-type-spec>)
   (fields
     (immutable rtd-id			record-type-spec.rtd-id)
@@ -1749,13 +1780,9 @@
 					   (id->record-type-spec parent-name.id))))))
 	      (constructor.stx	(or constructor.stx
 				    (bless `(record-constructor ,rcd-id))))
-	      (predicate.stx	(or predicate.stx
-				    (let ((arg.sym (gensym)))
-				      (bless
-				       `(lambda/std (,arg.sym)
-					  (record-and-rtd? ,arg.sym ,rtd-id)))))))
+	      (pred		(or predicate.stx make-record-type-predicate)))
 	  ((make-object-type-spec type-name parent-name.ots
-				  constructor.stx destructor.stx predicate.stx
+				  constructor.stx destructor.stx pred
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  safe-accessors-table safe-mutators-table methods-table)
 	   rtd-id rcd-id super-protocol-id)))
@@ -1768,6 +1795,13 @@
       (display "]" port)))
 
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define (make-record-type-predicate ots)
+  (let ((rtd-id  (record-type-spec.rtd-id ots))
+	(arg.sym (make-syntactic-identifier-for-temporary-variable)))
+    (bless
+     `(lambda/std (,arg.sym)
+	(record-and-rtd? ,arg.sym ,rtd-id)))))
 
 (define (simple-condition-object-type-spec? ots)
   ;;Return true  if OTS is  represents a simple condition-object  type specification;
@@ -1819,7 +1853,7 @@
 ;;"<compound-condition>" representing compound condition objects of a known type.
 ;;
 (define-record-type (<compound-condition-type-spec> make-compound-condition-type-spec compound-condition-type-spec?)
-  (nongenerative vicare:expander:<compound-condition-type-spec>)
+  (nongenerative *vicare:expander:<compound-condition-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -1831,20 +1865,18 @@
     (lambda (make-object-type-spec)
       (define* (make-compound-condition-type-spec component-type*.ots)
 	(let* ((component-type*.ots	(%splice-component-specs component-type*.ots))
-	       (name.stx		(cons (core-prim-id 'condition)
-					      (map object-type-spec.name component-type*.ots)))
+	       (name			make-compound-condition-type-name)
 	       (parent.ots		(<compound-condition>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-compound-condition-predicate
-					 (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (predicate.stx		make-compound-condition-type-predicate)
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
-	  ((make-object-type-spec name.stx parent.ots
+	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
@@ -1863,17 +1895,6 @@
 			       component.ots))))
 	  '() component-type*.ots))
 
-      (define (make-compound-condition-predicate component-pred*.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred"))
-	      (item.sym	(gensym "item")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (compound-condition? ,obj.sym)
-		   (for-all (lambda (,pred.sym)
-			      (,pred.sym ,obj.sym))
-		     (list ,@component-pred*.stx)))))))
-
       make-compound-condition-type-spec))
 
   (custom-printer
@@ -1890,6 +1911,25 @@
 (define <compound-condition-type-spec>-rcd
   (record-constructor-descriptor <compound-condition-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-compound-condition-type-name ots)
+  (cons (core-prim-id 'condition)
+	(map object-type-spec.name (compound-condition-type-spec.component-ots* ots))))
+
+(define (make-compound-condition-type-predicate ots)
+  (let* ((component-type*.ots	(compound-condition-type-spec.component-ots* ots))
+	 (component-pred*.stx	(map object-type-spec.type-predicate-stx component-type*.ots))
+	 (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
+	 (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
+	 (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (compound-condition? ,obj.sym)
+	     (for-all (lambda (,pred.sym)
+			(,pred.sym ,obj.sym))
+	       (list ,@component-pred*.stx)))))))
+
 
 ;;;; union object spec
 ;;
@@ -1897,7 +1937,7 @@
 ;;types.
 ;;
 (define-record-type (<union-type-spec> make-union-type-spec union-type-spec?)
-  (nongenerative vicare:expander:<union-type-spec>)
+  (nongenerative *vicare:expander:<union-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -1911,39 +1951,22 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-union-type-spec {component-type*.ots not-empty-list-of-object-type-spec?})
-	(let* ((name.stx		(cons (core-prim-id 'or)
-					      (map object-type-spec.name component-type*.ots)))
+	(let* ((name			make-union-type-name)
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-union-predicate component-type*.ots
-							      (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (predicate.stx		make-union-type-predicate)
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
-	  ((make-object-type-spec name.stx parent.ots
+	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots (void))))
-
-      (define (make-union-predicate component-type*.ots component-pred*.stx)
-	(for-each (lambda (type.ots pred.stx)
-		    (unless pred.stx
-		      (assertion-violation '<union-type-spec>
-			"impossible to generate union type predicate, component type has no predicate"
-			type.ots)))
-	  component-type*.ots component-pred*.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (exists (lambda (,pred.sym)
-			(,pred.sym ,obj.sym))
-		(list ,@component-pred*.stx))))))
 
       make-union-type-spec))
 
@@ -1960,6 +1983,31 @@
 
 (define <union-type-spec>-rcd
   (record-constructor-descriptor <union-type-spec>))
+
+;;; --------------------------------------------------------------------
+
+(define (make-union-type-name ots)
+  (cons (core-prim-id 'or)
+	(map object-type-spec.name (union-type-spec.component-ots* ots))))
+
+(define (make-union-type-predicate ots)
+  (let* ((component-type*.ots (union-type-spec.component-ots* ots))
+	 (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
+    (for-each (lambda (type.ots pred.stx)
+		(unless pred.stx
+		  (assertion-violation '<union-type-spec>
+		    "impossible to generate union type predicate, component type has no predicate"
+		    type.ots)))
+      component-type*.ots component-pred*.stx)
+    (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	  (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+      (bless
+       `(lambda (,obj.sym)
+	  (exists (lambda (,pred.sym)
+		    (,pred.sym ,obj.sym))
+	    (list ,@component-pred*.stx)))))))
+
+;;; --------------------------------------------------------------------
 
 (module (union-of-type-specs $union-of-type-specs)
 
@@ -2103,7 +2151,7 @@
 ;;types.
 ;;
 (define-record-type (<intersection-type-spec> make-intersection-type-spec intersection-type-spec?)
-  (nongenerative vicare:expander:<intersection-type-spec>)
+  (nongenerative *vicare:expander:<intersection-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2114,42 +2162,26 @@
 		;Initialised   to  void.    This   field  memoises   the  result   of
 		;INTERSECTION-TYPE-SPEC.LENGTH.
     #| end of FIELDS |# )
+
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-intersection-type-spec {component-type*.ots not-empty-list-of-object-type-spec?})
-	(let* ((name.stx		(cons (core-prim-id 'and)
-					      (map object-type-spec.name component-type*.ots)))
+	(let* ((name			make-intersection-type-name)
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-intersection-predicate component-type*.ots
-								     (map object-type-spec.type-predicate-stx component-type*.ots)))
+	       (predicate.stx		make-intersection-type-predicate)
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
-	  ((make-object-type-spec name.stx parent.ots
+	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   component-type*.ots (void))))
-
-      (define (make-intersection-predicate component-type*.ots component-pred*.stx)
-	(for-each (lambda (type.ots pred.stx)
-		    (unless pred.stx
-		      (assertion-violation '<intersection-type-spec>
-			"impossible to generate intersection type predicate, component type has no predicate"
-			type.ots)))
-	  component-type*.ots component-pred*.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (for-all (lambda (,pred.sym)
-			 (,pred.sym ,obj.sym))
-		(list ,@component-pred*.stx))))))
 
       make-intersection-type-spec))
 
@@ -2166,6 +2198,31 @@
 
 (define <intersection-type-spec>-rcd
   (record-constructor-descriptor <intersection-type-spec>))
+
+;;; --------------------------------------------------------------------
+
+(define (make-intersection-type-name ots)
+  (cons (core-prim-id 'and)
+	(map object-type-spec.name (intersection-type-spec.component-ots* ots))))
+
+(define (make-intersection-type-predicate ots)
+  (let* ((component-type*.ots (intersection-type-spec.component-ots* ots))
+	 (component-pred*.stx (map object-type-spec.type-predicate-stx component-type*.ots)))
+    (for-each (lambda (type.ots pred.stx)
+		(unless pred.stx
+		  (assertion-violation '<intersection-type-spec>
+		    "impossible to generate intersection type predicate, component type has no predicate"
+		    type.ots)))
+      component-type*.ots component-pred*.stx)
+    (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	  (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+      (bless
+       `(lambda (,obj.sym)
+	  (for-all (lambda (,pred.sym)
+		     (,pred.sym ,obj.sym))
+	    (list ,@component-pred*.stx)))))))
+
+;;; --------------------------------------------------------------------
 
 (module (intersection-of-type-specs)
 
@@ -2260,7 +2317,7 @@
 ;;types.
 ;;
 (define-record-type (<complement-type-spec> make-complement-type-spec complement-type-spec?)
-  (nongenerative vicare:expander:<complement-type-spec>)
+  (nongenerative *vicare:expander:<complement-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2270,33 +2327,22 @@
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-complement-type-spec {item-type.ots object-type-spec?})
-	(let* ((name.stx		(list (core-prim-id 'not) (object-type-spec.name item-type.ots)))
+	(let* ((name			make-complement-type-name)
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-complement-predicate item-type.ots
-								   (object-type-spec.type-predicate-stx item-type.ots)))
+	       (predicate.stx		make-complement-predicate)
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
-	  ((make-object-type-spec name.stx parent.ots
+	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   item-type.ots)))
-
-      (define (make-complement-predicate item-type.ots item-pred.stx)
-	(unless item-pred.stx
-	  (assertion-violation '<complement-type-spec>
-	    "impossible to generate complement type predicate, component type has no predicate"
-	    item-type.ots))
-	(let ((obj.sym	(gensym "obj")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (not (,item-pred.stx ,obj.sym))))))
 
       make-complement-type-spec))
 
@@ -2314,6 +2360,24 @@
 (define <complement-type-spec>-rcd
   (record-constructor-descriptor <complement-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-complement-type-name ots)
+  (list (core-prim-id 'not)
+	(object-type-spec.name (complement-type-spec.item-ots ots))))
+
+(define (make-complement-predicate ots)
+  (let* ((item-type.ots (complement-type-spec.item-ots ots))
+	 (item-pred.stx (object-type-spec.type-predicate-stx item-type.ots)))
+    (unless item-pred.stx
+      (assertion-violation '<complement-type-spec>
+	"impossible to generate complement type predicate, component type has no predicate"
+	item-type.ots))
+    (let ((obj.sym (make-syntactic-identifier-for-temporary-variable "obj")))
+      (bless
+       `(lambda (,obj.sym)
+	  (not (,item-pred.stx ,obj.sym)))))))
+
 
 ;;;; ancestor-of object spec
 ;;
@@ -2321,7 +2385,7 @@
 ;;types.
 ;;
 (define-record-type (<ancestor-of-type-spec> make-ancestor-of-type-spec ancestor-of-type-spec?)
-  (nongenerative vicare:expander:<ancestor-of-type-spec>)
+  (nongenerative *vicare:expander:<ancestor-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2330,42 +2394,27 @@
 		;A list of instances  of "<object-type-spec>" describing the optional
 		;types.
     #| end of FIELDS |# )
+
   (protocol
     (lambda (make-object-type-spec)
       (define* (make-ancestor-of-type-spec {type.ots object-type-spec?})
-	(let* ((name.stx		(list (core-prim-id 'ancestor-of)
-					      (object-type-spec.name type.ots)))
+	(let* ((name			make-ancestor-of-type-name)
 	       (ancestor*.ots		(object-type-spec.ancestors-ots* type.ots))
 	       (parent.ots		(<top>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-ancestor-of-predicate ancestor*.ots (map object-type-spec.type-predicate-stx ancestor*.ots)))
+	       (predicate.stx		make-ancestor-of-predicate)
 	       (equality-predicate.id	#f)
 	       (comparison-procedure.id	#f)
 	       (hash-function.id	#f)
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
-	  ((make-object-type-spec name.stx parent.ots
+	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   type.ots ancestor*.ots)))
-
-      (define (make-ancestor-of-predicate ancestor*.ots pred*.stx)
-	(for-each (lambda (ancestor.ots pred.stx)
-		    (unless pred.stx
-		      (assertion-violation '<ancestor-of-type-spec>
-			"impossible to generate ancestor-of type predicate, component type has no predicate"
-			ancestor.ots)))
-	  ancestor*.ots pred*.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (exists (lambda (,pred.sym)
-			(,pred.sym ,obj.sym))
-		(list ,@pred*.stx))))))
 
       make-ancestor-of-type-spec))
 
@@ -2383,6 +2432,29 @@
 (define <ancestor-of-type-spec>-rcd
   (record-constructor-descriptor <ancestor-of-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-ancestor-of-type-name ots)
+  (list (core-prim-id 'ancestor-of)
+	(object-type-spec.name (ancestor-of-type-spec.item-ots ots))))
+
+(define (make-ancestor-of-predicate ots)
+  (let* ((ancestor*.ots		(ancestor-of-type-spec.component-ots* ots))
+	 (pred*.stx		(map object-type-spec.type-predicate-stx ancestor*.ots)))
+    (for-each (lambda (ancestor.ots pred.stx)
+		(unless pred.stx
+		  (assertion-violation '<ancestor-of-type-spec>
+		    "impossible to generate ancestor-of type predicate, component type has no predicate"
+		    ancestor.ots)))
+      ancestor*.ots pred*.stx)
+    (let ((obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	  (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+      (bless
+       `(lambda (,obj.sym)
+	  (exists (lambda (,pred.sym)
+		    (,pred.sym ,obj.sym))
+	    (list ,@pred*.stx)))))))
+
 
 ;;;; closure object signature spec
 ;;
@@ -2396,7 +2468,7 @@
 ;;the signature of a closure object.
 ;;
 (define-record-type (<closure-type-spec> make-closure-type-spec closure-type-spec?)
-  (nongenerative vicare:expander:<closure-type-spec>)
+  (nongenerative *vicare:expander:<closure-type-spec>)
   (parent <object-type-spec>)
 
   (fields
@@ -2408,33 +2480,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-closure-type-spec
 	(({signature callable-signature?})
-	 (make-closure-type-spec signature (%mkname signature)))
+	 ($make-closure-type-spec signature make-closure-type-name))
 	(({signature callable-signature?} name.stx)
-	 (let ((parent.ots		(<procedure>-ots))
-	       (constructor.stx		#f)
-	       (destructor.stx		#f)
-	       (predicate.stx		(core-prim-id 'procedure?))
-	       (equality-predicate.id	#f)
-	       (comparison-procedure.id	#f)
-	       (hash-function.id	#f)
-	       (accessors-table		'())
-	       (mutators-table		'())
-	       (methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    signature))))
+	 ($make-closure-type-spec signature name.stx)))
 
-      (define (%mkname callable-signature)
-	(let* ((clause* (map (lambda (clause-signature)
-			       (list (type-signature.syntax-object (clambda-clause-signature.argvals clause-signature))
-				     (core-prim-id '=>)
-				     (type-signature.syntax-object (clambda-clause-signature.retvals clause-signature))))
-			  (clambda-signature.clause-signature* callable-signature))))
-	  (if (list-of-single-item? clause*)
-	      (cons (core-prim-id 'lambda) (car clause*))
-	    (cons (core-prim-id 'case-lambda) clause*))))
+      (define ($make-closure-type-spec signature name)
+	(let ((parent.ots		(<procedure>-ots))
+	      (constructor.stx		#f)
+	      (destructor.stx		#f)
+	      (predicate.stx		(core-prim-id 'procedure?))
+	      (equality-predicate.id	#f)
+	      (comparison-procedure.id	#f)
+	      (hash-function.id		#f)
+	      (accessors-table		'())
+	      (mutators-table		'())
+	      (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   signature)))
 
       make-closure-type-spec))
 
@@ -2451,6 +2516,21 @@
 
 (define <closure-type-spec>-rcd
   (record-constructor-descriptor <closure-type-spec>))
+
+;;; --------------------------------------------------------------------
+
+(define (make-closure-type-name ots)
+  (let* ((signature	(closure-type-spec.signature ots))
+	 (clause*	(map (lambda (clause-signature)
+			       (list (type-signature.syntax-object (clambda-clause-signature.argvals clause-signature))
+				     (core-prim-id '=>)
+				     (type-signature.syntax-object (clambda-clause-signature.retvals clause-signature))))
+			  (clambda-signature.clause-signature* signature))))
+    (if (list-of-single-item? clause*)
+	(cons (core-prim-id 'lambda) (car clause*))
+      (cons (core-prim-id 'case-lambda) clause*))))
+
+;;; --------------------------------------------------------------------
 
 (define* (closure-type-spec.thunk? {ots closure-type-spec?})
   ;;Return true if at least one of the clause signatures in OTS accepts no arguments;
@@ -2470,7 +2550,7 @@
 ;;"<pair>" representing pair of objects holding items of a known type.
 ;;
 (define-record-type (<pair-type-spec> make-pair-type-spec pair-type-spec?)
-  (nongenerative vicare:expander:<pair-type-spec>)
+  (nongenerative *vicare:expander:<pair-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2489,27 +2569,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-pair-type-spec
 	(({car.ots object-type-spec?} {cdr.ots object-type-spec?})
-	 (make-pair-type-spec car.ots cdr.ots
-			      (list (core-prim-id 'pair)
-				    (object-type-spec.name car.ots)
-				    (object-type-spec.name cdr.ots))))
+	 ($make-pair-type-spec car.ots cdr.ots make-pair-type-name))
 	(({car.ots object-type-spec?} {cdr.ots object-type-spec?} {name.stx pair-name?})
+	 ($make-pair-type-spec car.ots cdr.ots name.stx)))
+
+      (define ($make-pair-type-spec car.ots cdr.ots name)
 	 (let* ((parent.ots		(<pair>-ots))
 		(constructor.stx	#f)
 		(destructor.stx		#f)
-		(predicate.stx		(make-pair-predicate (object-type-spec.type-predicate-stx car.ots)
-							     (object-type-spec.type-predicate-stx cdr.ots)))
+		(predicate.stx		make-pair-predicate)
 		(equality-predicate.id	#f)
 		(comparison-procedure.id #f)
 		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
+	   ((make-object-type-spec name parent.ots
 				   constructor.stx destructor.stx predicate.stx
 				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
-	    car.ots cdr.ots (void)))))
+	    car.ots cdr.ots (void))))
 
       (define (pair-name? name.stx)
 	(syntax-match name.stx (pair)
@@ -2521,14 +2600,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-pair-predicate car-pred.stx cdr-pred.stx)
-	(let ((obj.sym (gensym "obj")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (pair? ,obj.sym)
-		   (,car-pred.stx (car ,obj.sym))
-		   (,cdr-pred.stx (cdr ,obj.sym)))))))
 
       make-pair-type-spec))
 
@@ -2546,6 +2617,25 @@
 (define <pair-type-spec>-rcd
   (record-constructor-descriptor <pair-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-pair-type-name ots)
+  (list (core-prim-id 'pair)
+	(object-type-spec.name (pair-type-spec.car-ots ots))
+	(object-type-spec.name (pair-type-spec.cdr-ots ots))))
+
+(define (make-pair-predicate ots)
+  (let ((car-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.car-ots ots)))
+	(cdr-pred.stx	(object-type-spec.type-predicate-stx (pair-type-spec.cdr-ots ots)))
+	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (pair? ,obj.sym)
+	     (,car-pred.stx (car ,obj.sym))
+	     (,cdr-pred.stx (cdr ,obj.sym)))))))
+
+;;; --------------------------------------------------------------------
+
 (define* (pair-type-spec.homogeneous? {pair.ots pair-type-spec?})
   (let ((mem (pair-type-spec.memoised-homogeneous? pair.ots)))
     (if (boolean? mem)
@@ -2562,7 +2652,7 @@
 ;;"<pair>" representing pair of objects holding items of the same type.
 ;;
 (define-record-type (<pair-of-type-spec> make-pair-of-type-spec pair-of-type-spec?)
-  (nongenerative vicare:expander:<pair-of-type-spec>)
+  (nongenerative *vicare:expander:<pair-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2575,25 +2665,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-pair-of-type-spec
 	(({item.ots object-type-spec?})
-	 (make-pair-of-type-spec item.ots
-				 (list (core-prim-id 'pair-of)
-				       (object-type-spec.name item.ots))))
+	 ($make-pair-of-type-spec item.ots make-pair-of-type-name))
 	(({item.ots object-type-spec?} {name.stx pair-of-name?})
+	 ($make-pair-of-type-spec item.ots name.stx)))
+
+      (define ($make-pair-of-type-spec item.ots name)
 	 (let* ((parent.ots		(<pair>-ots))
 		(constructor.stx	#f)
 		(destructor.stx		#f)
-		(predicate.stx		(make-pair-of-predicate (object-type-spec.type-predicate-stx item.ots)))
+		(predicate.stx		make-pair-of-predicate)
 		(equality-predicate.id	#f)
 		(comparison-procedure.id #f)
 		(hash-function.id	#f)
 		(accessors-table	'())
 		(mutators-table		'())
 		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
+	   ((make-object-type-spec name parent.ots
 				   constructor.stx destructor.stx predicate.stx
 				   equality-predicate.id comparison-procedure.id hash-function.id
 				   accessors-table mutators-table methods-table)
-	    item.ots))))
+	    item.ots)))
 
       (define (pair-of-name? name.stx)
 	(syntax-match name.stx (pair-of)
@@ -2604,14 +2695,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-pair-of-predicate item-pred.stx)
-	(let ((obj.sym (gensym "obj")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (pair? ,obj.sym)
-		   (,item-pred.stx (car ,obj.sym))
-		   (,item-pred.stx (cdr ,obj.sym)))))))
 
       make-pair-of-type-spec))
 
@@ -2629,6 +2712,22 @@
 (define <pair-of-type-spec>-rcd
   (record-constructor-descriptor <pair-of-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-pair-of-type-name ots)
+  (list (core-prim-id 'pair-of)
+	(object-type-spec.name (pair-of-type-spec.item-ots ots))))
+
+(define (make-pair-of-predicate ots)
+  (let ((item-pred.stx	(object-type-spec.type-predicate-stx (pair-of-type-spec.item-ots ots)))
+	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (pair? ,obj.sym)
+	     (,item-pred.stx (car ,obj.sym))
+	     (,item-pred.stx (cdr ,obj.sym)))))))
+
+
 
 ;;;; heterogeneous list object spec
 ;;
@@ -2637,7 +2736,7 @@
 ;;heterogeneous type.
 ;;
 (define-record-type (<list-type-spec> make-list-type-spec list-type-spec?)
-  (nongenerative vicare:expander:<list-type-spec>)
+  (nongenerative *vicare:expander:<list-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2655,24 +2754,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-list-type-spec
 	(({item-type*.ots not-empty-list-of-object-type-spec?})
-	 (make-list-type-spec item-type*.ots (cons (core-prim-id 'list)
-						   (map object-type-spec.name item-type*.ots))))
+	 ($make-list-type-spec item-type*.ots make-list-type-name))
 	(({item-type*.ots not-empty-list-of-object-type-spec?} {name.stx list-name?})
-	 (let* ((parent.ots		(<list>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		(make-list-predicate (map object-type-spec.type-predicate-stx item-type*.ots)))
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    item-type*.ots (void) (void)))))
+	 ($make-list-type-spec item-type*.ots name.stx)))
+
+      (define ($make-list-type-spec item-type*.ots name)
+	(let* ((parent.ots		(<list>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-list-type-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table	'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   item-type*.ots (void) (void))))
 
       (define (list-name? name.stx)
 	(syntax-match name.stx (list)
@@ -2683,18 +2784,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-list-predicate item-pred*.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred"))
-	      (item.sym	(gensym "item")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (list? ,obj.sym)
-		   (for-all (lambda (,pred.sym ,item.sym)
-			      (,pred.sym ,item.sym))
-		     (list ,@item-pred*.stx)
-		     ,obj.sym))))))
 
       make-list-type-spec))
 
@@ -2711,6 +2800,27 @@
 
 (define <list-type-spec>-rcd
   (record-constructor-descriptor <list-type-spec>))
+
+;;; --------------------------------------------------------------------
+
+(define (make-list-type-name ots)
+  (cons (core-prim-id 'list)
+	(map object-type-spec.name (list-type-spec.item-ots* ots))))
+
+(define (make-list-type-predicate ots)
+  (let ((item-pred*.stx (map object-type-spec.type-predicate-stx (list-type-spec.item-ots* ots)))
+	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	(pred.sym	(make-syntactic-identifier-for-temporary-variable "pred"))
+	(item.sym	(make-syntactic-identifier-for-temporary-variable "item")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (list? ,obj.sym)
+	     (for-all (lambda (,pred.sym ,item.sym)
+			(,pred.sym ,item.sym))
+	       (list ,@item-pred*.stx)
+	       ,obj.sym))))))
+
+;;; --------------------------------------------------------------------
 
 (define* (make-null-or-list-type-spec {item*.ots list-of-object-type-spec?})
   (if (pair? item*.ots)
@@ -2741,7 +2851,7 @@
 ;;type.
 ;;
 (define-record-type (<list-of-type-spec> make-list-of-type-spec list-of-type-spec?)
-  (nongenerative vicare:expander:<list-of-type-spec>)
+  (nongenerative *vicare:expander:<list-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2753,23 +2863,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-list-of-type-spec
 	(({item-type.ots object-type-spec?})
-	 (make-list-of-type-spec item-type.ots (list (list-of-id) (object-type-spec.name item-type.ots))))
+	 ($make-list-of-type-spec item-type.ots make-list-of-type-name))
 	(({item-type.ots object-type-spec?} {name.stx list-of-name?})
-	 (let* ((parent.ots		(<list>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		(make-list-of-predicate (object-type-spec.type-predicate-stx item-type.ots)))
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    item-type.ots))))
+	 ($make-list-of-type-spec item-type.ots name.stx)))
+
+      (define ($make-list-of-type-spec item-type.ots name)
+	(let* ((parent.ots		(<list>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-list-of-type-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   item-type.ots)))
 
       (define (list-of-name? name.stx)
 	(syntax-match name.stx (list-of)
@@ -2780,17 +2893,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-list-of-predicate item-pred.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred")))
-	  (bless
-	   `(letrec ((,pred.sym (lambda (,obj.sym)
-				  (if (pair? ,obj.sym)
-				      (and (,item-pred.stx (car ,obj.sym))
-					   (,pred.sym      (cdr ,obj.sym)))
-				    (null? ,obj.sym)))))
-	      ,pred.sym))))
 
       make-list-of-type-spec))
 
@@ -2808,6 +2910,25 @@
 (define <list-of-type-spec>-rcd
   (record-constructor-descriptor <list-of-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-list-of-type-name ots)
+  (list (list-of-id)
+	(object-type-spec.name (list-of-type-spec.item-ots ots))))
+
+(define (make-list-of-type-predicate ots)
+  (let* ((item-type.ots	(list-of-type-spec.item-ots ots))
+	 (item-pred.stx	(object-type-spec.type-predicate-stx item-type.ots))
+	 (obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	 (pred.sym	(make-syntactic-identifier-for-temporary-variable "pred")))
+    (bless
+     `(letrec ((,pred.sym (lambda (,obj.sym)
+			    (if (pair? ,obj.sym)
+				(and (,item-pred.stx (car ,obj.sym))
+				     (,pred.sym      (cdr ,obj.sym)))
+			      (null? ,obj.sym)))))
+	,pred.sym))))
+
 
 ;;;; heterogeneous vector object spec
 ;;
@@ -2816,7 +2937,7 @@
 ;;heterogeneous type.
 ;;
 (define-record-type (<vector-type-spec> make-vector-type-spec vector-type-spec?)
-  (nongenerative vicare:expander:<vector-type-spec>)
+  (nongenerative *vicare:expander:<vector-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2834,24 +2955,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-vector-type-spec
 	(({item-type*.ots not-empty-list-of-object-type-spec?})
-	 (make-vector-type-spec item-type*.ots (cons (core-prim-id 'vector)
-						     (map object-type-spec.name item-type*.ots))))
+	 ($make-vector-type-spec item-type*.ots make-vector-type-name))
 	(({item-type*.ots not-empty-list-of-object-type-spec?} {name.stx vector-name?})
-	 (let* ((parent.ots		(<vector>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		(make-vector-predicate (map object-type-spec.type-predicate-stx item-type*.ots)))
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    item-type*.ots (void) (void)))))
+	 ($make-vector-type-spec item-type*.ots name.stx)))
+
+      (define ($make-vector-type-spec item-type*.ots name)
+	(let* ((parent.ots		(<vector>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-vector-type-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   item-type*.ots (void) (void))))
 
       (define (vector-name? name.stx)
 	(syntax-match name.stx (vector)
@@ -2862,18 +2985,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-vector-predicate item-pred*.stx)
-	(let ((obj.sym	(gensym "obj"))
-	      (pred.sym	(gensym "pred"))
-	      (item.sym	(gensym "item")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (vector? ,obj.sym)
-		   (vector-for-all (lambda (,pred.sym ,item.sym)
-				     (,pred.sym ,item.sym))
-		     (vector ,@item-pred*.stx)
-		     ,obj.sym))))))
 
       make-vector-type-spec))
 
@@ -2890,6 +3001,27 @@
 
 (define <vector-type-spec>-rcd
   (record-constructor-descriptor <vector-type-spec>))
+
+;;; --------------------------------------------------------------------
+
+(define (make-vector-type-name ots)
+  (cons (core-prim-id 'vector)
+	(map object-type-spec.name (vector-type-spec.item-ots* ots))))
+
+(define (make-vector-type-predicate ots)
+  (let* ((item-pred*.stx	(map object-type-spec.type-predicate-stx (vector-type-spec.item-ots* ots)))
+	 (obj.sym		(make-syntactic-identifier-for-temporary-variable "obj"))
+	 (pred.sym		(make-syntactic-identifier-for-temporary-variable "pred"))
+	 (item.sym		(make-syntactic-identifier-for-temporary-variable "item")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (vector? ,obj.sym)
+	     (vector-for-all (lambda (,pred.sym ,item.sym)
+			       (,pred.sym ,item.sym))
+	       (vector ,@item-pred*.stx)
+	       ,obj.sym))))))
+
+;;; --------------------------------------------------------------------
 
 (define* (vector-type-spec.homogeneous? {vector.ots vector-type-spec?})
   (let ((mem (vector-type-spec.memoised-homogeneous? vector.ots)))
@@ -2914,7 +3046,7 @@
 ;;"<vector>" representing vector objects holding items of a known type.
 ;;
 (define-record-type (<vector-of-type-spec> make-vector-of-type-spec vector-of-type-spec?)
-  (nongenerative vicare:expander:<vector-of-type-spec>)
+  (nongenerative *vicare:expander:<vector-of-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2926,23 +3058,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-vector-of-type-spec
 	(({item-type.ots object-type-spec?})
-	 (make-vector-of-type-spec item-type.ots (list (vector-of-id) (object-type-spec.name item-type.ots))))
+	 ($make-vector-of-type-spec item-type.ots make-vector-of-type-name))
 	(({item-type.ots object-type-spec?} {name vector-of-name?})
-	 (let* ((parent.ots		(<vector>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		(make-vector-of-predicate (object-type-spec.type-predicate-stx item-type.ots)))
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    item-type.ots))))
+	 ($make-vector-of-type-spec item-type.ots name)))
+
+      (define ($make-vector-of-type-spec item-type.ots name)
+	(let* ((parent.ots		(<vector>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-vector-of-type-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   item-type.ots)))
 
       (define (vector-of-name? name.stx)
 	(syntax-match name.stx (vector-of)
@@ -2953,13 +3088,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-vector-of-predicate item-pred.stx)
-	(let ((obj.sym	(gensym "obj")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (vector? ,obj.sym)
-		   (vector-for-all ,item-pred.stx ,obj.sym))))))
 
       make-vector-of-type-spec))
 
@@ -2977,6 +3105,20 @@
 (define <vector-of-type-spec>-rcd
   (record-constructor-descriptor <vector-of-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-vector-of-type-name ots)
+  (list (vector-of-id)
+	(object-type-spec.name (vector-of-type-spec.item-ots ots))))
+
+(define (make-vector-of-type-predicate ots)
+  (let ((item-pred.stx	(object-type-spec.type-predicate-stx (vector-of-type-spec.item-ots ots)))
+	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (vector? ,obj.sym)
+	     (vector-for-all ,item-pred.stx ,obj.sym))))))
+
 
 ;;;; hashtable object spec
 ;;
@@ -2985,7 +3127,7 @@
 ;;type.
 ;;
 (define-record-type (<hashtable-type-spec> make-hashtable-type-spec hashtable-type-spec?)
-  (nongenerative vicare:expander:<hashtable-type-spec>)
+  (nongenerative *vicare:expander:<hashtable-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -2998,26 +3140,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-hashtable-type-spec
 	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?})
-	 (make-hashtable-type-spec key-type.ots value-type.ots
-				   (list (hashtable-id)
-					 (object-type-spec.name key-type.ots)
-					 (object-type-spec.name value-type.ots))))
+	 ($make-hashtable-type-spec key-type.ots value-type.ots make-hashtable-type-name))
 	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?} {name.stx hashtable-name?})
-	 (let* ((parent.ots		(<hashtable>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		#f)
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    key-type.ots value-type.ots))))
+	 ($make-hashtable-type-spec key-type.ots value-type.ots name.stx)))
+
+      (define ($make-hashtable-type-spec key-type.ots value-type.ots name)
+	(let* ((parent.ots		(<hashtable>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		#f)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   key-type.ots value-type.ots)))
 
       (define (hashtable-name? name.stx)
 	(syntax-match name.stx (hashtable)
@@ -3046,6 +3188,13 @@
 (define <hashtable-type-spec>-rcd
   (record-constructor-descriptor <hashtable-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-hashtable-type-name ots)
+  (list (hashtable-id)
+	(object-type-spec.name (hashtable-type-spec.key-ots   ots))
+	(object-type-spec.name (hashtable-type-spec.value-ots ots))))
+
 
 ;;;; alist object spec
 ;;
@@ -3053,7 +3202,7 @@
 ;;"<list>" representing alist objects holding keys and values of a known type.
 ;;
 (define-record-type (<alist-type-spec> make-alist-type-spec alist-type-spec?)
-  (nongenerative vicare:expander:<alist-type-spec>)
+  (nongenerative *vicare:expander:<alist-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3066,27 +3215,26 @@
     (lambda (make-object-type-spec)
       (case-define* make-alist-type-spec
 	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?})
-	 (make-alist-type-spec key-type.ots value-type.ots
-			       (list (alist-id)
-				     (object-type-spec.name key-type.ots)
-				     (object-type-spec.name value-type.ots))))
+	 ($make-alist-type-spec key-type.ots value-type.ots make-alist-type-name))
 	(({key-type.ots object-type-spec?} {value-type.ots object-type-spec?} {name.stx alist-name?})
-	 (let* ((parent.ots		(<list>-ots))
-		(constructor.stx	#f)
-		(destructor.stx		#f)
-		(predicate.stx		(make-alist-predicate (object-type-spec.type-predicate-stx key-type.ots)
-							      (object-type-spec.type-predicate-stx value-type.ots)))
-		(equality-predicate.id	#f)
-		(comparison-procedure.id #f)
-		(hash-function.id	#f)
-		(accessors-table	'())
-		(mutators-table		'())
-		(methods-table		'()))
-	   ((make-object-type-spec name.stx parent.ots
-				   constructor.stx destructor.stx predicate.stx
-				   equality-predicate.id comparison-procedure.id hash-function.id
-				   accessors-table mutators-table methods-table)
-	    key-type.ots value-type.ots))))
+	 ($make-alist-type-spec key-type.ots value-type.ots name.stx)))
+
+      (define ($make-alist-type-spec key-type.ots value-type.ots name)
+	(let* ((parent.ots		(<list>-ots))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (predicate.stx		make-alist-type-predicate)
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'())
+	       (methods-table		'()))
+	  ((make-object-type-spec name parent.ots
+				  constructor.stx destructor.stx predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   key-type.ots value-type.ots)))
 
       (define (alist-name? name.stx)
 	(syntax-match name.stx (alist)
@@ -3098,20 +3246,6 @@
 	   (identifier? ?type-id)
 	   #t)
 	  (else #f)))
-
-      (define (make-alist-predicate key-pred.stx value-pred.stx)
-	;;FIXME The generated predicate can be  made more efficient by iterating only
-	;;once through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
-	(let ((obj.sym	(gensym "obj"))
-	      (P.sym	(gensym "P")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (list? ,obj.sym)
-		   (for-all (lambda (,P.sym)
-			      (and (pair? ,P.sym)
-				   (,key-pred.stx   (car ,P.sym))
-				   (,value-pred.stx (cdr ,P.sym))))
-		     ,obj.sym))))))
 
       make-alist-type-spec))
 
@@ -3129,6 +3263,29 @@
 (define <alist-type-spec>-rcd
   (record-constructor-descriptor <alist-type-spec>))
 
+;;; --------------------------------------------------------------------
+
+(define (make-alist-type-name ots)
+  (list (alist-id)
+	(object-type-spec.name (alist-type-spec.key-ots   ots))
+	(object-type-spec.name (alist-type-spec.value-ots ots))))
+
+(define (make-alist-type-predicate ots)
+  ;;FIXME The generated  predicate can be made more efficient  by iterating only once
+  ;;through the spine of the list.  (Marco Maggi; Mon Apr 4, 2016)
+  (let ((key-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.key-ots   ots)))
+	(value-pred.stx	(object-type-spec.type-predicate-stx (alist-type-spec.value-ots ots)))
+	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj"))
+	(P.sym		(make-syntactic-identifier-for-temporary-variable "P")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (list? ,obj.sym)
+	     (for-all (lambda (,P.sym)
+			(and (pair? ,P.sym)
+			     (,key-pred.stx   (car ,P.sym))
+			     (,value-pred.stx (cdr ,P.sym))))
+	       ,obj.sym))))))
+
 
 ;;;; enumeration object spec
 ;;
@@ -3137,7 +3294,7 @@
 ;;annotation.
 ;;
 (define-record-type (<enumeration-type-spec> make-enumeration-type-spec enumeration-type-spec?)
-  (nongenerative vicare:expander:<enumeration-type-spec>)
+  (nongenerative *vicare:expander:<enumeration-type-spec>)
   (parent <object-type-spec>)
   (sealed #t)
   (fields
@@ -3148,37 +3305,27 @@
     (lambda (make-object-type-spec)
       (case-define* make-enumeration-type-spec
 	(({symbol* list-of-symbols?})
-	 (let ((symbol* (list-of-symbols.delete-duplicates symbol*)))
-	   ($make-enumeration-type-spec symbol*
-					(cons (enumeration-id) (map make-syntactic-identifier-for-quoted-symbol symbol*)))))
+	 ($make-enumeration-type-spec symbol* make-enumeration-type-name))
 	(({symbol* list-of-symbols?} name.stx)
-	 ($make-enumeration-type-spec (list-of-symbols.delete-duplicates symbol*)
-				      name.stx)))
+	 ($make-enumeration-type-spec symbol* name.stx)))
 
-      (define ($make-enumeration-type-spec symbol* name.stx)
-	(let* ((parent.ots		(<symbol>-ots))
+      (define ($make-enumeration-type-spec symbol* name)
+	(let* ((symbol*			(list-of-symbols.delete-duplicates symbol*))
+	       (parent.ots		(<symbol>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
-	       (predicate.stx		(make-enumeration-predicate symbol*))
+	       (predicate.stx		make-enumeration-type-predicate)
 	       (equality-predicate.id	(core-prim-id 'eq?))
 	       (comparison-procedure.id #f)
 	       (hash-function.id	(core-prim-id 'symbol-hash))
 	       (accessors-table		'())
 	       (mutators-table		'())
 	       (methods-table		'()))
-	  ((make-object-type-spec name.stx parent.ots
+	  ((make-object-type-spec name parent.ots
 				  constructor.stx destructor.stx predicate.stx
 				  equality-predicate.id comparison-procedure.id hash-function.id
 				  accessors-table mutators-table methods-table)
 	   symbol*)))
-
-      (define (make-enumeration-predicate symbol*)
-	(let ((obj.sym	(gensym "obj")))
-	  (bless
-	   `(lambda (,obj.sym)
-	      (and (symbol? ,obj.sym)
-		   (memq ,obj.sym (quote ,symbol*))
-		   #t)))))
 
       make-enumeration-type-spec))
 
@@ -3195,6 +3342,23 @@
 
 (define <enumeration-type-spec>-rcd
   (record-constructor-descriptor <enumeration-type-spec>))
+
+;;; --------------------------------------------------------------------
+
+(define (make-enumeration-type-name ots)
+  (cons (enumeration-id)
+	(map make-syntactic-identifier-for-quoted-symbol (enumeration-type-spec.symbol* ots))))
+
+(define (make-enumeration-type-predicate ots)
+  (let ((symbol*	(enumeration-type-spec.symbol* ots))
+	(obj.sym	(make-syntactic-identifier-for-temporary-variable "obj")))
+    (bless
+     `(lambda (,obj.sym)
+	(and (symbol? ,obj.sym)
+	     (memq ,obj.sym (quote ,symbol*))
+	     #t)))))
+
+;;; --------------------------------------------------------------------
 
 (define* (enumeration-type-spec.member? {ots enumeration-type-spec?} {sym symbol?})
   (memq sym (enumeration-type-spec.symbol* ots)))
