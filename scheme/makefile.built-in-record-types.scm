@@ -238,6 +238,10 @@
    (symbol*			enumeration-type-spec.symbol*)
    (member?			enumeration-type-spec.member?)))
 
+(define-built-in-record-type <label-type-spec>
+    <object-type-spec>
+  make-label-type-spec label-type-spec?)
+
 ;;; --------------------------------------------------------------------
 
 (define-built-in-record-type <type-signature>

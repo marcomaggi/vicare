@@ -10464,7 +10464,7 @@ Reset to void all the fields of a structure.
 @deffnx {Auxiliary Syntax} case-method
 @deffnx {Auxiliary Syntax} super-protocol @meta{expr}
 @deffnx {Auxiliary Syntax} destructor-protocol @meta{expr}
-@deffnx {Auxiliary Syntax} custom-predicate @meta{expr}
+@deffnx {Auxiliary Syntax} type-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} custom-printer @meta{expr}
 @deffnx {Auxiliary Syntax} equality-predicate @meta{expr}
 @deffnx {Auxiliary Syntax} comparison-procedure @meta{expr}
@@ -10661,14 +10661,14 @@ function becomes this type's destructor function.
 @subsubsection The custom predicate
 
 
-@cindex @syntax{custom-predicate}, record--type definition clause
+@cindex @syntax{type-predicate}, record--type definition clause
 
 
 In a use of the syntax @syntax{define-record-type}, the definition
 clause:
 
 @lisp
-(custom-predicate @meta{expr})
+(type-predicate @meta{expr})
 @end lisp
 
 @noindent
@@ -10676,7 +10676,7 @@ allows the specification of an expression @meta{expr} which, applied to
 the default type predicate, must evaluate to a custom predicate function
 for instances of the record--type.
 
-When the clause @syntax{custom-predicate} @strong{is not} used, the
+When the clause @syntax{type-predicate} @strong{is not} used, the
 syntax @syntax{define-record-type} just defines the default record--type
 predicate:
 
@@ -10689,7 +10689,7 @@ predicate:
 (duo? 123)              @result{} #f
 @end lisp
 
-When the clause @syntax{custom-predicate} @strong{is} used, the syntax
+When the clause @syntax{type-predicate} @strong{is} used, the syntax
 @syntax{define-record-type} binds to the type predicate's syntactic
 identifier the result of applying @meta{expr} to the default type
 predicate.  In the following example the custom predicate is just the
@@ -10698,7 +10698,7 @@ default predicate itself:
 @lisp
 (define-record-type duo
   (fields one two)
-  (custom-predicate
+  (type-predicate
     (lambda (duo?)
       duo?)))
 
@@ -10714,7 +10714,7 @@ into lists and vectors:
 @lisp
 (define-record-type duo
   (fields one two)
-  (custom-predicate
+  (type-predicate
     (lambda (duo?)
       (lambda (obj)
         (or (duo? obj)

@@ -910,6 +910,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	tests/test-types-syntaxes.sps					\
 	tests/test-types-enumerations.sps				\
+	tests/test-types-labels.sps					\
 	tests/test-types-objects-core.sps				\
 	tests/test-types-objects-alists.sps				\
 	tests/test-types-objects-booleans.sps				\
@@ -1244,18 +1245,18 @@ EXTRA_DIST	+= \
 	tests/exec-modes-helpers/r6rs-program.sps	\
 	tests/test-exec-modes.sh			\
 	\
+	tests/demo-curl.sps				\
+	tests/demo-find.sps				\
+	tests/demo-issue-35.sps				\
+	tests/demo-mailx.sps				\
+	tests/demo-parallel-process.sps			\
+	tests/demo-sendmail.sps				\
+	tests/demo-srfi-106.sps				\
+	tests/demo-tcp-connect.sps			\
 	tests/demo-vicare-gcc.sps			\
 	tests/demo-vicare-readline.sps			\
 	tests/demo-vicare-timerfd.sps			\
-	tests/demo-issue-35.sps				\
-	tests/demo-tcp-connect.sps			\
-	tests/demo-srfi-106.sps				\
-	tests/demo-sendmail.sps				\
-	tests/demo-mailx.sps				\
-	tests/demo-curl.sps				\
 	tests/demo-wget.sps				\
-	tests/demo-find.sps				\
-	tests/demo-parallel-process.sps			\
 	\
 	$(VICARE_SCHEME_R6RS_TESTS)			\
 	$(VICARE_SCHEME_CORE_TESTS)			\

@@ -805,6 +805,26 @@
    ((<enumeration-type-spec> <symbol>)	=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
+;;; <label-type-spec>
+
+(declare-core-rtd <label-type-spec>-rtd)
+(declare-core-rcd <label-type-spec>-rcd)
+
+(declare-core-primitive make-label-type-spec
+    (safe)
+  (signatures
+   ((<syntactic-identifier>		 ;label-name-id
+     <syntax-object>			 ;parent-id
+     (or <false> <syntactic-identifier>) ;type-predicate.id
+     (or <false> <syntactic-identifier>) ;equality-predicate.id
+     (or <false> <syntactic-identifier>) ;comparison-procedure.id
+     (or <false> <syntactic-identifier>) ;hash-function.id
+     <top>)				 ;methods-table
+    => (<label-type-spec>))))
+
+(declare-type-predicate label-type-spec?	<label-type-spec>)
+
+;;; --------------------------------------------------------------------
 ;;; operations on type specs
 
 (declare-core-primitive union-of-type-specs

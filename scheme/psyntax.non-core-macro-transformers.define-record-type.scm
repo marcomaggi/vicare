@@ -329,7 +329,7 @@
 		    fields parent parent-rtd protocol sealed opaque nongenerative
 			   ;;These are the Vicare extensions.
 		    super-protocol destructor-protocol
-		    custom-printer custom-predicate
+		    custom-printer type-predicate
 		    equality-predicate comparison-procedure hash-function
 		    define-type-descriptors strip-angular-parentheses
 		    method case-method))
@@ -1016,21 +1016,22 @@
   ;;FOO-RTD must be a symbol representing  the name of the syntactic identifier bound
   ;;to this type's RTD.
   ;;
-  (syntax-match (%get-clause 'custom-predicate clause*) ()
-    ((_ ?custom-predicate-expr)
-     ;;There is a CUSTOM-PREDICATE clause in this record-type definition.
+  (syntax-match (%get-clause 'type-predicate clause*) ()
+    ((_ ?type-predicate-expr)
+     ;;There is a TYPE-PREDICATE clause in this record-type definition.
      (let ((arg.sym			(make-syntactic-identifier-for-temporary-variable "obj"))
-	   (internal-predicate.sym	(make-syntactic-identifier-for-temporary-variable (string-append "internal-predicate-" (identifier->string foo?)))))
+	   (internal-predicate.sym	(make-syntactic-identifier-for-temporary-variable
+					 (string-append "internal-predicate-" (identifier->string foo?)))))
        `((define/std ,internal-predicate.sym
-	   (,?custom-predicate-expr (lambda/checked ({_ <boolean>} ,arg.sym)
-				      (unsafe-cast-signature (<boolean>)
-					(and ($struct? ,arg.sym)
-					     ($record-and-rtd? ,arg.sym ,foo-rtd))))))
+	   (,?type-predicate-expr (lambda/checked ({_ <boolean>} ,arg.sym)
+				    (unsafe-cast-signature (<boolean>)
+				      (and ($struct? ,arg.sym)
+					   ($record-and-rtd? ,arg.sym ,foo-rtd))))))
 	 (define/checked ((brace ,foo? <boolean>) ,arg.sym)
 	   (,internal-predicate.sym ,arg.sym)))))
 
     (#f
-     ;;No CUSTOM-PREDICATE clause  in this record-type definition.  Return  a list of
+     ;;No TYPE-PREDICATE clause  in this record-type definition.  Return  a list of
      ;;definitions representing the default record-type predicate definition.
      (let ((arg.sym (make-syntactic-identifier-for-temporary-variable "obj")))
        `((define/typed ((brace ,foo? <boolean>) ,arg.sym)
@@ -1038,7 +1039,7 @@
 		($record-and-rtd? ,arg.sym ,foo-rtd))))))
 
     (?invalid-clause
-     (synner "invalid syntax in CUSTOM-PREDICATE clause" ?invalid-clause))))
+     (synner "invalid syntax in TYPE-PREDICATE clause" ?invalid-clause))))
 
 
 (define (%make-super-rcd-code clause* foo foo-rtd foo-parent.id parent-rcd.sym synner)

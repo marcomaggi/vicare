@@ -85,7 +85,7 @@
      (vicare language-extensions ensure)
      (vicare language-extensions pipelines)
      (vicare language-extensions conditions-and-restarts)
-     #;(vicare language-extensions tags)
+     (vicare language-extensions labels)
 
      (vicare build-tools automake)
 

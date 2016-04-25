@@ -217,6 +217,10 @@
     <enumeration-type-spec>-rtd				<enumeration-type-spec>-rcd
     make-enumeration-type-spec				enumeration-type-spec?
     enumeration-type-spec.symbol*			enumeration-type-spec.member?
+
+    <label-type-spec>-rtd				<label-type-spec>-rcd
+    <label-type-spec>
+    make-label-type-spec				label-type-spec?
 ;;;
     ;; typed variable specification: base type
     <typed-variable-spec>

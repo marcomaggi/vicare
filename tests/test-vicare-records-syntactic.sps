@@ -1753,7 +1753,7 @@
   (void))
 
 
-(parametrise ((check-test-name		'custom-predicate))
+(parametrise ((check-test-name		'type-predicate))
 
   ;;Custom predicate that just uses the default type predicate.
   ;;
@@ -1761,7 +1761,7 @@
       (internal-body
 	(define-record-type duo
 	  (fields one two)
-	  (custom-predicate
+	  (type-predicate
 	    (lambda (duo?)
 	      duo?)))
 
@@ -1780,7 +1780,7 @@
       (internal-body
 	(define-record-type duo
 	  (fields one two)
-	  (custom-predicate
+	  (type-predicate
 	    (lambda (duo?)
 	      (lambda (obj)
 		(or (duo? obj)

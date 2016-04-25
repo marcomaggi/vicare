@@ -59,7 +59,9 @@
 ;;	     |
 ;;	     |------------> <hashtable-type-spec>
 ;;	     |
-;;	      ------------> <enumeration-type-spec>
+;;	     |------------> <enumeration-type-spec>
+;;	     |
+;;	      ------------> <label-type-spec>
 ;;
 ;;The type "<object-type-spec>" has a field  PARENT-OTS that is used to represent the
 ;;hierarchy of Scheme-level object-types.
@@ -231,6 +233,12 @@
 	 <ancestor-of-type-spec>-rtd			<ancestor-of-type-spec>-rcd
 	 make-ancestor-of-type-spec			ancestor-of-type-spec?
 	 ancestor-of-type-spec.item-ots			ancestor-of-type-spec.component-ots*
+
+	 ;;;
+
+	 <label-type-spec>-rtd				<label-type-spec>-rcd
+	 <label-type-spec>
+	 make-label-type-spec				label-type-spec?
 
 	 ;;;
 
@@ -1095,6 +1103,24 @@
 
 ;;; --------------------------------------------------------------------
 
+	((label-type-spec? super.ots)
+	 (if (label-type-spec.with-type-predicate? super.ots)
+	     ;;A label  with predicate used  as super-type  must never match:  it can
+	     ;;only be  compatible.  This  is because  we want  to apply  the label's
+	     ;;predicate to validate the value.
+	     #f
+	   ;;A label without  predicate use as super-type is an  alias for its parent
+	   ;;type annotation: it matches if its parent matches.
+	   (object-type-spec.matching-super-and-sub? (object-type-spec.parent-ots super.ots)
+						     sub.ots)))
+
+	((label-type-spec? sub.ots)
+	 ;;A sub-type label matches its parent and its parent's ancectors.
+	 (object-type-spec.matching-super-and-sub? super.ots
+						   (object-type-spec.parent-ots sub.ots)))
+
+;;; --------------------------------------------------------------------
+
 	((object-type-spec.parent-ots sub.ots)
 	 => (lambda (sub-parent.ots)
 	      (object-type-spec.matching-super-and-sub? super.ots sub-parent.ots)))
@@ -1201,6 +1227,23 @@
 
 	((complement-type-spec? sub.ots)
 	 #f)
+
+;;; --------------------------------------------------------------------
+
+	((label-type-spec? super.ots)
+	 (let ((super-parent.ots (object-type-spec.parent-ots super.ots)))
+	   (cond ((label-type-spec? sub.ots)
+		  (let ((sub-parent.ots (object-type-spec.parent-ots sub.ots)))
+		    (or (object-type-spec.matching-super-and-sub?   super-parent.ots sub-parent.ots)
+			(object-type-spec.compatible-super-and-sub? super-parent.ots sub-parent.ots))))
+		 (else
+		  (or (object-type-spec.matching-super-and-sub?   super-parent.ots sub.ots)
+		      (object-type-spec.compatible-super-and-sub? super-parent.ots sub.ots))))))
+
+	((label-type-spec? sub.ots)
+	 (let ((sub-parent.ots (object-type-spec.parent-ots sub.ots)))
+	   (or (object-type-spec.matching-super-and-sub?   super.ots sub-parent.ots)
+	       (object-type-spec.compatible-super-and-sub? super.ots sub-parent.ots))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3364,6 +3407,54 @@
   (memq sym (enumeration-type-spec.symbol* ots)))
 
 
+;;;; label spec
+;;
+;;This record-type  is used as syntactic  binding descriptor's value for  label types
+;;defined with DEFINE-LABEL.
+;;
+(define-record-type (<label-type-spec> make-label-type-spec label-type-spec?)
+  (nongenerative *vicare:expander:<label-type-spec>)
+  (parent <object-type-spec>)
+  (sealed #t)
+  (fields
+    (immutable with-type-predicate?	label-type-spec.with-type-predicate?)
+		;Boolean, true if this label has  a custom type predicate.  This flag
+		;is used when matching against other types.
+    #| end of FIELDS |# )
+  (protocol
+    (lambda (make-object-type-spec)
+      (define* (make-label-type-spec {type-name.id identifier?} parent.stx type-predicate.id
+				     equality-predicate.id comparison-procedure.id hash-function.id
+				     methods-table)
+	(let* ((parent.ots		(with-exception-handler
+					    (lambda (E)
+					      (raise (condition E (make-who-condition __who__))))
+					  (lambda ()
+					    (type-annotation->object-type-spec parent.stx))))
+	       (constructor.stx		#f)
+	       (destructor.stx		#f)
+	       (type-predicate.stx	(or type-predicate.id (object-type-spec.type-predicate-stx parent.ots)))
+	       (equality-predicate.id	#f)
+	       (comparison-procedure.id #f)
+	       (hash-function.id	#f)
+	       (accessors-table		'())
+	       (mutators-table		'()))
+	  ((make-object-type-spec type-name.id parent.ots
+				  constructor.stx destructor.stx type-predicate.stx
+				  equality-predicate.id comparison-procedure.id hash-function.id
+				  accessors-table mutators-table methods-table)
+	   (and type-predicate.id #t))))
+
+      make-label-type-spec))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define <label-type-spec>-rtd
+  (record-type-descriptor <label-type-spec>))
+
+(define <label-type-spec>-rcd
+  (record-constructor-descriptor <label-type-spec>))
+
+
 ;;;; type annotations
 ;;
 ;;A type annotation is a syntax object  representing the type of a syntactic binding.
@@ -3399,7 +3490,7 @@
    (syntax-match stx (pair list vector pair-of list-of vector-of
 			   hashtable alist condition enumeration
 			   or and not lambda case-lambda => parent-of ancestor-of
-			   equality-predicate comparison-procedure hash-function)
+			   type-predicate equality-predicate comparison-procedure hash-function)
      (?type-id
       (and (identifier? ?type-id)
 	   (try
@@ -3472,6 +3563,9 @@
      ((ancestor-of ?type)
       (recur ?type))
 
+     ((type-predicate ?type)
+      (recur ?type))
+
      ((equality-predicate ?type)
       (recur ?type))
 
@@ -3508,7 +3602,7 @@
    (syntax-match annotation.stx (pair list vector pair-of list-of vector-of
 				      hashtable alist condition enumeration
 				      or and not lambda case-lambda => parent-of ancestor-of
-				      equality-predicate comparison-procedure hash-function)
+				      type-predicate equality-predicate comparison-procedure hash-function)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-spec ?type-id lexenv))
@@ -3638,6 +3732,13 @@
      ((ancestor-of ?type)
       ;;If ?TYPE has no ancestors: its ancestors list is null.
       (make-ancestor-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
+
+     ((type-predicate ?type)
+      (type-annotation->object-type-spec (bless `(case-lambda
+						   ((,?type)                => (<true>))
+						   (((ancestor-of ,?type))  => (<boolean>))
+						   (((not ,?type))          => (<false>))))
+					 lexenv))
 
      ((equality-predicate ?type)
       (type-annotation->object-type-spec (bless `(lambda (,?type ,?type) => (<boolean>))) lexenv))

@@ -784,11 +784,23 @@ exactly a type annotation with one of the ancestors of @meta{type}:
 @end deftp
 
 
+@deftp {Type Annotation} type-predicate @meta{type}
+A short--cut to specify:
+
+@lisp
+(case-lambda
+  ((@meta{type})                => (<true>))
+  (((ancestor-of @meta{type}))  => (<boolean>))
+  (((not @meta{type}))          => (<false>)))
+@end lisp
+@end deftp
+
+
 @deftp {Type Annotation} equality-predicate @meta{type}
 A short--cut to specify:
 
 @lisp
-(lambda (@meta{type} @meta{?type}) => (<boolean>))
+(lambda (@meta{type} @meta{type}) => (<boolean>))
 @end lisp
 @end deftp
 
@@ -797,7 +809,7 @@ A short--cut to specify:
 A short--cut to specify:
 
 @lisp
-(lambda (@meta{type} @meta{?type}) => (<fixnum>))
+(lambda (@meta{type} @meta{type}) => (<fixnum>))
 @end lisp
 @end deftp
 
@@ -836,6 +848,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes assert::       Validating signatures.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
+* types syntaxes labels::       Sub--typing with labels.
 @end menu
 
 @c page
@@ -2134,6 +2147,49 @@ Examples:
   (else         'else))
 @result{} else
 @end lisp
+@end deffn
+
+@c page
+@node types syntaxes labels
+@subsection Sub--typing with labels
+
+
+@cindex Library @library{vicare language-extensions labels}
+@cindex @library{vicare language-extensions labels}, library
+
+
+Labels are types built on top of other types.  There are two kinds of
+labels:
+
+@itemize
+@item
+Labels without custom type predicate.  They are synonyms of their parent
+type and add methods to it.  A value matches the label type if it
+matches the parent type.
+
+@item
+Labels with custom type predicate.  A value matches the label type if it
+satisfies the label's type predicate; it is possible to establish when a
+value matches the label type only at run--time.
+@end itemize
+
+The following syntactic bindings are exported by the library
+@library{vicare language-extensions labels}.
+
+
+@deffn Syntax define-label @meta{type-name} @meta{clause} @dots{}
+@deffnx {Auxiliary Syntax} parent
+@deffnx {Auxiliary Syntax} type-predicate
+@deffnx {Auxiliary Syntax} equality-predicate
+@deffnx {Auxiliary Syntax} comparison-procedure
+@deffnx {Auxiliary Syntax} hash-function
+@deffnx {Auxiliary Syntax} method
+@deffnx {Auxiliary Syntax} case-method
+Define a new label type.  @meta{type-name} must be a syntactic
+identifier representing the label name.  All the clauses can be used in
+the same way they are used in @syntax{define-record-type}.  The clause
+@syntax{parent} is mandatory and its single argument must be a type
+annotation.
 @end deffn
 
 @c page
