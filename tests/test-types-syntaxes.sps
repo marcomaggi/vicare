@@ -1903,6 +1903,58 @@
   (void))
 
 
+(parametrise ((check-test-name	'misc-operations))
+
+  (import (vicare language-extensions labels))
+
+  (define-label <my-fixnum>
+    (parent <fixnum>)
+    (equality-predicate
+      (lambda (parent-func)
+	fx=?))
+    (comparison-procedure
+      (lambda (parent-func)
+	(lambda (a b)
+	  (cond ((fx=? a b)	 0)
+		((fx<=? a b)	-1)
+		(else		+1)))))
+    (hash-function
+      (lambda (parent-func)
+	(lambda (obj)
+	  (add1 (parent-func obj))))))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	((equality-predicate <my-fixnum>) 1 1))
+  (check-for-false	((equality-predicate <my-fixnum>) 1 2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((comparison-procedure <my-fixnum>) 1 1)
+    => 0)
+
+  (check
+      ((comparison-procedure <my-fixnum>) 1 2)
+    => -1)
+
+  (check
+      ((comparison-procedure <my-fixnum>) 2 1)
+    => +1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((hash-function <my-fixnum>) 1)
+    => (add1 (fixnum-hash 1)))
+
+  (check
+      ((hash-function <my-fixnum>) 123)
+    => (add1 (fixnum-hash 123)))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

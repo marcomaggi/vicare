@@ -114,9 +114,9 @@
     object-type-spec?
     object-type-spec.name				object-type-spec.parent-ots
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
-    object-type-spec.type-predicate-stx			object-type-spec.equality-predicate-id
-    object-type-spec.comparison-procedure-id		object-type-spec.hash-function-id
-    object-type-spec.applicable-method-stx		object-type-spec.applicable-hash-function-id
+    object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
+    object-type-spec.comparison-procedure		object-type-spec.hash-function
+    object-type-spec.applicable-method-stx		object-type-spec.applicable-hash-function
     object-type-spec.safe-accessor-stx			object-type-spec.safe-mutator-stx
     object-type-spec.single-value-validator-lambda-stx	object-type-spec.list-validator-lambda-stx
 

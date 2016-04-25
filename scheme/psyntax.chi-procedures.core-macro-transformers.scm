@@ -194,6 +194,10 @@
     ((type-signature-matching)			type-signature-matching-transformer)
     ((type-signature-union)			type-signature-union-transformer)
 
+    ((hash-function)				hash-function-transformer)
+    ((equality-predicate)			equality-predicate-transformer)
+    ((comparison-procedure)			comparison-procedure-transformer)
+
     ((expansion-of)				expansion-of-transformer)
     ((expansion-of*)				expansion-of*-transformer)
     ((visit-code-of)				visit-code-of-transformer)

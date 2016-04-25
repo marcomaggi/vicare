@@ -849,6 +849,7 @@ Scheme source code reader in @code{#!vicare} mode.
 * types syntaxes unsafe-cast::  Casting the type of expressions.
 * types syntaxes case-type::    Branching on type of expression.
 * types syntaxes labels::       Sub--typing with labels.
+* types syntaxes operations::   Miscellaneous operations.
 @end menu
 
 @c page
@@ -2190,6 +2191,32 @@ identifier representing the label name.  All the clauses can be used in
 the same way they are used in @syntax{define-record-type}.  The clause
 @syntax{parent} is mandatory and its single argument must be a type
 annotation.
+@end deffn
+
+@c page
+@node types syntaxes operations
+@subsection Miscellaneous operations
+
+
+The following syntactic bindings are exported by the library
+@library{vicare}.
+
+
+@deffn Syntax equality-predicate @meta{type}
+Return @false{} or a function that can be used as equality predicate
+between instances of @meta{type}.
+@end deffn
+
+
+@deffn Syntax comparison-procedure @meta{type}
+Return @false{} or a function that can be used as comparison procedure
+between instances of @meta{type}.
+@end deffn
+
+
+@deffn Syntax hash-function @meta{type}
+Return @false{} or a function that can be used as hash function for
+instances of @meta{type}.
 @end deffn
 
 @c page

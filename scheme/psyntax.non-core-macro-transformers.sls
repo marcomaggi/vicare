@@ -261,8 +261,7 @@
 	  fields mutable immutable parent protocol
 	  sealed opaque nongenerative parent-rtd
 	  super-protocol destructor-protocol custom-printer method case-method define-type-descriptors
-	  type-predicate hash-function equality-predicate comparison-procedure
-	  catch finally
+	  type-predicate catch finally
 	  pair pair-of list-of vector-of hashtable alist parent-of ancestor-of enumeration)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))

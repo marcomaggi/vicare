@@ -30,6 +30,9 @@
 	 assert-signature-transformer
 	 assert-signature-and-return-transformer
 	 cast-signature-transformer
+	 hash-function-transformer
+	 equality-predicate-transformer
+	 comparison-procedure-transformer
 	 type-of-transformer
 	 type-annotation=?-transformer
 	 type-annotation-super-and-sub?-transformer
@@ -702,7 +705,7 @@
 						 subject-expr.stx subject-expr.psi subject-expr.ots
 						 arg*.stx)
     (cond ((eq? 'hash method-name.sym)
-	   (cond ((object-type-spec.applicable-hash-function-id subject-expr.ots)
+	   (cond ((object-type-spec.applicable-hash-function subject-expr.ots)
 		  => (lambda (hash-function.id)
 		       (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
 							  hash-function.id subject-expr.psi arg*.stx)))
@@ -1128,6 +1131,63 @@
 			    (make-syntax-violation input-form.stx ?expr)
 			    (make-irritants-condition (list expr.sig))))))
 	 )))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+
+;;;; module core-macro-transformer: HASH-FUNCTION, EQUALITY-PREDICATE, COMPARISON-PROCEDURE
+
+(define-core-transformer (equality-predicate input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's EQUALITY-PREDICATE  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run ots)
+       (cond ((object-type-spec.equality-predicate ots)
+	      => (lambda (stx)
+		   (chi-expr stx lexenv.run lexenv.expand)))
+	     (else
+	      (make-psi input-form.stx
+		(build-data no-source #f)
+		(make-type-signature/single-false))))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+(define-core-transformer (comparison-procedure input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's COMPARISON-PROCEDURE  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run ots)
+       (cond ((object-type-spec.comparison-procedure ots)
+	      => (lambda (stx)
+		   (chi-expr stx lexenv.run lexenv.expand)))
+	     (else
+	      (make-psi input-form.stx
+		(build-data no-source #f)
+		(make-type-signature/single-false))))))
+    (_
+     (__synner__ "invalid syntax, no clause matches the input form"))))
+
+(define-core-transformer (hash-function input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's HASH-FUNCTION  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?type-annotation)
+     (with-object-type-syntactic-binding (__who__ input-form.stx ?type-annotation lexenv.run ots)
+       (cond ((object-type-spec.hash-function ots)
+	      => (lambda (stx)
+		   (chi-expr stx lexenv.run lexenv.expand)))
+	     (else
+	      (make-psi input-form.stx
+		(build-data no-source #f)
+		(make-type-signature/single-false))))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

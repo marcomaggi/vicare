@@ -131,6 +131,95 @@
   (void))
 
 
+(parametrise ((check-test-name	'case-methods))
+
+  (check
+      (internal-body
+
+	(define-label <my-string>
+	  (parent <string>)
+	  (case-method doit
+	    (({_ <my-string>} {O <my-string>} {suffix <string>})
+	     (string-append O suffix))))
+
+	(define {O <my-string>}
+	  "ciao")
+
+	(values (.doit O " mamma")
+		(.doit (.doit O " mamma") " ho")))
+    => "ciao mamma" "ciao mamma ho")
+
+  (check
+      (internal-body
+
+	(define-label <my-string>
+	  (parent <string>)
+	  (case-method doit
+	    (({_ <my-string>} {O <my-string>} {suffix <string>})
+	     (string-append O suffix))
+	    (({_ <my-string>} {O <my-string>} {prefix <string>} {suffix <string>})
+	     (string-append prefix O suffix))))
+
+	(define {O <my-string>}
+	  "ciao")
+
+	(values (.doit O "hey, " " mamma")
+		(.doit (.doit O " mamma") " ho")))
+    => "hey, ciao mamma" "ciao mamma ho")
+
+  (void))
+
+
+(parametrise ((check-test-name	'misc-operations))
+
+  (define-label <my-fixnum>
+    (parent <fixnum>)
+    (equality-predicate
+      (lambda (parent-func)
+	fx=?))
+    (comparison-procedure
+      (lambda (parent-func)
+	(lambda (a b)
+	  (cond ((fx=? a b)	 0)
+		((fx<=? a b)	-1)
+		(else		+1)))))
+    (hash-function
+      (lambda (parent-func)
+	(lambda (obj)
+	  (add1 (parent-func obj))))))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	((equality-predicate <my-fixnum>) 1 1))
+  (check-for-false	((equality-predicate <my-fixnum>) 1 2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((comparison-procedure <my-fixnum>) 1 1)
+    => 0)
+
+  (check
+      ((comparison-procedure <my-fixnum>) 1 2)
+    => -1)
+
+  (check
+      ((comparison-procedure <my-fixnum>) 2 1)
+    => +1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ((hash-function <my-fixnum>) 1)
+    => (add1 (fixnum-hash 1)))
+
+  (check
+      ((hash-function <my-fixnum>) 123)
+    => (add1 (fixnum-hash 123)))
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

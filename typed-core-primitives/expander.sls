@@ -815,10 +815,10 @@
   (signatures
    ((<syntactic-identifier>		 ;label-name-id
      <syntax-object>			 ;parent-id
-     (or <false> <syntactic-identifier>) ;type-predicate.id
-     (or <false> <syntactic-identifier>) ;equality-predicate.id
-     (or <false> <syntactic-identifier>) ;comparison-procedure.id
-     (or <false> <syntactic-identifier>) ;hash-function.id
+     (or <false> <syntactic-identifier>) ;type-predicate
+     (or <false> <syntactic-identifier>) ;equality-predicate
+     (or <false> <syntactic-identifier>) ;comparison-procedure
+     (or <false> <syntactic-identifier>) ;hash-function
      <top>)				 ;methods-table
     => (<label-type-spec>))))
 

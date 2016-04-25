@@ -56,7 +56,7 @@
 	(new <syntax-clause-spec> #'comparison-procedure	0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'hash-function		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'method			0 +inf.0 2 +inf.0 '() '())
-	(new <syntax-clause-spec> #'case-method			0 +inf.0 3 +inf.0 '() '())
+	(new <syntax-clause-spec> #'case-method			0 +inf.0 2 +inf.0 '() '())
 	#| end of LIST |# )))
 
     (define-record-type <parsed-clauses>
@@ -101,43 +101,55 @@
 	 (let ((type-name.id	#'?type-name))
 	   (unless (identifier? type-name.id)
 	     (synner "expected identifier as label type name" type-name.id))
-	   (let (({parsed <parsed-clauses>} (syntax-clauses-fold-specs
-					     (lambda (parsed spec args)
-					       (combine type-name.id parsed spec args synner)
-					       parsed)
-					     (new <parsed-clauses>) CLAUSE-SPEC*
-					     (syntax-clauses-unwrap #'?clauses synner) synner)))
+	   (let* (({parsed <parsed-clauses>} (syntax-clauses-fold-specs
+					      (lambda (parsed spec args)
+						(combine type-name.id parsed spec args synner)
+						parsed)
+					      (new <parsed-clauses>) CLAUSE-SPEC*
+					      (syntax-clauses-unwrap #'?clauses synner) synner))
+		  (parent.stx (.parent parsed)))
 	     (with-syntax
 		 (((TYPE-PREDICATE-ID TYPE-PREDICATE-DEF ...)
 		   (cond ((.type-predicate parsed)
 			  => (lambda (stx)
-			       (list #'(syntax type-predicate)
-				     #`(define/typed {type-predicate <procedure> #;(type-predicate ?type-name)}
-					 (#,stx (is-a? _ #,(.parent parsed)))))))
+			       (with-syntax
+				   ((FUNC (identifier-record-field-accessor type-name.id #'type-predicate)))
+				 (list #'(syntax FUNC)
+				       #`(define/typed {FUNC (type-predicate ?type-name)}
+					   (#,stx (is-a? _ #,parent.stx)))))))
 			 (else
 			  (list #f))))
 
 		  ((EQUALITY-PREDICATE-ID EQUALITY-PREDICATE-DEF ...)
 		   (cond ((.equality-predicate parsed)
 			  => (lambda (stx)
-			       (list #'(syntax equality-predicate)
-				     #`(define/typed {equality-predicate (equality-predicate ?type-name)} #,stx))))
+			       (with-syntax
+				   ((FUNC (identifier-record-field-accessor type-name.id #'equality-predicate)))
+				 (list #'(syntax FUNC)
+				       #`(define/typed {FUNC (equality-predicate ?type-name)}
+					   (#,stx (equality-predicate #,parent.stx)))))))
 			 (else
 			  (list #f))))
 
 		  ((COMPARISON-PROCEDURE-ID COMPARISON-PROCEDURE-DEF ...)
 		   (cond ((.comparison-procedure parsed)
 			  => (lambda (stx)
-			       (list #'(syntax comparison-procedure)
-				     #`(define/typed {comparison-procedure (comparison-procedure ?type-name)} #,stx))))
+			       (with-syntax
+				   ((FUNC (identifier-record-field-accessor type-name.id #'comparison-procedure)))
+				 (list #'(syntax FUNC)
+				       #`(define/typed {FUNC (comparison-procedure ?type-name)}
+					   (#,stx (comparison-procedure #,parent.stx)))))))
 			 (else
 			  (list #f))))
 
 		  ((HASH-FUNCTION-ID HASH-FUNCTION-DEF ...)
 		   (cond ((.hash-function parsed)
 			  => (lambda (stx)
-			       (list #'(syntax hash-function)
-				     #`(define/typed {hash-function (hash-function ?type-name)} #,stx))))
+			       (with-syntax
+				   ((FUNC (identifier-record-field-accessor type-name.id #'hash-function)))
+				 (list #'(syntax FUNC)
+				       #`(define/typed {FUNC (hash-function ?type-name)}
+					   (#,stx (hash-function #,parent.stx)))))))
 			 (else
 			  (list #f))))
 
@@ -147,7 +159,7 @@
 		   (define-syntax ?type-name
 		     (make-label-type-spec
 		      (syntax ?type-name)
-		      (syntax #,(.parent parsed))
+		      (syntax #,parent.stx)
 		      TYPE-PREDICATE-ID
 		      EQUALITY-PREDICATE-ID
 		      COMPARISON-PROCEDURE-ID
