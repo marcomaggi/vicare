@@ -647,6 +647,12 @@
 		   (,?recur . ,?rhs*)))
 	       lexenv.run lexenv.expand))
 
+    ((_ ((?lhs* ?rhs*) ...))
+     (__synner__ "missing body forms"))
+
+    ((_ ?recur ((?lhs* ?rhs*) ...))
+     (__synner__ "missing body forms"))
+
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
