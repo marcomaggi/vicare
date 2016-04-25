@@ -4,14 +4,17 @@
 ;;
 
 #!vicare
-(import (vicare))
+(import (vicare)
+  (prefix (vicare libraries)
+	  libs::))
 
 (define sexp
-  (expand-library->sexp '(library (demo)
-			   (export)
-			   (import (vicare))
-			   (define* (ciao . {x fixnum?})
-			     x))))
+  (libs::expand-library->sexp
+   '(library (demo)
+      (export)
+      (import (vicare))
+      (define* (ciao . {x fixnum?})
+	x))))
 
 (debug-print (assq 'invoke-code sexp))
 

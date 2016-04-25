@@ -8,7 +8,7 @@
 ;;;
 ;;;	Download the first page from "http://google.com/".
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,25 +36,6 @@
 ;;
 
 (with-compensations
-  (define socket
-    (compensate
-	(begin
-	  (log "connecting...\n")
-	  (srfi.make-client-socket "reddit.com" "http"))
-      (with
-       (srfi.socket-shutdown socket (srfi.shutdown-method read write))
-       (srfi.socket-close socket))))
-  (define in-port
-    (compensate
-	(srfi.socket-input-port socket)
-      (with
-       (close-port in-port))))
-  (define ou-port
-    (compensate
-	(srfi.socket-output-port socket)
-      (with
-       (close-port ou-port))))
-
   (define (log template . args)
     (apply fprintf (current-error-port)
 	   template args))
@@ -80,6 +61,25 @@
 		(display line.str str-port)
 		(next (get-bytevector-some in-port)))))))))
 
+  (define socket
+    (compensate
+	(begin
+	  (log "connecting...\n")
+	  (srfi.make-client-socket "reddit.com" "http"))
+      (with
+       (srfi.socket-shutdown socket (srfi.shutdown-method read write))
+       (srfi.socket-close socket))))
+  (define in-port
+    (compensate
+	(srfi.socket-input-port socket)
+      (with
+       (close-port in-port))))
+  (define ou-port
+    (compensate
+	(srfi.socket-output-port socket)
+      (with
+       (close-port ou-port))))
+
   (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
   (display (recv in-port))
   (display (recv in-port))
@@ -94,27 +94,6 @@
 ;;
 
 (with-compensations
-  (define socket
-    (compensate
-	(begin
-	  (log "connecting...\n")
-	  (srfi.make-client-socket "reddit.com" "http"))
-      (with
-       (srfi.socket-shutdown socket (srfi.shutdown-method read write))
-       (srfi.socket-close socket))))
-  (define in-port
-    (compensate
-	(transcoded-port (srfi.socket-input-port socket)
-			 (native-transcoder))
-      (with
-       (close-port in-port))))
-  (define ou-port
-    (compensate
-	(transcoded-port (srfi.socket-output-port socket)
-			 (native-transcoder))
-      (with
-       (close-port ou-port))))
-
   (define (log template . args)
     (apply fprintf (current-error-port)
 	   template args))
@@ -135,6 +114,27 @@
 	    (log "received: ~s\n" line)
 	    (display line str-port)
 	    (next (read-line in-port)))))))
+
+  (define socket
+    (compensate
+	(begin
+	  (log "connecting...\n")
+	  (srfi.make-client-socket "reddit.com" "http"))
+      (with
+       (srfi.socket-shutdown socket (srfi.shutdown-method read write))
+       (srfi.socket-close socket))))
+  (define in-port
+    (compensate
+	(transcoded-port (srfi.socket-input-port socket)
+			 (native-transcoder))
+      (with
+       (close-port in-port))))
+  (define ou-port
+    (compensate
+	(transcoded-port (srfi.socket-output-port socket)
+			 (native-transcoder))
+      (with
+       (close-port ou-port))))
 
   (send "GET /r/programming/ HTTP/1.0\r\n\r\n" ou-port)
   (display (recv in-port))
