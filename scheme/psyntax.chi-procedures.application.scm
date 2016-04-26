@@ -41,8 +41,9 @@
   ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
   ;;
   (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1
-				       condition cons list car cdr vector
-				       call-with-values)
+				       condition call-with-values
+				       cons list car cdr vector
+				       foldable-cons foldable-list foldable-vector)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -69,10 +70,16 @@
      (chi-condition-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((cons . ?rand*)
-     (chi-cons-application input-form.stx lexenv.run lexenv.expand ?rand*))
+     (chi-cons-application input-form.stx lexenv.run lexenv.expand ?rand* 'cons))
+
+    ((foldable-cons . ?rand*)
+     (chi-cons-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-cons))
 
     ((list . ?rand*)
-     (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand*))
+     (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand* 'list))
+
+    ((foldable-list . ?rand*)
+     (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-list))
 
     ((car . ?rand*)
      (chi-car-application input-form.stx lexenv.run lexenv.expand ?rand*))
@@ -81,7 +88,10 @@
      (chi-cdr-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((vector . ?rand*)
-     (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand*))
+     (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'vector))
+
+    ((foldable-vector . ?rand*)
+     (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-vector))
 
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -493,7 +503,7 @@
 
   (define-module-who chi-cons-application)
 
-  (define (chi-cons-application input-form.stx lexenv.run lexenv.expand rands.stx)
+  (define (chi-cons-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
     (syntax-match rands.stx ()
       ((?car-rand ?cdr-rand)
        ;;Two or more values.
@@ -508,7 +518,7 @@
 	 (let ((application.sig (make-type-signature/single-value (make-pair-type-spec car-rand.ots cdr-rand.ots))))
 	   (make-psi input-form.stx
 	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source 'cons)
+		 (build-primref no-source prim-name)
 	       (list car-rand.core cdr-rand.core))
 	     application.sig))))
 
@@ -596,7 +606,7 @@
   ;;
   (define-module-who chi-list-application)
 
-  (define (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx)
+  (define (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
     (syntax-match rands.stx ()
       (()
        ;;No arguments.  Just return null.
@@ -613,7 +623,7 @@
 	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
 	   (make-psi input-form.stx
 	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source 'list)
+		 (build-primref no-source prim-name)
 	       rand*.core)
 	     application.sig))))
       ))
@@ -978,7 +988,7 @@
   ;;
   (define-module-who chi-list-application)
 
-  (define (chi-vector-application input-form.stx lexenv.run lexenv.expand rands.stx)
+  (define (chi-vector-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
     (syntax-match rands.stx ()
       (()
        ;;No arguments.  Just return the empty vector.
@@ -995,7 +1005,7 @@
 	 (let ((application.sig (%operand-signatures->application-signature input-form.stx rand*.stx rand*.sig)))
 	   (make-psi input-form.stx
 	     (build-application (syntax-annotation input-form.stx)
-		 (build-primref no-source 'vector)
+		 (build-primref no-source prim-name)
 	       rand*.core)
 	     application.sig))))
       ))
