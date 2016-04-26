@@ -165,8 +165,7 @@
 		      COMPARISON-PROCEDURE-ID
 		      HASH-FUNCTION-ID
 		      ;;This methods table must be an alist.
-		      (quasiquote ((METHOD-NAME . (unquote (syntax METHOD-PROC)))
-				   ...))))
+		      (list (cons (quote METHOD-NAME) (syntax METHOD-PROC)) ...)))
 		   TYPE-PREDICATE-DEF		...
 		   EQUALITY-PREDICATE-DEF	...
 		   COMPARISON-PROCEDURE-DEF	...

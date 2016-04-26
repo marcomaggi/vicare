@@ -813,13 +813,13 @@
 (declare-core-primitive make-label-type-spec
     (safe)
   (signatures
-   ((<syntactic-identifier>		 ;label-name-id
-     <syntax-object>			 ;parent-id
-     (or <false> <syntactic-identifier>) ;type-predicate
-     (or <false> <syntactic-identifier>) ;equality-predicate
-     (or <false> <syntactic-identifier>) ;comparison-procedure
-     (or <false> <syntactic-identifier>) ;hash-function
-     <top>)				 ;methods-table
+   ((<syntactic-identifier>		      ;label-name-id
+     <syntax-object>			      ;parent-id
+     (or <false> <syntactic-identifier>)      ;type-predicate
+     (or <false> <syntactic-identifier>)      ;equality-predicate
+     (or <false> <syntactic-identifier>)      ;comparison-procedure
+     (or <false> <syntactic-identifier>)      ;hash-function
+     (alist <symbol> <syntactic-identifier>)) ;methods-table
     => (<label-type-spec>))))
 
 (declare-type-predicate label-type-spec?	<label-type-spec>)
