@@ -2159,8 +2159,9 @@ Examples:
 @cindex @library{vicare language-extensions labels}, library
 
 
-Labels are types built on top of other types.  There are two kinds of
-labels:
+Labels are types built on top of other types: we put type labels on
+values of a parent type to handle them locally in a special way.  There
+are two kinds of labels:
 
 @itemize
 @item
@@ -2354,7 +2355,6 @@ et cetera.
 * types built-in strings::      Type of string objects.
 * types built-in vectors::      Type of vector objects.
 * types built-in lists::        Type of list objects.
-* types built-in null::         Type of empty lists.
 * types built-in pairs::        Type of pair objects.
 * types built-in ipairs::       Type of immutable pair objects.
 * types built-in bytevectors::  Type of bytevector objects.
@@ -3734,6 +3734,17 @@ Apply @func{string-hash} to the instance.
 @subsection Type of vector values
 
 
+@menu
+* types built-in vectors base::         Base vector type.
+* types built-in vectors empty::        Empty vector type.
+* types built-in vectors non-empty::    Non-empty vector type.
+@end menu
+
+@c page
+@node types built-in vectors base
+@subsubsection Base vector type
+
+
 @deftp {Built--in Type} @aclass{vector}
 @deftpx {Parent Type} @aclass{top}
 Type of vector values.
@@ -3762,17 +3773,6 @@ Apply @func{vector-length} to the instance.
 @c ------------------------------------------------------------------------
 
 @subsubheading Accessors and mutators
-
-
-@deftypemethod @class{vector} @aclass{top} ref @var{self} @var{idx}
-Apply @func{vector-ref} to the instance and the argument.
-@end deftypemethod
-
-
-@deftypemethod @class{vector} @aclass{void} set! @var{self} @var{idx} @var{obj}
-Apply @func{vector-set!} to the instance and the arguments.
-@end deftypemethod
-
 
 @deftypemethod @class{vector} @aclass{void} fill! @var{self} @var{obj}
 Apply @func{vector-fill!} to the instance and the argument.
@@ -3858,8 +3858,52 @@ Apply @func{vector->list} to the instance.
 @end deftypemethod
 
 @c page
+@node types built-in vectors empty
+@subsubsection Empty vector type
+
+
+@deftp {Built--in Type} @aclass{empty-vector}
+@deftpx {Parent Type} @aclass{vector}
+Type of empty vector values.
+@end deftp
+
+@c page
+@node types built-in vectors non-empty
+@subsubsection Non--empty vector type
+
+
+@deftp {Built--in Type} @aclass{nevector}
+@deftpx {Parent Type} @aclass{vector}
+Type of non--empty vector values.
+@end deftp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Accessors and mutators
+
+@deftypemethod @class{nevector} @aclass{top} ref @var{self} @var{idx}
+Apply @func{vector-ref} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{nevector} @aclass{void} set! @var{self} @var{idx} @var{obj}
+Apply @func{vector-set!} to the instance and the arguments.
+@end deftypemethod
+
+@c page
 @node types built-in lists
 @subsection Type of list objects
+
+
+@menu
+* types built-in lists base::       Base type of list objects.
+* types built-in lists null::       Type of empty lists.
+* types built-in lists non-empty::  Type of non-empty list objects.
+@end menu
+
+@c page
+@node types built-in lists base
+@subsubsection Base type of list objects
 
 
 @deftp {Built--in Type} @aclass{list}
@@ -3881,21 +3925,9 @@ The type predicate is @func{list?}.  Return @true{} if @var{obj} is null
 or a proper list object; otherwise return @false{}.
 @end defop
 
-
-@defmethod @class{list} car
-Apply @func{car} to the type instance.  Raise an exception if the
-instance is null.
-@end defmethod
-
-
-@defmethod @class{list} cdr
-Apply @func{cdr} to the type instance.  Raise an exception if the
-instance is null.
-@end defmethod
-
 @c page
-@node types built-in null
-@subsection Type of empty lists
+@node types built-in lists null
+@subsubsection Type of empty lists
 
 
 @deftp {Built--in Type} @aclass{null}
@@ -3915,6 +3947,39 @@ list one item.
 The type predicate is @func{null?}.  Return @true{} if @var{obj} is
 null; otherwise return @false{}.
 @end defop
+
+@c page
+@node types built-in lists non-empty
+@subsubsection Type of non--empty list objects
+
+
+@deftp {Built--in Type} @aclass{nelist}
+@deftpx {Parent Type} @aclass{list}
+Type of non--empty lists, whatever their structure.  The fact that a
+list structure is non--circular, proper or improper must be checked at
+run--time.
+@end deftp
+
+
+@defop Constructor @class{nelist} new @aclass{nelist} @varo{obj} @var{obj} @dots{}
+Return a new list having the given @var{obj} arguments as items.
+@end defop
+
+
+@defop {Type predicate} @class{nelist} is-a? @var{obj} @aclass{nelist}
+Return @true{} if @var{obj} is a non--empty proper list object;
+otherwise return @false{}.
+@end defop
+
+
+@defmethod @class{nelist} car
+Apply @func{car} to the type instance.
+@end defmethod
+
+
+@defmethod @class{nelist} cdr
+Apply @func{cdr} to the type instance.
+@end defmethod
 
 @c page
 @node types built-in pairs

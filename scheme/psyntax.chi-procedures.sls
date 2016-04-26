@@ -191,6 +191,11 @@
     (build-data no-source #t)
     (make-type-signature/single-true)))
 
+(define (make-psi/single-null input-form.stx)
+  (make-psi input-form.stx
+    (build-data no-source '())
+    (make-type-signature/single-null)))
+
 
 ;;;; chi procedures: syntax object type inspection
 

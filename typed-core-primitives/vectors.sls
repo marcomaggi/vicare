@@ -37,7 +37,8 @@
 
 ;;; predicates
 
-(declare-type-predicate vector? <vector>)
+(declare-type-predicate vector?				<vector>)
+(declare-type-predicate <nevector>-type-predicate	<nelist>)
 
 (declare-vector-predicate vector-empty?)
 (declare-vector-predicate non-empty-vector?)
@@ -63,12 +64,17 @@
 (declare-core-primitive vector
     (safe)
   (signatures
-   (()				=> (<vector>))
-   (_				=> (<vector>)))
+   (()				=> (<empty-vector>))
+   ((<top> . (list-of <top>))	=> (<nevector>)))
   ;;Not foldable because it must return a newly allocated vector.
   (attributes
    (()				effect-free result-true)
    (_				effect-free result-true)))
+
+(declare-core-primitive <nevector>-constructor
+    (safe)
+  (signatures
+   ((<top> . <list>)		=> (<nevector>))))
 
 (declare-core-primitive subvector
     (safe)
@@ -81,8 +87,12 @@
 (declare-core-primitive make-vector
     (safe)
   (signatures
+   ((<positive-fixnum>)			=> (<nevector>))
+   ((<positive-fixnum> <top>)		=> (<nevector>))
+   ((<zero-fixnum>)			=> (<empty-vector>))
+   ((<zero-fixnum> <top>)		=> (<empty-vector>))
    ((<non-negative-fixnum>)		=> (<vector>))
-   ((<non-negative-fixnum> _)		=> (<vector>)))
+   ((<non-negative-fixnum> <top>)	=> (<vector>)))
   ;;Not foldable because it must return a newly allocated vector.
   (attributes
    ((0)				effect-free result-true)
@@ -143,7 +153,7 @@
 (declare-core-primitive vector-ref
     (safe)
   (signatures
-   ((<vector> <non-negative-fixnum>)	=> (<top>)))
+   ((<nevector> <non-negative-fixnum>)	=> (<top>)))
   (attributes
    ((_ _)		foldable effect-free)))
 
@@ -154,7 +164,7 @@
 (declare-core-primitive vector-set!
     (safe)
   (signatures
-   ((<vector> <non-negative-fixnum> _)	=> (<void>)))
+   ((<nevector> <non-negative-fixnum> _)	=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 
@@ -316,15 +326,15 @@
 (declare-core-primitive $vector-ref
     (unsafe)
   (signatures
-   ((<vector> <non-negative-fixnum>)		=> (<top>)))
+   ((<nevector> <non-negative-fixnum>)		=> (<top>)))
   (attributes
    ((_ _)			foldable effect-free)))
 
 (declare-core-primitive $vector-set!
     (unsafe)
   (signatures
-   ((<vector> <non-negative-fixnum> <void>)	=> (<void>))
-   ((<vector> <non-negative-fixnum> _)		=> (<void>)))
+   ((<nevector> <non-negative-fixnum> <void>)	=> (<void>))
+   ((<nevector> <non-negative-fixnum> _)	=> (<void>)))
   (attributes
    ((_ _ _)			result-true)))
 

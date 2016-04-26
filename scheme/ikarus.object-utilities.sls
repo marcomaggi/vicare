@@ -42,7 +42,9 @@
 
     ;; built-in object-type specification utilities, for internal use
     <top>-constructor			<top>-type-predicate
-    <boolean>-constructor		<null>-constructor
+    <boolean>-constructor
+    <nelist>-constructor		<nelist>-type-predicate
+    <nevector>-constructor		<nevector>-type-predicate
     <symbol>-value			<string>-for-each
     <vector>-map			<vector>-for-each
     <vector>-for-all			<vector>-exists
@@ -297,8 +299,12 @@
 	 (%record-object-call ($struct-rtd subject)))
 
 	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
-	((vector?  subject)	(%built-in-scheme-object-call <vector>-type-descriptor))
-	((list?    subject)	(%built-in-scheme-object-call <list>-type-descriptor))
+	((vector?  subject)	(if (vector-empty? subject)
+				    (%built-in-scheme-object-call <empty-vector>-type-descriptor)
+				  (%built-in-scheme-object-call <nevector>-type-descriptor)))
+	((list?    subject)	(if (pair? subject)
+				    (%built-in-scheme-object-call <nelist>-type-descriptor)
+				  (%built-in-scheme-object-call <null>-type-descriptor)))
 	((pair?    subject)	(%built-in-scheme-object-call <pair>-type-descriptor))
 	((bytevector? subject)	(%built-in-scheme-object-call <bytevector>-type-descriptor))
 
@@ -414,10 +420,24 @@
    (set-symbol-value! sym val)))
 
 
-;;;; object type helpers: <null>
+;;;; object type helpers: <nelist>
 
-(define (<null>-constructor)
-  '())
+(define (<nelist>-constructor obj . obj*)
+  (cons obj obj*))
+
+(define (<nelist>-type-predicate obj)
+  (and (pair? obj)
+       (list? obj)))
+
+
+;;;; object type helpers: <nevector>
+
+(define (<nevector>-constructor obj . obj*)
+  (apply vector obj obj*))
+
+(define (<nevector>-type-predicate obj)
+  (and (vector? obj)
+       (not (vector-empty? obj))))
 
 
 ;;;; object type helpers: <string>

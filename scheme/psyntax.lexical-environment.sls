@@ -331,8 +331,10 @@
     <procedure>-type-id			<procedure>-type-id?
     <pair>-type-id			<pair>-type-id?
     <list>-type-id			<list>-type-id?
+    <nelist>-type-id			<nelist>-type-id?
     <null>-type-id			<null>-type-id?
     <vector>-type-id			<vector>-type-id?
+    <nevector>-type-id			<nevector>-type-id?
     <empty-vector>-type-id		<empty-vector>-type-id?
     <stx>-type-id			<stx>-type-id?
     <syntactic-identifier>-type-id	<syntactic-identifier>-type-id?
@@ -352,7 +354,9 @@
     <pair>-ots				<pair>-ots?
     <null>-ots				<null>-ots?
     <list>-ots				<list>-ots?
+    <nelist>-ots			<nelist>-ots?
     <vector>-ots			<vector>-ots?
+    <nevector>-ots			<nevector>-ots?
     <hashtable>-ots			<hashtable>-ots?
     <empty-vector>-ots			<empty-vector>-ots?
     <stx>-ots				<stx>-ots?
@@ -2815,9 +2819,11 @@
   (define-type-id-retriever <struct>-type-id			<struct>)
   (define-type-id-retriever <record>-type-id			<record>)
   (define-type-id-retriever <vector>-type-id			<vector>)
+  (define-type-id-retriever <nevector>-type-id			<nevector>)
   (define-type-id-retriever <empty-vector>-type-id		<empty-vector>)
   (define-type-id-retriever <pair>-type-id			<pair>)
   (define-type-id-retriever <list>-type-id			<list>)
+  (define-type-id-retriever <nelist>-type-id			<nelist>)
   (define-type-id-retriever <null>-type-id			<null>)
   (define-type-id-retriever <stx>-type-id			<stx>)
   (define-type-id-retriever <syntactic-identifier>-type-id	<syntactic-identifier>)
@@ -2846,10 +2852,12 @@
   (define-type-spec-retriever <struct>-ots			<struct>)
   (define-type-spec-retriever <record>-ots			<record>)
   (define-type-spec-retriever <vector>-ots			<vector>)
+  (define-type-spec-retriever <nevector>-ots			<nevector>)
   (define-type-spec-retriever <hashtable>-ots			<hashtable>)
   (define-type-spec-retriever <empty-vector>-ots		<empty-vector>)
   (define-type-spec-retriever <null>-ots			<null>)
   (define-type-spec-retriever <list>-ots			<list>)
+  (define-type-spec-retriever <nelist>-ots			<nelist>)
   (define-type-spec-retriever <pair>-ots			<pair>)
   (define-type-spec-retriever <stx>-ots				<stx>)
   (define-type-spec-retriever <syntactic-identifier>-ots	<syntactic-identifier>)
@@ -2874,9 +2882,11 @@
   (define-type-id-predicate <symbol>-type-id?			<symbol>-type-id)
   (define-type-id-predicate <procedure>-type-id?		<procedure>-type-id)
   (define-type-id-predicate <vector>-type-id?			<vector>-type-id)
+  (define-type-id-predicate <nevector>-type-id?			<nevector>-type-id)
   (define-type-id-predicate <empty-vector>-type-id?		<empty-vector>-type-id)
   (define-type-id-predicate <pair>-type-id?			<pair>-type-id)
   (define-type-id-predicate <list>-type-id?			<list>-type-id)
+  (define-type-id-predicate <nelist>-type-id?			<nelist>-type-id)
   (define-type-id-predicate <null>-type-id?			<null>-type-id)
   (define-type-id-predicate <record>-type-id?			<record>-type-id)
   (define-type-id-predicate <stx>-type-id?			<stx>-type-id)
@@ -2923,10 +2933,12 @@
   (define-type-spec-predicate <symbol>-ots?			<symbol>-ots)
   (define-type-spec-predicate <procedure>-ots?			<procedure>-ots)
   (define-type-spec-predicate <vector>-ots?			<vector>-ots)
+  (define-type-spec-predicate <nevector>-ots?			<nevector>-ots)
   (define-type-spec-predicate <hashtable>-ots?			<hashtable>-ots)
   (define-type-spec-predicate <empty-vector>-ots?		<empty-vector>-ots)
   (define-type-spec-predicate <null>-ots?			<null>-ots)
   (define-type-spec-predicate <list>-ots?			<list>-ots)
+  (define-type-spec-predicate <nelist>-ots?			<nelist>-ots)
   (define-type-spec-predicate <pair>-ots?			<pair>-ots)
   (define-type-spec-predicate <stx>-ots?			<stx>-ots)
   (define-type-spec-predicate <syntactic-identifier>-ots?	<syntactic-identifier>-ots)

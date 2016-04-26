@@ -189,6 +189,23 @@
   (check-for-false	(let (({O <top>} "ciao"))
 			  (is-a? O <list>)))
 
+;;; --------------------------------------------------------------------
+
+  (check-for-false	(is-a? '(1 . 2) <nelist>))
+  (check-for-false	(is-a? '() <nelist>))
+  (check-for-false	(is-a? 123 <nelist>))
+
+  (check-for-true	(is-a? '(1) <nelist>))
+
+  (check-for-true	(let (({O <nelist>} '(1 2)))
+			  (is-a? O <nelist>)))
+
+  (check-for-true	(let (({O <top>} '(1  2)))
+			  (is-a? O <nelist>)))
+
+  (check-for-false	(let (({O <top>} "ciao"))
+			  (is-a? O <nelist>)))
+
   (void))
 
 
@@ -211,6 +228,17 @@
 ;;; --------------------------------------------------------------------
 
   (check
+      (new <nelist> 1 2)
+    => '(1 2))
+
+  (check
+      (.syntax-object (type-of (new <nelist> (read) (read))))
+    (=> syntax=?)
+    #'((list <top> <top>)))
+
+;;; --------------------------------------------------------------------
+
+  (check
       (.syntax-object (type-of (list)))
     (=> syntax=?)
     (list #'<null>))
@@ -225,26 +253,26 @@
 
 (parametrise ((check-test-name	'methods))
 
-  (check
-      (.car (new <list> 1 2))
-    => 1)
+  (begin
+    (check (.car (new <list> 1 2))	=> 1)
+    (check (.cdr (new <list> 1 2))	=> '(2)))
 
-  (check
-      (.cdr (new <list> 1 2))
-    => '(2))
+  (begin
+    (check (.car (new <nelist> 1 2))	=> 1)
+    (check (.cdr (new <nelist> 1 2))	=> '(2)))
 
   (void))
 
 
 (parametrise ((check-test-name	'late-binding))
 
-  (check
-      (method-call-late-binding 'car (new <list> 1 2))
-    => 1)
+  (begin
+    (check (method-call-late-binding 'car (new <list> 1 2))	=> 1)
+    (check (method-call-late-binding 'cdr (new <list> 1 2))	=> '(2)))
 
-  (check
-      (method-call-late-binding 'cdr (new <list> 1 2))
-    => '(2))
+  (begin
+    (check (method-call-late-binding 'car (new <nelist> 1 2))	=> 1)
+    (check (method-call-late-binding 'cdr (new <nelist> 1 2))	=> '(2)))
 
   #t)
 

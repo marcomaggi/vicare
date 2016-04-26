@@ -1028,13 +1028,13 @@
 				    <real> <real-valued> <complex> <number> <top>))
 
   (doit (list-of <fixnum>)		=> (<list> <top>))
-  (doit (list <fixnum> <string>)	=> (<list> <top>))
+  (doit (list <fixnum> <string>)	=> (<nelist> <list> <top>))
 
   (doit (pair-of <fixnum>)		=> (<pair> <top>))
   (doit (pair <fixnum> <string>)	=> (<pair> <top>))
 
   (doit (vector-of <fixnum>)		=> (<vector> <top>))
-  (doit (vector <fixnum> <string>)	=> (<vector> <top>))
+  (doit (vector <fixnum> <string>)	=> (<nevector> <vector> <top>))
 
   (doit (alist <fixnum> <string>)	=> (<list> <top>))
 

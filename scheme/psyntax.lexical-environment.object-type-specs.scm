@@ -76,9 +76,9 @@
 ;;      |
 ;;      |---> <null>
 ;;      |
-;;       ---> (list-of ?type) ---> <null>
-;;                  |
-;;                   ------------> (list ?type0 ?type ...)
+;;      |---> (list-of ?type) ---> <null>
+;;      |
+;;       ---> <nelist> ------------> (list ?type0 ?type ...)
 ;;
 ;;notice how "<null>" is considered a sub-type of both "<list>" and "(list-of ?type)"
 ;;annotations,  but *not*  of  "(list ?type0  ?type ..)";  this  special handling  is
@@ -93,9 +93,9 @@
 ;;      |
 ;;      |---> <empty-vector>
 ;;      |
-;;       ---> (vector-of ?type) ---> <empty-vector>
-;;                  |
-;;                   --------------> (vector ?type0 ?type ...)
+;;      |---> (vector-of ?type) ---> <empty-vector>
+;;      |
+;;       ---> <nevector> ----------> (vector ?type0 ?type ...)
 ;;
 ;;notice  how  "<empty-vector>" is  considered  a  sub-type  of both  "<vector>"  and
 ;;"(vector-of  ?type)"  annotations,  but  *not*   of  "(vector  ?type0  ?type  ...)"
@@ -787,9 +787,14 @@
 ;;; list type specifications
 
 	((<list>-ots? super.ots)
-	 (or (<null>-ots?        sub.ots)
+	 (or (<list>-ots?        sub.ots)
+	     (<null>-ots?        sub.ots)
 	     (list-of-type-spec? sub.ots)
 	     (list-type-spec?    sub.ots)))
+
+	((<nelist>-ots? super.ots)
+	 (or (<nelist>-ots?   sub.ots)
+	     (list-type-spec? sub.ots)))
 
 	((list-type-spec? super.ots)
 	 ;;SUPER.OTS is a non-empty list holding a known and fixed number of items of
@@ -1087,6 +1092,7 @@
 ;;; left-overs for SUB.OTS
 
 	((or (<list>-ots?        sub.ots)
+	     (<nelist>-ots?      sub.ots)
 	     (list-type-spec?    sub.ots)
 	     (list-of-type-spec? sub.ots))
 	 ;;All the cases of SUPER.OTS that match have been handled above.
@@ -1099,7 +1105,8 @@
 	 #f)
 
 	((alist-type-spec? sub.ots)
-	 (<list>-ots? super.ots))
+	 (or (<list>-ots?   super.ots)
+	     (<nelist>-ots? super.ots)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2802,7 +2809,7 @@
 	 ($make-list-type-spec item-type*.ots name.stx)))
 
       (define ($make-list-type-spec item-type*.ots name)
-	(let* ((parent.ots		(<list>-ots))
+	(let* ((parent.ots		(<nelist>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		make-list-type-predicate)
@@ -3003,7 +3010,7 @@
 	 ($make-vector-type-spec item-type*.ots name.stx)))
 
       (define ($make-vector-type-spec item-type*.ots name)
-	(let* ((parent.ots		(<vector>-ots))
+	(let* ((parent.ots		(<nevector>-ots))
 	       (constructor.stx		#f)
 	       (destructor.stx		#f)
 	       (predicate.stx		make-vector-type-predicate)

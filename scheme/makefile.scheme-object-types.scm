@@ -441,8 +441,6 @@
   (methods
    (empty?			vector-empty?)
    (length			vector-length)
-   (ref				vector-ref)
-   (set!			vector-set!)
    (fill!			vector-fill!)
    (append			vector-append)
    (subvector			subvector)
@@ -462,6 +460,14 @@
     <vector>
   (constructor <empty-vector>-constructor)
   (predicate <empty-vector>-type-predicate))
+
+(define-scheme-type <nevector>
+    <vector>
+  (constructor <nevector>-constructor)
+  (predicate <nevector>-type-predicate)
+  (methods
+   (ref				vector-ref)
+   (set!			vector-set!)))
 
 (define-scheme-type <bytevector>
     <top>
@@ -744,12 +750,20 @@
   (predicate list?)
   (equality-predicate equal?)
   (methods
+   (length	length)))
+
+(define-scheme-type <nelist>
+    <list>
+  (constructor <nelist>-constructor)
+  (predicate <nelist>-type-predicate)
+  (equality-predicate equal?)
+  (methods
    (car		car)
    (cdr		cdr)))
 
 (define-scheme-type <null>
     <list>
-  (constructor <null>-constructor)
+  (constructor #t)
   (predicate null?)
   (equality-predicate eq?))
 

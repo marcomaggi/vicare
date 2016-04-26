@@ -37,7 +37,8 @@
 
 ;;; predicates
 
-(declare-type-predicate null?	<null>)
+(declare-type-predicate null?			<null>)
+(declare-type-predicate <nelist>-type-predicate	<nelist>)
 
 (declare-core-primitive pair?
     (safe)
@@ -103,7 +104,7 @@
     (safe)
   (signatures
    (()			=> (<null>))
-   ((_ . _)		=> (<list>)))
+   ((_ . _)		=> (<nelist>)))
   (attributes
    ;;Foldable because it returns null.
    (()			foldable effect-free result-true)
@@ -113,6 +114,8 @@
 (declare-core-primitive make-list
     (safe)
   (signatures
+   ((<positive-fixnum>)			=> (<nelist>))
+   ((<positive-fixnum> <top>)		=> (<nelist>))
    ((<non-negative-fixnum>)		=> (<list>))
    ((<non-negative-fixnum> <top>)	=> (<list>)))
   (attributes
@@ -122,6 +125,11 @@
    ;;Not foldable because it must return a newly allocated list every time.
    ((_)				effect-free result-true)
    ((_ _)			effect-free result-true)))
+
+(declare-core-primitive <nelist>-constructor
+    (safe)
+  (signatures
+   ((<top> . <list>)		=> (<nelist>))))
 
 (declare-core-primitive reverse
     (safe)
@@ -137,7 +145,7 @@
 (declare-core-primitive append
     (safe)
   (signatures
-   (()				=> (<null>))
+   (()					=> (<null>))
    ((<top> . (list-of <top>))		=> (<top>)))
   (attributes
    ;;This is foldable because it returns null itself.
@@ -152,6 +160,7 @@
     (safe)
   (signatures
    ((<null>)			=> (<zero-fixnum>))
+   ((<nelist>)			=> (<positive-fixnum>))
    ((<list>)			=> (<non-negative-exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
@@ -241,7 +250,7 @@
     (safe)
   (signatures
    ((<procedure> <null> . (list-of <null>))	=> (<null>))
-   ((<procedure> <list> . <list>)	=> (<list>)))
+   ((<procedure> <list> . <list>)		=> (<list>)))
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
@@ -368,14 +377,14 @@
     (safe)
   (signatures
    ((<pair>)		=> (<top>))
-   ((<list>)		=> (<top>)))
+   ((<nelist>)		=> (<top>)))
   #| end of DECLARE-CORE-PRIMITIVE |# )
 
 (declare-core-primitive cdr
     (safe)
   (signatures
    ((<pair>)		=> (<top>))
-   ((<list>)		=> (<top>)))
+   ((<nelist>)		=> (<top>)))
   ;;(replacements $cdr)
   #| end of DECLARE-CORE-PRIMITIVE |# )
 

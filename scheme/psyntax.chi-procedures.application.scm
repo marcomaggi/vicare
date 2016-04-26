@@ -43,7 +43,8 @@
   (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1
 				       condition call-with-values
 				       cons list car cdr vector
-				       foldable-cons foldable-list foldable-vector)
+				       foldable-cons foldable-list foldable-vector
+				       <nelist>-constructor <nevector>-constructor)
     (((?nested-rator ?nested-rand* ...) ?rand* ...)
      ;;Sub-expression application.  It could be a nested expression application:
      ;;
@@ -81,6 +82,9 @@
     ((foldable-list . ?rand*)
      (chi-list-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-list))
 
+    ((<nelist>-constructor . ?rand*)
+     (chi-nelist-constructor-application input-form.stx lexenv.run lexenv.expand ?rand*))
+
     ((car . ?rand*)
      (chi-car-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
@@ -92,6 +96,9 @@
 
     ((foldable-vector . ?rand*)
      (chi-vector-application input-form.stx lexenv.run lexenv.expand ?rand* 'foldable-vector))
+
+    ((<nevector>-constructor . ?rand*)
+     (chi-nevector-constructor-application input-form.stx lexenv.run lexenv.expand ?rand*))
 
     ((apply ?rator ?rand* ...)
      (chi-apply-application input-form.stx lexenv.run lexenv.expand
@@ -591,7 +598,7 @@
   #| end of module: CHI-CONS-APPLICATION |# )
 
 
-(module (chi-list-application)
+(module (chi-list-application chi-nelist-constructor-application)
   ;;The input form has the syntax:
   ;;
   ;;   (list ?rand ...)
@@ -604,15 +611,24 @@
   ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
   ;;"<list-type-spec>".
   ;;
+  (import CLOSURE-APPLICATION-ERRORS)
+
   (define-module-who chi-list-application)
+
+  (define (chi-nelist-constructor-application input-form.stx lexenv.run lexenv.expand rands.stx)
+    (syntax-match rands.stx ()
+      (()
+       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+	 (core-prim-id '<nelist>-constructor) '() 1 0))
+
+      ((?rand ?rand* ...)
+       (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx '<nelist>-constructor))))
 
   (define (chi-list-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
     (syntax-match rands.stx ()
       (()
        ;;No arguments.  Just return null.
-       (make-psi input-form.stx
-	 (build-data no-source '())
-	 (make-type-signature/single-null)))
+       (make-psi/single-null input-form.stx))
 
       ((?rand ?rand* ...)
        ;;Two or more values.
@@ -973,7 +989,7 @@
   #| end of module: CHI-CDR-APPLICATION |# )
 
 
-(module (chi-vector-application)
+(module (chi-vector-application chi-nevector-constructor-application)
   ;;The input form has the syntax:
   ;;
   ;;   (vector ?rand ...)
@@ -986,7 +1002,18 @@
   ;;because  we  want  the  expression  to  return  a  type  signature  describing  a
   ;;"<vector-type-spec>".
   ;;
+  (import CLOSURE-APPLICATION-ERRORS)
+
   (define-module-who chi-list-application)
+
+  (define (chi-nevector-constructor-application input-form.stx lexenv.run lexenv.expand rands.stx)
+    (syntax-match rands.stx ()
+      (()
+       (%error-number-of-operands-deceeds-minimum-arguments-count input-form.stx
+	 (core-prim-id '<nevector>-constructor) '() 1 0))
+
+      ((?rand ?rand* ...)
+       (chi-vector-application input-form.stx lexenv.run lexenv.expand rands.stx '<nevector>-constructor))))
 
   (define (chi-vector-application input-form.stx lexenv.run lexenv.expand rands.stx prim-name)
     (syntax-match rands.stx ()

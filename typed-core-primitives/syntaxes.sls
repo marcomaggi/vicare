@@ -1115,7 +1115,7 @@
 	   (?safety)
 	 (signatures
 	  ((<pair>)		=> (<top>))
-	  ((<list>)		=> (<top>)))
+	  ((<nelist>)		=> (<top>)))
 	 (attributes
 	  ((_)			foldable effect-free))
 	 (replacements . ?replacements)))
@@ -1146,7 +1146,7 @@
 	   (?safety)
 	 (signatures
 	  ((<pair> _)		=> (<void>))
-	  ((<list> _)		=> (<top>)))
+	  ((<nelist> _)		=> (<top>)))
 	 (attributes
 	  ((_ _)		result-true))
 	 (replacements . ?replacements)))
@@ -1197,7 +1197,7 @@
 	 (?safety)
        (signatures
 	((?obj-tag <null>)	=> (<false>))
-	((?obj-tag <list>)	=> (_)))
+	((?obj-tag <nelist>)	=> (_)))
        (attributes
 	((_ ())			foldable effect-free result-false)
 	((_ _)			foldable effect-free))))

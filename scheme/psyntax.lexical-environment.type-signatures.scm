@@ -1205,7 +1205,7 @@
 	  ((null? datum)		(<null>-type-id))
 
 	  ((list? datum)		(if (hashtable-ref table datum #f)
-					    (<list>-type-id)
+					    (<nelist>-type-id)
 					  (begin
 					    (let pair-recur ((P datum))
 					      (when (pair? P)
@@ -1223,7 +1223,7 @@
 						  (recur (cdr datum))))))
 
 	  ((vector?  datum)		(if (hashtable-ref table datum #f)
-					    (<vector>-type-id)
+					    (<nevector>-type-id)
 					  (begin
 					    (hashtable-set! table datum #t)
 					    (cond ((vector-empty? datum)
