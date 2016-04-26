@@ -32,8 +32,6 @@ EXTRA_DIST += \
 dist_doc_DATA	= README COPYING GPL-3		\
 		  LICENSE.irregex LICENSE.pregexp LICENSE.srfi
 
-nodist_doc_DATA = typed-core-primitives/README
-
 dist_man_MANS = doc/vicare.1
 
 info_TEXINFOS		= \
@@ -535,6 +533,7 @@ VICARE_BOOT_TYPED_CORE_PRIMITIVES_LIBS = \
 	typed-core-primitives/cflonums.sls			\
 	typed-core-primitives/characters.sls			\
 	typed-core-primitives/code-objects.sls			\
+	typed-core-primitives/comparison-procedures.sls		\
 	typed-core-primitives/compnums.sls			\
 	typed-core-primitives/compiler.sls			\
 	typed-core-primitives/condition-objects.sls		\
