@@ -38,6 +38,9 @@
 ;;; predicates
 
 (declare-type-predicate string? <string>)
+(declare-type-predicate <nestring>-type-predicate	<nestring>)
+
+
 (declare-string-predicate string-empty?			(replacements $string-empty?))
 (declare-string-predicate ascii-encoded-string?		(replacements $ascii-encoded-string?))
 (declare-string-predicate latin1-encoded-string?	(replacements $latin1-encoded-string?))
@@ -53,8 +56,8 @@
 (declare-core-primitive string
     (safe)
   (signatures
-   (()			=> (<string>))
-   ((list-of <char>)	=> (<string>)))
+   (()					=> (<empty-string>))
+   ((<char> . (list-of <char>))		=> (<nestring>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -64,6 +67,10 @@
 (declare-core-primitive make-string
     (safe)
   (signatures
+   ((<positive-fixnum>)			=> (<nestring>))
+   ((<positive-fixnum> <char>)		=> (<nestring>))
+   ((<zero-fixnum>)			=> (<empty-string>))
+   ((<zero-fixnum> <char>)		=> (<empty-string>))
    ((<non-negative-fixnum>)		=> (<string>))
    ((<non-negative-fixnum> <char>)	=> (<string>)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
@@ -72,6 +79,11 @@
    ((0)			effect-free result-true)
    ((0 . _)		effect-free result-true)
    (_			effect-free result-true)))
+
+(declare-core-primitive <nestring>-constructor
+    (safe)
+  (signatures
+   ((<char> . (list-of <char>))		=> (<nestring>))))
 
 ;;; --------------------------------------------------------------------
 
@@ -126,7 +138,9 @@
 (declare-core-primitive string-length
     (safe)
   (signatures
-   ((<string>)		=> (<non-negative-fixnum>)))
+   ((<nestring>)		=> (<positive-fixnum>))
+   ((<empty-string>)		=> (<zero-fixnum>))
+   ((<string>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true))
   (replacements $string-length))
@@ -149,7 +163,7 @@
 (declare-core-primitive string-ref
     (safe)
   (signatures
-   ((<string> <non-negative-fixnum>)	=> (<char>)))
+   ((<nestring> <non-negative-fixnum>)	=> (<char>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
@@ -160,7 +174,7 @@
 (declare-core-primitive string-set!
     (safe)
   (signatures
-   ((<string> <non-negative-fixnum> <char>)	=> (<void>)))
+   ((<nestring> <non-negative-fixnum> <char>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 
@@ -415,14 +429,14 @@
 (declare-core-primitive $string-ref
     (unsafe)
   (signatures
-   ((<string> <non-negative-fixnum>)	=> (<char>)))
+   ((<nestring> <non-negative-fixnum>)	=> (<char>)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
 (declare-core-primitive $string-set!
     (unsafe)
   (signatures
-   ((<string> <non-negative-fixnum> <char>)	=> (<void>)))
+   ((<nestring> <non-negative-fixnum> <char>)	=> (<void>)))
   (attributes
    ((_ _ _)		result-true)))
 

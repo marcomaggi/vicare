@@ -2091,7 +2091,10 @@
 		    ;;a single "<boolean>".
 		    (component-type*.ots	(%collapse-booleans	 component-type*.ots))
 		    (component-type*.ots	(%collapse-list-of	 component-type*.ots))
-		    (component-type*.ots	(%collapse-enumerations  component-type*.ots)))
+		    (component-type*.ots	(%collapse-enumerations  component-type*.ots))
+		    (component-type*.ots	(%collapse-lists         component-type*.ots))
+		    (component-type*.ots	(%collapse-strings       component-type*.ots))
+		    (component-type*.ots	(%collapse-vectors       component-type*.ots)))
 	       (if (list-of-single-item? component-type*.ots)
 		   (car component-type*.ots)
 		 (make-union-type-spec component-type*.ots)))))))
@@ -2177,6 +2180,57 @@
 						 (enumeration-type-spec.symbol* (car enum*.ots))
 						 (cdr enum*.ots)))
 		   other*.ots)))))
+
+  (define (%collapse-strings component-type*.ots)
+    ;;If there  are both "<empty-string>"  and "<nestring>":  we replace them  with a
+    ;;single "<string>".
+    ;;
+    (let ((has-empty?		(exists <empty-string>-ots? component-type*.ots))
+	  (has-non-empty?	(exists <nestring>-ots?     component-type*.ots))
+	  (has-string?		(exists <string>-ots?       component-type*.ots)))
+      (if (and has-empty? has-non-empty?)
+	  (let ((component-type*.ots (remp (lambda (component-type.ots)
+					     (or (<empty-string>-ots? component-type.ots)
+						 (<nestring>-ots?     component-type.ots)))
+				       component-type*.ots)))
+	    (if has-string?
+		component-type*.ots
+	      (cons (<string>-ots) component-type*.ots)))
+	component-type*.ots)))
+
+  (define (%collapse-lists component-type*.ots)
+    ;;If  there are  both "<null>"  and  "<nelist>": we  replace them  with a  single
+    ;;"<list>".
+    ;;
+    (let ((has-empty?		(exists <null>-ots?   component-type*.ots))
+	  (has-non-empty?	(exists <nelist>-ots? component-type*.ots))
+	  (has-list?		(exists <list>-ots?   component-type*.ots)))
+      (if (and has-empty? has-non-empty?)
+	  (let ((component-type*.ots (remp (lambda (component-type.ots)
+					     (or (<null>-ots?   component-type.ots)
+						 (<nelist>-ots? component-type.ots)))
+				       component-type*.ots)))
+	    (if has-list?
+		component-type*.ots
+	      (cons (<list>-ots) component-type*.ots)))
+	component-type*.ots)))
+
+  (define (%collapse-vectors component-type*.ots)
+    ;;If there  are both "<empty-vector>"  and "<nevector>":  we replace them  with a
+    ;;single "<vector>".
+    ;;
+    (let ((has-empty?		(exists <empty-vector>-ots? component-type*.ots))
+	  (has-non-empty?	(exists <nevector>-ots?     component-type*.ots))
+	  (has-vector?		(exists <vector>-ots?       component-type*.ots)))
+      (if (and has-empty? has-non-empty?)
+	  (let ((component-type*.ots (remp (lambda (component-type.ots)
+					     (or (<empty-vector>-ots? component-type.ots)
+						 (<nevector>-ots?     component-type.ots)))
+				       component-type*.ots)))
+	    (if has-vector?
+		component-type*.ots
+	      (cons (<vector>-ots) component-type*.ots)))
+	component-type*.ots)))
 
   #| end of module: UNION-OF-TYPE-SPECS |# )
 

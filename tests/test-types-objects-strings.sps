@@ -57,6 +57,20 @@
   (check-for-false	(let (({O <top>} 123))
 			  (is-a? O <string>)))
 
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(is-a? "ciao" <nestring>))
+  (check-for-false	(is-a? 123 <nestring>))
+
+  (check-for-true	(let (({O <nestring>} "ciao"))
+			  (is-a? O <nestring>)))
+
+  (check-for-true	(let (({O <top>} "ciao"))
+			  (is-a? O <nestring>)))
+
+  (check-for-false	(let (({O <top>} 123))
+			  (is-a? O <nestring>)))
+
   (void))
 
 
@@ -70,6 +84,17 @@
       (expander::type-signature.syntax-object (type-of (new <string> (read))))
     (=> syntax=?)
     (list #'<string>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (new <nestring> #\a #\b #\c)
+    => "abc")
+
+  (check
+      (expander::type-signature.syntax-object (type-of (new <nestring> (read))))
+    (=> syntax=?)
+    (list #'<nestring>))
 
   (void))
 
@@ -94,11 +119,23 @@
 	(.append O P))
     => "ciao mamma")
 
+  (check
+      (let (({O <nestring>} "ciao")
+	    ({P <nestring>} " mamma"))
+	(.append O P))
+    => "ciao mamma")
+
 ;;; --------------------------------------------------------------------
 
   (check
       (with-result
 	(let (({O <string>} "ciao"))
+	  (.for-each O add-result)))
+    => '(#!void (#\c #\i #\a #\o)))
+
+  (check
+      (with-result
+	(let (({O <nestring>} "ciao"))
 	  (.for-each O add-result)))
     => '(#!void (#\c #\i #\a #\o)))
 
@@ -119,10 +156,20 @@
 	(method-call-late-binding 'empty? O))
     => #f)
 
+  (check
+      (let (({O <string>} "ciao"))
+	(fixnum? (method-call-late-binding 'hash O)))
+    => #t)
+
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (({O <string>} "ciao"))
+      (let (({O <nestring>} "ciao"))
+	(method-call-late-binding 'empty? O))
+    => #f)
+
+  (check
+      (let (({O <nestring>} "ciao"))
 	(fixnum? (method-call-late-binding 'hash O)))
     => #t)
 

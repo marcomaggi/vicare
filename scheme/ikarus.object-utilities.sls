@@ -44,14 +44,18 @@
     <top>-constructor			<top>-type-predicate
     <boolean>-constructor
     <nelist>-constructor		<nelist>-type-predicate
-    <nevector>-constructor		<nevector>-type-predicate
     <symbol>-value			<string>-for-each
+
+    <nestring>-constructor		<nestring>-type-predicate
+    <empty-string>-constructor		<empty-string>-type-predicate
+
+    <nevector>-constructor		<nevector>-type-predicate
+    <empty-vector>-constructor		<empty-vector>-type-predicate
     <vector>-map			<vector>-for-each
     <vector>-for-all			<vector>-exists
     <vector>-find
     <vector>-fold-right			<vector>-fold-left
     <vector>-sort			<vector>-sort!
-    <empty-vector>-constructor		<empty-vector>-type-predicate
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
@@ -298,7 +302,9 @@
 	 ;;record object.
 	 (%record-object-call ($struct-rtd subject)))
 
-	((string?  subject)	(%built-in-scheme-object-call <string>-type-descriptor))
+	((string?  subject)	(if (string-empty? subject)
+				    (%built-in-scheme-object-call <empty-string>-type-descriptor)
+				  (%built-in-scheme-object-call <nestring>-type-descriptor)))
 	((vector?  subject)	(if (vector-empty? subject)
 				    (%built-in-scheme-object-call <empty-vector>-type-descriptor)
 				  (%built-in-scheme-object-call <nevector>-type-descriptor)))
@@ -430,17 +436,27 @@
        (list? obj)))
 
 
-;;;; object type helpers: <nevector>
-
-(define (<nevector>-constructor obj . obj*)
-  (apply vector obj obj*))
-
-(define (<nevector>-type-predicate obj)
-  (and (vector? obj)
-       (not (vector-empty? obj))))
-
-
 ;;;; object type helpers: <string>
+
+(define (<empty-string>-constructor)
+  ;;Let's return an actually new string.
+  ;;
+  (string))
+
+(define (<empty-string>-type-predicate obj)
+  (and (string? obj)
+       (string-empty? obj)))
+
+;;; --------------------------------------------------------------------
+
+(define (<nestring>-constructor obj . obj*)
+  (apply string obj obj*))
+
+(define (<nestring>-type-predicate obj)
+  (and (string? obj)
+       (not (string-empty? obj))))
+
+;;; --------------------------------------------------------------------
 
 (case-define <string>-for-each
   ((str func)
@@ -449,7 +465,27 @@
    (apply string-for-each func str str*)))
 
 
-;;;; object type helpers: <vector>
+;;;; object type helpers: <vector>, <nevector>, <empty-vector>
+
+(define (<empty-vector>-constructor)
+  ;;Let's return an actually new vector.
+  ;;
+  (vector))
+
+(define (<empty-vector>-type-predicate obj)
+  (and (vector? obj)
+       (vector-empty? obj)))
+
+;;; --------------------------------------------------------------------
+
+(define (<nevector>-constructor obj . obj*)
+  (apply vector obj obj*))
+
+(define (<nevector>-type-predicate obj)
+  (and (vector? obj)
+       (not (vector-empty? obj))))
+
+;;; --------------------------------------------------------------------
 
 (case-define <vector>-for-each
   ((vec func)
@@ -495,21 +531,6 @@
 
 (define (<vector>-sort! vec proc)
   (vector-sort! proc vec))
-
-
-;;;; object type helpers: <empty-vector>
-;;
-;;This object-type stands to "<vector>" like "<null>" stands to "<list>".
-;;
-
-(define (<empty-vector>-constructor)
-  ;;Let's return an actually new vector.
-  ;;
-  (vector))
-
-(define (<empty-vector>-type-predicate obj)
-  (and (vector? obj)
-       (vector-empty? obj)))
 
 
 ;;;; built-in object-types descriptors: definitions

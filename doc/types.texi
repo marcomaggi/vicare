@@ -3441,6 +3441,17 @@ Type of zero numeric values.  Its definition is equivalent to:
 @subsection Type of string values
 
 
+@menu
+* types built-in strings base::         Base string type.
+* types built-in strings empty::        Empty string type.
+* types built-in strings non-empty::    Non-empty string type.
+@end menu
+
+@c page
+@node types built-in strings base
+@subsubsection Base string type
+
+
 @deftp {Built--in Type} @class{string}
 @deftpx {Parent Type} @aclass{top}
 Type of string values.
@@ -3498,17 +3509,6 @@ Apply @func{string-append} to the instance.
 @c ------------------------------------------------------------------------
 
 @subsubheading Accessors and mutators
-
-
-@deftypemethod @aclass{string} ref @var{self} @var{idx}
-Apply @func{string-ref} to the instance and the index @var{idx}.
-@end deftypemethod
-
-
-@deftypemethod @aclass{string} set! @var{self} @var{idx} @var{char}
-Apply @func{string-set!} to the instance, the index @var{idx} and the
-character @var{char}.
-@end deftypemethod
 
 
 @deftypemethod @aclass{string} fill! @var{self} @var{char}
@@ -3727,6 +3727,39 @@ Apply @func{string->list} to the instance.
 
 @deftypemethod @aclass{string} hash @var{self}
 Apply @func{string-hash} to the instance.
+@end deftypemethod
+
+@c page
+@node types built-in strings empty
+@subsubsection Empty string type
+
+
+@deftp {Built--in Type} @aclass{empty-string}
+@deftpx {Parent Type} @aclass{string}
+Type of empty string values.
+@end deftp
+
+@c page
+@node types built-in strings non-empty
+@subsubsection Non--empty string type
+
+
+@deftp {Built--in Type} @aclass{nestring}
+@deftpx {Parent Type} @aclass{string}
+Type of non--empty string values.
+@end deftp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Accessors and mutators
+
+@deftypemethod @class{nestring} @aclass{top} ref @var{self} @var{idx}
+Apply @func{string-ref} to the instance and the argument.
+@end deftypemethod
+
+
+@deftypemethod @class{nestring} @aclass{void} set! @var{self} @var{idx} @var{obj}
+Apply @func{string-set!} to the instance and the arguments.
 @end deftypemethod
 
 @c page

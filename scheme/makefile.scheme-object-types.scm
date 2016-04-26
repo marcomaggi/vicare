@@ -362,7 +362,7 @@
   (equality-predicate =))
 
 
-;;;; compound types
+;;;; strings
 
 (define-scheme-type <string>
     <top>
@@ -379,8 +379,6 @@
 
    (length			string-length)
    (for-each			<string>-for-each)
-   (ref				string-ref)
-   (set!			string-set!)
    (fill!			string-fill!)
 
    (ascii-encoded?		ascii-encoded-string?)
@@ -433,6 +431,26 @@
    (keyword			string->keyword)
    (list			string->list)
    ))
+
+(define-scheme-type <empty-string>
+    <string>
+  (constructor <empty-string>-constructor)
+  (predicate <empty-string>-type-predicate)
+  (equality-predicate string=?)
+  (comparison-procedure compar-string))
+
+(define-scheme-type <nestring>
+    <string>
+  (constructor <nestring>-constructor)
+  (predicate <nestring>-type-predicate)
+  (equality-predicate string=?)
+  (comparison-procedure compar-string)
+  (methods
+   (ref				string-ref)
+   (set!			string-set!)))
+
+
+;;;; compound types
 
 (define-scheme-type <vector>
     <top>

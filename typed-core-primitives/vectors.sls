@@ -38,7 +38,7 @@
 ;;; predicates
 
 (declare-type-predicate vector?				<vector>)
-(declare-type-predicate <nevector>-type-predicate	<nelist>)
+(declare-type-predicate <nevector>-type-predicate	<nevector>)
 
 (declare-vector-predicate vector-empty?)
 (declare-vector-predicate non-empty-vector?)
@@ -137,6 +137,8 @@
 (declare-core-primitive vector-length
     (safe)
   (signatures
+   ((<nevector>)		=> (<positive-fixnum>))
+   ((<empty-vector>)		=> (<zero-fixnum>))
    ((<vector>)			=> (<non-negative-fixnum>)))
   (attributes
    ((_)				foldable effect-free result-true))
