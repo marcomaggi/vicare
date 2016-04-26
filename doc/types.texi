@@ -2198,25 +2198,58 @@ annotation.
 @subsection Miscellaneous operations
 
 
+@value{PRJNAME} allows us to specify special procedures for built--in
+Scheme types, record types and label types; they are:
+
+@table @strong
+@item Type predicates
+When applied to a value the type predicate returns @true{} if the value
+matches the type; otherwise it returns @false{}.  It is always possible
+to use the type predicate with the @syntax{is-a?} syntax, @pxref{types
+syntaxes predicates, is-a?}.
+
+@item Equality predicates
+When applied to two values of the same type: the predicate returns
+@true{} if the values are equal; otherwise it returns @false{}.
+
+@item Comparison procedures
+When applied to two values @var{A} and @var{B} of the same type, the
+procedure returns a fixnum:
+
+@table @samp
+@item -1
+If @var{A} is less than @var{B}.
+
+@item 0
+If @var{A} is equal to @var{B}.
+
+@item +1
+If @var{A} is greater than @var{B}.
+@end table
+@end table
+
 The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
 @deffn Syntax equality-predicate @meta{type}
-Return @false{} or a function that can be used as equality predicate
-between instances of @meta{type}.
+Return a function that can be used as equality predicate between
+instances of @meta{type}, which must be a type annotation.  If the type
+has no equality predicate: raise a syntax violation.
 @end deffn
 
 
 @deffn Syntax comparison-procedure @meta{type}
-Return @false{} or a function that can be used as comparison procedure
-between instances of @meta{type}.
+Return a function that can be used as comparison procedure between
+instances of @meta{type}, which must be a type annotation.  If the type
+has no comparison procedure: raise a syntax violation.
 @end deffn
 
 
 @deffn Syntax hash-function @meta{type}
 Return @false{} or a function that can be used as hash function for
-instances of @meta{type}.
+instances of @meta{type}, which must be a type annotation.  If the type
+has no hash function: raise a syntax violation.
 @end deffn
 
 @c page

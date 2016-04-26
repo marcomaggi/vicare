@@ -145,6 +145,8 @@
 (define (gensym? x)
   (and (symbol? x)
        (let ((s ($symbol-unique-string x)))
+	 ;;The  USTRING  field  of  gensyms  is   initialised  to  the  fixnum  0  by
+	 ;;$MAKE-SYMBOL.  A non-gensym symbol has false in this field.
 	 (and s #t))))
 
 (define* ($unintern-gensym {x symbol?})
@@ -153,6 +155,8 @@
 
 (define* (gensym->unique-string {x symbol?})
   (let ((us ($symbol-unique-string x)))
+    ;;The USTRING field of gensyms is initialised to the fixnum 0 by $MAKE-SYMBOL.  A
+    ;;non-gensym symbol has false in this field.
     (cond ((string? us)
 	   us)
 	  ((not us)

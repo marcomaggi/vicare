@@ -179,6 +179,18 @@
 
   #| end of DEFINE-RECORD-TYPE |# )
 
+;;; --------------------------------------------------------------------
+
+(define (make-psi/single-false input-form.stx)
+  (make-psi input-form.stx
+    (build-data no-source #f)
+    (make-type-signature/single-false)))
+
+(define (make-psi/single-true input-form.stx)
+  (make-psi input-form.stx
+    (build-data no-source #t)
+    (make-type-signature/single-true)))
+
 
 ;;;; chi procedures: syntax object type inspection
 

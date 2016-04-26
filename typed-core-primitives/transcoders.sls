@@ -37,7 +37,8 @@
 
 ;;; predicates
 
-(declare-type-predicate transcoder? <transcoder>)
+(declare-type-predicate		transcoder?		<transcoder>)
+(declare-list-of-type-predicate	list-of-transcoders?	<transcoder>)
 
 ;;; --------------------------------------------------------------------
 ;;; constructors
@@ -89,6 +90,26 @@
 (declare-object-retriever native-eol-style	foldable	<symbol>)
 (declare-object-retriever native-endianness	foldable	<symbol>)
 
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-transcoder-binary/multi-comparison transcoder=?		(replacements $transcoder=))
+(declare-transcoder-binary/multi-comparison transcoder!=?		(replacements $transcoder!=))
+(declare-transcoder-binary/multi-comparison transcoder<?		(replacements $transcoder<))
+(declare-transcoder-binary/multi-comparison transcoder>?		(replacements $transcoder>))
+(declare-transcoder-binary/multi-comparison transcoder<=?		(replacements $transcoder<=))
+(declare-transcoder-binary/multi-comparison transcoder>=?		(replacements $transcoder>=))
+
+(declare-core-primitive transcoder-max
+    (safe)
+  (signatures
+   ((<transcoder> . (list-of <transcoder>))	=> (<transcoder>))))
+
+(declare-core-primitive transcoder-min
+    (safe)
+  (signatures
+   ((<transcoder> . (list-of <transcoder>))	=> (<transcoder>))))
+
 /section)
 
 
@@ -109,6 +130,26 @@
    ((<transcoder>)		=> (<fixnum>)))
   (attributes
    ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-transcoder-binary-comparison $transcoder=		unsafe)
+(declare-transcoder-binary-comparison $transcoder!=		unsafe)
+(declare-transcoder-binary-comparison $transcoder>		unsafe)
+(declare-transcoder-binary-comparison $transcoder<		unsafe)
+(declare-transcoder-binary-comparison $transcoder>=		unsafe)
+(declare-transcoder-binary-comparison $transcoder<=		unsafe)
+
+(declare-core-primitive $transcoder-max
+    (unsafe)
+  (signatures
+   ((<transcoder> <transcoder>)		=> (<transcoder>))))
+
+(declare-core-primitive $transcoder-min
+    (unsafe)
+  (signatures
+   ((<transcoder> <transcoder>)		=> (<transcoder>))))
 
 /section)
 

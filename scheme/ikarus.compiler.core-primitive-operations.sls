@@ -1696,6 +1696,8 @@
 			 (K symbol-primary-tag))))
       (asm 'mset sym (K off-symbol-record-tag)     (K symbol-tag))
       (asm 'mset sym (K off-symbol-record-string)  (V-simple-operand str))
+      ;;This  core primitive  generates a  gensym: the  USTRING field  is set  to the
+      ;;fixnum zero.  A non-gensym symbol has false in this field.
       (asm 'mset sym (K off-symbol-record-ustring) (K 0))
       (asm 'mset sym (K off-symbol-record-value)   (KN UNBOUND-OBJECT))
       (asm 'mset sym (K off-symbol-record-proc)    (KN UNBOUND-OBJECT))

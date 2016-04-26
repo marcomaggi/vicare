@@ -6937,6 +6937,22 @@ resulting transcoder.
 Extract the payload bits from a transcoder and return them as fixnum.
 @end deffn
 
+
+@deffn {Unsafe Operation} $transcoder= @vari{tran} @varii{tran}
+@deffnx {Unsafe Operation} $transcoder!= @vari{tran} @varii{tran}
+@deffnx {Unsafe Operation} $transcoder< @vari{tran} @varii{tran}
+@deffnx {Unsafe Operation} $transcoder> @vari{tran} @varii{tran}
+@deffnx {Unsafe Operation} $transcoder<= @vari{tran} @varii{tran}
+@deffnx {Unsafe Operation} $transcoder>= @vari{tran} @varii{tran}
+Compare the given transcoders and return @true{} or @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $transcoder-min @vari{tran} @varii{tran}
+@deffnx {Unsafe Operation} $transcoder-max @vari{tran} @varii{tran}
+Return the minimum or maximum transcoder among the arguments.
+@end deffn
+
 @c page
 @node syslib pointers
 @section Low level pointer operations

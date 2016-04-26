@@ -418,6 +418,7 @@
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
     "ikarus.foldable.sls"
+    "ikarus.comparison-procedures.sls"
 ;;;
     "ikarus.compiler.compat.sls"
     "ikarus.compiler.condition-types.sls"
@@ -3919,6 +3920,28 @@
     (keyword-hash				v $language)
 
 ;;; --------------------------------------------------------------------
+;;; additional transcoder functions
+
+    (list-of-transcoders?			v $language)
+    (transcoder=?				v $language)
+    (transcoder<?				v $language)
+    (transcoder<=?				v $language)
+    (transcoder>?				v $language)
+    (transcoder>=?				v $language)
+    (transcoder!=?				v $language)
+    (transcoder-max				v $language)
+    (transcoder-min				v $language)
+
+    ($transcoder=				$transc)
+    ($transcoder<				$transc)
+    ($transcoder<=				$transc)
+    ($transcoder>				$transc)
+    ($transcoder>=				$transc)
+    ($transcoder!=				$transc)
+    ($transcoder-max				$transc)
+    ($transcoder-min				$transc)
+
+;;; --------------------------------------------------------------------
 ;;; configuration options
 
     (vicare-built-with-ffi-enabled		v $language)
@@ -3963,6 +3986,28 @@
     (icar					v $language)
     (icdr					v $language)
     (ipair?					v $language)
+
+;;; --------------------------------------------------------------------
+;;; comparison procedures
+
+    (compar-fixnum				v $language)
+    (compar-bignum				v $language)
+    (compar-exact-integer			v $language)
+    (compar-ratnum				v $language)
+    (compar-exact-real				v $language)
+    (compar-flonum				v $language)
+    (compar-real				v $language)
+
+    (compar-char				v $language)
+    (compar-string				v $language)
+    (compar-string-ci				v $language)
+    (compar-symbol				v $language)
+
+    (compar-boolean				v $language)
+    (compar-transcoder				v $language)
+    (compar-pointer				v $language)
+
+    (make-comparison-procedure			v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions

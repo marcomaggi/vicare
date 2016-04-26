@@ -1149,9 +1149,7 @@
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
 	     (else
-	      (make-psi input-form.stx
-		(build-data no-source #f)
-		(make-type-signature/single-false))))))
+	      (__synner__ "type annotation has no equality predicate")))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
@@ -1167,9 +1165,7 @@
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
 	     (else
-	      (make-psi input-form.stx
-		(build-data no-source #f)
-		(make-type-signature/single-false))))))
+	      (__synner__ "type annotation has no comparison procedure")))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
@@ -1185,9 +1181,7 @@
 	      => (lambda (stx)
 		   (chi-expr stx lexenv.run lexenv.expand)))
 	     (else
-	      (make-psi input-form.stx
-		(build-data no-source #f)
-		(make-type-signature/single-false))))))
+	      (__synner__ "type annotation has no hash function")))))
     (_
      (__synner__ "invalid syntax, no clause matches the input form"))))
 

@@ -33,37 +33,89 @@
 
 
 (library (ikarus codecs)
-  (export native-eol-style
-	  latin-1-codec utf-8-codec utf-bom-codec
-	  utf-16-codec utf-16le-codec utf-16be-codec utf-16n-codec
-          make-transcoder native-transcoder buffer-mode?
-          transcoder-codec transcoder-eol-style
-          transcoder-error-handling-mode)
+  (export
+
+    ;; codecs
+    latin-1-codec
+    utf-bom-codec
+    utf-8-codec
+    utf-16-codec
+    utf-16le-codec
+    utf-16be-codec
+    utf-16n-codec
+
+    ;; transcoders
+    make-transcoder
+    native-transcoder
+    transcoder-codec
+    transcoder-eol-style
+    transcoder-error-handling-mode
+
+    list-of-transcoders?
+    transcoder=?	$transcoder=
+    transcoder<?	$transcoder<
+    transcoder<=?	$transcoder<=
+    transcoder>?	$transcoder>
+    transcoder>=?	$transcoder>=
+    transcoder!=?	$transcoder!=
+    transcoder-max	$transcoder-max
+    transcoder-min	$transcoder-min
+
+    ;; misc functions
+    native-eol-style
+    buffer-mode?
+
+    #| end of EXPORT |# )
   (import (except (vicare)
+		  ;; codecs
+		  latin-1-codec
+		  utf-bom-codec
+		  utf-8-codec
+		  utf-16-codec
+		  utf-16le-codec
+		  utf-16be-codec
+		  utf-16n-codec
+
+		  ;; transcoders
+		  make-transcoder
+		  native-transcoder
+		  transcoder-codec
+		  transcoder-eol-style
+		  transcoder-error-handling-mode
+
+		  list-of-transcoders?
+		  transcoder=?
+		  transcoder<?
+		  transcoder<=?
+		  transcoder>?
+		  transcoder>=?
+		  transcoder!=?
+		  transcoder-max
+		  transcoder-min
+
+		  ;; misc functions
 		  native-eol-style
-		  latin-1-codec utf-8-codec utf-bom-codec
-		  utf-16-codec utf-16le-codec utf-16be-codec utf-16n-codec
-		  make-transcoder native-transcoder
-		  buffer-mode? transcoder-codec
-		  transcoder-eol-style transcoder-error-handling-mode)
+		  buffer-mode?
+		  #| end of EXCEPT |# )
     (vicare system $transcoders)
-    (prefix (rename (vicare system $fx)
-		    ($fx=	fx=)	;comparison
-		    ($fxlogor	fxior)	;inclusive logic OR
-		    ($fxlogand	fxand))	;logic AND
-	    unsafe.))
+    (vicare system $fx)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; helpers
 
-(define-syntax %unsafe.fxior
+(define-syntax %unsafe::fxior
   (syntax-rules ()
     ((_ ?op1)
      ?op1)
     ((_ ?op1 ?op2)
-     (unsafe.fxior ?op1 ?op2))
+     ($fxlogor ?op1 ?op2))
     ((_ ?op1 ?op2 . ?ops)
-     (unsafe.fxior ?op1 (%unsafe.fxior ?op2 . ?ops)))))
+     ($fxlogor ?op1 (%unsafe::fxior ?op2 . ?ops)))))
 
 (define (%assert-value-is-transcoder obj who)
   (unless (transcoder? obj)
@@ -143,7 +195,7 @@
 (define (%reverse-alist-lookup bits alist)
   (cond ((null? alist)
 	 #f)
-	((unsafe.fx= (cdar alist) bits)
+	(($fx= (cdar alist) bits)
 	 (caar alist))
 	(else
 	 (%reverse-alist-lookup bits (cdr alist)))))
@@ -169,9 +221,9 @@
 
 (case-define* make-transcoder
   ((codec eol-style handling-mode)
-   ($data->transcoder (%unsafe.fxior (%error-handling-mode->fixnum handling-mode __who__)
-				     (%eol-style->fixnum	   eol-style     __who__)
-				     (%codec->fixnum		   codec         __who__))))
+   ($data->transcoder (%unsafe::fxior (%error-handling-mode->fixnum handling-mode __who__)
+				      (%eol-style->fixnum	   eol-style     __who__)
+				      (%codec->fixnum		   codec         __who__))))
   ((codec eol-style)
    (make-transcoder codec eol-style 'replace))
   ((codec)
@@ -186,20 +238,54 @@
 	(assertion-violation 'native-transcoder "expected transcoder value" obj)))))
 
 (define* (transcoder-codec {x transcoder?})
-  (let ((tag (unsafe.fxand ($transcoder->data x) codec-mask)))
+  (let ((tag ($fxlogand ($transcoder->data x) codec-mask)))
     (or (%reverse-alist-lookup tag codec-alist)
 	(assertion-violation __who__ "transcoder has no codec" x))))
 
 (define* (transcoder-eol-style {x transcoder?})
-  (let ((tag (unsafe.fxand ($transcoder->data x) eol-style-mask)))
+  (let ((tag ($fxlogand ($transcoder->data x) eol-style-mask)))
     (or (%reverse-alist-lookup tag eol-style-alist)
 	(assertion-violation __who__ "transcoder has no eol-style" x))))
 
 (define* (transcoder-error-handling-mode {x transcoder?})
   (%assert-value-is-transcoder x __who__)
-  (let ((tag (unsafe.fxand ($transcoder->data x) error-handling-mode-mask)))
+  (let ((tag ($fxlogand ($transcoder->data x) error-handling-mode-mask)))
     (or (%reverse-alist-lookup tag error-handling-mode-alist)
 	(assertion-violation __who__ "transcoder has no error-handling mode" x))))
+
+;;; --------------------------------------------------------------------
+
+(define-list-of-type-predicate list-of-transcoders? transcoder?)
+
+(define-equality/sorting-predicate transcoder=?		$transcoder=	transcoder?)
+(define-equality/sorting-predicate transcoder<?		$transcoder<	transcoder?)
+(define-equality/sorting-predicate transcoder<=?	$transcoder<=	transcoder?)
+(define-equality/sorting-predicate transcoder>?		$transcoder>	transcoder?)
+(define-equality/sorting-predicate transcoder>=?	$transcoder>=	transcoder?)
+(define-inequality-predicate       transcoder!=?	$transcoder!=	transcoder?)
+
+(define ($transcoder= A B)	($fx=	($transcoder->data A) ($transcoder->data B)))
+(define ($transcoder< A B)	($fx<	($transcoder->data A) ($transcoder->data B)))
+(define ($transcoder> A B)	($fx>	($transcoder->data A) ($transcoder->data B)))
+(define ($transcoder<= A B)	($fx<=	($transcoder->data A) ($transcoder->data B)))
+(define ($transcoder>= A B)	($fx>=	($transcoder->data A) ($transcoder->data B)))
+
+(define ($transcoder!= A B)
+  (not ($transcoder= A B)))
+
+;;; --------------------------------------------------------------------
+
+(define-min/max-comparison transcoder-max $transcoder-max transcoder?)
+(define-min/max-comparison transcoder-min $transcoder-min transcoder?)
+
+(define ($transcoder-min A B)
+  (if ($transcoder< A B) A B))
+
+(define ($transcoder-max A B)
+  (if ($transcoder< A B) B A))
+
+
+;;;; misc procedures
 
 (define (buffer-mode? x)
   (case x

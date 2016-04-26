@@ -84,7 +84,16 @@
 		  reader-annotation?
 		  reader-annotation-expression		reader-annotation-stripped
 		  reader-annotation-source		reader-annotation-textual-position
-		  sentinel				sentinel?)
+		  sentinel				sentinel?
+		  ;;
+		  compar-fixnum				compar-bignum
+		  compar-exact-integer			compar-ratnum
+		  compar-exact-real			compar-flonum
+		  compar-real				compar-char
+		  compar-string				compar-string-ci
+		  compar-symbol				compar-boolean
+		  compar-transcoder			compar-pointer
+		  #| end of EXCEPT |# )
     (only (vicare system $fx)
 	  $fxadd1)
     (only (vicare system $structs)
@@ -168,6 +177,27 @@
     ;;2016)
     (only (ikarus unique-objects)
 	  sentinel sentinel?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 26,
+    ;;2016)
+    (only (ikarus.comparison-procedures)
+	   compar-fixnum
+	   compar-bignum
+	   compar-exact-integer
+	   compar-ratnum
+	   compar-exact-real
+	   compar-flonum
+	   compar-real
+	   compar-char
+	   compar-string
+	   compar-string-ci
+	   compar-symbol
+	   compar-boolean
+	   compar-transcoder
+	   compar-pointer)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 26,
+    ;;2016)
+    (only (ikarus codecs)
+	  transcoder=?)
     (prefix (only (psyntax system $all)
 		  internal-applicable-record-destructor
 		  ;;FIXME To be uncommented at  the next boot image rotation.  (Marco

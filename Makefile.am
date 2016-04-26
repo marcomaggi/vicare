@@ -384,6 +384,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.collect.sls					\
 	scheme/ikarus.compensations.sls					\
 	scheme/ikarus.command-line.sls					\
+	scheme/ikarus.comparison-procedures.sls				\
 	scheme/ikarus.conditions.sls					\
 	scheme/ikarus.control.sls					\
 	scheme/ikarus.coroutines.sls					\
@@ -812,6 +813,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-builtin-posix.sps				\
 	tests/test-vicare-chars.sps					\
 	tests/test-vicare-collect.sps					\
+	tests/test-vicare-comparison-procedures.sps			\
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-conditions-core.sps				\
 	tests/test-vicare-convert-bytevectors.sps			\

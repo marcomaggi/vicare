@@ -939,7 +939,9 @@
   ($symbol-hash sym))
 
 (define ($symbol-hash sym)
-  (foreign-call "ikrt_string_hash" ($symbol->string sym) #t))
+  (if (gensym? sym)
+      (foreign-call "ikrt_string_hash" (gensym->unique-string sym) #t)
+    (foreign-call "ikrt_string_hash" ($symbol->string sym) #t)))
 
 ;;; --------------------------------------------------------------------
 
