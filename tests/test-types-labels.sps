@@ -220,6 +220,90 @@
   (void))
 
 
+(parametrise ((check-test-name	'doc-examples))
+
+  ;;Just an alias for "<string>".
+  ;;
+  (internal-body
+
+    (define-label <String>
+      (parent <string>))
+
+    (define {O <String>}
+      "ciao")
+
+    (check (.length O)	=> 4)
+    (check (.hash O)	=> (string-hash "ciao"))
+
+    #| end of INTERNAL-BODY |# )
+
+  ;;Custom hash function.
+  ;;
+  (internal-body
+
+    (define-label <String>
+      (parent <string>)
+      (hash-function
+	(lambda (parent-func)
+	  (lambda (S)
+	    (if (string-empty? S)
+		0
+	      (char-hash (string-ref S 0)))))))
+
+    (define {O <String>}
+      "ciao")
+
+    (check (.hash O)	=> (char-hash #\c))
+
+    #| end of INTERNAL-BODY |# )
+
+  ;;Method to append prefixes and suffixes.
+  ;;
+  (internal-body
+
+    (define-label <String>
+      (parent <string>)
+      (case-method append
+	(({_ <String>} {O <String>} {suff <String>})
+	 (string-append O suff))
+	(({_ <String>} {O <String>} {pref <String>} {suff <String>})
+	 (string-append pref O suff))))
+
+    (define {O <String>}
+      "ciao")
+
+    (check (.append O "-suff")		=> "ciao-suff")
+    (check (.append O "pref-" "-suff")	=> "pref-ciao-suff")
+
+    (check (.length (.append O "pref-" "-suff"))	=> 14)
+
+    #| end of INTERNAL-BODY |# )
+
+  ;;Comparison fixnum.
+  ;;
+  (internal-body
+
+    (define-label <comparison-fixnum>
+      (parent (or <non-negative-fixnum> <negative-fixnum>))
+      (type-predicate
+	(lambda (parent-pred)
+	  (lambda ({_ <boolean>} obj)
+	    (and (parent-pred obj)
+		 (fx<=? obj +1)
+		 (fx>=? obj -1))))))
+
+    (check (is-a? +1 <comparison-fixnum>)	=> #t)
+    (check (is-a? -1 <comparison-fixnum>)	=> #t)
+    (check (is-a?  0 <comparison-fixnum>)	=> #t)
+
+    (check (is-a? +2 <comparison-fixnum>)	=> #f)
+    (check (is-a? -2 <comparison-fixnum>)	=> #f)
+
+    #| end of INTERNAL-BODY |# )
+
+  (void))
+
+
 ;;;; done
 
 (check-report)

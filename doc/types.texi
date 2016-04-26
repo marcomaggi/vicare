@@ -2193,6 +2193,84 @@ the same way they are used in @syntax{define-record-type}.  The clause
 annotation.
 @end deffn
 
+
+The following example defines a label @class{String} that is just a
+synonym for @class{string}:
+
+@lisp
+(define-label <String>
+  (parent <string>))
+
+(define @{O <String>@}
+  "ciao")
+
+(.length O)     @result{} 4
+(.hash   O)     @expansion{} (string-hash O)
+@end lisp
+
+@noindent
+now let's define a custom hash function (we ignore the parent hash
+function that gets passed as @var{parent-func} argument):
+
+@lisp
+(define-label <String>
+  (parent <string>)
+  (hash-function
+    (lambda (parent-func)
+      (lambda (S)
+        (if (string-empty? S)
+            0
+          (char-hash (string-ref S 0)))))))
+
+(define @{O <String>@}
+  "ciao")
+
+(.hash O)    @equiv{} (char-hash #\c)
+@end lisp
+
+@noindent
+now let's define a method for appending prefixes and suffixes:
+
+@lisp
+(define-label <String>
+  (parent <string>)
+  (case-method append
+    ((@{_ <String>@} @{O <String>@} @{suff <String>@})
+     (string-append O suff))
+    ((@{_ <String>@} @{O <String>@} @{pref <String>@} @{suff <String>@})
+     (string-append pref O suff))))
+
+(define @{O <String>@}
+  "ciao")
+
+(.append O "-suff")             @result{} "ciao-suff"
+(.append O "pref-" "-suff")     @result{} "pref-ciao-suff"
+
+(.length (.append O "pref-" "-suff"))
+@result{} 14
+@end lisp
+
+Now let's define a label type to represent fixnums returned by
+comparison procedures (@samp{-1}, @samp{0}, @samp{+1}):
+
+@lisp
+(define-label <comparison-fixnum>
+  (parent (or <non-negative-fixnum> <negative-fixnum>))
+  (type-predicate
+    (lambda (parent-pred)
+      (lambda (obj)
+        (and (parent-pred obj)
+             (fx<=? obj +1)
+             (fx>=? obj -1))))))
+
+(is-a? +1 <comparison-fixnum>)  @result{} #t
+(is-a? -1 <comparison-fixnum>)  @result{} #t
+(is-a?  0 <comparison-fixnum>)  @result{} #t
+
+(is-a? +2 <comparison-fixnum>)  @result{} #f
+(is-a? -2 <comparison-fixnum>)  @result{} #f
+@end lisp
+
 @c page
 @node types syntaxes operations
 @subsection Miscellaneous operations
