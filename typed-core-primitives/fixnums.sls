@@ -311,6 +311,13 @@
    ((_)			foldable effect-free result-true)
    ((_ _)		foldable effect-free result-true)))
 
+(declare-core-primitive fixnum->char
+    (safe)
+  (signatures
+   ((<non-negative-fixnum>)	=> (<char>)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
 /section)
 
 
