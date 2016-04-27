@@ -1426,17 +1426,42 @@ conventionally the super--type of all the types.
 
 @c ------------------------------------------------------------------------
 
-@deffn Syntax type-annotation-union @metao{type} @meta{type} @dots{}
-Expand to a syntax object representing the type annotation resulting
-from the union of the given @meta{type} annotations.
+@deffn Syntax type-annotation-matching @metai{type} @metaii{type}
+Match the two type annotations as if: @metai{type} is the type of an
+argument requested by a closure object; @metaii{type} is the type of the
+operand given to a closure object application.
+
+Expand to a quoted symbol:
+
+@table @code
+@item exact-match
+If there is an exact match between the argument's and operand's
+annotation.
+
+@item possible-match
+If there is a possible match between the argument's and operand's
+annotation; the operand must be further validated at run--time.
+
+@item no-match
+If there is no match between the argument's and operand's annotation.
+@end table
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@deffn Syntax type-annotation-syntax @meta{type}
+Expand to a syntax object representing the type annotation of
+@meta{type}.  If @meta{type} is a compound annotation (@syntax{or},
+@syntax{and}, @syntax{condition}, @dots{}) some simplification may have
+been applied to the input to produce the output.
 
 @lisp
-(type-annotation-union <fixnum> <bignum>)
+(type-annotation-syntax (or <fixnum> <bignum>))
 @result{} (or <fixnum> <bignum>)
 
-(type-annotation-union (enumeration hello salut)
-                       (enumeration ciao)
-                       (enumeration ohayo ciao))
+(type-annotation-syntax (or (enumeration hello salut)
+                            (enumeration ciao)
+                            (enumeration ohayo ciao)))
 @result{} (enumeration hello salut ciao ohayo)
 @end lisp
 @end deffn
@@ -1529,10 +1554,10 @@ position when the list is improper.
 
 @c ------------------------------------------------------------------------
 
-@deffn Syntax type-signature-matching @var{args-signature} @var{rands-signature}
-Match the two signatures as if: @var{args-signature} is the type
+@deffn Syntax type-signature-matching @meta{args-signature} @meta{rands-signature}
+Match the two signatures as if: @meta{args-signature} is the type
 signature of the arguments requested by a closure object;
-@var{rands-signature} is the type signature of the operands given to a
+@meta{rands-signature} is the type signature of the operands given to a
 closure object application.
 
 Expand to a quoted symbol:
@@ -2181,6 +2206,8 @@ The following syntactic bindings are exported by the library
 
 @deffn Syntax define-label @meta{type-name} @meta{clause} @dots{}
 @deffnx {Auxiliary Syntax} parent
+@deffnx {Auxiliary Syntax} constructor
+@deffnx {Auxiliary Syntax} destructor
 @deffnx {Auxiliary Syntax} type-predicate
 @deffnx {Auxiliary Syntax} equality-predicate
 @deffnx {Auxiliary Syntax} comparison-procedure
@@ -2188,12 +2215,54 @@ The following syntactic bindings are exported by the library
 @deffnx {Auxiliary Syntax} method
 @deffnx {Auxiliary Syntax} case-method
 Define a new label type.  @meta{type-name} must be a syntactic
-identifier representing the label name.  All the clauses can be used in
-the same way they are used in @syntax{define-record-type}.  The clause
-@syntax{parent} is mandatory and its single argument must be a type
-annotation.
+identifier representing the label name.
+
+The clause @clause{parent} is mandatory and its single argument must be
+a type annotation.
+
+The following clauses can be used in the same way they are used in
+@syntax{define-record-type}:
+
+@lisp
+parent type-predicate
+equality-predicate comparison-procedure hash-function
+method case-method
+@end lisp
+
+The clause @clause{constructor} may appear zero, one or more times;
+these clauses define a constructor function to be used with the syntax
+@syntax{new}.  The @clause{constructor} clause has a syntax similar to
+@syntax{lambda}; it must have the format:
+
+@lisp
+(constructor @meta{formals} @metao{body} @meta{body} ...)
+@end lisp
+
+@noindent
+where @meta{formals} must specify one or more arguments, the first of
+which of type @meta{type-name}.  @meta{formals} must @strong{not}
+specify a return value: the constructor returns a single value of type
+@var{type-name}, and its specification is automatically generated.
+
+The clause @clause{destructor} may appear zero or one time; this clause
+defines a destructor function to be used with the syntax
+@syntax{delete}; this destructor is @strong{not} used by the garbage
+collector.  The @clause{destructor} clause has a syntax similar to
+@syntax{lambda}; it must have the format:
+
+@lisp
+(destructor @meta{formals} @metao{body} @meta{body} ...)
+@end lisp
+
+@noindent
+where @meta{formals} must specify a single argument of type
+@meta{type-name}.  @meta{formals} must @strong{not} specify a return
+value: the destructor should return unspecified values.
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Examples of simple labels
 
 The following example defines a label @class{String} that is just a
 synonym for @class{string}:
@@ -2209,15 +2278,39 @@ synonym for @class{string}:
 (.hash   O)     @expansion{} (string-hash O)
 @end lisp
 
-@noindent
-now let's define a custom hash function (we ignore the parent hash
-function that gets passed as @var{parent-func} argument):
+The following example defines a label to represent fixnums returned by
+comparison procedures (@samp{-1}, @samp{0}, @samp{+1}):
+
+@lisp
+(define-label <comparison-fixnum>
+  (parent (or <non-negative-fixnum> <negative-fixnum>))
+  (type-predicate
+    (lambda (parent-pred)
+      (lambda (obj)
+        (and (parent-pred obj)
+             (fx<=? obj +1)
+             (fx>=? obj -1))))))
+
+(is-a? +1 <comparison-fixnum>)  @result{} #t
+(is-a? -1 <comparison-fixnum>)  @result{} #t
+(is-a?  0 <comparison-fixnum>)  @result{} #t
+
+(is-a? +2 <comparison-fixnum>)  @result{} #f
+(is-a? -2 <comparison-fixnum>)  @result{} #f
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Examples of hash function
+
+Now let's define a custom hash function (we ignore the parent hash
+function that gets passed as @var{parent-hash} argument):
 
 @lisp
 (define-label <String>
   (parent <string>)
   (hash-function
-    (lambda (parent-func)
+    (lambda (parent-hash)
       (lambda (S)
         (if (string-empty? S)
             0
@@ -2229,8 +2322,25 @@ function that gets passed as @var{parent-func} argument):
 (.hash O)    @equiv{} (char-hash #\c)
 @end lisp
 
-@noindent
-now let's define a method for appending prefixes and suffixes:
+@c ------------------------------------------------------------------------
+
+@subsubheading Examples of methods
+
+Let's define a label with a method to increment a fixnum.
+
+@lisp
+(define-label <fx>
+  (parent <fixnum>)
+  (method (incr @{O <fx>@})
+    (fxadd1 O)))
+
+(define @{O <fx>@}
+  10)
+
+(.incr O)       @result{} 11
+@end lisp
+
+Now let's define a method for appending prefixes and suffixes:
 
 @lisp
 (define-label <String>
@@ -2251,25 +2361,65 @@ now let's define a method for appending prefixes and suffixes:
 @result{} 14
 @end lisp
 
-Now let's define a label type to represent fixnums returned by
-comparison procedures (@samp{-1}, @samp{0}, @samp{+1}):
+@c ------------------------------------------------------------------------
+
+@subsubheading Defining a constructor function
+
+In the following example:
 
 @lisp
-(define-label <comparison-fixnum>
-  (parent (or <non-negative-fixnum> <negative-fixnum>))
-  (type-predicate
-    (lambda (parent-pred)
-      (lambda (obj)
-        (and (parent-pred obj)
-             (fx<=? obj +1)
-             (fx>=? obj -1))))))
+(define-label <vec>
+  (parent <nevector>)
+  (constructor (a b)
+    (vector a b))
+  (constructor (a b c)
+    (vector a b c)))
 
-(is-a? +1 <comparison-fixnum>)  @result{} #t
-(is-a? -1 <comparison-fixnum>)  @result{} #t
-(is-a?  0 <comparison-fixnum>)  @result{} #t
+(new <vec> 1 2)         @result{} #(1 2)
+(new <vec> 1 2 3)       @result{} #(1 2 3)
+@end lisp
 
-(is-a? +2 <comparison-fixnum>)  @result{} #f
-(is-a? -2 <comparison-fixnum>)  @result{} #f
+@noindent
+we can think of the @clause{constructor} clauses as generating the
+following function definition:
+
+@lisp
+(case-define <vec>-constructor
+  ((@{_ <vec>@} a b)
+   (vector a b))
+  ((@{_ <vec>@} a b c)
+   (vector a b c)))
+@end lisp
+
+@noindent
+notice that a type signature for the return value has been automatically
+inserted.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Defining a destructor function
+
+Here we define a bogus destructor function:
+
+@lisp
+(define-label <vec>
+  (parent <vector>)
+  (destructor (@{O <vec>@})
+    `(deleted ,O)))
+
+(define @{O <vec>@}
+  '#(1 2))
+
+(delete O)      @result{} (deleted #(1 2))
+@end lisp
+
+@noindent
+we can think of the @clause{destructor} clauses as generating the
+following function definition:
+
+@lisp
+(define (<vec>-destructor @{O <vec>@})
+  `(deleted ,O))
 @end lisp
 
 @c page

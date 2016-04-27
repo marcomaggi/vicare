@@ -553,6 +553,7 @@
     #| end of INTERNAL-BODY |# )
 
 ;;; --------------------------------------------------------------------
+;;; constructor
 
   (internal-body
     (define-label <vec>
@@ -566,6 +567,25 @@
     (check (new <vec> 1 2 3)	=> '#(1 2 3))
 
     (check-for-true	(new <vec> 1 2))
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; destructor
+
+  (internal-body
+
+    (define-label <vec>
+      (parent <vector>)
+      (destructor ({O <vec>})
+	`(deleted ,O)))
+
+    (define {O <vec>}
+      '#(1 2))
+
+    (check
+	(delete O)
+      => '(deleted #(1 2)))
 
     #| end of INTERNAL-BODY |# )
 
