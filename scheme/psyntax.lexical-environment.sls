@@ -112,7 +112,8 @@
     <object-type-spec>
     <object-type-spec>-rtd				<object-type-spec>-rcd
     object-type-spec?
-    object-type-spec.name				object-type-spec.parent-ots
+    object-type-spec.name				object-type-spec.type-annotation
+    object-type-spec.parent-ots
     object-type-spec.constructor-stx			object-type-spec.destructor-stx
     object-type-spec.type-predicate-stx			object-type-spec.equality-predicate
     object-type-spec.comparison-procedure		object-type-spec.hash-function
@@ -283,6 +284,7 @@
     syntax-annotation			syntax-object-strip-annotations
     make-top-level-syntactic-identifier-from-source-name-and-label
     make-syntactic-identifier-for-temporary-variable
+    make-syntactic-identifier-for-quoted-symbol
     make-top-level-syntax-object/quoted-quoting
     wrap-source-expression
 

@@ -456,6 +456,7 @@
     <top>
   (constructor vector)
   (predicate vector?)
+  (equality-predicate equal?)
   (methods
    (empty?			vector-empty?)
    (length			vector-length)
@@ -477,12 +478,14 @@
 (define-scheme-type <empty-vector>
     <vector>
   (constructor <empty-vector>-constructor)
-  (predicate <empty-vector>-type-predicate))
+  (predicate <empty-vector>-type-predicate)
+  (equality-predicate equal?))
 
 (define-scheme-type <nevector>
     <vector>
   (constructor <nevector>-constructor)
   (predicate <nevector>-type-predicate)
+  (equality-predicate equal?)
   (methods
    (ref				vector-ref)
    (set!			vector-set!)))

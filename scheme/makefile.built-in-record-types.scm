@@ -102,6 +102,7 @@
   #f object-type-spec?
   (methods
    (name				object-type-spec.name)
+   (type-annotation			object-type-spec.type-annotation)
    (parent-ots				object-type-spec.parent-ots)
    (constructor-stx			object-type-spec.constructor-stx)
    (destructor-stx			object-type-spec.destructor-stx)

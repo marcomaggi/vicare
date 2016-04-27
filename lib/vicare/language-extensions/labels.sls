@@ -29,6 +29,8 @@
   (export
     define-label
     parent
+    constructor
+    destructor
     type-predicate
     equality-predicate
     comparison-procedure
@@ -51,6 +53,8 @@
        (list
 	;;KEYWORD MIN-OCCUR MAX-OCCUR MIN-ARGS MAX-ARGS MUTUALLY-INCLUSIVE MUTUALLY-EXCLUSIVE
 	(new <syntax-clause-spec> #'parent			1 1      1 +inf.0 '() '())
+	(new <syntax-clause-spec> #'constructor			0 +inf.0 2 +inf.0 '() '())
+	(new <syntax-clause-spec> #'destructor			0 1      2 +inf.0 '() '())
 	(new <syntax-clause-spec> #'type-predicate		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'equality-predicate		0 1      1 1      '() '())
 	(new <syntax-clause-spec> #'comparison-procedure	0 1      1 1      '() '())
@@ -61,9 +65,17 @@
 
     (define-record-type <parsed-clauses>
       (fields
+	(immutable type-name)
+		;Identifier representing the label type name.
 	(mutable parent)
 		;After  parsing:  a  syntax   object  representing  the  parent  type
 		;annotation.
+	(mutable constructor)
+		;After parsing:  null or a list  of CASE-DEFINE clauses for  the type
+		;constructor.
+	(mutable destructor)
+		;After parsing: false  of or a list representin  a single CASE-DEFINE
+		;clause for the type destructor.
 	(mutable type-predicate)
 		;After  parsing:  false or  a  syntax  object representing  a  Scheme
 		;expression  which,   expanded  and   evaluated,  returns   the  type
@@ -92,8 +104,8 @@
 	#| end of FIELDS |# )
       (protocol
 	(lambda (make-record)
-	  (lambda ()
-	    (make-record #f #f #f #f #f '())))))
+	  (lambda (type-name)
+	    (make-record type-name #f '() #f #f #f #f #f '())))))
 
     (define (main stx synner)
       (syntax-case stx ()
@@ -105,11 +117,33 @@
 					      (lambda (parsed spec args)
 						(combine type-name.id parsed spec args synner)
 						parsed)
-					      (new <parsed-clauses>) CLAUSE-SPEC*
+					      (new <parsed-clauses> type-name.id) CLAUSE-SPEC*
 					      (syntax-clauses-unwrap #'?clauses synner) synner))
 		  (parent.stx (.parent parsed)))
 	     (with-syntax
-		 (((TYPE-PREDICATE-ID TYPE-PREDICATE-DEF ...)
+		 (((CONSTRUCTOR-ID CONSTRUCTOR-DEF ...)
+		   (let ((clause*.stx (.constructor parsed)))
+		     (if (null? clause*.stx)
+			 '(#f)
+		       (let ((clause*.stx (map (lambda (clause.stx)
+						 (cons (cons #'(brace _ ?type-name) (car clause.stx))
+						       (cdr clause.stx)))
+					    (reverse clause*.stx))))
+			 (with-syntax
+			     ((FUNC (identifier-record-field-accessor type-name.id #'constructor)))
+			   (list #'(syntax FUNC)
+				 #`(case-define/checked FUNC . #,(reverse clause*.stx))))))))
+
+		  ((DESTRUCTOR-ID DESTRUCTOR-DEF ...)
+		   (cond ((.destructor parsed)
+			  => (lambda (clause.stx)
+			       (with-syntax
+				   ((FUNC (identifier-record-field-accessor type-name.id #'destructor)))
+				 (list #'(syntax FUNC)
+				       #`(case-define/checked FUNC #,clause.stx)))))
+			 (else '(#f))))
+
+		  ((TYPE-PREDICATE-ID TYPE-PREDICATE-DEF ...)
 		   (cond ((.type-predicate parsed)
 			  => (lambda (stx)
 			       (with-syntax
@@ -160,12 +194,16 @@
 		     (make-label-type-spec
 		      (syntax ?type-name)
 		      (syntax #,parent.stx)
+		      CONSTRUCTOR-ID
+		      DESTRUCTOR-ID
 		      TYPE-PREDICATE-ID
 		      EQUALITY-PREDICATE-ID
 		      COMPARISON-PROCEDURE-ID
 		      HASH-FUNCTION-ID
 		      ;;This methods table must be an alist.
 		      (list (cons (quote METHOD-NAME) (syntax METHOD-PROC)) ...)))
+		   CONSTRUCTOR-DEF		...
+		   DESTRUCTOR-DEF		...
 		   TYPE-PREDICATE-DEF		...
 		   EQUALITY-PREDICATE-DEF	...
 		   COMPARISON-PROCEDURE-DEF	...
@@ -176,56 +214,6 @@
 
     (define (combine type-name.id {parsed <parsed-clauses>} {spec <syntax-clause-spec>} args synner)
       (case-identifiers (.keyword spec)
-	((parent)
-	 ;;The input clause must have the format:
-	 ;;
-	 ;;   (parent ?parent-id)
-	 ;;
-	 ;;and we expect ARGS to have the format:
-	 ;;
-	 ;;   #(#(?parent-id))
-	 ;;
-         (set! (.parent parsed) (vector-ref (vector-ref args 0) 0)))
-	((type-predicate)
-	 ;;The input clause must have the format:
-	 ;;
-	 ;;   (predicate ?predicate-stx)
-	 ;;
-	 ;;and we expect ARGS to have the format:
-	 ;;
-	 ;;   #(#(?predicate-stx))
-	 ;;
-	 (set! (.type-predicate parsed) (vector-ref (vector-ref args 0) 0)))
-	((equality-predicate)
-	 ;;The input clause must have the format:
-	 ;;
-	 ;;   (equality-predicate ?func-stx)
-	 ;;
-	 ;;and we expect ARGS to have the format:
-	 ;;
-	 ;;   #(#(?func-stx))
-	 ;;
-	 (set! (.equality-predicate parsed) (vector-ref (vector-ref args 0) 0)))
-	((comparison-procedure)
-	 ;;The input clause must have the format:
-	 ;;
-	 ;;   (comparison-procedure ?func-stx)
-	 ;;
-	 ;;and we expect ARGS to have the format:
-	 ;;
-	 ;;   #(#(?func-stx))
-	 ;;
-	 (set! (.comparison-procedure parsed) (vector-ref (vector-ref args 0) 0)))
-	((hash-function)
-	 ;;The input clause must have the format:
-	 ;;
-	 ;;   (hash-function ?func-stx)
-	 ;;
-	 ;;and we expect ARGS to have the format:
-	 ;;
-	 ;;   #(#(?func-stx))
-	 ;;
-	 (set! (.hash-function parsed) (vector-ref (vector-ref args 0) 0)))
 	((method)
 	 ;;This clause  can be present multiple  times.  Each input clause  must have
 	 ;;the format:
@@ -236,29 +224,10 @@
 	 ;;
 	 ;;   #(#((?who . ?args) . ?body) ...)
 	 ;;
-	 (vector-for-each
-	     (lambda (method-def)
-	       (syntax-case method-def ()
-		 (#((?who . ?args) ?body0 ?body ...)
-		  (receive (method-name.id method-proc.id method-who.stx)
-		      (syntax-case #'?who (brace)
-			(?method-name
-			 (identifier? #'?method-name)
-			 (let ((method-proc.id (identifier-record-field-accessor type-name.id #'?method-name)))
-			   (values #'?method-name method-proc.id method-proc.id)))
-			((brace ?method-name ?rv-type0 ?rv-type ...)
-			 (identifier? #'?method-name)
-			 (let ((method-proc.id (identifier-record-field-accessor type-name.id #'?method-name)))
-			   (values #'?method-name method-proc.id #`(brace #,method-proc.id ?rv-type0 ?rv-type ...))))
-			(_
-			 (synner "invalid method name specification" #'?who)))
-		    (set! (.method* parsed)
-			  (cons (vector method-name.id method-proc.id
-					#`(define/checked (#,method-who.stx . ?args) ?body0 ?body ...))
-				(.method* parsed)))))
-		 (_
-		  (synner "invalid method specification" (cons #'method method-def)))))
+	 (vector-for-each (lambda (arg)
+			    (%process-method-spec parsed arg synner))
 	   args))
+
 	((case-method)
 	 ;;This clause  can be present multiple  times.  Each input clause  must have
 	 ;;the format:
@@ -269,20 +238,152 @@
 	 ;;
 	 ;;   #(#(?who ?case-method-clause0 ?case-method-clause ...))
 	 ;;
-	 (vector-for-each
-	     (lambda (cmethod-def)
-	       (syntax-case cmethod-def ()
-		 (#(?who ?case-method-clause0 ?case-method-clause ...)
-		  (set! (.method* parsed)
-			(cons (let ((method-proc.id (identifier-record-field-accessor type-name.id #'?method-name)))
-				(vector #'?who method-proc.id
-					#`(case-define #,method-proc.id ?case-method-clause0 ?case-method-clause ...)))
-			      (.method* parsed))))
-		 (_
-		  (synner "invalid method specification" (cons #'case-method cmethod-def)))))
+	 (vector-for-each (lambda (arg)
+			    (%process-case-method-spec parsed arg synner))
 	   args))
+
+	((parent)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (parent ?parent-id)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?parent-id))
+	 ;;
+         (set! (.parent parsed) (vector-ref (vector-ref args 0) 0)))
+
+	((constructor)
+	 ;;An input clause must have the format:
+	 ;;
+	 ;;   (constructor ?args ?body0 ?body ...)
+	 ;;
+	 ;;and there can be any number of them; we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?args ?body0 ?body ...) ...)
+	 ;;
+	 (vector-for-each
+	     (lambda (spec)
+	       (syntax-case spec ()
+		 (#(?args ?body0 ?body ...)
+		  (set! (.constructor parsed) (cons #'(?args ?body0 ?body ...)
+						    (.constructor parsed))))
+		 (#(?stuff ...)
+		  (synner "invalid constructor specification" #'(constructor ?stuff ...)))))
+	   args))
+
+	((destructor)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (destructor ?args ?body0 ?body ...)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?args ?body0 ?body ...))
+	 ;;
+	 (syntax-case (vector-ref args 0) ()
+	   (#(?args ?body0 ?body ...)
+	    (set! (.destructor parsed) #'(?args ?body0 ?body ...)))
+	   (#(?stuff ...)
+	    (synner "invalid destructor specification" #'(destructor ?stuff ...)))))
+
+	((type-predicate)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (predicate ?predicate-stx)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?predicate-stx))
+	 ;;
+	 (set! (.type-predicate parsed) (vector-ref (vector-ref args 0) 0)))
+
+	((equality-predicate)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (equality-predicate ?func-stx)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?func-stx))
+	 ;;
+	 (set! (.equality-predicate parsed) (vector-ref (vector-ref args 0) 0)))
+
+	((comparison-procedure)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (comparison-procedure ?func-stx)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?func-stx))
+	 ;;
+	 (set! (.comparison-procedure parsed) (vector-ref (vector-ref args 0) 0)))
+
+	((hash-function)
+	 ;;The input clause must have the format:
+	 ;;
+	 ;;   (hash-function ?func-stx)
+	 ;;
+	 ;;and we expect ARGS to have the format:
+	 ;;
+	 ;;   #(#(?func-stx))
+	 ;;
+	 (set! (.hash-function parsed) (vector-ref (vector-ref args 0) 0)))
+
 	(else
 	 (assertion-violation __module_who__ "invalid clause spec" spec))))
+
+    (define (%process-method-spec {parsed <parsed-clauses>} spec synner)
+      ;;The METHOD clause can be present multiple times.  Each input clause must have
+      ;;the format:
+      ;;
+      ;;   (method (?who . ?args) . ?body)
+      ;;
+      ;;and we expect SPEC to have the format:
+      ;;
+      ;;   #((?who . ?args) . ?body)
+      ;;
+      (syntax-case spec ()
+	(#((?who . ?args) ?body0 ?body ...)
+	 (receive (method-name.id method-proc.id method-who.stx)
+	     (syntax-case #'?who (brace)
+	       (?method-name
+		(identifier? #'?method-name)
+		(let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
+		  (values #'?method-name method-proc.id method-proc.id)))
+	       ((brace ?method-name ?rv-type0 ?rv-type ...)
+		(identifier? #'?method-name)
+		(let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
+		  (values #'?method-name method-proc.id #`(brace #,method-proc.id ?rv-type0 ?rv-type ...))))
+	       (_
+		(synner "invalid method name specification" #'?who)))
+	   (set! (.method* parsed)
+		 (cons (vector method-name.id method-proc.id
+			       #`(define/checked (#,method-who.stx . ?args) ?body0 ?body ...))
+		       (.method* parsed)))))
+	(#(?stuff ...)
+	 (synner "invalid method specification" #'(method ?stuff ...)))))
+
+    (define (%process-case-method-spec {parsed <parsed-clauses>} spec synner)
+      ;;The CASE-METHOD clause can be present multiple times.  Each input clause must
+      ;;have the format:
+      ;;
+      ;;   (case-method ?who . ?case-method-clauses)
+      ;;
+      ;;and we expect the SPEC argument to have the format:
+      ;;
+      ;;   #(?who ?case-method-clause0 ?case-method-clause ...)
+      ;;
+      (syntax-case spec ()
+	(#(?who ?case-method-clause0 ?case-method-clause ...)
+	 (set! (.method* parsed)
+	       (cons (let ((method-proc.id (identifier-record-field-accessor (.type-name parsed) #'?method-name)))
+		       (vector #'?who method-proc.id
+			       #`(case-define #,method-proc.id ?case-method-clause0 ?case-method-clause ...)))
+		     (.method* parsed))))
+	(#(?stuff ...)
+	 (synner "invalid method specification" #'(case-method ?stuff ...)))))
 
     (lambda (input-form.stx)
       (case-define synner

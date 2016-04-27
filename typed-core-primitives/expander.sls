@@ -815,6 +815,8 @@
   (signatures
    ((<syntactic-identifier>		      ;label-name-id
      <syntax-object>			      ;parent-id
+     (or <false> <syntactic-identifier>)      ;constructor
+     (or <false> <syntactic-identifier>)      ;destructor
      (or <false> <syntactic-identifier>)      ;type-predicate
      (or <false> <syntactic-identifier>)      ;equality-predicate
      (or <false> <syntactic-identifier>)      ;comparison-procedure

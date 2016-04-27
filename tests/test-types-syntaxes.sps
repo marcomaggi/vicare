@@ -402,6 +402,10 @@
 
   (check-for-false	(type-annotation-super-and-sub? (vector <number>) (vector-of <string>)))
 
+  (check-for-true (type-annotation-super-and-sub? <vector> <nevector>))
+  (check-for-true (type-annotation-super-and-sub? <vector> (vector <fixnum> <fixnum>)))
+  (check-for-true (type-annotation-super-and-sub? <nevector> (vector <fixnum> <fixnum>)))
+
 ;;; --------------------------------------------------------------------
 ;;; pairs
 
@@ -645,7 +649,144 @@
   (void))
 
 
-(parametrise ((check-test-name	'type-signature-super-and-sub))
+(parametrise ((check-test-name	'type-annotation-matching))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?one ?two => ?expected)
+       (check
+	   (type-annotation-matching ?one ?two)
+	 => (quote ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit <top> <void>	=> no-match)
+  (doit <void> <top>	=> no-match)
+
+  (doit <top> <fixnum>	=> exact-match)
+  (doit <fixnum> <top>	=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; type unions
+
+  (doit (or <fixnum> <string>)	<fixnum>		=> exact-match)
+  (doit (or <fixnum> <string>)	<string>		=> exact-match)
+  (doit <fixnum>		(or <fixnum> <string>)	=> possible-match)
+  (doit <string>		(or <fixnum> <string>)	=> possible-match)
+
+  (doit <exact-integer> <fixnum>		=> exact-match)
+  (doit <exact-integer> <bignum>		=> exact-match)
+  (doit <exact-integer> <exact-integer>		=> exact-match)
+  (doit <exact-integer> <ratnum>		=> no-match)
+  (doit <fixnum>	<exact-integer>		=> possible-match)
+  (doit <bignum>	<exact-integer>		=> possible-match)
+  (doit <exact-integer> <exact-integer>		=> exact-match)
+  (doit <ratnum>	<exact-integer>		=> no-match)
+
+  (doit <exact> <fixnum>		=> exact-match)
+  (doit <exact> <bignum>		=> exact-match)
+  (doit <exact> <exact-integer>		=> exact-match)
+  (doit <exact> <ratnum>		=> exact-match)
+  (doit <fixnum>	<exact>		=> possible-match)
+  (doit <bignum>	<exact>		=> possible-match)
+  (doit <exact-integer> <exact>		=> possible-match)
+  (doit <ratnum>	<exact>		=> possible-match)
+
+;;; --------------------------------------------------------------------
+;;; type complement
+
+  ;;"<top>" is an ancestor of "<string>".
+  (doit (not <string>)	<top>		=> possible-match)
+  (doit (not <string>)	<string>	=> no-match)
+;;;
+  (doit (not <fixnum>)	<positive-fixnum>	=> no-match)
+  (doit (not <fixnum>)	<fixnum>		=> no-match)
+  ;;"<exact-integer>" is an ancestor of "<fixnum>".
+  (doit (not <fixnum>)	<exact-integer>		=> possible-match)
+  (doit (not <fixnum>)	<bignum>		=> exact-match)
+
+;;; --------------------------------------------------------------------
+;;; type intersection
+
+  (doit (not <fixnum>)	<vector>		=> exact-match)
+  (doit (not <fixnum>)	<exact-integer>		=> possible-match)
+  (doit (not <string>)	<vector>		=> exact-match)
+  (doit (not <string>)	<exact-integer>		=> exact-match)
+
+  (begin
+    (doit (and (not <fixnum>)
+	       (not <string>))
+	  <vector>
+	  => exact-match)
+
+    (doit (and (not <fixnum>)
+	       (not <string>))
+	  <fixnum>
+	  => no-match)
+
+    (doit (and (not <fixnum>)
+	       (not <string>))
+	  <string>
+	  => no-match)
+
+    (doit (and (not <fixnum>)
+	       (not <string>))
+	  <positive-fixnum>
+	  => no-match)
+
+    ;;"<exact-integer>" is an ancestor of "<fixnum>".
+    ;;
+    (doit (and (not <fixnum>)
+	       (not <string>))
+	  <exact-integer>
+	  => possible-match)
+
+    #| end of BEGIN |# )
+
+  (internal-body
+    (define-type <it>
+      (and (not <fixnum>)
+	   (not <string>)))
+    (doit <it> <vector>			=> exact-match)
+    (doit <it> <fixnum>			=> no-match)
+    (doit <it> <string>			=> no-match)
+    (doit <it> <positive-fixnum>	=> no-match)
+    ;;"<exact-integer>" is an ancestor of "<fixnum>".
+    (doit <it> <exact-integer>		=> possible-match)
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; ancestor-of
+
+  (doit (ancestor-of &condition)	<condition>	=> exact-match)
+  (doit (ancestor-of &condition)	<record>	=> exact-match)
+  (doit (ancestor-of &condition)	<struct>	=> exact-match)
+  (doit (ancestor-of &condition)	<top>		=> exact-match)
+  (doit (ancestor-of &condition)	<fixnum>	=> no-match)
+  (doit (ancestor-of &condition)	&condition	=> no-match)
+  (doit (ancestor-of &condition)	&who		=> no-match)
+  (doit (ancestor-of &condition)	(condition &who &message)	=> no-match)
+  (doit (ancestor-of &who)		(condition &who &message)	=> no-match)
+
+;;; complement
+
+  (doit (not (ancestor-of &condition))		&condition	=> exact-match)
+  (doit (not (ancestor-of &condition))		<condition>	=> no-match)
+  (doit (not (ancestor-of &condition))		<record>	=> no-match)
+  (doit (not (ancestor-of &condition))		<struct>	=> no-match)
+  (doit (not (ancestor-of &condition))		<top>		=> no-match)
+
+;;;
+
+  (doit <fixnum>			<zero>		=> possible-match)
+  (doit (ancestor-of <fixnum>)		<zero>		=> no-match)
+  (doit (not (ancestor-of <fixnum>))	<zero>		=> exact-match)
+
+  (void))
+
+
+(parametrise ((check-test-name	'type-signature-matching))
 
   (define-syntax doit
     (syntax-rules (=>)

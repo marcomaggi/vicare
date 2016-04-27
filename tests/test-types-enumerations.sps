@@ -102,7 +102,7 @@
     (syntax-rules (=>)
       ((_ ?super ?sub => ?expected)
        (check
-	   (type-annotation-union ?super ?sub)
+	   (type-annotation-syntax (or ?super ?sub))
 	 (=> syntax=?)
 	 (syntax ?expected)))
       ))
