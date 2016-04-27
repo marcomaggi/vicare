@@ -77,7 +77,7 @@
   ;;     ;;The expression returns an unspecified number of values.
   ;;     ?body0 ?body ...))
   ;;
-  ;;    ((<no-return>)
+  ;;    (<no-return>
   ;;     ;;The expression is marked as not-returning.
   ;;     ?body0 ?body ...)
   ;;
@@ -104,7 +104,7 @@
   ;;     ;;The expression returns a single value, marked as "<procedure>".
   ;;     => (lambda (obj.ots) ?body0 ?body ...))
   ;;
-  ;;    ((<no-return>)
+  ;;    (<no-return>
   ;;     ;;The expression is marked as not-returning.
   ;;     ?body0 ?body ...)
   ;;

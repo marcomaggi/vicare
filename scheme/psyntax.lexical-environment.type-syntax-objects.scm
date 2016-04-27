@@ -175,69 +175,72 @@
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
-(define* (syntax-object.parse-typed-list-of-bindings lhs*)
-  ;;Parser  function for  lists of  typed syntactic  bindings.  It  is used  to parse
-  ;;bindings from  LET, DO  and similar  syntaxes.  For  example, when  expanding the
-  ;;syntax:
-  ;;
-  ;;   (let (({a <fixnum>} 1)
-  ;;         ({b <string>} "b")
-  ;;         (c            #t))
-  ;;     . ?body)
-  ;;
-  ;;the argument LHS* is:
-  ;;
-  ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
-  ;;
-  ;;and the return values are:
-  ;;
-  ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
-  ;;
-  ;;Assume  LHS* is  a syntax  object representing  a proper  list of  possibly typed
-  ;;binding identifiers.  Parse the list and return the following values:
-  ;;
-  ;;1. A list of syntactic identifiers representing the syntactic binding names.
-  ;;
-  ;;2. A  list of instances  of type "<object-type-spec>" representing  the syntactic
-  ;;   bindings' types.  "<top>" is used when the binding is untyped.
-  ;;
-  (define lexenv
-    (current-inferior-lexenv))
-  (receive-and-return (lhs*.id lhs*.ots)
-      (let recur ((stx lhs*))
-	(syntax-match stx (brace)
-	  (()
-	   (values '() '()))
-	  (((brace ?id ?type) . ?other-lhs*)
-	   (receive (lhs*.id lhs*.ots)
-	       (recur ?other-lhs*)
-	     (values (cons (if (identifier? ?id)
-			       ?id
-			     (syntax-violation __who__
-			       "expected identifier as syntactic binding name" ?id))
+(case-define* syntax-object.parse-typed-list-of-bindings
+  ((lhs*)
+   (syntax-object.parse-typed-list-of-bindings lhs* (<top>-ots)))
+  ((lhs* unspecified.ots)
+   ;;Parser function  for lists  of typed  syntactic bindings.  It  is used  to parse
+   ;;bindings from  LET, DO and  similar syntaxes.   For example, when  expanding the
+   ;;syntax:
+   ;;
+   ;;   (let (({a <fixnum>} 1)
+   ;;         ({b <string>} "b")
+   ;;         (c            #t))
+   ;;     . ?body)
+   ;;
+   ;;the argument LHS* is:
+   ;;
+   ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
+   ;;
+   ;;and the return values are:
+   ;;
+   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+   ;;
+   ;;Assume LHS*  is a  syntax object  representing a proper  list of  possibly typed
+   ;;binding identifiers.  Parse the list and return the following values:
+   ;;
+   ;;1. A list of syntactic identifiers representing the syntactic binding names.
+   ;;
+   ;;2. A list  of instances of type "<object-type-spec>"  representing the syntactic
+   ;;   bindings' types.  UNSPECIFIED.OTS is used when the binding is untyped.
+   ;;
+   (define lexenv
+     (current-inferior-lexenv))
+   (receive-and-return (lhs*.id lhs*.ots)
+       (let recur ((stx lhs*))
+	 (syntax-match stx (brace)
+	   (()
+	    (values '() '()))
+	   (((brace ?id ?type) . ?other-lhs*)
+	    (receive (lhs*.id lhs*.ots)
+		(recur ?other-lhs*)
+	      (values (cons (if (identifier? ?id)
+				?id
+			      (syntax-violation __who__
+				"expected identifier as syntactic binding name" ?id))
 			    lhs*.id)
-		     (cons (with-exception-handler
-			       (lambda (E)
-				 (raise (condition (make-who-condition __who__)
-						   (make-message-condition "invalid typed binding")
-						   E)))
-			     (lambda ()
-			       (type-annotation->object-type-spec ?type lexenv ?type)))
-			   lhs*.ots))))
-	  ((?id . ?other-lhs*)
-	   (identifier? ?id)
-	   (receive (lhs*.id lhs*.ots)
-	       (recur ?other-lhs*)
-	     (values (cons ?id lhs*.id)
-		     (cons (<top>-ots) lhs*.ots))))
-	  (?thing
-	   (syntax-violation __who__
-	     "expected optionally typed identifier as syntactic binding name" ?thing))))
-    (cond ((duplicate-bound-formals? lhs*.id)
-	   => (lambda (duplicate-id)
-		(syntax-violation __who__
-		  "duplicate identifiers among syntactic binding names"
-		  duplicate-id))))))
+		      (cons (with-exception-handler
+				(lambda (E)
+				  (raise (condition (make-who-condition __who__)
+						    (make-message-condition "invalid typed binding")
+						    E)))
+			      (lambda ()
+				(type-annotation->object-type-spec ?type lexenv ?type)))
+			    lhs*.ots))))
+	   ((?id . ?other-lhs*)
+	    (identifier? ?id)
+	    (receive (lhs*.id lhs*.ots)
+		(recur ?other-lhs*)
+	      (values (cons ?id lhs*.id)
+		      (cons unspecified.ots lhs*.ots))))
+	   (?thing
+	    (syntax-violation __who__
+	      "expected optionally typed identifier as syntactic binding name" ?thing))))
+     (cond ((duplicate-bound-formals? lhs*.id)
+	    => (lambda (duplicate-id)
+		 (syntax-violation __who__
+		   "duplicate identifiers among syntactic binding names"
+		   duplicate-id)))))))
 
 
 ;;;; standard binding parsing: standard LAMBDA formals
