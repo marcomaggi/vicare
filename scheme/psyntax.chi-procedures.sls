@@ -1393,7 +1393,7 @@
   ;;
   ;;   (%process-typed-syntactic-bindings-lhs*
   ;;      (list #'A #'B)
-  ;;      (list <fixnum>-ots <string>-ots)
+  ;;      (list (<fixnum>-ots) (<string>-ots))
   ;;      lexenv.run)
   ;;
   ;;Example, for the LAMBDA syntax:
@@ -1405,7 +1405,7 @@
   ;;
   ;;   (%process-typed-syntactic-bindings-lhs*
   ;;      (list #'C #'A #'B)
-  ;;      (list <list>-ots <fixnum>-ots <string>-ots)
+  ;;      (list (<list>-ots) (<fixnum>-ots) (<string>-ots))
   ;;      lexenv.run)
   ;;
   (define (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv)

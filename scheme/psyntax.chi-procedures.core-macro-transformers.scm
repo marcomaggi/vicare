@@ -831,9 +831,7 @@
     (define caller-who __who__)
     (syntax-match input-form.stx ()
       ((_)
-       (make-psi input-form.stx
-	 (build-data no-source #t)
-	 (make-type-signature/single-true)))
+       (make-psi/single-true input-form.stx))
 
       ((_ ?expr)
        (chi-expr ?expr lexenv.run lexenv.expand))
@@ -946,9 +944,7 @@
     (define caller-who __who__)
     (syntax-match input-form.stx ()
       ((_)
-       (make-psi input-form.stx
-	 (build-data no-source #f)
-	 (make-type-signature/single-false)))
+       (make-psi/single-false input-form.stx))
 
       ((_ ?expr ?expr* ...)
        (let* ((expr*.stx	(cons ?expr ?expr*))
