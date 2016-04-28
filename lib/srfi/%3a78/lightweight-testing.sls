@@ -70,6 +70,7 @@
 
 #!r6rs
 (library (srfi :78 lightweight-testing)
+  (options strict-r6rs)
   (export
     check
     check-ec
@@ -196,18 +197,19 @@
         (%display " correct, ")
         (%display (length check:failed))
         (%display " failed.")
-        (if (or (null? check:failed) (<= check:mode 1))
-            (%newline)
-	  (let* ((w (car (reverse check:failed)))
-		 (expression (car w))
-		 (actual-result (cadr w))
-		 (expected-result (caddr w))
-		 (pred (cadddr w)))
-	    (%display " First failed example:")
-	    (%newline)
-	    (check:report-expression expression pred)
-	    (check:report-actual-result actual-result)
-	    (check:report-failed expected-result))))))
+	(when (> check:mode 1)
+	  (if (null? check:failed)
+	      (%newline)
+	    (let* ((w (car (reverse check:failed)))
+		   (expression (car w))
+		   (actual-result (cadr w))
+		   (expected-result (caddr w))
+		   (pred (cadddr w)))
+	      (%display " First failed example:")
+	      (%newline)
+	      (check:report-expression expression pred)
+	      (check:report-actual-result actual-result)
+	      (check:report-failed expected-result)))))))
 
 (define (check-passed? expected-total-count)
   (and (= (length check:failed) 0)

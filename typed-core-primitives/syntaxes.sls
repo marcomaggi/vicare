@@ -647,7 +647,7 @@
   (declare-core-primitive ?prim-name
       (?safety)
     (signatures
-     ((?type)		=> (<fixnum>)))))
+     ((?type)		=> (<non-negative-fixnum>)))))
 
 
 ;;;; syntax helpers: comparison functions
@@ -1236,7 +1236,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((<bytevector> <fixnum>)	=> (?return-value-tag)))
+	((<nebytevector> <non-negative-fixnum>)	=> (?return-value-tag)))
        (attributes
 	((_ _)			foldable effect-free result-true))))
     ))
@@ -1252,7 +1252,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((<bytevector> <fixnum> <symbol>)	=> (?return-value-tag)))
+	((<nebytevector> <non-negative-fixnum> <symbol>)	=> (?return-value-tag)))
        (attributes
 	((_ _)			foldable effect-free result-true))))
     ))
@@ -1267,7 +1267,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((<bytevector> <fixnum> ?new-value-tag)	=> (<void>)))))
+	((<nebytevector> <non-negative-fixnum> ?new-value-tag)	=> (<void>)))))
     ))
 
 (define-syntax declare-unsafe-bytevector-mutator/endianness
@@ -1280,7 +1280,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
-	((<bytevector> <fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
+	((<nebytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
     ))
 
 (define-syntax declare-unsafe-bytevector-conversion
@@ -1294,6 +1294,7 @@
      (declare-core-primitive ?who
 	 (unsafe)
        (signatures
+	((<empty-bytevector>)	=> (<empty-bytevector>))
 	((<bytevector>)		=> (?return-value-tag)))
        (attributes
 	;;Not foldable because it must return a new bytevector every time.

@@ -494,7 +494,20 @@
     <top>
   (constructor make-bytevector)
   (predicate bytevector?)
-  (hash-function bytevector-hash))
+  (hash-function bytevector-hash)
+  (equality-predicate bytevector=?))
+
+(define-scheme-type <empty-bytevector>
+    <bytevector>
+  (constructor <empty-bytevector>-constructor)
+  (predicate <empty-bytevector>-type-predicate)
+  (equality-predicate bytevector=?))
+
+(define-scheme-type <nebytevector>
+    <bytevector>
+  (constructor <nebytevector>-constructor)
+  (predicate <nebytevector>-type-predicate)
+  (equality-predicate bytevector=?))
 
 ;;; --------------------------------------------------------------------
 

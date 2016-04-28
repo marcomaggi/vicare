@@ -776,6 +776,7 @@
 	 (or (<pair>-ots?        sub.ots)
 	     (pair-type-spec?    sub.ots)
 	     (pair-of-type-spec? sub.ots)
+	     (<nelist>-ots?      sub.ots)
 	     (list-type-spec?    sub.ots)))
 
 	((pair-type-spec? super.ots)
@@ -829,14 +830,28 @@
 	((<list>-ots? super.ots)
 	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<scheme-type-spec>" have
 	 ;;already been handled above, with the exception of "<null>".
-	 (or (<null>-ots?        sub.ots)
-	     (list-of-type-spec? sub.ots)
-	     (list-type-spec?    sub.ots)))
+	 (cond ((or (<null>-ots?        sub.ots)
+		    (list-of-type-spec? sub.ots)
+		    (list-type-spec?    sub.ots)))
+	       ((pair-type-spec? sub.ots)
+		;;This matches if the cdr is a list.
+		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	       ((pair-of-type-spec? sub.ots)
+		;;This matches if the item is a list.
+		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	       (else #f)))
 
 	((<nelist>-ots? super.ots)
 	 ;;Notice  that the  cases in  which SUB.OTS  is a  "<scheme-type-spec>" have
 	 ;;already been handled above.
-	 (list-type-spec? sub.ots))
+	 (cond ((list-type-spec? sub.ots))
+	       ((pair-type-spec? sub.ots)
+		;;This matches if the cdr is a list.
+		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	       ((pair-of-type-spec? sub.ots)
+		;;This matches if the item is a list.
+		(object-type-spec.matching-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	       (else #f)))
 
 	((list-type-spec? super.ots)
 	 ;;SUPER.OTS is a non-empty list holding a known and fixed number of items of
@@ -1200,98 +1215,118 @@
   (define (%matching-or-compatible? super.ots sub.ots)
     (or (object-type-spec.matching-super-and-sub?   super.ots sub.ots)
 	(object-type-spec.compatible-super-and-sub? super.ots sub.ots)))
-  (cond ((and (list-of-type-spec? super.ots)
-	      (list-type-spec?    sub.ots))
-	 (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
-	   (for-all (lambda (sub-item.ots)
-		      (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
-	     (list-type-spec.item-ots* sub.ots))))
+  (cond
 
-	((and (%compare-super-with-sub-and-its-parents (<list>-ots) super.ots)
-	      (%compare-super-with-sub-and-its-parents (<pair>-ots) sub.ots))
-	 (cond ((pair-type-spec? sub.ots)
-		(object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
-	       ((pair-of-type-spec? sub.ots)
-		(object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
-	       (else #t)))
+;;; lists
 
-	((and (vector-of-type-spec? super.ots)
-	      (vector-type-spec? sub.ots))
-	 (let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
-	   (for-all (lambda (sub-item.ots)
-		      (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
-	     (vector-type-spec.item-ots* sub.ots))))
+   ((and (list-of-type-spec? super.ots)
+	 (list-type-spec?    sub.ots))
+    (let ((super-item.ots (list-of-type-spec.item-ots super.ots)))
+      (for-all (lambda (sub-item.ots)
+		 (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
+	(list-type-spec.item-ots* sub.ots))))
+
+   ((list-of-type-spec? super.ots)
+    (or (<nelist>-ots? sub.ots)
+	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
+
+   ((list-type-spec? super.ots)
+    (or (<list>-ots?   sub.ots)
+	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
+
+   ((<nelist>-ots? super.ots)
+    ;; (type-annotation-matching <nelist> (list-of <top>)) => possible-match
+    (or (list-of-type-spec? sub.ots)
+	(<pair>-ots?        sub.ots)
+	(object-type-spec.matching-super-and-sub? sub.ots super.ots)))
+
+   ((and (%compare-super-with-sub-and-its-parents (<list>-ots) super.ots)
+	 (%compare-super-with-sub-and-its-parents (<pair>-ots) sub.ots))
+    (cond ((pair-type-spec? sub.ots)
+	   (object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-type-spec.cdr-ots sub.ots)))
+	  ((pair-of-type-spec? sub.ots)
+	   (object-type-spec.compatible-super-and-sub? (<list>-ots) (pair-of-type-spec.item-ots sub.ots)))
+	  (else #t)))
+
+;;; --------------------------------------------------------------------
+
+   ((and (vector-of-type-spec? super.ots)
+	 (vector-type-spec? sub.ots))
+    (let ((super-item.ots (vector-of-type-spec.item-ots super.ots)))
+      (for-all (lambda (sub-item.ots)
+		 (object-type-spec.compatible-super-and-sub? super-item.ots sub-item.ots))
+	(vector-type-spec.item-ots* sub.ots))))
 
 ;;; --------------------------------------------------------------------
 ;;; we want to do labels before unions
 
-	((label-type-spec? super.ots)
-	 (let ((super-parent.ots (object-type-spec.parent-ots super.ots)))
-	   (cond ((label-type-spec? sub.ots)
-		  (%matching-or-compatible? super-parent.ots (object-type-spec.parent-ots sub.ots)))
-		 (else
-		  ;; (debug-print __who__
-		  ;; 	       (object-type-spec.name super.ots)
-		  ;; 	       (object-type-spec.name super-parent.ots)
-		  ;; 	       (object-type-spec.name sub.ots))
-		  (%matching-or-compatible? super-parent.ots sub.ots)))))
+   ((label-type-spec? super.ots)
+    (let ((super-parent.ots (object-type-spec.parent-ots super.ots)))
+      (cond ((label-type-spec? sub.ots)
+	     (%matching-or-compatible? super-parent.ots (object-type-spec.parent-ots sub.ots)))
+	    (else
+	     ;; (debug-print __who__
+	     ;; 	       (object-type-spec.name super.ots)
+	     ;; 	       (object-type-spec.name super-parent.ots)
+	     ;; 	       (object-type-spec.name sub.ots))
+	     (%matching-or-compatible? super-parent.ots sub.ots)))))
 
-	((label-type-spec? sub.ots)
-	 (%matching-or-compatible? super.ots (object-type-spec.parent-ots sub.ots)))
-
-;;; --------------------------------------------------------------------
-
-	((union-type-spec? sub.ots)
-	 (exists (lambda (component-sub.ots)
-		   ;; (debug-print (object-type-spec.name super.ots)
-		   ;; 		(object-type-spec.name component-sub.ots)
-		   ;; 		(object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
-		   (%matching-or-compatible? super.ots component-sub.ots))
-	   (union-type-spec.component-ots* sub.ots)))
+   ((label-type-spec? sub.ots)
+    (%matching-or-compatible? super.ots (object-type-spec.parent-ots sub.ots)))
 
 ;;; --------------------------------------------------------------------
 
-	((intersection-type-spec? super.ots)
-	 ;;"<exact-integer>" is not a "<string>" and it is an ancestor of "<fixnum>",
-	 ;;so:
-	 ;;
-	 ;;   (type-signature-matching ((and (not <fixnum>) (not <string>)))
-	 ;;                            (<exact-integer>)
-	 ;;   => possible-match
-	 ;;
-	 (for-all (lambda (super-component.ots)
-		    (%matching-or-compatible? super-component.ots sub.ots))
-	   (intersection-type-spec.component-ots* super.ots)))
+   ((union-type-spec? sub.ots)
+    (exists (lambda (component-sub.ots)
+	      ;; (debug-print (object-type-spec.name super.ots)
+	      ;; 		(object-type-spec.name component-sub.ots)
+	      ;; 		(object-type-spec.matching-super-and-sub? super.ots component-sub.ots))
+	      (%matching-or-compatible? super.ots component-sub.ots))
+      (union-type-spec.component-ots* sub.ots)))
 
 ;;; --------------------------------------------------------------------
 
-	((complement-type-spec? super.ots)
-	 (cond ((complement-type-spec? sub.ots)
-		#f)
-	       (else
-		(let ((super-item.ots (complement-type-spec.item-ots super.ots)))
-		  (cond
-		   ;; (type-signature-matching ((not (ancestor-of &condition)))
-		   ;;                          (<condition>))
-		   ;; => no-match
-		   ((ancestor-of-type-spec? super-item.ots)
-		    #f)
-		   (($object-type-spec=? super-item.ots sub.ots)
-		    #f)
-		   (else
-		    ;; (type-signature-matching ((not <fixnum>))
-		    ;;                          (<exact-integer>))
-		    ;; => possible-match
-		    (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
-
-	((complement-type-spec? sub.ots)
-	 #f)
+   ((intersection-type-spec? super.ots)
+    ;;"<exact-integer>" is not a "<string>" and it is an ancestor of "<fixnum>",
+    ;;so:
+    ;;
+    ;;   (type-signature-matching ((and (not <fixnum>) (not <string>)))
+    ;;                            (<exact-integer>)
+    ;;   => possible-match
+    ;;
+    (for-all (lambda (super-component.ots)
+	       (%matching-or-compatible? super-component.ots sub.ots))
+      (intersection-type-spec.component-ots* super.ots)))
 
 ;;; --------------------------------------------------------------------
 
-	((object-type-spec.matching-super-and-sub? sub.ots super.ots))
+   ((complement-type-spec? super.ots)
+    (cond ((complement-type-spec? sub.ots)
+	   #f)
+	  (else
+	   (let ((super-item.ots (complement-type-spec.item-ots super.ots)))
+	     (cond
+	      ;; (type-signature-matching ((not (ancestor-of &condition)))
+	      ;;                          (<condition>))
+	      ;; => no-match
+	      ((ancestor-of-type-spec? super-item.ots)
+	       #f)
+	      (($object-type-spec=? super-item.ots sub.ots)
+	       #f)
+	      (else
+	       ;; (type-signature-matching ((not <fixnum>))
+	       ;;                          (<exact-integer>))
+	       ;; => possible-match
+	       (object-type-spec.matching-super-and-sub? sub.ots super-item.ots)))))))
 
-	(else #f)))
+   ((complement-type-spec? sub.ots)
+    #f)
+
+;;; --------------------------------------------------------------------
+
+   ((object-type-spec.matching-super-and-sub? sub.ots super.ots))
+
+   (else #f)))
 
 
 ;;;; basic object-type specification: common ancestor
@@ -3637,7 +3672,7 @@
      (identifier-syntax
       (lambda (stx)
 	(syntax-object.type-annotation? input-form.stx lexenv stx))))
-   (syntax-match stx (pair list vector pair-of list-of vector-of
+   (syntax-match stx (pair list vector pair-of list-of nelist-of vector-of
 			   hashtable alist condition enumeration
 			   or and not lambda case-lambda => parent-of ancestor-of
 			   type-predicate equality-predicate comparison-procedure hash-function)
@@ -3664,6 +3699,9 @@
       (recur ?item-type))
 
      ((list-of ?item-type)
+      (recur ?item-type))
+
+     ((nelist-of ?item-type)
       (recur ?item-type))
 
      ((vector-of ?item-type)
@@ -3749,7 +3787,7 @@
    ;;
    ;;as NAME.STX argument.
    ;;
-   (syntax-match annotation.stx (pair list vector pair-of list-of vector-of
+   (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of
 				      hashtable alist condition enumeration
 				      or and not lambda case-lambda => parent-of ancestor-of
 				      type-predicate equality-predicate comparison-procedure hash-function)
@@ -3781,6 +3819,12 @@
      ((pair-of ?item-type)
       (make-pair-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)
 			      name.stx))
+
+     ((nelist-of ?item-type)
+      (let ((pair-id	(core-prim-id 'pair))
+	    (list-of-id	(core-prim-id 'list-of)))
+	(type-annotation->object-type-spec `(,pair-id ,?item-type (,list-of-id ,?item-type))
+					   lexenv name.stx)))
 
      ((list-of ?item-type)
       (make-list-of-type-spec (type-annotation->object-type-spec ?item-type lexenv)

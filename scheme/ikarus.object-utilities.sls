@@ -56,6 +56,10 @@
     <vector>-find
     <vector>-fold-right			<vector>-fold-left
     <vector>-sort			<vector>-sort!
+
+    <nebytevector>-constructor		<nebytevector>-type-predicate
+    <empty-bytevector>-constructor	<empty-bytevector>-type-predicate
+
     #| end of EXPORT |# )
   (import (except (vicare)
 		  method-call-late-binding
@@ -531,6 +535,38 @@
 
 (define (<vector>-sort! vec proc)
   (vector-sort! proc vec))
+
+
+;;;; object type helpers: <bytevector>, <nebytevector>, <empty-bytevector>
+
+(define (<empty-bytevector>-constructor)
+  ;;Let's return an actually new bytevector.
+  ;;
+  (make-bytevector 0))
+
+(define (<empty-bytevector>-type-predicate obj)
+  (and (bytevector? obj)
+       (bytevector-empty? obj)))
+
+;;; --------------------------------------------------------------------
+
+(case-define* <nebytevector>-constructor
+  (({len positive-fixnum?})
+   (make-vector len))
+  (({len positive-fixnum?} {fill bytevector-byte-filler?})
+   (make-vector len fill)))
+
+(define (<nebytevector>-type-predicate obj)
+  (and (bytevector? obj)
+       (not (bytevector-empty? obj))))
+
+(define (bytevector-byte-filler? obj)
+  ;;Return  #t if  OBJ  is valid  as byte  filler  for new  bytevectors;
+  ;;otherwise return #f.
+  ;;
+  (and (fixnum? obj)
+       (fx>=? obj -128)
+       (fx<=? obj +255)))
 
 
 ;;;; built-in object-types descriptors: definitions

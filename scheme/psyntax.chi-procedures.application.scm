@@ -815,12 +815,12 @@
 	   ((pair-type-spec? rand.ots)
 	    (pair-type-spec.car-ots rand.ots))
 
-	   ((or (<list>-ots? rand.ots)
-		(<pair>-ots? rand.ots))
+	   ((or (<nelist>-ots? rand.ots)
+		(<pair>-ots?   rand.ots))
 	    (<top>-ots))
 
-	   ((or (object-type-spec.compatible-super-and-sub? (<list>-ots) rand.ots)
-		(object-type-spec.compatible-super-and-sub? (<pair>-ots) rand.ots))
+	   ((or (object-type-spec.compatible-super-and-sub? (<nelist>-ots) rand.ots)
+		(object-type-spec.compatible-super-and-sub? (<pair>-ots)   rand.ots))
 	    (<top>-ots))
 
 	   (else
@@ -958,12 +958,12 @@
 	   ((pair-type-spec? rand.ots)
 	    (pair-type-spec.cdr-ots rand.ots))
 
-	   ((or (<list>-ots? rand.ots)
-		(<pair>-ots? rand.ots))
+	   ((or (<nelist>-ots? rand.ots)
+		(<pair>-ots?   rand.ots))
 	    (<top>-ots))
 
-	   ((or (object-type-spec.compatible-super-and-sub? (<list>-ots) rand.ots)
-		(object-type-spec.compatible-super-and-sub? (<pair>-ots) rand.ots))
+	   ((or (object-type-spec.compatible-super-and-sub? (<nelist>-ots) rand.ots)
+		(object-type-spec.compatible-super-and-sub? (<pair>-ots)   rand.ots))
 	    (<top>-ots))
 
 	   (else

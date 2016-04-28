@@ -23,7 +23,7 @@
 
 (module (<typed-variable-spec>
 	 typed-variable-spec?
-	 typed-variable-spec.ots
+	 typed-variable-spec.ots			typed-variable-spec.ots-set!
 
 	 <lexical-typed-variable-spec>
 	 make-lexical-typed-variable-spec		lexical-typed-variable-spec?
@@ -42,9 +42,9 @@
 ;;;; lexical variable specification: base type
 
 (define-record-type (<typed-variable-spec> dummy typed-variable-spec?)
-  (nongenerative vicare:expander:<typed-variable-spec>)
+  (nongenerative *0*vicare:expander:<typed-variable-spec>)
   (fields
-    (immutable ots		typed-variable-spec.ots)
+    (mutable ots		typed-variable-spec.ots typed-variable-spec.ots-set!)
 		;An instance  of "<object-type-spec>"  representing the type  of this
 		;variable.
     #| end of FIELDS |# )
@@ -59,7 +59,7 @@
 ;;;; local lexical variable specification
 
 (define-record-type (<lexical-typed-variable-spec> make-lexical-typed-variable-spec lexical-typed-variable-spec?)
-  (nongenerative vicare:expander:<lexical-typed-variable-spec>)
+  (nongenerative *0*vicare:expander:<lexical-typed-variable-spec>)
   (parent <typed-variable-spec>)
   (fields
     (immutable lex		lexical-typed-variable-spec.lex)
@@ -85,7 +85,7 @@
 ;;"<global-typed-variable-spec>"; it pertains to the visit code.
 ;;
 (define-record-type (<global-typed-variable-spec> make-global-typed-variable-spec global-typed-variable-spec?)
-  (nongenerative vicare:expander:<global-typed-variable-spec>)
+  (nongenerative *0*vicare:expander:<global-typed-variable-spec>)
   (parent <typed-variable-spec>)
   (fields
     (immutable variable.loc	global-typed-variable-spec.variable-loc)
@@ -102,7 +102,7 @@
 ;;;; typed core primitive
 
 (define-record-type (<core-prim-type-spec> make-core-prim-type-spec core-prim-type-spec?)
-  (nongenerative vicare:expander:<core-prim-type-spec>)
+  (nongenerative *0*vicare:expander:<core-prim-type-spec>)
   (parent <typed-variable-spec>)
   (fields
     (immutable name			core-prim-type-spec.name)

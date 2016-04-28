@@ -449,6 +449,7 @@ syntaxes like the following:
 (vector    <fixnum> <string> <symbol>)
 (pair-of   <fixnum>)
 (list-of   <fixnum>)
+(nelist-of <fixnum>)
 (vector-of <fixnum>)
 (hashtable <symbol> <string>)
 (alist     <symbol> <string>)
@@ -550,6 +551,18 @@ annotation.
 @lisp
 (is-a? '(1 2) (list-of <fixnum>))       @result{} #t
 (is-a? '()    (list-of <fixnum>))       @result{} #t
+@end lisp
+@end deftp
+
+
+@deftp {Type Annotation} nelist-of @meta{item-type}
+@deftpx {Parent Type} @aclass{list}
+Describe a proper non--empty list holding any number of items all of the
+specified type.  The syntax @meta{item-type} is a nested type
+annotation.  This type annotation is expanded to:
+
+@lisp
+(pair @meta{item-type} (list-of @meta{item-type}))
 @end lisp
 @end deftp
 
@@ -4237,6 +4250,18 @@ Apply @func{icdr} to the type instance.
 @deftpx {Parent Type} @aclass{top}
 Type of bytevector objects.  The constructor is @func{make-bytevector}.
 The type predicate is @func{bytevector?}.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{empty-bytevector}
+@deftpx {Parent Type} @aclass{bytevector}
+Type of empty bytevector objects.
+@end deftp
+
+
+@deftp {Built--in Type} @aclass{nebytevector}
+@deftpx {Parent Type} @aclass{bytevector}
+Type of non--empty bytevector objects.
 @end deftp
 
 @c page

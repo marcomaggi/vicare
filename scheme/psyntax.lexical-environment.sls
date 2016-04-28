@@ -226,7 +226,7 @@
     ;; typed variable specification: base type
     <typed-variable-spec>
     typed-variable-spec?
-    typed-variable-spec.ots
+    typed-variable-spec.ots				typed-variable-spec.ots-set!
 
     ;; typed lexical variable specification
     <lexical-typed-variable-spec>

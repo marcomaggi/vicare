@@ -131,15 +131,15 @@
   (set-for-each (lambda (x) (set! total (+ total x))) nums2)
   (test 70 total)
   (test 10 (set-fold + 3 nums))
-  (set! nums (set eqv-comparator 10 20 30 40 50))
-  ;; nums is now {10, 20, 30, 40, 50}
-  (test-assert
-   (set=? nums (set-unfold
-		eqv-comparator
-		(lambda (i) (= i 0))
-		(lambda (i) (* i 10))
-		(lambda (i) (- i 1))
-		5)))
+  (let ((nums (set eqv-comparator 10 20 30 40 50)))
+    ;; nums is now {10, 20, 30, 40, 50}
+    (test-assert
+     (set=? nums (set-unfold
+		  eqv-comparator
+		  (lambda (i) (= i 0))
+		  (lambda (i) (* i 10))
+		  (lambda (i) (- i 1))
+		  5))))
   (test '(a) (set->list (set eq-comparator 'a)))
   (set! syms2 (list->set eq-comparator '(e f)))
   ;; syms2 is now {e, f}

@@ -41,6 +41,8 @@
 (declare-core-primitive make-bytevector
     (safe)
   (signatures
+   ((<positive-fixnum>)				=> (<nebytevector>))
+   ((<positive-fixnum> <fixnum>)		=> (<nebytevector>))
    ((<non-negative-fixnum>)			=> (<bytevector>))
    ((<non-negative-fixnum> <fixnum>)		=> (<bytevector>)))
   ;;Not foldable because it must return a newly allocated bytevector.
@@ -49,9 +51,20 @@
    ((0 _)			effect-free result-true)
    ((_ _)			effect-free result-true)))
 
+(declare-core-primitive <nebytevector>-constructor
+    (safe)
+  (signatures
+   ((<positive-fixnum>)			=> (<nebytevector>))
+   ((<positive-fixnum> <fixnum>)	=> (<nebytevector>)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((_ _)			effect-free result-true)))
+
 (declare-core-primitive bytevector-copy
     (safe)
   (signatures
+   ((<empty-bytevector>)	=> (<empty-bytevector>))
+   ((<nebytevector>)		=> (<nebytevector>))
    ((<bytevector>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
@@ -60,6 +73,8 @@
 (declare-core-primitive bytevector-append
     (safe)
   (signatures
+   ((list-of <empty-bytevector>)	=> (<empty-bytevector>))
+   ((list-of <nebytevector>)		=> (<nebytevector>))
    ((list-of <bytevector>)		=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
@@ -68,12 +83,15 @@
 (declare-core-primitive bytevector-concatenate
     (safe)
   (signatures
+   (((list-of <empty-bytevector>))	=> (<empty-bytevector>))
+   (((list-of <nebytevector>))		=> (<nebytevector>))
    (((list-of <bytevector>))		=> (<bytevector>))))
 
 (declare-core-primitive bytevector-reverse-and-concatenate
     (safe)
   (signatures
-   ((<list>)		=> (<bytevector>)))
+   ((<null>)			=> (<empty-bytevector>))
+   ((<list>)			=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_)				effect-free result-true)))
@@ -119,7 +137,8 @@
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
-(declare-type-predicate bytevector? <bytevector>)
+(declare-type-predicate bytevector?			<bytevector>)
+(declare-type-predicate <nebytevector>-type-predicate	<nebytevector>)
 
 (declare-bytevector-predicate bytevector-empty?			(replacements $bytevector-empty?))
 
@@ -132,7 +151,8 @@
 (declare-core-primitive list-of-bytevectors?
     (safe)
   (signatures
-   ((<list>)		=> (<boolean>)))
+   (((list-of <bytevector>))		=> (<true>))
+   ((<list>)				=> (<boolean>)))
   (attributes
    ((_)				foldable effect-free)))
 
@@ -142,7 +162,9 @@
 (declare-core-primitive bytevector-length
     (safe)
   (signatures
-   ((<bytevector>)	=> (<non-negative-fixnum>)))
+   ((<empty-bytevector>)	=> (<zero-fixnum>))
+   ((<nebytevector>)		=> (<positive-fixnum>))
+   ((<bytevector>)		=> (<non-negative-fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
@@ -204,14 +226,14 @@
 (declare-core-primitive bytevector-s8-ref
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum>)	=> (<fixnum>)))
+   ((<nebytevector> <non-negative-fixnum>)	=> (<fixnum>)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
 (declare-core-primitive bytevector-u8-ref
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum>)	=> (<non-negative-fixnum>)))
+   ((<nebytevector> <non-negative-fixnum>)	=> (<non-negative-fixnum>)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
@@ -222,7 +244,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector> <non-negative-fixnum>)	=> (?return-value-tag)))
+	    ((<nebytevector> <non-negative-fixnum>)	=> (?return-value-tag)))
 	   (attributes
 	    ((_ _)		foldable effect-free result-true))))
 	)))
@@ -243,7 +265,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector> <non-negative-fixnum> <symbol>)	=> (?return-value-tag)))
+	    ((<nebytevector> <non-negative-fixnum> <symbol>)	=> (?return-value-tag)))
 	   (attributes
 	    ((_ _)		foldable effect-free result-true))))
 	)))
@@ -260,14 +282,14 @@
 (declare-core-primitive bytevector-sint-ref
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <symbol> <positive-fixnum>)	=> (<exact-integer>)))
+   ((<nebytevector> <non-negative-fixnum> <symbol> <positive-fixnum>)	=> (<exact-integer>)))
   (attributes
    ((_ _ _ _)			foldable effect-free result-true)))
 
 (declare-core-primitive bytevector-uint-ref
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <symbol> <positive-fixnum>)	=> (<exact-integer>)))
+   ((<nebytevector> <non-negative-fixnum> <symbol> <positive-fixnum>)	=> (<exact-integer>)))
   (attributes
    ((_ _ _ _)			foldable effect-free result-true)))
 
@@ -276,12 +298,12 @@
 (declare-core-primitive bytevector-s8-set!
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <fixnum>)	=> (<void>))))
+   ((<nebytevector> <non-negative-fixnum> <fixnum>)	=> (<void>))))
 
 (declare-core-primitive bytevector-u8-set!
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>))))
+   ((<nebytevector> <non-negative-fixnum> <non-negative-fixnum>)	=> (<void>))))
 
 (let-syntax
     ((declare-safe-bytevector-mutator
@@ -290,7 +312,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector> <non-negative-fixnum> ?new-value-tag)	=> (<void>)))))
+	    ((<nebytevector> <non-negative-fixnum> ?new-value-tag)	=> (<void>)))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-native-set!		<fixnum>)
   (declare-safe-bytevector-mutator bytevector-u16-native-set!		<non-negative-fixnum>)
@@ -309,7 +331,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
+	    ((<nebytevector> <non-negative-fixnum> ?new-value-tag <symbol>)	=> (<void>)))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-set!		<fixnum>)
   (declare-safe-bytevector-mutator bytevector-u16-set!		<non-negative-fixnum>)
@@ -324,12 +346,12 @@
 (declare-core-primitive bytevector-sint-set!
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> (<exact-integer>))))
+   ((<nebytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> (<exact-integer>))))
 
 (declare-core-primitive bytevector-uint-set!
     (safe)
   (signatures
-   ((<bytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> (<exact-integer>))))
+   ((<nebytevector> <non-negative-fixnum> <exact-integer> <symbol> <positive-fixnum>)	=> (<exact-integer>))))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -337,7 +359,9 @@
 (declare-core-primitive bytevector->string
     (safe)
   (signatures
-   ((<bytevector> <transcoder>)	=> (<string>)))
+   ((<empty-bytevector> <transcoder>)	=> (<empty-string>))
+   ((<nebytevector>     <transcoder>)	=> (<nestring>))
+   ((<bytevector>       <transcoder>)	=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string at every application.
    ((_ _)			effect-free result-true)))
@@ -349,7 +373,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector>)	=> (<string>)))
+	    ((<empty-bytevector>)	=> (<empty-string>))
+	    ((<nebytevector>)		=> (<nestring>))
+	    ((<bytevector>)		=> (<string>)))
 	   (attributes
 	    ;;Not foldable because it must return a new string at every application.
 	    ((_) 		effect-free result-true))))
@@ -366,8 +392,14 @@
 (declare-core-primitive utf8->string
     (safe)
   (signatures
-   ((<bytevector>)		=> (<string>))
-   ((<bytevector> <symbol>)	=> (<string>)))
+   ((<empty-bytevector>)		=> (<empty-string>))
+   ((<empty-bytevector> <symbol>)	=> (<empty-string>))
+
+   ((<nebytevector>)			=> (<nestring>))
+   ((<nebytevector> <symbol>)		=> (<nestring>))
+
+   ((<bytevector>)			=> (<string>))
+   ((<bytevector> <symbol>)		=> (<string>)))
   (attributes
    ;;Not foldable because it must return a new string at every application.
    ((_) 		effect-free result-true)
@@ -376,6 +408,14 @@
 (declare-core-primitive utf16->string
     (safe)
   (signatures
+   ((<empty-bytevector> <symbol>)			=> (<empty-string>))
+   ((<empty-bytevector> <symbol> <top>)			=> (<empty-string>))
+   ((<empty-bytevector> <symbol> <top> <symbol>)	=> (<empty-string>))
+
+   ((<nebytevector> <symbol>)			=> (<nestring>))
+   ((<nebytevector> <symbol> <top>)		=> (<nestring>))
+   ((<nebytevector> <symbol> <top> <symbol>)	=> (<nestring>))
+
    ((<bytevector> <symbol>)			=> (<string>))
    ((<bytevector> <symbol> <top>)		=> (<string>))
    ((<bytevector> <symbol> <top> <symbol>)	=> (<string>)))
@@ -392,6 +432,12 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
+	    ((<empty-bytevector>)		=> (<empty-string>))
+	    ((<empty-bytevector> <symbol>)	=> (<empty-string>))
+
+	    ((<nebytevector>)		=> (<nestring>))
+	    ((<nebytevector> <symbol>)	=> (<nestring>))
+
 	    ((<bytevector>)		=> (<string>))
 	    ((<bytevector> <symbol>)	=> (<string>)))
 	   (attributes
@@ -407,6 +453,14 @@
 (declare-core-primitive utf32->string
     (safe)
   (signatures
+   ((<empty-bytevector> <symbol>)			=> (<empty-string>))
+   ((<empty-bytevector> <symbol> <top>)			=> (<empty-string>))
+   ((<empty-bytevector> <symbol> <top> <symbol>)	=> (<empty-string>))
+
+   ((<nebytevector> <symbol>)			=> (<nestring>))
+   ((<nebytevector> <symbol> <top>)		=> (<nestring>))
+   ((<nebytevector> <symbol> <top> <symbol>)	=> (<nestring>))
+
    ((<bytevector> <symbol>)			=> (<string>))
    ((<bytevector> <symbol> <top>)		=> (<string>))
    ((<bytevector> <symbol> <top> <symbol>)	=> (<string>)))
@@ -423,7 +477,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector>)	=> (<bytevector>)))
+	    ((<empty-bytevector>)	=> (<empty-bytevector>))
+	    ((<nebytevector>)		=> (<nebytevector>))
+	    ((<bytevector>)		=> (<bytevector>)))
 	   (attributes
 	    ;;Not foldable because it must return a new string at every application.
 	    ((_) 		effect-free result-true))))
@@ -443,7 +499,9 @@
 (declare-core-primitive bytevector->sint-list
     (safe)
   (signatures
-   ((<bytevector> <symbol> <positive-fixnum>)	=> (<list>)))
+   ((<empty-bytevector> <symbol> <positive-fixnum>)	=> (<null>))
+   ((<nebytevector> <symbol> <positive-fixnum>)		=> ((pair <exact-integer> (list-of <exact-integer>))))
+   ((<bytevector> <symbol> <positive-fixnum>)		=> ((list-of <exact-integer>))))
   (attributes
    ;;Not foldable because it must return a new list at every application.
    ((_ _ _) 		effect-free result-true)))
@@ -451,7 +509,9 @@
 (declare-core-primitive bytevector->uint-list
     (safe)
   (signatures
-   ((<bytevector> <symbol> <positive-fixnum>)	=> (<list>)))
+   ((<empty-bytevector> <symbol> <positive-fixnum>)	=> (<null>))
+   ((<nebytevector> <symbol> <positive-fixnum>)		=> ((pair <non-negative-exact-integer> (list-of <non-negative-exact-integer>))))
+   ((<bytevector> <symbol> <positive-fixnum>)		=> ((list-of <exact-integer>))))
   (attributes
    ;;Not foldable because it must return a new list at every application.
    ((_ _ _) 		effect-free result-true)))
@@ -463,7 +523,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<bytevector>)	=> (<list>)))
+	    ((<empty-bytevector>)	=> (<null>))
+	    ((<nebytevector>)		=> ((pair <fixnum> (list-of <fixnum>))))
+	    ((<bytevector>)		=> ((list-of <fixnum>))))
 	   (attributes
 	    ;;Not foldable because it must return a new list at every application.
 	    ((_) 		effect-free result-true))))
@@ -605,18 +667,17 @@
 (declare-core-primitive $make-bytevector
     (unsafe)
   (signatures
-   ((<fixnum>)		=> (<bytevector>))
-   ((<fixnum> <fixnum>)	=> (<bytevector>)))
-  ;;Not foldable because it must return a newly allocated bytevector.
-  (attributes
-   ((0)				effect-free result-true)
-   ((0 _)			effect-free result-true)
-   ((_ _)			effect-free result-true)))
+   ((<positive-fixnum>)				=> (<nebytevector>))
+   ((<positive-fixnum> <fixnum>)		=> (<nebytevector>))
+   ((<non-negative-fixnum>)			=> (<bytevector>))
+   ((<non-negative-fixnum> <fixnum>)		=> (<bytevector>))))
 
 (declare-core-primitive $bytevector-copy
     (unsafe)
   (signatures
-   ((<bytevector>)		=> (<bytevector>)))
+   ((<empty-bytevector>)		=> (<empty-bytevector>))
+   ((<nebytevector>)			=> (<nebytevector>))
+   ((<bytevector>)			=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_)				effect-free result-true)))
@@ -624,7 +685,7 @@
 (declare-core-primitive $bytevector-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> <list>)	=> (<bytevector>)))
+   ((<exact-integer> (list-of <bytevector>))	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_ _)			effect-free result-true)))
@@ -632,7 +693,7 @@
 (declare-core-primitive $bytevector-reverse-and-concatenate
     (unsafe)
   (signatures
-   ((<exact-integer> <list>)	=> (<bytevector>)))
+   ((<exact-integer> (list-of <bytevector>))	=> (<bytevector>)))
   (attributes
    ;;Not foldable because it must return a newly allocated bytevector.
    ((_ _)			effect-free result-true)))
@@ -663,6 +724,8 @@
 (declare-core-primitive $bytevector-length
     (unsafe)
   (signatures
+   ((<empty-bytevector>)	=> (<zero-fixnum>))
+   ((<nebytevector>)		=> (<positive-fixnum>))
    ((<bytevector>)		=> (<non-negative-fixnum>)))
   (attributes
    ((_)			foldable effect-free result-true)))
@@ -670,7 +733,7 @@
 (declare-core-primitive $bytevector-total-length
     (unsafe)
   (signatures
-   ((<exact-integer> <list>)	=> (<exact-integer>)))
+   ((<exact-integer> (list-of <bytevector>))	=> (<exact-integer>)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 

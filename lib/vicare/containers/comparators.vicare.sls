@@ -132,7 +132,7 @@
        (define-syntax ?who
 	 (identifier-syntax (builder)))
        (define builder
-	 (let ((C #f))
+	 (let (({C <boolean>} #f))
 	   (lambda ()
 	     (or C (receive-and-return (rv)
 		       ?build-form

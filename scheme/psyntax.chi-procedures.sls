@@ -1177,16 +1177,44 @@
        ;;
        (let* ((lts		(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
 	      (variable.lex	(lexical-typed-variable-spec.lex lts))
-	      (variable.type-id	(object-type-spec.name (typed-variable-spec.ots lts)))
-	      (rhs.psi		(chi-expr (bless
-					   `(assert-signature-and-return (,variable.type-id) ,rhs.stx))
-					  lexenv.run lexenv.expand)))
+	      (lts.old-ots	(typed-variable-spec.ots lts))
+	      (rhs.psi		(chi-expr (bless rhs.stx) lexenv.run lexenv.expand))
+	      (rhs.ots		(%process-rhs-signature rhs.stx rhs.psi))
+	      (new-lts.ots	(if (object-type-spec.matching-super-and-sub? lts.old-ots rhs.ots)
+				    lts.old-ots
+				  (object-type-spec.common-ancestor lts.old-ots rhs.ots))))
 	 (lexical-typed-variable-spec.assigned?-set! lts #t)
+	 ;;This  is  right-hand side  type  propagation.   The  type of  the  lexical
+	 ;;variable is mutated to match the new value.
+	 (typed-variable-spec.ots-set! lts rhs.ots)
 	 (make-psi input-form.stx
 	   (build-lexical-assignment no-source
 	       variable.lex
 	     (psi.core-expr rhs.psi))
 	   (make-type-signature/single-void))))
+
+      ;;NOTE The clause  below for LEXICAL-TYPED variables does not  perform RHS type
+      ;;propagation and  validates the RHS type  with ASSERT-SIGNATURE-AND-RETURN.  I
+      ;;keep it here as reference.  (Marco Maggi; Thu Apr 28, 2016)
+      ;;
+      ;; ((lexical-typed)
+      ;;  ;;A typed lexical binding used as LHS of SET!  is mutable and so unexportable.
+      ;;  ;;The syntactic binding's descriptor has format:
+      ;;  ;;
+      ;;  ;;   (lexical-typed . (#<lexical-typed-variable-spec> . ?expanded-expr))
+      ;;  ;;
+      ;;  (let* ((lts              (syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
+      ;;         (variable.lex     (lexical-typed-variable-spec.lex lts))
+      ;;         (variable.type-id (object-type-spec.name (typed-variable-spec.ots lts)))
+      ;;         (rhs.psi          (chi-expr (bless
+      ;;                                      `(assert-signature-and-return (,variable.type-id) ,rhs.stx))
+      ;;                                     lexenv.run lexenv.expand)))
+      ;;    (lexical-typed-variable-spec.assigned?-set! lts #t)
+      ;;    (make-psi input-form.stx
+      ;;      (build-lexical-assignment no-source
+      ;;          variable.lex
+      ;;        (psi.core-expr rhs.psi))
+      ;;      (make-type-signature/single-void))))
 
       ((core-prim core-prim-typed)
        (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
@@ -1257,6 +1285,53 @@
       (else
        (syntax-violation __module_who__
 	 "invalid left-hand side in assignment syntax" input-form.stx lhs.id))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%process-rhs-signature)
+
+    (define (%process-rhs-signature input-form.stx rhs.psi)
+      (define (common message)
+	(condition
+	  (make-who-condition 'set!)
+	  (make-message-condition message)
+	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
+      (case-signature-specs (psi.retvals-signature rhs.psi)
+	((single-value)
+	 ;;The expression returns a single value.  Good this OTS will become the type
+	 ;;of the syntactic binding.
+	 => (lambda (rhs.ots) rhs.ots))
+
+	(<no-return>
+	 ;;The expression is marked as not-returning.
+	 (%handle-error common "expression used as right-hand side in SET! is typed as not returning"))
+
+	((<void>)
+	 ;;The expression is marked as returning void.
+	 (%handle-error common "expression used as right-hand side in SET! is typed as returning void"))
+
+	((unspecified-values)
+	 ;;The expression returns an unspecified  number of values.  Let's simulate a
+	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
+	 ;;number of arguments.
+	 (<top>-ots))
+
+	(else
+	 ;;The expression returns zero, two or more values.
+	 (%handle-error common "expression used as right-hand side in SET! is typed as returning zero, two or more values"))))
+
+    (define (%handle-error common message)
+      (case-expander-language
+	((typed)
+	 (raise			(condition (make-expand-time-type-signature-violation)	(common message))))
+	((default)
+	 (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common message)))
+	 (<top>-ots))
+	((strict-r6rs)
+	 (<top>-ots))))
+
+    #| end of module: %PROCESS-RHS-SIGNATURE |# )
 
   #| end of module: CHI-SET |# )
 

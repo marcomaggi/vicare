@@ -381,6 +381,18 @@
 
   (check-for-false	(type-annotation-super-and-sub? (list <number>) (list-of <string>)))
 
+  ;;Tests for "<nelist>".
+  (check-for-true	(type-annotation-super-and-sub? <nelist> <nelist>))
+  (check-for-true	(type-annotation-super-and-sub? <list> <nelist>))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (list <top>)))
+  (check-for-false	(type-annotation-super-and-sub? <nelist> (list-of <top>)))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (pair-of <null>)))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (pair-of <list>)))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (pair-of <nelist>)))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (pair <top> <null>)))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (pair <top> <list>)))
+  (check-for-true	(type-annotation-super-and-sub? <nelist> (pair <top> (list-of <string>))))
+
 ;;; --------------------------------------------------------------------
 ;;; vectors
 
@@ -668,6 +680,61 @@
   (doit <fixnum> <top>	=> possible-match)
 
 ;;; --------------------------------------------------------------------
+;;; lists
+
+  ;;Tests for "<list>".
+  (doit <list>			<list>				=> exact-match)
+  (doit <list>			<null>				=> exact-match)
+  (doit <list>			<nelist>			=> exact-match)
+  (doit <list>			(list <top>)			=> exact-match)
+  (doit <list>			(list-of <top>)			=> exact-match)
+  (doit <list>			(pair-of <null>)		=> exact-match)
+  (doit	<list>			(pair-of <list>)		=> exact-match)
+  (doit <list>			(pair-of <nelist>)		=> exact-match)
+  (doit <list>			(pair <top> <null>)		=> exact-match)
+  (doit <list>			(pair <top> <list>)		=> exact-match)
+  (doit <list>			(pair <top> <nelist>)		=> exact-match)
+  (doit <list>			(pair <top> (list <top>))	=> exact-match)
+  (doit <list>			(pair <top> (list-of <string>))	=> exact-match)
+
+  (doit <null>				<list>			=> possible-match)
+  (doit <nelist>			<list>			=> possible-match)
+  (doit (list <top>)			<list>			=> possible-match)
+  (doit (list-of <top>)			<list>			=> possible-match)
+  (doit (pair-of <null>)		<list>			=> possible-match)
+  (doit (pair-of <list>)		<list>			=> possible-match)
+  (doit (pair-of <nelist>)		<list>			=> possible-match)
+  (doit (pair <top> <null>)		<list>			=> possible-match)
+  (doit (pair <top> <list>)		<list>			=> possible-match)
+  (doit (pair <top> <nelist>)		<list>			=> possible-match)
+  (doit (pair <top> (list <top>))	<list>			=> possible-match)
+  (doit (pair <top> (list-of <string>))	<list>			=> possible-match)
+
+  ;;Tests for "<nelist>".
+  (doit <nelist>		<nelist>			=> exact-match)
+  (doit <nelist>		<list>				=> possible-match)
+  (doit <nelist>		<null>				=> no-match)
+  (doit <nelist>		(list <top>)			=> exact-match)
+  (doit <nelist>		(list-of <top>)			=> possible-match)
+  (doit <nelist>		(pair-of <null>)		=> exact-match)
+  (doit	<nelist>		(pair-of <list>)		=> exact-match)
+  (doit <nelist>		(pair-of <nelist>)		=> exact-match)
+  (doit <nelist>		(pair <top> <null>)		=> exact-match)
+  (doit <nelist>		(pair <top> <list>)		=> exact-match)
+  (doit <nelist>		(pair <top> (list-of <string>))	=> exact-match)
+
+  (doit <list>				<nelist>		=> exact-match)
+  (doit <null>				<nelist>		=> no-match)
+  (doit (list <top>)			<nelist>		=> possible-match)
+  (doit (list-of <top>)			<nelist>		=> possible-match)
+  (doit (pair-of <null>)		<nelist>		=> possible-match)
+  (doit (pair-of <list>)		<nelist>		=> possible-match)
+  (doit (pair-of <nelist>)		<nelist>		=> possible-match)
+  (doit (pair <top> <null>)		<nelist>		=> possible-match)
+  (doit (pair <top> <list>)		<nelist>		=> possible-match)
+  (doit (pair <top> (list-of <string>))	<nelist>		=> possible-match)
+
+;;; --------------------------------------------------------------------
 ;;; type unions
 
   (doit (or <fixnum> <string>)	<fixnum>		=> exact-match)
@@ -769,7 +836,7 @@
   (doit (ancestor-of &condition)	(condition &who &message)	=> no-match)
   (doit (ancestor-of &who)		(condition &who &message)	=> no-match)
 
-;;; complement
+;;; complement of ancestor
 
   (doit (not (ancestor-of &condition))		&condition	=> exact-match)
   (doit (not (ancestor-of &condition))		<condition>	=> no-match)
@@ -1530,7 +1597,7 @@
   (doit (let ((a 1)
 	      (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> (<positive-fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; LET* type propagation
@@ -1553,7 +1620,7 @@
   (doit (let* ((a 1)
 	       (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> (<positive-fixnum>))
 
 ;;; --------------------------------------------------------------------
 ;;; LETREC type propagation
@@ -1945,7 +2012,7 @@
   (doit* (list? (list-of <fixnum>))		=> <true>)
   (doit* (list? (list <fixnum> <string>))	=> <true>)
   (doit* (list? (pair <fixnum> <string>))	=> <boolean>)
-  (doit* (list? (pair <fixnum> <null>))		=> <boolean>)
+  (doit* (list? (pair <fixnum> <null>))		=> <true>)
 
 ;;; --------------------------------------------------------------------
 ;;; circular-list?

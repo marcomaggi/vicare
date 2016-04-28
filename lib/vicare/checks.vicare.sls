@@ -1,32 +1,30 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;``Software''), to deal in the Software without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software  and associated documentation  files (the ``Software''), to  deal in
+;;;the Software without restriction, including  without limitation the rights to use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
 ;;;The  above  copyright notice  and  this  permission  notice shall  be
 ;;;included in all copies or substantial portions of the Software.
 ;;;
-;;;THE SOFTWARE  IS PROVIDED  ``AS IS'', WITHOUT  WARRANTY OF  ANY KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT. IN  NO EVENT SHALL THE AUTHORS  OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED ``AS  IS'', WITHOUT  WARRANTY OF  ANY KIND,  EXPRESS OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO  EVENT SHALL THE  AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-#!r6rs
+#!vicare
 (library (vicare checks)
+  (options typed-language)
   (export
     ;; bindings from the SRFI
     check
@@ -145,8 +143,14 @@
 
 ;;; state handling
 
+(define-type <list-check-failed>
+  (list-of (list <top> <top> <top>)))
+
+(define-type <nelist-check-failed>
+  (nelist-of (list <top> <top> <top>)))
+
 (define check:correct 0)
-(define check:failed '())
+(define {check:failed <list-check-failed>} '())
 
 (define (check-reset!)
   (set! check:correct 0)
@@ -196,23 +200,25 @@
     (check-display " correct, ")
     (check-display (length check:failed))
     (check-display " failed.")
-    (if (or (null? check:failed) (<= (check:mode) 1))
+    (when (> (check:mode) 1)
+      (if (pair? check:failed)
+	  (let* (({ell <nelist-check-failed>}	(reverse check:failed))
+		 ({w (list <top> <top> <top>)}	(car ell))
+		 (expression		(car w))
+		 (actual-result		(cadr w))
+		 (expected-result	(caddr w)))
+	    (check-display " First failed example:")
+	    (check-newline)
+	    (check:report-expression expression)
+	    (check:report-actual-result actual-result)
+	    (check:report-failed expected-result)
+	    (check-newline)
+	    (check-newline))
 	(begin
 	  (check-newline)
 	  (check-newline)
-	  (check-newline))
-      (let* ((w (car (reverse check:failed)))
-	     (expression (car w))
-	     (actual-result (cadr w))
-	     (expected-result (caddr w)))
-	(check-display " First failed example:")
-	(check-newline)
-	(check:report-expression expression)
-	(check:report-actual-result actual-result)
-	(check:report-failed expected-result)
-	(check-newline)
-	(check-newline)))
-    (flush-output-port (current-error-port)))
+	  (check-newline)))
+      (flush-output-port (current-error-port))))
   (cond ((null? check:failed)
 	 ;;Success for GNU Automake.
 	 (exit 0))

@@ -47,7 +47,7 @@
    ((<null>)				=> (<false>))
    (((or <list>
 	 (ancestor-of <list>)
-	 (ancestor-of <pair>)))	=> (<boolean>))
+	 (ancestor-of <pair>)))		=> (<boolean>))
    (((and (not <pair>)
 	  (not <list>)))		=> (<false>)))
   (attributes
@@ -59,7 +59,7 @@
    ((<list>)				=> (<true>))
    (((or <pair>
 	 (ancestor-of <list>)
-	 (ancestor-of <pair>)))	=> (<boolean>))
+	 (ancestor-of <pair>)))		=> (<boolean>))
    (((and (not <list>)
 	  (not <pair>)))		=> (<false>)))
   (attributes
@@ -71,7 +71,7 @@
   (signatures
    ((<list>)				=> (<false>))
    (((or <pair>
-	 (ancestor-of <pair>)))	=> (<boolean>))
+	 (ancestor-of <pair>)))		=> (<boolean>))
    (((not <pair>))			=> (<false>)))
   (attributes
    ((())		foldable effect-free result-false)
@@ -83,8 +83,8 @@
 (declare-core-primitive cons
     (safe)
   (signatures
-   ((<top> <list>)		=> (<list>))
-   ((_ _)			=> (<pair>)))
+   ((<top> <list>)			=> (<nelist>))
+   ((_ _)				=> (<pair>)))
   (attributes
    ;;This is not foldable because it must return a newly allocated pair every time.
    ((_ _)			effect-free result-true)))
@@ -92,8 +92,13 @@
 (declare-core-primitive cons*
     (safe)
   (signatures
-   ((_)			=> (_))
-   ((_ _ . _)		=> (<pair>)))
+   ((<top>)				=> (<top>))
+   ;;Common cases.
+   ((<top> <list>)			=> (<nelist>))
+   ((<top> <top> <list>)		=> (<nelist>))
+   ((<top> <top>)			=> (<pair>))
+   ;;Here the result may be an improper list.
+   ((<top> <top> <top> . <list>)	=> (<pair>)))
   (attributes
    ;;This will return the operand itself, so it is foldable.
    ((_)			foldable effect-free)
@@ -135,18 +140,22 @@
     (safe)
   (signatures
    ((<null>)			=> (<null>))
+   ((<nelist>)			=> (<nelist>))
    ((<list>)			=> (<list>)))
   (attributes
    ;;This is foldable because it returns null itself.
-   ((())		foldable effect-free result-true)
+   ((())			foldable effect-free result-true)
    ;;Not foldable because it must return a newly allocated list every time.
-   ((_)			effect-free result-true)))
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive append
     (safe)
   (signatures
    (()					=> (<null>))
-   ((<top> . (list-of <top>))		=> (<top>)))
+   ((list-of <list>)			=> (<nelist>))
+   ;;In general the result may be an improper list.
+   ((<top> . <list>)			=> (<pair>))
+   (<list>				=> (<top>)))
   (attributes
    ;;This is foldable because it returns null itself.
    (()				foldable effect-free result-true)
@@ -226,21 +235,23 @@
 (declare-core-primitive last-pair
     (safe)
   (signatures
-   ((<list>)				=> (<pair>)))
+   ((<nelist>)				=> (<pair>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive list-tail
     (safe)
   (signatures
-   ((<list> <exact-integer>)		=> (<list>)))
+   ;;If the index is out of range: an exception is raised.
+   ((<nelist> <exact-integer>)		=> (<list>)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive list-ref
     (safe)
   (signatures
-   ((<list> <exact-integer>)		=> (<top>)))
+   ;;If the index is out of range: an exception is raised.
+   ((<nelist> <exact-integer>)		=> (<top>)))
   (attributes
    ((_ _)				foldable effect-free)))
 
@@ -385,7 +396,6 @@
   (signatures
    ((<pair>)		=> (<top>))
    ((<nelist>)		=> (<top>)))
-  ;;(replacements $cdr)
   #| end of DECLARE-CORE-PRIMITIVE |# )
 
 (declare-pair-accessor caar)
@@ -469,7 +479,8 @@
 (declare-core-primitive list->string
     (safe)
   (signatures
-   ((<list>)		=> (<string>)))
+   ((<null>)				=> (<empty-string>))
+   (((pair <char> (list-of <char>)))	=> (<nestring>)))
   (attributes
    ;;Not foldable because it must return a new string every time.
    ((_)				effect-free result-true)))
@@ -477,7 +488,8 @@
 (declare-core-primitive list->vector
     (safe)
   (signatures
-   ((<list>)		=> (<vector>)))
+   ((<null>)		=> (<empty-vector>))
+   ((<nelist>)		=> (<nevector>)))
   (attributes
    ;;Not foldable because it must return a new vector every time.
    ((_)				effect-free result-true)))
@@ -489,7 +501,8 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((<list>)		=> (<bytevector>)))
+	    ((<null>)		=> (<empty-bytevector>))
+	    ((<nelist>)		=> (<nebytevector>)))
 	   (attributes
 	    ;;Not foldable because it must return a new bytevector every time.
 	    ((_)				effect-free result-true))))
@@ -551,7 +564,7 @@
     (safe)
   (signatures
    (()				=> (<procedure> <procedure> <procedure>))
-   ((<list>)		=> (<procedure> <procedure> <procedure>)))
+   ((<list>)			=> (<procedure> <procedure> <procedure>)))
   (attributes
    (()				effect-free)
    ((_)				effect-free)))
@@ -572,7 +585,9 @@
 (declare-core-primitive $length
     (unsafe)
   (signatures
-   ((<list>)		=> (<non-negative-fixnum>)))
+   ((<null>)			=> (<zero-fixnum>))
+   ((<nelist>)			=> (<positive-fixnum>))
+   ((<list>)			=> (<non-negative-exact-integer>)))
   (attributes
    ((_)				foldable effect-free result-true)))
 

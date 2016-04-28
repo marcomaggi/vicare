@@ -263,7 +263,7 @@
 	  constructor destructor
 	  super-protocol destructor-protocol custom-printer method case-method define-type-descriptors
 	  type-predicate catch finally
-	  pair pair-of list-of vector-of hashtable alist parent-of ancestor-of enumeration)
+	  pair pair-of list-of nelist-of vector-of hashtable alist parent-of ancestor-of enumeration)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
