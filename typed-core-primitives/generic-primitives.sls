@@ -121,7 +121,6 @@
     (safe)
   (signatures
    ((<void>)			=> (<true>))
-   (((not <void>))		=> (<false>))
    ((<top>)			=> (<boolean>))))
 
 (declare-core-primitive load
