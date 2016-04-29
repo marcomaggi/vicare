@@ -59,13 +59,25 @@
 		 (catch-exns (lambda () expr))
 		 expected))]))
 
+(define-syntax with-ignored-warnings
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (with-exception-handler
+	 (lambda (E)
+	   (unless (warning? E)
+	     (raise E)))
+       (lambda ()
+	 ?body0 ?body ...)))
+    ))
+
 (define (catch-exns thunk)
   (guard (c [#t (make-err c)])
-    (call-with-values thunk
-      (lambda x
-	(if (= 1 (length x))
-	    (car x)
-	  (make-multiple-results x))))))
+    (with-ignored-warnings
+     (call-with-values thunk
+       (lambda x
+	 (if (= 1 (length x))
+	     (car x)
+	   (make-multiple-results x)))))))
 
 (define-syntax test/approx
   (syntax-rules ()
@@ -109,7 +121,8 @@
     [(_ expr condition)
      (test (guard (c [((condition-predicate (record-type-descriptor condition)) c)
 		      (make-expected-exception)])
-	     expr)
+	     (with-ignored-warnings
+	      expr))
 	   (make-expected-exception))]))
 
 (define-syntax test/values
@@ -127,7 +140,7 @@
 		(lambda ()
 		  (run-test 'expr
 			    (guard (c [#t (make-err c)])
-			      expr)
+			      (with-ignored-warnings expr))
 			    expected)))
 	       str)]))
 
@@ -147,7 +160,8 @@
     [(_ expr condition)
      (test (guard (c [((condition-predicate (record-type-descriptor condition)) c)
 		      'unspec])
-	     (begin expr 'unspec))
+	     (with-ignored-warnings
+	      (begin expr 'unspec)))
 	   'unspec)]))
 
 (define-syntax test/unspec-flonum-or-exn
@@ -155,12 +169,13 @@
     [(_ expr condition)
      (test (guard (c [((condition-predicate (record-type-descriptor condition)) c)
 		      'unspec-or-flonum])
-	     (let ([v expr])
-	       (if (flonum? v)
-		   'unspec-or-flonum
-		 (if (eq? v 'unspec-or-flonum)
-		     (list v)
-		   v))))
+	     (with-ignored-warnings
+	      (let ([v expr])
+		(if (flonum? v)
+		    'unspec-or-flonum
+		  (if (eq? v 'unspec-or-flonum)
+		      (list v)
+		    v)))))
 	   'unspec-or-flonum)]))
 
 (define-syntax test/output/unspec
