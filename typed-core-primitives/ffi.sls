@@ -109,6 +109,8 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-type-predicate memory-block?	<memory-block>)
+
 (declare-core-primitive make-memory-block
     (safe)
   (signatures
@@ -125,14 +127,6 @@
    (()						=> (<memory-block>)))
   (attributes
    (()						effect-free result-true)))
-
-(declare-core-primitive memory-block?
-    (safe)
-  (signatures
-   ((<memory-block>)				=> (<boolean>))
-   ((<top>)					=> (<false>)))
-  (attributes
-   ((_)						effect-free)))
 
 (declare-core-primitive memory-block?/not-null
     (safe)

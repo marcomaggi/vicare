@@ -515,6 +515,9 @@
     ((_ ?who ?obj-tag)
      (declare-core-primitive ?who
 	 (safe)
+       ;;NOTE This way of writing the signature  of a type predicate (with the use of
+       ;;ANCESTOR-OF) works here when there are no labels and unions in the hierarchy
+       ;;of ?TYPE; othewise things get messy.  (Marco Maggi; Fri Apr 29, 2016)
        (signatures
 	((?obj-tag)				=> (<true>))
 	(((ancestor-of ?obj-tag))		=> (<boolean>))
@@ -532,6 +535,9 @@
     ((_ ?who ?obj-tag)
      (declare-core-primitive ?who
 	 (safe)
+       ;;NOTE This way of writing the signature  of a type predicate (with the use of
+       ;;ANCESTOR-OF) works here when there are no labels and unions in the hierarchy
+       ;;of ?TYPE; othewise things get messy.  (Marco Maggi; Fri Apr 29, 2016)
        (signatures
 	(((or ?obj-tag <false>))		=> (<true>))
 	(((or (ancestor-of ?obj-tag)
