@@ -269,7 +269,7 @@
 				   expected-result)))))
     (else (error 'check:proc
 	    "unrecognized check:mode" (check:mode))))
-  (if #f #f))
+  (void))
 
 (define-syntax srfi:check
   (syntax-rules (=>)
@@ -305,11 +305,23 @@
 
 ;;;; more macros
 
+(define-syntax with-ignored-warnings
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (with-exception-handler
+	 (lambda (E)
+	   (unless (warning? E)
+	     (raise E)))
+       (lambda ()
+	 ?body0 ?body ...)))
+    ))
+
 (define-syntax false-if-exception
   (syntax-rules ()
     ((_ ?form0 ?form ...)
-     (guard (exc (else #f))
-       ?form0 ?form ...))))
+      (guard (exc (else #f))
+	(with-ignored-warnings
+	 ?form0 ?form ...)))))
 
 (define-syntax check-for-true
   (syntax-rules ()
@@ -333,7 +345,7 @@
 		    (list (condition-who E)
 			  (condition-irritants E)))
 		   (else E))
-	   ?body)
+	   (with-ignored-warnings ?body))
        => ?expected-who/irritants))
     ))
 
@@ -345,7 +357,7 @@
 		    (list (condition-who E)
 			  (condition-irritants E)))
 		   (else E))
-	   ?body)
+	   (with-ignored-warnings ?body))
        => ?expected-who/irritants))
     ))
 
@@ -359,7 +371,7 @@
 			  (procedure-signature-argument-violation.failed-expression E)
 			  (procedure-signature-argument-violation.offending-value E)))
 		   (else E))
-	   ?body)
+	   (with-ignored-warnings ?body))
        => ?expected-who/irritants))
     ))
 
@@ -373,7 +385,7 @@
 			  (procedure-signature-return-value-violation.failed-expression E)
 			  (procedure-signature-return-value-violation.offending-value E)))
 		   (else E))
-	   ?body)
+	   (with-ignored-warnings ?body))
        => ?expected-who/irritants))
     ))
 
@@ -388,7 +400,7 @@
 		    (list (condition-who E)
 			  (condition-irritants E)))
 		   (else E))
-	   ?body)
+	   (with-ignored-warnings ?body))
        => ?expected-who/irritants))
     ))
 
@@ -400,7 +412,7 @@
 		    (list (condition-who E)
 			  (condition-irritants E)))
 		   (else E))
-	   ?body)
+	   (with-ignored-warnings ?body))
        => ?expected-who/irritants))
     ))
 

@@ -64,6 +64,9 @@
     (prefix (only (ikarus.debugger)
 		  guarded-start)
 	    debugger::)
+    (prefix (only (psyntax.config)
+		  warn-about-logic-constants)
+	    psyntax::)
     (prefix (only (psyntax.library-utils)
 		  init-search-paths-and-directories)
 	    psyntax::)
@@ -528,6 +531,14 @@
 	   (options::print-verbose-messages? #f)
 	   (next-option (cdr args) k))
 
+	  ((%option= "-Wlogic-constants")
+	   (psyntax::warn-about-logic-constants #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "-Wno-logic-constants")
+	   (psyntax::warn-about-logic-constants #f)
+	   (next-option (cdr args) k))
+
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -964,6 +975,11 @@ Other options:
            basic-letrec-pass
            waddell-letrec-pass
            scc-letrec-pass
+
+   -Wlogic-constants
+   -Wno-logic-constants
+        Enable or disable  raising a &warning exception  when an operand
+	in a logic expression always returns false or non-false.
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,

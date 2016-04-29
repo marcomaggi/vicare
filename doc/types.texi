@@ -802,9 +802,8 @@ A short--cut to specify:
 
 @lisp
 (case-lambda
-  ((@meta{type})                => (<true>))
-  (((ancestor-of @meta{type}))  => (<boolean>))
-  (((not @meta{type}))          => (<false>)))
+  ((@meta{type})     => (<true>))
+  ((<top>)      => (<boolean>)))
 @end lisp
 @end deftp
 

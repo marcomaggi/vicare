@@ -131,10 +131,10 @@
      (begin
        (define-syntax ?who
 	 (identifier-syntax (builder)))
-       (define builder
-	 (let (({C <boolean>} #f))
+       (define {builder (lambda () => (comparator))}
+	 (let (({C (or <false> comparator)} #f))
 	   (lambda ()
-	     (or C (receive-and-return (rv)
+	     (or C (receive-and-return ({rv comparator})
 		       ?build-form
 		     (set! C rv))))))
        #| end of BEGIN |# ))

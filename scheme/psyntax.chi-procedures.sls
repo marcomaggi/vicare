@@ -1177,20 +1177,34 @@
        ;;
        (let* ((lts		(syntactic-binding-descriptor/lexical-typed-var.typed-variable-spec descr))
 	      (variable.lex	(lexical-typed-variable-spec.lex lts))
-	      (lts.old-ots	(typed-variable-spec.ots lts))
+	      (lts.ots		(typed-variable-spec.ots lts))
 	      (rhs.psi		(chi-expr (bless rhs.stx) lexenv.run lexenv.expand))
-	      (rhs.ots		(%process-rhs-signature rhs.stx rhs.psi))
-	      (new-lts.ots	(if (object-type-spec.matching-super-and-sub? lts.old-ots rhs.ots)
-				    lts.old-ots
-				  (object-type-spec.common-ancestor lts.old-ots rhs.ots))))
+	      (rhs.ots		(%process-rhs-signature rhs.stx rhs.psi)))
+	 (define rhs.code
+	   (cond ((object-type-spec.matching-super-and-sub? lts.ots rhs.ots)
+		  (psi.core-expr rhs.psi))
+		 ((object-type-spec.compatible-super-and-sub? lts.ots rhs.ots)
+		  (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lts.ots #t))
+			 (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
+		    (build-application no-source
+			(psi.core-expr validator.psi)
+		      (list (psi.core-expr rhs.psi)	     ;value
+			    (build-data no-source 1)	     ;value-index
+			    (build-data no-source 'set!))))) ;caller-who
+		 (else
+		  (raise
+		   (condition (make-expand-time-type-signature-violation)
+			      (make-who-condition 'set!)
+			      (make-message-condition
+			       "expression used as right-hand side for SET! has type not matching the variable type")
+			      (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+			      (make-expected-type-signature-condition (make-type-signature/single-value lts.ots))
+			      (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
 	 (lexical-typed-variable-spec.assigned?-set! lts #t)
-	 ;;This  is  right-hand side  type  propagation.   The  type of  the  lexical
-	 ;;variable is mutated to match the new value.
-	 (typed-variable-spec.ots-set! lts rhs.ots)
 	 (make-psi input-form.stx
 	   (build-lexical-assignment no-source
 	       variable.lex
-	     (psi.core-expr rhs.psi))
+	     rhs.code)
 	   (make-type-signature/single-void))))
 
       ;;NOTE The clause  below for LEXICAL-TYPED variables does not  perform RHS type
@@ -1441,7 +1455,7 @@
 		(c (psi.core-expr guard-expr.psi) (stc)))))))
 
 
-(module (%process-typed-syntactic-bindings-lhs*)
+(module (%establish-typed-syntactic-bindings-lhs*)
   ;;This function is meant to be used by syntaxes that create new syntactic bindings:
   ;;LAMBDA, NAMED-LAMBDA,  CASE-LAMBDA, NAMED-CASE-LAMBDA,  LET, LETREC,  LETREC*, et
   ;;cetera.  These syntaxes need to create both typed and untyped syntactic bindings.
@@ -1466,7 +1480,7 @@
   ;;
   ;;this function must be called as:
   ;;
-  ;;   (%process-typed-syntactic-bindings-lhs*
+  ;;   (%establish-typed-syntactic-bindings-lhs*
   ;;      (list #'A #'B)
   ;;      (list (<fixnum>-ots) (<string>-ots))
   ;;      lexenv.run)
@@ -1478,12 +1492,12 @@
   ;;
   ;;this function must be called as:
   ;;
-  ;;   (%process-typed-syntactic-bindings-lhs*
+  ;;   (%establish-typed-syntactic-bindings-lhs*
   ;;      (list #'C #'A #'B)
   ;;      (list (<list>-ots) (<fixnum>-ots) (<string>-ots))
   ;;      lexenv.run)
   ;;
-  (define (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv)
+  (define (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv)
     (receive (typed-var*.id typed-var*.tag typed-var*.lex untyped-var*.id untyped-var*.lex lhs*.lex)
 	(%partition-typed-and-untyped-lhs* lhs*.id lhs*.ots '() '() '() '() '() '())
       ;;Prepare the UNtyped lexical variables.

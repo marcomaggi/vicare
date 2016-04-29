@@ -94,9 +94,9 @@
      field-relative-idx*
 		;A  list  of fixnums  representing  all  the field  relative  indexes
 		;(zero-based).
-     field-type*.ots
-		;The list  of "<object-type-spec>"  instances representing  the field
-		;types.
+     field-type*.ann
+		;The  list of  syntax objects  representing the  type annotations  of
+		;fields.
      safe-field-accessor*
 		;A  list of  syntactic identifiers  that will  be bound  to the  safe
 		;accessors.
@@ -279,13 +279,13 @@
       ,@foo-predicate-definitions
       ,@super-rcd-definition
       ,@(%make-unsafe-accessor+mutator-code foo foo-rtd
-					    field-name*.sym field-relative-idx* field-type*.ots
+					    field-name*.sym field-relative-idx* field-type*.ann
 					    unsafe-field-accessor* unsafe-field-mutator*)
       ,@(%make-safe-accessor+mutator-code foo
-					  field-name*.sym field-relative-idx* field-type*.ots
+					  field-name*.sym field-relative-idx* field-type*.ann
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
-      ,@(%make-safe-method-code foo field-type*.ots
+      ,@(%make-safe-method-code foo field-type*.ann
 				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
       #| end of module |# )))
 
@@ -480,11 +480,26 @@
   (define (%gen-safe-method-name field-name.id)
     (identifier-append type-id foo-for-id-generation "-" field-name.id "-method"))
 
+  (define (%parse-typed-field stx)
+    (syntax-match stx (brace)
+      ((brace ?id ?type)
+       ;;FIXME Here we  should do full type annotation validation.   At present it is
+       ;;not possible  becase here the syntactic  binding for the record  type is not
+       ;;established yet,  so we cannot use  it in field specifications  (but we want
+       ;;to).  (Marco Maggi; Fri Apr 29, 2016)
+       (begin
+	 ;; (unless (syntax-object.type-annotation? ?type)
+	 ;;   (synner "invalid field type annotation" ?type))
+	 (values ?id ?type)))
+      (?id
+       (identifier? ?id)
+       (values ?id (<top>-type-id)))))
+
   (let loop ((fields-clause*			fields-clause*)
 	     (i					0)
 	     (field-name*.sym			'())
 	     (field-relative-idx*		'())
-	     (field-type*.ots			'())
+	     (field-type*.ann			'())
 	     (safe-field-accessor*		'())
 	     (unsafe-field-accessor*		'())
 	     (safe-field-mutator*		'())
@@ -500,7 +515,7 @@
       (()
        (values (reverse field-name*.sym)
 	       (reverse field-relative-idx*)
-	       (reverse field-type*.ots)
+	       (reverse field-type*.ann)
 	       (reverse safe-field-accessor*)
 	       (reverse unsafe-field-accessor*)
 	       (reverse safe-field-mutator*)
@@ -511,12 +526,12 @@
       (((mutable   ?name ?accessor ?mutator) . ?rest)
        (and (identifier? ?accessor)
 	    (identifier? ?mutator))
-       (receive (field-name.id field-type.ots)
-	   (syntax-object.parse-typed-argument ?name)
+       (receive (field-name.id field-type.ann)
+	   (%parse-typed-field ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.ots field-type*.ots)
+	       (cons field-type.ann field-type*.ann)
 	       (cons ?accessor safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons ?mutator safe-field-mutator*)
@@ -526,12 +541,12 @@
 
       (((immutable ?name ?accessor) . ?rest)
        (identifier? ?accessor)
-       (receive (field-name.id field-type.ots)
-	   (syntax-object.parse-typed-argument ?name)
+       (receive (field-name.id field-type.ann)
+	   (%parse-typed-field ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.ots field-type*.ots)
+	       (cons field-type.ann field-type*.ann)
 	       (cons ?accessor safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
@@ -540,12 +555,12 @@
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       (((mutable   ?name) . ?rest)
-       (receive (field-name.id field-type.ots)
-	   (syntax-object.parse-typed-argument ?name)
+       (receive (field-name.id field-type.ann)
+	   (%parse-typed-field ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.ots field-type*.ots)
+	       (cons field-type.ann field-type*.ann)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons (%gen-safe-mutator-name    field-name.id) safe-field-mutator*)
@@ -554,12 +569,12 @@
 	       (cons `(mutable ,field-name.id) fields-vector-spec*))))
 
       (((immutable ?name) . ?rest)
-       (receive (field-name.id field-type.ots)
-	   (syntax-object.parse-typed-argument ?name)
+       (receive (field-name.id field-type.ann)
+	   (%parse-typed-field ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.ots field-type*.ots)
+	       (cons field-type.ann field-type*.ann)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
@@ -568,12 +583,12 @@
 	       (cons `(immutable ,field-name.id) fields-vector-spec*))))
 
       ((?name . ?rest)
-       (receive (field-name.id field-type.ots)
-	   (syntax-object.parse-typed-argument ?name)
+       (receive (field-name.id field-type.ann)
+	   (%parse-typed-field ?name)
 	 (loop ?rest (fxadd1 i)
 	       (%register-field-name field-name.id)
 	       (cons i field-relative-idx*)
-	       (cons field-type.ots field-type*.ots)
+	       (cons field-type.ann field-type*.ann)
 	       (cons (%gen-safe-accessor-name   field-name.id) safe-field-accessor*)
 	       (cons (%gen-unsafe-accessor-name field-name.id) unsafe-field-accessor*)
 	       (cons #f safe-field-mutator*)
@@ -674,7 +689,7 @@
 
 
 (define (%make-unsafe-accessor+mutator-code foo foo-rtd
-					    field-name*.sym field-relative-idx* field-type*.ots
+					    field-name*.sym field-relative-idx* field-type*.ann
 					    unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
   ;;representing  a Scheme  expression  which, expanded  and  evaluated at  run-time,
@@ -691,8 +706,8 @@
   ;;FIELD-RELATIVE-IDX* must be  a list of fixnums representing  the relative indexes
   ;;of all the fields and the mutable fields.
   ;;
-  ;;FIELD-TYPE*.OTS must be a list of "<object-type-spec>" instances representing all
-  ;;the field types.
+  ;;FIELD-TYPE*.ANN must  be a list of  syntax objects representing the  fields' type
+  ;;annotations.
   ;;
   ;;UNSAFE-FIELD-ACCESSOR*  and   UNSAFE-FIELD-MUTATOR*  must  be  list   of  symbols
   ;;representing the  names of the  syntactic identifiers  bound to the  unsafe field
@@ -726,37 +741,35 @@
 	    field-name*.sym field-relative-idx*)
 
 	;;unsafe record fields accessors
-	,@(map (lambda (unsafe-foo-x x field-type.ots)
+	,@(map (lambda (unsafe-foo-x x field-type.ann)
 		 (let ((the-index	(%make-field-index-varname x))
-		       (record.sym	(make-syntactic-identifier-for-temporary-variable "?record"))
-		       (field-type.ann	(object-type-spec.name field-type.ots)))
+		       (record.sym	(make-syntactic-identifier-for-temporary-variable "?record")))
 		   `(define-syntax ,unsafe-foo-x
 		      (identifier-syntax
 		       (lambda/typed ((brace _ ,field-type.ann) (brace ,record.sym ,foo))
 			 ($struct-ref ,record.sym ,the-index))))))
-	    unsafe-field-accessor* field-name*.sym field-type*.ots)
+	    unsafe-field-accessor* field-name*.sym field-type*.ann)
 
 	;;unsafe record fields mutators
 	,@(fold-right
-	      (lambda (unsafe-field-mutator field-name.sym field-type.ots knil)
+	      (lambda (unsafe-field-mutator field-name.sym field-type.ann knil)
 		(if unsafe-field-mutator
 		    (cons (let ((the-index	(%make-field-index-varname field-name.sym))
 				(record.sym	(make-syntactic-identifier-for-temporary-variable "?record"))
-				(value.sym	(make-syntactic-identifier-for-temporary-variable "?new-value"))
-				(field-type.ann	(object-type-spec.name field-type.ots)))
+				(value.sym	(make-syntactic-identifier-for-temporary-variable "?new-value")))
 			    `(define-syntax ,unsafe-field-mutator
 			       (identifier-syntax
 				(lambda/typed ((brace _ <void>) (brace ,record.sym ,foo) (brace ,value.sym ,field-type.ann))
 				  ($struct-set! ,record.sym ,the-index ,value.sym)))))
 			  knil)
 		  knil))
-	    '() unsafe-field-mutator* field-name*.sym field-type*.ots)
+	    '() unsafe-field-mutator* field-name*.sym field-type*.ann)
 
 	#| end of module: unsafe accessors and mutators |# ))))
 
 
 (define (%make-safe-accessor+mutator-code foo
-					  field-name*.sym field-relative-idx* field-type*.ots
+					  field-name*.sym field-relative-idx* field-type*.ann
 					  safe-field-accessor* unsafe-field-accessor*
 					  safe-field-mutator*  unsafe-field-mutator*)
   ;;Return  a  list holding  a  single  symbolic  expression  (to be  BLESSed  later)
@@ -772,8 +785,8 @@
   ;;FIELD-RELATIVE-IDX* must be the list of fixnums representing the relative indexes
   ;;of all the fields.
   ;;
-  ;;FIELD-TYPE*.OTS must  be the list of  "<object-type-spec>" instances representing
-  ;;all the field types.
+  ;;FIELD-TYPE*.ANN must be the list of  syntax objects representing the fields' type
+  ;;annotations.
   ;;
   ;;SAFE-FIELD-ACCESSOR* and SAFE-FIELD-MUTATOR* must be list of symbols representing
   ;;the names  of the  syntactic identifiers  bound to the  safe field  accessors and
@@ -798,25 +811,23 @@
   ;;   (unsafe-foo-x-set! the-record the-new-value)
   ;;
   (define safe-field-accessor-form*
-    (map (lambda (safe-field-accessor unsafe-field-accessor field-type.ots)
-	   (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
-		 (field-type.id	(object-type-spec.name field-type.ots)))
-	     `(define/checked ((brace ,safe-field-accessor ,field-type.id) (brace ,record.sym ,foo))
-		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))))
-      safe-field-accessor* unsafe-field-accessor* field-type*.ots))
+    (map (lambda (safe-field-accessor unsafe-field-accessor field-type.ann)
+	   (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record")))
+	     `(define/checked ((brace ,safe-field-accessor ,field-type.ann) (brace ,record.sym ,foo))
+		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.sym)))))
+      safe-field-accessor* unsafe-field-accessor* field-type*.ann))
 
   (define safe-field-mutator-form*
     (fold-right
-	(lambda (safe-field-mutator unsafe-field-mutator field-type.ots knil)
+	(lambda (safe-field-mutator unsafe-field-mutator field-type.ann knil)
 	  (if safe-field-mutator
-	      (cons (let ((record.sym		(make-syntactic-identifier-for-temporary-variable "record"))
-			  (val.sym		(make-syntactic-identifier-for-temporary-variable "new-value"))
-			  (field-type.id	(object-type-spec.name field-type.ots)))
-		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.id))
+	      (cons (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
+			  (val.sym	(make-syntactic-identifier-for-temporary-variable "new-value")))
+		      `(define/checked ((brace ,safe-field-mutator <void>) (brace ,record.sym ,foo) (brace ,val.sym ,field-type.ann))
 			 (,unsafe-field-mutator ,record.sym ,val.sym)))
 		    knil)
 	    knil))
-      '() safe-field-mutator* unsafe-field-mutator* field-type*.ots))
+      '() safe-field-mutator* unsafe-field-mutator* field-type*.ann))
 
   (if (and (null? safe-field-accessor-form*)
 	   (null? safe-field-mutator-form*))
@@ -825,7 +836,7 @@
 
 
 (define (%make-safe-method-code foo
-				field-type*.ots
+				field-type*.ann
 				safe-field-method* unsafe-field-accessor* unsafe-field-mutator*)
   ;;Return a list  holding a symbolic expressions (to be  BLESSed later) representing
   ;;Scheme  expressions  which,  expanded  and  evaluated  at  run-time,  define  the
@@ -835,8 +846,8 @@
   ;;
   ;;FOO must be the syntactic identifier represening the record-type name.
   ;;
-  ;;FIELD-TYPE*.OTS must  be the list of  "<object-type-spec>" instances representing
-  ;;all the field types.
+  ;;FIELD-TYPE*.ANN must be the list of  syntax objects representing the fields' type
+  ;;annotations.
   ;;
   ;;SAFE-FIELD-METHOD*  must be  a  list of  symbols representing  the  names of  the
   ;;syntactic identifiers the will be bound to the safe field methods.
@@ -845,19 +856,18 @@
   ;;representing the  names of the  syntactic identifiers  bound to the  unsafe field
   ;;accessors and mutators.
   ;;
-  (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.ots)
+  (map (lambda (safe-field-method unsafe-field-accessor unsafe-field-mutator field-type.ann)
 	 (let ((record.sym	(make-syntactic-identifier-for-temporary-variable "record"))
-	       (new-value.sym	(make-syntactic-identifier-for-temporary-variable "new-value"))
-	       (field-type.id	(object-type-spec.name field-type.ots)))
+	       (new-value.sym	(make-syntactic-identifier-for-temporary-variable "new-value")))
 	   (if unsafe-field-mutator
 	       `(case-define/checked ,safe-field-method
-		  (((brace _ ,field-type.id) (brace ,record.sym ,foo))
-		   (unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym)))
-		  (((brace _ <void>) (brace ,record.sym ,foo) (brace ,new-value.sym ,field-type.id))
+		  (((brace _ ,field-type.ann) (brace ,record.sym ,foo))
+		   (unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.sym)))
+		  (((brace _ <void>) (brace ,record.sym ,foo) (brace ,new-value.sym ,field-type.ann))
 		   (,unsafe-field-mutator ,record.sym ,new-value.sym)))
-	     `(define/checked ((brace ,safe-field-method ,field-type.id) (brace ,record.sym ,foo))
-		(unsafe-cast-signature (,field-type.id) (,unsafe-field-accessor ,record.sym))))))
-    safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ots))
+	     `(define/checked ((brace ,safe-field-method ,field-type.ann) (brace ,record.sym ,foo))
+		(unsafe-cast-signature (,field-type.ann) (,unsafe-field-accessor ,record.sym))))))
+    safe-field-method* unsafe-field-accessor* unsafe-field-mutator* field-type*.ann))
 
 
 (define (%make-parent-rtd+rcd-code clause* foo input-form.stx synner)

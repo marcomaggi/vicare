@@ -97,7 +97,7 @@
 	    expand-library)
     (prefix (only (psyntax.config)
 		  initialise-expander)
-	    config.)
+	    config::)
     (psyntax.setup)
     (psyntax.builders)
     (psyntax.special-transformers)
@@ -176,7 +176,7 @@
   ;;representing import  specifications as  defined by R6RS  plus Vicare
   ;;extensions.
   ;;
-  (config.initialise-expander)
+  (config::initialise-expander)
   (let ((itc (make-collector)))
     (parametrise ((imp-collector itc))
       ;;NAME-VEC is a vector of  symbols representing the external names
@@ -213,7 +213,7 @@
   (()
    (new-interaction-environment (base-of-interaction-library)))
   (({libref library-reference?})
-   (config.initialise-expander)
+   (config::initialise-expander)
    (let* ((lib    (libman::find-library-by-reference libref))
 	  (rib    (export-subst->rib (libman::library-export-subst lib)))
 	  (lexenv '()))
@@ -268,7 +268,7 @@
   ;;definition  or   expression  at  the   top-level  of  a  body,   expandable  with
   ;;CHI-INTERACTION-EXPR which in turn calls CHI-BODY*.
   ;;
-  (config.initialise-expander)
+  (config::initialise-expander)
   (cond ((non-interaction-lexical-environment? env)
 	 (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
 							       (vector->list (env-labels env)))))
@@ -366,7 +366,7 @@
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
     ;;level program, expand it.
     ;;
-    (config.initialise-expander)
+    (config::initialise-expander)
     (receive (import-spec* body* option* foreign-library*)
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
@@ -504,7 +504,7 @@
   ((library-sexp filename)
    (expand-library library-sexp filename (lambda (libname) (void))))
   ((library-sexp filename verify-libname)
-   (config.initialise-expander)
+   (config::initialise-expander)
    (receive (libname
 	     import-lib* invoke-lib* visit-lib*
 	     invoke-code visit-env

@@ -475,6 +475,19 @@ Select which algorithm to use when optimising @syntax{letrec} and
 
 @c ------------------------------------------------------------------------
 
+@item -Wlogic-constants
+@itemx -Wno-logic-constants
+@cindex Command line option @option{-Wlogic-constants}
+@cindex Command line option @option{-Wno-logic-constants}
+@cindex @option{-Wlogic-constants}, command line option
+@cindex @option{-Wno-logic-constants}, command line option
+Enable or disable raising a @condition{warning} exception when an
+operand in a logic expression (@syntax{if} test, @syntax{and},
+@syntax{or}, @dots{}) always returns false or non--false.  By default
+this options is disabled.
+
+@c ------------------------------------------------------------------------
+
 @item --scheme-heap-nursery-size @var{num-of-bytes}
 @cindex Command line option @option{--scheme-heap-nursery-size}
 @cindex @option{--scheme-heap-nursery-size}, command line option

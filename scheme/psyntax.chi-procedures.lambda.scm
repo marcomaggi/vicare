@@ -734,7 +734,7 @@
     ;;argument.  Here  we know that  STANDARD-FORMALS.STX and the  corresponding type
     ;;signature are proper lists with equal length.
     (receive (rib lexenv.run standard-formals*.lex)
-	(%process-typed-syntactic-bindings-lhs* standard-formals.stx (clambda-clause-signature.argvals.specs clause-signature) lexenv.run)
+	(%establish-typed-syntactic-bindings-lhs* standard-formals.stx (clambda-clause-signature.argvals.specs clause-signature) lexenv.run)
       (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals*.lex body*.stx rib)))
 
   (define (%expand-guts-with-improper-list-formals input-form.stx lexenv.run lexenv.expand
@@ -749,7 +749,7 @@
 	  (improper-list->list-and-rest (clambda-clause-signature.argvals.specs clause-signature)))
 	 ((rib lexenv.run standard-formals.lex)
 	  (receive (rib lexenv.run all*.lex)
-	      (%process-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) (cons rest.ots arg*.ots) lexenv.run)
+	      (%establish-typed-syntactic-bindings-lhs* (cons rest.id arg*.id) (cons rest.ots arg*.ots) lexenv.run)
 	    ;;Yes, this call to APPEND builds an improper list.
 	    (values rib lexenv.run (append (cdr all*.lex) (car all*.lex))))))
       (%expand-body input-form.stx lexenv.run lexenv.expand standard-formals.lex body*.stx rib)))

@@ -152,7 +152,7 @@
   (or <textual-input-port> <textual-output-port> <textual-input/output-port>))
 
 (define-type-annotation <binary-port>
-  (or <textual-input-port> <textual-output-port> <textual-input/output-port>))
+  (or <binary-input-port> <binary-output-port> <binary-input/output-port>))
 
 
 ;;;; miscellaneous

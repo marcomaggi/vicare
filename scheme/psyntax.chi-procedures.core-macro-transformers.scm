@@ -19,7 +19,10 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (module (core-macro-transformer)
-  (import (prefix (rnrs syntax-case) sys::))
+  (import (prefix (rnrs syntax-case) sys::)
+    (prefix (only (psyntax.config)
+		  warn-about-logic-constants)
+	    config::))
 
 (import PSYNTAX-TYPE-SYNTAX-OBJECTS)
 
@@ -151,8 +154,14 @@
     ((quote)					quote-transformer)
     ((if)					if-transformer)
     ((let)					let-transformer)
+    ((let/checked)				let/checked-transformer)
+    ((let/std)					let/std-transformer)
     ((letrec)					letrec-transformer)
+    ((letrec/checked)				letrec/checked-transformer)
+    ((letrec/std)				letrec/std-transformer)
     ((letrec*)					letrec*-transformer)
+    ((letrec*/checked)				letrec*/checked-transformer)
+    ((letrec*/std)				letrec*/std-transformer)
     ((and)					and-transformer)
     ((or)					or-transformer)
     ;;
@@ -516,53 +525,6 @@
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
-;;;; module core-macro-transformer: IF
-
-(define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand R6RS  IF syntaxes from the top-level built in
-  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-  ;;LEXENV; return a PSI object.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?test ?consequent ?alternate)
-     (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
-	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
-	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
-       (make-psi input-form.stx
-		 (build-conditional no-source
-		     (psi.core-expr test.psi)
-		   (psi.core-expr consequent.psi)
-		   (psi.core-expr alternate.psi))
-		 (type-signature.union (psi.retvals-signature consequent.psi)
-				       (psi.retvals-signature alternate.psi)))))
-    ((_ ?test ?consequent)
-     (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
-	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
-       ;;We build  code to  make the  one-armed IF  return void  if the  alternate is
-       ;;unspecified; according  to R6RS:
-       ;;
-       ;;* If  the test succeeds: the  return value must  be the return value  of the
-       ;;  consequent.
-       ;;
-       ;;* If the  test fails and there  *is* an alternate: the return  value must be
-       ;;  the return value of the alternate.
-       ;;
-       ;;* If the test fails and there is *no* alternate: this syntax has unspecified
-       ;;  return values.
-       ;;
-       ;;Notice that one-armed IF  is also used in the expansion  of WHEN and UNLESS;
-       ;;R6RS states that, for those syntaxes, when the body *is* executed the return
-       ;;value must be the return value of the last expression in the body.
-       (make-psi input-form.stx
-		 (build-conditional no-source
-		     (psi.core-expr test.psi)
-		   (psi.core-expr consequent.psi)
-		   (build-void))
-		 (make-type-signature/single-void))))
-    (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
-
-
 ;;;; module core-macro-transformer: QUOTE
 
 (define-core-transformer (quote input-form.stx lexenv.run lexenv.expand)
@@ -582,12 +544,25 @@
 
 ;;;; module core-macro-transformer: LET
 
-(module (let-transformer)
+(module (let-transformer
+	 let/checked-transformer
+	 let/std-transformer)
 
   (define-core-transformer (let input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer functions  used to expand  LET syntaxes  from the top-level  built in
-    ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-    ;;LEXENV; return a PSI object.
+    ;;Transformer functions used  to expand LET syntaxes from the  top-level built in
+    ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
+    ;;given LEXENV; return a PSI object.
+    ;;
+    (if (options::typed-language?)
+	(let/checked-transformer input-form.stx lexenv.run lexenv.expand)
+      (let/std-transformer input-form.stx lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define-core-transformer (let/checked input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer functions  used to expand  LET/CHECKED syntaxes from  the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI object.
     ;;
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -599,10 +574,24 @@
        ;;
        ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
        ;;
-       (let ((body*.stx (cons ?body ?body*)))
-	 (if (options::typed-language?)
-	     (%typed-let-transformer input-form.stx ?lhs* ?rhs* body*.stx lexenv.run lexenv.expand)
-	   (%standard-let-transformer input-form.stx ?lhs* ?rhs* body*.stx lexenv.run lexenv.expand))))
+       ;;Here each item in the list LHS*.OTS is either:
+       ;;
+       ;;* An instance of "<object-type-spec>" if  the source code specified the type
+       ;;of this syntactic binding.
+       ;;
+       ;;* False if the source code left the syntactic binding's type unspecified.
+       ;;
+       (receive (lhs*.id lhs*.ots)
+	   (syntax-object.parse-typed-list-of-bindings ?lhs* #f)
+	 (let ((rhs*.psi (chi-expr* ?rhs* lexenv.run lexenv.expand)))
+	   (receive (lhs*.out-ots rhs*.core-expr)
+	       ;;Here we take care of performing right-hand side type propagation and
+	       ;;validation.
+	       (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+						     __who__ lhs*.ots rhs*.psi)
+	     (receive (rib lexenv.run lhs*.lex)
+		 (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.out-ots lexenv.run)
+	       (%build-output input-form.stx lhs*.lex rhs*.core-expr (cons ?body ?body*) rib lexenv.run lexenv.expand))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -627,57 +616,93 @@
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
-  (define (%typed-let-transformer input-form.stx lhs*.stx rhs*.stx body*.stx lexenv.run lexenv.expand)
-    ;;Here each item in the list LHS*.OTS is either:
-    ;;
-    ;;* An instance of "<object-type-spec>" if  the source code specified the type of
-    ;;this syntactic binding.
-    ;;
-    ;;* False if the source code left the syntactic binding's type unspecified.
-    ;;
-    (receive (lhs*.id lhs*.ots)
-	(syntax-object.parse-typed-list-of-bindings lhs*.stx #f)
-      (let* ((rhs*.psi (map (lambda (rhs.stx lhs.ots)
-			      ;;We insert  a signature validation even  if LHS.OTS is
-			      ;;"<top>": this way we try to check at expand-time that
-			      ;;there is a single return value.  At run-time, we rely
-			      ;;on  the built-in  run-time  checking of  single-value
-			      ;;return.
-			      (chi-expr (if lhs.ots
-					    (bless
-					     `(assert-signature-and-return (,(object-type-spec.name lhs.ots)) ,rhs.stx))
-					  rhs.stx)
-					lexenv.run lexenv.expand))
-			 rhs*.stx lhs*.ots))
-	     (lhs*.ots (map (lambda (lhs.ots rhs.psi)
-			      ;;Here we want to do right-hand side type propagation.
-			      (or lhs.ots (%process-rhs-signature input-form.stx rhs.psi)))
-			 lhs*.ots rhs*.psi)))
-	(receive (rib lexenv.run lhs*.lex)
-	    (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)
-	  (%prepare-body input-form.stx lhs*.lex rhs*.psi body*.stx rib lexenv.run lexenv.expand)))))
+;;; --------------------------------------------------------------------
 
-  (define (%standard-let-transformer input-form.stx lhs*.stx rhs*.stx body*.stx lexenv.run lexenv.expand)
-    ;;Prepare standard, untyped syntactic bindings.
-    (let* ((lhs*.id	(syntax-object.parse-standard-list-of-bindings lhs*.stx))
-	   (rhs*.psi	(map (lambda (rhs.stx)
-			       (chi-expr rhs.stx lexenv.run lexenv.expand))
-			  rhs*.stx))
-	   (lhs*.lab	(map generate-label-gensym   lhs*.id))
-	   (lhs*.lex	(map generate-lexical-gensym lhs*.id))
-	   (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
-	   (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
-      (%prepare-body input-form.stx lhs*.lex rhs*.psi body*.stx rib lexenv.run lexenv.expand)))
+  (define-core-transformer (let/std input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer functions used to expand  LET/STD syntaxes from the top-level built
+    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
+    ;;given LEXENV; return a PSI object.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       ;;Convert the UNnamed standard syntax:
+       ;;
+       ;;   (let ((?lhs ?rhs) ...) . ?body)
+       ;;
+       ;;into the core language syntax:
+       ;;
+       ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
+       ;;
+       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
+	      (rhs*.psi		(map (lambda (rhs.stx)
+				       (chi-expr rhs.stx lexenv.run lexenv.expand))
+				  ?rhs*))
+	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
+	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
+	      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
+	 (%build-output input-form.stx lhs*.lex (map psi.core-expr rhs*.psi)
+			(cons ?body ?body*) rib lexenv.run lexenv.expand)))
 
-  (define (%prepare-body input-form.stx lhs*.lex rhs*.psi body*.stx rib lexenv.run lexenv.expand)
+      ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (identifier? ?recur)
+       (chi-expr (bless
+		  `(internal-body
+		     ;;Here  we use  DEFINE/CHECKED so  that we  can easily  define a
+		     ;;typed function.   Using LETREC would be  more descriptive, but
+		     ;;not significantly better.
+		     ;;
+		     ;;FIXME  We do  not want  "__who__"  to be  bound here.   (Marco
+		     ;;Maggi; Sat Feb 6, 2016)
+		     (define/std (,?recur . ,?lhs*) ,?body . ,?body*)
+		     (,?recur . ,?rhs*)))
+		 lexenv.run lexenv.expand))
+
+      ((_ ((?lhs* ?rhs*) ...))
+       (__synner__ "missing body forms"))
+
+      ((_ ?recur ((?lhs* ?rhs*) ...))
+       (__synner__ "missing body forms"))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-output input-form.stx lhs*.lex rhs*.core body*.stx rib lexenv.run lexenv.expand)
     (let* ((body.psi   (chi-internal-body (push-lexical-contour rib body*.stx) lexenv.run lexenv.expand))
-	   (body.core  (psi.core-expr body.psi))
-	   (rhs*.core  (map psi.core-expr rhs*.psi)))
+	   (body.core  (psi.core-expr body.psi)))
       (make-psi input-form.stx
 	(build-let (syntax-annotation input-form.stx)
 	    lhs*.lex rhs*.core
 	  body.core)
 	(psi.retvals-signature body.psi))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+						caller-who lhs*.source-ots rhs*.psi)
+    ;;Here  we  take  care  of   performing  right-hand  side  type  propagation  and
+    ;;validation.
+    ;;
+    (map-for-two-retvals
+	(lambda (lhs.source-ots rhs.psi)
+	  ;;Here we process the  RHS type signature to make sure  it returns a single
+	  ;;value.
+	  (define rhs.ots (%process-rhs-signature input-form.stx rhs.psi))
+	  (if lhs.source-ots
+	      ;;The LHS  has a  specified type in  the source code:  here we  want to
+	      ;;validate RHS as returning a single value of correct type.
+	      (values lhs.source-ots
+		      (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+					  caller-who lhs.source-ots rhs.psi rhs.ots))
+	    ;;The LHS has  no specified type in  the source code: here we  want to do
+	    ;;right-hand side  type propagation.   There is no  need to  validate the
+	    ;;RHS.
+	    (values rhs.ots (psi.core-expr rhs.psi))))
+      lhs*.source-ots rhs*.psi))
+
+;;; --------------------------------------------------------------------
 
   (module (%process-rhs-signature)
 
@@ -724,12 +749,42 @@
 
     #| end of module: %PROCESS-RHS-SIGNATURE |# )
 
+  (define (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+			      caller-who lhs.ots rhs.psi rhs.ots)
+    ;;Here the LHS  has a specified type LHS.OTS  and we want to validate  the RHS as
+    ;;returning a single value of such type.
+    ;;
+    (cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
+	   (psi.core-expr rhs.psi))
+	  ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lhs.ots #t))
+		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
+	     (build-application no-source
+		 (psi.core-expr validator.psi)
+	       (list (psi.core-expr rhs.psi)		   ;value
+		     (build-data no-source 1)		   ;value-index
+		     (build-data no-source caller-who))))) ;caller-who
+	  (else
+	   (raise
+	    (condition (make-expand-time-type-signature-violation)
+		       (make-who-condition caller-who)
+		       (make-message-condition
+			"expression used as right-hand side in syntactic binding has type not matching the variable type")
+		       (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+		       (make-expected-type-signature-condition (make-type-signature/single-value lhs.ots))
+		       (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
+
   #| end of module |# )
 
 
 ;;;; module core-macro-transformer: LET, LETREC and LETREC*
 
-(module (letrec-transformer letrec*-transformer)
+(module (letrec-transformer
+	 letrec/std-transformer
+	 letrec/checked-transformer
+	 letrec*-transformer
+	 letrec*/std-transformer
+	 letrec*/checked-transformer)
   ;;Transformer functions  used to expand LET,  LETREC and LETREC* syntaxes  from the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI object.
@@ -745,21 +800,57 @@
   ;;   (letrec* ((?lhs ?rhs) ...) . ?body)
   ;;
 
-  (define (letrec-transformer input-form.stx lexenv.run lexenv.expand)
+  (define-core-transformer (letrec input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand LETREC syntaxes from the top-level built in
     ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
     ;;given LEXENV; return a PSI object.
     ;;
-    (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec))
+    (if (options::typed-language?)
+	(letrec/checked-transformer input-form.stx lexenv.run lexenv.expand)
+      (letrec/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
-  (define (letrec*-transformer input-form.stx lexenv.run lexenv.expand)
+  (define-core-transformer (letrec/checked input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand  LETREC/CHECKED syntaxes from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI object.
+    ;;
+    (%build-output input-form.stx lexenv.run lexenv.expand build-letrec))
+
+  (define-core-transformer (letrec/std input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer  function used  to expand  LETREC/STD syntaxes  from the  top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI object.
+    ;;
+    (%build-output input-form.stx lexenv.run lexenv.expand build-letrec))
+
+;;; --------------------------------------------------------------------
+
+  (define-core-transformer (letrec* input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand LETREC* syntaxes from  the top-level built
     ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
     ;;given LEXENV; return a PSI object.
     ;;
-    (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
+    (if (options::typed-language?)
+	(letrec*/checked-transformer input-form.stx lexenv.run lexenv.expand)
+      (letrec*/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
-  (define* (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
+  (define-core-transformer (letrec*/checked input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand LETREC*/CHECKED syntaxes from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI object.
+    ;;
+    (%build-output input-form.stx lexenv.run lexenv.expand build-letrec*))
+
+  (define-core-transformer (letrec*/std input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function  used to  expand LETREC*/STD  syntaxes from  the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI object.
+    ;;
+    (%build-output input-form.stx lexenv.run lexenv.expand build-letrec*))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%build-output input-form.stx lexenv.run lexenv.expand core-lang-builder)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (receive (lhs*.lex rhs*.psi rib lexenv.run)
@@ -770,7 +861,7 @@
 		     (syntax-object.parse-typed-list-of-bindings ?lhs*))
 		    ;;Prepare the typed and untyped lexical variables.
 		    ((rib lexenv.run lhs*.lex)
-		     (%process-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run))
+		     (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run))
 		    ;;NOTE The region of all the LETREC and LETREC* bindings includes
 		    ;;all the right-hand sides.  The new rib is pushed on all the RHS
 		    ;;and the body.
@@ -854,9 +945,107 @@
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
-;;;; module core-macro-transformer: AND
+;;;; module core-macro-transformer: IF, AND, OR
 
-(module (and-transformer or-transformer)
+(module (if-transformer and-transformer or-transformer)
+
+  (define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used  to expand R6RS IF syntaxes from  the top-level built
+    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
+    ;;given LEXENV; return a PSI object.
+    ;;
+    (define caller-who __who__)
+    (syntax-match input-form.stx ()
+      ((_ ?test ?consequent ?alternate)
+       (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
+	     (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
+	     (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
+	 (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
+	   (case sym
+	     ((maybe-false)
+	      ;;The test might return false.
+	      (make-psi input-form.stx
+		(build-conditional no-source
+		    (psi.core-expr test.psi)
+		  (psi.core-expr consequent.psi)
+		  (psi.core-expr alternate.psi))
+		(type-signature.union (psi.retvals-signature consequent.psi)
+				      (psi.retvals-signature alternate.psi))))
+	     ((always-false)
+	      ;;The test always returns false.
+	      (make-psi input-form.stx
+		(build-sequence no-source
+		  (list (psi.core-expr test.psi)
+			(psi.core-expr alternate.psi)))
+		(psi.retvals-signature alternate.psi)))
+
+	     ((always-true)
+	      ;;The test always returns non-false.
+	      (make-psi input-form.stx
+		(build-sequence no-source
+		  (list (psi.core-expr test.psi)
+			(psi.core-expr consequent.psi)))
+		(psi.retvals-signature consequent.psi)))
+
+	     ((no-return)
+	      ;;The test raises an exception or exits the process.
+	      test.psi)
+
+	     (else
+	      (assertion-violation caller-who "internal error" input-form.stx sym))))))
+
+      ((_ ?test ?consequent)
+       (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
+	     (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
+	 ;;We build  code to make  the one-armed IF return  void if the  alternate is
+	 ;;unspecified; according to R6RS:
+	 ;;
+	 ;;* If the test  succeeds: the return value must be the  return value of the
+	 ;;  consequent.
+	 ;;
+	 ;;* If the test fails and there  *is* an alternate: the return value must be
+	 ;;  the return value of the alternate.
+	 ;;
+	 ;;*  If  the  test fails  and  there  is  *no*  alternate: this  syntax  has
+	 ;;  unspecified return values.
+	 ;;
+	 ;;Notice that one-armed IF is also used in the expansion of WHEN and UNLESS;
+	 ;;R6RS states  that, for  those syntaxes,  when the  body *is*  executed the
+	 ;;return value must be the return value of the last expression in the body.
+	 (let ((sym (%validate-and-qualify-single-signature caller-who input-form.stx test.psi)))
+	   (case sym
+	     ((maybe-false)
+	      ;;The test might return false.
+	      (make-psi input-form.stx
+		(build-conditional no-source
+		    (psi.core-expr test.psi)
+		  (psi.core-expr consequent.psi)
+		  (build-void))
+		(make-type-signature/single-void)))
+
+	     ((always-false)
+	      ;;The test always returns false.
+	      test.psi)
+
+	     ((always-true)
+	      ;;The test always returns non-false.
+	      (make-psi input-form.stx
+		(build-sequence no-source
+		  (list (psi.core-expr test.psi)
+			(psi.core-expr consequent.psi)))
+		(psi.retvals-signature consequent.psi)))
+
+	     ((no-return)
+	      ;;The test raises an exception or exits the process.
+	      test.psi)
+
+	     (else
+	      (assertion-violation caller-who "internal error" input-form.stx sym))))))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
+
+;;; --------------------------------------------------------------------
 
   (define-core-transformer (and input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand R6RS AND macros from the top-level built in
@@ -1084,7 +1273,7 @@
 	(make-who-condition caller-who)
 	(make-message-condition message)
 	(make-syntax-violation input-form.stx (psi.input-form expr.psi))
-	(make-application-operand-signature-condition expr.sig)))
+	(make-type-signature-condition expr.sig)))
     (define (%handle-error message rv)
       (%error (lambda () (common message)) rv))
     (case-signature-specs expr.sig
@@ -1103,14 +1292,15 @@
        'no-return)
 
       ((single-value)
-       => %expression-with-possibly-false-type-signature?)
+       => (lambda (type.ots)
+	    (%expression-with-possibly-false-type-signature? type.ots common)))
 
       (<list-of>
        ;;The operand expression returns an unspecified number of values of specified,
        ;;homogeneous, type.  We rely on the compiler to generate code that checks, at
        ;;run-time, if this operand returns a single value.
        => (lambda (expr.ots)
-	    (%expression-with-possibly-false-type-signature? (list-of-type-spec.item-ots expr.ots))))
+	    (%expression-with-possibly-false-type-signature? (list-of-type-spec.item-ots expr.ots) common)))
 
       (<list>
        ;;The  operand  expression   returns  an  unspecified  number   of  values  of
@@ -1122,8 +1312,12 @@
        ;;The operand expression returns zero, two or more values.
        (%handle-error "expression used as operand in logic predicate returns multiple values" 'maybe-false))))
 
-  (define (%expression-with-possibly-false-type-signature? expr.ots)
+  (define (%expression-with-possibly-false-type-signature? expr.ots common)
     (cond ((<false>-ots? expr.ots)
+	   (when (config::warn-about-logic-constants)
+	     (raise-continuable
+	      (condition (make-expand-time-type-signature-warning)
+			 (common "expression used as operand in logic predicate is typed as always returning false"))))
 	   'always-false)
 	  ((or (<top>-ots?     expr.ots)
 	       (<boolean>-ots? expr.ots)
@@ -1141,6 +1335,10 @@
 		      (intersection-type-spec.component-ots* expr.ots))))
 	   'maybe-false)
 	  (else
+	   (when (config::warn-about-logic-constants)
+	     (raise-continuable
+	      (condition (make-expand-time-type-signature-warning)
+			 (common "expression used as operand in logic predicate is typed as always returning non-false"))))
 	   'always-true)))
 
   (define (%cleanup-possibly-false-signature expr.sig)

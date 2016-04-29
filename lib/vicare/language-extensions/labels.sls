@@ -149,6 +149,8 @@
 			       (with-syntax
 				   ((FUNC (identifier-record-field-accessor type-name.id #'type-predicate)))
 				 (list #'(syntax FUNC)
+				       ;;NOTE  We  do   *not*  use  a  TYPE-PREDICATE
+				       ;;annotation here because, at present,
 				       #`(define/typed {FUNC (type-predicate ?type-name)}
 					   (#,stx (is-a? _ #,parent.stx)))))))
 			 (else

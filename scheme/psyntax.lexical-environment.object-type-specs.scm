@@ -670,8 +670,8 @@
 	 (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
 	   (cond ((ancestor-of-type-spec? super.ots)
 		  (exists (lambda (super-component.ots)
-			    (exists (lambda (sub-component.ots)
-				      ($object-type-spec=? super-component.ots sub-component.ots))
+			    (for-all (lambda (sub-component.ots)
+				       ($object-type-spec=? super-component.ots sub-component.ots))
 			      sub-component-ots*))
 		    (ancestor-of-type-spec.component-ots* super.ots)))
 		 (else
@@ -722,8 +722,8 @@
 		  ;;This case is already done above, in the intersection stuff.
 		  (let ((sub-component-ots* (intersection-type-spec.component-ots* sub.ots)))
 		    (exists (lambda (super-component.ots)
-			      (exists (lambda (sub-component.ots)
-					($object-type-spec=? super-component.ots sub-component.ots))
+			      (for-all (lambda (sub-component.ots)
+					 ($object-type-spec=? super-component.ots sub-component.ots))
 				sub-component-ots*))
 		      super-component-ots*)))
 		 (else
@@ -3928,10 +3928,15 @@
       (make-ancestor-of-type-spec (type-annotation->object-type-spec ?type lexenv)))
 
      ((type-predicate ?type)
-      (type-annotation->object-type-spec (bless `(case-lambda
-						   ((,?type)                => (<true>))
-						   (((ancestor-of ,?type))  => (<boolean>))
-						   (((not ,?type))          => (<false>))))
+      (type-annotation->object-type-spec (bless
+					  ;;FIXME  Can  we  do better  in  this  type
+					  ;;annotation?  Notice that  when the ?TYPE,
+					  ;;or it  hierarchy, contains  a label  or a
+					  ;;union  things get  messy.  (Marco  Maggi;
+					  ;;Fri Apr 29, 2016)
+					  `(case-lambda
+					     ((,?type)	=> (<true>))
+					     ((<top>)	=> (<boolean>))))
 					 lexenv))
 
      ((equality-predicate ?type)

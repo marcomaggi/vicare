@@ -131,11 +131,11 @@
 (define-record-type (<binary-node> make-binary-node binary-node?)
   (nongenerative vicare:containers:<binary-node>)
 
-  (fields (mutable parent)
+  (fields (mutable {parent	(or <false> <binary-node>)})
 		;False or an instance of "<binary-node>" being the parent node.
-	  (mutable left)
+	  (mutable {left	(or <false> <binary-node>)})
 		;False or an instance of "<binary-node>" being the left subtree.
-	  (mutable right)
+	  (mutable {right	(or <false> <binary-node>)})
 		;False or an instance of "<binary-node>" being the right subtree.
 	  #| end of FIELDS |# )
 
@@ -160,6 +160,9 @@
 (define (false-or-binary-node? obj)
   (or (not obj)
       (binary-node? obj)))
+
+(define-type <maybe-binary-node>
+  (or <false> <binary-node>))
 
 ;;; --------------------------------------------------------------------
 
@@ -434,20 +437,20 @@
 
 ;;;; plain binary trees: in-order iterations
 
-(define* (binary-tree-begin-in-order-forwards {root false-or-binary-node?})
+(define ({binary-tree-begin-in-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-in-order-forwards root))
 
-(define ($binary-tree-begin-in-order-forwards root)
+(define/typed ({$binary-tree-begin-in-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   (if root
       ($binary-tree-minimum root #f)
     root))
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-in-order-forwards {node binary-node?})
+(define ({binary-tree-step-in-order-forwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-in-order-forwards node))
 
-(define ($binary-tree-step-in-order-forwards node)
+(define/typed ({$binary-tree-step-in-order-forwards <maybe-binary-node>} {node <binary-node>})
   (cond (($binary-node-right node)
 	 => (lambda (right)
 	      ($binary-tree-minimum right #f)))
@@ -460,20 +463,20 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-begin-in-order-backwards {root false-or-binary-node?})
+(define ({binary-tree-begin-in-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-in-order-backwards root))
 
-(define ($binary-tree-begin-in-order-backwards root)
+(define/typed ({$binary-tree-begin-in-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   (if root
       ($binary-tree-maximum root #f)
     root))
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-in-order-backwards {root false-or-binary-node?})
+(define ({binary-tree-step-in-order-backwards <maybe-binary-node>} {root <binary-node>})
   ($binary-tree-step-in-order-backwards root))
 
-(define ($binary-tree-step-in-order-backwards node)
+(define/typed ({$binary-tree-step-in-order-backwards <maybe-binary-node>} {node <binary-node>})
   (cond (($binary-node-left node)
 	 => (lambda (left)
 	      ($binary-tree-maximum left #f)))
@@ -487,18 +490,18 @@
 
 ;;;; plain binary trees: pre-order iterations
 
-(define* (binary-tree-begin-pre-order-forwards {root false-or-binary-node?})
+(define ({binary-tree-begin-pre-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-pre-order-forwards root))
 
-(define ($binary-tree-begin-pre-order-forwards root)
+(define/typed ({$binary-tree-begin-pre-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   root)
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-pre-order-forwards {node binary-node?})
+(define ({binary-tree-step-pre-order-forwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-pre-order-forwards node))
 
-(define ($binary-tree-step-pre-order-forwards node)
+(define/typed ({$binary-tree-step-pre-order-forwards <maybe-binary-node>} {node <binary-node>})
   (or ($binary-node-left  node)
       ($binary-node-right node)
       (let loop ((node node)
@@ -512,18 +515,18 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-begin-pre-order-backwards {root false-or-binary-node?})
+(define ({binary-tree-begin-pre-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-pre-order-backwards root))
 
-(define ($binary-tree-begin-pre-order-backwards root)
+(define/typed ({$binary-tree-begin-pre-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   root)
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-pre-order-backwards {node false-or-binary-node?})
+(define ({binary-tree-step-pre-order-backwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-pre-order-backwards node))
 
-(define ($binary-tree-step-pre-order-backwards node)
+(define/typed ({$binary-tree-step-pre-order-backwards <maybe-binary-node>} {node <binary-node>})
   (or ($binary-node-right node)
       ($binary-node-left  node)
       (let loop ((node node)
@@ -538,18 +541,18 @@
 
 ;;;; plain binary trees: post-order iterations
 
-(define* (binary-tree-begin-post-order-forwards {root false-or-binary-node?})
+(define ({binary-tree-begin-post-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-post-order-forwards root))
 
-(define ($binary-tree-begin-post-order-forwards root)
+(define/typed ({$binary-tree-begin-post-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-deepest-left-leaf root))
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-post-order-forwards {node binary-node?})
+(define ({binary-tree-step-post-order-forwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-post-order-forwards node))
 
-(define ($binary-tree-step-post-order-forwards node)
+(define/typed ({$binary-tree-step-post-order-forwards <maybe-binary-node>} {node <binary-node>})
   (let ((dad ($binary-node-parent node)))
     (cond ((not dad)
 	   #f)
@@ -570,18 +573,18 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-begin-post-order-backwards {root false-or-binary-node?})
+(define ({binary-tree-begin-post-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-post-order-backwards root))
 
-(define ($binary-tree-begin-post-order-backwards root)
+(define/typed ({$binary-tree-begin-post-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-deepest-right-leaf root))
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-post-order-backwards {node false-or-binary-node?})
+(define ({binary-tree-step-post-order-backwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-post-order-backwards node))
 
-(define ($binary-tree-step-post-order-backwards node)
+(define/typed ({$binary-tree-step-post-order-backwards <maybe-binary-node>} {node <binary-node>})
   (let ((dad ($binary-node-parent node)))
     (cond ((not dad)
 	   #f)
@@ -595,18 +598,18 @@
 
 ;;;; plain binary trees: level-order iterations
 
-(define* (binary-tree-begin-level-order-forwards {root false-or-binary-node?})
+(define ({binary-tree-begin-level-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-level-order-forwards root))
 
-(define ($binary-tree-begin-level-order-forwards root)
+(define/typed ({$binary-tree-begin-level-order-forwards <maybe-binary-node>} {root <maybe-binary-node>})
   root)
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-level-order-forwards {node binary-node?})
+(define ({binary-tree-step-level-order-forwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-level-order-forwards node))
 
-(define ($binary-tree-step-level-order-forwards node)
+(define/typed ({$binary-tree-step-level-order-forwards <maybe-binary-node>} {node <binary-node>})
   ;;NOTE This  is a Scheme translation  of very old code  I wrote in the  C language.
   ;;This is why the style is so unschemey.  (Marco Maggi; Wed Aug 19, 2015)
   ;;
@@ -617,7 +620,7 @@
 	#f
       (let loop ((i    0)
 		 (org  node) ;the node from which we started this step
-		 (last #f))  ;the NODE in the previous loop iteration
+		 ({last <maybe-binary-node>} #f))  ;the NODE in the previous loop iteration
 	(define-syntax node->dad	(identifier-syntax ($binary-node-parent  node)))
 	(define-syntax node->left	(identifier-syntax ($binary-node-left    node)))
 	(define-syntax node->right	(identifier-syntax ($binary-node-right   node)))
@@ -667,18 +670,18 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-begin-level-order-backwards {root false-or-binary-node?})
+(define ({binary-tree-begin-level-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   ($binary-tree-begin-level-order-backwards root))
 
-(define ($binary-tree-begin-level-order-backwards root)
+(define/typed ({$binary-tree-begin-level-order-backwards <maybe-binary-node>} {root <maybe-binary-node>})
   root)
 
 ;;; --------------------------------------------------------------------
 
-(define* (binary-tree-step-level-order-backwards {node false-or-binary-node?})
+(define ({binary-tree-step-level-order-backwards <maybe-binary-node>} {node <binary-node>})
   ($binary-tree-step-level-order-backwards node))
 
-(define ($binary-tree-step-level-order-backwards node)
+(define/typed ({$binary-tree-step-level-order-backwards <maybe-binary-node>} {node <binary-node>})
   ;;NOTE This  is a Scheme translation  of very old code  I wrote in the  C language.
   ;;This is why the style is so unschemey.  (Marco Maggi; Wed Aug 19, 2015)
   ;;
@@ -689,7 +692,7 @@
 	#f
       (let loop ((i    0)
 		 (org  node) ;the node from which we started this step
-		 (last #f))  ;the NODE in the previous loop iteration
+		 ({last <maybe-binary-node>} #f)) ;the NODE in the previous loop iteration
 	(define-syntax node->dad	(identifier-syntax ($binary-node-parent  node)))
 	(define-syntax node->left	(identifier-syntax ($binary-node-left    node)))
 	(define-syntax node->right	(identifier-syntax ($binary-node-right   node)))
@@ -957,9 +960,9 @@
 (define-syntax define-iteration-thunk
   (syntax-rules ()
     ((_ ?who ?begin ?step)
-     (define* (?who {root false-or-binary-node?})
-       (let ((started?     #f)
-	     (current-node root))
+     (define (?who {root (or <false> <binary-node>)})
+       (let (({started?		<boolean>}		#f)
+	     ({current-node	<maybe-binary-node>}	root))
 	 (lambda ()
 	   (cond ((not current-node)
 		  (sentinel))
@@ -1024,7 +1027,8 @@
   (syntax-rules ()
     ((_ ?who ?begin ?step)
      (define* (?who {root false-or-binary-node?})
-       (let ((queue #f))
+       (import (vicare containers queues))
+       (let (({queue (or <false> <queue>)} #f))
 	 (lambda ()
 	   (cond ((not root)
 		  (sentinel))

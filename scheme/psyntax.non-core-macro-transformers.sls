@@ -142,6 +142,8 @@
     ((dolist)				dolist-macro)
     ((dotimes)				dotimes-macro)
     ((let*)				let*-macro)
+    ((let*/std)				let*/std-macro)
+    ((let*/checked)			let*/checked-macro)
     ((let-values)			let-values-macro)
     ((let*-values)			let*-values-macro)
     ((values->list)			values->list-macro)
@@ -462,9 +464,9 @@
       (receive (branch-binding* cond-clause*)
 	  (%process-clauses input-form.stx expr.sym else.sym datum-clause*.stx)
 	(bless
-	 `(letrec ((,expr.sym ,expr.stx)
-		   ,@branch-binding*
-		   (,else.sym (lambda/std () . ,else-body*.stx)))
+	 `(letrec/std ((,expr.sym ,expr.stx)
+		       ,@branch-binding*
+		       (,else.sym (lambda/std () . ,else-body*.stx)))
 	    (cond ,@cond-clause* (else (,else.sym))))))))
 
   (define (%process-clauses input-form.stx expr.sym else.sym clause*.stx)
@@ -683,9 +685,9 @@
       (receive (branch-binding* cond-clause*)
 	  (%process-clauses input-form.stx expr.sym datum-clause*.stx)
 	(bless
-	 `(letrec ((,expr.sym ,expr.stx)
-		   ,@branch-binding*
-		   (,else.sym (lambda/std () . ,else-body*.stx)))
+	 `(letrec/std ((,expr.sym ,expr.stx)
+		       ,@branch-binding*
+		       (,else.sym (lambda/std () . ,else-body*.stx)))
 	    (if (identifier? ,expr.sym)
 		(cond ,@cond-clause* (else (,else.sym)))
 	      (,else.sym)))))))
@@ -946,21 +948,22 @@
       `(internal-body ,?body . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (let ((lhs*    (generate-temporaries ?lhs*))
-	   (rhs*    (generate-temporaries ?rhs*))
-	   (guard?  (make-syntactic-identifier-for-temporary-variable "guard?"))
-	   (swap    (make-syntactic-identifier-for-temporary-variable "swap"))
-	   (t       (make-syntactic-identifier-for-temporary-variable "t")))
+     (let ((lhs-arg*	(generate-temporaries ?lhs*))
+	   (rhs-arg*	(generate-temporaries ?rhs*))
+	   (guard?	(make-syntactic-identifier-for-temporary-variable "guard?"))
+	   (swap	(make-syntactic-identifier-for-temporary-variable "swap"))
+	   (tmp		(make-syntactic-identifier-for-temporary-variable "tmp")))
        (bless
-	`((lambda/std ,(append lhs* rhs*)
-	    (let* ((,guard? #t) ;apply the guard function only the first time
-		   (,swap   (lambda/std ()
-			      ,@(map (lambda (lhs rhs)
-				       `(let ((,t (,lhs)))
-					  (,lhs ,rhs ,guard?)
-					  (set! ,rhs ,t)))
-				  lhs* rhs*)
-			      (set! ,guard? #f))))
+	`((lambda/std ,(append lhs-arg* rhs-arg*)
+	    (let*/checked
+		(({,guard? <boolean>}	#t) ;apply the guard function only the first time
+		 ({,swap   <thunk>}	(lambda/std ()
+					  ,@(map (lambda (lhs rhs)
+						   `(let/std ((,tmp (,lhs)))
+						      (,lhs ,rhs ,guard?)
+						      (set! ,rhs ,tmp)))
+					      lhs-arg* rhs-arg*)
+					  (set! ,guard? #f))))
 	      (dynamic-wind
 		  ,swap
 		  (lambda/std () ,?body . ,?body*)
@@ -983,11 +986,11 @@
 	   (why          (make-syntactic-identifier-for-temporary-variable))
 	   (escape       (make-syntactic-identifier-for-temporary-variable)))
        (bless
-	`(let (	;;True if the dynamic extent of the call to THUNK is terminated.
-	       (,terminated?   #f)
-	       ;;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
-	       ;;performing a normal return.
-	       (,normal-exit?  #f))
+	`(let/std ( ;;True if the dynamic extent of the call to THUNK is terminated.
+		   (,terminated?   #f)
+		   ;;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
+		   ;;performing a normal return.
+		   (,normal-exit?  #f))
 	   (dynamic-wind
 	       (lambda/std ()
 		 (when ,terminated?
@@ -1137,7 +1140,7 @@
        (let ((store (make-syntactic-identifier-for-temporary-variable))
 	     (why   (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
-	  `(let ,(%make-store-binding store)
+	  `(let/std ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
 		   (lambda/std (,why)
@@ -1157,7 +1160,7 @@
        (let ((store (make-syntactic-identifier-for-temporary-variable))
 	     (why   (make-syntactic-identifier-for-temporary-variable)))
 	 (bless
-	  `(let ,(%make-store-binding store)
+	  `(let/std ,(%make-store-binding store)
 	     (parametrise ((compensations ,store))
 	       (with-unwind-protection
 		   (lambda/std (,why)
@@ -1169,8 +1172,8 @@
   (define (%make-store-binding store)
     (let ((stack        (make-syntactic-identifier-for-temporary-variable))
 	  (false/thunk  (make-syntactic-identifier-for-temporary-variable)))
-      `((,store (let ((,stack '()))
-		  (case-lambda
+      `((,store (let/std ((,stack '()))
+		  (case-lambda/std
 		   (()
 		    ,stack)
 		   ((,false/thunk)
@@ -1252,7 +1255,7 @@
     ((_ ?thunk0 ?thunk* ...)
      (let ((counter (make-syntactic-identifier-for-temporary-variable "counter")))
        (bless
-	`(let ((,counter 0))
+	`(let/std ((,counter 0))
 	   (begin
 	     (set! ,counter (add1 ,counter))
 	     (coroutine (lambda/std () (,?thunk0) (set! ,counter (sub1 ,counter)))))
@@ -1348,7 +1351,7 @@
        (bless
 	`(define-syntax ,?name
 	   (named-lambda/std ,?name (,?stx)
-	     (letrec
+	     (letrec/std
 		 ((,SYNNER (named-case-lambda/std ,?name
 			     ((message)
 			      (,SYNNER message #f))
@@ -1396,7 +1399,7 @@
        (syntax-object.parse-standard-formals (map car idn*))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
-	  `(let ,(map list t* ?expr*)
+	  `(let/std ,(map list t* ?expr*)
 	     ,(let recur ((pat* ?pat*)
 			  (t*   t*))
 		(if (null? pat*)
@@ -1460,29 +1463,46 @@
   ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
   ;;must be further expanded.
   ;;
-  (define (%build-output-form lhs* rhs* body)
-    ;;Build the output form as nested LET forms.
-    (bless
-     (let recur ((x* (map list lhs* rhs*)))
-       (if (pair? x*)
-	   `(let (,(car x*)) ,(recur (cdr x*)))
-	 `(internal-body . ,body)))))
-  (syntax-match input-form.stx ()
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
-     ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
-     (and (options::typed-language?)
-	  (for-all syntax-object.typed-argument? ?lhs*))
-     (%build-output-form ?lhs* ?rhs* (cons ?body ?body*)))
+  (if (options::typed-language?)
+      (let*/checked-macro input-form.stx)
+    (let*/std-macro input-form.stx)))
 
+(define-macro-transformer (let*/std input-form.stx)
+  ;;Transformer function used  to expand LET*/STD macros from the  top-level built in
+  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
+  ;;must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
      ;;use SYNTAX-OBJECT.LIST-OF-STANDARD-BINDINGS? here.
      (begin
        (unless (all-identifiers? ?lhs*)
-	 (syntax-violation 'let* "invalid syntactic binding identifiers" input-form.stx ?lhs*))
-       (%build-output-form ?lhs* ?rhs* (cons ?body ?body*))))
+	 (syntax-violation 'let*/std "invalid syntactic binding identifiers" input-form.stx ?lhs*))
+       (bless
+	(let recur ((x* (map list ?lhs* ?rhs*)))
+	  (if (pair? x*)
+	      `(let/std (,(car x*)) ,(recur (cdr x*)))
+	    `(internal-body ,?body . ,?body*))))))
     ))
+
+(define-macro-transformer (let*/checked input-form.stx)
+  ;;Transformer function used to expand  LET*/CHECKED macros from the top-level built
+  ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
+     ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
+     (bless
+      (let recur ((x* (map list ?lhs* ?rhs*)))
+	(if (pair? x*)
+	    `(let/checked (,(car x*)) ,(recur (cdr x*)))
+	  `(internal-body ,?body . ,?body*)))))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-macro-transformer (trace-let input-form.stx)
   ;;Transformer function used to expand  Vicare's TRACE-LET macros from the top-level
@@ -1540,7 +1560,7 @@
   (define-macro-transformer (let-values input-form.stx)
     (syntax-match input-form.stx ()
       ((_ () ?body ?body* ...)
-       (cons* (bless 'let) '() ?body ?body*))
+       (cons* (bless 'let/std) '() ?body ?body*))
 
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (receive (lhs*.standard lhs*.signature)
@@ -1712,7 +1732,7 @@
     ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (let ((SHADOW* (generate-temporaries (cons ?lhs ?lhs*))))
        (bless
-	`(let ,(map list SHADOW* (cons ?rhs ?rhs*))
+	`(let/std ,(map list SHADOW* (cons ?rhs ?rhs*))
 	   (let-syntax ,(map (lambda (lhs shadow)
 			       `(,lhs (identifier-syntax ,shadow)))
 			  (cons ?lhs ?lhs*) SHADOW*)
@@ -1751,14 +1771,14 @@
      (let ((TMP* (generate-temporaries ?lhs*))
 	   (VAR* (generate-temporaries ?lhs*)))
        (bless
-	`(let ,(map (lambda (var)
-		      `(,var (void)))
-		 VAR*)
+	`(let/std ,(map (lambda (var)
+			  `(,var (void)))
+		     VAR*)
 	   (let-syntax ,(map (lambda (lhs var)
 			       `(,lhs (identifier-syntax ,var)))
 			  ?lhs* VAR*)
 	     ;;Do not enforce the order of evaluation of ?RHS.
-	     (let ,(map list TMP* ?rhs*)
+	     (let/std ,(map list TMP* ?rhs*)
 	       ,@(map (lambda (var tmp)
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
@@ -1779,14 +1799,14 @@
      (let ((TMP* (generate-temporaries ?lhs*))
 	   (VAR* (generate-temporaries ?lhs*)))
        (bless
-	`(let ,(map (lambda (var)
-		      `(,var (void)))
-		 VAR*)
+	`(let/std ,(map (lambda (var)
+			  `(,var (void)))
+		     VAR*)
 	   (let-syntax ,(map (lambda (lhs var)
 			       `(,lhs (identifier-syntax ,var)))
 			  ?lhs* VAR*)
 	     ;;Do enforce the order of evaluation of ?RHS.
-	     (let* ,(map list TMP* ?rhs*)
+	     (let*/std ,(map list TMP* ?rhs*)
 	       ,@(map (lambda (var tmp)
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
@@ -2386,9 +2406,9 @@
 					 (pred.sym		(make-syntactic-identifier-for-temporary-variable))
 					 (arg-counter.sym	(make-syntactic-identifier-for-temporary-variable))
 					 (arg*.sym		(make-syntactic-identifier-for-temporary-variable)))
-				     `(let ,loop.sym ((,pred.sym		,?expr)
-						      (,arg-counter.sym		,arg-counter)
-						      (,arg*.sym		,?arg-id))
+				     `(let/std ,loop.sym ((,pred.sym		,?expr)
+							  (,arg-counter.sym	,arg-counter)
+							  (,arg*.sym		,?arg-id))
 					(when (pair? ,arg*.sym)
 					  (if (,pred.sym (car ,arg*.sym))
 					      (,loop.sym ,pred.sym ($fxadd1 ,arg-counter.sym) (cdr ,arg*.sym))
@@ -2485,7 +2505,7 @@
     ((_ ?who ?expr)
      (bless
       `(define ,?who
-	 (let ((v ,?expr))
+	 (let/std ((v ,?expr))
 	   (if (procedure? v)
 	       (make-traced-procedure ',?who v)
 	     v)))))
@@ -2792,7 +2812,7 @@
 			  ;;or out-guard while trying to  call the cleanups: we reset
 			  ;;it to avoid leaving it true.
 			  (run-unwind-protection-cleanup-upon-exit? #f)
-			  (let ((,?variable ,raised-obj-id))
+			  (let/std ((,?variable ,raised-obj-id))
 			    ,(gen-clauses raised-obj-id reinstate-guard-continuation-id ?clause*)))
 		      (lambda/std ()
 			,?body . ,?body*)))))))))
@@ -2864,7 +2884,7 @@
       (syntax-match clause (=>)
 	((?test => ?proc)
 	 (let ((t (make-syntactic-identifier-for-temporary-variable)))
-	   `(let ((,t ,?test))
+	   `(let/std ((,t ,?test))
 	      (if ,t
 		  (begin
 		    (,run-unwind-protect-cleanups-id)
@@ -2873,7 +2893,7 @@
 
 	((?test)
 	 (let ((t (make-syntactic-identifier-for-temporary-variable)))
-	   `(let ((,t ,?test))
+	   `(let/std ((,t ,?test))
 	      (if ,t
 		  (begin
 		    (,run-unwind-protect-cleanups-id)
@@ -2953,7 +2973,7 @@
 		   (lambda/std ()
 		     (with-exception-handler
 			 (lambda/std (,raised-obj-id)
-			   (let ((,?variable ,raised-obj-id))
+			   (let/std ((,?variable ,raised-obj-id))
 			     ,(gen-clauses raised-obj-id outerk-id ?clause*)))
 		       (lambda/std ()
 			 ,?body . ,?body*))))))
@@ -2966,14 +2986,14 @@
        (syntax-match clause (=>)
 	 ((?test => ?proc)
 	  (let ((t (make-syntactic-identifier-for-temporary-variable)))
-	    `(let ((,t ,?test))
+	    `(let/std ((,t ,?test))
 	       (if ,t
 		   (,?proc ,t)
 		 ,kont-code-stx))))
 
 	 ((?test)
 	  (let ((t (make-syntactic-identifier-for-temporary-variable)))
-	    `(let ((,t ,?test))
+	    `(let/std ((,t ,?test))
 	       (if ,t ,t ,kont-code-stx))))
 
 	 ((?test ?expr ?expr* ...)
@@ -3174,12 +3194,12 @@
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
-	       (let ,loop ()
-		    (unwinding-call/cc
-			(lambda/std (,next-iteration)
-			  ,(with-escape-fluids escape next-iteration (list ?body))))
-		    (when ,?test
-		      (,loop))))))))
+	       (let/std ,loop ()
+			(unwinding-call/cc
+			    (lambda/std (,next-iteration)
+			      ,(with-escape-fluids escape next-iteration (list ?body))))
+			(when ,?test
+			  (,loop))))))))
 
     ;;This is an extended Vicare syntax.
     ;;
@@ -3194,12 +3214,12 @@
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
-	       (let ,loop ()
-		    (unwinding-call/cc
-			(lambda/std (,next-iteration)
-			  ,(with-escape-fluids escape next-iteration (list ?body))))
-		    (until ,?test
-		      (,loop))))))))
+	       (let/std ,loop ()
+			(unwinding-call/cc
+			    (lambda/std (,next-iteration)
+			      ,(with-escape-fluids escape next-iteration (list ?body))))
+			(until ,?test
+			  (,loop))))))))
 
     ;;This is the R6RS syntax.
     ;;
@@ -3216,16 +3236,16 @@
 	  (bless
 	   `(unwinding-call/cc
 		(lambda/std (,escape)
-		  (letrec ((,loop (lambda/std ,?var*
-				    (if (unwinding-call/cc
-					    (lambda/std (,next-iteration)
-					      (if ,?test
-						  #f
-						,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
-					(,loop . ,?step*)
-				      ,(if (null? ?expr*)
-					   '(void)
-					 `(begin . ,?expr*))))))
+		  (letrec/std ((,loop (lambda/std ,?var*
+					(if (unwinding-call/cc
+						(lambda/std (,next-iteration)
+						  (if ,?test
+						      #f
+						    ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+					    (,loop . ,?step*)
+					  ,(if (null? ?expr*)
+					       '(void)
+					     `(begin . ,?expr*))))))
 		    (,loop . ,?init*)))))))
        ))
     ))
@@ -3277,19 +3297,19 @@
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
-	       (let* ,init-binding*
-		 (letrec ((,loop (lambda/std ()
-				  (if (unwinding-call/cc
-					  (lambda/std (,next-iteration)
-					    (if ,?test
-						#f
-					      ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
-				      (begin
-					,@step-update*
-					(,loop))
-				    ,(if (null? ?expr*)
-					 '(void)
-				       `(begin . ,?expr*))))))
+	       (let*/std ,init-binding*
+		 (letrec/std ((,loop (lambda/std ()
+				       (if (unwinding-call/cc
+					       (lambda/std (,next-iteration)
+						 (if ,?test
+						     #f
+						   ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+					   (begin
+					     ,@step-update*
+					     (,loop))
+					 ,(if (null? ?expr*)
+					      '(void)
+					    `(begin . ,?expr*))))))
 		   (,loop))))))))
     ))
 
@@ -3309,13 +3329,13 @@
      (let ((ell  (make-syntactic-identifier-for-temporary-variable "ell"))
 	   (loop (make-syntactic-identifier-for-temporary-variable "loop")))
        (bless
-	`(let ,loop ((,ell ,?list-form))
-	      (if (pair? ,ell)
-		  (let ((,?var (car ,ell)))
-		    ,?body0 ,@?body*
-		    (,loop (cdr ,ell)))
-		(let ((,?var '()))
-		  ,?result-form))))))
+	`(let/std ,loop ((,ell ,?list-form))
+		  (if (pair? ,ell)
+		      (let/std ((,?var (car ,ell)))
+			,?body0 ,@?body*
+			(,loop (cdr ,ell)))
+		    (let/std ((,?var '()))
+		      ,?result-form))))))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -3329,14 +3349,14 @@
     ((_ (?var ?count-form)              ?body0 ?body* ...)
      (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
        (bless
-	`(let ((,max-var ,?count-form))
+	`(let/std ((,max-var ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
 	       ((>= ,?var ,max-var))
 	     ,?body0 . ,?body*)))))
     ((_ (?var ?count-form ?result-form) ?body0 ?body* ...)
      (let ((max-var (make-syntactic-identifier-for-temporary-variable)))
        (bless
-	`(let ((,max-var ,?count-form))
+	`(let/std ((,max-var ,?count-form))
 	   (do ((,?var 0 (add1 ,?var)))
 	       ((>= ,?var ,max-var)
 		,?result-form)
@@ -3361,7 +3381,7 @@
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
-	       (let ,loop ()
+	       (let/std ,loop ()
 		 (when (unwinding-call/cc
 			   (lambda/std (,next-iteration)
 			     (if ,?test
@@ -3386,7 +3406,7 @@
        (bless
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
-	       (let ,loop ()
+	       (let/std ,loop ()
 		 (when (unwinding-call/cc
 			   (lambda/std (,next-iteration)
 			     (if ,?test
@@ -3414,7 +3434,7 @@
 	`(unwinding-call/cc
 	     (lambda/std (,escape)
 	       ,?init
-	       (let ,loop ()
+	       (let/std ,loop ()
 		 (when (unwinding-call/cc
 			   (lambda/std (,next-iteration)
 			     (if ,?test
@@ -3598,13 +3618,13 @@
 	   (value.sym   (make-syntactic-identifier-for-temporary-variable "value"))
 	   (result.sym  (make-syntactic-identifier-for-temporary-variable "result")))
        (bless
-	`(let ((,mc.sym (private-shift-meta-continuation)))
+	`(let/std ((,mc.sym (private-shift-meta-continuation)))
 	   (call-with-current-continuation
 	       (lambda (,escape.sym)
 		 (parametrise ((private-shift-meta-continuation (lambda (,value.sym)
 								  (private-shift-meta-continuation ,mc.sym)
 								  (,escape.sym ,value.sym))))
-		   (let ((,result.sym ,?body))
+		   (let/std ((,result.sym ,?body))
 		     ((private-shift-meta-continuation) ,result.sym)))))))))
     ))
 
@@ -3622,9 +3642,9 @@
        (bless
 	`(call-with-current-continuation
 	     (lambda (,escape.sym)
-	       (let ((,result.sym (let ((,?var (lambda (,value.sym)
-						 (inner-reset (,escape.sym ,value.sym)))))
-				    ,?body)))
+	       (let/std ((,result.sym (let/std ((,?var (lambda (,value.sym)
+							 (inner-reset (,escape.sym ,value.sym)))))
+					,?body)))
 		 ((private-shift-meta-continuation) ,result.sym)))))))
     ))
 
@@ -3643,13 +3663,13 @@
 	   (value.sym   (make-syntactic-identifier-for-temporary-variable "value"))
 	   (result.sym  (make-syntactic-identifier-for-temporary-variable "result")))
        (bless
-	`(let ((,mc.sym (private-shift-meta-continuation)))
+	`(let/std ((,mc.sym (private-shift-meta-continuation)))
 	   (call-with-current-continuation
 	       (lambda (,escape.sym)
 		 (private-shift-meta-continuation (lambda (,value.sym)
 						    (private-shift-meta-continuation ,mc.sym)
 						    (,escape.sym ,value.sym)))
-		 (let ((,result.sym ,?body))
+		 (let/std ((,result.sym ,?body))
 		   ((private-shift-meta-continuation) ,result.sym))))))))
     ))
 
@@ -3672,13 +3692,13 @@
 
 	      ((?test => ?proc)
 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-		 `(let ((,tmp ,?test))
+		 `(let/std ((,tmp ,?test))
 		    (when ,tmp
 		      (,?proc ,tmp)))))
 
 	      ((?expr)
 	       (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-		 `(let ((,tmp ,?expr))
+		 `(let/std ((,tmp ,?expr))
 		    (when ,tmp ,tmp))))
 
 	      ((?test ?expr* ...)
@@ -3694,14 +3714,14 @@
 
 	    ((?test => ?proc)
 	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-	       `(let ((,tmp ,?test))
+	       `(let/std ((,tmp ,?test))
 		  (if ,tmp
 		      (,?proc ,tmp)
 		    ,(recur (car cls*) (cdr cls*))))))
 
 	    ((?expr)
 	     (let ((tmp (make-syntactic-identifier-for-temporary-variable "tmp")))
-	       `(let ((,tmp ,?expr))
+	       `(let/std ((,tmp ,?expr))
 		  (if ,tmp ,tmp ,(recur (car cls*) (cdr cls*))))))
 
 	    ((?test ?expr* ...)
@@ -4641,15 +4661,15 @@
     (cond ((null? expr*)
 	   bool/var)
 	  ((null? (cdr expr*))
-	   `(let ((x ,(car expr*)))
+	   `(let/std ((x ,(car expr*)))
 	      (if ,bool/var
 		  (and (not x) ,bool/var)
 		x)))
 	  (else
-	   `(let ((x ,(car expr*)))
+	   `(let/std ((x ,(car expr*)))
 	      (and (or (not ,bool/var)
 		       (not x))
-		   (let ((n (or ,bool/var x)))
+		   (let/std ((n (or ,bool/var x)))
 		     ,(%xor-aux 'n (cdr expr*))))))))
 
   #| end of module: XOR-MACRO |# )
@@ -4694,7 +4714,7 @@
     ((_ ?name ?expr)
      (bless
       `(define-syntax ,?name
-	 (let ((const ,?expr))
+	 (let/std ((const ,?expr))
 	   (lambda/std (stx)
 	     (if (identifier? stx)
 		 ;;By  using DATUM->SYNTAX  we avoid  the  "raw symbol  in output  of
@@ -4736,7 +4756,7 @@
 		  ((,?name (lambda/std (,STX)
 			     (syntax-violation (quote ,?name) "cannot recursively expand inline expression" ,STX)))
 		   (__who__  (identifier-syntax (quote ,?name))))
-		(let ,BINDING* ,?body0 . ,?body*))))))))
+		(let/std ,BINDING* ,?body0 . ,?body*))))))))
     ))
 
 

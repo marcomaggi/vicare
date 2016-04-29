@@ -11,7 +11,7 @@
 ;;;     NOTE It is  unlikely that I have gotten everything  right.  (Marco Maggi; Sun
 ;;;     Mar 8, 2015)
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -28,9 +28,10 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare checks)
-  (srfi :114))
+(program (test-srfi-114-comparators)
+  (import (vicare)
+    (vicare checks)
+    (srfi :114))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: SRFI 114, comparators\n")
@@ -1991,6 +1992,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of PROGRAM |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -1,4 +1,4 @@
-;;;Copyright (c) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
 ;;;a  copy of  this  software and  associated  documentation files  (the
@@ -20,25 +20,50 @@
 ;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
 ;;;SOFTWARE.
 
+
+#!vicare
 (library (psyntax.config)
   (export
+    ;; initialisation
     initialise-expander
-    expander-initialisation/initialise-label-gensyms-and-interned-libraries)
+    expander-initialisation/initialise-label-gensyms-and-interned-libraries
+
+    ;; options
+    warn-about-logic-constants
+
+    #| end of EXPORT |# )
   (import (rnrs)
     (psyntax.compat))
 
-  (define expander-initialisation/initialise-label-gensyms-and-interned-libraries
-    (make-parameter #f))
+
+;;;; initialiseation
 
-  (define initialise-expander
-    (let ((expander-initialised? #f))
-      (lambda ()
-	(unless expander-initialised?
-	  (print-expander-debug-message "initialising expander internals")
-	  (let ((func (expander-initialisation/initialise-label-gensyms-and-interned-libraries)))
-	    (when func (func)))
-	  (set! expander-initialised? #t)))))
+(define expander-initialisation/initialise-label-gensyms-and-interned-libraries
+  (make-parameter #f))
 
-  #| end of library |# )
+(define initialise-expander
+  (let ((expander-initialised? #f))
+    (lambda ()
+      (unless expander-initialised?
+	(print-expander-debug-message "initialising expander internals")
+	(let ((func (expander-initialisation/initialise-label-gensyms-and-interned-libraries)))
+	  (when func (func)))
+	(set! expander-initialised? #t)))))
+
+
+;;;; options
+
+(define warn-about-logic-constants
+  ;;When set to true:  raise a "&warning" when an operand in  a logic expression (if,
+  ;;and, or, ...) always returns true or always returns false; otherwise do nothing.
+  ;;
+  (make-parameter #f
+    (lambda (obj)
+      (and obj #t))))
+
+
+;;;; done
+
+#| end of library |# )
 
 ;;; end of file

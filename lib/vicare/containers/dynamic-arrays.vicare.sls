@@ -840,7 +840,7 @@
 ;;;; iteration thunks
 
 (define* (make-dynamic-array-front-iteration-thunk {arry dynamic-array?})
-  (let ((arry.idx 0)
+  (let (({arry.idx <fixnum>} 0)
 	(arry.len ($dynamic-array-length arry)))
     (lambda ()
       (if ($fx< arry.idx arry.len)
@@ -850,7 +850,7 @@
 	(sentinel)))))
 
 (define* (make-dynamic-array-rear-iteration-thunk {arry dynamic-array?})
-  (let ((arry.idx ($fxsub1 ($dynamic-array-length arry))))
+  (let (({arry.idx <fixnum>} ($fxsub1 ($dynamic-array-length arry))))
     (lambda ()
       (if ($fxnonnegative? arry.idx)
 	  (receive-and-return (ch)
