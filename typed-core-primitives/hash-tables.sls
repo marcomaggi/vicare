@@ -155,8 +155,10 @@
 (declare-core-primitive mutable-hashtable?
     (safe)
   (signatures
-   ((<hashtable>)		=> (<true>))
-   ((<top>)			=> (<false>)))
+   ((<hashtable>)				=> (<boolean>))
+   (((and (not <hashtable>)
+	  (not (ancestor-of <hashtable>))))	=> (<false>))
+   (((not <hashtable>))				=> (<false>)))
   (attributes
    ((_)				foldable effect-free)))
 
