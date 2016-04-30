@@ -50,6 +50,23 @@
   (check-for-false (flzero?/negative -123.0))
   (check-for-false (flzero?/negative -123.0))
 
+;;;
+
+  (check-for-true  (flzero? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (flzero? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (flzero? (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (flzero? (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-true  (flzero?/positive (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false (flzero?/positive (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (flzero?/positive (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (flzero?/positive (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-false (flzero?/negative (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (flzero?/negative (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (flzero?/negative (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (flzero?/negative (unsafe-cast-signature (<top>) -123.0)))
+
 ;;; --------------------------------------------------------------------
 
   (check-for-true  (apply flzero? '(+0.0)))
@@ -66,6 +83,23 @@
   (check-for-true  (apply flzero?/negative '(-0.0)))
   (check-for-false (apply flzero?/negative '(-123.0)))
   (check-for-false (apply flzero?/negative '(-123.0)))
+
+;;;
+
+  (check-for-true  (apply flzero? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply flzero? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply flzero? (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply flzero? (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-true  (apply flzero?/positive (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply flzero?/positive (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply flzero?/positive (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply flzero?/positive (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-false (apply flzero?/negative (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply flzero?/negative (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply flzero?/negative (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply flzero?/negative (unsafe-cast-signature (<top>) '(-123.0))))
 
 ;;; --------------------------------------------------------------------
 
@@ -84,6 +118,23 @@
   (check-for-false ($flzero?/negative -123.0))
   (check-for-false ($flzero?/negative -123.0))
 
+;;;
+
+  (check-for-true  ($flzero? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  ($flzero? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false ($flzero? (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false ($flzero? (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-true  ($flzero?/positive (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false ($flzero?/positive (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false ($flzero?/positive (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false ($flzero?/positive (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-false ($flzero?/negative (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  ($flzero?/negative (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false ($flzero?/negative (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false ($flzero?/negative (unsafe-cast-signature (<top>) -123.0)))
+
 ;;; --------------------------------------------------------------------
 
   (check-for-true  (apply $flzero? '(+0.0)))
@@ -101,6 +152,22 @@
   (check-for-false (apply $flzero?/negative '(-123.0)))
   (check-for-false (apply $flzero?/negative '(-123.0)))
 
+;;;
+
+  (check-for-true  (apply $flzero? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply $flzero? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply $flzero? (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply $flzero? (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-true  (apply $flzero?/positive (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply $flzero?/positive (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply $flzero?/positive (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply $flzero?/positive (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-false (apply $flzero?/negative (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply $flzero?/negative (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply $flzero?/negative (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply $flzero?/negative (unsafe-cast-signature (<top>) '(-123.0))))
 
 ;;; --------------------------------------------------------------------
 
@@ -114,15 +181,37 @@
   (check-for-false ($flnegative? +123.0))
   (check-for-true  ($flnegative? -123.0))
 
-  (check-for-false ($flnonpositive? +0.0))
+  (check-for-true  ($flnonpositive? +0.0))
   (check-for-true  ($flnonpositive? -0.0))
   (check-for-false ($flnonpositive? +123.0))
   (check-for-true  ($flnonpositive? -123.0))
 
   (check-for-true  ($flnonnegative? +0.0))
-  (check-for-false ($flnonnegative? -0.0))
+  (check-for-true  ($flnonnegative? -0.0))
   (check-for-true  ($flnonnegative? +123.0))
   (check-for-false ($flnonnegative? -123.0))
+
+;;;
+
+  (check-for-false ($flpositive? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false ($flpositive? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  ($flpositive? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false ($flpositive? (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-false ($flnegative? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false ($flnegative? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false ($flnegative? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-true  ($flnegative? (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-true  ($flnonpositive? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  ($flnonpositive? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false ($flnonpositive? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-true  ($flnonpositive? (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-true  ($flnonnegative? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  ($flnonnegative? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  ($flnonnegative? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false ($flnonnegative? (unsafe-cast-signature (<top>) -123.0)))
 
 ;;; --------------------------------------------------------------------
 
@@ -136,39 +225,85 @@
   (check-for-false (apply $flnegative? '(+123.0)))
   (check-for-true  (apply $flnegative? '(-123.0)))
 
-  (check-for-false (apply $flnonpositive? '(+0.0)))
+  (check-for-true  (apply $flnonpositive? '(+0.0)))
   (check-for-true  (apply $flnonpositive? '(-0.0)))
   (check-for-false (apply $flnonpositive? '(+123.0)))
   (check-for-true  (apply $flnonpositive? '(-123.0)))
 
   (check-for-true  (apply $flnonnegative? '(+0.0)))
-  (check-for-false (apply $flnonnegative? '(-0.0)))
+  (check-for-true  (apply $flnonnegative? '(-0.0)))
   (check-for-true  (apply $flnonnegative? '(+123.0)))
   (check-for-false (apply $flnonnegative? '(-123.0)))
 
+;;;
+
+  (check-for-false (apply $flpositive? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply $flpositive? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply $flpositive? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply $flpositive? (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-false (apply $flnegative? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply $flnegative? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply $flnegative? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-true  (apply $flnegative? (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-true  (apply $flnonpositive? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply $flnonpositive? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply $flnonpositive? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-true  (apply $flnonpositive? (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-true  (apply $flnonnegative? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply $flnonnegative? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply $flnonnegative? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply $flnonnegative? (unsafe-cast-signature (<top>) '(-123.0))))
+
 ;;; --------------------------------------------------------------------
 
-  (check-for-false (flnonpositive? +0.0))
+  (check-for-true  (flnonpositive? +0.0))
   (check-for-true  (flnonpositive? -0.0))
   (check-for-false (flnonpositive? +123.0))
   (check-for-true  (flnonpositive? -123.0))
 
   (check-for-true  (flnonnegative? +0.0))
-  (check-for-false (flnonnegative? -0.0))
+  (check-for-true  (flnonnegative? -0.0))
   (check-for-true  (flnonnegative? +123.0))
   (check-for-false (flnonnegative? -123.0))
 
+;;;
+
+  (check-for-true  (flnonpositive? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (flnonpositive? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (flnonpositive? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-true  (flnonpositive? (unsafe-cast-signature (<top>) -123.0)))
+
+  (check-for-true  (flnonnegative? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (flnonnegative? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  (flnonnegative? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false (flnonnegative? (unsafe-cast-signature (<top>) -123.0)))
+
 ;;; --------------------------------------------------------------------
 
-  (check-for-false (apply flnonpositive? '(+0.0)))
+  (check-for-true  (apply flnonpositive? '(+0.0)))
   (check-for-true  (apply flnonpositive? '(-0.0)))
   (check-for-false (apply flnonpositive? '(+123.0)))
   (check-for-true  (apply flnonpositive? '(-123.0)))
 
   (check-for-true  (apply flnonnegative? '(+0.0)))
-  (check-for-false (apply flnonnegative? '(-0.0)))
+  (check-for-true  (apply flnonnegative? '(-0.0)))
   (check-for-true  (apply flnonnegative? '(+123.0)))
   (check-for-false (apply flnonnegative? '(-123.0)))
+
+;;;
+
+  (check-for-true  (apply flnonpositive? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply flnonpositive? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply flnonpositive? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-true  (apply flnonpositive? (unsafe-cast-signature (<top>) '(-123.0))))
+
+  (check-for-true  (apply flnonnegative? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply flnonnegative? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply flnonnegative? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply flnonnegative? (unsafe-cast-signature (<top>) '(-123.0))))
 
 ;;; --------------------------------------------------------------------
 
@@ -190,29 +325,73 @@
   (check-for-false (negative-zero-flonum? -1.0))
   (check-for-false (negative-zero-flonum? "ciao"))
 
-  (check-for-true  (positive-flonum? +123.0))
   (check-for-false (positive-flonum? +0.0))
   (check-for-false (positive-flonum? -0.0))
+  (check-for-true  (positive-flonum? +123.0))
   (check-for-false (positive-flonum? -123.0))
   (check-for-false (positive-flonum? "ciao"))
 
-  (check-for-true  (negative-flonum? -123.0))
   (check-for-false (negative-flonum? +0.0))
   (check-for-false (negative-flonum? -0.0))
+  (check-for-true  (negative-flonum? -123.0))
   (check-for-false (negative-flonum? +123.0))
   (check-for-false (negative-flonum? "ciao"))
 
-  (check-for-false (non-positive-flonum? +0.0))
+  (check-for-true  (non-positive-flonum? +0.0))
   (check-for-true  (non-positive-flonum? -0.0))
   (check-for-true  (non-positive-flonum? -123.0))
   (check-for-false (non-positive-flonum? +123.0))
   (check-for-false (non-positive-flonum? "ciao"))
 
   (check-for-true  (non-negative-flonum? +0.0))
-  (check-for-false (non-negative-flonum? -0.0))
+  (check-for-true  (non-negative-flonum? -0.0))
   (check-for-true  (non-negative-flonum? +123.0))
   (check-for-false (non-negative-flonum? -123.0))
   (check-for-false (non-negative-flonum? "ciao"))
+
+;;;
+
+  (check-for-true  (zero-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (zero-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (zero-flonum? (unsafe-cast-signature (<top>) +1.0)))
+  (check-for-false (zero-flonum? (unsafe-cast-signature (<top>) -1.0)))
+  (check-for-false (zero-flonum? (unsafe-cast-signature (<top>) "ciao")))
+
+  (check-for-true  (positive-zero-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false (positive-zero-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (positive-zero-flonum? (unsafe-cast-signature (<top>) +1.0)))
+  (check-for-false (positive-zero-flonum? (unsafe-cast-signature (<top>) -1.0)))
+  (check-for-false (positive-zero-flonum? (unsafe-cast-signature (<top>) "ciao")))
+
+  (check-for-false (negative-zero-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (negative-zero-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-false (negative-zero-flonum? (unsafe-cast-signature (<top>) +1.0)))
+  (check-for-false (negative-zero-flonum? (unsafe-cast-signature (<top>) -1.0)))
+  (check-for-false (negative-zero-flonum? (unsafe-cast-signature (<top>) "ciao")))
+
+  (check-for-false (positive-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false (positive-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  (positive-flonum? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false (positive-flonum? (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (positive-flonum? (unsafe-cast-signature (<top>) "ciao")))
+
+  (check-for-false (negative-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-false (negative-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  (negative-flonum? (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (negative-flonum? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false (negative-flonum? (unsafe-cast-signature (<top>) "ciao")))
+
+  (check-for-true  (non-positive-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (non-positive-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  (non-positive-flonum? (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (non-positive-flonum? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false (non-positive-flonum? (unsafe-cast-signature (<top>) "ciao")))
+
+  (check-for-true  (non-negative-flonum? (unsafe-cast-signature (<top>) +0.0)))
+  (check-for-true  (non-negative-flonum? (unsafe-cast-signature (<top>) -0.0)))
+  (check-for-true  (non-negative-flonum? (unsafe-cast-signature (<top>) +123.0)))
+  (check-for-false (non-negative-flonum? (unsafe-cast-signature (<top>) -123.0)))
+  (check-for-false (non-negative-flonum? (unsafe-cast-signature (<top>) "ciao")))
 
 ;;; --------------------------------------------------------------------
 
@@ -234,29 +413,73 @@
   (check-for-false (apply negative-zero-flonum? '(-1.0)))
   (check-for-false (apply negative-zero-flonum? '("ciao")))
 
-  (check-for-true  (apply positive-flonum? '(+123.0)))
   (check-for-false (apply positive-flonum? '(+0.0)))
   (check-for-false (apply positive-flonum? '(-0.0)))
+  (check-for-true  (apply positive-flonum? '(+123.0)))
   (check-for-false (apply positive-flonum? '(-123.0)))
   (check-for-false (apply positive-flonum? '("ciao")))
 
-  (check-for-true  (apply negative-flonum? '(-123.0)))
   (check-for-false (apply negative-flonum? '(+0.0)))
   (check-for-false (apply negative-flonum? '(-0.0)))
+  (check-for-true  (apply negative-flonum? '(-123.0)))
   (check-for-false (apply negative-flonum? '(+123.0)))
   (check-for-false (apply negative-flonum? '("ciao")))
 
-  (check-for-false (apply non-positive-flonum? '(+0.0)))
+  (check-for-true  (apply non-positive-flonum? '(+0.0)))
   (check-for-true  (apply non-positive-flonum? '(-0.0)))
   (check-for-true  (apply non-positive-flonum? '(-123.0)))
   (check-for-false (apply non-positive-flonum? '(+123.0)))
   (check-for-false (apply non-positive-flonum? '("ciao")))
 
   (check-for-true  (apply non-negative-flonum? '(+0.0)))
-  (check-for-false (apply non-negative-flonum? '(-0.0)))
+  (check-for-true  (apply non-negative-flonum? '(-0.0)))
   (check-for-true  (apply non-negative-flonum? '(+123.0)))
   (check-for-false (apply non-negative-flonum? '(-123.0)))
   (check-for-false (apply non-negative-flonum? '("ciao")))
+
+;;;
+
+  (check-for-true  (apply zero-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply zero-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply zero-flonum? (unsafe-cast-signature (<top>) '(+1.0))))
+  (check-for-false (apply zero-flonum? (unsafe-cast-signature (<top>) '(-1.0))))
+  (check-for-false (apply zero-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
+
+  (check-for-true  (apply positive-zero-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply positive-zero-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply positive-zero-flonum? (unsafe-cast-signature (<top>) '(+1.0))))
+  (check-for-false (apply positive-zero-flonum? (unsafe-cast-signature (<top>) '(-1.0))))
+  (check-for-false (apply positive-zero-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
+
+  (check-for-false (apply negative-zero-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply negative-zero-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-false (apply negative-zero-flonum? (unsafe-cast-signature (<top>) '(+1.0))))
+  (check-for-false (apply negative-zero-flonum? (unsafe-cast-signature (<top>) '(-1.0))))
+  (check-for-false (apply negative-zero-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
+
+  (check-for-false (apply positive-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply positive-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply positive-flonum? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply positive-flonum? (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply positive-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
+
+  (check-for-false (apply negative-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-false (apply negative-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply negative-flonum? (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply negative-flonum? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply negative-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
+
+  (check-for-true  (apply non-positive-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply non-positive-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply non-positive-flonum? (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply non-positive-flonum? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply non-positive-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
+
+  (check-for-true  (apply non-negative-flonum? (unsafe-cast-signature (<top>) '(+0.0))))
+  (check-for-true  (apply non-negative-flonum? (unsafe-cast-signature (<top>) '(-0.0))))
+  (check-for-true  (apply non-negative-flonum? (unsafe-cast-signature (<top>) '(+123.0))))
+  (check-for-false (apply non-negative-flonum? (unsafe-cast-signature (<top>) '(-123.0))))
+  (check-for-false (apply non-negative-flonum? (unsafe-cast-signature (<top>) '("ciao"))))
 
   #t)
 

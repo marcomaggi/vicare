@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -71,10 +71,10 @@
   (check (non-negative? +123)		=> #t)
   (check (non-negative? -123)		=> #f)
 
-  (check (non-positive? +0.0)		=> #f)
+  (check (non-positive? +0.0)		=> #t)
   (check (non-positive? -0.0)		=> #t)
   (check (non-negative? +0.0)		=> #t)
-  (check (non-negative? -0.0)		=> #f)
+  (check (non-negative? -0.0)		=> #t)
 
   (check (non-positive? +123.0)		=> #f)
   (check (non-positive? -123.0)		=> #t)

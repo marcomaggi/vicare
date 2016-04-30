@@ -14565,11 +14565,11 @@ Notice the following behaviour with zero:
 (negative-flonum? +0.0)         @result{} #f
 (negative-flonum? -0.0)         @result{} #f
 
-(non-positive-flonum? +0.0)     @result{} #f
+(non-positive-flonum? +0.0)     @result{} #t
 (non-positive-flonum? -0.0)     @result{} #t
 
 (non-negative-flonum? +0.0)     @result{} #t
-(non-negative-flonum? -0.0)     @result{} #f
+(non-negative-flonum? -0.0)     @result{} #t
 @end lisp
 @end defun
 

@@ -265,12 +265,11 @@
 (declare-core-primitive non-zero-inexact-compnum?
     (safe)
   (signatures
-   ((<non-zero-compnum>)	=> (<true>))
-   ((<zero-compnum>)		=> (<false>))
-   ((<exact-compnum>)		=> (<false>))
-   ((<inexact-compnum>)		=> (<boolean>))
-   ((<compnum>)			=> (<boolean>))
-   ((<number>)			=> (<boolean>))))
+   ((<non-zero-inexact-compnum>)	=> (<true>))
+   ((<zero-compnum>)			=> (<false>))
+   ((<exact-compnum>)			=> (<false>))
+   ((<compnum>)				=> (<boolean>))
+   ((<number>)				=> (<boolean>))))
 
 ;;;
 

@@ -40,18 +40,246 @@
  (declare-type-predicate flonum? <flonum>)
  (declare-list-of-type-predicate list-of-flonums?	<flonum>)
 
- (declare-flonum-predicate flzero?		(replacements $flzero?))
- (declare-flonum-predicate flzero?/negative	(replacements $flzero?/negative))
- (declare-flonum-predicate flzero?/positive	(replacements $flzero?/positive))
- (declare-flonum-predicate flpositive?		(replacements $flpositive?))
- (declare-flonum-predicate flnegative?		(replacements $flnegative?))
- (declare-flonum-predicate flnonpositive?	(replacements $flnonpositive?))
- (declare-flonum-predicate flnonnegative?	(replacements $flnonnegative?))
+;;; --------------------------------------------------------------------
+;;; range predicates raising error if the argument is not a flonum
+
+;;;NOTE Compliance with IEEE 754 imposes constraints  on how to handle +0.0 and -0.0:
+;;;flonum zero is separeted from positive flonums and negative flonums; +0.0 is *not*
+;;;positive; -0.0 is *not* negative.
+
+ (declare-core-primitive flzero?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive flzero?/positive
+     (safe)
+   (signatures
+    ((<positive-zero-flonum>)		=> (<true>))
+    ((<negative-zero-flonum>)		=> (<false>))
+    ((<zero-flonum>)			=> (<boolean>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive flzero?/negative
+     (safe)
+   (signatures
+    ((<positive-zero-flonum>)		=> (<false>))
+    ((<negative-zero-flonum>)		=> (<true>))
+    ((<zero-flonum>)			=> (<boolean>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+;;;
+
+ (declare-core-primitive flpositive?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<false>))
+    ;;
+    ((<positive-flonum>)		=> (<true>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<false>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive flnonnegative?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<true>))
+    ((<non-negative-flonum>)		=> (<true>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+;;;
+
+ (declare-core-primitive flnegative?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<false>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<false>))
+    ;;
+    ((<negative-flonum>)		=> (<true>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive flnonpositive?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<true>))
+    ((<non-positive-flonum>)		=> (<true>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+;;; --------------------------------------------------------------------
+;;; range predicates returning false if the argument is not a flonum
+
+;;;NOTE Compliance with IEEE 754 imposes constraints  on how to handle +0.0 and -0.0:
+;;;flonum zero is separeted from positive flonums and negative flonums; +0.0 is *not*
+;;;positive; -0.0 is *not* negative.
+
+ (declare-core-primitive zero-flonum?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+ (declare-core-primitive positive-zero-flonum?
+     (safe)
+   (signatures
+    ((<positive-zero-flonum>)		=> (<true>))
+    ((<negative-zero-flonum>)		=> (<false>))
+    ((<zero-flonum>)			=> (<boolean>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+ (declare-core-primitive negative-zero-flonum?
+     (safe)
+   (signatures
+    ((<positive-zero-flonum>)		=> (<false>))
+    ((<negative-zero-flonum>)		=> (<true>))
+    ((<zero-flonum>)			=> (<boolean>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+;;;
+
+ (declare-core-primitive positive-flonum?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<false>))
+    ;;
+    ((<positive-flonum>)		=> (<true>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<false>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+ (declare-core-primitive non-negative-flonum?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<true>))
+    ((<non-negative-flonum>)		=> (<true>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+;;;
+
+ (declare-core-primitive negative-flonum?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<false>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<false>))
+    ;;
+    ((<negative-flonum>)		=> (<true>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+ (declare-core-primitive non-positive-flonum?
+     (safe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<false>))
+    ;;
+    ((<negative-flonum>)		=> (<true>))
+    ((<non-positive-flonum>)		=> (<true>))
+    ;;
+    ((<flonum>)				=> (<boolean>))
+    ;;
+    (((ancestor-of <fixnum>))		=> (<boolean>))
+    (((not <flonum>))			=> (<false>))))
+
+;;; --------------------------------------------------------------------
+
  (declare-flonum-predicate fleven?		(replacements $fleven?))
  (declare-flonum-predicate flodd?		(replacements $flodd?))
 
  (declare-core-primitive flinteger?
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)			=> (<boolean>)))
    (attributes
@@ -59,7 +287,7 @@
    (replacements $flonum-integer?))
 
  (declare-core-primitive flfinite?
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)			=> (<boolean>)))
    (attributes
@@ -67,7 +295,7 @@
    (replacements $flonum-rational?))
 
  (declare-core-primitive flinfinite?
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)			=> (<boolean>)))
    (attributes
@@ -75,88 +303,12 @@
    (replacements $flinfinite?))
 
  (declare-core-primitive flnan?
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)			=> (<boolean>)))
    (attributes
     ((_)			foldable effect-free))
    (replacements $flnan?))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive zero-flonum?
-    (safe)
-  (signatures
-   ((<zero-flonum>)		=> (<true>))
-   ((<positive-flonum>)		=> (<false>))
-   ((<negative-flonum>)		=> (<false>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive positive-zero-flonum?
-    (safe)
-  (signatures
-   ((<positive-zero-flonum>)	=> (<true>))
-   ((<negative-zero-flonum>)	=> (<false>))
-   ((<zero-flonum>)		=> (<boolean>))
-   ((<positive-flonum>)		=> (<false>))
-   ((<negative-flonum>)		=> (<false>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive negative-zero-flonum?
-    (safe)
-  (signatures
-   ((<negative-zero-flonum>)	=> (<true>))
-   ((<positive-zero-flonum>)	=> (<false>))
-   ((<zero-flonum>)		=> (<boolean>))
-   ((<positive-flonum>)		=> (<false>))
-   ((<negative-flonum>)		=> (<false>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive positive-flonum?
-    (safe)
-  (signatures
-   ((<zero-flonum>)		=> (<false>))
-   ((<positive-flonum>)		=> (<true>))
-   ((<negative-flonum>)		=> (<false>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive negative-flonum?
-    (safe)
-  (signatures
-   ((<zero-flonum>)		=> (<false>))
-   ((<positive-flonum>)		=> (<false>))
-   ((<negative-flonum>)		=> (<true>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive non-positive-flonum?
-    (safe)
-  (signatures
-   ((<zero-flonum>)		=> (<true>))
-   ((<positive-flonum>)		=> (<false>))
-   ((<negative-flonum>)		=> (<true>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive non-negative-flonum?
-    (safe)
-  (signatures
-   ((<zero-flonum>)		=> (<true>))
-   ((<positive-flonum>)		=> (<true>))
-   ((<negative-flonum>)		=> (<false>))
-   ((<top>)			=> (<boolean>)))
-  (attributes
-   ((_)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
@@ -165,7 +317,7 @@
      ((declare-flonum-rounding (syntax-rules ()
 				 ((_ ?who ?replacement)
 				  (declare-core-primitive ?who
-				    (safe)
+				      (safe)
 				    (signatures
 				     ((<flonum>)	=> (<flonum>)))
 				    (attributes
@@ -185,7 +337,7 @@
  (declare-flonum-unary flabs		(replacements $flabs))
 
  (declare-core-primitive flonum-bytes
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)				=> (<flonum> <flonum> <flonum> <flonum>
 						     <flonum> <flonum> <flonum> <flonum>)))
@@ -193,7 +345,7 @@
     ((_)				effect-free)))
 
  (declare-core-primitive flonum-parts
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)				=> (<boolean> <fixnum> <exact-integer>)))
    (attributes
@@ -209,7 +361,7 @@
  (declare-flonum-unary flacos		(replacements $flacos))
 
  (declare-core-primitive flatan
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)			=> (<flonum>))
     ((<flonum> <flonum>)	=> (<flonum>)))
@@ -269,14 +421,14 @@
  (declare-flonum-binary flmod0		(replacements $flmod0))
 
  (declare-core-primitive fldiv-and-mod
-   (safe)
+     (safe)
    (signatures
     ((<flonum> <flonum>)		=> (<flonum> <flonum>)))
    (attributes
     ((_ _)				effect-free)))
 
  (declare-core-primitive fldiv0-and-mod0
-   (safe)
+     (safe)
    (signatures
     ((<flonum> <flonum>)		=> (<flonum> <flonum>)))
    (attributes
@@ -286,20 +438,20 @@
 ;;; conversion
 
  (declare-core-primitive flonum->string
-   (safe)
+     (safe)
    (signatures
     ((<flonum>)		=> (<string>)))
    (attributes
     ((_)			foldable effect-free result-true)))
 
  (declare-core-primitive real->flonum
-   (safe)
+     (safe)
    (signatures
     ((<real>)		=> (<flonum>)))
    (attributes
     ((_)			foldable effect-free result-true)))
 
-/section)
+ /section)
 
 
 ;;;; flonums, unsafe functions
@@ -324,13 +476,107 @@
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
- (declare-flonum-predicate $flzero? unsafe)
- (declare-flonum-predicate $flzero?/positive unsafe)
- (declare-flonum-predicate $flzero?/negative unsafe)
- (declare-flonum-predicate $flpositive? unsafe)
- (declare-flonum-predicate $flnegative? unsafe)
- (declare-flonum-predicate $flnonpositive? unsafe)
- (declare-flonum-predicate $flnonnegative? unsafe)
+ (declare-core-primitive $flzero?
+     (unsafe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive $flzero?/positive
+     (unsafe)
+   (signatures
+    ((<positive-zero-flonum>)		=> (<true>))
+    ((<negative-zero-flonum>)		=> (<false>))
+    ((<zero-flonum>)			=> (<boolean>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive $flzero?/negative
+     (unsafe)
+   (signatures
+    ((<positive-zero-flonum>)		=> (<false>))
+    ((<negative-zero-flonum>)		=> (<true>))
+    ((<zero-flonum>)			=> (<boolean>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+;;;
+
+ (declare-core-primitive $flpositive?
+     (unsafe)
+   (signatures
+    ((<zero-flonum>)			=> (<false>))
+    ;;
+    ((<positive-flonum>)		=> (<true>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<false>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive $flnonnegative?
+     (unsafe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<true>))
+    ((<non-negative-flonum>)		=> (<true>))
+    ;;
+    ((<negative-flonum>)		=> (<false>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+;;;
+
+ (declare-core-primitive $flnegative?
+     (unsafe)
+   (signatures
+    ((<zero-flonum>)			=> (<false>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<false>))
+    ;;
+    ((<negative-flonum>)		=> (<true>))
+    ((<non-positive-flonum>)		=> (<boolean>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+ (declare-core-primitive $flnonpositive?
+     (unsafe)
+   (signatures
+    ((<zero-flonum>)			=> (<true>))
+    ;;
+    ((<positive-flonum>)		=> (<false>))
+    ((<non-negative-flonum>)		=> (<boolean>))
+    ;;
+    ((<negative-flonum>)		=> (<true>))
+    ((<non-positive-flonum>)		=> (<true>))
+    ;;
+    ((<flonum>)				=> (<boolean>))))
+
+;;; --------------------------------------------------------------------
+;;; other predicates
 
  (declare-flonum-predicate $fleven? unsafe)
  (declare-flonum-predicate $flodd? unsafe)

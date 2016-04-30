@@ -467,11 +467,11 @@
 ;;
 
 (define ($flnonpositive? x)
-  (or ($flzero?/negative x)
+  (or ($flzero? x)
       ($flnegative? x)))
 
 (define ($flnonnegative? x)
-  (or ($flzero?/positive x)
+  (or ($flzero? x)
       ($flpositive? x)))
 
 ;;; --------------------------------------------------------------------
