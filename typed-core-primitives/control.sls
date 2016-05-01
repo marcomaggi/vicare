@@ -121,6 +121,8 @@
    ((_)				effect-free result-true)
    ((_ _)			effect-free result-true)))
 
+(declare-parameter private-shift-meta-continuation)
+
 /section)
 
 

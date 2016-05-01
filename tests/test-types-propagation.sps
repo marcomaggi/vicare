@@ -560,14 +560,62 @@
   (void))
 
 
-(parametrise ((check-test-name	'xor))
-#|
-  (doit (xor 1 2 "3")
-	=> ((or <positive-fixnum> <string>)))
+(parametrise ((check-test-name	'not))
 
-  (doit (xor 1 2.2 "3")
-	=> ((or <positive-fixnum> <positive-flonum> <string>)))
-|#
+  (doit (not #t)
+	=> (<false>))
+
+  (doit (not #f)
+	=> (<true>))
+
+  (doit (not (read))
+	=> (<boolean>))
+
+  (void))
+
+
+(parametrise ((check-test-name	'xor))
+
+;;; XOR returns non-false if only one sub-expression is non-false.
+
+  (doit (xor #f)		=> (<false>))
+  (doit (xor 123)		=> (<positive-fixnum>))
+
+  (doit (xor 123 #f)		=> (<positive-fixnum>))
+  (doit (xor #f 123)		=> (<positive-fixnum>))
+
+  (doit (xor #f #f)		=> (<false>))
+  (doit (xor #f #f)		=> (<false>))
+
+  (doit (xor #f 2 3)		=> (<false>))
+  (doit (xor 1 #f 3)		=> (<false>))
+  (doit (xor 1 2 #f)		=> (<false>))
+
+  (doit (xor 1 #f #f)		=> (<positive-fixnum>))
+  (doit (xor #f 2 #f)		=> (<positive-fixnum>))
+  (doit (xor #f #f 3)		=> (<positive-fixnum>))
+
+  (doit (xor "1" #f #f)		=> (<string>))
+  (doit (xor #f "2" #f)		=> (<string>))
+  (doit (xor #f #f "3")		=> (<string>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (xor (read) #f)		=> (<top>))
+  (doit (xor #f     (read))	=> (<top>))
+  (doit (xor (read) (read))	=> (<top>))
+
+  (doit (xor (read) #f #f)	=> (<top>))
+  (doit (xor #f (read) #f)	=> (<top>))
+  (doit (xor #f #f (read))	=> (<top>))
+
+  (doit (xor (read) (read) (read))	=> (<top>))
+
+  (doit (xor (cast-signature (<boolean>) (read))
+	     (cast-signature (<boolean>) (read))
+	     (cast-signature (<boolean>) (read)))
+	=> (<boolean>))
+
   (void))
 
 

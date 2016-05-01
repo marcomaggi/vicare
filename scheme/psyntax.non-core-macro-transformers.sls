@@ -4597,33 +4597,32 @@
 	   (apply values args)))))
     ))
 
-(module (xor-macro)
+(define-macro-transformer (xor input-form.stx)
   ;;Transformer function used to expand Vicare's  XOR macros from the top-level built
   ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
   ;;that must be further expanded.
   ;;
-  (define-macro-transformer (xor input-form.stx)
-    (syntax-match input-form.stx ()
-      ((_ ?expr* ...)
-       (bless (%xor-aux #f ?expr*)))
-      ))
-
-  (define (%xor-aux bool/var expr*)
-    (cond ((null? expr*)
-	   bool/var)
-	  ((null? (cdr expr*))
-	   `(let/std ((x ,(car expr*)))
-	      (if ,bool/var
-		  (and (not x) ,bool/var)
-		x)))
-	  (else
-	   `(let/std ((x ,(car expr*)))
-	      (and (or (not ,bool/var)
-		       (not x))
-		   (let/std ((n (or ,bool/var x)))
-		     ,(%xor-aux 'n (cdr expr*))))))))
-
-  #| end of module: XOR-MACRO |# )
+  (syntax-match input-form.stx ()
+    ((_ ?expr* ...)
+     (bless
+      ;;We use LET/CHECKED so we can exploit RHS type propagation.
+      (let recur ((bool/var	#f)
+		  (expr*	?expr*))
+	(cond ((null? expr*)
+	       bool/var)
+	      ((null? (cdr expr*))
+	       `(let/checked ((x ,(car expr*)))
+		  (if ,bool/var
+		      (and (not x) ,bool/var)
+		    x)))
+	      (else
+	       `(let/checked ((x ,(car expr*)))
+		  (and (or (not ,bool/var)
+			   (not x))
+		       (let/checked ((tmp (or ,bool/var x)))
+			 ,(recur 'tmp (cdr expr*))))))))))
+    (_
+     (__synner__ "invalid syntax"))))
 
 
 ;;;; non-core macro: DEFINE-INLINE, DEFINE-CONSTANT
