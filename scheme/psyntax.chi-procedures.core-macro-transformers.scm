@@ -156,6 +156,9 @@
     ((let)					let-transformer)
     ((let/checked)				let/checked-transformer)
     ((let/std)					let/std-transformer)
+    ((let*)					let*-transformer)
+    ((let*/checked)				let*/checked-transformer)
+    ((let*/std)					let*/std-transformer)
     ((letrec)					letrec-transformer)
     ((letrec/checked)				letrec/checked-transformer)
     ((letrec/std)				letrec/std-transformer)
@@ -546,7 +549,10 @@
 
 (module (let-transformer
 	 let/checked-transformer
-	 let/std-transformer)
+	 let/std-transformer
+	 let*-transformer
+	 let*/checked-transformer
+	 let*/std-transformer)
 
   (define-core-transformer (let input-form.stx lexenv.run lexenv.expand)
     ;;Transformer functions used  to expand LET syntaxes from the  top-level built in
@@ -557,6 +563,109 @@
 	(let/checked-transformer input-form.stx lexenv.run lexenv.expand)
       (let/std-transformer input-form.stx lexenv.run lexenv.expand)))
 
+  (define-core-transformer (let* input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer functions used to expand LET*  syntaxes from the top-level built in
+    ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
+    ;;given LEXENV; return a PSI object.
+    ;;
+    (if (options::typed-language?)
+	(let*/checked-transformer input-form.stx lexenv.run lexenv.expand)
+      (let*/std-transformer input-form.stx lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define-core-transformer (let/std input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer functions used to expand  LET/STD syntaxes from the top-level built
+    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
+    ;;given LEXENV; return a PSI object.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       ;;Convert the UNnamed standard syntax:
+       ;;
+       ;;   (let ((?lhs ?rhs) ...) . ?body)
+       ;;
+       ;;into the core language syntax:
+       ;;
+       ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
+       ;;
+       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
+	      (rhs*.psi		(map (lambda (rhs.stx)
+				       (chi-expr rhs.stx lexenv.run lexenv.expand))
+				  ?rhs*))
+	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
+	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
+	      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
+	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
+	 (%build-output input-form.stx lexenv.run lexenv.expand
+			lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
+			build-let)))
+
+      ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (identifier? ?recur)
+       (chi-expr (bless
+		  `(internal-body
+		     ;;Here  we use  DEFINE/CHECKED so  that we  can easily  define a
+		     ;;typed function.   Using LETREC would be  more descriptive, but
+		     ;;not significantly better.
+		     ;;
+		     ;;FIXME  We do  not want  "__who__"  to be  bound here.   (Marco
+		     ;;Maggi; Sat Feb 6, 2016)
+		     (define/std (,?recur . ,?lhs*) ,?body . ,?body*)
+		     (,?recur . ,?rhs*)))
+		 lexenv.run lexenv.expand))
+
+      ((_ ((?lhs* ?rhs*) ...))
+       (__synner__ "missing body forms"))
+
+      ((_ ?recur ((?lhs* ?rhs*) ...))
+       (__synner__ "missing body forms"))
+
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
+
+  (define-core-transformer (let*/std input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer functions used to expand LET*/STD syntaxes from the top-level built
+    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
+    ;;given LEXENV; return a PSI object.
+    ;;
+    ;;We need to remember that LET* allows bindings with duplicate identifiers.
+    ;;
+    (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (let loop ((lhs*.id	(syntax-object.parse-standard-list-of-bindings/let-star ?lhs*))
+		  (rhs*.stx	?rhs*)
+		  (lhs*.lex	'())
+		  (rhs*.core	'())
+		  (body*.stx	(cons ?body ?body*))
+		  (lexenv.run	lexenv.run))
+	 (if (pair? lhs*.id)
+	     (let* ((rhs.psi	(chi-expr (car rhs*.stx) lexenv.run lexenv.expand))
+		    (lhs.id	(car lhs*.id))
+		    (lhs.lab	(generate-label-gensym   lhs.id))
+		    (lhs.lex	(generate-lexical-gensym lhs.id))
+		    (lexenv.run	(lexenv-add-lexical-var-binding lhs.lab lhs.lex lexenv.run))
+		    (rib	(make-rib/from-identifiers-and-labels (list lhs.id) (list lhs.lab))))
+	       (loop (cdr lhs*.id)
+		     (map (lambda (rhs.stx)
+			    (push-lexical-contour rib rhs.stx))
+		       (cdr rhs*.stx))
+		     (cons lhs.lex lhs*.lex)
+		     (cons (psi.core-expr rhs.psi) rhs*.core)
+		     (push-lexical-contour rib body*.stx)
+		     lexenv.run))
+	   (%build-output input-form.stx lexenv.run lexenv.expand
+			  (reverse lhs*.lex) (reverse rhs*.core) body*.stx
+			  build-let*))))
+      (_
+       (__synner__ "invalid syntax, no clause matches the input form"))))
+
 ;;; --------------------------------------------------------------------
 
   (define-core-transformer (let/checked input-form.stx lexenv.run lexenv.expand)
@@ -565,6 +674,9 @@
     ;;of the given LEXENV; return a PSI object.
     ;;
     (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Convert the UNnamed standard syntax:
        ;;
@@ -591,7 +703,9 @@
 						     __who__ lhs*.ots rhs*.psi)
 	     (receive (rib lexenv.run lhs*.lex)
 		 (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.out-ots lexenv.run)
-	       (%build-output input-form.stx lhs*.lex rhs*.core (cons ?body ?body*) rib lexenv.run lexenv.expand))))))
+	       (%build-output input-form.stx lexenv.run lexenv.expand
+			      lhs*.lex rhs*.core (push-lexical-contour rib (cons ?body ?body*))
+			      build-let))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -616,64 +730,67 @@
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
-;;; --------------------------------------------------------------------
-
-  (define-core-transformer (let/std input-form.stx lexenv.run lexenv.expand)
-    ;;Transformer functions used to expand  LET/STD syntaxes from the top-level built
-    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
-    ;;given LEXENV; return a PSI object.
+  (define-core-transformer (let*/checked input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer functions used  to expand LET*/CHECKED syntaxes  from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI object.
+    ;;
+    ;;We need to remember that LET* allows bindings with duplicate identifiers.
     ;;
     (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;Convert the UNnamed standard syntax:
-       ;;
-       ;;   (let ((?lhs ?rhs) ...) . ?body)
-       ;;
-       ;;into the core language syntax:
-       ;;
-       ;;   (let ((?lhs.lex ?rhs.core) ...) . ?body.core)
-       ;;
-       (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
-	      (rhs*.psi		(map (lambda (rhs.stx)
-				       (chi-expr rhs.stx lexenv.run lexenv.expand))
-				  ?rhs*))
-	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
-	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
-	      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
-	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
-	 (%build-output input-form.stx lhs*.lex (map psi.core-expr rhs*.psi)
-			(cons ?body ?body*) rib lexenv.run lexenv.expand)))
-
-      ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (identifier? ?recur)
-       (chi-expr (bless
-		  `(internal-body
-		     ;;Here  we use  DEFINE/CHECKED so  that we  can easily  define a
-		     ;;typed function.   Using LETREC would be  more descriptive, but
-		     ;;not significantly better.
-		     ;;
-		     ;;FIXME  We do  not want  "__who__"  to be  bound here.   (Marco
-		     ;;Maggi; Sat Feb 6, 2016)
-		     (define/std (,?recur . ,?lhs*) ,?body . ,?body*)
-		     (,?recur . ,?rhs*)))
-		 lexenv.run lexenv.expand))
-
-      ((_ ((?lhs* ?rhs*) ...))
-       (__synner__ "missing body forms"))
-
-      ((_ ?recur ((?lhs* ?rhs*) ...))
-       (__synner__ "missing body forms"))
-
+       (let loop ((lhs*.stx	?lhs*)
+		  (rhs*.stx	?rhs*)
+		  (lhs*.lex	'())
+		  (rhs*.core	'())
+		  (body*.stx	(cons ?body ?body*))
+		  (lexenv.run	lexenv.run))
+	 (if (pair? lhs*.stx)
+	     ;;Here the item in the list LHS*.OTS is either:
+	     ;;
+	     ;;* An instance of "<object-type-spec>" if the source code specified the
+	     ;;type of this syntactic binding.
+	     ;;
+	     ;;*  False  if  the  source  code  left  the  syntactic  binding's  type
+	     ;;unspecified.
+	     ;;
+	     (receive (this-lhs*.id this-lhs*.ots)
+		 (syntax-object.parse-typed-list-of-bindings/let-star (list (car lhs*.stx)) #f)
+	       (let ((rhs.psi (chi-expr (car rhs*.stx) lexenv.run lexenv.expand)))
+		 (receive (this-lhs*.out-ots this-rhs*.core)
+		     ;;Here  we   take  care  of  performing   right-hand  side  type
+		     ;;propagation and validation.
+		     (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+							   __who__ this-lhs*.ots (list rhs.psi))
+		   (receive (rib lexenv.run this-lhs*.lex)
+		       (%establish-typed-syntactic-bindings-lhs* this-lhs*.id this-lhs*.out-ots lexenv.run)
+		     (loop
+		      ;;Yes, we push the lexical contour on the LHS, too.  Who knows,
+		      ;;in future, what  is required to compose  the type annotation?
+		      ;;Better safe than sorry.  (Marco Maggi; Sat Apr 30, 2016)
+		      (map (lambda (lhs.stx) (push-lexical-contour rib lhs.stx)) (cdr lhs*.stx))
+		      (map (lambda (rhs.stx) (push-lexical-contour rib rhs.stx)) (cdr rhs*.stx))
+		      (cons (car this-lhs*.lex)  lhs*.lex)
+		      (cons (car this-rhs*.core) rhs*.core)
+		      (push-lexical-contour rib body*.stx)
+		      lexenv.run)))))
+	   (%build-output input-form.stx lexenv.run lexenv.expand
+			  (reverse lhs*.lex) (reverse rhs*.core) body*.stx
+			  build-let*))))
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-output input-form.stx lhs*.lex rhs*.core body*.stx rib lexenv.run lexenv.expand)
-    (let* ((body.psi   (chi-internal-body (push-lexical-contour rib body*.stx) lexenv.run lexenv.expand))
+  (define (%build-output input-form.stx lexenv.run lexenv.expand
+			 lhs*.lex rhs*.core body*.stx core-let-builder)
+    (let* ((body.psi   (chi-internal-body body*.stx lexenv.run lexenv.expand))
 	   (body.core  (psi.core-expr body.psi)))
       (make-psi input-form.stx
-	(build-let (syntax-annotation input-form.stx)
+	(core-let-builder (syntax-annotation input-form.stx)
 	    lhs*.lex rhs*.core
 	  body.core)
 	(psi.retvals-signature body.psi))))

@@ -154,8 +154,20 @@
 (declare-fixnum-binary fxmod)
 (declare-fixnum-binary fxdiv0)
 (declare-fixnum-binary fxmod0)
-(declare-fixnum-unary fxadd1)
-(declare-fixnum-unary fxsub1)
+
+(declare-core-primitive fxadd1
+    (safe)
+  (signatures
+   ((<positive-fixnum>)			=> (<positive-fixnum>))
+   ((<zero-fixnum>)			=> (<positive-fixnum>))
+   ((<fixnum>)				=> (<fixnum>))))
+
+(declare-core-primitive fxsub1
+    (safe)
+  (signatures
+   ((<negative-fixnum>)			=> (<negative-fixnum>))
+   ((<zero-fixnum>)			=> (<negative-fixnum>))
+   ((<fixnum>)				=> (<fixnum>))))
 
 (declare-fixnum-unary fxabs)
 (declare-fixnum-unary fxsign)

@@ -909,9 +909,16 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-vectors.sps					\
 	tests/test-vicare-writer.sps					\
 	\
-	tests/test-types-syntaxes.sps					\
+	tests/test-types-conditions.sps					\
 	tests/test-types-enumerations.sps				\
 	tests/test-types-labels.sps					\
+	tests/test-types-reader-annotations.sps				\
+	tests/test-types-records.sps					\
+	tests/test-types-propagation.sps				\
+	tests/test-types-structs.sps					\
+	tests/test-types-syntaxes.sps					\
+	tests/test-types-unions.sps					\
+	\
 	tests/test-types-objects-core.sps				\
 	tests/test-types-objects-alists.sps				\
 	tests/test-types-objects-booleans.sps				\
@@ -929,11 +936,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-types-objects-symbols.sps				\
 	tests/test-types-objects-transcoders.sps			\
 	tests/test-types-objects-vectors.sps				\
-	tests/test-types-structs.sps					\
-	tests/test-types-records.sps					\
-	tests/test-types-reader-annotations.sps				\
-	tests/test-types-conditions.sps					\
-	tests/test-types-unions.sps					\
 	\
 	tests/test-issue-001-equal-hash.sps				\
 	tests/test-issue-003.sps					\

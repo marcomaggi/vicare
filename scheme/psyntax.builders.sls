@@ -40,7 +40,8 @@
     build-application			build-conditional
     build-lexical-reference		build-global-assignment
     build-global-definition		build-lambda
-    build-case-lambda			build-let
+    build-case-lambda
+    build-let				build-let*
     build-primref			build-foreign-call
     build-data				build-sequence
     build-void				build-letrec
@@ -185,6 +186,12 @@
   ;;LET-like form.  (Marco Maggi; Fri Aug 22, 2014)
   ;;
   `(let ,(map list lhs* rhs*) ,body))
+
+(define (build-let* ae lhs* rhs* body)
+  (if (pair? lhs*)
+      `(let ,`((,(car lhs*) ,(car rhs*)))
+	 ,(build-let* ae (cdr lhs*) (cdr rhs*) body))
+    body))
 
 (define-syntax build-primref
   (syntax-rules ()

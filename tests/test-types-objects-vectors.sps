@@ -131,7 +131,7 @@
     => '#(1 2 3))
 
   (check
-      (expander::type-signature.syntax-object (type-of (new <vector> (read))))
+      (.syntax-object (type-of (new <vector> (read))))
     (=> syntax=?)
     #'((vector <top>)))
 

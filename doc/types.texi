@@ -1693,9 +1693,19 @@ successful, the syntax use just expands to the evaluation of
 is raised.  Otherwise the syntax use expands to an expression that
 validates the values at run--time.
 
-As special cases, when @meta{signature} is @samp{()},
-@samp{(<no-return>)} a proper or improper list of @class{top} and
-@class{list} types like:
+The type signature of the expanded expression is @meta{signature}, for
+example:
+
+@lisp
+(type-of 1)
+@result{} #[signature (<positive-fixnum>)]
+
+(type-of (cast-signature (<top>) 1))
+@result{} #[signature (<top>)]
+@end lisp
+
+As special cases, when @meta{signature} is @samp{()}, @samp{<no-return>}
+a proper or improper list of @class{top} and @class{list} types like:
 
 @lisp
 <list>

@@ -80,28 +80,47 @@
     ;;
     (syntax-match input-form.stx ()
       ((_ ?type-name ?rand* ...)
-       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-name lexenv.run type.ots)
-	 (cond ((or (list-of-type-spec? type.ots)
-		    (list-type-spec?    type.ots))
-		(%process-compound-constructor input-form.stx lexenv.run lexenv.expand
-					       (cons (core-prim-id 'list) ?rand*) type.ots))
+       (with-object-type-syntactic-binding (__who__ input-form.stx ?type-name lexenv.run requested.ots)
+	 (cond ((or (list-of-type-spec? requested.ots)
+		    (list-type-spec?    requested.ots))
+		;;LIST and LIST-OF type annotations  have no constructor, but we know
+		;;they need LIST.
+		(%build-object-with-constructor input-form.stx lexenv.run lexenv.expand
+						requested.ots (core-prim-id 'list) ?rand*))
 
-	       ((or (vector-of-type-spec? type.ots)
-		    (vector-type-spec?    type.ots))
-		(%process-compound-constructor input-form.stx lexenv.run lexenv.expand
-					       (cons (core-prim-id 'vector) ?rand*) type.ots))
+	       ((or (vector-of-type-spec? requested.ots)
+		    (vector-type-spec?    requested.ots))
+		;;VECTOR and VECTOR-OF  type annotations have no  constructor, but we
+		;;know they need VECTOR.
+		(%build-object-with-constructor input-form.stx lexenv.run lexenv.expand
+						requested.ots (core-prim-id 'vector) ?rand*))
 
-	       ((or (pair-of-type-spec? type.ots)
-		    (pair-type-spec?    type.ots))
-		(%process-compound-constructor input-form.stx lexenv.run lexenv.expand
-					       (cons (core-prim-id 'cons) ?rand*) type.ots))
+	       ((or (pair-of-type-spec? requested.ots)
+		    (pair-type-spec?    requested.ots))
+		;;PAIR and PAIR-OF type annotations  have no constructor, but we know
+		;;they need PAIR.
+		(%build-object-with-constructor input-form.stx lexenv.run lexenv.expand
+						requested.ots (core-prim-id 'pair) ?rand*))
 
-	       ((object-type-spec.constructor-stx type.ots)
+	       ((compound-condition-type-spec? requested.ots)
+		;;CONDITION type  annotations have no  constructor, but we  know they
+		;;need CONDITION.
+		(%build-object-with-constructor input-form.stx lexenv.run lexenv.expand
+						requested.ots (core-prim-id 'condition) ?rand*))
+
+	       ((enumeration-type-spec? requested.ots)
+		;;ENUMERATION  type  annotations  have  no constructor,  but  we  can
+		;;validate the symbol.
+		(%build-object-with-validator input-form.stx lexenv.run lexenv.expand
+					      requested.ots ?rand*))
+
+	       ((object-type-spec.constructor-stx requested.ots)
 		=> (lambda (constructor.stx)
 		     (if (boolean? constructor.stx)
-			 (%build-object-with-validator input-form.stx lexenv.run lexenv.expand ?type-name ?rand*)
-		       (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand ?type-name constructor.stx ?rand*))))
-
+			 (%build-object-with-validator input-form.stx lexenv.run lexenv.expand
+						       requested.ots ?rand*)
+		       (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand
+						       requested.ots constructor.stx ?rand*))))
 	       (else
 		(__synner__ "attempt to instantiate object-type with no constructor (abstract type?)" ?type-name)))))
       (_
@@ -109,74 +128,148 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-object-with-validator input-form.stx lexenv.run lexenv.expand type-name.id rand*.stx)
-    ;;The type identifier TYPE-NAME.ID references an object-type specification having
-    ;;no constructor, but requesting validation of a single operand.  For example:
+  (define (%build-object-with-validator input-form.stx lexenv.run lexenv.expand requested.ots rand*.stx)
+    ;;The requested type REQUESTED.OTS references an object-type specification having
+    ;;*no* constructor, but having #t  in the "<object-type-spec>" field.  This means
+    ;;a request to  validate the single operand for the  correct type, at expand-time
+    ;;and/or run-time.  For example:
     ;;
     ;;   (new <fixnum> 123)
     ;;
-    ;;must expand to:
+    ;;Build  and return  an expression  that validates  the operand  as matching  the
+    ;;requested type.
     ;;
-    ;;   (assert-signature-and-return (<fixnum>) 123)
-    ;;
-    (chi-expr (bless
-	       `(assert-signature-and-return (,type-name.id) (values . ,rand*.stx)))
-	      lexenv.run lexenv.expand))
+    (if (list-of-single-item? rand*.stx)
+	(let* ((constructor.psi	(chi-expr (car rand*.stx) lexenv.run lexenv.expand))
+	       (constructor.ots	(%process-retvals-signature input-form.stx constructor.psi)))
+	  (receive (constructor.core exact-match?)
+	      (%generate-constructor-code input-form.stx lexenv.run lexenv.expand
+					  requested.ots constructor.psi constructor.ots)
+	    (make-psi input-form.stx
+	      constructor.core
+	      (make-type-signature/single-value (if exact-match? constructor.ots requested.ots)))))
+      (raise
+       (condition (make-who-condition __module_who__)
+		  (make-message-condition "type with no constructor requires a single operand of the specified type")
+		  (make-syntax-violation input-form.stx #f)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand type-name.id constructor.stx rand*.stx)
-    ;;The type identifier TYPE-NAME.ID references an object-type specification having
-    ;;a constructor.
+  (define (%build-object-with-constructor input-form.stx lexenv.run lexenv.expand requested.ots constructor.stx rand*.stx)
+    ;;The requested type REQUESTED.OTS references an object-type specification having
+    ;;a constructor.  Build and return a PSI representing the constructor application
+    ;;to the given operands.
     ;;
-    (chi-expr (bless
-	       `(assert-signature-and-return (,type-name.id) (,constructor.stx . ,rand*.stx)))
-	      lexenv.run lexenv.expand))
+    ;;About the whole expression type signature:
+    ;;
+    ;;* If the constructor application returns  a single value whose type matches the
+    ;;requested one: the  NEW expression has CONSTRUCTOR.OTS as  return value's type.
+    ;;CONSTRUCTOR.OTS might be more descriptive than REQUESTED.OTS.
+    ;;
+    ;;*  If  the  constructor  application  returns a  single  value  whose  type  is
+    ;;compatible with the requested one: the NEW expression contains a type validator
+    ;;and it has REQUESTED.OTS has as return value's type.
+    ;;
+    (let* ((constructor.psi	(chi-expr `(,constructor.stx . ,rand*.stx) lexenv.run lexenv.expand))
+	   (constructor.ots	(%process-retvals-signature input-form.stx constructor.psi)))
+      (receive (constructor.core exact-match?)
+	  (%generate-constructor-code input-form.stx lexenv.run lexenv.expand
+				      requested.ots constructor.psi constructor.ots)
+	(make-psi input-form.stx
+	  constructor.core
+	  (make-type-signature/single-value (if exact-match? constructor.ots requested.ots))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%process-compound-constructor input-form.stx lexenv.run lexenv.expand
-					 expr.stx type.ots)
-    (let* ((result.psi (chi-expr expr.stx lexenv.run lexenv.expand))
-	   (result.sig (psi.retvals-signature result.psi)))
-      (case-signature-specs result.sig
+  (module (%process-retvals-signature)
+
+    (define (%process-retvals-signature input-form.stx constructor.psi)
+      ;;Process  the  "<type-signature>"  returned  by  the  constructor  expression:
+      ;;validate  that a  single return  value is  returned.  Return  an instance  of
+      ;;"<object-type-spec>"  representing the  type  of the  value  returned by  the
+      ;;constructor.
+      ;;
+      (define (common message)
+	(condition
+	  (make-who-condition __module_who__)
+	  (make-message-condition message)
+	  (make-syntax-violation input-form.stx (psi.input-form constructor.psi))
+	  (make-type-signature-condition (psi.retvals-signature constructor.psi))))
+      (case-signature-specs (psi.retvals-signature constructor.psi)
 	((single-value)
-	 => (lambda (result.ots)
-	      (cond ((object-type-spec.matching-super-and-sub? type.ots result.ots)
-		     ;;Matching signature.  Good.
-		     result.psi)
-		    ((object-type-spec.compatible-super-and-sub? type.ots result.ots)
-		     ;;Compatible signature.  Insert a run-time validation.
-		     (let* ((validator.stx	(object-type-spec.single-value-validator-lambda-stx type.ots 1))
-			    (appl.psi		(chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
-										   validator.stx result.psi
-										   (list 1 (bless `(quote ,__module_who__))))))
-		       (make-psi (psi.input-form appl.psi)
-			 (psi.core-expr appl.psi)
-			 result.sig)))
-		    (else
-		     ;;Non-compatible signature.
-		     (%error-return-value-of-invalid-type input-form.stx type.ots result.sig)))))
+	 ;;The expression returns a single value.  Good this OTS will become the type
+	 ;;of the expression.
+	 => (lambda (constructor.ots) constructor.ots))
+
+	(<no-return>
+	 ;;The expression is marked as not-returning.
+	 (%handle-error common "type constructor expression is typed as not returning"))
+
+	((<void>)
+	 ;;The expression is marked as returning void.
+	 (%handle-error common "type constructor expression is typed as returning void"))
+
+	((unspecified-values)
+	 ;;The expression returns an unspecified  number of values.  Let's simulate a
+	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
+	 ;;number of arguments.
+	 (<top>-ots))
+
 	(else
-	 (%error-multiple-return-values input-form.stx type.ots result.sig)))))
+	 ;;The expression returns zero, two or more values.
+	 (%handle-error common "type constructor expression is typed as returning zero, two or more values"))))
 
-  (define (%error-return-value-of-invalid-type input-form.stx type.ots result.sig)
-    (raise
-     (condition (make-expand-time-type-signature-violation)
-		(make-who-condition __module_who__)
-		(make-message-condition "object of invalid type returned by type constructor")
-		(make-syntax-violation input-form.stx #f)
-		(make-expected-type-signature-condition (make-type-signature/single-value type.ots))
-		(make-returned-type-signature-condition result.sig))))
+    (define (%handle-error common message)
+      (case-expander-language
+	((typed)
+	 (raise			(condition (make-expand-time-type-signature-violation)	(common message))))
+	((default)
+	 (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common message)))
+	 (<top>-ots))
+	((strict-r6rs)
+	 (<top>-ots))))
 
-  (define (%error-multiple-return-values input-form.stx type.ots result.sig)
-    (raise
-     (condition (make-expand-time-type-signature-violation)
-		(make-who-condition __module_who__)
-		(make-message-condition "object of invalid type returned by type constructor")
-		(make-syntax-violation input-form.stx #f)
-		(make-expected-type-signature-condition (make-type-signature/single-value type.ots))
-		(make-returned-type-signature-condition result.sig))))
+    #| end of module: %PROCESS-RETVALS-SIGNATURE |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%generate-constructor-code input-form.stx lexenv.run lexenv.expand
+				      requested.ots constructor.psi constructor.ots)
+    ;;The  NEW syntax  use  requested  building an  instance  of REQUESTED.OTS.   The
+    ;;constructor is  the expression  CONSTRUCTOR.PSI and it  returns an  instance of
+    ;;CONSTRUCTOR.OTS.
+    ;;
+    ;;Return 2 values:
+    ;;
+    ;;*  If the  CONSTRUCTOR.OTS matches  the REQUESTED.OTS:  the constructor's  core
+    ;;expression and #t.
+    ;;
+    ;;*  If  the CONSTRUCTOR.OTS  is  compatible  with  the REQUESTED.OTS:  wrap  the
+    ;;constructor's core  expression in a  validator for the requested  type.  Return
+    ;;the resulting core epxression and #f.
+    ;;
+    ;;If the CONSTRUCTOR.OTS is does not match the REQUESTED.OTS: raise an exception.
+    ;;
+    (cond ((object-type-spec.matching-super-and-sub? requested.ots constructor.ots)
+	   (values (psi.core-expr constructor.psi) #t))
+	  ((object-type-spec.compatible-super-and-sub? requested.ots constructor.ots)
+	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx requested.ots #t))
+		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
+	     (values (build-application no-source
+			 (psi.core-expr validator.psi)
+		       (list (psi.core-expr constructor.psi)	     ;value
+			     (build-data no-source 1)		     ;value-index
+			     (build-data no-source __module_who__))) ;caller-who
+		     #f)))
+	  (else
+	   (raise
+	    (condition (make-expand-time-type-signature-violation)
+		       (make-who-condition __module_who__)
+		       (make-message-condition
+			"type constructor expression has type not matching the requested type")
+		       (make-syntax-violation input-form.stx (psi.input-form constructor.psi))
+		       (make-expected-type-signature-condition (make-type-signature/single-value requested.ots))
+		       (make-returned-type-signature-condition (make-type-signature/single-value constructor.ots)))))))
 
   #| end of module |# )
 
@@ -919,8 +1012,14 @@
 	     (%just-evaluate-the-expression expr.psi return-values?))
 
 	    ((type-signature.super-and-sub? asrt.sig expr.sig)
-	     ;;Good.  Everything is all right at expand-time.
-	     (%just-evaluate-the-expression expr.psi return-values?))
+	     ;;Good.   Everything  is  all  right at  expand-time.   We  replace  the
+	     ;;expression's  type signature  with the  asserted type  signature: yes,
+	     ;;this  is  really useful,  especially  with  RHS type  propagation  and
+	     ;;mutable variables.
+	     (%just-evaluate-the-expression (make-psi (psi.input-form expr.psi)
+					      (psi.core-expr expr.psi)
+					      asrt.sig)
+					    return-values?))
 
 	    ((type-signature.compatible-super-and-sub? asrt.sig expr.sig)
 	     ;;Compatible signatures, let's check the values at run-time.

@@ -141,9 +141,6 @@
     ((do*)				do*-macro)
     ((dolist)				dolist-macro)
     ((dotimes)				dotimes-macro)
-    ((let*)				let*-macro)
-    ((let*/std)				let*/std-macro)
-    ((let*/checked)			let*/checked-macro)
     ((let-values)			let-values-macro)
     ((let*-values)			let*-values-macro)
     ((values->list)			values->list-macro)
@@ -1456,53 +1453,7 @@
     ))
 
 
-;;;; non-core macro: LET*, TRACE-LET
-
-(define-macro-transformer (let* input-form.stx)
-  ;;Transformer function used to expand R6RS  LET* macros from the top-level built in
-  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
-  ;;must be further expanded.
-  ;;
-  (if (options::typed-language?)
-      (let*/checked-macro input-form.stx)
-    (let*/std-macro input-form.stx)))
-
-(define-macro-transformer (let*/std input-form.stx)
-  ;;Transformer function used  to expand LET*/STD macros from the  top-level built in
-  ;;environment.  Expand the contents of  INPUT-FORM.STX; return a syntax object that
-  ;;must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
-     ;;use SYNTAX-OBJECT.LIST-OF-STANDARD-BINDINGS? here.
-     (begin
-       (unless (all-identifiers? ?lhs*)
-	 (syntax-violation 'let*/std "invalid syntactic binding identifiers" input-form.stx ?lhs*))
-       (bless
-	(let recur ((x* (map list ?lhs* ?rhs*)))
-	  (if (pair? x*)
-	      `(let/std (,(car x*)) ,(recur (cdr x*)))
-	    `(internal-body ,?body . ,?body*))))))
-    ))
-
-(define-macro-transformer (let*/checked input-form.stx)
-  ;;Transformer function used to expand  LET*/CHECKED macros from the top-level built
-  ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
-  ;;that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     ;;Remember that LET* allows bindings with  duplicate identifiers, so we do *not*
-     ;;use SYNTAX-OBJECT.LIST-OF-TYPED-BINDINGS? here.
-     (bless
-      (let recur ((x* (map list ?lhs* ?rhs*)))
-	(if (pair? x*)
-	    `(let/checked (,(car x*)) ,(recur (cdr x*)))
-	  `(internal-body ,?body . ,?body*)))))
-    ))
-
-;;; --------------------------------------------------------------------
+;;;; non-core macro: TRACE-LET
 
 (define-macro-transformer (trace-let input-form.stx)
   ;;Transformer function used to expand  Vicare's TRACE-LET macros from the top-level
