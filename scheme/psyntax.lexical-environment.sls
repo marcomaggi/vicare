@@ -32,8 +32,8 @@
     push-entry-on-lexenv
 
     make-syntactic-binding-descriptor
-    syntactic-binding-descriptor.type
-    syntactic-binding-descriptor.value
+    syntactic-binding-descriptor.type		syntactic-binding-descriptor.type-set!
+    syntactic-binding-descriptor.value		syntactic-binding-descriptor.value-set!
 
     ;; module interfaces
     PSYNTAX-SYNTAX-MATCH
@@ -653,6 +653,16 @@
   ;;Given a syntactic binding descriptor, return its value: a pair.
   ;;
   (cdr ?binding-descriptor))
+
+(define-syntax-rule (syntactic-binding-descriptor.type-set! ?binding-descriptor ?new-type)
+  ;;Given a syntactic binding descriptor, return its type: a symbol.
+  ;;
+  (set-car! ?binding-descriptor ?new-type))
+
+(define-syntax-rule (syntactic-binding-descriptor.value-set! ?binding-descriptor ?new-value)
+  ;;Given a syntactic binding descriptor, return its value: a pair.
+  ;;
+  (set-cdr! ?binding-descriptor ?new-value))
 
 
 ;;;; top-level environments

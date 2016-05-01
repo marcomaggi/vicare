@@ -545,7 +545,131 @@
      (__synner__ "invalid syntax, no clause matches the input form"))))
 
 
-;;;; module core-macro-transformer: LET
+(module LET-UTILITIES
+  (%generate-lhs-type-and-rhs-core-expr
+   %process-rhs-signature
+   %generate-rhs-code)
+
+  (define (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+						caller-who lhs*.source-ots rhs*.psi)
+    ;;In  a  LET, LET*,  LETREC  or  LETREC*  syntax,  the syntactic  bindings  have:
+    ;;LHS*.SOURCE-OTS has types  specified in the source code, false  is used when no
+    ;;type was  specified; RHS.PSI as  expanded right-hand side expression.
+    ;;
+    ;;Here  we  take  care  of   performing  right-hand  side  type  propagation  and
+    ;;validation.
+    ;;
+    (map-for-two-retvals
+	(lambda (lhs.source-ots rhs.psi)
+	  ;;Here we process the  RHS type signature to make sure  it returns a single
+	  ;;value.
+	  (define rhs.ots (%process-rhs-signature caller-who input-form.stx rhs.psi))
+	  (if lhs.source-ots
+	      ;;The LHS  has a  specified type in  the source code:  here we  want to
+	      ;;validate RHS as returning a single value of correct type.
+	      (values lhs.source-ots
+		      (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+					  caller-who lhs.source-ots rhs.psi rhs.ots))
+	    ;;The LHS has  no specified type in  the source code: here we  want to do
+	    ;;right-hand side  type propagation.   There is no  need to  validate the
+	    ;;RHS.
+	    (values rhs.ots (psi.core-expr rhs.psi))))
+      lhs*.source-ots rhs*.psi))
+
+;;; --------------------------------------------------------------------
+
+  (module (%process-rhs-signature)
+
+    (define (%process-rhs-signature caller-who input-form.stx rhs.psi)
+      ;;In a LET, LET*, LETREC or LETREC*  syntax, a syntactic binding has RHS.PSI as
+      ;;expanded  right-hand side  expression.  Here  we validate  it as  returning a
+      ;;single value,  otherwise we  raise an exception.   When successful  return an
+      ;;instance of "<object-type-spec>" representing the type of the variable.
+      ;;
+      (define (common message)
+	(condition
+	  (make-who-condition caller-who)
+	  (make-message-condition message)
+	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
+      (case-signature-specs (psi.retvals-signature rhs.psi)
+	((single-value)
+	 ;;The expression returns a single value.  Good this OTS will become the type
+	 ;;of the syntactic binding.
+	 => (lambda (rhs.ots) rhs.ots))
+
+	(<no-return>
+	 ;;The expression is marked as not-returning.
+	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as not returning"))
+
+	((<void>)
+	 ;;The expression is marked as returning void.
+	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as returning void"))
+
+	((unspecified-values)
+	 ;;The expression returns an unspecified  number of values.  Let's simulate a
+	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
+	 ;;number of arguments.
+	 (<top>-ots))
+
+	(else
+	 ;;The expression returns zero, two or more values.
+	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as returning zero, two or more values"))))
+
+    (define (%handle-error common message)
+      (case-expander-language
+	((typed)
+	 (raise			(condition (make-expand-time-type-signature-violation)	(common message))))
+	((default)
+	 (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common message)))
+	 (<top>-ots))
+	((strict-r6rs)
+	 (<top>-ots))))
+
+    #| end of module: %PROCESS-RHS-SIGNATURE |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+			      caller-who lhs.ots rhs.psi rhs.ots)
+    ;;In a LET, LET*,  LETREC or LETREC* syntax, a syntactic  binding has: LHS.OTS as
+    ;;variables's type;  RHS.PSI as expanded  right-hand side expression;  RHS.OTS as
+    ;;type of the single value returned by the RHS expression.
+    ;;
+    ;;*  If RHS.OTS  matches  LHS.OTS:  we return  the  core  language expression  of
+    ;;RHS.PSI.
+    ;;
+    ;;* If RHS.OTS  matches LHS.OTS: we wrap the core  language expression of RHS.PSI
+    ;;into a  run-time validator for LHS.OTS  and return the resulting  core language
+    ;;expression.
+    ;;
+    ;;* If RHS.OTS does not match LHS.OTS: we raise an exception.
+    ;;
+    (cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
+	   (psi.core-expr rhs.psi))
+	  ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
+	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lhs.ots #t))
+		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
+	     (build-application no-source
+		 (psi.core-expr validator.psi)
+	       (list (psi.core-expr rhs.psi)		   ;value
+		     (build-data no-source 1)		   ;value-index
+		     (build-data no-source caller-who))))) ;caller-who
+	  (else
+	   (raise
+	    (condition (make-expand-time-type-signature-violation)
+		       (make-who-condition caller-who)
+		       (make-message-condition
+			"expression used as right-hand side in syntactic binding has type not matching the variable type")
+		       (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
+		       (make-expected-type-signature-condition (make-type-signature/single-value lhs.ots))
+		       (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
+
+
+  #| end of module: LET-UTILITIES |# )
+
+
+;;;; module core-macro-transformer: LET and LET*
 
 (module (let-transformer
 	 let/checked-transformer
@@ -553,6 +677,7 @@
 	 let*-transformer
 	 let*/checked-transformer
 	 let*/std-transformer)
+  (import LET-UTILITIES)
 
   (define-core-transformer (let input-form.stx lexenv.run lexenv.expand)
     ;;Transformer functions used  to expand LET syntaxes from the  top-level built in
@@ -600,9 +725,9 @@
 	      (lhs*.lex		(map generate-lexical-gensym lhs*.id))
 	      (lexenv.run	(lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
 	      (rib		(make-rib/from-identifiers-and-labels lhs*.id lhs*.lab)))
-	 (%build-output input-form.stx lexenv.run lexenv.expand
-			lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
-			build-let)))
+	 (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			   lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
+			   build-let)))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -660,9 +785,9 @@
 		     (cons (psi.core-expr rhs.psi) rhs*.core)
 		     (push-lexical-contour rib body*.stx)
 		     lexenv.run))
-	   (%build-output input-form.stx lexenv.run lexenv.expand
-			  (reverse lhs*.lex) (reverse rhs*.core) body*.stx
-			  build-let*))))
+	   (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			     (reverse lhs*.lex) (reverse rhs*.core) body*.stx
+			     build-let*))))
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
@@ -703,9 +828,9 @@
 						     __who__ lhs*.ots rhs*.psi)
 	     (receive (rib lexenv.run lhs*.lex)
 		 (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.out-ots lexenv.run)
-	       (%build-output input-form.stx lexenv.run lexenv.expand
-			      lhs*.lex rhs*.core (push-lexical-contour rib (cons ?body ?body*))
-			      build-let))))))
+	       (%build-core-expr input-form.stx lexenv.run lexenv.expand
+				 lhs*.lex rhs*.core (push-lexical-contour rib (cons ?body ?body*))
+				 build-let))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
@@ -777,124 +902,28 @@
 		      (cons (car this-rhs*.core) rhs*.core)
 		      (push-lexical-contour rib body*.stx)
 		      lexenv.run)))))
-	   (%build-output input-form.stx lexenv.run lexenv.expand
-			  (reverse lhs*.lex) (reverse rhs*.core) body*.stx
-			  build-let*))))
+	   (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			     (reverse lhs*.lex) (reverse rhs*.core) body*.stx
+			     build-let*))))
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-output input-form.stx lexenv.run lexenv.expand
-			 lhs*.lex rhs*.core body*.stx core-let-builder)
+  (define (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			    lhs*.lex rhs*.core body*.stx core-let-builder)
     (let* ((body.psi   (chi-internal-body body*.stx lexenv.run lexenv.expand))
 	   (body.core  (psi.core-expr body.psi)))
       (make-psi input-form.stx
 	(core-let-builder (syntax-annotation input-form.stx)
-	    lhs*.lex rhs*.core
-	  body.core)
+			  lhs*.lex rhs*.core
+			  body.core)
 	(psi.retvals-signature body.psi))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
-						caller-who lhs*.source-ots rhs*.psi)
-    ;;Here  we  take  care  of   performing  right-hand  side  type  propagation  and
-    ;;validation.
-    ;;
-    (map-for-two-retvals
-	(lambda (lhs.source-ots rhs.psi)
-	  ;;Here we process the  RHS type signature to make sure  it returns a single
-	  ;;value.
-	  (define rhs.ots (%process-rhs-signature input-form.stx rhs.psi))
-	  (if lhs.source-ots
-	      ;;The LHS  has a  specified type in  the source code:  here we  want to
-	      ;;validate RHS as returning a single value of correct type.
-	      (values lhs.source-ots
-		      (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-					  caller-who lhs.source-ots rhs.psi rhs.ots))
-	    ;;The LHS has  no specified type in  the source code: here we  want to do
-	    ;;right-hand side  type propagation.   There is no  need to  validate the
-	    ;;RHS.
-	    (values rhs.ots (psi.core-expr rhs.psi))))
-      lhs*.source-ots rhs*.psi))
-
-;;; --------------------------------------------------------------------
-
-  (module (%process-rhs-signature)
-
-    (define (%process-rhs-signature input-form.stx rhs.psi)
-      (define (common message)
-	(condition
-	  (make-who-condition 'let)
-	  (make-message-condition message)
-	  (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
-	  (make-type-signature-condition (psi.retvals-signature rhs.psi))))
-      (case-signature-specs (psi.retvals-signature rhs.psi)
-	((single-value)
-	 ;;The expression returns a single value.  Good this OTS will become the type
-	 ;;of the syntactic binding.
-	 => (lambda (rhs.ots) rhs.ots))
-
-	(<no-return>
-	 ;;The expression is marked as not-returning.
-	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as not returning"))
-
-	((<void>)
-	 ;;The expression is marked as returning void.
-	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as returning void"))
-
-	((unspecified-values)
-	 ;;The expression returns an unspecified  number of values.  Let's simulate a
-	 ;;"<top>" syntactic binding  are delegate the run-time code  to validate the
-	 ;;number of arguments.
-	 (<top>-ots))
-
-	(else
-	 ;;The expression returns zero, two or more values.
-	 (%handle-error common "expression used as right-hand side in LET syntactic binding is typed as returning zero, two or more values"))))
-
-    (define (%handle-error common message)
-      (case-expander-language
-	((typed)
-	 (raise			(condition (make-expand-time-type-signature-violation)	(common message))))
-	((default)
-	 (raise-continuable	(condition (make-expand-time-type-signature-warning)	(common message)))
-	 (<top>-ots))
-	((strict-r6rs)
-	 (<top>-ots))))
-
-    #| end of module: %PROCESS-RHS-SIGNATURE |# )
-
-  (define (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-			      caller-who lhs.ots rhs.psi rhs.ots)
-    ;;Here the LHS  has a specified type LHS.OTS  and we want to validate  the RHS as
-    ;;returning a single value of such type.
-    ;;
-    (cond ((object-type-spec.matching-super-and-sub? lhs.ots rhs.ots)
-	   (psi.core-expr rhs.psi))
-	  ((object-type-spec.compatible-super-and-sub? lhs.ots rhs.ots)
-	   (let* ((validator.stx (object-type-spec.single-value-validator-lambda-stx lhs.ots #t))
-		  (validator.psi (chi-expr validator.stx lexenv.run lexenv.expand)))
-	     (build-application no-source
-		 (psi.core-expr validator.psi)
-	       (list (psi.core-expr rhs.psi)		   ;value
-		     (build-data no-source 1)		   ;value-index
-		     (build-data no-source caller-who))))) ;caller-who
-	  (else
-	   (raise
-	    (condition (make-expand-time-type-signature-violation)
-		       (make-who-condition caller-who)
-		       (make-message-condition
-			"expression used as right-hand side in syntactic binding has type not matching the variable type")
-		       (make-syntax-violation input-form.stx (psi.input-form rhs.psi))
-		       (make-expected-type-signature-condition (make-type-signature/single-value lhs.ots))
-		       (make-returned-type-signature-condition (psi.retvals-signature rhs.psi)))))))
 
   #| end of module |# )
 
 
-;;;; module core-macro-transformer: LET, LETREC and LETREC*
+;;;; module core-macro-transformer: LETREC and LETREC*
 
 (module (letrec-transformer
 	 letrec/std-transformer
@@ -931,7 +960,8 @@
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (%build-output/checked input-form.stx lexenv.run lexenv.expand build-letrec))
+    (%build-output/checked input-form.stx lexenv.run lexenv.expand
+			   __who__ build-letrec))
 
   (define-core-transformer (letrec/std input-form.stx lexenv.run lexenv.expand)
     ;;Transformer  function used  to expand  LETREC/STD syntaxes  from the  top-level
@@ -956,7 +986,8 @@
     ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
     ;;of the given LEXENV; return a PSI object.
     ;;
-    (%build-output/checked input-form.stx lexenv.run lexenv.expand build-letrec*))
+    (%build-output/checked input-form.stx lexenv.run lexenv.expand
+			   __who__ build-letrec*))
 
   (define-core-transformer (letrec*/std input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand LETREC*/STD  syntaxes from  the top-level
@@ -967,41 +998,103 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%build-output/checked input-form.stx lexenv.run lexenv.expand core-lang-builder)
+  (define* (%build-output/checked input-form.stx lexenv.run lexenv.expand
+				  caller-who core-lang-builder)
     (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       ;;First we establish all the syntactic bindings.
        (let*-values
+	   ;;Here  the  item  in  the  list   LHS*.OTS  is  either:  an  instance  of
+	   ;;"<object-type-spec>"  if the  source  code specified  the  type of  this
+	   ;;syntactic binding; false if the source code left the syntactic binding's
+	   ;;type unspecified.
 	   (((lhs*.id lhs*.ots)
-	     (syntax-object.parse-typed-list-of-bindings ?lhs*))
+	     (syntax-object.parse-typed-list-of-bindings ?lhs* #f))
 	    ((rib lexenv.run lhs*.lex)
-	     (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run))
-	    ;;NOTE The region of all the LETREC and LETREC* bindings includes all the
-	    ;;right-hand sides.  The new rib is pushed on all the RHS and the body.
-	    ((rhs*.psi)
-	     ($map-in-order
-		 (lambda (rhs.stx lhs.ots)
-		   (chi-expr (push-lexical-contour rib
-			       (bless
-				`(assert-signature-and-return (,(object-type-spec.name lhs.ots)) ,rhs.stx)))
-			     lexenv.run lexenv.expand))
-	       ?rhs* lhs*.ots))
-	    ((rhs*.ots)
-	     (map (lambda (rhs.psi)
-		    (%process-rhs-signature __who__ input-form.stx rhs.psi))
-	       rhs*.psi))
-	    ((rhs*.core)
-	     (map (lambda (lhs.ots rhs.psi rhs.ots)
-		    (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
-					__who__ lhs.ots rhs.psi rhs.ots))
-	       lhs*.ots rhs*.psi rhs*.ots)))
-	 (%build-body input-form.stx lexenv.run lexenv.expand
-		      rib core-lang-builder
-		      lhs*.lex rhs*.core (cons ?body ?body*))))
+	     (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)))
+	 (let loop ((lhs*.id	lhs*.id)
+		    (lhs*.ots	lhs*.ots)
+		    ;;The region of all the  LETREC and LETREC* bindings includes all
+		    ;;the right-hand  sides.  The new  rib is  pushed on all  the RHS
+		    ;;and, later, on the body.
+		    (rhs*.stx	(map (lambda (rhs.stx)
+				       (push-lexical-contour rib rhs.stx))
+				  ?rhs*))
+		    (rhs*.core	'()))
+	   (if (pair? lhs*.id)
+	       ;;For every syntactic binding: expand  the RHS and either: validate it
+	       ;;as matching the LHS.OTS; propagate RHS.OTS on the LHS.
+	       (let ((this-lhs*.id		(list (car lhs*.id)))
+		     (this-lhs*.source-ots	(list (car lhs*.ots)))
+		     (this-rhs*.psi		(list (chi-expr (car rhs*.stx) lexenv.run lexenv.expand))))
+		 (receive (this-lhs*.out-ots this-rhs*.core)
+		     ;;Here  we   perform  right-hand   side  type   propagation  and
+		     ;;validation.
+		     (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+							   caller-who this-lhs*.source-ots this-rhs*.psi)
+		   (unless (eq? (car this-lhs*.source-ots) (car this-lhs*.out-ots))
+		     ;;Here we mutate the syntactic binding's descriptor of LHS.ID to
+		     ;;represent a  typed lexical variable having  type THIS-LHS.OTS.
+		     ;;This  is very  dirty...   but  I thrive  in  dirt. Fuck  Yeah!
+		     ;;(Marco Maggi; Sun May 1, 2016)
+		     (let* ((lhs.lab	(id->label (push-lexical-contour rib (car lhs*.id))))
+			    (lhs.descr	(label->syntactic-binding-descriptor lhs.lab lexenv.run)))
+		       (assert (or (syntactic-binding-descriptor/lexical-typed-var? lhs.descr)
+				   (syntactic-binding-descriptor/lexical-var?       lhs.descr)))
+		       (let ((descr (make-syntactic-binding-descriptor/lexical-typed-var/from-data (car this-lhs*.out-ots)
+												   (car lhs*.lex))))
+			 (syntactic-binding-descriptor.type-set!  lhs.descr (syntactic-binding-descriptor.type  descr))
+			 (syntactic-binding-descriptor.value-set! lhs.descr (syntactic-binding-descriptor.value descr)))))
+		   (loop (cdr lhs*.id)
+			 (cdr lhs*.ots)
+			 (cdr rhs*.stx)
+			 (cons (car this-rhs*.core) rhs*.core))))
+	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			       lhs*.lex (reverse rhs*.core) (push-lexical-contour rib (cons ?body ?body*))
+			       core-lang-builder)))))
+
+      #|
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+      (let*-values
+      (((lhs*.id lhs*.ots)
+      (syntax-object.parse-typed-list-of-bindings ?lhs*))
+      ((rib lexenv.run lhs*.lex)
+      (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run))
+	    ;;NOTE The region of all the LETREC and LETREC* bindings includes all the ; ; ;
+	    ;;right-hand sides.  The new rib is pushed on all the RHS and the body. ; ; ;
+      ((rhs*.psi)
+      ($map-in-order
+      (lambda (rhs.stx lhs.ots)
+      (chi-expr (push-lexical-contour rib
+      (bless
+      `(assert-signature-and-return (,(object-type-spec.name lhs.ots)) ,rhs.stx)))
+      lexenv.run lexenv.expand))
+      ?rhs* lhs*.ots))
+      ((rhs*.ots)
+      (map (lambda (rhs.psi)
+      (%process-rhs-signature __who__ input-form.stx rhs.psi))
+      rhs*.psi))
+      ((rhs*.core)
+      (map (lambda (lhs.ots rhs.psi rhs.ots)
+      (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+      __who__ lhs.ots rhs.psi rhs.ots))
+      lhs*.ots rhs*.psi rhs*.ots)))
+      (%build-core-expr input-form.stx lexenv.run lexenv.expand
+      rib core-lang-builder
+      lhs*.lex rhs*.core (cons ?body ?body*))))
+      |#
+
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
   (define* (%build-output/std input-form.stx lexenv.run lexenv.expand core-lang-builder)
     (syntax-match input-form.stx ()
+      ((_ () ?body ?body* ...)
+       (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
+
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (let* ((lhs*.id		(syntax-object.parse-standard-list-of-bindings ?lhs*))
 	      (lhs*.lab		(map generate-label-gensym   lhs*.id))
@@ -1014,17 +1107,18 @@
 	      (rhs*.psi	($map-in-order (lambda (rhs.stx)
 					 (chi-expr (push-lexical-contour rib rhs.stx) lexenv.run lexenv.expand))
 			  ?rhs*)))
-	 (%build-body input-form.stx lexenv.run lexenv.expand
-		      rib core-lang-builder
-		      lhs*.lex (map psi.core-expr rhs*.psi) (cons ?body ?body*))))
+	 (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			lhs*.lex (map psi.core-expr rhs*.psi) (push-lexical-contour rib (cons ?body ?body*))
+			core-lang-builder)))
       (_
        (__synner__ "invalid syntax, no clause matches the input form"))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%build-body input-form.stx lexenv.run lexenv.expand
-		       rib core-lang-builder lhs*.lex rhs*.core body*.stx)
-    (let* ((body.psi	(chi-internal-body (push-lexical-contour rib body*.stx) lexenv.run lexenv.expand))
+  (define (%build-core-expr input-form.stx lexenv.run lexenv.expand
+			 lhs*.lex rhs*.core body*.stx
+			 core-lang-builder)
+    (let* ((body.psi	(chi-internal-body body*.stx lexenv.run lexenv.expand))
 	   (body.core	(psi.core-expr body.psi)))
       ;;Build the LETREC or LETREC* expression in the core language.
       (make-psi input-form.stx
@@ -1034,6 +1128,28 @@
 	(psi.retvals-signature body.psi))))
 
 ;;; --------------------------------------------------------------------
+
+  (define (%generate-lhs-type-and-rhs-core-expr input-form.stx lexenv.run lexenv.expand
+						caller-who lhs*.source-ots rhs*.psi)
+    ;;Here  we  take  care  of   performing  right-hand  side  type  propagation  and
+    ;;validation.
+    ;;
+    (map-for-two-retvals
+	(lambda (lhs.source-ots rhs.psi)
+	  ;;Here we process the  RHS type signature to make sure  it returns a single
+	  ;;value.
+	  (define rhs.ots (%process-rhs-signature caller-who input-form.stx rhs.psi))
+	  (if lhs.source-ots
+	      ;;The LHS  has a  specified type in  the source code:  here we  want to
+	      ;;validate RHS as returning a single value of correct type.
+	      (values lhs.source-ots
+		      (%generate-rhs-code input-form.stx lexenv.run lexenv.expand
+					  caller-who lhs.source-ots rhs.psi rhs.ots))
+	    ;;The LHS has  no specified type in  the source code: here we  want to do
+	    ;;right-hand side  type propagation.   There is no  need to  validate the
+	    ;;RHS.
+	    (values rhs.ots (psi.core-expr rhs.psi))))
+      lhs*.source-ots rhs*.psi))
 
   (module (%process-rhs-signature)
 

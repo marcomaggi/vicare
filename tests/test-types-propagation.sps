@@ -152,6 +152,31 @@
 
 (parametrise ((check-test-name	'letrec))
 
+  (doit (letrec ((A 1))
+	  A)
+	=> (<positive-fixnum>))
+
+  (doit (letrec ((A "ciao"))
+	  A)
+	=> (<string>))
+
+  (doit (letrec ((A "ciao"))
+	  (letrec ((B A))
+	    B))
+	=> (<string>))
+
+  (doit (letrec ((A (fxadd1 1)))
+	  A)
+	=> (<positive-fixnum>))
+
+  (doit (letrec ((A (fx+ 1 -2)))
+	  A)
+	=> (<fixnum>))
+
+  (doit (letrec ((A (cast-signature (<top>) 1)))
+	  A)
+	=> (<top>))
+
 ;;; --------------------------------------------------------------------
 
   (doit (letrec (({a <fixnum>} 1)
@@ -172,12 +197,39 @@
   (doit (letrec ((a 1)
 		 (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> (<positive-fixnum>))
 
   (void))
 
 
 (parametrise ((check-test-name	'letrec*))
+
+  (doit (letrec* ((A 1))
+	  A)
+	=> (<positive-fixnum>))
+
+  (doit (letrec* ((A "ciao"))
+	  A)
+	=> (<string>))
+
+  (doit (letrec* ((A "ciao"))
+	  (letrec* ((B A))
+	    B))
+	=> (<string>))
+
+  (doit (letrec* ((A (fxadd1 1)))
+	  A)
+	=> (<positive-fixnum>))
+
+  (doit (letrec* ((A (fx+ 1 -2)))
+	  A)
+	=> (<fixnum>))
+
+  (doit (letrec* ((A (cast-signature (<top>) 1)))
+	  A)
+	=> (<top>))
+
+;;; --------------------------------------------------------------------
 
   (doit (letrec* (({a <fixnum>} 1)
 		  ({b <fixnum>} 2))
@@ -197,7 +249,7 @@
   (doit (letrec* ((a 1)
 		  (b 2))
 	  (fx+ a b))
-	=> (<fixnum>))
+	=> (<positive-fixnum>))
 
   (void))
 
