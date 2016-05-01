@@ -266,7 +266,7 @@
 	    (lambda () 1)
 	  (lambda (a)
 	    (add1 a)))
-	=> <list>)
+	=> (<number>))
 
   (void))
 
@@ -291,12 +291,38 @@
 ;;; --------------------------------------------------------------------
 ;;; type propagation: automatic inference of return values's type signature
 
-#|
   (doit ((lambda ({a <fixnum>} {b <fixnum>})
 	   (fx+ a b))
 	 1 2)
 	=> (<fixnum>))
-|#
+
+  (void))
+
+
+(parametrise ((check-test-name	'named-lambda))
+
+  (doit ((named-lambda me ({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+	   (fx+ a b))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-lambda me ({_ <fixnum>} {a <positive-fixnum>} {b <negative-fixnum>})
+	   (fx+ a b))
+	 1 -2)
+	=> (<fixnum>))
+
+  (doit ((named-lambda me ({_ <fixnum>} a b)
+	   (fx+ a b))
+	 1 2)
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; type propagation: automatic inference of return values's type signature
+
+  (doit ((named-lambda me ({a <fixnum>} {b <fixnum>})
+	   (fx+ a b))
+	 1 2)
+	=> (<fixnum>))
 
   (void))
 
@@ -369,6 +395,127 @@
 	 1.0 2.0 3.0)
 	=> (<flonum>))
 
+;;; --------------------------------------------------------------------
+;;; type propagation: automatic inference of return values's type signature
+
+  (doit ((case-lambda
+	   (({a <fixnum>} {b <fixnum>})
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({a <fixnum>} {b <fixnum>})
+	    (fx+ a b))
+	   (({a <string>} {b <string>} {c <string>})
+	    (string-append a b c)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((case-lambda
+	   (({a <fixnum>} {b <fixnum>})
+	    (fx+ a b))
+	   (({a <string>} {b <string>} {c <string>})
+	    (string-append a b c)))
+	 "1" "2" "3")
+	=> (<string>))
+
+  (void))
+
+
+(parametrise ((check-test-name	'named-case-lambda))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} {a <positive-fixnum>} {b <negative-fixnum>})
+	    (fx+ a b)))
+	 1 -2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} a b)
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} a b c)
+	    (fl+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <flonum>} a b c)
+	    (fl+ a b))
+	   (({_ <fixnum>} a b)
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} a b c)
+	    (fl+ a b)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} {a <flonum>} {b <flonum>} {c <flonum>})
+	    (fl+ a b)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} {a <flonum>} . {b* (list-of <flonum>)})
+	    (apply fl+ a b*)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+  (doit ((named-case-lambda me
+	   (({_ <fixnum>} a b)
+	    (fx+ a b))
+	   (({_ <flonum>} . {fl* (list-of <flonum>)})
+	    (apply fl+ fl*)))
+	 1.0 2.0 3.0)
+	=> (<flonum>))
+
+;;; --------------------------------------------------------------------
+;;; type propagation: automatic inference of return values's type signature
+
+  (doit ((named-case-lambda me
+	   (({a <fixnum>} {b <fixnum>})
+	    (fx+ a b)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({a <fixnum>} {b <fixnum>})
+	    (fx+ a b))
+	   (({a <string>} {b <string>} {c <string>})
+	    (string-append a b c)))
+	 1 2)
+	=> (<fixnum>))
+
+  (doit ((named-case-lambda me
+	   (({a <fixnum>} {b <fixnum>})
+	    (fx+ a b))
+	   (({a <string>} {b <string>} {c <string>})
+	    (string-append a b c)))
+	 "1" "2" "3")
+	=> (<string>))
+
   (void))
 
 
@@ -424,17 +571,17 @@
 
 (parametrise ((check-test-name	'case))
 
-  #;(doit (case (read)
+  (doit (case (read)
 	  ((1)		1)
 	  ((ciao)	2)
 	  (else		3))
 	=> (<positive-fixnum>))
 
-  #;(doit (case (read)
+  (doit (case (read)
 	  ((1)		1)
 	  ((ciao)	'ciao)
 	  (else		#f))
-	=> ((or <positive-fixnum> <symbol> <false>)))
+	=> ((or <positive-fixnum> <false> (enumeration ciao))))
 
   (void))
 

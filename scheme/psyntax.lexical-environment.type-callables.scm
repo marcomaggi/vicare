@@ -31,6 +31,7 @@
      make-clambda-clause-signature			clambda-clause-signature?
      clambda-clause-signature=?
      clambda-clause-signature.retvals			clambda-clause-signature.retvals.specs
+     clambda-clause-signature.retvals-set!
      clambda-clause-signature.argvals			clambda-clause-signature.argvals.specs
      clambda-clause-signature.fully-untyped?		clambda-clause-signature.untyped?
      clambda-signature.min-and-max-argvals
@@ -55,7 +56,7 @@
 ;;representing a function application.
 ;;
 (define-record-type (<callable-signature> dummy-make-callable-signature callable-signature?)
-  (nongenerative vicare:expander:<callable-signature>)
+  (nongenerative *0*vicare:expander:<callable-signature>)
   (fields
     (immutable retvals	callable-signature.retvals)
 		;An instance of "<type-signature>".
@@ -83,11 +84,12 @@
 ;;;; type definition: CASE-LAMBDA clause signature
 
 (define-record-type (<clambda-clause-signature> make-clambda-clause-signature clambda-clause-signature?)
-  (nongenerative vicare:expander:<clambda-clause-signature>)
+  (nongenerative *0*vicare:expander:<clambda-clause-signature>)
   (fields
-    (immutable retvals	clambda-clause-signature.retvals)
+    (mutable retvals	clambda-clause-signature.retvals clambda-clause-signature.retvals-set!)
 		;An instance of "<type-signature>"  representing the signature of the
-		;return values.
+		;return values.  This  is mutable to allow type  propagation from the
+		;last form in the body to the whole clambda clause.
     (immutable argvals	clambda-clause-signature.argvals)
 		;An instance of "<type-signature>"  representing the signature of the
 		;argument values.
@@ -151,7 +153,7 @@
 ;;Type representing the full type signature of closure objects.
 ;;
 (define-record-type (<clambda-signature> make-clambda-signature clambda-signature?)
-  (nongenerative vicare:expander:<clambda-signature>)
+  (nongenerative *0*vicare:expander:<clambda-signature>)
   (parent <callable-signature>)
   (fields
     (immutable clause-signature*	clambda-signature.clause-signature*)

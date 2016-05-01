@@ -1014,10 +1014,11 @@
 	   ;;type unspecified.
 	   (((lhs*.id lhs*.ots)
 	     (syntax-object.parse-typed-list-of-bindings ?lhs* #f))
-	    ((rib lexenv.run lhs*.lex)
+	    ((rib lexenv.run lhs*.out-lex)
 	     (%establish-typed-syntactic-bindings-lhs* lhs*.id lhs*.ots lexenv.run)))
 	 (let loop ((lhs*.id	lhs*.id)
 		    (lhs*.ots	lhs*.ots)
+		    (lhs*.lex	lhs*.out-lex)
 		    ;;The region of all the  LETREC and LETREC* bindings includes all
 		    ;;the right-hand  sides.  The new  rib is  pushed on all  the RHS
 		    ;;and, later, on the body.
@@ -1051,10 +1052,11 @@
 			 (syntactic-binding-descriptor.value-set! lhs.descr (syntactic-binding-descriptor.value descr)))))
 		   (loop (cdr lhs*.id)
 			 (cdr lhs*.ots)
+			 (cdr lhs*.lex)
 			 (cdr rhs*.stx)
 			 (cons (car this-rhs*.core) rhs*.core))))
 	     (%build-core-expr input-form.stx lexenv.run lexenv.expand
-			       lhs*.lex (reverse rhs*.core) (push-lexical-contour rib (cons ?body ?body*))
+			       lhs*.out-lex (reverse rhs*.core) (push-lexical-contour rib (cons ?body ?body*))
 			       core-lang-builder)))))
 
       (_

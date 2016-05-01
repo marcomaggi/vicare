@@ -1612,30 +1612,30 @@
     ;;
     ;;   (obj1 == obj2) && (obj2 == obj3) => (obj1 == obj3)
     ;;
-    (and (comparator-equal? K obj1 obj2)
-	 (comparator-equal? K obj2 obj3)
-	 (debug-assert __who__ debug-K K (comparator-equal? K obj1 obj3)
-		       "equality: (obj1 == obj2) && (obj2 == obj3) => (obj1 == obj3)"
-		       "transitive" obj1 obj2 obj3))
+    (when (and (comparator-equal? K obj1 obj2)
+	       (comparator-equal? K obj2 obj3))
+      (debug-assert __who__ debug-K K (comparator-equal? K obj1 obj3)
+		    "equality: (obj1 == obj2) && (obj2 == obj3) => (obj1 == obj3)"
+		    "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj1 == obj2) && (obj2 != obj3) => (obj1 != obj3)
     ;;
-    (and (comparator-equal?      K obj1 obj2)
-	 (not (comparator-equal? K obj2 obj3))
-	 (debug-deny __who__ debug-K K (not (comparator-equal? K obj1 obj3))
-		     "equality: (obj1 == obj2) && (obj2 != obj3) => (obj1 != obj3)"
-		     "transitive" obj1 obj2 obj3))
+    (when (and (comparator-equal?      K obj1 obj2)
+	       (not (comparator-equal? K obj2 obj3)))
+      (debug-deny __who__ debug-K K (not (comparator-equal? K obj1 obj3))
+		  "equality: (obj1 == obj2) && (obj2 != obj3) => (obj1 != obj3)"
+		  "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj1 != obj2) && (obj2 == obj3) => (obj1 != obj3)
     ;;
-    (and (not (comparator-equal? K obj1 obj2))
-	 (comparator-equal?      K obj2 obj3)
-	 (debug-deny __who__ debug-K K
-		     (comparator-equal? K obj1 obj3)
-		     "equality: (obj1 != obj2) && (obj2 == obj3) => (obj1 != obj3)"
-		     "transitive" obj1 obj2 obj3)))
+    (when (and (not (comparator-equal? K obj1 obj2))
+	       (comparator-equal?      K obj2 obj3))
+      (debug-deny __who__ debug-K K
+		  (comparator-equal? K obj1 obj3)
+		  "equality: (obj1 != obj2) && (obj2 == obj3) => (obj1 != obj3)"
+		  "transitive" obj1 obj2 obj3)))
 
   (define (check-transitive-comparison debug-K K obj1 obj2 obj3)
     (define-syntax-rule (<= ?x ?y)
@@ -1644,56 +1644,56 @@
     ;;
     ;;   (obj1 <= obj2) && (obj2 <= obj3) => (obj1 <= obj3)
     ;;
-    (and (<= obj1 obj2)
-	 (<= obj2 obj3)
-	 (debug-assert __who__ debug-K K (<= obj1 obj3)
-		       "comparison: (obj1 <= obj2) && (obj2 <= obj3) => (obj1 <= obj3)"
-		       "transitive" obj1 obj2 obj3))
+    (when (and (<= obj1 obj2)
+	       (<= obj2 obj3))
+      (debug-assert __who__ debug-K K (<= obj1 obj3)
+		    "comparison: (obj1 <= obj2) && (obj2 <= obj3) => (obj1 <= obj3)"
+		    "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj2 <= obj1) && (obj1 <= obj3) => (obj2 <= obj3)
     ;;
-    (and (<= obj2 obj1)
-	 (<= obj1 obj3)
-	 (debug-assert __who__ debug-K K (<= obj2 obj3)
-		       "comparison: (obj2 <= obj1) && (obj1 <= obj3) => (obj2 <= obj3)"
-		       "transitive" obj1 obj2 obj3))
+    (when (and (<= obj2 obj1)
+	       (<= obj1 obj3))
+      (debug-assert __who__ debug-K K (<= obj2 obj3)
+		    "comparison: (obj2 <= obj1) && (obj1 <= obj3) => (obj2 <= obj3)"
+		    "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj3 <= obj1) && (obj1 <= obj2) => (obj3 <= obj2)
     ;;
-    (and (<= obj3 obj1)
-	 (<= obj1 obj2)
-	 (debug-assert __who__ debug-K K (<= obj3 obj2)
-		       "comparison: (obj3 <= obj1) && (obj1 <= obj2) => (obj3 <= obj2)"
-		       "transitive" obj1 obj2 obj3))
+    (when (and (<= obj3 obj1)
+	       (<= obj1 obj2))
+      (debug-assert __who__ debug-K K (<= obj3 obj2)
+		    "comparison: (obj3 <= obj1) && (obj1 <= obj2) => (obj3 <= obj2)"
+		    "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj3 <= obj2) && (obj2 <= obj1) => (obj3 <= obj1)
     ;;
-    (and (<= obj3 obj2)
-	 (<= obj2 obj1)
-	 (debug-assert __who__ debug-K K (<= obj3 obj1)
-		       "comparison: (obj3 <= obj2) && (obj2 <= obj1) => (obj3 <= obj1)"
-		       "transitive" obj1 obj2 obj3))
+    (when (and (<= obj3 obj2)
+	       (<= obj2 obj1))
+      (debug-assert __who__ debug-K K (<= obj3 obj1)
+		    "comparison: (obj3 <= obj2) && (obj2 <= obj1) => (obj3 <= obj1)"
+		    "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj1 <= obj3) && (obj3 <= obj2) => (obj1 <= obj2)
     ;;
-    (and (<= obj1 obj3)
-	 (<= obj3 obj2)
-	 (debug-assert __who__ debug-K K (<= obj1 obj2)
-		       "comparison: (obj1 <= obj3) && (obj3 <= obj2) => (obj1 <= obj2)"
-		       "transitive" obj1 obj2 obj3))
+    (when (and (<= obj1 obj3)
+	       (<= obj3 obj2))
+      (debug-assert __who__ debug-K K (<= obj1 obj2)
+		    "comparison: (obj1 <= obj3) && (obj3 <= obj2) => (obj1 <= obj2)"
+		    "transitive" obj1 obj2 obj3))
     ;;Tests:
     ;;
     ;;   (obj2 <= obj3) && (obj3 <= obj1) => (obj2 <= obj1)
     ;;
-    (and (<= obj2 obj3)
-	 (<= obj3 obj1)
-	 (debug-assert __who__ debug-K K (<= obj2 obj1)
-		       "comparison: (obj2 <= obj3) && (obj3 <= obj1) => (obj2 <= obj1)"
-		       "transitive" obj1 obj2 obj3)))
+    (when (and (<= obj2 obj3)
+	       (<= obj3 obj1))
+      (debug-assert __who__ debug-K K (<= obj2 obj1)
+		    "comparison: (obj2 <= obj3) && (obj3 <= obj1) => (obj2 <= obj1)"
+		    "transitive" obj1 obj2 obj3)))
 
   (define (check-hash-value debug-K K value)
     (debug-assert __who__ debug-K K

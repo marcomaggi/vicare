@@ -2966,7 +2966,9 @@
 		    ((line) (values " yyline)"
 				    "yyline)"))
 		    ((all)  (values " yyline yycolumn yyoffset)"
-				    "yyline yycolumn yyoffset)")))))
+				    "yyline yycolumn yyoffset)"))
+		    (else
+		     (error #f "internal error")))))
       (let* ((nbstates (vector-length arcs-v))
 	     (trees-v (make-vector nbstates)))
 	(let loop ((s 0))

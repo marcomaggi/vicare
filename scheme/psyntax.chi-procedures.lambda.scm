@@ -182,6 +182,12 @@
 					  (qdef-defun.standard-formals qdef)
 					  (car (qdef-closure.clause-signature* qdef))
 					  (qdef-defun.body* qdef)))))
+	(when (or (eq? type 'checked)
+		  (eq? type 'typed))
+	  (let ((clause-signature (car (qdef-closure.clause-signature* qdef))))
+	    ;;If no type signature was specified for the clause: we use the signaure of
+	    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+	      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))))
 	(make-psi input-form.stx
 	  (build-lambda (identifier->symbol (qdef.var-id qdef))
 	      standard-formals.lex
@@ -271,6 +277,14 @@
 	      ((checked)
 	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
 						standard-formals*.stx clause-signature* body**.stx)))
+	  (when (or (eq? type 'checked)
+		    (eq? type 'typed))
+	    (let ((clause-signature* (qdef-closure.clause-signature* qdef)))
+	      (for-each (lambda (clause-signature body.psi)
+			  ;;If no type signature was specified for the clause: we use the signaure of
+			  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+			    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
+		clause-signature* body*.psi)))
 	  (make-psi input-form.stx
 	    (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
@@ -431,6 +445,10 @@
 	    ((checked)
 	     (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
 					standard-formals.stx clause-signature body*.stx)))
+	;;If no type signature  was specified for the clause: we  use the signaure of
+	;;the last form in the body, performing type propagation.
+	(when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+	  (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
 	(make-psi input-form.stx
 	  (build-lambda (syntax-annotation input-form.stx)
 	      standard-formals.lex
@@ -480,6 +498,10 @@
 	      ((checked)
 	       (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
 					  standard-formals.stx clause-signature body*.stx)))
+	  ;;If no type signature was specified for the clause: we use the signaure of
+	  ;;the last form in the body, performing type propagation.
+	  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+	    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
 	  (make-psi input-form.stx
 	    (build-lambda (syntax-annotation input-form.stx)
 		standard-formals.lex
@@ -570,6 +592,12 @@
 	    ((checked)
 	     (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
 					      standard-formals*.stx clause-signature* body**.stx)))
+	;;If no type signature  was specified for the clause: we  use the signaure of
+	;;the last form in the body, performing type propagation.
+	(for-each (lambda (clause-signature body.psi)
+		    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+		      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
+	  clause-signature* body*.psi)
 	(make-psi input-form.stx
 	  (build-case-lambda (syntax-annotation input-form.stx)
 	      formals*.lex
@@ -624,6 +652,12 @@
 	      ((checked)
 	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
 						standard-formals*.stx clause-signature* body**.stx)))
+	  ;;If no type signature was specified for the clause: we use the signaure of
+	  ;;the last form in the body, performing type propagation.
+	  (for-each (lambda (clause-signature body.psi)
+		      (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
+			(clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
+	    clause-signature* body*.psi)
 	  (make-psi input-form.stx
 	    (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex

@@ -461,9 +461,9 @@
       (receive (branch-binding* cond-clause*)
 	  (%process-clauses input-form.stx expr.sym else.sym datum-clause*.stx)
 	(bless
-	 `(letrec/std ((,expr.sym ,expr.stx)
-		       ,@branch-binding*
-		       (,else.sym (lambda/std () . ,else-body*.stx)))
+	 `(letrec/checked ((,expr.sym ,expr.stx)
+			   ,@branch-binding*
+			   (,else.sym (lambda/checked () . ,else-body*.stx)))
 	    (cond ,@cond-clause* (else (,else.sym))))))))
 
   (define (%process-clauses input-form.stx expr.sym else.sym clause*.stx)
@@ -560,7 +560,7 @@
 	     (obj.sym		(make-syntactic-identifier-for-temporary-variable)))
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
-	 (values `(lambda/std (,obj.sym)
+	 (values `(lambda/checked (,obj.sym)
 		    ((assert-signature-and-return (<procedure>) ,?closure) ,obj.sym))
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
@@ -574,7 +574,7 @@
 		     )))))
       ((?datum* . ?body)
        (let ((closure.sym (make-syntactic-identifier-for-temporary-variable)))
-	 (values `(lambda/std () . ,?body)
+	 (values `(lambda/checked () . ,?body)
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
 				  (entries '()))
