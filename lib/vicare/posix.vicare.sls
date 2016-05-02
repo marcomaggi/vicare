@@ -4760,18 +4760,18 @@
 
   (define (vicare-executable-as-string)
     (or EXECUTABLE-STRING
-	(begin
-	  (set! EXECUTABLE-STRING (let ((pathname (vicare-executable-as-bytevector)))
-				    (if pathname
-					(ascii->string pathname)
-				      #f)))
-	  EXECUTABLE-STRING)))
+	(receive-and-return (rv)
+	    (let ((pathname (vicare-executable-as-bytevector)))
+	      (if pathname
+		  (ascii->string pathname)
+		#f))
+	  (set! EXECUTABLE-STRING rv))))
 
   (define (vicare-executable-as-bytevector)
     (or EXECUTABLE-BYTEVECTOR
-	(begin
-	  (set! EXECUTABLE-BYTEVECTOR (find-executable-as-bytevector (vicare-argv0)))
-	  EXECUTABLE-BYTEVECTOR)))
+	(receive-and-return (rv)
+	    (find-executable-as-bytevector (vicare-argv0))
+	  (set! EXECUTABLE-BYTEVECTOR rv))))
 
   #| end of module |# )
 
