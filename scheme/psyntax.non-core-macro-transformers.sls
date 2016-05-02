@@ -173,13 +173,6 @@
     ((case-lambda*)			case-lambda*-macro)
     ((named-lambda*)			named-lambda*-macro)
     ((named-case-lambda*)		named-case-lambda*-macro)
-    ;;
-    ((trace-lambda)			trace-lambda-macro)
-    ((trace-define)			trace-define-macro)
-    ((trace-let)			trace-let-macro)
-    ((trace-define-syntax)		trace-define-syntax-macro)
-    ((trace-let-syntax)			trace-let-syntax-macro)
-    ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
     ((define-syntax-parameter)		define-syntax-parameter-macro)
     ((syntax-parametrise)		syntax-parametrise-macro)
@@ -1471,34 +1464,6 @@
     ))
 
 
-;;;; non-core macro: TRACE-LET
-
-(define-macro-transformer (trace-let input-form.stx)
-  ;;Transformer function used to expand  Vicare's TRACE-LET macros from the top-level
-  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
-  ;;object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (identifier? ?recur)
-     (if (options::typed-language?)
-	 (receive (lhs*.id lhs*.ots)
-	     (syntax-object.parse-typed-list-of-bindings ?lhs*)
-	   (bless
-	    `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
-					      ,?body . ,?body*)))
-		,?recur)
-	      . ,(map (lambda (rhs ots)
-			`(assert-signature-and-return (,(object-type-spec.name ots)) ,rhs))
-		   ?rhs* lhs*.ots))))
-       (let ((lhs*.id (syntax-object.parse-standard-list-of-bindings ?lhs*)))
-	 (bless
-	  `((letrec ((,?recur (trace-lambda ,?recur ,lhs*.id ,?body . ,?body*)))
-	      ,?recur)
-	    . ?rhs*)))))
-    ))
-
-
 ;;;; non-core macro: LET-VALUES
 
 (module (let-values-macro)
@@ -2440,94 +2405,6 @@
 					   (list pred.id var.id))
 					  (else
 					   (synner "expected identifier as predicate name" pred.id)))))))
-
-  #| end of module |# )
-
-
-;;;; non-core macro: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
-
-(define-macro-transformer (trace-lambda input-form.stx)
-  ;;Transformer  function  used  to  expand Vicare's  TRACE-LAMBDA  macros  from  the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?who ?formals ?body ?body* ...)
-     (identifier? ?who)
-     (bless
-      `(make-traced-procedure (quote ,?who) (lambda/std ,?formals ,?body . ,?body*))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
-(define-macro-transformer (trace-define input-form.stx)
-  ;;Transformer  function  used  to  expand Vicare's  TRACE-DEFINE  macros  from  the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ (?who . ?formals) ?body ?body* ...)
-     (identifier? ?who)
-     (bless
-      `(define ,?who
-	 (make-traced-procedure ',?who (lambda/std ,?formals ,?body . ,?body*)))))
-
-    ((_ ?who ?expr)
-     (bless
-      `(define ,?who
-	 (let/std ((v ,?expr))
-	   (if (procedure? v)
-	       (make-traced-procedure ',?who v)
-	     v)))))
-
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
-(define-macro-transformer (trace-define-syntax input-form.stx)
-  ;;Transformer function used to expand  Vicare's TRACE-DEFINE-SYNTAX macros from the
-  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?who ?expr)
-     (identifier? ?who)
-     (bless
-      `(define-syntax ,?who
-	 (make-traced-macro ',?who ,?expr))))
-    (_
-     (__synner__ "invalid syntax in macro use"))))
-
-
-;;;; non-core macro: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
-
-(module (trace-let-syntax-macro
-	 trace-letrec-syntax-macro)
-
-  (define-macro-transformer (trace-let-syntax input-form.stx)
-    ;;Transformer function used  to expand Vicare's TRACE-LET-SYNTAX  macros from the
-    ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return
-    ;;a syntax object that must be further expanded.
-    ;;
-    (%transformer __who__ input-form.stx __synner__))
-
-  (define-macro-transformer (trace-letrec-syntax input-form.stx)
-    ;;Transformer function  used to  expand Vicare's TRACE-LETREC-SYNTAX  macros from
-    ;;the top-level  built in  environment.  Expand  the contents  of INPUT-FORM.STX;
-    ;;return a syntax object that must be further expanded.
-    ;;
-    (%transformer __who__ input-form.stx __synner__))
-
-  (define (%transformer caller-who input-form.stx synner)
-    (syntax-match input-form.stx ()
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (let* ((lhs* (syntax-object.parse-standard-list-of-bindings ?lhs*))
-	      (rhs* (map (lambda (lhs rhs)
-			   `(make-traced-macro ',lhs ,rhs))
-		      lhs* ?rhs*)))
-	 (bless
-	  `(,caller-who ,(map list ?lhs* rhs*)
-			,?body . ,?body*))))
-      (_
-       (synner "invalid syntax in macro use"))))
 
   #| end of module |# )
 

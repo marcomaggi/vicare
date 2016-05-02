@@ -593,6 +593,20 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/labels.sls
 CLEANFILES += lib/vicare/language-extensions/labels.fasl
 
+lib/vicare/language-extensions/tracing-syntaxes.fasl: \
+		lib/vicare/language-extensions/tracing-syntaxes.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_tracing_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_tracing_syntaxes_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_tracing_syntaxes_fasl_DATA = lib/vicare/language-extensions/tracing-syntaxes.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_tracing_syntaxes_sls_DATA = lib/vicare/language-extensions/tracing-syntaxes.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/tracing-syntaxes.sls
+CLEANFILES += lib/vicare/language-extensions/tracing-syntaxes.fasl
+
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.vicare.sls \
 		lib/vicare/posix.fasl \

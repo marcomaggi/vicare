@@ -35,7 +35,7 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2010-2015
+@set COPYRIGHT_YEARS            2010-2016
 
 
 @set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
@@ -146,6 +146,7 @@ Trademarks used herein are the property of their respective owners.
 * debugging::                   Debugging facilities.
 * getopts::                     Parsing command line arguments.
 * checks::                      Lightweight testing.
+* tracing::                     Tracing syntaxes.
 
 Networking libraries
 
@@ -235,6 +236,7 @@ External documents
 @include libs-debugging.texi
 @include libs-getopts.texi
 @include libs-checks.texi
+@include libs-tracing-syntaxes.texi
 
 @include libs-net-channels.texi
 
