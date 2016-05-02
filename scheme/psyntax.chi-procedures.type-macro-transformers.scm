@@ -124,7 +124,7 @@
 	       (else
 		(__synner__ "attempt to instantiate object-type with no constructor (abstract type?)" ?type-name)))))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -304,7 +304,7 @@
 	      "the expression used as destructor operand returns multiple values"
 	      input-form.stx ?expr)))))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (%apply-appropriate-destructor who input-form.stx lexenv.run lexenv.expand type.ots expr.psi)
     (cond ((object-type-spec.destructor-stx type.ots)
@@ -357,7 +357,7 @@
 	 (%expand-to-single-value-predicate input-form.stx lexenv.run lexenv.expand
 					    ?expr ?type-annotation type-annotation.ots __synner__)))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -589,7 +589,7 @@
 			(make-irritants-condition (list expr.sig))))))))
 
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -687,7 +687,7 @@
 			(make-syntax-violation input-form.stx ?expr)
 			(make-irritants-condition (list expr.sig))))))))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -790,7 +790,7 @@
 	    (%error "subject expression of method call returns multiple values")))))
 
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
@@ -884,7 +884,7 @@
        (%build-output-form input-form.stx lexenv.run lexenv.expand
 			   ?expr (cons ?case-clause0 ?case-clause*)))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
   (define (%build-output-form input-form.stx lexenv.run lexenv.expand
 			      expr.stx case-clause*.stx)
@@ -1237,7 +1237,7 @@
 			    (make-irritants-condition (list expr.sig))))))
 	 )))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; module core-macro-transformer: HASH-FUNCTION, EQUALITY-PREDICATE, COMPARISON-PROCEDURE
@@ -1256,7 +1256,7 @@
 	     (else
 	      (__synner__ "type annotation has no equality predicate")))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (comparison-procedure input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's COMPARISON-PROCEDURE  syntaxes from  the
@@ -1272,7 +1272,7 @@
 	     (else
 	      (__synner__ "type annotation has no comparison procedure")))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (hash-function input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's HASH-FUNCTION  syntaxes from  the
@@ -1288,7 +1288,7 @@
 	     (else
 	      (__synner__ "type annotation has no hash function")))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; module core-macro-transformer: TYPE-OF
@@ -1303,11 +1303,11 @@
      (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.sig (psi.retvals-signature expr.psi)))
        (make-psi input-form.stx
-		 (build-data no-source
-		   expr.sig)
-		 (make-type-signature/single-value (core-prim-id '<type-signature>)))))
+	 (build-data no-source
+	   expr.sig)
+	 (make-type-signature/single-value (core-prim-id '<type-signature>)))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; module core-macro-transformer:
@@ -1336,7 +1336,7 @@
 		 (make-type-signature/single-true)
 	       (make-type-signature/single-false)))))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-annotation-super-and-sub? input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  Vicare's  TYPE-ANNOTATION-SUPER-AND-SUB?
@@ -1354,7 +1354,7 @@
 		 (make-type-signature/single-true)
 	       (make-type-signature/single-false)))))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-annotation-common-ancestor input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to expand  Vicare's  TYPE-ANNOTATION-COMMON-ANCESTOR
@@ -1371,7 +1371,7 @@
 	       (object-type-spec.name ots))
 	     (make-type-signature/single-top))))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-annotation-ancestors input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  TYPE-ANNOTATION-ANCESTORS syntaxes
@@ -1386,7 +1386,7 @@
 	   (build-data no-source name*)
 	   (make-type-signature/single-list)))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-annotation-syntax input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand Vicare's TYPE-ANNOTATION-SYNTAX syntaxes from
@@ -1400,7 +1400,7 @@
 	 (build-data no-source (object-type-spec.type-annotation type.ots))
 	 (make-type-signature/single-top))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-annotation-matching input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's  TYPE-ANNOTATION-MATCHING syntaxes
@@ -1452,7 +1452,7 @@
 	       (make-type-signature/single-true)
 	     (make-type-signature/single-false))))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-signature-matching input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's TYPE-SIGNATURE-MATCHING  syntaxes
@@ -1473,7 +1473,7 @@
 	   (build-data no-source sym)
 	   (make-type-signature/single-value (core-prim-id '<symbol>))))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-signature-union input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  TYPE-SIGNATURE-UNION syntaxes from
@@ -1494,7 +1494,7 @@
 					?signature*))))
        (make-type-signature/single-value (core-prim-id '<top>))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-core-transformer (type-signature-common-ancestor input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  Vicare's  TYPE-SIGNATURE-COMMON-ANCESTOR
@@ -1516,7 +1516,7 @@
 	     (type-signature.syntax-object sig))
 	   (make-type-signature/single-top)))))
     (_
-     (__synner__ "invalid syntax, no clause matches the input form"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; done

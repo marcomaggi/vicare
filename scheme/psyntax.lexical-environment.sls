@@ -293,6 +293,7 @@
     id->object-type-spec			id->record-type-spec
     id->struct-type-spec			type-annotation->object-type-spec
     syntax-object.type-annotation?
+    expression-expander-for-type-annotations
     case-identifier-syntactic-binding-descriptor
     case-identifier-syntactic-binding-descriptor/no-indirection
     __descr__

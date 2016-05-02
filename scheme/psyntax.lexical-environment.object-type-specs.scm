@@ -244,6 +244,7 @@
 
 	 syntax-object.type-annotation?
 	 type-annotation->object-type-spec		tail-type-annotation->object-type-spec
+	 expression-expander-for-type-annotations
 
 	 #| end of export list |# )
 
@@ -3675,7 +3676,8 @@
    (syntax-match stx (pair list vector pair-of list-of nelist-of vector-of
 			   hashtable alist condition enumeration
 			   or and not lambda case-lambda => parent-of ancestor-of
-			   type-predicate equality-predicate comparison-procedure hash-function)
+			   type-predicate equality-predicate comparison-procedure hash-function
+			   type-of)
      (?type-id
       (and (identifier? ?type-id)
 	   (try
@@ -3763,9 +3765,17 @@
      ((hash-function ?type)
       (recur ?type))
 
+     ((type-of ?expr)
+      #t)
+
      (else #f))))
 
 ;;; --------------------------------------------------------------------
+
+(define expression-expander-for-type-annotations
+  (make-parameter (lambda (stx)
+		    (assertion-violation 'expression-expander-for-type-annotations
+		      "parameter not initialised"))))
 
 (case-define* type-annotation->object-type-spec
   ((annotation.stx)
@@ -3790,7 +3800,8 @@
    (syntax-match annotation.stx (pair list vector pair-of list-of nelist-of vector-of
 				      hashtable alist condition enumeration
 				      or and not lambda case-lambda => parent-of ancestor-of
-				      type-predicate equality-predicate comparison-procedure hash-function)
+				      type-predicate equality-predicate comparison-procedure hash-function
+				      type-of)
      (?type-id
       (identifier? ?type-id)
       (id->object-type-spec ?type-id lexenv))
@@ -3947,6 +3958,9 @@
 
      ((hash-function ?type)
       (type-annotation->object-type-spec (bless `(lambda (,?type) => (<non-negative-fixnum>)))))
+
+     ((type-of ?expr)
+      ((expression-expander-for-type-annotations) ?expr lexenv))
 
      (else
       (syntax-violation __who__ "invalid type annotation" annotation.stx)))))

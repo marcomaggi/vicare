@@ -1024,6 +1024,38 @@
 
   #| end of module: CHI-EXPR |# )
 
+;;; --------------------------------------------------------------------
+
+(define* (chi-expr-for-type-annotation expr.stx lexenv.run)
+  ;;This  function  is used  when  converting  type  annotation syntax  objects  into
+  ;;instances  of   "<object-type-spec>".   For  example:  when   processing  TYPE-OF
+  ;;annotations.
+  ;;
+  (let ((expr.sig (psi.retvals-signature (chi-expr expr.stx lexenv.run (make-empty-lexenv)))))
+    (case-signature-specs expr.sig
+      ((unspecified-values)
+       (syntax-violation __who__
+	 "the expression in the TYPE-OF annotation is typed as returning an unspecified number of values"
+	 expr.stx))
+
+      (<no-return>
+       (syntax-violation __who__
+	 "the expression in the TYPE-OF annotation is typed as not returning"
+	 expr.stx))
+
+      ((<void>)
+       ;;The expression is marked as returning void.
+       (<void>-ots))
+
+      ((single-value)
+       ;;The expression returns a single value.
+       => (lambda (obj.ots) obj.ots))
+
+      (else
+       (syntax-violation __who__
+	 "the expression in the TYPE-OF annotation is typed as returning zero, two or more values"
+	 expr.stx)))))
+
 
 ;;;; chi procedures: expressions in the interaction environment
 
@@ -1564,6 +1596,8 @@
 
 
 ;;;; done
+
+(expression-expander-for-type-annotations chi-expr-for-type-annotation)
 
 #| end of library |# )
 

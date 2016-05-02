@@ -164,6 +164,30 @@
   (void))
 
 
+(parametrise ((check-test-name	'type-annotation-syntax))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   ?expr
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (type-annotation-syntax (or <fixnum> <bignum>))
+	=> (or <fixnum> <bignum>))
+
+  (doit (type-annotation-syntax (or (enumeration hello salut)
+				    (enumeration ciao)
+				    (enumeration ohayo ciao)))
+	=> (enumeration hello salut ohayo ciao))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'type-annotation=?))
 
   (check-for-true	(type-annotation=? <top> <top>))
@@ -1261,6 +1285,86 @@
   (doit <zero>			=> (<top>))
 
   (void))
+
+
+(parametrise ((check-test-name	'type-of))
+
+  (define-syntax doit
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check
+	   ?expr
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+  (define-syntax doit-error
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (check-for-true
+	(try
+	    (eval (quote ?expr) (environment '(vicare)))
+	  (catch E
+	    ((?expected)	#t)
+	    (else		E)))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (type-annotation-syntax (type-of 123))
+	=> <positive-fixnum>)
+
+  (doit (type-annotation-syntax (type-of (void)))
+	=> <void>)
+
+  (doit (let ((fun (lambda () 123)))
+	  (type-annotation-syntax (type-of (fun))))
+	=> <positive-fixnum>)
+
+  (doit (type-annotation-syntax (or (type-of 1)
+				    (type-of "ciao")
+				    (type-of 'hey)))
+	=> (or <positive-fixnum> <string> (enumeration hey)))
+
+;;; --------------------------------------------------------------------
+;;; invalid expressions
+
+  ;;This raises an assertion: the expression is not allowed not to return.
+  ;;
+  (doit-error (type-annotation-syntax (type-of (error #f "error")))
+	      => &syntax)
+
+  ;;This raises an assertion:  the expression is not allowed not  return zero, two or
+  ;;more values.
+  ;;
+  (doit-error (type-annotation-syntax (type-of (values)))	=> &syntax)
+  (doit-error (type-annotation-syntax (type-of (values 1 2)))	=> &syntax)
+  (doit-error (type-annotation-syntax (type-of (values 1 2 3)))	=> &syntax)
+
+  ;;This raises  an assertion: the  expression is  not allowed to  return unspecified
+  ;;values.
+  ;;
+  (doit-error (letrec ((fun (lambda ({_ . <list>}) (fun))))
+		(type-annotation-syntax (type-of (fun))))
+	      => &error)
+
+  ;;The expression is expanded in the current lexical environment for phase zero, but
+  ;;with empty lexical environment for the other phases:
+  ;;
+  (doit-error (let-syntax
+		  ((outer (lambda (stx) 123)))
+		(type-annotation-syntax
+		 (type-of (let-syntax
+			      ((inner (lambda (stx) (outer))))
+			    (inner)))))
+	      => &syntax)
+
+  (doit-error (let-syntax
+		  ((outer (lambda (stx) 123)))
+		(type-annotation-syntax (outer)))
+	      => &syntax)
+
+  #| end of PARAMETRISE |# )
 
 
 (parametrise ((check-test-name	'assert-signature))

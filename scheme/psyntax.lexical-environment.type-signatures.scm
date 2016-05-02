@@ -75,7 +75,7 @@
   ;;  (case-signature-specs expr.sig
   ;;    ((unspecified-values)
   ;;     ;;The expression returns an unspecified number of values.
-  ;;     ?body0 ?body ...))
+  ;;     ?body0 ?body ...)
   ;;
   ;;    (<no-return>
   ;;     ;;The expression is marked as not-returning.
@@ -118,7 +118,7 @@
   ;;
   ;;    ((unspecified-values)
   ;;     ;;The expression returns an unspecified number of values.
-  ;;     ?body0 ?body ...))
+  ;;     ?body0 ?body ...)
   ;;
   ;;    (else
   ;;     ;;The expression returns zero, two or more values.

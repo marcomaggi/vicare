@@ -463,6 +463,7 @@ syntaxes like the following:
 (case-lambda
   ((<fixnum>) => (<string>))
   ((<flonum>) => (<string>)))
+(type-of @meta{expr})
 @end lisp
 
 @noindent
@@ -504,6 +505,7 @@ type annotations.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} list @metao{item-type} @meta{item-type} @dots{}
 @deftpx {Parent Type} @aclass{list}
@@ -517,6 +519,7 @@ annotation.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} vector @metao{item-type} @meta{item-type} @dots{}
 @deftpx {Parent Type} @aclass{vector}
@@ -530,6 +533,7 @@ annotation.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} pair-of @meta{item-type}
 @deftpx {Parent Type} @aclass{pair}
@@ -542,6 +546,7 @@ The syntax @meta{item-type} is a nested type annotation.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} list-of @meta{item-type}
 @deftpx {Parent Type} @aclass{list}
@@ -555,6 +560,7 @@ annotation.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} nelist-of @meta{item-type}
 @deftpx {Parent Type} @aclass{list}
@@ -567,6 +573,7 @@ annotation.  This type annotation is expanded to:
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} vector-of @meta{item-type}
 @deftpx {Parent Type} @aclass{vector}
@@ -580,6 +587,7 @@ annotation.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} hashtable @meta{key-type} @meta{value-type}
 @deftpx {Parent Type} @aclass{hashtable}
@@ -588,6 +596,7 @@ type @meta{value-type}.  Both @meta{key-type} and @meta{value-type} are
 nested type annotations.
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} enumeration @metao{symbol} @meta{symbol} @dots{}
 @deftpx {Parent Type} @aclass{symbol}
@@ -629,6 +638,7 @@ define-enumeration}.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} alist @meta{key-type} @meta{value-type}
 @deftpx {Parent Type} @aclass{list}
@@ -637,6 +647,7 @@ values of type @meta{value-type}.  Both @meta{key-type} and
 @meta{value-type} are nested type annotations.
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} condition @metao{cond-type} @meta{cond-type} @dots{}
 @deftpx {Parent Type} @aclass{compound-condition}
@@ -658,6 +669,7 @@ is a nested type annotation that must be one among: @class{condition},
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} lambda @meta{args-signature} => @meta{rv-signature}
 @deftpx {Parent Type} @aclass{procedure}
@@ -671,6 +683,7 @@ the type signature of the procedure's arguments.  The argument
 signature of the procedure's return values.
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} case-lambda @metao{clause} @meta{clause} @dots{}
 @deftpx {Parent Type} @aclass{procedure}
@@ -691,6 +704,7 @@ syntax object representing the type signature of the clause's return
 values.
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} or @metao{type} @meta{type} @dots{}
 @deftpx {Parent Type} @aclass{top}
@@ -705,6 +719,7 @@ matches at least one of the union's types.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} and @metao{type} @meta{type} @dots{}
 @deftpx {Parent Type} @aclass{top}
@@ -718,6 +733,7 @@ intersection of types if its type matches all the intersection's types.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} not @meta{type}
 @deftpx {Parent Type} @aclass{top}
@@ -737,6 +753,7 @@ a sub--type of @meta{type}.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} parent-of @meta{type}
 @deftpx {Parent Type} @aclass{top}
@@ -755,6 +772,7 @@ no parent.  The argument @meta{type} is a nested type annotation.
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} ancestor-of @meta{type}
 @deftpx {Parent Type} @aclass{top}
@@ -797,6 +815,7 @@ exactly a type annotation with one of the ancestors of @meta{type}:
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} type-predicate @meta{type}
 A short--cut to specify:
@@ -808,6 +827,7 @@ A short--cut to specify:
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} equality-predicate @meta{type}
 A short--cut to specify:
@@ -817,6 +837,7 @@ A short--cut to specify:
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} comparison-procedure @meta{type}
 A short--cut to specify:
@@ -826,12 +847,82 @@ A short--cut to specify:
 @end lisp
 @end deftp
 
+@c ------------------------------------------------------------
 
 @deftp {Type Annotation} hash-function @meta{type}
 A short--cut to specify:
 
 @lisp
 (lambda (@meta{type}) => (<non-negative-fixnum>))
+@end lisp
+@end deftp
+
+@c ------------------------------------------------------------
+
+@deftp {Type Annotation} type-of @meta{expr}
+Describe the type of @meta{expr}, which must be a Scheme expression.
+The type signature of @meta{expr} must hold a single value.  The
+expression is expanded and not evaluated; the side effects of the
+expansion are performed, so this type annotation must be used with care.
+
+@lisp
+(type-annotation-syntax (type-of 123))
+@result{} <positive-fixnum>
+
+(type-annotation-syntax (type-of (void)))
+@result{} <void>
+
+(let ((fun (lambda () 123)))
+  (type-annotation-syntax (type-of (fun))))
+@result{} <positive-fixnum>
+
+(type-annotation-syntax (or (type-of 1)
+                            (type-of "ciao")
+                            (type-of 'hey)))
+@result{} (or <positive-fixnum> <string> (enumeration hey))
+@end lisp
+
+The expression is not allowed not to return:
+
+@lisp
+(type-annotation-syntax (type-of (error #f "error")))
+@error{} &assertion
+@end lisp
+
+The expression is not allowed not return zero, two or more values:
+
+@lisp
+(type-annotation-syntax (type-of (values)))
+@error{} &assertion
+
+(type-annotation-syntax (type-of (values 1 2)))
+@error{} &assertion
+
+(type-annotation-syntax (type-of (values 1 2 3)))
+@error{} &assertion
+@end lisp
+
+The expression is not allowed to return unspecified values:
+
+@lisp
+(letrec ((fun (lambda (@{_ . <list>@}) (fun))))
+  (type-annotation-syntax (type-of (fun))))
+@error{} &assertion
+@end lisp
+
+The expression is expanded in the current lexical environment for phase
+zero, but with empty lexical environment for the other phases:
+
+@lisp
+(let-syntax ((outer (lambda (stx) 123)))
+  (type-annotation-syntax (outer)))
+@error{} identifier OUTER out of context
+
+(let-syntax  ((outer (lambda (stx) 123)))
+  (type-annotation-syntax
+     (type-of (let-syntax ((inner (lambda (stx) (outer))))
+                (inner)))))
+@error{} identifier OUTER out of context
 @end lisp
 @end deftp
 
@@ -1377,6 +1468,25 @@ The following syntactic bindings are exported by the library
 @library{vicare}.
 
 
+@deffn Syntax type-annotation-syntax @meta{type}
+Expand to a syntax object representing the type annotation of
+@meta{type}.  If @meta{type} is a compound annotation (@syntax{or},
+@syntax{and}, @syntax{condition}, @dots{}) some simplification may have
+been applied to the input to produce the output.
+
+@lisp
+(type-annotation-syntax (or <fixnum> <bignum>))
+@result{} (or <fixnum> <bignum>)
+
+(type-annotation-syntax (or (enumeration hello salut)
+                            (enumeration ciao)
+                            (enumeration ohayo ciao)))
+@result{} (enumeration hello salut ciao ohayo)
+@end lisp
+@end deffn
+
+@c ------------------------------------------------------------------------
+
 @deffn Syntax type-annotation=? @metai{type} @metaii{type}
 Expand to a boolean constant: @true{} if @metai{type} is equal to
 @metaii{type}; otherwise @false{}.
@@ -1457,25 +1567,6 @@ annotation; the operand must be further validated at run--time.
 @item no-match
 If there is no match between the argument's and operand's annotation.
 @end table
-@end deffn
-
-@c ------------------------------------------------------------------------
-
-@deffn Syntax type-annotation-syntax @meta{type}
-Expand to a syntax object representing the type annotation of
-@meta{type}.  If @meta{type} is a compound annotation (@syntax{or},
-@syntax{and}, @syntax{condition}, @dots{}) some simplification may have
-been applied to the input to produce the output.
-
-@lisp
-(type-annotation-syntax (or <fixnum> <bignum>))
-@result{} (or <fixnum> <bignum>)
-
-(type-annotation-syntax (or (enumeration hello salut)
-                            (enumeration ciao)
-                            (enumeration ohayo ciao)))
-@result{} (enumeration hello salut ciao ohayo)
-@end lisp
 @end deffn
 
 @c ------------------------------------------------------------------------
