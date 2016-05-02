@@ -574,10 +574,28 @@
       ((?datum* => ?closure)
        (let ((closure.sym	(make-syntactic-identifier-for-temporary-variable))
 	     (obj.sym		(make-syntactic-identifier-for-temporary-variable)))
+	 (define closure.stx
+	   ;;Perform type propagation for some common idioms.
+	   (let ((%make-annotation (lambda ()
+				     `(or . ,(map (lambda (datum)
+						    `(type-of ,datum))
+					       ?datum*)))))
+	     (syntax-match ?closure (lambda lambda/checked)
+	       ((lambda (?arg) . ?body*)
+		(and (options::typed-language?)
+		     (identifier? ?arg))
+		(bless
+		 `(lambda ((brace ,?arg ,(%make-annotation))) . ,?body*)))
+	       ((lambda/checked (?arg) . ?body*)
+		(identifier? ?arg)
+		(bless
+		 `(lambda/checked ((brace ,?arg ,(%make-annotation))) . ,?body*)))
+	       (_
+		?closure))))
 	 ;;We want ?CLOSURE to  be evaluated only if the test  of this clause returns
 	 ;;true.  That is why we wrap ?CLOSURE in a further LAMBDA.
 	 (values `(lambda/checked (,obj.sym)
-		    ((assert-signature-and-return (<procedure>) ,?closure) ,obj.sym))
+		    ((assert-signature-and-return (<procedure>) ,closure.stx) ,obj.sym))
 		 closure.sym
 		 (let next-datum ((datums  ?datum*)
 				  (entries '()))

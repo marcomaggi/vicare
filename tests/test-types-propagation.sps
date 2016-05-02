@@ -638,14 +638,14 @@
 	  ((2)	"ciao"))
 	=> ((or <string> <positive-fixnum> <true>)))
 
-  ;;Unfortunate case.
+  ;;Special case of type propagation from the datum to the lambda.
   ;;
   (doit (case (read)
-	  ((1)	=> (lambda (x) (list 1 x)))
+	  ((1)	=> (lambda (x) (list 'hey x)))
 	  ((2)	"ciao")
 	  (else	#f))
 	=> ((or <string>
-		(list <positive-fixnum> <top>)
+		(list (enumeration hey) <positive-fixnum>)
 		<false>)))
 
   (doit (case (read)
