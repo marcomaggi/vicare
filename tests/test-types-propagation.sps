@@ -521,30 +521,78 @@
 
 (parametrise ((check-test-name	'receive))
 
-  #;(doit (receive ({a <fixnum>})
+  (doit (receive (a)
+	    1
+	  123)
+	=> (<positive-fixnum>))
+
+  (doit (receive (a b)
+	    (values 1 2)
+	  (values 123 "ciao"))
+	=> (<positive-fixnum> <string>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (receive ({a <fixnum>})
 	    1
 	  a)
 	=> (<fixnum>))
 
-  #;(doit (receive (a)
+  (doit (receive ({a <positive-fixnum>} {b <string>})
+	    (values 123 "ciao")
+	  (values a b))
+	=> (<positive-fixnum> <string>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (receive (a)
 	    1
 	  a)
 	=> (<top>))
+
+  (doit (receive (a b)
+	    (values 123 "ciao")
+	  (values a b))
+	=> (<top> <top>))
 
   (void))
 
 
 (parametrise ((check-test-name	'receive-and-return))
 
-  #;(doit (receive-and-return ({a <fixnum>})
+  (doit (receive-and-return (a)
+	    1
+	  (list a))
+	=> (<top>))
+
+  (doit (receive-and-return (a b)
+	    (values 1 2)
+	  (list a b))
+	=> (<top> <top>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (receive-and-return ({a <fixnum>})
 	    1
 	  (void))
 	=> (<fixnum>))
 
-  #;(doit (receive-and-return (a)
+  (doit (receive-and-return ({a <positive-fixnum>} {b <string>})
+	    (values 123 "ciao")
+	  (list a b))
+	=> (<positive-fixnum> <string>))
+
+;;; --------------------------------------------------------------------
+
+  (doit (receive-and-return (a)
 	    1
-	  a)
+	  (void))
 	=> (<top>))
+
+  (doit (receive-and-return (a b)
+	    (values 123 "ciao")
+	  (list a b))
+	=> (<top> <top>))
 
   (void))
 
@@ -582,6 +630,35 @@
 	  ((ciao)	'ciao)
 	  (else		#f))
 	=> ((or <positive-fixnum> <false> (enumeration ciao))))
+
+  ;;Without ELSE clause: if no datum matches, CASE returns #t.
+  ;;
+  (doit (case (read)
+	  ((1)	1)
+	  ((2)	"ciao"))
+	=> ((or <string> <positive-fixnum> <true>)))
+
+  ;;Unfortunate case.
+  ;;
+  (doit (case (read)
+	  ((1)	=> (lambda (x) (list 1 x)))
+	  ((2)	"ciao")
+	  (else	#f))
+	=> ((or <string>
+		(list <positive-fixnum> <top>)
+		<false>)))
+
+  (doit (case (read)
+	  ((1)	=> (lambda ({x <positive-fixnum>}) x))
+	  ((2)	"ciao")
+	  (else	#f))
+	=> ((or <string> <positive-fixnum> <false>)))
+
+  (doit (case (read)
+	  ((1)	=> (lambda (x) 999))
+	  ((2)	"ciao")
+	  (else	#f))
+	=> ((or <string> <positive-fixnum> <false>)))
 
   (void))
 

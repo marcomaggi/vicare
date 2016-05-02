@@ -949,9 +949,9 @@
 	 (unless (syntax-object.type-signature? ?assert-signature)
 	   (__synner__ "invalid return values signature" ?assert-signature))
 	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
-			      ?assert-signature ?expr #f)))
+			      ?assert-signature ?expr #f #f)))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
   (define-core-transformer (assert-signature-and-return input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
@@ -960,9 +960,9 @@
 	 (unless (syntax-object.type-signature? ?assert-signature)
 	   (__synner__ "invalid return values signature" ?assert-signature))
 	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
-			      ?assert-signature ?expr #t)))
+			      ?assert-signature ?expr #t #f)))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
   (define-core-transformer (cast-signature input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
@@ -971,14 +971,14 @@
 	 (unless (syntax-object.type-signature? ?assert-signature)
 	   (__synner__ "invalid return values signature" ?assert-signature))
 	 (%process-expression __who__ input-form.stx lexenv.run lexenv.expand
-			      ?assert-signature ?expr #t)))
+			      ?assert-signature ?expr #t #t)))
       (_
-       (__synner__ "invalid syntax, no clause matches the input form"))))
+       (__synner__ "invalid syntax in macro use"))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%process-expression caller-who input-form.stx lexenv.run lexenv.expand
-			       asrt.stx expr.stx return-values?)
+			       asrt.stx expr.stx return-values? cast-signature?)
     (let* ((asrt.stx	(syntax-unwrap asrt.stx))
 	   (asrt.sig	(make-type-signature asrt.stx))
 	   (expr.psi	(chi-expr expr.stx lexenv.run lexenv.expand))
@@ -996,42 +996,41 @@
 	     ;;The uncommon  case of empty  signatures.  The expression  returns zero
 	     ;;values and  the assertion expects  zero values.  We just  evaluate the
 	     ;;expression.
-	     (%just-evaluate-the-expression expr.psi return-values?))
+	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
 	    ((type-signature.fully-untyped? asrt.sig)
 	     ;;The assertion's signature always matches expression's signature.
-	     (%just-evaluate-the-expression expr.psi return-values?))
+	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
 	    ((type-signature.fully-untyped? expr.sig)
 	     ;;When  the  assertion's  signature   has  types  and  the  expression's
 	     ;;signature is unspecified: always do a run-time validation.
-	     (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
-				   asrt.stx asrt.sig expr.psi return-values?))
+	     (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				   caller-who asrt.stx asrt.sig expr.psi
+				   return-values? cast-signature?))
 
 	    ((type-signature.no-return? expr.sig)
-	     (%just-evaluate-the-expression expr.psi return-values?))
+	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
 	    ((type-signature.super-and-sub? asrt.sig expr.sig)
 	     ;;Good.   Everything  is  all  right at  expand-time.   We  replace  the
 	     ;;expression's  type signature  with the  asserted type  signature: yes,
 	     ;;this  is  really useful,  especially  with  RHS type  propagation  and
 	     ;;mutable variables.
-	     (%just-evaluate-the-expression (make-psi (psi.input-form expr.psi)
-					      (psi.core-expr expr.psi)
-					      asrt.sig)
-					    return-values?))
+	     (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?))
 
 	    ((type-signature.compatible-super-and-sub? asrt.sig expr.sig)
 	     ;;Compatible signatures, let's check the values at run-time.
-	     (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
-				   asrt.stx asrt.sig expr.psi return-values?))
+	     (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				   caller-who asrt.stx asrt.sig expr.psi
+				   return-values? cast-signature?))
 
 	    (else
 	     (%error-mismatching-signatures)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%just-evaluate-the-expression expr.psi return-values?)
+  (define (%just-evaluate-the-expression asrt.sig expr.psi return-values? cast-signature?)
     ;;This  function  is  used  when  it   is  determined  at  expand-time  that  the
     ;;expression's signature matches the asserted signature.
     ;;
@@ -1039,21 +1038,27 @@
     ;;returning a single  value is faster and, sometimes, returning  void might allow
     ;;detection of unwanted use of return values.
     ;;
-    (if return-values?
-	expr.psi
-      (make-psi (psi.input-form expr.psi)
-	(build-sequence no-source
-	  (list (psi.core-expr expr.psi)
-		(build-void)))
-	(make-type-signature/single-void))))
+    (let ((output.psi (if cast-signature?
+			  (make-psi (psi.input-form expr.psi)
+			    (psi.core-expr expr.psi)
+			    asrt.sig)
+			expr.psi)))
+      (if return-values?
+	  output.psi
+	(make-psi (psi.input-form output.psi)
+	  (build-sequence no-source
+	    (list (psi.core-expr output.psi)
+		  (build-void)))
+	  (make-type-signature/single-void)))))
 
 ;;; --------------------------------------------------------------------
 
   (module (%run-time-validation)
     ;;Read the documentation for some examples of run-time validation.
     ;;
-    (define* (%run-time-validation caller-who input-form.stx lexenv.run lexenv.expand
-				   asrt.stx {asrt.sig type-signature?} {expr.psi psi?} return-values?)
+    (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				   caller-who asrt.stx {asrt.sig type-signature?} {expr.psi psi?}
+				   return-values? cast-signature?)
       (define asrt.specs
 	(type-signature.object-type-specs asrt.sig))
       (define-values (consumer-formals.sexp has-rest?)
@@ -1118,7 +1123,7 @@
 					     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
 		(consumer.core		(psi.core-expr consumer.psi))
 		(output-signature	(if return-values?
-					    asrt.sig
+					    (if cast-signature? asrt.sig (psi.retvals-signature expr.psi))
 					  (make-type-signature/single-void))))
 	   (make-psi input-form.stx
 	     (build-application no-source
@@ -1153,7 +1158,7 @@
 					     (chi-expr consumer.stx lexenv.run lexenv.expand)))))
 		(consumer.core		(psi.core-expr consumer.psi))
 		(output-signature	(if return-values?
-					    asrt.sig
+					    (if cast-signature? asrt.sig (psi.retvals-signature expr.psi))
 					  (make-type-signature/single-void))))
 	   (make-psi input-form.stx
 	     (build-application no-source

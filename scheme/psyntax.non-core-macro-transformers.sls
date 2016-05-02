@@ -323,7 +323,7 @@
 	 (bless
 	  `(define-syntax ,?type-name (quote ,ots))))))
     (_
-     (__synner__ "invalid syntax"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
@@ -437,12 +437,28 @@
   (define-macro-transformer (case input-form.stx)
     (syntax-match input-form.stx (else)
       ;;Without ELSE clause.
+      ;;
+      ;;NOTE When  no ELSE clause  is present: an  ELSE clause is  inserted returning
+      ;;true, not void; previously  it was void.  I have changed  it to true because:
+      ;;
+      ;;* It  is still  R6RS-compliant: according to  R6RS, CASE  returns unspecified
+      ;;values when no ELSE is present and no datum matches.
+      ;;
+      ;;* Void is also non-false, so the truth value is unchanged.
+      ;;
+      ;;* At  present (Sun May  1, 2016):  the union between  the types of  the other
+      ;;branches and  void would be  collapsed to void,  while the union  between the
+      ;;types of the other branches and false is whatever union comes out.
+      ;;
+      ;;Collapsing to  void is the  problem which can change  the truth value  of the
+      ;;form, and it is fixed by returning true.  (Marco Maggi; Sun May 1, 2016)
+      ;;
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
        (%build-output-form input-form.stx ?expr
 			   (map cons
 			     (map cons ?datum0* ?datum**)
 			     (map cons ?body0*  ?body**))
-			   '((void))))
+			   '(#t)))
 
       ;;With else clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else ?else-body0 ?else-body* ...))
@@ -453,7 +469,7 @@
 			   (cons ?else-body0 ?else-body*)))
 
       (_
-       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
   (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
     (let ((expr.sym (make-syntactic-identifier-for-temporary-variable "expr.sym"))
@@ -551,7 +567,7 @@
 		 (cons closure.sym closure*.sym)
 		 (cons entry*      entry**))))
       (_
-       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
   (define (%process-single-clause input-form.stx clause.stx)
     (syntax-match clause.stx (=>)
@@ -674,7 +690,7 @@
 			   (cons ?else-body0 ?else-body*)))
 
       (_
-       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
   (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
     (let ((expr.sym (make-syntactic-identifier-for-temporary-variable "expr.sym"))
@@ -700,7 +716,7 @@
 	 (values (cons branch-binding branch-binding*)
 		 (cons cond-clause    cond-clause*))))
       (_
-       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax in macro use" input-form.stx))))
 
   (define (%process-single-clause input-form.stx expr.sym clause.stx)
     (syntax-match clause.stx (=>)
@@ -2439,7 +2455,7 @@
      (bless
       `(make-traced-procedure (quote ,?who) (lambda/std ,?formals ,?body . ,?body*))))
     (_
-     (__synner__ "invalid syntax"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (trace-define input-form.stx)
   ;;Transformer  function  used  to  expand Vicare's  TRACE-DEFINE  macros  from  the
@@ -2462,7 +2478,7 @@
 	     v)))))
 
     (_
-     (__synner__ "invalid syntax"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 (define-macro-transformer (trace-define-syntax input-form.stx)
   ;;Transformer function used to expand  Vicare's TRACE-DEFINE-SYNTAX macros from the
@@ -2476,7 +2492,7 @@
       `(define-syntax ,?who
 	 (make-traced-macro ',?who ,?expr))))
     (_
-     (__synner__ "invalid syntax"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
@@ -2509,7 +2525,7 @@
 	  `(,caller-who ,(map list ?lhs* rhs*)
 			,?body . ,?body*))))
       (_
-       (synner "invalid syntax"))))
+       (synner "invalid syntax in macro use"))))
 
   #| end of module |# )
 
@@ -4622,7 +4638,7 @@
 		       (let/checked ((tmp (or ,bool/var x)))
 			 ,(recur 'tmp (cdr expr*))))))))))
     (_
-     (__synner__ "invalid syntax"))))
+     (__synner__ "invalid syntax in macro use"))))
 
 
 ;;;; non-core macro: DEFINE-INLINE, DEFINE-CONSTANT
