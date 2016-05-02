@@ -35,6 +35,7 @@
   (options typed-language)
   (export
     ;;
+    <comparator>
     comparator? comparator-comparison-procedure?
     comparator-hash-function?
     ;;
@@ -131,10 +132,10 @@
      (begin
        (define-syntax ?who
 	 (identifier-syntax (builder)))
-       (define {builder (lambda () => (comparator))}
-	 (let (({C (or <false> comparator)} #f))
+       (define {builder (lambda () => (<comparator>))}
+	 (let (({C (or <false> <comparator>)} #f))
 	   (lambda ()
-	     (or C (receive-and-return ({rv comparator})
+	     (or C (receive-and-return ({rv <comparator>})
 		       ?build-form
 		     (set! C rv))))))
        #| end of BEGIN |# ))
@@ -322,8 +323,9 @@
 
 ;;;; definition of comparator records with accessors and basic comparator
 
-(define-record-type comparator
+(define-record-type (<comparator> make-comparator comparator?)
   (nongenerative vicare:containers:comparator)
+  (strip-angular-parentheses)
   (fields (immutable type-test		comparator-type-test-procedure)
 	  (immutable equality		comparator-equality-predicate)
 	  (immutable comparison		comparator-comparison-procedure)
@@ -491,11 +493,11 @@
   ;;Next index for added comparator.
   ;;
   (define-constant FIRST-COMPARATOR-INDEX	12)
-  (define next-comparator-index	9)
-  (define *registered-comparators*
+  (define {next-comparator-index <fixnum>} 9)
+  (define {*registered-comparators* (list-of <comparator>)}
     (list unknown-object-comparator))
 
-  (define* (comparator-register-default! {comparator comparator?})
+  (define (comparator-register-default! {comparator <comparator>})
     ;;Register a new comparator for use by the default comparator.
     ;;
     ;;This is intended for other  sample implementations to register their comparator
@@ -1524,8 +1526,8 @@
 (module (make-debug-comparator)
 
   (define* (make-debug-comparator {K comparator?})
-    (define obj3            #f)
-    (define obj3-available? #f)
+    (define {obj3 <top>} #f)
+    (define {obj3-available? <boolean>} #f)
     (unless (comparator-comparison-procedure? K)
       (raise
        (condition (make-who-condition __who__)

@@ -185,7 +185,8 @@
 	(when (or (eq? type 'checked)
 		  (eq? type 'typed))
 	  (let ((clause-signature (car (qdef-closure.clause-signature* qdef))))
-	    ;;If no type signature was specified for the clause: we use the signaure of
+	    ;;If no type signature was specified for the clause: we use the signature
+	    ;;of the last form in the body, performing type propagation.
 	    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 	      (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))))
 	(make-psi input-form.stx
@@ -281,7 +282,9 @@
 		    (eq? type 'typed))
 	    (let ((clause-signature* (qdef-closure.clause-signature* qdef)))
 	      (for-each (lambda (clause-signature body.psi)
-			  ;;If no type signature was specified for the clause: we use the signaure of
+			  ;;If no type signature was specified for the clause: we use
+			  ;;the signature  of the last  form in the  body, performing
+			  ;;type propagation.
 			  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 			    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))
 		clause-signature* body*.psi)))
@@ -445,7 +448,7 @@
 	    ((checked)
 	     (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
 					standard-formals.stx clause-signature body*.stx)))
-	;;If no type signature  was specified for the clause: we  use the signaure of
+	;;If no type signature was specified for  the clause: we use the signature of
 	;;the last form in the body, performing type propagation.
 	(when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 	  (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
@@ -498,8 +501,8 @@
 	      ((checked)
 	       (chi-lambda-clause/checked input-form.stx lexenv.run lexenv.expand
 					  standard-formals.stx clause-signature body*.stx)))
-	  ;;If no type signature was specified for the clause: we use the signaure of
-	  ;;the last form in the body, performing type propagation.
+	  ;;If no type  signature was specified for the clause:  we use the signature
+	  ;;of the last form in the body, performing type propagation.
 	  (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 	    (clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi)))
 	  (make-psi input-form.stx
@@ -592,7 +595,7 @@
 	    ((checked)
 	     (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
 					      standard-formals*.stx clause-signature* body**.stx)))
-	;;If no type signature  was specified for the clause: we  use the signaure of
+	;;If no type signature was specified for  the clause: we use the signature of
 	;;the last form in the body, performing type propagation.
 	(for-each (lambda (clause-signature body.psi)
 		    (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
@@ -652,8 +655,8 @@
 	      ((checked)
 	       (chi-case-lambda-clause*/checked input-form.stx lexenv.run lexenv.expand
 						standard-formals*.stx clause-signature* body**.stx)))
-	  ;;If no type signature was specified for the clause: we use the signaure of
-	  ;;the last form in the body, performing type propagation.
+	  ;;If no type  signature was specified for the clause:  we use the signature
+	  ;;of the last form in the body, performing type propagation.
 	  (for-each (lambda (clause-signature body.psi)
 		      (when (type-signature.fully-untyped? (clambda-clause-signature.retvals clause-signature))
 			(clambda-clause-signature.retvals-set! clause-signature (psi.retvals-signature body.psi))))

@@ -82,7 +82,6 @@
 ;;;; type definitions: qualified RHS base type
 
 (define-record-type (<qdef> dummy-make-qdef qdef?)
-  (nongenerative vicare:expander:<qdef>)
   (fields
     (immutable input-form	qdef.input-form)
 		;A syntax object representing the original input form.
@@ -104,7 +103,6 @@
 ;;;; type definitions: qualified RHS general closure definition
 
 (define-record-type (<qdef-closure> dummy-make-qdef-closure qdef-closure?)
-  (nongenerative vicare:expander:<qdef-closure>)
   (parent <qdef>)
   (fields
     (immutable ots		qdef-closure.ots)
@@ -125,7 +123,6 @@
 ;;;; type definitions: qualified RHS single-clause function definition
 
 (define-record-type (<qdef-defun> make-qdef-defun qdef-defun?)
-  (nongenerative vicare:expander:<qdef-defun>)
   (parent <qdef-closure>)
   (fields
     (immutable formals			qdef-defun.standard-formals)
@@ -150,7 +147,6 @@
   ;;
   ;;   (define/std (fun arg) body)
   ;;
-  (nongenerative vicare:expander:<qdef-standard-defun>)
   (parent <qdef-defun>)
   (protocol
     (lambda (make-qdef-defun)
@@ -168,7 +164,6 @@
   ;;   (define/typed ((brace fun <fixnum>) (brace arg <string>))
   ;;     body)
   ;;
-  (nongenerative vicare:expander:<qdef-typed-defun>)
   (parent <qdef-defun>)
   (protocol
     (lambda (make-qdef-defun)
@@ -184,7 +179,6 @@
   ;;   (define/checked ((brace fun <fixnum>) (brace arg <string>))
   ;;     body)
   ;;
-  (nongenerative vicare:expander:<qdef-checked-defun>)
   (parent <qdef-defun>)
   (protocol
     (lambda (make-qdef-defun)
@@ -197,7 +191,6 @@
 ;;;; type definitions: qualified RHS multiple-clause function definition
 
 (define-record-type (<qdef-case-defun> make-qdef-case-defun qdef-case-defun?)
-  (nongenerative vicare:expander:<qdef-case-defun>)
   (parent <qdef-closure>)
   (fields
     (immutable formals*		qdef-case-defun.standard-formals*)
@@ -227,7 +220,6 @@
   ;;
   ;;   (define ?lhs (case-lambda/std ?clause0 ?clause ...))
   ;;
-  (nongenerative vicare:expander:qdef-standard-case-defun)
   (parent <qdef-case-defun>)
   (protocol
     (lambda (make-qdef-case-defun)
@@ -248,7 +240,6 @@
   ;;
   ;;   (define ?lhs (case-lambda/typed ?clause0 ?clause ...))
   ;;
-  (nongenerative vicare:expander:qdef-typed-case-defun)
   (parent <qdef-case-defun>)
   (protocol
     (lambda (make-qdef-case-defun)
@@ -267,7 +258,6 @@
   ;;
   ;;   (define ?lhs (case-lambda/checked ?clause0 ?clause ...))
   ;;
-  (nongenerative vicare:expander:qdef-checked-case-defun)
   (parent <qdef-case-defun>)
   (protocol
     (lambda (make-qdef-case-defun)
@@ -280,7 +270,6 @@
 ;;;; type definitions: qualified RHS variable definition
 
 (define-record-type (<qdef-defvar> make-qdef-defvar qdef-defvar?)
-  (nongenerative vicare:expander:<qdef-defvar>)
   (parent <qdef>)
   (fields
     (immutable rhs		qdef-defvar.rhs)
@@ -302,12 +291,18 @@
   ;;
   ;;   (define/std var val)
   ;;
-  (nongenerative vicare:expander:<qdef-standard-defvar>)
   (parent <qdef-defvar>)
+  (fields
+    (immutable typed-syntax?	qdef-defvar.typed-syntax?)
+		;Boolean.  True when the syntax that generated this QDEF is typed.
+    #| end of FIELDS |# )
   (protocol
     (lambda (make-qdef-defvar)
-      (define* (make-qdef-standard-defvar input-form.stx {lhs.var-id identifier?} rhs.stx)
-	((make-qdef-defvar input-form.stx lhs.var-id rhs.stx)))
+      (case-define* make-qdef-standard-defvar
+	((input-form.stx {lhs.var-id identifier?} rhs.stx)
+	 ((make-qdef-defvar input-form.stx lhs.var-id rhs.stx) #f))
+	((input-form.stx {lhs.var-id identifier?} rhs.stx typed-syntax?)
+	 ((make-qdef-defvar input-form.stx lhs.var-id rhs.stx) (if typed-syntax? #t #f))))
       make-qdef-standard-defvar)))
 
 ;;; --------------------------------------------------------------------
@@ -318,7 +313,6 @@
   ;;
   ;;   (define/typed (brace var <fixnum>) val)
   ;;
-  (nongenerative vicare:expander:<qdef-typed-defvar>)
   (parent <qdef-defvar>)
   (protocol
     (lambda (make-qdef-defvar)
@@ -332,7 +326,6 @@
   ;;
   ;;   (define/checked (brace var <fixnum>) val)
   ;;
-  (nongenerative vicare:expander:<qdef-checked-defvar>)
   (parent <qdef-defvar>)
   (protocol
     (lambda (make-qdef-defvar)
@@ -356,7 +349,6 @@
   ;;dummy left-hand side syntactic identifier (it  exists but it cannot be referenced
   ;;by the code).
   ;;
-  (nongenerative vicare:expander:<qdef-top-expr>)
   (parent <qdef>)
   (protocol
     (lambda (make-qdef)
@@ -428,8 +420,24 @@
     ;;on the type of the expression.
     (case-signature-specs rhs.sig
       ((single-value)
-       ;;A single return value.  Good.
-       rhs.psi)
+       => (lambda (rhs.ots)
+	    ;;A single return value.  Good.
+	    (when (qdef-defvar.typed-syntax? qdef)
+	      ;;This is a  QDEF representing a standard untyped variable,  but it was
+	      ;;generated  by  a  syntax  supporting   types:  we  perform  RHS  type
+	      ;;propagation.
+	      ;;
+	      ;;Here  we  mutate the  syntactic  binding's  descriptor of  LHS.ID  to
+	      ;;represent a typed lexical variable having type RHS.OTS.  This is very
+	      ;;dirty...  but I thrive in dirt.  Fuck Yeah!  (Marco Maggi; Mon May 2,
+	      ;;2016)
+	      (let* ((lhs.id	(qdef.var-id qdef))
+		     (lhs.lab	(id->label lhs.id))
+		     (lhs.descr	(label->syntactic-binding-descriptor lhs.lab lexenv.run)))
+		(let ((descr (make-syntactic-binding-descriptor/lexical-typed-var/from-data rhs.ots (qdef.lex qdef))))
+		  (syntactic-binding-descriptor.type-set!  lhs.descr (syntactic-binding-descriptor.type  descr))
+		  (syntactic-binding-descriptor.value-set! lhs.descr (syntactic-binding-descriptor.value descr)))))
+	    rhs.psi))
       ((unspecified-values)
        ;;Fully  unspecified return  values: we  accept it  here and  delegate further
        ;;checks at run-time.

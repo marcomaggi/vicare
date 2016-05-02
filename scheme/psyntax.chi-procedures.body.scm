@@ -1307,15 +1307,24 @@
       ((message subform)
        (syntax-violation __module_who__ message input-form.stx subform)))
     (receive (lhs.id lhs.ots qdef lexenv.run)
-	;;From parsing the  syntactic form, we receive the  following values: LHS.ID,
-	;;the lexical variable's syntactic  binding's identifier; LHS.OTS an instance
-	;;of "<object-type-spec>"  representing the type  of this binding;  QDEF, the
-	;;qualified RHS object to be expanded later.
+	;;From parsing the  syntactic form, we receive the  following values:
+	;;
+	;;* LHS.ID: the lexical variable's syntactic binding's identifier.
+	;;
+	;;* LHS.OTS: when the type was specified, an instance of "<object-type-spec>"
+	;;representing the type of this binding; otherwise false.
+	;;
+	;;* QDEF: the qualified RHS object to be expanded later.
 	(%parse-macro-use input-form.stx rib lexenv.run shadow/redefine-bindings? %synner)
       (if (bound-id-member? lhs.id kwd*)
 	  (%synner "cannot redefine keyword")
-	(let* ((lhs.lab		(generate-label-gensym   lhs.id))
-	       (descr		(make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef)))
+	(let* ((lhs.lab		(generate-label-gensym lhs.id))
+	       ;;It  is important,  here, to  generate an  untyped lexical  variable;
+	       ;;later we will try to convert it into a typed lexical variable by RHS
+	       ;;type propagation.
+	       (descr		(if lhs.ots
+				    (make-syntactic-binding-descriptor/lexical-typed-var/from-data lhs.ots (qdef.lex qdef))
+				  (make-syntactic-binding-descriptor/lexical-var (qdef.lex qdef))))
 	       (lexenv.run	(push-entry-on-lexenv lhs.lab descr lexenv.run)))
 	  ;;This rib extension will raise an exception if it represents an attempt to
 	  ;;illegally redefine a binding.
@@ -1391,8 +1400,8 @@
 								  lhs.id rhs.stx synner)
       (unless (identifier? lhs.id)
 	(synner "expected identifier as variable name" lhs.id))
-      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx)))
-	(values lhs.id (<top>-ots) qdef lexenv.run)))
+      (let ((qdef (make-qdef-standard-defvar input-form.stx lhs.id rhs.stx #t)))
+	(values lhs.id #f qdef lexenv.run)))
 
     #| end of module: %PARSE-MACRO-USE |# )
 
@@ -1527,7 +1536,7 @@
       (synner "expected identifier as variable name" lhs.id))
     (when (bound-id-member? lhs.id kwd*)
       (synner "cannot redefine keyword"))
-    (let* ((qdef	(make-qdef-standard-defvar input-form.stx lhs.id rhs.stx))
+    (let* ((qdef	(make-qdef-standard-defvar input-form.stx lhs.id rhs.stx #t))
 	   (lhs.lab	(generate-label-gensym lhs.id))
 	   (lhs.descr	(make-syntactic-binding-descriptor/lexical-var (qdef.lex qdef)))
 	   (lexenv.run	(push-entry-on-lexenv lhs.lab lhs.descr lexenv.run)))

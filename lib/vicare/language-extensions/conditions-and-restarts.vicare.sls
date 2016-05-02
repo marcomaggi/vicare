@@ -144,7 +144,7 @@
 	   guarded-expr)))
       ))
 
-  (define no-error-expr #f)
+  (define {no-error-expr <top>} #f)
 
   (define (%no-error-spec? X)
     (and (identifier? X)

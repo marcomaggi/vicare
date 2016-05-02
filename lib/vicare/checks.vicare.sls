@@ -149,7 +149,7 @@
 (define-type <nelist-check-failed>
   (nelist-of (list <top> <top> <top>)))
 
-(define check:correct 0)
+(define {check:correct <fixnum>} 0)
 (define {check:failed <list-check-failed>} '())
 
 (define (check-reset!)
@@ -157,7 +157,7 @@
   (set! check:failed '()))
 
 (define (check:add-correct!)
-  (set! check:correct (+ check:correct 1)))
+  (set! check:correct (fxadd1 check:correct)))
 
 (define (check:add-failed! expression actual-result expected-result)
   (set! check:failed

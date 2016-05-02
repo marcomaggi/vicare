@@ -4755,14 +4755,16 @@
 (module (vicare-executable-as-bytevector
 	 vicare-executable-as-string)
 
-  (define EXECUTABLE-BYTEVECTOR #f)
-  (define EXECUTABLE-STRING	#f)
+  (define {EXECUTABLE-BYTEVECTOR (or <false> <bytevector>)} #f)
+  (define {EXECUTABLE-STRING (or <false> <string>)}	#f)
 
   (define (vicare-executable-as-string)
     (or EXECUTABLE-STRING
 	(begin
 	  (set! EXECUTABLE-STRING (let ((pathname (vicare-executable-as-bytevector)))
-				    (and pathname (ascii->string pathname))))
+				    (if pathname
+					(ascii->string pathname)
+				      #f)))
 	  EXECUTABLE-STRING)))
 
   (define (vicare-executable-as-bytevector)
