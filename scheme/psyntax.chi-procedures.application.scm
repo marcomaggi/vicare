@@ -1416,7 +1416,6 @@
     ;;by the consumer application.
     ;;
     (cond ((closure-type-spec? consumer.ots)
-	   ;;Is this a thunk?
 	   (callable-signature.retvals (closure-type-spec.signature consumer.ots)))
 	  ((<procedure>-ots? consumer.ots)
 	   ;;Good.
@@ -1905,7 +1904,8 @@
 	     (%process-clambda-application input-form.stx lexenv.run lexenv.expand
 					   signature rator.psi rand*.psi))
 	    (else
-	     (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi)))))
+	     (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi
+				     (make-type-signature/fully-untyped))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2002,7 +2002,8 @@
 						     rator.clambda-signature rator.psi rand*.psi rands.sig)
     ;;For operators having  a "<clambda-signature>" signature: we  iterate, in order,
     ;;through  the  "<clambda-clause-signature>"  instances representing  the  clause
-    ;;signatures, looking for the first that matches.
+    ;;signatures, looking for the first that matches exactly; otherwise we accumulate
+    ;;a list of possible matching clauses.
     ;;
     ;;The argument  RATOR.CLAMBDA-SIGNATURE is  an instance  of "<clambda-signature>"
     ;;representing the closure object's signatures.
@@ -2016,29 +2017,40 @@
     ;;argument  RANDS.SIG  is  an  instance of  "<type-signature>"  representing  the
     ;;operands' types.
     ;;
-    (define (%build-default-application)
-      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi #f))
-    (receive (state clause-signature)
-	(returnable
-	  (values (fold-left (lambda (state clause-signature)
-			       (let ((args.sig (clambda-clause-signature.argvals clause-signature)))
-				 ;; (debug-print (syntax->datum input-form.stx)
-				 ;; 	      args.sig rands.sig
-				 ;; 	      (type-signature.match-arguments-against-operands args.sig rands.sig))
-				 (case (type-signature.match-arguments-against-operands args.sig rands.sig)
-				   ((exact-match)
-				    (return 'exact-match clause-signature))
-				   ((possible-match)
-				    'possible-match)
-				   (else state))))
-		    'no-match (clambda-signature.clause-signature* rator.clambda-signature))
-		  #f))
+    (let* ((selected-clause-signature* '())
+	   (state (returnable
+		    (fold-left (lambda (state clause-signature)
+				 (let ((args.sig (clambda-clause-signature.argvals clause-signature)))
+				   (case (type-signature.match-arguments-against-operands args.sig rands.sig)
+				     ((exact-match)
+				      (set! selected-clause-signature* (list clause-signature))
+				      (return 'exact-match))
+				     ((possible-match)
+				      (set-cons! selected-clause-signature* clause-signature)
+				      'possible-match)
+				     (else state))))
+		      'no-match (clambda-signature.clause-signature* rator.clambda-signature)))))
+      (define (%build-default-application)
+	(define (%signature-union-synner message cnd)
+	  (raise
+	   (condition (make-who-condition 'chi-application)
+		      (make-message-condition message)
+		      (make-syntax-violation input-form.stx #f)
+		      cnd)))
+	(%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi
+				(if (pair? selected-clause-signature*)
+				    (apply type-signature.union-same-number-of-operands
+					   %signature-union-synner
+					   (map clambda-clause-signature.retvals selected-clause-signature*))
+				  (make-type-signature/fully-untyped))))
       (case state
 	((exact-match)
-	 ;;There is a clause that exactly matches the operands.
-	 (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-						       rator.psi rand*.psi
-						       (clambda-clause-signature.retvals clause-signature)))
+	 ;;There is a clause that exactly matches the operands.  When we are here: we
+	 ;;know that SELECTED-CLAUSE-SIGNATURE* holds a single item.
+	 (let ((matching-clause-signature (car selected-clause-signature*)))
+	   (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
+							 rator.psi rand*.psi
+							 (clambda-clause-signature.retvals matching-clause-signature))))
 	((possible-match)
 	 ;;There is at least one clause with a possible match.  It is not possible to
 	 ;;fully  validate  the  signatures  at  expand-time;  we  rely  on  run-time
@@ -2047,6 +2059,7 @@
 	(else
 	 ;;There are no  matching clauses, not even possible  matches.  Arguments and
 	 ;;operands do *not* match at expand-time.
+	 (assert (null? selected-clause-signature*))
 	 (let ((make-arguments-signature* (lambda ()
 					    (map clambda-clause-signature.argvals
 					      (clambda-signature.clause-signature* rator.clambda-signature)))))
@@ -2062,23 +2075,23 @@
 ;;; --------------------------------------------------------------------
 
   (define (%process-application-with-matching-signature input-form.stx lexenv.run lexenv.expand
-							rator.psi rand*.psi clause-application-retvals.sig)
+							rator.psi rand*.psi application-retvals.sig)
     ;;We are  applying an operator RATOR.PSI  to a tuple of  operands RAND*.PSI.  The
     ;;operator is a closure object.  One of the closure's clauses has arguments' type
     ;;signature  matching (or  compatible with)  the operands'  type signature.   The
     ;;matching   closure's   clause   has   return   values   with   type   signature
-    ;;CLAUSE-APPLICATION-RETVALS.SIG.
+    ;;APPLICATION-RETVALS.SIG.
     ;;
     ;;If the operator is an identifier: it is possible that it has an unsafe variant.
     ;;Let's  try to  substitute  the application  of the  operantor  with its  unsafe
     ;;variant.
     ;;
     (define (%build-default-application)
-      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi clause-application-retvals.sig))
+      (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi application-retvals.sig))
     (define (%build-unsafe-variant-application unsafe-rator.sexp)
       ;; (let* ((unsafe-rator.stx (bless unsafe-rator.sexp))
       ;;        (unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-      ;;   (%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi clause-application-retvals.sig))
+      ;;   (%build-core-expression input-form.stx lexenv.run unsafe-rator.psi rand*.psi application-retvals.sig))
       (%build-default-application))
     (define* (%build-typed-variable-application {rator.spec typed-variable-spec?})
       ;; (cond ((typed-variable-spec.unsafe-variant-sexp rator.spec)
@@ -2121,75 +2134,13 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%build-core-expression)
-
-    (case-define* %build-core-expression
-      ((input-form.stx lexenv.run rator.psi rand*.psi)
-       (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi #f))
-      ((input-form.stx lexenv.run rator.psi rand*.psi clause-application-retvals.sig)
-       (let* ((rator.core	(psi.core-expr rator.psi))
-	      (rand*.core	(map psi.core-expr rand*.psi)))
-	 (make-psi input-form.stx
-	   (build-application (syntax-annotation input-form.stx)
-	       rator.core
-	     rand*.core)
-	   (or clause-application-retvals.sig
-	       (%build-application-retvals-signature input-form.stx lexenv.run rator.psi))))))
-
-    (define* ({%build-application-retvals-signature type-signature?} input-form.stx lexenv rator.psi)
-      ;;This function is used to build the "<type-signature>" of values returned by a
-      ;;closure object application, when it was not possible to determine it from the
-      ;;types of the operands.
-      ;;
-      (define (%handle-error message)
-	(%error (lambda ()
-		  (condition
-		    (make-who-condition __module_who__)
-		    (make-message-condition message)
-		    (make-syntax-violation input-form.stx (psi.input-form rator.psi))
-		    (make-application-operator-signature-condition (psi.retvals-signature rator.psi))))))
-      (case-signature-specs (psi.retvals-signature rator.psi)
-	((<closure>)
-	 ;;The  operator is  a "<closure-type-spec>",  good.  We  extract the  common
-	 ;;retvals signature from the callable value.
-	 => (lambda (rator.ots)
-	      (callable-signature.retvals (closure-type-spec.signature rator.ots))))
-
-	((<procedure>)
-	 ;;The operator is an untyped procedure, good.
-	 (make-type-signature/fully-untyped))
-
-	((single-value)
-	 ;;The operator is a single value, but not a procedure.
-	 (%handle-error "expression in operator application position is not a closure type"))
-
-	(<no-return>
-	 ;;The operator is marked to no-return: it means it raises an exception.  For
-	 ;;example:
-	 ;;
-	 ;;   ((error #f "bad") 1 2)
-	 ;;
-	 (%handle-error "expression used as operator in procedure application is typed as not returning"))
-
-	((unspecified-values)
-	 ;;The operator expression returns fully unspecified values.
-	 (make-type-signature/fully-untyped))
-
-	(else
-	 ;;The operator returns zero, two or more return values.
-	 (%handle-error "expression used as operator in procedure application returns zero, two or more values"))))
-
-    (define (%error common)
-      (case-expander-language
-	((typed)
-	 (raise			(condition (make-expand-time-type-signature-violation) (common))))
-	((default)
-	 (raise-continuable	(condition (make-expand-time-type-signature-warning)   (common)))
-	 (make-type-signature/fully-untyped))
-	((strict-r6rs)
-	 (make-type-signature/fully-untyped))))
-
-    #| end of module: %BUILD-CORE-EXPRESSION |# )
+  (define* (%build-core-expression input-form.stx lexenv.run rator.psi rand*.psi
+				   {application-retvals.sig type-signature?})
+    (make-psi input-form.stx
+      (build-application (syntax-annotation input-form.stx)
+	  (psi.core-expr rator.psi)
+	(map psi.core-expr rand*.psi))
+      application-retvals.sig))
 
   #| end of module: CHI-CLOSURE-OBJECT-APPLICATION |# )
 

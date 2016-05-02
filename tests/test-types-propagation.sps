@@ -843,6 +843,55 @@
   (void))
 
 
+(parametrise ((check-test-name	'application))
+
+  (doit (let ((fun (lambda ({a <fixnum>}) a)))
+	  (fun 1))
+	=> (<fixnum>))
+
+  ;;Exact match between operands and clauses.
+  ;;
+  (let ((fun (case-lambda
+	       (({a <fixnum>}) a)
+	       (({a <fixnum>} {b <fixnum>}) (fx+ a b)))))
+    (doit (fun 1)	=> (<fixnum>))
+    (doit (fun 1 -2)	=> (<fixnum>))
+    #| end of LET |# )
+
+  ;;Exact match between operands and clauses.
+  ;;
+  (let ((fun (case-lambda
+	       (({a <fixnum>}) a)
+	       (({a <string>} {b <string>}) (string-append a b)))))
+    (doit (fun 1)			=> (<fixnum>))
+    (doit (fun "ciao" " mamma")		=> (<string>))
+    #| end of LET |# )
+
+  ;;Possible match between operands and clauses: only one clause is possible.
+  ;;
+  (let ((fun (case-lambda
+	       (({a <fixnum>}) a)
+	       (({a <string>} {b <string>}) (string-append a b)))))
+    (doit (fun (cast-signature (<number>) 1))		=> (<fixnum>))
+    (doit (fun (cast-signature (<top>) "ciao")
+	       (cast-signature (<top>) " mamma"))	=> (<string>))
+    #| end of LET |# )
+
+  ;;Possible match between operands and clauses: multiple clauses are possible.
+  ;;
+  (let ((fun (case-lambda
+	       (({a <fixnum>}) a)
+	       ((a b c d)	'no-match)
+	       (({a <string>} . {b* (list-of <string>)}) (apply string-append a b*)))))
+    (doit (fun (cast-signature (<top>) 1))		=> ((or <string> <fixnum>)))
+    (doit (fun (cast-signature (<top>) "ciao"))		=> ((or <string> <fixnum>)))
+    (doit (fun (cast-signature (<top>) "ciao")
+	       (cast-signature (<top>) " mamma"))	=> (<string>))
+    #| end of LET |# )
+
+  (void))
+
+
 (parametrise ((check-test-name	'doc-examples))
 
   (debug-print

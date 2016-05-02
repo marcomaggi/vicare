@@ -80,10 +80,17 @@
       (new <string> #\a #\b #\c)
     => "abc")
 
+  ;;There are no arguments here to STRING: the return value is an empty string.
   (check
-      (expander::type-signature.syntax-object (type-of (new <string> (read))))
+      (.syntax-object (type-of (new <string>)))
     (=> syntax=?)
-    (list #'<string>))
+    (list #'<empty-string>))
+
+  ;;There is one argument here to STRING: the return value is a non-empty string.
+  (check
+      (.syntax-object (type-of (new <string> (read))))
+    (=> syntax=?)
+    (list #'<nestring>))
 
 ;;; --------------------------------------------------------------------
 
