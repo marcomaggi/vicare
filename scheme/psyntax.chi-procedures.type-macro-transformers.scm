@@ -1480,19 +1480,27 @@
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
   ;;the context of the given LEXENV; return a PSI struct.
   ;;
+  (define (%signature-union-synner message cnd)
+    (raise
+     (condition (make-who-condition 'type-signature-union)
+		(make-message-condition message)
+		(make-syntax-violation input-form.stx #f)
+		cnd)))
   (syntax-match input-form.stx ()
     ((_ ?signature* ...)
      (make-psi input-form.stx
        (build-data no-source
 	 (type-signature.syntax-object
-	  (apply type-signature.union (map (lambda (signature.stx)
-					     (if (syntax-object.type-signature? signature.stx lexenv.run)
-						 (make-type-signature signature.stx)
-					       (syntax-violation __who__
-						 "invalid type signature argument"
-						 input-form.stx signature.stx)))
-					?signature*))))
-       (make-type-signature/single-value (core-prim-id '<top>))))
+	  (apply type-signature.union-same-number-of-operands
+		 %signature-union-synner
+		 (map (lambda (signature.stx)
+			(if (syntax-object.type-signature? signature.stx lexenv.run)
+			    (make-type-signature signature.stx)
+			  (syntax-violation __who__
+			    "invalid type signature argument"
+			    input-form.stx signature.stx)))
+		   ?signature*))))
+       (make-type-signature/single-top)))
     (_
      (__synner__ "invalid syntax in macro use"))))
 

@@ -7,7 +7,7 @@
 ;;;
 ;;;	This is the double-closed ranges version of the library.
 ;;;
-;;;Copyright (c) 2009, 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -75,8 +75,10 @@
     ;; domain list operations
     %domain-for-each %domain-every %domain-any
     %domain-fold %domain->list)
-  (import (rnrs)
-    (vicare containers lists))
+  (import (except (vicare)
+		  type-descriptor)
+    (prefix (vicare containers lists)
+	    lists::))
 
 
 ;;;; type descriptor
@@ -226,7 +228,7 @@
       (values #f (cons ((type-descriptor-item-min type) start-a start-b)
 		       ((type-descriptor-item-max type) last-a  last-b)))))))
 
-(define (%range-difference type range-a range-b)
+(define* (%range-difference type range-a range-b)
   (let ((start-a (car range-a)) (last-a (cdr range-a))
 	(start-b (car range-b)) (last-b (cdr range-b))
 	(item=?  (type-descriptor-item=?  type))
@@ -259,7 +261,9 @@
 	    ((item<? last-b last-a)
 	     (values #f (let ((last-b/next (item-next last-b range-a)))
 			  (and (item<=? last-b/next last-a)
-			       (cons last-b/next last-a)))))))
+			       (cons last-b/next last-a)))))
+	    (else
+	     (error __who__ "internal error in same start branch"))))
 
      ((item=? last-a last-b) ; same last
       (cond ((item=? start-a start-b)
@@ -271,7 +275,10 @@
 	    ((item<? start-b start-a)
 	     (values #f (let ((start-a/prev (item-prev start-a range-b)))
 			  (and (item<=? start-b start-a/prev)
-			       (cons start-b start-a/prev)))))))
+			       (cons start-b start-a/prev)))))
+	    (else
+	     (error __who__ "internal error in same last branch"))))
+
      ;;Here we know that START-A != START-B and LAST-A != LAST-B.
      ((item<? start-a start-b) ; overlapping, a < b
       (values (let ((start-b/prev (item-prev start-b range-a)))
@@ -419,7 +426,7 @@
 	(cond
 	 ((%range=? type range new-range)
 ;;;	    (write (list 'equal range new-range))(newline)
-	  (append-reverse (cons range result) (cdr domain)))
+	  (lists::append-reverse (cons range result) (cdr domain)))
 	 ((%range-overlapping? type range new-range)
 ;;;	    (write (list 'overlapping range new-range))(newline)
 	  (let loop2 ((domain       (cdr domain))
@@ -436,7 +443,7 @@
 							 (%range-union type range new-range)))
 					  tail)))
 		      (else
-		       (append-reverse (cons new-range (cons range result))
+		       (lists::append-reverse (cons new-range (cons range result))
 				       domain)))))))
 	 ((%range-contiguous? type range new-range)
 ;;;	    (write (list 'contig range new-range))(newline)
@@ -452,11 +459,11 @@
 							 (%range-union type range new-range)))
 					  tail)))
 		      (else
-		       (append-reverse (cons new-range (cons range result))
+		       (lists::append-reverse (cons new-range (cons range result))
 				       domain)))))))
 	 ((%range<? type new-range range)
 ;;;	    (write (list 'less range new-range))(newline)
-	  (append-reverse (cons range (cons new-range result))
+	  (lists::append-reverse (cons range (cons new-range result))
 			  (cdr domain)))
 	 (else
 ;;;	    (write (list 'other range new-range))(newline)
@@ -491,14 +498,14 @@
 		  (loop range2 (cdr domain))))))))))))
 
 (define (%domain-size type domain)
-  (fold (lambda (range size)
-	  (+ size (%range-length type range)))
-	0 domain))
+  (lists::fold (lambda (range size)
+		 (+ size (%range-length type range)))
+	       0 domain))
 
 (define %domain-empty? null?)
 
 (define (%domain-contains? type domain obj)
-  (any (lambda (range) (%range-contains? type range obj))
+  (lists::any (lambda (range) (%range-contains? type range obj))
     domain))
 
 (define (%domain=? type domain-a domain-b)
@@ -517,7 +524,7 @@
 (define (%domain<? type domain-a domain-b)
   (and (not (null? domain-a))
        (not (null? domain-b))
-       (%range<? type (last domain-a) (car domain-b))))
+       (%range<? type (lists::last domain-a) (car domain-b))))
 
 ;;; --------------------------------------------------------------------
 
@@ -729,7 +736,7 @@
       (cond ((%domain-empty? universe)
 	     (reverse result))
 	    ((%domain-empty? domain)
-	     (reverse (append-reverse universe result)))
+	     (reverse (lists::append-reverse universe result)))
 	    (else
 	     (let ((range-a (car universe))
 		   (range-b (car domain)))
@@ -808,12 +815,12 @@
     domain))
 
 (define (%domain-every type proc domain)
-  (every (lambda (range)
-	   (%range-every type proc range))
-    domain))
+  (lists::every (lambda (range)
+		  (%range-every type proc range))
+		domain))
 
 (define (%domain-any type proc domain)
-  (any (lambda (range)
+  (lists::any (lambda (range)
 	 (%range-any type proc range))
     domain))
 

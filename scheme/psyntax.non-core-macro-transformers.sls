@@ -437,28 +437,12 @@
   (define-macro-transformer (case input-form.stx)
     (syntax-match input-form.stx (else)
       ;;Without ELSE clause.
-      ;;
-      ;;NOTE When  no ELSE clause  is present: an  ELSE clause is  inserted returning
-      ;;true, not void; previously  it was void.  I have changed  it to true because:
-      ;;
-      ;;* It  is still  R6RS-compliant: according to  R6RS, CASE  returns unspecified
-      ;;values when no ELSE is present and no datum matches.
-      ;;
-      ;;* Void is also non-false, so the truth value is unchanged.
-      ;;
-      ;;* At  present (Sun May  1, 2016):  the union between  the types of  the other
-      ;;branches and  void would be  collapsed to void,  while the union  between the
-      ;;types of the other branches and false is whatever union comes out.
-      ;;
-      ;;Collapsing to  void is the  problem which can change  the truth value  of the
-      ;;form, and it is fixed by returning true.  (Marco Maggi; Sun May 1, 2016)
-      ;;
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
        (%build-output-form input-form.stx ?expr
 			   (map cons
 			     (map cons ?datum0* ?datum**)
 			     (map cons ?body0*  ?body**))
-			   '(#t)))
+			   '((void))))
 
       ;;With else clause.
       ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else ?else-body0 ?else-body* ...))
@@ -3671,6 +3655,7 @@
      (bless
       (let recur ((cls ?cls) (cls* ?cls*))
 	(if (null? cls*)
+	    ;;Here we process the last clause.
 	    (syntax-match cls (else =>)
 	      ((else ?expr ?expr* ...)
 	       `(internal-body ,?expr . ,?expr*))

@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2010, 2012, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -553,7 +553,9 @@
 	      ((item<? last-b last-a)
 	       (values #f (let ((last-b/next (item-next last-b range-a)))
 			    (and (item<=? last-b/next last-a)
-				 (cons last-b/next last-a)))))))
+				 (cons last-b/next last-a)))))
+	      (else
+	       (error #f "internal-error"))))
 
        ((item=? last-a last-b) ; same last
 	(cond ((item=? start-a start-b)
@@ -565,7 +567,9 @@
 	      ((item<? start-b start-a)
 	       (values #f (let ((start-a/prev (item-prev start-a range-b)))
 			    (and (item<=? start-b start-a/prev)
-				 (cons start-b start-a/prev)))))))
+				 (cons start-b start-a/prev)))))
+	      (else
+	       (error #f "internal-error"))))
 
        ;;Here we know that START-A != START-B and LAST-A != LAST-B.
        ((item<? start-a start-b) ; overlapping, a < b

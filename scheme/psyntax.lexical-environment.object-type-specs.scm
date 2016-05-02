@@ -3928,7 +3928,10 @@
 				    (cons ?component-type ?component-type*))))
 
      ((not ?item-type)
-      (make-complement-type-spec (type-annotation->object-type-spec ?item-type lexenv)))
+      (let ((item.ots (type-annotation->object-type-spec ?item-type lexenv)))
+	(if (<void>-ots? item.ots)
+	    (<void>-ots)
+	  (make-complement-type-spec item.ots))))
 
      ((parent-of ?type)
       (or (object-type-spec.parent-ots (type-annotation->object-type-spec ?type lexenv))

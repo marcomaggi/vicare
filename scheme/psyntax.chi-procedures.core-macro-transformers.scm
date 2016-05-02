@@ -1153,6 +1153,12 @@
     ;;given LEXENV; return a PSI object.
     ;;
     (define caller-who __who__)
+    (define (%signature-union-synner message cnd)
+      (raise
+       (condition (make-who-condition caller-who)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx #f)
+		  cnd)))
     (syntax-match input-form.stx ()
       ((_ ?test ?consequent ?alternate)
        (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
@@ -1167,8 +1173,10 @@
 		    (psi.core-expr test.psi)
 		  (psi.core-expr consequent.psi)
 		  (psi.core-expr alternate.psi))
-		(type-signature.union (psi.retvals-signature consequent.psi)
-				      (psi.retvals-signature alternate.psi))))
+		(type-signature.union-same-number-of-operands
+		 %signature-union-synner
+		 (psi.retvals-signature consequent.psi)
+		 (psi.retvals-signature alternate.psi))))
 	     ((always-false)
 	      ;;The test always returns false.
 	      (make-psi input-form.stx
@@ -1281,6 +1289,12 @@
     ;;conditional; if an expression always returns non-false, we generate a sequence.
     ;;
     (define caller-who __who__)
+    (define (%signature-union-synner message cnd)
+      (raise
+       (condition (make-who-condition caller-who)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx #f)
+		  cnd)))
     (syntax-match input-form.stx ()
       ((_)
        (make-psi/single-true input-form.stx))
@@ -1353,7 +1367,9 @@
 		   expr.core)))))
 	 (define output-form.sig
 	   (if false-flag
-	       (type-signature.union last-expr.sig (make-type-signature/single-false))
+	       (type-signature.union-same-number-of-operands
+		%signature-union-synner
+		last-expr.sig (make-type-signature/single-false))
 	     last-expr.sig))
 	 #;(assert last-expr.sig)
 	 (make-psi input-form.stx code.core output-form.sig)))
@@ -1394,6 +1410,12 @@
     ;;warning.
     ;;
     (define caller-who __who__)
+    (define (%signature-union-synner message cnd)
+      (raise
+       (condition (make-who-condition caller-who)
+		  (make-message-condition message)
+		  (make-syntax-violation input-form.stx #f)
+		  cnd)))
     (syntax-match input-form.stx ()
       ((_)
        (make-psi/single-false input-form.stx))
@@ -1454,7 +1476,9 @@
 	   ;;Strictly  thinking: reversing  the  list  is not  needed,  the order  of
 	   ;;signatures is  irrelevant.  But when testing  the code: it is  useful to
 	   ;;have predictable results, it makes it simple to write tests.
-	   (apply type-signature.union (reverse (cons last-expr.sig middle-expr*.sig))))
+	   (apply type-signature.union-same-number-of-operands
+		  %signature-union-synner
+		  (reverse (cons last-expr.sig middle-expr*.sig))))
 	 (make-psi input-form.stx out.core out.sig)))
 
       (_
@@ -1476,7 +1500,9 @@
       (%error (lambda () (common message)) rv))
     (case-signature-specs expr.sig
       ((<void>)
-       (%handle-error "expression used as operand in logic predicate is typed as returning void" 'always-true))
+       (raise
+	(condition (make-expand-time-type-signature-violation)
+		   (common "expression used as operand in logic predicate is typed as returning void"))))
 
       (<no-return>
        ;;This is special.  We want to accept expressions like:

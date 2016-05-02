@@ -1264,9 +1264,9 @@
 
   (check	;no arrow, multiple values
       (case 2
-	((a b c)	'symbol)
+	((a b c)	(values 'symbol #f #f))
 	((1 2 3)	(values 7 8 9))
-	(else		'else))
+	(else		(values 'else #f #f)))
     => 7 8 9)
 
   (check
@@ -1293,9 +1293,9 @@
 
   (check	;with arrow multiple values
       (case 2
-	((a b c)	'symbol)
+	((a b c)	(values 'symbol #f #f))
 	((1 2 3)	=> (lambda (N) (values N N N)))
-	(else		'else))
+	(else		(values 'else #f #f)))
     => 2 2 2)
 
 ;;; --------------------------------------------------------------------
@@ -1322,7 +1322,8 @@
 	  ((expander::&expand-time-type-signature-violation)
 	   (values (expander::type-signature.syntax-object (expander::condition-expected-type-signature E))
 		   (expander::type-signature.syntax-object (expander::condition-returned-type-signature E))))
-	  (else E)))
+	  (else
+	   (values E #f))))
     (=> syntax=?)
     #'(<procedure>) #'(<positive-fixnum>))
 
@@ -1416,7 +1417,8 @@
 	  ((expander::&expand-time-type-signature-violation)
 	   (values (expander::type-signature.syntax-object (expander::condition-expected-type-signature E))
 		   (expander::type-signature.syntax-object (expander::condition-returned-type-signature E))))
-	  (else E)))
+	  (else
+	   (values E #f))))
     (=> syntax=?)
     #'(<procedure>) #'((enumeration one-two-three)))
 
@@ -2243,7 +2245,8 @@
       (guard (E ((syntax-violation? E)
 		 (values (condition-message E)
 			 (syntax->datum (syntax-violation-form E))))
-		(else E))
+		(else
+		 (values E #f)))
 	(eval '(let ()
 		 (begin-for-syntax
 		   (define a 1)
@@ -2258,7 +2261,8 @@
       (guard (E ((syntax-violation? E)
 		 (values (condition-message E)
 			 (syntax->datum (syntax-violation-form E))))
-		(else E))
+		(else
+		 (values E #f)))
 	(eval '(let ()
 		 (begin-for-syntax
 		   (define a 1))
@@ -2274,7 +2278,8 @@
       (guard (E ((syntax-violation? E)
 		 (values (condition-message E)
 			 (syntax->datum (syntax-violation-form E))))
-		(else E))
+		(else
+		 (values E #f)))
 	(eval '(let ()
 		 (begin-for-syntax
 		   (define-syntax (a stx)
@@ -2291,7 +2296,8 @@
       (guard (E ((syntax-violation? E)
 		 (values (condition-message E)
 			 (syntax->datum (syntax-violation-form E))))
-		(else E))
+		(else
+		 (values E #f)))
 	(eval '(let ()
 		 (begin-for-syntax
 		   (define-syntax (a stx)

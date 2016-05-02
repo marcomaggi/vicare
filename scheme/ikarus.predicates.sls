@@ -278,7 +278,10 @@
   (and (pair? x)
        (foreign-call "ikrt_is_weak_pair" x)))
 
-(define (not x)
+(define (not-void? obj)
+  (if (void-object? obj) #f #t))
+
+(define* (not {x not-void?})
   (if x #f #t))
 
 (define (bwp-object)

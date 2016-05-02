@@ -631,12 +631,12 @@
 	  (else		#f))
 	=> ((or <positive-fixnum> <false> (enumeration ciao))))
 
-  ;;Without ELSE clause: if no datum matches, CASE returns #t.
+  ;;Without ELSE clause: if no datum matches, CASE returns void.
   ;;
   (doit (case (read)
 	  ((1)	1)
 	  ((2)	"ciao"))
-	=> ((or <string> <positive-fixnum> <true>)))
+	=> (<void>))
 
   ;;Special case of type propagation from the datum to the lambda.
   ;;
@@ -839,6 +839,90 @@
 	     (cast-signature (<boolean>) (read))
 	     (cast-signature (<boolean>) (read)))
 	=> (<boolean>))
+
+  (void))
+
+
+(parametrise ((check-test-name	'doc-examples))
+
+  (debug-print
+   (type-of (let ((A 1))
+	      (let* ((B A)
+		     (C B))
+		(letrec ((D C))
+		  (letrec* ((E D)
+			    (F E))
+		    (define (G)
+		      F)
+		    ((lambda () (G)))))))))
+
+  (doit (let ((A 1))
+	  (let* ((B A)
+		 (C B))
+	    (letrec ((D C))
+	      (letrec* ((E D)
+			(F E))
+		(define (G)
+		  F)
+		((lambda () (G)))))))
+	=> (<positive-fixnum>))
+
+;;; --------------------------------------------------------------------
+
+  #;(begin
+    (debug-print
+     (type-of (let ((A 1))
+		(let* ((B A)
+		       (C B))
+		  (letrec ((D C))
+		    (letrec* ((E D)
+			      (F E))
+		      (define (G)
+			F)
+		      (define H
+			(G))
+		      ((lambda () H))))))))
+
+    (doit (let ((A 1))
+	    (let* ((B A)
+		   (C B))
+	      (letrec ((D C))
+		(letrec* ((E D)
+			  (F E))
+		  (define (G)
+		    F)
+		  (define H
+		    (G))
+		  ((lambda () H))))))
+	  => (<positive-fixnum>))
+
+    #| end of BEGIN |#  )
+
+;;; --------------------------------------------------------------------
+;;; mutated variables
+
+  (doit (let ((A "ciao"))
+	  (set! A "hello")
+	  A)
+	=> (<string>))
+
+  #;(doit (let ((A 1))
+	  (set! A -1)
+	  A)
+	=> (<fixnum>))
+
+  (doit (let (({A <fixnum>} 1))
+	  (set! A -1)
+	  A)
+	=> (<fixnum>))
+
+;;; --------------------------------------------------------------------
+;;; CASE
+
+  (doit (case (read)
+	  ((1 "2" 'ciao) => (lambda (x) x))
+	  (else #f))
+	=> ((or <positive-fixnum> <string> (enumeration ciao) <false>)))
 
   (void))
 

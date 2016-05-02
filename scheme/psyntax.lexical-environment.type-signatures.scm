@@ -56,6 +56,7 @@
    type-signature.min-and-max-counts
 
    type-signature.common-ancestor			type-signature.union
+   type-signature.union-same-number-of-operands
    datum-type-signature
 
 ;;; helpers
@@ -1094,6 +1095,11 @@
       ((<no-return>-ots? specs1)	specs2)
       ((<no-return>-ots? specs2)	specs1)
 
+      ;;If  a  signature  is  fully   unspecified:  just  consider  the  union  fully
+      ;;unspecified.  This is useful with the standard language.
+      ((<list>-ots? specs1)	(<list>-ots))
+      ((<list>-ots? specs2)	(<list>-ots))
+
       (else
        (let recur ((specs1 specs1) (specs2 specs2))
 	 (cond ((pair? specs1)
@@ -1123,6 +1129,89 @@
 		      ((pair? specs2)
 		       ;;SIG2 is an proper list longer that SIG1.
 		       (<list>-ots))
+		      (else
+		       ;;Both SIG1 and  SIG2 are improper lists with  the same number
+		       ;;of items.
+		       (union-of-type-specs specs1 specs2)))))))))))
+
+
+;;;; matching: union with same number of operands
+
+(case-define* type-signature.union-same-number-of-operands
+  ;;Given a  type signature arguments: return  a new type signature  representing the
+  ;;union.  UNION-SYNNER must be a procedure used to signal errors.
+  ;;
+  (({union-synner procedure?})
+   (make-type-signature/fully-untyped))
+  (({union-synner procedure?} {sig type-signature?})
+   sig)
+  (({union-synner procedure?} {sig1 type-signature?} {sig2 type-signature?})
+   ($type-signature.union-same-number-of-operands2 union-synner sig1 sig2))
+  (({union-synner procedure?} {sig1 type-signature?} {sig2 type-signature?} {sig3 type-signature?} . {sig* type-signature?})
+   (fold-left (lambda (sig1 sig2)
+		($type-signature.union-same-number-of-operands2 union-synner sig1 sig2))
+     ($type-signature.union-same-number-of-operands2
+      union-synner
+      ($type-signature.union-same-number-of-operands2 union-synner sig1 sig2)
+      sig3)
+     sig*)))
+
+(define ($type-signature.union-same-number-of-operands2 union-synner sig1 sig2)
+  ;;Given two  type signatures: return  a new  type signature representing  the union
+  ;;between the two.
+  ;;
+  (define (%error-mismatching-length)
+    (union-synner "type signatures of different length"
+		  (condition (make-type-signature-condition sig1)
+			     (make-type-signature-condition sig2))))
+  (make-type-signature
+   (let ((specs1 (type-signature.object-type-specs sig1))
+	 (specs2 (type-signature.object-type-specs sig2)))
+     (cond
+      ;;Here we imagine this situation:
+      ;;
+      ;;   (or (do-something)
+      ;;       (error #f "error doing something"))
+      ;;
+      ;;the type signature of  the returned values is the one  of the expression that
+      ;;returns.
+      ((<no-return>-ots? specs1)	specs2)
+      ((<no-return>-ots? specs2)	specs1)
+
+      ;;If  a  signature  is  fully   unspecified:  just  consider  the  union  fully
+      ;;unspecified.  This is useful with the standard language.
+      ((<list>-ots? specs1)	(<list>-ots))
+      ((<list>-ots? specs2)	(<list>-ots))
+
+      (else
+       (let recur ((specs1 specs1) (specs2 specs2))
+	 (cond ((pair? specs1)
+		(cond ((pair? specs2)
+		       (cons (union-of-type-specs (car specs1) (car specs2))
+			     (recur (cdr specs1) (cdr specs2))))
+		      ((null? specs2)
+		       ;;SIG2 is a proper list shorter that SIG1.
+		       (%error-mismatching-length))
+		      (else
+		       ;;SIG2 is an improper list shorter that SIG1.
+		       (<list>-ots))))
+
+	       ((null? specs1)
+		(if (null? specs2)
+		    ;;Both the  signatures are proper  lists with the same  number of
+		    ;;items: success!
+		    '()
+		  ;;SIG1 is a proper list shorter that SIG2.
+		  (%error-mismatching-length)))
+
+	       (else
+		;;SIG1 is an improper list.
+		(cond ((null? specs2)
+		       ;;SIG2 is an proper list shorter that SIG1.
+		       (%error-mismatching-length))
+		      ((pair? specs2)
+		       ;;SIG2 is an proper list longer that SIG1.
+		       (%error-mismatching-length))
 		      (else
 		       ;;Both SIG1 and  SIG2 are improper lists with  the same number
 		       ;;of items.

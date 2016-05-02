@@ -86,7 +86,8 @@
 	      #;(print-condition E)
 	      (values (syntax->datum (expander::type-signature.syntax-object (expander::condition-expected-type-signature E)))
 		      (syntax->datum (expander::type-signature.syntax-object (expander::condition-returned-type-signature E)))))
-	     (else E)))
+	     (else
+	      (values E #f))))
        => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
     ))
 
@@ -184,6 +185,18 @@
 				    (enumeration ciao)
 				    (enumeration ohayo ciao)))
 	=> (enumeration hello salut ohayo ciao))
+
+;;; --------------------------------------------------------------------
+;;; handling of void
+
+  (doit (type-annotation-syntax (or <fixnum> <void>))
+	=> <void>)
+
+  (doit (type-annotation-syntax (and <fixnum> <void>))
+	=> <void>)
+
+  (doit (type-annotation-syntax (not <void>))
+	=> <void>)
 
   #| end of PARAMETRISE |# )
 
@@ -1536,7 +1549,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (parametrise ((print-gensym #f))
+  #;(parametrise ((print-gensym #f))
     (begin-for-syntax
       (expander::generate-descriptive-gensyms? #t))
 

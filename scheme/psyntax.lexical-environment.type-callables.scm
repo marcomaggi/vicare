@@ -165,7 +165,14 @@
   (protocol
     (lambda (make-callable-signature)
       (define* (make-clambda-signature {signature* not-empty-list-of-clambda-clause-signatures?})
-	((make-callable-signature (apply type-signature.union (map clambda-clause-signature.retvals signature*)))
+	(define (%signature-union-synner message cnd)
+	  (raise
+	   (condition (make-who-condition 'make-clambda-signature)
+		      (make-message-condition message)
+		      cnd)))
+	((make-callable-signature (apply type-signature.union-same-number-of-operands
+					 %signature-union-synner
+					 (map clambda-clause-signature.retvals signature*)))
 	 signature* #f #f))
       make-clambda-signature))
   (custom-printer

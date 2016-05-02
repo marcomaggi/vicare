@@ -2220,7 +2220,9 @@
 							(file-options no-fail)
 							(buffer-mode block)
 							(native-transcoder)))
-	       (values #t #f)))
+	       (values #t #f))
+	      (else
+	       (error #f "internal error")))
       (unwind-protect
 	  (begin
 	    (when library-spec

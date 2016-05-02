@@ -87,10 +87,10 @@
   (signatures
    ((<false>)				=> (<true>))
    ((<true>)				=> (<false>))
-   (((or <boolean>
-	 (ancestor-of <boolean>)))	=> (<boolean>))
-   ;;"<true>" is repeated here on purpose.
-   (((or <true> (not <boolean>)))	=> (<false>))))
+   ((<void>)				=> (<void>))
+   ;;Here <true> is repeated on purpose.
+   (((or <true> (not <boolean>)))	=> (<false>))
+   ((<top>)				=> (<boolean>))))
 
 ;;; --------------------------------------------------------------------
 

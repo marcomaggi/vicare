@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -283,7 +283,8 @@
 
 (define ($close-channel chan)
   (define (%close port)
-    (and port (close-port port)))
+    (when port
+      (close-port port)))
   (%close ($channel-connect-in-port chan))
   (%close ($channel-connect-ou-port chan))
   (struct-reset chan)

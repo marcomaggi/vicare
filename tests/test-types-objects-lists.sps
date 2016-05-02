@@ -65,7 +65,8 @@
 	      #;(print-condition E)
 	      (values (syntax->datum (expander::type-signature.syntax-object (expander::condition-expected-type-signature E)))
 		      (syntax->datum (expander::type-signature.syntax-object (expander::condition-returned-type-signature E)))))
-	     (else E)))
+	     (else
+	      (values E #f))))
        => (quote ?expected-signature-sexp) (quote ?returned-signature-sexp)))
     ))
 

@@ -600,10 +600,12 @@
 
 ;;;; external modules
 
-(include "psyntax.lexical-environment.syntax-match.scm" #t)
+(include "psyntax.lexical-environment.condition-objects.scm"	#t)
+
+(include "psyntax.lexical-environment.syntax-match.scm"		#t)
 (import PSYNTAX-SYNTAX-MATCH)
 
-(include "psyntax.lexical-environment.syntax-utilities.scm" #t)
+(include "psyntax.lexical-environment.syntax-utilities.scm"	#t)
 (import PSYNTAX-SYNTAX-UTILITIES)
 
 (include "psyntax.lexical-environment.object-type-specs.scm"	#t)
@@ -615,8 +617,6 @@
 
 (include "psyntax.lexical-environment.syntactic-bindings.scm"	#t)
 (include "psyntax.lexical-environment.typed-variable-specs.scm"	#t)
-
-(include "psyntax.lexical-environment.condition-objects.scm"	#t)
 
 
 ;;;; syntactic bindings core definitions

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2015, 2016 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -228,7 +228,8 @@
 	      ((&utf8-string-decoding-invalid-octet)
 	       (values (utf8-string-decoding-invalid-octet.index E)
 		       (utf8-string-decoding-invalid-octet.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (invalid-2-octet ?bv ?index . ?octets)
@@ -239,7 +240,8 @@
 	      ((&utf8-string-decoding-invalid-2-tuple)
 	       (values (utf8-string-decoding-invalid-2-tuple.index E)
 		       (utf8-string-decoding-invalid-2-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (invalid-3-octet ?bv ?index . ?octets)
@@ -250,7 +252,8 @@
 	      ((&utf8-string-decoding-invalid-3-tuple)
 	       (values (utf8-string-decoding-invalid-3-tuple.index E)
 		       (utf8-string-decoding-invalid-3-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (invalid-4-octet ?bv ?index . ?octets)
@@ -261,7 +264,8 @@
 	      ((&utf8-string-decoding-invalid-4-tuple)
 	       (values (utf8-string-decoding-invalid-4-tuple.index E)
 		       (utf8-string-decoding-invalid-4-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (incomplete-2-octet ?bv ?index . ?octets)
@@ -272,7 +276,8 @@
 	      ((&utf8-string-decoding-incomplete-2-tuple)
 	       (values (utf8-string-decoding-incomplete-2-tuple.index E)
 		       (utf8-string-decoding-incomplete-2-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (incomplete-3-octet ?bv ?index . ?octets)
@@ -283,7 +288,8 @@
 	      ((&utf8-string-decoding-incomplete-3-tuple)
 	       (values (utf8-string-decoding-incomplete-3-tuple.index E)
 		       (utf8-string-decoding-incomplete-3-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (incomplete-4-octet ?bv ?index . ?octets)
@@ -294,7 +300,8 @@
 	      ((&utf8-string-decoding-incomplete-4-tuple)
 	       (values (utf8-string-decoding-incomplete-4-tuple.index E)
 		       (utf8-string-decoding-incomplete-4-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     ;;Encoded strings:
@@ -568,7 +575,8 @@
 	      ((&utf8-string-decoding-invalid-octet)
 	       (values (utf8-string-decoding-invalid-octet.index E)
 		       (utf8-string-decoding-invalid-octet.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (invalid-2-octet ?bv ?index . ?octets)
@@ -579,7 +587,8 @@
 	      ((&utf8-string-decoding-invalid-2-tuple)
 	       (values (utf8-string-decoding-invalid-2-tuple.index E)
 		       (utf8-string-decoding-invalid-2-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (invalid-3-octet ?bv ?index . ?octets)
@@ -590,7 +599,8 @@
 	      ((&utf8-string-decoding-invalid-3-tuple)
 	       (values (utf8-string-decoding-invalid-3-tuple.index E)
 		       (utf8-string-decoding-invalid-3-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (invalid-4-octet ?bv ?index . ?octets)
@@ -601,7 +611,8 @@
 	      ((&utf8-string-decoding-invalid-4-tuple)
 	       (values (utf8-string-decoding-invalid-4-tuple.index E)
 		       (utf8-string-decoding-invalid-4-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (incomplete-2-octet ?bv ?index . ?octets)
@@ -612,7 +623,8 @@
 	      ((&utf8-string-decoding-incomplete-2-tuple)
 	       (values (utf8-string-decoding-incomplete-2-tuple.index E)
 		       (utf8-string-decoding-incomplete-2-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (incomplete-3-octet ?bv ?index . ?octets)
@@ -623,7 +635,8 @@
 	      ((&utf8-string-decoding-incomplete-3-tuple)
 	       (values (utf8-string-decoding-incomplete-3-tuple.index E)
 		       (utf8-string-decoding-incomplete-3-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     (define-syntax-rule (incomplete-4-octet ?bv ?index . ?octets)
@@ -634,7 +647,8 @@
 	      ((&utf8-string-decoding-incomplete-4-tuple)
 	       (values (utf8-string-decoding-incomplete-4-tuple.index E)
 		       (utf8-string-decoding-incomplete-4-tuple.octets E)))
-	      (else E)))
+	      (else
+	       (values E #f))))
 	=> ?index (quote ?octets)))
 
     ;;Encoded strings:
@@ -910,7 +924,8 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 0)
     (check
 	(try
@@ -919,7 +934,8 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 0)
     (check
 	(try
@@ -928,7 +944,8 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 0)
     (check
 	(try
@@ -937,7 +954,8 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 0)
 
     ;;Error: ignore mode, 2-words character, missing second octet of second word.
@@ -950,7 +968,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 #xDF)
     (check
 	(try
@@ -960,7 +979,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 4 #xDF)
     (check
 	(try
@@ -970,7 +990,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 #xDF)
     (check
 	(try
@@ -980,7 +1001,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 4 #x45)
 
     ;;Error: ignore mode, 2-words character, missing second word.
@@ -993,7 +1015,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 #xD808)
     (check
 	(try
@@ -1003,7 +1026,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 #xD808)
     (check
 	(try
@@ -1013,7 +1037,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 #xD808)
     (check
 	(try
@@ -1023,7 +1048,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 #xD808)
 
     ;;Error: ignore mode, 2-words character, missing second octet of first word.
@@ -1036,7 +1062,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 #xD8)
     (check
 	(try
@@ -1046,7 +1073,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 #xD8)
     (check
 	(try
@@ -1056,7 +1084,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 #x08)
     (check
 	(try
@@ -1066,7 +1095,8 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 #x08)
 
     ;;Error: ignore mode, 2-words character, invalid second word.
@@ -1080,7 +1110,8 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else
+	     (values E #f #f))))
       => 2 #xD808 #x0045)
     (check
 	(try
@@ -1091,7 +1122,8 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else
+	     (values E #f #f))))
       => 4 #xD808 #x0045)
     (check
 	(try
@@ -1102,7 +1134,8 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else
+	     (values E #f #f))))
       => 2 #xD808 #x0045)
     (check
 	(try
@@ -1113,7 +1146,8 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else
+	     (values E #f #f))))
       => 4 #xD808 #x0045)
 
     #| end of INTERNAL-BODY |# )
@@ -1346,7 +1380,8 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 0 0)
     (check
 	(try
@@ -1355,7 +1390,8 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else
+	     (values E #f))))
       => 2 0)
     (check
 	(try
@@ -1364,7 +1400,7 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 0)
     (check
 	(try
@@ -1373,7 +1409,7 @@
 	    ((&utf16-string-decoding-standalone-octet)
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 0)
 
     ;;Error: ignore mode, 2-words character, missing second octet of second word.
@@ -1386,7 +1422,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 #xDF)
     (check
 	(try
@@ -1396,7 +1432,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 #xDF)
     (check
 	(try
@@ -1406,7 +1442,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 #xDF)
     (check
 	(try
@@ -1416,7 +1452,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 #x45)
 
     ;;Error: ignore mode, 2-words character, missing second word.
@@ -1429,7 +1465,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xD808)
     (check
 	(try
@@ -1439,7 +1475,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 #xD808)
     (check
 	(try
@@ -1449,7 +1485,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xD808)
     (check
 	(try
@@ -1459,7 +1495,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-missing-second-word.index E)
 		     (utf16-string-decoding-missing-second-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 #xD808)
 
     ;;Error: ignore mode, 2-words character, missing second octet of first word.
@@ -1472,7 +1508,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xD8)
     (check
 	(try
@@ -1482,7 +1518,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 #xD8)
     (check
 	(try
@@ -1492,7 +1528,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #x08)
     (check
 	(try
@@ -1502,7 +1538,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf16-string-decoding-standalone-octet.index E)
 		     (utf16-string-decoding-standalone-octet.octet E)))
-	    (else E)))
+	    (else (values E #f))))
       => 2 #x08)
 
     ;;Error: ignore mode, 2-words character, invalid second word.
@@ -1516,7 +1552,7 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else (values E #f #f))))
       => 2 #xD808 #x0045)
     (check
 	(try
@@ -1527,7 +1563,7 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else (values E #f #f))))
       => 4 #xD808 #x0045)
     (check
 	(try
@@ -1538,7 +1574,7 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else (values E #f #f))))
       => 2 #xD808 #x0045)
     (check
 	(try
@@ -1549,7 +1585,7 @@
 	     (values (utf16-string-decoding-invalid-second-word.index E)
 		     (utf16-string-decoding-invalid-second-word.first-word E)
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
-	    (else E)))
+	    (else (values E #f #f))))
       => 4 #xD808 #x0045)
 
     #| end of INTERNAL-BODY |# )
@@ -1703,7 +1739,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00 #x12))
     (check
 	(try
@@ -1712,7 +1748,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00))
     (check
 	(try
@@ -1721,7 +1757,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00))
     (check
 	(try
@@ -1730,7 +1766,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00 #x12))
     (check
 	(try
@@ -1739,7 +1775,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00))
     (check
 	(try
@@ -1748,7 +1784,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00))
     (check
 	(try
@@ -1757,7 +1793,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00 #x12))
     (check
 	(try
@@ -1766,7 +1802,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00))
     (check
 	(try
@@ -1775,7 +1811,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00))
     (check
 	(try
@@ -1784,7 +1820,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00 #x12))
     (check
 	(try
@@ -1793,7 +1829,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00))
     (check
 	(try
@@ -1802,7 +1838,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00))
 
     ;;Error: replace mode, wrong word.
@@ -1815,7 +1851,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xFF000000)
     (check
 	(try
@@ -1825,7 +1861,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 #xFF000000)
     (check
 	(try
@@ -1835,7 +1871,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xFF000000)
     (check
 	(try
@@ -1845,7 +1881,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 #xFF000000)
 
     #| end of INTERNAL-BODY |# )
@@ -1991,7 +2027,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00 #x12))
     (check
 	(try
@@ -2000,7 +2036,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00))
     (check
 	(try
@@ -2009,7 +2045,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00))
     (check
 	(try
@@ -2018,7 +2054,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00 #x12))
     (check
 	(try
@@ -2027,7 +2063,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00 #x00))
     (check
 	(try
@@ -2036,7 +2072,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 '(#x00))
     (check
 	(try
@@ -2045,7 +2081,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00 #x12))
     (check
 	(try
@@ -2054,7 +2090,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00))
     (check
 	(try
@@ -2063,7 +2099,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00))
     (check
 	(try
@@ -2072,7 +2108,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00 #x12))
     (check
 	(try
@@ -2081,7 +2117,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00 #x00))
     (check
 	(try
@@ -2090,7 +2126,7 @@
 	    ((&utf32-string-decoding-orphan-octets)
 	     (values (utf32-string-decoding-orphan-octets.index E)
 		     (utf32-string-decoding-orphan-octets.octets E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 '(#x00))
 
     ;;Error: replace mode, wrong word.
@@ -2103,7 +2139,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xFF000000)
     (check
 	(try
@@ -2113,7 +2149,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 #xFF000000)
     (check
 	(try
@@ -2123,7 +2159,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 0 #xFF000000)
     (check
 	(try
@@ -2133,7 +2169,7 @@
 	     #;(debug-print (condition-message E))
 	     (values (utf32-string-decoding-invalid-word.index E)
 		     (utf32-string-decoding-invalid-word.word E)))
-	    (else E)))
+	    (else (values E #f))))
       => 4 #xFF000000)
 
     #| end of INTERNAL-BODY |# )

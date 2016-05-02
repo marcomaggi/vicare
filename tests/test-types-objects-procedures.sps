@@ -104,13 +104,13 @@
 
   (check
       (expander::type-signature.syntax-object (type-of (case-lambda
-							 (({_ <fixnum>} {a <fixnum>})
-							  a)
+							 (({_ <fixnum> <false>} {a <fixnum>})
+							  (values a #f))
 							 (({_ <fixnum> <string>} {a <fixnum>} {b <string>})
 							  (values a b)))))
     (=> syntax=?)
     #'((case-lambda
-	 ((<fixnum>)		=> (<fixnum>))
+	 ((<fixnum>)		=> (<fixnum> <false>))
 	 ((<fixnum> <string>)	=> (<fixnum> <string>)))))
 
   (check
@@ -199,14 +199,14 @@
   (check
       (internal-body
 	(case-define fun
-	  (({_ <fixnum>} {a <fixnum>})
-	   a)
+	  (({_ <fixnum> <false>} {a <fixnum>})
+	   (values a #f))
 	  (({_ <fixnum> <string>} {a <fixnum>} {b <string>})
 	   (values a b)))
 	(expander::type-signature.syntax-object (type-of fun)))
     (=> syntax=?)
     #'((case-lambda
-	 ((<fixnum>)		=> (<fixnum>))
+	 ((<fixnum>)		=> (<fixnum> <false>))
 	 ((<fixnum> <string>)	=> (<fixnum> <string>)))))
 
   (check
