@@ -19,11 +19,6 @@
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (module (core-macro-transformer)
-  (import (prefix (rnrs syntax-case) sys::)
-    (prefix (only (psyntax.config)
-		  warn-about-logic-constants
-		  warn-about-not-returning-expressions)
-	    options::))
 
 (import PSYNTAX-TYPE-SYNTAX-OBJECTS)
 

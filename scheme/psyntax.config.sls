@@ -29,8 +29,11 @@
     expander-initialisation/initialise-label-gensyms-and-interned-libraries
 
     ;; options
+    enable-all-warnings
+    disable-all-warnings
     warn-about-logic-constants
     warn-about-not-returning-expressions
+    warn-about-compatible-operands-signature-in-procedure-application
 
     #| end of EXPORT |# )
   (import (rnrs)
@@ -69,6 +72,27 @@
   (make-parameter #f
     (lambda (obj)
       (if obj #t #f))))
+
+(define warn-about-compatible-operands-signature-in-procedure-application
+  ;;When set to true: raise a "&warning" when the type signature of the operands in a
+  ;;procedure application does not match the expected signature of the arguments, but
+  ;;it is compatible so the code compiles; otherwise do nothing.
+  ;;
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
+
+;;; --------------------------------------------------------------------
+
+(define (enable-all-warnings)
+  (warn-about-logic-constants #t)
+  (warn-about-not-returning-expressions #t)
+  (warn-about-compatible-operands-signature-in-procedure-application #t))
+
+(define (disable-all-warnings)
+  (warn-about-logic-constants #f)
+  (warn-about-not-returning-expressions #f)
+  (warn-about-compatible-operands-signature-in-procedure-application #f))
 
 
 ;;;; done

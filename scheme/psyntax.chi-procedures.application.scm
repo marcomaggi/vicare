@@ -314,18 +314,19 @@
     ;;OPERANDS-SIGNATURE must  be an  insance of "<type-signature>"  representing the
     ;;signature of the operands, when each operand returns a single value.
     ;;
-    (syntax-match input-form.stx ()
-      ((?rator . ?rand*)
-       (raise-compound-condition-object/continuable 'chi-application
-	 "expand-time mismatch between closure object's arguments signatures and operands signature"
-	 input-form.stx
-	 (condition
-	   (make-expand-time-type-signature-warning)
-	   (make-syntax-violation input-form.stx ?rator)
-	   (make-application-operator-expression-condition ?rator)
-	   (make-application-operands-expressions-condition ?rand*)
-	   (make-arguments-signatures-condition arguments-signature*)
-	   (make-operands-signature-condition operands-signature))))))
+    (when (options::warn-about-compatible-operands-signature-in-procedure-application)
+      (syntax-match input-form.stx ()
+	((?rator . ?rand*)
+	 (raise-compound-condition-object/continuable 'chi-application
+	   "expand-time mismatch between closure object's arguments signatures and operands signature"
+	   input-form.stx
+	   (condition
+	     (make-expand-time-type-signature-warning)
+	     (make-syntax-violation input-form.stx ?rator)
+	     (make-application-operator-expression-condition ?rator)
+	     (make-application-operands-expressions-condition ?rand*)
+	     (make-arguments-signatures-condition arguments-signature*)
+	     (make-operands-signature-condition operands-signature)))))))
 
   #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 

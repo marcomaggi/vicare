@@ -65,6 +65,8 @@
 		  guarded-start)
 	    debugger::)
     (prefix (only (psyntax.config)
+		  enable-all-warnings
+		  disable-all-warnings
 		  warn-about-logic-constants
 		  warn-about-not-returning-expressions)
 	    psyntax::)
@@ -532,6 +534,11 @@
 	   (options::print-verbose-messages? #f)
 	   (next-option (cdr args) k))
 
+;;;
+	  ((%option= "-Wall")
+	   (psyntax::enable-all-warnings)
+	   (next-option (cdr args) k))
+
 	  ((%option= "-Wlogic-constants")
 	   (psyntax::warn-about-logic-constants #t)
 	   (next-option (cdr args) k))
@@ -984,6 +991,9 @@ Other options:
            basic-letrec-pass
            waddell-letrec-pass
            scc-letrec-pass
+
+   -Wall
+        Enable all the expander and compiler warnings.
 
    -Wlogic-constants
    -Wno-logic-constants
