@@ -30,6 +30,7 @@
 
     ;; options
     warn-about-logic-constants
+    warn-about-not-returning-expressions
 
     #| end of EXPORT |# )
   (import (rnrs)
@@ -59,7 +60,15 @@
   ;;
   (make-parameter #f
     (lambda (obj)
-      (and obj #t))))
+      (if obj #t #f))))
+
+(define warn-about-not-returning-expressions
+  ;;When set to true: raise a "&warning"  when an expression evaluated for its return
+  ;;values is typed as not returning; otherwise do nothing.
+  ;;
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
 
 
 ;;;; done

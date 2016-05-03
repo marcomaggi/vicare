@@ -186,7 +186,6 @@
     ((define-constant-values)		define-constant-values-macro)
     ((receive)				receive-macro)
     ((receive-and-return)		receive-and-return-macro)
-    ((begin0)				begin0-macro)
     ((xor)				xor-macro)
     ((define-syntax-rule)		define-syntax-rule-macro)
     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
@@ -4422,7 +4421,7 @@
   #| end of module: DEFINE-CONSTANT-VALUES-MACRO |# )
 
 
-;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
+;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, XOR
 
 (define-macro-transformer (receive input-form.stx)
   ;;Transformer function  used to expand  Vicare's RECEIVE macros from  the top-level
@@ -4442,7 +4441,7 @@
 	     (else
 	      (bless
 	       `(call-with-values
-		    (lambda/std () ,?producer-expression)
+		    (lambda/checked () ,?producer-expression)
 		  (lambda/checked ,?formals ,?body0 ,@?body*)))))))
     ))
 
@@ -4474,23 +4473,8 @@
 	      `((lambda/checked ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
 	   (bless
 	    `(call-with-values
-		 (lambda/std () ,?producer-expression)
+		 (lambda/checked () ,?producer-expression)
 	       (lambda/checked ,?formals ,?body0 ,@?body* ,rv-form)))))))
-    ))
-
-(define-macro-transformer (begin0 input-form.stx)
-  ;;Transformer function  used to  expand Vicare's BEGIN0  macros from  the top-level
-  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
-  ;;object that must be further expanded.
-  ;;
-  (syntax-match input-form.stx ()
-    ((_ ?form0 ?form* ...)
-     (bless
-      `(call-with-values
-	   (lambda/std () ,?form0)
-	 (lambda/std args
-	   ,@?form*
-	   (apply values args)))))
     ))
 
 (define-macro-transformer (xor input-form.stx)

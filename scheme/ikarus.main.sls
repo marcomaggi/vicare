@@ -65,7 +65,8 @@
 		  guarded-start)
 	    debugger::)
     (prefix (only (psyntax.config)
-		  warn-about-logic-constants)
+		  warn-about-logic-constants
+		  warn-about-not-returning-expressions)
 	    psyntax::)
     (prefix (only (psyntax.library-utils)
 		  init-search-paths-and-directories)
@@ -539,6 +540,14 @@
 	   (psyntax::warn-about-logic-constants #f)
 	   (next-option (cdr args) k))
 
+	  ((%option= "-Wnot-returning")
+	   (psyntax::warn-about-not-returning-expressions #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "-Wno-not-returning")
+	   (psyntax::warn-about-not-returning-expressions #f)
+	   (next-option (cdr args) k))
+
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -980,6 +989,11 @@ Other options:
    -Wno-logic-constants
         Enable or disable  raising a &warning exception  when an operand
 	in a logic expression always returns false or non-false.
+
+   -Wnot-returning
+   -Wno-not-returning
+        Enable or disable  raising a &warning exception  when an operand
+	evaluated for its return values is typed as not returning.
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,

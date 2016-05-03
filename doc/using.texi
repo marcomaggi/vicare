@@ -486,6 +486,15 @@ operand in a logic expression (@syntax{if} test, @syntax{and},
 @syntax{or}, @dots{}) always returns false or non--false.  By default
 this options is disabled.
 
+@item -Wnot-returning
+@itemx -Wno-not-returning
+@cindex Command line option @option{-Wnot-returning}
+@cindex Command line option @option{-Wno-not-returning}
+@cindex @option{-Wnot-returning}, command line option
+@cindex @option{-Wno-not-returning}, command line option
+Enable or disable raising a @condition{warning} exception when an
+operand evaluated for its return values is typed as not returning.
+
 @c ------------------------------------------------------------------------
 
 @item --scheme-heap-nursery-size @var{num-of-bytes}

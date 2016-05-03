@@ -679,6 +679,7 @@
     (further-optimisation-of*			(core-macro . further-optimisation-of*))
     (assembly-of				(core-macro . assembly-of))
     (splice-first-expand			(core-macro . splice-first-expand))
+    (begin0					(core-macro . begin0))
 
 ;;;Non-core macros.
     (__file__					(macro! . __file__))
@@ -788,7 +789,6 @@
     (define-syntax-rule				(macro . define-syntax-rule))
     (receive					(macro . receive))
     (receive-and-return				(macro . receive-and-return))
-    (begin0					(macro . begin0))
     (xor					(macro . xor))
 
     (stdin					(macro . stdin))

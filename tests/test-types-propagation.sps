@@ -597,6 +597,51 @@
   (void))
 
 
+(parametrise ((check-test-name	'begin0))
+
+  (doit (begin0 1 "ciao")
+	=> (<positive-fixnum>))
+
+  (doit (begin0 (read) 1 2)
+	=> (<top>))
+
+  (doit (begin0 (values "ciao" 'hey) 1 2)
+	=> (<string> (enumeration hey)))
+
+;;; --------------------------------------------------------------------
+;;; special cases
+
+  ;;The first expression returns zero values.
+  ;;
+  (doit (begin0 (values) (read) (read))
+	=> ())
+
+  ;;The first expression returns void.
+  ;;
+  (doit (begin0 (void) (read) (read))
+	=> (<void>))
+
+  ;;The first expression does not return.
+  ;;
+  (doit (begin0 (error #f "ciao") (read) (read))
+	=> <no-return>)
+
+  ;;The  first expression  returns an  unspecified number  of values,  of unspecified
+  ;;type.
+  ;;
+  (doit (letrec ((fun (lambda ({_ . <list>}) (fun))))
+	  (begin0 (fun) (read) (read)))
+	=> <list>)
+
+  ;;The first expression returns an unspecified number of values, of known type.
+  ;;
+  (doit (letrec ((fun (lambda ({_ . (list-of <fixnum>)}) (fun))))
+	  (begin0 (fun) (read) (read)))
+	=> (list-of <fixnum>))
+
+  #| end of PARAMETRISE |# )
+
+
 (parametrise ((check-test-name	'cond))
 
   (doit (cond ((read)	1)

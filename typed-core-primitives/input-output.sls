@@ -415,6 +415,11 @@
   (signatures
    ((<procedure>)			=> <list>)))
 
+(declare-core-primitive with-output-to-port
+    (safe)
+  (signatures
+   ((<textual-output-port> <procedure>)	=> <list>)))
+
 (declare-core-primitive transcoded-port
     (safe)
   (signatures
