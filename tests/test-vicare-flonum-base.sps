@@ -1032,9 +1032,11 @@
   (check
       (try
 	  (eval '(fl- 1)
-		(environment '(rnrs)))
+		(environment '(rnrs))
+		(expander-options typed-language)
+		(compiler-options))
 	(catch E
-	  ((expander::&expand-time-type-signature-warning)
+	  ((expander::&expand-time-type-signature-violation)
 	   #t)
 	  (else E)))
     => #t)

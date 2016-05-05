@@ -1260,9 +1260,11 @@
   (check
       (try
 	  (eval '(record-reset 123)
-		(environment '(vicare)))
+		(environment '(vicare))
+		(expander-options typed-language)
+		(compiler-options))
 	(catch E
-	  ((expander::&expand-time-type-signature-warning)
+	  ((expander::&expand-time-type-signature-violation)
 	   #t)
 	  (else E)))
     => #t)

@@ -42,9 +42,11 @@
 (check
     (try
 	(eval '(fxreverse-bit-field 'ciao 1 4)
-	      (environment '(rnrs)))
+	      (environment '(rnrs))
+	      (expander-options typed-language)
+	      (compiler-options))
       (catch E
-	((expander::&expand-time-type-signature-warning)
+	((expander::&expand-time-type-signature-violation)
 	 #t)
 	(else E)))
   => #t)
@@ -52,9 +54,11 @@
 (check
     (try
 	(eval '(fxreverse-bit-field #b1010010 'ciao 4)
-	      (environment '(rnrs)))
+	      (environment '(rnrs))
+	      (expander-options typed-language)
+	      (compiler-options))
       (catch E
-	((expander::&expand-time-type-signature-warning)
+	((expander::&expand-time-type-signature-violation)
 	 #t)
 	(else E)))
   => #t)
@@ -62,9 +66,11 @@
 (check
     (try
 	(eval '(fxreverse-bit-field #b1010010 1 'ciao)
-	      (environment '(rnrs)))
+	      (environment '(rnrs))
+	      (expander-options typed-language)
+	      (compiler-options))
       (catch E
-	((expander::&expand-time-type-signature-warning)
+	((expander::&expand-time-type-signature-violation)
 	 #t)
 	(else E)))
   => #t)
