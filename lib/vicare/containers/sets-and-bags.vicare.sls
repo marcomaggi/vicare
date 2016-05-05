@@ -173,7 +173,8 @@
 
 ;;;; record definition and core typing
 
-(define-record-type (sob %make-sob sob?)
+(define-record-type (<sob> %make-sob sob?)
+  (strip-angular-parentheses)
   (fields (immutable hash-table)
 	  (immutable comparator)
 	  (immutable multi?))
